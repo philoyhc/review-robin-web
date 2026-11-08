@@ -377,6 +377,9 @@
       .end { text-align: right; }
       .flush { margin: 0; }
       .stack { display: flex; flex-direction: column; gap: 24px; }
+      /* In a stack its gap spaces the cards; a card's own outer margin,
+         from a page it also opens, would double it (author, 2026-11-08). */
+      .stack > .gap-above, .stack > .gap-below, .side > .gap-above, .side > .gap-below { margin-top: 0; margin-bottom: 0; }
       .gap-above { margin-top: 24px; }
       .gap-above-sm { margin-top: 12px; }
       .gap-below { margin-bottom: 24px; }
@@ -484,6 +487,10 @@
          widths. */
       .page:not(.desktop) > .split > .main { flex-basis: 340px; }
       .page:not(.desktop) > .split > .side { flex-basis: 340px; }
+      /* A split whose side has nothing in it (a viewer without the side's
+         cards) gives its main column the width, as a page without one. */
+      .page:not(.desktop) > .split:not(:has(> .side > *)) > .side { display: none; }
+      .page:not(.desktop) > .split:not(:has(> .side > *)) > .main { flex-basis: 100%; }
       @media (min-width: 1116px) {
         .page:not(.desktop) > .split { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
         .page:not(.desktop) > .split > .main { grid-column: span 2; }

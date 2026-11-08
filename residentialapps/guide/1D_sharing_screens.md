@@ -121,6 +121,13 @@ At most three columns of at least 340 px, 24 px apart: three from
 (author, 2026-11-08). Every Residential app; desktop-oriented pages
 keep the full width.
 
+### Rung 12 — The third column filled
+
+The side column starts at the top of a page, and a page without one
+gains it from its shorter cards: Students, the Consultation check, RA
+Leave history (author, 2026-11-08). A page with only one card keeps it
+at two thirds.
+
 ## Checks
 
 Each rung keeps `pytest`, `ruff`, `pyright` green and takes one
@@ -219,3 +226,12 @@ browser check passes on each rung.
   One read of the widening: a desktop page's split still took the
   columns, the page-map test matched any app's prefix and loosely, and
   nothing tested Residential Ops' layout, all fixed.
+- **Rung 12:** as planned, with Students keeping Find in the main column
+  (a phone reads it first) and putting Shared with me and Your records
+  (locked; unlocked it needs the main column's width) to the side, and
+  RA Leave history's Drafts beside the applications. A side with nothing
+  in it hides and gives the main column the width (Overview for Other
+  Staff view, Students unlocked). Overview's Flagged and Every plan stay
+  below the columns, so a phone reads them last as before. One read:
+  those two, Students' empty side, history's columns the wrong way round,
+  Apply's draft note above the columns, stale spec lines, all fixed.

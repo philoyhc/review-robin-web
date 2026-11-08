@@ -4,13 +4,15 @@
 {% block content %}
   {{ title("RA Leave", leave, viewing(me)) }}
   {% set mine = leave.queue(me) %}
-  <section class="tiles" aria-label="At a glance">
-    <a class="tile" href="{{ url('/ra-leave/staff/decide') }}{{ as_query }}"><span class="tile-n">{{ mine | length }}</span><span class="tile-l">Awaiting my decision</span></a>
-    <a class="tile" href="{{ url('/ra-leave/staff/decide') }}{{ as_query ~ ('&' if as_query else '?') }}cover=waiting"><span class="tile-n">{{ leave.waiting_on_cover_count(me) }}</span><span class="tile-l">Of those, waiting on cover</span></a>
-    <a class="tile" href="{{ url('/ra-leave/staff/decided') }}{{ as_query }}"><span class="tile-n">{{ leave.decided(me) | length }}</span><span class="tile-l">Decided</span></a>
-  </section>
-  <div class="split gap-above">
+  {# The side column starts at the top, beside what opens the page,
+     so the third column is never left empty (author, 2026-11-08). #}
+  <div class="split">
     <div class="main stack">
+      <section class="tiles" aria-label="At a glance">
+        <a class="tile" href="{{ url('/ra-leave/staff/decide') }}{{ as_query }}"><span class="tile-n">{{ mine | length }}</span><span class="tile-l">Awaiting my decision</span></a>
+        <a class="tile" href="{{ url('/ra-leave/staff/decide') }}{{ as_query ~ ('&' if as_query else '?') }}cover=waiting"><span class="tile-n">{{ leave.waiting_on_cover_count(me) }}</span><span class="tile-l">Of those, waiting on cover</span></a>
+        <a class="tile" href="{{ url('/ra-leave/staff/decided') }}{{ as_query }}"><span class="tile-n">{{ leave.decided(me) | length }}</span><span class="tile-l">Decided</span></a>
+      </section>
       <section class="card card-pad" aria-labelledby="await-h">
         <h2 id="await-h">Awaiting my decision <span class="count">· {{ mine | length }}</span></h2>
         <p class="sub">Oldest first.</p>

@@ -33,3 +33,20 @@ def test_a_split_is_two_and_one_and_a_desktop_page_keeps_its_own(page: Page) -> 
         page.set_viewport_size({"width": width, "height": 900})
         page.goto(ORIGIN + path)
         assert tuple(page.evaluate(MEASURE)) == expect, (width, path)
+
+
+def test_an_empty_side_gives_the_main_column_the_width(page: Page) -> None:  # noqa: F811
+    """RA Leave history with no drafts (author, 2026-11-08): the side has
+    nothing in it, so it hides and the applications take the page's two
+    columns' width, or the page below 1116 px."""
+    page.set_viewport_size({"width": 1000, "height": 900})
+    page.goto(ORIGIN + "/ra-leave/history?as=Hana%20Ito")
+    widths = page.evaluate(
+        """() => {
+      const s = document.querySelector('main.page > .split');
+      const side = s.querySelector(':scope > .side');
+      return [side.children.length, getComputedStyle(side).display,
+              Math.round(s.querySelector(':scope > .main').getBoundingClientRect().width)];
+    }"""
+    )
+    assert widths[0] == 0 and widths[1] == "none" and widths[2] == 952, widths

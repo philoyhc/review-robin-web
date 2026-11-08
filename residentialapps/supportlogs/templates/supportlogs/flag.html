@@ -10,9 +10,11 @@
   {{ sample_title("Safety flag", me.name) }}
   {# A flag's detail (UI spec screen 8): every view, acknowledgement and
      closure is audited (§11.3). #}
-  <p class="notice" role="note">Viewing this flag is recorded. {{ explainer_link() }}</p>
+  {# The side column starts at the top, beside the notice (author,
+     2026-11-08). #}
   <div class="split">
     <div class="main stack">
+      <p class="notice" role="note">Viewing this flag is recorded. {{ explainer_link() }}</p>
       <section class="card card-pad safety" aria-labelledby="flag-h">
         <h2 id="flag-h">{% if in_set %}<a href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %} {{ flag_chip(f) }}</h2>
         <dl class="kv">

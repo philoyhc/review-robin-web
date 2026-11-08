@@ -9,15 +9,17 @@
   {# A student across staff (§4.5, §11.2): who supports them, not a case
      file; an audited read for senior identifiable access. #}
   <p class="sub">{{ chosen.email }}</p>
-  <p class="notice" role="note">Opening this history is recorded, as a senior-level read across staff. {{ explainer_link() }}</p>
   {# The wall (author, 2026-11-07; confidentiality rule 3): which staff
      have records with the student, and their plans' kinds, never a
      record's content. To read it, a senior asks the staff member to share
      (inert until wired). #}
   {% set staff = sample.FRONTLINE_COLLEAGUES | select("in", sample.staff_with_records(chosen.id)) | list %}
   {% set plans = sample.PLANS | selectattr("student", "equalto", chosen.id) | list %}
+  {# The side column starts at the top, beside the notice (author,
+     2026-11-08). #}
   <div class="split">
     <div class="main stack">
+      <p class="notice" role="note">Opening this history is recorded, as a senior-level read across staff. {{ explainer_link() }}</p>
       <section class="card card-pad" aria-labelledby="staff-h">
         <h2 id="staff-h">Staff with records <span class="count">· {{ staff | length }}</span></h2>
         <p class="sub">Who has records about {{ chosen.name }}. You see that they do, never what they recorded: to read a staff member's records, ask them to share. They decide; in an emergency, a sys admin can agree on their behalf.</p>

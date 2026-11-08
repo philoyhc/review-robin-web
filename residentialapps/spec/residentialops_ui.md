@@ -27,7 +27,12 @@ in `residentialapps/web/templates/residential/base.html`.
   wide, two from 736 px, one below, stacked in column order. From
   1116 px a page's main column spans two and its side column one, and a
   card on its own spans two, never the third; from 736 px to 1115 px the
-  side column is 340 px and the main column takes the rest. A card's own
+  side column is 340 px and the main column takes the rest. **The side
+  column starts at the top** (author, 2026-11-08): what opens a page (a
+  notice, the flags, the tiles, a page's first button) sits in the main
+  column beside it, and a page's shorter cards go to the side, so the
+  third column is not left empty where a page has a one-column card to
+  put there; on a phone the side still follows the main column. A card's own
   inner split and a narrow notice card keep their widths, and a
   desktop-oriented page (the page map's class, listed in
   `residentialapps/web/pages.py`, with the pages beneath a listed path,

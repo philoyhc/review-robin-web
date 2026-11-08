@@ -12,19 +12,22 @@
      (confidentiality rule 3). Aggregate view sees counts and staff,
      never a student's name (roles rule 8). #}
   {% if named %}{{ recorded() }}{% else %}<p class="subtle small">Counts only: no student is named on your view.</p>{% endif %}
-  <p class="notice" role="note">You see who has records with which students, never what they recorded. To read a staff member's records, ask them to share.</p>
-  {% if sample.holds(me, sample.RECIPIENT) %}{{ flags_card(me, closed=true) }}{% endif %}
-  {% set across = sample.students_across_staff() %}
-  {% set active = sample.PLANS | selectattr("status", "equalto", "Active") | list %}
-  <section class="tiles gap-below" aria-label="Across the team">
-    <div class="tile"><span class="tile-n">{{ active | selectattr("formal") | list | length }}</span><span class="tile-l">Formal assignments</span></div>
-    <div class="tile"><span class="tile-n">{{ active | rejectattr("formal") | list | length }}</span><span class="tile-l">Follow-ups</span></div>
-    <div class="tile"><span class="tile-n">{{ across | length }}</span><span class="tile-l">Students with records</span></div>
-    <div class="tile"><span class="tile-n">{{ across | map(attribute="staff") | map("length") | select("gt", 1) | list | length }}</span><span class="tile-l">With more than one staff member</span></div>
-  </section>
 
+  {# The side column starts at the top, beside the notice, the flags and
+     the tiles, so the third column is never left empty (author,
+     2026-11-08). #}
   <div class="split">
     <div class="main stack">
+      <p class="notice" role="note">You see who has records with which students, never what they recorded. To read a staff member's records, ask them to share.</p>
+      {% if sample.holds(me, sample.RECIPIENT) %}{{ flags_card(me, closed=true) }}{% endif %}
+      {% set across = sample.students_across_staff() %}
+      {% set active = sample.PLANS | selectattr("status", "equalto", "Active") | list %}
+      <section class="tiles" aria-label="Across the team">
+        <div class="tile"><span class="tile-n">{{ active | selectattr("formal") | list | length }}</span><span class="tile-l">Formal assignments</span></div>
+        <div class="tile"><span class="tile-n">{{ active | rejectattr("formal") | list | length }}</span><span class="tile-l">Follow-ups</span></div>
+        <div class="tile"><span class="tile-n">{{ across | length }}</span><span class="tile-l">Students with records</span></div>
+        <div class="tile"><span class="tile-n">{{ across | map(attribute="staff") | map("length") | select("gt", 1) | list | length }}</span><span class="tile-l">With more than one staff member</span></div>
+      </section>
       <section class="card card-pad" aria-labelledby="support-h">
         {% call folded("support-h", "Who supports whom", fold=senior) %}
         <p class="sub">Per staff member, how many students they have records with, and their formal assignments and follow-ups. No dates, minutes or counts of encounters: those are the records' content.</p>
@@ -57,6 +60,8 @@
         {% endif %}
         {% endcall %}
       </section>
+    </div>
+    <div class="side">
       {% if senior %}
         <section class="card card-pad" aria-labelledby="who-h">
           {% call folded("who-h", "Who holds access") %}
@@ -66,8 +71,6 @@
           {% endcall %}
         </section>
       {% endif %}
-    </div>
-    <div class="side">
       {% if senior %}
         <section class="card card-pad muted" aria-labelledby="aud-h">
           <h2 id="aud-h">Support-activity audit</h2>
@@ -83,6 +86,8 @@
     </div>
   </div>
 
+  {# Below the columns, so a phone reads them after the side cards, as
+     before (2026-11-08). #}
   {% if senior %}
     <section class="card card-pad gap-above" aria-labelledby="refs-h">
       {% call folded("refs-h", "Flagged for formal assignment", sample.REFERRALS | length) %}
