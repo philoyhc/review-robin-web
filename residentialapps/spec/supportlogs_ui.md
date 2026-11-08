@@ -287,7 +287,7 @@ someone's behalf), **acknowledge** for having seen information sent on
   - a history;
   - the support-activity audit;
   - a consultation check.
-- **A senior's Overview folds every card that shows names** (author,
+- **A senior's Overview folds every card that names students** (author,
   2026-11-08): Who supports whom, Students across staff, Flagged for
   formal assignment and Every plan start closed, each heading opening its
   card, with Show or Hide beside it. The safety flags banner, the count

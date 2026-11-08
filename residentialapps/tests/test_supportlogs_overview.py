@@ -122,8 +122,8 @@ def test_a_closed_flag_is_a_signal_on_overview(client: TestClient) -> None:
 
 
 def test_a_senior_s_cards_of_names_start_folded(client: TestClient) -> None:
-    """Author, 2026-11-08: on a senior's Overview every card that shows
-    names opens only when asked; the safety flags banner, the count tiles
+    """Author, 2026-11-08: on a senior's Overview every card that names
+    students opens only when asked; the safety flags banner, the count tiles
     and Who holds access (staff and their grants) stay open. Other viewers
     are unchanged."""
     sam = client.get("/overview/?as=Sam%20Lee").text

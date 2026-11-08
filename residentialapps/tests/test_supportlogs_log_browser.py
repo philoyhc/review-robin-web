@@ -320,8 +320,8 @@ def test_a_withheld_name_shows_and_hides_again(page: Page) -> None:
 
 
 def test_overview_cards_of_names_stay_folded_until_opened(page: Page) -> None:
-    """Author, 2026-11-08: on a senior's Overview every card that shows
-    names starts closed, its heading the control; the safety flags banner,
+    """Author, 2026-11-08: on a senior's Overview every card that names
+    students starts closed, its heading the control; the safety flags banner,
     the count tiles and Who holds access stay open."""
     page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
     for heading, inside in (
