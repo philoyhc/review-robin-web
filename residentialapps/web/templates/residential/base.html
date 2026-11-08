@@ -539,7 +539,7 @@
           </div>
         {% else %}
         <details class="switch" data-tb-menu>
-          <summary aria-label="Switch area: {{ area }}">
+          <summary aria-label="Switch area: {{ area }}{% if unit_choices %}, Unit: {{ unit_name }}{% endif %}">
             {% if app_icon %}<span aria-hidden="true" class="tb-icon"></span>{% endif %}
             <span class="sw-t">{% if top_line %}<span class="sw-unit">{{ top_line }}</span>{% endif %}<span class="sw-app">{{ area }} <span aria-hidden="true" class="caret">▾</span></span></span>
           </summary>

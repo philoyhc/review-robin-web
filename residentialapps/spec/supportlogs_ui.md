@@ -110,7 +110,7 @@ form's end, and the main action is a full-width Primary on the page
   the viewer's working Unit only; there is no cross-Unit view for anyone,
   the super-admin included. A viewer with grants in more than one Unit
   picks the working Unit in the area switcher; one with grants in a
-  single Unit sees no switcher. Shares, teams and safety flags stay
+  single Unit sees no Unit group. Shares, teams and safety flags stay
   within their Unit. The switcher's **Unit** group (after the app's
   areas, before Cordware) lists the viewer's Units with the working one
   ticked, and the bar's top line names it; choosing one sets it for this

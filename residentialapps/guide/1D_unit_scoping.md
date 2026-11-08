@@ -72,9 +72,12 @@ transfer would carry their past records into the new Unit.
 ## Semantics
 
 - **Working Unit.** A viewer with grants in one Unit works there and sees
-  no switcher.
+  no Unit group.
   - A viewer with grants in more than one Unit picks one in the area
-    switcher, next to Sys admin. Each page shows one Unit at a time.
+    switcher's Unit group, after the app's areas (Sys admin moved to the
+    account menu on 2026-11-02). Each page shows one Unit at a time.
+  - The sample's `/unit` is a GET, as the sample's other preview
+    switches are; the wiring segment makes it a POST.
   - Log stamps the record with the working Unit.
   - The choice persists per browser and falls back to the first Unit
     held when the stored one is no longer held.
@@ -142,7 +145,8 @@ Taken 2026-11-08 at `c053b46b1`.
   roster doc §5 and §10, `supportlogs_ui.md` §2 and `todo_master.md`.
   The roster doc and `todo_master.md` keep Residential Operations' half
   of multi-Unit authorization open; only Support Logs' is struck.
-- **Rung 3:** as planned, with Sam Lee, the Master, as the two-Unit
+- **Rung 3:** as planned but for its place (after the app's areas, Sys
+  admin having left the switcher), with Sam Lee, the Master, as the two-Unit
   viewer rather than a new one (the roster mock has one Master). The
   Unit group sits in the top-left switcher, whose top line already names
   the Unit; the working Unit is a cookie (`supportlogs_unit`), as the
@@ -229,4 +233,5 @@ All answered by the author, 2026-11-08:
 - `residentialapps/spec/supportlogs_ui.md` — the working Unit and the switcher; per-Unit reads, shares, teams, flags, checks, workload and audit (rungs 2–4).
 - `residentialapps/spec/applications.md` — the switcher's place in the area menu (rungs 3–4).
 - `residentialapps/guide/todo_master.md` — strike "multi-Unit authorization" for Support Logs (rung 2).
+- `docs/header_chrome.md` — §3 the switcher's Unit group; §6 Support Logs' top line is the working Unit (rung 3).
 - `residentialapps/guide/segment_1D_support_logs.md` — Status line for this plan (each rung).

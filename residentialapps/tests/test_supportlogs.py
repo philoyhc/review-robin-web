@@ -356,8 +356,15 @@ def test_the_working_unit_switcher_is_a_scaffold(client: TestClient) -> None:
     daniel = TestClient(create_app())
     daniel.get("/unit?name=Example%20Hall&back=%2F")
     assert '<span class="sw-unit">Example College</span>' in daniel.get("/").text
-    assert (
-        chose.get("/unit?name=Nowhere&back=%2F%2Fevil.example", follow_redirects=False)
-        .headers["location"]
-        .endswith("/")
-    )
+    # The switcher's accessible name carries the working Unit.
+    assert ', Unit: Example Hall">' in after
+    # A return path off the application goes Home.
+    for back in ("%2F%2Fevil.example", "https%3A%2F%2Fevil.example", "javascript%3Aalert(1)", ""):
+        location = chose.get(f"/unit?name=Nowhere&back={back}", follow_redirects=False).headers[
+            "location"
+        ]
+        assert location.endswith("/") and "evil" not in location, (back, location)
+    absent = chose.get("/unit?name=Nowhere", follow_redirects=False).headers["location"]
+    assert absent.endswith("/")
+    slash = chose.get("/unit?name=Nowhere&back=%2F%5Cevil.example", follow_redirects=False)
+    assert not slash.headers["location"].startswith(("//", "/\\")), slash.headers["location"]
