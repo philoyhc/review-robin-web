@@ -47,7 +47,7 @@
        staff-facing cards are on Staff Overview. #}
     <div class="side">
       {# The counts at the top of the side, above Flagged for formal
-         assignment; no count of formal assignments, Every formal plan
+         assignment; no count of formal assignments, Formal plans
          gives it (author, 2026-11-08). #}
       <section class="tiles" aria-label="Across the team">
         <div class="tile"><span class="tile-n">{{ across | length }}</span><span class="tile-l">Students with records</span></div>
@@ -55,7 +55,7 @@
       </section>
       {% if senior %}
         <section class="card card-pad" aria-labelledby="refs-h">
-          {% call folded("refs-h", "Flagged for formal assignment", sample.REFERRALS | length) %}
+          {% call folded("refs-h", "Flagged for formal assignment", sample.REFERRALS | length, tile=true) %}
           <p class="sub">Students frontline staff have flagged for review (§3.1); assigning one opens a plan.</p>
           <ul class="items">{% for r in sample.REFERRALS %}{% set s = sample.student(r.student) %}{% set link %}<a class="strong" href="{{ url('/oversight-students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{% endset %}<li><div class="item-head">{{ link if sample.named_on_overview(s.id) else withheld(link) }}<button type="button" class="btn btn-secondary" disabled aria-label="{{ 'Assign a plan for ' ~ s.name if sample.named_on_overview(s.id) else 'Assign a plan' }}">Assign</button></div><div class="subtle">Flagged {{ sample.short_date(r.flagged_on) }} by {{ r.flagged_by }}{% if r.cadence %} · suggests {{ r.cadence | lower }}{% endif %}</div></li>{% endfor %}</ul>
           {% endcall %}
@@ -64,7 +64,7 @@
       {% if named %}
         <section class="card card-pad" aria-labelledby="plans-h">
           {% set formal = sample.PLANS | selectattr("formal") | list %}
-          {% call folded("plans-h", "Every formal plan", formal | length, fold=senior) %}
+          {% call folded("plans-h", "Formal plans", formal | length, fold=senior, tile=true) %}
           <p class="sub">Formal assignments across the team{% if not senior %}, read-only{% endif %}. Follow-ups are their staff member's own.</p>
           <ul class="items">{% for p in formal %}{% set s = sample.student(p.student) %}{% set link %}<a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ s.name }}</a>{% endset %}<li><div class="item-head">{{ link if sample.named_on_overview(s.id) else withheld(link) }}</div><div class="subtle">{{ "Plan · " ~ p.source if senior else "Plan" }} · {{ p.staff }}</div></li>{% endfor %}</ul>
           {% endcall %}

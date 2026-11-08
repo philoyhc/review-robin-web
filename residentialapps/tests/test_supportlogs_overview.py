@@ -418,3 +418,23 @@ def test_the_counts_head_students_overview_s_side(client: TestClient) -> None:
         assert 'class="tiles"' not in page.split('<div class="side">', 1)[0], name
     sam = client.get("/oversight-students/?as=Sam%20Lee").text
     assert sam.index('class="tiles"') < sam.index('id="refs-h"')
+
+
+def test_the_side_s_cards_are_headed_as_tiles(client: TestClient) -> None:
+    """Author, 2026-11-08: Flagged for formal assignment and Formal plans
+    head their cards as the counts above them do, the number over the
+    label, still opening the card."""
+    formal = sum(1 for p in sample.PLANS if p.formal)
+    sam = client.get("/oversight-students/?as=Sam%20Lee").text
+    for heading, n, label in (
+        ("refs-h", len(sample.REFERRALS), "Flagged for formal assignment"),
+        ("plans-h", formal, "Formal plans"),
+    ):
+        head = (
+            f'<summary><h2 id="{heading}"><span class="tile-head"><span class="tile-n">{n}</span>'
+            f' <span class="tile-l">{label}</span></span></h2>'
+        )
+        assert head in sam, heading
+    siti = client.get("/oversight-students/?as=Siti%20Rahman").text  # open, not folded
+    assert f'<h2 id="plans-h"><span class="tile-head"><span class="tile-n">{formal}</span>' in siti
+    assert "Every formal plan" not in sam + siti

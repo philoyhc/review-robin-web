@@ -349,6 +349,10 @@
       .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 12px; align-items: start; }
       .tile-n { font-size: 28px; font-weight: 700; line-height: 1.1; }
       .tile-l { font-size: 13px; color: var(--text-subtle); }
+      /* A card headed as a tile: its count over its label, in the tiles'
+         type, so it sits with a page's count tiles (author, 2026-11-08). */
+      .tile-head { display: flex; flex-direction: column; gap: 2px; }
+      .tile-head .tile-l { font-weight: 400; }
       /* The landing's applications: one large target each, phone first. */
       ul.apps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
       .app { display: flex; flex-direction: column; gap: 4px; min-height: 88px; padding: 16px 18px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-card); color: var(--text-body); text-decoration: none; }

@@ -173,6 +173,12 @@ with its audit, records and access pages beneath it; the frontline's
 `/students/` keeps its path, so the two never collide. Who holds access
 becomes an expander (author, 2026-11-08).
 
+### Rung 19 — Side cards headed as tiles
+
+Flagged for formal assignment and Every formal plan, renamed Formal
+plans, are headed like the counts above them: the number over the
+label (author, 2026-11-08).
+
 ## Checks
 
 Each rung keeps `pytest`, `ruff`, `pyright` green and takes one
@@ -301,3 +307,4 @@ browser check passes on each rung.
   beside them; on a phone the counts follow Students across staff.
 - **Rung 18:** as planned; old paths are not redirected (sample
   screens only).
+- **Rung 19:** as planned.
