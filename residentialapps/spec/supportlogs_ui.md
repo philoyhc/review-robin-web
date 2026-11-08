@@ -104,6 +104,15 @@ form's end, and the main action is a full-width Primary on the page
     Students Overview. In prose, "Overview" means Students Overview;
   - Consultation check for its grant;
   - Access, Configuration and Audit log in Sys admin.
+- **One Residential Unit at a time** (author, 2026-11-08;
+  `residentialapps/docs/resident_support_log_functional_spec_v0.3.md`
+  §3.7). Every page, count, download, Consultation check and audit shows
+  the viewer's working Unit only; there is no cross-Unit view for anyone,
+  the super-admin included. A viewer with grants in more than one Unit
+  picks the working Unit in the area switcher; one with grants in a
+  single Unit sees no switcher. Shares, teams and safety flags stay
+  within their Unit. The sample has one Unit, Example College, until the
+  Unit-scoping plan's rungs 3–4 (`residentialapps/guide/1D_unit_scoping.md`).
 - **Home is a tab only when it is a page of its own**: the frontline's
   dashboard, a recipient's flags, or a list of what a viewer with more
   than one destination reaches. Otherwise the bare mount redirects to the

@@ -181,6 +181,20 @@ For local development and testing, Support Logs provides a fake role for each au
 
 ---
 
+### 3.7 Residential Units
+
+**Support Logs is scoped by Residential Unit** (author, 2026-11-08; plan `residentialapps/guide/1D_unit_scoping.md`), as Residential Operations is (`residentialapps/docs/residentialapps_roster_structure.md` §4.1). The Unit belongs to the grant and the record, never to the person.
+
+- **Grants.** Every Support Logs authorization names its Unit. A grant in one Unit gives nothing in another. Eligibility is that Unit's Staff roster, every member eligible (§3.5); no appointment is required.
+- **Records.** Every record names the Unit it was made in, fixed at creation from its author's working Unit: encounters, safety escalations, support relationships, peer-view grants, teams, handovers, purges, review runs and audit events. Only a handover changes it.
+- **No cross-Unit view, for anyone.** Every page, count, download, check and audit review shows one Unit, the viewer's working Unit; the platform super-admin included.
+- **Working Unit.** A person with grants in more than one Unit works in one at a time, chosen in the area switcher; a person with grants in one Unit sees no switcher.
+- **Students.** A student's identity is one row per person. Whether a Unit knows the student is derived from that Unit's own records, so two Units never see each other's. A student who moves Units leaves their records where they were made; history crosses Units only through a handover agreed by a senior in each Unit.
+- **Sharing.** Shares, peer views and teams stay within one Unit.
+- **Safety flags** reach their Unit's recipients only.
+- **Consultation check** answers from the working Unit's records only, and names that Unit on its result.
+- **Administration.** The platform super-admin grants Support Logs administration per Unit. A Unit may have several administrators, but one account administers at most one Unit; a second Unit's grant to the same account is refused, naming the Unit that holds it.
+
 ## 4. Student Identity and Lookup
 
 ### 4.1 Identity Source
@@ -791,10 +805,11 @@ Entra (managed identity) authentication to PostgreSQL is a possible later harden
 - entra_object_id
 - institutional_email
 - display_name
-- optional cluster_id (a core residential unit's ID; the membership itself is held here)
 - active
 - created_at
 - updated_at
+
+One row per person, in no Unit (§3.7). Cluster membership is per Unit: `residential_unit_id`, `student_id`, `cluster_id` (a core residential unit's ID; the membership itself is held here).
 
 ### Shared Roster Core / Staff Roster
 
@@ -816,6 +831,7 @@ Owned by `supportlogs`; references a staff person from `residentialops`.
 
 - id
 - staff_id (stable `residentialops` core person ID)
+- residential_unit_id (the grant's Unit; §3.7)
 - permission / role type
 - active
 - granted_by
@@ -831,6 +847,7 @@ This boundary is asymmetric by design: **staff identity and eligibility are shar
 ### Encounter
 
 - id
+- residential_unit_id (§3.7)
 - student_id
 - staff_id (core person ID)
 - encounter_datetime
@@ -854,6 +871,7 @@ This boundary is asymmetric by design: **staff identity and eligibility are shar
 One per new safety concern (§5.10).
 
 - id
+- residential_unit_id (§3.7)
 - encounter_id
 - student_id
 - raised_by (core person ID)
@@ -868,6 +886,7 @@ One per new safety concern (§5.10).
 Represents either informal follow-up or formal assignment.
 
 - id
+- residential_unit_id (§3.7)
 - student_id
 - staff_id
 - relationship_type: `informal_follow_up` / `formal_assignment`
@@ -886,6 +905,7 @@ Represents either informal follow-up or formal assignment.
 ### PeerViewGrant
 
 - id
+- residential_unit_id (§3.7)
 - student_id
 - grantor_staff_id (core person ID)
 - viewer_staff_id (core person ID)
@@ -899,6 +919,7 @@ Represents either informal follow-up or formal assignment.
 A sensitive, audited review of a defined applicant list; it is not a student case record.
 
 - id
+- residential_unit_id (§3.7; the review answers from this Unit only)
 - initiated_by (core person ID)
 - purpose / opportunity reference
 - created_at
@@ -920,6 +941,7 @@ There is no persistent global wellness or risk score on the Student.
 In `supportlogs`, on RRW's audit model (§11.3), including read events.
 
 - id
+- residential_unit_id (§3.7)
 - actor_id (core person ID)
 - event_type (registered)
 - entity_type
