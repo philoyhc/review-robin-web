@@ -90,7 +90,11 @@ form's end, and the main action is a full-width Primary on the page
 - **There is no Safety flags tab** (author, 2026-10-29). Flags list on Home
   for the frontline and for a recipient without Overview, and on Overview
   for a recipient who has it (senior staff or Other Staff view). That tab carries the count of unacknowledged
-  flags as a red badge, with its words for screen readers.
+  flags as a red badge, with its words for screen readers. A recipient's
+  card ends with **Closed**, folded until opened (author, 2026-11-08):
+  the flags closed in the last 7 days, latest closed first, each saying
+  when it closed, then **Find
+  an older one by student or date** (inert until wired).
 - **A detail page** (a student, a plan, a flag, a history) has a back link
   and marks the tab of its list (`aria-current="true"`).
 

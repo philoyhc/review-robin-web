@@ -253,7 +253,7 @@
         display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 9999px; white-space: nowrap;
         font-size: 13px; color: var(--text-body); background: var(--surface-muted); border: 1px solid var(--border-subtle);
       }
-      .card h2 .count { font-size: 14px; font-weight: 400; color: var(--text-subtle); }
+      .card :is(h2, h3) .count { font-size: 14px; font-weight: 400; color: var(--text-subtle); }
       .filters { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
       .filter-fields { display: flex; flex-wrap: wrap; gap: 12px; flex: 1 1 480px; }
       .filter { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
@@ -323,7 +323,7 @@
          heading is the control, with Show or Hide beside it. */
       details.fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; cursor: pointer; list-style: none; }
       details.fold > summary::-webkit-details-marker { display: none; }
-      details.fold > summary h2 { margin: 0; }
+      details.fold > summary :is(h2, h3) { margin: 0; }
       details.fold:not([open]) > summary [data-when="open"], details.fold[open] > summary [data-when="closed"] { display: none; }
       details.fold[open] > summary { margin-bottom: 8px; }
       /* Safety: its own color and heading, set apart from routine controls

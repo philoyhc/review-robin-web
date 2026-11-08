@@ -644,7 +644,9 @@ FLAGS = (
         acknowledged_at=datetime(2026, 10, 3, 18, 40),
         outcome="No further action",
         closed_by="Sam Lee",
-        closed_at=datetime(2026, 10, 4, 10, 0),
+        # Closed within the last week, so the flags card's Closed list has
+        # one to show (author, 2026-11-08).
+        closed_at=datetime(2026, 10, 27, 10, 0),
     ),
 )
 
@@ -673,6 +675,18 @@ def flags_for(v: Viewer, active: bool | None = None, sid: str | None = None) -> 
     return sorted(
         sorted(found, key=lambda f: f.raised_at, reverse=True), key=lambda f: order[f.status]
     )
+
+
+CLOSED_DAYS = 7
+
+
+def recently_closed(v: Viewer, days: int = CLOSED_DAYS) -> list[Flag]:
+    """The closed flags a viewer may see that were closed in the last
+    `days` days, today included, the latest closed first (author,
+    2026-11-08). Older ones are found by student or date."""
+    since = TODAY - timedelta(days=days - 1)
+    done = [f for f in flags_for(v, active=False) if f.closed_at and f.closed_at.date() >= since]
+    return sorted(done, key=lambda f: f.closed_at or NOW, reverse=True)
 
 
 def unacknowledged(v: Viewer) -> int:
