@@ -259,32 +259,33 @@ would you change?*
 Act as **Sam Lee** (Master: senior identifiable, safety-flag recipient)
 unless a task says otherwise.
 
-### B1. The weekly picture: Overview
+### B1. The weekly picture: Overview and Workload
 
 *Task: "How is the team's support load, and who should we be worried
 about?"*
 
-- [ ] Overview alone in the tabs, with a red badge **1** for the
+- [ ] Overview and Workload alone in the tabs, Overview with a red badge **1** for the
   unacknowledged flag (a screen reader hears "unacknowledged safety
   flag").
 - [ ] The safety flags banner, the tiles and Who holds access are open;
   every other card that shows names starts closed, and its heading opens it (Show or Hide
   beside it).
 - [ ] A notice that you see who has records with whom, never what they
-  recorded; tiles counting plans and students; **Who supports whom**
-  (sortable, for the term chosen above it: per staff member, Assigned
-  plans, meetings and minutes, then Own students, meetings, per student,
-  minutes and per meeting; this term shows Daniel Koh's 2 plans, 3
-  meetings and 75 minutes assigned and 4 students, 5 meetings and 90
-  minutes his own, Arjun Nair (1 plan) and Mei Ling Tan "Fewer than 3
-  students" with no own figures, and AY2025-2026 Term 2 none; no Following column or
-  follow-ups tile anywhere);
-  **Students across staff**, naming only Elena Park, Jia Wen Lee, Clara
+  recorded; tiles counting plans and students; no Following column or
+  follow-ups tile anywhere; **Students across staff**, naming only Elena Park, Jia Wen Lee, Clara
   Tan, Dev Menon and Ivan Seet until **Show name** opens another row, and
   no dates, minutes or encounter counts anywhere else, nor any tied to a
-  student; as Siti Rahman, Who supports whom has no workload columns; Flagged for formal
-  assignment, with Assign disabled; Every formal plan, without due
-  states.
+  student; Flagged for formal assignment, with Assign disabled; Every
+  formal plan, without due states.
+- [ ] **Workload** holds **Who supports whom**, open, across the page's
+  full width (three columns from 1116 px) and sortable by each column,
+  for the term chosen above it: per staff member, Assigned plans,
+  meetings and minutes, then Own students, meetings, per student,
+  minutes and per meeting. This term shows Daniel Koh's 2 plans, 3
+  meetings and 75 minutes assigned and 4 students, 5 meetings and 90
+  minutes his own, Arjun Nair (1 plan) and Mei Ling Tan "Fewer than 3
+  students" with no own figures, and AY2025-2026 Term 2 none. As Siti
+  Rahman it has no workload columns.
 
 Ask: *Is who-has-records-with-whom enough to run a weekly meeting? What
 would you ask a staff member to share?*

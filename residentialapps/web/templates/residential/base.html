@@ -481,7 +481,9 @@
          wide (content 1068 px), two from 736 px (content 704 px, the
          page's margins being 16 px below 960), one below. The page's own
          split: its main column spans two and its side one; a card on its
-         own spans two, never the third column too. A split inside a card,
+         own spans two, never the third column too, unless it is .wide: a
+         table that earns the page's full width (author, 2026-11-08). A
+         split inside a card,
          a .narrow card and a desktop-oriented page (.page.desktop, from
          the page map: its split and its cards alike) keep their own
          widths. */
@@ -494,7 +496,7 @@
       @media (min-width: 1116px) {
         .page:not(.desktop) > .split { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
         .page:not(.desktop) > .split > .main { grid-column: span 2; }
-        .page:not(.desktop) > :not(.split):not(.narrow) { max-width: calc((100% - 48px) * 2 / 3 + 24px); }
+        .page:not(.desktop) > :not(.split):not(.narrow):not(.wide) { max-width: calc((100% - 48px) * 2 / 3 + 24px); }
       }
 
       @media (min-width: 960px) {

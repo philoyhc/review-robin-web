@@ -1,0 +1,42 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% block title %}Workload{% endblock %}
+{% block content %}
+  {{ sample_title("Workload", me.name) }}
+  {# Who supports whom, on its own tab at the page's full width, three
+     columns (author, 2026-11-08): it names staff, never a student, so it
+     is not folded. Senior staff see the workload; anyone else with
+     Overview sees students and formal plans per staff member. #}
+  <section class="card card-pad wide" aria-labelledby="support-h">
+    <h2 id="support-h">Who supports whom</h2>
+    {% if senior %}
+    {# Workload (author, 2026-11-08): per staff member, for a term,
+       totals only, never which student; senior staff alone. #}
+    <p class="sub">Per staff member, for the term chosen. <strong>Assigned</strong>: the formal plans active in it, and the meetings and minutes with those students. <strong>Own</strong>: every other meeting logged, as students, meetings, meetings per student and minutes in total and per meeting (60+ min counts as 60), never which student, and none for fewer than {{ sample.WORKLOAD_MIN_STUDENTS }} students. Follow-ups are the frontline's own and count nowhere here.</p>
+    <form class="btnrow gap-below" method="get" action="{{ url('/workload/') }}" aria-label="Workload's term">
+      {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
+      <label for="wl-term" class="visually-hidden">Term</label>
+      <select id="wl-term" name="term" class="input">{% for t in sample.TERMS %}<option value="{{ t.key }}"{% if chosen_term and t.key == chosen_term.key %} selected{% endif %}>{{ t.label }}</option>{% endfor %}<option value="all"{% if not chosen_term %} selected{% endif %}>All terms</option></select>
+      <button type="submit" class="btn btn-secondary">Show</button>
+    </form>
+    <div class="table-wrap">
+      <table data-sort-auto id="support-table">
+        <thead>
+          <tr><th scope="col" rowspan="2">Staff</th><th scope="colgroup" colspan="3">Assigned</th><th scope="colgroup" colspan="5">Own</th></tr>
+          <tr><th scope="col" class="num">Plans</th><th scope="col" class="num">Meetings</th><th scope="col" class="num">Minutes</th><th scope="col" class="num">Students</th><th scope="col" class="num">Meetings</th><th scope="col" class="num">Per student</th><th scope="col" class="num">Minutes</th><th scope="col" class="num">Per meeting</th></tr>
+        </thead>
+        <tbody>{% for r in sample.workload(chosen_term) %}<tr><td class="strong">{{ r.staff }}{% if not r.shown and r.students %} <span class="chip chip-mute">Fewer than {{ sample.WORKLOAD_MIN_STUDENTS }} students</span>{% endif %}</td><td class="num">{{ r.plans }}</td><td class="num">{{ r.assigned_meetings }}</td><td class="num">{{ r.assigned_minutes }}</td><td class="num">{{ r.students }}</td>{% if r.shown %}<td class="num">{{ r.meetings }}</td><td class="num">{{ r.per_student }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.per_meeting }}</td>{% else %}{% for _ in range(4) %}<td class="num" data-sort-value="">–</td>{% endfor %}{% endif %}</tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="sub">Per staff member, how many students they have records with, and their formal assignments. No dates, minutes or counts of encounters: those are the records' content.</p>
+    <div class="table-wrap">
+      <table data-sort-auto id="support-table">
+        <thead><tr><th scope="col">Staff</th><th scope="col" class="num">Students</th><th scope="col" class="num">Assigned</th></tr></thead>
+        <tbody>{% for r in sample.who_supports_whom() %}<tr><td class="strong">{{ r.staff }}</td><td class="num">{{ r.students }}</td><td class="num">{{ r.formal }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+{% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

@@ -146,6 +146,12 @@ assignment runs through a formal plan. Workload splits into Assigned
 minutes, shown at any size) and Own (the other meetings, as rung 13,
 withheld below three students) (author, 2026-11-08).
 
+### Rung 15 — Workload tab
+
+Who supports whom has the most claim to the full three columns, so it
+leaves Overview for a **Workload** tab beside it, for whoever has
+Overview, open and at full width (author, 2026-11-08).
+
 ## Checks
 
 Each rung keeps `pytest`, `ruff`, `pyright` green and takes one
@@ -263,3 +269,6 @@ browser check passes on each rung.
   in the term. Rung 1's removal of Team workload is partly reversed.
 - **Rung 14:** as planned; rung 13's counts of plans as records and of
   Following are superseded by the two groups.
+- **Rung 15:** as planned; Home does not list Workload apart from
+  Overview, so a viewer with Overview alone still lands on it. The
+  sort fix for grouped headers rode rung 14.

@@ -89,16 +89,19 @@ def test_no_grant_means_no_support_logs(client: TestClient) -> None:
 def test_each_grant_gives_its_tabs(client: TestClient) -> None:
     """Author, 2026-10-29: the frontline's Home, Log and Students (Plans
     folded into Students, author, 2026-11-07);
-    senior staff and Other Staff view an Overview tab; no Safety flags tab."""
+    senior staff and Other Staff view Overview and, beside it, Workload
+    (author, 2026-11-08); no Safety flags tab."""
     assert tabs(client.get("/").text) == ["Home", "Log", "Students"]
     assert tabs(client.get(at("/overview/", "Sam Lee")).text) == [
-        "Overview"
+        "Overview",
+        "Workload",
     ]  # no Home: it would only come back here
-    assert tabs(client.get(at("/overview/", "Kenneth Lau")).text) == ["Overview"]
+    assert tabs(client.get(at("/overview/", "Kenneth Lau")).text) == ["Overview", "Workload"]
     assert tabs(client.get(at("/consultation/", "Marcus Tan")).text) == ["Consultation check"]
     assert tabs(client.get(at("/", "Nadia Hassan")).text) == [
         "Home",
         "Overview",
+        "Workload",
         "Consultation check",
     ]
     assert tabs(client.get(at("/sys-admin/", "Rachel Yeo")).text) == [
