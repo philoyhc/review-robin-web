@@ -151,7 +151,8 @@ you would hesitate to record?*
 and deal with it."*
 
 - [ ] Priya's Home lists every active flag, Unacknowledged above
-  Acknowledged.
+  Acknowledged; **Closed** below is folded, and opens to the flags closed
+  in the last 7 days (Hana Rahim's), then the search for older ones.
 - [ ] F-01 (Elena Park) offers **Acknowledge**, and **Close with outcome**
   asks for an outcome. As Daniel, its raiser, the same flag shows its
   state and no actions.

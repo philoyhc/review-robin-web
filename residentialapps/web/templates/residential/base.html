@@ -323,7 +323,7 @@
          heading is the control, with Show or Hide beside it. */
       details.fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; cursor: pointer; list-style: none; }
       details.fold > summary::-webkit-details-marker { display: none; }
-      details.fold > summary h2 { margin: 0; }
+      details.fold > summary :is(h2, h3) { margin: 0; }
       details.fold:not([open]) > summary [data-when="open"], details.fold[open] > summary [data-when="closed"] { display: none; }
       details.fold[open] > summary { margin-bottom: 8px; }
       /* Safety: its own color and heading, set apart from routine controls

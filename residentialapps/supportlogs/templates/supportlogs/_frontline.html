@@ -76,7 +76,8 @@
 
 {# The flags a viewer may see: active ones, unacknowledged above
    acknowledged, and for a recipient the closed ones with their outcomes
-   below (UI spec screen 9). #}
+   below (UI spec screen 9): folded until opened, those closed in the
+   last 7 days, then the search for older ones (author, 2026-11-08). #}
 {% macro flags_card(me, closed=false) -%}
   {% set active = sample.flags_for(me, active=true) %}
   <section class="card card-pad safety gap-below" aria-labelledby="flags-h">
@@ -84,10 +85,11 @@
     <p class="sub">{% if sample.holds(me, sample.RECIPIENT) %}Every active flag, unacknowledged first, each until it is closed with an outcome.{% else %}The flags you raised, until each is closed with an outcome.{% endif %}</p>
     {% if active %}<ul class="items">{% for f in active %}{{ flag_item(f) }}{% endfor %}</ul>{% else %}<p class="sub">None active.</p>{% endif %}
     {% if closed %}
-      {% set done = sample.flags_for(me, active=false) %}
-      <h3 class="gap-above-sm">Closed</h3>
-      <div class="field-wide"><label for="flag-find">Find by student or date</label><input id="flag-find" class="input" type="search" disabled></div>
-      {% if done %}<ul class="items">{% for f in done %}{{ flag_item(f) }}{% endfor %}</ul>{% else %}<p class="sub">None yet.</p>{% endif %}
+      {% set done = sample.recently_closed(me) %}
+      <details class="fold gap-above-sm"><summary><h3 id="closed-h">Closed <span class="count">· {{ done | length }} in the last {{ sample.CLOSED_DAYS }} days</span></h3><span class="reveal-cta" data-when="closed" aria-hidden="true">Show</span><span class="reveal-cta" data-when="open" aria-hidden="true">Hide</span></summary>
+        {% if done %}<ul class="items">{% for f in done %}{{ flag_item(f) }}{% endfor %}</ul>{% else %}<p class="sub">None closed in the last {{ sample.CLOSED_DAYS }} days.</p>{% endif %}
+        <div class="field-wide gap-above-sm"><label for="flag-find">Find an older one by student or date</label><input id="flag-find" class="input" type="search" disabled></div>
+      </details>
     {% endif %}
   </section>
 {%- endmacro %}

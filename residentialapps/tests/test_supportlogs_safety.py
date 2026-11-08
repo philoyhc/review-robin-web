@@ -8,6 +8,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -59,7 +60,7 @@ def test_a_frontline_recipient_sees_every_flag_and_the_count(client: TestClient)
         ("/flags/F-01", "Unacknowledged"),
         ("/flags/F-02", "Acknowledged · Sam Lee"),
     ]
-    assert ("/flags/F-03", "Closed · Assessed by counselling") in flags(card.split("<h3")[1])
+    assert ("/flags/F-04", "Closed · No further action") in flags(card.split("<h3")[1])
     assert badge(client.get("/?as=Priya%20Raman").text) == [("Home", "1")]
     assert "<h3" not in section(client.get("/").text, "flags-h")  # a raiser's own active flags only
 
@@ -71,11 +72,19 @@ def test_a_recipient_with_nothing_else_finds_closed_flags_too(client: TestClient
         ("/flags/F-01", "Unacknowledged"),
         ("/flags/F-02", "Acknowledged · Sam Lee"),
     ]
-    assert flags(card.split("<h3")[1]) == [
-        ("/flags/F-04", "Closed · No further action"),
-        ("/flags/F-03", "Closed · Assessed by counselling"),
-    ]
-    assert 'id="flag-find"' in card and badge(home) == [("Home", "1")]
+    # Closed (author, 2026-11-08): folded until opened, only those closed
+    # in the last 7 days (F-04; F-03 closed in September is found by
+    # search), and the search after the names.
+    closed = card.split("<h3")[1]
+    assert flags(closed) == [("/flags/F-04", "Closed · No further action")]
+    assert "· 1 in the last 7 days" in closed
+    assert '<details class="fold gap-above-sm"><summary><h3 id="closed-h">' in card
+    assert '<details class="fold gap-above-sm" open' not in card
+    assert closed.index("/flags/F-04") < closed.index('id="flag-find"')
+    assert "Find an older one by student or date" in closed
+    assert badge(home) == [("Home", "1")]
+    old = next(f for f in sample.FLAGS if f.id == "F-03")
+    assert old.closed_at and old.closed_at.date() < sample.TODAY - timedelta(days=6)
 
 
 def test_senior_recipients_find_the_flags_on_overview(client: TestClient) -> None:

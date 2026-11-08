@@ -108,6 +108,12 @@ as a safety flag is acknowledged. Copy, model, spec and explainer follow.
 Every card on a senior's Overview that shows names starts closed, the
 safety flags banner and the tiles aside (author, 2026-11-08).
 
+### Rung 10 — Closed flags, folded and recent
+
+A recipient's flags card folds **Closed**, lists only the flags closed in
+the last 7 days, and puts the search for older ones after them (author,
+2026-11-08).
+
 ## Checks
 
 Each rung keeps `pytest`, `ruff`, `pyright` green and takes one
@@ -188,3 +194,5 @@ browser check passes on each rung.
   card body, the spec silent on what folding hides, B2's extra click and
   wordy screen-reader names, all fixed; how VoiceOver and NVDA announce a
   heading inside a summary is for the author's browser check.
+- **Rung 10:** as planned; the sample's F-04 (Hana Rahim) now closed on
+  27 Oct, so the list has one to show and F-03 is left to the search.
