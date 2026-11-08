@@ -14,9 +14,8 @@
      gives: due state, last contact, next expected, contacts (author,
      2026-11-07, confidentiality rule 3). #}
   {% set walled = not owner and not shared %}
-  {# A follow-up is the frontline's own: seen through the wall it shows
-     only who, whom and its status, never its dates, cadence, instruction
-     or history. A formal plan's facts are senior staff's own setting, so
+  {# A follow-up is the frontline's own: the route does not show it
+     through the wall at all (author, 2026-11-08). A formal plan's facts are senior staff's own setting, so
      they see them, and its history from the assignment on; Other Staff
      view sees only who, whom, kind and status (author, 2026-11-07). #}
   {% set thin = walled and not (p.formal and senior) %}
@@ -52,25 +51,13 @@
     </div>
     <div class="side">
       <section class="card card-pad muted" aria-labelledby="act-h">
-        <h2 id="act-h">{{ "Change it" if (owner and not p.formal) or senior else ("Assigned" if owner else "Read only") }}</h2>
-        {% if senior %}
-          {% if not p.formal %}
-            <p class="sub">Convert to a formal assignment, keeping its history (§8).</p>
-            <div class="field-wide"><label for="cv-source">Source</label><select id="cv-source" class="input" disabled>{% for src in sample.ASSIGNMENT_SOURCES %}<option>{{ src }}</option>{% endfor %}</select></div>
-            <div class="field-wide"><label for="cv-cadence">Cadence</label><select id="cv-cadence" class="input" disabled><option selected>Choose a cadence</option>{% for c in sample.ASSIGNMENT_CADENCES %}<option>{{ c }}</option>{% endfor %}</select></div>
-            <div class="field-wide"><label for="cv-review">Review on (optional)</label><input id="cv-review" class="input" type="date" disabled></div>
-            <div class="field-wide"><label for="cv-instr">Instruction (optional)</label><input id="cv-instr" class="input" maxlength="160" disabled aria-describedby="cv-instr-what">
-              <span id="cv-instr-what" class="subtle small">What to do, never why: "weekly check-in, review in four weeks" (§7.5).</span></div>
-            <label class="check"><input type="checkbox" disabled> Safety-plan support</label>
-            <p class="subtle small">Counselling only, and then a cadence and an instruction are required (§5.10).</p>
-            <button type="button" class="btn btn-primary gap-above-sm" disabled>Convert to formal assignment</button>
-          {% else %}
-            <div class="field-wide"><label for="st">Status</label><select id="st" class="input" disabled>{% for st in sample.PLAN_STATUSES %}<option{% if st == p.status %} selected{% endif %}>{{ st }}</option>{% endfor %}</select></div>
-            <div class="field-wide"><label for="fc">Cadence</label><select id="fc" class="input" disabled>{% for c in sample.ASSIGNMENT_CADENCES %}<option{% if c == p.cadence %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
-            <div class="field-wide"><label for="fr">Review on (optional)</label><input id="fr" class="input" type="date"{% if p.review %} value="{{ p.review.isoformat() }}"{% endif %} disabled></div>
-            <label class="check"><input type="checkbox"{% if p.safety_plan %} checked{% endif %} disabled> Safety-plan support</label>
-            <button type="button" class="btn btn-secondary gap-above-sm" disabled>Save</button>
-          {% endif %}
+        <h2 id="act-h">{{ "Change it" if (owner and not p.formal) or (senior and p.formal) else ("Assigned" if owner else "Read only") }}</h2>
+        {% if senior and p.formal %}
+          <div class="field-wide"><label for="st">Status</label><select id="st" class="input" disabled>{% for st in sample.PLAN_STATUSES %}<option{% if st == p.status %} selected{% endif %}>{{ st }}</option>{% endfor %}</select></div>
+          <div class="field-wide"><label for="fc">Cadence</label><select id="fc" class="input" disabled>{% for c in sample.ASSIGNMENT_CADENCES %}<option{% if c == p.cadence %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
+          <div class="field-wide"><label for="fr">Review on (optional)</label><input id="fr" class="input" type="date"{% if p.review %} value="{{ p.review.isoformat() }}"{% endif %} disabled></div>
+          <label class="check"><input type="checkbox"{% if p.safety_plan %} checked{% endif %} disabled> Safety-plan support</label>
+          <button type="button" class="btn btn-secondary gap-above-sm" disabled>Save</button>
         {% elif owner and not p.formal %}
           <div class="field-wide"><label for="cad">Cadence</label><select id="cad" class="input" disabled>{% for c in sample.FOLLOW_UP_CADENCES %}<option{% if c == p.cadence %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
           <div class="btnrow"><button type="button" class="btn btn-secondary" disabled>Save cadence</button><button type="button" class="btn btn-secondary" disabled>Stop following up</button></div>

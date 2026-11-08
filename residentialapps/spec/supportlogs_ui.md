@@ -206,25 +206,30 @@ form's end, and the main action is a full-width Primary on the page
     identifiable, off by default and recorded.
   - **The wall** (author, 2026-11-07, rule 3 below): Overview shows
     **Who supports whom** (per staff member, students with records and
-    plans) and **Students across staff** (per student, the staff with
+    formal plans) and **Students across staff** (per student, the staff with
     records and the signals), metadata only. For senior staff alone, Who
     supports whom carries each staff member's workload for a chosen term
-    (the current one by default, or all): students with a record in it
-    (a meeting, or a plan begun in it), records (meetings and plans),
-    records per student, minutes in total and per meeting (60+ min
-    counting as 60), and formal assignments and follow-ups active in it
-    (author, 2026-11-08). Totals per staff member only, never per student
+    (the current one by default, or all) in two groups (author,
+    2026-11-08). **Assigned**: the formal plans active in it, and the
+    meetings and minutes with those plans' students, shown whatever
+    their number, since a senior assigned them. **Own**: every other
+    meeting in it, as students, meetings, meetings per student, minutes
+    in total and per meeting (60+ min counting as 60), never per student
     or which student, and below three students only the number of
-    students shows; Other Staff view and aggregate view see none. A student's history lists
+    students shows. Other Staff view and aggregate view see none. A student's history lists
     the staff with records, each with **Request a share** (inert until
     wired); its encounters and Share on their behalf are gone. A plan
     seen by senior staff or Other Staff view shows no due state, last
     contact, next expected or contacts. A formal plan keeps, for senior
     staff, its source, cadence, review, instruction and history from its
-    assignment or conversion on; Other Staff view sees any plan's who
-    (its staff member and who assigned it), whom, kind and status only,
-    on the plan and on Overview's Every plan (author, 2026-11-07). A
-    follow-up's Convert form offers no cadence of its own. Records across staff downloads
+    assignment or conversion on; Other Staff view sees a formal plan's
+    who (its staff member and who assigned it), whom, kind and status
+    only, on the plan and on Overview's Every formal plan (author,
+    2026-11-07). **A follow-up is its staff member's own** (author,
+    2026-11-08): senior staff and Other Staff view do not see it listed,
+    counted or opened (404) unless it is shared with them, and there is
+    no senior Convert; a follow-up becomes formal through the owner's
+    Flag for formal assignment. Records across staff downloads
     encounters as staff and student pairs only.
   - Senior staff never write into others' log records.
 
@@ -298,14 +303,14 @@ someone's behalf), **acknowledge** for having seen information sent on
   - a consultation check.
 - **A senior's Overview folds every card that names students** (author,
   2026-11-08): Who supports whom, Students across staff, Flagged for
-  formal assignment and Every plan start closed, each heading opening its
+  formal assignment and Every formal plan start closed, each heading opening its
   card, with Show or Hide beside it. The safety flags banner, the count
   tiles and Who holds access (staff and their grants, author, same day)
   stay open; other viewers' Overview is
   unchanged. Folding is presentation only: the names are in the page
   (find-in-page opens a card), and opening one is not a recorded read.
 - **Overview names by default only students on a formal plan, with a
-  safety flag (open or closed) or with a team** (author, 2026-11-07), in Students across staff, Every plan and Flagged
+  safety flag (open or closed) or with a team** (author, 2026-11-07), in Students across staff, Every formal plan and Flagged
   for formal assignment. A flag for formal assignment, with its
   suggested cadence, is a message to senior staff, not content. Any other student's name is replaced by
   **Show name** alone (author, 2026-11-07: no "No formal plan" label), which shows the name and its link in place and reads

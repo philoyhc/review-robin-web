@@ -347,8 +347,8 @@ def test_the_staff_templates_name_the_staff_column(client: TestClient) -> None:
         assert template == [["Staff", *sample.STAFF_TEMPLATE_COLUMNS[what]]], what
     plans = sample.STAFF_TEMPLATE_COLUMNS["plans"]
     assert (
-        "Kind" in plans and "Source" in plans and "Status" not in plans
-    )  # senior staff make formal assignments
+        "Kind" not in plans and "Source" in plans and "Status" not in plans
+    )  # senior staff make formal assignments, and only those
 
 
 def test_purged_records_filter_by_staff_and_student(client: TestClient) -> None:

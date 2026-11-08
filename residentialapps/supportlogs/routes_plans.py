@@ -1,6 +1,6 @@
 """Support Logs' plans and sharing on sample data, segment 1D item 1 rung 4:
-a plan's detail with its history and, for senior staff, conversion of a
-follow-up to a formal assignment (§7, §8); Flag for formal assignment
+a plan's detail with its history (§7, §8), a follow-up its owner's alone
+(author, 2026-11-08); Flag for formal assignment
 (§3.1); and Share past records (§11.1; sharing screens rung 3). Nothing is
 stored: each form shows its confirmation, and changes wait on item 4."""
 
@@ -22,15 +22,20 @@ READERS = (sample.FRONTLINE, sample.SENIOR, sample.VIEW_IDENTIFIABLE)
 
 @router.get("/plans/{pid}", name="supportlogs_plan")
 def plan_detail(request: Request, pid: str) -> Response:
-    """A plan (§7, §8): its owner's, a senior's who may convert a follow-up
-    to a formal assignment, or Other Staff identifiable view's, read-only
-    (the page map's Plans). A plan the viewer may not see is not found."""
+    """A plan (§7, §8): its owner's; a formal one also senior staff's, who
+    change it, and Other Staff identifiable view's, read-only (the page
+    map's Plans). A follow-up only its owner's or through a share. A plan
+    the viewer may not see is not found."""
     me = sample.viewer(request.query_params.get("as"))
     if not sample.holds(me, *READERS):
         return gated(request, "supportlogs/plan.html", *READERS)  # the 403 page
     found = sample.plan(pid)
     oversees = sample.holds(me, sample.SENIOR, sample.VIEW_IDENTIFIABLE)
     if found is None or not (oversees or sample.may_read_plan(me.name, found)):
+        raise HTTPException(status_code=404)
+    # A follow-up is its staff member's own (author, 2026-11-08): senior
+    # staff and Other Staff view reach it only through a share.
+    if not found.formal and not (found.staff == me.name or sample.may_read_plan(me.name, found)):
         raise HTTPException(status_code=404)
     owner = found.staff == me.name
     return gated(

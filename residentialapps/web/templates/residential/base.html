@@ -804,9 +804,29 @@
         });
         // `data-sort-auto`: a header button per labelled column, its cells
         // keyed by position; rows whose cells do not line up are left out.
+        // A grouped header (a `colspan` row over a row of columns, `rowspan`
+        // beside it) gives each column the header at its foot, so a group's
+        // own heading takes no button (author, 2026-11-08).
+        function leafHeads(head) {
+          var grid = [];
+          Array.prototype.forEach.call(head ? head.rows : [], function (tr, r) {
+            grid[r] = grid[r] || [];
+            var col = 0;
+            Array.prototype.forEach.call(tr.cells, function (th) {
+              while (grid[r][col]) col++;
+              for (var rr = r; rr < r + th.rowSpan; rr++) {
+                grid[rr] = grid[rr] || [];
+                for (var cc = col; cc < col + th.colSpan; cc++) grid[rr][cc] = th;
+              }
+              col += th.colSpan;
+            });
+          });
+          return grid.length ? grid[grid.length - 1] : [];
+        }
         Array.prototype.forEach.call(document.querySelectorAll("table[data-sort-auto]"), function (table) {
-          var heads = table.tHead ? table.tHead.rows[0].cells : [];
+          var heads = leafHeads(table.tHead);
           Array.prototype.forEach.call(heads, function (th, i) {
+            if (th.colSpan !== 1) return;
             var label = th.textContent.trim();
             if (!label || th.querySelector(".visually-hidden")) return;
             th.classList.add("sortable");

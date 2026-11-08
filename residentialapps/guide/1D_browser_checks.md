@@ -272,16 +272,19 @@ about?"*
   beside it).
 - [ ] A notice that you see who has records with whom, never what they
   recorded; tiles counting plans and students; **Who supports whom**
-  (sortable: per staff member, students, records, per student, minutes,
-  per meeting, assigned, following, for the term chosen above it; this
-  term shows Daniel Koh's 6 students, 12 records and 165 minutes, Arjun
-  Nair and Mei Ling Tan "Fewer than 3 students" with no figures, and
-  AY2025-2026 Term 2 none);
+  (sortable, for the term chosen above it: per staff member, Assigned
+  plans, meetings and minutes, then Own students, meetings, per student,
+  minutes and per meeting; this term shows Daniel Koh's 2 plans, 3
+  meetings and 75 minutes assigned and 4 students, 5 meetings and 90
+  minutes his own, Arjun Nair (1 plan) and Mei Ling Tan "Fewer than 3
+  students" with no own figures, and AY2025-2026 Term 2 none; no Following column or
+  follow-ups tile anywhere);
   **Students across staff**, naming only Elena Park, Jia Wen Lee, Clara
   Tan, Dev Menon and Ivan Seet until **Show name** opens another row, and
   no dates, minutes or encounter counts anywhere else, nor any tied to a
   student; as Siti Rahman, Who supports whom has no workload columns; Flagged for formal
-  assignment, with Assign disabled; Every plan, without due states.
+  assignment, with Assign disabled; Every formal plan, without due
+  states.
 
 Ask: *Is who-has-records-with-whom enough to run a weekly meeting? What
 would you ask a staff member to share?*
@@ -297,26 +300,28 @@ would you ask a staff member to share?*
   which stays marked.
 - [ ] **Staff with records** lists Priya Raman and Arjun Nair, each with
   **Request a share**, disabled; no encounters, dates or notes anywhere.
-  Her follow-up (P-05) shows who, whom and status only, and Convert
-  offers no cadence of its own. Her Team card names Priya Raman and Daniel Koh; Hand over
+  Her follow-up (P-05) is Priya's own: not in her history, and its
+  address is not found. Her Team card names Priya Raman and Daniel Koh; Hand over
   offers From (Priya Raman and Arjun Nair only) and To, disabled.
 
 Ask: *When would you ask a staff member to share? Would you tell them
 why?*
 
-### B3. Turning a follow-up into a formal plan
+### B3. A follow-up that becomes a formal plan
 
-*Task: "Daniel's follow-up with Aiden Chen needs to become a formal
+*Task: "Daniel's follow-up with Aiden Chen may need to become a formal
 plan."*
 
-- [ ] P-03 offers **Convert to formal assignment**, with source, cadence,
-  review date, instruction and Safety-plan support.
+- [ ] P-03, his follow-up, is not found as Sam Lee: there is no Convert.
+  A follow-up reaches senior staff only as a **Flag for formal
+  assignment**: Elena Park, from Daniel's follow-up P-04, is listed under
+  Flagged for formal assignment.
 - [ ] P-02, converted from Daniel's follow-up, shows its source, cadence
   and History from the conversion on, never when he began following up.
   As Siti Rahman it shows only who, whom, kind and status.
 
-Ask: *Are the sources and cadences right? Who should be told when a plan
-is assigned?*
+Ask: *Is a flag the right way for a follow-up to reach you? Who should
+be told when a plan is assigned?*
 
 ### B4. Safety flags as recipient
 

@@ -99,14 +99,18 @@ is supporting whom, and where support may need to move.
 - **By default they see only who has records with which students:** how
   many students each staff member has records with, and how many staff
   each student has records with. They do not see when, how often or how
-  long you met any one student, and none of what you recorded. That is
+  long you met any one student, except in total for the students on
+  formal plans assigned to you, and none of what you recorded. That is
   the records' content, and a senior reads it only through a share.
-- **For workload, they see your totals for a term:** how many students
-  you have records with, how many records you made, how many minutes
-  your meetings took, and how many plans you had running, never which
-  student any of it was with. If you had fewer than three students in
-  the term, only the number of students shows, so no total can point to
-  one student.
+- **For workload, they see your totals for a term, in two parts:** the
+  formal plans assigned to you that ran in the term, with the meetings
+  and minutes with those students, who are known to them already; and
+  everything else you logged, as how many students, meetings, meetings
+  per student and minutes in total and per meeting, never which student
+  any of it was with. If everything else was with fewer than three
+  students in the term, only the number of students shows, so no total
+  can point to one student. Your own follow-ups are not shown or
+  counted; one becomes formal when you flag it for formal assignment.
 - **They see a student's name only when the student needs attention:**
   the student is on a formal plan, has a safety flag, or has a team.
   Other students are not named until a senior chooses to look, with
@@ -167,10 +171,11 @@ students, so they can oversee the team, but reads what you recorded only
 if you share it, or, in an emergency, if a system administrator agrees on
 your behalf. Either way it is recorded.
 
-**Does the Master see how much time I spend with students?**
-Only your totals for a term, for workload: how many meetings and minutes
-in all, never with whom. How often and how long you met any one student
-is part of your records' content, seen only through a share.
+**Does the Master see how much time I spend with students?** Only your
+totals for a term, for workload: meetings and minutes with the students
+on formal plans assigned to you, and with everyone else in all, never
+with whom. Otherwise, how often and how long you met any one student is
+part of your records' content, seen only through a share.
 
 **What happens to my records when I leave?**
 They are handed over to whoever takes on your students, with your

@@ -136,6 +136,16 @@ active plans for a chosen term; totals per staff member only, never
 which student, none below three students (author, 2026-11-08). Other
 Staff view and aggregate view see none.
 
+### Rung 14 — Follow-ups are the owner's; workload in two groups
+
+A follow-up is frontline-initiated, so senior staff and Other Staff view
+do not see it listed, counted or opened without a share, and there is no
+senior Convert: it becomes formal by Flag for formal assignment. Every
+assignment runs through a formal plan. Workload splits into Assigned
+(formal plans active in the term, with their students' meetings and
+minutes, shown at any size) and Own (the other meetings, as rung 13,
+withheld below three students) (author, 2026-11-08).
+
 ## Checks
 
 Each rung keeps `pytest`, `ruff`, `pyright` green and takes one
@@ -251,3 +261,5 @@ browser check passes on each rung.
   of one student's could be tied to them; students and records count
   plans as well as meetings; Assigned and Following are the plans active
   in the term. Rung 1's removal of Team workload is partly reversed.
+- **Rung 14:** as planned; rung 13's counts of plans as records and of
+  Following are superseded by the two groups.
