@@ -28,7 +28,7 @@ in `residentialapps/web/templates/residential/base.html`.
   1116 px a page's main column spans two and its side column one, and a
   card on its own spans two, never the third, unless it is a wide card:
   a table that earns the full width (`.wide`, author, 2026-11-08: Support
-  Logs' Who supports whom on Workload); from 736 px to 1115 px the
+  Logs' Who supports whom on Staff Overview); from 736 px to 1115 px the
   side column is 340 px and the main column takes the rest. **The side
   column starts at the top** (author, 2026-11-08): what opens a page (a
   notice, the flags, the tiles, a page's first button) sits in the main

@@ -27,11 +27,12 @@ Support Logs' own under `data-app="supportlogs"`.
   (`residentialapps/spec/residentialops_ui.md` §1, author, 2026-11-08):
   at most three of at least 340 px, three from 1116 px wide, two from
   736 px. Sys admin is desktop-oriented, so it keeps the full width for
-  its cards. Workload's Who supports whom is the one wide card: all
+  its cards. Staff Overview's Who supports whom is the one wide card: all
   three columns (author, 2026-11-08).
-- **Overview, Workload and the Consultation check are responsive**: their
+- **Students Overview, Staff Overview and the Consultation check are responsive**: their
   tables scroll sideways in `.table-wrap` when their column is narrower
-  than they are, on a phone and in Overview's main column below 1116 px.
+  than they are, on a phone and in Students Overview's main column below
+  1116 px.
 - **Log's students are the viewer's favorites** (author, 2026-11-06),
   marked with a star on Students, in the order favorited, with a hint to
   mark more there and "Or find a student" for the rest. Home has no Log
@@ -86,9 +87,15 @@ form's end, and the main action is a full-width Primary on the page
   super-admin. Nothing neutral sits between them (ruling 3).
 - **Tabs follow the grants**, never the appointment:
   - Log and Students for the frontline;
-  - Overview and Workload for senior staff and Other Staff view
-    (Workload, author, 2026-11-08: Who supports whom on its own, at the
-    page's full width; Home never lists it apart from Overview);
+  - **Students Overview** (`/overview/`) and **Staff Overview**
+    (`/workload/`) for senior staff and Other Staff view (author,
+    2026-11-08). Students Overview is the students' side of oversight:
+    the flags, the tiles, Students across staff, Flagged for formal
+    assignment, Every formal plan. Staff Overview is the staff's: Who
+    supports whom at the page's full width, then, for senior staff, Who
+    holds access, the support-activity audit and records across staff,
+    whose pages return to it. Home never lists Staff Overview apart from
+    Students Overview. In prose, "Overview" means Students Overview;
   - Consultation check for its grant;
   - Access, Configuration and Audit log in Sys admin.
 - **Home is a tab only when it is a page of its own**: the frontline's
@@ -196,7 +203,7 @@ form's end, and the main action is a full-width Primary on the page
 - **Administration and senior staff, each in view of the other** (author,
   2026-10-30). Administration decides who sees content but sees none;
   senior staff see who has records with whom but grant no access:
-  - **Who holds access** (`/overview/access`, linked from Overview's card),
+  - **Who holds access** (`/overview/access`, linked from Staff Overview's card),
     for senior identifiable access: each grant's holders and the access
     changes, read-only.
   - **Senior reads** on Sys admin's Audit log: each senior's reads with
@@ -207,7 +214,7 @@ form's end, and the main action is a full-width Primary on the page
     always has one; `?preview=no-senior` shows the warning).
   - **Configuration's Access card**: a sys admin may grant itself Senior
     identifiable, off by default and recorded.
-  - **The wall** (author, 2026-11-07, rule 3 below): Workload shows
+  - **The wall** (author, 2026-11-07, rule 3 below): Staff Overview shows
     **Who supports whom** (per staff member, students with records and
     formal plans) and Overview **Students across staff** (per student, the staff with
     records and the signals), metadata only. For senior staff alone, Who
@@ -239,7 +246,7 @@ form's end, and the main action is a full-width Primary on the page
 ## 5. Lists and tables
 
 - **Phone lists** (`ul.items`) carry the frontline's rows.
-- **Tables carry Workload's Who supports whom, Overview's Students across staff, the
+- **Tables carry Staff Overview's Who supports whom, Overview's Students across staff, the
   Consultation check's result, Access and both audits**; their other cards
   are lists. Each table is sortable (`data-sort-auto`), with `data-sort-value` on cells whose text
   is not their value. The exception is a table whose order is its
@@ -307,9 +314,9 @@ someone's behalf), **acknowledge** for having seen information sent on
 - **A senior's Overview folds every card that names students** (author,
   2026-11-08): Students across staff, Flagged for
   formal assignment and Every formal plan start closed, each heading opening its
-  card, with Show or Hide beside it. The safety flags banner, the count
-  tiles and Who holds access (staff and their grants, author, same day)
-  stay open; other viewers' Overview is
+  card, with Show or Hide beside it. The safety flags banner and the count
+  tiles stay open, as does Who holds access (staff and their grants,
+  author, same day), now on Staff Overview; other viewers' Overview is
   unchanged. Folding is presentation only: the names are in the page
   (find-in-page opens a card), and opening one is not a recorded read.
 - **Overview names by default only students on a formal plan, with a
@@ -344,7 +351,7 @@ someone's behalf), **acknowledge** for having seen information sent on
   and **Agree on behalf** (a handover or a senior's share request
   waiting on someone who cannot be reached, named by staff only), never
   a student. The
-  support-activity audit is senior staff's, on Overview.
+  support-activity audit is senior staff's, on Staff Overview.
 - **Notes are short and say so**: a live count to the limit, and the
   minimization guidance beside the field.
 

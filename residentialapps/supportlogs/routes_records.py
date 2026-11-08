@@ -148,7 +148,7 @@ def staff_records(request: Request) -> Response:
         request,
         "supportlogs/overview_records.html",
         sample.SENIOR,
-        current_tab="/overview/",
+        current_tab="/workload/",
         unlocked=records_unlocked(request),
         staff=staff,
         student=student,

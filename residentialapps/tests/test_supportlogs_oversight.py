@@ -28,7 +28,7 @@ def section(page: str, heading_id: str) -> str:
 
 
 def test_senior_staff_see_who_holds_access(client: TestClient) -> None:
-    card = section(client.get("/overview/" + SAM).text, "who-h")
+    card = section(client.get("/workload/" + SAM).text, "who-h")
     assert f"<dt>{sample.SENIOR}</dt><dd>Sam Lee</dd>" in card
     assert 'href="/overview/access?as=Sam%20Lee"' in card
     page = client.get("/overview/access" + SAM).text
@@ -43,7 +43,7 @@ def test_senior_staff_see_who_holds_access(client: TestClient) -> None:
 
 
 def test_who_holds_access_is_senior_only(client: TestClient) -> None:
-    assert 'id="who-h"' not in client.get("/overview/?as=Siti%20Rahman").text
+    assert 'id="who-h"' not in client.get("/workload/?as=Siti%20Rahman").text
     for name in ("Siti Rahman", "Kenneth Lau", "Daniel Koh", "Rachel Yeo"):
         assert client.get(f"/overview/access?as={name.replace(' ', '%20')}").status_code == 403, (
             name

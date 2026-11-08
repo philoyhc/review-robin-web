@@ -26,21 +26,23 @@ SYS_ADMIN_AREA = "Sys admin"
 # The staff explainer's page (author, 2026-11-07), in every account menu.
 EXPLAINER = "Who can see what"
 EXPLAINER_PATH = "/who-can-see-what"
-# Who supports whom's own tab, beside Overview (author, 2026-11-08).
+# Staff Overview: Who supports whom and the staff-facing cards, beside
+# Students Overview (author, 2026-11-08). Its path predates the name.
 WORKLOAD = "/workload/"
 
 
 def _grant_tabs(v: sample.Viewer) -> list[tuple[str, str]]:
     """Each grant's own tabs (author, 2026-10-29): the frontline's Log and
     Students, Plans folded into Students' filter (author, 2026-11-07);
-    Overview and Workload for senior staff and Other Staff view;
+    Students Overview and Staff Overview (author, 2026-11-08) for senior
+    staff and Other Staff view;
     Consultation check. No Safety flags tab: flags list on Home and
     Overview."""
     tabs: list[tuple[str, str]] = []
     if sample.holds(v, sample.FRONTLINE):
         tabs += [("Log", "/log"), ("Students", "/students/")]
     if sample.holds(v, sample.SENIOR, *sample.VIEW):
-        tabs += [("Overview", "/overview/"), ("Workload", WORKLOAD)]
+        tabs += [("Students Overview", "/overview/"), ("Staff Overview", WORKLOAD)]
     if sample.holds(v, sample.CONSULTATION):
         tabs.append(("Consultation check", "/consultation/"))
     return tabs

@@ -6,7 +6,7 @@
 {% block content %}
   {% set s = sample.student(f.student) %}
   {% set recipient = sample.holds(me, sample.RECIPIENT) %}
-  <a class="back" href="{{ url(back) }}{{ as_query }}">‹ {{ "Home" if back == "/" else "Overview" }}</a>
+  <a class="back" href="{{ url(back) }}{{ as_query }}">‹ {{ "Home" if back == "/" else "Students Overview" }}</a>
   {{ sample_title("Safety flag", me.name) }}
   {# A flag's detail (UI spec screen 8): every view, acknowledgement and
      closure is audited (§11.3). #}

@@ -259,33 +259,36 @@ would you change?*
 Act as **Sam Lee** (Master: senior identifiable, safety-flag recipient)
 unless a task says otherwise.
 
-### B1. The weekly picture: Overview and Workload
+### B1. The weekly picture: Students Overview and Staff Overview
 
 *Task: "How is the team's support load, and who should we be worried
 about?"*
 
-- [ ] Overview and Workload alone in the tabs, Overview with a red badge **1** for the
+- [ ] **Students Overview** and **Staff Overview** alone in the tabs, Students Overview with a red badge **1** for the
   unacknowledged flag (a screen reader hears "unacknowledged safety
   flag").
-- [ ] The safety flags banner, the tiles and Who holds access are open;
-  every other card that shows names starts closed, and its heading opens it (Show or Hide
+- [ ] On Students Overview, the safety flags banner and the tiles are open;
+  every card that shows names starts closed, and its heading opens it (Show or Hide
   beside it).
 - [ ] A notice that you see who has records with whom, never what they
   recorded; tiles counting plans and students; no Following column or
   follow-ups tile anywhere; **Students across staff**, naming only Elena Park, Jia Wen Lee, Clara
   Tan, Dev Menon and Ivan Seet until **Show name** opens another row, and
   no dates, minutes or encounter counts anywhere else, nor any tied to a
-  student; Flagged for formal assignment, with Assign disabled; Every
-  formal plan, without due states.
-- [ ] **Workload** holds **Who supports whom**, open, across the page's
+  student; beside them, Flagged for formal assignment, with Assign
+  disabled, and Every formal plan, without due states. No Who holds
+  access, audit or records card.
+- [ ] **Staff Overview** opens with **Who supports whom**, open, across the page's
   full width (three columns from 1116 px) and sortable by each column,
   for the term chosen above it: per staff member, Assigned plans,
   meetings and minutes, then Own students, meetings, per student,
   minutes and per meeting. This term shows Daniel Koh's 2 plans, 3
   meetings and 75 minutes assigned and 4 students, 5 meetings and 90
   minutes his own, Arjun Nair (1 plan) and Mei Ling Tan "Fewer than 3
-  students" with no own figures, and AY2025-2026 Term 2 none. As Siti
-  Rahman it has no workload columns.
+  students" with no own figures, and AY2025-2026 Term 2 none. Below
+  it, Who holds access (open), the support-activity audit and Records
+  across staff, each page's back link returning to Staff Overview. As
+  Siti Rahman it has no workload columns and none of those three.
 
 Ask: *Is who-has-records-with-whom enough to run a weekly meeting? What
 would you ask a staff member to share?*
@@ -297,7 +300,7 @@ would you ask a staff member to share?*
 - [ ] Open **Students across staff** first: Hana Rahim is named, by her team and her closed safety flag (a
   student with none of a formal plan, a flag or a team shows **Show
   name** first); her name opens her page, with
-  "Opening this history is recorded"; the back link returns to Overview,
+  "Opening this history is recorded"; the back link returns to Students Overview,
   which stays marked.
 - [ ] **Staff with records** lists Priya Raman and Arjun Nair, each with
   **Request a share**, disabled; no encounters, dates or notes anywhere.
@@ -402,9 +405,11 @@ you would act on?*
 ### C2. Tables and widths
 
 - [ ] **Columns**: at 1280 px a page's own cards stop at two thirds of the
-  page, and its side column, a third, starts at the top: Overview's Who
-  holds access, audit and records beside the notice and the flags (as
-  Siti Rahman, with no side cards, the main column takes the width);
+  page, and its side column, a third, starts at the top: Students
+  Overview's Flagged for formal assignment and Every formal plan beside
+  the notice and the flags (as Kenneth Lau, with no side cards, the main
+  column takes the width); Staff Overview's Who supports whom across all
+  three, then Who holds access beside the audit and records;
   Home's My last 14 days beside the flags; Students' Your records,
   locked, beside Find (unlocked it joins the main column, which takes the
   width); the Consultation check's past checks beside the form. At

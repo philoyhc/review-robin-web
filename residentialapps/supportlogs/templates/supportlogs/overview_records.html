@@ -3,7 +3,7 @@
 {% from "residential/_people.html" import token_filter %}
 {% block title %}Records across staff{% endblock %}
 {% block content %}
-  <a class="back" href="{{ url('/overview/') }}{{ as_query }}">‹ Overview</a>
+  <a class="back" href="{{ url('/workload/') }}{{ as_query }}">‹ Staff Overview</a>
   {{ sample_title("Records across staff", me.name) }}
   {# Senior identifiable access (author, 2026-10-30): upload records tagged
      to a staff member, download who has records with whom and the plans'

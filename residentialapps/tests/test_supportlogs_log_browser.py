@@ -334,14 +334,16 @@ def test_overview_cards_of_names_stay_folded_until_opened(page: Page) -> None:
         page.locator(heading).click()
         assert page.locator(inside).is_visible(), heading
     assert page.locator("#flags-h").is_visible() and page.locator(".tiles").is_visible()
+    page.goto(f"{ORIGIN}/workload/?as=Sam%20Lee")  # on Staff Overview since 2026-11-08
     assert page.locator("section:has(#who-h) dl.kv").is_visible()
 
 
 def test_three_columns_of_340_and_cards_span_two(page: Page) -> None:
     """Author, 2026-11-08: at most three columns of at least 340 px, 24 px
     apart. Three from 1116 px wide: a split's main column spans two and
-    its side one, starting at the top beside the notice, and a card on
-    its own (Log's form) spans two. Two from 736 px (the page's margins
+    its side one, starting at the top beside the notice (Every formal plan
+    sits in Students Overview's side), and a card on its own (Log's form)
+    spans two. Two from 736 px (the page's margins
     are 16 px below 960): a card spans the page. One below."""
     measure = """() => {
       const s = document.querySelector('.split');
@@ -353,16 +355,16 @@ def test_three_columns_of_340_and_cards_span_two(page: Page) -> None:
       return [Math.round(content), Math.round(m.width), Math.round(d.width),
               m.top === d.top, Math.round(card.width)];
     }"""
-    for width, expect in (
-        (1280, (1184, 781, 379, True, 781)),
-        (1116, (1068, 704, 340, True, 704)),
-        (1115, (1067, 703, 340, True, 1067)),
-        (736, (704, 340, 340, True, 704)),
-        (735, (703, 703, 703, False, 703)),
+    for width, expect, alone in (
+        (1280, (1184, 781, 379, True, 379), 781),
+        (1116, (1068, 704, 340, True, 340), 704),
+        (1115, (1067, 703, 340, True, 340), 1067),
+        (736, (704, 340, 340, True, 340), 704),
+        (735, (703, 703, 703, False, 703), 703),
     ):
         page.set_viewport_size({"width": width, "height": 900})
         page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
-        assert tuple(page.evaluate(measure)) == expect, width  # Every plan: on its own
+        assert tuple(page.evaluate(measure)) == expect, width  # Every formal plan: the side
         # Overview's side starts at the top, beside the notice (2026-11-08).
         tops = page.evaluate(
             "() => [document.querySelector('.page > .split > .main > .notice')"
@@ -375,7 +377,7 @@ def test_three_columns_of_340_and_cards_span_two(page: Page) -> None:
         form = page.evaluate(
             "() => document.querySelector('main.page > form.card').getBoundingClientRect().width"
         )
-        assert round(form) == expect[4], width
+        assert round(form) == alone, width
 
 
 def test_a_card_s_own_split_and_a_narrow_card_keep_their_widths(page: Page) -> None:

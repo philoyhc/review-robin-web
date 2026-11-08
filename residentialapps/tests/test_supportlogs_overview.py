@@ -225,8 +225,9 @@ def test_a_senior_s_cards_of_names_start_folded(client: TestClient) -> None:
     assert '<details class="fold" open' not in sam
     for heading in folded:
         assert f'<details class="fold"><summary><h2 id="{heading}">' in sam, heading
-    for heading in ("flags-h", "who-h"):
-        assert f'id="{heading}"' in sam and f'<summary><h2 id="{heading}"' not in sam, heading
+    assert 'id="flags-h"' in sam and '<summary><h2 id="flags-h"' not in sam
+    staff = client.get("/workload/?as=Sam%20Lee").text  # Who holds access, open
+    assert 'id="who-h"' in staff and '<summary><h2 id="who-h"' not in staff
     for name in ("Siti%20Rahman", "Kenneth%20Lau"):
         assert '<details class="fold">' not in client.get(f"/overview/?as={name}").text, name
 
@@ -301,8 +302,9 @@ def test_the_audit_is_senior_only_and_its_review_recorded(client: TestClient) ->
             assert row[3] == link
         else:
             assert row[3].startswith('<details class="reveal">') and link in row[3]
-    assert 'href="/overview/audit?as=Sam%20Lee"' in client.get("/overview/?as=Sam%20Lee").text
-    assert "/overview/audit" not in client.get("/overview/?as=Siti%20Rahman").text
+    assert 'href="/overview/audit?as=Sam%20Lee"' in client.get("/workload/?as=Sam%20Lee").text
+    for path in ("/overview/", "/workload/"):
+        assert "/overview/audit" not in client.get(f"{path}?as=Siti%20Rahman").text, path
     for name in NOT_SENIOR:
         assert client.get(f"/overview/audit?as={name.replace(' ', '%20')}").status_code == 403, name
 
@@ -352,17 +354,30 @@ def test_a_follow_up_alone_is_not_a_record_senior_staff_see(
     assert sid in sample.students_with_records("Grace Ho", follow_ups=True)
 
 
-def test_who_supports_whom_is_on_its_own_workload_tab(client: TestClient) -> None:
-    """Author, 2026-11-08: Who supports whom leaves Overview for a Workload
-    tab of its own, beside Overview for whoever has it, the card at the
-    page's full width (.wide) and never folded."""
+def test_students_overview_and_staff_overview(client: TestClient) -> None:
+    """Author, 2026-11-08: Overview becomes Students Overview, beside a
+    Staff Overview for whoever has it. Staff Overview opens with Who
+    supports whom at the page's full width (.wide), never folded, and
+    below it, for senior staff, who holds access, the support-activity
+    audit and records across staff, which leave Students Overview."""
+    staff_cards = ("who-h", "aud-h", "rec-h")
     for name in ("Sam%20Lee", "Siti%20Rahman", "Kenneth%20Lau"):
-        overview = client.get(f"/overview/?as={name}").text
-        assert 'id="support-h"' not in overview, name
-        assert 'href="/workload/' in overview and ">Workload<" in overview, name
+        students = client.get(f"/overview/?as={name}").text
+        assert 'id="support-h"' not in students, name
+        assert ">Students Overview<" in students and ">Staff Overview<" in students, name
+        assert 'href="/workload/' in students, name
+        for card in staff_cards:
+            assert f'id="{card}"' not in students, (name, card)
         page = client.get(f"/workload/?as={name}").text
         assert '<section class="card card-pad wide" aria-labelledby="support-h">' in page, name
         assert '<details class="fold">' not in page, name
-    frontline = client.get("/").text
-    assert ">Workload<" not in frontline
+        for card in staff_cards:  # senior staff's alone
+            assert (f'id="{card}"' in page) == (name == "Sam%20Lee"), (name, card)
+    sam = client.get("/workload/?as=Sam%20Lee").text
+    assert sam.index('id="support-h"') < sam.index('id="who-h"')  # below the table
+    for path in ("/overview/access", "/overview/audit", "/overview/records"):
+        page = client.get(f"{path}?as=Sam%20Lee").text
+        assert "‹ Staff Overview</a>" in page and 'href="/workload/?as=Sam%20Lee"' in page, path
+        assert re.search(r'href="/workload/\?as=Sam%20Lee"[^>]*aria-current="true"', page), path
+    assert ">Staff Overview<" not in client.get("/").text
     assert client.get("/workload/").status_code == 403

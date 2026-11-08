@@ -72,7 +72,7 @@ def test_a_follow_up_is_its_owner_s_alone(client: TestClient) -> None:
     assert client.get("/plans/P-03").status_code == 200  # Daniel's own
     formal = client.get("/plans/P-01?as=Sam%20Lee").text
     assert "Convert to formal assignment" not in formal and 'id="st"' in formal
-    assert "<dt>With</dt><dd>Daniel Koh</dd>" in formal and "‹ Overview" in formal
+    assert "<dt>With</dt><dd>Daniel Koh</dd>" in formal and "‹ Students Overview" in formal
 
 
 def test_other_staff_identifiable_view_reads_plans_only(client: TestClient) -> None:
