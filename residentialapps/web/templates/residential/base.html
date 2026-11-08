@@ -276,6 +276,11 @@
       .kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; font-size: 14px; }
       .kv dt { color: var(--text-subtle); }
       .kv dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+      /* A list whose terms are long and values short (a rules card,
+         2026-11-08): the terms wrap in the room left, the values keep
+         their words whole. */
+      .kv.kv-terms-wrap { grid-template-columns: minmax(0, 1fr) auto; }
+      .kv.kv-terms-wrap dd { overflow-wrap: normal; }
       /* The Assignments CSV card's upload modes: one radio each, its
          name then what it does (author, 2026-10-28). */
       fieldset.modes { margin: 12px 0 16px; padding: 0; border: 0; }

@@ -178,3 +178,14 @@ def test_only_administration_reaches_sys_admin(client: TestClient) -> None:
                 name,
             )
         assert client.get(path + SUPER).status_code == 200, path
+
+
+def test_the_consultation_rules_read_as_reason_and_level(client: TestClient) -> None:
+    """Author, 2026-11-08: the rules card's reasons wrap beside short
+    values, Required or Suggested, the word Consultation said once."""
+    card = section(client.get("/sys-admin/configuration?as=Rachel%20Yeo").text, "rules-h")
+    assert '<dl class="kv kv-terms-wrap">' in card
+    for reason, state in sample.CONSULTATION_REASONS:
+        level = state.removeprefix("Consultation ").capitalize()
+        assert f"<dt>{reason}</dt><dd>{level}</dd>" in card, reason
+    assert "<dd>Consultation" not in card
