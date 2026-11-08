@@ -282,8 +282,8 @@ about?"*
   no dates, minutes or encounter counts anywhere else, nor any tied to a
   student; beside them, from the top, two counts (10 students with
   records, 2 with more than one staff member; no formal assignments
-  count), Flagged for formal assignment, with Assign disabled, and Every
-  formal plan, without due states. No Who holds
+  count), Flagged for formal assignment, with Assign disabled, and **Formal plans**, without due states; both cards headed like
+  the counts, the number over the label. No Who holds
   access, audit or records card.
 - [ ] **Staff Overview** opens with **Who supports whom**, open, across the page's
   full width (three columns from 1116 px) and sortable by each column,
@@ -413,7 +413,7 @@ you would act on?*
 
 - [ ] **Columns**: at 1280 px a page's own cards stop at two thirds of the
   page, and its side column, a third, starts at the top: Students
-  Overview's counts, Flagged for formal assignment and Every formal plan beside
+  Overview's counts, Flagged for formal assignment and Formal plans beside
   the notice and the flags (as Kenneth Lau, the counts alone); Staff Overview's Who supports whom across all
   three, then Who holds access beside the audit and records;
   Home's My last 14 days beside the flags; Students' Your records,

@@ -344,7 +344,7 @@ def test_overview_cards_of_names_stay_folded_until_opened(page: Page) -> None:
 def test_three_columns_of_340_and_cards_span_two(page: Page) -> None:
     """Author, 2026-11-08: at most three columns of at least 340 px, 24 px
     apart. Three from 1116 px wide: a split's main column spans two and
-    its side one, starting at the top beside the notice (Every formal plan
+    its side one, starting at the top beside the notice (Formal plans
     sits in Students Overview's side), and a card on its own (Log's form)
     spans two. Two from 736 px (the page's margins
     are 16 px below 960): a card spans the page. One below."""
@@ -367,7 +367,7 @@ def test_three_columns_of_340_and_cards_span_two(page: Page) -> None:
     ):
         page.set_viewport_size({"width": width, "height": 900})
         page.goto(f"{ORIGIN}/oversight-students/?as=Sam%20Lee")
-        assert tuple(page.evaluate(measure)) == expect, width  # Every formal plan: the side
+        assert tuple(page.evaluate(measure)) == expect, width  # Formal plans: the side
         # Overview's side starts at the top, beside the notice (2026-11-08).
         tops = page.evaluate(
             "() => [document.querySelector('.page > .split > .main > .notice')"
