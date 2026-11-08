@@ -103,6 +103,11 @@ for an action to proceed: a share, a team, a handover, a sys admin's on
 someone's behalf. **Acknowledge** is having seen forwarded information,
 as a safety flag is acknowledged. Copy, model, spec and explainer follow.
 
+### Rung 9 — A senior's Overview folds its names
+
+Every card on a senior's Overview that shows names starts closed, the
+safety flags banner and the tiles aside (author, 2026-11-08).
+
 ## Checks
 
 Each rung keeps `pytest`, `ruff`, `pyright` green and takes one
@@ -176,3 +181,5 @@ browser check passes on each rung.
   safety flag keeps Acknowledge. One read: "agree" without "to" in the
   button labels and prose, and the README's sharing-model row, all
   fixed; earlier rungs' entries keep the words of their day.
+- **Rung 9:** as planned: Who supports whom, Students across staff, Who
+  holds access, Flagged for formal assignment and Every plan.

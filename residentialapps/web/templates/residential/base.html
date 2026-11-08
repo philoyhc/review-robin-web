@@ -319,6 +319,13 @@
       details.reveal:not([open]) [data-when="open"], details.reveal[open] [data-when="closed"] { display: none; }
       details.reveal > .strong { display: block; }
       .reveal-cta { color: var(--text-link); text-decoration: underline; }
+      /* A card of names, folded until opened (author, 2026-11-08): its
+         heading is the control, with Show or Hide beside it. */
+      details.fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; cursor: pointer; list-style: none; }
+      details.fold > summary::-webkit-details-marker { display: none; }
+      details.fold > summary h2 { margin: 0; }
+      details.fold:not([open]) > summary [data-when="open"], details.fold[open] > summary [data-when="closed"] { display: none; }
+      details.fold[open] > summary { margin-bottom: 8px; }
       /* Safety: its own color and heading, set apart from routine controls
          (support_logs_ui_spec_v0.1.md §1, §6). */
       .safety-head { margin: 0 0 16px; padding: 14px 16px; border-radius: 8px; background: var(--status-error-solid-bg); color: var(--status-error-solid-fg); }

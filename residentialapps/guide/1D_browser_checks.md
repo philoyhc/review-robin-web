@@ -265,6 +265,9 @@ about?"*
 - [ ] Overview alone in the tabs, with a red badge **1** for the
   unacknowledged flag (a screen reader hears "unacknowledged safety
   flag").
+- [ ] The safety flags banner and the tiles are open; every card that
+  shows names starts closed, and its heading opens it (Show or Hide
+  beside it).
 - [ ] A notice that you see who has records with whom, never what they
   recorded; tiles counting plans and students; **Who supports whom**
   (sortable: students, assigned, following per staff member);
