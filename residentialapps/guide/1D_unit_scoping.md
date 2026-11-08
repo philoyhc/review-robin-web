@@ -140,34 +140,35 @@ Taken 2026-11-08 at `c053b46b1`.
 
 ## Status
 
-- **Rung 1** merged 2026-11-08 (#3731); the rulings answered the same day.
-- **Rung 2:** functional spec §3.7 (new) and §13, roles rule 10, the
-  roster doc §5 and §10, `supportlogs_ui.md` §2 and `todo_master.md`.
-  The roster doc and `todo_master.md` keep Residential Operations' half
-  of multi-Unit authorization open; only Support Logs' is struck.
-- **Rung 3:** as planned but for its place (after the app's areas, Sys
-  admin having left the switcher), with Sam Lee, the Master, as the two-Unit
-  viewer rather than a new one (the roster mock has one Master). The
-  Unit group sits in the top-left switcher, whose top line already names
-  the Unit; the working Unit is a cookie (`supportlogs_unit`), as the
-  plan's per-browser rule says.
-- **Rung 4:** the sample's records are per Unit (`PerUnit`,
-  `PerUnitMap`): encounters, plans and their history, flags, referrals,
-  teams, pending, shares, the support-activity and access audits, check
-  runs, purges, favorites, frontline colleagues and the Staff roster,
-  each read as the request's working Unit, which a middleware sets
-  before any route runs. The student and staff directories (names,
-  emails) stay one, as §3.7's identities do; a student filter lists only
-  the students the Unit's records name. A sample viewer's grants are the
-  same in each Unit they hold. The Consultation check's result names
-  its Unit. The cold read found the access changes, the unlocked records
-  page and its student filter still global; fixed, and the sweep now
-  covers them, the CSVs and staff names, and every tab page for each
-  single-Unit viewer. Example Hall: two frontline staff, four
-  students (one directory, as §3.7 has it), one formal plan, no flags. A
-  history of a student the Unit's records do not name is not found.
-  Sys admin's own pages stay Example College's: no sys admin holds
-  grants in two sample Units.
+**Closed 2026-11-08.** Rungs 1–4 merged as #3731, #3732, #3733 and
+#3735, and deployed (Cordware #192); the rulings answered the same day.
+
+- **As planned:** the specs (functional spec §3.5, §3.7 and §13, roles
+  rule 10, the roster doc §5 and §10, `supportlogs_ui.md` §2,
+  `applications.md`, `docs/header_chrome.md` §3 and §6); the switcher;
+  every page scoped.
+- **Diverged:**
+  - **Rung 3:** the Unit group sits after the app's areas, Sys admin
+    having left the switcher. Sam Lee, the Master, is the two-Unit
+    viewer (the roster mock has one Master). The working Unit is a
+    cookie, and `/unit` a GET as the sample's other switches are.
+  - **Rung 4:** the sample's records are per Unit (`PerUnit`,
+    `PerUnitMap`), read as the working Unit a middleware sets per
+    request. The student and staff directories stay one, as identities.
+    A two-Unit viewer's grants are the same in each Unit. Sys admin's
+    pages show Example College alone. `supportlogs_ui.md` §2 says so.
+- **Not built:** the no-safety-flag-recipient warning on a Unit's Sys
+  admin Access page (Semantics), since no sample sys admin holds two
+  Units. It goes to the wiring segment with the rest.
+- **Left as found:** §3.5 and §13 still name a "qualifying
+  appointment", which §3.5's own eligibility paragraph and roles rule 9
+  supersede. That predates this plan.
+- **Reads:** two cold reads on rung 3, which found doc drift and a
+  missing accessible name, and one on the cumulative diff at rung 4,
+  which found an access-audit leak, a 500 on Example Hall's unlocked
+  records page and a student filter listing the other Unit's students.
+  All were fixed before merge. Codex raised two plan findings at
+  rung 1: the scaffold split and roster-only eligibility.
 
 ## PR ladder
 

@@ -119,7 +119,11 @@ form's end, and the main action is a full-width Primary on the page
   (two frontline staff, four students, one formal plan); every page,
   count and download shows the working Unit's records alone, and a
   history or plan of the other Unit's is not found
-  (`residentialapps/guide/1D_unit_scoping.md` rung 4).
+  (`residentialapps/guide/1D_unit_scoping.md` rung 4). The sample's
+  limits: a two-Unit viewer holds the same grants in each Unit, the
+  student and staff directories are one (identities, not records), and
+  no sample sys admin holds two Units, so Sys admin's pages show Example
+  College alone.
 - **Home is a tab only when it is a page of its own**: the frontline's
   dashboard, a recipient's flags, or a list of what a viewer with more
   than one destination reaches. Otherwise the bare mount redirects to the
