@@ -62,7 +62,7 @@ def history(request: Request, sid: str) -> Response:
     if not sample.holds(me, sample.SENIOR):
         return gated(request, "supportlogs/history.html", sample.SENIOR)  # the 403 page
     found = sample.student(sid)
-    if found is None:
+    if found is None or not sample.known_here(sid):  # another Unit's student (§3.7)
         raise HTTPException(status_code=404)
     return gated(
         request,

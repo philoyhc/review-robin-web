@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from residentialapps.supportlogs.pages import WorkingUnit
 from residentialapps.supportlogs.routes_consultation import router as consultation_router
 from residentialapps.supportlogs.routes_frontline import router as frontline_router
 from residentialapps.supportlogs.routes_health import router as health_router
@@ -29,4 +30,7 @@ def create_app() -> FastAPI:
     app.include_router(overview_router)
     app.include_router(consultation_router)
     app.include_router(sys_admin_router)
+    # The working Unit, set for every request before a route reads the
+    # sample (Unit-scoping rung 4).
+    app.add_middleware(WorkingUnit)
     return app

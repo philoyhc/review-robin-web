@@ -13,11 +13,13 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections.abc import Iterable
+from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
-from typing import TypedDict
+from typing import TypedDict, overload
 from urllib.parse import quote
 
 UNIT_NAME = "Example College"
@@ -26,6 +28,72 @@ UNIT_NAME = "Example College"
 # shows Example College's records whichever Unit is chosen.
 UNITS = (UNIT_NAME, "Example Hall")
 UNIT_COOKIE = "supportlogs_unit"
+HALL = UNITS[1]
+
+# The working Unit of the request being served (Unit-scoping rung 4,
+# functional spec §3.7): set once per request from the viewer and their
+# choice, read by every per-Unit collection below. Outside a request
+# (tests calling the helpers) it is Example College.
+_UNIT: ContextVar[str] = ContextVar("supportlogs_unit", default=UNIT_NAME)
+
+
+def current_unit() -> str:
+    return _UNIT.get()
+
+
+@contextmanager
+def in_unit(unit: str) -> Generator[None]:
+    """Run the enclosed code as if working in ``unit``."""
+    token = _UNIT.set(unit)
+    try:
+        yield
+    finally:
+        _UNIT.reset(token)
+
+
+class PerUnit[T](Sequence[T]):
+    """A record collection holding each Unit's own records, read as the
+    working Unit's alone: no page ever sees another Unit's (§3.7)."""
+
+    def __init__(self, by_unit: Mapping[str, Sequence[T]]) -> None:
+        self._by_unit = by_unit
+
+    def _here(self) -> Sequence[T]:
+        return self._by_unit.get(_UNIT.get(), ())
+
+    @overload
+    def __getitem__(self, index: int) -> T: ...
+    @overload
+    def __getitem__(self, index: slice) -> Sequence[T]: ...
+    def __getitem__(self, index: int | slice) -> T | Sequence[T]:
+        return self._here()[index]
+
+    def __len__(self) -> int:
+        return len(self._here())
+
+    def __iter__(self) -> Iterator[T]:
+        return iter(self._here())
+
+
+class PerUnitMap[K, V](Mapping[K, V]):
+    """A mapping holding each Unit's own entries, read as the working
+    Unit's alone."""
+
+    def __init__(self, by_unit: Mapping[str, Mapping[K, V]]) -> None:
+        self._by_unit = by_unit
+
+    def _here(self) -> Mapping[K, V]:
+        return self._by_unit.get(_UNIT.get(), {})
+
+    def __getitem__(self, key: K) -> V:
+        return self._here()[key]
+
+    def __len__(self) -> int:
+        return len(self._here())
+
+    def __iter__(self) -> Iterator[K]:
+        return iter(self._here())
+
 
 # Support Logs' authorization types (functional spec §3.5; roles rules 1
 # and 8), in the Access page's order. The super-admin holds administration
@@ -183,6 +251,12 @@ STUDENTS = tuple(
             "Hana Rahim",
             "Ivan Seet",
             "Jia Wen Lee",
+            # Example Hall's students (Unit-scoping rung 4): one directory,
+            # each Unit knowing only those its own records name (§3.7).
+            "Kai Tan",
+            "Leila Hamid",
+            "Nikhil Rao",
+            "Olivia Ng",
         ),
         start=1,
     )
@@ -214,7 +288,7 @@ class Encounter:
     note: str = ""
 
 
-ENCOUNTERS = (
+_COLLEGE_ENCOUNTERS = (
     Encounter(
         "E-01",
         "S-03",
@@ -409,7 +483,7 @@ class Plan:
     status: str = "Active"
 
 
-PLANS = (
+_COLLEGE_PLANS = (
     Plan(
         "P-01",
         "S-03",
@@ -510,7 +584,7 @@ def attention(staff: str) -> list[Plan]:
 # Each frontline viewer's favorites, in the order favorited (author,
 # 2026-11-06): marked on Students, they are Log's quick picks. Daniel Koh's
 # second is S-08, whose records Priya Raman shared with him.
-FAVORITES = {
+_COLLEGE_FAVORITES = {
     "Daniel Koh": ("S-03", "S-08"),
     "Priya Raman": ("S-08", "S-10"),
 }
@@ -617,7 +691,7 @@ class Flag:
         return self.status != "closed"
 
 
-FLAGS = (
+_COLLEGE_FLAGS = (
     Flag(
         "F-01",
         "S-05",
@@ -736,7 +810,13 @@ PLAN_STATUSES = ("Active", "Paused", "Closed")
 # Frontline colleagues a record can be shared with (§11.1): RFs and RSLMs
 # holding frontline access, copied from the roster's mock with the sample
 # viewers who hold it.
-FRONTLINE_COLLEAGUES = ("Daniel Koh", "Priya Raman", "Mei Ling Tan", "Arjun Nair", "Grace Ho")
+_COLLEGE_FRONTLINE_COLLEAGUES = (
+    "Daniel Koh",
+    "Priya Raman",
+    "Mei Ling Tan",
+    "Arjun Nair",
+    "Grace Ho",
+)
 # Their Staff-roster emails, so a filter matches a name or an email.
 STAFF_EMAILS = {
     "Daniel Koh": "daniel.koh@example.edu",
@@ -744,6 +824,8 @@ STAFF_EMAILS = {
     "Mei Ling Tan": "meiling.tan@example.edu",
     "Arjun Nair": "arjun.nair@example.edu",
     "Grace Ho": "grace.ho@example.edu",
+    "Lucas Teo": "lucas.teo@example.edu",  # Example Hall's
+    "Amira Salleh": "amira.salleh@example.edu",  # Example Hall's
 }
 
 
@@ -766,7 +848,7 @@ def walled_history(pid: str) -> tuple[tuple[date, str], ...]:
 
 # Each plan's history (§8): how it began and what changed, so a converted
 # follow-up keeps one record rather than a disconnected duplicate.
-PLAN_HISTORY: dict[str, tuple[tuple[date, str], ...]] = {
+_COLLEGE_PLAN_HISTORY: dict[str, tuple[tuple[date, str], ...]] = {
     "P-01": (
         (date(2026, 9, 21), "Sam Lee assigned it: Counselling, weekly, with safety-plan support"),
     ),
@@ -796,7 +878,7 @@ class Referral:
     cadence: str = ""
 
 
-REFERRALS = (Referral("S-05", "Daniel Koh", date(2026, 10, 27), "Weekly"),)
+_COLLEGE_REFERRALS = (Referral("S-05", "Daniel Koh", date(2026, 10, 27), "Weekly"),)
 
 
 @dataclass(frozen=True)
@@ -830,7 +912,9 @@ class Team:
     formed_by: str  # a member, or a senior who started it
 
 
-TEAMS = (Team("T-01", "S-08", ("Priya Raman", "Daniel Koh"), date(2026, 10, 25), "Priya Raman"),)
+_COLLEGE_TEAMS = (
+    Team("T-01", "S-08", ("Priya Raman", "Daniel Koh"), date(2026, 10, 25), "Priya Raman"),
+)
 
 
 def team_for(sid: str) -> Team | None:
@@ -870,7 +954,7 @@ class Pending:
     owner: str = ""
 
 
-PENDING = (
+_COLLEGE_PENDING = (
     Pending(SHARE_OFFERED, "Daniel Koh", "Priya Raman", "S-09", 1, date(2026, 10, 28)),
     Pending(SHARE_OFFERED, "Arjun Nair", "Daniel Koh", "S-02", 1, date(2026, 10, 28)),
     Pending(TEAM_INVITE, "Daniel Koh", "Sam Lee", "S-10", 0, date(2026, 10, 28)),
@@ -907,7 +991,7 @@ def pending_for(staff: str) -> list[Pending]:
     return sorted((p for p in PENDING if p.to == staff), key=lambda p: p.on, reverse=True)
 
 
-PEER_GRANTS = (
+_COLLEGE_PEER_GRANTS = (
     PeerGrant("S-03", "Daniel Koh", "Mei Ling Tan", date(2026, 10, 1)),
     PeerGrant("S-08", "Priya Raman", "Daniel Koh", date(2026, 10, 20)),
     # Daniel Koh offered one record about Bao Nguyen to Arjun Nair, who
@@ -1082,6 +1166,19 @@ def students_with_records(staff: str, *, follow_ups: bool = False) -> set[str]:
     }
 
 
+def known_here(sid: str) -> bool:
+    """Whether the working Unit's own records name a student (§3.7): the
+    directory holds every Unit's students, but a Unit knows only these."""
+    named = (
+        *(e.student for e in ENCOUNTERS),
+        *(p.student for p in PLANS),
+        *(f.student for f in FLAGS),
+        *(r.student for r in REFERRALS),
+        *(t.student for t in TEAMS),
+    )
+    return sid in named
+
+
 def staff_with_records(sid: str) -> set[str]:
     """The staff members with any record about a student."""
     return {n for n in FRONTLINE_COLLEAGUES if sid in students_with_records(n)}
@@ -1167,7 +1264,7 @@ class AuditEvent:
     student: str = ""
 
 
-AUDIT = (
+_COLLEGE_AUDIT = (
     AuditEvent(datetime(2026, 10, 29, 9, 0), "Sam Lee", "Viewed a student's history", "S-08"),
     AuditEvent(datetime(2026, 10, 29, 8, 30), "Sam Lee", "Acknowledged a safety flag", "S-10"),
     AuditEvent(datetime(2026, 10, 29, 8, 25), "Sam Lee", "Viewed a safety flag", "S-10"),
@@ -1305,7 +1402,7 @@ class CheckRun:
     flagged: int  # suggested or required
 
 
-CHECK_RUNS = (
+_COLLEGE_CHECK_RUNS = (
     CheckRun(date(2026, 10, 27), "Hui Min Goh", "Hall leadership appointments", 11, 2),
     CheckRun(date(2026, 10, 22), "Marcus Tan", "Overseas field trip, Semester 2", 14, 2),
     CheckRun(date(2026, 9, 30), "Nadia Hassan", "Student exchange nominations", 8, 1),
@@ -1319,7 +1416,7 @@ CHECK_RUNS = (
 # The Staff roster's active members (`staff_roster.csv`, copied: Support
 # Logs reads it as the eligibility list and never writes to it). A test
 # holds the copy to the file.
-STAFF_ROSTER = (
+_COLLEGE_STAFF_ROSTER = (
     ("Sam Lee", "Master"),
     ("Rachel Yeo", "Admin"),
     ("Priya Raman", "RSLM"),
@@ -1348,6 +1445,8 @@ APPOINTMENTS = {
 ACCESS_COLUMNS = (FRONTLINE, SENIOR, RECIPIENT, CONSULTATION, "Other Staff view", SYS_ADMIN)
 # Colleagues who hold grants but are not sample viewers.
 _OTHER_GRANTS = {
+    "Lucas Teo": frozenset({FRONTLINE}),  # Example Hall's
+    "Amira Salleh": frozenset({FRONTLINE}),  # Example Hall's
     "Mei Ling Tan": frozenset({FRONTLINE}),
     "Arjun Nair": frozenset({FRONTLINE}),
     "Grace Ho": frozenset({FRONTLINE}),
@@ -1383,7 +1482,7 @@ class Lapsed:
     why: str
 
 
-LAPSED = (
+_COLLEGE_LAPSED = (
     Lapsed(
         "Jason Teo", (FRONTLINE,), date(2026, 9, 30), "Left the Staff roster: RF appointment ended"
     ),
@@ -1402,7 +1501,7 @@ class AdminEvent:
     reason: str = ""
 
 
-ADMIN_AUDIT = (
+_COLLEGE_ADMIN_AUDIT = (
     AdminEvent(
         datetime(2026, 10, 27, 10, 5),
         "Rachel Yeo",
@@ -1647,7 +1746,7 @@ class Purge:
         return self.count if sid is None else sum(n for s, n in self.held if s == sid)
 
 
-PURGES = (
+_COLLEGE_PURGES = (
     Purge("Grace Ho", "Encounters", date(2026, 10, 9), (("S-02", 4), ("S-06", 2))),
     Purge("Arjun Nair", "Plans", date(2026, 5, 20), (("S-09", 2),)),
 )
@@ -1737,5 +1836,113 @@ def staff_choices() -> list[tuple[str, str, str]]:
 
 
 def student_choices(students: Iterable[Student] | None = None) -> list[tuple[str, str, str]]:
-    """(id, name, email) per student, for a student filter."""
-    return [(s.id, s.name, s.email) for s in (STUDENTS if students is None else students)]
+    """(id, name, email) per student, for a student filter: by default the
+    students the working Unit's records name, never another Unit's (§3.7)."""
+    chosen = [s for s in STUDENTS if known_here(s.id)] if students is None else students
+    return [(s.id, s.name, s.email) for s in chosen]
+
+
+# --- Example Hall (Unit-scoping rung 4, author, 2026-11-08) -------------
+# A second, smaller Unit: two frontline staff, four students, one formal
+# plan, no flags. Sam Lee, the Master, holds grants in both Units; every
+# other sample viewer works in Example College alone.
+_HALL_FRONTLINE_COLLEAGUES = ("Lucas Teo", "Amira Salleh")
+_HALL_STAFF_ROSTER = (
+    ("Sam Lee", "Master"),
+    ("Amira Salleh", "RSLM"),
+    ("Lucas Teo", "RF"),
+)
+_HALL_ENCOUNTERS = (
+    Encounter(
+        "E-101",
+        "S-11",
+        "Lucas Teo",
+        datetime(2026, 10, 14, 19, 0),
+        "30 min",
+        "Check-in",
+        ("Wellbeing",),
+        "Yes",
+        "In person",
+    ),
+    Encounter(
+        "E-102",
+        "S-11",
+        "Lucas Teo",
+        datetime(2026, 10, 24, 19, 30),
+        "15 min",
+        "Check-in",
+        (),
+        "No",
+        "In person",
+    ),
+    Encounter(
+        "E-103",
+        "S-12",
+        "Lucas Teo",
+        datetime(2026, 10, 20, 12, 0),
+        "15 min",
+        "Practical support",
+        ("Residential / community",),
+        "No",
+        "In person",
+    ),
+    Encounter(
+        "E-104",
+        "S-13",
+        "Amira Salleh",
+        datetime(2026, 10, 22, 17, 0),
+        "60+ min",
+        "Welfare follow-up",
+        ("Wellbeing",),
+        "Yes",
+        "In person",
+    ),
+    Encounter(
+        "E-105",
+        "S-14",
+        "Amira Salleh",
+        datetime(2026, 10, 26, 10, 0),
+        "30 min",
+        "Check-in",
+        (),
+        "No",
+        "Online",
+    ),
+)
+_HALL_PLANS = (
+    Plan(
+        "P-11",
+        "S-13",
+        "Amira Salleh",
+        True,
+        date(2026, 10, 23),
+        "Weekly",
+        "College",
+        "Sam Lee",
+        date(2026, 11, 20),
+        "Weekly check-in for the term.",
+    ),
+)
+_HALL_PLAN_HISTORY: dict[str, tuple[tuple[date, str], ...]] = {
+    "P-11": ((date(2026, 10, 23), "Sam Lee assigned it: College, weekly, review 20 Nov"),),
+}
+
+# Each record collection, read as the working Unit's alone (§3.7).
+ENCOUNTERS = PerUnit({UNIT_NAME: _COLLEGE_ENCOUNTERS, HALL: _HALL_ENCOUNTERS})
+PLANS = PerUnit({UNIT_NAME: _COLLEGE_PLANS, HALL: _HALL_PLANS})
+FLAGS = PerUnit({UNIT_NAME: _COLLEGE_FLAGS})
+FRONTLINE_COLLEAGUES = PerUnit(
+    {UNIT_NAME: _COLLEGE_FRONTLINE_COLLEAGUES, HALL: _HALL_FRONTLINE_COLLEAGUES}
+)
+PLAN_HISTORY = PerUnitMap({UNIT_NAME: _COLLEGE_PLAN_HISTORY, HALL: _HALL_PLAN_HISTORY})
+REFERRALS = PerUnit({UNIT_NAME: _COLLEGE_REFERRALS})
+TEAMS = PerUnit({UNIT_NAME: _COLLEGE_TEAMS})
+PENDING = PerUnit({UNIT_NAME: _COLLEGE_PENDING})
+PEER_GRANTS = PerUnit({UNIT_NAME: _COLLEGE_PEER_GRANTS})
+AUDIT = PerUnit({UNIT_NAME: _COLLEGE_AUDIT})
+CHECK_RUNS = PerUnit({UNIT_NAME: _COLLEGE_CHECK_RUNS})
+STAFF_ROSTER = PerUnit({UNIT_NAME: _COLLEGE_STAFF_ROSTER, HALL: _HALL_STAFF_ROSTER})
+LAPSED = PerUnit({UNIT_NAME: _COLLEGE_LAPSED})
+PURGES = PerUnit({UNIT_NAME: _COLLEGE_PURGES})
+ADMIN_AUDIT = PerUnit({UNIT_NAME: _COLLEGE_ADMIN_AUDIT})
+FAVORITES = PerUnitMap({UNIT_NAME: _COLLEGE_FAVORITES})

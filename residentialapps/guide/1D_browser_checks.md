@@ -301,14 +301,17 @@ about?"*
 Ask: *Is who-has-records-with-whom enough to run a weekly meeting? What
 would you ask a staff member to share?*
 
-### B1a. The working Unit (scaffold)
+### B1a. The working Unit
 
 - [ ] As Sam Lee, the top-left switcher has a **Unit** group listing
   Example College (ticked) and Example Hall; the top line reads Example
   College.
 - [ ] Choosing Example Hall returns to the same page, ticks it and names
-  it in the top line; every page still shows Example College's records
-  (until the Unit-scoping plan's rung 4).
+  it in the top line. Students Overview then counts 4 students with
+  records and 1 formal plan (Nikhil Rao); Staff Overview lists Lucas
+  Teo and Amira Salleh only; no Example College student, staff member
+  or count appears anywhere, and `/oversight-students/S-08` is not
+  found. Choosing Example College again brings its pages back.
 - [ ] As Daniel Koh, Siti Rahman or Rachel Yeo, there is no Unit group.
 
 ### B2. One student across staff

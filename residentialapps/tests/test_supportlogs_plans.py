@@ -305,7 +305,9 @@ def test_a_walled_history_shows_nothing_without_an_assignment(
     assert sample.walled_history("P-02")[0][1].startswith("Sam Lee converted it")
     assert sample.walled_history("P-01") == sample.PLAN_HISTORY["P-01"]
     monkeypatch.setitem(
-        sample.PLAN_HISTORY, "P-02", ((date(2026, 9, 28), "Daniel Koh began following up"),)
+        sample._COLLEGE_PLAN_HISTORY,  # pyright: ignore[reportPrivateUsage]  -- the College's own entries
+        "P-02",
+        ((date(2026, 9, 28), "Daniel Koh began following up"),),
     )
     assert sample.walled_history("P-02") == ()
 
