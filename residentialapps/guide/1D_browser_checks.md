@@ -457,7 +457,8 @@ you would act on?*
   an amber warning at the top; without it, none.
 - [ ] **Configuration**: list cards, one column at 390 px, each with a
   disabled Edit; the Access card's self-grant setting unticked (*ruling
-  R7: its default*).
+  R7: its default*). Consultation rules' reasons wrap beside **Required**
+  or **Suggested**, each on one line, at 1280 px and 390 px.
 - [ ] **Audit log**: administrative events only (the lapse row's actor is
   "Support Logs", its reason names Residential Operations); **Senior
   reads** shows Sam Lee, 3 reads, 1 download and his latest; Purged
