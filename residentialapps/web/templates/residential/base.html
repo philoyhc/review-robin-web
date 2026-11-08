@@ -480,12 +480,13 @@
          split: its main column spans two and its side one; a card on its
          own spans two, never the third column too. A split inside a card,
          a .narrow card and a desktop-oriented page (.page.desktop, from
-         the page map) keep their own widths. */
-      .page > .split > .main { flex-basis: 340px; }
-      .page > .split > .side { flex-basis: 340px; }
+         the page map: its split and its cards alike) keep their own
+         widths. */
+      .page:not(.desktop) > .split > .main { flex-basis: 340px; }
+      .page:not(.desktop) > .split > .side { flex-basis: 340px; }
       @media (min-width: 1116px) {
-        .page > .split { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        .page > .split > .main { grid-column: span 2; }
+        .page:not(.desktop) > .split { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .page:not(.desktop) > .split > .main { grid-column: span 2; }
         .page:not(.desktop) > :not(.split):not(.narrow) { max-width: calc((100% - 48px) * 2 / 3 + 24px); }
       }
 

@@ -216,3 +216,6 @@ browser check passes on each rung.
   oriented pages (Support Logs' Sys admin; Residential Ops' RA Leave
   admin, Precinct leave, rosters, Events admin and Sys admin) keep the
   full width, and the columns apply to every Residential app.
+  One read of the widening: a desktop page's split still took the
+  columns, the page-map test matched any app's prefix and loosely, and
+  nothing tested Residential Ops' layout, all fixed.

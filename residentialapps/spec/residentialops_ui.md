@@ -30,8 +30,9 @@ in `residentialapps/web/templates/residential/base.html`.
   side column is 340 px and the main column takes the rest. A card's own
   inner split and a narrow notice card keep their widths, and a
   desktop-oriented page (the page map's class, listed in
-  `residentialapps/web/pages.py`) keeps the page's full width for its
-  cards.
+  `residentialapps/web/pages.py`, with the pages beneath a listed path,
+  as a person's page is beneath the rosters) keeps its split and its
+  cards as they were: the full width.
 - **The page is centered and at most 1232 px wide** (1184 px of content
   inside 24 px padding); the top bar and the tabs keep the same width.
   RRW's 1400 px left-aligned page is its own (author, 2026-10-27).

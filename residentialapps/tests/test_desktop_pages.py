@@ -21,6 +21,8 @@ PAGE_MAP = Path(__file__).resolve().parents[1] / "spec" / "applications.md"
         ("residentialops", "/ra-leave/admin", True),
         ("residentialops", "/ra-leave/admin/applications/A-1", True),
         ("residentialops", "/ra-leave/staff/precinct", True),
+        ("residentialops", "/ra-leave/staff/precincts", False),
+        ("residentialops", "/rosters/people/P-01", True),
         ("residentialops", "/ra-leave/staff/", False),
         ("residentialops", "/rosters/staff", True),
         ("residentialops", "/sys-admin/", True),
@@ -34,16 +36,28 @@ def test_desktop_oriented(app: str, path: str, desktop: bool) -> None:
     assert desktop_oriented(app, path) is desktop
 
 
-def test_every_desktop_oriented_page_in_the_map_is_listed() -> None:
-    """Each page-map row classed desktop-oriented has its path's prefix
-    in DESKTOP_PAGES, so a new desktop page cannot miss the exemption."""
-    rows = [r for r in PAGE_MAP.read_text().splitlines() if "desktop-oriented" in r and "`/" in r]
-    assert rows
-    for row in rows:
-        for path in re.findall(r"`(/[^`]*)`", row.split("|")[2]):
-            listed = any(
-                path.startswith(prefix.rstrip("/"))
-                for prefixes in DESKTOP_PAGES.values()
-                for prefix in prefixes
-            )
-            assert listed, path
+def _page_map_rows() -> list[tuple[str, bool]]:
+    """Each classed page-map row's paths, and whether its class is
+    desktop-oriented (Support Logs' rows carry no class)."""
+    rows: list[tuple[str, bool]] = []
+    for row in PAGE_MAP.read_text().splitlines():
+        cells = row.split("|")
+        if len(cells) < 4 or "`/" not in cells[2]:
+            continue
+        if not any(c in row for c in ("desktop-oriented", "responsive", "mobile-critical")):
+            continue  # a section's heading row, or a page with no class
+        for path in re.findall(r"`(/[^`…]*)`", cells[2]):
+            rows.append((path, "desktop-oriented" in row))
+    return rows
+
+
+def test_the_list_matches_the_page_map_both_ways() -> None:
+    """Every Residential Ops path the map classes desktop-oriented is one,
+    and no path of a responsive or mobile-critical row is, so the list can
+    neither miss a desktop page nor catch another (Support Logs' Sys admin
+    is that spec's own class, `residentialapps/spec/supportlogs_ui.md`)."""
+    rows = _page_map_rows()
+    assert any(desktop for _, desktop in rows)
+    for path, desktop in rows:
+        assert desktop_oriented("residentialops", path) is desktop, path
+    assert DESKTOP_PAGES["supportlogs"] == ("/sys-admin/",)

@@ -13,8 +13,8 @@ button roles and touch targets (§4), sortable tables and column chips
 (§6), cards, notices and phone lists (§8), and accessibility (§10). Where
 both are silent, RRW's design system applies. The page map, with each
 page's grant, is `residentialapps/spec/applications.md` ("Support Logs");
-the styles are `residentialapps/web/templates/residential/base.html`
-under `data-app="supportlogs"`.
+the styles are `residentialapps/web/templates/residential/base.html`,
+Support Logs' own under `data-app="supportlogs"`.
 
 ## 1. Devices
 
@@ -26,12 +26,11 @@ under `data-app="supportlogs"`.
 - **Columns** are every Residential app's
   (`residentialapps/spec/residentialops_ui.md` §1, author, 2026-11-08):
   at most three of at least 340 px, three from 1116 px wide, two from
-  736 px. Sys admin, being desktop-oriented, keeps the full width for
+  736 px. Sys admin is desktop-oriented, so it keeps the full width for
   its cards.
 - **Overview and the Consultation check are responsive**: their tables
   scroll sideways in `.table-wrap` when their column is narrower than
-  they are, on a phone and in Overview's main column below 1116 px. **Sys admin is
-  desktop-oriented**.
+  they are, on a phone and in Overview's main column below 1116 px.
 - **Log's students are the viewer's favorites** (author, 2026-11-06),
   marked with a star on Students, in the order favorited, with a hint to
   mark more there and "Or find a student" for the rest. Home has no Log

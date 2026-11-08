@@ -228,7 +228,8 @@ reject it.
   not just the exit code. The other tool-gated tests are
   `tests/browser/` and Residential's
   `residentialapps/tests/test_sort_persistence_browser.py`,
-  `residentialapps/tests/test_touch_targets_browser.py` and
+  `residentialapps/tests/test_touch_targets_browser.py`,
+  `residentialapps/tests/test_columns_browser.py` and
   `residentialapps/tests/test_supportlogs_log_browser.py`, which need a
   Chromium build (preinstalled in the web sandbox) and skip with a reason
   without one; CI sets
