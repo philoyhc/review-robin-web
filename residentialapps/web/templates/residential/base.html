@@ -556,6 +556,17 @@
               {% endfor %}
             </div>
             {% endif %}
+            {# The working Unit, for a viewer holding grants in more than
+               one (Support Logs, Unit-scoping rung 3); one Unit at a time,
+               never a view across them. #}
+            {% if unit_choices %}
+            <div class="mg">
+              <div class="mg-h">Unit</div>
+              {% for u in unit_choices %}
+                <a href="{{ url(u.path) }}"{% if u.current %} aria-current="true"{% endif %}>{{ u.label }}{% if u.current %} <span aria-hidden="true">✓</span>{% endif %}</a>
+              {% endfor %}
+            </div>
+            {% endif %}
             <div class="mg">
               <div class="mg-h">Cordware</div>
               <a href="{{ host_url('/') }}">All applications</a>

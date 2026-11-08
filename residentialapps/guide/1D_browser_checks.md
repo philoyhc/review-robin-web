@@ -301,6 +301,16 @@ about?"*
 Ask: *Is who-has-records-with-whom enough to run a weekly meeting? What
 would you ask a staff member to share?*
 
+### B1a. The working Unit (scaffold)
+
+- [ ] As Sam Lee, the top-left switcher has a **Unit** group listing
+  Example College (ticked) and Example Hall; the top line reads Example
+  College.
+- [ ] Choosing Example Hall returns to the same page, ticks it and names
+  it in the top line; every page still shows Example College's records
+  (until the Unit-scoping plan's rung 4).
+- [ ] As Daniel Koh, Siti Rahman or Rachel Yeo, there is no Unit group.
+
 ### B2. One student across staff
 
 *Task: "Look at everything the team has on Hana Rahim."*

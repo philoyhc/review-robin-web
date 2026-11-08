@@ -142,6 +142,11 @@ Taken 2026-11-08 at `c053b46b1`.
   roster doc §5 and §10, `supportlogs_ui.md` §2 and `todo_master.md`.
   The roster doc and `todo_master.md` keep Residential Operations' half
   of multi-Unit authorization open; only Support Logs' is struck.
+- **Rung 3:** as planned, with Sam Lee, the Master, as the two-Unit
+  viewer rather than a new one (the roster mock has one Master). The
+  Unit group sits in the top-left switcher, whose top line already names
+  the Unit; the working Unit is a cookie (`supportlogs_unit`), as the
+  plan's per-browser rule says.
 
 ## PR ladder
 

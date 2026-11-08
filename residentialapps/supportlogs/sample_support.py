@@ -21,6 +21,11 @@ from typing import TypedDict
 from urllib.parse import quote
 
 UNIT_NAME = "Example College"
+# The sample's Residential Units (Unit-scoping rung 3, author, 2026-11-08):
+# a second Unit for the working-Unit switcher. Until rung 4 every page
+# shows Example College's records whichever Unit is chosen.
+UNITS = (UNIT_NAME, "Example Hall")
+UNIT_COOKIE = "supportlogs_unit"
 
 # Support Logs' authorization types (functional spec §3.5; roles rules 1
 # and 8), in the Access page's order. The super-admin holds administration
@@ -42,6 +47,9 @@ class Viewer:
     name: str
     appointment: str  # from the Staff roster's mock; empty for the super-admin
     grants: frozenset[str]
+    # The Units the viewer holds grants in (functional spec §3.7); one for
+    # every sample viewer but Sam Lee, the Master, who holds grants in both.
+    units: tuple[str, ...] = (UNIT_NAME,)
 
 
 # One sample viewer per role in practice (author, 2026-11-06,
@@ -54,7 +62,9 @@ class Viewer:
 VIEWERS = (
     Viewer("Daniel Koh", "RF", frozenset({FRONTLINE})),
     Viewer("Priya Raman", "RSLM", frozenset({FRONTLINE, RECIPIENT})),
-    Viewer("Sam Lee", "Master", frozenset({SENIOR, VIEW_AGGREGATE, RECIPIENT})),
+    # The Master holds grants in both sample Units, so the working-Unit
+    # switcher has a viewer (Unit-scoping rung 3, 2026-11-08).
+    Viewer("Sam Lee", "Master", frozenset({SENIOR, VIEW_AGGREGATE, RECIPIENT}), UNITS),
     Viewer("Hui Min Goh", "Exec", frozenset({CONSULTATION})),
     Viewer("Rachel Yeo", "Admin", frozenset({SYS_ADMIN})),
     Viewer("Platform super-admin", "", frozenset({SUPER_ADMIN})),
@@ -84,6 +94,12 @@ def viewer(name: str | None) -> Viewer:
 def as_query(v: Viewer) -> str:
     """The `?as=` every link carries, empty for the default viewer."""
     return "" if v == DEFAULT else f"?as={quote(v.name)}"
+
+
+def working_unit(v: Viewer, chosen: str | None) -> str:
+    """The viewer's working Unit (§3.7): the one chosen in this browser
+    when the viewer holds grants there, else their first."""
+    return chosen if chosen in v.units else v.units[0]
 
 
 def holds(v: Viewer, *grants: str) -> bool:
