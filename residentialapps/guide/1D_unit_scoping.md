@@ -52,8 +52,8 @@ belongs to the grant and the record, never to the person.
   appears once to each Unit and is never joined across them.
   `cluster_id` moves to a per-Unit membership row.
 - **Reads.** Every page, count, download and check filters by the Units
-  in which the viewer holds the grant that page needs. Cross-Unit views
-  do not exist.
+  in which the viewer holds the grant that page needs. **There are no
+  cross-Unit views at all, for anyone** (author, 2026-11-08).
 
 **Rejected: a database per Unit.** It would give the strongest
 isolation. But it multiplies migrations and Cordware deployments by the
@@ -76,7 +76,7 @@ transfer would carry their past records into the new Unit.
   - Log stamps the record with the working Unit.
   - The choice persists per browser and falls back to the first Unit
     held when the stored one is no longer held.
-- **A student who moves Units** (proposed, Q1).
+- **A student who moves Units** (ruled 2026-11-08, Q1).
   - Records stay in the Unit that made them. The new Unit starts with
     none.
   - History crosses Units only through a handover (§11, sharing model),
@@ -90,18 +90,21 @@ transfer would carry their past records into the new Unit.
 - **Safety flags** reach that Unit's recipients only. A Unit with no
   recipient warns on its Sys admin Access page, as a Unit with no senior
   does today.
-- **Consultation check** (proposed, Q4).
-  - It answers from the records of the Units the checker holds the grant
-    in, and says which Units it covered.
+- **Consultation check** (ruled 2026-11-08, Q4).
+  - It answers from the working Unit's records only, the checker holding
+    the grant there, and names that Unit on its result.
   - An unmatched student and a student unknown to those Units read the
     same: *Not matched* or *No consultation indicated*, never "known
     elsewhere".
 - **Workload and counts** (Staff Overview, Students Overview) are
   per-Unit. A staff member appointed in two Units has a separate row in
   each Unit's view.
-- **Administration** (proposed, Q3).
-  - The platform super-admin stays global and grants Support Logs Sys
-    admin per Unit.
+- **Administration** (ruled 2026-11-08, Q3).
+  - The platform super-admin grants Support Logs Sys admin per Unit, and
+    works one Unit at a time like anyone else.
+  - A Unit may have more than one Sys admin, but one account is Sys
+    admin in at most one Unit. A second Unit's grant to the same account
+    is refused, saying which Unit already holds it.
   - A Sys admin manages grants in their own Unit only.
   - Senior reads and purged counts in Sys admin's Audit log are
     per-Unit.
@@ -112,9 +115,8 @@ transfer would carry their past records into the new Unit.
 
 - The Unit is stamped at creation and only a handover changes it. Edits
   never move a record between Units.
-- There is no cross-Unit "all Units" view for anyone except the
-  super-admin's Sys admin pages, which list Units and grants and no
-  support content.
+- No cross-Unit view for anyone, the super-admin included (author,
+  2026-11-08): every page, Sys admin's among them, shows one Unit.
 - The working Unit lives in the switcher, not in the URL. Paths stay
   Unit-free, as Residential Operations' do.
 
@@ -134,7 +136,7 @@ Taken 2026-11-08 at `c053b46b1`.
 ## PR ladder
 
 1. **This plan** (prose only).
-2. **Rulings into the specs** (prose only, after Q1–Q4 are answered):
+2. **Rulings into the specs** (prose only; rulings of 2026-11-08):
    - functional spec §3.5 and §13 (the Unit on `SupportAuthorization`
      and on every record entity; per-Unit cluster membership);
    - the roles doc (per-Unit Support Logs Sys admin);
@@ -175,18 +177,15 @@ Taken 2026-11-08 at `c053b46b1`.
 
 ## Open questions
 
-All four are the author's to rule. Each has a proposed answer in
-§Semantics.
+All answered by the author, 2026-11-08:
 
-1. **A student who moves Units.** Do records stay where they were made,
-   crossing only by handover? Or does the student's history follow them?
-2. **Staff in two Units.** Should there be one working Unit at a time with
-   a switcher, as proposed? Or a merged view that labels each row's Unit?
-3. **Administration.** Should Support Logs Sys admin be per Unit under a
-   global super-admin, as proposed? Or global?
-4. **Consultation check across Units.** Should it answer only from the
-   checker's Units, as proposed? Or from every Unit, for a checker
-   granted platform-wide?
+1. **A student who moves Units:** as proposed; records stay where they
+   were made and cross only by handover.
+2. **Staff in two Units:** as proposed; one working Unit at a time.
+3. **Administration:** Sys admin per Unit, more than one allowed per
+   Unit, one account Sys admin in at most one Unit.
+4. **Consultation check:** as proposed; the checker's Unit only.
+5. **General rule:** no cross-Unit views at all.
 
 ## Out of scope
 
@@ -203,7 +202,7 @@ All four are the author's to rule. Each has a proposed answer in
 ## Doc impact
 
 - `residentialapps/docs/resident_support_log_functional_spec_v0.3.md` — §3.5 eligibility in the grant's Unit; §13 `residential_unit_id` on `SupportAuthorization` and every record entity, per-Unit cluster membership (rung 2).
-- `residentialapps/docs/residentialapps_roles.md` — Support Logs Sys admin per Unit under the global super-admin (rung 2).
+- `residentialapps/docs/residentialapps_roles.md` — Support Logs Sys admin per Unit, several per Unit, one account in at most one Unit; no cross-Unit view for anyone (rung 2).
 - `residentialapps/docs/residentialapps_roster_structure.md` — §5 and §10: the multi-Unit authorization item closed for Support Logs (rung 2).
 - `residentialapps/spec/supportlogs_ui.md` — the working Unit and the switcher; per-Unit reads, shares, teams, flags, checks, workload and audit (rungs 2–3).
 - `residentialapps/spec/applications.md` — the switcher's place in the area menu (rung 3).
