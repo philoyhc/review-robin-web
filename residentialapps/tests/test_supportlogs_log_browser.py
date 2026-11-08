@@ -6,7 +6,8 @@ a match into a pill and blocks an unmatched name (rung 8); and Students'
 filter of plans and follow-ups, kept across a reload (rung 13); and that
 text boxes resize vertically only, and Overview's withheld name opens
 and closes (2026-11-07); and a senior's folded Overview cards, and the
-three columns of 340 px (2026-11-08). Served as the
+three columns of 340 px, and the workload table's grouped header sorting
+by its columns (2026-11-08). Served as the
 sort tests are; without a Chromium
 build the test skips, saying why, and `RRW_REQUIRE_BROWSER=1` fails it."""
 
@@ -421,3 +422,38 @@ def test_students_teams_filter_shows_the_team_and_hides_add(page: Page) -> None:
     page.reload()
     assert mine.all_inner_texts() == ["Hana Rahim"] and not add.is_visible()
     page.get_by_role("button", name="All", exact=True).click()
+
+
+def test_the_workload_table_sorts_by_its_grouped_columns(page: Page) -> None:
+    """Who supports whom's two-row header (Assigned and Own over their
+    columns): each column takes a sort button, the groups none, and a
+    withheld figure sorts last either way (author, 2026-11-08)."""
+    page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
+    table = "#support-table"
+    labels = page.eval_on_selector_all(
+        f"{table} th.sortable",
+        "hs => hs.map(h => h.textContent.replace(/[\u2191\u2193\u2195]/g, '').trim())",
+    )
+    assert labels == [
+        "Staff",
+        "Plans",
+        "Meetings",
+        "Minutes",
+        "Students",
+        "Meetings",
+        "Per student",
+        "Minutes",
+        "Per meeting",
+    ]
+    rows = page.locator(f"{table} tbody tr[data-row]")
+    assert rows.count() == len(sample.workload(sample.CURRENT_TERM))
+    page.locator(table).evaluate("el => { const d = el.closest('details'); if (d) d.open = true; }")
+    meetings = page.locator(f"{table} th.sortable").nth(5)
+    meetings.locator(".sort-btn").click()
+    meetings.locator(".sort-btn").click()  # descending
+    firsts = page.eval_on_selector_all(
+        f"{table} tbody tr[data-row]", "rs => rs.map(r => r.cells[5].textContent.trim())"
+    )
+    shown = [f for f in firsts if f != "\u2013"]
+    assert shown == sorted(shown, key=int, reverse=True)
+    assert firsts[: len(shown)] == shown  # withheld last
