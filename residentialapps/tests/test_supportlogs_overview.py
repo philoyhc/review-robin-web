@@ -381,3 +381,26 @@ def test_students_overview_and_staff_overview(client: TestClient) -> None:
         assert re.search(r'href="/workload/\?as=Sam%20Lee"[^>]*aria-current="true"', page), path
     assert ">Staff Overview<" not in client.get("/").text
     assert client.get("/workload/").status_code == 403
+
+
+def test_the_counts_head_students_overview_s_side(client: TestClient) -> None:
+    """Author, 2026-11-08: Students Overview's counts are two, students
+    with records and those with more than one staff member, at the top of
+    the side column above Flagged for formal assignment; no count of
+    formal assignments."""
+    across = sample.students_across_staff()
+    for name in ("Sam%20Lee", "Siti%20Rahman", "Kenneth%20Lau"):
+        page = client.get(f"/overview/?as={name}").text
+        side = page.split('<div class="side">', 1)[1]
+        tiles = re.findall(r'<span class="tile-n">([^<]+)</span><span class="tile-l">([^<]+)', side)
+        assert tiles == [
+            (str(len(across)), "Students with records"),
+            (
+                str(sum(1 for r in across if len(r["staff"]) > 1)),
+                "With more than one staff member",
+            ),
+        ], name
+        assert "Formal assignments</span>" not in page, name
+        assert 'class="tiles"' not in page.split('<div class="side">', 1)[0], name
+    sam = client.get("/overview/?as=Sam%20Lee").text
+    assert sam.index('class="tiles"') < sam.index('id="refs-h"')

@@ -271,12 +271,14 @@ about?"*
   every card that shows names starts closed, and its heading opens it (Show or Hide
   beside it).
 - [ ] A notice that you see who has records with whom, never what they
-  recorded; tiles counting plans and students; no Following column or
+  recorded; no Following column or
   follow-ups tile anywhere; **Students across staff**, naming only Elena Park, Jia Wen Lee, Clara
   Tan, Dev Menon and Ivan Seet until **Show name** opens another row, and
   no dates, minutes or encounter counts anywhere else, nor any tied to a
-  student; beside them, Flagged for formal assignment, with Assign
-  disabled, and Every formal plan, without due states. No Who holds
+  student; beside them, from the top, two counts (10 students with
+  records, 2 with more than one staff member; no formal assignments
+  count), Flagged for formal assignment, with Assign disabled, and Every
+  formal plan, without due states. No Who holds
   access, audit or records card.
 - [ ] **Staff Overview** opens with **Who supports whom**, open, across the page's
   full width (three columns from 1116 px) and sortable by each column,
@@ -406,9 +408,8 @@ you would act on?*
 
 - [ ] **Columns**: at 1280 px a page's own cards stop at two thirds of the
   page, and its side column, a third, starts at the top: Students
-  Overview's Flagged for formal assignment and Every formal plan beside
-  the notice and the flags (as Kenneth Lau, with no side cards, the main
-  column takes the width); Staff Overview's Who supports whom across all
+  Overview's counts, Flagged for formal assignment and Every formal plan beside
+  the notice and the flags (as Kenneth Lau, the counts alone); Staff Overview's Who supports whom across all
   three, then Who holds access beside the audit and records;
   Home's My last 14 days beside the flags; Students' Your records,
   locked, beside Find (unlocked it joins the main column, which takes the
