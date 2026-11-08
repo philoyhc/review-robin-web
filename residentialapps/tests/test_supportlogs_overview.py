@@ -111,7 +111,7 @@ def test_senior_staff_see_each_staff_member_s_workload_by_term(client: TestClien
     assert list(_workload(client)) == [r["staff"] for r in sample.who_supports_whom()]
     # A past term: nothing met, no plan active in it.
     past = _workload(client, "&term=AY2025-2026.2")["Daniel Koh"]
-    assert past == ["0", "–", "–", "–", "–", "0", "0"]
+    assert past == ["0", "–", "–", "–", "–", "–", "–"]  # below the floor too
     assert _workload(client, "&term=all")["Daniel Koh"] == _workload(client)["Daniel Koh"]
     assert 'value="all" selected' in section(
         client.get("/overview/?as=Sam%20Lee&term=all").text, "support-h"
@@ -127,8 +127,8 @@ def test_no_workload_figures_below_three_students(client: TestClient) -> None:
     student's (Mei Ling Tan's one student would otherwise give away that
     student's meetings and minutes)."""
     rows = _workload(client)
-    assert rows["Mei Ling Tan"][:5] == ["1", "–", "–", "–", "–"]
-    assert rows["Arjun Nair"][:5] == ["2", "–", "–", "–", "–"]
+    assert rows["Mei Ling Tan"] == ["1", "–", "–", "–", "–", "–", "–"]
+    assert rows["Arjun Nair"] == ["2", "–", "–", "–", "–", "–", "–"]
     card = section(client.get("/overview/?as=Sam%20Lee").text, "support-h")
     assert card.count("Fewer than 3 students</span>") == 2
     assert all(r["shown"] == (r["students"] >= 3) for r in sample.workload(None))
