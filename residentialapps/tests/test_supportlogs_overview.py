@@ -47,6 +47,7 @@ def test_who_supports_whom_counts_students_not_encounters(client: TestClient) ->
     plans, for anyone but senior staff; nothing drawn from content (no
     encounters, minutes or load)."""
     page = client.get("/workload/?as=Siti%20Rahman").text
+    overview = client.get("/overview/?as=Siti%20Rahman").text
     rows = cells(section(page, "support-h"))
     assert [plain(r[0]) for r in rows] == [r["staff"] for r in sample.who_supports_whom()]
     daniel = next(r for r in rows if plain(r[0]) == "Daniel Koh")
@@ -54,7 +55,7 @@ def test_who_supports_whom_counts_students_not_encounters(client: TestClient) ->
         str(len(sample.students_with_records("Daniel Koh"))),
         "2",
     ]  # students, assigned; no follow-ups (author, 2026-11-08)
-    assert "Following" not in page
+    assert "Following" not in page and "Following" not in overview
     for gone in (
         "load-h",
         "hot-h",
@@ -66,9 +67,10 @@ def test_who_supports_whom_counts_students_not_encounters(client: TestClient) ->
         "Encounters,",
         "Overdue",
     ):
-        assert gone not in page, gone
-    assert "Minutes" not in client.get("/workload/?as=Kenneth%20Lau").text
-    assert "Following" not in client.get("/overview/?as=Siti%20Rahman").text
+        assert gone not in page and gone not in overview, gone
+    for name in ("Siti%20Rahman", "Kenneth%20Lau"):
+        for path in ("/workload/", "/overview/"):
+            assert "Minutes" not in client.get(f"{path}?as={name}").text, (path, name)
 
 
 def _workload(client: TestClient, term: str = "") -> dict[str, list[str]]:

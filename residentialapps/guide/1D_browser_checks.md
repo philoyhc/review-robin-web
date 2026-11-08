@@ -272,8 +272,7 @@ about?"*
   beside it).
 - [ ] A notice that you see who has records with whom, never what they
   recorded; tiles counting plans and students; no Following column or
-  follow-ups tile anywhere; per staff member, Assigned
-  **Students across staff**, naming only Elena Park, Jia Wen Lee, Clara
+  follow-ups tile anywhere; **Students across staff**, naming only Elena Park, Jia Wen Lee, Clara
   Tan, Dev Menon and Ivan Seet until **Show name** opens another row, and
   no dates, minutes or encounter counts anywhere else, nor any tied to a
   student; Flagged for formal assignment, with Assign disabled; Every

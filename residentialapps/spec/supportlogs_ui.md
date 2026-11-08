@@ -27,10 +27,11 @@ Support Logs' own under `data-app="supportlogs"`.
   (`residentialapps/spec/residentialops_ui.md` §1, author, 2026-11-08):
   at most three of at least 340 px, three from 1116 px wide, two from
   736 px. Sys admin is desktop-oriented, so it keeps the full width for
-  its cards.
-- **Overview and the Consultation check are responsive**: their tables
-  scroll sideways in `.table-wrap` when their column is narrower than
-  they are, on a phone and in Overview's main column below 1116 px.
+  its cards. Workload's Who supports whom is the one wide card: all
+  three columns (author, 2026-11-08).
+- **Overview, Workload and the Consultation check are responsive**: their
+  tables scroll sideways in `.table-wrap` when their column is narrower
+  than they are, on a phone and in Overview's main column below 1116 px.
 - **Log's students are the viewer's favorites** (author, 2026-11-06),
   marked with a star on Students, in the order favorited, with a hint to
   mark more there and "Or find a student" for the rest. Home has no Log
