@@ -473,6 +473,22 @@
       .split { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
       .split > .main { flex: 999 1 560px; min-width: 0; }
       .split > .side { flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+      /* Columns (author, 2026-11-08), every Residential app: at most
+         three, each at least 340 px with 24 px between. Three from 1116 px
+         wide (content 1068 px), two from 736 px (content 704 px, the
+         page's margins being 16 px below 960), one below. The page's own
+         split: its main column spans two and its side one; a card on its
+         own spans two, never the third column too. A split inside a card,
+         a .narrow card and a desktop-oriented page (.page.desktop, from
+         the page map: its split and its cards alike) keep their own
+         widths. */
+      .page:not(.desktop) > .split > .main { flex-basis: 340px; }
+      .page:not(.desktop) > .split > .side { flex-basis: 340px; }
+      @media (min-width: 1116px) {
+        .page:not(.desktop) > .split { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .page:not(.desktop) > .split > .main { grid-column: span 2; }
+        .page:not(.desktop) > :not(.split):not(.narrow) { max-width: calc((100% - 48px) * 2 / 3 + 24px); }
+      }
 
       @media (min-width: 960px) {
         .tb-in { padding: 10px 24px; }
@@ -590,7 +606,7 @@
         </div>
       </nav>
     {% endif %}
-    <main class="page">
+    <main class="page{% if desktop_page %} desktop{% endif %}">
       {% block content %}{% endblock %}
       {# The sample viewer card, after the page (author, 2026-10-31): the
          "Viewing as" chip at the top links down to it. #}

@@ -171,3 +171,29 @@ def top_line(unit_name: str | None) -> str:
 def initials(label: str) -> str:
     parts = [p for p in label.replace("@", " ").split() if p[:1].isalpha()]
     return "".join(p[0] for p in parts[:2]).upper() or "?"
+
+
+# The desktop-oriented pages of `residentialapps/spec/applications.md`
+# ("Pages"), by path prefix relative to the app's mount: they keep the
+# page's full width rather than two of its three columns (author,
+# 2026-11-08), their wide tables being the point of them. A prefix
+# covers its pages beneath it, as /rosters/ does a person's page.
+DESKTOP_PAGES: Mapping[str, tuple[str, ...]] = {
+    "residentialops": (
+        "/ra-leave/admin/",
+        "/ra-leave/staff/precinct",
+        "/ra-events/admin/",
+        "/rosters/",
+        "/sys-admin/",
+    ),
+    "supportlogs": ("/sys-admin/",),
+}
+
+
+def desktop_oriented(app_key: str, path: str) -> bool:
+    """Whether `path`, relative to the app's mount, is a desktop-oriented
+    page."""
+    return any(
+        path == prefix.rstrip("/") or path.startswith(prefix.rstrip("/") + "/")
+        for prefix in DESKTOP_PAGES.get(app_key, ())
+    )

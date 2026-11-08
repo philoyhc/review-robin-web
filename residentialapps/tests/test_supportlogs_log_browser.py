@@ -5,7 +5,8 @@ counts its characters; and a staff or student filter's box of people turns
 a match into a pill and blocks an unmatched name (rung 8); and Students'
 filter of plans and follow-ups, kept across a reload (rung 13); and that
 text boxes resize vertically only, and Overview's withheld name opens
-and closes (2026-11-07). Served as the
+and closes (2026-11-07); and a senior's folded Overview cards, and the
+three columns of 340 px (2026-11-08). Served as the
 sort tests are; without a Chromium
 build the test skips, saying why, and `RRW_REQUIRE_BROWSER=1` fails it."""
 
@@ -334,6 +335,64 @@ def test_overview_cards_of_names_stay_folded_until_opened(page: Page) -> None:
         page.locator(heading).click()
         assert page.locator(inside).is_visible(), heading
     assert page.locator("#flags-h").is_visible() and page.locator(".tiles").is_visible()
+
+
+def test_three_columns_of_340_and_cards_span_two(page: Page) -> None:
+    """Author, 2026-11-08: at most three columns of at least 340 px, 24 px
+    apart. Three from 1116 px wide: a split's main column spans two and
+    its side one, and a card on its own spans two. Two from 736 px (the
+    page's margins are 16 px below 960): a card spans the page. One
+    below."""
+    measure = """() => {
+      const s = document.querySelector('.split');
+      const m = s.querySelector('.main').getBoundingClientRect();
+      const d = s.querySelector('.side').getBoundingClientRect();
+      const card = document.querySelector('section:has(#plans-h)').getBoundingClientRect();
+      const pg = document.querySelector('.page'), cs = getComputedStyle(pg);
+      const content = pg.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      return [Math.round(content), Math.round(m.width), Math.round(d.width),
+              m.top === d.top, Math.round(card.width)];
+    }"""
+    for width, expect in (
+        (1280, (1184, 781, 379, True, 781)),
+        (1116, (1068, 704, 340, True, 704)),
+        (1115, (1067, 703, 340, True, 1067)),
+        (736, (704, 340, 340, True, 704)),
+        (735, (703, 703, 703, False, 703)),
+    ):
+        page.set_viewport_size({"width": width, "height": 900})
+        page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
+        assert tuple(page.evaluate(measure)) == expect, width
+
+
+def test_a_card_s_own_split_and_a_narrow_card_keep_their_widths(page: Page) -> None:
+    """The three columns are the page's: the split inside Your records
+    keeps a side of at least 300 px, and the no-access card stays 560 px
+    (author, 2026-11-08)."""
+    for width in (1280, 1116):
+        page.set_viewport_size({"width": width, "height": 900})
+        page.goto(f"{ORIGIN}/students/?records=open&understood=yes")
+        side = page.evaluate(
+            "() => document.querySelector('.card .split > .side').getBoundingClientRect().width"
+        )
+        assert side >= 300, (width, side)
+        page.goto(f"{ORIGIN}/sys-admin/?as=Sam%20Lee")
+        narrow = page.evaluate(
+            "() => document.querySelector('.narrow').getBoundingClientRect().width"
+        )
+        assert round(narrow) == 560, (width, narrow)
+
+
+def test_desktop_oriented_sys_admin_keeps_the_full_width(page: Page) -> None:
+    """Sys admin is desktop-oriented (author, 2026-11-08): at 1280 px its
+    cards keep the page's full width, where another page's stop at two
+    columns."""
+    page.set_viewport_size({"width": 1280, "height": 900})
+    page.goto(f"{ORIGIN}/sys-admin/?as=Rachel%20Yeo")
+    width = page.evaluate(
+        "() => document.querySelector('section:has(#access-h)').getBoundingClientRect().width"
+    )
+    assert round(width) == 1184 and page.locator("main.page.desktop").count() == 1
 
 
 def test_students_teams_filter_shows_the_team_and_hides_add(page: Page) -> None:

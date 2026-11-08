@@ -114,6 +114,13 @@ A recipient's flags card folds **Closed**, lists only the flags closed in
 the last 7 days, and puts the search for older ones after them (author,
 2026-11-08).
 
+### Rung 11 — Three columns of 340
+
+At most three columns of at least 340 px, 24 px apart: three from
+1116 px wide, two from 736 px, one below; cards on their own span two
+(author, 2026-11-08). Every Residential app; desktop-oriented pages
+keep the full width.
+
 ## Checks
 
 Each rung keeps `pytest`, `ruff`, `pyright` green and takes one
@@ -199,3 +206,16 @@ browser check passes on each rung.
   One read: the count unstyled in an h3, the window's edges untested and
   no closing date on a closed flag, all fixed. Left as is: the sample's
   audit has no closing event, as before.
+- **Rung 11:** as planned; two columns hold down to 736 px rather than
+  the 752 first worked out, the page's margins being 16 px below 960.
+  One read: the grid caught a card's own split and the cap a .narrow
+  card, both now exempt; the spec now says it overrides Residential
+  Ops' columns and that tables scroll in Overview's main column below
+  1116 px.
+- **Rung 11, widened:** the author's ruling, before merge: desktop-
+  oriented pages (Support Logs' Sys admin; Residential Ops' RA Leave
+  admin, Precinct leave, rosters, Events admin and Sys admin) keep the
+  full width, and the columns apply to every Residential app.
+  One read of the widening: a desktop page's split still took the
+  columns, the page-map test matched any app's prefix and loosely, and
+  nothing tested Residential Ops' layout, all fixed.

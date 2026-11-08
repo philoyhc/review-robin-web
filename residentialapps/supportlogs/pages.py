@@ -15,8 +15,8 @@ from starlette.responses import Response
 
 from cordware.identity import current_identity
 from residentialapps.supportlogs import sample_support as sample
-from residentialapps.web.pages import initials, split_areas, top_line
-from residentialapps.web.urls import templates
+from residentialapps.web.pages import desktop_oriented, initials, split_areas, top_line
+from residentialapps.web.urls import app_path, templates
 
 TEMPLATES = templates([Path(__file__).resolve().parent / "templates"])
 
@@ -165,6 +165,7 @@ def render(
         template,
         {
             "app_key": "supportlogs",
+            "desktop_page": desktop_oriented("supportlogs", app_path(request)),
             "app_name": APP_NAME,
             "unit_name": sample.UNIT_NAME,
             "top_line": top_line(sample.UNIT_NAME),

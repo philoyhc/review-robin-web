@@ -70,6 +70,8 @@ PROSE_TESTS = (
     # Who can see what holds the staff explainer's text, which an edit to
     # residentialapps/docs alone changes (2026-11-07).
     "residentialapps/tests/test_supportlogs_explainer.py",
+    # The desktop-oriented pages follow the page map (2026-11-08).
+    "residentialapps/tests/test_desktop_pages.py",
 )
 
 # What the residential lane runs beside the prose lane's tests: Residential's
