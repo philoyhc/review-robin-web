@@ -159,6 +159,12 @@ holds access, the support-activity audit and records across staff move
 to Staff Overview, below Who supports whom (author, 2026-11-08). Paths
 stay `/overview/` and `/workload/`.
 
+### Rung 17 — Students Overview's counts
+
+The formal assignments count goes, and the other two counts move to the
+top of the side column, above Flagged for formal assignment (author,
+2026-11-08).
+
 ## Checks
 
 Each rung keeps `pytest`, `ruff`, `pyright` green and takes one
@@ -282,3 +288,6 @@ browser check passes on each rung.
 - **Rung 16:** as planned; Flagged for formal assignment and Every
   formal plan move into Students Overview's side, so its third column
   is not left empty.
+- **Rung 17:** as planned. Every viewer gets the counts in the side, so
+  the aggregate view's main column, full width before, now spans two
+  beside them; on a phone the counts follow Students across staff.

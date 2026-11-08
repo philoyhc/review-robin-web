@@ -90,8 +90,10 @@ form's end, and the main action is a full-width Primary on the page
   - **Students Overview** (`/overview/`) and **Staff Overview**
     (`/workload/`) for senior staff and Other Staff view (author,
     2026-11-08). Students Overview is the students' side of oversight:
-    the flags, the tiles, Students across staff, Flagged for formal
-    assignment, Every formal plan. Staff Overview is the staff's: Who
+    the flags and Students across staff; in its side, two counts
+    (students with records, and with more than one staff member; no
+    count of formal assignments), Flagged for formal assignment, Every
+    formal plan. Staff Overview is the staff's: Who
     supports whom at the page's full width, then, for senior staff, Who
     holds access, the support-activity audit and records across staff,
     whose pages return to it. Home never lists Staff Overview apart from

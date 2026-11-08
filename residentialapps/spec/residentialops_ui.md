@@ -32,7 +32,8 @@ in `residentialapps/web/templates/residential/base.html`.
   side column is 340 px and the main column takes the rest. **The side
   column starts at the top** (author, 2026-11-08): what opens a page (a
   notice, the flags, the tiles, a page's first button) sits in the main
-  column beside it, and a page's shorter cards go to the side, so the
+  column beside it (Support Logs' Students Overview puts its two counts
+  at the top of the side instead, author, 2026-11-08), and a page's shorter cards go to the side, so the
   third column is not left empty where a page has a one-column card to
   put there; on a phone the side still follows the main column. A card's own
   inner split and a narrow notice card keep their widths, and a
