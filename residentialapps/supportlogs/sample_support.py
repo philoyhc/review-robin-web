@@ -978,23 +978,29 @@ class SupportRow(TypedDict):
     staff: str
     students: int
     formal: int
-    informal: int
 
 
 class WorkloadRow(TypedDict):
     staff: str
+    # Assigned (author, 2026-11-08): formal plans active in the term and
+    # the meetings with their students; cases senior staff assigned, so
+    # shown whatever their number.
+    plans: int
+    assigned_meetings: int
+    assigned_minutes: int
+    # Own: every other meeting logged in the term, counted without naming
+    # a student and withheld below WORKLOAD_MIN_STUDENTS students.
     students: int
-    shown: bool  # False: too few students to show the rest
-    records: int
+    shown: bool
+    meetings: int
     per_student: str
     minutes: int
     per_meeting: str
-    formal: int
-    informal: int
 
 
-# Below this many students in the term, a staff member's workload figures
-# are withheld, so no total is one student's (author, 2026-11-08).
+# Below this many students of their own in the term, a staff member's own
+# workload figures are withheld, so no total is one student's (author,
+# 2026-11-08).
 WORKLOAD_MIN_STUDENTS = 3
 
 
@@ -1006,46 +1012,48 @@ def _half_up(value: float, places: int = 0) -> str:
 
 def workload(chosen: Term | None) -> list[WorkloadRow]:
     """Workload, per frontline colleague, for a term or all terms (author,
-    2026-11-08): the students with a record in it (a meeting or a plan
-    started in it), the records (meetings and plans), records per student,
-    and the minutes met, in total and per meeting (60+ min counts as 60),
-    and the formal assignments and follow-ups active in it.
-    Totals for the staff member only, never per student or which student,
-    and withheld below WORKLOAD_MIN_STUDENTS students: senior staff see
-    them, no one else. Ordered as Who supports whom is."""
+    2026-11-08), in two parts. **Assigned**: the formal plans active in the
+    term (still active and begun by its end) and the meetings and minutes
+    with those plans' students. **Own**: the other meetings logged in the
+    term, as students, meetings, meetings per student and minutes in total
+    and per meeting (60+ min counts as 60), withheld below
+    WORKLOAD_MIN_STUDENTS students. Follow-ups are the frontline's own and
+    count nowhere here. Never which student. Ordered as Who supports whom."""
 
     def within(d: date) -> bool:
         return chosen is None or chosen.start <= d <= chosen.end
 
+    order = [r["staff"] for r in who_supports_whom()]
     rows: list[WorkloadRow] = []
-    for staff in FRONTLINE_COLLEAGUES:
-        met = [e for e in ENCOUNTERS if e.staff == staff and within(e.when.date())]
-        began = [p for p in PLANS if p.staff == staff and within(p.start)]
-        students = len({e.student for e in met} | {p.student for p in began})
-        records = len(met) + len(began)
-        minutes = sum(MINUTES[e.duration] for e in met)
-        # Active plans in the term (author, 2026-11-08): still active and
-        # begun by its end. The sample keeps no end date, so a closed or
-        # paused plan cannot be placed in a term until wiring records one.
-        current = [
+    for staff in order:
+        # The sample keeps no end date, so a closed or paused plan cannot be
+        # placed in a term until wiring records one.
+        formal = [
             p
             for p in plans_of(staff)
-            if chosen is None or (p.start <= chosen.end and chosen.start <= TODAY)
+            if p.formal and (chosen is None or (p.start <= chosen.end and chosen.start <= TODAY))
         ]
+        assigned = {p.student for p in formal}
+        met = [e for e in ENCOUNTERS if e.staff == staff and within(e.when.date())]
+        theirs = [e for e in met if e.student in assigned]
+        own = [e for e in met if e.student not in assigned]
+        students = len({e.student for e in own})
+        minutes = sum(MINUTES[e.duration] for e in own)
         rows.append(
             {
                 "staff": staff,
+                "plans": len(formal),
+                "assigned_meetings": len(theirs),
+                "assigned_minutes": sum(MINUTES[e.duration] for e in theirs),
                 "students": students,
                 "shown": students >= WORKLOAD_MIN_STUDENTS,
-                "records": records,
-                "per_student": _half_up(records / students, 1) if students else "–",
+                "meetings": len(own),
+                "per_student": _half_up(len(own) / students, 1) if students else "–",
                 "minutes": minutes,
-                "per_meeting": _half_up(minutes / len(met)) if met else "–",
-                "formal": sum(1 for p in current if p.formal),
-                "informal": sum(1 for p in current if not p.formal),
+                "per_meeting": _half_up(minutes / len(own)) if own else "–",
             }
         )
-    return sorted(rows, key=lambda r: (-r["students"], r["staff"]))
+    return rows
 
 
 def students_with_records(staff: str) -> set[str]:
@@ -1063,9 +1071,10 @@ def staff_with_records(sid: str) -> set[str]:
 
 def who_supports_whom() -> list[SupportRow]:
     """Who supports whom (author, 2026-11-07): per frontline colleague, how
-    many students they have records with, and their active formal plans
-    and follow-ups. Metadata only: no dates, minutes or counts of
-    encounters, which are content."""
+    many students they have records with, and their active formal plans.
+    Metadata only: no dates, minutes or counts of encounters, which are
+    content, and no follow-ups, which are the frontline's own (author,
+    2026-11-08)."""
     rows: list[SupportRow] = []
     for staff in FRONTLINE_COLLEAGUES:
         plans = plans_of(staff)
@@ -1074,7 +1083,6 @@ def who_supports_whom() -> list[SupportRow]:
                 "staff": staff,
                 "students": len(students_with_records(staff)),
                 "formal": sum(1 for p in plans if p.formal),
-                "informal": sum(1 for p in plans if not p.formal),
             }
         )
     return sorted(rows, key=lambda r: (-r["students"], r["staff"]))
@@ -1672,7 +1680,13 @@ def staff_rows(
     for name in FRONTLINE_COLLEAGUES:
         if staff and name != staff:
             continue
-        rows += [[name, *(r[i] for i in keep)] for r in plan_rows(name, t, sid)]
+        # Formal assignments only (author, 2026-11-08): a follow-up is the
+        # frontline's own, seen only through a share.
+        rows += [
+            [name, *(r[i] for i in keep)]
+            for r in plan_rows(name, t, sid)
+            if r[PLAN_COLUMNS.index("Kind")] == "Formal assignment"
+        ]
     return SENIOR_PLAN_COLUMNS, rows
 
 

@@ -32,10 +32,13 @@ content:
   its type, its concern areas, whether a follow-up is needed and its
   note. Figures drawn from content (encounter counts, minutes, due
   dates) are content too, but for one exception (author, 2026-11-08):
-  **senior staff see each staff member's workload for a chosen term**
-  (students with records, records, records per student, minutes in total
-  and per meeting, plans active), totals for the staff member only, never
-  per student or which student, and withheld below three students.
+  **senior staff see each staff member's workload for a chosen term** in
+  two groups: assigned (formal plans active, with the meetings and
+  minutes with their students, which a senior knows already) and own
+  (other meetings as students, meetings, per student, minutes, per
+  meeting, totals only, never which student, and withheld below three
+  students). Follow-ups are the staff member's own: not listed, counted
+  or opened by senior staff without a share.
 - **By default, a senior sees only the metadata: which students have
   records with which staff.**
 - **Names** follow confidentiality rule 3: a student on a formal plan,

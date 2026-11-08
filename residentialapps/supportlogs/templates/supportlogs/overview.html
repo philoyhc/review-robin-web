@@ -24,7 +24,6 @@
       {% set active = sample.PLANS | selectattr("status", "equalto", "Active") | list %}
       <section class="tiles" aria-label="Across the team">
         <div class="tile"><span class="tile-n">{{ active | selectattr("formal") | list | length }}</span><span class="tile-l">Formal assignments</span></div>
-        <div class="tile"><span class="tile-n">{{ active | rejectattr("formal") | list | length }}</span><span class="tile-l">Follow-ups</span></div>
         <div class="tile"><span class="tile-n">{{ across | length }}</span><span class="tile-l">Students with records</span></div>
         <div class="tile"><span class="tile-n">{{ across | map(attribute="staff") | map("length") | select("gt", 1) | list | length }}</span><span class="tile-l">With more than one staff member</span></div>
       </section>
@@ -33,7 +32,7 @@
         {% if senior %}
         {# Workload (author, 2026-11-08): per staff member, for a term,
            totals only, never which student; senior staff alone. #}
-        <p class="sub">Per staff member, for the term chosen: the students with a record in it, their records (meetings and plans), records per student, and the minutes met, in total and per meeting (60+ min counts as 60). Totals for the staff member only, never which student, and none for fewer than {{ sample.WORKLOAD_MIN_STUDENTS }} students, so no total is one student's. Assigned and Following are the plans active in the term.</p>
+        <p class="sub">Per staff member, for the term chosen. <strong>Assigned</strong>: the formal plans active in it, and the meetings and minutes with those students. <strong>Own</strong>: every other meeting logged, as students, meetings, meetings per student and minutes in total and per meeting (60+ min counts as 60), never which student, and none for fewer than {{ sample.WORKLOAD_MIN_STUDENTS }} students. Follow-ups are the frontline's own and count nowhere here.</p>
         <form class="btnrow gap-below" method="get" action="{{ url('/overview/') }}" aria-label="Workload's term">
           {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
           <label for="wl-term" class="visually-hidden">Term</label>
@@ -42,16 +41,19 @@
         </form>
         <div class="table-wrap">
           <table data-sort-auto id="support-table">
-            <thead><tr><th scope="col">Staff</th><th scope="col" class="num">Students</th><th scope="col" class="num">Records</th><th scope="col" class="num">Per student</th><th scope="col" class="num">Minutes</th><th scope="col" class="num">Per meeting</th><th scope="col" class="num">Assigned</th><th scope="col" class="num">Following</th></tr></thead>
-            <tbody>{% for r in sample.workload(chosen_term) %}<tr><td class="strong">{{ r.staff }}{% if not r.shown and r.students %} <span class="chip chip-mute">Fewer than {{ sample.WORKLOAD_MIN_STUDENTS }} students</span>{% endif %}</td><td class="num">{{ r.students }}</td>{% if r.shown %}<td class="num">{{ r.records }}</td><td class="num">{{ r.per_student }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.per_meeting }}</td><td class="num">{{ r.formal }}</td><td class="num">{{ r.informal }}</td>{% else %}<td class="num">–</td><td class="num">–</td><td class="num">–</td><td class="num">–</td><td class="num">–</td><td class="num">–</td>{% endif %}</tr>{% endfor %}</tbody>
+            <thead>
+              <tr><th scope="col" rowspan="2">Staff</th><th scope="colgroup" colspan="3">Assigned</th><th scope="colgroup" colspan="5">Own</th></tr>
+              <tr><th scope="col" class="num">Plans</th><th scope="col" class="num">Meetings</th><th scope="col" class="num">Minutes</th><th scope="col" class="num">Students</th><th scope="col" class="num">Meetings</th><th scope="col" class="num">Per student</th><th scope="col" class="num">Minutes</th><th scope="col" class="num">Per meeting</th></tr>
+            </thead>
+            <tbody>{% for r in sample.workload(chosen_term) %}<tr><td class="strong">{{ r.staff }}{% if not r.shown and r.students %} <span class="chip chip-mute">Fewer than {{ sample.WORKLOAD_MIN_STUDENTS }} students</span>{% endif %}</td><td class="num">{{ r.plans }}</td><td class="num">{{ r.assigned_meetings }}</td><td class="num">{{ r.assigned_minutes }}</td><td class="num">{{ r.students }}</td>{% if r.shown %}<td class="num">{{ r.meetings }}</td><td class="num">{{ r.per_student }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.per_meeting }}</td>{% else %}<td class="num">–</td><td class="num">–</td><td class="num">–</td><td class="num">–</td>{% endif %}</tr>{% endfor %}</tbody>
           </table>
         </div>
         {% else %}
-        <p class="sub">Per staff member, how many students they have records with, and their formal assignments and follow-ups. No dates, minutes or counts of encounters: those are the records' content.</p>
+        <p class="sub">Per staff member, how many students they have records with, and their formal assignments. No dates, minutes or counts of encounters: those are the records' content.</p>
         <div class="table-wrap">
           <table data-sort-auto id="support-table">
-            <thead><tr><th scope="col">Staff</th><th scope="col" class="num">Students</th><th scope="col" class="num">Assigned</th><th scope="col" class="num">Following</th></tr></thead>
-            <tbody>{% for r in sample.who_supports_whom() %}<tr><td class="strong">{{ r.staff }}</td><td class="num">{{ r.students }}</td><td class="num">{{ r.formal }}</td><td class="num">{{ r.informal }}</td></tr>{% endfor %}</tbody>
+            <thead><tr><th scope="col">Staff</th><th scope="col" class="num">Students</th><th scope="col" class="num">Assigned</th></tr></thead>
+            <tbody>{% for r in sample.who_supports_whom() %}<tr><td class="strong">{{ r.staff }}</td><td class="num">{{ r.students }}</td><td class="num">{{ r.formal }}</td></tr>{% endfor %}</tbody>
           </table>
         </div>
         {% endif %}
@@ -116,9 +118,10 @@
   {% endif %}
   {% if named %}
     <section class="card card-pad gap-above" aria-labelledby="plans-h">
-      {% call folded("plans-h", "Every plan", sample.PLANS | length, fold=senior) %}
-      <p class="sub">Formal assignments and follow-ups across the team{% if not senior %}, read-only{% endif %}.</p>
-      <ul class="items">{% for p in sample.PLANS | sort(attribute="formal", reverse=true) %}{% set s = sample.student(p.student) %}{% set link %}<a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ s.name }}</a>{% endset %}<li><div class="item-head">{{ link if sample.named_on_overview(s.id) else withheld(link) }}</div><div class="subtle">{{ ("Plan · " ~ p.source if senior else "Plan") if p.formal else "Following" }} · {{ p.staff }}</div></li>{% endfor %}</ul>
+      {% set formal = sample.PLANS | selectattr("formal") | list %}
+      {% call folded("plans-h", "Every formal plan", formal | length, fold=senior) %}
+      <p class="sub">Formal assignments across the team{% if not senior %}, read-only{% endif %}. Follow-ups are their staff member's own.</p>
+      <ul class="items">{% for p in formal %}{% set s = sample.student(p.student) %}{% set link %}<a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ s.name }}</a>{% endset %}<li><div class="item-head">{{ link if sample.named_on_overview(s.id) else withheld(link) }}</div><div class="subtle">{{ "Plan · " ~ p.source if senior else "Plan" }} · {{ p.staff }}</div></li>{% endfor %}</ul>
       {% endcall %}
     </section>
   {% endif %}

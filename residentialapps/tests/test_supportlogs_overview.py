@@ -53,8 +53,8 @@ def test_who_supports_whom_counts_students_not_encounters(client: TestClient) ->
     assert daniel[1:] == [
         str(len(sample.students_with_records("Daniel Koh"))),
         "2",
-        "2",
-    ]  # students, assigned, following
+    ]  # students, assigned; no follow-ups (author, 2026-11-08)
+    assert "Following" not in page
     for gone in (
         "load-h",
         "hot-h",
@@ -77,41 +77,46 @@ def _workload(client: TestClient, term: str = "") -> dict[str, list[str]]:
 
 def test_senior_staff_see_each_staff_member_s_workload_by_term(client: TestClient) -> None:
     """Author, 2026-11-08: senior staff see, per staff member, for a term
-    (the current one by default, or all), students with a record in it,
-    records (meetings and plans), records per student, minutes in total and
-    per meeting, and plans active in it; never which student."""
+    (the current one by default, or all), two kinds of load. Assigned: the
+    formal plans active in it and the meetings and minutes with their
+    students. Own: the other meetings, as students, meetings, meetings per
+    student and minutes in total and per meeting. Follow-ups count
+    nowhere; no student is named."""
     card = section(client.get("/overview/?as=Sam%20Lee").text, "support-h")
     assert '<select id="wl-term" name="term"' in card and "All terms</option>" in card
     assert f'value="{sample.CURRENT_TERM.key}" selected' in card
+    assert 'scope="colgroup" colspan="3">Assigned</th>' in card and ">Own</th>" in card
     term = sample.CURRENT_TERM
+    formal = [p for p in sample.plans_of("Daniel Koh") if p.formal]
+    assigned = {p.student for p in formal}
     met = [
         e
         for e in sample.ENCOUNTERS
         if e.staff == "Daniel Koh" and term.start <= e.when.date() <= term.end
     ]
-    began = [
-        p for p in sample.PLANS if p.staff == "Daniel Koh" and term.start <= p.start <= term.end
-    ]
-    students = len({e.student for e in met} | {p.student for p in began})
-    records = len(met) + len(began)
-    minutes = sum(sample.MINUTES[e.duration] for e in met)
+    theirs = [e for e in met if e.student in assigned]
+    own = [e for e in met if e.student not in assigned]
+    students = len({e.student for e in own})
+    minutes = sum(sample.MINUTES[e.duration] for e in own)
+    assert theirs and own, "the sample has both kinds"
     assert _workload(client)["Daniel Koh"] == [
+        str(len(formal)),
+        str(len(theirs)),
+        str(sum(sample.MINUTES[e.duration] for e in theirs)),
         str(students),
-        str(records),
-        f"{records / students:.1f}",
+        str(len(own)),
+        sample._half_up(len(own) / students, 1),
         str(minutes),
-        str(int(minutes / len(met) + 0.5)),
-        "2",
-        "2",
+        sample._half_up(minutes / len(own)),
     ]
-    assert began, "the sample's plans count as records"
     for s in sample.STUDENTS:  # no student named or linked in the card
         assert s.name not in card and s.id not in card, s.name
+    assert "Following" not in card and "follow-up" not in card.split("<table")[1]
     # Ordered as Who supports whom: most students first.
     assert list(_workload(client)) == [r["staff"] for r in sample.who_supports_whom()]
-    # A past term: nothing met, no plan active in it.
+    # A past term: no plan active in it, nothing met.
     past = _workload(client, "&term=AY2025-2026.2")["Daniel Koh"]
-    assert past == ["0", "–", "–", "–", "–", "–", "–"]  # below the floor too
+    assert past == ["0", "0", "0", "0", "–", "–", "–", "–"]
     assert _workload(client, "&term=all")["Daniel Koh"] == _workload(client)["Daniel Koh"]
     assert 'value="all" selected' in section(
         client.get("/overview/?as=Sam%20Lee&term=all").text, "support-h"
@@ -121,14 +126,20 @@ def test_senior_staff_see_each_staff_member_s_workload_by_term(client: TestClien
     )
 
 
-def test_no_workload_figures_below_three_students(client: TestClient) -> None:
-    """Author, 2026-11-08: a staff member with fewer than three students in
-    the term shows the number of students alone, so no total is one
-    student's (Mei Ling Tan's one student would otherwise give away that
-    student's meetings and minutes)."""
+def test_no_own_workload_figures_below_three_students(client: TestClient) -> None:
+    """Author, 2026-11-08: below three students of their own in the term,
+    a staff member's own load shows the number of students alone, so no
+    total is one student's. Assigned load shows whatever its size: those
+    cases are the senior's own assignments."""
     rows = _workload(client)
-    assert rows["Mei Ling Tan"] == ["1", "–", "–", "–", "–", "–", "–"]
-    assert rows["Arjun Nair"] == ["2", "–", "–", "–", "–", "–", "–"]
+    assert rows["Mei Ling Tan"] == ["0", "0", "0", "1", "–", "–", "–", "–"]
+    assert rows["Arjun Nair"][:3] == ["1", "0", "0"] and rows["Arjun Nair"][3:] == [
+        "1",
+        "–",
+        "–",
+        "–",
+        "–",
+    ]
     card = section(client.get("/overview/?as=Sam%20Lee").text, "support-h")
     assert card.count("Fewer than 3 students</span>") == 2
     assert all(r["shown"] == (r["students"] >= 3) for r in sample.workload(None))

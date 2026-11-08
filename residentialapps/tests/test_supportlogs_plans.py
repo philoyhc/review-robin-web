@@ -62,22 +62,21 @@ def test_the_owner_of_a_follow_up_changes_its_cadence(client: TestClient) -> Non
     assert 'aria-current="true">Students</a>' in page and "‹ Students" in page
 
 
-def test_senior_staff_convert_a_follow_up(client: TestClient) -> None:
-    """§8: a follow-up becomes a formal assignment without a duplicate."""
-    page = client.get("/plans/P-03?as=Sam%20Lee").text
-    assert ">Convert to formal assignment</button>" in page
-    sources = page.split('id="cv-source"')[1].split("</select>")[0]
-    assert re.findall(r"<option>([^<]+)</option>", sources) == [
-        s.replace("'", "&#39;") for s in sample.ASSIGNMENT_SOURCES
-    ]
-    assert "<dt>With</dt><dd>Daniel Koh</dd>" in page and "‹ Overview" in page
-    assert 'href="/students/' not in section(page, "plan-h")  # no student view off the frontline
+def test_a_follow_up_is_its_owner_s_alone(client: TestClient) -> None:
+    """Author, 2026-11-08: a follow-up is frontline-initiated, so senior
+    staff and Other Staff view reach it only through a share: no page, no
+    Convert. A follow-up becomes formal through the frontliner's Flag for
+    formal assignment. A formal plan stays theirs to change."""
+    for name in ("Sam%20Lee", "Siti%20Rahman"):
+        assert client.get(f"/plans/P-03?as={name}").status_code == 404, name
+    assert client.get("/plans/P-03").status_code == 200  # Daniel's own
     formal = client.get("/plans/P-01?as=Sam%20Lee").text
     assert "Convert to formal assignment" not in formal and 'id="st"' in formal
+    assert "<dt>With</dt><dd>Daniel Koh</dd>" in formal and "‹ Overview" in formal
 
 
 def test_other_staff_identifiable_view_reads_plans_only(client: TestClient) -> None:
-    page = client.get("/plans/P-03?as=Siti%20Rahman").text
+    page = client.get("/plans/P-01?as=Siti%20Rahman").text
     assert "You see it read-only (Other Staff view)." in page
     assert "Convert" not in page and "Save cadence" not in page
 
@@ -122,8 +121,8 @@ def test_the_grantor_sees_who_they_shared_with(client: TestClient) -> None:
 def test_overview_lists_every_plan_and_the_flagged_students(client: TestClient) -> None:
     sam = client.get("/overview/?as=Sam%20Lee").text
     assert re.findall(r'href="(/plans/P-\d+)\?as=Sam%20Lee"', section(sam, "plans-h")) == [
-        f"/plans/{p.id}" for p in sorted(sample.PLANS, key=lambda p: not p.formal)
-    ]
+        f"/plans/{p.id}" for p in sample.PLANS if p.formal
+    ]  # formal plans only: a follow-up is its staff member's own
     refs = section(sam, "refs-h")
     assert "Elena Park" in refs and "Flagged 27 Oct by Daniel Koh · suggests weekly" in refs
     siti = client.get("/overview/?as=Siti%20Rahman").text
@@ -235,7 +234,7 @@ def test_mounted_plan_pages_stay_under_the_mount() -> None:
     mounted = TestClient(host)
     for path in (
         "/plans/P-01",
-        "/plans/P-03?as=Sam%20Lee",
+        "/plans/P-02?as=Sam%20Lee",
         "/students/S-03/share",
         "/students/S-02/refer",
         "/students/S-08",
@@ -273,9 +272,7 @@ def test_a_plan_seen_by_senior_staff_shows_no_contact_facts(client: TestClient) 
         page = client.get(f"/plans/P-01?as={name}").text
         for fact in ("Last contact", "Next expected", "Contacts since it began", "Overdue"):
             assert fact not in page, (name, fact)
-        follow_up = client.get(f"/plans/P-03?as={name}").text  # Daniel's own
-        for fact in ("<dt>Since</dt>", "<dt>Cadence</dt>", 'id="hist-h"', "began following up"):
-            assert fact not in follow_up, (name, fact)
+        assert client.get(f"/plans/P-03?as={name}").status_code == 404  # Daniel's own
         # P-02 began as Daniel's follow-up: its history starts at the
         # conversion, never the follow-up's start and cadence.
         converted = client.get(f"/plans/P-02?as={name}").text
@@ -296,11 +293,6 @@ def test_a_plan_seen_by_senior_staff_shows_no_contact_facts(client: TestClient) 
     every = client.get("/overview/?as=Siti%20Rahman").text.split('id="plans-h"', 1)[1]
     assert "Plan · Counselling" not in every and "Plan · " in every
     assert "Plan · Counselling" in client.get("/overview/?as=Sam%20Lee").text
-    # A follow-up's Convert form offers no cadence of its own.
-    for pid in ("P-03", "P-05"):
-        convert = client.get(f"/plans/{pid}?as=Sam%20Lee").text
-        cadences = convert.split('id="cv-cadence"', 1)[1].split("</select>", 1)[0]
-        assert re.findall(r"<option selected>([^<]+)</option>", cadences) == ["Choose a cadence"]
 
 
 def test_a_walled_history_shows_nothing_without_an_assignment(

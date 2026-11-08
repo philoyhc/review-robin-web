@@ -14,7 +14,9 @@
      record's content. To read it, a senior asks the staff member to share
      (inert until wired). #}
   {% set staff = sample.FRONTLINE_COLLEAGUES | select("in", sample.staff_with_records(chosen.id)) | list %}
-  {% set plans = sample.PLANS | selectattr("student", "equalto", chosen.id) | list %}
+  {# Formal plans only (author, 2026-11-08): a follow-up is its staff
+     member's own, seen only through a share. #}
+  {% set plans = sample.PLANS | selectattr("student", "equalto", chosen.id) | selectattr("formal") | list %}
   {# The side column starts at the top, beside the notice (author,
      2026-11-08). #}
   <div class="split">
@@ -63,7 +65,7 @@
       </section>
       <section class="card card-pad muted" aria-labelledby="plans-h">
         <h2 id="plans-h">Plans <span class="count">· {{ plans | length }}</span></h2>
-        {% if plans %}<ul class="items">{% for p in plans %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ p.staff }}</a></div><div class="subtle">{{ "Plan · " ~ p.source if p.formal else "Following" }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}
+        {% if plans %}<ul class="items">{% for p in plans %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ p.staff }}</a></div><div class="subtle">{{ "Plan · " ~ p.source }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}
       </section>
     </div>
   </div>
