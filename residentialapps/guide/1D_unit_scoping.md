@@ -135,6 +135,14 @@ Taken 2026-11-08 at `c053b46b1`.
 | Unit mentions in the roles doc | 0 | `grep -rn -i "unit" residentialapps/docs/residentialapps_roles.md \| wc -l` |
 | Support Logs tests | 185 | `grep -c "def test_" residentialapps/tests/test_supportlogs*.py` (summed) |
 
+## Status
+
+- **Rung 1** merged 2026-11-08 (#3731); the rulings answered the same day.
+- **Rung 2:** functional spec §3.7 (new) and §13, roles rule 10, the
+  roster doc §5 and §10, `supportlogs_ui.md` §2 and `todo_master.md`.
+  The roster doc and `todo_master.md` keep Residential Operations' half
+  of multi-Unit authorization open; only Support Logs' is struck.
+
 ## PR ladder
 
 1. **This plan** (prose only).

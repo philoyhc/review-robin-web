@@ -173,7 +173,7 @@ The Staff and RA roster screens show **real-world Appointment** only; they show 
 
 The roster shows no per-application access chips (author, 2026-10-28). Authorization settings belong to their respective administration screens, not a general-purpose CSV column.
 
-**Multiple-Unit consideration:** Unit-scoped rosters and app data are required now. The exact future scope of Administrator / Support Logs permission grants across multiple Residential Units must be reconciled with `residentialapps_roles.md` before multi-unit rollout; do not silently change its presently authoritative rules.
+**Multiple-Unit consideration:** Unit-scoped rosters and app data are required now. **Support Logs is ruled** (author, 2026-11-08): every grant and record names its Unit, eligibility is that Unit's Staff roster, there is no cross-Unit view, and Support Logs sys admin is per Unit, one account in at most one Unit (`residentialapps_roles.md` rule 10). Residential Operations' Administrator grant across Units is still to be reconciled before multi-unit rollout; do not silently change its presently authoritative rules.
 
 ## 6. CSV imports and routine administrative presentation
 
@@ -268,6 +268,6 @@ A mismatch at sign-in requires the person to **contact the administrator**; the 
 - **Geographic exception:** can an RF Zone ever span more than one Tower? This affects whether the Zone needs multiple floor-range segments.
 - **Neighborhood continuity:** must RA Neighborhoods fully partition an RF Zone, or are deliberate gaps/overlaps permitted? Current proposal is to warn rather than silently prohibit exceptions.
 - **Reporting exceptions:** can an RA temporarily report to another RF, and should a backup arrangement have its own dates?
-- **Multi-Unit authorization:** reconcile future unit-scoped grants with existing global Administrator rules before exposing multiple Units.
+- **Multi-Unit authorization:** reconcile Residential Operations' unit-scoped grants with its global Administrator rules before exposing multiple Units. Support Logs' half is ruled (§5, 2026-11-08).
 
 These are limited policy/data-model questions. They do **not** reopen the agreed minimal Entra-first-sign-in or CSV roster-onboarding design.
