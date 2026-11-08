@@ -33,9 +33,9 @@ content:
   note. Figures drawn from content (encounter counts, minutes, due
   dates) are content too, but for one exception (author, 2026-11-08):
   **senior staff see each staff member's workload for a chosen term**
-  (students met, records, records per student, minutes in total and per
-  meeting), totals for the staff member only, never per student and
-  never which student.
+  (students with records, records, records per student, minutes in total
+  and per meeting, plans active), totals for the staff member only, never
+  per student or which student, and withheld below three students.
 - **By default, a senior sees only the metadata: which students have
   records with which staff.**
 - **Names** follow confidentiality rule 3: a student on a formal plan,
@@ -141,7 +141,8 @@ a withdrawal, and a team's formation, change or dissolution.
   no content: only which students have records with which staff.
 - Overview's Team workload, Hotspots and Coverage, drawn from content,
   give way to what metadata shows: per staff member, how many students
-  they have records with, and per student, how many staff.
+  they have records with, and per student, how many staff. (Workload
+  per staff member returned for senior staff on 2026-11-08, above.)
 - Students' filter gains **Teams** (3).
 
 These land as scaffolds first, one slice each, once this model is

@@ -33,7 +33,7 @@
         {% if senior %}
         {# Workload (author, 2026-11-08): per staff member, for a term,
            totals only, never which student; senior staff alone. #}
-        <p class="sub">Per staff member, for the term chosen: the students they met, their records, records per student and the minutes logged, in total and per meeting (60+ min counts as 60). Totals for the staff member only, never which student. Assigned and Following are today's plans.</p>
+        <p class="sub">Per staff member, for the term chosen: the students with a record in it, their records (meetings and plans), records per student, and the minutes met, in total and per meeting (60+ min counts as 60). Totals for the staff member only, never which student, and none for fewer than {{ sample.WORKLOAD_MIN_STUDENTS }} students, so no total is one student's. Assigned and Following are the plans active in the term.</p>
         <form class="btnrow gap-below" method="get" action="{{ url('/overview/') }}" aria-label="Workload's term">
           {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
           <label for="wl-term" class="visually-hidden">Term</label>
@@ -43,7 +43,7 @@
         <div class="table-wrap">
           <table data-sort-auto id="support-table">
             <thead><tr><th scope="col">Staff</th><th scope="col" class="num">Students</th><th scope="col" class="num">Records</th><th scope="col" class="num">Per student</th><th scope="col" class="num">Minutes</th><th scope="col" class="num">Per meeting</th><th scope="col" class="num">Assigned</th><th scope="col" class="num">Following</th></tr></thead>
-            <tbody>{% for r in sample.workload(chosen_term) %}{% set p = sample.who_supports_whom() | selectattr("staff", "equalto", r.staff) | first %}<tr><td class="strong">{{ r.staff }}</td><td class="num">{{ r.students }}</td><td class="num">{{ r.records }}</td><td class="num">{{ r.per_student if r.per_student is not none else "–" }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.per_meeting if r.per_meeting is not none else "–" }}</td><td class="num">{{ p.formal }}</td><td class="num">{{ p.informal }}</td></tr>{% endfor %}</tbody>
+            <tbody>{% for r in sample.workload(chosen_term) %}<tr><td class="strong">{{ r.staff }}{% if not r.shown and r.students %} <span class="chip chip-mute">Fewer than {{ sample.WORKLOAD_MIN_STUDENTS }} students</span>{% endif %}</td><td class="num">{{ r.students }}</td>{% if r.shown %}<td class="num">{{ r.records }}</td><td class="num">{{ r.per_student }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.per_meeting }}</td>{% else %}<td class="num">–</td><td class="num">–</td><td class="num">–</td><td class="num">–</td>{% endif %}<td class="num">{{ r.formal }}</td><td class="num">{{ r.informal }}</td></tr>{% endfor %}</tbody>
           </table>
         </div>
         {% else %}

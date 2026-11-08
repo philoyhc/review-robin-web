@@ -130,10 +130,11 @@ at two thirds.
 
 ### Rung 13 — Workload per staff member
 
-Senior staff see, in Who supports whom, each staff member's students
-met, records, records per student and minutes (total and per meeting)
-for a chosen term; totals per staff member only, never which student
-(author, 2026-11-08). Other Staff view and aggregate view see none.
+Senior staff see, in Who supports whom, each staff member's students,
+records, records per student, minutes (total and per meeting) and
+active plans for a chosen term; totals per staff member only, never
+which student, none below three students (author, 2026-11-08). Other
+Staff view and aggregate view see none.
 
 ## Checks
 
@@ -245,4 +246,8 @@ browser check passes on each rung.
 - **Rung 9, revised 2026-11-08** (author): Who holds access, naming
   staff and their grants, stays open.
 - **Rung 13:** as planned, the term the current one by default; the
-  explainer (doc and page) and the sharing model say so.
+  explainer (doc and page) and the sharing model say so. Rulings on the
+  read (author, same day): no figures below three students, as a total
+  of one student's could be tied to them; students and records count
+  plans as well as meetings; Assigned and Following are the plans active
+  in the term. Rung 1's removal of Team workload is partly reversed.
