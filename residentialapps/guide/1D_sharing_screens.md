@@ -288,4 +288,6 @@ browser check passes on each rung.
 - **Rung 16:** as planned; Flagged for formal assignment and Every
   formal plan move into Students Overview's side, so its third column
   is not left empty.
-- **Rung 17:** as planned.
+- **Rung 17:** as planned. Every viewer gets the counts in the side, so
+  the aggregate view's main column, full width before, now spans two
+  beside them; on a phone the counts follow Students across staff.
