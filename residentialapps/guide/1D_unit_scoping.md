@@ -146,17 +146,24 @@ Taken 2026-11-08 at `c053b46b1`.
    - `residentialapps/guide/todo_master.md` (strike the open item).
 
    Must not touch code.
-3. **Sample screens, scaffold-first.**
-   - Add a second sample Unit, "Example Hall", with its own staff,
-     students and records.
-   - Add a viewer holding grants in both Units.
-   - Add the working-Unit switcher.
-   - Scope every page, count, download and check by Unit.
+3. **The switcher, scaffold only** (`CLAUDE.md`, consequential UI lands
+   scaffold-first).
+   - Add the working-Unit switcher in the area menu, listing "Example
+     College" and "Example Hall", with its real copy and layout.
+   - Add a sample viewer holding grants in both Units, the only one who
+     sees the switcher.
+   - Choosing a Unit changes nothing yet: every page still shows Example
+     College.
+
+   Must not touch any page's data or scoping.
+4. **Scoping, on the scaffold.**
+   - Give Example Hall its own staff, students and records.
+   - Scope every page, count, download and check by the working Unit.
    - Add tests that no page shows another Unit's student, record or
-     count to a single-Unit viewer.
+     count to a viewer working in the other Unit.
 
    Must not change any rule the sharing model fixed.
-4. ~~Wiring~~: belongs to the Support Logs wiring segment (Out of scope).
+5. ~~Wiring~~: belongs to the Support Logs wiring segment (Out of scope).
 
 ## Definition of done
 
@@ -204,7 +211,7 @@ All answered by the author, 2026-11-08:
 - `residentialapps/docs/resident_support_log_functional_spec_v0.3.md` — §3.5 eligibility in the grant's Unit; §13 `residential_unit_id` on `SupportAuthorization` and every record entity, per-Unit cluster membership (rung 2).
 - `residentialapps/docs/residentialapps_roles.md` — Support Logs Sys admin per Unit, several per Unit, one account in at most one Unit; no cross-Unit view for anyone (rung 2).
 - `residentialapps/docs/residentialapps_roster_structure.md` — §5 and §10: the multi-Unit authorization item closed for Support Logs (rung 2).
-- `residentialapps/spec/supportlogs_ui.md` — the working Unit and the switcher; per-Unit reads, shares, teams, flags, checks, workload and audit (rungs 2–3).
-- `residentialapps/spec/applications.md` — the switcher's place in the area menu (rung 3).
+- `residentialapps/spec/supportlogs_ui.md` — the working Unit and the switcher; per-Unit reads, shares, teams, flags, checks, workload and audit (rungs 2–4).
+- `residentialapps/spec/applications.md` — the switcher's place in the area menu (rungs 3–4).
 - `residentialapps/guide/todo_master.md` — strike "multi-Unit authorization" for Support Logs (rung 2).
 - `residentialapps/guide/segment_1D_support_logs.md` — Status line for this plan (each rung).
