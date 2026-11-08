@@ -24,11 +24,16 @@ under `data-app="supportlogs"`.
 - **The page map has no device column for Support Logs**, so this
   section gives the classes.
 - **At most three columns of at least 340 px** (author, 2026-11-08),
-  24 px apart: three from 1116 px wide, two from 736 px, one below. A
-  page's main column spans two and its side column one; a card on its
-  own spans two, never the third.
+  24 px apart: three from 1116 px wide, two from 736 px, one below. This
+  overrides `residentialapps/spec/residentialops_ui.md` §1's three
+  columns from 960 px for Support Logs. From 1116 px a page's main column
+  spans two and its side column one, and a card on its own spans two,
+  never the third; from 736 px to 1115 px the side column is 340 px and
+  the main column takes the rest. A card's own inner split and a narrow
+  notice card keep their widths.
 - **Overview and the Consultation check are responsive**: their tables
-  scroll sideways in `.table-wrap` on a phone. **Sys admin is
+  scroll sideways in `.table-wrap` when their column is narrower than
+  they are, on a phone and in Overview's main column below 1116 px. **Sys admin is
   desktop-oriented**.
 - **Log's students are the viewer's favorites** (author, 2026-11-06),
   marked with a star on Students, in the order favorited, with a hint to

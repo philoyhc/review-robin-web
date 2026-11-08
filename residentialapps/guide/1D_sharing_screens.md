@@ -207,3 +207,7 @@ browser check passes on each rung.
   audit has no closing event, as before.
 - **Rung 11:** as planned; two columns hold down to 736 px rather than
   the 752 first worked out, the page's margins being 16 px below 960.
+  One read: the grid caught a card's own split and the cap a .narrow
+  card, both now exempt; the spec now says it overrides Residential
+  Ops' columns and that tables scroll in Overview's main column below
+  1116 px.

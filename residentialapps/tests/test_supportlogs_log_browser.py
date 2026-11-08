@@ -5,7 +5,8 @@ counts its characters; and a staff or student filter's box of people turns
 a match into a pill and blocks an unmatched name (rung 8); and Students'
 filter of plans and follow-ups, kept across a reload (rung 13); and that
 text boxes resize vertically only, and Overview's withheld name opens
-and closes (2026-11-07). Served as the
+and closes (2026-11-07); and a senior's folded Overview cards, and the
+three columns of 340 px (2026-11-08). Served as the
 sort tests are; without a Chromium
 build the test skips, saying why, and `RRW_REQUIRE_BROWSER=1` fails it."""
 
@@ -362,6 +363,24 @@ def test_three_columns_of_340_and_cards_span_two(page: Page) -> None:
         page.set_viewport_size({"width": width, "height": 900})
         page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
         assert tuple(page.evaluate(measure)) == expect, width
+
+
+def test_a_card_s_own_split_and_a_narrow_card_keep_their_widths(page: Page) -> None:
+    """The three columns are the page's: the split inside Your records
+    keeps a side of at least 300 px, and the no-access card stays 560 px
+    (author, 2026-11-08)."""
+    for width in (1280, 1116):
+        page.set_viewport_size({"width": width, "height": 900})
+        page.goto(f"{ORIGIN}/students/?records=open&understood=yes")
+        side = page.evaluate(
+            "() => document.querySelector('.card .split > .side').getBoundingClientRect().width"
+        )
+        assert side >= 300, (width, side)
+        page.goto(f"{ORIGIN}/sys-admin/?as=Sam%20Lee")
+        narrow = page.evaluate(
+            "() => document.querySelector('.narrow').getBoundingClientRect().width"
+        )
+        assert round(narrow) == 560, (width, narrow)
 
 
 def test_students_teams_filter_shows_the_team_and_hides_add(page: Page) -> None:
