@@ -235,3 +235,5 @@ browser check passes on each rung.
   below the columns, so a phone reads them last as before. One read:
   those two, Students' empty side, history's columns the wrong way round,
   Apply's draft note above the columns, stale spec lines, all fixed.
+- **Rung 9, revised 2026-11-08** (author): Who holds access, naming
+  staff and their grants, stays open.

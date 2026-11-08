@@ -321,13 +321,12 @@ def test_a_withheld_name_shows_and_hides_again(page: Page) -> None:
 
 def test_overview_cards_of_names_stay_folded_until_opened(page: Page) -> None:
     """Author, 2026-11-08: on a senior's Overview every card that shows
-    names starts closed, its heading the control; the safety flags banner
-    and the count tiles stay open."""
+    names starts closed, its heading the control; the safety flags banner,
+    the count tiles and Who holds access stay open."""
     page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
     for heading, inside in (
         ("#support-h", "#support-table"),
         ("#across-h", "#across-table"),
-        ("#who-h", "section:has(#who-h) dl.kv"),
         ("#refs-h", "section:has(#refs-h) ul.items"),
         ("#plans-h", "section:has(#plans-h) ul.items"),
     ):
@@ -335,6 +334,7 @@ def test_overview_cards_of_names_stay_folded_until_opened(page: Page) -> None:
         page.locator(heading).click()
         assert page.locator(inside).is_visible(), heading
     assert page.locator("#flags-h").is_visible() and page.locator(".tiles").is_visible()
+    assert page.locator("section:has(#who-h) dl.kv").is_visible()
 
 
 def test_three_columns_of_340_and_cards_span_two(page: Page) -> None:
