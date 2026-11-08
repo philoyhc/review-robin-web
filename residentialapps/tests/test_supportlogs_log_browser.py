@@ -326,7 +326,6 @@ def test_overview_cards_of_names_stay_folded_until_opened(page: Page) -> None:
     the count tiles and Who holds access stay open."""
     page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
     for heading, inside in (
-        ("#support-h", "#support-table"),
         ("#across-h", "#across-table"),
         ("#refs-h", "section:has(#refs-h) ul.items"),
         ("#plans-h", "section:has(#plans-h) ul.items"),
@@ -428,7 +427,7 @@ def test_the_workload_table_sorts_by_its_grouped_columns(page: Page) -> None:
     """Who supports whom's two-row header (Assigned and Own over their
     columns): each column takes a sort button, the groups none, and a
     withheld figure sorts last either way (author, 2026-11-08)."""
-    page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
+    page.goto(f"{ORIGIN}/workload/?as=Sam%20Lee")
     table = "#support-table"
     labels = page.eval_on_selector_all(
         f"{table} th.sortable",
@@ -457,3 +456,16 @@ def test_the_workload_table_sorts_by_its_grouped_columns(page: Page) -> None:
     shown = [f for f in firsts if f != "\u2013"]
     assert shown == sorted(shown, key=int, reverse=True)
     assert firsts[: len(shown)] == shown  # withheld last
+
+
+def test_the_workload_card_spans_the_page_s_three_columns(page: Page) -> None:
+    """Author, 2026-11-08: Who supports whom earns the full width, three
+    columns at 1280 px, where Overview's lone cards span two."""
+    page.set_viewport_size({"width": 1280, "height": 900})
+    page.goto(f"{ORIGIN}/workload/?as=Sam%20Lee")
+    card = page.locator("section:has(#support-h)").bounding_box()
+    content = page.locator(".page").evaluate(
+        "el => el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft)"
+        " - parseFloat(getComputedStyle(el).paddingRight)"
+    )
+    assert card is not None and abs(card["width"] - content) < 2, (card, content)

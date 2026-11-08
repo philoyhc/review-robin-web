@@ -85,7 +85,9 @@ form's end, and the main action is a full-width Primary on the page
   super-admin. Nothing neutral sits between them (ruling 3).
 - **Tabs follow the grants**, never the appointment:
   - Log and Students for the frontline;
-  - Overview for senior staff and Other Staff view;
+  - Overview and Workload for senior staff and Other Staff view
+    (Workload, author, 2026-11-08: Who supports whom on its own, at the
+    page's full width; Home never lists it apart from Overview);
   - Consultation check for its grant;
   - Access, Configuration and Audit log in Sys admin.
 - **Home is a tab only when it is a page of its own**: the frontline's
@@ -204,9 +206,9 @@ form's end, and the main action is a full-width Primary on the page
     always has one; `?preview=no-senior` shows the warning).
   - **Configuration's Access card**: a sys admin may grant itself Senior
     identifiable, off by default and recorded.
-  - **The wall** (author, 2026-11-07, rule 3 below): Overview shows
+  - **The wall** (author, 2026-11-07, rule 3 below): Workload shows
     **Who supports whom** (per staff member, students with records and
-    formal plans) and **Students across staff** (per student, the staff with
+    formal plans) and Overview **Students across staff** (per student, the staff with
     records and the signals), metadata only. For senior staff alone, Who
     supports whom carries each staff member's workload for a chosen term
     (the current one by default, or all) in two groups (author,
@@ -236,7 +238,7 @@ form's end, and the main action is a full-width Primary on the page
 ## 5. Lists and tables
 
 - **Phone lists** (`ul.items`) carry the frontline's rows.
-- **Tables carry Overview's Who supports whom and Students across staff, the
+- **Tables carry Workload's Who supports whom, Overview's Students across staff, the
   Consultation check's result, Access and both audits**; their other cards
   are lists. Each table is sortable (`data-sort-auto`), with `data-sort-value` on cells whose text
   is not their value. The exception is a table whose order is its
@@ -302,7 +304,7 @@ someone's behalf), **acknowledge** for having seen information sent on
   - the support-activity audit;
   - a consultation check.
 - **A senior's Overview folds every card that names students** (author,
-  2026-11-08): Who supports whom, Students across staff, Flagged for
+  2026-11-08): Students across staff, Flagged for
   formal assignment and Every formal plan start closed, each heading opening its
   card, with Show or Hide beside it. The safety flags banner, the count
   tiles and Who holds access (staff and their grants, author, same day)

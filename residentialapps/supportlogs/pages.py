@@ -26,19 +26,21 @@ SYS_ADMIN_AREA = "Sys admin"
 # The staff explainer's page (author, 2026-11-07), in every account menu.
 EXPLAINER = "Who can see what"
 EXPLAINER_PATH = "/who-can-see-what"
+# Who supports whom's own tab, beside Overview (author, 2026-11-08).
+WORKLOAD = "/workload/"
 
 
 def _grant_tabs(v: sample.Viewer) -> list[tuple[str, str]]:
     """Each grant's own tabs (author, 2026-10-29): the frontline's Log and
     Students, Plans folded into Students' filter (author, 2026-11-07);
-    Overview for senior staff and Other Staff view;
+    Overview and Workload for senior staff and Other Staff view;
     Consultation check. No Safety flags tab: flags list on Home and
     Overview."""
     tabs: list[tuple[str, str]] = []
     if sample.holds(v, sample.FRONTLINE):
         tabs += [("Log", "/log"), ("Students", "/students/")]
     if sample.holds(v, sample.SENIOR, *sample.VIEW):
-        tabs.append(("Overview", "/overview/"))
+        tabs += [("Overview", "/overview/"), ("Workload", WORKLOAD)]
     if sample.holds(v, sample.CONSULTATION):
         tabs.append(("Consultation check", "/consultation/"))
     return tabs
@@ -54,10 +56,12 @@ def home_flags(v: sample.Viewer) -> bool:
 
 def destinations(v: sample.Viewer) -> list[dict[str, str]]:
     """Where Home sends a viewer off the frontline: each grant's tab, and
-    Sys admin."""
+    Sys admin. Workload goes with Overview (author, 2026-11-08), so a
+    viewer with Overview alone still lands on it."""
     found = [
         {"label": label, "path": path, "query": sample.as_query(v)}
         for label, path in _grant_tabs(v)
+        if path != WORKLOAD  # Overview's sibling, not a page of its own to reach
     ]
     if sample.holds(v, *sample.ADMINISTRATION):
         found.append({"label": SYS_ADMIN_AREA, "path": "/sys-admin/", "query": sample.as_query(v)})

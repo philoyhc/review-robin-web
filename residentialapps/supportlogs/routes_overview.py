@@ -1,7 +1,8 @@
 """Support Logs' Overview on sample data, segment 1D item 1 rung 5: senior
 staff's and Other Staff view's tab (author, 2026-10-29). Since the
 sharing screens' rung 1 (author, 2026-11-07) it shows metadata only: who
-supports whom, students across staff, every plan and the flagged
+supports whom (on Workload since 2026-11-08), students across staff,
+every formal plan and the flagged
 students (the cluster view, §10.5, is deferred); a senior's view of a
 student, the staff with records (§11.2); and the support-activity audit
 (§11.3). Aggregate view sees counts only, never a student's name
@@ -25,15 +26,29 @@ OVERVIEW = (sample.SENIOR, *sample.VIEW)
 @router.get("/overview/", name="supportlogs_overview")
 def overview(request: Request) -> Response:
     me = sample.viewer(request.query_params.get("as"))
-    # Workload's term (author, 2026-11-08): the current one by default,
-    # "all" for every term; an unknown key reads as the current term.
-    key = request.query_params.get("term", sample.CURRENT_TERM.key)
-    chosen = None if key == "all" else sample.term(key) or sample.CURRENT_TERM
     return gated(
         request,
         "supportlogs/overview.html",
         *OVERVIEW,
         named=sample.holds(me, sample.SENIOR, sample.VIEW_IDENTIFIABLE),
+        senior=sample.holds(me, sample.SENIOR),
+    )
+
+
+@router.get("/workload/", name="supportlogs_workload")
+def workload(request: Request) -> Response:
+    """Who supports whom on a tab of its own, full width (author,
+    2026-11-08), for whoever has Overview: per staff member, students and
+    formal plans; for senior staff, the workload for a term."""
+    me = sample.viewer(request.query_params.get("as"))
+    # The term: the current one by default, "all" for every term; an
+    # unknown key reads as the current term.
+    key = request.query_params.get("term", sample.CURRENT_TERM.key)
+    chosen = None if key == "all" else sample.term(key) or sample.CURRENT_TERM
+    return gated(
+        request,
+        "supportlogs/workload.html",
+        *OVERVIEW,
         senior=sample.holds(me, sample.SENIOR),
         chosen_term=chosen,
     )

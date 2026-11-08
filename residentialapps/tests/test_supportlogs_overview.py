@@ -46,7 +46,7 @@ def test_who_supports_whom_counts_students_not_encounters(client: TestClient) ->
     """Author, 2026-11-07: per staff member, students with records and
     plans, for anyone but senior staff; nothing drawn from content (no
     encounters, minutes or load)."""
-    page = client.get("/overview/?as=Siti%20Rahman").text
+    page = client.get("/workload/?as=Siti%20Rahman").text
     rows = cells(section(page, "support-h"))
     assert [plain(r[0]) for r in rows] == [r["staff"] for r in sample.who_supports_whom()]
     daniel = next(r for r in rows if plain(r[0]) == "Daniel Koh")
@@ -67,11 +67,12 @@ def test_who_supports_whom_counts_students_not_encounters(client: TestClient) ->
         "Overdue",
     ):
         assert gone not in page, gone
-    assert "Minutes" not in client.get("/overview/?as=Kenneth%20Lau").text
+    assert "Minutes" not in client.get("/workload/?as=Kenneth%20Lau").text
+    assert "Following" not in client.get("/overview/?as=Siti%20Rahman").text
 
 
 def _workload(client: TestClient, term: str = "") -> dict[str, list[str]]:
-    card = section(client.get(f"/overview/?as=Sam%20Lee{term}").text, "support-h")
+    card = section(client.get(f"/workload/?as=Sam%20Lee{term}").text, "support-h")
     return {plain(r[0]).split(" Fewer")[0]: r[1:] for r in cells(card)}
 
 
@@ -82,7 +83,7 @@ def test_senior_staff_see_each_staff_member_s_workload_by_term(client: TestClien
     students. Own: the other meetings, as students, meetings, meetings per
     student and minutes in total and per meeting. Follow-ups count
     nowhere; no student is named."""
-    card = section(client.get("/overview/?as=Sam%20Lee").text, "support-h")
+    card = section(client.get("/workload/?as=Sam%20Lee").text, "support-h")
     assert '<select id="wl-term" name="term"' in card and "All terms</option>" in card
     assert f'value="{sample.CURRENT_TERM.key}" selected' in card
     assert 'scope="colgroup" colspan="3">Assigned</th>' in card and ">Own</th>" in card
@@ -119,10 +120,10 @@ def test_senior_staff_see_each_staff_member_s_workload_by_term(client: TestClien
     assert past == ["0", "0", "0", "0", "–", "–", "–", "–"]
     assert _workload(client, "&term=all")["Daniel Koh"] == _workload(client)["Daniel Koh"]
     assert 'value="all" selected' in section(
-        client.get("/overview/?as=Sam%20Lee&term=all").text, "support-h"
+        client.get("/workload/?as=Sam%20Lee&term=all").text, "support-h"
     )
     assert f'value="{sample.CURRENT_TERM.key}" selected' in section(
-        client.get("/overview/?as=Sam%20Lee&term=bogus").text, "support-h"
+        client.get("/workload/?as=Sam%20Lee&term=bogus").text, "support-h"
     )
 
 
@@ -140,7 +141,7 @@ def test_no_own_workload_figures_below_three_students(client: TestClient) -> Non
         "–",
         "–",
     ]
-    card = section(client.get("/overview/?as=Sam%20Lee").text, "support-h")
+    card = section(client.get("/workload/?as=Sam%20Lee").text, "support-h")
     assert card.count("Fewer than 3 students</span>") == 2
     assert all(r["shown"] == (r["students"] >= 3) for r in sample.workload(None))
 
@@ -217,7 +218,7 @@ def test_a_senior_s_cards_of_names_start_folded(client: TestClient) -> None:
     and Who holds access (staff and their grants) stay open. Other viewers
     are unchanged."""
     sam = client.get("/overview/?as=Sam%20Lee").text
-    folded = ("support-h", "across-h", "refs-h", "plans-h")
+    folded = ("across-h", "refs-h", "plans-h")
     assert sam.count('<details class="fold">') == len(folded)
     assert '<details class="fold" open' not in sam
     for heading in folded:
@@ -230,10 +231,11 @@ def test_a_senior_s_cards_of_names_start_folded(client: TestClient) -> None:
 
 def test_the_aggregate_view_names_no_student(client: TestClient) -> None:
     page = client.get("/overview/?as=Kenneth%20Lau").text
+    workload = client.get("/workload/?as=Kenneth%20Lau").text
     for s in sample.STUDENTS:
         assert s.name not in page and s.id not in page, s.name
-    for heading in ("support-h", "across-h"):
-        assert f'id="{heading}"' in page, heading
+        assert s.name not in workload and s.id not in workload, s.name
+    assert 'id="across-h"' in page and 'id="support-h"' in workload
     assert "Counts only" in page and "Opening this" not in page
 
 
@@ -346,3 +348,19 @@ def test_a_follow_up_alone_is_not_a_record_senior_staff_see(
     assert sid not in sample.students_with_records("Grace Ho")
     assert "Grace Ho" not in sample.staff_with_records(sid)
     assert sid in sample.students_with_records("Grace Ho", follow_ups=True)
+
+
+def test_who_supports_whom_is_on_its_own_workload_tab(client: TestClient) -> None:
+    """Author, 2026-11-08: Who supports whom leaves Overview for a Workload
+    tab of its own, beside Overview for whoever has it, the card at the
+    page's full width (.wide) and never folded."""
+    for name in ("Sam%20Lee", "Siti%20Rahman", "Kenneth%20Lau"):
+        overview = client.get(f"/overview/?as={name}").text
+        assert 'id="support-h"' not in overview, name
+        assert 'href="/workload/' in overview and ">Workload<" in overview, name
+        page = client.get(f"/workload/?as={name}").text
+        assert '<section class="card card-pad wide" aria-labelledby="support-h">' in page, name
+        assert '<details class="fold">' not in page, name
+    frontline = client.get("/").text
+    assert ">Workload<" not in frontline
+    assert client.get("/workload/").status_code == 403
