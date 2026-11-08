@@ -287,11 +287,12 @@ someone's behalf), **acknowledge** for having seen information sent on
   - a history;
   - the support-activity audit;
   - a consultation check.
-- **A senior's Overview folds every card that shows names** (author,
-  2026-11-08): Who supports whom, Students across staff, Who holds
-  access, Flagged for formal assignment and Every plan start closed, each
-  heading opening its card, with Show or Hide beside it. The safety flags
-  banner and the count tiles stay open; other viewers' Overview is
+- **A senior's Overview folds every card that names students** (author,
+  2026-11-08): Who supports whom, Students across staff, Flagged for
+  formal assignment and Every plan start closed, each heading opening its
+  card, with Show or Hide beside it. The safety flags banner, the count
+  tiles and Who holds access (staff and their grants, author, same day)
+  stay open; other viewers' Overview is
   unchanged. Folding is presentation only: the names are in the page
   (find-in-page opens a card), and opening one is not a recorded read.
 - **Overview names by default only students on a formal plan, with a
