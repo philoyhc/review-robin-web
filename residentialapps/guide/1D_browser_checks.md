@@ -7,8 +7,9 @@ uses before the design is locked in:
 - **Feedback sessions** with the people who will use it: the frontline
   team first (Part A), then senior staff (Part B). Each is a set of
   everyday tasks, what should happen, and what to ask.
-- **The author's checks** (Part C): chrome, widths, Sys admin, and what
-  only a browser shows.
+- **The author's checks** (Part C): chrome, widths, Sys admin, what
+  only a browser shows, and Residential Ops' columns (C4), which share
+  Support Logs' stylesheet.
 
 The tests already check what each page contains. A row that needs a change
 becomes a follow-up rung; a ruling goes in the plan's open questions (§D).
@@ -424,6 +425,33 @@ you would act on?*
   records shows Grace Ho's 6 encounters as a count, with no Delete.
 - [ ] **No student anywhere** in Sys admin (Ctrl+F for "Clara" or
   "@u.example.edu").
+
+### C4. Residential Ops' columns (1280, 1116, 1000, 736 and 390 px)
+
+Start Residential Ops with a block from
+`residentialapps/guide/fake_ids.md` ("RA Leave (1C)" for the leave pages,
+"Rosters and setup" for the rest). The columns are every Residential
+app's (`residentialapps/spec/residentialops_ui.md` §1, author,
+2026-11-08).
+
+- [ ] **RA Leave home** (`/residentialops/ra-leave/`, as Chloe Lim): at
+  1280 px the main column is two thirds and the side a third; its title
+  and cards on their own stop at two thirds. At 1000 px the side column
+  is narrower than the main one, at 736 px they are equal, and at 735 px
+  the side drops below. Apply and an application look the same.
+- [ ] **Staff home and Decide** (`/residentialops/ra-leave/staff/`, as
+  an approver): the same two thirds at 1280 px; Decide's cards stop at
+  two thirds.
+- [ ] **Desktop-oriented pages keep the full width** at 1280 px, cards
+  and columns as before: the Leave dashboard
+  (`/residentialops/ra-leave/admin/`, its main column wide and its side
+  narrow), Applications, Appeals, Precinct leave
+  (`/residentialops/ra-leave/staff/precinct`), the rosters and a
+  person's page, and Sys admin.
+- [ ] **At 736 px** the Leave dashboard's side column has dropped below
+  and its "Needs attention" table fits without scrolling.
+- [ ] **At 390 px** nothing on any of these pages scrolls sideways
+  except a table inside its box.
 
 ## D. Rulings to give while looking
 
