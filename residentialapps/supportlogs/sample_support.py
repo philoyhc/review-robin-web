@@ -980,6 +980,48 @@ class SupportRow(TypedDict):
     informal: int
 
 
+class WorkloadRow(TypedDict):
+    staff: str
+    students: int
+    records: int
+    per_student: float | None
+    minutes: int
+    per_meeting: int | None
+
+
+# A duration's minutes for a workload total; "60+ min" counts as 60, so a
+# total is at least what it says (author, 2026-11-08).
+DURATION_MINUTES = {"15 min": 15, "30 min": 30, "60+ min": 60}
+
+
+def workload(chosen: Term | None) -> list[WorkloadRow]:
+    """Workload, per frontline colleague, for a term or all terms (author,
+    2026-11-08): the students they met, their records (encounters), records
+    per student, and the minutes logged in total and per meeting. Totals
+    for the staff member only, never per student and never which student:
+    senior staff see them, no one else."""
+    rows: list[WorkloadRow] = []
+    for staff in FRONTLINE_COLLEAGUES:
+        mine = [
+            e
+            for e in ENCOUNTERS
+            if e.staff == staff and (chosen is None or chosen.start <= e.when.date() <= chosen.end)
+        ]
+        students = len({e.student for e in mine})
+        minutes = sum(DURATION_MINUTES.get(e.duration, 0) for e in mine)
+        rows.append(
+            {
+                "staff": staff,
+                "students": students,
+                "records": len(mine),
+                "per_student": round(len(mine) / students, 1) if students else None,
+                "minutes": minutes,
+                "per_meeting": round(minutes / len(mine)) if mine else None,
+            }
+        )
+    return rows
+
+
 def students_with_records(staff: str) -> set[str]:
     """The students a staff member has any record about: an encounter or a
     plan. Metadata, which senior staff see (author, 2026-11-07)."""

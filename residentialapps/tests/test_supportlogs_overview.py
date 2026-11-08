@@ -44,10 +44,10 @@ def plain(cell: str) -> str:
 
 def test_who_supports_whom_counts_students_not_encounters(client: TestClient) -> None:
     """Author, 2026-11-07: per staff member, students with records and
-    plans; nothing drawn from content (no encounters, minutes or load)."""
-    page = client.get("/overview/?as=Sam%20Lee").text
-    card = section(page, "support-h")
-    rows = cells(card)
+    plans, for anyone but senior staff; nothing drawn from content (no
+    encounters, minutes or load)."""
+    page = client.get("/overview/?as=Siti%20Rahman").text
+    rows = cells(section(page, "support-h"))
     assert [plain(r[0]) for r in rows] == [r["staff"] for r in sample.who_supports_whom()]
     daniel = next(r for r in rows if plain(r[0]) == "Daniel Koh")
     assert daniel[1:] == [
@@ -55,8 +55,53 @@ def test_who_supports_whom_counts_students_not_encounters(client: TestClient) ->
         "2",
         "2",
     ]  # students, assigned, following
-    for gone in ("load-h", "hot-h", "cov-h", "Minutes", "Encounters,", "Rising", "Overdue"):
+    for gone in ("load-h", "hot-h", "cov-h", "Minutes", "Records</th>", "wl-term", "Rising"):
         assert gone not in page, gone
+    assert "Minutes" not in client.get("/overview/?as=Kenneth%20Lau").text
+
+
+def test_senior_staff_see_each_staff_member_s_workload_by_term(client: TestClient) -> None:
+    """Author, 2026-11-08: senior staff see, per staff member, for a term
+    (the current one by default, or all), the students met, records,
+    records per student and minutes in total and per meeting; totals only,
+    never which student."""
+    card = section(client.get("/overview/?as=Sam%20Lee").text, "support-h")
+    assert '<select id="wl-term" name="term"' in card and "All terms</option>" in card
+    assert f'value="{sample.CURRENT_TERM.key}" selected' in card
+    daniel = next(r for r in cells(card) if plain(r[0]) == "Daniel Koh")
+    term = [
+        e
+        for e in sample.ENCOUNTERS
+        if e.staff == "Daniel Koh"
+        and sample.CURRENT_TERM.start <= e.when.date() <= sample.CURRENT_TERM.end
+    ]
+    minutes = sum(sample.DURATION_MINUTES[e.duration] for e in term)
+    students = len({e.student for e in term})
+    assert daniel[1:] == [
+        str(students),
+        str(len(term)),
+        str(round(len(term) / students, 1)),
+        str(minutes),
+        str(round(minutes / len(term))),
+        "2",
+        "2",
+    ]
+    for s in sample.STUDENTS:  # no student named or linked in the card
+        assert s.name not in card and s.id not in card, s.name
+    past = section(client.get("/overview/?as=Sam%20Lee&term=AY2025-2026.2").text, "support-h")
+    assert next(r for r in cells(past) if plain(r[0]) == "Daniel Koh")[1:6] == [
+        "0",
+        "0",
+        "–",
+        "0",
+        "–",
+    ]
+    assert 'value="all" selected' in section(
+        client.get("/overview/?as=Sam%20Lee&term=all").text, "support-h"
+    )
+    assert f'value="{sample.CURRENT_TERM.key}" selected' in section(
+        client.get("/overview/?as=Sam%20Lee&term=bogus").text, "support-h"
+    )
 
 
 def test_students_across_staff_shows_staff_never_content(client: TestClient) -> None:

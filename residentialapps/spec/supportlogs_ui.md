@@ -207,7 +207,12 @@ form's end, and the main action is a full-width Primary on the page
   - **The wall** (author, 2026-11-07, rule 3 below): Overview shows
     **Who supports whom** (per staff member, students with records and
     plans) and **Students across staff** (per student, the staff with
-    records and the signals), metadata only. A student's history lists
+    records and the signals), metadata only. For senior staff alone, Who
+    supports whom carries each staff member's workload for a chosen term
+    (the current one by default, or all): students met, records, records
+    per student, minutes in total and per meeting, 60+ min counting as 60
+    (author, 2026-11-08). Totals per staff member only, never per student
+    or which student; Other Staff view and aggregate view see none. A student's history lists
     the staff with records, each with **Request a share** (inert until
     wired); its encounters and Share on their behalf are gone. A plan
     seen by senior staff or Other Staff view shows no due state, last

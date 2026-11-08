@@ -128,6 +128,13 @@ gains it from its shorter cards: Students, the Consultation check, RA
 Leave history (author, 2026-11-08). A page with only one card keeps it
 at two thirds.
 
+### Rung 13 — Workload per staff member
+
+Senior staff see, in Who supports whom, each staff member's students
+met, records, records per student and minutes (total and per meeting)
+for a chosen term; totals per staff member only, never which student
+(author, 2026-11-08). Other Staff view and aggregate view see none.
+
 ## Checks
 
 Each rung keeps `pytest`, `ruff`, `pyright` green and takes one
@@ -237,3 +244,5 @@ browser check passes on each rung.
   Apply's draft note above the columns, stale spec lines, all fixed.
 - **Rung 9, revised 2026-11-08** (author): Who holds access, naming
   staff and their grants, stays open.
+- **Rung 13:** as planned, the term the current one by default; the
+  explainer (doc and page) and the sharing model say so.

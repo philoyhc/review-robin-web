@@ -30,6 +30,23 @@
       </section>
       <section class="card card-pad" aria-labelledby="support-h">
         {% call folded("support-h", "Who supports whom", fold=senior) %}
+        {% if senior %}
+        {# Workload (author, 2026-11-08): per staff member, for a term,
+           totals only, never which student; senior staff alone. #}
+        <p class="sub">Per staff member, for the term chosen: the students they met, their records, records per student and the minutes logged, in total and per meeting (60+ min counts as 60). Totals for the staff member only, never which student. Assigned and Following are today's plans.</p>
+        <form class="btnrow gap-below" method="get" action="{{ url('/overview/') }}" aria-label="Workload's term">
+          {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
+          <label for="wl-term" class="visually-hidden">Term</label>
+          <select id="wl-term" name="term" class="input">{% for t in sample.TERMS %}<option value="{{ t.key }}"{% if chosen_term and t.key == chosen_term.key %} selected{% endif %}>{{ t.label }}</option>{% endfor %}<option value="all"{% if not chosen_term %} selected{% endif %}>All terms</option></select>
+          <button type="submit" class="btn btn-secondary">Show</button>
+        </form>
+        <div class="table-wrap">
+          <table data-sort-auto id="support-table">
+            <thead><tr><th scope="col">Staff</th><th scope="col" class="num">Students</th><th scope="col" class="num">Records</th><th scope="col" class="num">Per student</th><th scope="col" class="num">Minutes</th><th scope="col" class="num">Per meeting</th><th scope="col" class="num">Assigned</th><th scope="col" class="num">Following</th></tr></thead>
+            <tbody>{% for r in sample.workload(chosen_term) %}{% set p = sample.who_supports_whom() | selectattr("staff", "equalto", r.staff) | first %}<tr><td class="strong">{{ r.staff }}</td><td class="num">{{ r.students }}</td><td class="num">{{ r.records }}</td><td class="num">{{ r.per_student if r.per_student is not none else "–" }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.per_meeting if r.per_meeting is not none else "–" }}</td><td class="num">{{ p.formal }}</td><td class="num">{{ p.informal }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+        {% else %}
         <p class="sub">Per staff member, how many students they have records with, and their formal assignments and follow-ups. No dates, minutes or counts of encounters: those are the records' content.</p>
         <div class="table-wrap">
           <table data-sort-auto id="support-table">
@@ -37,6 +54,7 @@
             <tbody>{% for r in sample.who_supports_whom() %}<tr><td class="strong">{{ r.staff }}</td><td class="num">{{ r.students }}</td><td class="num">{{ r.formal }}</td><td class="num">{{ r.informal }}</td></tr>{% endfor %}</tbody>
           </table>
         </div>
+        {% endif %}
         {% endcall %}
       </section>
       <section class="card card-pad" aria-labelledby="across-h">

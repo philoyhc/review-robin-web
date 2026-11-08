@@ -98,8 +98,11 @@ is supporting whom, and where support may need to move.
 - **By default they see only who has records with which students:** how
   many students each staff member has records with, and how many staff
   each student has records with. They do not see when, how often or how
-  long you met, and none of what you recorded. That is the records'
-  content, and a senior reads it only through a share.
+  long you met any one student, and none of what you recorded. That is
+  the records' content, and a senior reads it only through a share.
+- **For workload, they see your totals for a term:** how many students
+  you met, how many records you made, and how many minutes they took,
+  never which student any of it was with.
 - **They see a student's name only when the student needs attention:**
   the student is on a formal plan, has a safety flag, or has a team.
   Other students are not named until a senior chooses to look, with

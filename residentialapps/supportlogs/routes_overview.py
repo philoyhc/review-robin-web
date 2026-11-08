@@ -25,12 +25,17 @@ OVERVIEW = (sample.SENIOR, *sample.VIEW)
 @router.get("/overview/", name="supportlogs_overview")
 def overview(request: Request) -> Response:
     me = sample.viewer(request.query_params.get("as"))
+    # Workload's term (author, 2026-11-08): the current one by default,
+    # "all" for every term; an unknown key reads as the current term.
+    key = request.query_params.get("term", sample.CURRENT_TERM.key)
+    chosen = None if key == "all" else sample.term(key) or sample.CURRENT_TERM
     return gated(
         request,
         "supportlogs/overview.html",
         *OVERVIEW,
         named=sample.holds(me, sample.SENIOR, sample.VIEW_IDENTIFIABLE),
         senior=sample.holds(me, sample.SENIOR),
+        chosen_term=chosen,
     )
 
 
