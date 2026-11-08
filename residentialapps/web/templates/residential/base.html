@@ -473,6 +473,18 @@
       .split { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
       .split > .main { flex: 999 1 560px; min-width: 0; }
       .split > .side { flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+      /* supportlogs' columns (author, 2026-11-08): at most three, each at
+         least 340 px with 24 px between. Three from 1116 px wide (content
+         1068 px), two from 752 px (content 704 px), one below. A split's
+         main column spans two and its side one; a card on its own spans
+         two, never the third column too. */
+      :root[data-app="supportlogs"] .split > .main { flex-basis: 340px; }
+      :root[data-app="supportlogs"] .split > .side { flex-basis: 340px; }
+      @media (min-width: 1116px) {
+        :root[data-app="supportlogs"] .split { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        :root[data-app="supportlogs"] .split > .main { grid-column: span 2; }
+        :root[data-app="supportlogs"] .page > :not(.split) { max-width: calc((100% - 48px) * 2 / 3 + 24px); }
+      }
 
       @media (min-width: 960px) {
         .tb-in { padding: 10px 24px; }

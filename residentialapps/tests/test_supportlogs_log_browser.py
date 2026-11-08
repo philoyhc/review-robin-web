@@ -336,6 +336,34 @@ def test_overview_cards_of_names_stay_folded_until_opened(page: Page) -> None:
     assert page.locator("#flags-h").is_visible() and page.locator(".tiles").is_visible()
 
 
+def test_three_columns_of_340_and_cards_span_two(page: Page) -> None:
+    """Author, 2026-11-08: at most three columns of at least 340 px, 24 px
+    apart. Three from 1116 px wide: a split's main column spans two and
+    its side one, and a card on its own spans two. Two from 736 px (the
+    page's margins are 16 px below 960): a card spans the page. One
+    below."""
+    measure = """() => {
+      const s = document.querySelector('.split');
+      const m = s.querySelector('.main').getBoundingClientRect();
+      const d = s.querySelector('.side').getBoundingClientRect();
+      const card = document.querySelector('section:has(#plans-h)').getBoundingClientRect();
+      const pg = document.querySelector('.page'), cs = getComputedStyle(pg);
+      const content = pg.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      return [Math.round(content), Math.round(m.width), Math.round(d.width),
+              m.top === d.top, Math.round(card.width)];
+    }"""
+    for width, expect in (
+        (1280, (1184, 781, 379, True, 781)),
+        (1116, (1068, 704, 340, True, 704)),
+        (1115, (1067, 703, 340, True, 1067)),
+        (736, (704, 340, 340, True, 704)),
+        (735, (703, 703, 703, False, 703)),
+    ):
+        page.set_viewport_size({"width": width, "height": 900})
+        page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
+        assert tuple(page.evaluate(measure)) == expect, width
+
+
 def test_students_teams_filter_shows_the_team_and_hides_add(page: Page) -> None:
     """Rung 5: Teams shows the team's student alone, with no Add a student
     to follow up, and is kept across a reload."""

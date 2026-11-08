@@ -114,6 +114,12 @@ A recipient's flags card folds **Closed**, lists only the flags closed in
 the last 7 days, and puts the search for older ones after them (author,
 2026-11-08).
 
+### Rung 11 — Three columns of 340
+
+At most three columns of at least 340 px, 24 px apart: three from
+1116 px wide, two from 736 px, one below; cards on their own span two
+(author, 2026-11-08). Support Logs only.
+
 ## Checks
 
 Each rung keeps `pytest`, `ruff`, `pyright` green and takes one
@@ -199,3 +205,5 @@ browser check passes on each rung.
   One read: the count unstyled in an h3, the window's edges untested and
   no closing date on a closed flag, all fixed. Left as is: the sample's
   audit has no closing event, as before.
+- **Rung 11:** as planned; two columns hold down to 736 px rather than
+  the 752 first worked out, the page's margins being 16 px below 960.

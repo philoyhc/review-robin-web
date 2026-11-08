@@ -23,6 +23,10 @@ under `data-app="supportlogs"`.
   are designed at 390 px (functional spec §14, §16).
 - **The page map has no device column for Support Logs**, so this
   section gives the classes.
+- **At most three columns of at least 340 px** (author, 2026-11-08),
+  24 px apart: three from 1116 px wide, two from 736 px, one below. A
+  page's main column spans two and its side column one; a card on its
+  own spans two, never the third.
 - **Overview and the Consultation check are responsive**: their tables
   scroll sideways in `.table-wrap` on a phone. **Sys admin is
   desktop-oriented**.
