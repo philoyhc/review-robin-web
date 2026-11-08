@@ -42,7 +42,7 @@
     <section class="card card-pad" aria-labelledby="rules-h">
       <h2 id="rules-h">Consultation rules</h2>
       <p class="sub">Each reason, and whether it makes consultation required or suggested.</p>
-      <dl class="kv kv-terms-wrap">{% for reason, state in sample.CONSULTATION_REASONS %}<dt>{{ reason }}</dt><dd>{{ state | replace("Consultation ", "") | capitalize }}</dd>{% endfor %}</dl>
+      <dl class="kv kv-terms-wrap">{% for reason, state in sample.CONSULTATION_REASONS %}<dt>{{ reason }}</dt><dd>{{ sample.CONSULTATION_LEVELS[state] }}</dd>{% endfor %}</dl>
       <button type="button" class="btn btn-secondary gap-above-sm" disabled aria-label="Edit consultation rules">Edit</button>
       <p class="subtle small flush">§10.8; thresholds set before go-live (§17)</p>
     </section>

@@ -1207,6 +1207,9 @@ NONE_INDICATED = "No consultation indicated"
 SUGGESTED = "Consultation suggested"
 REQUIRED = "Consultation required"
 CONSULTATION_STATES = (REQUIRED, SUGGESTED, NONE_INDICATED)  # strongest first
+# A rule's level as Sys admin's Consultation rules card shows it, the card's
+# subheading saying once that these are levels of consultation (2026-11-08).
+CONSULTATION_LEVELS = {REQUIRED: "Required", SUGGESTED: "Suggested"}
 # Each reason and the state it brings (§10.8); the thresholds are policy,
 # configured before go-live (§17).
 CONSULTATION_REASONS = (

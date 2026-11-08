@@ -185,7 +185,9 @@ def test_the_consultation_rules_read_as_reason_and_level(client: TestClient) -> 
     values, Required or Suggested, the word Consultation said once."""
     card = section(client.get("/sys-admin/configuration?as=Rachel%20Yeo").text, "rules-h")
     assert '<dl class="kv kv-terms-wrap">' in card
+    levels = {sample.REQUIRED: "Required", sample.SUGGESTED: "Suggested"}
+    assert sample.CONSULTATION_LEVELS == levels
     for reason, state in sample.CONSULTATION_REASONS:
-        level = state.removeprefix("Consultation ").capitalize()
-        assert f"<dt>{reason}</dt><dd>{level}</dd>" in card, reason
+        assert state in levels, (reason, state)  # every rule's level is named
+        assert f"<dt>{reason}</dt><dd>{levels[state]}</dd>" in card, reason
     assert "<dd>Consultation" not in card
