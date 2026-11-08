@@ -152,7 +152,7 @@ The staff roster should be the first implementation of an **extensible Residenti
 2. **RA roster** — required later by Residential Operations;
 3. **Student roster** — to be decided; Residential may instead continue to resolve students directly from Entra / Microsoft 365 without maintaining a complete local roster.
 
-**Eligibility is the Staff roster** (author, 2026-10-28, superseding in part what follows): Support Logs reads the Staff roster to know who is eligible, and every active Staff-roster member is eligible for every authorization type below. The appointments in the table say who is normally granted each, not who may be. Grants are made and shown in Support Logs only; the roster shows none (`residentialapps/docs/residentialapps_roles.md` rule 9).
+**Eligibility is the Staff roster** (author, 2026-10-28, superseding in part what follows): Support Logs reads the Staff roster to know who is eligible, and every active Staff-roster member is eligible for every authorization type below. The appointments in the table say who is normally granted each, not who may be. Grants are made and shown in Support Logs only; the roster shows none (`residentialapps/docs/residentialapps_roles.md` rule 9). Every grant is in one Residential Unit and is read against that Unit's Staff roster; a grant in one Unit gives nothing in another (author, 2026-11-08, §3.7).
 
 **Appointments are not permissions** (author, 2026-10-22). `residentialops` records who the RFs, RSLMs, Master and other staff are; `supportlogs` decides what each of them may do in Support Logs. A person can read or write Support Logs only when **both** hold:
 
