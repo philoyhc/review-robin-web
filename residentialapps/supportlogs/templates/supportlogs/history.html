@@ -4,7 +4,7 @@
 {% from "supportlogs/_frontline.html" import flag_item with context %}
 {% block title %}{{ chosen.name }}{% endblock %}
 {% block content %}
-  <a class="back" href="{{ url('/overview/') }}{{ as_query }}">‹ Overview</a>
+  <a class="back" href="{{ url('/overview/') }}{{ as_query }}">‹ Students Overview</a>
   {{ sample_title(chosen.name, me.name) }}
   {# A student across staff (§4.5, §11.2): who supports them, not a case
      file; an audited read for senior identifiable access. #}

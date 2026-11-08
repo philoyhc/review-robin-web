@@ -45,7 +45,8 @@ def tabs(page: str) -> list[str]:
 PAGES = (
     ("/log", "Log encounter", (sample.FRONTLINE,)),
     ("/students/", "Students", (sample.FRONTLINE,)),
-    ("/overview/", "Overview", (sample.SENIOR, *sample.VIEW)),
+    ("/overview/", "Students Overview", (sample.SENIOR, *sample.VIEW)),
+    ("/workload/", "Staff Overview", (sample.SENIOR, *sample.VIEW)),
     ("/consultation/", "Consultation check", (sample.CONSULTATION,)),
     ("/sys-admin/", "Access", sample.ADMINISTRATION),
     ("/sys-admin/configuration", "Configuration", sample.ADMINISTRATION),
@@ -93,15 +94,18 @@ def test_each_grant_gives_its_tabs(client: TestClient) -> None:
     (author, 2026-11-08); no Safety flags tab."""
     assert tabs(client.get("/").text) == ["Home", "Log", "Students"]
     assert tabs(client.get(at("/overview/", "Sam Lee")).text) == [
-        "Overview",
-        "Workload",
+        "Students Overview",
+        "Staff Overview",
     ]  # no Home: it would only come back here
-    assert tabs(client.get(at("/overview/", "Kenneth Lau")).text) == ["Overview", "Workload"]
+    assert tabs(client.get(at("/overview/", "Kenneth Lau")).text) == [
+        "Students Overview",
+        "Staff Overview",
+    ]
     assert tabs(client.get(at("/consultation/", "Marcus Tan")).text) == ["Consultation check"]
     assert tabs(client.get(at("/", "Nadia Hassan")).text) == [
         "Home",
-        "Overview",
-        "Workload",
+        "Students Overview",
+        "Staff Overview",
         "Consultation check",
     ]
     assert tabs(client.get(at("/sys-admin/", "Rachel Yeo")).text) == [
@@ -133,7 +137,7 @@ def test_home_lists_the_pages_of_a_viewer_reaching_more_than_one(client: TestCli
     page = client.get(at("/", "Nadia Hassan")).text
     places = page.split('aria-label="Your pages"')[1].split("</ul>")[0]
     assert re.findall(r'href="([^"]*)"><span class="app-name">([^<]*)', places) == [
-        (at("/overview/", "Nadia Hassan"), "Overview"),
+        (at("/overview/", "Nadia Hassan"), "Students Overview"),
         (at("/consultation/", "Nadia Hassan"), "Consultation check"),
     ]
     assert 'href="/?as=Nadia%20Hassan" aria-current="page">Home</a>' in page

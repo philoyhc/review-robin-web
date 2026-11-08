@@ -152,6 +152,13 @@ Who supports whom has the most claim to the full three columns, so it
 leaves Overview for a **Workload** tab beside it, for whoever has
 Overview, open and at full width (author, 2026-11-08).
 
+### Rung 16 — Students Overview and Staff Overview
+
+The two tabs are renamed Students Overview and Staff Overview, and Who
+holds access, the support-activity audit and records across staff move
+to Staff Overview, below Who supports whom (author, 2026-11-08). Paths
+stay `/overview/` and `/workload/`.
+
 ## Checks
 
 Each rung keeps `pytest`, `ruff`, `pyright` green and takes one
@@ -272,3 +279,6 @@ browser check passes on each rung.
 - **Rung 15:** as planned; Home does not list Workload apart from
   Overview, so a viewer with Overview alone still lands on it. The
   sort fix for grouped headers rode rung 14.
+- **Rung 16:** as planned; Flagged for formal assignment and Every
+  formal plan move into Students Overview's side, so its third column
+  is not left empty.

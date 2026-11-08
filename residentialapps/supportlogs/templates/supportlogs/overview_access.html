@@ -2,7 +2,7 @@
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
 {% block title %}Who holds access{% endblock %}
 {% block content %}
-  <a class="back" href="{{ url('/overview/') }}{{ as_query }}">‹ Overview</a>
+  <a class="back" href="{{ url('/workload/') }}{{ as_query }}">‹ Staff Overview</a>
   {{ sample_title("Who holds access", me.name) }}
   {# Administration decides who sees content but sees none, so senior
      staff see what it decided (author, 2026-10-30): each grant's holders

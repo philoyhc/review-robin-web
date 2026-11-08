@@ -108,7 +108,7 @@ def test_closed_lists_the_last_7_days_latest_closed_first(
 def test_senior_recipients_find_the_flags_on_overview(client: TestClient) -> None:
     overview = client.get("/overview/?as=Sam%20Lee").text
     assert flags(section(overview, "flags-h"))[0] == ("/flags/F-01", "Unacknowledged")
-    assert badge(overview) == [("Overview", "1")]
+    assert badge(overview) == [("Students Overview", "1")]
     viewer = client.get("/overview/?as=Kenneth%20Lau").text
     assert (
         'id="flags-h"' not in viewer and badge(viewer) == []
@@ -158,7 +158,7 @@ def test_raising_confirms_or_goes_back_with_what_was_chosen(client: TestClient) 
     assert "A safety flag is raised for Bao Nguyen" in raised and "No alert is sent" in raised
     assert (
         "Duty senior staff contacted, 2026-10-29 13:50." in raised
-        and "on their Home or Overview" in raised
+        and "on their Home or Students Overview" in raised
     )
     back = client.get("/log/safety/raised?student=S-02&type=Check-in", follow_redirects=False)
     assert (back.status_code, back.headers["location"]) == (

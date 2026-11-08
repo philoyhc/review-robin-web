@@ -274,7 +274,7 @@ SAM = "as=Sam%20Lee"
 def test_records_across_staff_is_senior_only_and_locked(client: TestClient) -> None:
     assert (
         'href="/overview/records?as=Sam%20Lee">Open records</a>'
-        in client.get(f"/overview/?{SAM}").text
+        in client.get(f"/workload/?{SAM}").text
     )
     assert "/overview/records" not in client.get("/overview/?as=Siti%20Rahman").text
     locked = client.get(f"/overview/records?{SAM}").text
