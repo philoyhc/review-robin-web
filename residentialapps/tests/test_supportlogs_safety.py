@@ -87,6 +87,24 @@ def test_a_recipient_with_nothing_else_finds_closed_flags_too(client: TestClient
     assert old.closed_at and old.closed_at.date() < sample.TODAY - timedelta(days=6)
 
 
+def test_closed_lists_the_last_7_days_latest_closed_first(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The window is the last 7 days, today included (23 to 29 Oct on
+    sample data); each closed flag says when it closed."""
+    from dataclasses import replace
+    from datetime import datetime
+
+    f04 = next(f for f in sample.FLAGS if f.id == "F-04")
+    edge = replace(f04, id="F-90", closed_at=datetime(2026, 10, 23, 9, 0))
+    before = replace(f04, id="F-91", closed_at=datetime(2026, 10, 22, 23, 0))
+    monkeypatch.setattr(sample, "FLAGS", (*sample.FLAGS, edge, before))
+    farah = sample.viewer("Farah Aziz")
+    assert [f.id for f in sample.recently_closed(farah)] == ["F-04", "F-90"]
+    home = TestClient(create_app()).get("/?as=Farah%20Aziz").text
+    assert "· closed 27 Oct, 10:00" in section(home, "flags-h").split("<h3")[1]
+
+
 def test_senior_recipients_find_the_flags_on_overview(client: TestClient) -> None:
     overview = client.get("/overview/?as=Sam%20Lee").text
     assert flags(section(overview, "flags-h"))[0] == ("/flags/F-01", "Unacknowledged")

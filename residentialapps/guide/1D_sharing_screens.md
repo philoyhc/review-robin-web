@@ -196,3 +196,6 @@ browser check passes on each rung.
   heading inside a summary is for the author's browser check.
 - **Rung 10:** as planned; the sample's F-04 (Hana Rahim) now closed on
   27 Oct, so the list has one to show and F-03 is left to the search.
+  One read: the count unstyled in an h3, the window's edges untested and
+  no closing date on a closed flag, all fixed. Left as is: the sample's
+  audit has no closing event, as before.

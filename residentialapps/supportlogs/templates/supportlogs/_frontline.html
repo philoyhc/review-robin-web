@@ -70,7 +70,7 @@
   {% set s = sample.student(f.student) %}
   <li>
     <div class="item-head"><a class="strong" href="{{ url('/flags/' ~ f.id) }}{{ as_query }}" aria-label="Safety flag for {{ s.name }}, raised {{ sample.when(f.raised_at) }}">{{ s.name if with_student else "Raised " ~ sample.when(f.raised_at) }}</a>{{ flag_chip(f) }}</div>
-    <div class="subtle">{% if with_student %}Raised {{ sample.when(f.raised_at) }} · {% endif %}by {{ f.raised_by }} · {{ f.step }}</div>
+    <div class="subtle">{% if with_student %}Raised {{ sample.when(f.raised_at) }} · {% endif %}by {{ f.raised_by }} · {{ f.step }}{% if f.closed_at %} · closed {{ sample.when(f.closed_at) }}{% endif %}</div>
   </li>
 {%- endmacro %}
 
