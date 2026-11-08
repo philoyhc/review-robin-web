@@ -121,6 +121,21 @@ def test_a_closed_flag_is_a_signal_on_overview(client: TestClient) -> None:
     assert "Safety flag</span>" in page and "Active flag" not in page
 
 
+def test_a_senior_s_cards_of_names_start_folded(client: TestClient) -> None:
+    """Author, 2026-11-08: on a senior's Overview every card that shows
+    names, students' or staff's, opens only when asked; the safety flags
+    banner and the count tiles stay open. Other viewers are unchanged."""
+    sam = client.get("/overview/?as=Sam%20Lee").text
+    folded = ("support-h", "across-h", "who-h", "refs-h", "plans-h")
+    assert sam.count('<details class="fold">') == len(folded)
+    assert '<details class="fold" open' not in sam
+    for heading in folded:
+        assert f'<details class="fold"><summary><h2 id="{heading}">' in sam, heading
+    assert 'id="flags-h"' in sam and '<summary><h2 id="flags-h"' not in sam
+    for name in ("Siti%20Rahman", "Kenneth%20Lau"):
+        assert '<details class="fold">' not in client.get(f"/overview/?as={name}").text, name
+
+
 def test_the_aggregate_view_names_no_student(client: TestClient) -> None:
     page = client.get("/overview/?as=Kenneth%20Lau").text
     for s in sample.STUDENTS:

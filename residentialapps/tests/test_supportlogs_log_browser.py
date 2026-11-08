@@ -301,6 +301,7 @@ def test_a_withheld_name_shows_and_hides_again(page: Page) -> None:
     """Overview's withheld name (author, 2026-11-07): Show name opens it in
     place, its control stays and reads Hide name, and closes it again."""
     page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
+    page.locator("#across-h").click()  # the card opens first (author, 2026-11-08)
     row = page.locator("#across-table details.reveal").first
     summary = row.locator("summary")
     name = row.locator("> .strong")
@@ -315,6 +316,24 @@ def test_a_withheld_name_shows_and_hides_again(page: Page) -> None:
     assert summary.is_visible() and "Hide name" in summary.inner_text()
     summary.click()
     assert not name.is_visible()
+
+
+def test_overview_cards_of_names_stay_folded_until_opened(page: Page) -> None:
+    """Author, 2026-11-08: on a senior's Overview every card that shows
+    names starts closed, its heading the control; the safety flags banner
+    and the count tiles stay open."""
+    page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
+    for heading, inside in (
+        ("#support-h", "#support-table"),
+        ("#across-h", "#across-table"),
+        ("#who-h", "section:has(#who-h) dl.kv"),
+        ("#refs-h", "section:has(#refs-h) ul.items"),
+        ("#plans-h", "section:has(#plans-h) ul.items"),
+    ):
+        assert not page.locator(inside).is_visible(), heading
+        page.locator(heading).click()
+        assert page.locator(inside).is_visible(), heading
+    assert page.locator("#flags-h").is_visible() and page.locator(".tiles").is_visible()
 
 
 def test_students_teams_filter_shows_the_team_and_hides_add(page: Page) -> None:

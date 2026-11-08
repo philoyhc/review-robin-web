@@ -2,3 +2,10 @@
    formal plan, with no safety flag and no team. `name` is the name as it would
    show, link included. #}
 {% macro withheld(name) %}<details class="reveal"><summary><span class="reveal-cta" data-when="closed">Show name</span><span class="reveal-cta" data-when="open">Hide name</span></summary><span class="strong">{{ name }}</span></details>{% endmacro %}
+{# A card that shows names, folded until opened on a senior's Overview
+   (author, 2026-11-08): the heading opens it, so no name is on screen until
+   someone asks. Presentation only: the names are in the page, and opening a
+   card is not a recorded read. Show and Hide are hidden from screen
+   readers, which announce the expander's state themselves. `count`, if given, follows the title; with `fold` false
+   the card is open, its heading plain. #}
+{% macro folded(id, title, count=none, fold=true) %}{% set h %}<h2 id="{{ id }}">{{ title }}{% if count is not none %} <span class="count">· {{ count }}</span>{% endif %}</h2>{% endset %}{% if fold %}<details class="fold"><summary>{{ h }}<span class="reveal-cta" data-when="closed" aria-hidden="true">Show</span><span class="reveal-cta" data-when="open" aria-hidden="true">Hide</span></summary>{{ caller() }}</details>{% else %}{{ h }}{{ caller() }}{% endif %}{% endmacro %}
