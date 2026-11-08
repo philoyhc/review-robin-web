@@ -383,6 +383,18 @@ def test_a_card_s_own_split_and_a_narrow_card_keep_their_widths(page: Page) -> N
         assert round(narrow) == 560, (width, narrow)
 
 
+def test_desktop_oriented_sys_admin_keeps_the_full_width(page: Page) -> None:
+    """Sys admin is desktop-oriented (author, 2026-11-08): at 1280 px its
+    cards keep the page's full width, where another page's stop at two
+    columns."""
+    page.set_viewport_size({"width": 1280, "height": 900})
+    page.goto(f"{ORIGIN}/sys-admin/?as=Rachel%20Yeo")
+    width = page.evaluate(
+        "() => document.querySelector('section:has(#access-h)').getBoundingClientRect().width"
+    )
+    assert round(width) == 1184 and page.locator("main.page.desktop").count() == 1
+
+
 def test_students_teams_filter_shows_the_team_and_hides_add(page: Page) -> None:
     """Rung 5: Teams shows the team's student alone, with no Add a student
     to follow up, and is kept across a reload."""

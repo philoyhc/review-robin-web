@@ -12,11 +12,11 @@ from starlette.responses import Response
 
 from cordware.identity import current_identity
 from residentialapps.residentialops import sample_data, sample_leave
-from residentialapps.web.pages import initials, split_areas, top_line
+from residentialapps.web.pages import desktop_oriented, initials, split_areas, top_line
 from residentialapps.web.pages import (
     placeholders_previewers_only as placeholders_previewers_only,  # for the routes
 )
-from residentialapps.web.urls import templates
+from residentialapps.web.urls import app_path, templates
 
 TEMPLATES = templates([Path(__file__).resolve().parent / "templates"])
 
@@ -157,6 +157,7 @@ def render(
         template,
         {
             "app_key": "residentialops",
+            "desktop_page": desktop_oriented("residentialops", app_path(request)),
             "app_name": APP_NAME,
             "unit_name": sample_data.UNIT_NAME,
             "top_line": top_line(sample_data.UNIT_NAME),

@@ -391,7 +391,8 @@ you would act on?*
 
 - [ ] **Columns**: at 1280 px a page's own cards stop at two thirds of the
   page, and Overview's side column is a third; at 1100 px cards span the
-  page; at 735 px the side column drops below.
+  page; at 735 px the side column drops below. Sys admin's cards keep
+  the full width at 1280 px.
 - [ ] **Sorting**: a header's ↕ reorders rows; after a reload the sort is
   kept, and empty values sort last.
 - [ ] **At 390 px** every table scrolls sideways inside its card; no page

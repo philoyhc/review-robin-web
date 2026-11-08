@@ -22,8 +22,16 @@ in `residentialapps/web/templates/residential/base.html`.
 - **Phone first.** A mobile-critical page is designed at 390 px, holds at
   360 px and does not break at 320 px. Base styles are the phone's;
   `min-width` media queries widen them.
-- **Up to three columns of cards** from 960 px, stacked in column order
-  below it.
+- **At most three columns, each at least 340 px, 24 px apart**
+  (author, 2026-11-08), in every Residential app: three from 1116 px
+  wide, two from 736 px, one below, stacked in column order. From
+  1116 px a page's main column spans two and its side column one, and a
+  card on its own spans two, never the third; from 736 px to 1115 px the
+  side column is 340 px and the main column takes the rest. A card's own
+  inner split and a narrow notice card keep their widths, and a
+  desktop-oriented page (the page map's class, listed in
+  `residentialapps/web/pages.py`) keeps the page's full width for its
+  cards.
 - **The page is centered and at most 1232 px wide** (1184 px of content
   inside 24 px padding); the top bar and the tabs keep the same width.
   RRW's 1400 px left-aligned page is its own (author, 2026-10-27).

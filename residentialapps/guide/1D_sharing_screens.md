@@ -118,7 +118,8 @@ the last 7 days, and puts the search for older ones after them (author,
 
 At most three columns of at least 340 px, 24 px apart: three from
 1116 px wide, two from 736 px, one below; cards on their own span two
-(author, 2026-11-08). Support Logs only.
+(author, 2026-11-08). Every Residential app; desktop-oriented pages
+keep the full width.
 
 ## Checks
 
@@ -211,3 +212,7 @@ browser check passes on each rung.
   card, both now exempt; the spec now says it overrides Residential
   Ops' columns and that tables scroll in Overview's main column below
   1116 px.
+- **Rung 11, widened:** the author's ruling, before merge: desktop-
+  oriented pages (Support Logs' Sys admin; Residential Ops' RA Leave
+  admin, Precinct leave, rosters, Events admin and Sys admin) keep the
+  full width, and the columns apply to every Residential app.
