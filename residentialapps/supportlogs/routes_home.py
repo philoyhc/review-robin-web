@@ -72,3 +72,22 @@ def not_registered(request: Request) -> Response:
     return render(
         request, "supportlogs/not_registered.html", me=sample.DEFAULT, area=MAIN, areas=()
     )
+
+
+@router.get("/unit", name="supportlogs_unit")
+def choose_unit(request: Request) -> Response:
+    """Set this browser's working Unit and return to the page it was chosen
+    on (Unit-scoping rung 3; functional spec §3.7). An unknown Unit clears
+    the choice; a return path that is not the application's own goes Home."""
+    name = request.query_params.get("name", "")
+    back = request.query_params.get("back", "/")
+    if not back.startswith("/") or back.startswith("//"):
+        back = "/"
+    response = RedirectResponse(url_path(request, back), status_code=303)
+    if name in sample.UNITS:
+        response.set_cookie(
+            sample.UNIT_COOKIE, name, path=url_path(request, "/"), samesite="lax", httponly=True
+        )
+    else:
+        response.delete_cookie(sample.UNIT_COOKIE, path=url_path(request, "/"))
+    return response

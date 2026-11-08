@@ -162,6 +162,7 @@ def render(
     **context: Any,
 ) -> Response:
     identity = current_identity(request)
+    unit = sample.working_unit(me, request.cookies.get(sample.UNIT_COOKIE))
 
     def qs(**params: str) -> str:
         return query(me, **params)
@@ -173,8 +174,9 @@ def render(
             "app_key": "supportlogs",
             "desktop_page": desktop_oriented("supportlogs", app_path(request)),
             "app_name": APP_NAME,
-            "unit_name": sample.UNIT_NAME,
-            "top_line": top_line(sample.UNIT_NAME),
+            "unit_name": unit,
+            "top_line": top_line(unit),
+            "unit_choices": unit_choices(request, me, unit),
             "area": area,
             # Sys admin is the account's, in its menu, not a place (§4).
             **_areas_and_account(me, areas),
@@ -198,6 +200,23 @@ def render(
         },
         status_code=status_code,
     )
+
+
+def unit_choices(request: Request, me: sample.Viewer, unit: str) -> list[dict[str, str | bool]]:
+    """The switcher's Units (Unit-scoping rung 3): one entry per Unit the
+    viewer holds grants in, none for a viewer in one Unit. Choosing one
+    sets the working Unit for this browser and returns to this page."""
+    if len(me.units) < 2:
+        return []
+    here = app_path(request) + (f"?{request.url.query}" if request.url.query else "")
+    return [
+        {
+            "label": u,
+            "path": "/unit?" + urlencode({"name": u, "back": here}, quote_via=quote),
+            "current": u == unit,
+        }
+        for u in me.units
+    ]
 
 
 def _areas_and_account(

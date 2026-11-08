@@ -321,3 +321,50 @@ def test_the_sample_viewers_are_the_roles_in_practice(client: TestClient) -> Non
     for v in sample.UNLISTED_VIEWERS:
         assert sample.viewer(v.name) == v
         assert quote(v.name) not in card, v.name
+
+
+def test_the_working_unit_switcher_is_a_scaffold(client: TestClient) -> None:
+    """Unit-scoping rung 3 (author, 2026-11-08): a viewer holding grants in
+    more than one Unit picks the working Unit in the switcher; one in a
+    single Unit sees none. Choosing sets it for this browser and returns to
+    the page; the top line names it. Until rung 4 nothing else changes."""
+    sam = at("/oversight-students/", "Sam Lee")
+    page = client.get(sam).text
+    menu = page.split('aria-label="Switch area"', 1)[1].split("</nav>", 1)[0]
+    assert '<div class="mg-h">Unit</div>' in menu
+    for unit in sample.UNITS:
+        assert f">{unit}" in menu, unit
+    back = "back=%2Foversight-students%2F%3Fas%3DSam%2520Lee"
+    assert f'<a href="/unit?name=Example%20College&amp;{back}" aria-current="true">' in menu
+    for name in ("Daniel Koh", "Siti Rahman", "Rachel Yeo"):
+        assert '<div class="mg-h">Unit</div>' not in client.get(at("/", name)).text, name
+    chose = TestClient(create_app())
+    before = chose.get(sam).text
+    moved = chose.get(
+        "/unit?name=Example%20Hall&back=%2Foversight-students%2F%3Fas%3DSam%2520Lee",
+        follow_redirects=False,
+    )
+    assert moved.status_code == 303 and moved.headers["location"].endswith(
+        "/oversight-students/?as=Sam%20Lee"
+    )
+    after = chose.get(sam).text
+    assert '<span class="sw-unit">Example Hall</span>' in after
+    assert 'aria-current="true">Example Hall' in after
+    strip = re.compile(r'<header class="topbar">.*?</header>', re.S)
+    assert strip.sub("", after) == strip.sub("", before)  # no page differs yet
+    # A Unit the viewer holds no grant in, or an unknown one, is not worked in.
+    daniel = TestClient(create_app())
+    daniel.get("/unit?name=Example%20Hall&back=%2F")
+    assert '<span class="sw-unit">Example College</span>' in daniel.get("/").text
+    # The switcher's accessible name carries the working Unit.
+    assert ', Unit: Example Hall">' in after
+    # A return path off the application goes Home.
+    for back in ("%2F%2Fevil.example", "https%3A%2F%2Fevil.example", "javascript%3Aalert(1)", ""):
+        location = chose.get(f"/unit?name=Nowhere&back={back}", follow_redirects=False).headers[
+            "location"
+        ]
+        assert location.endswith("/") and "evil" not in location, (back, location)
+    absent = chose.get("/unit?name=Nowhere", follow_redirects=False).headers["location"]
+    assert absent.endswith("/")
+    slash = chose.get("/unit?name=Nowhere&back=%2F%5Cevil.example", follow_redirects=False)
+    assert not slash.headers["location"].startswith(("//", "/\\")), slash.headers["location"]

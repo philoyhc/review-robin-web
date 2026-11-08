@@ -539,7 +539,7 @@
           </div>
         {% else %}
         <details class="switch" data-tb-menu>
-          <summary aria-label="Switch area: {{ area }}">
+          <summary aria-label="Switch area: {{ area }}{% if unit_choices %}, Unit: {{ unit_name }}{% endif %}">
             {% if app_icon %}<span aria-hidden="true" class="tb-icon"></span>{% endif %}
             <span class="sw-t">{% if top_line %}<span class="sw-unit">{{ top_line }}</span>{% endif %}<span class="sw-app">{{ area }} <span aria-hidden="true" class="caret">▾</span></span></span>
           </summary>
@@ -553,6 +553,17 @@
                 {% else %}
                   <span class="later">{{ item.label }} <small>not built yet</small></span>
                 {% endif %}
+              {% endfor %}
+            </div>
+            {% endif %}
+            {# The working Unit, for a viewer holding grants in more than
+               one (Support Logs, Unit-scoping rung 3); one Unit at a time,
+               never a view across them. #}
+            {% if unit_choices %}
+            <div class="mg">
+              <div class="mg-h">Unit</div>
+              {% for u in unit_choices %}
+                <a href="{{ url(u.path) }}"{% if u.current %} aria-current="true"{% endif %}>{{ u.label }}{% if u.current %} <span aria-hidden="true">✓</span>{% endif %}</a>
               {% endfor %}
             </div>
             {% endif %}

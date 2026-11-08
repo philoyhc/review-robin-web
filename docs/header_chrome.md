@@ -61,6 +61,11 @@ needed to open it.
 
 - **First group, headed by the application's name**: the places the
   viewer can reach, the current one marked (✓ and `aria-current`).
+- **Support Logs' Unit group, headed "Unit"**, between them, only for a
+  viewer holding grants in more than one Residential Unit: those Units,
+  the working one marked (✓ and `aria-current`); choosing one sets it
+  for this browser (`residentialapps/docs/resident_support_log_functional_spec_v0.3.md`
+  §3.7, 2026-11-08).
 - **Last group, headed "Cordware"**: **All applications**, the host's
   landing page. An application never lists the host's other mounts
   itself (`residentialapps/spec/residentialops_ui.md` §2 gives why).
@@ -155,7 +160,9 @@ shows on that operator's existing sessions at once.
 
 **Residential**: the top-level Unit's name when it is set and differs
 from the default; otherwise the default. In practice that is the college,
-as today.
+as today. In Support Logs it is the viewer's working Unit (2026-11-08),
+which the summary's accessible name also carries when the viewer has
+more than one.
 
 ## 7. Behavior and accessibility
 

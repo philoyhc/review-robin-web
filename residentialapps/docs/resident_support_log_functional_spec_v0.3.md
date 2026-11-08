@@ -188,7 +188,7 @@ For local development and testing, Support Logs provides a fake role for each au
 - **Grants.** Every Support Logs authorization names its Unit. A grant in one Unit gives nothing in another. Eligibility is that Unit's Staff roster, every member eligible (§3.5); no appointment is required.
 - **Records.** Every record names the Unit it was made in, fixed at creation from its author's working Unit: encounters, safety escalations, support relationships, peer-view grants, teams, handovers, purges, review runs and audit events. Only a handover changes it.
 - **No cross-Unit view, for anyone.** Every page, count, download, check and audit review shows one Unit, the viewer's working Unit; the platform super-admin included.
-- **Working Unit.** A person with grants in more than one Unit works in one at a time, chosen in the area switcher; a person with grants in one Unit sees no switcher.
+- **Working Unit.** A person with grants in more than one Unit works in one at a time, chosen in the area switcher; a person with grants in one Unit sees no Unit group.
 - **Students.** A student's identity is one row per person. Whether a Unit knows the student is derived from that Unit's own records, so two Units never see each other's. A student who moves Units leaves their records where they were made; history crosses Units only through a handover agreed by a senior in each Unit.
 - **Sharing.** Shares, peer views and teams stay within one Unit.
 - **Safety flags** reach their Unit's recipients only.
