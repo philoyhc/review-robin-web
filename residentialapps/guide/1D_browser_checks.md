@@ -276,8 +276,8 @@ about?"*
   plans, meetings and minutes, then Own students, meetings, per student,
   minutes and per meeting; this term shows Daniel Koh's 2 plans, 3
   meetings and 75 minutes assigned and 4 students, 5 meetings and 90
-  minutes his own, Arjun Nair's 1 plan with "Fewer than 3 students" and
-  no own figures, and AY2025-2026 Term 2 none; no Following column or
+  minutes his own, Arjun Nair (1 plan) and Mei Ling Tan "Fewer than 3
+  students" with no own figures, and AY2025-2026 Term 2 none; no Following column or
   follow-ups tile anywhere);
   **Students across staff**, naming only Elena Park, Jia Wen Lee, Clara
   Tan, Dev Menon and Ivan Seet until **Show name** opens another row, and
@@ -313,8 +313,9 @@ why?*
 plan."*
 
 - [ ] P-03, his follow-up, is not found as Sam Lee: there is no Convert.
-  A follow-up reaches senior staff only as Daniel's **Flag for formal
-  assignment**, listed under Flagged for formal assignment.
+  A follow-up reaches senior staff only as a **Flag for formal
+  assignment**: Elena Park, from Daniel's follow-up P-04, is listed under
+  Flagged for formal assignment.
 - [ ] P-02, converted from Daniel's follow-up, shows its source, cadence
   and History from the conversion on, never when he began following up.
   As Siti Rahman it shows only who, whom, kind and status.

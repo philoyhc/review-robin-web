@@ -1,6 +1,6 @@
 """Support Logs' plans and sharing on sample data, segment 1D item 1 rung 4:
-a plan's detail and history, conversion for senior staff, Flag for formal
-assignment, and peer-view grants (functional spec §3.1, §7, §8, §11.1)."""
+a plan's detail and history, a follow-up its owner's alone, Flag for
+formal assignment, and peer-view grants (functional spec §3.1, §7, §8, §11.1)."""
 
 from __future__ import annotations
 

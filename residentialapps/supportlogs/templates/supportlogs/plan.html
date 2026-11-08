@@ -14,9 +14,8 @@
      gives: due state, last contact, next expected, contacts (author,
      2026-11-07, confidentiality rule 3). #}
   {% set walled = not owner and not shared %}
-  {# A follow-up is the frontline's own: seen through the wall it shows
-     only who, whom and its status, never its dates, cadence, instruction
-     or history. A formal plan's facts are senior staff's own setting, so
+  {# A follow-up is the frontline's own: the route does not show it
+     through the wall at all (author, 2026-11-08). A formal plan's facts are senior staff's own setting, so
      they see them, and its history from the assignment on; Other Staff
      view sees only who, whom, kind and status (author, 2026-11-07). #}
   {% set thin = walled and not (p.formal and senior) %}

@@ -1,6 +1,6 @@
 """Support Logs' plans and sharing on sample data, segment 1D item 1 rung 4:
-a plan's detail with its history and, for senior staff, conversion of a
-follow-up to a formal assignment (§7, §8); Flag for formal assignment
+a plan's detail with its history (§7, §8), a follow-up its owner's alone
+(author, 2026-11-08); Flag for formal assignment
 (§3.1); and Share past records (§11.1; sharing screens rung 3). Nothing is
 stored: each form shows its confirmation, and changes wait on item 4."""
 

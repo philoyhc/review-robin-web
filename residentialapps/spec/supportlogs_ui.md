@@ -206,7 +206,7 @@ form's end, and the main action is a full-width Primary on the page
     identifiable, off by default and recorded.
   - **The wall** (author, 2026-11-07, rule 3 below): Overview shows
     **Who supports whom** (per staff member, students with records and
-    plans) and **Students across staff** (per student, the staff with
+    formal plans) and **Students across staff** (per student, the staff with
     records and the signals), metadata only. For senior staff alone, Who
     supports whom carries each staff member's workload for a chosen term
     (the current one by default, or all) in two groups (author,

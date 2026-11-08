@@ -1056,11 +1056,13 @@ def workload(chosen: Term | None) -> list[WorkloadRow]:
     return rows
 
 
-def students_with_records(staff: str) -> set[str]:
-    """The students a staff member has any record about: an encounter or a
-    plan. Metadata, which senior staff see (author, 2026-11-07)."""
+def students_with_records(staff: str, *, follow_ups: bool = False) -> set[str]:
+    """The students a staff member has a record about: an encounter or a
+    formal plan. Metadata, which senior staff see (author, 2026-11-07). A
+    follow-up is its staff member's own (author, 2026-11-08), so it counts
+    only for them, with ``follow_ups``."""
     return {e.student for e in ENCOUNTERS if e.staff == staff} | {
-        p.student for p in PLANS if p.staff == staff
+        p.student for p in PLANS if p.staff == staff and (follow_ups or p.formal)
     }
 
 
@@ -1645,8 +1647,9 @@ RECORD_KINDS: dict[str, tuple[str, tuple[str, ...]]] = {
     "encounters": ("Encounters", ENCOUNTER_COLUMNS),
     "plans": ("Plans", PLAN_COLUMNS),
 }
-# What a senior upload takes after its Staff column: a plan may be a formal
-# assignment (§7), and a new one is always Active, so no Status.
+# What a senior upload takes after its Staff column: a plan is a formal
+# assignment, every one (author, 2026-11-08), so no Kind, and a new one is
+# always Active, so no Status.
 # Senior staff's downloads: metadata, never content (author, 2026-11-07).
 # Encounters as staff and student pairs; plans without their cadence or
 # dates.
@@ -1655,7 +1658,7 @@ SENIOR_PLAN_COLUMNS = ("Staff", "Student email", "Student", "Kind", "Source", "S
 
 STAFF_TEMPLATE_COLUMNS: dict[str, tuple[str, ...]] = {
     "encounters": ENCOUNTER_COLUMNS,
-    "plans": tuple(c for c in PLAN_COLUMNS if c != "Status"),
+    "plans": tuple(c for c in PLAN_COLUMNS if c not in ("Kind", "Status")),
 }
 
 

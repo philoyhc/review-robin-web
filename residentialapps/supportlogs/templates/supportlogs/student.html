@@ -93,7 +93,7 @@
          and a senior agree; starting it is the owner's own
          agreement. A record is an encounter or a plan. Inert until
          wired. #}
-      {% if chosen.id in sample.students_with_records(me.name) %}
+      {% if chosen.id in sample.students_with_records(me.name, follow_ups=True) %}
       {% set handing = sample.encounters_by(me.name, chosen.id) %}
       <section class="card card-pad muted" aria-labelledby="handover-h">
         <h2 id="handover-h">Hand over</h2>

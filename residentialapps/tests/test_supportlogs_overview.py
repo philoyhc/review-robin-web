@@ -331,3 +331,18 @@ def test_mounted_overview_pages_stay_under_the_mount() -> None:
                 path,
                 link,
             )
+
+
+def test_a_follow_up_alone_is_not_a_record_senior_staff_see(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Author, 2026-11-08: a follow-up is its staff member's own, so one
+    begun with no encounter neither counts nor lists the pair for senior
+    staff; its owner still has the student among their records."""
+    met = {e.student for e in sample.ENCOUNTERS if e.staff == "Grace Ho"}
+    sid = next(s.id for s in sample.STUDENTS if s.id not in met)
+    plan = sample.Plan("P-99", sid, "Grace Ho", False, sample.TODAY, "Weekly")
+    monkeypatch.setattr(sample, "PLANS", (*sample.PLANS, plan))
+    assert sid not in sample.students_with_records("Grace Ho")
+    assert "Grace Ho" not in sample.staff_with_records(sid)
+    assert sid in sample.students_with_records("Grace Ho", follow_ups=True)
