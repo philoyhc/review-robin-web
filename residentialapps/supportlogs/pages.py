@@ -27,7 +27,7 @@ SYS_ADMIN_AREA = "Sys admin"
 EXPLAINER = "Who can see what"
 EXPLAINER_PATH = "/who-can-see-what"
 # Staff Overview: Who supports whom and the staff-facing cards, beside
-# Students Overview (author, 2026-11-08). Its path predates the name.
+# Students Overview (author, 2026-11-08), at /oversight-staff/.
 WORKLOAD = "/oversight-staff/"
 
 
