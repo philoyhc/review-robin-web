@@ -9,7 +9,7 @@
      metadata only (author, 2026-11-07): a flag, a plan, or records with
      staff, never what records say, how many or when; no score, no notes
      (§10.8, §11.2). The run, with what it showed, is recorded. #}
-  <p class="sub">{{ purpose }} · {{ results | length }} {{ "student" if results | length == 1 else "students" }} · the strongest first</p>
+  <p class="sub">{{ purpose }} · {{ results | length }} {{ "student" if results | length == 1 else "students" }} · the strongest first · from {{ unit_name }}'s records alone</p>
   <p class="notice" role="note">This check is recorded with what it showed. {{ sample.NONE_MEANS }} {{ explainer_link() }}</p>
   {% if unread %}<section class="card card-pad gap-below" aria-labelledby="unread-h">
     <h2 id="unread-h">Not read <span class="count">· {{ unread | length }}</span></h2>

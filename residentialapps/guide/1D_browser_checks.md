@@ -301,7 +301,7 @@ about?"*
 Ask: *Is who-has-records-with-whom enough to run a weekly meeting? What
 would you ask a staff member to share?*
 
-### B1a. The working Unit (scaffold)
+### B1a. The working Unit
 
 - [ ] As Sam Lee, the top-left switcher has a **Unit** group listing
   Example College (ticked) and Example Hall; the top line reads Example

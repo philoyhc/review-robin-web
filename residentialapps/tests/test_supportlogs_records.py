@@ -554,8 +554,13 @@ def test_the_staff_emails_are_the_rosters() -> None:
     roster = Path(__file__).resolve().parents[1] / "docs" / "sample_data" / "staff_roster.csv"
     with roster.open(newline="") as f:
         emails = {r["Name"]: r["Email"] for r in csv.DictReader(f)}
-    assert all(emails[n] == e for n, e in sample.STAFF_EMAILS.items())
-    assert set(sample.STAFF_EMAILS) == set(sample.FRONTLINE_COLLEAGUES)
+    # Example College's are the roster mock's; each Unit's colleagues have one.
+    assert all(emails[n] == sample.STAFF_EMAILS[n] for n in sample.FRONTLINE_COLLEAGUES)
+    every: set[str] = set()
+    for unit in sample.UNITS:
+        with sample.in_unit(unit):
+            every |= set(sample.FRONTLINE_COLLEAGUES)
+    assert set(sample.STAFF_EMAILS) == every
 
 
 def test_residential_operations_boxes_stay_inert() -> None:

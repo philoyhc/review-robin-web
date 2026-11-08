@@ -151,9 +151,19 @@ Taken 2026-11-08 at `c053b46b1`.
   Unit group sits in the top-left switcher, whose top line already names
   the Unit; the working Unit is a cookie (`supportlogs_unit`), as the
   plan's per-browser rule says.
-- **Rung 4:** every record collection in the sample is per Unit
-  (`PerUnit`), read as the request's working Unit, which a middleware
-  sets before any route runs. Example Hall: two frontline staff, four
+- **Rung 4:** the sample's records are per Unit (`PerUnit`,
+  `PerUnitMap`): encounters, plans and their history, flags, referrals,
+  teams, pending, shares, the support-activity and access audits, check
+  runs, purges, favorites, frontline colleagues and the Staff roster,
+  each read as the request's working Unit, which a middleware sets
+  before any route runs. The student and staff directories (names,
+  emails) stay one, as §3.7's identities do; a student filter lists only
+  the students the Unit's records name. A sample viewer's grants are the
+  same in each Unit they hold. The Consultation check's result names
+  its Unit. The cold read found the access changes, the unlocked records
+  page and its student filter still global; fixed, and the sweep now
+  covers them, the CSVs and staff names, and every tab page for each
+  single-Unit viewer. Example Hall: two frontline staff, four
   students (one directory, as §3.7 has it), one formal plan, no flags. A
   history of a student the Unit's records do not name is not found.
   Sys admin's own pages stay Example College's: no sys admin holds

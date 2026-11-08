@@ -584,7 +584,7 @@ def attention(staff: str) -> list[Plan]:
 # Each frontline viewer's favorites, in the order favorited (author,
 # 2026-11-06): marked on Students, they are Log's quick picks. Daniel Koh's
 # second is S-08, whose records Priya Raman shared with him.
-FAVORITES = {
+_COLLEGE_FAVORITES = {
     "Daniel Koh": ("S-03", "S-08"),
     "Priya Raman": ("S-08", "S-10"),
 }
@@ -824,6 +824,8 @@ STAFF_EMAILS = {
     "Mei Ling Tan": "meiling.tan@example.edu",
     "Arjun Nair": "arjun.nair@example.edu",
     "Grace Ho": "grace.ho@example.edu",
+    "Lucas Teo": "lucas.teo@example.edu",  # Example Hall's
+    "Amira Salleh": "amira.salleh@example.edu",  # Example Hall's
 }
 
 
@@ -1499,7 +1501,7 @@ class AdminEvent:
     reason: str = ""
 
 
-ADMIN_AUDIT = (
+_COLLEGE_ADMIN_AUDIT = (
     AdminEvent(
         datetime(2026, 10, 27, 10, 5),
         "Rachel Yeo",
@@ -1834,8 +1836,10 @@ def staff_choices() -> list[tuple[str, str, str]]:
 
 
 def student_choices(students: Iterable[Student] | None = None) -> list[tuple[str, str, str]]:
-    """(id, name, email) per student, for a student filter."""
-    return [(s.id, s.name, s.email) for s in (STUDENTS if students is None else students)]
+    """(id, name, email) per student, for a student filter: by default the
+    students the working Unit's records name, never another Unit's (§3.7)."""
+    chosen = [s for s in STUDENTS if known_here(s.id)] if students is None else students
+    return [(s.id, s.name, s.email) for s in chosen]
 
 
 # --- Example Hall (Unit-scoping rung 4, author, 2026-11-08) -------------
@@ -1940,3 +1944,5 @@ CHECK_RUNS = PerUnit({UNIT_NAME: _COLLEGE_CHECK_RUNS})
 STAFF_ROSTER = PerUnit({UNIT_NAME: _COLLEGE_STAFF_ROSTER, HALL: _HALL_STAFF_ROSTER})
 LAPSED = PerUnit({UNIT_NAME: _COLLEGE_LAPSED})
 PURGES = PerUnit({UNIT_NAME: _COLLEGE_PURGES})
+ADMIN_AUDIT = PerUnit({UNIT_NAME: _COLLEGE_ADMIN_AUDIT})
+FAVORITES = PerUnitMap({UNIT_NAME: _COLLEGE_FAVORITES})

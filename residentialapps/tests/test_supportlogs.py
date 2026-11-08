@@ -28,7 +28,7 @@ FAVICON = re.compile(r'<link rel="icon"[^>]*>')
 
 
 def at(path: str, name: str) -> str:
-    return f"{path}?as={quote(name)}"
+    return f"{path}{'&' if '?' in path else '?'}as={quote(name)}"
 
 
 def holder(*grants: str) -> sample.Viewer:
@@ -398,8 +398,16 @@ def test_every_page_shows_the_working_unit_s_records_alone() -> None:
         "/oversight-staff/audit",
         "/oversight-staff/access",
         "/oversight-staff/records",
+        "/oversight-staff/records?records=open&understood=yes",
+        "/oversight-staff/records?records=open&understood=yes&what=plans",
+        "/oversight-staff/records.csv?records=open&understood=yes&term=all",
+        "/oversight-staff/records.csv?records=open&understood=yes&term=all&what=plans",
         "/who-can-see-what",
     )
+    with sample.in_unit(sample.UNIT_NAME):
+        college_staff = {n for n, _ in sample.STAFF_ROSTER} - {"Sam Lee"}
+    with sample.in_unit(sample.HALL):
+        hall_staff = {n for n, _ in sample.STAFF_ROSTER} - {"Sam Lee"}
     hall = _in_hall()
     plain = TestClient(create_app())
     for path in pages:
@@ -409,6 +417,10 @@ def test_every_page_shows_the_working_unit_s_records_alone() -> None:
             assert name not in at_hall and f"/{sid}" not in at_hall, (path, name)
         for sid, name in hall_ids.items():
             assert name not in at_college and f"/{sid}" not in at_college, (path, name)
+        for name in college_staff:  # nor another Unit's staff, their grants or changes
+            assert name not in at_hall, (path, name)
+        for name in hall_staff:
+            assert name not in at_college, (path, name)
     staff = _content(hall.get(at("/oversight-staff/", "Sam Lee")).text)
     for name in ("Lucas Teo", "Amira Salleh"):
         assert name in staff, name
@@ -429,6 +441,16 @@ def test_a_single_unit_viewer_never_works_in_another() -> None:
     """A viewer whose grants are all in Example College cannot choose
     Example Hall: their pages stay Example College's (§3.7)."""
     hall = _in_hall()
-    for name in ("Daniel Koh", "Siti Rahman", "Kenneth Lau", "Rachel Yeo"):
-        page = _content(hall.get(at("/", name), follow_redirects=True).text)
-        assert "Example Hall" not in page and "Lucas Teo" not in page, name
+    with sample.in_unit(sample.HALL):
+        hall_names = {s.name for s in sample.STUDENTS if sample.known_here(s.id)} | {
+            "Lucas Teo",
+            "Amira Salleh",
+            "Example Hall",
+        }
+    for path, _, grants in PAGES:
+        for v in (*sample.VIEWERS, *sample.UNLISTED_VIEWERS):
+            if len(v.units) > 1 or not sample.holds(v, *grants):
+                continue
+            page = _content(hall.get(at(path, v.name), follow_redirects=True).text)
+            for name in hall_names:
+                assert name not in page, (path, v.name, name)
