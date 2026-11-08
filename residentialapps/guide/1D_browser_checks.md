@@ -283,7 +283,7 @@ would you ask a staff member to share?*
 
 *Task: "Look at everything the team has on Hana Rahim."*
 
-- [ ] Hana Rahim is named, by her team and her closed safety flag (a
+- [ ] Open **Students across staff** first: Hana Rahim is named, by her team and her closed safety flag (a
   student with none of a formal plan, a flag or a team shows **Show
   name** first); her name opens her page, with
   "Opening this history is recorded"; the back link returns to Overview,

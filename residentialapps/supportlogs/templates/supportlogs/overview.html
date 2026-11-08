@@ -37,8 +37,9 @@
         {% endcall %}
       </section>
       <section class="card card-pad" aria-labelledby="across-h">
-        {% if named %}{% call folded("across-h", "Students across staff", fold=senior) %}
+        {% call folded("across-h", "Students across staff", fold=senior) %}
         <p class="sub">Each student someone has a record about, the staff with records, and whether they are on a formal plan, have a safety flag or have a team.{% if named %} Any other student is not named, here or below, until you show them.{% endif %}</p>
+        {% if named %}
           <div class="table-wrap">
             <table data-sort-auto id="across-table">
               <thead><tr><th scope="col">Student</th><th scope="col">Staff with records</th><th scope="col">Signals</th></tr></thead>
@@ -51,11 +52,10 @@
               </tr>{% endfor %}</tbody>
             </table>
           </div>
-        {% endcall %}{% else %}
-        <h2 id="across-h">Students across staff</h2>
-        <p class="sub">Each student someone has a record about, the staff with records, and whether they are on a formal plan, have a safety flag or have a team.{% if named %} Any other student is not named, here or below, until you show them.{% endif %}</p>
+        {% else %}
           <dl class="kv"><dt>Students with records</dt><dd>{{ across | length }}</dd><dt>On a formal plan</dt><dd>{{ across | selectattr("formal") | list | length }}</dd><dt>With a safety flag</dt><dd>{{ across | selectattr("flags") | list | length }}</dd></dl>
         {% endif %}
+        {% endcall %}
       </section>
       {% if senior %}
         <section class="card card-pad" aria-labelledby="who-h">

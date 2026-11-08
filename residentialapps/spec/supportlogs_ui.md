@@ -281,7 +281,8 @@ someone's behalf), **acknowledge** for having seen information sent on
   access, Flagged for formal assignment and Every plan start closed, each
   heading opening its card, with Show or Hide beside it. The safety flags
   banner and the count tiles stay open; other viewers' Overview is
-  unchanged.
+  unchanged. Folding is presentation only: the names are in the page
+  (find-in-page opens a card), and opening one is not a recorded read.
 - **Overview names by default only students on a formal plan, with a
   safety flag (open or closed) or with a team** (author, 2026-11-07), in Students across staff, Every plan and Flagged
   for formal assignment. A flag for formal assignment, with its

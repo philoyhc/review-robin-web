@@ -182,4 +182,9 @@ browser check passes on each rung.
   button labels and prose, and the README's sharing-model row, all
   fixed; earlier rungs' entries keep the words of their day.
 - **Rung 9:** as planned: Who supports whom, Students across staff, Who
-  holds access, Flagged for formal assignment and Every plan.
+  holds access, Flagged for formal assignment and Every plan; for senior
+  staff only (author, 2026-11-08). Presentation only: the names are in
+  the page and opening a card is not recorded. One read: a duplicated
+  card body, the spec silent on what folding hides, B2's extra click and
+  wordy screen-reader names, all fixed; how VoiceOver and NVDA announce a
+  heading inside a summary is for the author's browser check.
