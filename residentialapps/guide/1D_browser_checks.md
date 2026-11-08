@@ -282,8 +282,9 @@ about?"*
   no dates, minutes or encounter counts anywhere else, nor any tied to a
   student; beside them, from the top, two counts (10 students with
   records, 2 with more than one staff member; no formal assignments
-  count), Flagged for formal assignment, with Assign disabled, and **Formal plans**, without due states; both cards headed like
-  the counts, the number over the label. No Who holds
+  count), **Flagged for formal assignment**, with Assign disabled, and
+  **Formal plans**, without due states; both cards headed like the
+  counts, the number over the label. No Who holds
   access, audit or records card.
 - [ ] **Staff Overview** opens with **Who supports whom**, open, across the page's
   full width (three columns from 1116 px) and sortable by each column,
