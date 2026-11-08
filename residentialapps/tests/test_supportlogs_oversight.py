@@ -28,10 +28,10 @@ def section(page: str, heading_id: str) -> str:
 
 
 def test_senior_staff_see_who_holds_access(client: TestClient) -> None:
-    card = section(client.get("/workload/" + SAM).text, "who-h")
+    card = section(client.get("/oversight-staff/" + SAM).text, "who-h")
     assert f"<dt>{sample.SENIOR}</dt><dd>Sam Lee</dd>" in card
-    assert 'href="/overview/access?as=Sam%20Lee"' in card
-    page = client.get("/overview/access" + SAM).text
+    assert 'href="/oversight-staff/access?as=Sam%20Lee"' in card
+    page = client.get("/oversight-staff/access" + SAM).text
     grants = section(page, "grants-h")
     for g in sample.ACCESS_GRANTS:
         assert f"<dt>{g}</dt><dd>{', '.join(sample.holders(g)) or 'No one'}</dd>" in grants, g
@@ -43,11 +43,11 @@ def test_senior_staff_see_who_holds_access(client: TestClient) -> None:
 
 
 def test_who_holds_access_is_senior_only(client: TestClient) -> None:
-    assert 'id="who-h"' not in client.get("/workload/?as=Siti%20Rahman").text
+    assert 'id="who-h"' not in client.get("/oversight-staff/?as=Siti%20Rahman").text
     for name in ("Siti Rahman", "Kenneth Lau", "Daniel Koh", "Rachel Yeo"):
-        assert client.get(f"/overview/access?as={name.replace(' ', '%20')}").status_code == 403, (
-            name
-        )
+        assert (
+            client.get(f"/oversight-staff/access?as={name.replace(' ', '%20')}").status_code == 403
+        ), name
 
 
 def test_administrators_see_counts_of_senior_reads_never_whom(client: TestClient) -> None:
@@ -86,7 +86,7 @@ def test_the_self_grant_is_a_setting_off_by_default(client: TestClient, monkeypa
 def test_senior_staff_request_a_share_and_no_longer_share_on_behalf(client: TestClient) -> None:
     """The wall (author, 2026-11-07): to read records, a senior asks the
     staff member to share; Share on their behalf is gone."""
-    page = client.get("/overview/students/S-08" + SAM).text
+    page = client.get("/oversight-students/S-08" + SAM).text
     card = section(page, "staff-h")
     assert 'aria-label="Request a share from Priya Raman">Request a share</button>' in card
     assert "Share on their behalf" not in page and 'id="peer-h"' not in page
@@ -107,7 +107,7 @@ def test_hand_over_and_agree_on_behalf_scaffolds(client: TestClient) -> None:
     assert "Daniel Koh" not in to and "Mei Ling Tan" in to  # never to yourself
     # Shared (S-08, Priya's) or a team's (S-08, Daniel's team): none his own.
     assert 'id="handover-h"' not in client.get("/students/S-08").text
-    senior = section(client.get("/overview/students/S-08" + SAM).text, "handover-h")
+    senior = section(client.get("/oversight-students/S-08" + SAM).text, "handover-h")
     assert '<label for="ho-from">From</label>' in senior and ">Hand over</button>" in senior
     found = re.search(r'<select id="ho-from"[^>]*>(.*?)</select>', senior)
     assert found

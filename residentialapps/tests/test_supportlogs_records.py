@@ -273,19 +273,21 @@ SAM = "as=Sam%20Lee"
 
 def test_records_across_staff_is_senior_only_and_locked(client: TestClient) -> None:
     assert (
-        'href="/overview/records?as=Sam%20Lee">Open records</a>'
-        in client.get(f"/workload/?{SAM}").text
+        'href="/oversight-staff/records?as=Sam%20Lee">Open records</a>'
+        in client.get(f"/oversight-staff/?{SAM}").text
     )
-    assert "/overview/records" not in client.get("/overview/?as=Siti%20Rahman").text
-    locked = client.get(f"/overview/records?{SAM}").text
+    assert (
+        "/oversight-staff/records" not in client.get("/oversight-students/?as=Siti%20Rahman").text
+    )
+    locked = client.get(f"/oversight-staff/records?{SAM}").text
     assert (
         ">Locked</span>" in locked
         and "records.csv" not in locked
         and 'value="yes" required' in locked
     )
-    unlocked = client.get(f"/overview/records?{SAM}&{OPEN}").text
+    unlocked = client.get(f"/oversight-staff/records?{SAM}&{OPEN}").text
     assert (
-        "/overview/records.csv" in unlocked
+        "/oversight-staff/records.csv" in unlocked
         and "Every upload, download and deletion here is recorded" in unlocked
     )
     # A senior's upload shows no preview of its rows (author, 2026-11-07).
@@ -298,17 +300,20 @@ def test_records_across_staff_is_senior_only_and_locked(client: TestClient) -> N
         q = v.name.replace(" ", "%20")
         name = v.name
         for path in (
-            "/overview/records",
-            "/overview/records.csv",
-            "/overview/records-template.csv",
+            "/oversight-staff/records",
+            "/oversight-staff/records.csv",
+            "/oversight-staff/records-template.csv",
         ):
             assert client.get(f"{path}?as={q}&{OPEN}").status_code == 403, (name, path)
-    back = client.get(f"/overview/records.csv?{SAM}", follow_redirects=False)
-    assert (back.status_code, back.headers["location"]) == (303, "/overview/records?as=Sam%20Lee")
+    back = client.get(f"/oversight-staff/records.csv?{SAM}", follow_redirects=False)
+    assert (back.status_code, back.headers["location"]) == (
+        303,
+        "/oversight-staff/records?as=Sam%20Lee",
+    )
 
 
 def test_downloads_by_staff_and_term(client: TestClient) -> None:
-    everyone = client.get(f"/overview/records.csv?{SAM}&{OPEN}&what=encounters&term=all")
+    everyone = client.get(f"/oversight-staff/records.csv?{SAM}&{OPEN}&what=encounters&term=all")
     assert (
         everyone.headers["content-disposition"]
         == 'attachment; filename="support-logs-encounters-all-staff-all-terms.csv"'
@@ -321,11 +326,11 @@ def test_downloads_by_staff_and_term(client: TestClient) -> None:
     assert {r[0] for r in got[1:]} == {e.staff for e in sample.ENCOUNTERS}
     for e in sample.ENCOUNTERS:
         assert not e.note or e.note not in everyone.text
-    plans = rows(client.get(f"/overview/records.csv?{SAM}&{OPEN}&what=plans&term=all").text)
+    plans = rows(client.get(f"/oversight-staff/records.csv?{SAM}&{OPEN}&what=plans&term=all").text)
     assert tuple(plans[0]) == sample.SENIOR_PLAN_COLUMNS
     assert "Cadence" not in plans[0] and all(len(r) == 6 for r in plans)
     arjun = client.get(
-        f"/overview/records.csv?{SAM}&{OPEN}&what=plans&staff=Arjun%20Nair&term={sample.CURRENT_TERM.key}"
+        f"/oversight-staff/records.csv?{SAM}&{OPEN}&what=plans&staff=Arjun%20Nair&term={sample.CURRENT_TERM.key}"
     )
     assert "plans-arjun-nair-AY2026-2027.1" in arjun.headers["content-disposition"]
     assert [r[0] for r in rows(arjun.text)[1:]] == ["Arjun Nair"]
@@ -333,7 +338,7 @@ def test_downloads_by_staff_and_term(client: TestClient) -> None:
         len(
             rows(
                 client.get(
-                    f"/overview/records.csv?{SAM}&{OPEN}&what=encounters&term=AY2025-2026.2"
+                    f"/oversight-staff/records.csv?{SAM}&{OPEN}&what=encounters&term=AY2025-2026.2"
                 ).text
             )
         )
@@ -343,7 +348,9 @@ def test_downloads_by_staff_and_term(client: TestClient) -> None:
 
 def test_the_staff_templates_name_the_staff_column(client: TestClient) -> None:
     for what in ("encounters", "plans"):
-        template = rows(client.get(f"/overview/records-template.csv?{SAM}&{OPEN}&what={what}").text)
+        template = rows(
+            client.get(f"/oversight-staff/records-template.csv?{SAM}&{OPEN}&what={what}").text
+        )
         assert template == [["Staff", *sample.STAFF_TEMPLATE_COLUMNS[what]]], what
     plans = sample.STAFF_TEMPLATE_COLUMNS["plans"]
     assert (
@@ -354,7 +361,7 @@ def test_the_staff_templates_name_the_staff_column(client: TestClient) -> None:
 def test_purged_records_filter_by_staff_and_student(client: TestClient) -> None:
     def shown(params: str) -> list[str]:
         card = (
-            client.get(f"/overview/records?{SAM}&{OPEN}{params}")
+            client.get(f"/oversight-staff/records?{SAM}&{OPEN}{params}")
             .text.split('id="purged-h"')[1]
             .split("</section>")[0]
         )
@@ -370,25 +377,29 @@ def test_purged_records_filter_by_staff_and_student(client: TestClient) -> None:
     assert (
         shown("&staff=Nobody") == [] and shown("&student=S-99") == []
     )  # unknown matches no one, never everyone
-    card = client.get(f"/overview/records?{SAM}&{OPEN}").text.split('id="purged-h"')[1]
+    card = client.get(f"/oversight-staff/records?{SAM}&{OPEN}").text.split('id="purged-h"')[1]
     assert 'id="p-term"' not in card  # no delete by term (author, 2026-10-30)
     assert '<span class="count">· 8</span>' in card
     assert 'disabled aria-label="Delete permanently: 8 purged records"' in card
     assert "Deletes the whole purges shown, of all staff." in card
-    one = client.get(f"/overview/records?{SAM}&{OPEN}&student=S-06").text.split('id="purged-h"')[1]
+    one = client.get(f"/oversight-staff/records?{SAM}&{OPEN}&student=S-06").text.split(
+        'id="purged-h"'
+    )[1]
     assert (
         '<span class="count">· 2</span>' in one
     )  # only Farid's records count, and only they would go
     assert 'aria-label="Delete permanently: 2 purged records"' in one
     assert "Deletes only Farid Osman's purged records; the rest of each purge stays." in one
-    lost = client.get(f"/overview/records?{SAM}&{OPEN}&student=S-99").text.split('id="purged-h"')[1]
+    lost = client.get(f"/oversight-staff/records?{SAM}&{OPEN}&student=S-99").text.split(
+        'id="purged-h"'
+    )[1]
     assert (
         '<span class="token">Unknown student<input type="hidden" name="student" value="?">' in lost
     )  # Show again stays at none
     assert "Deletes nothing: the filter names no one." in lost
-    nobody = client.get(f"/overview/records?{SAM}&{OPEN}&staff=Nobody").text.split('id="purged-h"')[
-        1
-    ]
+    nobody = client.get(f"/oversight-staff/records?{SAM}&{OPEN}&staff=Nobody").text.split(
+        'id="purged-h"'
+    )[1]
     assert (
         '<span class="token">Unknown staff<input type="hidden" name="staff" value="?">' in nobody
     )  # Show again stays at none
@@ -396,15 +407,16 @@ def test_purged_records_filter_by_staff_and_student(client: TestClient) -> None:
 
 def test_unknown_values_never_widen(client: TestClient) -> None:
     nobody = client.get(
-        f"/overview/records.csv?{SAM}&{OPEN}&staff=Arjun%20Nar&term=all", follow_redirects=False
+        f"/oversight-staff/records.csv?{SAM}&{OPEN}&staff=Arjun%20Nar&term=all",
+        follow_redirects=False,
     )
     assert (nobody.status_code, nobody.headers["location"]) == (
         303,
-        "/overview/records?as=Sam%20Lee&records=open&understood=yes",
+        "/oversight-staff/records?as=Sam%20Lee&records=open&understood=yes",
     )
-    bogus = client.get(f"/overview/records.csv?{SAM}&{OPEN}&staff=Daniel%20Koh&term=bogus")
+    bogus = client.get(f"/oversight-staff/records.csv?{SAM}&{OPEN}&staff=Daniel%20Koh&term=bogus")
     assert f"daniel-koh-{sample.CURRENT_TERM.key}" in bogus.headers["content-disposition"]
-    missing = client.get(f"/overview/records.csv?{SAM}&{OPEN}&staff=Daniel%20Koh")
+    missing = client.get(f"/oversight-staff/records.csv?{SAM}&{OPEN}&staff=Daniel%20Koh")
     assert (
         f"daniel-koh-{sample.CURRENT_TERM.key}" in missing.headers["content-disposition"]
     )  # as Your records defaults
@@ -413,7 +425,7 @@ def test_unknown_values_never_widen(client: TestClient) -> None:
 def test_a_term_picks_the_right_rows_for_a_staff_member(client: TestClient) -> None:
     got = rows(
         client.get(
-            f"/overview/records.csv?{SAM}&{OPEN}&what=encounters&staff=Priya%20Raman"
+            f"/oversight-staff/records.csv?{SAM}&{OPEN}&what=encounters&staff=Priya%20Raman"
             f"&term={sample.CURRENT_TERM.key}"
         ).text
     )
@@ -431,7 +443,7 @@ def test_a_term_picks_the_right_rows_for_a_staff_member(client: TestClient) -> N
 
 def test_the_unlock_keeps_the_purge_filter(client: TestClient) -> None:
     form = (
-        client.get(f"/overview/records?{SAM}&staff=Grace%20Ho&student=S-06")
+        client.get(f"/oversight-staff/records?{SAM}&staff=Grace%20Ho&student=S-06")
         .text.split('id="records-h"')[1]
         .split("</form>")[0]
     )
@@ -460,14 +472,16 @@ def test_downloads_filter_by_student(client: TestClient) -> None:
     }  # either kind of record
     plans = rows(client.get(f"/plans/records.csv?{OPEN}&term=all&student=S-01").text)
     assert [r[1] for r in plans[1:]] == ["Aiden Chen"]
-    senior = client.get(f"/overview/records.csv?{SAM}&{OPEN}&what=encounters&term=all&student=S-08")
+    senior = client.get(
+        f"/oversight-staff/records.csv?{SAM}&{OPEN}&what=encounters&term=all&student=S-08"
+    )
     assert "all-staff-all-terms-S-08" in senior.headers["content-disposition"]
     assert sorted(r[0] for r in rows(senior.text)[1:]) == sorted(
         e.staff for e in sample.ENCOUNTERS if e.student == "S-08"
     )
     for path in (
         f"/students/records.csv?{OPEN}&student=S-99",
-        f"/overview/records.csv?{SAM}&{OPEN}&student=nope",
+        f"/oversight-staff/records.csv?{SAM}&{OPEN}&student=nope",
     ):
         assert client.get(path, follow_redirects=False).status_code == 303, (
             path
@@ -486,7 +500,10 @@ def test_purge_is_outline_red(client: TestClient) -> None:
 def test_mounted_senior_records_stay_under_the_mount() -> None:
     host, _ = host_with(("supportlogs",))
     mounted = TestClient(host)
-    for path in (f"/overview/records?{SAM}", f"/overview/records?{SAM}&{OPEN}&staff=Grace%20Ho"):
+    for path in (
+        f"/oversight-staff/records?{SAM}",
+        f"/oversight-staff/records?{SAM}&{OPEN}&staff=Grace%20Ho",
+    ):
         page = mounted.get("/supportlogs" + path)
         assert page.status_code == 200, path
         for link in re.findall(
@@ -497,14 +514,14 @@ def test_mounted_senior_records_stay_under_the_mount() -> None:
                 path,
                 link,
             )
-    back = mounted.get(f"/supportlogs/overview/records.csv?{SAM}", follow_redirects=False)
-    assert back.headers["location"] == "/supportlogs/overview/records?as=Sam%20Lee"
+    back = mounted.get(f"/supportlogs/oversight-staff/records.csv?{SAM}", follow_redirects=False)
+    assert back.headers["location"] == "/supportlogs/oversight-staff/records?as=Sam%20Lee"
 
 
 def test_filters_take_a_name_or_email_as_a_pill(client: TestClient) -> None:
     """Records across staff's and Your records' filters are Assignments' box
     of people, live: each person offered by name and by email."""
-    page = client.get(f"/overview/records?{SAM}&{OPEN}").text
+    page = client.get(f"/oversight-staff/records?{SAM}&{OPEN}").text
     staff = page.split('id="dl-staff-list"')[1].split("</datalist>")[0]
     for name in sample.FRONTLINE_COLLEAGUES:
         assert f'<option value="{name}" data-value="{name}">' in staff
@@ -517,9 +534,9 @@ def test_filters_take_a_name_or_email_as_a_pill(client: TestClient) -> None:
         '<option value="clara.tan@u.example.edu" data-value="S-03" data-name="Clara Tan">'
         in students
     )
-    chosen = client.get(f"/overview/records?{SAM}&{OPEN}&staff=Grace%20Ho&student=S-06").text.split(
-        'id="purged-h"'
-    )[1]
+    chosen = client.get(
+        f"/oversight-staff/records?{SAM}&{OPEN}&staff=Grace%20Ho&student=S-06"
+    ).text.split('id="purged-h"')[1]
     assert (
         '<span class="token">Grace Ho<input type="hidden" name="staff" value="Grace Ho">' in chosen
     )

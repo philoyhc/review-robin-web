@@ -23,7 +23,7 @@ router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 OVERVIEW = (sample.SENIOR, *sample.VIEW)
 
 
-@router.get("/overview/", name="supportlogs_overview")
+@router.get("/oversight-students/", name="supportlogs_overview")
 def overview(request: Request) -> Response:
     me = sample.viewer(request.query_params.get("as"))
     return gated(
@@ -35,7 +35,7 @@ def overview(request: Request) -> Response:
     )
 
 
-@router.get("/workload/", name="supportlogs_workload")
+@router.get("/oversight-staff/", name="supportlogs_workload")
 def workload(request: Request) -> Response:
     """Who supports whom on a tab of its own, full width (author,
     2026-11-08), for whoever has Overview: per staff member, students and
@@ -54,7 +54,7 @@ def workload(request: Request) -> Response:
     )
 
 
-@router.get("/overview/students/{sid}", name="supportlogs_overview_student")
+@router.get("/oversight-students/{sid}", name="supportlogs_overview_student")
 def history(request: Request, sid: str) -> Response:
     """A student's history across staff (§4.5, §11.2), for senior
     identifiable access: an audited read."""
@@ -65,22 +65,26 @@ def history(request: Request, sid: str) -> Response:
     if found is None:
         raise HTTPException(status_code=404)
     return gated(
-        request, "supportlogs/history.html", sample.SENIOR, chosen=found, current_tab="/overview/"
+        request,
+        "supportlogs/history.html",
+        sample.SENIOR,
+        chosen=found,
+        current_tab="/oversight-students/",
     )
 
 
-@router.get("/overview/audit", name="supportlogs_overview_audit")
+@router.get("/oversight-staff/audit", name="supportlogs_overview_audit")
 def audit(request: Request) -> Response:
     """The support-activity audit (§11.3): who did or saw what, of whom; for
     senior identifiable access only, and reviewing it is recorded."""
-    return gated(request, "supportlogs/audit.html", sample.SENIOR, current_tab="/workload/")
+    return gated(request, "supportlogs/audit.html", sample.SENIOR, current_tab="/oversight-staff/")
 
 
-@router.get("/overview/access", name="supportlogs_overview_access")
+@router.get("/oversight-staff/access", name="supportlogs_overview_access")
 def access(request: Request) -> Response:
     """Who holds each Support Logs grant and the access changes, read-only,
     for senior identifiable access (author, 2026-10-30): administration
     decides who sees content, and senior staff see what it decided."""
     return gated(
-        request, "supportlogs/overview_access.html", sample.SENIOR, current_tab="/workload/"
+        request, "supportlogs/overview_access.html", sample.SENIOR, current_tab="/oversight-staff/"
     )

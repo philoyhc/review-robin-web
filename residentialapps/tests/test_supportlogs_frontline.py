@@ -438,9 +438,9 @@ def test_a_team_shows_on_students_and_on_both_pages(client: TestClient) -> None:
     assert "Priya Raman, Daniel Koh" in team and ">Leave the team</button>" in team
     other = section(client.get("/students/S-03").text, "team-h")
     assert ">Form a team</button>" in other and "disabled" in other
-    senior = section(client.get("/overview/students/S-03?as=Sam%20Lee").text, "team-h")
+    senior = section(client.get("/oversight-students/S-03?as=Sam%20Lee").text, "team-h")
     assert ">Form a team</button>" in senior and "You are not in it" in senior
-    across = section(client.get("/overview/?as=Sam%20Lee").text, "across-h")
+    across = section(client.get("/oversight-students/?as=Sam%20Lee").text, "across-h")
     hana = across.split("Hana Rahim</a>")[1].split("</tr>")[0]
     assert '<span class="chip chip-info">Team</span>' in hana
 
@@ -459,7 +459,7 @@ def test_a_team_reaches_its_student_without_a_share(
     clara = section(client.get("/students/S-03").text, "team-h")  # Daniel's own student
     assert "Mei Ling Tan, Grace Ho" in clara and "You are not in it." in clara
     assert "Form a team" not in clara
-    across = section(client.get("/overview/?as=Sam%20Lee").text, "across-h")
+    across = section(client.get("/oversight-students/?as=Sam%20Lee").text, "across-h")
     for row in across.split("<tr>")[1:]:
         named = "Hana Rahim</a>" in row or "Clara Tan</a>" in row
         assert ('<span class="chip chip-info">Team</span>' in row) == named, row[:80]

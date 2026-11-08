@@ -4,7 +4,7 @@
 {% block title %}Plan{% endblock %}
 {% block content %}
   {% set s = sample.student(p.student) %}
-  {% set back = '/students/' if owner else ('/students/' ~ p.student if shared else '/overview/') %}
+  {% set back = '/students/' if owner else ('/students/' ~ p.student if shared else '/oversight-students/') %}
   <a class="back" href="{{ url(back) }}{{ as_query }}">‹ {{ "Students" if owner else (sample.student(p.student).name if shared else "Students Overview") }}</a>
   {{ sample_title(("Formal assignment" if p.formal else "Follow-up") ~ ": " ~ s.name, me.name) }}
   {{ recorded() }}

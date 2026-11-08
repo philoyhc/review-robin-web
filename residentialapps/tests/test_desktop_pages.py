@@ -28,7 +28,7 @@ PAGE_MAP = Path(__file__).resolve().parents[1] / "spec" / "applications.md"
         ("residentialops", "/sys-admin/", True),
         ("residentialops", "/", False),
         ("supportlogs", "/sys-admin/audit", True),
-        ("supportlogs", "/overview/", False),
+        ("supportlogs", "/oversight-students/", False),
         ("supportlogs", "/rosters/", False),
     ],
 )
