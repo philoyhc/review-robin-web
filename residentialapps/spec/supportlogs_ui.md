@@ -168,7 +168,9 @@ form's end, and the main action is a full-width Primary on the page
   Unlock, Download CSV, template links and purge filter: the downloads
   are the sample's own records.
 
-- **Your records** (author, 2026-10-30) ends Students: a
+- **Your records** (author, 2026-10-30) ends Students on a phone, and
+  sits beside Find in the side column on a wider screen while locked
+  (author, 2026-11-08): a
   section locked until its holder ticks a confirmation and unlocks it.
   Unlocked, it downloads the holder's own encounters or plans as CSV, for a
   term of Rosters and setup's or all terms and one of their students or

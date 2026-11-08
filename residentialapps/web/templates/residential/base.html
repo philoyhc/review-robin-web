@@ -487,6 +487,10 @@
          widths. */
       .page:not(.desktop) > .split > .main { flex-basis: 340px; }
       .page:not(.desktop) > .split > .side { flex-basis: 340px; }
+      /* A split whose side has nothing in it (a viewer without the side's
+         cards) gives its main column the width, as a page without one. */
+      .page:not(.desktop) > .split:not(:has(> .side > *)) > .side { display: none; }
+      .page:not(.desktop) > .split:not(:has(> .side > *)) > .main { flex-basis: 100%; }
       @media (min-width: 1116px) {
         .page:not(.desktop) > .split { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
         .page:not(.desktop) > .split > .main { grid-column: span 2; }

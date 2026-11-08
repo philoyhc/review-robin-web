@@ -340,9 +340,9 @@ def test_overview_cards_of_names_stay_folded_until_opened(page: Page) -> None:
 def test_three_columns_of_340_and_cards_span_two(page: Page) -> None:
     """Author, 2026-11-08: at most three columns of at least 340 px, 24 px
     apart. Three from 1116 px wide: a split's main column spans two and
-    its side one, and a card on its own spans two. Two from 736 px (the
-    page's margins are 16 px below 960): a card spans the page. One
-    below."""
+    its side one, starting at the top beside the notice, and a card on
+    its own (Log's form) spans two. Two from 736 px (the page's margins
+    are 16 px below 960): a card spans the page. One below."""
     measure = """() => {
       const s = document.querySelector('.split');
       const m = s.querySelector('.main').getBoundingClientRect();
@@ -362,8 +362,7 @@ def test_three_columns_of_340_and_cards_span_two(page: Page) -> None:
     ):
         page.set_viewport_size({"width": width, "height": 900})
         page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
-        content, main, side, beside, plans = page.evaluate(measure)
-        assert (content, main, side, beside, plans) == (*expect[:4], main), width
+        assert tuple(page.evaluate(measure)) == expect, width  # Every plan: on its own
         # Overview's side starts at the top, beside the notice (2026-11-08).
         tops = page.evaluate(
             "() => [document.querySelector('.page > .split > .main > .notice')"

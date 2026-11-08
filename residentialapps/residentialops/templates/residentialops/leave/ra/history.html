@@ -5,32 +5,26 @@
   {{ title("My history", leave, viewing(me)) }}
   <p class="sub">Every application you have made, newest first, ordinary and extra leave alike (spec §19). Rejected, withdrawn and cancelled ones stay, and never count against your entitlement; each shows its decisions, their dates and the remarks given.</p>
   {% set drafts = leave.my_drafts(me) %}
-  {# With drafts, they and the applications sit side by side, so the
-     third column is never left empty; on a phone drafts stay first
-     (author, 2026-11-08). #}
-  {% if drafts %}
+  {# The applications in the main column, Drafts beside them when there
+     are any, so the third column is not left empty; on a phone Drafts
+     follow the applications (author, 2026-11-08). #}
   <div class="split">
     <div class="main">
-      <section class="card card-pad" aria-labelledby="drafts-h">
-        <h2 id="drafts-h">Drafts <span class="count">· {{ drafts | length }}</span></h2>
-        <p class="sub">Saved, not submitted, so not yet applications.</p>
-        <ul class="items">{% for d in drafts %}{{ draft_item(d, leave) }}{% endfor %}</ul>
-      </section>
-    </div>
-    <div class="side">
       <section class="card card-pad" aria-labelledby="all-h">
         {% set mine = leave.my_applications(me) %}
         <h2 id="all-h">My applications <span class="count">· {{ mine | length }}</span></h2>
         {% if mine %}<ul class="items">{% for a in mine %}{{ app_item(a, leave) }}{% endfor %}</ul>{% else %}<p class="sub">None yet.</p>{% endif %}
       </section>
     </div>
+    <div class="side">
+      {% if drafts %}
+      <section class="card card-pad" aria-labelledby="drafts-h">
+        <h2 id="drafts-h">Drafts <span class="count">· {{ drafts | length }}</span></h2>
+        <p class="sub">Saved, not submitted, so not yet applications.</p>
+        <ul class="items">{% for d in drafts %}{{ draft_item(d, leave) }}{% endfor %}</ul>
+      </section>
+      {% endif %}
+    </div>
   </div>
-  {% else %}
-  <section class="card card-pad" aria-labelledby="all-h">
-    {% set mine = leave.my_applications(me) %}
-    <h2 id="all-h">My applications <span class="count">· {{ mine | length }}</span></h2>
-    {% if mine %}<ul class="items">{% for a in mine %}{{ app_item(a, leave) }}{% endfor %}</ul>{% else %}<p class="sub">None yet.</p>{% endif %}
-  </section>
-  {% endif %}
 {% endblock %}
 {% block viewer %}{{ ra_switch(me, leave, here) }}{% endblock %}

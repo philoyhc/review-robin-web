@@ -391,12 +391,14 @@ you would act on?*
 ### C2. Tables and widths
 
 - [ ] **Columns**: at 1280 px a page's own cards stop at two thirds of the
-  page, and its side column, a third, starts at the top: Overview's
-  audit, records and Who holds access beside the notice and the flags;
-  Home's My last 14 days beside the flags; Students' Shared with me and
-  Your records (locked) beside Find; the Consultation check's past checks
-  beside the form. At 1100 px cards span the page; at 735 px the side
-  column drops below, after the main one. Sys admin's cards keep
+  page, and its side column, a third, starts at the top: Overview's Who
+  holds access, audit and records beside the notice and the flags (as
+  Siti Rahman, with no side cards, the main column takes the width);
+  Home's My last 14 days beside the flags; Students' Your records,
+  locked, beside Find (unlocked it joins the main column, which takes the
+  width); the Consultation check's past checks beside the form. At
+  1100 px cards span the page; at 735 px the side column drops below,
+  after the main one. Sys admin's cards keep
   the full width at 1280 px.
 - [ ] **Sorting**: a header's ↕ reorders rows; after a reload the sort is
   kept, and empty values sort last.
@@ -443,8 +445,9 @@ app's (`residentialapps/spec/residentialops_ui.md` §1, author,
   and cards on their own stop at two thirds. At 1000 px the side column
   is narrower than the main one, at 736 px they are equal, and at 735 px
   the side drops below. Apply and an application look the same. The side
-  column (My balance) starts at the top, beside the tiles; My history's
-  Drafts and applications sit side by side.
+  column (My balance) starts at the top, beside the tiles; Apply's form
+  and the Draft saved note sit beside Available to you; My history's
+  applications have Drafts beside them.
 - [ ] **Staff home and Decide** (`/residentialops/ra-leave/staff/`, as
   an approver): the same two thirds at 1280 px; Decide's cards stop at
   two thirds.

@@ -229,5 +229,9 @@ browser check passes on each rung.
 - **Rung 12:** as planned, with Students keeping Find in the main column
   (a phone reads it first) and putting Shared with me and Your records
   (locked; unlocked it needs the main column's width) to the side, and
-  RA Leave history putting Drafts first. Still empty: Overview's side for
-  Other Staff view, whose side cards are senior-only.
+  RA Leave history's Drafts beside the applications. A side with nothing
+  in it hides and gives the main column the width (Overview for Other
+  Staff view, Students unlocked). Overview's Flagged and Every plan stay
+  below the columns, so a phone reads them last as before. One read:
+  those two, Students' empty side, history's columns the wrong way round,
+  Apply's draft note above the columns, stale spec lines, all fixed.
