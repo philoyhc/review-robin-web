@@ -1,7 +1,7 @@
 """Support Logs' Overview on sample data, segment 1D item 1 rung 5: senior
 staff's and Other Staff view's tab (author, 2026-10-29). Since the
 sharing screens' rung 1 (author, 2026-11-07) it shows metadata only: who
-supports whom (on Workload since 2026-11-08), students across staff,
+supports whom (on Staff Overview since 2026-11-08), students across staff,
 every formal plan and the flagged
 students (the cluster view, §10.5, is deferred); a senior's view of a
 student, the staff with records (§11.2); and the support-activity audit

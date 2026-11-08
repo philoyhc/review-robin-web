@@ -17,7 +17,7 @@
     {# Workload (author, 2026-11-08): per staff member, for a term,
        totals only, never which student; senior staff alone. #}
     <p class="sub">Per staff member, for the term chosen. <strong>Assigned</strong>: the formal plans active in it, and the meetings and minutes with those students. <strong>Own</strong>: every other meeting logged, as students, meetings, meetings per student and minutes in total and per meeting (60+ min counts as 60), never which student, and none for fewer than {{ sample.WORKLOAD_MIN_STUDENTS }} students. Follow-ups are the frontline's own and count nowhere here.</p>
-    <form class="btnrow gap-below" method="get" action="{{ url('/workload/') }}" aria-label="Workload's term">
+    <form class="btnrow gap-below" method="get" action="{{ url('/workload/') }}" aria-label="Staff Overview's term">
       {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
       <label for="wl-term" class="visually-hidden">Term</label>
       <select id="wl-term" name="term" class="input">{% for t in sample.TERMS %}<option value="{{ t.key }}"{% if chosen_term and t.key == chosen_term.key %} selected{% endif %}>{{ t.label }}</option>{% endfor %}<option value="all"{% if not chosen_term %} selected{% endif %}>All terms</option></select>

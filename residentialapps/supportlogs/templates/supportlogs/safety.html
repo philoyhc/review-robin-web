@@ -55,7 +55,7 @@
       <button id="raise" type="submit" class="btn btn-primary btn-wide" aria-describedby="raise-what">Save and raise safety flag</button>
       <a class="btn btn-secondary" href="{{ url('/log') }}{{ qs(student=chosen.id if chosen else '', duration=duration or '', type=kind or '') }}">Cancel</a>
     </div>
-    <p id="raise-what" class="subtle small">Raises once the student, duration, type and the escalation step are set. Every safety-flag recipient sees it at once, on their Home or Overview; no alert is sent.</p>
+    <p id="raise-what" class="subtle small">Raises once the student, duration, type and the escalation step are set. Every safety-flag recipient sees it at once, on their Home or Students Overview; no alert is sent.</p>
   </form>
   <script>
     (function () {

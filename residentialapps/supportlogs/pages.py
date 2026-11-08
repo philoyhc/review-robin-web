@@ -58,8 +58,8 @@ def home_flags(v: sample.Viewer) -> bool:
 
 def destinations(v: sample.Viewer) -> list[dict[str, str]]:
     """Where Home sends a viewer off the frontline: each grant's tab, and
-    Sys admin. Workload goes with Overview (author, 2026-11-08), so a
-    viewer with Overview alone still lands on it."""
+    Sys admin. Staff Overview goes with Students Overview (author, 2026-11-08),
+    so a viewer with those alone still lands on Students Overview."""
     found = [
         {"label": label, "path": path, "query": sample.as_query(v)}
         for label, path in _grant_tabs(v)

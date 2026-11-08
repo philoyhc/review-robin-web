@@ -337,7 +337,7 @@ be told when a plan is assigned?*
 - [ ] **Open the audit**: "Reviewing this log is recorded", When sorts by
   date, and reads of no one student (the audit itself, a download) show
   no student.
-- [ ] **Who holds access**: an open card in the side column names who holds Senior
+- [ ] **Who holds access**, on Staff Overview below Who supports whom: an open card names who holds Senior
   identifiable and identifiable view; **See every grant** lists every
   grant's holders and the access changes, with no button anywhere.
 
