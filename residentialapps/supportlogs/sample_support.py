@@ -16,6 +16,7 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from decimal import ROUND_HALF_UP, Decimal
 from typing import TypedDict
 from urllib.parse import quote
 
@@ -978,6 +979,73 @@ class SupportRow(TypedDict):
     students: int
     formal: int
     informal: int
+
+
+class WorkloadRow(TypedDict):
+    staff: str
+    students: int
+    shown: bool  # False: too few students to show the rest
+    records: int
+    per_student: str
+    minutes: int
+    per_meeting: str
+    formal: int
+    informal: int
+
+
+# Below this many students in the term, a staff member's workload figures
+# are withheld, so no total is one student's (author, 2026-11-08).
+WORKLOAD_MIN_STUDENTS = 3
+
+
+def _half_up(value: float, places: int = 0) -> str:
+    """A figure rounded half up, as a person reads it (22.5 is 23)."""
+    step = Decimal(1).scaleb(-places)
+    return str(Decimal(str(value)).quantize(step, rounding=ROUND_HALF_UP))
+
+
+def workload(chosen: Term | None) -> list[WorkloadRow]:
+    """Workload, per frontline colleague, for a term or all terms (author,
+    2026-11-08): the students with a record in it (a meeting or a plan
+    started in it), the records (meetings and plans), records per student,
+    and the minutes met, in total and per meeting (60+ min counts as 60),
+    and the formal assignments and follow-ups active in it.
+    Totals for the staff member only, never per student or which student,
+    and withheld below WORKLOAD_MIN_STUDENTS students: senior staff see
+    them, no one else. Ordered as Who supports whom is."""
+
+    def within(d: date) -> bool:
+        return chosen is None or chosen.start <= d <= chosen.end
+
+    rows: list[WorkloadRow] = []
+    for staff in FRONTLINE_COLLEAGUES:
+        met = [e for e in ENCOUNTERS if e.staff == staff and within(e.when.date())]
+        began = [p for p in PLANS if p.staff == staff and within(p.start)]
+        students = len({e.student for e in met} | {p.student for p in began})
+        records = len(met) + len(began)
+        minutes = sum(MINUTES[e.duration] for e in met)
+        # Active plans in the term (author, 2026-11-08): still active and
+        # begun by its end. The sample keeps no end date, so a closed or
+        # paused plan cannot be placed in a term until wiring records one.
+        current = [
+            p
+            for p in plans_of(staff)
+            if chosen is None or (p.start <= chosen.end and chosen.start <= TODAY)
+        ]
+        rows.append(
+            {
+                "staff": staff,
+                "students": students,
+                "shown": students >= WORKLOAD_MIN_STUDENTS,
+                "records": records,
+                "per_student": _half_up(records / students, 1) if students else "–",
+                "minutes": minutes,
+                "per_meeting": _half_up(minutes / len(met)) if met else "–",
+                "formal": sum(1 for p in current if p.formal),
+                "informal": sum(1 for p in current if not p.formal),
+            }
+        )
+    return sorted(rows, key=lambda r: (-r["students"], r["staff"]))
 
 
 def students_with_records(staff: str) -> set[str]:

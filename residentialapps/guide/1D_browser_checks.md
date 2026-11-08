@@ -272,10 +272,15 @@ about?"*
   beside it).
 - [ ] A notice that you see who has records with whom, never what they
   recorded; tiles counting plans and students; **Who supports whom**
-  (sortable: students, assigned, following per staff member);
+  (sortable: per staff member, students, records, per student, minutes,
+  per meeting, assigned, following, for the term chosen above it; this
+  term shows Daniel Koh's 6 students, 12 records and 165 minutes, Arjun
+  Nair and Mei Ling Tan "Fewer than 3 students" with no figures, and
+  AY2025-2026 Term 2 none);
   **Students across staff**, naming only Elena Park, Jia Wen Lee, Clara
   Tan, Dev Menon and Ivan Seet until **Show name** opens another row, and
-  no dates, minutes or encounter counts anywhere; Flagged for formal
+  no dates, minutes or encounter counts anywhere else, nor any tied to a
+  student; as Siti Rahman, Who supports whom has no workload columns; Flagged for formal
   assignment, with Assign disabled; Every plan, without due states.
 
 Ask: *Is who-has-records-with-whom enough to run a weekly meeting? What

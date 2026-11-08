@@ -44,10 +44,10 @@ def plain(cell: str) -> str:
 
 def test_who_supports_whom_counts_students_not_encounters(client: TestClient) -> None:
     """Author, 2026-11-07: per staff member, students with records and
-    plans; nothing drawn from content (no encounters, minutes or load)."""
-    page = client.get("/overview/?as=Sam%20Lee").text
-    card = section(page, "support-h")
-    rows = cells(card)
+    plans, for anyone but senior staff; nothing drawn from content (no
+    encounters, minutes or load)."""
+    page = client.get("/overview/?as=Siti%20Rahman").text
+    rows = cells(section(page, "support-h"))
     assert [plain(r[0]) for r in rows] == [r["staff"] for r in sample.who_supports_whom()]
     daniel = next(r for r in rows if plain(r[0]) == "Daniel Koh")
     assert daniel[1:] == [
@@ -55,8 +55,87 @@ def test_who_supports_whom_counts_students_not_encounters(client: TestClient) ->
         "2",
         "2",
     ]  # students, assigned, following
-    for gone in ("load-h", "hot-h", "cov-h", "Minutes", "Encounters,", "Rising", "Overdue"):
+    for gone in (
+        "load-h",
+        "hot-h",
+        "cov-h",
+        "Minutes",
+        "Records</th>",
+        "wl-term",
+        "Rising",
+        "Encounters,",
+        "Overdue",
+    ):
         assert gone not in page, gone
+    assert "Minutes" not in client.get("/overview/?as=Kenneth%20Lau").text
+
+
+def _workload(client: TestClient, term: str = "") -> dict[str, list[str]]:
+    card = section(client.get(f"/overview/?as=Sam%20Lee{term}").text, "support-h")
+    return {plain(r[0]).split(" Fewer")[0]: r[1:] for r in cells(card)}
+
+
+def test_senior_staff_see_each_staff_member_s_workload_by_term(client: TestClient) -> None:
+    """Author, 2026-11-08: senior staff see, per staff member, for a term
+    (the current one by default, or all), students with a record in it,
+    records (meetings and plans), records per student, minutes in total and
+    per meeting, and plans active in it; never which student."""
+    card = section(client.get("/overview/?as=Sam%20Lee").text, "support-h")
+    assert '<select id="wl-term" name="term"' in card and "All terms</option>" in card
+    assert f'value="{sample.CURRENT_TERM.key}" selected' in card
+    term = sample.CURRENT_TERM
+    met = [
+        e
+        for e in sample.ENCOUNTERS
+        if e.staff == "Daniel Koh" and term.start <= e.when.date() <= term.end
+    ]
+    began = [
+        p for p in sample.PLANS if p.staff == "Daniel Koh" and term.start <= p.start <= term.end
+    ]
+    students = len({e.student for e in met} | {p.student for p in began})
+    records = len(met) + len(began)
+    minutes = sum(sample.MINUTES[e.duration] for e in met)
+    assert _workload(client)["Daniel Koh"] == [
+        str(students),
+        str(records),
+        f"{records / students:.1f}",
+        str(minutes),
+        str(int(minutes / len(met) + 0.5)),
+        "2",
+        "2",
+    ]
+    assert began, "the sample's plans count as records"
+    for s in sample.STUDENTS:  # no student named or linked in the card
+        assert s.name not in card and s.id not in card, s.name
+    # Ordered as Who supports whom: most students first.
+    assert list(_workload(client)) == [r["staff"] for r in sample.who_supports_whom()]
+    # A past term: nothing met, no plan active in it.
+    past = _workload(client, "&term=AY2025-2026.2")["Daniel Koh"]
+    assert past == ["0", "–", "–", "–", "–", "–", "–"]  # below the floor too
+    assert _workload(client, "&term=all")["Daniel Koh"] == _workload(client)["Daniel Koh"]
+    assert 'value="all" selected' in section(
+        client.get("/overview/?as=Sam%20Lee&term=all").text, "support-h"
+    )
+    assert f'value="{sample.CURRENT_TERM.key}" selected' in section(
+        client.get("/overview/?as=Sam%20Lee&term=bogus").text, "support-h"
+    )
+
+
+def test_no_workload_figures_below_three_students(client: TestClient) -> None:
+    """Author, 2026-11-08: a staff member with fewer than three students in
+    the term shows the number of students alone, so no total is one
+    student's (Mei Ling Tan's one student would otherwise give away that
+    student's meetings and minutes)."""
+    rows = _workload(client)
+    assert rows["Mei Ling Tan"] == ["1", "–", "–", "–", "–", "–", "–"]
+    assert rows["Arjun Nair"] == ["2", "–", "–", "–", "–", "–", "–"]
+    card = section(client.get("/overview/?as=Sam%20Lee").text, "support-h")
+    assert card.count("Fewer than 3 students</span>") == 2
+    assert all(r["shown"] == (r["students"] >= 3) for r in sample.workload(None))
+
+
+def test_half_up_rounding() -> None:
+    assert sample._half_up(22.5) == "23" and sample._half_up(4 / 3, 1) == "1.3"  # pyright: ignore[reportPrivateUsage]  -- the helper is the sample's own
 
 
 def test_students_across_staff_shows_staff_never_content(client: TestClient) -> None:

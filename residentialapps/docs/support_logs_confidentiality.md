@@ -22,9 +22,10 @@ Each record has two parts:
   can whoever runs a consultation check, to know whom to ask.
 - **Everything else is the record's content:** when you met, for how
   long, what kind of meeting, the concerns, whether a follow-up is
-  needed, and your note. So are any totals worked out from them, such
-  as how many times you met or how many minutes it took. Only you, and
-  people you share with, see the content.
+  needed, and your note. So are totals worked out from them, such as
+  how many times you met or how many minutes it took, with one
+  exception below: your workload totals for a term. Only you, and people
+  you share with, see the content.
 
 ## Seeing someone else's records
 
@@ -98,8 +99,14 @@ is supporting whom, and where support may need to move.
 - **By default they see only who has records with which students:** how
   many students each staff member has records with, and how many staff
   each student has records with. They do not see when, how often or how
-  long you met, and none of what you recorded. That is the records'
-  content, and a senior reads it only through a share.
+  long you met any one student, and none of what you recorded. That is
+  the records' content, and a senior reads it only through a share.
+- **For workload, they see your totals for a term:** how many students
+  you have records with, how many records you made, how many minutes
+  your meetings took, and how many plans you had running, never which
+  student any of it was with. If you had fewer than three students in
+  the term, only the number of students shows, so no total can point to
+  one student.
 - **They see a student's name only when the student needs attention:**
   the student is on a formal plan, has a safety flag, or has a team.
   Other students are not named until a senior chooses to look, with
@@ -161,8 +168,9 @@ if you share it, or, in an emergency, if a system administrator agrees on
 your behalf. Either way it is recorded.
 
 **Does the Master see how much time I spend with students?**
-Not by default. How often and how long you meet is part of your records'
-content, so it is seen only through a share, like the rest.
+Only your totals for a term, for workload: how many meetings and minutes
+in all, never with whom. How often and how long you met any one student
+is part of your records' content, seen only through a share.
 
 **What happens to my records when I leave?**
 They are handed over to whoever takes on your students, with your
