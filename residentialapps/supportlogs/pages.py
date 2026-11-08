@@ -10,8 +10,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlencode
 
-from starlette.requests import Request
+from starlette.requests import HTTPConnection, Request
 from starlette.responses import Response
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from cordware.identity import current_identity
 from residentialapps.supportlogs import sample_support as sample
@@ -162,7 +163,7 @@ def render(
     **context: Any,
 ) -> Response:
     identity = current_identity(request)
-    unit = sample.working_unit(me, request.cookies.get(sample.UNIT_COOKIE))
+    unit = sample.current_unit()
 
     def qs(**params: str) -> str:
         return query(me, **params)
@@ -270,3 +271,24 @@ def records_unlocked(request: Request) -> bool:
     in the address, so leaving the page locks it again."""
     q = request.query_params
     return q.get("records") == "open" and q.get("understood") == "yes"
+
+
+class WorkingUnit:
+    """ASGI middleware setting each request's working Unit (Unit-scoping
+    rung 4, functional spec §3.7) before any route reads the sample: the
+    viewer's choice in this browser when they hold grants there, else
+    their first Unit. Every per-Unit collection then reads that Unit's
+    records alone."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        connection = HTTPConnection(scope)
+        me = sample.viewer(connection.query_params.get("as"))
+        unit = sample.working_unit(me, connection.cookies.get(sample.UNIT_COOKIE))
+        with sample.in_unit(unit):
+            await self.app(scope, receive, send)

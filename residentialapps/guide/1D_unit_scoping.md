@@ -151,6 +151,13 @@ Taken 2026-11-08 at `c053b46b1`.
   Unit group sits in the top-left switcher, whose top line already names
   the Unit; the working Unit is a cookie (`supportlogs_unit`), as the
   plan's per-browser rule says.
+- **Rung 4:** every record collection in the sample is per Unit
+  (`PerUnit`), read as the request's working Unit, which a middleware
+  sets before any route runs. Example Hall: two frontline staff, four
+  students (one directory, as §3.7 has it), one formal plan, no flags. A
+  history of a student the Unit's records do not name is not found.
+  Sys admin's own pages stay Example College's: no sys admin holds
+  grants in two sample Units.
 
 ## PR ladder
 

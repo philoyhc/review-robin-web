@@ -115,9 +115,11 @@ form's end, and the main action is a full-width Primary on the page
   areas, before Cordware) lists the viewer's Units with the working one
   ticked, and the bar's top line names it; choosing one sets it for this
   browser and returns to the same page (`/unit`). In the sample the
-  Master, Sam Lee, holds grants in Example College and Example Hall; until
-  the Unit-scoping plan's rung 4 (`residentialapps/guide/1D_unit_scoping.md`)
-  every page shows Example College's records whichever is chosen.
+  Master, Sam Lee, holds grants in Example College and Example Hall
+  (two frontline staff, four students, one formal plan); every page,
+  count and download shows the working Unit's records alone, and a
+  history or plan of the other Unit's is not found
+  (`residentialapps/guide/1D_unit_scoping.md` rung 4).
 - **Home is a tab only when it is a page of its own**: the frontline's
   dashboard, a recipient's flags, or a list of what a viewer with more
   than one destination reaches. Otherwise the bare mount redirects to the

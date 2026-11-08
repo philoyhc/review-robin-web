@@ -323,11 +323,11 @@ def test_the_sample_viewers_are_the_roles_in_practice(client: TestClient) -> Non
         assert quote(v.name) not in card, v.name
 
 
-def test_the_working_unit_switcher_is_a_scaffold(client: TestClient) -> None:
+def test_the_working_unit_switcher(client: TestClient) -> None:
     """Unit-scoping rung 3 (author, 2026-11-08): a viewer holding grants in
     more than one Unit picks the working Unit in the switcher; one in a
     single Unit sees none. Choosing sets it for this browser and returns to
-    the page; the top line names it. Until rung 4 nothing else changes."""
+    the page; the top line names it."""
     sam = at("/oversight-students/", "Sam Lee")
     page = client.get(sam).text
     menu = page.split('aria-label="Switch area"', 1)[1].split("</nav>", 1)[0]
@@ -350,8 +350,7 @@ def test_the_working_unit_switcher_is_a_scaffold(client: TestClient) -> None:
     after = chose.get(sam).text
     assert '<span class="sw-unit">Example Hall</span>' in after
     assert 'aria-current="true">Example Hall' in after
-    strip = re.compile(r'<header class="topbar">.*?</header>', re.S)
-    assert strip.sub("", after) == strip.sub("", before)  # no page differs yet
+    assert after != before  # rung 4: the page is Example Hall's
     # A Unit the viewer holds no grant in, or an unknown one, is not worked in.
     daniel = TestClient(create_app())
     daniel.get("/unit?name=Example%20Hall&back=%2F")
@@ -368,3 +367,68 @@ def test_the_working_unit_switcher_is_a_scaffold(client: TestClient) -> None:
     assert absent.endswith("/")
     slash = chose.get("/unit?name=Nowhere&back=%2F%5Cevil.example", follow_redirects=False)
     assert not slash.headers["location"].startswith(("//", "/\\")), slash.headers["location"]
+
+
+def _content(page: str) -> str:
+    """A page without the sample-viewer card, which names every viewer."""
+    return page.split('<nav id="sample-viewer"', 1)[0]
+
+
+def _in_hall() -> TestClient:
+    hall = TestClient(create_app())
+    hall.get("/unit?name=Example%20Hall&back=%2F")
+    return hall
+
+
+def test_every_page_shows_the_working_unit_s_records_alone() -> None:
+    """Unit-scoping rung 4 (author, 2026-11-08; functional spec §3.7): no
+    cross-Unit view for anyone. Sam Lee working in Example Hall sees
+    Example Hall's staff, students and records only, and in Example
+    College none of Example Hall's; a history or plan of the other Unit's
+    is not found."""
+    with sample.in_unit(sample.UNIT_NAME):
+        college = {s.id: s.name for s in sample.STUDENTS if sample.known_here(s.id)}
+    with sample.in_unit(sample.HALL):
+        hall_ids = {s.id: s.name for s in sample.STUDENTS if sample.known_here(s.id)}
+    assert hall_ids and college and not set(hall_ids) & set(college)
+    pages = (
+        "/oversight-students/",
+        "/oversight-staff/",
+        "/oversight-staff/?term=all",
+        "/oversight-staff/audit",
+        "/oversight-staff/access",
+        "/oversight-staff/records",
+        "/who-can-see-what",
+    )
+    hall = _in_hall()
+    plain = TestClient(create_app())
+    for path in pages:
+        at_hall = _content(hall.get(at(path, "Sam Lee")).text)
+        at_college = _content(plain.get(at(path, "Sam Lee")).text)
+        for sid, name in college.items():
+            assert name not in at_hall and f"/{sid}" not in at_hall, (path, name)
+        for sid, name in hall_ids.items():
+            assert name not in at_college and f"/{sid}" not in at_college, (path, name)
+    staff = _content(hall.get(at("/oversight-staff/", "Sam Lee")).text)
+    for name in ("Lucas Teo", "Amira Salleh"):
+        assert name in staff, name
+    for name in ("Daniel Koh", "Priya Raman", "Arjun Nair"):
+        assert name not in staff, name
+    students = hall.get(at("/oversight-students/", "Sam Lee")).text
+    assert "Nikhil Rao" in students  # on Example Hall's formal plan
+    # Another Unit's student or plan is not found, either way round.
+    assert hall.get(at("/oversight-students/S-08", "Sam Lee")).status_code == 404
+    assert plain.get(at("/oversight-students/S-13", "Sam Lee")).status_code == 404
+    assert hall.get(at("/plans/P-01", "Sam Lee")).status_code == 404
+    assert plain.get(at("/plans/P-11", "Sam Lee")).status_code == 404
+    assert hall.get(at("/oversight-students/S-13", "Sam Lee")).status_code == 200
+    assert hall.get(at("/plans/P-11", "Sam Lee")).status_code == 200
+
+
+def test_a_single_unit_viewer_never_works_in_another() -> None:
+    """A viewer whose grants are all in Example College cannot choose
+    Example Hall: their pages stay Example College's (§3.7)."""
+    hall = _in_hall()
+    for name in ("Daniel Koh", "Siti Rahman", "Kenneth Lau", "Rachel Yeo"):
+        page = _content(hall.get(at("/", name), follow_redirects=True).text)
+        assert "Example Hall" not in page and "Lucas Teo" not in page, name
