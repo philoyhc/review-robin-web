@@ -9,20 +9,22 @@
      student-centred view, not a case file, of what the viewer's
      authorizations cover (§11.1). #}
   <p class="sub">{{ chosen.email }}</p>
-  {% for g in sample.shared_with(me.name) if g.student == chosen.id %}<p class="notice" role="note">{{ g.grantor }} has shared their records for {{ chosen.name }} with you, since {{ sample.short_date(g.granted_on) }}.</p>{% endfor %}
-  <p class="notice" role="note">Opening this view is recorded. It shows your own records for {{ chosen.name }}, any a colleague has shared with you, and the safety flags you may see. {{ explainer_link() }}</p>
-  {% set mine = sample.plans_of(me.name, chosen.id) %}
-  {% set plan = mine[0] if mine else none %}
-  {% set seen = sample.encounters_by(me.name, chosen.id) %}
-  <section class="tiles gap-below" aria-label="Following up">
-    <div class="tile"><span class="tile-n">{{ plan.cadence if plan else "None" }}</span><span class="tile-l">Cadence</span></div>
-    <div class="tile"><span class="tile-n">{{ sample.short_date(seen[0].when.date()) if seen else "None" }}</span><span class="tile-l">Last contact</span></div>
-    {% set nd = sample.next_due(plan) if plan else none %}
-    <div class="tile"><span class="tile-n">{{ sample.short_date(nd) if nd else "None" }}</span><span class="tile-l">Next due</span></div>
-  </section>
-  <a class="btn btn-primary btn-wide gap-below" href="{{ url('/log') }}{{ qs(student=chosen.id) }}">Log encounter with {{ chosen.name }}</a>
-  <div class="split gap-above">
+  {# The side column starts at the top, beside what opens the page,
+     so the third column is never left empty (author, 2026-11-08). #}
+  <div class="split">
     <div class="main stack">
+      {% for g in sample.shared_with(me.name) if g.student == chosen.id %}<p class="notice" role="note">{{ g.grantor }} has shared their records for {{ chosen.name }} with you, since {{ sample.short_date(g.granted_on) }}.</p>{% endfor %}
+      <p class="notice" role="note">Opening this view is recorded. It shows your own records for {{ chosen.name }}, any a colleague has shared with you, and the safety flags you may see. {{ explainer_link() }}</p>
+      {% set mine = sample.plans_of(me.name, chosen.id) %}
+      {% set plan = mine[0] if mine else none %}
+      {% set seen = sample.encounters_by(me.name, chosen.id) %}
+      <section class="tiles gap-below" aria-label="Following up">
+        <div class="tile"><span class="tile-n">{{ plan.cadence if plan else "None" }}</span><span class="tile-l">Cadence</span></div>
+        <div class="tile"><span class="tile-n">{{ sample.short_date(seen[0].when.date()) if seen else "None" }}</span><span class="tile-l">Last contact</span></div>
+        {% set nd = sample.next_due(plan) if plan else none %}
+        <div class="tile"><span class="tile-n">{{ sample.short_date(nd) if nd else "None" }}</span><span class="tile-l">Next due</span></div>
+      </section>
+      <a class="btn btn-primary btn-wide gap-below" href="{{ url('/log') }}{{ qs(student=chosen.id) }}">Log encounter with {{ chosen.name }}</a>
       <section class="card card-pad" aria-labelledby="enc-h">
         {% set all_seen = (seen + sample.shared_encounters(me.name, chosen.id)) | sort(attribute="when", reverse=true) %}
         <h2 id="enc-h">Encounters <span class="count">· {{ all_seen | length }}</span></h2>

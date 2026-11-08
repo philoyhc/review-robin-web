@@ -14,104 +14,116 @@
   {{ recorded() }}
   {# The finder (UI spec screen 7): the same search as Log encounter's,
      then the viewer's own working set (§4.3). #}
-  <section class="card card-pad gap-below" aria-labelledby="find-h">
-    <h2 id="find-h">Find a student</h2>
-    <div class="field-wide"><label for="find">Name or email</label>
-      <input id="find" class="input" type="search" disabled aria-describedby="find-what">
-      <span id="find-what" class="subtle small">Your own students first, then the directory, searched as you; by email when the directory cannot be read (§4.2). Once wired.</span></div>
-  </section>
-  {% set mine = sample.working_set(me.name) %}
-  {# Teams (sharing screens rung 5): a team's student shows here for each
-     member, under Teams, whether or not they have records of their own. #}
-  {% set mine_ids = mine | map(attribute="0.id") | list %}
-  {% set team_only = sample.teams_of(me.name) | rejectattr("student", "in", mine_ids) | list %}
-  {# My plans folded in (author, 2026-11-07): a filter, All, Plans or
-     Following, the viewer's last choice kept in this browser. Each plan's
-     chip opens the plan, with its due state. Without script the filter
-     stays hidden and every row shows. My plans' row affordances follow
-     (author, 2026-11-07): Log, last contact, the safety-plan instruction
-     and Add a student to follow up. #}
-  <section class="card card-pad" aria-labelledby="mine-h">
-    <h2 id="mine-h">My students <span class="count">· <span data-students-count>{{ mine | length + team_only | length }}</span></span></h2>
-    <p class="sub">Your plans and follow-ups, then everyone you have logged an encounter with, the most recently seen first.</p>
-    <div data-students-filter hidden><div class="col-chips" role="group" aria-label="Show">
-      {% for key, label in (("all", "All"), ("plans", "Plans"), ("following", "Following"), ("teams", "Teams")) %}<button type="button" class="col-chip" data-show="{{ key }}" aria-pressed="{{ 'true' if key == 'all' else 'false' }}">{{ label }}</button>{% endfor %}
-    </div></div>
-    <ul class="items" data-students-list>
-      {% for s, _reasons, seen in mine %}
-        {% set plans = sample.plans_of(me.name, s.id) %}
-        {% set team = sample.team_for(s.id) if s.id in (sample.teams_of(me.name) | map(attribute="student") | list) else none %}
-        <li data-kinds="{% if plans | selectattr('formal') | first %}plans {% endif %}{% if plans | rejectattr('formal') | first %}following {% endif %}{% if team %}teams{% endif %}">
-          <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips">{{ favorite(s) }}</span></div>
-          {% if team %}<div class="subtle">{{ team_chip(team) }}</div>{% endif %}
-          {% if plans %}<div class="subtle">{% for p in plans %}{{ kind_chips(p) }} {{ due_chip(p) }} {{ p.cadence }}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
-          {% for p in plans if p.safety_plan %}<div class="subtle">{{ p.instruction }}</div>{% endfor %}
-          <div class="subtle">{{ s.email }}{% if plans %} · last contact {{ sample.short_date(seen) if seen else "none yet" }}{% elif seen %} · seen {{ sample.short_date(seen) }}{% endif %}</div>
-          <a class="btn btn-secondary gap-above-sm" href="{{ url('/log') }}{{ qs(student=s.id) }}" aria-label="Log an encounter with {{ s.name }}">Log</a>
-        </li>
-      {% endfor %}
-      {% for t in team_only %}{% set s = sample.student(t.student) %}
-        <li data-kinds="teams">
-          <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips">{{ favorite(s) }}</span></div>
-          <div class="subtle">{{ team_chip(t) }}</div>
-          <div class="subtle">{{ s.email }}</div>
-          <a class="btn btn-secondary gap-above-sm" href="{{ url('/log') }}{{ qs(student=s.id) }}" aria-label="Log an encounter with {{ s.name }}">Log</a>
-        </li>
-      {% endfor %}
-    </ul>
-    <p class="sub" data-students-none hidden>None.</p>
-    <div data-students-add><button type="button" class="btn btn-secondary gap-above-sm" disabled>Add a student to follow up</button></div>
-  </section>
-  <script>
-    // Students' filter (author, 2026-11-07): shows all, plans, teams or
-    // follow-ups; the choice is kept in this browser only.
-    (function () {
-      var group = document.querySelector("[data-students-filter]");
-      if (!group) return;
-      var KEY = "supportlogs-students-show";
-      var rows = document.querySelectorAll("[data-students-list] > li");
-      var count = document.querySelector("[data-students-count]");
-      var none = document.querySelector("[data-students-none]");
-      // Add a student to follow up shows under All and Following only.
-      var add = document.querySelector("[data-students-add]");
-      function apply(show) {
-        var shown = 0;
-        Array.prototype.forEach.call(rows, function (li) {
-          var kinds = " " + li.getAttribute("data-kinds") + " ";
-          var on = show === "all" || kinds.indexOf(" " + show + " ") !== -1;
-          li.hidden = !on;
-          if (on) shown += 1;
-        });
-        Array.prototype.forEach.call(group.querySelectorAll("[data-show]"), function (b) {
-          b.setAttribute("aria-pressed", b.getAttribute("data-show") === show ? "true" : "false");
-        });
-        count.textContent = shown;
-        none.hidden = shown !== 0;
-        if (add) add.hidden = show === "plans" || show === "teams";
-      }
-      var saved = "all";
-      try { saved = localStorage.getItem(KEY) || "all"; } catch (e) { /* storage blocked: All */ }
-      if (!group.querySelector('[data-show="' + saved + '"]')) saved = "all";
-      group.hidden = false;
-      apply(saved);
-      group.addEventListener("click", function (e) {
-        var b = e.target.closest ? e.target.closest("[data-show]") : null;
-        if (!b) return;
-        var show = b.getAttribute("data-show");
-        apply(show);
-        try { localStorage.setItem(KEY, show); } catch (err) { /* ignore */ }
-      });
-    })();
-  </script>
-  {# A team's student lists under My students, Teams, not again here. #}
-  {% set shared = sample.shared_with(me.name) | rejectattr("student", "in", sample.teams_of(me.name) | map(attribute="student") | list) | list %}
-  {% if shared %}
-  <section class="card card-pad gap-above" aria-labelledby="shared-h">
-    <h2 id="shared-h">Shared with me <span class="count">· {{ shared | length }}</span></h2>
-    <p class="sub">Students a colleague has shared their records for with you (§11.1).</p>
-    <ul class="items">{% for g in shared %}{% set s = sample.student(g.student) %}<li><div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips"><span class="chip chip-mute">Shared by {{ g.grantor }}</span>{{ favorite(s) }}</span></div><div class="subtle">{{ s.email }} · since {{ sample.short_date(g.granted_on) }}</div></li>{% endfor %}</ul>
-  </section>
-  {% endif %}
-  {{ records_card(unlocked) }}
+  {# Find and the list in the main column, what is shared and Your
+     records beside them, so the third column is never left empty; on a
+     phone the side follows the list, as before (author, 2026-11-08). #}
+  <div class="split">
+    <div class="main stack">
+      <section class="card card-pad" aria-labelledby="find-h">
+        <h2 id="find-h">Find a student</h2>
+        <div class="field-wide"><label for="find">Name or email</label>
+          <input id="find" class="input" type="search" disabled aria-describedby="find-what">
+          <span id="find-what" class="subtle small">Your own students first, then the directory, searched as you; by email when the directory cannot be read (§4.2). Once wired.</span></div>
+      </section>
+      {% set mine = sample.working_set(me.name) %}
+      {# Teams (sharing screens rung 5): a team's student shows here for each
+         member, under Teams, whether or not they have records of their own. #}
+      {% set mine_ids = mine | map(attribute="0.id") | list %}
+      {% set team_only = sample.teams_of(me.name) | rejectattr("student", "in", mine_ids) | list %}
+      {# My plans folded in (author, 2026-11-07): a filter, All, Plans or
+         Following, the viewer's last choice kept in this browser. Each plan's
+         chip opens the plan, with its due state. Without script the filter
+         stays hidden and every row shows. My plans' row affordances follow
+         (author, 2026-11-07): Log, last contact, the safety-plan instruction
+         and Add a student to follow up. #}
+      <section class="card card-pad" aria-labelledby="mine-h">
+        <h2 id="mine-h">My students <span class="count">· <span data-students-count>{{ mine | length + team_only | length }}</span></span></h2>
+        <p class="sub">Your plans and follow-ups, then everyone you have logged an encounter with, the most recently seen first.</p>
+        <div data-students-filter hidden><div class="col-chips" role="group" aria-label="Show">
+          {% for key, label in (("all", "All"), ("plans", "Plans"), ("following", "Following"), ("teams", "Teams")) %}<button type="button" class="col-chip" data-show="{{ key }}" aria-pressed="{{ 'true' if key == 'all' else 'false' }}">{{ label }}</button>{% endfor %}
+        </div></div>
+        <ul class="items" data-students-list>
+          {% for s, _reasons, seen in mine %}
+            {% set plans = sample.plans_of(me.name, s.id) %}
+            {% set team = sample.team_for(s.id) if s.id in (sample.teams_of(me.name) | map(attribute="student") | list) else none %}
+            <li data-kinds="{% if plans | selectattr('formal') | first %}plans {% endif %}{% if plans | rejectattr('formal') | first %}following {% endif %}{% if team %}teams{% endif %}">
+              <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips">{{ favorite(s) }}</span></div>
+              {% if team %}<div class="subtle">{{ team_chip(team) }}</div>{% endif %}
+              {% if plans %}<div class="subtle">{% for p in plans %}{{ kind_chips(p) }} {{ due_chip(p) }} {{ p.cadence }}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+              {% for p in plans if p.safety_plan %}<div class="subtle">{{ p.instruction }}</div>{% endfor %}
+              <div class="subtle">{{ s.email }}{% if plans %} · last contact {{ sample.short_date(seen) if seen else "none yet" }}{% elif seen %} · seen {{ sample.short_date(seen) }}{% endif %}</div>
+              <a class="btn btn-secondary gap-above-sm" href="{{ url('/log') }}{{ qs(student=s.id) }}" aria-label="Log an encounter with {{ s.name }}">Log</a>
+            </li>
+          {% endfor %}
+          {% for t in team_only %}{% set s = sample.student(t.student) %}
+            <li data-kinds="teams">
+              <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips">{{ favorite(s) }}</span></div>
+              <div class="subtle">{{ team_chip(t) }}</div>
+              <div class="subtle">{{ s.email }}</div>
+              <a class="btn btn-secondary gap-above-sm" href="{{ url('/log') }}{{ qs(student=s.id) }}" aria-label="Log an encounter with {{ s.name }}">Log</a>
+            </li>
+          {% endfor %}
+        </ul>
+        <p class="sub" data-students-none hidden>None.</p>
+        <div data-students-add><button type="button" class="btn btn-secondary gap-above-sm" disabled>Add a student to follow up</button></div>
+      </section>
+      <script>
+        // Students' filter (author, 2026-11-07): shows all, plans, teams or
+        // follow-ups; the choice is kept in this browser only.
+        (function () {
+          var group = document.querySelector("[data-students-filter]");
+          if (!group) return;
+          var KEY = "supportlogs-students-show";
+          var rows = document.querySelectorAll("[data-students-list] > li");
+          var count = document.querySelector("[data-students-count]");
+          var none = document.querySelector("[data-students-none]");
+          // Add a student to follow up shows under All and Following only.
+          var add = document.querySelector("[data-students-add]");
+          function apply(show) {
+            var shown = 0;
+            Array.prototype.forEach.call(rows, function (li) {
+              var kinds = " " + li.getAttribute("data-kinds") + " ";
+              var on = show === "all" || kinds.indexOf(" " + show + " ") !== -1;
+              li.hidden = !on;
+              if (on) shown += 1;
+            });
+            Array.prototype.forEach.call(group.querySelectorAll("[data-show]"), function (b) {
+              b.setAttribute("aria-pressed", b.getAttribute("data-show") === show ? "true" : "false");
+            });
+            count.textContent = shown;
+            none.hidden = shown !== 0;
+            if (add) add.hidden = show === "plans" || show === "teams";
+          }
+          var saved = "all";
+          try { saved = localStorage.getItem(KEY) || "all"; } catch (e) { /* storage blocked: All */ }
+          if (!group.querySelector('[data-show="' + saved + '"]')) saved = "all";
+          group.hidden = false;
+          apply(saved);
+          group.addEventListener("click", function (e) {
+            var b = e.target.closest ? e.target.closest("[data-show]") : null;
+            if (!b) return;
+            var show = b.getAttribute("data-show");
+            apply(show);
+            try { localStorage.setItem(KEY, show); } catch (err) { /* ignore */ }
+          });
+        })();
+      </script>
+      {# Unlocked, Your records holds forms and its own columns: the main
+         column's width. #}
+      {% if unlocked %}{{ records_card(unlocked) }}{% endif %}
+    </div>
+    <div class="side">
+      {# A team's student lists under My students, Teams, not again here. #}
+      {% set shared = sample.shared_with(me.name) | rejectattr("student", "in", sample.teams_of(me.name) | map(attribute="student") | list) | list %}
+      {% if shared %}
+      <section class="card card-pad" aria-labelledby="shared-h">
+        <h2 id="shared-h">Shared with me <span class="count">· {{ shared | length }}</span></h2>
+        <p class="sub">Students a colleague has shared their records for with you (§11.1).</p>
+        <ul class="items">{% for g in shared %}{% set s = sample.student(g.student) %}<li><div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips"><span class="chip chip-mute">Shared by {{ g.grantor }}</span>{{ favorite(s) }}</span></div><div class="subtle">{{ s.email }} · since {{ sample.short_date(g.granted_on) }}</div></li>{% endfor %}</ul>
+      </section>
+      {% endif %}
+      {% if not unlocked %}{{ records_card(unlocked) }}{% endif %}
+    </div>
+  </div>
 {% endblock %}
 {% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

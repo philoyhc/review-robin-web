@@ -377,6 +377,9 @@
       .end { text-align: right; }
       .flush { margin: 0; }
       .stack { display: flex; flex-direction: column; gap: 24px; }
+      /* In a stack its gap spaces the cards; a card's own outer margin,
+         from a page it also opens, would double it (author, 2026-11-08). */
+      .stack > .gap-above, .stack > .gap-below, .side > .gap-above, .side > .gap-below { margin-top: 0; margin-bottom: 0; }
       .gap-above { margin-top: 24px; }
       .gap-above-sm { margin-top: 12px; }
       .gap-below { margin-bottom: 24px; }

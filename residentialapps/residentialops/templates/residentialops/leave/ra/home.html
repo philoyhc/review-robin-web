@@ -5,18 +5,20 @@
   {{ title("My leave", leave, viewing(me)) }}
   {# The balance first, as the spec orders the page (§8.1); its detail is
      the side card, which a phone puts last. #}
-  <section class="tiles" aria-label="Available to you">
-    {% for r in leave.my_balances(me) %}
-      <a class="tile" href="#bal-h"><span class="tile-n">{{ r.available }}</span><span class="tile-l">{{ r.type }} available</span></a>
-    {% endfor %}
-  </section>
-  <div class="btnrow gap-above gap-below">
-    <a class="btn btn-primary" href="{{ url('/ra-leave/apply') }}{{ as_query }}">Apply for leave</a>
-    {% if leave.can_appeal(me) %}<a class="btn btn-secondary" href="{{ url('/ra-leave/appeal') }}{{ as_query }}">Request extra leave</a>{% endif %}
-  </div>
-
+  {# The side column starts at the top, beside what opens the page,
+     so the third column is never left empty (author, 2026-11-08). #}
   <div class="split">
     <div class="main stack">
+      <section class="tiles" aria-label="Available to you">
+        {% for r in leave.my_balances(me) %}
+          <a class="tile" href="#bal-h"><span class="tile-n">{{ r.available }}</span><span class="tile-l">{{ r.type }} available</span></a>
+        {% endfor %}
+      </section>
+      <div class="btnrow">
+        <a class="btn btn-primary" href="{{ url('/ra-leave/apply') }}{{ as_query }}">Apply for leave</a>
+        {% if leave.can_appeal(me) %}<a class="btn btn-secondary" href="{{ url('/ra-leave/appeal') }}{{ as_query }}">Request extra leave</a>{% endif %}
+      </div>
+
       {% set asked = leave.cover_asked(me) %}
       {% if asked.answer %}
         <section class="card card-pad" aria-labelledby="ask-h">

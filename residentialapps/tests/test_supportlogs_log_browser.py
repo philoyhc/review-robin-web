@@ -362,7 +362,21 @@ def test_three_columns_of_340_and_cards_span_two(page: Page) -> None:
     ):
         page.set_viewport_size({"width": width, "height": 900})
         page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
-        assert tuple(page.evaluate(measure)) == expect, width
+        content, main, side, beside, plans = page.evaluate(measure)
+        assert (content, main, side, beside, plans) == (*expect[:4], main), width
+        # Overview's side starts at the top, beside the notice (2026-11-08).
+        tops = page.evaluate(
+            "() => [document.querySelector('.page > .split > .main > .notice')"
+            ".getBoundingClientRect().top, document.querySelector('.page > .split > .side')"
+            ".getBoundingClientRect().top]"
+        )
+        assert tops[0] == tops[1] if expect[3] else tops[0] < tops[1], width
+        # A card on its own, Log's form, spans two columns, or the page.
+        page.goto(f"{ORIGIN}/log")
+        form = page.evaluate(
+            "() => document.querySelector('main.page > form.card').getBoundingClientRect().width"
+        )
+        assert round(form) == expect[4], width
 
 
 def test_a_card_s_own_split_and_a_narrow_card_keep_their_widths(page: Page) -> None:

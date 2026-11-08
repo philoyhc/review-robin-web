@@ -12,19 +12,22 @@
      (confidentiality rule 3). Aggregate view sees counts and staff,
      never a student's name (roles rule 8). #}
   {% if named %}{{ recorded() }}{% else %}<p class="subtle small">Counts only: no student is named on your view.</p>{% endif %}
-  <p class="notice" role="note">You see who has records with which students, never what they recorded. To read a staff member's records, ask them to share.</p>
-  {% if sample.holds(me, sample.RECIPIENT) %}{{ flags_card(me, closed=true) }}{% endif %}
-  {% set across = sample.students_across_staff() %}
-  {% set active = sample.PLANS | selectattr("status", "equalto", "Active") | list %}
-  <section class="tiles gap-below" aria-label="Across the team">
-    <div class="tile"><span class="tile-n">{{ active | selectattr("formal") | list | length }}</span><span class="tile-l">Formal assignments</span></div>
-    <div class="tile"><span class="tile-n">{{ active | rejectattr("formal") | list | length }}</span><span class="tile-l">Follow-ups</span></div>
-    <div class="tile"><span class="tile-n">{{ across | length }}</span><span class="tile-l">Students with records</span></div>
-    <div class="tile"><span class="tile-n">{{ across | map(attribute="staff") | map("length") | select("gt", 1) | list | length }}</span><span class="tile-l">With more than one staff member</span></div>
-  </section>
 
+  {# The side column starts at the top, beside the notice, the flags and
+     the tiles, so the third column is never left empty (author,
+     2026-11-08). #}
   <div class="split">
     <div class="main stack">
+      <p class="notice" role="note">You see who has records with which students, never what they recorded. To read a staff member's records, ask them to share.</p>
+      {% if sample.holds(me, sample.RECIPIENT) %}{{ flags_card(me, closed=true) }}{% endif %}
+      {% set across = sample.students_across_staff() %}
+      {% set active = sample.PLANS | selectattr("status", "equalto", "Active") | list %}
+      <section class="tiles" aria-label="Across the team">
+        <div class="tile"><span class="tile-n">{{ active | selectattr("formal") | list | length }}</span><span class="tile-l">Formal assignments</span></div>
+        <div class="tile"><span class="tile-n">{{ active | rejectattr("formal") | list | length }}</span><span class="tile-l">Follow-ups</span></div>
+        <div class="tile"><span class="tile-n">{{ across | length }}</span><span class="tile-l">Students with records</span></div>
+        <div class="tile"><span class="tile-n">{{ across | map(attribute="staff") | map("length") | select("gt", 1) | list | length }}</span><span class="tile-l">With more than one staff member</span></div>
+      </section>
       <section class="card card-pad" aria-labelledby="support-h">
         {% call folded("support-h", "Who supports whom", fold=senior) %}
         <p class="sub">Per staff member, how many students they have records with, and their formal assignments and follow-ups. No dates, minutes or counts of encounters: those are the records' content.</p>
@@ -58,6 +61,24 @@
         {% endcall %}
       </section>
       {% if senior %}
+        <section class="card card-pad" aria-labelledby="refs-h">
+          {% call folded("refs-h", "Flagged for formal assignment", sample.REFERRALS | length) %}
+          <p class="sub">Students frontline staff have flagged for review (§3.1); assigning one opens a plan.</p>
+          <ul class="items">{% for r in sample.REFERRALS %}{% set s = sample.student(r.student) %}{% set link %}<a class="strong" href="{{ url('/overview/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{% endset %}<li><div class="item-head">{{ link if sample.named_on_overview(s.id) else withheld(link) }}<button type="button" class="btn btn-secondary" disabled aria-label="{{ 'Assign a plan for ' ~ s.name if sample.named_on_overview(s.id) else 'Assign a plan' }}">Assign</button></div><div class="subtle">Flagged {{ sample.short_date(r.flagged_on) }} by {{ r.flagged_by }}{% if r.cadence %} · suggests {{ r.cadence | lower }}{% endif %}</div></li>{% endfor %}</ul>
+          {% endcall %}
+        </section>
+      {% endif %}
+      {% if named %}
+        <section class="card card-pad" aria-labelledby="plans-h">
+          {% call folded("plans-h", "Every plan", sample.PLANS | length, fold=senior) %}
+          <p class="sub">Formal assignments and follow-ups across the team{% if not senior %}, read-only{% endif %}.</p>
+          <ul class="items">{% for p in sample.PLANS | sort(attribute="formal", reverse=true) %}{% set s = sample.student(p.student) %}{% set link %}<a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ s.name }}</a>{% endset %}<li><div class="item-head">{{ link if sample.named_on_overview(s.id) else withheld(link) }}</div><div class="subtle">{{ ("Plan · " ~ p.source if senior else "Plan") if p.formal else "Following" }} · {{ p.staff }}</div></li>{% endfor %}</ul>
+          {% endcall %}
+        </section>
+      {% endif %}
+    </div>
+    <div class="side">
+      {% if senior %}
         <section class="card card-pad" aria-labelledby="who-h">
           {% call folded("who-h", "Who holds access") %}
           <p class="sub">Sys admins decide who sees support records; you see what they decided, read-only. Every grant and the latest changes are one click on.</p>
@@ -66,8 +87,6 @@
           {% endcall %}
         </section>
       {% endif %}
-    </div>
-    <div class="side">
       {% if senior %}
         <section class="card card-pad muted" aria-labelledby="aud-h">
           <h2 id="aud-h">Support-activity audit</h2>
@@ -83,21 +102,5 @@
     </div>
   </div>
 
-  {% if senior %}
-    <section class="card card-pad gap-above" aria-labelledby="refs-h">
-      {% call folded("refs-h", "Flagged for formal assignment", sample.REFERRALS | length) %}
-      <p class="sub">Students frontline staff have flagged for review (§3.1); assigning one opens a plan.</p>
-      <ul class="items">{% for r in sample.REFERRALS %}{% set s = sample.student(r.student) %}{% set link %}<a class="strong" href="{{ url('/overview/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{% endset %}<li><div class="item-head">{{ link if sample.named_on_overview(s.id) else withheld(link) }}<button type="button" class="btn btn-secondary" disabled aria-label="{{ 'Assign a plan for ' ~ s.name if sample.named_on_overview(s.id) else 'Assign a plan' }}">Assign</button></div><div class="subtle">Flagged {{ sample.short_date(r.flagged_on) }} by {{ r.flagged_by }}{% if r.cadence %} · suggests {{ r.cadence | lower }}{% endif %}</div></li>{% endfor %}</ul>
-      {% endcall %}
-    </section>
-  {% endif %}
-  {% if named %}
-    <section class="card card-pad gap-above" aria-labelledby="plans-h">
-      {% call folded("plans-h", "Every plan", sample.PLANS | length, fold=senior) %}
-      <p class="sub">Formal assignments and follow-ups across the team{% if not senior %}, read-only{% endif %}.</p>
-      <ul class="items">{% for p in sample.PLANS | sort(attribute="formal", reverse=true) %}{% set s = sample.student(p.student) %}{% set link %}<a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ s.name }}</a>{% endset %}<li><div class="item-head">{{ link if sample.named_on_overview(s.id) else withheld(link) }}</div><div class="subtle">{{ ("Plan · " ~ p.source if senior else "Plan") if p.formal else "Following" }} · {{ p.staff }}</div></li>{% endfor %}</ul>
-      {% endcall %}
-    </section>
-  {% endif %}
 {% endblock %}
 {% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}
