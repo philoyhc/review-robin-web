@@ -40,8 +40,10 @@ belongs to the grant and the record, never to the person.
 
 - **Grants.** `SupportAuthorization` gains `residential_unit_id`.
   - A grant in Unit A gives nothing in Unit B.
-  - Eligibility (§3.5) requires a Staff-roster entry and qualifying
-    appointment in the same Unit.
+  - Eligibility stays the Staff roster alone, every member eligible
+    (`residentialapps/docs/residentialapps_roles.md` rule 9, superseding
+    spec §3.5's appointments), now read from the grant's Unit's Staff
+    roster. No appointment is required.
 - **Records.** Each record names its Unit, fixed at creation from the
   author's working Unit (§Semantics): encounters, plans, safety flags,
   flags for formal assignment, teams, shares, handovers, purges, the
@@ -82,8 +84,8 @@ transfer would carry their past records into the new Unit.
   - History crosses Units only through a handover (§11, sharing model),
     agreed by a senior in each Unit, which re-stamps the handed-over
     records.
-- **A staff member who leaves a Unit.** Their grants there end with the
-  appointment (eligibility, §3.5). Their records stay in that Unit, under
+- **A staff member who leaves a Unit.** Their grants there end when they
+  leave that Unit's Staff roster (eligibility, roles rule 9). Their records stay in that Unit, under
   the handover rules already in the sharing model.
 - **Shares and teams** stay within one Unit. A share to someone with no
   frontline grant in the record's Unit is refused, saying why.
@@ -208,7 +210,7 @@ All answered by the author, 2026-11-08:
 
 ## Doc impact
 
-- `residentialapps/docs/resident_support_log_functional_spec_v0.3.md` — §3.5 eligibility in the grant's Unit; §13 `residential_unit_id` on `SupportAuthorization` and every record entity, per-Unit cluster membership (rung 2).
+- `residentialapps/docs/resident_support_log_functional_spec_v0.3.md` — §3.5 eligibility read from the grant's Unit's Staff roster (roster membership alone, roles rule 9); §13 `residential_unit_id` on `SupportAuthorization` and every record entity, per-Unit cluster membership (rung 2).
 - `residentialapps/docs/residentialapps_roles.md` — Support Logs Sys admin per Unit, several per Unit, one account in at most one Unit; no cross-Unit view for anyone (rung 2).
 - `residentialapps/docs/residentialapps_roster_structure.md` — §5 and §10: the multi-Unit authorization item closed for Support Logs (rung 2).
 - `residentialapps/spec/supportlogs_ui.md` — the working Unit and the switcher; per-Unit reads, shares, teams, flags, checks, workload and audit (rungs 2–4).
