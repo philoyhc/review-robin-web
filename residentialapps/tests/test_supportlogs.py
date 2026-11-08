@@ -45,8 +45,8 @@ def tabs(page: str) -> list[str]:
 PAGES = (
     ("/log", "Log encounter", (sample.FRONTLINE,)),
     ("/students/", "Students", (sample.FRONTLINE,)),
-    ("/overview/", "Students Overview", (sample.SENIOR, *sample.VIEW)),
-    ("/workload/", "Staff Overview", (sample.SENIOR, *sample.VIEW)),
+    ("/oversight-students/", "Students Overview", (sample.SENIOR, *sample.VIEW)),
+    ("/oversight-staff/", "Staff Overview", (sample.SENIOR, *sample.VIEW)),
     ("/consultation/", "Consultation check", (sample.CONSULTATION,)),
     ("/sys-admin/", "Access", sample.ADMINISTRATION),
     ("/sys-admin/configuration", "Configuration", sample.ADMINISTRATION),
@@ -93,11 +93,11 @@ def test_each_grant_gives_its_tabs(client: TestClient) -> None:
     senior staff and Other Staff view Overview and, beside it, Workload
     (author, 2026-11-08); no Safety flags tab."""
     assert tabs(client.get("/").text) == ["Home", "Log", "Students"]
-    assert tabs(client.get(at("/overview/", "Sam Lee")).text) == [
+    assert tabs(client.get(at("/oversight-students/", "Sam Lee")).text) == [
         "Students Overview",
         "Staff Overview",
     ]  # no Home: it would only come back here
-    assert tabs(client.get(at("/overview/", "Kenneth Lau")).text) == [
+    assert tabs(client.get(at("/oversight-students/", "Kenneth Lau")).text) == [
         "Students Overview",
         "Staff Overview",
     ]
@@ -123,8 +123,8 @@ def test_home_is_the_dashboard_or_goes_where_the_viewer_belongs(client: TestClie
     assert "The flags you raised" in dashboard
     assert "Every active flag, unacknowledged first" in client.get(at("/", "Priya Raman")).text
     for name, there in [
-        ("Sam Lee", "/overview/"),
-        ("Siti Rahman", "/overview/"),
+        ("Sam Lee", "/oversight-students/"),
+        ("Siti Rahman", "/oversight-students/"),
         ("Marcus Tan", "/consultation/"),
         ("Rachel Yeo", "/sys-admin/"),
         ("Platform super-admin", "/sys-admin/"),
@@ -137,7 +137,7 @@ def test_home_lists_the_pages_of_a_viewer_reaching_more_than_one(client: TestCli
     page = client.get(at("/", "Nadia Hassan")).text
     places = page.split('aria-label="Your pages"')[1].split("</ul>")[0]
     assert re.findall(r'href="([^"]*)"><span class="app-name">([^<]*)', places) == [
-        (at("/overview/", "Nadia Hassan"), "Students Overview"),
+        (at("/oversight-students/", "Nadia Hassan"), "Students Overview"),
         (at("/consultation/", "Nadia Hassan"), "Consultation check"),
     ]
     assert 'href="/?as=Nadia%20Hassan" aria-current="page">Home</a>' in page

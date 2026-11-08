@@ -27,8 +27,8 @@ SYS_ADMIN_AREA = "Sys admin"
 EXPLAINER = "Who can see what"
 EXPLAINER_PATH = "/who-can-see-what"
 # Staff Overview: Who supports whom and the staff-facing cards, beside
-# Students Overview (author, 2026-11-08). Its path predates the name.
-WORKLOAD = "/workload/"
+# Students Overview (author, 2026-11-08), at /oversight-staff/.
+WORKLOAD = "/oversight-staff/"
 
 
 def _grant_tabs(v: sample.Viewer) -> list[tuple[str, str]]:
@@ -42,7 +42,7 @@ def _grant_tabs(v: sample.Viewer) -> list[tuple[str, str]]:
     if sample.holds(v, sample.FRONTLINE):
         tabs += [("Log", "/log"), ("Students", "/students/")]
     if sample.holds(v, sample.SENIOR, *sample.VIEW):
-        tabs += [("Students Overview", "/overview/"), ("Staff Overview", WORKLOAD)]
+        tabs += [("Students Overview", "/oversight-students/"), ("Staff Overview", WORKLOAD)]
     if sample.holds(v, sample.CONSULTATION):
         tabs.append(("Consultation check", "/consultation/"))
     return tabs
@@ -82,7 +82,7 @@ def flags_tab(v: sample.Viewer) -> str | None:
     recipient with nothing else, else Overview (author, 2026-10-29)."""
     if not sample.holds(v, sample.RECIPIENT):
         return None
-    return "/" if sample.holds(v, sample.FRONTLINE) or home_flags(v) else "/overview/"
+    return "/" if sample.holds(v, sample.FRONTLINE) or home_flags(v) else "/oversight-students/"
 
 
 def tabs_for(v: sample.Viewer) -> tuple[dict[str, str | int], ...]:

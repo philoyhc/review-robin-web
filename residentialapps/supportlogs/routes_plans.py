@@ -47,7 +47,7 @@ def plan_detail(request: Request, pid: str) -> Response:
         senior=sample.holds(me, sample.SENIOR),
         shared=not owner and not oversees,
         linked=sample.holds(me, sample.FRONTLINE) and reaches_student(me, found.student),
-        current_tab="/overview/" if oversees and not owner else "/students/",
+        current_tab="/oversight-students/" if oversees and not owner else "/students/",
     )
 
 

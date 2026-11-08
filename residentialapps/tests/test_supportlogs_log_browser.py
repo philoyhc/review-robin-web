@@ -164,7 +164,7 @@ def test_a_filter_turns_a_matched_name_or_email_into_a_pill(page: Page) -> None:
     made live: a match becomes a pill carrying the value, its remove button
     takes the label's id, removing it brings the typeahead back, and case
     and spaces do not matter."""
-    page.goto(f"{ORIGIN}/overview/records?as=Sam%20Lee&{OPEN}")
+    page.goto(f"{ORIGIN}/oversight-staff/records?as=Sam%20Lee&{OPEN}")
     page.locator("#dl-staff").fill("  GRACE.HO@EXAMPLE.EDU ")
     page.locator("#dl-staff").press("Enter")
     pill = staff_box(page).locator(".token")
@@ -184,7 +184,7 @@ def test_a_filter_turns_a_matched_name_or_email_into_a_pill(page: Page) -> None:
 def test_typing_a_name_then_enter_keeps_the_pill(page: Page) -> None:
     """Key by key, then Enter twice: the pill stays, and the download goes
     out for that staff member, never for everyone."""
-    page.goto(f"{ORIGIN}/overview/records?as=Sam%20Lee&{OPEN}")
+    page.goto(f"{ORIGIN}/oversight-staff/records?as=Sam%20Lee&{OPEN}")
     page.locator("#dl-staff").press_sequentially("Grace Ho")
     assert staff_box(page).locator(".token").count() == 0  # never taken mid-typing
     page.keyboard.press("Enter")
@@ -197,7 +197,7 @@ def test_typing_a_name_then_enter_keeps_the_pill(page: Page) -> None:
 
 
 def test_an_unmatched_name_blocks_the_download(page: Page) -> None:
-    page.goto(f"{ORIGIN}/overview/records?as=Sam%20Lee&{OPEN}")
+    page.goto(f"{ORIGIN}/oversight-staff/records?as=Sam%20Lee&{OPEN}")
     requests: list[str] = []
     page.on("request", lambda r: requests.append(r.url))
     page.locator("#dl-staff").press_sequentially("Daniel Kho")
@@ -211,7 +211,7 @@ def test_an_unmatched_name_blocks_the_download(page: Page) -> None:
 
 
 def test_a_chosen_pill_from_the_server_can_be_removed(page: Page) -> None:
-    page.goto(f"{ORIGIN}/overview/records?as=Sam%20Lee&{OPEN}&staff=Grace%20Ho")
+    page.goto(f"{ORIGIN}/oversight-staff/records?as=Sam%20Lee&{OPEN}&staff=Grace%20Ho")
     box = page.locator(".tokens[aria-label='Purged records: Staff']")
     assert box.locator(".token-input").is_hidden()
     page.locator("#p-staff").click()  # the remove button holds the field's id
@@ -228,7 +228,7 @@ def test_your_records_student_box_is_live(page: Page) -> None:
 
 
 def test_a_chosen_filter_downloads_for_that_person(page: Page) -> None:
-    page.goto(f"{ORIGIN}/overview/records?as=Sam%20Lee&{OPEN}")
+    page.goto(f"{ORIGIN}/oversight-staff/records?as=Sam%20Lee&{OPEN}")
     page.locator("#dl-staff").fill("Priya Raman")
     page.locator("#dl-staff").press("Enter")
     page.locator("#dl-student").fill("hana.rahim@u.example.edu")
@@ -302,7 +302,7 @@ def test_text_boxes_resize_vertically_only(page: Page) -> None:
 def test_a_withheld_name_shows_and_hides_again(page: Page) -> None:
     """Overview's withheld name (author, 2026-11-07): Show name opens it in
     place, its control stays and reads Hide name, and closes it again."""
-    page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
+    page.goto(f"{ORIGIN}/oversight-students/?as=Sam%20Lee")
     page.locator("#across-h").click()  # the card opens first (author, 2026-11-08)
     row = page.locator("#across-table details.reveal").first
     summary = row.locator("summary")
@@ -322,9 +322,9 @@ def test_a_withheld_name_shows_and_hides_again(page: Page) -> None:
 
 def test_overview_cards_of_names_stay_folded_until_opened(page: Page) -> None:
     """Author, 2026-11-08: on a senior's Overview every card that names
-    students starts closed, its heading the control; the safety flags banner,
-    the count tiles and Who holds access stay open."""
-    page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
+    students starts closed, its heading the control; the safety flags banner
+    and the count tiles stay open; Who holds access is an expander."""
+    page.goto(f"{ORIGIN}/oversight-students/?as=Sam%20Lee")
     for heading, inside in (
         ("#across-h", "#across-table"),
         ("#refs-h", "section:has(#refs-h) ul.items"),
@@ -334,7 +334,10 @@ def test_overview_cards_of_names_stay_folded_until_opened(page: Page) -> None:
         page.locator(heading).click()
         assert page.locator(inside).is_visible(), heading
     assert page.locator("#flags-h").is_visible() and page.locator(".tiles").is_visible()
-    page.goto(f"{ORIGIN}/workload/?as=Sam%20Lee")  # on Staff Overview since 2026-11-08
+    # Who holds access, on Staff Overview, is an expander (2026-11-08).
+    page.goto(f"{ORIGIN}/oversight-staff/?as=Sam%20Lee")
+    assert not page.locator("section:has(#who-h) dl.kv").is_visible()
+    page.locator("#who-h").click()
     assert page.locator("section:has(#who-h) dl.kv").is_visible()
 
 
@@ -363,7 +366,7 @@ def test_three_columns_of_340_and_cards_span_two(page: Page) -> None:
         (735, (703, 703, 703, False, 703), 703),
     ):
         page.set_viewport_size({"width": width, "height": 900})
-        page.goto(f"{ORIGIN}/overview/?as=Sam%20Lee")
+        page.goto(f"{ORIGIN}/oversight-students/?as=Sam%20Lee")
         assert tuple(page.evaluate(measure)) == expect, width  # Every formal plan: the side
         # Overview's side starts at the top, beside the notice (2026-11-08).
         tops = page.evaluate(
@@ -429,7 +432,7 @@ def test_the_workload_table_sorts_by_its_grouped_columns(page: Page) -> None:
     """Who supports whom's two-row header (Assigned and Own over their
     columns): each column takes a sort button, the groups none, and a
     withheld figure sorts last either way (author, 2026-11-08)."""
-    page.goto(f"{ORIGIN}/workload/?as=Sam%20Lee")
+    page.goto(f"{ORIGIN}/oversight-staff/?as=Sam%20Lee")
     table = "#support-table"
     labels = page.eval_on_selector_all(
         f"{table} th.sortable",
@@ -464,7 +467,7 @@ def test_the_workload_card_spans_the_page_s_three_columns(page: Page) -> None:
     """Author, 2026-11-08: Who supports whom earns the full width, three
     columns at 1280 px, where Overview's lone cards span two."""
     page.set_viewport_size({"width": 1280, "height": 900})
-    page.goto(f"{ORIGIN}/workload/?as=Sam%20Lee")
+    page.goto(f"{ORIGIN}/oversight-staff/?as=Sam%20Lee")
     card = page.locator("section:has(#support-h)").bounding_box()
     content = page.locator(".page").evaluate(
         "el => el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft)"

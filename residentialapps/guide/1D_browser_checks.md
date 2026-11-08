@@ -261,6 +261,11 @@ unless a task says otherwise.
 
 ### B1. The weekly picture: Students Overview and Staff Overview
 
+*Paths: Students Overview `/oversight-students/` (a history
+`/oversight-students/{id}`), Staff Overview `/oversight-staff/`, with
+`/oversight-staff/audit`, `/oversight-staff/records` and
+`/oversight-staff/access`.*
+
 *Task: "How is the team's support load, and who should we be worried
 about?"*
 
@@ -288,7 +293,7 @@ about?"*
   meetings and 75 minutes assigned and 4 students, 5 meetings and 90
   minutes his own, Arjun Nair (1 plan) and Mei Ling Tan "Fewer than 3
   students" with no own figures, and AY2025-2026 Term 2 none. Below
-  it, Who holds access (open), the support-activity audit and Records
+  it, Who holds access (an expander, closed), the support-activity audit and Records
   across staff, each page's back link returning to Staff Overview. As
   Siti Rahman it has no workload columns and none of those three.
 
@@ -339,7 +344,7 @@ be told when a plan is assigned?*
 - [ ] **Open the audit**: "Reviewing this log is recorded", When sorts by
   date, and reads of no one student (the audit itself, a download) show
   no student.
-- [ ] **Who holds access**, on Staff Overview below Who supports whom: an open card names who holds Senior
+- [ ] **Who holds access**, on Staff Overview below Who supports whom: an expander, closed until its heading opens it, names who holds Senior
   identifiable and identifiable view; **See every grant** lists every
   grant's holders and the access changes, with no button anywhere.
 

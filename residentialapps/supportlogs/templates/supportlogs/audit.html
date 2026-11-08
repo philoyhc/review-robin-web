@@ -4,7 +4,7 @@
 {% from "supportlogs/_withheld.html" import withheld %}
 {% block title %}Support-activity audit{% endblock %}
 {% block content %}
-  <a class="back" href="{{ url('/workload/') }}{{ as_query }}">‹ Staff Overview</a>
+  <a class="back" href="{{ url('/oversight-staff/') }}{{ as_query }}">‹ Staff Overview</a>
   {{ sample_title("Support-activity audit", me.name) }}
   {# Support-activity events reveal who was seen and when, so only senior
      staff with identifiable access review them, and the review is itself
@@ -19,7 +19,7 @@
     <div class="table-wrap">
       <table data-sort-auto id="audit-table">
         <thead><tr><th scope="col">When</th><th scope="col">Who</th><th scope="col">What</th><th scope="col">Student</th></tr></thead>
-        <tbody>{% for a in sample.senior_audit() %}<tr><td class="nowrap" data-sort-value="{{ a.at.isoformat() }}">{{ sample.when(a.at) }}</td><td>{{ a.actor }}</td><td>{{ a.action }}</td><td>{% if a.student %}{% set link %}<a href="{{ url('/overview/students/' ~ a.student) }}{{ as_query }}">{{ sample.student(a.student).name }}</a>{% endset %}{{ link if sample.named_on_overview(a.student) else withheld(link) }}{% endif %}</td></tr>{% endfor %}</tbody>
+        <tbody>{% for a in sample.senior_audit() %}<tr><td class="nowrap" data-sort-value="{{ a.at.isoformat() }}">{{ sample.when(a.at) }}</td><td>{{ a.actor }}</td><td>{{ a.action }}</td><td>{% if a.student %}{% set link %}<a href="{{ url('/oversight-students/' ~ a.student) }}{{ as_query }}">{{ sample.student(a.student).name }}</a>{% endset %}{{ link if sample.named_on_overview(a.student) else withheld(link) }}{% endif %}</td></tr>{% endfor %}</tbody>
       </table>
     </div>
   </section>

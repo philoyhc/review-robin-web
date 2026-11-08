@@ -134,7 +134,7 @@ def _what(request: Request) -> str:
     return what if what in sample.RECORD_KINDS else "encounters"
 
 
-@router.get("/overview/records", name="supportlogs_overview_records")
+@router.get("/oversight-staff/records", name="supportlogs_overview_records")
 def staff_records(request: Request) -> Response:
     """Records across staff: upload tagged to a staff member, download by
     staff, student and term, delete purged records by staff and student; by
@@ -148,7 +148,7 @@ def staff_records(request: Request) -> Response:
         request,
         "supportlogs/overview_records.html",
         sample.SENIOR,
-        current_tab="/workload/",
+        current_tab="/oversight-staff/",
         unlocked=records_unlocked(request),
         staff=staff,
         student=student,
@@ -164,7 +164,9 @@ def _senior_download(request: Request, template: bool) -> Response:
     if not sample.holds(me, sample.SENIOR):
         return forbidden(request, me)
     if not records_unlocked(request):
-        return RedirectResponse(url_path(request, "/overview/records") + query(me), status_code=303)
+        return RedirectResponse(
+            url_path(request, "/oversight-staff/records") + query(me), status_code=303
+        )
     what = _what(request)
     if template:
         return _csv(
@@ -175,7 +177,8 @@ def _senior_download(request: Request, template: bool) -> Response:
     staff, chosen, sid = _staff(request), _term(request, sample.CURRENT_TERM.key), _student(request)
     if UNKNOWN in (staff, sid):  # a name or id that is no one's downloads nothing
         return RedirectResponse(
-            url_path(request, "/overview/records") + query(me, records="open", understood="yes"),
+            url_path(request, "/oversight-staff/records")
+            + query(me, records="open", understood="yes"),
             status_code=303,
         )
     columns, rows = sample.staff_rows(what, staff, chosen, sid)
@@ -184,11 +187,11 @@ def _senior_download(request: Request, template: bool) -> Response:
     return _csv(f"support-logs-{what}-{who}-{scope}.csv", columns, rows)
 
 
-@router.get("/overview/records.csv", name="supportlogs_overview_records_csv")
+@router.get("/oversight-staff/records.csv", name="supportlogs_overview_records_csv")
 def staff_records_csv(request: Request) -> Response:
     return _senior_download(request, template=False)
 
 
-@router.get("/overview/records-template.csv", name="supportlogs_overview_records_template")
+@router.get("/oversight-staff/records-template.csv", name="supportlogs_overview_records_template")
 def staff_records_template(request: Request) -> Response:
     return _senior_download(request, template=True)

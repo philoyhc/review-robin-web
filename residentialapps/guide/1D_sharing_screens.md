@@ -165,6 +165,14 @@ The formal assignments count goes, and the other two counts move to the
 top of the side column, above Flagged for formal assignment (author,
 2026-11-08).
 
+### Rung 18 — Oversight paths
+
+Students Overview moves to `/oversight-students/` (a history at
+`/oversight-students/{id}`) and Staff Overview to `/oversight-staff/`,
+with its audit, records and access pages beneath it; the frontline's
+`/students/` keeps its path, so the two never collide. Who holds access
+becomes an expander (author, 2026-11-08).
+
 ## Checks
 
 Each rung keeps `pytest`, `ruff`, `pyright` green and takes one
@@ -291,3 +299,5 @@ browser check passes on each rung.
 - **Rung 17:** as planned. Every viewer gets the counts in the side, so
   the aggregate view's main column, full width before, now spans two
   beside them; on a phone the counts follow Students across staff.
+- **Rung 18:** as planned; old paths are not redirected (sample
+  screens only).

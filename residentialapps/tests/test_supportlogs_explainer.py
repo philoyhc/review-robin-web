@@ -51,7 +51,7 @@ def test_the_page_follows_the_doc_word_for_word(client: TestClient) -> None:
         "/",
         "/students/",
         "/log",
-        "/overview/?as=Sam%20Lee",
+        "/oversight-students/?as=Sam%20Lee",
         "/consultation/?as=Hui%20Min%20Goh",
         "/sys-admin/?as=Rachel%20Yeo",
     ],
@@ -71,9 +71,9 @@ def test_pages_naming_students_link_to_it(client: TestClient) -> None:
         "/students/S-03",
         "/plans/P-01",
         "/flags/F-01",
-        "/overview/?as=Sam%20Lee",
-        "/overview/students/S-03?as=Sam%20Lee",
-        "/overview/audit?as=Sam%20Lee",
+        "/oversight-students/?as=Sam%20Lee",
+        "/oversight-students/S-03?as=Sam%20Lee",
+        "/oversight-staff/audit?as=Sam%20Lee",
         "/consultation/?as=Hui%20Min%20Goh",
     ):
         main = client.get(path).text.split("<main", 1)[1]

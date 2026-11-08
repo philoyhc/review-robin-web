@@ -119,19 +119,21 @@ def test_the_grantor_sees_who_they_shared_with(client: TestClient) -> None:
 
 
 def test_overview_lists_every_plan_and_the_flagged_students(client: TestClient) -> None:
-    sam = client.get("/overview/?as=Sam%20Lee").text
+    sam = client.get("/oversight-students/?as=Sam%20Lee").text
     assert re.findall(r'href="(/plans/P-\d+)\?as=Sam%20Lee"', section(sam, "plans-h")) == [
         f"/plans/{p.id}" for p in sample.PLANS if p.formal
     ]  # formal plans only: a follow-up is its staff member's own
     refs = section(sam, "refs-h")
     assert "Elena Park" in refs and "Flagged 27 Oct by Daniel Koh · suggests weekly" in refs
-    siti = client.get("/overview/?as=Siti%20Rahman").text
+    siti = client.get("/oversight-students/?as=Siti%20Rahman").text
     assert (
         'id="plans-h"' in siti
         and "read-only" in section(siti, "plans-h")
         and 'id="refs-h"' not in siti
     )
-    assert 'id="plans-h"' not in client.get("/overview/?as=Kenneth%20Lau").text  # aggregate only
+    assert (
+        'id="plans-h"' not in client.get("/oversight-students/?as=Kenneth%20Lau").text
+    )  # aggregate only
 
 
 def test_flag_for_formal_assignment_asks_no_reason(client: TestClient) -> None:
@@ -238,7 +240,7 @@ def test_mounted_plan_pages_stay_under_the_mount() -> None:
         "/students/S-03/share",
         "/students/S-02/refer",
         "/students/S-08",
-        "/overview/?as=Sam%20Lee",
+        "/oversight-students/?as=Sam%20Lee",
     ):
         page = mounted.get("/supportlogs" + path)
         assert page.status_code == 200, path
@@ -290,9 +292,9 @@ def test_a_plan_seen_by_senior_staff_shows_no_contact_facts(client: TestClient) 
     assert "<dt>Status</dt>" in siti and "<dt>Assigned by</dt>" in siti
     assert "Safety-plan support" not in siti and "Safety-plan support" in sam
     # Overview's Every plan: the source for senior staff only.
-    every = client.get("/overview/?as=Siti%20Rahman").text.split('id="plans-h"', 1)[1]
+    every = client.get("/oversight-students/?as=Siti%20Rahman").text.split('id="plans-h"', 1)[1]
     assert "Plan · Counselling" not in every and "Plan · " in every
-    assert "Plan · Counselling" in client.get("/overview/?as=Sam%20Lee").text
+    assert "Plan · Counselling" in client.get("/oversight-students/?as=Sam%20Lee").text
 
 
 def test_a_walled_history_shows_nothing_without_an_assignment(

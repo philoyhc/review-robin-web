@@ -106,10 +106,10 @@ def test_closed_lists_the_last_7_days_latest_closed_first(
 
 
 def test_senior_recipients_find_the_flags_on_overview(client: TestClient) -> None:
-    overview = client.get("/overview/?as=Sam%20Lee").text
+    overview = client.get("/oversight-students/?as=Sam%20Lee").text
     assert flags(section(overview, "flags-h"))[0] == ("/flags/F-01", "Unacknowledged")
     assert badge(overview) == [("Students Overview", "1")]
-    viewer = client.get("/overview/?as=Kenneth%20Lau").text
+    viewer = client.get("/oversight-students/?as=Kenneth%20Lau").text
     assert (
         'id="flags-h"' not in viewer and badge(viewer) == []
     )  # Other Staff view receives no flags
@@ -245,7 +245,7 @@ def test_mounted_safety_pages_stay_under_the_mount() -> None:
         "/log/safety",
         "/flags/F-01",
         "/?as=Farah%20Aziz",
-        "/overview/?as=Sam%20Lee",
+        "/oversight-students/?as=Sam%20Lee",
         "/log/safety/raised?student=S-02&duration=15%20min&type=Check-in&step=Duty%20senior%20staff%20contacted",
     ):
         page = mounted.get("/supportlogs" + path)

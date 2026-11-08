@@ -87,16 +87,19 @@ form's end, and the main action is a full-width Primary on the page
   super-admin. Nothing neutral sits between them (ruling 3).
 - **Tabs follow the grants**, never the appointment:
   - Log and Students for the frontline;
-  - **Students Overview** (`/overview/`) and **Staff Overview**
-    (`/workload/`) for senior staff and Other Staff view (author,
+  - **Students Overview** (`/oversight-students/`) and **Staff Overview**
+    (`/oversight-staff/`) for senior staff and Other Staff view (author,
     2026-11-08). Students Overview is the students' side of oversight:
     the flags and Students across staff; in its side, two counts
     (students with records, and with more than one staff member; no
     count of formal assignments), Flagged for formal assignment, Every
     formal plan. Staff Overview is the staff's: Who
     supports whom at the page's full width, then, for senior staff, Who
-    holds access, the support-activity audit and records across staff,
-    whose pages return to it. Home never lists Staff Overview apart from
+    holds access (an expander), the support-activity audit
+    (`/oversight-staff/audit`) and records across staff
+    (`/oversight-staff/records`), whose pages return to it. A student's
+    history is `/oversight-students/{id}`; the frontline's `/students/`
+    is a different page. Home never lists Staff Overview apart from
     Students Overview. In prose, "Overview" means Students Overview;
   - Consultation check for its grant;
   - Access, Configuration and Audit log in Sys admin.
@@ -190,7 +193,7 @@ form's end, and the main action is a full-width Primary on the page
   and Purge all, of every record or one student's, are disabled until
   wired. Leaving the page locks it again. A purge hides and keeps.
   Purge all is Destructive, outline red (author, 2026-10-30).
-- **Records across staff** (`/overview/records`, author, 2026-10-30), for
+- **Records across staff** (`/oversight-staff/records`, author, 2026-10-30), for
   senior identifiable access, behind the same lock: download, for any
   staff member or all, by student and term or all, which students each
   has encounters with (staff and student pairs) and their plans' kind,
@@ -205,7 +208,7 @@ form's end, and the main action is a full-width Primary on the page
 - **Administration and senior staff, each in view of the other** (author,
   2026-10-30). Administration decides who sees content but sees none;
   senior staff see who has records with whom but grant no access:
-  - **Who holds access** (`/overview/access`, linked from Staff Overview's card),
+  - **Who holds access** (`/oversight-staff/access`, linked from Staff Overview's card),
     for senior identifiable access: each grant's holders and the access
     changes, read-only.
   - **Senior reads** on Sys admin's Audit log: each senior's reads with
@@ -317,9 +320,9 @@ someone's behalf), **acknowledge** for having seen information sent on
   2026-11-08): Students across staff, Flagged for
   formal assignment and Every formal plan start closed, each heading opening its
   card, with Show or Hide beside it. The safety flags banner and the count
-  tiles stay open, as does Who holds access (staff and their grants,
-  author, same day), now on Staff Overview; other viewers' Overview is
-  unchanged. Folding is presentation only: the names are in the page
+  tiles stay open. Who holds access, on Staff Overview, is an expander
+  that starts closed too (author, 2026-11-08). Other viewers' Overview
+  is unchanged. Folding is presentation only: the names are in the page
   (find-in-page opens a card), and opening one is not a recorded read.
 - **Overview names by default only students on a formal plan, with a
   safety flag (open or closed) or with a team** (author, 2026-11-07), in Students across staff, Every formal plan and Flagged

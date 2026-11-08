@@ -46,8 +46,8 @@ def test_who_supports_whom_counts_students_not_encounters(client: TestClient) ->
     """Author, 2026-11-07: per staff member, students with records and
     plans, for anyone but senior staff; nothing drawn from content (no
     encounters, minutes or load)."""
-    page = client.get("/workload/?as=Siti%20Rahman").text
-    overview = client.get("/overview/?as=Siti%20Rahman").text
+    page = client.get("/oversight-staff/?as=Siti%20Rahman").text
+    overview = client.get("/oversight-students/?as=Siti%20Rahman").text
     rows = cells(section(page, "support-h"))
     assert [plain(r[0]) for r in rows] == [r["staff"] for r in sample.who_supports_whom()]
     daniel = next(r for r in rows if plain(r[0]) == "Daniel Koh")
@@ -69,12 +69,12 @@ def test_who_supports_whom_counts_students_not_encounters(client: TestClient) ->
     ):
         assert gone not in page and gone not in overview, gone
     for name in ("Siti%20Rahman", "Kenneth%20Lau"):
-        for path in ("/workload/", "/overview/"):
+        for path in ("/oversight-staff/", "/oversight-students/"):
             assert "Minutes" not in client.get(f"{path}?as={name}").text, (path, name)
 
 
 def _workload(client: TestClient, term: str = "") -> dict[str, list[str]]:
-    card = section(client.get(f"/workload/?as=Sam%20Lee{term}").text, "support-h")
+    card = section(client.get(f"/oversight-staff/?as=Sam%20Lee{term}").text, "support-h")
     return {plain(r[0]).split(" Fewer")[0]: r[1:] for r in cells(card)}
 
 
@@ -85,7 +85,7 @@ def test_senior_staff_see_each_staff_member_s_workload_by_term(client: TestClien
     students. Own: the other meetings, as students, meetings, meetings per
     student and minutes in total and per meeting. Follow-ups count
     nowhere; no student is named."""
-    card = section(client.get("/workload/?as=Sam%20Lee").text, "support-h")
+    card = section(client.get("/oversight-staff/?as=Sam%20Lee").text, "support-h")
     assert '<select id="wl-term" name="term"' in card and "All terms</option>" in card
     assert f'value="{sample.CURRENT_TERM.key}" selected' in card
     assert 'scope="colgroup" colspan="3">Assigned</th>' in card and ">Own</th>" in card
@@ -122,10 +122,10 @@ def test_senior_staff_see_each_staff_member_s_workload_by_term(client: TestClien
     assert past == ["0", "0", "0", "0", "–", "–", "–", "–"]
     assert _workload(client, "&term=all")["Daniel Koh"] == _workload(client)["Daniel Koh"]
     assert 'value="all" selected' in section(
-        client.get("/workload/?as=Sam%20Lee&term=all").text, "support-h"
+        client.get("/oversight-staff/?as=Sam%20Lee&term=all").text, "support-h"
     )
     assert f'value="{sample.CURRENT_TERM.key}" selected' in section(
-        client.get("/workload/?as=Sam%20Lee&term=bogus").text, "support-h"
+        client.get("/oversight-staff/?as=Sam%20Lee&term=bogus").text, "support-h"
     )
 
 
@@ -143,7 +143,7 @@ def test_no_own_workload_figures_below_three_students(client: TestClient) -> Non
         "–",
         "–",
     ]
-    card = section(client.get("/workload/?as=Sam%20Lee").text, "support-h")
+    card = section(client.get("/oversight-staff/?as=Sam%20Lee").text, "support-h")
     assert card.count("Fewer than 3 students</span>") == 2
     assert all(r["shown"] == (r["students"] >= 3) for r in sample.workload(None))
 
@@ -153,16 +153,16 @@ def test_half_up_rounding() -> None:
 
 
 def test_students_across_staff_shows_staff_never_content(client: TestClient) -> None:
-    sam = section(client.get("/overview/?as=Sam%20Lee").text, "across-h")
+    sam = section(client.get("/oversight-students/?as=Sam%20Lee").text, "across-h")
     rows = cells(sam)
     across = sample.students_across_staff()
     assert [plain(r[0]).removeprefix(HIDDEN) for r in rows] == [r["student"].name for r in across]
     assert [r[1] for r in rows] == [", ".join(r["staff"]) for r in across]
     hana = next(r for r in across if r["student"].id == "S-08")
     assert hana["staff"] == ["Arjun Nair", "Priya Raman"]
-    siti = section(client.get("/overview/?as=Siti%20Rahman").text, "across-h")
-    assert "Clara Tan" in siti and "/overview/students/" not in siti  # named, but no history
-    kenneth = section(client.get("/overview/?as=Kenneth%20Lau").text, "across-h")
+    siti = section(client.get("/oversight-students/?as=Siti%20Rahman").text, "across-h")
+    assert "Clara Tan" in siti and "/oversight-students/" not in siti  # named, but no history
+    kenneth = section(client.get("/oversight-students/?as=Kenneth%20Lau").text, "across-h")
     assert f"<dt>Students with records</dt><dd>{len(across)}</dd>" in kenneth
 
 
@@ -176,7 +176,7 @@ def test_overview_withholds_a_name_off_a_plan_until_shown(client: TestClient) ->
     assert {"Gwyneth Low", "Aiden Chen", "Bao Nguyen", "Farid Osman"} <= shown
     assert "Hana Rahim" not in hidden  # her team names her (rung 5)
     for name in ("Sam%20Lee", "Siti%20Rahman"):
-        page = client.get(f"/overview/?as={name}").text
+        page = client.get(f"/oversight-students/?as={name}").text
         for r in cells(section(page, "across-h")):
             if plain(r[0]).removeprefix(HIDDEN) in hidden:
                 assert r[0].startswith('<details class="reveal"><summary>'), r[0]
@@ -190,7 +190,7 @@ def test_overview_withholds_a_name_off_a_plan_until_shown(client: TestClient) ->
         )
         for student in hidden:
             assert student not in rest, (name, student)  # nowhere else on the page
-    raw = section(client.get("/overview/?as=Sam%20Lee").text, "across-h")
+    raw = section(client.get("/oversight-students/?as=Sam%20Lee").text, "across-h")
     assert raw.count('<td data-sort-value=""><details class="reveal">') == len(shown)
 
 
@@ -210,31 +210,33 @@ def test_a_closed_flag_is_a_signal_on_overview(client: TestClient) -> None:
     safety flag, open or closed (author, 2026-11-07)."""
     hana = next(r for r in sample.students_across_staff() if r["student"].id == "S-08")
     assert hana["flags"] == 1  # F-04, closed
-    page = section(client.get("/overview/?as=Sam%20Lee").text, "across-h")
+    page = section(client.get("/oversight-students/?as=Sam%20Lee").text, "across-h")
     assert "Safety flag</span>" in page and "Active flag" not in page
 
 
 def test_a_senior_s_cards_of_names_start_folded(client: TestClient) -> None:
     """Author, 2026-11-08: on a senior's Overview every card that names
-    students opens only when asked; the safety flags banner, the count tiles
-    and Who holds access (staff and their grants) stay open. Other viewers
-    are unchanged."""
-    sam = client.get("/overview/?as=Sam%20Lee").text
+    students opens only when asked; the safety flags banner and the count
+    tiles stay open. Who holds access, on Staff Overview, is an expander.
+    Other viewers are unchanged."""
+    sam = client.get("/oversight-students/?as=Sam%20Lee").text
     folded = ("across-h", "refs-h", "plans-h")
     assert sam.count('<details class="fold">') == len(folded)
     assert '<details class="fold" open' not in sam
     for heading in folded:
         assert f'<details class="fold"><summary><h2 id="{heading}">' in sam, heading
     assert 'id="flags-h"' in sam and '<summary><h2 id="flags-h"' not in sam
-    staff = client.get("/workload/?as=Sam%20Lee").text  # Who holds access, open
-    assert 'id="who-h"' in staff and '<summary><h2 id="who-h"' not in staff
+    staff = client.get("/oversight-staff/?as=Sam%20Lee").text  # Who holds access: an expander
+    assert '<details class="fold"><summary><h2 id="who-h">' in staff
     for name in ("Siti%20Rahman", "Kenneth%20Lau"):
-        assert '<details class="fold">' not in client.get(f"/overview/?as={name}").text, name
+        assert '<details class="fold">' not in client.get(f"/oversight-students/?as={name}").text, (
+            name
+        )
 
 
 def test_the_aggregate_view_names_no_student(client: TestClient) -> None:
-    page = client.get("/overview/?as=Kenneth%20Lau").text
-    workload = client.get("/workload/?as=Kenneth%20Lau").text
+    page = client.get("/oversight-students/?as=Kenneth%20Lau").text
+    workload = client.get("/oversight-staff/?as=Kenneth%20Lau").text
     for s in sample.STUDENTS:
         assert s.name not in page and s.id not in page, s.name
         assert s.name not in workload and s.id not in workload, s.name
@@ -243,7 +245,7 @@ def test_the_aggregate_view_names_no_student(client: TestClient) -> None:
 
 
 def test_every_plan_carries_no_due_state(client: TestClient) -> None:
-    plans = section(client.get("/overview/?as=Sam%20Lee").text, "plans-h")
+    plans = section(client.get("/oversight-students/?as=Sam%20Lee").text, "plans-h")
     assert "Overdue" not in plans and "Due " not in plans
     for p in sample.PLANS:
         assert p.cadence not in plans, p.cadence
@@ -254,16 +256,16 @@ def test_no_cluster_view_until_students_have_a_location(client: TestClient) -> N
     view is deferred (author, 2026-10-30): no card, and no student's
     cluster on their history."""
     for path in (
-        "/overview/?as=Sam%20Lee",
-        "/overview/?as=Kenneth%20Lau",
-        "/overview/students/S-08?as=Sam%20Lee",
+        "/oversight-students/?as=Sam%20Lee",
+        "/oversight-students/?as=Kenneth%20Lau",
+        "/oversight-students/S-08?as=Sam%20Lee",
     ):
         page = client.get(path)
         assert page.status_code == 200 and "cluster" not in page.text.lower(), path
 
 
 def test_history_is_senior_only_and_spans_every_staff_member(client: TestClient) -> None:
-    page = client.get("/overview/students/S-08?as=Sam%20Lee").text
+    page = client.get("/oversight-students/S-08?as=Sam%20Lee").text
     assert "<h1>Hana Rahim" in page and "Opening this history is recorded" in page
     staff = section(page, "staff-h")
     assert re.findall(r'<span class="strong">([^<]+)</span>', staff) == [
@@ -278,14 +280,14 @@ def test_history_is_senior_only_and_spans_every_staff_member(client: TestClient)
     for name in NOT_SENIOR:
         for sid in ("S-08", "S-99"):  # an unknown id is 403 too: no probing
             assert (
-                client.get(f"/overview/students/{sid}?as={name.replace(' ', '%20')}").status_code
+                client.get(f"/oversight-students/{sid}?as={name.replace(' ', '%20')}").status_code
                 == 403
             ), (name, sid)
-    assert client.get("/overview/students/S-99?as=Sam%20Lee").status_code == 404
+    assert client.get("/oversight-students/S-99?as=Sam%20Lee").status_code == 404
 
 
 def test_the_audit_is_senior_only_and_its_review_recorded(client: TestClient) -> None:
-    page = client.get("/overview/audit?as=Sam%20Lee").text
+    page = client.get("/oversight-staff/audit?as=Sam%20Lee").text
     assert "Reviewing this log is recorded." in page
     rows = cells(section(page, "audit-h"))
     shown = sample.senior_audit()
@@ -297,16 +299,21 @@ def test_the_audit_is_senior_only_and_its_review_recorded(client: TestClient) ->
             continue
         named = sample.student(event.student)
         assert named is not None
-        link = f'<a href="/overview/students/{event.student}?as=Sam%20Lee">{named.name}</a>'
+        link = f'<a href="/oversight-students/{event.student}?as=Sam%20Lee">{named.name}</a>'
         if sample.named_on_overview(event.student):
             assert row[3] == link
         else:
             assert row[3].startswith('<details class="reveal">') and link in row[3]
-    assert 'href="/overview/audit?as=Sam%20Lee"' in client.get("/workload/?as=Sam%20Lee").text
-    for path in ("/overview/", "/workload/"):
-        assert "/overview/audit" not in client.get(f"{path}?as=Siti%20Rahman").text, path
+    assert (
+        'href="/oversight-staff/audit?as=Sam%20Lee"'
+        in client.get("/oversight-staff/?as=Sam%20Lee").text
+    )
+    for path in ("/oversight-students/", "/oversight-staff/"):
+        assert "/oversight-staff/audit" not in client.get(f"{path}?as=Siti%20Rahman").text, path
     for name in NOT_SENIOR:
-        assert client.get(f"/overview/audit?as={name.replace(' ', '%20')}").status_code == 403, name
+        assert (
+            client.get(f"/oversight-staff/audit?as={name.replace(' ', '%20')}").status_code == 403
+        ), name
 
 
 def test_the_overview_pages_answer_only_on_a_local_run(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -314,7 +321,7 @@ def test_the_overview_pages_answer_only_on_a_local_run(monkeypatch: pytest.Monke
 
     monkeypatch.setattr(web_pages, "is_local", lambda: False)
     deployed = TestClient(create_app())
-    for path in ("/overview/", "/overview/students/S-08", "/overview/audit"):
+    for path in ("/oversight-students/", "/oversight-students/S-08", "/oversight-staff/audit"):
         assert deployed.get(path + "?as=Sam%20Lee").status_code == 404, path
 
 
@@ -322,10 +329,10 @@ def test_mounted_overview_pages_stay_under_the_mount() -> None:
     host, _ = host_with(("supportlogs",))
     mounted = TestClient(host)
     for path in (
-        "/overview/?as=Sam%20Lee",
-        "/overview/?as=Kenneth%20Lau",
-        "/overview/students/S-08?as=Sam%20Lee",
-        "/overview/audit?as=Sam%20Lee",
+        "/oversight-students/?as=Sam%20Lee",
+        "/oversight-students/?as=Kenneth%20Lau",
+        "/oversight-students/S-08?as=Sam%20Lee",
+        "/oversight-staff/audit?as=Sam%20Lee",
     ):
         page = mounted.get("/supportlogs" + path)
         assert page.status_code == 200, path
@@ -362,25 +369,32 @@ def test_students_overview_and_staff_overview(client: TestClient) -> None:
     audit and records across staff, which leave Students Overview."""
     staff_cards = ("who-h", "aud-h", "rec-h")
     for name in ("Sam%20Lee", "Siti%20Rahman", "Kenneth%20Lau"):
-        students = client.get(f"/overview/?as={name}").text
+        students = client.get(f"/oversight-students/?as={name}").text
         assert 'id="support-h"' not in students, name
         assert ">Students Overview<" in students and ">Staff Overview<" in students, name
-        assert 'href="/workload/' in students, name
+        assert 'href="/oversight-staff/' in students, name
         for card in staff_cards:
             assert f'id="{card}"' not in students, (name, card)
-        page = client.get(f"/workload/?as={name}").text
+        page = client.get(f"/oversight-staff/?as={name}").text
         assert '<section class="card card-pad wide" aria-labelledby="support-h">' in page, name
-        assert '<details class="fold">' not in page, name
+        # Who supports whom is never folded; Who holds access, senior
+        # staff's, is an expander (author, 2026-11-08).
+        assert page.count('<details class="fold">') == (name == "Sam%20Lee"), name
+        assert '<details class="fold"><summary><h2 id="support-h"' not in page, name
         for card in staff_cards:  # senior staff's alone
             assert (f'id="{card}"' in page) == (name == "Sam%20Lee"), (name, card)
-    sam = client.get("/workload/?as=Sam%20Lee").text
+    sam = client.get("/oversight-staff/?as=Sam%20Lee").text
     assert sam.index('id="support-h"') < sam.index('id="who-h"')  # below the table
-    for path in ("/overview/access", "/overview/audit", "/overview/records"):
+    for path in ("/oversight-staff/access", "/oversight-staff/audit", "/oversight-staff/records"):
         page = client.get(f"{path}?as=Sam%20Lee").text
-        assert "‹ Staff Overview</a>" in page and 'href="/workload/?as=Sam%20Lee"' in page, path
-        assert re.search(r'href="/workload/\?as=Sam%20Lee"[^>]*aria-current="true"', page), path
+        assert "‹ Staff Overview</a>" in page and 'href="/oversight-staff/?as=Sam%20Lee"' in page, (
+            path
+        )
+        assert re.search(r'href="/oversight-staff/\?as=Sam%20Lee"[^>]*aria-current="true"', page), (
+            path
+        )
     assert ">Staff Overview<" not in client.get("/").text
-    assert client.get("/workload/").status_code == 403
+    assert client.get("/oversight-staff/").status_code == 403
 
 
 def test_the_counts_head_students_overview_s_side(client: TestClient) -> None:
@@ -390,7 +404,7 @@ def test_the_counts_head_students_overview_s_side(client: TestClient) -> None:
     formal assignments."""
     across = sample.students_across_staff()
     for name in ("Sam%20Lee", "Siti%20Rahman", "Kenneth%20Lau"):
-        page = client.get(f"/overview/?as={name}").text
+        page = client.get(f"/oversight-students/?as={name}").text
         side = page.split('<div class="side">', 1)[1]
         tiles = re.findall(r'<span class="tile-n">([^<]+)</span><span class="tile-l">([^<]+)', side)
         assert tiles == [
@@ -402,5 +416,5 @@ def test_the_counts_head_students_overview_s_side(client: TestClient) -> None:
         ], name
         assert "Formal assignments</span>" not in page, name
         assert 'class="tiles"' not in page.split('<div class="side">', 1)[0], name
-    sam = client.get("/overview/?as=Sam%20Lee").text
+    sam = client.get("/oversight-students/?as=Sam%20Lee").text
     assert sam.index('class="tiles"') < sam.index('id="refs-h"')
