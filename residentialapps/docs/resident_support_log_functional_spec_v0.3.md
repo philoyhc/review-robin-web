@@ -152,14 +152,14 @@ The staff roster should be the first implementation of an **extensible Residenti
 2. **RA roster** — required later by Residential Operations;
 3. **Student roster** — to be decided; Residential may instead continue to resolve students directly from Entra / Microsoft 365 without maintaining a complete local roster.
 
-**Eligibility is the Staff roster** (author, 2026-10-28, superseding in part what follows): Support Logs reads the Staff roster to know who is eligible, and every active Staff-roster member is eligible for every authorization type below. The appointments in the table say who is normally granted each, not who may be. Grants are made and shown in Support Logs only; the roster shows none (`residentialapps/docs/residentialapps_roles.md` rule 9). Every grant is in one Residential Unit and is read against that Unit's Staff roster; a grant in one Unit gives nothing in another (author, 2026-11-08, §3.7).
+**Eligibility is the Staff roster** (author, 2026-10-28): Support Logs reads the Staff roster to know who is eligible, and every active Staff-roster member is eligible for every authorization type below. The appointments in the table say who is normally granted each, not who may be. Grants are made and shown in Support Logs only; the roster shows none (`residentialapps/docs/residentialapps_roles.md` rule 9). Every grant is in one Residential Unit and is read against that Unit's Staff roster; a grant in one Unit gives nothing in another (author, 2026-11-08, §3.7).
 
 **Appointments are not permissions** (author, 2026-10-22). `residentialops` records who the RFs, RSLMs, Master and other staff are; `supportlogs` decides what each of them may do in Support Logs. A person can read or write Support Logs only when **both** hold:
 
-1. an **active Staff-roster entry** in `residentialops`, plus the qualifying appointment where the authorization type requires one (table below); and
+1. an **active Staff-roster entry** in `residentialops`, in the grant's Unit (§3.7); no appointment is required; and
 2. an **explicit, active Support Logs authorization** in `supportlogs`, granted by a Support Logs administrator.
 
-Both are checked on every request, and access fails closed if either is missing. An appointment never grants Support Logs access by itself: an RF or RSLM appointment makes the person *eligible* for frontline access, and Support Logs may list eligible staff without access so an administrator can grant it, but the grant is always a deliberate, audited act in `supportlogs`. When the roster entry is retired or the qualifying appointment ends, access stops at once; Support Logs then shows the lapsed authorization to its administrators, who revoke it (audited in `supportlogs`). Support Logs never writes to the roster, and the roster never writes Support Logs authorizations.
+Both are checked on every request, and access fails closed if either is missing. An appointment never grants Support Logs access, and none is needed: the Staff-roster entry makes the person *eligible*, and Support Logs may list eligible staff without access so an administrator can grant it, but the grant is always a deliberate, audited act in `supportlogs`. When the roster entry is retired, access stops at once; Support Logs then shows the lapsed authorization to its administrators, who revoke it (audited in `supportlogs`). Support Logs never writes to the roster, and the roster never writes Support Logs authorizations.
 
 | Support Logs authorization | Normally granted to (eligibility: any active Staff-roster entry) |
 |---|---|
@@ -840,7 +840,7 @@ Owned by `supportlogs`; references a staff person from `residentialops`.
 - revoked_at
 - optional source / reason (for example: granted because of an active RF appointment, or at the Master's request)
 
-The types are those in §3.5's table: frontline access, senior identifiable access, safety-flag recipient, opportunity review and Support Logs administration. These are Support Logs security objects, not residential appointments. Effective access requires an active authorization here **and** an active Staff-roster entry, with the qualifying appointment, in `residentialops` (§3.5).
+The types are those in §3.5's table: frontline access, senior identifiable access, safety-flag recipient, opportunity review and Support Logs administration. These are Support Logs security objects, not residential appointments. Effective access requires an active authorization here **and** an active Staff-roster entry in the grant's Unit in `residentialops` (§3.5, §3.7); no appointment is required.
 
 This boundary is asymmetric by design: **staff identity and eligibility are shared operational data; student support membership and activity are not.**
 
@@ -1120,6 +1120,6 @@ v0.3 (22 October 2026) refines the functional model around the actual users and 
 - **Audit expanded:** peer-view grants and opportunity-review runs are auditable sensitive actions (§11.3).
 - **Audit ownership clarified:** each database audits the security objects it owns; `residentialops` audits roster/appointment changes, while `supportlogs` audits Support Logs authorization and student-specific grants (§11.3).
 - **Data model extended:** encounter signal fields, `PeerViewGrant`, `OpportunityReviewRun` and `OpportunityReviewResult`; no persistent student wellness/risk score (§13).
-- **Appointments are not permissions** (author, same day): Support Logs access needs an active Staff-roster entry, with the qualifying appointment, in `residentialops` **and** an explicit Support Logs authorization in `supportlogs`, checked on every request; appointments make staff eligible, administrators grant; lapsed eligibility stops access at once (§3.5, §13). Safety-flag recipients become an authorization type (§5.10), and fake roles seed both layers (§3.6).
+- **Appointments are not permissions** (author, same day): Support Logs access needs an active Staff-roster entry in `residentialops` (no qualifying appointment since 2026-10-28) **and** an explicit Support Logs authorization in `supportlogs`, checked on every request; appointments make staff eligible, administrators grant; lapsed eligibility stops access at once (§3.5, §13). Safety-flag recipients become an authorization type (§5.10), and fake roles seed both layers (§3.6).
 - **Classified by device (author, 2026-10-23):** each surface carries its mobile-to-desktop UX class, replacing "mobile-friendly first" (§14); the people supported are called students throughout.
 - **Shared staff boundary clarified:** the canonical Staff roster and residential appointments live in `residentialops`; Support Logs-specific authorization lives in `supportlogs` and references staff by stable core person ID (§1.1, §3.5, §11.3, §12, §13).

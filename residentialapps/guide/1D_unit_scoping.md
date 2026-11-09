@@ -160,9 +160,9 @@ Taken 2026-11-08 at `c053b46b1`.
 - **Not built:** the no-safety-flag-recipient warning on a Unit's Sys
   admin Access page (Semantics), since no sample sys admin holds two
   Units. It goes to the wiring segment with the rest.
-- **Left as found:** §3.5 and §13 still name a "qualifying
-  appointment", which §3.5's own eligibility paragraph and roles rule 9
-  supersede. That predates this plan.
+- **After the close** (author, 2026-11-09): §3.5 and §13 dropped
+  their older "qualifying appointment", which roles rule 9 had
+  superseded; eligibility is the grant's Unit's Staff roster alone.
 - **Reads:** two cold reads on rung 3, which found doc drift and a
   missing accessible name, and one on the cumulative diff at rung 4,
   which found an access-audit leak, a 500 on Example Hall's unlocked
