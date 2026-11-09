@@ -3,16 +3,35 @@
 {% block title %}My leave{% endblock %}
 {% block content %}
   {{ title("My leave", leave, viewing(me)) }}
-  {# The balance first, as the spec orders the page (§8.1); its detail is
-     the side card, which a phone puts last. #}
-  {# The side column starts at the top, beside what opens the page,
-     so the third column is never left empty (author, 2026-11-08). #}
+  {# The balance first, as the spec orders the page (§8.1): one card,
+     its leave types side by side, even on a phone (author, 2026-11-09:
+     no tiles repeating it). Drafts are the side column's, starting at
+     the top (author, 2026-11-08), and hide with it when there are none. #}
+  {% set drafts = leave.my_drafts(me) %}
   <div class="split">
     <div class="main stack">
-      <section class="tiles" aria-label="Available to you">
-        {% for r in leave.my_balances(me) %}
-          <a class="tile" href="#bal-h"><span class="tile-n">{{ r.available }}</span><span class="tile-l">{{ r.type }} available</span></a>
-        {% endfor %}
+      <section class="card card-pad" aria-labelledby="bal-h">
+        <h2 id="bal-h">My balance</h2>
+        <p class="sub">{{ leave.TERM.label }}. A term's days are used within it.</p>
+        <div class="pair">
+          {% for r in leave.my_balances(me) %}
+            <div>
+              <h3>{{ r.type }}</h3>
+              <dl class="kv">
+                <dt>Available</dt><dd>{{ r.available }} day{{ "s" if r.available != 1 }}</dd>
+                <dt>Entitlement</dt><dd>{{ r.entitlement }}{% if r.adjustment %} {{ "%+d" | format(r.adjustment) }}{% endif %}</dd>
+                <dt>Used</dt><dd>{{ r.used }}</dd>
+                <dt>Pending</dt><dd>{{ r.pending }}</dd>
+              </dl>
+            </div>
+          {% endfor %}
+        </div>
+        {% set extra = leave.my_extra(me) %}
+        {% if leave.POLICY.appeals == "Open" or extra.granted or extra.pending %}
+          <h3 class="gap-above-sm">Extra leave</h3>
+          <p class="subtle small">Granted by the Master on appeal, kept apart from your entitlement.</p>
+          <dl class="kv"><dt>Granted</dt><dd>{{ extra.granted }}</dd><dt>Pending</dt><dd>{{ extra.pending }}</dd></dl>
+        {% endif %}
       </section>
       <div class="btnrow">
         <a class="btn btn-primary" href="{{ url('/ra-leave/apply') }}{{ as_query }}">Apply for leave</a>
@@ -29,14 +48,6 @@
           </ul>
         </section>
       {% endif %}
-      {% set drafts = leave.my_drafts(me) %}
-      {% if drafts %}
-      <section class="card card-pad" aria-labelledby="drafts-h">
-        <h2 id="drafts-h">Drafts <span class="count">· {{ drafts | length }}</span></h2>
-        <p class="sub">Not sent: no one is asked or told until you submit.</p>
-        <ul class="items">{% for d in drafts %}{{ draft_item(d, leave) }}{% endfor %}</ul>
-      </section>
-      {% endif %}
       <section class="card card-pad" aria-labelledby="mine-h">
         {% set open = leave.my_applications(me) | selectattr("stage", "in", leave.OPEN_STAGES) | list %}
         <h2 id="mine-h">My applications <span class="count">· {{ open | length }} in progress</span></h2>
@@ -48,27 +59,13 @@
         <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/history') }}{{ as_query }}">All my applications</a>
       </section>
     </div>
-    <div class="side">
-      <section class="card card-pad" aria-labelledby="bal-h">
-        <h2 id="bal-h">My balance</h2>
-        <p class="sub">{{ leave.TERM.label }}. A term's days are used within it.</p>
-        {% for r in leave.my_balances(me) %}
-          <h3 class="gap-above-sm">{{ r.type }}</h3>
-          <dl class="kv">
-            <dt>Available</dt><dd>{{ r.available }} day{{ "s" if r.available != 1 }}</dd>
-            <dt>Entitlement</dt><dd>{{ r.entitlement }}{% if r.adjustment %} {{ "%+d" | format(r.adjustment) }}{% endif %}</dd>
-            <dt>Used</dt><dd>{{ r.used }}</dd>
-            <dt>Pending</dt><dd>{{ r.pending }}</dd>
-          </dl>
-        {% endfor %}
-        {% set extra = leave.my_extra(me) %}
-        {% if leave.POLICY.appeals == "Open" or extra.granted or extra.pending %}
-          <h3 class="gap-above-sm">Extra leave</h3>
-          <p class="subtle small">Granted by the Master on appeal, kept apart from your entitlement.</p>
-          <dl class="kv"><dt>Granted</dt><dd>{{ extra.granted }}</dd><dt>Pending</dt><dd>{{ extra.pending }}</dd></dl>
-        {% endif %}
+    <div class="side">{% if drafts %}
+      <section class="card card-pad" aria-labelledby="drafts-h">
+        <h2 id="drafts-h">Drafts <span class="count">· {{ drafts | length }}</span></h2>
+        <p class="sub">Not sent: no one is asked or told until you submit.</p>
+        <ul class="items">{% for d in drafts %}{{ draft_item(d, leave) }}{% endfor %}</ul>
       </section>
-    </div>
+    {% endif %}</div>
   </div>
 {% endblock %}
 {% block viewer %}{{ ra_switch(me, leave, here) }}{% endblock %}

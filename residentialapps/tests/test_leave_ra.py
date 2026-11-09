@@ -57,10 +57,14 @@ def test_home_shows_balance_cover_asked_and_applications_in_progress() -> None:
     """Spec §8: balance per leave type with extra leave apart; what is asked
     of the RA; applications in progress; the actions."""
     page = client().get(RA).text
-    assert re.findall(r'<span class="tile-n">(\d+)</span><span class="tile-l">([^<]*)', page) == [
-        ("2", "Personal leave available"),
-        ("1", "Official leave available"),
-    ]
+    # One balance card, first, its types side by side; no tiles repeat it
+    # (author, 2026-11-09).
+    assert 'class="tile' not in page
+    main = page.split('class="main stack">')[1]
+    assert main.lstrip().startswith('<section class="card card-pad" aria-labelledby="bal-h">')
+    pair = main.split('class="pair"')[1].split('<h3 class="gap-above-sm">')[0]
+    assert re.findall(r"<h3>([^<]*)</h3>", pair) == ["Personal leave", "Official leave"]
+    assert re.findall(r"<dt>Available</dt><dd>([^<]*)</dd>", pair) == ["2 days", "1 day"]
     assert "kept apart from your entitlement" in page
     ask = page.split('id="ask-h"')[1].split("</section>")[0]
     assert "Ethan Wong" in ask and "4 Dec – 6 Dec" in ask
