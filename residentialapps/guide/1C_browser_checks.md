@@ -51,7 +51,8 @@ widths, the scripts' behavior, and whether the screens read right.
   page offers her extra leave or links to it, and
   `/residentialops/ra-leave/appeal` is not found; the Extra leave tab
   appears only for an invited RA (Kai Ng) or while Open is previewed.
-  Records already on file still show on an RA's own pages.
+  Extra leave already on an RA's record would still show on their own
+  pages; no sample viewer has such a record, so a test covers it.
 - [ ] **Apply** names the approvers from the RA's slot and lists blackouts
   ahead. From the draft, **Apply** opens pre-filled with a draft notice.
   Every control is disabled.

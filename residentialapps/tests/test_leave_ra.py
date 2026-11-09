@@ -392,9 +392,24 @@ def test_each_appeal_mode_can_be_previewed() -> None:
     )  # the landing does not know her
 
 
-def test_the_appeal_page_works_an_example() -> None:
-    """The 1C.1 audit (2026-10-29): the appeal page works an example."""
+def test_the_ra_sees_an_appeal_s_split_and_a_refused_appeal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The 1C.1 audit (2026-10-29): granted extra leave shows apart from
+    entitlement (§7.5); a refused appeal reads in history (scenario I); the
+    appeal page works an example. Lucas Teo and Maya Seah are no longer RA
+    viewers (2026-11-09), so they are added back here: an RA's own record
+    still shows extra leave."""
+    monkeypatch.setattr(
+        sample_leave,
+        "RA_VIEWERS",
+        (*sample_leave.RA_VIEWERS, ("Lucas Teo", ""), ("Maya Seah", "")),
+    )
     c = TestClient(ops_app())
+    lucas = c.get("/ra-leave/applications/L-0118?as=Lucas%20Teo").text
+    assert "<dt>Extra leave</dt><dd>3 days, kept apart (spec §7.5)</dd>" in lucas
+    maya = c.get("/ra-leave/history?as=Maya%20Seah").text
+    assert "Rejected by Sam Lee" in maya
     assert (
         "For example, 4 days of Personal leave asked with 2 available: 2 from your entitlement, "
         "2 extra" in c.get("/ra-leave/appeal").text
