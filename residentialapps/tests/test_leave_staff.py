@@ -616,6 +616,9 @@ def test_staff_home_shows_a_month_of_leave_in_a_calendar() -> None:
     assert ("Chloe Lim", False) in {(a.ra, ok) for a, ok in sixth["leave"]}
     daniel = sample_leave.leave_calendar("Daniel Koh", october)
     assert not any(a.ra == "Maya Seah" for w in daniel for c in w for a, _ in c["leave"])
+    # An appeal awaiting the Master is left off (author, 2026-11-09): Gwen
+    # Ho's L-0105, 20 Nov – 23 Nov.
+    assert not any(a.id == "L-0105" for w in nov for c in w for a, _ in c["leave"])
     exams = next(c for w in nov for c in w if c["day"] == sample_leave.date(2026, 11, 16))
     assert exams["blackout"] == "Examinations"
     assert sample_leave.month_of("2026-13") == october and sample_leave.month_of("x") == october

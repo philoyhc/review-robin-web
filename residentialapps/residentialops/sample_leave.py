@@ -1831,14 +1831,17 @@ def shift_month(first: date, by: int) -> date:
 def leave_calendar(viewer: str, first: date) -> tuple[tuple[CalendarDay, ...], ...]:
     """Staff Home's leave calendar (author, 2026-11-09): the month's weeks,
     Sunday to Saturday, each day with the approved and pending leave of RAs
-    in the viewer's scope, and the blackout it falls in."""
+    in the viewer's scope, appeals awaiting the Master left off, and the
+    blackout it falls in."""
     last = shift_month(first, 1) - timedelta(days=1)
     start = first - timedelta(days=first.isoweekday() % 7)
     end = last + timedelta(days=6 - last.isoweekday() % 7)
     live = [
         a
         for a in APPLICATIONS
-        if (a.stage == "Approved" or a.stage in OPEN_STAGES)
+        # Appeals awaiting the Master stay off (author, 2026-11-09); one
+        # granted is approved leave like any other.
+        if (a.stage == "Approved" or (a.stage in OPEN_STAGES and a.stage != "Appeal to the Master"))
         and a.precinct in scope(viewer)
         and a.start <= end
         and a.end >= start
