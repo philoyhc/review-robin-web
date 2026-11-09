@@ -278,6 +278,10 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   count over its label, each tile a link to the rows it counts.
 - **A pair** (`.pair`, RA Home's balance, author, 2026-11-09): two short
   blocks side by side in a card, kept two even on a phone.
+- **A form pair** (`.form-pair`, RA Leave's Apply, author, 2026-11-09):
+  a form's fields in two columns from 960 px, one column below with the
+  left column's fields first; `.field-wide.full` lets a field's text box
+  run the card's full width.
 - **Numbers in a table** sit right-aligned (`td.num`).
 - **Phone lists** (`ul.items`, RA Leave's RA pages, 2026-10-28): on a
   mobile-critical page, rows are list items rather than table rows, each

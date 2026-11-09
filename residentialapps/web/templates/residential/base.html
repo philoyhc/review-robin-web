@@ -369,6 +369,13 @@
       .app-off { border-style: dashed; background: var(--surface-page); }
       .field-wide { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; font-size: 14px; }
       .field-wide textarea { width: 100%; max-width: 640px; font: inherit; }
+      .field-wide.full textarea { max-width: none; }
+      /* A form's fields in two columns side by side, one column below 960 px,
+         the left column's fields first (RA Leave's Apply, 2026-11-09). From
+         736 px the form shares the page with a 340 px side column, so two
+         columns wait until each is wide enough for a date input. */
+      .form-pair { display: grid; gap: 0 16px; }
+      @media (min-width: 960px) { .form-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
       /* A text box grows downward only: a sideways drag would push it past
          its column or the phone's edge (author, 2026-11-07). */
       textarea { resize: vertical; }

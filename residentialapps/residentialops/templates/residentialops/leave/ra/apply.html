@@ -10,16 +10,26 @@
       {% if draft %}<div class="gate-note gap-below" role="note"><strong>Draft saved {{ leave.short_date(draft.saved) }}.</strong> It is yours alone: no one is asked or told, and it uses no days, until you submit it.{% set short = leave.draft_short(draft) %}{% if short %} It asks {{ short }} day{{ "s" if short != 1 }} more {{ draft.leave_type }} than you have: {% if leave.can_appeal(me) %}submitting it offers Request extra leave instead.{% else %}shorten it before you submit.{% endif %}{% endif %}</div>{% endif %}
       <section class="card card-pad" aria-labelledby="form-h">
         <h2 id="form-h">Your application</h2>
-        <div class="field-wide"><label for="ltype">Leave type</label>
-          <select id="ltype" class="input" disabled>{% for lt in leave.LEAVE_TYPES %}<option{% if draft and draft.leave_type == lt.name %} selected{% endif %}>{{ lt.name }}</option>{% endfor %}</select></div>
-        <div class="field-wide"><label for="first">First day</label><input id="first" class="input" type="date"{% if draft %} value="{{ draft.start.isoformat() }}"{% endif %} disabled></div>
-        <div class="field-wide"><label for="last">Last day</label><input id="last" class="input" type="date"{% if draft %} value="{{ draft.end.isoformat() }}"{% endif %} disabled></div>
+        {# The dates on the left, the leave type and its day count on the
+           right; a phone takes them in that order (author, 2026-11-09). #}
+        <div class="form-pair">
+          <div>
+            <div class="field-wide"><label for="first">First day</label><input id="first" class="input" type="date"{% if draft %} value="{{ draft.start.isoformat() }}"{% endif %} disabled></div>
+            <div class="field-wide"><label for="last">Last day</label><input id="last" class="input" type="date"{% if draft %} value="{{ draft.end.isoformat() }}"{% endif %} disabled></div>
+          </div>
+          <div>
+            <div class="field-wide"><label for="ltype">Leave type</label>
+              <select id="ltype" class="input" disabled>{% for lt in leave.LEAVE_TYPES %}<option{% if draft and draft.leave_type == lt.name %} selected{% endif %}>{{ lt.name }}</option>{% endfor %}</select></div>
+            <div class="field-wide"><label for="days">Days of leave</label>
+              <output id="days" for="first last" class="strong">{% if draft %}{{ draft.days }} day{{ "s" if draft.days != 1 }}{% else %}Choose your dates{% endif %}</output></div>
+          </div>
+        </div>
         <p class="subtle small">The days are counted for you ({{ leave.POLICY.day_count | lower }}). {{ leave.zero_day_rule() }} {% if leave.can_appeal(me) %}Leave in a Refused blackout cannot be submitted; in an Appeal-only one it goes to the Master as an appeal.{% else %}Leave in a blackout cannot be submitted.{% endif %}</p>
-        <div class="field-wide"><label for="cover">Covering RA{% if not leave.POLICY.cover_required %} (optional){% endif %}</label>
+        <div class="field-wide full"><label for="cover">Covering RA{% if not leave.POLICY.cover_required %} (optional){% endif %}</label>
           {{ person_tokens("Covering RA", (draft.cover,) if draft and draft.cover else (), "cover-pool", "cover", single=true, describedby="cover-what") }}
           <datalist id="cover-pool">{% for name in leave.cover_choices(me) %}<option value="{{ name }}"></option>{% endfor %}</datalist>
           <span id="cover-what" class="subtle small">{{ leave.POLICY.cover_pool }}: {{ leave.cover_choices(me) | length }} RAs you may name.{% if leave.POLICY.cover_required and leave.POLICY.cover_mode == "Named and confirmed" %} They are asked to confirm; your application waits at first approval until they do.{% elif leave.POLICY.cover_required %} They are told; they need not confirm.{% endif %}</span></div>
-        <div class="field-wide"><label for="remarks">Remarks (optional)</label><textarea id="remarks" class="input" rows="2" disabled>{{ draft.remarks if draft }}</textarea></div>
+        <div class="field-wide full"><label for="remarks">Remarks (optional)</label><textarea id="remarks" class="input" rows="2" disabled>{{ draft.remarks if draft }}</textarea></div>
         <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Submit</button><button type="button" class="btn btn-secondary" disabled>Save draft</button>{% if draft %}<button type="button" class="btn btn-danger" disabled>Discard draft</button>{% endif %}<a class="btn btn-secondary" href="{{ url('/ra-leave/') }}{{ as_query }}">Cancel</a></div>
       </section>
     </div>
