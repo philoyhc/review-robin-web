@@ -8,7 +8,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import RedirectResponse, Response
 
 from residentialapps.residentialops import sample_data, sample_leave
 from residentialapps.residentialops.pages import (
@@ -17,7 +17,7 @@ from residentialapps.residentialops.pages import (
     placeholders_previewers_only,
     render,
 )
-from residentialapps.web.urls import app_path
+from residentialapps.web.urls import app_path, url_path
 
 router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 
@@ -47,13 +47,19 @@ def _page(request: Request, template: str, **context: object) -> Response:
 
 @router.get("/ra-leave/staff/", name="residentialops_leave_staff")
 def home(request: Request) -> Response:
-    return _page(request, "home.html")
+    # Home is also the queue (author, 2026-11-09), filtered to applications
+    # waiting on cover by `?cover=waiting`.
+    return _page(request, "home.html", cover_only=request.query_params.get("cover") == "waiting")
 
 
 @router.get("/ra-leave/staff/decide", name="residentialops_leave_staff_queue")
 def awaiting(request: Request) -> Response:
-    # Staff home's "waiting on cover" tile opens the queue filtered.
-    return _page(request, "queue.html", cover_only=request.query_params.get("cover") == "waiting")
+    # The Awaiting page folded into Home (author, 2026-11-09); an old link
+    # lands there, its query (`?as=`, `?cover=`) kept.
+    query = request.url.query
+    return RedirectResponse(
+        url_path(request, "/ra-leave/staff/") + (f"?{query}" if query else ""), status_code=303
+    )
 
 
 @router.get("/ra-leave/staff/decide/{application_id}", name="residentialops_leave_staff_decide")
@@ -67,7 +73,7 @@ def decide(request: Request, application_id: str) -> Response:
     role = next((r for a, r in sample_leave.queue(viewer) if a.id == found.id), None)
     # Back to the list it was most likely opened from, which its tab marks.
     if role:
-        back = ("/ra-leave/staff/decide", "Awaiting my decision")
+        back = ("/ra-leave/staff/", "Home")
     elif any(a.id == found.id for a, _, _ in sample_leave.decided(viewer)):
         back = ("/ra-leave/staff/decided", "Decided")
     elif sample_leave.appeals_decided() and (

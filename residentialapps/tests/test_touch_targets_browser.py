@@ -31,7 +31,6 @@ PHONE_PAGES = (
     "/ra-leave/applications/L-0101",
     "/ra-leave/cover",
     "/ra-leave/staff/",
-    "/ra-leave/staff/decide",
     "/ra-leave/staff/decide/L-0101",
 )
 

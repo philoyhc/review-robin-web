@@ -3,41 +3,44 @@
 {% block title %}Staff home{% endblock %}
 {% block content %}
   {{ title("RA Leave", leave, viewing(me)) }}
-  {% set mine = leave.queue(me) %}
-  {# The side column starts at the top, beside what opens the page,
-     so the third column is never left empty (author, 2026-11-08). #}
+  {# Home and Awaiting are one page (author, 2026-11-09): every application
+     awaiting the viewer, with the waiting-on-cover filter, and recent
+     decisions; This week and Later this week at the side, which starts at
+     the top (author, 2026-11-08). #}
+  {% set mine = leave.queue(me) %}{% if cover_only %}{% set mine = mine | selectattr(0, "in", leave.cover_unconfirmed()) | list %}{% endif %}
+  {% set sep = '&' if as_query else '?' %}
   <div class="split">
     <div class="main stack">
-      <section class="tiles" aria-label="At a glance">
-        <a class="tile" href="{{ url('/ra-leave/staff/decide') }}{{ as_query }}"><span class="tile-n">{{ mine | length }}</span><span class="tile-l">Awaiting my decision</span></a>
-        <a class="tile" href="{{ url('/ra-leave/staff/decide') }}{{ as_query ~ ('&' if as_query else '?') }}cover=waiting"><span class="tile-n">{{ leave.waiting_on_cover_count(me) }}</span><span class="tile-l">Of those, waiting on cover</span></a>
-        <a class="tile" href="{{ url('/ra-leave/staff/decided') }}{{ as_query }}"><span class="tile-n">{{ leave.decided(me) | length }}</span><span class="tile-l">Decided</span></a>
-      </section>
       <section class="card card-pad" aria-labelledby="await-h">
-        <h2 id="await-h">Awaiting my decision <span class="count">· {{ mine | length }}</span></h2>
-        <p class="sub">Oldest first.</p>
-        {% if mine %}<ul class="items">{% for a, role in mine[:3] %}{{ staff_item(a, leave, as_query, role) }}{% endfor %}</ul>{% else %}<p class="sub">Nothing awaits you.</p>{% endif %}
-        {% if mine | length > 3 %}<a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/staff/decide') }}{{ as_query }}">All {{ mine | length }}</a>{% endif %}
+        <h2 id="await-h">{{ "Waiting on cover" if cover_only else "Awaiting my decision" }} <span class="count">· {{ mine | length }}</span></h2>
+        <p class="sub">Oldest first. One waiting on its cover's confirmation can be opened but not approved until the cover confirms.
+          {% if cover_only %}<a href="{{ url('/ra-leave/staff/') }}{{ as_query }}">Show everything awaiting me</a>
+          {% elif leave.waiting_on_cover_count(me) %}<a href="{{ url('/ra-leave/staff/') }}{{ as_query ~ sep }}cover=waiting">Waiting on cover · {{ leave.waiting_on_cover_count(me) }}</a>{% endif %}</p>
+        {% if mine %}<ul class="items">{% for a, role in mine %}{{ staff_item(a, leave, as_query, role) }}{% endfor %}</ul>{% else %}<p class="sub">Nothing awaits you.</p>{% endif %}
       </section>
       <section class="card card-pad" aria-labelledby="recent-h">
         {% set recent = leave.decided(me) %}
         <h2 id="recent-h">Recent decisions</h2>
         {% if recent %}<ul class="items">{% for a, role, outcome in recent[:3] %}<li><div class="item-head"><a class="strong" href="{{ url('/ra-leave/staff/decide/' ~ a.id) }}{{ as_query }}">{{ a.ra }}</a><span class="chip {{ 'chip-ok' if outcome == 'Approved' else 'chip-mute' }}">{{ role }}: {{ outcome }}</span></div><div class="subtle">{{ a.dates }} · {{ a.leave_type }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">None yet.</p>{% endif %}
+        <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/staff/decided') }}{{ as_query }}">All decided</a>
       </section>
     </div>
     <div class="side">
+      {% set precincts = leave.scope(me) %}
+      {% set where = precincts[0] if precincts | length == 1 else precincts | length ~ " Precincts" %}
       <section class="card card-pad" aria-labelledby="week-h">
-        {% set precincts = leave.scope(me) %}
         <h2 id="week-h">This week</h2>
-        {% set _, _, first, last = leave.period() %}<p class="sub">{{ leave.short_date(first) }} – {{ leave.short_date(last) }}, in {{ precincts[0] if precincts | length == 1 else precincts | length ~ " Precincts" }}.</p>
-        {% set away = leave.away_this_week() | selectattr("precinct", "in", precincts) | list %}
-        {% if away %}<ul class="items">{% for a in away %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">Cover {{ a.cover }} · {{ a.precinct }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">No one is away.</p>{% endif %}
+        <p class="sub">Away today, {{ leave.short_date(leave.TODAY) }}, in {{ where }}.</p>
+        {% set away = leave.away_today(me) %}
+        {% if away %}<ul class="items">{% for a in away %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">Cover {{ a.cover }} · {{ a.precinct }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">No one is away today.</p>{% endif %}
         <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/staff/precinct') }}{{ as_query }}">Precinct leave</a>
       </section>
       <section class="card card-pad" aria-labelledby="later-h">
-        {% set later = leave.coming_up(me) %}
-        <h2 id="later-h">Later this term</h2>
-        {% if later %}<ul class="items">{% for a in later %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">Cover {{ a.cover }} · {{ a.precinct }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">No approved leave later this term.</p>{% endif %}
+        {% set _, _, _, last = leave.period("week") %}
+        <h2 id="later-h">Later this week</h2>
+        <p class="sub">Approved leave from tomorrow to {{ leave.short_date(last) }}.</p>
+        {% set later = leave.later_this_week(me) %}
+        {% if later %}<ul class="items">{% for a in later %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">Cover {{ a.cover }} · {{ a.precinct }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">No one starts leave later this week.</p>{% endif %}
       </section>
     </div>
   </div>

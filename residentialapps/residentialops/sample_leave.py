@@ -1775,6 +1775,29 @@ def draft_short(draft: Draft) -> int:
     return max(draft.days - max(available, 0), 0)
 
 
+def away_today(viewer: str) -> tuple[Application, ...]:
+    """Staff Home's This week (author, 2026-11-09): approved leave covering
+    today, in the viewer's scope."""
+    return tuple(a for a in away_between(TODAY, TODAY) if a.precinct in scope(viewer))
+
+
+def later_this_week(viewer: str) -> tuple[Application, ...]:
+    """Staff Home's Later this week (author, 2026-11-09): approved leave
+    starting from tomorrow to the end of the week's seven days, in the
+    viewer's scope, soonest first."""
+    _, _, _, last = period("week")
+    return tuple(
+        sorted(
+            (
+                a
+                for a in away_between(TODAY, last)
+                if a.start > TODAY and a.precinct in scope(viewer)
+            ),
+            key=lambda a: a.start,
+        )
+    )
+
+
 def coming_up(viewer: str) -> tuple[Application, ...]:
     """`upcoming()` in the viewer's scope, for the staff home (§24)."""
     return tuple(a for a in upcoming() if a.precinct in scope(viewer))
