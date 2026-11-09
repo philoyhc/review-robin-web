@@ -34,7 +34,11 @@ def _page(request: Request, template: str, **context: object) -> Response:
         request,
         f"residentialops/leave/staff/{template}",
         area="RA Leave",
-        tabs=leave_staff_tabs(as_query, appeals=sample_leave.sees_appeals(viewer))
+        tabs=leave_staff_tabs(
+            as_query,
+            appeals=sample_leave.sees_appeals(viewer),
+            precinct=sample_leave.precinct_label(viewer),
+        )
         if oversees
         else (),
         areas=areas_for(viewer),

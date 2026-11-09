@@ -1,48 +1,47 @@
 {% extends "residential/base.html" %}
 {% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, viewing, staff_switch, staff_item with context %}
-{% block title %}My Precinct{% endblock %}
+{% block title %}{{ leave.precinct_label(me) }}{% endblock %}
 {% block content %}
   {% set precincts = leave.scope(me) %}
-  {{ title("My Precinct", leave, viewing(me)) }}
+  {{ title(leave.precinct_label(me), leave, viewing(me)) }}
   <p class="sub">Read-only, scoped by Assignments for {{ leave.TERM.label }}: {{ precincts | join(", ") if precincts | length < 4 else "the whole Unit (" ~ precincts | length ~ " Precincts)" }} (spec §22).</p>
   {% set key, label, first, last = period %}
   {# The period is navigation, so choosing one is live (author, 2026-10-29). #}
-  <form class="card card-pad muted filters" method="get" action="{{ url(here) }}" aria-label="Period">
+  {# The period on its own row; its dates and Show period beneath, the
+     dates at the left, top aligned, the button at the right (author,
+     2026-11-09). #}
+  <form class="card card-pad muted" method="get" action="{{ url(here) }}" aria-label="Period">
     {% if me != leave.STAFF_VIEWERS[0][0] %}<input type="hidden" name="as" value="{{ me }}">{% endif %}
-    <div class="filter-fields">
-      <div class="filter filter-box">
-        <label for="period">Period</label>
-        <select id="period" name="period" class="input" aria-describedby="period-dates">
-          {% for option, name in leave.PERIODS %}<option value="{{ option }}"{% if option == key %} selected{% endif %}>{{ name }}</option>{% endfor %}
-        </select>
-        <span id="period-dates" class="subtle small">{{ leave.short_date(first) }} – {{ leave.short_date(last) }}</span>
-      </div>
-    </div>
-    <div class="btnrow"><button type="submit" class="btn btn-secondary">Show period</button></div>
+    <div class="field-wide"><label for="period">Period</label>
+      <select id="period" name="period" class="input" aria-describedby="period-dates">
+        {% for option, name in leave.PERIODS %}<option value="{{ option }}"{% if option == key %} selected{% endif %}>{{ name }}</option>{% endfor %}
+      </select></div>
+    <div class="period-row"><span id="period-dates" class="subtle small">{{ leave.short_date(first) }} – {{ leave.short_date(last) }}</span><button type="submit" class="btn btn-secondary">Show period</button></div>
   </form>
   {% set apps = leave.in_scope(me) %}
   {% set away = leave.away_between(first, last) | selectattr("precinct", "in", precincts) | list %}
   {% set pending = apps | selectattr("stage", "in", leave.OPEN_STAGES) | list %}
   {% set clashes = leave.clashes(first, last) | selectattr(0, "in", precincts) | list %}
-  <section class="tiles gap-above" aria-label="{{ label }}">
-    <a class="tile" href="#away-h"><span class="tile-n">{{ away | map(attribute="ra") | unique | list | length }}</span><span class="tile-l">Away, {{ label | lower }}</span></a>
-    <a class="tile" href="#upcoming-h"><span class="tile-n">{{ pending | length }}</span><span class="tile-l">Pending</span></a>
-    <a class="tile" href="#clash-h"><span class="tile-n">{{ clashes | length }}</span><span class="tile-l">Clashes</span></a>
-  </section>
+  {% set upcoming = leave.upcoming_and_pending(me) %}
   <div class="stack gap-above">
     <section class="card" aria-labelledby="away-h">
-      <div class="card-head"><h2 id="away-h">Away, {{ label | lower }}</h2><p class="sub">Approved leave overlapping {{ leave.short_date(first) }} – {{ leave.short_date(last) }}.</p></div>
+      <div class="card-head"><h2 id="away-h">Away, {{ label | lower }} <span class="count">· {{ away | map(attribute="ra") | unique | list | length }}</span></h2><p class="sub">Approved leave overlapping {{ leave.short_date(first) }} – {{ leave.short_date(last) }}.</p></div>
       <div class="table-wrap"><table data-sort-auto>
         <thead><tr><th scope="col">RA</th><th scope="col">Precinct</th><th scope="col">Dates</th><th scope="col">Cover</th></tr></thead>
         <tbody>{% for a in away %}<tr><td class="strong nowrap">{{ a.ra }}</td><td class="nowrap">{{ a.precinct }}</td><td class="nowrap" data-sort-value="{{ a.start.isoformat() }}">{{ a.dates }}</td><td class="nowrap">{{ a.cover }}{% if a in leave.cover_while_away() %} <span class="chip chip-warn">Away too</span>{% endif %}</td></tr>{% else %}<tr><td colspan="4" class="subtle">No one.</td></tr>{% endfor %}</tbody>
       </table></div>
     </section>
     <section class="card" aria-labelledby="upcoming-h">
-      <div class="card-head"><h2 id="upcoming-h">Upcoming and pending</h2><p class="sub">Approved leave still to come, and applications not yet decided, whatever the period.</p></div>
+      <div class="card-head"><h2 id="upcoming-h">Upcoming and pending <span class="count">· {{ upcoming | length }}</span></h2><p class="sub">Approved leave still to come, and applications not yet decided, whatever the period.</p></div>
       <div class="table-wrap"><table data-sort-auto>
         <thead><tr><th scope="col">RA</th><th scope="col">Precinct</th><th scope="col">Dates</th><th scope="col">Cover</th><th scope="col">Stage</th></tr></thead>
-        <tbody>{% for a in apps | sort(attribute="start") if a.start > leave.TODAY and (a.stage == "Approved" or a.stage in leave.OPEN_STAGES) %}<tr><td class="strong nowrap">{{ a.ra }}</td><td class="nowrap">{{ a.precinct }}</td><td class="nowrap" data-sort-value="{{ a.start.isoformat() }}">{{ a.dates }}</td><td class="nowrap">{{ a.cover }} {{ cover_chip(a.cover_status) }}</td><td>{{ stage_chip(a.stage) }}</td></tr>{% else %}<tr><td colspan="5" class="subtle">None.</td></tr>{% endfor %}</tbody>
+        <tbody>{% for a in upcoming %}<tr><td class="strong nowrap">{{ a.ra }}</td><td class="nowrap">{{ a.precinct }}</td><td class="nowrap" data-sort-value="{{ a.start.isoformat() }}">{{ a.dates }}</td><td class="nowrap">{{ a.cover }} {{ cover_chip(a.cover_status) }}</td><td>{{ stage_chip(a.stage) }}</td></tr>{% else %}<tr><td colspan="5" class="subtle">None.</td></tr>{% endfor %}</tbody>
       </table></div>
+    </section>
+    <section class="card card-pad" aria-labelledby="clash-h">
+      <h2 id="clash-h">Clashes <span class="count">· {{ clashes | length }}</span></h2>
+      <p class="sub">Two RAs in one Precinct away, or asking to be, on the same days in the period.</p>
+      {% if clashes %}<ul class="plain">{% for precinct, pair in clashes %}<li><strong>{{ precinct }}</strong>: {{ pair | join(" and ") }}</li>{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}
     </section>
     <section class="card" aria-labelledby="team-h">
       <div class="card-head"><h2 id="team-h">By Precinct</h2><p class="sub">RAs, those away in the period, and applications pending.</p></div>
@@ -50,11 +49,6 @@
         <thead><tr><th scope="col">Precinct</th><th scope="col" class="num">RAs</th><th scope="col" class="num">Away</th><th scope="col" class="num">Pending</th></tr></thead>
         <tbody>{% for row in leave.by_precinct(me, first, last) %}<tr><td class="strong nowrap">{{ row.precinct }}</td><td class="num">{{ row.ras }}</td><td class="num">{{ row.away }}</td><td class="num">{{ row.pending }}</td></tr>{% endfor %}</tbody>
       </table></div>
-    </section>
-    <section class="card card-pad" aria-labelledby="clash-h">
-      <h2 id="clash-h">Clashes <span class="count">· {{ clashes | length }}</span></h2>
-      <p class="sub">Two RAs in one Precinct away, or asking to be, on the same days in the period.</p>
-      {% if clashes %}<ul class="plain">{% for precinct, pair in clashes %}<li><strong>{{ precinct }}</strong>: {{ pair | join(" and ") }}</li>{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}
     </section>
   </div>
 {% endblock %}

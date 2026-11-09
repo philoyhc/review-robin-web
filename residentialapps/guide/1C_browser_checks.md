@@ -89,7 +89,7 @@ widths, the scripts' behavior, and whether the screens read right.
 
 - [ ] **Daniel's Home** (Home and Awaiting are one page, 2026-11-09):
   - no tiles; tabs Home, Decided, My Precinct (an RF has no Appeals tab;
-    Sam, Rachel and Priya do);
+    Sam, Rachel and Priya do, and their tab reads Precinct);
   - Awaiting my decision lists all three, oldest first, with Overdue
     chips; "Waiting on cover · 2" filters it under the heading "Waiting
     on cover", and "Show everything awaiting me" clears the filter;
@@ -110,7 +110,8 @@ widths, the scripts' behavior, and whether the screens read right.
   "Decide without the cover's confirmation" tick box.
 - [ ] **Rachel's queue** is L-0103, Final approval, pending 5 days, with an
   Overdue chip. Decided shows 9.
-- [ ] **My Precinct as Sam**, This week:
+- [ ] **Precinct as Sam** (no count tiles; the cards carry counts, By
+  Precinct last; the dates under the period, beside Show period), This week:
   - Away 3 (Maya Seah, Olivia Ng, Pranav Iyer);
   - Pending 7;
   - one clash, Willow A 13-25: Olivia Ng and Pranav Iyer, with "Away too"

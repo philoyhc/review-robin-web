@@ -1906,12 +1906,39 @@ def appeals_on() -> bool:
     return POLICY["appeals"] != "Off"
 
 
+def upcoming_and_pending(viewer: str) -> tuple[Application, ...]:
+    """The Precinct page's Upcoming and pending: approved leave still to
+    come and applications not yet decided, starting after today, in the
+    viewer's scope, soonest first."""
+    return tuple(
+        sorted(
+            (
+                a
+                for a in in_scope(viewer)
+                if a.start > TODAY and (a.stage == "Approved" or a.stage in OPEN_STAGES)
+            ),
+            key=lambda a: a.start,
+        )
+    )
+
+
+def is_rf(viewer: str) -> bool:
+    """Whether a staff member's appointment is RF."""
+    return next((s.abbrev for s in sample_data.STAFF if s.name == viewer), "") == "RF"
+
+
 def sees_appeals(viewer: str) -> bool:
     """Whether a staff member has the Appeals tab: while the Master decides
     appeals, for everyone but an RF (author, 2026-11-09), whose appeals
     are not theirs to decide or open."""
-    abbrev = next((s.abbrev for s in sample_data.STAFF if s.name == viewer), "")
-    return appeals_decided() and abbrev != "RF"
+    return appeals_decided() and not is_rf(viewer)
+
+
+def precinct_label(viewer: str) -> str:
+    """The Precinct page's name (author, 2026-11-09): My Precinct for an
+    RF, whose own Precinct it is; Precinct for the Master, the admin and an
+    RSLM, who see more than one."""
+    return "My Precinct" if is_rf(viewer) else "Precinct"
 
 
 def appeals_decided() -> bool:
