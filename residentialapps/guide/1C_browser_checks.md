@@ -88,7 +88,7 @@ widths, the scripts' behavior, and whether the screens read right.
 ## 3. Staff side
 
 - [ ] **Daniel's Home** (Home and Awaiting are one page, 2026-11-09):
-  - no tiles; tabs Home, Decided, Precinct leave, Appeals;
+  - no tiles; tabs Home, Decided, My Precinct, Appeals;
   - Awaiting my decision lists all three, oldest first, with Overdue
     chips; "Waiting on cover · 2" filters it under the heading "Waiting
     on cover", and "Show everything awaiting me" clears the filter;
@@ -106,7 +106,7 @@ widths, the scripts' behavior, and whether the screens read right.
   "Decide without the cover's confirmation" tick box.
 - [ ] **Rachel's queue** is L-0103, Final approval, pending 5 days, with an
   Overdue chip. Decided shows 9.
-- [ ] **Precinct leave as Sam**, This week:
+- [ ] **My Precinct as Sam**, This week:
   - Away 3 (Maya Seah, Olivia Ng, Pranav Iyer);
   - Pending 7;
   - one clash, Willow A 13-25: Olivia Ng and Pranav Iyer, with "Away too"
@@ -114,7 +114,7 @@ widths, the scripts' behavior, and whether the screens read right.
   
   Change **Period** and press **Show period**: the range and tables
   follow. Sort a table, then reload: the sort is kept.
-- [ ] **Precinct leave as Daniel**: This week has nobody away; Rest of term
+- [ ] **My Precinct as Daniel**: This week has nobody away; Rest of term
   shows Hana Ito.
 - [ ] **Appeals**: Invitations shows Gwen Ho "Sent: L-0105", Kai Ng Open
   and Nathan Yeo Lapsed, and Appeals with the Master.

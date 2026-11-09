@@ -44,6 +44,11 @@ def test_every_staff_page_answers_for_each_sample_viewer() -> None:
     assert re.findall(r'<a href="([^"]*)"', tabs) == [
         f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decided", "precinct", "appeals")
     ]
+    assert ">My Precinct</a>" in tabs  # renamed from Precinct leave (author, 2026-11-09)
+    assert (
+        "<h1>My Precinct</h1>" in c.get(STAFF + "precinct").text
+        or "My Precinct" in (c.get(STAFF + "precinct").text.split("<h1")[1].split("</h1>")[0])
+    )
     # Every overseer gets the same tabs, Appeals included while an appeal is open.
     assert (
         "/ra-leave/staff/appeals"
