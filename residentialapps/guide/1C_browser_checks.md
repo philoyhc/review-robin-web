@@ -46,7 +46,7 @@ widths, the scripts' behavior, and whether the screens read right.
   - "Asked to cover · 1" (Ethan Wong, 4 Dec – 6 Dec);
   - Drafts, with D-0001 "2 days over your Official leave";
   - "My applications · 1 in progress".
-- [ ] **Tabs** read Home, Apply, My cover, History. Appeals are By
+- [ ] **Tabs** read Home, Apply, Cover, History. Appeals are By
   invitation by default (2026-11-09), and Chloe is not invited, so no RA
   page offers her extra leave or links to it, and
   `/residentialops/ra-leave/appeal` is not found; the Extra leave tab
@@ -60,7 +60,7 @@ widths, the scripts' behavior, and whether the screens read right.
   - a timeline with a "Next:" line;
   - "Emails you sent", showing **Not sent** and why, with Resend;
   - cover and Withdraw cards.
-- [ ] **My cover**: To answer 1, Covering 1 (Hana Ito 14 Dec – 15 Dec),
+- [ ] **Cover**: To answer 1, Covering 1 (Hana Ito 14 Dec – 15 Dec),
   Earlier and declined 1.
 - [ ] **History**: Drafts, then every application newest first.
 - [ ] **Each RA viewer's state** reads as the table says. Switch with the
