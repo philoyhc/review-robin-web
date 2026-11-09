@@ -14,12 +14,13 @@ from residentialapps.residentialops import sample_data, sample_leave
 from residentialapps.residentialops.pages import (
     areas_for,
     leave_ra_tabs,
-    placeholders_previewers_only,
+    ra_pages_previewers,
     render,
 )
 from residentialapps.web.urls import app_path
 
-router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
+# Previewers, and RA previewers too (author, 2026-11-09).
+router = APIRouter(dependencies=[Depends(ra_pages_previewers)])
 
 
 def _viewer(request: Request) -> str:

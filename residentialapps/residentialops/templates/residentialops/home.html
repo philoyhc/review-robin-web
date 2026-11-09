@@ -4,7 +4,7 @@
 {% block content %}
   <div class="ptitle">
     <h1>Residential Operations</h1>
-    <span class="chips"><span class="chip chip-warn">Sample data</span>{{ viewing_chip(me, dict(sample.LANDING_VIEWERS).get(me, "")) }}</span>
+    <span class="chips"><span class="chip chip-warn">Sample data</span>{{ viewing_chip(me, dict(sample.LANDING_VIEWERS).get(me, ""), not ra_only) }}</span>
   </div>
   <p class="sub">Choose where to go. You see only what you can use.</p>
   <ul class="apps" aria-label="Applications">
@@ -19,7 +19,7 @@
     {% endfor %}
   </ul>
 {% endblock %}
-{% block viewer %}
+{% block viewer %}{% if not ra_only %}
   <nav id="sample-viewer" class="card card-pad muted viewer-end" aria-label="Sample viewer">
     <span class="subtle small">Sample viewer:</span>
     <span class="chips chip-wrap">
@@ -29,4 +29,4 @@
     </span>
     <ul class="plain subtle small">{% for name, what in sample.LANDING_VIEWERS %}<li>{{ name }}: {{ what }}</li>{% endfor %}</ul>
   </nav>
-{% endblock %}
+{% endif %}{% endblock %}

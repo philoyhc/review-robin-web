@@ -296,7 +296,7 @@ Until a screen is wired:
   leave's Period selector and its Show period button, which are
   navigation, and Assignments' upload-mode radios, so the Upload button's
   unavailable state can be seen (§7);
-- it answers anyone on a local run (`APP_ENV=local`) and, deployed, only a previewer, 404 to anyone else (`residentialapps/spec/applications.md`, "The preview gate");
+- it answers anyone on a local run (`APP_ENV=local`) and, deployed, only a previewer, 404 to anyone else; RA Leave's RA pages and the landing also answer an RA previewer (`residentialapps/spec/applications.md`, "The preview gate");
 - a page drawn for one person (RA Leave's RA and staff pages, the
   landing) says so in a **Viewing as** chip beside the Sample data chip,
   naming them with the line their switch gives them ("Viewing as Daniel
