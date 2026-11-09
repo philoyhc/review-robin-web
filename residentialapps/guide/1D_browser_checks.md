@@ -482,7 +482,8 @@ app's (`residentialapps/spec/residentialops_ui.md` §1, author,
   and cards on their own stop at two thirds. At 1000 px the side column
   is narrower than the main one, at 736 px they are equal, and at 735 px
   the side drops below. Apply and an application look the same. The side
-  column (My applications) starts at the top, beside My balance; Apply's form
+  column (My applications, Drafts, Asked to cover) starts at the top,
+  beside My balance; Apply's form
   and the Draft saved note sit beside Available to you; My history's
   applications have Drafts beside them.
 - [ ] **Staff home and Decide** (`/residentialops/ra-leave/staff/`, as

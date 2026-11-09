@@ -4,7 +4,10 @@
 {% block content %}
   {{ title("Cover", leave, viewing(me)) }}
   <p class="sub">Where another RA has named you as their cover (spec §23). Notification links land here.</p>
-  <div class="stack">
+  {# The summary is the side column's, beside the cards from the top, as
+     Apply's Available to you is (author, 2026-11-09); a phone puts it last. #}
+  <div class="split">
+  <div class="main stack">
     <section class="card card-pad" aria-labelledby="answer-h">
       <h2 id="answer-h">To answer <span class="count">· {{ asked.answer | length }}</span></h2>
       {% if asked.answer %}
@@ -39,6 +42,20 @@
         </ul>
       {% else %}<p class="sub">None.</p>{% endif %}
     </section>
+  </div>
+  <div class="side">
+    {% set summary = leave.cover_summary(me) %}
+    <section class="card card-pad muted" aria-labelledby="summary-h">
+      <h2 id="summary-h">Summary</h2>
+      <dl class="kv">
+        <dt>Days covered</dt><dd>{{ summary.covered }}</dd>
+        <dt>Days now or upcoming</dt><dd>{{ summary.coming }}</dd>
+        <dt>Requests to answer</dt><dd>{{ summary.to_answer }}</dd>
+        <dt>Declined</dt><dd>{{ summary.declined }}</dd>
+      </dl>
+      <p class="subtle small gap-above-sm">{{ leave.TERM.label }}. Days count cover you agreed to, or were named for where no answer is needed.</p>
+    </section>
+  </div>
   </div>
 {% endblock %}
 {% block viewer %}{{ ra_switch(me, leave, here) }}{% endblock %}
