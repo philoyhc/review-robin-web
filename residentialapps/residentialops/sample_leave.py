@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from contextvars import ContextVar
 from dataclasses import dataclass, replace
-from datetime import date
+from datetime import date, timedelta
 from typing import TypedDict, cast
 
 from residentialapps.residentialops import sample_data
@@ -1796,6 +1796,75 @@ def later_this_week(viewer: str) -> tuple[Application, ...]:
             key=lambda a: a.start,
         )
     )
+
+
+class CalendarDay(TypedDict):
+    """One day of staff Home's leave calendar (author, 2026-11-09)."""
+
+    day: date
+    in_month: bool
+    today: bool
+    leave: tuple[tuple[Application, bool], ...]  # (application, approved)
+    blackout: str  # the blackout's label, or ""
+
+
+def month_of(value: str | None) -> date:
+    """A `YYYY-MM` query value as the month's first day; anything else is
+    this month."""
+    try:
+        year, month = (int(part) for part in (value or "").split("-"))
+        return date(year, month, 1)
+    except ValueError:
+        return TODAY.replace(day=1)
+
+
+def shift_month(first: date, by: int) -> date:
+    """The first day of the month `by` months from `first`'s."""
+    n = first.year * 12 + first.month - 1 + by
+    return date(n // 12, n % 12 + 1, 1)
+
+
+def leave_calendar(viewer: str, first: date) -> tuple[tuple[CalendarDay, ...], ...]:
+    """Staff Home's leave calendar (author, 2026-11-09): the month's weeks,
+    Sunday to Saturday, each day with the approved and pending leave of RAs
+    in the viewer's scope, and the blackout it falls in."""
+    last = shift_month(first, 1) - timedelta(days=1)
+    start = first - timedelta(days=first.isoweekday() % 7)
+    end = last + timedelta(days=6 - last.isoweekday() % 7)
+    live = [
+        a
+        for a in APPLICATIONS
+        if (a.stage == "Approved" or a.stage in OPEN_STAGES)
+        and a.precinct in scope(viewer)
+        and a.start <= end
+        and a.end >= start
+    ]
+    spans = [(b.label, week_dates(b, PERIOD_LABEL)) for b in BLACKOUTS]
+    days: list[CalendarDay] = []
+    day = start
+    while day <= end:
+        days.append(
+            {
+                "day": day,
+                "in_month": day.month == first.month,
+                "today": day == TODAY,
+                "leave": tuple(
+                    (a, a.stage == "Approved")
+                    for a in sorted(live, key=lambda a: (a.start, a.ra))
+                    if a.start <= day <= a.end
+                ),
+                "blackout": next(
+                    (label for label, span in spans if span and span[0] <= day <= span[1]), ""
+                ),
+            }
+        )
+        day += timedelta(days=1)
+    return tuple(tuple(days[i : i + 7]) for i in range(0, len(days), 7))
+
+
+def calendar_has_leave(weeks: tuple[tuple[CalendarDay, ...], ...]) -> bool:
+    """Whether any day of the calendar's own month has leave."""
+    return any(c["leave"] for week in weeks for c in week if c["in_month"])
 
 
 def balance_of(application: Application) -> EntitlementRow:

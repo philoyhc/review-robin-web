@@ -44,5 +44,41 @@
       </section>
     </div>
   </div>
+  {# The leave calendar spans the page (author, 2026-11-09): approved leave
+     filled, pending outlined, blackout weeks hatched; a phone lists the
+     days with leave instead. #}
+  {% set weeks = leave.leave_calendar(me, month) %}
+  {% set prev, next = leave.shift_month(month, -1), leave.shift_month(month, 1) %}
+  {% set mq = as_query ~ ('&' if as_query else '?') ~ 'month=' %}
+  <section class="card card-pad wide gap-above" aria-labelledby="cal-h">
+    <div class="cal-head">
+      <h2 id="cal-h">Leave calendar</h2>
+      <nav class="cal-nav" aria-label="Month">
+        <a href="{{ url('/ra-leave/staff/') }}{{ mq }}{{ prev.strftime('%Y-%m') }}#cal-h" aria-label="Previous month, {{ prev.strftime('%B %Y') }}">‹ {{ prev.strftime('%b') }}</a>
+        <strong>{{ month.strftime('%B %Y') }}</strong>
+        <a href="{{ url('/ra-leave/staff/') }}{{ mq }}{{ next.strftime('%Y-%m') }}#cal-h" aria-label="Next month, {{ next.strftime('%B %Y') }}">{{ next.strftime('%b') }} ›</a>
+      </nav>
+      <span class="cal-key subtle"><span class="cal-leave approved">Approved</span><span class="cal-leave pending">Pending</span><span>Hatched: blackout</span></span>
+    </div>
+    <table class="cal-grid">
+      <caption class="visually-hidden">Leave in {{ month.strftime('%B %Y') }}</caption>
+      <thead><tr>{% for d in ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat") %}<th scope="col">{{ d }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        {% for week in weeks %}<tr>
+          {% for c in week %}<td class="{{ '' if c.in_month else 'out' }}{{ ' blackout' if c.blackout }}{{ ' today' if c.today }}"{% if c.blackout %} title="{{ c.blackout }} blackout"{% endif %}>
+            <span class="cal-n">{{ c.day.day }}</span>
+            {% for a, approved in c.leave %}<a class="cal-leave {{ 'approved' if approved else 'pending' }}" href="{{ url('/ra-leave/staff/decide/' ~ a.id) }}{{ as_query }}" title="{{ a.ra }}, {{ a.dates }}: {{ a.stage | lower }}">{{ a.ra }}</a>{% endfor %}
+          </td>{% endfor %}
+        </tr>{% endfor %}
+      </tbody>
+    </table>
+    <ul class="items cal-list">
+      {% for week in weeks %}{% for c in week if c.in_month and c.leave %}
+        <li><div class="item-head"><span class="strong">{{ c.day.strftime('%a') }} {{ leave.short_date(c.day) }}</span>{% if c.blackout %}<span class="chip chip-mute">{{ c.blackout }}</span>{% endif %}</div>
+          <div>{% for a, approved in c.leave %}<a class="cal-leave {{ 'approved' if approved else 'pending' }}" href="{{ url('/ra-leave/staff/decide/' ~ a.id) }}{{ as_query }}">{{ a.ra }}{{ '' if approved else ' (pending)' }}</a>{% endfor %}</div></li>
+      {% else %}{% endfor %}{% endfor %}
+    </ul>
+    {% if not leave.calendar_has_leave(weeks) %}<p class="sub">No leave this month.</p>{% endif %}
+  </section>
 {% endblock %}
 {% block viewer %}{{ staff_switch(me, leave, here) }}{% endblock %}

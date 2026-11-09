@@ -588,3 +588,41 @@ def test_staff_home_shows_this_week_and_admin_detail_the_balance() -> None:
 def test_staff_home_says_when_no_one_is_away_this_week() -> None:
     home = client().get(STAFF).text  # Daniel Koh's Precinct
     assert "No one is away today." in home and "No one starts leave later this week." in home
+
+
+def test_staff_home_shows_a_month_of_leave_in_a_calendar() -> None:
+    """Author, 2026-11-09: under the cards, a calendar of the month with the
+    approved and pending leave of RAs in the viewer's scope, blackout weeks
+    marked, and the previous and next month a link away; a phone lists the
+    days with leave instead."""
+    october = sample_leave.month_of(None)
+    assert october == sample_leave.date(2026, 10, 1)
+    weeks = sample_leave.leave_calendar("Sam Lee", october)
+    assert all(len(w) == 7 for w in weeks) and weeks[0][0]["day"].isoweekday() == 7  # a Sunday
+    today = next(c for w in weeks for c in w if c["today"])
+    assert today["day"] == sample_leave.TODAY
+    assert {a.ra for a, approved in today["leave"] if approved} == {"Maya Seah", "Olivia Ng"}
+    # Pending leave is marked, not approved; an RA out of scope is not shown.
+    nov = sample_leave.leave_calendar("Sam Lee", sample_leave.date(2026, 11, 1))
+    sixth = next(c for w in nov for c in w if c["day"] == sample_leave.date(2026, 11, 6))
+    assert ("Chloe Lim", False) in {(a.ra, ok) for a, ok in sixth["leave"]}
+    daniel = sample_leave.leave_calendar("Daniel Koh", october)
+    assert not any(a.ra == "Maya Seah" for w in daniel for c in w for a, _ in c["leave"])
+    exams = next(c for w in nov for c in w if c["day"] == sample_leave.date(2026, 11, 16))
+    assert exams["blackout"] == "Examinations"
+    assert sample_leave.month_of("2026-13") == october and sample_leave.month_of("x") == october
+    assert sample_leave.shift_month(sample_leave.date(2026, 12, 1), 1) == sample_leave.date(
+        2027, 1, 1
+    )
+
+    c = client()
+    page = c.get(STAFF + SAM).text.split('id="cal-h"')[1]
+    assert "<strong>October 2026</strong>" in page
+    assert 'href="/ra-leave/staff/?as=Sam%20Lee&amp;month=2026-11#cal-h"' in page
+    assert 'class="cal-leave approved" href="/ra-leave/staff/decide/L-0106?as=Sam%20Lee"' in page
+    assert 'class="items cal-list"' in page  # the phone's list of days
+    november = c.get(STAFF + "?month=2026-11").text.split('id="cal-h"')[1]
+    assert "<strong>November 2026</strong>" in november
+    assert 'class="cal-leave pending" href="/ra-leave/staff/decide/L-0101"' in november
+    assert 'title="Examinations blackout"' in november
+    assert "No leave this month." in c.get(STAFF + "?month=2027-03").text

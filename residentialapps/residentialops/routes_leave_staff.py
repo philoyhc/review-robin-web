@@ -49,7 +49,13 @@ def _page(request: Request, template: str, **context: object) -> Response:
 def home(request: Request) -> Response:
     # Home is also the queue (author, 2026-11-09), filtered to applications
     # waiting on cover by `?cover=waiting`.
-    return _page(request, "home.html", cover_only=request.query_params.get("cover") == "waiting")
+    q = request.query_params
+    return _page(
+        request,
+        "home.html",
+        cover_only=q.get("cover") == "waiting",
+        month=sample_leave.month_of(q.get("month")),
+    )
 
 
 @router.get("/ra-leave/staff/decide", name="residentialops_leave_staff_queue")
