@@ -6,6 +6,7 @@ from __future__ import annotations
 import dataclasses
 import re
 
+import pytest
 from fastapi.testclient import TestClient
 
 from residentialapps.residentialops import sample_leave
@@ -13,6 +14,13 @@ from residentialapps.residentialops.main import create_app as ops_app
 
 RA = "/ra-leave/"
 PAGES = ("", "apply", "appeal", "cover", "history", "applications/L-0101")
+
+
+@pytest.fixture(autouse=True)
+def _appeals_open(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests exercise extra leave, so appeals are Open in them; the
+    default, Off, has its own test (author, 2026-11-09)."""
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
 
 
 def _by_id(application_id: str) -> sample_leave.Application:
@@ -97,11 +105,10 @@ def test_appeals_off_removes_the_extra_leave_route(monkeypatch) -> None:
     c = client()
     home = c.get(RA).text
     assert "/ra-leave/appeal" not in home and "kept apart from your entitlement" not in home
-    assert "appeals are switched off" in c.get(RA + "appeal").text
-    assert (
-        "Leave in any blackout cannot be submitted while appeals are off"
-        in c.get(RA + "apply").text
-    )
+    assert c.get(RA + "appeal").status_code == 404  # not offered, not there
+    apply = c.get(RA + "apply").text
+    assert "Leave in a blackout cannot be submitted." in apply
+    assert "appeals are off" not in apply and "Request extra leave" not in apply
 
 
 def test_existing_extra_leave_shows_even_with_appeals_off(monkeypatch) -> None:
@@ -417,5 +424,20 @@ def test_apply_s_blackouts_follow_whether_the_ra_may_appeal() -> None:
     c = TestClient(ops_app())
     c.cookies.set(sample_leave.PREVIEW_COOKIE, "Off")
     apply = c.get("/ra-leave/apply").text
-    assert "while appeals are off" in apply
+    assert "Leave in a blackout cannot be submitted." in apply  # no word of appeals
     assert "Examinations, 15 Nov – 28 Nov: no leave" in apply and "appeal only" not in apply
+
+
+def test_extra_leave_is_off_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Author, 2026-11-09: a default deployment does not expose extra leave
+    to RAs. With appeals at their default, Off, no RA page offers it: no
+    Extra leave tab, no Request extra leave, no hint on Apply, no Extra
+    leave in the balance, and the appeal page is not there."""
+    assert sample_leave.APPEALS_DEFAULT == "Off"
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", sample_leave.APPEALS_DEFAULT)
+    client = TestClient(ops_app())
+    for path in ("/ra-leave/", "/ra-leave/apply", "/ra-leave/cover", "/ra-leave/history"):
+        page = client.get(path).text
+        assert 'href="/ra-leave/appeal' not in page, path
+        assert ">Extra leave<" not in page and "Request extra leave" not in page, path
+    assert client.get("/ra-leave/appeal").status_code == 404

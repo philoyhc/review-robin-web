@@ -46,8 +46,10 @@ widths, the scripts' behavior, and whether the screens read right.
   - "Asked to cover · 1" (Ethan Wong, 4 Dec – 6 Dec);
   - Drafts, with D-0001 "2 days over your Official leave";
   - "My applications · 1 in progress".
-- [ ] **Tabs** read Home, Apply, My cover, History. Extra leave appears only
-  while appeals are open to this RA.
+- [ ] **Tabs** read Home, Apply, My cover, History. Appeals are Off by
+  default (2026-11-09), so no RA page offers or names extra leave, and
+  `/residentialops/ra-leave/appeal` is not found; the Extra leave tab
+  appears only while a preview or the policy opens appeals to this RA.
 - [ ] **Apply** names the approvers from the RA's slot and lists blackouts
   ahead. From the draft, **Apply** opens pre-filled with a draft notice.
   Every control is disabled.
@@ -63,7 +65,8 @@ widths, the scripts' behavior, and whether the screens read right.
   chips:
   - Hana Ito is asked to name new cover.
   - Gwen Ho's L-0105 is "Appeal to the Master", with the blackout row
-    "Examinations … appeal only".
+    "Examinations … appeal only" (with appeals Open previewed; by
+    default, Off, an Appeal-only blackout refuses leave).
   - Lucas Teo shows extra leave granted.
   - Faris Iskandar shows his rejection.
   - Maya Seah shows the refused appeal.
@@ -148,9 +151,12 @@ RA Leave title.
   - `/residentialops/ra-leave/appeal` as Chloe returns Not Found.
   - Staff Appeals offers "Open an appeal" to Sam and Rachel only.
   - Approval chain gains an "Opens appeals" column.
-- [ ] **Off:** Extra leave is not offered. The Appeals tab stays while
-  L-0105 is still open.
-- [ ] **Open** clears the preview, and the chip goes.
+- [ ] **Open:** every RA has the Extra leave tab and **Request extra
+  leave** on Home.
+- [ ] **Off** (the default) clears the preview, and the chip goes: no
+  Extra leave tab or link, the appeal page not found, and Apply says
+  only "Leave in a blackout cannot be submitted." The staff Appeals tab
+  stays while L-0105 is still open.
 
 ## 6. After looking
 

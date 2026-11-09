@@ -141,7 +141,13 @@ def test_each_page_shows_its_csv() -> None:
     )
 
 
-def test_every_page_is_labeled_a_placeholder(host_client: TestClient) -> None:
+def test_every_page_is_labeled_a_placeholder(
+    host_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from residentialapps.residentialops import sample_leave
+
+    # Appeals Open, so the extra leave page answers (Off by default, 2026-11-09).
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
     assert page_routes(), "no pages found"
     for path in page_routes():
         page = host_client.get(MOUNT + path)
@@ -790,8 +796,11 @@ def test_people_boxes_across_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ruled 2026-10-29: every box for choosing people shows each verified
     person as a pill with its remove button; a one-person box (a cover,
     the RA an appeal is opened for) offers its typeahead until one is
-    chosen."""
+    chosen. Appeals are Open here, so the appeal page's box is drawn (the
+    default is Off, 2026-11-09)."""
     from residentialapps.residentialops import sample_leave
+
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
 
     client = TestClient(ops_app())
     for path, label in (

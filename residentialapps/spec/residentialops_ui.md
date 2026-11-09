@@ -306,6 +306,11 @@ Until a screen is wired:
   Decide) keeps the chip unlinked;
   the RA pages' viewers each reaching states the others do not (audit,
   2026-10-29);
+- RA Leave's appeals are **Off by default** (author, 2026-11-09): a
+  default deployment does not expose extra leave to RAs, so no RA page
+  offers, links or names it and the appeal page is not found; Leave
+  policy turns it on, Open or By invitation. Extra leave already on an
+  RA's record still shows in their balance and History.
 - RA Leave previews each appeal mode (`Open`, `By invitation`, `Off`) in
   the browser, from a sample switch on Leave policy, a cookie each request
   reads; while one is previewed a **Previewing appeals** chip by

@@ -395,7 +395,7 @@ Where:
 - an RA has insufficient normal leave remaining; or
 - the RA otherwise wishes to request exceptional leave,
 
-the application should offer a **Request Extra Leave / Appeal** path.
+the application should offer a **Request Extra Leave / Appeal** path, while the Leave policy turns appeals on. They are **off by default** (author, 2026-11-09): a default deployment does not expose extra leave to RAs.
 
 The system should not simply block the user at the insufficient-entitlement validation step.
 
