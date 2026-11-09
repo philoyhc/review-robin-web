@@ -797,7 +797,7 @@ def away_this_week() -> tuple[Application, ...]:
     return away_between(*period()[2:])
 
 
-# Precinct leave's period (spec §22, "for a selected period"; author,
+# My Precinct's period (spec §22, "for a selected period"; author,
 # 2026-10-29): a week from TODAY by default, the week after, four weeks
 # from TODAY, or what is left of the term.
 PERIODS = (
@@ -1809,10 +1809,14 @@ class CalendarDay(TypedDict):
 
 
 def month_of(value: str | None) -> date:
-    """A `YYYY-MM` query value as the month's first day; anything else is
-    this month."""
+    """A `YYYY-MM` query value as the month's first day; anything else, or
+    a year more than 50 from today's (the calendar pads to whole weeks and
+    steps a month either way, so the far ends of the calendar must not be
+    reached), is this month."""
     try:
         year, month = (int(part) for part in (value or "").split("-"))
+        if abs(year - TODAY.year) > 50:
+            raise ValueError(year)
         return date(year, month, 1)
     except ValueError:
         return TODAY.replace(day=1)
@@ -1839,7 +1843,9 @@ def leave_calendar(viewer: str, first: date) -> tuple[tuple[CalendarDay, ...], .
         and a.start <= end
         and a.end >= start
     ]
-    spans = [(b.label, week_dates(b, PERIOD_LABEL)) for b in BLACKOUTS]
+    # Every academic year's blackouts, so a month in another year shows its own.
+    years = sorted({t.year for t in sample_data.TERMS})
+    spans = [(b.label, week_dates(b, year)) for b in BLACKOUTS for year in years]
     days: list[CalendarDay] = []
     day = start
     while day <= end:
@@ -1860,6 +1866,19 @@ def leave_calendar(viewer: str, first: date) -> tuple[tuple[CalendarDay, ...], .
         )
         day += timedelta(days=1)
     return tuple(tuple(days[i : i + 7]) for i in range(0, len(days), 7))
+
+
+def month_blackouts(first: date) -> tuple[tuple[str, date, date], ...]:
+    """The blackouts a calendar month touches, any academic year's, with
+    their dates: the phone's list names them in one line."""
+    last = shift_month(first, 1) - timedelta(days=1)
+    years = sorted({t.year for t in sample_data.TERMS})
+    return tuple(
+        (b.label, *span)
+        for b in BLACKOUTS
+        for year in years
+        if (span := week_dates(b, year)) and span[0] <= last and span[1] >= first
+    )
 
 
 def calendar_has_leave(weeks: tuple[tuple[CalendarDay, ...], ...]) -> bool:

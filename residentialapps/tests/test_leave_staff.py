@@ -45,10 +45,9 @@ def test_every_staff_page_answers_for_each_sample_viewer() -> None:
         f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decided", "precinct", "appeals")
     ]
     assert ">My Precinct</a>" in tabs  # renamed from Precinct leave (author, 2026-11-09)
-    assert (
-        "<h1>My Precinct</h1>" in c.get(STAFF + "precinct").text
-        or "My Precinct" in (c.get(STAFF + "precinct").text.split("<h1")[1].split("</h1>")[0])
-    )
+    precinct = c.get(STAFF + "precinct").text
+    assert "<title>My Precinct" in precinct and ">My Precinct</h1>" in precinct
+    assert ">My Precinct</a>" in c.get(STAFF).text.split('id="week-h"')[1]  # Home's button
     # Every overseer gets the same tabs, Appeals included while an appeal is open.
     assert (
         "/ra-leave/staff/appeals"
@@ -296,7 +295,7 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
     page = c.get(STAFF + "decide/" + past.id).text
     assert "‹ Decided" in page and "<dt>Waiting</dt>" not in page
     assert 'href="/ra-leave/staff/decided" aria-current="true"' in page
-    # An appeal opened from Appeals goes back there, not to Precinct leave.
+    # An appeal opened from Appeals goes back there, not to My Precinct.
     page = c.get(STAFF + "decide/L-0105" + RACHEL).text
     assert (
         "‹ Appeals" in page
@@ -629,5 +628,33 @@ def test_staff_home_shows_a_month_of_leave_in_a_calendar() -> None:
     november = c.get(STAFF + "?month=2026-11").text.split('id="cal-h"')[1]
     assert "<strong>November 2026</strong>" in november
     assert 'class="cal-leave pending" href="/ra-leave/staff/decide/L-0101"' in november
-    assert 'title="Examinations blackout"' in november
+    assert '<span class="cal-black">Examinations</span>' in november  # named, not hatched alone
+    assert ">Chloe Lim (pending)</a>" in november  # pending in words, not color alone
+    assert "Blackouts: Examinations, 15 Nov – 28 Nov." in november  # the phone's note
+    phone = november.split('<ul class="items cal-list">')[1].split("</ul>")[0]
+    assert "Fri 6 Nov" in phone and "Chloe Lim (pending)" in phone
     assert "No leave this month." in c.get(STAFF + "?month=2027-03").text
+    assert 'aria-current="date"' in page  # today, for a screen reader too
+    # The cold read: the calendar's far ends are never reached, and every
+    # academic year's blackouts show.
+    for far in ("0001-01", "9999-12", "2026-13", "x"):
+        assert c.get(STAFF + f"?month={far}").status_code == 200, far
+    last_year = sample_leave.leave_calendar("Sam Lee", sample_leave.date(2025, 11, 1))
+    assert any(d["blackout"] == "Examinations" for w in last_year for d in w)
+    assert sample_leave.shift_month(sample_leave.date(2027, 1, 1), -1) == sample_leave.date(
+        2026, 12, 1
+    )
+    # An application across two months shows in both (L-0103, 30 Oct – 1 Nov).
+    rachel = [
+        {
+            a.id
+            for w in sample_leave.leave_calendar("Rachel Yeo", sample_leave.date(2026, m, 1))
+            for d in w
+            if d["in_month"]
+            for a, _ in d["leave"]
+        }
+        for m in (10, 11)
+    ]
+    assert "L-0103" in rachel[0] and "L-0103" in rachel[1]
+    # The month links keep the cover filter.
+    assert "?cover=waiting&amp;month=2026-11" in c.get(STAFF + "?cover=waiting").text

@@ -192,7 +192,7 @@ model (author, 2026-10-27):
   for Notes alone; sorted, each row names its levels and the grouping
   rules go. Leave admin's Applications takes chips for all but ID and RA;
   Entitlements, Approval chain's Precincts, Sys admin's grants and audit
-  log, and Precinct leave sort only (`data-sort-auto`). Policy's row
+  log, and My Precinct sort only (`data-sort-auto`). Policy's row
   builders, Terms, the dashboard's cards, Delegates and the appeals
   tables, short or edited in place, take neither (author, 2026-10-29).
   On every sorted table an empty value (a None chip, an empty cell) sorts

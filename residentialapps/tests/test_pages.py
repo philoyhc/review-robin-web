@@ -775,7 +775,7 @@ def test_the_slots_table_sorts_with_a_notes_chip_only() -> None:
 def test_other_tables_sort_and_applications_has_column_chips() -> None:
     """Ruled 2026-10-29: Leave admin's Applications takes column chips (all
     but ID and RA) and sorting; Entitlements, Approval chain, Sys admin's
-    tables and Precinct leave sort (`data-sort-auto`)."""
+    tables and My Precinct sort (`data-sort-auto`)."""
     client = TestClient(ops_app())
     apps = client.get("/ra-leave/admin/applications").text
     chips = apps.split('data-col-toggles-for="apps-table"')[1].split("</p>")[0]

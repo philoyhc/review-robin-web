@@ -1,6 +1,6 @@
 """RA Leave's staff pages (`/ra-leave/staff/`): placeholder screens with
 sample data for a sample viewer chosen on the banner (`?as=`), segment 1C
-item 1. Deciding is mobile-critical; Precinct leave is desktop-oriented."""
+item 1. Deciding is mobile-critical; My Precinct is desktop-oriented."""
 
 from __future__ import annotations
 
