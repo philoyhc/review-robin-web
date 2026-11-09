@@ -4,7 +4,7 @@
 {% block content %}
   <div class="ptitle">
     <h1>Residential Operations</h1>
-    <span class="chips"><span class="chip chip-warn">Sample data</span>{{ viewing_chip(me, dict(sample.LANDING_VIEWERS).get(me, "")) }}</span>
+    <span class="chips"><span class="chip chip-warn">Sample data</span>{{ viewing_chip(me, dict(sample.LANDING_VIEWERS).get(me, ""), not ra_only) }}</span>
   </div>
   <p class="sub">Choose where to go. You see only what you can use.</p>
   <ul class="apps" aria-label="Applications">

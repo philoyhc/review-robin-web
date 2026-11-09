@@ -35,17 +35,27 @@ _ADDRESS = re.compile(r"[^@\s<>()\[\]]+@[^@\s<>()\[\]]+\.[^@\s<>()\[\]]+")
 # at the margin). Reading more as fenced only ever reads fewer addresses.
 _FENCE = re.compile(r"^( *)(`{3,}|~{3,})(.*)$")
 _OPEN, _CLOSE = "<!--", "-->"
-# A heading at the left margin. Under the heading "RA previewers" (any
-# level, any case), an address reaches only RA Leave's RA pages and the
-# landing (author, 2026-11-09); any other heading ends that section.
-_HEADING = re.compile(r"^(#{1,6})[ \t]+(.*?)[ \t#]*$")
-RA_SECTION = "ra previewers"
+# The RA previewers section (author, 2026-11-09): its addresses reach only
+# RA Leave's RA pages and the landing. It fails safe, since a heading
+# written a little differently must never make RA previewers full ones:
+# any line that is not a list item and says "RA previewer(s)", however
+# marked up ("## RA previewers:", "**RA previewers**", an underlined or
+# indented heading, plain prose), starts the section, and only a `#`
+# heading that does not say it ends the section. Reading the section as
+# starting early or ending late only ever narrows access.
+_RA_MARKER = re.compile(r"\bra previewers?\b")
+_ENDS_SECTION = re.compile(r"^ {0,3}#{1,6}(?:[ \t]|$)")
 # In that section a line at the margin may also be a distribution list as
 # a mail client copies it, "Name <a@b.edu>; Name <c@d.edu>": each address
-# in angle brackets names it (author, 2026-11-09), so the list is pasted
-# as it is. Only angle-bracketed addresses count there, so prose that
-# merely mentions one names nobody.
+# in angle brackets names it, so the list is pasted as it is. The whole
+# line must be names and angle-bracketed addresses, separated by `;` or
+# `,`, so prose, a quote or a table row that mentions one names nobody.
 _ANGLED = re.compile(r"<([^<>\s]+)>")
+_DISTRIBUTION = re.compile(r"(?:[^<>;|]*<[^<>\s]+>[ \t]*[;,]?[ \t]*)+")
+
+
+def _says_ra_previewers(line: str) -> bool:
+    return bool(_RA_MARKER.search(" ".join(re.sub(r"[^a-z]+", " ", line.lower()).split())))
 
 
 class PreviewList(NamedTuple):
@@ -129,11 +139,13 @@ def parse_preview_sections(text: str) -> PreviewList:
         head, opened, tail = line.partition(_OPEN)
         if opened:
             in_comment = _leaves_comment_open(_OPEN + tail)
-        if heading := _HEADING.match(head):
-            in_ra = heading.group(2).strip().lower() == RA_SECTION
-        elif address := _first_address(head):
+        if address := _first_address(head):
             (ra if in_ra else full).add(address)
-        elif in_ra and head[:1] not in (" ", ""):
+        elif _LIST_ITEM.match(head) is None and _says_ra_previewers(head):
+            in_ra = True
+        elif _ENDS_SECTION.match(head):
+            in_ra = False
+        elif in_ra and head[:1] not in (" ", "") and _DISTRIBUTION.fullmatch(head.rstrip()):
             ra.update(word.lower() for word in _ANGLED.findall(head) if _ADDRESS.fullmatch(word))
     return PreviewList(frozenset(full), frozenset(ra - full))
 

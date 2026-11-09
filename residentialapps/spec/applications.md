@@ -195,7 +195,8 @@ preview gate; so does Support Logs' Home (`/supportlogs/`, segment 1D).
 
 While the screens are placeholders on sample data (author, 2026-10-31),
 every placeholder router depends on `placeholders_previewers_only`
-(`residentialapps/web/pages.py`). A local run (`APP_ENV=local`) answers
+(`residentialapps/web/pages.py`), except RA Leave's RA pages and the
+landing, which take `ra_pages_previewers` (RA previewers, below). A local run (`APP_ENV=local`) answers
 anyone. Deployed, a placeholder answers only a **previewer**: the
 platform super-admin, or an account whose mail, sign-in name (UPN) or
 address the preview list names, compared folded; anyone else, signed in
@@ -213,16 +214,19 @@ or not, gets `404`. `/health` is never gated.
   is left must be one plain address (a Markdown link is not). The rest
   of the item, and every other line, is free prose. HTML comments and
   fenced code blocks are not read, so commenting an entry out removes it.
-- **RA previewers** (author, 2026-11-09): addresses under a heading
-  `RA previewers` (any level, any case) reach only RA Leave's RA pages
-  and the landing, which shows them the sample RA's view with no viewer
-  to switch to; every other page, and Support Logs, is `404`. Any other
-  heading ends the section, and an address also named outside it is a
-  full previewer. In this section a line at the margin may also be a
-  distribution list as a mail client copies it, `Name <a@b.edu>; Name
-  <c@d.edu>`: each angle-bracketed address names it, so the list is
-  pasted as it is. The RA pages and the landing take
-  `ra_pages_previewers` in place of `placeholders_previewers_only`.
+- **RA previewers** (author, 2026-11-09): addresses in the RA
+  previewers section reach only RA Leave's RA pages and the landing,
+  which shows them the sample RA's view with no viewer to switch to;
+  every other page, and Support Logs, is `404`. An address also named
+  outside the section is a full previewer. The section **fails safe**:
+  any line that is not a list item and says "RA previewer(s)", however
+  marked up (`## RA previewers`, `**RA previewers:**`, an underlined
+  heading, prose), starts it, and only a `#` heading that does not say
+  it ends it, so a heading written differently can only narrow access.
+  In the section a line at the margin may also be a distribution list
+  as a mail client copies it, `Name <a@b.edu>; Name <c@d.edu>`: when the
+  whole line is names and angle-bracketed addresses, each address names
+  it, so the list is pasted as it is; any other line stays free prose.
 - **A file that cannot be read** names nobody, as no file does, and is
   logged; the count of addresses read is logged at the first request.
 - **Read once per process**, so a change to the list ships with a

@@ -10,10 +10,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
 from cordware.identity import Identity
 from cordware.settings import IdentitySettings
+from residentialapps.residentialops import routes_leave_ra
 from residentialapps.residentialops.main import create_app as ops_app
 from residentialapps.supportlogs.main import create_app as support_app
 from residentialapps.web import pages as web_pages
@@ -275,8 +277,11 @@ def test_every_route_but_health_carries_the_gate(factory) -> None:
         elif web_pages.placeholders_previewers_only not in calls:
             missing.append(route.path)
     assert missing == []
-    assert all(p == "/" or p.startswith("/ra-leave/") for p in ra_gated), ra_gated
-    assert not any(p.startswith(("/ra-leave/staff", "/ra-leave/admin")) for p in ra_gated)
+    if factory is support_app:
+        assert ra_gated == []  # Support Logs has no RA previewers
+    else:
+        ra_router = {r.path for r in routes_leave_ra.router.routes if isinstance(r, APIRoute)}
+        assert set(ra_gated) == {"/"} | ra_router
 
 
 SECTIONED = """# Residential preview
@@ -294,7 +299,7 @@ Some RAs, to try RA Leave's RA pages.
 ## Not a heading: commented out
 -->
 - still.ra@example.edu
-Tan Wei Ling <Wei.Ling@example.edu>; Lim, Jun <jun.lim@example.edu>; not <an address>
+Tan Wei Ling <Wei.Ling@example.edu>; Lim, Jun <jun.lim@example.edu>;
     Indented <indented@example.edu> is not read.
 Prose naming bare@example.edu names nobody.
 
@@ -380,3 +385,57 @@ def test_a_full_previewer_keeps_the_landing_s_viewers(
     assert ops.get("/ra-leave/admin/").status_code == 200
     landing = ops.get("/?as=Sam%20Lee").text
     assert 'id="sample-viewer"' in landing and "Viewing as Sam Lee" in landing
+
+
+@pytest.mark.parametrize(
+    "heading",
+    [
+        "## RA previewers",
+        "RA previewers\n=============",
+        "  ## RA previewers",
+        "## RA previewers:",
+        "## RA previewers (RA Leave only)",
+        "**RA previewers**",
+        "##RA previewers",
+        "## RA  previewers",
+        "### ra previewer",
+        "RA previewers, to try RA Leave:",
+    ],
+)
+def test_a_heading_written_differently_still_keeps_ra_previewers_ra_only(heading: str) -> None:
+    """The cold read: the section fails safe. However the heading is
+    written, those under it never become full previewers."""
+    text = f"- full@example.edu\n\n{heading}\n\n- ra@example.edu\nName <pasted@example.edu>\n"
+    full, ra = web_pages.parse_preview_sections(text)
+    assert full == {"full@example.edu"}
+    assert ra == {"ra@example.edu", "pasted@example.edu"}
+
+
+def test_a_list_item_or_address_saying_ra_previewers_starts_no_section() -> None:
+    text = "- ra.previewers@example.edu\n- note: RA previewers come later\n- after@example.edu\n"
+    assert web_pages.parse_preview_sections(text).full == {
+        "ra.previewers@example.edu",
+        "after@example.edu",
+    }
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Questions to <owner@example.edu>.",
+        "> <quote@example.edu>",
+        "| <table@example.edu> |",
+        "Ask <a@example.edu> or <b@example.edu> about it: soon",
+    ],
+)
+def test_only_a_whole_distribution_line_names_its_addresses(line: str) -> None:
+    text = f"## RA previewers\n\n{line}\n"
+    assert web_pages.parse_preview_sections(text) == (frozenset(), frozenset())
+
+
+def test_an_ra_previewer_s_landing_chip_is_not_a_dead_link(
+    sectioned_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    signed_in(monkeypatch, person(mail="ra.one@example.edu"))
+    landing = TestClient(ops_app()).get("/").text
+    assert 'href="#sample-viewer"' not in landing
