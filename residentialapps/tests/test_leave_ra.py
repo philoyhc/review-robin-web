@@ -537,3 +537,20 @@ def test_home_s_side_shows_only_the_cards_an_ra_has() -> None:
     assert kai.index('id="mine-h"') < kai.index('id="ask-h"') and 'id="drafts-h"' not in kai
     hana = client().get(RA + "?as=Hana%20Ito").text.split('<div class="side">')[1]
     assert 'id="mine-h"' in hana and 'id="drafts-h"' not in hana and 'id="ask-h"' not in hana
+
+
+def test_apply_puts_dates_beside_leave_type_and_its_day_count() -> None:
+    """Author, 2026-11-09: First day and Last day on the left, Leave type
+    and the days of leave on the right (that order on a phone), then
+    Covering RA and Remarks the full width."""
+    page = client().get(RA + "apply").text
+    pair = page.split('class="form-pair"')[1].split('class="field-wide full"')[0]
+    order = [pair.index(f'id="{i}"') for i in ("first", "last", "ltype", "days")]
+    assert order == sorted(order)
+    assert ">Choose your dates</output>" in pair
+    after = page.split('class="form-pair"')[1]
+    assert after.index('for="cover"') < after.index('for="remarks"')
+    assert '<div class="field-wide full"><label for="remarks">' in page
+    draft = sample_leave.my_drafts("Chloe Lim")[0]
+    with_draft = client().get(RA + f"apply?draft={draft.id}").text
+    assert f">{draft.days} day{'s' if draft.days != 1 else ''}</output>" in with_draft

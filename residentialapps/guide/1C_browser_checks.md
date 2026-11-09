@@ -56,7 +56,9 @@ widths, the scripts' behavior, and whether the screens read right.
   Extra leave already on an RA's record would still show on their own
   pages; no sample viewer has such a record, so a test covers it.
 - [ ] **Apply** names the approvers from the RA's slot and lists blackouts
-  ahead. From the draft, **Apply** opens pre-filled with a draft notice.
+  ahead. Its form puts First day and Last day on the left, Leave type and
+  Days of leave on the right (stacked in that order on a phone), then
+  Covering RA and Remarks across the full width. From the draft, **Apply** opens pre-filled with a draft notice.
   Every control is disabled.
 - [ ] **An application** (L-0101 as Chloe):
   - "‹ My history" back link, with the History tab marked;
