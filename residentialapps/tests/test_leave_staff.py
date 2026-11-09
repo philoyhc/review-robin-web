@@ -63,6 +63,10 @@ def test_each_viewer_s_queue_is_the_decision_theirs_to_make() -> None:
     home = c.get(STAFF).text
     assert 'class="tile' not in home
     assert 'href="/ra-leave/staff/?cover=waiting">Waiting on cover · 2</a>' in home
+    assert (
+        'href="/ra-leave/staff/?as=Sam%20Lee&amp;cover=waiting">Waiting on cover · 1</a>'
+        in c.get(STAFF + SAM).text
+    )
     waiting = c.get(STAFF + "?cover=waiting").text
     assert (
         ids(waiting, "await-h") == ["L-0109", "L-0114"] and "Show everything awaiting me" in waiting
@@ -362,7 +366,7 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
         {"appointments": ("Master", "Admin", "Exec"), "names": ()},
     )
     assert len(sample_leave.scope("Hui Min Goh")) == 9
-    assert "Nothing awaits you." in c.get(STAFF + "decide?as=Hui%20Min%20Goh").text
+    assert "Nothing awaits you." in c.get(STAFF + "?as=Hui%20Min%20Goh").text
 
 
 def test_oversight_follows_the_policy_setting(monkeypatch) -> None:

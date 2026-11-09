@@ -1798,11 +1798,6 @@ def later_this_week(viewer: str) -> tuple[Application, ...]:
     )
 
 
-def coming_up(viewer: str) -> tuple[Application, ...]:
-    """`upcoming()` in the viewer's scope, for the staff home (§24)."""
-    return tuple(a for a in upcoming() if a.precinct in scope(viewer))
-
-
 def balance_of(application: Application) -> EntitlementRow:
     return next(
         r
