@@ -34,9 +34,14 @@ def test_each_viewer_sees_only_what_they_reach() -> None:
     ]
     assert apps("?as=Nobody") == apps()  # an unknown viewer: the default
     page = TestClient(ops_app()).get("/").text
+    # RA Events is hidden from RAs for now (author, 2026-11-09), on the
+    # landing and in the switcher; staff still see it coming.
+    assert "RA Events" not in page
+    assert "RA Events" not in TestClient(ops_app()).get("/ra-leave/").text
+    staff = TestClient(ops_app()).get("/?as=Daniel%20Koh").text
     assert (
         '<span class="app app-off"><span class="app-name">RA Events</span>'
-        '<span class="app-what">Coming later' in page
+        '<span class="app-what">Coming later' in staff
     )
     assert "Sample data" in page and "Viewing as Chloe Lim" in page
 

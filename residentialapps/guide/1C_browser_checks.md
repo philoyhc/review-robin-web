@@ -31,7 +31,8 @@ widths, the scripts' behavior, and whether the screens read right.
   overflow, and the bar scrolls away with the page.
 - [ ] **The landing** (`/residentialops/`): its viewer chips change the
   cards.
-  - Chloe has RA Leave and RA Events "Coming later".
+  - Chloe has RA Leave only: RA Events is hidden from RAs for now
+    (2026-11-09), on the landing and in the switcher.
   - Hui Min Goh has RA Events only.
   - Rachel and Sam add RA Leave admin, Rosters and setup and Sys admin.
 - [ ] **The switcher** (top left) lists the viewer's areas, with **All

@@ -52,7 +52,10 @@ def choices(viewer: str) -> list[dict[str, str]]:
                 "what": "Decisions awaiting you and your Precinct's leave",
             }
         )
-    found.append({"label": "RA Events", "path": "", "what": "Coming later"})
+    # RA Events is hidden from RAs for now (author, 2026-11-09): an RA's
+    # landing and switcher offer RA Leave alone.
+    if not is_ra:
+        found.append({"label": "RA Events", "path": "", "what": "Coming later"})
     if is_sys_admin:
         found += [
             {

@@ -66,7 +66,7 @@ Events has no spec yet, so its rows are provisional.
 
 | Page | Path | Staff | RA |
 |---|---|---|---|
-| Landing | `/` | Choose an application the viewer reaches: RA Leave now, on the viewer's own side (RA or staff), RA Events later; RA Leave admin, Rosters and setup and Sys admin for sys admins (author, 2026-10-28) · mobile-critical | The same · mobile-critical |
+| Landing | `/` | Choose an application the viewer reaches: RA Leave now, on the viewer's own side (RA or staff), RA Events later, hidden from RAs for now (author, 2026-11-09); RA Leave admin, Rosters and setup and Sys admin for sys admins (author, 2026-10-28) · mobile-critical | The same · mobile-critical |
 | Not registered | any path | First sign-in not yet linked · mobile-critical | The same · mobile-critical |
 | **RA Leave, RAs** | `/ra-leave/` | — | — |
 | RA home | `/ra-leave/` | — | Balance, cover requests to answer, drafts, current applications, Apply (§8) · mobile-critical |
