@@ -1903,6 +1903,14 @@ def appeals_on() -> bool:
     return POLICY["appeals"] != "Off"
 
 
+def sees_appeals(viewer: str) -> bool:
+    """Whether a staff member has the Appeals tab: while the Master decides
+    appeals, for everyone but an RF (author, 2026-11-09), whose appeals
+    are not theirs to decide or open."""
+    abbrev = next((s.abbrev for s in sample_data.STAFF if s.name == viewer), "")
+    return appeals_decided() and abbrev != "RF"
+
+
 def appeals_decided() -> bool:
     """Whether the Master still decides appeals: while they are on, or
     while one made before they were turned off is open (author,

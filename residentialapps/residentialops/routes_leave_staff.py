@@ -34,7 +34,9 @@ def _page(request: Request, template: str, **context: object) -> Response:
         request,
         f"residentialops/leave/staff/{template}",
         area="RA Leave",
-        tabs=leave_staff_tabs(as_query, appeals=sample_leave.appeals_decided()) if oversees else (),
+        tabs=leave_staff_tabs(as_query, appeals=sample_leave.sees_appeals(viewer))
+        if oversees
+        else (),
         areas=areas_for(viewer),
         leave=sample_leave,
         sample=sample_data,
@@ -82,7 +84,7 @@ def decide(request: Request, application_id: str) -> Response:
         back = ("/ra-leave/staff/", "Home")
     elif any(a.id == found.id for a, _, _ in sample_leave.decided(viewer)):
         back = ("/ra-leave/staff/decided", "Decided")
-    elif sample_leave.appeals_decided() and (
+    elif sample_leave.sees_appeals(viewer) and (
         found.appeal or found.ra in sample_leave.invitable_ras(viewer)
     ):
         back = ("/ra-leave/staff/appeals", "Appeals")

@@ -48,10 +48,15 @@ def test_every_staff_page_answers_for_each_sample_viewer() -> None:
     precinct = c.get(STAFF + "precinct").text
     assert "<title>My Precinct" in precinct and ">My Precinct</h1>" in precinct
     assert ">My Precinct</a>" in c.get(STAFF).text.split('id="week-h"')[1]  # Home's button
-    # Every overseer gets the same tabs, Appeals included while an appeal is open.
+    # Every overseer but an RF gets Appeals while an appeal is open; an RF
+    # (Daniel Koh) has no Appeals tab (author, 2026-11-09).
     assert (
         "/ra-leave/staff/appeals"
-        in c.get(STAFF).text.split('class="tabs-in"')[1].split("</nav>")[0]
+        not in c.get(STAFF).text.split('class="tabs-in"')[1].split("</nav>")[0]
+    )
+    assert (
+        "/ra-leave/staff/appeals?as=Priya%20Raman"
+        in c.get(STAFF + "?as=Priya%20Raman").text.split('class="tabs-in"')[1].split("</nav>")[0]
     )
     assert sample_leave.staff_viewer("Nobody") == "Daniel Koh"
 
@@ -350,9 +355,8 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
         r'<a href="/ra-leave/staff/(\w*)',
         c.get(STAFF + q).text.split('class="tabs-in"')[1].split("</nav>")[0],
     )
-    assert (
-        tabs("?as=Priya%20Raman") == tabs("") == tabs(SAM) == ["", "decided", "precinct", "appeals"]
-    )
+    assert tabs("?as=Priya%20Raman") == tabs(SAM) == ["", "decided", "precinct", "appeals"]
+    assert tabs("") == ["", "decided", "precinct"]  # an RF: no Appeals tab
     assert "Nothing awaits you." in c.get(STAFF + "?as=Priya%20Raman").text
     # Untick the admin: Rachel Yeo holds no slot, so she sees no RA and
     # her final approval leaves every Precinct with a gap (ruled 2026-10-29).
