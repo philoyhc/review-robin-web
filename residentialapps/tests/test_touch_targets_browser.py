@@ -11,6 +11,7 @@ from __future__ import annotations
 import pytest
 from playwright.sync_api import Page
 
+from residentialapps.residentialops import sample_leave
 from residentialapps.tests.test_sort_persistence_browser import (  # noqa: F401  (the fixture)
     ORIGIN,
     page,
@@ -45,9 +46,17 @@ SMALL = """() => [...document.querySelectorAll('a[href], button, input, select, 
 
 
 @pytest.mark.parametrize("path", PHONE_PAGES)
-def test_every_control_is_a_thumb_s_width_on_a_phone(page: Page, path: str) -> None:  # noqa: F811
+def test_every_control_is_a_thumb_s_width_on_a_phone(
+    page: Page,  # noqa: F811
+    path: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Appeals are Off by default (author, 2026-11-09); open them so the
+    # appeal page is there to measure.
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
     page.set_viewport_size({"width": 390, "height": 844})
-    page.goto(ORIGIN + path)
+    response = page.goto(ORIGIN + path)
+    assert response is not None and response.status == 200, path
     assert page.evaluate(SMALL) == []
 
 

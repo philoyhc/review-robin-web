@@ -47,9 +47,10 @@ widths, the scripts' behavior, and whether the screens read right.
   - Drafts, with D-0001 "2 days over your Official leave";
   - "My applications · 1 in progress".
 - [ ] **Tabs** read Home, Apply, My cover, History. Appeals are Off by
-  default (2026-11-09), so no RA page offers or names extra leave, and
-  `/residentialops/ra-leave/appeal` is not found; the Extra leave tab
+  default (2026-11-09), so no RA page offers extra leave or links to it,
+  and `/residentialops/ra-leave/appeal` is not found; the Extra leave tab
   appears only while a preview or the policy opens appeals to this RA.
+  Records already on file still show (Gwen Ho, Lucas Teo, Maya Seah).
 - [ ] **Apply** names the approvers from the RA's slot and lists blackouts
   ahead. From the draft, **Apply** opens pre-filled with a draft notice.
   Every control is disabled.
@@ -65,8 +66,8 @@ widths, the scripts' behavior, and whether the screens read right.
   chips:
   - Hana Ito is asked to name new cover.
   - Gwen Ho's L-0105 is "Appeal to the Master", with the blackout row
-    "Examinations … appeal only" (with appeals Open previewed; by
-    default, Off, an Appeal-only blackout refuses leave).
+    "Examinations … appeal only", whatever the mode; only Apply's
+    blackout list follows it, reading "no leave" while appeals are Off.
   - Lucas Teo shows extra leave granted.
   - Faris Iskandar shows his rejection.
   - Maya Seah shows the refused appeal.

@@ -397,7 +397,7 @@ Where:
 
 the application should offer a **Request Extra Leave / Appeal** path, while the Leave policy turns appeals on. They are **off by default** (author, 2026-11-09): a default deployment does not expose extra leave to RAs.
 
-The system should not simply block the user at the insufficient-entitlement validation step.
+While appeals are on, the system should not simply block the user at the insufficient-entitlement validation step. While they are off, an application beyond entitlement cannot be submitted, and Apply asks the RA to shorten it.
 
 Instead it should explain:
 

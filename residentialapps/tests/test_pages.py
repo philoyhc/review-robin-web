@@ -165,12 +165,20 @@ def test_the_chrome_carries_the_switcher_tabs_and_theme(host_client: TestClient)
     assert page.count('"rrw-theme"') == 2
 
 
-def test_no_page_emits_a_path_outside_its_mount(host_client: TestClient) -> None:
+def test_no_page_emits_a_path_outside_its_mount(
+    host_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """The GET crawl: every link, form and source on every page is under
     the mount, a fragment, Easy Auth's, or the host's landing page; the
-    inline favicon is not a path."""
+    inline favicon is not a path. Appeals are opened so the appeal page,
+    Off by default, is crawled too."""
+    from residentialapps.residentialops import sample_leave
+
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
     for path in [*page_routes(), f"/rosters/people/{CHLOE}"]:
-        for link in LINK.findall(FAVICON.sub("", host_client.get(MOUNT + path).text)):
+        response = host_client.get(MOUNT + path)
+        assert response.status_code == 200, path
+        for link in LINK.findall(FAVICON.sub("", response.text)):
             assert link == "/" or link.startswith((f"{MOUNT}/", "#", "/.auth/")), (path, link)
 
 

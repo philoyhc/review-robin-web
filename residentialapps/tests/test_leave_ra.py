@@ -428,15 +428,40 @@ def test_apply_s_blackouts_follow_whether_the_ra_may_appeal() -> None:
     assert "Examinations, 15 Nov – 28 Nov: no leave" in apply and "appeal only" not in apply
 
 
+def test_at_the_default_open_is_previewed_and_off_clears_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The guide's default flow: the policy is Off, so previewing Open
+    shows the Extra leave tab and previewing Off clears the preview."""
+    monkeypatch.undo()
+    assert sample_leave.policy_appeals() == "Off"
+    c = TestClient(ops_app())
+    c.get("/ra-leave/admin/policy/preview-appeals?mode=Open")
+    home = c.get("/ra-leave/").text
+    assert ">Previewing appeals: Open</a>" in home
+    assert "/ra-leave/appeal" in home.split('class="tabs-in"')[1].split("</nav>")[0]
+    assert c.get("/ra-leave/appeal").status_code == 200
+    c.get("/ra-leave/admin/policy/preview-appeals?mode=Off")
+    assert "Previewing appeals" not in c.get("/ra-leave/").text
+    assert c.get("/ra-leave/appeal").status_code == 404
+
+
 def test_extra_leave_is_off_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     """Author, 2026-11-09: a default deployment does not expose extra leave
     to RAs. With appeals at their default, Off, no RA page offers it: no
     Extra leave tab, no Request extra leave, no hint on Apply, no Extra
     leave in the balance, and the appeal page is not there."""
     assert sample_leave.APPEALS_DEFAULT == "Off"
-    monkeypatch.setitem(sample_leave.POLICY, "appeals", sample_leave.APPEALS_DEFAULT)
+    monkeypatch.undo()  # this file's fixture opens appeals; see the shipped policy
+    assert sample_leave.policy_appeals() == sample_leave.APPEALS_DEFAULT
     client = TestClient(ops_app())
-    for path in ("/ra-leave/", "/ra-leave/apply", "/ra-leave/cover", "/ra-leave/history"):
+    for path in (
+        "/ra-leave/",
+        "/ra-leave/apply",
+        "/ra-leave/cover",
+        "/ra-leave/history",
+        "/ra-leave/applications/L-0101",
+    ):
         page = client.get(path).text
         assert 'href="/ra-leave/appeal' not in page, path
         assert ">Extra leave<" not in page and "Request extra leave" not in page, path

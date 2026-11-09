@@ -44,7 +44,7 @@ def test_every_staff_page_answers_for_each_sample_viewer() -> None:
     assert re.findall(r'<a href="([^"]*)"', tabs) == [
         f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decide", "decided", "precinct", "appeals")
     ]
-    # Every overseer gets the same tabs, Appeals included while appeals are on.
+    # Every overseer gets the same tabs, Appeals included while an appeal is open.
     assert (
         "/ra-leave/staff/appeals"
         in c.get(STAFF).text.split('class="tabs-in"')[1].split("</nav>")[0]
@@ -131,7 +131,7 @@ def test_whatever_a_viewer_may_decide_opens(monkeypatch) -> None:
         {"first_types": ("RF", "RSLM")},
         {"first": "none"},
         {"final": "named", "final_names": ("Daniel Koh",)},
-        {"appeals": "Off"},
+        {"appeals": "Open"},
         {"appeals": "By invitation"},
     )
     for setting, day in itertools.product(settings, (None, sample_leave.date(2026, 12, 10))):
