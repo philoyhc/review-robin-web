@@ -142,11 +142,8 @@ landing card.
 | Chloe Lim | RA | cover asked of her, a draft, an email not sent |
 | Hana Ito | RA | her cover declined: name new cover |
 | Ethan Wong | RA | awaiting cover confirmation; a withdrawn application; a draft |
-| Gwen Ho | RA | an appeal with the Master |
-| Lucas Teo | RA | extra leave granted |
 | Faris Iskandar | RA | a rejected application |
-| Maya Seah | RA | an appeal the Master refused |
-| Kai Ng | RA | approved leave cancelled; invited to appeal (preview appeals by invitation) |
+| Kai Ng | RA | approved leave cancelled; invited to apply for extra leave |
 | Daniel Koh | staff | RF, first approver for Cypress A 04-12 |
 | Priya Raman | staff | RSLM, no decisions under the policy |
 | Rachel Yeo | staff | Residential Admin, final approver |
@@ -207,42 +204,6 @@ Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residen
 uvicorn cordware.main:app --reload
 ```
 
-### Gwen Ho (RA)
-
-An appeal with the Master.
-
-```powershell
-Set-Location C:\GitHub\review-robin-web
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\.venv\Scripts\Activate.ps1
-$env:APP_ENV = "local"
-$env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "gwen.ho@example.edu"
-$env:FAKE_AUTH_NAME = "Gwen Ho"
-$env:FAKE_AUTH_SUPER_ADMIN = "false"
-Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/?as=Gwen%20Ho" } | Out-Null
-uvicorn cordware.main:app --reload
-```
-
-### Lucas Teo (RA)
-
-Extra leave granted.
-
-```powershell
-Set-Location C:\GitHub\review-robin-web
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\.venv\Scripts\Activate.ps1
-$env:APP_ENV = "local"
-$env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "lucas.teo@example.edu"
-$env:FAKE_AUTH_NAME = "Lucas Teo"
-$env:FAKE_AUTH_SUPER_ADMIN = "false"
-Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/?as=Lucas%20Teo" } | Out-Null
-uvicorn cordware.main:app --reload
-```
-
 ### Faris Iskandar (RA)
 
 A rejected application.
@@ -261,27 +222,9 @@ Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residen
 uvicorn cordware.main:app --reload
 ```
 
-### Maya Seah (RA)
-
-An appeal the Master refused.
-
-```powershell
-Set-Location C:\GitHub\review-robin-web
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\.venv\Scripts\Activate.ps1
-$env:APP_ENV = "local"
-$env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "maya.seah@example.edu"
-$env:FAKE_AUTH_NAME = "Maya Seah"
-$env:FAKE_AUTH_SUPER_ADMIN = "false"
-Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/?as=Maya%20Seah" } | Out-Null
-uvicorn cordware.main:app --reload
-```
-
 ### Kai Ng (RA)
 
-Approved leave cancelled; invited to appeal (preview appeals by invitation).
+Approved leave cancelled; invited to apply for extra leave.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web

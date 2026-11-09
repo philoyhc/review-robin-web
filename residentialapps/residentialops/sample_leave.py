@@ -1273,16 +1273,16 @@ def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
 # wired (segment 1C plan, "Viewing as"): Chloe Lim by default.
 VIEWER = "Chloe Lim"
 # The RA pages' sample viewers (`?as=`; audit, 2026-10-29), each reaching
-# states Chloe Lim's applications do not.
+# states Chloe Lim's applications do not. Extra leave is not shown to RAs
+# by default (author, 2026-11-09), so the viewers there for it alone (an
+# appeal with the Master, granted, refused) are gone; Kai Ng's invitation
+# is the one way an RA reaches it.
 RA_VIEWERS = (
     ("Chloe Lim", "cover asked of her, a draft, an email not sent"),
     ("Hana Ito", "her cover declined: name new cover"),
     ("Ethan Wong", "awaiting cover confirmation; a withdrawn application; a draft"),
-    ("Gwen Ho", "an appeal with the Master"),
-    ("Lucas Teo", "extra leave granted"),
     ("Faris Iskandar", "a rejected application"),
-    ("Maya Seah", "an appeal the Master refused"),
-    ("Kai Ng", "approved leave cancelled; invited to appeal (preview appeals by invitation)"),
+    ("Kai Ng", "approved leave cancelled; invited to apply for extra leave"),
 )
 
 
