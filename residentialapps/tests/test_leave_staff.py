@@ -305,7 +305,7 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
     page = c.get(STAFF + "decide/" + past.id).text
     assert "‹ Decided" in page and "<dt>Waiting</dt>" not in page
     assert 'href="/ra-leave/staff/decided" aria-current="true"' in page
-    # An appeal opened from Appeals goes back there, not to My Precinct.
+    # An appeal opened from Appeals goes back there, not to Precinct.
     page = c.get(STAFF + "decide/L-0105" + RACHEL).text
     assert (
         "‹ Appeals" in page
@@ -680,9 +680,12 @@ def test_the_precinct_page_counts_in_its_cards_and_lists_by_precinct_last() -> N
     assert 'class="tile' not in page
     order = [page.index(f'id="{h}"') for h in ("away-h", "upcoming-h", "clash-h", "team-h")]
     assert order == sorted(order)
-    upcoming = sample_leave.upcoming_and_pending("Sam Lee")
-    assert f'Upcoming and pending <span class="count">· {len(upcoming)}</span>' in page
-    assert re.search(r'Away, this week <span class="count">· \d+</span>', page)
+    assert 'Upcoming and pending <span class="count">· 9</span>' in page
+    rows = page.split('id="upcoming-h"')[1].split("</table>")[0].count("<tr><td")
+    assert rows == 9  # the count is the table's rows
+    assert 'Away, this week <span class="count">· 3</span>' in page
+    assert 'Clashes <span class="count">· 1</span>' in page
+    assert ">Precinct</a>" in client().get(STAFF + "?as=Priya%20Raman").text  # an RSLM
     assert (
         '<div class="period-row"><span id="period-dates"' in page
         and "Show period</button></div>" in page

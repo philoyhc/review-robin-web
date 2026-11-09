@@ -18,9 +18,7 @@
       </select></div>
     <div class="period-row"><span id="period-dates" class="subtle small">{{ leave.short_date(first) }} – {{ leave.short_date(last) }}</span><button type="submit" class="btn btn-secondary">Show period</button></div>
   </form>
-  {% set apps = leave.in_scope(me) %}
   {% set away = leave.away_between(first, last) | selectattr("precinct", "in", precincts) | list %}
-  {% set pending = apps | selectattr("stage", "in", leave.OPEN_STAGES) | list %}
   {% set clashes = leave.clashes(first, last) | selectattr(0, "in", precincts) | list %}
   {% set upcoming = leave.upcoming_and_pending(me) %}
   <div class="stack gap-above">

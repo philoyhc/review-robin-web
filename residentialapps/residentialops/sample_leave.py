@@ -797,7 +797,7 @@ def away_this_week() -> tuple[Application, ...]:
     return away_between(*period()[2:])
 
 
-# My Precinct's period (spec §22, "for a selected period"; author,
+# The Precinct page's period (spec §22, "for a selected period"; author,
 # 2026-10-29): a week from TODAY by default, the week after, four weeks
 # from TODAY, or what is left of the term.
 PERIODS = (

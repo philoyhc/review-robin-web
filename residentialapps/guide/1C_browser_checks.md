@@ -113,7 +113,7 @@ widths, the scripts' behavior, and whether the screens read right.
 - [ ] **Precinct as Sam** (no count tiles; the cards carry counts, By
   Precinct last; the dates under the period, beside Show period), This week:
   - Away 3 (Maya Seah, Olivia Ng, Pranav Iyer);
-  - Pending 7;
+  - Upcoming and pending 9;
   - one clash, Willow A 13-25: Olivia Ng and Pranav Iyer, with "Away too"
     on Pranav.
   
