@@ -51,7 +51,7 @@ widths, the scripts' behavior, and whether the screens read right.
   page offers her extra leave or links to it, and
   `/residentialops/ra-leave/appeal` is not found; the Extra leave tab
   appears only for an invited RA (Kai Ng) or while Open is previewed.
-  Records already on file still show (Gwen Ho, Lucas Teo, Maya Seah).
+  Records already on file still show on an RA's own pages.
 - [ ] **Apply** names the approvers from the RA's slot and lists blackouts
   ahead. From the draft, **Apply** opens pre-filled with a draft notice.
   Every control is disabled.
@@ -66,12 +66,10 @@ widths, the scripts' behavior, and whether the screens read right.
 - [ ] **Each RA viewer's state** reads as the table says. Switch with the
   chips:
   - Hana Ito is asked to name new cover.
-  - Gwen Ho's L-0105 is "Appeal to the Master", with the blackout row
-    "Examinations … appeal only", whatever the mode; only Apply's
-    blackout list follows it, reading "no leave" while appeals are Off.
-  - Lucas Teo shows extra leave granted.
   - Faris Iskandar shows his rejection.
-  - Maya Seah shows the refused appeal.
+  - Kai Ng shows approved leave cancelled, and the Extra leave tab.
+  - No viewer is there for an appeal alone (2026-11-09): Gwen Ho, Lucas
+    Teo and Maya Seah are not offered.
 - [ ] **Text fits at 360 px**: no row or chip overflows its card.
 
 ## 3. Staff side

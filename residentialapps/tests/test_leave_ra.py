@@ -392,19 +392,24 @@ def test_each_appeal_mode_can_be_previewed() -> None:
     )  # the landing does not know her
 
 
-def test_the_ra_sees_an_appeal_s_split_and_a_refused_appeal() -> None:
-    """The 1C.1 audit (2026-10-29): granted extra leave shows apart from
-    entitlement (§7.5); a refused appeal reads in history (scenario I); the
-    appeal page works an example."""
+def test_the_appeal_page_works_an_example() -> None:
+    """The 1C.1 audit (2026-10-29): the appeal page works an example."""
     c = TestClient(ops_app())
-    lucas = c.get("/ra-leave/applications/L-0118?as=Lucas%20Teo").text
-    assert "<dt>Extra leave</dt><dd>3 days, kept apart (spec §7.5)</dd>" in lucas
-    maya = c.get("/ra-leave/history?as=Maya%20Seah").text
-    assert "Rejected by Sam Lee" in maya
     assert (
         "For example, 4 days of Personal leave asked with 2 available: 2 from your entitlement, "
         "2 extra" in c.get("/ra-leave/appeal").text
     )
+
+
+def test_no_ra_viewer_is_there_for_extra_leave_alone() -> None:
+    """Author, 2026-11-09: extra leave is not shown to RAs, so the RA pages'
+    viewers no longer include those whose only state was an appeal; a name
+    not among them falls back to Chloe Lim."""
+    names = [name for name, _ in sample_leave.RA_VIEWERS]
+    assert names == ["Chloe Lim", "Hana Ito", "Ethan Wong", "Faris Iskandar", "Kai Ng"]
+    card = TestClient(ops_app()).get("/ra-leave/").text.split('id="sample-viewer"')[1]
+    assert "appeal" not in card and "Gwen Ho" not in card
+    assert sample_leave.ra_viewer("Lucas Teo") == "Chloe Lim"
 
 
 def test_apply_names_approvers_and_blackouts_and_warns_on_a_draft_over_balance() -> None:

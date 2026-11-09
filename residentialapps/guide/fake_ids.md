@@ -142,11 +142,8 @@ landing card.
 | Chloe Lim | RA | cover asked of her, a draft, an email not sent |
 | Hana Ito | RA | her cover declined: name new cover |
 | Ethan Wong | RA | awaiting cover confirmation; a withdrawn application; a draft |
-| Gwen Ho | RA | an appeal with the Master |
-| Lucas Teo | RA | extra leave granted |
 | Faris Iskandar | RA | a rejected application |
-| Maya Seah | RA | an appeal the Master refused |
-| Kai Ng | RA | approved leave cancelled; invited to appeal (preview appeals by invitation) |
+| Kai Ng | RA | approved leave cancelled; invited to apply for extra leave |
 | Daniel Koh | staff | RF, first approver for Cypress A 04-12 |
 | Priya Raman | staff | RSLM, no decisions under the policy |
 | Rachel Yeo | staff | Residential Admin, final approver |
