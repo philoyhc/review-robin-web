@@ -5,9 +5,10 @@
   {{ title("My leave", leave, viewing(me)) }}
   {# The balance first, as the spec orders the page (§8.1): one card,
      its leave types side by side, even on a phone (author, 2026-11-09:
-     no tiles repeating it). Drafts are the side column's, starting at
-     the top (author, 2026-11-08), and hide with it when there are none. #}
-  {% set drafts = leave.my_drafts(me) %}
+     no tiles repeating it). My applications, which every RA has, is the
+     side column's, starting at the top (author, 2026-11-08); on a phone
+     it follows, so the spec's order holds: balance, cover asked, drafts,
+     applications (§8.1). #}
   <div class="split">
     <div class="main stack">
       <section class="card card-pad" aria-labelledby="bal-h">
@@ -48,6 +49,16 @@
           </ul>
         </section>
       {% endif %}
+      {% set drafts = leave.my_drafts(me) %}
+      {% if drafts %}
+      <section class="card card-pad" aria-labelledby="drafts-h">
+        <h2 id="drafts-h">Drafts <span class="count">· {{ drafts | length }}</span></h2>
+        <p class="sub">Not sent: no one is asked or told until you submit.</p>
+        <ul class="items">{% for d in drafts %}{{ draft_item(d, leave) }}{% endfor %}</ul>
+      </section>
+      {% endif %}
+    </div>
+    <div class="side">
       <section class="card card-pad" aria-labelledby="mine-h">
         {% set open = leave.my_applications(me) | selectattr("stage", "in", leave.OPEN_STAGES) | list %}
         <h2 id="mine-h">My applications <span class="count">· {{ open | length }} in progress</span></h2>
@@ -59,13 +70,6 @@
         <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/history') }}{{ as_query }}">All my applications</a>
       </section>
     </div>
-    <div class="side">{% if drafts %}
-      <section class="card card-pad" aria-labelledby="drafts-h">
-        <h2 id="drafts-h">Drafts <span class="count">· {{ drafts | length }}</span></h2>
-        <p class="sub">Not sent: no one is asked or told until you submit.</p>
-        <ul class="items">{% for d in drafts %}{{ draft_item(d, leave) }}{% endfor %}</ul>
-      </section>
-    {% endif %}</div>
   </div>
 {% endblock %}
 {% block viewer %}{{ ra_switch(me, leave, here) }}{% endblock %}

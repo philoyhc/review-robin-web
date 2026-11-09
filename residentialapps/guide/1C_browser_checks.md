@@ -44,7 +44,7 @@ widths, the scripts' behavior, and whether the screens read right.
     (2 days and 1 day available), with no tiles above it;
   - **Apply**;
   - "Asked to cover · 1" (Ethan Wong, 4 Dec – 6 Dec);
-  - Drafts in the side column, with D-0001 "2 days over your Official leave";
+  - Drafts, with D-0001 "2 days over your Official leave";
   - "My applications · 1 in progress".
 - [ ] **Tabs** read Home, Apply, Cover, History. Appeals are By
   invitation by default (2026-11-09), and Chloe is not invited, so no RA

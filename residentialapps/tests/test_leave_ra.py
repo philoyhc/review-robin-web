@@ -62,9 +62,16 @@ def test_home_shows_balance_cover_asked_and_applications_in_progress() -> None:
     assert 'class="tile' not in page
     main = page.split('class="main stack">')[1]
     assert main.lstrip().startswith('<section class="card card-pad" aria-labelledby="bal-h">')
-    pair = main.split('class="pair"')[1].split('<h3 class="gap-above-sm">')[0]
+    pair = main.split('class="pair"')[1].split("</section>")[0]
     assert re.findall(r"<h3>([^<]*)</h3>", pair) == ["Personal leave", "Official leave"]
     assert re.findall(r"<dt>Available</dt><dd>([^<]*)</dd>", pair) == ["2 days", "1 day"]
+    # My applications is the side column's, which every RA has, so the side
+    # is never left empty; drafts stay in the main column (cold read).
+    main, side = main.split('<div class="side">')
+    assert 'id="drafts-h"' in main and 'id="mine-h"' not in main
+    assert 'id="mine-h"' in side
+    hana = client().get(RA + "?as=Hana%20Ito").text.split('<div class="side">')[1]
+    assert 'id="mine-h"' in hana
     assert "kept apart from your entitlement" in page
     ask = page.split('id="ask-h"')[1].split("</section>")[0]
     assert "Ethan Wong" in ask and "4 Dec – 6 Dec" in ask

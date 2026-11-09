@@ -276,6 +276,8 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   overlap; warnings that never block a save say so.
 - **Stat tiles** (`.tiles`, RA Leave admin's dashboard, 2026-10-28): a
   count over its label, each tile a link to the rows it counts.
+- **A pair** (`.pair`, RA Home's balance, author, 2026-11-09): two short
+  blocks side by side in a card, kept two even on a phone.
 - **Numbers in a table** sit right-aligned (`td.num`).
 - **Phone lists** (`ul.items`, RA Leave's RA pages, 2026-10-28): on a
   mobile-critical page, rows are list items rather than table rows, each
