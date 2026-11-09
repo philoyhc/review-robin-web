@@ -40,8 +40,8 @@ widths, the scripts' behavior, and whether the screens read right.
 ## 2. RA side (390 px first)
 
 - [ ] **Chloe's Home**:
-  - balance tiles reading **2** Personal leave and **1** Official leave
-    available;
+  - **My balance** first, Personal leave and Official leave side by side
+    (2 days and 1 day available), with no tiles above it;
   - **Apply**;
   - "Asked to cover · 1" (Ethan Wong, 4 Dec – 6 Dec);
   - Drafts, with D-0001 "2 days over your Official leave";
