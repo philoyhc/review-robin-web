@@ -35,14 +35,14 @@ def ids(html: str, section: str) -> list[str]:
 def test_every_staff_page_answers_for_each_sample_viewer() -> None:
     c = client()
     for query, name in (("", "Daniel Koh"), (RACHEL, "Rachel Yeo"), (SAM, "Sam Lee")):
-        for path in ("", "decide", "decided", "precinct"):
+        for path in ("", "decided", "precinct"):
             page = c.get(STAFF + path + query)
             assert page.status_code == 200, (path, query)
             assert "Sample data" in page.text and f"Viewing as {name}" in page.text, (path, query)
             assert 'aria-current="true">' in page.text
     tabs = c.get(STAFF + RACHEL).text.split('class="tabs-in"')[1].split("</nav>")[0]
     assert re.findall(r'<a href="([^"]*)"', tabs) == [
-        f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decide", "decided", "precinct", "appeals")
+        f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decided", "precinct", "appeals")
     ]
     # Every overseer gets the same tabs, Appeals included while an appeal is open.
     assert (
@@ -56,19 +56,25 @@ def test_each_viewer_s_queue_is_the_decision_theirs_to_make() -> None:
     """Spec §16, §24: first approval for the slot's approver, final for the
     policy's final approver, appeals for the Master; oldest first."""
     c = client()
-    assert ids(c.get(STAFF + "decide").text, "queue-h") == ["L-0109", "L-0101", "L-0114"]
-    assert ids(c.get(STAFF + "decide" + RACHEL).text, "queue-h") == ["L-0103"]
-    assert ids(c.get(STAFF + "decide" + SAM).text, "queue-h") == ["L-0105"]
+    # Home is the queue, every item on it, and no tiles (author, 2026-11-09).
+    assert ids(c.get(STAFF).text, "await-h") == ["L-0109", "L-0101", "L-0114"]
+    assert ids(c.get(STAFF + RACHEL).text, "await-h") == ["L-0103"]
+    assert ids(c.get(STAFF + SAM).text, "await-h") == ["L-0105"]
     home = c.get(STAFF).text
-    tiles = re.findall(r'<span class="tile-n">(\d+)</span><span class="tile-l">([^<]*)', home)
-    assert tiles == [
-        ("3", "Awaiting my decision"),
-        ("2", "Of those, waiting on cover"),
-        ("2", "Decided"),
-    ]
-    waiting = c.get(STAFF + "decide?cover=waiting").text
-    assert ids(waiting, "queue-h") == ["L-0109", "L-0114"]
-    assert 'href="/ra-leave/staff/decide?as=Sam%20Lee&amp;cover=waiting"' in c.get(STAFF + SAM).text
+    assert 'class="tile' not in home
+    assert 'href="/ra-leave/staff/?cover=waiting">Waiting on cover · 2</a>' in home
+    assert (
+        'href="/ra-leave/staff/?as=Sam%20Lee&amp;cover=waiting">Waiting on cover · 1</a>'
+        in c.get(STAFF + SAM).text
+    )
+    waiting = c.get(STAFF + "?cover=waiting").text
+    assert (
+        ids(waiting, "await-h") == ["L-0109", "L-0114"] and "Show everything awaiting me" in waiting
+    )
+    # The old Awaiting page lands on Home, its query kept.
+    went = c.get(STAFF + "decide" + SAM + "&cover=waiting", follow_redirects=False)
+    assert went.status_code == 303
+    assert went.headers["location"] == "/ra-leave/staff/?as=Sam%20Lee&cover=waiting"
 
 
 def test_decide_shows_entitlement_cover_and_precinct_context() -> None:
@@ -280,10 +286,7 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
     c = client()
     queued = sample_leave.queue("Daniel Koh")[0][0]
     page = c.get(STAFF + "decide/" + queued.id).text
-    assert (
-        "‹ Awaiting my decision" in page
-        and 'href="/ra-leave/staff/decide" aria-current="true"' in page
-    )
+    assert "‹ Home" in page and 'href="/ra-leave/staff/" aria-current="true"' in page
     past = sample_leave.decided("Daniel Koh")[0][0]
     page = c.get(STAFF + "decide/" + past.id).text
     assert "‹ Decided" in page and "<dt>Waiting</dt>" not in page
@@ -344,12 +347,9 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
         c.get(STAFF + q).text.split('class="tabs-in"')[1].split("</nav>")[0],
     )
     assert (
-        tabs("?as=Priya%20Raman")
-        == tabs("")
-        == tabs(SAM)
-        == ["", "decide", "decided", "precinct", "appeals"]
+        tabs("?as=Priya%20Raman") == tabs("") == tabs(SAM) == ["", "decided", "precinct", "appeals"]
     )
-    assert "Nothing awaits you." in c.get(STAFF + "decide?as=Priya%20Raman").text
+    assert "Nothing awaits you." in c.get(STAFF + "?as=Priya%20Raman").text
     # Untick the admin: Rachel Yeo holds no slot, so she sees no RA and
     # her final approval leaves every Precinct with a gap (ruled 2026-10-29).
     monkeypatch.setitem(
@@ -366,7 +366,7 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
         {"appointments": ("Master", "Admin", "Exec"), "names": ()},
     )
     assert len(sample_leave.scope("Hui Min Goh")) == 9
-    assert "Nothing awaits you." in c.get(STAFF + "decide?as=Hui%20Min%20Goh").text
+    assert "Nothing awaits you." in c.get(STAFF + "?as=Hui%20Min%20Goh").text
 
 
 def test_oversight_follows_the_policy_setting(monkeypatch) -> None:
@@ -562,16 +562,18 @@ def test_an_appeal_charges_the_ra_s_own_days_first(monkeypatch) -> None:
     assert sample_leave.my_extra("Isaac Goh")["pending"] == 2  # only the rest is extra
 
 
-def test_staff_home_shows_leave_later_this_term_and_admin_detail_the_balance() -> None:
-    """The 1C.1 audit (2026-10-29): beyond this week, the staff home lists
-    approved leave later this term (§24); the admin application page shows
-    the RA's balance for correcting the record (§21.4, scenario M)."""
+def test_staff_home_shows_this_week_and_admin_detail_the_balance() -> None:
+    """Author, 2026-11-09: This week is who is away today; Later this week
+    approved leave starting from tomorrow to the week's end. The admin
+    application page shows the RA's balance for correcting the record
+    (§21.4, scenario M)."""
     c = client()
-    later = (
-        c.get(STAFF + SAM).text.split('id="later-h">Later this term</h2>')[1].split("</section>")[0]
-    )
-    assert "Hana Ito" in later and "14 Dec – 15 Dec" in later
-    assert [a.id for a in sample_leave.coming_up("Sam Lee")] == ["L-0115"]
+    home = c.get(STAFF + SAM).text
+    today = home.split('id="week-h">This week</h2>')[1].split("</section>")[0]
+    assert ["Maya Seah", "Olivia Ng"] == re.findall(r'<span class="strong">([^<]+)</span>', today)
+    later = home.split('id="later-h">Later this week</h2>')[1].split("</section>")[0]
+    assert re.findall(r'<span class="strong">([^<]+)</span>', later) == ["Pranav Iyer"]
+    assert [a.id for a in sample_leave.later_this_week("Sam Lee")] == ["L-0108"]
     admin = c.get("/ra-leave/admin/applications/L-0101").text
     card = admin.split('id="bal-h">')[1].split("</section>")[0]
     assert card.startswith("Chloe Lim's Personal leave, ")
@@ -583,12 +585,6 @@ def test_staff_home_shows_leave_later_this_term_and_admin_detail_the_balance() -
     ]
 
 
-def test_staff_home_says_when_no_leave_is_later_this_term(monkeypatch) -> None:
-    monkeypatch.setattr(sample_leave, "upcoming", lambda: ())
-    later = (
-        client()
-        .get(STAFF + SAM)
-        .text.split('id="later-h">Later this term</h2>')[1]
-        .split("</section>")[0]
-    )
-    assert "No approved leave later this term." in later
+def test_staff_home_says_when_no_one_is_away_this_week() -> None:
+    home = client().get(STAFF).text  # Daniel Koh's Precinct
+    assert "No one is away today." in home and "No one starts leave later this week." in home

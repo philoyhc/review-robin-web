@@ -87,15 +87,15 @@ widths, the scripts' behavior, and whether the screens read right.
 
 ## 3. Staff side
 
-- [ ] **Daniel's Home**:
-  - tiles 3 / 2 / 2 (Awaiting my decision; Of those, waiting on cover;
-    Decided);
-  - the first three awaiting, with **All N** when there are more;
-  - Recent decisions, This week, Later this term.
-- [ ] **Awaiting** lists oldest first, with Overdue chips.
-  - The "waiting on cover" tile opens it filtered, under the heading
-    "Waiting on cover".
-  - "Show everything awaiting me" clears the filter.
+- [ ] **Daniel's Home** (Home and Awaiting are one page, 2026-11-09):
+  - no tiles; tabs Home, Decided, Precinct leave, Appeals;
+  - Awaiting my decision lists all three, oldest first, with Overdue
+    chips; "Waiting on cover · 2" filters it under the heading "Waiting
+    on cover", and "Show everything awaiting me" clears the filter;
+  - Recent decisions with **All decided**; at the side This week (away
+    today) and Later this week (as Sam: Maya Seah and Olivia Ng today,
+    Pranav Iyer later);
+  - an old `/ra-leave/staff/decide` link lands on Home.
 - [ ] **Deciding** (open an awaiting item):
   - back link and marked tab match where you came from;
   - Approve/Reject when it awaits this viewer;

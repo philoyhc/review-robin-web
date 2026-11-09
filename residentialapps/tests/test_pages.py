@@ -962,3 +962,13 @@ def test_the_bar_is_the_shared_header(
     assert web_pages.top_line("  Hall  ") == "Hall"
     monkeypatch.setattr(identity_settings, "institution_name", "")
     assert web_pages.top_line(None) == ""
+
+
+def test_the_old_awaiting_page_redirects_under_the_mount(host_client: TestClient) -> None:
+    """Awaiting folded into staff Home (author, 2026-11-09): served under the
+    host's mount, the redirect keeps the prefix, and the query when there is
+    one."""
+    bare = host_client.get(f"{MOUNT}/ra-leave/staff/decide", follow_redirects=False)
+    assert (bare.status_code, bare.headers["location"]) == (303, f"{MOUNT}/ra-leave/staff/")
+    kept = host_client.get(f"{MOUNT}/ra-leave/staff/decide?cover=waiting", follow_redirects=False)
+    assert kept.headers["location"] == f"{MOUNT}/ra-leave/staff/?cover=waiting"

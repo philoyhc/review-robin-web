@@ -304,7 +304,6 @@ def test_an_application_can_be_saved_as_a_draft_and_reopened() -> None:
         "/ra-leave/admin/",
         "/ra-leave/admin/applications",
         "/ra-leave/staff/",
-        "/ra-leave/staff/decide",
         "/ra-leave/staff/precinct?period=term",
     ):
         assert "18 Dec" not in c.get(path).text, path
