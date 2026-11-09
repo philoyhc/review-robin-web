@@ -1403,6 +1403,26 @@ def cover_asked(ra: str = VIEWER) -> dict[str, tuple[Application, ...]]:
     return {"answer": answer, "coming": coming, "past": past}
 
 
+def cover_summary(ra: str = VIEWER) -> dict[str, int]:
+    """The Cover page's summary (author, 2026-11-09): days an RA has
+    covered, days they cover now or are to cover, and the requests to
+    answer and declined. Days count cover agreed to, or named for where no
+    answer is owed."""
+    asked = cover_asked(ra)
+
+    def agreed(a: Application) -> bool:
+        return a.cover_status == "Confirmed" or (
+            a.cover_status == "Awaiting" and not confirmation_needed(a)
+        )
+
+    return {
+        "covered": sum(a.days for a in asked["past"] if agreed(a) and a.end < TODAY),
+        "coming": sum(a.days for a in asked["coming"]),
+        "to_answer": len(asked["answer"]),
+        "declined": sum(1 for a in asked["past"] if a.cover_status == "Declined"),
+    }
+
+
 def cover_choices(ra: str = VIEWER) -> tuple[str, ...]:
     """Whom an RA may name as cover under the policy's pool, never
     themselves (spec §9.2)."""

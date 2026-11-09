@@ -65,11 +65,13 @@ def test_home_shows_balance_cover_asked_and_applications_in_progress() -> None:
     pair = main.split('class="pair"')[1].split("</section>")[0]
     assert re.findall(r"<h3>([^<]*)</h3>", pair) == ["Personal leave", "Official leave"]
     assert re.findall(r"<dt>Available</dt><dd>([^<]*)</dd>", pair) == ["2 days", "1 day"]
-    # My applications is the side column's, which every RA has, so the side
-    # is never left empty; drafts stay in the main column (cold read).
+    # The main column is the balance and Apply; the side holds My
+    # applications, Drafts, then Asked to cover, the order a phone shows
+    # them after Apply (author, 2026-11-09).
     main, side = main.split('<div class="side">')
-    assert 'id="drafts-h"' in main and 'id="mine-h"' not in main
-    assert 'id="mine-h"' in side
+    assert ">Apply for leave</a>" in main
+    assert not any(h in main for h in ('id="mine-h"', 'id="drafts-h"', 'id="ask-h"'))
+    assert side.index('id="mine-h"') < side.index('id="drafts-h"') < side.index('id="ask-h"')
     hana = client().get(RA + "?as=Hana%20Ito").text.split('<div class="side">')[1]
     assert 'id="mine-h"' in hana
     assert "kept apart from your entitlement" in page
@@ -501,3 +503,37 @@ def test_extra_leave_is_by_invitation_by_default(monkeypatch: pytest.MonkeyPatch
         assert 'href="/ra-leave/appeal' not in page, path
         assert ">Extra leave<" not in page and "Request extra leave" not in page, path
     assert client.get("/ra-leave/appeal").status_code == 404
+
+
+def test_cover_has_a_summary_beside_its_cards() -> None:
+    """Author, 2026-11-09: Cover's side column sums up an RA's cover, as
+    Apply's Available to you does: days covered, days now or upcoming,
+    requests to answer and declined."""
+    page = client().get(RA + "cover").text
+    main, side = page.split('<div class="side">')
+    assert 'id="answer-h"' in main and 'id="summary-h"' in side
+    s = sample_leave.cover_summary("Chloe Lim")
+    assert s["to_answer"] == 1  # Ethan Wong, 4 Dec – 6 Dec
+    assert f"<dt>Requests to answer</dt><dd>{s['to_answer']}</dd>" in side
+    assert f"<dt>Days now or upcoming</dt><dd>{s['coming']}</dd>" in side
+    assert f"<dt>Days covered</dt><dd>{s['covered']}</dd>" in side
+    assert f"<dt>Declined</dt><dd>{s['declined']}</dd>" in side
+    # The sample viewers each read differently (the cold read's table).
+    assert {
+        n: tuple(sample_leave.cover_summary(n).values()) for n, _ in sample_leave.RA_VIEWERS
+    } == {
+        "Chloe Lim": (0, 2, 1, 1),
+        "Hana Ito": (1, 0, 0, 0),
+        "Ethan Wong": (0, 3, 0, 0),
+        "Faris Iskandar": (2, 0, 0, 0),
+        "Kai Ng": (0, 0, 1, 0),
+    }
+
+
+def test_home_s_side_shows_only_the_cards_an_ra_has() -> None:
+    """Kai Ng has a cover request and no drafts; Hana Ito only her
+    applications: the side keeps its order and leaves out the rest."""
+    kai = client().get(RA + "?as=Kai%20Ng").text.split('<div class="side">')[1]
+    assert kai.index('id="mine-h"') < kai.index('id="ask-h"') and 'id="drafts-h"' not in kai
+    hana = client().get(RA + "?as=Hana%20Ito").text.split('<div class="side">')[1]
+    assert 'id="mine-h"' in hana and 'id="drafts-h"' not in hana and 'id="ask-h"' not in hana

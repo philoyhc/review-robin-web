@@ -44,9 +44,10 @@ widths, the scripts' behavior, and whether the screens read right.
   - **My balance** first, Personal leave and Official leave side by side
     (2 days and 1 day available), with no tiles above it;
   - **Apply**;
-  - "Asked to cover · 1" (Ethan Wong, 4 Dec – 6 Dec);
+  - "My applications · 1 in progress";
   - Drafts, with D-0001 "2 days over your Official leave";
-  - "My applications · 1 in progress".
+  - "Asked to cover · 1" (Ethan Wong, 4 Dec – 6 Dec).
+  On a desktop the last three are the side column, beside the balance.
 - [ ] **Tabs** read Home, Apply, Cover, History. Appeals are By
   invitation by default (2026-11-09), and Chloe is not invited, so no RA
   page offers her extra leave or links to it, and
@@ -63,7 +64,9 @@ widths, the scripts' behavior, and whether the screens read right.
   - "Emails you sent", showing **Not sent** and why, with Resend;
   - cover and Withdraw cards.
 - [ ] **Cover**: To answer 1, Covering 1 (Hana Ito 14 Dec – 15 Dec),
-  Earlier and declined 1.
+  Earlier and declined 1; a Summary card (beside the cards on a desktop,
+  last on a phone) reads Days covered 0, Days now or upcoming 2,
+  Requests to answer 1, Declined 1.
 - [ ] **History**: Drafts, then every application newest first.
 - [ ] **Each RA viewer's state** reads as the table says. Switch with the
   chips:
