@@ -516,4 +516,24 @@ def test_cover_has_a_summary_beside_its_cards() -> None:
     assert s["to_answer"] == 1  # Ethan Wong, 4 Dec – 6 Dec
     assert f"<dt>Requests to answer</dt><dd>{s['to_answer']}</dd>" in side
     assert f"<dt>Days now or upcoming</dt><dd>{s['coming']}</dd>" in side
-    assert s["coming"] == sum(a.days for a in sample_leave.cover_asked("Chloe Lim")["coming"])
+    assert f"<dt>Days covered</dt><dd>{s['covered']}</dd>" in side
+    assert f"<dt>Declined</dt><dd>{s['declined']}</dd>" in side
+    # The sample viewers each read differently (the cold read's table).
+    assert {
+        n: tuple(sample_leave.cover_summary(n).values()) for n, _ in sample_leave.RA_VIEWERS
+    } == {
+        "Chloe Lim": (0, 2, 1, 1),
+        "Hana Ito": (1, 0, 0, 0),
+        "Ethan Wong": (0, 3, 0, 0),
+        "Faris Iskandar": (2, 0, 0, 0),
+        "Kai Ng": (0, 0, 1, 0),
+    }
+
+
+def test_home_s_side_shows_only_the_cards_an_ra_has() -> None:
+    """Kai Ng has a cover request and no drafts; Hana Ito only her
+    applications: the side keeps its order and leaves out the rest."""
+    kai = client().get(RA + "?as=Kai%20Ng").text.split('<div class="side">')[1]
+    assert kai.index('id="mine-h"') < kai.index('id="ask-h"') and 'id="drafts-h"' not in kai
+    hana = client().get(RA + "?as=Hana%20Ito").text.split('<div class="side">')[1]
+    assert 'id="mine-h"' in hana and 'id="drafts-h"' not in hana and 'id="ask-h"' not in hana
