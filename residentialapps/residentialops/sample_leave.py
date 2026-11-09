@@ -1685,6 +1685,63 @@ def term_blackouts() -> tuple[tuple[Blackout, date, date], ...]:
     return tuple(found)
 
 
+class DateCheck(TypedDict):
+    """What Apply and Request extra leave show under Days of leave, and
+    whether the form may be sent (author, 2026-11-09)."""
+
+    days: int | None
+    message: str
+    ok: bool
+
+
+def check_dates(
+    ra: str, leave_type: str, first: date | None, last: date | None, appeal: bool = False
+) -> DateCheck:
+    """Check an application's dates as the RA keys them in (author,
+    2026-11-09): both chosen, in order, not past, within this term,
+    counting a day, clear of a blackout and within the RA's balance. An
+    appeal may run past the balance or into an Appeal-only blackout; that
+    is what it is for (§7)."""
+    if first is None or last is None:
+        return {"days": None, "message": "Choose your dates.", "ok": False}
+    if last < first:
+        return {"days": None, "message": "The last day is before the first day.", "ok": False}
+
+    def no(message: str, days: int | None = None) -> DateCheck:
+        return {"days": days, "message": message, "ok": False}
+
+    if first < TODAY:
+        return no("The first day has passed.")
+    if first < TERM.start or last > TERM.end:
+        return no(
+            f"Leave falls within {TERM.label}: {short_date(TERM.start)} – {short_date(TERM.end)}."
+        )
+    days = leave_days(first, last)
+    if days == 0:
+        return no("These dates count no days of leave.", 0)
+    may_appeal = appeal or can_appeal(ra)
+    for b in BLACKOUTS:
+        span = week_dates(b)
+        if not span or span[0] > last or span[1] < first:
+            continue
+        when = f"{b.label}, {short_date(span[0])} – {short_date(span[1])}"
+        if b.effect == "Refused" or not may_appeal:
+            return no(f"These dates fall in a blackout ({when}): no leave.", days)
+        if not appeal:
+            return no(
+                f"These dates fall in an Appeal-only blackout ({when}): use Request extra leave.",
+                days,
+            )
+    available = next((r["available"] for r in my_balances(ra) if r["type"] == leave_type), 0)
+    short = days - max(available, 0)
+    if short > 0 and not appeal:
+        tail = "use Request extra leave." if may_appeal else "shorten it."
+        return no(
+            f"{short} day{'s' if short != 1 else ''} more than your {leave_type}: {tail}", days
+        )
+    return {"days": days, "message": "", "ok": True}
+
+
 def draft_short(draft: Draft) -> int:
     """How many days a draft asks beyond what the RA has of its type; 0 when
     it fits (§10, scenario G)."""

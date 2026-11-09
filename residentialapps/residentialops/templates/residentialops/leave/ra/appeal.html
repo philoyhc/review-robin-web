@@ -1,6 +1,7 @@
 {% extends "residential/base.html" %}
 {% from "residentialops/leave/_leave.html" import title, viewing, ra_switch with context %}
 {% from "residential/_people.html" import person_tokens %}
+{% from "residentialops/leave/ra/_dates.html" import date_fields with context %}
 {% block title %}Request extra leave{% endblock %}
 {% block content %}
   {{ title("Request extra leave", leave, viewing(me)) }}
@@ -9,18 +10,15 @@
      not yet invited). #}
   {% set invited = leave.invitation_for(me) %}
   {% if invited and leave.POLICY.appeals == "By invitation" %}<div class="notice">The Master has agreed to consider your appeal; send it by {{ leave.short_date(invited.until) }}.</div>{% endif %}
-  <p class="sub">For leave beyond your entitlement, or in an Appeal-only blackout. The Master decides personally; approval is discretionary, and extra leave is kept apart from your entitlement (spec §7). Controls are inert until RA Leave is wired.</p>
+  <p class="sub">For leave beyond your entitlement, or in an Appeal-only blackout. The Master decides personally; approval is discretionary, and extra leave is kept apart from your entitlement (spec §7). Your dates are checked as you key them in; Send opens once they are valid. Nothing is sent until RA Leave is wired.</p>
   <div class="split">
     <div class="main">
       <section class="card card-pad" aria-labelledby="form-h">
         <h2 id="form-h">Your request</h2>
-        <div class="field-wide"><label for="ltype">Leave type</label>
-          <select id="ltype" class="input" disabled>{% for lt in leave.LEAVE_TYPES %}<option>{{ lt.name }}</option>{% endfor %}</select></div>
-        <div class="field-wide"><label for="first">First day</label><input id="first" class="input" type="date" disabled></div>
-        <div class="field-wide"><label for="last">Last day</label><input id="last" class="input" type="date" disabled></div>
+        {{ date_fields(leave, me, as_query, "send", appeal=true) }}
         {% if leave.zero_day_rule() %}<p class="subtle small">{{ leave.zero_day_rule() }}</p>{% endif %}
-        <div class="field-wide"><label for="reason">Why you need it</label><textarea id="reason" class="input" rows="3" disabled></textarea></div>
-        <div class="field-wide"><label for="cover">Covering RA</label>
+        <div class="field-wide full"><label for="reason">Why you need it</label><textarea id="reason" class="input" rows="3" disabled></textarea></div>
+        <div class="field-wide full"><label for="cover">Covering RA</label>
           {{ person_tokens("Covering RA", (), "cover-pool", "cover", single=true, describedby="cover-what") }}
           <datalist id="cover-pool">{% for name in leave.cover_choices(me) %}<option value="{{ name }}"></option>{% endfor %}</datalist>
           <span id="cover-what" class="subtle small">An appeal always needs your cover to confirm (spec §7.4).</span></div>
@@ -28,7 +26,7 @@
           <p class="sub">{{ leave.POLICY.appeal_terms }}</p>
           <label class="check"><input type="checkbox" disabled> I accept these terms</label>
         </fieldset>
-        <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Send to the Master</button><a class="btn btn-secondary" href="{{ url('/ra-leave/') }}{{ as_query }}">Cancel</a></div>
+        <div class="btnrow"><button type="button" id="send" class="btn btn-primary" disabled>Send to the Master</button><a class="btn btn-secondary" href="{{ url('/ra-leave/') }}{{ as_query }}">Cancel</a></div>
       </section>
     </div>
     <div class="side">

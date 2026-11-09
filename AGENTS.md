@@ -229,8 +229,9 @@ reject it.
   `tests/browser/` and Residential's
   `residentialapps/tests/test_sort_persistence_browser.py`,
   `residentialapps/tests/test_touch_targets_browser.py`,
-  `residentialapps/tests/test_columns_browser.py` and
-  `residentialapps/tests/test_supportlogs_log_browser.py`, which need a
+  `residentialapps/tests/test_columns_browser.py`,
+  `residentialapps/tests/test_supportlogs_log_browser.py` and
+  `residentialapps/tests/test_leave_dates_browser.py`, which need a
   Chromium build (preinstalled in the web sandbox) and skip with a reason
   without one; CI sets
   `RRW_REQUIRE_BROWSER=1` so a missing browser fails there. They also run in
