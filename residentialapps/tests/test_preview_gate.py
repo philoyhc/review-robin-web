@@ -460,3 +460,35 @@ def test_an_ra_previewer_s_landing_chip_is_not_a_dead_link(
 )
 def test_a_copied_distribution_list_names_each_address(line: str, named: set[str]) -> None:
     assert web_pages.parse_preview_sections(f"## RA previewers\n{line}\n").ra == named
+
+
+def test_a_staff_previewers_section_takes_a_pasted_list_as_full_previewers() -> None:
+    """Author, 2026-11-09: staff previewers are pasted as a distribution
+    list too. Only under a `#` heading saying so; elsewhere outside the RA
+    section a pasted line names nobody, and a misspelt heading leaves it
+    unread rather than reading it as full."""
+    text = """# Residential preview
+
+Prose <prose@example.edu>; Before <before@example.edu>;
+
+## Staff Previewers
+
+- listed@example.edu
+Tan Wei Ling <wl@example.edu>; Lim, Jun <jl@example.edu>;
+
+## RA previewers
+
+A One <ra@example.edu>;
+
+## Notes
+
+After <after@example.edu>;
+"""
+    full, ra = web_pages.parse_preview_sections(text)
+    assert full == {"listed@example.edu", "wl@example.edu", "jl@example.edu"}
+    assert ra == {"ra@example.edu"}
+    misspelt = "## Staf Previewers\n\nTan Wei Ling <wl@example.edu>;\n"
+    assert web_pages.parse_preview_sections(misspelt) == (frozenset(), frozenset())
+    # A heading naming both is the RA section: the narrower reading.
+    both = "## Staff and RA previewers\n\nA One <x@example.edu>;\n"
+    assert web_pages.parse_preview_sections(both).ra == {"x@example.edu"}

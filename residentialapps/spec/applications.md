@@ -229,6 +229,12 @@ or not, gets `404`. `/health` is never gated.
   `,` (one person alone as `Name <a@b.edu>;`), and no name holds a colon,
   each address names it, so the list is pasted as it is; any other line,
   `Contact: <a@b.edu>` included, stays free prose.
+- **Staff previewers** (author, 2026-11-09): under a `#` heading that
+  says "Staff previewer(s)", a distribution line pasted the same way names
+  full previewers; any other `#` heading ends the section. Outside these
+  two sections a pasted line names nobody, so a misspelt heading leaves
+  its list unread rather than wider. List items name full previewers
+  anywhere outside the RA section, as before.
 - **A file that cannot be read** names nobody, as no file does, and is
   logged; the count of addresses read is logged at the first request.
 - **Read once per process**, so a change to the list ships with a
