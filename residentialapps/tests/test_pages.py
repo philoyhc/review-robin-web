@@ -146,7 +146,7 @@ def test_every_page_is_labeled_a_placeholder(
 ) -> None:
     from residentialapps.residentialops import sample_leave
 
-    # Appeals Open, so the extra leave page answers (Off by default, 2026-11-09).
+    # Appeals Open, so the extra leave page answers (by invitation by default, 2026-11-09).
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
     assert page_routes(), "no pages found"
     for path in page_routes():
@@ -171,7 +171,7 @@ def test_no_page_emits_a_path_outside_its_mount(
     """The GET crawl: every link, form and source on every page is under
     the mount, a fragment, Easy Auth's, or the host's landing page; the
     inline favicon is not a path. Appeals are opened so the appeal page,
-    Off by default, is crawled too."""
+    by invitation by default, is crawled too."""
     from residentialapps.residentialops import sample_leave
 
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
@@ -805,7 +805,7 @@ def test_people_boxes_across_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
     person as a pill with its remove button; a one-person box (a cover,
     the RA an appeal is opened for) offers its typeahead until one is
     chosen. Appeals are Open here, so the appeal page's box is drawn (the
-    default is Off, 2026-11-09)."""
+    default is By invitation, 2026-11-09)."""
     from residentialapps.residentialops import sample_leave
 
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")

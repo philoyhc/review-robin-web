@@ -63,7 +63,7 @@ def apply(request: Request) -> Response:
 @router.get("/ra-leave/appeal", name="residentialops_leave_appeal")
 def appeal(request: Request) -> Response:
     # The page exists only for an RA who may appeal now: never while appeals
-    # are Off, the default (author, 2026-11-09), and by invitation only once
+    # are Off, and by invitation, the default (author, 2026-11-09), only once
     # invited (author, 2026-10-29).
     if not sample_leave.can_appeal(_viewer(request)):
         raise HTTPException(status_code=404)

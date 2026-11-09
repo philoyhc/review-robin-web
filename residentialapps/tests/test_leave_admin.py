@@ -20,7 +20,7 @@ ADMIN = "/ra-leave/admin/"
 @pytest.fixture(autouse=True)
 def _appeals_open(monkeypatch: pytest.MonkeyPatch) -> None:
     """These tests exercise extra leave, so appeals are Open in them; the
-    default, Off, has its own test (author, 2026-11-09)."""
+    default, By invitation, has its own test (author, 2026-11-09)."""
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
 
 

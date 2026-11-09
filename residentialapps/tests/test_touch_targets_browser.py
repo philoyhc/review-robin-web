@@ -51,7 +51,7 @@ def test_every_control_is_a_thumb_s_width_on_a_phone(
     path: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Appeals are Off by default (author, 2026-11-09); open them so the
+    # Appeals are by invitation by default (author, 2026-11-09); open them so the
     # appeal page is there to measure.
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
     page.set_viewport_size({"width": 390, "height": 844})

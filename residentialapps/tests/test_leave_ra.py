@@ -19,7 +19,7 @@ PAGES = ("", "apply", "appeal", "cover", "history", "applications/L-0101")
 @pytest.fixture(autouse=True)
 def _appeals_open(monkeypatch: pytest.MonkeyPatch) -> None:
     """These tests exercise extra leave, so appeals are Open in them; the
-    default, Off, has its own test (author, 2026-11-09)."""
+    default, By invitation, has its own test (author, 2026-11-09)."""
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
 
 
@@ -428,32 +428,36 @@ def test_apply_s_blackouts_follow_whether_the_ra_may_appeal() -> None:
     assert "Examinations, 15 Nov – 28 Nov: no leave" in apply and "appeal only" not in apply
 
 
-def test_at_the_default_open_is_previewed_and_off_clears_it(
+def test_at_the_default_open_is_previewed_and_by_invitation_clears_it(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The guide's default flow: the policy is Off, so previewing Open
-    shows the Extra leave tab and previewing Off clears the preview."""
+    """The guide's default flow: the policy is By invitation, so previewing
+    Open shows Chloe the Extra leave tab and By invitation clears it."""
     monkeypatch.undo()
-    assert sample_leave.policy_appeals() == "Off"
+    assert sample_leave.policy_appeals() == "By invitation"
     c = TestClient(ops_app())
     c.get("/ra-leave/admin/policy/preview-appeals?mode=Open")
     home = c.get("/ra-leave/").text
     assert ">Previewing appeals: Open</a>" in home
     assert "/ra-leave/appeal" in home.split('class="tabs-in"')[1].split("</nav>")[0]
     assert c.get("/ra-leave/appeal").status_code == 200
-    c.get("/ra-leave/admin/policy/preview-appeals?mode=Off")
+    c.get("/ra-leave/admin/policy/preview-appeals?mode=By%20invitation")
     assert "Previewing appeals" not in c.get("/ra-leave/").text
     assert c.get("/ra-leave/appeal").status_code == 404
 
 
-def test_extra_leave_is_off_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Author, 2026-11-09: a default deployment does not expose extra leave
-    to RAs. With appeals at their default, Off, no RA page offers it: no
-    Extra leave tab, no Request extra leave, no hint on Apply, no Extra
-    leave in the balance, and the appeal page is not there."""
-    assert sample_leave.APPEALS_DEFAULT == "Off"
+def test_extra_leave_is_by_invitation_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Author, 2026-11-09: a default deployment does not show extra leave
+    to RAs. An RA appeals offline; if it is agreed, an admin opens an
+    invitation, and only that RA is then offered the appeal page. To an RA
+    not invited (Chloe Lim) no page offers it: no Extra leave tab, no
+    Request extra leave, no hint on Apply, no Extra leave in the balance,
+    and the appeal page is not there; the invited RA (Kai Ng) has it."""
+    assert sample_leave.APPEALS_DEFAULT == "By invitation"
     monkeypatch.undo()  # this file's fixture opens appeals; see the shipped policy
     assert sample_leave.policy_appeals() == sample_leave.APPEALS_DEFAULT
+    kai = TestClient(ops_app())
+    assert kai.get("/ra-leave/appeal?as=Kai%20Ng").status_code == 200
     client = TestClient(ops_app())
     for path in (
         "/ra-leave/",

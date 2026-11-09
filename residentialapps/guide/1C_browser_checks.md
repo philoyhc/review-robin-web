@@ -19,7 +19,7 @@ widths, the scripts' behavior, and whether the screens read right.
 - **RA Leave admin has no viewer switch.** It is drawn for a sys admin.
 - **Appeal modes** are previewed from Policy's Appeals card (§5). A
   "Previewing appeals" chip by every RA Leave title shows when one is on.
-  Choose **Open** to turn it off.
+  Choose **By invitation**, the default, to turn it off.
 - **Widths:** the RA pages are phone first; check them at 390 px first. Check
   the staff and admin pages at desktop width, then at 390 px.
 
@@ -46,10 +46,11 @@ widths, the scripts' behavior, and whether the screens read right.
   - "Asked to cover · 1" (Ethan Wong, 4 Dec – 6 Dec);
   - Drafts, with D-0001 "2 days over your Official leave";
   - "My applications · 1 in progress".
-- [ ] **Tabs** read Home, Apply, My cover, History. Appeals are Off by
-  default (2026-11-09), so no RA page offers extra leave or links to it,
-  and `/residentialops/ra-leave/appeal` is not found; the Extra leave tab
-  appears only while a preview or the policy opens appeals to this RA.
+- [ ] **Tabs** read Home, Apply, My cover, History. Appeals are By
+  invitation by default (2026-11-09), and Chloe is not invited, so no RA
+  page offers her extra leave or links to it, and
+  `/residentialops/ra-leave/appeal` is not found; the Extra leave tab
+  appears only for an invited RA (Kai Ng) or while Open is previewed.
   Records already on file still show (Gwen Ho, Lucas Teo, Maya Seah).
 - [ ] **Apply** names the approvers from the RA's slot and lists blackouts
   ahead. From the draft, **Apply** opens pre-filled with a draft notice.
@@ -147,15 +148,15 @@ On Policy's Appeals card, choose each preview chip in turn. Each one
 redirects back to the card and puts a "Previewing appeals: …" chip by every
 RA Leave title.
 
-- [ ] **By invitation:**
+- [ ] **By invitation** (the default) clears the preview, and the chip
+  goes:
   - Only Kai Ng has the Extra leave tab, with "send it by 10 Nov".
   - `/residentialops/ra-leave/appeal` as Chloe returns Not Found.
   - Staff Appeals offers "Open an appeal" to Sam and Rachel only.
   - Approval chain gains an "Opens appeals" column.
 - [ ] **Open:** every RA has the Extra leave tab and **Request extra
   leave** on Home.
-- [ ] **Off** (the default) clears the preview, and the chip goes: no
-  Extra leave tab or link, the appeal page not found, and Apply says
+- [ ] **Off:** no RA has the Extra leave tab or link, the appeal page not found, and Apply says
   only "Leave in a blackout cannot be submitted." The staff Appeals tab
   stays while L-0105 is still open.
 

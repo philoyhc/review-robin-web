@@ -77,9 +77,10 @@ def week_dates(blackout: Blackout, year: str = "AY2026-2027") -> tuple[date, dat
 
 
 APPEAL_MODES = ("Open", "By invitation", "Off")
-# Off by default (author, 2026-11-09): a default deployment does not expose
-# extra leave to RAs; Leave policy turns it on, Open or By invitation.
-APPEALS_DEFAULT = "Off"
+# By invitation by default (author, 2026-11-09): a default deployment does
+# not show extra leave to RAs. An RA appeals offline; if it is agreed, an
+# admin opens an invitation, and only that RA may then send it.
+APPEALS_DEFAULT = "By invitation"
 COVER_MODES = ("Named only", "Named and confirmed")
 COVER_POOLS = ("Any RA", "Same Precinct", "Same Wing")
 # The sample's appeal mode can be previewed per browser (`Leave policy`'s

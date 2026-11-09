@@ -306,11 +306,12 @@ Until a screen is wired:
   Decide) keeps the chip unlinked;
   the RA pages' viewers each reaching states the others do not (audit,
   2026-10-29);
-- RA Leave's appeals are **Off by default** (author, 2026-11-09), a
-  product default that stays once the screens are wired: a default
-  deployment does not expose extra leave to RAs, so no RA page offers or
-  links it and the appeal page is not found; Leave policy turns it on,
-  Open or By invitation. Extra leave already on an RA's record still
+- RA Leave's appeals are **By invitation by default** (author,
+  2026-11-09), a product default that stays once the screens are wired: a
+  default deployment does not show extra leave to RAs. An RA appeals
+  offline; if it is agreed, an admin opens an invitation, and only that RA
+  is then offered the appeal page. To every other RA no page offers or
+  links it, and the page is not found. Extra leave already on an RA's record still
   shows in their balance, applications and History.
 - RA Leave previews each appeal mode (`Open`, `By invitation`, `Off`) in
   the browser, from a sample switch on Leave policy, a cookie each request

@@ -132,7 +132,7 @@ def test_whatever_a_viewer_may_decide_opens(monkeypatch) -> None:
         {"first": "none"},
         {"final": "named", "final_names": ("Daniel Koh",)},
         {"appeals": "Open"},
-        {"appeals": "By invitation"},
+        {"appeals": "Off"},
     )
     for setting, day in itertools.product(settings, (None, sample_leave.date(2026, 12, 10))):
         with monkeypatch.context() as m:
@@ -295,7 +295,10 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
         and 'href="/ra-leave/staff/appeals?as=Rachel%20Yeo" aria-current="true"' in page
     )
     assert "Daniel Koh: RF, first approver for" in c.get(STAFF).text
-    assert "opens appeals" not in c.get(STAFF).text  # appeals are open: no one opens them
+    # By invitation, the default (2026-11-09), Sam Lee opens appeals ...
+    assert "Sam Lee: Master, decides appeals, opens appeals" in c.get(STAFF).text
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
+    assert "opens appeals" not in c.get(STAFF).text  # ... open, no one opens them
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     assert "Sam Lee: Master, decides appeals, opens appeals" in c.get(STAFF).text
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
