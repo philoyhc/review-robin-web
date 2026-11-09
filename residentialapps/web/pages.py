@@ -45,6 +45,13 @@ _OPEN, _CLOSE = "<!--", "-->"
 # starting early or ending late only ever narrows access.
 _RA_MARKER = re.compile(r"\bra previewers?\b")
 _ENDS_SECTION = re.compile(r"^ {0,3}#{1,6}(?:[ \t]|$)")
+# The staff previewers section (author, 2026-11-09): full previewers, who
+# may also be pasted as a distribution list. Only a `#` heading that says
+# "Staff previewer(s)" and not "RA previewer(s)" starts it, and any other
+# `#` heading ends it, so a heading written differently leaves its pasted
+# lines unread (narrower), never read as full (wider). List items name
+# full previewers outside the RA section, as before.
+_STAFF_MARKER = re.compile(r"\bstaff previewers?\b")
 # In that section a line at the margin may also be a distribution list as
 # a mail client copies it, "Name <a@b.edu>; Name <c@d.edu>": each address
 # in angle brackets names it, so the list is pasted as it is. The whole
@@ -65,8 +72,12 @@ def _is_distribution_line(line: str) -> bool:
     return bool(_DISTRIBUTION.fullmatch(line) and _SEPARATED.search(line))
 
 
+def _words(line: str) -> str:
+    return " ".join(re.sub(r"[^a-z]+", " ", line.lower()).split())
+
+
 def _says_ra_previewers(line: str) -> bool:
-    return bool(_RA_MARKER.search(" ".join(re.sub(r"[^a-z]+", " ", line.lower()).split())))
+    return bool(_RA_MARKER.search(_words(line)))
 
 
 class PreviewList(NamedTuple):
@@ -131,6 +142,7 @@ def parse_preview_sections(text: str) -> PreviewList:
     full: set[str] = set()
     ra: set[str] = set()
     in_ra = False
+    in_staff = False
     fence: tuple[str, int] | None = None  # the opener's marker and indent
     in_comment = False
     for line in text.expandtabs(4).splitlines():
@@ -153,11 +165,12 @@ def parse_preview_sections(text: str) -> PreviewList:
         if address := _first_address(head):
             (ra if in_ra else full).add(address)
         elif _LIST_ITEM.match(head) is None and _says_ra_previewers(head):
-            in_ra = True
+            in_ra, in_staff = True, False
         elif _ENDS_SECTION.match(head):
-            in_ra = False
-        elif in_ra and head[:1] not in (" ", "") and _is_distribution_line(head):
-            ra.update(word.lower() for word in _ANGLED.findall(head) if _ADDRESS.fullmatch(word))
+            in_ra, in_staff = False, bool(_STAFF_MARKER.search(_words(head)))
+        elif (in_ra or in_staff) and head[:1] not in (" ", "") and _is_distribution_line(head):
+            named = (word.lower() for word in _ANGLED.findall(head) if _ADDRESS.fullmatch(word))
+            (ra if in_ra else full).update(named)
     return PreviewList(frozenset(full), frozenset(ra - full))
 
 
