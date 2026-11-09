@@ -23,7 +23,7 @@
       {% if asked.answer %}
         <section class="card card-pad" aria-labelledby="ask-h">
           <h2 id="ask-h">Asked to cover <span class="count">· {{ asked.answer | length }}</span></h2>
-          <p class="sub">An RA has named you as their cover. Answer on <a href="{{ url('/ra-leave/cover') }}{{ as_query }}">My cover</a>.</p>
+          <p class="sub">An RA has named you as their cover. Answer on <a href="{{ url('/ra-leave/cover') }}{{ as_query }}">Cover</a>.</p>
           <ul class="items">
             {% for a in asked.answer %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">{{ a.days }} day{{ "s" if a.days != 1 }} · asked {{ leave.short_date(a.submitted) }}</div></li>{% endfor %}
           </ul>

@@ -62,11 +62,10 @@ def apply(request: Request) -> Response:
 
 @router.get("/ra-leave/appeal", name="residentialops_leave_appeal")
 def appeal(request: Request) -> Response:
-    # By invitation the appeal is not shown to an RA until they are invited
-    # (author, 2026-10-29): uninvited, the page does not exist for them.
-    if sample_leave.POLICY["appeals"] == "By invitation" and not sample_leave.can_appeal(
-        _viewer(request)
-    ):
+    # The page exists only for an RA who may appeal now: never while appeals
+    # are Off, and by invitation, the default (author, 2026-11-09), only once
+    # invited (author, 2026-10-29).
+    if not sample_leave.can_appeal(_viewer(request)):
         raise HTTPException(status_code=404)
     return _page(request, "appeal.html")
 

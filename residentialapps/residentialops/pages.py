@@ -103,7 +103,7 @@ def leave_ra_tabs(appeals: bool, query: str = "") -> tuple[dict[str, str | None]
             ("Home", "/ra-leave/"),
             ("Apply", "/ra-leave/apply"),
             *((("Extra leave", "/ra-leave/appeal"),) if appeals else ()),
-            ("My cover", "/ra-leave/cover"),
+            ("Cover", "/ra-leave/cover"),
             ("History", "/ra-leave/history"),
         )
     )

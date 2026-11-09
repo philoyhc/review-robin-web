@@ -14,7 +14,7 @@
           <select id="ltype" class="input" disabled>{% for lt in leave.LEAVE_TYPES %}<option{% if draft and draft.leave_type == lt.name %} selected{% endif %}>{{ lt.name }}</option>{% endfor %}</select></div>
         <div class="field-wide"><label for="first">First day</label><input id="first" class="input" type="date"{% if draft %} value="{{ draft.start.isoformat() }}"{% endif %} disabled></div>
         <div class="field-wide"><label for="last">Last day</label><input id="last" class="input" type="date"{% if draft %} value="{{ draft.end.isoformat() }}"{% endif %} disabled></div>
-        <p class="subtle small">The days are counted for you ({{ leave.POLICY.day_count | lower }}). {{ leave.zero_day_rule() }} {% if leave.can_appeal(me) %}Leave in a Refused blackout cannot be submitted; in an Appeal-only one it goes to the Master as an appeal.{% elif leave.appeals_on() %}Leave in a blackout cannot be submitted.{% else %}Leave in any blackout cannot be submitted while appeals are off.{% endif %}</p>
+        <p class="subtle small">The days are counted for you ({{ leave.POLICY.day_count | lower }}). {{ leave.zero_day_rule() }} {% if leave.can_appeal(me) %}Leave in a Refused blackout cannot be submitted; in an Appeal-only one it goes to the Master as an appeal.{% else %}Leave in a blackout cannot be submitted.{% endif %}</p>
         <div class="field-wide"><label for="cover">Covering RA{% if not leave.POLICY.cover_required %} (optional){% endif %}</label>
           {{ person_tokens("Covering RA", (draft.cover,) if draft and draft.cover else (), "cover-pool", "cover", single=true, describedby="cover-what") }}
           <datalist id="cover-pool">{% for name in leave.cover_choices(me) %}<option value="{{ name }}"></option>{% endfor %}</datalist>

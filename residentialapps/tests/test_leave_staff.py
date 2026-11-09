@@ -44,7 +44,7 @@ def test_every_staff_page_answers_for_each_sample_viewer() -> None:
     assert re.findall(r'<a href="([^"]*)"', tabs) == [
         f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decide", "decided", "precinct", "appeals")
     ]
-    # Every overseer gets the same tabs, Appeals included while appeals are on.
+    # Every overseer gets the same tabs, Appeals included while an appeal is open.
     assert (
         "/ra-leave/staff/appeals"
         in c.get(STAFF).text.split('class="tabs-in"')[1].split("</nav>")[0]
@@ -131,8 +131,8 @@ def test_whatever_a_viewer_may_decide_opens(monkeypatch) -> None:
         {"first_types": ("RF", "RSLM")},
         {"first": "none"},
         {"final": "named", "final_names": ("Daniel Koh",)},
+        {"appeals": "Open"},
         {"appeals": "Off"},
-        {"appeals": "By invitation"},
     )
     for setting, day in itertools.product(settings, (None, sample_leave.date(2026, 12, 10))):
         with monkeypatch.context() as m:
@@ -295,7 +295,10 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
         and 'href="/ra-leave/staff/appeals?as=Rachel%20Yeo" aria-current="true"' in page
     )
     assert "Daniel Koh: RF, first approver for" in c.get(STAFF).text
-    assert "opens appeals" not in c.get(STAFF).text  # appeals are open: no one opens them
+    # By invitation, the default (2026-11-09), Sam Lee opens appeals ...
+    assert "Sam Lee: Master, decides appeals, opens appeals" in c.get(STAFF).text
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
+    assert "opens appeals" not in c.get(STAFF).text  # ... open, no one opens them
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     assert "Sam Lee: Master, decides appeals, opens appeals" in c.get(STAFF).text
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")

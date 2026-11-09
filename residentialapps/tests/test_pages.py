@@ -141,7 +141,13 @@ def test_each_page_shows_its_csv() -> None:
     )
 
 
-def test_every_page_is_labeled_a_placeholder(host_client: TestClient) -> None:
+def test_every_page_is_labeled_a_placeholder(
+    host_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from residentialapps.residentialops import sample_leave
+
+    # Appeals Open, so the extra leave page answers (by invitation by default, 2026-11-09).
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
     assert page_routes(), "no pages found"
     for path in page_routes():
         page = host_client.get(MOUNT + path)
@@ -159,12 +165,20 @@ def test_the_chrome_carries_the_switcher_tabs_and_theme(host_client: TestClient)
     assert page.count('"rrw-theme"') == 2
 
 
-def test_no_page_emits_a_path_outside_its_mount(host_client: TestClient) -> None:
+def test_no_page_emits_a_path_outside_its_mount(
+    host_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """The GET crawl: every link, form and source on every page is under
     the mount, a fragment, Easy Auth's, or the host's landing page; the
-    inline favicon is not a path."""
+    inline favicon is not a path. Appeals are opened so the appeal page,
+    by invitation by default, is crawled too."""
+    from residentialapps.residentialops import sample_leave
+
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
     for path in [*page_routes(), f"/rosters/people/{CHLOE}"]:
-        for link in LINK.findall(FAVICON.sub("", host_client.get(MOUNT + path).text)):
+        response = host_client.get(MOUNT + path)
+        assert response.status_code == 200, path
+        for link in LINK.findall(FAVICON.sub("", response.text)):
             assert link == "/" or link.startswith((f"{MOUNT}/", "#", "/.auth/")), (path, link)
 
 
@@ -790,8 +804,11 @@ def test_people_boxes_across_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ruled 2026-10-29: every box for choosing people shows each verified
     person as a pill with its remove button; a one-person box (a cover,
     the RA an appeal is opened for) offers its typeahead until one is
-    chosen."""
+    chosen. Appeals are Open here, so the appeal page's box is drawn (the
+    default is By invitation, 2026-11-09)."""
     from residentialapps.residentialops import sample_leave
+
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
 
     client = TestClient(ops_app())
     for path, label in (

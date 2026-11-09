@@ -7,6 +7,7 @@ from __future__ import annotations
 import re
 from datetime import date
 
+import pytest
 from fastapi.testclient import TestClient
 
 from residentialapps.residentialops import sample_data, sample_leave
@@ -14,6 +15,13 @@ from residentialapps.residentialops.main import create_app as ops_app
 from residentialapps.residentialops.pages import LEAVE_ADMIN_TABS
 
 ADMIN = "/ra-leave/admin/"
+
+
+@pytest.fixture(autouse=True)
+def _appeals_open(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests exercise extra leave, so appeals are Open in them; the
+    default, By invitation, has its own test (author, 2026-11-09)."""
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
 
 
 def _by_id(application_id: str) -> sample_leave.Application:
