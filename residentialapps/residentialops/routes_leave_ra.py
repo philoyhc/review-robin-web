@@ -4,11 +4,12 @@ segment 1C item 1, phone first."""
 
 from __future__ import annotations
 
+from datetime import date
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 from residentialapps.residentialops import sample_data, sample_leave
 from residentialapps.residentialops.pages import (
@@ -59,6 +60,30 @@ def apply(request: Request) -> Response:
     if key and draft is None:
         raise HTTPException(status_code=404)
     return _page(request, "apply.html", draft=draft)
+
+
+def _day(value: str | None) -> date | None:
+    try:
+        return date.fromisoformat(value) if value else None
+    except ValueError:
+        return None
+
+
+@router.get("/ra-leave/check-dates", name="residentialops_leave_check_dates")
+def check_dates(request: Request) -> Response:
+    """Apply's and Request extra leave's live check of the dates keyed in
+    (author, 2026-11-09): the days they count, what is wrong, and whether
+    the form may be sent."""
+    q = request.query_params
+    viewer = _viewer(request)
+    leave_type = q.get("type") or sample_leave.LEAVE_TYPES[0].name
+    # Appeal rules only for an RA who may appeal now, as the appeal page.
+    appeal = q.get("appeal") == "1" and sample_leave.can_appeal(viewer)
+    return JSONResponse(
+        sample_leave.check_dates(
+            viewer, leave_type, _day(q.get("first")), _day(q.get("last")), appeal=appeal
+        )
+    )
 
 
 @router.get("/ra-leave/appeal", name="residentialops_leave_appeal")

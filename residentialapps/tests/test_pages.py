@@ -40,7 +40,10 @@ def page_routes() -> list[str]:
         for r in flatten(ops_app().routes)
         if isinstance(r, APIRoute) and "GET" in (r.methods or ())
     ]
-    return sorted(r.path for r in routes if r.name != "residentialops_health" and "{" not in r.path)
+    # Health, and RA Leave's JSON check of dates (author, 2026-11-09), are
+    # not pages.
+    not_pages = {"residentialops_health", "residentialops_leave_check_dates"}
+    return sorted(r.path for r in routes if r.name not in not_pages and "{" not in r.path)
 
 
 def flatten(routes: Sequence[Any]) -> list[Any]:

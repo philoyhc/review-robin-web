@@ -109,6 +109,7 @@ def test_anyone_else_gets_404_and_health_still_answers(
         client = TestClient(app)
         assert client.get("/").status_code == 404
         assert client.get("/health").status_code == 200
+    assert TestClient(ops_app()).get("/ra-leave/check-dates").status_code == 404
 
 
 def test_a_local_run_answers_anyone(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -345,6 +346,7 @@ def sectioned_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[
 
 RA_PAGES = (
     "/",
+    "/ra-leave/check-dates",
     "/ra-leave/",
     "/ra-leave/apply",
     "/ra-leave/cover",
