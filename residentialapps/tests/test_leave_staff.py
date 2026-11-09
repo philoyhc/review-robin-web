@@ -44,10 +44,15 @@ def test_every_staff_page_answers_for_each_sample_viewer() -> None:
     assert re.findall(r'<a href="([^"]*)"', tabs) == [
         f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decided", "precinct", "appeals")
     ]
-    assert ">My Precinct</a>" in tabs  # renamed from Precinct leave (author, 2026-11-09)
+    # Precinct for the admin, the Master and an RSLM; My Precinct for an RF,
+    # whose own Precinct it is (author, 2026-11-09).
+    assert ">Precinct</a>" in tabs and "My Precinct" not in tabs
+    daniel = c.get(STAFF).text
+    assert ">My Precinct</a>" in daniel.split('class="tabs-in"')[1].split("</nav>")[0]
+    assert ">My Precinct</a>" in daniel.split('id="week-h"')[1]  # Home's button
     precinct = c.get(STAFF + "precinct").text
     assert "<title>My Precinct" in precinct and ">My Precinct</h1>" in precinct
-    assert ">My Precinct</a>" in c.get(STAFF).text.split('id="week-h"')[1]  # Home's button
+    assert ">Precinct</h1>" in c.get(STAFF + "precinct" + SAM).text
     # Every overseer but an RF gets Appeals while an appeal is open; an RF
     # (Daniel Koh) has no Appeals tab (author, 2026-11-09).
     assert (
@@ -300,7 +305,7 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
     page = c.get(STAFF + "decide/" + past.id).text
     assert "‹ Decided" in page and "<dt>Waiting</dt>" not in page
     assert 'href="/ra-leave/staff/decided" aria-current="true"' in page
-    # An appeal opened from Appeals goes back there, not to My Precinct.
+    # An appeal opened from Appeals goes back there, not to Precinct.
     page = c.get(STAFF + "decide/L-0105" + RACHEL).text
     assert (
         "‹ Appeals" in page
@@ -665,3 +670,23 @@ def test_staff_home_shows_a_month_of_leave_in_a_calendar() -> None:
     assert "L-0103" in rachel[0] and "L-0103" in rachel[1]
     # The month links keep the cover filter.
     assert "?cover=waiting&amp;month=2026-11" in c.get(STAFF + "?cover=waiting").text
+
+
+def test_the_precinct_page_counts_in_its_cards_and_lists_by_precinct_last() -> None:
+    """Author, 2026-11-09: no count tiles; Away, Upcoming and pending, and
+    Clashes carry their counts; By Precinct comes last; the period's dates
+    sit under the select beside Show period."""
+    page = client().get(STAFF + "precinct" + SAM).text
+    assert 'class="tile' not in page
+    order = [page.index(f'id="{h}"') for h in ("away-h", "upcoming-h", "clash-h", "team-h")]
+    assert order == sorted(order)
+    assert 'Upcoming and pending <span class="count">· 9</span>' in page
+    rows = page.split('id="upcoming-h"')[1].split("</table>")[0].count("<tr><td")
+    assert rows == 9  # the count is the table's rows
+    assert 'Away, this week <span class="count">· 3</span>' in page
+    assert 'Clashes <span class="count">· 1</span>' in page
+    assert ">Precinct</a>" in client().get(STAFF + "?as=Priya%20Raman").text  # an RSLM
+    assert (
+        '<div class="period-row"><span id="period-dates"' in page
+        and "Show period</button></div>" in page
+    )

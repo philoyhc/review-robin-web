@@ -1,6 +1,6 @@
 """RA Leave's staff pages (`/ra-leave/staff/`): placeholder screens with
 sample data for a sample viewer chosen on the banner (`?as=`), segment 1C
-item 1. Deciding is mobile-critical; My Precinct is desktop-oriented."""
+item 1. Deciding is mobile-critical; Precinct is desktop-oriented."""
 
 from __future__ import annotations
 
@@ -34,7 +34,11 @@ def _page(request: Request, template: str, **context: object) -> Response:
         request,
         f"residentialops/leave/staff/{template}",
         area="RA Leave",
-        tabs=leave_staff_tabs(as_query, appeals=sample_leave.sees_appeals(viewer))
+        tabs=leave_staff_tabs(
+            as_query,
+            appeals=sample_leave.sees_appeals(viewer),
+            precinct=sample_leave.precinct_label(viewer),
+        )
         if oversees
         else (),
         areas=areas_for(viewer),
