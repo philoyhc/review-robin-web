@@ -20,7 +20,7 @@
           <div>
             <div class="field-wide"><label for="ltype">Leave type</label>
               <select id="ltype" class="input" disabled>{% for lt in leave.LEAVE_TYPES %}<option{% if draft and draft.leave_type == lt.name %} selected{% endif %}>{{ lt.name }}</option>{% endfor %}</select></div>
-            <div class="field-wide"><span>Days of leave</span>
+            <div class="field-wide"><label for="days">Days of leave</label>
               <output id="days" for="first last" class="strong">{% if draft %}{{ draft.days }} day{{ "s" if draft.days != 1 }}{% else %}Choose your dates{% endif %}</output></div>
           </div>
         </div>

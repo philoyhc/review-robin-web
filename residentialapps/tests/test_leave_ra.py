@@ -547,10 +547,15 @@ def test_apply_puts_dates_beside_leave_type_and_its_day_count() -> None:
     pair = page.split('class="form-pair"')[1].split('class="field-wide full"')[0]
     order = [pair.index(f'id="{i}"') for i in ("first", "last", "ltype", "days")]
     assert order == sorted(order)
+    left, right = pair.split("</div>\n          </div>\n          <div>")
+    assert 'id="first"' in left and 'id="last"' in left and 'id="ltype"' not in left
+    assert 'id="ltype"' in right and 'id="days"' in right
+    assert '<label for="days">Days of leave</label>' in right  # an accessible name
     assert ">Choose your dates</output>" in pair
     after = page.split('class="form-pair"')[1]
     assert after.index('for="cover"') < after.index('for="remarks"')
     assert '<div class="field-wide full"><label for="remarks">' in page
+    assert '<div class="field-wide full"><label for="cover">' in page
     draft = sample_leave.my_drafts("Chloe Lim")[0]
     with_draft = client().get(RA + f"apply?draft={draft.id}").text
     assert f">{draft.days} day{'s' if draft.days != 1 else ''}</output>" in with_draft
