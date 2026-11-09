@@ -1,6 +1,6 @@
 """RA Leave's staff pages (`/ra-leave/staff/`): placeholder screens with
 sample data for a sample viewer chosen on the banner (`?as=`), segment 1C
-item 1. Deciding is mobile-critical; Precinct leave is desktop-oriented."""
+item 1. Deciding is mobile-critical; My Precinct is desktop-oriented."""
 
 from __future__ import annotations
 
@@ -34,7 +34,9 @@ def _page(request: Request, template: str, **context: object) -> Response:
         request,
         f"residentialops/leave/staff/{template}",
         area="RA Leave",
-        tabs=leave_staff_tabs(as_query, appeals=sample_leave.appeals_decided()) if oversees else (),
+        tabs=leave_staff_tabs(as_query, appeals=sample_leave.sees_appeals(viewer))
+        if oversees
+        else (),
         areas=areas_for(viewer),
         leave=sample_leave,
         sample=sample_data,
@@ -49,7 +51,13 @@ def _page(request: Request, template: str, **context: object) -> Response:
 def home(request: Request) -> Response:
     # Home is also the queue (author, 2026-11-09), filtered to applications
     # waiting on cover by `?cover=waiting`.
-    return _page(request, "home.html", cover_only=request.query_params.get("cover") == "waiting")
+    q = request.query_params
+    return _page(
+        request,
+        "home.html",
+        cover_only=q.get("cover") == "waiting",
+        month=sample_leave.month_of(q.get("month")),
+    )
 
 
 @router.get("/ra-leave/staff/decide", name="residentialops_leave_staff_queue")
@@ -76,7 +84,7 @@ def decide(request: Request, application_id: str) -> Response:
         back = ("/ra-leave/staff/", "Home")
     elif any(a.id == found.id for a, _, _ in sample_leave.decided(viewer)):
         back = ("/ra-leave/staff/decided", "Decided")
-    elif sample_leave.appeals_decided() and (
+    elif sample_leave.sees_appeals(viewer) and (
         found.appeal or found.ra in sample_leave.invitable_ras(viewer)
     ):
         back = ("/ra-leave/staff/appeals", "Appeals")

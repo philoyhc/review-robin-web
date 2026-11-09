@@ -88,14 +88,18 @@ widths, the scripts' behavior, and whether the screens read right.
 ## 3. Staff side
 
 - [ ] **Daniel's Home** (Home and Awaiting are one page, 2026-11-09):
-  - no tiles; tabs Home, Decided, Precinct leave, Appeals;
+  - no tiles; tabs Home, Decided, My Precinct (an RF has no Appeals tab;
+    Sam, Rachel and Priya do);
   - Awaiting my decision lists all three, oldest first, with Overdue
     chips; "Waiting on cover · 2" filters it under the heading "Waiting
     on cover", and "Show everything awaiting me" clears the filter;
   - Recent decisions with **All decided**; at the side This week (away
     today) and Later this week (as Sam: Maya Seah and Olivia Ng today,
     Pranav Iyer later);
-  - an old `/ra-leave/staff/decide` link lands on Home.
+  - an old `/ra-leave/staff/decide` link lands on Home;
+  - a Leave calendar under the cards (as Sam: October has Maya, Olivia and
+    Pranav; November Chloe Lim (pending) and the Examinations days named
+    and hatched); on a phone or a touch screen, a list of the days.
 - [ ] **Deciding** (open an awaiting item):
   - back link and marked tab match where you came from;
   - Approve/Reject when it awaits this viewer;
@@ -106,7 +110,7 @@ widths, the scripts' behavior, and whether the screens read right.
   "Decide without the cover's confirmation" tick box.
 - [ ] **Rachel's queue** is L-0103, Final approval, pending 5 days, with an
   Overdue chip. Decided shows 9.
-- [ ] **Precinct leave as Sam**, This week:
+- [ ] **My Precinct as Sam**, This week:
   - Away 3 (Maya Seah, Olivia Ng, Pranav Iyer);
   - Pending 7;
   - one clash, Willow A 13-25: Olivia Ng and Pranav Iyer, with "Away too"
@@ -114,7 +118,7 @@ widths, the scripts' behavior, and whether the screens read right.
   
   Change **Period** and press **Show period**: the range and tables
   follow. Sort a table, then reload: the sort is kept.
-- [ ] **Precinct leave as Daniel**: This week has nobody away; Rest of term
+- [ ] **My Precinct as Daniel**: This week has nobody away; Rest of term
   shows Hana Ito.
 - [ ] **Appeals**: Invitations shows Gwen Ho "Sent: L-0105", Kai Ng Open
   and Nathan Yeo Lapsed, and Appeals with the Master.

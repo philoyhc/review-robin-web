@@ -492,7 +492,7 @@ app's (`residentialapps/spec/residentialops_ui.md` §1, author,
 - [ ] **Desktop-oriented pages keep the full width** at 1280 px, cards
   and columns as before: the Leave dashboard
   (`/residentialops/ra-leave/admin/`, its main column wide and its side
-  narrow), Applications, Appeals, Precinct leave
+  narrow), Applications, Appeals, My Precinct
   (`/residentialops/ra-leave/staff/precinct`), the rosters and a
   person's page, and Sys admin.
 - [ ] **At 736 px** the Leave dashboard's side column has dropped below

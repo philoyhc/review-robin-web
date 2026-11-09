@@ -192,7 +192,7 @@ model (author, 2026-10-27):
   for Notes alone; sorted, each row names its levels and the grouping
   rules go. Leave admin's Applications takes chips for all but ID and RA;
   Entitlements, Approval chain's Precincts, Sys admin's grants and audit
-  log, and Precinct leave sort only (`data-sort-auto`). Policy's row
+  log, and My Precinct sort only (`data-sort-auto`). Policy's row
   builders, Terms, the dashboard's cards, Delegates and the appeals
   tables, short or edited in place, take neither (author, 2026-10-29).
   On every sorted table an empty value (a None chip, an empty cell) sorts
@@ -282,6 +282,11 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   a form's fields in two columns from 960 px, one column below with the
   left column's fields first; `.field-wide.full` lets a field's text box
   run the card's full width.
+- **A leave calendar** (`.cal-grid`, `.cal-list`, `.cal-leave`; RA Leave
+  staff Home, author, 2026-11-09): a month grid only from 640 px with a
+  mouse, its entries too small for a finger; otherwise a list of the days
+  with leave. Approved is filled, pending outlined and named so; a
+  blackout day names its blackout.
 - **Numbers in a table** sit right-aligned (`td.num`).
 - **Phone lists** (`ul.items`, RA Leave's RA pages, 2026-10-28): on a
   mobile-critical page, rows are list items rather than table rows, each

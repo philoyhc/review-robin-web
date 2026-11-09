@@ -44,10 +44,19 @@ def test_every_staff_page_answers_for_each_sample_viewer() -> None:
     assert re.findall(r'<a href="([^"]*)"', tabs) == [
         f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decided", "precinct", "appeals")
     ]
-    # Every overseer gets the same tabs, Appeals included while an appeal is open.
+    assert ">My Precinct</a>" in tabs  # renamed from Precinct leave (author, 2026-11-09)
+    precinct = c.get(STAFF + "precinct").text
+    assert "<title>My Precinct" in precinct and ">My Precinct</h1>" in precinct
+    assert ">My Precinct</a>" in c.get(STAFF).text.split('id="week-h"')[1]  # Home's button
+    # Every overseer but an RF gets Appeals while an appeal is open; an RF
+    # (Daniel Koh) has no Appeals tab (author, 2026-11-09).
     assert (
         "/ra-leave/staff/appeals"
-        in c.get(STAFF).text.split('class="tabs-in"')[1].split("</nav>")[0]
+        not in c.get(STAFF).text.split('class="tabs-in"')[1].split("</nav>")[0]
+    )
+    assert (
+        "/ra-leave/staff/appeals?as=Priya%20Raman"
+        in c.get(STAFF + "?as=Priya%20Raman").text.split('class="tabs-in"')[1].split("</nav>")[0]
     )
     assert sample_leave.staff_viewer("Nobody") == "Daniel Koh"
 
@@ -291,7 +300,7 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
     page = c.get(STAFF + "decide/" + past.id).text
     assert "‹ Decided" in page and "<dt>Waiting</dt>" not in page
     assert 'href="/ra-leave/staff/decided" aria-current="true"' in page
-    # An appeal opened from Appeals goes back there, not to Precinct leave.
+    # An appeal opened from Appeals goes back there, not to My Precinct.
     page = c.get(STAFF + "decide/L-0105" + RACHEL).text
     assert (
         "‹ Appeals" in page
@@ -346,9 +355,8 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
         r'<a href="/ra-leave/staff/(\w*)',
         c.get(STAFF + q).text.split('class="tabs-in"')[1].split("</nav>")[0],
     )
-    assert (
-        tabs("?as=Priya%20Raman") == tabs("") == tabs(SAM) == ["", "decided", "precinct", "appeals"]
-    )
+    assert tabs("?as=Priya%20Raman") == tabs(SAM) == ["", "decided", "precinct", "appeals"]
+    assert tabs("") == ["", "decided", "precinct"]  # an RF: no Appeals tab
     assert "Nothing awaits you." in c.get(STAFF + "?as=Priya%20Raman").text
     # Untick the admin: Rachel Yeo holds no slot, so she sees no RA and
     # her final approval leaves every Precinct with a gap (ruled 2026-10-29).
@@ -588,3 +596,72 @@ def test_staff_home_shows_this_week_and_admin_detail_the_balance() -> None:
 def test_staff_home_says_when_no_one_is_away_this_week() -> None:
     home = client().get(STAFF).text  # Daniel Koh's Precinct
     assert "No one is away today." in home and "No one starts leave later this week." in home
+
+
+def test_staff_home_shows_a_month_of_leave_in_a_calendar() -> None:
+    """Author, 2026-11-09: under the cards, a calendar of the month with the
+    approved and pending leave of RAs in the viewer's scope, blackout weeks
+    marked, and the previous and next month a link away; a phone lists the
+    days with leave instead."""
+    october = sample_leave.month_of(None)
+    assert october == sample_leave.date(2026, 10, 1)
+    weeks = sample_leave.leave_calendar("Sam Lee", october)
+    assert all(len(w) == 7 for w in weeks) and weeks[0][0]["day"].isoweekday() == 7  # a Sunday
+    today = next(c for w in weeks for c in w if c["today"])
+    assert today["day"] == sample_leave.TODAY
+    assert {a.ra for a, approved in today["leave"] if approved} == {"Maya Seah", "Olivia Ng"}
+    # Pending leave is marked, not approved; an RA out of scope is not shown.
+    nov = sample_leave.leave_calendar("Sam Lee", sample_leave.date(2026, 11, 1))
+    sixth = next(c for w in nov for c in w if c["day"] == sample_leave.date(2026, 11, 6))
+    assert ("Chloe Lim", False) in {(a.ra, ok) for a, ok in sixth["leave"]}
+    daniel = sample_leave.leave_calendar("Daniel Koh", october)
+    assert not any(a.ra == "Maya Seah" for w in daniel for c in w for a, _ in c["leave"])
+    # An appeal awaiting the Master is left off (author, 2026-11-09): Gwen
+    # Ho's L-0105, 20 Nov – 23 Nov.
+    assert not any(a.id == "L-0105" for w in nov for c in w for a, _ in c["leave"])
+    exams = next(c for w in nov for c in w if c["day"] == sample_leave.date(2026, 11, 16))
+    assert exams["blackout"] == "Examinations"
+    assert sample_leave.month_of("2026-13") == october and sample_leave.month_of("x") == october
+    assert sample_leave.shift_month(sample_leave.date(2026, 12, 1), 1) == sample_leave.date(
+        2027, 1, 1
+    )
+
+    c = client()
+    page = c.get(STAFF + SAM).text.split('id="cal-h"')[1]
+    assert "<strong>October 2026</strong>" in page
+    assert 'href="/ra-leave/staff/?as=Sam%20Lee&amp;month=2026-11#cal-h"' in page
+    assert 'class="cal-leave approved" href="/ra-leave/staff/decide/L-0106?as=Sam%20Lee"' in page
+    assert 'class="items cal-list"' in page  # the phone's list of days
+    november = c.get(STAFF + "?month=2026-11").text.split('id="cal-h"')[1]
+    assert "<strong>November 2026</strong>" in november
+    assert 'class="cal-leave pending" href="/ra-leave/staff/decide/L-0101"' in november
+    assert '<span class="cal-black">Examinations</span>' in november  # named, not hatched alone
+    assert ">Chloe Lim (pending)</a>" in november  # pending in words, not color alone
+    assert "Blackouts: Examinations, 15 Nov – 28 Nov." in november  # the phone's note
+    phone = november.split('<ul class="items cal-list">')[1].split("</ul>")[0]
+    assert "Fri 6 Nov" in phone and "Chloe Lim (pending)" in phone
+    assert "No leave this month." in c.get(STAFF + "?month=2027-03").text
+    assert 'aria-current="date"' in page  # today, for a screen reader too
+    # The cold read: the calendar's far ends are never reached, and every
+    # academic year's blackouts show.
+    for far in ("0001-01", "9999-12", "2026-13", "x"):
+        assert c.get(STAFF + f"?month={far}").status_code == 200, far
+    last_year = sample_leave.leave_calendar("Sam Lee", sample_leave.date(2025, 11, 1))
+    assert any(d["blackout"] == "Examinations" for w in last_year for d in w)
+    assert sample_leave.shift_month(sample_leave.date(2027, 1, 1), -1) == sample_leave.date(
+        2026, 12, 1
+    )
+    # An application across two months shows in both (L-0103, 30 Oct – 1 Nov).
+    rachel = [
+        {
+            a.id
+            for w in sample_leave.leave_calendar("Rachel Yeo", sample_leave.date(2026, m, 1))
+            for d in w
+            if d["in_month"]
+            for a, _ in d["leave"]
+        }
+        for m in (10, 11)
+    ]
+    assert "L-0103" in rachel[0] and "L-0103" in rachel[1]
+    # The month links keep the cover filter.
+    assert "?cover=waiting&amp;month=2026-11" in c.get(STAFF + "?cover=waiting").text

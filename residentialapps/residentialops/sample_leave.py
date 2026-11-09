@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from contextvars import ContextVar
 from dataclasses import dataclass, replace
-from datetime import date
+from datetime import date, timedelta
 from typing import TypedDict, cast
 
 from residentialapps.residentialops import sample_data
@@ -797,7 +797,7 @@ def away_this_week() -> tuple[Application, ...]:
     return away_between(*period()[2:])
 
 
-# Precinct leave's period (spec §22, "for a selected period"; author,
+# My Precinct's period (spec §22, "for a selected period"; author,
 # 2026-10-29): a week from TODAY by default, the week after, four weeks
 # from TODAY, or what is left of the term.
 PERIODS = (
@@ -1798,6 +1798,97 @@ def later_this_week(viewer: str) -> tuple[Application, ...]:
     )
 
 
+class CalendarDay(TypedDict):
+    """One day of staff Home's leave calendar (author, 2026-11-09)."""
+
+    day: date
+    in_month: bool
+    today: bool
+    leave: tuple[tuple[Application, bool], ...]  # (application, approved)
+    blackout: str  # the blackout's label, or ""
+
+
+def month_of(value: str | None) -> date:
+    """A `YYYY-MM` query value as the month's first day; anything else, or
+    a year more than 50 from today's (the calendar pads to whole weeks and
+    steps a month either way, so the far ends of the calendar must not be
+    reached), is this month."""
+    try:
+        year, month = (int(part) for part in (value or "").split("-"))
+        if abs(year - TODAY.year) > 50:
+            raise ValueError(year)
+        return date(year, month, 1)
+    except ValueError:
+        return TODAY.replace(day=1)
+
+
+def shift_month(first: date, by: int) -> date:
+    """The first day of the month `by` months from `first`'s."""
+    n = first.year * 12 + first.month - 1 + by
+    return date(n // 12, n % 12 + 1, 1)
+
+
+def leave_calendar(viewer: str, first: date) -> tuple[tuple[CalendarDay, ...], ...]:
+    """Staff Home's leave calendar (author, 2026-11-09): the month's weeks,
+    Sunday to Saturday, each day with the approved and pending leave of RAs
+    in the viewer's scope, appeals awaiting the Master left off, and the
+    blackout it falls in."""
+    last = shift_month(first, 1) - timedelta(days=1)
+    start = first - timedelta(days=first.isoweekday() % 7)
+    end = last + timedelta(days=6 - last.isoweekday() % 7)
+    live = [
+        a
+        for a in APPLICATIONS
+        # Appeals awaiting the Master stay off (author, 2026-11-09); one
+        # granted is approved leave like any other.
+        if (a.stage == "Approved" or (a.stage in OPEN_STAGES and a.stage != "Appeal to the Master"))
+        and a.precinct in scope(viewer)
+        and a.start <= end
+        and a.end >= start
+    ]
+    # Every academic year's blackouts, so a month in another year shows its own.
+    years = sorted({t.year for t in sample_data.TERMS})
+    spans = [(b.label, week_dates(b, year)) for b in BLACKOUTS for year in years]
+    days: list[CalendarDay] = []
+    day = start
+    while day <= end:
+        days.append(
+            {
+                "day": day,
+                "in_month": day.month == first.month,
+                "today": day == TODAY,
+                "leave": tuple(
+                    (a, a.stage == "Approved")
+                    for a in sorted(live, key=lambda a: (a.start, a.ra))
+                    if a.start <= day <= a.end
+                ),
+                "blackout": next(
+                    (label for label, span in spans if span and span[0] <= day <= span[1]), ""
+                ),
+            }
+        )
+        day += timedelta(days=1)
+    return tuple(tuple(days[i : i + 7]) for i in range(0, len(days), 7))
+
+
+def month_blackouts(first: date) -> tuple[tuple[str, date, date], ...]:
+    """The blackouts a calendar month touches, any academic year's, with
+    their dates: the phone's list names them in one line."""
+    last = shift_month(first, 1) - timedelta(days=1)
+    years = sorted({t.year for t in sample_data.TERMS})
+    return tuple(
+        (b.label, *span)
+        for b in BLACKOUTS
+        for year in years
+        if (span := week_dates(b, year)) and span[0] <= last and span[1] >= first
+    )
+
+
+def calendar_has_leave(weeks: tuple[tuple[CalendarDay, ...], ...]) -> bool:
+    """Whether any day of the calendar's own month has leave."""
+    return any(c["leave"] for week in weeks for c in week if c["in_month"])
+
+
 def balance_of(application: Application) -> EntitlementRow:
     return next(
         r
@@ -1813,6 +1904,14 @@ def waiting_on_cover_count(viewer: str) -> int:
 def appeals_on() -> bool:
     """Whether the system has appeals at all: open, or by invitation."""
     return POLICY["appeals"] != "Off"
+
+
+def sees_appeals(viewer: str) -> bool:
+    """Whether a staff member has the Appeals tab: while the Master decides
+    appeals, for everyone but an RF (author, 2026-11-09), whose appeals
+    are not theirs to decide or open."""
+    abbrev = next((s.abbrev for s in sample_data.STAFF if s.name == viewer), "")
+    return appeals_decided() and abbrev != "RF"
 
 
 def appeals_decided() -> bool:
