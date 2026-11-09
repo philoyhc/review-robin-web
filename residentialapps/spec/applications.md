@@ -225,8 +225,10 @@ or not, gets `404`. `/health` is never gated.
   it ends it, so a heading written differently can only narrow access.
   In the section a line at the margin may also be a distribution list
   as a mail client copies it, `Name <a@b.edu>; Name <c@d.edu>`: when the
-  whole line is names and angle-bracketed addresses, each address names
-  it, so the list is pasted as it is; any other line stays free prose.
+  whole line is names and angle-bracketed addresses, separated by `;` or
+  `,` (one person alone as `Name <a@b.edu>;`), and no name holds a colon,
+  each address names it, so the list is pasted as it is; any other line,
+  `Contact: <a@b.edu>` included, stays free prose.
 - **A file that cannot be read** names nobody, as no file does, and is
   logged; the count of addresses read is logged at the first request.
 - **Read once per process**, so a change to the list ships with a

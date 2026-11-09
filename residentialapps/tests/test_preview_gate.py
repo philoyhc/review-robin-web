@@ -405,7 +405,7 @@ def test_a_full_previewer_keeps_the_landing_s_viewers(
 def test_a_heading_written_differently_still_keeps_ra_previewers_ra_only(heading: str) -> None:
     """The cold read: the section fails safe. However the heading is
     written, those under it never become full previewers."""
-    text = f"- full@example.edu\n\n{heading}\n\n- ra@example.edu\nName <pasted@example.edu>\n"
+    text = f"- full@example.edu\n\n{heading}\n\n- ra@example.edu\nName <pasted@example.edu>;\n"
     full, ra = web_pages.parse_preview_sections(text)
     assert full == {"full@example.edu"}
     assert ra == {"ra@example.edu", "pasted@example.edu"}
@@ -426,6 +426,10 @@ def test_a_list_item_or_address_saying_ra_previewers_starts_no_section() -> None
         "> <quote@example.edu>",
         "| <table@example.edu> |",
         "Ask <a@example.edu> or <b@example.edu> about it: soon",
+        # The Codex review: prose ending at the bracketed address.
+        "Contact: <owner@example.edu>",
+        "Do not grant access to <excluded@example.edu>",
+        "Contact: <a@example.edu>; <b@example.edu>",
     ],
 )
 def test_only_a_whole_distribution_line_names_its_addresses(line: str) -> None:
@@ -439,3 +443,20 @@ def test_an_ra_previewer_s_landing_chip_is_not_a_dead_link(
     signed_in(monkeypatch, person(mail="ra.one@example.edu"))
     landing = TestClient(ops_app()).get("/").text
     assert 'href="#sample-viewer"' not in landing
+
+
+@pytest.mark.parametrize(
+    ("line", "named"),
+    [
+        ("Tan Wei Ling <wl@example.edu>;", {"wl@example.edu"}),
+        (
+            "Tan Wei Ling <wl@example.edu>; Lim, Jun <jl@example.edu>",
+            {"wl@example.edu", "jl@example.edu"},
+        ),
+        ("A One <a@example.edu>, B Two <b@example.edu>", {"a@example.edu", "b@example.edu"}),
+        ("<bare@example.edu>; <other@example.edu>;", {"bare@example.edu", "other@example.edu"}),
+        ("Tan Wei Ling <wl@example.edu>", set()),  # no separator: not a copied list
+    ],
+)
+def test_a_copied_distribution_list_names_each_address(line: str, named: set[str]) -> None:
+    assert web_pages.parse_preview_sections(f"## RA previewers\n{line}\n").ra == named

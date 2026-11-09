@@ -50,8 +50,19 @@ _ENDS_SECTION = re.compile(r"^ {0,3}#{1,6}(?:[ \t]|$)")
 # in angle brackets names it, so the list is pasted as it is. The whole
 # line must be names and angle-bracketed addresses, separated by `;` or
 # `,`, so prose, a quote or a table row that mentions one names nobody.
+# A name never holds a colon, and the line must separate an address with
+# `;` or `,` as a mail client does (Codex review), so "Contact: <a@b.edu>"
+# or "Do not grant access to <a@b.edu>" names nobody; one person alone is
+# copied as "Name <a@b.edu>;".
 _ANGLED = re.compile(r"<([^<>\s]+)>")
-_DISTRIBUTION = re.compile(r"(?:[^<>;|]*<[^<>\s]+>[ \t]*[;,]?[ \t]*)+")
+_ENTRY = r"[^<>;:|]*<[^<>\s]+>"
+_DISTRIBUTION = re.compile(rf"{_ENTRY}(?:[ \t]*[;,][ \t]*{_ENTRY})*[ \t]*[;,]?[ \t]*")
+_SEPARATED = re.compile(r">[ \t]*[;,]")
+
+
+def _is_distribution_line(line: str) -> bool:
+    line = line.rstrip()
+    return bool(_DISTRIBUTION.fullmatch(line) and _SEPARATED.search(line))
 
 
 def _says_ra_previewers(line: str) -> bool:
@@ -145,7 +156,7 @@ def parse_preview_sections(text: str) -> PreviewList:
             in_ra = True
         elif _ENDS_SECTION.match(head):
             in_ra = False
-        elif in_ra and head[:1] not in (" ", "") and _DISTRIBUTION.fullmatch(head.rstrip()):
+        elif in_ra and head[:1] not in (" ", "") and _is_distribution_line(head):
             ra.update(word.lower() for word in _ANGLED.findall(head) if _ADDRESS.fullmatch(word))
     return PreviewList(frozenset(full), frozenset(ra - full))
 
