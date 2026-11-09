@@ -6,36 +6,32 @@ tests are; without a Chromium build the test skips, saying why, and
 
 from __future__ import annotations
 
-import pytest
 from playwright.sync_api import Page, expect
 
-from residentialapps.residentialops import sample_leave
 from residentialapps.tests.test_sort_persistence_browser import (  # noqa: F401  (the fixture)
     ORIGIN,
     page,
 )
 
 
-def test_keyed_in_dates_are_checked_and_open_submit(
-    page: Page,  # noqa: F811
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Off")
+def test_keyed_in_dates_are_checked_and_open_submit(page: Page) -> None:  # noqa: F811
+    # At the default, By invitation, Chloe Lim is not invited: more than her
+    # balance is refused.
     page.goto(ORIGIN + "/ra-leave/apply")
     submit = page.locator("#send")
     expect(submit).to_be_disabled()
-    page.fill("#first", "2026-11-02")
-    page.fill("#last", "2026-10-31")
+    page.fill("#first", "2026-11-30")
+    page.fill("#last", "2026-11-29")
     page.locator("#last").dispatch_event("change")
     expect(page.locator("#days-note")).to_have_text("The last day is before the first day.")
     expect(submit).to_be_disabled()
-    page.fill("#last", "2026-11-06")
+    page.fill("#last", "2026-12-04")
     page.locator("#last").dispatch_event("change")
     expect(page.locator("#days")).to_have_text("5 days")
     expect(page.locator("#days-note")).to_have_text(
-        "3 days more than your Personal leave: shorten it."
+        "3 days more than your Personal leave (2 available): shorten it."
     )
-    page.fill("#last", "2026-11-03")
+    page.fill("#last", "2026-12-01")
     page.locator("#last").dispatch_event("change")
     expect(page.locator("#days")).to_have_text("2 days")
     expect(page.locator("#days-note")).to_have_text("")

@@ -10,7 +10,7 @@
      not yet invited). #}
   {% set invited = leave.invitation_for(me) %}
   {% if invited and leave.POLICY.appeals == "By invitation" %}<div class="notice">The Master has agreed to consider your appeal; send it by {{ leave.short_date(invited.until) }}.</div>{% endif %}
-  <p class="sub">For leave beyond your entitlement, or in an Appeal-only blackout. The Master decides personally; approval is discretionary, and extra leave is kept apart from your entitlement (spec §7). Your dates are checked as you key them in; Send opens once they are valid. Nothing is sent until RA Leave is wired.</p>
+  <p class="sub">For leave beyond your entitlement, or in an Appeal-only blackout. The Master decides personally; approval is discretionary, and extra leave is kept apart from your entitlement (spec §7). Your dates are checked as you key them in; Send opens once they pass; your reason, cover and the terms are not checked yet. Nothing is sent until RA Leave is wired.</p>
   <div class="split">
     <div class="main">
       <section class="card card-pad" aria-labelledby="form-h">
@@ -26,7 +26,7 @@
           <p class="sub">{{ leave.POLICY.appeal_terms }}</p>
           <label class="check"><input type="checkbox" disabled> I accept these terms</label>
         </fieldset>
-        <div class="btnrow"><button type="button" id="send" class="btn btn-primary" disabled>Send to the Master</button><a class="btn btn-secondary" href="{{ url('/ra-leave/') }}{{ as_query }}">Cancel</a></div>
+        <div class="btnrow"><button type="button" id="send" aria-describedby="days-note" class="btn btn-primary" disabled>Send to the Master</button><a class="btn btn-secondary" href="{{ url('/ra-leave/') }}{{ as_query }}">Cancel</a></div>
       </section>
     </div>
     <div class="side">

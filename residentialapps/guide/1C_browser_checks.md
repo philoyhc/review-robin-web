@@ -60,8 +60,10 @@ widths, the scripts' behavior, and whether the screens read right.
   Leave type and Days of leave on the right (stacked in that order below),
   then Covering RA and Remarks across the full width; check the date
   inputs at 960 px. Key in dates: Days of leave counts them and says what
-  is wrong (last before first, past, beyond the term, a blackout, over the
-  balance), and Submit opens only once they pass. Request extra leave
+  is wrong (last before first, past, beyond the term, overlapping her own
+  leave, a blackout, over the balance), and Submit opens only once they
+  pass. With appeals Open previewed, over the balance is a note and Submit
+  stays open. Request extra leave
   (as Kai Ng) has the same block, allowing more than the balance. From the draft, **Apply** opens pre-filled with a
   draft notice. Every control is disabled.
 - [ ] **An application** (L-0101 as Chloe):

@@ -1697,11 +1697,16 @@ class DateCheck(TypedDict):
 def check_dates(
     ra: str, leave_type: str, first: date | None, last: date | None, appeal: bool = False
 ) -> DateCheck:
-    """Check an application's dates as the RA keys them in (author,
-    2026-11-09): both chosen, in order, not past, within this term,
-    counting a day, clear of a blackout and within the RA's balance. An
-    appeal may run past the balance or into an Appeal-only blackout; that
-    is what it is for (§7)."""
+    """Check an application as the RA keys it in (author, 2026-11-09; spec
+    §10): a known leave type, both dates chosen, in order, not past, within
+    this term, clear of the RA's own leave, counting a day, clear of a
+    Refused blackout and within the balance. Where the RA may appeal, an
+    Appeal-only blackout or more than the balance still submits, as an
+    appeal or by offering Request extra leave (author, 2026-10-29; §7.2
+    "should not simply block"), so the message is a note, not a refusal;
+    on the appeal page itself it needs no note (§7)."""
+    if leave_type not in {lt.name for lt in LEAVE_TYPES}:
+        return {"days": None, "message": "Choose a leave type.", "ok": False}
     if first is None or last is None:
         return {"days": None, "message": "Choose your dates.", "ok": False}
     if last < first:
@@ -1716,30 +1721,47 @@ def check_dates(
         return no(
             f"Leave falls within {TERM.label}: {short_date(TERM.start)} – {short_date(TERM.end)}."
         )
+    clash = next(
+        (
+            a
+            for a in my_applications(ra)
+            if (a.stage in OPEN_STAGES or a.stage == "Approved")
+            and a.start <= last
+            and a.end >= first
+        ),
+        None,
+    )
+    if clash is not None:
+        return no(f"These dates overlap your leave of {clash.dates} ({clash.stage.lower()}).")
     days = leave_days(first, last)
     if days == 0:
         return no("These dates count no days of leave.", 0)
     may_appeal = appeal or can_appeal(ra)
+    note = ""
     for b in BLACKOUTS:
-        span = week_dates(b)
+        span = week_dates(b, PERIOD_LABEL)
         if not span or span[0] > last or span[1] < first:
             continue
         when = f"{b.label}, {short_date(span[0])} – {short_date(span[1])}"
         if b.effect == "Refused" or not may_appeal:
             return no(f"These dates fall in a blackout ({when}): no leave.", days)
         if not appeal:
-            return no(
-                f"These dates fall in an Appeal-only blackout ({when}): use Request extra leave.",
-                days,
+            note = (
+                f"These dates fall in an Appeal-only blackout ({when}): submitting sends "
+                "it to the Master as an appeal, which the Master decides at discretion."
             )
-    available = next((r["available"] for r in my_balances(ra) if r["type"] == leave_type), 0)
-    short = days - max(available, 0)
+    available = max(next(r["available"] for r in my_balances(ra) if r["type"] == leave_type), 0)
+    short = days - available
     if short > 0 and not appeal:
-        tail = "use Request extra leave." if may_appeal else "shorten it."
-        return no(
-            f"{short} day{'s' if short != 1 else ''} more than your {leave_type}: {tail}", days
+        plural = "s" if short != 1 else ""
+        over = f"{short} day{plural} more than your {leave_type} ({available} available)"
+        if not may_appeal:
+            return no(f"{over}: shorten it.", days)
+        note = note or (
+            f"{over}: submitting offers Request extra leave, which the Master decides at "
+            "discretion."
         )
-    return {"days": days, "message": "", "ok": True}
+    return {"days": days, "message": note, "ok": True}
 
 
 def draft_short(draft: Draft) -> int:

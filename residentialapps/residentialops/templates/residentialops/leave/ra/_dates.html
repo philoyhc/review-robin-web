@@ -38,16 +38,29 @@
         if (send) send.disabled = !r.ok;
       }
       var asked = 0;
+      function hold() {
+        var send = document.getElementById(pair.dataset.submit);
+        if (send) send.disabled = true;
+      }
       function check() {
         var mine = ++asked;  // a later change's answer wins over an earlier one's
+        hold();  // until this answer comes, the dates are unchecked
         var q = new URLSearchParams({ first: first.value, last: last.value, type: type.value, appeal: pair.dataset.appeal });
         if (pair.dataset.as) q.set("as", pair.dataset.as);
         fetch(pair.dataset.dateCheck + "?" + q.toString(), { credentials: "same-origin" })
           .then(function (res) { return res.ok ? res.json() : null; })
-          .then(function (r) { if (r && mine === asked) show(r); })
-          .catch(function () {});
+          .then(function (r) {
+            if (mine !== asked) return;
+            show(r || { days: null, message: "The dates could not be checked; try again.", ok: false });
+          })
+          .catch(function () {
+            if (mine === asked) show({ days: null, message: "The dates could not be checked; try again.", ok: false });
+          });
       }
       [first, last, type].forEach(function (el) { el.addEventListener("change", check); });
+      // A browser that restores the fields on reload or Back gets them
+      // checked, not the page's first answer.
+      if (first.value || last.value) check();
     })();
   </script>
 {% endmacro %}

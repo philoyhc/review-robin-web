@@ -75,14 +75,13 @@ def check_dates(request: Request) -> Response:
     (author, 2026-11-09): the days they count, what is wrong, and whether
     the form may be sent."""
     q = request.query_params
+    viewer = _viewer(request)
     leave_type = q.get("type") or sample_leave.LEAVE_TYPES[0].name
+    # Appeal rules only for an RA who may appeal now, as the appeal page.
+    appeal = q.get("appeal") == "1" and sample_leave.can_appeal(viewer)
     return JSONResponse(
         sample_leave.check_dates(
-            _viewer(request),
-            leave_type,
-            _day(q.get("first")),
-            _day(q.get("last")),
-            appeal=q.get("appeal") == "1",
+            viewer, leave_type, _day(q.get("first")), _day(q.get("last")), appeal=appeal
         )
     )
 

@@ -578,13 +578,24 @@ def test_the_dates_are_checked_as_they_are_keyed_in(monkeypatch: pytest.MonkeyPa
     assert msg(t - 2 * one, t)["message"] == "The first day has passed."
     assert "Leave falls within" in msg(t + one, sample_leave.TERM.end + one)["message"]
     assert msg(t + one, t + one) == {"days": 1, "message": "", "ok": True}
+    # Where she may appeal, more than her balance or an Appeal-only blackout
+    # still submits, with a note, not a refusal (author, 2026-10-29; §7.2).
     over = msg(t + one, t + 5 * one)  # 5 days; Chloe Lim has 2 Personal leave
-    assert over["days"] == 5 and not over["ok"]
-    assert over["message"] == "3 days more than your Personal leave: use Request extra leave."
-    assert msg(t + one, t + 5 * one, appeal=True)["ok"]
+    assert over["days"] == 5 and over["ok"]
+    assert over["message"].startswith(
+        "3 days more than your Personal leave (2 available): submitting offers Request extra leave"
+    )
+    assert msg(t + one, t + 5 * one, appeal=True) == {"days": 5, "message": "", "ok": True}
     exams = (sample_leave.date(2026, 11, 16), sample_leave.date(2026, 11, 17))
-    assert "Appeal-only blackout (Examinations" in msg(*exams)["message"]
-    assert msg(*exams, appeal=True)["ok"]
+    assert msg(*exams)["ok"] and "Appeal-only blackout (Examinations" in msg(*exams)["message"]
+    assert msg(*exams, appeal=True) == {"days": 2, "message": "", "ok": True}
+    # Her own live leave, and an unknown leave type, are refused (§10).
+    mine = next(
+        a for a in sample_leave.my_applications("Chloe Lim") if a.stage in sample_leave.OPEN_STAGES
+    )
+    clash = msg(mine.start, mine.end)
+    assert not clash["ok"] and clash["message"].startswith("These dates overlap your leave of")
+    assert msg(t + one, t + one, kind="Bogus leave")["message"] == "Choose a leave type."
     # Without appeals open to her, she is told to shorten it, and a blackout
     # is simply no leave.
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Off")
@@ -608,7 +619,7 @@ def test_the_check_answers_as_json_for_the_viewer() -> None:
     ).json()
     assert (
         got["days"] == 5
-        and got["ok"] is False
+        and got["ok"] is True  # with a note: appeals are open here
         and "more than your Personal leave" in got["message"]
     )
     assert c.get("/ra-leave/check-dates", params={"first": "nonsense"}).json()["message"] == (
@@ -626,17 +637,59 @@ def test_submit_is_disabled_until_the_dates_pass() -> None:
     dates pass opens with Submit enabled. The appeal page shares Apply's
     dates block and its full-width fields (author, 2026-11-09)."""
     c = client()
-    assert (
-        '<button type="button" id="send" class="btn btn-primary" disabled>Submit</button>'
-        in c.get(RA + "apply").text
-    )
+    send = '<button type="button" id="send" aria-describedby="days-note" class="btn btn-primary"'
+    assert f"{send} disabled>Submit</button>" in c.get(RA + "apply").text
     appeal = c.get(RA + "appeal").text
-    assert 'id="send" class="btn btn-primary" disabled>Send to the Master' in appeal
+    assert (
+        'id="send" aria-describedby="days-note" class="btn btn-primary" disabled>Send to the Master'
+        in appeal
+    )
     assert 'class="form-pair" data-date-check=' in appeal and 'data-appeal="1"' in appeal
     assert '<div class="field-wide full"><label for="reason">' in appeal
     for d in sample_leave.my_drafts("Chloe Lim"):
         ok = sample_leave.check_dates("Chloe Lim", d.leave_type, d.start, d.end)["ok"]
         page = c.get(RA + f"apply?draft={d.id}").text
-        assert (
-            '<button type="button" id="send" class="btn btn-primary">Submit</button>' in page
-        ) is ok
+        assert (f"{send}>Submit</button>" in page) is ok
+
+
+def test_at_the_default_an_ra_not_invited_is_simply_refused(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """By invitation, the default (2026-11-09): Chloe Lim, not invited, is
+    told to shorten it and a blackout is no leave; Kai Ng, invited, gets
+    the appeal notes, and his ?as= reaches the JSON check."""
+    monkeypatch.undo()
+    t = sample_leave.TODAY
+    from datetime import timedelta
+
+    one = timedelta(days=1)
+    chloe = sample_leave.check_dates("Chloe Lim", "Personal leave", t + one, t + 5 * one)
+    assert not chloe["ok"] and chloe["message"].endswith("shorten it.")
+    exams = (sample_leave.date(2026, 11, 16), sample_leave.date(2026, 11, 17))
+    assert sample_leave.check_dates("Chloe Lim", "Personal leave", *exams)["message"].endswith(
+        ": no leave."
+    )
+    kai = (
+        TestClient(ops_app())
+        .get(
+            "/ra-leave/check-dates",
+            params={
+                "as": "Kai Ng",
+                "first": "2026-11-16",
+                "last": "2026-11-17",
+                "type": "Personal leave",
+            },
+        )
+        .json()
+    )
+    assert kai["ok"] and "Appeal-only blackout" in kai["message"]
+    # Appeal rules only for an RA who may appeal: Chloe's appeal=1 is ignored.
+    got = (
+        TestClient(ops_app())
+        .get(
+            "/ra-leave/check-dates",
+            params={"first": "2026-11-16", "last": "2026-11-17", "appeal": "1"},
+        )
+        .json()
+    )
+    assert not got["ok"] and got["message"].endswith(": no leave.")
