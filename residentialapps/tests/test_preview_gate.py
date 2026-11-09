@@ -38,9 +38,9 @@ def preview_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Pa
     path.write_text(LIST, encoding="utf-8")
     monkeypatch.setattr(web_pages, "PREVIEW_FILE", path)
     monkeypatch.setattr(web_pages, "is_local", lambda: False)
-    web_pages.preview_addresses.cache_clear()
+    web_pages.preview_lists.cache_clear()
     yield path
-    web_pages.preview_addresses.cache_clear()
+    web_pages.preview_lists.cache_clear()
 
 
 def signed_in(monkeypatch: pytest.MonkeyPatch, identity: Identity | None) -> None:
@@ -158,10 +158,10 @@ def test_an_item_s_first_word_is_trimmed_then_must_be_one_address(
 
 def test_an_unreadable_list_names_nobody(tmp_path: Path) -> None:
     (tmp_path / "bad.md").write_bytes(b"- \xff\xfe@example.edu\n")
-    web_pages.preview_addresses.cache_clear()
+    web_pages.preview_lists.cache_clear()
     assert web_pages.preview_addresses(tmp_path / "bad.md") == frozenset()
     assert web_pages.preview_addresses(tmp_path) == frozenset()  # a directory
-    web_pages.preview_addresses.cache_clear()
+    web_pages.preview_lists.cache_clear()
 
 
 def test_a_fence_closes_only_on_its_own_marker_at_least_as_long() -> None:
@@ -261,12 +261,122 @@ UNGATED = {"/health"}
 def test_every_route_but_health_carries_the_gate(factory) -> None:
     """Findings register N1: the gate was tested at ``GET /`` only, so a
     new router that forgot ``Depends(placeholders_previewers_only)``
-    would have passed. This walks every route the application builds."""
+    would have passed. This walks every route the application builds.
+    RA Leave's RA pages and the landing take the RA previewers' gate
+    instead (author, 2026-11-09), and only they."""
     routes = list(_gated_routes(factory().routes))
     assert len(routes) > len(UNGATED)
-    missing = [
-        route.path
-        for route, calls in routes
-        if route.path not in UNGATED and web_pages.placeholders_previewers_only not in calls
-    ]
+    missing, ra_gated = [], []
+    for route, calls in routes:
+        if route.path in UNGATED:
+            continue
+        if web_pages.ra_pages_previewers in calls:
+            ra_gated.append(route.path)
+        elif web_pages.placeholders_previewers_only not in calls:
+            missing.append(route.path)
     assert missing == []
+    assert all(p == "/" or p.startswith("/ra-leave/") for p in ra_gated), ra_gated
+    assert not any(p.startswith(("/ra-leave/staff", "/ra-leave/admin")) for p in ra_gated)
+
+
+SECTIONED = """# Residential preview
+
+- full@example.edu
+
+## RA previewers
+
+Some RAs, to try RA Leave's RA pages.
+
+- ra.one@example.edu
+- `Ra.Two@Example.edu` (RA, Cypress)
+- both@example.edu
+<!--
+## Not a heading: commented out
+-->
+- still.ra@example.edu
+Tan Wei Ling <Wei.Ling@example.edu>; Lim, Jun <jun.lim@example.edu>; not <an address>
+    Indented <indented@example.edu> is not read.
+Prose naming bare@example.edu names nobody.
+
+## Staff
+
+- staff@example.edu
+- both@example.edu
+"""
+
+
+def test_the_ra_previewers_heading_starts_an_ra_only_section() -> None:
+    """Author, 2026-11-09: addresses under "RA previewers" reach only RA
+    Leave's RA pages and the landing; any other heading ends the section,
+    and an address named in both is a full previewer."""
+    full, ra = web_pages.parse_preview_sections(SECTIONED)
+    assert full == frozenset({"full@example.edu", "staff@example.edu", "both@example.edu"})
+    assert ra == frozenset(
+        {
+            "ra.one@example.edu",
+            "ra.two@example.edu",
+            "still.ra@example.edu",
+            # A distribution list pasted as a mail client copies it.
+            "wei.ling@example.edu",
+            "jun.lim@example.edu",
+        }
+    )
+    assert web_pages.parse_preview_list(SECTIONED) == full | ra
+    # A heading in a fence or indented changes no section.
+    fenced = "```\n## RA previewers\n```\n- fenced.heading@example.edu\n"
+    assert web_pages.parse_preview_sections(fenced).full == {"fenced.heading@example.edu"}
+
+
+@pytest.fixture
+def sectioned_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+    path = tmp_path / "residential_preview.md"
+    path.write_text(SECTIONED, encoding="utf-8")
+    monkeypatch.setattr(web_pages, "PREVIEW_FILE", path)
+    monkeypatch.setattr(web_pages, "is_local", lambda: False)
+    web_pages.preview_lists.cache_clear()
+    yield path
+    web_pages.preview_lists.cache_clear()
+
+
+RA_PAGES = (
+    "/",
+    "/ra-leave/",
+    "/ra-leave/apply",
+    "/ra-leave/cover",
+    "/ra-leave/history",
+    "/ra-leave/applications/L-0101",
+)
+NOT_RA_PAGES = (
+    "/ra-leave/staff/",
+    "/ra-leave/staff/decide",
+    "/ra-leave/admin/",
+    "/ra-leave/admin/policy",
+    "/rosters/",
+    "/sys-admin/",
+)
+
+
+def test_an_ra_previewer_reaches_the_ra_pages_and_the_landing_only(
+    sectioned_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    signed_in(monkeypatch, person(mail="ra.one@example.edu"))
+    ops = TestClient(ops_app())
+    for path in RA_PAGES:
+        assert ops.get(path).status_code == 200, path
+    for path in NOT_RA_PAGES:
+        assert ops.get(path).status_code == 404, path
+    assert TestClient(support_app()).get("/").status_code == 404
+    # The landing is the sample RA's, with no viewer to switch to.
+    landing = ops.get("/?as=Sam%20Lee").text
+    assert "Viewing as Chloe Lim" in landing and 'id="sample-viewer"' not in landing
+    assert 'href="/ra-leave/"' in landing and "/ra-leave/admin/" not in landing
+
+
+def test_a_full_previewer_keeps_the_landing_s_viewers(
+    sectioned_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    signed_in(monkeypatch, person(mail="both@example.edu"))
+    ops = TestClient(ops_app())
+    assert ops.get("/ra-leave/admin/").status_code == 200
+    landing = ops.get("/?as=Sam%20Lee").text
+    assert 'id="sample-viewer"' in landing and "Viewing as Sam Lee" in landing

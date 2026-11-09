@@ -19,7 +19,7 @@
     {% endfor %}
   </ul>
 {% endblock %}
-{% block viewer %}
+{% block viewer %}{% if not ra_only %}
   <nav id="sample-viewer" class="card card-pad muted viewer-end" aria-label="Sample viewer">
     <span class="subtle small">Sample viewer:</span>
     <span class="chips chip-wrap">
@@ -29,4 +29,4 @@
     </span>
     <ul class="plain subtle small">{% for name, what in sample.LANDING_VIEWERS %}<li>{{ name }}: {{ what }}</li>{% endfor %}</ul>
   </nav>
-{% endblock %}
+{% endif %}{% endblock %}

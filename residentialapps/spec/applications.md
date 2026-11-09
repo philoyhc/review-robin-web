@@ -213,6 +213,16 @@ or not, gets `404`. `/health` is never gated.
   is left must be one plain address (a Markdown link is not). The rest
   of the item, and every other line, is free prose. HTML comments and
   fenced code blocks are not read, so commenting an entry out removes it.
+- **RA previewers** (author, 2026-11-09): addresses under a heading
+  `RA previewers` (any level, any case) reach only RA Leave's RA pages
+  and the landing, which shows them the sample RA's view with no viewer
+  to switch to; every other page, and Support Logs, is `404`. Any other
+  heading ends the section, and an address also named outside it is a
+  full previewer. In this section a line at the margin may also be a
+  distribution list as a mail client copies it, `Name <a@b.edu>; Name
+  <c@d.edu>`: each angle-bracketed address names it, so the list is
+  pasted as it is. The RA pages and the landing take
+  `ra_pages_previewers` in place of `placeholders_previewers_only`.
 - **A file that cannot be read** names nobody, as no file does, and is
   logged; the count of addresses read is logged at the first request.
 - **Read once per process**, so a change to the list ships with a
