@@ -1235,6 +1235,10 @@ def test_an_invited_appeal_routes_by_the_policy_choice(monkeypatch) -> None:
     assert any(s.startswith("Remarks from") for s in steps)
     assert not any(s[1].startswith("Sent as") for s in sample_leave.history_steps(l0105))
     assert not sample_leave.appeals_decided()
+    # The Appeals tab stays, for opening invitations (second cold read).
+    assert sample_leave.sees_appeals("Sam Lee") and sample_leave.sees_appeals("Rachel Yeo")
+    staff_appeals = c.get("/ra-leave/staff/appeals?as=Sam%20Lee").text
+    assert "The usual approvers decide each one." in staff_appeals
     appeals = c.get("/ra-leave/admin/appeals").text
     assert "Open appeals" in appeals and "L-0105" in appeals.split('id="open-h"')[1]
     viewers = (*sample_leave.RA_VIEWERS, ("Gwen Ho", ""))

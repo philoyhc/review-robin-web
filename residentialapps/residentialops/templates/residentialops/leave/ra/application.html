@@ -60,7 +60,7 @@
       {% elif leave.can_withdraw(app) %}
         <section class="card card-pad muted" aria-labelledby="act-h">
           <h2 id="act-h">Changed your plans?</h2>
-          <p class="sub">Withdrawing ends this request for extra leave; your cover and {{ leave.appeal_decider_name() }} are told.</p>
+          <p class="sub">Withdrawing ends this request for extra leave; your cover and {{ "the Master" if app.stage == "Appeal to the Master" else "your approvers" }} are told.</p>
           <button type="button" class="btn btn-danger" aria-label="Withdraw, {{ app.dates }}" disabled>Withdraw</button>
         </section>
       {% elif leave.can_cancel(app) %}

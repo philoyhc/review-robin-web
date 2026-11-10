@@ -148,7 +148,7 @@ widths, the scripts' behavior, and whether the screens read right.
 - [ ] **Records as Daniel**: no Precinct chips or column; This week
   has nobody away; Rest of term shows Hana Ito.
 - [ ] **Appeals**: Invitations shows Gwen Ho "Sent: L-0105", Kai Ng Open
-  and Nathan Yeo Lapsed, and Appeals with the Master.
+  and Nathan Yeo Lapsed, and Open appeals.
 - [ ] **Hui Min Goh** sees "You oversee no RA" and no tabs.
 
 ## 4. RA Leave admin (desktop first; then 390 px)

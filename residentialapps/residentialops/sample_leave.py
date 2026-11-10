@@ -2344,10 +2344,11 @@ def is_rf(viewer: str) -> bool:
 
 
 def sees_appeals(viewer: str) -> bool:
-    """Whether a staff member has the Appeals tab: while the Master decides
-    appeals, for everyone but an RF (author, 2026-11-09), whose appeals
-    are not theirs to decide or open."""
-    return appeals_decided() and not is_rf(viewer)
+    """Whether a staff member has the Appeals tab: while appeals are on,
+    or one made before is still decided, for everyone but an RF (author,
+    2026-11-09), whose appeals are not theirs to decide or open. Under the
+    usual approvers it stays, for opening invitations (2026-11-10)."""
+    return (appeals_on() or appeals_decided()) and not is_rf(viewer)
 
 
 def appeals_decided() -> bool:

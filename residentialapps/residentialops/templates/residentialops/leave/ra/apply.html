@@ -12,7 +12,7 @@
       <section class="card card-pad" aria-labelledby="form-h">
         <h2 id="form-h">Your application</h2>
         {{ date_fields(leave, me, as_query, "send", draft) }}
-        <p class="subtle small">The days are counted for you ({{ leave.POLICY.day_count | lower }}). {{ leave.zero_day_rule() }} {% if leave.can_appeal(me) %}Leave in a Refused blackout cannot be submitted; in an Appeal-only one it goes to the Master as an appeal.{% else %}Leave in a blackout cannot be submitted.{% endif %}</p>
+        <p class="subtle small">The days are counted for you ({{ leave.POLICY.day_count | lower }}). {{ leave.zero_day_rule() }} {% if leave.can_appeal(me) %}Leave in a Refused blackout cannot be submitted; in an Appeal-only one it goes to {{ leave.appeal_decider_name() }} as an appeal.{% else %}Leave in a blackout cannot be submitted.{% endif %}</p>
         <div class="field-wide full"><label for="cover">Covering RA{% if not leave.POLICY.cover_required %} (optional){% endif %}</label>
           {{ person_tokens("Covering RA", (draft.cover,) if draft and draft.cover else (), "cover-pool", "cover", single=true, describedby="cover-what") }}
           <datalist id="cover-pool">{% for name in leave.cover_choices(me) %}<option value="{{ name }}"></option>{% endfor %}</datalist>
