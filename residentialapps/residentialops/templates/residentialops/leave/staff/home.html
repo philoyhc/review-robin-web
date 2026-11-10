@@ -67,19 +67,13 @@
         {% for week in weeks %}<tr>
           {% for c in week %}<td class="{{ '' if c.in_month else 'out' }}{{ ' blackout' if c.blackout }}{{ ' today' if c.today }}"{% if c.today %} aria-current="date"{% endif %}>
             <span class="cal-n">{{ c.day.day }}{% if c.today %}<span class="visually-hidden">, today</span>{% endif %}</span>{% if c.blackout %}<span class="cal-black">{{ c.blackout }}</span>{% endif %}
-            {% for a, approved in c.leave %}<a class="cal-leave {{ 'approved' if approved else 'pending' }}" href="{{ url('/ra-leave/staff/decide/' ~ a.id) }}{{ as_query }}" title="{{ a.ra }}, {{ a.dates }}: {{ a.stage | lower }}">{{ a.ra }}{% if not approved %} (pending){% endif %}</a>{% endfor %}
+            {% for a, approved in c.leave %}{% set kind = 'approved' if approved else 'pending' %}<a class="cal-leave cal-link {{ kind }}" href="{{ url('/ra-leave/staff/decide/' ~ a.id) }}{{ as_query }}" title="{{ a.ra }}, {{ a.dates }}: {{ a.stage | lower }}">{{ a.ra }}{% if not approved %} (pending){% endif %}</a><span class="cal-leave cal-tag {{ kind }}" title="{{ a.ra }}, {{ a.dates }}: {{ a.stage | lower }}">{{ a.ra.split()[0] }}<span class="visually-hidden">{{ a.ra[a.ra.split()[0] | length:] }}{% if not approved %}, pending{% endif %}</span></span>{% endfor %}
           </td>{% endfor %}
         </tr>{% endfor %}
       </tbody>
     </table>
     {% set blackouts = leave.month_blackouts(month) %}
-    {% if blackouts %}<p class="sub cal-list">Blackouts: {% for label, first, last in blackouts %}{{ label }}, {{ leave.short_date(first) }} – {{ leave.short_date(last) }}{{ "; " if not loop.last }}{% endfor %}.</p>{% endif %}
-    <ul class="items cal-list">
-      {% for week in weeks %}{% for c in week if c.in_month and c.leave %}
-        <li><div class="item-head"><span class="strong">{{ c.day.strftime('%a') }} {{ leave.short_date(c.day) }}</span>{% if c.blackout %}<span class="chip chip-mute">{{ c.blackout }}</span>{% endif %}</div>
-          <div>{% for a, approved in c.leave %}<a class="cal-leave {{ 'approved' if approved else 'pending' }}" href="{{ url('/ra-leave/staff/decide/' ~ a.id) }}{{ as_query }}">{{ a.ra }}{{ '' if approved else ' (pending)' }}</a>{% endfor %}</div></li>
-      {% else %}{% endfor %}{% endfor %}
-    </ul>
+    {% if blackouts %}<p class="sub gap-above-sm">Blackouts: {% for label, first, last in blackouts %}{{ label }}, {{ leave.short_date(first) }} – {{ leave.short_date(last) }}{{ "; " if not loop.last }}{% endfor %}.</p>{% endif %}
     {% if not leave.calendar_has_leave(weeks) %}<p class="sub">No leave this month.</p>{% endif %}
   </section>
 {% endblock %}

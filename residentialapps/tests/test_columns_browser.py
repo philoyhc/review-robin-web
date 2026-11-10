@@ -50,3 +50,18 @@ def test_an_empty_side_gives_the_main_column_the_width(page: Page) -> None:  # n
     }"""
     )
     assert widths[0] == 0 and widths[1] == "none" and widths[2] == 952, widths
+
+
+def test_a_phone_sees_the_whole_month_of_leave(page: Page) -> None:  # noqa: F811
+    """Author, 2026-11-10: the staff Home's calendar stays a month grid on a
+    phone, all seven days across without scrolling sideways, each entry a
+    tag, not a link."""
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.goto(ORIGIN + "/ra-leave/staff/?as=Sam%20Lee")
+    grid = page.locator(".cal-grid")
+    assert grid.is_visible()
+    box = grid.bounding_box()
+    assert box is not None and box["x"] >= 0 and box["x"] + box["width"] <= 390
+    assert page.evaluate("document.documentElement.scrollWidth") <= 390
+    assert page.locator(".cal-tag").first.is_visible()
+    assert not page.locator(".cal-link").first.is_visible()

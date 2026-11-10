@@ -635,16 +635,24 @@ def test_staff_home_shows_a_month_of_leave_in_a_calendar() -> None:
     page = c.get(STAFF + SAM).text.split('id="cal-h"')[1]
     assert "<strong>October 2026</strong>" in page
     assert 'href="/ra-leave/staff/?as=Sam%20Lee&amp;month=2026-11#cal-h"' in page
-    assert 'class="cal-leave approved" href="/ra-leave/staff/decide/L-0106?as=Sam%20Lee"' in page
-    assert 'class="items cal-list"' in page  # the phone's list of days
+    assert (
+        'class="cal-leave cal-link approved" href="/ra-leave/staff/decide/L-0106?as=Sam%20Lee"'
+        in page
+    )
+    # A phone keeps the month (author, 2026-11-10): each entry also a first
+    # name in a tag, the full name and status for a screen reader.
+    assert 'class="items cal-list"' not in page
+    assert (
+        '<span class="cal-leave cal-tag approved"' in page
+        and '>Maya<span class="visually-hidden"> Seah</span></span>' in page
+    )
     november = c.get(STAFF + "?month=2026-11").text.split('id="cal-h"')[1]
     assert "<strong>November 2026</strong>" in november
-    assert 'class="cal-leave pending" href="/ra-leave/staff/decide/L-0101"' in november
+    assert 'class="cal-leave cal-link pending" href="/ra-leave/staff/decide/L-0101"' in november
+    assert '>Chloe<span class="visually-hidden"> Lim, pending</span></span>' in november
     assert '<span class="cal-black">Examinations</span>' in november  # named, not hatched alone
     assert ">Chloe Lim (pending)</a>" in november  # pending in words, not color alone
-    assert "Blackouts: Examinations, 15 Nov – 28 Nov." in november  # the phone's note
-    phone = november.split('<ul class="items cal-list">')[1].split("</ul>")[0]
-    assert "Fri 6 Nov" in phone and "Chloe Lim (pending)" in phone
+    assert "Blackouts: Examinations, 15 Nov – 28 Nov." in november
     assert "No leave this month." in c.get(STAFF + "?month=2027-03").text
     assert 'aria-current="date"' in page  # today, for a screen reader too
     # The cold read: the calendar's far ends are never reached, and every

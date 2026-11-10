@@ -282,11 +282,14 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   a form's fields in two columns from 960 px, one column below with the
   left column's fields first; `.field-wide.full` lets a field's text box
   run the card's full width.
-- **A leave calendar** (`.cal-grid`, `.cal-list`, `.cal-leave`; RA Leave
-  staff Home, author, 2026-11-09): a month grid only from 640 px with a
-  mouse, its entries too small for a finger; otherwise a list of the days
-  with leave. Approved is filled, pending outlined and named so; a
-  blackout day names its blackout.
+- **A leave calendar** (`.cal-grid`, `.cal-leave`; RA Leave staff Home,
+  author, 2026-11-09): a month grid at every width, a phone's too
+  (author, 2026-11-10). Where a mouse points from 640 px each entry is
+  the full name, a link (`.cal-link`); otherwise a first name in a tag
+  (`.cal-tag`), not a link, a day cell being too small for a finger's
+  target. Approved is filled, pending outlined (named so where there is
+  room, and for a screen reader always); a blackout day names its
+  blackout.
 - **A period row** (`.period-row`, RA Leave's Precinct page, author,
   2026-11-09): under a select on its own row, its dates at the left, top
   aligned, and the submit button at the right.
