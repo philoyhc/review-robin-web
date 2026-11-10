@@ -2585,7 +2585,7 @@ def permission_rows() -> tuple[PermissionRow, ...]:
                 "who": title,
                 "kind": "role",
                 "note": abbrev,
-                "scope": ("RAs in every slot",) if whole else ("RAs in their slots",),
+                "scope": ("RAs in every slot",) if whole else ("RAs assigned to staff's slots",),
                 "perms": frozenset(perms),
             }
         )
@@ -2597,11 +2597,11 @@ def permission_rows() -> tuple[PermissionRow, ...]:
     if POLICY["final"] == "named":
         for n in POLICY["final_names"]:
             named.setdefault(n, set()).add("final")
-            scopes.setdefault(n, ("RAs in their slots",))
+            scopes.setdefault(n, ("RAs assigned to staff's slots",))
     if POLICY["inviters"] == "named":
         for n in POLICY["inviter_names"]:
             named.setdefault(n, set()).add("open")
-            scopes.setdefault(n, ("RAs in their slots",))
+            scopes.setdefault(n, ("RAs assigned to staff's slots",))
     titles = {abbrev: title for title, abbrev in (*slot_appointments(), *unit_appointments())}
     for name, perms in named.items():
         role = next((p.abbrev for p in sample_data.STAFF if p.name == name), "")

@@ -960,7 +960,7 @@ def test_policy_permissions_say_who_does_what_over_which_ras(monkeypatch) -> Non
     person's is chosen, overlaps resolved. Approvals keeps how, and sums
     up who; the Appeals card's who-may-open moves here too."""
     rows = {r["who"]: r for r in sample_leave.permission_rows()}
-    assert rows["Residential Fellow"]["scope"] == ("RAs in their slots",)
+    assert rows["Residential Fellow"]["scope"] == ("RAs assigned to staff's slots",)
     assert rows["Master"]["scope"] == ("RAs in every slot",)
     assert rows["Residential Fellow"]["perms"] == {"first", "view"}
     assert rows["Residential Admin"]["perms"] == {"final", "open", "view", "admin"}
@@ -1001,7 +1001,8 @@ def test_policy_permissions_say_who_does_what_over_which_ras(monkeypatch) -> Non
     # Approvals sums up who; the old who-fieldsets are gone.
     assert 'name="first-types"' not in page and 'name="final-types"' not in page
     assert 'name="inviters"' not in page
-    assert "<dt>First approval</dt><dd>Residential Fellow (RAs in their slots)" in page
+    first = "<dt>First approval</dt><dd>Residential Fellow (RAs assigned to staff&#39;s slots)"
+    assert first in page
     # Named final approvers appear as named rows.
     monkeypatch.setitem(sample_leave.POLICY, "final", "named")
     monkeypatch.setitem(sample_leave.POLICY, "final_names", ("Sam Lee",))
