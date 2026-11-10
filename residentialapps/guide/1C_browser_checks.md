@@ -73,7 +73,7 @@ widths, the scripts' behavior, and whether the screens read right.
   - cover and "Changed your plans?" cards, the latter with **Withdraw to
     draft** (back to the drafts as sent); as Hana, L-0115 (approved, 14 Dec)
     has **Cancel leave** instead, and Chloe's L-0117 (taken) has neither.
-  - leave under way: as Sam, Decide on L-0107 (Olivia Ng) has **Cancel leave
+  - leave under way: as Sam, the Application page of L-0107 (Olivia Ng) has **Cancel leave
     under way**, naming Olivia and Siti Rahman as told; the admin's L-0107
     says the same.
 - [ ] **Cover**: To answer 1, Covering 1 (Hana Ito 14 Dec – 15 Dec),

@@ -335,6 +335,12 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
     past = sample_leave.decided("Daniel Koh")[0][0]
     page = c.get(STAFF + "applications/" + past.id).text
     assert "‹ Records" in page and "<dt>Waiting</dt>" not in page
+    # ...over the whole term, so the decision is on it (the cold read).
+    assert '<a class="back" href="/ra-leave/staff/records?period=whole">' in page
+    assert f"applications/{past.id}" in c.get(STAFF + "records?period=whole").text
+    # A decided appeal goes back to Appeals, as an open one does.
+    refused = c.get(STAFF + "applications/L-0120" + SAM).text
+    assert '<a class="back" href="/ra-leave/staff/appeals?as=Sam%20Lee">‹ Appeals</a>' in refused
     assert 'href="/ra-leave/staff/records" aria-current="true"' in page
     # An appeal opened from Appeals goes back there, not to Precinct.
     page = c.get(STAFF + "applications/L-0105" + RACHEL).text

@@ -98,7 +98,7 @@
   </nav>
 {%- endmacro %}
 
-{# An application in a staff list, linked to Decide. #}
+{# An application in a staff list, linked to its page. #}
 {% macro staff_item(a, leave, as_query, label="") -%}
   <li>
     <div class="item-head"><a class="strong" href="{{ url('/ra-leave/staff/applications/' ~ a.id) }}{{ as_query }}">{{ a.ra }}</a>{% if label %}<span class="chip chip-accent">{{ label }}</span>{% endif %}</div>

@@ -84,15 +84,19 @@ def application(request: Request, application_id: str) -> Response:
     if found is None or not sample_leave.can_open(viewer, found):
         raise HTTPException(status_code=404)
     role = next((r for a, r in sample_leave.queue(viewer) if a.id == found.id), None)
-    # Back to the list it was most likely opened from, which its tab marks.
+    # Back to the list it was most likely opened from, which its tab marks:
+    # an appeal to Appeals, decided or not; the viewer's own decision to
+    # Records over the whole term, so it is on the page (the cold read,
+    # 2026-11-10).
+    back_period = ""
     if role:
         back = ("/ra-leave/staff/", "Home")
-    elif any(a.id == found.id for a, _, _ in sample_leave.decided(viewer)):
-        back = ("/ra-leave/staff/records", "Records")
     elif sample_leave.sees_appeals(viewer) and (
         found.appeal or found.ra in sample_leave.invitable_ras(viewer)
     ):
         back = ("/ra-leave/staff/appeals", "Appeals")
+    elif any(a.id == found.id for a, _, _ in sample_leave.decided(viewer)):
+        back, back_period = ("/ra-leave/staff/records", "Records"), "whole"
     else:
         back = ("/ra-leave/staff/", "Home")
     return _page(
@@ -103,6 +107,7 @@ def application(request: Request, application_id: str) -> Response:
         steps=sample_leave.timeline(found),
         back_path=back[0],
         back_label=back[1],
+        back_period=back_period,
         current_tab=back[0],
     )
 

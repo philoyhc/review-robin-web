@@ -486,9 +486,9 @@ app's (`residentialapps/spec/residentialops_ui.md` §1, author,
   beside My balance; Apply's form
   and the Draft saved note sit beside Available to you; My history's
   applications have Drafts beside them.
-- [ ] **Staff home and Decide** (`/residentialops/ra-leave/staff/`, as
-  an approver): the same two thirds at 1280 px; Decide's cards stop at
-  two thirds.
+- [ ] **Staff home and an Application** (`/residentialops/ra-leave/staff/`,
+  as an approver): the same two thirds at 1280 px; the Application page's
+  cards stop at two thirds.
 - [ ] **Desktop-oriented pages keep the full width** at 1280 px, cards
   and columns as before: the Leave dashboard
   (`/residentialops/ra-leave/admin/`, its main column wide and its side
