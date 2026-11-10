@@ -1646,11 +1646,14 @@ def scope(viewer: str) -> tuple[str, ...]:
 
 
 def _standing_in(name: str) -> bool:
-    """A delegate standing in as first approver today (Approval chain): not
-    a Permissions tick, but RA Leave while they do (cold read, 2026-11-10)."""
-    return POLICY["first"] == "slot" and any(
+    """Who has RA Leave without a Permissions tick (2026-11-10): a delegate
+    standing in as first approver today (Approval chain), and the Master
+    while deciding appeals (who decides is the Appeals card's, so it is no
+    column of Permissions)."""
+    delegate = POLICY["first"] == "slot" and any(
         name in r.first.split(" or ") for r in routes() if not r.gap
     )
+    return delegate or (appeals_decided() and name == APPEAL_DECIDER)
 
 
 def _named_precincts(name: str) -> tuple[str, ...]:
@@ -2619,7 +2622,6 @@ PERMISSIONS = (
     ("first", "First approval"),
     ("final", "Final approval"),
     ("open", "Open appeals"),
-    ("decide", "Decide appeals"),
     ("view", "View records"),
     ("admin", "Admin pages"),
 )
@@ -2701,8 +2703,6 @@ def _granted(name: str) -> set[str]:
             granted.add("open")
     elif abbrev in POLICY["inviter_types"]:
         granted.add("open")
-    if appeals_decided() and name == APPEAL_DECIDER:
-        granted.add("decide")
     if abbrev in POLICY["viewer_types"]:
         granted.add("view")
     if any(n == name for n, *_ in sample_data.SYS_ADMINS):
