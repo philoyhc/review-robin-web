@@ -109,7 +109,7 @@ def test_hiding_the_sorted_column_drops_the_kept_sort(page: Page) -> None:
 def test_each_table_on_a_page_keeps_its_own_sort(page: Page) -> None:
     url = f"{ORIGIN}/ra-leave/staff/records?as=Sam%20Lee"
     page.goto(url)
-    tables = page.locator("table[data-sort-auto]")
+    tables = page.locator("table:has(.sort-btn)")
     assert tables.count() > 1
     tables.nth(1).locator(".sort-btn").first.click()
     page.goto(url)

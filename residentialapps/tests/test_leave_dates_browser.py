@@ -53,6 +53,7 @@ def test_leave_records_apply_a_period_on_choosing_it_and_stay_at_the_top(
     assert "period=whole" in page.url and "Rejected" in page.url
     assert page.evaluate("window.scrollY") == 0
     expect(page.locator("#period")).to_have_value("whole")
+    page.locator("#rec-filters > summary").click()  # Filters starts closed
     page.evaluate("window.scrollTo(0, 300)")
     with page.expect_navigation():
         page.locator(".rec-filters").nth(2).locator("a", has_text="Clear all").click()  # Precinct
@@ -72,3 +73,38 @@ def test_leave_records_wait_for_a_forward_range(page: Page) -> None:  # noqa: F8
         page.fill("#to", "2026-12-31")
         page.locator("#to").dispatch_event("change")
     assert "from=2026-12-01" in page.url and "to=2026-12-31" in page.url
+
+
+def test_leave_records_filters_start_closed_and_columns_hide_and_stay(
+    page: Page,  # noqa: F811
+) -> None:
+    """Author, 2026-11-10: the chips sit in a Filters expander, closed
+    until opened, its summary naming what is off; a column chip hides its
+    column at once, and the browser keeps both choices."""
+    page.goto(ORIGIN + "/ra-leave/admin/records?hide=Rejected")
+    assert not page.evaluate("document.getElementById('rec-filters').open")
+    expect(page.locator("#rec-off")).to_have_text(" · 1 off: Rejected")
+    page.locator("#rec-filters > summary").click()
+    page.locator('[data-col-toggle="submitted"]').click()
+    expect(page.locator("#rec-off")).to_have_text(" · 2 off: Rejected; column Submitted")
+    expect(page.locator('#rec-table th[data-col="submitted"]')).to_be_hidden()
+    page.reload()
+    assert page.evaluate("document.getElementById('rec-filters').open")
+    expect(page.locator('#rec-table th[data-col="submitted"]')).to_be_hidden()
+    page.locator('[data-cols-all="true"]').click()
+    expect(page.locator('#rec-table th[data-col="submitted"]')).to_be_visible()
+
+
+def test_leave_records_keep_the_period_and_chips_in_the_browser(
+    page: Page,  # noqa: F811
+) -> None:
+    """Author, 2026-11-10: the selectors are kept in the browser; a visit
+    naming no period (the tab) takes the last ones back, per viewer."""
+    page.goto(ORIGIN + "/ra-leave/staff/records?as=Sam%20Lee&hide=Rejected&period=term")
+    page.goto(ORIGIN + "/ra-leave/staff/records?as=Sam%20Lee")
+    page.wait_for_url("**period=term**")
+    assert "hide=Rejected" in page.url
+    expect(page.locator("#period")).to_have_value("term")
+    # Another viewer keeps their own.
+    page.goto(ORIGIN + "/ra-leave/staff/records")
+    expect(page.locator("#period")).to_have_value("week")

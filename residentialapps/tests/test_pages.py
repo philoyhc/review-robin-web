@@ -778,16 +778,29 @@ def test_other_tables_sort_and_leave_records_share_their_columns() -> None:
     the staff's Records share one table (author, 2026-11-10): ID, RA,
     Precinct, Leave type, Dates, Days, Cover, Submitted, Stage."""
     client = TestClient(ops_app())
-    columns = ["ID", "RA", "Precinct", "Leave type", "Dates", "Days", "Cover", "Submitted", "Stage"]
+    columns = [
+        "ID",
+        "RA",
+        "Precinct",
+        "Leave type",
+        "Dates",
+        "Days",
+        "Cover",
+        "Submitted",
+        "Stage",
+        "Approved",  # author, 2026-11-10
+    ]
     for path in ("/ra-leave/admin/records", "/ra-leave/staff/records?as=Sam%20Lee"):
         head = client.get(path).text.split('id="rec-h"')[1].split("</thead>")[0]
-        assert re.findall(r'<th scope="col"[^>]*>([^<]+)</th>', head) == columns, path
+        assert re.findall(r'<th scope="col"[^>]*>([^<]+)<button', head) == columns, path
+        # Column chips again, all but ID and RA, kept per browser.
+        assert 'data-col-toggles-for="rec-table"' in head
     for path, tables in (
         ("/ra-leave/admin/entitlements", 1),
         ("/ra-leave/admin/routing", 1),
         ("/sys-admin/", 2),
-        ("/ra-leave/staff/records?as=Sam%20Lee", 2),
-        ("/ra-leave/admin/records", 1),
+        ("/ra-leave/staff/records?as=Sam%20Lee", 1),
+        ("/ra-leave/admin/records", 0),
     ):
         assert client.get(path).text.count("<table data-sort-auto>") == tables, path
 

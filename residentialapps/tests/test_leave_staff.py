@@ -493,12 +493,12 @@ def test_leave_records_show_a_chosen_period() -> None:
     def names(query: str, status: str | None = None) -> list[str]:
         page = c.get(STAFF + "records" + query).text
         part = page.split('id="rec-h"')[1].split("</table>")[0]
-        rows = re.findall(r"<tr>(.*?)</tr>", part, re.S)
+        rows = re.findall(r"<tr[^>]*>(.*?)</tr>", part, re.S)
         return [
             name
             for r in rows
             if status is None or f">{status}</span>" in r
-            for name in re.findall(r'<td class="strong nowrap" data-sort-value="([^"]+)"', r)
+            for name in re.findall(r'<td class="strong nowrap" data-col="ra">([^<]+)', r)
         ]
 
     assert sample_leave.period("bogus")[:2] == ("week", "This week")
@@ -766,9 +766,12 @@ def test_leave_records_list_every_application_filtered_by_status_and_precinct() 
     order = [page.index(f'id="{h}"') for h in ("rec-h", "sum-h", "clash-h")]
     assert order == sorted(order) and 'id="away-h"' not in page and 'id="upcoming-h"' not in page
     head = page.split('id="rec-h"')[1].split("</thead>")[0]
-    assert '<div class="grid-thirds one-two gap-above-sm">' in head
+    # Period, From and To in a row; the chips in a Filters expander, closed
+    # until opened (author, 2026-11-10).
+    assert '<div class="rec-period">' in head
+    assert '<details class="rec-filters-box" id="rec-filters">' in head
     status_chips, cover_chips, precinct_chips = (
-        part.split("</div>")[0] for part in head.split('class="col-chips rec-filters"')[1:]
+        part.split("</div>")[0] for part in head.split('class="col-chips rec-filters"')[1:4]
     )
     assert cover_chips.count('class="col-chip on"') == 4 and "Cover confirmed<span" in cover_chips
     assert status_chips.count('class="col-chip on"') == 9
@@ -809,7 +812,9 @@ def test_leave_records_list_every_application_filtered_by_status_and_precinct() 
     assert dchips.count('class="col-chip on"') == 9 and "Cypress" not in dchips
     # ...though the Precinct column is always there, the table being the
     # admin's too (author, 2026-11-10).
-    assert '<th scope="col">Precinct</th>' in daniel.split('id="rec-h"')[1].split("</thead>")[0]
+    assert (
+        'data-col="precinct">Precinct<button' in daniel.split('id="rec-h"')[1].split("</thead>")[0]
+    )
     # Summary: establishment and days at each strength; no total.
     summary = page.split('id="sum-h"')[1].split("</section>")[0]
     assert 'scope="row">Total' not in summary
@@ -935,7 +940,7 @@ def test_leave_records_chips_select_and_clear_all_and_the_page_stays_at_the_top(
 
     c = client()
     page = c.get(STAFF + "records" + SAM + "&period=term&hide=Rejected,Maple 03-08").text
-    groups = page.split('class="col-chips rec-filters"')[1:]
+    groups = page.split('class="col-chips rec-filters"')[1:4]  # the Columns row last
     assert len(groups) == 3
     for group in groups:
         group = group.split("</div>")[0]
@@ -1124,10 +1129,33 @@ def test_records_filter_by_cover_take_from_and_to_and_match_the_admin_s() -> Non
     admin = c.get("/ra-leave/admin/records").text  # the whole term by default
     assert 'Leave applications <span class="count">· 20</span>' in admin
     groups = admin.split('class="col-chips rec-filters"')[1:]
-    assert [g.count('class="col-chip on"') for g in groups] == [9, 4, 9]
+    assert [g.count('class="col-chip on"') for g in groups[:3]] == [9, 4, 9]
+    cols = groups[3].split("</div>")[0]
+    assert re.findall(r'data-col-toggle="(\w+)"', cols) == [
+        "precinct",
+        "type",
+        "dates",
+        "days",
+        "cover",
+        "submitted",
+        "stage",
+        "approved",
+    ]
     assert admin.index("</table>") < admin.index("Export CSV</button>")
     assert 'href="/ra-leave/admin/records/L-0101">L-0101</a>' in admin
     # Leave types shortened to Personal and Official (author, 2026-11-10).
     table = admin.split('id="rec-h"')[1].split("</table>")[0]
-    assert '<td class="nowrap">Personal <span class="chip chip-accent"' in table
-    assert '<td class="nowrap">Official</td>' in table and "Personal leave" not in table
+    assert '<td class="nowrap" data-col="type">Personal <span class="chip chip-accent"' in table
+    assert '<td class="nowrap" data-col="type">Official</td>' in table
+    assert "Personal leave" not in table
+    # Approved: the latest approval's date, the "1st:" mark beside it.
+    assert (
+        'data-col="approved" data-sort-value="2026-10-24">24 Oct <span class="chip chip-info"'
+        in table
+    )
+    bella = sample_leave.by_id("L-0103")
+    assert bella and sample_leave.approved_on(bella) == sample_leave.date(2026, 10, 24)
+    pranav = sample_leave.by_id("L-0108")  # first 16 Oct, then final 19 Oct
+    assert pranav and sample_leave.approved_on(pranav) == sample_leave.date(2026, 10, 19)
+    pending = sample_leave.by_id("L-0101")
+    assert pending and sample_leave.approved_on(pending) is None

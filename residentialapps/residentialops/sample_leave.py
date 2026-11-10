@@ -1497,6 +1497,17 @@ def first_decider_of(application: Application) -> str:
     return next(iter(routes_first(application)), "")
 
 
+def approved_on(application: Application) -> date | None:
+    """Records' Approved column (author, 2026-11-10): the date of the
+    latest approval, the first approval's until the final approval, then
+    the final's (an appeal granted, its grant's); None before any."""
+    steps = DECISIONS.get(application.id, {})
+    for step in ("final", "appeal", "first"):
+        if step in steps and (step != "appeal" or application.stage == "Approved"):
+            return steps[step][0]
+    return None
+
+
 def first_by_cover(application: Application) -> str:
     """Who first approved an application in place of the RA's RF, a
     delegate or an ad hoc cover, or "" when the RF did or it has had no
