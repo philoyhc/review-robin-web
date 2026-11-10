@@ -1599,48 +1599,71 @@ def other_leave(application: Application) -> tuple[Application, ...]:
     )
 
 
-class PrecinctCount(TypedDict):
-    """A Precinct's RAs (its establishment strength), how many are away,
-    how many available, and how many applications pend."""
+class PrecinctStrength(TypedDict):
+    """A Precinct's establishment strength and, over a period, how many of
+    its days it stood at full strength, one down, two down, and three or
+    more down."""
 
     precinct: str
     ras: int
-    away: int
-    available: int
-    pending: int
+    days: tuple[int, int, int, int]
+
+
+# What Leave records' Summary counts as an RA down on a day (author,
+# 2026-11-10), each a chip: approved leave on a day up to today, approved
+# leave on a day after it, and an application not yet decided.
+STRENGTH_COUNTS = ("Leave taken", "Leave approved", "Leave approval pending")
+
+
+def strength_kind(application: Application, day: date) -> str:
+    """Which of `STRENGTH_COUNTS` an application's day is: taken up to and
+    including today, approved after it; pending while undecided."""
+    if application.stage == "Approved":
+        return "Leave taken" if day <= TODAY else "Leave approved"
+    return "Leave approval pending"
 
 
 def by_precinct(
-    viewer: str, start: date | None = None, end: date | None = None
-) -> tuple[PrecinctCount, ...]:
-    """Per Precinct in the viewer's scope (§22), for the period given (this
-    week without both ends): its establishment strength, the RAs away on
-    approved leave, those available (the rest), and the applications
-    pending whose dates touch the period (author, 2026-11-10)."""
+    viewer: str,
+    start: date | None = None,
+    end: date | None = None,
+    hidden: frozenset[str] = frozenset(),
+) -> tuple[PrecinctStrength, ...]:
+    """Leave records' Summary (author, 2026-11-10): per Precinct in the
+    viewer's scope, its establishment strength and, day by day over the
+    period (this week without both ends), how many days it stood at full
+    strength, one, two, and three or more RAs down. An RA is down on a day
+    their leave covers, counting only the kinds of `STRENGTH_COUNTS` not in
+    `hidden`; an RA with two applications that day is down once."""
     if not (start and end):
         start, end = period()[2:]
-    away = away_between(start, end)
-    rows: list[PrecinctCount] = []
+    live = [a for a in APPLICATIONS if a.stage == "Approved" or a.stage in OPEN_STAGES]
+    rows: list[PrecinctStrength] = []
     for p in scope(viewer):
-        ras = sum(len(s.ras) for s in sample_data.SLOTS if s.precinct == p)
-        out = len({a.ra for a in away if a.precinct == p})  # RAs, not applications
+        mine = [a for a in live if a.precinct == p and a.start <= end and a.end >= start]
+        days = [0, 0, 0, 0]
+        day = start
+        while day <= end:
+            down = {
+                a.ra
+                for a in mine
+                if a.start <= day <= a.end and strength_kind(a, day) not in hidden
+            }
+            days[min(len(down), 3)] += 1
+            day += timedelta(days=1)
         rows.append(
             {
                 "precinct": p,
-                "ras": ras,
-                "away": out,
-                "available": ras - out,
-                "pending": sum(
-                    1
-                    for a in APPLICATIONS
-                    if a.precinct == p
-                    and a.stage in OPEN_STAGES
-                    and a.start <= end
-                    and a.end >= start
-                ),
+                "ras": sum(len(s.ras) for s in sample_data.SLOTS if s.precinct == p),
+                "days": (days[0], days[1], days[2], days[3]),
             }
         )
     return tuple(rows)
+
+
+def strength_hidden(value: str | None) -> frozenset[str]:
+    """The Summary's counts turned off, from `?uncount=`."""
+    return frozenset(v for v in (value or "").split(",") if v in STRENGTH_COUNTS)
 
 
 def ras_in_scope(viewer: str) -> tuple[str, ...]:

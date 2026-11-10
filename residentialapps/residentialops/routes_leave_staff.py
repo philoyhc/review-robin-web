@@ -117,7 +117,12 @@ def records(request: Request) -> Response:
     # and, for more than one Precinct, by Precinct (`?hide=`).
     q = request.query_params
     return _page(
-        request, "records.html", period=sample_leave.period(q.get("period")), hide=q.get("hide")
+        request,
+        "records.html",
+        period=sample_leave.period(q.get("period")),
+        hide=q.get("hide"),
+        # The Summary's counts turned off (author, 2026-11-10).
+        uncount=q.get("uncount"),
     )
 
 

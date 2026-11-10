@@ -193,10 +193,13 @@ def test_decide_shows_the_applicant_s_other_leave_and_precinct_numbers() -> None
         (
             r'<td class="strong nowrap">([^<]*)</td><td class="num">(\d+)</td>'
             r'<td class="num">(\d+)</td><td class="num">(\d+)</td><td class="num">(\d+)</td>'
+            r'<td class="num">(\d+)</td>'
         ),
         c.get(STAFF + "records" + SAM).text,
     )
-    assert ("Willow A 13-25", "4", "2", "2", "0") in rows and len(rows) == 9
+    # Willow A 13-25 this week: Olivia Ng 28–30 Oct, Pranav Iyer 29–31 Oct,
+    # so three days at full strength, two one down and two two down.
+    assert ("Willow A 13-25", "4", "3", "2", "2", "0") in rows and len(rows) == 9
 
 
 def test_the_master_and_the_admin_delegate_open_appeals_from_the_staff_pages(monkeypatch) -> None:
@@ -476,13 +479,15 @@ def test_leave_records_show_a_chosen_period() -> None:
         sample_leave.clashes(start, end) == () and sample_leave.clashes()
     )  # none next week, some in all
 
-    # The Precinct counts follow the period too, counting RAs.
-    def counts(key: str) -> dict[str, int]:
+    # The Summary follows the period too, day by day: each Precinct's days
+    # add up to the period's.
+    def down_days(key: str) -> int:
         _, _, start, end = sample_leave.period(key)
-        return {r["precinct"]: r["away"] for r in sample_leave.by_precinct("Sam Lee", start, end)}
+        rows = sample_leave.by_precinct("Sam Lee", start, end)
+        assert all(sum(r["days"]) == (end - start).days + 1 for r in rows)
+        return sum(sum(r["days"][1:]) for r in rows)
 
-    assert sum(counts("week").values()) == 3 and sum(counts("next").values()) == 0
-    assert sum(counts("term").values()) == 4
+    assert down_days("week") > 0 and down_days("term") > down_days("week")
     four = sample_leave.period("four")
     assert (four[1], four[2], four[3].toordinal() - four[2].toordinal()) == (
         "These four weeks",
@@ -759,8 +764,8 @@ def test_leave_records_list_every_application_filtered_by_status_and_precinct() 
     assert '<th scope="col">Precinct</th>' not in daniel.split('id="rec-h"')[1].split("</thead>")[0]
     # Summary: establishment, away, available, pending, and a total.
     summary = page.split('id="sum-h"')[1].split("</section>")[0]
-    assert ">Establishment</th>" in summary and ">Available</th>" in summary
-    assert '<th scope="row">Total</th>' in summary and "Total" not in daniel.split('id="sum-h"')[1]
+    assert 'title="Establishment strength">Estab.</abbr>' in summary
+    assert 'title="Days three or more RAs down">−3</abbr>' in summary
     assert '<div class="bottom-row">' in page
 
 
@@ -901,3 +906,34 @@ def test_leave_records_chips_select_and_clear_all_and_the_page_stays_at_the_top(
     assert "<noscript><button" in form and "Show period</button></noscript>" in form
     assert 'select.addEventListener("change"' in page
     assert '<input type="hidden" name="hide" value="Maple 03-08,Rejected">' in form
+
+
+def test_the_summary_counts_days_at_full_strength_and_down_by_kind() -> None:
+    """Author, 2026-11-10: leave is by days, so the Summary counts, per
+    Precinct over the period, the days at full strength and one, two and
+    three or more down, with chips for what counts as down: Leave taken,
+    Leave approved, Leave approval pending."""
+    _, _, start, end = sample_leave.period("week")  # 28 Oct – 3 Nov
+
+    def row(precinct: str, hidden: frozenset[str] = frozenset()) -> tuple[int, int, int, int]:
+        rows = sample_leave.by_precinct("Sam Lee", start, end, hidden)
+        return next(r["days"] for r in rows if r["precinct"] == precinct)
+
+    # Olivia Ng 28–30 Oct (28 Oct, today, taken), Pranav Iyer 29–31 Oct.
+    assert row("Willow A 13-25") == (3, 2, 2, 0)
+    assert row("Willow A 13-25", frozenset({"Leave taken"})) == (4, 1, 2, 0)  # 28 Oct full
+    assert row("Willow A 13-25", frozenset({"Leave approved"})) == (6, 1, 0, 0)
+    # Hana Ito's pending 2–3 Nov counts only while pending is counted.
+    assert row("Cypress A 04-12") == (5, 2, 0, 0)
+    assert row("Cypress A 04-12", frozenset({"Leave approval pending"})) == (7, 0, 0, 0)
+    assert sample_leave.strength_hidden("Leave taken,x") == {"Leave taken"}
+
+    c = client()
+    page = c.get(STAFF + "records" + SAM + "&hide=Rejected&uncount=Leave taken").text
+    chips = page.split('aria-label="Count as down"')[1].split("</div>")[0]
+    assert chips.count('class="col-chip on"') == 2 and 'class="col-chip" data-filter' in chips
+    # A count chip keeps the table's filters, and the table's keep the counts.
+    assert "&amp;hide=Rejected&amp;period=week" in chips
+    assert "uncount=Leave%20taken&amp;hide=" in page.split('class="col-chips rec-filters"')[1]
+    form = page.split('id="period-form"')[1].split("</form>")[0]
+    assert '<input type="hidden" name="uncount" value="Leave taken">' in form

@@ -14,7 +14,11 @@
   {% set hidden = leave.records_hidden(me, hide) %}
   {% set rows = leave.records(me, first, last, hidden) %}
   {% set multi = precincts | length > 1 %}
-  {% set aq = ('as=' ~ (me | urlencode) ~ '&') if me != leave.STAFF_VIEWERS[0][0] else '' %}
+  {% set uncounted = leave.strength_hidden(uncount) %}
+  {# Every link keeps the viewer and the Summary's counts (`uq`), so the
+     two cards' filters ride each other. #}
+  {% set uq = ('uncount=' ~ (uncounted | sort | join(',') | urlencode) ~ '&') if uncounted else '' %}
+  {% set aq = (('as=' ~ (me | urlencode) ~ '&') if me != leave.STAFF_VIEWERS[0][0] else '') ~ uq %}
   <section class="card" aria-labelledby="rec-h">
     <div class="card-head">
       <h2 id="rec-h">Leave applications <span class="count">· {{ rows | length }}</span></h2>
@@ -25,7 +29,8 @@
            the button kept for a browser without scripts. Every change
            lands at the top of the page: no fragment on any link. #}
         <form method="get" action="{{ url(here) }}" aria-label="Period" id="period-form">
-          {% if aq %}<input type="hidden" name="as" value="{{ me }}">{% endif %}
+          {% if me != leave.STAFF_VIEWERS[0][0] %}<input type="hidden" name="as" value="{{ me }}">{% endif %}
+          {% if uncounted %}<input type="hidden" name="uncount" value="{{ uncounted | sort | join(',') }}">{% endif %}
           {% if hidden %}<input type="hidden" name="hide" value="{{ hidden | sort | join(',') }}">{% endif %}
           <div class="field-wide"><label for="period">Period</label>
             <select id="period" name="period" class="input" aria-describedby="period-dates">
@@ -66,13 +71,20 @@
     </table></div>
   </section>
   <div class="bottom-row">
-    {% set counts = leave.by_precinct(me, first, last) %}
+    {% set counts = leave.by_precinct(me, first, last, uncounted) %}
+    {% set hq = ('hide=' ~ (hidden | sort | join(',') | urlencode) ~ '&') if hidden else '' %}
+    {% set viewer_q = ('as=' ~ (me | urlencode) ~ '&') if me != leave.STAFF_VIEWERS[0][0] else '' %}
     <section class="card" aria-labelledby="sum-h">
-      <div class="card-head"><h2 id="sum-h">Summary, {{ label | lower }}</h2><p class="sub">Per Precinct: its establishment strength, the RAs away on approved leave in the period, those available for duty, and the applications pending for it.</p></div>
+      <div class="card-head">
+        <h2 id="sum-h">Summary, {{ label | lower }}</h2>
+        <p class="sub">Per Precinct, its establishment strength and, over the period's {{ (last - first).days + 1 }} days, how many days it stood at full strength, one RA down, two down, and three or more down. Count as down:</p>
+        <div class="col-chips count-filters" role="group" aria-label="Count as down">
+          {% for c_label, on, flip in leave.toggle_filters(leave.STRENGTH_COUNTS, uncounted) %}<a class="col-chip{{ ' on' if on }}" data-filter href="{{ url(here) }}?{{ viewer_q }}{{ ('uncount=' ~ (flip | urlencode) ~ '&') if flip }}{{ hq }}period={{ key }}">{{ c_label }}<span class="visually-hidden">, {{ "counted" if on else "not counted" }}</span></a>{% endfor %}
+        </div>
+      </div>
       <div class="table-wrap"><table data-sort-auto>
-        <thead><tr><th scope="col">Precinct</th><th scope="col" class="num">Establishment</th><th scope="col" class="num">Away</th><th scope="col" class="num">Available</th><th scope="col" class="num">Pending</th></tr></thead>
-        <tbody>{% for row in counts %}<tr><td class="strong nowrap">{{ row.precinct }}</td><td class="num">{{ row.ras }}</td><td class="num">{{ row.away }}</td><td class="num">{{ row.available }}</td><td class="num">{{ row.pending }}</td></tr>{% endfor %}</tbody>
-        {% if multi %}<tfoot><tr><th scope="row">Total</th><td class="num">{{ counts | sum(attribute="ras") }}</td><td class="num">{{ counts | sum(attribute="away") }}</td><td class="num">{{ counts | sum(attribute="available") }}</td><td class="num">{{ counts | sum(attribute="pending") }}</td></tr></tfoot>{% endif %}
+        <thead><tr><th scope="col">Precinct</th><th scope="col" class="num"><abbr title="Establishment strength">Estab.</abbr></th><th scope="col" class="num"><abbr title="Days at full strength">Full</abbr></th><th scope="col" class="num"><abbr title="Days one RA down">−1</abbr></th><th scope="col" class="num"><abbr title="Days two RAs down">−2</abbr></th><th scope="col" class="num"><abbr title="Days three or more RAs down">−3</abbr></th></tr></thead>
+        <tbody>{% for row in counts %}<tr><td class="strong nowrap">{{ row.precinct }}</td><td class="num">{{ row.ras }}</td>{% for n in row.days %}<td class="num">{{ n }}</td>{% endfor %}</tr>{% endfor %}</tbody>
       </table></div>
     </section>
     {% set clashes = leave.clashes(first, last) | selectattr(0, "in", precincts) | list %}
