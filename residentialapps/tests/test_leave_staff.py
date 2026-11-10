@@ -1195,3 +1195,73 @@ def test_an_appeal_s_pages_follow_the_cover_setting(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "cover_required", False)
     form = c.get("/ra-leave/appeal").text
     assert "Covering RA (optional)</label>" in form and "need not confirm" not in form
+
+
+def test_an_invited_appeal_routes_by_the_policy_choice(monkeypatch) -> None:
+    """Author, 2026-11-10: an appeal by invitation is approved by the usual
+    first and final approvers, or by the usual first approver then the
+    Master; with no first approver either skips that step; an appeal made
+    while appeals are Open goes straight to the Master."""
+    c = client()
+    l0105 = _by_id("L-0105")
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
+    # The sample's choice: the usual first approver, then the Master.
+    steps = [s[1] for s in sample_leave.timeline(l0105)]
+    first = next(i for i, s in enumerate(steps) if s.startswith("First approval by"))
+    sent = next(i for i, s in enumerate(steps) if s.startswith("Sent to Sam Lee"))
+    assert first < sent and l0105.stage == "Appeal to the Master"
+    assert (l0105, "Appeal") in sample_leave.queue("Sam Lee")
+    policy = c.get("/ra-leave/admin/policy").text
+    assert "The usual first approver, then the Master (Sam Lee), personally" in policy
+    # With no first approver, that step is skipped.
+    monkeypatch.setitem(sample_leave.POLICY, "first", "none")
+    assert not any(
+        s.startswith("First approval") for s in (t[1] for t in sample_leave.timeline(l0105))
+    )
+    monkeypatch.setitem(sample_leave.POLICY, "first", "slot")
+    # The usual approvers: the appeal awaits final approval, not the Master.
+    monkeypatch.setitem(sample_leave.POLICY, "appeal_approval", "usual")
+    assert l0105.appeal and l0105.stage == "Pending final approval"
+    assert all(a is not l0105 for a, _ in sample_leave.queue("Sam Lee"))
+    finals = sample_leave.final_for(l0105.precinct)
+    assert finals and all((l0105, "Final approval") in sample_leave.queue(n) for n in finals)
+    steps = [s[1] for s in sample_leave.timeline(l0105)]
+    assert "Sent as an extra-leave appeal, to the usual approvers" in steps
+    assert "The usual first and final approvers" in c.get("/ra-leave/admin/policy").text
+    # Cold read: the appeal stays an open appeal, the RF's remarks stay in
+    # its timeline, its sending is no decision, and the Master no longer
+    # decides appeals.
+    assert l0105 in sample_leave.open_appeals()
+    assert any(s.startswith("Remarks from") for s in steps)
+    assert not any(s[1].startswith("Sent as") for s in sample_leave.history_steps(l0105))
+    assert not sample_leave.appeals_decided()
+    # The live date check names the usual approvers too (Codex).
+    for b in sample_leave.BLACKOUTS:
+        if b.effect == "Appeal only" and sample_leave.week_dates(b):
+            span = sample_leave.week_dates(b)
+            assert span is not None
+            msg = sample_leave.check_dates(
+                "Kai Ng", sample_leave.LEAVE_TYPES[0].name, span[0], span[0]
+            )["message"]
+            assert msg and "the usual approvers" in msg and "the Master" not in msg
+            break
+    # The Appeals tab stays, for opening invitations (second cold read).
+    assert sample_leave.sees_appeals("Sam Lee") and sample_leave.sees_appeals("Rachel Yeo")
+    staff_appeals = c.get("/ra-leave/staff/appeals?as=Sam%20Lee").text
+    assert "The usual approvers decide each one." in staff_appeals
+    appeals = c.get("/ra-leave/admin/appeals").text
+    assert "Open appeals" in appeals and "L-0105" in appeals.split('id="open-h"')[1]
+    viewers = (*sample_leave.RA_VIEWERS, ("Gwen Ho", ""))
+    monkeypatch.setattr(sample_leave, "RA_VIEWERS", viewers)
+    ra = c.get("/ra-leave/applications/L-0105?as=Gwen%20Ho").text
+    nxt = ra.split("Next:")[1].split("</li>")[0]
+    assert "pending final approval" in nxt and "the Master" not in nxt
+    # Decided appeals keep their history: the Master granted L-0118.
+    assert any(d == "Appeal" for a, d, _ in sample_leave.decided("Sam Lee") if a.id == "L-0118")
+    # Open: straight to the Master, whatever the invited choice.
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
+    assert l0105.stage == "Appeal to the Master"
+    assert not any(
+        s.startswith("First approval") for s in (t[1] for t in sample_leave.timeline(l0105))
+    )
+    assert "The Master (Sam Lee), personally" in c.get("/ra-leave/admin/policy").text

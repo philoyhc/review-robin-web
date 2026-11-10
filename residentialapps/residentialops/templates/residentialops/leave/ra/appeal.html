@@ -9,8 +9,8 @@
      otherwise: by invitation, the default since 2026-11-09, an RA
      not yet invited). #}
   {% set invited = leave.invitation_for(me) %}
-  {% if invited and leave.POLICY.appeals == "By invitation" %}<div class="notice">The Master has agreed to consider your appeal; send it by {{ leave.short_date(invited.until) }}.</div>{% endif %}
-  <p class="sub">For leave beyond your entitlement, or in an Appeal-only blackout. The Master decides personally; approval is discretionary, and extra leave is kept apart from your entitlement (spec §7). Your dates are checked as you key them in; Send opens once they pass; your reason, cover and the terms are not checked yet. Nothing is sent until RA Leave is wired.</p>
+  {% if invited and leave.POLICY.appeals == "By invitation" %}<div class="notice">Your appeal has been agreed in principle; send it by {{ leave.short_date(invited.until) }}.</div>{% endif %}
+  <p class="sub">For leave beyond your entitlement, or in an Appeal-only blackout. {{ "The Master decides personally" if leave.appeal_route() == "master" else "The usual approvers decide it" }}; approval is discretionary, and extra leave is kept apart from your entitlement (spec §7). Your dates are checked as you key them in; Send opens once they pass; your reason, cover and the terms are not checked yet. Nothing is sent until RA Leave is wired.</p>
   <div class="split">
     <div class="main">
       <section class="card card-pad" aria-labelledby="form-h">
@@ -26,16 +26,16 @@
           <p class="sub">{{ leave.POLICY.appeal_terms }}</p>
           <label class="check"><input type="checkbox" disabled> I accept these terms</label>
         </fieldset>
-        <div class="btnrow"><button type="button" id="send" aria-describedby="days-note" class="btn btn-primary" disabled>Send to the Master</button><a class="btn btn-secondary" href="{{ url('/ra-leave/') }}{{ as_query }}">Cancel</a></div>
+        <div class="btnrow"><button type="button" id="send" aria-describedby="days-note" class="btn btn-primary" disabled>Send{% if leave.appeal_route() == "master" %} to the Master{% endif %}</button><a class="btn btn-secondary" href="{{ url('/ra-leave/') }}{{ as_query }}">Cancel</a></div>
       </section>
     </div>
     <div class="side">
       <section class="card card-pad muted" aria-labelledby="count-h">
         <h2 id="count-h">How it adds up</h2>
-        <p class="sub">Shown once you pick your dates: the days you ask for, what your entitlement covers, and the days needing the Master's approval (spec §7.2). Your own days are used first; only the rest is extra leave, kept apart from your entitlement (§7.5).</p>
+        <p class="sub">Shown once you pick your dates: the days you ask for, what your entitlement covers, and the days needing approval as extra leave (spec §7.2). Your own days are used first; only the rest is extra leave, kept apart from your entitlement (§7.5).</p>
         <dl class="kv">{% for r in leave.my_balances(me) %}<dt>{{ r.type }}</dt><dd>{{ r.available }} available</dd>{% endfor %}</dl>
         {% set r = leave.my_balances(me)[0] %}{% set asked = [r.available, 0] | max + 2 %}
-        <p class="subtle small gap-above-sm">For example, {{ asked }} days of {{ r.type }} asked with {{ [r.available, 0] | max }} available: {{ [r.available, 0] | max }} from your entitlement, 2 extra, for the Master to decide.</p>
+        <p class="subtle small gap-above-sm">For example, {{ asked }} days of {{ r.type }} asked with {{ [r.available, 0] | max }} available: {{ [r.available, 0] | max }} from your entitlement, 2 extra, for {{ leave.appeal_decider_name() }} to decide.</p>
       </section>
     </div>
   </div>

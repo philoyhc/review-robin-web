@@ -206,7 +206,7 @@ def test_by_invitation_the_ra_is_not_offered_an_appeal_until_invited(monkeypatch
     )
     monkeypatch.setattr(sample_leave, "VIEWER", "Chloe Lim")
     invited = c.get(RA + "appeal").text
-    assert "The Master has agreed to consider your appeal; send it by 4 Nov." in invited
+    assert "Your appeal has been agreed in principle; send it by 4 Nov." in invited
     assert ">Request extra leave</a>" in c.get(RA).text
     assert "in an Appeal-only one it goes to the Master as an appeal" in c.get(RA + "apply").text
 
