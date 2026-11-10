@@ -129,8 +129,7 @@ widths, the scripts' behavior, and whether the screens read right.
     after a reload; the table ID, RA, Precinct, Leave type, Dates, Days,
     Cover, Submitted, Stage, Remarks (Bella Koh's "1st: Marcus Tan" and
     "5 days overdue"; Olivia Ng's "Cover away"); Maya Seah and
-    Olivia Ng On leave, Pranav Iyer Approved (from tomorrow), with "Away
-    too" on Olivia's cover; turn a chip off and change the period: it
+    Olivia Ng On leave, Pranav Iyer Approved (from tomorrow); turn a chip off and change the period: it
     stays off; Whole term adds Taken, Rejected and Withdrawn rows;
   - Summary, this week: Estab., Full, −1, −2, −3 per Precinct (Willow A
     13-25: 4, 3, 2, 2, 0), with Leave taken, Leave approved and Leave

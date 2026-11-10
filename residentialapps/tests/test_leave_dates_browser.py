@@ -122,3 +122,16 @@ def test_leave_records_keep_the_period_and_chips_in_the_browser(
     # Another viewer keeps their own.
     page.goto(ORIGIN + "/ra-leave/staff/records")
     expect(page.locator("#period")).to_have_value("week")
+
+
+def test_the_cover_tile_drill_down_is_not_kept(page: Page) -> None:  # noqa: F811
+    """The cold read: a chip clicked on the tile's one-off view is kept
+    without its `cover=unconfirmed`, so a later bare visit shows every
+    application, the chip's choice kept."""
+    page.goto(ORIGIN + "/ra-leave/admin/records?cover=unconfirmed&period=whole")
+    page.locator("#rec-filters > summary").click()
+    with page.expect_navigation():
+        page.locator(".rec-filters").first.locator("a", has_text="Withdrawn").click()
+    page.goto(ORIGIN + "/ra-leave/admin/records")
+    page.wait_for_url("**hide=Withdrawn**")
+    assert "cover=" not in page.url

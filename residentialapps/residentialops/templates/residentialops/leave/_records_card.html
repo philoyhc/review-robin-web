@@ -137,7 +137,7 @@
       <td data-col="stage">{% if status == "On leave" %}<span class="chip chip-ok">On leave</span>{% elif status == "Taken" %}<span class="chip chip-mute">Taken</span>{% else %}{{ stage_chip(status) }}{% endif %}</td>
       {# Remarks: what is out of the ordinary (author, 2026-11-10). #}
       {% set cover_by = leave.first_by_cover(a) %}
-      <td data-col="remarks"><span class="chips">{% if cover_by %}<span class="chip chip-info" title="First approved by {{ cover_by }}, covering for the RF">1st: {{ cover_by }}</span>{% endif %}{% if a in leave.cover_while_away() %}<span class="chip chip-warn" title="{{ a.cover }} is on leave on some of these days">Cover away</span>{% endif %}{% if a.overdue %}<span class="chip chip-warn" title="Pending {{ a.age }} days since it was submitted">{{ a.age }} days overdue</span>{% endif %}</span></td>
+      <td data-col="remarks"><span class="chips">{% if cover_by %}<span class="chip chip-info" title="First approved by {{ cover_by }}, covering for the RF">1st: {{ cover_by }}</span> {% endif %}{% if a in leave.cover_while_away() %}<span class="chip chip-warn" title="{{ a.cover }} is on leave, or has asked to be, on some of these days">Cover away</span> {% endif %}{% if a.overdue %}<span class="chip chip-warn" title="Pending {{ a.age }} days since it was submitted">{{ a.age }} days overdue</span>{% endif %}</span></td>
     </tr>{% else %}<tr><td colspan="10" class="subtle">{{ "None with these filters." if hidden else "None in this period." }}</td></tr>{% endfor %}</tbody>
   </table></div>
   {% if admin %}<div class="card-pad btnrow">

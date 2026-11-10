@@ -296,7 +296,7 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   Pending, each with its swatch, the chips being the key, and a chip a
   Wing besides for a viewer whose scope is the whole Unit.
 - **A period applied on choosing** (Leave records, author, 2026-11-10):
-  a select that reloads the page when changed, its dates under it, the
+  a select that reloads the page when changed, From and To beside it, the
   submit button kept only in `<noscript>`; `.period-row` (dates and
   button on one row, 2026-11-09) retired with the button.
 - **Filter actions** (`.col-chip.chip-act`, Leave records, author,
