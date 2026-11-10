@@ -783,3 +783,69 @@ def test_withdraw_and_cancel_on_an_appeal_and_on_leave_under_way(
     assert ">Request cancellation</button>" in extra and "Cancel leave</button>" not in extra
     alone = c.get(RA + "applications/L-0115?as=Hana%20Ito").text
     assert "releases" not in alone and "Your approvers are told" in alone
+
+
+def test_no_one_is_on_leave_while_covering(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Author, 2026-11-10: "You can't be on leave if you are covering." An
+    RA's dates are refused where they cover someone; a cover away on the
+    dates is refused and not offered; a cover whose own leave clashes is
+    told so where they would confirm."""
+    d = sample_leave.date
+    # Chloe Lim covers Ethan Wong on 4 Dec – 6 Dec (named, awaiting her).
+    covering = sample_leave.check_dates(
+        "Chloe Lim", "Personal leave", d(2026, 12, 5), d(2026, 12, 5)
+    )
+    assert not covering["ok"] and "You are covering Ethan Wong" in covering["message"]
+    # Chloe's own leave, 6 Nov – 8 Nov, means she cannot be named for it.
+    away = sample_leave.check_dates(
+        "Hana Ito", "Personal leave", d(2026, 11, 7), d(2026, 11, 7), cover="Chloe Lim"
+    )
+    assert not away["ok"] and "Chloe Lim is on leave" in away["message"]
+    free = sample_leave.check_dates(
+        "Hana Ito", "Personal leave", d(2026, 12, 9), d(2026, 12, 9), cover="Chloe Lim"
+    )
+    assert free["ok"]
+    assert "Chloe Lim" in sample_leave.away_between_names(d(2026, 11, 7), d(2026, 11, 7))
+    # The live check names whom the cover list may not offer.
+    c = client()
+    r = c.get(RA + "check-dates", params={"first": "2026-11-07", "last": "2026-11-07"}).json()
+    assert "Chloe Lim" in r["unavailable"]
+    assert c.get(RA + "check-dates").json()["unavailable"] == []
+    backwards = {"first": "2026-11-08", "last": "2026-11-07"}
+    assert c.get(RA + "check-dates", params=backwards).json()["unavailable"] == []
+    # The route passes the cover to the check.
+    named = c.get(
+        RA + "check-dates",
+        params={
+            "first": "2026-11-07",
+            "last": "2026-11-07",
+            "cover": "Chloe Lim",
+            "as": "Hana Ito",
+        },
+    ).json()
+    assert not named["ok"] and "Chloe Lim is on leave" in named["message"]
+    # A declined cover covers nothing (Hana Ito's L-0109, 2 Nov – 3 Nov,
+    # declined by Chloe), and withdrawn leave is no leave (Ethan Wong's
+    # L-0111, 17 Oct – 18 Oct).
+    assert sample_leave.covering_between("Chloe Lim", d(2026, 11, 2), d(2026, 11, 3)) is None
+    assert sample_leave.own_leave_between("Ethan Wong", d(2026, 10, 17), d(2026, 10, 18)) is None
+    assert "Ethan Wong" not in sample_leave.away_between_names(d(2026, 10, 17), d(2026, 10, 18))
+    # Changing cover on an application offers no one away on its dates.
+    detail = c.get(RA + "applications/L-0101").text  # Chloe, 6 Nov – 8 Nov
+    pool = detail.split('id="cover-pool"')[1].split("</datalist>")[0]
+    away = sample_leave.away_between_names(d(2026, 11, 6), d(2026, 11, 8))
+    assert not any(f'value="{n}"' in pool for n in away)
+    # A cover asked for days they are away is told, Confirm marked unavailable.
+    ethan = sample_leave.by_id("L-0114")
+    assert ethan
+    clash = sample_leave.replace(ethan, start=d(2026, 11, 7), end=d(2026, 11, 8))
+    monkeypatch.setattr(
+        sample_leave,
+        "APPLICATIONS",
+        tuple(clash if a.id == "L-0114" else a for a in sample_leave.APPLICATIONS),
+    )
+    page = c.get(RA + "cover").text
+    assert "You are on leave, or have asked to be, on 6 Nov – 8 Nov" in page
+    assert (
+        'class="btn btn-primary btn-unavailable" aria-label="Confirm cover for Ethan Wong' in page
+    )

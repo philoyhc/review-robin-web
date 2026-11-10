@@ -1783,13 +1783,69 @@ class DateCheck(TypedDict):
     ok: bool
 
 
+def own_leave_between(name: str, first: date, last: date) -> Application | None:
+    """An RA's leave, approved or asked for, touching the days given: they
+    cannot cover anyone then (author, 2026-11-10)."""
+    return next(
+        (
+            a
+            for a in sorted(APPLICATIONS, key=lambda a: a.start)
+            if a.ra == name
+            and (a.stage == "Approved" or a.stage in OPEN_STAGES)
+            and a.start <= last
+            and a.end >= first
+        ),
+        None,
+    )
+
+
+def covering_between(name: str, first: date, last: date) -> Application | None:
+    """Leave an RA covers, agreed or named, touching the days given: they
+    cannot be on leave then (author, 2026-11-10)."""
+    return next(
+        (
+            a
+            for a in sorted(APPLICATIONS, key=lambda a: a.start)
+            if a.cover == name
+            and (a.stage == "Approved" or a.stage in OPEN_STAGES)
+            and a.cover_status not in ("Declined", "Cancelled")
+            and a.start <= last
+            and a.end >= first
+        ),
+        None,
+    )
+
+
+def away_between_names(first: date, last: date) -> tuple[str, ...]:
+    """Every RA with leave, approved or asked for, touching the days given:
+    none of them may be named as cover for those days."""
+    return tuple(
+        sorted(
+            {
+                a.ra
+                for a in APPLICATIONS
+                if (a.stage == "Approved" or a.stage in OPEN_STAGES)
+                and a.start <= last
+                and a.end >= first
+            }
+        )
+    )
+
+
 def check_dates(
-    ra: str, leave_type: str, first: date | None, last: date | None, appeal: bool = False
+    ra: str,
+    leave_type: str,
+    first: date | None,
+    last: date | None,
+    appeal: bool = False,
+    cover: str = "",
 ) -> DateCheck:
     """Check an application as the RA keys it in (author, 2026-11-09; spec
     §10): a known leave type, both dates chosen, in order, not past, within
-    this term, clear of the RA's own leave, counting a day, clear of a
-    Refused blackout and within the balance. Where the RA may appeal, an
+    this term, clear of the RA's own leave, clear of leave the RA covers
+    and, given a cover, clear of the cover's own leave (author,
+    2026-11-10), counting a day, clear of a Refused blackout and within
+    the balance. Where the RA may appeal, an
     Appeal-only blackout or more than the balance still submits, as an
     appeal or by offering Request extra leave (author, 2026-10-29; §7.2
     "should not simply block"), so the message is a note, not a refusal;
@@ -1822,6 +1878,19 @@ def check_dates(
     )
     if clash is not None:
         return no(f"These dates overlap your leave of {clash.dates} ({clash.stage.lower()}).")
+    # No one is on leave while covering, nor covers while on leave (author,
+    # 2026-11-10: "You can't be on leave if you are covering").
+    covering = covering_between(ra, first, last)
+    if covering is not None:
+        return no(
+            f"You are covering {covering.ra} on {covering.dates}: you cannot be on leave then."
+        )
+    if cover:
+        away = own_leave_between(cover, first, last)
+        if away is not None:
+            return no(
+                f"{cover} is on leave, or has asked to be, on {away.dates}: name another cover."
+            )
     days = leave_days(first, last)
     if days == 0:
         return no("These dates count no days of leave.", 0)

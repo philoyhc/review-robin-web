@@ -5,8 +5,8 @@
    check passes. The check is the server's (`sample_leave.check_dates`,
    asked again as the fields change), so the rules live in one place. #}
 {% macro date_fields(leave, me, as_query, submit_id, draft=none, appeal=false) %}
-  {% set check = leave.check_dates(me, draft.leave_type if draft else leave.LEAVE_TYPES[0].name, draft.start if draft else none, draft.end if draft else none, appeal) %}
-  <div class="form-pair" data-date-check="{{ url('/ra-leave/check-dates') }}" data-submit="{{ submit_id }}" data-appeal="{{ '1' if appeal else '0' }}" data-as="{{ me if as_query else '' }}">
+  {% set check = leave.check_dates(me, draft.leave_type if draft else leave.LEAVE_TYPES[0].name, draft.start if draft else none, draft.end if draft else none, appeal, draft.cover if draft else "") %}
+  <div class="form-pair" data-date-check="{{ url('/ra-leave/check-dates') }}" data-submit="{{ submit_id }}" data-appeal="{{ '1' if appeal else '0' }}" data-as="{{ me if as_query else '' }}" data-cover="{{ draft.cover if draft and draft.cover else '' }}">
     <div>
       <div class="field-wide"><label for="first">First day</label><input id="first" class="input" type="date" min="{{ leave.TODAY.isoformat() }}" max="{{ leave.TERM.end.isoformat() }}"{% if draft %} value="{{ draft.start.isoformat() }}"{% endif %}></div>
       <div class="field-wide"><label for="last">Last day</label><input id="last" class="input" type="date" min="{{ leave.TODAY.isoformat() }}" max="{{ leave.TERM.end.isoformat() }}"{% if draft %} value="{{ draft.end.isoformat() }}"{% endif %}></div>
@@ -36,6 +36,12 @@
         // Looked up here: the button comes after this script in the form.
         var send = document.getElementById(pair.dataset.submit);
         if (send) send.disabled = !r.ok;
+        // No one away on these dates is offered as cover (author,
+        // 2026-11-10).
+        var away = r.unavailable || [];
+        Array.prototype.forEach.call(document.querySelectorAll("#cover-pool option"), function (o) {
+          o.disabled = away.indexOf(o.value) !== -1;
+        });
       }
       var asked = 0;
       function hold() {
@@ -47,6 +53,7 @@
         hold();  // until this answer comes, the dates are unchecked
         var q = new URLSearchParams({ first: first.value, last: last.value, type: type.value, appeal: pair.dataset.appeal });
         if (pair.dataset.as) q.set("as", pair.dataset.as);
+        if (pair.dataset.cover) q.set("cover", pair.dataset.cover);
         fetch(pair.dataset.dateCheck + "?" + q.toString(), { credentials: "same-origin" })
           .then(function (res) { return res.ok ? res.json() : null; })
           .then(function (r) {

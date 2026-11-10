@@ -16,8 +16,11 @@
             <li>
               <div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div>
               <div class="subtle">{{ a.leave_type }} · {{ a.days }} day{{ "s" if a.days != 1 }} · asked {{ leave.short_date(a.submitted) }}</div>
+              {# No one covers while on leave (author, 2026-11-10). #}
+              {% set mine = leave.own_leave_between(me, a.start, a.end) %}
+              {% if mine %}<p class="small text-danger gap-above-sm">You are on leave, or have asked to be, on {{ mine.dates }}: you cannot cover these days. Decline, so {{ a.ra }} can name someone else.</p>{% endif %}
               <div class="btnrow gap-above-sm">
-                <button type="button" class="btn btn-primary" aria-label="Confirm cover for {{ a.ra }}, {{ a.dates }}" disabled>Confirm</button>
+                <button type="button" class="btn btn-primary{{ ' btn-unavailable' if mine }}" aria-label="Confirm cover for {{ a.ra }}, {{ a.dates }}" disabled>Confirm</button>
                 <button type="button" class="btn btn-secondary" aria-label="Decline cover for {{ a.ra }}, {{ a.dates }}" disabled>Decline</button>
               </div>
             </li>

@@ -95,7 +95,7 @@ LEAVE_ADMIN_TABS: tuple[dict[str, str | None], ...] = (
     {"label": "Entitlements", "path": "/ra-leave/admin/entitlements"},
     {"label": "Approval chain", "path": "/ra-leave/admin/routing"},
     # Leave records (author, 2026-11-10; Applications until then).
-    {"label": "Leave records", "path": "/ra-leave/admin/records"},
+    {"label": "Records", "path": "/ra-leave/admin/records"},
     {"label": "Appeals", "path": "/ra-leave/admin/appeals"},
 )
 

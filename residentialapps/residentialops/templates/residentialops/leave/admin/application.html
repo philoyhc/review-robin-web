@@ -2,7 +2,7 @@
 {% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, timeline_items, email_items, appeal_rows with context %}
 {% block title %}{{ app.id }}{% endblock %}
 {% block content %}
-  <a class="back" href="{{ url('/ra-leave/admin/records') }}?period=whole">‹ Leave records</a>
+  <a class="back" href="{{ url('/ra-leave/admin/records') }}?period=whole">‹ Records</a>
   {{ title(app.id ~ " · " ~ app.ra, leave, stage_chip(app.stage)) }}
 
   <div class="split">
