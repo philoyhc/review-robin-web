@@ -1145,11 +1145,15 @@ def test_records_filter_by_cover_take_from_and_to_and_match_the_admin_s() -> Non
     ]
     assert admin.index("</table>") < admin.index("Export CSV</button>")
     assert 'href="/ra-leave/admin/records/L-0101">L-0101</a>' in admin
-    # Leave types shortened to Personal and Official (author, 2026-11-10).
+    # Leave types shown by their Policy abbreviation, under Type (author,
+    # 2026-11-10), the full name on hover.
     table = admin.split('id="rec-h"')[1].split("</table>")[0]
-    assert '<td class="nowrap" data-col="type">Personal <span class="chip chip-accent"' in table
-    assert '<td class="nowrap" data-col="type">Official</td>' in table
-    assert "Personal leave" not in table
+    pl = '<td class="nowrap" data-col="type"><abbr title="Personal leave">PL</abbr>'
+    assert pl + ' <span class="chip chip-accent"' in table
+    assert '<td class="nowrap" data-col="type"><abbr title="Official leave">OL</abbr></td>' in table
+    assert sample_leave.type_abbrev("Personal leave") == "PL"
+    assert sample_leave.type_abbrev("Sabbatical") == "Sabbatical"
+    assert ">Personal leave<" not in table  # the name is only the hover title
     # Remarks: what is out of the ordinary (author, 2026-11-10): a cover's
     # first approval, a cover away, pending past the days allowed.
     rows = {re.findall(r">(L-\d+)</a>", r)[0]: r for r in table.split("<tr data-row>")[1:]}

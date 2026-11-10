@@ -783,7 +783,7 @@ def test_other_tables_sort_and_leave_records_share_their_columns() -> None:
         "ID",
         "RA",
         "Precinct",
-        "Leave type",
+        "Type",
         "Dates",
         "Days",
         "Cover",

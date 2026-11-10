@@ -41,6 +41,12 @@ LEAVE_TYPES = (
 )
 
 
+def type_abbrev(name: str) -> str:
+    """A leave type's abbreviation from Policy, as Records shows it (author,
+    2026-11-10); a name Policy no longer lists shows whole."""
+    return next((t.abbrev for t in LEAVE_TYPES if t.name == name), name)
+
+
 @dataclass(frozen=True)
 class Blackout:
     """A run of weeks in a term when leave is refused, or only open to
