@@ -390,13 +390,12 @@
          own swatch, so the chips are its key too. */
       a.col-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
       .cal-filters { margin: 4px 0 8px; }
-      /* Two columns of a third and two thirds (Leave records, author,
-         2026-11-10): the period beside its filter chips, the summary
-         beside the clashes. One column below 960 px. */
+      /* A third and two thirds (Leave records, author, 2026-11-10): the
+         period beside its filter chips; one column below 960 px. The
+         converse is .bottom-row. */
       .grid-thirds { display: grid; gap: 16px 24px; grid-template-columns: minmax(0, 1fr); align-items: start; }
       @media (min-width: 960px) {
         .grid-thirds.one-two { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
-        .grid-thirds.two-one { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
       }
       .field-label { display: block; margin: 8px 0 4px; font-size: 14px; }
       .rec-filters { margin: 0; }

@@ -804,10 +804,15 @@ def away_this_week() -> tuple[Application, ...]:
 # default, the week after, four weeks from TODAY, or what is left of the
 # term.
 PERIODS = (
+    ("last", "Last week"),
     ("week", "This week"),
     ("next", "Next week"),
     ("four", "These four weeks"),
     ("term", "Rest of term"),
+    # Looking back, so taken, rejected and withdrawn leave can show on
+    # Leave records too (the cold read, 2026-11-10).
+    ("sofar", "Term so far"),
+    ("whole", "Whole term"),
 )
 
 
@@ -816,12 +821,12 @@ def period(key: str | None = None) -> tuple[str, str, date, date]:
     this week."""
     key = key if key in dict(PERIODS) else "week"
     first = TODAY.toordinal()
-    span = {"week": (0, 6), "next": (7, 13), "four": (0, 27)}.get(key)
-    start, end = (
-        (date.fromordinal(first + span[0]), date.fromordinal(first + span[1]))
-        if span
-        else (TODAY, TERM.end)
-    )
+    span = {"last": (-7, -1), "week": (0, 6), "next": (7, 13), "four": (0, 27)}.get(key)
+    if span:
+        start, end = date.fromordinal(first + span[0]), date.fromordinal(first + span[1])
+    else:
+        start = TERM.start if key in ("sofar", "whole") else TODAY
+        end = TODAY if key == "sofar" else TERM.end
     return key, dict(PERIODS)[key], start, end
 
 
@@ -1979,14 +1984,16 @@ def appeals_on() -> bool:
 
 
 # Leave records' statuses (author, 2026-11-10), in the order of their
-# chips: approved leave split by where today falls, then each stage.
+# chips, the author's order: approved leave split by where today falls,
+# then each stage.
 RECORD_STATUSES = (
     "On leave",
     "Approved",
+    "Taken",
     "Pending first approval",
     "Pending final approval",
-    "Appeal to the Master",
     "Rejected",
+    "Appeal to the Master",
     "Withdrawn",
     "Cancelled",
 )
@@ -1994,11 +2001,20 @@ RECORD_STATUSES = (
 
 def record_status(application: Application) -> str:
     """An application's status on Leave records: approved leave is On leave
-    while today falls in it, Approved while still to come (or once taken);
+    while today falls in it, Approved while still to come, Taken once past;
     any other its stage."""
-    if application.stage == "Approved" and application.start <= TODAY <= application.end:
-        return "On leave"
+    if application.stage == "Approved":
+        if application.end < TODAY:
+            return "Taken"
+        return "On leave" if application.start <= TODAY else "Approved"
     return application.stage
+
+
+def record_statuses() -> tuple[str, ...]:
+    """The status chips the policy uses: no appeal chip while appeals are
+    not decided, no first-approval chip when none is needed (`stages`)."""
+    used = set(stages())
+    return tuple(s for s in RECORD_STATUSES if s not in STAGES or s in used)
 
 
 def record_precincts(viewer: str) -> tuple[str, ...]:
@@ -2011,14 +2027,14 @@ def record_precincts(viewer: str) -> tuple[str, ...]:
 def records_hidden(viewer: str, value: str | None) -> frozenset[str]:
     """Leave records' filters turned off, from `?hide=`: only the viewer's
     own chips count."""
-    known = set(RECORD_STATUSES) | set(record_precincts(viewer))
+    known = set(record_statuses()) | set(record_precincts(viewer))
     return frozenset(v for v in (value or "").split(",") if v in known)
 
 
 def record_filters(viewer: str, hidden: frozenset[str]) -> tuple[tuple[str, bool, str], ...]:
     """Leave records' chips: each status, then each Precinct where there is
     more than one."""
-    return toggle_filters(RECORD_STATUSES + record_precincts(viewer), hidden)
+    return toggle_filters(record_statuses() + record_precincts(viewer), hidden)
 
 
 def records(

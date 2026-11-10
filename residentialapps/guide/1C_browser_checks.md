@@ -122,9 +122,10 @@ widths, the scripts' behavior, and whether the screens read right.
 - [ ] **Leave records as Sam** (desktop; `/ra-leave/staff/precinct` lands
   here), This week:
   - Leave applications: the period at the left, the chips at the right
-    (eight statuses, then nine Precincts on their own line); Maya Seah and
-    Olivia Ng On leave, Pranav Iyer On leave or Approved, with "Away too"
-    on Pranav's cover; turn a chip off and change the period: it stays off;
+    (nine statuses, then nine Precincts on their own line); Maya Seah and
+    Olivia Ng On leave, Pranav Iyer Approved (from tomorrow), with "Away
+    too" on Olivia's cover; turn a chip off and change the period: it
+    stays off; Whole term adds Taken, Rejected and Withdrawn rows;
   - Summary, this week: Establishment, Away, Available and Pending per
     Precinct, with a Total row; Clashes at its right, one, Willow A 13-25:
     Olivia Ng and Pranav Iyer.

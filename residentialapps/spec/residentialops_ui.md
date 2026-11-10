@@ -192,7 +192,7 @@ model (author, 2026-10-27):
   for Notes alone; sorted, each row names its levels and the grouping
   rules go. Leave admin's Applications takes chips for all but ID and RA;
   Entitlements, Approval chain's Precincts, Sys admin's grants and audit
-  log, and Precinct sort only (`data-sort-auto`). Policy's row
+  log, and Leave records sort only (`data-sort-auto`). Policy's row
   builders, Terms, the dashboard's cards, Delegates and the appeals
   tables, short or edited in place, take neither (author, 2026-10-29).
   On every sorted table an empty value (a None chip, an empty cell) sorts
@@ -296,10 +296,10 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
 - **A period row** (`.period-row`, RA Leave's Leave records, author,
   2026-11-09): under a select on its own row, its dates at the left, top
   aligned, and the submit button at the right.
-- **Thirds** (`.grid-thirds`, `.one-two` or `.two-one`; Leave records,
-  author, 2026-11-10): two columns of a third and two thirds from 960 px,
-  one below: a period beside its filter chips, a summary beside its
-  clashes.
+- **A third and two thirds** (`.grid-thirds.one-two`; Leave records,
+  author, 2026-11-10): from 960 px, one column below: a period beside its
+  filter chips. Its converse, two thirds and a third, is `.bottom-row`
+  (Leave records' summary beside its clashes).
 - **Numbers in a table** sit right-aligned (`td.num`).
 - **Phone lists** (`ul.items`, RA Leave's RA pages, 2026-10-28): on a
   mobile-critical page, rows are list items rather than table rows, each
@@ -314,9 +314,9 @@ Until a screen is wired:
   in one module, deleted in one place by the item that wires it;
 - its controls are present and `disabled`, except a roster's tick boxes,
   which open the expander so its shape can be checked (§6), and
-  Assignments' term selector and its Show term button, and Precinct
-  leave's Period selector and its Show period button, which are
-  navigation, and Assignments' upload-mode radios, so the Upload button's
+  Assignments' term selector and its Show term button, and Leave
+  records' Period selector, Show period button and filter chips, which
+  are navigation, and Assignments' upload-mode radios, so the Upload button's
   unavailable state can be seen (§7);
 - it answers anyone on a local run (`APP_ENV=local`) and, deployed, only a previewer, 404 to anyone else; RA Leave's RA pages and the landing also answer an RA previewer (`residentialapps/spec/applications.md`, "The preview gate");
 - a page drawn for one person (RA Leave's RA and staff pages, the

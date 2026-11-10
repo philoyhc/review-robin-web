@@ -718,12 +718,24 @@ def test_leave_records_list_every_application_filtered_by_status_and_precinct() 
     head = page.split('id="rec-h"')[1].split("</thead>")[0]
     assert '<div class="grid-thirds one-two gap-above-sm">' in head
     chips = head.split('class="col-chips rec-filters"')[1].split("</div>")[0]
-    assert chips.count('class="col-chip on"') == 8 + 9
+    assert chips.count('class="col-chip on"') == 9 + 9
     assert "Pending first approval<span" in chips and "Willow B 04-12<span" in chips
-    # Every stage the period touches, a rejected one included.
+    # Every stage the period touches; looking back over the whole term
+    # (the cold read) reaches taken, rejected and withdrawn leave too.
     _, _, first, last = sample_leave.period("term")
     rows = sample_leave.records("Sam Lee", first, last)
     assert {s for _, s in rows} >= {"On leave", "Approved", "Pending first approval"}
+    _, _, start, end = sample_leave.period("whole")
+    assert (start, end) == (sample_leave.TERM.start, sample_leave.TERM.end)
+    whole = {s for _, s in sample_leave.records("Sam Lee", start, end)}
+    assert whole >= {"Taken", "Rejected", "Withdrawn", "Cancelled", "Appeal to the Master"}
+    assert sample_leave.period("last")[2:] == (
+        sample_leave.TODAY - sample_leave.timedelta(days=7),
+        sample_leave.TODAY - sample_leave.timedelta(days=1),
+    )
+    assert sample_leave.period("sofar")[3] == sample_leave.TODAY
+    wpage = c.get(STAFF + "records" + SAM + "&period=whole").text
+    assert '<span class="chip chip-mute">Taken</span>' in wpage
     assert f'Leave applications <span class="count">· {len(rows)}</span>' in page
     # A chip off hides its rows; its link keeps the period, and the period
     # form keeps the chips.
@@ -739,13 +751,13 @@ def test_leave_records_list_every_application_filtered_by_status_and_precinct() 
     # An RF sees no Precinct chips or column.
     daniel = c.get(STAFF + "records").text
     dchips = daniel.split('class="col-chips rec-filters"')[1].split("</div>")[0]
-    assert dchips.count('class="col-chip on"') == 8 and "Cypress" not in dchips
+    assert dchips.count('class="col-chip on"') == 9 and "Cypress" not in dchips
     assert '<th scope="col">Precinct</th>' not in daniel.split('id="rec-h"')[1].split("</thead>")[0]
     # Summary: establishment, away, available, pending, and a total.
     summary = page.split('id="sum-h"')[1].split("</section>")[0]
     assert ">Establishment</th>" in summary and ">Available</th>" in summary
     assert '<th scope="row">Total</th>' in summary and "Total" not in daniel.split('id="sum-h"')[1]
-    assert 'class="grid-thirds two-one gap-above"' in page
+    assert '<div class="bottom-row">' in page
 
 
 def test_the_leave_calendar_filters_by_status_and_for_the_unit_by_wing() -> None:
