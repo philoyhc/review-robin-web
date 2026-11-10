@@ -8,7 +8,7 @@ import re
 
 from fastapi.testclient import TestClient
 
-from residentialapps.residentialops import sample_leave
+from residentialapps.residentialops import sample_data, sample_leave
 from residentialapps.residentialops.main import create_app as ops_app
 
 STAFF = "/ra-leave/staff/"
@@ -606,8 +606,8 @@ def test_staff_home_says_when_no_one_is_away_this_week() -> None:
 def test_staff_home_shows_a_month_of_leave_in_a_calendar() -> None:
     """Author, 2026-11-09: under the cards, a calendar of the month with the
     approved and pending leave of RAs in the viewer's scope, blackout weeks
-    marked, and the previous and next month a link away; a phone lists the
-    days with leave instead."""
+    marked, and the previous and next month a link away; a phone keeps the
+    month, each entry a first name in a tag (author, 2026-11-10)."""
     october = sample_leave.month_of(None)
     assert october == sample_leave.date(2026, 10, 1)
     weeks = sample_leave.leave_calendar("Sam Lee", october)
@@ -635,16 +635,24 @@ def test_staff_home_shows_a_month_of_leave_in_a_calendar() -> None:
     page = c.get(STAFF + SAM).text.split('id="cal-h"')[1]
     assert "<strong>October 2026</strong>" in page
     assert 'href="/ra-leave/staff/?as=Sam%20Lee&amp;month=2026-11#cal-h"' in page
-    assert 'class="cal-leave approved" href="/ra-leave/staff/decide/L-0106?as=Sam%20Lee"' in page
-    assert 'class="items cal-list"' in page  # the phone's list of days
+    assert (
+        'class="cal-leave cal-link approved" href="/ra-leave/staff/decide/L-0106?as=Sam%20Lee"'
+        in page
+    )
+    # A phone keeps the month (author, 2026-11-10): each entry also a first
+    # name in a tag, the full name and status for a screen reader.
+    assert 'class="items cal-list"' not in page
+    assert (
+        '<span class="cal-leave cal-tag approved"' in page
+        and '>Maya<span class="visually-hidden"> Seah</span></span>' in page
+    )
     november = c.get(STAFF + "?month=2026-11").text.split('id="cal-h"')[1]
     assert "<strong>November 2026</strong>" in november
-    assert 'class="cal-leave pending" href="/ra-leave/staff/decide/L-0101"' in november
+    assert 'class="cal-leave cal-link pending" href="/ra-leave/staff/decide/L-0101"' in november
+    assert '>Chloe<span class="visually-hidden"> Lim, pending</span></span>' in november
     assert '<span class="cal-black">Examinations</span>' in november  # named, not hatched alone
     assert ">Chloe Lim (pending)</a>" in november  # pending in words, not color alone
-    assert "Blackouts: Examinations, 15 Nov – 28 Nov." in november  # the phone's note
-    phone = november.split('<ul class="items cal-list">')[1].split("</ul>")[0]
-    assert "Fri 6 Nov" in phone and "Chloe Lim (pending)" in phone
+    assert "Blackouts: Examinations, 15 Nov – 28 Nov." in november
     assert "No leave this month." in c.get(STAFF + "?month=2027-03").text
     assert 'aria-current="date"' in page  # today, for a screen reader too
     # The cold read: the calendar's far ends are never reached, and every
@@ -689,4 +697,70 @@ def test_the_precinct_page_counts_in_its_cards_and_lists_by_precinct_last() -> N
     assert (
         '<div class="period-row"><span id="period-dates"' in page
         and "Show period</button></div>" in page
+    )
+
+
+def test_the_leave_calendar_filters_by_status_and_for_the_unit_by_wing() -> None:
+    """Author, 2026-11-10: on/off chips over the calendar, Approved and
+    Pending for a viewer with one Precinct (or one Wing), and a chip a Wing
+    besides for one who sees the whole Unit."""
+    assert sample_leave.calendar_wings("Daniel Koh") == ()
+    assert sample_leave.calendar_wings("Priya Raman") == ()  # one Wing
+    assert sample_leave.calendar_wings("Sam Lee") == ("Cypress", "Maple", "Willow")
+    assert sample_leave.calendar_wings("Rachel Yeo") == ("Cypress", "Maple", "Willow")
+    # Only the viewer's own chips are read from `?hide=`.
+    assert sample_leave.calendar_hidden("Daniel Koh", "Pending,Maple,x") == {"Pending"}
+    assert sample_leave.calendar_hidden("Sam Lee", "Pending,Maple,x") == {"Pending", "Maple"}
+    nov = sample_leave.date(2026, 11, 1)
+
+    def names(viewer: str, hidden: frozenset[str] = frozenset()) -> set[tuple[str, bool]]:
+        weeks = sample_leave.leave_calendar(viewer, nov, hidden)
+        return {(a.ra, ok) for w in weeks for c in w for a, ok in c["leave"]}
+
+    every = names("Sam Lee")
+    assert ("Chloe Lim", False) in every
+    assert all(ok for _, ok in names("Sam Lee", frozenset({"Pending"})))
+    assert not any(ok for _, ok in names("Sam Lee", frozenset({"Approved"})))
+    no_cypress = sample_leave.leave_calendar("Sam Lee", nov, frozenset({"Cypress"}))
+    wing_of = {s.precinct: s.wing for s in sample_data.SLOTS}
+    assert all(
+        wing_of[a.precinct] != "Cypress" for w in no_cypress for c in w for a, _ in c["leave"]
+    )
+    assert ("Chloe Lim", False) not in names("Sam Lee", frozenset({"Cypress"}))
+
+    c = client()
+    page = c.get(STAFF + "?month=2026-11").text.split('id="cal-h"')[1]  # Daniel, an RF
+    chips = page.split('class="col-chips cal-filters"')[1].split("</div>")[0]
+    assert chips.count('class="col-chip on"') == 2 and "Cypress" not in chips
+    # Each chip's link turns itself off and keeps the month.
+    assert 'href="/ra-leave/staff/?hide=Pending&amp;month=2026-11#cal-h"' in chips
+    off = c.get(STAFF + "?month=2026-11&hide=Pending").text.split('id="cal-h"')[1]
+    assert ">Chloe<" not in off and 'class="col-chip" data-filter' in off
+    # ...and the month links carry the filter.
+    assert "hide=Pending&amp;month=2026-12#cal-h" in off
+    # Turning it back on clears `hide`.
+    assert 'href="/ra-leave/staff/?month=2026-11#cal-h"' in off
+
+    sam = c.get(STAFF + SAM + "&month=2026-11").text.split('id="cal-h"')[1]
+    sam_chips = sam.split('class="col-chips cal-filters"')[1].split("</div>")[0]
+    for wing in ("Cypress", "Maple", "Willow"):
+        assert f"{wing}<span" in sam_chips
+    assert "hide=Maple&amp;month=2026-11" in sam_chips
+    hidden_all = c.get(STAFF + SAM + "&month=2026-11&hide=Approved,Pending").text
+    assert "No leave this month with these filters." in hidden_all
+    # The cold read: two filters off write one form of `hide`, a month with
+    # no leave says so whatever is off, and the cover filter keeps them.
+    two = c.get(STAFF + SAM + "&month=2026-11&hide=Pending,Maple").text
+    assert two.count("hide=Maple%2CPending&amp;month=2026-12#cal-h") == 1
+    assert "hide=Maple%2CPending%2CWillow&amp;month=2026-11#cal-h" in two
+    empty = c.get(STAFF + SAM + "&month=2027-03&hide=Pending").text
+    assert "No leave this month." in empty and "with these filters" not in empty
+    cover = (
+        'href="/ra-leave/staff/?as=Sam%20Lee&amp;cover=waiting&amp;hide=Pending&amp;month=2026-11"'
+    )
+    assert cover in c.get(STAFF + SAM + "&month=2026-11&hide=Pending").text
+    back = c.get(STAFF + SAM + "&cover=waiting&month=2026-11&hide=Pending").text
+    assert (
+        'href="/ra-leave/staff/?as=Sam%20Lee&amp;hide=Pending&amp;month=2026-11">Show everything'
+        in back
     )

@@ -237,7 +237,7 @@
         min-height: 28px; padding: 2px 10px; border-radius: 9999px; border: 1px solid var(--accent);
         background: var(--surface-muted); color: var(--text-body); font: inherit; font-size: 13px; cursor: pointer;
       }
-      .col-chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+      .col-chip[aria-pressed="true"], .col-chip.on { background: var(--accent); color: var(--on-accent); font-weight: 600; }
       /* Each header sorts by its button: ascending, descending, then back
          to the table's own order. */
       th.sortable { white-space: nowrap; }
@@ -372,27 +372,44 @@
       .field-wide.full textarea { max-width: none; }
       .text-danger { color: var(--danger); }
       .period-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-top: 4px; }
-      /* Staff Home's leave calendar (RA Leave, 2026-11-09): a list of the
-         days with leave or a blackout first; a month grid only where it is
-         wide enough and a mouse points, since its names are too small to
-         take a finger (§4). Pending leave and blackouts carry words. */
+      /* Staff Home's leave calendar (RA Leave, 2026-11-09): a month grid at
+         every width, a phone's too (author, 2026-11-10). On a phone or a
+         touch screen each entry is a first name in a tag, not a link, a
+         day cell being too small for a finger's target (§4); where a
+         mouse points it is the full name, a link. Pending and blackouts
+         carry words. */
       .cal-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
       .cal-nav { display: flex; align-items: center; gap: 12px; }
       .cal-nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; }
       .cal-key { display: inline-flex; flex-wrap: wrap; gap: 12px; font-size: 12px; }
-      .cal-leave { display: block; margin: 2px 0; padding: 1px 4px; border-radius: 4px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; text-decoration: none; }
+      .cal-leave { display: block; margin: 2px 0; padding: 0 3px; border-radius: 4px; font-size: 11px; line-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; text-decoration: none; }
       .cal-leave.approved { background: var(--chip-ok-bg); color: var(--chip-ok-fg); }
       .cal-leave.pending { border: 1px dashed var(--chip-info-fg); color: var(--chip-info-fg); }
-      .cal-list .cal-leave { display: flex; align-items: center; min-height: 44px; margin: 4px 0; padding: 0 10px; font-size: 14px; }
-      .cal-grid { display: none; width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
-      .cal-grid th { font-weight: 600; color: var(--text-subtle); padding: 4px; text-align: left; }
-      .cal-grid td { vertical-align: top; height: 72px; padding: 4px; border: 1px solid var(--border-subtle); }
+      /* The calendar's filters are column chips that are links (author,
+         2026-11-10), on filled; Approved and Pending carry the calendar's
+         own swatch, so the chips are its key too. */
+      a.col-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+      .cal-filters { margin: 4px 0 8px; }
+      .cal-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--surface-muted); }
+      .cal-swatch.approved { background: var(--chip-ok-bg); border: 1px solid var(--chip-ok-fg); }
+      .cal-swatch.pending { border: 1px dashed var(--chip-info-fg); }
+      .cal-link { display: none; }
+      .cal-grid { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+      .cal-grid th { font-weight: 600; color: var(--text-subtle); padding: 2px; text-align: left; font-size: 11px; }
+      .cal-grid td { vertical-align: top; height: 56px; padding: 2px; border: 1px solid var(--border-subtle); }
       .cal-grid td.out { color: var(--text-subtle); background: var(--surface-muted); }
       .cal-grid td.blackout { background-image: repeating-linear-gradient(135deg, transparent 0 6px, var(--border-default) 6px 7px); }
       .cal-grid td.today .cal-n { font-weight: 700; text-decoration: underline; }
-      .cal-n { display: block; margin-bottom: 2px; }
-      .cal-black { display: block; font-size: 11px; color: var(--text-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      @media (min-width: 640px) and (pointer: fine) { .cal-grid { display: table; } .cal-list { display: none; } }
+      .cal-n { display: block; margin-bottom: 1px; }
+      .cal-black { display: block; font-size: 10px; color: var(--text-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      @media (min-width: 640px) {
+        .cal-grid { font-size: 13px; }
+        .cal-grid th { padding: 4px; font-size: 13px; }
+        .cal-grid td { height: 72px; padding: 4px; }
+        .cal-leave { padding: 1px 4px; font-size: 12px; }
+        .cal-black { font-size: 11px; }
+      }
+      @media (min-width: 640px) and (pointer: fine) { .cal-link { display: block; } .cal-tag { display: none; } }
       /* A form's fields in two columns side by side, one column below 960 px,
          the left column's fields first (RA Leave's Apply, 2026-11-09). From
          736 px the form shares the page with a 340 px side column, so two
@@ -556,8 +573,9 @@
         .btn, .input, .theme-toggle button, a.chip, .tokens, label.check { min-height: 44px; }
         /* A favorite star and a list filter sit on phone-first pages (1D
            rungs 12 and 13), so they take the finger's height a desktop
-           column chip does not; so does a withheld name's Show name. */
-        .col-chip[data-favorite], .col-chip[data-show] { min-height: 44px; min-width: 44px; }
+           column chip does not; so does a withheld name's Show name, and
+           a leave calendar's filter chip (author, 2026-11-10). */
+        .col-chip[data-favorite], .col-chip[data-show], .col-chip[data-filter] { min-height: 44px; min-width: 44px; }
         details.reveal > summary { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; }
         .token-x { min-width: 44px; min-height: 44px; }
         .token-input { min-height: 36px; }

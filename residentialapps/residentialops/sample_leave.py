@@ -1828,11 +1828,52 @@ def shift_month(first: date, by: int) -> date:
     return date(n // 12, n % 12 + 1, 1)
 
 
-def leave_calendar(viewer: str, first: date) -> tuple[tuple[CalendarDay, ...], ...]:
+CALENDAR_STATUSES = ("Approved", "Pending")
+
+
+def calendar_wings(viewer: str) -> tuple[str, ...]:
+    """The Wings a viewer's calendar filters by (author, 2026-11-10): one
+    chip a Wing when the viewer's scope spans the whole Unit; none for an RF
+    or an RSLM, whose scope is a Precinct or one Wing."""
+    precincts = set(scope(viewer))
+    unit = {s.precinct for s in sample_data.SLOTS}
+    if not precincts or precincts != unit:
+        return ()
+    return tuple(sorted({s.wing for s in sample_data.SLOTS}))
+
+
+def calendar_hidden(viewer: str, value: str | None) -> frozenset[str]:
+    """The calendar filters turned off, from `?hide=` (a comma list): only
+    the viewer's own chips count, so a stray or another scope's value is
+    dropped."""
+    known = set(CALENDAR_STATUSES) | set(calendar_wings(viewer))
+    return frozenset(v for v in (value or "").split(",") if v in known)
+
+
+def calendar_filters(viewer: str, hidden: frozenset[str]) -> tuple[tuple[str, bool, str], ...]:
+    """Each calendar chip as (label, on, the `hide` value its link sets):
+    Approved and Pending, then a Wing each for a whole-Unit viewer. The
+    link toggles its own chip and keeps the others as they are."""
+    labels = CALENDAR_STATUSES + calendar_wings(viewer)
+    return tuple(
+        (
+            label,
+            label not in hidden,
+            ",".join(sorted(x for x in labels if (x in hidden) != (x == label))),
+        )
+        for label in labels
+    )
+
+
+def leave_calendar(
+    viewer: str, first: date, hidden: frozenset[str] = frozenset()
+) -> tuple[tuple[CalendarDay, ...], ...]:
     """Staff Home's leave calendar (author, 2026-11-09): the month's weeks,
     Sunday to Saturday, each day with the approved and pending leave of RAs
     in the viewer's scope, appeals awaiting the Master left off, and the
-    blackout it falls in."""
+    blackout it falls in. `hidden` names the filters turned off (author,
+    2026-11-10): Approved, Pending, or a Wing."""
+    wing_of = {s.precinct: s.wing for s in sample_data.SLOTS}
     last = shift_month(first, 1) - timedelta(days=1)
     start = first - timedelta(days=first.isoweekday() % 7)
     end = last + timedelta(days=6 - last.isoweekday() % 7)
@@ -1845,6 +1886,8 @@ def leave_calendar(viewer: str, first: date) -> tuple[tuple[CalendarDay, ...], .
         and a.precinct in scope(viewer)
         and a.start <= end
         and a.end >= start
+        and ("Approved" if a.stage == "Approved" else "Pending") not in hidden
+        and wing_of.get(a.precinct) not in hidden
     ]
     # Every academic year's blackouts, so a month in another year shows its own.
     years = sorted({t.year for t in sample_data.TERMS})
@@ -1873,7 +1916,7 @@ def leave_calendar(viewer: str, first: date) -> tuple[tuple[CalendarDay, ...], .
 
 def month_blackouts(first: date) -> tuple[tuple[str, date, date], ...]:
     """The blackouts a calendar month touches, any academic year's, with
-    their dates: the phone's list names them in one line."""
+    their dates, named in one line under the calendar."""
     last = shift_month(first, 1) - timedelta(days=1)
     years = sorted({t.year for t in sample_data.TERMS})
     return tuple(
