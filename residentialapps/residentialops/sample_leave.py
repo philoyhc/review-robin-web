@@ -446,8 +446,8 @@ _APPLICATION_ROWS: tuple[_ApplicationRow, ...] = (
         "Pending first approval",
         _d("2026-10-21"),
     ),
-    # Cover not yet confirmed: the Master may decide over it, on the
-    # record (spec §7.4; audit, 2026-10-29).
+    # Cover not yet confirmed: the appeal waits for it, as ordinary leave
+    # does (author, 2026-11-10).
     (
         "Gwen Ho",
         "Personal leave",
@@ -1389,12 +1389,11 @@ def my_extra(ra: str = VIEWER) -> dict[str, int]:
 
 
 def confirmation_needed(application: Application) -> bool:
-    """Whether the cover must confirm: always for an appeal (spec §7.4); for
-    ordinary leave only when the policy requires named and confirmed cover
-    (§12)."""
-    return application.appeal or (
-        POLICY["cover_required"] and POLICY["cover_mode"] == "Named and confirmed"
-    )
+    """Whether the cover must confirm: when the policy requires named and
+    confirmed cover (§12), for an appeal as for ordinary leave (author,
+    2026-11-10: the two are harmonized, with no override)."""
+    del application  # one rule for every application
+    return POLICY["cover_required"] and POLICY["cover_mode"] == "Named and confirmed"
 
 
 def cover_asked(ra: str = VIEWER) -> dict[str, tuple[Application, ...]]:

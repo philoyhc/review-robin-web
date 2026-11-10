@@ -21,7 +21,7 @@
         <div class="field-wide full"><label for="cover">Covering RA</label>
           {{ person_tokens("Covering RA", (), "cover-pool", "cover", single=true, describedby="cover-what") }}
           <datalist id="cover-pool">{% for name in leave.cover_choices(me) %}<option value="{{ name }}"></option>{% endfor %}</datalist>
-          <span id="cover-what" class="subtle small">An appeal always needs your cover to confirm (spec §7.4).</span></div>
+          <span id="cover-what" class="subtle small">{{ leave.POLICY.cover_pool }}: {{ leave.cover_choices(me) | length }} RAs you may name.{% if leave.POLICY.cover_required and leave.POLICY.cover_mode == "Named and confirmed" %} They are asked to confirm; your appeal waits until they do.{% elif leave.POLICY.cover_required %} They are told; they need not confirm.{% endif %}</span></div>
         <fieldset class="modes"><legend>The terms</legend>
           <p class="sub">{{ leave.POLICY.appeal_terms }}</p>
           <label class="check"><input type="checkbox" disabled> I accept these terms</label>

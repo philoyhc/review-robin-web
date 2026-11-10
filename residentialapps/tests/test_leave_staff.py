@@ -569,16 +569,19 @@ def test_decide_lists_this_term_s_other_leave_only() -> None:
 
 def test_the_audit_s_appeal_screens() -> None:
     """The 1C.1 audit (2026-10-29): staff in the RA's slot add remarks to an
-    appeal for the Master (§15); the Master may decide over unconfirmed
-    cover (§7.4); a refused appeal is decided; an appeal's days split
-    between entitlement and extra leave (§7.5); blackouts show."""
+    appeal for the Master (§15); an appeal waits for confirmed cover as
+    ordinary leave does, with no override (author, 2026-11-10); a refused
+    appeal is decided; an appeal's days split between entitlement and extra
+    leave (§7.5); blackouts show."""
     c = client()
     rachel = c.get(STAFF + "applications/L-0105" + RACHEL).text  # in every slot, not the decider
     assert "Your remarks for the Master" in rachel and ">Add remarks</button>" in rachel
     assert ">Approve</button>" not in rachel
     sam = c.get(STAFF + "applications/L-0105" + SAM).text  # the Master
     assert "Your remarks for the Master" not in sam
-    assert "Decide without the cover's confirmation" in sam  # Elise Tan has not confirmed
+    # Elise Tan has not confirmed: the appeal waits, as ordinary leave does.
+    assert "Decide without the cover's confirmation" not in sam
+    assert "Elise Tan has not yet confirmed; this can be granted once they do" in sam
     assert (
         "<dt>From entitlement</dt><dd>0 days of Personal leave</dd><dt>Extra leave</dt><dd>4 days"
         in sam
@@ -1156,3 +1159,17 @@ def test_records_filter_by_cover_take_from_and_to_and_match_the_admin_s() -> Non
     assert ">Cover away</span>" in remarks["L-0107"]  # Pranav Iyer, away 29–31 Oct
     assert remarks["L-0115"] == '<span class="chips"></span>'
     assert "Away too" not in table
+
+
+def test_an_appeal_follows_the_cover_setting(monkeypatch) -> None:
+    """Author, 2026-11-10: cover for an appeal is harmonized with ordinary
+    leave; it waits for confirmation only when the policy asks for it."""
+    appeal = next(a for a in sample_leave.APPLICATIONS if a.appeal)
+    ordinary = next(a for a in sample_leave.APPLICATIONS if not a.appeal)
+    for mode in ("Named and confirmed", "Named only"):
+        monkeypatch.setitem(sample_leave.POLICY, "cover_mode", mode)
+        confirms = mode == "Named and confirmed"
+        assert sample_leave.confirmation_needed(appeal) is confirms
+        assert sample_leave.confirmation_needed(ordinary) is confirms
+    monkeypatch.setitem(sample_leave.POLICY, "cover_required", False)
+    assert not sample_leave.confirmation_needed(appeal)
