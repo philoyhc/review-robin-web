@@ -2618,26 +2618,25 @@ def permission_rows() -> tuple[PermissionRow, ...]:
         )
     titles = {abbrev: title for title, abbrev in (*slot_appointments(), *unit_appointments())}
     abbrevs = {p.name: p.abbrev for p in sample_data.STAFF}
-    named: dict[str, set[str]] = {}
-    scopes: dict[str, tuple[str, ...]] = {}
+    # A person with more than their role gives, scoped as routing scopes
+    # them; then each chosen grant on its own row with its own scope, so
+    # neither hides the other (Codex on #3758).
+    named: list[tuple[str, frozenset[str], tuple[str, ...]]] = []
     for person in sample_data.STAFF:
         extra = _granted(person.name) - by_role.get(person.abbrev, set())
         if extra:
-            named[person.name] = extra
-            scopes[person.name] = _scope_of(person.name)
+            named.append((person.name, frozenset(extra), _scope_of(person.name)))
     for g in NAMED_GRANTS:
-        if g.name not in named:
-            named[g.name] = set(g.perms)
-            scopes[g.name] = resolve_scope(g.scope)
-    for name, perms in named.items():
+        named.append((g.name, g.perms, resolve_scope(g.scope)))
+    for name, perms, chosen in named:
         role = abbrevs.get(name, "")
         rows.append(
             {
                 "who": name,
                 "kind": "named",
                 "note": titles.get(role, role),
-                "scope": scopes[name],
-                "perms": frozenset(perms),
+                "scope": chosen,
+                "perms": perms,
             }
         )
     return tuple(rows)

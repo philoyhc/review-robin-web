@@ -1012,6 +1012,13 @@ def test_policy_permissions_say_who_does_what_over_which_ras(monkeypatch) -> Non
     named = {r["who"]: r for r in sample_leave.permission_rows()}
     assert "final" in named["Sam Lee"]["perms"] and named["Sam Lee"]["kind"] == "named"
     assert "final" not in named["Residential Admin"]["perms"]
+    # A chosen grant keeps its row and scope beside a routing one (Codex).
+    monkeypatch.setitem(sample_leave.POLICY, "final_names", ("Hui Min Goh",))
+    goh = [r for r in sample_leave.permission_rows() if r["who"] == "Hui Min Goh"]
+    assert sorted((sorted(r["perms"]), r["scope"]) for r in goh) == [
+        (["final"], ("RAs assigned to staff's slots",)),
+        (["view"], ("Cypress", "Maple 03-08")),
+    ]
 
 
 @pytest.mark.parametrize(
