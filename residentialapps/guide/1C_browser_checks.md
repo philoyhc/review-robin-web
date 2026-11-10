@@ -128,8 +128,9 @@ widths, the scripts' behavior, and whether the screens read right.
     stays off; Whole term adds Taken, Rejected and Withdrawn rows;
   - Summary, this week: Estab., Full, −1, −2, −3 per Precinct (Willow A
     13-25: 4, 3, 2, 2, 0), with Leave taken, Leave approved and Leave
-    approval pending chips; turning Leave approval pending off makes
-    Cypress A 04-12 seven days Full; Clashes at its right, one, Willow A
+    approval pending chips, and Weekdays and Weekends; turning Leave
+    approval pending off makes Cypress A 04-12 seven days Full, and
+    Weekends off counts 5 days; Clashes at its right, one, Willow A
     13-25: Olivia Ng and Pranav Iyer.
 
   Choose a **Period**: the page reloads at the top with the range and

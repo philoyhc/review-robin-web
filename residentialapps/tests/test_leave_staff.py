@@ -942,6 +942,37 @@ def test_the_summary_counts_days_at_full_strength_and_down_by_kind() -> None:
     assert '<input type="hidden" name="uncount" value="Leave taken">' in form
 
 
+def test_the_summary_counts_weekdays_and_weekends_by_chip() -> None:
+    """Author, 2026-11-10: chips for Weekdays (Mon–Fri) and Weekends
+    (Sat–Sun) choose which days the Summary counts; an appeal awaiting the
+    Master counts as pending, as normal leave would."""
+    _, _, start, end = sample_leave.period("week")  # Wed 28 Oct – Tue 3 Nov
+    assert [sample_leave.day_kind(sample_leave.date(2026, 10, d)) for d in (30, 31)] == [
+        "Weekdays",
+        "Weekends",
+    ]
+    assert sample_leave.counted_days(start, end, frozenset()) == 7
+    assert sample_leave.counted_days(start, end, frozenset({"Weekends"})) == 5
+    assert sample_leave.counted_days(start, end, frozenset({"Weekdays"})) == 2
+
+    def willow(hidden: frozenset[str]) -> tuple[int, int, int, int]:
+        rows = sample_leave.by_precinct("Sam Lee", start, end, hidden)
+        return next(r["days"] for r in rows if r["precinct"] == "Willow A 13-25")
+
+    # Olivia Ng 28–30 Oct, Pranav Iyer 29–31 Oct (Sat 31 Oct, Sun 1 Nov).
+    assert willow(frozenset({"Weekends"})) == (2, 1, 2, 0)
+    assert willow(frozenset({"Weekdays"})) == (1, 1, 0, 0)
+    assert sum(willow(frozenset({"Weekdays", "Weekends"}))) == 0
+    appeal = sample_leave.by_id("L-0105")  # Gwen Ho, Appeal to the Master
+    assert appeal and sample_leave.strength_kind(appeal, appeal.start) == "Leave approval pending"
+
+    c = client()
+    page = c.get(STAFF + "records" + SAM + "&uncount=Weekends").text
+    days = page.split('aria-labelledby="days-l"')[1].split("</div>")[0]
+    assert ">Weekdays<" in days and 'class="col-chip" data-filter' in days
+    assert "over the 5 days counted" in page
+
+
 def test_the_summary_counts_an_ra_once_a_day_and_three_or_more_as_minus_three(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

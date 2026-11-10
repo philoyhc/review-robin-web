@@ -78,11 +78,13 @@
     <section class="card" aria-labelledby="sum-h">
       <div class="card-head">
         <h2 id="sum-h">Summary, {{ label | lower }}</h2>
-        <p class="sub">Per Precinct, its establishment strength and, over the period's {{ (last - first).days + 1 }} days, how many days it stood at full strength, one RA down, two down, and three or more down.</p>
-        <span class="field-label" id="count-l">Count as down</span>
-        <div class="col-chips count-filters" role="group" aria-labelledby="count-l">
-          {% for c_label, on, flip in leave.toggle_filters(leave.STRENGTH_COUNTS, uncounted) %}<a class="col-chip{{ ' on' if on }}" data-filter href="{{ url(here) }}?{{ viewer_q }}{{ ('uncount=' ~ (flip | urlencode) ~ '&') if flip }}{{ hq }}period={{ key }}">{{ c_label }}<span class="visually-hidden">, {{ "counted" if on else "not counted" }}</span></a>{% endfor %}
+        <p class="sub">Per Precinct, its establishment strength and, over the {{ leave.counted_days(first, last, uncounted) }} days counted, how many it stood at full strength, one RA down, two down, and three or more down.</p>
+        {% for g_id, g_label, g_labels in (("count-l", "Count as down", leave.STRENGTH_COUNTS), ("days-l", "Days", leave.STRENGTH_DAYS)) %}
+        <span class="field-label" id="{{ g_id }}">{{ g_label }}</span>
+        <div class="col-chips count-filters" role="group" aria-labelledby="{{ g_id }}">
+          {% for c_label, on, flip in leave.toggle_filters(leave.STRENGTH_COUNTS + leave.STRENGTH_DAYS, uncounted) if c_label in g_labels %}<a class="col-chip{{ ' on' if on }}" data-filter href="{{ url(here) }}?{{ viewer_q }}{{ ('uncount=' ~ (flip | urlencode) ~ '&') if flip }}{{ hq }}period={{ key }}">{{ c_label }}<span class="visually-hidden">, {{ "counted" if on else "not counted" }}</span></a>{% endfor %}
         </div>
+        {% endfor %}
       </div>
       <div class="table-wrap"><table data-sort-auto>
         <thead><tr><th scope="col">Precinct</th><th scope="col" class="num"><abbr title="Establishment strength">Estab.</abbr></th><th scope="col" class="num"><abbr title="Days at full strength">Full</abbr></th><th scope="col" class="num"><abbr title="Days one RA down">−1</abbr></th><th scope="col" class="num"><abbr title="Days two RAs down">−2</abbr></th><th scope="col" class="num"><abbr title="Days three or more RAs down">−3</abbr></th></tr></thead>

@@ -1613,12 +1613,21 @@ class PrecinctStrength(TypedDict):
 # 2026-11-10), each a chip: approved leave on a day up to today, approved
 # leave on a day after it, and an application not yet decided.
 STRENGTH_COUNTS = ("Leave taken", "Leave approved", "Leave approval pending")
+# Which days the Summary counts (author, 2026-11-10), each a chip:
+# Monday to Friday, and Saturday and Sunday.
+STRENGTH_DAYS = ("Weekdays", "Weekends")
+
+
+def day_kind(day: date) -> str:
+    """Which of `STRENGTH_DAYS` a day is."""
+    return "Weekends" if day.isoweekday() > 5 else "Weekdays"
 
 
 def strength_kind(application: Application, day: date) -> str:
     """Which of `STRENGTH_COUNTS` an application's day is: taken up to and
-    including today, approved after it; pending while undecided (an appeal
-    awaiting the Master included); none for a decided one not approved."""
+    including today, approved after it; pending while undecided, an appeal
+    awaiting the Master included (author, 2026-11-10: once the invitation is
+    given it counts as normal leave); none for a decided one not approved."""
     if application.stage == "Approved":
         return "Leave taken" if day <= TODAY else "Leave approved"
     return "Leave approval pending" if application.stage in OPEN_STAGES else ""
@@ -1635,7 +1644,8 @@ def by_precinct(
     period (this week without both ends), how many days it stood at full
     strength, one, two, and three or more RAs down. An RA is down on a day
     their leave covers, counting only the kinds of `STRENGTH_COUNTS` not in
-    `hidden`; an RA with two applications that day is down once."""
+    `hidden`; an RA with two applications that day is down once. Only the
+    days of `STRENGTH_DAYS` not in `hidden` are counted at all."""
     if not (start and end):
         start, end = period()[2:]
     live = [a for a in APPLICATIONS if a.stage == "Approved" or a.stage in OPEN_STAGES]
@@ -1645,6 +1655,9 @@ def by_precinct(
         days = [0, 0, 0, 0]
         day = start
         while day <= end:
+            if day_kind(day) in hidden:
+                day += timedelta(days=1)
+                continue
             down = {
                 a.ra
                 for a in mine
@@ -1663,8 +1676,19 @@ def by_precinct(
 
 
 def strength_hidden(value: str | None) -> frozenset[str]:
-    """The Summary's counts turned off, from `?uncount=`."""
-    return frozenset(v for v in (value or "").split(",") if v in STRENGTH_COUNTS)
+    """The Summary's chips turned off, from `?uncount=`: what counts as
+    down, and which days."""
+    known = set(STRENGTH_COUNTS) | set(STRENGTH_DAYS)
+    return frozenset(v for v in (value or "").split(",") if v in known)
+
+
+def counted_days(start: date, end: date, hidden: frozenset[str]) -> int:
+    """How many of the period's days the Summary counts."""
+    return sum(
+        1
+        for n in range((end - start).days + 1)
+        if day_kind(start + timedelta(days=n)) not in hidden
+    )
 
 
 def ras_in_scope(viewer: str) -> tuple[str, ...]:
