@@ -85,7 +85,7 @@ def appeals(request: Request) -> Response:
     # side (author, 2026-11-10), so the old tab goes to the staff Appeals,
     # as the Residential Admin sees it in the sample.
     return RedirectResponse(
-        url_path(request, "/ra-leave/staff/appeals") + "?as=" + quote("Rachel Yeo"),
+        url_path(request, "/ra-leave/staff/appeals") + "?as=" + quote(sample_leave.SAMPLE_ADMIN),
         status_code=303,
     )
 

@@ -1487,6 +1487,9 @@ def cover_choices(ra: str = VIEWER) -> tuple[str, ...]:
 
 # The staff pages (`/ra-leave/staff/`) render for a sample viewer chosen on
 # the sample banner (`?as=`), one per role, until identity is wired.
+# The sample's Residential Admin, whom the retired admin Appeals page now
+# sends to the staff Appeals as (author, 2026-11-10).
+SAMPLE_ADMIN = "Rachel Yeo"
 STAFF_VIEWERS = (
     ("Daniel Koh", "RF"),
     ("Priya Raman", "RSLM"),

@@ -15,6 +15,7 @@ from residentialapps.residentialops.main import create_app as ops_app
 from residentialapps.residentialops.pages import LEAVE_ADMIN_TABS
 
 ADMIN = "/ra-leave/admin/"
+STAFF_ADMIN_APPEALS = "/ra-leave/staff/appeals?as=Rachel%20Yeo"  # the admin Appeals, retired
 
 
 @pytest.fixture(autouse=True)
@@ -642,15 +643,16 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     principle and opens an appeal for them on Appeals; until then the RA is
     not offered one."""
     c = client()
-    # Open, the admin page opens none, as the staff page (audit, 2026-10-29).
-    open_page = c.get(ADMIN + "appeals").text
+    # Open, the staff Appeals opens none (audit, 2026-10-29); the admin
+    # page that did the same is retired (2026-11-10).
+    open_page = c.get(STAFF_ADMIN_APPEALS).text
     assert (
         'id="inv-ra"' not in open_page
         and "every RA may send one, so none is opened for them" in open_page
     )
     assert "Invitations take effect only while appeals are by invitation" in open_page
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Off")
-    off = c.get(ADMIN + "appeals").text
+    off = c.get(STAFF_ADMIN_APPEALS).text
     assert 'id="inv-ra"' not in off and "Appeals are off: no new one can be opened" in off
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     # The admin Appeals tab is gone (author, 2026-11-10): its path goes to
@@ -659,7 +661,7 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     assert went.status_code == 303
     assert went.headers["location"] == "/ra-leave/staff/appeals?as=Rachel%20Yeo"
     assert 'href="/ra-leave/admin/appeals"' not in c.get(ADMIN).text
-    page = c.get(ADMIN + "appeals").text
+    page = c.get(STAFF_ADMIN_APPEALS).text
     assert 'href="/ra-leave/staff/appeals?as=Rachel%20Yeo" aria-current="page"' in page
     rows = re.findall(
         r'<td class="strong nowrap">([^<]*)</td>\s*<td class="nowrap">([^<]*)</td>', page
@@ -691,7 +693,7 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     )  # hers is used
     assert not sample_leave.can_appeal("Chloe Lim")
     assert not sample_leave.invitation_for("Kai Ng", sample_leave.date(2026, 11, 11))  # lapsed
-    assert "Invitations take effect" not in c.get(ADMIN + "appeals").text
+    assert "Invitations take effect" not in c.get(STAFF_ADMIN_APPEALS).text
     assert 'name="appeals" value="By invitation" checked' in c.get(ADMIN + "policy").text
     routing = c.get(ADMIN + "routing").text
     assert ">Appeals</th>" in routing and "final approval and appeals are not delegable" in routing
@@ -767,17 +769,17 @@ def test_review_fixes_on_the_admin_side(monkeypatch) -> None:
     )
     monkeypatch.setitem(sample_leave.POLICY, "cover_mode", "Named only")
     assert "declined cover" not in c.get(ADMIN).text
-    assert "every RA may send one, so none is opened for them" in c.get(ADMIN + "appeals").text
+    assert "every RA may send one, so none is opened for them" in c.get(STAFF_ADMIN_APPEALS).text
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     monkeypatch.setitem(sample_leave.POLICY, "inviter_types", ())
-    assert "Leave policy names no one to open appeals." in c.get(ADMIN + "appeals").text
+    assert "Leave policy names no one to open appeals." in c.get(STAFF_ADMIN_APPEALS).text
     monkeypatch.setitem(sample_leave.POLICY, "first", "slot")
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ())
     assert "No first approver ticked" in c.get(ADMIN).text
     assert "(no first approver ticked, no final approver set)" in c.get(ADMIN + "routing").text
     assert (
-        "Kai Ng" in c.get(ADMIN + "appeals").text
-        and "agreed by email" not in c.get(ADMIN + "appeals").text
+        "Kai Ng" in c.get(STAFF_ADMIN_APPEALS).text
+        and "agreed by email" not in c.get(STAFF_ADMIN_APPEALS).text
     )
     detail = c.get(ADMIN + "records/L-0105").text
     assert (
@@ -880,7 +882,7 @@ def test_roles_outside_the_slots_show_as_gaps(monkeypatch) -> None:
     assert sample_leave.inviter_gaps() == sample_leave.precincts()
     assert (
         "names Hui Min Goh, but none holds a place in any RA's slot"
-        in c.get(ADMIN + "appeals").text
+        in c.get(STAFF_ADMIN_APPEALS).text
     )
     routing = c.get(ADMIN + "routing").text
     assert ">Opens appeals</th>" in routing
