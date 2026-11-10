@@ -1023,7 +1023,7 @@ def test_policy_permissions_say_who_does_what_over_which_ras(monkeypatch) -> Non
     assert '<span class="token">Cypress<button' in table
     assert 'aria-label="View records, Hui Min Goh" checked' in table
     assert '<option value="All RAs">' in page and '<option value="Willow A 04-05-06">' in page
-    # Approvals sums up who; the old who-fieldsets are gone.
+    # The old who-fieldsets and the Approvals card are gone.
     assert 'name="first-types"' not in page and 'name="final-types"' not in page
     assert 'name="inviters"' not in page
     assert 'id="approvals-h"' not in page  # the summary went with the card
