@@ -93,8 +93,8 @@ widths, the scripts' behavior, and whether the screens read right.
 ## 3. Staff side
 
 - [ ] **Daniel's Home** (Home and Awaiting are one page, 2026-11-09):
-  - no tiles; tabs Home, Decided, My Precinct (an RF has no Appeals tab;
-    Sam, Rachel and Priya do, and their tab reads Precinct);
+  - no tiles; tabs Home, Decided, Leave records (an RF has no Appeals tab;
+    Sam, Rachel and Priya do);
   - Awaiting my decision lists all three, oldest first, with Overdue
     chips; "Waiting on cover · 2" filters it under the heading "Waiting
     on cover", and "Show everything awaiting me" clears the filter;
@@ -119,17 +119,20 @@ widths, the scripts' behavior, and whether the screens read right.
   "Decide without the cover's confirmation" tick box.
 - [ ] **Rachel's queue** is L-0103, Final approval, pending 5 days, with an
   Overdue chip. Decided shows 9.
-- [ ] **Precinct as Sam** (no count tiles; the cards carry counts, By
-  Precinct last; the dates under the period, beside Show period), This week:
-  - Away 3 (Maya Seah, Olivia Ng, Pranav Iyer);
-  - Upcoming and pending 9;
-  - one clash, Willow A 13-25: Olivia Ng and Pranav Iyer, with "Away too"
-    on Pranav.
-  
+- [ ] **Leave records as Sam** (desktop; `/ra-leave/staff/precinct` lands
+  here), This week:
+  - Leave applications: the period at the left, the chips at the right
+    (eight statuses, then nine Precincts on their own line); Maya Seah and
+    Olivia Ng On leave, Pranav Iyer On leave or Approved, with "Away too"
+    on Pranav's cover; turn a chip off and change the period: it stays off;
+  - Summary, this week: Establishment, Away, Available and Pending per
+    Precinct, with a Total row; Clashes at its right, one, Willow A 13-25:
+    Olivia Ng and Pranav Iyer.
+
   Change **Period** and press **Show period**: the range and tables
   follow. Sort a table, then reload: the sort is kept.
-- [ ] **My Precinct as Daniel**: This week has nobody away; Rest of term
-  shows Hana Ito.
+- [ ] **Leave records as Daniel**: no Precinct chips or column; This week
+  has nobody away; Rest of term shows Hana Ito.
 - [ ] **Appeals**: Invitations shows Gwen Ho "Sent: L-0105", Kai Ng Open
   and Nathan Yeo Lapsed, and Appeals with the Master.
 - [ ] **Hui Min Goh** sees "You oversee no RA" and no tabs.

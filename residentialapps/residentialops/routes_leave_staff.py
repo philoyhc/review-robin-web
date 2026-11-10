@@ -34,11 +34,7 @@ def _page(request: Request, template: str, **context: object) -> Response:
         request,
         f"residentialops/leave/staff/{template}",
         area="RA Leave",
-        tabs=leave_staff_tabs(
-            as_query,
-            appeals=sample_leave.sees_appeals(viewer),
-            precinct=sample_leave.precinct_label(viewer),
-        )
+        tabs=leave_staff_tabs(as_query, appeals=sample_leave.sees_appeals(viewer))
         if oversees
         else (),
         areas=areas_for(viewer),
@@ -114,11 +110,25 @@ def decided(request: Request) -> Response:
     return _page(request, "decided.html")
 
 
+@router.get("/ra-leave/staff/records", name="residentialops_leave_staff_records")
+def records(request: Request) -> Response:
+    # Every application in the viewer's scope for a chosen period (spec
+    # §22; author, 2026-11-10), this week by default, filtered by status
+    # and, for more than one Precinct, by Precinct (`?hide=`).
+    q = request.query_params
+    return _page(
+        request, "records.html", period=sample_leave.period(q.get("period")), hide=q.get("hide")
+    )
+
+
 @router.get("/ra-leave/staff/precinct", name="residentialops_leave_staff_precinct")
 def precinct(request: Request) -> Response:
-    # For a chosen period (spec §22; author, 2026-10-29), this week by default.
-    return _page(
-        request, "precinct.html", period=sample_leave.period(request.query_params.get("period"))
+    # The Precinct page became Leave records (author, 2026-11-10); an old
+    # link lands there, its query kept.
+    query = request.url.query
+    return RedirectResponse(
+        url_path(request, "/ra-leave/staff/records") + (f"?{query}" if query else ""),
+        status_code=303,
     )
 
 

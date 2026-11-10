@@ -799,9 +799,10 @@ def away_this_week() -> tuple[Application, ...]:
     return away_between(*period()[2:])
 
 
-# The Precinct page's period (spec §22, "for a selected period"; author,
-# 2026-10-29): a week from TODAY by default, the week after, four weeks
-# from TODAY, or what is left of the term.
+# Leave records' period (the Precinct page until 2026-11-10; spec §22,
+# "for a selected period"; author, 2026-10-29): a week from TODAY by
+# default, the week after, four weeks from TODAY, or what is left of the
+# term.
 PERIODS = (
     ("week", "This week"),
     ("next", "Next week"),
@@ -1594,29 +1595,47 @@ def other_leave(application: Application) -> tuple[Application, ...]:
 
 
 class PrecinctCount(TypedDict):
-    """A Precinct's RAs, how many are away and how many applications pend."""
+    """A Precinct's RAs (its establishment strength), how many are away,
+    how many available, and how many applications pend."""
 
     precinct: str
     ras: int
     away: int
+    available: int
     pending: int
 
 
 def by_precinct(
     viewer: str, start: date | None = None, end: date | None = None
 ) -> tuple[PrecinctCount, ...]:
-    """Numbers away (this week, or in the period given) and pending per
-    Precinct in the viewer's scope (§22)."""
-    away = away_between(start, end) if start and end else away_this_week()
-    return tuple(
-        {
-            "precinct": p,
-            "ras": sum(len(s.ras) for s in sample_data.SLOTS if s.precinct == p),
-            "away": len({a.ra for a in away if a.precinct == p}),  # RAs, not applications
-            "pending": sum(1 for a in APPLICATIONS if a.precinct == p and a.stage in OPEN_STAGES),
-        }
-        for p in scope(viewer)
-    )
+    """Per Precinct in the viewer's scope (§22), for the period given (this
+    week without both ends): its establishment strength, the RAs away on
+    approved leave, those available (the rest), and the applications
+    pending whose dates touch the period (author, 2026-11-10)."""
+    if not (start and end):
+        start, end = period()[2:]
+    away = away_between(start, end)
+    rows: list[PrecinctCount] = []
+    for p in scope(viewer):
+        ras = sum(len(s.ras) for s in sample_data.SLOTS if s.precinct == p)
+        out = len({a.ra for a in away if a.precinct == p})  # RAs, not applications
+        rows.append(
+            {
+                "precinct": p,
+                "ras": ras,
+                "away": out,
+                "available": ras - out,
+                "pending": sum(
+                    1
+                    for a in APPLICATIONS
+                    if a.precinct == p
+                    and a.stage in OPEN_STAGES
+                    and a.start <= end
+                    and a.end >= start
+                ),
+            }
+        )
+    return tuple(rows)
 
 
 def ras_in_scope(viewer: str) -> tuple[str, ...]:
@@ -1856,7 +1875,15 @@ def calendar_filters(viewer: str, hidden: frozenset[str]) -> tuple[tuple[str, bo
     """Each calendar chip as (label, on, the `hide` value its link sets):
     Approved and Pending, then a Wing each for a whole-Unit viewer. The
     link toggles its own chip and keeps the others as they are."""
-    labels = CALENDAR_STATUSES + calendar_wings(viewer)
+    return toggle_filters(CALENDAR_STATUSES + calendar_wings(viewer), hidden)
+
+
+def toggle_filters(
+    labels: tuple[str, ...], hidden: frozenset[str]
+) -> tuple[tuple[str, bool, str], ...]:
+    """On/off chips as (label, on, the `hide` value its link sets): each
+    link toggles its own chip and keeps the others as they are, `hide`
+    written sorted so one state has one form."""
     return tuple(
         (
             label,
@@ -1951,19 +1978,62 @@ def appeals_on() -> bool:
     return POLICY["appeals"] != "Off"
 
 
-def upcoming_and_pending(viewer: str) -> tuple[Application, ...]:
-    """The Precinct page's Upcoming and pending: approved leave still to
-    come and applications not yet decided, starting after today, in the
-    viewer's scope, soonest first."""
+# Leave records' statuses (author, 2026-11-10), in the order of their
+# chips: approved leave split by where today falls, then each stage.
+RECORD_STATUSES = (
+    "On leave",
+    "Approved",
+    "Pending first approval",
+    "Pending final approval",
+    "Appeal to the Master",
+    "Rejected",
+    "Withdrawn",
+    "Cancelled",
+)
+
+
+def record_status(application: Application) -> str:
+    """An application's status on Leave records: approved leave is On leave
+    while today falls in it, Approved while still to come (or once taken);
+    any other its stage."""
+    if application.stage == "Approved" and application.start <= TODAY <= application.end:
+        return "On leave"
+    return application.stage
+
+
+def record_precincts(viewer: str) -> tuple[str, ...]:
+    """The Precinct chips on Leave records: one each for a viewer who
+    oversees more than one Precinct (author, 2026-11-10); none for one."""
+    precincts = scope(viewer)
+    return precincts if len(precincts) > 1 else ()
+
+
+def records_hidden(viewer: str, value: str | None) -> frozenset[str]:
+    """Leave records' filters turned off, from `?hide=`: only the viewer's
+    own chips count."""
+    known = set(RECORD_STATUSES) | set(record_precincts(viewer))
+    return frozenset(v for v in (value or "").split(",") if v in known)
+
+
+def record_filters(viewer: str, hidden: frozenset[str]) -> tuple[tuple[str, bool, str], ...]:
+    """Leave records' chips: each status, then each Precinct where there is
+    more than one."""
+    return toggle_filters(RECORD_STATUSES + record_precincts(viewer), hidden)
+
+
+def records(
+    viewer: str, start: date, end: date, hidden: frozenset[str] = frozenset()
+) -> tuple[tuple[Application, str], ...]:
+    """Leave records' table (author, 2026-11-10): every application in the
+    viewer's scope whose dates touch the period, whatever its stage, with
+    its status, soonest first; the filters turned off left out."""
     return tuple(
-        sorted(
-            (
-                a
-                for a in in_scope(viewer)
-                if a.start > TODAY and (a.stage == "Approved" or a.stage in OPEN_STAGES)
-            ),
-            key=lambda a: a.start,
-        )
+        (a, record_status(a))
+        for a in sorted(in_scope(viewer), key=lambda a: (a.start, a.ra))
+        if a.start <= end
+        and a.end >= start
+        and record_status(a) not in hidden
+        and a.precinct not in hidden
     )
 
 
@@ -1977,13 +2047,6 @@ def sees_appeals(viewer: str) -> bool:
     appeals, for everyone but an RF (author, 2026-11-09), whose appeals
     are not theirs to decide or open."""
     return appeals_decided() and not is_rf(viewer)
-
-
-def precinct_label(viewer: str) -> str:
-    """The Precinct page's name (author, 2026-11-09): My Precinct for an
-    RF, whose own Precinct it is; Precinct for the Master, the admin and an
-    RSLM, who see more than one."""
-    return "My Precinct" if is_rf(viewer) else "Precinct"
 
 
 def appeals_decided() -> bool:

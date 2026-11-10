@@ -293,9 +293,13 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   `?hide=` rides the month links; author, 2026-11-10): Approved and
   Pending, each with its swatch, the chips being the key, and a chip a
   Wing besides for a viewer whose scope is the whole Unit.
-- **A period row** (`.period-row`, RA Leave's Precinct page, author,
+- **A period row** (`.period-row`, RA Leave's Leave records, author,
   2026-11-09): under a select on its own row, its dates at the left, top
   aligned, and the submit button at the right.
+- **Thirds** (`.grid-thirds`, `.one-two` or `.two-one`; Leave records,
+  author, 2026-11-10): two columns of a third and two thirds from 960 px,
+  one below: a period beside its filter chips, a summary beside its
+  clashes.
 - **Numbers in a table** sit right-aligned (`td.num`).
 - **Phone lists** (`ul.items`, RA Leave's RA pages, 2026-10-28): on a
   mobile-critical page, rows are list items rather than table rows, each
