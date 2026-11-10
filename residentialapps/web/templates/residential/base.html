@@ -371,7 +371,6 @@
       .field-wide textarea { width: 100%; max-width: 640px; font: inherit; }
       .field-wide.full textarea { max-width: none; }
       .text-danger { color: var(--danger); }
-      .period-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-top: 4px; }
       /* Staff Home's leave calendar (RA Leave, 2026-11-09): a month grid at
          every width, a phone's too (author, 2026-11-10). On a phone or a
          touch screen each entry is a first name in a tag, not a link, a
@@ -399,7 +398,9 @@
       }
       .field-label { display: block; margin: 8px 0 4px; font-size: 14px; }
       .rec-filters { margin: 0; }
-      .chip-break { flex-basis: 100%; height: 0; }
+      /* Select all and Clear all close a group of filter chips: an
+         action, so outlined and never filled. */
+      .col-chip.chip-act { background: transparent; color: var(--accent-chip-fg); border-style: dashed; font-weight: 500; }
       .cal-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--surface-muted); }
       .cal-swatch.approved { background: var(--chip-ok-bg); border: 1px solid var(--chip-ok-fg); }
       .cal-swatch.pending { border: 1px dashed var(--chip-info-fg); }

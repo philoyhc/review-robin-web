@@ -130,8 +130,10 @@ widths, the scripts' behavior, and whether the screens read right.
     Precinct, with a Total row; Clashes at its right, one, Willow A 13-25:
     Olivia Ng and Pranav Iyer.
 
-  Change **Period** and press **Show period**: the range and tables
-  follow. Sort a table, then reload: the sort is kept.
+  Choose a **Period**: the page reloads at the top with the range and
+  tables following; no Show period button. Each chip, Select all and
+  Clear all (Status and Precinct each have their own) also lands at the
+  top, the other group unchanged. Sort a table, then reload: the sort is kept.
 - [ ] **Leave records as Daniel**: no Precinct chips or column; This week
   has nobody away; Rest of term shows Hana Ito.
 - [ ] **Appeals**: Invitations shows Gwen Ho "Sent: L-0105", Kai Ng Open

@@ -717,9 +717,13 @@ def test_leave_records_list_every_application_filtered_by_status_and_precinct() 
     assert order == sorted(order) and 'id="away-h"' not in page and 'id="upcoming-h"' not in page
     head = page.split('id="rec-h"')[1].split("</thead>")[0]
     assert '<div class="grid-thirds one-two gap-above-sm">' in head
-    chips = head.split('class="col-chips rec-filters"')[1].split("</div>")[0]
-    assert chips.count('class="col-chip on"') == 9 + 9
-    assert "Pending first approval<span" in chips and "Willow B 04-12<span" in chips
+    status_chips, precinct_chips = (
+        part.split("</div>")[0] for part in head.split('class="col-chips rec-filters"')[1:]
+    )
+    assert status_chips.count('class="col-chip on"') == 9
+    assert precinct_chips.count('class="col-chip on"') == 9
+    assert "Pending first approval<span" in status_chips
+    assert "Willow B 04-12<span" in precinct_chips
     # Every stage the period touches; looking back over the whole term
     # (the cold read) reaches taken, rejected and withdrawn leave too.
     _, _, first, last = sample_leave.period("term")
@@ -745,7 +749,7 @@ def test_leave_records_list_every_application_filtered_by_status_and_precinct() 
     assert all(s != "Approved" and a.precinct != "Willow A 13-25" for a, s in kept)
     assert '<input type="hidden" name="hide" value="Approved,Willow A 13-25">' in off
     assert (
-        'href="/ra-leave/staff/records?as=Sam%20Lee&amp;hide=Willow%20A%2013-25&amp;period=term#rec-h"'
+        'href="/ra-leave/staff/records?as=Sam%20Lee&amp;hide=Willow%20A%2013-25&amp;period=term"'
         in off
     )
     # An RF sees no Precinct chips or column.
@@ -855,3 +859,45 @@ def test_a_senior_cancels_leave_under_way_and_the_admin_s_page_says_who_is_told(
     assert ">Cancel leave under way</button>" not in c.get(STAFF + "decide/L-0115" + SAM).text
     admin = c.get("/ra-leave/admin/applications/L-0107").text
     assert "This leave is under way" in admin and "Siti Rahman, their RF," in admin
+
+
+def test_leave_records_chips_select_and_clear_all_and_the_page_stays_at_the_top() -> None:
+    """Author, 2026-11-10: Select all and Clear all close the Status chips
+    and, separately, the Precinct chips, each keeping the other group's
+    state; every change lands at the top of the page; choosing a period
+    applies it, with no Show period button (kept for a browser without
+    scripts)."""
+    hidden = frozenset({"Rejected", "Maple 03-08"})
+    status, precinct = sample_leave.record_groups("Sam Lee", hidden)
+    assert (status["name"], precinct["name"]) == ("Status", "Precinct")
+    assert status["select_all"] == "Maple 03-08"
+    assert status["clear_all"] == ",".join(sorted(hidden | set(sample_leave.record_statuses())))
+    assert precinct["select_all"] == "Rejected"
+    assert set(precinct["clear_all"].split(",")) == {"Rejected", *sample_leave.scope("Sam Lee")}
+    assert [g["name"] for g in sample_leave.record_groups("Daniel Koh", frozenset())] == ["Status"]
+
+    c = client()
+    page = c.get(STAFF + "records" + SAM + "&period=term&hide=Rejected,Maple 03-08").text
+    groups = page.split('class="col-chips rec-filters"')[1:]
+    assert len(groups) == 2
+    for group in groups:
+        group = group.split("</div>")[0]
+        links = re.findall(r"<a [^>]*>(?:Select all|Clear all)", group)
+        assert len(links) == 2 and group.rstrip().endswith("</a>")
+        last_chip = max(m.start() for m in re.finditer(r'class="col-chip(?: on)?"', group))
+        assert group.index("Select all") > last_chip  # at the end
+    assert (
+        'href="/ra-leave/staff/records?as=Sam%20Lee&amp;hide=Maple%2003-08&amp;period=term">'
+        "Select all"
+    ) in page
+    clear = (
+        "Cypress%20A%2004-12%2CCypress%20A%2013-20%2CCypress%20B%2003-14%2CMaple%2003-08"
+        "%2CMaple%2009-14%2CMaple%2015-22%2CRejected%2CWillow%20A%2004-12%2CWillow%20A%2013-25"
+        "%2CWillow%20B%2004-12"
+    )
+    assert f'hide={clear}&amp;period=term">Clear all' in page  # the Status kept
+    assert "#rec-h" not in page  # no fragment: every change lands at the top
+    form = page.split('id="period-form"')[1].split("</form>")[0]
+    assert "<noscript><button" in form and "Show period</button></noscript>" in form
+    assert 'select.addEventListener("change"' in page
+    assert '<input type="hidden" name="hide" value="Maple 03-08,Rejected">' in form
