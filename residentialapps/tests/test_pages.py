@@ -822,8 +822,8 @@ def test_people_boxes_across_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
         ("/ra-leave/appeal", "Covering RA"),
         ("/ra-leave/applications/L-0101", "New covering RA"),
         ("/ra-leave/admin/appeals", "RA"),
-        ("/ra-leave/admin/policy", "Staff who may give final approval"),
-        ("/ra-leave/admin/policy", "Staff who may open an appeal"),
+        ("/ra-leave/admin/policy", "Scope for Hui Min Goh"),
+        ("/ra-leave/admin/policy", "Scope for the person added"),
     ):
         with monkeypatch.context() as m:
             if path == "/ra-leave/admin/appeals":  # opened for an RA only by invitation

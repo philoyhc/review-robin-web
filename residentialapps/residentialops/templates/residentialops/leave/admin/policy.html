@@ -138,16 +138,8 @@
         </span>
       </nav>
       {{ choice("appeals", "Appeals beyond entitlement are", leave.APPEAL_MODES, leave.POLICY.appeals, {"Open": "Request extra leave is offered to every RA; sending it starts the appeal", "By invitation": "Not shown to RAs. An RA writes in first; once someone chosen below agrees in principle, they open an appeal for that RA on Appeals, and the RA can then send it", "Off": "Not available: an application beyond entitlement cannot be submitted, and Appeal-only blackouts refuse leave"}) }}
-      <fieldset class="modes">
-        <legend>By invitation, who may open an appeal</legend>
-        <div class="mode"><input type="radio" id="inv-slot" name="inviters" value="slot"{% if leave.POLICY.inviters == "slot" %} checked{% endif %} aria-describedby="inv-slot-what" disabled> <div><label for="inv-slot"><strong>The RA's slot's</strong></label> <span id="inv-slot-what" class="subtle">Tick one or more of the appointments on the RAs' slots; each may open an appeal for their own slots' RAs</span>
-          {{ checks("inviter-slot-types", "Slot appointments that may open an appeal", leave.slot_appointments(), leave.POLICY.inviter_types if leave.POLICY.inviters == "slot" else ()) }}</div></div>
-        <div class="mode"><input type="radio" id="inv-unit" name="inviters" value="unit"{% if leave.POLICY.inviters == "unit" %} checked{% endif %} aria-describedby="inv-unit-what" disabled> <div><label for="inv-unit"><strong>The Unit's</strong></label> <span id="inv-unit-what" class="subtle">Tick one or more Unit-level appointments; each may open an appeal for the RAs in whose slots they hold a place, every RA for those who oversee every RA</span>
-          {{ checks("inviter-unit-types", "Unit appointments that may open an appeal", leave.unit_appointments(), leave.POLICY.inviter_types if leave.POLICY.inviters == "unit" else ()) }}</div></div>
-        <div class="mode"><input type="radio" id="inv-named" name="inviters" value="named"{% if leave.POLICY.inviters == "named" %} checked{% endif %} aria-describedby="inv-named-what" disabled> <div><label for="inv-named"><strong>Named staff</strong></label> <span id="inv-named-what" class="subtle">One or more from the Staff roster, each added by name. Each opens appeals only for the RAs in whose slots they hold a place</span>
-          {{ person_tokens("Staff who may open an appeal", leave.POLICY.inviter_names if leave.POLICY.inviters == "named" else (), "staff-names") }}</div></div>
-      </fieldset>
-      <p class="subtle small">Used only while appeals are by invitation. The Master decides appeals, for the RAs in whose slots the Master holds a place: every RA while the Master oversees every RA.</p>
+      <p class="sub">Who may open an appeal, and for which RAs, is set in <a href="#perms-h">Permissions</a> (Open appeals); used only while appeals are by invitation.</p>
+      <p class="subtle small">The Master decides appeals, for the RAs in whose slots the Master holds a place: every RA while the Master oversees every RA.</p>
       <div class="field-wide">
         <label for="appeal-terms">The terms shown to the RA when they appeal</label>
         <textarea id="appeal-terms" class="input" rows="2" disabled>{{ leave.POLICY.appeal_terms }}</textarea>
@@ -164,24 +156,51 @@
       {{ choice("pool", "An RA may name as cover", leave.COVER_POOLS, leave.POLICY.cover_pool, {"Any RA": "Anyone on the RA roster", "Same Precinct": "An RA in a slot under the same Precinct, this term", "Same Wing": "An RA in a slot under the same Wing, this term"}) }}
     </section>
 
+    {# Permissions (author, 2026-11-10): who may do what, and over which
+       RAs, in one table, the only place that says who; the Approvals and
+       Appeals cards keep how. A role's scope is its slots on Assignments;
+       a named person's is chosen: All RAs, a Wing, a Precinct or a slot,
+       overlaps resolved (`leave.add_scope`). With no tick, no access to the
+       staff pages. #}
+    <section class="card" aria-labelledby="perms-h">
+      <div class="card-head"><h2 id="perms-h">Permissions</h2>
+        <p class="sub">Who may do what, and over which RAs. A role's scope comes from <a href="{{ url('/rosters/assignments') }}">Assignments</a>: the RAs in its slots, or in every slot. A person named here is given a scope of one or more choices, each a pill: All RAs, a Wing, a Precinct or a slot; a choice already inside another is not added, and a broader choice replaces the narrower ones it holds. With no tick, no access to the staff pages.</p></div>
+      <div class="table-wrap"><table class="perms-table">
+        <thead><tr><th scope="col">Role or person</th><th scope="col">Scope</th>{% for key, label in leave.PERMISSIONS %}<th scope="col" class="center">{{ label }}</th>{% endfor %}<th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
+        <tbody>
+          {% for r in leave.permission_rows() %}<tr>
+            <th scope="row"><span class="strong">{{ r.who }}</span><div class="subtle small">{{ "By role · " ~ r.note if r.kind == "role" else "Named" ~ (" · " ~ r.note if r.note else "") }}</div></th>
+            <td>{% if r.kind == "role" %}<span class="subtle">{{ r.scope[0] }}</span>{% else %}{{ person_tokens("Scope for " ~ r.who, r.scope, "scope-pool", placeholder="Add a scope") }}{% endif %}</td>
+            {% for key, label in leave.PERMISSIONS %}<td class="center"><input type="checkbox" aria-label="{{ label }}, {{ r.who }}"{% if key in r.perms %} checked{% endif %} disabled></td>{% endfor %}
+            <td>{% if r.kind == "named" %}<button type="button" class="btn btn-danger btn-glyph" aria-label="Remove {{ r.who }}" title="Remove this person" disabled>X</button>{% endif %}</td>
+          </tr>{% endfor %}
+          <tr>
+            <td><input class="input" list="staff-names" aria-label="Add a person" placeholder="Add a person" disabled></td>
+            <td>{{ person_tokens("Scope for the person added", (), "scope-pool", placeholder="Add a scope") }}</td>
+            {% for key, label in leave.PERMISSIONS %}<td class="center"><input type="checkbox" aria-label="{{ label }}, the person added" disabled></td>{% endfor %}
+            <td><button type="button" class="btn btn-secondary btn-glyph" aria-label="Add the person" title="Add this person" disabled>+</button></td>
+          </tr>
+        </tbody>
+      </table></div>
+      <datalist id="scope-pool">{% for choice in leave.scope_levels() %}<option value="{{ choice }}"></option>{% endfor %}</datalist>
+      <p class="subtle small card-pad">Delegates who approve first in someone's place, by dates, stay on <a href="{{ url('/ra-leave/admin/routing') }}">Approval chain</a>.</p>
+    </section>
+
     {# 6. Approvals. #}
     <section class="card card-pad" aria-labelledby="approvals-h">
       <h2 id="approvals-h">Approvals</h2>
       <p class="sub">An application takes a first approval, unless none is needed, then a final one, by different people. Only someone holding a place in the RA's slot approves it, first or final: those in every slot, set on Assignments, hold one in each; anyone else named for a role, or standing in as a delegate, approves only where they do. The slot's approvers are read from the RA's slot on Assignments for the current term; a delegate who approves first while an approver cannot is set on <a href="{{ url('/ra-leave/admin/routing') }}">Approval chain</a>.</p>
       <fieldset class="modes">
         <legend>First approval</legend>
-        <div class="mode"><input type="radio" id="first-slot" name="first" value="slot"{% if leave.POLICY.first == "slot" %} checked{% endif %} aria-describedby="first-slot-what" disabled> <div><label for="first-slot"><strong>By the RA's slot's</strong></label> <span id="first-slot-what" class="subtle">Tick one or more of the appointments on the RAs' slots; with more than one, whichever approves first</span>
-          {{ checks("first-types", "Appointments that may give first approval", leave.slot_appointments(), leave.POLICY.first_types if leave.POLICY.first == "slot" else ()) }}</div></div>
+        <div class="mode"><input type="radio" id="first-slot" name="first" value="slot"{% if leave.POLICY.first == "slot" %} checked{% endif %} disabled> <label for="first-slot"><strong>Needed</strong> <span class="subtle">by whoever Permissions gives First approval; with more than one, whichever approves first</span></label></div>
         <div class="mode"><input type="radio" id="first-none" name="first" value="none"{% if leave.POLICY.first == "none" %} checked{% endif %} aria-describedby="first-none-what" disabled> <span><label for="first-none"><strong>No first approver needed</strong></label> <span id="first-none-what" class="subtle">Applications go straight to final approval</span></span></div>
       </fieldset>
-      <fieldset class="modes">
-        <legend>Final approval</legend>
-        <div class="mode"><input type="radio" id="final-unit" name="final" value="unit"{% if leave.POLICY.final == "unit" %} checked{% endif %} aria-describedby="final-unit-what" disabled> <div><label for="final-unit"><strong>By the Unit's</strong></label> <span id="final-unit-what" class="subtle">Tick one or more Unit-level appointments; with more than one, whichever approves first</span>
-          {{ checks("final-types", "Appointments that may give final approval", leave.unit_appointments(), leave.POLICY.final_types if leave.POLICY.final == "unit" else ()) }}</div></div>
-        <div class="mode"><input type="radio" id="final-named" name="final" value="named"{% if leave.POLICY.final == "named" %} checked{% endif %} aria-describedby="final-named-what" disabled> <div><label for="final-named"><strong>By named staff</strong></label> <span id="final-named-what" class="subtle">One or more from the Staff roster, each added by name; whichever approves first. Each approves only the RAs in whose slots they hold a place</span>
-          {{ person_tokens("Staff who may give final approval", leave.POLICY.final_names if leave.POLICY.final == "named" else (), "staff-names") }}
-          </div></div>
-      </fieldset>
+      {% set rows = leave.permission_rows() %}
+      <dl class="kv">
+        {% for key, label in (("first", "First approval"), ("final", "Final approval")) %}
+          <dt>{{ label }}</dt><dd>{% if key == "first" and leave.POLICY.first == "none" %}None needed{% else %}{% for r in rows if key in r.perms %}{{ r.who }} ({{ r.scope | join(", ") }}){{ "; " if not loop.last }}{% else %}<span class="text-danger">No one</span>{% endfor %}{% endif %} · <a href="#perms-h">Permissions</a></dd>
+        {% endfor %}
+      </dl>
       <p class="subtle small">Who is in every slot, and so oversees every RA, is set for each term on <a href="{{ url('/rosters/assignments') }}">Assignments</a>: {{ leave.overseers() | join(", ") or "no one" }} for {{ leave.TERM.label }}.</p>
       <dl class="kv">
         <dt>Appeals</dt><dd>{% if leave.appeals_on() %}The Master ({{ leave.APPEAL_DECIDER }}), personally{% else %}Off{% endif %}</dd>

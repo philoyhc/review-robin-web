@@ -285,11 +285,10 @@ def test_inviter_settings_at_their_edges(monkeypatch) -> None:
     assert sample_leave.inviters_for("Chloe Lim") == ("Daniel Koh", "Priya Raman")
     assert sample_leave.inviters_for("Nobody") == ()  # on no slot: no one may
     policy = c.get("/ra-leave/admin/policy").text
-    assert re.findall(r'name="inviter-slot-types" value="(\w+)"( checked)?', policy) == [
-        ("RF", " checked"),
-        ("RSLM", " checked"),
-    ]
-    assert 'name="inviters" value="slot" checked' in policy
+    # Who may open appeals is Permissions' Open appeals column now
+    # (author, 2026-11-10).
+    assert 'aria-label="Open appeals, Residential Fellow" checked' in policy
+    assert 'aria-label="Open appeals, Residential Student Life Manager" checked' in policy
     agreed = c.get("/ra-leave/admin/appeals").text.split('id="inv-by"')[1].split("</select>")[0]
     assert agreed.count("<option>") == 9 + 3  # every RF and RSLM on a slot
 
