@@ -123,12 +123,13 @@ widths, the scripts' behavior, and whether the screens read right.
   Overdue chip.
 - [ ] **Records as Sam** (desktop; `/ra-leave/staff/precinct` lands
   here; Bella Koh's row marked "1st: Marcus Tan"), This week:
-  - Leave applications: the period, then From and To, at the left, the
-    chips at the right (nine statuses, four cover statuses, then nine
-    Precincts, each on their own rows); the table ID, RA, Precinct, Leave
-    type, Dates, Days, Cover, Submitted, Stage; Maya Seah and
-    Olivia Ng On leave, Pranav Iyer Approved (from tomorrow), with "Away
-    too" on Olivia's cover; turn a chip off and change the period: it
+  - Leave applications: Period, From and To in a row; Filters closed,
+    opening on Status, Cover, Precinct and Columns rows, its summary
+    naming what is off; hide Submitted: it goes at once and stays hidden
+    after a reload; the table ID, RA, Precinct, Leave type, Dates, Days,
+    Cover, Submitted, Stage, Remarks (Bella Koh's "1st: Marcus Tan" and
+    "Pending 5 days"; Olivia Ng's "Cover away"); Maya Seah and
+    Olivia Ng On leave, Pranav Iyer Approved (from tomorrow); turn a chip off and change the period: it
     stays off; Whole term adds Taken, Rejected and Withdrawn rows;
   - Summary, this week: Estab., Full, −1, −2, −3 per Precinct (Willow A
     13-25: 4, 3, 2, 2, 0), with Leave taken, Leave approved and Leave

@@ -389,15 +389,19 @@
          own swatch, so the chips are its key too. */
       a.col-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
       .cal-filters { margin: 4px 0 8px; }
-      /* A third and two thirds (Leave records, author, 2026-11-10): the
-         period beside its filter chips; one column below 960 px. The
-         converse is .bottom-row. */
-      .grid-thirds { display: grid; gap: 16px 24px; grid-template-columns: minmax(0, 1fr); align-items: start; }
-      @media (min-width: 960px) {
-        .grid-thirds.one-two { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
-      }
       .field-label { display: block; margin: 8px 0 4px; font-size: 14px; }
       .rec-filters { margin: 0; }
+      /* Records' period in three columns from 720 px, then its Filters
+         expander, the chip rows each labelled at the left (author,
+         2026-11-10). */
+      .rec-period { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 24px; margin-top: 8px; }
+      .rec-period .field-wide { margin: 4px 0; }
+      @media (min-width: 720px) { .rec-period { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+      .rec-filters-box { margin-top: 12px; border-top: 1px solid var(--border-subtle); padding-top: 10px; }
+      .rec-filters-box > summary { cursor: pointer; font-weight: 600; font-size: 14px; min-height: 28px; }
+      .rec-filters-box > summary .subtle { font-weight: 400; }
+      .rec-chiprows { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 16px; align-items: start; margin-top: 10px; }
+      .rec-chiprows > .field-label { margin: 6px 0 0; font-weight: 600; }
       .count-filters { margin: 8px 0 0; }
       /* Select all and Clear all close a group of filter chips: an
          action, so outlined and never filled. */

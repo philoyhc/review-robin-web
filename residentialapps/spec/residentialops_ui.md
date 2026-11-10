@@ -190,10 +190,11 @@ model (author, 2026-10-27):
   or sample viewer) across a reload, and dropped once its column is hidden
   or gone (author, 2026-10-29). Assignments' slots table sorts the same way, with a chip
   for Notes alone; sorted, each row names its levels and the grouping
-  rules go. Entitlements, Approval chain's Precincts, Sys admin's grants
-  and audit log, and Leave records, the staff's and the admin's (one
-  table since 2026-11-10, its column chips gone), sort only
-  (`data-sort-auto`). Policy's row
+  rules go. Leave records, the staff's and the admin's (one table since
+  2026-11-10), takes chips for all but ID and RA, in its Filters
+  expander, and sorts by header. Entitlements, Approval chain's
+  Precincts, Sys admin's grants and audit log, and the staff Records'
+  Summary sort only (`data-sort-auto`). Policy's row
   builders, Terms, the dashboard's cards, Delegates and the appeals
   tables, short or edited in place, take neither (author, 2026-10-29).
   On every sorted table an empty value (a None chip, an empty cell) sorts
@@ -295,16 +296,19 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   Pending, each with its swatch, the chips being the key, and a chip a
   Wing besides for a viewer whose scope is the whole Unit.
 - **A period applied on choosing** (Leave records, author, 2026-11-10):
-  a select that reloads the page when changed, its dates under it, the
+  a select that reloads the page when changed, From and To beside it, the
   submit button kept only in `<noscript>`; `.period-row` (dates and
   button on one row, 2026-11-09) retired with the button.
 - **Filter actions** (`.col-chip.chip-act`, Leave records, author,
   2026-11-10): Select all and Clear all close a group of filter chips,
   outlined and dashed, never filled, as an action is not a state.
-- **A third and two thirds** (`.grid-thirds.one-two`; Leave records,
-  author, 2026-11-10): from 960 px, one column below: a period beside its
-  filter chips. Its converse, two thirds and a third, is `.bottom-row`
-  (Leave records' summary beside its clashes).
+- **Records' filters** (`.rec-period`, `.rec-filters-box`,
+  `.rec-chiprows`; Leave records, author, 2026-11-10): Period, From and To
+  in three columns from 720 px; then a Filters expander, closed when the
+  page opens, its summary naming what is off, holding the Status, Cover,
+  Precinct and Columns chip rows, each labelled at the left. Two thirds
+  and a third on a page is `.bottom-row` (the Summary beside its
+  clashes).
 - **Numbers in a table** sit right-aligned (`td.num`).
 - **Phone lists** (`ul.items`, RA Leave's RA pages, 2026-10-28): on a
   mobile-critical page, rows are list items rather than table rows, each

@@ -53,6 +53,7 @@ def test_leave_records_apply_a_period_on_choosing_it_and_stay_at_the_top(
     assert "period=whole" in page.url and "Rejected" in page.url
     assert page.evaluate("window.scrollY") == 0
     expect(page.locator("#period")).to_have_value("whole")
+    page.locator("#rec-filters > summary").click()  # Filters starts closed
     page.evaluate("window.scrollTo(0, 300)")
     with page.expect_navigation():
         page.locator(".rec-filters").nth(2).locator("a", has_text="Clear all").click()  # Precinct
@@ -72,3 +73,65 @@ def test_leave_records_wait_for_a_forward_range(page: Page) -> None:  # noqa: F8
         page.fill("#to", "2026-12-31")
         page.locator("#to").dispatch_event("change")
     assert "from=2026-12-01" in page.url and "to=2026-12-31" in page.url
+
+
+def test_leave_records_filters_start_closed_and_columns_hide_and_stay(
+    page: Page,  # noqa: F811
+) -> None:
+    """Author, 2026-11-10: the chips sit in a Filters expander, closed
+    until opened, its summary naming what is off; a column chip hides its
+    column at once, and the browser keeps both choices."""
+    page.goto(ORIGIN + "/ra-leave/admin/records?hide=Rejected")
+    assert not page.evaluate("document.getElementById('rec-filters').open")
+    expect(page.locator("#rec-off")).to_have_text(" · 1 off: Rejected")
+    page.locator("#rec-filters > summary").click()
+    page.locator('[data-col-toggle="submitted"]').click()
+    expect(page.locator("#rec-off")).to_have_text(" · 2 off: Rejected; column Submitted")
+    expect(page.locator('#rec-table th[data-col="submitted"]')).to_be_hidden()
+    page.reload()
+    assert not page.evaluate("document.getElementById('rec-filters').open")  # starts closed
+    expect(page.locator('#rec-table th[data-col="submitted"]')).to_be_hidden()
+    page.locator("#rec-filters > summary").click()
+    page.locator('[data-cols-all="false"]').click()
+    expect(page.locator('#rec-table th[data-col="precinct"]')).to_be_hidden()
+    page.locator('[data-cols-all="true"]').click()
+    expect(page.locator('#rec-table th[data-col="submitted"]')).to_be_visible()
+
+
+def test_leave_records_keep_the_period_and_chips_in_the_browser(
+    page: Page,  # noqa: F811
+) -> None:
+    """Author, 2026-11-10: the selectors are kept in the browser. Only a
+    choice made on the page is kept, per viewer; a visit naming no filter
+    takes it back; a link naming its own (a tile, a back link) is shown as
+    it is and does not overwrite it (the cold read)."""
+    page.goto(ORIGIN + "/ra-leave/staff/records?as=Sam%20Lee")
+    with page.expect_navigation():
+        page.select_option("#period", "term")
+    page.locator("#rec-filters > summary").click()
+    with page.expect_navigation():
+        page.locator(".rec-filters").first.locator("a", has_text="Rejected").click()
+    page.goto(ORIGIN + "/ra-leave/staff/records?as=Sam%20Lee")
+    page.wait_for_url("**period=term**")
+    assert "Rejected" in page.url
+    # A link naming its own filters shows them and keeps the choice.
+    page.goto(ORIGIN + "/ra-leave/staff/records?as=Sam%20Lee&period=whole")
+    expect(page.locator("#period")).to_have_value("whole")
+    page.goto(ORIGIN + "/ra-leave/staff/records?as=Sam%20Lee")
+    page.wait_for_url("**period=term**")
+    # Another viewer keeps their own.
+    page.goto(ORIGIN + "/ra-leave/staff/records")
+    expect(page.locator("#period")).to_have_value("week")
+
+
+def test_the_cover_tile_drill_down_is_not_kept(page: Page) -> None:  # noqa: F811
+    """The cold read: a chip clicked on the tile's one-off view is kept
+    without its `cover=unconfirmed`, so a later bare visit shows every
+    application, the chip's choice kept."""
+    page.goto(ORIGIN + "/ra-leave/admin/records?cover=unconfirmed&period=whole")
+    page.locator("#rec-filters > summary").click()
+    with page.expect_navigation():
+        page.locator(".rec-filters").first.locator("a", has_text="Withdrawn").click()
+    page.goto(ORIGIN + "/ra-leave/admin/records")
+    page.wait_for_url("**hide=Withdrawn**")
+    assert "cover=" not in page.url
