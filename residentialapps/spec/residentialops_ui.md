@@ -303,8 +303,9 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   2026-11-10): Select all and Clear all close a group of filter chips,
   outlined and dashed, never filled, as an action is not a state.
 - **Records' filters** (`.rec-period`, `.rec-filters-box`,
-  `.rec-chiprows`; Leave records, author, 2026-11-10): Period, From and To
-  in three columns from 720 px; then a Filters expander, closed when the
+  `.rec-chiprows`; Leave records, author, 2026-11-10): Period, From, To and
+  a Name box, two by two from 720 px and four in a row from 1000 px
+  (2026-11-10); then a Filters expander, closed when the
   page opens, its summary naming what is off, holding the Status, Cover,
   Precinct and Columns chip rows, each labelled at the left. Two thirds
   and a third on a page is `.bottom-row` (the Summary beside its

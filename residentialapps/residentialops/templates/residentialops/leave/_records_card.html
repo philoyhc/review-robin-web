@@ -13,7 +13,7 @@
   <div class="card-head">
     <h2 id="rec-h">Leave applications <span class="count">· {{ rows | length }}</span></h2>
     <p class="sub">Every application whose dates touch {{ leave.short_date(first) }} – {{ leave.short_date(last) }}, whatever its stage. On leave and Approved together are who is away.</p>
-    {# The period in three columns, then the chips in a Filters expander,
+    {# The period and a Name box, a quarter each, then the chips in a Filters expander,
        closed when the page opens, its summary naming what is off (author,
        2026-11-10). #}
     <form method="get" action="{{ url(here) }}" aria-label="Period" id="period-form">
@@ -27,6 +27,13 @@
           </select></div>
         <div class="field-wide"><label for="from">From</label><input id="from" name="from" class="input" type="date" value="{{ first.isoformat() }}"></div>
         <div class="field-wide"><label for="to">To</label><input id="to" name="to" class="input" type="date" value="{{ last.isoformat() }}"></div>
+        {# A name, RA or cover, narrows the table as it is typed, in the
+           browser; it is no filter on the URL (author, 2026-11-10). #}
+        <div class="field-wide"><label for="rec-who">Name</label><input id="rec-who" class="input" type="search" list="rec-who-pool" placeholder="RA or cover" autocomplete="off" aria-describedby="rec-who-what"><span id="rec-who-what" class="visually-hidden">Shows the applications whose RA or cover matches</span><span id="rec-who-said" class="visually-hidden" aria-live="polite"></span>
+          {# The roster's RAs the viewer may see, and any cover in the rows. #}
+          {% set roster = leave.ras_in_scope(me) if me else sample.RAS | map(attribute="name") | list %}
+          {% set pool = (roster | list) + (rows | map("first") | map(attribute="cover") | list) %}
+          <datalist id="rec-who-pool">{% for name in pool | unique | sort %}{% if name %}<option value="{{ name }}"></option>{% endif %}{% endfor %}</datalist></div>
       </div>
       <noscript><button type="submit" class="btn btn-secondary gap-above-sm">Show period</button></noscript>
     </form>
@@ -125,7 +132,7 @@
   {% from "residential/_tables.html" import sort_th %}
   <div class="table-wrap"><table id="rec-table" data-col-store="residentialops-records-columns:{{ here }}">
     <thead><tr>{{ sort_th("id", "ID") }}{{ sort_th("ra", "RA") }}{{ sort_th("precinct", "Precinct") }}{{ sort_th("type", "Type") }}{{ sort_th("dates", "Dates") }}{{ sort_th("days", "Days", "num") }}{{ sort_th("cover", "Cover") }}{{ sort_th("submitted", "Submitted") }}{{ sort_th("stage", "Stage") }}{{ sort_th("remarks", "Remarks") }}</tr></thead>
-    <tbody>{% for a, status in rows %}<tr data-row>
+    <tbody>{% for a, status in rows %}<tr data-row data-who="{{ (a.ra ~ '|' ~ a.cover) | lower }}">
       <td class="nowrap" data-col="id"><a href="{{ url(app_base ~ a.id) }}{{ as_query }}">{{ a.id }}</a></td>
       <td class="strong nowrap" data-col="ra">{{ a.ra }}</td>
       <td class="nowrap" data-col="precinct">{{ a.precinct }}</td>
@@ -138,10 +145,37 @@
       {# Remarks: what is out of the ordinary (author, 2026-11-10). #}
       {% set cover_by = leave.first_by_cover(a) %}
       <td data-col="remarks"><span class="chips">{% if cover_by %}<span class="chip chip-info" title="First approved by {{ cover_by }}, covering for the RF">1st: {{ cover_by }}</span> {% endif %}{% if a in leave.cover_while_away() %}<span class="chip chip-warn" title="{{ a.cover }} is on leave, or has asked to be, on some of these days">Cover away</span> {% endif %}{% if a.overdue %}<span class="chip chip-warn" title="Pending {{ a.age }} days since it was submitted, past the {{ leave.OVERDUE_DAYS }} days allowed">Pending {{ a.age }} days</span>{% endif %}</span></td>
-    </tr>{% else %}<tr><td colspan="10" class="subtle">{{ "None with these filters." if hidden else "None in this period." }}</td></tr>{% endfor %}</tbody>
+    </tr>{% if loop.last %}<tr data-none hidden><td colspan="10" class="subtle">No application with that name.</td></tr>{% endif %}{% else %}<tr><td colspan="10" class="subtle">{{ "None with these filters." if hidden else "None in this period." }}</td></tr>{% endfor %}</tbody>
   </table></div>
   {% if admin %}<div class="card-pad btnrow">
     <button type="button" class="btn btn-secondary" disabled>Export CSV</button>
     <button type="button" class="btn btn-primary" disabled>Record external leave</button>
   </div>{% endif %}
 </section>
+<script>
+  /* Name: the rows whose RA or cover holds what is typed, and the count. */
+  (function () {
+    var box = document.getElementById("rec-who");
+    var table = document.getElementById("rec-table");
+    if (!box || !table) { return; }
+    var head = document.getElementById("rec-h");
+    var count = head ? head.querySelector(".count") : null;
+    var total = count ? count.textContent : "";
+    var none = table.querySelector("tr[data-none]");
+    var said = document.getElementById("rec-who-said");
+    // The box sits in the period form for layout; Enter must not submit it.
+    box.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); } });
+    box.addEventListener("input", function () {
+      var q = box.value.trim().toLowerCase();
+      var shown = 0;
+      Array.prototype.forEach.call(table.querySelectorAll("tr[data-row]"), function (tr) {
+        var hit = !q || (tr.getAttribute("data-who") || "").indexOf(q) !== -1;
+        tr.hidden = !hit;
+        if (hit) { shown += 1; }
+      });
+      if (count) { count.textContent = q ? "· " + shown : total; }
+      if (none) { none.hidden = !(q && !shown); }
+      if (said) { said.textContent = q ? shown + " shown" : ""; }
+    });
+  })();
+</script>

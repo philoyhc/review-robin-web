@@ -145,3 +145,23 @@ def test_the_cover_tile_drill_down_is_not_kept(page: Page) -> None:  # noqa: F81
     page.goto(ORIGIN + "/ra-leave/admin/records")
     page.wait_for_url("**hide=Withdrawn**")
     assert "cover=" not in page.url
+
+
+def test_leave_records_name_box_narrows_rows_and_count(page: Page) -> None:  # noqa: F811
+    """Author, 2026-11-10: the Name box keeps the rows whose RA or cover
+    matches, the count following; Enter does not reload; no match says so;
+    clearing it brings every row back."""
+    page.goto(ORIGIN + "/ra-leave/staff/records?as=Sam%20Lee&period=whole")
+    count = page.locator("#rec-h .count")
+    total = count.inner_text()
+    page.fill("#rec-who", "elise")
+    expect(count).to_have_text("· 3")
+    expect(page.locator("#rec-table tr[data-row]:visible")).to_have_count(3)
+    url = page.url
+    page.press("#rec-who", "Enter")
+    assert page.url == url
+    page.fill("#rec-who", "zzz")
+    expect(page.locator("#rec-table tr[data-none]")).to_be_visible()
+    page.fill("#rec-who", "")
+    expect(count).to_have_text(total)
+    expect(page.locator("#rec-table tr[data-none]")).to_be_hidden()
