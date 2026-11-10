@@ -170,7 +170,7 @@
       </dl>
       <p class="subtle small">Who is in every slot, and so oversees every RA, is set for each term on <a href="{{ url('/rosters/assignments') }}">Assignments</a>: {{ leave.overseers() | join(", ") or "no one" }} for {{ leave.TERM.label }}.</p>
       <dl class="kv">
-        <dt>Appeals</dt><dd>{% if leave.appeals_on() %}The Master ({{ leave.APPEAL_DECIDER }}), personally{% else %}Off{% endif %}</dd>
+        <dt>Appeals</dt><dd>{{ leave.appeal_deciders() }}</dd>
       </dl>
     </section>
 

@@ -86,8 +86,8 @@ APPEAL_MODES = ("Open", "By invitation", "Off")
 # Who approves an appeal opened by invitation (author, 2026-11-10): the
 # usual first and final approvers, or the usual first approver and then the
 # Master, so the Master is always involved. With no separate first approver,
-# either skips that step. Shown on Policy and inert: routing still sends
-# every appeal straight to the Master, with no first approval.
+# either skips that step. An appeal made while appeals are Open goes
+# straight to the Master.
 APPEAL_APPROVALS = (
     ("usual", "the normal first, and final approver"),
     ("master", "the normal first approver, and the Master"),
@@ -360,9 +360,13 @@ class Application:
     @property
     def stage(self) -> str:
         """The stage under the policy: with no first approval needed, an
-        application recorded as awaiting it awaits final approval (a wired
-        policy change moves the records themselves)."""
+        application recorded as awaiting it awaits final approval; an
+        invited appeal awaiting the Master awaits final approval instead
+        when the usual approvers decide it (a wired policy change moves the
+        records themselves)."""
         if self.recorded == "Pending first approval" and POLICY["first"] == "none":
+            return "Pending final approval"
+        if self.recorded == "Appeal to the Master" and appeal_route() == "usual":
             return "Pending final approval"
         return self.recorded
 
@@ -370,7 +374,9 @@ class Application:
     def appeal(self) -> bool:
         """An extra-leave appeal: decided by the Master, and kept apart from
         normal entitlement once granted (spec §7.5)."""
-        return self.stage == "Appeal to the Master" or self.id in GRANTED_APPEALS | REJECTED_APPEALS
+        return (
+            self.recorded == "Appeal to the Master" or self.id in GRANTED_APPEALS | REJECTED_APPEALS
+        )
 
     @property
     def days(self) -> int:
@@ -1264,7 +1270,15 @@ def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
     # The sample reads today's chain; a wired timeline records who decided.
     route = next(r for r in routes() if r.precinct == application.precinct)
     first = "the first approver" if route.gap else route.first.split(" or ")[0]
+    if application.appeal and application.stage == "Pending final approval":
+        # An invited appeal the usual approvers decide (author, 2026-11-10).
+        steps.append(("", "Sent as an extra-leave appeal, to the usual approvers", ""))
+        if appeal_takes_first():
+            steps.append(_step(application, "first", f"First approval by {first}"))
+        return tuple(steps)
     if application.appeal:
+        if appeal_takes_first() and application.stage == "Appeal to the Master":
+            steps.append(_step(application, "first", f"First approval by {first}"))
         decider = (
             APPEAL_DECIDER
             if decides_appeals(application.precinct)
@@ -1563,7 +1577,7 @@ def decided(viewer: str) -> tuple[tuple[Application, str, str], ...]:
     (application, decision, outcome)."""
     found: list[tuple[Application, str, str]] = []
     for a in APPLICATIONS:
-        if a.appeal:
+        if a.appeal and a.stage != "Pending final approval":
             if (
                 viewer == APPEAL_DECIDER
                 and decides_appeals(a.precinct)
@@ -2131,6 +2145,34 @@ def waiting_on_cover_count(viewer: str) -> int:
 def appeals_on() -> bool:
     """Whether the system has appeals at all: open, or by invitation."""
     return POLICY["appeals"] != "Off"
+
+
+def appeal_route() -> str:
+    """How an appeal is decided (author, 2026-11-10): "usual", by the
+    usual first and final approvers, only for an appeal by invitation
+    with Policy's choice so; otherwise "master", the Master deciding,
+    after the usual first approver for an invited appeal."""
+    invited = POLICY["appeals"] == "By invitation"
+    return "usual" if invited and POLICY["appeal_approval"] == "usual" else "master"
+
+
+def appeal_takes_first() -> bool:
+    """Whether an appeal takes the usual first approval before its
+    decider: an invited appeal, under a policy that has a first
+    approver (with none, either choice skips that step)."""
+    return POLICY["appeals"] == "By invitation" and POLICY["first"] == "slot"
+
+
+def appeal_deciders() -> str:
+    """Who decides appeals, in a few words, for Policy's summary."""
+    if not appeals_on():
+        return "Off"
+    master = f"the Master ({APPEAL_DECIDER}), personally"
+    if appeal_route() == "usual":
+        return "The usual first and final approvers"
+    if appeal_takes_first():
+        return "The usual first approver, then " + master
+    return master[0].upper() + master[1:]
 
 
 # Leave records' statuses (author, 2026-11-10), in the order of their
