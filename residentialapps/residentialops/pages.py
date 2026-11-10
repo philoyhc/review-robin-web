@@ -122,10 +122,9 @@ def leave_staff_tabs(query: str = "", appeals: bool = False) -> tuple[dict[str, 
         {"label": label, "path": path, "query": query}
         for label, path in (
             ("Home", "/ra-leave/staff/"),
-            ("Decided", "/ra-leave/staff/decided"),
-            # Leave records (author, 2026-11-10; Precinct, or My Precinct
-            # for an RF, until then).
-            ("Leave records", "/ra-leave/staff/records"),
+            # Records (author, 2026-11-10; Leave records, Precinct, or My
+            # Precinct for an RF, before; Decided folded into it).
+            ("Records", "/ra-leave/staff/records"),
             *((("Appeals", "/ra-leave/staff/appeals"),) if appeals else ()),
         )
     )

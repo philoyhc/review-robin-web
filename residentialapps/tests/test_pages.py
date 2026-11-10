@@ -923,7 +923,7 @@ def test_the_sample_viewer_card_comes_last_and_the_chip_jumps_to_it(
 
 
 def test_a_page_without_the_card_keeps_the_chip_unlinked(both: TestClient) -> None:
-    page = both.get("/residentialops/ra-leave/staff/decide/L-0103?as=Rachel%20Yeo").text
+    page = both.get("/residentialops/ra-leave/staff/applications/L-0103?as=Rachel%20Yeo").text
     assert (
         '<span class="chip chip-info chip-viewing">Viewing as ' in page
         and 'href="#sample-viewer"' not in page

@@ -752,13 +752,14 @@ def test_cancelled_leave_and_decision_records(monkeypatch) -> None:
     )
     assert kai["used"] == 0  # cancelled leave is not charged
     # The final approver sees the first approver's date and remarks (§14).
-    decide = c.get("/ra-leave/staff/decide/L-0103?as=Rachel%20Yeo").text
+    decide = c.get("/ra-leave/staff/applications/L-0103?as=Rachel%20Yeo").text
     assert (
         "24 Oct</span> · First approval by" in decide and "the Precinct is fully staffed" in decide
     )
     # The Master sees the staff remarks on an appeal (§15).
     assert (
-        "Remarks from Benjamin Chua, RF" in c.get("/ra-leave/staff/decide/L-0105?as=Sam%20Lee").text
+        "Remarks from Benjamin Chua, RF"
+        in c.get("/ra-leave/staff/applications/L-0105?as=Sam%20Lee").text
     )
 
 
@@ -790,7 +791,7 @@ def test_dashboard_reports_and_export(monkeypatch) -> None:
     assert (
         lucas["available"] == 0
         and "Beyond entitlement</dt><dd>3 days"
-        in c.get("/ra-leave/staff/decide/L-0118?as=Sam%20Lee").text
+        in c.get("/ra-leave/staff/applications/L-0118?as=Sam%20Lee").text
     )
     assert "Export CSV" in c.get(ADMIN + "applications").text
     monkeypatch.setitem(sample_leave.ADJUSTMENTS, ("Chloe Lim", "Personal leave"), (-9, ""))

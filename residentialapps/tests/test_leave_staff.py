@@ -30,27 +30,27 @@ def client() -> TestClient:
 
 def ids(html: str, section: str) -> list[str]:
     part = html.split(f'id="{section}"')[1].split("</section>")[0]
-    return re.findall(r'href="/ra-leave/staff/decide/(L-\d+)', part)
+    return re.findall(r'href="/ra-leave/staff/applications/(L-\d+)', part)
 
 
 def test_every_staff_page_answers_for_each_sample_viewer() -> None:
     c = client()
     for query, name in (("", "Daniel Koh"), (RACHEL, "Rachel Yeo"), (SAM, "Sam Lee")):
-        for path in ("", "decided", "records"):
+        for path in ("", "records"):
             page = c.get(STAFF + path + query)
             assert page.status_code == 200, (path, query)
             assert "Sample data" in page.text and f"Viewing as {name}" in page.text, (path, query)
             assert 'aria-current="true">' in page.text
     tabs = c.get(STAFF + RACHEL).text.split('class="tabs-in"')[1].split("</nav>")[0]
     assert re.findall(r'<a href="([^"]*)"', tabs) == [
-        f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decided", "records", "appeals")
+        f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "records", "appeals")
     ]
     # Leave records for every staff member (author, 2026-11-10; Precinct, or
     # My Precinct for an RF, until then).
-    assert ">Leave records</a>" in tabs and "Precinct</a>" not in tabs
+    assert ">Records</a>" in tabs and "Precinct</a>" not in tabs
     daniel = c.get(STAFF).text
-    assert ">Leave records</a>" in daniel.split('class="tabs-in"')[1].split("</nav>")[0]
-    assert ">Leave records</a>" in daniel.split('id="week-h"')[1]  # Home's button
+    assert ">Records</a>" in daniel.split('class="tabs-in"')[1].split("</nav>")[0]
+    assert ">Records</a>" in daniel.split('id="week-h"')[1]  # Home's button
     records = c.get(STAFF + "records").text
     assert "<title>Leave records" in records and ">Leave records</h1>" in records
     # The old address lands here, its query kept.
@@ -97,14 +97,14 @@ def test_each_viewer_s_queue_is_the_decision_theirs_to_make() -> None:
 
 def test_decide_shows_entitlement_cover_and_precinct_context() -> None:
     c = client()
-    hana = c.get(STAFF + "decide/L-0109").text
+    hana = c.get(STAFF + "applications/L-0109").text
     assert ">Waiting on cover</span> Chloe Lim has declined; the RA must name new cover" in hana
     assert ">Approve</button>" in hana
     assert "<dt>Available</dt><dd>0 days</dd>" in hana
-    appeal = c.get(STAFF + "decide/L-0105" + SAM).text
+    appeal = c.get(STAFF + "applications/L-0105" + SAM).text
     assert "Decide the appeal" in appeal and "<dt>Beyond entitlement</dt><dd>4 days</dd>" in appeal
     assert "kept apart from the entitlement" in appeal
-    clash = c.get(STAFF + "decide/L-0108" + SAM).text  # Pranav Iyer, decided: read-only
+    clash = c.get(STAFF + "applications/L-0108" + SAM).text  # Pranav Iyer, decided: read-only
     assert "Decided; shown read-only." in clash and ">Approve</button>" not in clash
     ctx = clash.split('id="ctx-h"')[1].split("</section>")[0]
     assert "Olivia Ng" in ctx
@@ -117,25 +117,45 @@ def test_a_staff_member_sees_only_their_scope() -> None:
     assert sample_leave.scope("Daniel Koh") == ("Cypress A 04-12",)
     assert len(sample_leave.scope("Marcus Tan")) == 3  # an RSLM: the Maple Wing
     assert len(sample_leave.scope("Sam Lee")) == 9
-    assert c.get(STAFF + "decide/L-0105").status_code == 404  # Maple 09-14, not Daniel Koh's
-    assert c.get(STAFF + "decide/L-9999" + SAM).status_code == 404
+    assert c.get(STAFF + "applications/L-0105").status_code == 404  # Maple 09-14, not Daniel Koh's
+    assert c.get(STAFF + "applications/L-9999" + SAM).status_code == 404
     records = c.get(STAFF + "records?period=term").text
     assert "Isaac Goh" not in records and "Hana Ito" in records
 
 
-def test_decided_lists_the_viewer_s_own_decisions() -> None:
+def test_decided_folds_into_records_and_an_application_moves_to_applications() -> None:
+    """Author, 2026-11-10: the tabs are Home, Records and Appeals; Decided
+    is folded into Records, an RF's first approvals being theirs, and the
+    odd one first approved by a cover is marked there; an application's
+    page is /applications/{id}. Old addresses land on the new ones."""
     c = client()
-    assert ids(c.get(STAFF + "decided").text, "dec-h") == ["L-0115", "L-0117"]
-    rachel = c.get(STAFF + "decided" + RACHEL).text
-    assert len(ids(rachel, "dec-h")) == 9 and "Final approval: Approved" in rachel
-    assert ids(c.get(STAFF + "decided" + SAM).text, "dec-h") == [
-        "L-0120",
-        "L-0118",
-    ]  # the appeals the Master refused and granted
+    # The viewer's own decisions still drive the back link (Records).
+    assert [a.id for a, _, _ in sample_leave.decided("Daniel Koh")] == ["L-0115", "L-0117"]
+    old = c.get(STAFF + "decided" + SAM, follow_redirects=False)
+    assert (
+        old.status_code == 303 and old.headers["location"] == "/ra-leave/staff/records?as=Sam%20Lee"
+    )
+    moved = c.get(STAFF + "decide/L-0105" + SAM, follow_redirects=False)
+    assert moved.status_code == 303
+    assert moved.headers["location"] == "/ra-leave/staff/applications/L-0105?as=Sam%20Lee"
+    home = c.get(STAFF).text
+    assert 'id="recent-h"' not in home and "All decided" not in home
+    assert ">Records</a>" in home.split('class="tabs-in"')[1].split("</nav>")[0]
+    # Maple 03-08's first approver is Marcus Tan, standing in for its RF.
+    bella, hana = sample_leave.by_id("L-0103"), sample_leave.by_id("L-0115")
+    assert bella and hana
+    assert sample_leave.first_by_cover(bella) == "Marcus Tan"
+    assert sample_leave.first_by_cover(hana) == ""
+    records = c.get(STAFF + "records" + SAM).text
+    assert (
+        '<span class="chip chip-info" title="First approved by Marcus Tan, covering for the RF">'
+        "1st: Marcus Tan</span>" in records
+    )
+    assert records.count("1st: ") == 1
 
 
 def test_whatever_a_viewer_may_decide_opens(monkeypatch) -> None:
-    """Every row in a viewer's queue or Decided list opens Decide, under
+    """Every row in a viewer's queue or decisions opens its page, under
     each approval setting, a delegate's and a named approver's included."""
     import itertools
 
@@ -174,7 +194,7 @@ def test_whatever_a_viewer_may_decide_opens(monkeypatch) -> None:
                 ]:
                     assert sample_leave.can_open(person, a), (setting, day, person, a.id)
     assert (
-        c.get(STAFF + "decide/L-0103?as=Benjamin%20Chua").status_code == 404
+        c.get(STAFF + "applications/L-0103?as=Benjamin%20Chua").status_code == 404
     )  # not a staff viewer: defaults to Daniel
     assert sample_leave.can_open("Marcus Tan", _by_id("L-0103"))  # standing in for Grace Ho
 
@@ -188,7 +208,11 @@ def test_with_no_first_approval_rejections_belong_to_the_final_approver(monkeypa
 
 def test_decide_shows_the_applicant_s_other_leave_and_precinct_numbers() -> None:
     c = client()
-    appeal = c.get(STAFF + "decide/L-0105" + SAM).text.split('id="own-h"')[1].split("</section>")[0]
+    appeal = (
+        c.get(STAFF + "applications/L-0105" + SAM)
+        .text.split('id="own-h"')[1]
+        .split("</section>")[0]
+    )
     assert appeal.count("<li>") == 2 and "17 Aug – 19 Aug" in appeal
     rows = re.findall(
         (
@@ -211,8 +235,8 @@ def test_the_master_and_the_admin_delegate_open_appeals_from_the_staff_pages(mon
     for query, name in ((SAM, "Sam Lee"), (RACHEL, "Rachel Yeo")):
         page = c.get(STAFF + "appeals" + query).text
         assert f"<option selected>{name}</option>" in page and ">Open the appeal</button>" in page
-        assert f'href="/ra-leave/staff/decide/L-0105{query}">Sent: L-0105</a>' in page
-        assert c.get(f"/ra-leave/staff/decide/L-0105{query}").status_code == 200
+        assert f'href="/ra-leave/staff/applications/L-0105{query}">Sent: L-0105</a>' in page
+        assert c.get(f"/ra-leave/staff/applications/L-0105{query}").status_code == 200
     for query in ("", "?as=Daniel%20Koh"):
         page = c.get(STAFF + "appeals" + query).text
         assert "you are not among them" in page and ">Open the appeal</button>" not in page
@@ -294,7 +318,7 @@ def test_a_staff_appeals_page_lists_only_the_viewer_s_ras(monkeypatch) -> None:
         "Ethan Wong",
         "Hana Ito",
     )
-    for link in re.findall(r'href="(/ra-leave/staff/decide/L-\d+)"', page):
+    for link in re.findall(r'href="(/ra-leave/staff/applications/L-\d+)"', page):
         assert c.get(link).status_code == 200, link
     admin = c.get("/ra-leave/admin/appeals").text
     assert 'Invitations <span class="count">· 3' in admin
@@ -306,14 +330,14 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
     viewers' roles follow the policy."""
     c = client()
     queued = sample_leave.queue("Daniel Koh")[0][0]
-    page = c.get(STAFF + "decide/" + queued.id).text
+    page = c.get(STAFF + "applications/" + queued.id).text
     assert "‹ Home" in page and 'href="/ra-leave/staff/" aria-current="true"' in page
     past = sample_leave.decided("Daniel Koh")[0][0]
-    page = c.get(STAFF + "decide/" + past.id).text
-    assert "‹ Decided" in page and "<dt>Waiting</dt>" not in page
-    assert 'href="/ra-leave/staff/decided" aria-current="true"' in page
+    page = c.get(STAFF + "applications/" + past.id).text
+    assert "‹ Records" in page and "<dt>Waiting</dt>" not in page
+    assert 'href="/ra-leave/staff/records" aria-current="true"' in page
     # An appeal opened from Appeals goes back there, not to Precinct.
-    page = c.get(STAFF + "decide/L-0105" + RACHEL).text
+    page = c.get(STAFF + "applications/L-0105" + RACHEL).text
     assert (
         "‹ Appeals" in page
         and 'href="/ra-leave/staff/appeals?as=Rachel%20Yeo" aria-current="true"' in page
@@ -359,7 +383,7 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
     page = c.get(STAFF + "?as=Hui%20Min%20Goh").text
     assert "You oversee no RA" in page and 'class="tabs-in"' not in page
     assert "Hui Min Goh: Residential Executive, oversees no RA, so RA Leave is not shown" in page
-    assert c.get(STAFF + "decide/L-0101?as=Hui%20Min%20Goh").status_code == 404
+    assert c.get(STAFF + "applications/L-0101?as=Hui%20Min%20Goh").status_code == 404
     landing = c.get("/?as=Hui%20Min%20Goh").text
     assert "/ra-leave/" not in landing.split('<main class="page">')[1]
     # An RSLM gets the same tabs as an RF, and decides nothing by default.
@@ -367,8 +391,8 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
         r'<a href="/ra-leave/staff/(\w*)',
         c.get(STAFF + q).text.split('class="tabs-in"')[1].split("</nav>")[0],
     )
-    assert tabs("?as=Priya%20Raman") == tabs(SAM) == ["", "decided", "records", "appeals"]
-    assert tabs("") == ["", "decided", "records"]  # an RF: no Appeals tab
+    assert tabs("?as=Priya%20Raman") == tabs(SAM) == ["", "records", "appeals"]
+    assert tabs("") == ["", "records"]  # an RF: no Appeals tab
     assert "Nothing awaits you." in c.get(STAFF + "?as=Priya%20Raman").text
     # Untick the admin: Rachel Yeo holds no slot, so she sees no RA and
     # her final approval leaves every Precinct with a gap (ruled 2026-10-29).
@@ -439,7 +463,7 @@ def test_oversight_follows_the_policy_setting(monkeypatch) -> None:
         sample_leave.TERM.key,
         {"appointments": ("Master", "Admin", "Exec"), "names": ()},
     )
-    page = c.get(STAFF + "decide/L-0105?as=Hui%20Min%20Goh").text
+    page = c.get(STAFF + "applications/L-0105?as=Hui%20Min%20Goh").text
     assert "‹ Appeals" in page
 
 
@@ -457,7 +481,7 @@ def test_leave_records_show_a_chosen_period() -> None:
             name
             for r in rows
             if status is None or f">{status}</span>" in r
-            for name in re.findall(r'decide/L-\d+[^"]*">([^<]+)</a>', r)
+            for name in re.findall(r'applications/L-\d+[^"]*">([^<]+)</a>', r)
         ]
 
     assert sample_leave.period("bogus")[:2] == ("week", "This week")
@@ -511,9 +535,9 @@ def test_staff_see_only_the_emails_they_sent() -> None:
     """Spec §17.2 (author, 2026-10-29): the actor resends their own failed
     email from the application; another overseer sees no outbox there."""
     c = client()
-    mine = c.get(STAFF + "decide/L-0115").text  # Daniel Koh approved it first
+    mine = c.get(STAFF + "applications/L-0115").text  # Daniel Koh approved it first
     assert ">Resend to Hana Ito</button>" in mine.split('id="emails-h"')[1].split("</section>")[0]
-    assert 'id="emails-h"' not in c.get(STAFF + "decide/L-0115" + SAM).text
+    assert 'id="emails-h"' not in c.get(STAFF + "applications/L-0115" + SAM).text
 
 
 def test_decide_lists_this_term_s_other_leave_only() -> None:
@@ -533,10 +557,10 @@ def test_the_audit_s_appeal_screens() -> None:
     cover (§7.4); a refused appeal is decided; an appeal's days split
     between entitlement and extra leave (§7.5); blackouts show."""
     c = client()
-    rachel = c.get(STAFF + "decide/L-0105" + RACHEL).text  # in every slot, not the decider
+    rachel = c.get(STAFF + "applications/L-0105" + RACHEL).text  # in every slot, not the decider
     assert "Your remarks for the Master" in rachel and ">Add remarks</button>" in rachel
     assert ">Approve</button>" not in rachel
-    sam = c.get(STAFF + "decide/L-0105" + SAM).text  # the Master
+    sam = c.get(STAFF + "applications/L-0105" + SAM).text  # the Master
     assert "Your remarks for the Master" not in sam
     assert "Decide without the cover's confirmation" in sam  # Elise Tan has not confirmed
     assert (
@@ -552,10 +576,10 @@ def test_the_audit_s_appeal_screens() -> None:
         "The Precinct is short that week; take your five days, or apply in a quieter week.",
     )
     assert (
-        c.get(STAFF + "decide/L-0105" + "?as=Daniel%20Koh").status_code == 404
+        c.get(STAFF + "applications/L-0105" + "?as=Daniel%20Koh").status_code == 404
     )  # outside his scope
     assert (
-        "From entitlement" not in c.get(STAFF + "decide/L-0120" + SAM).text
+        "From entitlement" not in c.get(STAFF + "applications/L-0120" + SAM).text
     )  # refused: nothing to split
 
 
@@ -656,8 +680,8 @@ def test_staff_home_shows_a_month_of_leave_in_a_calendar() -> None:
     assert "<strong>October 2026</strong>" in page
     assert 'href="/ra-leave/staff/?as=Sam%20Lee&amp;month=2026-11#cal-h"' in page
     assert (
-        'class="cal-leave cal-link approved" href="/ra-leave/staff/decide/L-0106?as=Sam%20Lee"'
-        in page
+        'class="cal-leave cal-link approved" '
+        'href="/ra-leave/staff/applications/L-0106?as=Sam%20Lee"' in page
     )
     # A phone keeps the month (author, 2026-11-10): each entry also a first
     # name in a tag, the full name and status for a screen reader.
@@ -668,7 +692,9 @@ def test_staff_home_shows_a_month_of_leave_in_a_calendar() -> None:
     )
     november = c.get(STAFF + "?month=2026-11").text.split('id="cal-h"')[1]
     assert "<strong>November 2026</strong>" in november
-    assert 'class="cal-leave cal-link pending" href="/ra-leave/staff/decide/L-0101"' in november
+    assert (
+        'class="cal-leave cal-link pending" href="/ra-leave/staff/applications/L-0101"' in november
+    )
     assert '>Chloe<span class="visually-hidden"> Lim, pending</span></span>' in november
     assert '<span class="cal-black">Examinations</span>' in november  # named, not hatched alone
     assert ">Chloe Lim (pending)</a>" in november  # pending in words, not color alone
@@ -861,10 +887,10 @@ def test_a_senior_cancels_leave_under_way_and_the_admin_s_page_says_who_is_told(
     assert not sample_leave.cancels_under_way("Siti Rahman", begun)  # her RF
     assert not sample_leave.cancels_under_way("Priya Raman", begun)  # Cypress, not Willow
     c = client()
-    sam = c.get(STAFF + "decide/L-0107" + SAM).text
+    sam = c.get(STAFF + "applications/L-0107" + SAM).text
     assert "Olivia Ng and Siti Rahman, their RF, are told." in sam
     assert ">Cancel leave under way</button>" in sam
-    assert ">Cancel leave under way</button>" not in c.get(STAFF + "decide/L-0115" + SAM).text
+    assert ">Cancel leave under way</button>" not in c.get(STAFF + "applications/L-0115" + SAM).text
     admin = c.get("/ra-leave/admin/applications/L-0107").text
     assert "This leave is under way" in admin and "Siti Rahman, their RF," in admin
 

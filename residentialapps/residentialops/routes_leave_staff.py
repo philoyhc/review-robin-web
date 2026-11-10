@@ -73,8 +73,10 @@ def awaiting(request: Request) -> Response:
     )
 
 
-@router.get("/ra-leave/staff/decide/{application_id}", name="residentialops_leave_staff_decide")
-def decide(request: Request, application_id: str) -> Response:
+@router.get(
+    "/ra-leave/staff/applications/{application_id}", name="residentialops_leave_staff_application"
+)
+def application(request: Request, application_id: str) -> Response:
     # A staff member opens an application in their own scope only; it is
     # actionable when it awaits their decision, read-only otherwise.
     viewer = sample_leave.staff_viewer(request.query_params.get("as"))
@@ -86,7 +88,7 @@ def decide(request: Request, application_id: str) -> Response:
     if role:
         back = ("/ra-leave/staff/", "Home")
     elif any(a.id == found.id for a, _, _ in sample_leave.decided(viewer)):
-        back = ("/ra-leave/staff/decided", "Decided")
+        back = ("/ra-leave/staff/records", "Records")
     elif sample_leave.sees_appeals(viewer) and (
         found.appeal or found.ra in sample_leave.invitable_ras(viewer)
     ):
@@ -95,7 +97,7 @@ def decide(request: Request, application_id: str) -> Response:
         back = ("/ra-leave/staff/", "Home")
     return _page(
         request,
-        "decide.html",
+        "application.html",
         app=found,
         role=role,
         steps=sample_leave.timeline(found),
@@ -105,9 +107,25 @@ def decide(request: Request, application_id: str) -> Response:
     )
 
 
+@router.get("/ra-leave/staff/decide/{application_id}", name="residentialops_leave_staff_decide_old")
+def decide_old(request: Request, application_id: str) -> Response:
+    # An application's page moved to /applications/ (author, 2026-11-10);
+    # an old link, an email's included, lands there, its query kept.
+    return _moved(request, f"/ra-leave/staff/applications/{application_id}")
+
+
 @router.get("/ra-leave/staff/decided", name="residentialops_leave_staff_decided")
 def decided(request: Request) -> Response:
-    return _page(request, "decided.html")
+    # Decided folded into Records (author, 2026-11-10): an RF's first
+    # approvals are theirs, the odd one by a cover marked there.
+    return _moved(request, "/ra-leave/staff/records")
+
+
+def _moved(request: Request, path: str) -> Response:
+    query = request.url.query
+    return RedirectResponse(
+        url_path(request, path) + (f"?{query}" if query else ""), status_code=303
+    )
 
 
 @router.get("/ra-leave/staff/records", name="residentialops_leave_staff_records")

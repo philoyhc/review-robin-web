@@ -4,9 +4,9 @@
 {% block content %}
   {{ title("RA Leave", leave, viewing(me)) }}
   {# Home and Awaiting are one page (author, 2026-11-09): every application
-     awaiting the viewer, with the waiting-on-cover filter, and recent
-     decisions; This week and Later this week at the side, which starts at
-     the top (author, 2026-11-08). #}
+     awaiting the viewer, with the waiting-on-cover filter; This week and
+     Later this week at the side, which starts at the top (author,
+     2026-11-08). Recent decisions went with Decided (2026-11-10). #}
   {% set mine = leave.queue(me) %}{% if cover_only %}{% set mine = mine | selectattr(0, "in", leave.cover_unconfirmed()) | list %}{% endif %}
   {% set sep = '&' if as_query else '?' %}
   {# The calendar's filters ride every link on the page that keeps its month. #}
@@ -22,12 +22,6 @@
           {% elif leave.waiting_on_cover_count(me) %}<a href="{{ url('/ra-leave/staff/') }}{{ as_query ~ sep }}cover=waiting{{ ('&' ~ (hq ~ mkeep).rstrip('&')) if hq or mkeep }}">Waiting on cover · {{ leave.waiting_on_cover_count(me) }}</a>{% endif %}</p>
         {% if mine %}<ul class="items">{% for a, role in mine %}{{ staff_item(a, leave, as_query, role) }}{% endfor %}</ul>{% else %}<p class="sub">Nothing awaits you.</p>{% endif %}
       </section>
-      <section class="card card-pad" aria-labelledby="recent-h">
-        {% set recent = leave.decided(me) %}
-        <h2 id="recent-h">Recent decisions</h2>
-        {% if recent %}<ul class="items">{% for a, role, outcome in recent[:3] %}<li><div class="item-head"><a class="strong" href="{{ url('/ra-leave/staff/decide/' ~ a.id) }}{{ as_query }}">{{ a.ra }}</a><span class="chip {{ 'chip-ok' if outcome == 'Approved' else 'chip-mute' }}">{{ role }}: {{ outcome }}</span></div><div class="subtle">{{ a.dates }} · {{ a.leave_type }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">None yet.</p>{% endif %}
-        <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/staff/decided') }}{{ as_query }}">All decided</a>
-      </section>
     </div>
     <div class="side">
       {% set precincts = leave.scope(me) %}
@@ -37,7 +31,7 @@
         <p class="sub">Away today, {{ leave.short_date(leave.TODAY) }}, in {{ where }}.</p>
         {% set away = leave.away_today(me) %}
         {% if away %}<ul class="items">{% for a in away %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">Cover {{ a.cover }} · {{ a.precinct }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">No one is away today.</p>{% endif %}
-        <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/staff/records') }}{{ as_query }}">Leave records</a>
+        <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/staff/records') }}{{ as_query }}">Records</a>
       </section>
       <section class="card card-pad" aria-labelledby="later-h">
         {% set _, _, _, last = leave.period("week") %}
@@ -78,7 +72,7 @@
         {% for week in weeks %}<tr>
           {% for c in week %}<td class="{{ '' if c.in_month else 'out' }}{{ ' blackout' if c.blackout }}{{ ' today' if c.today }}"{% if c.today %} aria-current="date"{% endif %}>
             <span class="cal-n">{{ c.day.day }}{% if c.today %}<span class="visually-hidden">, today</span>{% endif %}</span>{% if c.blackout %}<span class="cal-black">{{ c.blackout }}</span>{% endif %}
-            {% for a, approved in c.leave %}{% set kind = 'approved' if approved else 'pending' %}<a class="cal-leave cal-link {{ kind }}" href="{{ url('/ra-leave/staff/decide/' ~ a.id) }}{{ as_query }}" title="{{ a.ra }}, {{ a.dates }}: {{ a.stage | lower }}">{{ a.ra }}{% if not approved %} (pending){% endif %}</a><span class="cal-leave cal-tag {{ kind }}" title="{{ a.ra }}, {{ a.dates }}: {{ a.stage | lower }}">{% set nm = a.ra.split(None, 1) %}{{ nm[0] }}<span class="visually-hidden">{{ ' ' ~ nm[1] if nm | length > 1 }}{% if not approved %}, pending{% endif %}</span></span>{% endfor %}
+            {% for a, approved in c.leave %}{% set kind = 'approved' if approved else 'pending' %}<a class="cal-leave cal-link {{ kind }}" href="{{ url('/ra-leave/staff/applications/' ~ a.id) }}{{ as_query }}" title="{{ a.ra }}, {{ a.dates }}: {{ a.stage | lower }}">{{ a.ra }}{% if not approved %} (pending){% endif %}</a><span class="cal-leave cal-tag {{ kind }}" title="{{ a.ra }}, {{ a.dates }}: {{ a.stage | lower }}">{% set nm = a.ra.split(None, 1) %}{{ nm[0] }}<span class="visually-hidden">{{ ' ' ~ nm[1] if nm | length > 1 }}{% if not approved %}, pending{% endif %}</span></span>{% endfor %}
           </td>{% endfor %}
         </tr>{% endfor %}
       </tbody>

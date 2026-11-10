@@ -61,7 +61,7 @@
     <div class="table-wrap"><table data-sort-auto>
       <thead><tr><th scope="col">RA</th>{% if multi %}<th scope="col">Precinct</th>{% endif %}<th scope="col">Dates</th><th scope="col" class="num">Days</th><th scope="col">Leave type</th><th scope="col">Cover</th><th scope="col">Status</th></tr></thead>
       <tbody>{% for a, status in rows %}<tr>
-        <td class="strong nowrap"><a href="{{ url('/ra-leave/staff/decide/' ~ a.id) }}{{ as_query }}">{{ a.ra }}</a></td>
+        <td class="strong nowrap"><a href="{{ url('/ra-leave/staff/applications/' ~ a.id) }}{{ as_query }}">{{ a.ra }}</a>{% set cover_by = leave.first_by_cover(a) %}{% if cover_by %} <span class="chip chip-info" title="First approved by {{ cover_by }}, covering for the RF">1st: {{ cover_by }}</span>{% endif %}</td>
         {% if multi %}<td class="nowrap">{{ a.precinct }}</td>{% endif %}
         <td class="nowrap" data-sort-value="{{ a.start.isoformat() }}">{{ a.dates }}</td>
         <td class="num">{{ a.days }}</td>
