@@ -9,13 +9,17 @@
      the top (author, 2026-11-08). #}
   {% set mine = leave.queue(me) %}{% if cover_only %}{% set mine = mine | selectattr(0, "in", leave.cover_unconfirmed()) | list %}{% endif %}
   {% set sep = '&' if as_query else '?' %}
+  {# The calendar's filters ride every link on the page that keeps its month. #}
+  {% set hidden = leave.calendar_hidden(me, hide) %}
+  {% set hq = ('hide=' ~ (hidden | sort | join(',') | urlencode) ~ '&') if hidden else '' %}
+  {% set mkeep = 'month=' ~ month.strftime('%Y-%m') if month != leave.TODAY.replace(day=1) else '' %}
   <div class="split">
     <div class="main stack">
       <section class="card card-pad" aria-labelledby="await-h">
         <h2 id="await-h">{{ "Waiting on cover" if cover_only else "Awaiting my decision" }} <span class="count">· {{ mine | length }}</span></h2>
         <p class="sub">Oldest first. One waiting on its cover's confirmation can be opened but not approved until the cover confirms.
-          {% if cover_only %}<a href="{{ url('/ra-leave/staff/') }}{{ as_query }}">Show everything awaiting me</a>
-          {% elif leave.waiting_on_cover_count(me) %}<a href="{{ url('/ra-leave/staff/') }}{{ as_query ~ sep }}cover=waiting{{ '&month=' ~ month.strftime('%Y-%m') if month != leave.TODAY.replace(day=1) }}">Waiting on cover · {{ leave.waiting_on_cover_count(me) }}</a>{% endif %}</p>
+          {% if cover_only %}{% set rest = (hq ~ mkeep).rstrip('&') %}<a href="{{ url('/ra-leave/staff/') }}{{ as_query ~ (sep ~ rest if rest) }}">Show everything awaiting me</a>
+          {% elif leave.waiting_on_cover_count(me) %}<a href="{{ url('/ra-leave/staff/') }}{{ as_query ~ sep }}cover=waiting{{ ('&' ~ (hq ~ mkeep).rstrip('&')) if hq or mkeep }}">Waiting on cover · {{ leave.waiting_on_cover_count(me) }}</a>{% endif %}</p>
         {% if mine %}<ul class="items">{% for a, role in mine %}{{ staff_item(a, leave, as_query, role) }}{% endfor %}</ul>{% else %}<p class="sub">Nothing awaits you.</p>{% endif %}
       </section>
       <section class="card card-pad" aria-labelledby="recent-h">
@@ -50,11 +54,9 @@
      chips turn Approved, Pending and, for a whole-Unit viewer, each Wing on
      and off (author, 2026-11-10); a link each, so the filter rides the
      month links too. #}
-  {% set hidden = leave.calendar_hidden(me, hide) %}
   {% set weeks = leave.leave_calendar(me, month, hidden) %}
   {% set prev, next = leave.shift_month(month, -1), leave.shift_month(month, 1) %}
   {% set base = as_query ~ ('&' if as_query else '?') ~ ('cover=waiting&' if cover_only else '') %}
-  {% set hq = ('hide=' ~ (hidden | sort | join(',') | urlencode) ~ '&') if hidden else '' %}
   {% set mq = base ~ hq ~ 'month=' %}
   <section class="card card-pad wide gap-above" aria-labelledby="cal-h">
     <div class="cal-head">
@@ -83,7 +85,7 @@
     </table>
     {% set blackouts = leave.month_blackouts(month) %}
     {% if blackouts %}<p class="sub gap-above-sm">Blackouts: {% for label, first, last in blackouts %}{{ label }}, {{ leave.short_date(first) }} – {{ leave.short_date(last) }}{{ "; " if not loop.last }}{% endfor %}.</p>{% endif %}
-    {% if not leave.calendar_has_leave(weeks) %}<p class="sub">{{ "No leave this month." if not hidden else "No leave this month with these filters." }}</p>{% endif %}
+    {% if not leave.calendar_has_leave(weeks) %}<p class="sub">{{ "No leave this month with these filters." if hidden and leave.calendar_has_leave(leave.leave_calendar(me, month)) else "No leave this month." }}</p>{% endif %}
   </section>
 {% endblock %}
 {% block viewer %}{{ staff_switch(me, leave, here) }}{% endblock %}

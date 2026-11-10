@@ -1859,7 +1859,7 @@ def calendar_filters(viewer: str, hidden: frozenset[str]) -> tuple[tuple[str, bo
         (
             label,
             label not in hidden,
-            ",".join(x for x in labels if (x in hidden) != (x == label)),
+            ",".join(sorted(x for x in labels if (x in hidden) != (x == label))),
         )
         for label in labels
     )

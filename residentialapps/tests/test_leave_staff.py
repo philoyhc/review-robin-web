@@ -748,3 +748,19 @@ def test_the_leave_calendar_filters_by_status_and_for_the_unit_by_wing() -> None
     assert "hide=Maple&amp;month=2026-11" in sam_chips
     hidden_all = c.get(STAFF + SAM + "&month=2026-11&hide=Approved,Pending").text
     assert "No leave this month with these filters." in hidden_all
+    # The cold read: two filters off write one form of `hide`, a month with
+    # no leave says so whatever is off, and the cover filter keeps them.
+    two = c.get(STAFF + SAM + "&month=2026-11&hide=Pending,Maple").text
+    assert two.count("hide=Maple%2CPending&amp;month=2026-12#cal-h") == 1
+    assert "hide=Maple%2CPending%2CWillow&amp;month=2026-11#cal-h" in two
+    empty = c.get(STAFF + SAM + "&month=2027-03&hide=Pending").text
+    assert "No leave this month." in empty and "with these filters" not in empty
+    cover = (
+        'href="/ra-leave/staff/?as=Sam%20Lee&amp;cover=waiting&amp;hide=Pending&amp;month=2026-11"'
+    )
+    assert cover in c.get(STAFF + SAM + "&month=2026-11&hide=Pending").text
+    back = c.get(STAFF + SAM + "&cover=waiting&month=2026-11&hide=Pending").text
+    assert (
+        'href="/ra-leave/staff/?as=Sam%20Lee&amp;hide=Pending&amp;month=2026-11">Show everything'
+        in back
+    )
