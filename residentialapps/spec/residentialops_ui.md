@@ -293,10 +293,13 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   `?hide=` rides the month links; author, 2026-11-10): Approved and
   Pending, each with its swatch, the chips being the key, and a chip a
   Wing besides for a viewer whose scope is the whole Unit.
-- **A period row** (`.period-row`, author, 2026-11-09): under a select on
-  its own row, its dates at the left, top aligned, and the submit button
-  at the right. Leave records no longer uses it: its period applies on
-  choosing (author, 2026-11-10).
+- **A period applied on choosing** (Leave records, author, 2026-11-10):
+  a select that reloads the page when changed, its dates under it, the
+  submit button kept only in `<noscript>`; `.period-row` (dates and
+  button on one row, 2026-11-09) retired with the button.
+- **Filter actions** (`.col-chip.chip-act`, Leave records, author,
+  2026-11-10): Select all and Clear all close a group of filter chips,
+  outlined and dashed, never filled, as an action is not a state.
 - **A third and two thirds** (`.grid-thirds.one-two`; Leave records,
   author, 2026-11-10): from 960 px, one column below: a period beside its
   filter chips. Its converse, two thirds and a third, is `.bottom-row`

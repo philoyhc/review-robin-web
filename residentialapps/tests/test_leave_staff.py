@@ -890,6 +890,12 @@ def test_leave_records_chips_select_and_clear_all_and_the_page_stays_at_the_top(
         'href="/ra-leave/staff/records?as=Sam%20Lee&amp;hide=Maple%2003-08&amp;period=term">'
         "Select all"
     ) in page
+    clear = (
+        "Cypress%20A%2004-12%2CCypress%20A%2013-20%2CCypress%20B%2003-14%2CMaple%2003-08"
+        "%2CMaple%2009-14%2CMaple%2015-22%2CRejected%2CWillow%20A%2004-12%2CWillow%20A%2013-25"
+        "%2CWillow%20B%2004-12"
+    )
+    assert f'hide={clear}&amp;period=term">Clear all' in page  # the Status kept
     assert "#rec-h" not in page  # no fragment: every change lands at the top
     form = page.split('id="period-form"')[1].split("</form>")[0]
     assert "<noscript><button" in form and "Show period</button></noscript>" in form
