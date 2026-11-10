@@ -660,7 +660,7 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     policy = c.get(ADMIN + "policy").text
     assert (
         "they open an appeal for that RA on Appeals" in policy
-        and "once someone chosen below agrees" in policy
+        and "once someone with Open appeals in Permissions agrees" in policy
     )
     assert 'aria-label="Open appeals, Master" checked' in policy
     assert 'aria-label="Open appeals, Residential Admin" checked' in policy
@@ -955,16 +955,19 @@ def test_the_cover_tile_opens_the_set_it_counts_under_any_policy(monkeypatch) ->
 
 
 def test_policy_permissions_say_who_does_what_over_which_ras(monkeypatch) -> None:
-    """Author, 2026-11-10: one Permissions table on Policy, the only place
-    that says who; a role's scope is its slots (or every slot), a named
-    person's is chosen, overlaps resolved. Approvals keeps how, and sums
-    up who; the Appeals card's who-may-open moves here too."""
+    """Author, 2026-11-10: one Permissions table on Policy saying who; a
+    role's scope is its slots (or every slot), a named person's is chosen,
+    overlaps resolved. Approvals keeps how, and sums up who; the Appeals
+    card's who-may-open moves here too."""
     rows = {r["who"]: r for r in sample_leave.permission_rows()}
     assert rows["Residential Fellow"]["scope"] == ("RAs assigned to staff's slots",)
     assert rows["Master"]["scope"] == ("RAs in every slot",)
     assert rows["Residential Fellow"]["perms"] == {"first", "view"}
     assert rows["Residential Admin"]["perms"] == {"final", "open", "view", "admin"}
-    assert rows["Residential Student Life Manager"]["perms"] == frozenset()
+    assert rows["Master"]["perms"] == {"open", "decide", "view", "admin"}
+    # RSLMs see their Wing's records today; the table says so.
+    assert rows["Residential Student Life Manager"]["perms"] == {"view"}
+    assert rows["Residential Executive"]["perms"] == frozenset()
     assert rows["Hui Min Goh"]["kind"] == "named"
     assert rows["Hui Min Goh"]["scope"] == ("Cypress", "Maple 03-08")
     # Scope overlaps resolve: a choice inside one already there is not
@@ -1009,3 +1012,39 @@ def test_policy_permissions_say_who_does_what_over_which_ras(monkeypatch) -> Non
     named = {r["who"]: r for r in sample_leave.permission_rows()}
     assert "final" in named["Sam Lee"]["perms"] and named["Sam Lee"]["kind"] == "named"
     assert "final" not in named["Residential Admin"]["perms"]
+
+
+@pytest.mark.parametrize(
+    "policy",
+    [
+        {},
+        {"final": "named", "final_names": ("Sam Lee", "Priya Raman")},
+        {"inviters": "named", "inviter_names": ("Daniel Koh",)},
+        {"inviters": "slot", "inviter_types": ("RF",)},
+        {"appeals": "Off"},
+        {"first": "none"},
+    ],
+)
+def test_permissions_agree_with_routing(monkeypatch, policy) -> None:
+    """Review of 2026-11-10: each tick in Permissions is what routing grants,
+    under every Policy setting, so the table and the app cannot disagree."""
+    for key, value in policy.items():
+        monkeypatch.setitem(sample_leave.POLICY, key, value)
+    rows = sample_leave.permission_rows()
+    roles = {r["note"]: r["perms"] for r in rows if r["kind"] == "role"}
+    named = {r["who"]: r["perms"] for r in rows if r["kind"] == "named"}
+    sys_admins = {n for n, *_ in sample_data.SYS_ADMINS}
+    inviters = {n for p in sample_leave.precincts() for n in sample_leave.inviters_in(p)}
+    chosen = {g.name for g in sample_leave.NAMED_GRANTS}  # shown, not yet enforced
+    for person in sample_data.STAFF:
+        name = person.name
+        if name in chosen:
+            continue
+        perms = roles.get(person.abbrev, frozenset()) | named.get(name, frozenset())
+        assert ("final" in perms) == (name in sample_leave.final_approvers()), name
+        assert ("view" in perms) == bool(sample_leave.scope(name)), name
+        assert ("admin" in perms) == (name in sys_admins), name
+        decides = sample_leave.appeals_decided() and name == sample_leave.APPEAL_DECIDER
+        assert ("decide" in perms) == decides, name
+        if name in inviters:
+            assert "open" in perms, name

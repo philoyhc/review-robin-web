@@ -16,13 +16,6 @@
     </fieldset>
   {% endmacro %}
 
-  {% macro checks(name, label, appointments, ticked) %}
-    <div class="checks" role="group" aria-label="{{ label }}">
-      {% for appointment, abbrev in appointments %}
-        <label class="check"><input type="checkbox" name="{{ name }}" value="{{ abbrev }}"{% if abbrev in ticked %} checked{% endif %} disabled> {{ appointment }}{% if abbrev != appointment %} ({{ abbrev }}){% endif %}</label>
-      {% endfor %}
-    </div>
-  {% endmacro %}
 
   {# The Staff roster's names, for every named-staff box on the page. #}
   <datalist id="staff-names">{% for p in sample.STAFF %}<option value="{{ p.name }}">{{ p.appointment }}</option>{% endfor %}</datalist>
@@ -137,7 +130,7 @@
           {% endfor %}
         </span>
       </nav>
-      {{ choice("appeals", "Appeals beyond entitlement are", leave.APPEAL_MODES, leave.POLICY.appeals, {"Open": "Request extra leave is offered to every RA; sending it starts the appeal", "By invitation": "Not shown to RAs. An RA writes in first; once someone chosen below agrees in principle, they open an appeal for that RA on Appeals, and the RA can then send it", "Off": "Not available: an application beyond entitlement cannot be submitted, and Appeal-only blackouts refuse leave"}) }}
+      {{ choice("appeals", "Appeals beyond entitlement are", leave.APPEAL_MODES, leave.POLICY.appeals, {"Open": "Request extra leave is offered to every RA; sending it starts the appeal", "By invitation": "Not shown to RAs. An RA writes in first; once someone with Open appeals in Permissions agrees in principle, they open an appeal for that RA on Appeals, and the RA can then send it", "Off": "Not available: an application beyond entitlement cannot be submitted, and Appeal-only blackouts refuse leave"}) }}
       <p class="sub">Who may open an appeal, and for which RAs, is set in <a href="#perms-h">Permissions</a> (Open appeals); used only while appeals are by invitation.</p>
       <p class="subtle small">The Master decides appeals, for the RAs in whose slots the Master holds a place: every RA while the Master oversees every RA.</p>
       <div class="field-wide">
@@ -160,12 +153,13 @@
        RAs, in one table, the only place that says who; the Approvals and
        Appeals cards keep how. A role's scope is its slots on Assignments;
        a named person's is chosen: All RAs, a Wing, a Precinct or a slot,
-       overlaps resolved (`leave.add_scope`). With no tick, no access to the
-       staff pages. #}
+       overlaps resolved (`leave.add_scope`). Each tick is read from what
+       grants it (`leave.permission_rows`); controls are inert, and named
+       scopes do not yet change access. #}
     <section class="card" aria-labelledby="perms-h">
       <div class="card-head"><h2 id="perms-h">Permissions</h2>
-        <p class="sub">Who may do what, and over which RAs. A role's scope comes from <a href="{{ url('/rosters/assignments') }}">Assignments</a>: the RAs in its slots, or in every slot. A person named here is given a scope of one or more choices, each a pill: All RAs, a Wing, a Precinct or a slot; a choice already inside another is not added, and a broader choice replaces the narrower ones it holds. With no tick, no access to the staff pages.</p></div>
-      <div class="table-wrap"><table class="perms-table">
+        <p class="sub">Who may do what, and over which RAs. A role's scope comes from <a href="{{ url('/rosters/assignments') }}">Assignments</a>: the RAs in its slots, or in every slot. A person named here is given a scope of one or more choices, each a pill: All RAs, a Wing, a Precinct or a slot; a choice already inside another is not added, and a broader choice replaces the narrower ones it holds. Each tick shows what that role or person may do today.</p></div>
+      <div class="table-wrap"><table class="rows perms-table">
         <thead><tr><th scope="col">Role or person</th><th scope="col">Scope</th>{% for key, label in leave.PERMISSIONS %}<th scope="col" class="center">{{ label }}</th>{% endfor %}<th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
         <tbody>
           {% for r in leave.permission_rows() %}<tr>

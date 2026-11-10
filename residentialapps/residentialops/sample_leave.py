@@ -106,7 +106,6 @@ class Policy(TypedDict):
     final: str
     final_types: tuple[str, ...]
     final_names: tuple[str, ...]
-    viewer_types: tuple[str, ...]
 
 
 class _Policy(dict[str, object]):
@@ -167,7 +166,6 @@ _POLICY = _Policy(
         "final_names": (),
         # Who views Leave records without approving (author, 2026-11-10):
         # the appointments given View records in Permissions.
-        "viewer_types": ("RF", "Master", "Admin"),
     }
 )
 # Read through its keys' types: `_Policy` is the runtime object, `Policy`
@@ -2556,55 +2554,80 @@ class PermissionRow(TypedDict):
     perms: frozenset[str]
 
 
+def _granted(name: str) -> set[str]:
+    """What a person may do now, read from the functions that grant it:
+    first and final approval and opening appeals from Policy, deciding
+    appeals from `APPEAL_DECIDER` while `appeals_decided`, viewing records
+    from `scope`, the admin pages from the sys admins."""
+    abbrev = {p.name: p.abbrev for p in sample_data.STAFF}.get(name, "")
+    granted = set()
+    if POLICY["first"] == "slot" and abbrev in POLICY["first_types"]:
+        granted.add("first")
+    if name in final_approvers():
+        granted.add("final")
+    if POLICY["inviters"] == "named":
+        if name in POLICY["inviter_names"]:
+            granted.add("open")
+    elif abbrev in POLICY["inviter_types"]:
+        granted.add("open")
+    if appeals_decided() and name == APPEAL_DECIDER:
+        granted.add("decide")
+    if scope(name):
+        granted.add("view")
+    if any(n == name for n, *_ in sample_data.SYS_ADMINS):
+        granted.add("admin")
+    return granted
+
+
+def _scope_of(name: str) -> tuple[str, ...]:
+    return ("RAs in every slot",) if name in overseers() else ("RAs assigned to staff's slots",)
+
+
 def permission_rows() -> tuple[PermissionRow, ...]:
-    """Permissions' rows: each appointment, then each named person. A
-    role's scope is its slots, or every slot for one whose holders are in
-    every slot on Assignments; its ticks are the Policy fields."""
-    every = set(overseers())
+    """Permissions' rows: each appointment, then each person holding more
+    than their appointment gives. Every tick is read from the function that
+    grants it (`_granted`), so the table cannot disagree with routing: a
+    role is ticked for what all its holders may do, and a person with more
+    gets a named row for the rest, scoped as routing scopes it (the RAs in
+    their slots, or every slot for an overseer). `NAMED_GRANTS` rows are
+    shown as chosen; they do not yet change access."""
     rows: list[PermissionRow] = []
+    by_role: dict[str, set[str]] = {}
     for title, abbrev in (*slot_appointments(), *unit_appointments()):
         holders = [p.name for p in sample_data.STAFF if p.abbrev == abbrev]
-        whole = bool(holders) and all(h in every for h in holders)
-        perms = {
-            k
-            for k, on in (
-                ("first", POLICY["first"] == "slot" and abbrev in POLICY["first_types"]),
-                ("final", POLICY["final"] == "unit" and abbrev in POLICY["final_types"]),
-                (
-                    "open",
-                    POLICY["inviters"] in ("slot", "unit") and abbrev in POLICY["inviter_types"],
-                ),
-                ("decide", abbrev == "Master"),
-                ("view", abbrev in POLICY["viewer_types"]),
-                ("admin", abbrev == "Admin"),
-            )
-            if on
-        }
+        common = set.intersection(*(_granted(h) for h in holders)) if holders else set()
+        # Approvers or inviters chosen by name are a person's grant, not the
+        # role's, so they get named rows even when they hold the role alone.
+        if POLICY["final"] == "named":
+            common.discard("final")
+        if POLICY["inviters"] == "named":
+            common.discard("open")
+        by_role[abbrev] = common
+        whole = bool(holders) and all(h in overseers() for h in holders)
         rows.append(
             {
                 "who": title,
                 "kind": "role",
                 "note": abbrev,
-                "scope": ("RAs in every slot",) if whole else ("RAs assigned to staff's slots",),
-                "perms": frozenset(perms),
+                "scope": _scope_of(holders[0]) if whole else _scope_of(""),
+                "perms": frozenset(common),
             }
         )
+    titles = {abbrev: title for title, abbrev in (*slot_appointments(), *unit_appointments())}
+    abbrevs = {p.name: p.abbrev for p in sample_data.STAFF}
     named: dict[str, set[str]] = {}
     scopes: dict[str, tuple[str, ...]] = {}
+    for person in sample_data.STAFF:
+        extra = _granted(person.name) - by_role.get(person.abbrev, set())
+        if extra:
+            named[person.name] = extra
+            scopes[person.name] = _scope_of(person.name)
     for g in NAMED_GRANTS:
-        named.setdefault(g.name, set()).update(g.perms)
-        scopes[g.name] = resolve_scope(g.scope)
-    if POLICY["final"] == "named":
-        for n in POLICY["final_names"]:
-            named.setdefault(n, set()).add("final")
-            scopes.setdefault(n, ("RAs assigned to staff's slots",))
-    if POLICY["inviters"] == "named":
-        for n in POLICY["inviter_names"]:
-            named.setdefault(n, set()).add("open")
-            scopes.setdefault(n, ("RAs assigned to staff's slots",))
-    titles = {abbrev: title for title, abbrev in (*slot_appointments(), *unit_appointments())}
+        if g.name not in named:
+            named[g.name] = set(g.perms)
+            scopes[g.name] = resolve_scope(g.scope)
     for name, perms in named.items():
-        role = next((p.abbrev for p in sample_data.STAFF if p.name == name), "")
+        role = abbrevs.get(name, "")
         rows.append(
             {
                 "who": name,
