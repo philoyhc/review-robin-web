@@ -670,7 +670,6 @@ def test_assignments_sets_who_is_in_every_slot(monkeypatch) -> None:
     assert sample_leave.scope("Rachel Yeo") == ()
     later = client.get("/rosters/assignments?term=AY2026-2027.2").text
     assert "No one is in every slot for AY2026-2027, Term 2; copying an earlier term" in later
-    assert "set for each term on" in client.get("/ra-leave/admin/policy").text
     # It opens with the Staff cells: before the rosters have people it is
     # shown gated and names no one; a past term has none.
     gated = (

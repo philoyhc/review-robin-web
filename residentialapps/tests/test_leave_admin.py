@@ -230,17 +230,18 @@ def test_policy_appeals_cover_and_approvals() -> None:
     assert "may ask the college for extra leave" in page and "spec §7.5" not in page
     assert "Whether an application or appeal must name a covering RA" in page
     assert "Cover for leave is" in page and "ordinary leave is" not in page
-    # Cover sits left of Appeals; Approvals comes before Permissions; one
+    # Cover sits left of Appeals; the Approvals card is gone; one
     # Leave days card holds counting, public holidays and blackouts.
     assert page.index('aria-labelledby="cover-h"') < page.index('aria-labelledby="appeals-h"')
-    assert page.index('id="approvals-h"') < page.index('id="perms-h"')
+    assert 'id="approvals-h"' not in page and 'id="perms-h"' in page
     days = page.split('aria-labelledby="days-h"')[1].split('aria-labelledby="cover-h"')[0]
     assert 'id="holidays-h"' in days and 'id="blackout-h"' in days and 'name="day-count"' in days
     assert 'aria-labelledby="count-h"' not in page
-    assert "The Master (Sam Lee), personally" in page
-    # Who approves is Permissions' to say (author, 2026-11-10); Approvals
-    # sums it up.
-    assert "<dt>Final approval</dt><dd>Residential Admin (RAs in every slot)" in page
+    # Who approves is Permissions' to say; the Approvals card that summed
+    # it up is gone (author, 2026-11-10), and the Dashboard names who
+    # decides appeals.
+    assert 'aria-label="Final approval, Residential Admin" checked' in page
+    assert "The Master (Sam Lee), personally" in client().get(ADMIN).text
 
 
 def test_entitlements_follow_the_policy_rules() -> None:
@@ -493,13 +494,9 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
         ("Residential Executive", "Exec"),
     )
     page = client().get(ADMIN + "policy").text
-    radios = re.findall(
-        r'<input type="radio" id="(first|final)-(\w+)" name="\1" value="\2"( checked)?', page
-    )
-    assert [(g, v, bool(c)) for g, v, c in radios] == [
-        ("first", "slot", True),
-        ("first", "none", False),
-    ]
+    # The Approvals card is gone (author, 2026-11-10): no first-approval
+    # radios; Permissions' First approval ticks say whether one is needed.
+    assert 'name="first"' not in page and 'id="approvals-h"' not in page
     # Who approves, first or final, is Permissions' (author, 2026-11-10).
     ticks = dict(re.findall(r'aria-label="([^"]+)"( checked)? disabled>', page))
     assert ticks["First approval, Residential Fellow"] == " checked"
@@ -510,7 +507,6 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
         and ticks["Final approval, Residential Executive"] == ""
     )
     assert 'list="staff-names"' in page and page.count('<option value="') >= len(sample_data.STAFF)
-    assert "No first approver needed" in page
 
     monkeypatch.setitem(sample_leave.POLICY, "first", "none")
     monkeypatch.setitem(sample_leave.POLICY, "final", "named")
@@ -553,10 +549,11 @@ def test_approvals_edge_cases(monkeypatch) -> None:
         s for _, s, _ in sample_leave.timeline(_by_id("L-0106"))
     ]
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ())
+    # No First approval tick: none is needed (author, 2026-11-10), no gap.
     routes = sample_leave.routes()
-    assert all(r.gap and r.first == "No one" for r in routes)
-    # A first-approval gap per Precinct, and the final one (no names set) on each row too.
-    assert client().get(ADMIN + "routing").text.count(">Gap</span>") == 2 * len(routes)
+    assert sample_leave.POLICY["first"] == "none" and not any(r.gap for r in routes)
+    # Only the final gap (no names set) remains on each row.
+    assert client().get(ADMIN + "routing").text.count(">Gap</span>") == len(routes)
 
 
 def test_the_sample_keeps_its_own_policy() -> None:
@@ -778,8 +775,7 @@ def test_review_fixes_on_the_admin_side(monkeypatch) -> None:
     assert "Leave policy names no one to open appeals." in c.get(STAFF_ADMIN_APPEALS).text
     monkeypatch.setitem(sample_leave.POLICY, "first", "slot")
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ())
-    assert "No first approver ticked" in c.get(ADMIN).text
-    assert "(no first approver ticked, no final approver set)" in c.get(ADMIN + "routing").text
+    assert "No first approval" in c.get(ADMIN).text  # no tick, none needed
     assert (
         "Kai Ng" in c.get(STAFF_ADMIN_APPEALS).text
         and "agreed by email" not in c.get(STAFF_ADMIN_APPEALS).text
@@ -1027,11 +1023,10 @@ def test_policy_permissions_say_who_does_what_over_which_ras(monkeypatch) -> Non
     assert '<span class="token">Cypress<button' in table
     assert 'aria-label="View records, Hui Min Goh" checked' in table
     assert '<option value="All RAs">' in page and '<option value="Willow A 04-05-06">' in page
-    # Approvals sums up who; the old who-fieldsets are gone.
+    # The old who-fieldsets and the Approvals card are gone.
     assert 'name="first-types"' not in page and 'name="final-types"' not in page
     assert 'name="inviters"' not in page
-    first = "<dt>First approval</dt><dd>Residential Fellow (RAs assigned to staff&#39;s slots)"
-    assert first in page
+    assert 'id="approvals-h"' not in page  # the summary went with the card
     # Named final approvers appear as named rows.
     monkeypatch.setitem(sample_leave.POLICY, "final", "named")
     monkeypatch.setitem(sample_leave.POLICY, "final_names", ("Sam Lee",))
@@ -1131,3 +1126,17 @@ def test_approval_chain_names_each_approver_with_their_role(monkeypatch) -> None
     monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ("Sam Lee",))
     named = client().get(ADMIN + "routing").text.split('id="chain-h"')[1]
     assert "<td>Sam Lee</td>" in named.split("</table>")[0]
+
+
+def test_first_approval_is_needed_while_someone_is_ticked(monkeypatch) -> None:
+    """Author, 2026-11-10: the Approvals card is gone; Permissions' First
+    approval ticks say whether a first approval is needed, so no tick
+    means none, and a "needed but no one ticked" gap cannot arise."""
+    assert sample_leave.POLICY["first"] == "slot"  # RF ticked
+    page = client().get(ADMIN + "policy").text
+    assert 'id="approvals-h"' not in page and "go straight to final approval" in page
+    monkeypatch.setitem(sample_leave.POLICY, "first_types", ())
+    assert sample_leave.POLICY["first"] == "none"
+    assert not any(r.gap for r in sample_leave.routes())
+    waiting = sample_leave.by_id("L-0101")
+    assert waiting is not None and waiting.stage == "Pending final approval"

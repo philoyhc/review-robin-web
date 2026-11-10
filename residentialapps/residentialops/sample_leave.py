@@ -129,6 +129,12 @@ class _Policy(dict[str, object]):
     """The sample policy; reading `appeals` gives the previewed mode, if any."""
 
     def __getitem__(self, key: str) -> object:
+        if key == "first":
+            # A first approval is needed while Permissions ticks someone for
+            # it (author, 2026-11-10: the Approvals card is gone); no tick,
+            # none needed, so a ticked-but-nobody gap cannot arise.
+            ticked = bool(super().__getitem__("first_types"))
+            return super().__getitem__("first") if ticked else "none"
         preview = APPEALS_PREVIEW.get() if key == "appeals" else None
         return preview if preview in APPEAL_MODES else super().__getitem__(key)
 
@@ -177,6 +183,9 @@ _POLICY = _Policy(
         # Approvals (author, 2026-10-28): first by one or more of the
         # appointments on the RA's slot, whichever approves first, or none;
         # final by one or more Unit-level appointments, or by named staff.
+        # Since 2026-11-10 the ticks alone say whether one is needed: reading
+        # "first" gives "none" while no one is ticked (`_Policy`); "none"
+        # stored here remains only for tests that turn first approval off.
         "first": "slot",  # or "none"
         "first_types": ("RF",),
         "final": "unit",  # or "named"
@@ -1266,7 +1275,7 @@ def routes(day: date | None = None) -> tuple[Route, ...]:
         if POLICY["first"] == "none":
             first = "None needed"
         elif gap:
-            first, note = "No one", f"no {first_label() or 'ticked appointment'} on its slots"
+            first, note = "No one", f"no {first_label()} on its slots"
         found[slot.precinct] = Route(
             slot.precinct,
             slot.wing,
@@ -2237,7 +2246,7 @@ def appeal_takes_first() -> bool:
 
 
 def appeal_deciders() -> str:
-    """Who decides appeals, in a few words, for Policy's summary."""
+    """Who decides appeals, in a few words, for the Dashboard's Policy summary."""
     if not appeals_on():
         return "Off"
     master = f"the Master ({APPEAL_DECIDER}), personally"
