@@ -2037,6 +2037,38 @@ def record_filters(viewer: str, hidden: frozenset[str]) -> tuple[tuple[str, bool
     return toggle_filters(record_statuses() + record_precincts(viewer), hidden)
 
 
+class FilterGroup(TypedDict):
+    """One row of Leave records' chips, with its Select all and Clear all
+    links' `hide` values."""
+
+    name: str
+    chips: tuple[tuple[str, bool, str], ...]
+    select_all: str
+    clear_all: str
+
+
+def record_groups(viewer: str, hidden: frozenset[str]) -> tuple[FilterGroup, ...]:
+    """Leave records' chips in groups (author, 2026-11-10): Status, then
+    Precinct where there is more than one, each ending in Select all and
+    Clear all, which turn that group's chips all on or all off and keep
+    the other group's as they are."""
+    chips = record_filters(viewer, hidden)
+    groups: list[FilterGroup] = []
+    for name, labels in (("Status", record_statuses()), ("Precinct", record_precincts(viewer))):
+        if not labels:
+            continue
+        group = set(labels)
+        groups.append(
+            {
+                "name": name,
+                "chips": tuple(c for c in chips if c[0] in group),
+                "select_all": ",".join(sorted(hidden - group)),
+                "clear_all": ",".join(sorted(hidden | group)),
+            }
+        )
+    return tuple(groups)
+
+
 def records(
     viewer: str, start: date, end: date, hidden: frozenset[str] = frozenset()
 ) -> tuple[tuple[Application, str], ...]:

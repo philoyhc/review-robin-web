@@ -293,9 +293,10 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   `?hide=` rides the month links; author, 2026-11-10): Approved and
   Pending, each with its swatch, the chips being the key, and a chip a
   Wing besides for a viewer whose scope is the whole Unit.
-- **A period row** (`.period-row`, RA Leave's Leave records, author,
-  2026-11-09): under a select on its own row, its dates at the left, top
-  aligned, and the submit button at the right.
+- **A period row** (`.period-row`, author, 2026-11-09): under a select on
+  its own row, its dates at the left, top aligned, and the submit button
+  at the right. Leave records no longer uses it: its period applies on
+  choosing (author, 2026-11-10).
 - **A third and two thirds** (`.grid-thirds.one-two`; Leave records,
   author, 2026-11-10): from 960 px, one column below: a period beside its
   filter chips. Its converse, two thirds and a third, is `.bottom-row`
@@ -315,8 +316,7 @@ Until a screen is wired:
 - its controls are present and `disabled`, except a roster's tick boxes,
   which open the expander so its shape can be checked (§6), and
   Assignments' term selector and its Show term button, and Leave
-  records' Period selector, Show period button and filter chips, which
-  are navigation, and Assignments' upload-mode radios, so the Upload button's
+  records' Period selector and filter chips, which are navigation, and Assignments' upload-mode radios, so the Upload button's
   unavailable state can be seen (§7);
 - it answers anyone on a local run (`APP_ENV=local`) and, deployed, only a previewer, 404 to anyone else; RA Leave's RA pages and the landing also answer an RA previewer (`residentialapps/spec/applications.md`, "The preview gate");
 - a page drawn for one person (RA Leave's RA and staff pages, the
