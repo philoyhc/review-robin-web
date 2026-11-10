@@ -127,8 +127,8 @@ widths, the scripts' behavior, and whether the screens read right.
     opening on Status, Cover, Precinct and Columns rows, its summary
     naming what is off; hide Submitted: it goes at once and stays hidden
     after a reload; the table ID, RA, Precinct, Leave type, Dates, Days,
-    Cover, Submitted, Stage, Approved (Bella Koh's "24 Oct" with "1st:
-    Marcus Tan"); Maya Seah and
+    Cover, Submitted, Stage, Remarks (Bella Koh's "1st: Marcus Tan" and
+    "5 days overdue"; Olivia Ng's "Cover away"); Maya Seah and
     Olivia Ng On leave, Pranav Iyer Approved (from tomorrow), with "Away
     too" on Olivia's cover; turn a chip off and change the period: it
     stays off; Whole term adds Taken, Rejected and Withdrawn rows;

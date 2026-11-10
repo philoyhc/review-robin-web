@@ -89,8 +89,11 @@ def test_leave_records_filters_start_closed_and_columns_hide_and_stay(
     expect(page.locator("#rec-off")).to_have_text(" · 2 off: Rejected; column Submitted")
     expect(page.locator('#rec-table th[data-col="submitted"]')).to_be_hidden()
     page.reload()
-    assert page.evaluate("document.getElementById('rec-filters').open")
+    assert not page.evaluate("document.getElementById('rec-filters').open")  # starts closed
     expect(page.locator('#rec-table th[data-col="submitted"]')).to_be_hidden()
+    page.locator("#rec-filters > summary").click()
+    page.locator('[data-cols-all="false"]').click()
+    expect(page.locator('#rec-table th[data-col="precinct"]')).to_be_hidden()
     page.locator('[data-cols-all="true"]').click()
     expect(page.locator('#rec-table th[data-col="submitted"]')).to_be_visible()
 
@@ -98,13 +101,24 @@ def test_leave_records_filters_start_closed_and_columns_hide_and_stay(
 def test_leave_records_keep_the_period_and_chips_in_the_browser(
     page: Page,  # noqa: F811
 ) -> None:
-    """Author, 2026-11-10: the selectors are kept in the browser; a visit
-    naming no period (the tab) takes the last ones back, per viewer."""
-    page.goto(ORIGIN + "/ra-leave/staff/records?as=Sam%20Lee&hide=Rejected&period=term")
+    """Author, 2026-11-10: the selectors are kept in the browser. Only a
+    choice made on the page is kept, per viewer; a visit naming no filter
+    takes it back; a link naming its own (a tile, a back link) is shown as
+    it is and does not overwrite it (the cold read)."""
+    page.goto(ORIGIN + "/ra-leave/staff/records?as=Sam%20Lee")
+    with page.expect_navigation():
+        page.select_option("#period", "term")
+    page.locator("#rec-filters > summary").click()
+    with page.expect_navigation():
+        page.locator(".rec-filters").first.locator("a", has_text="Rejected").click()
     page.goto(ORIGIN + "/ra-leave/staff/records?as=Sam%20Lee")
     page.wait_for_url("**period=term**")
-    assert "hide=Rejected" in page.url
-    expect(page.locator("#period")).to_have_value("term")
+    assert "Rejected" in page.url
+    # A link naming its own filters shows them and keeps the choice.
+    page.goto(ORIGIN + "/ra-leave/staff/records?as=Sam%20Lee&period=whole")
+    expect(page.locator("#period")).to_have_value("whole")
+    page.goto(ORIGIN + "/ra-leave/staff/records?as=Sam%20Lee")
+    page.wait_for_url("**period=term**")
     # Another viewer keeps their own.
     page.goto(ORIGIN + "/ra-leave/staff/records")
     expect(page.locator("#period")).to_have_value("week")

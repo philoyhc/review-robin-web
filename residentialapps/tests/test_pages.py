@@ -773,10 +773,11 @@ def test_the_slots_table_sorts_with_a_notes_chip_only() -> None:
 
 
 def test_other_tables_sort_and_leave_records_share_their_columns() -> None:
-    """Ruled 2026-10-29: Entitlements, Approval chain, Sys admin's tables
-    and Leave records sort (`data-sort-auto`). The admin's Leave records and
-    the staff's Records share one table (author, 2026-11-10): ID, RA,
-    Precinct, Leave type, Dates, Days, Cover, Submitted, Stage."""
+    """Ruled 2026-10-29: Entitlements, Approval chain and Sys admin's
+    tables sort (`data-sort-auto`). The admin's Leave records and the
+    staff's Records share one table (author, 2026-11-10): ID, RA, Precinct,
+    Leave type, Dates, Days, Cover, Submitted, Stage, Remarks, sorted by
+    header with column chips."""
     client = TestClient(ops_app())
     columns = [
         "ID",
@@ -788,7 +789,7 @@ def test_other_tables_sort_and_leave_records_share_their_columns() -> None:
         "Cover",
         "Submitted",
         "Stage",
-        "Approved",  # author, 2026-11-10
+        "Remarks",  # author, 2026-11-10
     ]
     for path in ("/ra-leave/admin/records", "/ra-leave/staff/records?as=Sam%20Lee"):
         head = client.get(path).text.split('id="rec-h"')[1].split("</thead>")[0]
