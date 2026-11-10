@@ -224,7 +224,9 @@ def test_policy_appeals_cover_and_approvals() -> None:
     assert "unless the Master overrides it" in page and "no built-in default" in page
     assert "cannot be done in advance and banked" in page
     assert "The Master (Sam Lee), personally" in page
-    assert "<dt>Final approval</dt>" not in page  # a choice now, not fixed (author, 2026-10-28)
+    # Who approves is Permissions' to say (author, 2026-11-10); Approvals
+    # sums it up.
+    assert "<dt>Final approval</dt><dd>Residential Admin (RAs in every slot)" in page
 
 
 def test_entitlements_follow_the_policy_rules() -> None:
@@ -483,15 +485,18 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     assert [(g, v, bool(c)) for g, v, c in radios] == [
         ("first", "slot", True),
         ("first", "none", False),
-        ("final", "unit", True),
-        ("final", "named", False),
     ]
-    first = re.findall(r'name="first-types" value="(\w+)"( checked)?', page)
-    assert first == [("RF", " checked"), ("RSLM", "")]
-    final = re.findall(r'name="final-types" value="(\w+)"( checked)?', page)
-    assert final == [("Master", ""), ("Admin", " checked"), ("Exec", "")]
+    # Who approves, first or final, is Permissions' (author, 2026-11-10).
+    ticks = dict(re.findall(r'aria-label="([^"]+)"( checked)? disabled>', page))
+    assert ticks["First approval, Residential Fellow"] == " checked"
+    assert ticks["First approval, Residential Student Life Manager"] == ""
+    assert ticks["Final approval, Residential Admin"] == " checked"
+    assert (
+        ticks["Final approval, Master"] == ""
+        and ticks["Final approval, Residential Executive"] == ""
+    )
     assert 'list="staff-names"' in page and page.count('<option value="') >= len(sample_data.STAFF)
-    assert "No first approver needed" in page and "each added by name" in page
+    assert "No first approver needed" in page
 
     monkeypatch.setitem(sample_leave.POLICY, "first", "none")
     monkeypatch.setitem(sample_leave.POLICY, "final", "named")
@@ -504,8 +509,8 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
         and "Final approval by Sam Lee" in steps
     )
     named = client().get(ADMIN + "policy").text
-    box = named.split('aria-label="Staff who may give final approval"')[1].split("</div>")[0]
-    assert re.findall(r'<span class="token">([^<]+)<button', box) == ["Sam Lee", "Rachel Yeo"]
+    assert 'aria-label="Final approval, Sam Lee" checked' in named
+    assert 'aria-label="Final approval, Rachel Yeo" checked' in named
     assert "<td>Sam Lee or Rachel Yeo</td>" in client().get(ADMIN + "routing").text
     dash = client().get(ADMIN).text
     assert (
@@ -655,11 +660,11 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     policy = c.get(ADMIN + "policy").text
     assert (
         "they open an appeal for that RA on Appeals" in policy
-        and "once someone chosen below agrees" in policy
+        and "once someone with Open appeals in Permissions agrees" in policy
     )
-    inviters = re.findall(r'name="inviter-unit-types" value="(\w+)"( checked)?', policy)
-    assert inviters == [("Master", " checked"), ("Admin", " checked"), ("Exec", "")]
-    assert 'name="inviters" value="unit" checked' in policy
+    assert 'aria-label="Open appeals, Master" checked' in policy
+    assert 'aria-label="Open appeals, Residential Admin" checked' in policy
+    assert 'aria-label="Open appeals, Residential Executive" disabled' in policy
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     assert sample_leave.appeals_on()
     assert sample_leave.can_appeal("Kai Ng") and not sample_leave.can_appeal(
@@ -947,3 +952,106 @@ def test_the_cover_tile_opens_the_set_it_counts_under_any_policy(monkeypatch) ->
     chips = page.split('class="col-chips rec-filters"')[1]
     assert "?cover=unconfirmed&amp;" in chips.split("</div>")[0]
     assert '<input type="hidden" name="cover" value="unconfirmed">' in page
+
+
+def test_policy_permissions_say_who_does_what_over_which_ras(monkeypatch) -> None:
+    """Author, 2026-11-10: one Permissions table on Policy saying who; a
+    role's scope is its slots (or every slot), a named person's is chosen,
+    overlaps resolved. Approvals keeps how, and sums up who; the Appeals
+    card's who-may-open moves here too."""
+    rows = {r["who"]: r for r in sample_leave.permission_rows()}
+    assert rows["Residential Fellow"]["scope"] == ("RAs assigned to staff's slots",)
+    assert rows["Master"]["scope"] == ("RAs in every slot",)
+    assert rows["Residential Fellow"]["perms"] == {"first", "view"}
+    assert rows["Residential Admin"]["perms"] == {"final", "open", "view", "admin"}
+    assert rows["Master"]["perms"] == {"open", "decide", "view", "admin"}
+    # RSLMs see their Wing's records today; the table says so.
+    assert rows["Residential Student Life Manager"]["perms"] == {"view"}
+    assert rows["Residential Executive"]["perms"] == frozenset()
+    assert rows["Hui Min Goh"]["kind"] == "named"
+    assert rows["Hui Min Goh"]["scope"] == ("Cypress", "Maple 03-08")
+    # Scope overlaps resolve: a choice inside one already there is not
+    # added; a broader one replaces the narrower ones it holds.
+    add = sample_leave.add_scope
+    assert add(("All RAs",), "Maple 03-08") == ("All RAs",)
+    assert add(("Cypress",), "Cypress A 04-12") == ("Cypress",)
+    assert add(("Cypress A 04-05-06", "Maple 03-08"), "Cypress") == ("Maple 03-08", "Cypress")
+    assert add(("Cypress", "Maple"), "All RAs") == ("All RAs",)
+    assert add(("Cypress",), "Nowhere") == ("Cypress",)
+    assert sample_leave.resolve_scope(["Willow A 04-05-06", "Willow A 04-12"]) == (
+        "Willow A 04-12",
+    )
+    levels = sample_leave.scope_levels()
+    assert levels["Willow A 04-05-06"] == ("All RAs", "Willow", "Willow A 04-12")
+
+    page = client().get(ADMIN + "policy").text
+    table = page.split('id="perms-h"')[1].split("</table>")[0]
+    assert [h for h in re.findall(r'<th scope="col"[^>]*>([^<]+)</th>', table)] == [
+        "Role or person",
+        "Scope",
+        "First approval",
+        "Final approval",
+        "Open appeals",
+        "Decide appeals",
+        "View records",
+        "Admin pages",
+    ]
+    assert '<span class="subtle">RAs in every slot</span>' in table
+    assert 'aria-label="Scope for Hui Min Goh"' in table
+    assert '<span class="token">Cypress<button' in table
+    assert 'aria-label="View records, Hui Min Goh" checked' in table
+    assert '<option value="All RAs">' in page and '<option value="Willow A 04-05-06">' in page
+    # Approvals sums up who; the old who-fieldsets are gone.
+    assert 'name="first-types"' not in page and 'name="final-types"' not in page
+    assert 'name="inviters"' not in page
+    first = "<dt>First approval</dt><dd>Residential Fellow (RAs assigned to staff&#39;s slots)"
+    assert first in page
+    # Named final approvers appear as named rows.
+    monkeypatch.setitem(sample_leave.POLICY, "final", "named")
+    monkeypatch.setitem(sample_leave.POLICY, "final_names", ("Sam Lee",))
+    named = {r["who"]: r for r in sample_leave.permission_rows()}
+    assert "final" in named["Sam Lee"]["perms"] and named["Sam Lee"]["kind"] == "named"
+    assert "final" not in named["Residential Admin"]["perms"]
+    # A chosen grant keeps its row and scope beside a routing one (Codex).
+    monkeypatch.setitem(sample_leave.POLICY, "final_names", ("Hui Min Goh",))
+    goh = [r for r in sample_leave.permission_rows() if r["who"] == "Hui Min Goh"]
+    assert sorted((sorted(r["perms"]), r["scope"]) for r in goh) == [
+        (["final"], ("RAs assigned to staff's slots",)),
+        (["view"], ("Cypress", "Maple 03-08")),
+    ]
+
+
+@pytest.mark.parametrize(
+    "policy",
+    [
+        {},
+        {"final": "named", "final_names": ("Sam Lee", "Priya Raman")},
+        {"inviters": "named", "inviter_names": ("Daniel Koh",)},
+        {"inviters": "slot", "inviter_types": ("RF",)},
+        {"appeals": "Off"},
+        {"first": "none"},
+    ],
+)
+def test_permissions_agree_with_routing(monkeypatch, policy) -> None:
+    """Review of 2026-11-10: each tick in Permissions is what routing grants,
+    under every Policy setting, so the table and the app cannot disagree."""
+    for key, value in policy.items():
+        monkeypatch.setitem(sample_leave.POLICY, key, value)
+    rows = sample_leave.permission_rows()
+    roles = {r["note"]: r["perms"] for r in rows if r["kind"] == "role"}
+    named = {r["who"]: r["perms"] for r in rows if r["kind"] == "named"}
+    sys_admins = {n for n, *_ in sample_data.SYS_ADMINS}
+    inviters = {n for p in sample_leave.precincts() for n in sample_leave.inviters_in(p)}
+    chosen = {g.name for g in sample_leave.NAMED_GRANTS}  # shown, not yet enforced
+    for person in sample_data.STAFF:
+        name = person.name
+        if name in chosen:
+            continue
+        perms = roles.get(person.abbrev, frozenset()) | named.get(name, frozenset())
+        assert ("final" in perms) == (name in sample_leave.final_approvers()), name
+        assert ("view" in perms) == bool(sample_leave.scope(name)), name
+        assert ("admin" in perms) == (name in sys_admins), name
+        decides = sample_leave.appeals_decided() and name == sample_leave.APPEAL_DECIDER
+        assert ("decide" in perms) == decides, name
+        if name in inviters:
+            assert "open" in perms, name
