@@ -9,12 +9,12 @@
      first stage rather than being one (spec §11, §25). #}
   <section class="tiles" aria-label="Pending by stage">
     {% for stage, count in leave.pending_by_stage() %}
-      <a class="tile" href="{{ url('/ra-leave/admin/applications') }}?stage={{ stage | urlencode }}">
+      <a class="tile" href="{{ url('/ra-leave/admin/records') }}?hide={{ leave.records_hide_except(stage) | urlencode }}&amp;period=whole">
         <span class="tile-n">{{ count }}</span>
         <span class="tile-l">{{ stage }}</span>
       </a>
     {% endfor %}
-    <a class="tile" href="{{ url('/ra-leave/admin/applications') }}?cover=unconfirmed">
+    <a class="tile" href="{{ url('/ra-leave/admin/records') }}?hide={{ leave.records_hide_except('Cover awaiting', 'Cover declined') | urlencode }}&amp;period=whole">
       <span class="tile-n">{{ leave.cover_unconfirmed() | length }}</span>
       <span class="tile-l">Cover not yet confirmed</span>
     </a>
@@ -34,7 +34,7 @@
               {% set away_cover = leave.cover_while_away() %}
               {% for a in leave.APPLICATIONS if a.overdue or (a.stage in leave.OPEN_STAGES and a.cover_status == "Declined" and leave.confirmation_needed(a)) or a in away_cover %}
                 <tr>
-                  <td class="nowrap"><a href="{{ url('/ra-leave/admin/applications/' ~ a.id) }}">{{ a.id }}</a></td>
+                  <td class="nowrap"><a href="{{ url('/ra-leave/admin/records/' ~ a.id) }}">{{ a.id }}</a></td>
                   <td class="strong nowrap">{{ a.ra }}</td>
                   <td class="nowrap">{{ a.precinct }}</td>
                   <td>{{ stage_chip(a.stage) }}</td>
@@ -67,7 +67,7 @@
             <tbody>
               {% for e in unsent %}
                 <tr>
-                  <td class="nowrap"><a href="{{ url('/ra-leave/admin/applications/' ~ e.application) }}">{{ e.application }}</a></td>
+                  <td class="nowrap"><a href="{{ url('/ra-leave/admin/records/' ~ e.application) }}">{{ e.application }}</a></td>
                   <td>{{ e.about }}<div class="subtle small">{{ e.at }}</div></td>
                   <td class="nowrap">{{ e.sender }}</td>
                   <td class="nowrap">{{ e.to }}</td>
@@ -111,7 +111,7 @@
             <thead><tr><th scope="col">RA</th><th scope="col">Precinct</th><th scope="col">Dates</th><th scope="col">Cover</th></tr></thead>
             <tbody>
               {% for a in leave.upcoming() %}
-                <tr><td class="strong nowrap"><a href="{{ url('/ra-leave/admin/applications/' ~ a.id) }}">{{ a.ra }}</a></td><td class="nowrap">{{ a.precinct }}</td><td class="nowrap">{{ a.dates }}</td><td>{{ a.cover }} {{ cover_chip(a.cover_status) }}</td></tr>
+                <tr><td class="strong nowrap"><a href="{{ url('/ra-leave/admin/records/' ~ a.id) }}">{{ a.ra }}</a></td><td class="nowrap">{{ a.precinct }}</td><td class="nowrap">{{ a.dates }}</td><td>{{ a.cover }} {{ cover_chip(a.cover_status) }}</td></tr>
               {% else %}
                 <tr><td colspan="4" class="subtle">No approved leave later this term.</td></tr>
               {% endfor %}
@@ -130,7 +130,7 @@
             <thead><tr><th scope="col">When</th><th scope="col">Who</th><th scope="col">What</th><th scope="col">Reason</th></tr></thead>
             <tbody>
               {% for c in leave.CORRECTIONS %}
-                <tr><td class="nowrap">{{ leave.short_date(c.when) }}</td><td class="nowrap">{{ c.actor }}</td><td>{% if c.application %}<a href="{{ url('/ra-leave/admin/applications/' ~ c.application) }}">{{ c.what }}</a>{% else %}{{ c.what }}{% endif %}</td><td>{{ c.reason }}</td></tr>
+                <tr><td class="nowrap">{{ leave.short_date(c.when) }}</td><td class="nowrap">{{ c.actor }}</td><td>{% if c.application %}<a href="{{ url('/ra-leave/admin/records/' ~ c.application) }}">{{ c.what }}</a>{% else %}{{ c.what }}{% endif %}</td><td>{{ c.reason }}</td></tr>
               {% endfor %}
             </tbody>
           </table>

@@ -498,7 +498,7 @@ def test_leave_records_show_a_chosen_period() -> None:
             name
             for r in rows
             if status is None or f">{status}</span>" in r
-            for name in re.findall(r'applications/L-\d+[^"]*">([^<]+)</a>', r)
+            for name in re.findall(r'<td class="strong nowrap" data-sort-value="([^"]+)"', r)
         ]
 
     assert sample_leave.period("bogus")[:2] == ("week", "This week")
@@ -648,7 +648,7 @@ def test_staff_home_shows_this_week_and_admin_detail_the_balance() -> None:
     later = home.split('id="later-h">Later this week</h2>')[1].split("</section>")[0]
     assert re.findall(r'<span class="strong">([^<]+)</span>', later) == ["Pranav Iyer"]
     assert [a.id for a in sample_leave.later_this_week("Sam Lee")] == ["L-0108"]
-    admin = c.get("/ra-leave/admin/applications/L-0101").text
+    admin = c.get("/ra-leave/admin/records/L-0101").text
     card = admin.split('id="bal-h">')[1].split("</section>")[0]
     assert card.startswith("Chloe Lim's Personal leave, ")
     assert re.findall(r"<dt>(\w+)</dt><dd>(\d+)</dd>", card) == [
@@ -767,9 +767,10 @@ def test_leave_records_list_every_application_filtered_by_status_and_precinct() 
     assert order == sorted(order) and 'id="away-h"' not in page and 'id="upcoming-h"' not in page
     head = page.split('id="rec-h"')[1].split("</thead>")[0]
     assert '<div class="grid-thirds one-two gap-above-sm">' in head
-    status_chips, precinct_chips = (
+    status_chips, cover_chips, precinct_chips = (
         part.split("</div>")[0] for part in head.split('class="col-chips rec-filters"')[1:]
     )
+    assert cover_chips.count('class="col-chip on"') == 4 and "Cover confirmed<span" in cover_chips
     assert status_chips.count('class="col-chip on"') == 9
     assert precinct_chips.count('class="col-chip on"') == 9
     assert "Pending first approval<span" in status_chips
@@ -802,11 +803,13 @@ def test_leave_records_list_every_application_filtered_by_status_and_precinct() 
         'href="/ra-leave/staff/records?as=Sam%20Lee&amp;hide=Willow%20A%2013-25&amp;period=term"'
         in off
     )
-    # An RF sees no Precinct chips or column.
+    # An RF sees no Precinct chips...
     daniel = c.get(STAFF + "records").text
     dchips = daniel.split('class="col-chips rec-filters"')[1].split("</div>")[0]
     assert dchips.count('class="col-chip on"') == 9 and "Cypress" not in dchips
-    assert '<th scope="col">Precinct</th>' not in daniel.split('id="rec-h"')[1].split("</thead>")[0]
+    # ...though the Precinct column is always there, the table being the
+    # admin's too (author, 2026-11-10).
+    assert '<th scope="col">Precinct</th>' in daniel.split('id="rec-h"')[1].split("</thead>")[0]
     # Summary: establishment and days at each strength; no total.
     summary = page.split('id="sum-h"')[1].split("</section>")[0]
     assert 'scope="row">Total' not in summary
@@ -908,7 +911,7 @@ def test_a_senior_cancels_leave_under_way_and_the_admin_s_page_says_who_is_told(
     assert "Olivia Ng and Siti Rahman, their RF, are told." in sam
     assert ">Cancel leave under way</button>" in sam
     assert ">Cancel leave under way</button>" not in c.get(STAFF + "applications/L-0115" + SAM).text
-    admin = c.get("/ra-leave/admin/applications/L-0107").text
+    admin = c.get("/ra-leave/admin/records/L-0107").text
     assert "This leave is under way" in admin and "Siti Rahman, their RF," in admin
 
 
@@ -919,18 +922,21 @@ def test_leave_records_chips_select_and_clear_all_and_the_page_stays_at_the_top(
     applies it, with no Show period button (kept for a browser without
     scripts)."""
     hidden = frozenset({"Rejected", "Maple 03-08"})
-    status, precinct = sample_leave.record_groups("Sam Lee", hidden)
-    assert (status["name"], precinct["name"]) == ("Status", "Precinct")
+    status, cover, precinct = sample_leave.record_groups("Sam Lee", hidden)
+    assert (status["name"], cover["name"], precinct["name"]) == ("Status", "Cover", "Precinct")
     assert status["select_all"] == "Maple 03-08"
     assert status["clear_all"] == ",".join(sorted(hidden | set(sample_leave.record_statuses())))
     assert precinct["select_all"] == "Rejected"
     assert set(precinct["clear_all"].split(",")) == {"Rejected", *sample_leave.scope("Sam Lee")}
-    assert [g["name"] for g in sample_leave.record_groups("Daniel Koh", frozenset())] == ["Status"]
+    assert [g["name"] for g in sample_leave.record_groups("Daniel Koh", frozenset())] == [
+        "Status",
+        "Cover",
+    ]
 
     c = client()
     page = c.get(STAFF + "records" + SAM + "&period=term&hide=Rejected,Maple 03-08").text
     groups = page.split('class="col-chips rec-filters"')[1:]
-    assert len(groups) == 2
+    assert len(groups) == 3
     for group in groups:
         group = group.split("</div>")[0]
         links = re.findall(r"<a [^>]*>(?:Select all|Clear all)", group)
@@ -1069,3 +1075,43 @@ def test_the_summary_counts_an_ra_once_a_day_and_three_or_more_as_minus_three(
         if r["precinct"] == "Willow A 13-25"
     )
     assert row["days"] == (0, 1, 0, 0)  # once, not twice
+
+
+def test_records_filter_by_cover_take_from_and_to_and_match_the_admin_s() -> None:
+    """Author, 2026-11-10: Records gets Cover chips (Cover confirmed,
+    awaiting, declined, released), and under the period From and To boxes,
+    one above the other; the admin's Leave records (Applications until
+    then) is the same card over the whole Unit, Export under the table."""
+    c = client()
+    _, _, start, end = sample_leave.period("whole")
+    unconfirmed = sample_leave.records(
+        "Sam Lee", start, end, frozenset({"Cover confirmed", "Cover released"})
+    )
+    assert unconfirmed and all(a.cover_status in ("Awaiting", "Declined") for a, _ in unconfirmed)
+    assert sample_leave.records_hidden("Daniel Koh", "Cover declined,Maple 03-08") == {
+        "Cover declined"
+    }
+    # From and To: a range that parses and runs forwards, else the period.
+    custom = sample_leave.period_range(None, "2026-09-01", "2026-09-30")
+    assert custom[0] == "custom" and custom[2:] == (
+        sample_leave.date(2026, 9, 1),
+        sample_leave.date(2026, 9, 30),
+    )
+    assert sample_leave.period_range("term", "2026-09-30", "2026-09-01")[0] == "term"
+    assert sample_leave.period_range("next", "x", "")[0] == "next"
+    page = c.get(STAFF + "records" + SAM + "&period=custom&from=2026-09-01&to=2026-09-30").text
+    form = page.split('id="period-form"')[1].split("</form>")[0]
+    assert form.index('id="period"') < form.index('id="from"') < form.index('id="to"')
+    assert 'name="from" class="input" type="date" value="2026-09-01"' in form
+    assert '<option value="custom" selected>' in form
+    chips = page.split('class="col-chips rec-filters"')[1].split("</div>")[0]
+    assert "period=custom&amp;from=2026-09-01&amp;to=2026-09-30" in chips
+    sept = sample_leave.records("Sam Lee", custom[2], custom[3])
+    assert f'Leave applications <span class="count">· {len(sept)}</span>' in page
+    # The admin's Leave records: the same card, the whole Unit, Export below.
+    admin = c.get("/ra-leave/admin/records?period=whole").text
+    assert 'Leave applications <span class="count">· 20</span>' in admin
+    groups = admin.split('class="col-chips rec-filters"')[1:]
+    assert [g.count('class="col-chip on"') for g in groups] == [9, 4, 9]
+    assert admin.index("</table>") < admin.index("Export CSV</button>")
+    assert 'href="/ra-leave/admin/records/L-0101">L-0101</a>' in admin

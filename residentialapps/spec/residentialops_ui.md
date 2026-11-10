@@ -89,7 +89,7 @@ with the page.
   roster and RA roster (§7); RA Leave's split by audience (`residentialapps/spec/applications.md`):
   an RA's under `/ra-leave/`, staff's under `/ra-leave/staff/`, and sys
   admins' under `/ra-leave/admin/` (Dashboard, Policy, Entitlements,
-  Approval chain, Applications, Appeals), each set its own. A detail page
+  Approval chain, Leave records, Appeals), each set its own. A detail page
   adds a back link instead of a breadcrumb, and marks the tab of the list
   it belongs to (`aria-current="true"`; author, 2026-10-29).
 - **The favicon** is the accent behind a white glyph that runs off the
@@ -190,9 +190,10 @@ model (author, 2026-10-27):
   or sample viewer) across a reload, and dropped once its column is hidden
   or gone (author, 2026-10-29). Assignments' slots table sorts the same way, with a chip
   for Notes alone; sorted, each row names its levels and the grouping
-  rules go. Leave admin's Applications takes chips for all but ID and RA;
-  Entitlements, Approval chain's Precincts, Sys admin's grants and audit
-  log, and Leave records sort only (`data-sort-auto`). Policy's row
+  rules go. Entitlements, Approval chain's Precincts, Sys admin's grants
+  and audit log, and Leave records, the staff's and the admin's (one
+  table since 2026-11-10, its column chips gone), sort only
+  (`data-sort-auto`). Policy's row
   builders, Terms, the dashboard's cards, Delegates and the appeals
   tables, short or edited in place, take neither (author, 2026-10-29).
   On every sorted table an empty value (a None chip, an empty cell) sorts

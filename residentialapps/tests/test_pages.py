@@ -772,33 +772,22 @@ def test_the_slots_table_sorts_with_a_notes_chip_only() -> None:
     assert '<td class="cell" data-col="ra" data-sort-value="Chloe Lim">' in page
 
 
-def test_other_tables_sort_and_applications_has_column_chips() -> None:
-    """Ruled 2026-10-29: Leave admin's Applications takes column chips (all
-    but ID and RA) and sorting; Entitlements, Approval chain, Sys admin's
-    tables and Leave records sort (`data-sort-auto`)."""
+def test_other_tables_sort_and_leave_records_share_their_columns() -> None:
+    """Ruled 2026-10-29: Entitlements, Approval chain, Sys admin's tables
+    and Leave records sort (`data-sort-auto`). The admin's Leave records and
+    the staff's Records share one table (author, 2026-11-10): ID, RA,
+    Precinct, Leave type, Dates, Days, Cover, Submitted, Stage."""
     client = TestClient(ops_app())
-    apps = client.get("/ra-leave/admin/applications").text
-    chips = apps.split('data-col-toggles-for="apps-table"')[1].split("</p>")[0]
-    assert re.findall(r'data-col-toggle="(\w+)"', chips) == [
-        "precinct",
-        "type",
-        "dates",
-        "days",
-        "cover",
-        "stage",
-        "submitted",
-    ]
-    head = apps.split('id="apps-table"')[1].split("</thead>")[0]
-    assert (
-        len(re.findall(r'class="sortable[ "]', head)) == 9
-        and 'class="sortable num" data-col="days"' in head
-    )
-    assert 'data-col="dates" data-sort-value="2026-' in apps
+    columns = ["ID", "RA", "Precinct", "Leave type", "Dates", "Days", "Cover", "Submitted", "Stage"]
+    for path in ("/ra-leave/admin/records", "/ra-leave/staff/records?as=Sam%20Lee"):
+        head = client.get(path).text.split('id="rec-h"')[1].split("</thead>")[0]
+        assert re.findall(r'<th scope="col"[^>]*>([^<]+)</th>', head) == columns, path
     for path, tables in (
         ("/ra-leave/admin/entitlements", 1),
         ("/ra-leave/admin/routing", 1),
         ("/sys-admin/", 2),
         ("/ra-leave/staff/records?as=Sam%20Lee", 2),
+        ("/ra-leave/admin/records", 1),
     ):
         assert client.get(path).text.count("<table data-sort-auto>") == tables, path
 

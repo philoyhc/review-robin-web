@@ -142,7 +142,8 @@ def records(request: Request) -> Response:
     return _page(
         request,
         "records.html",
-        period=sample_leave.period(q.get("period")),
+        # A named period or From and To (author, 2026-11-10).
+        period=sample_leave.period_range(q.get("period"), q.get("from"), q.get("to")),
         hide=q.get("hide"),
         # The Summary's counts turned off (author, 2026-11-10).
         uncount=q.get("uncount"),

@@ -67,8 +67,15 @@ def test_the_dashboard_counts_pending_by_stage_and_flags_what_needs_attention() 
         ("1", "Appeal to the Master"),
         ("4", "Cover not yet confirmed"),
     ]
-    assert tiles[0][0] == "/ra-leave/admin/applications?stage=Pending%20first%20approval"
-    assert tiles[3][0] == "/ra-leave/admin/applications?cover=unconfirmed"
+    # Each tile opens Leave records over the whole term with only its rows
+    # left on (author, 2026-11-10: Applications became Leave records).
+    assert tiles[0][0].startswith("/ra-leave/admin/records?hide=") and tiles[0][0].endswith(
+        "&amp;period=whole"
+    )
+    assert "Pending%20first%20approval" not in tiles[0][0]
+    assert tiles[3][0] == (
+        "/ra-leave/admin/records?hide=Cover%20confirmed%2CCover%20released&amp;period=whole"
+    )
     attention = page.split('id="attention-h"')[1].split("</section>")[0]
     assert re.findall(r">(L-\d+)</a>", attention) == ["L-0103", "L-0104", "L-0107", "L-0109"]
     assert "Pranav Iyer is away too" in attention and "Chloe Lim declined cover" in attention
@@ -85,23 +92,29 @@ def test_the_dashboard_counts_pending_by_stage_and_flags_what_needs_attention() 
 
 def test_a_tile_opens_the_rows_it_counts() -> None:
     c = client()
-    first = c.get(ADMIN + "applications", params={"stage": "Pending first approval"}).text
-    assert re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', first) == [
+    page = c.get(ADMIN).text
+    links = re.findall(r'<a class="tile" href="([^"]*)"', page)
+    first = c.get(links[0].replace("&amp;", "&")).text
+    assert sorted(re.findall(r'href="/ra-leave/admin/records/(L-\d+)"', first)) == [
         "L-0101",
-        "L-0114",
         "L-0102",
-        "L-0109",
         "L-0104",
+        "L-0109",
+        "L-0114",
     ]
-    assert "<option selected>Pending first approval</option>" in first
-    cover = c.get(ADMIN + "applications?cover=unconfirmed").text
-    assert sorted(re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', cover)) == [
+    cover = c.get(links[-1].replace("&amp;", "&")).text
+    assert sorted(re.findall(r'href="/ra-leave/admin/records/(L-\d+)"', cover)) == [
         "L-0102",
         "L-0105",
         "L-0109",
         "L-0114",
     ]  # L-0105: the appeal's cover awaits (audit, 2026-10-29)
-    assert "· 4 of 20" in cover
+    assert 'Leave applications <span class="count">· 4</span>' in cover
+    # An old Applications link lands on Leave records, its query kept.
+    old = c.get(ADMIN + "applications?stage=x", follow_redirects=False)
+    assert old.status_code == 303 and old.headers["location"] == "/ra-leave/admin/records?stage=x"
+    old = c.get(ADMIN + "applications/L-0101", follow_redirects=False)
+    assert old.headers["location"] == "/ra-leave/admin/records/L-0101"
 
 
 def test_policy_sets_leave_types_with_their_own_entitlement_rules() -> None:
@@ -280,24 +293,24 @@ def test_a_delegate_stands_in_for_a_person_between_dates() -> None:
 
 def test_applications_list_every_one_and_open_to_their_timeline() -> None:
     c = client()
-    page = c.get(ADMIN + "applications").text
+    page = c.get(ADMIN + "records?period=whole").text
     for a in sample_leave.APPLICATIONS:
-        assert f'href="/ra-leave/admin/applications/{a.id}">{a.id}</a>' in page
-    detail = c.get(ADMIN + "applications/L-0105").text
+        assert f'href="/ra-leave/admin/records/{a.id}">{a.id}</a>' in page
+    detail = c.get(ADMIN + "records/L-0105").text
     assert "Gwen Ho" in detail and "family wedding" in detail
     assert "Sent to Sam Lee as an extra-leave appeal" in detail
-    approved = c.get(ADMIN + "applications/L-0106").text
+    approved = c.get(ADMIN + "records/L-0106").text
     assert (
         "Final approval by Rachel Yeo" in approved and ">Cancel approved leave</button>" in approved
     )
     assert "Reassign" not in approved
-    rejected = c.get(ADMIN + "applications/L-0110").text
+    rejected = c.get(ADMIN + "records/L-0110").text
     assert (
         ">Correct the record</button>" in rejected
         and "Cancel" not in rejected
         and "Reassign" not in rejected
     )
-    assert c.get(ADMIN + "applications/L-9999").status_code == 404
+    assert c.get(ADMIN + "records/L-9999").status_code == 404
 
 
 def test_no_platform_only_date_format() -> None:
@@ -485,7 +498,7 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     )
     rejected = [s for _, s, _ in sample_leave.timeline(_by_id("L-0110"))]
     assert "Rejected by Sam Lee" in rejected
-    assert client().get(ADMIN + "applications/L-0106").status_code == 200
+    assert client().get(ADMIN + "records/L-0106").status_code == 200
     routing = client().get(ADMIN + "routing").text.split('id="delegates-h"')[1]
     assert "Standing in" not in routing and routing.count(">No first approval</span>") == len(
         sample_leave.DELEGATES
@@ -532,9 +545,9 @@ def test_the_admin_pages_follow_the_policy_switches(monkeypatch) -> None:
     slot holds: the dashboard flags the gap. An appeal is never reassigned:
     the Master decides it personally."""
     c = client()
-    assert ">Reassign the approval</button>" not in c.get(ADMIN + "applications/L-0105").text
-    assert ">Reassign the approval</button>" in c.get(ADMIN + "applications/L-0101").text
-    detail = c.get(ADMIN + "applications/L-0101").text
+    assert ">Reassign the approval</button>" not in c.get(ADMIN + "records/L-0105").text
+    assert ">Reassign the approval</button>" in c.get(ADMIN + "records/L-0101").text
+    detail = c.get(ADMIN + "records/L-0101").text
     assert (
         '<span class="chip chip-mute">AY2026-2027</span>' in detail
         and "27 Oct</span> · Submitted by Chloe Lim" in detail
@@ -557,8 +570,8 @@ def test_the_admin_pages_follow_the_policy_switches(monkeypatch) -> None:
     monkeypatch.setattr(sample_leave, "APPLICATIONS", no_appeals)
     dash = c.get(ADMIN).text
     assert "Appeal to the Master" not in dash
-    stage_filter = c.get(ADMIN + "applications").text.split('id="stage"')[1].split("</select>")[0]
-    assert "Appeal to the Master" not in stage_filter
+    chips = c.get(ADMIN + "records?period=whole").text.split('class="col-chips rec-filters"')[1]
+    assert "Appeal to the Master" not in chips.split("</div>")[0]
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ("Master",))  # held on no slot
     card = c.get(ADMIN).text.split('id="gaps-h"')[1].split("</section>")[0]
     assert "9 Precincts without a first approver." in card and card.count(">Gap</span>") == 9
@@ -613,7 +626,7 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     )
     assert rows[:2] == [("Gwen Ho", "Sam Lee"), ("Kai Ng", "Rachel Yeo")]
     assert (
-        'href="/ra-leave/admin/applications/L-0105">Sent: L-0105</a>' in page
+        'href="/ra-leave/admin/records/L-0105">Sent: L-0105</a>' in page
         and "selected" not in page.split('id="inv-by"')[1].split("</select>")[0]
     )
     assert (
@@ -701,7 +714,7 @@ def test_review_fixes_on_the_admin_side(monkeypatch) -> None:
     assert "<option selected>Grace Ho</option>" in routing and "Not a first approver" in routing
     monkeypatch.setitem(sample_leave.POLICY, "first", "none")
     assert 'value="RSLM" checked' not in c.get(ADMIN + "policy").text
-    assert "Pending first approval" not in c.get(ADMIN + "applications").text
+    assert "Pending first approval" not in c.get(ADMIN + "records?period=whole").text
     monkeypatch.setitem(sample_leave.POLICY, "final", "named")
     monkeypatch.setitem(sample_leave.POLICY, "final_names", ())
     dashboard = c.get(ADMIN).text
@@ -723,10 +736,10 @@ def test_review_fixes_on_the_admin_side(monkeypatch) -> None:
         "Kai Ng" in c.get(ADMIN + "appeals").text
         and "agreed by email" not in c.get(ADMIN + "appeals").text
     )
-    detail = c.get(ADMIN + "applications/L-0105").text
+    detail = c.get(ADMIN + "records/L-0105").text
     assert (
         "Personal leave · extra leave" in detail
-        and 'href="/ra-leave/admin/applications" aria-current="true"' in detail
+        and 'href="/ra-leave/admin/records" aria-current="true"' in detail
     )
 
 
@@ -737,7 +750,7 @@ def test_cancelled_leave_and_decision_records(monkeypatch) -> None:
     c = client()
     cancelled = _by_id("L-0116")
     assert cancelled.stage == "Cancelled" and cancelled.cover_status == "Cancelled"
-    assert "<option>Cancelled</option>" in c.get(ADMIN + "applications").text
+    assert ">Cancelled<span" in c.get(ADMIN + "records?period=whole").text  # its chip
     steps = sample_leave.timeline(cancelled)
     assert steps[-1] == (
         "20 Oct",
@@ -793,7 +806,7 @@ def test_dashboard_reports_and_export(monkeypatch) -> None:
         and "Beyond entitlement</dt><dd>3 days"
         in c.get("/ra-leave/staff/applications/L-0118?as=Sam%20Lee").text
     )
-    assert "Export CSV" in c.get(ADMIN + "applications").text
+    assert "Export CSV" in c.get(ADMIN + "records?period=whole").text
     monkeypatch.setitem(sample_leave.ADJUSTMENTS, ("Chloe Lim", "Personal leave"), (-9, ""))
     assert (
         "<strong>Chloe Lim</strong>, Personal leave: Over entitlement by 7 days, pending included."
@@ -857,14 +870,14 @@ def test_failed_emails_stay_visible_and_can_be_resent() -> None:
     failed = sample_leave.failed_emails()
     assert {e.application for e in failed} == {"L-0101", "L-0115", "L-0116"}
     board = c.get("/ra-leave/admin/").text.split('id="unsent-h"')[1].split("</section>")[0]
-    assert re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', board) == [
+    assert re.findall(r'href="/ra-leave/admin/records/(L-\d+)"', board) == [
         e.application for e in failed
     ]
     assert board.count(">Resend</button>") == len(failed)
     assert 'disabled aria-label="Resend L-0116 approved leave cancelled to Kai Ng">' in board
     # The admin sees every email on the application, sent or not.
     page = (
-        c.get("/ra-leave/admin/applications/L-0116")
+        c.get("/ra-leave/admin/records/L-0116")
         .text.split('id="emails-h"')[1]
         .split("</section>")[0]
     )
@@ -875,12 +888,10 @@ def test_failed_emails_stay_visible_and_can_be_resent() -> None:
     # sender (ruled 2026-10-29).
     assert (
         "it goes from the admin's account, naming its original sender"
-        in c.get("/ra-leave/admin/applications/L-0116").text
+        in c.get("/ra-leave/admin/records/L-0116").text
     )
     assert "from your own account, naming its original sender" in c.get("/ra-leave/admin/").text
-    assert (
-        'id="emails-h"' not in c.get("/ra-leave/admin/applications/L-0102").text
-    )  # no emails, no card
+    assert 'id="emails-h"' not in c.get("/ra-leave/admin/records/L-0102").text  # no emails, no card
 
 
 def test_the_audit_s_consistency_fixes() -> None:
@@ -889,8 +900,8 @@ def test_the_audit_s_consistency_fixes() -> None:
     pages' switcher reaches the staff side; final approvers read as Policy
     names them."""
     c = client()
-    apps = c.get(ADMIN + "applications").text
-    row = apps.split('href="/ra-leave/admin/applications/L-0118"')[1].split("</tr>")[0]
+    apps = c.get(ADMIN + "records?period=whole").text
+    row = apps.split('href="/ra-leave/admin/records/L-0118"')[1].split("</tr>")[0]
     assert '<span class="chip chip-accent">Extra leave</span>' in row
     assert "Hui Min Goh" not in sample_leave.delegate_choices("Daniel Koh")  # in no slot
     assert all(

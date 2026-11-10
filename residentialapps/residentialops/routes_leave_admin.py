@@ -16,7 +16,7 @@ from residentialapps.residentialops.pages import (
     placeholders_previewers_only,
     render,
 )
-from residentialapps.web.urls import url_path
+from residentialapps.web.urls import app_path, url_path
 
 router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 
@@ -95,23 +95,45 @@ def appeals(request: Request) -> Response:
     )
 
 
+@router.get("/ra-leave/admin/records", name="residentialops_leave_admin_records")
+def records(request: Request) -> Response:
+    # Leave records (author, 2026-11-10; Applications until then): the
+    # staff's Records card over the whole Unit, its filters the same chips
+    # and period, Export and Record external leave under the table.
+    q = request.query_params
+    return _page(
+        request,
+        "records.html",
+        period=sample_leave.period_range(q.get("period"), q.get("from"), q.get("to")),
+        hide=q.get("hide"),
+        here=app_path(request),
+    )
+
+
 @router.get("/ra-leave/admin/applications", name="residentialops_leave_admin_applications")
 def applications(request: Request) -> Response:
-    # The dashboard's tiles link here filtered (`?stage=`, `?cover=`); the
-    # rest of the filter card is inert until item 2.
-    stage = request.query_params.get("stage", "")
-    cover = request.query_params.get("cover", "")
-    shown = tuple(
-        a
-        for a in sample_leave.APPLICATIONS
-        if (not stage or a.stage == stage)
-        and (cover != "unconfirmed" or a in sample_leave.cover_unconfirmed())
-    )
-    return _page(request, "applications.html", shown=shown, stage=stage, cover=cover)
+    # Applications became Leave records (author, 2026-11-10); an old link,
+    # the dashboard's filtered ones too, lands there, its query kept.
+    return _moved(request, "/ra-leave/admin/records")
 
 
 @router.get(
-    "/ra-leave/admin/applications/{application_id}", name="residentialops_leave_admin_application"
+    "/ra-leave/admin/applications/{application_id}",
+    name="residentialops_leave_admin_application_old",
+)
+def application_old(request: Request, application_id: str) -> Response:
+    return _moved(request, f"/ra-leave/admin/records/{application_id}")
+
+
+def _moved(request: Request, path: str) -> Response:
+    query = request.url.query
+    return RedirectResponse(
+        url_path(request, path) + (f"?{query}" if query else ""), status_code=303
+    )
+
+
+@router.get(
+    "/ra-leave/admin/records/{application_id}", name="residentialops_leave_admin_application"
 )
 def application(request: Request, application_id: str) -> Response:
     found = sample_leave.by_id(application_id)
@@ -122,5 +144,5 @@ def application(request: Request, application_id: str) -> Response:
         "application.html",
         app=found,
         steps=sample_leave.timeline(found),
-        current_tab="/ra-leave/admin/applications",
+        current_tab="/ra-leave/admin/records",
     )
