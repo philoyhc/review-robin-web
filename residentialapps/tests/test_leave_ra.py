@@ -317,7 +317,7 @@ def test_the_audit_s_ra_page_fixes() -> None:
     Secondary; an appeal's still ends it."""
     page = TestClient(ops_app()).get("/ra-leave/applications/L-0101").text
     assert '<a class="back" href="/ra-leave/history">‹ My history</a>' in page
-    assert 'class="btn btn-secondary" aria-label="Withdraw 6 Nov – 8 Nov to your drafts"' in page
+    assert 'class="btn btn-secondary" aria-label="Withdraw to draft, 6 Nov – 8 Nov"' in page
 
 
 def test_the_ra_pages_switch_sample_viewer() -> None:
@@ -723,3 +723,36 @@ def test_an_ra_withdraws_pending_leave_to_draft_and_cancels_approved_leave() -> 
     assert "Cancel leave</button>" not in done and "Withdraw" not in done
     kai = c.get(RA + "applications/L-0116?as=Kai%20Ng").text  # already cancelled
     assert "Cancel leave</button>" not in kai and "Withdraw" not in kai
+
+
+def test_withdraw_and_cancel_on_an_appeal_and_on_leave_under_way(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The cold read (2026-11-10): an appeal's Withdraw ends it and is
+    Destructive, a granted appeal is never cancelled by the RA, and leave
+    already under way (L-0107 starts today) says the Residential Admin
+    changes it. No sample RA viewer reaches these, so three are added."""
+    from dataclasses import replace
+
+    granted = sample_leave.by_id("L-0118")
+    assert granted and granted.appeal
+    later = replace(
+        granted, start=sample_leave.date(2026, 12, 1), end=sample_leave.date(2026, 12, 2)
+    )
+    assert not sample_leave.can_cancel(later)
+    monkeypatch.setattr(
+        sample_leave,
+        "RA_VIEWERS",
+        sample_leave.RA_VIEWERS + (("Gwen Ho", ""), ("Olivia Ng", ""), ("Bella Koh", "")),
+    )
+    c = client()
+    appeal = c.get(RA + "applications/L-0105?as=Gwen%20Ho").text
+    assert (
+        'class="btn btn-danger" aria-label="Withdraw, 20 Nov – 23 Nov" disabled>Withdraw</button>'
+        in appeal
+    )
+    assert "your cover and the Master are told" in appeal and "Withdraw to draft" not in appeal
+    begun = c.get(RA + "applications/L-0107?as=Olivia%20Ng").text
+    assert "changed by the Residential Admin" in begun and "Cancel leave</button>" not in begun
+    final = c.get(RA + "applications/L-0103?as=Bella%20Koh").text  # pending final approval
+    assert ">Withdraw to draft</button>" in final

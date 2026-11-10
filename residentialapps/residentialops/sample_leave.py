@@ -311,7 +311,9 @@ STAGES = (
     "Approved",
     "Rejected",
     "Withdrawn",
-    "Cancelled",  # approved, then cancelled by an admin (spec §30, §21.4)
+    # Approved, then cancelled: by an admin (spec §30, §21.4), or by the RA
+    # before it begins (2026-11-10).
+    "Cancelled",
 )
 OPEN_STAGES = STAGES[:3]
 OVERDUE_DAYS = 3  # a pending application older than this is flagged
@@ -2121,17 +2123,20 @@ def can_withdraw(application: Application) -> bool:
 def withdraws_to_draft(application: Application) -> bool:
     """Withdrawing ordinary leave takes it back to the RA's drafts, filled in
     as sent, to change and send again (author, 2026-11-10); My history keeps
-    the sent one as Withdrawn (§20). An appeal has no draft yet (§30,
-    `APPEAL_DRAFT`), so withdrawing one ends it."""
+    the sent one as Withdrawn (§20). The prototype has no appeal draft yet
+    (§30's `APPEAL_DRAFT` waits for the wiring, as `Draft` says), so for now
+    withdrawing an appeal ends it."""
     return can_withdraw(application) and not application.appeal
 
 
 def can_cancel(application: Application) -> bool:
-    """An RA may cancel approved leave that has not begun (author,
-    2026-11-10). It keeps its record, as Cancelled, and releases its days
-    and its cover (§20, §30). Leave already begun is the Residential
-    Admin's to cancel (§21.4)."""
-    return application.stage == "Approved" and application.start > TODAY
+    """An RA may cancel an approved application (author, 2026-11-10). It
+    keeps its record, as Cancelled (§30), and releases its days and its
+    cover, as Applications' admin cancel does. Proposed here, for the author
+    to confirm: only ordinary leave not yet begun, leave under way being the
+    Residential Admin's (§21.4), and a granted appeal, which §30 gives no
+    cancelled state, too."""
+    return application.stage == "Approved" and application.start > TODAY and not application.appeal
 
 
 def can_appeal(ra: str) -> bool:
