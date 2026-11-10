@@ -77,6 +77,9 @@ def test_a_sys_admin_off_the_staff_side_gets_no_staff_pages(monkeypatch) -> None
     monkeypatch.setattr(
         sample_data, "SYS_ADMINS", sample_data.SYS_ADMINS + (("Hui Min Goh", "", "", ""),)
     )
+    from residentialapps.residentialops import sample_leave
+
+    monkeypatch.setattr(sample_leave, "NAMED_GRANTS", ())  # her View records grant aside
     targets = [a["path"] for a in routes_home.choices("Hui Min Goh")]
     assert (
         not any(t.startswith("/ra-leave/staff/") for t in targets) and "/ra-leave/admin/" in targets

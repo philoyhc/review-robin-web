@@ -984,8 +984,8 @@ def test_policy_permissions_say_who_does_what_over_which_ras(monkeypatch) -> Non
     assert rows["Residential Fellow"]["perms"] == {"first", "view"}
     assert rows["Residential Admin"]["perms"] == {"final", "open", "view", "admin"}
     assert rows["Master"]["perms"] == {"open", "decide", "view", "admin"}
-    # RSLMs see their Wing's records today; the table says so.
-    assert rows["Residential Student Life Manager"]["perms"] == {"view"}
+    # RSLMs need no RA Leave (author, 2026-11-09): no tick, no access.
+    assert rows["Residential Student Life Manager"]["perms"] == frozenset()
     assert rows["Residential Executive"]["perms"] == frozenset()
     assert rows["Hui Min Goh"]["kind"] == "named"
     assert rows["Hui Min Goh"]["scope"] == ("Cypress", "Maple 03-08")
@@ -1061,14 +1061,18 @@ def test_permissions_agree_with_routing(monkeypatch, policy) -> None:
     named = {r["who"]: r["perms"] for r in rows if r["kind"] == "named"}
     sys_admins = {n for n, *_ in sample_data.SYS_ADMINS}
     inviters = {n for p in sample_leave.precincts() for n in sample_leave.inviters_in(p)}
-    chosen = {g.name for g in sample_leave.NAMED_GRANTS}  # shown, not yet enforced
     for person in sample_data.STAFF:
         name = person.name
-        if name in chosen:
-            continue
         perms = roles.get(person.abbrev, frozenset()) | named.get(name, frozenset())
+        # Access follows the table (author, 2026-11-10): any tick but Admin
+        # pages, over some RA, opens the staff pages.
+        if not (perms - {"admin"}):
+            assert sample_leave.scope(name) == (), name
         assert ("final" in perms) == (name in sample_leave.final_approvers()), name
-        assert ("view" in perms) == bool(sample_leave.scope(name)), name
+        viewer = person.abbrev in sample_leave.POLICY["viewer_types"] or any(
+            g.name == name and "view" in g.perms for g in sample_leave.NAMED_GRANTS
+        )
+        assert ("view" in perms) == viewer, name
         assert ("admin" in perms) == (name in sys_admins), name
         decides = sample_leave.appeals_decided() and name == sample_leave.APPEAL_DECIDER
         assert ("decide" in perms) == decides, name

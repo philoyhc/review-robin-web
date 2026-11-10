@@ -64,8 +64,8 @@ def test_every_staff_page_answers_for_each_sample_viewer() -> None:
         not in c.get(STAFF).text.split('class="tabs-in"')[1].split("</nav>")[0]
     )
     assert (
-        "/ra-leave/staff/appeals?as=Priya%20Raman"
-        in c.get(STAFF + "?as=Priya%20Raman").text.split('class="tabs-in"')[1].split("</nav>")[0]
+        "/ra-leave/staff/appeals?as=Rachel%20Yeo"
+        in c.get(STAFF + "?as=Rachel%20Yeo").text.split('class="tabs-in"')[1].split("</nav>")[0]
     )
     assert sample_leave.staff_viewer("Nobody") == "Daniel Koh"
 
@@ -115,7 +115,7 @@ def test_a_staff_member_sees_only_their_scope() -> None:
     whole Unit; Decide 404s outside the viewer's scope."""
     c = client()
     assert sample_leave.scope("Daniel Koh") == ("Cypress A 04-12",)
-    assert len(sample_leave.scope("Marcus Tan")) == 3  # an RSLM: the Maple Wing
+    assert sample_leave.scope("Marcus Tan") == ()  # an RSLM: no tick in Permissions
     assert len(sample_leave.scope("Sam Lee")) == 9
     assert c.get(STAFF + "applications/L-0105").status_code == 404  # Maple 09-14, not Daniel Koh's
     assert c.get(STAFF + "applications/L-9999" + SAM).status_code == 404
@@ -394,22 +394,29 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
     same for every overseer; actions follow the approval chain."""
     c = client()
     assert sample_leave.overseers() == ("Sam Lee", "Rachel Yeo")
-    assert len(sample_leave.scope("Priya Raman")) == 3  # an RSLM: the Cypress Wing
-    assert sample_leave.scope("Hui Min Goh") == ()
-    page = c.get(STAFF + "?as=Hui%20Min%20Goh").text
+    # Access follows Permissions (author, 2026-11-10): an RSLM has no tick,
+    # so none; Hui Min Goh's named View records over Cypress and Maple
+    # 03-08 gives the Cypress Wing's Precincts and that slot's Precinct.
+    assert sample_leave.scope("Priya Raman") == ()
+    goh = sample_leave.scope("Hui Min Goh")
+    cypress = {s.precinct for s in sample_data.SLOTS if s.wing == "Cypress"}
+    maple = {"Maple 03-08"}  # a Precinct
+    assert set(goh) == cypress | maple and len(goh) == len(cypress | maple)
+    page = c.get(STAFF + "?as=Priya%20Raman").text
     assert "You oversee no RA" in page and 'class="tabs-in"' not in page
-    assert "Hui Min Goh: Residential Executive, oversees no RA, so RA Leave is not shown" in page
-    assert c.get(STAFF + "applications/L-0101?as=Hui%20Min%20Goh").status_code == 404
-    landing = c.get("/?as=Hui%20Min%20Goh").text
+    assert "Priya Raman: RSLM, oversees no RA, so RA Leave is not shown" in page
+    assert c.get(STAFF + "applications/L-0101?as=Priya%20Raman").status_code == 404
+    landing = c.get("/?as=Priya%20Raman").text
     assert "/ra-leave/" not in landing.split('<main class="page">')[1]
-    # An RSLM gets the same tabs as an RF, and decides nothing by default.
+    # The admin gets the Master's tabs; Hui Min Goh, viewing by name, decides
+    # nothing.
     tabs = lambda q: re.findall(  # noqa: E731
         r'<a href="/ra-leave/staff/(\w*)',
         c.get(STAFF + q).text.split('class="tabs-in"')[1].split("</nav>")[0],
     )
-    assert tabs("?as=Priya%20Raman") == tabs(SAM) == ["", "records", "appeals"]
+    assert tabs("?as=Rachel%20Yeo") == tabs(SAM) == ["", "records", "appeals"]
     assert tabs("") == ["", "records"]  # an RF: no Appeals tab
-    assert "Nothing awaits you." in c.get(STAFF + "?as=Priya%20Raman").text
+    assert "Nothing awaits you." in c.get(STAFF + "?as=Hui%20Min%20Goh").text
     # Untick the admin: Rachel Yeo holds no slot, so she sees no RA and
     # her final approval leaves every Precinct with a gap (ruled 2026-10-29).
     monkeypatch.setitem(
@@ -760,7 +767,7 @@ def test_leave_records_list_every_application_filtered_by_status_and_precinct() 
         "Pending first approval",
     ]
     assert sample_leave.record_precincts("Daniel Koh") == ()
-    assert len(sample_leave.record_precincts("Priya Raman")) == 3
+    assert sample_leave.record_precincts("Priya Raman") == ()
     assert len(sample_leave.record_precincts("Sam Lee")) == 9
     assert sample_leave.records_hidden("Daniel Koh", "Rejected,Maple 03-08,x") == {"Rejected"}
 
