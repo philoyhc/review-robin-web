@@ -117,8 +117,16 @@ def test_a_tile_opens_the_rows_it_counts() -> None:
         sample_leave.cover_unconfirmed()
     )
     # An old Applications link lands on Leave records, its query kept.
+    # An old filtered Applications link keeps its filter (Codex).
     old = c.get(ADMIN + "applications?stage=x", follow_redirects=False)
-    assert old.status_code == 303 and old.headers["location"] == "/ra-leave/admin/records?stage=x"
+    assert old.status_code == 303
+    assert old.headers["location"] == "/ra-leave/admin/records?period=whole"
+    staged = c.get(ADMIN + "applications?stage=Pending%20first%20approval").text
+    assert sorted(re.findall(r'href="/ra-leave/admin/records/(L-\d+)"', staged)) == sorted(
+        re.findall(r'href="/ra-leave/admin/records/(L-\d+)"', first)
+    )
+    unconfirmed = c.get(ADMIN + "applications?cover=unconfirmed").text
+    assert 'Leave applications <span class="count">· 4</span>' in unconfirmed
     old = c.get(ADMIN + "applications/L-0101", follow_redirects=False)
     assert old.headers["location"] == "/ra-leave/admin/records/L-0101"
     back = c.get(ADMIN + "records/L-0101").text

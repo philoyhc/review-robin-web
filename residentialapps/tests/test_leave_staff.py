@@ -957,6 +957,7 @@ def test_leave_records_chips_select_and_clear_all_and_the_page_stays_at_the_top(
     form = page.split('id="period-form"')[1].split("</form>")[0]
     assert "<noscript><button" in form and "Show period</button></noscript>" in form
     assert 'select.addEventListener("change"' in page
+    assert "from.value > to.value" in page  # a backwards range waits (Codex)
     assert '<input type="hidden" name="hide" value="Maple 03-08,Rejected">' in form
 
 
@@ -1126,3 +1127,7 @@ def test_records_filter_by_cover_take_from_and_to_and_match_the_admin_s() -> Non
     assert [g.count('class="col-chip on"') for g in groups] == [9, 4, 9]
     assert admin.index("</table>") < admin.index("Export CSV</button>")
     assert 'href="/ra-leave/admin/records/L-0101">L-0101</a>' in admin
+    # Leave types shortened to Personal and Official (author, 2026-11-10).
+    table = admin.split('id="rec-h"')[1].split("</table>")[0]
+    assert '<td class="nowrap">Personal <span class="chip chip-accent"' in table
+    assert '<td class="nowrap">Official</td>' in table and "Personal leave" not in table

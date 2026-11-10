@@ -5,6 +5,7 @@ downstream of its configuration (author, 2026-10-28)."""
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.requests import Request
@@ -114,9 +115,21 @@ def records(request: Request) -> Response:
 
 @router.get("/ra-leave/admin/applications", name="residentialops_leave_admin_applications")
 def applications(request: Request) -> Response:
-    # Applications became Leave records (author, 2026-11-10); an old link,
-    # the dashboard's filtered ones too, lands there, its query kept.
-    return _moved(request, "/ra-leave/admin/records")
+    # Applications became Leave records (author, 2026-11-10); an old link
+    # lands there over the whole term, its `?stage=` and `?cover=` filters
+    # turned into the chips that keep their rows (Codex, 2026-11-10).
+    q = request.query_params
+    kept: list[str] = []
+    if q.get("stage") in sample_leave.stages():
+        kept.append(q["stage"])
+    if q.get("cover") == "unconfirmed":
+        kept += ["Cover awaiting", "Cover declined", *sample_leave.stages(open_only=True)]
+    query = "period=whole"
+    if kept:
+        query = "hide=" + quote(sample_leave.records_hide_except(*kept)) + "&" + query
+    return RedirectResponse(
+        url_path(request, "/ra-leave/admin/records") + "?" + query, status_code=303
+    )
 
 
 @router.get(
