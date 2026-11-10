@@ -2113,6 +2113,27 @@ def invitation_status(invitation: Invitation) -> str:
     return "Open" if invitation.opened <= TODAY else "From " + short_date(invitation.opened)
 
 
+def can_withdraw(application: Application) -> bool:
+    """An RA may withdraw an application at any pending stage (spec §11)."""
+    return application.stage in OPEN_STAGES
+
+
+def withdraws_to_draft(application: Application) -> bool:
+    """Withdrawing ordinary leave takes it back to the RA's drafts, filled in
+    as sent, to change and send again (author, 2026-11-10); My history keeps
+    the sent one as Withdrawn (§20). An appeal has no draft yet (§30,
+    `APPEAL_DRAFT`), so withdrawing one ends it."""
+    return can_withdraw(application) and not application.appeal
+
+
+def can_cancel(application: Application) -> bool:
+    """An RA may cancel approved leave that has not begun (author,
+    2026-11-10). It keeps its record, as Cancelled, and releases its days
+    and its cover (§20, §30). Leave already begun is the Residential
+    Admin's to cancel (§21.4)."""
+    return application.stage == "Approved" and application.start > TODAY
+
+
 def can_appeal(ra: str) -> bool:
     """Whether an RA may send an appeal now: always while appeals are open,
     with an invitation while they are by invitation, never while off."""

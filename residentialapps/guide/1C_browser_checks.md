@@ -70,7 +70,9 @@ widths, the scripts' behavior, and whether the screens read right.
   - "‹ My history" back link, with the History tab marked;
   - a timeline with a "Next:" line;
   - "Emails you sent", showing **Not sent** and why, with Resend;
-  - cover and Withdraw cards.
+  - cover and "Changed your plans?" cards, the latter with **Withdraw to
+    draft** (back to the drafts as sent); as Hana, L-0115 (approved, 14 Dec)
+    has **Cancel leave** instead, and Chloe's L-0117 (taken) has neither.
 - [ ] **Cover**: To answer 1, Covering 1 (Hana Ito 14 Dec – 15 Dec),
   Earlier and declined 1; a Summary card (beside the cards on a desktop,
   last on a phone) reads Days covered 0, Days now or upcoming 2,

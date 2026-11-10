@@ -105,7 +105,7 @@ def test_cover_lists_what_to_answer_what_is_agreed_and_the_rest() -> None:
 def test_an_ra_sees_only_their_own_applications() -> None:
     c = client()
     detail = c.get(RA + "applications/L-0101").text
-    assert ">Withdraw</button>" in detail and "Submitted by Chloe Lim" in detail
+    assert ">Withdraw to draft</button>" in detail and "Submitted by Chloe Lim" in detail
     assert c.get(RA + "applications/L-0102").status_code == 404  # Isaac Goh's
     history = c.get(RA + "history").text
     assert re.findall(r'href="/ra-leave/applications/(L-\d+)"', history) == [
@@ -312,10 +312,12 @@ def test_an_application_can_be_saved_as_a_draft_and_reopened() -> None:
 
 def test_the_audit_s_ra_page_fixes() -> None:
     """The 1C.1 audit (2026-10-29): the back link names the page it opens,
-    and withdrawing, which ends the application, is Destructive."""
+    and withdrawing, which ends the application, is Destructive. Since
+    2026-11-10 withdrawing ordinary leave returns it to the drafts, so it is
+    Secondary; an appeal's still ends it."""
     page = TestClient(ops_app()).get("/ra-leave/applications/L-0101").text
     assert '<a class="back" href="/ra-leave/history">‹ My history</a>' in page
-    assert '<button type="button" class="btn btn-danger" disabled>Withdraw</button>' in page
+    assert 'class="btn btn-secondary" aria-label="Withdraw 6 Nov – 8 Nov to your drafts"' in page
 
 
 def test_the_ra_pages_switch_sample_viewer() -> None:
@@ -692,3 +694,32 @@ def test_at_the_default_an_ra_not_invited_is_simply_refused(
         .json()
     )
     assert not got["ok"] and got["message"].endswith(": no leave.")
+
+
+def test_an_ra_withdraws_pending_leave_to_draft_and_cancels_approved_leave() -> None:
+    """Author, 2026-11-10: on an application's page, pending ordinary leave
+    can be withdrawn back to the drafts, and approved leave not yet begun
+    cancelled; leave already begun is the Residential Admin's."""
+    by = sample_leave.by_id
+    pending, future, begun, past = by("L-0101"), by("L-0115"), by("L-0106"), by("L-0112")
+    assert pending and future and begun and past
+    assert sample_leave.withdraws_to_draft(pending) and not sample_leave.can_cancel(pending)
+    assert sample_leave.can_cancel(future) and not sample_leave.can_withdraw(future)
+    assert not sample_leave.can_cancel(begun) and not sample_leave.can_cancel(past)
+    appeal = by("L-0105")
+    assert appeal and sample_leave.can_withdraw(appeal)
+    assert not sample_leave.withdraws_to_draft(appeal)
+
+    c = client()
+    chloe = c.get(RA + "applications/L-0101").text
+    assert "back to your drafts, filled in as you sent it" in chloe
+    assert "Cancel leave" not in chloe
+    hana = c.get(RA + "applications/L-0115?as=Hana%20Ito").text
+    assert 'aria-label="Cancel leave, 14 Dec – 15 Dec" disabled>Cancel leave</button>' in hana
+    assert "gives back its 2 days" in hana and "Withdraw" not in hana
+    # No sample RA viewer has leave under way or an appeal pending; the rules
+    # above cover those. Leave already taken offers nothing.
+    done = c.get(RA + "applications/L-0117").text  # Chloe's, 25 Sep
+    assert "Cancel leave</button>" not in done and "Withdraw" not in done
+    kai = c.get(RA + "applications/L-0116?as=Kai%20Ng").text  # already cancelled
+    assert "Cancel leave</button>" not in kai and "Withdraw" not in kai
