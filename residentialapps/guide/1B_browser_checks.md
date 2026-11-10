@@ -30,8 +30,8 @@ modes, gated steps) and whether the screens read right.
 - [ ] **Fuchsia throughout**, with a house favicon. Dark mode is readable.
 - [ ] **The chips change the cards:**
   - Chloe Lim has RA Leave and RA Events "Coming later".
-  - Daniel Koh's and Priya Raman's RA Leave cards open the staff side.
-  - Hui Min Goh has RA Events only.
+  - Daniel Koh's and Hui Min Goh's RA Leave cards open the staff side;
+    Priya Raman, an RSLM with no tick in Permissions, has none.
   - Rachel Yeo and Sam Lee add RA Leave admin, Rosters and setup and Sys
     admin.
 - [ ] **The switcher** (top left) lists Home and the viewer's areas, with

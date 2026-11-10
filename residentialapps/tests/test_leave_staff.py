@@ -64,8 +64,8 @@ def test_every_staff_page_answers_for_each_sample_viewer() -> None:
         not in c.get(STAFF).text.split('class="tabs-in"')[1].split("</nav>")[0]
     )
     assert (
-        "/ra-leave/staff/appeals?as=Priya%20Raman"
-        in c.get(STAFF + "?as=Priya%20Raman").text.split('class="tabs-in"')[1].split("</nav>")[0]
+        "/ra-leave/staff/appeals?as=Rachel%20Yeo"
+        in c.get(STAFF + "?as=Rachel%20Yeo").text.split('class="tabs-in"')[1].split("</nav>")[0]
     )
     assert sample_leave.staff_viewer("Nobody") == "Daniel Koh"
 
@@ -115,7 +115,10 @@ def test_a_staff_member_sees_only_their_scope() -> None:
     whole Unit; Decide 404s outside the viewer's scope."""
     c = client()
     assert sample_leave.scope("Daniel Koh") == ("Cypress A 04-12",)
-    assert len(sample_leave.scope("Marcus Tan")) == 3  # an RSLM: the Maple Wing
+    # An RSLM has no tick; Marcus Tan stands in as Grace Ho's first approver,
+    # so has First approval, and his Wing, while he does (cold read).
+    assert sample_leave.scope("Priya Raman") == ()
+    assert len(sample_leave.scope("Marcus Tan")) == 3
     assert len(sample_leave.scope("Sam Lee")) == 9
     assert c.get(STAFF + "applications/L-0105").status_code == 404  # Maple 09-14, not Daniel Koh's
     assert c.get(STAFF + "applications/L-9999" + SAM).status_code == 404
@@ -394,22 +397,29 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
     same for every overseer; actions follow the approval chain."""
     c = client()
     assert sample_leave.overseers() == ("Sam Lee", "Rachel Yeo")
-    assert len(sample_leave.scope("Priya Raman")) == 3  # an RSLM: the Cypress Wing
-    assert sample_leave.scope("Hui Min Goh") == ()
-    page = c.get(STAFF + "?as=Hui%20Min%20Goh").text
-    assert "You oversee no RA" in page and 'class="tabs-in"' not in page
-    assert "Hui Min Goh: Residential Executive, oversees no RA, so RA Leave is not shown" in page
-    assert c.get(STAFF + "applications/L-0101?as=Hui%20Min%20Goh").status_code == 404
-    landing = c.get("/?as=Hui%20Min%20Goh").text
+    # Access follows Permissions (author, 2026-11-10): an RSLM has no tick,
+    # so none; Hui Min Goh's named View records over Cypress and Maple
+    # 03-08 gives the Cypress Wing's Precincts and that slot's Precinct.
+    assert sample_leave.scope("Priya Raman") == ()
+    goh = sample_leave.scope("Hui Min Goh")
+    cypress = {s.precinct for s in sample_data.SLOTS if s.wing == "Cypress"}
+    maple = {"Maple 03-08"}  # a Precinct
+    assert set(goh) == cypress | maple and len(goh) == len(cypress | maple)
+    page = c.get(STAFF + "?as=Priya%20Raman").text
+    assert "No RA Leave for you" in page and 'class="tabs-in"' not in page
+    assert "Priya Raman: RSLM, no tick in Permissions, so RA Leave is not shown" in page
+    assert c.get(STAFF + "applications/L-0101?as=Priya%20Raman").status_code == 404
+    landing = c.get("/?as=Priya%20Raman").text
     assert "/ra-leave/" not in landing.split('<main class="page">')[1]
-    # An RSLM gets the same tabs as an RF, and decides nothing by default.
+    # The admin gets the Master's tabs; Hui Min Goh, viewing by name, decides
+    # nothing.
     tabs = lambda q: re.findall(  # noqa: E731
         r'<a href="/ra-leave/staff/(\w*)',
         c.get(STAFF + q).text.split('class="tabs-in"')[1].split("</nav>")[0],
     )
-    assert tabs("?as=Priya%20Raman") == tabs(SAM) == ["", "records", "appeals"]
+    assert tabs("?as=Rachel%20Yeo") == tabs(SAM) == ["", "records", "appeals"]
     assert tabs("") == ["", "records"]  # an RF: no Appeals tab
-    assert "Nothing awaits you." in c.get(STAFF + "?as=Priya%20Raman").text
+    assert "Nothing awaits you." in c.get(STAFF + "?as=Hui%20Min%20Goh").text
     # Untick the admin: Rachel Yeo holds no slot, so she sees no RA and
     # her final approval leaves every Precinct with a gap (ruled 2026-10-29).
     monkeypatch.setitem(
@@ -419,7 +429,10 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
     )
     assert sample_leave.overseers() == ("Sam Lee",) and sample_leave.scope("Rachel Yeo") == ()
     assert sample_leave.final_gaps() == sample_leave.precincts()
-    # Tick the Executive: Hui Min Goh oversees every RA, deciding nothing.
+    # Tick the Executive in every slot and for View records: Hui Min Goh
+    # oversees every RA, deciding nothing. In every slot with no tick, she
+    # would see only her named grant.
+    monkeypatch.setitem(sample_leave.POLICY, "viewer_types", ("RF", "Master", "Admin", "Exec"))
     monkeypatch.setitem(
         sample_leave.sample_data.EVERY_SLOT,
         sample_leave.TERM.key,
@@ -474,6 +487,7 @@ def test_oversight_follows_the_policy_setting(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
     assert "every RA may send one, so none is opened for them" in c.get(STAFF + "appeals").text
     # An appeal opened from Appeals goes back there, inviter or not.
+    monkeypatch.setitem(sample_leave.POLICY, "viewer_types", ("RF", "Master", "Admin", "Exec"))
     monkeypatch.setitem(
         sample_leave.sample_data.EVERY_SLOT,
         sample_leave.TERM.key,
@@ -760,7 +774,7 @@ def test_leave_records_list_every_application_filtered_by_status_and_precinct() 
         "Pending first approval",
     ]
     assert sample_leave.record_precincts("Daniel Koh") == ()
-    assert len(sample_leave.record_precincts("Priya Raman")) == 3
+    assert sample_leave.record_precincts("Priya Raman") == ()
     assert len(sample_leave.record_precincts("Sam Lee")) == 9
     assert sample_leave.records_hidden("Daniel Koh", "Rejected,Maple 03-08,x") == {"Rejected"}
 
@@ -1265,3 +1279,27 @@ def test_an_invited_appeal_routes_by_the_policy_choice(monkeypatch) -> None:
         s.startswith("First approval") for s in (t[1] for t in sample_leave.timeline(l0105))
     )
     assert "The Master (Sam Lee), personally" in c.get("/ra-leave/admin/policy").text
+
+
+def test_a_named_grant_gives_its_own_scope_and_no_more(monkeypatch) -> None:
+    """Cold read of access by Permissions (2026-11-10): a named grant
+    covers only its chosen scope, even for an RSLM; viewing is not acting,
+    so a viewer cannot cancel leave under way; an Admin-pages-only grant
+    opens no staff pages."""
+    goh = set(sample_leave.scope("Hui Min Goh"))
+    under = [a for a in sample_leave.APPLICATIONS if sample_leave.under_way(a)]
+    assert all(not sample_leave.cancels_under_way("Hui Min Goh", a) for a in under)
+    assert under and any(a.precinct in goh for a in under)
+    grant = sample_leave.NamedGrant
+    monkeypatch.setattr(
+        sample_leave,
+        "NAMED_GRANTS",
+        (
+            grant("Priya Raman", ("Cypress A 04-05-06",), frozenset({"view"})),
+            grant("Marcus Tan", ("All RAs",), frozenset({"admin"})),
+        ),
+    )
+    slot = next(s for s in sample_data.SLOTS if s.neighborhood == "Cypress A 04-05-06")
+    assert sample_leave.scope("Priya Raman") == (slot.precinct,)
+    # Marcus Tan keeps only what his delegation gives, not All RAs.
+    assert len(sample_leave.scope("Marcus Tan")) == 3

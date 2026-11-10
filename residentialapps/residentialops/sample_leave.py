@@ -122,6 +122,7 @@ class Policy(TypedDict):
     final: str
     final_types: tuple[str, ...]
     final_names: tuple[str, ...]
+    viewer_types: tuple[str, ...]
 
 
 class _Policy(dict[str, object]):
@@ -182,7 +183,9 @@ _POLICY = _Policy(
         "final_types": ("Admin",),
         "final_names": (),
         # Who views Leave records without approving (author, 2026-11-10):
-        # the appointments given View records in Permissions.
+        # the appointments given View records in Permissions. RSLMs need no
+        # RA Leave (author, 2026-11-09), so they are not among them.
+        "viewer_types": ("RF", "Master", "Admin"),
     }
 )
 # Read through its keys' types: `_Policy` is the runtime object, `Policy`
@@ -1515,6 +1518,8 @@ def staff_role(name: str) -> str:
     if POLICY["appeals"] == "By invitation" and invitable_ras(name):
         does.append("opens appeals")
     if not scope(name):
+        if any(name in s.staff for s in sample_data.SLOTS):
+            return f"{appointment}, no tick in Permissions, so RA Leave is not shown"
         return f"{appointment}, oversees no RA, so RA Leave is not shown"
     return (
         f"{appointment}, {', '.join(does)}"
@@ -1613,17 +1618,54 @@ def overseers() -> tuple[str, ...]:
 def scope(viewer: str) -> tuple[str, ...]:
     """The Precincts whose RAs a staff member oversees (spec §22; author,
     2026-10-29): the overseers every one, as if in every slot; an RF their
-    slots' Precincts, an RSLM their Wing's. Every decision is confined to
-    these (`in_slots`), so the approval chain never widens them. Staff with
-    none, such as Unit-level staff holding no slot, see no RA Leave."""
+    slots' Precincts, an RSLM their Wing's if Permissions gives one a tick
+    (none by default). Decisions stay confined to slots (`in_slots`); a
+    delegate standing in as first approver sees their own scope while they
+    do, as an RSLM their Wing. Staff with none, such as Unit-level staff
+    holding no slot, see no RA Leave.
+
+    Permissions decide who sees any (author, 2026-11-10): staff with no
+    tick but Admin pages see none, and a person named there adds the
+    Precincts their chosen scope holds (a slot widens to its Precinct, as
+    the sample keeps scope by Precinct)."""
     every = precincts()
+    named = set(_named_precincts(viewer))
+    if not (_granted(viewer) - {"admin"}) and not _standing_in(viewer):
+        # No tick of their own: only what a named grant holds (cold read).
+        return tuple(p for p in every if p in named)
     if viewer in overseers():
         return every
     abbrev = {p.name: p.abbrev for p in sample_data.STAFF}.get(viewer)
     held = [s for s in sample_data.SLOTS if viewer in s.staff]
     wings = {s.wing for s in held if abbrev == "RSLM"}
     found = {s.precinct for s in held} | {s.precinct for s in sample_data.SLOTS if s.wing in wings}
-    return tuple(p for p in every if p in found)
+    return tuple(p for p in every if p in found | named)
+
+
+def _standing_in(name: str) -> bool:
+    """A delegate standing in as first approver today (Approval chain): not
+    a Permissions tick, but RA Leave while they do (cold read, 2026-11-10)."""
+    return POLICY["first"] == "slot" and any(
+        name in r.first.split(" or ") for r in routes() if not r.gap
+    )
+
+
+def _named_precincts(name: str) -> tuple[str, ...]:
+    """The Precincts a person's named grants hold: All RAs every one, a
+    Wing its Precincts, a Precinct itself, a slot its Precinct."""
+    chosen = {
+        c
+        for g in NAMED_GRANTS
+        if g.name == name and g.perms - {"admin"}
+        for c in resolve_scope(g.scope)
+    }
+    return tuple(
+        dict.fromkeys(
+            s.precinct
+            for s in sample_data.SLOTS
+            if chosen & {SCOPE_ALL, s.wing, s.precinct, s.neighborhood}
+        )
+    )
 
 
 def can_open(viewer: str, application: Application) -> bool:
@@ -2548,7 +2590,13 @@ def cancels_under_way(viewer: str, application: Application) -> bool:
     RA's Precinct, the Residential Admin among them, who also may from
     Applications; the RA and the RF are told. An RF approves an RA's
     request instead."""
-    return under_way(application) and not is_rf(viewer) and application.precinct in scope(viewer)
+    # In the RA's slots, not merely viewing them (cold read, 2026-11-10).
+    return (
+        under_way(application)
+        and not is_rf(viewer)
+        and in_slots(viewer, application.precinct)
+        and application.precinct in scope(viewer)
+    )
 
 
 def can_appeal(ra: str) -> bool:
@@ -2634,10 +2682,11 @@ class PermissionRow(TypedDict):
 
 
 def _granted(name: str) -> set[str]:
-    """What a person may do now, read from the functions that grant it:
-    first and final approval and opening appeals from Policy, deciding
-    appeals from `APPEAL_DECIDER` while `appeals_decided`, viewing records
-    from `scope`, the admin pages from the sys admins."""
+    """What a person may do by their appointment, read from the functions
+    that grant it: first and final approval and opening appeals from
+    Policy, deciding appeals from `APPEAL_DECIDER` while `appeals_decided`,
+    viewing records from Policy's View records, the admin pages from the
+    sys admins. Named grants are their own rows; `scope` reads both."""
     abbrev = {p.name: p.abbrev for p in sample_data.STAFF}.get(name, "")
     granted: set[str] = set()
     if POLICY["first"] == "slot" and abbrev in POLICY["first_types"]:
@@ -2651,7 +2700,7 @@ def _granted(name: str) -> set[str]:
         granted.add("open")
     if appeals_decided() and name == APPEAL_DECIDER:
         granted.add("decide")
-    if scope(name):
+    if abbrev in POLICY["viewer_types"]:
         granted.add("view")
     if any(n == name for n, *_ in sample_data.SYS_ADMINS):
         granted.add("admin")
@@ -2669,7 +2718,7 @@ def permission_rows() -> tuple[PermissionRow, ...]:
     role is ticked for what all its holders may do, and a person with more
     gets a named row for the rest, scoped as routing scopes it (the RAs in
     their slots, or every slot for an overseer). `NAMED_GRANTS` rows are
-    shown as chosen; they do not yet change access."""
+    shown as chosen, and `scope` adds the Precincts they hold."""
     rows: list[PermissionRow] = []
     by_role: dict[str, set[str]] = {}
     for title, abbrev in (*slot_appointments(), *unit_appointments()):

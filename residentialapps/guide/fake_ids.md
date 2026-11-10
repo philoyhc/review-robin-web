@@ -145,10 +145,10 @@ landing card.
 | Faris Iskandar | RA | a rejected application |
 | Kai Ng | RA | approved leave cancelled; invited to apply for extra leave |
 | Daniel Koh | staff | RF, first approver for Cypress A 04-12 |
-| Priya Raman | staff | RSLM, no decisions under the policy |
+| Priya Raman | staff | RSLM, no tick in Permissions, so RA Leave is not shown |
 | Rachel Yeo | staff | Residential Admin, final approver |
 | Sam Lee | staff | Master, decides appeals |
-| Hui Min Goh | staff | Residential Executive, oversees no RA |
+| Hui Min Goh | staff | Residential Executive, no decisions under the policy (View records by name) |
 
 ### Chloe Lim (RA)
 
@@ -314,7 +314,7 @@ uvicorn cordware.main:app --reload
 
 ### Hui Min Goh (staff)
 
-Residential Executive, oversees no RA.
+Residential Executive, View records by name over Cypress and Maple 03-08.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web

@@ -4,8 +4,8 @@
 {% block content %}
   {{ title("RA Leave", leave, viewing(me)) }}
   <section class="card card-pad narrow">
-    <h2>You oversee no RA</h2>
-    <p class="sub">RA Leave shows each staff member the RAs they oversee: the RAs on their slots in Assignments for {{ leave.TERM.label }}; or every RA for those in every slot on Assignments ({{ leave.overseers() | join(", ") or "no one" }}). Neither is yours, so there is no leave to show you. If that is wrong, the fix is in Assignments, which a sys admin keeps.</p>
+    <h2>No RA Leave for you</h2>
+    <p class="sub">RA Leave shows each staff member the RAs they oversee: the RAs on their slots in Assignments for {{ leave.TERM.label }}, or every RA for those in every slot ({{ leave.overseers() | join(", ") or "no one" }}), for staff with a tick in the Leave policy's Permissions, or the RAs a person is named for there. Neither is yours, so there is no leave to show you. If that is wrong, the fix is in Assignments or Permissions.</p>
   </section>
 {% endblock %}
 {% block viewer %}{{ staff_switch(me, leave, here) }}{% endblock %}

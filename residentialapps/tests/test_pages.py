@@ -656,8 +656,10 @@ def test_assignments_sets_who_is_in_every_slot(monkeypatch) -> None:
     ]
     assert "In every slot: Sam Lee, Rachel Yeo." in card
     assert sample_leave.overseers() == ("Sam Lee", "Rachel Yeo")
-    # By name too: a named person is in every slot, and oversees every RA.
+    # By name too: a named person is in every slot, and, given View records
+    # (Permissions decide access, 2026-11-10), oversees every RA.
     term = sample_data.CURRENT_TERM.key
+    monkeypatch.setitem(sample_leave.POLICY, "viewer_types", ("RF", "Master", "Admin", "Exec"))
     monkeypatch.setitem(
         sample_data.EVERY_SLOT, term, {"appointments": ("Master",), "names": ("Hui Min Goh",)}
     )
