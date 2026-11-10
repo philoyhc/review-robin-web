@@ -1066,7 +1066,8 @@ def test_permissions_agree_with_routing(monkeypatch, policy) -> None:
         perms = roles.get(person.abbrev, frozenset()) | named.get(name, frozenset())
         # Access follows the table (author, 2026-11-10): any tick but Admin
         # pages, over some RA, opens the staff pages.
-        if not (perms - {"admin"}):
+        # A delegate standing in has RA Leave without a tick (cold read).
+        if not (perms - {"admin"}) and not sample_leave._standing_in(name):  # noqa: SLF001
             assert sample_leave.scope(name) == (), name
         assert ("final" in perms) == (name in sample_leave.final_approvers()), name
         viewer = person.abbrev in sample_leave.POLICY["viewer_types"] or any(

@@ -1619,9 +1619,10 @@ def scope(viewer: str) -> tuple[str, ...]:
     """The Precincts whose RAs a staff member oversees (spec §22; author,
     2026-10-29): the overseers every one, as if in every slot; an RF their
     slots' Precincts, an RSLM their Wing's if Permissions gives one a tick
-    (none by default). Every decision is confined to
-    these (`in_slots`), so the approval chain never widens them. Staff with
-    none, such as Unit-level staff holding no slot, see no RA Leave.
+    (none by default). Decisions stay confined to slots (`in_slots`); a
+    delegate standing in as first approver sees their own scope while they
+    do, as an RSLM their Wing. Staff with none, such as Unit-level staff
+    holding no slot, see no RA Leave.
 
     Permissions decide who sees any (author, 2026-11-10): staff with no
     tick but Admin pages see none, and a person named there adds the
@@ -1629,7 +1630,7 @@ def scope(viewer: str) -> tuple[str, ...]:
     the sample keeps scope by Precinct)."""
     every = precincts()
     named = set(_named_precincts(viewer))
-    if not (_granted(viewer, named=False) - {"admin"}):
+    if not (_granted(viewer) - {"admin"}) and not _standing_in(viewer):
         # No tick of their own: only what a named grant holds (cold read).
         return tuple(p for p in every if p in named)
     if viewer in overseers():
@@ -1639,6 +1640,14 @@ def scope(viewer: str) -> tuple[str, ...]:
     wings = {s.wing for s in held if abbrev == "RSLM"}
     found = {s.precinct for s in held} | {s.precinct for s in sample_data.SLOTS if s.wing in wings}
     return tuple(p for p in every if p in found | named)
+
+
+def _standing_in(name: str) -> bool:
+    """A delegate standing in as first approver today (Approval chain): not
+    a Permissions tick, but RA Leave while they do (cold read, 2026-11-10)."""
+    return POLICY["first"] == "slot" and any(
+        name in r.first.split(" or ") for r in routes() if not r.gap
+    )
 
 
 def _named_precincts(name: str) -> tuple[str, ...]:
@@ -2672,20 +2681,15 @@ class PermissionRow(TypedDict):
     perms: frozenset[str]
 
 
-def _granted(name: str, named: bool = True) -> set[str]:
-    """What a person may do now, read from the functions that grant it:
-    first and final approval and opening appeals from Policy, deciding
-    appeals from `APPEAL_DECIDER` while `appeals_decided`, viewing records
-    from Policy's View records or a named grant, the admin pages from the
-    sys admins. `scope` reads this, so access follows the table."""
+def _granted(name: str) -> set[str]:
+    """What a person may do by their appointment, read from the functions
+    that grant it: first and final approval and opening appeals from
+    Policy, deciding appeals from `APPEAL_DECIDER` while `appeals_decided`,
+    viewing records from Policy's View records, the admin pages from the
+    sys admins. Named grants are their own rows; `scope` reads both."""
     abbrev = {p.name: p.abbrev for p in sample_data.STAFF}.get(name, "")
     granted: set[str] = set()
     if POLICY["first"] == "slot" and abbrev in POLICY["first_types"]:
-        granted.add("first")
-    # A delegate standing in as first approver has it while they do.
-    if POLICY["first"] == "slot" and any(
-        name in r.first.split(" or ") for r in routes() if not r.gap
-    ):
         granted.add("first")
     if name in final_approvers():
         granted.add("final")
@@ -2698,10 +2702,6 @@ def _granted(name: str, named: bool = True) -> set[str]:
         granted.add("decide")
     if abbrev in POLICY["viewer_types"]:
         granted.add("view")
-    if named:
-        for g in NAMED_GRANTS:
-            if g.name == name:
-                granted |= g.perms
     if any(n == name for n, *_ in sample_data.SYS_ADMINS):
         granted.add("admin")
     return granted
@@ -2725,7 +2725,7 @@ def permission_rows() -> tuple[PermissionRow, ...]:
         holders = [p.name for p in sample_data.STAFF if p.abbrev == abbrev]
         common: set[str] = set(PERMISSION_KEYS) if holders else set()
         for h in holders:
-            common &= _granted(h, named=False)
+            common &= _granted(h)
         # Approvers or inviters chosen by name are a person's grant, not the
         # role's, so they get named rows even when they hold the role alone.
         if POLICY["final"] == "named":
@@ -2750,7 +2750,7 @@ def permission_rows() -> tuple[PermissionRow, ...]:
     # neither hides the other (Codex on #3758).
     named: list[tuple[str, frozenset[str], tuple[str, ...]]] = []
     for person in sample_data.STAFF:
-        extra = _granted(person.name, named=False) - by_role.get(person.abbrev, set())
+        extra = _granted(person.name) - by_role.get(person.abbrev, set())
         if extra:
             named.append((person.name, frozenset(extra), _scope_of(person.name)))
     for g in NAMED_GRANTS:

@@ -406,7 +406,7 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
     maple = {"Maple 03-08"}  # a Precinct
     assert set(goh) == cypress | maple and len(goh) == len(cypress | maple)
     page = c.get(STAFF + "?as=Priya%20Raman").text
-    assert "You oversee no RA" in page and 'class="tabs-in"' not in page
+    assert "No RA Leave for you" in page and 'class="tabs-in"' not in page
     assert "Priya Raman: RSLM, no tick in Permissions, so RA Leave is not shown" in page
     assert c.get(STAFF + "applications/L-0101?as=Priya%20Raman").status_code == 404
     landing = c.get("/?as=Priya%20Raman").text
@@ -1289,7 +1289,7 @@ def test_a_named_grant_gives_its_own_scope_and_no_more(monkeypatch) -> None:
     goh = set(sample_leave.scope("Hui Min Goh"))
     under = [a for a in sample_leave.APPLICATIONS if sample_leave.under_way(a)]
     assert all(not sample_leave.cancels_under_way("Hui Min Goh", a) for a in under)
-    assert any(a.precinct in goh for a in under) or not under
+    assert under and any(a.precinct in goh for a in under)
     grant = sample_leave.NamedGrant
     monkeypatch.setattr(
         sample_leave,
