@@ -126,7 +126,9 @@ widths, the scripts' behavior, and whether the screens read right.
   Overdue chip.
 - [ ] **Records as Sam** (desktop; `/ra-leave/staff/precinct` lands
   here; Bella Koh's row marked "1st: Marcus Tan"), This week:
-  - Leave applications: Period, From and To in a row; Filters closed,
+  - Leave applications: Period, From, To and Name in a row; typing
+    "elise" leaves Elise Tan's rows and the count, Enter not reloading;
+    Filters closed,
     opening on Status, Cover, Precinct and Columns rows, its summary
     naming what is off; hide Submitted: it goes at once and stays hidden
     after a reload; the table ID, RA, Precinct, Type (PL, OL), Dates, Days,

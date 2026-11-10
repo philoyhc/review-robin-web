@@ -391,12 +391,13 @@
       .cal-filters { margin: 4px 0 8px; }
       .field-label { display: block; margin: 8px 0 4px; font-size: 14px; }
       .rec-filters { margin: 0; }
-      /* Records' period in three columns from 720 px, then its Filters
+      /* Records' period and Name box, two by two from 720 px and four in a row from 1000 px, then its Filters
          expander, the chip rows each labelled at the left (author,
          2026-11-10). */
       .rec-period { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 24px; margin-top: 8px; }
       .rec-period .field-wide { margin: 4px 0; }
-      @media (min-width: 720px) { .rec-period { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+      @media (min-width: 720px) { .rec-period { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      @media (min-width: 1000px) { .rec-period { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
       .rec-filters-box { margin-top: 12px; border-top: 1px solid var(--border-subtle); padding-top: 10px; }
       .rec-filters-box > summary { cursor: pointer; font-weight: 600; font-size: 14px; min-height: 28px; }
       .rec-filters-box > summary .subtle { font-weight: 400; }
