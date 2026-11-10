@@ -304,7 +304,7 @@ def test_an_application_can_be_saved_as_a_draft_and_reopened() -> None:
         "/ra-leave/admin/",
         "/ra-leave/admin/applications",
         "/ra-leave/staff/",
-        "/ra-leave/staff/precinct?period=term",
+        "/ra-leave/staff/records?period=whole",
     ):
         assert "18 Dec" not in c.get(path).text, path
     assert all(a.id != draft.id for a in sample_leave.APPLICATIONS)

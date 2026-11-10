@@ -35,24 +35,27 @@ def ids(html: str, section: str) -> list[str]:
 def test_every_staff_page_answers_for_each_sample_viewer() -> None:
     c = client()
     for query, name in (("", "Daniel Koh"), (RACHEL, "Rachel Yeo"), (SAM, "Sam Lee")):
-        for path in ("", "decided", "precinct"):
+        for path in ("", "decided", "records"):
             page = c.get(STAFF + path + query)
             assert page.status_code == 200, (path, query)
             assert "Sample data" in page.text and f"Viewing as {name}" in page.text, (path, query)
             assert 'aria-current="true">' in page.text
     tabs = c.get(STAFF + RACHEL).text.split('class="tabs-in"')[1].split("</nav>")[0]
     assert re.findall(r'<a href="([^"]*)"', tabs) == [
-        f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decided", "precinct", "appeals")
+        f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decided", "records", "appeals")
     ]
-    # Precinct for the admin, the Master and an RSLM; My Precinct for an RF,
-    # whose own Precinct it is (author, 2026-11-09).
-    assert ">Precinct</a>" in tabs and "My Precinct" not in tabs
+    # Leave records for every staff member (author, 2026-11-10; Precinct, or
+    # My Precinct for an RF, until then).
+    assert ">Leave records</a>" in tabs and "Precinct</a>" not in tabs
     daniel = c.get(STAFF).text
-    assert ">My Precinct</a>" in daniel.split('class="tabs-in"')[1].split("</nav>")[0]
-    assert ">My Precinct</a>" in daniel.split('id="week-h"')[1]  # Home's button
-    precinct = c.get(STAFF + "precinct").text
-    assert "<title>My Precinct" in precinct and ">My Precinct</h1>" in precinct
-    assert ">Precinct</h1>" in c.get(STAFF + "precinct" + SAM).text
+    assert ">Leave records</a>" in daniel.split('class="tabs-in"')[1].split("</nav>")[0]
+    assert ">Leave records</a>" in daniel.split('id="week-h"')[1]  # Home's button
+    records = c.get(STAFF + "records").text
+    assert "<title>Leave records" in records and ">Leave records</h1>" in records
+    # The old address lands here, its query kept.
+    old = c.get(STAFF + "precinct" + SAM + "&period=next", follow_redirects=False)
+    assert old.status_code == 303
+    assert old.headers["location"] == "/ra-leave/staff/records?as=Sam%20Lee&period=next"
     # Every overseer but an RF gets Appeals while an appeal is open; an RF
     # (Daniel Koh) has no Appeals tab (author, 2026-11-09).
     assert (
@@ -115,8 +118,8 @@ def test_a_staff_member_sees_only_their_scope() -> None:
     assert len(sample_leave.scope("Sam Lee")) == 9
     assert c.get(STAFF + "decide/L-0105").status_code == 404  # Maple 09-14, not Daniel Koh's
     assert c.get(STAFF + "decide/L-9999" + SAM).status_code == 404
-    precinct = c.get(STAFF + "precinct").text
-    assert "Isaac Goh" not in precinct and "Ethan Wong" in precinct
+    records = c.get(STAFF + "records?period=term").text
+    assert "Isaac Goh" not in records and "Hana Ito" in records
 
 
 def test_decided_lists_the_viewer_s_own_decisions() -> None:
@@ -189,11 +192,11 @@ def test_decide_shows_the_applicant_s_other_leave_and_precinct_numbers() -> None
     rows = re.findall(
         (
             r'<td class="strong nowrap">([^<]*)</td><td class="num">(\d+)</td>'
-            r'<td class="num">(\d+)</td><td class="num">(\d+)</td>'
+            r'<td class="num">(\d+)</td><td class="num">(\d+)</td><td class="num">(\d+)</td>'
         ),
-        c.get(STAFF + "precinct" + SAM).text,
+        c.get(STAFF + "records" + SAM).text,
     )
-    assert ("Willow A 13-25", "4", "2", "0") in rows and len(rows) == 9
+    assert ("Willow A 13-25", "4", "2", "2", "0") in rows and len(rows) == 9
 
 
 def test_the_master_and_the_admin_delegate_open_appeals_from_the_staff_pages(monkeypatch) -> None:
@@ -360,8 +363,8 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
         r'<a href="/ra-leave/staff/(\w*)',
         c.get(STAFF + q).text.split('class="tabs-in"')[1].split("</nav>")[0],
     )
-    assert tabs("?as=Priya%20Raman") == tabs(SAM) == ["", "decided", "precinct", "appeals"]
-    assert tabs("") == ["", "decided", "precinct"]  # an RF: no Appeals tab
+    assert tabs("?as=Priya%20Raman") == tabs(SAM) == ["", "decided", "records", "appeals"]
+    assert tabs("") == ["", "decided", "records"]  # an RF: no Appeals tab
     assert "Nothing awaits you." in c.get(STAFF + "?as=Priya%20Raman").text
     # Untick the admin: Rachel Yeo holds no slot, so she sees no RA and
     # her final approval leaves every Precinct with a gap (ruled 2026-10-29).
@@ -436,22 +439,32 @@ def test_oversight_follows_the_policy_setting(monkeypatch) -> None:
     assert "‹ Appeals" in page
 
 
-def test_precinct_leave_shows_a_chosen_period() -> None:
+def test_leave_records_show_a_chosen_period() -> None:
     """Spec §22, "for a selected period" (author, 2026-10-29): this week by
-    default, next week, the next four weeks or the rest of the term; who is
-    away, the Precinct counts and the clashes follow it."""
+    default, next week, the next four weeks or the rest of the term; the
+    applications, the counts and the clashes follow it."""
     c = client()
 
-    def away(query: str) -> list[str]:
-        page = c.get(STAFF + "precinct" + query).text
-        part = page.split('id="away-h"')[1].split("</section>")[0]
-        return re.findall(r'<td class="strong nowrap">([^<]+)</td>', part)
+    def names(query: str, status: str | None = None) -> list[str]:
+        page = c.get(STAFF + "records" + query).text
+        part = page.split('id="rec-h"')[1].split("</table>")[0]
+        rows = re.findall(r"<tr>(.*?)</tr>", part, re.S)
+        return [
+            name
+            for r in rows
+            if status is None or f">{status}</span>" in r
+            for name in re.findall(r'decide/L-\d+[^"]*">([^<]+)</a>', r)
+        ]
 
     assert sample_leave.period("bogus")[:2] == ("week", "This week")
-    assert away(SAM) == away(SAM + "&period=week") == ["Maya Seah", "Olivia Ng", "Pranav Iyer"]
-    assert away(SAM + "&period=next") == []
-    assert "Hana Ito" in away(SAM + "&period=term") and "Hana Ito" not in away(SAM)
-    week, nxt = (c.get(STAFF + "precinct" + SAM + q).text for q in ("", "&period=next"))
+    away = names(SAM, "On leave") + names(SAM, "Approved")
+    assert sorted(away) == ["Maya Seah", "Olivia Ng", "Pranav Iyer"]
+    assert names(SAM + "&period=week") == names(SAM)
+    # Hana Ito's approved 14 Dec is in the term, not this week (her pending
+    # 2 Nov is in both).
+    assert "Hana Ito" in names(SAM + "&period=term", "Approved")
+    assert "Hana Ito" not in names(SAM, "Approved")
+    week, nxt = (c.get(STAFF + "records" + SAM + q).text for q in ("", "&period=next"))
     assert '<option value="week" selected>This week</option>' in week
     assert '<option value="next" selected>Next week</option>' in nxt
     assert '<input type="hidden" name="as" value="Sam Lee">' in week  # the viewer survives a change
@@ -680,24 +693,71 @@ def test_staff_home_shows_a_month_of_leave_in_a_calendar() -> None:
     assert "?cover=waiting&amp;month=2026-11" in c.get(STAFF + "?cover=waiting").text
 
 
-def test_the_precinct_page_counts_in_its_cards_and_lists_by_precinct_last() -> None:
-    """Author, 2026-11-09: no count tiles; Away, Upcoming and pending, and
-    Clashes carry their counts; By Precinct comes last; the period's dates
-    sit under the select beside Show period."""
-    page = client().get(STAFF + "precinct" + SAM).text
-    assert 'class="tile' not in page
-    order = [page.index(f'id="{h}"') for h in ("away-h", "upcoming-h", "clash-h", "team-h")]
-    assert order == sorted(order)
-    assert 'Upcoming and pending <span class="count">· 9</span>' in page
-    rows = page.split('id="upcoming-h"')[1].split("</table>")[0].count("<tr><td")
-    assert rows == 9  # the count is the table's rows
-    assert 'Away, this week <span class="count">· 3</span>' in page
-    assert 'Clashes <span class="count">· 1</span>' in page
-    assert ">Precinct</a>" in client().get(STAFF + "?as=Priya%20Raman").text  # an RSLM
-    assert (
-        '<div class="period-row"><span id="period-dates"' in page
-        and "Show period</button></div>" in page
+def test_leave_records_list_every_application_filtered_by_status_and_precinct() -> None:
+    """Author, 2026-11-10: the Precinct page becomes Leave records, desktop
+    oriented. A full-width Leave applications card lists every application
+    whose dates touch the period, whatever its stage; over it, the period
+    at the left and on/off chips at the right, a status each and, over more
+    than one Precinct, a Precinct each. Then a Summary of the Precinct
+    counts with establishment and available, and Clashes at its right."""
+    c = client()
+    found = [sample_leave.by_id(i) for i in ("L-0107", "L-0115", "L-0101")]
+    assert [sample_leave.record_status(a) for a in found if a] == [
+        "On leave",
+        "Approved",
+        "Pending first approval",
+    ]
+    assert sample_leave.record_precincts("Daniel Koh") == ()
+    assert len(sample_leave.record_precincts("Priya Raman")) == 3
+    assert len(sample_leave.record_precincts("Sam Lee")) == 9
+    assert sample_leave.records_hidden("Daniel Koh", "Rejected,Maple 03-08,x") == {"Rejected"}
+
+    page = c.get(STAFF + "records" + SAM + "&period=term").text
+    order = [page.index(f'id="{h}"') for h in ("rec-h", "sum-h", "clash-h")]
+    assert order == sorted(order) and 'id="away-h"' not in page and 'id="upcoming-h"' not in page
+    head = page.split('id="rec-h"')[1].split("</thead>")[0]
+    assert '<div class="grid-thirds one-two gap-above-sm">' in head
+    chips = head.split('class="col-chips rec-filters"')[1].split("</div>")[0]
+    assert chips.count('class="col-chip on"') == 9 + 9
+    assert "Pending first approval<span" in chips and "Willow B 04-12<span" in chips
+    # Every stage the period touches; looking back over the whole term
+    # (the cold read) reaches taken, rejected and withdrawn leave too.
+    _, _, first, last = sample_leave.period("term")
+    rows = sample_leave.records("Sam Lee", first, last)
+    assert {s for _, s in rows} >= {"On leave", "Approved", "Pending first approval"}
+    _, _, start, end = sample_leave.period("whole")
+    assert (start, end) == (sample_leave.TERM.start, sample_leave.TERM.end)
+    whole = {s for _, s in sample_leave.records("Sam Lee", start, end)}
+    assert whole >= {"Taken", "Rejected", "Withdrawn", "Cancelled", "Appeal to the Master"}
+    assert sample_leave.period("last")[2:] == (
+        sample_leave.TODAY - sample_leave.timedelta(days=7),
+        sample_leave.TODAY - sample_leave.timedelta(days=1),
     )
+    assert sample_leave.period("sofar")[3] == sample_leave.TODAY
+    wpage = c.get(STAFF + "records" + SAM + "&period=whole").text
+    assert '<span class="chip chip-mute">Taken</span>' in wpage
+    assert f'Leave applications <span class="count">· {len(rows)}</span>' in page
+    # A chip off hides its rows; its link keeps the period, and the period
+    # form keeps the chips.
+    off = c.get(STAFF + "records" + SAM + "&period=term&hide=Approved,Willow A 13-25").text
+    kept = sample_leave.records("Sam Lee", first, last, frozenset({"Approved", "Willow A 13-25"}))
+    assert f'Leave applications <span class="count">· {len(kept)}</span>' in off
+    assert all(s != "Approved" and a.precinct != "Willow A 13-25" for a, s in kept)
+    assert '<input type="hidden" name="hide" value="Approved,Willow A 13-25">' in off
+    assert (
+        'href="/ra-leave/staff/records?as=Sam%20Lee&amp;hide=Willow%20A%2013-25&amp;period=term#rec-h"'
+        in off
+    )
+    # An RF sees no Precinct chips or column.
+    daniel = c.get(STAFF + "records").text
+    dchips = daniel.split('class="col-chips rec-filters"')[1].split("</div>")[0]
+    assert dchips.count('class="col-chip on"') == 9 and "Cypress" not in dchips
+    assert '<th scope="col">Precinct</th>' not in daniel.split('id="rec-h"')[1].split("</thead>")[0]
+    # Summary: establishment, away, available, pending, and a total.
+    summary = page.split('id="sum-h"')[1].split("</section>")[0]
+    assert ">Establishment</th>" in summary and ">Available</th>" in summary
+    assert '<th scope="row">Total</th>' in summary and "Total" not in daniel.split('id="sum-h"')[1]
+    assert '<div class="bottom-row">' in page
 
 
 def test_the_leave_calendar_filters_by_status_and_for_the_unit_by_wing() -> None:

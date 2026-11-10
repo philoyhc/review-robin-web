@@ -291,7 +291,7 @@ def initials(label: str) -> str:
 DESKTOP_PAGES: Mapping[str, tuple[str, ...]] = {
     "residentialops": (
         "/ra-leave/admin/",
-        "/ra-leave/staff/precinct",
+        "/ra-leave/staff/records",
         "/ra-events/admin/",
         "/rosters/",
         "/sys-admin/",

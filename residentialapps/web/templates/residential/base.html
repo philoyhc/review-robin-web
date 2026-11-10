@@ -390,6 +390,16 @@
          own swatch, so the chips are its key too. */
       a.col-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
       .cal-filters { margin: 4px 0 8px; }
+      /* A third and two thirds (Leave records, author, 2026-11-10): the
+         period beside its filter chips; one column below 960 px. The
+         converse is .bottom-row. */
+      .grid-thirds { display: grid; gap: 16px 24px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+      @media (min-width: 960px) {
+        .grid-thirds.one-two { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+      }
+      .field-label { display: block; margin: 8px 0 4px; font-size: 14px; }
+      .rec-filters { margin: 0; }
+      .chip-break { flex-basis: 100%; height: 0; }
       .cal-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--surface-muted); }
       .cal-swatch.approved { background: var(--chip-ok-bg); border: 1px solid var(--chip-ok-fg); }
       .cal-swatch.pending { border: 1px dashed var(--chip-info-fg); }

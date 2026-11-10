@@ -37,7 +37,7 @@
         <p class="sub">Away today, {{ leave.short_date(leave.TODAY) }}, in {{ where }}.</p>
         {% set away = leave.away_today(me) %}
         {% if away %}<ul class="items">{% for a in away %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">Cover {{ a.cover }} · {{ a.precinct }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">No one is away today.</p>{% endif %}
-        <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/staff/precinct') }}{{ as_query }}">{{ leave.precinct_label(me) }}</a>
+        <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/staff/records') }}{{ as_query }}">Leave records</a>
       </section>
       <section class="card card-pad" aria-labelledby="later-h">
         {% set _, _, _, last = leave.period("week") %}
