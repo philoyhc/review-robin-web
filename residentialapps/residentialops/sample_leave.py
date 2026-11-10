@@ -2494,6 +2494,7 @@ PERMISSIONS = (
     ("view", "View records"),
     ("admin", "Admin pages"),
 )
+PERMISSION_KEYS = tuple(key for key, _ in PERMISSIONS)
 SCOPE_ALL = "All RAs"
 
 
@@ -2560,7 +2561,7 @@ def _granted(name: str) -> set[str]:
     appeals from `APPEAL_DECIDER` while `appeals_decided`, viewing records
     from `scope`, the admin pages from the sys admins."""
     abbrev = {p.name: p.abbrev for p in sample_data.STAFF}.get(name, "")
-    granted = set()
+    granted: set[str] = set()
     if POLICY["first"] == "slot" and abbrev in POLICY["first_types"]:
         granted.add("first")
     if name in final_approvers():
@@ -2595,7 +2596,9 @@ def permission_rows() -> tuple[PermissionRow, ...]:
     by_role: dict[str, set[str]] = {}
     for title, abbrev in (*slot_appointments(), *unit_appointments()):
         holders = [p.name for p in sample_data.STAFF if p.abbrev == abbrev]
-        common = set.intersection(*(_granted(h) for h in holders)) if holders else set()
+        common: set[str] = set(PERMISSION_KEYS) if holders else set()
+        for h in holders:
+            common &= _granted(h)
         # Approvers or inviters chosen by name are a person's grant, not the
         # role's, so they get named rows even when they hold the role alone.
         if POLICY["final"] == "named":
