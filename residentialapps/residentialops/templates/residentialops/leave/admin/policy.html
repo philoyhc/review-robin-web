@@ -54,7 +54,7 @@
         </table>
       </div>
       <ul class="plain subtle gap-above-sm">
-        <li><strong>Per term</strong>: the days for each term. <strong>Per month served</strong>: the days earned for each whole month served in the term. Either way a term's days are available only within that term and do not carry to the next.</li>
+        <li><strong>Per term</strong>: the days for each term. <strong>Per month served</strong>: the days earned for each whole month served in the term. A term's leave days are available only within that term and do not carry over.</li>
         <li>The cap holds what an RA earns in each term, or across the year's terms. Per-RA adjustments sit outside it, each with its reason, and are made on <a href="{{ url('/ra-leave/admin/entitlements') }}">Entitlements</a>.</li>
       </ul>
     </section>
@@ -63,7 +63,7 @@
        public holidays and blackout weeks side by side. #}
     <section class="card card-pad" aria-labelledby="days-h">
       <h2 id="days-h">Leave days</h2>
-      <p class="sub">Which days in an application count, against entitlement or as extra leave, and which weeks leave is closed. RAs usually work weekends and public holidays, so every day counts unless set otherwise.</p>
+      <p class="sub">Which days in an application count, against entitlement or as extra leave, and which weeks leave is closed.</p>
       {{ choice("day-count", "An application counts", leave.DAY_COUNTS, leave.POLICY.day_count, {"Every day": "Every day from the first to the last, weekends and public holidays included", "Weekdays": "Monday to Friday only; weekends are free, and dates falling only on a weekend cannot be applied for", "Working days": "Monday to Friday, less the public holidays below; dates counting no day cannot be applied for"}) }}
       <div class="split-cols gap-above">
         <section aria-labelledby="holidays-h">

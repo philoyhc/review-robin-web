@@ -379,7 +379,7 @@ def test_entitlement_rules_beyond_the_sample_types() -> None:
     monthly = lt("X", "X", "Per month served", 2, 6, "year")
     assert sample_leave.entitlement(monthly, start, terms[0]) == 4  # two months so far
     page = client().get(ADMIN + "policy").text
-    assert "do not carry to the next" in page and "Per academic year" not in page
+    assert "do not carry over" in page and "Per academic year" not in page
 
 
 def test_used_and_pending_count_only_the_terms_own_days(monkeypatch) -> None:
