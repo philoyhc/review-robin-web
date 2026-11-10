@@ -433,7 +433,7 @@ def test_appeals_switched_off_leave_no_appeal_route(monkeypatch) -> None:
     c = client()
     on = c.get(ADMIN).text.split('id="policy-h"')[1].split("</section>")[0]
     assert "<dt>Appeals</dt><dd>Open: The Master (Sam Lee), personally</dd>" in on
-    assert ">Appeals</th>" in c.get(ADMIN + "routing").text
+    assert ">Appeals final</th>" in c.get(ADMIN + "routing").text
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Off")
     policy = c.get(ADMIN + "policy").text
     assert 'name="appeals" value="Off" checked' in policy
@@ -445,7 +445,7 @@ def test_appeals_switched_off_leave_no_appeal_route(monkeypatch) -> None:
     routing = c.get(ADMIN + "routing").text
     # L-0105, made before appeals were turned off, stands and is decided.
     assert (
-        ">Appeals</th>" in routing
+        ">Appeals final</th>" in routing
         and "final approval and appeals are given only by those holding a place in the RA's slot"
         in routing
     )
@@ -525,7 +525,7 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     named = client().get(ADMIN + "policy").text
     assert 'aria-label="Final approval, Sam Lee" checked' in named
     assert 'aria-label="Final approval, Rachel Yeo" checked' in named
-    assert "<td>Sam Lee or Rachel Yeo</td>" in client().get(ADMIN + "routing").text
+    assert "<td>Sam Lee, Rachel Yeo</td>" in client().get(ADMIN + "routing").text
     dash = client().get(ADMIN).text
     assert (
         "No first approval, then Sam Lee or Rachel Yeo" in dash
@@ -696,7 +696,10 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     assert "Invitations take effect" not in c.get(STAFF_ADMIN_APPEALS).text
     assert 'name="appeals" value="By invitation" checked' in c.get(ADMIN + "policy").text
     routing = c.get(ADMIN + "routing").text
-    assert ">Appeals</th>" in routing and "final approval and appeals are not delegable" in routing
+    assert (
+        ">Appeals final</th>" in routing
+        and "final approval and appeals are not delegable" in routing
+    )
     assert "Extra leave the Master grants on appeal" in c.get(ADMIN + "entitlements").text
     future = sample_leave.Invitation(
         "Mira Sato",
@@ -1097,3 +1100,34 @@ def test_no_decide_column_the_master_keeps_ra_leave_while_deciding(monkeypatch) 
     assert sample_leave.appeals_decided() and len(sample_leave.scope("Sam Lee")) == 9
     monkeypatch.setitem(sample_leave.POLICY, "appeal_approval", "usual")
     assert not sample_leave.appeals_decided() and sample_leave.scope("Sam Lee") == ()
+
+
+def test_approval_chain_names_each_approver_with_their_role(monkeypatch) -> None:
+    """Author, 2026-11-10: the Precincts table is Wing, Precinct, RAs, First
+    approval, Final, Opens appeals, Appeals final; a name chosen by role
+    carries its Staff-roster abbreviation, several comma separated."""
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
+    page = client().get(ADMIN + "routing").text
+    table = page.split('id="chain-h"')[1].split("</table>")[0]
+    heads = re.findall(r'<th scope="col"[^>]*>([^<]+)</th>', table)
+    assert heads == [
+        "Wing",
+        "Precinct",
+        "RAs",
+        "First approval",
+        "Final",
+        "Opens appeals",
+        "Appeals final",
+    ]
+    assert "<td>Daniel Koh (RF)" in table
+    assert "<td>Rachel Yeo (Admin)</td>" in table
+    assert "<td>Sam Lee (Master), Rachel Yeo (Admin)</td>" in table
+    assert "<td>Sam Lee (Master)</td>" in table
+    assert ">RSLM</th>" not in table and ">RF</th>" not in table
+    # A delegate stands in by name, not role (cold read): Marcus Tan.
+    assert "<td>Marcus Tan <span" in table
+    assert sample_leave.with_roles(["Sam Lee", "Sam Lee"]) == "Sam Lee (Master)"
+    monkeypatch.setitem(sample_leave.POLICY, "inviters", "named")
+    monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ("Sam Lee",))
+    named = client().get(ADMIN + "routing").text.split('id="chain-h"')[1]
+    assert "<td>Sam Lee</td>" in named.split("</table>")[0]
