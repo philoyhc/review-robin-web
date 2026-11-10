@@ -177,7 +177,8 @@ def test_policy_blackouts_count_by_week_and_refuse_or_send_to_appeal() -> None:
     last_week = sample_leave.week_dates(B(1, 23, 24, "Last week", "Refused"))
     assert last_week is not None
     assert last_week[1].isoformat() == "2027-01-10"  # a Sunday: clipped
-    rendered = re.findall(r'<td class="nowrap subtle">([^<]*)</td>', page)
+    # Each blackout's dates sit under its What (author, 2026-11-10).
+    rendered = re.findall(r'value="[^"]*" disabled><div class="subtle small">([^<]*)</div>', page)
     assert rendered == ["3 Aug – 15 Aug", "15 Nov – 28 Nov", "11 Jan – 16 Jan"]
     terms = page.split('aria-label="Blackout 1: term"')[1].split("</select>")[0]
     assert re.findall(r"<option[^>]*>([^<]*)", terms) == ["Term 1", "Term 2", "Term 3"]
@@ -221,9 +222,21 @@ def test_policy_appeals_cover_and_approvals() -> None:
     ]
     assert "refused while appeals are off" in page  # system-wide switch (author, 2026-10-28)
     assert sample_leave.POLICY["appeal_terms"] in page
-    assert "unless the Master overrides it" in page and "no built-in default" in page
-    assert "cannot be done in advance and banked" in page
-    assert "The Master (Sam Lee), personally" in page
+    # Cover and appeal wording (author, 2026-11-10): the override sentence,
+    # the banking note and the Master-decides line go; appeals ask the college.
+    assert "no built-in default" in page and "unless the Master overrides it" not in page
+    assert "cannot be done in advance and banked" not in page
+    assert "may ask the college for extra leave" in page and "spec §7.5" not in page
+    assert "Whether an application or appeal must name a covering RA" in page
+    assert "Cover for leave is" in page and "ordinary leave is" not in page
+    # Cover sits left of Appeals; Approvals comes before Permissions; one
+    # Leave days card holds counting, public holidays and blackouts.
+    assert page.index('aria-labelledby="cover-h"') < page.index('aria-labelledby="appeals-h"')
+    assert page.index('id="approvals-h"') < page.index('id="perms-h"')
+    days = page.split('aria-labelledby="days-h"')[1].split("</section>")[0]
+    assert 'id="holidays-h"' in days and 'id="blackout-h"' in days and 'name="day-count"' in days
+    assert 'aria-labelledby="count-h"' not in page
+    assert "The first approver, then the Master (Sam Lee), personally" in page
     # Who approves is Permissions' to say (author, 2026-11-10); Approvals
     # sums it up.
     assert "<dt>Final approval</dt><dd>Residential Admin (RAs in every slot)" in page
@@ -425,7 +438,7 @@ def test_appeals_switched_off_leave_no_appeal_route(monkeypatch) -> None:
     assert 'name="appeals" value="Off" checked' in policy
     assert (
         "Not available: an application beyond entitlement" in policy
-        and "The Master (Sam Lee), personally" not in policy
+        and "then the Master (Sam Lee), personally" not in policy
     )
     assert "<dt>Appeals</dt><dd>Off</dd>" in c.get(ADMIN).text
     routing = c.get(ADMIN + "routing").text
@@ -658,10 +671,13 @@ def test_appeals_by_invitation(monkeypatch) -> None:
         '<span class="chip chip-mute">Lapsed</span>' in page and "Withdraw Nathan Yeo" not in page
     )
     policy = c.get(ADMIN + "policy").text
-    assert (
-        "they open an appeal for that RA on Appeals" in policy
-        and "once someone with Open appeals in Permissions agrees" in policy
-    )
+    assert "someone with permission can open an appeal for that RA" in policy
+    # Who approves an invited appeal: the usual approvers, or the usual
+    # first approver then the Master (author, 2026-11-10); the sample's is
+    # the Master, as routing does.
+    approvers = re.findall(r'name="appeal-approval" value="(\w+)"( checked)?', policy)
+    assert approvers == [("usual", ""), ("master", " checked")]
+    assert "the normal first approver, and the Master" in policy
     assert 'aria-label="Open appeals, Master" checked' in policy
     assert 'aria-label="Open appeals, Residential Admin" checked' in policy
     assert 'aria-label="Open appeals, Residential Executive" disabled' in policy

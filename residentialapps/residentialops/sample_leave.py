@@ -77,6 +77,15 @@ def week_dates(blackout: Blackout, year: str = "AY2026-2027") -> tuple[date, dat
 
 
 APPEAL_MODES = ("Open", "By invitation", "Off")
+# Who approves an appeal opened by invitation (author, 2026-11-10): the
+# usual first and final approvers, or the usual first approver and then the
+# Master, so the Master is always involved. With no separate first approver,
+# either skips that step. Shown on Policy; routing still sends every appeal
+# to the Master, as "master" does.
+APPEAL_APPROVALS = (
+    ("usual", "the normal first, and final approver"),
+    ("master", "the normal first approver, and the Master"),
+)
 # By invitation by default (author, 2026-11-09): a default deployment does
 # not show extra leave to RAs. An RA appeals offline; if it is agreed, an
 # admin opens an invitation, and only that RA may then send it.
@@ -98,6 +107,7 @@ class Policy(TypedDict):
     inviter_types: tuple[str, ...]
     inviter_names: tuple[str, ...]
     appeal_terms: str
+    appeal_approval: str
     cover_required: bool
     cover_mode: str
     cover_pool: str
@@ -153,6 +163,7 @@ _POLICY = _Policy(
         "appeal_terms": (
             "Granted on the understanding that you take on extra duties, as agreed with your RF."
         ),
+        "appeal_approval": "master",
         "cover_required": True,
         "cover_mode": "Named and confirmed",
         "cover_pool": "Same Precinct",
