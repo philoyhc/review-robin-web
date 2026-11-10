@@ -44,7 +44,7 @@
           {% else %}<p class="sub">{{ app.cover }} {{ cover_chip(app.cover_status) }}. Changing your cover tells {{ app.cover }} they are released{% if leave.confirmation_needed(app) %} and asks the new RA to confirm{% else %} and tells the new RA{% endif %}.</p>{% endif %}
           <div class="field-wide"><label for="new-cover">New covering RA</label>
             {{ person_tokens("New covering RA", (), "cover-pool", "new-cover", single=true) }}
-            <datalist id="cover-pool">{% for name in leave.cover_choices(me) if name != app.cover %}<option value="{{ name }}"></option>{% endfor %}</datalist></div>
+            <datalist id="cover-pool">{% set away = leave.away_between_names(app.start, app.end) %}{% for name in leave.cover_choices(me) if name != app.cover and name not in away %}<option value="{{ name }}"></option>{% endfor %}</datalist></div>
           <button type="button" class="btn btn-primary" disabled>Change cover</button>
         </section>
       {% endif %}

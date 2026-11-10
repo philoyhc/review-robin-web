@@ -5,7 +5,7 @@
 {% block title %}Apply for leave{% endblock %}
 {% block content %}
   {{ title("Apply for leave", leave, viewing(me)) }}
-  <p class="sub">Your approvers, from your slot: {{ leave.approvers_for(me) }}. You name your cover. Your dates are checked as you key them in; Submit opens once they pass. No one can be on leave while covering: your dates are refused if you cover someone then, and anyone away on them is not offered as your cover. Nothing is sent until RA Leave is wired.</p>
+  <p class="sub">Your approvers, from your slot: {{ leave.approvers_for(me) }}. You name your cover. Your dates are checked as you key them in; Submit opens once they pass. No one can be on leave while covering: your dates are refused if you cover someone then, and a saved draft's cover is checked against their own leave; choosing a cover here is checked once RA Leave is wired. Nothing is sent until RA Leave is wired.</p>
   <div class="split">
     <div class="main stack">
       {% if draft %}<div class="gate-note gap-below" role="note"><strong>Draft saved {{ leave.short_date(draft.saved) }}.</strong> It is yours alone: no one is asked or told, and it uses no days, until you submit it.{% set short = leave.draft_short(draft) %}{% if short %} It asks {{ short }} day{{ "s" if short != 1 }} more {{ draft.leave_type }} than you have: {% if leave.can_appeal(me) %}submitting it offers Request extra leave instead.{% else %}shorten it before you submit.{% endif %}{% endif %}</div>{% endif %}
@@ -18,7 +18,7 @@
           <datalist id="cover-pool">{% for name in leave.cover_choices(me) %}<option value="{{ name }}"></option>{% endfor %}</datalist>
           <span id="cover-what" class="subtle small">{{ leave.POLICY.cover_pool }}: {{ leave.cover_choices(me) | length }} RAs you may name.{% if leave.POLICY.cover_required and leave.POLICY.cover_mode == "Named and confirmed" %} They are asked to confirm; your application waits at first approval until they do.{% elif leave.POLICY.cover_required %} They are told; they need not confirm.{% endif %}</span></div>
         <div class="field-wide full"><label for="remarks">Remarks (optional)</label><textarea id="remarks" class="input" rows="2" disabled>{{ draft.remarks if draft }}</textarea></div>
-        <div class="btnrow">{% set ok = leave.check_dates(me, draft.leave_type, draft.start, draft.end).ok if draft else false %}<button type="button" id="send" aria-describedby="days-note" class="btn btn-primary"{% if not ok %} disabled{% endif %}>Submit</button><button type="button" class="btn btn-secondary" disabled>Save draft</button>{% if draft %}<button type="button" class="btn btn-danger" disabled>Discard draft</button>{% endif %}<a class="btn btn-secondary" href="{{ url('/ra-leave/') }}{{ as_query }}">Cancel</a></div>
+        <div class="btnrow">{% set ok = leave.check_dates(me, draft.leave_type, draft.start, draft.end, false, draft.cover or "").ok if draft else false %}<button type="button" id="send" aria-describedby="days-note" class="btn btn-primary"{% if not ok %} disabled{% endif %}>Submit</button><button type="button" class="btn btn-secondary" disabled>Save draft</button>{% if draft %}<button type="button" class="btn btn-danger" disabled>Discard draft</button>{% endif %}<a class="btn btn-secondary" href="{{ url('/ra-leave/') }}{{ as_query }}">Cancel</a></div>
       </section>
     </div>
     <div class="side">

@@ -127,7 +127,10 @@ def test_a_tile_opens_the_rows_it_counts() -> None:
     old = c.get(ADMIN + "applications/L-0101", follow_redirects=False)
     assert old.headers["location"] == "/ra-leave/admin/records/L-0101"
     back = c.get(ADMIN + "records/L-0101").text
-    assert '<a class="back" href="/ra-leave/admin/records?period=whole">' in back
+    assert '<a class="back" href="/ra-leave/admin/records?period=whole">‹ Records</a>' in back
+    # Its tab reads Records, as the staff's (author, 2026-11-10).
+    tabs = c.get(ADMIN).text.split('class="tabs-in"')[1].split("</nav>")[0]
+    assert '/ra-leave/admin/records">Records</a>' in tabs and "Leave records" not in tabs
 
 
 def test_policy_sets_leave_types_with_their_own_entitlement_rules() -> None:

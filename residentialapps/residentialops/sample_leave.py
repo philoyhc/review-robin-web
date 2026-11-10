@@ -1842,8 +1842,10 @@ def check_dates(
 ) -> DateCheck:
     """Check an application as the RA keys it in (author, 2026-11-09; spec
     §10): a known leave type, both dates chosen, in order, not past, within
-    this term, clear of the RA's own leave, counting a day, clear of a
-    Refused blackout and within the balance. Where the RA may appeal, an
+    this term, clear of the RA's own leave, clear of leave the RA covers
+    and, given a cover, clear of the cover's own leave (author,
+    2026-11-10), counting a day, clear of a Refused blackout and within
+    the balance. Where the RA may appeal, an
     Appeal-only blackout or more than the balance still submits, as an
     appeal or by offering Request extra leave (author, 2026-10-29; §7.2
     "should not simply block"), so the message is a note, not a refusal;

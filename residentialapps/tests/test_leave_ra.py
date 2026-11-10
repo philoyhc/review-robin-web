@@ -811,6 +811,30 @@ def test_no_one_is_on_leave_while_covering(monkeypatch: pytest.MonkeyPatch) -> N
     r = c.get(RA + "check-dates", params={"first": "2026-11-07", "last": "2026-11-07"}).json()
     assert "Chloe Lim" in r["unavailable"]
     assert c.get(RA + "check-dates").json()["unavailable"] == []
+    backwards = {"first": "2026-11-08", "last": "2026-11-07"}
+    assert c.get(RA + "check-dates", params=backwards).json()["unavailable"] == []
+    # The route passes the cover to the check.
+    named = c.get(
+        RA + "check-dates",
+        params={
+            "first": "2026-11-07",
+            "last": "2026-11-07",
+            "cover": "Chloe Lim",
+            "as": "Hana Ito",
+        },
+    ).json()
+    assert not named["ok"] and "Chloe Lim is on leave" in named["message"]
+    # A declined cover covers nothing (Hana Ito's L-0109, 2 Nov – 3 Nov,
+    # declined by Chloe), and withdrawn leave is no leave (Ethan Wong's
+    # L-0111, 17 Oct – 18 Oct).
+    assert sample_leave.covering_between("Chloe Lim", d(2026, 11, 2), d(2026, 11, 3)) is None
+    assert sample_leave.own_leave_between("Ethan Wong", d(2026, 10, 17), d(2026, 10, 18)) is None
+    assert "Ethan Wong" not in sample_leave.away_between_names(d(2026, 10, 17), d(2026, 10, 18))
+    # Changing cover on an application offers no one away on its dates.
+    detail = c.get(RA + "applications/L-0101").text  # Chloe, 6 Nov – 8 Nov
+    pool = detail.split('id="cover-pool"')[1].split("</datalist>")[0]
+    away = sample_leave.away_between_names(d(2026, 11, 6), d(2026, 11, 8))
+    assert not any(f'value="{n}"' in pool for n in away)
     # A cover asked for days they are away is told, Confirm marked unavailable.
     ethan = sample_leave.by_id("L-0114")
     assert ethan
