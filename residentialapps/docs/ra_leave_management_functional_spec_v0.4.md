@@ -568,7 +568,7 @@ At minimum, the covering RA should receive notification when:
 3. the leave is finally approved;
 4. the leave is rejected, withdrawn or cancelled.
 
-Both facilities are built in for every application: **cover information** (naming the covering RA, who is notified) and **cover confirmation** (the covering RA confirms or declines). Whether leave requires confirmation is decided by an administrator setting (author, 2026-10-22). It has no built-in default: the setting is chosen as part of cycle setup (§21.1), and ordinary applications cannot be submitted until it has been set. Extra-leave appeals follow the same setting (author, 2026-11-10; §7.4).
+Both facilities are built in for every application: **cover information** (naming the covering RA, who is notified) and **cover confirmation** (the covering RA confirms or declines). Whether leave requires confirmation is decided by an administrator setting (author, 2026-10-22). It has no built-in default: the setting is chosen as part of cycle setup (§21.1), and no application, ordinary or appeal, can be submitted until it has been set. Extra-leave appeals follow the same setting (author, 2026-11-10; §7.4).
 
 ---
 
@@ -631,7 +631,7 @@ If rejected:
 
 A typical extra-leave path is:
 
-**Appeal Submitted → Awaiting Cover Confirmation → Pending Master Decision → Approved / Rejected**
+**Appeal Submitted → Awaiting Cover Confirmation (where the setting requires it, §12) → Pending Master Decision → Approved / Rejected**
 
 The precise sequence may permit cover confirmation and staff review to occur in parallel, but the application must make the outstanding prerequisites visible.
 
@@ -773,7 +773,7 @@ This replaces the older approach in which parts of the audit history might exist
 Administrators can:
 
 - create a new RA cycle;
-- choose whether ordinary leave requires cover confirmation (§12);
+- choose whether leave, appeals included, requires cover confirmation (§12);
 - upload roster/entitlement CSV;
 - preview and validate changes;
 - commit the import;

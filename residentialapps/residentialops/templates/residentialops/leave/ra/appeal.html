@@ -18,7 +18,7 @@
         {{ date_fields(leave, me, as_query, "send", appeal=true) }}
         {% if leave.zero_day_rule() %}<p class="subtle small">{{ leave.zero_day_rule() }}</p>{% endif %}
         <div class="field-wide full"><label for="reason">Why you need it</label><textarea id="reason" class="input" rows="3" disabled></textarea></div>
-        <div class="field-wide full"><label for="cover">Covering RA</label>
+        <div class="field-wide full"><label for="cover">Covering RA{% if not leave.POLICY.cover_required %} (optional){% endif %}</label>
           {{ person_tokens("Covering RA", (), "cover-pool", "cover", single=true, describedby="cover-what") }}
           <datalist id="cover-pool">{% for name in leave.cover_choices(me) %}<option value="{{ name }}"></option>{% endfor %}</datalist>
           <span id="cover-what" class="subtle small">{{ leave.POLICY.cover_pool }}: {{ leave.cover_choices(me) | length }} RAs you may name.{% if leave.POLICY.cover_required and leave.POLICY.cover_mode == "Named and confirmed" %} They are asked to confirm; your appeal waits until they do.{% elif leave.POLICY.cover_required %} They are told; they need not confirm.{% endif %}</span></div>

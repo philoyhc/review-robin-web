@@ -1173,3 +1173,21 @@ def test_an_appeal_follows_the_cover_setting(monkeypatch) -> None:
         assert sample_leave.confirmation_needed(ordinary) is confirms
     monkeypatch.setitem(sample_leave.POLICY, "cover_required", False)
     assert not sample_leave.confirmation_needed(appeal)
+
+
+def test_an_appeal_s_pages_follow_the_cover_setting(monkeypatch) -> None:
+    """The harmonized cover rule on the pages (author, 2026-11-10): Sam's
+    L-0105 waits on Elise Tan only while confirmation is required, and the
+    appeal form's cover note and label follow the setting as Apply's do."""
+    c = client()
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
+    sam = c.get(STAFF + "applications/L-0105" + SAM).text
+    assert "Waiting on cover" in sam and "this can be granted once they do" in sam
+    form = c.get("/ra-leave/appeal").text
+    assert "your appeal waits until they do" in form and "Covering RA</label>" in form
+    monkeypatch.setitem(sample_leave.POLICY, "cover_mode", "Named only")
+    assert "Waiting on cover" not in c.get(STAFF + "applications/L-0105" + SAM).text
+    assert "They are told; they need not confirm." in c.get("/ra-leave/appeal").text
+    monkeypatch.setitem(sample_leave.POLICY, "cover_required", False)
+    form = c.get("/ra-leave/appeal").text
+    assert "Covering RA (optional)</label>" in form and "need not confirm" not in form

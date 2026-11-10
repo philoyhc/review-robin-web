@@ -12,7 +12,7 @@
         <section class="card card-pad" aria-labelledby="act-h">
           <h2 id="act-h">{{ "Decide the appeal" if role == "Appeal" else role }}</h2>
           {% if cover_wait %}
-            <p class="sub"><span class="chip chip-warn">Waiting on cover</span> {% if app.cover_status == "Declined" %}{{ app.cover }} has declined; the RA must name new cover before this can be approved, or you may reject it now.{% else %}{{ app.cover }} has not yet confirmed; this can be {{ "granted" if role == "Appeal" else "approved" }} once they do, or rejected now.{% endif %}</p>
+            <p class="sub"><span class="chip chip-warn">Waiting on cover</span> {% if app.cover_status == "Declined" %}{{ app.cover }} has declined; the RA must name new cover before this can be {{ "granted" if role == "Appeal" else "approved" }}, or you may reject it now.{% else %}{{ app.cover }} has not yet confirmed; this can be {{ "granted" if role == "Appeal" else "approved" }} once they do, or rejected now.{% endif %}</p>
           {% endif %}
           <div class="field-wide"><label for="remarks">Remarks{% if role == "Appeal" %} (the reason for your decision){% else %} (optional){% endif %}</label><textarea id="remarks" class="input" rows="2" disabled></textarea></div>
           <div class="btnrow">
