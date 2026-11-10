@@ -55,6 +55,20 @@ def test_leave_records_apply_a_period_on_choosing_it_and_stay_at_the_top(
     expect(page.locator("#period")).to_have_value("whole")
     page.evaluate("window.scrollTo(0, 300)")
     with page.expect_navigation():
-        page.locator(".rec-filters").nth(1).locator("a", has_text="Clear all").click()
+        page.locator(".rec-filters").nth(2).locator("a", has_text="Clear all").click()  # Precinct
     assert page.evaluate("window.scrollY") == 0
     assert "period=whole" in page.url
+
+
+def test_leave_records_wait_for_a_forward_range(page: Page) -> None:  # noqa: F811
+    """Codex, 2026-11-10: a From moved past To waits for To instead of
+    submitting a backwards range; a forward one applies."""
+    page.goto(ORIGIN + "/ra-leave/staff/records?as=Sam%20Lee")
+    page.fill("#from", "2026-12-01")
+    page.locator("#from").dispatch_event("change")
+    page.wait_for_timeout(300)
+    assert "period=custom" not in page.url  # no reload: To still 3 Nov
+    with page.expect_navigation():
+        page.fill("#to", "2026-12-31")
+        page.locator("#to").dispatch_event("change")
+    assert "from=2026-12-01" in page.url and "to=2026-12-31" in page.url

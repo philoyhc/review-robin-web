@@ -302,7 +302,7 @@ def test_an_application_can_be_saved_as_a_draft_and_reopened() -> None:
     # sees it, not even its RA's own approver's.
     for path in (
         "/ra-leave/admin/",
-        "/ra-leave/admin/applications",
+        "/ra-leave/admin/records?period=whole",
         "/ra-leave/staff/",
         "/ra-leave/staff/records?period=whole",
     ):

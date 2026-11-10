@@ -1,0 +1,21 @@
+{% extends "residential/base.html" %}
+{% from "residentialops/leave/_leave.html" import title with context %}
+{% block title %}Leave records{% endblock %}
+{% block content %}
+  {# Leave records (author, 2026-11-10; Applications until then): the
+     staff's Records card over the whole Unit, its period and chips the
+     same, Export and Record external leave under the table. Open an ID to
+     correct the record, cancel approved leave or reassign an approval
+     (spec §21.4); every change is audited. #}
+  {{ title("Leave records", leave) }}
+  <p class="sub">Every application in the Unit for a period. Open an ID to correct it, cancel approved leave or reassign an approval; external leave is recorded here too (spec §21.4). Every change is audited. Export downloads the rows the filters show, as CSV, for reporting (spec §4.6).</p>
+  {% set me = None %}
+  {% set key, label, first, last = period %}
+  {% set hidden = leave.records_hidden(None, hide) %}
+  {% set rows = leave.records(None, first, last, hidden) %}
+  {% if unconfirmed %}{% set waiting = leave.cover_unconfirmed() %}{% set rows = rows | selectattr(0, "in", waiting) | list %}{% endif %}
+  {% set aq, form_keep, as_query, admin = ('cover=unconfirmed&' if unconfirmed else ''), ([("cover", "unconfirmed")] if unconfirmed else []), '', true %}
+  {% if unconfirmed %}<p class="sub"><span class="chip chip-warn">Cover not yet confirmed</span> Only the open applications whose cover the policy still waits on, as the dashboard's tile counts them. <a href="{{ url('/ra-leave/admin/records') }}?period={{ period[0] if period[0] != 'custom' else 'whole' }}">Show all</a></p>{% endif %}
+  {% set app_base = '/ra-leave/admin/records/' %}
+  {% include "residentialops/leave/_records_card.html" %}
+{% endblock %}

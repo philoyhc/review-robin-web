@@ -5,6 +5,7 @@ downstream of its configuration (author, 2026-10-28)."""
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.requests import Request
@@ -16,7 +17,7 @@ from residentialapps.residentialops.pages import (
     placeholders_previewers_only,
     render,
 )
-from residentialapps.web.urls import url_path
+from residentialapps.web.urls import app_path, url_path
 
 router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 
@@ -95,23 +96,63 @@ def appeals(request: Request) -> Response:
     )
 
 
+@router.get("/ra-leave/admin/records", name="residentialops_leave_admin_records")
+def records(request: Request) -> Response:
+    # Leave records (author, 2026-11-10; Applications until then): the
+    # staff's Records card over the whole Unit, its filters the same chips
+    # and period, Export and Record external leave under the table.
+    q = request.query_params
+    return _page(
+        request,
+        "records.html",
+        # The whole term by default: the admin keeps the record (the cold
+        # read, 2026-11-10; Applications listed every application).
+        period=sample_leave.period_range(q.get("period"), q.get("from"), q.get("to"), "whole"),
+        hide=q.get("hide"),
+        # The Cover not yet confirmed tile's own set (Codex, 2026-11-10):
+        # open, its cover still to confirm where the policy asks it, which
+        # the chips alone cannot say.
+        unconfirmed=q.get("cover") == "unconfirmed",
+        here=app_path(request),
+    )
+
+
 @router.get("/ra-leave/admin/applications", name="residentialops_leave_admin_applications")
 def applications(request: Request) -> Response:
-    # The dashboard's tiles link here filtered (`?stage=`, `?cover=`); the
-    # rest of the filter card is inert until item 2.
-    stage = request.query_params.get("stage", "")
-    cover = request.query_params.get("cover", "")
-    shown = tuple(
-        a
-        for a in sample_leave.APPLICATIONS
-        if (not stage or a.stage == stage)
-        and (cover != "unconfirmed" or a in sample_leave.cover_unconfirmed())
+    # Applications became Leave records (author, 2026-11-10); an old link
+    # lands there over the whole term, its `?stage=` and `?cover=` filters
+    # turned into the chips that keep their rows (Codex, 2026-11-10).
+    q = request.query_params
+    kept: list[str] = []
+    if q.get("stage") in sample_leave.stages():
+        kept.append(q["stage"])
+    query = "period=whole"
+    if q.get("cover") == "unconfirmed":
+        query = "cover=unconfirmed&" + query
+    if kept:
+        query = "hide=" + quote(sample_leave.records_hide_except(*kept)) + "&" + query
+    return RedirectResponse(
+        url_path(request, "/ra-leave/admin/records") + "?" + query, status_code=303
     )
-    return _page(request, "applications.html", shown=shown, stage=stage, cover=cover)
 
 
 @router.get(
-    "/ra-leave/admin/applications/{application_id}", name="residentialops_leave_admin_application"
+    "/ra-leave/admin/applications/{application_id}",
+    name="residentialops_leave_admin_application_old",
+)
+def application_old(request: Request, application_id: str) -> Response:
+    return _moved(request, f"/ra-leave/admin/records/{application_id}")
+
+
+def _moved(request: Request, path: str) -> Response:
+    query = request.url.query
+    return RedirectResponse(
+        url_path(request, path) + (f"?{query}" if query else ""), status_code=303
+    )
+
+
+@router.get(
+    "/ra-leave/admin/records/{application_id}", name="residentialops_leave_admin_application"
 )
 def application(request: Request, application_id: str) -> Response:
     found = sample_leave.by_id(application_id)
@@ -122,5 +163,5 @@ def application(request: Request, application_id: str) -> Response:
         "application.html",
         app=found,
         steps=sample_leave.timeline(found),
-        current_tab="/ra-leave/admin/applications",
+        current_tab="/ra-leave/admin/records",
     )

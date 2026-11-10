@@ -2080,24 +2080,41 @@ def record_statuses() -> tuple[str, ...]:
     return tuple(s for s in RECORD_STATUSES if s not in STAGES or s in used)
 
 
-def record_precincts(viewer: str) -> tuple[str, ...]:
-    """The Precinct chips on Leave records: one each for a viewer who
-    oversees more than one Precinct (author, 2026-11-10); none for one."""
-    precincts = scope(viewer)
-    return precincts if len(precincts) > 1 else ()
+# Leave records' Cover chips (author, 2026-11-10), one per cover status,
+# named apart from the status chips (a Cancelled stage, a released cover).
+COVER_CHIPS = {
+    "Confirmed": "Cover confirmed",
+    "Awaiting": "Cover awaiting",
+    "Declined": "Cover declined",
+    "Cancelled": "Cover released",
+}
 
 
-def records_hidden(viewer: str, value: str | None) -> frozenset[str]:
-    """Leave records' filters turned off, from `?hide=`: only the viewer's
+def records_scope(viewer: str | None) -> tuple[str, ...]:
+    """The Precincts Leave records covers: a staff member's scope, or the
+    whole Unit on the admin's Leave records (viewer None)."""
+    return precincts() if viewer is None else scope(viewer)
+
+
+def record_precincts(viewer: str | None) -> tuple[str, ...]:
+    """The Precinct chips on Leave records: one each where the page covers
+    more than one Precinct (author, 2026-11-10); none for one."""
+    covered = records_scope(viewer)
+    return covered if len(covered) > 1 else ()
+
+
+def records_hidden(viewer: str | None, value: str | None) -> frozenset[str]:
+    """Leave records' filters turned off, from `?hide=`: only the page's
     own chips count."""
-    known = set(record_statuses()) | set(record_precincts(viewer))
+    known = set(record_statuses()) | set(COVER_CHIPS.values()) | set(record_precincts(viewer))
     return frozenset(v for v in (value or "").split(",") if v in known)
 
 
-def record_filters(viewer: str, hidden: frozenset[str]) -> tuple[tuple[str, bool, str], ...]:
-    """Leave records' chips: each status, then each Precinct where there is
-    more than one."""
-    return toggle_filters(record_statuses() + record_precincts(viewer), hidden)
+def record_filters(viewer: str | None, hidden: frozenset[str]) -> tuple[tuple[str, bool, str], ...]:
+    """Leave records' chips: each status, each cover status, then each
+    Precinct where there is more than one."""
+    labels = record_statuses() + tuple(COVER_CHIPS.values()) + record_precincts(viewer)
+    return toggle_filters(labels, hidden)
 
 
 class FilterGroup(TypedDict):
@@ -2110,14 +2127,18 @@ class FilterGroup(TypedDict):
     clear_all: str
 
 
-def record_groups(viewer: str, hidden: frozenset[str]) -> tuple[FilterGroup, ...]:
-    """Leave records' chips in groups (author, 2026-11-10): Status, then
-    Precinct where there is more than one, each ending in Select all and
-    Clear all, which turn that group's chips all on or all off and keep
-    the other group's as they are."""
+def record_groups(viewer: str | None, hidden: frozenset[str]) -> tuple[FilterGroup, ...]:
+    """Leave records' chips in groups (author, 2026-11-10): Status, Cover,
+    then Precinct where there is more than one, each ending in Select all
+    and Clear all, which turn that group's chips all on or all off and keep
+    the other groups' as they are."""
     chips = record_filters(viewer, hidden)
     groups: list[FilterGroup] = []
-    for name, labels in (("Status", record_statuses()), ("Precinct", record_precincts(viewer))):
+    for name, labels in (
+        ("Status", record_statuses()),
+        ("Cover", tuple(COVER_CHIPS.values())),
+        ("Precinct", record_precincts(viewer)),
+    ):
         if not labels:
             continue
         group = set(labels)
@@ -2132,20 +2153,55 @@ def record_groups(viewer: str, hidden: frozenset[str]) -> tuple[FilterGroup, ...
     return tuple(groups)
 
 
+def records_hide_except(*kept: str) -> str:
+    """A `hide` value that leaves only the chips named on, the rest of
+    their groups off: the admin dashboard's links into Leave records."""
+    groups = (record_statuses(), tuple(COVER_CHIPS.values()))
+    off = [label for g in groups if any(k in g for k in kept) for label in g if label not in kept]
+    return ",".join(sorted(off))
+
+
 def records(
-    viewer: str, start: date, end: date, hidden: frozenset[str] = frozenset()
+    viewer: str | None, start: date, end: date, hidden: frozenset[str] = frozenset()
 ) -> tuple[tuple[Application, str], ...]:
     """Leave records' table (author, 2026-11-10): every application in the
-    viewer's scope whose dates touch the period, whatever its stage, with
-    its status, soonest first; the filters turned off left out."""
+    page's scope whose dates touch the period, whatever its stage, with its
+    status, soonest first; the filters turned off left out."""
+    covered = records_scope(viewer)
     return tuple(
         (a, record_status(a))
-        for a in sorted(in_scope(viewer), key=lambda a: (a.start, a.ra))
-        if a.start <= end
+        for a in sorted(APPLICATIONS, key=lambda a: (a.start, a.ra))
+        if a.precinct in covered
+        and a.start <= end
         and a.end >= start
         and record_status(a) not in hidden
+        and COVER_CHIPS.get(a.cover_status, "") not in hidden
         and a.precinct not in hidden
     )
+
+
+# The longest From–To range Leave records takes: two years, the Summary
+# counting each day of it (the cold read, 2026-11-10).
+MAX_RANGE_DAYS = 731
+
+
+def period_range(
+    key: str | None, start: str | None, end: str | None, default: str = "week"
+) -> tuple[str, str, date, date]:
+    """Leave records' period (author, 2026-11-10): one of `PERIODS`
+    (`default` when none is named), or, when the period is "custom" or
+    none is named, the From and To dates given, when both parse, run
+    forwards and span at most `MAX_RANGE_DAYS`. A named period wins over
+    dates sent with it, so the form works without scripts."""
+    if key not in (None, "", "custom"):
+        return period(key)
+    try:
+        first, last = date.fromisoformat(start or ""), date.fromisoformat(end or "")
+    except ValueError:
+        return period(default)
+    if first > last or (last - first).days >= MAX_RANGE_DAYS:
+        return period(default)
+    return "custom", f"{short_date(first)} – {short_date(last)}", first, last
 
 
 def is_rf(viewer: str) -> bool:

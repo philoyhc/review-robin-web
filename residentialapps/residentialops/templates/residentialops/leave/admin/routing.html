@@ -33,7 +33,7 @@
 
   <section class="card card-pad gap-above" aria-labelledby="delegates-h">
     <h2 id="delegates-h">Delegates <span class="count">· {{ leave.DELEGATES | length }}</span></h2>
-    <p class="sub">{% if leave.POLICY.first == "none" %}The policy needs no first approval, so no delegate stands in until it does. {% endif %}A delegate approves first in a person's place on every slot that person approves for, between the dates given, and must hold a place in those slots; leave both blank until removed. First approval only: final approval{{ " and appeals are" if leave.appeals_on() else " is" }} not delegable, and an application waiting on someone can be reassigned from <a href="{{ url('/ra-leave/admin/applications') }}">Applications</a>.</p>
+    <p class="sub">{% if leave.POLICY.first == "none" %}The policy needs no first approval, so no delegate stands in until it does. {% endif %}A delegate approves first in a person's place on every slot that person approves for, between the dates given, and must hold a place in those slots; leave both blank until removed. First approval only: final approval{{ " and appeals are" if leave.appeals_on() else " is" }} not delegable, and an application waiting on someone can be reassigned from <a href="{{ url('/ra-leave/admin/records') }}">Leave records</a>.</p>
     <div class="table-wrap">
       <table class="rows">
         <thead><tr><th scope="col">Acting for</th><th scope="col">Delegate</th><th scope="col">From</th><th scope="col">To</th><th scope="col">Why</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>

@@ -123,8 +123,10 @@ widths, the scripts' behavior, and whether the screens read right.
   Overdue chip.
 - [ ] **Records as Sam** (desktop; `/ra-leave/staff/precinct` lands
   here; Bella Koh's row marked "1st: Marcus Tan"), This week:
-  - Leave applications: the period at the left, the chips at the right
-    (nine statuses, then nine Precincts on their own line); Maya Seah and
+  - Leave applications: the period, then From and To, at the left, the
+    chips at the right (nine statuses, four cover statuses, then nine
+    Precincts, each on their own rows); the table ID, RA, Precinct, Leave
+    type, Dates, Days, Cover, Submitted, Stage; Maya Seah and
     Olivia Ng On leave, Pranav Iyer Approved (from tomorrow), with "Away
     too" on Olivia's cover; turn a chip off and change the period: it
     stays off; Whole term adds Taken, Rejected and Withdrawn rows;
@@ -151,8 +153,8 @@ Reach it from Rachel's or Sam's landing card.
 
 - [ ] **Dashboard**:
   - tiles: Pending first approval 5, Pending final approval 1, Appeal to
-    the Master 1, Cover not yet confirmed 4. Each tile opens Applications
-    filtered.
+    the Master 1, Cover not yet confirmed 4. Each tile opens Leave records
+    over the whole term with only its rows' chips on.
   - Needs attention lists L-0103, L-0104, L-0107, L-0109 and the
     Willow A 13-25 clash;
   - Emails not sent · 3, with Resend.
@@ -168,12 +170,14 @@ Reach it from Rachel's or Sam's landing card.
     "Grace Ho has not signed in yet";
   - Daniel Koh → Priya Raman, 7 Dec – 18 Dec, in the delegates row
     builder.
-- [ ] **Applications**:
-  - the "Cover not yet confirmed" tile shows "· 4 of 20";
-  - **column chips** hide columns, and the choice is kept after a reload;
+- [ ] **Leave records** (admin; `/ra-leave/admin/applications` lands here):
+  - the staff Records card: Period, then From and To, one above the
+    other; Status, Cover and Precinct chips, each row ending in Select all
+    and Clear all; the "Cover not yet confirmed" tile shows 4 rows;
+  - choosing a period, or keying in both From and To, reloads at the top;
   - headers sort, with Days sorting as numbers;
-  - a hidden column's kept sort is dropped.
-- [ ] **An application** (admin): detail, timeline, Emails, the RA's
+  - Export CSV and Record external leave under the table.
+- [ ] **An application** (admin, `/ra-leave/admin/records/{id}`): detail, timeline, Emails, the RA's
   balance, and Administer buttons by stage.
 - [ ] **At 390 px** wide tables scroll inside their cards, and the page
   never scrolls sideways.

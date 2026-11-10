@@ -1,0 +1,88 @@
+{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip with context %}
+{# Leave records' Leave applications card, the same on the staff's Records
+   and the admin's Leave records (author, 2026-11-10). From the including
+   page: `me` (None on the admin's), `key`, `first`, `last`, `hidden`,
+   `rows`, `aq` (the query each link carries ahead of its own: the viewer
+   and the Summary's counts, empty or ending in "&"), `form_keep` (the
+   (name, value) pairs the period form carries), `app_base` and
+   `as_query` (where a row's ID opens), and `admin` (true on the admin's
+   page: Export and Record external leave under the table). Every change lands at the top of
+   the page: no fragment on any link. #}
+{% set pq = ('period=custom&from=' ~ first.isoformat() ~ '&to=' ~ last.isoformat()) if key == "custom" else 'period=' ~ key %}
+<section class="card" aria-labelledby="rec-h">
+  <div class="card-head">
+    <h2 id="rec-h">Leave applications <span class="count">· {{ rows | length }}</span></h2>
+    <p class="sub">Every application whose dates touch {{ leave.short_date(first) }} – {{ leave.short_date(last) }}, whatever its stage. On leave and Approved together are who is away.</p>
+    <div class="grid-thirds one-two gap-above-sm">
+      {# The period is navigation; the chips' state rides it. Choosing a
+         period applies it, and changing From or To applies the range as a
+         custom period (author, 2026-11-10); the button is kept for a
+         browser without scripts, a named period winning over the dates
+         sent with it. #}
+      <form method="get" action="{{ url(here) }}" aria-label="Period" id="period-form">
+        {% for name, value in form_keep %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+        {% if hidden %}<input type="hidden" name="hide" value="{{ hidden | sort | join(',') }}">{% endif %}
+        <div class="field-wide"><label for="period">Period</label>
+          <select id="period" name="period" class="input">
+            {% for option, name in leave.PERIODS %}<option value="{{ option }}"{% if option == key %} selected{% endif %}>{{ name }}</option>{% endfor %}
+            <option value="custom"{% if key == "custom" %} selected{% endif %}>From and To below</option>
+          </select></div>
+        <div class="field-wide"><label for="from">From</label><input id="from" name="from" class="input" type="date" value="{{ first.isoformat() }}"></div>
+        <div class="field-wide"><label for="to">To</label><input id="to" name="to" class="input" type="date" value="{{ last.isoformat() }}"></div>
+        <noscript><button type="submit" class="btn btn-secondary gap-above-sm">Show period</button></noscript>
+      </form>
+      <script>
+        (function () {
+          var form = document.getElementById("period-form");
+          var select = document.getElementById("period");
+          var from = document.getElementById("from");
+          var to = document.getElementById("to");
+          // A named period sets its own dates; From and To apply as a
+          // custom period once both are filled in.
+          select.addEventListener("change", function () {
+            if (select.value === "custom") { from.focus(); return; }
+            from.disabled = true; to.disabled = true;
+            form.submit();
+          });
+          // Only a range that runs forwards applies; a From past To waits
+          // for To (Codex, 2026-11-10).
+          function dates() {
+            if (!from.value || !to.value || from.value > to.value) { return; }
+            select.value = "custom";
+            form.submit();
+          }
+          from.addEventListener("change", dates);
+          to.addEventListener("change", dates);
+        })();
+      </script>
+      <div>
+        {% for g in leave.record_groups(me, hidden) %}
+        <span class="field-label" id="show-{{ loop.index }}">{{ g.name }}</span>
+        <div class="col-chips rec-filters" role="group" aria-labelledby="show-{{ loop.index }}">
+          {% for f_label, on, flip in g.chips %}<a class="col-chip{{ ' on' if on }}" data-filter href="{{ url(here) }}?{{ aq }}{{ ('hide=' ~ (flip | urlencode) ~ '&') if flip }}{{ pq }}">{{ f_label }}<span class="visually-hidden">, {{ "shown" if on else "hidden" }}</span></a>{% endfor %}
+          <a class="col-chip chip-act" data-filter href="{{ url(here) }}?{{ aq }}{{ ('hide=' ~ (g.select_all | urlencode) ~ '&') if g.select_all }}{{ pq }}">Select all<span class="visually-hidden">, {{ g.name }}</span></a>
+          <a class="col-chip chip-act" data-filter href="{{ url(here) }}?{{ aq }}{{ ('hide=' ~ (g.clear_all | urlencode) ~ '&') if g.clear_all }}{{ pq }}">Clear all<span class="visually-hidden">, {{ g.name }}</span></a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="table-wrap"><table data-sort-auto>
+    <thead><tr><th scope="col">ID</th><th scope="col">RA</th><th scope="col">Precinct</th><th scope="col">Leave type</th><th scope="col">Dates</th><th scope="col" class="num">Days</th><th scope="col">Cover</th><th scope="col">Submitted</th><th scope="col">Stage</th></tr></thead>
+    <tbody>{% for a, status in rows %}<tr>
+      <td class="nowrap"><a href="{{ url(app_base ~ a.id) }}{{ as_query }}">{{ a.id }}</a></td>
+      <td class="strong nowrap" data-sort-value="{{ a.ra }}">{{ a.ra }}{% set cover_by = leave.first_by_cover(a) %}{% if cover_by %} <span class="chip chip-info" title="First approved by {{ cover_by }}, covering for the RF">1st: {{ cover_by }}</span>{% endif %}</td>
+      <td class="nowrap">{{ a.precinct }}</td>
+      <td class="nowrap">{{ a.leave_type | replace(" leave", "") }}{% if a.appeal %} <span class="chip chip-accent" title="Extra leave, granted on appeal">Extra</span>{% endif %}</td>
+      <td class="nowrap" data-sort-value="{{ a.start.isoformat() }}">{{ a.dates }}</td>
+      <td class="num" data-sort-value="{{ '%05d' | format(a.days) }}">{{ a.days }}</td>
+      <td class="nowrap">{{ a.cover }} {{ cover_chip(a.cover_status) }}{% if a in leave.cover_while_away() %} <span class="chip chip-warn">Away too</span>{% endif %}</td>
+      <td class="nowrap" data-sort-value="{{ a.submitted.isoformat() }}">{{ leave.short_date(a.submitted) }}{% if a.overdue %} <span class="chip chip-warn">{{ a.age }} days</span>{% endif %}</td>
+      <td>{% if status == "On leave" %}<span class="chip chip-ok">On leave</span>{% elif status == "Taken" %}<span class="chip chip-mute">Taken</span>{% else %}{{ stage_chip(status) }}{% endif %}</td>
+    </tr>{% else %}<tr><td colspan="9" class="subtle">{{ "None with these filters." if hidden else "None in this period." }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% if admin %}<div class="card-pad btnrow">
+    <button type="button" class="btn btn-secondary" disabled>Export CSV</button>
+    <button type="button" class="btn btn-primary" disabled>Record external leave</button>
+  </div>{% endif %}
+</section>

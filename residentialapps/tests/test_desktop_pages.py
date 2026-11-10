@@ -19,7 +19,7 @@ PAGE_MAP = Path(__file__).resolve().parents[1] / "spec" / "applications.md"
     [
         ("residentialops", "/ra-leave/admin/", True),
         ("residentialops", "/ra-leave/admin", True),
-        ("residentialops", "/ra-leave/admin/applications/A-1", True),
+        ("residentialops", "/ra-leave/admin/records/A-1", True),
         ("residentialops", "/ra-leave/staff/records", True),
         ("residentialops", "/ra-leave/staff/recordsx", False),
         ("residentialops", "/rosters/people/P-01", True),
