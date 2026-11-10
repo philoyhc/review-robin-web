@@ -73,7 +73,7 @@ widths, the scripts' behavior, and whether the screens read right.
   - cover and "Changed your plans?" cards, the latter with **Withdraw to
     draft** (back to the drafts as sent); as Hana, L-0115 (approved, 14 Dec)
     has **Cancel leave** instead, and Chloe's L-0117 (taken) has neither.
-  - leave under way: as Sam, Decide on L-0107 (Olivia Ng) has **Cancel leave
+  - leave under way: as Sam, the Application page of L-0107 (Olivia Ng) has **Cancel leave
     under way**, naming Olivia and Siti Rahman as told; the admin's L-0107
     says the same.
 - [ ] **Cover**: To answer 1, Covering 1 (Hana Ito 14 Dec – 15 Dec),
@@ -93,15 +93,17 @@ widths, the scripts' behavior, and whether the screens read right.
 ## 3. Staff side
 
 - [ ] **Daniel's Home** (Home and Awaiting are one page, 2026-11-09):
-  - no tiles; tabs Home, Decided, Leave records (an RF has no Appeals tab;
+  - no tiles; tabs Home, Records (an RF has no Appeals tab;
     Sam, Rachel and Priya do);
   - Awaiting my decision lists all three, oldest first, with Overdue
     chips; "Waiting on cover · 2" filters it under the heading "Waiting
     on cover", and "Show everything awaiting me" clears the filter;
-  - Recent decisions with **All decided**; at the side This week (away
+  - no Recent decisions card; at the side This week (away
     today) and Later this week (as Sam: Maya Seah and Olivia Ng today,
     Pranav Iyer later);
-  - an old `/ra-leave/staff/decide` link lands on Home;
+  - an old `/ra-leave/staff/decide` link lands on Home, an old
+    `…/decide/L-0101` on `…/applications/L-0101`, and `…/decided` on
+    Records;
   - a Leave calendar under the cards (as Sam: October has Maya, Olivia and
     Pranav; November Chloe Lim (pending) and the Examinations days named
     and hatched); on a phone the whole month still fits at 390 px, each
@@ -118,9 +120,9 @@ widths, the scripts' behavior, and whether the screens read right.
 - [ ] **Sam's queue** is L-0105, an appeal: "Cover not confirmed" and the
   "Decide without the cover's confirmation" tick box.
 - [ ] **Rachel's queue** is L-0103, Final approval, pending 5 days, with an
-  Overdue chip. Decided shows 9.
-- [ ] **Leave records as Sam** (desktop; `/ra-leave/staff/precinct` lands
-  here), This week:
+  Overdue chip.
+- [ ] **Records as Sam** (desktop; `/ra-leave/staff/precinct` lands
+  here; Bella Koh's row marked "1st: Marcus Tan"), This week:
   - Leave applications: the period at the left, the chips at the right
     (nine statuses, then nine Precincts on their own line); Maya Seah and
     Olivia Ng On leave, Pranav Iyer Approved (from tomorrow), with "Away
@@ -137,7 +139,7 @@ widths, the scripts' behavior, and whether the screens read right.
   tables following; no Show period button. Each chip, Select all and
   Clear all (Status and Precinct each have their own) also lands at the
   top, the other group unchanged. Sort a table, then reload: the sort is kept.
-- [ ] **Leave records as Daniel**: no Precinct chips or column; This week
+- [ ] **Records as Daniel**: no Precinct chips or column; This week
   has nobody away; Rest of term shows Hana Ito.
 - [ ] **Appeals**: Invitations shows Gwen Ho "Sent: L-0105", Kai Ng Open
   and Nathan Yeo Lapsed, and Appeals with the Master.

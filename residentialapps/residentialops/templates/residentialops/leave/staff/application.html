@@ -2,7 +2,7 @@
 {% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, timeline_items, viewing, staff_switch, staff_item, email_items, appeal_rows with context %}
 {% block title %}{{ app.ra }} · {{ app.dates }}{% endblock %}
 {% block content %}
-  <a class="back" href="{{ url(back_path) }}{{ as_query }}">‹ {{ back_label }}</a>
+  <a class="back" href="{{ url(back_path) }}{{ as_query }}{{ (('&' if as_query else '?') ~ 'period=' ~ back_period) if back_period }}">‹ {{ back_label }}</a>
   {{ title(app.ra, leave, viewing(me, false) ~ stage_chip(app.stage)) }}
   {% set bal = leave.balance_of(app) %}
   {% set cover_wait = leave.waiting_on_cover(app) %}

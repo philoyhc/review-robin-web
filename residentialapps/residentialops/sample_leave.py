@@ -1497,6 +1497,21 @@ def first_decider_of(application: Application) -> str:
     return next(iter(routes_first(application)), "")
 
 
+def first_by_cover(application: Application) -> str:
+    """Who first approved an application in place of the RA's RF, a
+    delegate or an ad hoc cover, or "" when the RF did or it has had no
+    first approval (author, 2026-11-10: Records marks the odd case rather
+    than carrying a column)."""
+    if application.appeal or application.stage not in (
+        "Pending final approval",
+        "Approved",
+        "Cancelled",
+    ):
+        return ""
+    who = first_decider_of(application)
+    return who if who and who != rf_of(application) else ""
+
+
 def queue(viewer: str) -> tuple[tuple[Application, str], ...]:
     """What awaits the viewer's decision, oldest first (spec §16, §24), with
     the decision it needs."""

@@ -329,8 +329,8 @@ Until a screen is wired:
   person on the page (`?as=`; the RA and staff pages' tabs and links carry
   it), from a sample viewer card that comes **last on the page**, after
   everything the page shows, which the chip links down to
-  (`#sample-viewer`, author 2026-10-31); a page with no card (staff
-  Decide) keeps the chip unlinked;
+  (`#sample-viewer`, author 2026-10-31); a page with no card (a staff
+  Application page) keeps the chip unlinked;
   the RA pages' viewers each reaching states the others do not (audit,
   2026-10-29);
 - RA Leave's appeals are **By invitation by default** (author,
