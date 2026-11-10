@@ -988,7 +988,7 @@ def test_policy_permissions_say_who_does_what_over_which_ras(monkeypatch) -> Non
     assert rows["Master"]["scope"] == ("RAs in every slot",)
     assert rows["Residential Fellow"]["perms"] == {"first", "view"}
     assert rows["Residential Admin"]["perms"] == {"final", "open", "view", "admin"}
-    assert rows["Master"]["perms"] == {"open", "decide", "view", "admin"}
+    assert rows["Master"]["perms"] == {"open", "view", "admin"}
     # RSLMs need no RA Leave (author, 2026-11-09): no tick, no access.
     assert rows["Residential Student Life Manager"]["perms"] == frozenset()
     assert rows["Residential Executive"]["perms"] == frozenset()
@@ -1016,7 +1016,6 @@ def test_policy_permissions_say_who_does_what_over_which_ras(monkeypatch) -> Non
         "First approval",
         "Final approval",
         "Open appeals",
-        "Decide appeals",
         "View records",
         "Admin pages",
     ]
@@ -1080,7 +1079,21 @@ def test_permissions_agree_with_routing(monkeypatch, policy) -> None:
         )
         assert ("view" in perms) == viewer, name
         assert ("admin" in perms) == (name in sys_admins), name
-        decides = sample_leave.appeals_decided() and name == sample_leave.APPEAL_DECIDER
-        assert ("decide" in perms) == decides, name
         if name in inviters:
             assert "open" in perms, name
+
+
+def test_no_decide_column_the_master_keeps_ra_leave_while_deciding(monkeypatch) -> None:
+    """Author, 2026-11-10: who decides an appeal is the Appeals card's, so
+    Permissions has no Decide appeals column; the Master keeps RA Leave
+    while deciding appeals, with or without a tick."""
+    labels = [label for _, label in sample_leave.PERMISSIONS]
+    assert "Decide appeals" not in labels
+    assert "Decide appeals" not in client().get(ADMIN + "policy").text
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
+    monkeypatch.setitem(sample_leave.POLICY, "viewer_types", ("RF", "Admin"))
+    monkeypatch.setitem(sample_leave.POLICY, "inviter_types", ("Admin",))
+    monkeypatch.setattr(sample_data, "SYS_ADMINS", ())
+    assert sample_leave.appeals_decided() and len(sample_leave.scope("Sam Lee")) == 9
+    monkeypatch.setitem(sample_leave.POLICY, "appeal_approval", "usual")
+    assert not sample_leave.appeals_decided() and sample_leave.scope("Sam Lee") == ()

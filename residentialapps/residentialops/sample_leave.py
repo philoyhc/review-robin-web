@@ -1623,9 +1623,9 @@ def scope(viewer: str) -> tuple[str, ...]:
     2026-10-29): the overseers every one, as if in every slot; an RF their
     slots' Precincts, an RSLM their Wing's if Permissions gives one a tick
     (none by default). Decisions stay confined to slots (`in_slots`); a
-    delegate standing in as first approver sees their own scope while they
-    do, as an RSLM their Wing. Staff with none, such as Unit-level staff
-    holding no slot, see no RA Leave.
+    delegate standing in as first approver, or the Master while deciding
+    appeals, sees their own scope without a tick (`_standing_in`). Staff
+    with none, such as Unit-level staff holding no slot, see no RA Leave.
 
     Permissions decide who sees any (author, 2026-11-10): staff with no
     tick but Admin pages see none, and a person named there adds the
@@ -1646,11 +1646,14 @@ def scope(viewer: str) -> tuple[str, ...]:
 
 
 def _standing_in(name: str) -> bool:
-    """A delegate standing in as first approver today (Approval chain): not
-    a Permissions tick, but RA Leave while they do (cold read, 2026-11-10)."""
-    return POLICY["first"] == "slot" and any(
+    """Who has RA Leave without a Permissions tick (2026-11-10): a delegate
+    standing in as first approver today (Approval chain), and the Master
+    while deciding appeals (who decides is the Appeals card's, so it is no
+    column of Permissions)."""
+    delegate = POLICY["first"] == "slot" and any(
         name in r.first.split(" or ") for r in routes() if not r.gap
     )
+    return delegate or (appeals_decided() and name == APPEAL_DECIDER)
 
 
 def _named_precincts(name: str) -> tuple[str, ...]:
@@ -2619,7 +2622,6 @@ PERMISSIONS = (
     ("first", "First approval"),
     ("final", "Final approval"),
     ("open", "Open appeals"),
-    ("decide", "Decide appeals"),
     ("view", "View records"),
     ("admin", "Admin pages"),
 )
@@ -2687,8 +2689,7 @@ class PermissionRow(TypedDict):
 def _granted(name: str) -> set[str]:
     """What a person may do by their appointment, read from the functions
     that grant it: first and final approval and opening appeals from
-    Policy, deciding appeals from `APPEAL_DECIDER` while `appeals_decided`,
-    viewing records from Policy's View records, the admin pages from the
+    Policy, viewing records from Policy's View records, the admin pages from the
     sys admins. Named grants are their own rows; `scope` reads both."""
     abbrev = {p.name: p.abbrev for p in sample_data.STAFF}.get(name, "")
     granted: set[str] = set()
@@ -2701,8 +2702,6 @@ def _granted(name: str) -> set[str]:
             granted.add("open")
     elif abbrev in POLICY["inviter_types"]:
         granted.add("open")
-    if appeals_decided() and name == APPEAL_DECIDER:
-        granted.add("decide")
     if abbrev in POLICY["viewer_types"]:
         granted.add("view")
     if any(n == name for n, *_ in sample_data.SYS_ADMINS):
