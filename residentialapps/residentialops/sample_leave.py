@@ -281,7 +281,8 @@ def with_roles(names: Iterable[str], by_role: bool = True) -> str:
     """Names for Approval chain (author, 2026-11-10), comma separated, each
     with its Staff-roster abbreviation when the role decided it."""
     abbrev = {p.name: p.abbrev for p in sample_data.STAFF}
-    return ", ".join(f"{n} ({abbrev[n]})" if by_role and abbrev.get(n) else n for n in names)
+    once = dict.fromkeys(names)  # a person once, however often named
+    return ", ".join(f"{n} ({abbrev[n]})" if by_role and abbrev.get(n) else n for n in once)
 
 
 def appeal_finals(precinct: str) -> tuple[str, ...]:

@@ -1124,3 +1124,10 @@ def test_approval_chain_names_each_approver_with_their_role(monkeypatch) -> None
     assert "<td>Sam Lee (Master), Rachel Yeo (Admin)</td>" in table
     assert "<td>Sam Lee (Master)</td>" in table
     assert ">RSLM</th>" not in table and ">RF</th>" not in table
+    # A delegate stands in by name, not role (cold read): Marcus Tan.
+    assert "<td>Marcus Tan <span" in table
+    assert sample_leave.with_roles(["Sam Lee", "Sam Lee"]) == "Sam Lee (Master)"
+    monkeypatch.setitem(sample_leave.POLICY, "inviters", "named")
+    monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ("Sam Lee",))
+    named = client().get(ADMIN + "routing").text.split('id="chain-h"')[1]
+    assert "<td>Sam Lee</td>" in named.split("</table>")[0]
