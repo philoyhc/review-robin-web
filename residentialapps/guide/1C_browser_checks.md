@@ -120,8 +120,8 @@ widths, the scripts' behavior, and whether the screens read right.
   - a "Waiting on cover" note when the cover is not confirmed;
   - side cards: entitlement, the RA's other leave, the Precinct on those
     days.
-- [ ] **Sam's queue** is L-0105, an appeal: "Cover not confirmed" and the
-  "Decide without the cover's confirmation" tick box.
+- [ ] **Sam's queue** is L-0105, an appeal: "Waiting on cover", Elise Tan
+  not yet confirmed, with no override (cover harmonized, 2026-11-10).
 - [ ] **Rachel's queue** is L-0103, Final approval, pending 5 days, with an
   Overdue chip.
 - [ ] **Records as Sam** (desktop; `/ra-leave/staff/precinct` lands

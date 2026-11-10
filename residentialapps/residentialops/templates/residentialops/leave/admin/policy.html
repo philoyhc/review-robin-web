@@ -6,12 +6,12 @@
   {{ title("Leave policy", leave) }}
   <p class="sub">What RAs may apply for and how applications travel, set before the year opens (author, 2026-10-28). The choices shown are the sample's; cover has no built-in default, and ordinary applications cannot be submitted until it is chosen (spec §12). Controls are inert until RA Leave is wired.</p>
 
-  {% macro choice(name, legend, options, current, notes={}) %}
+  {% macro choice(name, legend, options, current, notes={}, inner={}) %}
     <fieldset class="modes">
       <legend>{{ legend }}</legend>
       {% for option in options %}
         {% set id = name ~ "-" ~ loop.index %}
-        <div class="mode"><input type="radio" id="{{ id }}" name="{{ name }}" value="{{ option }}"{% if option == current %} checked{% endif %}{% if notes.get(option) %} aria-describedby="{{ id }}-what"{% endif %} disabled> <span><label for="{{ id }}"><strong>{{ option }}</strong></label>{% if notes.get(option) %} <span id="{{ id }}-what" class="subtle">{{ notes[option] }}</span>{% endif %}</span></div>
+        <div class="mode"><input type="radio" id="{{ id }}" name="{{ name }}" value="{{ option }}"{% if option == current %} checked{% endif %}{% if notes.get(option) %} aria-describedby="{{ id }}-what"{% endif %} disabled> <span><label for="{{ id }}"><strong>{{ option }}</strong></label>{% if notes.get(option) %} <span id="{{ id }}-what" class="subtle">{{ notes[option] }}</span>{% endif %}{% if inner.get(option) %}{{ inner[option] }}{% endif %}</span></div>
       {% endfor %}
     </fieldset>
   {% endmacro %}
@@ -59,128 +59,101 @@
       </ul>
     </section>
 
-    {# Counting leave days (author, 2026-10-29). #}
-    <section class="card card-pad" aria-labelledby="count-h">
-      <h2 id="count-h">Counting leave days</h2>
-      <p class="sub">Which days in an application count, against entitlement or as extra leave. RAs usually work weekends and public holidays, so every day counts unless set otherwise.</p>
+    {# Leave days (author, 2026-11-10): which days count, full width, then
+       public holidays and blackout weeks side by side. #}
+    <section class="card card-pad" aria-labelledby="days-h">
+      <h2 id="days-h">Leave days</h2>
+      <p class="sub">Which days in an application count, against entitlement or as extra leave, and which weeks leave is closed. RAs usually work weekends and public holidays, so every day counts unless set otherwise.</p>
       {{ choice("day-count", "An application counts", leave.DAY_COUNTS, leave.POLICY.day_count, {"Every day": "Every day from the first to the last, weekends and public holidays included", "Weekdays": "Monday to Friday only; weekends are free, and dates falling only on a weekend cannot be applied for", "Working days": "Monday to Friday, less the public holidays below; dates counting no day cannot be applied for"}) }}
-      <div class="table-wrap">
-        <table class="rows">
-          <thead><tr><th scope="col">Public holiday</th><th scope="col">Date</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
-          <tbody>
-            {% for day, name in leave.PUBLIC_HOLIDAYS %}
-              {% set n = loop.index %}
-              <tr>
-                <td><input class="input" type="text" aria-label="Public holiday {{ n }}: name" value="{{ name }}" disabled></td>
-                <td><input class="input" type="date" aria-label="Public holiday {{ n }}: date" value="{{ day.isoformat() }}" disabled></td>
-                <td><span class="row-actions">
-                  <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a public holiday below {{ name }}" title="Add a public holiday below this one" disabled>+</button>
-                  <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove {{ name }}" title="Remove this public holiday" disabled>X</button>
-                </span></td>
-              </tr>
+      <div class="split-cols gap-above">
+        <section aria-labelledby="holidays-h">
+          <h3 id="holidays-h" class="h-sub">Public holidays</h3>
+          <p class="sub">Public holidays matter only when working days are counted. List the dates observed: a holiday on a Sunday is entered as its Monday in lieu.</p>
+          <div class="table-wrap">
+            <table class="rows">
+              <thead><tr><th scope="col">Public holiday</th><th scope="col">Date</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
+              <tbody>
+                {% for day, name in leave.PUBLIC_HOLIDAYS %}
+                  {% set n = loop.index %}
+                  <tr>
+                    <td><input class="input" type="text" aria-label="Public holiday {{ n }}: name" value="{{ name }}" disabled></td>
+                    <td><input class="input" type="date" aria-label="Public holiday {{ n }}: date" value="{{ day.isoformat() }}" disabled></td>
+                    <td><span class="row-actions">
+                      <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a public holiday below {{ name }}" title="Add a public holiday below this one" disabled>+</button>
+                      <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove {{ name }}" title="Remove this public holiday" disabled>X</button>
+                    </span></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section aria-labelledby="blackout-h">
+          <h3 id="blackout-h" class="h-sub">Blackout periods</h3>
+          <p class="sub">Weeks within a term when leave is refused outright, or open only by appeal to the Master. Counted by week of a term and each week runs Sunday to Saturday.</p>
+          <div class="table-wrap">
+            <table class="rows">
+              <thead><tr><th scope="col">Term</th><th scope="col">From week</th><th scope="col">To week</th><th scope="col">What</th><th scope="col">Leave is</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
+              <tbody>
+                {% for b in leave.BLACKOUTS %}
+                  {% set n = loop.index %}
+                  {% set span = leave.week_dates(b) %}
+                  <tr>
+                    <td><select class="input" aria-label="Blackout {{ n }}: term" disabled>{{ options(leave.term_labels(), "Term " ~ b.term) }}</select></td>
+                    <td><input class="input" type="number" aria-label="Blackout {{ n }}: from week" value="{{ b.week_from }}" disabled></td>
+                    <td><input class="input" type="number" aria-label="Blackout {{ n }}: to week" value="{{ b.week_to }}" disabled></td>
+                    <td><input class="input" type="text" aria-label="Blackout {{ n }}: what" value="{{ b.label }}" disabled><div class="subtle small">{% if span %}{{ leave.short_date(span[0]) }} – {{ leave.short_date(span[1]) }}{% else %}Outside the term{% endif %}</div></td>
+                    <td><select class="input" aria-label="Blackout {{ n }}: leave is" disabled>{{ options(leave.BLACKOUT_EFFECTS, b.effect) }}</select></td>
+                    <td><span class="row-actions">
+                      <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a blackout below {{ b.label }}" title="Add a blackout below this one" disabled>+</button>
+                      <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove {{ b.label }}" title="Remove this blackout" disabled>X</button>
+                    </span></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <ul class="plain subtle gap-above-sm">
+            <li><strong>Refused</strong>: an application touching these dates cannot be submitted. <strong>Appeal only</strong>: it can, but goes to the Master as an appeal (by invitation, once invited); refused while appeals are off.</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+
+    <div class="split-cards">
+      {# Cover (spec §12), left of Appeals (author, 2026-11-10). #}
+      <section class="card card-pad" aria-labelledby="cover-h">
+        <h2 id="cover-h">Cover</h2>
+        <p class="sub">Whether an application or appeal must name a covering RA, whether that RA must confirm, whom an RA may name as their cover.</p>
+        {{ choice("cover", "Cover for leave is", ("Required", "Not required"), "Required" if leave.POLICY.cover_required else "Not required") }}
+        {{ choice("cover-mode", "When required, the covering RA is", leave.COVER_MODES, leave.POLICY.cover_mode, {"Named only": "Told, and need not confirm", "Named and confirmed": "Asked to confirm; the application waits at first approval until they do"}) }}
+        {{ choice("pool", "An RA may name as cover", leave.COVER_POOLS, leave.POLICY.cover_pool, {"Any RA": "Anyone on the RA roster", "Same Precinct": "An RA in a slot under the same Precinct, this term", "Same Wing": "An RA in a slot under the same Wing, this term"}) }}
+      </section>
+
+      {# Appeals beyond entitlement (spec §7). #}
+      <section class="card card-pad" aria-labelledby="appeals-h">
+        <h2 id="appeals-h">Appeals beyond entitlement</h2>
+        <p class="sub">An RA with no entitlement left, or applying into an Appeal-only blackout, may ask the college for extra leave, as openly as this setting allows. Extra leave granted is kept apart from the entitlement.</p>
+        <nav class="card card-pad muted gap-below" aria-label="Sample preview of appeals">
+          <span class="subtle small">Sample: preview every RA Leave page, in this browser, as if appeals were</span>
+          <span class="chips chip-wrap">
+            {% for mode in leave.APPEAL_MODES %}
+              {% set on = mode == leave.POLICY.appeals %}
+              <a class="chip {{ 'chip-info' if on else 'chip-mute' }}" href="{{ url('/ra-leave/admin/policy/preview-appeals') }}?mode={{ mode | urlencode }}"{% if on %} aria-current="true"{% endif %}>{{ mode }}{% if mode == leave.policy_appeals() %} (the sample policy){% endif %}</a>
             {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <p class="subtle small">Public holidays matter only when working days are counted. List the dates observed: a holiday on a Sunday is entered as its Monday in lieu.</p>
-    </section>
+          </span>
+        </nav>
+        {% set invited %}<span class="nested-choices" role="radiogroup" aria-label="An appeal by invitation is approved by">{% for key, label in leave.APPEAL_APPROVALS %}<label><input type="radio" name="appeal-approval" value="{{ key }}"{% if key == leave.POLICY.appeal_approval %} checked{% endif %} disabled> {{ label }}</label>{% endfor %}<span class="subtle small">With no separate first approver, either skips that step.</span></span>{% endset %}
+        {{ choice("appeals", "Appeals beyond entitlement are", leave.APPEAL_MODES, leave.POLICY.appeals, {"Open": "Request extra leave is offered to every RA; sending it starts the appeal", "By invitation": "Not shown to RAs. An RA writes in first; someone with permission can open an appeal for that RA, and the RA can then send it as a leave application. Such an application will be approved by", "Off": "Not available: an application beyond entitlement cannot be submitted, and Appeal-only blackouts refuse leave"}, {"By invitation": invited}) }}
+        <p class="sub">Who may open an appeal, and for which RAs, is set in <a href="#perms-h">Permissions</a> (Open appeals); used only while appeals are by invitation.</p>
+        <div class="field-wide">
+          <label for="appeal-terms">The terms shown to the RA when they appeal</label>
+          <textarea id="appeal-terms" class="input" rows="2" disabled>{{ leave.POLICY.appeal_terms }}</textarea>
+        </div>
+      </section>
+    </div>
 
-    {# 3. Blackouts by week, so they carry from one year to the next. #}
-    <section class="card card-pad" aria-labelledby="blackout-h">
-      <h2 id="blackout-h">Blackout periods</h2>
-      <p class="sub">Weeks when leave is refused outright, or open only by appeal to the Master. Counted by week of a term so they carry to the next year: week 1 starts on the Sunday on or before the term's first day, and each week runs Sunday to Saturday. A blackout covers only its own term's days.</p>
-      <div class="table-wrap">
-        <table class="rows">
-          <thead><tr><th scope="col">Term</th><th scope="col">From week</th><th scope="col">To week</th><th scope="col">What</th><th scope="col">Leave is</th><th scope="col">{{ leave.PERIOD_LABEL }}</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
-          <tbody>
-            {% for b in leave.BLACKOUTS %}
-              {% set n = loop.index %}
-              {% set span = leave.week_dates(b) %}
-              <tr>
-                <td><select class="input" aria-label="Blackout {{ n }}: term" disabled>{{ options(leave.term_labels(), "Term " ~ b.term) }}</select></td>
-                <td><input class="input" type="number" aria-label="Blackout {{ n }}: from week" value="{{ b.week_from }}" disabled></td>
-                <td><input class="input" type="number" aria-label="Blackout {{ n }}: to week" value="{{ b.week_to }}" disabled></td>
-                <td><input class="input" type="text" aria-label="Blackout {{ n }}: what" value="{{ b.label }}" disabled></td>
-                <td><select class="input" aria-label="Blackout {{ n }}: leave is" disabled>{{ options(leave.BLACKOUT_EFFECTS, b.effect) }}</select></td>
-                <td class="nowrap subtle">{% if span %}{{ leave.short_date(span[0]) }} – {{ leave.short_date(span[1]) }}{% else %}Outside the term{% endif %}</td>
-                <td><span class="row-actions">
-                  <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a blackout below {{ b.label }}" title="Add a blackout below this one" disabled>+</button>
-                  <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove {{ b.label }}" title="Remove this blackout" disabled>X</button>
-                </span></td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <ul class="plain subtle gap-above-sm">
-        <li><strong>Refused</strong>: an application touching these dates cannot be submitted. <strong>Appeal only</strong>: it can, but goes to the Master as an appeal (by invitation, once invited); refused while appeals are off.</li>
-      </ul>
-    </section>
-
-    {# 4. Appeals beyond entitlement (spec §7). #}
-    <section class="card card-pad" aria-labelledby="appeals-h">
-      <h2 id="appeals-h">Appeals beyond entitlement</h2>
-      <p class="sub">An RA with no entitlement left, or applying into an Appeal-only blackout, may ask the Master for extra leave, as openly as this setting allows. The Master decides personally; extra leave granted is kept apart from the entitlement (spec §7.5).</p>
-      <nav class="card card-pad muted gap-below" aria-label="Sample preview of appeals">
-        <span class="subtle small">Sample: preview every RA Leave page, in this browser, as if appeals were</span>
-        <span class="chips chip-wrap">
-          {% for mode in leave.APPEAL_MODES %}
-            {% set on = mode == leave.POLICY.appeals %}
-            <a class="chip {{ 'chip-info' if on else 'chip-mute' }}" href="{{ url('/ra-leave/admin/policy/preview-appeals') }}?mode={{ mode | urlencode }}"{% if on %} aria-current="true"{% endif %}>{{ mode }}{% if mode == leave.policy_appeals() %} (the sample policy){% endif %}</a>
-          {% endfor %}
-        </span>
-      </nav>
-      {{ choice("appeals", "Appeals beyond entitlement are", leave.APPEAL_MODES, leave.POLICY.appeals, {"Open": "Request extra leave is offered to every RA; sending it starts the appeal", "By invitation": "Not shown to RAs. An RA writes in first; once someone with Open appeals in Permissions agrees in principle, they open an appeal for that RA on Appeals, and the RA can then send it", "Off": "Not available: an application beyond entitlement cannot be submitted, and Appeal-only blackouts refuse leave"}) }}
-      <p class="sub">Who may open an appeal, and for which RAs, is set in <a href="#perms-h">Permissions</a> (Open appeals); used only while appeals are by invitation.</p>
-      <p class="subtle small">The Master decides appeals, for the RAs in whose slots the Master holds a place: every RA while the Master oversees every RA.</p>
-      <div class="field-wide">
-        <label for="appeal-terms">The terms shown to the RA when they appeal</label>
-        <textarea id="appeal-terms" class="input" rows="2" disabled>{{ leave.POLICY.appeal_terms }}</textarea>
-      </div>
-      <p class="subtle small">Extra duties are taken on after the leave is granted. They cannot be done in advance and banked against a future appeal.</p>
-    </section>
-
-    {# 5. Cover (spec §12). #}
-    <section class="card card-pad" aria-labelledby="cover-h">
-      <h2 id="cover-h">Cover</h2>
-      <p class="sub">Whether an application must name a covering RA, whether that RA must confirm, and whom an RA may name. {% if leave.appeals_on() %}Appeals need confirmed cover unless the Master overrides it, on the record (spec §7.4).{% endif %}</p>
-      {{ choice("cover", "Cover for ordinary leave is", ("Required", "Not required"), "Required" if leave.POLICY.cover_required else "Not required") }}
-      {{ choice("cover-mode", "When required, the covering RA is", leave.COVER_MODES, leave.POLICY.cover_mode, {"Named only": "Told, and need not confirm", "Named and confirmed": "Asked to confirm; the application waits at first approval until they do"}) }}
-      {{ choice("pool", "An RA may name as cover", leave.COVER_POOLS, leave.POLICY.cover_pool, {"Any RA": "Anyone on the RA roster", "Same Precinct": "An RA in a slot under the same Precinct, this term", "Same Wing": "An RA in a slot under the same Wing, this term"}) }}
-    </section>
-
-    {# Permissions (author, 2026-11-10): who may do what, and over which
-       RAs, in one table, the only place that says who; the Approvals and
-       Appeals cards keep how. A role's scope is its slots on Assignments;
-       a named person's is chosen: All RAs, a Wing, a Precinct or a slot,
-       overlaps resolved (`leave.add_scope`). Each tick is read from what
-       grants it (`leave.permission_rows`); controls are inert, and named
-       scopes do not yet change access. #}
-    <section class="card" aria-labelledby="perms-h">
-      <div class="card-head"><h2 id="perms-h">Permissions</h2>
-        <p class="sub">Who may do what, and over which RAs. A role's scope comes from <a href="{{ url('/rosters/assignments') }}">Assignments</a>: the RAs in its slots, or in every slot. A person named here is given a scope of one or more choices, each a pill: All RAs, a Wing, a Precinct or a slot; a choice already inside another is not added, and a broader choice replaces the narrower ones it holds. Each tick shows what that role or person may do today.</p></div>
-      <div class="table-wrap"><table class="rows perms-table">
-        <thead><tr><th scope="col">Role or person</th><th scope="col">Scope</th>{% for key, label in leave.PERMISSIONS %}<th scope="col" class="center">{{ label }}</th>{% endfor %}<th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
-        <tbody>
-          {% for r in leave.permission_rows() %}<tr>
-            <th scope="row"><span class="strong">{{ r.who }}</span><div class="subtle small">{{ "By role · " ~ r.note if r.kind == "role" else "Named" ~ (" · " ~ r.note if r.note else "") }}</div></th>
-            <td>{% if r.kind == "role" %}<span class="subtle">{{ r.scope[0] }}</span>{% else %}{{ person_tokens("Scope for " ~ r.who, r.scope, "scope-pool", placeholder="Add a scope") }}{% endif %}</td>
-            {% for key, label in leave.PERMISSIONS %}<td class="center"><input type="checkbox" aria-label="{{ label }}, {{ r.who }}"{% if key in r.perms %} checked{% endif %} disabled></td>{% endfor %}
-            <td>{% if r.kind == "named" %}<button type="button" class="btn btn-danger btn-glyph" aria-label="Remove {{ r.who }}" title="Remove this person" disabled>X</button>{% endif %}</td>
-          </tr>{% endfor %}
-          <tr>
-            <td><input class="input" list="staff-names" aria-label="Add a person" placeholder="Add a person" disabled></td>
-            <td>{{ person_tokens("Scope for the person added", (), "scope-pool", placeholder="Add a scope") }}</td>
-            {% for key, label in leave.PERMISSIONS %}<td class="center"><input type="checkbox" aria-label="{{ label }}, the person added" disabled></td>{% endfor %}
-            <td><button type="button" class="btn btn-secondary btn-glyph" aria-label="Add the person" title="Add this person" disabled>+</button></td>
-          </tr>
-        </tbody>
-      </table></div>
-      <datalist id="scope-pool">{% for choice in leave.scope_levels() %}<option value="{{ choice }}"></option>{% endfor %}</datalist>
-      <p class="subtle small card-pad">Delegates who approve first in someone's place, by dates, stay on <a href="{{ url('/ra-leave/admin/routing') }}">Approval chain</a>.</p>
-    </section>
-
-    {# 6. Approvals. #}
+    {# Approvals, before Permissions (author, 2026-11-10). #}
     <section class="card card-pad" aria-labelledby="approvals-h">
       <h2 id="approvals-h">Approvals</h2>
       <p class="sub">An application takes a first approval, unless none is needed, then a final one, by different people. Only someone holding a place in the RA's slot approves it, first or final: those in every slot, set on Assignments, hold one in each; anyone else named for a role, or standing in as a delegate, approves only where they do. The slot's approvers are read from the RA's slot on Assignments for the current term; a delegate who approves first while an approver cannot is set on <a href="{{ url('/ra-leave/admin/routing') }}">Approval chain</a>.</p>
@@ -199,6 +172,37 @@
       <dl class="kv">
         <dt>Appeals</dt><dd>{% if leave.appeals_on() %}The Master ({{ leave.APPEAL_DECIDER }}), personally{% else %}Off{% endif %}</dd>
       </dl>
+    </section>
+
+    {# Permissions (author, 2026-11-10): who may do what, and over which
+       RAs, in one table; the Approvals and Appeals cards keep how (who
+       approves an invited appeal is the Appeals card's). A role's scope is its slots on Assignments;
+       a named person's is chosen: All RAs, a Wing, a Precinct or a slot,
+       overlaps resolved (`leave.add_scope`). Each tick is read from what
+       grants it (`leave.permission_rows`); controls are inert, and named
+       scopes do not yet change access. #}
+    <section class="card" aria-labelledby="perms-h">
+      <div class="card-head"><h2 id="perms-h">Permissions</h2>
+        <p class="sub">Who may do what, and over which RAs. A role's scope comes from <a href="{{ url('/rosters/assignments') }}">Assignments</a>: the RAs in its slots, or in every slot. A person named here is given a scope of one or more choices, each a pill: All RAs, a Wing, a Precinct or a slot; a choice already inside another is not added, and a broader choice replaces the narrower ones it holds. Each tick shows what that role or person may do today.</p></div>
+      <div class="table-wrap"><table class="rows perms-table">
+        <thead><tr><th scope="col">Role or person</th><th scope="col">Scope</th>{% for key, label in leave.PERMISSIONS %}<th scope="col" class="center">{{ label }}</th>{% endfor %}<th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
+        <tbody>
+          {% for r in leave.permission_rows() %}<tr>
+            <th scope="row"><span class="strong">{{ r.who }}</span><div class="subtle small">{{ "By role · " ~ r.note if r.kind == "role" else "Named" ~ (" · " ~ r.note if r.note else "") }}</div></th>
+            <td>{% if r.kind == "role" %}<span class="subtle">{{ r.scope[0] }}</span>{% else %}{{ person_tokens("Scope for " ~ r.who, r.scope, "scope-pool", placeholder="Add a scope") }}{% endif %}</td>
+            {% for key, label in leave.PERMISSIONS %}<td class="center"><input type="checkbox" aria-label="{{ label }}, {{ r.who }}"{% if key in r.perms %} checked{% endif %} disabled></td>{% endfor %}
+            <td>{% if r.kind == "named" %}<span class="row-actions"><button type="button" class="btn btn-danger btn-glyph" aria-label="Remove {{ r.who }}" title="Remove this person" disabled>X</button></span>{% endif %}</td>
+          </tr>{% endfor %}
+          <tr>
+            <td><input class="input" list="staff-names" aria-label="Add a person" placeholder="Add a person" disabled></td>
+            <td>{{ person_tokens("Scope for the person added", (), "scope-pool", placeholder="Add a scope") }}</td>
+            {% for key, label in leave.PERMISSIONS %}<td class="center"><input type="checkbox" aria-label="{{ label }}, the person added" disabled></td>{% endfor %}
+            <td><span class="row-actions"><button type="button" class="btn btn-secondary btn-glyph" aria-label="Add the person" title="Add this person" disabled>+</button></span></td>
+          </tr>
+        </tbody>
+      </table></div>
+      <datalist id="scope-pool">{% for choice in leave.scope_levels() %}<option value="{{ choice }}"></option>{% endfor %}</datalist>
+      <p class="subtle small card-pad">Delegates who approve first in someone's place, by dates, stay on <a href="{{ url('/ra-leave/admin/routing') }}">Approval chain</a>.</p>
     </section>
     <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Save policy</button></div>
   </div>

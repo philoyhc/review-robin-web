@@ -132,7 +132,7 @@ def test_existing_extra_leave_shows_even_with_appeals_off(monkeypatch) -> None:
 
 
 def test_cover_answers_follow_the_cover_setting(monkeypatch) -> None:
-    """Named only, or cover not required: no answer is owed for ordinary
+    """Named only, or cover not required: no answer is owed for any
     leave (spec §12), so Ethan Wong's ask moves to Covering."""
     detail = client().get(RA + "applications/L-0101").text
     assert "Next: pending first approval" in detail

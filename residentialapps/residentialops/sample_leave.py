@@ -77,6 +77,15 @@ def week_dates(blackout: Blackout, year: str = "AY2026-2027") -> tuple[date, dat
 
 
 APPEAL_MODES = ("Open", "By invitation", "Off")
+# Who approves an appeal opened by invitation (author, 2026-11-10): the
+# usual first and final approvers, or the usual first approver and then the
+# Master, so the Master is always involved. With no separate first approver,
+# either skips that step. Shown on Policy and inert: routing still sends
+# every appeal straight to the Master, with no first approval.
+APPEAL_APPROVALS = (
+    ("usual", "the normal first, and final approver"),
+    ("master", "the normal first approver, and the Master"),
+)
 # By invitation by default (author, 2026-11-09): a default deployment does
 # not show extra leave to RAs. An RA appeals offline; if it is agreed, an
 # admin opens an invitation, and only that RA may then send it.
@@ -98,6 +107,7 @@ class Policy(TypedDict):
     inviter_types: tuple[str, ...]
     inviter_names: tuple[str, ...]
     appeal_terms: str
+    appeal_approval: str
     cover_required: bool
     cover_mode: str
     cover_pool: str
@@ -153,6 +163,7 @@ _POLICY = _Policy(
         "appeal_terms": (
             "Granted on the understanding that you take on extra duties, as agreed with your RF."
         ),
+        "appeal_approval": "master",
         "cover_required": True,
         "cover_mode": "Named and confirmed",
         "cover_pool": "Same Precinct",
@@ -435,8 +446,8 @@ _APPLICATION_ROWS: tuple[_ApplicationRow, ...] = (
         "Pending first approval",
         _d("2026-10-21"),
     ),
-    # Cover not yet confirmed: the Master may decide over it, on the
-    # record (spec §7.4; audit, 2026-10-29).
+    # Cover not yet confirmed: the appeal waits for it, as ordinary leave
+    # does (author, 2026-11-10).
     (
         "Gwen Ho",
         "Personal leave",
@@ -1378,12 +1389,11 @@ def my_extra(ra: str = VIEWER) -> dict[str, int]:
 
 
 def confirmation_needed(application: Application) -> bool:
-    """Whether the cover must confirm: always for an appeal (spec §7.4); for
-    ordinary leave only when the policy requires named and confirmed cover
-    (§12)."""
-    return application.appeal or (
-        POLICY["cover_required"] and POLICY["cover_mode"] == "Named and confirmed"
-    )
+    """Whether the cover must confirm: when the policy requires named and
+    confirmed cover (§12), for an appeal as for ordinary leave (author,
+    2026-11-10: the two are harmonized, with no override)."""
+    del application  # one rule for every application
+    return POLICY["cover_required"] and POLICY["cover_mode"] == "Named and confirmed"
 
 
 def cover_asked(ra: str = VIEWER) -> dict[str, tuple[Application, ...]]:

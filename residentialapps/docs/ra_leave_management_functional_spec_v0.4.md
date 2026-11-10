@@ -423,15 +423,9 @@ An extra-leave appeal should contain:
 
 ## 7.4 Cover requirement
 
-Extra leave normally requires an agreed covering arrangement.
+An appeal follows the same cover settings as ordinary leave (§12; author, 2026-11-10): when cover is required the RA names the covering RA as part of the appeal, and when confirmation is required the appeal waits until the covering RA confirms. There is no override.
 
-The RA identifies the covering RA as part of the appeal.
-
-The covering RA is notified and can confirm or decline.
-
-The Residential Master should be able to see the covering RA's response before deciding the appeal.
-
-The system may allow the Residential Master to override an incomplete cover confirmation where necessary, but such an override must be explicit and audited.
+The covering RA is notified and can confirm or decline, and whoever decides the appeal sees the covering RA's response.
 
 ## 7.5 Accounting treatment
 
@@ -574,7 +568,7 @@ At minimum, the covering RA should receive notification when:
 3. the leave is finally approved;
 4. the leave is rejected, withdrawn or cancelled.
 
-Both facilities are built in for every application: **cover information** (naming the covering RA, who is notified) and **cover confirmation** (the covering RA confirms or declines). Whether ordinary leave requires confirmation is decided by an administrator setting (author, 2026-10-22). It has no built-in default: the setting is chosen as part of cycle setup (§21.1), and ordinary applications cannot be submitted until it has been set. Extra-leave appeals always require confirmation, subject to the explicit, audited override in §7.4.
+Both facilities are built in for every application: **cover information** (naming the covering RA, who is notified) and **cover confirmation** (the covering RA confirms or declines). Whether leave requires confirmation is decided by an administrator setting (author, 2026-10-22). It has no built-in default: the setting is chosen as part of cycle setup (§21.1), and no application, ordinary or appeal, can be submitted until it has been set. Extra-leave appeals follow the same setting (author, 2026-11-10; §7.4).
 
 ---
 
@@ -637,7 +631,7 @@ If rejected:
 
 A typical extra-leave path is:
 
-**Appeal Submitted → Awaiting Cover Confirmation → Pending Master Decision → Approved / Rejected**
+**Appeal Submitted → Awaiting Cover Confirmation (where the setting requires it, §12) → Pending Master Decision → Approved / Rejected**
 
 The precise sequence may permit cover confirmation and staff review to occur in parallel, but the application must make the outstanding prerequisites visible.
 
@@ -779,7 +773,7 @@ This replaces the older approach in which parts of the audit history might exist
 Administrators can:
 
 - create a new RA cycle;
-- choose whether ordinary leave requires cover confirmation (§12);
+- choose whether leave, appeals included, requires cover confirmation (§12);
 - upload roster/entitlement CSV;
 - preview and validate changes;
 - commit the import;
