@@ -730,8 +730,8 @@ def test_withdraw_and_cancel_on_an_appeal_and_on_leave_under_way(
 ) -> None:
     """The cold read (2026-11-10): an appeal's Withdraw ends it and is
     Destructive, a granted appeal is never cancelled by the RA, and leave
-    already under way (L-0107 starts today) says the Residential Admin
-    changes it. No sample RA viewer reaches these, so three are added."""
+    already under way (L-0107 starts today) is a request to the RF. No
+    sample RA viewer reaches these, so three are added."""
     from dataclasses import replace
 
     granted = sample_leave.by_id("L-0118")
@@ -753,6 +753,11 @@ def test_withdraw_and_cancel_on_an_appeal_and_on_leave_under_way(
     )
     assert "your cover and the Master are told" in appeal and "Withdraw to draft" not in appeal
     begun = c.get(RA + "applications/L-0107?as=Olivia%20Ng").text
-    assert "changed by the Residential Admin" in begun and "Cancel leave</button>" not in begun
+    assert "Cancel leave</button>" not in begun
+    # Leave under way is a request to the RF (author, 2026-11-10).
+    assert "a request to Siti Rahman, your RF, to approve" in begun
+    assert (
+        'aria-label="Request cancellation, 28 Oct – 30 Oct" disabled>Request cancellation' in begun
+    )
     final = c.get(RA + "applications/L-0103?as=Bella%20Koh").text  # pending final approval
     assert ">Withdraw to draft</button>" in final

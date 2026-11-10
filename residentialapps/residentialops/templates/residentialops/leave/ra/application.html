@@ -69,10 +69,14 @@
           <p class="sub">Cancelling gives back its {{ app.days }} day{{ "s" if app.days != 1 }}{% if app.cover and app.cover_status != "Declined" %} and releases {{ app.cover }} from covering you{% endif %}. {{ "Your cover and approvers are" if app.cover else "Your approvers are" }} told, and My history keeps it as Cancelled.</p>
           <button type="button" class="btn btn-danger" aria-label="Cancel leave, {{ app.dates }}" disabled>Cancel leave</button>
         </section>
-      {% elif app.stage == "Approved" and app.end >= leave.TODAY %}
+      {% elif leave.under_way(app) %}
+        {# Leave under way (author, 2026-11-10): the RA asks; their RF
+           approves. #}
+        {% set rf = leave.cancel_request_to(app) %}
         <section class="card card-pad muted" aria-labelledby="act-h">
           <h2 id="act-h">Coming back early?</h2>
-          <p class="sub">Leave already begun is changed by the Residential Admin; ask them.</p>
+          <p class="sub">Your leave has begun, so cancelling the rest of it is a request{% if rf %} to {{ rf }}, your RF, to approve{% endif %}. The days not yet taken come back once it is approved; until then your leave stands.</p>
+          <button type="button" class="btn btn-secondary" aria-label="Request cancellation, {{ app.dates }}" disabled>Request cancellation</button>
         </section>
       {% endif %}
     </div>
