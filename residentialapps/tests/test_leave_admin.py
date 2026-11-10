@@ -910,7 +910,9 @@ def test_the_audit_s_consistency_fixes() -> None:
     c = client()
     apps = c.get(ADMIN + "records?period=whole").text
     row = apps.split('href="/ra-leave/admin/records/L-0118"')[1].split("</tr>")[0]
-    assert '<span class="chip chip-accent">Extra leave</span>' in row
+    assert (
+        '<span class="chip chip-accent" title="Extra leave, granted on appeal">Extra</span>' in row
+    )
     assert "Hui Min Goh" not in sample_leave.delegate_choices("Daniel Koh")  # in no slot
     assert all(
         sample_leave.delegate_fits(sample_leave.Delegate("Daniel Koh", p, None, None, ""))
