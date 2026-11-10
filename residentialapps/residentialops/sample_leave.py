@@ -85,7 +85,7 @@ def week_dates(blackout: Blackout, year: str = "AY2026-2027") -> tuple[date, dat
 APPEAL_MODES = ("Open", "By invitation", "Off")
 # Who approves an appeal opened by invitation (author, 2026-11-10): the
 # usual first and final approvers, or the usual first approver and then the
-# Master, so the Master is always involved. With no separate first approver,
+# Master, so the Master is involved. With no separate first approver,
 # either skips that step. An appeal made while appeals are Open goes
 # straight to the Master.
 APPEAL_APPROVALS = (
@@ -372,8 +372,9 @@ class Application:
 
     @property
     def appeal(self) -> bool:
-        """An extra-leave appeal: decided by the Master, and kept apart from
-        normal entitlement once granted (spec §7.5)."""
+        """An extra-leave appeal: decided by the Master, or by the usual
+        approvers for an invited one when Policy says so (`appeal_route`),
+        and kept apart from normal entitlement once granted (spec §7.5)."""
         return (
             self.recorded == "Appeal to the Master" or self.id in GRANTED_APPEALS | REJECTED_APPEALS
         )
@@ -728,7 +729,9 @@ def history_steps(application: Application) -> tuple[tuple[str, str, str], ...]:
     shows them under today's policy, for a history item (spec §19): each
     with its date and remarks."""
     return tuple(
-        s for s in timeline(application) if not s[1].startswith(("Submitted", "Cover ", "Sent to"))
+        s
+        for s in timeline(application)
+        if not s[1].startswith(("Submitted", "Cover ", "Sent to", "Sent as"))
     )
 
 
@@ -1273,6 +1276,8 @@ def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
     if application.appeal and application.stage == "Pending final approval":
         # An invited appeal the usual approvers decide (author, 2026-11-10).
         steps.append(("", "Sent as an extra-leave appeal, to the usual approvers", ""))
+        if "staff" in DECISIONS.get(application.id, {}):
+            steps.append(_step(application, "staff", f"Remarks from {route.rf}, RF"))
         if appeal_takes_first():
             steps.append(_step(application, "first", f"First approval by {first}"))
         return tuple(steps)
@@ -2078,9 +2083,9 @@ def leave_calendar(
     live = [
         a
         for a in APPLICATIONS
-        # Appeals awaiting the Master stay off (author, 2026-11-09); one
-        # granted is approved leave like any other.
-        if (a.stage == "Approved" or (a.stage in OPEN_STAGES and a.stage != "Appeal to the Master"))
+        # Open appeals stay off (author, 2026-11-09), wherever they wait;
+        # one granted is approved leave like any other.
+        if (a.stage == "Approved" or (a.stage in OPEN_STAGES and not a.appeal))
         and a.precinct in scope(viewer)
         and a.start <= end
         and a.end >= start
@@ -2346,10 +2351,21 @@ def sees_appeals(viewer: str) -> bool:
 
 
 def appeals_decided() -> bool:
-    """Whether the Master still decides appeals: while they are on, or
-    while one made before they were turned off is open (author,
-    2026-10-28: existing appeals stand)."""
-    return appeals_on() or any(a.stage == "Appeal to the Master" for a in APPLICATIONS)
+    """Whether the Master still decides appeals: while they are on and
+    the Master decides them (`appeal_route`), or while one is open before
+    the Master (author, 2026-10-28: existing appeals stand)."""
+    master = appeals_on() and appeal_route() == "master"
+    return master or any(a.stage == "Appeal to the Master" for a in APPLICATIONS)
+
+
+def open_appeals() -> tuple[Application, ...]:
+    """Appeals not yet decided, wherever they wait (author, 2026-11-10)."""
+    return tuple(a for a in APPLICATIONS if a.appeal and a.stage in OPEN_STAGES)
+
+
+def appeal_decider_name() -> str:
+    """Who decides a new appeal, for the RA's and staff's copy."""
+    return "the usual approvers" if appeal_route() == "usual" else "the Master"
 
 
 @dataclass(frozen=True)

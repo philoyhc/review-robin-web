@@ -1228,6 +1228,20 @@ def test_an_invited_appeal_routes_by_the_policy_choice(monkeypatch) -> None:
     steps = [s[1] for s in sample_leave.timeline(l0105)]
     assert "Sent as an extra-leave appeal, to the usual approvers" in steps
     assert "The usual first and final approvers" in c.get("/ra-leave/admin/policy").text
+    # Cold read: the appeal stays an open appeal, the RF's remarks stay in
+    # its timeline, its sending is no decision, and the Master no longer
+    # decides appeals.
+    assert l0105 in sample_leave.open_appeals()
+    assert any(s.startswith("Remarks from") for s in steps)
+    assert not any(s[1].startswith("Sent as") for s in sample_leave.history_steps(l0105))
+    assert not sample_leave.appeals_decided()
+    appeals = c.get("/ra-leave/admin/appeals").text
+    assert "Open appeals" in appeals and "L-0105" in appeals.split('id="open-h"')[1]
+    viewers = (*sample_leave.RA_VIEWERS, ("Gwen Ho", ""))
+    monkeypatch.setattr(sample_leave, "RA_VIEWERS", viewers)
+    ra = c.get("/ra-leave/applications/L-0105?as=Gwen%20Ho").text
+    nxt = ra.split("Next:")[1].split("</li>")[0]
+    assert "pending final approval" in nxt and "the Master" not in nxt
     # Decided appeals keep their history: the Master granted L-0118.
     assert any(d == "Appeal" for a, d, _ in sample_leave.decided("Sam Lee") if a.id == "L-0118")
     # Open: straight to the Master, whatever the invited choice.

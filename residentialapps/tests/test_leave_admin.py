@@ -431,7 +431,7 @@ def test_appeals_switched_off_leave_no_appeal_route(monkeypatch) -> None:
     (author, 2026-10-28): off, no page offers or names an appeal route."""
     c = client()
     on = c.get(ADMIN).text.split('id="policy-h"')[1].split("</section>")[0]
-    assert "<dt>Appeals</dt><dd>Open, to the Master</dd>" in on
+    assert "<dt>Appeals</dt><dd>Open: The Master (Sam Lee), personally</dd>" in on
     assert ">Appeals</th>" in c.get(ADMIN + "routing").text
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Off")
     policy = c.get(ADMIN + "policy").text
@@ -703,7 +703,10 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     assert sample_leave.invitation_status(
         future
     ) == "From 2 Nov" and not sample_leave.invitation_for("Mira Sato")
-    assert "<dd>By invitation, to the Master</dd>" in c.get(ADMIN).text
+    assert (
+        "<dd>By invitation: The usual first approver, then the Master (Sam Lee), personally</dd>"
+        in c.get(ADMIN).text
+    )
     assert "Appeal to the Master" in c.get(ADMIN).text  # appeals exist: the tile stays
 
 

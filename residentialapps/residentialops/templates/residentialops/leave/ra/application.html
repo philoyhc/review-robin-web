@@ -21,7 +21,7 @@
         <h2 id="timeline-h">Timeline</h2>
         <ol class="plain">
           {{ timeline_items(steps) }}
-          {% if app.stage in leave.OPEN_STAGES %}<li class="subtle">Next: {% if app.cover_status == "Awaiting" and leave.confirmation_needed(app) %}awaiting cover confirmation from {{ app.cover }}, then {% endif %}{{ "the Master's decision" if app.appeal else app.stage | lower }}</li>{% endif %}
+          {% if app.stage in leave.OPEN_STAGES %}<li class="subtle">Next: {% if app.cover_status == "Awaiting" and leave.confirmation_needed(app) %}awaiting cover confirmation from {{ app.cover }}, then {% endif %}{{ "the Master's decision" if app.stage == "Appeal to the Master" else app.stage | lower }}</li>{% endif %}
         </ol>
       </section>
       {% set emails = leave.emails_for(app, me) %}
@@ -60,7 +60,7 @@
       {% elif leave.can_withdraw(app) %}
         <section class="card card-pad muted" aria-labelledby="act-h">
           <h2 id="act-h">Changed your plans?</h2>
-          <p class="sub">Withdrawing ends this request for extra leave; your cover and the Master are told.</p>
+          <p class="sub">Withdrawing ends this request for extra leave; your cover and {{ leave.appeal_decider_name() }} are told.</p>
           <button type="button" class="btn btn-danger" aria-label="Withdraw, {{ app.dates }}" disabled>Withdraw</button>
         </section>
       {% elif leave.can_cancel(app) %}

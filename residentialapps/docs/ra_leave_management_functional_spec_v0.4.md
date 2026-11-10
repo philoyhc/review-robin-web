@@ -388,6 +388,8 @@ Typical circumstances may include an RA having undertaken additional duties or a
 
 The system should therefore support this practice explicitly instead of treating it as an administrative error, entitlement adjustment or negative balance.
 
+Who decides (author, 2026-11-10): an appeal made while appeals are open goes to the Residential Master. An appeal by invitation goes either to the usual first approver and then the Residential Master, or to the usual first and final approvers, as the administrator sets on Leave policy; with no separate first approver, either skips that step. Where this specification says the Residential Master decides an appeal, it means whoever this setting names.
+
 ## 7.2 Appeal affordance
 
 Where:
@@ -631,7 +633,7 @@ If rejected:
 
 A typical extra-leave path is:
 
-**Appeal Submitted → Awaiting Cover Confirmation (where the setting requires it, §12) → Pending Master Decision → Approved / Rejected**
+**Appeal Submitted → Awaiting Cover Confirmation (where the setting requires it, §12) → Pending Master Decision → Approved / Rejected**, or, for an appeal by invitation, the first and final approvals the Leave policy sets (§7.1)
 
 The precise sequence may permit cover confirmation and staff review to occur in parallel, but the application must make the outstanding prerequisites visible.
 
