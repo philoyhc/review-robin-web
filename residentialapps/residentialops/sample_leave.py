@@ -2136,31 +2136,39 @@ def can_cancel(application: Application) -> bool:
     to confirm: only ordinary leave not yet begun, leave under way being the
     RF's to approve on the RA's request, or a senior's or the Residential
     Admin's to cancel (author, 2026-11-10; `under_way`), and a granted
-    appeal, which §30 gives no cancelled state, too."""
+    appeal, which §30 gives no cancelled state, a request too
+    (`cancel_by_request`)."""
     return application.stage == "Approved" and application.start > TODAY and not application.appeal
 
 
 def under_way(application: Application) -> bool:
-    """Approved ordinary leave whose first day has come and whose last has
-    not passed."""
+    """Approved leave whose first day has come and whose last has not
+    passed, ordinary or a granted appeal."""
+    return application.stage == "Approved" and application.start <= TODAY <= application.end
+
+
+def cancel_by_request(application: Application) -> bool:
+    """Approved leave the RA asks to cancel rather than cancelling it
+    themselves (author, 2026-11-10): leave under way, and a granted appeal
+    not yet ended, which the RA does not cancel alone (§30)."""
     return (
-        application.stage == "Approved"
-        and not application.appeal
-        and application.start <= TODAY <= application.end
+        application.stage == "Approved" and application.end >= TODAY and not can_cancel(application)
     )
 
 
-def cancel_request_to(application: Application) -> str:
-    """Who an RA's request to cancel leave under way goes to (author,
-    2026-11-10): their RF, the first approver of their slot, to approve."""
-    return " or ".join(routes_first(application))
+def rf_of(application: Application) -> str:
+    """The RF of the RA's slot (author, 2026-11-10: a request to cancel
+    leave under way goes to the RF, who is told of a cancel): the slot's
+    RF by appointment, whoever the policy names as first approver today."""
+    return next((r.rf for r in routes() if r.precinct == application.precinct), "")
 
 
 def cancels_under_way(viewer: str, application: Application) -> bool:
     """Whether a staff member may cancel leave under way themselves (author,
     2026-11-10): a senior, any staff member above RF whose scope holds the
-    RA's Precinct; the RA and the RF are told. An RF approves an RA's
-    request instead, and the Residential Admin cancels from Applications."""
+    RA's Precinct, the Residential Admin among them, who also may from
+    Applications; the RA and the RF are told. An RF approves an RA's
+    request instead."""
     return under_way(application) and not is_rf(viewer) and application.precinct in scope(viewer)
 
 

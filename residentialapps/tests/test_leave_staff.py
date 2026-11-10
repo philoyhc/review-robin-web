@@ -774,7 +774,16 @@ def test_a_senior_cancels_leave_under_way_and_the_admin_s_page_says_who_is_told(
     later = sample_leave.by_id("L-0115")  # Hana Ito, 14 Dec
     assert begun and later
     assert sample_leave.under_way(begun) and not sample_leave.under_way(later)
-    assert sample_leave.cancel_request_to(begun) == "Siti Rahman"
+    assert sample_leave.rf_of(begun) == "Siti Rahman"
+    # The RF by appointment, not a delegate approving first today (the
+    # second cold read): Maple 03-08's first approver is Marcus Tan, an
+    # RSLM standing in for its RF.
+    maple = next(r for r in sample_leave.routes() if r.precinct == "Maple 03-08")
+    assert maple.first != maple.rf
+    maple_ra = next(s.ras[0] for s in sample_data.SLOTS if s.precinct == "Maple 03-08")
+    elsewhere = sample_leave.replace(begun, ra=maple_ra)
+    assert elsewhere.precinct == "Maple 03-08"
+    assert sample_leave.rf_of(elsewhere) == maple.rf
     assert sample_leave.cancels_under_way("Sam Lee", begun)
     assert not sample_leave.cancels_under_way("Sam Lee", later)
     assert not sample_leave.cancels_under_way("Siti Rahman", begun)  # her RF

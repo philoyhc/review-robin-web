@@ -66,16 +66,16 @@
       {% elif leave.can_cancel(app) %}
         <section class="card card-pad muted" aria-labelledby="act-h">
           <h2 id="act-h">No longer taking this leave?</h2>
-          <p class="sub">Cancelling gives back its {{ app.days }} day{{ "s" if app.days != 1 }}{% if app.cover and app.cover_status != "Declined" %} and releases {{ app.cover }} from covering you{% endif %}. {{ "Your cover and approvers are" if app.cover else "Your approvers are" }} told, and My history keeps it as Cancelled.</p>
+          <p class="sub">Cancelling gives back its {{ app.days }} day{{ "s" if app.days != 1 }}{% set covered = app.cover and app.cover_status != "Declined" %}{% if covered %} and releases {{ app.cover }} from covering you{% endif %}. {{ "Your cover and approvers are" if covered else "Your approvers are" }} told, and My history keeps it as Cancelled.</p>
           <button type="button" class="btn btn-danger" aria-label="Cancel leave, {{ app.dates }}" disabled>Cancel leave</button>
         </section>
-      {% elif leave.under_way(app) %}
-        {# Leave under way (author, 2026-11-10): the RA asks; their RF
-           approves. #}
-        {% set rf = leave.cancel_request_to(app) %}
+      {% elif leave.cancel_by_request(app) %}
+        {# Leave under way, or granted extra leave (author, 2026-11-10): the
+           RA asks; their RF approves. #}
+        {% set rf = leave.rf_of(app) %}
         <section class="card card-pad muted" aria-labelledby="act-h">
-          <h2 id="act-h">Coming back early?</h2>
-          <p class="sub">Your leave has begun, so cancelling the rest of it is a request{% if rf %} to {{ rf }}, your RF, to approve{% endif %}. The days not yet taken come back once it is approved; until then your leave stands.</p>
+          <h2 id="act-h">{{ "Coming back early?" if leave.under_way(app) else "No longer taking this leave?" }}</h2>
+          <p class="sub">{{ "Your leave has begun, so cancelling the rest of it" if leave.under_way(app) else "Extra leave granted on appeal is cancelled" }} is a request {{ "to " ~ rf ~ ", your RF," if rf else "to your RF" }} to approve. The days not yet taken come back once it is approved; until then your leave stands.</p>
           <button type="button" class="btn btn-secondary" aria-label="Request cancellation, {{ app.dates }}" disabled>Request cancellation</button>
         </section>
       {% endif %}

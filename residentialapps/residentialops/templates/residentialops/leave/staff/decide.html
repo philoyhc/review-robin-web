@@ -35,7 +35,7 @@
       {% elif leave.cancels_under_way(me, app) %}
         {# A senior cancels leave under way (author, 2026-11-10); the RA and
            their RF are told. #}
-        {% set rf = leave.cancel_request_to(app) %}
+        {% set rf = leave.rf_of(app) %}
         <section class="card card-pad" aria-labelledby="act-h">
           <h2 id="act-h">Leave under way</h2>
           <p class="sub">Cancelling gives back the days not yet taken and keeps the record as Cancelled. {{ app.ra }}{% if rf %} and {{ rf }}, their RF,{% endif %} are told.</p>

@@ -56,7 +56,7 @@
             <button type="button" class="btn btn-danger" disabled>Cancel approved leave</button>
           {% endif %}
         </div>
-        {% if leave.under_way(app) %}{% set rf = leave.cancel_request_to(app) %}<p class="sub gap-above-sm">This leave is under way: cancelling gives back the days not yet taken, and {{ app.ra }}{% if rf %} and {{ rf }}, their RF,{% endif %} are told.</p>{% endif %}
+        {% if leave.under_way(app) %}{% set rf = leave.rf_of(app) %}<p class="sub gap-above-sm">This leave is under way: cancelling gives back the days not yet taken, and {{ app.ra }}{% if rf %} and {{ rf }}, their RF,{% endif %} are told.</p>{% endif %}
       </section>
     </div>
   </div>

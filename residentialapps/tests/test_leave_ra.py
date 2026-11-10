@@ -743,7 +743,8 @@ def test_withdraw_and_cancel_on_an_appeal_and_on_leave_under_way(
     monkeypatch.setattr(
         sample_leave,
         "RA_VIEWERS",
-        sample_leave.RA_VIEWERS + (("Gwen Ho", ""), ("Olivia Ng", ""), ("Bella Koh", "")),
+        sample_leave.RA_VIEWERS
+        + (("Gwen Ho", ""), ("Olivia Ng", ""), ("Bella Koh", ""), ("Lucas Teo", "")),
     )
     c = client()
     appeal = c.get(RA + "applications/L-0105?as=Gwen%20Ho").text
@@ -761,3 +762,24 @@ def test_withdraw_and_cancel_on_an_appeal_and_on_leave_under_way(
     )
     final = c.get(RA + "applications/L-0103?as=Bella%20Koh").text  # pending final approval
     assert ">Withdraw to draft</button>" in final
+    # Granted extra leave not yet ended is a request too (the second cold
+    # read), and a cancel with no cover names none.
+    lucas = sample_leave.replace(
+        granted, start=sample_leave.date(2026, 12, 1), end=sample_leave.date(2026, 12, 2)
+    )
+    hana = sample_leave.by_id("L-0115")
+    assert hana
+    uncovered = sample_leave.replace(hana, cover="")
+    monkeypatch.setattr(
+        sample_leave,
+        "APPLICATIONS",
+        tuple(
+            lucas if a.id == "L-0118" else uncovered if a.id == "L-0115" else a
+            for a in sample_leave.APPLICATIONS
+        ),
+    )
+    extra = c.get(RA + "applications/L-0118?as=Lucas%20Teo").text
+    assert "Extra leave granted on appeal is cancelled is a request" in extra
+    assert ">Request cancellation</button>" in extra and "Cancel leave</button>" not in extra
+    alone = c.get(RA + "applications/L-0115?as=Hana%20Ito").text
+    assert "releases" not in alone and "Your approvers are told" in alone
