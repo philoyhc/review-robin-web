@@ -653,19 +653,22 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     off = c.get(ADMIN + "appeals").text
     assert 'id="inv-ra"' not in off and "Appeals are off: no new one can be opened" in off
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
+    # The admin Appeals tab is gone (author, 2026-11-10): its path goes to
+    # the staff Appeals, as the Residential Admin sees it.
+    went = c.get(ADMIN + "appeals", follow_redirects=False)
+    assert went.status_code == 303
+    assert went.headers["location"] == "/ra-leave/staff/appeals?as=Rachel%20Yeo"
+    assert 'href="/ra-leave/admin/appeals"' not in c.get(ADMIN).text
     page = c.get(ADMIN + "appeals").text
-    assert 'href="/ra-leave/admin/appeals" aria-current="page"' in page
+    assert 'href="/ra-leave/staff/appeals?as=Rachel%20Yeo" aria-current="page"' in page
     rows = re.findall(
         r'<td class="strong nowrap">([^<]*)</td>\s*<td class="nowrap">([^<]*)</td>', page
     )
     assert rows[:2] == [("Gwen Ho", "Sam Lee"), ("Kai Ng", "Rachel Yeo")]
-    assert (
-        'href="/ra-leave/admin/records/L-0105">Sent: L-0105</a>' in page
-        and "selected" not in page.split('id="inv-by"')[1].split("</select>")[0]
-    )
-    assert (
-        page.split('id="inv-by"')[1].split("</select>")[0].count("<option>") == 2
-    )  # the Unit's Master and Admin
+    by = page.split('id="inv-by"')[1].split("</select>")[0]
+    assert 'href="/ra-leave/staff/applications/L-0105?as=Rachel%20Yeo">Sent: L-0105</a>' in page
+    # On the staff page the viewer, the Admin, opens appeals as herself.
+    assert "<option selected>Rachel Yeo</option>" in by and by.count("<option") == 1
     assert ">Sent: L-0105</a>" in page and 'aria-label="Withdraw Kai Ng\'s invitation"' in page
     assert (
         '<span class="chip chip-mute">Lapsed</span>' in page and "Withdraw Nathan Yeo" not in page
@@ -764,10 +767,10 @@ def test_review_fixes_on_the_admin_side(monkeypatch) -> None:
     )
     monkeypatch.setitem(sample_leave.POLICY, "cover_mode", "Named only")
     assert "declined cover" not in c.get(ADMIN).text
-    assert "Every RA may send one, so no invitation is needed" in c.get(ADMIN + "appeals").text
+    assert "every RA may send one, so none is opened for them" in c.get(ADMIN + "appeals").text
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     monkeypatch.setitem(sample_leave.POLICY, "inviter_types", ())
-    assert "names no one who may open an appeal" in c.get(ADMIN + "appeals").text
+    assert "Leave policy names no one to open appeals." in c.get(ADMIN + "appeals").text
     monkeypatch.setitem(sample_leave.POLICY, "first", "slot")
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ())
     assert "No first approver ticked" in c.get(ADMIN).text

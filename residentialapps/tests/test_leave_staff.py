@@ -292,8 +292,7 @@ def test_inviter_settings_at_their_edges(monkeypatch) -> None:
     # (author, 2026-11-10).
     assert 'aria-label="Open appeals, Residential Fellow" checked' in policy
     assert 'aria-label="Open appeals, Residential Student Life Manager" checked' in policy
-    agreed = c.get("/ra-leave/admin/appeals").text.split('id="inv-by"')[1].split("</select>")[0]
-    assert agreed.count("<option>") == 9 + 3  # every RF and RSLM on a slot
+    assert len(sample_leave.all_inviters()) == 9 + 3  # every RF and RSLM on a slot
 
 
 def test_a_staff_appeals_page_lists_only_the_viewer_s_ras(monkeypatch) -> None:
