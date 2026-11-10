@@ -14,7 +14,7 @@
         <span class="tile-l">{{ stage }}</span>
       </a>
     {% endfor %}
-    <a class="tile" href="{{ url('/ra-leave/admin/records') }}?hide={{ leave.records_hide_except('Cover awaiting', 'Cover declined', *leave.stages(open_only=True)) | urlencode }}&amp;period=whole">
+    <a class="tile" href="{{ url('/ra-leave/admin/records') }}?cover=unconfirmed&amp;period=whole">
       <span class="tile-n">{{ leave.cover_unconfirmed() | length }}</span>
       <span class="tile-l">Cover not yet confirmed</span>
     </a>

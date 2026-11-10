@@ -73,10 +73,7 @@ def test_the_dashboard_counts_pending_by_stage_and_flags_what_needs_attention() 
         "&amp;period=whole"
     )
     assert "Pending%20first%20approval" not in tiles[0][0]
-    assert tiles[3][0] == (
-        "/ra-leave/admin/records?hide=Approved%2CCancelled%2CCover%20confirmed%2CCover%20released"
-        "%2COn%20leave%2CRejected%2CTaken%2CWithdrawn&amp;period=whole"
-    )
+    assert tiles[3][0] == "/ra-leave/admin/records?cover=unconfirmed&amp;period=whole"
     attention = page.split('id="attention-h"')[1].split("</section>")[0]
     assert re.findall(r">(L-\d+)</a>", attention) == ["L-0103", "L-0104", "L-0107", "L-0109"]
     assert "Pranav Iyer is away too" in attention and "Chloe Lim declined cover" in attention
@@ -931,3 +928,19 @@ def test_the_audit_s_consistency_fixes() -> None:
     board = c.get(ADMIN).text
     assert 'href="/ra-leave/staff/?as=Rachel%20Yeo">RA Leave</a>' in board
     assert ">Rosters and setup</a>" in board
+
+
+def test_the_cover_tile_opens_the_set_it_counts_under_any_policy(monkeypatch) -> None:
+    """Codex, 2026-11-10: with ordinary leave's cover not to be confirmed,
+    the tile counts only the appeal (L-0105); its link shows that set, not
+    every application whose cover is awaiting."""
+    monkeypatch.setitem(sample_leave.POLICY, "cover_required", False)
+    c = client()
+    counted = {a.id for a in sample_leave.cover_unconfirmed()}
+    page = c.get(ADMIN + "records?cover=unconfirmed&period=whole").text
+    assert set(re.findall(r'href="/ra-leave/admin/records/(L-\d+)"', page)) == counted
+    assert "Show all</a>" in page and "Cover not yet confirmed</span>" in page
+    # A chip and the period form keep the filter.
+    chips = page.split('class="col-chips rec-filters"')[1]
+    assert "?cover=unconfirmed&amp;" in chips.split("</div>")[0]
+    assert '<input type="hidden" name="cover" value="unconfirmed">' in page

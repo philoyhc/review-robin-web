@@ -109,6 +109,10 @@ def records(request: Request) -> Response:
         # read, 2026-11-10; Applications listed every application).
         period=sample_leave.period_range(q.get("period"), q.get("from"), q.get("to"), "whole"),
         hide=q.get("hide"),
+        # The Cover not yet confirmed tile's own set (Codex, 2026-11-10):
+        # open, its cover still to confirm where the policy asks it, which
+        # the chips alone cannot say.
+        unconfirmed=q.get("cover") == "unconfirmed",
         here=app_path(request),
     )
 
@@ -122,9 +126,9 @@ def applications(request: Request) -> Response:
     kept: list[str] = []
     if q.get("stage") in sample_leave.stages():
         kept.append(q["stage"])
-    if q.get("cover") == "unconfirmed":
-        kept += ["Cover awaiting", "Cover declined", *sample_leave.stages(open_only=True)]
     query = "period=whole"
+    if q.get("cover") == "unconfirmed":
+        query = "cover=unconfirmed&" + query
     if kept:
         query = "hide=" + quote(sample_leave.records_hide_except(*kept)) + "&" + query
     return RedirectResponse(

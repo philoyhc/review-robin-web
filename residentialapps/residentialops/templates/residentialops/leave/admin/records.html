@@ -13,7 +13,9 @@
   {% set key, label, first, last = period %}
   {% set hidden = leave.records_hidden(None, hide) %}
   {% set rows = leave.records(None, first, last, hidden) %}
-  {% set aq, form_keep, as_query, admin = '', [], '', true %}
+  {% if unconfirmed %}{% set waiting = leave.cover_unconfirmed() %}{% set rows = rows | selectattr(0, "in", waiting) | list %}{% endif %}
+  {% set aq, form_keep, as_query, admin = ('cover=unconfirmed&' if unconfirmed else ''), ([("cover", "unconfirmed")] if unconfirmed else []), '', true %}
+  {% if unconfirmed %}<p class="sub"><span class="chip chip-warn">Cover not yet confirmed</span> Only the open applications whose cover the policy still waits on, as the dashboard's tile counts them. <a href="{{ url('/ra-leave/admin/records') }}?period={{ period[0] if period[0] != 'custom' else 'whole' }}">Show all</a></p>{% endif %}
   {% set app_base = '/ra-leave/admin/records/' %}
   {% include "residentialops/leave/_records_card.html" %}
 {% endblock %}
