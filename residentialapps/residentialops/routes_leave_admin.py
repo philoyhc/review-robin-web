@@ -104,7 +104,9 @@ def records(request: Request) -> Response:
     return _page(
         request,
         "records.html",
-        period=sample_leave.period_range(q.get("period"), q.get("from"), q.get("to")),
+        # The whole term by default: the admin keeps the record (the cold
+        # read, 2026-11-10; Applications listed every application).
+        period=sample_leave.period_range(q.get("period"), q.get("from"), q.get("to"), "whole"),
         hide=q.get("hide"),
         here=app_path(request),
     )

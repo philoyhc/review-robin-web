@@ -5,7 +5,8 @@
    `rows`, `aq` (the query each link carries ahead of its own: the viewer
    and the Summary's counts, empty or ending in "&"), `form_keep` (the
    (name, value) pairs the period form carries), `app_base` and
-   `as_query` (where a row's ID opens). Every change lands at the top of
+   `as_query` (where a row's ID opens), and `admin` (true on the admin's
+   page: Export and Record external leave under the table). Every change lands at the top of
    the page: no fragment on any link. #}
 {% set pq = ('period=custom&from=' ~ first.isoformat() ~ '&to=' ~ last.isoformat()) if key == "custom" else 'period=' ~ key %}
 <section class="card" aria-labelledby="rec-h">
@@ -14,9 +15,10 @@
     <p class="sub">Every application whose dates touch {{ leave.short_date(first) }} – {{ leave.short_date(last) }}, whatever its stage. On leave and Approved together are who is away.</p>
     <div class="grid-thirds one-two gap-above-sm">
       {# The period is navigation; the chips' state rides it. Choosing a
-         period applies it, and so do From and To once both are keyed in
-         (author, 2026-11-10), the button kept for a browser without
-         scripts. #}
+         period applies it, and changing From or To applies the range as a
+         custom period (author, 2026-11-10); the button is kept for a
+         browser without scripts, a named period winning over the dates
+         sent with it. #}
       <form method="get" action="{{ url(here) }}" aria-label="Period" id="period-form">
         {% for name, value in form_keep %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
         {% if hidden %}<input type="hidden" name="hide" value="{{ hidden | sort | join(',') }}">{% endif %}

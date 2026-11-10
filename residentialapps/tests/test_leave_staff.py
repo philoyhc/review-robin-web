@@ -1097,8 +1097,16 @@ def test_records_filter_by_cover_take_from_and_to_and_match_the_admin_s() -> Non
         sample_leave.date(2026, 9, 1),
         sample_leave.date(2026, 9, 30),
     )
-    assert sample_leave.period_range("term", "2026-09-30", "2026-09-01")[0] == "term"
+    assert sample_leave.period_range("custom", "2026-09-30", "2026-09-01")[0] == "week"
     assert sample_leave.period_range("next", "x", "")[0] == "next"
+    # A named period wins over the dates the form sends with it, so the
+    # noscript Show period works (the cold read); two years at most.
+    assert sample_leave.period_range("whole", "2026-09-01", "2026-09-30")[0] == "whole"
+    assert sample_leave.period_range(None, "2026-01-01", "2027-12-31")[0] == "custom"
+    assert sample_leave.period_range(None, "2026-01-01", "2028-01-02")[0] == "week"
+    assert sample_leave.period_range(None, None, None, "whole")[0] == "whole"
+    sent = c.get(STAFF + "records" + SAM + "&period=whole&from=2026-09-01&to=2026-09-30").text
+    assert '<option value="whole" selected>' in sent
     page = c.get(STAFF + "records" + SAM + "&period=custom&from=2026-09-01&to=2026-09-30").text
     form = page.split('id="period-form"')[1].split("</form>")[0]
     assert form.index('id="period"') < form.index('id="from"') < form.index('id="to"')
@@ -1106,10 +1114,13 @@ def test_records_filter_by_cover_take_from_and_to_and_match_the_admin_s() -> Non
     assert '<option value="custom" selected>' in form
     chips = page.split('class="col-chips rec-filters"')[1].split("</div>")[0]
     assert "period=custom&amp;from=2026-09-01&amp;to=2026-09-30" in chips
+    assert '<h2 id="sum-h">Summary, 1 Sep – 30 Sep</h2>' in page
+    summary_chips = page.split('aria-labelledby="count-l"')[1].split("</div>")[0]
+    assert "period=custom&amp;from=2026-09-01&amp;to=2026-09-30" in summary_chips
     sept = sample_leave.records("Sam Lee", custom[2], custom[3])
     assert f'Leave applications <span class="count">· {len(sept)}</span>' in page
     # The admin's Leave records: the same card, the whole Unit, Export below.
-    admin = c.get("/ra-leave/admin/records?period=whole").text
+    admin = c.get("/ra-leave/admin/records").text  # the whole term by default
     assert 'Leave applications <span class="count">· 20</span>' in admin
     groups = admin.split('class="col-chips rec-filters"')[1:]
     assert [g.count('class="col-chip on"') for g in groups] == [9, 4, 9]

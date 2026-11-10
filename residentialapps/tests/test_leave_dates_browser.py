@@ -55,6 +55,6 @@ def test_leave_records_apply_a_period_on_choosing_it_and_stay_at_the_top(
     expect(page.locator("#period")).to_have_value("whole")
     page.evaluate("window.scrollTo(0, 300)")
     with page.expect_navigation():
-        page.locator(".rec-filters").nth(1).locator("a", has_text="Clear all").click()
+        page.locator(".rec-filters").nth(2).locator("a", has_text="Clear all").click()  # Precinct
     assert page.evaluate("window.scrollY") == 0
     assert "period=whole" in page.url

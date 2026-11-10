@@ -74,7 +74,8 @@ def test_the_dashboard_counts_pending_by_stage_and_flags_what_needs_attention() 
     )
     assert "Pending%20first%20approval" not in tiles[0][0]
     assert tiles[3][0] == (
-        "/ra-leave/admin/records?hide=Cover%20confirmed%2CCover%20released&amp;period=whole"
+        "/ra-leave/admin/records?hide=Approved%2CCancelled%2CCover%20confirmed%2CCover%20released"
+        "%2COn%20leave%2CRejected%2CTaken%2CWithdrawn&amp;period=whole"
     )
     attention = page.split('id="attention-h"')[1].split("</section>")[0]
     assert re.findall(r">(L-\d+)</a>", attention) == ["L-0103", "L-0104", "L-0107", "L-0109"]
@@ -110,11 +111,18 @@ def test_a_tile_opens_the_rows_it_counts() -> None:
         "L-0114",
     ]  # L-0105: the appeal's cover awaits (audit, 2026-10-29)
     assert 'Leave applications <span class="count">· 4</span>' in cover
+    # The tile's count and its rows are one set: open stages, cover still
+    # to confirm (the cold read).
+    assert len(re.findall(r'href="/ra-leave/admin/records/(L-\d+)"', cover)) == len(
+        sample_leave.cover_unconfirmed()
+    )
     # An old Applications link lands on Leave records, its query kept.
     old = c.get(ADMIN + "applications?stage=x", follow_redirects=False)
     assert old.status_code == 303 and old.headers["location"] == "/ra-leave/admin/records?stage=x"
     old = c.get(ADMIN + "applications/L-0101", follow_redirects=False)
     assert old.headers["location"] == "/ra-leave/admin/records/L-0101"
+    back = c.get(ADMIN + "records/L-0101").text
+    assert '<a class="back" href="/ra-leave/admin/records?period=whole">' in back
 
 
 def test_policy_sets_leave_types_with_their_own_entitlement_rules() -> None:

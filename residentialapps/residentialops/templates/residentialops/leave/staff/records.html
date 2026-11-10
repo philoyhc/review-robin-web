@@ -29,7 +29,7 @@
     {% set viewer_q = ('as=' ~ (me | urlencode) ~ '&') if me != leave.STAFF_VIEWERS[0][0] else '' %}
     <section class="card" aria-labelledby="sum-h">
       <div class="card-head">
-        <h2 id="sum-h">Summary, {{ label | lower }}</h2>
+        <h2 id="sum-h">Summary, {{ label if key == "custom" else label | lower }}</h2>
         {% set n_days = leave.counted_days(first, last, uncounted) %}
         <p class="sub">Per Precinct, its establishment strength and, over the {{ n_days }} day{{ "" if n_days == 1 else "s" }} counted, how many it stood at full strength, one RA down, two down, and three or more down.{% if not n_days %} Turn Weekdays or Weekends on to count days.{% endif %}</p>
         {% for g_id, g_label, g_labels in (("count-l", "Count as down", leave.STRENGTH_COUNTS), ("days-l", "Days", leave.STRENGTH_DAYS)) %}

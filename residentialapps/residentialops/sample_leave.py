@@ -2180,17 +2180,27 @@ def records(
     )
 
 
+# The longest From–To range Leave records takes: two years, the Summary
+# counting each day of it (the cold read, 2026-11-10).
+MAX_RANGE_DAYS = 731
+
+
 def period_range(
-    key: str | None, start: str | None, end: str | None
+    key: str | None, start: str | None, end: str | None, default: str = "week"
 ) -> tuple[str, str, date, date]:
-    """Leave records' period (author, 2026-11-10): one of `PERIODS`, or
-    the From and To dates given, when both parse and run forwards."""
+    """Leave records' period (author, 2026-11-10): one of `PERIODS`
+    (`default` when none is named), or, when the period is "custom" or
+    none is named, the From and To dates given, when both parse, run
+    forwards and span at most `MAX_RANGE_DAYS`. A named period wins over
+    dates sent with it, so the form works without scripts."""
+    if key not in (None, "", "custom"):
+        return period(key)
     try:
         first, last = date.fromisoformat(start or ""), date.fromisoformat(end or "")
     except ValueError:
-        return period(key)
-    if first > last or not (1 <= first.year <= 9998 and 1 <= last.year <= 9998):
-        return period(key)
+        return period(default)
+    if first > last or (last - first).days >= MAX_RANGE_DAYS:
+        return period(default)
     return "custom", f"{short_date(first)} – {short_date(last)}", first, last
 
 
