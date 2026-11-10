@@ -277,6 +277,22 @@ def precincts() -> tuple[str, ...]:
     return tuple(dict.fromkeys(s.precinct for s in sample_data.SLOTS))
 
 
+def with_roles(names: Iterable[str], by_role: bool = True) -> str:
+    """Names for Approval chain (author, 2026-11-10), comma separated, each
+    with its Staff-roster abbreviation when the role decided it."""
+    abbrev = {p.name: p.abbrev for p in sample_data.STAFF}
+    return ", ".join(f"{n} ({abbrev[n]})" if by_role and abbrev.get(n) else n for n in names)
+
+
+def appeal_finals(precinct: str) -> tuple[str, ...]:
+    """Who gives an appeal its final decision for a Precinct: the usual
+    final approvers when they decide invited appeals, else the Master
+    while in its slots."""
+    if appeal_route() == "usual":
+        return final_for(precinct)
+    return (APPEAL_DECIDER,) if decides_appeals(precinct) else ()
+
+
 def final_for(precinct: str) -> tuple[str, ...]:
     """Who gives final approval for a Precinct's RAs: those the policy
     names who hold a place in its slots."""
