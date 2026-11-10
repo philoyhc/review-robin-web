@@ -1617,10 +1617,11 @@ STRENGTH_COUNTS = ("Leave taken", "Leave approved", "Leave approval pending")
 
 def strength_kind(application: Application, day: date) -> str:
     """Which of `STRENGTH_COUNTS` an application's day is: taken up to and
-    including today, approved after it; pending while undecided."""
+    including today, approved after it; pending while undecided (an appeal
+    awaiting the Master included); none for a decided one not approved."""
     if application.stage == "Approved":
         return "Leave taken" if day <= TODAY else "Leave approved"
-    return "Leave approval pending"
+    return "Leave approval pending" if application.stage in OPEN_STAGES else ""
 
 
 def by_precinct(
@@ -1647,7 +1648,7 @@ def by_precinct(
             down = {
                 a.ra
                 for a in mine
-                if a.start <= day <= a.end and strength_kind(a, day) not in hidden
+                if a.start <= day <= a.end and strength_kind(a, day) not in hidden | {""}
             }
             days[min(len(down), 3)] += 1
             day += timedelta(days=1)

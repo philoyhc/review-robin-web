@@ -15,8 +15,9 @@
   {% set rows = leave.records(me, first, last, hidden) %}
   {% set multi = precincts | length > 1 %}
   {% set uncounted = leave.strength_hidden(uncount) %}
-  {# Every link keeps the viewer and the Summary's counts (`uq`), so the
-     two cards' filters ride each other. #}
+  {# Every filter link and the period form keep the viewer and the
+     Summary's counts (`uq`), so the two cards' filters ride each other;
+     the sample viewer switch starts afresh. #}
   {% set uq = ('uncount=' ~ (uncounted | sort | join(',') | urlencode) ~ '&') if uncounted else '' %}
   {% set aq = (('as=' ~ (me | urlencode) ~ '&') if me != leave.STAFF_VIEWERS[0][0] else '') ~ uq %}
   <section class="card" aria-labelledby="rec-h">
@@ -77,8 +78,9 @@
     <section class="card" aria-labelledby="sum-h">
       <div class="card-head">
         <h2 id="sum-h">Summary, {{ label | lower }}</h2>
-        <p class="sub">Per Precinct, its establishment strength and, over the period's {{ (last - first).days + 1 }} days, how many days it stood at full strength, one RA down, two down, and three or more down. Count as down:</p>
-        <div class="col-chips count-filters" role="group" aria-label="Count as down">
+        <p class="sub">Per Precinct, its establishment strength and, over the period's {{ (last - first).days + 1 }} days, how many days it stood at full strength, one RA down, two down, and three or more down.</p>
+        <span class="field-label" id="count-l">Count as down</span>
+        <div class="col-chips count-filters" role="group" aria-labelledby="count-l">
           {% for c_label, on, flip in leave.toggle_filters(leave.STRENGTH_COUNTS, uncounted) %}<a class="col-chip{{ ' on' if on }}" data-filter href="{{ url(here) }}?{{ viewer_q }}{{ ('uncount=' ~ (flip | urlencode) ~ '&') if flip }}{{ hq }}period={{ key }}">{{ c_label }}<span class="visually-hidden">, {{ "counted" if on else "not counted" }}</span></a>{% endfor %}
         </div>
       </div>

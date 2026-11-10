@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import re
 
+import pytest
 from fastapi.testclient import TestClient
 
 from residentialapps.residentialops import sample_data, sample_leave
@@ -481,13 +482,14 @@ def test_leave_records_show_a_chosen_period() -> None:
 
     # The Summary follows the period too, day by day: each Precinct's days
     # add up to the period's.
-    def down_days(key: str) -> int:
+    def down_days(key: str, hidden: frozenset[str] = frozenset()) -> int:
         _, _, start, end = sample_leave.period(key)
-        rows = sample_leave.by_precinct("Sam Lee", start, end)
+        rows = sample_leave.by_precinct("Sam Lee", start, end, hidden)
         assert all(sum(r["days"]) == (end - start).days + 1 for r in rows)
         return sum(sum(r["days"][1:]) for r in rows)
 
     assert down_days("week") > 0 and down_days("term") > down_days("week")
+    assert down_days("next", frozenset({"Leave approval pending"})) == 0  # none approved
     four = sample_leave.period("four")
     assert (four[1], four[2], four[3].toordinal() - four[2].toordinal()) == (
         "These four weeks",
@@ -762,8 +764,9 @@ def test_leave_records_list_every_application_filtered_by_status_and_precinct() 
     dchips = daniel.split('class="col-chips rec-filters"')[1].split("</div>")[0]
     assert dchips.count('class="col-chip on"') == 9 and "Cypress" not in dchips
     assert '<th scope="col">Precinct</th>' not in daniel.split('id="rec-h"')[1].split("</thead>")[0]
-    # Summary: establishment, away, available, pending, and a total.
+    # Summary: establishment and days at each strength; no total.
     summary = page.split('id="sum-h"')[1].split("</section>")[0]
+    assert 'scope="row">Total' not in summary
     assert 'title="Establishment strength">Estab.</abbr>' in summary
     assert 'title="Days three or more RAs down">−3</abbr>' in summary
     assert '<div class="bottom-row">' in page
@@ -930,10 +933,43 @@ def test_the_summary_counts_days_at_full_strength_and_down_by_kind() -> None:
 
     c = client()
     page = c.get(STAFF + "records" + SAM + "&hide=Rejected&uncount=Leave taken").text
-    chips = page.split('aria-label="Count as down"')[1].split("</div>")[0]
+    chips = page.split('aria-labelledby="count-l"')[1].split("</div>")[0]
     assert chips.count('class="col-chip on"') == 2 and 'class="col-chip" data-filter' in chips
     # A count chip keeps the table's filters, and the table's keep the counts.
     assert "&amp;hide=Rejected&amp;period=week" in chips
     assert "uncount=Leave%20taken&amp;hide=" in page.split('class="col-chips rec-filters"')[1]
     form = page.split('id="period-form"')[1].split("</form>")[0]
     assert '<input type="hidden" name="uncount" value="Leave taken">' in form
+
+
+def test_the_summary_counts_an_ra_once_a_day_and_three_or_more_as_minus_three(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The cold read: an RA with two applications on a day is down once,
+    and four RAs down on a day count in −3 (three or more); a rejected
+    application counts as nothing."""
+    base = sample_leave.by_id("L-0107")
+    assert base
+    precinct_ras = tuple(
+        ra for slot in sample_data.SLOTS if slot.precinct == "Willow A 13-25" for ra in slot.ras
+    )
+    day = sample_leave.date(2026, 11, 20)
+    made = [
+        sample_leave.replace(base, id=f"T-{i}", ra=ra, start=day, end=day, recorded="Approved")
+        for i, ra in enumerate(precinct_ras)
+    ]
+    twice = sample_leave.replace(made[0], id="T-x")
+    refused = sample_leave.replace(
+        made[0], id="T-r", start=day, end=day + sample_leave.timedelta(days=1), recorded="Rejected"
+    )
+    monkeypatch.setattr(sample_leave, "APPLICATIONS", (*made, twice, refused))
+    one = sample_leave.by_precinct("Sam Lee", day, day + sample_leave.timedelta(days=1))
+    row = next(r for r in one if r["precinct"] == "Willow A 13-25")
+    assert len(precinct_ras) == 4 and row["days"] == (1, 0, 0, 1)
+    monkeypatch.setattr(sample_leave, "APPLICATIONS", (made[0], twice))
+    row = next(
+        r
+        for r in sample_leave.by_precinct("Sam Lee", day, day)
+        if r["precinct"] == "Willow A 13-25"
+    )
+    assert row["days"] == (0, 1, 0, 0)  # once, not twice
