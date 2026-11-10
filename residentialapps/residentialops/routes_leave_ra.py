@@ -79,11 +79,19 @@ def check_dates(request: Request) -> Response:
     leave_type = q.get("type") or sample_leave.LEAVE_TYPES[0].name
     # Appeal rules only for an RA who may appeal now, as the appeal page.
     appeal = q.get("appeal") == "1" and sample_leave.can_appeal(viewer)
-    return JSONResponse(
+    first, last = _day(q.get("first")), _day(q.get("last"))
+    result: dict[str, object] = dict(
         sample_leave.check_dates(
-            viewer, leave_type, _day(q.get("first")), _day(q.get("last")), appeal=appeal
+            viewer, leave_type, first, last, appeal=appeal, cover=q.get("cover") or ""
         )
     )
+    # Whom the cover list may not offer for these dates (author, 2026-11-10).
+    result["unavailable"] = (
+        list(sample_leave.away_between_names(first, last))
+        if first and last and first <= last
+        else []
+    )
+    return JSONResponse(result)
 
 
 @router.get("/ra-leave/appeal", name="residentialops_leave_appeal")

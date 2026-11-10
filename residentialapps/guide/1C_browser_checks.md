@@ -55,6 +55,9 @@ widths, the scripts' behavior, and whether the screens read right.
   appears only for an invited RA (Kai Ng) or while Open is previewed.
   Extra leave already on an RA's record would still show on their own
   pages; no sample viewer has such a record, so a test covers it.
+- [ ] **No one on leave while covering** (as Chloe): Apply for 4 Dec – 5
+  Dec says "You are covering Ethan Wong on 4 Dec – 6 Dec" and Submit stays
+  off; 7 Dec – 8 Dec passes.
 - [ ] **Apply** names the approvers from the RA's slot and lists blackouts
   ahead. From 960 px its form puts First day and Last day on the left,
   Leave type and Days of leave on the right (stacked in that order below),

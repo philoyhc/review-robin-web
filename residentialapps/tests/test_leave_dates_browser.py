@@ -21,22 +21,32 @@ def test_keyed_in_dates_are_checked_and_open_submit(page: Page) -> None:  # noqa
     page.goto(ORIGIN + "/ra-leave/apply")
     submit = page.locator("#send")
     expect(submit).to_be_disabled()
-    page.fill("#first", "2026-11-30")
-    page.fill("#last", "2026-11-29")
+    # 7 Dec – 11 Dec: Chloe covers no one then (she covers Ethan Wong on
+    # 4 Dec – 6 Dec and Hana Ito on 14 Dec – 15 Dec).
+    page.fill("#first", "2026-12-07")
+    page.fill("#last", "2026-12-06")
     page.locator("#last").dispatch_event("change")
     expect(page.locator("#days-note")).to_have_text("The last day is before the first day.")
     expect(submit).to_be_disabled()
-    page.fill("#last", "2026-12-04")
+    page.fill("#last", "2026-12-11")
     page.locator("#last").dispatch_event("change")
     expect(page.locator("#days")).to_have_text("5 days")
     expect(page.locator("#days-note")).to_have_text(
         "3 days more than your Personal leave (2 available): shorten it."
     )
-    page.fill("#last", "2026-12-01")
+    page.fill("#last", "2026-12-08")
     page.locator("#last").dispatch_event("change")
     expect(page.locator("#days")).to_have_text("2 days")
     expect(page.locator("#days-note")).to_have_text("")
     expect(submit).to_be_enabled()
+    # Dates she covers someone on are refused (author, 2026-11-10).
+    page.fill("#first", "2026-12-04")
+    page.fill("#last", "2026-12-05")
+    page.locator("#last").dispatch_event("change")
+    expect(page.locator("#days-note")).to_have_text(
+        "You are covering Ethan Wong on 4 Dec – 6 Dec: you cannot be on leave then."
+    )
+    expect(submit).to_be_disabled()
 
 
 def test_leave_records_apply_a_period_on_choosing_it_and_stay_at_the_top(
