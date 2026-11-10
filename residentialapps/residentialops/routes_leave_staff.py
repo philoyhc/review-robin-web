@@ -91,12 +91,12 @@ def application(request: Request, application_id: str) -> Response:
     back_period = ""
     if role:
         back = ("/ra-leave/staff/", "Home")
-    elif sample_leave.sees_appeals(viewer) and (
-        found.appeal or found.ra in sample_leave.invitable_ras(viewer)
-    ):
+    elif sample_leave.sees_appeals(viewer) and found.appeal:
         back = ("/ra-leave/staff/appeals", "Appeals")
     elif any(a.id == found.id for a, _, _ in sample_leave.decided(viewer)):
         back, back_period = ("/ra-leave/staff/records", "Records"), "whole"
+    elif sample_leave.sees_appeals(viewer) and found.ra in sample_leave.invitable_ras(viewer):
+        back = ("/ra-leave/staff/appeals", "Appeals")
     else:
         back = ("/ra-leave/staff/", "Home")
     return _page(

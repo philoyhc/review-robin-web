@@ -341,6 +341,17 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
     # A decided appeal goes back to Appeals, as an open one does.
     refused = c.get(STAFF + "applications/L-0120" + SAM).text
     assert '<a class="back" href="/ra-leave/staff/appeals?as=Sam%20Lee">‹ Appeals</a>' in refused
+    # ...but an ordinary decision of someone who may open appeals goes to
+    # Records (Codex): Rachel Yeo's final approval of L-0115.
+    rachel = c.get(STAFF + "applications/L-0115" + RACHEL).text
+    assert (
+        '<a class="back" href="/ra-leave/staff/records?as=Rachel%20Yeo&amp;period=whole">' in rachel
+    )
+    assert all(
+        "‹ Records" in c.get(STAFF + "applications/" + a.id + RACHEL).text
+        for a, _, _ in sample_leave.decided("Rachel Yeo")
+        if not a.appeal
+    )
     assert 'href="/ra-leave/staff/records" aria-current="true"' in page
     # An appeal opened from Appeals goes back there, not to Precinct.
     page = c.get(STAFF + "applications/L-0105" + RACHEL).text
