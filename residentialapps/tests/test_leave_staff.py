@@ -959,18 +959,40 @@ def test_the_summary_counts_weekdays_and_weekends_by_chip() -> None:
         rows = sample_leave.by_precinct("Sam Lee", start, end, hidden)
         return next(r["days"] for r in rows if r["precinct"] == "Willow A 13-25")
 
-    # Olivia Ng 28–30 Oct, Pranav Iyer 29–31 Oct (Sat 31 Oct, Sun 1 Nov).
+    # Olivia Ng 28–30 Oct, Pranav Iyer 29–31 Oct (Sat 31 Oct the weekend day).
     assert willow(frozenset({"Weekends"})) == (2, 1, 2, 0)
     assert willow(frozenset({"Weekdays"})) == (1, 1, 0, 0)
     assert sum(willow(frozenset({"Weekdays", "Weekends"}))) == 0
     appeal = sample_leave.by_id("L-0105")  # Gwen Ho, Appeal to the Master
     assert appeal and sample_leave.strength_kind(appeal, appeal.start) == "Leave approval pending"
+    # ...and the Summary counts it: Maple 09-14 is down on its 4 days only
+    # while pending is counted.
+    _, _, s4, e4 = sample_leave.period("four")
+
+    def maple(hidden: frozenset[str]) -> tuple[int, int, int, int]:
+        rows = sample_leave.by_precinct("Sam Lee", s4, e4, hidden)
+        return next(r["days"] for r in rows if r["precinct"] == "Maple 09-14")
+
+    assert sum(maple(frozenset())[1:]) >= 4
+    assert sum(maple(frozenset({"Leave approval pending"}))[1:]) == 0
 
     c = client()
     page = c.get(STAFF + "records" + SAM + "&uncount=Weekends").text
     days = page.split('aria-labelledby="days-l"')[1].split("</div>")[0]
-    assert ">Weekdays<" in days and 'class="col-chip" data-filter' in days
+    assert '<a class="col-chip on" data-filter' in days.split("Weekdays<")[0]
+    assert '>Weekends<span class="visually-hidden">, not counted</span>' in days
     assert "over the 5 days counted" in page
+    # Each group keeps the other's, and the rest of the page keeps both.
+    both = c.get(STAFF + "records" + SAM + "&hide=Rejected&uncount=Leave taken,Weekends").text
+    days = both.split('aria-labelledby="days-l"')[1].split("</div>")[0]
+    assert "?as=Sam%20Lee&amp;uncount=Leave%20taken&amp;hide=Rejected&amp;period=week" in days
+    count = both.split('aria-labelledby="count-l"')[1].split("</div>")[0]
+    assert "uncount=Leave%20approval%20pending%2CLeave%20taken%2CWeekends&amp;" in count
+    form = both.split('id="period-form"')[1].split("</form>")[0]
+    assert '<input type="hidden" name="uncount" value="Leave taken,Weekends">' in form
+    assert "uncount=Leave%20taken%2CWeekends&amp;hide=" in both.split('aria-labelledby="show-1"')[1]
+    none = c.get(STAFF + "records" + SAM + "&uncount=Weekdays,Weekends").text
+    assert "over the 0 days counted" in none and "Turn Weekdays or Weekends on" in none
 
 
 def test_the_summary_counts_an_ra_once_a_day_and_three_or_more_as_minus_three(
