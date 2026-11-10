@@ -47,10 +47,36 @@
             <datalist id="cover-pool">{% for name in leave.cover_choices(me) if name != app.cover %}<option value="{{ name }}"></option>{% endfor %}</datalist></div>
           <button type="button" class="btn btn-primary" disabled>Change cover</button>
         </section>
+      {% endif %}
+      {# Withdraw and cancel (author, 2026-11-10): pending ordinary leave goes
+         back to the RA's drafts; approved ordinary leave not yet begun is
+         cancelled. Inert until wired, as the page's other actions. #}
+      {% if leave.withdraws_to_draft(app) %}
         <section class="card card-pad muted" aria-labelledby="act-h">
           <h2 id="act-h">Changed your plans?</h2>
-          <p class="sub">Withdrawing ends the application; your cover and approvers are told.</p>
-          <button type="button" class="btn btn-danger" disabled>Withdraw</button>
+          <p class="sub">Withdrawing takes this application back to your drafts, filled in as you sent it, to change and send again or discard. Your cover and approvers are told it was withdrawn, and My history keeps it as Withdrawn.</p>
+          <button type="button" class="btn btn-secondary" aria-label="Withdraw to draft, {{ app.dates }}" disabled>Withdraw to draft</button>
+        </section>
+      {% elif leave.can_withdraw(app) %}
+        <section class="card card-pad muted" aria-labelledby="act-h">
+          <h2 id="act-h">Changed your plans?</h2>
+          <p class="sub">Withdrawing ends this request for extra leave; your cover and the Master are told.</p>
+          <button type="button" class="btn btn-danger" aria-label="Withdraw, {{ app.dates }}" disabled>Withdraw</button>
+        </section>
+      {% elif leave.can_cancel(app) %}
+        <section class="card card-pad muted" aria-labelledby="act-h">
+          <h2 id="act-h">No longer taking this leave?</h2>
+          <p class="sub">Cancelling gives back its {{ app.days }} day{{ "s" if app.days != 1 }}{% set covered = app.cover and app.cover_status != "Declined" %}{% if covered %} and releases {{ app.cover }} from covering you{% endif %}. {{ "Your cover and approvers are" if covered else "Your approvers are" }} told, and My history keeps it as Cancelled.</p>
+          <button type="button" class="btn btn-danger" aria-label="Cancel leave, {{ app.dates }}" disabled>Cancel leave</button>
+        </section>
+      {% elif leave.cancel_by_request(app) %}
+        {# Leave under way, or granted extra leave (author, 2026-11-10): the
+           RA asks; their RF approves. #}
+        {% set rf = leave.rf_of(app) %}
+        <section class="card card-pad muted" aria-labelledby="act-h">
+          <h2 id="act-h">{{ "Coming back early?" if leave.under_way(app) else "No longer taking this leave?" }}</h2>
+          <p class="sub">{{ "Your leave has begun, so cancelling the rest of it" if leave.under_way(app) else "Extra leave granted on appeal is cancelled" }} is a request {{ "to " ~ rf ~ ", your RF," if rf else "to your RF" }} to approve. The days not yet taken come back once it is approved; until then your leave stands.</p>
+          <button type="button" class="btn btn-secondary" aria-label="Request cancellation, {{ app.dates }}" disabled>Request cancellation</button>
         </section>
       {% endif %}
     </div>

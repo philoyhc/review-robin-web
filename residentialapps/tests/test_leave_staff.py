@@ -764,3 +764,34 @@ def test_the_leave_calendar_filters_by_status_and_for_the_unit_by_wing() -> None
         'href="/ra-leave/staff/?as=Sam%20Lee&amp;hide=Pending&amp;month=2026-11">Show everything'
         in back
     )
+
+
+def test_a_senior_cancels_leave_under_way_and_the_admin_s_page_says_who_is_told() -> None:
+    """Author, 2026-11-10: a senior or the Residential Admin cancels leave
+    under way, the RA and their RF told; an RF approves an RA's request
+    instead, so has no cancel of their own."""
+    begun = sample_leave.by_id("L-0107")  # Olivia Ng, 28 Oct – 30 Oct
+    later = sample_leave.by_id("L-0115")  # Hana Ito, 14 Dec
+    assert begun and later
+    assert sample_leave.under_way(begun) and not sample_leave.under_way(later)
+    assert sample_leave.rf_of(begun) == "Siti Rahman"
+    # The RF by appointment, not a delegate approving first today (the
+    # second cold read): Maple 03-08's first approver is Marcus Tan, an
+    # RSLM standing in for its RF.
+    maple = next(r for r in sample_leave.routes() if r.precinct == "Maple 03-08")
+    assert maple.first != maple.rf
+    maple_ra = next(s.ras[0] for s in sample_data.SLOTS if s.precinct == "Maple 03-08")
+    elsewhere = sample_leave.replace(begun, ra=maple_ra)
+    assert elsewhere.precinct == "Maple 03-08"
+    assert sample_leave.rf_of(elsewhere) == maple.rf
+    assert sample_leave.cancels_under_way("Sam Lee", begun)
+    assert not sample_leave.cancels_under_way("Sam Lee", later)
+    assert not sample_leave.cancels_under_way("Siti Rahman", begun)  # her RF
+    assert not sample_leave.cancels_under_way("Priya Raman", begun)  # Cypress, not Willow
+    c = client()
+    sam = c.get(STAFF + "decide/L-0107" + SAM).text
+    assert "Olivia Ng and Siti Rahman, their RF, are told." in sam
+    assert ">Cancel leave under way</button>" in sam
+    assert ">Cancel leave under way</button>" not in c.get(STAFF + "decide/L-0115" + SAM).text
+    admin = c.get("/ra-leave/admin/applications/L-0107").text
+    assert "This leave is under way" in admin and "Siti Rahman, their RF," in admin

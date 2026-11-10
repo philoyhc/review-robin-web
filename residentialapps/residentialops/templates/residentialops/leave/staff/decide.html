@@ -32,6 +32,16 @@
           <div class="field-wide"><label for="staff-remarks">Remarks</label><textarea id="staff-remarks" class="input" rows="2" disabled></textarea></div>
           <button type="button" class="btn btn-primary" disabled>Add remarks</button>
         </section>
+      {% elif leave.cancels_under_way(me, app) %}
+        {# A senior cancels leave under way (author, 2026-11-10); the RA and
+           their RF are told. #}
+        {% set rf = leave.rf_of(app) %}
+        <section class="card card-pad" aria-labelledby="act-h">
+          <h2 id="act-h">Leave under way</h2>
+          <p class="sub">Cancelling gives back the days not yet taken and keeps the record as Cancelled. {{ app.ra }}{% if rf %} and {{ rf }}, their RF,{% endif %} are told.</p>
+          <div class="field-wide"><label for="cancel-reason">Reason</label><textarea id="cancel-reason" class="input" rows="2" disabled></textarea></div>
+          <button type="button" class="btn btn-danger" aria-label="Cancel leave under way, {{ app.ra }}, {{ app.dates }}" disabled>Cancel leave under way</button>
+        </section>
       {% else %}
         <section class="card card-pad muted"><p class="sub">{% if app.stage in leave.OPEN_STAGES %}This application does not await your decision.{% else %}Decided; shown read-only.{% endif %}</p></section>
       {% endif %}

@@ -311,7 +311,9 @@ STAGES = (
     "Approved",
     "Rejected",
     "Withdrawn",
-    "Cancelled",  # approved, then cancelled by an admin (spec §30, §21.4)
+    # Approved, then cancelled: by an admin (spec §30, §21.4), or by the RA
+    # before it begins (2026-11-10).
+    "Cancelled",
 )
 OPEN_STAGES = STAGES[:3]
 OVERDUE_DAYS = 3  # a pending application older than this is flagged
@@ -2111,6 +2113,63 @@ def invitation_status(invitation: Invitation) -> str:
     if invitation.until < TODAY:
         return "Lapsed"
     return "Open" if invitation.opened <= TODAY else "From " + short_date(invitation.opened)
+
+
+def can_withdraw(application: Application) -> bool:
+    """An RA may withdraw an application at any pending stage (spec §11)."""
+    return application.stage in OPEN_STAGES
+
+
+def withdraws_to_draft(application: Application) -> bool:
+    """Withdrawing ordinary leave takes it back to the RA's drafts, filled in
+    as sent, to change and send again (author, 2026-11-10); My history keeps
+    the sent one as Withdrawn (§20). The prototype has no appeal draft yet
+    (§30's `APPEAL_DRAFT` waits for the wiring, as `Draft` says), so for now
+    withdrawing an appeal ends it."""
+    return can_withdraw(application) and not application.appeal
+
+
+def can_cancel(application: Application) -> bool:
+    """An RA may cancel an approved application (author, 2026-11-10). It
+    keeps its record, as Cancelled (§30), and releases its days and its
+    cover, as Applications' admin cancel does. Proposed here, for the author
+    to confirm: only ordinary leave not yet begun, leave under way being the
+    RF's to approve on the RA's request, or a senior's or the Residential
+    Admin's to cancel (author, 2026-11-10; `under_way`), and a granted
+    appeal, which §30 gives no cancelled state, a request too
+    (`cancel_by_request`)."""
+    return application.stage == "Approved" and application.start > TODAY and not application.appeal
+
+
+def under_way(application: Application) -> bool:
+    """Approved leave whose first day has come and whose last has not
+    passed, ordinary or a granted appeal."""
+    return application.stage == "Approved" and application.start <= TODAY <= application.end
+
+
+def cancel_by_request(application: Application) -> bool:
+    """Approved leave the RA asks to cancel rather than cancelling it
+    themselves (author, 2026-11-10): leave under way, and a granted appeal
+    not yet ended, which the RA does not cancel alone (§30)."""
+    return (
+        application.stage == "Approved" and application.end >= TODAY and not can_cancel(application)
+    )
+
+
+def rf_of(application: Application) -> str:
+    """The RF of the RA's slot (author, 2026-11-10: a request to cancel
+    leave under way goes to the RF, who is told of a cancel): the slot's
+    RF by appointment, whoever the policy names as first approver today."""
+    return next((r.rf for r in routes() if r.precinct == application.precinct), "")
+
+
+def cancels_under_way(viewer: str, application: Application) -> bool:
+    """Whether a staff member may cancel leave under way themselves (author,
+    2026-11-10): a senior, any staff member above RF whose scope holds the
+    RA's Precinct, the Residential Admin among them, who also may from
+    Applications; the RA and the RF are told. An RF approves an RA's
+    request instead."""
+    return under_way(application) and not is_rf(viewer) and application.precinct in scope(viewer)
 
 
 def can_appeal(ra: str) -> bool:
