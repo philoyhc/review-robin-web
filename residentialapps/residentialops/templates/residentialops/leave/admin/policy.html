@@ -66,8 +66,8 @@
       <p class="sub">Which days in an application count, against entitlement or as extra leave, and which weeks leave is closed. RAs usually work weekends and public holidays, so every day counts unless set otherwise.</p>
       {{ choice("day-count", "An application counts", leave.DAY_COUNTS, leave.POLICY.day_count, {"Every day": "Every day from the first to the last, weekends and public holidays included", "Weekdays": "Monday to Friday only; weekends are free, and dates falling only on a weekend cannot be applied for", "Working days": "Monday to Friday, less the public holidays below; dates counting no day cannot be applied for"}) }}
       <div class="split-cols gap-above">
-        <div aria-labelledby="holidays-h">
-          <h2 id="holidays-h" class="h-sub">Public holidays</h2>
+        <section aria-labelledby="holidays-h">
+          <h3 id="holidays-h" class="h-sub">Public holidays</h3>
           <p class="sub">Public holidays matter only when working days are counted. List the dates observed: a holiday on a Sunday is entered as its Monday in lieu.</p>
           <div class="table-wrap">
             <table class="rows">
@@ -87,9 +87,9 @@
               </tbody>
             </table>
           </div>
-        </div>
-        <div aria-labelledby="blackout-h">
-          <h2 id="blackout-h" class="h-sub">Blackout periods</h2>
+        </section>
+        <section aria-labelledby="blackout-h">
+          <h3 id="blackout-h" class="h-sub">Blackout periods</h3>
           <p class="sub">Weeks within a term when leave is refused outright, or open only by appeal to the Master. Counted by week of a term and each week runs Sunday to Saturday.</p>
           <div class="table-wrap">
             <table class="rows">
@@ -116,12 +116,12 @@
           <ul class="plain subtle gap-above-sm">
             <li><strong>Refused</strong>: an application touching these dates cannot be submitted. <strong>Appeal only</strong>: it can, but goes to the Master as an appeal (by invitation, once invited); refused while appeals are off.</li>
           </ul>
-        </div>
+        </section>
       </div>
     </section>
 
     <div class="split-cards">
-      {# 5. Cover (spec §12). #}
+      {# Cover (spec §12), left of Appeals (author, 2026-11-10). #}
       <section class="card card-pad" aria-labelledby="cover-h">
         <h2 id="cover-h">Cover</h2>
         <p class="sub">Whether an application or appeal must name a covering RA, whether that RA must confirm, whom an RA may name as their cover.</p>
@@ -130,7 +130,7 @@
         {{ choice("pool", "An RA may name as cover", leave.COVER_POOLS, leave.POLICY.cover_pool, {"Any RA": "Anyone on the RA roster", "Same Precinct": "An RA in a slot under the same Precinct, this term", "Same Wing": "An RA in a slot under the same Wing, this term"}) }}
       </section>
 
-      {# 4. Appeals beyond entitlement (spec §7). #}
+      {# Appeals beyond entitlement (spec §7). #}
       <section class="card card-pad" aria-labelledby="appeals-h">
         <h2 id="appeals-h">Appeals beyond entitlement</h2>
         <p class="sub">An RA with no entitlement left, or applying into an Appeal-only blackout, may ask the college for extra leave, as openly as this setting allows. Extra leave granted is kept apart from the entitlement.</p>
@@ -153,7 +153,7 @@
       </section>
     </div>
 
-    {# 6. Approvals. #}
+    {# Approvals, before Permissions (author, 2026-11-10). #}
     <section class="card card-pad" aria-labelledby="approvals-h">
       <h2 id="approvals-h">Approvals</h2>
       <p class="sub">An application takes a first approval, unless none is needed, then a final one, by different people. Only someone holding a place in the RA's slot approves it, first or final: those in every slot, set on Assignments, hold one in each; anyone else named for a role, or standing in as a delegate, approves only where they do. The slot's approvers are read from the RA's slot on Assignments for the current term; a delegate who approves first while an approver cannot is set on <a href="{{ url('/ra-leave/admin/routing') }}">Approval chain</a>.</p>
@@ -170,13 +170,13 @@
       </dl>
       <p class="subtle small">Who is in every slot, and so oversees every RA, is set for each term on <a href="{{ url('/rosters/assignments') }}">Assignments</a>: {{ leave.overseers() | join(", ") or "no one" }} for {{ leave.TERM.label }}.</p>
       <dl class="kv">
-        <dt>Appeals</dt><dd>{% if not leave.appeals_on() %}Off{% elif leave.POLICY.appeal_approval == "usual" %}The usual first and final approvers{% else %}The first approver, then the Master ({{ leave.APPEAL_DECIDER }}), personally{% endif %}</dd>
+        <dt>Appeals</dt><dd>{% if leave.appeals_on() %}The Master ({{ leave.APPEAL_DECIDER }}), personally{% else %}Off{% endif %}</dd>
       </dl>
     </section>
 
     {# Permissions (author, 2026-11-10): who may do what, and over which
-       RAs, in one table, the only place that says who; the Approvals and
-       Appeals cards keep how. A role's scope is its slots on Assignments;
+       RAs, in one table; the Approvals and Appeals cards keep how (who
+       approves an invited appeal is the Appeals card's). A role's scope is its slots on Assignments;
        a named person's is chosen: All RAs, a Wing, a Precinct or a slot,
        overlaps resolved (`leave.add_scope`). Each tick is read from what
        grants it (`leave.permission_rows`); controls are inert, and named

@@ -233,10 +233,10 @@ def test_policy_appeals_cover_and_approvals() -> None:
     # Leave days card holds counting, public holidays and blackouts.
     assert page.index('aria-labelledby="cover-h"') < page.index('aria-labelledby="appeals-h"')
     assert page.index('id="approvals-h"') < page.index('id="perms-h"')
-    days = page.split('aria-labelledby="days-h"')[1].split("</section>")[0]
+    days = page.split('aria-labelledby="days-h"')[1].split('aria-labelledby="cover-h"')[0]
     assert 'id="holidays-h"' in days and 'id="blackout-h"' in days and 'name="day-count"' in days
     assert 'aria-labelledby="count-h"' not in page
-    assert "The first approver, then the Master (Sam Lee), personally" in page
+    assert "The Master (Sam Lee), personally" in page
     # Who approves is Permissions' to say (author, 2026-11-10); Approvals
     # sums it up.
     assert "<dt>Final approval</dt><dd>Residential Admin (RAs in every slot)" in page
@@ -438,7 +438,7 @@ def test_appeals_switched_off_leave_no_appeal_route(monkeypatch) -> None:
     assert 'name="appeals" value="Off" checked' in policy
     assert (
         "Not available: an application beyond entitlement" in policy
-        and "then the Master (Sam Lee), personally" not in policy
+        and "The Master (Sam Lee), personally" not in policy
     )
     assert "<dt>Appeals</dt><dd>Off</dd>" in c.get(ADMIN).text
     routing = c.get(ADMIN + "routing").text

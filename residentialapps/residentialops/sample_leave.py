@@ -80,8 +80,8 @@ APPEAL_MODES = ("Open", "By invitation", "Off")
 # Who approves an appeal opened by invitation (author, 2026-11-10): the
 # usual first and final approvers, or the usual first approver and then the
 # Master, so the Master is always involved. With no separate first approver,
-# either skips that step. Shown on Policy; routing still sends every appeal
-# to the Master, as "master" does.
+# either skips that step. Shown on Policy and inert: routing still sends
+# every appeal straight to the Master, with no first approval.
 APPEAL_APPROVALS = (
     ("usual", "the normal first, and final approver"),
     ("master", "the normal first approver, and the Master"),
