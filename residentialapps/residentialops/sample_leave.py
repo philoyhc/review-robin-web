@@ -129,6 +129,12 @@ class _Policy(dict[str, object]):
     """The sample policy; reading `appeals` gives the previewed mode, if any."""
 
     def __getitem__(self, key: str) -> object:
+        if key == "first":
+            # A first approval is needed while Permissions ticks someone for
+            # it (author, 2026-11-10: the Approvals card is gone); no tick,
+            # none needed, so a ticked-but-nobody gap cannot arise.
+            ticked = bool(super().__getitem__("first_types"))
+            return super().__getitem__("first") if ticked else "none"
         preview = APPEALS_PREVIEW.get() if key == "appeals" else None
         return preview if preview in APPEAL_MODES else super().__getitem__(key)
 

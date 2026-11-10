@@ -1227,7 +1227,7 @@ def test_an_invited_appeal_routes_by_the_policy_choice(monkeypatch) -> None:
     sent = next(i for i, s in enumerate(steps) if s.startswith("Sent to Sam Lee"))
     assert first < sent and l0105.stage == "Appeal to the Master"
     assert (l0105, "Appeal") in sample_leave.queue("Sam Lee")
-    policy = c.get("/ra-leave/admin/policy").text
+    policy = c.get("/ra-leave/admin/").text
     assert "The usual first approver, then the Master (Sam Lee), personally" in policy
     # With no first approver, that step is skipped.
     monkeypatch.setitem(sample_leave.POLICY, "first", "none")
@@ -1243,7 +1243,7 @@ def test_an_invited_appeal_routes_by_the_policy_choice(monkeypatch) -> None:
     assert finals and all((l0105, "Final approval") in sample_leave.queue(n) for n in finals)
     steps = [s[1] for s in sample_leave.timeline(l0105)]
     assert "Sent as an extra-leave appeal, to the usual approvers" in steps
-    assert "The usual first and final approvers" in c.get("/ra-leave/admin/policy").text
+    assert "The usual first and final approvers" in c.get("/ra-leave/admin/").text
     # Cold read: the appeal stays an open appeal, the RF's remarks stay in
     # its timeline, its sending is no decision, and the Master no longer
     # decides appeals.
@@ -1280,7 +1280,7 @@ def test_an_invited_appeal_routes_by_the_policy_choice(monkeypatch) -> None:
     assert not any(
         s.startswith("First approval") for s in (t[1] for t in sample_leave.timeline(l0105))
     )
-    assert "The Master (Sam Lee), personally" in c.get("/ra-leave/admin/policy").text
+    assert "The Master (Sam Lee), personally" in c.get("/ra-leave/admin/").text
 
 
 def test_a_named_grant_gives_its_own_scope_and_no_more(monkeypatch) -> None:
