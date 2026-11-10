@@ -128,7 +128,7 @@ widths, the scripts' behavior, and whether the screens read right.
     naming what is off; hide Submitted: it goes at once and stays hidden
     after a reload; the table ID, RA, Precinct, Leave type, Dates, Days,
     Cover, Submitted, Stage, Remarks (Bella Koh's "1st: Marcus Tan" and
-    "5 days overdue"; Olivia Ng's "Cover away"); Maya Seah and
+    "Pending 5 days"; Olivia Ng's "Cover away"); Maya Seah and
     Olivia Ng On leave, Pranav Iyer Approved (from tomorrow); turn a chip off and change the period: it
     stays off; Whole term adds Taken, Rejected and Withdrawn rows;
   - Summary, this week: Estab., Full, −1, −2, −3 per Precinct (Willow A

@@ -1149,11 +1149,11 @@ def test_records_filter_by_cover_take_from_and_to_and_match_the_admin_s() -> Non
     assert '<td class="nowrap" data-col="type">Official</td>' in table
     assert "Personal leave" not in table
     # Remarks: what is out of the ordinary (author, 2026-11-10): a cover's
-    # first approval, a cover away, days overdue.
+    # first approval, a cover away, pending past the days allowed.
     rows = {re.findall(r">(L-\d+)</a>", r)[0]: r for r in table.split("<tr data-row>")[1:]}
     remarks = {k: r.split('data-col="remarks">')[1].split("</td>")[0] for k, r in rows.items()}
     assert ">1st: Marcus Tan</span>" in remarks["L-0103"]
-    assert "5 days overdue</span>" in remarks["L-0103"]
+    assert ">Pending 5 days</span>" in remarks["L-0103"]
     assert ">Cover away</span>" in remarks["L-0107"]  # Pranav Iyer, away 29–31 Oct
     assert remarks["L-0115"] == '<span class="chips"></span>'
     assert "Away too" not in table
