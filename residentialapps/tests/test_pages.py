@@ -823,12 +823,12 @@ def test_people_boxes_across_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
         ("/ra-leave/apply", "Covering RA"),
         ("/ra-leave/appeal", "Covering RA"),
         ("/ra-leave/applications/L-0101", "New covering RA"),
-        ("/ra-leave/admin/appeals", "RA"),
+        ("/ra-leave/staff/appeals?as=Rachel%20Yeo", "RA"),
         ("/ra-leave/admin/policy", "Scope for Hui Min Goh"),
         ("/ra-leave/admin/policy", "Scope for the person added"),
     ):
         with monkeypatch.context() as m:
-            if path == "/ra-leave/admin/appeals":  # opened for an RA only by invitation
+            if "appeals" in path:  # opened for an RA only by invitation
                 m.setitem(sample_leave.POLICY, "appeals", "By invitation")
             page = client.get(path).text
         assert f'<div class="tokens" role="group" aria-label="{label}"' in page, (path, label)

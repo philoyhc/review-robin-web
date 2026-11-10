@@ -379,7 +379,9 @@ def test_each_appeal_mode_can_be_previewed() -> None:
     )  # no Extra leave tab
     c.get("/ra-leave/admin/policy/preview-appeals?mode=By%20invitation")
     assert c.get("/ra-leave/appeal").status_code == 404  # Chloe Lim is not invited
-    assert 'id="inv-ra"' in c.get("/ra-leave/admin/appeals").text  # opened for an RA
+    assert (
+        'id="inv-ra"' in c.get("/ra-leave/staff/appeals?as=Rachel%20Yeo").text
+    )  # opened for an RA
     policy = c.get("/ra-leave/admin/policy").text
     assert (
         'aria-current="true">By invitation</a>' in policy

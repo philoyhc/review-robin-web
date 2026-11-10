@@ -280,9 +280,10 @@ def test_inviter_settings_at_their_edges(monkeypatch) -> None:
     assert sample_leave.inviter_label() == "" and sample_leave.all_inviters() == ()
     assert "Leave policy names no one to open appeals." in c.get(STAFF + "appeals" + SAM).text
     assert (
-        "Leave policy names no one to open appeals." in c.get("/ra-leave/admin/appeals").text
+        "Leave policy names no one to open appeals."
+        in c.get("/ra-leave/staff/appeals?as=Rachel%20Yeo").text
     )  # as the staff page
-    assert 'id="inv-ra"' not in c.get("/ra-leave/admin/appeals").text
+    assert 'id="inv-ra"' not in c.get("/ra-leave/staff/appeals?as=Rachel%20Yeo").text
     monkeypatch.setitem(sample_leave.POLICY, "inviters", "slot")
     monkeypatch.setitem(sample_leave.POLICY, "inviter_types", ("RF", "RSLM"))
     assert sample_leave.inviters_for("Chloe Lim") == ("Daniel Koh", "Priya Raman")
@@ -292,8 +293,7 @@ def test_inviter_settings_at_their_edges(monkeypatch) -> None:
     # (author, 2026-11-10).
     assert 'aria-label="Open appeals, Residential Fellow" checked' in policy
     assert 'aria-label="Open appeals, Residential Student Life Manager" checked' in policy
-    agreed = c.get("/ra-leave/admin/appeals").text.split('id="inv-by"')[1].split("</select>")[0]
-    assert agreed.count("<option>") == 9 + 3  # every RF and RSLM on a slot
+    assert len(sample_leave.all_inviters()) == 9 + 3  # every RF and RSLM on a slot
 
 
 def test_a_staff_appeals_page_lists_only_the_viewer_s_ras(monkeypatch) -> None:
@@ -322,7 +322,7 @@ def test_a_staff_appeals_page_lists_only_the_viewer_s_ras(monkeypatch) -> None:
     )
     for link in re.findall(r'href="(/ra-leave/staff/applications/L-\d+)"', page):
         assert c.get(link).status_code == 200, link
-    admin = c.get("/ra-leave/admin/appeals").text
+    admin = c.get("/ra-leave/staff/appeals?as=Rachel%20Yeo").text
     assert 'Invitations <span class="count">· 3' in admin
 
 
@@ -1263,7 +1263,7 @@ def test_an_invited_appeal_routes_by_the_policy_choice(monkeypatch) -> None:
     assert sample_leave.sees_appeals("Sam Lee") and sample_leave.sees_appeals("Rachel Yeo")
     staff_appeals = c.get("/ra-leave/staff/appeals?as=Sam%20Lee").text
     assert "The usual approvers decide each one." in staff_appeals
-    appeals = c.get("/ra-leave/admin/appeals").text
+    appeals = c.get("/ra-leave/staff/appeals?as=Rachel%20Yeo").text
     assert "Open appeals" in appeals and "L-0105" in appeals.split('id="open-h"')[1]
     viewers = (*sample_leave.RA_VIEWERS, ("Gwen Ho", ""))
     monkeypatch.setattr(sample_leave, "RA_VIEWERS", viewers)

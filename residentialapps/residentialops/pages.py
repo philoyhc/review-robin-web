@@ -96,7 +96,8 @@ LEAVE_ADMIN_TABS: tuple[dict[str, str | None], ...] = (
     {"label": "Approval chain", "path": "/ra-leave/admin/routing"},
     # Leave records (author, 2026-11-10; Applications until then).
     {"label": "Records", "path": "/ra-leave/admin/records"},
-    {"label": "Appeals", "path": "/ra-leave/admin/appeals"},
+    # Appeals left the admin pages (author, 2026-11-10): handled on the
+    # staff side; the old path redirects there.
 )
 
 

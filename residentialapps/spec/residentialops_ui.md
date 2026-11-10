@@ -89,7 +89,7 @@ with the page.
   roster and RA roster (§7); RA Leave's split by audience (`residentialapps/spec/applications.md`):
   an RA's under `/ra-leave/`, staff's under `/ra-leave/staff/`, and sys
   admins' under `/ra-leave/admin/` (Dashboard, Policy, Entitlements,
-  Approval chain, Leave records, Appeals), each set its own. A detail page
+  Approval chain, Records; Appeals moved to the staff side, 2026-11-10), each set its own. A detail page
   adds a back link instead of a breadcrumb, and marks the tab of the list
   it belongs to (`aria-current="true"`; author, 2026-10-29).
 - **The favicon** is the accent behind a white glyph that runs off the
