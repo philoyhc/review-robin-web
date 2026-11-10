@@ -1235,6 +1235,16 @@ def test_an_invited_appeal_routes_by_the_policy_choice(monkeypatch) -> None:
     assert any(s.startswith("Remarks from") for s in steps)
     assert not any(s[1].startswith("Sent as") for s in sample_leave.history_steps(l0105))
     assert not sample_leave.appeals_decided()
+    # The live date check names the usual approvers too (Codex).
+    for b in sample_leave.BLACKOUTS:
+        if b.effect == "Appeal only" and sample_leave.week_dates(b):
+            span = sample_leave.week_dates(b)
+            assert span is not None
+            msg = sample_leave.check_dates(
+                "Kai Ng", sample_leave.LEAVE_TYPES[0].name, span[0], span[0]
+            )["message"]
+            assert msg and "the usual approvers" in msg and "the Master" not in msg
+            break
     # The Appeals tab stays, for opening invitations (second cold read).
     assert sample_leave.sees_appeals("Sam Lee") and sample_leave.sees_appeals("Rachel Yeo")
     staff_appeals = c.get("/ra-leave/staff/appeals?as=Sam%20Lee").text

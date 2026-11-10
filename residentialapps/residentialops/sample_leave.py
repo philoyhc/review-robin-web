@@ -1941,9 +1941,11 @@ def check_dates(
         if b.effect == "Refused" or not may_appeal:
             return no(f"These dates fall in a blackout ({when}): no leave.", days)
         if not appeal:
+            who = appeal_decider_name()
             note = (
                 f"These dates fall in an Appeal-only blackout ({when}): submitting sends "
-                "it to the Master as an appeal, which the Master decides at discretion."
+                f"it to {who} as an appeal, which {who} decide"
+                f"{'s' if who == 'the Master' else ''} at discretion."
             )
     available = max(next(r["available"] for r in my_balances(ra) if r["type"] == leave_type), 0)
     short = days - available
@@ -1952,9 +1954,10 @@ def check_dates(
         over = f"{short} day{plural} more than your {leave_type} ({available} available)"
         if not may_appeal:
             return no(f"{over}: shorten it.", days)
+        who = appeal_decider_name()
         note = note or (
-            f"{over}: submitting offers Request extra leave, which the Master decides at "
-            "discretion."
+            f"{over}: submitting offers Request extra leave, which {who} decide"
+            f"{'s' if who == 'the Master' else ''} at discretion."
         )
     return {"days": days, "message": note, "ok": True}
 
