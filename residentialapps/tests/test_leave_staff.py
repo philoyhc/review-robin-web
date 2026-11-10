@@ -1170,7 +1170,9 @@ def test_records_filter_by_cover_take_from_and_to_and_match_the_admin_s() -> Non
     assert ">Personal leave<" not in table  # the name is only the hover title
     # Remarks: what is out of the ordinary (author, 2026-11-10): a cover's
     # first approval, a cover away, pending past the days allowed.
-    rows = {re.findall(r">(L-\d+)</a>", r)[0]: r for r in table.split("<tr data-row>")[1:]}
+    rows = {
+        re.findall(r">(L-\d+)</a>", r)[0]: r for r in re.split(r"<tr data-row[^>]*>", table)[1:]
+    }
     remarks = {k: r.split('data-col="remarks">')[1].split("</td>")[0] for k, r in rows.items()}
     assert ">1st: Marcus Tan</span>" in remarks["L-0103"]
     assert ">Pending 5 days</span>" in remarks["L-0103"]
@@ -1303,3 +1305,23 @@ def test_a_named_grant_gives_its_own_scope_and_no_more(monkeypatch) -> None:
     assert sample_leave.scope("Priya Raman") == (slot.precinct,)
     # Marcus Tan keeps only what his delegation gives, not All RAs.
     assert len(sample_leave.scope("Marcus Tan")) == 3
+
+
+def test_records_name_box_narrows_by_ra_or_cover() -> None:
+    """Author, 2026-11-10: Period, From and To a quarter each, and a Name
+    box beside them, its typeahead the RA roster, narrowing the table to
+    rows whose RA or cover matches, in the browser."""
+    page = client().get(STAFF + "records" + SAM + "&period=whole").text
+    period = page.split('class="rec-period"')[1].split("</form>")[0]
+    assert 'id="rec-who"' in period and 'list="rec-who-pool"' in period
+    assert 'name="who"' not in period  # no filter on the URL
+    pool = page.split('id="rec-who-pool"')[1].split("</datalist>")[0]
+    assert pool.count("<option") == len(sample_data.RAS)  # the Master sees every RA
+    # An RF's list holds only the RAs they oversee, and covers in their rows.
+    daniel = client().get(STAFF + "records").text.split('id="rec-who-pool"')[1]
+    daniel = daniel.split("</datalist>")[0]
+    seen = set(sample_leave.ras_in_scope("Daniel Koh"))
+    names = set(re.findall(r'<option value="([^"]+)">', daniel))
+    covers = {a.cover for a in sample_leave.in_scope("Daniel Koh")}
+    assert names and names <= seen | covers
+    assert 'data-who="gwen ho|elise tan"' in page
