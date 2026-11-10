@@ -29,7 +29,7 @@ The layouts follow the rulings in `residentialapps/guide/todo_master.md` (organi
 
 | File | Import it… | Expect |
 |---|---|---|
-| `staff_roster.csv` | First | 15 staff: the Master, the Admin, 3 RSLMs, 9 RFs, and a Residential Executive in no slot, who oversees no RA (RA Leave is not shown to such staff; author, 2026-10-29) |
+| `staff_roster.csv` | First | 15 staff: the Master, the Admin, 3 RSLMs, 9 RFs, and a Residential Executive in no slot, given View records by name over Cypress and Maple 03-08 in the Leave policy's Permissions (author, 2026-11-10; staff with no tick see no RA Leave) |
 | `staff_roster_errors.csv` | After `staff_roster.csv` | Refused in preview: a duplicate email (Daniel Koh); a student appointment on the Staff roster (Ravi Kumar, Residential Assistant); a row with no email; an end date before the start. One warning: Mei Ling Tan's name and enterprise name change (Meiling Tan, TAN MEILING) |
 | `ra_roster.csv` | First | 30 RAs |
 | `ra_roster_errors.csv` | After `ra_roster.csv` | Refused in preview: a duplicate email (Chloe Lim); a staff appointment on the RA roster (Owen Pang, Residential Fellow); a student ID that is not nine characters; a row with no email; an end date before the start. One warning: Ethan Wong's student ID changes (A0234127C) |

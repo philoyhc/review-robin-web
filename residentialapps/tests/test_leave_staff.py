@@ -115,7 +115,10 @@ def test_a_staff_member_sees_only_their_scope() -> None:
     whole Unit; Decide 404s outside the viewer's scope."""
     c = client()
     assert sample_leave.scope("Daniel Koh") == ("Cypress A 04-12",)
-    assert sample_leave.scope("Marcus Tan") == ()  # an RSLM: no tick in Permissions
+    # An RSLM has no tick; Marcus Tan stands in as Grace Ho's first approver,
+    # so has First approval, and his Wing, while he does (cold read).
+    assert sample_leave.scope("Priya Raman") == ()
+    assert len(sample_leave.scope("Marcus Tan")) == 3
     assert len(sample_leave.scope("Sam Lee")) == 9
     assert c.get(STAFF + "applications/L-0105").status_code == 404  # Maple 09-14, not Daniel Koh's
     assert c.get(STAFF + "applications/L-9999" + SAM).status_code == 404
@@ -404,7 +407,7 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
     assert set(goh) == cypress | maple and len(goh) == len(cypress | maple)
     page = c.get(STAFF + "?as=Priya%20Raman").text
     assert "You oversee no RA" in page and 'class="tabs-in"' not in page
-    assert "Priya Raman: RSLM, oversees no RA, so RA Leave is not shown" in page
+    assert "Priya Raman: RSLM, no tick in Permissions, so RA Leave is not shown" in page
     assert c.get(STAFF + "applications/L-0101?as=Priya%20Raman").status_code == 404
     landing = c.get("/?as=Priya%20Raman").text
     assert "/ra-leave/" not in landing.split('<main class="page">')[1]
@@ -426,7 +429,10 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
     )
     assert sample_leave.overseers() == ("Sam Lee",) and sample_leave.scope("Rachel Yeo") == ()
     assert sample_leave.final_gaps() == sample_leave.precincts()
-    # Tick the Executive: Hui Min Goh oversees every RA, deciding nothing.
+    # Tick the Executive in every slot and for View records: Hui Min Goh
+    # oversees every RA, deciding nothing. In every slot with no tick, she
+    # would see only her named grant.
+    monkeypatch.setitem(sample_leave.POLICY, "viewer_types", ("RF", "Master", "Admin", "Exec"))
     monkeypatch.setitem(
         sample_leave.sample_data.EVERY_SLOT,
         sample_leave.TERM.key,
@@ -481,6 +487,7 @@ def test_oversight_follows_the_policy_setting(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
     assert "every RA may send one, so none is opened for them" in c.get(STAFF + "appeals").text
     # An appeal opened from Appeals goes back there, inviter or not.
+    monkeypatch.setitem(sample_leave.POLICY, "viewer_types", ("RF", "Master", "Admin", "Exec"))
     monkeypatch.setitem(
         sample_leave.sample_data.EVERY_SLOT,
         sample_leave.TERM.key,
@@ -1272,3 +1279,27 @@ def test_an_invited_appeal_routes_by_the_policy_choice(monkeypatch) -> None:
         s.startswith("First approval") for s in (t[1] for t in sample_leave.timeline(l0105))
     )
     assert "The Master (Sam Lee), personally" in c.get("/ra-leave/admin/policy").text
+
+
+def test_a_named_grant_gives_its_own_scope_and_no_more(monkeypatch) -> None:
+    """Cold read of access by Permissions (2026-11-10): a named grant
+    covers only its chosen scope, even for an RSLM; viewing is not acting,
+    so a viewer cannot cancel leave under way; an Admin-pages-only grant
+    opens no staff pages."""
+    goh = set(sample_leave.scope("Hui Min Goh"))
+    under = [a for a in sample_leave.APPLICATIONS if sample_leave.under_way(a)]
+    assert all(not sample_leave.cancels_under_way("Hui Min Goh", a) for a in under)
+    assert any(a.precinct in goh for a in under) or not under
+    grant = sample_leave.NamedGrant
+    monkeypatch.setattr(
+        sample_leave,
+        "NAMED_GRANTS",
+        (
+            grant("Priya Raman", ("Cypress A 04-05-06",), frozenset({"view"})),
+            grant("Marcus Tan", ("All RAs",), frozenset({"admin"})),
+        ),
+    )
+    slot = next(s for s in sample_data.SLOTS if s.neighborhood == "Cypress A 04-05-06")
+    assert sample_leave.scope("Priya Raman") == (slot.precinct,)
+    # Marcus Tan keeps only what his delegation gives, not All RAs.
+    assert len(sample_leave.scope("Marcus Tan")) == 3

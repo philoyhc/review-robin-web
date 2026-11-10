@@ -1518,6 +1518,8 @@ def staff_role(name: str) -> str:
     if POLICY["appeals"] == "By invitation" and invitable_ras(name):
         does.append("opens appeals")
     if not scope(name):
+        if any(name in s.staff for s in sample_data.SLOTS):
+            return f"{appointment}, no tick in Permissions, so RA Leave is not shown"
         return f"{appointment}, oversees no RA, so RA Leave is not shown"
     return (
         f"{appointment}, {', '.join(does)}"
@@ -1626,9 +1628,10 @@ def scope(viewer: str) -> tuple[str, ...]:
     Precincts their chosen scope holds (a slot widens to its Precinct, as
     the sample keeps scope by Precinct)."""
     every = precincts()
-    if not (_granted(viewer) - {"admin"}):
-        return ()
     named = set(_named_precincts(viewer))
+    if not (_granted(viewer, named=False) - {"admin"}):
+        # No tick of their own: only what a named grant holds (cold read).
+        return tuple(p for p in every if p in named)
     if viewer in overseers():
         return every
     abbrev = {p.name: p.abbrev for p in sample_data.STAFF}.get(viewer)
@@ -1641,7 +1644,12 @@ def scope(viewer: str) -> tuple[str, ...]:
 def _named_precincts(name: str) -> tuple[str, ...]:
     """The Precincts a person's named grants hold: All RAs every one, a
     Wing its Precincts, a Precinct itself, a slot its Precinct."""
-    chosen = {c for g in NAMED_GRANTS if g.name == name for c in resolve_scope(g.scope)}
+    chosen = {
+        c
+        for g in NAMED_GRANTS
+        if g.name == name and g.perms - {"admin"}
+        for c in resolve_scope(g.scope)
+    }
     return tuple(
         dict.fromkeys(
             s.precinct
@@ -2573,7 +2581,13 @@ def cancels_under_way(viewer: str, application: Application) -> bool:
     RA's Precinct, the Residential Admin among them, who also may from
     Applications; the RA and the RF are told. An RF approves an RA's
     request instead."""
-    return under_way(application) and not is_rf(viewer) and application.precinct in scope(viewer)
+    # In the RA's slots, not merely viewing them (cold read, 2026-11-10).
+    return (
+        under_way(application)
+        and not is_rf(viewer)
+        and in_slots(viewer, application.precinct)
+        and application.precinct in scope(viewer)
+    )
 
 
 def can_appeal(ra: str) -> bool:
@@ -2668,6 +2682,11 @@ def _granted(name: str, named: bool = True) -> set[str]:
     granted: set[str] = set()
     if POLICY["first"] == "slot" and abbrev in POLICY["first_types"]:
         granted.add("first")
+    # A delegate standing in as first approver has it while they do.
+    if POLICY["first"] == "slot" and any(
+        name in r.first.split(" or ") for r in routes() if not r.gap
+    ):
+        granted.add("first")
     if name in final_approvers():
         granted.add("final")
     if POLICY["inviters"] == "named":
@@ -2677,9 +2696,12 @@ def _granted(name: str, named: bool = True) -> set[str]:
         granted.add("open")
     if appeals_decided() and name == APPEAL_DECIDER:
         granted.add("decide")
-    named_view = named and any(g.name == name and "view" in g.perms for g in NAMED_GRANTS)
-    if abbrev in POLICY["viewer_types"] or named_view:
+    if abbrev in POLICY["viewer_types"]:
         granted.add("view")
+    if named:
+        for g in NAMED_GRANTS:
+            if g.name == name:
+                granted |= g.perms
     if any(n == name for n, *_ in sample_data.SYS_ADMINS):
         granted.add("admin")
     return granted

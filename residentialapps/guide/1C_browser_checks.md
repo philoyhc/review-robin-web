@@ -33,7 +33,7 @@ widths, the scripts' behavior, and whether the screens read right.
   cards.
   - Chloe has RA Leave only: RA Events is hidden from RAs for now
     (2026-11-09), on the landing and in the switcher.
-  - Hui Min Goh has RA Events only.
+  - Hui Min Goh has RA Leave (View records by name) and RA Events.
   - Rachel and Sam add RA Leave admin, Rosters and setup and Sys admin.
 - [ ] **The switcher** (top left) lists the viewer's areas, with **All
   applications** at the foot.
@@ -97,7 +97,7 @@ widths, the scripts' behavior, and whether the screens read right.
 
 - [ ] **Daniel's Home** (Home and Awaiting are one page, 2026-11-09):
   - no tiles; tabs Home, Records (an RF has no Appeals tab;
-    Sam, Rachel and Priya do);
+    Sam and Rachel do; Priya, an RSLM with no tick, sees no RA Leave);
   - Awaiting my decision lists all three, oldest first, with Overdue
     chips; "Waiting on cover · 2" filters it under the heading "Waiting
     on cover", and "Show everything awaiting me" clears the filter;
@@ -149,7 +149,8 @@ widths, the scripts' behavior, and whether the screens read right.
   has nobody away; Rest of term shows Hana Ito.
 - [ ] **Appeals**: Invitations shows Gwen Ho "Sent: L-0105", Kai Ng Open
   and Nathan Yeo Lapsed, and Open appeals.
-- [ ] **Hui Min Goh** sees "You oversee no RA" and no tabs.
+- [ ] **Priya Raman** sees "no tick in Permissions" and no tabs; **Hui Min Goh**
+  sees the Cypress Precincts and Maple 03-08, read-only.
 
 ## 4. RA Leave admin (desktop first; then 390 px)
 
