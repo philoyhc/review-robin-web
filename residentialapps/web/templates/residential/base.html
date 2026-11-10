@@ -385,7 +385,15 @@
       .cal-leave { display: block; margin: 2px 0; padding: 0 3px; border-radius: 4px; font-size: 11px; line-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; text-decoration: none; }
       .cal-leave.approved { background: var(--chip-ok-bg); color: var(--chip-ok-fg); }
       .cal-leave.pending { border: 1px dashed var(--chip-info-fg); color: var(--chip-info-fg); }
-      .cal-key .cal-leave { display: inline-block; }
+      /* The calendar's filters are column chips that are links (author,
+         2026-11-10), on filled; Approved and Pending carry the calendar's
+         own swatch, so the chips are its key too. */
+      a.col-chip { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+      .col-chip.on { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+      .cal-filters { margin: 4px 0 8px; }
+      .cal-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--surface-muted); }
+      .cal-swatch.approved { background: var(--chip-ok-bg); border: 1px solid var(--chip-ok-fg); }
+      .cal-swatch.pending { border: 1px dashed var(--chip-info-fg); }
       .cal-link { display: none; }
       .cal-grid { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
       .cal-grid th { font-weight: 600; color: var(--text-subtle); padding: 2px; text-align: left; font-size: 11px; }
@@ -567,7 +575,7 @@
         /* A favorite star and a list filter sit on phone-first pages (1D
            rungs 12 and 13), so they take the finger's height a desktop
            column chip does not; so does a withheld name's Show name. */
-        .col-chip[data-favorite], .col-chip[data-show] { min-height: 44px; min-width: 44px; }
+        .col-chip[data-favorite], .col-chip[data-show], .col-chip[data-filter] { min-height: 44px; min-width: 44px; }
         details.reveal > summary { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; }
         .token-x { min-width: 44px; min-height: 44px; }
         .token-input { min-height: 36px; }

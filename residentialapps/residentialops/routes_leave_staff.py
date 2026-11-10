@@ -61,6 +61,9 @@ def home(request: Request) -> Response:
         "home.html",
         cover_only=q.get("cover") == "waiting",
         month=sample_leave.month_of(q.get("month")),
+        # The calendar's filters turned off (author, 2026-11-10), e.g.
+        # `?hide=Pending,Maple`; the template checks them against the viewer.
+        hide=q.get("hide"),
     )
 
 

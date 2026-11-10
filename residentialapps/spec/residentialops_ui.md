@@ -287,9 +287,12 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   (author, 2026-11-10). Where a mouse points from 640 px each entry is
   the full name, a link (`.cal-link`); otherwise a first name in a tag
   (`.cal-tag`), not a link, a day cell being too small for a finger's
-  target. Approved is filled, pending outlined (named so where there is
-  room, and for a screen reader always); a blackout day names its
-  blackout.
+  target. Approved is filled, pending outlined (named so on the links,
+  and for a screen reader always); a blackout day names its blackout.
+  Over it, on/off filter chips (`a.col-chip[data-filter]`, links, so
+  `?hide=` rides the month links; author, 2026-11-10): Approved and
+  Pending, each with its swatch, the chips being the key, and a chip a
+  Wing besides for a viewer whose scope is the whole Unit.
 - **A period row** (`.period-row`, RA Leave's Precinct page, author,
   2026-11-09): under a select on its own row, its dates at the left, top
   aligned, and the submit button at the right.
