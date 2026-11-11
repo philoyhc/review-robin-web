@@ -2631,6 +2631,15 @@
             var input = host.querySelector('[data-response-layout-input]');
             return !!input && input.value === 'stacked';
           }
+          // A typed bound as the server stores and prints it
+          // (``_format_band2_bound``): "1.50" is "1.5", "+3" is "3".
+          function canonicalNumber(text) {
+            var n = parseFloat(String(text || '').trim());
+            if (!isFinite(n)) { return null; }
+            var out = String(n);
+            if (/e/i.test(out)) { out = n.toFixed(20).replace(/0+$/, '').replace(/\.$/, ''); }
+            return out;
+          }
           function decimalPlaces(text) {
             text = String(text || '');
             var at = text.indexOf('.');
@@ -2644,15 +2653,14 @@
             if (!row || !rfRowCommitted(row)) { return null; }
             var shape = window.newModelRfCommittedShape(row);
             if (shape.dataType === 'integer' || shape.dataType === 'decimal') {
-              if (!shape.min || !shape.max) { return null; }
-              if (shape.dataType === 'decimal' && !shape.step) { return null; }
-              var bounds = [shape.min, shape.max];
-              var whole = Math.max.apply(null, bounds.map(function (b) {
-                return b.replace(/^-/, '').split('.')[0].length;
-              }));
-              var sign = bounds.some(function (b) { return b.charAt(0) === '-'; }) ? 1 : 0;
-              var places = Math.max(decimalPlaces(shape.min), shape.step ? decimalPlaces(shape.step) : 0);
-              return sign + whole + (places ? 1 + places : 0);
+              var min = canonicalNumber(shape.min), max = canonicalNumber(shape.max);
+              var step = canonicalNumber(shape.step);
+              if (min === null || max === null) { return null; }
+              if (shape.dataType === 'decimal' && step === null) { return null; }
+              // The wider bound's whole part, its sign included.
+              var whole = Math.max(min.split('.')[0].length, max.split('.')[0].length);
+              var places = Math.max(decimalPlaces(min), step === null ? 0 : decimalPlaces(step));
+              return whole + (places ? 1 + places : 0);
             }
             if (shape.dataType === 'list') {
               var longest = 1;
@@ -2733,6 +2741,14 @@
             var card = table && table.closest('[data-new-model-band2]');
             if (!card || (which !== 'label' && which !== 'input')) { return; }
             var part = handle.parentNode;
+            // An automatic table turns fixed, as the surface does once a
+            // width is saved (``newModelBand2ResizeStart``).
+            if (table.style.tableLayout !== 'fixed') {
+              table.querySelectorAll('col[data-start-style]').forEach(function (c) {
+                c.setAttribute('style', c.getAttribute('data-start-style'));
+              });
+              table.style.tableLayout = 'fixed';
+            }
             var startX = event.clientX;
             var startWidth = part.getBoundingClientRect().width;
             var lastWidth = Math.round(startWidth);

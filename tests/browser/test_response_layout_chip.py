@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import httpx
 from playwright.sync_api import Page, expect
 
-from ._builder import open_card, open_unlocked, save
-from .conftest import LiveServer
+from ._builder import REVIEWER_EMAIL, activate, open_card, open_unlocked, save, seed_rosters
+from .conftest import LiveServer, app_url
 
 
 def test_the_chip_cycles_and_saves(
@@ -148,3 +149,35 @@ def test_stacked_the_label_and_response_columns_drag_and_save(
     reloaded = card.evaluate(_STACK)
     assert reloaded is not None
     assert abs(reloaded["lines"][0]["boxLeft"] - after["lines"][0]["boxLeft"]) < 2
+
+
+def test_stacked_on_the_reviewer_surface_a_rating_box_is_compact(
+    page: Page,
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """The reviewer meets the layout the preview showed: the Rating box
+    takes the compact width (the app-wide number-input rule would
+    otherwise stretch it), the Comments box the rest of the column, both
+    starting at one edge, with a branch still judged within the row."""
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    page.set_viewport_size({"width": 1400, "height": 1000})
+    card = open_unlocked(page, session_id)
+    card.locator("[data-response-layout-chip]").click()
+    save(page, card)
+    activate(api, live_server.database_url, session_id)
+
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 1400, "height": 1000})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    rating = reviewer.locator("[name^='response['][name$='][rating]']")
+    comments = reviewer.locator("[name^='response['][name$='][comments]']")
+    rating_box, comments_box = rating.bounding_box(), comments.bounding_box()
+    assert rating_box is not None and comments_box is not None
+    # 6ch at the surface's font is well under 100px; the column is not.
+    assert rating_box["width"] < 100 < comments_box["width"]
+    assert abs(rating_box["x"] - comments_box["x"]) < 1
+    assert rating_box["y"] < comments_box["y"]

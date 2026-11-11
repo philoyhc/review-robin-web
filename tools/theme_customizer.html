@@ -4905,8 +4905,10 @@
         width: 100%;
         box-sizing: border-box;
       }
-      .rs-stack-input.is-compact > input,
-      .rs-stack-input.is-compact > select {
+      /* ``body.ui-v2`` outranks the app-wide ``body.ui-v2
+         input[type="number"] { width: 100% }``. */
+      body.ui-v2 .rs-stack-input.is-compact > input,
+      body.ui-v2 .rs-stack-input.is-compact > select {
         width: var(--rs-stack-compact, 100%);
         max-width: 100%;
       }

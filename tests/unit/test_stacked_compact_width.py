@@ -27,6 +27,9 @@ def _field(data_type: str, **validation: Any) -> InstrumentResponseField:
         (_field("Integer", min=1, max=5, step=1), 1),
         (_field("Integer", min=0, max=100, step=5), 3),
         (_field("Integer", min=-10, max=10, step=1), 3),
+        # The wider bound's whole part, its sign included: -1 is two, 100 three.
+        (_field("Integer", min=-1, max=100, step=1), 3),
+        (_field("Integer", min=-100, max=1, step=1), 4),
         (_field("Decimal", min=0, max=10, step=0.25), 5),
         (_field("Decimal", min=0, max=1, step=0.1), 3),
         (_field("Decimal", min=0.5, max=9.5, step=1), 3),

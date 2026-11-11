@@ -2,7 +2,7 @@
 
 **Opened:** 2026-11-11 · **Theme:** an instrument can lay its response fields out one per line, each labeled beside its input, for reviews that ask for substantial answers · **Related:** `guide/segment_20L_response_row_break.md` (the alternative, written for comparison), `spec/reviewer-surface.md`, `spec/instruments.md`
 
-**Status: building (author picked 20K over 20L, 2026-11-11).** Rungs 2 (the setting) and 3 (the chip; labels *Responses across* / *Responses stacked* for the author to confirm in the browser) built; rung 4 (the stacked surface) and rung 5 (the two widths, the last build rung) built. Base `9d99fdf` for the cumulative read. The close waits on the author's browser check.
+**Status: building (author picked 20K over 20L, 2026-11-11).** Rungs 2 (the setting) and 3 (the chip; labels *Responses across* / *Responses stacked* for the author to confirm in the browser) built; rung 4 (the stacked surface) and rung 5 (the two widths, the last build rung) built. One `diff-reviewer` read of the cumulative diff (`9d99fdf..`) at rung 5 found one real defect (compact number boxes stretched on the reviewer surface: the app-wide number-input rule outranked the compact one; the preview hid it) and four small ones (typed bounds not canonicalised in the preview's width, a sign rule wider than the plan's, a stray `<col>` with no visible field, a stack drag leaving the preview's table automatic); all fixed in rung 5. Base `9d99fdf` for the cumulative read. The close waits on the author's browser check.
 
 ## Opportunity
 

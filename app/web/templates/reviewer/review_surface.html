@@ -352,7 +352,7 @@
                 {% set first_row_cg = group.rows[0] %}
                 {% if group.response_layout == "stacked" %}
                   {# 20K — one Responses column holds every field. #}
-                  <col>
+                  {% if first_row_cg.cells %}<col>{% endif %}
                 {% else %}
                 {% for cell in first_row_cg.cells %}
                   {% set _rfw = group.response_field_width_by_id.get(cell.field.id) %}
