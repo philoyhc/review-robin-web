@@ -260,13 +260,17 @@ def describe(exc: BaseException) -> str:
     """What failed, without the message: urllib wraps a connect-time error in
     ``URLError``, so the wrapped error's class follows the wrapper's, and an
     ``OSError``'s errno tells refused (111) from reset (104) or unreachable
-    (101, 113)."""
+    (101, 113); an SSL error's, being OpenSSL's code, is left out."""
     inner: BaseException = exc
     name = type(exc).__name__
     if isinstance(exc, urllib.error.URLError) and isinstance(exc.reason, BaseException):
         inner = exc.reason
         name += "/" + type(inner).__name__
-    number = inner.errno if isinstance(inner, OSError) else None
+    # An SSL error's errno is OpenSSL's code, not the system's: left out, so
+    # errno=1 is never read as EPERM. TLS_FAILURE already says what it was.
+    number: object = None
+    if isinstance(inner, OSError) and not isinstance(inner, ssl.SSLError):
+        number = inner.errno
     return f"{name} errno={number}" if isinstance(number, int) else name
 
 
