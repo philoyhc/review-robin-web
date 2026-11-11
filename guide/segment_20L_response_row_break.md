@@ -33,7 +33,7 @@ As 20K: the reviewer surface's one-row-per-reviewee table suits brief data point
 ## Judgment calls — decided
 
 - The flag lives on the field, not the instrument: the author's design breaks after a chosen field.
-- The toggle sits on the field's row in the instrument card's response-field list, like the per-instrument page break one level up.
+- **The control is a ¶ button at the end of each response field's row** in the instrument card's response-field list, just before the row's × (author, 2026-11-11). It is a *Toggle* in the row's glyph form, as the ⑂ branch button already is (`spec/operator_button_audit.md`, row #230): `btn rf-glyph` when on, `btn secondary rf-glyph` when off, `aria-pressed` either way. On means a row break after this field; it rides the card's Save like the row's other controls. The last response field's ¶ is disabled, since a break there does nothing.
 
 ## Blast radius (measured)
 
@@ -51,7 +51,7 @@ Taken 2026-11-11 at `0af35e9`.
 
 1. **Plan** (this file).
 2. **The flag.** Model, migration (`sa.false()`), the service writer with its audit event, the Settings CSV row, and tests. Nothing renders it yet.
-3. **The control, scaffold-first.** The toggle on each response field's row in the instrument card; the preview unchanged.
+3. **The control, scaffold-first.** The ¶ toggle at the end of each response field's row, before its ×; the preview unchanged.
 4. **Grouped rows in the sort.** The shared sort moves a reviewee's rows as one unit, with tests on a grouped table and the existing 12 unchanged. Lands before any page groups rows.
 5. **The surface.** The broken rows on the reviewer surface and the operator preview, header rows for later lines, branching rescoped; tests for layout, sort, branching and Save across lines. Last build rung: `diff-reviewer` reads the cumulative diff.
 6. **Close.**
@@ -80,7 +80,7 @@ Taken 2026-11-11 at `0af35e9`.
 ## Doc impact
 
 - `spec/reviewer-surface.md` — row breaks under *Per-instrument table*, and grouped-row sorting.
-- `spec/instruments.md` — the per-field toggle.
+- `spec/instruments.md` — the per-field ¶ toggle.
 - `spec/settings_inventory.md` — `InstrumentResponseField.row_break_after`.
 - `spec/csv_contracts.md` — the flag in the Settings CSV.
 - `spec/sort_by_reviewee.md` — the sort moves a reviewee's rows as one unit.

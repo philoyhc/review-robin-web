@@ -37,7 +37,7 @@ The reviewer surface is a table: one row per reviewee, one column per response f
 
 - Per instrument, not per session: a session can mix a brief rating instrument and a long-answer one.
 - **The control is a cycle chip** (`spec/ui_elements.md` §9), like the *Layout 1* / *Layout 2* chip, saved by the card's Save as that chip is (author, 2026-11-11). It labels the layout in force: *Responses across* / *Responses stacked* — proposed labels, the author to confirm at rung 3.
-- **Its place:** the *Preview review instrument* heading's row, reordered to the heading, **↻ Refresh sample**, the *Layout* chip, then the new *Responses* chip (author, 2026-11-11).
+- **Its place:** the *Preview review instrument* heading's row: the heading, the *Layout* chip, the new *Responses* chip, then **↻ Refresh sample**, which stays last because it is hidden while the card is locked, so the chips don't shift (author, 2026-11-11).
 - Two widths, not one (author, 2026-11-11): compact boxes sized to the widest need, so a 1-5 rating is not a page-wide box; one shared compact width, so the compact boxes still line up. Computed at render in the view layer: nothing stored, nothing in the Settings CSV.
 
 ## Blast radius (measured)
@@ -56,7 +56,7 @@ Taken 2026-11-11 at `0af35e9`.
 
 1. **Plan** (this file).
 2. **The setting.** Model, migration (`sa.text("'columns'")` default, round-trips on Postgres), the service writer with its audit event, the Settings CSV row, and tests. Nothing renders it yet.
-3. **The control, scaffold-first.** The *Responses* chip on the *Preview review instrument* row, with **↻ Refresh sample** moved ahead of the *Layout* chip; wired to the setting through the card's Save; the preview still shows columns.
+3. **The control, scaffold-first.** The *Responses* chip on the *Preview review instrument* row, after the *Layout* chip and before **↻ Refresh sample**; wired to the setting through the card's Save; the preview still shows columns.
 4. **The surface.** The *Responses stacked* rendering on the reviewer surface and the operator preview (one template), constraints under labels, the summary line hidden, and the compact width (a view helper with its unit tests); tests for layout, branching and Save in the stacked cell.
 5. **The two widths.** Drag handles on the preview's label column and response column, the `stack_label` and `stack_input` keys through `set_column_widths`, and the reviewer surface honoring them. Last build rung: `diff-reviewer` reads the cumulative diff.
 6. **Close.**
