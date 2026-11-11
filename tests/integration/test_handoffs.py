@@ -487,6 +487,15 @@ def _status(client: TestClient, transfer_id: str) -> Any:
     return client.get(f"/operator/handoffs/{transfer_id}/status")
 
 
+def _set_up_instruments(db: Session) -> None:
+    """Every instrument set up, as the Instruments page's pill reads it:
+    a visible response field (the default ones are) and all three
+    assignment-rule links set."""
+    for instrument in db.scalars(select(Instrument)).all():
+        instrument.band1_touched_links = ["link1", "link2", "link3"]
+    db.commit()
+
+
 def test_status_reports_the_session_and_its_counts(client: TestClient, db: Session) -> None:
     bundle = _bundle()
     created = _post(client, bundle).json()
@@ -494,23 +503,74 @@ def test_status_reports_the_session_and_its_counts(client: TestClient, db: Sessi
     assert reply.status_code == 200, reply.text
     assert reply.headers["cache-control"] == "no-store"
     body = reply.json()
-    assert body["status_schema_version"] == 1
+    assert body["status_schema_version"] == 3
     assert body["session_ref"] == created["session_ref"]
     assert body["session_home_url"] == created["session_home_url"]
     assert (body["state"], body["state_label"]) == ("draft", "Draft")
     assert body["as_of"]
-    assert body["counts"] == {
+    # The status row every session page shows: four rosters, the
+    # default instrument, not set up (author, 2026-11-11).
+    assert body["status_row"] == {
         "reviewers": 2,
         "reviewees": 3,
-        "instruments": 1,
-        "group_instruments": 0,
+        "relationships": 0,
+        "observers": 0,
         "assignments": 0,
-        "assignments_completed": 0,
-        "reviewers_assigned": 0,
-        "reviewers_invited": 0,
-        "reviewers_opened": 0,
-        "reviewers_submitted": 0,
+        "instruments": 1,
+        "instruments_set_up": 0,
+        "invitations": "not_created",
+        "responses_drafts": 0,
+        "responses_submitted": 0,
     }
+    assert set(body["schedule"]) == {
+        "display_timezone",
+        "scheduled_activate_at",
+        "activated_at",
+        "deadline",
+        "responses_release_at",
+        "responses_release_until",
+    }
+    assert body["schedule"]["activated_at"] is None
+    [instrument] = body["instruments"]
+    assert (instrument["seq"], instrument["set_up"], instrument["scope"]) == (
+        1,
+        False,
+        "per_reviewee",
+    )
+    # The Workflow card's reading: the instrument not set up leaves the
+    # setup incomplete, so no Prepare (the author's "will not validate").
+    workflow = body["workflow"]
+    assert workflow["setup_complete"] is False
+    assert workflow["checklist"] == {
+        "reviewers": True,
+        "reviewees": True,
+        "instruments_set_up": False,
+    }
+    assert "prepare" not in workflow["actions"]
+    # The Validate page's rules, as they read now.
+    validation = body["validation"]
+    assert {"errors", "warnings", "issues"} == set(validation)
+    assert all({"rule", "severity", "message", "page"} <= set(i) for i in validation["issues"])
+    # Progress is reported, not withheld, and labelled provisional.
+    assert body["progress"]["provisional"] is True
+    assert body["progress"]["provisional_reason"] == "instruments_not_set_up"
+    # Monitoring's tables list only who has assignments: none yet.
+    assert body["reviewers"] == [] and body["reviewees"] == []
+
+
+def test_status_progress_is_not_provisional_once_every_instrument_is_set_up(
+    client: TestClient, db: Session
+) -> None:
+    bundle = _bundle()
+    _post(client, bundle)
+    _set_up_instruments(db)
+    body = _status(client, bundle["transfer_id"]).json()
+    assert body["status_row"]["instruments_set_up"] == 1
+    assert body["instruments"][0]["set_up"] is True
+    assert body["progress"]["provisional"] is False
+    assert body["progress"]["provisional_reason"] is None
+    assert body["workflow"]["setup_complete"] is True
+    assert "prepare" in body["workflow"]["actions"]
 
 
 def test_status_counts_assignments_of_assigned_reviewers(client: TestClient, db: Session) -> None:
@@ -532,8 +592,18 @@ def test_status_counts_assignments_of_assigned_reviewers(client: TestClient, db:
             )
         )
     db.commit()
-    counts = _status(client, bundle["transfer_id"]).json()["counts"]
-    assert (counts["assignments"], counts["reviewers_assigned"]) == (len(reviewees), 1)
+    body = _status(client, bundle["transfer_id"]).json()
+    progress = body["progress"]
+    assert (progress["assignments"], progress["reviewers_assigned"]) == (len(reviewees), 1)
+    assert body["status_row"]["assignments"] == len(reviewees)
+    assert body["instruments"][0]["assignments"] == len(reviewees)
+    assert len(body["reviewees"]) == len(reviewees)
+    [row] = body["reviewers"]
+    assert (row["email"], row["assignments"], row["state"]) == (
+        reviewers[0].email,
+        len(reviewees),
+        "not started",
+    )
 
 
 def test_status_of_an_unknown_transfer_is_not_linked(client: TestClient) -> None:
@@ -711,8 +781,8 @@ def test_group_scoped_instruments_are_left_out(client: TestClient, db: Session) 
     db.commit()
     for name in ("results.csv", "completion.csv"):
         assert _rows(client.get(f"/operator/handoffs/{bundle['transfer_id']}/{name}")) == []
-    counts = _status(client, bundle["transfer_id"]).json()["counts"]
-    assert counts["group_instruments"] == 1
+    [instrument] = _status(client, bundle["transfer_id"]).json()["instruments"]
+    assert instrument["scope"] == "group"
 
 
 def test_the_csvs_refuse_an_unlinked_transfer(client: TestClient) -> None:
@@ -766,7 +836,7 @@ def test_the_csvs_count_what_the_status_counts(client: TestClient, db: Session) 
     base = f"/operator/handoffs/{bundle['transfer_id']}"
     total = len(assignments) - 1
     assert len(_rows(client.get(f"{base}/completion.csv"))) == total
-    assert _status(client, bundle["transfer_id"]).json()["counts"]["assignments"] == total
+    assert _status(client, bundle["transfer_id"]).json()["progress"]["assignments"] == total
     reviewer = db.get(Reviewer, assignments[0].reviewer_id)
     assert reviewer is not None
     reviewer.status = "inactive"
