@@ -5,9 +5,10 @@ replacement.
 Rules covered:
 
 - ``instruments.no_rule_pinned`` — **inert since Wave 5 PR 5.3**: a
-  NULL ``rule_set_id`` is the Full Matrix default, so a missing rule
-  is not a setup gap in itself (the Band 1 "Not set" gate, off-validate,
-  decides readiness). It raised a warning per unpinned
+  NULL ``rule_set_id`` is Full Matrix once the links are set, so a
+  missing rule is not a setup gap in itself (the Band 1 "Not set" gate
+  decides readiness, as ``instruments.band1_not_set`` since segment
+  20J). It raised a warning per unpinned
   instrument when this file was written; the tests below now assert
   its silence, and the bullet said otherwise until 19R Item 6.
 - ``assignments.no_included_pairs`` — warning when sum of
@@ -137,9 +138,9 @@ def test_no_rule_pinned_silent_after_wave_5(
     db: Session,
 ) -> None:
     """Wave 5 PR 5.3 — ``instruments.no_rule_pinned`` retired as a
-    no-op check. An instrument with no stored Band 1 rule evaluates
-    as Full Matrix (Wave 4 PR 1), so a NULL ``rule_set_id`` is not a
-    setup gap in itself. The rule key stays registered so audit
+    no-op check. An instrument with no stored Band 1 rule and its links
+    set evaluates as Full Matrix (Wave 4 PR 1), so a NULL
+    ``rule_set_id`` is not a setup gap in itself. The rule key stays registered so audit
     history remains addressable."""
     _user, review_session, _instrument, _rs = _seed(db, code="nrp-retired")
     issues = validate_session_setup(db, review_session)
@@ -161,8 +162,10 @@ def test_no_rule_pinned_silent_per_unpinned_instrument_after_wave_5(
     db: Session,
 ) -> None:
     """Wave 5 PR 5.3 — multi-instrument sessions with some pinned
-    and some unpinned no longer trigger the retired rule. Every
-    instrument with no stored Band 1 rule evaluates as Full Matrix."""
+    and some unpinned no longer trigger the retired rule. An unpinned
+    instrument is Full Matrix once its links are set, and has no pairs
+    until then (segment 20J) — ``instrument_b`` below sets none, which
+    this rule does not judge either way."""
     _user, review_session, instrument_a, rule_set = _seed(db, code="nrp-multi")
     instrument_a.rule_set_id = rule_set.id
     instrument_b = Instrument(session_id=review_session.id, name="Peer survey", order=99)
@@ -182,7 +185,7 @@ def test_no_rule_pinned_skips_new_model_instruments(db: Session) -> None:
     """Wave 4 PR 2 — a new-model instrument with NULL ``rule_set_id``
     no longer trips ``instruments.no_rule_pinned`` (the rule's pre-
     PR-2 message is wrong for new-model — Generate now produces a
-    Full Matrix instead of skipping). The seeded default response
+    Full Matrix instead of skipping, once the links are set). The seeded default response
     fields (Rating + Comments) are ``visible=True`` out of the box,
     so the parallel ``no_visible_response_fields`` rule stays
     silent too."""

@@ -5,8 +5,9 @@ The function reads each instrument's pinned ``rule_set_id``, runs the
 engine internally per-instrument, writes per-instrument
 ``Assignment`` rows, and emits one ``assignments.generated`` audit
 event per processed instrument with ``refs.instrument_id`` set.
-An instrument with NULL ``rule_set_id`` generates against the
-synthetic Full Matrix default.
+An instrument with NULL ``rule_set_id`` and its Band 1 links set
+generates against the synthetic Full Matrix; one with a link not set
+generates nothing (segment 20J).
 """
 
 from __future__ import annotations

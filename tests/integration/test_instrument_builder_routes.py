@@ -5560,7 +5560,7 @@ def test_wave3_priii_reviewer_surface_emits_response_column_width(
 
 
 # --------------------------------------------------------------------------- #
-# Wave 4 PR 1 — Full Matrix default for new-model NULL rule_set
+# Wave 4 PR 1 — Full Matrix for new-model NULL rule_set (links set, 20J)
 # --------------------------------------------------------------------------- #
 
 

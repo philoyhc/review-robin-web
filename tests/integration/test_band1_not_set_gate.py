@@ -6,7 +6,8 @@ Unit of review) in the ``"Not set"`` state. Until the operator
 clicks each pill at least once, the instrument is considered
 unconfigured by the workflow card — preventing operators from
 silently shipping the implicit Full Matrix default that the
-Wave 5 RuleSet collapse enabled.
+Wave 5 RuleSet collapse enabled. Since segment 20J that default is
+gone: such an instrument generates nothing, and Validate refuses it.
 
 The gate keys off ``Instrument.band1_touched_links`` (a sticky
 JSON list); the bulk-save form carries one ``{link}_touched``
