@@ -590,6 +590,12 @@ Stated plainly so the card copy and the PR description stay honest:
   pair, so a response belonging to one is **dropped and reported**
   ([§6.4](#64-load-responses)) rather than silently given a fabricated
   home; an *empty-but-included* manual assignment won't reappear either.
+- **An instrument whose links were never set generates nothing**
+  (segment 20J): there is no Full Matrix default. An extract whose
+  `settings.csv` leaves an instrument's `band1_touched_links` empty —
+  one from a session that ran on that default — rehydrates with no
+  assignments for it, so its responses are **dropped and reported**
+  ([§6.4](#64-load-responses)) like any other unplaced row.
 - **The gate is a judgement, not an open defect.** Every response a
   legitimate assignment can carry is loaded; every other row is dropped
   with a reason, counted in the audit event, and handed to the operator

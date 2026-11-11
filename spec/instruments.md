@@ -714,12 +714,11 @@ The workflow card's "Empty Setup" state keys off
 - at least one `visible=True` `InstrumentResponseField`, AND
 - all three Link ids present in `band1_touched_links`.
 
-This is the **safety gate** that stops the implicit Full Matrix
-default (synthesised when `rule_set_id` is NULL — see
-`spec/assignments.md`) shipping silently. The
-operator has to make a deliberate choice on each Link before
-the instrument reads as configured; Validate raises an error until
-then (`instruments.band1_not_set`, segment 20J).
+This is the **safety gate** that makes the operator choose each Link
+deliberately before the instrument reads as configured. Until then it
+generates nothing — there is no Full Matrix default (segment 20J;
+`spec/assignments.md` § *Synthetic Full Matrix*) — and Validate raises
+an error (`instruments.band1_not_set`).
 
 Writers respect ownership when updating the touched set:
 
@@ -841,7 +840,7 @@ Band 1 saves through `app/services/instruments/_band1.py:set_band1_assignment_ru
   `_create_band1_rule_set`. Stored shape:
   - `combinator="ALL_OF"` (the outer wrap that intersects Links).
   - `exclude_self_reviews=False` — aligned with the synthetic
-    Full Matrix default; the Link 3 column's self-review
+    Full Matrix; the Link 3 column's self-review
     chip (§ *Self-review exclusion* above) is the control
     that sets it.
   - `rules_json` carries one COMPOSITE per Link with the

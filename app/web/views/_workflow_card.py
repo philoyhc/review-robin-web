@@ -100,7 +100,7 @@ def build_workflow_card_context(
     reviewee_count = csv_imports.existing_reviewee_count(db, review_session.id)
     # Wave 4 PR 2 — switched from a rule-set-centric check to
     # ``has_unconfigured``: a NULL rule_set_id is fine (Generate uses
-    # Full Matrix). Since the Wave 5 "Not set" gate, an instrument also
+    # Full Matrix once the Links are set). Since the Wave 5 "Not set" gate, an instrument also
     # needs all three Band 1 links set (``band1_touched_links``) as
     # well as a visible response field. The old helper it replaced kept
     # a docstring claiming this card still drove it, and has since been

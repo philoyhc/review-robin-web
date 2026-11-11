@@ -43,7 +43,7 @@ from app.db.models import (
 from app.db.models.instrument import INTRO_LAYOUT_DEFAULT, INTRO_LAYOUTS
 from app.services import audit, session_guard, unit_of_work
 from app.services import session_lifecycle as lifecycle
-from app.services.instruments._band1 import _band1_rule_set_name
+from app.services.instruments._band1 import _band1_rule_set_name, record_band1_links_set
 from app.services.instruments._field_refs import repoint_sort, repoint_widths
 from app.services.instruments._response_fields import DEFAULT_RESPONSE_FIELDS
 from app.services.instruments._state import _instrument_label
@@ -1148,7 +1148,7 @@ def set_unit_of_review(
     desired_touched = (existing_touched | {"link3"}) if touched else (existing_touched - {"link3"})
     if desired_touched != existing_touched:
         instrument.band1_touched_links = sorted(desired_touched)
-        db.flush()
+        record_band1_links_set(db, instrument, before=sorted(existing_touched), actor=actor)
     if instrument.group_kind == new_value:
         return instrument
     lifecycle.invalidate_if_validated(

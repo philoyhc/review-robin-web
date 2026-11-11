@@ -220,15 +220,14 @@ def _with_self_review_exclusions(
 
 
 def _full_matrix_schema() -> Any:
-    """Synthetic ``RuleSetSchema`` representing the Full Matrix
-    default: empty rules, ALL_OF combinator, self-reviews allowed.
+    """Synthetic ``RuleSetSchema`` for Full Matrix: empty rules,
+    ALL_OF combinator, self-reviews allowed.
 
-    Wave 4 — new-model instruments with no stored Band 1 rule (Links
-    in ``"all"`` mode, or still ``Not set``) carry
-    ``rule_set_id = NULL``; the engine treats this synthetic schema as "no filter," producing every
-    (reviewer, reviewee) pair. Legacy instruments with NULL
-    ``rule_set_id`` continue to be filtered out upstream — they
-    require an explicit pin per Segment 13C.
+    Wave 4 — an instrument whose Links are set with no stored Band 1 rule
+    (``"all"`` mode) carries ``rule_set_id = NULL``; the engine treats
+    this synthetic schema as "no filter," producing every
+    (reviewer, reviewee) pair. One with a Link still ``Not set`` never
+    reaches it: it has no pairs (segment 20J, ``_diff_one_instrument``).
     """
     from app.schemas.rules import (
         Combinator,
@@ -239,7 +238,7 @@ def _full_matrix_schema() -> Any:
 
     return RuleSetSchema(
         id=0,
-        name="Full Matrix (new-model default)",
+        name="Full Matrix (all Links All)",
         description="",
         scope=RuleSetScope.personal,
         combinator=Combinator.ALL_OF,
@@ -306,26 +305,28 @@ def _diff_one_instrument(
     """
     from app.services.rules import engine
 
-    if session_rule_set is None:
-        rule_set_schema = _full_matrix_schema()
-        revision_seed = 0
-    else:
-        rule_set_schema = _session_rule_set_to_schema(session_rule_set)
-        revision_seed = session_rule_set.id
-    result = engine.evaluate(
-        rule_set_schema,
-        reviewers=reviewers,
-        reviewees=reviewees,
-        override_exclude_self_reviews=override_exclude_self_reviews,
-        revision_seed=revision_seed,
-        pair_context_lookup=pair_context_lookup,
-    )
-    # The engine hands back the roster rows it was given.
-    engine_pairs = cast(list[tuple[Reviewer, Reviewee]], result.pairs)
-    excluded_counts = dict(result.excluded_counts)
-    if band1_links_not_set(instrument):
-        engine_pairs = []
-        excluded_counts = {}
+    engine_pairs: list[tuple[Reviewer, Reviewee]] = []
+    excluded_counts: dict[str, int] = {}
+    # A link not set: no pairs, and the engine is not run, so its stored
+    # rule (if any) is neither walked nor able to fail Generate.
+    if not band1_links_not_set(instrument):
+        if session_rule_set is None:
+            rule_set_schema = _full_matrix_schema()
+            revision_seed = 0
+        else:
+            rule_set_schema = _session_rule_set_to_schema(session_rule_set)
+            revision_seed = session_rule_set.id
+        result = engine.evaluate(
+            rule_set_schema,
+            reviewers=reviewers,
+            reviewees=reviewees,
+            override_exclude_self_reviews=override_exclude_self_reviews,
+            revision_seed=revision_seed,
+            pair_context_lookup=pair_context_lookup,
+        )
+        # The engine hands back the roster rows it was given.
+        engine_pairs = cast(list[tuple[Reviewer, Reviewee]], result.pairs)
+        excluded_counts = dict(result.excluded_counts)
 
     # On a group-scoped instrument, excluding self-reviews rules
     # out the whole group the reviewer is a member of — not just
@@ -660,7 +661,7 @@ class _ReconcileInputs:
     def rule_set_for(self, instrument: Instrument) -> SessionRuleSet | None:
         # Wave 4 — new-model instruments with no stored Band 1 rule carry
         # ``rule_set_id = NULL``; the diff/materialise path treats
-        # ``None`` as the Full Matrix default. Legacy instruments
+        # ``None`` as Full Matrix (Links set, none stored). Legacy instruments
         # with NULL ``rule_set_id`` are filtered out upstream in
         # ``_load_reconcile_inputs`` and never reach this method.
         if instrument.rule_set_id is None:
@@ -687,8 +688,8 @@ def _load_reconcile_inputs(
     needs. Writes nothing.
 
     ``instrument_id=None`` targets **every** instrument in the session;
-    a NULL ``rule_set_id`` is the Full Matrix default at the diff site,
-    not a reason to skip. ``instrument_id=<id>`` targets that one and
+    a NULL ``rule_set_id`` is Full Matrix at the diff site (or no pairs,
+    with a Link not set), not a reason to skip. ``instrument_id=<id>`` targets that one and
     raises ``ValueError`` if no such instrument belongs to the session.
     A NULL pin is not an error here either.
     """
@@ -853,10 +854,12 @@ def _full_matrix_never_generated_state(
     *,
     override_exclude_self_reviews: bool | None,
 ) -> InstrumentReconcileState:
-    """What :func:`_diff_one_instrument` reports for an instrument on the
-    Full Matrix default with no rows, counted instead of walked.
+    """What :func:`_diff_one_instrument` reports for an instrument on
+    Full Matrix (Links set, no rule stored) with no rows, counted instead
+    of walked. One with a Link not set is not passed here: it counts no
+    pairs (segment 20J).
 
-    The default's schema has no rules and ``excludeSelfReviews=False``,
+    The synthetic schema has no rules and ``excludeSelfReviews=False``,
     so the engine's fan-out is every ``(reviewer, reviewee)`` pair, less
     the self-review pairs only when ``override_exclude_self_reviews`` is
     true; and the per-instrument exclusion needs a pinned rule set, so it
@@ -919,9 +922,10 @@ def staleness_by_instrument(
       rule change that trades one pair for another — the totals match and
       the set is different.
     - *Gating on ``rule_id is not None``* misses every unpinned
-      instrument. Since Wave 5 PR 5.3 a NULL ``rule_set_id`` is the Full
-      Matrix default at the diff site, so unpinned instruments generate
-      like any other and can go stale like any other.
+      instrument. Since Wave 5 PR 5.3 a NULL ``rule_set_id`` is Full
+      Matrix at the diff site (once its Links are set, segment 20J), so
+      unpinned instruments generate like any other and can go stale like
+      any other.
 
     Deriving the verdict from :func:`_diff_one_instrument` — the same
     function :func:`replace_assignments` applies — means it cannot drift
@@ -965,7 +969,7 @@ def staleness_by_instrument(
             session_rule_set is None
             and not _reconcile_cache.rows_for(rows_by_instrument, instrument.id).count
         ):
-            # Never generated, on the Full Matrix default: the verdict
+            # Never generated, with no rule stored: the verdict
             # is not stale by the rule below, and the fan-out is every
             # pair, so it is counted rather than walked — the walk is
             # R x E pairs, 6.5 s at 1,000 x 1,000 on every page load
@@ -1192,8 +1196,8 @@ def replace_assignments(
     instrument's pinned ``session_rule_sets`` row, and write
     per-instrument pair fan-outs. An instrument with a NULL
     ``rule_set_id`` is not skipped — since Wave 5 PR 5.3 a NULL pin
-    resolves to the Full Matrix default at the diff site, so every
-    instrument flows through one path.
+    resolves to Full Matrix at the diff site (no pairs while a Link is not
+    set, segment 20J), so every instrument flows through one path.
 
     ``instrument_id=<id>``: scope to that single instrument only.
     Raises ``ValueError`` if no such instrument belongs to the session;

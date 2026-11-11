@@ -347,7 +347,7 @@ substitutes a synthetic schema:
 
 ```python
 RuleSetSchema(
-    name="Full Matrix (new-model default)",
+    name="Full Matrix (all Links All)",
     combinator=Combinator.ALL_OF,
     rules=[],
     options=RuleSetOptions(excludeSelfReviews=False, seed=0),

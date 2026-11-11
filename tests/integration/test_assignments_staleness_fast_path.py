@@ -2,11 +2,11 @@
 
 At 1,000 x 1,000 the Assignments and Validate pages took 6.5 and 7.3 s
 on every load before the first Prepare: ``staleness_by_instrument``
-walked the Full Matrix default's 1,000,000 pairs, and the cache it
+walked Full Matrix's 1,000,000 pairs, and the cache it
 warmed was flushed but never committed on a GET. Two changes, each
 held here:
 
-- **Counted, not walked.** An instrument on the Full Matrix default
+- **Counted, not walked.** An instrument on Full Matrix (Links set, no rule)
   with no rows gets its verdict from
   ``_full_matrix_never_generated_state``. It must equal what the walk
   reports, so the parity tests below run both on a roster built to
@@ -66,7 +66,7 @@ def _seed(
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
     instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
-    assert instrument.rule_set_id is None  # the Full Matrix default
+    assert instrument.rule_set_id is None  # Full Matrix: Links set, no rule
     instrument.group_kind = group_kind
     db.flush()
     return review_session, instrument
