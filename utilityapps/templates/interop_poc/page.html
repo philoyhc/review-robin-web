@@ -65,7 +65,10 @@
       return node;
     }
     function load() {
-      try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { return []; }
+      try {
+        var list = JSON.parse(localStorage.getItem(KEY) || "[]");
+        return Array.isArray(list) ? list.filter(function (i) { return i && i.transfer_id; }) : [];
+      } catch (e) { return []; }
     }
     function save(list) {
       try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) { /* kept for this page only */ }
@@ -209,8 +212,12 @@
         results.addEventListener("click", function () {
           results.disabled = true;
           detail.replaceChildren(el("p", "Fetching from Review Robin…", "note"));
-          Promise.all([fetchCsv(item, "results.csv"), fetchCsv(item, "completion.csv")]).then(function (both) {
-            showResults(item, both[0], both[1], both[0].asOf);
+          // One after the other: a refused results.csv fetches no
+          // completion.csv, so nothing is taken (and audited) unshown.
+          fetchCsv(item, "results.csv").then(function (results) {
+            return fetchCsv(item, "completion.csv").then(function (completion) {
+              showResults(item, results, completion, results.asOf);
+            });
           }).catch(function (err) {
             unavailable("Results: " + item.session_code, err && err.message ? err.message : "Review Robin did not answer.");
           }).finally(function () { results.disabled = false; });

@@ -111,3 +111,8 @@ def test_the_sent_card_reads_review_robin_for_each_session_sent(client: TestClie
     # A failed read shows unavailable, never old counts or zero (§6.4).
     assert "Unavailable, last checked" in text
     assert 'cache: "no-store"' in text and "innerHTML" not in text
+    # Cold read: a stored list that is not an array is ignored, and the
+    # two CSVs are fetched one after the other, so a refused results.csv
+    # takes (and audits) no completion.csv.
+    assert "Array.isArray(list)" in text
+    assert "Promise.all" not in text
