@@ -85,7 +85,34 @@ Each plan carries its line as a judgment call; this is the list.
 - No import across packages (`cordware/tests/test_import_boundary.py`)
   and no table another app reads.
 
-## 4. When the revisit comes
+## 4. What the proof of concept settled (23A)
+
+Segment 23A (`guide/archive/segment_23A_interop_poc.md`) built the
+initiate step against mock rosters, before ApplyDesk; the contract is
+`spec/handoffs.md`. For the revisit:
+
+- **The browser-mediated, one-origin flow works.** A tab opened during the
+  click, a same-origin JSON post and a receipt URL land the operator on
+  the new Session Home, with no cross-app credential (interop spec §7.1).
+  Verified in local Chromium; production after an import is the author's.
+- **All or nothing without an atomic create.** The handoff route keeps
+  New session's two commits and deletes the draft on a refusal, so New
+  session's own behavior did not change (§1's row stays a ruling for
+  the revisit).
+- **Replay needs a completion record, not roster counts.** An operator
+  may clear a roster after a handoff, so a replay reads
+  `session.handoff_completed`, never deletes, and re-checks who may
+  operate the session now. A table can replace the two audit events
+  once a status projection needs one.
+- **Routes:** `/operator/handoffs/…` rather than the interop spec's
+  `/reviewrobin/api/v1/…`; ApplyDesk's segment settles the final paths.
+- **Still open for the revisit:** `reviewees.unreachable_for_results`
+  fires on every opaque application ID (§1); two concurrent first posts
+  of one transfer can make two sessions; and two first requests from a
+  brand-new user can race in `get_or_create_user` (`UNIQUE users.email`),
+  which a sender's holding tab and post make likelier.
+
+## 5. When the revisit comes
 
 Start from the handoff's §3 reconciliation report against the `main` of
 the day; §1 above answers part of it. Then a segment plan, whose

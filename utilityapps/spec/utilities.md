@@ -40,6 +40,7 @@ does the other applications' probes. Cordware's deployment excluded it on
 | Index | `/` (the bare mount) | Anyone Easy Auth lets in: the route checks no identity itself, since it names tools and holds nothing about anyone. Each tool gates its own routes. |
 | Email Address Checker | `/email-check/` and the steps it posts to | The platform super-admin only (`utilityapps/spec/email_check.md` "Access") |
 | Telegram egress probe | `/diagnostics/telegram-egress`, and `…/run` it posts to | The platform super-admin only. Not on the index: an operator diagnostic, not a tool |
+| Interop proof of concept | `/interop-poc/` | The platform super-admin only. Not on the index: a working model for the next application that hands work to Review Robin |
 
 The index lists one card per tool, linking to its first page. Every page
 links back to the host's landing page (`/`) and to `/.auth/logout`.
@@ -76,6 +77,31 @@ Test replaces it.
   exclusion: the probe is behind sign-in like every other page.
 - **No feature flag:** Utilities reads no setting (above), and the
   super-admin gate is the access control.
+
+## Interop proof of concept
+
+Segment 23A (`guide/archive/segment_23A_interop_poc.md`): one click
+creates a populated Review Robin draft session and opens its Session
+Home in a new tab. Review Robin's side is `spec/handoffs.md`. Kept as a
+model once ApplyDesk's handoff exists (author, 2026-11-11).
+
+- **The mock** (`utilityapps/interop_poc/mock.py`): *Mock Scholarship
+  2027*, three synthetic `example.edu` reviewers plus the signed-in
+  super-admin, and six applications whose IDs are the reviewees' opaque
+  `RevieweeEmail` keys, each with a placeholder `ProfileLink`
+  (`applydesk.invalid`). Shown on the page as the two CSVs it sends.
+- **The bundle** sits in the page as JSON; the script adds a fresh
+  `transfer_id` and a `POC-<YYMMDD-HHMMSS>` code per transfer.
+- **Create in Review Robin** opens the holding tab during the click,
+  posts with `redirect: "manual"` (a non-operator's `303` reads as
+  `not_authorized`), then moves the tab to the receipt's Session Home, or
+  shows the link when the tab was blocked.
+- **A refusal** closes the tab and names the error, with the slot,
+  reason and issue lines of an `invalid_setup`, and the draft's link on
+  a `transfer_incomplete`; the next click is a new transfer. **A `5xx`,
+  no answer, or an answer it cannot read** keeps the transfer, so trying
+  again finds a session already made.
+- Text is inserted with `textContent` only; every response is `no-store`.
 
 Templates write app paths through `url()` in `utilityapps/web.py`, which
 adds the mount's prefix; `host_url()` marks a path that is the host's.

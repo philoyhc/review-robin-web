@@ -64,6 +64,10 @@ It follows the spec's rulings (§13.1):
 
 - The tool sits in Utilities, not a new `applydesk/` package: it is disposable, and ApplyDesk's package lands with its own segment.
 - Replay is guarded by the audit row rather than a new table: no migration for a proof of concept.
+- All or nothing by discarding the draft on a refusal, not by one transaction: New session's two commits stay, so its own behavior is untouched (rung 2, 2026-11-11).
+- A replay never deletes: a transfer cut off before its rosters answers `409 transfer_incomplete` with the draft's link, and completion is a recorded event, not inferred from roster counts, which an operator may clear (Codex, #3780).
+- A replay re-checks `permissions.user_can_view_session`: the sender once is not the operator now (Codex, #3780).
+- The sender keeps its transfer on a `5xx`, a network error or an unreadable answer; any other refusal starts a new one (cold read; Codex, #3781).
 - The mock's reviewers are synthetic `example.edu` addresses plus the signed-in super-admin. On production, the synthetic ones show as unresolved, which is itself what the test should see.
 
 ## Blast radius (measured)
@@ -75,8 +79,18 @@ Taken 2026-11-11 at `e96d006`.
 | Operator routing slices, to gain `_handoffs.py` | 23 | `ls app/web/routes_operator/*.py \| wc -l` |
 | The Quick Setup pipeline the create reuses | 1 (`_run_quick_setup_contents`) | `grep -n "async def _run_quick_setup_contents" app/web/routes_operator/_quick_setup.py` |
 | Audit schema registry, to gain one event | 1 (`EVENT_SCHEMAS`, `app/services/audit.py:433`) | `grep -n "EVENT_SCHEMAS" app/services/audit.py` |
-| Commits on the create path (why it is not atomic) | 2 (`create_session`, then Quick Setup's unit) | `grep -n "commit" app/services/sessions.py app/web/routes_operator/_quick_setup.py` |
+| Commits on the create path (New session's, which the handoff keeps; its all-or-nothing is a discard) | 2 (`create_session`, then Quick Setup's unit) | `grep -n "commit" app/services/sessions.py app/web/routes_operator/_quick_setup.py` |
 | Live specs | 36 files in `spec/` | `ls spec \| wc -l` |
+
+## Status
+
+**Closed 2026-11-11.** The ladder shipped as planned: rung 1 #3779, rung 2 #3780, rung 3 #3781, rung 4 this close.
+
+- **Intended vs done.** As Semantics says, plus a second audit event, `session.handoff_completed`, and the error codes `directory_sign_in`, `transfer_incomplete` and `invalid_setup`'s `empty_roster` reason (`spec/handoffs.md`). The replay and completion rules live in `app/services/handoffs.py`; the route only translates (Codex, #3780).
+- **The mock has four reviewers**, not three: the signed-in operator is added so the session has a reviewer who can sign in. The definition of done's count reads accordingly.
+- **Verified** in local Chromium with fake auth: the tab lands on Session Home with 4 reviewers and 6 reviewees, no assignments, no invitations; a mocked `transfer_incomplete` shows its draft link. Localhost and production checks are the author's.
+- **Reads.** One `diff-reviewer` read of rungs 1–3's cumulative diff, before rung 2 merged: 8 findings, all fixed (a deep-nested body and a lone surrogate as 500s; an undeclared length; an exception or empty roster leaving a draft; the replay record written late; a lapsed directory sign-in labelled a refused file; `Sec-Fetch-Site: none` accepted; the page dropping its transfer on a `5xx`). Codex then found 7 on #3780 (surrogate, cancellation, roster-count completion, stale-actor replay, rules in the route, NUL, an unescaped unknown key) and 1 on #3781 (an unreadable receipt); all fixed.
+- **Carried to the revisit** (`guide/interoperability.md` §4): concurrent first posts of one transfer, and a first-visit race in `get_or_create_user` on a brand-new user.
 
 ## PR ladder
 
@@ -87,7 +101,7 @@ Taken 2026-11-11 at `e96d006`.
 
 ## Definition of done
 
-- Clicking **Create in Review Robin** on `/utilities/interop-poc/` opens a tab that lands on a new session's Session Home, with six reviewees and three reviewers, no assignments and no invitations. Verified on localhost by the author, and on production after an import.
+- Clicking **Create in Review Robin** on `/utilities/interop-poc/` opens a tab that lands on a new session's Session Home, with six reviewees and four reviewers (three plus the operator), no assignments and no invitations. Verified on localhost by the author, and on production after an import.
 - A second click of the same transfer returns the same session, and a refused roster reports `invalid_setup` with its slot and issue lines and leaves no session. Both are covered by tests in `tests/integration/test_handoffs.py`.
 - `utilityapps/tests/test_interop_poc.py` covers the page, its gate and its bundle.
 - `## Doc impact` section present and current
@@ -111,7 +125,8 @@ Taken 2026-11-11 at `e96d006`.
 
 - `spec/handoffs.md` — new: the proof-of-concept create route, its bundle, receipts, errors, replay and its all-or-nothing create; a row in `spec/README.md`.
 - `spec/permissions.md` — the new operator routes in the route table.
-- `spec/architecture.md` — `session.handoff_created` in the audit-event list.
+- `spec/architecture.md` — `session.handoff_created` and `session.handoff_completed` with the `counts` envelope's events.
 - `utilityapps/spec/utilities.md` — the *Interop proof of concept* page row and section.
-- `guide/interoperability.md` — what the proof of concept settled for the revisit.
+- `guide/interoperability.md` — what the proof of concept settled for the revisit (§4).
+- `app/web/spec_registry.py` — `_handoffs` and `_quick_setup` map to `spec/handoffs.md`; the declared debt is cleared.
 - `guide/todo_master.md` — the queue entry, deleted at close.

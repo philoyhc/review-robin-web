@@ -1019,8 +1019,11 @@ allowed (e.g. `snapshot.instruments` on `session.deleted`).
 
 For bulk operations — `assignments.generated`,
 `reviewers.imported`, `reviewees.imported`,
-`responses.deleted_all`, `responses.cleared`. All values are
-non-negative integers.
+`responses.deleted_all`, `responses.cleared`, and the handoff
+create's `session.handoff_created` (`files`) and
+`session.handoff_completed` (`reviewers`, `reviewees`), whose
+`context` carries `transfer_id` and `source_app` (`spec/handoffs.md`
+§8). All values are non-negative integers.
 
 **Cascade slots.** A roster replace, delete-all or bulk delete
 destroys rows in other tables, and each destroyed kind gets its own
