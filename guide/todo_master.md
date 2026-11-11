@@ -34,7 +34,8 @@ the deployment has *concluded* (verified, the personal web app retired)
 is the author's call.
 
 **Order (author, 2026-11-06):** 14G when IT answers. 23C is open
-(author, 2026-11-11) and runs beside it.
+(author, 2026-11-11) and runs beside it; 20J goes before 23C's close
+(author, 2026-11-11), so the diagnostic status reports its errors.
 
 1. **14G — Scheduled email** (gated on IT: offline sending as the
    operator, else a dedicated mailbox). Sends due invitations, reminders
@@ -50,7 +51,13 @@ is the author's call.
    operators may have reminded by hand: 14G marks those skipped, not
    sent, when it turns the setting on.
 
-2. **23C — Interoperability: status as Review Robin reports it** (author,
+2. **20J — An instrument not set up: no Full Matrix default, and
+   Validate refuses it** (author, 2026-11-11). The engine generates
+   nothing for an instrument with a Band 1 link not set, and Validate
+   errors match the Workflow card's `is_configured`.
+   **Plan:** `guide/segment_20J_instruments_set_up_validate.md`.
+
+3. **23C — Interoperability: status as Review Robin reports it** (author,
    2026-11-11). The handoff status carries Review Robin's own readings
    (status row, schedule, validation, instruments, progress, per person)
    for the diagnostic Utilities tool. **Plan:**
