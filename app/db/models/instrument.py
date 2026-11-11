@@ -257,8 +257,8 @@ class Instrument(Base, TimestampMixin):
     Until all three link ids appear here, ``is_configured`` reports
     False — the workflow card surfaces the instrument as not yet
     set up, forcing the operator to make a deliberate choice
-    instead of silently shipping the default Full Matrix
-    (Wave 5 follow-up "Not set" pill safety gate). Stored values
+    (Wave 5 follow-up "Not set" pill safety gate); since segment 20J
+    such an instrument also generates nothing and fails Validate. Stored values
     are a subset of ``{"link1", "link2", "link3"}``; NULL reads
     as the empty set."""
 

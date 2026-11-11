@@ -34,12 +34,13 @@ authors a rule, where `group_kind` lives — see
 
 > **One rule per instrument, authored in one place.** Every rule
 > lives on its instrument's Band 1: there is no operator-side
-> RuleSet library and no standalone Rule Builder page, and an
-> instrument with no rule at all evaluates against the synthetic
-> Full Matrix. That default is what Generate does, not whether the
-> instrument is ready: it reads as set up only once all three Band 1
-> Links have been set (`spec/instruments.md` § *"Not set" pill safety
-> gate*).
+> RuleSet library and no standalone Rule Builder page. An instrument
+> whose three Band 1 Links are set with no rule stored (*All*, *All*,
+> *Individual*) evaluates against the synthetic Full Matrix. **One with
+> a Link still `Not set` generates nothing** (segment 20J): there is no
+> Full Matrix default, and Validate refuses it
+> (`instruments.band1_not_set`; `spec/instruments.md` § *"Not set" pill
+> safety gate*).
 
 ## Contents
 
@@ -74,8 +75,9 @@ An Assignment connects three entities:
   are still materialised, with `include=False`, so their responses
   survive a deactivate → Prepare → reactivate round trip.
 - **Instrument** — a row in `instruments`. Owns the rule (via
-  `rule_set_id` or the synthetic Full Matrix when NULL) and
-  the unit-of-review (`group_kind`).
+  `rule_set_id`, or the synthetic Full Matrix when NULL with its Links
+  set) and the unit-of-review (`group_kind`). With a Link not set it
+  has no pairs (segment 20J).
 
 Plus one pair-level entity:
 
@@ -331,12 +333,21 @@ distinction — every row is per-session.
 
 ## Synthetic Full Matrix
 
-When `Instrument.rule_set_id is NULL`, the engine substitutes a
-synthetic schema:
+**An instrument with a Band 1 Link still `Not set` has no pairs**, whatever
+`rule_set_id` holds (segment 20J, author 2026-11-11: there is no
+reachable Full Matrix default). The engine's fan-out for it is empty, so
+Generate removes any rows it has, `reconcile_impact` counts them as
+deleted, and the staleness verdict reads stale while they remain. It is
+read off `instruments.band1_links_not_set`, the same test
+`is_configured` and `instruments.band1_not_set` use, and the reconcile
+stamp carries it.
+
+When `Instrument.rule_set_id is NULL` and the Links are set, the engine
+substitutes a synthetic schema:
 
 ```python
 RuleSetSchema(
-    name="Full Matrix (new-model default)",
+    name="Full Matrix (all Links All)",
     combinator=Combinator.ALL_OF,
     rules=[],
     options=RuleSetOptions(excludeSelfReviews=False, seed=0),
@@ -358,7 +369,7 @@ Effects:
 **`rule_set_id` says nothing about readiness.** A NULL one is what a
 Band 1 stores when its Links are still `Not set`, and also when every
 Link is set to `All` / `Individual` and no row has been materialized
-yet. The two evaluate identically, but only the second can be set up:
+yet. Only the second generates (above), and only the second can be set up:
 `is_configured` requires all three Link ids in
 `Instrument.band1_touched_links`, whatever `rule_set_id` holds, as well
 as a visible response field (`spec/instruments.md` § *"Not set" pill
@@ -899,7 +910,7 @@ row reads as it would before Generate; the page answers 200 rather than
 500 (findings E4, 2026-10-22; "Staleness").
 
 **There is no Rule column**, and re-adding one buys nothing: the
-rule lives on Band 1, and with the implicit Full Matrix default a
+rule lives on Band 1, and with Full Matrix storing no rule a
 rule name here names either Band 1 or nothing.
 
 ### Self-review toggle wiring
@@ -1400,8 +1411,9 @@ promotion does) or Generate writes it through. The other pages that
 run the Workflow card's readiness report still warm without
 committing.
 
-**A never-generated instrument on the Full Matrix default is counted,
-not walked.** With no rule and no `Assignment` rows the verdict is
+**A never-generated instrument on Full Matrix is counted, not walked**
+(one with a Link not set counts no pairs at all, segment 20J). With no
+rule and no `Assignment` rows the verdict is
 not stale by definition, and the fan-out is every reviewer × reviewee
 pair, less the self-review pairs only when a self-review override
 excludes them, so `eligible` and `self_reviews_excluded` are

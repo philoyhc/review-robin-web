@@ -86,7 +86,7 @@ def _check_instruments_no_rule_pinned(
     """Wave 5 PR 5.3 — retired. Pre-PR-5.3 the rule fired on legacy
     instruments with NULL ``rule_set_id``. With the legacy /
     new-model split collapsed, an instrument with no stored Band 1
-    rule evaluates as Full Matrix (Wave 4 PR 1), so a NULL
+    rule and its links set (all *All*) evaluates as Full Matrix, so a NULL
     ``rule_set_id`` is not a setup gap in itself. Readiness is
     checked elsewhere: ``instruments.no_visible_response_fields``
     here, and the Band 1 "Not set" gate

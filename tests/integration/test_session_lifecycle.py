@@ -587,3 +587,74 @@ def test_activation_opens_a_group_instrument(client: TestClient, db: Session) ->
     # Activation opens it with every other instrument; there is no
     # per-instrument open.
     assert group.accepting_responses is True
+
+
+# --------------------------------------------------------------------------- #
+# Segment 20J — an instrument not set up
+# --------------------------------------------------------------------------- #
+
+
+def test_mark_validated_refuses_an_instrument_not_set_up(client: TestClient, db: Session) -> None:
+    """``instruments.band1_not_set`` is an error, so the report cannot
+    validate, and ``mark_validated`` refuses it as it refuses any error."""
+    from app.services import validation
+
+    session = _create_session(client, db, code="20j-not-set")
+    _populate_rosters(client, session.id)
+    db.refresh(session)
+    report = lifecycle.build_readiness_report(validation.validate_session_setup(db, session))
+    assert "instruments.band1_not_set" in {i.rule_key for i in report.errors}
+    try:
+        lifecycle.mark_validated(
+            db, review_session=session, user=session.created_by_user, report=report
+        )
+    except lifecycle.LifecycleError as exc:
+        assert exc.code == "has_errors"
+    else:
+        raise AssertionError("mark_validated accepted an instrument not set up")
+    db.rollback()
+    db.refresh(session)
+    assert session.status == "draft"
+
+
+def test_unsetting_a_link_reverts_a_validated_session_and_is_audited(
+    client: TestClient, db: Session
+) -> None:
+    """A link set or unset changes what Generate makes and whether
+    Validate passes, so it is a setup mutation: it reverts a validated
+    session to draft and writes ``instrument.band1_links_set``."""
+    from app.services import instruments as instruments_service
+
+    session = _create_session(client, db, code="20j-unset")
+    _populate_rosters(client, session.id)
+    mark_band1_touched_on_all_instruments(db, session.id)
+    validate_session(session)
+    db.refresh(session)
+    assert session.status == "validated"
+
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalar_one()
+    instruments_service.set_band1_assignment_rules(
+        db,
+        instrument=instrument,
+        link1_mode="all",
+        link1_combinator="AND",
+        link1_rules=[],
+        link2_mode="all",
+        link2_combinator="AND",
+        link2_rules=[],
+        actor=session.created_by_user,
+        touched_links={"link1"},  # Link 2 back to Not set
+    )
+    db.commit()
+    db.refresh(session)
+    assert session.status == "draft"
+    event = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "instrument.band1_links_set")
+    ).scalar_one()
+    assert event.detail is not None
+    assert event.detail["changes"]["band1_touched_links"] == [
+        ["link1", "link2", "link3"],
+        ["link1", "link3"],
+    ]

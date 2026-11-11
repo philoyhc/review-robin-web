@@ -335,6 +335,14 @@ def _rule_cases() -> list[tuple[str, Callable[[Inputs], Undo]]]:
             lambda i: _flip(i.instrument, "self_reviews_active"),
         ),
         (
+            "whether the instrument's Band 1 links are set (20J)",
+            lambda i: _set(
+                i.instrument,
+                "band1_touched_links",
+                None if i.instrument.band1_touched_links else ["link1", "link2", "link3"],
+            ),
+        ),
+        (
             "the caller's self-review override",
             lambda i: _set(i, "override_exclude_self_reviews", True),
         ),

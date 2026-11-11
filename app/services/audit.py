@@ -575,6 +575,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "instrument.response_fields_saved": EventSchema(_IDENTITY | {"set_changes", "refs"}),
     "instrument.described": EventSchema(_IDENTITY | {"changes", "refs"}),
     "instrument.short_label_updated": EventSchema(_IDENTITY | {"changes", "refs"}),
+    # Segment 20J: which Band 1 links are set now changes what Generate makes.
+    "instrument.band1_links_set": EventSchema(_IDENTITY | {"changes", "refs"}),
     # ``instruments.bulk_accepting_responses`` +
     # ``instruments.bulk_visibility_when_closed`` retired in 18R Item 3
     # with their emitters (bulk_set_accepting / bulk_set_visibility).

@@ -60,7 +60,13 @@ def _seed(db: Session) -> tuple[ReviewSession, User]:
     db.add(rs)
     db.flush()
     db.add(SessionOperator(session_id=rs.id, user_id=user.id, role="owner"))
-    inst = Instrument(session_id=rs.id, name="Inst", short_label="INST", order=1)
+    inst = Instrument(
+        session_id=rs.id,
+        name="Inst",
+        short_label="INST",
+        order=1,
+        band1_touched_links=["link1", "link2", "link3"],  # set up (20J)
+    )
     db.add(inst)
     db.flush()
     field = InstrumentResponseField(

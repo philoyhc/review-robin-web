@@ -52,6 +52,7 @@ def _seed(db: Session) -> tuple[User, ReviewSession]:
     )
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     rule_set = SessionRuleSet(
         session_id=review_session.id,
         name="Full Matrix",

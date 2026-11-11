@@ -5569,7 +5569,10 @@ def test_new_model_no_band1_rule_generates_full_matrix(client: TestClient, db: S
     (Link 1 + Link 2 both in 'all' mode → no SessionRuleSet
     materialised → ``rule_set_id IS NULL``) is no longer silently
     skipped by ``replace_assignments``. The engine treats it as
-    Full Matrix and produces every (reviewer, reviewee) pair."""
+    Full Matrix and produces every (reviewer, reviewee) pair.
+
+    Segment 20J: only once all three links are set. Untouched, the same
+    instrument generates nothing: no Full Matrix default."""
     review_session, new_model = _new_model_with_tags(client, db, code="w4-default-matrix")
     # Add a second reviewer + reviewee so Full Matrix produces > 1 pair
     # — makes the count assertion meaningful.
@@ -5593,7 +5596,18 @@ def test_new_model_no_band1_rule_generates_full_matrix(client: TestClient, db: S
     )
     db.commit()
 
-    # No Band 1 save, no rule pin. Just hit Generate.
+    # No Band 1 save, no rule pin, links not set: Generate makes nothing.
+    resp = generate_via_page_button(client, review_session.id)
+    assert resp.status_code == 303
+    untouched = db.execute(
+        select(Assignment).where(Assignment.instrument_id == new_model.id)
+    ).scalars()
+    assert list(untouched) == []
+
+    # All three links set (All, All, Individual): every pair.
+    db.refresh(new_model)
+    new_model.band1_touched_links = ["link1", "link2", "link3"]
+    db.commit()
     resp = generate_via_page_button(client, review_session.id)
     assert resp.status_code == 303
 

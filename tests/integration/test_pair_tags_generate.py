@@ -51,6 +51,7 @@ def _seed(db: Session, code: str, *, group_kind: str | None, rules_json: list) -
             order=0,
             group_kind=group_kind,
             rule_set_id=rule_set.id,
+            band1_touched_links=["link1", "link2", "link3"],  # set up (20J)
         )
     )
     rae = Reviewer(session_id=review_session.id, name="Rae", email="rae@example.edu")

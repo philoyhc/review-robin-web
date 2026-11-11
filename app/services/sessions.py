@@ -132,9 +132,9 @@ def create_session(
     # Wave 5 PR 5.2 — RuleSet seeding retired entirely. New
     # sessions land with no rows in ``session_rule_sets``;
     # Band 1's inline editor lazily materialises rows on first
-    # save. New-model instruments default to Full Matrix via
-    # the synthetic schema (Wave 4 PR 1) when no rule_set_id
-    # is pinned.
+    # save. All three links set to All store no rule set and run
+    # as Full Matrix via the synthetic schema (Wave 4 PR 1); links
+    # not set generate nothing (segment 20J).
 
     audit.write_event(
         db,

@@ -151,7 +151,7 @@ def set_band1_assignment_rules(
             "Unit of review to Individual, or change that rule."
         )
 
-    _mark_touched_links(instrument, touched_links, {"link1", "link2"})
+    _mark_touched_links(instrument, touched_links, {"link1", "link2"}, actor=actor)
 
     rule_set = (
         db.get(SessionRuleSet, instrument.rule_set_id)
@@ -600,10 +600,49 @@ def _empty_link_state(*, touched: bool = False) -> dict[str, Any]:
     }
 
 
+def record_band1_links_set(
+    db: Session,
+    instrument: Instrument,
+    *,
+    before: list[str],
+    actor: User | None,
+) -> None:
+    """Write a change to which Band 1 links are set, with its side effects.
+
+    Since segment 20J a link set or unset changes what Generate makes (one
+    not set means no pairs) and whether Validate passes, so it is a setup
+    mutation like any rule edit: it invalidates a validated session and
+    writes ``instrument.band1_links_set``. The caller has assigned
+    ``instrument.band1_touched_links`` already; ``before`` is the list it
+    replaced, and an unchanged set records nothing.
+    """
+    after = sorted(instrument.band1_touched_links or [])
+    if sorted(before) == after:
+        return
+    db.flush()
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_band1_links_set",
+    )
+    audit.write_event(
+        db,
+        event_type="instrument.band1_links_set",
+        summary=f"Changed which assignment-rule links are set on {_instrument_label(instrument)}",
+        actor_user_id=actor.id if actor else None,
+        session=instrument.session,
+        payload=audit.changes({"band1_touched_links": [sorted(before), after]}),
+        refs={"instrument_id": instrument.id},
+    )
+
+
 def _mark_touched_links(
     instrument: Instrument,
     touched_links: set[str] | None,
     allowed: set[str],
+    *,
+    actor: User | None,
 ) -> None:
     """Replace the ``allowed`` slice of
     ``instrument.band1_touched_links`` with ``touched_links`` (which
@@ -627,7 +666,7 @@ def _mark_touched_links(
     instrument.band1_touched_links = sorted(merged)
     db = object_session(instrument)
     assert db is not None  # a stored instrument is in a session
-    db.flush()
+    record_band1_links_set(db, instrument, before=sorted(existing), actor=actor)
 
 
 def _form_touched_links(form: Any, keys: tuple[str, ...]) -> set[str]:

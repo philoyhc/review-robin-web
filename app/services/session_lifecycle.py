@@ -535,8 +535,8 @@ def activate_session(
     )
     for instrument in instruments:
         # Wave 5 PR 5.3 — every instrument flips to accepting on
-        # activate. One with no stored Band 1 rule evaluates as the
-        # synthetic Full Matrix (Wave 4 PR 1) at generate time.
+        # activate. One with no stored Band 1 rule (all links All)
+        # evaluates as the synthetic Full Matrix (Wave 4 PR 1).
         instrument.accepting_responses = True
         instrument.deadline_closed_at = None
     db.flush()

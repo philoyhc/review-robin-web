@@ -76,6 +76,7 @@ def _seed(
     db.add(full_matrix)
     db.flush()
     default_inst = ensure_default_instrument(db, review_session)
+    default_inst.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     default_inst.rule_set_id = full_matrix.id
     db.flush()
 
