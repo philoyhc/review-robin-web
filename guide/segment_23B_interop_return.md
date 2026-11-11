@@ -13,10 +13,13 @@ Neither has any code. RRW's nearest output, `responses.csv`, is not a feed: `Ins
 
 ## Decision
 
-**Pull on the operator's view, not push.** The sender asks; Review Robin answers, over the same browser-mediated, same-origin transport as 23A's create (§7.1). Two read routes, both keyed by the handoff's `transfer_id`:
+**Pull on the operator's view, not push.** The sender asks; Review Robin answers, over the same browser-mediated, same-origin transport as 23A's create (§7.1). Three read routes, each keyed by the handoff's `transfer_id`:
 
 1. **`GET /operator/handoffs/{transfer_id}/status`** — a JSON status projection: the session, its lifecycle state, counts with their denominators and an as-of time. No answers.
-2. **`GET /operator/handoffs/{transfer_id}/results`** — a JSON results snapshot: a manifest, one row per submitted answer, and one completion row per assignment. Audited as an export.
+2. **`GET /operator/handoffs/{transfer_id}/results.csv`** — a CSV of the submitted answers, one row per answer, keyed so the sender can match each to its application. Audited as an export.
+3. **`GET /operator/handoffs/{transfer_id}/completion.csv`** — a CSV of the assignments and where each stands. No answers.
+
+The point is that the sender can fetch the CSV data (author, 2026-11-11); how it maps or displays the values is the sender's.
 
 The Utilities tool keeps the transfers it created (in the browser, for the proof of concept) and offers **Refresh status** and **Fetch results** on each.
 
@@ -36,18 +39,21 @@ The Utilities tool keeps the transfers it created (in the browser, for the proof
   - `reviewers_assigned`, then of those `reviewers_invited`, `reviewers_opened` and `reviewers_submitted` (`monitoring.summary_counts`).
 
   Every count names its denominator, and there is no single percentage (D4). A read changes nothing: no lazy lifecycle step runs, so status reports what the clock (14E) has already done.
-- **Results** (`result_schema_version` 1):
-  - **Manifest:** `session_ref`, `transfer_id`, `as_of`, `scope` (`submitted`), `complete` (true), row counts, and a SHA-256 `digest` of the rows.
-  - **Answer rows:** submitted answers only (§6.5: drafts excluded, missing stays missing). Each row is keyed by `reviewer_email`, `reviewee_key` (`Reviewee.email_or_identifier`, the application ID), `instrument_seq` (`Instrument.session_seq`) and `field_key`, and carries `instrument_label`, `field_label`, `response_type`, `value` and `submitted_at`.
-  - **Completion rows:** one per assignment, with `reviewer_email`, `reviewee_key`, `instrument_seq` and `state` (`not_started` / `in_progress` / `submitted`). No answers.
-- **Group-scoped instruments** are left out of both row sets and counted in the manifest (`excluded_group_instruments`): group-to-application meaning is undefined (§6.5).
+- **`results.csv`** (`text/csv`, UTF-8):
+  - **Rows:** submitted answers only (§6.5: drafts excluded, missing stays missing).
+  - **Keys:** `ReviewerEmail`, `RevieweeEmail` (`Reviewee.email_or_identifier`, the application ID, under `responses.csv`'s name), `InstrumentSeq` (`Instrument.session_seq`) and `FieldKey`.
+  - **Then:** `InstrumentLabel`, `FieldLabel`, `ResponseType`, `Value` (as stored, author 2026-11-11) and `SubmittedAt`.
+- **`completion.csv`:** one row per assignment, with `ReviewerEmail`, `RevieweeEmail`, `InstrumentSeq` and `State` (`not_started` / `in_progress` / `submitted`).
+- **Snapshot identity.** Each CSV carries an `ETag` (SHA-256 of its bytes) and an `X-Review-Robin-As-Of` header. A sender that sends `If-None-Match` with the last tag gets `304` when nothing changed: §6.5's *Already up to date*.
+- **Group-scoped instruments** are left out of both CSVs, and status reports how many there are (`group_instruments`): group-to-application meaning is undefined (§6.5).
 - **Keys.** `instrument_seq` + `field_key` is stable (interop spec §13.3 item 2). An answer has no ID of its own: `Version` resets after a clear. A snapshot is therefore a complete replacement, and the receiver reconciles on (`reviewer_email`, `reviewee_key`, `instrument_seq`, `field_key`). That is D2's proof-of-concept answer; ApplyDesk's segment settles it.
-- **Audit.** A results fetch writes `session.handoff_results_exported` (`counts` of rows; `context` `{transfer_id, digest}`). A status read writes nothing: reads never audit (`spec/permissions.md` §6).
+- **Audit.** A results or completion fetch writes `session.handoff_results_exported` (`counts` of rows; `context` `{transfer_id, file, etag}`); a `304` writes nothing. A status read writes nothing: reads never audit (`spec/permissions.md` §6).
 - **The page.** A failed refresh shows *unavailable, last checked …*, never old counts as current and never zero (§6.4). *Status last checked at T* and *results fetched at U* are shown apart. Fetched results show as a table and download as CSV. Nothing is stored server-side.
 
 ## Judgment calls — decided
 
-- JSON for both routes, not a ZIP: the browser fetches them same-origin and the page renders them. The receiving format is ApplyDesk's segment's to settle (§6.5 allows "one normalized CSV, several CSVs …").
+- Status is JSON (a projection the page renders); results and completion are CSV, the data ApplyDesk fetches (author, 2026-11-11). Two plain CSVs, not a ZIP: each is fetched same-origin on its own.
+- `results.csv` is a filtered, re-keyed view of `responses.csv`'s rows: the same reads (`serialize_responses`) and its column names where they overlap, but no preamble, `InstrumentSeq` for the positional `InstrumentName`, submitted answers only, no group rows. CSV is the interop spec's payload format (§5.1), and RRW's extract already builds these rows; `responses.csv` itself is unchanged.
 - The Utilities page keeps its transfers in `localStorage`. Utilities has no database, and ApplyDesk will store the link itself. Clearing the browser loses the list, not the sessions.
 - The routes live in `_handoffs.py` (the holding page's slice): they run no Quick Setup pipeline. The projections are `app/services/handoffs.py` functions over `monitoring` and the response reads.
 
@@ -68,14 +74,14 @@ Taken 2026-11-11 at `732b9ab`.
 
 1. **Scaffold.** The Utilities page gains a **Sent to Review Robin** card: the transfers this browser created (code, when), each with inert **Refresh status** and **Fetch results** buttons, and placeholder panes showing the fields each will fill. Not touched: RRW.
 2. **Status route.** `handoffs.status(...)`, the route, `not_linked` / `not_authorized` / `transfer_incomplete`, and tests: every count against a seeded session, the link check, the permission check, and that a read changes nothing. Not touched: the page.
-3. **Results route.** `handoffs.results(...)`, the route, the audit event in `EVENT_SCHEMAS`, and tests: submitted-only, drafts excluded, completion states, group-scoped exclusion, digest stable across two reads of unchanged data, and the keys.
+3. **Results and completion CSVs.** The two serializers in `handoffs`, the routes, `ETag` / `304`, the audit event in `EVENT_SCHEMAS`, and tests: submitted-only, drafts excluded, values as stored, completion states, group-scoped exclusion, the tag stable across two reads of unchanged data, and the keys.
 4. **Wire the page.** The card refreshes status, fetches and shows results, downloads CSV, and handles *unavailable*. This is the last build rung: `diff-reviewer` reads the cumulative diff from rung 1's base.
 5. **Close.** Specs, `spec-writer` and the archive.
 
 ## Definition of done
 
-- On `/utilities/interop-poc/`, a session created there shows its live status on **Refresh status**. After a reviewer submits in Review Robin, **Fetch results** shows that reviewer's answers keyed by application ID. Verified on localhost by the author, and on production after an import.
-- `tests/integration/test_handoffs.py` covers both routes, their link and permission refusals, submitted-only results and the audit event. `utilityapps/tests/test_interop_poc.py` covers the card.
+- On `/utilities/interop-poc/`, a session created there shows its live status on **Refresh status**. After a reviewer submits in Review Robin, **Fetch results** retrieves `results.csv` with that reviewer's answers keyed by application ID, and shows and downloads it. Verified on localhost by the author, and on production after an import.
+- `tests/integration/test_handoffs.py` covers the three routes, their link and permission refusals, submitted-only results and the audit event. `utilityapps/tests/test_interop_poc.py` covers the card.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 23B` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -84,7 +90,7 @@ Taken 2026-11-11 at `732b9ab`.
 
 ## Open questions
 
-- **Rich-text and multi-choice values** in a results row: the stored value as is, or a display form? Decided at rung 3 from what the response types store; recorded in Judgment calls.
+- ~~Display form of values~~ As stored; mapping and display are ApplyDesk's (author, 2026-11-11).
 
 ## Out of scope
 
@@ -95,8 +101,8 @@ Taken 2026-11-11 at `732b9ab`.
 
 ## Doc impact
 
-- `spec/handoffs.md` — the two read routes, the status and results projections, `not_linked`, and the export audit event.
-- `spec/permissions.md` — the two routes in the per-route matrix.
+- `spec/handoffs.md` — the three read routes, the status projection, the two CSVs and their `ETag`, `not_linked`, and the export audit event.
+- `spec/permissions.md` — the three routes in the per-route matrix.
 - `spec/architecture.md` — `session.handoff_results_exported` with the `counts` envelope's events.
 - `utilityapps/spec/utilities.md` — the *Sent to Review Robin* card.
 - `guide/interoperability.md` — what the reverse flow settled (D2 and D4 for the proof of concept), in §4.
