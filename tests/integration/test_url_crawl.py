@@ -298,6 +298,7 @@ ROUTES: dict[str, tuple[Visit, ...]] = {
     # The operator surfaces.
     "/operator/sessions": _PAGE,
     "/operator/sessions/archived": _PAGE,
+    "/operator/handoffs/new": _PAGE,
     "/operator/sessions/new": _PAGE,
     "/operator/sessions/rehydrate": _PAGE,
     # Its token names the dropped rows a rehydrate commit stashes; the

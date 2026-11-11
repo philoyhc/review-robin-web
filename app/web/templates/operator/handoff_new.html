@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Creating a session — Review Robin Web{% endblock %}
+
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  <h1>Creating a session</h1>
+  <div class="card" id="handoff-holding">
+    <p>Another Cordware application is setting up a draft session for you. This tab moves to the new session's home page when it is ready.</p>
+    <p class="muted">Nothing is prepared, no one is invited and no email is sent: the draft waits for you.</p>
+    <p class="muted">If this tab stays here, go back to the application that opened it: it shows what happened. Your sessions are on the <a href="{{ url('/operator/sessions') }}">Sessions</a> page.</p>
+  </div>
+{% endblock %}
