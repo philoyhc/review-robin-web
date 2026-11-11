@@ -132,7 +132,6 @@ after any other refusal it starts a new transfer.
 |---|---|---|
 | `session.handoff_created` | `counts(files=n)`, `context` `{transfer_id, source_app}` | with the draft, before its rosters |
 | `session.handoff_completed` | `counts(reviewers, reviewees)`, same `context` | once the rosters have saved, or on the replay that finds them saved |
-
 | `session.handoff_results_exported` | `counts(rows)`, `context` `{transfer_id, file, etag}` | a `results.csv` or `completion.csv` fetched (§10); a `304` writes nothing |
 
 All three are registered in `EVENT_SCHEMAS`. The draft's own
@@ -177,7 +176,8 @@ denominators; there is no single percentage (interop spec D4):
   `group_instruments`;
 - `assignments`: the included assignments of active reviewers, and of
   those `assignments_completed`, Review Robin's own *complete*: every
-  required field answered (`monitoring`);
+  required field answered, saved or submitted (the reviewer-side rollup,
+  `monitoring.per_reviewer_progress`);
 - `reviewers_assigned`: active reviewers with assignments, and of those
   `reviewers_invited`, `reviewers_opened`, `reviewers_submitted`.
 

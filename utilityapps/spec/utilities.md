@@ -104,7 +104,7 @@ model once ApplyDesk's handoff exists (author, 2026-11-11).
 - Text is inserted with `textContent` only; every response is `no-store`.
 - **Sent to Review Robin** (segment 23B): the sessions this browser
   created, kept in `localStorage` (Utilities has no database; clearing it
-  forgets the list, not the sessions). Each offers:
+  forgets the list, not the sessions; open tabs keep it in step). Each offers:
   - **Refresh status**: reads Review Robin's status (`spec/handoffs.md`
     §10) and shows the state and counts with their denominators; a failed
     read shows *Unavailable, last checked …* and why, never old counts or
