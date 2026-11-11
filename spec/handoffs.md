@@ -32,8 +32,10 @@ no mail (interop spec §3 invariant 4): the draft waits for its operator.
 | `GET /operator/handoffs/new` | the package gate `require_operator` | The holding page: says a draft is being set up and that nothing is sent, links the Sessions lobby, and offers nothing else to do. `no-store`. |
 | `POST /operator/handoffs/sessions` | the package gate `require_operator` | The create (§3–§6). Every answer is JSON and `no-store`. |
 
-A non-operator gets the package gate's usual `303` to `/me`; a sender
-posting with `redirect: "manual"` reads that as `not_authorized`. The
+A non-operator gets the package gate's usual `303` to `/me`, as does an
+operator the owner-eligibility lock refuses (`OperatorAllowlistDenied`,
+§5); a sender posting with `redirect: "manual"` reads either as
+`not_authorized`. The
 create route lives in `app/web/routes_operator/_quick_setup.py`, whose
 pipeline it runs; its rules are `app/services/handoffs.py`.
 
@@ -70,7 +72,10 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
 - **Who owns it:** the signed-in operator, through the owner-eligibility
   lock (`session_owners.lock_owner_eligible`) and `sessions.create_session`,
   as New session does, without its scheduling fields.
-- **A taken code** is `409 session_code_conflict`, before anything is made.
+- **Before anything is made**, in this order: a taken code is
+  `409 session_code_conflict`; a name or code New session would refuse is
+  `422 invalid_package`; an operator the owner-eligibility lock refuses
+  gets the `303` of §2.
 - **The rosters** go through Quick Setup's pipeline
   (`_run_quick_setup_contents`), every slot saved in one unit, with the
   session's directory (`spec/quick_setup_card_spec.md`).
@@ -79,7 +84,9 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   refused roster is `422 invalid_setup` with `slot`, `reason` and the
   importer's own `details`; a lapsed directory sign-in is
   `409 directory_sign_in`; a roster with no rows is `422 invalid_setup`
-  with `reason` `empty_roster`. Any unexpected error discards it too.
+  with `reason` `empty_roster`. An unexpected error while the rosters save
+  discards it too. A failure after the save, while recording completion,
+  leaves the draft with its rosters, which a replay completes (§6).
   New session's own behavior is unchanged: it still keeps the draft when a
   file is refused.
 - **Receipt:** `201` `{status: "created", session_ref, session_code, session_home_url}`.

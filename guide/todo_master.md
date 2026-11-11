@@ -33,8 +33,7 @@ host is provisioned and serving Review Robin since 2026-10-31; whether
 the deployment has *concluded* (verified, the personal web app retired)
 is the author's call.
 
-**Order (author, 2026-11-06):** 14G when IT answers. 23A is open
-(author, 2026-11-11) and runs beside it.
+**Order (author, 2026-11-06):** 14G when IT answers.
 
 1. **14G — Scheduled email** (gated on IT: offline sending as the
    operator, else a dedicated mailbox). Sends due invitations, reminders
@@ -49,12 +48,6 @@ is the author's call.
    reminder already past due on every open session in one pass, after
    operators may have reminded by hand: 14G marks those skipped, not
    sent, when it turns the setting on.
-
-2. **23A — Interoperability proof of concept** (author, 2026-11-11).
-   A temporary Utilities tool with mock rosters creates and populates a
-   Review Robin draft session in one click and opens its Session Home
-   in a new tab: the interop spec's initiate step, tried before
-   ApplyDesk exists. **Plan:** `guide/segment_23A_interop_poc.md`.
 
 ### Stubs
 

@@ -1,5 +1,5 @@
 """The handoff create route (segment 23A, rung 2;
-`guide/segment_23A_interop_poc.md`): another Cordware application's
+`guide/archive/segment_23A_interop_poc.md`): another Cordware application's
 rosters become a draft session, all or nothing, and nothing else
 happens."""
 
