@@ -470,6 +470,22 @@ decision not to.
   convention has been followed once and broken zero times — the same
   "pin it before the first violation" moment as §2.2.
 
+### 2.4 The interoperability example follows the handoff contract
+
+- **Written down at** `docs/interoperability_example.md` §4 and
+  `spec/handoffs.md`'s status line: a change to the handoff contract
+  updates Utilities' *Interop proof of concept* in the same change.
+- **The check.** The contract's version constants are readable as text:
+  `STATUS_SCHEMA_VERSION` in `app/web/views/_handoffs.py` and
+  `STATUS_VERSION` in `utilityapps/templates/interop_poc/page.html`. A
+  test that the two agree needs no import across the boundary
+  `cordware/tests/test_import_boundary.py` guards. Codes and CSV headers
+  could follow the same way.
+- **Verified 2026-11-11.** Raising `STATUS_SCHEMA_VERSION` to 4 fails
+  `tests/integration/test_handoffs.py` but leaves
+  `utilityapps/tests/test_interop_poc.py` green: the page would show
+  *unavailable* on production, and nothing in the suite says so.
+
 ---
 
 ## What this file is not

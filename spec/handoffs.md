@@ -6,8 +6,10 @@ as the interoperability proof of concept; the reads back to the sender
 `cordware/docs/cordware_interoperability_consolidated_spec_v0.3.md`
 ("the interop spec"); this file is the contract Review Robin actually
 offers. The only sender today is Utilities' *Interop proof of concept*
-(`utilityapps/spec/utilities.md`). ApplyDesk's segment settles the final
-paths when it builds the real sender.
+(`utilityapps/spec/utilities.md`), which is also the example a real
+sender starts from (`docs/interoperability_example.md`); a change to
+this contract updates it in the same change. ApplyDesk's segment
+settles the final paths when it builds the real sender.
 
 ## 1. The flow
 

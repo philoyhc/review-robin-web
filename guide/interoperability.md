@@ -129,6 +129,7 @@ initiate step against mock rosters, before ApplyDesk; the contract is
 ## 5. When the revisit comes
 
 Start from the handoff's §3 reconciliation report against the `main` of
-the day; §1 above answers part of it. Then a segment plan, whose
+the day; §1 above answers part of it. The sender's code starts from the
+example, `docs/interoperability_example.md`. Then a segment plan, whose
 `Doc impact` names `cordware/spec/interoperability_and_orchestration.md`.
 This note retires into it.
