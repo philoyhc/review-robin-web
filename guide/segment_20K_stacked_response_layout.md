@@ -10,7 +10,7 @@ The reviewer surface is a table: one row per reviewee, one column per response f
 
 ## Decision
 
-**A per-instrument layout setting: *Side by side* (today, the default) or *One per line*.** With *One per line* (mock-up agreed 2026-11-11):
+**A per-instrument layout setting: *Responses across* (today, the default) or *Responses stacked*.** With *Responses stacked* (mock-up agreed 2026-11-11):
 
 - **The table keeps one row per reviewee.** Identity and display fields keep their columns; every response field moves into a single *Responses* cell.
 - **Inside that cell, one line per response field:** the label on the left, the input on its right. No extra header rows.
@@ -28,7 +28,7 @@ The reviewer surface is a table: one row per reviewee, one column per response f
 
 - **One row per reviewee is what keeps this cheap.** Branching (a governed field finds its parent within the row, `closest("tr")`), the shared column sort (it moves rows of `tbody.rrw-rows`) and per-row Save all keep working unchanged.
 - **Sorting by a response field goes**, since it has no column header; sorting by reviewee and by display fields stays. A sort cookie naming a response field is ignored.
-- **Response-field column widths** (`rf_<id>` in `column_widths`) are kept but unused while the layout is *One per line*, and the preview offers no drag handle on a response box; switching back restores them. The two widths are new keys, `stack_label` and `stack_input`, in the same JSON — `set_column_widths` accepts them, `repoint_widths` already keeps keys it does not re-point, and the Settings CSV carries `column_widths` as it is.
+- **Response-field column widths** (`rf_<id>` in `column_widths`) are kept but unused while the layout is *Responses stacked*, and the preview offers no drag handle on a response box; switching back restores them. The two widths are new keys, `stack_label` and `stack_input`, in the same JSON — `set_column_widths` accepts them, `repoint_widths` already keeps keys it does not re-point, and the Settings CSV carries `column_widths` as it is.
 - **Group-scoped instruments** take the same layout, one cell per group.
 - **Unchanged:** answers, required and branching rules, completion counts, Validate, every CSV export, and the reviewee results and observer collation pages (read only; out of scope).
 - **The setting** is a new `Instrument` column (`response_layout`, `columns` | `stacked`, default `columns`), invalidates a validated session when changed (it changes what reviewers see), writes `instrument.response_layout_set`, and round-trips in the Settings CSV as `instruments[n].response_layout`.
@@ -36,7 +36,8 @@ The reviewer surface is a table: one row per reviewee, one column per response f
 ## Judgment calls — decided
 
 - Per instrument, not per session: a session can mix a brief rating instrument and a long-answer one.
-- The control sits on the instrument card beside the preview it changes.
+- **The control is a cycle chip** (`spec/ui_elements.md` §9), like the *Layout 1* / *Layout 2* chip, saved by the card's Save as that chip is (author, 2026-11-11). It labels the layout in force: *Responses across* / *Responses stacked* — proposed labels, the author to confirm at rung 3.
+- **Its place:** the *Preview review instrument* heading's row, reordered to the heading, **↻ Refresh sample**, the *Layout* chip, then the new *Responses* chip (author, 2026-11-11).
 - Two widths, not one (author, 2026-11-11): compact boxes sized to the widest need, so a 1-5 rating is not a page-wide box; one shared compact width, so the compact boxes still line up. Computed at render in the view layer: nothing stored, nothing in the Settings CSV.
 
 ## Blast radius (measured)
@@ -55,14 +56,14 @@ Taken 2026-11-11 at `0af35e9`.
 
 1. **Plan** (this file).
 2. **The setting.** Model, migration (`sa.text("'columns'")` default, round-trips on Postgres), the service writer with its audit event, the Settings CSV row, and tests. Nothing renders it yet.
-3. **The control, scaffold-first.** The *Side by side* / *One per line* toggle on the instrument card, wired to the setting; the preview still shows columns.
-4. **The surface.** The *One per line* rendering on the reviewer surface and the operator preview (one template), constraints under labels, the summary line hidden, and the compact width (a view helper with its unit tests); tests for layout, branching and Save in the stacked cell.
+3. **The control, scaffold-first.** The *Responses* chip on the *Preview review instrument* row, with **↻ Refresh sample** moved ahead of the *Layout* chip; wired to the setting through the card's Save; the preview still shows columns.
+4. **The surface.** The *Responses stacked* rendering on the reviewer surface and the operator preview (one template), constraints under labels, the summary line hidden, and the compact width (a view helper with its unit tests); tests for layout, branching and Save in the stacked cell.
 5. **The two widths.** Drag handles on the preview's label column and response column, the `stack_label` and `stack_input` keys through `set_column_widths`, and the reviewer surface honoring them. Last build rung: `diff-reviewer` reads the cumulative diff.
 6. **Close.**
 
 ## Definition of done
 
-- An instrument set to *One per line* shows each response field on its own line, label and constraint on the left, on both the reviewer surface and the Instruments page preview (author's browser check).
+- An instrument set to *Responses stacked* shows each response field on its own line, label and constraint on the left, on both the reviewer surface and the Instruments page preview (author's browser check).
 - Branching, required marks and Save behave as in columns (`tests/integration/test_reviewer_surface_*`).
 - The label and response column widths survive a reload and a Settings CSV round trip.
 - `## Doc impact` section present and current
@@ -74,7 +75,7 @@ Taken 2026-11-11 at `0af35e9`.
 ## Open questions
 
 - Which of 20K and 20L to build, or both (author).
-- The control's exact wording and place on the card (settled at rung 3 on the scaffold).
+- The chip's labels (*Responses across* / *Responses stacked* proposed; author at rung 3).
 
 ## Out of scope
 
@@ -83,7 +84,7 @@ Taken 2026-11-11 at `0af35e9`.
 
 ## Doc impact
 
-- `spec/reviewer-surface.md` — the *One per line* layout under *Per-instrument table*.
+- `spec/reviewer-surface.md` — the *Responses stacked* layout under *Per-instrument table*.
 - `spec/instruments.md` — the layout control and the label width.
 - `spec/settings_inventory.md` — `Instrument.response_layout`; the `stack_label` and `stack_input` width keys.
 - `spec/csv_contracts.md` — `instruments[n].response_layout` in the Settings CSV.
