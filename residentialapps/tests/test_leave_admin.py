@@ -245,15 +245,25 @@ def test_policy_appeals_cover_and_approvals() -> None:
 
 
 def test_entitlements_name_each_ras_neighborhood() -> None:
-    """A Neighborhood column after RA, from the RA's slot, sorting by it
-    groups the RAs by where they are and keeps each RA's rows together
-    (author, 2026-11-11)."""
+    """A Neighborhood column after RA, the RA's slots as the RA roster
+    names them; sorting by it groups the RAs by where they are and keeps
+    each RA's rows together, an RA in no slot last (author, 2026-11-11)."""
     page = client().get(ADMIN + "entitlements").text
     assert '<th scope="col">RA</th><th scope="col">Neighborhood</th>' in page
     for row in sample_leave.entitlement_rows():
-        slot = next(s for s in sample_data.SLOTS if row["ra"] in s.ras)
-        assert row["neighborhood"] == slot.neighborhood
-        assert f'data-sort-value="{slot.neighborhood} {row["ra"]}"' in page
+        held = sample_data.assignment(row["ra"], sample_leave.TERM)
+        assert row["neighborhoods"] == held and held
+        assert f'data-sort-value="{"; ".join(held)} {row["ra"]}"' in page
+        assert f'<span class="pill-derived">{held[0]}</span>' in page
+
+
+def test_an_ra_in_no_slot_shows_none_and_sorts_last(monkeypatch: pytest.MonkeyPatch) -> None:
+    rows = sample_leave.entitlement_rows()
+    bare = ({**rows[0], "neighborhoods": ()},)
+    monkeypatch.setattr(sample_leave, "entitlement_rows", lambda: bare)
+    page = client().get(ADMIN + "entitlements").text
+    assert 'data-sort-value=""' in page
+    assert '<span class="chip chip-mute">None</span>' in page
 
 
 def test_entitlements_follow_the_policy_rules() -> None:

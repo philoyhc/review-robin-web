@@ -1104,7 +1104,7 @@ class EntitlementRow(TypedDict):
 
     ra: str
     email: str
-    neighborhood: str  # the RA's slot, so the table sorts by where they are
+    neighborhoods: tuple[str, ...]  # the RA's slots this term, as the RA roster names them
     type: str
     entitlement: int
     adjustment: int
@@ -1119,7 +1119,7 @@ def entitlement_rows() -> tuple[EntitlementRow, ...]:
     charges = _appeal_charges()
     for ra in sample_data.RAS:
         start = date.fromisoformat(ra.dates.split()[0])
-        slots = ", ".join(s.neighborhood for s in sample_data.SLOTS if ra.name in s.ras)
+        slots = sample_data.assignment(ra.name, TERM)
         for leave_type in LEAVE_TYPES:
             name, days = leave_type.name, entitlement(leave_type, start)
             adjustment, reason = ADJUSTMENTS.get((ra.name, name), (0, ""))
@@ -1134,7 +1134,7 @@ def entitlement_rows() -> tuple[EntitlementRow, ...]:
                 {
                     "ra": ra.name,
                     "email": ra.email,
-                    "neighborhood": slots,
+                    "neighborhoods": slots,
                     "type": name,
                     "entitlement": days,
                     "adjustment": adjustment,
