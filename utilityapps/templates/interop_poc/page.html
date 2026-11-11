@@ -228,10 +228,15 @@
       }));
     }
     document.addEventListener("poc:sent", function (event) {
+      // Another tab may have saved since this one loaded (Codex, #3788).
+      sent = load();
       sent = sent.filter(function (item) { return item.transfer_id !== event.detail.transfer_id; });
       sent.push(event.detail);
       save(sent);
       render();
+    });
+    window.addEventListener("storage", function (event) {
+      if (event.key === KEY) { sent = load(); render(); }
     });
     render();
   })();
