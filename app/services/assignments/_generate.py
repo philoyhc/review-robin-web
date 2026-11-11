@@ -295,11 +295,16 @@ def _diff_one_instrument(
     then applies the diff) and :func:`reconcile_impact` (which only
     sums the counts for the dry-run).
 
-    ``session_rule_set=None`` is the Full Matrix default — used for
-    new-model instruments with no stored Band 1 rule (Wave 4). The engine
-    evaluates a synthetic empty-rules schema and the revision seed
-    falls back to ``0``.
+    ``session_rule_set=None`` is Full Matrix — what all three links set
+    to *All* store (Wave 4). The engine evaluates a synthetic
+    empty-rules schema and the revision seed falls back to ``0``.
+
+    **An instrument with a Band 1 link not set has no pairs** (segment
+    20J): untouched links are no longer a Full Matrix default. Its target
+    is empty, so Generate removes any rows it has, and the staleness
+    verdict reads stale for an instrument that has some.
     """
+    from app.services import instruments as instruments_service
     from app.services.rules import engine
 
     if session_rule_set is None:
@@ -318,6 +323,10 @@ def _diff_one_instrument(
     )
     # The engine hands back the roster rows it was given.
     engine_pairs = cast(list[tuple[Reviewer, Reviewee]], result.pairs)
+    excluded_counts = dict(result.excluded_counts)
+    if instruments_service.band1_links_not_set(instrument):
+        engine_pairs = []
+        excluded_counts = {}
 
     # On a group-scoped instrument, excluding self-reviews rules
     # out the whole group the reviewer is a member of — not just
@@ -338,7 +347,6 @@ def _diff_one_instrument(
     pair_group_key: dict[tuple[int, int], tuple[str, ...]] = {}
     self_review_groups: set[tuple[int, tuple[str, ...]]] = set()
     if instrument.group_kind is not None:
-        from app.services import instruments as instruments_service
         from app.services.responses import group_key_for_pair, is_catch_all_key
 
         boundary = instruments_service.decode_group_kind(instrument.group_kind)
@@ -453,7 +461,7 @@ def _diff_one_instrument(
         to_keep=to_keep,
         responses_deleted=responses_deleted,
         pairs_count=len(new_pairs),
-        excluded_counts=_with_self_review_exclusions(result.excluded_counts, excluded_by_rule),
+        excluded_counts=_with_self_review_exclusions(excluded_counts, excluded_by_rule),
     )
 
 
