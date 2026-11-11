@@ -10,10 +10,99 @@
     <p>Creates a draft session owned by you, with the rosters below. You need to be a Review Robin operator. Either the whole session is created or nothing is; if Review Robin refuses, the reason shows here.</p>
     <p class="note">Nothing else happens: no assignments, no invitations, no email. The draft waits for you in Review Robin.</p>
     <div class="actions">
-      <button class="btn primary" type="button" disabled aria-disabled="true">Create in Review Robin</button>
-      <span class="note">Not wired yet (segment 23A, rung 3).</span>
+      <button class="btn primary" type="button" id="poc-create"
+              data-holding-url="{{ host_url('/reviewrobin/operator/handoffs/new') }}"
+              data-create-url="{{ host_url('/reviewrobin/operator/handoffs/sessions') }}">Create in Review Robin</button>
     </div>
+    <div id="poc-result" role="status" aria-live="polite"></div>
   </div>
+  <script type="application/json" id="poc-bundle">{{ bundle | tojson }}</script>
+  <script>
+  // Segment 23A, rung 3: one click opens a Review Robin tab (during the
+  // click, so no pop-up blocker stops it), posts the bundle, then moves
+  // the tab to the new session. A transfer that never answered keeps its
+  // id, so trying again cannot make a second session.
+  (function () {
+    var button = document.getElementById("poc-create");
+    var result = document.getElementById("poc-result");
+    var base = JSON.parse(document.getElementById("poc-bundle").textContent);
+    var transfer = null;
+    var messages = {
+      not_authorized: "Review Robin did not accept you as an operator. Ask its admin to admit you, then try again.",
+      invalid_setup: "Review Robin refused a roster, so nothing was created.",
+      invalid_package: "Review Robin could not read the bundle.",
+      unsupported_version: "Review Robin does not accept this bundle's version.",
+      session_code_conflict: "That session code is already in use. Try again for a new one.",
+      duplicate_conflict: "Another person already sent this transfer. Reload the page and try again."
+    };
+    function el(tag, text, cls) {
+      var node = document.createElement(tag);
+      if (text) node.textContent = text;
+      if (cls) node.className = cls;
+      return node;
+    }
+    function show(nodes) {
+      result.replaceChildren.apply(result, nodes);
+    }
+    function code() {
+      var d = new Date();
+      function two(n) { return String(n).padStart(2, "0"); }
+      return "POC-" + String(d.getFullYear()).slice(2) + two(d.getMonth() + 1) + two(d.getDate()) +
+        "-" + two(d.getHours()) + two(d.getMinutes()) + two(d.getSeconds());
+    }
+    function refused(tab, error, body) {
+      if (tab && !tab.closed) tab.close();
+      transfer = null;
+      var nodes = [el("p", messages[error] || ("Review Robin answered " + error + "."), "error")];
+      if (body && body.slot) nodes.push(el("p", "File: " + body.slot + ".csv" + (body.reason ? " (" + body.reason + ")" : ""), "note"));
+      if (body && body.details && body.details.length) {
+        var list = el("ul");
+        body.details.forEach(function (line) { list.appendChild(el("li", line)); });
+        nodes.push(list);
+      }
+      show(nodes);
+    }
+    button.addEventListener("click", function () {
+      button.disabled = true;
+      var tab = window.open(button.dataset.holdingUrl, "_blank");
+      if (!transfer) {
+        transfer = Object.assign({}, base, {
+          transfer_id: crypto.randomUUID(),
+          session_suggestion: { name: base.session_suggestion.name, code: code() }
+        });
+      }
+      show([el("p", "Creating the session in Review Robin…", "note")]);
+      fetch(button.dataset.createUrl, {
+        method: "POST",
+        credentials: "same-origin",
+        redirect: "manual",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(transfer)
+      }).then(function (reply) {
+        // The operator gate answers a non-operator with a redirect to /me.
+        if (reply.type === "opaqueredirect" || reply.status === 0) return refused(tab, "not_authorized");
+        return reply.json().catch(function () { return {}; }).then(function (body) {
+          if (!reply.ok || !body.session_home_url) return refused(tab, body.error || String(reply.status), body);
+          transfer = null;
+          var opened = tab && !tab.closed;
+          if (opened) tab.location.href = body.session_home_url;
+          var link = el("a", "Open the session");
+          link.href = body.session_home_url;
+          link.target = "_blank";
+          var line = el("p", (body.status === "already_created" ? "Already created: " : "Created: ") + body.session_code + ". ");
+          line.appendChild(link);
+          show([line, el("p", opened ? "It opened in a new tab." : "The browser blocked the new tab: use the link.", "note")]);
+        });
+      }).catch(function () {
+        if (tab && !tab.closed) tab.close();
+        // The transfer is kept: if Review Robin created it, trying again finds it.
+        show([el("p", "Review Robin did not answer. Try again: the same transfer is sent, so no second session is made.", "error")]);
+      }).finally(function () {
+        button.disabled = false;
+      });
+    });
+  })();
+  </script>
 
   <div class="card" aria-labelledby="exercise-h">
     <h2 id="exercise-h">{{ exercise }}</h2>

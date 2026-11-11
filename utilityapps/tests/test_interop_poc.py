@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 
 import pytest
 from fastapi.testclient import TestClient
@@ -32,9 +33,25 @@ def test_the_page_shows_the_mock_exercise_and_its_files(client: TestClient) -> N
     assert "<code>reviewers.csv</code>" in page.text and "<code>reviewees.csv</code>" in page.text
 
 
-def test_the_button_is_inert_until_rung_3(client: TestClient) -> None:
+def test_the_button_posts_to_review_robins_create_route(client: TestClient) -> None:
     text = client.get(PAGE).text
-    assert '<button class="btn primary" type="button" disabled aria-disabled="true">' in text
+    assert 'id="poc-create"' in text and "disabled" not in text.split('id="poc-create"')[1][:40]
+    assert 'data-holding-url="/reviewrobin/operator/handoffs/new"' in text
+    assert 'data-create-url="/reviewrobin/operator/handoffs/sessions"' in text
+    assert 'redirect: "manual"' in text  # a non-operator's 303 reads as not authorized
+
+
+def test_the_page_carries_the_bundle_less_its_per_click_parts(client: TestClient) -> None:
+    text = client.get(PAGE).text
+    start = text.index('<script type="application/json" id="poc-bundle">') + len(
+        '<script type="application/json" id="poc-bundle">'
+    )
+    bundle = json.loads(text[start : text.index("</script>", start)])
+    assert bundle["protocol"] == "cordware.csv-handoff" and bundle["protocol_version"] == 1
+    assert bundle["operation"] == "reviewrobin.create_draft_session"
+    assert "transfer_id" not in bundle and "code" not in bundle["session_suggestion"]
+    assert set(bundle["files"]) == {"reviewers", "reviewees"}  # rosters only
+    assert "SCH27-0006" in bundle["files"]["reviewees"]
 
 
 def test_the_files_are_review_robins_roster_formats() -> None:
