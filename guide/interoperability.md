@@ -112,6 +112,20 @@ initiate step against mock rosters, before ApplyDesk; the contract is
   brand-new user can race in `get_or_create_user` (`UNIQUE users.email`),
   which a sender's holding tab and post make likelier.
 
+**The reverse flow (23B,** `guide/archive/segment_23B_interop_return.md`**).**
+
+- **Pull, not push.** The sender reads status and results on its
+  operator's view; Review Robin holds no other app's address or
+  credential. A notification (Telegram, Cordware's temp to-do item 22)
+  could later tell an operator to look; it would carry no data.
+- **D4 for the proof of concept:** counts with named denominators,
+  Review Robin's own *complete*, no single percentage
+  (`spec/handoffs.md` §10).
+- **D2 for the proof of concept:** reviewer email, application ID,
+  `InstrumentSeq` and `FieldKey` key an answer; with no answer ID, a fetch
+  is a complete snapshot with an `ETag`. Group-scoped instruments,
+  drafts and correction history are left for ApplyDesk's segment.
+
 ## 5. When the revisit comes
 
 Start from the handoff's §3 reconciliation report against the `main` of

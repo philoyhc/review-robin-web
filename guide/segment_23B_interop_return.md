@@ -35,7 +35,7 @@ The Utilities tool keeps the transfers it created (in the browser, for the proof
 - **Link and permission.** A route resolves `transfer_id` through `session.handoff_created` (`handoffs.prior_transfer`). An unknown transfer, or one whose session is gone, is `404 not_linked`. The caller must operate that session now (`permissions.user_can_view_session`), else `403 not_authorized`, as 23A's replay. An unfinished transfer (no `session.handoff_completed`) is `409 transfer_incomplete`. Both routes answer JSON, `no-store`, under the package gate.
 - **Status** (`status_schema_version` 1): `session_ref`, `session_code`, `name`, lifecycle `state` (the enum) and its display label, `session_home_url`, `as_of`, and counts:
   - `reviewers`, `reviewees`, `instruments`;
-  - `assignments` (obligations), and of those, `assignments_submitted`;
+  - `assignments` (obligations), and of those, ~~`assignments_submitted`~~ `assignments_completed` (Status);
   - `reviewers_assigned`, then of those `reviewers_invited`, `reviewers_opened` and `reviewers_submitted` (`monitoring.summary_counts`).
 
   Every count names its denominator, and there is no single percentage (D4). A read changes nothing: no lazy lifecycle step runs, so status reports what the clock (14E) has already done.
@@ -53,7 +53,7 @@ The Utilities tool keeps the transfers it created (in the browser, for the proof
 ## Judgment calls — decided
 
 - Status is JSON (a projection the page renders); results and completion are CSV, the data ApplyDesk fetches (author, 2026-11-11). Two plain CSVs, not a ZIP: each is fetched same-origin on its own.
-- `results.csv` is a filtered, re-keyed view of `responses.csv`'s rows: the same reads (`serialize_responses`) and its column names where they overlap, but no preamble, `InstrumentSeq` for the positional `InstrumentName`, submitted answers only, no group rows. CSV is the interop spec's payload format (§5.1), and RRW's extract already builds these rows; `responses.csv` itself is unchanged.
+- `results.csv` is a filtered, re-keyed view of `responses.csv`'s rows: the same joins as `serialize_responses` (its own query, Status) and its column names where they overlap, but no preamble, `InstrumentSeq` for the positional `InstrumentName`, submitted answers only, no group rows. CSV is the interop spec's payload format (§5.1), and RRW's extract already builds these rows; `responses.csv` itself is unchanged.
 - The Utilities page keeps its transfers in `localStorage`. Utilities has no database, and ApplyDesk will store the link itself. Clearing the browser loses the list, not the sessions.
 - The routes live in `_handoffs.py` (the holding page's slice): they run no Quick Setup pipeline. The projections are `app/services/handoffs.py` functions over `monitoring` and the response reads.
 
@@ -69,6 +69,18 @@ Taken 2026-11-11 at `732b9ab`.
 | The responses read it sits beside | 1 (`serialize_responses`, `app/services/extracts/responses_extract.py:247`) | `grep -n "def serialize_responses" app/services/extracts/responses_extract.py` |
 | Routes in `_handoffs.py` today | 1 | `grep -n "@router" app/web/routes_operator/_handoffs.py \| wc -l` |
 | Tests to extend | 26 + 7 | `grep -c "^def test_" tests/integration/test_handoffs.py utilityapps/tests/test_interop_poc.py` |
+
+## Status
+
+**Closed 2026-11-11.** The ladder shipped as planned: plan #3784, rung 1 #3785, rung 2 #3786, rung 3 #3787, rung 4 #3788, rung 5 this close.
+
+- **Intended vs done.** As Semantics says, with three divergences:
+  - **`assignments_completed`, not `assignments_submitted`.** Review Robin records submission per answer and per reviewer, not per assignment, so status reports its Monitoring *complete* (every required field answered) and leaves submission to `reviewers_submitted`.
+  - **`results.csv` has its own query** with `serialize_responses`'s joins and names, rather than reusing it: that serializer yields positional, preamble-led, draft-including rows.
+  - **Who is counted.** Both CSVs, like the status, take the included assignments of active reviewers on per-reviewee instruments. A completion row is `submitted` when all its answers are stamped, or when it has none and its reviewer has submitted, as Review Robin records submission.
+- **Verified** in local Chromium with fake auth. Create, then Refresh status shows Draft, 4 reviewers and 6 applications. With 2 submitted answers seeded, Fetch results shows them keyed by `SCH27-0001`, and both downloads. The list survives a reload. Localhost and production checks are the author's.
+- **Reads.** One `diff-reviewer` read of rungs 1–4 (from `b824f22`) found 7. Fixed: completion state mis-reading submission, withdrawn reviewers counted, exact-match `If-None-Match`, a non-array stored list stopping the card, a parallel fetch auditing an unshown CSV, and missing tests. Plan wording was fixed here. The server-side fixes moved into rung 3, where Codex had raised the completion case too; Codex found nothing else across the ladder.
+- **For the author:** values go out as stored, so an answer beginning `=` reaches a spreadsheet as a formula, as in RRW's other extracts.
 
 ## PR ladder
 
