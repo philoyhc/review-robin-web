@@ -244,6 +244,18 @@ def test_policy_appeals_cover_and_approvals() -> None:
     assert "The Master (Sam Lee), personally" in client().get(ADMIN).text
 
 
+def test_entitlements_name_each_ras_neighborhood() -> None:
+    """A Neighborhood column after RA, from the RA's slot, sorting by it
+    groups the RAs by where they are and keeps each RA's rows together
+    (author, 2026-11-11)."""
+    page = client().get(ADMIN + "entitlements").text
+    assert '<th scope="col">RA</th><th scope="col">Neighborhood</th>' in page
+    for row in sample_leave.entitlement_rows():
+        slot = next(s for s in sample_data.SLOTS if row["ra"] in s.ras)
+        assert row["neighborhood"] == slot.neighborhood
+        assert f'data-sort-value="{slot.neighborhood} {row["ra"]}"' in page
+
+
 def test_entitlements_follow_the_policy_rules() -> None:
     page = client().get(ADMIN + "entitlements").text
     rows = {(r["ra"], r["type"]): r for r in sample_leave.entitlement_rows()}

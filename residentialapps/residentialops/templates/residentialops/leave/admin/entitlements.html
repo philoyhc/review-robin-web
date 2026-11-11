@@ -21,11 +21,12 @@
     </div>
     <div class="table-wrap">
       <table data-sort-auto>
-        <thead><tr><th scope="col">RA</th><th scope="col">Leave type</th><th scope="col" class="num">Entitlement</th><th scope="col" class="num">Adjustment</th><th scope="col" class="num">Used</th><th scope="col" class="num">Pending</th><th scope="col" class="num">Available</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+        <thead><tr><th scope="col">RA</th><th scope="col">Neighborhood</th><th scope="col">Leave type</th><th scope="col" class="num">Entitlement</th><th scope="col" class="num">Adjustment</th><th scope="col" class="num">Used</th><th scope="col" class="num">Pending</th><th scope="col" class="num">Available</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
         <tbody>
           {% for row in rows %}
             <tr>
               <td class="strong nowrap group" data-sort-value="{{ row.ra }}">{% if loop.first or loop.previtem.ra != row.ra %}{{ row.ra }}{% else %}<span class="visually-hidden">{{ row.ra }}</span>{% endif %}</td>
+              <td class="nowrap group" data-sort-value="{{ row.neighborhood }} {{ row.ra }}">{% if loop.first or loop.previtem.ra != row.ra %}{{ row.neighborhood }}{% else %}<span class="visually-hidden">{{ row.neighborhood }}</span>{% endif %}</td>
               <td class="nowrap">{{ row.type }}</td>
               <td class="num">{{ row.entitlement }}</td>
               <td class="num" data-sort-value="{{ '%05d' | format(row.adjustment + 10000) }}">{% if row.adjustment %}{{ "%+d" | format(row.adjustment) }}<div class="subtle">{{ row.reason }}</div>{% else %}<span class="subtle">—</span>{% endif %}</td>
