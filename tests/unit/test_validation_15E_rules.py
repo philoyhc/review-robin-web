@@ -5,9 +5,10 @@ replacement.
 Rules covered:
 
 - ``instruments.no_rule_pinned`` — **inert since Wave 5 PR 5.3**: a
-  NULL ``rule_set_id`` is the Full Matrix default, so a missing rule
-  is not a setup gap in itself (the Band 1 "Not set" gate, off-validate,
-  decides readiness). It raised a warning per unpinned
+  NULL ``rule_set_id`` is Full Matrix once the links are set, so a
+  missing rule is not a setup gap in itself (the Band 1 "Not set" gate
+  decides readiness, as ``instruments.band1_not_set`` since segment
+  20J). It raised a warning per unpinned
   instrument when this file was written; the tests below now assert
   its silence, and the bullet said otherwise until 19R Item 6.
 - ``assignments.no_included_pairs`` — warning when sum of

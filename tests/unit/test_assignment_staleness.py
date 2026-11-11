@@ -24,9 +24,10 @@ unavailable:
   have entirely moved.
 - ``test_an_unpinned_full_matrix_instrument_can_go_stale`` — the old
   predicate also required ``rule_id is not None``. Since Wave 5 PR 5.3 a
-  NULL ``rule_set_id`` is the Full Matrix default at the diff site, so
-  unpinned instruments generate like any other and can fall out of step
-  like any other.
+  NULL ``rule_set_id`` is Full Matrix at the diff site once the
+  instrument's Band 1 links are set (segment 20J: with one not set it has
+  no pairs), so unpinned instruments generate like any other and can
+  fall out of step like any other.
 """
 
 from __future__ import annotations
