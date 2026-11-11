@@ -278,6 +278,10 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   overlap; warnings that never block a save say so.
 - **Stat tiles** (`.tiles`, RA Leave admin's dashboard, 2026-10-28): a
   count over its label, each tile a link to the rows it counts.
+- **Banded cards** (`.band`, `.cards-3`, RA Leave admin's dashboard,
+  author, 2026-11-10): a small uppercase band heading a group of cards,
+  three across from 1116 px and two from 736 px as §1's columns, each
+  card ending in a link to where its matter is fixed.
 - **A pair** (`.pair`, RA Home's balance, author, 2026-11-09): two short
   blocks side by side in a card, kept two even on a phone.
 - **A form pair** (`.form-pair`, RA Leave's Apply, author, 2026-11-09):
