@@ -287,6 +287,24 @@ def test_an_unpaired_surrogate_is_refused_not_a_500(client: TestClient, db: Sess
     assert _count(db, ReviewSession) == 0
 
 
+def test_a_nul_character_is_refused_before_any_database_work(
+    client: TestClient, db: Session
+) -> None:
+    """Codex, `#3780`: an escaped NUL is valid UTF-8 that Postgres text
+    columns refuse; in ``source_app`` it failed after the draft committed."""
+    for bundle in (
+        _bundle(source_app="utilities\u0000"),
+        _bundle(session_suggestion={"name": "Bad\u0000", "code": "POC-NUL"}),
+        _bundle(
+            files={"reviewers": REVIEWERS + "Zoe,zoe@example.edu\u0000\r\n", "reviewees": REVIEWEES}
+        ),
+    ):
+        reply = _post(client, bundle)
+        assert reply.status_code == 422 and reply.json()["error"] == "invalid_package", reply.text
+        assert "NUL" in reply.json()["details"][0]
+    assert _count(db, ReviewSession) == 0
+
+
 def test_an_empty_roster_is_refused(client: TestClient, db: Session) -> None:
     bundle = _bundle(files={"reviewers": "ReviewerName,ReviewerEmail\r\n", "reviewees": REVIEWEES})
     reply = _post(client, bundle)

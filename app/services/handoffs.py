@@ -18,8 +18,8 @@ from typing import cast
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, ReviewSession
-from app.services import csv_imports
+from app.db.models import AuditEvent, ReviewSession, User
+from app.services import audit, csv_imports, permissions, unit_of_work
 
 PROTOCOL = "cordware.csv-handoff"
 PROTOCOL_VERSION = 1
@@ -39,13 +39,24 @@ COMPLETED = "session.handoff_completed"
 
 class HandoffError(Exception):
     """A refused handoff: an error code from the interop spec's
-    vocabulary (§7.3), an HTTP status, and lines for the sender to show."""
+    vocabulary (§7.3), an HTTP status, and lines for the sender to show;
+    with the session it concerns, when there is one, and a finer reason."""
 
-    def __init__(self, code: str, status: int, details: list[str] | None = None) -> None:
+    def __init__(
+        self,
+        code: str,
+        status: int,
+        details: list[str] | None = None,
+        *,
+        review_session: ReviewSession | None = None,
+        reason: str | None = None,
+    ) -> None:
         super().__init__(code)
         self.code = code
         self.status = status
         self.details = details or []
+        self.review_session = review_session
+        self.reason = reason
 
 
 @dataclass(frozen=True)
@@ -60,11 +71,15 @@ class Bundle:
 
 def _encoded(value: str, key: str) -> bytes:
     """UTF-8, or :class:`HandoffError`: JSON admits an escaped unpaired
-    surrogate (``\\ud800``) that no UTF-8 text, and no database, holds."""
+    surrogate (``\\ud800``) that no UTF-8 text, and no database, holds, and
+    an escaped NUL (``\\u0000``) that Postgres text columns refuse."""
     try:
-        return value.encode("utf-8")
+        encoded = value.encode("utf-8")
     except UnicodeEncodeError as exc:
         raise HandoffError("invalid_package", 422, [f"`{key}` is not valid Unicode text."]) from exc
+    if b"\x00" in encoded:
+        raise HandoffError("invalid_package", 422, [f"`{key}` holds a NUL character."])
+    return encoded
 
 
 def _text(data: dict[str, object], key: str, limit: int) -> str:
@@ -177,3 +192,93 @@ def rosters_saved(db: Session, review_session: ReviewSession) -> bool:
         csv_imports.existing_reviewer_count(db, review_session.id) > 0
         and csv_imports.existing_reviewee_count(db, review_session.id) > 0
     )
+
+
+def _transfer_context(bundle: Bundle) -> dict[str, str | int | bool]:
+    return {"transfer_id": bundle.transfer_id, "source_app": bundle.source_app}
+
+
+def replayed(db: Session, user: User, bundle: Bundle) -> ReviewSession | None:
+    """The session an earlier create of this transfer made, for a replay
+    to answer ``already_created`` with; ``None`` when the transfer is new.
+
+    Raises :class:`HandoffError` when the replay is refused: another
+    sender's transfer, a session this user may no longer operate (the
+    sender once is not the operator now), or a transfer cut off before its
+    rosters saved, whose draft is left for its operator rather than deleted.
+    A transfer cut off between the roster save and its completion record
+    gets the record here."""
+    prior = prior_transfer(db, bundle.transfer_id)
+    if prior is None:
+        return None
+    if prior.actor_user_id != user.id:
+        raise HandoffError("duplicate_conflict", 409)
+    if not permissions.user_can_view_session(db, user, prior.review_session.id):
+        raise HandoffError("not_authorized", 403)
+    if not prior.completed:
+        if not rosters_saved(db, prior.review_session):
+            raise HandoffError(
+                "transfer_incomplete",
+                409,
+                ["An earlier try of this transfer stopped before its rosters were saved."],
+                review_session=prior.review_session,
+            )
+        record_completed(db, prior.review_session, user, bundle)
+    return prior.review_session
+
+
+def record_created(
+    db: Session,
+    review_session: ReviewSession,
+    user: User,
+    bundle: Bundle,
+    correlation_id: str | None,
+) -> None:
+    """Record the transfer with its new draft, before the rosters, so a
+    retry after anything later finds it. A discarded draft takes the
+    record with it (``sessions.delete_session`` drops its events)."""
+    audit.write_event(
+        db,
+        event_type=EVENT,
+        summary=f"Session {review_session.code} created from {bundle.source_app}",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(files=len(bundle.files)),
+        context=_transfer_context(bundle),
+        correlation_id=correlation_id,
+    )
+    unit_of_work.commit(db)
+
+
+def check_rosters(db: Session, review_session: ReviewSession) -> None:
+    """:class:`HandoffError` unless both rosters hold rows. A handoff
+    carries people to review and to be reviewed, and a roster with no
+    rows also would leave "both rosters saved" not meaning "the save
+    happened" for :func:`replayed`."""
+    if not rosters_saved(db, review_session):
+        raise HandoffError(
+            "invalid_setup",
+            422,
+            ["A handoff needs at least one reviewer and one reviewee."],
+            reason="empty_roster",
+        )
+
+
+def record_completed(
+    db: Session, review_session: ReviewSession, user: User, bundle: Bundle
+) -> None:
+    """The completion record: the rosters have saved. A replay reads it,
+    whatever the rosters hold later."""
+    audit.write_event(
+        db,
+        event_type=COMPLETED,
+        summary=f"Session {review_session.code}: rosters from {bundle.source_app} saved",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(
+            reviewers=csv_imports.existing_reviewer_count(db, review_session.id),
+            reviewees=csv_imports.existing_reviewee_count(db, review_session.id),
+        ),
+        context=_transfer_context(bundle),
+    )
+    unit_of_work.commit(db)

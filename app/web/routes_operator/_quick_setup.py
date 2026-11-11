@@ -42,13 +42,11 @@ from app.schemas.imports import (
 )
 from app.schemas.sessions import SessionCreate
 from app.services import (
-    audit,
     csv_imports,
     date_formatting,
     handoffs,
     held_uploads,
     operator_settings,
-    permissions,
     scheduled_events,
     session_config_io,
     session_guard,
@@ -1530,6 +1528,19 @@ def _handoff_error(
     return JSONResponse(body, status_code=status_code, headers=_HANDOFF_HEADERS)
 
 
+def _session_home(request: Request, review_session: ReviewSession) -> str:
+    return urls.url_path(request, f"/operator/sessions/{review_session.public_id}")
+
+
+def _handoff_refused(request: Request, exc: handoffs.HandoffError) -> JSONResponse:
+    extra: dict[str, str] = {}
+    if exc.reason:
+        extra["reason"] = exc.reason
+    if exc.review_session is not None:
+        extra["session_home_url"] = _session_home(request, exc.review_session)
+    return _handoff_error(exc.code, exc.status, exc.details, **extra)
+
+
 def _handoff_receipt(
     request: Request, review_session: ReviewSession, status_word: str
 ) -> dict[str, str]:
@@ -1537,28 +1548,8 @@ def _handoff_receipt(
         "status": status_word,
         "session_ref": review_session.public_id,
         "session_code": review_session.code,
-        "session_home_url": urls.url_path(
-            request, f"/operator/sessions/{review_session.public_id}"
-        ),
+        "session_home_url": _session_home(request, review_session),
     }
-
-
-def _record_handoff_completed(
-    db: Session, review_session: ReviewSession, user: User, bundle: handoffs.Bundle
-) -> None:
-    audit.write_event(
-        db,
-        event_type=handoffs.COMPLETED,
-        summary=f"Session {review_session.code}: rosters from {bundle.source_app} saved",
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.counts(
-            reviewers=csv_imports.existing_reviewer_count(db, review_session.id),
-            reviewees=csv_imports.existing_reviewee_count(db, review_session.id),
-        ),
-        context={"transfer_id": bundle.transfer_id, "source_app": bundle.source_app},
-    )
-    unit_of_work.commit(db)
 
 
 @router.post("/handoffs/sessions", response_model=None)
@@ -1591,33 +1582,15 @@ async def create_handoff_session(
     try:
         bundle = handoffs.parse_bundle(body)
     except handoffs.HandoffError as exc:
-        return _handoff_error(exc.code, exc.status, exc.details)
+        return _handoff_refused(request, exc)
 
-    prior = handoffs.prior_transfer(db, bundle.transfer_id)
+    try:
+        prior = handoffs.replayed(db, user, bundle)
+    except handoffs.HandoffError as exc:
+        return _handoff_refused(request, exc)
     if prior is not None:
-        # A replay answers only for whoever may operate that session now,
-        # not for whoever sent the transfer once (Codex, #3780).
-        if prior.actor_user_id != user.id:
-            return _handoff_error("duplicate_conflict", status.HTTP_409_CONFLICT)
-        if not permissions.user_can_view_session(db, user, prior.review_session.id):
-            return _handoff_error("not_authorized", status.HTTP_403_FORBIDDEN)
-        if not prior.completed and handoffs.rosters_saved(db, prior.review_session):
-            # Cut off between the roster save and its record: record it.
-            _record_handoff_completed(db, prior.review_session, user, bundle)
-        elif not prior.completed:
-            # Cut off before the rosters saved. Nothing is deleted on a
-            # replay: the sender is told, and its next try is a new transfer.
-            return _handoff_error(
-                "transfer_incomplete",
-                status.HTTP_409_CONFLICT,
-                ["An earlier try of this transfer stopped before its rosters were saved."],
-                session_home_url=urls.url_path(
-                    request, f"/operator/sessions/{prior.review_session.public_id}"
-                ),
-            )
         return JSONResponse(
-            _handoff_receipt(request, prior.review_session, "already_created"),
-            headers=_HANDOFF_HEADERS,
+            _handoff_receipt(request, prior, "already_created"), headers=_HANDOFF_HEADERS
         )
     try:
         sessions.ensure_code_available(db, bundle.code)
@@ -1638,20 +1611,7 @@ async def create_handoff_session(
     review_session = sessions.create_session(
         db, user=user, payload=payload, correlation_id=correlation_id
     )
-    # The transfer is recorded with the draft, before the rosters, so a
-    # retry after anything below finds it; a discarded draft takes the
-    # record with it (``delete_session`` drops its events).
-    audit.write_event(
-        db,
-        event_type=handoffs.EVENT,
-        summary=f"Session {review_session.code} created from {bundle.source_app}",
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.counts(files=len(bundle.files)),
-        context={"transfer_id": bundle.transfer_id, "source_app": bundle.source_app},
-        correlation_id=correlation_id,
-    )
-    unit_of_work.commit(db)
+    handoffs.record_created(db, review_session, user, bundle, correlation_id)
 
     def discard() -> None:
         # All or nothing (author, 2026-11-11): the draft goes with its
@@ -1694,18 +1654,12 @@ async def create_handoff_session(
             slot=refusal.kind,
             reason=refusal.failure.reason,
         )
-    if not handoffs.rosters_saved(db, review_session):
-        # A handoff carries people to review and to be reviewed: a roster
-        # with no rows is refused. It also keeps "both rosters saved"
-        # meaning "the save happened" for the replay above.
+    try:
+        handoffs.check_rosters(db, review_session)
+    except handoffs.HandoffError as exc:
         discard()
-        return _handoff_error(
-            "invalid_setup",
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-            ["A handoff needs at least one reviewer and one reviewee."],
-            reason="empty_roster",
-        )
-    _record_handoff_completed(db, review_session, user, bundle)
+        return _handoff_refused(request, exc)
+    handoffs.record_completed(db, review_session, user, bundle)
     return JSONResponse(
         _handoff_receipt(request, review_session, "created"),
         status_code=status.HTTP_201_CREATED,
