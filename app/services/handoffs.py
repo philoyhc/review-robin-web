@@ -29,9 +29,12 @@ MAX_BYTES = 1024 * 1024
 #: Rosters only (interop spec §13.1): no Settings file.
 REQUIRED_FILES = ("reviewers", "reviewees")
 OPTIONAL_FILES = ("relationships", "observers")
-#: The audit event a successful create writes; its ``context`` carries
-#: the transfer, which is how a replay is recognized.
+#: The audit event written with the draft, before its rosters; its
+#: ``context`` carries the transfer, which is how a replay is recognized.
 EVENT = "session.handoff_created"
+#: Written once the rosters have saved: the mark of a complete transfer,
+#: independent of what the rosters hold later (an operator may clear one).
+COMPLETED = "session.handoff_completed"
 
 
 class HandoffError(Exception):
@@ -137,31 +140,39 @@ def parse_bundle(body: bytes) -> Bundle:
 class Prior:
     review_session: ReviewSession
     actor_user_id: int | None
+    completed: bool
+
+
+def _transfer_of(event: AuditEvent) -> object:
+    detail: dict[str, object] = event.detail or {}
+    context = detail.get("context")
+    if not isinstance(context, dict):
+        return None
+    return cast(dict[str, object], context).get("transfer_id")
 
 
 def prior_transfer(db: Session, transfer_id: str) -> Prior | None:
     """The session an earlier create of this transfer made, if it still
-    exists. Read from the audit events, so the proof of concept needs
-    no table of its own."""
+    exists, and whether that create completed. Read from the audit
+    events, so the proof of concept needs no table of its own."""
     events = db.scalars(
-        select(AuditEvent).where(AuditEvent.event_type == EVENT).order_by(AuditEvent.id)
+        select(AuditEvent)
+        .where(AuditEvent.event_type.in_((EVENT, COMPLETED)))
+        .order_by(AuditEvent.id)
     ).all()
-    for event in events:
-        detail: dict[str, object] = event.detail or {}
-        context = detail.get("context")
-        if not isinstance(context, dict):
-            continue
-        found = cast(dict[str, object], context).get("transfer_id")
-        if found == transfer_id and event.session is not None:
-            return Prior(event.session, event.actor_user_id)
-    return None
+    mine = [e for e in events if _transfer_of(e) == transfer_id and e.session is not None]
+    created = next((e for e in mine if e.event_type == EVENT), None)
+    if created is None or created.session is None:
+        return None
+    completed = any(e.event_type == COMPLETED and e.session_id == created.session_id for e in mine)
+    return Prior(created.session, created.actor_user_id, completed)
 
 
 def rosters_saved(db: Session, review_session: ReviewSession) -> bool:
-    """Both rosters hold rows: the mark of a complete handoff create. Quick
-    Setup saves every slot in one unit, and the route refuses an empty
-    roster, so a recorded transfer whose session has neither was cut off
-    before its rosters saved."""
+    """Both rosters hold rows. Quick Setup saves every slot in one unit,
+    so a create whose completion was never recorded but whose rosters are
+    here was cut off between that save and the record; one with neither
+    was cut off before the save."""
     return (
         csv_imports.existing_reviewer_count(db, review_session.id) > 0
         and csv_imports.existing_reviewee_count(db, review_session.id) > 0

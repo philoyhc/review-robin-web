@@ -24,6 +24,7 @@ from app.db.models import (
     Reviewee,
     Reviewer,
     ReviewSession,
+    SessionOperator,
 )
 from app.web import views
 from app.web.routes_operator import _quick_setup
@@ -294,11 +295,12 @@ def test_an_empty_roster_is_refused(client: TestClient, db: Session) -> None:
     assert _count(db, ReviewSession) == 0
 
 
-def test_a_replay_of_a_transfer_cut_off_before_its_rosters_creates_it_again(
+def test_a_replay_of_a_transfer_cut_off_before_its_rosters_deletes_nothing(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Codex, `#3780`: a cancelled request leaves its draft and transfer
-    record but no rosters. Its retry must not answer already_created."""
+    record but no rosters. Its retry is told so, with the draft's link,
+    and nothing is deleted; the sender's next try is a new transfer."""
     bundle = _bundle()
 
     class CutOff(BaseException):
@@ -311,10 +313,77 @@ def test_a_replay_of_a_transfer_cut_off_before_its_rosters_creates_it_again(
     monkeypatch.setattr(_quick_setup, "_run_quick_setup_contents", cut_off)
     with pytest.raises(BaseException):  # noqa: B017 -- the test client's wrapping varies
         _post(client, bundle)
-    assert _count(db, ReviewSession) == 1 and _count(db, Reviewer) == 0  # the leftover
     monkeypatch.undo()
     retry = _post(client, bundle)
-    assert retry.status_code == 201, retry.text
-    assert retry.json()["status"] == "created"
+    assert retry.status_code == 409 and retry.json()["error"] == "transfer_incomplete"
+    assert retry.json()["session_home_url"].startswith("/operator/sessions/")
+    assert _count(db, ReviewSession) == 1  # the leftover stays, for its operator
+    fresh = _post(client, _bundle(session_suggestion={"name": "Again", "code": "POC-AGAIN"}))
+    assert fresh.status_code == 201
+
+
+def test_a_replay_after_the_operator_cleared_a_roster_is_still_already_created(
+    client: TestClient, db: Session
+) -> None:
+    """Codex, `#3780`: completion is recorded, not read from what the
+    rosters hold now."""
+    bundle = _bundle()
+    first = _post(client, bundle).json()
+    for row in db.scalars(select(Reviewer)).all():
+        db.delete(row)
+    db.commit()
+    again = _post(client, bundle)
+    assert again.status_code == 200 and again.json()["status"] == "already_created"
+    assert again.json()["session_ref"] == first["session_ref"]
     assert _count(db, ReviewSession) == 1
-    assert _count(db, Reviewer) == 2 and _count(db, Reviewee) == 3
+
+
+def test_a_replay_needs_the_session_now(
+    client: TestClient,
+    db: Session,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+    alice: AuthenticatedUser,
+) -> None:
+    """Codex, `#3780`: the original sender, since removed from the
+    session, gets no receipt for it."""
+    bundle = _bundle()
+    assert _post(client, bundle).status_code == 201
+    for row in db.scalars(select(SessionOperator)).all():
+        db.delete(row)
+    db.commit()
+    reply = _post(make_client(alice), bundle)
+    assert reply.status_code == 403 and reply.json()["error"] == "not_authorized"
+    assert _count(db, ReviewSession) == 1
+
+
+def test_a_completed_create_records_its_completion(client: TestClient, db: Session) -> None:
+    assert _post(client, _bundle()).status_code == 201
+    done = db.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == "session.handoff_completed")
+    ).one()
+    assert done.detail is not None
+    assert done.detail["counts"] == {"reviewers": 2, "reviewees": 3}
+
+
+def test_a_replay_cut_off_after_its_rosters_saved_completes_it(
+    client: TestClient, db: Session
+) -> None:
+    """The rosters saved but the completion was never recorded: the
+    replay records it and answers already_created."""
+    bundle = _bundle()
+    first = _post(client, bundle).json()
+    for event in db.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == "session.handoff_completed")
+    ).all():
+        db.delete(event)
+    db.commit()
+    again = _post(client, bundle)
+    assert again.status_code == 200 and again.json()["session_ref"] == first["session_ref"]
+    assert (
+        db.scalar(
+            select(func.count())
+            .select_from(AuditEvent)
+            .where(AuditEvent.event_type == "session.handoff_completed")
+        )
+        == 1
+    )

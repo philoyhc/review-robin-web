@@ -48,6 +48,7 @@ from app.services import (
     handoffs,
     held_uploads,
     operator_settings,
+    permissions,
     scheduled_events,
     session_config_io,
     session_guard,
@@ -1542,6 +1543,24 @@ def _handoff_receipt(
     }
 
 
+def _record_handoff_completed(
+    db: Session, review_session: ReviewSession, user: User, bundle: handoffs.Bundle
+) -> None:
+    audit.write_event(
+        db,
+        event_type=handoffs.COMPLETED,
+        summary=f"Session {review_session.code}: rosters from {bundle.source_app} saved",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(
+            reviewers=csv_imports.existing_reviewer_count(db, review_session.id),
+            reviewees=csv_imports.existing_reviewee_count(db, review_session.id),
+        ),
+        context={"transfer_id": bundle.transfer_id, "source_app": bundle.source_app},
+    )
+    unit_of_work.commit(db)
+
+
 @router.post("/handoffs/sessions", response_model=None)
 async def create_handoff_session(
     request: Request,
@@ -1576,18 +1595,30 @@ async def create_handoff_session(
 
     prior = handoffs.prior_transfer(db, bundle.transfer_id)
     if prior is not None:
+        # A replay answers only for whoever may operate that session now,
+        # not for whoever sent the transfer once (Codex, #3780).
         if prior.actor_user_id != user.id:
             return _handoff_error("duplicate_conflict", status.HTTP_409_CONFLICT)
-        if handoffs.rosters_saved(db, prior.review_session):
-            return JSONResponse(
-                _handoff_receipt(request, prior.review_session, "already_created"),
-                headers=_HANDOFF_HEADERS,
+        if not permissions.user_can_view_session(db, user, prior.review_session.id):
+            return _handoff_error("not_authorized", status.HTTP_403_FORBIDDEN)
+        if not prior.completed and handoffs.rosters_saved(db, prior.review_session):
+            # Cut off between the roster save and its record: record it.
+            _record_handoff_completed(db, prior.review_session, user, bundle)
+        elif not prior.completed:
+            # Cut off before the rosters saved. Nothing is deleted on a
+            # replay: the sender is told, and its next try is a new transfer.
+            return _handoff_error(
+                "transfer_incomplete",
+                status.HTTP_409_CONFLICT,
+                ["An earlier try of this transfer stopped before its rosters were saved."],
+                session_home_url=urls.url_path(
+                    request, f"/operator/sessions/{prior.review_session.public_id}"
+                ),
             )
-        # Recorded but never populated: the request that made it was cut
-        # off before its rosters saved (cancelled, or the worker gone). A
-        # complete create always has both rosters (below), so this draft
-        # is that transfer's leftover: discarded, and the create runs again.
-        sessions.delete_session(db, review_session=prior.review_session, user=user)
+        return JSONResponse(
+            _handoff_receipt(request, prior.review_session, "already_created"),
+            headers=_HANDOFF_HEADERS,
+        )
     try:
         sessions.ensure_code_available(db, bundle.code)
     except sessions.SessionCodeTakenError:
@@ -1665,8 +1696,8 @@ async def create_handoff_session(
         )
     if not handoffs.rosters_saved(db, review_session):
         # A handoff carries people to review and to be reviewed: a roster
-        # with no rows is refused, which also keeps "both rosters saved"
-        # the mark of a complete create for the replay above.
+        # with no rows is refused. It also keeps "both rosters saved"
+        # meaning "the save happened" for the replay above.
         discard()
         return _handoff_error(
             "invalid_setup",
@@ -1674,6 +1705,7 @@ async def create_handoff_session(
             ["A handoff needs at least one reviewer and one reviewee."],
             reason="empty_roster",
         )
+    _record_handoff_completed(db, review_session, user, bundle)
     return JSONResponse(
         _handoff_receipt(request, review_session, "created"),
         status_code=status.HTTP_201_CREATED,
