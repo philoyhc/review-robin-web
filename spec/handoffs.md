@@ -1,7 +1,8 @@
 # Handoffs from another Cordware application
 
 **Status:** shipped in segment 23A (`guide/archive/segment_23A_interop_poc.md`),
-as the interoperability proof of concept. The design it tries out is
+as the interoperability proof of concept; the reads back to the sender
+(§10) in segment 23B (`guide/archive/segment_23B_interop_return.md`). The design it tries out is
 `cordware/docs/cordware_interoperability_consolidated_spec_v0.3.md`
 ("the interop spec"); this file is the contract Review Robin actually
 offers. The only sender today is Utilities' *Interop proof of concept*
@@ -131,11 +132,81 @@ after any other refusal it starts a new transfer.
 |---|---|---|
 | `session.handoff_created` | `counts(files=n)`, `context` `{transfer_id, source_app}` | with the draft, before its rosters |
 | `session.handoff_completed` | `counts(reviewers, reviewees)`, same `context` | once the rosters have saved, or on the replay that finds them saved |
+| `session.handoff_results_exported` | `counts(rows)`, `context` `{transfer_id, file, etag}` | a `results.csv` or `completion.csv` fetched (§10); a `304` writes nothing |
 
-Both are registered in `EVENT_SCHEMAS`. The draft's own `session.created`
-and the roster saves' events are written as for New session.
+All three are registered in `EVENT_SCHEMAS`. The draft's own
+`session.created` and the roster saves' events are written as for New
+session. A status read writes nothing: reads never audit.
 
 ## 9. Tests
 
-`tests/integration/test_handoffs.py` (the route), and
+`tests/integration/test_handoffs.py` (the routes), and
 `utilityapps/tests/test_interop_poc.py` (the sender's page and bundle).
+
+## 10. Reading back: status and results
+
+The reverse flow (segment 23B): the sender pulls, on its operator's view,
+over the same transport (§1). Nothing is pushed: Review Robin calls no
+other application.
+
+| Route | Answers |
+|---|---|
+| `GET /operator/handoffs/{transfer_id}/status` | JSON: the live status |
+| `GET /operator/handoffs/{transfer_id}/results.csv` | the submitted answers |
+| `GET /operator/handoffs/{transfer_id}/completion.csv` | where each assignment stands |
+
+**Link and permission.** Each route is keyed by the transfer, never a free
+session reference, so a sender reads only what its own handoff made
+(interop spec §6.6; `handoffs.linked`):
+
+- an unknown transfer, or a malformed one, is `404 not_linked`;
+- the caller must operate the session now
+  (`permissions.user_can_view_session`), else `403 not_authorized`;
+- a transfer that never completed (§6) is `409 transfer_incomplete`, with
+  its draft's `session_home_url`.
+
+Refusals are §7's JSON. Every answer is `no-store`, under the package gate.
+
+**Status** (`status_schema_version` 1): `session_ref`, `session_code`,
+`name`, the lifecycle `state` (the enum) and `state_label` (as Review
+Robin shows it), `session_home_url` and `as_of`. Its counts name their
+denominators; there is no single percentage (interop spec D4):
+
+- `reviewers`, `reviewees`: the rosters; `instruments`, and of those
+  `group_instruments`;
+- `assignments`: the included assignments of active reviewers, and of
+  those `assignments_completed`, Review Robin's own *complete*: every
+  required field answered, saved or submitted (the reviewer-side rollup,
+  `monitoring.per_reviewer_progress`);
+- `reviewers_assigned`: active reviewers with assignments, and of those
+  `reviewers_invited`, `reviewers_opened`, `reviewers_submitted`.
+
+A read changes nothing: no lifecycle step runs, so it reports what the
+clock has already done.
+
+**The CSVs** (UTF-8, `text/csv`). Both take the assignments the status
+counts, on per-reviewee instruments: group-scoped instruments are left
+out, since a group's meaning for one application is undefined (interop
+spec §6.5).
+
+- `results.csv`: one row per **submitted** answer (saved drafts are left
+  out), values as stored. Its columns borrow `responses.csv`'s names:
+  `ReviewerEmail`, `RevieweeEmail` (the application ID), `InstrumentSeq`
+  (`Instrument.session_seq`, stable where `responses.csv`'s
+  `InstrumentName` is positional), `InstrumentLabel`, `FieldKey`,
+  `FieldLabel`, `ResponseType`, `Value`, `SubmittedAt` (the session's
+  zone). No preamble. An answer has no ID of its own (`Version` resets
+  after a clear), so a fetch is a complete snapshot: a receiver reconciles
+  on reviewer, application, instrument and field.
+- `completion.csv`: one row per assignment, `ReviewerEmail`,
+  `RevieweeEmail`, `InstrumentSeq`, `State`:
+  - `submitted`: its answers are all submitted, or it has none and its
+    reviewer has submitted (optional fields left blank leave no rows);
+  - `in_progress`: it has answers, not all submitted (an edit after a
+    submit clears that answer's stamp);
+  - `not_started`: neither.
+
+**Snapshot identity.** Each CSV carries an `ETag` (SHA-256 of its bytes)
+and `X-Review-Robin-As-Of`. `If-None-Match` naming that tag (a list, a
+weak `W/` tag, or `*`) answers `304`: the interop spec's *Already up to
+date*. The download name is `<code>_results.csv` / `<code>_completion.csv`.
