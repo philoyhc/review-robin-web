@@ -36,7 +36,9 @@ from app.db.models import (
     Reviewee,
     Reviewer,
     ReviewSession,
+    User,
 )
+from app.services import handoffs
 
 from ._answer_form import answer_form
 
@@ -240,6 +242,7 @@ class Visit:
 _PAGE = (Visit("alice", 200),)
 _EVERY_STATE = tuple(Visit("alice", 200, phase) for phase in (_DRAFT, _LIVE, _RELEASED))
 _SESSION = "/operator/sessions/{session_id}"
+_TRANSFER = "6f1c2a3e-0d4b-4e8a-9b7c-1a2b3c4d5e6f"
 _EXPORTS = (
     "audit_log.csv",
     "bundle.zip",
@@ -299,6 +302,7 @@ ROUTES: dict[str, tuple[Visit, ...]] = {
     "/operator/sessions": _PAGE,
     "/operator/sessions/archived": _PAGE,
     "/operator/handoffs/new": _PAGE,
+    "/operator/handoffs/{transfer_id}/status": _EVERY_STATE,
     "/operator/sessions/new": _PAGE,
     "/operator/sessions/rehydrate": _PAGE,
     # Its token names the dropped rows a rehydrate commit stashes; the
@@ -393,6 +397,13 @@ def _seed_draft(client: TestClient, db: Session) -> tuple[ReviewSession, dict[st
         )
     )
     db.commit()
+    # Segment 23B: the seeded session as a handoff made it, so the reverse
+    # flow's reads answer it rather than refusing an unlinked transfer.
+    creator = db.get(User, review_session.created_by_user_id)
+    assert creator is not None
+    handoff = handoffs.Bundle(_TRANSFER, "crawl", review_session.name, review_session.code, {})
+    handoffs.record_created(db, review_session, creator, handoff, None)
+    handoffs.record_completed(db, review_session, creator, handoff)
     instrument = _first(db, Instrument, review_session)
     return review_session, {
         "session_id": sid,
@@ -402,6 +413,7 @@ def _seed_draft(client: TestClient, db: Session) -> tuple[ReviewSession, dict[st
         "reviewer_id": str(_first(db, Reviewer, review_session).id),
         "reviewee_id": str(_first(db, Reviewee, review_session).id),
         "shape_id": str(_first(db, DataShape, review_session).id),
+        "transfer_id": _TRANSFER,
     }
 
 

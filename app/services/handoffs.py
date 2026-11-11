@@ -16,11 +16,12 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import cast
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, ReviewSession, User
-from app.services import audit, csv_imports, permissions, unit_of_work
+from app.db.models import AuditEvent, Instrument, ReviewSession, User
+from app.services import audit, csv_imports, monitoring, permissions, unit_of_work
+from app.services.lifecycle_display import lifecycle_display_label
 
 PROTOCOL = "cordware.csv-handoff"
 PROTOCOL_VERSION = 1
@@ -306,3 +307,73 @@ def record_completed(
         context=_transfer_context(bundle),
     )
     unit_of_work.commit(db)
+
+
+#: The status projection's shape; a sender reads this before the counts.
+STATUS_SCHEMA_VERSION = 1
+
+
+def linked(db: Session, user: User, transfer_id: str) -> ReviewSession:
+    """The session a completed handoff made, for the reverse flow's reads
+    (segment 23B), or :class:`HandoffError`. A sender names its transfer,
+    never a free session reference, so it reads only what its own handoff
+    made (interop spec §6.6); the caller must operate that session now."""
+    try:
+        uuid.UUID(transfer_id)
+    except ValueError:
+        raise HandoffError("not_linked", 404) from None
+    prior = prior_transfer(db, transfer_id)
+    if prior is None:
+        raise HandoffError("not_linked", 404)
+    if not permissions.user_can_view_session(db, user, prior.review_session.id):
+        raise HandoffError("not_authorized", 403)
+    if not prior.completed:
+        raise HandoffError(
+            "transfer_incomplete",
+            409,
+            ["This transfer did not finish, so its session has nothing to report."],
+            review_session=prior.review_session,
+        )
+    return prior.review_session
+
+
+def status(db: Session, review_session: ReviewSession) -> dict[str, object]:
+    """The live status a sender shows (interop spec §6.4, D4): the
+    lifecycle state and counts, each with its denominator named, no single
+    percentage and no answers. Reads only: no lifecycle step runs here."""
+    progress = monitoring.per_reviewer_progress(db, review_session)
+    summary = monitoring.summarize(progress)
+    instruments = db.scalar(
+        select(func.count())
+        .select_from(Instrument)
+        .where(Instrument.session_id == review_session.id)
+    )
+    group_instruments = db.scalar(
+        select(func.count())
+        .select_from(Instrument)
+        .where(Instrument.session_id == review_session.id, Instrument.group_kind.is_not(None))
+    )
+    return {
+        "status_schema_version": STATUS_SCHEMA_VERSION,
+        "session_ref": review_session.public_id,
+        "session_code": review_session.code,
+        "name": review_session.name,
+        "state": review_session.status,
+        "state_label": lifecycle_display_label(review_session.status),
+        "as_of": datetime.now(UTC).isoformat(timespec="seconds"),
+        "counts": {
+            "reviewers": csv_imports.existing_reviewer_count(db, review_session.id),
+            "reviewees": csv_imports.existing_reviewee_count(db, review_session.id),
+            "instruments": instruments or 0,
+            "group_instruments": group_instruments or 0,
+            # Of the active reviewers' included assignments; "completed"
+            # is Review Robin's own: every required field answered.
+            "assignments": sum(p.assignment_count for p in progress),
+            "assignments_completed": sum(p.completed_count for p in progress),
+            # Of the reviewers with assignments.
+            "reviewers_assigned": summary.assigned,
+            "reviewers_invited": summary.invited,
+            "reviewers_opened": summary.opened,
+            "reviewers_submitted": summary.submitted,
+        },
+    }
