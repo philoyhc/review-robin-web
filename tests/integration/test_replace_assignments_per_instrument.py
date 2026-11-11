@@ -81,10 +81,12 @@ def _seed_two_instruments(
     )
     db.flush()
     inst_a = ensure_default_instrument(db, review_session)
+    inst_a.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     inst_b = Instrument(
         session_id=review_session.id,
         name="Peer survey",
         order=2,
+        band1_touched_links=["link1", "link2", "link3"],  # set up (20J)
     )
     db.add(inst_b)
     db.flush()
@@ -236,6 +238,7 @@ def _seed_self_review_session(
     )
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     rule_set = SessionRuleSet(
         session_id=review_session.id,
         name="Full Matrix",

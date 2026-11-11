@@ -108,6 +108,7 @@ def _seed(
     )
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     rule_set = SessionRuleSet(
         session_id=review_session.id,
         name="Link",
@@ -348,6 +349,7 @@ def test_the_blank_boundary_group_is_never_the_reviewers_own(
     )
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     instrument.group_kind = "r1"
     db.flush()
 
@@ -397,6 +399,7 @@ def test_generate_includes_the_blank_boundary_group_with_self_reviews_off(
     )
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     instrument.group_kind = "r1"
     db.flush()
 

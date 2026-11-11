@@ -311,7 +311,8 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         severity=Severity.warning,
         why=(
             "Retired: this check raises no findings. An instrument "
-            "with no assignment rules uses Full Matrix, so a missing "
+            "whose links are all set to All stores no rule and uses "
+            "Full Matrix, so a missing "
             "rule is not a problem in itself. Whether the instrument "
             "is ready is checked by the visible-response-fields "
             "and the assignment-rule-links checks. It stays listed "

@@ -98,6 +98,7 @@ def _seed(db: Session) -> tuple[User, ReviewSession]:
     db.add(full_matrix)
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     instrument.rule_set_id = full_matrix.id
     db.flush()
     return user, review_session

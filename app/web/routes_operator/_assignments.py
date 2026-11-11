@@ -392,8 +392,9 @@ def assignments_generate(
     """Generate the session's assignments, every instrument at once.
 
     ``replace_assignments(instrument_id=None)`` runs each instrument's
-    pinned rule set; an instrument with no ``rule_set_id`` runs the
-    Full Matrix default. Existing rows are replaced wholesale, so once
+    pinned rule set; an instrument with no ``rule_set_id`` runs Full
+    Matrix, and one with a Band 1 link not set generates nothing
+    (segment 20J). Existing rows are replaced wholesale, so once
     the session has rows the POST needs ``confirm_replace=true`` (else
     a 303 back to the page with ``?needs_confirm=1``) and, when any
     response exists, ``acknowledge_response_loss=true``. No page form

@@ -39,6 +39,7 @@ from app.services.setup_templates import (
 from app.web import views
 from cordware.settings import IdentitySettings
 
+from ._full_matrix import mark_band1_touched_on_all_instruments
 from ._lookups import must_get
 
 app = rrw_app()
@@ -338,6 +339,9 @@ def test_the_demo_set_populates_the_surfaces_it_is_meant_to_show(
         },
         follow_redirects=False,
     )
+    # The operator sets the default instrument's links before Prepare: the
+    # set carries no rule, and untouched links generate nothing (20J).
+    mark_band1_touched_on_all_instruments(db, session_id)
     client.post(
         f"/operator/sessions/{public_id}/workflow/prepare",
         follow_redirects=False,

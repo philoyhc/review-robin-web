@@ -883,10 +883,9 @@ def is_configured(db: Session, instrument: Instrument) -> bool:
     - all three Band 1 link pills (Pool of reviewers / Pool of
       those reviewed / Unit of review) deliberately clicked into
       a set state — see ``Instrument.band1_touched_links`` for
-      the "Not set" pill safety gate. Untouched links still default
-      to Full Matrix at evaluate time (Wave 4 PR 1); the gate
-      forces the operator to acknowledge them on the card before
-      the workflow card lights up as ready.
+      the "Not set" pill safety gate. An instrument with a link not
+      set generates nothing (segment 20J), and Validate refuses it
+      (``instruments.band1_not_set``).
     """
     visible_count = (
         db.scalar(

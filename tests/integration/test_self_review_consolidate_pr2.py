@@ -105,6 +105,7 @@ def test_regenerate_populates_is_self_review_on_fresh_rows(
     db.add(full_matrix)
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     instrument.rule_set_id = full_matrix.id
     db.flush()
 
@@ -187,6 +188,7 @@ def test_create_instrument_writes_no_assignment_rows(
     db.flush()
 
     source = ensure_default_instrument(db, review_session)
+    source.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     db.add(
         Assignment(
             session_id=review_session.id,
@@ -233,6 +235,7 @@ def test_replicate_instrument_writes_no_assignment_rows(
     db.add_all([alice_r, alice_e])
     db.flush()
     source = ensure_default_instrument(db, review_session)
+    source.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     db.add(
         Assignment(
             session_id=review_session.id,
@@ -270,6 +273,7 @@ def test_reviewer_email_change_recomputes_is_self_review(
     db.add_all([alice_r, alice_e])
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     assignment = Assignment(
         session_id=review_session.id,
         reviewer_id=alice_r.id,
@@ -305,6 +309,7 @@ def test_reviewee_identifier_change_recomputes_is_self_review(
     db.add_all([alice_r, alice_e])
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     assignment = Assignment(
         session_id=review_session.id,
         reviewer_id=alice_r.id,
@@ -356,6 +361,7 @@ def test_reviewee_tag_change_recomputes_is_self_review(
     db.flush()
     # Group-scoped instrument on tag_1.
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     instrument.group_kind = encode_group_kind([("reviewee", "tag_1")])
     db.flush()
     a_alice = Assignment(
@@ -422,6 +428,7 @@ def test_set_group_boundary_recomputes_is_self_review(
     # containing Alice and Carol; Alice's review of either row is
     # in a group Alice is a member of → both self-review.
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     instrument.group_kind = "both"
     db.flush()
     a_alice = Assignment(
@@ -481,6 +488,7 @@ def test_set_unit_of_review_recomputes_is_self_review(
     db.flush()
     # Individual-scoped instrument: only (Alice, Alice) is self-review.
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     a_alice = Assignment(
         session_id=review_session.id,
         reviewer_id=alice_r.id,
@@ -536,6 +544,7 @@ def test_recompute_returns_zero_when_nothing_changed(
     db.add_all([alice_r, alice_e])
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     db.add(
         Assignment(
             session_id=review_session.id,

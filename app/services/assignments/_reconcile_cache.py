@@ -30,8 +30,9 @@ Four groups of inputs, and one non-input:
    directly.
 4. **The instrument settings** the diff consults: ``rule_set_id``,
    ``group_kind``, ``self_reviews_active`` (the instrument's, since
-   findings E3; the session's only seeds a new instrument's), and the
-   caller's ``override_exclude_self_reviews``.
+   findings E3; the session's only seeds a new instrument's), whether
+   its three Band 1 links are set (segment 20J: one not set means no
+   pairs), and the caller's ``override_exclude_self_reviews``.
 
 And the non-input: **the materialized rows themselves**. The verdict is
 a *diff* against the instrument's existing ``Assignment`` rows, so
@@ -62,6 +63,7 @@ from app.db.models import (
     ReviewSession,
     SessionRuleSet,
 )
+from app.services.instruments import band1_links_not_set
 from app.services.rules.fields import FIELD_MAP
 
 #: Prefix on every stamp. Bump it when the *shape* below changes, so a
@@ -77,8 +79,10 @@ from app.services.rules.fields import FIELD_MAP
 #: counting as the reviewer's own. ``v5`` (2026-10-22, findings E1): a
 #: disabled Composite child, or a Composite with none enabled, stopped
 #: applying. ``v6`` (2026-10-31, segment 21F): self-review compares
-#: directory accounts, and the roster digest carries them.
-STAMP_VERSION = "v6"
+#: directory accounts, and the roster digest carries them. ``v7``
+#: (2026-11-11, segment 20J): an instrument with a Band 1 link not set
+#: has no pairs, and the stamp carries whether its links are set.
+STAMP_VERSION = "v7"
 
 
 @dataclass(frozen=True)
@@ -217,8 +221,8 @@ def _pair_context_digest(
 
 def _rule_set_digest(rule_set: SessionRuleSet | None) -> Any:
     """Everything the engine reads off the pinned rule, or ``None`` for
-    an unpinned instrument — which is the Full Matrix default at the
-    diff site, not an absence.
+    an unpinned instrument — which is Full Matrix at the diff site
+    (all links *All*), not an absence.
 
     The field list is *what the readers read*: ``id``, ``name``,
     ``description``, ``combinator``, ``rules_json`` and ``seed`` reach
@@ -278,6 +282,7 @@ def reconcile_stamp(
             "rule_set_id": instrument.rule_set_id,
             "group_kind": instrument.group_kind,
             "self_reviews_active": bool(instrument.self_reviews_active),
+            "links_set": not band1_links_not_set(instrument),
         },
         "rule_set": _rule_set_digest(session_rule_set),
         "reviewers": _roster_digest(reviewers, side="reviewer"),

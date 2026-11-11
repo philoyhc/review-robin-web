@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewer, ReviewSession
 
 from ._feature_toggles import enable_observers, enable_relationships
+from ._full_matrix import mark_band1_touched_on_all_instruments
 from ._lookups import must_search
 from ._unlock_panel import assert_lock_ends_right_column, panel_columns
 from ._unlock_panel import div_block as _div_block
@@ -67,6 +68,7 @@ def _give_it_assignments(client: TestClient, db: Session, rs: ReviewSession) -> 
         },
         follow_redirects=False,
     )
+    mark_band1_touched_on_all_instruments(db, rs.id)  # set up, so it generates (20J)
     client.post(
         f"/operator/sessions/{rs.public_id}/assignments/generate",
         data={"mode": "all_to_all"},

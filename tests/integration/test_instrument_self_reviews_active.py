@@ -76,6 +76,7 @@ def _seed(
     db.add(review_session)
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     _pin_full_matrix(db, instrument)
     for name in people:
         _person(db, review_session, name)
@@ -199,7 +200,12 @@ def test_two_instruments_toggled_differently_stay_independent(
     db: Session,
 ) -> None:
     user, review_session, first = _seed(db, code="e3-two")
-    second = Instrument(session_id=review_session.id, name="Second", order=1)
+    second = Instrument(
+        session_id=review_session.id,
+        name="Second",
+        order=1,
+        band1_touched_links=["link1", "link2", "link3"],
+    )
     db.add(second)
     db.flush()
     _pin_full_matrix(db, second)
@@ -241,7 +247,12 @@ def test_replicate_carries_the_flag(db: Session) -> None:
 
 def test_duplicate_carries_each_instruments_flag(db: Session) -> None:
     user, review_session, first = _seed(db, code="e3-dup")
-    second = Instrument(session_id=review_session.id, name="Second", order=1)
+    second = Instrument(
+        session_id=review_session.id,
+        name="Second",
+        order=1,
+        band1_touched_links=["link1", "link2", "link3"],
+    )
     db.add(second)
     db.flush()
     first.self_reviews_active = False
@@ -277,7 +288,12 @@ def test_settings_csv_round_trip_carries_each_instruments_flag(
     db: Session,
 ) -> None:
     _, source, first = _seed(db, code="e3-csv-src")
-    second = Instrument(session_id=source.id, name="Second", order=1)
+    second = Instrument(
+        session_id=source.id,
+        name="Second",
+        order=1,
+        band1_touched_links=["link1", "link2", "link3"],
+    )
     db.add(second)
     db.flush()
     first.self_reviews_active = False

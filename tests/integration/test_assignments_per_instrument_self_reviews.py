@@ -47,6 +47,7 @@ def _seed_multi_instrument(
     db.add(review_session)
     db.flush()
     inst_a = ensure_default_instrument(db, review_session)
+    inst_a.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     inst_b = Instrument(session_id=review_session.id, name="Peer survey", order=2)
     db.add(inst_b)
     db.flush()

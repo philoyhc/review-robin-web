@@ -33,6 +33,7 @@ from app.db.models import Relationship, Reviewee, Reviewer, ReviewSession
 
 from ._full_matrix import (
     generate_via_page_button,
+    mark_band1_touched_on_all_instruments,
     pin_full_matrix_on_all_instruments,
 )
 
@@ -59,7 +60,12 @@ def _session(
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == code)
+    ).scalar_one()
+    # Its default instrument set up, so Generate makes rows (20J).
+    mark_band1_touched_on_all_instruments(db, review_session.id)
+    return review_session
 
 
 def _rows(body: str) -> str:

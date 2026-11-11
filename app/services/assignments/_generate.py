@@ -33,7 +33,7 @@ from app.db.models import (
 from app.schemas.assignments import AssignmentMode
 from app.services import audit, unit_of_work
 from app.services import session_lifecycle as lifecycle
-from app.services.instruments import _instrument_label
+from app.services.instruments import _instrument_label, band1_links_not_set
 
 from . import _reconcile_cache
 from ._coverage import (
@@ -304,7 +304,6 @@ def _diff_one_instrument(
     is empty, so Generate removes any rows it has, and the staleness
     verdict reads stale for an instrument that has some.
     """
-    from app.services import instruments as instruments_service
     from app.services.rules import engine
 
     if session_rule_set is None:
@@ -324,7 +323,7 @@ def _diff_one_instrument(
     # The engine hands back the roster rows it was given.
     engine_pairs = cast(list[tuple[Reviewer, Reviewee]], result.pairs)
     excluded_counts = dict(result.excluded_counts)
-    if instruments_service.band1_links_not_set(instrument):
+    if band1_links_not_set(instrument):
         engine_pairs = []
         excluded_counts = {}
 
@@ -347,6 +346,7 @@ def _diff_one_instrument(
     pair_group_key: dict[tuple[int, int], tuple[str, ...]] = {}
     self_review_groups: set[tuple[int, tuple[str, ...]]] = set()
     if instrument.group_kind is not None:
+        from app.services import instruments as instruments_service
         from app.services.responses import group_key_for_pair, is_catch_all_key
 
         boundary = instruments_service.decode_group_kind(instrument.group_kind)
@@ -969,11 +969,16 @@ def staleness_by_instrument(
             # is not stale by the rule below, and the fan-out is every
             # pair, so it is counted rather than walked — the walk is
             # R x E pairs, 6.5 s at 1,000 x 1,000 on every page load
-            # before the first Prepare (post_assessment_1oct E5).
-            computed = _full_matrix_never_generated_state(
-                inputs.reviewers,
-                inputs.reviewees,
-                override_exclude_self_reviews=override_exclude_self_reviews,
+            # before the first Prepare (post_assessment_1oct E5). With
+            # a Band 1 link not set there are no pairs at all (20J).
+            computed = (
+                InstrumentReconcileState(stale=False, eligible=0, self_reviews_excluded=0)
+                if band1_links_not_set(instrument)
+                else _full_matrix_never_generated_state(
+                    inputs.reviewers,
+                    inputs.reviewees,
+                    override_exclude_self_reviews=override_exclude_self_reviews,
+                )
             )
             state[instrument.id] = computed
             _store_state(instrument, stamp, computed)

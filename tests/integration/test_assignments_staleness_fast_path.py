@@ -65,6 +65,7 @@ def _seed(
     )
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     assert instrument.rule_set_id is None  # the Full Matrix default
     instrument.group_kind = group_kind
     db.flush()
@@ -104,6 +105,29 @@ def test_the_count_equals_the_walk(
     # code against itself; the blank address matches nothing. So the
     # override's exclusion is exercised, not vacuous.
     assert counted.self_reviews_excluded == (6 if override else 0)
+
+
+def test_links_not_set_count_no_pairs_as_the_walk_does(db: Session) -> None:
+    """Segment 20J: with a Band 1 link not set there is no Full Matrix
+    default, so the verdict staleness_by_instrument serves is no pairs,
+    and it agrees with the walk Generate runs."""
+    review_session, instrument = _seed(db, "fp-not-set")
+    instrument.band1_touched_links = ["link1", "link2"]
+    db.flush()
+    inputs = _generate._load_reconcile_inputs(db, review_session, None)
+    walked = _generate._diff_one_instrument(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        session_rule_set=None,
+        reviewers=inputs.reviewers,
+        reviewees=inputs.reviewees,
+        pair_context_lookup=inputs.pair_context_lookup,
+        override_exclude_self_reviews=None,
+    )
+    served = assignments.staleness_by_instrument(db, review_session)[instrument.id]
+    assert walked.pairs_count == 0
+    assert (served.stale, served.eligible, served.self_reviews_excluded) == (False, 0, 0)
 
 
 JANE_OID = "11111111-1111-4111-8111-111111111111"
@@ -158,6 +182,7 @@ def test_the_count_equals_the_walk_on_bound_rows(db: Session) -> None:
     )
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     inputs = _generate._load_reconcile_inputs(db, review_session, None)
     walked = _generate._diff_one_instrument(
         db,

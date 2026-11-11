@@ -68,6 +68,7 @@ def _seed(db: Session, *, code: str, pin: bool = True, exclude_self: bool = Fals
     )
     db.flush()
     instrument = ensure_default_instrument(db, review_session)
+    instrument.band1_touched_links = ["link1", "link2", "link3"]  # set up (20J)
     if pin:
         rule_set = SessionRuleSet(
             session_id=review_session.id,
@@ -262,6 +263,26 @@ def test_an_unpinned_full_matrix_instrument_can_go_stale(
     db.add(Reviewer(session_id=review_session.id, name="Bob", email="bob@example.edu"))
     db.flush()
     assert _state(db, review_session, instrument).stale is True
+
+
+def test_rows_from_before_a_link_was_unset_read_stale_and_generate_clears_them(
+    db: Session,
+) -> None:
+    """Segment 20J: a Band 1 link not set means no pairs. Rows generated
+    while the links were set read stale once one is unset, and the next
+    Generate removes them rather than keeping a Full Matrix default."""
+    user, review_session, instrument = _seed(db, code="stale-unset", pin=False)
+    _generate(db, review_session=review_session, user=user, cid="c1")
+    assert _state(db, review_session, instrument).eligible == 1
+
+    instrument.band1_touched_links = ["link1", "link2"]
+    db.flush()
+    state = _state(db, review_session, instrument)
+    assert (state.stale, state.eligible) == (True, 0)
+
+    _generate(db, review_session=review_session, user=user, cid="c2")
+    assert assignments.existing_count(db, review_session.id) == 0
+    assert _state(db, review_session, instrument).stale is False
 
 
 def test_eligible_carries_the_engine_fan_out(db: Session) -> None:
