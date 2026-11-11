@@ -1,0 +1,92 @@
+{# The answer control for one response cell (segment 20K): shared by a
+   column per field and the stacked layout's one-field-per-line cell.
+   Included with ``cell``, ``row`` and ``group`` in scope. #}
+{% set validation = cell.field.validation or {} %}
+{% set data_type = cell.field.data_type %}
+{% set max_len = validation.max_length or 0 %}
+{# 19V Item 2 — the row's ordinal on the page, never its assignment ID. #}
+{% set field_name = "response[" ~ answer_ordinals[row.assignment.id] ~ "][" ~ cell.field.field_key ~ "]" %}
+{% set disabled_attr = "" if row.accepting and cell.branch_open else "disabled" %}
+{# Each response control names its column and row
+   so a screen-reader user hears "{field} for
+   {reviewee}" rather than an unlabelled box. #}
+{# 19T Item 11 — "(required)" follows ``required_now``,
+   so a required governed cell behind a closed branch
+   doesn't announce itself as required. #}
+{% set cell_aria = cell.field.label ~ " for " ~ (row.group_label if group.is_group else row.assignment.reviewee.name) ~ (" (required)" if cell.required_now else "") %}
+{# Render is driven by the field's ``data_type``:
+   a String is an answer box, Integer / Decimal a
+   number input, List a <select> over the field's
+   ``choices``. #}
+{# `data-rs-saved-value` carries the last-saved
+   value. No script reads it: Cancel
+   (``data-rs-discard``, ``_action_row.html``) is a
+   plain link that reloads the page, which drops
+   unsaved edits on its own. #}
+{% if data_type == "String" %}
+  {# 19X Item 10 — every String answer is a box that
+     fits its text (``base.html``'s fit script),
+     from a floor of one line when its maximum is
+     50 or fewer characters and two lines otherwise
+     (no maximum included). A one-line box takes no
+     line break. #}
+  {% set one_line = max_len and max_len <= 50 %}
+  <textarea name="{{ field_name }}"
+            class="rs-answer"
+            aria-label="{{ cell_aria }}"
+            rows="{{ 1 if one_line else 2 }}"
+            data-fit-box{% if one_line %}="one-line"{% endif %}
+            data-rs-saved-value="{{ cell.value }}"
+            {% if cell.placeholder %}placeholder="{{ cell.placeholder }}"{% endif %}
+            {% if max_len %}maxlength="{{ max_len }}"{% endif %}
+            {{ disabled_attr }}>{{ cell.value }}</textarea>
+{% elif data_type == "Integer" or data_type == "Decimal" %}
+  {# HTML5 ``type="number"`` carries the
+     ``min`` / ``max`` enforcement (and the
+     ``Value must be ≤ N`` browser popup on
+     submit). ``step="any"`` deliberately bypasses
+     the native step-grid check — that's what fired
+     spurious popups on legitimate values like
+     ``2`` in a 1-to-5dec field due to float drift.
+     The actual step lives in ``data-rs-step`` and
+     drives a JS-side check that uses
+     ``setCustomValidity`` so off-grid values get
+     the same browser popup chrome as a range
+     violation, just with our custom message and
+     our float-tolerant comparison. An Integer field
+     with a blank Step steps by 1 (unless its Min is not
+     whole, since steps count from Min), so a decimal
+     meets the same check rather than reaching the
+     server.
+     Spinners are hidden via base.html CSS. #}
+  <input type="number"
+         inputmode="{{ 'numeric' if data_type == 'Integer' else 'decimal' }}"
+         name="{{ field_name }}"
+         aria-label="{{ cell_aria }}"
+         value="{{ cell.value }}"
+         data-rs-saved-value="{{ cell.value }}"
+         {% if validation.min is defined %}min="{{ validation.min }}"{% endif %}
+         {% if validation.max is defined %}max="{{ validation.max }}"{% endif %}
+         step="any"
+         {% if validation.step is defined %}data-rs-step="{{ validation.step }}"{% elif data_type == "Integer" and (validation.min is not defined or validation.min == validation.min|int) %}data-rs-step="1"{% endif %}
+         {% if validation.min is defined %}data-rs-step-anchor="{{ validation.min }}"{% endif %}
+         {% if cell.placeholder %}title="{{ cell.placeholder }}"{% endif %}
+         {{ disabled_attr }}>
+{% elif data_type == "List" %}
+  <select name="{{ field_name }}"
+          aria-label="{{ cell_aria }}"
+          data-rs-saved-value="{{ cell.value }}"
+          {{ disabled_attr }}>
+    <option value=""{% if not cell.value %} selected{% endif %}>—</option>
+    {% for choice in (validation.choices or []) %}
+      <option value="{{ choice }}"{% if cell.value == choice %} selected{% endif %}>{{ choice }}</option>
+    {% endfor %}
+  </select>
+{% else %}
+  <input type="text"
+         name="{{ field_name }}"
+         aria-label="{{ cell_aria }}"
+         value="{{ cell.value }}"
+         data-rs-saved-value="{{ cell.value }}"
+         {{ disabled_attr }}>
+{% endif %}

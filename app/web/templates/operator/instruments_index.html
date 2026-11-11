@@ -1280,8 +1280,9 @@
           if (window.newModelMarkCardDirty) { window.newModelMarkCardDirty(card); }
         };
         // 20K — the Responses chip: each click moves to the next
-        // response layout, writes the card's hidden input and marks the
-        // card dirty. A locked card's chip does nothing.
+        // response layout, writes the card's hidden input, rebuilds the
+        // preview in that layout and marks the card dirty. A locked
+        // card's chip does nothing.
         window.newModelCycleResponseLayout = window.newModelCycleResponseLayout || function (chip) {
           var card = chip.closest('[data-instrument-card]');
           if (!card || card.getAttribute('data-instrument-locked') === 'true') { return; }
@@ -1296,6 +1297,8 @@
           input.value = next.value;
           chip.textContent = next.label;
           chip.title = next.title;
+          var band2 = card.querySelector('[data-new-model-band2]');
+          if (band2 && window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
           if (window.newModelMarkCardDirty) { window.newModelMarkCardDirty(card); }
         };
         window.newModelToggleRuleMode = window.newModelToggleRuleMode || function (btn) {
@@ -1668,9 +1671,9 @@
                  autocomplete="off" data-intro-layout-input>
           {# 20K — the Responses chip, a second cycle chip: a column per
              response field, or one per line. A click moves to the next
-             layout (``newModelCycleResponseLayout``) and writes the
-             hidden input, which rides the card's Save; the preview
-             below does not follow it yet. Locked, as the Layout chip. #}
+             layout (``newModelCycleResponseLayout``), rebuilds the
+             preview below in it and writes the hidden input, which
+             rides the card's Save. Locked, as the Layout chip. #}
           {% set _response_layout = response_layout_choice_by_instrument[instrument.id] %}
           <span class="pill pill-count tag-chip is-selected"
                 data-response-layout-chip
@@ -2618,6 +2621,94 @@
           // and the surface's layout rule: automatic until a width is
           // set, then table-layout: fixed so the widths are honored
           // exactly as the reviewer will see them (19T Item 16).
+          // 20K — the instrument card's Responses chip: stacked puts every
+          // response field on a line of its own in one cell, as the
+          // reviewer surface does (``review_surface.html``).
+          function previewStacked(card) {
+            var host = card.closest('[data-instrument-card]') || card;
+            var input = host.querySelector('[data-response-layout-input]');
+            return !!input && input.value === 'stacked';
+          }
+          function decimalPlaces(text) {
+            text = String(text || '');
+            var at = text.indexOf('.');
+            return at < 0 ? 0 : text.length - at - 1;
+          }
+          // A stacked box's need in characters, or null when its width
+          // is not calculable and it is a text box. Mirrors
+          // ``views.stacked_box_chars``.
+          function stackBoxChars(card, r) {
+            var row = rfRowByKey(card, r.key);
+            if (!row || !rfRowCommitted(row)) { return null; }
+            var shape = window.newModelRfCommittedShape(row);
+            if (shape.dataType === 'integer' || shape.dataType === 'decimal') {
+              if (!shape.min || !shape.max) { return null; }
+              if (shape.dataType === 'decimal' && !shape.step) { return null; }
+              var bounds = [shape.min, shape.max];
+              var whole = Math.max.apply(null, bounds.map(function (b) {
+                return b.replace(/^-/, '').split('.')[0].length;
+              }));
+              var sign = bounds.some(function (b) { return b.charAt(0) === '-'; }) ? 1 : 0;
+              var places = Math.max(decimalPlaces(shape.min), shape.step ? decimalPlaces(shape.step) : 0);
+              return sign + whole + (places ? 1 + places : 0);
+            }
+            if (shape.dataType === 'list') {
+              var longest = 1;
+              (shape.list || '').split(',').forEach(function (c) {
+                c = c.trim();
+                if (c.length > longest) { longest = c.length; }
+              });
+              return longest + 3;
+            }
+            return null;
+          }
+          // The one compact width, floored at three characters, plus the
+          // box's padding (``views.stacked_compact_ch``).
+          function stackCompactCh(card, responses) {
+            var needs = responses.map(function (r) { return stackBoxChars(card, r); })
+              .filter(function (n) { return n !== null; });
+            if (!needs.length) { return null; }
+            return Math.max.apply(null, [3].concat(needs)) + 3;
+          }
+          // A field's constraint, as the summary line words it.
+          function constraintSummary(shape) {
+            if (shape.dataType === 'integer' || shape.dataType === 'decimal') {
+              return (shape.min && shape.max && shape.step)
+                ? shape.min + '-' + shape.max + ', steps of ' + shape.step : '';
+            }
+            if (shape.dataType === 'string' && shape.max) {
+              return (shape.min || '0') + '-' + shape.max + ' char';
+            }
+            return '';
+          }
+          // The stacked layout's one Responses cell: a line per field,
+          // its label and constraint left of its box.
+          function buildStackCell(card, responses) {
+            var compact = stackCompactCh(card, responses);
+            var html = '<td class="rs-stack" data-col-key="responses"><div class="rs-stack-fields"'
+              + (compact ? ' style="--rs-stack-compact: ' + compact + 'ch"' : '') + '>';
+            responses.forEach(function (r) {
+              var row = rfRowByKey(card, r.key);
+              var summary = (row && rfRowCommitted(row))
+                ? constraintSummary(window.newModelRfCommittedShape(row)) : '';
+              var isCompact = stackBoxChars(card, r) !== null;
+              var control = buildResponseFieldPreviewCell(card, r);
+              if (isCompact) {
+                control = control.replace('width: 100%;', 'width: var(--rs-stack-compact); max-width: 100%;');
+              }
+              html += '<div class="rs-stack-field' + (r.branchHint ? ' rs-branch-closed' : '') + '"'
+                + ' data-rs-stack-field="' + esc(r.key) + '"'
+                + (r.branchHint ? ' title="' + esc(r.branchHint) + '"' : '') + '>'
+                + '<div class="rs-stack-label"><span class="rs-stack-name">' + esc(r.label)
+                + (r.required ? ' <span title="Required" aria-label="Required">*</span>' : '')
+                + '</span>'
+                + (summary ? '<small class="rs-stack-help">' + esc(summary) + '</small>' : '')
+                + '</div>'
+                + '<div class="rs-stack-input' + (isCompact ? ' is-compact' : '') + '">' + control + '</div>'
+                + '</div>';
+            });
+            return html + '</div></td>';
+          }
           function buildIndividualPreview(card, selected) {
             if (selected.length === 0) { return ''; }
             var name = selected.find(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'name'; });
@@ -2638,7 +2729,8 @@
             // displays, then responses; total column count =
             // (identity? 1 : 0) + displays.length + responses.length.
             var hasIdentity = !!(name || email);
-            var totalCols = (hasIdentity ? 1 : 0) + displays.length + responses.length;
+            var stacked = previewStacked(card) && responses.length > 0;
+            var totalCols = (hasIdentity ? 1 : 0) + displays.length + (stacked ? 1 : responses.length);
             var lastIdx = totalCols - 1;
             // 19T Item 16 — the surface's layout rule: automatic until
             // some column width is set, then fixed. Automatic, a <col>
@@ -2669,9 +2761,13 @@
                 : colStyle(o.width);
               html += '<col data-col-key="df_' + esc(o.displayFieldId) + '"' + colAttrs(style) + '>';
             });
-            responses.forEach(function (r) {
-              html += '<col data-col-key="resp_' + esc(r.key) + '"' + colAttrs(responseColStyle(card, r)) + '>';
-            });
+            if (stacked) {
+              html += '<col data-col-key="responses">';
+            } else {
+              responses.forEach(function (r) {
+                html += '<col data-col-key="resp_' + esc(r.key) + '"' + colAttrs(responseColStyle(card, r)) + '>';
+              });
+            }
             html += '</colgroup><thead><tr>';
             var colIdx = 0;
             if (hasIdentity) {
@@ -2700,7 +2796,10 @@
                 + '</th>';
               colIdx += 1;
             });
-            responses.forEach(function (r) {
+            if (stacked) {
+              html += '<th scope="col" class="rs-stack" style="position: relative;">Responses</th>';
+            }
+            (stacked ? [] : responses).forEach(function (r) {
               var hint = responseColClass(card, r);
               html += '<th scope="col" class="' + (hint ? hint + ' ' : '') + 'rrw-sortable" style="position: relative;">'
                 + esc(r.label)
@@ -2733,10 +2832,14 @@
             // the operator sees the reviewer-surface shape (textarea
             // / number / list / text) for each response field, not
             // a bare ``—``.
-            responses.forEach(function (r) {
-              html += responseCellOpen(r, responseColClass(card, r))
-                + buildResponseFieldPreviewCell(card, r) + '</td>';
-            });
+            if (stacked) {
+              html += buildStackCell(card, responses);
+            } else {
+              responses.forEach(function (r) {
+                html += responseCellOpen(r, responseColClass(card, r))
+                  + buildResponseFieldPreviewCell(card, r) + '</td>';
+              });
+            }
             html += '</tr></tbody></table>';
             return html;
           }
@@ -2787,13 +2890,18 @@
             var identityW = parseInt(card.getAttribute('data-new-model-band2-identity-width') || '', 10) || 0;
             // Last-column index for the trailing-gripper skip.
             // Group identity always sits first; responses follow.
-            var totalCols = 1 + responses.length;
+            var stacked = previewStacked(card) && responses.length > 0;
+            var totalCols = 1 + (stacked ? 1 : responses.length);
             var lastIdx = totalCols - 1;
             var html = '<table class="rs-group-table">';
             html += '<colgroup><col data-col-key="identity" style="' + colStyle(identityW) + '">';
-            responses.forEach(function (r) {
-              html += '<col data-col-key="resp_' + esc(r.key) + '" style="' + responseColStyle(card, r) + '">';
-            });
+            if (stacked) {
+              html += '<col data-col-key="responses">';
+            } else {
+              responses.forEach(function (r) {
+                html += '<col data-col-key="resp_' + esc(r.key) + '" style="' + responseColStyle(card, r) + '">';
+              });
+            }
             html += '</colgroup><thead><tr>';
             var colIdx = 0;
             // Group sort badge pins to the
@@ -2806,7 +2914,10 @@
               + maybeResizeHandle('identity', colIdx === lastIdx)
               + '</th>';
             colIdx += 1;
-            responses.forEach(function (r) {
+            if (stacked) {
+              html += '<th scope="col" class="rs-stack" style="position: relative;">Responses</th>';
+            }
+            (stacked ? [] : responses).forEach(function (r) {
               html += '<th scope="col" style="position: relative;">'
                 + esc(r.label)
                 + (r.required ? ' <span title="Required" aria-label="Required">*</span>' : '')
@@ -2827,10 +2938,14 @@
               html += '<span class="muted">' + names + '</span>';
             }
             html += '</td>';
-            responses.forEach(function (r) {
-              html += responseCellOpen(r)
-                + buildResponseFieldPreviewCell(card, r) + '</td>';
-            });
+            if (stacked) {
+              html += buildStackCell(card, responses);
+            } else {
+              responses.forEach(function (r) {
+                html += responseCellOpen(r)
+                  + buildResponseFieldPreviewCell(card, r) + '</td>';
+              });
+            }
             html += '</tr></tbody></table>';
             return html;
           }
@@ -3339,7 +3454,8 @@
           // to the left of the constraints when both render.
           function buildProgressAndConstraintsRow(card) {
             var pillsHtml = buildProgressPills(card);
-            var constraintsHtml = buildConstraints(card);
+            // 20K — stacked, each constraint sits under its label.
+            var constraintsHtml = previewStacked(card) ? '' : buildConstraints(card);
             return '<div class="rs-progress-row">'
               + pillsHtml
               + constraintsHtml

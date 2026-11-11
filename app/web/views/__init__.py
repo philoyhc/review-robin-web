@@ -128,6 +128,8 @@ from ._instruments import (
     numeric_column_ch_width,
     placeholder_for_field,
     profile_column_ch_width,
+    stacked_box_chars,
+    stacked_compact_ch,
 )
 
 # Manage Invitations page rows (sliced in PR 3).
@@ -459,6 +461,8 @@ __all__ = [
     "constraint_summary_for_field",
     "new_model_usable_tags",
     "numeric_column_ch_width",
+    "stacked_box_chars",
+    "stacked_compact_ch",
     "profile_column_ch_width",
     "is_web_link",
     "RuleEditState",

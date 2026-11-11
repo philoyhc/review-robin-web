@@ -242,6 +242,69 @@ def placeholder_for_field(field: InstrumentResponseField) -> str:
     return ""
 
 
+# Segment 20K — the stacked layout's compact box. Its width counts
+# characters; the box adds ``_STACK_BOX_PAD_CH`` for its padding and a
+# number's spinner room, as ``numeric_column_ch_width``'s input does.
+STACK_COMPACT_FLOOR_CHARS = 3
+_STACK_BOX_PAD_CH = 3
+# A <select>'s arrow, in characters, beside its longest choice.
+_STACK_LIST_ARROW_CH = 3
+
+
+def _decimal_places(text: str) -> int:
+    return len(text.split(".", 1)[1]) if "." in text else 0
+
+
+def stacked_box_chars(field: InstrumentResponseField) -> int | None:
+    """The characters a stacked layout's box needs for ``field``'s
+    widest answer, or ``None`` when that width is not calculable and the
+    field takes a text box (segment 20K: a width is computed only where
+    it is calculable).
+
+    - A String field is always a text box.
+    - A number field needs both bounds; a Decimal field its step too
+      (with none, its decimal places are open). The need is the wider
+      bound's whole digits, its sign, and a point plus as many decimal
+      places as the step or the lower bound (where the steps count
+      from) carries: min 0, max 10, step 0.25 needs ``10.00``, five.
+    - A list needs its longest choice (or the empty ``—``) plus the
+      dropdown arrow.
+    """
+    validation = field.validation or {}
+    data_type = field.data_type
+    if data_type in ("Integer", "Decimal"):
+        min_, max_, step = validation.get("min"), validation.get("max"), validation.get("step")
+        if min_ is None or max_ is None:
+            return None
+        if data_type == "Decimal" and step is None:
+            return None
+        bounds = [_format_band2_bound(float(v)) for v in (min_, max_)]
+        whole = max(len(b.lstrip("-").split(".", 1)[0]) for b in bounds)
+        sign = 1 if any(b.startswith("-") for b in bounds) else 0
+        places = _decimal_places(bounds[0])
+        if step is not None:
+            places = max(places, _decimal_places(_format_band2_bound(float(step))))
+        return sign + whole + (1 + places if places else 0)
+    if data_type == "List":
+        choices = [str(c) for c in json_list(validation.get("choices")) or []]
+        return max([1, *(len(c) for c in choices)]) + _STACK_LIST_ARROW_CH
+    return None
+
+
+def stacked_compact_ch(fields: list[InstrumentResponseField]) -> int | None:
+    """The one width, in ``ch``, every compact box of a stacked
+    instrument shares (segment 20K): the widest need among ``fields``
+    whose need is calculable, never narrower than
+    :data:`STACK_COMPACT_FLOOR_CHARS` (the author, 2026-11-11: a
+    one-digit box is too cramped to click and read), plus the box's
+    padding. ``None`` when no field is compact. The template caps it at
+    the response column's width."""
+    needs = [n for n in (stacked_box_chars(f) for f in fields) if n is not None]
+    if not needs:
+        return None
+    return max(STACK_COMPACT_FLOOR_CHARS, *needs) + _STACK_BOX_PAD_CH
+
+
 def branch_condition_label(parent: InstrumentResponseField) -> str:
     """19T Item 10 — a parent's branch condition as a reviewer reads it,
     "Rating ≥ 4" or "Colour is not Red or Blue", for the hint on a closed

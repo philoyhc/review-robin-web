@@ -558,10 +558,17 @@ def _surface_context(
             if f"rf_{f.id}" in widths_by_col_key
         }
         constraints: list[dict[str, str]] = []
+        constraint_by_field_id: dict[int, str] = {}
         for f in fields:
             summary = views.constraint_summary_for_field(f)
             if summary:
                 constraints.append({"label": f.label, "summary": summary})
+                constraint_by_field_id[f.id] = summary
+        # Segment 20K — a stacked instrument puts every response field
+        # in one cell, each constraint under its label; the compact
+        # boxes share one width.
+        response_layout = instruments_service.effective_response_layout(instrument)
+        stacked = response_layout == "stacked"
         instrument_groups.append(
             {
                 "instrument": instrument,
@@ -575,7 +582,17 @@ def _surface_context(
                 "identity_width_px": identity_width_px,
                 "response_field_width_by_id": response_field_width_by_id,
                 "has_custom_widths": bool(widths_by_col_key),
-                "constraints": constraints,
+                # The summary line goes when each constraint sits under
+                # its label (20K).
+                "constraints": [] if stacked else constraints,
+                "response_layout": response_layout,
+                "constraint_by_field_id": constraint_by_field_id,
+                "stack_compact_ch": views.stacked_compact_ch(fields) if stacked else None,
+                "stack_compact_ids": (
+                    {f.id for f in fields if views.stacked_box_chars(f) is not None}
+                    if stacked
+                    else set()
+                ),
                 "show_status_col": show_incomplete_marks
                 or any(r.get("submitted_at") for r in group_rows),
                 "completion": _group_completion(group_rows, fields),
