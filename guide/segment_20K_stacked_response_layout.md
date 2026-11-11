@@ -18,7 +18,7 @@ The reviewer surface is a table: one row per reviewee, one column per response f
 - **The label column's width is adjustable**, like every other column (author, 2026-11-11): the operator drags it on the Instruments page preview, and the text wraps within that width. Until set, it is as wide as its longest label or constraint.
 - **Two box widths, never one per field** (author, 2026-11-11):
   - **Text boxes** (every String field, short or long) take the response column's width. That column — every text box at once — has its own adjustable width, like the label column: two drag handles in this layout, never one per box. Until set, it fills the rest of the row.
-  - **Compact boxes** (number and list fields) share one computed width: the widest need among the instrument's number and list fields. A number needs its digits at min and max (from `numeric_column_ch_width`'s digit span); a list needs its longest choice plus the dropdown arrow. A number field with no bound counts as 6 digits. The compact width is never wider than the response column.
+  - **Compact boxes** (number and list fields) share one computed width: the widest need among the instrument's number and list fields. A number needs its digits at min and max (from `numeric_column_ch_width`'s digit span); a list needs its longest choice plus the dropdown arrow. A number field with no bound counts as 6 digits. The compact width is never narrower than 3 digits (author, 2026-11-11: a single-digit box is too cramped to click and read) and never wider than the response column.
 
 **Rejected:**
 - **Wrapping the label column at a fixed cap** — the author prefers it adjustable like the others.
