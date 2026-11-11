@@ -549,8 +549,19 @@ def test_status_reports_the_session_and_its_counts(client: TestClient, db: Sessi
     assert "prepare" not in workflow["actions"]
     # The Validate page's rules, as they read now.
     validation = body["validation"]
-    assert {"errors", "warnings", "issues"} == set(validation)
+    assert {"errors", "warnings", "info", "issues"} == set(validation)
     assert all({"rule", "severity", "message", "page"} <= set(i) for i in validation["issues"])
+    severities = [i["severity"] for i in validation["issues"]]
+    assert (validation["errors"], validation["warnings"], validation["info"]) == (
+        severities.count("error"),
+        severities.count("warning"),
+        severities.count("info"),
+    )
+    # No assignments generated yet: the Validate rule says so, by its key.
+    assert {"rule": "assignments.no_included_pairs", "severity": "warning"}.items() <= next(
+        i for i in validation["issues"] if i["rule"] == "assignments.no_included_pairs"
+    ).items()
+    assert workflow["invitations_generated"] is False and workflow["invitations_sent"] is False
     # Progress is reported, not withheld, and labelled provisional.
     assert body["progress"]["provisional"] is True
     assert body["progress"]["provisional_reason"] == "instruments_not_set_up"
@@ -598,6 +609,12 @@ def test_status_counts_assignments_of_assigned_reviewers(client: TestClient, db:
     assert body["status_row"]["assignments"] == len(reviewees)
     assert body["instruments"][0]["assignments"] == len(reviewees)
     assert len(body["reviewees"]) == len(reviewees)
+    keys = {reviewee.email_or_identifier for reviewee in reviewees}
+    assert {row["key"] for row in body["reviewees"]} == keys
+    assert all(
+        (row["reviewers"], row["completed"], row["last_response_at"]) == (1, 0, None)
+        for row in body["reviewees"]
+    )
     [row] = body["reviewers"]
     assert (row["email"], row["assignments"], row["state"]) == (
         reviewers[0].email,
