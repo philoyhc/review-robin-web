@@ -107,7 +107,8 @@ model once ApplyDesk's handoff exists (author, 2026-11-11).
   forgets the list, not the sessions; open tabs keep it in step). Each offers:
   - **Refresh status**: reads Review Robin's status (`spec/handoffs.md`
     §10, version 3; segment 23C) and shows each section as Review Robin
-    labels it: the state, the status row (four rosters, instruments set
+    reports it, its keys as sent (only the state carries its display
+    label): the state, the status row (four rosters, instruments set
     up, assignments, invitations, responses), the Workflow card's reading
     and actions, the Validate issues, the instruments, progress (marked
     *provisional*, with its reason, while an instrument is not set up),

@@ -38,9 +38,9 @@ _ACTIONS = (
 
 #: The projection's shape. 3 (segment 23C): Review Robin's own readings.
 STATUS_SCHEMA_VERSION = 3
-#: Why ``progress.provisional`` is true: Review Robin validates no session
-#: with an instrument not set up, so until then the assignments are an
-#: untouched rule's stand-in rather than the review's.
+#: Why ``progress.provisional`` is true: an instrument is not set up (no
+#: visible response field, or an assignment-rule link not set), so the
+#: assignments may not be the review's yet.
 PROVISIONAL_REASON = "instruments_not_set_up"
 
 
@@ -144,6 +144,7 @@ def handoff_status(db: Session, review_session: ReviewSession) -> dict[str, obje
         "validation": {
             "errors": errors,
             "warnings": sum(1 for issue in issues if issue.severity.value == "warning"),
+            "info": sum(1 for issue in issues if issue.severity.value == "info"),
             "issues": [
                 {
                     "rule": issue.rule_key or "",

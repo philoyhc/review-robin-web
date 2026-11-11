@@ -31,7 +31,7 @@
     <details>
     <summary>What each read shows</summary>
     <h3>Status</h3>
-    <p class="note">Review Robin's own readings of the session, as its pages label them (status version 3). A failed check shows unavailable, never old counts or zero.</p>
+    <p class="note">Review Robin's own readings of the session, its keys as it sends them (status version 3). A failed check shows unavailable, never old counts or zero.</p>
     <dl class="note" id="poc-status-fields">
       <dt>State</dt><dd>Draft, Validated, Activated, Closed or Archived, as Review Robin shows it</dd>
       <dt>Status row</dt><dd>The row on every session page: the four rosters, instruments set up, assignments, invitations, responses</dd>
@@ -41,6 +41,7 @@
       <dt>Progress</dt><dd>Monitoring's summary; provisional while an instrument is not set up</dd>
       <dt>Schedule</dt><dd>Activation, deadline and release, as stored</dd>
       <dt>Per person</dt><dd>Monitoring's reviewer and reviewee tables, folded</dd>
+      <dt>Checked</dt><dd>Review Robin's time, and when this page last asked</dd>
     </dl>
     <h3>Results</h3>
     <p class="note"><code>results.csv</code>: one row per submitted answer, with <code>ReviewerEmail</code>, <code>RevieweeEmail</code> (the application ID), <code>InstrumentSeq</code>, <code>FieldKey</code>, the labels, <code>ResponseType</code>, <code>Value</code> as stored and <code>SubmittedAt</code>. Saved drafts are not included.</p>
@@ -158,11 +159,11 @@
       ]));
       nodes.push(el("h4", "Workflow"));
       nodes.push(pairs([
-        ["Setup complete", yes(w.setup_complete) + " (reviewers " + yes(w.checklist.reviewers) + ", reviewees " + yes(w.checklist.reviewees) + ", instruments set up " + yes(w.checklist.instruments_set_up) + ")"],
+        ["Setup complete (checked in draft)", yes(w.setup_complete) + " (reviewers " + yes(w.checklist.reviewers) + ", reviewees " + yes(w.checklist.reviewees) + ", instruments set up " + yes(w.checklist.instruments_set_up) + ")"],
         ["Actions offered", w.actions.length ? w.actions.join(", ") : "none"],
         ["Invitations", "generated " + yes(w.invitations_generated) + "; sent " + yes(w.invitations_sent)]
       ].concat(w.due.map(function (line) { return ["Due", line]; }))));
-      nodes.push(el("h4", "Validation: " + v.errors + " errors, " + v.warnings + " warnings"));
+      nodes.push(el("h4", "Validation: " + v.errors + " errors, " + v.warnings + " warnings, " + v.info + " info"));
       if (v.issues.length) {
         nodes.push(table(["Severity", "Rule", "Message", "Page"], v.issues.map(function (i) {
           return [i.severity, i.rule, i.message, i.page];
@@ -176,7 +177,7 @@
       })));
       nodes.push(el("h4", "Progress" + (g.provisional ? " (provisional)" : "")));
       if (g.provisional) {
-        nodes.push(el("p", "Provisional: " + g.provisional_reason + ". Until every instrument is set up, the assignments are an untouched rule's stand-in, not the review's.", "note"));
+        nodes.push(el("p", "Provisional: " + g.provisional_reason + ". An instrument lacks a visible response field or an assignment-rule link, so the assignments may not be the review's yet.", "note"));
       }
       nodes.push(pairs([
         ["Assignments", g.assignments_completed + " complete of " + g.assignments],
@@ -185,7 +186,7 @@
       ]));
       nodes.push(el("h4", "Schedule"));
       nodes.push(pairs([
-        ["Timezone", s.display_timezone],
+        ["Timezone", s.display_timezone || "not set"],
         ["Scheduled activation", s.scheduled_activate_at ? when(s.scheduled_activate_at) : "not set"],
         ["Activated", s.activated_at ? when(s.activated_at) : "not yet"],
         ["Deadline", s.deadline ? when(s.deadline) : "not set"],

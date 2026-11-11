@@ -186,17 +186,20 @@ a view adapter (`app/web/views/_handoffs.py`). Identity: `session_ref`,
   `responses_release_until`, as stored (ISO 8601, or null).
 - `workflow`: the Workflow card's reading.
   - `setup_complete`, and its `checklist` of `reviewers`, `reviewees` and
-    `instruments_set_up`. An incomplete setup offers no **Prepare**,
+    `instruments_set_up`. The card checks setup only in draft, so past
+    draft `setup_complete` is true whatever the checklist reads. An
+    incomplete setup offers no **Prepare**,
     which is what keeps a session with an instrument not set up from
     validating; the Validate rules below do not.
-  - `actions`: the card's buttons showing now, in order (`revert`,
+  - `actions`: the card's buttons showing now, enabled or not (with
+    bulk email off, the send buttons show disabled), in order (`revert`,
     `prepare`, `send_invites`, `activate`, `send_reminders`, `close`,
     `release_responses`, `stop_release`, `archive`).
   - `invitations_generated`, `invitations_sent`, and `due`: the card's due
     prompts.
 - `validation`: the Validate page's rules as they read now
-  (`validate_session_setup`, read only, nothing stamped): `errors`,
-  `warnings`, and `issues`, each with its `rule` key, `severity`,
+  (`validate_session_setup`, read only, nothing stamped): the counts of
+  `errors`, `warnings` and `info`, and `issues`, each with its `rule` key, `severity`,
   `message` and fix `page`.
 - `instruments`: one entry per instrument, by `seq`: `name`,
   `short_label`, `set_up`, `scope` (`per_reviewee` or `group`), and
@@ -210,10 +213,12 @@ a view adapter (`app/web/views/_handoffs.py`). Identity: `session_ref`,
     `reviewers_opened`, `reviewers_submitted` and `reviewers_incomplete`.
   - Always reported, never withheld. While any instrument is not set up
     (or there is none), `provisional` is true with `provisional_reason`
-    `instruments_not_set_up`: the assignments are then an untouched
-    rule's full-matrix stand-in, not the review's (author, 2026-11-11).
+    `instruments_not_set_up`: an instrument lacks a visible response
+    field or an assignment-rule link, so the assignments may not be the
+    review's yet (author, 2026-11-11). It covers the whole block, not
+    only that instrument's share.
 - `reviewers` and `reviewees`: Monitoring's two tables, listing only who
-  has assignments.
+  has assignments (and, for reviewers, only the active).
   - A reviewer row: `email`, `name`, `state`, `assignments`,
     `completed`, `missing_required`, `invitation` and
     `last_reminder_at`.

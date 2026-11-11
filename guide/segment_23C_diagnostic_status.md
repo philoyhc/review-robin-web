@@ -23,7 +23,7 @@ The Utilities tool is diagnostic. Its status should carry what Review Robin repo
 5. **Progress** (`monitoring`): the reviewer summary (assigned, invited, opened, submitted, incomplete) and the assignments' completion. It is always reported, with `provisional: true` and the reason while any instrument is not set up, rather than withheld.
 6. **Per person** (Monitoring's own tables): each reviewer's progress state and counts, and each reviewee's coverage state.
 
-The page shows each section as Review Robin labels it.
+The page shows each section as Review Robin reports it, its keys as sent.
 
 **Rejected:**
 - **Withholding progress until instruments are set up.** That was drafted after the author's first note, and is parked as `wip-status-v2`. A diagnostic hides nothing; it labels.
@@ -56,7 +56,7 @@ Taken 2026-11-11 at `e7e290b`.
 
 1. **Plan** (this file).
 2. **Status v3.** The view adapter, the route, `spec/handoffs.md` §10, and tests for each section, including `provisional` while an instrument is not set up. Not touched: the page.
-3. **The page.** It shows each section as Review Robin labels it, with per-person rows in collapsed tables. This is the last build rung: `diff-reviewer` reads the cumulative diff.
+3. **The page.** It shows each section as Review Robin reports it, with per-person rows in collapsed tables. This is the last build rung: `diff-reviewer` reads the cumulative diff.
 4. **Close.**
 
 ## Definition of done
