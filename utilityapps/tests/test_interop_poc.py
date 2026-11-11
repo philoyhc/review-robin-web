@@ -39,6 +39,10 @@ def test_the_button_posts_to_review_robins_create_route(client: TestClient) -> N
     assert 'data-holding-url="/reviewrobin/operator/handoffs/new"' in text
     assert 'data-create-url="/reviewrobin/operator/handoffs/sessions"' in text
     assert 'redirect: "manual"' in text  # a non-operator's 303 reads as not authorized
+    # A refusal starts a new transfer next time; a 5xx or a lost answer
+    # keeps it, so a retry finds a session already made (the cold read).
+    assert "reply.status >= 500" in text and "if (!keep) transfer = null;" in text
+    assert "directory_sign_in:" in text
 
 
 def test_the_page_carries_the_bundle_less_its_per_click_parts(client: TestClient) -> None:

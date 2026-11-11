@@ -33,7 +33,10 @@
       invalid_package: "Review Robin could not read the bundle.",
       unsupported_version: "Review Robin does not accept this bundle's version.",
       session_code_conflict: "That session code is already in use. Try again for a new one.",
-      duplicate_conflict: "Another person already sent this transfer. Reload the page and try again."
+      duplicate_conflict: "Another person already sent this transfer. Reload the page and try again.",
+      directory_sign_in: "Your Review Robin sign-in to the directory has lapsed. Open Review Robin, sign in again, then try again.",
+      "411": "Review Robin needs the bundle's length. Try again.",
+      "413": "The bundle is too large for Review Robin."
     };
     function el(tag, text, cls) {
       var node = document.createElement(tag);
@@ -50,10 +53,13 @@
       return "POC-" + String(d.getFullYear()).slice(2) + two(d.getMonth() + 1) + two(d.getDate()) +
         "-" + two(d.getHours()) + two(d.getMinutes()) + two(d.getSeconds());
     }
-    function refused(tab, error, body) {
+    function refused(tab, error, body, keep) {
       if (tab && !tab.closed) tab.close();
-      transfer = null;
-      var nodes = [el("p", messages[error] || ("Review Robin answered " + error + "."), "error")];
+      // A refusal is final, so the next click is a new transfer; a server
+      // error may have come after the session was made, so its transfer is
+      // kept and trying again finds it rather than making a second one.
+      if (!keep) transfer = null;
+      var nodes = [el("p", messages[error] || (error === "server" ? "Review Robin did not finish." : "Review Robin answered " + error + "."), "error")];
       if (body && body.slot) nodes.push(el("p", "File: " + body.slot + ".csv" + (body.reason ? " (" + body.reason + ")" : ""), "note"));
       if (body && body.details && body.details.length) {
         var list = el("ul");
@@ -82,7 +88,12 @@
         // The operator gate answers a non-operator with a redirect to /me.
         if (reply.type === "opaqueredirect" || reply.status === 0) return refused(tab, "not_authorized");
         return reply.json().catch(function () { return {}; }).then(function (body) {
-          if (!reply.ok || !body.session_home_url) return refused(tab, body.error || String(reply.status), body);
+          if (!reply.ok || !body.session_home_url) {
+            if (reply.status >= 500) {
+              return refused(tab, "server", { details: ["Review Robin failed (" + reply.status + "). Try again: the same transfer is sent, so no second session is made."] }, true);
+            }
+            return refused(tab, body.error || String(reply.status), body);
+          }
           transfer = null;
           var opened = tab && !tab.closed;
           if (opened) tab.location.href = body.session_home_url;
