@@ -33,9 +33,16 @@ host is provisioned and serving Review Robin since 2026-10-31; whether
 the deployment has *concluded* (verified, the personal web app retired)
 is the author's call.
 
-**Order (author, 2026-11-06):** 14G when IT answers.
+**Order (author, 2026-11-11):** 20K now; 14G when IT answers.
 
-1. **14G — Scheduled email** (gated on IT: offline sending as the
+1. **20K — One response field per line on the reviewer surface**
+   (author picked it over 20L, 2026-11-11). An instrument can stack its
+   response fields, each labeled beside its input. **Plan:**
+   `guide/segment_20K_stacked_response_layout.md`. The close waits on
+   the author's browser check. 20L (`guide/segment_20L_response_row_break.md`)
+   stays written, not queued.
+
+2. **14G — Scheduled email** (gated on IT: offline sending as the
    operator, else a dedicated mailbox). Sends due invitations, reminders
    and confirmations from 14E's clock, turning the offset fields from
    prompts (14F rung 5) back into sends. **Plan:**

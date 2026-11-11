@@ -32,7 +32,10 @@ from app.services.instruments._field_refs import (
     sort_to_positions,
     widths_to_positions,
 )
-from app.services.instruments._instrument_crud import effective_intro_layout
+from app.services.instruments._instrument_crud import (
+    effective_intro_layout,
+    effective_response_layout,
+)
 from app.services.session_config_io._rows import (
     Row,
     _bool,
@@ -432,6 +435,12 @@ def _instrument_rows(
         Row(
             f"{prefix}.intro_layout",
             _str(effective_intro_layout(instrument)),
+            "enum",
+        ),
+        # Segment 20K — the Responses chip.
+        Row(
+            f"{prefix}.response_layout",
+            _str(effective_response_layout(instrument)),
             "enum",
         ),
         Row(
