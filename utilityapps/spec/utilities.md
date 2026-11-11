@@ -65,8 +65,9 @@ Test replaces it.
 - **Shown:** the outcome, HTTP status, whether the envelope matched (with
   Telegram's description, cut to 80 printable characters), elapsed ms, the
   time in UTC and SGT, a correlation ID and one line of guidance.
-- **Logged:** outcome, status, elapsed ms, the exception's class name on a
-  failure, and correlation ID. Nothing is kept.
+- **Logged:** outcome, status, elapsed ms, on a failure the exception's
+  class (and the class urllib wrapped in it) with its errno, never its
+  message, and correlation ID. Nothing is kept.
 - **Spacing:** one run at a time, at least 30 s apart across the process;
   sooner is a `429` page. Every response is `no-store`.
 - **Cross-site posts:** the host's `SameSite=Lax` sign-in cookie, as every

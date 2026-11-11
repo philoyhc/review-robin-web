@@ -99,13 +99,59 @@ def test_anything_else_that_answers_is_not_a_pass(reply: Reply) -> None:
 def test_failures_are_classified_without_their_detail(exc: BaseException, outcome: str) -> None:
     result = telegram_egress.run(_raising(exc))
     assert result.outcome.value == outcome
-    assert result.error_type == type(exc).__name__  # for the log, never the page
+    assert result.error_type == telegram_egress.describe(exc)  # for the log, never the page
+    assert result.error_type is not None and result.error_type.startswith(type(exc).__name__)
     assert (result.http_status, result.telegram_api_envelope, result.description) == (
         None,
         False,
         None,
     )
     assert result.guidance  # every outcome has its sentence
+
+
+@pytest.mark.parametrize(
+    ("exc", "described"),
+    [
+        (
+            urllib.error.URLError(ConnectionResetError(104, "Connection reset by peer")),
+            "URLError/ConnectionResetError errno=104",
+        ),
+        (
+            urllib.error.URLError(ConnectionRefusedError(111, "Connection refused")),
+            "URLError/ConnectionRefusedError errno=111",
+        ),
+        (
+            urllib.error.URLError(OSError(101, "Network is unreachable")),
+            "URLError/OSError errno=101",
+        ),
+        (urllib.error.URLError(TimeoutError("timed out")), "URLError/TimeoutError"),
+        (urllib.error.URLError("unknown url type"), "URLError"),
+        (ConnectionResetError(104, "reset"), "ConnectionResetError errno=104"),
+        (
+            urllib.error.URLError(ssl.SSLCertVerificationError(1, "certificate verify failed")),
+            "URLError/SSLCertVerificationError",
+        ),
+        (ValueError("something else"), "ValueError"),
+    ],
+)
+def test_the_log_names_the_wrapped_error_and_its_errno(exc: BaseException, described: str) -> None:
+    """`error=URLError` alone could not tell refused from reset (the first
+    production runs, 2026-11-11). Class names and errno only, never the message."""
+    assert telegram_egress.describe(exc) == described
+
+
+def test_a_failed_run_logs_the_wrapped_error_and_never_its_message(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level("INFO", logger="utilityapps.diagnostics.routes")
+    monkeypatch.setattr(routes, "gate", routes._Gate())  # pyright: ignore[reportPrivateUsage]  -- a fresh gate
+    reset = urllib.error.URLError(ConnectionResetError(104, "Connection reset by 10.1.2.3"))
+    monkeypatch.setattr(routes, "probe", lambda: telegram_egress.run(_raising(reset)))
+    page = client.post(RUN)
+    assert "NETWORK_ERROR" in page.text and "ConnectionResetError" not in page.text
+    logged = " ".join(r.getMessage() for r in caplog.records)
+    assert "error=URLError/ConnectionResetError errno=104 correlation=" in logged
+    assert "10.1.2.3" not in logged and "reset by" not in logged
 
 
 def test_elapsed_time_is_measured_in_milliseconds() -> None:
