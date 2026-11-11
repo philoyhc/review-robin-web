@@ -718,7 +718,8 @@ This is the **safety gate** that stops the implicit Full Matrix
 default (synthesised when `rule_set_id` is NULL — see
 `spec/assignments.md`) shipping silently. The
 operator has to make a deliberate choice on each Link before
-the instrument reads as configured.
+the instrument reads as configured; Validate raises an error until
+then (`instruments.band1_not_set`, segment 20J).
 
 Writers respect ownership when updating the touched set:
 
@@ -1886,9 +1887,12 @@ of rules against instruments. Active ones that surface here
 
 - **`instruments.no_fields`** (error) — instrument has zero
   response fields.
-- **`instruments.no_visible_response_fields`** (warning) — every
-  response field has `visible=False`. Reviewer page would render
-  empty; turn on a field's name chip.
+- **`instruments.band1_not_set`** (error, segment 20J) — an
+  assignment-rule link is still `Not set`. The message names the
+  links by the card's headings; set each on the card.
+- **`instruments.no_visible_response_fields`** (error since segment
+  20J) — every response field has `visible=False`. Reviewer page
+  would render empty; turn on a field's name chip.
 - **`instruments.no_display_fields`** (warning) — instrument has
   zero display fields. Reviewer surface still works (Name + Email
   always render) but is sparse.
@@ -1916,12 +1920,13 @@ of rules against instruments. Active ones that surface here
   note below.
 
 Note: the "Not set" pill safety gate (see
-[the assignment rule](#instrument-assignment-rule--unit-of-review)) is enforced
-**off-validate** — it drives the workflow card's `is_setup_empty`
-state directly via `is_configured` / `has_unconfigured` rather
-than emitting a `ValidationRule`. The signal surface is the
-Workflow card's Setup checklist on the Workflow card right-column
-status aside.
+[the assignment rule](#instrument-assignment-rule--unit-of-review)) is
+enforced twice over. The workflow card's `is_setup_empty` reads
+`is_configured` / `has_unconfigured` directly, so its Setup checklist
+withholds **Prepare**; and since segment 20J its two halves are
+Validate errors (`instruments.band1_not_set`,
+`instruments.no_visible_response_fields`), so **Mark validated** and
+**Activate** refuse too.
 
 ## Open / deferred
 

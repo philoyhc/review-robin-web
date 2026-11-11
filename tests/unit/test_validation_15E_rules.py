@@ -220,7 +220,7 @@ def test_no_visible_response_fields_fires_when_none_visible(
     db: Session,
 ) -> None:
     """New-model instrument with zero ``visible=True`` response fields
-    → warning per instrument."""
+    → an error per instrument (segment 20J; a warning before)."""
     _user, review_session, instrument, _rs = _seed(db, code="nvrf-fire")
     # Hide all seeded response fields.
     db.execute(
@@ -233,8 +233,31 @@ def test_no_visible_response_fields_fires_when_none_visible(
     issues = validate_session_setup(db, review_session)
     fired = _issues_with_key(issues, "instruments.no_visible_response_fields")
     assert len(fired) == 1
-    assert fired[0].severity is Severity.warning
+    assert fired[0].severity is Severity.error
     assert fired[0].fix_anchor == f"#instrument-{instrument.id}"
+
+
+def test_band1_not_set_names_each_link_not_set(db: Session) -> None:
+    """Segment 20J: an error per instrument with an assignment-rule
+    link still ``Not set``, naming those links by the card's
+    headings, in the card's order."""
+    _user, review_session, instrument, _rs = _seed(db, code="b1ns-fire")
+    instrument.band1_touched_links = ["link2"]
+    db.commit()
+    issues = validate_session_setup(db, review_session)
+    [issue] = _issues_with_key(issues, "instruments.band1_not_set")
+    assert issue.severity is Severity.error
+    assert issue.fix_anchor == f"#instrument-{instrument.id}"
+    assert "Who does the review, Unit of review." in issue.message
+    assert "Who is being reviewed" not in issue.message
+
+
+def test_band1_not_set_is_silent_once_all_three_links_are_set(db: Session) -> None:
+    _user, review_session, instrument, _rs = _seed(db, code="b1ns-ok")
+    instrument.band1_touched_links = ["link1", "link2", "link3"]
+    db.commit()
+    issues = validate_session_setup(db, review_session)
+    assert _issues_with_key(issues, "instruments.band1_not_set") == []
 
 
 def test_no_visible_response_fields_silent_when_at_least_one_visible(

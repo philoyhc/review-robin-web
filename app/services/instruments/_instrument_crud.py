@@ -854,7 +854,20 @@ def update_short_label(
     return instrument
 
 
-_BAND1_REQUIRED_LINKS: frozenset[str] = frozenset({"link1", "link2", "link3"})
+#: The three Band 1 links, in the card's order, by the heading it shows.
+BAND1_LINK_LABELS: tuple[tuple[str, str], ...] = (
+    ("link1", "Who does the review"),
+    ("link2", "Who is being reviewed"),
+    ("link3", "Unit of review"),
+)
+
+
+def band1_links_not_set(instrument: Instrument) -> tuple[str, ...]:
+    """The card headings of the instrument's Band 1 links still ``Not
+    set`` (absent from ``band1_touched_links``), in the card's order.
+    Empty when all three are set — half of :func:`is_configured`."""
+    touched = set(instrument.band1_touched_links or [])
+    return tuple(label for link, label in BAND1_LINK_LABELS if link not in touched)
 
 
 def is_configured(db: Session, instrument: Instrument) -> bool:
@@ -885,8 +898,7 @@ def is_configured(db: Session, instrument: Instrument) -> bool:
     )
     if visible_count <= 0:
         return False
-    touched = set(instrument.band1_touched_links or [])
-    return _BAND1_REQUIRED_LINKS.issubset(touched)
+    return not band1_links_not_set(instrument)
 
 
 def configured_counts(db: Session, session_id: int) -> tuple[int, int]:
@@ -916,10 +928,7 @@ def configured_counts(db: Session, session_id: int) -> tuple[int, int]:
     ).all()
     has_visible_field = {row[0] for row in rows}
     configured = sum(
-        1
-        for inst in instruments
-        if inst.id in has_visible_field
-        and _BAND1_REQUIRED_LINKS.issubset(set(inst.band1_touched_links or []))
+        1 for inst in instruments if inst.id in has_visible_field and not band1_links_not_set(inst)
     )
     return (len(instruments), configured)
 

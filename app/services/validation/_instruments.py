@@ -14,7 +14,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.schemas.validation import Severity, ValidationIssue
-from app.services.instruments import _instrument_label
+from app.services.instruments import _instrument_label, band1_links_not_set
 from app.services.validation._inputs import (
     ValidationInputs,
 )
@@ -22,6 +22,7 @@ from app.services.validation._inputs import (
 # What the package's other modules import from this one; the leading
 # underscore marks a name private to the package, not to the module.
 __all__ = [
+    "_check_instruments_band1_not_set",
     "_check_instruments_no_display_fields",
     "_check_instruments_no_fields",
     "_check_instruments_no_rule_pinned",
@@ -53,6 +54,30 @@ def _check_instruments_no_fields(
             )
 
 
+def _check_instruments_band1_not_set(
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
+) -> Iterable[ValidationIssue]:
+    """An error per instrument with a Band 1 link still ``Not set``
+    (segment 20J): the other half of ``instruments.is_configured``,
+    which the Workflow card already gates Prepare on."""
+    for instrument in inputs.instruments:
+        not_set = band1_links_not_set(instrument)
+        if not not_set:
+            continue
+        yield ValidationIssue(
+            severity=Severity.error,
+            source="instruments",
+            message=(
+                f"Instrument {_instrument_label(instrument)!r} has its "
+                f"assignment rule not set: {', '.join(not_set)}. Set each "
+                "on the instrument's card."
+            ),
+            fix_anchor=f"#instrument-{instrument.id}",
+        )
+
+
 def _check_instruments_no_rule_pinned(
     db: Session,
     review_session: ReviewSession,
@@ -65,9 +90,8 @@ def _check_instruments_no_rule_pinned(
     ``rule_set_id`` is not a setup gap in itself. Readiness is
     checked elsewhere: ``instruments.no_visible_response_fields``
     here, and the Band 1 "Not set" gate
-    (``instruments.is_configured``), which the Workflow card
-    enforces off-validate. The rule key stays registered so audit
-    history remains addressable.
+    (``instruments.band1_not_set``, segment 20J). The rule key stays
+    registered so audit history remains addressable.
     """
     return
     yield  # pragma: no cover — make this an Iterable
@@ -78,7 +102,7 @@ def _check_new_model_no_visible_response_fields(
     review_session: ReviewSession,
     inputs: ValidationInputs,
 ) -> Iterable[ValidationIssue]:
-    """Warning per new-model instrument with no ``visible=True``
+    """Error (segment 20J; a warning before) per instrument with no ``visible=True``
     :class:`InstrumentResponseField` rows once the session has
     reviewers + reviewees.
 
@@ -93,7 +117,7 @@ def _check_new_model_no_visible_response_fields(
         if instrument.id in inputs.instruments_with_visible_response_fields:
             continue
         yield ValidationIssue(
-            severity=Severity.warning,
+            severity=Severity.error,
             source="instruments",
             message=(
                 f"Instrument {_instrument_label(instrument)!r} has no "

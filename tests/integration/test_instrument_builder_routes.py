@@ -5628,9 +5628,9 @@ def test_new_model_no_band1_rule_activates_and_accepts_responses(
     client: TestClient, db: Session
 ) -> None:
     """Wave 4 PR 1 — activation flips ``accepting_responses=True`` on
-    new-model instruments with NULL ``rule_set_id`` (Full Matrix
-    default). The legacy ``group_kind + rule_set_id IS NULL`` skip
-    no longer triggers for new-model rows."""
+    new-model instruments with NULL ``rule_set_id``: all three links
+    set to *All* store no rule set. Segment 20J: the links must be set
+    first; until then Validate refuses, and the session stays draft."""
     review_session, new_model = _new_model_with_tags(client, db, code="w4-default-activate")
     # Delete the legacy source instrument so the session has only the
     # new-model row. (``_new_model_with_tags`` seeds a legacy
@@ -5642,12 +5642,26 @@ def test_new_model_no_band1_rule_activates_and_accepts_responses(
         .where(Instrument.session_id == review_session.id)
         .where(Instrument.id != new_model.id)
     ).scalar_one()
-    client.post(
+    deleted = client.post(
         f"/operator/sessions/{review_session.public_id}/instruments/{source.id}/delete",
+        data={"confirm": "true"},
         follow_redirects=False,
     )
+    # Segment 20J: the delete wanted its confirm, and the 400 went unseen
+    # until Validate started reading the source instrument's links.
+    assert deleted.status_code == 303, deleted.text
     generate_via_page_button(client, review_session.id)
     _activate(client, db, review_session.id)
+    db.refresh(review_session)
+    assert review_session.status == "draft"  # links not set: refused
+
+    db.refresh(new_model)
+    new_model.band1_touched_links = ["link1", "link2", "link3"]  # All, All, Individual
+    db.commit()
+    generate_via_page_button(client, review_session.id, confirm_replace=True)
+    _activate(client, db, review_session.id)
+    db.refresh(review_session)
+    assert review_session.status == "ready"
 
     db.refresh(new_model)
     assert new_model.rule_set_id is None  # still NULL

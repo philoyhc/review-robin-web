@@ -360,8 +360,13 @@ def test_validate_setup_blocks_when_instrument_has_no_fields(db: Session) -> Non
 
     issues = validate_session_setup(db, session)
     blocking = [i for i in issues if i.severity is Severity.error and i.source == "instruments"]
-    assert len(blocking) == 1
-    assert "no response fields" in blocking[0].message
+    # No fields, so none visible; and its links not set (segment 20J).
+    assert sorted(i.rule_key or "" for i in blocking) == [
+        "instruments.band1_not_set",
+        "instruments.no_fields",
+        "instruments.no_visible_response_fields",
+    ]
+    assert any("no response fields" in i.message for i in blocking)
 
 
 # ── validation_block_from_inline — Band 3 → JSON shape ──────────────────

@@ -56,8 +56,17 @@ def _session(db: Session, *, code: str, **kwargs: object) -> ReviewSession:
     return review_session
 
 
-def _instrument(db: Session, session_id: int, name: str, order: int = 0) -> Instrument:
-    instrument = Instrument(session_id=session_id, name=name, order=order)
+def _instrument(
+    db: Session, session_id: int, name: str, order: int = 0, *, set_up: bool = False
+) -> Instrument:
+    """``set_up`` sets all three Band 1 links (``band1_touched_links``),
+    which ``instruments.band1_not_set`` asks for (segment 20J)."""
+    instrument = Instrument(
+        session_id=session_id,
+        name=name,
+        order=order,
+        band1_touched_links=["link1", "link2", "link3"] if set_up else None,
+    )
     db.add(instrument)
     db.flush()
     return instrument
@@ -104,7 +113,7 @@ def _build_no_help_contact_only(db: Session) -> ReviewSession:
         )
     )
     db.flush()
-    instrument = _instrument(db, review_session.id, "I1")
+    instrument = _instrument(db, review_session.id, "I1", set_up=True)
     _response_field(db, instrument.id)
     _display_field(db, instrument.id)
     db.flush()
@@ -230,7 +239,7 @@ def _build_single_instrument_generated(db: Session) -> ReviewSession:
     )
     db.add_all([covered, missing, reviewee])
     db.flush()
-    instrument = _instrument(db, review_session.id, "I1")
+    instrument = _instrument(db, review_session.id, "I1", set_up=True)
     _response_field(db, instrument.id)
     _display_field(db, instrument.id)
     db.flush()

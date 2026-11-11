@@ -118,6 +118,14 @@
     },
     {
       "field": null,
+      "fix_anchor": "#instrument-1",
+      "message": "Instrument 'Instrument_1' has its assignment rule not set: Who does the review, Who is being reviewed, Unit of review. Set each on the instrument's card.",
+      "rule_key": "instruments.band1_not_set",
+      "severity": "error",
+      "source": "instruments"
+    },
+    {
+      "field": null,
       "fix_anchor": null,
       "message": "No included assignment rows on any instrument \u2014 reviewers will see an empty surface",
       "rule_key": "assignments.no_included_pairs",
@@ -145,9 +153,33 @@
     {
       "field": null,
       "fix_anchor": "#instrument-1",
+      "message": "Instrument 'Instrument_1' has its assignment rule not set: Who does the review, Who is being reviewed, Unit of review. Set each on the instrument's card.",
+      "rule_key": "instruments.band1_not_set",
+      "severity": "error",
+      "source": "instruments"
+    },
+    {
+      "field": null,
+      "fix_anchor": "#instrument-2",
+      "message": "Instrument 'Instrument_2' has its assignment rule not set: Who does the review, Who is being reviewed, Unit of review. Set each on the instrument's card.",
+      "rule_key": "instruments.band1_not_set",
+      "severity": "error",
+      "source": "instruments"
+    },
+    {
+      "field": null,
+      "fix_anchor": "#instrument-3",
+      "message": "Instrument 'Instrument_3' has its assignment rule not set: Who does the review, Who is being reviewed, Unit of review. Set each on the instrument's card.",
+      "rule_key": "instruments.band1_not_set",
+      "severity": "error",
+      "source": "instruments"
+    },
+    {
+      "field": null,
+      "fix_anchor": "#instrument-1",
       "message": "Instrument 'Instrument_1' has no visible response fields \u2014 reviewers see an empty page. Select at least one response-field chip on the instrument's card.",
       "rule_key": "instruments.no_visible_response_fields",
-      "severity": "warning",
+      "severity": "error",
       "source": "instruments"
     },
     {
@@ -155,7 +187,7 @@
       "fix_anchor": "#instrument-3",
       "message": "Instrument 'Instrument_3' has no visible response fields \u2014 reviewers see an empty page. Select at least one response-field chip on the instrument's card.",
       "rule_key": "instruments.no_visible_response_fields",
-      "severity": "warning",
+      "severity": "error",
       "source": "instruments"
     },
     {
@@ -176,6 +208,30 @@
     }
   ],
   "multi_instrument_gaps": [
+    {
+      "field": null,
+      "fix_anchor": "#instrument-1",
+      "message": "Instrument 'Instrument_1' has its assignment rule not set: Who does the review, Who is being reviewed, Unit of review. Set each on the instrument's card.",
+      "rule_key": "instruments.band1_not_set",
+      "severity": "error",
+      "source": "instruments"
+    },
+    {
+      "field": null,
+      "fix_anchor": "#instrument-2",
+      "message": "Instrument 'Instrument_2' has its assignment rule not set: Who does the review, Who is being reviewed, Unit of review. Set each on the instrument's card.",
+      "rule_key": "instruments.band1_not_set",
+      "severity": "error",
+      "source": "instruments"
+    },
+    {
+      "field": null,
+      "fix_anchor": "#instrument-3",
+      "message": "Instrument 'Instrument_3' has its assignment rule not set: Who does the review, Who is being reviewed, Unit of review. Set each on the instrument's card.",
+      "rule_key": "instruments.band1_not_set",
+      "severity": "error",
+      "source": "instruments"
+    },
     {
       "field": "reviewer_id:1|instrument_id:1",
       "fix_anchor": "#instrument-1",

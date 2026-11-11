@@ -562,6 +562,10 @@ def test_status_reports_the_session_and_its_counts(client: TestClient, db: Sessi
         i for i in validation["issues"] if i["rule"] == "assignments.no_included_pairs"
     ).items()
     assert workflow["invitations_generated"] is False and workflow["invitations_sent"] is False
+    # Segment 20J: Validate refuses the instrument not set up, too.
+    not_set = [i for i in validation["issues"] if i["rule"] == "instruments.band1_not_set"]
+    assert [i["severity"] for i in not_set] == ["error"]
+    assert validation["errors"] >= 1
     # Progress is reported, not withheld, and labelled provisional.
     assert body["progress"]["provisional"] is True
     assert body["progress"]["provisional_reason"] == "instruments_not_set_up"

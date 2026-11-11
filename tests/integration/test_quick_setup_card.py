@@ -22,6 +22,7 @@ from app.db.models import ReviewSession
 
 from ._full_matrix import (
     generate_via_page_button,
+    mark_band1_touched_on_all_instruments,
     pin_full_matrix_on_all_instruments,
 )
 from ._quick_setup_refusal import refusal
@@ -335,6 +336,7 @@ def test_reviewers_submit_on_validated_applies_and_demotes(
 
     operator = make_client(alice)
     review_session = _seed_pair(operator, db, code="qs-validated-submit")
+    mark_band1_touched_on_all_instruments(db, review_session.id)  # segment 20J
     validate_session(review_session)
     db.flush()
     assert review_session.status == "validated"
