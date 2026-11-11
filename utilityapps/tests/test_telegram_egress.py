@@ -34,11 +34,11 @@ def _envelope(code: int, description: str = "Unauthorized") -> bytes:
 
 
 def _replying(reply: Reply):
-    return lambda deadline: reply
+    return lambda deadline, answered: reply
 
 
 def _raising(exc: BaseException):
-    def fetch(deadline: float) -> Reply:
+    def fetch(deadline: float, answered: threading.Event) -> Reply:
         raise exc
 
     return fetch
@@ -156,7 +156,7 @@ def test_the_request_is_fixed_bounded_and_reads_at_most_4_kib(
 ) -> None:
     opener = _Opener(_Answer(200, b"x" * 10_000))
     monkeypatch.setattr(telegram_egress, "_opener", lambda: opener)
-    reply = telegram_egress.urllib_fetch(time.monotonic() + 5)
+    reply = telegram_egress.urllib_fetch(time.monotonic() + 5, threading.Event())
     assert opener.calls == [
         ("https://api.telegram.org/bot000000000:INVALID/getMe", "GET", telegram_egress.TIMEOUT)
     ]
@@ -175,10 +175,12 @@ def test_an_http_error_status_is_an_answer_not_a_failure(
     closed: list[bool] = []
     monkeypatch.setattr(error, "close", lambda: closed.append(True))
     monkeypatch.setattr(telegram_egress, "_opener", lambda: _Opener(error))
-    reply = telegram_egress.urllib_fetch(time.monotonic() + 5)
+    reply = telegram_egress.urllib_fetch(time.monotonic() + 5, threading.Event())
     assert (reply.status, reply.content_type) == (401, JSON)
     assert closed == [True]  # its socket is not left to the collector
-    assert telegram_egress.run(lambda deadline: reply).outcome is Outcome.TELEGRAM_REACHABLE
+    assert (
+        telegram_egress.run(lambda deadline, answered: reply).outcome is Outcome.TELEGRAM_REACHABLE
+    )
 
 
 def test_the_whole_attempt_is_held_to_the_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -186,7 +188,7 @@ def test_the_whole_attempt_is_held_to_the_deadline(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(telegram_egress, "DEADLINE", 0.05)
     release = threading.Event()
 
-    def hangs(deadline: float) -> Reply:
+    def hangs(deadline: float, answered: threading.Event) -> Reply:
         release.wait(5)
         return Reply(401, JSON, _envelope(401))
 
@@ -196,6 +198,37 @@ def test_the_whole_attempt_is_held_to_the_deadline(monkeypatch: pytest.MonkeyPat
     assert time.monotonic() - started < 2
     assert result.outcome is Outcome.CONNECT_TIMEOUT
     assert result.error_type == "_Unfinished"
+
+
+def test_running_out_of_time_after_an_answer_began_is_a_read_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Headers came back, then the body trickled past the deadline: the
+    connection worked, so not CONNECT_TIMEOUT (Codex, `#3776`)."""
+    monkeypatch.setattr(telegram_egress, "DEADLINE", 0.05)
+    release = threading.Event()
+
+    def trickles(deadline: float, answered: threading.Event) -> Reply:
+        answered.set()
+        release.wait(5)
+        return Reply(401, JSON, _envelope(401))
+
+    result = telegram_egress.run(trickles)
+    release.set()
+    assert result.outcome is Outcome.READ_TIMEOUT
+
+
+def test_urllib_fetch_marks_the_answer_begun(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(telegram_egress, "_opener", lambda: _Opener(_Answer(200, b"{}")))
+    answered = threading.Event()
+    telegram_egress.urllib_fetch(time.monotonic() + 5, answered)
+    assert answered.is_set()
+    failing = _Opener(urllib.error.URLError(TimeoutError("timed out")))
+    monkeypatch.setattr(telegram_egress, "_opener", lambda: failing)
+    before = threading.Event()
+    with pytest.raises(urllib.error.URLError):
+        telegram_egress.urllib_fetch(time.monotonic() + 5, before)
+    assert not before.is_set()
 
 
 def test_a_trickling_body_stops_at_the_deadline() -> None:

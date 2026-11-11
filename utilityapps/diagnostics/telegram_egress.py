@@ -107,7 +107,10 @@ class Result:
         return GUIDANCE[self.outcome]
 
 
-Fetch = Callable[[float], Reply]  # given the monotonic deadline
+# Given the monotonic deadline, and an event to set once an answer has
+# begun (connected, TLS done, status line read), so that running out of
+# time afterwards reads as READ_TIMEOUT, not CONNECT_TIMEOUT.
+Fetch = Callable[[float, threading.Event], Reply]
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -156,14 +159,16 @@ def _reply(status: int, headers: Any, stream: Any, deadline: float) -> Reply:
     return Reply(status, content_type, _read(stream, deadline))
 
 
-def urllib_fetch(deadline: float) -> Reply:
+def urllib_fetch(deadline: float, answered: threading.Event) -> Reply:
     request = urllib.request.Request(
         URL, headers={"Accept": "application/json", "User-Agent": "cordware-egress-probe"}
     )
     try:
         with _opener().open(request, timeout=TIMEOUT) as answer:  # noqa: S310 - fixed https URL
+            answered.set()
             return _reply(answer.status, answer.headers, answer, deadline)
     except urllib.error.HTTPError as exc:
+        answered.set()
         try:
             return _reply(exc.code, exc.headers, exc, deadline)
         finally:
@@ -231,10 +236,11 @@ def _bounded(fetch: Fetch, deadline: float) -> Reply:
     """``fetch`` on its own thread, abandoned at the deadline. A thread left
     behind ends at its next socket timeout; it holds nothing of anyone's."""
     box: dict[str, object] = {}
+    answered = threading.Event()
 
     def work() -> None:
         try:
-            box["reply"] = fetch(deadline)
+            box["reply"] = fetch(deadline, answered)
         except BaseException as exc:  # handed back to the caller
             box["error"] = exc
 
@@ -242,7 +248,7 @@ def _bounded(fetch: Fetch, deadline: float) -> Reply:
     worker.start()
     worker.join(max(0.0, deadline - time.monotonic()))
     if worker.is_alive():
-        raise _Unfinished(connected=False)
+        raise _Unfinished(connected=answered.is_set())
     if "error" in box:
         raise cast(BaseException, box["error"])
     return cast(Reply, box["reply"])
