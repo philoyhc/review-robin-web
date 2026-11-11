@@ -37,7 +37,7 @@ authors a rule, where `group_kind` lives — see
 > RuleSet library and no standalone Rule Builder page. An instrument
 > whose three Band 1 Links are set with no rule stored (*All*, *All*,
 > *Individual*) evaluates against the synthetic Full Matrix. **One with
-> a Link still `Not set` generates nothing** (segment 20J): there is no
+> a Link still `Not set` generates nothing**: there is no
 > Full Matrix default, and Validate refuses it
 > (`instruments.band1_not_set`; `spec/instruments.md` § *"Not set" pill
 > safety gate*).
@@ -77,7 +77,7 @@ An Assignment connects three entities:
 - **Instrument** — a row in `instruments`. Owns the rule (via
   `rule_set_id`, or the synthetic Full Matrix when NULL with its Links
   set) and the unit-of-review (`group_kind`). With a Link not set it
-  has no pairs (segment 20J).
+  has no pairs.
 
 Plus one pair-level entity:
 
@@ -334,8 +334,8 @@ distinction — every row is per-session.
 ## Synthetic Full Matrix
 
 **An instrument with a Band 1 Link still `Not set` has no pairs**, whatever
-`rule_set_id` holds (segment 20J, author 2026-11-11: there is no
-reachable Full Matrix default). The engine's fan-out for it is empty, so
+`rule_set_id` holds: there is no reachable
+Full Matrix default. The engine's fan-out for it is empty, so
 Generate removes any rows it has, `reconcile_impact` counts them as
 deleted, and the staleness verdict reads stale while they remain. It is
 read off `instruments.band1_links_not_set`, the same test
@@ -1361,9 +1361,11 @@ implementation note:
 - **A change that swaps one pair for another is stale**, even though the
   totals match. A count comparison reports a session fresh while every
   row names a reviewer the rule no longer selects.
-- **Unpinned instruments go stale too.** A NULL `rule_set_id` is the Full
-  Matrix default at the diff site, so an unpinned instrument generates
-  like any other and can fall out of step like any other.
+- **Unpinned instruments go stale too.** A NULL `rule_set_id` with all
+  three Links set is the Full Matrix at the diff site, so it generates
+  like any other and can fall out of step like any other. One with a Link
+  not set has an empty target, so it reads stale only while it still
+  holds rows.
 
 - **A roster append or merge leaves every assignment in place** and reads
   stale when a regeneration would add pairs for the new rows; it is the
@@ -1391,7 +1393,7 @@ scale, so the verdict — together with the `eligible` and
 renders — persists on `instruments.cached_reconcile_*` against a content
 stamp. The stamp covers **everything the verdict is derived from**: both
 rosters, the relationships rows behind `pair_context`, the pinned rule,
-the instrument's `rule_set_id`, `group_kind` and self-review
+the instrument's `rule_set_id`, whether its Links are set, `group_kind` and self-review
 setting (`self_reviews_active`), any caller-supplied self-review override, and a
 summary of the instrument's own `Assignment` rows. That last one is not an engine input, and it is in the stamp
 because the verdict is a *diff against the materialised rows*: Generate
@@ -1412,7 +1414,7 @@ run the Workflow card's readiness report still warm without
 committing.
 
 **A never-generated instrument on Full Matrix is counted, not walked**
-(one with a Link not set counts no pairs at all, segment 20J). With no
+(one with a Link not set counts no pairs at all). With no
 rule and no `Assignment` rows the verdict is
 not stale by definition, and the fan-out is every reviewer × reviewee
 pair, less the self-review pairs only when a self-review override

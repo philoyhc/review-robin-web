@@ -1173,10 +1173,10 @@ Routes: `GET /templates/starter.zip`, `GET /templates/demo.zip`,
 carries only `reviewers.csv` and `reviewees.csv`, with **no
 relationships, observers or settings file, and no round-trip test**:
 it has no pairing rule to make Full Matrix on 154 people affordable
-(23,716 assignments), so a session built from it pairs everyone with
-everyone unless the operator narrows the rule (setting the three
-Band 1 links to `All` / `All` / `Individual`, which Prepare needs,
-keeps Full Matrix).
+(23,716 assignments), so a session built from it generates nothing
+until the operator sets the three Band 1 links; setting them to
+`All` / `All` / `Individual` pairs everyone with everyone (Full
+Matrix), and narrowing the rule pairs fewer.
 
 **The full set's cohort.** Eleven tutorial groups of fourteen
 (`TW01`–`TW11`), each split into teams of 5 / 5 / 4 numbered across

@@ -189,7 +189,7 @@ a view adapter (`app/web/views/_handoffs.py`). Identity: `session_ref`,
     `instruments_set_up`. The card checks setup only in draft, so past
     draft `setup_complete` is true whatever the checklist reads. An
     incomplete setup offers no **Prepare**, and the Validate rules
-    below refuse an instrument not set up as well (segment 20J).
+    below refuse an instrument not set up as well.
   - `actions`: the card's buttons showing now, enabled or not (with
     bulk email off, the send buttons show disabled), in order (`revert`,
     `prepare`, `send_invites`, `activate`, `send_reminders`, `close`,

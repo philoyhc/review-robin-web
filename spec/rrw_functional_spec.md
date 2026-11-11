@@ -564,10 +564,11 @@ Every RuleSet is **per-session**: a rule belongs to one
 instrument in one session and nowhere else.
 
 Each instrument owns its rule, authored inline in the instrument
-card's **Instrument assignment rule** (Band 1). When every Link is
-left in its "all"/"individual" state the instrument stores no rule
-and the engine substitutes a **synthetic Full Matrix** (everyone
-reviews everyone) at evaluate time; the moment a Link carries a
+card's **Instrument assignment rule** (Band 1). Until every Link is
+set the instrument has no assignments. When every Link is set to
+"all"/"individual" the instrument stores no rule and the engine
+substitutes a **synthetic Full Matrix** (everyone reviews everyone)
+at evaluate time; the moment a Link carries a
 filter, a stored rule is created. The operator changes
 a rule by editing Band 1; sharing a rule across instruments is via
 Replicate-the-instrument, not a library.

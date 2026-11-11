@@ -716,9 +716,10 @@ The workflow card's "Empty Setup" state keys off
 
 This is the **safety gate** that makes the operator choose each Link
 deliberately before the instrument reads as configured. Until then it
-generates nothing — there is no Full Matrix default (segment 20J;
-`spec/assignments.md` § *Synthetic Full Matrix*) — and Validate raises
-an error (`instruments.band1_not_set`).
+generates nothing — there is no Full Matrix default (`spec/assignments.md` § *Synthetic Full Matrix*) — and Validate raises
+an error (`instruments.band1_not_set`). A change to which Links are
+set (`instrument.band1_links_set`) reverts a validated session to draft,
+like any rule edit.
 
 Writers respect ownership when updating the touched set:
 
@@ -1886,11 +1887,10 @@ of rules against instruments. Active ones that surface here
 
 - **`instruments.no_fields`** (error) — instrument has zero
   response fields.
-- **`instruments.band1_not_set`** (error, segment 20J) — an
+- **`instruments.band1_not_set`** (error) — an
   assignment-rule link is still `Not set`. The message names the
   links by the card's headings; set each on the card.
-- **`instruments.no_visible_response_fields`** (error since segment
-  20J) — every response field has `visible=False`. Reviewer page
+- **`instruments.no_visible_response_fields`** (error) — every response field has `visible=False`. Reviewer page
   would render empty; turn on a field's name chip.
 - **`instruments.no_display_fields`** (warning) — instrument has
   zero display fields. Reviewer surface still works (Name + Email
@@ -1922,7 +1922,7 @@ Note: the "Not set" pill safety gate (see
 [the assignment rule](#instrument-assignment-rule--unit-of-review)) is
 enforced twice over. The workflow card's `is_setup_empty` reads
 `is_configured` / `has_unconfigured` directly, so its Setup checklist
-withholds **Prepare**; and since segment 20J its two halves are
+withholds **Prepare**; and its two halves are
 Validate errors (`instruments.band1_not_set`,
 `instruments.no_visible_response_fields`), so **Mark validated** and
 **Activate** refuse too.
