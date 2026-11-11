@@ -39,9 +39,42 @@ does the other applications' probes. Cordware's deployment excluded it on
 |---|---|---|
 | Index | `/` (the bare mount) | Anyone Easy Auth lets in: the route checks no identity itself, since it names tools and holds nothing about anyone. Each tool gates its own routes. |
 | Email Address Checker | `/email-check/` and the steps it posts to | The platform super-admin only (`utilityapps/spec/email_check.md` "Access") |
+| Telegram egress probe | `/diagnostics/telegram-egress`, and `…/run` it posts to | The platform super-admin only. Not on the index: an operator diagnostic, not a tool |
 
 The index lists one card per tool, linking to its first page. Every page
 links back to the host's landing page (`/`) and to `/.auth/logout`.
+
+## Telegram egress probe
+
+A temporary diagnostic (`utilityapps/docs/cordware_telegram_egress_probe_handover_v0.1.md`):
+can this App Service reach `api.telegram.org:443`? Removed when Telegram
+Test replaces it.
+
+- **`GET`** explains and offers **Run probe**; it sends nothing.
+- **`POST …/run`** sends one `GET` to Telegram's `getMe` with a fixed,
+  invalid token: no retry, redirects not followed, certificates and host
+  names verified, each socket operation held to 3 s, the whole attempt
+  (DNS included) to 7 s, at most 4 KiB read. Nothing in the request comes
+  from the caller.
+- **The pass** is Telegram's own error envelope (`ok` false, `error_code`
+  equal to the HTTP status), whatever the status: `TELEGRAM_REACHABLE`.
+  Any other answer, a proxy refusing the tunnel included, is
+  `HTTP_INTERMEDIARY_OR_UNEXPECTED`; a failure is
+  `DNS_FAILURE`, `CONNECT_TIMEOUT`, `READ_TIMEOUT`, `TLS_FAILURE`,
+  `NETWORK_ERROR` or `OTHER_ERROR`, shown without its detail.
+- **Shown:** the outcome, HTTP status, whether the envelope matched (with
+  Telegram's description, cut to 80 printable characters), elapsed ms, the
+  time in UTC and SGT, a correlation ID and one line of guidance.
+- **Logged:** outcome, status, elapsed ms, the exception's class name on a
+  failure, and correlation ID. Nothing is kept.
+- **Spacing:** one run at a time, at least 30 s apart across the process;
+  sooner is a `429` page. Every response is `no-store`.
+- **Cross-site posts:** the host's `SameSite=Lax` sign-in cookie, as every
+  Cordware form (`docs/security_posture.md`, "CSRF posture"), so no token:
+  that is a platform property no in-app test can show. No Easy Auth
+  exclusion: the probe is behind sign-in like every other page.
+- **No feature flag:** Utilities reads no setting (above), and the
+  super-admin gate is the access control.
 
 Templates write app paths through `url()` in `utilityapps/web.py`, which
 adds the mount's prefix; `host_url()` marks a path that is the host's.
