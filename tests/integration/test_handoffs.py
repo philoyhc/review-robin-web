@@ -5,6 +5,8 @@ happens."""
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import uuid
 from collections.abc import Callable, Iterator
@@ -22,13 +24,16 @@ from app.db.models import (
     AuditEvent,
     EmailOutbox,
     Instrument,
+    InstrumentResponseField,
     Invitation,
+    Response,
     Reviewee,
     Reviewer,
     ReviewSession,
     SessionOperator,
 )
 from app.services import handoffs
+from app.services.instruments import GROUP_KIND_SENTINEL
 from app.web import views
 from app.web.routes_operator import _quick_setup
 
@@ -579,3 +584,138 @@ def test_a_status_read_changes_nothing(client: TestClient, db: Session) -> None:
     db.expire_all()
     assert _count(db, AuditEvent) == before
     assert db.scalars(select(ReviewSession)).one().status == "draft"
+
+
+def _answered_session(db: Session, *, submit: bool) -> tuple[ReviewSession, list[Assignment]]:
+    """The handed-off session with its first reviewer assigned every
+    reviewee, and the first assignment answered (submitted or saved)."""
+    review_session = db.scalars(select(ReviewSession)).one()
+    sid = review_session.id
+    instrument = db.scalars(select(Instrument).where(Instrument.session_id == sid)).one()
+    reviewer = db.scalars(
+        select(Reviewer).where(Reviewer.session_id == sid).order_by(Reviewer.id)
+    ).first()
+    assert reviewer is not None
+    assignments = [
+        Assignment(
+            session_id=sid,
+            reviewer_id=reviewer.id,
+            reviewee_id=reviewee.id,
+            instrument_id=instrument.id,
+        )
+        for reviewee in db.scalars(
+            select(Reviewee).where(Reviewee.session_id == sid).order_by(Reviewee.id)
+        )
+    ]
+    db.add_all(assignments)
+    db.flush()
+    fields = db.scalars(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id
+        )
+    ).all()
+    for field in fields:
+        db.add(
+            Response(
+                assignment_id=assignments[0].id,
+                response_field_id=field.id,
+                value=f"=Answer {field.field_key}",
+                submitted_at=datetime.now(UTC) if submit else None,
+            )
+        )
+    db.commit()
+    return review_session, assignments
+
+
+def _rows(reply: Any) -> list[dict[str, str]]:
+    return list(csv.DictReader(io.StringIO(reply.content.decode("utf-8"))))
+
+
+def test_results_csv_carries_submitted_answers_keyed_by_application(
+    client: TestClient, db: Session
+) -> None:
+    bundle = _bundle()
+    _post(client, bundle)
+    review_session, assignments = _answered_session(db, submit=True)
+    reply = client.get(f"/operator/handoffs/{bundle['transfer_id']}/results.csv")
+    assert reply.status_code == 200, reply.text
+    assert reply.headers["content-type"].startswith("text/csv")
+    assert reply.headers["cache-control"] == "no-store"
+    assert reply.headers["etag"].startswith('"sha256-')
+    assert reply.headers["x-review-robin-as-of"]
+    rows = _rows(reply)
+    assert rows and list(rows[0]) == list(handoffs.RESULTS_HEADER)
+    reviewee = db.get(Reviewee, assignments[0].reviewee_id)
+    assert reviewee is not None
+    for row in rows:
+        assert row["RevieweeEmail"] == reviewee.email_or_identifier  # the application ID
+        assert row["InstrumentSeq"] == "1"
+        assert row["Value"] == f"=Answer {row['FieldKey']}"  # as stored
+        assert row["SubmittedAt"]
+    event = db.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == "session.handoff_results_exported")
+    ).one()
+    assert event.detail is not None
+    assert event.detail["counts"] == {"rows": len(rows)}
+    assert event.detail["context"]["file"] == "results.csv"
+
+
+def test_results_csv_leaves_out_saved_drafts(client: TestClient, db: Session) -> None:
+    bundle = _bundle()
+    _post(client, bundle)
+    _answered_session(db, submit=False)
+    reply = client.get(f"/operator/handoffs/{bundle['transfer_id']}/results.csv")
+    assert reply.status_code == 200 and _rows(reply) == []
+
+
+def test_completion_csv_says_where_each_assignment_stands(client: TestClient, db: Session) -> None:
+    for submit, first_state in ((False, "in_progress"), (True, "submitted")):
+        bundle = _bundle(session_suggestion={"name": "S", "code": f"POC-{submit}"})
+        _post(client, bundle)
+        for row in db.scalars(select(Response)).all():
+            db.delete(row)
+        for row in db.scalars(select(Assignment)).all():
+            db.delete(row)
+        for row in db.scalars(select(ReviewSession)).all():
+            if row.code != f"POC-{submit}":
+                db.delete(row)
+        db.commit()
+        _answered_session(db, submit=submit)
+        rows = _rows(client.get(f"/operator/handoffs/{bundle['transfer_id']}/completion.csv"))
+        assert [r["State"] for r in rows] == [first_state] + ["not_started"] * (len(rows) - 1)
+        assert list(rows[0]) == list(handoffs.COMPLETION_HEADER)
+
+
+def test_an_unchanged_snapshot_is_not_modified_and_not_audited(
+    client: TestClient, db: Session
+) -> None:
+    bundle = _bundle()
+    _post(client, bundle)
+    _answered_session(db, submit=True)
+    url = f"/operator/handoffs/{bundle['transfer_id']}/results.csv"
+    first = client.get(url)
+    again = client.get(url)
+    assert first.headers["etag"] == again.headers["etag"]  # stable over unchanged data
+    before = _count(db, AuditEvent)
+    same = client.get(url, headers={"If-None-Match": first.headers["etag"]})
+    assert same.status_code == 304 and same.content == b""
+    assert _count(db, AuditEvent) == before
+
+
+def test_group_scoped_instruments_are_left_out(client: TestClient, db: Session) -> None:
+    bundle = _bundle()
+    _post(client, bundle)
+    _answered_session(db, submit=True)
+    for instrument in db.scalars(select(Instrument)).all():
+        instrument.group_kind = GROUP_KIND_SENTINEL
+    db.commit()
+    for name in ("results.csv", "completion.csv"):
+        assert _rows(client.get(f"/operator/handoffs/{bundle['transfer_id']}/{name}")) == []
+    counts = _status(client, bundle["transfer_id"]).json()["counts"]
+    assert counts["group_instruments"] == 1
+
+
+def test_the_csvs_refuse_an_unlinked_transfer(client: TestClient) -> None:
+    for name in ("results.csv", "completion.csv"):
+        reply = client.get(f"/operator/handoffs/{uuid.uuid4()}/{name}")
+        assert reply.status_code == 404 and reply.json()["error"] == "not_linked"

@@ -303,6 +303,8 @@ ROUTES: dict[str, tuple[Visit, ...]] = {
     "/operator/sessions/archived": _PAGE,
     "/operator/handoffs/new": _PAGE,
     "/operator/handoffs/{transfer_id}/status": _EVERY_STATE,
+    "/operator/handoffs/{transfer_id}/results.csv": _EVERY_STATE,
+    "/operator/handoffs/{transfer_id}/completion.csv": _EVERY_STATE,
     "/operator/sessions/new": _PAGE,
     "/operator/sessions/rehydrate": _PAGE,
     # Its token names the dropped rows a rehydrate commit stashes; the
