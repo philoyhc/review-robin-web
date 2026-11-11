@@ -167,3 +167,25 @@ def test_save_stores_every_line(
         ).scalars()
     }
     assert values == {fields["rating"].id: "4", fields["comments"].id: "Thorough"}
+
+
+def test_the_dragged_widths_hold_on_the_surface(
+    db: Session,
+    alice: AuthenticatedUser,
+    reviewer_user: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    operator = make_client(alice)
+    review_session = _make_session(operator, db, code="20k-widths")
+    _populate_rosters(operator, review_session.id)
+    _generate_full_matrix(operator, db, review_session.id)
+    instrument = _instrument(db, review_session.id)
+    instrument.response_layout = "stacked"
+    instrument.column_widths = {"stack_label": 180, "stack_input": 400}
+    db.flush()
+    _activate(operator, db, review_session.id)
+    flat = _flat(make_client(reviewer_user).get(f"/me/sessions/{review_session.public_id}").text)
+    assert (
+        'class="rs-stack-fields" style="--rs-stack-compact: 6ch; '
+        '--rs-stack-label: 180px; --rs-stack-input: 400px"'
+    ) in flat

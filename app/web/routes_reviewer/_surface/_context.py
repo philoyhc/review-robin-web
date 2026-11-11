@@ -588,6 +588,10 @@ def _surface_context(
                 "response_layout": response_layout,
                 "constraint_by_field_id": constraint_by_field_id,
                 "stack_compact_ch": views.stacked_compact_ch(fields) if stacked else None,
+                # The label and response columns' widths, once dragged
+                # on the Instruments page preview (20K rung 5).
+                "stack_label_px": widths_by_col_key.get("stack_label") if stacked else None,
+                "stack_input_px": widths_by_col_key.get("stack_input") if stacked else None,
                 "stack_compact_ids": (
                     {f.id for f in fields if views.stacked_box_chars(f) is not None}
                     if stacked

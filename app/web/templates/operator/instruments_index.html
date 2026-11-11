@@ -1637,6 +1637,8 @@
            data-new-model-band2-sample-names="{{ _band2.sample_names | join('|') }}"
            data-new-model-band2-sample-extra-count="{{ _band2.sample_extra_count }}"
            data-new-model-band2-identity-width="{{ _band2.identity_width_px or '' }}"
+           data-new-model-band2-stack-label-width="{{ _band2.stack_label_px or '' }}"
+           data-new-model-band2-stack-input-width="{{ _band2.stack_input_px or '' }}"
            data-new-model-band2-unit-mode="{{ _saved_unit_mode }}"
            data-new-model-band2-roster='{{ _band2.roster | tojson }}'
            data-new-model-band2-sample-name="{{ _band2.sample_reviewee_name or '' }}"
@@ -2681,12 +2683,84 @@
             }
             return '';
           }
+          // 20K rung 5 — the stacked layout's two widths, the label
+          // column and the response column, as CSS variables the cell's
+          // grid (and the header's, which carries their drag handles)
+          // reads; unset, the labels take their widest and the boxes the
+          // rest. ``stack_label`` / ``stack_input`` in column_widths.
+          function stackWidth(card, which) {
+            return parseInt(card.getAttribute('data-new-model-band2-stack-' + which + '-width') || '', 10) || 0;
+          }
+          function stackVars(card) {
+            var vars = [];
+            if (stackWidth(card, 'label')) { vars.push('--rs-stack-label: ' + stackWidth(card, 'label') + 'px'); }
+            if (stackWidth(card, 'input')) { vars.push('--rs-stack-input: ' + stackWidth(card, 'input') + 'px'); }
+            return vars.join('; ');
+          }
+          function stackResizeHandle(which) {
+            return '<span class="new-model-band2-resize-handle" '
+              + 'data-stack-width="' + which + '" '
+              + 'onmousedown="newModelStackResizeStart(event)" '
+              + 'style="position: absolute; right: -2px; top: 0; bottom: 0; '
+              + 'width: 6px; cursor: col-resize; user-select: none; z-index: 1;" '
+              + 'title="Drag to resize the ' + (which === 'label' ? 'label' : 'response') + ' column"></span>';
+          }
+          // The Responses header, split as the cell below it is: the
+          // label column's handle at its right edge, the response
+          // column's at its. ``syncStackHead`` lines an unset label
+          // column up with the cell's once both are drawn.
+          function stackHeader(card) {
+            var vars = stackVars(card);
+            return '<th scope="col" class="rs-stack">'
+              + '<div class="rs-stack-head"' + (vars ? ' style="' + vars + '"' : '') + '>'
+              + '<span class="rs-stack-head-label">Responses' + stackResizeHandle('label') + '</span>'
+              + '<span class="rs-stack-head-input">' + stackResizeHandle('input') + '</span>'
+              + '</div></th>';
+          }
+          function syncStackHead(card) {
+            var head = card.querySelector('[data-new-model-band2-preview] .rs-stack-head');
+            var label = card.querySelector('[data-new-model-band2-preview] td.rs-stack .rs-stack-label');
+            if (!head || !label || stackWidth(card, 'label')) { return; }
+            head.style.setProperty('--rs-stack-label', label.getBoundingClientRect().width + 'px');
+          }
+          // Drag one of the two widths: both grids follow live; on
+          // release the width is staged with the others for Save.
+          window.newModelStackResizeStart = function (event) {
+            event.preventDefault();
+            var handle = event.target;
+            var which = handle.getAttribute('data-stack-width');
+            var table = handle.closest('table');
+            var card = table && table.closest('[data-new-model-band2]');
+            if (!card || (which !== 'label' && which !== 'input')) { return; }
+            var part = handle.parentNode;
+            var startX = event.clientX;
+            var startWidth = part.getBoundingClientRect().width;
+            var lastWidth = Math.round(startWidth);
+            document.body.style.cursor = 'col-resize';
+            function onMove(ev) {
+              lastWidth = Math.round(Math.max(40, Math.min(1200, startWidth + ev.clientX - startX)));
+              table.querySelectorAll('.rs-stack-head, .rs-stack-fields').forEach(function (el) {
+                el.style.setProperty('--rs-stack-' + which, lastWidth + 'px');
+              });
+            }
+            function onUp() {
+              document.removeEventListener('mousemove', onMove);
+              document.removeEventListener('mouseup', onUp);
+              document.body.style.cursor = '';
+              card.setAttribute('data-new-model-band2-stack-' + which + '-width', lastWidth);
+              saveBand2Widths(card);
+            }
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+          };
           // The stacked layout's one Responses cell: a line per field,
           // its label and constraint left of its box.
           function buildStackCell(card, responses) {
             var compact = stackCompactCh(card, responses);
+            var vars = stackVars(card);
+            if (compact) { vars = (vars ? vars + '; ' : '') + '--rs-stack-compact: ' + compact + 'ch'; }
             var html = '<td class="rs-stack" data-col-key="responses"><div class="rs-stack-fields"'
-              + (compact ? ' style="--rs-stack-compact: ' + compact + 'ch"' : '') + '>';
+              + (vars ? ' style="' + vars + '"' : '') + '>';
             responses.forEach(function (r) {
               var row = rfRowByKey(card, r.key);
               var summary = (row && rfRowCommitted(row))
@@ -2740,7 +2814,8 @@
             // Any width counts, a hidden column's too, as the surface's
             // ``has_custom_widths`` counts every saved key.
             function hasWidth(row) { return (parseInt(row.getAttribute('data-width') || '', 10) || 0) > 0; }
-            var sized = identityW > 0 || dfRows(card).some(hasWidth) || rfRows(card).some(hasWidth);
+            var sized = identityW > 0 || dfRows(card).some(hasWidth) || rfRows(card).some(hasWidth)
+              || stackWidth(card, 'label') > 0 || stackWidth(card, 'input') > 0;
             function colAttrs(style) {
               if (!style) { return ''; }
               return sized ? ' style="' + style + '"' : ' data-start-style="' + style + '"';
@@ -2797,7 +2872,7 @@
               colIdx += 1;
             });
             if (stacked) {
-              html += '<th scope="col" class="rs-stack" style="position: relative;">Responses</th>';
+              html += stackHeader(card);
             }
             (stacked ? [] : responses).forEach(function (r) {
               var hint = responseColClass(card, r);
@@ -2915,7 +2990,7 @@
               + '</th>';
             colIdx += 1;
             if (stacked) {
-              html += '<th scope="col" class="rs-stack" style="position: relative;">Responses</th>';
+              html += stackHeader(card);
             }
             (stacked ? [] : responses).forEach(function (r) {
               html += '<th scope="col" style="position: relative;">'
@@ -3045,6 +3120,9 @@
             // widths through the form payload — eliminates the
             // race where the async fetch hadn't reached the
             // server before the page navigated away.
+            // 20K rung 5 — the stacked layout's two widths.
+            if (stackWidth(card, 'label')) { widths.stack_label = stackWidth(card, 'label'); }
+            if (stackWidth(card, 'input')) { widths.stack_input = stackWidth(card, 'input'); }
             var snapshot = card.querySelector('[data-new-model-band2-widths-snapshot]');
             if (snapshot) { snapshot.value = JSON.stringify(widths); }
             // Segment 18R Item 2 PR 5a — mark the card dirty so the
@@ -3476,6 +3554,7 @@
             placeHelpRows(card);
             container.innerHTML = buildProgressAndConstraintsRow(card)
               + tableHtml;
+            syncStackHead(card);
             // 19T Item 8 — refresh the display-field table's arrows.
             syncDfTable(card);
           }

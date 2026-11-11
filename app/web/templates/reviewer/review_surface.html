@@ -467,7 +467,11 @@
                      as wide as the column. #}
                   {% if row.cells %}
                   <td class="rs-stack">
-                    <div class="rs-stack-fields"{% if group.stack_compact_ch %} style="--rs-stack-compact: {{ group.stack_compact_ch }}ch"{% endif %}>
+                    {% set _stack_style = [] %}
+                    {% if group.stack_compact_ch %}{% set _stack_style = _stack_style + ["--rs-stack-compact: " ~ group.stack_compact_ch ~ "ch"] %}{% endif %}
+                    {% if group.stack_label_px %}{% set _stack_style = _stack_style + ["--rs-stack-label: " ~ group.stack_label_px ~ "px"] %}{% endif %}
+                    {% if group.stack_input_px %}{% set _stack_style = _stack_style + ["--rs-stack-input: " ~ group.stack_input_px ~ "px"] %}{% endif %}
+                    <div class="rs-stack-fields"{% if _stack_style %} style="{{ _stack_style | join('; ') }}"{% endif %}>
                       {% for cell in row.cells %}
                         {% set _summary = group.constraint_by_field_id.get(cell.field.id) %}
                         <div class="rs-stack-field{% if not cell.branch_open %} rs-branch-closed{% endif %}"

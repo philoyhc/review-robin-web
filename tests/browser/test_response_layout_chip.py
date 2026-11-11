@@ -102,3 +102,49 @@ def test_stacked_the_preview_puts_each_field_on_a_line(
 
     card.locator("[data-response-layout-chip]").click()
     assert card.evaluate(_STACK) is None
+
+
+def test_stacked_the_label_and_response_columns_drag_and_save(
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """Two handles in the Responses header, never one per box: the label
+    column's and the response column's. A drag moves every line and
+    rides the card's Save as ``stack_label`` / ``stack_input``."""
+    session_id = new_session()
+    page.set_viewport_size({"width": 1400, "height": 1000})
+    card = open_unlocked(page, session_id)
+    card.locator("[data-response-layout-chip]").click()
+    handles = card.locator("[data-new-model-band2-preview] th.rs-stack [data-stack-width]")
+    expect(handles).to_have_count(2)
+    before = card.evaluate(_STACK)
+    assert before is not None
+    # Unset, the header's label column lines up with the cell's.
+    head_label = card.locator(".rs-stack-head-label").bounding_box()
+    assert head_label is not None
+    assert abs(head_label["x"] + head_label["width"] - before["lines"][0]["labelRight"]) < 2
+
+    card.locator('[data-stack-width="label"]').scroll_into_view_if_needed()
+    before = card.evaluate(_STACK)
+    assert before is not None
+    label_handle = card.locator('[data-stack-width="label"]').bounding_box()
+    assert label_handle is not None
+    x = label_handle["x"] + label_handle["width"] / 2
+    y = label_handle["y"] + label_handle["height"] / 2
+    page.mouse.move(x, y)
+    page.mouse.down()
+    page.mouse.move(x + 80, y, steps=4)
+    page.mouse.up()
+    after = card.evaluate(_STACK)
+    assert after is not None
+    shift = after["lines"][0]["boxLeft"] - before["lines"][0]["boxLeft"]
+    assert 70 < shift < 90
+    # Every line moves together.
+    assert abs(after["lines"][0]["boxLeft"] - after["lines"][1]["boxLeft"]) < 1
+    snapshot = card.locator("[data-new-model-band2-widths-snapshot]").input_value()
+    assert '"stack_label"' in snapshot
+    save(page, card)
+
+    card = open_unlocked(page, session_id)
+    reloaded = card.evaluate(_STACK)
+    assert reloaded is not None
+    assert abs(reloaded["lines"][0]["boxLeft"] - after["lines"][0]["boxLeft"]) < 2

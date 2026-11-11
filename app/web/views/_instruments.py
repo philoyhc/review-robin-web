@@ -821,6 +821,9 @@ def _new_model_band2_state(
         "sample_names": sample_names,
         "sample_extra_count": sample_extra_count,
         "identity_width_px": identity_width_px,
+        # Segment 20K — the stacked layout's label and response widths.
+        "stack_label_px": (instrument.column_widths or {}).get("stack_label"),
+        "stack_input_px": (instrument.column_widths or {}).get("stack_input"),
         "selected_display_keys": selected_display_keys,
         "response_fields": response_fields,
         "response_field_groups": response_field_groups,

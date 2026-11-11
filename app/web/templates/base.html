@@ -4891,7 +4891,12 @@
          the instrument's one compact width, never wider than the column. */
       .rs-stack-fields {
         display: grid;
-        grid-template-columns: max-content minmax(0, 1fr);
+        /* Until dragged (20K rung 5), the labels take their widest and
+           the boxes the rest; a dragged width holds, and a label wraps
+           within it. */
+        grid-template-columns:
+          var(--rs-stack-label, max-content)
+          var(--rs-stack-input, minmax(0, 1fr));
         column-gap: var(--space-3);
         row-gap: var(--space-2);
       }
@@ -4901,7 +4906,13 @@
         grid-template-columns: subgrid;
         align-items: center;
       }
-      .rs-stack-label { align-self: start; line-height: 1.25; padding-top: 4px; }
+      .rs-stack-label {
+        align-self: start;
+        line-height: 1.25;
+        padding-top: 4px;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
       .rs-stack-name { font-weight: 600; }
       .rs-stack-help {
         display: block;
@@ -4921,6 +4932,16 @@
         max-width: 100%;
       }
       body.ui-v2 .rs-stack-field.rs-branch-closed { opacity: 0.5; }
+      /* The Instruments page preview's Responses header (20K rung 5):
+         the cell's two columns, each with a drag handle at its edge. */
+      .rs-stack-head {
+        display: grid;
+        grid-template-columns:
+          var(--rs-stack-label, max-content)
+          var(--rs-stack-input, minmax(0, 1fr));
+        column-gap: var(--space-3);
+      }
+      .rs-stack-head > span { position: relative; min-width: 0; }
       /* The session description on the participant pages, between the
          title row and the participant row, with no card (19X Items 11
          and 13). */
