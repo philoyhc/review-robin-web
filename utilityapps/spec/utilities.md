@@ -82,8 +82,10 @@ Test replaces it.
 
 Segment 23A (`guide/archive/segment_23A_interop_poc.md`): one click
 creates a populated Review Robin draft session and opens its Session
-Home in a new tab. Review Robin's side is `spec/handoffs.md`. Kept as a
-model once ApplyDesk's handoff exists (author, 2026-11-11).
+Home in a new tab. Review Robin's side is `spec/handoffs.md`. It is the
+example code for interoperability, kept once ApplyDesk's handoff exists
+(author, 2026-11-11): `docs/interoperability_example.md` says what a
+sender takes from it.
 
 - **The mock** (`utilityapps/interop_poc/mock.py`): *Mock Scholarship
   2027*, three synthetic `example.edu` reviewers plus the signed-in
