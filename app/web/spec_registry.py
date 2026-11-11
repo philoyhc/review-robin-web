@@ -79,7 +79,9 @@ SPEC_COVERAGE: dict[str, tuple[str, ...]] = {
         "spec/permissions.md",  # owners/add, owners/{id}/remove
         "spec/session_owners.md",  # the Owners card's routes (findings B7)
     ),
-    "app.web.routes_operator._quick_setup": ("spec/quick_setup_card_spec.md",),
+    "app.web.routes_operator._quick_setup": (
+        "spec/quick_setup_card_spec.md",
+    ),  # and, from 23A's close, spec/handoffs.md
     # Segment 23A: spec/handoffs.md is written at the close; until then
     # the debt is declared (EXPECTED_PENDING).
     "app.web.routes_operator._handoffs": SPEC_PENDING,
