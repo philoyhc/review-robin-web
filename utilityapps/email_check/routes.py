@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TypeGuard, cast
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import FormData, UploadFile
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -25,7 +25,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from cordware.graph import GraphError, directory_for
-from cordware.identity import resolve_identity
+from utilityapps.access import require_super_admin
 from utilityapps.email_check import check, csvio
 from utilityapps.web import templates, url_path
 
@@ -45,12 +45,6 @@ _LOOKUP_LIMIT = 16 * 1024
 _FORM_PART_LIMIT = _CARRIED_LIMIT
 # Results hold names and addresses: never cached anywhere (spec §10).
 _NO_STORE = {"Cache-Control": "no-store", "Pragma": "no-cache"}
-
-
-def require_super_admin(request: Request) -> None:
-    identity = resolve_identity(request)  # 401 with no identity
-    if not identity.is_super_admin:
-        raise HTTPException(status_code=403)
 
 
 router = APIRouter(prefix="/email-check", dependencies=[Depends(require_super_admin)])

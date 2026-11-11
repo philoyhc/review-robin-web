@@ -9,6 +9,7 @@ from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import Response
 
+from utilityapps.diagnostics.routes import router as diagnostics_router
 from utilityapps.email_check.routes import router as email_check_router
 from utilityapps.routes_health import router as health_router
 from utilityapps.routes_home import router as home_router
@@ -34,4 +35,5 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(home_router)
     app.include_router(email_check_router)
+    app.include_router(diagnostics_router)
     return app

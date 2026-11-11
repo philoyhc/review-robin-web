@@ -1,0 +1,39 @@
+{% extends "utilities/base.html" %}
+{% block title %}Telegram egress probe{% endblock %}
+{% block content %}
+  <p class="crumbs"><a href="{{ url('/') }}">Utilities</a> › Diagnostics</p>
+  <h1>Telegram egress probe</h1>
+  <p class="sub">Checks whether this App Service can reach Telegram's Bot API at <code>{{ host }}:443</code> over HTTPS.</p>
+  {% if result %}
+    <div class="card{% if result.outcome.value != 'TELEGRAM_REACHABLE' %} alert{% endif %}" aria-labelledby="result-h" role="status">
+      <h2 id="result-h">Result</h2>
+      <table>
+        <tr><th scope="row">Outcome</th><td><strong><code class="status">{{ result.outcome.value }}</code></strong></td></tr>
+        <tr><th scope="row">HTTP status</th><td>{{ result.http_status if result.http_status is not none else "—" }}</td></tr>
+        <tr><th scope="row">Telegram's error envelope</th><td>{{ "Yes" if result.telegram_api_envelope else "No" }}{% if result.description %} ({{ result.description }}){% endif %}</td></tr>
+        <tr><th scope="row">Elapsed</th><td>{{ result.elapsed_ms }} ms</td></tr>
+        <tr><th scope="row">When</th><td>{{ at_utc }} · {{ at_sgt }}</td></tr>
+        <tr><th scope="row">Correlation ID</th><td><code>{{ correlation }}</code></td></tr>
+      </table>
+      <p>{{ result.guidance }}</p>
+    </div>
+  {% elif wait %}
+    <p class="error" role="alert">The probe ran less than 30 s ago. Try again in {{ wait }} s.</p>
+  {% endif %}
+  <form class="card" aria-labelledby="run-h" method="post" action="{{ url('/diagnostics/telegram-egress/run') }}">
+    <h2 id="run-h">Run the probe</h2>
+    <p>One HTTPS request from this server to Telegram's <code>getMe</code>, with a deliberately invalid bot token: no real token and no data about anyone is sent. Telegram refusing that token with its own error reply is the pass: it shows the request got through to Telegram.</p>
+    <p class="note">Nothing is kept. The server log records the outcome, elapsed time and correlation ID only. Runs are at least 30 s apart.</p>
+    <div class="actions">
+      <button class="btn primary" type="submit">Run probe</button>
+    </div>
+  </form>
+  <div class="card" aria-labelledby="what-h">
+    <h2 id="what-h">What a pass does and doesn't show</h2>
+    <ul>
+      <li>It shows this server could reach Telegram's API when you ran it. Network policy can change later.</li>
+      <li>It doesn't test a real bot token, sending a message, or anything reaching a phone.</li>
+      <li>If it fails, give IT the time, the outcome and the correlation ID, never a screenshot of anything else.</li>
+    </ul>
+  </div>
+{% endblock %}
