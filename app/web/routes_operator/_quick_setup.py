@@ -1608,8 +1608,9 @@ async def create_handoff_session(
         raise OperatorAllowlistDenied()
 
     correlation_id = request_correlation_id()
+    # The draft and its transfer record commit together (Codex, cordware#202).
     review_session = sessions.create_session(
-        db, user=user, payload=payload, correlation_id=correlation_id
+        db, user=user, payload=payload, correlation_id=correlation_id, commit=False
     )
     handoffs.record_created(db, review_session, user, bundle, correlation_id)
 

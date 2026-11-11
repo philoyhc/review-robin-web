@@ -47,6 +47,8 @@ def test_the_button_posts_to_review_robins_create_route(client: TestClient) -> N
     assert "directory_sign_in:" in text
     # A replay cut off before its rosters saved names the draft it left.
     assert "transfer_incomplete:" in text and "Open the draft" in text
+    # A first try still running keeps the transfer (Codex, cordware#202).
+    assert 'body.error === "transfer_in_progress"' in text
 
 
 def test_the_page_carries_the_bundle_less_its_per_click_parts(client: TestClient) -> None:

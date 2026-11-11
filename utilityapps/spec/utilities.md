@@ -99,7 +99,7 @@ model once ApplyDesk's handoff exists (author, 2026-11-11).
 - **A refusal** closes the tab and names the error, with the slot,
   reason and issue lines of an `invalid_setup`, and the draft's link on
   a `transfer_incomplete`; the next click is a new transfer. **A `5xx`,
-  no answer, or an answer it cannot read** keeps the transfer, so trying
+  no answer, an answer it cannot read, or `transfer_in_progress`** keeps the transfer, so trying
   again finds a session already made.
 - Text is inserted with `textContent` only; every response is `no-store`.
 
