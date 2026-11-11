@@ -74,6 +74,15 @@
       try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) { /* kept for this page only */ }
     }
     var sent = load();
+    function merged(a, b) {
+      // By transfer, in sent order. A merge, not a reload: when storage is
+      // blocked the page keeps what it sent (Codex, #3788).
+      var byId = {};
+      a.concat(b).forEach(function (item) { byId[item.transfer_id] = item; });
+      return Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (x, y) {
+        return String(x.sent_at).localeCompare(String(y.sent_at));
+      });
+    }
     function when(iso) {
       var d = new Date(iso);
       return isNaN(d) ? "" : d.toLocaleString();
@@ -229,14 +238,12 @@
     }
     document.addEventListener("poc:sent", function (event) {
       // Another tab may have saved since this one loaded (Codex, #3788).
-      sent = load();
-      sent = sent.filter(function (item) { return item.transfer_id !== event.detail.transfer_id; });
-      sent.push(event.detail);
+      sent = merged(merged(load(), sent), [event.detail]);
       save(sent);
       render();
     });
     window.addEventListener("storage", function (event) {
-      if (event.key === KEY) { sent = load(); render(); }
+      if (event.key === KEY) { sent = merged(load(), sent); render(); }
     });
     render();
   })();

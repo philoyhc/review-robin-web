@@ -117,4 +117,6 @@ def test_the_sent_card_reads_review_robin_for_each_session_sent(client: TestClie
     assert "Array.isArray(list)" in text
     assert "Promise.all" not in text
     # Codex, #3788: two open tabs merge, not overwrite, the stored list.
-    assert "sent = load();" in text and 'addEventListener("storage"' in text
+    assert "merged(merged(load(), sent), [event.detail])" in text
+    assert 'addEventListener("storage"' in text and "merged(load(), sent)" in text
+    assert text.count("sent = load();") == 1  # the first read only; later ones merge
