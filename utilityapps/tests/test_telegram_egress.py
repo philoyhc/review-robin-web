@@ -7,6 +7,8 @@ from __future__ import annotations
 import json
 import socket
 import ssl
+import threading
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Iterator
@@ -32,11 +34,11 @@ def _envelope(code: int, description: str = "Unauthorized") -> bytes:
 
 
 def _replying(reply: Reply):
-    return lambda: reply
+    return lambda deadline: reply
 
 
 def _raising(exc: BaseException):
-    def fetch() -> Reply:
+    def fetch(deadline: float) -> Reply:
         raise exc
 
     return fetch
@@ -87,12 +89,17 @@ def test_anything_else_that_answers_is_not_a_pass(reply: Reply) -> None:
         (urllib.error.URLError(ConnectionRefusedError(111, "refused")), "NETWORK_ERROR"),
         (ConnectionResetError(104, "reset"), "NETWORK_ERROR"),
         (urllib.error.URLError("unknown url type"), "NETWORK_ERROR"),
+        (
+            urllib.error.URLError(OSError("Tunnel connection failed: 403 Forbidden")),
+            "HTTP_INTERMEDIARY_OR_UNEXPECTED",
+        ),
         (ValueError("something else"), "OTHER_ERROR"),
     ],
 )
 def test_failures_are_classified_without_their_detail(exc: BaseException, outcome: str) -> None:
     result = telegram_egress.run(_raising(exc))
     assert result.outcome.value == outcome
+    assert result.error_type == type(exc).__name__  # for the log, never the page
     assert (result.http_status, result.telegram_api_envelope, result.description) == (
         None,
         False,
@@ -149,11 +156,11 @@ def test_the_request_is_fixed_bounded_and_reads_at_most_4_kib(
 ) -> None:
     opener = _Opener(_Answer(200, b"x" * 10_000))
     monkeypatch.setattr(telegram_egress, "_opener", lambda: opener)
-    reply = telegram_egress.urllib_fetch()
+    reply = telegram_egress.urllib_fetch(time.monotonic() + 5)
     assert opener.calls == [
         ("https://api.telegram.org/bot000000000:INVALID/getMe", "GET", telegram_egress.TIMEOUT)
     ]
-    assert telegram_egress.TIMEOUT <= 3.0
+    assert telegram_egress.TIMEOUT <= 3.0 and telegram_egress.DEADLINE <= 7.0
     assert len(reply.body) == telegram_egress.BODY_LIMIT == 4096
 
 
@@ -165,10 +172,42 @@ def test_an_http_error_status_is_an_answer_not_a_failure(
     error = urllib.error.HTTPError(
         telegram_egress.URL, 401, "Unauthorized", headers, BytesIO(_envelope(401))
     )
+    closed: list[bool] = []
+    monkeypatch.setattr(error, "close", lambda: closed.append(True))
     monkeypatch.setattr(telegram_egress, "_opener", lambda: _Opener(error))
-    reply = telegram_egress.urllib_fetch()
+    reply = telegram_egress.urllib_fetch(time.monotonic() + 5)
     assert (reply.status, reply.content_type) == (401, JSON)
-    assert telegram_egress.run(lambda: reply).outcome is Outcome.TELEGRAM_REACHABLE
+    assert closed == [True]  # its socket is not left to the collector
+    assert telegram_egress.run(lambda deadline: reply).outcome is Outcome.TELEGRAM_REACHABLE
+
+
+def test_the_whole_attempt_is_held_to_the_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A lookup or connect no socket timeout reaches still ends the run."""
+    monkeypatch.setattr(telegram_egress, "DEADLINE", 0.05)
+    release = threading.Event()
+
+    def hangs(deadline: float) -> Reply:
+        release.wait(5)
+        return Reply(401, JSON, _envelope(401))
+
+    started = time.monotonic()
+    result = telegram_egress.run(hangs)
+    release.set()
+    assert time.monotonic() - started < 2
+    assert result.outcome is Outcome.CONNECT_TIMEOUT
+    assert result.error_type == "_Unfinished"
+
+
+def test_a_trickling_body_stops_at_the_deadline() -> None:
+    class Trickle:
+        def read1(self, size: int) -> bytes:
+            time.sleep(0.01)  # a byte at a time, each inside the socket timeout
+            return b"x"
+
+    with pytest.raises(TimeoutError):
+        telegram_egress._read(Trickle(), time.monotonic() + 0.05)  # pyright: ignore[reportPrivateUsage]  -- the reader under test
+    reply = telegram_egress.run(_raising(TimeoutError("probe deadline")))
+    assert reply.outcome is Outcome.READ_TIMEOUT
 
 
 def test_certificates_and_host_names_are_verified() -> None:
@@ -178,6 +217,12 @@ def test_certificates_and_host_names_are_verified() -> None:
     handlers = telegram_egress._opener().handlers  # pyright: ignore[reportPrivateUsage, reportAttributeAccessIssue]  -- urllib leaves the attribute untyped
     https = next(h for h in handlers if isinstance(h, urllib.request.HTTPSHandler))
     assert https._context.verify_mode is ssl.CERT_REQUIRED  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]  -- urllib keeps it private
+
+
+def test_the_opener_has_no_redirect_handler_but_its_own() -> None:
+    handlers = telegram_egress._opener().handlers  # pyright: ignore[reportPrivateUsage, reportAttributeAccessIssue]  -- urllib leaves the attribute untyped
+    redirects = [h for h in handlers if isinstance(h, urllib.request.HTTPRedirectHandler)]
+    assert [type(h) for h in redirects] == [telegram_egress._NoRedirect]  # pyright: ignore[reportPrivateUsage]  -- the handler under test
 
 
 def test_redirects_are_not_followed() -> None:
@@ -231,6 +276,7 @@ def test_running_it_makes_one_request_and_shows_the_result(
     assert "evil.example" not in page.text and "123:abc" not in page.text
     logged = " ".join(r.getMessage() for r in caplog.records)
     assert "outcome=TELEGRAM_REACHABLE" in logged and "correlation=" in logged
+    assert "error=-" in logged
     assert "INVALID" not in logged and "bot0" not in logged
 
 
@@ -238,15 +284,42 @@ def test_a_second_run_within_30_s_is_refused(client: TestClient, calls: list[int
     assert client.post(RUN).status_code == 200
     again = client.post(RUN)
     assert again.status_code == 429
-    assert "Try again in" in again.text
+    assert (
+        "Try again in" in again.text
+        and f"less than {round(routes.MIN_INTERVAL)} s ago" in again.text
+    )
     assert calls == [1]
 
 
 def test_the_gate_opens_again_after_the_interval() -> None:
     gate = routes._Gate()  # pyright: ignore[reportPrivateUsage]  -- the gate under test
     assert gate.wait_left(100.0) == 0
+    gate.release()
     assert gate.wait_left(110.0) == 20
     assert gate.wait_left(100.0 + routes.MIN_INTERVAL) == 0
+
+
+def test_one_run_at_a_time_however_long_it_takes() -> None:
+    gate = routes._Gate()  # pyright: ignore[reportPrivateUsage]  -- the gate under test
+    assert gate.wait_left(100.0) == 0
+    assert gate.wait_left(100.0 + 10 * routes.MIN_INTERVAL) > 0  # still running
+    gate.release()
+    assert gate.wait_left(100.0 + 10 * routes.MIN_INTERVAL) == 0
+
+
+def test_a_probe_that_raises_still_releases_the_gate(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    gate = routes._Gate()  # pyright: ignore[reportPrivateUsage]  -- a fresh gate
+    monkeypatch.setattr(routes, "gate", gate)
+
+    def broken() -> telegram_egress.Result:
+        raise RuntimeError("bug")
+
+    monkeypatch.setattr(routes, "probe", broken)
+    with pytest.raises(RuntimeError):
+        client.post(RUN)
+    assert gate.wait_left(1e12) == 0  # not left busy
 
 
 def test_running_needs_a_post(client: TestClient, calls: list[int]) -> None:

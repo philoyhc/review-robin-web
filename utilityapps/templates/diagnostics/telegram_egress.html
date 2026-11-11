@@ -18,12 +18,12 @@
       <p>{{ result.guidance }}</p>
     </div>
   {% elif wait %}
-    <p class="error" role="alert">The probe ran less than 30 s ago. Try again in {{ wait }} s.</p>
+    <p class="error" role="alert">A probe ran less than {{ interval }} s ago, or is still running. Try again in {{ wait }} s.</p>
   {% endif %}
   <form class="card" aria-labelledby="run-h" method="post" action="{{ url('/diagnostics/telegram-egress/run') }}">
     <h2 id="run-h">Run the probe</h2>
     <p>One HTTPS request from this server to Telegram's <code>getMe</code>, with a deliberately invalid bot token: no real token and no data about anyone is sent. Telegram refusing that token with its own error reply is the pass: it shows the request got through to Telegram.</p>
-    <p class="note">Nothing is kept. The server log records the outcome, elapsed time and correlation ID only. Runs are at least 30 s apart.</p>
+    <p class="note">Nothing is kept. The server log records the outcome, elapsed time and correlation ID only. Runs are at least {{ interval }} s apart.</p>
     <div class="actions">
       <button class="btn primary" type="submit">Run probe</button>
     </div>
