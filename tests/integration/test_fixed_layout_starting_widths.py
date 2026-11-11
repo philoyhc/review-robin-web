@@ -152,7 +152,11 @@ def test_the_preview_mirrors_it(client: TestClient, db: Session) -> None:
         ),
         "+ (sortBadgeHtml(card, o.displayFieldId) || surfaceSortStub())",
         # Any width counts, a hidden column's too, as has_custom_widths does.
-        "var sized = identityW > 0 || dfRows(card).some(hasWidth) || rfRows(card).some(hasWidth);",
+        (
+            "var sized = identityW > 0 || dfRows(card).some(hasWidth)"
+            " || rfRows(card).some(hasWidth)"
+            " || stackWidth(card, 'label') > 0 || stackWidth(card, 'input') > 0;"
+        ),
         # The surface's cell padding; the stub measures as a <button>.
         "body.ui-v2 [data-new-model-band2-preview] td { padding: var(--space-2) var(--space-4);",
         "box-sizing: border-box; /* a <button>'s default, so both measure alike */",
