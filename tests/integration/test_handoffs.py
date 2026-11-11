@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import uuid
 from collections.abc import Callable, Iterator
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -26,6 +27,7 @@ from app.db.models import (
     ReviewSession,
     SessionOperator,
 )
+from app.services import handoffs
 from app.web import views
 from app.web.routes_operator import _quick_setup
 
@@ -342,12 +344,67 @@ def test_a_replay_of_a_transfer_cut_off_before_its_rosters_deletes_nothing(
     with pytest.raises(BaseException):  # noqa: B017 -- the test client's wrapping varies
         _post(client, bundle)
     monkeypatch.undo()
+    _age_transfer(db, handoffs.IN_PROGRESS + timedelta(seconds=1))
     retry = _post(client, bundle)
     assert retry.status_code == 409 and retry.json()["error"] == "transfer_incomplete"
     assert retry.json()["session_home_url"].startswith("/operator/sessions/")
     assert _count(db, ReviewSession) == 1  # the leftover stays, for its operator
     fresh = _post(client, _bundle(session_suggestion={"name": "Again", "code": "POC-AGAIN"}))
     assert fresh.status_code == 201
+
+
+def _age_transfer(db: Session, by: timedelta) -> None:
+    for event in db.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == "session.handoff_created")
+    ).all():
+        event.created_at = datetime.now(UTC) - by
+    db.commit()
+
+
+def test_a_replay_while_the_first_try_may_still_run_keeps_its_transfer(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex, cordware#202: a retry while the first create is still
+    checking the directory or saving finds a draft with no rosters yet.
+    Within ``IN_PROGRESS`` that is ``transfer_in_progress``, which the
+    sender retries with the same transfer, not ``transfer_incomplete``."""
+    bundle = _bundle()
+
+    class CutOff(BaseException):
+        pass
+
+    async def cut_off(**_: Any) -> None:
+        raise CutOff
+
+    monkeypatch.setattr(_quick_setup, "_run_quick_setup_contents", cut_off)
+    with pytest.raises(BaseException):  # noqa: B017 -- the test client's wrapping varies
+        _post(client, bundle)
+    monkeypatch.undo()
+    retry = _post(client, bundle)
+    assert retry.status_code == 409 and retry.json()["error"] == "transfer_in_progress"
+    assert "session_home_url" not in retry.json()
+    assert _count(db, ReviewSession) == 1
+
+
+def test_the_draft_and_its_transfer_record_commit_together(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex, cordware#202: a draft committed before its transfer record
+    could be orphaned, its retry refused as a taken code. Neither lands
+    without the other."""
+
+    real = handoffs.audit.write_event
+
+    def write_event(db_: Session, **kwargs: Any) -> Any:
+        if kwargs.get("event_type") == handoffs.EVENT:
+            raise RuntimeError("record failed")
+        return real(db_, **kwargs)
+
+    monkeypatch.setattr(handoffs.audit, "write_event", write_event)
+    with pytest.raises(RuntimeError):
+        _post(client, _bundle())
+    db.rollback()
+    assert _count(db, ReviewSession) == 0
 
 
 def test_a_replay_after_the_operator_cleared_a_roster_is_still_already_created(

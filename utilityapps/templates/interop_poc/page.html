@@ -34,6 +34,7 @@
       unsupported_version: "Review Robin does not accept this bundle's version.",
       session_code_conflict: "That session code is already in use. Try again for a new one.",
       duplicate_conflict: "Another person already sent this transfer. Reload the page and try again.",
+      transfer_in_progress: "Review Robin is still working on the first try of this transfer. Try again in a moment: the same transfer is sent.",
       transfer_incomplete: "An earlier try of this transfer stopped before its rosters were saved. Its draft is left for you to check or delete; the next click sends a new transfer.",
       directory_sign_in: "Your Review Robin sign-in to the directory has lapsed. Open Review Robin, sign in again, then try again.",
       "411": "Review Robin needs the bundle's length. Try again.",
@@ -106,7 +107,8 @@
             if (reply.status >= 500) {
               return refused(tab, "server", { details: ["Review Robin failed (" + reply.status + "). Try again: the same transfer is sent, so no second session is made."] }, true);
             }
-            return refused(tab, body.error || String(reply.status), body);
+            // Still running: keep the transfer, so the next try finds it.
+            return refused(tab, body.error || String(reply.status), body, body.error === "transfer_in_progress");
           }
           transfer = null;
           var opened = tab && !tab.closed;

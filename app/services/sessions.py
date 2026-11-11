@@ -66,7 +66,11 @@ def create_session(
     user: User,
     payload: SessionCreate,
     correlation_id: str | None = None,
+    commit: bool = True,
 ) -> ReviewSession:
+    """Create a draft owned by ``user``. ``commit=False`` leaves it
+    flushed for the caller's commit, so a caller can record more in the
+    same unit (the handoff create's transfer record, `spec/handoffs.md`)."""
     review_session = ReviewSession(
         name=payload.name,
         code=payload.code,
@@ -147,8 +151,9 @@ def create_session(
         ),
         correlation_id=correlation_id,
     )
-    db.commit()
-    db.refresh(review_session)
+    if commit:
+        db.commit()
+        db.refresh(review_session)
     return review_session
 
 

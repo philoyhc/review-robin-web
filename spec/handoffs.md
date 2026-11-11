@@ -97,7 +97,9 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
 A `transfer_id` already used is a replay. Two audit events record a
 transfer, so the proof of concept needs no table:
 
-- `session.handoff_created`, written with the draft before its rosters;
+- `session.handoff_created`, written with the draft before its rosters,
+  in the same commit, so neither lands without the other
+  (`sessions.create_session(commit=False)`);
 - `session.handoff_completed`, written once the rosters have saved — the
   mark of a finished transfer, whatever the rosters hold later.
 
@@ -107,7 +109,8 @@ transfer, so the proof of concept needs no table:
 | a session the sender may no longer operate (`permissions.user_can_view_session`, checked now, not at the first post) | `403 not_authorized` |
 | a completed transfer | `200` receipt, `status: "already_created"` |
 | no completion record, but both rosters saved (cut off between the save and the record) | the record is written; `200 already_created` |
-| no completion record and no rosters (cut off before the save) | `409 transfer_incomplete` with the draft's `session_home_url`. **Nothing is deleted on a replay**: the draft stays for its operator, and the sender's next try is a new transfer |
+| no completion record and no rosters, the draft under 5 minutes old (`handoffs.IN_PROGRESS`: the first try may still be checking the directory or saving) | `409 transfer_in_progress`; the sender keeps its transfer and tries again |
+| no completion record and no rosters, the draft older (cut off before the save) | `409 transfer_incomplete` with the draft's `session_home_url`. **Nothing is deleted on a replay**: the draft stays for its operator, and the sender's next try is a new transfer |
 
 Two concurrent first posts of one transfer can still make two sessions:
 accepted for a proof of concept, whose sender disables its button.
@@ -116,10 +119,11 @@ accepted for a proof of concept, whose sender disables its button.
 
 Every refusal is `{"error": <code>}`, with `details` (lines for the sender
 to show) and, where they apply, `slot`, `reason` and `session_home_url`.
-The codes are the interop spec's vocabulary (§7.3) plus `directory_sign_in`
-and `transfer_incomplete`. A sender keeps its `transfer_id` on a `5xx`, a
-network error or an answer it cannot read, so trying again finds a session
-already made; after any other refusal it starts a new transfer.
+The codes are the interop spec's vocabulary (§7.3) plus `directory_sign_in`,
+`transfer_in_progress` and `transfer_incomplete`. A sender keeps its
+`transfer_id` on a `5xx`, a network error, an answer it cannot read or
+`transfer_in_progress`, so trying again finds a session already made;
+after any other refusal it starts a new transfer.
 
 ## 8. Audit
 

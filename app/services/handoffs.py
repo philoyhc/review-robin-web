@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import cast
 
 from sqlalchemy import select
@@ -35,6 +36,10 @@ EVENT = "session.handoff_created"
 #: Written once the rosters have saved: the mark of a complete transfer,
 #: independent of what the rosters hold later (an operator may clear one).
 COMPLETED = "session.handoff_completed"
+#: How long after its draft a transfer with no rosters yet counts as still
+#: running: past the create's 120 s directory budget and the roster save,
+#: with room to spare. Older, it was cut off.
+IN_PROGRESS = timedelta(minutes=5)
 
 
 class HandoffError(Exception):
@@ -161,6 +166,7 @@ class Prior:
     review_session: ReviewSession
     actor_user_id: int | None
     completed: bool
+    started_at: datetime
 
 
 def _transfer_of(event: AuditEvent) -> object:
@@ -185,7 +191,10 @@ def prior_transfer(db: Session, transfer_id: str) -> Prior | None:
     if created is None or created.session is None:
         return None
     completed = any(e.event_type == COMPLETED and e.session_id == created.session_id for e in mine)
-    return Prior(created.session, created.actor_user_id, completed)
+    started = created.created_at
+    if started.tzinfo is None:  # SQLite drops tzinfo on write; naive is UTC
+        started = started.replace(tzinfo=UTC)
+    return Prior(created.session, created.actor_user_id, completed, started)
 
 
 def rosters_saved(db: Session, review_session: ReviewSession) -> bool:
@@ -209,10 +218,12 @@ def replayed(db: Session, user: User, bundle: Bundle) -> ReviewSession | None:
 
     Raises :class:`HandoffError` when the replay is refused: another
     sender's transfer, a session this user may no longer operate (the
-    sender once is not the operator now), or a transfer cut off before its
-    rosters saved, whose draft is left for its operator rather than deleted.
-    A transfer cut off between the roster save and its completion record
-    gets the record here."""
+    sender once is not the operator now), a transfer whose first try may
+    still be running (no rosters yet, started within :data:`IN_PROGRESS`:
+    the sender keeps its transfer and tries again), or a transfer cut off
+    before its rosters saved, whose draft is left for its operator rather
+    than deleted. A transfer cut off between the roster save and its
+    completion record gets the record here."""
     prior = prior_transfer(db, bundle.transfer_id)
     if prior is None:
         return None
@@ -222,6 +233,12 @@ def replayed(db: Session, user: User, bundle: Bundle) -> ReviewSession | None:
         raise HandoffError("not_authorized", 403)
     if not prior.completed:
         if not rosters_saved(db, prior.review_session):
+            if datetime.now(UTC) - prior.started_at < IN_PROGRESS:
+                raise HandoffError(
+                    "transfer_in_progress",
+                    409,
+                    ["The first try of this transfer is still running. Try again in a moment."],
+                )
             raise HandoffError(
                 "transfer_incomplete",
                 409,
@@ -240,8 +257,10 @@ def record_created(
     correlation_id: str | None,
 ) -> None:
     """Record the transfer with its new draft, before the rosters, so a
-    retry after anything later finds it. A discarded draft takes the
-    record with it (``sessions.delete_session`` drops its events)."""
+    retry after anything later finds it, and commit both as one unit: the
+    draft is created with ``commit=False`` so it never lands without its
+    record. A discarded draft takes the record with it
+    (``sessions.delete_session`` drops its events)."""
     audit.write_event(
         db,
         event_type=EVENT,
