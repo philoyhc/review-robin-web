@@ -435,6 +435,11 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.created": EventSchema(_IDENTITY | {"snapshot"}),
     "session.updated": EventSchema(_IDENTITY | {"changes"}),
     "session.deleted": EventSchema(frozenset({"snapshot"})),
+    # Segment 23A: a session created from another application's rosters;
+    # ``context`` carries the transfer and the sending application.
+    "session.handoff_created": EventSchema(_IDENTITY | {"counts", "context"}),
+    # ... and once its rosters have saved: the transfer is complete.
+    "session.handoff_completed": EventSchema(_IDENTITY | {"counts", "context"}),
     "session.validated": EventSchema(_IDENTITY | {"counts"}),
     "session.invalidated": EventSchema(_IDENTITY | {"reason"}),
     "session.activated": EventSchema(_IDENTITY | {"counts", "context"}),

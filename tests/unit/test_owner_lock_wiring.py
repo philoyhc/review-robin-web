@@ -101,9 +101,10 @@ def _route_callers():
     ]
 
 
-def test_the_three_routes_are_found() -> None:
-    """Guards the guard: a rename that hid a caller would pass below."""
-    assert len(_route_callers()) == 3
+def test_the_four_routes_are_found() -> None:
+    """Guards the guard: a rename that hid a caller would pass below.
+    New session, clone, rehydrate, and (segment 23A) the handoff create."""
+    assert len(_route_callers()) == 4
 
 
 def _locked_user(statement: ast.stmt) -> ast.expr | None:

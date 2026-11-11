@@ -29,7 +29,7 @@ from fastapi import (
     status,
 )
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
@@ -44,6 +44,7 @@ from app.schemas.sessions import SessionCreate
 from app.services import (
     csv_imports,
     date_formatting,
+    handoffs,
     held_uploads,
     operator_settings,
     scheduled_events,
@@ -1504,3 +1505,163 @@ def _read_settings_csv(
     except _csv.Error:
         return [], [], "unreadable"
     return rows, row_errors, None
+
+
+# --------------------------------------------------------------------------- #
+# Handoffs from another Cordware application (segment 23A)
+# --------------------------------------------------------------------------- #
+#
+# Here rather than in ``_handoffs.py`` (the holding page's slice) because it
+# runs this slice's pipeline, ``_run_quick_setup_contents``, and slices do
+# not import one another (`CLAUDE.md`, "Architecture at a glance").
+
+#: Every handoff answer: JSON, never cached (interop spec §7.1).
+_HANDOFF_HEADERS = {"Cache-Control": "no-store"}
+
+
+def _handoff_error(
+    code: str, status_code: int, details: list[str] | None = None, **extra: str
+) -> JSONResponse:
+    body: dict[str, object] = {"error": code, **extra}
+    if details:
+        body["details"] = details
+    return JSONResponse(body, status_code=status_code, headers=_HANDOFF_HEADERS)
+
+
+def _session_home(request: Request, review_session: ReviewSession) -> str:
+    return urls.url_path(request, f"/operator/sessions/{review_session.public_id}")
+
+
+def _handoff_refused(request: Request, exc: handoffs.HandoffError) -> JSONResponse:
+    extra: dict[str, str] = {}
+    if exc.reason:
+        extra["reason"] = exc.reason
+    if exc.review_session is not None:
+        extra["session_home_url"] = _session_home(request, exc.review_session)
+    return _handoff_error(exc.code, exc.status, exc.details, **extra)
+
+
+def _handoff_receipt(
+    request: Request, review_session: ReviewSession, status_word: str
+) -> dict[str, str]:
+    return {
+        "status": status_word,
+        "session_ref": review_session.public_id,
+        "session_code": review_session.code,
+        "session_home_url": _session_home(request, review_session),
+    }
+
+
+@router.post("/handoffs/sessions", response_model=None)
+async def create_handoff_session(
+    request: Request,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Create a draft session from another application's rosters, all or
+    nothing (`spec/handoffs.md`). The package gate has already checked
+    that the signer-in is an RRW operator. Nothing is prepared, activated,
+    invited or sent."""
+    # A JSON body is the cross-site guard, as the directory endpoints';
+    # a browser that names any other origin is refused outright.
+    if request.headers.get("sec-fetch-site", "same-origin") != "same-origin":
+        return _handoff_error("not_authorized", status.HTTP_403_FORBIDDEN)
+    media = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    if media != "application/json":
+        return _handoff_error("invalid_package", status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+    # Refused unread when undeclared (a chunked body), as the directory
+    # endpoints do: the cap is checked before anything is held.
+    declared = request.headers.get("content-length", "")
+    if not declared.isdigit():
+        return _handoff_error("invalid_package", status.HTTP_411_LENGTH_REQUIRED)
+    if int(declared) > handoffs.MAX_BYTES:
+        return _handoff_error("invalid_package", status.HTTP_413_CONTENT_TOO_LARGE)
+    body = await request.body()
+    if len(body) > handoffs.MAX_BYTES:
+        return _handoff_error("invalid_package", status.HTTP_413_CONTENT_TOO_LARGE)
+    try:
+        bundle = handoffs.parse_bundle(body)
+    except handoffs.HandoffError as exc:
+        return _handoff_refused(request, exc)
+
+    try:
+        prior = handoffs.replayed(db, user, bundle)
+    except handoffs.HandoffError as exc:
+        return _handoff_refused(request, exc)
+    if prior is not None:
+        return JSONResponse(
+            _handoff_receipt(request, prior, "already_created"), headers=_HANDOFF_HEADERS
+        )
+    try:
+        sessions.ensure_code_available(db, bundle.code)
+    except sessions.SessionCodeTakenError:
+        return _handoff_error("session_code_conflict", status.HTTP_409_CONFLICT)
+    try:
+        payload = SessionCreate(name=bundle.name, code=bundle.code)
+    except ValidationError:
+        return _handoff_error(
+            "invalid_package",
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            ["The session name or code is not valid."],
+        )
+    if not await run_in_threadpool(session_owners.lock_owner_eligible, db, user):
+        raise OperatorAllowlistDenied()
+
+    correlation_id = request_correlation_id()
+    review_session = sessions.create_session(
+        db, user=user, payload=payload, correlation_id=correlation_id
+    )
+    handoffs.record_created(db, review_session, user, bundle, correlation_id)
+
+    def discard() -> None:
+        # All or nothing (author, 2026-11-11): the draft goes with its
+        # rosters when they do not all apply.
+        db.rollback()
+        sessions.delete_session(
+            db, review_session=review_session, user=user, correlation_id=correlation_id
+        )
+
+    try:
+        refusal = await _run_quick_setup_contents(
+            contents=bundle.files,
+            filenames={kind: f"{kind}.csv" for kind in bundle.files},
+            review_session=review_session,
+            user=user,
+            db=db,
+            confirm_replace="true",
+            acknowledge_response_loss=None,
+            replacing=False,
+            correlation_id=correlation_id,
+            directory=directory_or_none(request),
+        )
+    except Exception:
+        discard()
+        raise
+    if refusal is not None:
+        discard()
+        if refusal.failure.reason == views.DIRECTORY_SIGN_IN:
+            # Nothing wrong with the files: the operator's directory
+            # sign-in lapsed, which only they can renew, in Review Robin.
+            return _handoff_error(
+                "directory_sign_in",
+                status.HTTP_409_CONFLICT,
+                ["Your Review Robin sign-in to the directory has lapsed."],
+            )
+        return _handoff_error(
+            "invalid_setup",
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            refusal.failure.details,
+            slot=refusal.kind,
+            reason=refusal.failure.reason,
+        )
+    try:
+        handoffs.check_rosters(db, review_session)
+    except handoffs.HandoffError as exc:
+        discard()
+        return _handoff_refused(request, exc)
+    handoffs.record_completed(db, review_session, user, bundle)
+    return JSONResponse(
+        _handoff_receipt(request, review_session, "created"),
+        status_code=status.HTTP_201_CREATED,
+        headers=_HANDOFF_HEADERS,
+    )
