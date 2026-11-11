@@ -2870,7 +2870,22 @@ def staff_access() -> tuple[tuple[str, int, str], ...]:
 
 
 def roles_without_access() -> tuple[str, ...]:
-    """Appointments whose holders reach no staff page under Permissions."""
+    """Appointments, held by someone, whose holders reach no staff page by
+    a Permissions tick."""
+    held = {p.abbrev for p in sample_data.STAFF}
     return tuple(
-        r["who"] for r in permission_rows() if r["kind"] == "role" and not (r["perms"] - {"admin"})
+        r["who"]
+        for r in permission_rows()
+        if r["kind"] == "role" and r["note"] in held and not (r["perms"] - {"admin"})
+    )
+
+
+def standing_in_now() -> tuple[str, ...]:
+    """Staff who reach the staff pages today without a tick: a delegate
+    standing in, or the Master while deciding appeals (`_standing_in`)."""
+    named = {r["who"] for r in permission_rows() if r["kind"] == "named"}
+    return tuple(
+        p.name
+        for p in sample_data.STAFF
+        if p.name not in named and not (_granted(p.name) - {"admin"}) and _standing_in(p.name)
     )

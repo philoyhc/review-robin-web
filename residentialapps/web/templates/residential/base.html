@@ -532,7 +532,10 @@
       /* The admin Dashboard: banded rows of three cards (author, 2026-11-10). */
       .band { margin: 24px 0 8px; font-size: 14px; color: var(--text-subtle); text-transform: uppercase; letter-spacing: .04em; }
       .cards-3 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: stretch; }
-      @media (min-width: 900px) { .cards-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+      /* §1's columns: two from 736 px, three from 1116 px, each 340 px or more. */
+      @media (min-width: 736px) { .cards-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      @media (min-width: 1116px) { .cards-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+      .cards-3 .card h3 { margin: 0 0 4px; font-size: 18px; }
       .cards-3 .card { display: flex; flex-direction: column; }
       .cards-3 .card > a:last-child { margin-top: auto; padding-top: 8px; }
       .nested-choices label { display: flex; gap: 8px; align-items: center; }

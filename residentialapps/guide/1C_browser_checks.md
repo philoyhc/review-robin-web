@@ -162,9 +162,12 @@ Reach it from Rachel's or Sam's landing card.
   - tiles: Pending first approval 5, Pending final approval 1, Appeal to
     the Master 1, Cover not yet confirmed 4. Each tile opens Leave records
     over the whole term with only its rows' chips on.
-  - Needs attention lists L-0103, L-0104, L-0107, L-0109 and the
-    Willow A 13-25 clash;
-  - Emails not sent · 3, with Resend.
+  - Set-up: Term and cycle, Rosters, Policy at a glance, Approval
+    chain, Who reaches the staff pages, Coming up, three across at
+    1440 px, two at 1000 px, one on a phone, each ending in its link;
+  - Needs attention: Records lists L-0103, L-0104, L-0107, L-0109, the
+    three emails not sent and the Willow A 13-25 clash; Entitlements;
+    Roster mismatches (no one in every slot for Term 2).
 - [ ] **Policy**:
   - row builders for leave types, holidays and blackouts, with + and X;
   - radio fieldsets;

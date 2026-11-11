@@ -491,12 +491,10 @@ app's (`residentialapps/spec/residentialops_ui.md` §1, author,
   cards stop at two thirds.
 - [ ] **Desktop-oriented pages keep the full width** at 1280 px, cards
   and columns as before: the Leave dashboard
-  (`/residentialops/ra-leave/admin/`, its main column wide and its side
-  narrow), Applications, Appeals, Leave records
+  (`/residentialops/ra-leave/admin/`, its cards three across), Applications, Appeals, Leave records
   (`/residentialops/ra-leave/staff/records`), the rosters and a
   person's page, and Sys admin.
-- [ ] **At 736 px** the Leave dashboard's side column has dropped below
-  and its "Needs attention" table fits without scrolling.
+- [ ] **At 736 px** the Leave dashboard's cards are two across.
 - [ ] **At 390 px** nothing on any of these pages scrolls sideways
   except a table inside its box.
 

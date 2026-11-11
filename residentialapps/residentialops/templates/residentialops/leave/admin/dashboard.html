@@ -25,17 +25,17 @@
   <h2 class="band">Set-up</h2>
   <div class="cards-3">
     <section class="card card-pad" aria-labelledby="term-h">
-      <h2 id="term-h">Term and cycle</h2>
+      <h3 id="term-h">Term and cycle</h3>
       {% set later = leave.next_term() %}
       <dl class="kv">
         <dt>Term</dt><dd>{{ leave.TERM.label }}</dd>
         <dt>Dates</dt><dd>{{ leave.short_date(leave.TERM.start) }} – {{ leave.short_date(leave.TERM.end) }}</dd>
-        <dt>Next term</dt><dd>{% if later %}Term {{ later.number }} from {{ leave.short_date(later.start) }}{% else %}None set{% endif %}</dd>
+        <dt>Next term</dt><dd>{% if later %}{{ later.label }} from {{ leave.short_date(later.start) }}{% else %}None set{% endif %}</dd>
       </dl>
       <a href="{{ url('/rosters/') }}">Rosters ›</a>
     </section>
     <section class="card card-pad" aria-labelledby="roster-h">
-      <h2 id="roster-h">Rosters</h2>
+      <h3 id="roster-h">Rosters</h3>
       <dl class="kv">
         <dt>Staff</dt><dd>{{ sample.STAFF | length }} · {% for abbrev, n in leave.roster_counts() %}{{ n ~ " " if n > 1 }}{{ abbrev }}{{ ", " if not loop.last }}{% endfor %}</dd>
         <dt>RAs</dt><dd>{{ sample.RAS | length }}, in {{ sample.SLOTS | length }} slots across {{ leave.precincts() | length }} Precincts</dd>
@@ -43,7 +43,7 @@
       <a href="{{ url('/rosters/') }}">Rosters ›</a>
     </section>
     <section class="card card-pad" aria-labelledby="policy-h">
-      <h2 id="policy-h">Policy at a glance</h2>
+      <h3 id="policy-h">Policy at a glance</h3>
       <dl class="kv">
         <dt>Leave types</dt><dd>{% for t in leave.LEAVE_TYPES %}{{ t.abbrev }} {{ t.amount }} {{ t.accrual | lower }}{{ "; " if not loop.last }}{% endfor %}</dd>
         <dt>Days counted</dt><dd>{{ leave.POLICY.day_count }}</dd>
@@ -53,7 +53,7 @@
       <a href="{{ url('/ra-leave/admin/policy') }}">Policy ›</a>
     </section>
     <section class="card card-pad" aria-labelledby="gaps-h">
-      <h2 id="gaps-h">Approval chain</h2>
+      <h3 id="gaps-h">Approval chain</h3>
       {% set chain = leave.routes() %}
       {% set gaps = chain | selectattr("gap") | list %}
       {% set standing = chain | selectattr("delegate") | list %}
@@ -66,15 +66,16 @@
       <a href="{{ url('/ra-leave/admin/routing') }}">Approval chain ›</a>
     </section>
     <section class="card card-pad" aria-labelledby="access-h">
-      <h2 id="access-h">Who reaches the staff pages</h2>
+      <h3 id="access-h">Who reaches the staff pages</h3>
       <ul class="plain">
         {% for who, n, over in leave.staff_access() %}<li>{{ who }}{% if n > 1 %} <strong>{{ n }}</strong>{% endif %}: {{ over }}</li>{% endfor %}
-        {% set barred = leave.roles_without_access() %}{% if barred %}<li class="subtle">No tick, no access: {{ barred | join(", ") }}</li>{% endif %}
+        {% set standing = leave.standing_in_now() %}{% if standing %}<li>Without a tick, while standing in or deciding appeals: {{ standing | join(", ") }}</li>{% endif %}
+        {% set barred = leave.roles_without_access() %}{% if barred %}<li class="subtle">No tick, no access otherwise: {{ barred | join(", ") }}</li>{% endif %}
       </ul>
       <a href="{{ url('/ra-leave/admin/policy') }}#perms-h">Permissions ›</a>
     </section>
     <section class="card card-pad" aria-labelledby="coming-h">
-      <h2 id="coming-h">Coming up</h2>
+      <h3 id="coming-h">Coming up</h3>
       <ul class="plain">
         {% for when, what in leave.coming_up() %}<li><strong>{{ when }}</strong> · {{ what }}</li>{% else %}<li class="subtle">No blackout or public holiday ahead this year</li>{% endfor %}
       </ul>
@@ -85,27 +86,28 @@
   <h2 class="band">Needs attention</h2>
   <div class="cards-3">
     <section class="card card-pad" aria-labelledby="attention-h">
-      <h2 id="attention-h">Records</h2>
+      <h3 id="attention-h">Records</h3>
       {% set away_cover = leave.cover_while_away() %}
       <ul class="plain">
         {% for a in leave.APPLICATIONS if a.overdue or (a.stage in leave.OPEN_STAGES and a.cover_status == "Declined" and leave.confirmation_needed(a)) or a in away_cover %}
           <li><a href="{{ url('/ra-leave/admin/records/' ~ a.id) }}">{{ a.id }}</a> {{ a.ra }}: {% set why = [] %}{% if a.overdue %}{% set _ = why.append("pending " ~ a.age ~ " days") %}{% endif %}{% if a.stage in leave.OPEN_STAGES and a.cover_status == "Declined" and leave.confirmation_needed(a) %}{% set _ = why.append(a.cover ~ " declined cover") %}{% endif %}{% if a in away_cover %}{% set _ = why.append(a.cover ~ " is away too") %}{% endif %}{{ why | join("; ") }}</li>
         {% endfor %}
+        {% for e in leave.failed_emails() %}<li><a href="{{ url('/ra-leave/admin/records/' ~ e.application) }}">{{ e.application }}</a> email to {{ e.to }} not sent: resend from the application</li>{% endfor %}
         {% for precinct, names in leave.clashes() %}<li><span class="chip chip-warn">Clash</span> {{ names | join(", ") }}, {{ precinct }}: away on the same days</li>{% endfor %}
       </ul>
       <a href="{{ url('/ra-leave/admin/records') }}">Records ›</a>
     </section>
     <section class="card card-pad" aria-labelledby="anomaly-h">
-      <h2 id="anomaly-h">Entitlements</h2>
+      <h3 id="anomaly-h">Entitlements</h3>
       {% set odd = leave.entitlement_anomalies() %}
       {% if odd %}<ul class="plain">{% for r, why in odd %}<li><strong>{{ r.ra }}</strong>, {{ r.type }}: {{ why }}.</li>{% endfor %}</ul>
       {% else %}<p class="sub">None in {{ leave.TERM.label }}: no RA is over entitlement, and every adjustment has its reason.</p>{% endif %}
       <a href="{{ url('/ra-leave/admin/entitlements') }}">Entitlements ›</a>
     </section>
     <section class="card card-pad" aria-labelledby="mismatch-h">
-      <h2 id="mismatch-h">Roster mismatches</h2>
+      <h3 id="mismatch-h">Roster mismatches</h3>
       <ul class="plain">
-        {% for m in leave.roster_mismatches() %}<li><span class="chip chip-warn">Check</span> {{ m }}</li>{% else %}<li class="subtle">Every RA has a slot, every slot an RF, and next term has its overseers</li>{% endfor %}
+        {% for m in leave.roster_mismatches() %}<li><span class="chip chip-warn">Check</span> {{ m }}</li>{% else %}<li class="subtle">Every RA has a slot, every slot an RF{{ ", next term has its overseers" if leave.next_term() }}, and everyone named in Permissions is on the Staff roster</li>{% endfor %}
       </ul>
       <a href="{{ url('/rosters/assignments') }}">Assignments ›</a>
     </section>

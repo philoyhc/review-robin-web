@@ -76,7 +76,10 @@ def test_the_dashboard_counts_pending_by_stage_and_flags_what_needs_attention() 
     assert "Pending%20first%20approval" not in tiles[0][0]
     assert tiles[3][0] == "/ra-leave/admin/records?cover=unconfirmed&amp;period=whole"
     attention = page.split('id="attention-h"')[1].split("</section>")[0]
-    assert re.findall(r">(L-\d+)</a>", attention) == ["L-0103", "L-0104", "L-0107", "L-0109"]
+    # The records needing attention, then the emails not sent (2026-11-10).
+    ids = re.findall(r">(L-\d+)</a>", attention)
+    assert ids[:4] == ["L-0103", "L-0104", "L-0107", "L-0109"]
+    assert ids[4:] == [e.application for e in sample_leave.failed_emails()]
     assert "Pranav Iyer is away too" in attention and "Chloe Lim declined cover" in attention
     assert attention.count("away on the same days") == 1
     assert "Olivia Ng, Pranav Iyer" in attention
@@ -827,7 +830,7 @@ def test_dashboard_reports_and_export(monkeypatch) -> None:
     # attention, three cards across, each linking where it is fixed; the
     # cards that linked nowhere in admin (Upcoming leave, Extra leave
     # granted, Recent corrections, Emails not sent) are gone.
-    heads = re.findall(r'<h2 id="[a-z]+-h">([^<]+)', dashboard)
+    heads = re.findall(r'<h3 id="[a-z]+-h">([^<]+)', dashboard)
     assert heads == [
         "Term and cycle",
         "Rosters",
@@ -845,11 +848,13 @@ def test_dashboard_reports_and_export(monkeypatch) -> None:
     assert "<dt>Staff</dt><dd>15 · Master, Admin, 3 RSLM, 9 RF, Exec</dd>" in dashboard
     assert "<dt>RAs</dt><dd>30, in 30 slots across 9 Precincts</dd>" in dashboard
     assert (
-        "Term 2 from 11 Jan" in dashboard and dashboard.count('href="/rosters/">Rosters ›</a>') == 2
+        "AY2026-2027, Term 2 from 11 Jan" in dashboard
+        and dashboard.count('href="/rosters/">Rosters ›</a>') == 2
     )
     assert "Residential Fellow <strong>9</strong>: RAs assigned to staff&#39;s slots" in dashboard
     assert (
-        "No tick, no access: Residential Student Life Manager, Residential Executive" in dashboard
+        "No tick, no access otherwise: Residential Student Life Manager" in dashboard
+        and "while standing in or deciding appeals: Marcus Tan" in dashboard
     )
     assert "<strong>15 Nov – 28 Nov</strong> · Examinations, appeal only" in dashboard
     assert "No one is in every slot for AY2026-2027, Term 2" in dashboard
@@ -928,9 +933,12 @@ def test_failed_emails_stay_visible_and_can_be_resent() -> None:
     c = TestClient(ops_app())
     failed = sample_leave.failed_emails()
     assert {e.application for e in failed} == {"L-0101", "L-0115", "L-0116"}
-    # Emails not sent left the Dashboard (author, 2026-11-10): a send goes
-    # from the sender's own account, so resend belongs to them.
-    assert 'id="unsent-h"' not in c.get("/ra-leave/admin/").text
+    # Emails not sent left the Dashboard as a card (author, 2026-11-10);
+    # each is listed under Records and resent from its application.
+    board = c.get("/ra-leave/admin/").text
+    listed = board.split('id="attention-h"')[1].split("</section>")[0]
+    assert 'id="unsent-h"' not in board
+    assert all(f"{e.application}</a> email to {e.to} not sent" in listed for e in failed)
     # The admin sees every email on the application, sent or not.
     page = (
         c.get("/ra-leave/admin/records/L-0116")
