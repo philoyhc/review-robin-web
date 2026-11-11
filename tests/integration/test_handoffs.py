@@ -7,9 +7,10 @@ from __future__ import annotations
 
 import json
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -24,6 +25,8 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
+from app.web import views
+from app.web.routes_operator import _quick_setup
 
 URL = "/operator/handoffs/sessions"
 REVIEWERS = (
@@ -93,7 +96,7 @@ def test_a_handoff_creates_a_populated_draft_and_nothing_else(
     ).one()
     assert event.detail is not None
     assert event.detail["context"]["source_app"] == "utilities"
-    assert event.detail["counts"] == {"reviewers": 2, "reviewees": 3}
+    assert event.detail["counts"] == {"files": 2}
 
 
 def test_the_receipt_url_carries_the_mount_prefix(
@@ -175,8 +178,9 @@ def test_the_envelope_is_checked(client: TestClient, db: Session) -> None:
 def test_only_json_from_the_same_site(client: TestClient, db: Session) -> None:
     as_form = client.post(URL, data={"x": "1"})
     assert as_form.status_code == 415
-    cross = _post(client, _bundle(), **{"Sec-Fetch-Site": "cross-site"})
-    assert cross.status_code == 403 and cross.json()["error"] == "not_authorized"
+    for site in ("cross-site", "same-site", "none"):
+        cross = _post(client, _bundle(), **{"Sec-Fetch-Site": site})
+        assert cross.status_code == 403 and cross.json()["error"] == "not_authorized", site
     garbled = client.post(URL, content=b"{not json", headers={"Content-Type": "application/json"})
     assert garbled.status_code == 422
     assert _count(db, ReviewSession) == 0
@@ -201,3 +205,62 @@ def test_a_non_operator_is_turned_away(
     assert reply.history and reply.history[0].status_code == 303
     assert "/me" in reply.history[0].headers["location"]
     assert _count(db, ReviewSession) == 0
+
+
+def test_a_deeply_nested_body_is_refused_not_a_500(client: TestClient, db: Session) -> None:
+    deep = "[" * 200_000
+    reply = client.post(URL, content=deep, headers={"Content-Type": "application/json"})
+    assert reply.status_code == 422 and reply.json()["error"] == "invalid_package"
+
+
+def test_an_undeclared_length_is_refused_unread(client: TestClient, db: Session) -> None:
+    def chunks() -> Iterator[bytes]:
+        yield json.dumps(_bundle()).encode()
+
+    reply = client.post(URL, content=chunks(), headers={"Content-Type": "application/json"})
+    assert reply.status_code == 411 and reply.json()["error"] == "invalid_package"
+    assert _count(db, ReviewSession) == 0
+
+
+def test_an_error_after_the_create_leaves_no_draft(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def broken(**_: Any) -> None:
+        raise RuntimeError("lock wait")
+
+    monkeypatch.setattr(_quick_setup, "_run_quick_setup_contents", broken)
+    with pytest.raises(RuntimeError):
+        _post(client, _bundle())
+    assert _count(db, ReviewSession) == 0
+    assert _count(db, Reviewer) == 0
+
+
+def test_a_lapsed_directory_sign_in_is_named_not_blamed_on_a_file(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def stopped(**_: Any) -> Any:
+        return _quick_setup._SlotRefusal(  # pyright: ignore[reportPrivateUsage]  -- the refusal under test
+            "reviewers",
+            _quick_setup._SlotFailure(views.DIRECTORY_SIGN_IN),  # pyright: ignore[reportPrivateUsage]  -- as above
+        )
+
+    monkeypatch.setattr(_quick_setup, "_run_quick_setup_contents", stopped)
+    reply = _post(client, _bundle())
+    assert reply.status_code == 409 and reply.json()["error"] == "directory_sign_in"
+    assert "slot" not in reply.json()
+    assert _count(db, ReviewSession) == 0
+
+
+def test_a_replay_after_an_unanswered_create_finds_the_session(
+    client: TestClient, db: Session
+) -> None:
+    """The transfer is recorded with the draft, before the rosters, so a
+    sender that lost the answer gets the same session back."""
+    bundle = _bundle()
+    first = _post(client, bundle).json()
+    event = db.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == "session.handoff_created")
+    ).one()
+    created = db.scalars(select(AuditEvent).where(AuditEvent.event_type == "session.created")).one()
+    assert event.correlation_id == created.correlation_id
+    assert _post(client, bundle).json()["session_ref"] == first["session_ref"]

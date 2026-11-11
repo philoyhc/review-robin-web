@@ -68,7 +68,8 @@ def parse_bundle(body: bytes) -> Bundle:
     the CSVs are Quick Setup's to check, with its own parsers and caps."""
     try:
         raw: object = json.loads(body)
-    except (ValueError, UnicodeDecodeError) as exc:
+    except (ValueError, UnicodeDecodeError, RecursionError) as exc:
+        # RecursionError: a body nested deeper than the parser's stack.
         raise HandoffError("invalid_package", 422, ["The body is not JSON."]) from exc
     if not isinstance(raw, dict):
         raise HandoffError("invalid_package", 422, ["The body is not a JSON object."])

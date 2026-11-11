@@ -4,7 +4,8 @@ The proof of concept's RRW side: a holding page that another
 application opens in a new tab during its operator's click, while it
 posts the setup that creates the session, then moves the tab to that
 session's Session Home (`cordware/docs/cordware_interoperability_consolidated_spec_v0.3.md`
-§7.1). Rung 1 lands the holding page alone; the create route is rung 2's.
+§7.1). The create route itself is in ``_quick_setup.py``, whose
+pipeline it runs (slices do not import one another).
 """
 
 from __future__ import annotations

@@ -1553,14 +1553,18 @@ async def create_handoff_session(
     that the signer-in is an RRW operator. Nothing is prepared, activated,
     invited or sent."""
     # A JSON body is the cross-site guard, as the directory endpoints';
-    # a browser that names a cross-site origin is refused outright.
-    if request.headers.get("sec-fetch-site", "same-origin") not in {"same-origin", "none"}:
+    # a browser that names any other origin is refused outright.
+    if request.headers.get("sec-fetch-site", "same-origin") != "same-origin":
         return _handoff_error("not_authorized", status.HTTP_403_FORBIDDEN)
     media = request.headers.get("content-type", "").split(";")[0].strip().lower()
     if media != "application/json":
         return _handoff_error("invalid_package", status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+    # Refused unread when undeclared (a chunked body), as the directory
+    # endpoints do: the cap is checked before anything is held.
     declared = request.headers.get("content-length", "")
-    if declared.isdigit() and int(declared) > handoffs.MAX_BYTES:
+    if not declared.isdigit():
+        return _handoff_error("invalid_package", status.HTTP_411_LENGTH_REQUIRED)
+    if int(declared) > handoffs.MAX_BYTES:
         return _handoff_error("invalid_package", status.HTTP_413_CONTENT_TOO_LARGE)
     body = await request.body()
     if len(body) > handoffs.MAX_BYTES:
@@ -1597,25 +1601,55 @@ async def create_handoff_session(
     review_session = sessions.create_session(
         db, user=user, payload=payload, correlation_id=correlation_id
     )
-    refusal = await _run_quick_setup_contents(
-        contents=bundle.files,
-        filenames={kind: f"{kind}.csv" for kind in bundle.files},
-        review_session=review_session,
-        user=user,
-        db=db,
-        confirm_replace="true",
-        acknowledge_response_loss=None,
-        replacing=False,
+    # The transfer is recorded with the draft, before the rosters, so a
+    # retry after anything below finds it; a discarded draft takes the
+    # record with it (``delete_session`` drops its events).
+    audit.write_event(
+        db,
+        event_type=handoffs.EVENT,
+        summary=f"Session {review_session.code} created from {bundle.source_app}",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(files=len(bundle.files)),
+        context={"transfer_id": bundle.transfer_id, "source_app": bundle.source_app},
         correlation_id=correlation_id,
-        directory=directory_or_none(request),
     )
-    if refusal is not None:
+    unit_of_work.commit(db)
+
+    def discard() -> None:
         # All or nothing (author, 2026-11-11): the draft goes with its
-        # refused rosters, and the sender is told which slot and why.
+        # rosters when they do not all apply.
         db.rollback()
         sessions.delete_session(
             db, review_session=review_session, user=user, correlation_id=correlation_id
         )
+
+    try:
+        refusal = await _run_quick_setup_contents(
+            contents=bundle.files,
+            filenames={kind: f"{kind}.csv" for kind in bundle.files},
+            review_session=review_session,
+            user=user,
+            db=db,
+            confirm_replace="true",
+            acknowledge_response_loss=None,
+            replacing=False,
+            correlation_id=correlation_id,
+            directory=directory_or_none(request),
+        )
+    except Exception:
+        discard()
+        raise
+    if refusal is not None:
+        discard()
+        if refusal.failure.reason == views.DIRECTORY_SIGN_IN:
+            # Nothing wrong with the files: the operator's directory
+            # sign-in lapsed, which only they can renew, in Review Robin.
+            return _handoff_error(
+                "directory_sign_in",
+                status.HTTP_409_CONFLICT,
+                ["Your Review Robin sign-in to the directory has lapsed."],
+            )
         return _handoff_error(
             "invalid_setup",
             status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -1623,21 +1657,6 @@ async def create_handoff_session(
             slot=refusal.kind,
             reason=refusal.failure.reason,
         )
-
-    audit.write_event(
-        db,
-        event_type=handoffs.EVENT,
-        summary=f"Session {review_session.code} created from {bundle.source_app}",
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.counts(
-            reviewers=csv_imports.existing_reviewer_count(db, review_session.id),
-            reviewees=csv_imports.existing_reviewee_count(db, review_session.id),
-        ),
-        context={"transfer_id": bundle.transfer_id, "source_app": bundle.source_app},
-        correlation_id=correlation_id,
-    )
-    unit_of_work.commit(db)
     return JSONResponse(
         _handoff_receipt(request, review_session, "created"),
         status_code=status.HTTP_201_CREATED,
