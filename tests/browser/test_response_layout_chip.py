@@ -108,15 +108,30 @@ def test_stacked_the_preview_puts_each_field_on_a_line(
 def test_stacked_the_label_and_response_columns_drag_and_save(
     page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
-    """Two handles in the Responses header, never one per box: the label
-    column's and the response column's. A drag moves every line and
-    rides the card's Save as ``stack_label`` / ``stack_input``."""
+    """One handle in the Responses header, the label column's, never one
+    per box. A drag moves every line and rides the card's Save as
+    ``stack_label``."""
     session_id = new_session()
     page.set_viewport_size({"width": 1400, "height": 1000})
     card = open_unlocked(page, session_id)
     card.locator("[data-response-layout-chip]").click()
     handles = card.locator("[data-new-model-band2-preview] th.rs-stack [data-stack-width]")
-    expect(handles).to_have_count(2)
+    # The label column's only: the response column is the table's last,
+    # and a last column has no handle (the author, 2026-11-11).
+    expect(handles).to_have_count(1)
+    expect(card.locator('[data-stack-width="label"]')).to_have_count(1)
+    # Each handle runs the header cell's full height, as a column's does.
+    heights = card.evaluate(
+        """c => {
+          const th = c.querySelector('[data-new-model-band2-preview] th.rs-stack');
+          const cell = th.getBoundingClientRect();
+          return [...th.querySelectorAll('[data-stack-width]')].map(h => {
+            const r = h.getBoundingClientRect();
+            return [r.top - cell.top, cell.bottom - r.bottom];
+          });
+        }"""
+    )
+    assert all(abs(top) <= 1 and abs(bottom) <= 1 for top, bottom in heights), heights
     before = card.evaluate(_STACK)
     assert before is not None
     # Unset, the header's label column lines up with the cell's.

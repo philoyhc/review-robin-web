@@ -2710,7 +2710,7 @@
           // ``stack_col_px``).
           function stackColStyle(card) {
             var label = stackWidth(card, 'label'), input = stackWidth(card, 'input');
-            return (label && input) ? 'width: ' + (label + input + 12 + 16) + 'px;' : '';
+            return (label && input) ? 'width: ' + (label + input + 12 + 32) + 'px;' : '';
           }
           function stackResizeHandle(which) {
             return '<span class="new-model-band2-resize-handle" '
@@ -2720,16 +2720,18 @@
               + 'width: 6px; cursor: col-resize; user-select: none; z-index: 1;" '
               + 'title="Drag to resize the ' + (which === 'label' ? 'label' : 'response') + ' column"></span>';
           }
-          // The Responses header, split as the cell below it is: the
-          // label column's handle at its right edge, the response
-          // column's at its. ``syncStackHead`` lines an unset label
-          // column up with the cell's once both are drawn.
+          // The Responses header, split as the cell below it is, with the
+          // label column's handle at its right edge. The response column
+          // is the table's last, so like any last column it has no handle
+          // (the author, 2026-11-11): it takes the width the others leave.
+          // ``syncStackHead`` lines an unset label column up with the
+          // cell's once both are drawn.
           function stackHeader(card) {
             var vars = stackVars(card);
             return '<th scope="col" class="rs-stack">'
               + '<div class="rs-stack-head"' + (vars ? ' style="' + vars + '"' : '') + '>'
               + '<span class="rs-stack-head-label">Responses' + stackResizeHandle('label') + '</span>'
-              + '<span class="rs-stack-head-input">' + stackResizeHandle('input') + '</span>'
+              + '<span class="rs-stack-head-input"></span>' 
               + '</div></th>';
           }
           function syncStackHead(card) {

@@ -4944,8 +4944,16 @@
           minmax(0, var(--rs-stack-label, max-content))
           minmax(0, var(--rs-stack-input, 1fr));
         column-gap: var(--space-3);
+        /* Reach the header cell's top and bottom edges (the preview's
+           cells pad ``--space-2``), so each handle runs the cell's full
+           height as a column's gripper does. */
+        margin: calc(-1 * var(--space-2)) 0;
       }
-      .rs-stack-head > span { position: relative; min-width: 0; }
+      .rs-stack-head > span {
+        position: relative;
+        min-width: 0;
+        padding: var(--space-2) 0;
+      }
       /* The session description on the participant pages, between the
          title row and the participant row, with no card (19X Items 11
          and 13). */
