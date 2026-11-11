@@ -52,10 +52,11 @@ from ._status import (
 )
 
 # Segment 20K — the stacked cell's grid gap (``--space-3``) and the
-# cell's horizontal padding (``td`` is ``4px 8px``), so a Responses
-# column sized from the two saved widths holds the whole grid.
+# cell's horizontal padding (``body.ui-v2 td`` pads ``--space-4``, 16px,
+# each side), so a Responses column sized from the two saved widths
+# holds the whole grid.
 _STACK_GRID_GAP_PX = 12
-_STACK_CELL_PADDING_PX = 16
+_STACK_CELL_PADDING_PX = 32
 
 
 def _load_assignments_with_relations(

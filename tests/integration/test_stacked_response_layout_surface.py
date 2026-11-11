@@ -190,5 +190,5 @@ def test_the_dragged_widths_hold_on_the_surface(
         '--rs-stack-label: 180px; --rs-stack-input: 400px"'
     ) in flat
     # Both saved, the Responses column holds them (Codex on #3806): the
-    # widths, the 12px gap and the cell's 16px of padding.
-    assert '<col style="width: 608px">' in flat
+    # widths, the 12px gap and the cell's 32px of padding.
+    assert '<col style="width: 624px">' in flat
