@@ -279,12 +279,12 @@ def stacked_box_chars(field: InstrumentResponseField) -> int | None:
         if data_type == "Decimal" and step is None:
             return None
         bounds = [_format_band2_bound(float(v)) for v in (min_, max_)]
-        whole = max(len(b.lstrip("-").split(".", 1)[0]) for b in bounds)
-        sign = 1 if any(b.startswith("-") for b in bounds) else 0
+        # The wider bound's whole part, its sign included.
+        whole = max(len(b.split(".", 1)[0]) for b in bounds)
         places = _decimal_places(bounds[0])
         if step is not None:
             places = max(places, _decimal_places(_format_band2_bound(float(step))))
-        return sign + whole + (1 + places if places else 0)
+        return whole + (1 + places if places else 0)
     if data_type == "List":
         choices = [str(c) for c in json_list(validation.get("choices")) or []]
         return max([1, *(len(c) for c in choices)]) + _STACK_LIST_ARROW_CH
@@ -821,6 +821,9 @@ def _new_model_band2_state(
         "sample_names": sample_names,
         "sample_extra_count": sample_extra_count,
         "identity_width_px": identity_width_px,
+        # Segment 20K — the stacked layout's label and response widths.
+        "stack_label_px": (instrument.column_widths or {}).get("stack_label"),
+        "stack_input_px": (instrument.column_widths or {}).get("stack_input"),
         "selected_display_keys": selected_display_keys,
         "response_fields": response_fields,
         "response_field_groups": response_field_groups,

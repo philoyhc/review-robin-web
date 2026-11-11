@@ -1203,6 +1203,11 @@ _COLUMN_WIDTH_MIN_PX = 40
 _COLUMN_WIDTH_MAX_PX = 1200
 
 
+# Segment 20K — a stacked instrument's two widths: its label column and
+# its response (text box) column, inside the one Responses cell.
+STACK_WIDTH_KEYS: tuple[str, ...] = ("stack_label", "stack_input")
+
+
 def set_column_widths(
     db: Session,
     *,
@@ -1213,8 +1218,10 @@ def set_column_widths(
     """Persist the per-column pixel widths the operator set by
     drag-resizing the new-model card's Band 2 preview table.
 
-    ``widths`` is a dict keyed by ``"identity"`` and
-    ``"df_<display_field_id>"`` strings, valued by positive integer
+    ``widths`` is a dict keyed by ``"identity"``,
+    ``"df_<display_field_id>"`` and ``"rf_<response_field_id>"``
+    strings, plus the stacked layout's ``"stack_label"`` and
+    ``"stack_input"`` (segment 20K), valued by positive integer
     pixels: JSON from the client, so a key or a value ``int`` refuses
     is dropped. Unknown keys are dropped; values are clamped to
     ``[_COLUMN_WIDTH_MIN_PX, _COLUMN_WIDTH_MAX_PX]``. Passing an
@@ -1230,7 +1237,11 @@ def set_column_widths(
     sanitised: dict[str, int] = {}
     for raw_key, raw_value in (widths or {}).items():
         key = str(raw_key).strip()
-        if key != "identity" and not key.startswith("df_") and not key.startswith("rf_"):
+        if (
+            key not in ("identity", *STACK_WIDTH_KEYS)
+            and not key.startswith("df_")
+            and not key.startswith("rf_")
+        ):
             continue
         if key.startswith("df_"):
             try:

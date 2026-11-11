@@ -337,3 +337,46 @@ def test_both_saves_refuse_an_unknown_layout(
     stored = must_get(db, Instrument, instrument.id)
     assert stored.response_layout == "columns"
     assert stored.short_label != "Changed"
+
+
+# --- Rung 5: the stacked layout's two widths ---------------------------
+
+
+def test_set_column_widths_keeps_the_stack_widths(db: Session) -> None:
+    from app.services.instruments import set_column_widths
+
+    user, _, instrument = _seed(db, code="20k-widths")
+    set_column_widths(
+        db,
+        instrument=instrument,
+        widths={"stack_label": 180, "stack_input": 5000, "stack_other": 90},
+        actor=user,
+    )
+    db.commit()
+    # Clamped as every width is; an unknown key is dropped.
+    assert instrument.column_widths == {"stack_label": 180, "stack_input": 1200}
+
+
+def test_the_settings_csv_carries_the_stack_widths(db: Session) -> None:
+    _, source, instrument = _seed(db, code="20k-widths-src")
+    instrument.response_layout = "stacked"
+    instrument.column_widths = {"stack_label": 180, "stack_input": 400}
+    db.commit()
+    rows = serialize_session_config(db, source)
+    destination = _bare(db, "20k-widths-dst")
+    result = apply_session_config(db, destination, rows)
+    assert result.ok, result.errors
+    copied = db.execute(
+        select(Instrument).where(Instrument.session_id == destination.id)
+    ).scalar_one()
+    assert copied.column_widths == {"stack_label": 180, "stack_input": 400}
+
+
+def test_the_card_carries_the_stack_widths_for_its_preview(client: TestClient, db: Session) -> None:
+    review_session = _make_session(client, db, code="20k-widths-card")
+    instrument = _instrument(db, review_session)
+    instrument.column_widths = {"stack_label": 180, "stack_input": 400}
+    db.commit()
+    flat = _flat_page(client, review_session)
+    assert 'data-new-model-band2-stack-label-width="180"' in flat
+    assert 'data-new-model-band2-stack-input-width="400"' in flat
