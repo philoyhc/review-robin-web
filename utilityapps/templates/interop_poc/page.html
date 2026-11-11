@@ -96,7 +96,12 @@
       }).then(function (reply) {
         // The operator gate answers a non-operator with a redirect to /me.
         if (reply.type === "opaqueredirect" || reply.status === 0) return refused(tab, "not_authorized");
-        return reply.json().catch(function () { return {}; }).then(function (body) {
+        // An answer whose body cannot be read is not a refusal: the session
+        // may exist, so the transfer is kept and trying again finds it.
+        return reply.json().then(null, function () { return null; }).then(function (body) {
+          if (body === null) {
+            return refused(tab, "server", { details: ["Review Robin's answer (" + reply.status + ") could not be read. Try again: the same transfer is sent, so no second session is made."] }, true);
+          }
           if (!reply.ok || !body.session_home_url) {
             if (reply.status >= 500) {
               return refused(tab, "server", { details: ["Review Robin failed (" + reply.status + "). Try again: the same transfer is sent, so no second session is made."] }, true);

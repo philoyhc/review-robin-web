@@ -42,6 +42,8 @@ def test_the_button_posts_to_review_robins_create_route(client: TestClient) -> N
     # A refusal starts a new transfer next time; a 5xx or a lost answer
     # keeps it, so a retry finds a session already made (the cold read).
     assert "reply.status >= 500" in text and "if (!keep) transfer = null;" in text
+    # An unreadable answer keeps it too: a 201 may have lost its body (Codex).
+    assert "if (body === null)" in text and ".catch(function () { return {}; })" not in text
     assert "directory_sign_in:" in text
     # A replay cut off before its rosters saved names the draft it left.
     assert "transfer_incomplete:" in text and "Open the draft" in text
