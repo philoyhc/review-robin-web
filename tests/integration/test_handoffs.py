@@ -264,3 +264,23 @@ def test_a_replay_after_an_unanswered_create_finds_the_session(
     created = db.scalars(select(AuditEvent).where(AuditEvent.event_type == "session.created")).one()
     assert event.correlation_id == created.correlation_id
     assert _post(client, bundle).json()["session_ref"] == first["session_ref"]
+
+
+def test_an_unpaired_surrogate_is_refused_not_a_500(client: TestClient, db: Session) -> None:
+    """Codex, `#3780`: JSON admits an escaped lone surrogate that UTF-8
+    cannot encode."""
+    lone = "\ud800"
+    for bundle in (
+        _bundle(
+            files={
+                "reviewers": REVIEWERS + f"Zoe,zoe@example.edu{lone}\r\n",
+                "reviewees": REVIEWEES,
+            }
+        ),
+        _bundle(session_suggestion={"name": f"Bad {lone}", "code": "POC-SURR"}),
+    ):
+        body = json.dumps(bundle)  # ensure_ascii writes the surrogate as \ud800
+        assert "\\ud800" in body
+        reply = client.post(URL, content=body, headers={"Content-Type": "application/json"})
+        assert reply.status_code == 422 and reply.json()["error"] == "invalid_package", reply.text
+    assert _count(db, ReviewSession) == 0

@@ -54,12 +54,22 @@ class Bundle:
     files: dict[str, bytes]
 
 
+def _encoded(value: str, key: str) -> bytes:
+    """UTF-8, or :class:`HandoffError`: JSON admits an escaped unpaired
+    surrogate (``\\ud800``) that no UTF-8 text, and no database, holds."""
+    try:
+        return value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise HandoffError("invalid_package", 422, [f"`{key}` is not valid Unicode text."]) from exc
+
+
 def _text(data: dict[str, object], key: str, limit: int) -> str:
     value = data.get(key)
     if not isinstance(value, str) or not value.strip() or len(value) > limit:
         raise HandoffError(
             "invalid_package", 422, [f"`{key}` must be text of 1–{limit} characters"]
         )
+    _encoded(value, key)
     return value.strip()
 
 
@@ -118,7 +128,7 @@ def parse_bundle(body: bytes) -> Bundle:
         value = files[kind]
         if not isinstance(value, str):
             raise HandoffError("invalid_package", 422, [f"`files.{kind}` must be CSV text."])
-        contents[kind] = value.encode("utf-8")
+        contents[kind] = _encoded(value, f"files.{kind}")
     return Bundle(transfer_id, source_app, name, code, contents)
 
 
