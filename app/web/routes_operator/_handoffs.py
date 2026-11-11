@@ -72,6 +72,14 @@ def handoff_status(
     return JSONResponse(body, headers=_NO_STORE)
 
 
+def _not_modified(if_none_match: str | None, etag: str) -> bool:
+    """RFC 9110 §13.1.2: a weak comparison against a list of tags, or *."""
+    if not if_none_match:
+        return False
+    tags = [tag.strip().removeprefix("W/") for tag in if_none_match.split(",")]
+    return "*" in tags or etag in tags
+
+
 def _csv(
     request: Request,
     transfer_id: str,
@@ -90,7 +98,7 @@ def _csv(
         "X-Review-Robin-As-Of": datetime.now(UTC).isoformat(timespec="seconds"),
     }
     # Already up to date (interop spec §6.5): nothing taken, nothing audited.
-    if request.headers.get("if-none-match") == snapshot.etag:
+    if _not_modified(request.headers.get("if-none-match"), snapshot.etag):
         return Response(status_code=304, headers=headers)
     handoffs.record_export(db, review_session, user, transfer_id, snapshot)
     headers["Content-Disposition"] = content_disposition(f"{review_session.code}_{snapshot.name}")

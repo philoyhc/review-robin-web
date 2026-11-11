@@ -719,3 +719,97 @@ def test_the_csvs_refuse_an_unlinked_transfer(client: TestClient) -> None:
     for name in ("results.csv", "completion.csv"):
         reply = client.get(f"/operator/handoffs/{uuid.uuid4()}/{name}")
         assert reply.status_code == 404 and reply.json()["error"] == "not_linked"
+
+
+def test_an_answer_edited_after_submit_leaves_its_assignment_in_progress(
+    client: TestClient, db: Session
+) -> None:
+    """Cold read: an edit clears that answer's stamp only, so the
+    assignment is in progress again and the answer leaves results.csv."""
+    bundle = _bundle()
+    _post(client, bundle)
+    _, assignments = _answered_session(db, submit=True)
+    edited = db.scalars(select(Response).where(Response.assignment_id == assignments[0].id)).first()
+    assert edited is not None
+    edited.submitted_at = None
+    db.commit()
+    base = f"/operator/handoffs/{bundle['transfer_id']}"
+    assert _rows(client.get(f"{base}/completion.csv"))[0]["State"] == "in_progress"
+    kept = _rows(client.get(f"{base}/results.csv"))
+    assert all(row["FieldKey"] != edited.response_field.field_key for row in kept)
+
+
+def test_an_assignment_left_blank_is_submitted_with_its_reviewer(
+    client: TestClient, db: Session
+) -> None:
+    """Cold read: a submit stamps only the answers there are, so an
+    assignment of optional fields left blank has no rows; it reads
+    submitted when its reviewer has submitted, by Monitoring's state."""
+    bundle = _bundle()
+    _post(client, bundle)
+    _answered_session(db, submit=True)
+    for field in db.scalars(select(InstrumentResponseField)).all():
+        field.required = False
+    db.commit()
+    rows = _rows(client.get(f"/operator/handoffs/{bundle['transfer_id']}/completion.csv"))
+    assert {row["State"] for row in rows} == {"submitted"}
+
+
+def test_the_csvs_count_what_the_status_counts(client: TestClient, db: Session) -> None:
+    """Cold read: an excluded assignment, or one of a withdrawn reviewer,
+    is in neither CSV, as it is in no status count."""
+    bundle = _bundle()
+    _post(client, bundle)
+    _, assignments = _answered_session(db, submit=True)
+    assignments[1].include = False
+    db.commit()
+    base = f"/operator/handoffs/{bundle['transfer_id']}"
+    total = len(assignments) - 1
+    assert len(_rows(client.get(f"{base}/completion.csv"))) == total
+    assert _status(client, bundle["transfer_id"]).json()["counts"]["assignments"] == total
+    reviewer = db.get(Reviewer, assignments[0].reviewer_id)
+    assert reviewer is not None
+    reviewer.status = "inactive"
+    db.commit()
+    for name in ("completion.csv", "results.csv"):
+        assert _rows(client.get(f"{base}/{name}")) == []
+
+
+def test_the_csvs_need_the_session_now_and_a_finished_transfer(
+    client: TestClient,
+    db: Session,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+    bob: AuthenticatedUser,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle = _bundle()
+    _post(client, bundle)
+    for name in ("results.csv", "completion.csv"):
+        other = make_client(bob).get(f"/operator/handoffs/{bundle['transfer_id']}/{name}")
+        assert other.status_code == 403 and other.json()["error"] == "not_authorized"
+
+    unfinished = _bundle(session_suggestion={"name": "U", "code": "POC-UNFINISHED"})
+
+    class CutOff(BaseException):
+        pass
+
+    async def cut_off(**_: Any) -> None:
+        raise CutOff
+
+    monkeypatch.setattr(_quick_setup, "_run_quick_setup_contents", cut_off)
+    with pytest.raises(BaseException):  # noqa: B017 -- the test client's wrapping varies
+        _post(client, unfinished)
+    monkeypatch.undo()
+    reply = client.get(f"/operator/handoffs/{unfinished['transfer_id']}/results.csv")
+    assert reply.status_code == 409 and reply.json()["error"] == "transfer_incomplete"
+
+
+def test_if_none_match_takes_a_list_a_weak_tag_or_any(client: TestClient, db: Session) -> None:
+    """Cold read: RFC 9110's weak comparison over a list, and *."""
+    bundle = _bundle()
+    _post(client, bundle)
+    url = f"/operator/handoffs/{bundle['transfer_id']}/results.csv"
+    tag = client.get(url).headers["etag"]
+    for header in (f'"other", {tag}', f"W/{tag}", "*"):
+        assert client.get(url, headers={"If-None-Match": header}).status_code == 304
+    assert client.get(url, headers={"If-None-Match": '"other"'}).status_code == 200

@@ -430,9 +430,10 @@ def _snapshot(name: str, header: tuple[str, ...], rows: list[tuple[str, ...]]) -
 
 
 def _counted_assignments(review_session: ReviewSession):
-    """The assignments the status counts: included, on per-reviewee
-    instruments. Group-scoped ones are left out: what a group means for
-    one application is undefined (interop spec §6.5)."""
+    """The assignments the status counts: included, of active reviewers
+    (as ``monitoring``), on per-reviewee instruments. Group-scoped ones are
+    left out: what a group means for one application is undefined
+    (interop spec §6.5)."""
     return (
         select(Assignment, Reviewer, Reviewee, Instrument)
         .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
@@ -441,6 +442,7 @@ def _counted_assignments(review_session: ReviewSession):
         .where(
             Assignment.session_id == review_session.id,
             Assignment.include.is_(True),
+            Reviewer.status == "active",
             Instrument.group_kind.is_(None),
         )
     )
@@ -461,6 +463,7 @@ def results_csv(db: Session, review_session: ReviewSession) -> CsvSnapshot:
         .where(
             Assignment.session_id == review_session.id,
             Assignment.include.is_(True),
+            Reviewer.status == "active",
             Instrument.group_kind.is_(None),
             Response.submitted_at.is_not(None),
         )
@@ -490,42 +493,48 @@ def results_csv(db: Session, review_session: ReviewSession) -> CsvSnapshot:
 
 
 def completion_csv(db: Session, review_session: ReviewSession) -> CsvSnapshot:
-    """One row per counted assignment and where it stands: ``submitted``
-    once its answers are submitted, ``in_progress`` with answers saved,
-    else ``not_started``. No answers."""
-    # A comprehension, not dict(): a Result has .keys(), so dict() would
-    # read it as a mapping.
-    answered = {
-        assignment_id: submitted
-        for assignment_id, submitted in db.execute(
-            select(Response.assignment_id, func.count(Response.submitted_at))
+    """One row per counted assignment and where it stands, read as Review
+    Robin records submission: a submit stamps every saved answer, and an
+    edit afterwards clears that answer's stamp.
+
+    - ``submitted``: it has answers and all are submitted; or it has none
+      and its reviewer has submitted (optional fields left blank leave no
+      rows), by Monitoring's own reviewer state.
+    - ``in_progress``: it has answers, not all submitted.
+    - ``not_started``: no answers, and its reviewer has not submitted.
+    """
+    # Answer rows and submitted rows per assignment. A comprehension, not
+    # dict(): a Result has .keys(), so dict() would read it as a mapping.
+    answers = {
+        assignment_id: (rows, submitted)
+        for assignment_id, rows, submitted in db.execute(
+            select(
+                Response.assignment_id, func.count(Response.id), func.count(Response.submitted_at)
+            )
             .join(Assignment, Response.assignment_id == Assignment.id)
             .where(Assignment.session_id == review_session.id)
             .group_by(Response.assignment_id)
         )
     }
-    saved = set(
-        db.scalars(
-            select(Response.assignment_id)
-            .join(Assignment, Response.assignment_id == Assignment.id)
-            .where(Assignment.session_id == review_session.id)
-        )
-    )
+    reviewer_submitted = {
+        progress.reviewer.id
+        for progress in monitoring.per_reviewer_progress(db, review_session)
+        if progress.pill_state == "submitted"
+    }
     stmt = _counted_assignments(review_session).order_by(
         Reviewer.email, Reviewee.email_or_identifier, Instrument.session_seq
     )
-    rows: list[tuple[str, ...]] = []
+    out: list[tuple[str, ...]] = []
     for assignment, reviewer, reviewee, instrument in db.execute(stmt):
-        if answered.get(assignment.id, 0):
-            state = "submitted"
-        elif assignment.id in saved:
-            state = "in_progress"
+        rows, submitted = answers.get(assignment.id, (0, 0))
+        if rows:
+            state = "submitted" if submitted == rows else "in_progress"
         else:
-            state = "not_started"
-        rows.append(
+            state = "submitted" if reviewer.id in reviewer_submitted else "not_started"
+        out.append(
             (reviewer.email, reviewee.email_or_identifier, str(instrument.session_seq), state)
         )
-    return _snapshot("completion.csv", COMPLETION_HEADER, rows)
+    return _snapshot("completion.csv", COMPLETION_HEADER, out)
 
 
 def record_export(
