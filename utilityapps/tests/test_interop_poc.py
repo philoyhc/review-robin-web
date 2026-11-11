@@ -91,3 +91,14 @@ def test_nobody_signed_in_gets_a_401(client: TestClient, monkeypatch: pytest.Mon
 
 def test_the_index_does_not_list_it(client: TestClient) -> None:
     assert "interop" not in client.get("/utilities/").text.lower()
+
+
+def test_the_sent_card_is_a_scaffold(client: TestClient) -> None:
+    """Segment 23B, rung 1: the card's copy and layout, controls inert."""
+    text = client.get(PAGE).text
+    card = text.split('id="poc-sent"')[1].split("</div>")[0]
+    assert "Sent to Review Robin" in card
+    assert card.count("disabled>") == 2  # Refresh status, Fetch results
+    for column in ("ReviewerEmail", "RevieweeEmail", "InstrumentSeq", "FieldKey", "Value"):
+        assert column in card
+    assert "results.csv" in card and "completion.csv" in card
