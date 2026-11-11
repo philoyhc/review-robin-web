@@ -181,3 +181,53 @@ def test_stacked_on_the_reviewer_surface_a_rating_box_is_compact(
     assert rating_box["width"] < 100 < comments_box["width"]
     assert abs(rating_box["x"] - comments_box["x"]) < 1
     assert rating_box["y"] < comments_box["y"]
+
+
+def test_stacked_saved_widths_never_spill_out_of_the_cell(
+    page: Page,
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Codex on #3806: saved widths wider than a narrow window gives the
+    Responses column widen the table, which scrolls, rather than paint
+    the boxes over the next column."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument
+
+    from ._builder import session_pk
+
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(
+                    Instrument.session_id == session_pk(live_server.database_url, session_id)
+                )
+            ).scalar_one()
+            instrument.response_layout = "stacked"
+            instrument.column_widths = {"stack_label": 300, "stack_input": 700}
+            db.commit()
+    finally:
+        engine.dispose()
+    activate(api, live_server.database_url, session_id)
+
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 800, "height": 900})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    spill = reviewer.evaluate(
+        """() => {
+          const cell = document.querySelector('td.rs-stack');
+          const grid = cell.querySelector('.rs-stack-fields');
+          return {cell: cell.getBoundingClientRect().right,
+                  grid: grid.getBoundingClientRect().right,
+                  width: cell.getBoundingClientRect().width};
+        }"""
+    )
+    assert spill["grid"] <= spill["cell"] + 1, spill
+    assert spill["width"] >= 1000, spill

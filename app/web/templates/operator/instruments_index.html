@@ -2705,6 +2705,13 @@
             if (stackWidth(card, 'input')) { vars.push('--rs-stack-input: ' + stackWidth(card, 'input') + 'px'); }
             return vars.join('; ');
           }
+          // Both widths set, the Responses column holds them: the two
+          // widths, the grid's gap and the cell's padding (the surface's
+          // ``stack_col_px``).
+          function stackColStyle(card) {
+            var label = stackWidth(card, 'label'), input = stackWidth(card, 'input');
+            return (label && input) ? 'width: ' + (label + input + 12 + 16) + 'px;' : '';
+          }
           function stackResizeHandle(which) {
             return '<span class="new-model-band2-resize-handle" '
               + 'data-stack-width="' + which + '" '
@@ -2753,11 +2760,15 @@
             var startWidth = part.getBoundingClientRect().width;
             var lastWidth = Math.round(startWidth);
             document.body.style.cursor = 'col-resize';
+            var col = table.querySelector('col[data-col-key="responses"]');
             function onMove(ev) {
               lastWidth = Math.round(Math.max(40, Math.min(1200, startWidth + ev.clientX - startX)));
               table.querySelectorAll('.rs-stack-head, .rs-stack-fields').forEach(function (el) {
                 el.style.setProperty('--rs-stack-' + which, lastWidth + 'px');
               });
+              // The column follows once both widths are set.
+              card.setAttribute('data-new-model-band2-stack-' + which + '-width', lastWidth);
+              if (col) { col.setAttribute('style', stackColStyle(card)); }
             }
             function onUp() {
               document.removeEventListener('mousemove', onMove);
@@ -2853,7 +2864,7 @@
               html += '<col data-col-key="df_' + esc(o.displayFieldId) + '"' + colAttrs(style) + '>';
             });
             if (stacked) {
-              html += '<col data-col-key="responses">';
+              html += '<col data-col-key="responses"' + colAttrs(stackColStyle(card)) + '>';
             } else {
               responses.forEach(function (r) {
                 html += '<col data-col-key="resp_' + esc(r.key) + '"' + colAttrs(responseColStyle(card, r)) + '>';
@@ -2987,7 +2998,7 @@
             var html = '<table class="rs-group-table">';
             html += '<colgroup><col data-col-key="identity" style="' + colStyle(identityW) + '">';
             if (stacked) {
-              html += '<col data-col-key="responses">';
+              html += '<col data-col-key="responses" style="' + stackColStyle(card) + '">';
             } else {
               responses.forEach(function (r) {
                 html += '<col data-col-key="resp_' + esc(r.key) + '" style="' + responseColStyle(card, r) + '">';

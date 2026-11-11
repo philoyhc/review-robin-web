@@ -4872,10 +4872,12 @@
         display: grid;
         /* Until dragged (20K rung 5), the labels take their widest and
            the boxes the rest; a dragged width holds, and a label wraps
-           within it. */
+           within it. Each track may shrink within the cell rather than
+           paint over the next column; with both widths saved the column
+           is sized to hold them (``stack_col_px``). */
         grid-template-columns:
-          var(--rs-stack-label, max-content)
-          var(--rs-stack-input, minmax(0, 1fr));
+          minmax(0, var(--rs-stack-label, max-content))
+          minmax(0, var(--rs-stack-input, 1fr));
         column-gap: var(--space-3);
         row-gap: var(--space-2);
       }
@@ -4918,8 +4920,8 @@
       .rs-stack-head {
         display: grid;
         grid-template-columns:
-          var(--rs-stack-label, max-content)
-          var(--rs-stack-input, minmax(0, 1fr));
+          minmax(0, var(--rs-stack-label, max-content))
+          minmax(0, var(--rs-stack-input, 1fr));
         column-gap: var(--space-3);
       }
       .rs-stack-head > span { position: relative; min-width: 0; }
