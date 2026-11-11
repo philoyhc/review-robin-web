@@ -284,3 +284,37 @@ def test_an_unpaired_surrogate_is_refused_not_a_500(client: TestClient, db: Sess
         reply = client.post(URL, content=body, headers={"Content-Type": "application/json"})
         assert reply.status_code == 422 and reply.json()["error"] == "invalid_package", reply.text
     assert _count(db, ReviewSession) == 0
+
+
+def test_an_empty_roster_is_refused(client: TestClient, db: Session) -> None:
+    bundle = _bundle(files={"reviewers": "ReviewerName,ReviewerEmail\r\n", "reviewees": REVIEWEES})
+    reply = _post(client, bundle)
+    assert reply.status_code == 422
+    assert (reply.json()["error"], reply.json()["reason"]) == ("invalid_setup", "empty_roster")
+    assert _count(db, ReviewSession) == 0
+
+
+def test_a_replay_of_a_transfer_cut_off_before_its_rosters_creates_it_again(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex, `#3780`: a cancelled request leaves its draft and transfer
+    record but no rosters. Its retry must not answer already_created."""
+    bundle = _bundle()
+
+    class CutOff(BaseException):
+        """Stands for a cancellation: a BaseException, so the route's
+        ``except Exception`` does not discard the draft."""
+
+    async def cut_off(**_: Any) -> None:
+        raise CutOff
+
+    monkeypatch.setattr(_quick_setup, "_run_quick_setup_contents", cut_off)
+    with pytest.raises(BaseException):  # noqa: B017 -- the test client's wrapping varies
+        _post(client, bundle)
+    assert _count(db, ReviewSession) == 1 and _count(db, Reviewer) == 0  # the leftover
+    monkeypatch.undo()
+    retry = _post(client, bundle)
+    assert retry.status_code == 201, retry.text
+    assert retry.json()["status"] == "created"
+    assert _count(db, ReviewSession) == 1
+    assert _count(db, Reviewer) == 2 and _count(db, Reviewee) == 3

@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession
+from app.services import csv_imports
 
 PROTOCOL = "cordware.csv-handoff"
 PROTOCOL_VERSION = 1
@@ -154,3 +155,14 @@ def prior_transfer(db: Session, transfer_id: str) -> Prior | None:
         if found == transfer_id and event.session is not None:
             return Prior(event.session, event.actor_user_id)
     return None
+
+
+def rosters_saved(db: Session, review_session: ReviewSession) -> bool:
+    """Both rosters hold rows: the mark of a complete handoff create. Quick
+    Setup saves every slot in one unit, and the route refuses an empty
+    roster, so a recorded transfer whose session has neither was cut off
+    before its rosters saved."""
+    return (
+        csv_imports.existing_reviewer_count(db, review_session.id) > 0
+        and csv_imports.existing_reviewee_count(db, review_session.id) > 0
+    )

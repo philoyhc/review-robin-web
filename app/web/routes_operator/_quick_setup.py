@@ -1578,10 +1578,16 @@ async def create_handoff_session(
     if prior is not None:
         if prior.actor_user_id != user.id:
             return _handoff_error("duplicate_conflict", status.HTTP_409_CONFLICT)
-        return JSONResponse(
-            _handoff_receipt(request, prior.review_session, "already_created"),
-            headers=_HANDOFF_HEADERS,
-        )
+        if handoffs.rosters_saved(db, prior.review_session):
+            return JSONResponse(
+                _handoff_receipt(request, prior.review_session, "already_created"),
+                headers=_HANDOFF_HEADERS,
+            )
+        # Recorded but never populated: the request that made it was cut
+        # off before its rosters saved (cancelled, or the worker gone). A
+        # complete create always has both rosters (below), so this draft
+        # is that transfer's leftover: discarded, and the create runs again.
+        sessions.delete_session(db, review_session=prior.review_session, user=user)
     try:
         sessions.ensure_code_available(db, bundle.code)
     except sessions.SessionCodeTakenError:
@@ -1656,6 +1662,17 @@ async def create_handoff_session(
             refusal.failure.details,
             slot=refusal.kind,
             reason=refusal.failure.reason,
+        )
+    if not handoffs.rosters_saved(db, review_session):
+        # A handoff carries people to review and to be reviewed: a roster
+        # with no rows is refused, which also keeps "both rosters saved"
+        # the mark of a complete create for the replay above.
+        discard()
+        return _handoff_error(
+            "invalid_setup",
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            ["A handoff needs at least one reviewer and one reviewee."],
+            reason="empty_roster",
         )
     return JSONResponse(
         _handoff_receipt(request, review_session, "created"),
