@@ -53,10 +53,11 @@ It follows the spec's rulings (§13.1):
   - the owner-eligibility lock and `create_session`;
   - the slots through `_run_quick_setup_contents` with the session's directory (`directory_or_none`);
   - `session.handoff_created`, audited with `context` `{transfer_id, source_app}`.
-- **Not atomic.** The session commits first and the rosters after, as New session does today. A refused roster leaves the draft, and the receipt says `invalid_setup` with the slot. Making the create atomic changes an existing page and needs a ruling (interop spec §13.4 item 2); see Open questions.
+- **All or nothing** (author, 2026-11-11). A handoff create leaves either a session with every roster or nothing at all. A refused roster is `422` `invalid_setup`, and the body carries the slot and the importer's own issue lines, so the sending app can show the operator why. New session's own behavior is not changed (`spec/quick_setup_card_spec.md`, "Failure mode"). How it is done (one unit, or the draft removed on refusal) is rung 2's to choose, and is recorded in Judgment calls.
 - **Replay.** A `transfer_id` already recorded on a `session.handoff_created` event by the same user returns that session as `already_created` (`200`). A different user is `409` `duplicate_conflict`. Two concurrent first posts can still make two sessions: accepted for a proof of concept, since the button disables on click.
 - **Code.** The mock suggests `POC-<YYMMDD-HHMMSS>`. A taken code is `409` `session_code_conflict`.
 - **Receipt.** `201` `{status: "created", session_ref, session_home_url}`. The URL is app-relative and emitted through `app/web/urls.py`. Errors are `{"error": <code>}`. Every response is `no-store`.
+- **Kept as a model.** The tool stays once ApplyDesk's handoff exists (author, 2026-11-11), a working reference for the next app that hands work to Review Robin.
 - **The tab.** If the browser blocks the new window, the page shows **Open the session** as a link once the receipt arrives. The holding page says what is happening and, alone, offers nothing to do.
 
 ## Judgment calls — decided
@@ -81,13 +82,13 @@ Taken 2026-11-11 at `e96d006`.
 
 1. **Scaffold.** The Utilities page shows the mock data, with **Create in Review Robin** inert, and a note of what will be sent and what will not happen. RRW's holding page is static. Neither is listed on an index. Tests: both routes, their gates, RRW's URL crawl and spec coverage. Not touched: any create.
 2. **RRW create route.** `POST /operator/handoffs/sessions` as Semantics says: the bundle checks, the create through the existing services, the `session.handoff_created` event in `EVENT_SCHEMAS`, replay and the error codes. Tests cover each error, replay, a refused roster, `Sec-Fetch-Site`, a non-operator, and that no assignment, invitation or mail exists after it. Not touched: the Utilities page.
-3. **Wire the button.** The page script opens the tab, builds the bundle, posts it, moves the tab and shows the receipt or the error, with the blocked-pop-up fallback. This is the item's last build rung: `diff-reviewer` reads the cumulative diff from rung 1's base.
+3. **Wire the button.** The page script opens the tab, builds the bundle, posts it, moves the tab and shows the receipt or the error (an `invalid_setup` with its slot and issue lines), with the blocked-pop-up fallback. This is the item's last build rung: `diff-reviewer` reads the cumulative diff from rung 1's base.
 4. **Close.** Specs, `spec-writer` and the archive.
 
 ## Definition of done
 
 - Clicking **Create in Review Robin** on `/utilities/interop-poc/` opens a tab that lands on a new session's Session Home, with six reviewees and three reviewers, no assignments and no invitations. Verified on localhost by the author, and on production after an import.
-- A second click of the same transfer returns the same session, and a refused roster reports `invalid_setup`. Both are covered by tests in `tests/integration/test_handoffs.py`.
+- A second click of the same transfer returns the same session, and a refused roster reports `invalid_setup` with its slot and issue lines and leaves no session. Both are covered by tests in `tests/integration/test_handoffs.py`.
 - `utilityapps/tests/test_interop_poc.py` covers the page, its gate and its bundle.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 23A` exits 0; any warning adjudicated
@@ -97,8 +98,8 @@ Taken 2026-11-11 at `e96d006`.
 
 ## Open questions
 
-- **Atomic create** (a session and its rosters in one transaction) changes New session's behavior too. Ruled by the author before ApplyDesk's handoff, not here.
-- **Retiring the tool.** Does it stay once ApplyDesk's handoff exists, or go? Author, at ApplyDesk's first handoff segment.
+- ~~Atomic create~~ All or nothing for the handoff create, with the refusal's reasons returned to the sending app (author, 2026-11-11). New session unchanged.
+- ~~Retiring the tool~~ It stays as a model once ApplyDesk's handoff exists (author, 2026-11-11).
 
 ## Out of scope
 
@@ -108,7 +109,7 @@ Taken 2026-11-11 at `e96d006`.
 
 ## Doc impact
 
-- `spec/handoffs.md` — new: the proof-of-concept create route, its bundle, receipts, errors, replay and its non-atomic create; a row in `spec/README.md`.
+- `spec/handoffs.md` — new: the proof-of-concept create route, its bundle, receipts, errors, replay and its all-or-nothing create; a row in `spec/README.md`.
 - `spec/permissions.md` — the new operator routes in the route table.
 - `spec/architecture.md` — `session.handoff_created` in the audit-event list.
 - `utilityapps/spec/utilities.md` — the *Interop proof of concept* page row and section.
