@@ -20,6 +20,7 @@ from app.services import session_lifecycle as lifecycle
 from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
+    mark_band1_touched_on_all_instruments,
     pin_full_matrix_on_all_instruments,
 )
 from ._instrument_states import add_group_instrument
@@ -123,7 +124,9 @@ def test_activate_requires_acknowledge_when_warnings_present(
 ) -> None:
     session = _create_session(client, db, code="warn-1")
     _populate_rosters(client, session.id)
-    # Skip _generate_full_matrix so the assignment_mode-is-None warning fires.
+    # Skip _generate_full_matrix so the assignment_mode-is-None warning
+    # fires; the instrument still needs setting up (segment 20J).
+    mark_band1_touched_on_all_instruments(db, session.id)
     validate_session(session)
     client.get(f"/operator/sessions/{session.public_id}/assignments")
     db.refresh(session)

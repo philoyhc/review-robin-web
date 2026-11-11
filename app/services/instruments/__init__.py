@@ -89,10 +89,12 @@ from ._display_fields import (
 # per-instrument column-widths writer. (Session-level bulk toggles
 # retired in 18R Item 3.)
 from ._instrument_crud import (
+    BAND1_LINK_LABELS,
     DEFAULT_INSTRUMENT_NAME,
     GROUP_KIND_SENTINEL,
     IntroLayoutError,
     LastInstrumentError,
+    band1_links_not_set,
     configured_counts,
     copy_view_policies,
     create_instrument,
@@ -210,6 +212,8 @@ __all__ = [
     "group_boundary_pairs",
     "replicate_instrument",
     "copy_view_policies",
+    "BAND1_LINK_LABELS",
+    "band1_links_not_set",
     "configured_counts",
     "has_unconfigured",
     "is_configured",

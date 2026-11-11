@@ -22,6 +22,7 @@ from app.services.validation._inputs import (
     load_validation_inputs,
 )
 from app.services.validation._instruments import (
+    _check_instruments_band1_not_set,
     _check_instruments_no_display_fields,
     _check_instruments_no_fields,
     _check_instruments_no_rule_pinned,
@@ -290,6 +291,21 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         check=_check_instruments_no_fields,
     ),
     ValidationRule(
+        key="instruments.band1_not_set",
+        source="instruments",
+        severity=Severity.error,
+        why=(
+            "Each of the instrument's three assignment-rule links (Who "
+            "does the review, Who is being reviewed, Unit of review) "
+            "must be set deliberately. An instrument with a link not "
+            "set is not set up, and the Workflow card offers no "
+            "Prepare until it is."
+        ),
+        fix_url=_instruments_url,
+        fix_page_label="Instruments Setup",
+        check=_check_instruments_band1_not_set,
+    ),
+    ValidationRule(
         key="instruments.no_rule_pinned",
         source="instruments",
         severity=Severity.warning,
@@ -298,9 +314,8 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
             "with no assignment rules uses Full Matrix, so a missing "
             "rule is not a problem in itself. Whether the instrument "
             "is ready is checked by the visible-response-fields "
-            "check and by its three Band 1 links, which must each "
-            "be set. It stays listed so past audit entries still "
-            "name it."
+            "and the assignment-rule-links checks. It stays listed "
+            "so past audit entries still name it."
         ),
         fix_url=_instruments_url,
         fix_page_label="Instruments Setup",
@@ -309,7 +324,7 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
     ValidationRule(
         key="instruments.no_visible_response_fields",
         source="instruments",
-        severity=Severity.warning,
+        severity=Severity.error,
         why=(
             "A new-model instrument needs at least one visible "
             "response-field chip selected, otherwise reviewers see "

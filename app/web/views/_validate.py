@@ -70,6 +70,7 @@ _RULE_KEY_GATE: dict[str, Gate] = {
     "instruments.no_fields": "setup",
     "instruments.no_display_fields": "setup",
     "instruments.rule_set_unloadable": "setup",
+    "instruments.band1_not_set": "setup",
     "email_template.no_help_contact": "setup",
     "instruments.no_rule_pinned": "operations",
     "instruments.no_visible_response_fields": "operations",
