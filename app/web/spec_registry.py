@@ -81,10 +81,9 @@ SPEC_COVERAGE: dict[str, tuple[str, ...]] = {
     ),
     "app.web.routes_operator._quick_setup": (
         "spec/quick_setup_card_spec.md",
-    ),  # and, from 23A's close, spec/handoffs.md
-    # Segment 23A: spec/handoffs.md is written at the close; until then
-    # the debt is declared (EXPECTED_PENDING).
-    "app.web.routes_operator._handoffs": SPEC_PENDING,
+        "spec/handoffs.md",  # the handoff create, which runs this pipeline
+    ),
+    "app.web.routes_operator._handoffs": ("spec/handoffs.md",),
     "app.web.routes_operator._setup_reviewers": ("spec/setup_pages.md",),
     "app.web.routes_operator._setup_reviewees": ("spec/setup_pages.md",),
     "app.web.routes_operator._setup_relationships": ("spec/setup_pages.md",),
@@ -153,7 +152,7 @@ SPEC_COVERAGE: dict[str, tuple[str, ...]] = {
 # Modules currently mapped to ``SPEC_PENDING``. Empty is the correct
 # baseline: as of 2026-09-05 every routing module has a governing spec.
 # Adding an entry here is declaring debt, and the test message says so.
-EXPECTED_PENDING: tuple[str, ...] = ("app.web.routes_operator._handoffs",)
+EXPECTED_PENDING: tuple[str, ...] = ()
 
 # A broken route walk (see ``_iter_endpoint_routes``) would under-report
 # rather than fail, turning a framework change into a confusing set diff.

@@ -220,13 +220,13 @@ def test_one_failed_key_in_a_batch_stops_the_count(
     page: Page, new_session: Callable[[], str], tmp_path: Path
 ) -> None:
     """A batch is failed by any of its keys, not only its first: the
-    seventh key of the first batch answered errors, and no further batch
-    goes.
+    seventh key of each batch errors, and no further batch goes.
 
-    The first batch *answered*, not the one starting ``mid0``: two go out
-    together and either may reach the route first. Failing ``mid0``'s
-    let the other's answer send a third before the failure arrived (CI on
-    #3668), which is the count working, not stopping late."""
+    Both batches that go out together fail. The route sees them in one
+    order and the browser may handle their answers in the other, so
+    failing only the first the route saw let the other's answer send a
+    third before the failure arrived (CI on #3668, then on #3782): the
+    count working, not stopping late."""
     session_id = new_session()
     roster = tmp_path / "reviewers.csv"
     many = [f"mid{i}@example.edu" for i in range(40)]
@@ -239,7 +239,7 @@ def test_one_failed_key_in_a_batch_stops_the_count(
         keys = json.loads(route.request.post_data)["keys"]
         batches.append(keys)
         outcomes = {k: {"status": "NOT_FOUND", "error_kind": None} for k in keys}
-        if len(batches) == 1:
+        if len(batches) <= 2:
             outcomes[keys[6]] = {"status": "ERROR", "error_kind": "throttled"}
         route.fulfill(
             status=200, content_type="application/json", body=json.dumps({"outcomes": outcomes})
@@ -253,8 +253,8 @@ def test_one_failed_key_in_a_batch_stops_the_count(
             "#upload-csv-form .unlock-col-actions button[type=submit]:not([data-directory-recheck])"
         ).click()
     page.wait_for_load_state("load")
-    # The first batch's answer stops the count: at most the other batch
-    # already in flight went too, of the four.
+    # Whichever failed answer the browser handles first stops the count:
+    # at most the other batch already in flight went too, of the four.
     assert 1 <= len(batches) <= 2
 
 
