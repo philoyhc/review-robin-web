@@ -257,6 +257,14 @@ def test_entitlements_name_each_ras_neighborhood() -> None:
         assert f'<span class="pill-derived">{held[0]}</span>' in page
 
 
+def test_an_adjustments_reason_wraps_rather_than_widening_its_column() -> None:
+    """A long reason held to one line stretched Adjustment to ~450px and
+    pushed the table wide (author, 2026-11-11): it wraps at 14em."""
+    page = client().get(ADMIN + "entitlements").text
+    assert '<div class="subtle cell-note">Correction: days charged twice' in page
+    assert "td.num .cell-note { white-space: normal; max-width: 14em;" in page
+
+
 def test_an_ra_in_no_slot_shows_none_and_sorts_last(monkeypatch: pytest.MonkeyPatch) -> None:
     rows = sample_leave.entitlement_rows()
     bare = ({**rows[0], "neighborhoods": ()},)
@@ -290,7 +298,7 @@ def test_entitlements_follow_the_policy_rules() -> None:
         rows["Gwen Ho", "Personal leave"]["pending"] == 0
     )  # her appeal is extra leave, not charged (§7.5)
     assert (
-        '+2<div class="subtle">Correction: days charged twice' in page
+        '+2<div class="subtle cell-note">Correction: days charged twice' in page
     )  # the reason, visible; never extra leave (§7.5, §21.3)
     assert "Email,Leave type,Adjustment,Reason" in page
     assert (

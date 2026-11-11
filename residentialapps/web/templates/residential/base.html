@@ -302,6 +302,9 @@
       .item-head > a { display: inline-flex; align-items: center; min-height: 44px; }
       .item-head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; margin-bottom: 2px; }
       th.num, td.num { text-align: right; white-space: nowrap; }
+      /* A note under a number (an adjustment's reason) wraps at a
+         narrow measure, so one long note does not widen its column. */
+      td.num .cell-note { white-space: normal; max-width: 14em; margin-left: auto; }
       /* Choice chips (support_logs_ui_spec_v0.1.md §5): native radios and
          checkboxes styled as pills; a chosen one takes the accent tint, a
          check and a heavier label, so it shows without color. */

@@ -29,7 +29,7 @@
               {% set held = row.neighborhoods | join('; ') %}<td class="nowrap group" data-sort-value="{{ held and held ~ ' ' ~ row.ra }}">{% if held %}{% if loop.first or loop.previtem.ra != row.ra %}<span class="pills">{% for name in row.neighborhoods %}<span class="pill-derived">{{ name }}</span>{% endfor %}</span>{% else %}<span class="visually-hidden">{{ held }}</span>{% endif %}{% elif loop.first or loop.previtem.ra != row.ra %}<span class="chip chip-mute">None</span>{% endif %}</td>
               <td class="nowrap">{{ row.type }}</td>
               <td class="num">{{ row.entitlement }}</td>
-              <td class="num" data-sort-value="{{ '%05d' | format(row.adjustment + 10000) }}">{% if row.adjustment %}{{ "%+d" | format(row.adjustment) }}<div class="subtle">{{ row.reason }}</div>{% else %}<span class="subtle">—</span>{% endif %}</td>
+              <td class="num" data-sort-value="{{ '%05d' | format(row.adjustment + 10000) }}">{% if row.adjustment %}{{ "%+d" | format(row.adjustment) }}<div class="subtle cell-note">{{ row.reason }}</div>{% else %}<span class="subtle">—</span>{% endif %}</td>
               <td class="num">{{ row.used }}</td>
               <td class="num">{{ row.pending }}</td>
               <td class="num strong" data-sort-value="{{ '%05d' | format(row.available + 10000) }}">{{ row.available }}{% if row.available <= 0 %} <span class="chip chip-warn">None left</span>{% endif %}</td>
