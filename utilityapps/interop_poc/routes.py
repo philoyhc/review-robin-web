@@ -1,6 +1,7 @@
 """The proof of concept's page (segment 23A). Super-admin only, every
-response `no-store`. Rung 1 shows what will be sent with the button
-inert; rung 3 wires it to Review Robin's create route."""
+response `no-store`. The page carries the bundle; its script adds a
+fresh transfer id and session code per click and posts it to Review
+Robin's create route (`spec/handoffs.md`)."""
 
 from __future__ import annotations
 
@@ -32,6 +33,7 @@ def page(request: Request) -> Response:
             "applications": mock.APPLICATIONS,
             "reviewers_csv": mock.reviewers_csv(people),
             "reviewees_csv": mock.reviewees_csv(),
+            "bundle": mock.bundle(people),
         },
         headers=_NO_STORE,
     )

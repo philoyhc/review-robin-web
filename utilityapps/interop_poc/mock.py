@@ -79,3 +79,16 @@ def reviewees_csv() -> str:
         ["RevieweeName", "RevieweeEmail", "RevieweeTag1", "ProfileLink"],
         [[a.applicant, a.id, a.faculty, a.profile_link] for a in APPLICATIONS],
     )
+
+
+def bundle(people: tuple[Reviewer, ...]) -> dict[str, object]:
+    """The handoff bundle without its per-click parts: the page's script
+    adds a fresh ``transfer_id`` and a session code (`spec/handoffs.md`)."""
+    return {
+        "protocol": "cordware.csv-handoff",
+        "protocol_version": 1,
+        "operation": "reviewrobin.create_draft_session",
+        "source_app": "utilities",
+        "session_suggestion": {"name": EXERCISE},
+        "files": {"reviewers": reviewers_csv(people), "reviewees": reviewees_csv()},
+    }
