@@ -43,6 +43,8 @@ def test_the_button_posts_to_review_robins_create_route(client: TestClient) -> N
     # keeps it, so a retry finds a session already made (the cold read).
     assert "reply.status >= 500" in text and "if (!keep) transfer = null;" in text
     assert "directory_sign_in:" in text
+    # A replay cut off before its rosters saved names the draft it left.
+    assert "transfer_incomplete:" in text and "Open the draft" in text
 
 
 def test_the_page_carries_the_bundle_less_its_per_click_parts(client: TestClient) -> None:

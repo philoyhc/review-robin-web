@@ -34,6 +34,7 @@
       unsupported_version: "Review Robin does not accept this bundle's version.",
       session_code_conflict: "That session code is already in use. Try again for a new one.",
       duplicate_conflict: "Another person already sent this transfer. Reload the page and try again.",
+      transfer_incomplete: "An earlier try of this transfer stopped before its rosters were saved. Its draft is left for you to check or delete; the next click sends a new transfer.",
       directory_sign_in: "Your Review Robin sign-in to the directory has lapsed. Open Review Robin, sign in again, then try again.",
       "411": "Review Robin needs the bundle's length. Try again.",
       "413": "The bundle is too large for Review Robin."
@@ -65,6 +66,14 @@
         var list = el("ul");
         body.details.forEach(function (line) { list.appendChild(el("li", line)); });
         nodes.push(list);
+      }
+      if (body && body.session_home_url) {
+        var draft = el("a", "Open the draft");
+        draft.href = body.session_home_url;
+        draft.target = "_blank";
+        var p = el("p");
+        p.appendChild(draft);
+        nodes.push(p);
       }
       show(nodes);
     }
