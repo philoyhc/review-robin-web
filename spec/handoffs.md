@@ -167,19 +167,60 @@ session reference, so a sender reads only what its own handoff made
 
 Refusals are §7's JSON. Every answer is `no-store`, under the package gate.
 
-**Status** (`status_schema_version` 1): `session_ref`, `session_code`,
-`name`, the lifecycle `state` (the enum) and `state_label` (as Review
-Robin shows it), `session_home_url` and `as_of`. Its counts name their
-denominators; there is no single percentage (interop spec D4):
+**Status** (`status_schema_version` 3, segment 23C): Review Robin's own
+readings of the session, each from the function its pages read, so a
+number the sender sees is the one Review Robin shows. It is assembled by
+a view adapter (`app/web/views/_handoffs.py`). Identity: `session_ref`,
+`session_code`, `name`, the lifecycle `state` (the enum) and `state_label`
+(as Review Robin shows it), `session_home_url` and `as_of`. Then:
 
-- `reviewers`, `reviewees`: the rosters; `instruments`, and of those
-  `group_instruments`;
-- `assignments`: the included assignments of active reviewers, and of
-  those `assignments_completed`, Review Robin's own *complete*: every
-  required field answered, saved or submitted (the reviewer-side rollup,
-  `monitoring.per_reviewer_progress`);
-- `reviewers_assigned`: active reviewers with assignments, and of those
-  `reviewers_invited`, `reviewers_opened`, `reviewers_submitted`.
+- `status_row`: the row every session page shows (`session_status_pills`).
+  It carries `reviewers`, `reviewees`, `relationships`, `observers`,
+  `assignments`, `instruments` and of those `instruments_set_up`
+  (`instruments.is_configured`: a visible response field and all three
+  assignment-rule links set), `invitations` (`not_created`, `not_sent`,
+  `partial_sent`, `all_sent`), `responses_drafts` and
+  `responses_submitted`.
+- `schedule`: `display_timezone`, `scheduled_activate_at`,
+  `activated_at`, `deadline`, `responses_release_at` and
+  `responses_release_until`, as stored (ISO 8601, or null).
+- `workflow`: the Workflow card's reading.
+  - `setup_complete`, and its `checklist` of `reviewers`, `reviewees` and
+    `instruments_set_up`. An incomplete setup offers no **Prepare**,
+    which is what keeps a session with an instrument not set up from
+    validating; the Validate rules below do not.
+  - `actions`: the card's buttons showing now, in order (`revert`,
+    `prepare`, `send_invites`, `activate`, `send_reminders`, `close`,
+    `release_responses`, `stop_release`, `archive`).
+  - `invitations_generated`, `invitations_sent`, and `due`: the card's due
+    prompts.
+- `validation`: the Validate page's rules as they read now
+  (`validate_session_setup`, read only, nothing stamped): `errors`,
+  `warnings`, and `issues`, each with its `rule` key, `severity`,
+  `message` and fix `page`.
+- `instruments`: one entry per instrument, by `seq`: `name`,
+  `short_label`, `set_up`, `scope` (`per_reviewee` or `group`), and
+  included `assignments`.
+- `progress`: Monitoring's summary.
+  - `assignments`: the included assignments of active reviewers, and of
+    those `assignments_completed`. "Completed" is Review Robin's own
+    *complete*: every required field answered, saved or submitted (the
+    reviewer-side rollup).
+  - `reviewers_assigned`, and of those `reviewers_invited`,
+    `reviewers_opened`, `reviewers_submitted` and `reviewers_incomplete`.
+  - Always reported, never withheld. While any instrument is not set up
+    (or there is none), `provisional` is true with `provisional_reason`
+    `instruments_not_set_up`: the assignments are then an untouched
+    rule's full-matrix stand-in, not the review's (author, 2026-11-11).
+- `reviewers` and `reviewees`: Monitoring's two tables, listing only who
+  has assignments.
+  - A reviewer row: `email`, `name`, `state`, `assignments`,
+    `completed`, `missing_required`, `invitation` and
+    `last_reminder_at`.
+  - A reviewee row: `key` (the application ID), `name`, `state`,
+    `reviewers`, `completed` and `last_response_at`.
+  - Both carry participants' details, as the Monitoring page does, to
+    someone who may see that page.
 
 A read changes nothing: no lifecycle step runs, so it reports what the
 clock has already done.

@@ -109,6 +109,9 @@ from ._filters import (
     sessions_filter_options,
 )
 
+# The handoff status a sender reads (segment 23C).
+from ._handoffs import handoff_status
+
 # Instruments page context + reviewer-surface heading helpers
 # (sliced in PR 6).
 from ._instruments import (
@@ -522,6 +525,7 @@ __all__ = [
     "reviewers_search_options",
     "sessions_filter_options",
     "session_status_pills",
+    "handoff_status",
     "DirectoryCheck",
     "last_directory_check",
     "unmatched_count",

@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import handoffs
-from app.web import breadcrumbs, urls
+from app.web import breadcrumbs, urls, views
 from app.web.deps import get_or_create_user
 from app.web.downloads import content_disposition
 from app.web.routes_operator._shared import _templates
@@ -65,7 +65,7 @@ def handoff_status(
         review_session = handoffs.linked(db, user, transfer_id)
     except handoffs.HandoffError as exc:
         return _refused(request, exc)
-    body = handoffs.status(db, review_session)
+    body = views.handoff_status(db, review_session)
     body["session_home_url"] = urls.url_path(
         request, f"/operator/sessions/{review_session.public_id}"
     )
