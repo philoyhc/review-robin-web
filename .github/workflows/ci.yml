@@ -77,10 +77,29 @@ jobs:
           pip install -e .[dev]
 
       # The unit shard needs it too: three of residentialapps/tests'
-      # files drive a browser.
+      # files drive a browser. The browser comes from Playwright's own
+      # download host; its system packages (mostly fonts) come from
+      # Ubuntu's mirror, which a runner sometimes cannot reach. That
+      # outage failed every run on 2026-11-11 before a test started, so
+      # the packages are time-limited, tried twice, and on failure leave
+      # a warning rather than end the job: the image already carries the
+      # libraries Chromium needs, and a browser test that truly cannot
+      # run still fails (RRW_REQUIRE_BROWSER below).
       - name: Install Chromium for the browser tests
         if: matrix.shard.name != 'integration'
-        run: python -m playwright install --with-deps chromium
+        run: python -m playwright install chromium
+
+      - name: Install Chromium's system packages
+        if: matrix.shard.name != 'integration'
+        run: |
+          for attempt in 1 2; do
+            if timeout 240 python -m playwright install-deps chromium; then
+              exit 0
+            fi
+            echo "Attempt $attempt to install Chromium's system packages failed."
+            sleep 20
+          done
+          echo "::warning title=Chromium system packages::Ubuntu's mirror could not be reached; the tests run with the packages already on the runner."
 
       - name: Lint
         if: matrix.shard.name == 'unit'
@@ -157,8 +176,20 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[dev]
 
+      # As the test job's two steps, for the same reason.
       - name: Install Chromium for the browser tests
-        run: python -m playwright install --with-deps chromium
+        run: python -m playwright install chromium
+
+      - name: Install Chromium's system packages
+        run: |
+          for attempt in 1 2; do
+            if timeout 240 python -m playwright install-deps chromium; then
+              exit 0
+            fi
+            echo "Attempt $attempt to install Chromium's system packages failed."
+            sleep 20
+          done
+          echo "::warning title=Chromium system packages::Ubuntu's mirror could not be reached; the tests run with the packages already on the runner."
 
       - name: Lint
         run: ruff check .
