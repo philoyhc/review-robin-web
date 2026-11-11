@@ -131,9 +131,17 @@ def test_refresh_status_shows_review_robins_own_readings(client: TestClient) -> 
     for section in ('"Status row"', '"Workflow"', '"Instruments"', '"Schedule"'):
         assert section in text
     for key in (
-        "r.relationships", "r.observers", "r.instruments_set_up",
-        "w.setup_complete", "w.actions", "v.issues", "body.instruments",
-        "g.provisional", "g.provisional_reason", "body.reviewers", "body.reviewees",
+        "r.relationships",
+        "r.observers",
+        "r.instruments_set_up",
+        "w.setup_complete",
+        "w.actions",
+        "v.issues",
+        "body.instruments",
+        "g.provisional",
+        "g.provisional_reason",
+        "body.reviewers",
+        "body.reviewees",
     ):
         assert key in text
     assert '"Progress" + (g.provisional ? " (provisional)" : "")' in text
