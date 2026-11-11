@@ -21,6 +21,7 @@ from app.db.models import (
     Assignment,
     AuditEvent,
     EmailOutbox,
+    Instrument,
     Invitation,
     Reviewee,
     Reviewer,
@@ -472,3 +473,109 @@ def test_a_replay_cut_off_after_its_rosters_saved_completes_it(
         )
         == 1
     )
+
+
+# --- Segment 23B: the reverse flow's reads ------------------------------- #
+
+
+def _status(client: TestClient, transfer_id: str) -> Any:
+    return client.get(f"/operator/handoffs/{transfer_id}/status")
+
+
+def test_status_reports_the_session_and_its_counts(client: TestClient, db: Session) -> None:
+    bundle = _bundle()
+    created = _post(client, bundle).json()
+    reply = _status(client, bundle["transfer_id"])
+    assert reply.status_code == 200, reply.text
+    assert reply.headers["cache-control"] == "no-store"
+    body = reply.json()
+    assert body["status_schema_version"] == 1
+    assert body["session_ref"] == created["session_ref"]
+    assert body["session_home_url"] == created["session_home_url"]
+    assert (body["state"], body["state_label"]) == ("draft", "Draft")
+    assert body["as_of"]
+    assert body["counts"] == {
+        "reviewers": 2,
+        "reviewees": 3,
+        "instruments": 1,
+        "group_instruments": 0,
+        "assignments": 0,
+        "assignments_completed": 0,
+        "reviewers_assigned": 0,
+        "reviewers_invited": 0,
+        "reviewers_opened": 0,
+        "reviewers_submitted": 0,
+    }
+
+
+def test_status_counts_assignments_of_assigned_reviewers(client: TestClient, db: Session) -> None:
+    bundle = _bundle()
+    _post(client, bundle)
+    review_session = db.scalars(select(ReviewSession)).one()
+    instrument = db.scalars(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).one()
+    reviewers = db.scalars(select(Reviewer).where(Reviewer.session_id == review_session.id)).all()
+    reviewees = db.scalars(select(Reviewee).where(Reviewee.session_id == review_session.id)).all()
+    for reviewee in reviewees:
+        db.add(
+            Assignment(
+                session_id=review_session.id,
+                reviewer_id=reviewers[0].id,
+                reviewee_id=reviewee.id,
+                instrument_id=instrument.id,
+            )
+        )
+    db.commit()
+    counts = _status(client, bundle["transfer_id"]).json()["counts"]
+    assert (counts["assignments"], counts["reviewers_assigned"]) == (len(reviewees), 1)
+
+
+def test_status_of_an_unknown_transfer_is_not_linked(client: TestClient) -> None:
+    assert _status(client, str(uuid.uuid4())).json() == {"error": "not_linked"}
+    reply = _status(client, "not-a-uuid")
+    assert reply.status_code == 404 and reply.json()["error"] == "not_linked"
+
+
+def test_status_needs_the_session_now(
+    client: TestClient,
+    db: Session,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+    bob: AuthenticatedUser,
+) -> None:
+    """A sender reads only a session it may operate today: another
+    operator, or the creator once removed, is refused."""
+    bundle = _bundle()
+    _post(client, bundle)
+    other = _status(make_client(bob), bundle["transfer_id"])
+    assert other.status_code == 403 and other.json()["error"] == "not_authorized"
+
+
+def test_status_of_an_unfinished_transfer_says_so(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    bundle = _bundle()
+
+    class CutOff(BaseException):
+        pass
+
+    async def cut_off(**_: Any) -> None:
+        raise CutOff
+
+    monkeypatch.setattr(_quick_setup, "_run_quick_setup_contents", cut_off)
+    with pytest.raises(BaseException):  # noqa: B017 -- the test client's wrapping varies
+        _post(client, bundle)
+    monkeypatch.undo()
+    reply = _status(client, bundle["transfer_id"])
+    assert reply.status_code == 409 and reply.json()["error"] == "transfer_incomplete"
+
+
+def test_a_status_read_changes_nothing(client: TestClient, db: Session) -> None:
+    bundle = _bundle()
+    _post(client, bundle)
+    before = _count(db, AuditEvent)
+    for _ in range(2):
+        assert _status(client, bundle["transfer_id"]).status_code == 200
+    db.expire_all()
+    assert _count(db, AuditEvent) == before
+    assert db.scalars(select(ReviewSession)).one().status == "draft"

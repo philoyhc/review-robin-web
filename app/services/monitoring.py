@@ -474,7 +474,12 @@ class SummaryCounts:
 
 
 def summary_counts(db: Session, review_session: ReviewSession) -> SummaryCounts:
-    rows = per_reviewer_progress(db, review_session)
+    return summarize(per_reviewer_progress(db, review_session))
+
+
+def summarize(rows: list[ReviewerProgress]) -> SummaryCounts:
+    """The summary of rows :func:`per_reviewer_progress` already read, for
+    a caller that needs the rows too (the handoff status, segment 23B)."""
     invited = sum(1 for r in rows if r.invitation is not None and r.invitation.status != "pending")
     opened = sum(1 for r in rows if r.invitation is not None and r.invitation.status == "opened")
     submitted = sum(1 for r in rows if r.pill_state == "submitted")
