@@ -8,4 +8,4 @@ this differs from ``alembic heads``: a new migration updates it in the
 same change.
 """
 
-SCHEMA_HEAD = "a3d7f1c9e2b4"
+SCHEMA_HEAD = "b9e2d4f7a1c6"

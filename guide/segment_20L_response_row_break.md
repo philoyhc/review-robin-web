@@ -2,7 +2,7 @@
 
 **Opened:** 2026-11-11 · **Theme:** an operator can end a reviewee's line after any response field, so later fields continue on a further line · **Related:** `guide/segment_20K_stacked_response_layout.md` (the alternative, written for comparison), `spec/reviewer-surface.md`, `spec/instruments.md`
 
-**Status: proposed for comparison with 20K (author, 2026-11-11).** Neither is queued until the author picks.
+**Status: written, not queued.** The author picked 20K first (2026-11-11); this plan stays for a later call.
 
 ## Opportunity
 
@@ -69,7 +69,7 @@ Taken 2026-11-11 at `0af35e9`.
 
 ## Open questions
 
-- Which of 20K and 20L to build, or both (author).
+- Whether to build this as well as 20K (author).
 - Per-line column widths: deferred, or in this segment (author).
 
 ## Out of scope

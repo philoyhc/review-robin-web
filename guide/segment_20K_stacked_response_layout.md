@@ -2,7 +2,7 @@
 
 **Opened:** 2026-11-11 · **Theme:** an instrument can lay its response fields out one per line, each labeled beside its input, for reviews that ask for substantial answers · **Related:** `guide/segment_20L_response_row_break.md` (the alternative, written for comparison), `spec/reviewer-surface.md`, `spec/instruments.md`
 
-**Status: proposed for comparison with 20L (author, 2026-11-11).** Neither is queued until the author picks.
+**Status: building (author picked 20K over 20L, 2026-11-11).** Rung 2 (the setting) in review; base `9d99fdf` for the cumulative read. The close waits on the author's browser check.
 
 ## Opportunity
 
@@ -74,7 +74,6 @@ Taken 2026-11-11 at `0af35e9`.
 
 ## Open questions
 
-- Which of 20K and 20L to build, or both (author).
 - The chip's labels (*Responses across* / *Responses stacked* proposed; author at rung 3).
 
 ## Out of scope

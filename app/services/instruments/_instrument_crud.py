@@ -40,7 +40,12 @@ from app.db.models import (
     SessionRuleSet,
     User,
 )
-from app.db.models.instrument import INTRO_LAYOUT_DEFAULT, INTRO_LAYOUTS
+from app.db.models.instrument import (
+    INTRO_LAYOUT_DEFAULT,
+    INTRO_LAYOUTS,
+    RESPONSE_LAYOUT_DEFAULT,
+    RESPONSE_LAYOUTS,
+)
 from app.services import audit, session_guard, unit_of_work
 from app.services import session_lifecycle as lifecycle
 from app.services.instruments._band1 import _band1_rule_set_name, record_band1_links_set
@@ -162,6 +167,8 @@ def is_untouched_default(instrument: Instrument) -> bool:
     if instrument.self_reviews_active != instrument.session.self_reviews_active:
         return False
     if instrument.intro_layout != INTRO_LAYOUT_DEFAULT:
+        return False
+    if instrument.response_layout != RESPONSE_LAYOUT_DEFAULT:
         return False
     # A roster upload seeds a Display Fields row for each populated tag
     # column, unlabelled and shown; only a label or a hidden row is the
@@ -422,8 +429,9 @@ def replicate_instrument(
     the response fields (incl. help text, ``visible`` and branches),
     the display fields (incl. each row's ``visible``), ``group_kind``,
     ``band1_touched_links``, ``band2_state``, ``self_reviews_active``
-    (the Self review toggle, findings E3), ``intro_layout`` (19Y Item 1) and
-    ``accepting_responses`` as-is. ``starts_new_page`` is not copied: it marks a break
+    (the Self review toggle, findings E3), ``intro_layout`` (19Y Item 1),
+    ``response_layout`` (20K) and ``accepting_responses`` as-is.
+    ``starts_new_page`` is not copied: it marks a break
     before the instrument, a fact about position, and the copy
     continues the source's page like any new instrument. The source's Band 1 rule set is
     **cloned** into a row of the copy's own (author's ruling,
@@ -474,6 +482,7 @@ def replicate_instrument(
         band2_state=_copy.deepcopy(source.band2_state),
         self_reviews_active=source.self_reviews_active,
         intro_layout=source.intro_layout,
+        response_layout=source.response_layout,
     )
     db.add(instrument)
     db.flush()
@@ -1320,6 +1329,68 @@ def set_intro_layout(
         actor_user_id=actor.id if actor else None,
         session=instrument.session,
         payload=audit.changes({"intro_layout": [old_value, value]}),
+        refs={"instrument_id": instrument.id},
+    )
+    return instrument
+
+
+class ResponseLayoutError(ValueError):
+    """A layout that is not one of :data:`RESPONSE_LAYOUTS`."""
+
+
+def effective_response_layout(instrument: Instrument) -> str:
+    """How the instrument lays out its response fields: its stored
+    ``response_layout``, or the default for a value outside
+    :data:`RESPONSE_LAYOUTS` (segment 20K). Every reader goes through
+    this, as through :func:`effective_intro_layout`, so a stray value
+    renders and exports as ``columns`` rather than as something the
+    import would refuse."""
+    if instrument.response_layout in RESPONSE_LAYOUTS:
+        return instrument.response_layout
+    return RESPONSE_LAYOUT_DEFAULT
+
+
+def set_response_layout(
+    db: Session,
+    *,
+    instrument: Instrument,
+    layout: str,
+    actor: User | None,
+) -> Instrument:
+    """Store how the instrument lays out its response fields (segment
+    20K): ``columns`` or ``stacked``, the instrument card's *Responses*
+    chip.
+
+    ``layout`` must be one of :data:`RESPONSE_LAYOUTS`; anything else
+    raises :class:`ResponseLayoutError`. Unlike the intro layout, it
+    changes what reviewers see of the questions themselves, so a change
+    reverts a validated session to draft, as a setup edit does, and
+    writes ``instrument.response_layout_set``. A no-op save does neither.
+    """
+    lifecycle.require_editable(db, instrument.session)
+    value = (layout or "").strip()
+    if value not in RESPONSE_LAYOUTS:
+        raise ResponseLayoutError(f"Unknown response layout {layout!r}.")
+    if instrument.response_layout == value:
+        return instrument
+    old_value = instrument.response_layout
+    instrument.response_layout = value
+    db.flush()
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_response_layout_set",
+    )
+    audit.write_event(
+        db,
+        event_type="instrument.response_layout_set",
+        summary=(
+            f"Set the response layout on instrument {_instrument_label(instrument)} to {value}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session=instrument.session,
+        payload=audit.changes({"response_layout": [old_value, value]}),
         refs={"instrument_id": instrument.id},
     )
     return instrument

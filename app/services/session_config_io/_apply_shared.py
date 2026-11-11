@@ -15,7 +15,7 @@ from dataclasses import field as _dataclass_field
 from datetime import datetime
 from typing import Any
 
-from app.db.models.instrument import INTRO_LAYOUTS
+from app.db.models.instrument import INTRO_LAYOUTS, RESPONSE_LAYOUTS
 from app.services import date_formatting
 from app.services.instruments import (
     GROUP_KIND_SENTINEL,
@@ -54,6 +54,7 @@ __all__ = [
     "_parse_group_kind",
     "_parse_int",
     "_parse_intro_layout",
+    "_parse_response_layout",
     "_parse_json",
 ]
 
@@ -138,6 +139,9 @@ class _InstrumentSpec:
     # Segment 19Y Item 1 — the intro layout chip. ``None`` (a file from
     # before the row existed) leaves the column default.
     intro_layout: str | None = None
+    # Segment 20K — the Responses chip. ``None`` (a file from before the
+    # row existed) leaves the column default.
+    response_layout: str | None = None
     # Segment 18P PR D2 — the Band 1 "set"-pill state, dropped by the
     # pre-D2 settings CSV.
     band1_touched_links: list[str] | None = None
@@ -344,5 +348,20 @@ def _parse_intro_layout(value: str) -> str | None:
         raise _ParseError(
             f"invalid instrument intro_layout {value!r}; expected one of "
             + ", ".join(repr(v) for v in INTRO_LAYOUTS)
+        )
+    return value
+
+
+def _parse_response_layout(value: str) -> str | None:
+    """Parse an ``instruments[].response_layout`` config value (segment
+    20K), as :func:`_parse_intro_layout`: empty leaves the default, a
+    value not in ``RESPONSE_LAYOUTS`` is refused."""
+    value = (value or "").strip()
+    if not value:
+        return None
+    if value not in RESPONSE_LAYOUTS:
+        raise _ParseError(
+            f"invalid instrument response_layout {value!r}; expected one of "
+            + ", ".join(repr(v) for v in RESPONSE_LAYOUTS)
         )
     return value
