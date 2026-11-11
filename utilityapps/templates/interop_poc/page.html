@@ -1,0 +1,45 @@
+{% extends "utilities/base.html" %}
+{% block title %}Interop proof of concept{% endblock %}
+{% block content %}
+  <p class="crumbs"><a href="{{ url('/') }}">Utilities</a> › Interop proof of concept</p>
+  <h1>Interop proof of concept</h1>
+  <p class="sub">One click turns this mock exercise into a draft session in Review Robin, populated with its reviewers and reviewees, and opens the session in a new tab. A model for applications that hand their review to Review Robin, such as ApplyDesk.</p>
+
+  <div class="card" aria-labelledby="send-h">
+    <h2 id="send-h">Create in Review Robin</h2>
+    <p>Creates a draft session owned by you, with the rosters below. You need to be a Review Robin operator. Either the whole session is created or nothing is; if Review Robin refuses, the reason shows here.</p>
+    <p class="note">Nothing else happens: no assignments, no invitations, no email. The draft waits for you in Review Robin.</p>
+    <div class="actions">
+      <button class="btn primary" type="button" disabled aria-disabled="true">Create in Review Robin</button>
+      <span class="note">Not wired yet (segment 23A, rung 3).</span>
+    </div>
+  </div>
+
+  <div class="card" aria-labelledby="exercise-h">
+    <h2 id="exercise-h">{{ exercise }}</h2>
+    <p class="note">Mock data. Each application's ID is its reviewee key in Review Robin, so one applicant could hold two applications. The profile link is a placeholder for the ApplyDesk page a reviewer would read the application on.</p>
+    <h3>Reviewees: {{ applications | length }} applications</h3>
+    <table>
+      <thead><tr><th scope="col">Application</th><th scope="col">Applicant</th><th scope="col">Faculty</th></tr></thead>
+      <tbody>
+        {% for a in applications %}<tr><td><code>{{ a.id }}</code></td><td>{{ a.applicant }}</td><td>{{ a.faculty }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+    <h3>Reviewers: {{ reviewers | length }}</h3>
+    <table>
+      <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Tag</th></tr></thead>
+      <tbody>
+        {% for r in reviewers %}<tr><td>{{ r.name }}</td><td><code>{{ r.email }}</code></td><td>{{ r.panel }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" aria-labelledby="files-h">
+    <h2 id="files-h">The files sent</h2>
+    <p class="note">Review Robin's own roster formats, read by its own importers. No settings file: instruments are built in Review Robin.</p>
+    <h3><code>reviewers.csv</code></h3>
+    <pre class="sample">{{ reviewers_csv }}</pre>
+    <h3><code>reviewees.csv</code></h3>
+    <pre class="sample">{{ reviewees_csv }}</pre>
+  </div>
+{% endblock %}

@@ -11,6 +11,7 @@ from starlette.responses import Response
 
 from utilityapps.diagnostics.routes import router as diagnostics_router
 from utilityapps.email_check.routes import router as email_check_router
+from utilityapps.interop_poc.routes import router as interop_poc_router
 from utilityapps.routes_health import router as health_router
 from utilityapps.routes_home import router as home_router
 from utilityapps.web import templates
@@ -36,4 +37,5 @@ def create_app() -> FastAPI:
     app.include_router(home_router)
     app.include_router(email_check_router)
     app.include_router(diagnostics_router)
+    app.include_router(interop_poc_router)
     return app

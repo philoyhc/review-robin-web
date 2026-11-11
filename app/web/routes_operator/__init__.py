@@ -27,6 +27,7 @@ from . import (
     _directory,
     _extract_data,
     _extracts,
+    _handoffs,
     _instruments,
     _instruments_band2,
     _instruments_pagination,
@@ -73,4 +74,7 @@ router.include_router(_instruments_pagination.router)
 router.include_router(_extract_data.router)
 router.include_router(_extracts.router)
 router.include_router(_sys_admin.router)
+# Segment 23A: the interop proof of concept's holding page (and, from
+# rung 2, its create route).
+router.include_router(_handoffs.router)
 router.include_router(_workflow.router)
