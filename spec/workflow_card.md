@@ -810,7 +810,7 @@ item; there's no separate heading row.
 
 | State | Per-state status detail |
 | --- | --- |
-| **1** (setup empty) | **Setup checklist** — renders in every draft state (1 and 2), not State 1 alone, so an all-✓ row confirms the operator is ready to Prepare. Three inline entries (Reviewers / Reviewees / Instruments), each prefixed by a ✓ or ✗ pill and linked to the relevant Operations-row page. Wraps on narrow viewports. The Instruments entry is `instruments_configured_ok`, i.e. `not has_unconfigured`: every instrument has at least one visible response field **and** all three Band 1 links touched (`instruments/_instrument_crud.py` `configured_counts`). It is **not** a rule-pinning check — a NULL `rule_set_id` is the Full Matrix default and does not fail it. |
+| **1** (setup empty) | **Setup checklist** — renders in every draft state (1 and 2), not State 1 alone, so an all-✓ row confirms the operator is ready to Prepare. Three inline entries (Reviewers / Reviewees / Instruments), each prefixed by a ✓ or ✗ pill and linked to the relevant Operations-row page. Wraps on narrow viewports. The Instruments entry is `instruments_configured_ok`, i.e. `not has_unconfigured`: every instrument has at least one visible response field **and** all three Band 1 links touched (`instruments/_instrument_crud.py` `configured_counts`). It is **not** a rule-pinning check — a NULL `rule_set_id` (all three Links set to *All* / *All* / *Individual*, Full Matrix) does not fail it; a Link still `Not set` does. |
 | **2** (draft, not yet validated) | **Setup checklist** only (as State 1). |
 | ~~**3**~~ | Unused. |
 | **4** (validated, no invites) | **Status** — "Setup validated." |

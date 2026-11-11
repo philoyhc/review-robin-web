@@ -499,7 +499,8 @@ perspective:
   session has one or more instruments, each defining its own set of
   response fields and display fields **and its own assignment rule**
   (`Instrument.rule_set_id` → a `session_rule_sets` row, or NULL for
-  the synthetic Full Matrix default). The schema, services, and
+  the synthetic Full Matrix when all three Links are set to *All* /
+  *All* / *Individual*). The schema, services, and
   audit events are fully multi-instrument-aware
   (`Instrument.session_id`, `Instrument.order`, FK delete-orphan
   cascades, `create_instrument` / `delete_instrument` services with
@@ -518,7 +519,8 @@ perspective:
 - **Rule sets** drive assignment generation. Each instrument's
   Band 1 either materialises one `session_rule_sets` row (when any
   Link carries filter / group rules) or leaves `rule_set_id=NULL`
-  and inherits the synthetic **Full Matrix** default. The rule
+  with all three Links set and gets the synthetic **Full Matrix**.
+  An instrument with any Link still `Not set` has no assignments. The rule
   engine lives in `app/services/rules/` (`engine.py`,
   `predicates.py`, `quotas.py`, `fields.py`) and is
   pure — it evaluates a rule set against the reviewer × active-
@@ -1166,6 +1168,7 @@ canonical "no payload" marker.
 | `session.updated` | `changes` | `{"session_id": 17, "session_code": "CS101", "changes": {"name": ["Spring", "Spring v2"]}}` |
 | `session.deleted` | `snapshot` (no top-level identity) | `{"snapshot": {"id": 17, "code": "CS101", "name": "Final Review"}}` |
 | `session.invalidated` | `reason` (no payload) | `{"session_id": 17, "session_code": "CS101", "reason": "reviewer_created"}` |
+| `instrument.band1_links_set` | `changes` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "changes": {"band1_touched_links": [["link1"], ["link1", "link2"]]}}`; a change to which Links are set also reverts a validated session to draft |
 | `instrument.closed` | `reason` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "reason": "deadline", "context": {"deadline": "2026-06-01T00:00:00+00:00"}}` |
 | `assignments.generated` | `counts` + `context` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "counts": {"new": 104, "deleted": 0, "kept": 0, "responses_deleted": 0, "pairs": 104, "instruments": 1}, "context": {"mode": "rule_based"}}` |
 | `responses.saved` | `refs` + `counts` | `{"session_id": 17, "session_code": "CS101", "refs": {"reviewer_id": 42}, "counts": {"assignments_touched": 3, "responses_saved": 5}}` |
@@ -1282,6 +1285,6 @@ is. Every write from that date onward is canonical.
   ones, and leaving matched pairs (and their saved responses)
   untouched. See `spec/assignments.md` "Reconcile + regenerate".
 - Materialise rather than virtualise: the rule engine (including the
-  synthetic Full Matrix default) generates concrete Assignment rows
+  synthetic Full Matrix) generates concrete Assignment rows
   rather than implying them, so downstream features query one uniform
   table regardless of instrument rule or group scoping.
