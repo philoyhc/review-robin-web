@@ -93,12 +93,21 @@ def test_the_index_does_not_list_it(client: TestClient) -> None:
     assert "interop" not in client.get("/utilities/").text.lower()
 
 
-def test_the_sent_card_is_a_scaffold(client: TestClient) -> None:
-    """Segment 23B, rung 1: the card's copy and layout, controls inert."""
+def test_the_sent_card_reads_review_robin_for_each_session_sent(client: TestClient) -> None:
+    """Segment 23B: the card lists what this browser sent and asks
+    Review Robin's reverse-flow routes, same-origin, as the operator."""
     text = client.get(PAGE).text
-    card = text.split('id="poc-sent"')[1].split("</div>")[0]
+    card = text.split('id="poc-sent"')[1].split("<script>")[0]
     assert "Sent to Review Robin" in card
-    assert card.count("disabled>") == 2  # Refresh status, Fetch results
+    assert 'data-handoffs-url="/reviewrobin/operator/handoffs/"' in card
+    assert 'id="poc-sent-rows"' in card and "No sessions sent from this browser yet." in card
     for column in ("ReviewerEmail", "RevieweeEmail", "InstrumentSeq", "FieldKey", "Value"):
         assert column in card
-    assert "results.csv" in card and "completion.csv" in card
+    # The create announces what it sent; the card keeps it in this browser.
+    assert 'new CustomEvent("poc:sent"' in text and 'addEventListener("poc:sent"' in text
+    assert '"interop-poc.sent"' in text
+    for route in ('"status"', '"results.csv"', '"completion.csv"'):
+        assert route in text
+    # A failed read shows unavailable, never old counts or zero (§6.4).
+    assert "Unavailable, last checked" in text
+    assert 'cache: "no-store"' in text and "innerHTML" not in text

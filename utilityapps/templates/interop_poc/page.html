@@ -16,33 +16,219 @@
     </div>
     <div id="poc-result" role="status" aria-live="polite"></div>
   </div>
-  <div class="card" aria-labelledby="sent-h" id="poc-sent">
+  <div class="card" aria-labelledby="sent-h" id="poc-sent"
+       data-handoffs-url="{{ host_url('/reviewrobin/operator/handoffs/') }}">
     <h2 id="sent-h">Sent to Review Robin</h2>
     <p>The sessions this browser created. For each, read its live status, or fetch its submitted answers as CSV, keyed by application ID. Both ask Review Robin as you, so you need to operate that session there.</p>
     <p class="note">Kept in this browser only; clearing it forgets the list, not the sessions. Nothing here changes anything in Review Robin.</p>
     <table>
       <thead><tr><th scope="col">Session</th><th scope="col">Sent</th><th scope="col">Status</th><th scope="col">Results</th></tr></thead>
-      <tbody>
-        <tr class="note">
-          <td><code>POC-YYMMDD-HHMMSS</code></td>
-          <td>Not sent yet</td>
-          <td><button class="btn secondary" type="button" disabled>Refresh status</button></td>
-          <td><button class="btn secondary" type="button" disabled>Fetch results</button></td>
-        </tr>
+      <tbody id="poc-sent-rows">
+        <tr class="note"><td colspan="4">No sessions sent from this browser yet.</td></tr>
       </tbody>
     </table>
+    <div id="poc-sent-detail" role="status" aria-live="polite"></div>
+    <details>
+    <summary>What each read shows</summary>
     <h3>Status</h3>
     <dl class="note" id="poc-status-fields">
       <dt>State</dt><dd>Draft, Validated, Activated, Closed or Archived, as Review Robin shows it</dd>
       <dt>People</dt><dd>Reviewers; applications (reviewees); instruments</dd>
-      <dt>Assignments</dt><dd>Submitted, of all assignments</dd>
+      <dt>Assignments</dt><dd>Complete (every required field answered), of all assignments</dd>
       <dt>Reviewers</dt><dd>Invited, opened and submitted, each of the reviewers with assignments</dd>
       <dt>Checked</dt><dd>Review Robin's time, and when this page last asked. A failed check shows unavailable, never old counts or zero.</dd>
     </dl>
     <h3>Results</h3>
     <p class="note"><code>results.csv</code>: one row per submitted answer, with <code>ReviewerEmail</code>, <code>RevieweeEmail</code> (the application ID), <code>InstrumentSeq</code>, <code>FieldKey</code>, the labels, <code>ResponseType</code>, <code>Value</code> as stored and <code>SubmittedAt</code>. Saved drafts are not included.</p>
     <p class="note"><code>completion.csv</code>: one row per assignment and where it stands: not started, in progress or submitted.</p>
+    </details>
   </div>
+  <script>
+  // Segment 23B, rung 4: the sessions this browser sent, and the reverse
+  // flow's reads. Kept in localStorage (Utilities has no database); every
+  // read asks Review Robin as the signed-in operator, same-origin.
+  (function () {
+    var card = document.getElementById("poc-sent");
+    var rows = document.getElementById("poc-sent-rows");
+    var detail = document.getElementById("poc-sent-detail");
+    var base = card.dataset.handoffsUrl;
+    var KEY = "interop-poc.sent";
+    var problems = {
+      not_linked: "Review Robin has no finished handoff with this transfer.",
+      not_authorized: "You do not operate this session in Review Robin now.",
+      transfer_incomplete: "This transfer did not finish, so its session has nothing to report."
+    };
+    function el(tag, text, cls) {
+      var node = document.createElement(tag);
+      if (text !== undefined && text !== null) node.textContent = String(text);
+      if (cls) node.className = cls;
+      return node;
+    }
+    function load() {
+      try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { return []; }
+    }
+    function save(list) {
+      try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) { /* kept for this page only */ }
+    }
+    var sent = load();
+    function when(iso) {
+      var d = new Date(iso);
+      return isNaN(d) ? "" : d.toLocaleString();
+    }
+    function url(item, tail) {
+      return base + encodeURIComponent(item.transfer_id) + "/" + tail;
+    }
+    function ask(item, tail, extra) {
+      return fetch(url(item, tail), Object.assign({
+        credentials: "same-origin", redirect: "manual", cache: "no-store"
+      }, extra || {}));
+    }
+    function refusal(reply) {
+      if (reply.type === "opaqueredirect" || reply.status === 0) return Promise.resolve("Review Robin did not accept you as an operator.");
+      return reply.json().then(function (body) {
+        return problems[body.error] || ("Review Robin answered " + (body.error || reply.status) + ".");
+      }, function () { return "Review Robin answered " + reply.status + "."; });
+    }
+    function unavailable(heading, why) {
+      detail.replaceChildren(el("h3", heading), el("p", "Unavailable, last checked " + new Date().toLocaleString() + ". " + why, "error"));
+    }
+    function showStatus(item, body) {
+      var c = body.counts;
+      var list = el("dl");
+      [
+        ["State", body.state_label],
+        ["People", c.reviewers + " reviewers; " + c.reviewees + " applications; " + c.instruments + " instruments" +
+          (c.group_instruments ? " (" + c.group_instruments + " group-scoped, left out of results)" : "")],
+        ["Assignments", c.assignments_completed + " complete of " + c.assignments],
+        ["Reviewers", c.reviewers_invited + " invited, " + c.reviewers_opened + " opened, " +
+          c.reviewers_submitted + " submitted, of " + c.reviewers_assigned + " with assignments"],
+        ["Checked", "Review Robin " + when(body.as_of) + "; this page " + new Date().toLocaleString()]
+      ].forEach(function (pair) { list.appendChild(el("dt", pair[0])); list.appendChild(el("dd", pair[1])); });
+      var link = el("a", "Open in Review Robin");
+      link.href = body.session_home_url;
+      link.target = "_blank";
+      var p = el("p");
+      p.appendChild(link);
+      detail.replaceChildren(el("h3", "Status: " + item.session_code), list, p);
+    }
+    function parseCsv(text) {
+      // RFC 4180: quoted fields, doubled quotes, CRLF rows.
+      var out = [], row = [], cell = "", quoted = false;
+      for (var i = 0; i < text.length; i++) {
+        var ch = text[i];
+        if (quoted) {
+          if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+          else if (ch === '"') quoted = false;
+          else cell += ch;
+        } else if (ch === '"') quoted = true;
+        else if (ch === ",") { row.push(cell); cell = ""; }
+        else if (ch === "\n" || ch === "\r") {
+          if (ch === "\r" && text[i + 1] === "\n") i++;
+          row.push(cell); out.push(row); row = []; cell = "";
+        } else cell += ch;
+      }
+      if (cell !== "" || row.length) { row.push(cell); out.push(row); }
+      return out;
+    }
+    function download(name, blob) {
+      var link = el("a", "Download " + name);
+      link.href = URL.createObjectURL(blob);
+      link.download = name;
+      return link;
+    }
+    function showResults(item, results, completion, asOf) {
+      var table = el("table");
+      var head = el("thead"), hr = el("tr");
+      results.rows[0].forEach(function (h) { var th = el("th", h); th.scope = "col"; hr.appendChild(th); });
+      head.appendChild(hr);
+      var tbody = el("tbody");
+      results.rows.slice(1).forEach(function (r) {
+        var tr = el("tr");
+        r.forEach(function (v) { tr.appendChild(el("td", v)); });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(head);
+      table.appendChild(tbody);
+      var answers = results.rows.length - 1;
+      var links = el("p");
+      links.appendChild(download(item.session_code + "_results.csv", results.blob));
+      links.appendChild(document.createTextNode(" · "));
+      links.appendChild(download(item.session_code + "_completion.csv", completion.blob));
+      var nodes = [
+        el("h3", "Results: " + item.session_code),
+        el("p", answers + " submitted answers; " + (completion.rows.length - 1) + " assignments. Review Robin " +
+          when(asOf) + "; fetched " + new Date().toLocaleString() + ".", "note"),
+        links
+      ];
+      var wrap = el("div", null, "scroll");
+      wrap.appendChild(table);
+      if (answers) nodes.push(wrap);
+      else nodes.push(el("p", "No answers have been submitted yet."));
+      detail.replaceChildren.apply(detail, nodes);
+    }
+    function fetchCsv(item, name) {
+      return ask(item, name).then(function (reply) {
+        if (!reply.ok) return refusal(reply).then(function (why) { throw new Error(why); });
+        var asOf = reply.headers.get("X-Review-Robin-As-Of");
+        return reply.blob().then(function (blob) {
+          return blob.text().then(function (text) {
+            return { blob: blob, rows: parseCsv(text), asOf: asOf };
+          });
+        });
+      });
+    }
+    function render() {
+      if (!sent.length) {
+        var empty = el("tr", null, "note");
+        var td = el("td", "No sessions sent from this browser yet.");
+        td.colSpan = 4;
+        empty.appendChild(td);
+        rows.replaceChildren(empty);
+        return;
+      }
+      rows.replaceChildren.apply(rows, sent.slice().reverse().map(function (item) {
+        var tr = el("tr");
+        var code = el("td");
+        code.appendChild(el("code", item.session_code));
+        tr.appendChild(code);
+        tr.appendChild(el("td", when(item.sent_at)));
+        var status = el("button", "Refresh status", "btn secondary");
+        status.type = "button";
+        status.addEventListener("click", function () {
+          status.disabled = true;
+          detail.replaceChildren(el("p", "Asking Review Robin…", "note"));
+          ask(item, "status", { headers: { "Accept": "application/json" } }).then(function (reply) {
+            if (!reply.ok) return refusal(reply).then(function (why) { unavailable("Status: " + item.session_code, why); });
+            return reply.json().then(function (body) { showStatus(item, body); });
+          }).catch(function () {
+            unavailable("Status: " + item.session_code, "Review Robin did not answer.");
+          }).finally(function () { status.disabled = false; });
+        });
+        var results = el("button", "Fetch results", "btn secondary");
+        results.type = "button";
+        results.addEventListener("click", function () {
+          results.disabled = true;
+          detail.replaceChildren(el("p", "Fetching from Review Robin…", "note"));
+          Promise.all([fetchCsv(item, "results.csv"), fetchCsv(item, "completion.csv")]).then(function (both) {
+            showResults(item, both[0], both[1], both[0].asOf);
+          }).catch(function (err) {
+            unavailable("Results: " + item.session_code, err && err.message ? err.message : "Review Robin did not answer.");
+          }).finally(function () { results.disabled = false; });
+        });
+        var a = el("td"); a.appendChild(status); tr.appendChild(a);
+        var b = el("td"); b.appendChild(results); tr.appendChild(b);
+        return tr;
+      }));
+    }
+    document.addEventListener("poc:sent", function (event) {
+      sent = sent.filter(function (item) { return item.transfer_id !== event.detail.transfer_id; });
+      sent.push(event.detail);
+      save(sent);
+      render();
+    });
+    render();
+  })();
+  </script>
   <script type="application/json" id="poc-bundle">{{ bundle | tojson }}</script>
   <script>
   // Segment 23A, rung 3: one click opens a Review Robin tab (during the
@@ -137,6 +323,9 @@
             // Still running: keep the transfer, so the next try finds it.
             return refused(tab, body.error || String(reply.status), body, body.error === "transfer_in_progress");
           }
+          document.dispatchEvent(new CustomEvent("poc:sent", { detail: {
+            transfer_id: transfer.transfer_id, session_code: body.session_code, sent_at: new Date().toISOString()
+          } }));
           transfer = null;
           var opened = tab && !tab.closed;
           if (opened) tab.location.href = body.session_home_url;
