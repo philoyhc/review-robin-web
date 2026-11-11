@@ -2691,11 +2691,12 @@
             }
             return '';
           }
-          // 20K rung 5 — the stacked layout's two widths, the label
-          // column and the response column, as CSS variables the cell's
-          // grid (and the header's, which carries their drag handles)
-          // reads; unset, the labels take their widest and the boxes the
-          // rest. ``stack_label`` / ``stack_input`` in column_widths.
+          // 20K rung 5 — the stacked layout's widths as CSS variables the
+          // cell's grid (and the header's, which carries the label
+          // column's drag handle) reads; unset, the labels take their
+          // widest and the boxes the rest. ``stack_label`` in
+          // column_widths; a ``stack_input`` saved before the response
+          // column's handle went is read, and dropped by the next Save.
           function stackWidth(card, which) {
             return parseInt(card.getAttribute('data-new-model-band2-stack-' + which + '-width') || '', 10) || 0;
           }
@@ -2731,7 +2732,7 @@
             return '<th scope="col" class="rs-stack">'
               + '<div class="rs-stack-head"' + (vars ? ' style="' + vars + '"' : '') + '>'
               + '<span class="rs-stack-head-label">Responses' + stackResizeHandle('label') + '</span>'
-              + '<span class="rs-stack-head-input"></span>' 
+              + '<span class="rs-stack-head-input"></span>'
               + '</div></th>';
           }
           function syncStackHead(card) {
@@ -2740,7 +2741,7 @@
             if (!head || !label || stackWidth(card, 'label')) { return; }
             head.style.setProperty('--rs-stack-label', label.getBoundingClientRect().width + 'px');
           }
-          // Drag one of the two widths: both grids follow live; on
+          // Drag the label column's width: both grids follow live; on
           // release the width is staged with the others for Save.
           window.newModelStackResizeStart = function (event) {
             event.preventDefault();
@@ -3151,7 +3152,6 @@
             // server before the page navigated away.
             // 20K rung 5 — the stacked layout's two widths.
             if (stackWidth(card, 'label')) { widths.stack_label = stackWidth(card, 'label'); }
-            if (stackWidth(card, 'input')) { widths.stack_input = stackWidth(card, 'input'); }
             var snapshot = card.querySelector('[data-new-model-band2-widths-snapshot]');
             if (snapshot) { snapshot.value = JSON.stringify(widths); }
             // Segment 18R Item 2 PR 5a — mark the card dirty so the
