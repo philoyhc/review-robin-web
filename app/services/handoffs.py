@@ -135,7 +135,12 @@ def parse_bundle(body: bytes) -> Bundle:
         raise HandoffError(
             "invalid_package",
             422,
-            [f"Not accepted: {', '.join(unknown)}. Rosters only: {', '.join(sorted(allowed))}."],
+            # ASCII-escaped: a key is the sender's text, and may hold what
+            # no UTF-8 response can (a lone surrogate).
+            [
+                f"Not accepted: {', '.join(json.dumps(k) for k in unknown)}. "
+                f"Rosters only: {', '.join(sorted(allowed))}."
+            ],
         )
     missing = [kind for kind in REQUIRED_FILES if kind not in files]
     if missing:

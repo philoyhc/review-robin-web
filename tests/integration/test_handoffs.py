@@ -287,6 +287,16 @@ def test_an_unpaired_surrogate_is_refused_not_a_500(client: TestClient, db: Sess
     assert _count(db, ReviewSession) == 0
 
 
+def test_an_unknown_file_key_with_a_lone_surrogate_is_refused_not_a_500(
+    client: TestClient,
+) -> None:
+    """Codex, `#3780`: the refusal names the key, ASCII-escaped."""
+    body = json.dumps(_bundle(files={"reviewers": REVIEWERS, "reviewees": REVIEWEES, "\ud800": ""}))
+    reply = client.post(URL, content=body, headers={"Content-Type": "application/json"})
+    assert reply.status_code == 422 and reply.json()["error"] == "invalid_package", reply.text
+    assert '"\\ud800"' in reply.json()["details"][0]
+
+
 def test_a_nul_character_is_refused_before_any_database_work(
     client: TestClient, db: Session
 ) -> None:
