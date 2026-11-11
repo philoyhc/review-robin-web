@@ -120,3 +120,23 @@ def test_the_sent_card_reads_review_robin_for_each_session_sent(client: TestClie
     assert "merged(merged(load(), sent), [event.detail])" in text
     assert 'addEventListener("storage"' in text and "merged(load(), sent)" in text
     assert text.count("sent = load();") == 1  # the first read only; later ones merge
+
+
+def test_refresh_status_shows_review_robins_own_readings(client: TestClient) -> None:
+    """Segment 23C: the page reads status version 3 and shows each of its
+    sections as Review Robin labels them, per person folded."""
+    text = client.get(PAGE).text
+    assert "var STATUS_VERSION = 3;" in text
+    assert "body.status_schema_version !== STATUS_VERSION" in text
+    for section in ('"Status row"', '"Workflow"', '"Instruments"', '"Schedule"'):
+        assert section in text
+    for key in (
+        "r.relationships", "r.observers", "r.instruments_set_up",
+        "w.setup_complete", "w.actions", "v.issues", "body.instruments",
+        "g.provisional", "g.provisional_reason", "body.reviewers", "body.reviewees",
+    ):
+        assert key in text
+    assert '"Progress" + (g.provisional ? " (provisional)" : "")' in text
+    assert 'el("details")' in text and "innerHTML" not in text
+    # 23B's counts are gone with version 1.
+    assert "body.counts" not in text

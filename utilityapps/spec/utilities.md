@@ -106,9 +106,14 @@ model once ApplyDesk's handoff exists (author, 2026-11-11).
   created, kept in `localStorage` (Utilities has no database; clearing it
   forgets the list, not the sessions; open tabs keep it in step). Each offers:
   - **Refresh status**: reads Review Robin's status (`spec/handoffs.md`
-    §10) and shows the state and counts with their denominators; a failed
-    read shows *Unavailable, last checked …* and why, never old counts or
-    zero.
+    §10, version 3; segment 23C) and shows each section as Review Robin
+    labels it: the state, the status row (four rosters, instruments set
+    up, assignments, invitations, responses), the Workflow card's reading
+    and actions, the Validate issues, the instruments, progress (marked
+    *provisional*, with its reason, while an instrument is not set up),
+    the schedule, and Monitoring's reviewer and reviewee tables, folded.
+    Another version, or a failed read, shows *Unavailable, last checked …*
+    and why, never old counts or zero.
   - **Fetch results**: reads `results.csv`, then `completion.csv`, shows
     the answers in a table and offers both downloads. A refused
     `results.csv` fetches no `completion.csv`.

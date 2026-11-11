@@ -31,12 +31,16 @@
     <details>
     <summary>What each read shows</summary>
     <h3>Status</h3>
+    <p class="note">Review Robin's own readings of the session, as its pages label them (status version 3). A failed check shows unavailable, never old counts or zero.</p>
     <dl class="note" id="poc-status-fields">
       <dt>State</dt><dd>Draft, Validated, Activated, Closed or Archived, as Review Robin shows it</dd>
-      <dt>People</dt><dd>Reviewers; applications (reviewees); instruments</dd>
-      <dt>Assignments</dt><dd>Complete (every required field answered, saved or submitted), of all assignments</dd>
-      <dt>Reviewers</dt><dd>Invited, opened and submitted, each of the reviewers with assignments</dd>
-      <dt>Checked</dt><dd>Review Robin's time, and when this page last asked. A failed check shows unavailable, never old counts or zero.</dd>
+      <dt>Status row</dt><dd>The row on every session page: the four rosters, instruments set up, assignments, invitations, responses</dd>
+      <dt>Workflow</dt><dd>The Workflow card: whether setup is complete, and the actions it offers now</dd>
+      <dt>Validation</dt><dd>The Validate page's issues, read without validating</dd>
+      <dt>Instruments</dt><dd>Each one, and whether it is set up</dd>
+      <dt>Progress</dt><dd>Monitoring's summary; provisional while an instrument is not set up</dd>
+      <dt>Schedule</dt><dd>Activation, deadline and release, as stored</dd>
+      <dt>Per person</dt><dd>Monitoring's reviewer and reviewee tables, folded</dd>
     </dl>
     <h3>Results</h3>
     <p class="note"><code>results.csv</code>: one row per submitted answer, with <code>ReviewerEmail</code>, <code>RevieweeEmail</code> (the application ID), <code>InstrumentSeq</code>, <code>FieldKey</code>, the labels, <code>ResponseType</code>, <code>Value</code> as stored and <code>SubmittedAt</code>. Saved drafts are not included.</p>
@@ -104,24 +108,106 @@
     function unavailable(heading, why) {
       detail.replaceChildren(el("h3", heading), el("p", "Unavailable, last checked " + new Date().toLocaleString() + ". " + why, "error"));
     }
-    function showStatus(item, body) {
-      var c = body.counts;
+    // Segment 23C: status v3 is Review Robin's own readings, shown as it
+    // labels them; this page interprets none of them.
+    var STATUS_VERSION = 3;
+    function pairs(rows) {
       var list = el("dl");
-      [
-        ["State", body.state_label],
-        ["People", c.reviewers + " reviewers; " + c.reviewees + " applications; " + c.instruments + " instruments" +
-          (c.group_instruments ? " (" + c.group_instruments + " group-scoped, left out of results)" : "")],
-        ["Assignments", c.assignments_completed + " complete of " + c.assignments],
-        ["Reviewers", c.reviewers_invited + " invited, " + c.reviewers_opened + " opened, " +
-          c.reviewers_submitted + " submitted, of " + c.reviewers_assigned + " with assignments"],
+      rows.forEach(function (pair) { list.appendChild(el("dt", pair[0])); list.appendChild(el("dd", pair[1])); });
+      return list;
+    }
+    function table(head, rows) {
+      var t = el("table"), thead = el("thead"), hr = el("tr"), tbody = el("tbody");
+      head.forEach(function (h) { var th = el("th", h); th.scope = "col"; hr.appendChild(th); });
+      thead.appendChild(hr);
+      rows.forEach(function (r) {
+        var tr = el("tr");
+        r.forEach(function (v) { tr.appendChild(el("td", v === null || v === undefined ? "" : v)); });
+        tbody.appendChild(tr);
+      });
+      t.append(thead, tbody);
+      var wrap = el("div", null, "scroll");
+      wrap.appendChild(t);
+      return wrap;
+    }
+    function folded(summary, nodes) {
+      var d = el("details");
+      d.appendChild(el("summary", summary));
+      nodes.forEach(function (n) { d.appendChild(n); });
+      return d;
+    }
+    function yes(flag) { return flag ? "yes" : "no"; }
+    function showStatus(item, body) {
+      if (body.status_schema_version !== STATUS_VERSION) {
+        unavailable("Status: " + item.session_code, "Review Robin answered status version " + body.status_schema_version + "; this page reads version " + STATUS_VERSION + ".");
+        return;
+      }
+      var r = body.status_row, s = body.schedule, w = body.workflow, v = body.validation, g = body.progress;
+      var nodes = [el("h3", "Status: " + item.session_code)];
+      nodes.push(pairs([
+        ["State", body.state_label + " (" + body.state + ")"],
         ["Checked", "Review Robin " + when(body.as_of) + "; this page " + new Date().toLocaleString()]
-      ].forEach(function (pair) { list.appendChild(el("dt", pair[0])); list.appendChild(el("dd", pair[1])); });
+      ]));
+      nodes.push(el("h4", "Status row"));
+      nodes.push(pairs([
+        ["Rosters", r.reviewers + " reviewers; " + r.reviewees + " reviewees; " + r.relationships + " relationship pairs; " + r.observers + " observers"],
+        ["Instruments", r.instruments_set_up + " of " + r.instruments + " set up"],
+        ["Assignments", String(r.assignments)],
+        ["Invitations", r.invitations],
+        ["Responses", r.responses_drafts + " drafts; " + r.responses_submitted + " submitted"]
+      ]));
+      nodes.push(el("h4", "Workflow"));
+      nodes.push(pairs([
+        ["Setup complete", yes(w.setup_complete) + " (reviewers " + yes(w.checklist.reviewers) + ", reviewees " + yes(w.checklist.reviewees) + ", instruments set up " + yes(w.checklist.instruments_set_up) + ")"],
+        ["Actions offered", w.actions.length ? w.actions.join(", ") : "none"],
+        ["Invitations", "generated " + yes(w.invitations_generated) + "; sent " + yes(w.invitations_sent)]
+      ].concat(w.due.map(function (line) { return ["Due", line]; }))));
+      nodes.push(el("h4", "Validation: " + v.errors + " errors, " + v.warnings + " warnings"));
+      if (v.issues.length) {
+        nodes.push(table(["Severity", "Rule", "Message", "Page"], v.issues.map(function (i) {
+          return [i.severity, i.rule, i.message, i.page];
+        })));
+      } else {
+        nodes.push(el("p", "No issues.", "note"));
+      }
+      nodes.push(el("h4", "Instruments"));
+      nodes.push(table(["Seq", "Name", "Short label", "Set up", "Scope", "Assignments"], body.instruments.map(function (i) {
+        return [i.seq, i.name, i.short_label, yes(i.set_up), i.scope, i.assignments];
+      })));
+      nodes.push(el("h4", "Progress" + (g.provisional ? " (provisional)" : "")));
+      if (g.provisional) {
+        nodes.push(el("p", "Provisional: " + g.provisional_reason + ". Until every instrument is set up, the assignments are an untouched rule's stand-in, not the review's.", "note"));
+      }
+      nodes.push(pairs([
+        ["Assignments", g.assignments_completed + " complete of " + g.assignments],
+        ["Reviewers", g.reviewers_invited + " invited, " + g.reviewers_opened + " opened, " + g.reviewers_submitted + " submitted, " +
+          g.reviewers_incomplete + " incomplete, of " + g.reviewers_assigned + " with assignments"]
+      ]));
+      nodes.push(el("h4", "Schedule"));
+      nodes.push(pairs([
+        ["Timezone", s.display_timezone],
+        ["Scheduled activation", s.scheduled_activate_at ? when(s.scheduled_activate_at) : "not set"],
+        ["Activated", s.activated_at ? when(s.activated_at) : "not yet"],
+        ["Deadline", s.deadline ? when(s.deadline) : "not set"],
+        ["Responses released", s.responses_release_at ? when(s.responses_release_at) + (s.responses_release_until ? " until " + when(s.responses_release_until) : "") : "not set"]
+      ]));
+      nodes.push(folded("Reviewers (" + body.reviewers.length + ")", [table(
+        ["Email", "Name", "State", "Assignments", "Completed", "Missing required", "Invitation", "Last reminder"],
+        body.reviewers.map(function (p) {
+          return [p.email, p.name, p.state, p.assignments, p.completed, p.missing_required, p.invitation, p.last_reminder_at ? when(p.last_reminder_at) : ""];
+        }))]));
+      nodes.push(folded("Reviewees with assignments (" + body.reviewees.length + ")", [table(
+        ["Key", "Name", "State", "Reviewers", "Completed", "Last response"],
+        body.reviewees.map(function (c) {
+          return [c.key, c.name, c.state, c.reviewers, c.completed, c.last_response_at ? when(c.last_response_at) : ""];
+        }))]));
       var link = el("a", "Open in Review Robin");
       link.href = body.session_home_url;
       link.target = "_blank";
       var p = el("p");
       p.appendChild(link);
-      detail.replaceChildren(el("h3", "Status: " + item.session_code), list, p);
+      nodes.push(p);
+      detail.replaceChildren.apply(detail, nodes);
     }
     function parseCsv(text) {
       // RFC 4180: quoted fields, doubled quotes, CRLF rows.
