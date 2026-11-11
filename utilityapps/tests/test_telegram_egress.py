@@ -99,13 +99,42 @@ def test_anything_else_that_answers_is_not_a_pass(reply: Reply) -> None:
 def test_failures_are_classified_without_their_detail(exc: BaseException, outcome: str) -> None:
     result = telegram_egress.run(_raising(exc))
     assert result.outcome.value == outcome
-    assert result.error_type == type(exc).__name__  # for the log, never the page
+    assert result.error_type == telegram_egress.describe(exc)  # for the log, never the page
+    assert result.error_type is not None and result.error_type.startswith(type(exc).__name__)
     assert (result.http_status, result.telegram_api_envelope, result.description) == (
         None,
         False,
         None,
     )
     assert result.guidance  # every outcome has its sentence
+
+
+@pytest.mark.parametrize(
+    ("exc", "described"),
+    [
+        (
+            urllib.error.URLError(ConnectionResetError(104, "Connection reset by peer")),
+            "URLError/ConnectionResetError errno=104",
+        ),
+        (
+            urllib.error.URLError(ConnectionRefusedError(111, "Connection refused")),
+            "URLError/ConnectionRefusedError errno=111",
+        ),
+        (
+            urllib.error.URLError(OSError(101, "Network is unreachable")),
+            "URLError/OSError errno=101",
+        ),
+        (urllib.error.URLError(TimeoutError("timed out")), "URLError/TimeoutError"),
+        (urllib.error.URLError("unknown url type"), "URLError"),
+        (ConnectionResetError(104, "reset"), "ConnectionResetError errno=104"),
+        (ValueError("something else"), "ValueError"),
+    ],
+)
+def test_the_log_names_the_wrapped_error_and_its_errno(exc: BaseException, described: str) -> None:
+    """`error=URLError` alone could not tell refused from reset (the first
+    production runs, 2026-11-11). Class names and errno only, never the message."""
+    assert telegram_egress.describe(exc) == described
+    assert "Connection" not in described.split(" ")[-1]
 
 
 def test_elapsed_time_is_measured_in_milliseconds() -> None:

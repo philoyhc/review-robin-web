@@ -100,7 +100,9 @@ class Result:
     telegram_api_envelope: bool
     description: str | None  # Telegram's own, sanitised; only with the envelope
     elapsed_ms: int
-    error_type: str | None = None  # the exception's class name, for the log only
+    # The failure's class names and errno, for the log only: e.g.
+    # "URLError/ConnectionResetError errno=104". Never its message.
+    error_type: str | None = None
 
     @property
     def guidance(self) -> str:
@@ -254,6 +256,20 @@ def _bounded(fetch: Fetch, deadline: float) -> Reply:
     return cast(Reply, box["reply"])
 
 
+def describe(exc: BaseException) -> str:
+    """What failed, without the message: urllib wraps a connect-time error in
+    ``URLError``, so the wrapped error's class follows the wrapper's, and an
+    ``OSError``'s errno tells refused (111) from reset (104) or unreachable
+    (101, 113)."""
+    inner: BaseException = exc
+    name = type(exc).__name__
+    if isinstance(exc, urllib.error.URLError) and isinstance(exc.reason, BaseException):
+        inner = exc.reason
+        name += "/" + type(inner).__name__
+    number = inner.errno if isinstance(inner, OSError) else None
+    return f"{name} errno={number}" if isinstance(number, int) else name
+
+
 def run(fetch: Fetch = urllib_fetch, clock: Callable[[], float] = time.monotonic) -> Result:
     """One attempt, no retry, over within about ``DEADLINE`` seconds."""
     started = clock()
@@ -261,7 +277,7 @@ def run(fetch: Fetch = urllib_fetch, clock: Callable[[], float] = time.monotonic
         reply = _bounded(fetch, time.monotonic() + DEADLINE)
     except Exception as exc:  # classified, never shown
         elapsed = round((clock() - started) * 1000)
-        return Result(_failure(exc), None, False, None, elapsed, type(exc).__name__)
+        return Result(_failure(exc), None, False, None, elapsed, describe(exc))
     elapsed = round((clock() - started) * 1000)
     description = _envelope(reply)
     if description is None:
