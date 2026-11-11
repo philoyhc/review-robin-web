@@ -173,7 +173,8 @@ Reach it from Rachel's or Sam's landing card.
   - radio fieldsets;
   - tick boxes and person tokens, all disabled;
   - except the appeal preview chips (§5).
-- [ ] **Entitlements**: 30 RAs, each RA's name on its first row only.
+- [ ] **Entitlements**: 30 RAs, each RA's name and Neighborhood pill
+  on its first row only; sorting by Neighborhood groups the RAs by slot.
   Leon Chia's Personal leave shows +2 with its reason. "None left" chips.
 - [ ] **Approval chain**:
   - Maple 03-08's first approver is Marcus Tan, with a Delegate chip and
