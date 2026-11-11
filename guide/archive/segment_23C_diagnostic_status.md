@@ -52,6 +52,16 @@ Taken 2026-11-11 at `e7e290b`.
 | The validation run it reads | 1 (`validate_session_setup`, `app/services/validation/_registry.py:474`) | `grep -n "def validate_session_setup" app/services/validation/_registry.py` |
 | View adapter modules, to gain `_handoffs.py` | 35 | `ls app/web/views/ \| grep -c "^_"` |
 
+## Status
+
+**Closed 2026-11-11.** Intended versus done:
+
+- **Shipped as planned:** plan (#3790), status v3 (#3791), the page (#3792), close. Import into Cordware and the production deploy follow the close (author); the Definition of done's production check is the author's, after that deploy.
+- **The Validate gap became its own segment.** Rung 2 found that `validate_session_setup` raised nothing for an instrument not set up — only the Workflow card's Prepare gate held — and that untouched links still generated a Full Matrix stand-in. The author ruled both legacy; segment 20J (`guide/archive/segment_20J_instruments_set_up_validate.md`) made them Validate errors and retired the default before this close, so the status now reports `instruments.band1_not_set` and an instrument not set up shows no assignments.
+- **Decisions confirmed at build:** the page shows Review Robin's keys as sent, not its display labels (only the state carries one); `validation` counts `info` as well as errors and warnings; `workflow.setup_complete` is read in draft only, and `actions` lists the card's buttons whether or not they are enabled.
+- **Reads:** one cold read on the cumulative diff (rungs 2 and 3). Nothing blocking; its findings (overclaimed "labels", the provisional rationale, the draft-only and enabled-or-not notes, `info` uncounted, test gaps) were fixed in rung 3. `spec-writer` at the close aligned `spec/handoffs.md` §10 with 20J.
+- **23B's Fetch results** worked on the Azure deployment (author, 2026-11-11).
+
 ## PR ladder
 
 1. **Plan** (this file).

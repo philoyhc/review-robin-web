@@ -1,6 +1,6 @@
 # Segment 20J — An instrument not set up: no Full Matrix default, and Validate refuses it
 
-**Opened:** 2026-11-11 · **Theme:** retire the untouched-link Full Matrix default, and have Validate enforce what the Workflow card already requires of an instrument · **Related:** `guide/segment_23C_diagnostic_status.md`, `spec/assignments.md`, `spec/validate_page.md`, `spec/instruments.md`
+**Opened:** 2026-11-11 · **Theme:** retire the untouched-link Full Matrix default, and have Validate enforce what the Workflow card already requires of an instrument · **Related:** `guide/archive/segment_23C_diagnostic_status.md`, `spec/assignments.md`, `spec/validate_page.md`, `spec/instruments.md`
 
 ## Opportunity
 
