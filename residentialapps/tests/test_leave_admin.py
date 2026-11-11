@@ -78,14 +78,11 @@ def test_the_dashboard_counts_pending_by_stage_and_flags_what_needs_attention() 
     attention = page.split('id="attention-h"')[1].split("</section>")[0]
     assert re.findall(r">(L-\d+)</a>", attention) == ["L-0103", "L-0104", "L-0107", "L-0109"]
     assert "Pranav Iyer is away too" in attention and "Chloe Lim declined cover" in attention
-    assert attention.count("Away on the same days in one Precinct") == 1
-    assert '<td class="strong">Olivia Ng, Pranav Iyer</td>' in attention
-    away = page.split('id="away-h"')[1].split("</section>")[0]
-    assert re.findall(r'<td class="strong nowrap">([^<]*)', away) == [
-        "Maya Seah",
-        "Olivia Ng",
-        "Pranav Iyer",
-    ]
+    assert attention.count("away on the same days") == 1
+    assert "Olivia Ng, Pranav Iyer" in attention
+    # Away this week left the Dashboard (author, 2026-11-10): the staff
+    # pages show who is away.
+    assert 'id="away-h"' not in page
     assert "Maple 03-08</strong>: Grace Ho has not signed in yet" in page
 
 
@@ -826,18 +823,36 @@ def test_dashboard_reports_and_export(monkeypatch) -> None:
     the dashboard; Applications exports what it shows."""
     c = client()
     dashboard = c.get(ADMIN).text
-    for heading in (
-        "Upcoming leave",
-        "Extra leave granted",
-        "Entitlement anomalies",
-        "Recent administrative corrections",
-    ):
-        assert f">{heading}" in dashboard, heading
-    assert "<dt>AY2026-2027, Term 1</dt><dd>3 days, 1 appeal</dd>" in dashboard
+    # The Dashboard, rebuilt (author, 2026-11-10): Set-up and Needs
+    # attention, three cards across, each linking where it is fixed; the
+    # cards that linked nowhere in admin (Upcoming leave, Extra leave
+    # granted, Recent corrections, Emails not sent) are gone.
+    heads = re.findall(r'<h2 id="[a-z]+-h">([^<]+)', dashboard)
+    assert heads == [
+        "Term and cycle",
+        "Rosters",
+        "Policy at a glance",
+        "Approval chain",
+        "Who reaches the staff pages",
+        "Coming up",
+        "Records",
+        "Entitlements",
+        "Roster mismatches",
+    ]
+    for gone in ("Upcoming leave", "Extra leave granted", "Recent administrative corrections"):
+        assert gone not in dashboard, gone
+    assert "no RA is over entitlement" in dashboard
+    assert "<dt>Staff</dt><dd>15 · Master, Admin, 3 RSLM, 9 RF, Exec</dd>" in dashboard
+    assert "<dt>RAs</dt><dd>30, in 30 slots across 9 Precincts</dd>" in dashboard
     assert (
-        "Cancelled approved leave for Kai Ng" in dashboard
-        and "no RA is over entitlement" in dashboard
+        "Term 2 from 11 Jan" in dashboard and dashboard.count('href="/rosters/">Rosters ›</a>') == 2
     )
+    assert "Residential Fellow <strong>9</strong>: RAs assigned to staff&#39;s slots" in dashboard
+    assert (
+        "No tick, no access: Residential Student Life Manager, Residential Executive" in dashboard
+    )
+    assert "<strong>15 Nov – 28 Nov</strong> · Examinations, appeal only" in dashboard
+    assert "No one is in every slot for AY2026-2027, Term 2" in dashboard
     assert [a.id for a in sample_leave.upcoming()] == ["L-0115"]
     # Lucas Teo's appeal goes beyond a balance his earlier leave used.
     lucas = next(
@@ -913,12 +928,9 @@ def test_failed_emails_stay_visible_and_can_be_resent() -> None:
     c = TestClient(ops_app())
     failed = sample_leave.failed_emails()
     assert {e.application for e in failed} == {"L-0101", "L-0115", "L-0116"}
-    board = c.get("/ra-leave/admin/").text.split('id="unsent-h"')[1].split("</section>")[0]
-    assert re.findall(r'href="/ra-leave/admin/records/(L-\d+)"', board) == [
-        e.application for e in failed
-    ]
-    assert board.count(">Resend</button>") == len(failed)
-    assert 'disabled aria-label="Resend L-0116 approved leave cancelled to Kai Ng">' in board
+    # Emails not sent left the Dashboard (author, 2026-11-10): a send goes
+    # from the sender's own account, so resend belongs to them.
+    assert 'id="unsent-h"' not in c.get("/ra-leave/admin/").text
     # The admin sees every email on the application, sent or not.
     page = (
         c.get("/ra-leave/admin/records/L-0116")
@@ -934,7 +946,6 @@ def test_failed_emails_stay_visible_and_can_be_resent() -> None:
         "it goes from the admin's account, naming its original sender"
         in c.get("/ra-leave/admin/records/L-0116").text
     )
-    assert "from your own account, naming its original sender" in c.get("/ra-leave/admin/").text
     assert 'id="emails-h"' not in c.get("/ra-leave/admin/records/L-0102").text  # no emails, no card
 
 

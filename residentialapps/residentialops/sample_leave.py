@@ -2795,3 +2795,82 @@ def permission_rows() -> tuple[PermissionRow, ...]:
             }
         )
     return tuple(rows)
+
+
+# The admin Dashboard (author, 2026-11-10): the leave system's set-up and
+# where it needs attention, three cards across, each card linking to the
+# page that fixes it.
+
+
+def next_term() -> sample_data.Term | None:
+    """The term after the current one, if the year has one."""
+    later = [t for t in sample_data.TERMS if t.start > TERM.end]
+    return min(later, key=lambda t: t.start) if later else None
+
+
+def roster_counts() -> tuple[tuple[str, int], ...]:
+    """Staff by appointment, in roster order, as (abbreviation, count)."""
+    seen: dict[str, int] = {}
+    for p in sample_data.STAFF:
+        seen[p.abbrev] = seen.get(p.abbrev, 0) + 1
+    return tuple(seen.items())
+
+
+def coming_up() -> tuple[tuple[str, str], ...]:
+    """The next blackout and public holidays from today, as (when, what)."""
+    found: list[tuple[date, str, str]] = []
+    for b in BLACKOUTS:
+        span = week_dates(b)
+        if span and span[1] >= TODAY:
+            when = f"{short_date(span[0])} – {short_date(span[1])}"
+            found.append((span[0], when, f"{b.label}, {b.effect.lower()}"))
+    found.sort()
+    holidays = [(d, short_date(d), name) for d, name in PUBLIC_HOLIDAYS if d >= TODAY]
+    return tuple((when, what) for _, when, what in sorted(found[:1] + holidays[:2]))
+
+
+def roster_mismatches() -> tuple[str, ...]:
+    """What in the rosters quietly breaks leave: an RA in no slot (no
+    approver), a slot with no RF, no one in every slot next term, a person
+    named in Permissions who is not on the Staff roster."""
+    found: list[str] = []
+    slotted = {ra for s in sample_data.SLOTS for ra in s.ras}
+    loose = [p.name for p in sample_data.RAS if p.name not in slotted]
+    if loose:
+        found.append(f"RAs in no slot: {', '.join(loose)}")
+    abbrev = {p.name: p.abbrev for p in sample_data.STAFF}
+    bare = [
+        s.neighborhood for s in sample_data.SLOTS if not any(abbrev.get(n) == "RF" for n in s.staff)
+    ]
+    if bare:
+        found.append(f"Slots with no RF: {', '.join(bare)}")
+    later = next_term()
+    if later and not sample_data.every_slot_people(later):
+        found.append(f"No one is in every slot for {later.label}")
+    gone = [g.name for g in NAMED_GRANTS if g.name not in abbrev]
+    if gone:
+        found.append(f"Named in Permissions but not on the Staff roster: {', '.join(gone)}")
+    return tuple(found)
+
+
+def staff_access() -> tuple[tuple[str, int, str], ...]:
+    """Who reaches the staff pages, by Permissions: (who, how many, over
+    which RAs) for each role with a tick beyond Admin pages, then each
+    person named."""
+    rows: list[tuple[str, int, str]] = []
+    for r in permission_rows():
+        if not (r["perms"] - {"admin"}):
+            continue
+        if r["kind"] == "role":
+            count = sum(1 for p in sample_data.STAFF if p.abbrev == r["note"])
+            rows.append((r["who"], count, r["scope"][0]))
+        else:
+            rows.append((r["who"], 1, ", ".join(r["scope"])))
+    return tuple(rows)
+
+
+def roles_without_access() -> tuple[str, ...]:
+    """Appointments whose holders reach no staff page under Permissions."""
+    return tuple(
+        r["who"] for r in permission_rows() if r["kind"] == "role" and not (r["perms"] - {"admin"})
+    )

@@ -27,8 +27,10 @@ def test_a_split_is_two_and_one_and_a_desktop_page_keeps_its_own(page: Page) -> 
     for width, path, expect in (
         (1280, "/ra-leave/", (False, 781, 379, True)),
         (736, "/ra-leave/", (False, 340, 340, True)),
-        (1280, "/ra-leave/admin/", (True, 860, 300, True)),
-        (736, "/ra-leave/admin/", (True, 704, 704, False)),
+        # An admin application, its own split (the Dashboard is cards since
+        # 2026-11-10).
+        (1280, "/ra-leave/admin/records/L-0101", (True, 860, 300, True)),
+        (736, "/ra-leave/admin/records/L-0101", (True, 704, 704, False)),
     ):
         page.set_viewport_size({"width": width, "height": 900})
         page.goto(ORIGIN + path)
