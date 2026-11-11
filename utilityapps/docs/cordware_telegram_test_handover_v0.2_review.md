@@ -46,8 +46,11 @@ The handover rules memory out because of multiple instances and restarts (§2A).
 - **Identity.** Key the link on `(tenant_id, principal_id)` from `cordware/identity.py`, never on email. Both are there, and the fake-auth path supplies both.
 - **Settings.** The factory "reads no setting" today, so the bot token and username change that contract. Supply them as App Service settings with Key Vault references. The page shows *Not configured* when either is missing, which replaces a separate `TELEGRAM_SMOKE_TEST_ENABLED` flag.
 - **Destinations.** Use a fixed server-side list: the host landing page, `/utilities/` and `/reviewrobin/`. Skip a JSON setting for v1 (§8's `TELEGRAM_ALLOWED_TARGETS_JSON`); the form submits a key, never a URL.
-- **Phone sign-in.** Entra inside Telegram's in-app browser may meet the tenant's conditional access or MFA, and its session is separate from the phone's browser.
-  - Treat §9 A6 as the real test. Try it both ways and record what happened.
+- **Phone sign-in.** Which browser a URL button opens is the user's Telegram setting, not Cordware's: Android *Settings → Chat Settings → In-App Browser*; iPhone *Settings → Data and Storage → Open Links in*.
+  - **The phone's own browser** (the author's phone, 2026-11-11): sign-in happens where a Microsoft or Cordware session may already exist, under the tenant's usual policies.
+  - **Telegram's in-app browser:** Entra may meet the tenant's conditional access or MFA, and its session is separate from the phone's browser, so the user signs in again.
+  - **User instructions** should say which to expect, and that turning the in-app browser off gives the smoother sign-in.
+  - Treat §9 A6 as the real test. Try both settings and record which browser opened and what sign-in asked for.
   - Easy Auth normally returns to the requested page after sign-in, which covers "preserve the intended destination".
 - **Bots.** Use separate dev and production bots (§8). Polling makes the dev bot usable on localhost.
 - **Rate limits.** One link challenge and one send per few seconds per user, in memory, is enough for one super-admin. Telegram's 429 `retry_after` is reported, not retried.
