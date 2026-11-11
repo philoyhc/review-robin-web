@@ -2,7 +2,7 @@
 
 **Opened:** 2026-11-11 · **Theme:** an instrument can lay its response fields out one per line, each labeled beside its input, for reviews that ask for substantial answers · **Related:** `guide/segment_20L_response_row_break.md` (the alternative, written for comparison), `spec/reviewer-surface.md`, `spec/instruments.md`
 
-**Status: building (author picked 20K over 20L, 2026-11-11).** Rung 2 (the setting) in review; base `9d99fdf` for the cumulative read. The close waits on the author's browser check.
+**Status: building (author picked 20K over 20L, 2026-11-11).** Rung 2 (the setting) merged; rung 3 (the chip) in review, labels *Responses across* / *Responses stacked* for the author to confirm in the browser. Base `9d99fdf` for the cumulative read. The close waits on the author's browser check.
 
 ## Opportunity
 

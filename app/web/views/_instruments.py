@@ -76,6 +76,31 @@ INTRO_LAYOUT_CHOICES: tuple[dict[str, str], ...] = (
 )
 
 
+# Segment 20K — the Responses chip's states, in the cycle's order
+# (``RESPONSE_LAYOUTS``): the label it reads and the title naming the
+# layout. The labels are proposed; the author confirms them at rung 3.
+RESPONSE_LAYOUT_CHOICES: tuple[dict[str, str], ...] = (
+    {
+        "value": "columns",
+        "label": "Responses across",
+        "title": "Responses across: a column for each response field",
+    },
+    {
+        "value": "stacked",
+        "label": "Responses stacked",
+        "title": "Responses stacked: one response field per line, labeled beside its box",
+    },
+)
+
+
+def response_layout_choice_for(instrument: Instrument) -> dict[str, str]:
+    """The Responses chip's state for the instrument: the
+    :data:`RESPONSE_LAYOUT_CHOICES` row of its effective layout
+    (``instruments.effective_response_layout``)."""
+    layout = instruments_service.effective_response_layout(instrument)
+    return next(c for c in RESPONSE_LAYOUT_CHOICES if c["value"] == layout)
+
+
 def intro_layout_for(instrument: Instrument) -> str:
     """The layout the instrument's intro renders in
     (``instruments.effective_intro_layout``)."""
@@ -1023,6 +1048,10 @@ def build_instruments_context(
         "intro_layout_choices": INTRO_LAYOUT_CHOICES,
         "intro_layout_choice_by_instrument": {
             instrument.id: intro_layout_choice_for(instrument) for instrument in instruments
+        },
+        "response_layout_choices": RESPONSE_LAYOUT_CHOICES,
+        "response_layout_choice_by_instrument": {
+            instrument.id: response_layout_choice_for(instrument) for instrument in instruments
         },
         "reviewers_have_profile_link": _reviewers_have_profile_link(db, review_session),
         # Reviewer-surface "Who can see what you wrote (other than

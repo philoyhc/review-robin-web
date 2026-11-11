@@ -1279,6 +1279,25 @@
           if (band2 && window.newModelPlaceHelpRows) { window.newModelPlaceHelpRows(band2); }
           if (window.newModelMarkCardDirty) { window.newModelMarkCardDirty(card); }
         };
+        // 20K — the Responses chip: each click moves to the next
+        // response layout, writes the card's hidden input and marks the
+        // card dirty. A locked card's chip does nothing.
+        window.newModelCycleResponseLayout = window.newModelCycleResponseLayout || function (chip) {
+          var card = chip.closest('[data-instrument-card]');
+          if (!card || card.getAttribute('data-instrument-locked') === 'true') { return; }
+          var input = card.querySelector('[data-response-layout-input]');
+          var choices = JSON.parse(chip.getAttribute('data-response-layout-choices') || '[]');
+          if (!input || !choices.length) { return; }
+          var at = 0;
+          for (var i = 0; i < choices.length; i++) {
+            if (choices[i].value === input.value) { at = i; }
+          }
+          var next = choices[(at + 1) % choices.length];
+          input.value = next.value;
+          chip.textContent = next.label;
+          chip.title = next.title;
+          if (window.newModelMarkCardDirty) { window.newModelMarkCardDirty(card); }
+        };
         window.newModelToggleRuleMode = window.newModelToggleRuleMode || function (btn) {
           // 3-state cycle: not_set → all → filter → not_set → …
           // Each click advances one step; the cycle wraps so the
@@ -1647,6 +1666,23 @@
           <input type="hidden" form="dfsave-{{ instrument.id }}"
                  name="intro_layout" value="{{ _intro_layout.value }}"
                  autocomplete="off" data-intro-layout-input>
+          {# 20K — the Responses chip, a second cycle chip: a column per
+             response field, or one per line. A click moves to the next
+             layout (``newModelCycleResponseLayout``) and writes the
+             hidden input, which rides the card's Save; the preview
+             below does not follow it yet. Locked, as the Layout chip. #}
+          {% set _response_layout = response_layout_choice_by_instrument[instrument.id] %}
+          <span class="pill pill-count tag-chip is-selected"
+                data-response-layout-chip
+                data-response-layout-choices='{{ response_layout_choices | tojson }}'
+                role="button"
+                {% if is_editing %}tabindex="0"{% else %}aria-disabled="true"{% endif %}
+                onclick="newModelCycleResponseLayout(this)"
+                onkeydown="newModelChipKey(this, event)"
+                title="{{ _response_layout.title }}">{{ _response_layout.label }}</span>
+          <input type="hidden" form="dfsave-{{ instrument.id }}"
+                 name="response_layout" value="{{ _response_layout.value }}"
+                 autocomplete="off" data-response-layout-input>
           {# Refresh only makes sense once the operator has
              deliberately set every Band 1 link — running the
              engine on a "Not set" link silently uses an empty
@@ -3801,9 +3837,10 @@
                 region.removeAttribute('aria-hidden');
               }
             });
-            // 19Y Item 1 — the intro layout chip sits outside the lock
-            // regions; locked, it leaves the tab order and reads disabled.
-            card.querySelectorAll('[data-intro-layout-chip]').forEach(function (chip) {
+            // 19Y Item 1 — the intro layout chip, and 20K's Responses
+            // chip, sit outside the lock regions; locked, they leave the
+            // tab order and read disabled.
+            card.querySelectorAll('[data-intro-layout-chip], [data-response-layout-chip]').forEach(function (chip) {
               if (locked) {
                 chip.removeAttribute('tabindex');
                 chip.setAttribute('aria-disabled', 'true');
