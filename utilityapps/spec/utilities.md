@@ -102,11 +102,11 @@ model once ApplyDesk's handoff exists (author, 2026-11-11).
   no answer, an answer it cannot read, or `transfer_in_progress`** keeps the transfer, so trying
   again finds a session already made.
 - Text is inserted with `textContent` only; every response is `no-store`.
-- **Sent to Review Robin** (segment 23B): the sessions this browser
+- **Sent to Review Robin**: the sessions this browser
   created, kept in `localStorage` (Utilities has no database; clearing it
   forgets the list, not the sessions; open tabs keep it in step). Each offers:
   - **Refresh status**: reads Review Robin's status (`spec/handoffs.md`
-    §10, version 3; segment 23C) and shows each section as Review Robin
+    §10, version 3) and shows each section as Review Robin
     reports it, its keys as sent (only the state carries its display
     label): the state, the status row (four rosters, instruments set
     up, assignments, invitations, responses), the Workflow card's reading

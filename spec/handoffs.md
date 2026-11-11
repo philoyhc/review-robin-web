@@ -145,7 +145,7 @@ session. A status read writes nothing: reads never audit.
 
 ## 10. Reading back: status and results
 
-The reverse flow (segment 23B): the sender pulls, on its operator's view,
+The reverse flow: the sender pulls, on its operator's view,
 over the same transport (§1). Nothing is pushed: Review Robin calls no
 other application.
 
@@ -167,7 +167,7 @@ session reference, so a sender reads only what its own handoff made
 
 Refusals are §7's JSON. Every answer is `no-store`, under the package gate.
 
-**Status** (`status_schema_version` 3, segment 23C): Review Robin's own
+**Status** (`status_schema_version` 3): Review Robin's own
 readings of the session, each from the function its pages read, so a
 number the sender sees is the one Review Robin shows. It is assembled by
 a view adapter (`app/web/views/_handoffs.py`). Identity: `session_ref`,
@@ -188,8 +188,9 @@ a view adapter (`app/web/views/_handoffs.py`). Identity: `session_ref`,
   - `setup_complete`, and its `checklist` of `reviewers`, `reviewees` and
     `instruments_set_up`. The card checks setup only in draft, so past
     draft `setup_complete` is true whatever the checklist reads. An
-    incomplete setup offers no **Prepare**, and the Validate rules
-    below refuse an instrument not set up as well.
+    incomplete setup offers no **Prepare**; Validate also raises
+    `instruments.band1_not_set` (error) for an instrument with an
+    assignment-rule link not set.
   - `actions`: the card's buttons showing now, enabled or not (with
     bulk email off, the send buttons show disabled), in order (`revert`,
     `prepare`, `send_invites`, `activate`, `send_reminders`, `close`,
@@ -214,8 +215,8 @@ a view adapter (`app/web/views/_handoffs.py`). Identity: `session_ref`,
     (or there is none), `provisional` is true with `provisional_reason`
     `instruments_not_set_up`: an instrument lacks a visible response
     field or an assignment-rule link, so the assignments may not be the
-    review's yet (author, 2026-11-11). It covers the whole block, not
-    only that instrument's share.
+    review's yet: an instrument not set up generates none. It covers the
+    whole block, not only that instrument's share.
 - `reviewers` and `reviewees`: Monitoring's two tables, listing only who
   has assignments (and, for reviewers, only the active).
   - A reviewer row: `email`, `name`, `state`, `assignments`,
