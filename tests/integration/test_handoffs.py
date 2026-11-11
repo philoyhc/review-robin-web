@@ -5,6 +5,8 @@ happens."""
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import uuid
 from collections.abc import Callable, Iterator
@@ -22,13 +24,16 @@ from app.db.models import (
     AuditEvent,
     EmailOutbox,
     Instrument,
+    InstrumentResponseField,
     Invitation,
+    Response,
     Reviewee,
     Reviewer,
     ReviewSession,
     SessionOperator,
 )
 from app.services import handoffs
+from app.services.instruments import GROUP_KIND_SENTINEL
 from app.web import views
 from app.web.routes_operator import _quick_setup
 
@@ -579,3 +584,232 @@ def test_a_status_read_changes_nothing(client: TestClient, db: Session) -> None:
     db.expire_all()
     assert _count(db, AuditEvent) == before
     assert db.scalars(select(ReviewSession)).one().status == "draft"
+
+
+def _answered_session(db: Session, *, submit: bool) -> tuple[ReviewSession, list[Assignment]]:
+    """The handed-off session with its first reviewer assigned every
+    reviewee, and the first assignment answered (submitted or saved)."""
+    review_session = db.scalars(select(ReviewSession)).one()
+    sid = review_session.id
+    instrument = db.scalars(select(Instrument).where(Instrument.session_id == sid)).one()
+    reviewer = db.scalars(
+        select(Reviewer).where(Reviewer.session_id == sid).order_by(Reviewer.id)
+    ).first()
+    assert reviewer is not None
+    assignments = [
+        Assignment(
+            session_id=sid,
+            reviewer_id=reviewer.id,
+            reviewee_id=reviewee.id,
+            instrument_id=instrument.id,
+        )
+        for reviewee in db.scalars(
+            select(Reviewee).where(Reviewee.session_id == sid).order_by(Reviewee.id)
+        )
+    ]
+    db.add_all(assignments)
+    db.flush()
+    fields = db.scalars(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == instrument.id
+        )
+    ).all()
+    for field in fields:
+        db.add(
+            Response(
+                assignment_id=assignments[0].id,
+                response_field_id=field.id,
+                value=f"=Answer {field.field_key}",
+                submitted_at=datetime.now(UTC) if submit else None,
+            )
+        )
+    db.commit()
+    return review_session, assignments
+
+
+def _rows(reply: Any) -> list[dict[str, str]]:
+    return list(csv.DictReader(io.StringIO(reply.content.decode("utf-8"))))
+
+
+def test_results_csv_carries_submitted_answers_keyed_by_application(
+    client: TestClient, db: Session
+) -> None:
+    bundle = _bundle()
+    _post(client, bundle)
+    review_session, assignments = _answered_session(db, submit=True)
+    reply = client.get(f"/operator/handoffs/{bundle['transfer_id']}/results.csv")
+    assert reply.status_code == 200, reply.text
+    assert reply.headers["content-type"].startswith("text/csv")
+    assert reply.headers["cache-control"] == "no-store"
+    assert reply.headers["etag"].startswith('"sha256-')
+    assert reply.headers["x-review-robin-as-of"]
+    rows = _rows(reply)
+    assert rows and list(rows[0]) == list(handoffs.RESULTS_HEADER)
+    reviewee = db.get(Reviewee, assignments[0].reviewee_id)
+    assert reviewee is not None
+    for row in rows:
+        assert row["RevieweeEmail"] == reviewee.email_or_identifier  # the application ID
+        assert row["InstrumentSeq"] == "1"
+        assert row["Value"] == f"=Answer {row['FieldKey']}"  # as stored
+        assert row["SubmittedAt"]
+    event = db.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == "session.handoff_results_exported")
+    ).one()
+    assert event.detail is not None
+    assert event.detail["counts"] == {"rows": len(rows)}
+    assert event.detail["context"]["file"] == "results.csv"
+
+
+def test_results_csv_leaves_out_saved_drafts(client: TestClient, db: Session) -> None:
+    bundle = _bundle()
+    _post(client, bundle)
+    _answered_session(db, submit=False)
+    reply = client.get(f"/operator/handoffs/{bundle['transfer_id']}/results.csv")
+    assert reply.status_code == 200 and _rows(reply) == []
+
+
+def test_completion_csv_says_where_each_assignment_stands(client: TestClient, db: Session) -> None:
+    for submit, first_state in ((False, "in_progress"), (True, "submitted")):
+        bundle = _bundle(session_suggestion={"name": "S", "code": f"POC-{submit}"})
+        _post(client, bundle)
+        for row in db.scalars(select(Response)).all():
+            db.delete(row)
+        for row in db.scalars(select(Assignment)).all():
+            db.delete(row)
+        for row in db.scalars(select(ReviewSession)).all():
+            if row.code != f"POC-{submit}":
+                db.delete(row)
+        db.commit()
+        _answered_session(db, submit=submit)
+        rows = _rows(client.get(f"/operator/handoffs/{bundle['transfer_id']}/completion.csv"))
+        assert [r["State"] for r in rows] == [first_state] + ["not_started"] * (len(rows) - 1)
+        assert list(rows[0]) == list(handoffs.COMPLETION_HEADER)
+
+
+def test_an_unchanged_snapshot_is_not_modified_and_not_audited(
+    client: TestClient, db: Session
+) -> None:
+    bundle = _bundle()
+    _post(client, bundle)
+    _answered_session(db, submit=True)
+    url = f"/operator/handoffs/{bundle['transfer_id']}/results.csv"
+    first = client.get(url)
+    again = client.get(url)
+    assert first.headers["etag"] == again.headers["etag"]  # stable over unchanged data
+    before = _count(db, AuditEvent)
+    same = client.get(url, headers={"If-None-Match": first.headers["etag"]})
+    assert same.status_code == 304 and same.content == b""
+    assert _count(db, AuditEvent) == before
+
+
+def test_group_scoped_instruments_are_left_out(client: TestClient, db: Session) -> None:
+    bundle = _bundle()
+    _post(client, bundle)
+    _answered_session(db, submit=True)
+    for instrument in db.scalars(select(Instrument)).all():
+        instrument.group_kind = GROUP_KIND_SENTINEL
+    db.commit()
+    for name in ("results.csv", "completion.csv"):
+        assert _rows(client.get(f"/operator/handoffs/{bundle['transfer_id']}/{name}")) == []
+    counts = _status(client, bundle["transfer_id"]).json()["counts"]
+    assert counts["group_instruments"] == 1
+
+
+def test_the_csvs_refuse_an_unlinked_transfer(client: TestClient) -> None:
+    for name in ("results.csv", "completion.csv"):
+        reply = client.get(f"/operator/handoffs/{uuid.uuid4()}/{name}")
+        assert reply.status_code == 404 and reply.json()["error"] == "not_linked"
+
+
+def test_an_answer_edited_after_submit_leaves_its_assignment_in_progress(
+    client: TestClient, db: Session
+) -> None:
+    """Cold read: an edit clears that answer's stamp only, so the
+    assignment is in progress again and the answer leaves results.csv."""
+    bundle = _bundle()
+    _post(client, bundle)
+    _, assignments = _answered_session(db, submit=True)
+    edited = db.scalars(select(Response).where(Response.assignment_id == assignments[0].id)).first()
+    assert edited is not None
+    edited.submitted_at = None
+    db.commit()
+    base = f"/operator/handoffs/{bundle['transfer_id']}"
+    assert _rows(client.get(f"{base}/completion.csv"))[0]["State"] == "in_progress"
+    kept = _rows(client.get(f"{base}/results.csv"))
+    assert all(row["FieldKey"] != edited.response_field.field_key for row in kept)
+
+
+def test_an_assignment_left_blank_is_submitted_with_its_reviewer(
+    client: TestClient, db: Session
+) -> None:
+    """Cold read: a submit stamps only the answers there are, so an
+    assignment of optional fields left blank has no rows; it reads
+    submitted when its reviewer has submitted, by Monitoring's state."""
+    bundle = _bundle()
+    _post(client, bundle)
+    _answered_session(db, submit=True)
+    for field in db.scalars(select(InstrumentResponseField)).all():
+        field.required = False
+    db.commit()
+    rows = _rows(client.get(f"/operator/handoffs/{bundle['transfer_id']}/completion.csv"))
+    assert {row["State"] for row in rows} == {"submitted"}
+
+
+def test_the_csvs_count_what_the_status_counts(client: TestClient, db: Session) -> None:
+    """Cold read: an excluded assignment, or one of a withdrawn reviewer,
+    is in neither CSV, as it is in no status count."""
+    bundle = _bundle()
+    _post(client, bundle)
+    _, assignments = _answered_session(db, submit=True)
+    assignments[1].include = False
+    db.commit()
+    base = f"/operator/handoffs/{bundle['transfer_id']}"
+    total = len(assignments) - 1
+    assert len(_rows(client.get(f"{base}/completion.csv"))) == total
+    assert _status(client, bundle["transfer_id"]).json()["counts"]["assignments"] == total
+    reviewer = db.get(Reviewer, assignments[0].reviewer_id)
+    assert reviewer is not None
+    reviewer.status = "inactive"
+    db.commit()
+    for name in ("completion.csv", "results.csv"):
+        assert _rows(client.get(f"{base}/{name}")) == []
+
+
+def test_the_csvs_need_the_session_now_and_a_finished_transfer(
+    client: TestClient,
+    db: Session,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+    bob: AuthenticatedUser,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle = _bundle()
+    _post(client, bundle)
+    for name in ("results.csv", "completion.csv"):
+        other = make_client(bob).get(f"/operator/handoffs/{bundle['transfer_id']}/{name}")
+        assert other.status_code == 403 and other.json()["error"] == "not_authorized"
+
+    unfinished = _bundle(session_suggestion={"name": "U", "code": "POC-UNFINISHED"})
+
+    class CutOff(BaseException):
+        pass
+
+    async def cut_off(**_: Any) -> None:
+        raise CutOff
+
+    monkeypatch.setattr(_quick_setup, "_run_quick_setup_contents", cut_off)
+    with pytest.raises(BaseException):  # noqa: B017 -- the test client's wrapping varies
+        _post(client, unfinished)
+    monkeypatch.undo()
+    reply = client.get(f"/operator/handoffs/{unfinished['transfer_id']}/results.csv")
+    assert reply.status_code == 409 and reply.json()["error"] == "transfer_incomplete"
+
+
+def test_if_none_match_takes_a_list_a_weak_tag_or_any(client: TestClient, db: Session) -> None:
+    """Cold read: RFC 9110's weak comparison over a list, and *."""
+    bundle = _bundle()
+    _post(client, bundle)
+    url = f"/operator/handoffs/{bundle['transfer_id']}/results.csv"
+    tag = client.get(url).headers["etag"]
+    for header in (f'"other", {tag}', f"W/{tag}", "*"):
+        assert client.get(url, headers={"If-None-Match": header}).status_code == 304
+    assert client.get(url, headers={"If-None-Match": '"other"'}).status_code == 200

@@ -10,6 +10,9 @@ route runs the create through Quick Setup's pipeline.
 
 from __future__ import annotations
 
+import csv
+import hashlib
+import io
 import json
 import uuid
 from dataclasses import dataclass
@@ -19,9 +22,21 @@ from typing import cast
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, Instrument, ReviewSession, User
+from app.db.models import (
+    Assignment,
+    AuditEvent,
+    Instrument,
+    InstrumentResponseField,
+    Response,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+    User,
+)
 from app.services import audit, csv_imports, monitoring, permissions, unit_of_work
+from app.services.date_formatting import iso_in_zone
 from app.services.lifecycle_display import lifecycle_display_label
+from app.services.sessions import resolve_session_timezone
 
 PROTOCOL = "cordware.csv-handoff"
 PROTOCOL_VERSION = 1
@@ -377,3 +392,167 @@ def status(db: Session, review_session: ReviewSession) -> dict[str, object]:
             "reviewers_submitted": summary.submitted,
         },
     }
+
+
+#: The answers a sender fetches (segment 23B): ``responses.csv``'s names
+#: where they overlap, with the instrument's stable ``session_seq`` in
+#: place of its position, and no preamble.
+RESULTS_HEADER = (
+    "ReviewerEmail",
+    "RevieweeEmail",
+    "InstrumentSeq",
+    "InstrumentLabel",
+    "FieldKey",
+    "FieldLabel",
+    "ResponseType",
+    "Value",
+    "SubmittedAt",
+)
+COMPLETION_HEADER = ("ReviewerEmail", "RevieweeEmail", "InstrumentSeq", "State")
+EXPORTED = "session.handoff_results_exported"
+
+
+@dataclass(frozen=True)
+class CsvSnapshot:
+    name: str
+    body: bytes
+    rows: int
+    etag: str
+
+
+def _snapshot(name: str, header: tuple[str, ...], rows: list[tuple[str, ...]]) -> CsvSnapshot:
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, lineterminator="\r\n")
+    writer.writerow(header)
+    writer.writerows(rows)
+    body = buffer.getvalue().encode("utf-8")
+    return CsvSnapshot(name, body, len(rows), f'"sha256-{hashlib.sha256(body).hexdigest()}"')
+
+
+def _counted_assignments(review_session: ReviewSession):
+    """The assignments the status counts: included, of active reviewers
+    (as ``monitoring``), on per-reviewee instruments. Group-scoped ones are
+    left out: what a group means for one application is undefined
+    (interop spec §6.5)."""
+    return (
+        select(Assignment, Reviewer, Reviewee, Instrument)
+        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .join(Instrument, Assignment.instrument_id == Instrument.id)
+        .where(
+            Assignment.session_id == review_session.id,
+            Assignment.include.is_(True),
+            Reviewer.status == "active",
+            Instrument.group_kind.is_(None),
+        )
+    )
+
+
+def results_csv(db: Session, review_session: ReviewSession) -> CsvSnapshot:
+    """Submitted answers, one row per answer, values as stored (author,
+    2026-11-11). Saved drafts are left out (§6.5). A complete snapshot:
+    a receiver reconciles on reviewer, reviewee, instrument and field."""
+    zone = resolve_session_timezone(review_session)
+    stmt = (
+        select(Response, Reviewer, Reviewee, Instrument, InstrumentResponseField)
+        .join(Assignment, Response.assignment_id == Assignment.id)
+        .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+        .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
+        .join(Instrument, Assignment.instrument_id == Instrument.id)
+        .join(InstrumentResponseField, Response.response_field_id == InstrumentResponseField.id)
+        .where(
+            Assignment.session_id == review_session.id,
+            Assignment.include.is_(True),
+            Reviewer.status == "active",
+            Instrument.group_kind.is_(None),
+            Response.submitted_at.is_not(None),
+        )
+        .order_by(
+            Reviewer.email,
+            Reviewee.email_or_identifier,
+            Instrument.session_seq,
+            InstrumentResponseField.order,
+            InstrumentResponseField.id,
+        )
+    )
+    rows = [
+        (
+            reviewer.email,
+            reviewee.email_or_identifier,
+            str(instrument.session_seq),
+            instrument.short_label or "",
+            field.field_key,
+            field.label,
+            field.response_type,
+            response.value if response.value is not None else "",
+            iso_in_zone(response.submitted_at, zone),
+        )
+        for response, reviewer, reviewee, instrument, field in db.execute(stmt)
+    ]
+    return _snapshot("results.csv", RESULTS_HEADER, rows)
+
+
+def completion_csv(db: Session, review_session: ReviewSession) -> CsvSnapshot:
+    """One row per counted assignment and where it stands, read as Review
+    Robin records submission: a submit stamps every saved answer, and an
+    edit afterwards clears that answer's stamp.
+
+    - ``submitted``: it has answers and all are submitted; or it has none
+      and its reviewer has submitted (optional fields left blank leave no
+      rows), by Monitoring's own reviewer state.
+    - ``in_progress``: it has answers, not all submitted.
+    - ``not_started``: no answers, and its reviewer has not submitted.
+    """
+    # Answer rows and submitted rows per assignment. A comprehension, not
+    # dict(): a Result has .keys(), so dict() would read it as a mapping.
+    answers = {
+        assignment_id: (rows, submitted)
+        for assignment_id, rows, submitted in db.execute(
+            select(
+                Response.assignment_id, func.count(Response.id), func.count(Response.submitted_at)
+            )
+            .join(Assignment, Response.assignment_id == Assignment.id)
+            .where(Assignment.session_id == review_session.id)
+            .group_by(Response.assignment_id)
+        )
+    }
+    reviewer_submitted = {
+        progress.reviewer.id
+        for progress in monitoring.per_reviewer_progress(db, review_session)
+        if progress.pill_state == "submitted"
+    }
+    stmt = _counted_assignments(review_session).order_by(
+        Reviewer.email, Reviewee.email_or_identifier, Instrument.session_seq
+    )
+    out: list[tuple[str, ...]] = []
+    for assignment, reviewer, reviewee, instrument in db.execute(stmt):
+        rows, submitted = answers.get(assignment.id, (0, 0))
+        if rows:
+            state = "submitted" if submitted == rows else "in_progress"
+        else:
+            state = "submitted" if reviewer.id in reviewer_submitted else "not_started"
+        out.append(
+            (reviewer.email, reviewee.email_or_identifier, str(instrument.session_seq), state)
+        )
+    return _snapshot("completion.csv", COMPLETION_HEADER, out)
+
+
+def record_export(
+    db: Session,
+    review_session: ReviewSession,
+    user: User,
+    transfer_id: str,
+    snapshot: CsvSnapshot,
+) -> None:
+    """Audit a fetch the sender took away (§6.5 step 2); a ``304`` takes
+    nothing and is not recorded."""
+    audit.write_event(
+        db,
+        event_type=EXPORTED,
+        summary=f"Session {review_session.code}: {snapshot.name} fetched by its sender",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(rows=snapshot.rows),
+        context={"transfer_id": transfer_id, "file": snapshot.name, "etag": snapshot.etag},
+    )
+    unit_of_work.commit(db)

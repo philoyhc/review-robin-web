@@ -10,15 +10,19 @@ pipeline it runs (slices do not import one another).
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from sqlalchemy.orm import Session
 
-from app.db.models import User
+from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import handoffs
 from app.web import breadcrumbs, urls
 from app.web.deps import get_or_create_user
+from app.web.downloads import content_disposition
 from app.web.routes_operator._shared import _templates
 
 router = APIRouter()
@@ -66,3 +70,60 @@ def handoff_status(
         request, f"/operator/sessions/{review_session.public_id}"
     )
     return JSONResponse(body, headers=_NO_STORE)
+
+
+def _not_modified(if_none_match: str | None, etag: str) -> bool:
+    """RFC 9110 §13.1.2: a weak comparison against a list of tags, or *."""
+    if not if_none_match:
+        return False
+    tags = [tag.strip().removeprefix("W/") for tag in if_none_match.split(",")]
+    return "*" in tags or etag in tags
+
+
+def _csv(
+    request: Request,
+    transfer_id: str,
+    user: User,
+    db: Session,
+    build: Callable[[Session, ReviewSession], handoffs.CsvSnapshot],
+) -> Response:
+    try:
+        review_session = handoffs.linked(db, user, transfer_id)
+    except handoffs.HandoffError as exc:
+        return _refused(request, exc)
+    snapshot = build(db, review_session)
+    headers = {
+        **_NO_STORE,
+        "ETag": snapshot.etag,
+        "X-Review-Robin-As-Of": datetime.now(UTC).isoformat(timespec="seconds"),
+    }
+    # Already up to date (interop spec §6.5): nothing taken, nothing audited.
+    if _not_modified(request.headers.get("if-none-match"), snapshot.etag):
+        return Response(status_code=304, headers=headers)
+    handoffs.record_export(db, review_session, user, transfer_id, snapshot)
+    headers["Content-Disposition"] = content_disposition(f"{review_session.code}_{snapshot.name}")
+    return Response(snapshot.body, media_type="text/csv; charset=utf-8", headers=headers)
+
+
+@router.get("/handoffs/{transfer_id}/results.csv", response_model=None)
+def handoff_results(
+    request: Request,
+    transfer_id: str,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """The submitted answers of a handed-off session, for its sender
+    (segment 23B; `spec/handoffs.md`). Audited as an export."""
+    return _csv(request, transfer_id, user, db, handoffs.results_csv)
+
+
+@router.get("/handoffs/{transfer_id}/completion.csv", response_model=None)
+def handoff_completion(
+    request: Request,
+    transfer_id: str,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Where each assignment of a handed-off session stands, for its
+    sender (segment 23B). No answers. Audited as an export."""
+    return _csv(request, transfer_id, user, db, handoffs.completion_csv)
