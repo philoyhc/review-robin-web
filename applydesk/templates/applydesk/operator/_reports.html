@@ -1,0 +1,31 @@
+<section class="card">
+  <h2>Evaluation responses</h2>
+  <p class="muted">Every evaluation of each application in one place: the assessments in Review Robin, pulled back by application{% if exercise.blind %} through the alias key{% endif %}; the interviews; and the reviewer an applicant chose from the pool.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Application</th><th>Assessment <span class="muted">(Review Robin)</span></th><th>Interview</th><th>Pool reviewer</th></tr></thead>
+    <tbody>
+    {% for a in applications if a.state == "Submitted" %}
+      {% set r = responses.get(a.public_id, {}) %}
+      <tr><td>{{ a.title }}<br><span class="muted"><code>{{ a.public_id }}</code></span></td>
+        <td>{{ r.assessment or "Not sent yet" }}</td><td>{{ r.interview or "—" }}</td><td>{{ r.pool or "—" }}</td></tr>
+    {% else %}
+      <tr><td colspan="4" class="muted">No submitted applications yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Pull results from Review Robin</button><button class="btn btn-secondary" type="button" disabled>Record interview scores</button></div>
+</section>
+<div class="grid">
+  <section class="card">
+    <h2>Export bundle</h2>
+    <p>A ZIP for offline selection: a manifest, the applications with both sections, the panels, and every evaluation response collated above.</p>
+    <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Download export</button></div>
+  </section>
+  <section class="card">
+    <h2>Single files</h2>
+    <p class="muted">CSV, one row each.</p>
+    <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Applications</button><button class="btn btn-secondary" type="button" disabled>Panels</button><button class="btn btn-secondary" type="button" disabled>Evaluation responses</button></div>
+  </section>
+</div>

@@ -16,14 +16,14 @@ router = APIRouter(prefix="/operator", dependencies=[Depends(placeholders_only)]
 #: An exercise's operator pages beyond Home, each a partial of
 #: `operator/section.html`, with its heading.
 #: The tabs as the author set them (2026-11-12): Review kept, between
-#: Panels and Report, as a seventh.
+#: Panels and Reports, as a seventh.
 SECTIONS: dict[str, str] = {
     "setup": "Setup",
     "form": "Application form",
     "applications": "Applications",
     "panels": "Panels",
     "review": "Assessment in Review Robin",
-    "report": "Report",
+    "reports": "Reports",
 }
 
 
@@ -69,6 +69,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         assessors=sample_data.assessors_of(exercise.public_id),
         pool=sample_data.pool_of(exercise.public_id),
         interviewers=sample_data.interviewers_of(exercise.public_id),
+        responses=sample_data.RESPONSES,
         shown=sample_data.SHOWN_TO_REVIEWERS,
         not_shown=sample_data.NOT_SHOWN_TO_REVIEWERS,
     )

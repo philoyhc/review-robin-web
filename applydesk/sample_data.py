@@ -189,6 +189,23 @@ NOT_SHOWN_TO_REVIEWERS: tuple[str, ...] = (
 )
 
 
+# Evaluation responses by application, from every source (author,
+# 2026-11-12: Reports collates them): Review Robin's assessments, the
+# interviews, and the reviewer an applicant chose from the pool.
+RESPONSES: dict[str, dict[str, str]] = {
+    "m3qx8vkt2n": {
+        "assessment": "2 of 2 submitted · mean 4.5 of 5",
+        "interview": "Not yet",
+        "pool": "Received from Dr Hana Ito",
+    },
+    "h6zr2tdw9p": {
+        "assessment": "1 of 2 submitted",
+        "interview": "Not yet",
+        "pool": "Awaited from Dr Omar Aziz",
+    },
+}
+
+
 def exercise(public_id: str) -> Exercise | None:
     return next((e for e in EXERCISES if e.public_id == public_id), None)
 

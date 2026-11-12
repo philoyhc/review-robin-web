@@ -4,7 +4,7 @@
   <tbody>
   {% for a in applications %}
     <tr><td>{{ a.applicant }}<br><span class="muted">{{ a.email }}</span></td><td>{{ a.title }}</td><td><code>{{ a.public_id }}</code></td><td>{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</td><td>{{ a.submitted or "—" }}</td>
-      <td>{% if a.state == "Submitted" %}Generated{% else %}<span class="muted">—</span>{% endif %}</td></tr>
+      <td>{% if a.state == "Submitted" %}<a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/profiles/' ~ a.profile_id) }}">Open</a>{% else %}<span class="muted">—</span>{% endif %}</td></tr>
   {% else %}
     <tr><td colspan="6" class="muted">No applications yet.</td></tr>
   {% endfor %}

@@ -27,7 +27,7 @@ PAGES = (
     f"/applydesk/operator/exercises/{EX}",
     *(
         f"/applydesk/operator/exercises/{EX}/{section}"
-        for section in ("setup", "form", "applications", "panels", "review", "report")
+        for section in ("setup", "form", "applications", "panels", "review", "reports")
     ),
     f"/applydesk/operator/exercises/{BLIND}",  # Review stage: "Go to Review"
     f"/applydesk/operator/exercises/{BLIND}/setup",  # blind review on
@@ -243,15 +243,15 @@ def test_withdraw_is_destructive(client: TestClient) -> None:
 
 def test_the_operator_tabs_are_the_authors_seven(client: TestClient) -> None:
     """Author, 2026-11-12: Home, Setup, Form, Applications, Panels and
-    Report, with Review kept as a seventh after Panels."""
+    Reports, with Review kept as a seventh, between Panels and Reports."""
     text = client.get(f"/applydesk/operator/exercises/{EX}").text
     row = text[text.index('<nav class="tabs"') :]
     row = row[: row.index("</nav>")]
     tabs = re.findall(r"<a [^>]*>([^<]+)</a>", row)
-    assert tabs == ["Home", "Setup", "Form", "Applications", "Panels", "Review", "Report"]
+    assert tabs == ["Home", "Setup", "Form", "Applications", "Panels", "Review", "Reports"]
 
 
-@pytest.mark.parametrize("old", ["settings", "assessors", "timeline", "export"])
+@pytest.mark.parametrize("old", ["settings", "assessors", "timeline", "export", "report"])
 def test_the_retired_sections_are_gone(client: TestClient, old: str) -> None:
     assert client.get(f"/applydesk/operator/exercises/{EX}/{old}").status_code == 404
 
@@ -288,9 +288,8 @@ def test_the_form_page_previews_the_form(client: TestClient) -> None:
 def test_applications_generates_applicant_profiles(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/applications").text
     assert "Generate applicant profiles" in text
-    # Ruling 9 opens the profile page to its assessors; the operator's list
-    # does not link it (the cold read).
-    assert "/profiles/" not in text
+    # Operators open every profile (author, 2026-11-12).
+    assert "/applydesk/me/exercises/wa9juxbc2t/profiles/p3bd7kq2wx" in text
 
 
 def test_panels_holds_the_three_rosters(client: TestClient) -> None:
@@ -303,9 +302,19 @@ def test_panels_holds_the_three_rosters(client: TestClient) -> None:
     assert "No pool: applicants do not choose a reviewer" in blind
 
 
-def test_report_exports(client: TestClient) -> None:
-    text = client.get(f"/applydesk/operator/exercises/{EX}/report").text
+def test_reports_collates_every_evaluation_and_exports(client: TestClient) -> None:
+    """Author, 2026-11-12: Reports collates the evaluation responses,
+    Review Robin's included, beside the data export."""
+    text = client.get(f"/applydesk/operator/exercises/{EX}/reports").text
+    assert "<h2>Evaluation responses</h2>" in text
+    for column in ("Assessment", "Interview", "Pool reviewer"):
+        assert f"<th>{column}" in text
+    assert "2 of 2 submitted · mean 4.5 of 5" in text  # from Review Robin
+    assert "Received from Dr Hana Ito" in text  # the pool reviewer
+    assert "Pull results from Review Robin" in text
     assert "<h2>Export bundle</h2>" in text and "Download export" in text
+    review = client.get(f"/applydesk/operator/exercises/{EX}/review").text
+    assert 'href="/applydesk/operator/exercises/wa9juxbc2t/reports"' in review
 
 
 def test_a_draft_exercise_s_timeline_reads_cleanly(client: TestClient) -> None:

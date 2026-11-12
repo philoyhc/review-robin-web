@@ -97,7 +97,7 @@ def exercise_tabs(exercise_id: str) -> tuple[Mapping[str, str], ...]:
         {"label": "Applications", "path": f"{base}/applications"},
         {"label": "Panels", "path": f"{base}/panels"},
         {"label": "Review", "path": f"{base}/review"},
-        {"label": "Report", "path": f"{base}/report"},
+        {"label": "Reports", "path": f"{base}/reports"},
     )
 
 
