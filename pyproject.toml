@@ -124,6 +124,7 @@ root = "applydesk/tests"
 extraPaths = ["."]
 reportMissingParameterType = "none"
 reportUnknownArgumentType = "none"
+reportUnknownLambdaType = "none"
 reportUnknownMemberType = "none"
 reportUnknownParameterType = "none"
 reportUnknownVariableType = "none"

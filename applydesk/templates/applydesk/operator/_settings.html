@@ -1,0 +1,30 @@
+<div class="grid">
+  <section class="card">
+    <h2>Details</h2>
+    <dl class="facts">
+      <dt>Name</dt><dd>{{ exercise.name }}</dd>
+      <dt>Summary</dt><dd>{{ exercise.summary }}</dd>
+      <dt>Contact</dt><dd>fellowships@example.edu</dd>
+    </dl>
+  </section>
+  <section class="card">
+    <h2>Dates and stages</h2>
+    <dl class="facts">
+      <dt>Opens</dt><dd>{{ exercise.opens }}</dd>
+      <dt>Application stage ends</dt><dd>{{ exercise.application_stage_ends }}</dd>
+      <dt>Expected outcome</dt><dd>{{ exercise.expected_outcome }}</dd>
+    </dl>
+    <p class="muted">The end of the Application stage is a hard deadline: no application starts, submits or resubmits after it.</p>
+  </section>
+  <section class="card">
+    <h2>Who may apply</h2>
+    <p>{{ exercise.eligibility }}</p>
+    <p class="muted">Invitation only hides the exercise from everyone not on its list, direct links included.</p>
+  </section>
+  <section class="card">
+    <h2>Review</h2>
+    <p>Blind review: <strong>{{ "On" if exercise.blind else "Off" }}</strong></p>
+    <p class="muted">On, assessors' profile pages redact the applicant's name and identifiers, and Review Robin receives an alias key in place of each application ID.</p>
+  </section>
+</div>
+<div class="btnrow"><button class="btn btn-primary" type="button" disabled>Save</button></div>

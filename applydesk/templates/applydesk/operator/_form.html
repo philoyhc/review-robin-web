@@ -1,0 +1,13 @@
+<div class="grid">
+  <section class="card">
+    <h2>Shown to reviewers</h2>
+    <p class="muted">What assessors read on the profile page, and what an applicant is told reviewers will see.</p>
+    <ul>{% for label, help in shown %}<li>{{ label }}{% if help %} <span class="muted">— {{ help }}</span>{% endif %}</li>{% endfor %}</ul>
+  </section>
+  <section class="card">
+    <h2>Not shown to reviewers</h2>
+    <p class="muted">The applicant and this exercise's operators only.</p>
+    <ul>{% for label in not_shown %}<li>{{ label }}</li>{% endfor %}</ul>
+  </section>
+</div>
+<div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Add a question</button><button class="btn btn-primary" type="button" disabled>Save</button></div>

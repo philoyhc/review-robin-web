@@ -69,7 +69,8 @@ Taken 2026-11-12 at `9bf80d5`.
 ## Status
 
 Building. Base `573ffa3` (`main` before rung 2) for the cumulative read.
-- Rung 2: item 1 as planned; the favicon is the author's proposed ApplyDesk icon (2026-11-02), a white sheet with a tick on rose `#be123c`.
+- Rung 2 (#3818): item 1 as planned; the favicon is the author's ApplyDesk icon (2026-11-02, kept in Cordware's favicon sources), a white sheet with a tick on rose `#be123c`.
+- Rung 3: the gate admits the platform super-admin only when deployed, not a preview list as Residential's: ApplyDesk is not shipped, so it needs none yet. One template serves the seven operator sections, each a partial.
 
 ## PR ladder
 

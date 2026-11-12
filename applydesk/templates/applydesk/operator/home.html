@@ -1,0 +1,42 @@
+{% extends "applydesk/base.html" %}
+{% block title %}{{ exercise.name }}{% endblock %}
+{% block content %}
+{% include "applydesk/operator/_heading.html" %}
+<p class="lede">{{ exercise.summary }}</p>
+{% include "applydesk/_placeholder.html" %}
+{% set submitted = applications | selectattr("state", "equalto", "Submitted") | list %}
+<div class="grid">
+  <section class="card">
+    <h2>Where it stands</h2>
+    <dl class="facts">
+      <dt>Exercise ID</dt><dd><code>{{ exercise.public_id }}</code></dd>
+      <dt>Opens</dt><dd>{{ exercise.opens }}</dd>
+      <dt>Application stage ends</dt><dd>{{ exercise.application_stage_ends }} (a hard deadline)</dd>
+      <dt>Expected outcome</dt><dd>{{ exercise.expected_outcome }}</dd>
+      <dt>Who may apply</dt><dd>{{ exercise.eligibility }}</dd>
+    </dl>
+  </section>
+  <section class="card">
+    <h2>Counts</h2>
+    <dl class="facts">
+      <dt>Applications</dt><dd>{{ applications | length }}</dd>
+      <dt>Submitted</dt><dd>{{ submitted | length }}</dd>
+      <dt>Drafts</dt><dd>{{ applications | selectattr("state", "equalto", "Draft") | list | length }}</dd>
+      <dt>Assessors</dt><dd>{{ assessors | length }}</dd>
+    </dl>
+  </section>
+  <section class="card">
+    <h2>Next step</h2>
+    {% if exercise.state == "Draft" %}
+      <p>Finish the settings and the applicant form, then publish.</p>
+      <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Publish</button></div>
+    {% elif exercise.stage == "Application" %}
+      <p>Applications are open. When the Application stage ends, start the Review stage and send the submitted applications to Review Robin.</p>
+      <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Start the Review stage</button></div>
+    {% else %}
+      <p>Assessment is under way in Review Robin. Pull its results back from the Review page.</p>
+      <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/review') }}">Go to Review</a></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

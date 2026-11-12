@@ -1,7 +1,8 @@
 # ApplyDesk as the host sees it
 
-> **Built so far:** segment AD1 item 1 built "The registry entry",
-> "Health" and "Running alone". "The URL map" is item 2's contract.
+> **Built so far:** segment AD1 built "The registry entry", "Health",
+> "Running alone" (item 1) and "The URL map" as placeholders on sample
+> data (item 2), pending the author's approval in a browser.
 
 ApplyDesk's contract with the Cordware host. The host's side is
 `cordware/spec/host.md`; this file states only what ApplyDesk adds. The
@@ -38,7 +39,19 @@ mounts it beside every other application. Its records are stamped
 
 ## The URL map
 
-Item 2's contract (`applydesk/guide/segment_AD1_skeleton.md`, "The URL
-map"): operators under `/operator/exercises`, participants under `/me`,
-an exercise named by a 10-character public ID in RRW's alphabet, and a
-profile page named by its own ID, never the application's.
+The table is `applydesk/guide/segment_AD1_skeleton.md`, "The URL map":
+operators under `/operator/exercises`, participants under `/me`.
+
+- **Public IDs** (`applydesk/ids.py`): 10 symbols from RRW's alphabet,
+  `23456789abcdefghjkmnpqrstuvwxyz`, drawn at random. A path whose ID has
+  any other shape, or names nothing, is a 404 before anything is read.
+- **The profile page** is named by its own ID, never the application's,
+  and shows only the *Shown to reviewers* section. In a blind exercise it
+  redacts the applicant's name and identifiers.
+- **The chrome** is the shared bar (`docs/header_chrome.md`): the app
+  icon, the workspace's top line over the area, a switcher of *Exercises*
+  and *My ApplyDesk* then *All applications*, the Light/Dark toggle and the
+  account menu. An exercise's operator pages add a row of tabs.
+- **The gate** (`applydesk/gate.py`): every route but `/health` answers
+  anyone on a local run and, deployed, only the platform super-admin,
+  with a 404 for everyone else, until the segments that wire them.

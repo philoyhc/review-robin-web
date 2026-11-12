@@ -1,0 +1,23 @@
+{% extends "applydesk/base.html" %}
+{% block content %}
+<div class="ptitle"><h1>Exercises</h1><button class="btn btn-primary" type="button" disabled>New exercise</button></div>
+<p class="lede">Each call for applications is an exercise, named by its own ID.</p>
+{% include "applydesk/_placeholder.html" %}
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Exercise</th><th>ID</th><th>State</th><th>Stage</th><th>Applications</th><th>Application stage ends</th></tr></thead>
+  <tbody>
+  {% for e in exercises %}
+    <tr>
+      <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a></td>
+      <td><code>{{ e.public_id }}</code></td>
+      <td>{% with value = e.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</td>
+      <td>{{ e.stage }}</td>
+      <td>{{ applications(e.public_id) | length }}</td>
+      <td>{{ e.application_stage_ends }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

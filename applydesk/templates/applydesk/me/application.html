@@ -1,0 +1,21 @@
+{% extends "applydesk/base.html" %}
+{% block title %}{{ application.title }}{% endblock %}
+{% block content %}
+<div class="ptitle"><h1>{{ application.title }}</h1>{% with value = application.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</div>
+<p class="lede">{{ exercise.name }}</p>
+{% include "applydesk/_placeholder.html" %}
+<div class="section">
+  <h3>Shown to reviewers</h3>
+  <p class="muted">Assessors read this part.</p>
+  <dl class="facts">{% for label, help in shown %}<dt>{{ label }}</dt><dd>{{ application.title if loop.first else help }}</dd>{% endfor %}</dl>
+</div>
+<div class="section">
+  <h3>Not shown to reviewers</h3>
+  <p class="muted">Only you and this exercise's operators see this part.</p>
+  <dl class="facts">{% for label in not_shown %}<dt>{{ label }}</dt><dd class="muted">—</dd>{% endfor %}</dl>
+</div>
+<div class="btnrow">
+  {% if application.state == "Draft" %}<button class="btn btn-secondary" type="button" disabled>Save draft</button><button class="btn btn-primary" type="button" disabled>Submit</button>
+  {% else %}<button class="btn btn-secondary" type="button" disabled>Withdraw</button>{% endif %}
+</div>
+{% endblock %}
