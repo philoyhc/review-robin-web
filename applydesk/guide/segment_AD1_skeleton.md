@@ -66,6 +66,11 @@ Taken 2026-11-12 at `9bf80d5`.
 | Packaging | `applydesk*` absent from `packages.find` | `grep -n include pyproject.toml` |
 | CI lanes | `applydesk/` already in `APP_DIRS` | `grep -n APP_DIRS tools/ci_lanes.py` |
 
+## Status
+
+Building. Base `573ffa3` (`main` before rung 2) for the cumulative read.
+- Rung 2: item 1 as planned; the favicon is the author's proposed ApplyDesk icon (2026-11-02), a white sheet with a tick on rose `#be123c`.
+
 ## PR ladder
 
 1. **Plan and rulings** (this file and `applydesk/guide/todo_master.md`).

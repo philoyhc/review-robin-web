@@ -18,10 +18,11 @@ ROOT = Path(__file__).resolve().parents[2]
 
 # Package directory -> top-level packages it must never import.
 FORBIDDEN = {
-    "app": {"residentialapps", "utilityapps"},
-    "residentialapps": {"app", "utilityapps"},
-    "utilityapps": {"app", "residentialapps"},
-    "cordware": {"app", "residentialapps", "utilityapps"},
+    "app": {"applydesk", "residentialapps", "utilityapps"},
+    "applydesk": {"app", "residentialapps", "utilityapps"},
+    "residentialapps": {"app", "applydesk", "utilityapps"},
+    "utilityapps": {"app", "applydesk", "residentialapps"},
+    "cordware": {"app", "applydesk", "residentialapps", "utilityapps"},
 }
 
 _DYNAMIC = {"import_module", "__import__"}
@@ -111,12 +112,12 @@ def imported_modules(source: str) -> set[str]:
 def test_no_application_imports_the_host_entry_point() -> None:
     """`cordware.main` builds the host when imported (segment 21C):
     applications import `cordware.identity`, never the entry point.
-    Residential's and Utilities' tests build the host on purpose, as RRW's
-    root `tests/` do (`residentialapps/spec/architecture.md`)."""
-    tests = (ROOT / "residentialapps" / "tests", ROOT / "utilityapps" / "tests")
+    ApplyDesk's, Residential's and Utilities' tests build the host on
+    purpose, as RRW's root `tests/` do (`residentialapps/spec/architecture.md`)."""
+    tests = tuple(ROOT / p / "tests" for p in ("applydesk", "residentialapps", "utilityapps"))
     found = [
         str(path.relative_to(ROOT))
-        for package in ("app", "residentialapps", "utilityapps")
+        for package in ("app", "applydesk", "residentialapps", "utilityapps")
         if (ROOT / package).is_dir()
         for path in sorted((ROOT / package).rglob("*.py"))
         if not any(path.is_relative_to(t) for t in tests)

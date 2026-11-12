@@ -55,7 +55,7 @@ jobs:
       matrix:
         shard:
           - name: unit
-            pytest_args: "tests cordware/tests residentialapps/tests utilityapps/tests --ignore=tests/integration --ignore=tests/browser"
+            pytest_args: "tests cordware/tests applydesk/tests residentialapps/tests utilityapps/tests --ignore=tests/integration --ignore=tests/browser"
           - name: integration
             pytest_args: "tests/integration"
           - name: browser
