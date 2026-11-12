@@ -108,6 +108,19 @@ SUMMARY_CASES: list[tuple[FormCard, str]] = [
         FormCard("field", "decimal", min="0.00", max="5.00", step="0.01"),
         "Decimal · 0.00 to 5.00, step 0.01",
     ),
+    (FormCard("field", "people"), "Select people · Institution-wide"),
+    (
+        FormCard("field", "people", min="1", max="3", pool="panel:Panel A"),
+        "Select people · 1 to 3 people · Panel A",
+    ),
+    (
+        FormCard("field", "people", min="1", max="1", pool="pool"),
+        "Select people · exactly 1 person · Reviewer pool",
+    ),
+    (
+        FormCard("field", "people", min="2", pool="interviewers"),
+        "Select people · at least 2 people · Interviewers",
+    ),
     (FormCard("field", "text"), "Title and Description · display only"),
 ]
 
@@ -124,3 +137,24 @@ def test_a_photo_is_kept_600_px_on_its_longer_side() -> None:
     # Half up, as the page's Math.round, and ASCII digits only.
     assert kept_size("16", "3") == (600, 113)
     assert kept_size("\uff14", "5") is None
+
+
+def test_a_people_card_offers_the_exercise_s_pools(client: TestClient) -> None:
+    text = client.get(FORM).text
+    for label in ("Institution-wide", "Panel A", "Panel B", "Reviewer pool", "Interviewers"):
+        assert f">{label}</option>" in text
+    pools = sample_data.people_pools("wa9juxbc2t")
+    assert list(pools) == ["institution", "panel:Panel A", "panel:Panel B", "pool", "interviewers"]
+    assert ("Daniel Koh", "daniel.koh@example.edu") in pools["institution"]
+    assert pools["pool"] == [(e.name, e.email) for e in sample_data.pool_of("wa9juxbc2t")]
+    # A blank exercise has no rosters yet: Institution-wide alone.
+    assert list(sample_data.people_pools("n5wg8tjr3e")) == ["institution"]
+
+
+def test_a_pool_the_exercise_lacks_reads_as_institution_wide(client: TestClient) -> None:
+    # k7mfr3pq8z has panels and an interviewer, but no reviewer pool.
+    card = next(c for c in sample_data.form_cards("k7mfr3pq8z") if c.type == "people")
+    assert card.pool == "institution"
+    assert card_summary(card) == "Select people · exactly 1 person · Institution-wide"
+    text = client.get("/applydesk/operator/exercises/k7mfr3pq8z/form").text
+    assert "Select people · exactly 1 person · Institution-wide" in text

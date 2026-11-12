@@ -21,12 +21,12 @@
       {% for c in cards %}
         {% if c.kind == "section" %}{{ fc.section(c) }}
         {% elif c.kind == "pagebreak" %}{{ fc.pagebreak() }}
-        {% else %}{{ fc.field(c, summary, kept_size, card_types, open=single) }}{% endif %}
+        {% else %}{{ fc.field(c, summary, kept_size, card_types, people, pool_label, open=single) }}{% endif %}
       {% endfor %}
     </div>
     {# What + New, + Section and + Page break add: the same macros as the
        server's own cards. #}
-    <template id="fb-new-field">{{ fc.field(blank, summary, kept_size, card_types, open=True) }}</template>
+    <template id="fb-new-field">{{ fc.field(blank, summary, kept_size, card_types, people, pool_label, open=True) }}</template>
     <template id="fb-new-section">{{ fc.section(blank_section, open=True) }}</template>
     <template id="fb-new-pagebreak">{{ fc.pagebreak() }}</template>
   </div>
@@ -70,7 +70,7 @@
   }
   function group(card) {
     var t = card.dataset.type;
-    return t === "string" ? "string" : (t === "integer" || t === "decimal") ? "number" : "";
+    return t === "string" ? "string" : (t === "integer" || t === "decimal") ? "number" : t === "people" ? "people" : "";
   }
   function pressed(card, f) {
     var on = card.querySelector('[data-f="' + f + '"][aria-pressed="true"]');
@@ -100,6 +100,12 @@
     if (t === "list") {
       var opts = val(card, "options").split(",").map(function (o) { return o.trim(); }).filter(Boolean).join(", ");
       return "List · " + (pressed(card, "exclusive") ? "choose one" : "choose any") + " · " + (opts || "no options yet");
+    }
+    if (t === "people") {
+      var lo = val(card, "min"), hi = val(card, "max");
+      var who = span(lo, hi, (hi || lo) === "1" ? "person" : "people");
+      var pool = card.querySelector('[data-f="pool"]');
+      return "Select people · " + [who, pool.options[pool.selectedIndex].text].filter(Boolean).join(" · ");
     }
     if (t === "photo") {
       var k = kept(val(card, "ratio_w"), val(card, "ratio_h"));
@@ -216,6 +222,7 @@
       added = item.cloneNode(true);
       // A clone keeps typed values, but not a select's current choice.
       added.querySelector('[data-f="type"]').value = item.querySelector('[data-f="type"]').value;
+      added.querySelector('[data-f="pool"]').value = item.querySelector('[data-f="pool"]').value;
       setOpen(added, true);
     } else if (what === "delete") {
       var next = item.nextElementSibling || item.previousElementSibling;
@@ -308,6 +315,7 @@
     card.querySelectorAll("[data-g], [data-f=options]").forEach(function (i) { i.value = ""; });
     card.querySelector('[data-f="ratio_w"]').value = "4";
     card.querySelector('[data-f="ratio_h"]').value = "5";
+    card.querySelector('[data-f="pool"]').value = "institution";
     card.querySelectorAll('[data-f="exclusive"]').forEach(function (x) { x.setAttribute("aria-pressed", x.dataset.v === "true" ? "true" : "false"); });
     refresh(card); drawOutline();
   });
@@ -336,6 +344,7 @@
           kind: kind, type: card.dataset.type, label: val(card, "label"), help: val(card, "help"),
           min: val(card, "min"), max: val(card, "max"), step: val(card, "step"), options: val(card, "options"),
           exclusive: pressed(card, "exclusive"), required: pressed(card, "required"), shown: pressed(card, "shown"),
+          pool: card.querySelector('[data-f="pool"]').value,
           ratio_w: val(card, "ratio_w"), ratio_h: val(card, "ratio_h"), kept: kept(val(card, "ratio_w"), val(card, "ratio_h"))
         };
       })

@@ -273,11 +273,12 @@ _FILL = """([card, c]) => {
   type.value = c.type;
   type.dispatchEvent(new Event("change", { bubbles: true }));
   const num = ["integer", "decimal"].includes(c.type);
-  const g = c.type === "string" ? "string" : num ? "number" : "";
+  const g = c.type === "string" ? "string" : num ? "number" : c.type === "people" ? "people" : "";
   for (const f of ["min", "max", "step", "options", "ratio_w", "ratio_h"]) {
     const el = card.querySelector(`[data-f="${f}"]:not([data-g]), [data-f="${f}"][data-g="${g}"]`);
     if (el) el.value = c[f];
   }
+  card.querySelector('[data-f="pool"]').value = c.pool;
   card.querySelector(`[data-f="exclusive"][data-v="${c.exclusive}"]`).click();
   card.querySelector('[data-f="min"]').dispatchEvent(new Event("input", { bubbles: true }));
   return card.querySelector('[data-sum="type"]').textContent;
@@ -301,7 +302,7 @@ def test_the_script_s_summaries_match_the_server_s(page: Page) -> None:
     for c, expected in SUMMARY_CASES:
         fields = {
             k: getattr(c, k)
-            for k in ("type", "min", "max", "step", "options", "ratio_w", "ratio_h")
+            for k in ("type", "min", "max", "step", "options", "ratio_w", "ratio_h", "pool")
         }
         fields["exclusive"] = "true" if c.exclusive else "false"
         assert page.evaluate(_FILL, [card, fields]) == expected, c
@@ -467,3 +468,98 @@ def test_the_form_title_is_larger_than_a_card_s(page: Page) -> None:
     size = "e => parseFloat(getComputedStyle(e).fontSize)"
     title = page.locator('[data-sum="title"]').evaluate(size)
     assert title > _card(page, "Summary").locator('[data-sum="label"]').evaluate(size)
+
+
+# --- Iteration: Select people ---
+def _people_box(page: Page, label: str) -> Locator:
+    page.goto(FORM)
+    page.locator("[data-fb-preview]").click()
+    return page.locator("#fb-preview").get_by_role("textbox", name=label)
+
+
+def test_select_people_turns_names_into_pills(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Preferred reviewer")
+    card.locator("[data-fc-toggle]").click()
+    # Open the question to anyone in the institution, up to three.
+    card.locator('[data-f="max"][data-g="people"]').fill("3")
+    card.locator('[data-f="pool"]').select_option("institution")
+    assert (
+        card.locator('[data-sum="type"]').text_content()
+        == "Select people · 1 to 3 people · Institution-wide"
+    )
+    page.locator("[data-fb-preview]").click()
+    preview = page.locator("#fb-preview")
+    box = preview.get_by_role("textbox", name="Preferred reviewer")
+    box.press_sequentially("Daniel Koh, PRIYA.RAMAN@example.edu, Nobody Here,")
+    tokens = preview.locator(".token")
+    assert [t.split("×")[0].strip() for t in tokens.all_inner_texts()] == [
+        "Daniel Koh",
+        "Priya Raman",
+    ]
+    assert box.input_value().startswith("Nobody Here")
+    assert "Not found in the institution: Nobody Here." in preview.inner_text()
+    box.fill("")
+    box.press_sequentially("Zoe Tan")
+    box.press("Enter")
+    assert tokens.count() == 3
+    # Three is the most: the box takes no more until one is removed.
+    assert not box.is_visible()
+    preview.get_by_role("button", name="Remove Daniel Koh").click()
+    assert tokens.count() == 2 and box.is_visible()
+
+
+def test_select_people_keeps_to_its_pool(page: Page) -> None:
+    box = _people_box(page, "Preferred reviewer")
+    preview = page.locator("#fb-preview")
+    assert "Choose 1 person from the reviewer pool." in preview.inner_text()
+    box.press_sequentially("Daniel Koh,")
+    assert preview.locator(".token").count() == 0
+    assert "Not found in the reviewer pool: Daniel Koh." in preview.inner_text()
+    box.fill("")
+    box.press_sequentially("Dr Omar Aziz,")
+    assert preview.locator(".token").count() == 1 and not box.is_visible()
+
+
+def test_select_people_drops_names_past_the_most_and_says_so(page: Page) -> None:
+    box = _people_box(page, "Preferred reviewer")
+    preview = page.locator("#fb-preview")
+    box.focus()
+    box.fill("Dr Omar Aziz, Dr Hana Ito,")  # pasted at once
+    assert preview.locator(".token").count() == 1
+    assert "At most 1 person; not added: Dr Hana Ito." in preview.inner_text()
+    # Nothing is left in a hidden box; focus moved to the pill's button.
+    hidden = preview.locator(".token-input")
+    assert not hidden.is_visible() and hidden.input_value() == ""
+    assert page.evaluate("document.activeElement.getAttribute('aria-label')") == (
+        "Remove Dr Omar Aziz"
+    )
+    # The group keeps the question's name once the box is full.
+    group = preview.get_by_role("group", name="Preferred reviewer")
+    assert group.count() == 1
+
+
+def test_select_people_says_already_chosen(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Preferred reviewer")
+    card.locator("[data-fc-toggle]").click()
+    card.locator('[data-f="max"][data-g="people"]').fill("")
+    page.locator("[data-fb-preview]").click()
+    preview = page.locator("#fb-preview")
+    box = preview.get_by_role("textbox", name="Preferred reviewer")
+    box.press_sequentially("Dr Ruth Kahn, ruth.kahn@example.edu,")
+    assert preview.locator(".token").count() == 1
+    assert "Already chosen: Dr Ruth Kahn." in preview.inner_text()
+
+
+def test_a_full_box_keeps_no_unfound_text(page: Page) -> None:
+    # Codex: an unfound name before the one that fills the box was left
+    # in the hidden input.
+    box = _people_box(page, "Preferred reviewer")
+    preview = page.locator("#fb-preview")
+    box.focus()
+    box.fill("Nobody Here, Dr Omar Aziz,")
+    assert preview.locator(".token").count() == 1
+    hidden = preview.locator(".token-input")
+    assert not hidden.is_visible() and hidden.input_value() == ""
+    assert "not added: Nobody Here." in preview.inner_text()

@@ -65,6 +65,7 @@ def form_preview(request: Request, exercise_id: str) -> Response:
         area="Exercises",
         exercise=exercise,
         snapshot=sample_data.form_snapshot(exercise.public_id),
+        people=sample_data.people_pools(exercise.public_id),
     )
 
 
@@ -91,6 +92,8 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         card_types=sample_data.CARD_TYPES,
         summary=sample_data.card_summary,
         kept_size=sample_data.kept_size,
+        people=sample_data.people_pools(exercise.public_id),
+        pool_label=sample_data.pool_label,
         blank=sample_data.FormCard("field"),
         blank_section=sample_data.FormCard("section"),
     )
