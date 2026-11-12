@@ -1,3 +1,9 @@
+{% if exercise.state == "Draft" %}
+<section class="card">
+  <h2>Not yet</h2>
+  <p class="muted">Nothing to send: the exercise is a draft. Once it is published and its Application stage ends, the submitted applications go to Review Robin from here.</p>
+</section>
+{% else %}
 <div class="grid">
   <section class="card">
     <h2>Send to Review Robin</h2>
@@ -14,3 +20,4 @@
     <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Pull results</button><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/reports') }}">Go to Reports</a></div>
   </section>
 </div>
+{% endif %}

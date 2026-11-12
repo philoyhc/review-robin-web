@@ -1,4 +1,4 @@
-"""Sample data for the placeholders (segment AD1, item 2): three exercises,
+"""Sample data for the placeholders (segment AD1, item 2): four exercises,
 their applications, panels and profile pages, so every page of the URL
 map has something to show. Names and addresses are invented; IDs have the
 public-ID shape (`applydesk/ids.py`)."""
@@ -94,6 +94,21 @@ EXERCISES: tuple[Exercise, ...] = (
         application_stage_ends="Not set",
         expected_outcome="Not set",
         summary="Placements with partner organizations over the summer vacation.",
+    ),
+    # Just created: a name and nothing else, awaiting setup (author,
+    # 2026-11-12).
+    Exercise(
+        public_id="n5wg8tjr3e",
+        code="",
+        name="Graduate Travel Grant 2027",
+        state="Draft",
+        stage="Application",
+        eligibility="Not set",
+        blind=False,
+        opens="Not set",
+        application_stage_ends="Not set",
+        expected_outcome="Not set",
+        summary="",
     ),
 )
 
@@ -204,6 +219,34 @@ RESPONSES: dict[str, dict[str, str]] = {
         "pool": "Awaited from Dr Omar Aziz",
     },
 }
+
+
+#: Exercises whose application form has no questions yet.
+EMPTY_FORMS: frozenset[str] = frozenset({"n5wg8tjr3e"})
+
+
+def form_of(exercise_id: str) -> tuple[tuple[tuple[str, str], ...], tuple[str, ...]]:
+    """The application form's two sections: shown to reviewers, not shown."""
+    if exercise_id in EMPTY_FORMS:
+        return (), ()
+    return SHOWN_TO_REVIEWERS, NOT_SHOWN_TO_REVIEWERS
+
+
+def setup_missing(e: Exercise) -> tuple[tuple[str, str], ...]:
+    """What a draft still lacks before it can be published, each with the
+    tab that sets it: Setup's, in its order, then the Form's."""
+    missing: list[tuple[str, str]] = []
+    if not e.code:
+        missing.append(("Exercise Code", "setup"))
+    if not e.summary:
+        missing.append(("Summary", "setup"))
+    if "Not set" in (e.opens, e.application_stage_ends):
+        missing.append(("Dates", "setup"))
+    if e.eligibility == "Not set":
+        missing.append(("Who may apply", "setup"))
+    if e.public_id in EMPTY_FORMS:
+        missing.append(("Application form", "form"))
+    return tuple(missing)
 
 
 def exercise(public_id: str) -> Exercise | None:

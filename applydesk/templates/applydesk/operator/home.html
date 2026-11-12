@@ -2,7 +2,7 @@
 {% block title %}{{ exercise.name }}{% endblock %}
 {% block content %}
 {% include "applydesk/operator/_heading.html" %}
-<p class="lede">{{ exercise.summary }}</p>
+<p class="lede">{{ exercise.summary or "No summary yet." }}</p>
 {% include "applydesk/_placeholder.html" %}
 {% set submitted = applications | selectattr("state", "equalto", "Submitted") | list %}
 <section class="card">
@@ -13,9 +13,9 @@
   <section class="card">
     <h2>Where it stands</h2>
     <dl class="facts">
-      <dt>Exercise Code</dt><dd><code>{{ exercise.code }}</code></dd>
+      <dt>Exercise Code</dt><dd>{% if exercise.code %}<code>{{ exercise.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</dd>
       <dt>Opens</dt><dd>{{ exercise.opens }}</dd>
-      <dt>Application stage ends</dt><dd>{{ exercise.application_stage_ends }} (a hard deadline)</dd>
+      <dt>Application stage ends</dt><dd>{{ exercise.application_stage_ends }}{% if exercise.application_stage_ends != "Not set" %} (a hard deadline){% endif %}</dd>
       <dt>Expected outcome</dt><dd>{{ exercise.expected_outcome }}</dd>
       <dt>Who may apply</dt><dd>{{ exercise.eligibility }}</dd>
     </dl>
@@ -32,8 +32,14 @@
   <section class="card">
     <h2>Next step</h2>
     {% if exercise.state == "Draft" %}
-      <p>Finish Setup and the application form, then publish.</p>
+      {% if missing %}
+      <p>Still to set up before it can be published:</p>
+      <ul>{% for label, tab in missing %}<li><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/' ~ tab) }}">{{ label }}</a></li>{% endfor %}</ul>
+      <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Publish</button></div>
+      {% else %}
+      <p>Ready to publish: Setup and the application form are complete.</p>
       <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Publish</button></div>
+      {% endif %}
     {% elif exercise.stage == "Application" %}
       <p>Applications are open. When the Application stage ends, start the Review stage and send the submitted applications to Review Robin.</p>
       <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Start the Review stage</button></div>
