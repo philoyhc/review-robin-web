@@ -139,3 +139,142 @@ def test_the_outline_counts_the_form(page: Page) -> None:
         "1 page · 0 sections · 1 question · 0 required"
     )
     assert page.locator('.fc[data-kind="field"] [data-f="label"]').is_visible()  # opened
+
+
+# --- Rung 3: moves, the last-card rule, reordering, Preview ---
+
+
+def _labels(page: Page) -> list[str]:
+    # textContent: an open card hides its summary, which inner_text reads as "".
+    return page.eval_on_selector_all(
+        '#fb-cards > .fc [data-sum="label"]', "els => els.map(e => e.textContent)"
+    )
+
+
+def _kinds(page: Page) -> list[str]:
+    return page.eval_on_selector_all(
+        "#fb-cards > [data-kind]", "els => els.map(e => e.dataset.kind)"
+    )
+
+
+def test_new_adds_an_open_string_card_after_this_one(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Project title")
+    card.locator("[data-fc-toggle]").click()
+    card.locator('[data-fc-act="new"]').click()
+    labels = _labels(page)
+    added = page.locator("#fb-cards > .fc").nth(labels.index("Project title") + 1)
+    assert added.get_attribute("data-type") == "string"
+    assert added.get_attribute("data-open") is not None
+    assert added.locator('[data-f="label"]').evaluate("e => e === document.activeElement")
+    assert added.locator('[data-sum="shown"]').text_content() == "Not shown"  # the safer side
+    added.locator('[data-f="label"]').fill("Supervisor's name")
+    assert "Supervisor's name" in page.locator("[data-fb-outline]").inner_text()
+    assert "10 questions" in page.locator("[data-fb-counts]").inner_text()
+
+
+def test_replicate_copies_the_card(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Months the project will run")
+    card.locator("[data-fc-toggle]").click()
+    card.locator('[data-fc-act="replicate"]').click()
+    copies = _card(page, "Months the project will run")
+    assert copies.count() == 2
+    copy = copies.nth(1)
+    assert copy.get_attribute("data-type") == "integer"
+    assert copy.locator('[data-f="max"][data-g="number"]').input_value() == "6"
+    assert copy.locator('[data-sum="type"]').text_content() == "Integer · 1 to 6, step 1"
+
+
+def test_section_and_page_break_are_added_after_the_card(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Summary")
+    card.locator("[data-fc-toggle]").click()
+    card.locator('[data-fc-act="pagebreak"]').click()
+    card.locator('[data-fc-act="section"]').click()
+    kinds = _kinds(page)
+    at = page.eval_on_selector_all(
+        "#fb-cards > [data-kind]",
+        "els => els.findIndex(e =>"
+        " (e.querySelector('[data-sum=label]') || {}).textContent === 'Summary')",
+    )
+    assert kinds[at + 1 : at + 3] == ["section", "pagebreak"]
+    section = page.locator("#fb-cards > [data-kind]").nth(at + 1)
+    section.locator('[data-f="label"]').fill("Plans")
+    outline = page.locator("[data-fb-outline]").inner_text()
+    assert "Plans" in outline and "Page 3" in outline
+    assert page.locator("[data-fb-counts]").inner_text().startswith("3 pages · 3 sections")
+
+
+def test_delete_removes_a_card_and_the_last_card_stays(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Methods")
+    card.locator("[data-fc-toggle]").click()
+    card.locator('[data-fc-act="delete"]').click()
+    assert "Methods" not in _labels(page)
+    page.locator(".fc-break [data-fc-act=delete]").click()  # a page break's Remove
+    assert "pagebreak" not in _kinds(page)
+    page.goto(BLANK)
+    only = page.locator('#fb-cards > .fc[data-kind="field"]')
+    assert only.locator('[data-fc-act="delete"]').is_disabled()
+    assert only.locator('[data-fc-act="delete"]').get_attribute("title") == (
+        "A form keeps at least one card"
+    )
+    only.locator('[data-fc-act="new"]').click()
+    dels = page.locator('#fb-cards > .fc[data-kind="field"] [data-fc-act="delete"]')
+    assert dels.nth(0).is_enabled() and dels.nth(1).is_enabled()
+    dels.nth(1).click()
+    assert page.locator('#fb-cards > .fc[data-kind="field"] [data-fc-act="delete"]').is_disabled()
+
+
+def test_a_card_is_dragged_by_its_handle(page: Page) -> None:
+    page.goto(FORM)
+    before = _labels(page)
+    grip = _card(page, "Field of study").locator("[data-fc-grip]")
+    target = _card(page, "Project title")
+    page.set_viewport_size({"width": 1280, "height": 1400})  # both on screen
+    g = grip.bounding_box()
+    t = target.bounding_box()
+    assert g is not None and t is not None
+    page.mouse.move(g["x"] + g["width"] / 2, g["y"] + g["height"] / 2)
+    page.mouse.down()
+    page.mouse.move(g["x"] + 5, t["y"] + 4, steps=12)  # into the top half of Project title
+    page.mouse.up()
+    after = _labels(page)
+    assert after.index("Field of study") == after.index("Project title") - 1
+    assert sorted(after) == sorted(before)
+    outline = page.locator("[data-fb-outline] .fb-o-item").all_inner_texts()
+    assert outline.index("Field of study") < outline.index("Project title")
+
+
+def test_a_card_moves_with_the_arrow_keys(page: Page) -> None:
+    page.goto(FORM)
+    grip = _card(page, "Summary").locator("[data-fc-grip]")
+    grip.focus()
+    page.keyboard.press("ArrowUp")
+    labels = _labels(page)
+    assert labels.index("Summary") == labels.index("Project title") - 1
+    assert grip.evaluate("e => e === document.activeElement")
+    page.keyboard.press("ArrowDown")
+    labels = _labels(page)
+    assert labels.index("Summary") == labels.index("Project title") + 1
+    page.keyboard.press("ArrowDown")
+    labels = _labels(page)
+    assert labels.index("Summary") == labels.index("Methods") + 1
+
+
+def test_preview_shows_the_form_as_an_applicant_sees_it(page: Page) -> None:
+    page.goto(FORM)
+    page.locator("[data-fb-preview]").click()
+    assert page.locator("#fb-preview").is_visible()
+    assert not page.locator("#fb-cards").is_visible()
+    body = page.locator("[data-fb-preview-body]")
+    assert body.locator("h3.fb-pv-form").inner_text() == "Application form"
+    assert body.locator(".fb-pv-page").all_inner_texts() == ["PAGE 1", "PAGE 2"]
+    assert body.get_by_label("Months the project will run").get_attribute("type") == "number"
+    assert body.get_by_label("Months the project will run").get_attribute("max") == "6"
+    assert body.get_by_role("radio", name="Engineering").count() == 1
+    assert body.locator(".fb-pv-frame").count() == 1
+    assert "Reviewers see your answer." in body.inner_text()
+    page.locator("[data-fb-preview-close]").click()
+    assert page.locator("#fb-cards").is_visible() and not page.locator("#fb-preview").is_visible()

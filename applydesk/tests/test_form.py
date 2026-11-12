@@ -24,10 +24,18 @@ def client() -> TestClient:
     return TestClient(host_with(("applydesk",))[0])
 
 
+def _form(client: TestClient, path: str = FORM) -> str:
+    """The card list alone: the page also carries the blank cards that
+    + New, + Section and + Page break clone (`<template>`)."""
+    text = client.get(path).text
+    return text[text.index('id="fb-cards"') : text.index('<template id="fb-new-field">')]
+
+
 def test_the_form_page_shows_its_title_and_every_card(client: TestClient) -> None:
-    text = client.get(FORM).text
-    assert 'data-fb="title" value="Application form"' in text
-    assert sample_data.FORM_DESCRIPTION in text
+    page = client.get(FORM).text
+    assert 'data-fb="title" value="Application form"' in page
+    assert sample_data.FORM_DESCRIPTION in page
+    text = _form(client)
     kinds = [k for k, _ in re.findall(r'data-kind="(\w+)"(?: data-type="(\w+)")?', text)]
     expected = [c.kind for c in sample_data.SAMPLE_FORM]
     assert kinds == expected
@@ -44,7 +52,7 @@ def test_every_type_is_in_the_type_menu(client: TestClient) -> None:
 
 
 def test_cards_load_collapsed_and_carry_their_buttons(client: TestClient) -> None:
-    text = client.get(FORM).text
+    text = _form(client)
     assert re.search(r'data-kind="field"[^>]*data-open', text) is None
     fields = text.count('data-kind="field"')
     assert text.count('data-fc-act="replicate"') == fields  # a section has none
@@ -56,7 +64,7 @@ def test_cards_load_collapsed_and_carry_their_buttons(client: TestClient) -> Non
 
 
 def test_every_card_has_its_own_visibility(client: TestClient) -> None:
-    text = client.get(FORM).text
+    text = _form(client)
     fields = [c for c in sample_data.SAMPLE_FORM if c.kind == "field"]
     assert text.count('aria-label="Who sees it"') == len(fields)
     shown = sum(c.shown for c in fields)
@@ -73,10 +81,11 @@ def test_nothing_is_saved(client: TestClient) -> None:
 
 
 def test_a_blank_form_opens_its_one_card(client: TestClient) -> None:
-    text = client.get(f"/applydesk/operator/exercises/{BLANK}/form").text
+    page = client.get(f"/applydesk/operator/exercises/{BLANK}/form").text
+    text = _form(client, f"/applydesk/operator/exercises/{BLANK}/form")
     assert text.count('data-kind="field"') == 1
     assert re.search(r'data-kind="field" data-type="string" data-open', text)
-    assert 'value="" placeholder="Untitled form"' in text
+    assert 'value="" placeholder="Untitled form"' in page
 
 
 @pytest.mark.parametrize(

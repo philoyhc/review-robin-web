@@ -79,4 +79,6 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         card_types=sample_data.CARD_TYPES,
         summary=sample_data.card_summary,
         kept_size=sample_data.kept_size,
+        blank=sample_data.FormCard("field"),
+        blank_section=sample_data.FormCard("section"),
     )

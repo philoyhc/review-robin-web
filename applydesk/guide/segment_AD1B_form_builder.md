@@ -71,6 +71,7 @@ Taken 2026-11-12 at `666cf88`.
 
 Building. Base `73d4230` for the cumulative read.
 - Rung 2: the page and its cards. The form's sample cards (`sample_data.SAMPLE_FORM`), one macro per kind (`operator/_form_cards.html`), and one inline script for collapse, the type menu, the toggles, the summaries and the Outline; *+ New*, *Replicate*, *+ Section*, *+ Page break*, *Delete* and the handle render, inert until rung 3. A Title and Description card shows no Required chip. Summaries are computed twice, `card_summary` for the first render and the script after an edit; the Chromium tests hold them to the same text.
+- Rung 3: the moves. *+ New*, *Replicate*, *+ Section* and *+ Page break* clone the server's own macros from `<template>`s; *Delete* keeps the last field card; dragging listens on the document, since moving the card in the page ends a pointer capture; ↑ and ↓ on a focused handle; Preview builds from the cards. A string question with a maximum of 200 or fewer characters previews as one line, longer or unbounded as a box.
 
 ## PR ladder
 

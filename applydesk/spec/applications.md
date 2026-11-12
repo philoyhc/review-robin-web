@@ -57,3 +57,44 @@ operators under `/operator/exercises`, participants under `/me`.
 - **The gate** (`applydesk/gate.py`): every route but `/health` answers
   anyone on a local run and, deployed, only the platform super-admin,
   with a 404 for everyone else, until the segments that wire them.
+
+## The Form page
+
+Segment AD1B (`applydesk/guide/segment_AD1B_form_builder.md`): the
+application form builder on the Form tab, `/operator/exercises/<id>/form`.
+Every move works in the browser; nothing is saved until AD2, and a
+reload restores the sample form.
+
+- **Layout.** The form's own *Form title* and *Description* at the top,
+  which cannot be deleted or moved; then its cards; an Outline beside
+  them in the right third, kept in view (one column on a phone, the
+  Outline below).
+- **Cards.** A question or text card (*field*), a *section* (a title) or a
+  *page break*. A field card's type is one of String (min and max length),
+  Integer and Decimal (min, max, step), List (comma-separated options,
+  *Choose one* or *Choose any*), Photo (an aspect ratio; kept as a JPEG
+  600 px on its longer side) and Title and Description (display only).
+  Changing the type keeps the question, help text, *Required* and
+  visibility, and empties the new type's fields.
+- **Visibility** is per card: *Shown to reviewers* or *Not shown*; a new
+  card is *Not shown*.
+- **Collapsed**, a card shows its question and help text (a text card's
+  title and description), a summary of its settings, and *Required* or
+  *Optional* and its visibility as chips; expanded, its fields and its
+  buttons. Cards load collapsed; a form with one card opens it. No card
+  shows a number.
+- **Buttons** on each card: *Replicate* (a field card), *+ New* (an empty
+  String card), *+ Section* and *+ Page break*, each inserted right after
+  the card and a new card opened; *Delete*, with no confirmation,
+  disabled on the form's last question or text card. A page break has
+  *Remove*.
+- **Reordering** by dragging a card's handle, or by focusing the handle
+  and pressing ↑ or ↓.
+- **The Outline** lists sections, cards and page breaks in order, with
+  each card's visibility, and the counts of pages, sections, questions
+  (a text card is no question) and required ones; a click goes to the
+  card. It follows every change.
+- **Preview** shows the form as an applicant sees it, page by page, built
+  from the cards on screen: a number field with its bounds, a list as
+  radio buttons or tick boxes, a photo's frame at its ratio, and "Reviewers
+  see your answer." under a shown question. Nothing typed there is kept.
