@@ -53,10 +53,12 @@ Profile's 8 templates include the rosters, results and summary pages, which Item
 
 ## Status
 
-Building. Base `1c650a1` for the cumulative read. Rungs 2 (#3810) and 3 (#3811) merged; 4–6 built.
-- Rung 4's hidden input sits beside the preview's chips' inputs, not in Band 3: Band 3 locks by its two tables, and nothing else there may take input (the full suite caught it).
-- Rung 6: the Instruments page preview shows one sample group, so it has no group order to follow; only the reviewer surface sorts.
-- **Read:** one `diff-reviewer` read of the cumulative diff (`1c650a1..`) at rung 6 found two real defects, fixed in rung 6: a sort entry on a Stacked or Joined field still ordered the rows (now inert, as Profile's; Name and Email still sort), and the group sort key dropped an empty tag, shifting later tags into its place (now positional, with the boundary key breaking ties). Also fixed: an inline style moved to a `base.html` class, two stale comments. Left as they are: Profile's column branches, now unreachable; a saved width on a column that no longer exists still switches the surface's table to fixed layout, as a hidden column's does (for the author's browser check).
+Closed 2026-11-12. PRs **#3810 → #3814** (rungs 2–6), the browser checks (#3815, all passed, author 2026-11-12) and the close. The ladder ran as planned; base `1c650a1` for the cumulative read.
+- Rung 4's hidden input sits beside the preview's chip inputs, not in Band 3: Band 3 locks by its two tables, and nothing else there may take input.
+- Rung 6: the Instruments page preview shows one sample group, so only the reviewer surface sorts groups.
+- Scope moved: a sort entry on a field heading no column (Stacked or Joined fields, Profile) is inert; Name still sorts (rung 5, from the read).
+- **Read:** one `diff-reviewer` read of the cumulative diff, at rung 6, found two real defects, both fixed: the inert sort above, and a group sort key that dropped an empty tag (now positional, the boundary key breaking ties). Left: Profile's unreachable column code (`profile_column_ch_width`, `profileColumnCh`), a cleanup candidate; a saved width on a column that no longer shows still switches the surface to fixed layout (checked in the browser, looks right).
+- `spec-writer` at the close: the five specs written; no flag changed a decision.
 
 ## PR ladder
 

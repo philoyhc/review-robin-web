@@ -1095,8 +1095,43 @@ Each row holds:
   tooltip; on a locked card it reads as a plain display pill, an
   unticked field faded (`spec/ui_elements.md` §9);
 - ▲ / ▼ `btn secondary btn-short` move buttons (not `.btn-icon` —
-  `spec/ui_elements.md` §10), absent on a locked row. An unticked row
-  can still be moved.
+  `spec/ui_elements.md` §10), absent on a locked row and on Profile's. An
+  unticked row can still be moved.
+
+**Profile's row is pinned after Email** (`data-beside-name`), whatever
+its stored order, and carries no ▲ / ▼: Profile renders beside the
+reviewee's name and never heads a column, so its place in the order means
+nothing. The next reorder Save stores it there, since a reorder names
+every unlocked field. A tick still shows or hides it.
+
+#### Display fields chip
+
+Right of the *Display fields* header above this table, a cycle chip
+(`data-display-layout-chip`, `spec/ui_elements.md` §9) sets
+`Instrument.display_layout` (`spec/settings_inventory.md`):
+*Across* (a column per field), *Stacked* (each field on its own
+`Label: value` line under the email, the label muted) or *Joined* (the
+values on one line under the email, comma-separated)
+(`views._instruments.DISPLAY_LAYOUT_CHOICES`). Stacked and Joined drop
+the fields' columns; Profile is unaffected. Rendering is in
+`spec/reviewer-surface.md` "Display layouts".
+
+A click or Enter / Space advances to the next layout and wraps
+(`newModelCycleDisplayLayout`), rebuilds the preview in it and writes the
+hidden `display_layout` input on `dfsave-{id}`, which sits beside the
+preview's chips' inputs, not in Band 3 (Band 3 locks by its two tables).
+Locked, it is the plain pill. **Both Saves store it** through
+`instruments.set_display_layout`: an unknown value is refused, an absent
+input keeps the stored layout. Like the response layout it changes what
+reviewers see, so a change reverts a validated session to draft and writes
+`instrument.display_layout_set`.
+
+**A group-scoped instrument** cycles *Joined* ↔ *Stacked* only: a stored
+`across` reads as *Joined* (a group row has no per-reviewee columns)
+(`views.display_layout_for`). The input carries the **stored** value, so
+the stored layout changes only when the chip is clicked: an unrelated
+Save on a group card never rewrites `across`. Switching the instrument
+back to individual rows offers *Across* again.
 
 **Name and Email are locked**: every instrument is created with these
 two rows (`ensure_locked_display_fields`, called by
@@ -1117,7 +1152,8 @@ so it follows a mode change with no class kept in step
 #### Preview row
 
 Renders one sample reviewee inline, using the operator's
-currently-selected display fields. The sample is picked by the
+currently-selected display fields, in the chip's layout and with Profile
+beside the name (`profileCell` mirrors `_partials/profile_value.html`). The sample is picked by the
 server (first surviving reviewee under current Link 1 + Link 2
 + Link 3 rules — see `find_sample_in_scope_reviewee` in
 `_preview.py`); the operator clicks **↻ Refresh sample** to pick
@@ -1129,7 +1165,7 @@ persist as integer pixels per column key into
 `Instrument.column_widths` (JSON):
 
 - `identity` — the always-rendered Reviewee / Group identity cell.
-- `df_<display_field_id>` — each operator-chosen display field.
+- `df_<display_field_id>` — each operator-chosen display field. Kept but unused while the field heads no column (Stacked or Joined; always for Profile).
 - `rf_<response_field_id>` — each Band 3 response-field column
   (keyed by name for a not-yet-saved field, re-keyed to id on
   save; carried on the row's `data-width` and folded in by
@@ -1141,14 +1177,11 @@ widths. A per-reviewee table is automatic until a column width is set
 (a hidden column's counting, as the surface's `has_custom_widths`
 does), then `table-layout: fixed`; its cells take the surface's padding
 and its inputs their own size; its headers and cells carry the surface's
-width classes (`rs-narrow` on a profile-link or number column,
+width classes (`rs-narrow` on a number column,
 `rs-textlong` on a String over 100 characters, `th.rrw-sortable`) and,
 wherever the preview shows no sort control of its own, an inert copy
 of the surface's ↕ sort button, since a narrow column is as wide as its
-header. Under the fixed layout an unsized profile-link column starts
-at `views.profile_column_ch_width` (mirrored as `profileColumnCh`: its
-label plus room for the sort button, never narrower than "View") and a
-number column at `views.numeric_column_ch_width` (mirrored as
+header. Under the fixed layout an unsized number column starts at `views.numeric_column_ch_width` (mirrored as
 `numericColumnCh`: its header or its min / max digit span), not
 `rs-narrow`'s 1% of the table. While automatic, each `<col>` keeps that
 start in `data-start-style`; a drag applies them as it turns the table
@@ -1176,9 +1209,9 @@ change.
 
 When Link 3 is `group`, the preview row's identity cell
 composes **group identity**: the sample's values for the selected
-`reviewee.tag_*` display fields, bold and comma-joined, on top, then
-up to `GROUP_MEMBER_NAME_LIMIT` (10) member names below (Name is
-locked in group mode). The reviewer surface composes its line the same way
+`reviewee.tag_*` display fields below up to `GROUP_MEMBER_NAME_LIMIT` (10)
+member names (Name is locked in group mode), comma-joined (*Joined*) or one
+`Label: value` line each (*Stacked*), not bold. The reviewer surface composes its line the same way
 (`spec/reviewer-surface.md` "Group-scoped instruments"). Reviewees in the rule-surviving subset that share
 the sample's boundary key form the group; if more than 10
 qualify, a trailing `, +N more` collapses the overflow. A
@@ -1834,7 +1867,7 @@ key, the `order` slot, `session_seq` (a fresh one), `starts_new_page`,
 - `accepting_responses` — copied as-is.
 - `self_reviews_active` — copied as-is: the copy's self-review rows
   start in the source's Self review state.
-- `intro_layout`, `response_layout` — copied as-is.
+- `intro_layout`, `response_layout`, `display_layout` — copied as-is.
 - Visibility policies — copied row for row: the copy shows its responses to the same audiences,
   in the same modes, as its source. Each row goes through
   `visibility_policies.upsert_policy`, so it is checked against the

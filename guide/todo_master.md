@@ -33,14 +33,9 @@ host is provisioned and serving Review Robin since 2026-10-31; whether
 the deployment has *concluded* (verified, the personal web app retired)
 is the author's call.
 
-**Order (author, 2026-11-12):** 20M now; 14G when IT answers.
+**Order (author, 2026-11-12):** 14G when IT answers.
 
-1. **20M — Instruments touch-up: where display fields sit.** Profile
-   beside the name; a Band 3 chip for *Across* / *Stacked* / *Joined*
-   display fields (group rows *Joined* / *Stacked*); group rows sort by the
-   tags they show. **Plan:** `guide/segment_20M_instruments_touch_up.md`.
-
-2. **14G — Scheduled email** (gated on IT: offline sending as the
+1. **14G — Scheduled email** (gated on IT: offline sending as the
    operator, else a dedicated mailbox). Sends due invitations, reminders
    and confirmations from 14E's clock, turning the offset fields from
    prompts (14F rung 5) back into sends. **Plan:**
