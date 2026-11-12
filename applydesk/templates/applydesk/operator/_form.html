@@ -37,7 +37,7 @@
       <div data-fb-outline></div>
       <p class="muted fb-counts" data-fb-counts></p>
       <p class="visually-hidden" data-fb-live aria-live="polite"></p>
-      <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form/preview') }}" target="_blank" rel="opener" data-fb-preview>Preview</a></div>
+      <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form/preview') }}" target="applydesk-preview-{{ exercise.public_id }}" rel="opener" data-fb-preview>Preview</a></div>
       <p class="muted fb-pv-note">Opens a new tab: the form as an applicant sees it.</p>
     </section>
   </aside>
@@ -46,7 +46,8 @@
 // Segment AD1B: the Form page's moves, in the browser only; a reload
 // restores the sample form. Collapse and expand, the type menu, the
 // toggles and the summaries (rung 2); adding, replicating, deleting,
-// dragging and the keyboard, the Outline following, Preview (rung 3).
+// dragging and the keyboard, the Outline following (rung 3); the form's
+// own card collapsing, and the snapshot the Preview tab draws (rung 4).
 (function () {
   var root = document.querySelector("[data-form-builder]");
   if (!root) return;

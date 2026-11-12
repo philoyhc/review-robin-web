@@ -7,7 +7,7 @@
 <div class="ptitle"><h1>Preview</h1><span class="chip chip-mute">How applicants see it</span></div>
 <p class="lede">{{ exercise.name }}</p>
 <p class="placeholder"><strong>Placeholder.</strong> Sample data; forms are saved from segment AD2, so opened on its own this tab shows the sample form (segment AD1B).</p>
-<p class="muted" data-pv-source>The sample form. Nothing typed here is kept.</p>
+<p class="muted" data-pv-source>Opened on its own, this tab shows the sample form, not edits on the Form page: use that page's Preview button. Nothing typed here is kept.</p>
 <section class="card fb-pv" aria-label="The application form">
   <div data-fb-preview-body></div>
   <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Submit</button></div>
@@ -40,7 +40,7 @@
   function field(c) {
     var t = c.type, wrap = el("div", "fb-pv-field");
     if (t === "text") {
-      wrap.appendChild(el("h3", "fb-pv-title", c.label || "Untitled text"));
+      wrap.appendChild(el("h4", "fb-pv-title", c.label || "Untitled text"));
       if (c.help) wrap.appendChild(el("p", "fb-pv-help", c.help));
       return wrap;
     }
@@ -99,7 +99,7 @@
   body.appendChild(el("p", "fb-pv-page fb-pv-first", "Page 1"));
   form.cards.forEach(function (c) {
     if (c.kind === "pagebreak") { page += 1; body.appendChild(el("p", "fb-pv-page", "Page " + page)); }
-    else if (c.kind === "section") body.appendChild(el("h2", "fb-pv-section", c.label || "Untitled section"));
+    else if (c.kind === "section") body.appendChild(el("h3", "fb-pv-section", c.label || "Untitled section"));
     else body.appendChild(field(c));
   });
 })();

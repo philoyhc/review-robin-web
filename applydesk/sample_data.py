@@ -349,8 +349,10 @@ def form_heading(exercise_id: str) -> tuple[str, str]:
 
 def form_snapshot(exercise_id: str) -> dict[str, object]:
     """The form as the preview tab draws it, when the builder that opened
-    it cannot hand over its own: the same keys as the page's
-    ``applydeskFormSnapshot()``, a photo's kept size worked out here."""
+    it cannot hand over its own: a field card has the same keys as the
+    page's ``applydeskFormSnapshot()`` (a section or page break more than
+    the page sends, read only for ``kind`` and ``label``), a photo's kept
+    size worked out here."""
     title, description = form_heading(exercise_id)
     return {
         "exercise": exercise_id,

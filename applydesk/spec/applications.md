@@ -82,7 +82,8 @@ reload restores the sample form.
 - **Collapsed**, a card shows its question and help text (a text card's
   title and description), a summary of its settings, and *Required* or
   *Optional* and its visibility as chips; expanded, its fields and its
-  buttons. Cards load collapsed; a form with one card opens it. No card
+  buttons. Cards load collapsed, the form's own card too; a form with
+  one card opens it and the form's own card. No card
   shows a number.
 - **Buttons** on each card: *Replicate* (a field card), *+ New* (an empty
   String card), *+ Section* and *+ Page break*, each inserted right after
@@ -99,7 +100,8 @@ reload restores the sample form.
 - **Preview**, at the foot of the Outline, opens a new tab,
   `/operator/exercises/<id>/form/preview`, showing the form as an
   applicant sees it, page by page, built from the cards on screen (a
-  reload of the tab picks up later edits; opened on its own, it shows
-  the sample form): a number field with its bounds, a list as
+  reload of the tab picks up later edits; opened on its own, or once the
+  Form page has gone to another exercise, it shows the sample form and
+  says so; its *Submit* is disabled): a number field with its bounds, a list as
   radio buttons or tick boxes, a photo's frame at its ratio, and "Reviewers
   see your answer." under a shown question. Nothing typed there is kept.

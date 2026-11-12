@@ -44,6 +44,8 @@ def page() -> Iterator[Page]:
         tab = browser.new_page(viewport={"width": 1280, "height": 900})
         errors: list[str] = []
         tab.on("pageerror", lambda exc: errors.append(str(exc)))
+        # A tab the page opens (Preview) reports its errors too.
+        tab.context.on("page", lambda p: p.on("pageerror", lambda exc: errors.append(str(exc))))
         tab.context.route(f"{ORIGIN}/**", serve)
         yield tab
         browser.close()
@@ -332,6 +334,19 @@ def test_handles_name_their_card_and_moves_are_announced(page: Page) -> None:
 PREVIEW = f"{FORM}/preview"
 
 
+def _the_applicant_form(body: Locator) -> None:
+    """What both sources draw for the sample form: pages, a number with
+    its bounds, a list as radios, a photo frame, the reviewers' note."""
+    assert body.locator("h2.fb-pv-form").inner_text() == "Application form"
+    assert body.locator("h3.fb-pv-section").all_inner_texts() == ["About the project", "About you"]
+    assert body.locator(".fb-pv-page").all_inner_texts() == ["PAGE 1", "PAGE 2"]
+    months = body.get_by_label("Months the project will run")
+    assert months.get_attribute("type") == "number" and months.get_attribute("max") == "6"
+    assert body.get_by_role("radio", name="Engineering").count() == 1
+    assert body.locator(".fb-pv-frame").count() == 1
+    assert "Reviewers see your answer." in body.inner_text()
+
+
 def test_preview_opens_a_tab_with_the_form_as_it_stands(page: Page) -> None:
     page.goto(FORM)
     card = _card(page, "Project title")
@@ -345,14 +360,8 @@ def test_preview_opens_a_tab_with_the_form_as_it_stands(page: Page) -> None:
     tab = opened.value
     tab.wait_for_load_state()
     body = tab.locator("[data-fb-preview-body]")
-    assert body.locator("h2.fb-pv-form").inner_text() == "Application form"
+    _the_applicant_form(body)
     assert body.get_by_label("Working title").evaluate("e => e.tagName") == "TEXTAREA"
-    assert body.locator(".fb-pv-page").all_inner_texts() == ["PAGE 1", "PAGE 2"]
-    months = body.get_by_label("Months the project will run")
-    assert months.get_attribute("type") == "number" and months.get_attribute("max") == "6"
-    assert body.get_by_role("radio", name="Engineering").count() == 1
-    assert body.locator(".fb-pv-frame").count() == 1
-    assert "Reviewers see your answer." in body.inner_text()
     assert "unsaved" in (tab.locator("[data-pv-source]").text_content() or "")
     # A reload picks up later edits.
     label.fill("Final title")
@@ -362,18 +371,34 @@ def test_preview_opens_a_tab_with_the_form_as_it_stands(page: Page) -> None:
 
 def test_preview_on_its_own_shows_the_sample_form(page: Page) -> None:
     page.goto(PREVIEW)
-    body = page.locator("[data-fb-preview-body]")
-    assert body.get_by_label("Project title").count() == 1
+    _the_applicant_form(page.locator("[data-fb-preview-body]"))
     assert "sample form" in (page.locator("[data-pv-source]").text_content() or "")
 
 
+def test_preview_of_another_exercise_ignores_this_form(page: Page) -> None:
+    page.goto(FORM)
+    _card(page, "Project title").locator("[data-fc-toggle]").click()
+    _card(page, "Project title").locator('[data-f="label"]').fill("Not for the blank form")
+    blank = page.evaluate(f"window.open('{BLANK}/preview', 'other')")
+    assert blank is not None
+    other = page.context.pages[-1]
+    other.wait_for_load_state()
+    assert "sample form" in (other.locator("[data-pv-source]").text_content() or "")
+    assert other.locator("[data-fb-preview-body]").get_by_label("Untitled question").count() == 1
+
+
 def test_the_form_s_own_card_collapses(page: Page) -> None:
+    page.goto(BLANK)
+    assert page.locator('[data-kind="title"]').get_attribute("data-open") is not None
     page.goto(FORM)
     title = page.locator('[data-kind="title"]')
+    toggle = title.locator("[data-fc-toggle]")
+    assert toggle.get_attribute("aria-label") == "Expand the form's title and description"
     assert not title.locator('[data-fb="title"]').is_visible()
     assert title.locator('[data-sum="title"]').inner_text() == "Application form"
-    title.locator("[data-fc-toggle]").click()
-    assert title.locator("[data-fc-toggle]").get_attribute("aria-expanded") == "true"
+    toggle.click()
+    assert toggle.get_attribute("aria-expanded") == "true"
+    assert toggle.get_attribute("aria-label") == "Collapse the form's title and description"
     title.locator('[data-fb="title"]').fill("Travel grant form")
     title.locator("[data-fc-toggle]").click()
     assert title.locator('[data-sum="title"]').inner_text() == "Travel grant form"

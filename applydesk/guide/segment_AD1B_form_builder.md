@@ -10,7 +10,7 @@ The Form tab is a placeholder: two static lists and an inert preview (AD1 iterat
 
 **A column of cards in the Cordware style, every move working in the browser, nothing saved** (author, 2026-11-12):
 
-1. **The form's own Title and Description**, a card at the top that cannot be deleted, moved or collapsed.
+1. **The form's own Title and Description**, a card at the top that cannot be deleted or moved; ~~or collapsed~~ it collapses like a card (author, iteration rung 4).
 2. **One card per question or text block.** A form starts with one card, and its last card cannot be deleted.
 3. **A card collapses and expands.** Collapsed, it shows its question and help text (or title and description) and a summary of its settings, and no controls. Expanded, it shows its fields and its buttons.
 4. **Each card's own controls**: a type menu at its top right; a **Shown to reviewers / Not shown** toggle; along its bottom *Replicate*, *+ New*, *+ Section*, *+ Page break* and *Delete*.
@@ -45,7 +45,7 @@ The Form tab is a placeholder: two static lists and an inert preview (AD1 iterat
 - **Reordering.** Dragging a handle moves the card among the others (sections and page breaks included; the form's Title card stays first). A focused handle moves its card with ↑ and ↓.
 - **Load state.** Every card loads collapsed, except a form with a single card, which opens it. Several cards can be open at once.
 - **Outline** lists sections, cards and page breaks in order, each card's visibility as a chip, and the counts; a click scrolls to the card. It follows every change.
-- **Preview** shows the form as an applicant sees it, page by page, built from the cards on screen; *Back to editing* returns.
+- **Preview** shows the form as an applicant sees it, page by page, built from the cards on screen; ~~*Back to editing* returns~~ in a new tab since iteration rung 4, showing the sample form when it cannot reach the builder that opened it.
 - **Nothing is saved.** A reload restores the sample form; the placeholder banner says so, and *Save* is disabled until AD2.
 
 ## Judgment calls — decided
@@ -72,8 +72,7 @@ Taken 2026-11-12 at `666cf88`.
 Building. Base `73d4230` for the cumulative read.
 - Rung 2: the page and its cards. The form's sample cards (`sample_data.SAMPLE_FORM`), one macro per kind (`operator/_form_cards.html`), and one inline script for collapse, the type menu, the toggles, the summaries and the Outline; *+ New*, *Replicate*, *+ Section*, *+ Page break*, *Delete* and the handle render, inert until rung 3. A Title and Description card shows no Required chip. Summaries are computed twice, `card_summary` for the first render and the script after an edit; a Chromium test replays `test_form.SUMMARY_CASES` and every sample card through the script (rung 3).
 - Rung 3: the moves. *+ New*, *+ Section* and *+ Page break* clone the server's own macros from `<template>`s, *Replicate* the card itself; *Delete* keeps the last field card; dragging listens on the document, since moving the card in the page ends a pointer capture; ↑ and ↓ on a focused handle; Preview builds from the cards. A string question with a maximum of 200 or fewer characters previews as one line, longer or unbounded as a box. The cumulative read (1 read, 13 findings) led to: a bad maximum no longer breaking Preview; the kept size rounding half up on both sides; an Outline click leaving Preview; the Outline unnumbered (Decision 6); a type change resetting *Choose one*; handles and toggles named after their card, arrow-key moves announced; presets dropped from the plan. Left as notes: drag has no Escape or auto-scroll; `.seg` and `.btn-toggle` are ApplyDesk's own controls, beside RRW's roles.
-
-- Iteration rung 4 (author, 2026-11-12): **Preview opens a new tab** (`/operator/exercises/<id>/form/preview`), drawn from the builder's cards through `window.opener` (`applydeskFormSnapshot`), else from the sample form (`sample_data.form_snapshot`); the in-page Preview is gone. **The form's own card collapses** like the others, amending Decision 1 ("cannot be … collapsed").
+- Iteration rung 4 (author, 2026-11-12): Preview in a new tab and the title card collapsing (Decision 1, Semantics). The tab reads the builder through `window.opener`, kept on purpose so a reload picks up later edits; both tabs are the same origin behind the same gate. A tab opened without an opener (middle-click) says it shows the sample form. Its read: 9 findings, all prose, tests or nits, acted on.
 
 ## PR ladder
 
