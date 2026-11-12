@@ -2,7 +2,8 @@
 `utilityapps/guide/segment_U4_photo_poc.md`). Super-admin only, every
 response `no-store`.
 
-The page's script posts the original file and the window's rectangle;
+The page's script posts the original file and the window over it
+(`service.Frame`: center, width, turn);
 `service` does the rest. The two writes take a custom header, which a
 cross-site form cannot send without a preflight this host never answers."""
 

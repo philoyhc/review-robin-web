@@ -13,7 +13,7 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from PIL import Image
+from PIL import Image, ImageChops, ImageStat
 from playwright.sync_api import Error, FilePayload, Page, Route, sync_playwright
 
 from utilityapps.tests._host import host_with
@@ -195,7 +195,7 @@ def test_two_fingers_pinch_to_zoom_and_twist_to_rotate(client: TestClient, page:
     _save_and_read(client, page, 1)
 
 
-@pytest.mark.parametrize("turn", ["17.5", "-63", "135"])
+@pytest.mark.parametrize("turn", ["17.5", "-63", "90", "135", "180"])
 def test_any_turn_at_the_smallest_zoom_is_accepted(
     client: TestClient, page: Page, turn: str
 ) -> None:
@@ -204,3 +204,42 @@ def test_any_turn_at_the_smallest_zoom_is_accepted(
     _choose_phone_photo(page)
     page.locator("#photo-rotate").fill(turn)
     _save_and_read(client, page, 1)
+
+
+def _tiles_png() -> bytes:
+    """900 by 1200 of distinct tiles, so a shift or a stretch shows."""
+    image = Image.new("RGB", (900, 1200))
+    for i in range(0, 900, 60):
+        for j in range(0, 1200, 60):
+            image.paste(((i * 7) % 256, (j * 3) % 256, ((i + j) * 5) % 256), (i, j, i + 60, j + 60))
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+@pytest.mark.parametrize("button", [None, "#photo-right", "#photo-left"])
+def test_the_saved_photo_is_what_the_window_shows(
+    client: TestClient, page: Page, button: str | None
+) -> None:
+    """The cold read: a quarter turn saved a stretched photo, which a
+    two-colour test cannot see. A screenshot of the window, against the
+    saved photo scaled to it, after a zoom, a turn and a drag."""
+    page.goto(PAGE)
+    tiles: FilePayload = {"name": "tiles.png", "mimeType": "image/png", "buffer": _tiles_png()}
+    page.set_input_files("#photo-file", files=[tiles])
+    page.wait_for_selector("#photo-save:enabled")
+    page.locator("#photo-zoom").fill("1.6")
+    if button is None:
+        page.locator("#photo-rotate").fill("23.5")
+    else:
+        page.click(button)
+    window = page.locator("#photo-window").bounding_box()
+    assert window is not None
+    page.mouse.move(window["x"] + 100, window["y"] + 100)
+    page.mouse.down()
+    page.mouse.move(window["x"] + 130, window["y"] + 70, steps=3)
+    page.mouse.up()
+    shot = Image.open(io.BytesIO(page.locator("#photo-window").screenshot())).convert("RGB")
+    saved = _save_and_read(client, page, 1).resize(shot.size)
+    diff = ImageStat.Stat(ImageChops.difference(shot, saved)).mean
+    assert max(diff) < 8, diff

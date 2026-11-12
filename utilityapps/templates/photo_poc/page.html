@@ -168,7 +168,9 @@
       choose(e.dataTransfer && e.dataTransfer.files[0]);
     });
     zoom.addEventListener("input", function () { if (img) setZoom(parseFloat(zoom.value)); });
-    rotate.addEventListener("input", function () { if (img) setAngle(parseFloat(rotate.value)); });
+    // The slider's own value, within its range: normalizing would send
+    // its right end, 180, to -180 and the thumb to the left end.
+    rotate.addEventListener("input", function () { if (img) { angle = parseFloat(rotate.value); draw(); } });
     left.addEventListener("click", function () { if (img) setAngle(angle - 90); });
     right.addEventListener("click", function () { if (img) setAngle(angle + 90); });
 
@@ -197,8 +199,10 @@
       }
     }
     win.addEventListener("pointerdown", function (e) {
-      if (!img) return;
+      if (!img || (e.pointerType === "mouse" && e.button !== 0)) return;
       e.preventDefault();
+      // preventDefault stops a click focusing the window; the arrow keys need it.
+      win.focus({ preventScroll: true });
       pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
       try { win.setPointerCapture(e.pointerId); } catch (err) { /* not an active pointer */ }
       begin();
@@ -226,6 +230,8 @@
     }
     win.addEventListener("pointerup", lift);
     win.addEventListener("pointercancel", lift);
+    // A capture lost without an up or cancel would leave a finger behind.
+    win.addEventListener("lostpointercapture", lift);
     // A trackpad's pinch arrives as a wheel with ctrlKey.
     win.addEventListener("wheel", function (e) {
       if (!img || !e.ctrlKey) return;

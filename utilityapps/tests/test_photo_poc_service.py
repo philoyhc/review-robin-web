@@ -8,7 +8,7 @@ import io
 from collections.abc import Iterator
 
 import pytest
-from PIL import Image, ImageCms
+from PIL import Image, ImageChops, ImageCms, ImageStat
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -250,3 +250,27 @@ def test_a_color_profile_is_converted_to_srgb_and_not_kept(monkeypatch: pytest.M
     assert "icc_profile" not in saved.info
     pixel = saved.convert("RGB").getpixel((240, 300))
     assert isinstance(pixel, tuple) and abs(pixel[0] - 200) < 8 and abs(pixel[1] - 30) < 8
+
+
+def _pattern() -> Image.Image:
+    """1000 by 1000 of distinct tiles, so a shift or a stretch shows."""
+    image = Image.new("RGB", (1000, 1000))
+    for i in range(0, 1000, 50):
+        for j in range(0, 1000, 50):
+            image.paste(((i * 5) % 256, (j * 5) % 256, ((i + j) * 3) % 256), (i, j, i + 50, j + 50))
+    return image
+
+
+@pytest.mark.parametrize("angle", [0, 30, 77, 80, 85, 90, -90, 103, 135, 180, -135])
+def test_the_window_is_cut_at_its_own_size_and_matches_the_turned_photo(angle: float) -> None:
+    """The cold read: near a quarter turn the window came out short and was
+    stretched to 480 x 600. Against the whole photo turned the slow way,
+    the window is the same size and the same picture at every angle."""
+    image = _pattern()
+    frame = Frame(500, 500, 400, angle=angle)
+    window = service._window(image, frame)  # pyright: ignore[reportPrivateUsage]  -- the step under test
+    assert window.size == (400, 500)
+    whole = image.rotate(-angle, resample=Image.Resampling.BICUBIC, center=(500, 500))
+    expected = whole.crop((300, 250, 700, 750))
+    diff = ImageStat.Stat(ImageChops.difference(window, expected)).mean
+    assert max(diff) < 1.5, diff

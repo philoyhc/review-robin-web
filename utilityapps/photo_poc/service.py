@@ -152,15 +152,25 @@ def _to_srgb(image: Image.Image) -> Image.Image:
 
 
 def _window(image: Image.Image, frame: Frame) -> Image.Image:
-    """What the window shows, at the photo's own resolution: the corners'
-    bounding box cut out first, so a large photo is never turned whole;
-    that piece turned upright about the window's center; then the window
-    cut from it."""
+    """What the window shows, at the photo's own resolution, exactly the
+    window's size: a piece cut out first, so a large photo is never turned
+    whole; that piece turned upright about the window's center; then the
+    window cut from it.
+
+    The piece covers both where the window lies over the photo (its
+    corners' bounding box) and where the upright window lands after the
+    turn (the window's own box about its center): `rotate` keeps the
+    canvas's size, so a piece cut to the corners alone is too short for
+    the upright window near a quarter turn (cold read, 2026-11-12). The
+    piece is not clamped to the photo: `crop` pads beyond it, and no
+    padded pixel is inside the window, whose corners `_check` holds over
+    the photo."""
+    half_w, half_h = frame.width / 2, frame.height / 2
     xs, ys = zip(*frame.corners(), strict=True)
-    left = max(0, math.floor(min(xs)) - 2)
-    top = max(0, math.floor(min(ys)) - 2)
-    right = min(image.width, math.ceil(max(xs)) + 2)
-    bottom = min(image.height, math.ceil(max(ys)) + 2)
+    left = math.floor(min(*xs, frame.cx - half_w)) - 2
+    top = math.floor(min(*ys, frame.cy - half_h)) - 2
+    right = math.ceil(max(*xs, frame.cx + half_w)) + 2
+    bottom = math.ceil(max(*ys, frame.cy + half_h)) + 2
     piece = _flatten(_to_srgb(image.crop((left, top, right, bottom))))
     cx, cy = frame.cx - left, frame.cy - top
     if frame.angle % 360:
@@ -171,14 +181,8 @@ def _window(image: Image.Image, frame: Frame) -> Image.Image:
             center=(cx, cy),
             fillcolor=(255, 255, 255),
         )
-    half_w, half_h = frame.width / 2, frame.height / 2
-    box = (
-        max(0, round(cx - half_w)),
-        max(0, round(cy - half_h)),
-        min(piece.width, round(cx + half_w)),
-        min(piece.height, round(cy + half_h)),
-    )
-    return piece.crop(box)
+    x0, y0 = round(cx - half_w), round(cy - half_h)
+    return piece.crop((x0, y0, x0 + round(frame.width), y0 + round(frame.height)))
 
 
 def process(data: bytes, frame: Frame) -> bytes:
