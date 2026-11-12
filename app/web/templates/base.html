@@ -3088,11 +3088,13 @@
         border-color: transparent;
         box-shadow: none;
       }
-      /* The intro layout chip (19Y Item 1) and the Responses chip (20K)
-         sit in the preview's heading row, outside the lock regions;
-         locked, each is the plain pill. */
+      /* The intro layout chip (19Y Item 1) and the Responses chip (20K),
+         in the preview's heading row, and the Display fields chip (20M),
+         in Band 3's header, sit outside the lock regions; locked, each is
+         the plain pill. */
       body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .tag-chip[data-intro-layout-chip],
-      body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .tag-chip[data-response-layout-chip] {
+      body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .tag-chip[data-response-layout-chip],
+      body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .tag-chip[data-display-layout-chip] {
         cursor: default;
         border-color: transparent;
         box-shadow: none;

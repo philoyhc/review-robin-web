@@ -93,6 +93,41 @@ RESPONSE_LAYOUT_CHOICES: tuple[dict[str, str], ...] = (
 )
 
 
+# Segment 20M — the Display fields chip's states, in the cycle's order
+# (``DISPLAY_LAYOUTS``). A group-scoped instrument cycles Joined and
+# Stacked only, and reads a stored ``across`` as ``joined``.
+DISPLAY_LAYOUT_CHOICES: tuple[dict[str, str], ...] = (
+    {"value": "across", "label": "Across", "title": "Across: a column for each display field"},
+    {
+        "value": "stacked",
+        "label": "Stacked",
+        "title": "Stacked: each display field on its own labeled line under the reviewee",
+    },
+    {
+        "value": "joined",
+        "label": "Joined",
+        "title": "Joined: the display fields on one line under the reviewee, comma-separated",
+    },
+)
+
+
+def display_layout_for(instrument: Instrument) -> str:
+    """Where the instrument's display fields render (segment 20M): the
+    stored layout, with a group-scoped instrument's ``across`` read as
+    ``joined`` (a group row has no per-reviewee columns)."""
+    layout = instruments_service.effective_display_layout(instrument)
+    if instrument.group_kind is not None and layout == "across":
+        return "joined"
+    return layout
+
+
+def display_layout_choice_for(instrument: Instrument) -> dict[str, str]:
+    """The Display fields chip's state: the :data:`DISPLAY_LAYOUT_CHOICES`
+    row of :func:`display_layout_for`."""
+    layout = display_layout_for(instrument)
+    return next(c for c in DISPLAY_LAYOUT_CHOICES if c["value"] == layout)
+
+
 def response_layout_choice_for(instrument: Instrument) -> dict[str, str]:
     """The Responses chip's state for the instrument: the
     :data:`RESPONSE_LAYOUT_CHOICES` row of its effective layout
@@ -1124,6 +1159,14 @@ def build_instruments_context(
         "intro_layout_choices": INTRO_LAYOUT_CHOICES,
         "intro_layout_choice_by_instrument": {
             instrument.id: intro_layout_choice_for(instrument) for instrument in instruments
+        },
+        "display_layout_choices": DISPLAY_LAYOUT_CHOICES,
+        "display_layout_choice_by_instrument": {
+            instrument.id: display_layout_choice_for(instrument) for instrument in instruments
+        },
+        "display_layout_stored_by_instrument": {
+            instrument.id: instruments_service.effective_display_layout(instrument)
+            for instrument in instruments
         },
         "response_layout_choices": RESPONSE_LAYOUT_CHOICES,
         "response_layout_choice_by_instrument": {

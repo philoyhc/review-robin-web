@@ -12,7 +12,7 @@ Four items, the mock-ups agreed 2026-11-11 (author):
 
 1. **Profile beside the name.** When selected, Profile renders inline right after the reviewee's name in the identity cell — **View** for a web link, the muted ••• with the value on hover otherwise (`_partials/profile_value.html`, unchanged) — and takes no column, in every layout. In Band 3 it keeps its row, pinned after Email, with no ▲ ▼.
 2. **A display-field layout chip**, a cycle chip (`spec/ui_elements.md` §9) right of Band 3's *Display fields* header, saved by the card's Save: *Across* (a column per field; today), *Stacked* (each field on its own line under the email, `Label: value`, the label muted), *Joined* (the values on one line under the email, comma-separated). Stacked and Joined drop the fields' columns.
-3. **Group-scoped instruments** take the same chip, cycling *Joined* ↔ *Stacked* only. *Joined* is today's cell with the tag line no longer bold; *Stacked* puts the member names first, then each tag on its own `Label: value` line below them, styled as an individual row's.
+3. **Group-scoped instruments** take the same chip, cycling *Joined* ↔ *Stacked* only. Both put the member names first, then the tags below them, so every option reads names-then-fields (author, 2026-11-12): *Joined* the tag values on one line, no longer bold (today's cell has them above the names); *Stacked* each tag on its own `Label: value` line, styled as an individual row's.
 4. **Group rows sort by the tags they show**: the values of the selected tag display fields, in Band 3 order, compared as a tuple (`TW01, Team 1, …` before `TW01, Team 2, …` before `TW45, …`). The Group header's asc / desc keeps reversing it.
 
 **Rejected:**
@@ -33,6 +33,7 @@ Four items, the mock-ups agreed 2026-11-11 (author):
 ## Judgment calls — decided
 
 - One setting serves both scopes, not a second column for group instruments: the scope already decides which values are legal.
+- **The group chip's stored value** changes only when the chip is clicked: a group card shows a stored `across` as *Joined* but Saves `across` back until the operator cycles it, so an unrelated Save never reverts a validated session (rung 4, 2026-11-12).
 - Profile's pin is a render rule, not a data change: Band 3 lists it after Email whatever its stored order, so the next reorder Save (which must name every unlocked field) stores it there (rung 2, 2026-11-12).
 - Stacked labels use the display field's label (`display_field_label`), as the column header does.
 

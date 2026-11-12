@@ -1301,6 +1301,49 @@
           if (band2 && window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
           if (window.newModelMarkCardDirty) { window.newModelMarkCardDirty(card); }
         };
+        // 20M — the Display fields chip. A group-scoped card (its Band 2
+        // in grouped mode) cycles Joined and Stacked only and shows a
+        // stored Across as Joined; an individual card cycles all three.
+        function displayLayoutState(chip) {
+          var card = chip.closest('[data-instrument-card]');
+          var input = card && card.querySelector('[data-display-layout-input]');
+          var band2 = card && card.querySelector('[data-new-model-band2]');
+          var grouped = !!band2 && band2.getAttribute('data-new-model-band2-unit-mode') === 'grouped';
+          var choices = JSON.parse(chip.getAttribute('data-display-layout-choices') || '[]')
+            .filter(function (c) { return !(grouped && c.value === 'across'); });
+          var shown = input ? input.value : 'across';
+          if (grouped && shown === 'across') { shown = 'joined'; }
+          return {card: card, input: input, choices: choices, shown: shown};
+        }
+        function paintDisplayLayoutChip(chip, value) {
+          var all = JSON.parse(chip.getAttribute('data-display-layout-choices') || '[]');
+          for (var i = 0; i < all.length; i++) {
+            if (all[i].value === value) {
+              chip.textContent = all[i].label;
+              chip.title = all[i].title;
+            }
+          }
+        }
+        window.newModelCycleDisplayLayout = window.newModelCycleDisplayLayout || function (chip) {
+          var state = displayLayoutState(chip);
+          if (!state.card || !state.input || !state.choices.length) { return; }
+          if (state.card.getAttribute('data-instrument-locked') === 'true') { return; }
+          var at = 0;
+          for (var i = 0; i < state.choices.length; i++) {
+            if (state.choices[i].value === state.shown) { at = i; }
+          }
+          var next = state.choices[(at + 1) % state.choices.length];
+          state.input.value = next.value;
+          paintDisplayLayoutChip(chip, next.value);
+          if (window.newModelMarkCardDirty) { window.newModelMarkCardDirty(state.card); }
+        };
+        // Repaint after the unit of review changes: a group card shows a
+        // stored Across as Joined, an individual one shows what is stored.
+        window.newModelSyncDisplayLayoutChip = window.newModelSyncDisplayLayoutChip || function (card) {
+          var chip = card && card.querySelector('[data-display-layout-chip]');
+          if (!chip) { return; }
+          paintDisplayLayoutChip(chip, displayLayoutState(chip).shown);
+        };
         window.newModelToggleRuleMode = window.newModelToggleRuleMode || function (btn) {
           // 3-state cycle: not_set → all → filter → not_set → …
           // Each click advances one step; the cycle wraps so the
@@ -1497,6 +1540,9 @@
             instrumentCard.querySelectorAll('[data-new-model-band2]').forEach(function (b2) {
               b2.setAttribute('data-new-model-band2-unit-mode', newMode);
             });
+            if (window.newModelSyncDisplayLayoutChip) {
+              window.newModelSyncDisplayLayoutChip(instrumentCard);
+            }
           }
           window.newModelRefreshBand1TouchedRefreshGate(btn);
         };
@@ -1688,6 +1734,12 @@
           <input type="hidden" form="dfsave-{{ instrument.id }}"
                  name="response_layout" value="{{ _response_layout.value }}"
                  autocomplete="off" data-response-layout-input>
+          {# 20M — Band 3's Display fields chip's input. It sits here,
+             outside Band 3, whose only form controls are its two
+             tables' (Band 3 locks by its tables). #}
+          <input type="hidden" form="dfsave-{{ instrument.id }}"
+                 name="display_layout" value="{{ display_layout_stored_by_instrument[instrument.id] }}"
+                 autocomplete="off" data-display-layout-input>
           {# Refresh only makes sense once the operator has
              deliberately set every Band 1 link — running the
              engine on a "Not set" link silently uses an empty
@@ -4071,7 +4123,7 @@
             // 19Y Item 1 — the intro layout chip, and 20K's Responses
             // chip, sit outside the lock regions; locked, they leave the
             // tab order and read disabled.
-            card.querySelectorAll('[data-intro-layout-chip], [data-response-layout-chip]').forEach(function (chip) {
+            card.querySelectorAll('[data-intro-layout-chip], [data-response-layout-chip], [data-display-layout-chip]').forEach(function (chip) {
               if (locked) {
                 chip.removeAttribute('tabindex');
                 chip.setAttribute('aria-disabled', 'true');
@@ -4607,7 +4659,25 @@
            moved. The rows are compact (``table-compact``, base.html)
            rather than aligned with the response-field rows beside them. #}
         <div data-new-model-band3-left>
-          <h3 style="margin: 0 0 12px 0;">Display fields</h3>
+          {# 20M — the Display fields chip, a cycle chip right of the
+             header: Across / Stacked / Joined, or Joined / Stacked on a
+             group-scoped instrument, where a stored Across reads as
+             Joined. A click writes the hidden input (beside the
+             preview's chips' inputs), which rides the card's Save; until
+             then the stored value stands. Locked,
+             as the preview's chips. #}
+          {% set _display_layout = display_layout_choice_by_instrument[instrument.id] %}
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px 0;">
+            <h3 style="margin: 0;">Display fields</h3>
+            <span class="pill pill-count tag-chip is-selected"
+                  data-display-layout-chip
+                  data-display-layout-choices='{{ display_layout_choices | tojson }}'
+                  role="button"
+                  {% if is_editing %}tabindex="0"{% else %}aria-disabled="true"{% endif %}
+                  onclick="newModelCycleDisplayLayout(this)"
+                  onkeydown="newModelChipKey(this, event)"
+                  title="{{ _display_layout.title }}">{{ _display_layout.label }}</span>
+          </div>
           <div class="table-scroll">
           <table class="table-compact" data-new-model-df-table data-lock-region
                  {% if not is_editing %}inert aria-hidden="true"{% endif %}>

@@ -707,6 +707,22 @@ async def instrument_bulk_save_fields(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=str(exc),
                     ) from exc
+            # 20M — the Display fields chip's input; absent keeps the
+            # stored layout.
+            if "display_layout" in form:
+                try:
+                    instruments_service.set_display_layout(
+                        db,
+                        instrument=instrument,
+                        layout=str(form.get("display_layout")),
+                        actor=user,
+                    )
+                except instruments_service.DisplayLayoutError as exc:
+                    db.rollback()
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=str(exc),
+                    ) from exc
             # Visibility-policy editor hitches a ride on this form (the
             # standalone "Save visibility" button retired — the Band 3
             # chips' hidden inputs carry ``form="dfsave-<id>"`` so they
@@ -949,6 +965,18 @@ async def instrument_consolidated_save(
                         actor=user,
                     )
                 except instruments_service.ResponseLayoutError as exc:
+                    return _fail(str(exc))
+            # 20M — the Display fields chip's input; absent keeps the
+            # stored layout.
+            if "display_layout" in form:
+                try:
+                    instruments_service.set_display_layout(
+                        db,
+                        instrument=instrument,
+                        layout=str(form.get("display_layout")),
+                        actor=user,
+                    )
+                except instruments_service.DisplayLayoutError as exc:
                     return _fail(str(exc))
 
             # Band 3 visibility policies (chips ride ``form="dfsave-<id>"``).
