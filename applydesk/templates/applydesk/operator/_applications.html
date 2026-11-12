@@ -1,0 +1,13 @@
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Applicant</th><th>Title</th><th>Application ID</th><th>State</th><th>Submitted</th></tr></thead>
+  <tbody>
+  {% for a in applications %}
+    <tr><td>{{ a.applicant }}<br><span class="muted">{{ a.email }}</span></td><td>{{ a.title }}</td><td><code>{{ a.public_id }}</code></td><td>{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</td><td>{{ a.submitted or "—" }}</td></tr>
+  {% else %}
+    <tr><td colspan="5" class="muted">No applications yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<div class="btnrow"><button class="btn btn-alert" type="button" disabled>Return to draft</button></div>

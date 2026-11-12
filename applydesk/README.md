@@ -1,14 +1,16 @@
 # applydesk/
 
 ApplyDesk: applications, assessment through Review Robin, and applicant
-communication, mounted under Cordware at `/applydesk`. Segment AD1 item 1
-built the package and its health path; nothing else answers yet. Rulings
+communication, mounted under Cordware at `/applydesk`. Segment AD1 built
+the package, its health path and its URL map as placeholders on sample
+data. Rulings
 and the MVP roadmap are in `guide/todo_master.md`.
 
 | Path | Holds |
 |---|---|
-| `main.py`, `routes_health.py` | The factory and `/health` |
-| `templates/applydesk/` | Templates; `base.html` carries the favicon |
+| `main.py`, `routes_*.py` | The factory, `/health` and the placeholder pages |
+| `gate.py`, `ids.py`, `web.py`, `sample_data.py` | The placeholders' gate, public IDs, templates and chrome, sample data |
+| `templates/applydesk/` | Templates; `base.html` carries the favicon and the bar |
 | `tests/` | ApplyDesk's tests, with a host harness (`tests/_host.py`) |
 | `docs/applydesk_functional_spec_v0.6b_agent_handoff.md` | The functional baseline (v0.6b, 2 November 2026); where a ruling in `guide/todo_master.md` differs, the ruling wins |
 | `spec/applications.md` | ApplyDesk as the host sees it: registry entry, health, running alone, the URL map |

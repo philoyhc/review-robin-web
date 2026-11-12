@@ -1,8 +1,8 @@
 # ApplyDesk architecture
 
-> **Built so far:** segment AD1 item 1 built the package root,
-> `routes_health.py`, `templates/`, `tests/`, the boundary rules and
-> packaging.
+> **Built so far:** segment AD1 built everything below: the package,
+> its health path and packaging (item 1), and the placeholder pages
+> (item 2).
 
 How `applydesk/` is laid out, what it may import, and how its tests run.
 Its contract with the host is `applydesk/spec/applications.md`.
@@ -13,7 +13,12 @@ Its contract with the host is `applydesk/spec/applications.md`.
 |---|---|
 | `applydesk/main.py` | The factory, `create_app` |
 | `applydesk/routes_health.py` | `/health` |
-| `applydesk/templates/applydesk/` | Its templates; `base.html` carries the favicon |
+| `applydesk/routes_home.py`, `routes_operator.py`, `routes_me.py` | The landing, the operator's pages and the participant's |
+| `applydesk/gate.py` | The placeholders' gate |
+| `applydesk/ids.py` | Public IDs: generation and the shape check |
+| `applydesk/web.py` | Templates, mount-aware URLs (`url()`, `is_here()`, `host_url()`) and the page chrome |
+| `applydesk/sample_data.py` | The placeholders' sample exercises, applications and assessors |
+| `applydesk/templates/applydesk/` | Its templates; `base.html` carries the favicon and the bar |
 | `applydesk/tests/` | ApplyDesk's tests, a package with its own `__init__.py`; `_host.py` builds the Cordware host with the real registry |
 | `applydesk/docs/`, `applydesk/guide/`, `applydesk/spec/` | Prose, as RRW's three folders |
 

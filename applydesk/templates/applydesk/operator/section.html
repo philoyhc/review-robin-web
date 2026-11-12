@@ -1,0 +1,8 @@
+{% extends "applydesk/base.html" %}
+{% block title %}{{ heading }} · {{ exercise.name }}{% endblock %}
+{% block content %}
+{% include "applydesk/operator/_heading.html" %}
+<h2 class="lede"><strong>{{ heading }}</strong></h2>
+{% include "applydesk/_placeholder.html" %}
+{% include "applydesk/operator/_" ~ section ~ ".html" %}
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "applydesk/base.html" %}
+{% block content %}
+<div class="ptitle"><h1>ApplyDesk</h1></div>
+<p class="lede">Applications, assessment through Review Robin, and what applicants hear back.</p>
+{% include "applydesk/_placeholder.html" %}
+<div class="grid">
+  <section class="card">
+    <h2><a href="{{ url('/me') }}">My ApplyDesk</a></h2>
+    <p>Exercises open to you, your applications, and the applications you are asked to review.</p>
+  </section>
+  <section class="card">
+    <h2><a href="{{ url('/operator/exercises') }}">Exercises</a></h2>
+    <p>For operators: set up an exercise, follow its applications and assessment, publish what applicants see.</p>
+  </section>
+</div>
+{% endblock %}

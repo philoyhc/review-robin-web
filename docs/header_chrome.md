@@ -76,7 +76,7 @@ needed to open it.
 | Review Robin, participant | Your reviews |
 | Residential Operations | Its areas, as today |
 | Support Logs | Its areas, as today |
-| ApplyDesk | Its areas, when it has them |
+| ApplyDesk | Exercises (operators); My ApplyDesk |
 
 A viewer with only one place and no other application still gets the
 menu, for All applications. A page that registers no places shows the
@@ -196,8 +196,9 @@ more than one.
   (§6), and the toggle moving into the menu under 640 px. Sys admin is an
   account-menu entry, as Review Robin's Settings and Admin are (author,
   2026-11-02). Its switcher's places and tabs stay as they are.
-- **ApplyDesk** does not exist yet; §2–§6 fix its bar and its Unit so it
-  is born matching.
+- **ApplyDesk**: the bar of §2–§4 built with its placeholders, in its own
+  `applydesk/templates/applydesk/base.html` (segment AD1, 2026-11-12);
+  the top line is the workspace default until its operators have Units.
 
 ## 9. Done when
 

@@ -1,0 +1,17 @@
+{% extends "applydesk/base.html" %}
+{% block title %}{{ "Application" if exercise.blind else application.title }}{% endblock %}
+{% block content %}
+{# The application profile page (rulings 5, 6 and 9): the part shown to
+   reviewers only; in a blind exercise, no name or identifier. #}
+<div class="ptitle"><h1>{% if exercise.blind %}An application{% else %}{{ application.title }}{% endif %}</h1>{% if exercise.blind %}<span class="chip chip-mute">Blind review</span>{% endif %}</div>
+<p class="lede">{{ exercise.name }}</p>
+{% include "applydesk/_placeholder.html" %}
+<dl class="facts">
+  <dt>Applicant</dt><dd>{% if exercise.blind %}<span class="redacted">Redacted</span>{% else %}{{ application.applicant }}{% endif %}</dd>
+</dl>
+<div class="section">
+  <h3>Shown to reviewers</h3>
+  <dl class="facts">{% for label, help in shown %}<dt>{{ label }}</dt><dd>{{ application.title if loop.first else help }}</dd>{% endfor %}</dl>
+</div>
+<p class="muted">You can open this page because you are asked to review this application. Score it in Review Robin.</p>
+{% endblock %}

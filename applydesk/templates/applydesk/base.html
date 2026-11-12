@@ -3,15 +3,244 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{% endblock %} · ApplyDesk</title>
+  <title>{% block title %}{{ area }}{% endblock %} · ApplyDesk</title>
   {# ApplyDesk: a white application sheet on rose, running off the
      bottom-right like Support Logs' sheet, a tick cut in rose; the style of
      RRW's robin (author, 2026-11-02; source kept in Cordware's private
-     records). #}
+     records). The bar's icon below repeats it (`applydesk/tests/test_pages.py`
+     holds the two equal). #}
   <link rel="icon" type="image/svg+xml"
         href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><clipPath id='t'><rect width='32' height='32' rx='7'/></clipPath></defs><g clip-path='url(%23t)'><rect width='32' height='32' fill='%23be123c'/><rect x='7' y='5.5' width='34' height='38' rx='3.5' fill='%23fff'/><path d='M11.5 19 L16.5 24 L25.5 15' fill='none' stroke='%23be123c' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'/></g></svg>">
+  {# The theme is RRW's: the same storage key, so one choice holds across
+     the host's applications. Applied before the stylesheet, so a saved
+     Dark choice never flashes Light. #}
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("rrw-theme") === "dark") {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      } catch (e) { /* storage blocked: stay on Light */ }
+    })();
+  </script>
+  <style>
+    /* Tokens after RRW's and Residential's; the accent is the favicon's rose. */
+    :root {
+      --surface-page: #ffffff; --surface-card: #ffffff; --surface-muted: #f5f5f7;
+      --text-body: #111827; --text-subtle: #616874; --text-strong-subtle: #3a465c;
+      --text-link: #2563eb; --border-subtle: #e5e7eb; --border-default: #6f7b8e;
+      --on-accent: #ffffff; --danger: #b91c1c; --amber: #92400e;
+      --accent: #be123c; --accent-tint: #fff1f2; --accent-chip-fg: #9f1239;
+      --chip-info-bg: #dbeafe; --chip-info-fg: #1e40af;
+      --chip-warn-bg: #fef3c7; --chip-warn-fg: #92400e;
+      --chip-ok-bg: #dcfce7; --chip-ok-fg: #166534;
+      --chip-mute-bg: #f3f4f6; --chip-mute-fg: #3a465c;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --surface-page: #0f141b; --surface-card: #1a212e; --surface-muted: #232c3b;
+      --text-body: #e6eaf2; --text-subtle: #a9b4c6; --text-strong-subtle: #a9b4c6;
+      --text-link: #60a5fa; --border-subtle: #2b3547; --border-default: #6f7b8e;
+      --on-accent: #111827; --danger: #fca5a5; --amber: #fcd34d;
+      --accent: #fb7185; --accent-tint: #4c0519; --accent-chip-fg: #fda4af;
+      --chip-info-bg: #172554; --chip-info-fg: #93c5fd;
+      --chip-warn-bg: #451a03; --chip-warn-fg: #fcd34d;
+      --chip-ok-bg: #052e16; --chip-ok-fg: #86efac;
+      --chip-mute-bg: #232c3b; --chip-mute-fg: #a9b4c6;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--surface-page); color: var(--text-body); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; -webkit-text-size-adjust: 100%; }
+    a { color: var(--text-link); }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+    /* The bar (docs/header_chrome.md §2-§4), to Residential's measures. */
+    .topbar { border-bottom: 1px solid var(--border-subtle); background: var(--surface-page); }
+    .tb-in { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 1232px; margin: 0 auto; padding: 8px 16px; }
+    .switch, .acct-menu { position: relative; }
+    .switch > summary { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 10px 4px 6px; margin-left: -6px; border-radius: 8px; cursor: pointer; list-style: none; }
+    .switch > summary::-webkit-details-marker, .acct-menu > summary::-webkit-details-marker { display: none; }
+    .switch > summary:hover, .switch[open] > summary { background: var(--accent-tint); }
+    .tb-icon { flex: none; width: 28px; height: 28px; display: block; background: center / contain no-repeat url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><clipPath id='t'><rect width='32' height='32' rx='7'/></clipPath></defs><g clip-path='url(%23t)'><rect width='32' height='32' fill='%23be123c'/><rect x='7' y='5.5' width='34' height='38' rx='3.5' fill='%23fff'/><path d='M11.5 19 L16.5 24 L25.5 15' fill='none' stroke='%23be123c' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'/></g></svg>"); }
+    .sw-t { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+    .sw-unit { font-size: 12px; color: var(--text-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sw-app { font-size: 16px; font-weight: 700; }
+    .caret { font-size: 12px; color: var(--text-subtle); margin-left: 2px; }
+    .menu { position: absolute; z-index: 5; top: calc(100% + 4px); left: -6px; width: 270px; background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 8px; box-shadow: 0 8px 24px rgba(17, 24, 39, 0.14); padding: 6px 0; }
+    .mg + .mg { border-top: 1px solid var(--border-subtle); margin-top: 6px; padding-top: 6px; }
+    .mg-h { padding: 6px 14px 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-subtle); }
+    .menu a { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 14px; font-size: 15px; color: var(--text-body); text-decoration: none; }
+    .menu a[aria-current] { background: var(--accent-tint); font-weight: 700; color: var(--accent); }
+    .right { display: flex; align-items: center; gap: 12px; }
+    .theme-toggle { display: inline-flex; border: 1px solid var(--border-default); border-radius: 9999px; overflow: hidden; }
+    .theme-toggle button { font: inherit; font-size: 12px; line-height: 1.6; min-height: 28px; padding: 2px 12px; border: 0; background: transparent; color: var(--text-subtle); cursor: pointer; }
+    .theme-toggle button + button { border-left: 1px solid var(--border-default); }
+    .theme-toggle button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+    .acct-name { font-size: 14px; color: var(--text-strong-subtle); }
+    .avatar { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 9999px; background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 700; }
+    .acct-menu > summary { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border-radius: 9999px; cursor: pointer; list-style: none; }
+    .acct-menu .menu { left: auto; right: 0; }
+    .who { display: flex; flex-direction: column; gap: 2px; padding: 8px 14px; font-size: 13px; color: var(--text-subtle); }
+    .who strong { font-size: 15px; color: var(--text-body); }
+    .narrow-only { display: none; padding: 8px 14px; }
+    @media (max-width: 959px) { .acct-name { display: none; } }
+    @media (max-width: 639px) { .right > .theme-toggle { display: none; } .narrow-only { display: block; } }
+    .tabs { border-bottom: 1px solid var(--border-subtle); }
+    .tabs-in { display: flex; gap: 4px; max-width: 1232px; margin: 0 auto; padding: 0 8px; overflow-x: auto; scrollbar-width: none; }
+    .tabs a { flex: none; display: flex; align-items: center; min-height: 44px; padding: 0 10px; font-size: 14px; font-weight: 600; color: var(--text-strong-subtle); text-decoration: none; white-space: nowrap; }
+    .tabs a[aria-current] { color: var(--text-body); box-shadow: inset 0 -3px 0 var(--accent); }
+
+    /* The page. */
+    .page { max-width: 1232px; margin: 0 auto; padding: 20px 16px 48px; }
+    .ptitle { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+    .ptitle h1 { margin: 0; font-size: 22px; }
+    .lede { margin: 0 0 16px; color: var(--text-strong-subtle); font-size: 15px; }
+    .placeholder { margin: 0 0 16px; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--accent-tint); font-size: 14px; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; }
+    .card { border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-card); padding: 16px; min-width: 0; }
+    .card + .card { margin-top: 16px; }
+    .grid > .card + .card { margin-top: 0; }
+    .card h2 { margin: 0 0 8px; font-size: 17px; }
+    .card p { margin: 0 0 8px; }
+    .muted { color: var(--text-subtle); }
+    dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }
+    dl.facts dt { color: var(--text-subtle); }
+    dl.facts dd { margin: 0; }
+    .chip { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .chip-info { background: var(--chip-info-bg); color: var(--chip-info-fg); }
+    .chip-warn { background: var(--chip-warn-bg); color: var(--chip-warn-fg); }
+    .chip-ok { background: var(--chip-ok-bg); color: var(--chip-ok-fg); }
+    .chip-mute { background: var(--chip-mute-bg); color: var(--chip-mute-fg); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; }
+    th { font-size: 13px; color: var(--text-subtle); font-weight: 600; }
+    /* Buttons: RRW's roles (spec/ui_elements.md §6). Inert on placeholders. */
+    .btnrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 14px; border-radius: 6px; font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; border: 1px solid var(--accent); }
+    .btn-primary { background: var(--accent); color: var(--on-accent); }
+    .btn-secondary { background: transparent; color: var(--accent); }
+    /* Outline-amber: serious but recoverable, as Return to draft. */
+    .btn-alert { background: transparent; color: var(--amber); border-color: var(--amber); }
+    /* 0.85, as Residential's: disabled text stays at 4.5:1 or better. */
+    .btn[disabled] { opacity: 0.85; cursor: default; }
+    .section { border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px 16px; }
+    .section + .section, .facts + .section { margin-top: 12px; }
+    .section h3 { margin: 0 0 4px; font-size: 15px; }
+    .redacted { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--surface-muted); color: var(--text-subtle); font-size: 13px; }
+  </style>
 </head>
 <body>
-{% block body %}{% endblock %}
+  <header class="topbar">
+    <div class="tb-in">
+      <details class="switch" data-tb-menu>
+        <summary aria-label="Switch area: {{ area }}">
+          <span aria-hidden="true" class="tb-icon"></span>
+          <span class="sw-t">{% if top_line %}<span class="sw-unit">{{ top_line }}</span>{% endif %}<span class="sw-app">{{ area }} <span aria-hidden="true" class="caret">▾</span></span></span>
+        </summary>
+        <nav class="menu" aria-label="Switch area">
+          <div class="mg">
+            <div class="mg-h">{{ app_name }}</div>
+            {% for item in places %}
+              <a href="{{ url(item.path) }}"{% if item.label == area %} aria-current="page"{% endif %}>{{ item.label }}{% if item.label == area %} <span aria-hidden="true">✓</span>{% endif %}</a>
+            {% endfor %}
+          </div>
+          <div class="mg">
+            <div class="mg-h">Cordware</div>
+            <a href="{{ host_url('/') }}">All applications</a>
+          </div>
+        </nav>
+      </details>
+      <div class="right">
+        <div class="theme-toggle" role="group" aria-label="Display mode">
+          <button type="button" data-theme-choice="light" aria-pressed="true">Light</button>
+          <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+        </div>
+        {% if viewer %}
+          {% set _who = viewer.display_label %}
+          <span class="acct-name" aria-hidden="true">{{ _who }}</span>
+          <details class="acct-menu" data-tb-menu>
+            <summary aria-label="Account: {{ _who }}"><span class="avatar" aria-hidden="true">{{ initials }}</span></summary>
+            <nav class="menu" aria-label="Account">
+              <div class="mg who">
+                <strong>{{ _who }}</strong>
+                {% if viewer.email %}<span>{{ viewer.email }}</span>{% endif %}
+                {% if viewer.is_super_admin %}<span>super admin</span>{% endif %}
+              </div>
+              <div class="mg narrow-only">
+                <div class="theme-toggle" role="group" aria-label="Display mode">
+                  <button type="button" data-theme-choice="light" aria-pressed="true">Light</button>
+                  <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+                </div>
+              </div>
+              <div class="mg">
+                <a href="{{ host_url('/.auth/logout') }}">Sign out</a>
+              </div>
+            </nav>
+          </details>
+        {% else %}
+          <span class="avatar" aria-hidden="true">?</span><span class="visually-hidden">Not signed in</span>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+  {% if tabs %}
+    <nav class="tabs" aria-label="{{ area }}">
+      <div class="tabs-in">
+        {% for tab in tabs %}
+          <a href="{{ url(tab.path) }}"{% if is_here(tab.path) %} aria-current="page"{% endif %}>{{ tab.label }}</a>
+        {% endfor %}
+      </div>
+    </nav>
+  {% endif %}
+  <main class="page">
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var opts = document.querySelectorAll(".theme-toggle button");
+      function mode() { return root.getAttribute("data-theme") === "dark" ? "dark" : "light"; }
+      function sync() {
+        Array.prototype.forEach.call(opts, function (b) {
+          b.setAttribute("aria-pressed", b.getAttribute("data-theme-choice") === mode() ? "true" : "false");
+        });
+      }
+      Array.prototype.forEach.call(opts, function (b) {
+        b.addEventListener("click", function () {
+          var choice = b.getAttribute("data-theme-choice");
+          if (choice === "dark") root.setAttribute("data-theme", "dark");
+          else root.removeAttribute("data-theme");
+          try { localStorage.setItem("rrw-theme", choice); } catch (e) { /* ignore */ }
+          sync();
+        });
+      });
+      sync();
+    })();
+  </script>
+  <script>
+    // The bar's two menus (docs/header_chrome.md §7): one open at a time;
+    // Escape closes the open one and returns focus to its summary; a click
+    // outside closes it. Without this they still open and close.
+    (function () {
+      var menus = document.querySelectorAll("details[data-tb-menu]");
+      Array.prototype.forEach.call(menus, function (m) {
+        m.addEventListener("toggle", function () {
+          if (!m.open) return;
+          Array.prototype.forEach.call(menus, function (o) { if (o !== m) o.open = false; });
+        });
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key !== "Escape") return;
+        Array.prototype.forEach.call(menus, function (m) {
+          if (m.open) { m.open = false; m.querySelector("summary").focus(); }
+        });
+      });
+      document.addEventListener("click", function (e) {
+        Array.prototype.forEach.call(menus, function (m) {
+          if (m.open && !m.contains(e.target)) m.open = false;
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

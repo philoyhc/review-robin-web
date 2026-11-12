@@ -1,0 +1,26 @@
+{% extends "applydesk/base.html" %}
+{% block title %}{{ exercise.name }}{% endblock %}
+{% block content %}
+<div class="ptitle"><h1>{{ exercise.name }}</h1></div>
+<p class="lede">{{ exercise.summary }}</p>
+{% include "applydesk/_placeholder.html" %}
+<div class="grid">
+  <section class="card">
+    <h2>Timeline</h2>
+    <dl class="facts">
+      <dt>Applications open</dt><dd>{{ exercise.opens }}</dd>
+      <dt>Applications close</dt><dd>{{ exercise.application_stage_ends }}</dd>
+      <dt>Expected outcome</dt><dd>{{ exercise.expected_outcome }} <span class="muted">(an estimate)</span></dd>
+    </dl>
+  </section>
+  <section class="card">
+    <h2>Apply</h2>
+    {% if exercise.stage == "Application" %}
+      <p>Start an application; you can save a draft and come back before applications close.</p>
+      <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Start an application</button></div>
+    {% else %}
+      <p>Applications have closed.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

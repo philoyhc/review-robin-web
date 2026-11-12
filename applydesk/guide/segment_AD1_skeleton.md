@@ -69,7 +69,10 @@ Taken 2026-11-12 at `9bf80d5`.
 ## Status
 
 Building. Base `573ffa3` (`main` before rung 2) for the cumulative read.
-- Rung 2: item 1 as planned; the favicon is the author's proposed ApplyDesk icon (2026-11-02), a white sheet with a tick on rose `#be123c`.
+- Rung 2 (#3818): item 1 as planned; the favicon is the author's ApplyDesk icon (2026-11-02, kept in Cordware's favicon sources), a white sheet with a tick on rose `#be123c`.
+- Rung 3: the gate admits the platform super-admin only when deployed, not a preview list as Residential's: ApplyDesk is not shipped, so it needs none yet. One template serves the seven operator sections, each a partial.
+- **Read:** one `diff-reviewer` read of `573ffa3..` at rung 3. Fixed: the application and profile IDs were looked up before their shape was checked (now `applydesk/lookups.py`, shape first, and the route modules no longer import each other); Return to draft and Withdraw take Outline-amber; disabled buttons at 0.85 opacity, as Residential's; the tests now render the blind and draft exercises' pages, hold links to `url()` by mounting under another prefix, and call health with no identity; `/me` marks an invitation-only exercise; `docs/header_chrome.md` and the doc impact caught up. Sound as read: the gate, the blind profile, the registry and packaging.
+- **For the author's check:** Withdraw's role, Outline-amber or Destructive (withdrawal cannot be undone by the applicant).
 
 ## PR ladder
 
@@ -107,4 +110,6 @@ Building. Base `573ffa3` (`main` before rung 2) for the cumulative read.
 - `applydesk/spec/architecture.md` — new: package layout, import boundaries, packaging, tests and CI (item 1).
 - `cordware/spec/host.md` — the `applydesk` registry entry and its health path (item 1).
 - `applydesk/README.md` — new: the package's index, as Residential's (item 1).
+- `docs/header_chrome.md` — §3's ApplyDesk row and §8: the bar built (item 2).
+- `residentialapps/spec/applications.md`, `residentialapps/spec/architecture.md`, `utilityapps/spec/utilities.md` — the registry order and boundaries with ApplyDesk in them (item 1).
 - `applydesk/guide/todo_master.md` — the AD1 row, deleted at close.

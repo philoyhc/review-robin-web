@@ -1,0 +1,71 @@
+"""The operator's pages, `/operator/exercises/…` (segment AD1, item 2):
+placeholders on sample data, controls inert."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from starlette.responses import Response
+
+from applydesk import sample_data
+from applydesk.gate import placeholders_only
+from applydesk.lookups import exercise_or_404
+from applydesk.web import exercise_tabs, render
+
+router = APIRouter(prefix="/operator", dependencies=[Depends(placeholders_only)])
+
+#: An exercise's operator pages beyond Home, each a partial of
+#: `operator/section.html`, with its heading.
+SECTIONS: dict[str, str] = {
+    "settings": "Settings",
+    "form": "Applicant form",
+    "applications": "Applications",
+    "assessors": "Assessors",
+    "review": "Assessment in Review Robin",
+    "timeline": "Timeline and outcomes",
+    "export": "Export",
+}
+
+
+@router.get("/exercises", name="applydesk_exercises")
+def exercises(request: Request) -> Response:
+    return render(
+        request,
+        "applydesk/operator/exercises.html",
+        area="Exercises",
+        exercises=sample_data.EXERCISES,
+        applications=sample_data.applications_of,
+    )
+
+
+@router.get("/exercises/{exercise_id}", name="applydesk_exercise_home")
+def exercise_home(request: Request, exercise_id: str) -> Response:
+    exercise = exercise_or_404(exercise_id)
+    return render(
+        request,
+        "applydesk/operator/home.html",
+        area="Exercises",
+        tabs=exercise_tabs(exercise.public_id),
+        exercise=exercise,
+        applications=sample_data.applications_of(exercise.public_id),
+        assessors=sample_data.assessors_of(exercise.public_id),
+    )
+
+
+@router.get("/exercises/{exercise_id}/{section}", name="applydesk_exercise_section")
+def exercise_section(request: Request, exercise_id: str, section: str) -> Response:
+    exercise = exercise_or_404(exercise_id)
+    if section not in SECTIONS:
+        raise HTTPException(status_code=404)
+    return render(
+        request,
+        "applydesk/operator/section.html",
+        area="Exercises",
+        tabs=exercise_tabs(exercise.public_id),
+        exercise=exercise,
+        section=section,
+        heading=SECTIONS[section],
+        applications=sample_data.applications_of(exercise.public_id),
+        assessors=sample_data.assessors_of(exercise.public_id),
+        shown=sample_data.SHOWN_TO_REVIEWERS,
+        not_shown=sample_data.NOT_SHOWN_TO_REVIEWERS,
+    )

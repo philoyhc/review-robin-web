@@ -1,0 +1,24 @@
+{% extends "applydesk/base.html" %}
+{% block content %}
+<div class="ptitle"><h1>My ApplyDesk</h1></div>
+{% include "applydesk/_placeholder.html" %}
+<section class="card">
+  <h2>My applications</h2>
+  {% for a in mine %}
+    <p><a href="{{ url('/me/exercises/' ~ a.exercise_id ~ '/applications/' ~ a.public_id) }}">{{ a.title }}</a> {% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</p>
+  {% endfor %}
+</section>
+<section class="card">
+  <h2>Open to me</h2>
+  {% for e in exercises %}
+    <p><a href="{{ url('/me/exercises/' ~ e.public_id) }}">{{ e.name }}</a> <span class="muted">· {{ e.stage }} stage</span>{% if e.eligibility == "Invitation only" %} <span class="chip chip-info">You are invited</span>{% endif %}</p>
+  {% endfor %}
+</section>
+<section class="card">
+  <h2>Applications I am asked to review</h2>
+  <p class="muted">Usually opened from Review Robin's <strong>View</strong> link.</p>
+  {% for e, a in profiles %}
+    <p><a href="{{ url('/me/exercises/' ~ e.public_id ~ '/profiles/' ~ a.profile_id) }}">{{ "An application" if e.blind else a.title }}</a> <span class="muted">· {{ e.name }}</span></p>
+  {% endfor %}
+</section>
+{% endblock %}
