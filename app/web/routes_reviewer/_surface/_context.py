@@ -408,6 +408,10 @@ def _surface_context(
                     ),
                 }
             )
+        # 20M Item 1 — Profile rides beside the reviewee's name, never a
+        # column of its own.
+        profile_cell = next((c for c in display_cells if c["is_profile_link"]), None)
+        display_cells = [c for c in display_cells if not c["is_profile_link"]]
         # Sort lookup: ``display_field_id -> resolved value`` over
         # all display fields on this instrument (including the
         # identity ones that ``display_cells`` excludes). Lets the
@@ -435,6 +439,7 @@ def _surface_context(
                 "answer_count": completion.answer_count,
                 "unsubmitted_count": completion.unsubmitted_count,
                 "display_cells": display_cells,
+                "profile_cell": profile_cell,
                 "sort_values": sort_values,
                 "accepting": accepting,
                 "show_values": show_values,
@@ -496,8 +501,12 @@ def _surface_context(
             # The full set — including identity-column display
             # fields the visible-cells filter excludes — so the
             # operator can sort by Reviewee name.
+            # Profile heads no column (20M Item 1), so a stored sort entry
+            # on it is inert, as an unknown field's is.
             known_display_field_ids = {
-                df.id for df in all_display_fields_by_instrument.get(instrument_id, [])
+                df.id
+                for df in all_display_fields_by_instrument.get(instrument_id, [])
+                if not (df.source_type == "reviewee" and df.source_field == "profile_link")
             }
             # Effective sort spec for this instrument (Segment 13B
             # Part 2 PR 5):
@@ -554,6 +563,8 @@ def _surface_context(
                     "width_px": widths_by_col_key.get(f"df_{df.id}"),
                 }
                 for df in display_fields_by_instrument.get(instrument_id, [])
+                # Profile rides beside the name (20M Item 1).
+                if not (df.source_type == "reviewee" and df.source_field == "profile_link")
             ]
         )
         # Wave 3 PR iii — response-column widths migrated from

@@ -443,7 +443,9 @@
                 {% else %}
                   <td class="rs-reviewee"
                       data-sort-value="{{ row.assignment.reviewee.name }}">
-                    <strong>{{ row.assignment.reviewee.name }}</strong>{% if row.assignment.is_self_review %} <span class="pill pill-info">Self review</span>{% endif %}<br>
+                    {# 20M Item 1 — Profile rides beside the name, never a
+                       column: View for a web link, ••• otherwise. #}
+                    <strong>{{ row.assignment.reviewee.name }}</strong>{% if row.profile_cell and row.profile_cell.value %} <span class="rs-profile">{{ profile_value(row.profile_cell.value, "View", aria_label="View — " ~ row.assignment.reviewee.name) }}</span>{% endif %}{% if row.assignment.is_self_review %} <span class="pill pill-info">Self review</span>{% endif %}<br>
                     <code>{{ row.assignment.reviewee.email_or_identifier }}</code>
                   </td>
                 {% endif %}

@@ -202,6 +202,11 @@ def instrument_heading(
     return InstrumentHeading(title=f"#{position}", subtitle=desc)
 
 
+def _is_profile(source_type: str, source_field: str) -> bool:
+    """The reviewee's ProfileLink display field (20M Item 1)."""
+    return source_type == "reviewee" and source_field == "profile_link"
+
+
 def _format_band2_bound(value: float) -> str:
     """Format a Wave-2 ``_inline_min`` / ``_inline_max`` / ``_inline_step``
     float for re-serialisation back into the band2_state JSON
@@ -742,8 +747,13 @@ def _new_model_band2_state(
                 "pinned": _PINNED_WORDS.get(
                     instruments_service.locked_display_position(f.source_type, f.source_field)
                 ),
+                # 20M Item 1 — Profile rides beside the name, never a
+                # column, so its row sits after Email with no arrows.
+                "beside_name": _is_profile(f.source_type, f.source_field),
             }
         )
+    # Profile's row follows Name and Email, whatever its stored order.
+    fields.sort(key=lambda field: 0 if field["locked"] else 1 if field["beside_name"] else 2)
     identity_width_px = (instrument.column_widths or {}).get("identity")
     # Gap 1: selected_display_keys is derived from
     # ``InstrumentDisplayField.visible`` (the source of truth that

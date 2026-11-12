@@ -332,3 +332,35 @@ def test_the_row_script_keeps_the_chip_first_at_every_level(
     # first too.
     detached = card.locator("[data-new-model-rf-level='1']").nth(1)
     assert _leading(detached) == ["chip", "bar", "+", "fork", "nest", "join"]
+
+
+def test_profile_rides_beside_the_name_in_the_preview(
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
+) -> None:
+    """20M Item 1: Profile heads no preview column; its View sits after
+    the sample reviewee's name, and its Band 3 row has no arrows."""
+    session_id = new_session()
+    for kind, body in (
+        ("reviewers", b"ReviewerName,ReviewerEmail\nRana,rana@example.edu\n"),
+        (
+            "reviewees",
+            b"RevieweeName,RevieweeEmail,ProfileLink,RevieweeTag1\n"
+            b"Carol,carol@example.edu,https://example.edu/carol,Blue\n",
+        ),
+    ):
+        response = api.post(
+            f"/operator/sessions/{session_id}/{kind}/import",
+            files={"file": (f"{kind}.csv", body, "text/csv")},
+            follow_redirects=False,
+        )
+        assert response.status_code in (200, 303), response.text
+    card = open_unlocked(page, session_id)
+    profile = _chip(card, "reviewee.profile_link")
+    if not _box(card, "reviewee.profile_link").is_checked():
+        profile.click()
+    headers = preview_headers(card)
+    assert "Profile" not in headers, headers
+    identity = card.locator("[data-new-model-band2-preview] td.rs-reviewee")
+    expect(identity.locator(".rs-profile a")).to_have_text("View")
+    row = card.locator('[data-new-model-df-row][data-key="reviewee.profile_link"]')
+    expect(row.locator("[data-new-model-df-move]")).to_have_count(0)
