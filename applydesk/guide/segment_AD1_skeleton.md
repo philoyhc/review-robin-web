@@ -1,0 +1,105 @@
+# Segment AD1 — ApplyDesk: skeleton and URL map
+
+**Opened:** 2026-11-12 · **Theme:** the `applydesk/` package mounted under Cordware at `/applydesk`, and its URL map stood up as placeholder pages before any data exists · **Related:** `applydesk/guide/todo_master.md` (rulings 1–8, the MVP roadmap), `applydesk/docs/applydesk_functional_spec_v0.6b_agent_handoff.md` (§10, §15.4 slice 1), `residentialapps/guide/archive/segment_1A_package_and_mounts.md` (the same step for Residential)
+
+## Opportunity
+
+`applydesk/` holds only prose, and Cordware's importer excludes it. Nothing can render an ApplyDesk page, pass the import boundaries or run in CI until the package exists and is mounted. The rulings of 2026-11-12 settle the page structure enough to draw it: operators under `/operator/exercises`, participants under `/me` (ruling 8), exercises named by a 10-character ID (ruling 7), and reviewers reading applications on a profile page that can be blind (rulings 5 and 6).
+
+## Decision
+
+**Two items, in order; the segment closes as a whole.**
+
+1. **Package and mount**, as Residential's 1A: the package, its factory, the registry entry with an icon, health, packaging and the boundary tests. No database, no identity work, no pages beyond `health`.
+2. **The URL map as placeholders**: every page of the map below on sample data, with real copy and layout, the shared top bar (`docs/header_chrome.md`) and inert controls. It is iterated in the browser until the author approves it; that approval is item 2's gate, as 1B's item 1 was Residential's.
+
+**Rejected:**
+- **A database in AD1.** The schema follows the pages, and AD2 owns the database and identity. The placeholders need sample data only.
+- **A dedicated CI lane.** `tools/ci_lanes.py` already lists `applydesk/` in `APP_DIRS`, so an ApplyDesk code change runs the full lane. A narrower lane, like `residential`, waits until the full one costs too much.
+
+## The URL map
+
+Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID, `<app>` an application's, `<profile>` a profile page's. Item 2 builds every row as a placeholder.
+
+| Path | Page | Who reaches it (when wired) |
+|---|---|---|
+| `/` | Landing: links to *My ApplyDesk* and, for an operator, *Exercises* | Anyone signed in |
+| `/health` | Health, `200` signed out | Anyone |
+| `/operator/exercises` | Exercises lobby: the operator's exercises by state; New exercise | Operators |
+| `/operator/exercises/<id>` | Exercise Home: stage, state, counts, the next step | The exercise's operators |
+| `/operator/exercises/<id>/settings` | Details, dates and stage boundary, eligibility (open or invitation-only), blind review | 〃 |
+| `/operator/exercises/<id>/form` | The applicant form: *Shown to reviewers* and *Not shown to reviewers* | 〃 |
+| `/operator/exercises/<id>/applications` | Applications by state | 〃 |
+| `/operator/exercises/<id>/assessors` | The assessor roster and what each may view | 〃 |
+| `/operator/exercises/<id>/review` | Assessment in Review Robin: send, status, results back | 〃 |
+| `/operator/exercises/<id>/timeline` | Milestones, announcements, outcomes | 〃 |
+| `/operator/exercises/<id>/export` | The export bundle | 〃 |
+| `/me` | My ApplyDesk: my applications, exercises open to me, profiles I may read | Anyone signed in |
+| `/me/exercises/<id>` | An exercise as an applicant sees it: details, timeline, Apply | Eligible applicants |
+| `/me/exercises/<id>/applications/<app>` | My application: draft or submitted | Its applicant |
+| `/me/exercises/<id>/profiles/<profile>` | The application profile page: the *Shown to reviewers* section; in a blind exercise, the applicant's name and identifiers redacted | Assessors asked to review that application (ruling 9) |
+
+## Semantics
+
+- **Health without sign-in:** `/applydesk/health` answers `200` with no database, as RRW's does. Excluding it from Easy Auth in Azure is a private deployment step, not this segment's.
+- **Running alone:** `CORDWARE_APPS=applydesk` starts, and so does ApplyDesk beside every other application.
+- **Boundaries** (spec §10.1): `applydesk` never imports `app`, `residentialapps` or `utilityapps`, and nothing imports `applydesk`, except the host's registry, which names its factory as a string.
+- **Exercise IDs:** 10 symbols from RRW's alphabet (`23456789abcdefghjkmnpqrstuvwxyz`, no look-alikes), drawn at random. The sample data uses IDs of that shape, and a route refuses any other shape with a 404, as RRW's `get_by_public_id` does.
+- **Profile IDs are not application IDs.** A reviewer's URL names the profile page, never the application, so a blind profile's address carries nothing an applicant's own pages use.
+- **Placeholders answer only locally, or a previewer**, as Residential's preview gate does (`residentialapps/spec/applications.md`). Deployed, nobody else reaches a page until it is wired.
+
+## Judgment calls — decided
+
+- **ApplyDesk keeps its own copy of the ID alphabet** rather than importing RRW's. Ruling 7 makes it a shared convention, not shared code, and the boundary forbids the import.
+- **Participant paths sit under `/me`** whatever the role: an applicant's application and an assessor's profile page share the namespace, as RRW's reviewer and reviewee pages do.
+- **The landing page follows the shared header's landing pattern** (`docs/header_chrome.md`), not a page of its own design.
+
+## Blast radius (measured)
+
+Taken 2026-11-12 at `9bf80d5`.
+
+| What | Count | Command |
+|---|---|---|
+| ApplyDesk code today | 0 files outside `docs/`, `guide/`, `README` | `git ls-files applydesk \| grep -v -e /docs/ -e /guide/ -e README \| wc -l` |
+| Host registry entries to add | 1, in `cordware/main.py` `REGISTRY` (4 today) | `grep -n "AppEntry(" cordware/main.py` |
+| Boundary-test lines naming `applydesk` | 0 | `grep -c applydesk cordware/tests/test_import_boundary.py` |
+| Packaging | `applydesk*` absent from `packages.find` | `grep -n include pyproject.toml` |
+| CI lanes | `applydesk/` already in `APP_DIRS` | `grep -n APP_DIRS tools/ci_lanes.py` |
+
+## PR ladder
+
+1. **Plan and rulings** (this file and `applydesk/guide/todo_master.md`).
+2. **Item 1 — package and mount.** `applydesk/main.py` (`create_app`), `/health`, the registry entry and its `app_icons` entry, `packages.find`, the boundary tests, ApplyDesk's first tests, and drafts of `applydesk/spec/applications.md` and `applydesk/spec/architecture.md`. Record `main`'s SHA before this rung as the read's base.
+3. **Item 2 — the URL map as placeholders.** Every row above, with sample data, the top bar, the preview gate and the shape-checked IDs; tests that every path answers locally and refuses a malformed ID. Last build rung: `diff-reviewer` reads the cumulative diff from rung 2's base.
+4. **Iteration rungs**, as the author's browser checks ask, until item 2 is approved.
+5. **Close.**
+
+## Definition of done
+
+- `CORDWARE_APPS=applydesk` starts alone and beside every other application; `/applydesk/health` answers `200` signed out.
+- `cordware/tests/test_import_boundary.py` holds ApplyDesk's boundaries.
+- Every path in the URL map renders its placeholder locally; a malformed exercise ID gets a 404.
+- The author has approved the placeholders in a browser.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py AD1` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+
+## Open questions
+
+- **`close_check.py` reads only RRW's `guide/`**, as Residential found at 1A. Check AD1's close by hand, as 1A was, unless the tool has learned the other folders by then (author).
+
+## Out of scope
+
+- The database, models, identity binding and operator grants: AD2.
+- Anything wired: AD3 onward (`applydesk/guide/todo_master.md`, the roadmap).
+- Cordware's import rules and `deployment/apps.toml` for `applydesk/`: classified in the first import that carries ApplyDesk code, in the private repository.
+
+## Doc impact
+
+- `applydesk/spec/applications.md` — new: registry entry, health, running alone, the URL map and who reaches each page (items 1–2).
+- `applydesk/spec/architecture.md` — new: package layout, import boundaries, packaging, tests and CI (item 1).
+- `cordware/spec/host.md` — the `applydesk` registry entry and its health path (item 1).
+- `applydesk/README.md` — new: the package's index, as Residential's (item 1).
+- `applydesk/guide/todo_master.md` — the AD1 row, deleted at close.
