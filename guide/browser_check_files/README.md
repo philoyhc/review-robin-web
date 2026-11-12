@@ -11,4 +11,4 @@ checks.
 
 ## Current sets
 
-None.
+- `20m/` — 20M (where display fields sit): two rosters and a run order.
