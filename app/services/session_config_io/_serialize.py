@@ -33,6 +33,7 @@ from app.services.instruments._field_refs import (
     widths_to_positions,
 )
 from app.services.instruments._instrument_crud import (
+    effective_display_layout,
     effective_intro_layout,
     effective_response_layout,
 )
@@ -441,6 +442,12 @@ def _instrument_rows(
         Row(
             f"{prefix}.response_layout",
             _str(effective_response_layout(instrument)),
+            "enum",
+        ),
+        # Segment 20M — the Display fields chip.
+        Row(
+            f"{prefix}.display_layout",
+            _str(effective_display_layout(instrument)),
             "enum",
         ),
         Row(

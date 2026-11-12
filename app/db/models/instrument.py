@@ -43,6 +43,14 @@ INTRO_LAYOUT_DEFAULT = "layout_1"
 RESPONSE_LAYOUTS: tuple[str, ...] = ("columns", "stacked")
 RESPONSE_LAYOUT_DEFAULT = "columns"
 
+# Segment 20M — where an instrument's display fields sit on the reviewer
+# surface, in the order the Band 3 chip cycles them: a column each
+# (``across``), a labeled line each under the reviewee (``stacked``), or
+# one comma-separated line under the reviewee (``joined``). A
+# group-scoped instrument offers only ``joined`` and ``stacked``.
+DISPLAY_LAYOUTS: tuple[str, ...] = ("across", "stacked", "joined")
+DISPLAY_LAYOUT_DEFAULT = "across"
+
 
 def _next_session_seq(context: Any) -> int:
     """``max(session_seq) + 1`` within the row's session, 19Q Item 6.
@@ -208,6 +216,19 @@ class Instrument(Base, TimestampMixin):
     *Responses* cell. One of :data:`RESPONSE_LAYOUTS`; set by
     ``instruments.set_response_layout``. Revision ``b9e2d4f7a1c6`` gave
     every existing row the default."""
+    display_layout: Mapped[str] = mapped_column(
+        String(16),
+        default=DISPLAY_LAYOUT_DEFAULT,
+        server_default=DISPLAY_LAYOUT_DEFAULT,
+        nullable=False,
+    )
+    """Where the instrument's display fields sit on the reviewer surface
+    and the Instruments page preview (segment 20M): ``across``, a column
+    each; ``stacked``, a labeled line each under the reviewee; or
+    ``joined``, one comma-separated line under the reviewee. One of
+    :data:`DISPLAY_LAYOUTS`; a group-scoped instrument reads ``across`` as
+    ``joined``. Set by ``instruments.set_display_layout``. Revision
+    ``c3f8a1d6e2b7`` gave every existing row the default."""
     deadline_closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     sort_display_fields: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     """Operator-defined default sort spec for this instrument's

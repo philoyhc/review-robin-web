@@ -41,6 +41,8 @@ from app.db.models import (
     User,
 )
 from app.db.models.instrument import (
+    DISPLAY_LAYOUT_DEFAULT,
+    DISPLAY_LAYOUTS,
     INTRO_LAYOUT_DEFAULT,
     INTRO_LAYOUTS,
     RESPONSE_LAYOUT_DEFAULT,
@@ -169,6 +171,8 @@ def is_untouched_default(instrument: Instrument) -> bool:
     if instrument.intro_layout != INTRO_LAYOUT_DEFAULT:
         return False
     if instrument.response_layout != RESPONSE_LAYOUT_DEFAULT:
+        return False
+    if instrument.display_layout != DISPLAY_LAYOUT_DEFAULT:
         return False
     # A roster upload seeds a Display Fields row for each populated tag
     # column, unlabelled and shown; only a label or a hidden row is the
@@ -430,7 +434,8 @@ def replicate_instrument(
     the display fields (incl. each row's ``visible``), ``group_kind``,
     ``band1_touched_links``, ``band2_state``, ``self_reviews_active``
     (the Self review toggle, findings E3), ``intro_layout`` (19Y Item 1),
-    ``response_layout`` (20K) and ``accepting_responses`` as-is.
+    ``response_layout`` (20K), ``display_layout`` (20M) and
+    ``accepting_responses`` as-is.
     ``starts_new_page`` is not copied: it marks a break
     before the instrument, a fact about position, and the copy
     continues the source's page like any new instrument. The source's Band 1 rule set is
@@ -483,6 +488,7 @@ def replicate_instrument(
         self_reviews_active=source.self_reviews_active,
         intro_layout=source.intro_layout,
         response_layout=source.response_layout,
+        display_layout=source.display_layout,
     )
     db.add(instrument)
     db.flush()
@@ -1402,6 +1408,67 @@ def set_response_layout(
         actor_user_id=actor.id if actor else None,
         session=instrument.session,
         payload=audit.changes({"response_layout": [old_value, value]}),
+        refs={"instrument_id": instrument.id},
+    )
+    return instrument
+
+
+class DisplayLayoutError(ValueError):
+    """A layout that is not one of :data:`DISPLAY_LAYOUTS`."""
+
+
+def effective_display_layout(instrument: Instrument) -> str:
+    """Where the instrument's display fields sit, as stored: its
+    ``display_layout``, or the default for a value outside
+    :data:`DISPLAY_LAYOUTS` (segment 20M). The Settings CSV exports this;
+    the surface reads a group-scoped instrument's ``across`` as
+    ``joined`` on top of it."""
+    if instrument.display_layout in DISPLAY_LAYOUTS:
+        return instrument.display_layout
+    return DISPLAY_LAYOUT_DEFAULT
+
+
+def set_display_layout(
+    db: Session,
+    *,
+    instrument: Instrument,
+    layout: str,
+    actor: User | None,
+) -> Instrument:
+    """Store where the instrument's display fields sit (segment 20M):
+    ``across``, ``stacked`` or ``joined``, the Band 3 *Display fields*
+    chip.
+
+    ``layout`` must be one of :data:`DISPLAY_LAYOUTS`; anything else
+    raises :class:`DisplayLayoutError`. As the response layout (20K), it
+    changes what reviewers see, so a change reverts a validated session
+    to draft and writes ``instrument.display_layout_set``. A no-op save
+    does neither.
+    """
+    lifecycle.require_editable(db, instrument.session)
+    value = (layout or "").strip()
+    if value not in DISPLAY_LAYOUTS:
+        raise DisplayLayoutError(f"Unknown display layout {layout!r}.")
+    if instrument.display_layout == value:
+        return instrument
+    old_value = instrument.display_layout
+    instrument.display_layout = value
+    db.flush()
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_display_layout_set",
+    )
+    audit.write_event(
+        db,
+        event_type="instrument.display_layout_set",
+        summary=(
+            f"Set the display layout on instrument {_instrument_label(instrument)} to {value}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session=instrument.session,
+        payload=audit.changes({"display_layout": [old_value, value]}),
         refs={"instrument_id": instrument.id},
     )
     return instrument

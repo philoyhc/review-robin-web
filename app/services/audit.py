@@ -567,6 +567,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Segment 19Y Item 1 — the instrument card's intro layout chip.
     "instrument.intro_layout_updated": EventSchema(_IDENTITY | {"changes", "refs"}),
     "instrument.response_layout_set": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "instrument.display_layout_set": EventSchema(_IDENTITY | {"changes", "refs"}),
     "instrument.band2_state_updated": EventSchema(_IDENTITY | {"changes", "refs"}),
     "instrument.field_added": EventSchema(_IDENTITY | {"snapshot", "refs", "context"}),
     "instrument.field_updated": EventSchema(_IDENTITY | {"changes", "refs", "context"}),
