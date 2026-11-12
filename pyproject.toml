@@ -23,6 +23,8 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "python-multipart>=0.0.9",
     "cryptography>=42",
+    # Utilities' photo proof of concept re-encodes uploads (segment U4).
+    "pillow>=11",
 ]
 
 [project.optional-dependencies]

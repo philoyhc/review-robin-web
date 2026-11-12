@@ -55,6 +55,7 @@ Taken 2026-11-12 at `12cba9a`.
 
 Building. Base `5974163` for the cumulative read.
 - Rung 2: the history's version table is `utilityapps_alembic_version`, so CI round-trips it on RRW's Postgres service database beside RRW's own; checked locally against Postgres 16 too.
+- Rung 3: Pillow 11 or later. Pillow's own bomb guard fires only at about 179 Mpx, so the service refuses beyond 40 Mpx itself, from the header, before any pixel is read; transparency lands on white.
 
 ## PR ladder
 
