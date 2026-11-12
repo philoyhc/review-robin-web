@@ -17,7 +17,7 @@ from utilityapps.tests._host import host_with
 PAGE = "/utilities/photo-poc/"
 SAVE = "/utilities/photo-poc/photos"
 WRITE = {WRITE_HEADER: "1"}
-CROP = {"x": "100", "y": "0", "width": "800", "height": "1000"}
+CROP = {"cx": "500", "cy": "500", "width": "800", "angle": "0"}
 
 
 @pytest.fixture
@@ -74,6 +74,11 @@ def test_a_saved_photo_is_listed_and_served_back(client: TestClient) -> None:
     assert again.status_code == 304 and again.content == b""
 
 
+def test_a_turned_window_with_fractions_is_saved(client: TestClient) -> None:
+    tile = _save(client, cx="500.25", cy="499.5", width="400.125", angle="-12.5")
+    assert client.get(tile["src"]).status_code == 200
+
+
 def test_photos_are_listed_newest_first(client: TestClient) -> None:
     first, second = _save(client), _save(client)
     page = client.get(PAGE).text
@@ -84,11 +89,12 @@ def test_photos_are_listed_newest_first(client: TestClient) -> None:
     ("data", "fields", "status", "message"),
     [
         (b"not a photo", {}, 400, "The file is not a photo this tool can read."),
-        (None, {"x": "500"}, 400, "The crop is outside the photo."),
-        (None, {"height": "900"}, 400, "The crop is not the window's shape."),
+        (None, {"cx": "900"}, 400, "The crop is outside the photo."),
+        (None, {"angle": "30"}, 400, "The crop is outside the photo."),
         (None, {"width": "eight"}, 400, "The crop is outside the photo."),
-        (None, {"x": "--5"}, 400, "The crop is outside the photo."),
-        (None, {"x": "\u0661"}, 400, "The crop is outside the photo."),
+        (None, {"cx": "--5"}, 400, "The crop is outside the photo."),
+        (None, {"cx": "\u0661"}, 400, "The crop is outside the photo."),
+        (None, {"cx": "5e2"}, 400, "The crop is outside the photo."),
         (b"\xff" * (5 * 1024 * 1024 + 1), {}, 413, "The photo is larger than 5 MB."),
     ],
 )

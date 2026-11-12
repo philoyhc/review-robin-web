@@ -17,12 +17,18 @@
 
   <div class="card" aria-labelledby="frame-h">
     <h2 id="frame-h">Frame</h2>
-    <p class="note">Drag the photo to move it, or use the arrow keys; zoom in or out. The photo always covers the window. Save keeps exactly what is inside the window.</p>
+    <p class="note">Drag the photo to move it, or use the arrow keys. Zoom and rotate with the controls below or, on a touch screen, with two fingers: pinch to zoom, twist to rotate. The photo always covers the window. Save keeps exactly what is inside the window.</p>
     <div class="frame" id="photo-window" style="--ratio: {{ ratio[0] }} / {{ ratio[1] }};" tabindex="0" aria-label="The window: what Save keeps">
       <span class="frame-empty">No photo chosen</span>
     </div>
     <label for="photo-zoom">Zoom</label>
     <input type="range" id="photo-zoom" min="1" max="4" step="0.01" value="1" disabled>
+    <label for="photo-rotate">Rotate</label>
+    <input type="range" id="photo-rotate" min="-180" max="180" step="0.5" value="0" disabled>
+    <div class="actions tight">
+      <button class="btn secondary" type="button" id="photo-left" disabled>Rotate left 90°</button>
+      <button class="btn secondary" type="button" id="photo-right" disabled>Rotate right 90°</button>
+    </div>
     <div class="actions">
       <button class="btn primary" type="button" id="photo-save" disabled>Save</button>
     </div>
@@ -43,10 +49,12 @@
     </ul>
   </div>
   <script>
-  // Segment U4, rung 5: frame a photo in the window and save it. The
-  // browser draws the photo with its EXIF orientation applied, so the
-  // rectangle sent is in the oriented photo's pixels, as the server reads
-  // it after `exif_transpose`. The server crops; nothing here does.
+  // Segment U4: frame a photo in the window and save it. The browser
+  // draws the photo with its EXIF orientation applied, so the window is
+  // described in the oriented photo's pixels, as the server reads it after
+  // `exif_transpose`: its center, its width and the photo's turn
+  // (`utilityapps/photo_poc/service.py`, `Frame`). The server crops;
+  // nothing here does.
   (function () {
     var MAX = {{ max_bytes }};
     var RW = {{ ratio[0] }}, RH = {{ ratio[1] }};
@@ -54,44 +62,71 @@
     var SAVE_URL = {{ url('/photo-poc/photos') | tojson }};
     var DELETE_BASE = {{ url('/photo-poc/photos/') | tojson }};
     var TYPES = ["image/jpeg", "image/png", "image/webp"];
+    var MAX_ZOOM = 4;
     var drop = document.getElementById("photo-drop");
     var input = document.getElementById("photo-file");
     var message = document.getElementById("photo-message");
     var win = document.getElementById("photo-window");
     var zoom = document.getElementById("photo-zoom");
+    var rotate = document.getElementById("photo-rotate");
+    var left = document.getElementById("photo-left");
+    var right = document.getElementById("photo-right");
     var saveButton = document.getElementById("photo-save");
     var tiles = document.getElementById("photo-tiles");
     var none = document.getElementById("photo-none");
-    var file = null, img = null, nw = 0, nh = 0, base = 1, scale = 1, ox = 0, oy = 0, drag = null;
+    // The photo's point at the window's center, its turn in degrees
+    // clockwise, and the zoom over the smallest scale that covers.
+    var file = null, img = null, nw = 0, nh = 0, cx = 0, cy = 0, angle = 0, z = 1;
+    var pointers = {}, drag = null, pinch = null;
 
     function say(text, error) {
       message.textContent = text;
       message.className = error ? "error" : "note";
     }
+    // The window's size on screen; its height follows from the ratio, as
+    // the server's does, rather than from layout's rounding.
     function box() {
-      var r = win.getBoundingClientRect();
-      return { w: r.width, h: r.height };
+      var w = win.getBoundingClientRect().width;
+      return { w: w, h: w * RH / RW };
     }
-    // The photo always covers the window: its offset stays between the
-    // window's far edge less the photo's size, and zero.
+    function trig(a) {
+      var r = a * Math.PI / 180;
+      return { c: Math.cos(r), s: Math.sin(r) };
+    }
+    // Half the window's extent in the photo's pixels, along its axes, at
+    // a turn and a scale: the corners' bounding box.
+    function reach(a, k) {
+      var b = box(), t = trig(a), c = Math.abs(t.c), s = Math.abs(t.s);
+      return { x: (c * b.w + s * b.h) / (2 * k), y: (s * b.w + c * b.h) / (2 * k) };
+    }
+    // The smallest scale (screen pixels per photo pixel) at which the
+    // turned photo covers the window.
+    function fit(a) {
+      var e = reach(a, 1);
+      return Math.max(2 * e.x / nw, 2 * e.y / nh);
+    }
+    function scale() { return fit(angle) * z; }
+    // A screen offset as a photo offset: turned back, and scaled.
+    function toPhoto(dx, dy, a, k) {
+      var t = trig(a);
+      return { x: (t.c * dx + t.s * dy) / k, y: (-t.s * dx + t.c * dy) / k };
+    }
+    function normal(a) { return ((a + 180) % 360 + 360) % 360 - 180; }
+    // The photo always covers the window: its center stays where every
+    // corner of the window is over the photo.
     function draw() {
-      var b = box();
-      ox = Math.min(0, Math.max(b.w - nw * scale, ox));
-      oy = Math.min(0, Math.max(b.h - nh * scale, oy));
-      img.style.width = nw * scale + "px";
-      img.style.height = nh * scale + "px";
-      img.style.transform = "translate(" + ox + "px, " + oy + "px)";
+      var b = box(), k = scale(), e = reach(angle, k);
+      cx = Math.min(nw - e.x, Math.max(e.x, cx));
+      cy = Math.min(nh - e.y, Math.max(e.y, cy));
+      img.style.width = nw + "px";
+      img.style.height = nh + "px";
+      img.style.transform = "translate(" + b.w / 2 + "px, " + b.h / 2 + "px) rotate(" + angle +
+        "deg) scale(" + k + ") translate(" + -cx + "px, " + -cy + "px)";
+      zoom.value = String(z);
+      rotate.value = String(angle);
     }
-    // Zoom about the window's center.
-    function setZoom(z) {
-      var b = box();
-      var cx = (b.w / 2 - ox) / scale, cy = (b.h / 2 - oy) / scale;
-      base = Math.max(b.w / nw, b.h / nh);
-      scale = base * z;
-      ox = b.w / 2 - cx * scale;
-      oy = b.h / 2 - cy * scale;
-      draw();
-    }
+    function setZoom(next) { z = Math.min(MAX_ZOOM, Math.max(1, next)); draw(); }
+    function setAngle(next) { angle = normal(next); draw(); }
     function choose(chosen) {
       if (!chosen) return;
       if (TYPES.indexOf(chosen.type) < 0) { say("Choose a JPEG, PNG or WebP photo.", true); return; }
@@ -107,16 +142,10 @@
         next.draggable = false;
         win.textContent = "";
         win.appendChild(next);
-        var b = box();
-        base = Math.max(b.w / nw, b.h / nh);
-        scale = base;
-        zoom.value = "1";
-        ox = (b.w - nw * scale) / 2;
-        oy = (b.h - nh * scale) / 2;
+        cx = nw / 2; cy = nh / 2; angle = 0; z = 1;
         draw();
-        zoom.disabled = false;
-        saveButton.disabled = false;
-        say(chosen.name + ": drag and zoom to frame it, then Save.", false);
+        [zoom, rotate, left, right, saveButton].forEach(function (c) { c.disabled = false; });
+        say(chosen.name + ": drag, zoom and rotate to frame it, then Save.", false);
       };
       next.onerror = function () {
         URL.revokeObjectURL(source);
@@ -124,16 +153,10 @@
       };
       next.src = source;
     }
-    // The window's rectangle in the photo's pixels, its width to height
-    // exactly the window's to within a pixel, always inside the photo.
-    function rectangle() {
-      var b = box();
-      var w = Math.min(nw, Math.round(b.w / scale));
-      var h = Math.round(w * RH / RW);
-      if (h > nh) { h = nh; w = Math.floor(h * RW / RH); }
-      var x = Math.max(0, Math.min(nw - w, Math.round(-ox / scale)));
-      var y = Math.max(0, Math.min(nh - h, Math.round(-oy / scale)));
-      return { x: x, y: y, width: w, height: h };
+    // What Save sends: the window in the photo's pixels.
+    function frame() {
+      var k = scale();
+      return { cx: cx.toFixed(3), cy: cy.toFixed(3), width: (box().w / k).toFixed(3), angle: angle.toFixed(3) };
     }
 
     input.addEventListener("change", function () { choose(input.files[0]); input.value = ""; });
@@ -145,29 +168,80 @@
       choose(e.dataTransfer && e.dataTransfer.files[0]);
     });
     zoom.addEventListener("input", function () { if (img) setZoom(parseFloat(zoom.value)); });
+    rotate.addEventListener("input", function () { if (img) setAngle(parseFloat(rotate.value)); });
+    left.addEventListener("click", function () { if (img) setAngle(angle - 90); });
+    right.addEventListener("click", function () { if (img) setAngle(angle + 90); });
+
+    // One finger (or the mouse) drags; two pinch and twist, about the
+    // point between them, which stays under the fingers.
+    function fromCenter(p) {
+      var r = win.getBoundingClientRect();
+      return { x: p.x - r.left - r.width / 2, y: p.y - r.top - r.width * RH / RW / 2 };
+    }
+    function both() {
+      var ids = Object.keys(pointers), a = pointers[ids[0]], b = pointers[ids[1]];
+      return {
+        dist: Math.hypot(b.x - a.x, b.y - a.y) || 1,
+        turn: Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI,
+        mid: fromCenter({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })
+      };
+    }
+    function begin() {
+      var ids = Object.keys(pointers);
+      drag = null; pinch = null;
+      if (ids.length === 1) {
+        drag = { x: pointers[ids[0]].x, y: pointers[ids[0]].y, cx: cx, cy: cy };
+      } else if (ids.length >= 2) {
+        var g = both(), k = scale(), d = toPhoto(g.mid.x, g.mid.y, angle, k);
+        pinch = { dist: g.dist, turn: g.turn, z: z, angle: angle, qx: cx + d.x, qy: cy + d.y };
+      }
+    }
     win.addEventListener("pointerdown", function (e) {
       if (!img) return;
-      drag = { x: e.clientX, y: e.clientY, ox: ox, oy: oy };
-      win.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+      try { win.setPointerCapture(e.pointerId); } catch (err) { /* not an active pointer */ }
+      begin();
     });
     win.addEventListener("pointermove", function (e) {
-      if (!drag) return;
-      ox = drag.ox + e.clientX - drag.x;
-      oy = drag.oy + e.clientY - drag.y;
-      draw();
+      if (!pointers[e.pointerId]) return;
+      pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+      if (pinch && Object.keys(pointers).length >= 2) {
+        var g = both();
+        z = Math.min(MAX_ZOOM, Math.max(1, pinch.z * g.dist / pinch.dist));
+        angle = normal(pinch.angle + g.turn - pinch.turn);
+        var d = toPhoto(g.mid.x, g.mid.y, angle, scale());
+        cx = pinch.qx - d.x; cy = pinch.qy - d.y;
+        draw();
+      } else if (drag) {
+        var m = toPhoto(e.clientX - drag.x, e.clientY - drag.y, angle, scale());
+        cx = drag.cx - m.x; cy = drag.cy - m.y;
+        draw();
+      }
     });
-    function stop() { drag = null; }
-    win.addEventListener("pointerup", stop);
-    win.addEventListener("pointercancel", stop);
+    function lift(e) {
+      if (!pointers[e.pointerId]) return;
+      delete pointers[e.pointerId];
+      begin();
+    }
+    win.addEventListener("pointerup", lift);
+    win.addEventListener("pointercancel", lift);
+    // A trackpad's pinch arrives as a wheel with ctrlKey.
+    win.addEventListener("wheel", function (e) {
+      if (!img || !e.ctrlKey) return;
+      e.preventDefault();
+      setZoom(z * Math.exp(-e.deltaY / 100));
+    }, { passive: false });
     win.addEventListener("keydown", function (e) {
       if (!img) return;
       var step = { ArrowLeft: [10, 0], ArrowRight: [-10, 0], ArrowUp: [0, 10], ArrowDown: [0, -10] }[e.key];
       if (!step) return;
       e.preventDefault();
-      ox += step[0]; oy += step[1];
+      var m = toPhoto(step[0], step[1], angle, scale());
+      cx -= m.x; cy -= m.y;
       draw();
     });
-    window.addEventListener("resize", function () { if (img) setZoom(parseFloat(zoom.value)); });
+    window.addEventListener("resize", function () { if (img) draw(); });
 
     function addTile(t) {
       var li = document.createElement("li");
@@ -204,13 +278,13 @@
 
     saveButton.addEventListener("click", function () {
       if (!file) return;
-      var r = rectangle();
+      var r = frame();
       var body = new FormData();
       body.append("photo", file);
-      body.append("x", String(r.x));
-      body.append("y", String(r.y));
-      body.append("width", String(r.width));
-      body.append("height", String(r.height));
+      body.append("cx", r.cx);
+      body.append("cy", r.cy);
+      body.append("width", r.width);
+      body.append("angle", r.angle);
       var headers = {};
       headers[HEADER] = "1";
       saveButton.disabled = true;

@@ -132,3 +132,75 @@ def test_an_over_size_or_wrong_file_is_refused_in_the_browser(page: Page) -> Non
     )
     assert page.locator("#photo-message").text_content() == "The photo is larger than 5 MB."
     assert page.locator("#photo-save").is_disabled()
+
+
+def _choose_phone_photo(page: Page) -> None:
+    page.goto(PAGE)
+    phone: FilePayload = {"name": "phone.jpg", "mimeType": "image/jpeg", "buffer": _phone_photo()}
+    page.set_input_files("#photo-file", files=[phone])
+    page.wait_for_selector("#photo-save:enabled")
+
+
+def _save_and_read(client: TestClient, page: Page, count: int) -> Image.Image:
+    page.click("#photo-save")
+    page.wait_for_function(f"document.querySelectorAll('#photo-tiles li').length === {count}")
+    saved = _saved(client, page)
+    assert saved.size == (480, 600)
+    return saved
+
+
+def test_a_photo_turned_right_is_saved_as_shown(client: TestClient, page: Page) -> None:
+    """Seen blue on the left and red on the right; turned a quarter
+    clockwise, blue is on top and red below, and so is the saved photo."""
+    _choose_phone_photo(page)
+    page.click("#photo-right")
+    assert page.locator("#photo-rotate").input_value() == "90"
+    saved = _save_and_read(client, page, 1)
+    assert _rgb(saved, 240, 60)[2] > 200 and _rgb(saved, 240, 540)[0] > 200
+    page.click("#photo-left")
+    page.click("#photo-left")
+    assert page.locator("#photo-rotate").input_value() == "-90"
+    saved = _save_and_read(client, page, 2)
+    assert _rgb(saved, 240, 60)[0] > 200 and _rgb(saved, 240, 540)[2] > 200
+
+
+# Two touches on the window, as a touch screen sends them: the second
+# moves out to twice the spread and turns 30 degrees about the first.
+TWO_FINGERS = """([x, y]) => {
+  const win = document.getElementById('photo-window');
+  const send = (type, id, cx, cy) => win.dispatchEvent(new PointerEvent(type, {
+    pointerId: id, pointerType: 'touch', isPrimary: id === 1,
+    clientX: cx, clientY: cy, bubbles: true, cancelable: true }));
+  send('pointerdown', 1, x - 40, y);
+  send('pointerdown', 2, x + 40, y);
+  const r = 160, turn = Math.PI / 6;
+  for (let i = 1; i <= 5; i++) {
+    const f = i / 5, d = 80 + (r - 80) * f, a = turn * f;
+    send('pointermove', 2, x - 40 + d * Math.cos(a), y + d * Math.sin(a));
+  }
+  send('pointerup', 2, 0, 0);
+  send('pointerup', 1, 0, 0);
+}"""
+
+
+def test_two_fingers_pinch_to_zoom_and_twist_to_rotate(client: TestClient, page: Page) -> None:
+    _choose_phone_photo(page)
+    window = page.locator("#photo-window").bounding_box()
+    assert window is not None
+    middle = [window["x"] + window["width"] / 2, window["y"] + window["height"] / 2]
+    page.evaluate(TWO_FINGERS, middle)
+    assert float(page.locator("#photo-zoom").input_value()) == pytest.approx(2, abs=0.01)
+    assert float(page.locator("#photo-rotate").input_value()) == pytest.approx(30, abs=0.5)
+    # The turned, zoomed window is inside the photo as the server checks it.
+    _save_and_read(client, page, 1)
+
+
+@pytest.mark.parametrize("turn", ["17.5", "-63", "135"])
+def test_any_turn_at_the_smallest_zoom_is_accepted(
+    client: TestClient, page: Page, turn: str
+) -> None:
+    """At zoom 1 the window's corners touch the photo's edges: the page's
+    covering rule and the server's check agree there."""
+    _choose_phone_photo(page)
+    page.locator("#photo-rotate").fill(turn)
+    _save_and_read(client, page, 1)
