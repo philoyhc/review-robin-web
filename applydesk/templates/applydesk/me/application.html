@@ -16,6 +16,6 @@
 </div>
 <div class="btnrow">
   {% if application.state == "Draft" %}<button class="btn btn-secondary" type="button" disabled>Save draft</button><button class="btn btn-primary" type="button" disabled>Submit</button>
-  {% else %}<button class="btn btn-alert" type="button" disabled>Withdraw</button>{% endif %}
+  {% else %}<button class="btn btn-destructive" type="button" disabled>Withdraw</button>{% endif %}
 </div>
 {% endblock %}

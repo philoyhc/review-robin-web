@@ -72,7 +72,7 @@ Building. Base `573ffa3` (`main` before rung 2) for the cumulative read.
 - Rung 2 (#3818): item 1 as planned; the favicon is the author's ApplyDesk icon (2026-11-02, kept in Cordware's favicon sources), a white sheet with a tick on rose `#be123c`.
 - Rung 3: the gate admits the platform super-admin only when deployed, not a preview list as Residential's: ApplyDesk is not shipped, so it needs none yet. One template serves the seven operator sections, each a partial.
 - **Read:** one `diff-reviewer` read of `573ffa3..` at rung 3. Fixed: the application and profile IDs were looked up before their shape was checked (now `applydesk/lookups.py`, shape first, and the route modules no longer import each other); Return to draft and Withdraw take Outline-amber; disabled buttons at 0.85 opacity, as Residential's; the tests now render the blind and draft exercises' pages, hold links to `url()` by mounting under another prefix, and call health with no identity; `/me` marks an invitation-only exercise; `docs/header_chrome.md` and the doc impact caught up. Sound as read: the gate, the blind profile, the registry and packaging.
-- **For the author's check:** Withdraw's role, Outline-amber or Destructive (withdrawal cannot be undone by the applicant).
+- **Iteration rung 4** (author's browser check on Azure, 2026-11-12): the lobby shows an *Exercise Code* column, the operator's short code as an RRW session's, not the public ID; Home and Settings show the code too. Withdraw is Destructive (outline red): an applicant cannot undo it.
 
 ## PR ladder
 

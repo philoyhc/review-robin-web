@@ -11,6 +11,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Exercise:
     public_id: str
+    code: str  # the operator's short code, as an RRW session's (unique)
     name: str
     state: str  # Draft, Published, Closed, Archived
     stage: str  # Application, Review
@@ -45,6 +46,7 @@ class Assessor:
 EXERCISES: tuple[Exercise, ...] = (
     Exercise(
         public_id="wa9juxbc2t",
+        code="URF-2027",
         name="Undergraduate Research Fellowship 2027",
         state="Published",
         stage="Application",
@@ -57,6 +59,7 @@ EXERCISES: tuple[Exercise, ...] = (
     ),
     Exercise(
         public_id="k7mfr3pq8z",
+        code="TEA-2026",
         name="Teaching Excellence Award 2026",
         state="Published",
         stage="Review",
@@ -69,6 +72,7 @@ EXERCISES: tuple[Exercise, ...] = (
     ),
     Exercise(
         public_id="c4xh2ndv6s",
+        code="SIS-2027",
         name="Summer Internship Scheme 2027",
         state="Draft",
         stage="Application",
