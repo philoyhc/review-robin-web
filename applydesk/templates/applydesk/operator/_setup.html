@@ -1,0 +1,43 @@
+<div class="grid">
+  <section class="card">
+    <h2>Details</h2>
+    <dl class="facts">
+      <dt>Name</dt><dd>{{ exercise.name }}</dd>
+      <dt>Exercise Code</dt><dd><code>{{ exercise.code }}</code></dd>
+      <dt>Summary</dt><dd>{{ exercise.summary }}</dd>
+      <dt>Contact</dt><dd>fellowships@example.edu</dd>
+    </dl>
+  </section>
+  <section class="card">
+    <h2>Who may apply</h2>
+    <p>{{ exercise.eligibility }}</p>
+    <p class="muted">Invitation only hides the exercise from everyone not on its list, direct links included.</p>
+  </section>
+  <section class="card">
+    <h2>Review</h2>
+    <p>Blind review: <strong>{{ "On" if exercise.blind else "Off" }}</strong></p>
+    <p class="muted">On, assessors' profile pages redact the applicant's name and identifiers, and Review Robin receives an alias key in place of each application ID.</p>
+  </section>
+</div>
+<section class="card">
+  <h2>Timeline</h2>
+  <p class="muted">The stages and their dates, as Home and applicants see them.</p>
+  {% include "applydesk/operator/_stages.html" %}
+  <h3>Milestones</h3>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Milestone</th><th>Date</th><th>Shown to applicants</th></tr></thead>
+    <tbody>
+      <tr><td>Applications open</td><td>{{ exercise.opens }}</td><td>Yes</td></tr>
+      <tr><td>Application stage ends <span class="muted">(a hard deadline: no application starts, submits or resubmits after it)</span></td><td>{{ exercise.application_stage_ends }}</td><td>Yes</td></tr>
+      <tr><td>Interviews</td><td class="muted">Not set</td><td>Yes</td></tr>
+      <tr><td>Expected outcome <span class="muted">(an estimate)</span></td><td>{{ exercise.expected_outcome }}</td><td>Yes</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Add a milestone</button></div>
+  <h3>Announcements</h3>
+  <p class="muted">None yet. An announcement shows on every applicant's exercise page.</p>
+  <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>New announcement</button></div>
+</section>
+<div class="btnrow"><button class="btn btn-primary" type="button" disabled>Save</button></div>

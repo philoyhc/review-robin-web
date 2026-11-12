@@ -27,18 +27,12 @@ PAGES = (
     f"/applydesk/operator/exercises/{EX}",
     *(
         f"/applydesk/operator/exercises/{EX}/{section}"
-        for section in (
-            "settings",
-            "form",
-            "applications",
-            "assessors",
-            "review",
-            "timeline",
-            "export",
-        )
+        for section in ("setup", "form", "applications", "panels", "review", "report")
     ),
     f"/applydesk/operator/exercises/{BLIND}",  # Review stage: "Go to Review"
-    f"/applydesk/operator/exercises/{BLIND}/settings",  # blind review on
+    f"/applydesk/operator/exercises/{BLIND}/setup",  # blind review on
+    f"/applydesk/operator/exercises/{BLIND}/panels",  # no reviewer pool
+    f"/applydesk/operator/exercises/{DRAFT}/setup",  # the Setup stage is now
     f"/applydesk/operator/exercises/{DRAFT}",  # the Publish step
     f"/applydesk/operator/exercises/{DRAFT}/applications",  # none yet
     "/applydesk/me",
@@ -245,3 +239,64 @@ def test_withdraw_is_destructive(client: TestClient) -> None:
     """The applicant cannot undo a withdrawal (author, 2026-11-12)."""
     page = client.get(f"/applydesk/me/exercises/{EX}/applications/h6zr2tdw9p").text
     assert '<button class="btn btn-destructive" type="button" disabled>Withdraw</button>' in page
+
+
+def test_the_operator_tabs_are_the_authors_seven(client: TestClient) -> None:
+    """Author, 2026-11-12: Home, Setup, Form, Applications, Panels and
+    Report, with Review kept as a seventh after Panels."""
+    text = client.get(f"/applydesk/operator/exercises/{EX}").text
+    link = r'<a href="/applydesk/operator/exercises/' + EX + r'[^"]*"[^>]*>([^<]+)</a>'
+    tabs = re.findall(link, text)
+    assert tabs[-7:] == ["Home", "Setup", "Form", "Applications", "Panels", "Review", "Report"]
+
+
+@pytest.mark.parametrize("old", ["settings", "assessors", "timeline", "export"])
+def test_the_retired_sections_are_gone(client: TestClient, old: str) -> None:
+    assert client.get(f"/applydesk/operator/exercises/{EX}/{old}").status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("exercise_id", "now"), [(DRAFT, "Setup"), (EX, "Applications"), (BLIND, "Review")]
+)
+def test_home_marks_the_current_stage_on_its_timeline(
+    client: TestClient, exercise_id: str, now: str
+) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{exercise_id}").text
+    current = re.findall(r'aria-current="step">\s*<span class="stage-name">([^<]+)', text)
+    assert [c.strip() for c in current] == [now]
+    for stage in ("Setup", "Applications", "Review", "Outcome"):
+        assert f'<span class="stage-name">{stage}' in text
+
+
+def test_setup_carries_the_timeline_setup(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/setup").text
+    assert '<ol class="stages"' in text and "<h3>Milestones</h3>" in text
+    assert "Add a milestone" in text and "New announcement" in text
+
+
+def test_the_form_page_previews_the_form(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/form").text
+    assert '<h2 id="preview-h">Preview</h2>' in text
+    for label, _ in sample_data.SHOWN_TO_REVIEWERS:
+        assert f">{label}</label>" in text
+
+
+def test_applications_generates_applicant_profiles(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/applications").text
+    assert "Generate applicant profiles" in text
+    assert "/applydesk/me/exercises/wa9juxbc2t/profiles/p3bd7kq2wx" in text
+
+
+def test_panels_holds_the_three_rosters(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/panels").text
+    for heading in ("Assessment panels", "Reviewer pool", "Interviewers"):
+        assert f"<h2>{heading}</h2>" in text
+    assert "<h3>Panel A</h3>" in text and "<h3>Panel B</h3>" in text
+    assert "Dr Hana Ito" in text and "Prof Ivan Petrov" in text
+    blind = client.get(f"/applydesk/operator/exercises/{BLIND}/panels").text
+    assert "No pool: applicants do not choose a reviewer" in blind
+
+
+def test_report_exports(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/report").text
+    assert "<h2>Export bundle</h2>" in text and "Download export" in text

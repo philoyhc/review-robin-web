@@ -5,6 +5,10 @@
 <p class="lede">{{ exercise.summary }}</p>
 {% include "applydesk/_placeholder.html" %}
 {% set submitted = applications | selectattr("state", "equalto", "Submitted") | list %}
+<section class="card">
+  <h2>Timeline</h2>
+  {% include "applydesk/operator/_stages.html" %}
+</section>
 <div class="grid">
   <section class="card">
     <h2>Where it stands</h2>
@@ -22,13 +26,13 @@
       <dt>Applications</dt><dd>{{ applications | length }}</dd>
       <dt>Submitted</dt><dd>{{ submitted | length }}</dd>
       <dt>Drafts</dt><dd>{{ applications | selectattr("state", "equalto", "Draft") | list | length }}</dd>
-      <dt>Assessors</dt><dd>{{ assessors | length }}</dd>
+      <dt>On panels</dt><dd>{{ assessors | length }}</dd>
     </dl>
   </section>
   <section class="card">
     <h2>Next step</h2>
     {% if exercise.state == "Draft" %}
-      <p>Finish the settings and the applicant form, then publish.</p>
+      <p>Finish Setup and the application form, then publish.</p>
       <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Publish</button></div>
     {% elif exercise.stage == "Application" %}
       <p>Applications are open. When the Application stage ends, start the Review stage and send the submitted applications to Review Robin.</p>

@@ -92,13 +92,12 @@ def exercise_tabs(exercise_id: str) -> tuple[Mapping[str, str], ...]:
     base = f"/operator/exercises/{exercise_id}"
     return (
         {"label": "Home", "path": base},
-        {"label": "Settings", "path": f"{base}/settings"},
+        {"label": "Setup", "path": f"{base}/setup"},
         {"label": "Form", "path": f"{base}/form"},
         {"label": "Applications", "path": f"{base}/applications"},
-        {"label": "Assessors", "path": f"{base}/assessors"},
+        {"label": "Panels", "path": f"{base}/panels"},
         {"label": "Review", "path": f"{base}/review"},
-        {"label": "Timeline", "path": f"{base}/timeline"},
-        {"label": "Export", "path": f"{base}/export"},
+        {"label": "Report", "path": f"{base}/report"},
     )
 
 
