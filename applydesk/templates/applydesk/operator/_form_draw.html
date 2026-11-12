@@ -21,21 +21,25 @@
   // A box of people: each comma-separated name or email found in the
   // pool becomes a pill; what is not found stays in the box, said why.
   function people(c, id, label) {
-    var members = POOLS[c.pool] || POOLS.institution || [];
+    // A pool this exercise has no roster for reads as Institution-wide,
+    // as the card's own menu shows it.
+    var key = POOLS[c.pool] ? c.pool : "institution";
+    var members = POOLS[key] || [];
     var lo = /^\d+$/.test(c.min) ? parseInt(c.min, 10) : 0;
     var hi = /^\d+$/.test(c.max) ? parseInt(c.max, 10) : 0;
     var box = el("div", "tokens");
     box.setAttribute("role", "group");
+    box.setAttribute("aria-labelledby", id + "-l");
     var input = el("input", "token-input");
     input.type = "text";
     input.autocomplete = "off";
     input.placeholder = "Name or email; separate several with commas";
-    input.setAttribute("aria-label", "Add to " + label);
     box.appendChild(input);
+    // Always rendered, so a screen reader hears each change.
     var err = el("p", "fb-pv-err");
     err.id = id + "-e";
     err.setAttribute("role", "status");
-    input.setAttribute("aria-describedby", err.id);
+    function say(text) { err.textContent = text; err.classList.remove("is-bad"); }
     function chosen() { return Array.prototype.map.call(box.querySelectorAll(".token"), function (t) { return t.dataset.email; }); }
     function full() { return hi > 0 && chosen().length >= hi; }
     function sync() { input.hidden = full(); }
@@ -45,48 +49,63 @@
       var x = el("button", "token-x", "×");
       x.type = "button";
       x.setAttribute("aria-label", "Remove " + name);
-      x.addEventListener("click", function () { t.remove(); sync(); err.textContent = ""; input.focus(); });
+      x.addEventListener("click", function () { t.remove(); sync(); say(name + " removed."); input.focus(); });
       t.appendChild(x);
       box.insertBefore(t, input);
     }
     function find(text) {
       var q = text.toLowerCase();
-      var hits = members.filter(function (m) { return m[0].toLowerCase() === q || m[1].toLowerCase() === q; });
-      return hits.length === 1 ? hits[0] : null;
+      return members.filter(function (m) { return m[0].toLowerCase() === q || m[1].toLowerCase() === q; });
     }
+    var busy = false;
+    // Each finished entry: a pill if it names one person in the pool;
+    // otherwise it stays in the box with the reason. Past the maximum,
+    // entries are dropped, so nothing is left in a hidden box.
     function take(final) {
+      if (busy) return;
+      busy = true;
+      var focused = document.activeElement === input;
       var parts = input.value.split(",");
-      var tail = final ? "" : parts.pop();
-      var left = [], why = "";
+      var tail = final ? "" : parts.pop().replace(/^\s+/, "");
+      var left = [], said = [], added = [], dropped = false;
       parts.forEach(function (raw) {
         var text = raw.trim();
         if (!text) return;
-        var m = find(text);
-        if (!m) { left.push(text); why = "Not found in " + poolName(c.pool) + ": " + text + "."; return; }
-        if (chosen().indexOf(m[1]) >= 0) return;
-        if (full()) { left.push(text); why = "At most " + hi + (hi === 1 ? " person." : " people."); return; }
-        pill(m[0], m[1]);
+        var hits = find(text);
+        if (hits.length > 1) { left.push(text); said.push("More than one " + text + ": use the email."); return; }
+        if (!hits.length) { left.push(text); said.push("Not found in " + poolName(key) + ": " + text + "."); return; }
+        if (chosen().indexOf(hits[0][1]) >= 0) { said.push("Already chosen: " + hits[0][0] + "."); return; }
+        if (full()) { dropped = true; return; }
+        pill(hits[0][0], hits[0][1]);
+        added.push(hits[0][0]);
       });
-      input.value = left.join(", ") + (left.length && !final ? ", " : "") + tail.replace(/^\s+/, "");
-      err.textContent = why;
+      if (dropped) { said.push("At most " + hi + (hi === 1 ? " person." : " people.")); tail = ""; left = []; }
+      var bad = said.length > 0;
+      if (added.length) said.unshift("Added " + added.join(", ") + ".");
+      // Unfinished text stays after what was not found; a finished entry
+      // left behind keeps its comma only while typing goes on.
+      input.value = final ? left.join(", ") : left.concat([tail]).join(", ");
+      err.textContent = said.join(" ");
+      err.classList.toggle("is-bad", bad);
       sync();
-      if (input.hidden) box.querySelector(".token:last-of-type .token-x").focus();
+      if (input.hidden && focused) box.querySelector(".token:last-of-type .token-x").focus();
+      busy = false;
     }
     input.addEventListener("input", function () { if (input.value.indexOf(",") >= 0) take(false); });
     input.addEventListener("keydown", function (e) {
       if (e.key === "Enter") { e.preventDefault(); take(true); }
       else if (e.key === "Backspace" && !input.value) {
         var last = box.querySelectorAll(".token");
-        if (last.length) { last[last.length - 1].remove(); sync(); }
+        if (last.length) { var gone = last[last.length - 1]; say(gone.firstChild.textContent + " removed."); gone.remove(); sync(); }
       }
     });
     input.addEventListener("blur", function () { if (input.value.trim()) take(true); });
-    var hint = lo && hi ? (lo === hi ? lo + "" : lo + " to " + hi) : hi ? "up to " + hi : lo ? "at least " + lo : "";
-    var note = el("p", "fb-pv-help", (hint ? "Choose " + hint + ((hi || lo) === 1 ? " person" : " people") : "Choose people") + " from " + poolName(c.pool) + ".");
+    var unit = (c.max || c.min) === "1" ? " person" : " people";
+    var hint = lo && hi ? (lo === hi ? lo + unit : lo + " to " + hi + unit) : hi ? "up to " + hi + unit : lo ? "at least " + lo + unit : "people";
+    var note = el("p", "fb-pv-help", "Choose " + hint + " from " + poolName(key) + ".");
     note.id = id + "-n";
     var wrap = el("div");
     wrap.appendChild(note); wrap.appendChild(box); wrap.appendChild(err);
-    box.setAttribute("aria-describedby", note.id);
     return wrap;
   }
   function field(c) {
@@ -141,7 +160,7 @@
       // "not found" describe it.
       var typed = input.querySelector(".token-input");
       typed.id = id;
-      typed.removeAttribute("aria-label");
+      lab.id = id + "-l";
       if (c.required) typed.setAttribute("aria-required", "true");
       typed.setAttribute("aria-describedby", (c.help ? id + "-h " : "") + id + "-n " + id + "-e");
       wrap.appendChild(input);

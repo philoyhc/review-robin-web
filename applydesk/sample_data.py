@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import math
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 
 
 @dataclass(frozen=True)
@@ -316,7 +316,7 @@ SAMPLE_FORM: tuple[FormCard, ...] = (
         "field",
         "people",
         "Preferred reviewer",
-        help="One person from the reviewer pool.",
+        help="If you have a preference.",
         min="1",
         max="1",
         pool="pool",
@@ -342,7 +342,13 @@ def form_cards(exercise_id: str) -> tuple[FormCard, ...]:
     """The Form page's cards: one empty question for a form with none."""
     if exercise_id in EMPTY_FORMS:
         return (FormCard("field"),)
-    return SAMPLE_FORM
+    # A pool this exercise has no roster for reads as Institution-wide,
+    # so the summary, the card's menu and Preview agree.
+    pools = people_pools(exercise_id)
+    return tuple(
+        replace(c, pool="institution") if c.type == "people" and c.pool not in pools else c
+        for c in SAMPLE_FORM
+    )
 
 
 def form_heading(exercise_id: str) -> tuple[str, str]:

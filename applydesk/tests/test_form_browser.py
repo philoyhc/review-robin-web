@@ -474,7 +474,7 @@ def test_the_form_title_is_larger_than_a_card_s(page: Page) -> None:
 def _people_box(page: Page, label: str) -> Locator:
     page.goto(FORM)
     page.locator("[data-fb-preview]").click()
-    return page.locator("#fb-preview").get_by_label(label)
+    return page.locator("#fb-preview").get_by_role("textbox", name=label)
 
 
 def test_select_people_turns_names_into_pills(page: Page) -> None:
@@ -490,7 +490,7 @@ def test_select_people_turns_names_into_pills(page: Page) -> None:
     )
     page.locator("[data-fb-preview]").click()
     preview = page.locator("#fb-preview")
-    box = preview.get_by_label("Preferred reviewer")
+    box = preview.get_by_role("textbox", name="Preferred reviewer")
     box.press_sequentially("Daniel Koh, PRIYA.RAMAN@example.edu, Nobody Here,")
     tokens = preview.locator(".token")
     assert [t.split("×")[0].strip() for t in tokens.all_inner_texts()] == [
@@ -519,3 +519,34 @@ def test_select_people_keeps_to_its_pool(page: Page) -> None:
     box.fill("")
     box.press_sequentially("Dr Omar Aziz,")
     assert preview.locator(".token").count() == 1 and not box.is_visible()
+
+
+def test_select_people_drops_names_past_the_most_and_says_so(page: Page) -> None:
+    box = _people_box(page, "Preferred reviewer")
+    preview = page.locator("#fb-preview")
+    box.focus()
+    box.fill("Dr Omar Aziz, Dr Hana Ito,")  # pasted at once
+    assert preview.locator(".token").count() == 1
+    assert "At most 1 person." in preview.inner_text()
+    # Nothing is left in a hidden box; focus moved to the pill's button.
+    hidden = preview.locator(".token-input")
+    assert not hidden.is_visible() and hidden.input_value() == ""
+    assert page.evaluate("document.activeElement.getAttribute('aria-label')") == (
+        "Remove Dr Omar Aziz"
+    )
+    # The group keeps the question's name once the box is full.
+    group = preview.get_by_role("group", name="Preferred reviewer")
+    assert group.count() == 1
+
+
+def test_select_people_says_already_chosen(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Preferred reviewer")
+    card.locator("[data-fc-toggle]").click()
+    card.locator('[data-f="max"][data-g="people"]').fill("")
+    page.locator("[data-fb-preview]").click()
+    preview = page.locator("#fb-preview")
+    box = preview.get_by_role("textbox", name="Preferred reviewer")
+    box.press_sequentially("Dr Ruth Kahn, ruth.kahn@example.edu,")
+    assert preview.locator(".token").count() == 1
+    assert "Already chosen: Dr Ruth Kahn." in preview.inner_text()

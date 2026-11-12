@@ -35,7 +35,7 @@ The Form tab is a placeholder: two static lists and an inert preview (AD1 iterat
   | List | Options (comma-separated, ~~with presets~~ (dropped at build: none were specified)), *Choose one / Choose any*, Required | "List · choose one · A, B, C" |
   | Photo | Ratio width : Ratio height, Required | "Photo · 4:5, kept 480 × 600" |
   | Select people *(iteration rung 5)* | Min people, Max people, *Chosen from* (Institution-wide, or a Panels roster), Required | "Select people · 1 to 3 people · Panel A" |
-| Title and Description | *Title* and *Description* in place of Question and Help text; nothing else | "display only" |
+  | Title and Description | *Title* and *Description* in place of Question and Help text; nothing else | "display only" |
 
   An empty bound is left out of the summary ("Integer · up to 6"). Changing a card's type keeps its question, help text, visibility and Required, and shows the new type's fields empty.
 - **Photo's kept size** follows the ratio: 600 px on the longer side (4:5 → 480 × 600; 1:1 → 600 × 600).

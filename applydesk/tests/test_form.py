@@ -149,3 +149,12 @@ def test_a_people_card_offers_the_exercise_s_pools(client: TestClient) -> None:
     assert pools["pool"] == [(e.name, e.email) for e in sample_data.pool_of("wa9juxbc2t")]
     # A blank exercise has no rosters yet: Institution-wide alone.
     assert list(sample_data.people_pools("n5wg8tjr3e")) == ["institution"]
+
+
+def test_a_pool_the_exercise_lacks_reads_as_institution_wide(client: TestClient) -> None:
+    # k7mfr3pq8z has panels and an interviewer, but no reviewer pool.
+    card = next(c for c in sample_data.form_cards("k7mfr3pq8z") if c.type == "people")
+    assert card.pool == "institution"
+    assert card_summary(card) == "Select people · exactly 1 person · Institution-wide"
+    text = client.get("/applydesk/operator/exercises/k7mfr3pq8z/form").text
+    assert "Select people · exactly 1 person · Institution-wide" in text

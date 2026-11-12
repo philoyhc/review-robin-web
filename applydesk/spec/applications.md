@@ -80,7 +80,7 @@ reload restores the sample form.
   Help text and descriptions grow to fit what is typed, with no resize
   handle; so does a long answer's box in Preview. Changing the type keeps the question, help text, *Required* and
   visibility, and empties the new type's fields: a photo's ratio starts
-  at 4:5 and a list at *Choose one*.
+  at 4:5, a list at *Choose one* and Select people at *Institution-wide*.
 - **Visibility** is per card: *Shown to reviewers* or *Not shown*; a new
   card is *Not shown*.
 - **Collapsed**, a card shows its question and help text (a text card's
