@@ -106,3 +106,44 @@ def test_a_stacked_group_labels_each_tag_below_the_names(client: TestClient, db:
     assert names < first
     assert re.search(r'<span class="muted">[^<]+:</span> TW01</div>', cell)
     assert re.search(r'<span class="muted">[^<]+:</span> Team 2</div>', cell)
+
+
+def test_a_sort_on_a_field_that_heads_no_column_is_inert(client: TestClient, db: Session) -> None:
+    """A stored sort entry on a Stacked field sorts nothing (the plan's
+    Semantics), as Profile's doesn't; across, the same entry orders the
+    rows."""
+    for layout, expect_tag_order in (("across", True), ("stacked", False)):
+        review_session = _make_session_with_reviewer(
+            client,
+            db,
+            code=f"20m-sort-{layout}",
+            reviewee_idents=["a@example.edu", "b@example.edu"],
+        )
+        reviewees = list(
+            db.execute(
+                select(Reviewee)
+                .where(Reviewee.session_id == review_session.id)
+                .order_by(Reviewee.id)
+            ).scalars()
+        )
+        # Tag order is the reverse of insertion order.
+        reviewees[0].tag_1, reviewees[1].tag_1 = "Z", "A"
+        instrument = db.execute(
+            select(Instrument).where(Instrument.session_id == review_session.id)
+        ).scalar_one()
+        tag = InstrumentDisplayField(
+            instrument_id=instrument.id,
+            label="",
+            source_type="reviewee",
+            source_field="tag_1",
+            order=5,
+            visible=True,
+        )
+        db.add(tag)
+        db.flush()
+        instrument.sort_display_fields = [{"display_field_id": tag.id, "dir": "asc"}]
+        instrument.display_layout = layout
+        db.commit()
+        body = client.get(f"/operator/sessions/{review_session.public_id}/preview-surface/1").text
+        first = body.index("b@example.edu") < body.index("a@example.edu")
+        assert first is expect_tag_order, layout
