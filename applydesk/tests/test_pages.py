@@ -342,15 +342,17 @@ def test_a_blank_exercise_lists_what_is_still_to_set_up(client: TestClient) -> N
     home = client.get(f"/applydesk/operator/exercises/{BLANK}").text
     assert "<h1>Graduate Travel Grant 2027</h1>" in home and "No summary yet." in home
     assert "Still to set up before it can be published:" in home
-    listed = re.findall(r"<li>([^<]+)</li>", home[home.index("Still to set up") :])
-    assert listed[:5] == [
-        "Exercise Code",
-        "Summary",
-        "Dates",
-        "Who may apply",
-        "Application form",
+    missing = home[home.index("Still to set up") :]
+    missing = missing[: missing.index("</ul>")]
+    base = "/applydesk/operator/exercises/n5wg8tjr3e"
+    # Each item links to the tab that sets it; the form is on Form.
+    assert re.findall(r'<li><a href="([^"]+)">([^<]+)</a></li>', missing) == [
+        (f"{base}/setup", "Exercise Code"),
+        (f"{base}/setup", "Summary"),
+        (f"{base}/setup", "Dates"),
+        (f"{base}/setup", "Who may apply"),
+        (f"{base}/form", "Application form"),
     ]
-    assert 'href="/applydesk/operator/exercises/n5wg8tjr3e/setup">Go to Setup</a>' in home
     assert "Dates not set" in home and "(a hard deadline)" not in home
     current = re.findall(r'aria-current="step">\s*<span class="stage-name">([^<]+)', home)
     assert [c.strip() for c in current] == ["Setup"]
@@ -372,4 +374,27 @@ def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> Non
 def test_a_set_up_draft_lists_only_what_it_lacks(client: TestClient) -> None:
     home = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
     missing = home[home.index("Still to set up") :]
-    assert re.findall(r"<li>([^<]+)</li>", missing[: missing.index("</ul>")]) == ["Dates"]
+    assert re.findall(r"<a [^>]*>([^<]+)</a></li>", missing[: missing.index("</ul>")]) == ["Dates"]
+
+
+def test_a_blank_exercise_s_setup_and_review_say_not_yet(client: TestClient) -> None:
+    base = f"/applydesk/operator/exercises/{BLANK}"
+    setup = client.get(f"{base}/setup").text
+    assert setup.count('<span class="muted">Not set</span>') >= 3  # code, summary, contact
+    assert "fellowships@example.edu" not in setup
+    review = client.get(f"{base}/review").text
+    assert "Nothing to send: the exercise is a draft." in review
+    assert "Send to Review Robin</button>" not in review
+
+
+def test_a_draft_with_nothing_missing_is_ready_to_publish(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sample_data, "setup_missing", lambda e: ())
+    home = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
+    assert "Ready to publish: Setup and the application form are complete." in home
+    assert '<button class="btn btn-primary" type="button" disabled>Publish</button>' in home
+
+
+def test_the_blank_exercise_is_not_offered_to_applicants(client: TestClient) -> None:
+    assert "Graduate Travel Grant 2027" not in client.get("/applydesk/me").text

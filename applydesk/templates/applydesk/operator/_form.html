@@ -13,7 +13,7 @@
     <h2 id="preview-h">Preview</h2>
     <p class="muted">The form as an applicant sees it. Nothing typed here is kept.</p>
     {% if not shown and not not_shown %}<p class="muted">Add a question to see it here.</p>{% else %}
-    <h3>Shown to reviewers</h3>
+    {% if shown %}<h3>Shown to reviewers</h3>{% endif %}
     {% for label, help in shown %}
     <div class="field">
       <label for="pv-s{{ loop.index }}">{{ label }}</label>
@@ -22,7 +22,7 @@
       {% if loop.first %}<input id="pv-s{{ loop.index }}" type="text"{{ described | safe }} disabled>{% else %}<textarea id="pv-s{{ loop.index }}" rows="2"{{ described | safe }} disabled></textarea>{% endif %}
     </div>
     {% endfor %}
-    <h3>Not shown to reviewers</h3>
+    {% if not_shown %}<h3>Not shown to reviewers</h3>{% endif %}
     {% for label in not_shown %}
     <div class="field"><label for="pv-n{{ loop.index }}">{{ label }}</label><input id="pv-n{{ loop.index }}" type="text" disabled></div>
     {% endfor %}

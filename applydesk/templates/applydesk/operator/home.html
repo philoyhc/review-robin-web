@@ -34,10 +34,10 @@
     {% if exercise.state == "Draft" %}
       {% if missing %}
       <p>Still to set up before it can be published:</p>
-      <ul>{% for item in missing %}<li>{{ item }}</li>{% endfor %}</ul>
-      <div class="btnrow"><a class="btn btn-primary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/setup') }}">Go to Setup</a><button class="btn btn-secondary" type="button" disabled>Publish</button></div>
+      <ul>{% for label, tab in missing %}<li><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/' ~ tab) }}">{{ label }}</a></li>{% endfor %}</ul>
+      <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Publish</button></div>
       {% else %}
-      <p>Finish Setup and the application form, then publish.</p>
+      <p>Ready to publish: Setup and the application form are complete.</p>
       <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Publish</button></div>
       {% endif %}
     {% elif exercise.stage == "Application" %}
