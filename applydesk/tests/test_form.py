@@ -88,22 +88,31 @@ def test_a_blank_form_opens_its_one_card(client: TestClient) -> None:
     assert 'value="" placeholder="Untitled form"' in page
 
 
-@pytest.mark.parametrize(
-    ("card", "summary"),
-    [
-        (FormCard("field", "string"), "String"),
-        (FormCard("field", "string", max="120"), "String · up to 120 characters"),
-        (FormCard("field", "string", min="9", max="9"), "String · exactly 9 characters"),
-        (FormCard("field", "integer", min="1", max="6", step="1"), "Integer · 1 to 6, step 1"),
-        (FormCard("field", "decimal", step="0.5"), "Decimal · step 0.5"),
-        (FormCard("field", "list", options=" A, ,B "), "List · choose one · A, B"),
-        (FormCard("field", "list", exclusive=False), "List · choose any · no options yet"),
-        (FormCard("field", "photo", ratio_w="1", ratio_h="1"), "Photo · 1:1, kept 600 × 600"),
-        (FormCard("field", "photo", ratio_w="16", ratio_h="9"), "Photo · 16:9, kept 600 × 338"),
-        (FormCard("field", "photo", ratio_w="0", ratio_h="5"), "Photo · ratio not set"),
-        (FormCard("field", "text"), "Title and Description · display only"),
-    ],
-)
+# Every summary the page's script must also give: test_form_browser.py
+# replays these in Chromium.
+SUMMARY_CASES: list[tuple[FormCard, str]] = [
+    (FormCard("field", "string"), "String"),
+    (FormCard("field", "string", max="120"), "String · up to 120 characters"),
+    (FormCard("field", "string", min="9", max="9"), "String · exactly 9 characters"),
+    (FormCard("field", "integer", min="1", max="6", step="1"), "Integer · 1 to 6, step 1"),
+    (FormCard("field", "decimal", step="0.5"), "Decimal · step 0.5"),
+    (FormCard("field", "list", options=" A, ,B "), "List · choose one · A, B"),
+    (FormCard("field", "list", exclusive=False), "List · choose any · no options yet"),
+    (FormCard("field", "photo", ratio_w="1", ratio_h="1"), "Photo · 1:1, kept 600 × 600"),
+    (FormCard("field", "photo", ratio_w="16", ratio_h="9"), "Photo · 16:9, kept 600 × 338"),
+    (FormCard("field", "photo", ratio_w="0", ratio_h="5"), "Photo · ratio not set"),
+    (FormCard("field", "photo", ratio_w="16", ratio_h="7"), "Photo · 16:7, kept 600 × 263"),
+    (FormCard("field", "photo", ratio_w="\uff14", ratio_h="5"), "Photo · ratio not set"),
+    (FormCard("field", "string", min="3"), "String · at least 3 characters"),
+    (
+        FormCard("field", "decimal", min="0.00", max="5.00", step="0.01"),
+        "Decimal · 0.00 to 5.00, step 0.01",
+    ),
+    (FormCard("field", "text"), "Title and Description · display only"),
+]
+
+
+@pytest.mark.parametrize(("card", "summary"), SUMMARY_CASES)
 def test_a_card_s_summary(card: FormCard, summary: str) -> None:
     assert card_summary(card) == summary
 
@@ -112,3 +121,6 @@ def test_a_photo_is_kept_600_px_on_its_longer_side() -> None:
     assert kept_size("4", "5") == (480, 600)
     assert kept_size("3", "2") == (600, 400)
     assert kept_size("x", "5") is None
+    # Half up, as the page's Math.round, and ASCII digits only.
+    assert kept_size("16", "3") == (600, 113)
+    assert kept_size("\uff14", "5") is None

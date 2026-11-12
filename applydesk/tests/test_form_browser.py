@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from playwright.sync_api import Error, Locator, Page, Route, sync_playwright
 
 from applydesk.tests._host import host_with
+from applydesk.tests.test_form import SUMMARY_CASES
 
 ORIGIN = "http://applydesk.test"
 FORM = f"{ORIGIN}/applydesk/operator/exercises/wa9juxbc2t/form"
@@ -278,3 +279,90 @@ def test_preview_shows_the_form_as_an_applicant_sees_it(page: Page) -> None:
     assert "Reviewers see your answer." in body.inner_text()
     page.locator("[data-fb-preview-close]").click()
     assert page.locator("#fb-cards").is_visible() and not page.locator("#fb-preview").is_visible()
+
+
+# Fills one card from a FormCard's fields, as an operator would: the
+# type menu first (it empties the new type's fields), then each field.
+_FILL = """([card, c]) => {
+  const type = card.querySelector('[data-f="type"]');
+  type.value = c.type;
+  type.dispatchEvent(new Event("change", { bubbles: true }));
+  const num = ["integer", "decimal"].includes(c.type);
+  const g = c.type === "string" ? "string" : num ? "number" : "";
+  for (const f of ["min", "max", "step", "options", "ratio_w", "ratio_h"]) {
+    const el = card.querySelector(`[data-f="${f}"]:not([data-g]), [data-f="${f}"][data-g="${g}"]`);
+    if (el) el.value = c[f];
+  }
+  card.querySelector(`[data-f="exclusive"][data-v="${c.exclusive}"]`).click();
+  card.querySelector('[data-f="min"]').dispatchEvent(new Event("input", { bubbles: true }));
+  return card.querySelector('[data-sum="type"]').textContent;
+}"""
+
+
+def test_the_script_s_summaries_match_the_server_s(page: Page) -> None:
+    page.goto(FORM)
+    # Every server-rendered summary survives an edit unchanged.
+    rendered = page.eval_on_selector_all(
+        '#fb-cards .fc[data-kind="field"]',
+        """cards => cards.map(c => {
+          const before = c.querySelector('[data-sum="type"]').textContent;
+          c.querySelector('[data-f="label"]').dispatchEvent(new Event("input", { bubbles: true }));
+          return [before, c.querySelector('[data-sum="type"]').textContent];
+        })""",
+    )
+    assert rendered and all(before == after for before, after in rendered)
+    # And every case card_summary is held to, typed into a card.
+    card = page.locator('#fb-cards .fc[data-kind="field"]').first.element_handle()
+    for c, expected in SUMMARY_CASES:
+        fields = {
+            k: getattr(c, k)
+            for k in ("type", "min", "max", "step", "options", "ratio_w", "ratio_h")
+        }
+        fields["exclusive"] = "true" if c.exclusive else "false"
+        assert page.evaluate(_FILL, [card, fields]) == expected, c
+
+
+def test_a_type_change_resets_choose_one(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Field of study")
+    card.locator("[data-fc-toggle]").click()
+    card.locator('[data-f="exclusive"][data-v="false"]').click()
+    card.locator('[data-f="type"]').select_option("string")
+    card.locator('[data-f="type"]').select_option("list")
+    assert (
+        card.locator('[data-f="exclusive"][data-v="true"]').get_attribute("aria-pressed") == "true"
+    )
+
+
+def test_a_bad_max_length_still_previews(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Project title")
+    card.locator("[data-fc-toggle]").click()
+    card.locator('[data-f="max"][data-g="string"]').fill("-1")
+    page.locator("[data-fb-preview]").click()
+    assert page.locator("#fb-preview").is_visible()
+    box = page.locator("[data-fb-preview-body]").get_by_label("Project title")
+    assert box.evaluate("e => e.tagName") == "TEXTAREA"
+
+
+def test_the_outline_leaves_preview_for_the_card(page: Page) -> None:
+    page.goto(FORM)
+    page.locator("[data-fb-preview]").click()
+    page.locator(".fb-o-item", has_text="Methods").click()
+    assert page.locator("#fb-cards").is_visible()
+    assert not page.locator("#fb-preview").is_visible()
+    focused = page.evaluate(
+        "document.activeElement.closest('.fc').querySelector('[data-sum=label]').textContent"
+    )
+    assert focused == "Methods"
+
+
+def test_handles_name_their_card_and_moves_are_announced(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Summary")
+    grip = card.locator("[data-fc-grip]")
+    assert (grip.get_attribute("aria-label") or "").startswith("Move Summary:")
+    assert card.locator("[data-fc-toggle]").get_attribute("aria-label") == "Expand Summary"
+    grip.focus()
+    page.keyboard.press("ArrowUp")
+    assert (page.locator("[data-fb-live]").text_content() or "").startswith("Moved Summary to ")

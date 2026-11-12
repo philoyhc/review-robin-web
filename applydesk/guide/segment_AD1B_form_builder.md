@@ -32,7 +32,7 @@ The Form tab is a placeholder: two static lists and an inert preview (AD1 iterat
   | String | Min length, Max length, Required | "String · 1 to 120 characters" |
   | Integer | Min, Max, Step, Required | "Integer · 1 to 6, step 1" |
   | Decimal | Min, Max, Step, Required | "Decimal · 0.00 to 5.00, step 0.01" |
-  | List | Options (comma-separated, with presets), *Choose one / Choose any*, Required | "List · choose one · A, B, C" |
+  | List | Options (comma-separated, ~~with presets~~ (dropped at build: none were specified)), *Choose one / Choose any*, Required | "List · choose one · A, B, C" |
   | Photo | Ratio width : Ratio height, Required | "Photo · 4:5, kept 480 × 600" |
   | Title and Description | *Title* and *Description* in place of Question and Help text; nothing else | "display only" |
 
@@ -54,7 +54,7 @@ The Form tab is a placeholder: two static lists and an inert preview (AD1 iterat
 - **Each card carries every type's fields**, the inactive ones hidden, as RRW's instrument rows do; switching type swaps what shows without a round trip.
 - **A new card is *Not shown*** to reviewers: the safer side until the operator says otherwise.
 - **The blank exercise** (`n5wg8tjr3e`) shows its Title card and one empty String card, expanded.
-- **Applicant pages keep their sample lists** (`SHOWN_TO_REVIEWERS`, `NOT_SHOWN_TO_REVIEWERS`) until AD4 renders a stored form; the builder's sample form carries the same questions.
+- **Applicant pages keep their sample lists** (`SHOWN_TO_REVIEWERS`, `NOT_SHOWN_TO_REVIEWERS`) until AD4 renders a stored form; the builder's sample form carries the same questions. *(At build: it carries most of them and adds others; the two meet at AD4.)*
 
 ## Blast radius (measured)
 
@@ -70,8 +70,8 @@ Taken 2026-11-12 at `666cf88`.
 ## Status
 
 Building. Base `73d4230` for the cumulative read.
-- Rung 2: the page and its cards. The form's sample cards (`sample_data.SAMPLE_FORM`), one macro per kind (`operator/_form_cards.html`), and one inline script for collapse, the type menu, the toggles, the summaries and the Outline; *+ New*, *Replicate*, *+ Section*, *+ Page break*, *Delete* and the handle render, inert until rung 3. A Title and Description card shows no Required chip. Summaries are computed twice, `card_summary` for the first render and the script after an edit; the Chromium tests hold them to the same text.
-- Rung 3: the moves. *+ New*, *Replicate*, *+ Section* and *+ Page break* clone the server's own macros from `<template>`s; *Delete* keeps the last field card; dragging listens on the document, since moving the card in the page ends a pointer capture; ↑ and ↓ on a focused handle; Preview builds from the cards. A string question with a maximum of 200 or fewer characters previews as one line, longer or unbounded as a box.
+- Rung 2: the page and its cards. The form's sample cards (`sample_data.SAMPLE_FORM`), one macro per kind (`operator/_form_cards.html`), and one inline script for collapse, the type menu, the toggles, the summaries and the Outline; *+ New*, *Replicate*, *+ Section*, *+ Page break*, *Delete* and the handle render, inert until rung 3. A Title and Description card shows no Required chip. Summaries are computed twice, `card_summary` for the first render and the script after an edit; a Chromium test replays `test_form.SUMMARY_CASES` and every sample card through the script (rung 3).
+- Rung 3: the moves. *+ New*, *+ Section* and *+ Page break* clone the server's own macros from `<template>`s, *Replicate* the card itself; *Delete* keeps the last field card; dragging listens on the document, since moving the card in the page ends a pointer capture; ↑ and ↓ on a focused handle; Preview builds from the cards. A string question with a maximum of 200 or fewer characters previews as one line, longer or unbounded as a box. The cumulative read (1 read, 13 findings) led to: a bad maximum no longer breaking Preview; the kept size rounding half up on both sides; an Outline click leaving Preview; the Outline unnumbered (Decision 6); a type change resetting *Choose one*; handles and toggles named after their card, arrow-key moves announced; presets dropped from the plan. Left as notes: drag has no Escape or auto-scroll; `.seg` and `.btn-toggle` are ApplyDesk's own controls, beside RRW's roles.
 
 ## PR ladder
 

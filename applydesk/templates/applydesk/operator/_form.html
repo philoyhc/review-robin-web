@@ -33,6 +33,7 @@
       <h2 id="outline-h">Outline</h2>
       <div data-fb-outline></div>
       <p class="muted fb-counts" data-fb-counts></p>
+      <p class="visually-hidden" data-fb-live aria-live="polite"></p>
       <div class="btnrow"><button type="button" class="btn btn-secondary" data-fb-preview>Preview</button></div>
     </section>
   </aside>
@@ -48,6 +49,7 @@
   var list = root.querySelector("#fb-cards");
   var outline = root.querySelector("[data-fb-outline]");
   var counts = root.querySelector("[data-fb-counts]");
+  var live = root.querySelector("[data-fb-live]");
   var NAMES = { integer: "Integer", decimal: "Decimal" };
 
   function val(card, f) {
@@ -121,6 +123,12 @@
     if (text !== undefined) e.textContent = text;
     return e;
   }
+  // An Outline click goes to the card, leaving Preview first.
+  function goTo(card) {
+    if (main.hidden) showPreview(false);
+    card.scrollIntoView({ block: "center" });
+    card.querySelector("[data-fc-toggle]").focus();
+  }
   // The Outline: sections, cards and page breaks in order, each card's
   // visibility as a chip; a click scrolls to the card.
   function drawOutline() {
@@ -136,14 +144,14 @@
       if (kind === "section") {
         sections += 1; ol = null;
         var h = el("button", "fb-o-section", val(card, "label") || "Untitled section");
-        h.type = "button"; h.addEventListener("click", function () { card.scrollIntoView({ block: "center" }); card.querySelector("[data-fc-toggle]").focus(); });
+        h.type = "button"; h.addEventListener("click", function () { goTo(card); });
         outline.appendChild(h);
         return;
       }
-      if (!ol) { ol = el("ol", "fb-o-list"); outline.appendChild(ol); }
+      if (!ol) { ol = el("ul", "fb-o-list"); outline.appendChild(ol); }
       var li = el("li");
       var b = el("button", "fb-o-item", val(card, "label") || (card.dataset.type === "text" ? "Untitled text" : "Untitled question"));
-      b.type = "button"; b.addEventListener("click", function () { card.scrollIntoView({ block: "center" }); card.querySelector("[data-fc-toggle]").focus(); });
+      b.type = "button"; b.addEventListener("click", function () { goTo(card); });
       li.appendChild(b);
       var shown = pressed(card, "shown");
       li.appendChild(el("span", "chip " + (shown ? "chip-info" : "chip-mute"), shown ? "Shown" : "Not shown"));
@@ -153,11 +161,22 @@
     counts.textContent = page + (page === 1 ? " page" : " pages") + " · " + sections + (sections === 1 ? " section" : " sections")
       + " · " + questions + (questions === 1 ? " question" : " questions") + " · " + required + " required";
   }
+  // A card's name for its handle and its toggle, so a screen reader
+  // tells one card from another.
+  function nameOf(card) {
+    if (card.dataset.kind === "pagebreak") return "page break";
+    if (card.dataset.kind === "section") return "section " + (val(card, "label") || "Untitled section");
+    return val(card, "label") || (card.dataset.type === "text" ? "Untitled text" : "Untitled question");
+  }
+  function name(card) {
+    var n = nameOf(card), t = card.querySelector("[data-fc-toggle]");
+    card.querySelector("[data-fc-grip]").setAttribute("aria-label", "Move " + n + ": drag, or press the up and down arrow keys");
+    if (t) t.setAttribute("aria-label", (card.hasAttribute("data-open") ? "Collapse " : "Expand ") + n);
+  }
   function setOpen(card, open) {
     if (open) card.setAttribute("data-open", ""); else card.removeAttribute("data-open");
-    var t = card.querySelector("[data-fc-toggle]");
-    t.setAttribute("aria-expanded", open ? "true" : "false");
-    t.setAttribute("aria-label", open ? "Collapse" : "Expand");
+    card.querySelector("[data-fc-toggle]").setAttribute("aria-expanded", open ? "true" : "false");
+    name(card);
   }
 
   // --- Adding, replicating and deleting (rung 3) ---
@@ -173,7 +192,7 @@
       if (fields.length === 1) del.title = "A form keeps at least one card"; else del.removeAttribute("title");
     });
   }
-  function changed() { guardLast(); drawOutline(); }
+  function changed() { guardLast(); drawOutline(); Array.prototype.forEach.call(list.children, name); }
   function act(item, what) {
     var added = null;
     if (what === "new") added = fresh("fb-new-field");
@@ -241,6 +260,8 @@
     else if (e.key === "ArrowDown" && item.nextElementSibling) item.nextElementSibling.after(item);
     grip.focus();
     changed();
+    var at = Array.prototype.indexOf.call(list.children, item) + 1;
+    live.textContent = "Moved " + nameOf(item) + " to " + at + " of " + list.children.length + ".";
   });
 
   list.addEventListener("click", function (e) {
@@ -260,7 +281,7 @@
   });
   list.addEventListener("input", function (e) {
     var card = e.target.closest(".fc");
-    if (card) { refresh(card); drawOutline(); }
+    if (card) { refresh(card); drawOutline(); name(card); }
   });
   // A new type shows its own fields empty; the question, help text,
   // visibility and Required are kept.
@@ -271,6 +292,7 @@
     card.querySelectorAll("[data-g], [data-f=options]").forEach(function (i) { i.value = ""; });
     card.querySelector('[data-f="ratio_w"]').value = "4";
     card.querySelector('[data-f="ratio_h"]').value = "5";
+    card.querySelectorAll('[data-f="exclusive"]').forEach(function (x) { x.setAttribute("aria-pressed", x.dataset.v === "true" ? "true" : "false"); });
     refresh(card); drawOutline();
   });
   // --- Preview: the form as an applicant sees it, from the cards ---
@@ -295,9 +317,9 @@
     if (pressed(card, "shown")) wrap.appendChild(el("p", "fb-pv-seen", "Reviewers see your answer."));
     var input;
     if (t === "string") {
-      var max = parseInt(val(card, "max"), 10);
-      input = el(max && max <= 200 ? "input" : "textarea", "fc-in");
-      if (max) input.maxLength = max;
+      var max = /^\d+$/.test(val(card, "max")) ? parseInt(val(card, "max"), 10) : 0;
+      input = el(max > 0 && max <= 200 ? "input" : "textarea", "fc-in");
+      if (max > 0) input.maxLength = max;
     } else if (t === "integer" || t === "decimal") {
       input = el("input", "fc-in fb-pv-num");
       input.type = "number";
@@ -318,6 +340,7 @@
     } else {
       var k = kept(val(card, "ratio_w"), val(card, "ratio_h"));
       input = el("div", "fb-pv-photo");
+      input.setAttribute("role", "group");
       var frame = el("span", "fb-pv-frame");
       if (k) frame.style.aspectRatio = k[0] + " / " + k[1];
       input.appendChild(frame);
@@ -325,8 +348,12 @@
     }
     if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
       input.id = id;
-      if (val(card, "help")) input.setAttribute("aria-describedby", id + "-h");
-    } else { lab.htmlFor = ""; lab.id = id; input.setAttribute("aria-labelledby", id); }
+      if (req) input.required = true;
+    } else {
+      lab.htmlFor = ""; lab.id = id; input.setAttribute("aria-labelledby", id);
+      if (req) input.setAttribute("aria-required", "true");
+    }
+    if (val(card, "help")) input.setAttribute("aria-describedby", id + "-h");
     wrap.appendChild(input);
     return wrap;
   }
@@ -348,12 +375,11 @@
     if (on) drawPreview();
     main.hidden = on;
     preview.hidden = !on;
-    opener.textContent = on ? "Back to editing" : "Preview";
-    opener.setAttribute("aria-pressed", on ? "true" : "false");
+    opener.disabled = on;
     (on ? preview.querySelector("h2") : opener).focus();
   }
   preview.querySelector("h2").tabIndex = -1;
-  opener.addEventListener("click", function () { showPreview(main.hidden ? false : true); });
+  opener.addEventListener("click", function () { showPreview(true); });
   preview.querySelector("[data-fb-preview-close]").addEventListener("click", function () { showPreview(false); });
 
   changed();

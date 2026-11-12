@@ -75,7 +75,8 @@ reload restores the sample form.
   *Choose one* or *Choose any*), Photo (an aspect ratio; kept as a JPEG
   600 px on its longer side) and Title and Description (display only).
   Changing the type keeps the question, help text, *Required* and
-  visibility, and empties the new type's fields.
+  visibility, and empties the new type's fields: a photo's ratio starts
+  at 4:5 and a list at *Choose one*.
 - **Visibility** is per card: *Shown to reviewers* or *Not shown*; a new
   card is *Not shown*.
 - **Collapsed**, a card shows its question and help text (a text card's
@@ -93,7 +94,8 @@ reload restores the sample form.
 - **The Outline** lists sections, cards and page breaks in order, with
   each card's visibility, and the counts of pages, sections, questions
   (a text card is no question) and required ones; a click goes to the
-  card. It follows every change.
+  card, leaving Preview. Nothing in it is numbered. It follows every
+  change.
 - **Preview** shows the form as an applicant sees it, page by page, built
   from the cards on screen: a number field with its bounds, a list as
   radio buttons or tick boxes, a photo's frame at its ratio, and "Reviewers
