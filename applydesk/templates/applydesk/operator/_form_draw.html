@@ -59,15 +59,16 @@
     }
     var busy = false;
     // Each finished entry: a pill if it names one person in the pool;
-    // otherwise it stays in the box with the reason. Past the maximum,
-    // entries are dropped, so nothing is left in a hidden box.
+    // otherwise it stays in the box with the reason. Once the box is
+    // full, whatever else was typed is dropped and named, found or not,
+    // so nothing is left in a hidden box.
     function take(final) {
       if (busy) return;
       busy = true;
       var focused = document.activeElement === input;
       var parts = input.value.split(",");
       var tail = final ? "" : parts.pop().replace(/^\s+/, "");
-      var left = [], said = [], added = [], dropped = false;
+      var left = [], said = [], added = [], dropped = [];
       parts.forEach(function (raw) {
         var text = raw.trim();
         if (!text) return;
@@ -75,11 +76,15 @@
         if (hits.length > 1) { left.push(text); said.push("More than one " + text + ": use the email."); return; }
         if (!hits.length) { left.push(text); said.push("Not found in " + poolName(key) + ": " + text + "."); return; }
         if (chosen().indexOf(hits[0][1]) >= 0) { said.push("Already chosen: " + hits[0][0] + "."); return; }
-        if (full()) { dropped = true; return; }
+        if (full()) { dropped.push(text); return; }
         pill(hits[0][0], hits[0][1]);
         added.push(hits[0][0]);
       });
-      if (dropped) { said.push("At most " + hi + (hi === 1 ? " person." : " people.")); tail = ""; left = []; }
+      if (full()) {
+        var extra = left.concat(dropped, tail.trim() ? [tail.trim()] : []);
+        if (extra.length) said = ["At most " + hi + (hi === 1 ? " person" : " people") + "; not added: " + extra.join(", ") + "."];
+        left = []; tail = "";
+      }
       var bad = said.length > 0;
       if (added.length) said.unshift("Added " + added.join(", ") + ".");
       // Unfinished text stays after what was not found; a finished entry

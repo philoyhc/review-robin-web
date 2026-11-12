@@ -527,7 +527,7 @@ def test_select_people_drops_names_past_the_most_and_says_so(page: Page) -> None
     box.focus()
     box.fill("Dr Omar Aziz, Dr Hana Ito,")  # pasted at once
     assert preview.locator(".token").count() == 1
-    assert "At most 1 person." in preview.inner_text()
+    assert "At most 1 person; not added: Dr Hana Ito." in preview.inner_text()
     # Nothing is left in a hidden box; focus moved to the pill's button.
     hidden = preview.locator(".token-input")
     assert not hidden.is_visible() and hidden.input_value() == ""
@@ -550,3 +550,16 @@ def test_select_people_says_already_chosen(page: Page) -> None:
     box.press_sequentially("Dr Ruth Kahn, ruth.kahn@example.edu,")
     assert preview.locator(".token").count() == 1
     assert "Already chosen: Dr Ruth Kahn." in preview.inner_text()
+
+
+def test_a_full_box_keeps_no_unfound_text(page: Page) -> None:
+    # Codex: an unfound name before the one that fills the box was left
+    # in the hidden input.
+    box = _people_box(page, "Preferred reviewer")
+    preview = page.locator("#fb-preview")
+    box.focus()
+    box.fill("Nobody Here, Dr Omar Aziz,")
+    assert preview.locator(".token").count() == 1
+    hidden = preview.locator(".token-input")
+    assert not hidden.is_visible() and hidden.input_value() == ""
+    assert "not added: Nobody Here." in preview.inner_text()
