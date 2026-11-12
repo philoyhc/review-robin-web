@@ -28,11 +28,13 @@ Review Robin shows a reviewee's photo only as an external `profile_link`, and Ap
 - **Upload limits.** 5 MB, checked in the browser for a quick answer and again by the server, which reads at most 5 MB + 1 byte. Accepted: whatever Pillow decodes as JPEG, PNG or WebP; anything else is refused with a message. Pillow's decompression-bomb limit is set low (about 40 megapixels) and enforced as an error.
 - **Orientation.** The browser draws a photo with its EXIF orientation applied, so the rectangle is in the oriented image's pixels; the server applies `ImageOps.exif_transpose` before cropping, so both read the same picture.
 - **The rectangle.** Integers inside the image, with the window's aspect ratio to within one pixel of rounding; otherwise refused. The server never trusts the browser's rectangle to be in bounds.
-- **What is kept.** The crop resized to the output size, RGB, JPEG at quality 85, no metadata. Expected size about 50–100 KB. One row per photo: a public ID (RRW's alphabet), who uploaded it, when, the bytes, their SHA-256, width and height.
+- **What is kept.** The crop resized to 480 × 600 px (the window is 4:5), RGB, JPEG at quality 85, no metadata. Expected size about 50–100 KB. One row per photo: a public ID (RRW's alphabet), who uploaded it, when, the bytes, their SHA-256, width and height.
 - **Reading back.** `GET /utilities/photo-poc/photos/<id>.jpg` checks the same super-admin guard, sends `Cache-Control: private, no-store` and an `ETag`; a malformed or unknown ID is a 404.
 - **Retention.** A proof of concept on the author's own test photos: each can be deleted, and the segment's close deletes the table's rows unless the author keeps them. Real participant photos need a retention rule first (PDPA).
 
 ## Judgment calls — decided
+
+- **Testing locally** (author asked, 2026-11-12): the database falls back to a SQLite file, so the whole tool runs on `uvicorn` with fake auth as the super-admin at `/utilities/photo-poc/`; Postgres is exercised by CI's round-trip and on Azure.
 
 - **Utilities' own Alembic history** (`utilityapps/alembic/`), not a table in RRW's: the database is Utilities', and the import boundary forbids sharing RRW's models.
 - **The connection string** is read from `UTILITYAPPS_DATABASE_URL`, already set on the App Service as a Key Vault reference; locally a SQLite file, as RRW's default.
@@ -74,8 +76,8 @@ Taken 2026-11-12 at `12cba9a`.
 
 ## Open questions
 
-- **The window's ratio and the output size** (author): proposed portrait 4:5 at 480 × 600 px, a profile photo's usual shape. Square 1:1 at 512 × 512 is the alternative.
-- **JPEG or WebP** (author): proposed JPEG for any viewer and any mail client; WebP is about a third smaller.
+- ~~The window's ratio and output size~~: portrait **4:5 at 480 × 600 px** (author, 2026-11-12).
+- ~~JPEG or WebP~~: **JPEG** (author, 2026-11-12).
 
 ## Out of scope
 
