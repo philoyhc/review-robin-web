@@ -89,7 +89,7 @@ reload restores the sample form.
   buttons. Cards load collapsed, the form's own card too; a form with
   one card opens it and the form's own card. No card
   shows a number.
-- **Buttons** on each card: *Replicate* (a field card), *+ New* (an empty
+- **Buttons** along each card's foot, flush right: *Replicate* (a field card), *+ New* (an empty
   String card), *+ Section* and *+ Page break*, each inserted right after
   the card and a new card opened; *Delete*, with no confirmation,
   disabled on the form's last question or text card. A page break has
