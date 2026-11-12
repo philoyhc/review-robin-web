@@ -51,7 +51,9 @@ operators under `/operator/exercises`, participants under `/me`.
 - **The chrome** is the shared bar (`docs/header_chrome.md`): the app
   icon, the workspace's top line over the area, a switcher of *Exercises*
   and *My ApplyDesk* then *All applications*, the Light/Dark toggle and the
-  account menu. An exercise's operator pages add a row of tabs.
+  account menu. An exercise's operator pages add a row of tabs: Home,
+  Setup, Form, Applications, Panels, Review and Reports (author,
+  2026-11-12).
 - **The gate** (`applydesk/gate.py`): every route but `/health` answers
   anyone on a local run and, deployed, only the platform super-admin,
   with a 404 for everyone else, until the segments that wire them.

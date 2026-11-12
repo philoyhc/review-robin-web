@@ -1,5 +1,5 @@
 """Sample data for the placeholders (segment AD1, item 2): three exercises,
-their applications, assessors and profile pages, so every page of the URL
+their applications, panels and profile pages, so every page of the URL
 map has something to show. Names and addresses are invented; IDs have the
 public-ID shape (`applydesk/ids.py`)."""
 
@@ -41,6 +41,18 @@ class Assessor:
     name: str
     email: str
     asked_to_review: tuple[str, ...]  # application public IDs (ruling 9)
+    panel: str = "Panel A"
+
+
+@dataclass(frozen=True)
+class Evaluator:
+    """Someone on a roster that is not an assessment panel: the pool
+    applicants choose a reviewer from, or the interviewers."""
+
+    exercise_id: str
+    name: str
+    email: str
+    note: str
 
 
 EXERCISES: tuple[Exercise, ...] = (
@@ -141,8 +153,21 @@ APPLICATIONS: tuple[Application, ...] = (
 ASSESSORS: tuple[Assessor, ...] = (
     Assessor("wa9juxbc2t", "Zoe Tan", "zoe.tan@example.edu", ("m3qx8vkt2n", "h6zr2tdw9p")),
     Assessor("wa9juxbc2t", "Lars Berg", "lars.berg@example.edu", ("m3qx8vkt2n",)),
+    Assessor("wa9juxbc2t", "Ana Lim", "ana.lim@example.edu", ("h6zr2tdw9p",), panel="Panel B"),
     Assessor("k7mfr3pq8z", "Priya Rao", "priya.rao@example.edu", ("b8yd3mkr6v", "q4tw9hcz3x")),
     Assessor("k7mfr3pq8z", "Mei Chen", "mei.chen@example.edu", ("q4tw9hcz3x",)),
+)
+
+# The pool an applicant chooses a reviewer from, and the interviewers.
+REVIEWER_POOL: tuple[Evaluator, ...] = (
+    Evaluator("wa9juxbc2t", "Dr Hana Ito", "hana.ito@example.edu", "Life Sciences"),
+    Evaluator("wa9juxbc2t", "Dr Omar Aziz", "omar.aziz@example.edu", "Engineering"),
+    Evaluator("wa9juxbc2t", "Dr Ruth Kahn", "ruth.kahn@example.edu", "Humanities"),
+)
+INTERVIEWERS: tuple[Evaluator, ...] = (
+    Evaluator("wa9juxbc2t", "Prof Ivan Petrov", "ivan.petrov@example.edu", "Chair"),
+    Evaluator("wa9juxbc2t", "Dr Sara Ng", "sara.ng@example.edu", ""),
+    Evaluator("k7mfr3pq8z", "Prof Ben Ortiz", "ben.ortiz@example.edu", "Chair"),
 )
 
 # The applicant form's two sections, as an applicant fills them in
@@ -157,10 +182,28 @@ SHOWN_TO_REVIEWERS: tuple[tuple[str, str], ...] = (
     ("Relevant experience", "Courses, projects or work that prepare the applicant."),
 )
 NOT_SHOWN_TO_REVIEWERS: tuple[str, ...] = (
+    "Preferred reviewer (from the reviewer pool)",
     "Matriculation number",
     "Expected graduation",
     "Financial aid held",
 )
+
+
+# Evaluation responses by application, from every source (author,
+# 2026-11-12: Reports collates them): Review Robin's assessments, the
+# interviews, and the reviewer an applicant chose from the pool.
+RESPONSES: dict[str, dict[str, str]] = {
+    "m3qx8vkt2n": {
+        "assessment": "2 of 2 submitted · mean 4.5 of 5",
+        "interview": "Not yet",
+        "pool": "Received from Dr Hana Ito",
+    },
+    "h6zr2tdw9p": {
+        "assessment": "1 of 2 submitted",
+        "interview": "Not yet",
+        "pool": "Awaited from Dr Omar Aziz",
+    },
+}
 
 
 def exercise(public_id: str) -> Exercise | None:
@@ -173,6 +216,14 @@ def applications_of(exercise_id: str) -> tuple[Application, ...]:
 
 def assessors_of(exercise_id: str) -> tuple[Assessor, ...]:
     return tuple(a for a in ASSESSORS if a.exercise_id == exercise_id)
+
+
+def pool_of(exercise_id: str) -> tuple[Evaluator, ...]:
+    return tuple(e for e in REVIEWER_POOL if e.exercise_id == exercise_id)
+
+
+def interviewers_of(exercise_id: str) -> tuple[Evaluator, ...]:
+    return tuple(e for e in INTERVIEWERS if e.exercise_id == exercise_id)
 
 
 def application(exercise_id: str, public_id: str) -> Application | None:

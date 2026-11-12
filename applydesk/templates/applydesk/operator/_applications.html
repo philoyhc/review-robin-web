@@ -1,13 +1,19 @@
 <div class="table-wrap">
 <table>
-  <thead><tr><th>Applicant</th><th>Title</th><th>Application ID</th><th>State</th><th>Submitted</th></tr></thead>
+  <thead><tr><th>Applicant</th><th>Title</th><th>Application ID</th><th>State</th><th>Submitted</th><th>Applicant profile</th></tr></thead>
   <tbody>
   {% for a in applications %}
-    <tr><td>{{ a.applicant }}<br><span class="muted">{{ a.email }}</span></td><td>{{ a.title }}</td><td><code>{{ a.public_id }}</code></td><td>{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</td><td>{{ a.submitted or "—" }}</td></tr>
+    <tr><td>{{ a.applicant }}<br><span class="muted">{{ a.email }}</span></td><td>{{ a.title }}</td><td><code>{{ a.public_id }}</code></td><td>{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</td><td>{{ a.submitted or "—" }}</td>
+      <td>{% if a.state == "Submitted" %}<a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/profiles/' ~ a.profile_id) }}">Open</a>{% else %}<span class="muted">—</span>{% endif %}</td></tr>
   {% else %}
-    <tr><td colspan="5" class="muted">No applications yet.</td></tr>
+    <tr><td colspan="6" class="muted">No applications yet.</td></tr>
   {% endfor %}
   </tbody>
 </table>
 </div>
-<div class="btnrow"><button class="btn btn-alert" type="button" disabled>Return to draft</button></div>
+<p class="muted">An applicant profile is the page assessors read, made for each submitted application by <em>Generate applicant profiles</em>: the <em>Shown to reviewers</em> section only{% if exercise.blind %}, with the applicant's name and identifiers redacted{% endif %}. Outcomes are imported by application ID and held until released; a release time is kept to on read.</p>
+<div class="btnrow">
+  <button class="btn btn-primary" type="button" disabled>Generate applicant profiles</button>
+  <button class="btn btn-secondary" type="button" disabled>Import outcomes</button>
+  <button class="btn btn-alert" type="button" disabled>Return to draft</button>
+</div>

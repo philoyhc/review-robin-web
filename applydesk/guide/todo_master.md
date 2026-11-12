@@ -33,11 +33,22 @@ where a ruling below differs from it, the ruling wins.
    `/applydesk/me` and `/applydesk/me/exercises/<id>/…`.
 9. **A reviewer opens only the profiles of the applications they are
    asked to review** (AD5). ApplyDesk's roster holds that permission.
+   **The exercise's operators open every profile** (author, 2026-11-12).
    How the same pairs reach Review Robin's assignments, through reviewer,
    reviewee or relationship tags, is decided at AD6.
 10. **A blind exercise sends Review Robin an alias key** in place of the
     application ID, minted per handoff and mapped back only by
     ApplyDesk (AD6), since RRW shows `RevieweeEmail` under each name.
+11. **The operator's pages are Home, Setup, Form, Applications, Panels,
+    Review and Reports** (author, 2026-11-12). Home shows the timeline and
+    the current stage; Setup holds the timeline's setup; Form builds and
+    previews the application form; Applications generates applicant
+    profiles. **Panels holds the rosters ApplyDesk keeps (ruling 4)**:
+    assessment panels, a reviewer pool applicants choose from on the form,
+    and interviewers. Ruling 1's "panels" are the native assessment
+    engine's, still out of the MVP; these are rosters. **Reports collates
+    every evaluation response**, Review Robin's included, beside the data
+    export.
 
 ## MVP roadmap
 
@@ -49,10 +60,10 @@ Segments in order; each gets a plan in this folder when it starts.
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the Application → Review stage boundary | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
-| AD5 — Assessor roster and profile page | The exercise's assessors and the applications each is asked to review (ruling 9); the application profile page with its access check, audit and blind redaction | — |
+| AD5 — Panels and profile page | The rosters on Panels (ruling 11): assessment panels and the applications each assessor is asked to review (ruling 9), the reviewer pool, interviewers; applicant profiles generated, the profile page with its access check, audit and blind redaction | — |
 | AD6 — Assessment in Review Robin | Rosters from submitted applications, the pairs as tags, `ProfileLink` to the profile page, the blind alias key (ruling 10), results back into ApplyDesk | The open items below |
 | AD7 — Timeline and outcomes | Milestones, announcements, outcome import, embargo on read, release, correction | G5 (sender), G7 (publication) |
-| AD8 — Dashboard and export | Counts by state; the export bundle | — |
+| AD8 — Dashboard and Reports | Counts by state; Reports: every evaluation response collated (ruling 11), the export bundle | — |
 | Later | Blob storage, then uploads and referees | G8, with IT |
 
 ## Open decisions

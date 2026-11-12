@@ -27,18 +27,12 @@ PAGES = (
     f"/applydesk/operator/exercises/{EX}",
     *(
         f"/applydesk/operator/exercises/{EX}/{section}"
-        for section in (
-            "settings",
-            "form",
-            "applications",
-            "assessors",
-            "review",
-            "timeline",
-            "export",
-        )
+        for section in ("setup", "form", "applications", "panels", "review", "reports")
     ),
     f"/applydesk/operator/exercises/{BLIND}",  # Review stage: "Go to Review"
-    f"/applydesk/operator/exercises/{BLIND}/settings",  # blind review on
+    f"/applydesk/operator/exercises/{BLIND}/setup",  # blind review on
+    f"/applydesk/operator/exercises/{BLIND}/panels",  # no reviewer pool
+    f"/applydesk/operator/exercises/{DRAFT}/setup",  # the Setup stage is now
     f"/applydesk/operator/exercises/{DRAFT}",  # the Publish step
     f"/applydesk/operator/exercises/{DRAFT}/applications",  # none yet
     "/applydesk/me",
@@ -245,3 +239,91 @@ def test_withdraw_is_destructive(client: TestClient) -> None:
     """The applicant cannot undo a withdrawal (author, 2026-11-12)."""
     page = client.get(f"/applydesk/me/exercises/{EX}/applications/h6zr2tdw9p").text
     assert '<button class="btn btn-destructive" type="button" disabled>Withdraw</button>' in page
+
+
+def test_the_operator_tabs_are_the_authors_seven(client: TestClient) -> None:
+    """Author, 2026-11-12: Home, Setup, Form, Applications, Panels and
+    Reports, with Review kept as a seventh, between Panels and Reports."""
+    text = client.get(f"/applydesk/operator/exercises/{EX}").text
+    row = text[text.index('<nav class="tabs"') :]
+    row = row[: row.index("</nav>")]
+    tabs = re.findall(r"<a [^>]*>([^<]+)</a>", row)
+    assert tabs == ["Home", "Setup", "Form", "Applications", "Panels", "Review", "Reports"]
+
+
+@pytest.mark.parametrize("old", ["settings", "assessors", "timeline", "export", "report"])
+def test_the_retired_sections_are_gone(client: TestClient, old: str) -> None:
+    assert client.get(f"/applydesk/operator/exercises/{EX}/{old}").status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("exercise_id", "now"), [(DRAFT, "Setup"), (EX, "Applications"), (BLIND, "Review")]
+)
+def test_home_marks_the_current_stage_on_its_timeline(
+    client: TestClient, exercise_id: str, now: str
+) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{exercise_id}").text
+    current = re.findall(r'aria-current="step">\s*<span class="stage-name">([^<]+)', text)
+    assert [c.strip() for c in current] == [now]
+    done = {"Setup": 0, "Applications": 1, "Review": 2}[now]
+    assert text.count('<span class="chip chip-mute">Done</span>') == done
+    for stage in ("Setup", "Applications", "Review", "Outcome"):
+        assert f'<span class="stage-name">{stage}' in text
+
+
+def test_setup_carries_the_timeline_setup(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/setup").text
+    assert '<ol class="stages"' in text and "<h3>Milestones</h3>" in text
+    assert 'aria-current="step"' in text
+    assert "Add a milestone" in text and "New announcement" in text
+
+
+def test_the_form_page_previews_the_form(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/form").text
+    assert '<h2 id="preview-h">Preview</h2>' in text
+    for label, _ in sample_data.SHOWN_TO_REVIEWERS:
+        assert f">{label}</label>" in text
+
+
+def test_applications_generates_applicant_profiles(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/applications").text
+    assert "Generate applicant profiles" in text
+    # Operators open every profile (author, 2026-11-12).
+    assert "/applydesk/me/exercises/wa9juxbc2t/profiles/p3bd7kq2wx" in text
+
+
+def test_panels_holds_the_three_rosters(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/panels").text
+    for heading in ("Assessment panels", "Reviewer pool", "Interviewers"):
+        assert f"<h2>{heading}</h2>" in text
+    assert "<h3>Panel A</h3>" in text and "<h3>Panel B</h3>" in text
+    assert "Dr Hana Ito" in text and "Prof Ivan Petrov" in text
+    blind = client.get(f"/applydesk/operator/exercises/{BLIND}/panels").text
+    assert "No pool: applicants do not choose a reviewer" in blind
+
+
+def test_reports_collates_every_evaluation_and_exports(client: TestClient) -> None:
+    """Author, 2026-11-12: Reports collates the evaluation responses,
+    Review Robin's included, beside the data export."""
+    text = client.get(f"/applydesk/operator/exercises/{EX}/reports").text
+    assert "<h2>Evaluation responses</h2>" in text
+    for column in ("Assessment", "Interview", "Pool reviewer"):
+        assert f"<th>{column}" in text
+    assert "2 of 2 submitted · mean 4.5 of 5" in text  # from Review Robin
+    assert "Received from Dr Hana Ito" in text  # the pool reviewer
+    assert "Pull results from Review Robin" in text
+    assert "<h2>Export bundle</h2>" in text and "Download export" in text
+    review = client.get(f"/applydesk/operator/exercises/{EX}/review").text
+    assert 'href="/applydesk/operator/exercises/wa9juxbc2t/reports"' in review
+
+
+def test_a_draft_exercise_s_timeline_reads_cleanly(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
+    assert "Not set to Not set" not in text and "Expected Not set" not in text
+    assert "Dates not set" in text
+
+
+def test_the_form_preview_ties_help_to_its_field(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/form").text
+    assert 'id="pv-s2-help"' in text and 'aria-describedby="pv-s2-help"' in text
+    assert "Preferred reviewer (from the reviewer pool)" in text

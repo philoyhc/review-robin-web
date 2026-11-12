@@ -26,18 +26,21 @@ Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID
 | `/` | Landing: links to *My ApplyDesk* and, for an operator, *Exercises* | Anyone signed in |
 | `/health` | Health, `200` signed out | Anyone |
 | `/operator/exercises` | Exercises lobby: the operator's exercises by state; New exercise | Operators |
-| `/operator/exercises/<id>` | Exercise Home: stage, state, counts, the next step | The exercise's operators |
-| `/operator/exercises/<id>/settings` | Details, dates and stage boundary, eligibility (open or invitation-only), blind review | 〃 |
-| `/operator/exercises/<id>/form` | The applicant form: *Shown to reviewers* and *Not shown to reviewers* | 〃 |
-| `/operator/exercises/<id>/applications` | Applications by state | 〃 |
-| `/operator/exercises/<id>/assessors` | The assessor roster and what each may view | 〃 |
+| `/operator/exercises/<id>` | Exercise Home: stage, state, counts, the next step; the timeline with the current stage marked (iteration 5) | The exercise's operators |
+| ~~`/operator/exercises/<id>/settings`~~ | Became Setup (iteration 5) | |
+| `/operator/exercises/<id>/setup` | Details, eligibility (open or invitation-only), blind review; the timeline: stages, milestones, announcements (iteration 5) | 〃 |
+| `/operator/exercises/<id>/form` | The application form builder: *Shown to reviewers* and *Not shown to reviewers*, and its preview (iteration 5) | 〃 |
+| `/operator/exercises/<id>/applications` | Applications by state; generate applicant profiles; import outcomes (iteration 5) | 〃 |
+| ~~`/operator/exercises/<id>/assessors`~~ | Became Panels (iteration 5) | |
+| `/operator/exercises/<id>/panels` | The rosters of evaluators: assessment panels (what each may view), the reviewer pool applicants choose from, interviewers (iteration 5) | 〃 |
 | `/operator/exercises/<id>/review` | Assessment in Review Robin: send, status, results back | 〃 |
-| `/operator/exercises/<id>/timeline` | Milestones, announcements, outcomes | 〃 |
-| `/operator/exercises/<id>/export` | The export bundle | 〃 |
+| ~~`/operator/exercises/<id>/timeline`~~ | Into Setup and Home; outcomes into Applications (iteration 5) | |
+| ~~`/operator/exercises/<id>/export`~~ | Became Reports (iteration 5) | |
+| `/operator/exercises/<id>/reports` | Every evaluation response collated, Review Robin's included; the data export (iteration 5) | 〃 |
 | `/me` | My ApplyDesk: my applications, exercises open to me, profiles I may read | Anyone signed in |
 | `/me/exercises/<id>` | An exercise as an applicant sees it: details, timeline, Apply | Eligible applicants |
 | `/me/exercises/<id>/applications/<app>` | My application: draft or submitted | Its applicant |
-| `/me/exercises/<id>/profiles/<profile>` | The application profile page: the *Shown to reviewers* section; in a blind exercise, the applicant's name and identifiers redacted | Assessors asked to review that application (ruling 9) |
+| `/me/exercises/<id>/profiles/<profile>` | The application profile page: the *Shown to reviewers* section; in a blind exercise, the applicant's name and identifiers redacted | Assessors asked to review that application (ruling 9); the exercise's operators (author, 2026-11-12) |
 
 ## Semantics
 
@@ -73,6 +76,7 @@ Building. Base `573ffa3` (`main` before rung 2) for the cumulative read.
 - Rung 3: the gate admits the platform super-admin only when deployed, not a preview list as Residential's: ApplyDesk is not shipped, so it needs none yet. One template serves the seven operator sections, each a partial.
 - **Read:** one `diff-reviewer` read of `573ffa3..` at rung 3. Fixed: the application and profile IDs were looked up before their shape was checked (now `applydesk/lookups.py`, shape first, and the route modules no longer import each other); Return to draft and Withdraw take Outline-amber; disabled buttons at 0.85 opacity, as Residential's; the tests now render the blind and draft exercises' pages, hold links to `url()` by mounting under another prefix, and call health with no identity; `/me` marks an invitation-only exercise; `docs/header_chrome.md` and the doc impact caught up. Sound as read: the gate, the blind profile, the registry and packaging.
 - **Iteration rung 4** (author's browser check on Azure, 2026-11-12): the lobby shows an *Exercise Code* column, the operator's short code as an RRW session's, not the public ID; Home and Settings show the code too. Withdraw is Destructive (outline red): an applicant cannot undo it.
+- **Iteration rung 5** (author, 2026-11-12): the operator's tabs are Home, Setup, Form, Applications, Panels and Reports, with Review kept as a seventh tab, between Panels and Reports (the author's chosen order). Home shows the timeline, the current stage marked; Setup holds the timeline's setup (milestones, announcements); Form adds a preview; Applications generates applicant profiles and imports outcomes; Panels holds three rosters, assessment panels, the reviewer pool applicants choose from, and interviewers; Reports collates every evaluation response, Review Robin's included, beside the data export. Settings, Assessors, Timeline and Export are gone; their paths are `404`. Its read, then the author: operators open every profile (author), so the list links it; profiles are made by *Generate*, not on submission; the form carries the pool's question; finished stages say *Done*; unset dates read *not set*; ruling 11 records the tabs and Panels.
 
 ## PR ladder
 

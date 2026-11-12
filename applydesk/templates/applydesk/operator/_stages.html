@@ -1,0 +1,17 @@
+{# The exercise's stages, the current one marked (Home; Setup's timeline). #}
+{% set now = "setup" if exercise.state == "Draft" else ("applications" if exercise.stage == "Application" else "review") %}
+{% set order = ["setup", "applications", "review", "outcome"] %}
+<ol class="stages" aria-label="Stages">
+  {% for key, name, when in [
+      ("setup", "Setup", "Until applications open"),
+      ("applications", "Applications", "Dates not set" if "Not set" in (exercise.opens, exercise.application_stage_ends) else exercise.opens ~ " to " ~ exercise.application_stage_ends),
+      ("review", "Review", "Assessment in Review Robin, interviews"),
+      ("outcome", "Outcome", "Date not set" if exercise.expected_outcome == "Not set" else "Expected " ~ exercise.expected_outcome),
+  ] %}
+  {% set i = order.index(key) %}{% set n = order.index(now) %}
+  <li class="stage {{ 'stage-now' if i == n else ('stage-done' if i < n else '') }}"{% if i == n %} aria-current="step"{% endif %}>
+    <span class="stage-name">{{ name }}{% if i == n %} <span class="chip chip-info">Now</span>{% elif i < n %} <span class="chip chip-mute">Done</span>{% endif %}</span>
+    <span class="stage-when">{{ when }}</span>
+  </li>
+  {% endfor %}
+</ol>

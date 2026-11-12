@@ -17,7 +17,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/gate.py` | The placeholders' gate |
 | `applydesk/ids.py` | Public IDs: generation and the shape check |
 | `applydesk/web.py` | Templates, mount-aware URLs (`url()`, `is_here()`, `host_url()`) and the page chrome |
-| `applydesk/sample_data.py` | The placeholders' sample exercises, applications and assessors |
+| `applydesk/sample_data.py` | The placeholders' sample exercises, applications, panels, reviewer pool and interviewers |
 | `applydesk/templates/applydesk/` | Its templates; `base.html` carries the favicon and the bar |
 | `applydesk/tests/` | ApplyDesk's tests, a package with its own `__init__.py`; `_host.py` builds the Cordware host with the real registry |
 | `applydesk/docs/`, `applydesk/guide/`, `applydesk/spec/` | Prose, as RRW's three folders |
