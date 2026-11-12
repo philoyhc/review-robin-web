@@ -70,6 +70,7 @@
   }
 
   window.applydeskDrawForm = function (body, form) {
+    if (window.applydeskUnfitBoxes) window.applydeskUnfitBoxes(body);
     body.textContent = "";
     body.appendChild(el("h2", "fb-pv-form", form.title || "Untitled form"));
     if (form.description) body.appendChild(el("p", "fb-pv-help", form.description));

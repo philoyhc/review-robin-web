@@ -417,6 +417,12 @@ def test_preview_takes_the_cards_place_and_back(page: Page) -> None:
     assert preview.is_visible()
     # The form alone: no heading or note of its own.
     assert "Nothing typed here is kept" not in preview.inner_text()
+    first = preview.locator(":scope > *").first
+    assert first.get_attribute("data-fb-preview-body") is not None
+    assert (
+        preview.locator("[data-fb-preview-body] > *").first.evaluate("e => e.className")
+        == "fb-pv-form"
+    )
     _the_applicant_form(preview.locator("[data-fb-preview-body]"))
     button.click()
     assert button.inner_text() == "Preview"
@@ -425,6 +431,10 @@ def test_preview_takes_the_cards_place_and_back(page: Page) -> None:
     button.click()
     page.locator(".fb-o-item", has_text="Methods").click()
     assert page.locator("#fb-cards").is_visible() and button.inner_text() == "Preview"
+    focused = page.evaluate(
+        "document.activeElement.closest('.fc').querySelector('[data-sum=label]').textContent"
+    )
+    assert focused == "Methods"
 
 
 def test_text_boxes_grow_to_fit_without_a_handle(page: Page) -> None:
@@ -438,6 +448,18 @@ def test_text_boxes_grow_to_fit_without_a_handle(page: Page) -> None:
     after = help_box.evaluate("e => e.offsetHeight")
     assert after > before
     assert help_box.evaluate("e => e.scrollHeight <= e.clientHeight")
+    # A box in a card that opens from collapsed is sized to its text.
+    long = _card(page, "Your proposed project")
+    long.locator("[data-fc-toggle]").click()
+    box = long.locator('[data-f="help"]')
+    page.wait_for_function(
+        "e => e.style.height !== '' && e.scrollHeight <= e.clientHeight", arg=box.element_handle()
+    )
+    # And a new card's box, after + New.
+    card.locator('[data-fc-act="new"]').click()
+    fresh = page.locator('#fb-cards .fc[data-open] [data-f="help"]').nth(1)
+    fresh.fill("One\nTwo\nThree\nFour")
+    assert fresh.evaluate("e => e.scrollHeight <= e.clientHeight")
 
 
 def test_the_form_title_is_larger_than_a_card_s(page: Page) -> None:

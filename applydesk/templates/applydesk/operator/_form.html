@@ -219,6 +219,7 @@
       setOpen(added, true);
     } else if (what === "delete") {
       var next = item.nextElementSibling || item.previousElementSibling;
+      if (window.applydeskUnfitBoxes) window.applydeskUnfitBoxes(item);
       item.remove();
       changed();
       var focus = next && (next.querySelector("[data-fc-toggle]") || next.querySelector("[data-fc-grip]"));
@@ -343,15 +344,15 @@
 
   var main = root.querySelector(".fb-main");
   var preview = root.querySelector("#fb-preview");
-  var opener = root.querySelector("[data-fb-preview]");
+  var previewBtn = root.querySelector("[data-fb-preview]");
   function showPreview(on) {
     if (on) window.applydeskDrawForm(preview.querySelector("[data-fb-preview-body]"), JSON.parse(window.applydeskFormSnapshot()));
     main.hidden = on;
     preview.hidden = !on;
-    opener.textContent = on ? "Back to edit" : "Preview";
-    if (on) preview.focus(); else opener.focus();
+    previewBtn.textContent = on ? "Back to edit" : "Preview";
+    if (on) preview.focus(); else previewBtn.focus();
   }
-  opener.addEventListener("click", function () { showPreview(!main.hidden); });
+  previewBtn.addEventListener("click", function () { showPreview(!main.hidden); });
 
   changed();
 })();

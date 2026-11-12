@@ -76,7 +76,7 @@ reload restores the sample form.
   *Choose one* or *Choose any*), Photo (an aspect ratio; kept as a JPEG
   600 px on its longer side) and Title and Description (display only).
   Help text and descriptions grow to fit what is typed, with no resize
-  handle. Changing the type keeps the question, help text, *Required* and
+  handle; so does a long answer's box in Preview. Changing the type keeps the question, help text, *Required* and
   visibility, and empties the new type's fields: a photo's ratio starts
   at 4:5 and a list at *Choose one*.
 - **Visibility** is per card: *Shown to reviewers* or *Not shown*; a new
