@@ -563,3 +563,26 @@ def test_a_full_box_keeps_no_unfound_text(page: Page) -> None:
     hidden = preview.locator(".token-input")
     assert not hidden.is_visible() and hidden.input_value() == ""
     assert "not added: Nobody Here." in preview.inner_text()
+
+
+def test_a_card_s_buttons_sit_flush_right_in_order(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Months the project will run")
+    card.locator("[data-fc-toggle]").click()
+    foot = card.locator(".fc-foot")
+    buttons = foot.locator("button")
+    assert buttons.all_inner_texts() == [
+        "Replicate",
+        "+ New",
+        "+ Section",
+        "+ Page break",
+        "Delete",
+    ]
+    lefts = [b.evaluate("e => e.getBoundingClientRect().left") for b in buttons.all()]
+    assert lefts == sorted(lefts)
+    edge = foot.evaluate("e => e.getBoundingClientRect().right")
+    last = buttons.last.evaluate("e => e.getBoundingClientRect().right")
+    assert abs(edge - last) < 1
+    # A gap between the buttons, not a gap at the left pushing Delete away.
+    gaps = [b - a for a, b in zip(lefts, lefts[1:], strict=False)]
+    assert max(gaps) < 200
