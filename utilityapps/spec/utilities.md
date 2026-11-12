@@ -113,7 +113,7 @@ sender takes from it.
   again finds a session already made.
 - Text is inserted with `textContent` only; every response is `no-store`.
 - **Sent to Review Robin**: the sessions this browser
-  created, kept in `localStorage` (Utilities has no database; clearing it
+  created, kept in `localStorage` (not in Utilities' database; clearing it
   forgets the list, not the sessions; open tabs keep it in step). Each offers:
   - **Refresh status**: reads Review Robin's status (`spec/handoffs.md`
     §10, version 3) and shows each section as Review Robin
@@ -145,9 +145,11 @@ Utilities' own database, with no Blob storage.
   keys.
 - **Saving** (`POST /photo-poc/photos`): the original file and the
   window's rectangle in the oriented photo's pixels. The server decodes,
-  orients, checks the rectangle, crops and keeps only a 480 × 600 JPEG
-  with no metadata (`utilityapps/photo_poc/service.py`). A refusal is a
-  `400` (`413` over 5 MB) whose message the page shows; nothing is kept.
+  orients, checks the rectangle, crops, converts any color profile to
+  sRGB and keeps only a 480 × 600 JPEG with no metadata (`utilityapps/photo_poc/service.py`). A refusal is a
+  `400` (`413` over 5 MB, `411` with no size given) whose message the
+  page shows; nothing is kept. A phone JPEG that Pillow reads as `MPO`
+  (a second picture in it) is a JPEG here: its first picture is kept.
 - **Reading back** (`GET /photo-poc/photos/<id>.jpg`): `Cache-Control:
   private, no-store` and an `ETag`; a malformed or unknown ID is a `404`.
 - **Deleting** (`DELETE /photo-poc/photos/<id>`): `204`, or `404` when it

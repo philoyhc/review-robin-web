@@ -87,6 +87,8 @@ def test_photos_are_listed_newest_first(client: TestClient) -> None:
         (None, {"x": "500"}, 400, "The crop is outside the photo."),
         (None, {"height": "900"}, 400, "The crop is not the window's shape."),
         (None, {"width": "eight"}, 400, "The crop is outside the photo."),
+        (None, {"x": "--5"}, 400, "The crop is outside the photo."),
+        (None, {"x": "\u0661"}, 400, "The crop is outside the photo."),
         (b"\xff" * (5 * 1024 * 1024 + 1), {}, 413, "The photo is larger than 5 MB."),
     ],
 )
@@ -102,6 +104,17 @@ def test_a_refusal_says_why_and_keeps_nothing(
     assert (reply.status_code, reply.json()) == (status, {"error": message})
     after = client.get(PAGE).text
     assert "No photos saved yet." in after and "data-id=" not in after
+
+
+def test_an_upload_that_does_not_say_its_size_is_refused(client: TestClient) -> None:
+    reply = client.post(SAVE, content=iter([b"--x--"]), headers=WRITE)
+    assert reply.status_code == 411
+    assert reply.json() == {"error": "The upload did not say its size. Choose the photo again."}
+
+
+def test_a_body_over_the_limit_is_refused_before_it_is_read(client: TestClient) -> None:
+    reply = client.post(SAVE, content=b"x" * (6 * 1024 * 1024), headers=WRITE)
+    assert (reply.status_code, reply.json()) == (413, {"error": "The photo is larger than 5 MB."})
 
 
 def test_no_photo_is_refused(client: TestClient) -> None:
@@ -146,6 +159,9 @@ def test_nobody_signed_in_gets_a_401(client: TestClient, monkeypatch: pytest.Mon
     monkeypatch.setattr(identity_settings, "allow_fake_auth", False)
     assert client.get(PAGE).status_code == 401
     assert client.get(f"{SAVE}/2345678923.jpg").status_code == 401
+    files = {"photo": ("p.jpg", _photo(), "image/jpeg")}
+    assert client.post(SAVE, files=files, data=CROP, headers=WRITE).status_code == 401
+    assert client.delete(f"{SAVE}/2345678923", headers=WRITE).status_code == 401
 
 
 def test_the_index_does_not_list_it(client: TestClient) -> None:

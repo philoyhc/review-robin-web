@@ -76,8 +76,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[dev]
 
-      # The unit shard needs it too: three of residentialapps/tests'
-      # files drive a browser. The browser comes from Playwright's own
+      # The unit shard needs it too: Residential's and Utilities' own
+      # browser tests run there. The browser comes from Playwright's own
       # download host; its system packages (mostly fonts) come from
       # Ubuntu's mirror, which a runner sometimes cannot reach. That
       # outage failed every run on 2026-11-11 before a test started, so

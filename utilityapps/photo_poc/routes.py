@@ -8,11 +8,13 @@ cross-site form cannot send without a preflight this host never answers."""
 
 from __future__ import annotations
 
+import re
 from datetime import UTC
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import FormData, UploadFile
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.requests import Request
@@ -72,9 +74,12 @@ def page(request: Request, session: DbSession) -> Response:
     )
 
 
+_INTEGER = re.compile(r"-?[0-9]{1,9}")
+
+
 def _int(form: FormData, name: str) -> int | None:
     raw = form.get(name)
-    if not isinstance(raw, str) or not raw.lstrip("-").isdecimal() or len(raw) > 9:
+    if not isinstance(raw, str) or _INTEGER.fullmatch(raw) is None:
         return None
     return int(raw)
 
@@ -84,7 +89,9 @@ async def save(request: Request, session: DbSession) -> Response:
     if request.headers.get(WRITE_HEADER) != "1":
         return _refused(403, "This page's own script saves photos.")
     length = request.headers.get("content-length", "")
-    if not length.isdecimal() or len(length) > 18 or int(length) > _BODY_LIMIT:
+    if not length.isdecimal():
+        return _refused(411, "The upload did not say its size. Choose the photo again.")
+    if len(length) > 18 or int(length) > _BODY_LIMIT:
         return _refused(413, "The photo is larger than 5 MB.")
     try:
         form = await request.form(max_files=1, max_fields=8, max_part_size=_BODY_LIMIT)
@@ -100,7 +107,10 @@ async def save(request: Request, session: DbSession) -> Response:
     x, y, width, height = (n for n in numbers if n is not None)
     identity = resolve_identity(request)
     try:
-        photo = service.save(
+        # Decoding and resizing take a while on a large photo: off the
+        # event loop, which every application on the host shares.
+        photo = await run_in_threadpool(
+            service.save,
             session,
             data,
             service.Crop(x, y, width, height),
