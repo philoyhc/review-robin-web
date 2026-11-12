@@ -379,9 +379,9 @@ def test_preview_of_another_exercise_ignores_this_form(page: Page) -> None:
     page.goto(FORM)
     _card(page, "Project title").locator("[data-fc-toggle]").click()
     _card(page, "Project title").locator('[data-f="label"]').fill("Not for the blank form")
-    blank = page.evaluate(f"window.open('{BLANK}/preview', 'other')")
-    assert blank is not None
-    other = page.context.pages[-1]
+    with page.context.expect_page() as opened:
+        page.evaluate(f"window.open('{BLANK}/preview', 'other')")
+    other = opened.value
     other.wait_for_load_state()
     assert "sample form" in (other.locator("[data-pv-source]").text_content() or "")
     assert other.locator("[data-fb-preview-body]").get_by_label("Untitled question").count() == 1
