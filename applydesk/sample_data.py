@@ -5,6 +5,8 @@ public-ID shape (`applydesk/ids.py`)."""
 
 from __future__ import annotations
 
+import math
+import re
 from dataclasses import dataclass
 
 
@@ -226,6 +228,9 @@ RESPONSES: dict[str, dict[str, str]] = {
 # a question or text block ("field"), a section's title ("section") or
 # a page break ("pagebreak"). The applicant pages still read the two
 # lists above until AD4 renders a stored form.
+# ASCII digits only, as the page's /^\d+$/: str.isdecimal() takes others.
+_DIGITS = re.compile(r"[0-9]+")
+
 CARD_TYPES: tuple[tuple[str, str], ...] = (
     ("string", "String"),
     ("integer", "Integer"),
@@ -345,14 +350,16 @@ def form_heading(exercise_id: str) -> tuple[str, str]:
 def kept_size(ratio_w: str, ratio_h: str) -> tuple[int, int] | None:
     """A photo's kept size: 600 px on its longer side, the other by the
     ratio; None for a ratio that is not two positive whole numbers."""
-    if not (ratio_w.isdecimal() and ratio_h.isdecimal()):
+    if not (_DIGITS.fullmatch(ratio_w) and _DIGITS.fullmatch(ratio_h)):
         return None
     w, h = int(ratio_w), int(ratio_h)
     if w <= 0 or h <= 0:
         return None
+    # Half up, as the page's Math.round: Python's round() takes a half
+    # to the even side (16:7 is 262.5, kept 263 on both).
     if w >= h:
-        return 600, round(600 * h / w)
-    return round(600 * w / h), 600
+        return 600, math.floor(600 * h / w + 0.5)
+    return math.floor(600 * w / h + 0.5), 600
 
 
 def _span(lo: str, hi: str, unit: str = "") -> str:

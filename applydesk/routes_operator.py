@@ -58,7 +58,6 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
     exercise = exercise_or_404(exercise_id)
     if section not in SECTIONS:
         raise HTTPException(status_code=404)
-    shown, not_shown = sample_data.form_of(exercise.public_id)
     return render(
         request,
         "applydesk/operator/section.html",
@@ -72,11 +71,11 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         pool=sample_data.pool_of(exercise.public_id),
         interviewers=sample_data.interviewers_of(exercise.public_id),
         responses=sample_data.RESPONSES,
-        shown=shown,
-        not_shown=not_shown,
         cards=sample_data.form_cards(exercise.public_id),
         form_heading=sample_data.form_heading(exercise.public_id),
         card_types=sample_data.CARD_TYPES,
         summary=sample_data.card_summary,
         kept_size=sample_data.kept_size,
+        blank=sample_data.FormCard("field"),
+        blank_section=sample_data.FormCard("section"),
     )

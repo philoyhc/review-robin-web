@@ -351,7 +351,8 @@ def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> Non
     row = lobby[lobby.index("Graduate Travel Grant 2027") :]
     assert '<span class="muted">Not set</span>' in row[: row.index("</tr>")]
     form = client.get(f"{base}/form").text
-    assert form.count('data-kind="field"') == 1 and 'placeholder="Untitled form"' in form
+    cards = form[form.index('id="fb-cards"') : form.index('<template id="fb-new-field">')]
+    assert cards.count('data-kind="field"') == 1 and 'placeholder="Untitled form"' in form
     assert "No applications yet." in client.get(f"{base}/applications").text
     panels = client.get(f"{base}/panels").text
     assert "No panels yet." in panels and "No interviewers yet." in panels
