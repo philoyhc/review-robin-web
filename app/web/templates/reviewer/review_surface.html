@@ -343,7 +343,7 @@
                  columns. #}
               <colgroup>
                 <col{% if group.identity_width_px %} style="width: {{ group.identity_width_px }}px"{% endif %}>
-                {% for header in group.display_fields %}
+                {% for header in (group.display_fields if group.display_layout == "across" else []) %}
                   {# An unsized profile column starts wide enough for its
                      header: under the fixed layout its ``rs-narrow``
                      1% would squish it (the author, 2026-09-29). #}
@@ -377,7 +377,9 @@
                       onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge" aria-hidden="true">↕</span></button>
                 </th>
               {% endif %}
-              {% for header in group.display_fields %}
+              {# 20M — Stacked and Joined fields sit under the reviewee
+                 and head no column. #}
+              {% for header in (group.display_fields if group.display_layout == "across" else []) %}
                 <th scope="col"{% if header.is_profile_link %} class="rs-narrow rrw-sortable"{% else %} class="rrw-sortable"{% endif %}
                     data-sort-key="display:{{ header.field.source_type }}.{{ header.field.source_field }}">{{ header.label }}<button type="button" class="rrw-sort-btn"
                     aria-label="Sort by {{ header.label }}"
@@ -424,15 +426,20 @@
                      composed from the boundary tag values and the
                      member list (Segment 13C; Name always shows on a
                      group instrument, findings G1). #}
+                  {# 20M Item 3 — the member names first, then the tags:
+                     one plain line (Joined) or a labeled line each
+                     (Stacked), as an individual row's fields read. #}
                   <td class="rs-group">
-                    {% if row.group_identity.tag_line %}
-                      <strong>{{ row.group_identity.tag_line }}</strong>
-                    {% endif %}
-                    {% if row.group_identity.member_names %}
-                      {% if row.group_identity.tag_line %}<br>{% endif %}
-                      <span class="muted">{{ row.group_identity.member_names | join(", ") }}{% if row.group_identity.extra_count %}, +{{ row.group_identity.extra_count }} more{% endif %}</span>
-                    {% elif not row.group_identity.tag_line %}
+                    {% set _gi = row.group_identity %}
+                    {% if _gi.member_names %}
+                      <span class="muted">{{ _gi.member_names | join(", ") }}{% if _gi.extra_count %}, +{{ _gi.extra_count }} more{% endif %}</span>
+                    {% elif not _gi.tag_line %}
                       <span class="muted">{{ row.group_label }}</span>
+                    {% endif %}
+                    {% if group.display_layout == "stacked" and _gi.tag_items %}
+                      {% for item in _gi.tag_items %}<div class="rs-df-line"><span class="muted">{{ item.label }}:</span> {{ item.value }}</div>{% endfor %}
+                    {% elif _gi.tag_line %}
+                      <div class="rs-df-line">{{ _gi.tag_line }}</div>
                     {% endif %}
                     {# A self-review group flags every member's row, so
                        the representative's flag speaks for the group. #}
@@ -447,9 +454,18 @@
                        column: View for a web link, ••• otherwise. #}
                     <strong>{{ row.assignment.reviewee.name }}</strong>{% if row.profile_cell and row.profile_cell.value %} <span class="rs-profile">{{ profile_value(row.profile_cell.value, "View", aria_label="View — " ~ row.assignment.reviewee.name) }}</span>{% endif %}{% if row.assignment.is_self_review %} <span class="pill pill-info">Self review</span>{% endif %}<br>
                     <code>{{ row.assignment.reviewee.email_or_identifier }}</code>
+                    {# 20M Item 2 — Stacked: a labeled line per field;
+                       Joined: the values on one line. An empty field is
+                       left out. #}
+                    {% if group.display_layout == "stacked" %}
+                      {% for cell in row.display_cells if cell.value %}<div class="rs-df-line"><span class="muted">{{ cell.label }}:</span> {{ cell.value }}</div>{% endfor %}
+                    {% elif group.display_layout == "joined" %}
+                      {% set _joined = row.display_cells | selectattr("value") | map(attribute="value") | join(", ") %}
+                      {% if _joined %}<div class="rs-df-line">{{ _joined }}</div>{% endif %}
+                    {% endif %}
                   </td>
                 {% endif %}
-                {% for cell in row.display_cells %}
+                {% for cell in (row.display_cells if group.display_layout == "across" else []) %}
                   <td{% if cell.is_profile_link %} class="rs-narrow"{% endif %}
                       data-sort-value="{{ cell.value or '' }}">
                     {% if cell.is_profile_link %}

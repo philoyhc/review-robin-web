@@ -604,6 +604,9 @@ def _surface_context(
                 # its label (20K).
                 "constraints": [] if stacked else constraints,
                 "response_layout": response_layout,
+                # 20M — where the display fields sit: a column each, or a
+                # labeled line each / one joined line under the reviewee.
+                "display_layout": views.display_layout_for(instrument),
                 "constraint_by_field_id": constraint_by_field_id,
                 "stack_compact_ch": views.stacked_compact_ch(fields) if stacked else None,
                 # The label and response columns' widths, once dragged

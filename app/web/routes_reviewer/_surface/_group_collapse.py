@@ -57,6 +57,8 @@ def _collapse_group_rows(
         # visible reviewee.tag_* display fields, so the line is
         # never blank when a boundary tag value exists.
         tag_values: list[str] = []
+        # 20M — each tag with its label, for the Stacked group cell.
+        tag_items: list[dict[str, str]] = []
         display_cells: list[dict[str, Any]] = members[0].get("display_cells", []) or []
         for cell in display_cells:
             field = cell.get("field")
@@ -69,6 +71,7 @@ def _collapse_group_rows(
             value = (cell.get("value") or "").strip()
             if value:
                 tag_values.append(value)
+                tag_items.append({"label": str(cell.get("label") or ""), "value": value})
         if tag_values:
             tag_line = ", ".join(tag_values)
         else:
@@ -77,6 +80,7 @@ def _collapse_group_rows(
         representative["sort_values"] = {}
         representative["group_identity"] = {
             "tag_line": tag_line,
+            "tag_items": tag_items,
             "member_names": shown,
             "extra_count": len(names) - len(shown),
         }

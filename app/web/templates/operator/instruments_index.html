@@ -1335,6 +1335,8 @@
           var next = state.choices[(at + 1) % state.choices.length];
           state.input.value = next.value;
           paintDisplayLayoutChip(chip, next.value);
+          var band2 = state.card.querySelector('[data-new-model-band2]');
+          if (band2 && window.newModelRefreshBand2) { window.newModelRefreshBand2(band2); }
           if (window.newModelMarkCardDirty) { window.newModelMarkCardDirty(state.card); }
         };
         // Repaint after the unit of review changes: a group card shows a
@@ -2865,6 +2867,31 @@
             });
             return html + '</div></td>';
           }
+          // 20M — where the display fields sit: the Display fields chip's
+          // input, a group card reading Across as Joined
+          // (``views.display_layout_for``).
+          function previewDisplayLayout(card) {
+            var host = card.closest('[data-instrument-card]') || card;
+            var input = host.querySelector('[data-display-layout-input]');
+            var value = input ? input.value : 'across';
+            if (unitMode(card) === 'grouped' && value === 'across') { return 'joined'; }
+            return value;
+          }
+          // The fields under the reviewee (or a group's members): a
+          // labeled line each (Stacked) or the values on one line
+          // (Joined), an empty field left out.
+          function displayLinesHtml(fields, layout) {
+            var filled = fields.filter(function (o) { return (o.value || '').trim(); });
+            if (!filled.length || layout === 'across') { return ''; }
+            if (layout === 'stacked') {
+              return filled.map(function (o) {
+                return '<div class="rs-df-line"><span class="muted">' + esc(o.label) + ':</span> '
+                  + esc(o.value) + '</div>';
+              }).join('');
+            }
+            return '<div class="rs-df-line">'
+              + filled.map(function (o) { return esc(o.value); }).join(', ') + '</div>';
+          }
           function buildIndividualPreview(card, selected) {
             if (selected.length === 0) { return ''; }
             var name = selected.find(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'name'; });
@@ -2881,6 +2908,11 @@
                 && !(s.sourceType === 'reviewee' && (s.sourceField === 'name' || s.sourceField === 'email_or_identifier' || s.sourceField === 'profile_link'));
             });
             var responses = selected.filter(function (s) { return s.sourceType === 'response'; });
+            // 20M Item 2 — Stacked and Joined fields sit under the
+            // reviewee and head no column.
+            var displayLayout = previewDisplayLayout(card);
+            var underDisplays = displayLayout === 'across' ? [] : displays;
+            if (displayLayout !== 'across') { displays = []; }
             var identityW = parseInt(card.getAttribute('data-new-model-band2-identity-width') || '', 10) || 0;
             // Last-column index drives the "no trailing gripper"
             // rule. Identity (if present) sits first, then
@@ -2977,6 +3009,7 @@
               }
               if (name && email) { html += '<br>'; }
               if (email) { html += '<code>' + esc(email.value || '—') + '</code>'; }
+              html += displayLinesHtml(underDisplays, displayLayout);
               html += '</td>';
             }
             displays.forEach(function (o) {
@@ -3088,17 +3121,15 @@
               colIdx += 1;
             });
             html += '</tr></thead><tbody class="rrw-rows"><tr>';
+            // 20M Item 3 — the member names first, then the tags: one
+            // plain line (Joined) or a labeled line each (Stacked).
             html += '<td class="rs-group">';
-            if (tagPills.length > 0) {
-              var tagLine = tagPills.map(function (t) { return esc(t.value || '—'); }).join(', ');
-              html += '<strong>' + tagLine + '</strong>';
-            }
             if (nameSelected && samples.length > 0) {
-              if (tagPills.length > 0) { html += '<br>'; }
               var names = samples.map(esc).join(', ');
               if (extra > 0) { names += ', +' + extra + ' more'; }
               html += '<span class="muted">' + names + '</span>';
             }
+            html += displayLinesHtml(tagPills, previewDisplayLayout(card));
             html += '</td>';
             if (stacked) {
               html += buildStackCell(card, responses);
@@ -4663,8 +4694,8 @@
              header: Across / Stacked / Joined, or Joined / Stacked on a
              group-scoped instrument, where a stored Across reads as
              Joined. A click writes the hidden input (beside the
-             preview's chips' inputs), which rides the card's Save; until
-             then the stored value stands. Locked,
+             preview's chips' inputs), which rides the card's Save, and
+             rebuilds the preview; until then the stored value stands. Locked,
              as the preview's chips. #}
           {% set _display_layout = display_layout_choice_by_instrument[instrument.id] %}
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px 0;">
