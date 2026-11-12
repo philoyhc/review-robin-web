@@ -63,5 +63,10 @@ Segments in order; each gets a plan in this folder when it starts.
 - **Unattended send (AD7):** Cordware's host sends as the signed-in
   user (`cordware/graph.py`, `/me/sendMail`); a send with no one signed
   in shares RRW segment 14G's open question for IT.
+- **The applicant photo field:** designed and saved
+  (`applydesk/docs/photo_field_design.md`), from Utilities' photo proof of
+  concept, which needs no Blob storage. Whether it enters the MVP against
+  ruling 3, and how a blind exercise treats a face, are the author's
+  (its Open questions).
 - **Raise early with IT:** Blob storage (spec §5.3) and the `applydesk`
   database, beside 14G's mailbox question.

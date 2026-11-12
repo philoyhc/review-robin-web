@@ -13,6 +13,7 @@ and the MVP roadmap are in `guide/todo_master.md`.
 | `templates/applydesk/` | Templates; `base.html` carries the favicon and the bar |
 | `tests/` | ApplyDesk's tests, with a host harness (`tests/_host.py`) |
 | `docs/applydesk_functional_spec_v0.6b_agent_handoff.md` | The functional baseline (v0.6b, 2 November 2026); where a ruling in `guide/todo_master.md` differs, the ruling wins |
+| `docs/photo_field_design.md`, `docs/photo_field/` | The applicant photo field's design and mock-ups (2026-11-12), from Utilities' photo proof of concept; not scheduled |
 | `spec/applications.md` | ApplyDesk as the host sees it: registry entry, health, running alone, the URL map |
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and CI |
 | `guide/todo_master.md` | Rulings, the MVP roadmap and open decisions |
