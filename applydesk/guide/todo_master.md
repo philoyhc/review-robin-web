@@ -50,6 +50,12 @@ where a ruling below differs from it, the ruling wins.
     every evaluation response**, Review Robin's included, beside the data
     export.
 
+12. **A photo is a question type in the MVP** (author, 2026-11-12): the
+    one upload ruling 3 allows, since it needs no Blob storage (the
+    applicant frames it, the server keeps a re-encoded JPEG;
+    `applydesk/docs/photo_field_design.md`). Its aspect ratio is set per
+    question.
+
 ## MVP roadmap
 
 Segments in order; each gets a plan in this folder when it starts.
@@ -57,6 +63,7 @@ Segments in order; each gets a plan in this folder when it starts.
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
+| **AD1B — Form page** | The Form tab as a working scaffold: cards of six types, per-card visibility, add, replicate, sections, page breaks, drag to reorder, Preview; nothing saved | `applydesk/guide/segment_AD1B_form_builder.md` |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the Application → Review stage boundary | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
@@ -76,8 +83,8 @@ Segments in order; each gets a plan in this folder when it starts.
   in shares RRW segment 14G's open question for IT.
 - **The applicant photo field:** designed and saved
   (`applydesk/docs/photo_field_design.md`), from Utilities' photo proof of
-  concept, which needs no Blob storage. Whether it enters the MVP against
-  ruling 3, and how a blind exercise treats a face, are the author's
-  (its Open questions).
+  concept, which needs no Blob storage. It is in the MVP (ruling 12); how
+  a blind exercise treats a face is still the author's (its Open
+  questions).
 - **Raise early with IT:** Blob storage (spec §5.3) and the `applydesk`
   database, beside 14G's mailbox question.
