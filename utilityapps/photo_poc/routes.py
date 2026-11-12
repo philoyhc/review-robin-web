@@ -2,7 +2,8 @@
 `utilityapps/guide/segment_U4_photo_poc.md`). Super-admin only, every
 response `no-store`.
 
-The page's script posts the original file and the window's rectangle;
+The page's script posts the original file and the window over it
+(`service.Frame`: center, width, turn);
 `service` does the rest. The two writes take a custom header, which a
 cross-site form cannot send without a preflight this host never answers."""
 
@@ -74,14 +75,15 @@ def page(request: Request, session: DbSession) -> Response:
     )
 
 
-_INTEGER = re.compile(r"-?[0-9]{1,9}")
+# A plain decimal: ASCII digits, an optional sign and fraction, no exponent.
+_NUMBER = re.compile(r"-?[0-9]{1,6}(?:\.[0-9]{1,6})?")
 
 
-def _int(form: FormData, name: str) -> int | None:
+def _number(form: FormData, name: str) -> float | None:
     raw = form.get(name)
-    if not isinstance(raw, str) or _INTEGER.fullmatch(raw) is None:
+    if not isinstance(raw, str) or _NUMBER.fullmatch(raw) is None:
         return None
-    return int(raw)
+    return float(raw)
 
 
 @router.post("/photos", name="utilities_photo_poc_save")
@@ -101,10 +103,10 @@ async def save(request: Request, session: DbSession) -> Response:
     if not isinstance(upload, UploadFile):
         return _refused(400, "Choose a photo first.")
     data = await upload.read(service.MAX_UPLOAD_BYTES + 1)
-    numbers = [_int(form, k) for k in ("x", "y", "width", "height")]
+    numbers = [_number(form, k) for k in ("cx", "cy", "width", "angle")]
     if any(n is None for n in numbers):
         return _refused(400, "The crop is outside the photo.")
-    x, y, width, height = (n for n in numbers if n is not None)
+    cx, cy, width, angle = (n for n in numbers if n is not None)
     identity = resolve_identity(request)
     try:
         # Decoding and resizing take a while on a large photo: off the
@@ -113,7 +115,7 @@ async def save(request: Request, session: DbSession) -> Response:
             service.save,
             session,
             data,
-            service.Crop(x, y, width, height),
+            service.Frame(cx, cy, width, angle),
             uploaded_by=identity.email or identity.name or "unknown",
         )
     except service.PhotoRefused as exc:

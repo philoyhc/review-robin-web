@@ -1,16 +1,18 @@
 """The photo proof of concept's rules (segment U4, rung 3;
 `utilityapps/guide/segment_U4_photo_poc.md`, Semantics).
 
-The browser sends the original upload and the window's rectangle in the
-image's own pixels; this module decodes the upload, applies its EXIF
-orientation, checks the rectangle, crops, resizes to 480 x 600 and
-re-encodes a metadata-free JPEG. Only that JPEG is kept: the bytes stored
-are always the server's own."""
+The browser sends the original upload and the window over it, in the
+image's own pixels: its center, width and the photo's turn (`Frame`). This
+module decodes the upload, applies its EXIF orientation, checks the window
+lies inside the photo, cuts out and turns what it shows, resizes it to
+480 x 600 and re-encodes a metadata-free JPEG. Only that JPEG is kept: the
+bytes stored are always the server's own."""
 
 from __future__ import annotations
 
 import hashlib
 import io
+import math
 import secrets
 from dataclasses import dataclass
 
@@ -40,18 +42,46 @@ _ID_LENGTH = 10
 
 
 class PhotoRefused(ValueError):
-    """An upload or a rectangle the tool will not keep; the message is the
+    """An upload or a window the tool will not keep; the message is the
     user's."""
 
 
-@dataclass(frozen=True)
-class Crop:
-    """The window's rectangle, in the oriented image's pixels."""
+#: How far a window's corner may fall outside the photo: the browser's
+#: rounding, not a margin anyone sees.
+SLACK = 1.0
+#: The largest turn, either way, in degrees.
+MAX_ANGLE = 360.0
 
-    x: int
-    y: int
-    width: int
-    height: int
+
+@dataclass(frozen=True)
+class Frame:
+    """The window over the photo, in the oriented image's pixels: its
+    center, its width (its height follows from `RATIO`), and the photo's
+    turn on screen, in degrees clockwise. At angle 0 the window is the
+    axis-aligned rectangle centered on (cx, cy)."""
+
+    cx: float
+    cy: float
+    width: float
+    angle: float = 0.0
+
+    @property
+    def height(self) -> float:
+        across, down = RATIO
+        return self.width * down / across
+
+    def corners(self) -> list[tuple[float, float]]:
+        """The window's corners in the photo. The photo is drawn turned
+        clockwise by `angle`, so the window lies turned the other way over
+        it: a window offset (dx, dy) is the photo offset
+        (dx cos a + dy sin a, -dx sin a + dy cos a), y pointing down."""
+        a = math.radians(self.angle)
+        cos, sin = math.cos(a), math.sin(a)
+        w, h = self.width / 2, self.height / 2
+        return [
+            (self.cx + dx * cos + dy * sin, self.cy - dx * sin + dy * cos)
+            for dx, dy in ((-w, -h), (w, -h), (w, h), (-w, h))
+        ]
 
 
 def _open(data: bytes) -> Image.Image:
@@ -74,16 +104,16 @@ def _open(data: bytes) -> Image.Image:
     return ImageOps.exif_transpose(image)
 
 
-def _check(crop: Crop, size: tuple[int, int]) -> None:
+def _check(frame: Frame, size: tuple[int, int]) -> None:
     width, height = size
-    if crop.width < 1 or crop.height < 1 or crop.x < 0 or crop.y < 0:
+    values = (frame.cx, frame.cy, frame.width, frame.angle)
+    if not all(math.isfinite(v) for v in values) or abs(frame.angle) > MAX_ANGLE:
         raise PhotoRefused("The crop is outside the photo.")
-    if crop.x + crop.width > width or crop.y + crop.height > height:
+    if frame.width < 1:
         raise PhotoRefused("The crop is outside the photo.")
-    across, down = RATIO
-    # Within a pixel of rounding either way: |w * 5 - h * 4| <= 5.
-    if abs(crop.width * down - crop.height * across) > max(RATIO):
-        raise PhotoRefused("The crop is not the window's shape.")
+    for x, y in frame.corners():
+        if not (-SLACK <= x <= width + SLACK and -SLACK <= y <= height + SLACK):
+            raise PhotoRefused("The crop is outside the photo.")
 
 
 def _flatten(image: Image.Image) -> Image.Image:
@@ -121,14 +151,47 @@ def _to_srgb(image: Image.Image) -> Image.Image:
     return image if converted is None else converted
 
 
-def process(data: bytes, crop: Crop) -> bytes:
-    """The saved JPEG for ``data`` cropped to ``crop``, or `PhotoRefused`."""
+def _window(image: Image.Image, frame: Frame) -> Image.Image:
+    """What the window shows, at the photo's own resolution, exactly the
+    window's size: a piece cut out first, so a large photo is never turned
+    whole; that piece turned upright about the window's center; then the
+    window cut from it.
+
+    The piece covers both where the window lies over the photo (its
+    corners' bounding box) and where the upright window lands after the
+    turn (the window's own box about its center): `rotate` keeps the
+    canvas's size, so a piece cut to the corners alone is too short for
+    the upright window near a quarter turn (cold read, 2026-11-12). The
+    piece is not clamped to the photo: `crop` pads beyond it, and no
+    padded pixel is inside the window, whose corners `_check` holds over
+    the photo."""
+    half_w, half_h = frame.width / 2, frame.height / 2
+    xs, ys = zip(*frame.corners(), strict=True)
+    left = math.floor(min(*xs, frame.cx - half_w)) - 2
+    top = math.floor(min(*ys, frame.cy - half_h)) - 2
+    right = math.ceil(max(*xs, frame.cx + half_w)) + 2
+    bottom = math.ceil(max(*ys, frame.cy + half_h)) + 2
+    piece = _flatten(_to_srgb(image.crop((left, top, right, bottom))))
+    cx, cy = frame.cx - left, frame.cy - top
+    if frame.angle % 360:
+        # Pillow turns counterclockwise; the photo was turned clockwise.
+        piece = piece.rotate(
+            -frame.angle,
+            resample=Image.Resampling.BICUBIC,
+            center=(cx, cy),
+            fillcolor=(255, 255, 255),
+        )
+    x0, y0 = round(cx - half_w), round(cy - half_h)
+    return piece.crop((x0, y0, x0 + round(frame.width), y0 + round(frame.height)))
+
+
+def process(data: bytes, frame: Frame) -> bytes:
+    """The saved JPEG for ``data`` as the window ``frame`` shows it, or
+    `PhotoRefused`."""
     image = _open(data)
-    _check(crop, image.size)
-    box = (crop.x, crop.y, crop.x + crop.width, crop.y + crop.height)
-    cropped = _flatten(_to_srgb(image.crop(box)))
+    _check(frame, image.size)
     # Pillow types `size` with numpy's array type, which is not installed.
-    out = cropped.resize(OUTPUT_SIZE, Image.Resampling.LANCZOS)  # pyright: ignore[reportUnknownMemberType]  -- numpy-typed overload
+    out = _window(image, frame).resize(OUTPUT_SIZE, Image.Resampling.LANCZOS)  # pyright: ignore[reportUnknownMemberType]  -- numpy-typed overload
     # Pillow carries the upload's `info` (a JPEG comment, DPI, ...) through
     # crop and resize, and the JPEG encoder writes some of it by default.
     out.info.clear()
@@ -145,9 +208,9 @@ def _new_public_id(session: Session) -> str:
             return candidate
 
 
-def save(session: Session, data: bytes, crop: Crop, uploaded_by: str) -> PhotoPocPhoto:
+def save(session: Session, data: bytes, frame: Frame, uploaded_by: str) -> PhotoPocPhoto:
     """Process and keep a photo; commits."""
-    jpeg = process(data, crop)
+    jpeg = process(data, frame)
     photo = PhotoPocPhoto(
         public_id=_new_public_id(session),
         uploaded_by=uploaded_by,

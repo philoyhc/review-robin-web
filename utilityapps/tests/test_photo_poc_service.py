@@ -8,13 +8,13 @@ import io
 from collections.abc import Iterator
 
 import pytest
-from PIL import Image, ImageCms
+from PIL import Image, ImageChops, ImageCms, ImageStat
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from utilityapps.db import Base
 from utilityapps.photo_poc import service
-from utilityapps.photo_poc.service import Crop, PhotoRefused
+from utilityapps.photo_poc.service import Frame, PhotoRefused
 
 
 def _image_bytes(
@@ -31,7 +31,7 @@ def _image_bytes(
     return buffer.getvalue()
 
 
-FULL = Crop(0, 0, 800, 1000)
+FULL = Frame(400, 500, 800)
 
 
 def _open(data: bytes) -> Image.Image:
@@ -73,13 +73,13 @@ def test_a_rotated_phone_photo_is_cropped_upright() -> None:
     stored.save(buffer, format="JPEG", exif=exif)
     data = buffer.getvalue()
 
-    def centre(crop: Crop) -> tuple[int, ...]:
-        pixel = _open(service.process(data, crop)).convert("RGB").getpixel((240, 300))
+    def centre(frame: Frame) -> tuple[int, ...]:
+        pixel = _open(service.process(data, frame)).convert("RGB").getpixel((240, 300))
         assert isinstance(pixel, tuple)
         return pixel
 
-    assert centre(Crop(400, 0, 400, 500))[0] > 200  # seen right: red
-    assert centre(Crop(0, 0, 400, 500))[2] > 200  # seen left: blue
+    assert centre(Frame(600, 250, 400))[0] > 200  # seen right: red
+    assert centre(Frame(200, 250, 400))[2] > 200  # seen left: blue
 
 
 @pytest.mark.parametrize(
@@ -111,28 +111,61 @@ def test_a_decompression_bomb_is_refused_before_its_pixels_are_read(
 
     monkeypatch.setattr(Image.Image, "load", loaded)
     with pytest.raises(PhotoRefused, match="too many pixels"):
-        service.process(bomb, Crop(0, 0, 400, 500))
+        service.process(bomb, Frame(200, 250, 400))
 
 
 @pytest.mark.parametrize(
-    "crop",
+    "frame",
     [
-        Crop(-1, 0, 400, 500),
-        Crop(0, 0, 0, 0),
-        Crop(500, 0, 400, 500),  # past the right edge of 800
-        Crop(0, 600, 400, 500),  # past the bottom of 1000
+        Frame(198, 250, 400),  # 2 px past the left edge
+        Frame(400, 500, 0),
+        Frame(700, 250, 400),  # past the right edge of 800
+        Frame(200, 800, 400),  # past the bottom of 1000
+        Frame(400, 500, 800, angle=10),  # the whole width, turned: corners stick out
+        Frame(200, 250, 400, angle=361),
+        Frame(float("nan"), 250, 400),
     ],
 )
-def test_a_crop_outside_the_photo_is_refused(crop: Crop) -> None:
+def test_a_window_outside_the_photo_is_refused(frame: Frame) -> None:
     with pytest.raises(PhotoRefused, match="outside the photo"):
-        service.process(_image_bytes(), crop)
+        service.process(_image_bytes(), frame)
 
 
-def test_a_crop_of_another_shape_is_refused_and_rounding_is_allowed() -> None:
-    with pytest.raises(PhotoRefused, match="window's shape"):
-        service.process(_image_bytes(), Crop(0, 0, 500, 500))
-    # 401 x 500 is a pixel of rounding off 4:5.
-    assert _open(service.process(_image_bytes(), Crop(0, 0, 401, 500))).size == (480, 600)
+def test_a_pixel_of_rounding_is_allowed() -> None:
+    assert _open(service.process(_image_bytes(), Frame(199.2, 250, 400))).size == (480, 600)
+
+
+def _halves() -> bytes:
+    """1000 by 1000, its left half red and its right half blue."""
+    image = Image.new("RGB", (1000, 1000), (0, 0, 255))
+    image.paste((255, 0, 0), (0, 0, 500, 1000))
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _rgb(image: Image.Image, x: int, y: int) -> tuple[int, int, int]:
+    pixel = image.convert("RGB").getpixel((x, y))
+    assert isinstance(pixel, tuple)
+    return pixel[0], pixel[1], pixel[2]
+
+
+def test_a_photo_turned_a_quarter_clockwise_saves_as_seen() -> None:
+    """Turned 90° clockwise on screen, the photo's left side is at the
+    window's top: red above, blue below."""
+    out = _open(service.process(_halves(), Frame(500, 500, 400, angle=90)))
+    assert out.size == (480, 600)
+    assert _rgb(out, 240, 60)[0] > 200 and _rgb(out, 240, 540)[2] > 200
+    turned_back = _open(service.process(_halves(), Frame(500, 500, 400, angle=-90)))
+    assert _rgb(turned_back, 240, 60)[2] > 200 and _rgb(turned_back, 240, 540)[0] > 200
+
+
+def test_a_slightly_turned_photo_keeps_the_window_filled() -> None:
+    """A small turn, the window well inside: no fill color reaches the
+    saved photo's corners."""
+    out = _open(service.process(_halves(), Frame(500, 500, 400, angle=15)))
+    for x, y in ((2, 2), (477, 2), (2, 597), (477, 597)):
+        assert _rgb(out, x, y) != (255, 255, 255)
 
 
 @pytest.fixture
@@ -217,3 +250,27 @@ def test_a_color_profile_is_converted_to_srgb_and_not_kept(monkeypatch: pytest.M
     assert "icc_profile" not in saved.info
     pixel = saved.convert("RGB").getpixel((240, 300))
     assert isinstance(pixel, tuple) and abs(pixel[0] - 200) < 8 and abs(pixel[1] - 30) < 8
+
+
+def _pattern() -> Image.Image:
+    """1000 by 1000 of distinct tiles, so a shift or a stretch shows."""
+    image = Image.new("RGB", (1000, 1000))
+    for i in range(0, 1000, 50):
+        for j in range(0, 1000, 50):
+            image.paste(((i * 5) % 256, (j * 5) % 256, ((i + j) * 3) % 256), (i, j, i + 50, j + 50))
+    return image
+
+
+@pytest.mark.parametrize("angle", [0, 30, 77, 80, 85, 90, -90, 103, 135, 180, -135])
+def test_the_window_is_cut_at_its_own_size_and_matches_the_turned_photo(angle: float) -> None:
+    """The cold read: near a quarter turn the window came out short and was
+    stretched to 480 x 600. Against the whole photo turned the slow way,
+    the window is the same size and the same picture at every angle."""
+    image = _pattern()
+    frame = Frame(500, 500, 400, angle=angle)
+    window = service._window(image, frame)  # pyright: ignore[reportPrivateUsage]  -- the step under test
+    assert window.size == (400, 500)
+    whole = image.rotate(-angle, resample=Image.Resampling.BICUBIC, center=(500, 500))
+    expected = whole.crop((300, 250, 700, 750))
+    diff = ImageStat.Stat(ImageChops.difference(window, expected)).mean
+    assert max(diff) < 1.5, diff

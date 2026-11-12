@@ -139,14 +139,21 @@ uploaded, framed in a fixed window, cropped, resized and kept in
 Utilities' own database, with no Blob storage.
 
 - **The page** (`/photo-poc/`): a drop box (JPEG, PNG or WebP, 5 MB at
-  most, checked in the browser first), the 4:5 window, a zoom control and
-  Save, then the saved photos, newest first, each with Delete. The photo
-  always covers the window; it is dragged with a pointer or the arrow
-  keys.
-- **Saving** (`POST /photo-poc/photos`): the original file and the
-  window's rectangle in the oriented photo's pixels. The server decodes,
-  orients, checks the rectangle, crops, converts any color profile to
-  sRGB and keeps only a 480 × 600 JPEG with no metadata (`utilityapps/photo_poc/service.py`). A refusal is a
+  most, checked in the browser first), the 4:5 window, zoom (1 to 4) and
+  rotate (any angle) controls, *Rotate left 90°* and *Rotate right 90°*,
+  and Save, then the saved photos, newest first, each with Delete. The
+  photo always covers the window, at any zoom and turn. It is dragged
+  with one finger, a pointer or the arrow keys; on a touch screen two
+  fingers pinch to zoom and twist to rotate, about the point between them;
+  a trackpad's pinch zooms.
+- **Saving** (`POST /photo-poc/photos`): the original file and the window
+  over it in the oriented photo's pixels: `cx` and `cy` (its center),
+  `width` (its height follows from 4:5) and `angle` (the photo's turn on
+  screen, degrees clockwise), plain decimals. The server decodes, orients,
+  checks every corner of the window lies over the photo (to within a
+  pixel), cuts out and turns what the window shows, converts any color
+  profile to sRGB and keeps only a 480 × 600 JPEG with no metadata
+  (`utilityapps/photo_poc/service.py`). A refusal is a
   `400` (`413` over 5 MB, `411` with no size given) whose message the
   page shows; nothing is kept. A phone JPEG that Pillow reads as `MPO`
   (a second picture in it) is a JPEG here: its first picture is kept.
