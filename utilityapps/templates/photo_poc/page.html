@@ -122,6 +122,7 @@
         "deg) scale(" + k + ") translate(" + -cx + "px, " + -cy + "px)";
       zoom.value = String(z);
       rotate.value = String(angle);
+      rotate.setAttribute("aria-valuetext", angle + " degrees");
     }
     function setZoom(next) { z = Math.min(MAX_ZOOM, Math.max(1, next)); draw(); }
     function setAngle(next) { angle = normal(next); draw(); }
@@ -166,15 +167,20 @@
       choose(e.dataTransfer && e.dataTransfer.files[0]);
     });
     zoom.addEventListener("input", function () { if (img) setZoom(parseFloat(zoom.value)); });
-    // The rotate bar snaps to its waypoints, the quarter turns and upright,
-    // within SNAP degrees. Its own value otherwise, within its range:
-    // normalizing would send its right end, 180, to -180 and the thumb to
-    // the left end.
-    var WAYPOINTS = [-90, 0, 90], SNAP = 4;
+    // Dragged, the rotate bar snaps to its waypoints, the quarter turns
+    // and upright, within SNAP degrees. Stepped with the keys it does not:
+    // a 0.5° step off a waypoint would snap straight back, so the keys
+    // could never leave one (cold read). Its own value otherwise, within
+    // its range: normalizing would send its right end, 180, to -180 and
+    // the thumb to the left end.
+    var WAYPOINTS = [-90, 0, 90], SNAP = 4, keyed = false;
+    rotate.addEventListener("keydown", function () { keyed = true; });
+    rotate.addEventListener("keyup", function () { keyed = false; });
+    rotate.addEventListener("blur", function () { keyed = false; });
     rotate.addEventListener("input", function () {
       if (!img) return;
       var value = parseFloat(rotate.value);
-      WAYPOINTS.forEach(function (w) { if (Math.abs(value - w) <= SNAP) value = w; });
+      if (!keyed) WAYPOINTS.forEach(function (w) { if (Math.abs(value - w) <= SNAP) value = w; });
       angle = value;
       draw();
     });

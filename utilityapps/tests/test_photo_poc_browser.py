@@ -276,3 +276,14 @@ def test_the_bars_sit_right_of_and_below_the_window(page: Page) -> None:
     # Zoom in is up: a click near the bar's top sets a high zoom.
     page.mouse.click(zoom["x"] + zoom["width"] / 2, zoom["y"] + 4)
     assert float(page.locator("#photo-zoom").input_value()) > 3.5
+
+
+def test_the_arrow_keys_step_off_a_waypoint(page: Page) -> None:
+    """The cold read: a 0.5 degree step off a waypoint snapped straight
+    back, so the keys could never leave one. Stepped, the bar does not snap."""
+    _choose_phone_photo(page)
+    page.locator("#photo-rotate").focus()
+    page.keyboard.press("ArrowRight")
+    page.keyboard.press("ArrowRight")
+    assert page.locator("#photo-rotate").input_value() == "1"
+    assert page.locator("#photo-rotate").get_attribute("aria-valuetext") == "1 degrees"
