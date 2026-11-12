@@ -1,8 +1,8 @@
 # Segment 20K — One response field per line on the reviewer surface
 
-**Opened:** 2026-11-11 · **Theme:** an instrument can lay its response fields out one per line, each labeled beside its input, for reviews that ask for substantial answers · **Related:** `guide/segment_20L_response_row_break.md` (the alternative, written for comparison), `spec/reviewer-surface.md`, `spec/instruments.md`
+**Opened:** 2026-11-11 · **Theme:** an instrument can lay its response fields out one per line, each labeled beside its input, for reviews that ask for substantial answers · **Related:** `guide/segment_20L_response_row_break.md` (the alternative, written for comparison, set aside), `spec/reviewer-surface.md`, `spec/instruments.md`
 
-**Status: building (author picked 20K over 20L, 2026-11-11).** Rungs 2 (the setting) and 3 (the chip; labels *Responses across* / *Responses stacked* for the author to confirm in the browser) built; rung 4 (the stacked surface) and rung 5 (the widths, the last build rung) built. One `diff-reviewer` read of the cumulative diff (`9d99fdf..`) at rung 5 found one real defect (compact number boxes stretched on the reviewer surface: the app-wide number-input rule outranked the compact one; the preview hid it) and four small ones (typed bounds not canonicalised in the preview's width, a sign rule wider than the plan's, a stray `<col>` with no visible field, a stack drag leaving the preview's table automatic); all fixed in rung 5. The author's first browser check (2026-11-11): the response column's handle went (a last column has none), so the label column's is the only one; `stack_input` is still accepted, but nothing sets it now and the preview's next Save drops a saved one; the label handle spans its header cell's height. Base `9d99fdf` for the cumulative read. The close waits on the author's final browser check.
+**Status: closed 2026-11-12.** See `## Status` below.
 
 ## Opportunity
 
@@ -52,6 +52,17 @@ Taken 2026-11-11 at `0af35e9`.
 | Templates using the shared sort | 13 | `grep -rl "data-rrw-sortable" app/web/templates \| wc -l` |
 | Reviewer-surface and preview test files | 9 | `ls tests/integration tests/unit \| grep -c "reviewer_surface\|preview_surface"` |
 
+## Status
+
+Closed 2026-11-12. PRs **#3803 → #3807** (rungs 2–5 and a fix after the author's browser check); plan #3800, #3802.
+
+**Intended vs done:**
+- **Rung 4** wrote the layout twice: the Instruments page preview is built by its own script, not by `review_surface.html` (the plan's "one template" was wrong; corrected in the ladder).
+- **Rung 5** shipped one drag handle, the label column's (`stack_label`), not two: the response column is the table's last, and a last column has none (author's browser check). `stack_input` is still accepted and honored, but nothing sets it, and the preview's next Save drops a saved one. With both saved, the Responses `<col>` holds them (Codex on #3806).
+- **The width rule** counts decimal places from the step or the lower bound (steps count from it), and the sign with the wider bound's whole part.
+
+**Reads:** one `diff-reviewer` read of the cumulative diff (`9d99fdf..`) at rung 5 found one real defect (compact number boxes stretched on the reviewer surface: `body.ui-v2 input[type=number]` outranked the compact rule, and the preview's inline style hid it) and four small ones; all fixed in rung 5, the real one pinned by a browser test on the surface. A second read of #3807 found stale comments and a saved `stack_input` with no control; both fixed there.
+
 ## PR ladder
 
 1. **Plan** (this file).
@@ -74,7 +85,7 @@ Taken 2026-11-11 at `0af35e9`.
 
 ## Open questions
 
-- The chip's labels (*Responses across* / *Responses stacked* proposed; author at rung 3).
+- The chip's labels: *Responses across* / *Responses stacked*, as shipped (author, at the close, 2026-11-12).
 
 ## Out of scope
 

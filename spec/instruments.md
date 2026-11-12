@@ -927,6 +927,36 @@ stored layout. A change writes `instrument.intro_layout_updated`
 (`changes` + `refs`); a no-op writes nothing. It is a display setting,
 like `column_widths`: it does not demote a validated session.
 
+#### Responses layout chip
+
+After the Layout chip and before **↻ Refresh sample**, a second cycle
+chip (`data-response-layout-chip`) names how the instrument lays out its
+response fields: *Responses across* (`columns`, the default) or
+*Responses stacked* (`stacked`), each with a `title`
+(`views._instruments.RESPONSE_LAYOUT_CHOICES`). A click or Enter / Space
+advances to the next layout in `RESPONSE_LAYOUTS` and wraps
+(`newModelCycleResponseLayout`), rebuilds the preview in it and writes
+the hidden `response_layout` input on `dfsave-{id}`. Locked, it is the
+plain pill, as the Layout chip is. Refresh stays last because it is
+hidden while the card is locked, so the chips do not shift.
+
+**Both Saves store it** through `instruments.set_response_layout`; an
+unknown value is refused, an absent input keeps the stored layout. Unlike
+the intro layout it changes what reviewers see of the questions, so a
+change reverts a validated session to draft and writes
+`instrument.response_layout_set` (`spec/settings_inventory.md`).
+
+**The preview renders `stacked` as the reviewer surface does**
+(`spec/reviewer-surface.md`, "Responses stacked"): one *Responses*
+column, a line per response field with its constraint under its label,
+the box widths by the same rule (`stackBoxChars` / `stackCompactCh`
+mirror `views.stacked_box_chars` / `views.stacked_compact_ch`), and the
+summary line hidden. The **only drag handle is on the label column**,
+spanning its header cell: the response column is the table's last, and a
+last column has none. A drag stages `stack_label` into
+`column_widths_snapshot`. A `stack_input` already saved is read, and
+the next Save drops it.
+
 #### Intro card
 
 Top-of-band intro card carrying:
@@ -1804,7 +1834,7 @@ key, the `order` slot, `session_seq` (a fresh one), `starts_new_page`,
 - `accepting_responses` — copied as-is.
 - `self_reviews_active` — copied as-is: the copy's self-review rows
   start in the source's Self review state.
-- `intro_layout` — copied as-is.
+- `intro_layout`, `response_layout` — copied as-is.
 - Visibility policies — copied row for row: the copy shows its responses to the same audiences,
   in the same modes, as its source. Each row goes through
   `visibility_policies.upsert_policy`, so it is checked against the
