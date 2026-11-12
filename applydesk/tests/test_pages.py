@@ -227,3 +227,21 @@ def test_health_answers_with_no_identity(monkeypatch: pytest.MonkeyPatch) -> Non
     client = TestClient(host_with(("applydesk",))[0])
     assert client.get("/applydesk/health").json() == {"status": "ok"}
     assert client.get("/applydesk/me").status_code == 404
+
+
+def test_the_lobby_names_exercises_by_code_not_id(client: TestClient) -> None:
+    """Iteration rung 4 (author, 2026-11-12): an Exercise Code column, as
+    RRW's Session Code; the public ID is only in each row's link."""
+    page = client.get("/applydesk/operator/exercises").text
+    assert "<th>Exercise Code</th>" in page and ">ID<" not in page
+    for e in sample_data.EXERCISES:
+        assert f"<code>{e.code}</code>" in page
+        assert f"<code>{e.public_id}</code>" not in page
+    codes = [e.code for e in sample_data.EXERCISES]
+    assert len(set(codes)) == len(codes)
+
+
+def test_withdraw_is_destructive(client: TestClient) -> None:
+    """The applicant cannot undo a withdrawal (author, 2026-11-12)."""
+    page = client.get(f"/applydesk/me/exercises/{EX}/applications/h6zr2tdw9p").text
+    assert '<button class="btn btn-destructive" type="button" disabled>Withdraw</button>' in page
