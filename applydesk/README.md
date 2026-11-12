@@ -18,4 +18,4 @@ and the MVP roadmap are in `guide/todo_master.md`.
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and CI |
 | `guide/todo_master.md` | Rulings, the MVP roadmap and open decisions |
 | `guide/segment_AD1_skeleton.md` | Segment AD1 plan: the package and mount, then the URL map as placeholders |
-| `guide/segment_AD1B_form_builder.md` | Segment AD1B plan: the Form page as a working scaffold, cards that move on screen, nothing saved |
+| `guide/archive/README.md` | Closed segment plans: AD1B (the Form page) |
