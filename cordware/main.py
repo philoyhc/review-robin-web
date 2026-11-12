@@ -63,7 +63,8 @@ class AppEntry:
 
 # RRW mounts at `/reviewrobin` (segment 21D; v0.8 §3), the two Residential
 # applications at `/residentialops` and `/supportlogs` (Residential segment
-# 1A), Utilities at `/utilities` (Utilities segment U1). Constants, not
+# 1A), ApplyDesk at `/applydesk` (ApplyDesk segment AD1), Utilities at
+# `/utilities` (Utilities segment U1). Constants, not
 # settings, so no configuration can move one by accident.
 REGISTRY: Mapping[str, AppEntry] = {
     "reviewrobin": AppEntry(
@@ -86,6 +87,13 @@ REGISTRY: Mapping[str, AppEntry] = {
         logger="residentialapps.supportlogs",
         title="Support Logs",
         icon=app_icons.SUPPORT_LOGS,
+    ),
+    "applydesk": AppEntry(
+        path="/applydesk",
+        factory="applydesk.main:create_app",
+        logger="applydesk",
+        title="ApplyDesk",
+        icon=app_icons.APPLYDESK,
     ),
     "utilities": AppEntry(
         path="/utilities",

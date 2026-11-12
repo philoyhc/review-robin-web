@@ -66,6 +66,11 @@ Taken 2026-11-12 at `9bf80d5`.
 | Packaging | `applydesk*` absent from `packages.find` | `grep -n include pyproject.toml` |
 | CI lanes | `applydesk/` already in `APP_DIRS` | `grep -n APP_DIRS tools/ci_lanes.py` |
 
+## Status
+
+Building. Base `573ffa3` (`main` before rung 2) for the cumulative read.
+- Rung 2: item 1 as planned; the favicon is a white form on a rose `#be123c` tile, for the author to redraw at item 2's check if wanted.
+
 ## PR ladder
 
 1. **Plan and rulings** (this file and `applydesk/guide/todo_master.md`).

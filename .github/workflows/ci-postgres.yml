@@ -53,7 +53,7 @@ jobs:
       matrix:
         shard:
           - name: unit
-            pytest_args: "tests cordware/tests residentialapps/tests utilityapps/tests --ignore=tests/integration --ignore=tests/browser"
+            pytest_args: "tests cordware/tests applydesk/tests residentialapps/tests utilityapps/tests --ignore=tests/integration --ignore=tests/browser"
           # tests/integration cut in two by measured time (22I Item 1
           # rung 2; moved inside the r files, findings N8, when the
           # second ran 1.8 times the first); the unquoted $PYTEST_ARGS

@@ -18,7 +18,7 @@ Utilities adds. The design it follows is
 | Landing-page title | `Utilities` |
 | Health | `GET /utilities/health`, route name `utilities_health` |
 
-- The registry lists it last, after Residential's two, so an unset
+- The registry lists it last, after Residential's two and ApplyDesk, so an unset
   `CORDWARE_APPS` mounts it last and the landing page lists it so.
 - The factory is a zero-argument callable returning a new `FastAPI`
   application with no schema pages. It reads no setting and opens no
@@ -128,7 +128,7 @@ adds the mount's prefix; `host_url()` marks a path that is the host's.
 
 Enforced by `cordware/tests/test_import_boundary.py`:
 
-- `utilityapps` imports neither `app` (Review Robin) nor `residentialapps`,
-  and neither of them imports it. It may import `cordware`, never
+- `utilityapps` imports none of `app` (Review Robin), `residentialapps`
+  and `applydesk`, and none of them imports it. It may import `cordware`, never
   `cordware.main`, except in `utilityapps/tests/`, which builds the host.
 - `cordware` imports it only through the registry's factory string.

@@ -274,6 +274,11 @@ def _own_favicon(name: str) -> str:
     if name == "reviewrobin":
         (icon,) = ICON.findall((REPO / "app/web/templates/base.html").read_text(encoding="utf-8"))
         return icon
+    if name == "applydesk":
+        (icon,) = ICON.findall(
+            (REPO / "applydesk/templates/applydesk/base.html").read_text(encoding="utf-8")
+        )
+        return icon
     if name == "utilities":
         (icon,) = ICON.findall(
             (REPO / "utilityapps/templates/utilities/base.html").read_text(encoding="utf-8")

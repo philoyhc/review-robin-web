@@ -42,10 +42,12 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["app*", "cordware*", "residentialapps*", "utilityapps*"]
+include = ["app*", "applydesk*", "cordware*", "residentialapps*", "utilityapps*"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "cordware/tests", "residentialapps/tests", "utilityapps/tests"]
+testpaths = [
+    "tests", "cordware/tests", "applydesk/tests", "residentialapps/tests", "utilityapps/tests"
+]
 
 [tool.ruff]
 line-length = 100
@@ -61,7 +63,7 @@ target-version = "py312"
 # joins strict mode when its list is gone, and test roots keep theirs for
 # good. `reportPrivateUsage` is off: a package's modules share `_helpers`
 # by convention (author's ruling, 2026-11-04). The first matching root wins.
-include = ["app", "cordware", "residentialapps", "utilityapps", "tests"]
+include = ["app", "applydesk", "cordware", "residentialapps", "utilityapps", "tests"]
 exclude = [".venv", "**/__pycache__"]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
@@ -116,6 +118,15 @@ reportUnknownMemberType = "none"
 reportUnknownParameterType = "none"
 reportUnknownVariableType = "none"
 reportUnusedImport = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "applydesk/tests"
+extraPaths = ["."]
+reportMissingParameterType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownMemberType = "none"
+reportUnknownParameterType = "none"
+reportUnknownVariableType = "none"
 
 [[tool.pyright.executionEnvironments]]
 root = "utilityapps/tests"

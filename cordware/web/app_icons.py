@@ -3,7 +3,8 @@ draws it before the application's name (author, 2026-10-31).
 
 Copies, not the source: each application's own templates own its icon
 (`app/web/templates/base.html`, `residentialapps/web/templates/residential/
-base.html`, `utilityapps/templates/utilities/base.html`), and
+base.html`, `applydesk/templates/applydesk/base.html`,
+`utilityapps/templates/utilities/base.html`), and
 `cordware/tests/test_landing.py` fails when a copy here drifts from them.
 Inline SVG data URIs, every `#` escaped as `%23`."""
 
@@ -43,6 +44,15 @@ SUPPORT_LOGS = (
     "<rect x='11.5' y='12' width='24' height='2.8' rx='1.4' fill='%230f766e'/>"
     "<rect x='11.5' y='18' width='24' height='2.8' rx='1.4' fill='%230f766e'/>"
     "<rect x='11.5' y='24' width='14' height='2.8' rx='1.4' fill='%230f766e'/></g></svg>"
+)
+APPLYDESK = (
+    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs>"
+    "<clipPath id='t'><rect width='32' height='32' rx='7'/></clipPath></defs>"
+    "<g clip-path='url(%23t)'><rect width='32' height='32' fill='%23be123c'/>"
+    "<rect x='7.5' y='5' width='17' height='31' rx='3' fill='%23fff'/>"
+    "<rect x='11.5' y='9.5' width='9' height='2.4' rx='1.2' fill='%23be123c'/>"
+    "<path d='M11.5 18.5 L15 22 L21 15.5' fill='none' stroke='%23be123c' stroke-width='2.6' "
+    "stroke-linecap='round' stroke-linejoin='round'/></g></svg>"
 )
 UTILITIES = (
     "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs>"
