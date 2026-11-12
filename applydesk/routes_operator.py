@@ -8,7 +8,7 @@ from starlette.responses import Response
 
 from applydesk import sample_data
 from applydesk.gate import placeholders_only
-from applydesk.ids import is_public_id
+from applydesk.lookups import exercise_or_404
 from applydesk.web import exercise_tabs, render
 
 router = APIRouter(prefix="/operator", dependencies=[Depends(placeholders_only)])
@@ -24,14 +24,6 @@ SECTIONS: dict[str, str] = {
     "timeline": "Timeline and outcomes",
     "export": "Export",
 }
-
-
-def exercise_or_404(exercise_id: str) -> sample_data.Exercise:
-    """The exercise a path names; a malformed or unknown ID is a 404."""
-    found = sample_data.exercise(exercise_id) if is_public_id(exercise_id) else None
-    if found is None:
-        raise HTTPException(status_code=404)
-    return found
 
 
 @router.get("/exercises", name="applydesk_exercises")

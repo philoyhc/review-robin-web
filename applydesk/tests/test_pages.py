@@ -19,6 +19,7 @@ from cordware.identity import Identity
 
 EX = "wa9juxbc2t"  # open, not blind, Application stage
 BLIND = "k7mfr3pq8z"  # blind, Review stage
+DRAFT = "c4xh2ndv6s"  # not published
 
 PAGES = (
     "/applydesk/",
@@ -36,8 +37,13 @@ PAGES = (
             "export",
         )
     ),
+    f"/applydesk/operator/exercises/{BLIND}",  # Review stage: "Go to Review"
+    f"/applydesk/operator/exercises/{BLIND}/settings",  # blind review on
+    f"/applydesk/operator/exercises/{DRAFT}",  # the Publish step
+    f"/applydesk/operator/exercises/{DRAFT}/applications",  # none yet
     "/applydesk/me",
     f"/applydesk/me/exercises/{EX}",
+    f"/applydesk/me/exercises/{BLIND}",  # applications have closed
     f"/applydesk/me/exercises/{EX}/applications/m3qx8vkt2n",
     f"/applydesk/me/exercises/{EX}/profiles/p3bd7kq2wx",
     f"/applydesk/me/exercises/{BLIND}/profiles/t8nv4hzm2c",
@@ -67,6 +73,10 @@ def test_every_page_of_the_map_answers_locally(client: TestClient, path: str) ->
         f"/applydesk/operator/exercises/{EX}/bogus",
         "/applydesk/me/exercises/c4xh2ndv6s",  # a draft is not open to applicants
         f"/applydesk/me/exercises/{EX}/applications/zzzzzzzzzz",
+        f"/applydesk/me/exercises/{EX}/applications/M3QX8VKT2N",  # an application ID's shape
+        f"/applydesk/me/exercises/{EX}/applications/m3qx8vkt2",
+        f"/applydesk/me/exercises/{EX}/profiles/P3BD7KQ2WX",  # a profile ID's shape
+        f"/applydesk/me/exercises/{EX}/profiles/p3bd7kq2wx0",
         f"/applydesk/me/exercises/{EX}/profiles/m3qx8vkt2n",  # an application ID is no profile ID
         f"/applydesk/me/exercises/{BLIND}/profiles/p3bd7kq2wx",  # another exercise's profile
     ],
@@ -110,8 +120,9 @@ _LINK = re.compile(r'\b(?:href|action|src)="([^"]*)"')
 
 @pytest.mark.parametrize("path", PAGES)
 def test_every_link_stays_in_the_mount(client: TestClient, path: str) -> None:
-    """Paths go through `url()`; only the host's landing and Easy Auth's
-    sign-out leave the mount."""
+    """Every link sits under the mount; only the host's landing and Easy
+    Auth's sign-out leave it. (That templates write them through `url()`
+    is held by rendering under another prefix, below.)"""
     for link in _LINK.findall(client.get(path).text):
         if link.startswith("data:") or link.startswith("#"):
             continue
@@ -187,3 +198,32 @@ def test_every_route_but_health_carries_the_gate() -> None:
         r.path for r, calls in routes if r.path != "/health" and gate.placeholders_only not in calls
     ]
     assert missing == []
+
+
+def test_links_follow_the_mount_s_prefix() -> None:
+    """Mounted elsewhere, every link moves with it: none is written with
+    `/applydesk` spelled out, so each went through `url()`."""
+    from fastapi import FastAPI
+
+    from applydesk.main import create_app as factory
+
+    host = FastAPI()
+    host.mount("/elsewhere", factory())
+    client = TestClient(host)
+    for path in PAGES:
+        page = client.get(path.replace("/applydesk/", "/elsewhere/", 1)).text
+        for link in _LINK.findall(page):
+            assert not link.startswith("/applydesk"), (path, link)
+
+
+def test_health_answers_with_no_identity(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No sign-in at all, fake auth off and deployed: health still answers,
+    and nothing else does."""
+    from cordware.settings import identity_settings
+
+    monkeypatch.setattr(identity_settings, "allow_fake_auth", False)
+    monkeypatch.setattr(identity_settings, "app_env", "production")
+    monkeypatch.setattr(gate, "is_local", lambda: False)
+    client = TestClient(host_with(("applydesk",))[0])
+    assert client.get("/applydesk/health").json() == {"status": "ok"}
+    assert client.get("/applydesk/me").status_code == 404

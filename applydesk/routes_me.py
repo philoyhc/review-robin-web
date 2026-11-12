@@ -9,8 +9,7 @@ from starlette.responses import Response
 
 from applydesk import sample_data
 from applydesk.gate import placeholders_only
-from applydesk.ids import is_public_id
-from applydesk.routes_operator import exercise_or_404
+from applydesk.lookups import application_or_404, exercise_or_404, profile_or_404
 from applydesk.web import render
 
 router = APIRouter(prefix="/me", dependencies=[Depends(placeholders_only)])
@@ -44,9 +43,7 @@ def exercise(request: Request, exercise_id: str) -> Response:
 )
 def application(request: Request, exercise_id: str, application_id: str) -> Response:
     found = exercise_or_404(exercise_id)
-    app = sample_data.application(found.public_id, application_id)
-    if not is_public_id(application_id) or app is None:
-        raise HTTPException(status_code=404)
+    app = application_or_404(found, application_id)
     return render(
         request,
         "applydesk/me/application.html",
@@ -64,9 +61,7 @@ def profile(request: Request, exercise_id: str, profile_id: str) -> Response:
     reviewers* section only; in a blind exercise the applicant's name and
     identifiers redacted. Named by its own ID, never the application's."""
     found = exercise_or_404(exercise_id)
-    app = sample_data.by_profile(found.public_id, profile_id)
-    if not is_public_id(profile_id) or app is None:
-        raise HTTPException(status_code=404)
+    app = profile_or_404(found, profile_id)
     return render(
         request,
         "applydesk/me/profile.html",

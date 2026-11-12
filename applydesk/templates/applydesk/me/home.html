@@ -11,7 +11,7 @@
 <section class="card">
   <h2>Open to me</h2>
   {% for e in exercises %}
-    <p><a href="{{ url('/me/exercises/' ~ e.public_id) }}">{{ e.name }}</a> <span class="muted">· {{ e.stage }} stage</span></p>
+    <p><a href="{{ url('/me/exercises/' ~ e.public_id) }}">{{ e.name }}</a> <span class="muted">· {{ e.stage }} stage</span>{% if e.eligibility == "Invitation only" %} <span class="chip chip-info">You are invited</span>{% endif %}</p>
   {% endfor %}
 </section>
 <section class="card">
