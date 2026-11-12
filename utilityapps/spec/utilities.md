@@ -139,9 +139,12 @@ uploaded, framed in a fixed window, cropped, resized and kept in
 Utilities' own database, with no Blob storage.
 
 - **The page** (`/photo-poc/`): a drop box (JPEG, PNG or WebP, 5 MB at
-  most, checked in the browser first), the 4:5 window, zoom (1 to 4) and
-  rotate (any angle) controls, *Rotate left 90°* and *Rotate right 90°*,
-  and Save, then the saved photos, newest first, each with Delete. The
+  most, checked in the browser first), the 4:5 window with its zoom bar
+  (1 to 4) upright on its right and its rotate bar (−180° to 180°) below
+  it, which snaps to −90°, 0° and 90° within 4° when dragged (not when
+  stepped with the arrow keys, nor under a two-finger twist), and Save,
+  then the saved
+  photos, newest first, each with Delete. The
   photo always covers the window, at any zoom and turn. It is dragged
   with one finger, a pointer or the arrow keys; on a touch screen two
   fingers pinch to zoom and twist to rotate, about the point between them;

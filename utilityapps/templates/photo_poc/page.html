@@ -17,17 +17,17 @@
 
   <div class="card" aria-labelledby="frame-h">
     <h2 id="frame-h">Frame</h2>
-    <p class="note">Drag the photo to move it, or use the arrow keys. Zoom and rotate with the controls below or, on a touch screen, with two fingers: pinch to zoom, twist to rotate. The photo always covers the window. Save keeps exactly what is inside the window.</p>
-    <div class="frame" id="photo-window" style="--ratio: {{ ratio[0] }} / {{ ratio[1] }};" tabindex="0" aria-label="The window: what Save keeps">
-      <span class="frame-empty">No photo chosen</span>
-    </div>
-    <label for="photo-zoom">Zoom</label>
-    <input type="range" id="photo-zoom" min="1" max="4" step="0.01" value="1" disabled>
-    <label for="photo-rotate">Rotate</label>
-    <input type="range" id="photo-rotate" min="-180" max="180" step="0.5" value="0" disabled>
-    <div class="actions tight">
-      <button class="btn secondary" type="button" id="photo-left" disabled>Rotate left 90°</button>
-      <button class="btn secondary" type="button" id="photo-right" disabled>Rotate right 90°</button>
+    <p class="note">Drag the photo to move it, or use the arrow keys. Zoom with the bar on the right and rotate with the bar below, which snaps to −90°, 0° and 90°; on a touch screen, two fingers pinch to zoom and twist to rotate. The photo always covers the window. Save keeps exactly what is inside the window.</p>
+    <div class="frame-tools">
+      <div class="frame" id="photo-window" style="--ratio: {{ ratio[0] }} / {{ ratio[1] }};" tabindex="0" aria-label="The window: what Save keeps">
+        <span class="frame-empty">No photo chosen</span>
+      </div>
+      <input type="range" class="zoom-bar" id="photo-zoom" aria-label="Zoom" min="1" max="4" step="0.01" value="1" disabled>
+      <div class="rotate-bar">
+        <input type="range" id="photo-rotate" aria-label="Rotate" list="photo-turns" min="-180" max="180" step="0.5" value="0" disabled>
+        <datalist id="photo-turns"><option value="-90"></option><option value="0"></option><option value="90"></option></datalist>
+        <div class="turn-marks" aria-hidden="true"><span class="at-left">−90°</span><span class="at-middle">0°</span><span class="at-right">90°</span></div>
+      </div>
     </div>
     <div class="actions">
       <button class="btn primary" type="button" id="photo-save" disabled>Save</button>
@@ -69,8 +69,6 @@
     var win = document.getElementById("photo-window");
     var zoom = document.getElementById("photo-zoom");
     var rotate = document.getElementById("photo-rotate");
-    var left = document.getElementById("photo-left");
-    var right = document.getElementById("photo-right");
     var saveButton = document.getElementById("photo-save");
     var tiles = document.getElementById("photo-tiles");
     var none = document.getElementById("photo-none");
@@ -124,6 +122,7 @@
         "deg) scale(" + k + ") translate(" + -cx + "px, " + -cy + "px)";
       zoom.value = String(z);
       rotate.value = String(angle);
+      rotate.setAttribute("aria-valuetext", angle + " degrees");
     }
     function setZoom(next) { z = Math.min(MAX_ZOOM, Math.max(1, next)); draw(); }
     function setAngle(next) { angle = normal(next); draw(); }
@@ -144,7 +143,7 @@
         win.appendChild(next);
         cx = nw / 2; cy = nh / 2; angle = 0; z = 1;
         draw();
-        [zoom, rotate, left, right, saveButton].forEach(function (c) { c.disabled = false; });
+        [zoom, rotate, saveButton].forEach(function (c) { c.disabled = false; });
         say(chosen.name + ": drag, zoom and rotate to frame it, then Save.", false);
       };
       next.onerror = function () {
@@ -168,11 +167,23 @@
       choose(e.dataTransfer && e.dataTransfer.files[0]);
     });
     zoom.addEventListener("input", function () { if (img) setZoom(parseFloat(zoom.value)); });
-    // The slider's own value, within its range: normalizing would send
-    // its right end, 180, to -180 and the thumb to the left end.
-    rotate.addEventListener("input", function () { if (img) { angle = parseFloat(rotate.value); draw(); } });
-    left.addEventListener("click", function () { if (img) setAngle(angle - 90); });
-    right.addEventListener("click", function () { if (img) setAngle(angle + 90); });
+    // Dragged, the rotate bar snaps to its waypoints, the quarter turns
+    // and upright, within SNAP degrees. Stepped with the keys it does not:
+    // a 0.5° step off a waypoint would snap straight back, so the keys
+    // could never leave one (cold read). Its own value otherwise, within
+    // its range: normalizing would send its right end, 180, to -180 and
+    // the thumb to the left end.
+    var WAYPOINTS = [-90, 0, 90], SNAP = 4, keyed = false;
+    rotate.addEventListener("keydown", function () { keyed = true; });
+    rotate.addEventListener("keyup", function () { keyed = false; });
+    rotate.addEventListener("blur", function () { keyed = false; });
+    rotate.addEventListener("input", function () {
+      if (!img) return;
+      var value = parseFloat(rotate.value);
+      if (!keyed) WAYPOINTS.forEach(function (w) { if (Math.abs(value - w) <= SNAP) value = w; });
+      angle = value;
+      draw();
+    });
 
     // One finger (or the mouse) drags; two pinch and twist, about the
     // point between them, which stays under the fingers.
