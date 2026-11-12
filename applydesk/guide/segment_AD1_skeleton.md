@@ -29,7 +29,7 @@ Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID
 | `/operator/exercises/<id>` | Exercise Home: stage, state, counts, the next step; the timeline with the current stage marked (iteration 5) | The exercise's operators |
 | ~~`/operator/exercises/<id>/settings`~~ | Became Setup (iteration 5) | |
 | `/operator/exercises/<id>/setup` | Details, eligibility (open or invitation-only), blind review; the timeline: stages, milestones, announcements (iteration 5) | 〃 |
-| `/operator/exercises/<id>/form` | The application form builder: *Shown to reviewers* and *Not shown to reviewers*, and its preview (iteration 5) | 〃 |
+| `/operator/exercises/<id>/form` | The application form builder (iteration 5); from AD1B, cards that move on screen (`applydesk/guide/segment_AD1B_form_builder.md`) | 〃 |
 | `/operator/exercises/<id>/applications` | Applications by state; generate applicant profiles; import outcomes (iteration 5) | 〃 |
 | ~~`/operator/exercises/<id>/assessors`~~ | Became Panels (iteration 5) | |
 | `/operator/exercises/<id>/panels` | The rosters of evaluators: assessment panels (what each may view), the reviewer pool applicants choose from, interviewers (iteration 5) | 〃 |

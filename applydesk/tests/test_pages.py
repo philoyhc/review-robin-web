@@ -286,13 +286,6 @@ def test_setup_carries_the_timeline_setup(client: TestClient) -> None:
     assert "Add a milestone" in text and "New announcement" in text
 
 
-def test_the_form_page_previews_the_form(client: TestClient) -> None:
-    text = client.get(f"/applydesk/operator/exercises/{EX}/form").text
-    assert '<h2 id="preview-h">Preview</h2>' in text
-    for label, _ in sample_data.SHOWN_TO_REVIEWERS:
-        assert f">{label}</label>" in text
-
-
 def test_applications_generates_applicant_profiles(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/applications").text
     assert "Generate applicant profiles" in text
@@ -331,12 +324,6 @@ def test_a_draft_exercise_s_timeline_reads_cleanly(client: TestClient) -> None:
     assert "Dates not set" in text
 
 
-def test_the_form_preview_ties_help_to_its_field(client: TestClient) -> None:
-    text = client.get(f"/applydesk/operator/exercises/{EX}/form").text
-    assert 'id="pv-s2-help"' in text and 'aria-describedby="pv-s2-help"' in text
-    assert "Preferred reviewer (from the reviewer pool)" in text
-
-
 def test_a_blank_exercise_lists_what_is_still_to_set_up(client: TestClient) -> None:
     """Author, 2026-11-12: one exercise as just created, with only a name."""
     home = client.get(f"/applydesk/operator/exercises/{BLANK}").text
@@ -364,7 +351,7 @@ def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> Non
     row = lobby[lobby.index("Graduate Travel Grant 2027") :]
     assert '<span class="muted">Not set</span>' in row[: row.index("</tr>")]
     form = client.get(f"{base}/form").text
-    assert form.count("No questions yet.") == 2 and "Add a question to see it here." in form
+    assert form.count('data-kind="field"') == 1 and 'placeholder="Untitled form"' in form
     assert "No applications yet." in client.get(f"{base}/applications").text
     panels = client.get(f"{base}/panels").text
     assert "No panels yet." in panels and "No interviewers yet." in panels

@@ -67,6 +67,11 @@ Taken 2026-11-12 at `666cf88`.
 | Form tests to rewrite | 2 of 33 in `test_pages.py` | `grep -n "def test.*form" applydesk/tests/test_pages.py` |
 | ApplyDesk browser tests | 0 | `ls applydesk/tests` |
 
+## Status
+
+Building. Base `73d4230` for the cumulative read.
+- Rung 2: the page and its cards. The form's sample cards (`sample_data.SAMPLE_FORM`), one macro per kind (`operator/_form_cards.html`), and one inline script for collapse, the type menu, the toggles, the summaries and the Outline; *+ New*, *Replicate*, *+ Section*, *+ Page break*, *Delete* and the handle render, inert until rung 3. A Title and Description card shows no Required chip. Summaries are computed twice, `card_summary` for the first render and the script after an edit; the Chromium tests hold them to the same text.
+
 ## PR ladder
 
 1. **Plan** (this file), its README row and roadmap row.

@@ -1,0 +1,99 @@
+{# The Form page's cards (segment AD1B): one macro per kind, so a card
+   the server renders and a card the page's script adds share their
+   markup. A field card carries every type's fields; its data-type says
+   which show. Nothing here is saved. #}
+
+{% macro grip() %}<button type="button" class="fc-grip" data-fc-grip aria-label="Move: drag, or press the up and down arrow keys" title="Drag to reorder">⋮⋮</button>{% endmacro %}
+
+{% macro foot(replicate) %}
+<div class="fc-foot">
+  {% if replicate %}<button type="button" class="btn btn-secondary" data-fc-act="replicate">Replicate</button>{% endif %}
+  <button type="button" class="btn btn-secondary" data-fc-act="new">+ New</button>
+  <button type="button" class="btn btn-secondary" data-fc-act="section">+ Section</button>
+  <button type="button" class="btn btn-secondary" data-fc-act="pagebreak">+ Page break</button>
+  <button type="button" class="btn btn-destructive fc-del" data-fc-act="delete">Delete</button>
+</div>
+{% endmacro %}
+
+{% macro field(c, summary, kept_size, card_types, open=False) %}
+{% set size = kept_size(c.ratio_w, c.ratio_h) %}
+<article class="fc" data-kind="field" data-type="{{ c.type }}"{% if open %} data-open{% endif %}>
+  <div class="fc-head">
+    {{ grip() }}
+    <button type="button" class="fc-toggle" data-fc-toggle aria-expanded="{{ 'true' if open else 'false' }}" aria-label="{{ 'Collapse' if open else 'Expand' }}"></button>
+    <div class="fc-sum">
+      <div class="fc-texts">
+        <span class="fc-q" data-sum="label">{{ c.label or ("Untitled text" if c.type == "text" else "Untitled question") }}</span>
+        <span class="fc-h" data-sum="help">{{ c.help }}</span>
+      </div>
+      <span class="fc-chips">
+        <span class="chip chip-mute" data-sum="type">{{ summary(c) }}</span>
+        <span class="chip {{ 'chip-req' if c.required else 'chip-mute' }}" data-sum="required">{{ "Required" if c.required else "Optional" }}</span>
+        <span class="chip {{ 'chip-info' if c.shown else 'chip-mute' }}" data-sum="shown">{{ "Shown to reviewers" if c.shown else "Not shown" }}</span>
+      </span>
+    </div>
+    <select class="fc-type" data-f="type" aria-label="Card type">
+      {% for key, label in card_types %}<option value="{{ key }}"{% if key == c.type %} selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="fc-body">
+    <label class="fc-l"><span class="l-q">Question</span><span class="l-t">Title</span>
+      <input class="fc-in" data-f="label" value="{{ c.label }}" placeholder="Untitled"></label>
+    <label class="fc-l"><span class="l-q">Help text</span><span class="l-t">Description</span>
+      <textarea class="fc-in" data-f="help" rows="2" placeholder="Optional">{{ c.help }}</textarea></label>
+    <div class="fc-row g-string">
+      <label class="fc-l">Min length<input class="fc-in" data-f="min" data-g="string" inputmode="numeric" value="{{ c.min if c.type == 'string' }}"></label>
+      <label class="fc-l">Max length<input class="fc-in" data-f="max" data-g="string" inputmode="numeric" value="{{ c.max if c.type == 'string' }}"></label>
+    </div>
+    <div class="fc-row g-number">
+      <label class="fc-l">Min<input class="fc-in" data-f="min" data-g="number" inputmode="decimal" value="{{ c.min if c.type in ('integer', 'decimal') }}"></label>
+      <label class="fc-l">Max<input class="fc-in" data-f="max" data-g="number" inputmode="decimal" value="{{ c.max if c.type in ('integer', 'decimal') }}"></label>
+      <label class="fc-l">Step<input class="fc-in" data-f="step" data-g="number" inputmode="decimal" value="{{ c.step if c.type in ('integer', 'decimal') }}"></label>
+    </div>
+    <div class="fc-row g-list">
+      <label class="fc-l fc-wide">Options (comma-separated)<input class="fc-in" data-f="options" value="{{ c.options }}"></label>
+      <div class="fc-l"><span>Choices</span>
+        <span class="seg" role="group" aria-label="Choices">
+          <button type="button" data-f="exclusive" data-v="true" aria-pressed="{{ 'true' if c.exclusive else 'false' }}">Choose one</button>
+          <button type="button" data-f="exclusive" data-v="false" aria-pressed="{{ 'false' if c.exclusive else 'true' }}">Choose any</button>
+        </span>
+      </div>
+    </div>
+    <div class="fc-row g-photo">
+      <label class="fc-l fc-narrow">Ratio width<input class="fc-in" data-f="ratio_w" inputmode="numeric" value="{{ c.ratio_w }}"></label>
+      <span class="fc-colon" aria-hidden="true">:</span>
+      <label class="fc-l fc-narrow">Ratio height<input class="fc-in" data-f="ratio_h" inputmode="numeric" value="{{ c.ratio_h }}"></label>
+      <p class="muted fc-note" data-sum="kept">{% if size %}Kept as a {{ size[0] }} × {{ size[1] }} JPEG: 600 px on its longer side.{% else %}Enter the ratio as two whole numbers.{% endif %}</p>
+    </div>
+    <div class="fc-row fc-flags">
+      <button type="button" class="btn btn-toggle g-req" data-f="required" aria-pressed="{{ 'true' if c.required else 'false' }}">Required</button>
+      <span class="seg" role="group" aria-label="Who sees it">
+        <button type="button" data-f="shown" data-v="true" aria-pressed="{{ 'true' if c.shown else 'false' }}">Shown to reviewers</button>
+        <button type="button" data-f="shown" data-v="false" aria-pressed="{{ 'false' if c.shown else 'true' }}">Not shown</button>
+      </span>
+    </div>
+    {{ foot(True) }}
+  </div>
+</article>
+{% endmacro %}
+
+{% macro section(c, open=False) %}
+<article class="fc fc-section" data-kind="section"{% if open %} data-open{% endif %}>
+  <div class="fc-head">
+    {{ grip() }}
+    <button type="button" class="fc-toggle" data-fc-toggle aria-expanded="{{ 'true' if open else 'false' }}" aria-label="{{ 'Collapse' if open else 'Expand' }}"></button>
+    <div class="fc-sum"><div class="fc-texts"><span class="fc-kicker">Section</span><span class="fc-q" data-sum="label">{{ c.label or "Untitled section" }}</span></div></div>
+  </div>
+  <div class="fc-body">
+    <label class="fc-l">Section title<input class="fc-in" data-f="label" value="{{ c.label }}" placeholder="Untitled section"></label>
+    {{ foot(False) }}
+  </div>
+</article>
+{% endmacro %}
+
+{% macro pagebreak() %}
+<div class="fc-break" data-kind="pagebreak">
+  {{ grip() }}<span class="fc-break-l">Page break</span>
+  <button type="button" class="btn btn-destructive" data-fc-act="delete">Remove</button>
+</div>
+{% endmacro %}

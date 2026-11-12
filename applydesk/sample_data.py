@@ -221,6 +221,173 @@ RESPONSES: dict[str, dict[str, str]] = {
 }
 
 
+# The application form as the Form page builds it (segment AD1B): the
+# form's own title and description, then its cards in order. A card is
+# a question or text block ("field"), a section's title ("section") or
+# a page break ("pagebreak"). The applicant pages still read the two
+# lists above until AD4 renders a stored form.
+CARD_TYPES: tuple[tuple[str, str], ...] = (
+    ("string", "String"),
+    ("integer", "Integer"),
+    ("decimal", "Decimal"),
+    ("list", "List"),
+    ("photo", "Photo"),
+    ("text", "Title and Description"),
+)
+
+
+@dataclass(frozen=True)
+class FormCard:
+    kind: str  # field, section, pagebreak
+    type: str = "string"  # a CARD_TYPES key, for a field
+    label: str = ""  # the question, a text block's title, a section's title
+    help: str = ""  # help text, or a text block's description
+    min: str = ""
+    max: str = ""
+    step: str = ""
+    options: str = ""  # a list's, comma-separated
+    exclusive: bool = True  # a list: choose one, else choose any
+    ratio_w: str = "4"
+    ratio_h: str = "5"
+    required: bool = False
+    shown: bool = False  # shown to reviewers; a new card is not
+
+
+SAMPLE_FORM: tuple[FormCard, ...] = (
+    FormCard("section", label="About the project"),
+    FormCard(
+        "field",
+        "text",
+        "Your proposed project",
+        help=(
+            "Tell us what you will work on and how. Assessors read the "
+            "questions marked shown on your applicant profile."
+        ),
+        shown=True,
+    ),
+    FormCard("field", "string", "Project title", min="1", max="120", required=True, shown=True),
+    FormCard(
+        "field",
+        "string",
+        "Summary",
+        help="What the project asks, why it matters, and what the semester will produce.",
+        max="2000",
+        required=True,
+        shown=True,
+    ),
+    FormCard(
+        "field",
+        "string",
+        "Methods",
+        help="How the work will be done, with a timeline by month.",
+        max="2000",
+        shown=True,
+    ),
+    FormCard(
+        "field",
+        "integer",
+        "Months the project will run",
+        help="From 1 to 6, in whole months.",
+        min="1",
+        max="6",
+        step="1",
+        required=True,
+        shown=True,
+    ),
+    FormCard(
+        "field",
+        "list",
+        "Field of study",
+        help="Choose the closest.",
+        options="Life Sciences, Engineering, Humanities",
+        required=True,
+        shown=True,
+    ),
+    FormCard("pagebreak"),
+    FormCard("section", label="About you"),
+    FormCard(
+        "field",
+        "list",
+        "Preferred reviewer (from the reviewer pool)",
+        options="Dr Hana Ito, Dr Omar Aziz, Dr Ruth Kahn",
+    ),
+    FormCard("field", "string", "Matriculation number", min="9", max="9", required=True),
+    FormCard(
+        "field",
+        "decimal",
+        "Cumulative GPA",
+        help="As on your latest transcript.",
+        min="0.00",
+        max="5.00",
+        step="0.01",
+        required=True,
+    ),
+    FormCard("field", "photo", "Photo", help="A recent head-and-shoulders photo."),
+)
+
+FORM_DESCRIPTION = "Tell us about the project you propose for the semester."
+
+
+def form_cards(exercise_id: str) -> tuple[FormCard, ...]:
+    """The Form page's cards: one empty question for a form with none."""
+    if exercise_id in EMPTY_FORMS:
+        return (FormCard("field"),)
+    return SAMPLE_FORM
+
+
+def form_heading(exercise_id: str) -> tuple[str, str]:
+    """The form's own title and description."""
+    if exercise_id in EMPTY_FORMS:
+        return "", ""
+    return "Application form", FORM_DESCRIPTION
+
+
+def kept_size(ratio_w: str, ratio_h: str) -> tuple[int, int] | None:
+    """A photo's kept size: 600 px on its longer side, the other by the
+    ratio; None for a ratio that is not two positive whole numbers."""
+    if not (ratio_w.isdecimal() and ratio_h.isdecimal()):
+        return None
+    w, h = int(ratio_w), int(ratio_h)
+    if w <= 0 or h <= 0:
+        return None
+    if w >= h:
+        return 600, round(600 * h / w)
+    return round(600 * w / h), 600
+
+
+def _span(lo: str, hi: str, unit: str = "") -> str:
+    suffix = f" {unit}" if unit else ""
+    if lo and hi:
+        return f"exactly {lo}{suffix}" if lo == hi else f"{lo} to {hi}{suffix}"
+    if hi:
+        return f"up to {hi}{suffix}"
+    if lo:
+        return f"at least {lo}{suffix}"
+    return ""
+
+
+def card_summary(c: FormCard) -> str:
+    """A collapsed card's summary of its settings; the page's script
+    computes the same as the card is edited."""
+    if c.type == "string":
+        span = _span(c.min, c.max, "characters")
+        return f"String · {span}" if span else "String"
+    if c.type in ("integer", "decimal"):
+        name = "Integer" if c.type == "integer" else "Decimal"
+        parts = [p for p in (_span(c.min, c.max), f"step {c.step}" if c.step else "") if p]
+        return f"{name} · {', '.join(parts)}" if parts else name
+    if c.type == "list":
+        options = ", ".join(o.strip() for o in c.options.split(",") if o.strip())
+        choose = "choose one" if c.exclusive else "choose any"
+        return f"List · {choose} · {options or 'no options yet'}"
+    if c.type == "photo":
+        size = kept_size(c.ratio_w, c.ratio_h)
+        if size is None:
+            return "Photo · ratio not set"
+        return f"Photo · {c.ratio_w}:{c.ratio_h}, kept {size[0]} × {size[1]}"
+    return "Title and Description · display only"
+
+
 #: Exercises whose application form has no questions yet.
 EMPTY_FORMS: frozenset[str] = frozenset({"n5wg8tjr3e"})
 
