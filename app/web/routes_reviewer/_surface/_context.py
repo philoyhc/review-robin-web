@@ -501,12 +501,19 @@ def _surface_context(
             # The full set — including identity-column display
             # fields the visible-cells filter excludes — so the
             # operator can sort by Reviewee name.
-            # Profile heads no column (20M Item 1), so a stored sort entry
-            # on it is inert, as an unknown field's is.
+            # A field that heads no column sorts nothing, as an unknown
+            # field's entry: Profile always (20M Item 1), and every other
+            # field once the layout is Stacked or Joined (Item 2). Name and
+            # Email still sort through the Reviewee column.
+            fields_across = views.display_layout_for(instrument) == "across"
             known_display_field_ids = {
                 df.id
                 for df in all_display_fields_by_instrument.get(instrument_id, [])
-                if not (df.source_type == "reviewee" and df.source_field == "profile_link")
+                if instruments_service.is_locked_display_source(df.source_type, df.source_field)
+                or (
+                    fields_across
+                    and not (df.source_type == "reviewee" and df.source_field == "profile_link")
+                )
             }
             # Effective sort spec for this instrument (Segment 13B
             # Part 2 PR 5):
@@ -604,6 +611,9 @@ def _surface_context(
                 # its label (20K).
                 "constraints": [] if stacked else constraints,
                 "response_layout": response_layout,
+                # 20M — where the display fields sit: a column each, or a
+                # labeled line each / one joined line under the reviewee.
+                "display_layout": views.display_layout_for(instrument),
                 "constraint_by_field_id": constraint_by_field_id,
                 "stack_compact_ch": views.stacked_compact_ch(fields) if stacked else None,
                 # The label and response columns' widths, once dragged
