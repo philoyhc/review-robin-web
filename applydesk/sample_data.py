@@ -182,6 +182,7 @@ SHOWN_TO_REVIEWERS: tuple[tuple[str, str], ...] = (
     ("Relevant experience", "Courses, projects or work that prepare the applicant."),
 )
 NOT_SHOWN_TO_REVIEWERS: tuple[str, ...] = (
+    "Preferred reviewer (from the reviewer pool)",
     "Matriculation number",
     "Expected graduation",
     "Financial aid held",

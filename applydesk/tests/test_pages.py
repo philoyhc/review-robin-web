@@ -245,9 +245,10 @@ def test_the_operator_tabs_are_the_authors_seven(client: TestClient) -> None:
     """Author, 2026-11-12: Home, Setup, Form, Applications, Panels and
     Report, with Review kept as a seventh after Panels."""
     text = client.get(f"/applydesk/operator/exercises/{EX}").text
-    link = r'<a href="/applydesk/operator/exercises/' + EX + r'[^"]*"[^>]*>([^<]+)</a>'
-    tabs = re.findall(link, text)
-    assert tabs[-7:] == ["Home", "Setup", "Form", "Applications", "Panels", "Review", "Report"]
+    row = text[text.index('<nav class="tabs"') :]
+    row = row[: row.index("</nav>")]
+    tabs = re.findall(r"<a [^>]*>([^<]+)</a>", row)
+    assert tabs == ["Home", "Setup", "Form", "Applications", "Panels", "Review", "Report"]
 
 
 @pytest.mark.parametrize("old", ["settings", "assessors", "timeline", "export"])
@@ -264,6 +265,8 @@ def test_home_marks_the_current_stage_on_its_timeline(
     text = client.get(f"/applydesk/operator/exercises/{exercise_id}").text
     current = re.findall(r'aria-current="step">\s*<span class="stage-name">([^<]+)', text)
     assert [c.strip() for c in current] == [now]
+    done = {"Setup": 0, "Applications": 1, "Review": 2}[now]
+    assert text.count('<span class="chip chip-mute">Done</span>') == done
     for stage in ("Setup", "Applications", "Review", "Outcome"):
         assert f'<span class="stage-name">{stage}' in text
 
@@ -271,6 +274,7 @@ def test_home_marks_the_current_stage_on_its_timeline(
 def test_setup_carries_the_timeline_setup(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/setup").text
     assert '<ol class="stages"' in text and "<h3>Milestones</h3>" in text
+    assert 'aria-current="step"' in text
     assert "Add a milestone" in text and "New announcement" in text
 
 
@@ -284,7 +288,9 @@ def test_the_form_page_previews_the_form(client: TestClient) -> None:
 def test_applications_generates_applicant_profiles(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/applications").text
     assert "Generate applicant profiles" in text
-    assert "/applydesk/me/exercises/wa9juxbc2t/profiles/p3bd7kq2wx" in text
+    # Ruling 9 opens the profile page to its assessors; the operator's list
+    # does not link it (the cold read).
+    assert "/profiles/" not in text
 
 
 def test_panels_holds_the_three_rosters(client: TestClient) -> None:
@@ -300,3 +306,15 @@ def test_panels_holds_the_three_rosters(client: TestClient) -> None:
 def test_report_exports(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/report").text
     assert "<h2>Export bundle</h2>" in text and "Download export" in text
+
+
+def test_a_draft_exercise_s_timeline_reads_cleanly(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
+    assert "Not set to Not set" not in text and "Expected Not set" not in text
+    assert "Dates not set" in text
+
+
+def test_the_form_preview_ties_help_to_its_field(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/form").text
+    assert 'id="pv-s2-help"' in text and 'aria-describedby="pv-s2-help"' in text
+    assert "Preferred reviewer (from the reviewer pool)" in text

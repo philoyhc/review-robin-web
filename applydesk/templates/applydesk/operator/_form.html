@@ -1,6 +1,6 @@
 <div class="grid">
-  <section class="card">
-    <h2>Build</h2>
+  <section class="card" aria-labelledby="build-h">
+    <h2 id="build-h">Build</h2>
     <h3>Shown to reviewers</h3>
     <p class="muted">What assessors read on the profile page, and what an applicant is told reviewers will see.</p>
     <ul>{% for label, help in shown %}<li>{{ label }}{% if help %} <span class="muted">— {{ help }}</span>{% endif %}</li>{% endfor %}</ul>
@@ -16,8 +16,9 @@
     {% for label, help in shown %}
     <div class="field">
       <label for="pv-s{{ loop.index }}">{{ label }}</label>
-      {% if help %}<span class="field-help">{{ help }}</span>{% endif %}
-      {% if loop.first %}<input id="pv-s{{ loop.index }}" type="text" disabled>{% else %}<textarea id="pv-s{{ loop.index }}" rows="2" disabled></textarea>{% endif %}
+      {% if help %}<span class="field-help" id="pv-s{{ loop.index }}-help">{{ help }}</span>{% endif %}
+      {% set described = ' aria-describedby="pv-s' ~ loop.index ~ '-help"' if help else '' %}
+      {% if loop.first %}<input id="pv-s{{ loop.index }}" type="text"{{ described | safe }} disabled>{% else %}<textarea id="pv-s{{ loop.index }}" rows="2"{{ described | safe }} disabled></textarea>{% endif %}
     </div>
     {% endfor %}
     <h3>Not shown to reviewers</h3>

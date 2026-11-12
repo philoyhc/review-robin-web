@@ -15,7 +15,8 @@ router = APIRouter(prefix="/operator", dependencies=[Depends(placeholders_only)]
 
 #: An exercise's operator pages beyond Home, each a partial of
 #: `operator/section.html`, with its heading.
-#: The tabs as the author set them (2026-11-12), Review kept as a seventh.
+#: The tabs as the author set them (2026-11-12): Review kept, between
+#: Panels and Report, as a seventh.
 SECTIONS: dict[str, str] = {
     "setup": "Setup",
     "form": "Application form",
