@@ -1,0 +1,44 @@
+{% extends "utilities/base.html" %}
+{% block title %}Photo proof of concept{% endblock %}
+{% block content %}
+  <p class="crumbs"><a href="{{ url('/') }}">Utilities</a> › Photo proof of concept</p>
+  <h1>Photo proof of concept</h1>
+  <p class="sub">Upload a photo, frame it in the window, and save exactly what the window shows. Every saved photo is {{ ratio[0] }}:{{ ratio[1] }}, {{ width }} × {{ height }} px, kept in Utilities' own database with no Blob storage. A model for participant photos in Review Robin and ApplyDesk.</p>
+
+  <div class="card" aria-labelledby="upload-h">
+    <h2 id="upload-h">Photo</h2>
+    <label class="drop" for="photo-file" id="photo-drop">
+      <span class="drop-main">Choose a photo, or drop it here</span>
+      <span class="note">JPEG, PNG or WebP, {{ max_mb }} MB at most</span>
+      <input type="file" id="photo-file" accept="image/jpeg,image/png,image/webp" disabled>
+    </label>
+    <div id="photo-message" role="status" aria-live="polite"></div>
+  </div>
+
+  <div class="card" aria-labelledby="frame-h">
+    <h2 id="frame-h">Frame</h2>
+    <p class="note">Drag the photo to move it; zoom in or out. The photo always covers the window. Save keeps exactly what is inside the window.</p>
+    <div class="frame" id="photo-window" style="--ratio: {{ ratio[0] }} / {{ ratio[1] }};">
+      <span class="frame-empty">No photo chosen</span>
+    </div>
+    <label for="photo-zoom">Zoom</label>
+    <input type="range" id="photo-zoom" min="1" max="4" step="0.01" value="1" disabled>
+    <div class="actions">
+      <button class="btn primary" type="button" id="photo-save" disabled>Save</button>
+    </div>
+  </div>
+
+  <div class="card" aria-labelledby="saved-h">
+    <h2 id="saved-h">Saved photos</h2>
+    <p class="sample">Sample tiles: the list is wired in the next step.</p>
+    <ul class="tiles" id="photo-tiles">
+      {% for tile in tiles %}
+      <li class="tile">
+        <div class="frame tile-photo" style="--ratio: {{ ratio[0] }} / {{ ratio[1] }};"></div>
+        <p class="note">{{ tile.created }}<br>{{ tile.uploaded_by }}<br>{{ tile.size }}</p>
+        <button class="btn destructive" type="button" disabled>Delete</button>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endblock %}

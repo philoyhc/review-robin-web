@@ -46,6 +46,19 @@
     .btn.primary { background: var(--link); color: #fff; }
     .btn.secondary { background: transparent; color: var(--link); }
     .btn:disabled, .btn[aria-disabled=true] { opacity: 0.5; cursor: not-allowed; }
+    .btn.destructive { background: transparent; color: #b91c1c; border-color: #b91c1c; }
+    /* The photo proof of concept (segment U4): the drop box, the fixed
+       window, whose aspect ratio is the saved photo's, and the tiles. */
+    .drop { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 1.5rem 1rem; border: 2px dashed var(--line); border-radius: 8px; text-align: center; cursor: pointer; font-weight: normal; }
+    .drop.over { border-color: var(--link); }
+    .drop-main { font-weight: 600; color: var(--link); }
+    .drop input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .frame { position: relative; overflow: hidden; aspect-ratio: var(--ratio); width: min(16rem, 100%); margin: 0 0 1rem; background: var(--line); border-radius: 4px; display: flex; align-items: center; justify-content: center; touch-action: none; }
+    .frame-empty { color: var(--muted); font-size: 0.9rem; }
+    input[type=range] { width: min(16rem, 100%); }
+    .tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); gap: 1rem; }
+    .tile .frame { width: 100%; margin: 0 0 0.25rem; }
+    .tile p { margin: 0 0 0.5rem; }
     table { border-collapse: collapse; width: 100%; }
     th, td { text-align: left; padding: 0.4rem 0.5rem 0.4rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
     td.n, th.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
