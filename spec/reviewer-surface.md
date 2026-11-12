@@ -725,6 +725,55 @@ In rendered order:
    submitted`` / ``Draft``) in the title row, and the summary
    page's session-level timestamp.
 
+### Responses stacked
+
+An instrument whose `response_layout` is `stacked`
+(`Instrument.response_layout`, `spec/instruments.md`; read through
+`instruments.effective_response_layout`, so a stray value reads
+`columns`) keeps one row per reviewee and moves every response field
+into a single **Responses** cell. Identity and display fields keep their
+columns; a group-scoped instrument takes the same cell, one per group.
+`columns` is the layout the rest of this section describes.
+
+- **One line per response field** (`.rs-stack-field`): the label on the
+  left, with its constraint under it in the muted helper style
+  (`constraint_summary_for_field`, as the summary line words it), and the
+  box on the right. A required field's label carries the ` *` marker. A
+  line carries the branch attributes a column's cell does
+  (`data-rs-branch-*`, `data-rs-governed-by`, `rs-branch-closed`, the
+  hint `title`), so branching finds its parent within the row as it does
+  in columns.
+- **The summary line above the table is not shown** (`constraints` is
+  empty): each constraint is under its label.
+- **Response fields head no column, so none sorts the table.** The
+  header is one `Responses` cell with no sort control; a saved sort
+  naming a response field is skipped. Sorting by reviewee and by display
+  field is unchanged, and so are per-row Save, completion counts and
+  the answers.
+- **Two box widths, never one per field. A width is computed only where
+  it is calculable**; any other box is a text box.
+  - **Text boxes** (every String field, a number field missing a bound,
+    a Decimal field missing its step) fill the Responses column.
+  - **Compact boxes** (list fields, Integer fields with both bounds,
+    Decimal fields with both bounds and a step) share one width, the
+    widest need among them, never under 3 characters
+    (`views.stacked_compact_ch`, from `views.stacked_box_chars`; the
+    template caps it at the column). A number needs its wider bound's
+    whole digits, sign included, plus a point and as many decimal places
+    as its step (or its lower bound) carries: min 0, max 10, step 0.25
+    needs `10.00`. A list needs its longest choice plus the dropdown
+    arrow. Computed at render; nothing is stored. The preview mirrors
+    both functions in script (`spec/instruments.md`).
+- **The label column's width** is `stack_label` in `column_widths`
+  (`spec/settings_inventory.md`), set by dragging the Responses header's
+  handle on the Instruments page preview; the label and its constraint
+  wrap within it. Unset, the column is as wide as its longest label or
+  constraint. `stack_input` is accepted and honored when stored, but
+  nothing sets it. When both are stored the Responses `<col>` is sized
+  to their sum plus the grid gap and the cell's padding
+  (`stack_col_px`); otherwise it takes the width the other columns
+  leave. `rf_<id>` widths are kept but unused while stacked.
+
 ### Cell renderers
 
 Response field input markup is driven by the field's `data_type`:

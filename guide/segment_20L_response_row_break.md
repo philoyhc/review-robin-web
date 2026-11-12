@@ -1,8 +1,8 @@
 # Segment 20L — A row break after a response field
 
-**Opened:** 2026-11-11 · **Theme:** an operator can end a reviewee's line after any response field, so later fields continue on a further line · **Related:** `guide/segment_20K_stacked_response_layout.md` (the alternative, written for comparison), `spec/reviewer-surface.md`, `spec/instruments.md`
+**Opened:** 2026-11-11 · **Theme:** an operator can end a reviewee's line after any response field, so later fields continue on a further line · **Related:** `guide/archive/segment_20K_stacked_response_layout.md` (the alternative, built and closed), `spec/reviewer-surface.md`, `spec/instruments.md`
 
-**Status: written, not queued.** The author picked 20K first (2026-11-11); this plan stays for a later call.
+**Status: set aside (author, 2026-11-12) — not archived.** Not needed for Review Robin, which shipped 20K; kept because a row break could serve ApplyDesk's reviews later. Picking it up starts from this plan.
 
 ## Opportunity
 
@@ -69,7 +69,7 @@ Taken 2026-11-11 at `0af35e9`.
 
 ## Open questions
 
-- Whether to build this as well as 20K (author).
+- Whether ApplyDesk needs it (author, when ApplyDesk's reviews are planned).
 - Per-line column widths: deferred, or in this segment (author).
 
 ## Out of scope

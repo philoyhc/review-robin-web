@@ -1,6 +1,6 @@
 # Segment 20M — Instruments touch-up: where display fields sit
 
-**Opened:** 2026-11-11 · **Theme:** an instrument's display fields can sit under the reviewee rather than in columns, Profile rides beside the name, and group rows sort by what they show · **Related:** `guide/segment_20K_stacked_response_layout.md` (the response-side counterpart), `spec/reviewer-surface.md`, `spec/instruments.md`, `spec/sort_by_reviewee.md`
+**Opened:** 2026-11-11 · **Theme:** an instrument's display fields can sit under the reviewee rather than in columns, Profile rides beside the name, and group rows sort by what they show · **Related:** `guide/archive/segment_20K_stacked_response_layout.md` (the response-side counterpart), `spec/reviewer-surface.md`, `spec/instruments.md`, `spec/sort_by_reviewee.md`
 
 ## Opportunity
 
