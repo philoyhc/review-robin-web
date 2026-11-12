@@ -70,11 +70,13 @@ Taken 2026-11-12 at `666cf88`.
 
 ## Status
 
-Building. Base `73d4230` for the cumulative read.
-- Rung 2: the page and its cards. The form's sample cards (`sample_data.SAMPLE_FORM`), one macro per kind (`operator/_form_cards.html`), and one inline script for collapse, the type menu, the toggles, the summaries and the Outline; *+ New*, *Replicate*, *+ Section*, *+ Page break*, *Delete* and the handle render, inert until rung 3. A Title and Description card shows no Required chip. Summaries are computed twice, `card_summary` for the first render and the script after an edit; a Chromium test replays `test_form.SUMMARY_CASES` and every sample card through the script (rung 3).
-- Rung 3: the moves. *+ New*, *+ Section* and *+ Page break* clone the server's own macros from `<template>`s, *Replicate* the card itself; *Delete* keeps the last field card; dragging listens on the document, since moving the card in the page ends a pointer capture; ↑ and ↓ on a focused handle; Preview builds from the cards. A string question with a maximum of 200 or fewer characters previews as one line, longer or unbounded as a box. The cumulative read (1 read, 13 findings) led to: a bad maximum no longer breaking Preview; the kept size rounding half up on both sides; an Outline click leaving Preview; the Outline unnumbered (Decision 6); a type change resetting *Choose one*; handles and toggles named after their card, arrow-key moves announced; presets dropped from the plan. Left as notes: drag has no Escape or auto-scroll; `.seg` and `.btn-toggle` are ApplyDesk's own controls, beside RRW's roles.
-- Iteration rung 4 (author, 2026-11-12): Preview in a new tab and the title card collapsing (Decision 1, Semantics). The tab reads the builder through `window.opener`, kept on purpose so a reload picks up later edits; both tabs are the same origin behind the same gate. A tab opened without an opener (middle-click) says it shows the sample form. Its read: 9 findings, all prose, tests or nits, acted on. Then (author): the in-page Preview kept beside the tab, its button reading *Back to edit* with *Save* inline after it, and no heading or note of its own; text boxes fit their text with no handle (after RRW's `data-fit-box`); the form title larger than a card's. One renderer, `operator/_form_draw.html`, draws both previews.
-- Iteration rung 5 (author, 2026-11-12): a seventh type, **Select people**: a box of pills after Residential's Staff box, its pools `sample_data.people_pools` (Institution-wide, each assessment panel, the reviewer pool, the interviewers). The scaffold matches names and emails against sample rosters; the lookup through Graph comes with AD4. The sample's *Preferred reviewer* becomes one, on the reviewer pool.
+**Closed 2026-11-12** (author: "Form is largely stabilized"). Intended versus done:
+
+- **As planned (rungs 2–3):** the sample form as cards from one macro per kind, `<template>` clones for *+ New*, *+ Section* and *+ Page break* (*Replicate* clones the card), the last-card rule, drag on the document (moving a card ends a pointer capture) and ↑/↓ on the handle, the Outline following, Preview. Summaries are computed in Python (`card_summary`) and in the script; a Chromium test replays `test_form.SUMMARY_CASES` and every sample card through both.
+- **Changed at build (iterations, author):** the title card collapses (Decision 1) and its title is larger than a card's; Preview shows in place of the cards, its button reading *Back to edit* with *Save* beside it, and also opens in its own tab through `window.opener`, one renderer (`operator/_form_draw.html`) drawing both; text boxes fit their text with no handle; a card's buttons sit flush right; **a seventh type, Select people** (min, max, and a pool from `sample_data.people_pools`), matched against sample rosters until AD4 looks people up through Graph. List presets were dropped: none were specified.
+- **Decisions confirmed at build:** a string maximum of 200 or fewer previews as one line; the kept size rounds half up on both sides; the Outline is not numbered; a type change resets *Choose one*, a 4:5 ratio and *Institution-wide*; a pool an exercise lacks reads as *Institution-wide*; the preview tab keeps its opener on purpose (same origin, same gate) so a reload picks up edits.
+- **Reads:** five `diff-reviewer` reads (the cumulative read of rungs 2–3, then one per code iteration) found 13, 9, 7 and 8 findings, plus a further pass; every one was fixed or recorded. Codex found one more (text stranded in a full people box), fixed. Left as notes: drag has no Escape or auto-scroll; `.seg` and `.btn-toggle` are ApplyDesk's own controls beside RRW's roles.
+- **Not built, by decision:** conditional questions (author, 2026-11-12), deferred with a minimal shape and a trigger in `applydesk/guide/todo_master.md`.
 
 ## PR ladder
 
@@ -97,18 +99,18 @@ Building. Base `73d4230` for the cumulative read.
 
 ## Open questions
 
-- **Visibility beyond shown / not shown**: the further states belong in the spec (author: "there should be more states in the spec"); which, and when (author).
-- **`close_check.py` reads only RRW's `guide/`**, as AD1 found: this close is checked by hand unless the tool learns ApplyDesk's folder (author).
+- **Visibility beyond shown / not shown**: still open, moved to `applydesk/guide/todo_master.md` (author).
+- **`close_check.py` reads only RRW's `guide/`**: this close was checked by hand against the five close lines.
 
 ## Out of scope
 
 - **Saving** the form, and checking it on the server (bounds that make sense, lists with options): AD2 gives the database, AD4 the form's storage and versioning (`applydesk/guide/todo_master.md`, roadmap).
 - **The applicant's side**: filling the form in, and the photo field's own cropper (`applydesk/docs/photo_field_design.md`), come with AD4.
-- **Conditional questions** and answer validation beyond the bounds.
+- **Conditional questions** (author, 2026-11-12: not needed for a typical application form yet), and answer validation beyond the bounds. Deferred in `applydesk/guide/todo_master.md`.
 
 ## Doc impact
 
 - `applydesk/spec/applications.md` — the Form tab's page: cards, types, visibility, moves, nothing saved (rungs 2–3).
 - `applydesk/guide/segment_AD1_skeleton.md` — the Form row of the URL map points here (rung 2).
-- `applydesk/guide/todo_master.md` — ruling 12: the photo type is in the MVP, an exception to ruling 3; the AD1B roadmap row, deleted at close (rung 1).
-- `applydesk/README.md` — this plan's row (rung 1).
+- `applydesk/guide/todo_master.md` — ruling 12: the photo type is in the MVP, an exception to ruling 3; the AD1B roadmap row, deleted at close (rung 1); conditional questions deferred and visibility states left open (close).
+- `applydesk/README.md` — this plan's row (rung 1), moved to the archive's index at close.
