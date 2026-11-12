@@ -76,14 +76,16 @@ def _surface_cols(
     return re.findall(r"<col[^>]*>", colgroup)
 
 
-def test_the_surface_starts_an_unsized_profile_column_at_its_header(
+def test_the_surface_gives_profile_no_column(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,  # noqa: F811 (fixture)
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
+    """Profile rides beside the name (20M Item 1), so the fixed layout
+    starts no column for it."""
     cols = _surface_cols(db, make_client, alice, rae, "prof-width", {"identity": 200})
-    assert f'<col style="width: {profile_column_ch_width("Profile")}ch">' in cols
+    assert f'<col style="width: {profile_column_ch_width("Profile")}ch">' not in cols
     # The numeric Rating column starts at its header / digit span.
     rating = (
         db.execute(
@@ -108,15 +110,15 @@ def test_the_status_column_takes_a_fixed_width() -> None:
     assert "th.rs-status { width: 4ch; }" in (templates / "base.html").read_text()
 
 
-def test_an_operator_set_profile_width_wins(
+def test_a_saved_profile_width_starts_no_column(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,  # noqa: F811 (fixture)
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
+    """A Profile width saved before 20M is kept but unused."""
     cols = _surface_cols(db, make_client, alice, rae, "prof-width-set", {"df_PROFILE": 90})
-    assert '<col style="width: 90px">' in cols
-    assert f'<col style="width: {profile_column_ch_width("Profile")}ch">' not in cols
+    assert '<col style="width: 90px">' not in cols
 
 
 def test_the_preview_mirrors_it(client: TestClient, db: Session) -> None:

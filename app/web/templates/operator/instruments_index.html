@@ -2822,9 +2822,11 @@
             // and response columns. The reviewer surface always
             // renders response columns AFTER display columns, so
             // we do the same here.
+            // 20M Item 1 — Profile rides beside the name, never a column.
+            var profile = selected.find(function (s) { return s.sourceType === 'reviewee' && s.sourceField === 'profile_link'; });
             var displays = selected.filter(function (s) {
               return s.sourceType !== 'response'
-                && !(s.sourceType === 'reviewee' && (s.sourceField === 'name' || s.sourceField === 'email_or_identifier'));
+                && !(s.sourceType === 'reviewee' && (s.sourceField === 'name' || s.sourceField === 'email_or_identifier' || s.sourceField === 'profile_link'));
             });
             var responses = selected.filter(function (s) { return s.sourceType === 'response'; });
             var identityW = parseInt(card.getAttribute('data-new-model-band2-identity-width') || '', 10) || 0;
@@ -2918,6 +2920,9 @@
             if (name || email) {
               html += '<td class="rs-reviewee">';
               if (name) { html += '<strong>' + esc(name.value || '—') + '</strong>'; }
+              if (name && profile && profile.value) {
+                html += ' <span class="rs-profile">' + profileCell(profile.value) + '</span>';
+              }
               if (name && email) { html += '<br>'; }
               if (email) { html += '<code>' + esc(email.value || '—') + '</code>'; }
               html += '</td>';
@@ -3799,8 +3804,10 @@
             var band2 = dfBand2(btn);
             var row = btn.closest('[data-new-model-df-row]');
             if (!band2 || !row) { return; }
+            // Profile (20M Item 1) is in the order but never moves.
             var movable = dfRows(band2).filter(function (r) {
-              return r.getAttribute('data-reorderable') === 'true';
+              return r.getAttribute('data-reorderable') === 'true'
+                && r.getAttribute('data-beside-name') !== 'true';
             });
             var i = movable.indexOf(row);
             var up = btn.getAttribute('data-new-model-df-move') === 'up';
@@ -4618,6 +4625,7 @@
                     data-display-field-id="{{ field.display_field_id }}"
                     data-width="{{ field.width_px or '' }}"
                     data-reorderable="{{ 'true' if field.reorderable else 'false' }}"
+                    {% if field.beside_name %}data-beside-name="true"{% endif %}
                     {% if field.locked %}data-locked="true"{% endif %}>
                   <td><label class="pill pill-count tag-chip"
                              title="{{ 'Not shown on group rows' if _group_off else _title_on }}"><input
@@ -4629,10 +4637,12 @@
                            title="{{ 'Not shown on group rows' if _group_off else _title_on }}"
                            onchange="newModelDfToggle(this)">{{ field.label }}</label></td>
                   <td class="col-shrink">
-                    {% if not field.locked %}
+                    {# 20M Item 1 — Profile rides beside the name, so its
+                       row, pinned after Email, takes no arrows. #}
+                    {% if not field.locked and not field.beside_name %}
                       <button type="button" class="btn secondary btn-short"
                               data-new-model-df-move="up"
-                              {% if loop.previtem is not defined or loop.previtem.locked %}disabled{% endif %}
+                              {% if loop.previtem is not defined or loop.previtem.locked or loop.previtem.beside_name %}disabled{% endif %}
                               aria-label="Move {{ field.label }} up"
                               title="Move up"
                               onclick="newModelDfMove(this)">▲</button>

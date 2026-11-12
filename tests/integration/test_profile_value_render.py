@@ -189,11 +189,12 @@ def test_the_surface_masks_a_value_that_is_not_an_address(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     body = _surface(db, make_client, alice, rae, "pv-surface-text", TEXT)
-    assert ">Profile<" in body
+    # Beside the name, never a column (20M Item 1), so no header and no
+    # sort value of its own.
+    assert ">Profile<" not in body
     assert _masked(TEXT) in body
     assert TEXT not in _hrefs(body)
-    # The column still sorts on the stored value.
-    assert f'data-sort-value="{TEXT}"' in body
+    assert f'data-sort-value="{TEXT}"' not in body
 
 
 def test_the_surface_never_links_a_script(

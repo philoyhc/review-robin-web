@@ -33,7 +33,7 @@ Four items, the mock-ups agreed 2026-11-11 (author):
 ## Judgment calls — decided
 
 - One setting serves both scopes, not a second column for group instruments: the scope already decides which values are legal.
-- Profile's pin is a render rule, not a data change: its `display_order` is left as stored and simply not used.
+- Profile's pin is a render rule, not a data change: Band 3 lists it after Email whatever its stored order, so the next reorder Save (which must name every unlocked field) stores it there (rung 2, 2026-11-12).
 - Stacked labels use the display field's label (`display_field_label`), as the column header does.
 
 ## Blast radius (measured)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 import pytest
@@ -201,8 +202,14 @@ def test_profile_link_renders_as_anchor(
 
     assert response.status_code == 200
     body = response.text
-    assert ">Profile<" in body
-    assert ('<a href="https://example.edu/carol" aria-label="View — Carol">View</a>') in body
+    # 20M Item 1 — Profile rides beside the name, in the identity cell,
+    # and heads no column.
+    assert ">Profile<" not in body
+    assert re.search(
+        r'<strong>Carol</strong> <span class="rs-profile">\s*'
+        r'<a href="https://example.edu/carol" aria-label="View — Carol">View</a>',
+        body,
+    )
 
 
 def test_profile_link_empty_renders_empty_cell(
@@ -240,5 +247,7 @@ def test_profile_link_empty_renders_empty_cell(
     response = rae_client.get(f"/me/sessions/{review_session.public_id}")
 
     assert response.status_code == 200
-    assert ">Profile<" in response.text
+    # No value: nothing beside the name, and no column (20M Item 1).
+    assert ">Profile<" not in response.text
+    assert 'class="rs-profile"' not in response.text
     assert "https://example.edu" not in response.text
