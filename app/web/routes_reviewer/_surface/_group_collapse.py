@@ -28,7 +28,9 @@ def _collapse_group_rows(
     """Collapse a group-scoped instrument's per-assignment rows into
     one row per boundary-defined group (Segment 13C reviewer surface).
 
-    Rows are partitioned by their assignment's group key; each
+    Rows are partitioned by their assignment's group key and ordered by
+    the tag values the group shows, in Band 3 order (segment 20M Item 4);
+    each
     partition yields one row carrying its lowest-id member assignment
     as the representative — response inputs key off it and the write
     fan-out spreads the answer to the rest. The representative row
@@ -41,8 +43,11 @@ def _collapse_group_rows(
     for row in per_assignment_rows:
         group_key = group_key_by_assignment.get(row["assignment"].id, ())
         partitions.setdefault(group_key, []).append(row)
-    collapsed: list[SurfaceRow] = []
-    for group_key in sorted(partitions):
+    # 20M Item 4 — the rows sort by the tags they show: the values of the
+    # selected tag display fields in Band 3 order, as a tuple, falling
+    # back to the boundary key when a group shows no tag value.
+    keyed: list[tuple[tuple[str, ...], SurfaceRow]] = []
+    for group_key in partitions:
         members = sorted(partitions[group_key], key=lambda r: r["assignment"].id)
         representative = dict(members[0])
         names = sorted(r["assignment"].reviewee.name for r in members)
@@ -85,8 +90,9 @@ def _collapse_group_rows(
             "extra_count": len(names) - len(shown),
         }
         representative["group_label"] = tag_line or ", ".join(shown) or "the group"
-        collapsed.append(representative)
-    return collapsed
+        keyed.append((tuple(tag_values) if tag_values else group_key, representative))
+    keyed.sort(key=lambda pair: pair[0])
+    return [row for _, row in keyed]
 
 
 __all__ = ["GROUP_MEMBER_NAME_LIMIT", "_collapse_group_rows"]

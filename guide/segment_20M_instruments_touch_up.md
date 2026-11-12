@@ -51,6 +51,12 @@ Taken 2026-11-11 at `933518e`.
 
 Profile's 8 templates include the rosters, results and summary pages, which Item 1 leaves alone: only the reviewer surface and the Instruments preview move it.
 
+## Status
+
+Building. Base `1c650a1` for the cumulative read. Rungs 2 (#3810) and 3 (#3811) merged; 4–6 built.
+- Rung 4's hidden input sits beside the preview's chips' inputs, not in Band 3: Band 3 locks by its two tables, and nothing else there may take input (the full suite caught it).
+- Rung 6: the Instruments page preview shows one sample group, so it has no group order to follow; only the reviewer surface sorts.
+
 ## PR ladder
 
 1. **Plan** (this file).
