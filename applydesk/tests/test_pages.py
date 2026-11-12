@@ -30,6 +30,8 @@ PAGES = (
         f"/applydesk/operator/exercises/{EX}/{section}"
         for section in ("setup", "form", "applications", "panels", "review", "reports")
     ),
+    f"/applydesk/operator/exercises/{EX}/form/preview",
+    f"/applydesk/operator/exercises/{BLANK}/form/preview",
     f"/applydesk/operator/exercises/{BLIND}",  # Review stage: "Go to Review"
     f"/applydesk/operator/exercises/{BLIND}/setup",  # blind review on
     f"/applydesk/operator/exercises/{BLIND}/panels",  # no reviewer pool

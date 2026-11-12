@@ -44,7 +44,9 @@ def page() -> Iterator[Page]:
         tab = browser.new_page(viewport={"width": 1280, "height": 900})
         errors: list[str] = []
         tab.on("pageerror", lambda exc: errors.append(str(exc)))
-        tab.route(f"{ORIGIN}/**", serve)
+        # A tab the page opens (Preview) reports its errors too.
+        tab.context.on("page", lambda p: p.on("pageerror", lambda exc: errors.append(str(exc))))
+        tab.context.route(f"{ORIGIN}/**", serve)
         yield tab
         browser.close()
         assert errors == [], f"page errors: {errors}"
@@ -264,23 +266,6 @@ def test_a_card_moves_with_the_arrow_keys(page: Page) -> None:
     assert labels.index("Summary") == labels.index("Methods") + 1
 
 
-def test_preview_shows_the_form_as_an_applicant_sees_it(page: Page) -> None:
-    page.goto(FORM)
-    page.locator("[data-fb-preview]").click()
-    assert page.locator("#fb-preview").is_visible()
-    assert not page.locator("#fb-cards").is_visible()
-    body = page.locator("[data-fb-preview-body]")
-    assert body.locator("h3.fb-pv-form").inner_text() == "Application form"
-    assert body.locator(".fb-pv-page").all_inner_texts() == ["PAGE 1", "PAGE 2"]
-    assert body.get_by_label("Months the project will run").get_attribute("type") == "number"
-    assert body.get_by_label("Months the project will run").get_attribute("max") == "6"
-    assert body.get_by_role("radio", name="Engineering").count() == 1
-    assert body.locator(".fb-pv-frame").count() == 1
-    assert "Reviewers see your answer." in body.inner_text()
-    page.locator("[data-fb-preview-close]").click()
-    assert page.locator("#fb-cards").is_visible() and not page.locator("#fb-preview").is_visible()
-
-
 # Fills one card from a FormCard's fields, as an operator would: the
 # type menu first (it empties the new type's fields), then each field.
 _FILL = """([card, c]) => {
@@ -334,29 +319,6 @@ def test_a_type_change_resets_choose_one(page: Page) -> None:
     )
 
 
-def test_a_bad_max_length_still_previews(page: Page) -> None:
-    page.goto(FORM)
-    card = _card(page, "Project title")
-    card.locator("[data-fc-toggle]").click()
-    card.locator('[data-f="max"][data-g="string"]').fill("-1")
-    page.locator("[data-fb-preview]").click()
-    assert page.locator("#fb-preview").is_visible()
-    box = page.locator("[data-fb-preview-body]").get_by_label("Project title")
-    assert box.evaluate("e => e.tagName") == "TEXTAREA"
-
-
-def test_the_outline_leaves_preview_for_the_card(page: Page) -> None:
-    page.goto(FORM)
-    page.locator("[data-fb-preview]").click()
-    page.locator(".fb-o-item", has_text="Methods").click()
-    assert page.locator("#fb-cards").is_visible()
-    assert not page.locator("#fb-preview").is_visible()
-    focused = page.evaluate(
-        "document.activeElement.closest('.fc').querySelector('[data-sum=label]').textContent"
-    )
-    assert focused == "Methods"
-
-
 def test_handles_name_their_card_and_moves_are_announced(page: Page) -> None:
     page.goto(FORM)
     card = _card(page, "Summary")
@@ -366,3 +328,142 @@ def test_handles_name_their_card_and_moves_are_announced(page: Page) -> None:
     grip.focus()
     page.keyboard.press("ArrowUp")
     assert (page.locator("[data-fb-live]").text_content() or "").startswith("Moved Summary to ")
+
+
+# --- Iteration: Preview in its own tab; the form's own card collapses ---
+PREVIEW = f"{FORM}/preview"
+
+
+def _the_applicant_form(body: Locator) -> None:
+    """What both sources draw for the sample form: pages, a number with
+    its bounds, a list as radios, a photo frame, the reviewers' note."""
+    assert body.locator("h2.fb-pv-form").inner_text() == "Application form"
+    assert body.locator("h3.fb-pv-section").all_inner_texts() == ["About the project", "About you"]
+    assert body.locator(".fb-pv-page").all_inner_texts() == ["PAGE 1", "PAGE 2"]
+    months = body.get_by_label("Months the project will run")
+    assert months.get_attribute("type") == "number" and months.get_attribute("max") == "6"
+    assert body.get_by_role("radio", name="Engineering").count() == 1
+    assert body.locator(".fb-pv-frame").count() == 1
+    assert "Reviewers see your answer." in body.inner_text()
+
+
+def test_preview_opens_a_tab_with_the_form_as_it_stands(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Project title")
+    card.locator("[data-fc-toggle]").click()
+    # A bad maximum previews as a box, and does not stop the tab drawing.
+    card.locator('[data-f="max"][data-g="string"]').fill("-1")
+    label = card.locator('[data-f="label"]').element_handle()
+    label.fill("Working title")
+    with page.context.expect_page() as opened:
+        page.locator("[data-fb-preview-tab]").click()
+    tab = opened.value
+    tab.wait_for_load_state()
+    body = tab.locator("[data-fb-preview-body]")
+    _the_applicant_form(body)
+    assert body.get_by_label("Working title").evaluate("e => e.tagName") == "TEXTAREA"
+    assert "unsaved" in (tab.locator("[data-pv-source]").text_content() or "")
+    # A reload picks up later edits.
+    label.fill("Final title")
+    tab.reload()
+    assert tab.locator("[data-fb-preview-body]").get_by_label("Final title").count() == 1
+
+
+def test_preview_on_its_own_shows_the_sample_form(page: Page) -> None:
+    page.goto(PREVIEW)
+    _the_applicant_form(page.locator("[data-fb-preview-body]"))
+    assert "sample form" in (page.locator("[data-pv-source]").text_content() or "")
+
+
+def test_preview_of_another_exercise_ignores_this_form(page: Page) -> None:
+    page.goto(FORM)
+    _card(page, "Project title").locator("[data-fc-toggle]").click()
+    _card(page, "Project title").locator('[data-f="label"]').fill("Not for the blank form")
+    with page.context.expect_page() as opened:
+        page.evaluate(f"window.open('{BLANK}/preview', 'other')")
+    other = opened.value
+    other.wait_for_load_state()
+    assert "sample form" in (other.locator("[data-pv-source]").text_content() or "")
+    assert other.locator("[data-fb-preview-body]").get_by_label("Untitled question").count() == 1
+
+
+def test_the_form_s_own_card_collapses(page: Page) -> None:
+    page.goto(BLANK)
+    assert page.locator('[data-kind="title"]').get_attribute("data-open") is not None
+    page.goto(FORM)
+    title = page.locator('[data-kind="title"]')
+    toggle = title.locator("[data-fc-toggle]")
+    assert toggle.get_attribute("aria-label") == "Expand the form's title and description"
+    assert not title.locator('[data-fb="title"]').is_visible()
+    assert title.locator('[data-sum="title"]').inner_text() == "Application form"
+    toggle.click()
+    assert toggle.get_attribute("aria-expanded") == "true"
+    assert toggle.get_attribute("aria-label") == "Collapse the form's title and description"
+    title.locator('[data-fb="title"]').fill("Travel grant form")
+    title.locator("[data-fc-toggle]").click()
+    assert title.locator('[data-sum="title"]').inner_text() == "Travel grant form"
+    assert not title.locator('[data-fb="title"]').is_visible()
+
+
+def test_preview_takes_the_cards_place_and_back(page: Page) -> None:
+    page.goto(FORM)
+    button = page.locator("[data-fb-preview]")
+    # Save sits beside it.
+    assert button.locator("xpath=following-sibling::button").inner_text() == "Save"
+    button.click()
+    assert button.inner_text() == "Back to edit"
+    assert not page.locator("#fb-cards").is_visible()
+    preview = page.locator("#fb-preview")
+    assert preview.is_visible()
+    # The form alone: no heading or note of its own.
+    assert "Nothing typed here is kept" not in preview.inner_text()
+    first = preview.locator(":scope > *").first
+    assert first.get_attribute("data-fb-preview-body") is not None
+    assert (
+        preview.locator("[data-fb-preview-body] > *").first.evaluate("e => e.className")
+        == "fb-pv-form"
+    )
+    _the_applicant_form(preview.locator("[data-fb-preview-body]"))
+    button.click()
+    assert button.inner_text() == "Preview"
+    assert page.locator("#fb-cards").is_visible() and not preview.is_visible()
+    # An Outline click while previewing goes back to the card.
+    button.click()
+    page.locator(".fb-o-item", has_text="Methods").click()
+    assert page.locator("#fb-cards").is_visible() and button.inner_text() == "Preview"
+    focused = page.evaluate(
+        "document.activeElement.closest('.fc').querySelector('[data-sum=label]').textContent"
+    )
+    assert focused == "Methods"
+
+
+def test_text_boxes_grow_to_fit_without_a_handle(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Summary")
+    card.locator("[data-fc-toggle]").click()
+    help_box = card.locator('[data-f="help"]')
+    assert help_box.evaluate("e => getComputedStyle(e).resize") == "none"
+    before = help_box.evaluate("e => e.offsetHeight")
+    help_box.fill("A line\n" * 8)
+    after = help_box.evaluate("e => e.offsetHeight")
+    assert after > before
+    assert help_box.evaluate("e => e.scrollHeight <= e.clientHeight")
+    # A box in a card that opens from collapsed is sized to its text.
+    long = _card(page, "Your proposed project")
+    long.locator("[data-fc-toggle]").click()
+    box = long.locator('[data-f="help"]')
+    page.wait_for_function(
+        "e => e.style.height !== '' && e.scrollHeight <= e.clientHeight", arg=box.element_handle()
+    )
+    # And a new card's box, after + New.
+    card.locator('[data-fc-act="new"]').click()
+    fresh = page.locator('#fb-cards .fc[data-open] [data-f="help"]').nth(1)
+    fresh.fill("One\nTwo\nThree\nFour")
+    assert fresh.evaluate("e => e.scrollHeight <= e.clientHeight")
+
+
+def test_the_form_title_is_larger_than_a_card_s(page: Page) -> None:
+    page.goto(FORM)
+    size = "e => parseFloat(getComputedStyle(e).fontSize)"
+    title = page.locator('[data-sum="title"]').evaluate(size)
+    assert title > _card(page, "Summary").locator('[data-sum="label"]').evaluate(size)

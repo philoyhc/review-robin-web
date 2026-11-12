@@ -53,6 +53,21 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
     )
 
 
+@router.get("/exercises/{exercise_id}/form/preview", name="applydesk_form_preview")
+def form_preview(request: Request, exercise_id: str) -> Response:
+    """The application form as an applicant sees it, in its own tab
+    (segment AD1B, iteration): drawn from the Form page that opened it,
+    else from the sample form."""
+    exercise = exercise_or_404(exercise_id)
+    return render(
+        request,
+        "applydesk/operator/form_preview.html",
+        area="Exercises",
+        exercise=exercise,
+        snapshot=sample_data.form_snapshot(exercise.public_id),
+    )
+
+
 @router.get("/exercises/{exercise_id}/{section}", name="applydesk_exercise_section")
 def exercise_section(request: Request, exercise_id: str, section: str) -> Response:
     exercise = exercise_or_404(exercise_id)

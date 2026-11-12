@@ -66,7 +66,8 @@ Every move works in the browser; nothing is saved until AD2, and a
 reload restores the sample form.
 
 - **Layout.** The form's own *Form title* and *Description* at the top,
-  which cannot be deleted or moved; then its cards; an Outline beside
+  which cannot be deleted or moved and collapses like a card, its title
+  larger than a card's; then its cards; an Outline beside
   them in the right third, kept in view (one column on a phone, the
   Outline below).
 - **Cards.** A question or text card (*field*), a *section* (a title) or a
@@ -74,7 +75,8 @@ reload restores the sample form.
   Integer and Decimal (min, max, step), List (comma-separated options,
   *Choose one* or *Choose any*), Photo (an aspect ratio; kept as a JPEG
   600 px on its longer side) and Title and Description (display only).
-  Changing the type keeps the question, help text, *Required* and
+  Help text and descriptions grow to fit what is typed, with no resize
+  handle; so does a long answer's box in Preview. Changing the type keeps the question, help text, *Required* and
   visibility, and empties the new type's fields: a photo's ratio starts
   at 4:5 and a list at *Choose one*.
 - **Visibility** is per card: *Shown to reviewers* or *Not shown*; a new
@@ -82,7 +84,8 @@ reload restores the sample form.
 - **Collapsed**, a card shows its question and help text (a text card's
   title and description), a summary of its settings, and *Required* or
   *Optional* and its visibility as chips; expanded, its fields and its
-  buttons. Cards load collapsed; a form with one card opens it. No card
+  buttons. Cards load collapsed, the form's own card too; a form with
+  one card opens it and the form's own card. No card
   shows a number.
 - **Buttons** on each card: *Replicate* (a field card), *+ New* (an empty
   String card), *+ Section* and *+ Page break*, each inserted right after
@@ -94,9 +97,16 @@ reload restores the sample form.
 - **The Outline** lists sections, cards and page breaks in order, with
   each card's visibility, and the counts of pages, sections, questions
   (a text card is no question) and required ones; a click goes to the
-  card, leaving Preview. Nothing in it is numbered. It follows every
+  card. Nothing in it is numbered. It follows every
   change.
-- **Preview** shows the form as an applicant sees it, page by page, built
-  from the cards on screen: a number field with its bounds, a list as
+- **Preview**, at the foot of the Outline with *Save* (disabled until
+  AD2) beside it, shows the form in place of the cards, as an applicant
+  sees it, page by page, built from the cards on screen; the button reads
+  *Back to edit* meanwhile, and an Outline click also returns. *Open the
+  preview in a new tab*, under them, shows the same at
+  `/operator/exercises/<id>/form/preview` (a reload of the tab picks up
+  later edits; opened on its own, or once the Form page has gone to
+  another exercise, it shows the sample form and says so; its *Submit*
+  is disabled): a number field with its bounds, a list as
   radio buttons or tick boxes, a photo's frame at its ratio, and "Reviewers
   see your answer." under a shown question. Nothing typed there is kept.

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 
 @dataclass(frozen=True)
@@ -345,6 +345,23 @@ def form_heading(exercise_id: str) -> tuple[str, str]:
     if exercise_id in EMPTY_FORMS:
         return "", ""
     return "Application form", FORM_DESCRIPTION
+
+
+def form_snapshot(exercise_id: str) -> dict[str, object]:
+    """The form as the preview tab draws it, when the builder that opened
+    it cannot hand over its own: a field card has the same keys as the
+    page's ``applydeskFormSnapshot()`` (a section or page break more than
+    the page sends, read only for ``kind`` and ``label``), a photo's kept
+    size worked out here."""
+    title, description = form_heading(exercise_id)
+    return {
+        "exercise": exercise_id,
+        "title": title,
+        "description": description,
+        "cards": [
+            {**asdict(c), "kept": kept_size(c.ratio_w, c.ratio_h)} for c in form_cards(exercise_id)
+        ],
+    }
 
 
 def kept_size(ratio_w: str, ratio_h: str) -> tuple[int, int] | None:

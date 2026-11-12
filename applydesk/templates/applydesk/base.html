@@ -149,7 +149,9 @@
     @media (min-width: 736px) { .fb-split { grid-template-columns: minmax(0, 1fr) 340px; } .fb-side { position: sticky; top: 16px; } }
     @media (min-width: 1116px) { .fb-split { grid-template-columns: repeat(3, minmax(0, 1fr)); } .fb-main { grid-column: span 2; } }
     .fb-title { border-top: 4px solid var(--accent); margin-bottom: 12px; }
-    .fb-title-in { font-size: 18px !important; font-weight: 600; }
+    .fb-title-in { font-size: 22px !important; font-weight: 600; }
+    .fc-q.fb-title-q { font-size: 22px; line-height: 1.25; }
+    textarea[data-fit-box] { resize: none; overflow: hidden; }
     .fb-cards { display: flex; flex-direction: column; gap: 10px; }
     .fc { border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-card); }
     .fc-section { background: var(--surface-muted); border-color: var(--border-default); }
@@ -211,19 +213,19 @@
     @media (max-width: 599px) { .fc-foot .fc-del { margin-left: 0; } }
     .fc-dragging { opacity: 0.6; outline: 2px dashed var(--accent); }
     .fc-del[disabled] { cursor: not-allowed; }
-    .fb-preview { grid-column: 1 / -1; }
+    .fb-pv { max-width: 760px; }
     @media (min-width: 1116px) { .fb-preview { grid-column: span 2; } }
-    .fb-pv-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-    .fb-pv-form { font-size: 20px; margin: 12px 0 4px; }
-    .fb-pv-section { font-size: 17px; margin: 18px 0 4px; }
-    .fb-pv-page { margin: 18px 0 0; padding-top: 8px; border-top: 2px dashed var(--border-default); font-size: 12px; font-weight: 700; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.06em; }
-    .fb-pv-first { border-top: 0; padding-top: 0; }
+    .fb-pv-note { margin: 4px 0 0; font-size: 12px; }
+    .card .fb-pv-form { font-size: 20px; margin: 12px 0 4px; }
+    .card .fb-pv-section { font-size: 17px; margin: 18px 0 4px; }
+    .card .fb-pv-page { margin: 18px 0 0; padding-top: 8px; border-top: 2px dashed var(--border-default); font-size: 12px; font-weight: 700; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.06em; }
+    .card .fb-pv-first { border-top: 0; padding-top: 0; }
     .fb-pv-field { margin: 14px 0; }
     .fb-pv-label { display: block; font-weight: 600; font-size: 14px; }
     .fb-pv-req { font-weight: 400; color: var(--text-subtle); }
-    .fb-pv-title { margin: 0 0 2px; font-size: 15px; }
-    .fb-pv-help { margin: 2px 0 4px; font-size: 13px; color: var(--text-subtle); }
-    .fb-pv-seen { margin: 2px 0 4px; font-size: 12px; color: var(--chip-info-fg); }
+    .card .fb-pv-title { margin: 0 0 2px; font-size: 15px; }
+    .card .fb-pv-help { margin: 2px 0 4px; font-size: 13px; color: var(--text-subtle); }
+    .card .fb-pv-seen { margin: 2px 0 4px; font-size: 12px; color: var(--chip-info-fg); }
     .fb-pv-num { max-width: 200px; }
     .fb-pv-opts { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; font-size: 14px; }
     .fb-pv-photo { display: flex; align-items: center; gap: 12px; margin-top: 4px; font-size: 13px; }
@@ -317,6 +319,49 @@
         });
       });
       sync();
+    })();
+  </script>
+  <script>
+    // Boxes that fit their text (after RRW's data-fit-box, base.html): a
+    // textarea[data-fit-box] takes the height of its text above its rows,
+    // on load, on each edit and when its width changes (a collapsed card
+    // opening), with no handle. Boxes added later are wired by
+    // window.applydeskFitBoxes(node); wiring twice is a no-op.
+    (function () {
+      function fit(ta) {
+        if (!ta.getClientRects().length) return;
+        var y = window.scrollY, cs = getComputedStyle(ta);
+        ta.style.height = "auto";
+        ta.style.height = (ta.scrollHeight + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth)) + "px";
+        if (window.scrollY !== y) window.scrollTo(window.scrollX, y);
+      }
+      var watch = window.ResizeObserver ? new ResizeObserver(function (entries) {
+        var changed = [];
+        entries.forEach(function (e) {
+          if (e.target.__adFitWidth === e.contentRect.width) return;
+          e.target.__adFitWidth = e.contentRect.width;
+          changed.push(e.target);
+        });
+        if (changed.length) window.requestAnimationFrame(function () { changed.forEach(fit); });
+      }) : null;
+      // Stop watching boxes about to be thrown away (a redrawn preview,
+      // a deleted card), so the observer does not keep them alive.
+      window.applydeskUnfitBoxes = function (root) {
+        if (!watch) return;
+        root.querySelectorAll("textarea[data-fit-box]").forEach(function (ta) { watch.unobserve(ta); });
+      };
+      window.applydeskFitBoxes = function (root) {
+        (root || document).querySelectorAll("textarea[data-fit-box]").forEach(function (ta) {
+          if (ta.__adFit) return;
+          ta.__adFit = true;
+          if (watch) watch.observe(ta);
+          fit(ta);
+        });
+      };
+      document.addEventListener("input", function (e) {
+        if (e.target.matches && e.target.matches("textarea[data-fit-box]")) fit(e.target);
+      }, true);
+      window.applydeskFitBoxes();
     })();
   </script>
   <script>

@@ -1,0 +1,38 @@
+{% extends "applydesk/base.html" %}
+{# The application form as an applicant sees it, in its own tab
+   (segment AD1B): the Form page's "Open the preview in a new tab"
+   opens it. Drawn from that
+   page's cards when it is still open, else from the sample form. #}
+{% block title %}Preview · {{ exercise.name }}{% endblock %}
+{% block content %}
+<div class="ptitle"><h1>Preview</h1><span class="chip chip-mute">How applicants see it</span></div>
+<p class="lede">{{ exercise.name }}</p>
+<p class="placeholder"><strong>Placeholder.</strong> Sample data; forms are saved from segment AD2, so opened on its own this tab shows the sample form (segment AD1B).</p>
+<p class="muted" data-pv-source>Opened on its own, this tab shows the sample form, not edits on the Form page: use that page's link, Open the preview in a new tab. Nothing typed here is kept.</p>
+<section class="card fb-pv" aria-label="The application form">
+  <div data-fb-preview-body></div>
+  <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Submit</button></div>
+</section>
+{% include "applydesk/operator/_form_draw.html" %}
+<script type="application/json" id="fb-pv-sample">{{ snapshot | tojson }}</script>
+<script>
+// Segment AD1B: the preview tab. The Form page that opened it hands over
+// its cards as they stand (window.opener.applydeskFormSnapshot); opened
+// on its own, or once that page has gone, it shows the sample form. A
+// reload picks up the builder's latest edits.
+(function () {
+  var body = document.querySelector("[data-fb-preview-body]");
+  var source = document.querySelector("[data-pv-source]");
+  var form = JSON.parse(document.getElementById("fb-pv-sample").textContent);
+  try {
+    var handed = window.opener && window.opener.applydeskFormSnapshot && JSON.parse(window.opener.applydeskFormSnapshot());
+    if (handed && handed.exercise === form.exercise) {
+      form = handed;
+      source.textContent = "The form as it stands on the Form page, unsaved. Reload this tab to see later edits. Nothing typed here is kept.";
+    }
+  } catch (e) { /* the opener has navigated away: the sample stands */ }
+
+  window.applydeskDrawForm(body, form);
+})();
+</script>
+{% endblock %}
