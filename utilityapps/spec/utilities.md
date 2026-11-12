@@ -48,6 +48,7 @@ does the other applications' probes. Cordware's deployment excluded it on
 | Email Address Checker | `/email-check/` and the steps it posts to | The platform super-admin only (`utilityapps/spec/email_check.md` "Access") |
 | Telegram egress probe | `/diagnostics/telegram-egress`, and `…/run` it posts to | The platform super-admin only. Not on the index: an operator diagnostic, not a tool |
 | Interop proof of concept | `/interop-poc/` | The platform super-admin only. Not on the index: a working model for the next application that hands work to Review Robin |
+| Photo proof of concept | `/photo-poc/` | The platform super-admin only. Not on the index: a model for participant photos without Blob storage (segment U4, `utilityapps/guide/segment_U4_photo_poc.md`) |
 
 The index lists one card per tool, linking to its first page. Every page
 links back to the host's landing page (`/`) and to `/.auth/logout`.
