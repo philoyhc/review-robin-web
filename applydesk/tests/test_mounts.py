@@ -70,7 +70,7 @@ def test_log_records_are_stamped_applydesk() -> None:
     assert record.__dict__["application"] == "applydesk"
 
 
-def test_favicon_is_the_rose_form() -> None:
+def test_favicon_is_the_rose_sheet_with_a_tick() -> None:
     """The landing page draws the favicon the app's own base template
     carries (`cordware/tests/test_landing.py` holds the copy to it)."""
     icon = REGISTRY["applydesk"].icon

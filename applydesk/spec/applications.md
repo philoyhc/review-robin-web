@@ -16,7 +16,7 @@ rulings behind it are `applydesk/guide/todo_master.md`.
 | Factory | `applydesk.main:create_app` |
 | Logger prefix | `applydesk` |
 | Landing-page title | `ApplyDesk` |
-| Icon | A white form with a heading bar and a check, on a rose (`#be123c`) tile; the sheet runs off the tile's bottom. The source is `applydesk/templates/applydesk/base.html`, copied to `cordware/web/app_icons.py` |
+| Icon | A white application sheet on a rose (`#be123c`) tile, running off the bottom-right, a tick cut in rose (author, 2026-11-02). The source is `applydesk/templates/applydesk/base.html`, copied to `cordware/web/app_icons.py` |
 
 - The registry lists it after Residential's two applications and before
   Utilities, which stays last.

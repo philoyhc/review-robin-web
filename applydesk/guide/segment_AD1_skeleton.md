@@ -69,7 +69,7 @@ Taken 2026-11-12 at `9bf80d5`.
 ## Status
 
 Building. Base `573ffa3` (`main` before rung 2) for the cumulative read.
-- Rung 2: item 1 as planned; the favicon is a white form on a rose `#be123c` tile, for the author to redraw at item 2's check if wanted.
+- Rung 2: item 1 as planned; the favicon is the author's proposed ApplyDesk icon (2026-11-02), a white sheet with a tick on rose `#be123c`.
 
 ## PR ladder
 

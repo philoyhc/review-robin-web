@@ -49,9 +49,8 @@ APPLYDESK = (
     "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs>"
     "<clipPath id='t'><rect width='32' height='32' rx='7'/></clipPath></defs>"
     "<g clip-path='url(%23t)'><rect width='32' height='32' fill='%23be123c'/>"
-    "<rect x='7.5' y='5' width='17' height='31' rx='3' fill='%23fff'/>"
-    "<rect x='11.5' y='9.5' width='9' height='2.4' rx='1.2' fill='%23be123c'/>"
-    "<path d='M11.5 18.5 L15 22 L21 15.5' fill='none' stroke='%23be123c' stroke-width='2.6' "
+    "<rect x='7' y='5.5' width='34' height='38' rx='3.5' fill='%23fff'/>"
+    "<path d='M11.5 19 L16.5 24 L25.5 15' fill='none' stroke='%23be123c' stroke-width='3.6' "
     "stroke-linecap='round' stroke-linejoin='round'/></g></svg>"
 )
 UTILITIES = (
