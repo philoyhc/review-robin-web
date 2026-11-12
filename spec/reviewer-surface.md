@@ -654,36 +654,25 @@ In rendered order:
 1. **Reviewee** (always first, mandatory; class `.rs-reviewee`):
    reviewee `name` in **bold**, `email_or_identifier` in `<code>`
    beneath. Both are sourced from the `Reviewee` row pointed at by
-   the assignment. A self-review row (`Assignment.is_self_review`) adds
+   the assignment. **Profile**, when selected, renders inline right after
+   the name (`.rs-profile`): **View** for a web link, otherwise the muted
+   `•••` carrying the value, never an `href`; nothing when empty. It
+   takes no column in any layout. A self-review row (`Assignment.is_self_review`) adds
    a `.pill.pill-info` **Self review** after the name, the label the
    operator's Assignments page uses; writes are not blocked
    (`spec/rrw_functional_spec.md` §10.3). A group row's equivalent is
    under "Group-scoped instruments".
 2. **Display fields** (in operator-configured `InstrumentDisplayField.order`):
-   one column per visible row in `display_fields_by_instrument`.
+   one column per visible row in `display_fields_by_instrument`, when
+   the instrument's display layout is `across`; `stacked` and `joined`
+   put them in the identity cell instead ("Display layouts" below).
    Filtered to exclude duplicates of the always-rendered Reviewee
    identity column (i.e. `reviewee.name` /
    `reviewee.email_or_identifier` display fields are suppressed even
-   if the operator added them, because they'd duplicate column 1).
-   Each cell renders per the field's source:
-   - `reviewee.profile_link` → `<a href="{value}">View</a>` when the
-     value starts `http://` / `https://` with a host character after
-     the `//`, matched unstripped and ASCII-only (`views.is_web_link`);
-     any other non-empty value → a muted `•••` whose `title` (and
-     visually-hidden text) carries the value, never an `href`; empty
-     otherwise. One macro, `_partials/profile_value.html`, renders it
-     here, on the summary, the reviewee results and the operator
-     rosters; the Band 2 preview's `profileCell` mirrors it. The cell's
-     `data-sort-value` is the stored value.
-   - `pair_context.{n}` and the rest → plain text.
-   Header carries `class="rs-narrow"` for `profile_link` (URL
-   columns are kept narrow); other display headers have no width
-   modifier. When the table is `table-layout: fixed` (any column
-   width set), `rs-narrow`'s `width: 1%` would take 1% of the table,
-   so an unsized profile column's `<col>` starts at
-   `views.profile_column_ch_width(label)` ch instead — the label plus
-   room for the sort button, never narrower than "View". The reviewer
-   summary and the reviewee results start theirs the same way.
+   if the operator added them, because they'd duplicate column 1) and
+   **Profile**, which never heads a column (below). Cells are plain
+   text; `pair_context.{n}` and the rest alike. Display headers carry no
+   width modifier.
 3. **Response fields** (in stored `InstrumentResponseField.order`):
    one column per response field. Header text is the field label;
    required fields — and a visible field a require-mode parent governs
@@ -724,6 +713,31 @@ In rendered order:
    session-status pill (``Submitted`` / ``Saved but not
    submitted`` / ``Draft``) in the title row, and the summary
    page's session-level timestamp.
+
+### Display layouts
+
+`Instrument.display_layout` (`across` | `stacked` | `joined`, default
+`across`; `spec/instruments.md`) says where the selected display fields
+sit. It is read through `views.display_layout_for`: a stray value reads
+`across`, and a group-scoped instrument reads `across` as `joined`.
+
+- **Profile** is not a display field in this sense: it renders beside
+  the name (Columns, item 1) in every layout, by
+  `_partials/profile_value.html` (a web link per `views.is_web_link`).
+  The Band 2 preview does the same.
+- **`across`** — a column per field (Columns, item 2).
+- **`stacked`** — under the email, one `.rs-df-line` per field:
+  `Label: value`, the label muted (the display field's label, as the
+  column header would carry). An empty field's line is skipped.
+- **`joined`** — under the email, one `.rs-df-line` of the non-empty
+  values, comma-separated; nothing when all are empty.
+- **`stacked` and `joined` head no column.** A sort entry naming such a
+  field is kept but inert (`_surface/_context.py`), so the rows are not
+  ordered by it; Reviewee (Name) still sorts
+  (`spec/sort_by_reviewee.md`). Saved `df_<id>` widths are kept and
+  unused.
+- The reviewee results and observer collation pages keep their display
+  columns.
 
 ### Responses stacked
 
@@ -961,17 +975,23 @@ reviewer-surface specifics:
   group. A branch's cells (above) are judged on the representative's
   own answers, carried into the collapsed row along with its cells.
 - **`Group` identity column** replaces the `Reviewee` column and
-  the per-reviewee display columns. Its first line joins, with
-  commas, the values of every visible `reviewee.tag_*` display field
-  on the lowest-id member — the tag pills the operator's Band 2
-  preview shows — falling back to the boundary tag values when none
-  yields a value. A second line lists the members, always (Name stays
-  shown on a group instrument) — the first
-  `GROUP_MEMBER_NAME_LIMIT` (10) names, then a `+N more` suffix. No separate display-field
-  columns render. When the group is a self-review group, a
+  the per-reviewee display columns. Its first line lists the members,
+  always (Name stays shown on a group instrument): the first
+  `GROUP_MEMBER_NAME_LIMIT` (10) names, then a `+N more` suffix. Below
+  it come the values of every visible `reviewee.tag_*` display field on
+  the lowest-id member, in Band 3 order — the tag pills the operator's
+  Band 2 preview shows — falling back to the boundary tag values when
+  none yields a value. The layout (`views.display_layout_for`, `joined`
+  or `stacked`) sets the tags' form, not bold in either: `joined` one
+  `.rs-df-line` of comma-joined values, `stacked` one `Label: value`
+  `.rs-df-line` per tag, the label muted, as an individual row's. No
+  separate display-field columns render. When the group is a
+  self-review group, a
   `.pill.pill-info` **Self review** follows on its own line: every
   member's assignment is flagged then, so the representative's flag
   speaks for the group.
+- **Row order** follows the tags shown: see `spec/sort_by_reviewee.md`
+  "Group-scoped instruments".
 - **Fixed table layout.** The group table is `table-layout: fixed`
   (`table.rs-group-table`): the `Group` column is pinned to a
   third of the table width (`th.rs-group { width: 33% }`), and
@@ -998,7 +1018,7 @@ reviewer-surface specifics:
   exactly the drift the shared path exists to prevent.
 
 The collapsed row carries the same dict shape plus a
-`group_identity` block (`tag_line` / `member_names` /
+`group_identity` block (`tag_line` / `tag_items` / `member_names` /
 `extra_count`) and a `group_label`; the
 instrument group dict carries `is_group: bool`, which the
 template branches on.

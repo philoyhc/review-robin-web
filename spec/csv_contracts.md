@@ -973,6 +973,12 @@ import leaves as stored, on an unchanged anchor, is not checked.
   row, or with a blank cell, leaves the instrument at the default
   `columns`. The export writes a stored value outside `RESPONSE_LAYOUTS`
   as `columns`.
+- **`instruments[n].display_layout` is the Display fields chip**
+  (`spec/instruments.md`), an `enum` row: `across`, `stacked` or `joined`
+  (`DISPLAY_LAYOUTS`). An unknown value is refused. A file without the
+  row, or with a blank cell, leaves the instrument at the default
+  `across`. The export writes a stored value outside `DISPLAY_LAYOUTS` as
+  `across`.
 - **`instruments[n].order` is informational.** Apply ignores the `order`
   cell — **the `[n]` number is authoritative**, not the rows' place in
   the file. Each instrument is stored at its 0-based rank among the
