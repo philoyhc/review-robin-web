@@ -157,3 +157,22 @@ def test_a_refused_upload_keeps_nothing(session: Session) -> None:
     with pytest.raises(PhotoRefused):
         service.save(session, b"nope", FULL, "admin@example.edu")
     assert service.list_photos(session) == []
+
+
+def test_a_jpeg_comment_is_not_carried_into_the_saved_photo() -> None:
+    """Codex on #3824: Pillow carries `info` through crop and resize, and
+    the JPEG encoder writes an inherited `comment` unless told otherwise."""
+    buffer = io.BytesIO()
+    Image.new("RGB", (800, 1000), (10, 20, 30)).save(buffer, format="JPEG", comment=b"note")
+    saved = _open(service.process(buffer.getvalue(), FULL))
+    assert "comment" not in saved.info
+    assert b"note" not in service.process(buffer.getvalue(), FULL)
+
+
+def test_a_color_key_transparent_png_lands_on_white() -> None:
+    """Codex on #3824: an RGB PNG whose tRNS chunk marks one color
+    transparent is flattened as an alpha channel is."""
+    buffer = io.BytesIO()
+    Image.new("RGB", (800, 1000), (0, 255, 0)).save(buffer, format="PNG", transparency=(0, 255, 0))
+    pixel = _open(service.process(buffer.getvalue(), FULL)).convert("RGB").getpixel((240, 300))
+    assert isinstance(pixel, tuple) and min(pixel) > 245

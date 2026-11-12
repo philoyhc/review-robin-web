@@ -86,7 +86,9 @@ def _check(crop: Crop, size: tuple[int, int]) -> None:
 
 def _flatten(image: Image.Image) -> Image.Image:
     """RGB, with any transparency on white."""
-    if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
+    # An alpha channel, or a palette or color key marked transparent
+    # (`transparency` in `info`, e.g. a PNG's tRNS chunk).
+    if image.mode in ("RGBA", "LA", "PA") or "transparency" in image.info:
         rgba = image.convert("RGBA")
         background = Image.new("RGB", rgba.size, (255, 255, 255))
         background.paste(rgba, mask=rgba.getchannel("A"))
@@ -102,6 +104,9 @@ def process(data: bytes, crop: Crop) -> bytes:
     cropped = _flatten(image.crop(box))
     # Pillow types `size` with numpy's array type, which is not installed.
     out = cropped.resize(OUTPUT_SIZE, Image.Resampling.LANCZOS)  # pyright: ignore[reportUnknownMemberType]  -- numpy-typed overload
+    # Pillow carries the upload's `info` (a JPEG comment, DPI, ...) through
+    # crop and resize, and the JPEG encoder writes some of it by default.
+    out.info.clear()
     buffer = io.BytesIO()
     # No `exif=` and no `icc_profile=`: the saved file carries no metadata.
     out.save(buffer, format="JPEG", quality=JPEG_QUALITY, optimize=True)
