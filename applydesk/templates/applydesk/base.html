@@ -152,6 +152,17 @@
     .fb-title-in { font-size: 22px !important; font-weight: 600; }
     .fc-q.fb-title-q { font-size: 22px; line-height: 1.25; }
     textarea[data-fit-box] { resize: none; overflow: hidden; }
+    /* A box of people, after Residential's (Select people, AD1B): a pill
+       per person found, its remove button, then the box for the next. */
+    .tokens { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 36px; margin-top: 4px; padding: 3px 6px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card); }
+    .token { display: inline-flex; align-items: center; gap: 2px; padding: 1px 2px 1px 8px; border-radius: 9999px; background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 600; white-space: nowrap; }
+    .token-x { border: 0; background: transparent; color: inherit; font: inherit; padding: 0 4px; min-width: 20px; cursor: pointer; }
+    .token-x:focus-visible { outline: 2px solid var(--on-accent); outline-offset: -2px; border-radius: 9999px; }
+    .token-input { flex: 1 1 120px; min-width: 120px; border: 0; background: transparent; color: var(--text-body); font: inherit; font-size: 14px; padding: 4px 2px; }
+    .token-input:focus { outline: none; }
+    .tokens:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .card .fb-pv-err { margin: 2px 0 0; font-size: 12px; color: var(--danger); }
+    .card .fb-pv-err:empty { display: none; }
     .fb-cards { display: flex; flex-direction: column; gap: 10px; }
     .fc { border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-card); }
     .fc-section { background: var(--surface-muted); border-color: var(--border-default); }
@@ -185,7 +196,7 @@
     .fc-colon { font-weight: 700; padding-bottom: 8px; }
     .fc-note { flex: 1 1 100%; margin: 6px 0 0; font-size: 13px; }
     .fc[data-type="string"] .g-string, .fc[data-type="integer"] .g-number, .fc[data-type="decimal"] .g-number,
-    .fc[data-type="list"] .g-list, .fc[data-type="photo"] .g-photo, .fc .fc-flags { display: flex; }
+    .fc[data-type="list"] .g-list, .fc[data-type="photo"] .g-photo, .fc[data-type="people"] .g-people, .fc .fc-flags { display: flex; }
     .fc .fc-flags { margin-top: 12px; }
     .fc[data-type="text"] .g-req { display: none; }
     .fc[data-type="text"] [data-sum="required"] { display: none; }

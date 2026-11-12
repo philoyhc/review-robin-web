@@ -3,8 +3,12 @@
    applydeskDrawForm(body, form) takes a snapshot, as
    applydeskFormSnapshot() or sample_data.form_snapshot give it. Text
    goes in by textContent only. #}
+<script type="application/json" id="fb-people">{{ people | tojson }}</script>
 <script>
 (function () {
+  // Who each Select people pool holds (sample_data.people_pools): the
+  // scaffold's stand-in for a directory search through Graph (AD4).
+  var POOLS = JSON.parse(document.getElementById("fb-people").textContent);
   function el(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -12,6 +16,79 @@
     return e;
   }
   var uid = 0;
+  var POOL_NAMES = { institution: "the institution", pool: "the reviewer pool", interviewers: "the interviewers" };
+  function poolName(key) { return key.indexOf("panel:") === 0 ? key.slice(6) : (POOL_NAMES[key] || POOL_NAMES.institution); }
+  // A box of people: each comma-separated name or email found in the
+  // pool becomes a pill; what is not found stays in the box, said why.
+  function people(c, id, label) {
+    var members = POOLS[c.pool] || POOLS.institution || [];
+    var lo = /^\d+$/.test(c.min) ? parseInt(c.min, 10) : 0;
+    var hi = /^\d+$/.test(c.max) ? parseInt(c.max, 10) : 0;
+    var box = el("div", "tokens");
+    box.setAttribute("role", "group");
+    var input = el("input", "token-input");
+    input.type = "text";
+    input.autocomplete = "off";
+    input.placeholder = "Name or email; separate several with commas";
+    input.setAttribute("aria-label", "Add to " + label);
+    box.appendChild(input);
+    var err = el("p", "fb-pv-err");
+    err.id = id + "-e";
+    err.setAttribute("role", "status");
+    input.setAttribute("aria-describedby", err.id);
+    function chosen() { return Array.prototype.map.call(box.querySelectorAll(".token"), function (t) { return t.dataset.email; }); }
+    function full() { return hi > 0 && chosen().length >= hi; }
+    function sync() { input.hidden = full(); }
+    function pill(name, email) {
+      var t = el("span", "token", name);
+      t.dataset.email = email;
+      var x = el("button", "token-x", "×");
+      x.type = "button";
+      x.setAttribute("aria-label", "Remove " + name);
+      x.addEventListener("click", function () { t.remove(); sync(); err.textContent = ""; input.focus(); });
+      t.appendChild(x);
+      box.insertBefore(t, input);
+    }
+    function find(text) {
+      var q = text.toLowerCase();
+      var hits = members.filter(function (m) { return m[0].toLowerCase() === q || m[1].toLowerCase() === q; });
+      return hits.length === 1 ? hits[0] : null;
+    }
+    function take(final) {
+      var parts = input.value.split(",");
+      var tail = final ? "" : parts.pop();
+      var left = [], why = "";
+      parts.forEach(function (raw) {
+        var text = raw.trim();
+        if (!text) return;
+        var m = find(text);
+        if (!m) { left.push(text); why = "Not found in " + poolName(c.pool) + ": " + text + "."; return; }
+        if (chosen().indexOf(m[1]) >= 0) return;
+        if (full()) { left.push(text); why = "At most " + hi + (hi === 1 ? " person." : " people."); return; }
+        pill(m[0], m[1]);
+      });
+      input.value = left.join(", ") + (left.length && !final ? ", " : "") + tail.replace(/^\s+/, "");
+      err.textContent = why;
+      sync();
+      if (input.hidden) box.querySelector(".token:last-of-type .token-x").focus();
+    }
+    input.addEventListener("input", function () { if (input.value.indexOf(",") >= 0) take(false); });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); take(true); }
+      else if (e.key === "Backspace" && !input.value) {
+        var last = box.querySelectorAll(".token");
+        if (last.length) { last[last.length - 1].remove(); sync(); }
+      }
+    });
+    input.addEventListener("blur", function () { if (input.value.trim()) take(true); });
+    var hint = lo && hi ? (lo === hi ? lo + "" : lo + " to " + hi) : hi ? "up to " + hi : lo ? "at least " + lo : "";
+    var note = el("p", "fb-pv-help", (hint ? "Choose " + hint + ((hi || lo) === 1 ? " person" : " people") : "Choose people") + " from " + poolName(c.pool) + ".");
+    note.id = id + "-n";
+    var wrap = el("div");
+    wrap.appendChild(note); wrap.appendChild(box); wrap.appendChild(err);
+    box.setAttribute("aria-describedby", note.id);
+    return wrap;
+  }
   function field(c) {
     var t = c.type, wrap = el("div", "fb-pv-field");
     if (t === "text") {
@@ -37,6 +114,8 @@
       input.type = "number";
       ["min", "max", "step"].forEach(function (k) { if (c[k]) input.setAttribute(k, c[k]); });
       if (t === "decimal" && !c.step) input.step = "any";
+    } else if (t === "people") {
+      input = people(c, id, c.label || "Untitled question");
     } else if (t === "list") {
       input = el("div", "fb-pv-opts");
       input.setAttribute("role", "group");
@@ -56,6 +135,17 @@
       if (k) frame.style.aspectRatio = k[0] + " / " + k[1];
       input.appendChild(frame);
       input.appendChild(el("span", "muted", "Choose a photo and frame it here" + (k ? " (kept " + k[0] + " × " + k[1] + ")." : ".")));
+    }
+    if (t === "people") {
+      // The label names the box's own input; help, the count and any
+      // "not found" describe it.
+      var typed = input.querySelector(".token-input");
+      typed.id = id;
+      typed.removeAttribute("aria-label");
+      if (c.required) typed.setAttribute("aria-required", "true");
+      typed.setAttribute("aria-describedby", (c.help ? id + "-h " : "") + id + "-n " + id + "-e");
+      wrap.appendChild(input);
+      return wrap;
     }
     if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
       input.id = id;

@@ -237,6 +237,7 @@ CARD_TYPES: tuple[tuple[str, str], ...] = (
     ("decimal", "Decimal"),
     ("list", "List"),
     ("photo", "Photo"),
+    ("people", "Select people"),
     ("text", "Title and Description"),
 )
 
@@ -254,6 +255,7 @@ class FormCard:
     exclusive: bool = True  # a list: choose one, else choose any
     ratio_w: str = "4"
     ratio_h: str = "5"
+    pool: str = "institution"  # Select people: a PEOPLE_POOLS key
     required: bool = False
     shown: bool = False  # shown to reviewers; a new card is not
 
@@ -312,9 +314,12 @@ SAMPLE_FORM: tuple[FormCard, ...] = (
     FormCard("section", label="About you"),
     FormCard(
         "field",
-        "list",
-        "Preferred reviewer (from the reviewer pool)",
-        options="Dr Hana Ito, Dr Omar Aziz, Dr Ruth Kahn",
+        "people",
+        "Preferred reviewer",
+        help="One person from the reviewer pool.",
+        min="1",
+        max="1",
+        pool="pool",
     ),
     FormCard("field", "string", "Matriculation number", min="9", max="9", required=True),
     FormCard(
@@ -390,6 +395,54 @@ def _span(lo: str, hi: str, unit: str = "") -> str:
     return ""
 
 
+# Who a Select people question may name (segment AD1B): everyone in the
+# institution (looked up in Entra ID through Graph once forms are live,
+# AD4), or a roster on the Panels page. Keys: "institution", "pool",
+# "interviewers", or "panel:" and an assessment panel's name.
+#: The sample institution: everyone below, and two more, stand in for
+#: the directory Graph searches.
+_ELSEWHERE: tuple[tuple[str, str], ...] = (
+    ("Daniel Koh", "daniel.koh@example.edu"),
+    ("Priya Raman", "priya.raman@example.edu"),
+)
+
+
+def pool_label(key: str) -> str:
+    """A pool's name on the card and in its summary."""
+    if key.startswith("panel:"):
+        return key.removeprefix("panel:")
+    return {"pool": "Reviewer pool", "interviewers": "Interviewers"}.get(key, "Institution-wide")
+
+
+def people_pools(exercise_id: str) -> dict[str, list[tuple[str, str]]]:
+    """Each pool a Select people question may use in this exercise, with
+    its members (name, email), Institution-wide first."""
+    pools: dict[str, list[tuple[str, str]]] = {}
+    for a in assessors_of(exercise_id):
+        pools.setdefault(f"panel:{a.panel}", []).append((a.name, a.email))
+    if pool := pool_of(exercise_id):
+        pools["pool"] = [(e.name, e.email) for e in pool]
+    if interviewers := interviewers_of(exercise_id):
+        pools["interviewers"] = [(e.name, e.email) for e in interviewers]
+    everyone = {
+        email: (name, email)
+        for name, email in [
+            *((a.name, a.email) for a in ASSESSORS),
+            *((e.name, e.email) for e in (*REVIEWER_POOL, *INTERVIEWERS)),
+            *_ELSEWHERE,
+        ]
+    }
+    panels = sorted(k for k in pools if k.startswith("panel:"))
+    order = [*panels, *(k for k in ("pool", "interviewers") if k in pools)]
+    return {"institution": sorted(everyone.values()), **{k: pools[k] for k in order}}
+
+
+def _people(lo: str, hi: str) -> str:
+    """A people span, "person" where its last number is 1."""
+    unit = "person" if (hi or lo) == "1" else "people"
+    return _span(lo, hi, unit)
+
+
 def card_summary(c: FormCard) -> str:
     """A collapsed card's summary of its settings; the page's script
     computes the same as the card is edited."""
@@ -409,6 +462,9 @@ def card_summary(c: FormCard) -> str:
         if size is None:
             return "Photo · ratio not set"
         return f"Photo · {c.ratio_w}:{c.ratio_h}, kept {size[0]} × {size[1]}"
+    if c.type == "people":
+        parts = [p for p in (_people(c.min, c.max), pool_label(c.pool)) if p]
+        return f"Select people · {' · '.join(parts)}"
     return "Title and Description · display only"
 
 

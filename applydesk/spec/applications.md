@@ -74,7 +74,9 @@ reload restores the sample form.
   *page break*. A field card's type is one of String (min and max length),
   Integer and Decimal (min, max, step), List (comma-separated options,
   *Choose one* or *Choose any*), Photo (an aspect ratio; kept as a JPEG
-  600 px on its longer side) and Title and Description (display only).
+  600 px on its longer side), Select people (a minimum and maximum, and
+  who may be named: *Institution-wide* or a roster on the Panels page)
+  and Title and Description (display only).
   Help text and descriptions grow to fit what is typed, with no resize
   handle; so does a long answer's box in Preview. Changing the type keeps the question, help text, *Required* and
   visibility, and empties the new type's fields: a photo's ratio starts
@@ -107,6 +109,11 @@ reload restores the sample form.
   `/operator/exercises/<id>/form/preview` (a reload of the tab picks up
   later edits; opened on its own, or once the Form page has gone to
   another exercise, it shows the sample form and says so; its *Submit*
-  is disabled): a number field with its bounds, a list as
+  is disabled). Select people previews as a box of pills, after
+  Residential's Staff box: each comma-separated name or email found in
+  its pool becomes a pill, one not found stays in the box with the
+  reason, and the box takes no more at the maximum. Here the pools are
+  sample rosters; looking people up in Entra ID through Graph comes with
+  the applicant's form (AD4). Otherwise it shows a number field with its bounds, a list as
   radio buttons or tick boxes, a photo's frame at its ratio, and "Reviewers
   see your answer." under a shown question. Nothing typed there is kept.
