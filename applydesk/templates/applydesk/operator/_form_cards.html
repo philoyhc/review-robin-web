@@ -40,7 +40,7 @@
     <label class="fc-l"><span class="l-q">Question</span><span class="l-t">Title</span>
       <input class="fc-in" data-f="label" value="{{ c.label }}" placeholder="Untitled"></label>
     <label class="fc-l"><span class="l-q">Help text</span><span class="l-t">Description</span>
-      <textarea class="fc-in" data-f="help" rows="2" placeholder="Optional">{{ c.help }}</textarea></label>
+      <textarea class="fc-in" data-f="help" data-fit-box rows="1" placeholder="Optional">{{ c.help }}</textarea></label>
     <div class="fc-row g-string">
       <label class="fc-l">Min length<input class="fc-in" data-f="min" data-g="string" inputmode="numeric" value="{{ c.min if c.type == 'string' }}"></label>
       <label class="fc-l">Max length<input class="fc-in" data-f="max" data-g="string" inputmode="numeric" value="{{ c.max if c.type == 'string' }}"></label>

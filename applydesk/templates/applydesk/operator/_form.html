@@ -14,7 +14,7 @@
       </div>
       <div class="fc-body">
         <label class="fc-l">Form title<input class="fc-in fb-title-in" data-fb="title" value="{{ form_heading[0] }}" placeholder="Untitled form"></label>
-        <label class="fc-l">Description<textarea class="fc-in" data-fb="description" rows="2" placeholder="Optional">{{ form_heading[1] }}</textarea></label>
+        <label class="fc-l">Description<textarea class="fc-in" data-fb="description" data-fit-box rows="1" placeholder="Optional">{{ form_heading[1] }}</textarea></label>
       </div>
     </section>
     <div class="fb-cards" id="fb-cards">
@@ -24,24 +24,31 @@
         {% else %}{{ fc.field(c, summary, kept_size, card_types, open=single) }}{% endif %}
       {% endfor %}
     </div>
-    <div class="btnrow"><button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button></div>
     {# What + New, + Section and + Page break add: the same macros as the
        server's own cards. #}
     <template id="fb-new-field">{{ fc.field(blank, summary, kept_size, card_types, open=True) }}</template>
     <template id="fb-new-section">{{ fc.section(blank_section, open=True) }}</template>
     <template id="fb-new-pagebreak">{{ fc.pagebreak() }}</template>
   </div>
+  {# Preview in place of the cards: the Outline's button toggles it. #}
+  <section class="fb-preview card" id="fb-preview" hidden tabindex="-1" aria-label="Preview: the form as an applicant sees it">
+    <div data-fb-preview-body></div>
+  </section>
   <aside class="fb-side">
     <section class="card fb-outline" aria-labelledby="outline-h">
       <h2 id="outline-h">Outline</h2>
       <div data-fb-outline></div>
       <p class="muted fb-counts" data-fb-counts></p>
       <p class="visually-hidden" data-fb-live aria-live="polite"></p>
-      <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form/preview') }}" target="applydesk-preview-{{ exercise.public_id }}" rel="opener" data-fb-preview>Preview</a></div>
-      <p class="muted fb-pv-note">Opens a new tab: the form as an applicant sees it.</p>
+      <div class="btnrow">
+        <button type="button" class="btn btn-secondary" data-fb-preview>Preview</button>
+        <button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>
+      </div>
+      <p class="muted fb-pv-note"><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form/preview') }}" target="applydesk-preview-{{ exercise.public_id }}" rel="opener" data-fb-preview-tab>Open the preview in a new tab</a></p>
     </section>
   </aside>
 </div>
+{% include "applydesk/operator/_form_draw.html" %}
 <script>
 // Segment AD1B: the Form page's moves, in the browser only; a reload
 // restores the sample form. Collapse and expand, the type menu, the
@@ -128,8 +135,9 @@
     if (text !== undefined) e.textContent = text;
     return e;
   }
-  // An Outline click goes to the card.
+  // An Outline click goes to the card, leaving Preview first.
   function goTo(card) {
+    if (main.hidden) showPreview(false);
     card.scrollIntoView({ block: "center" });
     card.querySelector("[data-fc-toggle]").focus();
   }
@@ -219,6 +227,7 @@
     }
     if (!added) return;
     item.after(added);
+    if (window.applydeskFitBoxes) window.applydeskFitBoxes(added);
     if (added.dataset.kind !== "pagebreak") refresh(added);
     changed();
     var first = added.querySelector('[data-f="label"]') || added.querySelector("[data-fc-grip]");
@@ -313,7 +322,7 @@
     titleCard.querySelector('[data-sum="description"]').textContent = descIn.value.trim();
   });
 
-  // --- Preview: a new tab draws the form from this snapshot ---
+  // --- Preview: in place of the cards, or a new tab; both draw this ---
   window.applydeskFormSnapshot = function () {
     return JSON.stringify({
       exercise: root.dataset.exercise,
@@ -331,6 +340,18 @@
       })
     });
   };
+
+  var main = root.querySelector(".fb-main");
+  var preview = root.querySelector("#fb-preview");
+  var opener = root.querySelector("[data-fb-preview]");
+  function showPreview(on) {
+    if (on) window.applydeskDrawForm(preview.querySelector("[data-fb-preview-body]"), JSON.parse(window.applydeskFormSnapshot()));
+    main.hidden = on;
+    preview.hidden = !on;
+    opener.textContent = on ? "Back to edit" : "Preview";
+    if (on) preview.focus(); else opener.focus();
+  }
+  opener.addEventListener("click", function () { showPreview(!main.hidden); });
 
   changed();
 })();

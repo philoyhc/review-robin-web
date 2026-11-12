@@ -1,0 +1,86 @@
+{# The application form drawn as an applicant sees it (segment AD1B):
+   one renderer for the Form page's Preview and the preview tab.
+   applydeskDrawForm(body, form) takes a snapshot, as
+   applydeskFormSnapshot() or sample_data.form_snapshot give it. Text
+   goes in by textContent only. #}
+<script>
+(function () {
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  var uid = 0;
+  function field(c) {
+    var t = c.type, wrap = el("div", "fb-pv-field");
+    if (t === "text") {
+      wrap.appendChild(el("h4", "fb-pv-title", c.label || "Untitled text"));
+      if (c.help) wrap.appendChild(el("p", "fb-pv-help", c.help));
+      return wrap;
+    }
+    var id = "fb-pv-" + (++uid);
+    var lab = el("label", "fb-pv-label", c.label || "Untitled question");
+    lab.htmlFor = id;
+    if (c.required) lab.appendChild(el("span", "fb-pv-req", " (required)"));
+    wrap.appendChild(lab);
+    if (c.help) { var h = el("p", "fb-pv-help", c.help); h.id = id + "-h"; wrap.appendChild(h); }
+    if (c.shown) wrap.appendChild(el("p", "fb-pv-seen", "Reviewers see your answer."));
+    var input;
+    if (t === "string") {
+      var max = /^\d+$/.test(c.max) ? parseInt(c.max, 10) : 0;
+      input = el(max > 0 && max <= 200 ? "input" : "textarea", "fc-in");
+      if (input.tagName === "TEXTAREA") { input.rows = 3; input.setAttribute("data-fit-box", ""); }
+      if (max > 0) input.maxLength = max;
+    } else if (t === "integer" || t === "decimal") {
+      input = el("input", "fc-in fb-pv-num");
+      input.type = "number";
+      ["min", "max", "step"].forEach(function (k) { if (c[k]) input.setAttribute(k, c[k]); });
+      if (t === "decimal" && !c.step) input.step = "any";
+    } else if (t === "list") {
+      input = el("div", "fb-pv-opts");
+      input.setAttribute("role", "group");
+      c.options.split(",").map(function (o) { return o.trim(); }).filter(Boolean).forEach(function (o) {
+        var l = el("label", "fb-pv-opt"), box = el("input");
+        box.type = c.exclusive ? "radio" : "checkbox";
+        box.name = id;
+        l.appendChild(box); l.appendChild(document.createTextNode(" " + o));
+        input.appendChild(l);
+      });
+      if (!input.children.length) input.appendChild(el("p", "muted", "No options yet."));
+    } else {
+      var k = c.kept;
+      input = el("div", "fb-pv-photo");
+      input.setAttribute("role", "group");
+      var frame = el("span", "fb-pv-frame");
+      if (k) frame.style.aspectRatio = k[0] + " / " + k[1];
+      input.appendChild(frame);
+      input.appendChild(el("span", "muted", "Choose a photo and frame it here" + (k ? " (kept " + k[0] + " × " + k[1] + ")." : ".")));
+    }
+    if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
+      input.id = id;
+      if (c.required) input.required = true;
+    } else {
+      lab.htmlFor = ""; lab.id = id; input.setAttribute("aria-labelledby", id);
+      if (c.required) input.setAttribute("aria-required", "true");
+    }
+    if (c.help) input.setAttribute("aria-describedby", id + "-h");
+    wrap.appendChild(input);
+    return wrap;
+  }
+
+  window.applydeskDrawForm = function (body, form) {
+    body.textContent = "";
+    body.appendChild(el("h2", "fb-pv-form", form.title || "Untitled form"));
+    if (form.description) body.appendChild(el("p", "fb-pv-help", form.description));
+    var page = 1;
+    body.appendChild(el("p", "fb-pv-page fb-pv-first", "Page 1"));
+    form.cards.forEach(function (c) {
+      if (c.kind === "pagebreak") { page += 1; body.appendChild(el("p", "fb-pv-page", "Page " + page)); }
+      else if (c.kind === "section") body.appendChild(el("h3", "fb-pv-section", c.label || "Untitled section"));
+      else body.appendChild(field(c));
+    });
+    if (window.applydeskFitBoxes) window.applydeskFitBoxes(body);
+  };
+})();
+</script>

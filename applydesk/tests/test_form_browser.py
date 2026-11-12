@@ -356,7 +356,7 @@ def test_preview_opens_a_tab_with_the_form_as_it_stands(page: Page) -> None:
     label = card.locator('[data-f="label"]').element_handle()
     label.fill("Working title")
     with page.context.expect_page() as opened:
-        page.locator("[data-fb-preview]").click()
+        page.locator("[data-fb-preview-tab]").click()
     tab = opened.value
     tab.wait_for_load_state()
     body = tab.locator("[data-fb-preview-body]")
@@ -403,3 +403,45 @@ def test_the_form_s_own_card_collapses(page: Page) -> None:
     title.locator("[data-fc-toggle]").click()
     assert title.locator('[data-sum="title"]').inner_text() == "Travel grant form"
     assert not title.locator('[data-fb="title"]').is_visible()
+
+
+def test_preview_takes_the_cards_place_and_back(page: Page) -> None:
+    page.goto(FORM)
+    button = page.locator("[data-fb-preview]")
+    # Save sits beside it.
+    assert button.locator("xpath=following-sibling::button").inner_text() == "Save"
+    button.click()
+    assert button.inner_text() == "Back to edit"
+    assert not page.locator("#fb-cards").is_visible()
+    preview = page.locator("#fb-preview")
+    assert preview.is_visible()
+    # The form alone: no heading or note of its own.
+    assert "Nothing typed here is kept" not in preview.inner_text()
+    _the_applicant_form(preview.locator("[data-fb-preview-body]"))
+    button.click()
+    assert button.inner_text() == "Preview"
+    assert page.locator("#fb-cards").is_visible() and not preview.is_visible()
+    # An Outline click while previewing goes back to the card.
+    button.click()
+    page.locator(".fb-o-item", has_text="Methods").click()
+    assert page.locator("#fb-cards").is_visible() and button.inner_text() == "Preview"
+
+
+def test_text_boxes_grow_to_fit_without_a_handle(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Summary")
+    card.locator("[data-fc-toggle]").click()
+    help_box = card.locator('[data-f="help"]')
+    assert help_box.evaluate("e => getComputedStyle(e).resize") == "none"
+    before = help_box.evaluate("e => e.offsetHeight")
+    help_box.fill("A line\n" * 8)
+    after = help_box.evaluate("e => e.offsetHeight")
+    assert after > before
+    assert help_box.evaluate("e => e.scrollHeight <= e.clientHeight")
+
+
+def test_the_form_title_is_larger_than_a_card_s(page: Page) -> None:
+    page.goto(FORM)
+    size = "e => parseFloat(getComputedStyle(e).fontSize)"
+    title = page.locator('[data-sum="title"]').evaluate(size)
+    assert title > _card(page, "Summary").locator('[data-sum="label"]').evaluate(size)
