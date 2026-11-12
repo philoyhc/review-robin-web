@@ -10,7 +10,7 @@
   {% for e in exercises %}
     <tr>
       <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a></td>
-      <td><code>{{ e.code }}</code></td>
+      <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
       <td>{% with value = e.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</td>
       <td>{{ e.stage }}</td>
       <td>{{ applications(e.public_id) | length }}</td>

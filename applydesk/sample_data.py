@@ -95,6 +95,21 @@ EXERCISES: tuple[Exercise, ...] = (
         expected_outcome="Not set",
         summary="Placements with partner organizations over the summer vacation.",
     ),
+    # Just created: a name and nothing else, awaiting setup (author,
+    # 2026-11-12).
+    Exercise(
+        public_id="n5wg8tjr3e",
+        code="",
+        name="Graduate Travel Grant 2027",
+        state="Draft",
+        stage="Application",
+        eligibility="Not set",
+        blind=False,
+        opens="Not set",
+        application_stage_ends="Not set",
+        expected_outcome="Not set",
+        summary="",
+    ),
 )
 
 APPLICATIONS: tuple[Application, ...] = (
@@ -204,6 +219,33 @@ RESPONSES: dict[str, dict[str, str]] = {
         "pool": "Awaited from Dr Omar Aziz",
     },
 }
+
+
+#: Exercises whose application form has no questions yet.
+EMPTY_FORMS: frozenset[str] = frozenset({"n5wg8tjr3e"})
+
+
+def form_of(exercise_id: str) -> tuple[tuple[tuple[str, str], ...], tuple[str, ...]]:
+    """The application form's two sections: shown to reviewers, not shown."""
+    if exercise_id in EMPTY_FORMS:
+        return (), ()
+    return SHOWN_TO_REVIEWERS, NOT_SHOWN_TO_REVIEWERS
+
+
+def setup_missing(e: Exercise) -> tuple[str, ...]:
+    """What a draft still lacks before it can be published, in Setup's order."""
+    missing: list[str] = []
+    if not e.code:
+        missing.append("Exercise Code")
+    if not e.summary:
+        missing.append("Summary")
+    if "Not set" in (e.opens, e.application_stage_ends):
+        missing.append("Dates")
+    if e.eligibility == "Not set":
+        missing.append("Who may apply")
+    if e.public_id in EMPTY_FORMS:
+        missing.append("Application form")
+    return tuple(missing)
 
 
 def exercise(public_id: str) -> Exercise | None:

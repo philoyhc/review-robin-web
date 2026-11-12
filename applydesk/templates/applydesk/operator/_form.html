@@ -3,15 +3,16 @@
     <h2 id="build-h">Build</h2>
     <h3>Shown to reviewers</h3>
     <p class="muted">What assessors read on the profile page, and what an applicant is told reviewers will see.</p>
-    <ul>{% for label, help in shown %}<li>{{ label }}{% if help %} <span class="muted">— {{ help }}</span>{% endif %}</li>{% endfor %}</ul>
+    <ul>{% for label, help in shown %}<li>{{ label }}{% if help %} <span class="muted">— {{ help }}</span>{% endif %}</li>{% else %}<li class="muted">No questions yet.</li>{% endfor %}</ul>
     <h3>Not shown to reviewers</h3>
     <p class="muted">The applicant and this exercise's operators only.</p>
-    <ul>{% for label in not_shown %}<li>{{ label }}</li>{% endfor %}</ul>
+    <ul>{% for label in not_shown %}<li>{{ label }}</li>{% else %}<li class="muted">No questions yet.</li>{% endfor %}</ul>
     <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Add a question</button><button class="btn btn-primary" type="button" disabled>Save</button></div>
   </section>
   <section class="card" aria-labelledby="preview-h">
     <h2 id="preview-h">Preview</h2>
     <p class="muted">The form as an applicant sees it. Nothing typed here is kept.</p>
+    {% if not shown and not not_shown %}<p class="muted">Add a question to see it here.</p>{% else %}
     <h3>Shown to reviewers</h3>
     {% for label, help in shown %}
     <div class="field">
@@ -25,5 +26,6 @@
     {% for label in not_shown %}
     <div class="field"><label for="pv-n{{ loop.index }}">{{ label }}</label><input id="pv-n{{ loop.index }}" type="text" disabled></div>
     {% endfor %}
+    {% endif %}
   </section>
 </div>

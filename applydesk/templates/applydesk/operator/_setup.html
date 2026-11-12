@@ -3,8 +3,8 @@
     <h2>Details</h2>
     <dl class="facts">
       <dt>Name</dt><dd>{{ exercise.name }}</dd>
-      <dt>Exercise Code</dt><dd><code>{{ exercise.code }}</code></dd>
-      <dt>Summary</dt><dd>{{ exercise.summary }}</dd>
+      <dt>Exercise Code</dt><dd>{% if exercise.code %}<code>{{ exercise.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</dd>
+      <dt>Summary</dt><dd>{{ exercise.summary or "Not set" }}</dd>
       <dt>Contact</dt><dd>fellowships@example.edu</dd>
     </dl>
   </section>

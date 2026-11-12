@@ -20,6 +20,7 @@ from cordware.identity import Identity
 EX = "wa9juxbc2t"  # open, not blind, Application stage
 BLIND = "k7mfr3pq8z"  # blind, Review stage
 DRAFT = "c4xh2ndv6s"  # not published
+BLANK = "n5wg8tjr3e"  # just created: a name, nothing else
 
 PAGES = (
     "/applydesk/",
@@ -35,6 +36,11 @@ PAGES = (
     f"/applydesk/operator/exercises/{DRAFT}/setup",  # the Setup stage is now
     f"/applydesk/operator/exercises/{DRAFT}",  # the Publish step
     f"/applydesk/operator/exercises/{DRAFT}/applications",  # none yet
+    f"/applydesk/operator/exercises/{BLANK}",
+    *(
+        f"/applydesk/operator/exercises/{BLANK}/{section}"
+        for section in ("setup", "form", "applications", "panels", "review", "reports")
+    ),
     "/applydesk/me",
     f"/applydesk/me/exercises/{EX}",
     f"/applydesk/me/exercises/{BLIND}",  # applications have closed
@@ -66,6 +72,7 @@ def test_every_page_of_the_map_answers_locally(client: TestClient, path: str) ->
         "/applydesk/operator/exercises/zzzzzzzzzz",  # well formed, unknown
         f"/applydesk/operator/exercises/{EX}/bogus",
         "/applydesk/me/exercises/c4xh2ndv6s",  # a draft is not open to applicants
+        f"/applydesk/me/exercises/{BLANK}",
         f"/applydesk/me/exercises/{EX}/applications/zzzzzzzzzz",
         f"/applydesk/me/exercises/{EX}/applications/M3QX8VKT2N",  # an application ID's shape
         f"/applydesk/me/exercises/{EX}/applications/m3qx8vkt2",
@@ -229,9 +236,10 @@ def test_the_lobby_names_exercises_by_code_not_id(client: TestClient) -> None:
     page = client.get("/applydesk/operator/exercises").text
     assert "<th>Exercise Code</th>" in page and ">ID<" not in page
     for e in sample_data.EXERCISES:
-        assert f"<code>{e.code}</code>" in page
+        if e.code:  # a just-created exercise has none yet
+            assert f"<code>{e.code}</code>" in page
         assert f"<code>{e.public_id}</code>" not in page
-    codes = [e.code for e in sample_data.EXERCISES]
+    codes = [e.code for e in sample_data.EXERCISES if e.code]
     assert len(set(codes)) == len(codes)
 
 
@@ -327,3 +335,41 @@ def test_the_form_preview_ties_help_to_its_field(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/form").text
     assert 'id="pv-s2-help"' in text and 'aria-describedby="pv-s2-help"' in text
     assert "Preferred reviewer (from the reviewer pool)" in text
+
+
+def test_a_blank_exercise_lists_what_is_still_to_set_up(client: TestClient) -> None:
+    """Author, 2026-11-12: one exercise as just created, with only a name."""
+    home = client.get(f"/applydesk/operator/exercises/{BLANK}").text
+    assert "<h1>Graduate Travel Grant 2027</h1>" in home and "No summary yet." in home
+    assert "Still to set up before it can be published:" in home
+    listed = re.findall(r"<li>([^<]+)</li>", home[home.index("Still to set up") :])
+    assert listed[:5] == [
+        "Exercise Code",
+        "Summary",
+        "Dates",
+        "Who may apply",
+        "Application form",
+    ]
+    assert 'href="/applydesk/operator/exercises/n5wg8tjr3e/setup">Go to Setup</a>' in home
+    assert "Dates not set" in home and "(a hard deadline)" not in home
+    current = re.findall(r'aria-current="step">\s*<span class="stage-name">([^<]+)', home)
+    assert [c.strip() for c in current] == ["Setup"]
+
+
+def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> None:
+    base = f"/applydesk/operator/exercises/{BLANK}"
+    lobby = client.get("/applydesk/operator/exercises").text
+    row = lobby[lobby.index("Graduate Travel Grant 2027") :]
+    assert '<span class="muted">Not set</span>' in row[: row.index("</tr>")]
+    form = client.get(f"{base}/form").text
+    assert form.count("No questions yet.") == 2 and "Add a question to see it here." in form
+    assert "No applications yet." in client.get(f"{base}/applications").text
+    panels = client.get(f"{base}/panels").text
+    assert "No panels yet." in panels and "No interviewers yet." in panels
+    assert "No submitted applications yet." in client.get(f"{base}/reports").text
+
+
+def test_a_set_up_draft_lists_only_what_it_lacks(client: TestClient) -> None:
+    home = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
+    missing = home[home.index("Still to set up") :]
+    assert re.findall(r"<li>([^<]+)</li>", missing[: missing.index("</ul>")]) == ["Dates"]
