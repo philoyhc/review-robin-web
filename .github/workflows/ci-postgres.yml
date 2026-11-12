@@ -106,6 +106,18 @@ jobs:
           alembic downgrade base
           alembic upgrade head
 
+      # Utilities' own history (segment U4), for its database utilityapps.
+      # Its version table is its own, so it shares this database with RRW's.
+      - name: Round-trip Utilities' migrations
+        if: matrix.shard.name == 'unit'
+        env:
+          UTILITYAPPS_DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: |
+          alembic -c utilityapps/alembic.ini upgrade head
+          alembic -c utilityapps/alembic.ini downgrade base
+          alembic -c utilityapps/alembic.ini upgrade head
+          alembic -c utilityapps/alembic.ini check
+
       - name: Run pytest against Postgres
         # The browser tests serve the app from their own SQLite file, so they
         # add nothing here; they run in ci.yml (guide/archive/browser_test.md).

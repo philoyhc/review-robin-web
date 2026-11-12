@@ -22,7 +22,14 @@ Utilities adds. The design it follows is
   `CORDWARE_APPS` mounts it last and the landing page lists it so.
 - The factory is a zero-argument callable returning a new `FastAPI`
   application with no schema pages. It reads no setting and opens no
-  database: Utilities has none (spec §9).
+  database.
+- **Utilities' database** (segment U4, 2026-11-12): `utilityapps`, its
+  own, at `UTILITYAPPS_DATABASE_URL` (locally a SQLite file,
+  `utilityapps.db`). `utilityapps/db.py` makes the engine on first use,
+  so `/health` and the tools that need no database never open it. Its
+  tables are declared on Utilities' own `Base` (`utilityapps/models.py`)
+  and migrated by its own history, `alembic -c utilityapps/alembic.ini`,
+  whose version table is `utilityapps_alembic_version`.
 - Each tool is a feature module inside this one application. A tool with
   a materially different trust boundary becomes its own mount instead.
 
