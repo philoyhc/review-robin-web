@@ -57,3 +57,63 @@ deployment, not a local run.
 - [ ] **An invited user's first sign-in binds them.** Invite a new
   address, then sign in as it: the log shows
   `workspace.user_principal_recorded`.
+
+## Where display fields sit (20M)
+
+Run order and files: `guide/browser_check_files/20m/`. Instrument 1 is
+individual, Instrument 2 grouped by Group AND Team.
+
+**Profile beside the name (Instrument 1)**
+
+- [ ] **Band 3 pins it.** Profile's row sits right after Email with no
+  ▲ ▼; the other rows still reorder around it.
+- [ ] **No column, on the preview or the review page.** Kenji Russo's
+  name is followed by **View**, which opens his link; Aisha Bello's by a
+  muted ••• whose hover reads `Room 4B`; Diego Marsh's by nothing.
+  Neither page has a Profile column.
+
+**Individual layouts (Instrument 1)**
+
+- [ ] **The chip.** Right of Band 3's *Display fields* header, it
+  reads *Across* and cycles *Stacked* → *Joined* → *Across*, and it
+  fits there without widening the column. The *Display fields* heading
+  looks as it did before.
+- [ ] **Stacked.** Tutor, Group and Team leave the preview's columns
+  and sit under the sample email, one muted `Label:` per line. Save,
+  reload: still *Stacked*. On the review page, Hana Ito shows Tutor and
+  Group lines and no Team line.
+- [ ] **Joined.** The values sit on one line under the email,
+  comma-separated: Hana Ito reads `Zoe Tan, TW01`, with no empty
+  slot.
+- [ ] **Across is as before.** Back on *Across*, the three columns
+  return on both pages.
+- [ ] **A sort on a hidden field goes quiet.** On *Across*, set Tutor
+  descending with its badge and Save: the review page lists Zoe Tan's
+  reviewees first. Switch to *Stacked* and Save: the rows no longer
+  follow Tutor, and a Name sort still orders them.
+- [ ] **A width on a hidden column.** On *Across*, drag the Tutor
+  column wider in the preview and Save, then switch to *Stacked* and
+  Save. The review page's table still lays out sensibly, with no gap
+  where Tutor was and no squeezed columns.
+
+**Group layouts (Instrument 2)**
+
+- [ ] **The chip.** It reads *Joined* and cycles *Joined* ↔ *Stacked*
+  only; there is no *Across*.
+- [ ] **Joined.** Each group row shows the member names first, then one
+  line of tags below them, not bold: for example `Zoe Tan, TW01, Team 1`
+  under Kenji Russo and Wen Novak.
+- [ ] **Stacked.** Names first, then one muted `Label: value` line per
+  tag, styled like an individual row's. Hana Ito's group has no Team
+  line.
+
+**Group order on the review page (Instrument 2)**
+
+- [ ] **Rows follow the shown tags.** With Tutor, Group, Team in that
+  order: Ahmed Shah's two TW45 groups (Team 1, then Team 2), then Zoe
+  Tan's: Hana Ito's group (no Team) first, then Team 1, then Team 2.
+- [ ] **Reordering moves them.** Move Group above Tutor in Band 3 and
+  Save: the TW01 groups now come before the TW45 groups.
+- [ ] **Descending reverses it.** Set the Group header descending:
+  the order reverses, and Hana Ito's group is now last of the TW01
+  rows.
