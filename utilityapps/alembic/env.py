@@ -22,7 +22,10 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 if not config.get_main_option("sqlalchemy.url"):
-    config.set_main_option("sqlalchemy.url", UtilityAppsSettings().database_url)
+    # ConfigParser reads `%` as interpolation; a percent-encoded password
+    # (`pass%40word`) must reach it doubled.
+    url = UtilityAppsSettings().database_url
+    config.set_main_option("sqlalchemy.url", url.replace("%", "%%"))
 
 # Importing the models registers every table on Utilities' Base.
 target_metadata = models.Base.metadata

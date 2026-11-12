@@ -47,6 +47,19 @@ def test_another_application_s_tables_are_left_alone(tmp_path: Path) -> None:
     assert "sessions" in inspect(create_engine(url)).get_table_names()
 
 
+def test_a_percent_encoded_url_reaches_alembic(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex review: ConfigParser reads `%` as interpolation, so the URL
+    from the setting is doubled on its way into Alembic's config."""
+    path = tmp_path / "p%40d.db"
+    monkeypatch.setenv("UTILITYAPPS_DATABASE_URL", f"sqlite:///{path}")
+    config = Config(str(ROOT / "utilityapps" / "alembic.ini"))
+    command.upgrade(config, "head")  # raised ValueError before the fix
+    # SQLAlchemy decodes the URL's path: the file is named with the `@`.
+    assert (tmp_path / "p@d.db").exists()
+
+
 def test_the_url_comes_from_its_own_setting(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("UTILITYAPPS_DATABASE_URL", "sqlite:///./elsewhere.db")
     assert db.UtilityAppsSettings().database_url == "sqlite:///./elsewhere.db"
