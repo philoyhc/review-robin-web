@@ -57,6 +57,7 @@ Building. Base `5974163` for the cumulative read.
 - Rung 2: the history's version table is `utilityapps_alembic_version`, so CI round-trips it on RRW's Postgres service database beside RRW's own; checked locally against Postgres 16 too.
 - Rung 3: Pillow 11 or later. Pillow's own bomb guard fires only at about 179 Mpx, so the service refuses beyond 40 Mpx itself, from the header, before any pixel is read; transparency lands on white.
 - Rung 4: the page is not on the Utilities index, as the interop proof of concept is not. Delete takes Destructive (outline red), new to Utilities' stylesheet: a deleted photo cannot be brought back.
+- Rung 5: the writes take a custom header, `X-Photo-Poc: 1`, as Utilities' JSON-only lookup takes its content type: a cross-site form cannot send either. The browser test serves the page through a `TestClient` behind a routed origin, as Residential's do, and runs in CI's unit shard.
 
 ## PR ladder
 

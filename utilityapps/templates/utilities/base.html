@@ -48,13 +48,18 @@
     .btn:disabled, .btn[aria-disabled=true] { opacity: 0.5; cursor: not-allowed; }
     .btn.destructive { background: transparent; color: #b91c1c; border-color: #b91c1c; }
     /* The photo proof of concept (segment U4): the drop box, the fixed
-       window, whose aspect ratio is the saved photo's, and the tiles. */
+       window, whose aspect ratio is the saved photo's, the photo inside
+       it, moved and scaled by the page's script, and the tiles. */
     .drop { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 1.5rem 1rem; border: 2px dashed var(--line); border-radius: 8px; text-align: center; cursor: pointer; font-weight: normal; }
     .drop.over { border-color: var(--link); }
     .drop-main { font-weight: 600; color: var(--link); }
     .drop input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
     .frame { position: relative; overflow: hidden; aspect-ratio: var(--ratio); width: min(16rem, 100%); margin: 0 0 1rem; background: var(--line); border-radius: 4px; display: flex; align-items: center; justify-content: center; touch-action: none; }
     .frame-empty { color: var(--muted); font-size: 0.9rem; }
+    .frame:focus-visible, .drop:focus-within { outline: 2px solid var(--link); outline-offset: 2px; }
+    .frame-photo { position: absolute; left: 0; top: 0; max-width: none; transform-origin: 0 0; user-select: none; pointer-events: none; }
+    #photo-window:has(.frame-photo) { cursor: grab; }
+    .tile-photo img { display: block; width: 100%; height: 100%; }
     input[type=range] { width: min(16rem, 100%); }
     .tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); gap: 1rem; }
     .tile .frame { width: 100%; margin: 0 0 0.25rem; }
