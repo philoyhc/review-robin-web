@@ -153,12 +153,11 @@ def test_a_photo_turned_right_is_saved_as_shown(client: TestClient, page: Page) 
     """Seen blue on the left and red on the right; turned a quarter
     clockwise, blue is on top and red below, and so is the saved photo."""
     _choose_phone_photo(page)
-    page.click("#photo-right")
+    page.locator("#photo-rotate").fill("88")  # snaps to the waypoint
     assert page.locator("#photo-rotate").input_value() == "90"
     saved = _save_and_read(client, page, 1)
     assert _rgb(saved, 240, 60)[2] > 200 and _rgb(saved, 240, 540)[0] > 200
-    page.click("#photo-left")
-    page.click("#photo-left")
+    page.locator("#photo-rotate").fill("-93")
     assert page.locator("#photo-rotate").input_value() == "-90"
     saved = _save_and_read(client, page, 2)
     assert _rgb(saved, 240, 60)[0] > 200 and _rgb(saved, 240, 540)[2] > 200
@@ -217,9 +216,9 @@ def _tiles_png() -> bytes:
     return buffer.getvalue()
 
 
-@pytest.mark.parametrize("button", [None, "#photo-right", "#photo-left"])
+@pytest.mark.parametrize("turn", ["23.5", "90", "-90"])
 def test_the_saved_photo_is_what_the_window_shows(
-    client: TestClient, page: Page, button: str | None
+    client: TestClient, page: Page, turn: str
 ) -> None:
     """The cold read: a quarter turn saved a stretched photo, which a
     two-colour test cannot see. A screenshot of the window, against the
@@ -229,10 +228,7 @@ def test_the_saved_photo_is_what_the_window_shows(
     page.set_input_files("#photo-file", files=[tiles])
     page.wait_for_selector("#photo-save:enabled")
     page.locator("#photo-zoom").fill("1.6")
-    if button is None:
-        page.locator("#photo-rotate").fill("23.5")
-    else:
-        page.click(button)
+    page.locator("#photo-rotate").fill(turn)
     window = page.locator("#photo-window").bounding_box()
     assert window is not None
     page.mouse.move(window["x"] + 100, window["y"] + 100)
@@ -243,3 +239,40 @@ def test_the_saved_photo_is_what_the_window_shows(
     saved = _save_and_read(client, page, 1).resize(shot.size)
     diff = ImageStat.Stat(ImageChops.difference(shot, saved)).mean
     assert max(diff) < 8, diff
+
+
+@pytest.mark.parametrize(
+    ("moved_to", "shown"),
+    [
+        ("4", "0"),
+        ("-3.5", "0"),
+        ("86", "90"),
+        ("94", "90"),
+        ("-87", "-90"),
+        ("85", "85"),
+        ("95", "95"),
+        ("45", "45"),
+        ("180", "180"),
+    ],
+)
+def test_the_rotate_bar_snaps_to_its_waypoints(page: Page, moved_to: str, shown: str) -> None:
+    """Upright and the quarter turns catch the bar within 4 degrees;
+    anywhere else it stays where it is put."""
+    _choose_phone_photo(page)
+    page.locator("#photo-rotate").fill(moved_to)
+    assert float(page.locator("#photo-rotate").input_value()) == float(shown)
+
+
+def test_the_bars_sit_right_of_and_below_the_window(page: Page) -> None:
+    _choose_phone_photo(page)
+    window = page.locator("#photo-window").bounding_box()
+    zoom = page.locator("#photo-zoom").bounding_box()
+    rotate = page.locator("#photo-rotate").bounding_box()
+    assert window is not None and zoom is not None and rotate is not None
+    assert zoom["x"] >= window["x"] + window["width"]  # right of it
+    assert zoom["height"] > zoom["width"] * 3  # upright
+    assert rotate["y"] >= window["y"] + window["height"]  # below it
+    assert rotate["width"] > rotate["height"] * 3  # lying down
+    # Zoom in is up: a click near the bar's top sets a high zoom.
+    page.mouse.click(zoom["x"] + zoom["width"] / 2, zoom["y"] + 4)
+    assert float(page.locator("#photo-zoom").input_value()) > 3.5
