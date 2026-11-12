@@ -66,7 +66,7 @@ Every move works in the browser; nothing is saved until AD2, and a
 reload restores the sample form.
 
 - **Layout.** The form's own *Form title* and *Description* at the top,
-  which cannot be deleted or moved; then its cards; an Outline beside
+  which cannot be deleted or moved and collapses like a card; then its cards; an Outline beside
   them in the right third, kept in view (one column on a phone, the
   Outline below).
 - **Cards.** A question or text card (*field*), a *section* (a title) or a
@@ -94,9 +94,12 @@ reload restores the sample form.
 - **The Outline** lists sections, cards and page breaks in order, with
   each card's visibility, and the counts of pages, sections, questions
   (a text card is no question) and required ones; a click goes to the
-  card, leaving Preview. Nothing in it is numbered. It follows every
+  card. Nothing in it is numbered. It follows every
   change.
-- **Preview** shows the form as an applicant sees it, page by page, built
-  from the cards on screen: a number field with its bounds, a list as
+- **Preview**, at the foot of the Outline, opens a new tab,
+  `/operator/exercises/<id>/form/preview`, showing the form as an
+  applicant sees it, page by page, built from the cards on screen (a
+  reload of the tab picks up later edits; opened on its own, it shows
+  the sample form): a number field with its bounds, a list as
   radio buttons or tick boxes, a photo's frame at its ratio, and "Reviewers
   see your answer." under a shown question. Nothing typed there is kept.

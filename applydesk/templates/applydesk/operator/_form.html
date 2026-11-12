@@ -3,11 +3,19 @@
    browser and nothing is saved until AD2. #}
 {% import "applydesk/operator/_form_cards.html" as fc %}
 {% set single = (cards | selectattr("kind", "equalto", "field") | list | length) == 1 %}
-<div class="fb-split" data-form-builder>
+<div class="fb-split" data-form-builder data-exercise="{{ exercise.public_id }}">
   <div class="fb-main">
-    <section class="card fb-title" aria-label="The form's title and description">
-      <label class="fc-l">Form title<input class="fc-in fb-title-in" data-fb="title" value="{{ form_heading[0] }}" placeholder="Untitled form"></label>
-      <label class="fc-l">Description<textarea class="fc-in" data-fb="description" rows="2" placeholder="Optional">{{ form_heading[1] }}</textarea></label>
+    {# The form's own title and description: collapsible, never moved or
+       deleted. #}
+    <section class="fc fb-title" data-kind="title" aria-label="The form's title and description"{% if single %} data-open{% endif %}>
+      <div class="fc-head">
+        <button type="button" class="fc-toggle" data-fc-toggle aria-expanded="{{ 'true' if single else 'false' }}" aria-label="{{ 'Collapse' if single else 'Expand' }} the form's title and description"></button>
+        <div class="fc-sum"><div class="fc-texts"><span class="fc-kicker">Form</span><span class="fc-q fb-title-q" data-sum="title">{{ form_heading[0] or "Untitled form" }}</span><span class="fc-h" data-sum="description">{{ form_heading[1] }}</span></div></div>
+      </div>
+      <div class="fc-body">
+        <label class="fc-l">Form title<input class="fc-in fb-title-in" data-fb="title" value="{{ form_heading[0] }}" placeholder="Untitled form"></label>
+        <label class="fc-l">Description<textarea class="fc-in" data-fb="description" rows="2" placeholder="Optional">{{ form_heading[1] }}</textarea></label>
+      </div>
     </section>
     <div class="fb-cards" id="fb-cards">
       {% for c in cards %}
@@ -23,18 +31,14 @@
     <template id="fb-new-section">{{ fc.section(blank_section, open=True) }}</template>
     <template id="fb-new-pagebreak">{{ fc.pagebreak() }}</template>
   </div>
-  <section class="fb-preview card" id="fb-preview" hidden aria-labelledby="preview-h">
-    <div class="fb-pv-bar"><h2 id="preview-h">Preview</h2><button type="button" class="btn btn-secondary" data-fb-preview-close>Back to editing</button></div>
-    <p class="muted">The form as an applicant sees it. Nothing typed here is kept.</p>
-    <div data-fb-preview-body></div>
-  </section>
   <aside class="fb-side">
     <section class="card fb-outline" aria-labelledby="outline-h">
       <h2 id="outline-h">Outline</h2>
       <div data-fb-outline></div>
       <p class="muted fb-counts" data-fb-counts></p>
       <p class="visually-hidden" data-fb-live aria-live="polite"></p>
-      <div class="btnrow"><button type="button" class="btn btn-secondary" data-fb-preview>Preview</button></div>
+      <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form/preview') }}" target="_blank" rel="opener" data-fb-preview>Preview</a></div>
+      <p class="muted fb-pv-note">Opens a new tab: the form as an applicant sees it.</p>
     </section>
   </aside>
 </div>
@@ -123,9 +127,8 @@
     if (text !== undefined) e.textContent = text;
     return e;
   }
-  // An Outline click goes to the card, leaving Preview first.
+  // An Outline click goes to the card.
   function goTo(card) {
-    if (main.hidden) showPreview(false);
     card.scrollIntoView({ block: "center" });
     card.querySelector("[data-fc-toggle]").focus();
   }
@@ -164,13 +167,15 @@
   // A card's name for its handle and its toggle, so a screen reader
   // tells one card from another.
   function nameOf(card) {
+    if (card.dataset.kind === "title") return "the form's title and description";
     if (card.dataset.kind === "pagebreak") return "page break";
     if (card.dataset.kind === "section") return "section " + (val(card, "label") || "Untitled section");
     return val(card, "label") || (card.dataset.type === "text" ? "Untitled text" : "Untitled question");
   }
   function name(card) {
     var n = nameOf(card), t = card.querySelector("[data-fc-toggle]");
-    card.querySelector("[data-fc-grip]").setAttribute("aria-label", "Move " + n + ": drag, or press the up and down arrow keys");
+    var grip = card.querySelector("[data-fc-grip]");
+    if (grip) grip.setAttribute("aria-label", "Move " + n + ": drag, or press the up and down arrow keys");
     if (t) t.setAttribute("aria-label", (card.hasAttribute("data-open") ? "Collapse " : "Expand ") + n);
   }
   function setOpen(card, open) {
@@ -295,92 +300,36 @@
     card.querySelectorAll('[data-f="exclusive"]').forEach(function (x) { x.setAttribute("aria-pressed", x.dataset.v === "true" ? "true" : "false"); });
     refresh(card); drawOutline();
   });
-  // --- Preview: the form as an applicant sees it, from the cards ---
-  var main = root.querySelector(".fb-main");
-  var preview = root.querySelector("#fb-preview");
-  var pbody = preview.querySelector("[data-fb-preview-body]");
-  var opener = root.querySelector("[data-fb-preview]");
-  var uid = 0;
-  function pvField(card) {
-    var t = card.dataset.type, wrap = el("div", "fb-pv-field");
-    if (t === "text") {
-      wrap.appendChild(el("h4", "fb-pv-title", val(card, "label") || "Untitled text"));
-      if (val(card, "help")) wrap.appendChild(el("p", "fb-pv-help", val(card, "help")));
-      return wrap;
-    }
-    var id = "fb-pv-" + (++uid), req = pressed(card, "required");
-    var lab = el("label", "fb-pv-label", val(card, "label") || "Untitled question");
-    lab.htmlFor = id;
-    if (req) lab.appendChild(el("span", "fb-pv-req", " (required)"));
-    wrap.appendChild(lab);
-    if (val(card, "help")) { var h = el("p", "fb-pv-help", val(card, "help")); h.id = id + "-h"; wrap.appendChild(h); }
-    if (pressed(card, "shown")) wrap.appendChild(el("p", "fb-pv-seen", "Reviewers see your answer."));
-    var input;
-    if (t === "string") {
-      var max = /^\d+$/.test(val(card, "max")) ? parseInt(val(card, "max"), 10) : 0;
-      input = el(max > 0 && max <= 200 ? "input" : "textarea", "fc-in");
-      if (max > 0) input.maxLength = max;
-    } else if (t === "integer" || t === "decimal") {
-      input = el("input", "fc-in fb-pv-num");
-      input.type = "number";
-      ["min", "max", "step"].forEach(function (k) { if (val(card, k)) input.setAttribute(k, val(card, k)); });
-      if (t === "decimal" && !val(card, "step")) input.step = "any";
-    } else if (t === "list") {
-      input = el("div", "fb-pv-opts");
-      input.setAttribute("role", "group");
-      var exclusive = pressed(card, "exclusive");
-      val(card, "options").split(",").map(function (o) { return o.trim(); }).filter(Boolean).forEach(function (o, i) {
-        var l = el("label", "fb-pv-opt"), box = el("input");
-        box.type = exclusive ? "radio" : "checkbox";
-        box.name = id;
-        l.appendChild(box); l.appendChild(document.createTextNode(" " + o));
-        input.appendChild(l);
-      });
-      if (!input.children.length) input.appendChild(el("p", "muted", "No options yet."));
-    } else {
-      var k = kept(val(card, "ratio_w"), val(card, "ratio_h"));
-      input = el("div", "fb-pv-photo");
-      input.setAttribute("role", "group");
-      var frame = el("span", "fb-pv-frame");
-      if (k) frame.style.aspectRatio = k[0] + " / " + k[1];
-      input.appendChild(frame);
-      input.appendChild(el("span", "muted", "Choose a photo and frame it here" + (k ? " (kept " + k[0] + " × " + k[1] + ")." : ".")));
-    }
-    if (input.tagName === "INPUT" || input.tagName === "TEXTAREA") {
-      input.id = id;
-      if (req) input.required = true;
-    } else {
-      lab.htmlFor = ""; lab.id = id; input.setAttribute("aria-labelledby", id);
-      if (req) input.setAttribute("aria-required", "true");
-    }
-    if (val(card, "help")) input.setAttribute("aria-describedby", id + "-h");
-    wrap.appendChild(input);
-    return wrap;
-  }
-  function drawPreview() {
-    pbody.textContent = "";
-    var title = root.querySelector('[data-fb="title"]').value.trim();
-    var desc = root.querySelector('[data-fb="description"]').value.trim();
-    pbody.appendChild(el("h3", "fb-pv-form", title || "Untitled form"));
-    if (desc) pbody.appendChild(el("p", "fb-pv-help", desc));
-    var page = 1;
-    pbody.appendChild(el("p", "fb-pv-page fb-pv-first", "Page 1"));
-    Array.prototype.forEach.call(list.children, function (card) {
-      if (card.dataset.kind === "pagebreak") { page += 1; pbody.appendChild(el("p", "fb-pv-page", "Page " + page)); }
-      else if (card.dataset.kind === "section") pbody.appendChild(el("h3", "fb-pv-section", val(card, "label") || "Untitled section"));
-      else pbody.appendChild(pvField(card));
+  // --- The form's own card: collapses like the others ---
+  var titleCard = root.querySelector('[data-kind="title"]');
+  var titleIn = titleCard.querySelector('[data-fb="title"]');
+  var descIn = titleCard.querySelector('[data-fb="description"]');
+  titleCard.querySelector("[data-fc-toggle]").addEventListener("click", function () {
+    setOpen(titleCard, !titleCard.hasAttribute("data-open"));
+  });
+  titleCard.addEventListener("input", function () {
+    titleCard.querySelector('[data-sum="title"]').textContent = titleIn.value.trim() || "Untitled form";
+    titleCard.querySelector('[data-sum="description"]').textContent = descIn.value.trim();
+  });
+
+  // --- Preview: a new tab draws the form from this snapshot ---
+  window.applydeskFormSnapshot = function () {
+    return JSON.stringify({
+      exercise: root.dataset.exercise,
+      title: titleIn.value.trim(),
+      description: descIn.value.trim(),
+      cards: Array.prototype.map.call(list.children, function (card) {
+        var kind = card.dataset.kind;
+        if (kind !== "field") return { kind: kind, label: kind === "section" ? val(card, "label") : "" };
+        return {
+          kind: kind, type: card.dataset.type, label: val(card, "label"), help: val(card, "help"),
+          min: val(card, "min"), max: val(card, "max"), step: val(card, "step"), options: val(card, "options"),
+          exclusive: pressed(card, "exclusive"), required: pressed(card, "required"), shown: pressed(card, "shown"),
+          ratio_w: val(card, "ratio_w"), ratio_h: val(card, "ratio_h"), kept: kept(val(card, "ratio_w"), val(card, "ratio_h"))
+        };
+      })
     });
-  }
-  function showPreview(on) {
-    if (on) drawPreview();
-    main.hidden = on;
-    preview.hidden = !on;
-    opener.disabled = on;
-    (on ? preview.querySelector("h2") : opener).focus();
-  }
-  preview.querySelector("h2").tabIndex = -1;
-  opener.addEventListener("click", function () { showPreview(true); });
-  preview.querySelector("[data-fb-preview-close]").addEventListener("click", function () { showPreview(false); });
+  };
 
   changed();
 })();
