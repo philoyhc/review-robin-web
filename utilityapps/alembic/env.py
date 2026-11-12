@@ -1,0 +1,78 @@
+"""Alembic environment for Utilities' database (segment U4).
+
+Its version table is `utilityapps_alembic_version`, not Alembic's default,
+so it can never be mistaken for RRW's history even on a shared test
+database."""
+
+from __future__ import annotations
+
+from logging.config import fileConfig
+
+from alembic import context
+from sqlalchemy import engine_from_config, pool
+
+from utilityapps import models
+from utilityapps.db import UtilityAppsSettings
+
+VERSION_TABLE = "utilityapps_alembic_version"
+
+config = context.config
+
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
+
+if not config.get_main_option("sqlalchemy.url"):
+    # ConfigParser reads `%` as interpolation; a percent-encoded password
+    # (`pass%40word`) must reach it doubled.
+    url = UtilityAppsSettings().database_url
+    config.set_main_option("sqlalchemy.url", url.replace("%", "%%"))
+
+# Importing the models registers every table on Utilities' Base.
+target_metadata = models.Base.metadata
+
+
+def include_name(name: str | None, type_: str, parent_names: object) -> bool:
+    """Compare only Utilities' own tables: any other table in the database
+    (RRW's, on CI's shared Postgres) is not this history's to drop."""
+    if type_ == "table":
+        return name in target_metadata.tables
+    return True
+
+
+def run_migrations_offline() -> None:
+    url = config.get_main_option("sqlalchemy.url")
+    context.configure(
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        dialect_opts={"paramstyle": "named"},
+        version_table=VERSION_TABLE,
+        include_name=include_name,
+        render_as_batch=url is not None and url.startswith("sqlite"),
+    )
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+def run_migrations_online() -> None:
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            version_table=VERSION_TABLE,
+            include_name=include_name,
+            render_as_batch=connection.dialect.name == "sqlite",
+        )
+        with context.begin_transaction():
+            context.run_migrations()
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()

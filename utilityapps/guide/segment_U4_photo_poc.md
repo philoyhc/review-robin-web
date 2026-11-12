@@ -51,6 +51,11 @@ Taken 2026-11-12 at `12cba9a`.
 | Pillow in the dependencies | 0 | `grep -c -i pillow pyproject.toml requirements.txt` |
 | Cordware's release migration table | 1 row (`reviewrobin`) | Cordware `grep -n '"files"' .github/workflows/release.yml` |
 
+## Status
+
+Building. Base `5974163` for the cumulative read.
+- Rung 2: the history's version table is `utilityapps_alembic_version`, so CI round-trips it on RRW's Postgres service database beside RRW's own; checked locally against Postgres 16 too.
+
 ## PR ladder
 
 1. **Plan** (this file).
