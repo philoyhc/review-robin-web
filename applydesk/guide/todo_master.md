@@ -31,6 +31,13 @@ where a ruling below differs from it, the ruling wins.
    `/applydesk/operator/exercises` and
    `/applydesk/operator/exercises/<id>/…`; participants under
    `/applydesk/me` and `/applydesk/me/exercises/<id>/…`.
+9. **A reviewer opens only the profiles of the applications they are
+   asked to review** (AD5). ApplyDesk's roster holds that permission.
+   How the same pairs reach Review Robin's assignments, through reviewer,
+   reviewee or relationship tags, is decided at AD6.
+10. **A blind exercise sends Review Robin an alias key** in place of the
+    application ID, minted per handoff and mapped back only by
+    ApplyDesk (AD6), since RRW shows `RevieweeEmail` under each name.
 
 ## MVP roadmap
 
@@ -42,22 +49,14 @@ Segments in order; each gets a plan in this folder when it starts.
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the Application → Review stage boundary | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
-| AD5 — Assessor roster and profile page | The exercise's assessors and what each may view; the application profile page with its access check, audit and blind redaction | View scope: below |
-| AD6 — Assessment in Review Robin | Rosters from submitted applications, `ProfileLink` to the profile page, results back into ApplyDesk | The open items below |
+| AD5 — Assessor roster and profile page | The exercise's assessors and the applications each is asked to review (ruling 9); the application profile page with its access check, audit and blind redaction | — |
+| AD6 — Assessment in Review Robin | Rosters from submitted applications, the pairs as tags, `ProfileLink` to the profile page, the blind alias key (ruling 10), results back into ApplyDesk | The open items below |
 | AD7 — Timeline and outcomes | Milestones, announcements, outcome import, embargo on read, release, correction | G5 (sender), G7 (publication) |
 | AD8 — Dashboard and export | Counts by state; the export bundle | — |
 | Later | Blob storage, then uploads and referees | G8, with IT |
 
 ## Open decisions
 
-- **View scope (AD5):** whether an assessor may open every application
-  in the exercise, or only those ApplyDesk lists for them. Listing
-  pairs means ApplyDesk also sends them to Review Robin as
-  Relationships, for the instrument to filter on.
-- **Blind identity in Review Robin (AD6):** RRW shows `RevieweeEmail`
-  under each name, and the handoff puts the application ID there. A blind
-  exercise may need an alias key minted per handoff, which only
-  ApplyDesk can map back.
 - **The 23A open items (AD6):** `reviewees.unreachable_for_results` on
   every application ID; two concurrent first posts of one transfer; the
   new-user race in `get_or_create_user` (`guide/interoperability.md` §4).

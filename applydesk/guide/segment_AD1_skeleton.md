@@ -37,7 +37,7 @@ Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID
 | `/me` | My ApplyDesk: my applications, exercises open to me, profiles I may read | Anyone signed in |
 | `/me/exercises/<id>` | An exercise as an applicant sees it: details, timeline, Apply | Eligible applicants |
 | `/me/exercises/<id>/applications/<app>` | My application: draft or submitted | Its applicant |
-| `/me/exercises/<id>/profiles/<profile>` | The application profile page: the *Shown to reviewers* section; in a blind exercise, the applicant's name and identifiers redacted | Its exercise's assessors, within their view scope |
+| `/me/exercises/<id>/profiles/<profile>` | The application profile page: the *Shown to reviewers* section; in a blind exercise, the applicant's name and identifiers redacted | Assessors asked to review that application (ruling 9) |
 
 ## Semantics
 
