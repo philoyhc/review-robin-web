@@ -33,6 +33,20 @@ def test_the_history_round_trips_and_matches_the_models(tmp_path: Path) -> None:
     assert tables == {"photo_poc_photos", "utilityapps_alembic_version"}
 
 
+def test_another_application_s_tables_are_left_alone(tmp_path: Path) -> None:
+    """CI's Postgres holds RRW's tables beside Utilities': the history's
+    check compares Utilities' own tables only, and never drops another's."""
+    url = f"sqlite:///{tmp_path / 'shared.db'}"
+    engine = create_engine(url)
+    with engine.begin() as connection:
+        connection.exec_driver_sql("CREATE TABLE sessions (id INTEGER PRIMARY KEY)")
+    config = _config(url)
+    command.upgrade(config, "head")
+    command.check(config)
+    command.downgrade(config, "base")
+    assert "sessions" in inspect(create_engine(url)).get_table_names()
+
+
 def test_the_url_comes_from_its_own_setting(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("UTILITYAPPS_DATABASE_URL", "sqlite:///./elsewhere.db")
     assert db.UtilityAppsSettings().database_url == "sqlite:///./elsewhere.db"

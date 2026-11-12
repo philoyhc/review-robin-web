@@ -28,6 +28,14 @@ if not config.get_main_option("sqlalchemy.url"):
 target_metadata = models.Base.metadata
 
 
+def include_name(name: str | None, type_: str, parent_names: object) -> bool:
+    """Compare only Utilities' own tables: any other table in the database
+    (RRW's, on CI's shared Postgres) is not this history's to drop."""
+    if type_ == "table":
+        return name in target_metadata.tables
+    return True
+
+
 def run_migrations_offline() -> None:
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
@@ -36,6 +44,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         version_table=VERSION_TABLE,
+        include_name=include_name,
         render_as_batch=url is not None and url.startswith("sqlite"),
     )
     with context.begin_transaction():
@@ -53,6 +62,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             version_table=VERSION_TABLE,
+            include_name=include_name,
             render_as_batch=connection.dialect.name == "sqlite",
         )
         with context.begin_transaction():
