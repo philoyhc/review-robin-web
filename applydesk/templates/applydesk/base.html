@@ -142,6 +142,73 @@
     .section { border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px 16px; }
     .section + .section, .facts + .section { margin-top: 12px; }
     .section h3 { margin: 0 0 4px; font-size: 15px; }
+    /* The Form page (segment AD1B): the cards in two thirds, the Outline
+       in the third, as Residential's columns (three from 1116 px, two from
+       736 px with a 340 px side, one below). */
+    .fb-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
+    @media (min-width: 736px) { .fb-split { grid-template-columns: minmax(0, 1fr) 340px; } .fb-side { position: sticky; top: 16px; } }
+    @media (min-width: 1116px) { .fb-split { grid-template-columns: repeat(3, minmax(0, 1fr)); } .fb-main { grid-column: span 2; } }
+    .fb-title { border-top: 4px solid var(--accent); margin-bottom: 12px; }
+    .fb-title-in { font-size: 18px !important; font-weight: 600; }
+    .fb-cards { display: flex; flex-direction: column; gap: 10px; }
+    .fc { border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-card); }
+    .fc-section { background: var(--surface-muted); border-color: var(--border-default); }
+    .fc-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; }
+    .fc-grip { border: 0; background: none; color: var(--text-subtle); cursor: grab; font-size: 16px; letter-spacing: -3px; padding: 6px 8px 6px 4px; border-radius: 4px; touch-action: none; }
+    .fc-grip:hover, .fc-grip:focus-visible { background: var(--surface-muted); color: var(--text-body); }
+    .fc-toggle { border: 0; background: none; cursor: pointer; width: 28px; height: 28px; border-radius: 4px; color: var(--text-strong-subtle); }
+    .fc-toggle::before { content: "▸"; }
+    .fc[data-open] .fc-toggle::before { content: "▾"; }
+    .fc-toggle:hover { background: var(--surface-muted); }
+    .fc-sum { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+    .fc-texts { flex: 1 1 220px; min-width: 0; }
+    .fc-q { display: block; font-weight: 600; font-size: 15px; overflow-wrap: anywhere; }
+    .fc-h { display: block; font-size: 13px; color: var(--text-subtle); overflow-wrap: anywhere; }
+    .fc-h:empty { display: none; }
+    .fc-kicker { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-subtle); }
+    .fc-chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+    .fc-chips .chip { white-space: normal; }
+    .chip-req { background: var(--accent-tint); color: var(--accent-chip-fg); }
+    .fc-type { display: none; margin-left: auto; font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card); color: var(--text-body); }
+    .fc[data-open] .fc-type { display: block; }
+    .fc[data-open] .fc-sum { visibility: hidden; height: 0; overflow: hidden; }
+    .fc-body { display: none; padding: 4px 16px 14px; border-top: 1px solid var(--border-subtle); }
+    .fc[data-open] .fc-body { display: block; }
+    .fc-l { display: block; font-size: 13px; font-weight: 600; margin-top: 10px; }
+    .fc-in { display: block; width: 100%; margin-top: 3px; font: inherit; font-size: 14px; font-weight: 400; padding: 7px 9px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card); color: var(--text-body); }
+    .fc-row { display: none; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+    .fc-row > .fc-l { flex: 1 1 80px; }
+    .fc-row > .fc-wide { flex: 3 1 240px; }
+    .fc-row > .fc-narrow { flex: 0 1 110px; }
+    .fc-colon { font-weight: 700; padding-bottom: 8px; }
+    .fc-note { flex: 1 1 100%; margin: 6px 0 0; font-size: 13px; }
+    .fc[data-type="string"] .g-string, .fc[data-type="integer"] .g-number, .fc[data-type="decimal"] .g-number,
+    .fc[data-type="list"] .g-list, .fc[data-type="photo"] .g-photo, .fc .fc-flags { display: flex; }
+    .fc .fc-flags { margin-top: 12px; }
+    .fc[data-type="text"] .g-req { display: none; }
+    .fc[data-type="text"] [data-sum="required"] { display: none; }
+    .l-t { display: none; }
+    .fc[data-type="text"] .l-q { display: none; }
+    .fc[data-type="text"] .l-t { display: inline; }
+    .seg { display: inline-flex; border: 1px solid var(--accent); border-radius: 6px; overflow: hidden; margin-top: 3px; }
+    .seg button { border: 0; background: transparent; color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; padding: 0 12px; min-height: 34px; white-space: nowrap; cursor: pointer; }
+    .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+    .btn-toggle { background: transparent; color: var(--accent); }
+    .btn-toggle[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+    .fc-foot { display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--border-subtle); margin-top: 14px; padding-top: 12px; }
+    .fc-foot .fc-del { margin-left: auto; }
+    .fc-break { display: flex; align-items: center; gap: 10px; color: var(--text-subtle); font-size: 13px; font-weight: 600; margin: 6px 0; }
+    .fc-break::after { content: ""; flex: 1; border-top: 2px dashed var(--border-default); order: 1; }
+    .fc-break .btn { order: 2; min-height: 28px; }
+    .fb-outline h2 { margin-bottom: 6px; }
+    .fb-o-section { display: block; border: 0; background: none; padding: 6px 0 2px; font: inherit; font-size: 14px; font-weight: 700; color: var(--text-body); cursor: pointer; text-align: left; }
+    .fb-o-break { margin: 8px 0 2px; font-size: 12px; color: var(--text-subtle); }
+    .fb-o-list { margin: 0; padding-left: 20px; font-size: 14px; }
+    .fb-o-list li { padding: 2px 0; }
+    .fb-o-item { border: 0; background: none; padding: 0; font: inherit; color: var(--text-link); cursor: pointer; text-align: left; margin-right: 6px; }
+    .fb-o-list .chip { font-size: 11px; padding: 1px 8px; }
+    .fb-counts { margin: 10px 0 0; font-size: 13px; }
+    @media (max-width: 599px) { .fc-foot .fc-del { margin-left: 0; } }
     .redacted { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--surface-muted); color: var(--text-subtle); font-size: 13px; }
   </style>
 </head>

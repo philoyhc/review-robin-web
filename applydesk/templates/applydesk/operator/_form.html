@@ -1,31 +1,181 @@
-<div class="grid">
-  <section class="card" aria-labelledby="build-h">
-    <h2 id="build-h">Build</h2>
-    <h3>Shown to reviewers</h3>
-    <p class="muted">What assessors read on the profile page, and what an applicant is told reviewers will see.</p>
-    <ul>{% for label, help in shown %}<li>{{ label }}{% if help %} <span class="muted">— {{ help }}</span>{% endif %}</li>{% else %}<li class="muted">No questions yet.</li>{% endfor %}</ul>
-    <h3>Not shown to reviewers</h3>
-    <p class="muted">The applicant and this exercise's operators only.</p>
-    <ul>{% for label in not_shown %}<li>{{ label }}</li>{% else %}<li class="muted">No questions yet.</li>{% endfor %}</ul>
-    <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Add a question</button><button class="btn btn-primary" type="button" disabled>Save</button></div>
-  </section>
-  <section class="card" aria-labelledby="preview-h">
-    <h2 id="preview-h">Preview</h2>
-    <p class="muted">The form as an applicant sees it. Nothing typed here is kept.</p>
-    {% if not shown and not not_shown %}<p class="muted">Add a question to see it here.</p>{% else %}
-    {% if shown %}<h3>Shown to reviewers</h3>{% endif %}
-    {% for label, help in shown %}
-    <div class="field">
-      <label for="pv-s{{ loop.index }}">{{ label }}</label>
-      {% if help %}<span class="field-help" id="pv-s{{ loop.index }}-help">{{ help }}</span>{% endif %}
-      {% set described = ' aria-describedby="pv-s' ~ loop.index ~ '-help"' if help else '' %}
-      {% if loop.first %}<input id="pv-s{{ loop.index }}" type="text"{{ described | safe }} disabled>{% else %}<textarea id="pv-s{{ loop.index }}" rows="2"{{ described | safe }} disabled></textarea>{% endif %}
+{# The Form page (segment AD1B): the form's own title and description,
+   then its cards; the Outline beside them. Every move works in the
+   browser and nothing is saved until AD2. #}
+{% import "applydesk/operator/_form_cards.html" as fc %}
+{% set single = (cards | selectattr("kind", "equalto", "field") | list | length) == 1 %}
+<div class="fb-split" data-form-builder>
+  <div class="fb-main">
+    <section class="card fb-title" aria-label="The form's title and description">
+      <label class="fc-l">Form title<input class="fc-in fb-title-in" data-fb="title" value="{{ form_heading[0] }}" placeholder="Untitled form"></label>
+      <label class="fc-l">Description<textarea class="fc-in" data-fb="description" rows="2" placeholder="Optional">{{ form_heading[1] }}</textarea></label>
+    </section>
+    <div class="fb-cards" id="fb-cards">
+      {% for c in cards %}
+        {% if c.kind == "section" %}{{ fc.section(c) }}
+        {% elif c.kind == "pagebreak" %}{{ fc.pagebreak() }}
+        {% else %}{{ fc.field(c, summary, kept_size, card_types, open=single) }}{% endif %}
+      {% endfor %}
     </div>
-    {% endfor %}
-    {% if not_shown %}<h3>Not shown to reviewers</h3>{% endif %}
-    {% for label in not_shown %}
-    <div class="field"><label for="pv-n{{ loop.index }}">{{ label }}</label><input id="pv-n{{ loop.index }}" type="text" disabled></div>
-    {% endfor %}
-    {% endif %}
-  </section>
+    <div class="btnrow"><button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button></div>
+  </div>
+  <aside class="fb-side">
+    <section class="card fb-outline" aria-labelledby="outline-h">
+      <h2 id="outline-h">Outline</h2>
+      <div data-fb-outline></div>
+      <p class="muted fb-counts" data-fb-counts></p>
+    </section>
+  </aside>
 </div>
+<script>
+// Segment AD1B: the Form page's moves, in the browser only; a reload
+// restores the sample form. Rung 2: collapse and expand, the type menu,
+// the toggles, the summaries and the Outline following every edit.
+(function () {
+  var root = document.querySelector("[data-form-builder]");
+  if (!root) return;
+  var list = root.querySelector("#fb-cards");
+  var outline = root.querySelector("[data-fb-outline]");
+  var counts = root.querySelector("[data-fb-counts]");
+  var NAMES = { integer: "Integer", decimal: "Decimal" };
+
+  function val(card, f) {
+    var el = card.querySelector('[data-f="' + f + '"]:not([data-g]), [data-f="' + f + '"][data-g="' + group(card) + '"]');
+    return el ? el.value.trim() : "";
+  }
+  function group(card) {
+    var t = card.dataset.type;
+    return t === "string" ? "string" : (t === "integer" || t === "decimal") ? "number" : "";
+  }
+  function pressed(card, f) {
+    var on = card.querySelector('[data-f="' + f + '"][aria-pressed="true"]');
+    return on ? (on.dataset.v ? on.dataset.v === "true" : true) : false;
+  }
+  function span(lo, hi, unit) {
+    var u = unit ? " " + unit : "";
+    if (lo && hi) return lo === hi ? "exactly " + lo + u : lo + " to " + hi + u;
+    if (hi) return "up to " + hi + u;
+    if (lo) return "at least " + lo + u;
+    return "";
+  }
+  function kept(w, h) {
+    if (!/^\d+$/.test(w) || !/^\d+$/.test(h)) return null;
+    var a = parseInt(w, 10), b = parseInt(h, 10);
+    if (a <= 0 || b <= 0) return null;
+    return a >= b ? [600, Math.round(600 * b / a)] : [Math.round(600 * a / b), 600];
+  }
+  // As sample_data.card_summary: the two must read the same.
+  function summary(card) {
+    var t = card.dataset.type, s;
+    if (t === "string") { s = span(val(card, "min"), val(card, "max"), "characters"); return s ? "String · " + s : "String"; }
+    if (t === "integer" || t === "decimal") {
+      var parts = [span(val(card, "min"), val(card, "max"), ""), val(card, "step") ? "step " + val(card, "step") : ""].filter(Boolean);
+      return NAMES[t] + (parts.length ? " · " + parts.join(", ") : "");
+    }
+    if (t === "list") {
+      var opts = val(card, "options").split(",").map(function (o) { return o.trim(); }).filter(Boolean).join(", ");
+      return "List · " + (pressed(card, "exclusive") ? "choose one" : "choose any") + " · " + (opts || "no options yet");
+    }
+    if (t === "photo") {
+      var k = kept(val(card, "ratio_w"), val(card, "ratio_h"));
+      return k ? "Photo · " + val(card, "ratio_w") + ":" + val(card, "ratio_h") + ", kept " + k[0] + " × " + k[1] : "Photo · ratio not set";
+    }
+    return "Title and Description · display only";
+  }
+  function refresh(card) {
+    if (card.dataset.kind === "section") {
+      card.querySelector('[data-sum="label"]').textContent = val(card, "label") || "Untitled section";
+      return;
+    }
+    if (card.dataset.kind !== "field") return;
+    var text = card.dataset.type === "text";
+    card.querySelector('[data-sum="label"]').textContent = val(card, "label") || (text ? "Untitled text" : "Untitled question");
+    card.querySelector('[data-sum="help"]').textContent = val(card, "help");
+    card.querySelector('[data-sum="type"]').textContent = summary(card);
+    var req = pressed(card, "required"), shown = pressed(card, "shown");
+    var r = card.querySelector('[data-sum="required"]');
+    r.textContent = req ? "Required" : "Optional";
+    r.className = "chip " + (req ? "chip-req" : "chip-mute");
+    var v = card.querySelector('[data-sum="shown"]');
+    v.textContent = shown ? "Shown to reviewers" : "Not shown";
+    v.className = "chip " + (shown ? "chip-info" : "chip-mute");
+    var k = kept(val(card, "ratio_w"), val(card, "ratio_h"));
+    card.querySelector('[data-sum="kept"]').textContent = k
+      ? "Kept as a " + k[0] + " × " + k[1] + " JPEG: 600 px on its longer side."
+      : "Enter the ratio as two whole numbers.";
+  }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  // The Outline: sections, cards and page breaks in order, each card's
+  // visibility as a chip; a click scrolls to the card.
+  function drawOutline() {
+    outline.textContent = "";
+    var ol = null, page = 1, questions = 0, required = 0, sections = 0;
+    Array.prototype.forEach.call(list.children, function (card) {
+      var kind = card.dataset.kind;
+      if (kind === "pagebreak") {
+        page += 1; ol = null;
+        outline.appendChild(el("p", "fb-o-break", "Page " + page));
+        return;
+      }
+      if (kind === "section") {
+        sections += 1; ol = null;
+        var h = el("button", "fb-o-section", val(card, "label") || "Untitled section");
+        h.type = "button"; h.addEventListener("click", function () { card.scrollIntoView({ block: "center" }); card.querySelector("[data-fc-toggle]").focus(); });
+        outline.appendChild(h);
+        return;
+      }
+      if (!ol) { ol = el("ol", "fb-o-list"); outline.appendChild(ol); }
+      var li = el("li");
+      var b = el("button", "fb-o-item", val(card, "label") || (card.dataset.type === "text" ? "Untitled text" : "Untitled question"));
+      b.type = "button"; b.addEventListener("click", function () { card.scrollIntoView({ block: "center" }); card.querySelector("[data-fc-toggle]").focus(); });
+      li.appendChild(b);
+      var shown = pressed(card, "shown");
+      li.appendChild(el("span", "chip " + (shown ? "chip-info" : "chip-mute"), shown ? "Shown" : "Not shown"));
+      ol.appendChild(li);
+      if (card.dataset.type !== "text") { questions += 1; if (pressed(card, "required")) required += 1; }
+    });
+    counts.textContent = page + (page === 1 ? " page" : " pages") + " · " + sections + (sections === 1 ? " section" : " sections")
+      + " · " + questions + (questions === 1 ? " question" : " questions") + " · " + required + " required";
+  }
+  function setOpen(card, open) {
+    if (open) card.setAttribute("data-open", ""); else card.removeAttribute("data-open");
+    var t = card.querySelector("[data-fc-toggle]");
+    t.setAttribute("aria-expanded", open ? "true" : "false");
+    t.setAttribute("aria-label", open ? "Collapse" : "Expand");
+  }
+
+  list.addEventListener("click", function (e) {
+    var card = e.target.closest(".fc");
+    if (!card) return;
+    if (e.target.closest("[data-fc-toggle]")) { setOpen(card, !card.hasAttribute("data-open")); return; }
+    var b = e.target.closest("button[data-f]");
+    if (!b) return;
+    if (b.dataset.v) {
+      card.querySelectorAll('[data-f="' + b.dataset.f + '"]').forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+    } else {
+      b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") === "true" ? "false" : "true");
+    }
+    refresh(card); drawOutline();
+  });
+  list.addEventListener("input", function (e) {
+    var card = e.target.closest(".fc");
+    if (card) { refresh(card); drawOutline(); }
+  });
+  // A new type shows its own fields empty; the question, help text,
+  // visibility and Required are kept.
+  list.addEventListener("change", function (e) {
+    if (!e.target.matches('[data-f="type"]')) return;
+    var card = e.target.closest(".fc");
+    card.dataset.type = e.target.value;
+    card.querySelectorAll("[data-g], [data-f=options]").forEach(function (i) { i.value = ""; });
+    card.querySelector('[data-f="ratio_w"]').value = "4";
+    card.querySelector('[data-f="ratio_h"]').value = "5";
+    refresh(card); drawOutline();
+  });
+  drawOutline();
+})();
+</script>
