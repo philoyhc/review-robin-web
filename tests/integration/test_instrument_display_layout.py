@@ -3,12 +3,16 @@
 ``Instrument.display_layout`` is ``across`` (a column per display field;
 the default), ``stacked`` or ``joined`` (under the reviewee). This rung
 stores it: the setter, its audit event and the revert of a validated
-session, Replicate, Duplicate and the Settings CSV. Nothing renders it.
+session, Replicate, Duplicate and the Settings CSV. Nothing renders it. Rung 4 adds
+Band 3's *Display fields* chip, which both Saves store.
 """
 
 from __future__ import annotations
 
+import re
+
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -28,6 +32,9 @@ from app.services.session_config_io import (
     apply_session_config,
     serialize_session_config,
 )
+from app.web.views._instruments import DISPLAY_LAYOUT_CHOICES, display_layout_for
+
+from ._lookups import must_get
 
 
 def _seed(db: Session, *, code: str) -> tuple[User, ReviewSession, Instrument]:
@@ -206,3 +213,100 @@ def test_a_stray_stored_value_exports_as_across(db: Session) -> None:
     db.commit()
     rows = serialize_session_config(db, review_session)
     assert {r.field: r.value for r in rows}["instruments[1].display_layout"] == "across"
+
+
+# --- Rung 4: the Display fields chip -----------------------------------
+
+
+def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "Display", "code": code},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    return db.execute(select(ReviewSession).where(ReviewSession.code == code)).scalar_one()
+
+
+def _instrument(db: Session, review_session: ReviewSession) -> Instrument:
+    return db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalar_one()
+
+
+def _chip(client: TestClient, review_session: ReviewSession) -> tuple[str, str]:
+    flat = " ".join(
+        client.get(f"/operator/sessions/{review_session.public_id}/instruments").text.split()
+    )
+    header = flat.index("Display fields</h3>")
+    chip = re.search(r"<span [^>]*data-display-layout-chip[^>]*>([^<]*)</span>", flat)
+    assert chip is not None and chip.start() > header
+    return chip.group(1), flat
+
+
+def test_the_chip_vocabulary_follows_the_model() -> None:
+    assert tuple(c["value"] for c in DISPLAY_LAYOUT_CHOICES) == DISPLAY_LAYOUTS
+    assert [c["label"] for c in DISPLAY_LAYOUT_CHOICES] == ["Across", "Stacked", "Joined"]
+
+
+def test_the_chip_sits_right_of_the_header_and_carries_the_stored_value(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="20m-chip")
+    instrument = _instrument(db, review_session)
+    instrument.display_layout = "joined"
+    db.commit()
+    label, flat = _chip(client, review_session)
+    assert label == "Joined"
+    assert re.search(
+        rf'<input type="hidden" form="dfsave-{instrument.id}" name="display_layout" '
+        r'value="joined" autocomplete="off" data-display-layout-input>',
+        flat,
+    )
+
+
+def test_a_group_instrument_shows_a_stored_across_as_joined_but_keeps_it(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="20m-chip-group")
+    instrument = _instrument(db, review_session)
+    instrument.group_kind = "r1"
+    db.commit()
+    label, flat = _chip(client, review_session)
+    assert label == "Joined"
+    # The stored value rides the Save until the operator cycles the chip.
+    assert 'name="display_layout" value="across"' in flat
+    assert display_layout_for(instrument) == "joined"
+
+
+@pytest.mark.parametrize("path", ["fields/save", "save"])
+def test_both_saves_store_the_layout(client: TestClient, db: Session, path: str) -> None:
+    review_session = _make_session(client, db, code=f"20m-{path.replace('/', '-')}")
+    instrument = _instrument(db, review_session)
+    response = client.post(
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/{path}",
+        data={"display_layout": "stacked"},
+        follow_redirects=False,
+    )
+    assert response.status_code in (200, 303), response.text
+    db.expire_all()
+    assert must_get(db, Instrument, instrument.id).display_layout == "stacked"
+    assert len(_layout_events(db)) == 1
+
+
+@pytest.mark.parametrize(("path", "status_code"), [("fields/save", 400), ("save", 422)])
+def test_both_saves_refuse_an_unknown_layout(
+    client: TestClient, db: Session, path: str, status_code: int
+) -> None:
+    review_session = _make_session(client, db, code=f"20m-bad-{path.replace('/', '-')}")
+    instrument = _instrument(db, review_session)
+    response = client.post(
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/{path}",
+        data={"display_layout": "sideways", "short_label": "Changed"},
+        follow_redirects=False,
+    )
+    assert response.status_code == status_code
+    db.expire_all()
+    stored = must_get(db, Instrument, instrument.id)
+    assert stored.display_layout == "across"
+    assert stored.short_label != "Changed"
