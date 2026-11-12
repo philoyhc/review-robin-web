@@ -54,3 +54,20 @@ def test_a_group_showing_no_tag_falls_back_to_its_boundary_key() -> None:
     rows = [_row(1, "Aisha", ("", "")), _row(2, "Ben", ("", ""))]
     collapsed = _collapse_group_rows(rows, group_key_by_assignment={1: ("Z",), 2: ("M",)})
     assert [r["group_identity"]["tag_line"] for r in collapsed] == ["M", "Z"]
+
+
+def test_an_empty_tag_keeps_its_place_in_the_key() -> None:
+    """A group with no Tutorial sorts on its empty Tutorial, not its Team
+    shifted left into Tutorial's place."""
+    rows = [
+        _row(1, "Aisha", ("TW01", "Team 1")),
+        _row(2, "Ben", ("", "Team 9")),
+    ]
+    collapsed = _collapse_group_rows(rows, group_key_by_assignment={1: ("A",), 2: ("B",)})
+    assert [r["group_identity"]["tag_line"] for r in collapsed] == ["Team 9", "TW01, Team 1"]
+
+
+def test_groups_showing_the_same_tags_fall_back_to_the_boundary_key() -> None:
+    rows = [_row(1, "Aisha", ("TW01", "Team 1")), _row(2, "Ben", ("TW01", "Team 1"))]
+    collapsed = _collapse_group_rows(rows, group_key_by_assignment={1: ("Z",), 2: ("M",)})
+    assert [r["assignment"].id for r in collapsed] == [2, 1]

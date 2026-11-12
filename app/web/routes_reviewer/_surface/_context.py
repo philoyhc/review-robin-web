@@ -483,8 +483,8 @@ def _surface_context(
         # instrument silently drop from the sort cascade — see
         # ``views.order_rows_by_sort_spec`` for the render-time
         # defense. A group-scoped instrument's rows are already
-        # collapsed to one per group and ordered by composed
-        # group key; the only operator-controllable knob on a
+        # collapsed to one per group and ordered by the tags they
+        # show (20M Item 4); the only operator-controllable knob on a
         # group instrument is the Group sort sentinel
         # ``display_field_id == GROUP_IDENTITY_SORT_KEY`` (-1)
         # which lets the operator flip the order (asc keeps the
