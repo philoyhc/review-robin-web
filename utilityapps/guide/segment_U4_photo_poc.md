@@ -25,7 +25,7 @@ Review Robin shows a reviewee's photo only as an external `profile_link`, and Ap
 
 ## Semantics
 
-- **Upload limits.** 5 MB, checked in the browser for a quick answer and again by the server, which reads at most 5 MB + 1 byte. Accepted: whatever Pillow decodes as JPEG, PNG or WebP; anything else is refused with a message. Pillow's decompression-bomb limit is set low (about 40 megapixels) and enforced as an error.
+- **Upload limits.** 5 MB, checked in the browser for a quick answer and again by the server, which reads at most 5 MB + 1 byte. Accepted: whatever Pillow decodes as JPEG, PNG or WebP; anything else is refused with a message. ~~Pillow's decompression-bomb limit is set low~~ The service refuses beyond about 40 megapixels itself, from the header, before decoding (rung 3, Status).
 - **Orientation.** The browser draws a photo with its EXIF orientation applied, so the rectangle is in the oriented image's pixels; the server applies `ImageOps.exif_transpose` before cropping, so both read the same picture.
 - **The rectangle.** Integers inside the image, with the window's aspect ratio to within one pixel of rounding; otherwise refused. The server never trusts the browser's rectangle to be in bounds.
 - **What is kept.** The crop resized to 480 × 600 px (the window is 4:5), RGB, JPEG at quality 85, no metadata. Expected size about 50–100 KB. One row per photo: a public ID (RRW's alphabet), who uploaded it, when, the bytes, their SHA-256, width and height.
@@ -57,6 +57,8 @@ Building. Base `5974163` for the cumulative read.
 - Rung 2: the history's version table is `utilityapps_alembic_version`, so CI round-trips it on RRW's Postgres service database beside RRW's own; checked locally against Postgres 16 too.
 - Rung 3: Pillow 11 or later. Pillow's own bomb guard fires only at about 179 Mpx, so the service refuses beyond 40 Mpx itself, from the header, before any pixel is read; transparency lands on white.
 - Rung 4: the page is not on the Utilities index, as the interop proof of concept is not. Delete takes Destructive (outline red), new to Utilities' stylesheet: a deleted photo cannot be brought back.
+- Rung 5: the writes take a custom header, `X-Photo-Poc: 1`, as Utilities' JSON-only lookup takes its content type: a cross-site form cannot send either. The browser test serves the page through a `TestClient` behind a routed origin, as Residential's do, and runs in CI's unit shard.
+- **Read:** one `diff-reviewer` read of `5974163..` at rung 5, and Codex on rung 3 (#3824). Fixed: a JPEG comment and other inherited `info` no longer reach the saved file, and a color-key-transparent PNG lands on white (Codex); saving runs off the event loop; a phone JPEG Pillow reads as `MPO` is accepted; a color profile is converted to sRGB before it is dropped; a malformed crop number is a `400`, a body with no size a `411`; the bomb test proves no pixel is read; Delete's red has a dark-mode value. Accepted for the proof of concept: a 40 Mpx upload can take a few hundred MB while it is processed, to revisit before participant photos; the image's `ETag` beside `no-store` never earns a `304`, kept as the plan states it. Sound as read: the gate on every route, the write header, the window's rectangle against the server's tolerance, no XSS in the tiles, the database and its migration.
 
 ## PR ladder
 

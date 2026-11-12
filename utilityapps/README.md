@@ -45,7 +45,7 @@ token's hour is up.
 | `main.py`, `routes_*.py`, `web.py`, `templates/` | The application: factory, routes, mount-aware URLs and templates |
 | `email_check/` | The Email Address Checker: `csvio.py` (CSV in and out), `check.py` (lookup and classification), `routes.py` (the pages) |
 | `db.py`, `models.py`, `alembic.ini`, `alembic/` | Utilities' own database, `utilityapps` (segment U4): engine and session from `UTILITYAPPS_DATABASE_URL`, its tables, and its migration history (`alembic -c utilityapps/alembic.ini upgrade head`) |
-| `photo_poc/` | The photo upload proof of concept (segment U4): `service.py` decodes an upload, applies its orientation, checks the 4:5 crop, and keeps a metadata-free 480 × 600 JPEG; `routes.py` serves the page at `/photo-poc/` |
+| `photo_poc/` | The photo upload proof of concept (segment U4): `service.py` decodes an upload, applies its orientation, checks the 4:5 crop, and keeps a metadata-free 480 × 600 JPEG; `routes.py` serves the page at `/photo-poc/`, saves, reads back and deletes |
 | `tests/` | Utilities' tests; they build the host |
 | `spec/utilities.md` | The application's contract: mount, health, index, import boundaries |
 | `docs/email_address_checker_functional_spec_v0.1.md` | Email Address Checker, functional spec v0.1 (proposed, 2026-10-30): CSV in, CSV out, each address checked against the directory for its primary email and duplicated accounts; read-only, super-admin only |

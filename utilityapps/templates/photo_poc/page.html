@@ -10,15 +10,15 @@
     <label class="drop" for="photo-file" id="photo-drop">
       <span class="drop-main">Choose a photo, or drop it here</span>
       <span class="note">JPEG, PNG or WebP, {{ max_mb }} MB at most</span>
-      <input type="file" id="photo-file" accept="image/jpeg,image/png,image/webp" disabled>
+      <input type="file" id="photo-file" accept="image/jpeg,image/png,image/webp">
     </label>
     <div id="photo-message" role="status" aria-live="polite"></div>
   </div>
 
   <div class="card" aria-labelledby="frame-h">
     <h2 id="frame-h">Frame</h2>
-    <p class="note">Drag the photo to move it; zoom in or out. The photo always covers the window. Save keeps exactly what is inside the window.</p>
-    <div class="frame" id="photo-window" style="--ratio: {{ ratio[0] }} / {{ ratio[1] }};">
+    <p class="note">Drag the photo to move it, or use the arrow keys; zoom in or out. The photo always covers the window. Save keeps exactly what is inside the window.</p>
+    <div class="frame" id="photo-window" style="--ratio: {{ ratio[0] }} / {{ ratio[1] }};" tabindex="0" aria-label="The window: what Save keeps">
       <span class="frame-empty">No photo chosen</span>
     </div>
     <label for="photo-zoom">Zoom</label>
@@ -30,15 +30,228 @@
 
   <div class="card" aria-labelledby="saved-h">
     <h2 id="saved-h">Saved photos</h2>
-    <p class="sample">Sample tiles: the list is wired in the next step.</p>
+    <p class="note">Newest first. Each is served only to you, and never cached.</p>
+    <p class="note" id="photo-none"{% if tiles %} hidden{% endif %}>No photos saved yet.</p>
     <ul class="tiles" id="photo-tiles">
       {% for tile in tiles %}
-      <li class="tile">
-        <div class="frame tile-photo" style="--ratio: {{ ratio[0] }} / {{ ratio[1] }};"></div>
+      <li class="tile" data-id="{{ tile.id }}">
+        <div class="frame tile-photo" style="--ratio: {{ ratio[0] }} / {{ ratio[1] }};"><img src="{{ tile.src }}" alt="Saved photo, {{ tile.created }}" width="{{ width }}" height="{{ height }}"></div>
         <p class="note">{{ tile.created }}<br>{{ tile.uploaded_by }}<br>{{ tile.size }}</p>
-        <button class="btn destructive" type="button" disabled>Delete</button>
+        <button class="btn destructive" type="button" data-delete="{{ tile.id }}">Delete</button>
       </li>
       {% endfor %}
     </ul>
   </div>
+  <script>
+  // Segment U4, rung 5: frame a photo in the window and save it. The
+  // browser draws the photo with its EXIF orientation applied, so the
+  // rectangle sent is in the oriented photo's pixels, as the server reads
+  // it after `exif_transpose`. The server crops; nothing here does.
+  (function () {
+    var MAX = {{ max_bytes }};
+    var RW = {{ ratio[0] }}, RH = {{ ratio[1] }};
+    var HEADER = {{ write_header | tojson }};
+    var SAVE_URL = {{ url('/photo-poc/photos') | tojson }};
+    var DELETE_BASE = {{ url('/photo-poc/photos/') | tojson }};
+    var TYPES = ["image/jpeg", "image/png", "image/webp"];
+    var drop = document.getElementById("photo-drop");
+    var input = document.getElementById("photo-file");
+    var message = document.getElementById("photo-message");
+    var win = document.getElementById("photo-window");
+    var zoom = document.getElementById("photo-zoom");
+    var saveButton = document.getElementById("photo-save");
+    var tiles = document.getElementById("photo-tiles");
+    var none = document.getElementById("photo-none");
+    var file = null, img = null, nw = 0, nh = 0, base = 1, scale = 1, ox = 0, oy = 0, drag = null;
+
+    function say(text, error) {
+      message.textContent = text;
+      message.className = error ? "error" : "note";
+    }
+    function box() {
+      var r = win.getBoundingClientRect();
+      return { w: r.width, h: r.height };
+    }
+    // The photo always covers the window: its offset stays between the
+    // window's far edge less the photo's size, and zero.
+    function draw() {
+      var b = box();
+      ox = Math.min(0, Math.max(b.w - nw * scale, ox));
+      oy = Math.min(0, Math.max(b.h - nh * scale, oy));
+      img.style.width = nw * scale + "px";
+      img.style.height = nh * scale + "px";
+      img.style.transform = "translate(" + ox + "px, " + oy + "px)";
+    }
+    // Zoom about the window's center.
+    function setZoom(z) {
+      var b = box();
+      var cx = (b.w / 2 - ox) / scale, cy = (b.h / 2 - oy) / scale;
+      base = Math.max(b.w / nw, b.h / nh);
+      scale = base * z;
+      ox = b.w / 2 - cx * scale;
+      oy = b.h / 2 - cy * scale;
+      draw();
+    }
+    function choose(chosen) {
+      if (!chosen) return;
+      if (TYPES.indexOf(chosen.type) < 0) { say("Choose a JPEG, PNG or WebP photo.", true); return; }
+      if (chosen.size > MAX) { say("The photo is larger than 5 MB.", true); return; }
+      var source = URL.createObjectURL(chosen);
+      var next = new Image();
+      next.onload = function () {
+        if (img) URL.revokeObjectURL(img.src);
+        file = chosen; img = next;
+        nw = next.naturalWidth; nh = next.naturalHeight;
+        next.className = "frame-photo";
+        next.alt = "";
+        next.draggable = false;
+        win.textContent = "";
+        win.appendChild(next);
+        var b = box();
+        base = Math.max(b.w / nw, b.h / nh);
+        scale = base;
+        zoom.value = "1";
+        ox = (b.w - nw * scale) / 2;
+        oy = (b.h - nh * scale) / 2;
+        draw();
+        zoom.disabled = false;
+        saveButton.disabled = false;
+        say(chosen.name + ": drag and zoom to frame it, then Save.", false);
+      };
+      next.onerror = function () {
+        URL.revokeObjectURL(source);
+        say("The file is not a photo this browser can show.", true);
+      };
+      next.src = source;
+    }
+    // The window's rectangle in the photo's pixels, its width to height
+    // exactly the window's to within a pixel, always inside the photo.
+    function rectangle() {
+      var b = box();
+      var w = Math.min(nw, Math.round(b.w / scale));
+      var h = Math.round(w * RH / RW);
+      if (h > nh) { h = nh; w = Math.floor(h * RW / RH); }
+      var x = Math.max(0, Math.min(nw - w, Math.round(-ox / scale)));
+      var y = Math.max(0, Math.min(nh - h, Math.round(-oy / scale)));
+      return { x: x, y: y, width: w, height: h };
+    }
+
+    input.addEventListener("change", function () { choose(input.files[0]); input.value = ""; });
+    drop.addEventListener("dragover", function (e) { e.preventDefault(); drop.classList.add("over"); });
+    drop.addEventListener("dragleave", function () { drop.classList.remove("over"); });
+    drop.addEventListener("drop", function (e) {
+      e.preventDefault();
+      drop.classList.remove("over");
+      choose(e.dataTransfer && e.dataTransfer.files[0]);
+    });
+    zoom.addEventListener("input", function () { if (img) setZoom(parseFloat(zoom.value)); });
+    win.addEventListener("pointerdown", function (e) {
+      if (!img) return;
+      drag = { x: e.clientX, y: e.clientY, ox: ox, oy: oy };
+      win.setPointerCapture(e.pointerId);
+    });
+    win.addEventListener("pointermove", function (e) {
+      if (!drag) return;
+      ox = drag.ox + e.clientX - drag.x;
+      oy = drag.oy + e.clientY - drag.y;
+      draw();
+    });
+    function stop() { drag = null; }
+    win.addEventListener("pointerup", stop);
+    win.addEventListener("pointercancel", stop);
+    win.addEventListener("keydown", function (e) {
+      if (!img) return;
+      var step = { ArrowLeft: [10, 0], ArrowRight: [-10, 0], ArrowUp: [0, 10], ArrowDown: [0, -10] }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      ox += step[0]; oy += step[1];
+      draw();
+    });
+    window.addEventListener("resize", function () { if (img) setZoom(parseFloat(zoom.value)); });
+
+    function addTile(t) {
+      var li = document.createElement("li");
+      li.className = "tile";
+      li.dataset.id = t.id;
+      var frame = document.createElement("div");
+      frame.className = "frame tile-photo";
+      frame.style.setProperty("--ratio", RW + " / " + RH);
+      var picture = document.createElement("img");
+      picture.src = t.src;
+      picture.alt = "Saved photo, " + t.created;
+      frame.appendChild(picture);
+      var note = document.createElement("p");
+      note.className = "note";
+      [t.created, t.uploaded_by, t.size].forEach(function (line, i) {
+        if (i) note.appendChild(document.createElement("br"));
+        note.appendChild(document.createTextNode(line));
+      });
+      var button = document.createElement("button");
+      button.className = "btn destructive";
+      button.type = "button";
+      button.dataset.delete = t.id;
+      button.textContent = "Delete";
+      li.appendChild(frame);
+      li.appendChild(note);
+      li.appendChild(button);
+      tiles.insertBefore(li, tiles.firstChild);
+      none.hidden = true;
+    }
+    function reply(response) {
+      return response.json().then(function (body) { return body; }, function () { return {}; })
+        .then(function (body) { return { status: response.status, body: body }; });
+    }
+
+    saveButton.addEventListener("click", function () {
+      if (!file) return;
+      var r = rectangle();
+      var body = new FormData();
+      body.append("photo", file);
+      body.append("x", String(r.x));
+      body.append("y", String(r.y));
+      body.append("width", String(r.width));
+      body.append("height", String(r.height));
+      var headers = {};
+      headers[HEADER] = "1";
+      saveButton.disabled = true;
+      say("Saving…", false);
+      fetch(SAVE_URL, { method: "POST", body: body, headers: headers, credentials: "same-origin" })
+        .then(reply)
+        .then(function (result) {
+          if (result.status === 201) {
+            addTile(result.body);
+            say("Saved.", false);
+          } else {
+            say(result.body.error || "The photo was not saved. Try again.", true);
+          }
+        }, function () { say("The photo was not saved: the connection failed.", true); })
+        .then(function () { saveButton.disabled = false; });
+    });
+
+    tiles.addEventListener("click", function (e) {
+      var button = e.target.closest("[data-delete]");
+      if (!button) return;
+      if (!window.confirm("Delete this photo? It cannot be brought back.")) return;
+      var headers = {};
+      headers[HEADER] = "1";
+      button.disabled = true;
+      fetch(DELETE_BASE + encodeURIComponent(button.dataset.delete),
+            { method: "DELETE", headers: headers, credentials: "same-origin" })
+        .then(reply)
+        .then(function (result) {
+          if (result.status === 204 || result.status === 404) {
+            button.closest("li").remove();
+            none.hidden = tiles.children.length > 0;
+            say("Deleted.", false);
+          } else {
+            button.disabled = false;
+            say(result.body.error || "The photo was not deleted. Try again.", true);
+          }
+        }, function () {
+          button.disabled = false;
+          say("The photo was not deleted: the connection failed.", true);
+        });
+    });
+  })();
+  </script>
 {% endblock %}

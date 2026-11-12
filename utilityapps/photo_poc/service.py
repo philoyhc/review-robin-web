@@ -14,7 +14,7 @@ import io
 import secrets
 from dataclasses import dataclass
 
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageCms, ImageOps, UnidentifiedImageError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -27,7 +27,9 @@ OUTPUT_SIZE = (480, 600)
 #: Decoded size refused beyond this, before the pixels are read: a
 #: decompression bomb is a small file that decodes to a huge image.
 MAX_PIXELS = 40_000_000
-ACCEPTED_FORMATS = frozenset({"JPEG", "PNG", "WEBP"})
+# Pillow reads a phone JPEG carrying more than one picture (a depth map or
+# HDR gain map, in an MPF segment) as "MPO"; its first frame is the photo.
+ACCEPTED_FORMATS = frozenset({"JPEG", "MPO", "PNG", "WEBP"})
 JPEG_QUALITY = 85
 CONTENT_TYPE = "image/jpeg"
 
@@ -96,12 +98,35 @@ def _flatten(image: Image.Image) -> Image.Image:
     return image.convert("RGB")
 
 
+# Pillow's stubs leave `createProfile`'s return partly untyped; wrapped,
+# it is a typed profile.
+_SRGB = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB"))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]  -- partly untyped stub
+
+
+def _to_srgb(image: Image.Image) -> Image.Image:
+    """The pixels in sRGB when the upload carries a color profile (an
+    iPhone's Display P3, say): the saved file carries none, so a browser
+    reads it as sRGB. Without a profile, or one this cannot apply, the
+    pixels are taken as sRGB already."""
+    icc = image.info.get("icc_profile")
+    if not isinstance(icc, bytes) or not icc or image.mode not in ("RGB", "RGBA", "CMYK"):
+        return image
+    try:
+        source = ImageCms.ImageCmsProfile(io.BytesIO(icc))
+        converted = ImageCms.profileToProfile(
+            image, source, _SRGB, outputMode="RGBA" if image.mode == "RGBA" else "RGB"
+        )
+    except (ImageCms.PyCMSError, OSError, ValueError):
+        return image
+    return image if converted is None else converted
+
+
 def process(data: bytes, crop: Crop) -> bytes:
     """The saved JPEG for ``data`` cropped to ``crop``, or `PhotoRefused`."""
     image = _open(data)
     _check(crop, image.size)
     box = (crop.x, crop.y, crop.x + crop.width, crop.y + crop.height)
-    cropped = _flatten(image.crop(box))
+    cropped = _flatten(_to_srgb(image.crop(box)))
     # Pillow types `size` with numpy's array type, which is not installed.
     out = cropped.resize(OUTPUT_SIZE, Image.Resampling.LANCZOS)  # pyright: ignore[reportUnknownMemberType]  -- numpy-typed overload
     # Pillow carries the upload's `info` (a JPEG comment, DPI, ...) through

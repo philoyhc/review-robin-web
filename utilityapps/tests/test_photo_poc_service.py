@@ -8,7 +8,7 @@ import io
 from collections.abc import Iterator
 
 import pytest
-from PIL import Image
+from PIL import Image, ImageCms
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -25,7 +25,7 @@ def _image_bytes(
     exif: Image.Exif | None = None,
 ) -> bytes:
     buffer = io.BytesIO()
-    image = Image.new(mode, size, color)  # pyright: ignore[reportArgumentType]
+    image = Image.new(mode, size, color)  # pyright: ignore[reportArgumentType]  -- a test helper's loose color
     options = {"exif": exif} if exif is not None else {}
     image.save(buffer, format=fmt, **options)
     return buffer.getvalue()
@@ -100,9 +100,16 @@ def test_over_5_mb_is_refused() -> None:
         service.process(b"\xff" * (service.MAX_UPLOAD_BYTES + 1), FULL)
 
 
-def test_a_decompression_bomb_is_refused_before_its_pixels_are_read() -> None:
+def test_a_decompression_bomb_is_refused_before_its_pixels_are_read(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     bomb = _image_bytes(size=(8000, 6000), fmt="PNG", mode="1", color=0)
     assert len(bomb) < service.MAX_UPLOAD_BYTES  # small on disk, 48 Mpx decoded
+
+    def loaded(self: Image.Image) -> None:
+        raise AssertionError("the pixels were read")
+
+    monkeypatch.setattr(Image.Image, "load", loaded)
     with pytest.raises(PhotoRefused, match="too many pixels"):
         service.process(bomb, Crop(0, 0, 400, 500))
 
@@ -176,3 +183,37 @@ def test_a_color_key_transparent_png_lands_on_white() -> None:
     Image.new("RGB", (800, 1000), (0, 255, 0)).save(buffer, format="PNG", transparency=(0, 255, 0))
     pixel = _open(service.process(buffer.getvalue(), FULL)).convert("RGB").getpixel((240, 300))
     assert isinstance(pixel, tuple) and min(pixel) > 245
+
+
+def test_a_phone_jpeg_read_as_mpo_is_accepted() -> None:
+    """The cold read: a JPEG with a second picture in an MPF segment opens
+    as "MPO"; the first frame is kept."""
+    buffer = io.BytesIO()
+    first = Image.new("RGB", (800, 1000), (200, 30, 60))
+    first.save(buffer, format="MPO", save_all=True, append_images=[Image.new("RGB", (80, 100))])
+    assert Image.open(io.BytesIO(buffer.getvalue())).format == "MPO"
+    saved = _open(service.process(buffer.getvalue(), FULL)).convert("RGB")
+    pixel = saved.getpixel((240, 300))
+    assert isinstance(pixel, tuple) and pixel[0] > 180 and pixel[2] < 90
+
+
+def test_a_color_profile_is_converted_to_srgb_and_not_kept(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The cold read: the profile is dropped, so the pixels are converted
+    to sRGB first. Pillow builds no Display P3 profile, so the conversion
+    is watched rather than measured."""
+    srgb = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+    buffer = io.BytesIO()
+    Image.new("RGB", (800, 1000), (200, 30, 60)).save(buffer, format="JPEG", icc_profile=srgb)
+    calls: list[str] = []
+    real = ImageCms.profileToProfile
+
+    def watched(image: Image.Image, *args: object, **kwargs: object) -> Image.Image | None:
+        calls.append(image.mode)
+        return real(image, *args, **kwargs)  # pyright: ignore[reportArgumentType, reportCallIssue]  -- passed through
+
+    monkeypatch.setattr(ImageCms, "profileToProfile", watched)
+    saved = _open(service.process(buffer.getvalue(), FULL))
+    assert calls == ["RGB"]
+    assert "icc_profile" not in saved.info
+    pixel = saved.convert("RGB").getpixel((240, 300))
+    assert isinstance(pixel, tuple) and abs(pixel[0] - 200) < 8 and abs(pixel[1] - 30) < 8

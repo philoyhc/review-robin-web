@@ -113,7 +113,7 @@ sender takes from it.
   again finds a session already made.
 - Text is inserted with `textContent` only; every response is `no-store`.
 - **Sent to Review Robin**: the sessions this browser
-  created, kept in `localStorage` (Utilities has no database; clearing it
+  created, kept in `localStorage` (not in Utilities' database; clearing it
   forgets the list, not the sessions; open tabs keep it in step). Each offers:
   - **Refresh status**: reads Review Robin's status (`spec/handoffs.md`
     §10, version 3) and shows each section as Review Robin
@@ -131,6 +131,34 @@ sender takes from it.
 
 Templates write app paths through `url()` in `utilityapps/web.py`, which
 adds the mount's prefix; `host_url()` marks a path that is the host's.
+
+## Photo proof of concept
+
+Segment U4 (`utilityapps/guide/segment_U4_photo_poc.md`): a photo
+uploaded, framed in a fixed window, cropped, resized and kept in
+Utilities' own database, with no Blob storage.
+
+- **The page** (`/photo-poc/`): a drop box (JPEG, PNG or WebP, 5 MB at
+  most, checked in the browser first), the 4:5 window, a zoom control and
+  Save, then the saved photos, newest first, each with Delete. The photo
+  always covers the window; it is dragged with a pointer or the arrow
+  keys.
+- **Saving** (`POST /photo-poc/photos`): the original file and the
+  window's rectangle in the oriented photo's pixels. The server decodes,
+  orients, checks the rectangle, crops, converts any color profile to
+  sRGB and keeps only a 480 × 600 JPEG with no metadata (`utilityapps/photo_poc/service.py`). A refusal is a
+  `400` (`413` over 5 MB, `411` with no size given) whose message the
+  page shows; nothing is kept. A phone JPEG that Pillow reads as `MPO`
+  (a second picture in it) is a JPEG here: its first picture is kept.
+- **Reading back** (`GET /photo-poc/photos/<id>.jpg`): `Cache-Control:
+  private, no-store` and an `ETag`; a malformed or unknown ID is a `404`.
+- **Deleting** (`DELETE /photo-poc/photos/<id>`): `204`, or `404` when it
+  is gone.
+- **The writes carry the header `X-Photo-Poc: 1`**, which only the page's
+  own script sends: a cross-site form cannot set it, and a cross-site
+  script would need a preflight the host never answers. Without it, `403`.
+- **Every route**, the image included, is the platform super-admin's
+  alone: anyone else `403`, nobody signed in `401`.
 
 ## Import boundaries
 

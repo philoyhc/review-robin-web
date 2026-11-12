@@ -12,9 +12,9 @@
         href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><clipPath id='t'><rect width='32' height='32' rx='7'/></clipPath></defs><g clip-path='url(%23t)'><rect width='32' height='32' fill='%23b45309'/><g transform='translate(42.5 0.5) scale(-1.75 1.75)'><path d='M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z' fill='%23fff' stroke='%23fff' stroke-width='1.2' stroke-linejoin='round'/></g></g></svg>">
   {# The host landing page's tokens: one plain look until a tool needs more. #}
   <style>
-    :root { color-scheme: light dark; --fg: #1f2328; --muted: #59636e; --bg: #ffffff; --line: #d1d9e0; --link: #0969da; --warn: #92400e; }
+    :root { color-scheme: light dark; --fg: #1f2328; --muted: #59636e; --bg: #ffffff; --line: #d1d9e0; --link: #0969da; --warn: #92400e; --danger: #b91c1c; }
     @media (prefers-color-scheme: dark) {
-      :root { --fg: #f0f6fc; --muted: #9198a1; --bg: #0d1117; --line: #3d444d; --link: #4493f8; --warn: #fcd34d; }
+      :root { --fg: #f0f6fc; --muted: #9198a1; --bg: #0d1117; --line: #3d444d; --link: #4493f8; --warn: #fcd34d; --danger: #f87171; }
     }
     /* The app's amber accent (utilityapps/README.md) is the favicon's tile and nothing in
        this stylesheet. --warn is the status hue (Residential's warning
@@ -46,15 +46,20 @@
     .btn.primary { background: var(--link); color: #fff; }
     .btn.secondary { background: transparent; color: var(--link); }
     .btn:disabled, .btn[aria-disabled=true] { opacity: 0.5; cursor: not-allowed; }
-    .btn.destructive { background: transparent; color: #b91c1c; border-color: #b91c1c; }
+    .btn.destructive { background: transparent; color: var(--danger); border-color: var(--danger); }
     /* The photo proof of concept (segment U4): the drop box, the fixed
-       window, whose aspect ratio is the saved photo's, and the tiles. */
+       window, whose aspect ratio is the saved photo's, the photo inside
+       it, moved and scaled by the page's script, and the tiles. */
     .drop { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 1.5rem 1rem; border: 2px dashed var(--line); border-radius: 8px; text-align: center; cursor: pointer; font-weight: normal; }
     .drop.over { border-color: var(--link); }
     .drop-main { font-weight: 600; color: var(--link); }
     .drop input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
     .frame { position: relative; overflow: hidden; aspect-ratio: var(--ratio); width: min(16rem, 100%); margin: 0 0 1rem; background: var(--line); border-radius: 4px; display: flex; align-items: center; justify-content: center; touch-action: none; }
     .frame-empty { color: var(--muted); font-size: 0.9rem; }
+    .frame:focus-visible, .drop:focus-within { outline: 2px solid var(--link); outline-offset: 2px; }
+    .frame-photo { position: absolute; left: 0; top: 0; max-width: none; transform-origin: 0 0; user-select: none; pointer-events: none; }
+    #photo-window:has(.frame-photo) { cursor: grab; }
+    .tile-photo img { display: block; width: 100%; height: 100%; }
     input[type=range] { width: min(16rem, 100%); }
     .tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); gap: 1rem; }
     .tile .frame { width: 100%; margin: 0 0 0.25rem; }
