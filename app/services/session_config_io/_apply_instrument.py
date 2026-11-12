@@ -69,6 +69,7 @@ from ._apply_shared import (
     _InstrumentSpec,
     _parse_bool,
     _parse_decimal,
+    _parse_display_layout,
     _parse_group_kind,
     _parse_int,
     _parse_intro_layout,
@@ -295,6 +296,8 @@ def _apply_instrument_kv(plan: _ParsedConfig, field_path: str, value: str, data_
         instrument.intro_layout = _parse_intro_layout(value)
     elif attr == "response_layout":
         instrument.response_layout = _parse_response_layout(value)
+    elif attr == "display_layout":
+        instrument.display_layout = _parse_display_layout(value)
     elif attr == "band2_state":
         state = json_object(_parse_json(value, default={}))
         # The Instruments page reads this as an object; anything else
@@ -490,6 +493,8 @@ def _apply_instruments(
             instrument.intro_layout = spec.intro_layout
         if spec.response_layout is not None:
             instrument.response_layout = spec.response_layout
+        if spec.display_layout is not None:
+            instrument.display_layout = spec.display_layout
         db.add(instrument)
         db.flush()  # populate ``instrument.id``
         counts["instruments"] += 1
