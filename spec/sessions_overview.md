@@ -22,8 +22,8 @@ archived-sessions child page.
 - **URL.** `/operator/sessions`. The operator's root page; reached
   via the top-bar identity link or by signing in. `/` redirects
   here for any authenticated operator.
-- **Title.** `Sessions — Review Robin Web` (browser tab) +
-  `Sessions Lobby` (page H1).
+- **Title.** `Operator Lobby — Review Robin Web` (browser tab) +
+  `Operator Lobby` (page H1).
 - **Body class.** `ui-v2` (no reviewer modifier — this is an
   operator-only surface).
 - **Audience.** Operators and sys-admins only: the operator router's
@@ -38,7 +38,7 @@ archived-sessions child page.
 A single-column page:
 
 ```
-┌─ <h1>Sessions Lobby</h1> ───────────────────────────┐
+┌─ <h1>Operator Lobby</h1> ───────────────────────────┐
 │                                                     │
 │ ┌─ Sessions ─────────┐ ┌─ Filter ─────────────────┐ │
 │ │ counts + tag chips │ │ [filter box + typeahead] │ │
@@ -74,7 +74,7 @@ Danger Zone card.
 
 ## Header
 
-- **`<h1>Sessions Lobby</h1>`** — page title, left-aligned, on its
+- **`<h1>Operator Lobby</h1>`** — page title, left-aligned, on its
   own line. **The header carries no button.** The page's one create
   affordance is the Filter card's `Add new session`, which renders in
   every state — see "Lobby states" below.

@@ -50,12 +50,12 @@ def test_without_a_remembered_origin_the_back_link_is_the_lobby(
     client: TestClient, admin: None
 ) -> None:
     for page in (SESSIONS, ACCOUNTS):
-        assert _back(client.get(page).text) == '/operator/sessions">&larr; Back to Sessions'
+        assert _back(client.get(page).text) == '/operator/sessions">&larr; Back to Operator Lobby'
 
 
 def test_a_forged_origin_falls_back_to_the_lobby(client: TestClient, admin: None) -> None:
     client.cookies.set("rrw-admin-return-to", "https://evil.example/", path="/operator/sys-admin")
-    assert _back(client.get(ACCOUNTS).text) == '/operator/sessions">&larr; Back to Sessions'
+    assert _back(client.get(ACCOUNTS).text) == '/operator/sessions">&larr; Back to Operator Lobby'
 
 
 def test_a_later_admin_link_replaces_the_origin(
@@ -64,7 +64,7 @@ def test_a_later_admin_link_replaces_the_origin(
     review_session = _session(client, db)
     client.get(f"/operator/sys-admin?return_to=/operator/sessions/{review_session.public_id}")
     client.get("/operator/sys-admin?return_to=/operator/sessions")
-    assert _back(client.get(ACCOUNTS).text) == '/operator/sessions">&larr; Back to Sessions'
+    assert _back(client.get(ACCOUNTS).text) == '/operator/sessions">&larr; Back to Operator Lobby'
 
 
 def test_diagnostics_opened_with_a_return_to_remembers_it(
@@ -106,4 +106,4 @@ def test_a_bad_character_in_return_to_falls_back_to_the_lobby(
     raw = shape.format(id=review_session.public_id, fw=quote(fullwidth))
     response = client.get(f"{entry}?return_to={raw}")
     assert response.status_code == 200
-    assert _back(response.text) == '/operator/sessions">&larr; Back to Sessions'
+    assert _back(response.text) == '/operator/sessions">&larr; Back to Operator Lobby'

@@ -289,7 +289,7 @@ def test_results_body_renders_raw_responses_for_reviewee(
     # The submitted values surface.
     assert "Solid work." in body
     # Participant audit P4: a reviewee has a way back to /me.
-    assert 'href="/me" data-your-reviews>Your reviews</a>' in body
+    assert 'href="/me" data-your-reviews>User Lobby</a>' in body
 
 
 # A13 (2026-10-02) pinned that a legacy reviewee row carrying a

@@ -169,11 +169,13 @@ def create_app() -> FastAPI:
 
     @app.get("/operator", include_in_schema=False)
     @app.get("/operator/", include_in_schema=False)
-    def operator_root(request: Request) -> RedirectResponse:
-        # Bare ``/operator`` has no page of its own — send everyone to the
-        # lobby and let the operator router's ``require_operator`` gate
-        # bounce non-operators from there. Deliberately unguarded so one
-        # place (the lobby gate) decides operator access, not two.
-        return urls.redirect(request, url="/operator/sessions", status_code=302)
+    def operator_root(
+        request: Request, user: User = Depends(get_or_create_user)
+    ) -> RedirectResponse:
+        # Bare ``/operator`` has no page of its own: it lands by role, as
+        # ``/`` does (segment 20N) — the Operator Lobby for an operator or
+        # sys-admin, the User Lobby for anyone else. The lobby keeps its
+        # own ``require_operator`` gate as the line that decides access.
+        return root(request, user)
 
     return app

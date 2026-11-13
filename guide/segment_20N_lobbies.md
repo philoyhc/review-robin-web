@@ -26,6 +26,7 @@ The author (2026-11-13) asked for one vocabulary across the apps: **Operator Lob
 
 ## Judgment calls — decided
 
+- **Back-links and the error page's way out name the lobbies too** (author, 2026-11-13: "rename back links too"): *← Back to Operator Lobby* / *← Back to User Lobby*, *Go to the Operator Lobby* / *Go to the User Lobby*. Breadcrumb trails keep *Sessions*. Prose naming the page (`/about`, the Guide, the handoff page) says *Operator Lobby*.
 - **The participant pages' Secondary *Your reviews* buttons** (`invite_mismatch.html`, `pre_open.html`, `summary.html`, `about.html`'s link) become *User Lobby*. They name the page they go to, like the switcher, and are not breadcrumbs.
 - **`Sessions Lobby` joins `RETIRED_TERMS`**, since no code constant derives *Operator Lobby*. *Your reviews* does not join it: it is plain English that live prose uses for other things.
 
@@ -39,6 +40,11 @@ Taken 2026-11-13 at `0fec4eba0`.
 | *Your reviews* in app, spec, docs | 22 lines, 12 files | `grep -rnF "Your reviews" app spec docs --include=*.py --include=*.html --include=*.md` |
 | Tests naming *Your reviews* or `data-your-reviews` | 6 files | `grep -rlF "Your reviews" tests; grep -rlF "data-your-reviews" tests` |
 | The `/operator` redirect | 1 handler | `app/main.py` `operator_root` |
+
+## Status
+
+Building (2026-11-13).
+- Rung 2, the build: the switcher, both pages' H1 and `<title>`, the participant pages' Secondary buttons and `/about`'s link read *Operator Lobby* / *User Lobby*; `/operator` lands by role through `/`'s own handler. `Sessions Lobby` joined `RETIRED_TERMS`, so `spec/sessions_overview.md` and `spec/rehydrate.md` took the new name in this rung rather than at close (the gate fails otherwise); the other Doc impact specs wait for the close's `spec-writer`.
 
 ## PR ladder
 
@@ -74,3 +80,6 @@ Taken 2026-11-13 at `0fec4eba0`.
 - `spec/rehydrate.md` — the Rehydrate button sits in the Operator Lobby.
 - `spec/role_landing_and_visibility.md` — the dashboard's name, and `/operator` landing by role.
 - `docs/header_chrome.md` — §3's switcher rows: Operator Lobby and User Lobby.
+- `spec/operator_ui_concept.md` — the switcher's entries, and bare `/operator` landing by role, not unguarded.
+- `spec/permissions.md` — bare `/operator`'s row: signed in, landing by role.
+- `spec/ui_elements.md` — the error page's way out: *Go to the Operator Lobby* / *Go to the User Lobby*.

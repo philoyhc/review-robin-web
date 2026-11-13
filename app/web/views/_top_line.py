@@ -5,7 +5,7 @@ Read from the page's template context, so no route has to pass it:
 
 - a session's pages, operator or participant (a ``session`` in context):
   the Unit of the operator who **created** the session, else the default;
-- a participant's Your reviews (the route passes ``top_line_sessions``):
+- a participant's User Lobby (the route passes ``top_line_sessions``):
   the default, unless every session listed resolves to the same Unit;
 - any other page: the viewer's own Unit if they are an operator, else the
   default.
@@ -46,7 +46,7 @@ def session_unit(review_session: ReviewSession) -> str | None:
 
 
 def dashboard_top_line(sessions: Iterable[ReviewSession], default: str) -> str:
-    """Your reviews: one Unit when every listed session resolves to it,
+    """The User Lobby: one Unit when every listed session resolves to it,
     else the default (an empty list shows the default)."""
     resolved = {session_unit(s) or default for s in sessions}
     return resolved.pop() if len(resolved) == 1 else default

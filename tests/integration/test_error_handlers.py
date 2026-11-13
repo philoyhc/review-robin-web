@@ -175,14 +175,14 @@ def test_a_participant_error_page_links_to_your_reviews() -> None:
     "Go back" stays hidden unless the page was reached from an app page
     (tests/browser/test_error_page_links.py drives that)."""
     body = TestClient(app).get("/__test/err/not-found-bare").text
-    assert 'href="/me" data-error-home>Go to your reviews</a>' in body
+    assert 'href="/me" data-error-home>Go to the User Lobby</a>' in body
     assert "data-error-history hidden>Go back</a>" in body
     assert "history.back(); return false;" not in body
 
 
 def test_an_operator_error_page_links_to_the_lobby() -> None:
     body = TestClient(app).get("/operator/no/such/page").text
-    assert 'href="/operator/sessions" data-error-home>Go to Sessions</a>' in body
+    assert 'href="/operator/sessions" data-error-home>Go to the Operator Lobby</a>' in body
 
 
 def test_a_401_error_page_offers_sign_out() -> None:
