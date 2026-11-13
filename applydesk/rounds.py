@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
+from datetime import date, datetime
 
 from applydesk import sample_data
 from applydesk.sample_data import Application
@@ -29,7 +30,7 @@ class Rule:
 
     ``when`` holds conditions that must all hold, each (kind, key, op,
     value): ("status", "", "is", "Submitted"); ("last", "", "le", "1"),
-    among the last N its applicant submitted; ("out", outcome, "is",
+    one of the applicant's last N submitted; ("out", outcome, "is",
     value); for an outcome only, ("res", gate, "ge"/"lt", "4.0") on a gate
     in its scope, ("ent", gate, "is", "Entered") and ("comb", "", "ge"/"lt",
     "4.2") on its combined result. A gate never reads another gate."""
@@ -210,15 +211,13 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
         if rank.get(i, 0) != 1:  # not the applicant's last submitted
             for k in ("g1", "g2"):
                 cells[k] = Cell("Not entered", "Not the applicant's last")
-            cells["o1"] = Cell("Not shortlisted", "10 Nov")
-            cells["g3"] = Cell("Not entered")
+            cells["g3"] = Cell("Not entered")  # Shortlist not reached: "—"
             rows.append(Row(a, cells))
             continue
         if i == excluded:
             for k in ("g1", "g2"):
                 cells[k] = Cell("Not entered", "Excluded: not eligible", by_hand=True)
-            cells["o1"] = Cell("Not shortlisted", "10 Nov")
-            cells["g3"] = Cell("Not entered")
+            cells["g3"] = Cell("Not entered")  # Shortlist not reached: "—"
             rows.append(Row(a, cells))
             continue
         if i in late:
@@ -338,11 +337,17 @@ def submitted_rank(rows: tuple[Row, ...]) -> dict[str, int]:
     """Each submitted application's place among its applicant's submitted
     ones, newest first (1 = last submitted); for "the last N submitted by
     each applicant" in a gate's rule (author, 2026-11-13)."""
-    by_applicant: dict[str, list[str]] = {}
-    for r in rows:
-        if r.application.state == "Submitted":
-            by_applicant.setdefault(r.application.email.lower(), []).append(r.application.public_id)
-    return {app_id: len(ids) - n for ids in by_applicant.values() for n, app_id in enumerate(ids)}
+    by_applicant: dict[str, list[tuple[date, int, str]]] = {}
+    for n, r in enumerate(rows):
+        a = r.application
+        if a.state == "Submitted":
+            when = datetime.strptime(a.submitted, "%d %b %Y").date()
+            by_applicant.setdefault(a.email.lower(), []).append((when, n, a.public_id))
+    return {
+        app_id: rank
+        for subs in by_applicant.values()
+        for rank, (_, _, app_id) in enumerate(sorted(subs, reverse=True), start=1)
+    }
 
 
 _SAID = {

@@ -256,8 +256,20 @@
     return h.dataset.kind === "gate" ? CYCLE : ["Pending"].concat(h.dataset.values.split("|"));
   }
   function td(text) { var c = document.createElement("td"); c.textContent = text; return c; }
-  function propose(title, changes, skipped, from) {
+  // Every cell's value and hand mark, to tell whether the table moved
+  // after a rule proposal, whose later columns read earlier ones.
+  function tableState() {
+    return rows.map(function (r) {
+      return Array.prototype.map.call(r.querySelectorAll("[data-cell]"), function (td) {
+        var el = td.querySelector("[data-v]");
+        return (el ? el.dataset.v : "") + (td.hasAttribute("data-hand") ? "*" : "");
+      }).join("|");
+    }).join("\n");
+  }
+  var proposedAt = null;
+  function propose(title, changes, skipped, from, chained) {
     pending = changes;
+    proposedAt = chained ? tableState() : null;
     opener = from || null;
     proposal.querySelector("[data-ap-prop-title]").textContent = title;
     proposal.querySelector("[data-ap-prop-sum]").textContent = changes.length
@@ -280,6 +292,11 @@
   if (proposal) {
     // A cell changed by hand since the proposal keeps the hand's value.
     proposal.querySelector("[data-ap-prop-apply]").addEventListener("click", function () {
+      if (proposedAt !== null && proposedAt !== tableState()) {
+        close();
+        window.alert("The table changed since this proposal, and a rule may read what changed. Nothing was applied: propose again.");
+        return;
+      }
       var kept = 0;
       pending.forEach(function (c) {
         var el = cellOf(c.row, c.key);
@@ -305,7 +322,7 @@
   // with no finished result, or not yet decided, leaves it unknown.
   function combinedOf(r, okey, val) {
     var spec = head[okey].dataset.weights;
-    if (!spec) return { known: false, none: true };
+    if (!spec) return { known: false };
     var total = 0, weight = 0, unknown = false;
     spec.split("|").forEach(function (part) {
       var kw = part.split(":"), el = cellOf(r, kw[0]), w = parseFloat(kw[1]);
@@ -315,8 +332,8 @@
       total += w * parseFloat(el.dataset.result);
       weight += w;
     });
-    if (unknown) return { known: false, none: false };
-    if (!weight) return { known: false, none: true };
+    if (unknown) return { known: false };
+    if (!weight) return { known: false };
     return { known: true, value: Math.round(total / weight * 100) / 100 };
   }
   function showCombined() {
@@ -340,6 +357,11 @@
       ruleOpen.setAttribute("aria-expanded", rule.hidden ? "false" : "true");
       if (!rule.hidden) go.focus();
     });
+    // An outcome none of whose gates this application entered.
+    function notReached(r, okey, val) {
+      var scoped = head[okey].dataset.scope ? head[okey].dataset.scope.split("|") : [];
+      return scoped.length > 0 && scoped.every(function (g) { var v = val(r, g); return v === null || v === "Not entered"; });
+    }
     function holds(r, cond, okey, val) {
       var kind = cond[0], key = cond[1], op = cond[2], want = cond[3];
       function cmp(x) { var t = parseFloat(want); return op === "ge" ? x >= t : x < t; }
@@ -348,6 +370,7 @@
       if (kind === "ent" || kind === "out") {
         var v = val(r, key);
         if (v === null) return false;  // a cell this application has not
+        if (kind === "out" && v === "" && notReached(r, key, val)) return false;
         if (v !== want && undecided(v)) return null;  // not decided yet: wait
         return v === want;
       }
@@ -358,8 +381,7 @@
         return cmp(parseFloat(el.dataset.result));
       }
       var c = combinedOf(r, okey, val);  // comb
-      if (c.known) return cmp(c.value);
-      return c.none ? false : null;
+      return c.known ? cmp(c.value) : null;  // as rounds.combined: unknown
     }
     go.addEventListener("click", function () {
       var onlyPending = rule.querySelector("[data-ap-rule-pending]").checked;
@@ -375,13 +397,14 @@
         var spec = JSON.parse(h.dataset.rule || "null");
         if (!spec) return;
         var key = h.dataset.col, unjudged = [];
-        var scoped = h.dataset.scope ? h.dataset.scope.split("|") : [];
         rows.forEach(function (r) {
           var el = cellOf(r, key);
           if (!el) return;  // a draft, or a cell that cannot be set
+          // A withdrawn application keeps what it had; a draft has nothing.
+          if (r.dataset.status !== "Submitted") return;
           // An outcome none of whose gates this application entered is
           // not reached: it stays as it is.
-          if (scoped.length && scoped.every(function (g) { var v = val(r, g); return v === null || v === "Not entered"; })) return;
+          if (h.dataset.kind === "outcome" && notReached(r, key, val)) return;
           if (!replaceHand && el.closest("td").hasAttribute("data-hand")) return;
           if (onlyPending && !undecided(el.dataset.v)) return;
           var verdict = true;
@@ -400,7 +423,7 @@
           skipped.push(h.dataset.label + ": " + unjudged.length + (unjudged.length === 1 ? " application cannot" : " applications cannot") + " be judged yet (a result not in), left as is: " + unjudged.join(", ") + ".");
         }
       });
-      propose("Apply rules", changes, skipped, go);
+      propose("Apply rules", changes, skipped, go, true);
     });
   }
 

@@ -344,10 +344,57 @@ def test_the_page_shows_each_outcome_s_combined_result_and_weights(page: Page) -
     plan = rounds.plan_of("wa9juxbc2t")
     o1 = next(c for c in plan.columns if c.key == "o1")
     assert isinstance(o1, rounds.Outcome)
-    for r in plan.rows[:15]:
+    shown = page.evaluate(
+        """() => Array.from(document.querySelectorAll('[data-row]')).map(r => [
+            r.querySelector('.ap-id code').textContent,
+            (r.querySelector('[data-cell="o1"] [data-ap-comb]') || {}).textContent || ""])"""
+    )
+    by_id = dict(shown)
+    for r in plan.rows:
+        if r.application.state == "Draft":
+            continue
         want = rounds.combined(r, o1)
-        shown = page.locator(f'[data-row]:has(code:text-is("{r.application.public_id}"))').locator(
-            '[data-cell="o1"] [data-ap-comb]'
+        assert by_id[r.application.public_id] == ("" if want is None else f"Combined {want:.2f}"), (
+            r.application.public_id
         )
-        if shown.count():
-            assert shown.inner_text() == ("" if want is None else f"Combined {want:.2f}")
+    # A hand change re-weighs it: Peer Review not entered leaves the score.
+    first = next(r for r in plan.rows if r.cells["g2"].result is not None)
+    row = _row(page, first.application.public_id)
+    chip = row.locator('[data-cell="g1"] [data-ap-adm]')
+    while chip.inner_text() != "Not entered":
+        chip.click()
+    assert (
+        row.locator('[data-cell="o1"] [data-ap-comb]').inner_text()
+        == f"Combined {first.cells['g2'].result:.2f}"
+    )
+
+
+def test_the_sample_follows_its_rules(page: Page) -> None:
+    """Every rule over every cell, decided or not, changes only what is
+    still to decide; withdrawn and draft rows are never touched."""
+    page.goto(PAGE)
+    prop = _apply_rules(page, only_undecided=False)
+    rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
+    assert rows
+    for r in rows:
+        assert r.split("\t")[3] in ("Pending", "—", ""), r
+    withdrawn = page.locator('[data-row][data-status="Withdrawn"] .ap-id code').all_inner_texts()
+    assert withdrawn and not [r for r in rows if r.split("\t")[0] in withdrawn]
+
+
+def test_a_rule_proposal_is_dropped_when_the_table_changes(page: Page) -> None:
+    page.goto(PAGE)
+    prop = _apply_rules(page)
+    first = prop.locator("[data-ap-prop-rows] tr").first.inner_text().split("\t")
+    messages: list[str] = []
+
+    def answer(d: Dialog) -> None:
+        messages.append(d.message)
+        d.accept()
+
+    page.on("dialog", answer)
+    row = _row(page, first[0])
+    row.locator('[data-cell="g3"] [data-ap-adm]').click()
+    prop.locator("[data-ap-prop-apply]").click()
+    assert messages and "propose again" in messages[0]
+    assert row.locator('[data-cell="o2"] select').get_attribute("data-v") == first[3]
