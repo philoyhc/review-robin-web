@@ -135,3 +135,14 @@ def test_the_bar_names_the_application() -> None:
         page = client.get(path).text
         assert '<span class="sw-app">Apply Desk <span' in page, path
         assert 'aria-label="Switch area: Apply Desk"' in page, path
+
+
+def test_operator_pages_take_review_robin_s_layout() -> None:
+    """Operator pages: Review Robin's left-aligned wide layout; /me keeps
+    the centred column (author, 2026-11-13)."""
+    client = TestClient(host_with(("applydesk",))[0])
+    assert '<body class="op">' in client.get("/applydesk/operator/exercises").text
+    assert (
+        '<body class="op">' in client.get("/applydesk/operator/exercises/wa9juxbc2t/process").text
+    )
+    assert "<body>" in client.get("/applydesk/me").text
