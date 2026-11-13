@@ -24,7 +24,7 @@ Gates is AD1D's placeholder: one plain card per gate, with Gate 1 showing every 
 ## Semantics
 
 - **A panel's key**, not its name, is what a question or gate holds; renaming a panel renames it everywhere on the page.
-- **Members**: an email is required and unique within a panel (case-insensitive); a name is optional (shown as the email). A pasted list or a CSV adds only the rows whose email is new, and says what it skipped and why.
+- **Members**: an email is required and unique within a panel (case-insensitive); a name is optional (shown as the email). A pasted list or a CSV adds only the rows whose email is new, and says what it skipped and why. *+ New panel*'s box is stricter (2026-11-13): it makes nothing until every entry is an email listed once, naming those that are not, since nothing it makes can be edited until Panels.
 - **CSV**: header `Name,Email,Note` (any order, case-insensitive; *Email* required); export writes the table as shown.
 - **Retire** only when nothing uses it. **Copy panel** makes *Copy of …*, unused, with the same members.
 - **A gate already sent** (`workflow.gate_state`: *Sent*, *Results in*) keeps its roster: its panel's card says so, as does the gate's.

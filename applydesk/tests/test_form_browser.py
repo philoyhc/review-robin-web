@@ -663,3 +663,35 @@ def test_new_panel_is_made_chosen_and_offered_everywhere(page: Page) -> None:
             ],
         }
     }
+
+
+def test_new_panel_goes_back_to_what_the_menu_shows(page: Page) -> None:
+    """Codex on #3876: a type change resets the menu in code; + New panel
+    and Cancel must leave Institution-wide, not the panel picked before."""
+    card, box = _new_panel(page)
+    box.get_by_role("button", name="Cancel").click()
+    menu = card.locator('[data-f="pool"]')
+    menu.select_option("panel-a")
+    card.locator('[data-f="type"]').select_option("string")
+    card.locator('[data-f="type"]').select_option("people")
+    assert menu.input_value() == "institution"
+    menu.focus()
+    menu.select_option("__new")
+    box.get_by_role("button", name="Cancel").click()
+    assert menu.input_value() == "institution"
+    assert card.locator('[data-sum="type"]').text_content() == "Select people · Institution-wide"
+
+
+def test_new_panel_by_keyboard_keeps_focus_on_the_menu(page: Page) -> None:
+    page.goto(FORM)
+    card = _card(page, "Preferred reviewer")
+    card.locator("[data-fc-toggle]").click()
+    menu = card.locator('[data-f="pool"]')
+    menu.focus()
+    menu.select_option("__new")
+    box = card.locator("[data-newpanel]")
+    assert box.is_visible()
+    # Chosen without a pointer: the menu keeps focus; the live line says so.
+    assert page.evaluate("document.activeElement.matches('[data-f=\"pool\"]')")
+    live = page.locator("[data-np-live]").text_content() or ""
+    assert "New panel: its name and members are below the menu." in live

@@ -317,7 +317,8 @@
     card.querySelectorAll("[data-g], [data-f=options]").forEach(function (i) { i.value = ""; });
     card.querySelector('[data-f="ratio_w"]').value = "4";
     card.querySelector('[data-f="ratio_h"]').value = "5";
-    card.querySelector('[data-f="pool"]').value = "institution";
+    var pool = card.querySelector('[data-f="pool"]');
+    pool.value = pool.dataset.prev = "institution";  // the picker goes back to this
     card.querySelectorAll('[data-f="exclusive"]').forEach(function (x) { x.setAttribute("aria-pressed", x.dataset.v === "true" ? "true" : "false"); });
     refresh(card); drawOutline();
   });
