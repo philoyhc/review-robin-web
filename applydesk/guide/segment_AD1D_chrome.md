@@ -57,6 +57,11 @@ Taken 2026-11-13 at `bf44ce575`.
 | Page tests | 32 | `grep -c "def test" applydesk/tests/test_pages.py` |
 | Test files naming a retired section | 4 | `grep -rln "panels\|/review\|reports\|/setup" applydesk/tests --include=*.py` |
 
+## Status
+
+Building. Base `bf44ce575` for the cumulative read.
+- Rung 2: the chrome in Review Robin's styling (`applydesk/templates/applydesk/_exercise_nav.html`), its status row from `applydesk/workflow.py` (each item's state, sample values per exercise), and the pages: Process (the rounds with every rule and which step sends an email, then the timeline), Gates (a card per gate with its panel: the assessment panels on Gate 1, the interviewers on the Interview gate; the reviewer pool), Emails (each template, set up or not), Evaluations (each gate's state and progress), Extract data (Reports' content). Setup's details moved to Home; a draft's missing items link to Home's details, Process or Form. The `h1` is the page's name, the exercise's in the breadcrumb.
+
 ## PR ladder
 
 1. **Plan** (this file), ruling 14, the mock-ups, the README and roadmap rows.

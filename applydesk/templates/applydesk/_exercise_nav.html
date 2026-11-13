@@ -1,0 +1,19 @@
+{# An exercise's chrome (ruling 14, segment AD1D), after Review Robin's
+   (`spec/visual_style_rrw.md` "Operator session chrome"): the
+   breadcrumb, then a card holding Exercise Home double-height on the
+   left, the Setup and Operations rows, and the status row. #}
+<nav class="crumbs" aria-label="Breadcrumb"><a href="{{ url('/operator/exercises') }}">Exercises</a><span aria-hidden="true">/</span><span aria-current="page">{{ exercise.name }}</span></nav>
+<div class="xnav">
+  <nav class="xnav-grid" aria-label="{{ exercise.name }}">
+    <a class="xnav-home{% if nav.home.on %} on{% endif %}" href="{{ url(nav.home.path) }}"{% if nav.home.on %} aria-current="page"{% endif %}>{{ nav.home.label }}</a>
+    <span class="xnav-label xnav-l-setup{% if nav.setup_on %} on{% endif %}">Setup</span>
+    <div class="xnav-row xnav-setup">
+      {% for t in nav.setup %}<a class="xnav-tab{% if t.on %} on{% endif %}" href="{{ url(t.path) }}"{% if t.on %} aria-current="page"{% endif %}>{{ t.label }}</a>{% endfor %}
+    </div>
+    <span class="xnav-label xnav-l-ops{% if nav.operations_on %} on{% endif %}">Operations</span>
+    <div class="xnav-row xnav-ops">
+      {% for t in nav.operations %}<a class="xnav-tab{% if t.on %} on{% endif %}" href="{{ url(t.path) }}"{% if t.on %} aria-current="page"{% endif %}>{{ t.label }}</a>{% endfor %}
+    </div>
+  </nav>
+  <p class="xnav-status" data-status>{% for p in status %}{{ " · " if not loop.first }}{{ p.label }}: <span class="chip chip-{{ p.tone }}">{{ p.text }}</span>{% endfor %}</p>
+</div>

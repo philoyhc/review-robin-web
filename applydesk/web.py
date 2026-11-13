@@ -11,7 +11,7 @@ comparisons read ``is_here()``.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -87,18 +87,40 @@ PLACES: tuple[Mapping[str, str], ...] = (
 )
 
 
-def exercise_tabs(exercise_id: str) -> tuple[Mapping[str, str], ...]:
-    """An exercise's operator pages, as the row under the bar."""
+#: An exercise's pages beyond Home, in the chrome's two rows (ruling 14):
+#: (path segment, tab label).
+SETUP_PAGES: tuple[tuple[str, str], ...] = (
+    ("process", "Process"),
+    ("form", "Form"),
+    ("gates", "Gates"),
+    ("emails", "Emails"),
+)
+OPERATIONS_PAGES: tuple[tuple[str, str], ...] = (
+    ("applications", "Applications"),
+    ("evaluations", "Evaluations"),
+    ("extract", "Extract data"),
+)
+
+
+def exercise_nav(exercise_id: str, current: str) -> Mapping[str, Any]:
+    """An exercise's chrome (ruling 14, segment AD1D): Home, then the
+    Setup and Operations rows, each tab's path, and the page showing
+    (``current``: "" for Home, else a path segment)."""
     base = f"/operator/exercises/{exercise_id}"
-    return (
-        {"label": "Home", "path": base},
-        {"label": "Setup", "path": f"{base}/setup"},
-        {"label": "Form", "path": f"{base}/form"},
-        {"label": "Applications", "path": f"{base}/applications"},
-        {"label": "Panels", "path": f"{base}/panels"},
-        {"label": "Review", "path": f"{base}/review"},
-        {"label": "Reports", "path": f"{base}/reports"},
-    )
+
+    def row(pages: tuple[tuple[str, str], ...]) -> list[Mapping[str, Any]]:
+        return [
+            {"label": label, "path": f"{base}/{key}", "on": key == current} for key, label in pages
+        ]
+
+    setup, operations = row(SETUP_PAGES), row(OPERATIONS_PAGES)
+    return {
+        "home": {"label": "Exercise Home", "path": base, "on": current == ""},
+        "setup": setup,
+        "operations": operations,
+        "setup_on": any(t["on"] for t in setup),
+        "operations_on": any(t["on"] for t in operations),
+    }
 
 
 def initials(label: str) -> str:
@@ -111,13 +133,13 @@ def render(
     template: str,
     *,
     area: str,
-    tabs: Sequence[Mapping[str, str]] = (),
+    nav: Mapping[str, Any] | None = None,
     status_code: int = 200,
     **context: Any,
 ) -> Response:
     """A page in the shared bar (`docs/header_chrome.md`): the app icon,
     the workspace's top line over ``area``, the switcher and the account
-    menu, then ``tabs`` as the row under the bar."""
+    menu; on an exercise's pages, ``nav``, its chrome (ruling 14)."""
     viewer = current_identity(request)
     return templates.TemplateResponse(
         request,
@@ -126,7 +148,7 @@ def render(
             "app_name": APP_NAME,
             "area": area,
             "places": PLACES,
-            "tabs": tabs,
+            "nav": nav,
             "top_line": institution_name(),
             "viewer": viewer,
             "initials": initials(viewer.display_label) if viewer else "?",

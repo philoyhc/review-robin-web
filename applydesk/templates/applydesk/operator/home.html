@@ -1,9 +1,10 @@
 {% extends "applydesk/base.html" %}
 {% block title %}{{ exercise.name }}{% endblock %}
 {% block content %}
-{% include "applydesk/operator/_heading.html" %}
+<div class="ptitle"><h1>{{ exercise.name }}</h1></div>
 <p class="lede">{{ exercise.summary or "No summary yet." }}</p>
 {% include "applydesk/_placeholder.html" %}
+{% include "applydesk/operator/_details.html" %}
 {% set submitted = applications | selectattr("state", "equalto", "Submitted") | list %}
 <section class="card">
   <h2>Timeline</h2>
@@ -34,18 +35,18 @@
     {% if exercise.state == "Draft" %}
       {% if missing %}
       <p>Still to set up before it can be published:</p>
-      <ul>{% for label, tab in missing %}<li><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/' ~ tab) }}">{{ label }}</a></li>{% endfor %}</ul>
+      <ul>{% for label, tab in missing %}<li><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ ('/' ~ tab if tab else '')) }}{{ '' if tab else '#details' }}">{{ label }}</a></li>{% endfor %}</ul>
       <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Publish</button></div>
       {% else %}
-      <p>Ready to publish: Setup and the application form are complete.</p>
+      <p>Ready to publish: the details, the dates and the application form are complete.</p>
       <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Publish</button></div>
       {% endif %}
     {% elif exercise.stage == "Application" %}
       <p>Applications are open. When the Application stage ends, start the Review stage and send the submitted applications to Review Robin.</p>
       <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Start the Review stage</button></div>
     {% else %}
-      <p>Assessment is under way in Review Robin. Pull its results back from the Review page.</p>
-      <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/review') }}">Go to Review</a></div>
+      <p>Assessment is under way in Review Robin. Its results come back on Evaluations.</p>
+      <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations') }}">Go to Evaluations</a></div>
     {% endif %}
   </section>
 </div>

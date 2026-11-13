@@ -1,0 +1,35 @@
+{# Evaluations (ruling 14, segment AD1D): each gate's progress and its
+   results from Review Robin; Review folded in here. A placeholder until
+   its own segment. #}
+{% set gates = plan.columns | selectattr("via", "defined") | list %}
+{% if exercise.state == "Draft" %}
+<section class="card">
+  <h2>Not yet</h2>
+  <p class="muted">Nothing to send: the exercise is a draft. Once it is published, each gate is sent to Review Robin from here when its round opens.</p>
+</section>
+{% elif not gates %}
+<section class="card">
+  <h2>No gates yet</h2>
+  <p class="muted">Add rounds and gates on Process; each one's progress shows here once it is sent.</p>
+</section>
+{% else %}
+<section class="card">
+  <h2>Gates</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Gate</th><th>Runs as</th><th>State</th><th>Progress</th><th></th></tr></thead>
+    <tbody>
+    {% for g in gates %}
+      {% set st = gate_state(exercise.public_id, g.key) %}
+      <tr data-gate="{{ g.key }}"><td><span class="muted">Gate {{ g.number }}</span><br><strong>{{ g.label }}</strong></td>
+        <td>{{ "Review Robin" if g.via == "RRW" else "Entered here" }}</td>
+        <td><span class="chip chip-{{ 'ok' if st[0] == 'Results in' else ('info' if st[0] in ('Sent', 'Ready') else 'warn') }}">{{ st[0] }}</span></td>
+        <td>{{ st[1] or "—" }}</td>
+        <td>{% if st[0] == "Sent" %}<button class="btn btn-secondary" type="button" disabled>Pull results</button>{% elif st[0] in ("Not ready", "Ready") %}<button class="btn btn-secondary" type="button" disabled>Send to Review Robin</button>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="muted">Sending a gate creates a Review Robin session from the applications entered at it and its panel, each application file as its <code>ProfileLink</code>{% if exercise.blind %}, and an alias key in place of each application ID{% endif %}. Results come back by application and fill the gate's column on Applications.</p>
+</section>
+{% endif %}

@@ -1,0 +1,23 @@
+{# The exercise's details, on Home (ruling 14): what Setup held before
+   AD1D. #}
+<div class="grid" id="details">
+  <section class="card">
+    <h2>Details</h2>
+    <dl class="facts">
+      <dt>Name</dt><dd>{{ exercise.name }}</dd>
+      <dt>Exercise Code</dt><dd>{% if exercise.code %}<code>{{ exercise.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</dd>
+      <dt>Summary</dt><dd>{% if exercise.summary %}{{ exercise.summary }}{% else %}<span class="muted">Not set</span>{% endif %}</dd>
+      <dt>Contact</dt><dd>{% if exercise.code %}fellowships@example.edu{% else %}<span class="muted">Not set</span>{% endif %}</dd>
+    </dl>
+  </section>
+  <section class="card">
+    <h2>Who may apply</h2>
+    <p>{{ exercise.eligibility }}</p>
+    <p class="muted">Invitation only hides the exercise from everyone not on its list, direct links included.</p>
+  </section>
+  <section class="card">
+    <h2>Review</h2>
+    <p>Blind review: <strong>{{ "On" if exercise.blind else "Off" }}</strong></p>
+    <p class="muted">On, assessors' application files redact the applicant's name and identifiers, and Review Robin receives an alias key in place of each application ID.</p>
+  </section>
+</div>

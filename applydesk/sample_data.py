@@ -674,16 +674,17 @@ def form_of(exercise_id: str) -> tuple[tuple[tuple[str, str], ...], tuple[str, .
 
 def setup_missing(e: Exercise) -> tuple[tuple[str, str], ...]:
     """What a draft still lacks before it can be published, each with the
-    tab that sets it: Setup's, in its order, then the Form's."""
+    page that sets it ("" for Home's details, ruling 14): Home's, then
+    Process's, then the Form's."""
     missing: list[tuple[str, str]] = []
     if not e.code:
-        missing.append(("Exercise Code", "setup"))
+        missing.append(("Exercise Code", ""))
     if not e.summary:
-        missing.append(("Summary", "setup"))
-    if "Not set" in (e.opens, e.application_stage_ends):
-        missing.append(("Dates", "setup"))
+        missing.append(("Summary", ""))
     if e.eligibility == "Not set":
-        missing.append(("Who may apply", "setup"))
+        missing.append(("Who may apply", ""))
+    if "Not set" in (e.opens, e.application_stage_ends):
+        missing.append(("Dates", "process"))
     if e.public_id in EMPTY_FORMS:
         missing.append(("Application form", "form"))
     return tuple(missing)
