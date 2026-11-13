@@ -45,6 +45,12 @@ Taken 2026-11-13 at `fb6785690`.
 | Files reading the three rosters | 7 | `grep -rln "people_pools\|pool_label\|assessors_of\|pool_of\|interviewers_of" applydesk --include=*.py --include=*.html` |
 | Test lines naming gates, pools or panels | 21, 14, 6 | `grep -c "gates\|pool\|panel" applydesk/tests/test_pages.py applydesk/tests/test_form.py applydesk/tests/test_form_browser.py` |
 
+## Status
+
+- **Rungs 1–3 built** (#3875 plan, #3876 Form's picker, rung 3 Gates). The Panels page waits for the author's choice of format (Open questions); Form and Gates came first at the author's word.
+- **The draft exercise gained a selection gate with no panel** (rung 3): every other sample gate is sent, so its menu is fixed, and Gates had nothing to pick on.
+- **Reads: one**, cumulative on rungs 2–3 (base `8b4fa6484`, main after the plan): one defect, the picker restoring a stale panel after Form's type change, also found by Codex on #3876 and fixed there; on Gates, a link to Process on the card and assessment-panel membership kept once (in `PANELS`). The quick create refusing a repeated email, where a table would skip it, is recorded in Semantics. Rung 4 takes its own read.
+
 ## PR ladder
 
 1. **Plan** (this file), ruling 19, the roadmap row, the README row.

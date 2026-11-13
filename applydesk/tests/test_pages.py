@@ -387,15 +387,36 @@ def test_applications_generates_application_files(client: TestClient) -> None:
     assert "/applydesk/me/exercises/wa9juxbc2t/files/p3bd7kq2wx" in text
 
 
-def test_gates_carries_each_gate_with_its_panel(client: TestClient) -> None:
+def test_gates_carries_each_gate_as_a_card_with_its_panel(client: TestClient) -> None:
+    """Segment AD1F: a card per gate in timeline order, its panel's chip
+    and members, the Outline beside; a sent gate keeps its panel."""
     text = client.get(f"/applydesk/operator/exercises/{EX}/gates").text
-    assert re.findall(r'<section class="card" data-gate="(\w+)">', text) == ["g1", "g2", "g3"]
-    assert "<h4>Panel A</h4>" in text and "<h4>Panel B</h4>" in text  # Gate 1's panel
+    assert re.findall(r'data-kind="gate" data-gate="(\w+)"', text) == ["g1", "g2", "g3"]
+    chips = re.findall(r'data-sum="panel">([^<]*)<', text)
+    assert chips == ["Panel A · 2 people", "Panel B · 1 person", "Interviewers · 2 people"]
     assert "Prof Ivan Petrov" in text  # the interviewers, on the Interview gate
-    assert "Copy roster from Gate 1" in text
-    assert "<h2>Reviewer pool</h2>" in text and "Dr Hana Ito" in text
-    blind = client.get(f"/applydesk/operator/exercises/{BLIND}/gates").text
-    assert "No pool: applicants do not choose a reviewer" in blind
+    assert re.findall(r'data-o-panel="\w+">([^<]*)<', text) == [
+        "Panel A",
+        "Panel B",
+        "Interviewers",
+    ]
+    # Every gate here is sent: its menu is fixed.
+    assert text.count('data-gc-panel disabled title="Sent') == 3
+    # A gate picks a panel, never Institution-wide.
+    menu = text[text.index("data-gc-panel") : text.index("</select>", text.index("data-gc-panel"))]
+    assert ">Institution-wide<" not in menu and ">Reviewer pool<" in menu
+    assert ">+ New panel…</option>" in menu
+
+
+def test_a_gate_with_no_panel_says_so(client: TestClient) -> None:
+    """The draft's selection gate was added just in time: no panel yet,
+    and it has none to choose from but one it makes."""
+    text = client.get(f"/applydesk/operator/exercises/{DRAFT}/gates").text
+    assert re.findall(r'data-sum="panel">([^<]*)<', text) == ["No panel"]
+    assert '<option value="" selected>No panel yet</option>' in text
+    assert "data-gc-panel disabled" not in text
+    # A lone card loads open.
+    assert 'data-gate="g1" id="gate-g1" data-open' in text
 
 
 def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> None:
@@ -593,12 +614,11 @@ def test_the_breadcrumb_ends_at_the_page(client: TestClient) -> None:
     assert f'<a href="/applydesk/operator/exercises/{EX}">Undergraduate' in crumbs
 
 
-def test_every_old_roster_has_a_home_on_gates(client: TestClient) -> None:
-    """Teaching Excellence has an interviewer but no interview gate."""
+def test_every_panel_is_offered_on_gates(client: TestClient) -> None:
+    """Teaching Excellence has interviewers but no interview gate: its
+    panel is still offered on its one gate's menu (ruling 19)."""
     text = client.get(f"/applydesk/operator/exercises/{BLIND}/gates").text
-    for e in sample_data.interviewers_of(BLIND):
-        assert e.name in text
-    assert 'data-roster="interviewers"' in text
+    assert '<option value="interviewers">Interviewers</option>' in text
 
 
 def test_a_sent_gate_opens_evaluations_except_from_evaluations(client: TestClient) -> None:

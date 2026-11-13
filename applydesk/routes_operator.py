@@ -94,6 +94,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         ),
         kept_size=sample_data.kept_size,
         people=sample_data.people_pools(exercise.public_id),
+        panel_pools=sample_data.panel_pools(exercise.public_id),
         blank=sample_data.FormCard("field"),
         blank_section=sample_data.FormCard("section"),
         plan=stages.plan_of(exercise.public_id),
