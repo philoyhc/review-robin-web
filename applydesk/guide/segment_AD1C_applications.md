@@ -90,7 +90,7 @@ Building. Base `34f3d4b` for the cumulative read.
 ## Open questions
 
 - **Where Setup holds rounds, gates and outcomes**, and how the Timeline sets what a release does: a later segment builds Setup's side; this page reads `sample_data` until then (author).
-- **The Review tab**: with gates here, does it fold into Applications or become each gate's detail (author).
+- **The Review tab**: answered by ruling 14 — it becomes Evaluations, each gate's progress and results (segment AD1D).
 - **`close_check.py` reads only RRW's `guide/`**: this close is checked by hand, as AD1B's was.
 
 ## Out of scope

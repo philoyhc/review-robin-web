@@ -89,6 +89,25 @@ where a ruling below differs from it, the ruling wins.
     - What a reviewer opens is the **application file**, one per
       application (ruling 5's "profile page"); it keeps its own ID apart
       from the application ID, for ruling 10's blind exercises.
+14. **An exercise's pages follow the operator's workflow, in Review
+    Robin's chrome** (author, 2026-11-13; segment AD1D):
+    - **Home**, then a **Setup** row: *Process* (rounds, gates, outcomes,
+      dates, every rule, what a release does), *Form*, *Gates* (one card
+      per gate, its panel roster on it), *Emails* (every template to
+      applicants, kept in one place; Process sets which steps send one,
+      and when); then
+      an **Operations** row: *Applications*, *Evaluations* (each gate's
+      progress and results), *Extract data*. Panels folds into Gates,
+      Review becomes Evaluations, Reports becomes Extract data, Setup
+      becomes Process. Ruling 13's "Setup and the Timeline" is Process.
+    - **Each item goes live on its own**: the form (*Draft → Open →
+      Closed*), each gate (*Not ready → Ready → Sent → Results in*), each
+      outcome (*Pending → Decided → Released*), then the exercise is
+      closed and archived. An item locks when it goes live; the rest
+      stays editable, so a later gate can be set up just in time.
+    - **A Workflow card** on Home and every Operations page steps
+      through them in timeline order, the next one carrying its action
+      and what blocks it; there is no Validate tab.
 
 ## MVP roadmap
 
@@ -98,6 +117,8 @@ Segments in order; each gets a plan in this folder when it starts.
 |---|---|---|
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
+| **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
+| AD1E onward — the new pages | Process (rules and dates), then Gates, Emails, Evaluations and Extract data built out as working scaffolds, one segment each | After AD1D |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the Application → Review stage boundary | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
