@@ -1,89 +1,163 @@
-{# Gates (ruling 14, segment AD1D): one card per gate, who evaluates (its
-   panel roster), what they see and how it runs; Panels folded in here.
-   A placeholder until its own segment. #}
-<p>Who evaluates at each gate. Apply Desk keeps every roster and what each person may view; to Review Robin they are ordinary reviewers.</p>
+{# Gates (rulings 14, 19; segment AD1F): a card per gate in timeline
+   order, as Process's stage cards and Form's question cards, with the
+   Outline beside them. A card picks its gate's panel, or makes one in
+   place; the panels' rosters are kept on Panels. Process owns the
+   timeline, so gates are not added, moved or deleted here. Nothing is
+   saved. #}
+{% import "applydesk/operator/_panel_pick.html" as pick %}
 {% set gates = plan.columns | selectattr("via", "defined") | list %}
-{% for g in gates %}
-{% set st = gate_state(exercise.public_id, g.key) %}
-<section class="card" data-gate="{{ g.key }}">
-  <h2>Gate {{ g.number }} · {{ g.label }} <span class="chip chip-{{ 'ok' if st[0] == 'Results in' else ('info' if st[0] in ('Sent', 'Ready') else 'warn') }}">{{ st[0] }}</span></h2>
-  <dl class="facts">
-    <dt>Runs as</dt><dd>{{ "A Review Robin session" if g.via == "RRW" else "Results entered here" }}</dd>
-    <dt>Result</dt><dd>{{ g.measure or "None" }}</dd>
-    <dt>Panel sees</dt><dd>The application file: the <em>Shown to reviewers</em> part{% if exercise.blind %}, redacted{% endif %}</dd>
-  </dl>
-  <h3>Panel</h3>
-  {% if loop.first %}
-  {% for panel, members in assessors | groupby("panel") %}
-  <h4>{{ panel }}</h4>
-  <div class="table-wrap">
-  <table>
-    <thead><tr><th>Assessor</th><th>Asked to review</th></tr></thead>
-    <tbody>
-    {% for s in members %}
-      <tr><td>{{ s.name }}<br><span class="muted">{{ s.email }}</span></td>
-        <td>{% for app_id in s.asked_to_review %}{% for a in applications if a.public_id == app_id %}<div>{{ a.title }}</div>{% endfor %}{% endfor %}</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
+<script type="application/json" id="gc-pools">{{ people | tojson }}</script>
+<div class="fb-split" data-gates>
+  <div class="fb-main">
+    <p class="muted pc-intro">Who evaluates at each gate, and what they see. Each gate is evaluated by a panel; its name, how it runs, its result and its entry rule are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>. Apply Desk keeps every panel and what each person may view; to Review Robin they are ordinary reviewers.</p>
+    <div class="fb-cards" id="gc-cards">
+      {% for st in plan.stages %}{% for g in st.columns if g.via is defined %}
+      {% set state = gate_state(exercise.public_id, g.key) %}
+      {% set sent = state[0] in ("Sent", "Results in") %}
+      {% set pool = people.get(g.panel) if g.panel else none %}
+      {% set open = gates | length == 1 %}
+      <article class="fc gc" data-kind="gate" data-gate="{{ g.key }}" id="gate-{{ g.key }}"{% if open %} data-open{% endif %}>
+        <div class="fc-head">
+          <button type="button" class="fc-toggle" data-fc-toggle aria-expanded="{{ 'true' if open else 'false' }}" aria-label="{{ 'Collapse' if open else 'Expand' }} Gate {{ g.number }}"></button>
+          <div class="fc-sum gc-sum">
+            <div class="fc-texts">
+              <span class="fc-kicker">Gate {{ g.number }}</span>
+              <span class="fc-q">{{ g.label }}</span>
+              <span class="fc-h">{{ st.label }} · {{ st.dates }}</span>
+            </div>
+            <span class="fc-chips">
+              <span class="chip chip-{{ 'ok' if state[0] == 'Results in' else ('info' if state[0] in ('Sent', 'Ready') else 'warn') }}">{{ state[0] }}</span>
+              <span class="chip {{ 'chip-mute' if pool else 'chip-warn' }}" data-sum="panel">{% if pool %}{{ pool.name }} · {{ pool.members | length }} {{ "person" if pool.members | length == 1 else "people" }}{% else %}No panel{% endif %}</span>
+            </span>
+          </div>
+        </div>
+        <div class="fc-body">
+          <dl class="facts gc-facts">
+            <dt>Runs as</dt><dd>{{ "A Review Robin session" if g.via == "RRW" else "Results entered here" }}</dd>
+            <dt>Result</dt><dd>{{ g.measure or "None" }}</dd>
+            <dt>Panel sees</dt><dd>The application file: the <em>Shown to reviewers</em> part{% if exercise.blind %}, redacted{% endif %}</dd>
+            {% if state[1] %}<dt>Progress</dt><dd>{{ state[1] }}</dd>{% endif %}
+          </dl>
+          <p class="pc-line muted">Its name, how it runs, its result and its entry rule: on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</p>
+          <div class="fc-row gc-pick" data-pick-wrap>
+            <label class="fc-l fc-wide">Evaluators{{ pick.menu(panel_pools, g.panel, 'data-gc-panel' ~ (' disabled title="Sent: the gate keeps the panel it was sent with"' if sent else ''), empty="No panel yet") }}</label>
+            {{ pick.new_box() }}
+          </div>
+          {% if sent %}<p class="pc-line muted">Sent with the panel as it then stood: changes to its roster apply from the gate's next send.</p>{% endif %}
+          <ul class="gc-members" data-gc-members>
+            {% for name, email in (pool.members if pool else []) %}<li>{{ name }}{% if name != email %} <span class="muted">{{ email }}</span>{% endif %}</li>{% endfor %}
+          </ul>
+          <p class="pc-line muted gc-none" data-gc-none{% if pool %} hidden{% endif %}>No panel yet: choose one, or make one with <em>+ New panel</em>.</p>
+          <p class="pc-line muted">Who reviews which application comes with Review Robin's assignments, once the gate is sent.</p>
+        </div>
+      </article>
+      {% endfor %}{% endfor %}
+      {% if not gates %}
+      <section class="card">
+        <h2>No gates yet</h2>
+        <p class="muted">Add stages and gates on Process; each gate gets its card here, with its panel.</p>
+        <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Go to Process</a></div>
+      </section>
+      {% endif %}
+    </div>
   </div>
-  {% else %}
-  <p class="muted">No panels yet.</p>
-  {% endfor %}
-  {% elif "Interview" in g.label %}
-  <div class="table-wrap">
-  <table>
-    <thead><tr><th>Interviewer</th><th>Role</th></tr></thead>
-    <tbody>
-    {% for e in interviewers %}
-      <tr><td>{{ e.name }}<br><span class="muted">{{ e.email }}</span></td><td>{{ e.note or "—" }}</td></tr>
-    {% else %}
-      <tr><td colspan="2" class="muted">No interviewers yet.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  </div>
-  {% else %}
-  <p class="muted">No roster yet.</p>
-  {% endif %}
-  <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Add people</button><button class="btn btn-secondary" type="button" disabled>Upload CSV</button>{% if not loop.first %}<button class="btn btn-secondary" type="button" disabled>Copy roster from Gate 1</button>{% endif %}</div>
-</section>
-{% else %}
-<section class="card">
-  <h2>No gates yet</h2>
-  <p class="muted">Add stages and gates on Process; each gate gets its card here, with its panel.</p>
-  <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Go to Process</a></div>
-</section>
-{% endfor %}
-{% set ns = namespace(interview=false) %}{% for g in gates if "Interview" in g.label %}{% set ns.interview = true %}{% endfor %}
-{% if interviewers and gates and not ns.interview %}
-<section class="card" data-roster="interviewers">
-  <h2>Interviewers</h2>
-  <p class="muted">Not yet on a gate: add an interview gate on Process, then copy them to it.</p>
-  <div class="table-wrap">
-  <table>
-    <thead><tr><th>Interviewer</th><th>Role</th></tr></thead>
-    <tbody>
-    {% for e in interviewers %}<tr><td>{{ e.name }}<br><span class="muted">{{ e.email }}</span></td><td>{{ e.note or "—" }}</td></tr>{% endfor %}
-    </tbody>
-  </table>
-  </div>
-</section>
-{% endif %}
-<section class="card">
-  <h2>Reviewer pool</h2>
-  <p class="muted">Applicants choose their reviewer from this pool on the application form.</p>
-  <div class="table-wrap">
-  <table>
-    <thead><tr><th>Reviewer</th><th>Area</th></tr></thead>
-    <tbody>
-    {% for e in pool %}
-      <tr><td>{{ e.name }}<br><span class="muted">{{ e.email }}</span></td><td>{{ e.note or "—" }}</td></tr>
-    {% else %}
-      <tr><td colspan="2" class="muted">No pool: applicants do not choose a reviewer in this exercise.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  </div>
-  <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Add reviewers</button><button class="btn btn-secondary" type="button" disabled>Upload CSV</button></div>
-</section>
+  <aside class="fb-side">
+    <section class="card fb-outline" aria-labelledby="gc-outline-h">
+      <h2 id="gc-outline-h">Outline</h2>
+      <ol class="pc-o" data-gc-outline>
+        {% for st in plan.stages %}{% set sg = st.columns | selectattr("via", "defined") | list %}{% if sg %}
+        <li><span class="pc-o-h">{{ st.label }}</span> <span class="muted">{{ st.dates }}</span>
+          <ul class="fb-o-list">
+            {% for g in sg %}<li><button type="button" class="fb-o-item" data-go="{{ g.key }}">Gate {{ g.number }}: {{ g.label }}</button> <span class="muted" data-o-panel="{{ g.key }}">{{ people[g.panel].name if g.panel in people else "No panel" }}</span></li>{% endfor %}
+          </ul>
+        </li>
+        {% endif %}{% endfor %}
+      </ol>
+      <p class="muted fb-counts" data-gc-counts></p>
+      <ul class="pc-issues" data-gc-issues hidden></ul>
+      <div class="btnrow">
+        <button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>
+      </div>
+    </section>
+  </aside>
+</div>
+{% include "applydesk/operator/_panel_pick_js.html" %}
+<script>
+// Segment AD1F rung 3: the Gates page's moves, in the browser only; a
+// reload restores the sample. Cards open and close; a gate's panel menu
+// redraws its members, its chip and the Outline, which counts the panels
+// in use and names a gate with none.
+(function () {
+  var root = document.querySelector("[data-gates]");
+  if (!root) return;
+  window.applydeskPools = window.applydeskPools || JSON.parse(document.getElementById("gc-pools").textContent);
+  var POOLS = window.applydeskPools;
+  var list = root.querySelector("#gc-cards");
+  function cards() { return Array.prototype.slice.call(list.querySelectorAll(".gc")); }
+  function kicker(card) { return card.querySelector(".fc-kicker").textContent; }
+  function setOpen(card, open) {
+    if (open) card.setAttribute("data-open", ""); else card.removeAttribute("data-open");
+    var t = card.querySelector("[data-fc-toggle]");
+    t.setAttribute("aria-expanded", open ? "true" : "false");
+    t.setAttribute("aria-label", (open ? "Collapse " : "Expand ") + kicker(card));
+  }
+  function people(n) { return n + (n === 1 ? " person" : " people"); }
+  function draw(card) {
+    var key = card.querySelector("[data-gc-panel]").value, pool = key ? POOLS[key] : null;
+    var chip = card.querySelector('[data-sum="panel"]');
+    chip.textContent = pool ? pool.name + " · " + people(pool.members.length) : "No panel";
+    chip.className = "chip " + (pool ? "chip-mute" : "chip-warn");
+    var ul = card.querySelector("[data-gc-members]");
+    ul.textContent = "";
+    (pool ? pool.members : []).forEach(function (m) {
+      var li = document.createElement("li");
+      li.textContent = m[0];
+      if (m[0] !== m[1]) {
+        var e = document.createElement("span");
+        e.className = "muted";
+        e.textContent = m[1];
+        li.appendChild(document.createTextNode(" "));
+        li.appendChild(e);
+      }
+      ul.appendChild(li);
+    });
+    card.querySelector("[data-gc-none]").hidden = !!pool;
+    root.querySelector('[data-o-panel="' + card.dataset.gate + '"]').textContent = pool ? pool.name : "No panel";
+  }
+  function outline() {
+    var used = {}, missing = [];
+    cards().forEach(function (card) {
+      var key = card.querySelector("[data-gc-panel]").value;
+      if (key && POOLS[key]) used[key] = true; else missing.push(kicker(card));
+    });
+    var n = cards().length, p = Object.keys(used).length;
+    root.querySelector("[data-gc-counts]").textContent = n + (n === 1 ? " gate" : " gates") + " · " + p + (p === 1 ? " panel" : " panels") + " in use";
+    var issues = root.querySelector("[data-gc-issues]");
+    issues.textContent = "";
+    missing.forEach(function (g) {
+      var li = document.createElement("li");
+      li.textContent = g + " has no panel.";
+      issues.appendChild(li);
+    });
+    issues.hidden = !missing.length;
+  }
+  list.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-fc-toggle]");
+    if (t) { var card = t.closest(".gc"); setOpen(card, !card.hasAttribute("data-open")); }
+  });
+  list.addEventListener("input", function (e) {
+    if (!e.target.matches("[data-gc-panel]")) return;
+    draw(e.target.closest(".gc"));
+    outline();
+  });
+  root.querySelector("[data-gc-outline]").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-go]");
+    if (!b) return;
+    var card = root.querySelector('.gc[data-gate="' + b.dataset.go + '"]');
+    setOpen(card, true);
+    card.scrollIntoView({ block: "start" });
+    card.querySelector("[data-fc-toggle]").focus({ preventScroll: true });
+  });
+  outline();
+})();
+</script>

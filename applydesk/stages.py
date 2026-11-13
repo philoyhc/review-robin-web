@@ -157,6 +157,14 @@ _O2 = Outcome(
 _O3 = Outcome("o3", 3, "Final results", ("Awarded", "Waitlisted", "Not awarded"), "12 Dec", "")
 
 _STAGES: dict[str, tuple[Stage, ...]] = {
+    # A draft still being set up (segment AD1F): its selection gate added
+    # just in time, its panel not chosen yet.
+    "c4xh2ndv6s": (
+        Stage(1, "", "Dates not set", form=True),
+        Stage(
+            2, "Selection", "Dates not set", (Gate("g1", 1, "Placement interview", "", "Score"),)
+        ),
+    ),
     # The model exercise (author, 2026-11-13): its stages named.
     "wa9juxbc2t": (
         Stage(1, "Call for applications", "1 Sep – 15 Oct", form=True),

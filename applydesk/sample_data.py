@@ -44,7 +44,6 @@ class Assessor:
     name: str
     email: str
     asked_to_review: tuple[str, ...]  # application public IDs (ruling 9)
-    panel: str = "Panel A"
 
 
 @dataclass(frozen=True)
@@ -388,14 +387,15 @@ APPLICATIONS: tuple[Application, ...] = _WRITTEN + _generated()
 ASSESSORS: tuple[Assessor, ...] = (
     Assessor("wa9juxbc2t", "Zoe Tan", "zoe.tan@example.edu", ("m3qx8vkt2n", "h6zr2tdw9p")),
     Assessor("wa9juxbc2t", "Lars Berg", "lars.berg@example.edu", ("m3qx8vkt2n",)),
-    Assessor("wa9juxbc2t", "Ana Lim", "ana.lim@example.edu", ("h6zr2tdw9p",), panel="Panel B"),
+    Assessor("wa9juxbc2t", "Ana Lim", "ana.lim@example.edu", ("h6zr2tdw9p",)),
     Assessor("k7mfr3pq8z", "Priya Rao", "priya.rao@example.edu", ("b8yd3mkr6v", "q4tw9hcz3x")),
     Assessor("k7mfr3pq8z", "Mei Chen", "mei.chen@example.edu", ("q4tw9hcz3x",)),
 )
 
 # The exercises' panels (ruling 19), one sample each kind: assessment
 # panels, the pool an applicant chooses a reviewer from, the interviewers.
-# ASSESSORS above keeps who each assessor is asked to review (AD5, AD6).
+# ASSESSORS above keeps only who each assessor is asked to review (AD5,
+# AD6); which panel they sit on is here.
 PANELS: tuple[Panel, ...] = (
     Panel(
         "wa9juxbc2t",
@@ -692,6 +692,12 @@ def people_pools(exercise_id: str) -> dict[str, Pool]:
     for p in panels_of(exercise_id):
         pools[p.key] = {"name": p.name, "members": [(m.name, m.email) for m in p.members]}
     return pools
+
+
+def panel_pools(exercise_id: str) -> dict[str, Pool]:
+    """The exercise's panels alone, in order, as a gate picks from them:
+    a gate is evaluated by a panel, never Institution-wide."""
+    return {k: p for k, p in people_pools(exercise_id).items() if k != "institution"}
 
 
 def _people(lo: str, hi: str) -> str:

@@ -4,8 +4,9 @@
    script in `_panel_pick_js.html` wires every pair on the page. A panel
    made here lives on this page only: nothing is saved until AD2. #}
 
-{% macro menu(pools, chosen, attrs="") %}
+{% macro menu(pools, chosen, attrs="", empty="") %}
 <select class="fc-in" data-panel-pick {{ attrs | safe }}>
+  {% if empty %}<option value=""{% if not chosen %} selected{% endif %}>{{ empty }}</option>{% endif %}
   {% for key, p in pools.items() %}<option value="{{ key }}"{% if key == chosen %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
   <option value="__new">+ New panel…</option>
 </select>
