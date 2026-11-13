@@ -64,5 +64,6 @@ Taken 2026-11-13 at `984307e17`.
 
 ## Doc impact
 
-- `spec/visual_style_rrw.md` — the tab title's pattern, *Page · Review Robin*.
+- `spec/visual_style_rrw.md` — the tab title's pattern, *Page · Review Robin*, including the participant pages' and the error page's (no longer ` — Review Robin Web`).
 - `spec/sessions_overview.md` — the lobby's tab title.
+- `spec/email_template_editor.md` — the page's tab title, `Email Template — {session name} · Review Robin`.

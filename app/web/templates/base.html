@@ -2,7 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>{% block title %}Review Robin Web{% endblock %}</title>
+    {# Segment 20O: the tab reads "Page · Review Robin", as every Cordware
+       application's does. A page's title block names only the page;
+       the base adds the app, and a page with none reads "Review Robin". #}
+    {% if false %}{% block title %}{% endblock %}{% endif %}
+    {% set _page_title = self.title() | trim %}
+    <title>{{ _page_title ~ " · " if _page_title }}Review Robin</title>
     {# Favicon: the author's robin on RRW's primary blue (`--blue-strong`,
        #2563eb), a 32×32 tile with corner radius 7 like the other Cordware
        applications' (author, 2026-11-01). An inline SVG data URI, every

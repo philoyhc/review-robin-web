@@ -17,7 +17,7 @@ from app.db.models import Reviewer, ReviewSession
 from ._lookups import must_search
 
 _TEMPLATES = Path("app/web/templates")
-_BRAND = "Review Robin Web"
+_BRAND = "Review Robin"
 
 
 def _participant(make_client) -> TestClient:
@@ -57,22 +57,23 @@ def _seed_reviewer(client: TestClient, db: Session) -> None:
     # The shared pages a participant reaches (participant audit M8).
     + ["about.html", "guide.html", "me_debug.html"],
 )
-def test_every_participant_page_title_ends_with_the_brand(template: str) -> None:
+def test_every_participant_page_title_names_only_the_page(template: str) -> None:
     """The mismatch page had no suffix, the surface read "… — Review"
-    and Sign-in details put the brand first (L2)."""
+    and Sign-in details put the brand first (L2). Since segment 20O the
+    base adds " · Review Robin", so a page's block names only the page."""
     text = (_TEMPLATES / template).read_text()
     title = must_search(r"{% block title %}(.*?){% endblock %}", text).group(1)
-    assert title.endswith(f" — {_BRAND}"), title
+    assert title.strip() and _BRAND not in title, title
 
 
 def test_the_error_page_title_uses_the_same_brand(make_client) -> None:
-    """The error page read "· Review Robin" where every other title reads
-    "— Review Robin Web" (L2)."""
+    """The error page's tab ends as every other's does: " · Review Robin"
+    since segment 20O (L2's brand, the author's separator)."""
     resp = _participant(make_client).get("/me/invite/not-a-token")
     assert resp.status_code == 404
     title = must_search(r"<title>(.*?)</title>", resp.text).group(1)
-    assert title.endswith(f" — {_BRAND}"), title
-    assert "· Review Robin" not in resp.text
+    assert title.endswith(f" · {_BRAND}"), title
+    assert "Review Robin Web" not in title
 
 
 # ── L3: no operator vocabulary for a participant ─────────────────────
@@ -141,3 +142,35 @@ def test_the_reviewer_card_says_when_answers_can_change_and_be_read(
     assert "You can still read your answers until the review closes" in body
     assert "only if the people running it allow it" in body
     assert "revisit until the session closes" not in body
+
+
+def test_no_template_names_the_app_in_its_title_block() -> None:
+    """Segment 20O: the base adds " · Review Robin"; a block that named the
+    app too would read "X — Review Robin · Review Robin"."""
+    for path in sorted(_TEMPLATES.rglob("*.html")):
+        for block in re.findall(r"{% block title %}(.*?){% endblock %}", path.read_text(), re.S):
+            assert _BRAND not in block, (path, block)
+
+
+def test_a_page_without_a_title_reads_the_app_alone() -> None:
+    """The base's own title lines, run with an empty and a filled block."""
+    import jinja2
+
+    base = (_TEMPLATES / "base.html").read_text()
+    found = re.search(r"({% if false %}{% block title %}.*?</title>)", base, re.S)
+    assert found, "base.html's title lines moved"
+    head = found.group(1)
+    env = jinja2.Environment(
+        loader=jinja2.DictLoader(
+            {
+                "b.html": head,
+                "empty.html": '{% extends "b.html" %}',
+                "named.html": '{% extends "b.html" %}{% block title %}{{ name }}{% endblock %}',
+            }
+        ),
+        autoescape=True,
+    )
+    assert env.get_template("empty.html").render().strip().endswith("<title>Review Robin</title>")
+    assert "<title>A &amp; B · Review Robin</title>" in env.get_template("named.html").render(
+        name="A & B"
+    )
