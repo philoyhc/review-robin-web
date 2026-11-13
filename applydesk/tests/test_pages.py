@@ -32,10 +32,13 @@ PAGES = (
         for section in ("setup", "form", "applications", "panels", "review", "reports")
     ),
     f"/applydesk/operator/exercises/{EX}/form/preview",
+    f"/applydesk/operator/exercises/{OPEN}",  # open for applications
+    f"/applydesk/operator/exercises/{OPEN}/applications",  # no rounds yet
     f"/applydesk/operator/exercises/{BLANK}/form/preview",
     f"/applydesk/operator/exercises/{BLIND}",  # Review stage: "Go to Review"
     f"/applydesk/operator/exercises/{BLIND}/setup",  # blind review on
     f"/applydesk/operator/exercises/{BLIND}/panels",  # no reviewer pool
+    f"/applydesk/operator/exercises/{BLIND}/review",  # blind: the alias key
     f"/applydesk/operator/exercises/{DRAFT}/setup",  # the Setup stage is now
     f"/applydesk/operator/exercises/{DRAFT}",  # the Publish step
     f"/applydesk/operator/exercises/{DRAFT}/applications",  # none yet
@@ -395,8 +398,9 @@ def test_the_blank_exercise_is_not_offered_to_applicants(client: TestClient) -> 
 def test_profile_shows_nowhere_a_reader_sees(client: TestClient) -> None:
     """Ruling 13: what a reviewer opens is the application file. Review
     Robin's `ProfileLink` keeps its name: it is the handoff's field."""
+    # The raw page: text, attributes (aria-label, title, placeholder) and
+    # the scripts' strings alike.
     for path in PAGES:
-        text = re.sub(r"<code>ProfileLink</code>", "", client.get(path).text)
-        visible = re.sub(r"<script.*?</script>|<[^>]+>", " ", text, flags=re.S)
-        assert "profile" not in visible.lower(), path
+        text = client.get(path).text.replace("<code>ProfileLink</code>", "")
+        assert "profile" not in text.lower(), path
     assert client.get(f"/applydesk/me/exercises/{EX}/profiles/p3bd7kq2wx").status_code == 404

@@ -48,13 +48,13 @@ Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID
 - **Running alone:** `CORDWARE_APPS=applydesk` starts, and so does ApplyDesk beside every other application.
 - **Boundaries** (spec §10.1): `applydesk` never imports `app`, `residentialapps` or `utilityapps`, and nothing imports `applydesk`, except the host's registry, which names its factory as a string.
 - **Exercise IDs:** 10 symbols from RRW's alphabet (`23456789abcdefghjkmnpqrstuvwxyz`, no look-alikes), drawn at random. The sample data uses IDs of that shape, and a route refuses any other shape with a 404, as RRW's `get_by_public_id` does.
-- **Profile IDs are not application IDs.** A reviewer's URL names the profile page, never the application, so a blind profile's address carries nothing an applicant's own pages use.
+- **File IDs are not application IDs.** A reviewer's URL names the application file (a profile page's until AD1C), never the application, so a blind profile's address carries nothing an applicant's own pages use.
 - **Placeholders answer only locally, or a previewer**, as Residential's preview gate does (`residentialapps/spec/applications.md`). Deployed, nobody else reaches a page until it is wired.
 
 ## Judgment calls — decided
 
 - **ApplyDesk keeps its own copy of the ID alphabet** rather than importing RRW's. Ruling 7 makes it a shared convention, not shared code, and the boundary forbids the import.
-- **Participant paths sit under `/me`** whatever the role: an applicant's application and an assessor's profile page share the namespace, as RRW's reviewer and reviewee pages do.
+- **Participant paths sit under `/me`** whatever the role: an applicant's application and an assessor's application file share the namespace, as RRW's reviewer and reviewee pages do.
 - **The landing page follows the shared header's landing pattern** (`docs/header_chrome.md`), not a page of its own design.
 
 ## Blast radius (measured)
