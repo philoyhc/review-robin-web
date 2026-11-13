@@ -59,6 +59,7 @@ Taken 2026-11-13 at `fb6e75f07`.
 Building. Base `fb6e75f07` for the cumulative read.
 - Rung 2, the scaffold: a card per stage (`operator/_process_cards.html`, one macro per card and item, as Form's), every card open and every action disabled until rung 3; an open card keeps its name, dates and what it holds in its head. The Outline lists the stages and their items with the counts and any `stages.problems`. The placeholder's milestones table is gone: its dates live on the stages (Decision 8, the author's). The announcements card went at rung 3 (author: their equivalent is part of the exercise's setup).
 - Rung 3: the stage card moves (`_process.html`'s script): open and close (cards load collapsed unless alone); name and dates feed the head and the Outline, an empty name reading *Stage N*; *+ Stage*, *Replicate* (the copy leaves the form behind and gives its gates and outcome keys of their own), *Delete* (never the last); dragging or ↑ ↓, gates and outcomes renumbered by timeline; *+ Form* and *Remove the form* within ruling 15, the buttons saying why when refused. *+ Gate* and *+ Outcome* stay for rung 4. Built on the element alignment (#3853): the cards take Review Robin's 2px edge.
+- Rung 4: *+ Gate* puts a gate after the stage's last, before its outcome; *+ Outcome* adds the one outcome a stage may hold; each removable. New items take keys of their own and are numbered by timeline; a new rule reads *Decided by hand* until rung 5. A stage holding the form refuses a gate, as one holding gates refuses the form.
 
 ## PR ladder
 

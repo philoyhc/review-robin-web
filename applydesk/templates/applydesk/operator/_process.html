@@ -2,7 +2,8 @@
    stack of stage cards, as Form is of question cards; each holds the
    form, or gates, and may hold an outcome, with their dates, rules and
    emails. The cards are drawn from the sample, collapsed unless alone;
-   the stage card moves in the browser (rung 3), the Outline following.
+   the stage card moves in the browser (rung 3), and its gates and outcome
+   are added and removed (rung 4), the Outline following.
    Nothing is saved. #}
 {% import "applydesk/operator/_process_cards.html" as pc with context %}
 {% set gates = plan.columns | selectattr("via", "defined") | list %}
@@ -17,6 +18,8 @@
     {# What + Stage and + Form add: the same macros as the server's own. #}
     <template id="pc-new-stage">{{ pc.stage(plan, blank_stage, rule_text, emails, last=False, open=True) }}</template>
     <template id="pc-new-form">{{ pc.form_item(blank_stage, emails) }}</template>
+    <template id="pc-new-gate">{{ pc.gate_item(plan, blank_gate, rule_text) }}</template>
+    <template id="pc-new-outcome">{{ pc.outcome_item(plan, blank_outcome, rule_text, emails) }}</template>
   </div>
   <aside class="fb-side">
     <section class="card fb-outline" aria-labelledby="pc-outline-h">
@@ -87,16 +90,18 @@
     b.disabled = !!why;
     if (why) b.title = why; else b.removeAttribute("title");
   }
-  // Ruling 15, as the buttons say it; the gate and outcome buttons stay
-  // inert until rung 4, but say why where the ruling forbids them.
+  // Ruling 15, as the buttons say it: the form, a gate, an outcome.
   function guards() {
     var all = cards(), holder = all.filter(function (c) { return items(c, "form").length; })[0];
     all.forEach(function (card) {
       var hasForm = items(card, "form").length > 0, hasGates = items(card, "gate").length > 0;
       guard(card, "form", hasForm ? "This stage holds the form" : hasGates ? "A stage holding gates holds no form" : holder ? "Another stage holds the form" : "");
       var gate = card.querySelector('[data-pc-act="gate"]'), out = card.querySelector('[data-pc-act="outcome"]');
-      gate.title = hasForm ? "A stage holding the form holds no gate" : "Gates are added in the next rung";
-      out.title = items(card, "outcome").length ? "A stage holds one outcome at most" : "Outcomes are added in the next rung";
+      gate.disabled = hasForm;
+      if (hasForm) gate.title = "A stage holding the form holds no gate"; else gate.removeAttribute("title");
+      var hasOut = items(card, "outcome").length > 0;
+      out.disabled = hasOut;
+      if (hasOut) out.title = "A stage holds one outcome at most"; else out.removeAttribute("title");
       var del = card.querySelector('[data-fc-act="delete"]');
       del.disabled = all.length === 1;
       if (all.length === 1) del.title = "The last stage cannot be deleted"; else del.removeAttribute("title");
@@ -222,6 +227,20 @@
         p.closest(".pc-item").remove();
         changed();
         card.querySelector('[data-pc-act="form"]').focus();
+      } else if (p.dataset.pcAct === "gate" || p.dataset.pcAct === "outcome") {
+        // A gate goes after the stage's last gate, before its outcome; an
+        // outcome after everything. Each is a new column, with its own key.
+        var kind = p.dataset.pcAct, added = fresh("pc-new-" + kind);
+        added.dataset.key = kind[0] + "new" + (++keys);
+        var outcome = card.querySelector('.pc-item[data-item="outcome"]');
+        var anchor = kind === "gate" && outcome ? outcome : card.querySelector(".pc-empty");
+        anchor.before(added);
+        changed();
+        added.querySelector('[data-pc="item-name"]').focus();
+      } else if (p.dataset.pcAct === "remove-gate" || p.dataset.pcAct === "remove-outcome") {
+        p.closest(".pc-item").remove();
+        changed();
+        card.querySelector('[data-pc-act="' + p.dataset.pcAct.slice(7) + '"]').focus();
       }
       return;
     }
