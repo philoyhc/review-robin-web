@@ -6,25 +6,16 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
-from applydesk import rounds, sample_data
+from applydesk import rounds, sample_data, workflow
 from applydesk.gate import placeholders_only
 from applydesk.lookups import exercise_or_404
-from applydesk.web import exercise_tabs, render
+from applydesk.web import OPERATIONS_PAGES, SETUP_PAGES, exercise_nav, render
 
 router = APIRouter(prefix="/operator", dependencies=[Depends(placeholders_only)])
 
 #: An exercise's operator pages beyond Home, each a partial of
-#: `operator/section.html`, with its heading.
-#: The tabs as the author set them (2026-11-12): Review kept, between
-#: Panels and Reports, as a seventh.
-SECTIONS: dict[str, str] = {
-    "setup": "Setup",
-    "form": "Application form",
-    "applications": "Applications",
-    "panels": "Panels",
-    "review": "Assessment in Review Robin",
-    "reports": "Reports",
-}
+#: `operator/section.html`, headed by its tab's label (ruling 14).
+SECTIONS: dict[str, str] = dict(SETUP_PAGES + OPERATIONS_PAGES)
 
 
 @router.get("/exercises", name="applydesk_exercises")
@@ -45,7 +36,8 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         request,
         "applydesk/operator/home.html",
         area="Exercises",
-        tabs=exercise_tabs(exercise.public_id),
+        nav=exercise_nav(exercise.public_id, ""),
+        status=workflow.status_row(exercise),
         exercise=exercise,
         applications=sample_data.applications_of(exercise.public_id),
         assessors=sample_data.assessors_of(exercise.public_id),
@@ -78,7 +70,8 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         request,
         "applydesk/operator/section.html",
         area="Exercises",
-        tabs=exercise_tabs(exercise.public_id),
+        nav=exercise_nav(exercise.public_id, section),
+        status=workflow.status_row(exercise),
         exercise=exercise,
         section=section,
         heading=SECTIONS[section],
@@ -103,4 +96,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         submitted_rank=rounds.submitted_rank,
         rule_text=rounds.rule_text,
         rule_json=rounds.rule_json,
+        gate_state=workflow.gate_state,
+        emails=workflow.emails(exercise.public_id),
+        form_state=workflow.form_state(exercise),
     )

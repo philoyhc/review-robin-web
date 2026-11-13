@@ -28,15 +28,20 @@ Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID
 | `/operator/exercises` | Exercises lobby: the operator's exercises by state; New exercise | Operators |
 | `/operator/exercises/<id>` | Exercise Home: stage, state, counts, the next step; the timeline with the current stage marked (iteration 5) | The exercise's operators |
 | ~~`/operator/exercises/<id>/settings`~~ | Became Setup (iteration 5) | |
-| `/operator/exercises/<id>/setup` | Details, eligibility (open or invitation-only), blind review; the timeline: stages, milestones, announcements (iteration 5) | 〃 |
+| ~~`/operator/exercises/<id>/setup`~~ | Became Process; its details moved to Home (AD1D) | |
+| `/operator/exercises/<id>/process` | Rounds, gates and outcomes with their rules and emails; the timeline (AD1D) | 〃 |
 | `/operator/exercises/<id>/form` | The application form builder (iteration 5); from AD1B, cards that move on screen (`applydesk/guide/archive/segment_AD1B_form_builder.md`) | 〃 |
 | `/operator/exercises/<id>/applications` | Applications by state; generate applicant profiles; import outcomes (iteration 5); from AD1C, the control surface of rounds, gates and outcomes, generating application files | 〃 |
 | ~~`/operator/exercises/<id>/assessors`~~ | Became Panels (iteration 5) | |
-| `/operator/exercises/<id>/panels` | The rosters of evaluators: assessment panels (what each may view), the reviewer pool applicants choose from, interviewers (iteration 5) | 〃 |
-| `/operator/exercises/<id>/review` | Assessment in Review Robin: send, status, results back | 〃 |
+| ~~`/operator/exercises/<id>/panels`~~ | Into Gates (AD1D) | |
+| `/operator/exercises/<id>/gates` | One card per gate with its panel; the reviewer pool (AD1D) | 〃 |
+| `/operator/exercises/<id>/emails` | The templates to applicants (AD1D) | 〃 |
+| ~~`/operator/exercises/<id>/review`~~ | Became Evaluations (AD1D) | |
+| `/operator/exercises/<id>/evaluations` | Each gate's state and progress in Review Robin, results back (AD1D) | 〃 |
 | ~~`/operator/exercises/<id>/timeline`~~ | Into Setup and Home; outcomes into Applications (iteration 5) | |
 | ~~`/operator/exercises/<id>/export`~~ | Became Reports (iteration 5) | |
-| `/operator/exercises/<id>/reports` | Every evaluation response collated, Review Robin's included; the data export (iteration 5) | 〃 |
+| ~~`/operator/exercises/<id>/reports`~~ | Became Extract data (AD1D) | |
+| `/operator/exercises/<id>/extract` | Every evaluation response collated; the data export (AD1D) | 〃 |
 | `/me` | My ApplyDesk: my applications, exercises open to me, application files I may read | Anyone signed in |
 | `/me/exercises/<id>` | An exercise as an applicant sees it: details, timeline, Apply | Eligible applicants |
 | `/me/exercises/<id>/applications/<app>` | My application: draft or submitted | Its applicant |

@@ -19,7 +19,7 @@ An exercise has seven tabs in one row (Home, Setup, Form, Applications, Panels, 
 1. **Home**: the exercise's details, the Workflow card, owners, the danger zone (close and archive).
 2. **Setup**: **Process** (rounds, gates placed in them, outcomes, dates, every rule, what a release does), **Form** (AD1B), **Gates** (one card per gate: its panel roster, what the panel sees, how it is run, its result's measure), **Emails** (the one place the templates to applicants are kept: the receipt, reminders before the form closes, a notice per outcome; Process says which steps send one, and when).
 3. **Operations**: **Applications** (AD1C, the control surface), **Evaluations** (each gate's progress and results from Review Robin), **Extract data**.
-4. **Styled as Review Robin's** (author, 2026-11-13): a card under the breadcrumb (*Exercises / name*); *Exercise Home* double-height on the left; uppercase row labels with a triangle; the Setup row tinted blue, the Operations row green, the tabs sharing each row's width; the active tab white with its row's underline.
+4. **Styled as Review Robin's** (author, 2026-11-13): a card under the breadcrumb (*Exercises / name*); *Exercise Home* double-height on the left; uppercase row labels with a triangle; in ApplyDesk's rose rather than Review Robin's blue and green (author: the favicon's color), the Setup row a stronger rose, the Operations row a paler one, the tabs sharing each row's width; the active tab white with its row's underline.
 5. **A status row** inside that card, under the tabs, on every page: the exercise's state, then the form, gates, outcomes and emails at a glance.
 6. **The Workflow card** on Home and every Operations page: the timeline as a stepper, each item with its state; the one due next carries its action; one not ready says why.
 
@@ -56,6 +56,11 @@ Taken 2026-11-13 at `bf44ce575`.
 | Operator templates | 14 | `ls applydesk/templates/applydesk/operator/ \| wc -l` |
 | Page tests | 32 | `grep -c "def test" applydesk/tests/test_pages.py` |
 | Test files naming a retired section | 4 | `grep -rln "panels\|/review\|reports\|/setup" applydesk/tests --include=*.py` |
+
+## Status
+
+Building. Base `bf44ce575` for the cumulative read.
+- Rung 2: the chrome in Review Robin's styling (`applydesk/templates/applydesk/_exercise_nav.html`), its status row from `applydesk/workflow.py` (each item's state, sample values per exercise), and the pages: Process (the rounds with every rule and which step sends an email, then the timeline), Gates (a card per gate with its panel: the assessment panels on Gate 1, the interviewers on the Interview gate; the reviewer pool), Emails (each template, set up or not), Evaluations (each gate's state and progress), Extract data (Reports' content). Setup's details moved to Home; a draft's missing items link to Home's details, Process or Form. The `h1` is the page's name, the exercise's in the breadcrumb.
 
 ## PR ladder
 

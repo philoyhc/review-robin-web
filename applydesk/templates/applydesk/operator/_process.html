@@ -1,0 +1,50 @@
+{# Process (ruling 14, segment AD1D): the exercise's flow, its rounds of
+   gates and outcomes, their dates, every rule, and what each step sends;
+   a placeholder until its own segment. #}
+<section class="card">
+  <h2>Rounds</h2>
+  <p class="muted">Rounds run one after another; a round's gates may run together, and its outcomes come after them. Every rule is set here; Applications applies them.</p>
+  {% for r in plan.rounds %}
+  <h3>{{ r.label }} <span class="muted">· {{ r.dates }}</span></h3>
+  <div class="table-wrap">
+  <table class="xproc">
+    <thead><tr><th>Step</th><th>Rule</th><th>Email to applicants</th></tr></thead>
+    <tbody>
+    {% for c in r.columns %}
+      {% set rt = rule_text(plan, c) %}
+      <tr>
+        <td>{% if c.via is defined %}<span class="muted">Gate {{ c.number }}</span><br><strong>{{ c.label }}</strong><br><span class="muted">{{ "A Review Robin session" if c.via == "RRW" else "Results entered here" }}{% if c.measure %} · {{ c.measure }}{% endif %}</span>{% else %}<span class="muted">Outcome {{ c.number }}</span><br><strong>{{ c.label }}</strong><br><span class="muted">{{ c.values | join(" / ") }} · due {{ c.due }}</span>{% endif %}</td>
+        <td>{{ rt if rt else "Decided by hand" }}{% if c.weights and c.weights | length > 1 %}<br><span class="muted">Combined: {% for k, w in c.weights %}{% for g in plan.columns if g.key == k %}{{ g.label }} {{ (w * 100) | round | int }}%{% endfor %}{{ " · " if not loop.last }}{% endfor %}</span>{% endif %}</td>
+        <td>{% if c.via is defined %}<span class="muted">None</span>{% else %}{% for name, when, ok in emails if name == c.label %}On release{% if not ok %} <span class="chip chip-warn">Template not set up</span>{% endif %}{% else %}<span class="muted">None</span>{% endfor %}{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="muted">No rounds yet.</p>
+  {% endfor %}
+  <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Add a round</button><button class="btn btn-secondary" type="button" disabled>Add a gate</button><button class="btn btn-secondary" type="button" disabled>Add an outcome</button></div>
+</section>
+<section class="card">
+  <h2>Timeline</h2>
+  <p class="muted">The stages and their dates, as Home shows them; the form opens and closes on these.</p>
+  {% include "applydesk/operator/_stages.html" %}
+  <h3>Milestones</h3>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Milestone</th><th>Date</th><th>Shown to applicants</th></tr></thead>
+    <tbody>
+      <tr><td>Applications open</td><td>{{ exercise.opens }}</td><td>Yes</td></tr>
+      <tr><td>Application stage ends <span class="muted">(a hard deadline: no application starts, submits or resubmits after it)</span></td><td>{{ exercise.application_stage_ends }}</td><td>Yes</td></tr>
+      <tr><td>Interviews</td><td class="muted">Not set</td><td>No</td></tr>
+      <tr><td>Expected outcome <span class="muted">(an estimate)</span></td><td>{{ exercise.expected_outcome }}</td><td>Yes</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Add a milestone</button></div>
+  <h3>Announcements</h3>
+  <p class="muted">None yet. An announcement shows on every applicant's exercise page.</p>
+  <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>New announcement</button></div>
+</section>
+<div class="btnrow"><button class="btn btn-primary" type="button" disabled>Save</button></div>

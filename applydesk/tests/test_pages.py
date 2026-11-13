@@ -29,23 +29,38 @@ PAGES = (
     f"/applydesk/operator/exercises/{EX}",
     *(
         f"/applydesk/operator/exercises/{EX}/{section}"
-        for section in ("setup", "form", "applications", "panels", "review", "reports")
+        for section in (
+            "process",
+            "form",
+            "gates",
+            "emails",
+            "applications",
+            "evaluations",
+            "extract",
+        )
     ),
     f"/applydesk/operator/exercises/{EX}/form/preview",
     f"/applydesk/operator/exercises/{OPEN}",  # open for applications
     f"/applydesk/operator/exercises/{OPEN}/applications",  # no rounds yet
     f"/applydesk/operator/exercises/{BLANK}/form/preview",
-    f"/applydesk/operator/exercises/{BLIND}",  # Review stage: "Go to Review"
-    f"/applydesk/operator/exercises/{BLIND}/setup",  # blind review on
-    f"/applydesk/operator/exercises/{BLIND}/panels",  # no reviewer pool
-    f"/applydesk/operator/exercises/{BLIND}/review",  # blind: the alias key
-    f"/applydesk/operator/exercises/{DRAFT}/setup",  # the Setup stage is now
+    f"/applydesk/operator/exercises/{BLIND}",  # Review stage; blind review on
+    f"/applydesk/operator/exercises/{BLIND}/gates",  # no reviewer pool
+    f"/applydesk/operator/exercises/{BLIND}/evaluations",  # blind: the alias key
+    f"/applydesk/operator/exercises/{DRAFT}/process",  # the Setup stage is now
     f"/applydesk/operator/exercises/{DRAFT}",  # the Publish step
     f"/applydesk/operator/exercises/{DRAFT}/applications",  # none yet
     f"/applydesk/operator/exercises/{BLANK}",
     *(
         f"/applydesk/operator/exercises/{BLANK}/{section}"
-        for section in ("setup", "form", "applications", "panels", "review", "reports")
+        for section in (
+            "process",
+            "form",
+            "gates",
+            "emails",
+            "applications",
+            "evaluations",
+            "extract",
+        )
     ),
     "/applydesk/me",
     f"/applydesk/me/exercises/{EX}",
@@ -138,8 +153,16 @@ def test_every_link_stays_in_the_mount(client: TestClient, path: str) -> None:
 
 def test_the_tabs_mark_the_current_page(client: TestClient) -> None:
     page = client.get(f"/applydesk/operator/exercises/{EX}/form").text
-    assert f'<a href="/applydesk/operator/exercises/{EX}/form" aria-current="page">Form</a>' in page
-    assert page.count('aria-current="page"') == 2  # the tab, and Exercises in the switcher
+    assert (
+        f'<a class="xnav-tab on" href="/applydesk/operator/exercises/{EX}/form"'
+        ' aria-current="page">Form</a>'
+    ) in page
+    assert '<span class="xnav-label xnav-l-setup on">Setup</span>' in page
+    assert '<span class="xnav-label xnav-l-ops">Operations</span>' in page
+    # The tab, the breadcrumb's last step, and Exercises in the switcher.
+    assert page.count('aria-current="page"') == 3
+    home = client.get(f"/applydesk/operator/exercises/{EX}").text
+    assert '<a class="xnav-home on"' in home and 'class="xnav-tab on"' not in home
 
 
 def test_a_blind_application_file_names_nobody(client: TestClient) -> None:
@@ -255,17 +278,39 @@ def test_withdraw_is_destructive(client: TestClient) -> None:
     assert '<button class="btn btn-destructive" type="button" disabled>Withdraw</button>' in page
 
 
-def test_the_operator_tabs_are_the_authors_seven(client: TestClient) -> None:
-    """Author, 2026-11-12: Home, Setup, Form, Applications, Panels and
-    Reports, with Review kept as a seventh, between Panels and Reports."""
+def test_the_chrome_follows_the_operator_s_workflow(client: TestClient) -> None:
+    """Ruling 14: Exercise Home, then a Setup row and an Operations row."""
     text = client.get(f"/applydesk/operator/exercises/{EX}").text
-    row = text[text.index('<nav class="tabs"') :]
-    row = row[: row.index("</nav>")]
-    tabs = re.findall(r"<a [^>]*>([^<]+)</a>", row)
-    assert tabs == ["Home", "Setup", "Form", "Applications", "Panels", "Review", "Reports"]
+    grid = text[text.index('<nav class="xnav-grid"') :]
+    grid = grid[: grid.index("</nav>")]
+    home = re.findall(r'<a class="xnav-home[^"]*"[^>]*>([^<]+)</a>', grid)
+    setup = grid[grid.index("xnav-setup") : grid.index("xnav-l-ops")]
+    ops = grid[grid.index('class="xnav-row xnav-ops"') :]
+    tab = r'<a class="xnav-tab[^"]*"[^>]*>([^<]+)</a>'
+    assert home == ["Exercise Home"]
+    assert re.findall(tab, setup) == ["Process", "Form", "Gates", "Emails"]
+    assert re.findall(tab, ops) == ["Applications", "Evaluations", "Extract data"]
+    assert '<nav class="crumbs" aria-label="Breadcrumb">' in text
+    assert "<h1>Undergraduate Research Fellowship 2027</h1>" in text
 
 
-@pytest.mark.parametrize("old", ["settings", "assessors", "timeline", "export", "report"])
+def test_the_status_row_says_where_each_item_stands(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/applications").text
+    row = text[text.index("data-status>") + len("data-status>") :]
+    row = re.sub(r"<[^>]+>", "", row[: row.index("</p>")])
+    assert row == (
+        "Exercise: Published · Form: Closed · Gates: 2 of 3 done · "
+        "Outcomes: 1 of 3 released · Emails: 4 of 5 · Applications: 89 submitted"
+    )
+    blank = client.get(f"/applydesk/operator/exercises/{BLANK}/process").text
+    assert 'Gates: <span class="chip chip-warn">none</span>' in blank
+
+
+@pytest.mark.parametrize(
+    "old",
+    ["settings", "assessors", "timeline", "export", "report"]
+    + ["setup", "panels", "review", "reports"],  # ruling 14
+)
 def test_the_retired_sections_are_gone(client: TestClient, old: str) -> None:
     assert client.get(f"/applydesk/operator/exercises/{EX}/{old}").status_code == 404
 
@@ -286,11 +331,17 @@ def test_home_marks_the_current_stage_on_its_timeline(
         assert f'<span class="stage-name">{stage}' in text
 
 
-def test_setup_carries_the_timeline_setup(client: TestClient) -> None:
-    text = client.get(f"/applydesk/operator/exercises/{EX}/setup").text
+def test_process_carries_the_rounds_and_the_timeline(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
     assert '<ol class="stages"' in text and "<h3>Milestones</h3>" in text
     assert 'aria-current="step"' in text
     assert "Add a milestone" in text and "New announcement" in text
+    for r in ("Round 1", "Round 2", "Final"):
+        assert f"<h3>{r} <span" in text
+    assert "Combined ≥ 4.2 → Shortlisted, else Not shortlisted" in text
+    assert "Peer Review 30% · Faculty Panel Review 70%" in text
+    assert "Decided by hand" in text  # Final results
+    assert 'On release <span class="chip chip-warn">Template not set up</span>' in text
 
 
 def test_applications_generates_application_files(client: TestClient) -> None:
@@ -300,20 +351,34 @@ def test_applications_generates_application_files(client: TestClient) -> None:
     assert "/applydesk/me/exercises/wa9juxbc2t/files/p3bd7kq2wx" in text
 
 
-def test_panels_holds_the_three_rosters(client: TestClient) -> None:
-    text = client.get(f"/applydesk/operator/exercises/{EX}/panels").text
-    for heading in ("Assessment panels", "Reviewer pool", "Interviewers"):
-        assert f"<h2>{heading}</h2>" in text
-    assert "<h3>Panel A</h3>" in text and "<h3>Panel B</h3>" in text
-    assert "Dr Hana Ito" in text and "Prof Ivan Petrov" in text
-    blind = client.get(f"/applydesk/operator/exercises/{BLIND}/panels").text
+def test_gates_carries_each_gate_with_its_panel(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/gates").text
+    assert re.findall(r'<section class="card" data-gate="(\w+)">', text) == ["g1", "g2", "g3"]
+    assert "<h4>Panel A</h4>" in text and "<h4>Panel B</h4>" in text  # Gate 1's panel
+    assert "Prof Ivan Petrov" in text  # the interviewers, on the Interview gate
+    assert "Copy roster from Gate 1" in text
+    assert "<h2>Reviewer pool</h2>" in text and "Dr Hana Ito" in text
+    blind = client.get(f"/applydesk/operator/exercises/{BLIND}/gates").text
     assert "No pool: applicants do not choose a reviewer" in blind
 
 
-def test_reports_collates_every_evaluation_and_exports(client: TestClient) -> None:
-    """Author, 2026-11-12: Reports collates the evaluation responses,
-    Review Robin's included, beside the data export."""
-    text = client.get(f"/applydesk/operator/exercises/{EX}/reports").text
+def test_emails_keeps_every_template_to_applicants(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/emails").text
+    names = re.findall(r'<section class="card" data-email="([^"]+)">', text)
+    assert names == ["Receipt", "Reminder", "Shortlist for interview", "Finalists", "Final results"]
+    assert text.count('<span class="chip chip-warn">Not set up</span>') == 1
+
+
+def test_evaluations_lists_each_gate_s_progress(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/evaluations").text
+    assert re.findall(r'<tr data-gate="(\w+)">', text) == ["g1", "g2", "g3"]
+    assert "18 of 27 interviewed" in text and "Pull results</button>" in text
+
+
+def test_extract_data_collates_every_evaluation_and_exports(client: TestClient) -> None:
+    """Author, 2026-11-12: the evaluation responses, Review Robin's
+    included, beside the data export (Reports until ruling 14)."""
+    text = client.get(f"/applydesk/operator/exercises/{EX}/extract").text
     assert "<h2>Evaluation responses</h2>" in text
     for column in ("Assessment", "Interview", "Pool reviewer"):
         assert f"<th>{column}" in text
@@ -321,8 +386,6 @@ def test_reports_collates_every_evaluation_and_exports(client: TestClient) -> No
     assert "Received from Dr Hana Ito" in text  # the pool reviewer
     assert "Pull results from Review Robin" in text
     assert "<h2>Export bundle</h2>" in text and "Download export" in text
-    review = client.get(f"/applydesk/operator/exercises/{EX}/review").text
-    assert 'href="/applydesk/operator/exercises/wa9juxbc2t/reports"' in review
 
 
 def test_a_draft_exercise_s_timeline_reads_cleanly(client: TestClient) -> None:
@@ -339,12 +402,12 @@ def test_a_blank_exercise_lists_what_is_still_to_set_up(client: TestClient) -> N
     missing = home[home.index("Still to set up") :]
     missing = missing[: missing.index("</ul>")]
     base = "/applydesk/operator/exercises/n5wg8tjr3e"
-    # Each item links to the tab that sets it; the form is on Form.
+    # Each item links to where it is set: Home's details, Process, Form.
     assert re.findall(r'<li><a href="([^"]+)">([^<]+)</a></li>', missing) == [
-        (f"{base}/setup", "Exercise Code"),
-        (f"{base}/setup", "Summary"),
-        (f"{base}/setup", "Dates"),
-        (f"{base}/setup", "Who may apply"),
+        (f"{base}#details", "Exercise Code"),
+        (f"{base}#details", "Summary"),
+        (f"{base}#details", "Who may apply"),
+        (f"{base}/process", "Dates"),
         (f"{base}/form", "Application form"),
     ]
     assert "Dates not set" in home and "(a hard deadline)" not in home
@@ -361,9 +424,9 @@ def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> Non
     cards = form[form.index('id="fb-cards"') : form.index('<template id="fb-new-field">')]
     assert cards.count('data-kind="field"') == 1 and 'placeholder="Untitled form"' in form
     assert "No applications yet." in client.get(f"{base}/applications").text
-    panels = client.get(f"{base}/panels").text
-    assert "No panels yet." in panels and "No interviewers yet." in panels
-    assert "No submitted applications yet." in client.get(f"{base}/reports").text
+    assert "<h2>No gates yet</h2>" in client.get(f"{base}/gates").text
+    assert "<h2>No emails yet</h2>" in client.get(f"{base}/emails").text
+    assert "No submitted applications yet." in client.get(f"{base}/extract").text
 
 
 def test_a_set_up_draft_lists_only_what_it_lacks(client: TestClient) -> None:
@@ -372,12 +435,12 @@ def test_a_set_up_draft_lists_only_what_it_lacks(client: TestClient) -> None:
     assert re.findall(r"<a [^>]*>([^<]+)</a></li>", missing[: missing.index("</ul>")]) == ["Dates"]
 
 
-def test_a_blank_exercise_s_setup_and_review_say_not_yet(client: TestClient) -> None:
+def test_a_blank_exercise_s_details_and_evaluations_say_not_yet(client: TestClient) -> None:
     base = f"/applydesk/operator/exercises/{BLANK}"
-    setup = client.get(f"{base}/setup").text
-    assert setup.count('<span class="muted">Not set</span>') >= 3  # code, summary, contact
-    assert "fellowships@example.edu" not in setup
-    review = client.get(f"{base}/review").text
+    home = client.get(base).text
+    assert home.count('<span class="muted">Not set</span>') >= 3  # code, summary, contact
+    assert "fellowships@example.edu" not in home
+    review = client.get(f"{base}/evaluations").text
     assert "Nothing to send: the exercise is a draft." in review
     assert "Send to Review Robin</button>" not in review
 
@@ -387,7 +450,7 @@ def test_a_draft_with_nothing_missing_is_ready_to_publish(
 ) -> None:
     monkeypatch.setattr(sample_data, "setup_missing", lambda e: ())
     home = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
-    assert "Ready to publish: Setup and the application form are complete." in home
+    assert "Ready to publish: the details, the dates and the application form are complete." in home
     assert '<button class="btn btn-primary" type="button" disabled>Publish</button>' in home
 
 

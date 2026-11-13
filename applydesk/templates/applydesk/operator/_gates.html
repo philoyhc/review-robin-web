@@ -1,0 +1,74 @@
+{# Gates (ruling 14, segment AD1D): one card per gate, who evaluates (its
+   panel roster), what they see and how it runs; Panels folded in here.
+   A placeholder until its own segment. #}
+<p>Who evaluates at each gate. ApplyDesk keeps every roster and what each person may view; to Review Robin they are ordinary reviewers.</p>
+{% set gates = plan.columns | selectattr("via", "defined") | list %}
+{% for g in gates %}
+{% set st = gate_state(exercise.public_id, g.key) %}
+<section class="card" data-gate="{{ g.key }}">
+  <h2>Gate {{ g.number }} · {{ g.label }} <span class="chip chip-{{ 'ok' if st[0] == 'Results in' else ('info' if st[0] in ('Sent', 'Ready') else 'warn') }}">{{ st[0] }}</span></h2>
+  <dl class="facts">
+    <dt>Runs as</dt><dd>{{ "A Review Robin session" if g.via == "RRW" else "Results entered here" }}</dd>
+    <dt>Result</dt><dd>{{ g.measure or "None" }}</dd>
+    <dt>Panel sees</dt><dd>The application file: the <em>Shown to reviewers</em> part{% if exercise.blind %}, redacted{% endif %}</dd>
+  </dl>
+  <h3>Panel</h3>
+  {% if loop.first %}
+  {% for panel, members in assessors | groupby("panel") %}
+  <h4>{{ panel }}</h4>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Assessor</th><th>Asked to review</th></tr></thead>
+    <tbody>
+    {% for s in members %}
+      <tr><td>{{ s.name }}<br><span class="muted">{{ s.email }}</span></td>
+        <td>{% for app_id in s.asked_to_review %}{% for a in applications if a.public_id == app_id %}<div>{{ a.title }}</div>{% endfor %}{% endfor %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="muted">No panels yet.</p>
+  {% endfor %}
+  {% elif "Interview" in g.label %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Interviewer</th><th>Role</th></tr></thead>
+    <tbody>
+    {% for e in interviewers %}
+      <tr><td>{{ e.name }}<br><span class="muted">{{ e.email }}</span></td><td>{{ e.note or "—" }}</td></tr>
+    {% else %}
+      <tr><td colspan="2" class="muted">No interviewers yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="muted">No roster yet.</p>
+  {% endif %}
+  <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Add people</button><button class="btn btn-secondary" type="button" disabled>Upload CSV</button>{% if not loop.first %}<button class="btn btn-secondary" type="button" disabled>Copy roster from Gate 1</button>{% endif %}</div>
+</section>
+{% else %}
+<section class="card">
+  <h2>No gates yet</h2>
+  <p class="muted">Add rounds and gates on Process; each gate gets its card here, with its panel.</p>
+  <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Go to Process</a></div>
+</section>
+{% endfor %}
+<section class="card">
+  <h2>Reviewer pool</h2>
+  <p class="muted">Applicants choose their reviewer from this pool on the application form.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Reviewer</th><th>Area</th></tr></thead>
+    <tbody>
+    {% for e in pool %}
+      <tr><td>{{ e.name }}<br><span class="muted">{{ e.email }}</span></td><td>{{ e.note or "—" }}</td></tr>
+    {% else %}
+      <tr><td colspan="2" class="muted">No pool: applicants do not choose a reviewer in this exercise.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Add reviewers</button><button class="btn btn-secondary" type="button" disabled>Upload CSV</button></div>
+</section>

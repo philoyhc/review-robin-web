@@ -1,4 +1,0 @@
-<div class="ptitle">
-  <h1>{{ exercise.name }}</h1>
-  <span>{% with value = exercise.state %}{% include "applydesk/_state_chip.html" %}{% endwith %} <span class="chip chip-info">{{ exercise.stage }} stage</span>{% if exercise.blind %} <span class="chip chip-mute">Blind review</span>{% endif %}</span>
-</div>
