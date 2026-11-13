@@ -23,13 +23,18 @@ Utilities adds. The design it follows is
 - The factory is a zero-argument callable returning a new `FastAPI`
   application with no schema pages. It reads no setting and opens no
   database.
-- **Utilities' database** (segment U4, 2026-11-12): `utilityapps`, its
-  own, at `UTILITYAPPS_DATABASE_URL` (locally a SQLite file,
-  `utilityapps.db`). `utilityapps/db.py` makes the engine on first use,
-  so `/health` and the tools that need no database never open it. Its
-  tables are declared on Utilities' own `Base` (`utilityapps/models.py`)
-  and migrated by its own history, `alembic -c utilityapps/alembic.ini`,
-  whose version table is `utilityapps_alembic_version`.
+- **Utilities' database** (segment U4): `utilityapps`, its own, at
+  `UTILITYAPPS_DATABASE_URL` (locally a SQLite file, `utilityapps.db`).
+  `utilityapps/db.py` makes the engine and sessions on first use, so the
+  factory, `/health` and the tools that need no database never open it.
+  - **Models** are declared on Utilities' own `Base`
+    (`utilityapps/models.py`); no RRW, Residential or ApplyDesk model is
+    shared. One table so far: `photo_poc_photos` (`PhotoPocPhoto`).
+  - **Migrations** are Utilities' own history, `utilityapps/alembic/`,
+    run with `alembic -c utilityapps/alembic.ini`. Its version table is
+    `utilityapps_alembic_version`, so it is never mistaken for RRW's, and
+    its autogenerate compares only Utilities' own tables. First revision
+    `u4a1photopoc01` creates `photo_poc_photos`.
 - Each tool is a feature module inside this one application. A tool with
   a materially different trust boundary becomes its own mount instead.
 
@@ -48,7 +53,7 @@ does the other applications' probes. Cordware's deployment excluded it on
 | Email Address Checker | `/email-check/` and the steps it posts to | The platform super-admin only (`utilityapps/spec/email_check.md` "Access") |
 | Telegram egress probe | `/diagnostics/telegram-egress`, and `…/run` it posts to | The platform super-admin only. Not on the index: an operator diagnostic, not a tool |
 | Interop proof of concept | `/interop-poc/` | The platform super-admin only. Not on the index: a working model for the next application that hands work to Review Robin |
-| Photo proof of concept | `/photo-poc/` | The platform super-admin only. Not on the index: a model for participant photos without Blob storage (segment U4, `utilityapps/guide/segment_U4_photo_poc.md`) |
+| Photo proof of concept | `/photo-poc/` | The platform super-admin only. Not on the index: a model for participant photos without Blob storage (segment U4, `utilityapps/guide/archive/segment_U4_photo_poc.md`) |
 
 The index lists one card per tool, linking to its first page. Every page
 links back to the host's landing page (`/`) and to `/.auth/logout`.
@@ -83,7 +88,7 @@ Test replaces it.
   Cordware form (`docs/security_posture.md`, "CSRF posture"), so no token:
   that is a platform property no in-app test can show. No Easy Auth
   exclusion: the probe is behind sign-in like every other page.
-- **No feature flag:** Utilities reads no setting (above), and the
+- **No feature flag:** the probe reads no setting, and the
   super-admin gate is the access control.
 
 ## Interop proof of concept
@@ -134,7 +139,7 @@ adds the mount's prefix; `host_url()` marks a path that is the host's.
 
 ## Photo proof of concept
 
-Segment U4 (`utilityapps/guide/segment_U4_photo_poc.md`): a photo
+Segment U4 (`utilityapps/guide/archive/segment_U4_photo_poc.md`): a photo
 uploaded, framed in a fixed window, cropped, resized and kept in
 Utilities' own database, with no Blob storage.
 
@@ -142,9 +147,11 @@ Utilities' own database, with no Blob storage.
   most, checked in the browser first), the 4:5 window with its zoom bar
   (1 to 4) upright on its right and its rotate bar (−180° to 180°) below
   it, which snaps to −90°, 0° and 90° within 4° when dragged (not when
-  stepped with the arrow keys, nor under a two-finger twist), and Save,
-  then the saved
-  photos, newest first, each with Delete. The
+  stepped with the arrow keys, nor under a two-finger twist), and
+  **Save**, then **Saved photos**, newest first, each with its uploader,
+  time and size and a **Delete** (Destructive, after a confirmation: a
+  deleted photo cannot be brought back). The controls stay disabled until
+  a photo is chosen. The
   photo always covers the window, at any zoom and turn. It is dragged
   with one finger, a pointer or the arrow keys; on a touch screen two
   fingers pinch to zoom and twist to rotate, about the point between them;
@@ -152,23 +159,33 @@ Utilities' own database, with no Blob storage.
 - **Saving** (`POST /photo-poc/photos`): the original file and the window
   over it in the oriented photo's pixels: `cx` and `cy` (its center),
   `width` (its height follows from 4:5) and `angle` (the photo's turn on
-  screen, degrees clockwise), plain decimals. The server decodes, orients,
-  checks every corner of the window lies over the photo (to within a
-  pixel), cuts out and turns what the window shows, converts any color
-  profile to sRGB and keeps only a 480 × 600 JPEG with no metadata
-  (`utilityapps/photo_poc/service.py`). A refusal is a
+  screen, degrees clockwise), plain decimals (a malformed one is a
+  `400`). The server decodes, applies the EXIF orientation, refuses a
+  photo of more than 40 megapixels from its header before reading any
+  pixel, checks every corner of the window lies over the photo (to within
+  a pixel), cuts out and turns what the window shows (never turning the
+  whole photo), converts any color profile to sRGB, puts transparency on
+  white and keeps only a 480 × 600 JPEG at quality 85 with no metadata
+  (`utilityapps/photo_poc/service.py`). The row holds a public ID (RRW's
+  alphabet), the uploader's email (or name), the time, the bytes, their
+  SHA-256, width and height; the upload itself is never kept. Success is
+  a `201` with the new tile. A refusal is a
   `400` (`413` over 5 MB, `411` with no size given) whose message the
   page shows; nothing is kept. A phone JPEG that Pillow reads as `MPO`
   (a second picture in it) is a JPEG here: its first picture is kept.
+  Saving runs off the event loop.
 - **Reading back** (`GET /photo-poc/photos/<id>.jpg`): `Cache-Control:
-  private, no-store` and an `ETag`; a malformed or unknown ID is a `404`.
+  private, no-store` and an `ETag` (the bytes' SHA-256); a malformed or
+  unknown ID is a `404`.
 - **Deleting** (`DELETE /photo-poc/photos/<id>`): `204`, or `404` when it
   is gone.
 - **The writes carry the header `X-Photo-Poc: 1`**, which only the page's
   own script sends: a cross-site form cannot set it, and a cross-site
   script would need a preflight the host never answers. Without it, `403`.
 - **Every route**, the image included, is the platform super-admin's
-  alone: anyone else `403`, nobody signed in `401`.
+  alone: anyone else `403`, nobody signed in `401`.- **Retention.** A proof of concept on the author's own test photos:
+  each can be deleted. Real participant photos need a retention rule
+  first (PDPA).
 
 ## Import boundaries
 

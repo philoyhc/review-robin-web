@@ -7,7 +7,7 @@ field is the one upload that needs no Blob storage, so when, and whether,
 it enters is the author's call (an open decision there).
 
 **Source:** Utilities' photo proof of concept, segment U4
-(`utilityapps/guide/segment_U4_photo_poc.md`, `utilityapps/spec/utilities.md`
+(`utilityapps/guide/archive/segment_U4_photo_poc.md`, `utilityapps/spec/utilities.md`
 "Photo proof of concept"): the cropper, the server's pipeline and the
 storage were built and checked there. ApplyDesk keeps its own copy of
 both, as it does RRW's ID alphabet: no package imports another.
