@@ -15,7 +15,7 @@ Utilities adds. The design it follows is
 | Mount path | `/utilities` |
 | Factory | `utilityapps.main:create_app` |
 | Logger prefix | `utilityapps` |
-| Landing-page title | `Utilities` |
+| Landing-page title | `Cordware Utilities` (author, 2026-11-13: as its pages' own title) |
 | Health | `GET /utilities/health`, route name `utilities_health` |
 
 - The registry lists it last, after Residential's two and Apply Desk, so an unset

@@ -43,7 +43,7 @@ point.
   | `applydesk` | `/applydesk` | `applydesk.main:create_app` | `applydesk` | `Apply Desk` |
   | `residentialops` | `/residentialops` | `residentialapps.residentialops.main:create_app` | `residentialapps.residentialops` | `Residential Operations` |
   | `supportlogs` | `/supportlogs` | `residentialapps.supportlogs.main:create_app` | `residentialapps.supportlogs` | `Support Logs` |
-  | `utilities` | `/utilities` | `utilityapps.main:create_app` | `utilityapps` | `Utilities` |
+  | `utilities` | `/utilities` | `utilityapps.main:create_app` | `utilityapps` | `Cordware Utilities` |
 
   The two Residential applications' own contract is
   `residentialapps/spec/applications.md`; Apply Desk's is
@@ -83,7 +83,7 @@ serve `GET /`. The host registers it before any mount, so it answers ahead of
 an application; if an application is mounted at `/`, the host registers
 nothing there and the application owns `/`.
 
-`/` answers with a page listing each mounted application, in mount order,
+`/` answers with a page, its browser tab titled *Cordware* (author, 2026-11-13), listing each mounted application, in mount order,
 as a link to its path with its trailing slash and the request's
 `root_path` (`/reviewrobin/` for RRW), titled by its registry title
 (registry name if empty) after its registry icon (24 px, decorative, empty

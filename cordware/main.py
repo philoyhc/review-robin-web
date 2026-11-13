@@ -104,7 +104,7 @@ REGISTRY: Mapping[str, AppEntry] = {
         path="/utilities",
         factory="utilityapps.main:create_app",
         logger="utilityapps",
-        title="Utilities",
+        title="Cordware Utilities",
         icon=app_icons.UTILITIES,
     ),
 }
