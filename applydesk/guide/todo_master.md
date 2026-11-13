@@ -188,8 +188,9 @@ where a ruling below differs from it, the ruling wins.
       people* question's *Chosen from*, a gate's evaluators), and may make
       one there: *+ New panel*, a name and pasted emails, with *Edit on
       Panels →*. So Setup still runs forward without going back.
-    - **Panels** holds each panel's roster as a table, Review Robin's
-      roster page style, for the adjustments made after: rows added,
+    - **Panels** holds the rosters in tables, Review Robin's roster page
+      style (a table per panel, or everyone in one with a column per
+      panel: open, AD1F), for the adjustments made after: rows added,
       edited and removed, a CSV in and out, a *Used by* line, *Copy
       panel*; a panel is retired only when nothing uses it. A gate already
       sent keeps the roster it was sent with.
@@ -203,7 +204,7 @@ Segments in order; each gets a plan in this folder when it starts.
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
 | **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
-| **AD1F — Gates and Panels** | Gates as gate cards beside an Outline; Panels as its own tab (ruling 19), a card per panel holding its roster table; Form's *Select people* and each gate picking or making a panel; nothing saved | `applydesk/guide/segment_AD1F_gates_panels.md` |
+| **AD1F — Gates and Panels** | Form's *Select people* and each gate picking or making a panel (ruling 19); Gates as gate cards beside an Outline; then Panels as its own tab, its format the author's; nothing saved | `applydesk/guide/segment_AD1F_gates_panels.md` |
 | AD1G onward — the other new pages | Emails, Evaluations and Extract data built out as working scaffolds, one segment each | After AD1F |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
