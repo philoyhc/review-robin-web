@@ -17,7 +17,8 @@ from applydesk.main import create_app
 from applydesk.tests._host import host_with
 from cordware.identity import Identity
 
-EX = "wa9juxbc2t"  # open, not blind, Application stage
+EX = "wa9juxbc2t"  # the model exercise: not blind, Review stage, rounds under way
+OPEN = "r6tm4kq9wz"  # open for applications
 BLIND = "k7mfr3pq8z"  # blind, Review stage
 DRAFT = "c4xh2ndv6s"  # not published
 BLANK = "n5wg8tjr3e"  # just created: a name, nothing else
@@ -267,7 +268,8 @@ def test_the_retired_sections_are_gone(client: TestClient, old: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("exercise_id", "now"), [(DRAFT, "Setup"), (EX, "Applications"), (BLIND, "Review")]
+    ("exercise_id", "now"),
+    [(DRAFT, "Setup"), (OPEN, "Applications"), (EX, "Review"), (BLIND, "Review")],
 )
 def test_home_marks_the_current_stage_on_its_timeline(
     client: TestClient, exercise_id: str, now: str

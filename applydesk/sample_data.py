@@ -63,12 +63,14 @@ EXERCISES: tuple[Exercise, ...] = (
         code="URF-2027",
         name="Undergraduate Research Fellowship 2027",
         state="Published",
-        stage="Application",
+        # The model exercise (author, 2026-11-13): partway through
+        # evaluation, Round 2 under way (`applydesk/rounds.py`).
+        stage="Review",
         eligibility="Open to all signed in",
         blind=False,
-        opens="3 Nov 2026",
-        application_stage_ends="31 Jan 2027, 23:59",
-        expected_outcome="Mid-March 2027",
+        opens="1 Sep 2026",
+        application_stage_ends="15 Oct 2026, 23:59",
+        expected_outcome="12 Dec 2026",
         summary="Funding for a semester of supervised research, with a stipend.",
     ),
     Exercise(
@@ -97,6 +99,21 @@ EXERCISES: tuple[Exercise, ...] = (
         expected_outcome="Not set",
         summary="Placements with partner organizations over the summer vacation.",
     ),
+    # Open for applications, now that the model exercise is in its
+    # Review stage (segment AD1C).
+    Exercise(
+        public_id="r6tm4kq9wz",
+        code="PCG-2027",
+        name="Postgraduate Conference Grant 2027",
+        state="Published",
+        stage="Application",
+        eligibility="Open to all signed in",
+        blind=False,
+        opens="1 Nov 2026",
+        application_stage_ends="31 Jan 2027, 23:59",
+        expected_outcome="Early March 2027",
+        summary="Travel and registration for presenting at an international conference.",
+    ),
     # Just created: a name and nothing else, awaiting setup (author,
     # 2026-11-12).
     Exercise(
@@ -114,7 +131,7 @@ EXERCISES: tuple[Exercise, ...] = (
     ),
 )
 
-APPLICATIONS: tuple[Application, ...] = (
+_WRITTEN: tuple[Application, ...] = (
     Application(
         "m3qx8vkt2n",
         "wa9juxbc2t",
@@ -122,7 +139,7 @@ APPLICATIONS: tuple[Application, ...] = (
         "aisha.bello@example.edu",
         "Soil microbes and drought tolerance",
         "Submitted",
-        "12 Nov 2026",
+        "3 Oct 2026",
         "p3bd7kq2wx",
     ),
     Application(
@@ -132,7 +149,7 @@ APPLICATIONS: tuple[Application, ...] = (
         "kenji.russo@example.edu",
         "Low-cost sensors for air quality",
         "Submitted",
-        "10 Nov 2026",
+        "5 Oct 2026",
         "r9ck4xbm7t",
     ),
     Application(
@@ -142,7 +159,7 @@ APPLICATIONS: tuple[Application, ...] = (
         "wen.novak@example.edu",
         "Oral histories of a fishing village",
         "Draft",
-        "",
+        "14 Oct 2026",
         "w5jh8ntq3d",
     ),
     Application(
@@ -156,6 +173,26 @@ APPLICATIONS: tuple[Application, ...] = (
         "t8nv4hzm2c",
     ),
     Application(
+        "x3vb7ndq5h",
+        "r6tm4kq9wz",
+        "Lucia Ferrari",
+        "lucia.ferrari@example.edu",
+        "Presenting at the European Geosciences Union",
+        "Submitted",
+        "8 Nov 2026",
+        "y8kc2mtw4r",
+    ),
+    Application(
+        "z5hp9rkd3m",
+        "r6tm4kq9wz",
+        "Tomas Herrera",
+        "tomas.herrera@example.edu",
+        "A poster at the Linguistic Society of America",
+        "Draft",
+        "11 Nov 2026",
+        "a4nw6qxt8c",
+    ),
+    Application(
         "q4tw9hcz3x",
         "k7mfr3pq8z",
         "Ahmed Shah",
@@ -166,6 +203,145 @@ APPLICATIONS: tuple[Application, ...] = (
         "e6xp2rfk9m",
     ),
 )
+
+# The model exercise's other applications, generated with a fixed seed
+# so the Applications page reads as a real call of about 100 (segment
+# AD1C): names, IDs, statuses and dates are the same on every run.
+_FIRST = (
+    "Aisha",
+    "Ben",
+    "Chen",
+    "Divya",
+    "Ethan",
+    "Farah",
+    "Gabriel",
+    "Hana",
+    "Ivan",
+    "Jia",
+    "Kofi",
+    "Lena",
+    "Mateo",
+    "Nadia",
+    "Omar",
+    "Priya",
+    "Quinn",
+    "Rosa",
+    "Samir",
+    "Tara",
+    "Umar",
+    "Vera",
+    "Wei",
+    "Xavier",
+    "Yuki",
+    "Zara",
+    "Arjun",
+    "Bea",
+    "Caleb",
+    "Dina",
+)
+_LAST = (
+    "Rahman",
+    "Carter",
+    "Wei",
+    "Nair",
+    "Lim",
+    "Ismail",
+    "Ortiz",
+    "Sato",
+    "Petrova",
+    "Huang",
+    "Mensah",
+    "Fischer",
+    "Silva",
+    "Haddad",
+    "Farouk",
+    "Raman",
+    "Byrne",
+    "Moreno",
+    "Kapoor",
+    "Lund",
+    "Tanaka",
+    "Okafor",
+    "Novak",
+    "Duarte",
+    "Yilmaz",
+    "Kowalski",
+    "Ng",
+    "Abbott",
+)
+_TOPICS = (
+    "Coral bleaching thresholds",
+    "Bias in loan approval models",
+    "Urban heat islands",
+    "Microplastics in mangroves",
+    "Early modern letter networks",
+    "Battery recycling yields",
+    "Sleep and exam performance",
+    "Street food and public health",
+    "Translation of folk songs",
+    "Soft robots for fruit picking",
+    "Rainwater harvesting in high-rises",
+    "Dialect drift online",
+)
+
+
+def _generated() -> tuple[Application, ...]:
+    import random
+
+    from applydesk.ids import PUBLIC_ID_ALPHABET, PUBLIC_ID_LENGTH
+
+    rng = random.Random("wa9juxbc2t")
+    taken = {"m3qx8vkt2n", "h6zr2tdw9p", "f2ps7nyh4k", "b8yd3mkr6v", "q4tw9hcz3x"}
+
+    def new_id() -> str:
+        while True:
+            value = "".join(rng.choice(PUBLIC_ID_ALPHABET) for _ in range(PUBLIC_ID_LENGTH))
+            if value not in taken:
+                taken.add(value)
+                return value
+
+    made: list[Application] = []
+    names: set[str] = set()
+    for n in range(97):
+        first, k = _FIRST[n % len(_FIRST)], (n * 7) % len(_LAST)
+        while f"{first} {_LAST[k]}" in names:  # one person per name
+            k = (k + 1) % len(_LAST)
+        last = _LAST[k]
+        names.add(f"{first} {last}")
+        roll = rng.random()
+        state = "Draft" if roll < 0.06 else "Withdrawn" if roll < 0.10 else "Submitted"
+        day = rng.randint(2, 15) if state != "Withdrawn" else rng.randint(16, 31)
+        month = "Oct" if state != "Withdrawn" or day <= 31 else "Nov"
+        made.append(
+            Application(
+                new_id(),
+                "wa9juxbc2t",
+                f"{first} {last}",
+                f"{first.lower()}.{last.lower()}@example.edu",
+                f"{_TOPICS[n % len(_TOPICS)]}",
+                state,
+                f"{day} {month} 2026",
+                new_id(),
+            )
+        )
+    # One applicant sends twice (author, 2026-11-12): the first is
+    # withdrawn when the second is submitted.
+    twice = made[2]
+    made.insert(
+        2,
+        replace(
+            twice,
+            public_id=new_id(),
+            profile_id=new_id(),
+            state="Withdrawn",
+            submitted="4 Oct 2026",
+        ),
+    )
+    made[3] = replace(twice, state="Submitted", submitted="5 Oct 2026")
+    return tuple(made)
+
+
+APPLICATIONS: tuple[Application, ...] = _WRITTEN + _generated()
 
 ASSESSORS: tuple[Assessor, ...] = (
     Assessor("wa9juxbc2t", "Zoe Tan", "zoe.tan@example.edu", ("m3qx8vkt2n", "h6zr2tdw9p")),

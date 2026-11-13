@@ -6,7 +6,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
-from applydesk import sample_data
+from applydesk import rounds, sample_data
 from applydesk.gate import placeholders_only
 from applydesk.lookups import exercise_or_404
 from applydesk.web import exercise_tabs, render
@@ -96,4 +96,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         pool_label=sample_data.pool_label,
         blank=sample_data.FormCard("field"),
         blank_section=sample_data.FormCard("section"),
+        plan=rounds.plan_of(exercise.public_id),
+        counts=rounds.counts,
+        last_submitted=rounds.last_submitted,
     )

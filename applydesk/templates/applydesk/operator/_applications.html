@@ -1,19 +1,203 @@
-<div class="table-wrap">
-<table>
-  <thead><tr><th>Applicant</th><th>Title</th><th>Application ID</th><th>State</th><th>Submitted</th><th>Applicant profile</th></tr></thead>
-  <tbody>
-  {% for a in applications %}
-    <tr><td>{{ a.applicant }}<br><span class="muted">{{ a.email }}</span></td><td>{{ a.title }}</td><td><code>{{ a.public_id }}</code></td><td>{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</td><td>{{ a.submitted or "—" }}</td>
-      <td>{% if a.state == "Submitted" %}<a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/profiles/' ~ a.profile_id) }}">Open</a>{% else %}<span class="muted">—</span>{% endif %}</td></tr>
-  {% else %}
-    <tr><td colspan="6" class="muted">No applications yet.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+{# The Applications page (segment AD1C, ruling 13): the exercise's control
+   surface. A row per application; the Application stage's columns, then
+   each round's gates and outcomes as Setup and the Timeline set them.
+   Every move works on screen; nothing is saved until AD2. #}
+{% set last = last_submitted(plan.rows) %}
+{% set cols = plan.columns %}
+<div class="ap" data-applications>
+  <div class="ap-tool">
+    <input type="search" class="ap-search" data-ap-search placeholder="Search ID, name or email" aria-label="Search applications">
+    <select class="ap-sel" data-ap-status aria-label="Status">
+      <option value="">All statuses</option><option>Submitted</option><option>Draft</option><option>Withdrawn</option>
+    </select>
+    <span class="ap-gap"></span>
+    <button class="btn btn-secondary" type="button" disabled title="Comes in the next build (segment AD1C, rung 3)">Fill by rule…</button>
+    <button class="btn btn-secondary" type="button" disabled title="Comes in the next build (segment AD1C, rung 3)">Upload CSV</button>
+    <button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>
+  </div>
+  <div class="ap-wrap">
+  <table class="ap-table">
+    <thead>
+      <tr class="ap-groups">
+        <th class="ap-first" colspan="3"><b>Application stage</b>{% if plan.stage_dates %}<span class="ap-when">{{ plan.stage_dates }}</span>{% endif %}</th>
+        {% for r in plan.rounds %}<th class="ap-r" colspan="{{ r.columns | length }}"><b>{{ r.label }}</b><span class="ap-when">{{ r.dates }}</span></th>{% endfor %}
+      </tr>
+      <tr>
+        <th class="ap-first">Application</th>
+        <th>Applicant</th>
+        <th>Status<span class="ap-count" data-ap-count="status"></span></th>
+        {% for r in plan.rounds %}{% for c in r.columns %}
+          {% if c.via is defined %}
+          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span></th>
+          {% else %}
+          <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-first="{{ c.values[0] }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
+            <label class="ap-rel"><input type="checkbox" data-ap-release="{{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
+            <span class="ap-relnote{{ ' ap-relnote-on' if c.released }}" data-ap-relnote>{{ c.released or "Not yet" }}</span>
+          </th>
+          {% endif %}
+        {% endfor %}{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in plan.rows %}{% set a = row.application %}
+      <tr data-row data-status="{{ a.state }}" data-search="{{ (a.public_id ~ ' ' ~ a.applicant ~ ' ' ~ a.email) | lower }}"{% if a.public_id in last %} data-last{% endif %}>
+        <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ a.public_id }}">
+          {% if a.state == "Submitted" %}<a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/profiles/' ~ a.profile_id) }}"><code>{{ a.public_id }}</code></a>{% else %}<code>{{ a.public_id }}</code>{% endif %}</td>
+        <td class="ap-who"><strong>{{ a.applicant }}</strong><span class="ap-mail">{{ a.email }}</span></td>
+        <td class="ap-stat">{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}<span class="ap-note">{{ a.submitted }}</span></td>
+        {% for r in plan.rounds %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}
+          <td class="{{ 'ap-out' if c.via is not defined }} {{ 'ap-r' if loop.first }}" data-cell="{{ c.key }}">
+          {% if not cell.value %}<span class="muted">—</span>
+          {% elif c.via is defined %}<button type="button" class="ap-adm" data-ap-adm data-v="{{ cell.value }}" aria-label="{{ c.label }} for {{ a.public_id }}: {{ cell.value }}">{{ cell.value }}</button>{% if cell.note %}<span class="ap-note">{{ cell.note }}</span>{% endif %}
+          {% else %}<select class="ap-oc" data-ap-oc data-v="{{ cell.value }}" aria-label="{{ c.label }} for {{ a.public_id }}">
+              <option{% if cell.value == "Pending" %} selected{% endif %}>Pending</option>
+              {% for v in c.values %}<option{% if v == cell.value %} selected{% endif %}>{{ v }}</option>{% endfor %}
+            </select><span class="ap-note" data-ap-date data-due="Due {{ c.due }}">{{ cell.note }}</span>
+          {% endif %}</td>
+        {% endfor %}{% endfor %}
+      </tr>
+    {% else %}
+      <tr><td colspan="3" class="muted">No applications yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="ap-foot">
+    <span><select class="ap-sel" data-ap-which aria-label="Which applications">
+      <option value="all">All applications</option><option value="last">Last applications (each applicant's last submitted)</option>
+    </select> <span class="muted" data-ap-shown></span></span>
+      {% if cols %}
+    <span class="ap-set" role="group" aria-label="Set the ticked rows">
+      <select class="ap-sel" data-ap-set-col aria-label="Column to set">
+        {% for c in cols %}<option value="{{ c.key }}">{{ "Gate " ~ c.number if c.via is defined else "Outcome " ~ c.number }}: {{ c.label }}</option>{% endfor %}
+      </select>
+      <select class="ap-sel" data-ap-set-val aria-label="Value to set"></select>
+      <button class="btn btn-secondary" type="button" data-ap-set>Set ticked rows</button>
+    </span>
+    {% endif %}
+
+    {% if not cols %}<span class="muted">No rounds yet: rounds, gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/setup') }}">Setup</a>.</span>{% endif %}
+  </div>
+  <p class="muted ap-help">A gate's chip cycles <em>Pending</em>, <em>Selected</em>, <em>Not selected</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> switch does what the Timeline sets. Rounds, gates, outcomes and dates come from Setup and the Timeline.</p>
 </div>
-<p class="muted">An applicant profile is the page assessors read, made for each submitted application by <em>Generate applicant profiles</em>: the <em>Shown to reviewers</em> section only{% if exercise.blind %}, with the applicant's name and identifiers redacted{% endif %}. Outcomes are imported by application ID and held until released; a release time is kept to on read.</p>
 <div class="btnrow">
   <button class="btn btn-primary" type="button" disabled>Generate applicant profiles</button>
-  <button class="btn btn-secondary" type="button" disabled>Import outcomes</button>
   <button class="btn btn-alert" type="button" disabled>Return to draft</button>
 </div>
+<script>
+// Segment AD1C: the Applications page's moves, on screen only; a reload
+// restores the sample. Chips cycle, outcomes are picked and dated, the
+// counts follow, releases confirm, rows filter and are set in bulk.
+(function () {
+  var root = document.querySelector("[data-applications]");
+  if (!root) return;
+  var CYCLE = ["Pending", "Selected", "Not selected"];
+  var TODAY = "13 Nov";
+  var rows = Array.prototype.slice.call(root.querySelectorAll("[data-row]"));
+  var heads = Array.prototype.slice.call(root.querySelectorAll("th[data-col]"));
+
+  var head = {};
+  heads.forEach(function (h) { head[h.dataset.col] = h; });
+  // A chip's tone: pending amber, the column's going-on value (Selected,
+  // Shortlisted, Finalist, Awarded) green, anything else muted.
+  function tone(el) {
+    var v = el.dataset.v, h = head[el.closest("td").dataset.cell];
+    var on = h.dataset.kind === "gate" ? "Selected" : h.dataset.first;
+    el.classList.remove("ap-t-warn", "ap-t-good", "ap-t-mute");
+    el.classList.add(v === "Pending" ? "ap-t-warn" : v === on ? "ap-t-good" : "ap-t-mute");
+  }
+  function recount() {
+    heads.forEach(function (h) {
+      var key = h.dataset.col, tally = {};
+      rows.forEach(function (r) {
+        var el = r.querySelector('[data-cell="' + key + '"] [data-v]');
+        if (el) tally[el.dataset.v] = (tally[el.dataset.v] || 0) + 1;
+      });
+      var first = h.dataset.kind === "gate" ? "Selected" : h.dataset.first;
+      var parts = [];
+      if (tally[first]) parts.push(tally[first] + " " + first.toLowerCase());
+      if (tally.Pending) parts.push(tally.Pending + " pending");
+      h.querySelector("[data-ap-count]").textContent = parts.join(" · ") || "none yet";
+    });
+    var s = {};
+    rows.forEach(function (r) { s[r.dataset.status] = (s[r.dataset.status] || 0) + 1; });
+    root.querySelector('[data-ap-count="status"]').textContent = ["Submitted", "Draft", "Withdrawn"]
+      .filter(function (k) { return s[k]; }).map(function (k) { return s[k] + " " + k.toLowerCase(); }).join(" · ");
+  }
+  function setAdm(btn, v) {
+    btn.dataset.v = v;
+    btn.textContent = v;
+    btn.setAttribute("aria-label", btn.getAttribute("aria-label").replace(/: [^:]*$/, ": " + v));
+    tone(btn);
+  }
+  function setOutcome(sel, v) {
+    sel.value = v;
+    sel.dataset.v = v;
+    var date = sel.parentNode.querySelector("[data-ap-date]");
+    date.textContent = v === "Pending" ? date.dataset.due : TODAY;
+    tone(sel);
+  }
+  root.querySelectorAll("[data-ap-adm], [data-ap-oc]").forEach(tone);
+
+  root.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-ap-adm]");
+    if (!btn) return;
+    setAdm(btn, CYCLE[(CYCLE.indexOf(btn.dataset.v) + 1) % CYCLE.length]);
+    recount();
+  });
+  root.addEventListener("change", function (e) {
+    var sel = e.target.closest("[data-ap-oc]");
+    if (sel) { setOutcome(sel, sel.value); recount(); return; }
+    var rel = e.target.closest("[data-ap-release]");
+    if (rel) {
+      var name = rel.dataset.apRelease;
+      var ok = window.confirm(rel.checked
+        ? "Release " + name + "? What a release does (to applicants, to reviewers, by email) is set with the Timeline. Nothing is sent from this mock-up."
+        : "Withdraw the release of " + name + "?");
+      if (!ok) { rel.checked = !rel.checked; return; }
+      var note = rel.closest("th").querySelector("[data-ap-relnote]");
+      note.textContent = rel.checked ? TODAY + " · as the Timeline sets" : "Not yet";
+      note.classList.toggle("ap-relnote-on", rel.checked);
+    }
+  });
+
+  // Filters: search, status, all or last applications.
+  var search = root.querySelector("[data-ap-search]"), status = root.querySelector("[data-ap-status]");
+  var which = root.querySelector("[data-ap-which]"), shown = root.querySelector("[data-ap-shown]");
+  function filter() {
+    var q = search.value.trim().toLowerCase(), st = status.value, lastOnly = which.value === "last", n = 0;
+    rows.forEach(function (r) {
+      var on = (!q || r.dataset.search.indexOf(q) >= 0) && (!st || r.dataset.status === st) && (!lastOnly || r.hasAttribute("data-last"));
+      r.hidden = !on;
+      if (on) n += 1;
+    });
+    shown.textContent = "Showing " + n + " of " + rows.length;
+  }
+  [search, status, which].forEach(function (el) { el.addEventListener("input", filter); });
+
+  // Set the ticked rows: one value for one column.
+  var setCol = root.querySelector("[data-ap-set-col]"), setVal = root.querySelector("[data-ap-set-val]");
+  function values() {
+    if (!setCol) return;
+    var h = head[setCol.value];
+    var opts = h.dataset.kind === "gate" ? CYCLE : ["Pending"].concat(h.dataset.values.split("|"));
+    setVal.textContent = "";
+    opts.forEach(function (v) { var o = document.createElement("option"); o.textContent = v; setVal.appendChild(o); });
+  }
+  if (setCol) {
+    values();
+    setCol.addEventListener("change", values);
+    root.querySelector("[data-ap-set]").addEventListener("click", function () {
+      rows.forEach(function (r) {
+        if (r.hidden || !r.querySelector("[data-ap-tick]").checked) return;
+        var el = r.querySelector('[data-cell="' + setCol.value + '"] [data-v]');
+        if (!el) return;  // a draft, or never admitted: nothing to set
+        if (el.matches("[data-ap-adm]")) setAdm(el, setVal.value); else setOutcome(el, setVal.value);
+      });
+      recount();
+    });
+  }
+  recount();
+  filter();
+})();
+</script>
