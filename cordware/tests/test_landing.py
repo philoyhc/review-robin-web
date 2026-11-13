@@ -297,3 +297,9 @@ def test_each_registered_application_s_icon_is_its_own_favicon(name: str) -> Non
     icon = REGISTRY[name].icon
     assert icon.startswith("data:image/svg+xml;utf8,<svg ") and "#" not in icon
     assert icon == _own_favicon(name)
+
+
+def test_the_host_s_tab_is_titled_cordware() -> None:
+    """The root page's browser tab names the host (author, 2026-11-13)."""
+    client = TestClient(create_app(apps=()))
+    assert "<title>Cordware</title>" in client.get("/").text

@@ -22,7 +22,7 @@ def test_registry_entry() -> None:
         path="/utilities",
         factory="utilityapps.main:create_app",
         logger="utilityapps",
-        title="Utilities",
+        title="Cordware Utilities",
     )
 
 
@@ -34,7 +34,7 @@ def test_runs_alone() -> None:
     landing = client.get("/", follow_redirects=False)
     assert landing.status_code == 200
     assert re.search(
-        r'<a href="/utilities/"><img [^>]*>Utilities</a>', landing.text
+        r'<a href="/utilities/"><img [^>]*>Cordware Utilities</a>', landing.text
     )  # its icon first
     assert client.get("/reviewrobin/health").status_code == 404
     assert client.get("/supportlogs/health").status_code == 404
