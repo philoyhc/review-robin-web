@@ -1,0 +1,34 @@
+{# The Workflow card (ruling 14, segment AD1D): the exercise's timeline as
+   a stepper, on Home and every Operations page. Each item goes live on
+   its own; the earliest not yet done is marked, with its action. Every
+   action is inert until AD2 (author, 2026-11-13). #}
+{% set now = next_step(wf_steps) %}{% set wf_groups = wf_groups_of(wf_steps) %}
+<section class="card wf" aria-labelledby="wf-h">
+  <h2 id="wf-h">Workflow</h2>
+  <p class="muted wf-next" data-wf-next>{% if now %}Next: <strong>{{ (now.kind ~ " · ") if now.kind }}{{ now.title }}</strong>{{ (" — " ~ now.line) if now.line }}{% if now.blocked %} ({{ now.blocked }}){% endif %}.{% else %}Every step is done.{% endif %}</p>
+  <div class="wf-scroll">
+  <ol class="wf-groups">
+    {% for label, members in wf_groups %}
+    <li class="wf-group wf-g{{ [members | length, 9] | min }}">
+      <span class="wf-grp">{{ label }}</span>
+      <ol class="wf-steps">
+      {% for s in members %}
+      {% set is_now = now is sameas s %}
+      <li class="wf-step{{ ' done' if s.done }}{{ ' now' if is_now }}" data-wf-step="{{ s.title }}"{% if is_now %} aria-current="step"{% endif %}>
+        <span class="wf-dot" aria-hidden="true"></span>
+        {% if s.kind %}<span class="wf-kind wf-kind-{{ 'g' if s.kind.startswith('Gate') else 'o' }}">{{ s.kind }}</span>{% endif %}
+        <span class="wf-title">{{ s.title }}</span>
+        <span class="chip chip-{{ 'ok' if s.done else ('info' if is_now else 'mute') }}">{{ s.state }}</span>
+        <span class="wf-when">{{ s.when }}</span>
+        {% if s.line %}<span class="wf-when">{{ s.line }}</span>{% endif %}
+        {% if s.blocked %}<span class="wf-blocked">{{ s.blocked }}</span>{% endif %}
+        {% if s.link and s.link != section %}<a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/' ~ s.link) }}">Open {{ s.link | capitalize }}</a>
+        {% elif s.action %}<button class="btn btn-secondary" type="button" disabled>{{ s.action }}</button>{% endif %}
+      </li>
+      {% endfor %}
+      </ol>
+    </li>
+    {% endfor %}
+  </ol>
+  </div>
+</section>

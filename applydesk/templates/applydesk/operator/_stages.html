@@ -1,4 +1,4 @@
-{# The exercise's stages, the current one marked (Home; Setup's timeline). #}
+{# The exercise's stages, the current one marked (Home; Process's timeline). #}
 {% set now = "setup" if exercise.state == "Draft" else ("applications" if exercise.stage == "Application" else "review") %}
 {% set order = ["setup", "applications", "review", "outcome"] %}
 <ol class="stages" aria-label="Stages">

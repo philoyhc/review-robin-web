@@ -2,6 +2,7 @@
 {% block title %}{{ heading }} · {{ exercise.name }}{% endblock %}
 {% block content %}
 <div class="ptitle"><h1>{{ heading }}</h1></div>
+{% if section in ("applications", "evaluations", "extract") %}{% include "applydesk/operator/_workflow.html" %}{% endif %}
 {% include "applydesk/_placeholder.html" %}
 {% include "applydesk/operator/_" ~ section ~ ".html" %}
 {% endblock %}

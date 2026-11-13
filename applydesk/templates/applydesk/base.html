@@ -128,7 +128,7 @@
        width; the page showing is white with its row's underline. */
     .crumbs { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0 10px; margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); font-size: 15px; }
     .crumbs a { color: var(--text-link); text-decoration: none; }
-    .crumbs [aria-current] { font-weight: 600; text-transform: uppercase; }
+    .crumbs [aria-current] { font-weight: 600; }
     .xnav { border: 1px solid var(--border-subtle); border-radius: 8px; overflow: hidden; margin-bottom: 20px; background: var(--surface-card); }
     .xnav-grid { display: grid; grid-template-columns: minmax(150px, 220px) auto 1fr; }
     .xnav-home { grid-column: 1; grid-row: 1 / span 2; position: relative; display: flex; align-items: center; justify-content: center; text-align: center; padding: 12px 16px; background: var(--nav-home-bg); border-right: 1px solid var(--border-subtle); color: var(--text-subtle); font-weight: 600; text-decoration: none; }
@@ -146,6 +146,35 @@
     .xnav-tab.on::after, .xnav-home.on::after { content: ""; position: absolute; left: 18px; right: 18px; bottom: 0; height: 4px; border-radius: 2px; background: var(--accent); }
     .xnav-setup .xnav-tab.on::after { background: var(--nav-setup-marker); }
     .xnav-ops .xnav-tab.on::after { background: var(--nav-ops-marker); }
+    /* The Workflow card (ruling 14): a column per step, grouped by round. */
+    .wf-next { margin: 0 0 12px; }
+    .wf-scroll { overflow-x: auto; }
+    .wf-groups, .wf-steps { list-style: none; margin: 0; padding: 0; display: flex; }
+    .wf-group { display: flex; flex-direction: column; min-width: 0; }
+    .wf-g1 { flex: 1 1 0; min-width: 128px; }
+    .wf-g2 { flex: 2 1 0; min-width: 256px; }
+    .wf-g3 { flex: 3 1 0; min-width: 384px; }
+    .wf-g4 { flex: 4 1 0; min-width: 512px; }
+    .wf-g5 { flex: 5 1 0; min-width: 640px; }
+    .wf-g6 { flex: 6 1 0; min-width: 768px; }
+    .wf-g7 { flex: 7 1 0; min-width: 896px; }
+    .wf-g8 { flex: 8 1 0; min-width: 1024px; }
+    .wf-g9 { flex: 9 1 0; min-width: 1152px; }
+    .wf-steps { flex: 1; }
+    .wf-grp { padding: 0 8px 6px; border-bottom: 2px solid var(--border-subtle); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-subtle); white-space: nowrap; }
+    .wf-step { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 8px; border-left: 1px solid var(--border-subtle); font-size: 13px; }
+    .wf-group:first-child .wf-step:first-child { border-left: 0; }
+    .wf-step.now { background: var(--surface-muted); }
+    .wf-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-default); }
+    .wf-step.done .wf-dot { background: var(--chip-ok-fg); border-color: var(--chip-ok-fg); }
+    .wf-step.now .wf-dot { background: var(--accent); border-color: var(--accent); }
+    .wf-kind { font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+    .wf-kind-g { color: var(--accent); }
+    .wf-kind-o { color: var(--chip-info-fg); }
+    .wf-title { font-weight: 700; font-size: 14px; }
+    .wf-when { color: var(--text-subtle); }
+    .wf-blocked { color: var(--amber); }
+    .wf-step .btn { margin-top: auto; font-size: 13px; }
     .xproc { table-layout: fixed; }
     .xproc th:first-child { width: 34%; }
     .xproc th:last-child { width: 22%; }

@@ -24,21 +24,36 @@ _GATES: dict[str, dict[str, tuple[str, str]]] = {
     "k7mfr3pq8z": {"g1": ("Sent", "3 of 5 reviewed")},
 }
 
-#: The templates to applicants each sample exercise keeps on Emails:
-#: (name, when it is sent, set up). Process says which steps send one.
-_EMAILS: dict[str, tuple[tuple[str, str, bool], ...]] = {
+
+@dataclass(frozen=True)
+class Email:
+    """A template to applicants, kept on Emails (ruling 14): its name, when
+    it is sent, whether it is set up, and the outcome whose release sends
+    it ("" for the receipt and reminders)."""
+
+    name: str
+    when: str
+    ok: bool
+    outcome: str = ""
+
+
+_RELEASE = "When the outcome is released"
+
+#: The templates each sample exercise keeps; Process says which steps
+#: send one.
+_EMAILS: dict[str, tuple[Email, ...]] = {
     "wa9juxbc2t": (
-        ("Receipt", "When an application is submitted", True),
-        ("Reminder", "To drafts, 7 days before the form closes", True),
-        ("Shortlist for interview", "When the outcome is released", True),
-        ("Finalists", "When the outcome is released", True),
-        ("Final results", "When the outcome is released", False),
+        Email("Receipt", "When an application is submitted", True),
+        Email("Reminder", "To drafts, 7 days before the form closes", True),
+        Email("Shortlist for interview", _RELEASE, True, "o1"),
+        Email("Finalists", _RELEASE, True, "o2"),
+        Email("Final results", _RELEASE, False, "o3"),
     ),
     "k7mfr3pq8z": (
-        ("Receipt", "When an application is submitted", True),
-        ("Award decision", "When the outcome is released", False),
+        Email("Receipt", "When an application is submitted", True),
+        Email("Award decision", _RELEASE, False, "o1"),
     ),
-    "r6tm4kq9wz": (("Receipt", "When an application is submitted", True),),
+    "r6tm4kq9wz": (Email("Receipt", "When an application is submitted", True),),
 }
 
 
@@ -64,8 +79,13 @@ def gate_state(exercise_id: str, key: str) -> tuple[str, str]:
     return _GATES.get(exercise_id, {}).get(key, ("Not ready", ""))
 
 
-def emails(exercise_id: str) -> tuple[tuple[str, str, bool], ...]:
+def emails(exercise_id: str) -> tuple[Email, ...]:
     return _EMAILS.get(exercise_id, ())
+
+
+def outcome_email(exercise_id: str, outcome_key: str) -> Email | None:
+    """The email an outcome's release sends, if Process says it sends one."""
+    return next((e for e in emails(exercise_id) if e.outcome == outcome_key), None)
 
 
 def status_row(exercise: Exercise) -> tuple[Pill, ...]:
@@ -80,7 +100,7 @@ def status_row(exercise: Exercise) -> tuple[Pill, ...]:
     done = sum(gate_state(exercise.public_id, g.key)[0] == "Results in" for g in gates)
     released = sum(bool(o.released) for o in outcomes)
     mail = emails(exercise.public_id)
-    kept = sum(ok for _, _, ok in mail)
+    kept = sum(e.ok for e in mail)
     return (
         Pill("Exercise", exercise.state, "ok" if exercise.state == "Published" else "warn"),
         Pill("Form", form, "warn" if form == "Draft" else "info"),
@@ -101,3 +121,112 @@ def status_row(exercise: Exercise) -> tuple[Pill, ...]:
         ),
         Pill("Applications", f"{submitted} submitted", "info" if submitted else "mute"),
     )
+
+
+@dataclass(frozen=True)
+class Step:
+    """One step on the Workflow card: the form, a gate, an outcome or the
+    close, in timeline order (ruling 14)."""
+
+    group: str  # the round it sits in: "Application", "Round 1", …, "Close"
+    kind: str  # "Gate 1", "Outcome 2", "" for the form and the close
+    title: str
+    state: str
+    when: str
+    line: str  # progress, or what it waits on
+    action: str  # what the step's button would do; inert until AD2
+    done: bool
+    blocked: str = ""  # why it is not ready, when it is not
+    link: str = ""  # a page to open instead of an action, e.g. "evaluations"
+
+
+def steps(exercise: Exercise) -> tuple[Step, ...]:
+    """The exercise's timeline as the Workflow card steps through it: the
+    form, then each round's gates and outcomes in their set order, then
+    the close."""
+    plan = rounds.plan_of(exercise.public_id)
+    apps = sample_data.applications_of(exercise.public_id)
+    form = form_state(exercise)
+    dates = (
+        "Dates not set"
+        if "Not set" in (exercise.opens, exercise.application_stage_ends)
+        else f"{exercise.opens} – {exercise.application_stage_ends}"
+    )
+    out: list[Step] = [
+        Step(
+            "Application",
+            "",
+            "Application form",
+            form,
+            dates,
+            f"{len(apps)} received" if form != "Draft" else "Not open yet",
+            {"Draft": "Open form…", "Open": "Close form…"}.get(form, ""),
+            form == "Closed",
+        )
+    ]
+    for r in plan.rounds:
+        for c in r.columns:
+            if isinstance(c, rounds.Gate):
+                state, line = gate_state(exercise.public_id, c.key)
+                out.append(
+                    Step(
+                        r.label,
+                        f"Gate {c.number}",
+                        c.label,
+                        state,
+                        r.dates,
+                        line,
+                        "" if state in ("Sent", "Results in") else "Send…",
+                        state == "Results in",
+                        link="evaluations" if state == "Sent" else "",
+                    )
+                )
+            else:
+                released = bool(c.released)
+                email = outcome_email(exercise.public_id, c.key)
+                blocked = (
+                    "" if email is None or email.ok else "Not ready: no email for this outcome"
+                )
+                out.append(
+                    Step(
+                        r.label,
+                        f"Outcome {c.number}",
+                        c.label,
+                        "Released" if released else "Pending",
+                        c.released or f"Due {c.due}",
+                        "" if released else "Decided on Applications",
+                        "" if released else "Release…",
+                        released,
+                        blocked,
+                    )
+                )
+    last = plan.rounds[-1].dates.split("–")[-1].strip() if plan.rounds else ""
+    out.append(
+        Step(
+            "Close",
+            "",
+            "Close and archive",
+            exercise.state if exercise.state in ("Closed", "Archived") else "—",
+            f"After {last}" if last else "After the last outcome",
+            "Extract data first",
+            "Close…",
+            exercise.state == "Archived",
+        )
+    )
+    return tuple(out)
+
+
+def next_step(all_steps: tuple[Step, ...]) -> Step | None:
+    """The earliest step not yet done: the one the card marks."""
+    return next((s for s in all_steps if not s.done), None)
+
+
+def groups(all_steps: tuple[Step, ...]) -> tuple[tuple[str, tuple[Step, ...]], ...]:
+    """The card's groups in order, each with its steps."""
+    out: list[tuple[str, list[Step]]] = []
+    for s in all_steps:
+        if out and out[-1][0] == s.group:
+            out[-1][1].append(s)
+        else:
+            out.append((s.group, [s]))
+    return tuple((label, tuple(members)) for label, members in out)

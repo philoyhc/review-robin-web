@@ -15,7 +15,7 @@
       <tr>
         <td>{% if c.via is defined %}<span class="muted">Gate {{ c.number }}</span><br><strong>{{ c.label }}</strong><br><span class="muted">{{ "A Review Robin session" if c.via == "RRW" else "Results entered here" }}{% if c.measure %} · {{ c.measure }}{% endif %}</span>{% else %}<span class="muted">Outcome {{ c.number }}</span><br><strong>{{ c.label }}</strong><br><span class="muted">{{ c.values | join(" / ") }} · due {{ c.due }}</span>{% endif %}</td>
         <td>{{ rt if rt else "Decided by hand" }}{% if c.weights and c.weights | length > 1 %}<br><span class="muted">Combined: {% for k, w in c.weights %}{% for g in plan.columns if g.key == k %}{{ g.label }} {{ (w * 100) | round | int }}%{% endfor %}{{ " · " if not loop.last }}{% endfor %}</span>{% endif %}</td>
-        <td>{% if c.via is defined %}<span class="muted">None</span>{% else %}{% for name, when, ok in emails if name == c.label %}On release{% if not ok %} <span class="chip chip-warn">Template not set up</span>{% endif %}{% else %}<span class="muted">None</span>{% endfor %}{% endif %}</td>
+        <td>{% if c.via is defined %}<span class="muted">None</span>{% else %}{% for e in emails if e.outcome == c.key %}On release: {{ e.name }}{% if not e.ok %} <span class="chip chip-warn">Template not set up</span>{% endif %}{% else %}<span class="muted">None</span>{% endfor %}{% endif %}</td>
       </tr>
     {% endfor %}
     </tbody>

@@ -2,10 +2,11 @@
    one place; Process sets which steps send one, and when. Reviewers'
    emails are Review Robin's. A placeholder until its own segment. #}
 <p>The emails applicants receive. Each is kept here; Process says which steps send one, and when. Panel members' invitations and reminders come from Review Robin.</p>
-{% for name, when, ok in emails %}
+{% for e in emails %}
+{% set name, ok = e.name, e.ok %}
 <section class="card" data-email="{{ name }}">
   <h2>{{ name }} <span class="chip chip-{{ 'ok' if ok else 'warn' }}">{{ "Set up" if ok else "Not set up" }}</span></h2>
-  <p class="muted">{{ when }}</p>
+  <p class="muted">{{ e.when }}</p>
   <div class="field"><label>Subject <input type="text" value="{{ exercise.name ~ ': ' ~ name if ok else '' }}" disabled></label></div>
   <div class="field"><label>Body <textarea rows="3" disabled>{{ "Dear [applicant name], …" if ok else "" }}</textarea></label></div>
   <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Preview</button><button class="btn btn-secondary" type="button" disabled>Reset to default</button></div>

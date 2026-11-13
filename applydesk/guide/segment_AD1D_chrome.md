@@ -43,7 +43,7 @@ An exercise has seven tabs in one row (Home, Setup, Form, Applications, Panels, 
 
 - **The Workflow card reads `applydesk/rounds.py`** for the model exercise, so it agrees with Applications; the other exercises get a shorter timeline from their own sample.
 - **Steps are columns, grouped by round**, as the Applications table's headers are: the same groups in the same order on both.
-- **The status row replaces the heading's chips** (state, stage) on exercise pages, and the page's `h1` is the page's name (the exercise's on Home), the exercise's name moving to the breadcrumb, as in Review Robin; the lobby keeps its chips.
+- **The status row replaces the heading's chips** (state, stage) on exercise pages, and the page's `h1` is the page's name (the exercise's on Home), the exercise's name moving to the breadcrumb (*Exercises / name / page*, as Review Robin's). Review Robin's Setup and Operations pages carry no `h1`; ApplyDesk keeps one, as its pages always have (a deliberate difference). The lobby keeps its chips.
 
 ## Blast radius (measured)
 
@@ -61,6 +61,8 @@ Taken 2026-11-13 at `bf44ce575`.
 
 Building. Base `bf44ce575` for the cumulative read.
 - Rung 2: the chrome in Review Robin's styling (`applydesk/templates/applydesk/_exercise_nav.html`), its status row from `applydesk/workflow.py` (each item's state, sample values per exercise), and the pages: Process (the rounds with every rule and which step sends an email, then the timeline), Gates (a card per gate with its panel: the assessment panels on Gate 1, the interviewers on the Interview gate; the reviewer pool), Emails (each template, set up or not), Evaluations (each gate's state and progress), Extract data (Reports' content). Setup's details moved to Home; a draft's missing items link to Home's details, Process or Form. The `h1` is the page's name, the exercise's in the breadcrumb.
+- Rung 3: the Workflow card (`applydesk/templates/applydesk/operator/_workflow.html`, `workflow.steps`) on Home under the summary and on Applications, Evaluations and Extract data: a column per step grouped by round, the earliest not done marked as Next; a sent gate opens Evaluations; an outcome whose email is not set up says so; every other action inert (author).
+- The cumulative read (rungs 1–3): 13 findings, none blocking. Fixed: an outcome's email linked to the outcome, not matched by name (the second exercise disagreed across pages); the breadcrumb ends at the page, the exercise linking Home; the `h1` recorded as a deliberate difference; ruling 11 marked superseded; a sent gate always opens Evaluations, never offering Send (and not from Evaluations itself); an exercise's interviewers kept on Gates when no gate is an interview; the Workflow card's Next found by identity; the close step shows *Closed*; comments and the AD1 URL map's Home row. Rung 2 touched Applications' body only to point its Setup links at Process. Left for Process's segment: the *Decided* and *Ready* states, a not-ready gate's reason, and an action held until the steps it reads are done (every action is inert meanwhile).
 
 ## PR ladder
 

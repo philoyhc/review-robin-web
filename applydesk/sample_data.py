@@ -590,7 +590,7 @@ def _span(lo: str, hi: str, unit: str = "") -> str:
 
 # Who a Select people question may name (segment AD1B): everyone in the
 # institution (looked up in Entra ID through Graph once forms are live,
-# AD4), or a roster on the Panels page. Keys: "institution", "pool",
+# AD4), or a roster on the Gates page (ruling 14). Keys: "institution", "pool",
 # "interviewers", or "panel:" and an assessment panel's name.
 #: The sample institution: everyone below, and two more, stand in for
 #: the directory Graph searches.

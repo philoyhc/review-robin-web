@@ -42,6 +42,9 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         applications=sample_data.applications_of(exercise.public_id),
         assessors=sample_data.assessors_of(exercise.public_id),
         missing=sample_data.setup_missing(exercise),
+        wf_steps=workflow.steps(exercise),
+        wf_groups_of=workflow.groups,
+        next_step=workflow.next_step,
     )
 
 
@@ -99,4 +102,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         gate_state=workflow.gate_state,
         emails=workflow.emails(exercise.public_id),
         form_state=workflow.form_state(exercise),
+        wf_steps=workflow.steps(exercise),
+        wf_groups_of=workflow.groups,
+        next_step=workflow.next_step,
     )

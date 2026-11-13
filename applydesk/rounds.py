@@ -18,14 +18,14 @@ from applydesk.sample_data import Application
 
 #: Gate admittance, in the order a chip cycles (author, 2026-11-13): no
 #: status yet, then whether the application is sent through the gate.
-#: Outcomes keep their own values, with Pending, from Setup.
+#: Outcomes keep their own values, with Pending, from Process.
 NO_STATUS = "—"
 ADMITTANCE: tuple[str, ...] = (NO_STATUS, "Entered", "Not entered")
 
 
 @dataclass(frozen=True)
 class Rule:
-    """How a column is filled, set with it on Setup (author, 2026-11-13);
+    """How a column is filled, set with it on Process (rulings 13, 14);
     the Applications page only applies it, and a hand can override.
 
     ``when`` holds conditions that must all hold, each (kind, key, op,
@@ -59,7 +59,7 @@ class Outcome:
     due: str
     released: str  # "" until released, else when and to whom
     # Its combined result: a weighted average of the gates in its scope
-    # (author, 2026-11-13), set with the outcome on Setup; the sample's.
+    # (author, 2026-11-13), set with the outcome on Process; the sample's.
     weights: tuple[tuple[str, float], ...] = ()
     rule: Rule | None = None
 

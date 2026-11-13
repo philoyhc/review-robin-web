@@ -2,7 +2,8 @@
    (`spec/visual_style_rrw.md` "Operator session chrome"): the
    breadcrumb, then a card holding Exercise Home double-height on the
    left, the Setup and Operations rows, and the status row. #}
-<nav class="crumbs" aria-label="Breadcrumb"><a href="{{ url('/operator/exercises') }}">Exercises</a><span aria-hidden="true">/</span><span aria-current="page">{{ exercise.name }}</span></nav>
+{% set here_tab = (nav.setup + nav.operations) | selectattr("on") | first %}
+<nav class="crumbs" aria-label="Breadcrumb"><a href="{{ url('/operator/exercises') }}">Exercises</a><span aria-hidden="true">/</span>{% if here_tab %}<a href="{{ url(nav.home.path) }}">{{ exercise.name }}</a><span aria-hidden="true">/</span><span aria-current="page">{{ here_tab.label }}</span>{% else %}<span aria-current="page">{{ exercise.name }}</span>{% endif %}</nav>
 <div class="xnav">
   <nav class="xnav-grid" aria-label="{{ exercise.name }}">
     <a class="xnav-home{% if nav.home.on %} on{% endif %}" href="{{ url(nav.home.path) }}"{% if nav.home.on %} aria-current="page"{% endif %}>{{ nav.home.label }}</a>
