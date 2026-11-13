@@ -14,9 +14,11 @@ and the MVP roadmap are in `guide/todo_master.md`.
 | `tests/` | ApplyDesk's tests, with a host harness (`tests/_host.py`) |
 | `docs/applydesk_functional_spec_v0.6b_agent_handoff.md` | The functional baseline (v0.6b, 2 November 2026); where a ruling in `guide/todo_master.md` differs, the ruling wins |
 | `docs/photo_field_design.md`, `docs/photo_field/` | The applicant photo field's design and mock-ups (2026-11-12), from Utilities' photo proof of concept; not scheduled |
+| `docs/chrome/` | Mock-ups of the exercise chrome and Workflow card (2026-11-13), for segment AD1D |
 | `spec/applications.md` | ApplyDesk as the host sees it: registry entry, health, running alone, the URL map |
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and CI |
 | `guide/todo_master.md` | Rulings, the MVP roadmap and open decisions |
 | `guide/segment_AD1_skeleton.md` | Segment AD1 plan: the package and mount, then the URL map as placeholders |
 | `guide/segment_AD1C_applications.md` | Segment AD1C plan: the Applications page as the control surface, rounds of gates and outcomes as columns, nothing saved |
+| `guide/segment_AD1D_chrome.md` | Segment AD1D plan: an exercise's pages in Review Robin's chrome (Home, Setup, Operations) and the Workflow card |
 | `guide/archive/README.md` | Closed segment plans: AD1B (the Form page) |
