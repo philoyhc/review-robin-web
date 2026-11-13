@@ -161,6 +161,7 @@ def test_a_csv_proposes_then_applies(page: Page) -> None:
     page.locator("[data-ap-csv]").set_input_files(
         files=[{"name": "decisions.csv", "mimeType": "text/csv", "buffer": body.encode()}]
     )
+    page.locator("[data-ap-proposal]").wait_for(state="visible")  # read async
     prop = page.locator("[data-ap-proposal]")
     assert "Upload CSV: decisions.csv" in prop.inner_text()
     text = prop.inner_text()
@@ -193,6 +194,7 @@ def test_the_table_downloads_as_the_csv_an_upload_reads(page: Page) -> None:
     page.locator("[data-ap-csv]").set_input_files(
         files=[{"name": "applications.csv", "mimeType": "text/csv", "buffer": text.encode()}]
     )
+    page.locator("[data-ap-proposal]").wait_for(state="visible")  # read async
     prop = page.locator("[data-ap-proposal]")
     assert "Nothing would change." in prop.inner_text()
     assert prop.locator("[data-ap-prop-skip] li").count() == 0
@@ -210,6 +212,7 @@ def test_apply_keeps_a_cell_changed_by_hand_since(page: Page) -> None:
             }
         ]
     )
+    page.locator("[data-ap-proposal]").wait_for(state="visible")  # read async
     prop = page.locator("[data-ap-proposal]")
     assert prop.locator("[data-ap-prop-rows] tr").count() == 1
     chip = _row(page, "kenji.russo").locator('[data-cell="g3"] [data-ap-adm]')
@@ -235,6 +238,7 @@ def test_a_csv_giving_one_cell_two_values_leaves_it(page: Page) -> None:
     page.locator("[data-ap-csv]").set_input_files(
         files=[{"name": "twice.csv", "mimeType": "text/csv", "buffer": body.encode()}]
     )
+    page.locator("[data-ap-proposal]").wait_for(state="visible")  # read async
     prop = page.locator("[data-ap-proposal]")
     assert "h6zr2tdw9p: Interview given more than one value (Entered, —), left as is." in (
         prop.inner_text()
@@ -258,6 +262,7 @@ def test_a_csv_id_like_an_object_key_is_just_unknown(page: Page) -> None:
     page.locator("[data-ap-csv]").set_input_files(
         files=[{"name": "odd.csv", "mimeType": "text/csv", "buffer": body.encode()}]
     )
+    page.locator("[data-ap-proposal]").wait_for(state="visible")  # read async
     prop = page.locator("[data-ap-proposal]")
     assert "Not in this exercise, ignored: __proto__, constructor." in prop.inner_text()
 

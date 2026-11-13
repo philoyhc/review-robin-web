@@ -149,21 +149,20 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
     apps = sample_data.applications_of(exercise.public_id)
     form = form_state(exercise)
     out: list[Step] = []
-    holding = plan.application_stage
-    if holding is not None:
-        out.append(
-            Step(
-                holding.label,
-                "",
-                "Application form",
-                form,
-                holding.dates,
-                f"{len(apps)} received" if form != "Draft" else "Not open yet",
-                {"Draft": "Open form…", "Open": "Close form…"}.get(form, ""),
-                form == "Closed",
-            )
-        )
     for r in plan.stages:
+        if r.application:  # the form, where its stage sits in the timeline
+            out.append(
+                Step(
+                    r.label,
+                    "",
+                    "Application form",
+                    form,
+                    r.dates,
+                    f"{len(apps)} received" if form != "Draft" else "Not open yet",
+                    {"Draft": "Open form…", "Open": "Close form…"}.get(form, ""),
+                    form == "Closed",
+                )
+            )
         for c in r.columns:
             if isinstance(c, stages.Gate):
                 state, line = gate_state(exercise.public_id, c.key)

@@ -120,7 +120,7 @@ def test_a_stage_may_not_hold_the_application_and_a_gate() -> None:
     late = (stages.Stage(1, "", "", (gate,)), stages.Stage(2, "", "", application=True))
     assert stages.problems(both) == ("Stage 1 holds both the application and a gate.",)
     assert "More than one stage holds the application." in stages.problems(two)
-    assert stages.problems(late) == ("The stage holding the application is not the first.",)
+    assert stages.problems(late) == ()  # a gate may come first (author, 2026-11-13)
     assert stages.problems((stages.Stage(1, "", "", (gate,)),)) == ()  # from elsewhere
 
 
