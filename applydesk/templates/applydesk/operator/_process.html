@@ -1,8 +1,9 @@
 {# Process (rulings 13–15, segment AD1E): the exercise's timeline as a
    stack of stage cards, as Form is of question cards; each holds the
    form, or gates, and may hold an outcome, with their dates, rules and
-   emails. Rung 2, the scaffold: the cards drawn from the sample, open,
-   every control inert; the Outline beside them. Nothing is saved. #}
+   emails. The cards are drawn from the sample, collapsed unless alone;
+   the stage card moves in the browser (rung 3), the Outline following.
+   Nothing is saved. #}
 {% import "applydesk/operator/_process_cards.html" as pc with context %}
 {% set gates = plan.columns | selectattr("via", "defined") | list %}
 {% set outs = plan.columns | rejectattr("via", "defined") | list %}
@@ -11,13 +12,11 @@
   <div class="fb-main">
     <p class="muted pc-intro">The exercise's timeline, stage by stage. A stage holds the application form, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Applications applies them.</p>
     <div class="fb-cards" id="pc-cards">
-      {% for st in plan.stages %}{{ pc.stage(plan, st, rule_text, emails, last=(plan.stages | length == 1), open=True) }}{% endfor %}
+      {% for st in plan.stages %}{{ pc.stage(plan, st, rule_text, emails, last=(plan.stages | length == 1), open=(plan.stages | length == 1)) }}{% endfor %}
     </div>
-    <section class="card pc-notes" aria-labelledby="ann-h">
-      <h2 id="ann-h">Announcements</h2>
-      <p class="muted">None yet. An announcement shows on every applicant's exercise page.</p>
-      <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>New announcement</button></div>
-    </section>
+    {# What + Stage and + Form add: the same macros as the server's own. #}
+    <template id="pc-new-stage">{{ pc.stage(plan, blank_stage, rule_text, emails, last=False, open=True) }}</template>
+    <template id="pc-new-form">{{ pc.form_item(blank_stage, emails) }}</template>
   </div>
   <aside class="fb-side">
     <section class="card fb-outline" aria-labelledby="pc-outline-h">
@@ -34,9 +33,203 @@
       </ol>
       <p class="muted fb-counts" data-pc-counts>{{ plan.stages | length }} {{ "stage" if plan.stages | length == 1 else "stages" }} · {{ gates | length }} {{ "gate" if gates | length == 1 else "gates" }} · {{ outs | length }} {{ "outcome" if outs | length == 1 else "outcomes" }}</p>
       {% if issues %}<ul class="pc-issues" data-pc-issues>{% for i in issues %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
+      <p class="visually-hidden" data-pc-live aria-live="polite"></p>
       <div class="btnrow">
         <button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>
       </div>
     </section>
   </aside>
 </div>
+<script>
+// Segment AD1E rung 3: the stage card moves, in the browser only; a reload
+// restores the sample. Collapse and expand; the name and dates feeding the
+// card's head and the Outline; + Stage, Replicate and Delete (never the
+// last stage); dragging a handle or the arrow keys; the form added or
+// removed within ruling 15 (one stage holds it, never beside a gate).
+// Gates and outcomes are numbered by timeline as cards move.
+(function () {
+  var root = document.querySelector("[data-process]");
+  if (!root) return;
+  var list = root.querySelector("#pc-cards");
+  var outline = root.querySelector("[data-pc-outline]");
+  var counts = root.querySelector("[data-pc-counts]");
+  var live = root.querySelector("[data-pc-live]");
+  var keys = 0;
+  function cards() { return Array.prototype.slice.call(list.children); }
+  function items(card, kind) { return Array.prototype.slice.call(card.querySelectorAll('.pc-item[data-item="' + kind + '"]')); }
+  function field(card, f) { var i = card.querySelector('[data-pc="' + f + '"]'); return i ? i.value.trim() : ""; }
+  function labelOf(card) { return field(card, "name") || "Stage " + (cards().indexOf(card) + 1); }
+  function datesOf(card) {
+    var a = field(card, "from"), b = field(card, "to");
+    return a && b ? a + " – " + b : (a || b || "Dates not set");
+  }
+  function itemName(item, fallback) {
+    var i = item.querySelector('[data-pc="item-name"]');
+    return (i && i.value.trim()) || fallback;
+  }
+  function holds(card) {
+    var gates = items(card, "gate"), outs = items(card, "outcome"), parts = [];
+    if (items(card, "form").length) parts.push("Form");
+    else if (gates.length) parts.push(gates.length + (gates.length === 1 ? " gate" : " gates"));
+    else parts.push("No gates");
+    if (outs.length) parts.push("Outcome: " + itemName(outs[0], "Untitled outcome"));
+    return parts.join(" · ");
+  }
+  function setOpen(card, open) {
+    if (open) card.setAttribute("data-open", ""); else card.removeAttribute("data-open");
+    var t = card.querySelector("[data-fc-toggle]");
+    t.setAttribute("aria-expanded", open ? "true" : "false");
+    t.setAttribute("aria-label", (open ? "Collapse " : "Expand ") + labelOf(card));
+  }
+  function guard(card, act, why) {
+    var b = card.querySelector('[data-pc-act="' + act + '"]');
+    if (!b) return;
+    b.disabled = !!why;
+    if (why) b.title = why; else b.removeAttribute("title");
+  }
+  // Ruling 15, as the buttons say it; the gate and outcome buttons stay
+  // inert until rung 4, but say why where the ruling forbids them.
+  function guards() {
+    var all = cards(), holder = all.filter(function (c) { return items(c, "form").length; })[0];
+    all.forEach(function (card) {
+      var hasForm = items(card, "form").length > 0, hasGates = items(card, "gate").length > 0;
+      guard(card, "form", hasForm ? "This stage holds the form" : hasGates ? "A stage holding gates holds no form" : holder ? "Another stage holds the form" : "");
+      var gate = card.querySelector('[data-pc-act="gate"]'), out = card.querySelector('[data-pc-act="outcome"]');
+      gate.title = hasForm ? "A stage holding the form holds no gate" : "Gates are added in the next rung";
+      out.title = items(card, "outcome").length ? "A stage holds one outcome at most" : "Outcomes are added in the next rung";
+      var del = card.querySelector('[data-fc-act="delete"]');
+      del.disabled = all.length === 1;
+      if (all.length === 1) del.title = "The last stage cannot be deleted"; else del.removeAttribute("title");
+      card.querySelector(".fc-body").classList.toggle("pc-body-empty", !card.querySelector(".pc-item"));
+    });
+  }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text) e.textContent = text;
+    return e;
+  }
+  function changed() {
+    var g = 0, o = 0, nGates = 0, nOuts = 0;
+    outline.textContent = "";
+    cards().forEach(function (card, i) {
+      card.dataset.stage = String(i + 1);
+      var name = card.querySelector('[data-pc="name"]');
+      name.placeholder = "Stage " + (i + 1);
+      card.querySelector('[data-sum="name"]').textContent = labelOf(card);
+      card.querySelector('[data-sum="dates"]').textContent = datesOf(card);
+      card.querySelector('[data-sum="holds"]').textContent = holds(card);
+      card.querySelector("[data-fc-grip]").setAttribute("aria-label", "Move " + labelOf(card) + ": drag, or press the up and down arrow keys");
+      setOpen(card, card.hasAttribute("data-open"));
+      var li = el("li"), sub = el("ul", "fb-o-list");
+      li.appendChild(el("span", "pc-o-stage", labelOf(card)));
+      li.appendChild(document.createTextNode(" "));
+      li.appendChild(el("span", "muted", datesOf(card)));
+      if (items(card, "form").length) sub.appendChild(el("li", "", "Form"));
+      card.querySelectorAll(".pc-item[data-item=gate], .pc-item[data-item=outcome]").forEach(function (item) {
+        var gate = item.dataset.item === "gate";
+        var label = gate ? "Gate " + (++g) : "Outcome " + (++o);
+        item.querySelector("[data-pc-kicker]").textContent = label;
+        sub.appendChild(el("li", "", label + ": " + itemName(item, gate ? "Untitled gate" : "Untitled outcome")));
+      });
+      li.appendChild(sub);
+      outline.appendChild(li);
+    });
+    nGates = g; nOuts = o;
+    var n = cards().length;
+    counts.textContent = n + (n === 1 ? " stage" : " stages") + " · " + nGates + (nGates === 1 ? " gate" : " gates") + " · " + nOuts + (nOuts === 1 ? " outcome" : " outcomes");
+    guards();
+  }
+  function fresh(id) { return document.getElementById(id).content.firstElementChild.cloneNode(true); }
+  function act(card, what) {
+    var added = null;
+    if (what === "new") added = fresh("pc-new-stage");
+    else if (what === "replicate") {
+      added = card.cloneNode(true);
+      // One stage holds the form: a copy leaves it behind. Its gates and
+      // outcome are new columns, with keys of their own.
+      added.querySelectorAll('.pc-item[data-item="form"]').forEach(function (f) { f.remove(); });
+      added.querySelectorAll(".pc-item[data-key]").forEach(function (item) { item.dataset.key = item.dataset.item[0] + "new" + (++keys); });
+      added.querySelectorAll("select").forEach(function (s, i) { s.value = card.querySelectorAll("select")[i].value; });
+      setOpen(added, true);
+    } else if (what === "delete") {
+      if (cards().length === 1) return;
+      var next = card.nextElementSibling || card.previousElementSibling;
+      card.remove();
+      changed();
+      if (next) next.querySelector("[data-fc-toggle]").focus();
+      return;
+    }
+    if (!added) return;
+    card.after(added);
+    changed();
+    added.querySelector('[data-pc="name"]').focus();
+  }
+
+  var drag = null;
+  list.addEventListener("pointerdown", function (e) {
+    var grip = e.target.closest("[data-fc-grip]");
+    if (!grip || (e.pointerType === "mouse" && e.button !== 0)) return;
+    e.preventDefault();
+    drag = grip.closest(".pc");
+    drag.classList.add("fc-dragging");
+  });
+  document.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    var over = null;
+    cards().some(function (c) {
+      if (c === drag) return false;
+      var r = c.getBoundingClientRect();
+      if (e.clientY >= r.top && e.clientY <= r.bottom) { over = c; return true; }
+      return false;
+    });
+    if (!over) return;
+    var box = over.getBoundingClientRect();
+    if (e.clientY < box.top + box.height / 2) over.before(drag); else over.after(drag);
+  });
+  function drop() {
+    if (!drag) return;
+    drag.classList.remove("fc-dragging");
+    drag = null;
+    changed();
+  }
+  document.addEventListener("pointerup", drop);
+  document.addEventListener("pointercancel", drop);
+  list.addEventListener("keydown", function (e) {
+    var grip = e.target.closest("[data-fc-grip]");
+    if (!grip || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+    e.preventDefault();
+    var card = grip.closest(".pc");
+    if (e.key === "ArrowUp" && card.previousElementSibling) card.previousElementSibling.before(card);
+    else if (e.key === "ArrowDown" && card.nextElementSibling) card.nextElementSibling.after(card);
+    grip.focus();
+    changed();
+    live.textContent = "Moved " + labelOf(card) + " to " + (cards().indexOf(card) + 1) + " of " + cards().length + ".";
+  });
+
+  list.addEventListener("click", function (e) {
+    var card = e.target.closest(".pc");
+    if (!card) return;
+    var a = e.target.closest("[data-fc-act]");
+    if (a) { if (!a.disabled) act(card, a.dataset.fcAct); return; }
+    var p = e.target.closest("[data-pc-act]");
+    if (p && !p.disabled) {
+      if (p.dataset.pcAct === "form") {
+        card.querySelector(".fc-body > .pc-row").after(fresh("pc-new-form"));
+        changed();
+        card.querySelector('[data-pc-act="remove-form"]').focus();
+      } else if (p.dataset.pcAct === "remove-form") {
+        p.closest(".pc-item").remove();
+        changed();
+        card.querySelector('[data-pc-act="form"]').focus();
+      }
+      return;
+    }
+    if (e.target.closest("[data-fc-toggle]")) setOpen(card, !card.hasAttribute("data-open"));
+  });
+  list.addEventListener("input", function (e) {
+    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-name"]')) changed();
+  });
+  changed();
+})();
+</script>

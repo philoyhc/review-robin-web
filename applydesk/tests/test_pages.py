@@ -330,14 +330,21 @@ def test_the_lobby_names_each_exercise_s_current_stage(
     assert f"<td>{now}</td>" in row[: row.index("</tr>")]
 
 
+def _page(text: str) -> str:
+    """The Process page without the templates its script clones from."""
+    cut = text.find('<template id="pc-new-stage">')
+    return text if cut < 0 else text[:cut]
+
+
 def _stage_cards(text: str) -> list[str]:
-    return re.findall(r'<article class="fc pc" data-kind="stage" data-stage="\d+"', text)
+    return re.findall(r'<article class="fc pc" data-kind="stage" data-stage="\d+"', _page(text))
 
 
 def test_process_is_a_stack_of_stage_cards(client: TestClient) -> None:
     """Segment AD1E rung 2, the scaffold: Form's pattern, a card per stage
     holding its items, the Outline beside them."""
-    text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
+    full = client.get(f"/applydesk/operator/exercises/{EX}/process").text
+    text = _page(full)
     names = re.findall(r'<span class="fc-q" data-sum="name">([^<]+)</span>', text)
     assert names == ["Call for applications", "Review", "Interview", "Decision"]
     assert len(_stage_cards(text)) == 4
@@ -347,20 +354,23 @@ def test_process_is_a_stack_of_stage_cards(client: TestClient) -> None:
     assert 'value="30" inputmode="numeric" aria-label="Peer Review, percent"' in text
     assert "Decided by hand" in text  # Final results
     assert "<option selected>Final results (not set up)</option>" in text
-    assert "4 stages · 3 gates · 3 outcomes" in text
-    assert "New announcement" in text
+    assert "4 stages · 3 gates · 3 outcomes" in full
+    assert "announcement" not in text.lower()  # the exercise's own setup (author)
     # Ruling 15's shape, as the inert buttons say it.
     assert 'disabled title="A stage holding the form holds no gate">+ Gate' in text
     assert 'disabled title="A stage holding gates holds no form">+ Form' in text
     assert 'disabled title="A stage holds one outcome at most">+ Outcome' in text
-    # The scaffold: every control inert.
-    body = text[text.index("data-process") : text.index("</aside>")]
-    actions = re.findall(r"<button[^>]*class=\"btn [^>]*>", body)
-    assert actions and all("disabled" in b for b in actions)
+    # Rung 3: the stage card's own actions work; a gate's and an
+    # outcome's wait for rung 4. Cards load collapsed, as Form's.
+    assert not re.findall(r"<article [^>]*data-open", text)
+    assert (
+        '<button type="button" class="btn btn-secondary" data-fc-act="new">+ Stage</button>' in text
+    )
+    assert re.findall(r'data-pc-act="gate" disabled', text)
 
 
 def test_a_blank_exercise_s_process_is_one_stage_holding_the_form(client: TestClient) -> None:
-    text = client.get(f"/applydesk/operator/exercises/{BLANK}/process").text
+    text = _page(client.get(f"/applydesk/operator/exercises/{BLANK}/process").text)
     assert len(_stage_cards(text)) == 1
     assert 'placeholder="Stage 1"' in text
     assert re.findall(r'<div class="pc-item" data-item="(\w+)"', text) == ["form"]

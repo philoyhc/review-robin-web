@@ -1,7 +1,9 @@
 {# The Process page's cards (segment AD1E): a stage card and the items it
    holds, one macro each, so a card the server renders and one the page's
    script will add share their markup (as Form's `_form_cards.html`).
-   Rung 2, the scaffold: every control drawn, none wired. Nothing here is
+   Rung 2 drew them; rung 3 wires the stage card itself (its name,
+   dates, the form, adding, replicating, deleting and moving it); a gate's
+   and an outcome's own controls wait for rung 4, their rules for rung 5. Nothing here is
    saved. Imported with context, for the exercise's links. #}
 
 {% macro grip() %}<button type="button" class="fc-grip" data-fc-grip aria-label="Move: drag, or press the up and down arrow keys" title="Drag to reorder">⋮⋮</button>{% endmacro %}
@@ -17,7 +19,7 @@
     <span class="muted">No emails to applicants yet: the receipt and reminders are kept on Emails.</span>
     {% endfor %}
   </div>
-  <div class="pc-item-foot"><button type="button" class="btn btn-secondary" data-pc-act="remove-form" disabled>Remove the form</button></div>
+  <div class="pc-item-foot"><button type="button" class="btn btn-secondary" data-pc-act="remove-form">Remove the form</button></div>
 </div>
 {% endmacro %}
 
@@ -32,9 +34,9 @@
 
 {% macro gate_item(plan, g, rule_text) %}
 <div class="pc-item" data-item="gate" data-key="{{ g.key }}">
-  <span class="fc-kicker">Gate {{ g.number }}</span>
+  <span class="fc-kicker" data-pc-kicker>Gate {{ g.number }}</span>
   <div class="pc-row">
-    <label class="fc-l pc-wide">Name<input class="fc-in" value="{{ g.label }}" placeholder="Untitled gate"></label>
+    <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ g.label }}" placeholder="Untitled gate"></label>
     <label class="fc-l">Runs as<select class="fc-in"><option{% if g.via == "RRW" %} selected{% endif %}>A Review Robin session</option><option{% if g.via != "RRW" %} selected{% endif %}>Results entered here</option></select></label>
     <label class="fc-l pc-narrow">Result<input class="fc-in" value="{{ g.measure }}" placeholder="Score"></label>
   </div>
@@ -46,9 +48,9 @@
 
 {% macro outcome_item(plan, o, rule_text, emails) %}
 <div class="pc-item" data-item="outcome" data-key="{{ o.key }}">
-  <span class="fc-kicker">Outcome {{ o.number }}</span>
+  <span class="fc-kicker" data-pc-kicker>Outcome {{ o.number }}</span>
   <div class="pc-row">
-    <label class="fc-l pc-wide">Name<input class="fc-in" value="{{ o.label }}" placeholder="Untitled outcome"></label>
+    <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ o.label }}" placeholder="Untitled outcome"></label>
     <label class="fc-l">Due<input class="fc-in" value="{{ o.due }}" placeholder="Date"></label>
     <label class="pc-check"><input type="checkbox" checked> Shown to applicants</label>
   </div>
@@ -88,26 +90,26 @@
       <span class="fc-chips"><span class="chip chip-mute" data-sum="holds">{% if st.form %}Form{% elif gates %}{{ gates | length }} {{ "gate" if gates | length == 1 else "gates" }}{% else %}No gates{% endif %}{% if outs %} · Outcome: {{ outs[0].label }}{% endif %}</span></span>
     </div>
   </div>
-  <div class="fc-body">
+  <div class="fc-body{% if not st.form and not st.columns %} pc-body-empty{% endif %}">
     <div class="pc-row">
       <label class="fc-l pc-wide">Stage name<input class="fc-in" data-pc="name" value="{{ st.name }}" placeholder="Stage {{ st.number }}"></label>
-      <label class="fc-l">From<input class="fc-in" value="{{ dates[0] }}" placeholder="Date"></label>
-      <label class="fc-l">To<input class="fc-in" value="{{ dates[1] }}" placeholder="Date"></label>
+      <label class="fc-l">From<input class="fc-in" data-pc="from" value="{{ dates[0] }}" placeholder="Date"></label>
+      <label class="fc-l">To<input class="fc-in" data-pc="to" value="{{ dates[1] }}" placeholder="Date"></label>
       <label class="pc-check"><input type="checkbox" checked> Shown to applicants</label>
     </div>
     {% if st.form %}{{ form_item(st, emails) }}{% endif %}
     {% for g in gates %}{{ gate_item(plan, g, rule_text) }}{% endfor %}
     {% for o in outs %}{{ outcome_item(plan, o, rule_text, emails) }}{% endfor %}
-    {% if not st.form and not st.columns %}<p class="pc-line muted">Nothing in this stage yet: add the form, a gate or an outcome.</p>{% endif %}
+    <p class="pc-line muted pc-empty">Nothing in this stage yet: add the form, a gate or an outcome.</p>
     <div class="pc-adds">
       <button type="button" class="btn btn-secondary" data-pc-act="gate" disabled{% if st.form %} title="A stage holding the form holds no gate"{% endif %}>+ Gate</button>
       <button type="button" class="btn btn-secondary" data-pc-act="outcome" disabled{% if outs %} title="A stage holds one outcome at most"{% endif %}>+ Outcome</button>
-      <button type="button" class="btn btn-secondary" data-pc-act="form" disabled{% if gates %} title="A stage holding gates holds no form"{% elif plan.form_stage and not st.form %} title="Another stage holds the form"{% endif %}>+ Form</button>
+      <button type="button" class="btn btn-secondary" data-pc-act="form"{% if st.form %} disabled title="This stage holds the form"{% elif gates %} disabled title="A stage holding gates holds no form"{% elif plan.form_stage %} disabled title="Another stage holds the form"{% endif %}>+ Form</button>
     </div>
     <div class="fc-foot">
-      <button type="button" class="btn btn-secondary" data-fc-act="replicate" disabled>Replicate</button>
-      <button type="button" class="btn btn-secondary" data-fc-act="new" disabled>+ Stage</button>
-      <button type="button" class="btn btn-destructive fc-del" data-fc-act="delete" disabled{% if last %} title="The last stage cannot be deleted"{% endif %}>Delete</button>
+      <button type="button" class="btn btn-secondary" data-fc-act="replicate">Replicate</button>
+      <button type="button" class="btn btn-secondary" data-fc-act="new">+ Stage</button>
+      <button type="button" class="btn btn-destructive fc-del" data-fc-act="delete"{% if last %} disabled title="The last stage cannot be deleted"{% endif %}>Delete</button>
     </div>
   </div>
 </article>
