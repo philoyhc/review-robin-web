@@ -58,6 +58,7 @@ Taken 2026-11-13 at `34f3d4b`.
 
 Building. Base `34f3d4b` for the cumulative read.
 - Rung 2: the table. The rounds and each row's cells in `applydesk/rounds.py`; 98 generated applications join the model exercise's three in `sample_data` (101). The model exercise moves to mid-review (author, 2026-11-13: applications 1 Sep – 15 Oct, Round 2 under way), so a new sample exercise, *Postgraduate Conference Grant 2027* (`r6tm4kq9wz`), is the one open for applications. *Set ticked rows* sits under the table beside *All / Last applications*, keeping the toolbar on one line. *Fill by rule…* and *Upload CSV* render, inert until rung 3.
+- Rung 3: *Fill by rule…* (Set a column to a value where an earlier gate's Rating or Score is ≥ or < a threshold, otherwise a value or as is; Pending cells only unless unticked) and *Upload CSV* (`Application ID`, then columns named as their headers, with or without "Gate 1:") share one proposal panel: what would change, what was left and why; *Apply* or *Cancel*. A gate cell carries its finished result (`Cell.result`) for the rule; an unfinished one is named, not guessed. *Download CSV* gives the table in the shape an upload reads.
 
 ## PR ladder
 

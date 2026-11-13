@@ -49,6 +49,7 @@ class Round:
 class Cell:
     value: str  # an admittance, an outcome value, or "" for none ("—")
     note: str = ""  # under the chip: a gate's result, a reason, a date
+    result: float | None = None  # a gate's finished result, which a rule reads
 
 
 @dataclass(frozen=True)
@@ -156,7 +157,7 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
         elif i in late:
             cells["g1"] = Cell("Selected", f"Rating {rating[i]} · 1 of 3")
         else:
-            cells["g1"] = Cell("Selected", f"Rating {rating[i]} · 3 of 3")
+            cells["g1"] = Cell("Selected", f"Rating {rating[i]} · 3 of 3", rating[i])
         if i in late:
             cells["g2"] = Cell("Pending", "Waiting on Peer Review")
             cells["o1"] = Cell("Pending", "Due 10 Nov")
@@ -165,9 +166,9 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
             cells["o1"] = Cell("Not shortlisted", "10 Nov")
         else:
             if i in added:
-                cells["g2"] = Cell("Selected", "Added by operator: panel request")
+                cells["g2"] = Cell("Selected", "Added by operator: panel request", score[i])
             elif rating[i] >= _PANEL_FROM:
-                cells["g2"] = Cell("Selected", f"Score {score[i]} · 4 of 4")
+                cells["g2"] = Cell("Selected", f"Score {score[i]} · 4 of 4", score[i])
             else:
                 cells["g2"] = Cell("Not selected", f"Below {_PANEL_FROM} (Rating)")
             cells["o1"] = Cell("Shortlisted" if i in shortlisted else "Not shortlisted", "10 Nov")
@@ -186,7 +187,13 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
 
 def _small_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
     return tuple(
-        Row(a, {"g1": Cell("Selected", "Score 4.1 · 2 of 2"), "o1": Cell("Pending", "Due 15 Dec")})
+        Row(
+            a,
+            {
+                "g1": Cell("Selected", "Score 4.1 · 2 of 2", 4.1),
+                "o1": Cell("Pending", "Due 15 Dec"),
+            },
+        )
         for a in apps
     )
 
