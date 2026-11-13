@@ -61,6 +61,7 @@ Taken 2026-11-13 at `bf44ce575`.
 
 Building. Base `bf44ce575` for the cumulative read.
 - Rung 2: the chrome in Review Robin's styling (`applydesk/templates/applydesk/_exercise_nav.html`), its status row from `applydesk/workflow.py` (each item's state, sample values per exercise), and the pages: Process (the rounds with every rule and which step sends an email, then the timeline), Gates (a card per gate with its panel: the assessment panels on Gate 1, the interviewers on the Interview gate; the reviewer pool), Emails (each template, set up or not), Evaluations (each gate's state and progress), Extract data (Reports' content). Setup's details moved to Home; a draft's missing items link to Home's details, Process or Form. The `h1` is the page's name, the exercise's in the breadcrumb.
+- Rung 3: the Workflow card (`applydesk/templates/applydesk/operator/_workflow.html`, `workflow.steps`) on Home under the summary and on Applications, Evaluations and Extract data: a column per step grouped by round, the earliest not done marked as Next; a sent gate opens Evaluations; an outcome whose email is not set up says so; every other action inert (author).
 
 ## PR ladder
 

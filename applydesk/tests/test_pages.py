@@ -467,3 +467,56 @@ def test_profile_shows_nowhere_a_reader_sees(client: TestClient) -> None:
         text = client.get(path).text.replace("<code>ProfileLink</code>", "")
         assert "profile" not in text.lower(), path
     assert client.get(f"/applydesk/me/exercises/{EX}/profiles/p3bd7kq2wx").status_code == 404
+
+
+# --- Segment AD1D rung 3: the Workflow card (ruling 14) ---
+def _steps(text: str) -> list[str]:
+    return re.findall(r'data-wf-step="([^"]+)"', text)
+
+
+def test_the_workflow_card_follows_the_timeline(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}").text
+    assert _steps(text) == [
+        "Application form",
+        "Peer Review",
+        "Faculty Panel Review",
+        "Shortlist for interview",
+        "Interview",
+        "Finalists",
+        "Final results",
+        "Close and archive",
+    ]
+    groups = re.findall(r'<span class="wf-grp">([^<]+)</span>', text)
+    assert groups == ["Application", "Round 1", "Round 2", "Final", "Close"]
+    # Next is the earliest step not done: Gate 3, sent, opening Evaluations.
+    now = re.findall(r'data-wf-step="([^"]+)" aria-current="step"', text)
+    assert now == ["Interview"]
+    assert "Next: <strong>Gate 3 · Interview</strong> — 18 of 27 interviewed." in text
+    assert f'href="/applydesk/operator/exercises/{EX}/evaluations">Open Evaluations</a>' in text
+    assert "Not ready: no email for this outcome" in text  # Final results
+    # Every action is inert until AD2 (author, 2026-11-13).
+    card = text[text.index('aria-labelledby="wf-h"') :]
+    card = card[: card.index("</section>")]
+    assert "<button" in card and card.count("<button") == card.count("disabled>")
+
+
+@pytest.mark.parametrize("section", ["applications", "evaluations", "extract"])
+def test_the_workflow_card_sits_on_every_operations_page(client: TestClient, section: str) -> None:
+    assert (
+        'aria-labelledby="wf-h"' in client.get(f"/applydesk/operator/exercises/{EX}/{section}").text
+    )
+
+
+@pytest.mark.parametrize("section", ["process", "form", "gates", "emails"])
+def test_setup_pages_carry_no_workflow_card(client: TestClient, section: str) -> None:
+    assert (
+        'aria-labelledby="wf-h"'
+        not in client.get(f"/applydesk/operator/exercises/{EX}/{section}").text
+    )
+
+
+def test_a_draft_s_workflow_starts_at_opening_the_form(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{BLANK}").text
+    assert _steps(text) == ["Application form", "Close and archive"]
+    assert "Next: <strong>Application form</strong> — Not open yet." in text
+    assert "Open form…</button>" in text

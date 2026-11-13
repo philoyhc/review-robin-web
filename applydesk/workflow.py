@@ -101,3 +101,110 @@ def status_row(exercise: Exercise) -> tuple[Pill, ...]:
         ),
         Pill("Applications", f"{submitted} submitted", "info" if submitted else "mute"),
     )
+
+
+@dataclass(frozen=True)
+class Step:
+    """One step on the Workflow card: the form, a gate, an outcome or the
+    close, in timeline order (ruling 14)."""
+
+    group: str  # the round it sits in: "Application", "Round 1", …, "Close"
+    kind: str  # "Gate 1", "Outcome 2", "" for the form and the close
+    title: str
+    state: str
+    when: str
+    line: str  # progress, or what it waits on
+    action: str  # what the step's button would do; inert until AD2
+    done: bool
+    blocked: str = ""  # why it is not ready, when it is not
+    link: str = ""  # a page to open instead of an action, e.g. "evaluations"
+
+
+def steps(exercise: Exercise) -> tuple[Step, ...]:
+    """The exercise's timeline as the Workflow card steps through it: the
+    form, then each round's gates and outcomes in their set order, then
+    the close."""
+    plan = rounds.plan_of(exercise.public_id)
+    apps = sample_data.applications_of(exercise.public_id)
+    form = form_state(exercise)
+    dates = (
+        "Dates not set"
+        if "Not set" in (exercise.opens, exercise.application_stage_ends)
+        else f"{exercise.opens} – {exercise.application_stage_ends}"
+    )
+    out: list[Step] = [
+        Step(
+            "Application",
+            "",
+            "Application form",
+            form,
+            dates,
+            f"{len(apps)} received" if form != "Draft" else "Not open yet",
+            {"Draft": "Open form…", "Open": "Close form…"}.get(form, ""),
+            form == "Closed",
+        )
+    ]
+    mail = {name: ok for name, _, ok in emails(exercise.public_id)}
+    for r in plan.rounds:
+        for c in r.columns:
+            if isinstance(c, rounds.Gate):
+                state, line = gate_state(exercise.public_id, c.key)
+                out.append(
+                    Step(
+                        r.label,
+                        f"Gate {c.number}",
+                        c.label,
+                        state,
+                        r.dates,
+                        line,
+                        "" if state == "Results in" else "Send…",
+                        state == "Results in",
+                        link="evaluations" if state == "Sent" else "",
+                    )
+                )
+            else:
+                released = bool(c.released)
+                blocked = "" if mail.get(c.label, True) else "Not ready: no email for this outcome"
+                out.append(
+                    Step(
+                        r.label,
+                        f"Outcome {c.number}",
+                        c.label,
+                        "Released" if released else "Pending",
+                        c.released or f"Due {c.due}",
+                        "" if released else "Decided on Applications",
+                        "" if released else "Release…",
+                        released,
+                        blocked,
+                    )
+                )
+    last = plan.rounds[-1].dates.split("–")[-1].strip() if plan.rounds else ""
+    out.append(
+        Step(
+            "Close",
+            "",
+            "Close and archive",
+            "Archived" if exercise.state == "Archived" else "—",
+            f"After {last}" if last else "After the last outcome",
+            "Extract data first",
+            "Close…",
+            exercise.state == "Archived",
+        )
+    )
+    return tuple(out)
+
+
+def next_step(all_steps: tuple[Step, ...]) -> Step | None:
+    """The earliest step not yet done: the one the card marks."""
+    return next((s for s in all_steps if not s.done), None)
+
+
+def groups(all_steps: tuple[Step, ...]) -> tuple[tuple[str, tuple[Step, ...]], ...]:
+    """The card's groups in order, each with its steps."""
+    out: list[tuple[str, list[Step]]] = []
+    for s in all_steps:
+        if out and out[-1][0] == s.group:
+            out[-1][1].append(s)
+        else:
+            out.append((s.group, [s]))
+    return tuple((label, tuple(members)) for label, members in out)

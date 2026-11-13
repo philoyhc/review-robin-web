@@ -3,6 +3,7 @@
 {% block content %}
 <div class="ptitle"><h1>{{ exercise.name }}</h1></div>
 <p class="lede">{{ exercise.summary or "No summary yet." }}</p>
+{% include "applydesk/operator/_workflow.html" %}
 {% include "applydesk/_placeholder.html" %}
 {% include "applydesk/operator/_details.html" %}
 {% set submitted = applications | selectattr("state", "equalto", "Submitted") | list %}
