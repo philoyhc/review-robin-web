@@ -1,6 +1,6 @@
 {# The Applications page (segment AD1C, ruling 13): the exercise's control
    surface. A row per application; the Application stage's columns, then
-   each round's gates and outcomes as Process sets them.
+   each stage's gates and outcomes as Process sets them.
    Every move works on screen; nothing is saved until AD2. #}
 {% set last = last_submitted(plan.rows) %}
 {% set rank = submitted_rank(plan.rows) %}
@@ -47,14 +47,15 @@
   <table class="ap-table">
     <thead>
       <tr class="ap-groups">
-        <th class="ap-first" colspan="3"><b>Application stage</b>{% if plan.stage_dates %}<span class="ap-when">{{ plan.stage_dates }}</span>{% endif %}</th>
-        {% for r in plan.rounds %}<th class="ap-r" colspan="{{ r.columns | length }}"><b>{{ r.label }}</b><span class="ap-when">{{ r.dates }}</span></th>{% endfor %}
+        {% set ast = plan.application_stage %}
+        <th class="ap-first" colspan="3"><b>{{ ast.label if ast else "Applications" }}</b>{% if ast %}<span class="ap-when">{{ ast.dates }}</span>{% else %}<span class="ap-when">From elsewhere</span>{% endif %}</th>
+        {% for r in plan.stages if r.columns %}<th class="ap-r" colspan="{{ r.columns | length }}"><b>{{ r.label }}</b><span class="ap-when">{{ r.dates }}</span></th>{% endfor %}
       </tr>
       <tr>
         <th class="ap-first">Application</th>
         <th>Applicant</th>
         <th>Status<span class="ap-count" data-ap-count="status"></span></th>
-        {% for r in plan.rounds %}{% for c in r.columns %}
+        {% for r in plan.stages %}{% for c in r.columns %}
           {% if c.via is defined %}
           <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}" data-measure="{{ c.measure }}"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span></th>
           {% else %}
@@ -75,7 +76,7 @@
           {% if a.state == "Submitted" %}<a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/files/' ~ a.file_id) }}"><code>{{ a.public_id }}</code></a>{% else %}<code>{{ a.public_id }}</code>{% endif %}</td>
         <td class="ap-who"><strong>{{ a.applicant }}</strong><span class="ap-mail">{{ a.email }}</span></td>
         <td class="ap-stat">{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}<span class="ap-note">{{ a.submitted }}</span></td>
-        {% for r in plan.rounds %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}
+        {% for r in plan.stages %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}
           <td class="{{ 'ap-out' if c.via is not defined }} {{ 'ap-r' if loop.first }}" data-cell="{{ c.key }}"{% if cell.by_hand %} data-hand{% endif %}>
           {# A submitted application's outcomes are always settable, "—"
              until decided, so a hand change can advance it (Codex). #}
@@ -110,9 +111,9 @@
     {% endif %}
 
     {% if cols %}<button class="btn btn-secondary" type="button" data-ap-csv-down>Download CSV</button>{% endif %}
-    {% if not cols %}<span class="muted">No rounds yet: rounds, gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</span>{% endif %}
+    {% if not cols %}<span class="muted">No gates or outcomes yet: stages, their gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</span>{% endif %}
   </div>
-  <p class="muted ap-help">A gate's chip says whether the application is sent through it, cycling <em>—</em> (no status yet), <em>Entered</em>, <em>Not entered</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> switch does what Process sets. Rounds, gates, outcomes, dates and rules come from Process.</p>
+  <p class="muted ap-help">A gate's chip says whether the application is sent through it, cycling <em>—</em> (no status yet), <em>Entered</em>, <em>Not entered</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> switch does what Process sets. Stages, gates, outcomes, dates and rules come from Process.</p>
 </div>
 <div class="btnrow">
   <button class="btn btn-primary" type="button" disabled>Generate application files</button>
@@ -381,7 +382,7 @@
         return cmp(parseFloat(el.dataset.result));
       }
       var c = combinedOf(r, okey, val);  // comb
-      return c.known ? cmp(c.value) : null;  // as rounds.combined: unknown
+      return c.known ? cmp(c.value) : null;  // as stages.combined: unknown
     }
     go.addEventListener("click", function () {
       var onlyPending = rule.querySelector("[data-ap-rule-pending]").checked;

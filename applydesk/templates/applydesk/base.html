@@ -104,13 +104,6 @@
     .card + .card { margin-top: 16px; }
     .grid > .card + .card { margin-top: 0; }
     .card + .grid, .grid + .card, .grid + .grid { margin-top: 16px; }
-    /* An exercise's stages, left to right, the current one marked. */
-    .stages { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
-    .stage { border-top: 4px solid var(--border-subtle); padding: 8px 4px 0; display: flex; flex-direction: column; gap: 2px; }
-    .stage-done { border-top-color: var(--border-default); }
-    .stage-now { border-top-color: var(--accent); }
-    .stage-name { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; }
-    .stage-when { font-size: 13px; color: var(--text-subtle); }
     /* Inert form controls on placeholders: the form preview. */
     .field { margin: 0 0 12px; }
     .field label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 2px; }
@@ -146,7 +139,7 @@
     .xnav-tab.on::after, .xnav-home.on::after { content: ""; position: absolute; left: 18px; right: 18px; bottom: 0; height: 4px; border-radius: 2px; background: var(--accent); }
     .xnav-setup .xnav-tab.on::after { background: var(--nav-setup-marker); }
     .xnav-ops .xnav-tab.on::after { background: var(--nav-ops-marker); }
-    /* The Workflow card (ruling 14): a column per step, grouped by round. */
+    /* The Workflow card (ruling 14): a column per step, grouped by stage. */
     .wf-next { margin: 0 0 12px; }
     .wf-scroll { overflow-x: auto; }
     .wf-groups, .wf-steps { list-style: none; margin: 0; padding: 0; display: flex; }
@@ -220,7 +213,7 @@
     .fc-q.fb-title-q { font-size: 22px; line-height: 1.25; }
     textarea[data-fit-box] { resize: none; overflow: hidden; }
     /* The Applications page (segment AD1C): a row per application, a
-       column per gate and outcome under its round, the first column kept
+       column per gate and outcome under its stage, the first column kept
        in view; mock-up v3. */
     .ap-tool { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
     .ap-gap { flex: 1; }

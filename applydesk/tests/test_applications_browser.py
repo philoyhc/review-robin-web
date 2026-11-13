@@ -336,14 +336,14 @@ def test_a_gate_rule_takes_each_applicant_s_last_submitted(page: Page) -> None:
 
 
 def test_the_page_shows_each_outcome_s_combined_result_and_weights(page: Page) -> None:
-    from applydesk import rounds
+    from applydesk import stages
 
     page.goto(PAGE)
     head = page.locator('th[data-col="o1"]').inner_text()
     assert "Peer Review 30% · Faculty Panel Review 70%" in head
-    plan = rounds.plan_of("wa9juxbc2t")
+    plan = stages.plan_of("wa9juxbc2t")
     o1 = next(c for c in plan.columns if c.key == "o1")
-    assert isinstance(o1, rounds.Outcome)
+    assert isinstance(o1, stages.Outcome)
     shown = page.evaluate(
         """() => Array.from(document.querySelectorAll('[data-row]')).map(r => [
             r.querySelector('.ap-id code').textContent,
@@ -353,7 +353,7 @@ def test_the_page_shows_each_outcome_s_combined_result_and_weights(page: Page) -
     for r in plan.rows:
         if r.application.state == "Draft":
             continue
-        want = rounds.combined(r, o1)
+        want = stages.combined(r, o1)
         assert by_id[r.application.public_id] == ("" if want is None else f"Combined {want:.2f}"), (
             r.application.public_id
         )

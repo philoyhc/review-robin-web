@@ -17,7 +17,7 @@ from applydesk.main import create_app
 from applydesk.tests._host import host_with
 from cordware.identity import Identity
 
-EX = "wa9juxbc2t"  # the model exercise: not blind, Review stage, rounds under way
+EX = "wa9juxbc2t"  # the model exercise: not blind, its Interview stage under way
 OPEN = "r6tm4kq9wz"  # open for applications
 BLIND = "k7mfr3pq8z"  # blind, Review stage
 DRAFT = "c4xh2ndv6s"  # not published
@@ -41,7 +41,7 @@ PAGES = (
     ),
     f"/applydesk/operator/exercises/{EX}/form/preview",
     f"/applydesk/operator/exercises/{OPEN}",  # open for applications
-    f"/applydesk/operator/exercises/{OPEN}/applications",  # no rounds yet
+    f"/applydesk/operator/exercises/{OPEN}/applications",  # only its first stage
     f"/applydesk/operator/exercises/{BLANK}/form/preview",
     f"/applydesk/operator/exercises/{BLIND}",  # Review stage; blind review on
     f"/applydesk/operator/exercises/{BLIND}/gates",  # no reviewer pool
@@ -317,27 +317,26 @@ def test_the_retired_sections_are_gone(client: TestClient, old: str) -> None:
 
 @pytest.mark.parametrize(
     ("exercise_id", "now"),
-    [(DRAFT, "Setup"), (OPEN, "Applications"), (EX, "Review"), (BLIND, "Review")],
+    [(DRAFT, "Stage 1"), (OPEN, "Stage 1"), (EX, "Interview"), (BLIND, "Stage 2")],
 )
-def test_home_marks_the_current_stage_on_its_timeline(
+def test_the_lobby_names_each_exercise_s_current_stage(
     client: TestClient, exercise_id: str, now: str
 ) -> None:
-    text = client.get(f"/applydesk/operator/exercises/{exercise_id}").text
-    current = re.findall(r'aria-current="step">\s*<span class="stage-name">([^<]+)', text)
-    assert [c.strip() for c in current] == [now]
-    done = {"Setup": 0, "Applications": 1, "Review": 2}[now]
-    assert text.count('<span class="chip chip-mute">Done</span>') == done
-    for stage in ("Setup", "Applications", "Review", "Outcome"):
-        assert f'<span class="stage-name">{stage}' in text
+    """Ruling 15: the stage holding the exercise's next step."""
+    e = sample_data.exercise(exercise_id)
+    assert e is not None and workflow.current_stage(e) == now
+    lobby = client.get("/applydesk/operator/exercises").text
+    row = lobby[lobby.index(e.name) :]
+    assert f"<td>{now}</td>" in row[: row.index("</tr>")]
 
 
-def test_process_carries_the_rounds_and_the_timeline(client: TestClient) -> None:
+def test_process_carries_the_stages_and_the_milestones(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
-    assert '<ol class="stages"' in text and "<h3>Milestones</h3>" in text
-    assert 'aria-current="step"' in text
+    assert "<h3>Milestones</h3>" in text
     assert "Add a milestone" in text and "New announcement" in text
-    for r in ("Round 1", "Round 2", "Final"):
-        assert f"<h3>{r} <span" in text
+    for st in ("Applications", "Review", "Interview", "Decision"):
+        assert f"<h3>{st} <span" in text
+    assert "<strong>Application form</strong>" in text  # in Applications
     assert "Combined ≥ 4.2 → Shortlisted, else Not shortlisted" in text
     assert "Peer Review 30% · Faculty Panel Review 70%" in text
     assert "Decided by hand" in text  # Final results
@@ -413,8 +412,7 @@ def test_a_blank_exercise_lists_what_is_still_to_set_up(client: TestClient) -> N
         (f"{base}/form", "Application form"),
     ]
     assert "Dates not set" in home and "(a hard deadline)" not in home
-    current = re.findall(r'aria-current="step">\s*<span class="stage-name">([^<]+)', home)
-    assert [c.strip() for c in current] == ["Setup"]
+    assert re.findall(r'data-wf-step="([^"]+)" aria-current="step"', home) == ["Application form"]
 
 
 def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> None:
@@ -489,7 +487,7 @@ def test_the_workflow_card_follows_the_timeline(client: TestClient) -> None:
         "Close and archive",
     ]
     groups = re.findall(r'<span class="wf-grp">([^<]+)</span>', text)
-    assert groups == ["Application", "Round 1", "Round 2", "Final", "Close"]
+    assert groups == ["Applications", "Review", "Interview", "Decision", "Close"]
     # Next is the earliest step not done: Gate 3, sent, opening Evaluations.
     now = re.findall(r'data-wf-step="([^"]+)" aria-current="step"', text)
     assert now == ["Interview"]

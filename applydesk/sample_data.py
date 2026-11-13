@@ -16,7 +16,7 @@ class Exercise:
     code: str  # the operator's short code, as an RRW session's (unique)
     name: str
     state: str  # Draft, Published, Closed, Archived
-    stage: str  # Application, Review
+    form_open: bool  # the application form takes applications (rulings 14, 15)
     eligibility: str  # "Open to all signed in", "Invitation only"
     blind: bool
     opens: str
@@ -64,8 +64,8 @@ EXERCISES: tuple[Exercise, ...] = (
         name="Undergraduate Research Fellowship 2027",
         state="Published",
         # The model exercise (author, 2026-11-13): partway through
-        # evaluation, Round 2 under way (`applydesk/rounds.py`).
-        stage="Review",
+        # evaluation, its Interview stage under way (`applydesk/stages.py`).
+        form_open=False,
         eligibility="Open to all signed in",
         blind=False,
         opens="1 Sep 2026",
@@ -78,7 +78,7 @@ EXERCISES: tuple[Exercise, ...] = (
         code="TEA-2026",
         name="Teaching Excellence Award 2026",
         state="Published",
-        stage="Review",
+        form_open=False,
         eligibility="Invitation only",
         blind=True,
         opens="1 Sep 2026",
@@ -91,7 +91,7 @@ EXERCISES: tuple[Exercise, ...] = (
         code="SIS-2027",
         name="Summer Internship Scheme 2027",
         state="Draft",
-        stage="Application",
+        form_open=True,
         eligibility="Open to all signed in",
         blind=False,
         opens="Not set",
@@ -99,14 +99,14 @@ EXERCISES: tuple[Exercise, ...] = (
         expected_outcome="Not set",
         summary="Placements with partner organizations over the summer vacation.",
     ),
-    # Open for applications, now that the model exercise is in its
-    # Review stage (segment AD1C).
+    # Open for applications, now that the model exercise is past its
+    # Applications stage (segment AD1C).
     Exercise(
         public_id="r6tm4kq9wz",
         code="PCG-2027",
         name="Postgraduate Conference Grant 2027",
         state="Published",
-        stage="Application",
+        form_open=True,
         eligibility="Open to all signed in",
         blind=False,
         opens="1 Nov 2026",
@@ -121,7 +121,7 @@ EXERCISES: tuple[Exercise, ...] = (
         code="",
         name="Graduate Travel Grant 2027",
         state="Draft",
-        stage="Application",
+        form_open=True,
         eligibility="Not set",
         blind=False,
         opens="Not set",

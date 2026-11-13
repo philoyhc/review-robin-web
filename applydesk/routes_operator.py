@@ -6,7 +6,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
-from applydesk import rounds, sample_data, workflow
+from applydesk import sample_data, stages, workflow
 from applydesk.gate import placeholders_only
 from applydesk.lookups import exercise_or_404
 from applydesk.web import OPERATIONS_PAGES, SETUP_PAGES, exercise_nav, render
@@ -26,6 +26,7 @@ def exercises(request: Request) -> Response:
         area="Exercises",
         exercises=sample_data.EXERCISES,
         applications=sample_data.applications_of,
+        current_stage=workflow.current_stage,
     )
 
 
@@ -92,13 +93,13 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         pool_label=sample_data.pool_label,
         blank=sample_data.FormCard("field"),
         blank_section=sample_data.FormCard("section"),
-        plan=rounds.plan_of(exercise.public_id),
-        counts=rounds.counts,
-        last_submitted=rounds.last_submitted,
-        scope=rounds.scope,
-        submitted_rank=rounds.submitted_rank,
-        rule_text=rounds.rule_text,
-        rule_json=rounds.rule_json,
+        plan=stages.plan_of(exercise.public_id),
+        counts=stages.counts,
+        last_submitted=stages.last_submitted,
+        scope=stages.scope,
+        submitted_rank=stages.submitted_rank,
+        rule_text=stages.rule_text,
+        rule_json=stages.rule_json,
         gate_state=workflow.gate_state,
         emails=workflow.emails(exercise.public_id),
         form_state=workflow.form_state(exercise),

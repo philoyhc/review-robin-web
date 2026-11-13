@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from applydesk import rounds, sample_data
+from applydesk import sample_data, stages
 from applydesk.sample_data import Exercise
 
 #: Each sample gate's state and its line (ruling 14: Not ready → Ready →
@@ -71,7 +71,7 @@ def form_state(exercise: Exercise) -> str:
     """The application form's state: Draft, Open or Closed."""
     if exercise.state == "Draft":
         return "Draft"
-    return "Open" if exercise.stage == "Application" else "Closed"
+    return "Open" if exercise.form_open else "Closed"
 
 
 def gate_state(exercise_id: str, key: str) -> tuple[str, str]:
@@ -91,9 +91,9 @@ def outcome_email(exercise_id: str, outcome_key: str) -> Email | None:
 def status_row(exercise: Exercise) -> tuple[Pill, ...]:
     """The chrome's status row: the exercise, then the form, gates,
     outcomes and emails, then applications received."""
-    plan = rounds.plan_of(exercise.public_id)
-    gates = [c for c in plan.columns if isinstance(c, rounds.Gate)]
-    outcomes = [c for c in plan.columns if isinstance(c, rounds.Outcome)]
+    plan = stages.plan_of(exercise.public_id)
+    gates = [c for c in plan.columns if isinstance(c, stages.Gate)]
+    outcomes = [c for c in plan.columns if isinstance(c, stages.Outcome)]
     apps = sample_data.applications_of(exercise.public_id)
     submitted = sum(a.state == "Submitted" for a in apps)
     form = form_state(exercise)
@@ -128,7 +128,7 @@ class Step:
     """One step on the Workflow card: the form, a gate, an outcome or the
     close, in timeline order (ruling 14)."""
 
-    group: str  # the round it sits in: "Application", "Round 1", …, "Close"
+    group: str  # the stage it sits in, by its label, or "Close"
     kind: str  # "Gate 1", "Outcome 2", "" for the form and the close
     title: str
     state: str
@@ -141,32 +141,31 @@ class Step:
 
 
 def steps(exercise: Exercise) -> tuple[Step, ...]:
-    """The exercise's timeline as the Workflow card steps through it: the
-    form, then each round's gates and outcomes in their set order, then
-    the close."""
-    plan = rounds.plan_of(exercise.public_id)
+    """The exercise's timeline as the Workflow card steps through it: each
+    stage's application form, gates and outcomes in their set order, then
+    the close (ruling 15). An exercise whose applications came from
+    elsewhere has no form step."""
+    plan = stages.plan_of(exercise.public_id)
     apps = sample_data.applications_of(exercise.public_id)
     form = form_state(exercise)
-    dates = (
-        "Dates not set"
-        if "Not set" in (exercise.opens, exercise.application_stage_ends)
-        else f"{exercise.opens} – {exercise.application_stage_ends}"
-    )
-    out: list[Step] = [
-        Step(
-            "Application",
-            "",
-            "Application form",
-            form,
-            dates,
-            f"{len(apps)} received" if form != "Draft" else "Not open yet",
-            {"Draft": "Open form…", "Open": "Close form…"}.get(form, ""),
-            form == "Closed",
+    out: list[Step] = []
+    holding = plan.application_stage
+    if holding is not None:
+        out.append(
+            Step(
+                holding.label,
+                "",
+                "Application form",
+                form,
+                holding.dates,
+                f"{len(apps)} received" if form != "Draft" else "Not open yet",
+                {"Draft": "Open form…", "Open": "Close form…"}.get(form, ""),
+                form == "Closed",
+            )
         )
-    ]
-    for r in plan.rounds:
+    for r in plan.stages:
         for c in r.columns:
-            if isinstance(c, rounds.Gate):
+            if isinstance(c, stages.Gate):
                 state, line = gate_state(exercise.public_id, c.key)
                 out.append(
                     Step(
@@ -200,7 +199,7 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
                         blocked,
                     )
                 )
-    last = plan.rounds[-1].dates.split("–")[-1].strip() if plan.rounds else ""
+    last = plan.stages[-1].dates.split("–")[-1].strip() if plan.stages else ""
     out.append(
         Step(
             "Close",
@@ -230,3 +229,14 @@ def groups(all_steps: tuple[Step, ...]) -> tuple[tuple[str, tuple[Step, ...]], .
         else:
             out.append((s.group, [s]))
     return tuple((label, tuple(members)) for label, members in out)
+
+
+def current_stage(exercise: Exercise) -> str:
+    """The stage the exercise is in: the one holding its next step, or
+    its last once every step is done (ruling 15)."""
+    all_steps = steps(exercise)
+    now = next_step(all_steps)
+    if now is not None and now.group != "Close":
+        return now.group
+    plan = stages.plan_of(exercise.public_id)
+    return plan.stages[-1].label if plan.stages else ""
