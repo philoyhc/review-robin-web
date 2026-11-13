@@ -258,7 +258,7 @@ def test_sessions_diagnostics_back_link_falls_back_to_lobby(
     response = client.get("/operator/sys-admin/sessions")
     assert response.status_code == 200
     assert 'href="/operator/sessions"' in response.text
-    assert "Back to Sessions" in response.text
+    assert "Back to Operator Lobby" in response.text
 
 
 def test_sessions_diagnostics_renders_live_accounts_tab(

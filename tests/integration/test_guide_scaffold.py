@@ -130,7 +130,7 @@ def test_guide_back_link_defaults_to_the_lobby(client: TestClient) -> None:
     body = client.get("/guide").text
     assert 'class="back-link"' in body
     assert 'href="/operator/sessions"' in body
-    assert "Back to Sessions" in body
+    assert "Back to Operator Lobby" in body
 
 
 def test_guide_back_link_honours_a_valid_return_to(client: TestClient) -> None:

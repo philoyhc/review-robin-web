@@ -17,8 +17,8 @@ outside this catalogue and the contrast audit. Its card still takes the
 card shape (`spec/visual_style_general.md`): a 2px edge in
 `--border-default`'s value, an 8px radius, no shadow. Its own link
 always goes somewhere real, chosen from the request alone
-(`_home_link`): Sign out for a 401, "Go to Sessions" on an
-`/operator` path, and "Go to your reviews" (`/me`) everywhere else.
+(`_home_link`): Sign out for a 401, "Go to the Operator Lobby" on an
+`/operator` path, and "Go to the User Lobby" (`/me`) everywhere else.
 "Go back" shows beside it only when the page was reached from a page of
 the app (a same-origin `document.referrer` outside `/.auth/`), and links
 to that page, so it never follows a sign-in redirect and works in a new

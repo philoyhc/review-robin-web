@@ -366,9 +366,9 @@ The two-row session chrome (Setup row, Operations row) **does not appear** on th
 About and Settings are detour destinations: the operator opens them to consult or adjust something, then wants to return to whatever they were doing. The pattern:
 
 - When the operator opens About or Settings, the URL captures the origin via a query parameter (e.g., `?return_to=/sessions/abc123`) or session state.
-- The About/Settings page renders a clear "Back" affordance — a `.back-link` in `--text-link` near the top of the page body, labeled with context where possible: "← Back to Sessions" or "← Back to Student Associate Selection 2026 Peer Review".
+- The About/Settings page renders a clear "Back" affordance — a `.back-link` in `--text-link` near the top of the page body, labeled with context where possible: "← Back to Operator Lobby" or "← Back to Student Associate Selection 2026 Peer Review".
 - Clicking the affordance returns the operator to the origin URL.
-- If no origin is recorded (e.g., the operator deep-linked to Settings), the affordance defaults to "← Back to Sessions" — the app's natural lobby. For a viewer who is not an operator (a participant on About, the Guide or Sign-in details) it defaults to "← Back to your reviews" (`/me`) instead, since the lobby would only bounce them there.
+- If no origin is recorded (e.g., the operator deep-linked to Settings), the affordance defaults to "← Back to Operator Lobby" — the app's natural lobby. For a viewer who is not an operator (a participant on About, the Guide or Sign-in details) it defaults to "← Back to User Lobby" (`/me`) instead, since the lobby would only bounce them there.
 
 This is a small piece of plumbing but it changes the affordance from "trip down a rabbit hole" to "quick consultation." Operators learn to use About and Settings without losing their place.
 

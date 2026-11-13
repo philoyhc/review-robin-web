@@ -113,14 +113,14 @@ def _home_link(request: Request, status_code: int) -> tuple[str, str]:
 
     A 401 means no usable identity, and ``/me`` would only answer 401
     again, so the way out is Sign out. An operator page leads to the
-    Sessions lobby. Everything else leads to ``/me``, which renders for
+    Operator Lobby. Everything else leads to ``/me``, which renders for
     anyone signed in.
     """
     if status_code == status.HTTP_401_UNAUTHORIZED:
         return "/.auth/logout", "Sign out"
     if urls.app_path(request).startswith("/operator"):
-        return "/operator/sessions", "Go to Sessions"
-    return "/me", "Go to your reviews"
+        return "/operator/sessions", "Go to the Operator Lobby"
+    return "/me", "Go to the User Lobby"
 
 
 def _render_error(request: Request, status_code: int, detail: str | None = None) -> Response:

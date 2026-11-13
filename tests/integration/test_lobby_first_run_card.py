@@ -64,7 +64,9 @@ def test_the_guide_link_resolves_and_returns_to_the_lobby(
     response = client.get(GUIDE_LINK)
 
     assert response.status_code == 200
-    assert "&larr; Back to Sessions" in response.text or ("← Back to Sessions" in response.text)
+    assert "&larr; Back to Operator Lobby" in response.text or (
+        "← Back to Operator Lobby" in response.text
+    )
 
 
 def test_operator_with_a_session_does_not_see_the_card(

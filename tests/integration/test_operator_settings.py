@@ -388,7 +388,7 @@ def test_settings_get_renders_back_link_to_origin(client: TestClient, db: Sessio
     ``app.web.return_to`` and renders the back-link. (The SMTP form's
     Cancel retired with it, 14C Item 1.)"""
     body = client.get("/operator/settings?return_to=/operator/sessions").text
-    assert "&larr; Back to Sessions" in body
+    assert "&larr; Back to Operator Lobby" in body
     assert 'class="back-link" href="/operator/sessions"' in body
 
 

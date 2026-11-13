@@ -27,7 +27,7 @@ def test_about_renders_default_back_link_without_return_to(
     body = client.get("/about").text
     assert 'class="back-link"' in body
     assert 'href="/operator/sessions"' in body
-    assert "Back to Sessions" in body
+    assert "Back to Operator Lobby" in body
 
 
 def test_about_renders_session_label_when_return_to_is_session_path(
@@ -45,7 +45,7 @@ def test_about_falls_back_to_default_for_disallowed_return_to(
     body = client.get("/about?return_to=https://evil.example.com").text
     assert "evil.example.com" not in body
     assert 'href="/operator/sessions"' in body
-    assert "Back to Sessions" in body
+    assert "Back to Operator Lobby" in body
 
 
 def test_me_debug_renders_back_link(client: TestClient, db: Session) -> None:
@@ -77,7 +77,7 @@ def test_a_stranger_is_not_told_a_session_name_by_the_back_link(
     # A participant's fallback is their own dashboard (audit M8). The
     # href and the label are asserted together: About carries a plain
     # "/me" link of its own.
-    assert 'href="/me">&larr; Back to your reviews' in body
+    assert 'href="/me">&larr; Back to User Lobby' in body
 
 
 def test_me_debug_creates_no_user_row(client: TestClient, db: Session, make_client) -> None:
@@ -94,7 +94,7 @@ def test_me_debug_creates_no_user_row(client: TestClient, db: Session, make_clie
         )
     )
     body = eve.get(f"/auth/me/debug?return_to=/me/sessions/{session.public_id}").text
-    assert "Back to your reviews" in body
+    assert "Back to User Lobby" in body
     assert db.execute(select(User).where(User.email == "eve@example.edu")).first() is None
 
 
@@ -119,7 +119,7 @@ def test_me_debug_renders_when_the_user_lookup_fails(make_client, monkeypatch) -
     )
     resp = eve.get("/auth/me/debug")
     assert resp.status_code == 200
-    assert "Back to your reviews" in resp.text
+    assert "Back to User Lobby" in resp.text
 
 
 def test_settings_does_not_name_another_operators_session(
@@ -134,7 +134,7 @@ def test_settings_does_not_name_another_operators_session(
         .text
     )
     assert session.name not in body
-    assert "Back to Sessions" in body
+    assert "Back to Operator Lobby" in body
 
 
 def test_chrome_about_link_carries_current_path_as_return_to(

@@ -35,8 +35,8 @@ class ReturnTarget:
     label: str
 
 
-DEFAULT_TARGET = ReturnTarget(url="/operator/sessions", label="Sessions")
-PARTICIPANT_DEFAULT = ReturnTarget(url="/me", label="your reviews")
+DEFAULT_TARGET = ReturnTarget(url="/operator/sessions", label="Operator Lobby")
+PARTICIPANT_DEFAULT = ReturnTarget(url="/me", label="User Lobby")
 
 # ``\Z``, not ``$``: ``$`` also matches before a trailing newline. And
 # ASCII classes, not ``\w`` or ``\d``, which match any Unicode letter or
@@ -135,7 +135,7 @@ def _resolve(
         return None
 
     if _OPERATOR_SESSIONS.match(path):
-        return ReturnTarget(url=path, label="Sessions")
+        return ReturnTarget(url=path, label="Operator Lobby")
 
     page = _OPERATOR_PAGES.get(path.removesuffix("/"))
     if page is not None:
@@ -149,7 +149,7 @@ def _resolve(
         return ReturnTarget(url=path, label=session.name)
 
     if _REVIEWER_ROOT.match(path):
-        return ReturnTarget(url=path, label="your reviews")
+        return ReturnTarget(url=path, label="User Lobby")
 
     m = _REVIEWER_SESSION.match(path)
     if m:

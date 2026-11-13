@@ -90,7 +90,7 @@ def test_the_fallback_is_the_lobby_for_operators_and_me_for_others(
 def test_operator_sessions_root_resolves_to_sessions_label(db: Session) -> None:
     target = resolve_return_to("/operator/sessions", db, viewer=None)
     assert target.url == "/operator/sessions"
-    assert target.label == "Sessions"
+    assert target.label == "Operator Lobby"
 
 
 def test_operator_session_detail_resolves_to_session_name(db: Session) -> None:
@@ -120,7 +120,7 @@ def test_operator_session_with_unknown_id_falls_back(db: Session) -> None:
 def test_reviewer_root_resolves_to_your_reviews(db: Session) -> None:
     target = resolve_return_to("/me", db, viewer=None)
     assert target.url == "/me"
-    assert target.label == "your reviews"
+    assert target.label == "User Lobby"
 
 
 def test_reviewer_session_resolves_to_session_name(db: Session) -> None:
@@ -133,7 +133,7 @@ def test_reviewer_session_resolves_to_session_name(db: Session) -> None:
 def test_query_string_and_fragment_are_stripped(db: Session) -> None:
     target = resolve_return_to("/operator/sessions?validated=1#x", db, viewer=None)
     assert target.url == "/operator/sessions"
-    assert target.label == "Sessions"
+    assert target.label == "Operator Lobby"
 
 
 @pytest.mark.parametrize(
@@ -364,7 +364,7 @@ def test_a_callable_viewer_is_resolved_at_most_once_and_only_when_needed(
         return _owner(db, session)
 
     # Allowlisted targets that name no session never ask.
-    assert resolve_return_to("/me", db, viewer=viewer).label == "your reviews"
+    assert resolve_return_to("/me", db, viewer=viewer).label == "User Lobby"
     assert resolve_return_to("/operator/settings", db, viewer=viewer).label == "Settings"
     assert calls == []
     # A session path asks once.
