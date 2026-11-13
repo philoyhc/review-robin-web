@@ -111,7 +111,7 @@ def test_search_status_and_last_applications_filter(page: Page) -> None:
     assert shown.inner_text() == "Showing 2 of 102"
     page.locator("[data-ap-which]").select_option("last")
     assert shown.inner_text() == "Showing 1 of 102"
-    assert "Submitted" in page.locator("[data-row]:visible").inner_text()
+    assert "Submitted" in (page.locator("[data-row]:visible").text_content() or "")
     page.locator("[data-ap-search]").fill("")
     page.locator("[data-ap-which]").select_option("all")
     page.locator("[data-ap-status]").select_option("Draft")

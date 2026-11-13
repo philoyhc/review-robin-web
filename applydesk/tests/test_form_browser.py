@@ -80,7 +80,7 @@ def test_editing_a_card_updates_its_summary_and_the_outline(page: Page) -> None:
     card.locator('[data-f="max"][data-g="number"]').fill("12")
     card.locator('[data-f="label"]').fill("Months the project will take")
     card.locator("[data-fc-toggle]").click()
-    assert card.locator('[data-sum="type"]').inner_text() == "Integer · 1 to 12, step 1"
+    assert card.locator('[data-sum="type"]').text_content() == "Integer · 1 to 12, step 1"
     assert card.locator('[data-sum="label"]').inner_text() == "Months the project will take"
     assert "Months the project will take" in page.locator("[data-fb-outline]").inner_text()
 

@@ -31,9 +31,14 @@
       --text-link: #2563eb; --border-subtle: #e5e7eb; --border-default: #6f7b8e;
       --on-accent: #ffffff; --danger: #b91c1c; --amber: #92400e;
       --accent: #be123c; --accent-tint: #fff1f2; --accent-chip-fg: #9f1239;
+      /* Pills and the Secondary button as Review Robin's (its theme
+         customizer, `tools/theme_customizer.html`); applydesk/tests/
+         test_style_parity.py holds them equal. */
       --chip-info-bg: #dbeafe; --chip-info-fg: #1e40af;
       --chip-warn-bg: #fef3c7; --chip-warn-fg: #92400e;
-      --chip-ok-bg: #dcfce7; --chip-ok-fg: #166534;
+      --chip-ok-bg: #d1fae5; --chip-ok-fg: #166534;
+      --btn-secondary-bg: #ffffff; --btn-secondary-fg: #111827;
+      --btn-secondary-border: #616874; --btn-secondary-bg-hover: #f5f5f7;
       --chip-mute-bg: #f3f4f6; --chip-mute-fg: #3a465c;
       /* The exercise chrome's rows, laid out as Review Robin's (ruling
          14) in ApplyDesk's rose (author, 2026-11-13). */
@@ -48,9 +53,11 @@
       --text-link: #60a5fa; --border-subtle: #2b3547; --border-default: #6f7b8e;
       --on-accent: #111827; --danger: #fca5a5; --amber: #fcd34d;
       --accent: #fb7185; --accent-tint: #4c0519; --accent-chip-fg: #fda4af;
-      --chip-info-bg: #172554; --chip-info-fg: #93c5fd;
-      --chip-warn-bg: #451a03; --chip-warn-fg: #fcd34d;
-      --chip-ok-bg: #052e16; --chip-ok-fg: #86efac;
+      --chip-info-bg: #16324f; --chip-info-fg: #93c5fd;
+      --chip-warn-bg: #3a2c0a; --chip-warn-fg: #fcd34d;
+      --chip-ok-bg: #0f3d2e; --chip-ok-fg: #6ee7b7;
+      --btn-secondary-bg: #0f141b; --btn-secondary-fg: #e6eaf2;
+      --btn-secondary-border: #a9b4c6; --btn-secondary-bg-hover: #232c3b;
       --chip-mute-bg: #232c3b; --chip-mute-fg: #a9b4c6;
       --nav-home-bg: #232c3b; --nav-tab-on-bg: #0f141b;
       --nav-setup-bg: #4c0519; --nav-ops-bg: #2a0a12;
@@ -100,7 +107,7 @@
     .lede { margin: 0 0 16px; color: var(--text-strong-subtle); font-size: 15px; }
     .placeholder { margin: 0 0 16px; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--accent-tint); font-size: 14px; }
     .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; }
-    .card { border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-card); padding: 16px; min-width: 0; }
+    .card { border: 2px solid var(--border-default); border-radius: 8px; background: var(--surface-card); padding: 16px; min-width: 0; }
     .card + .card { margin-top: 16px; }
     .grid > .card + .card { margin-top: 0; }
     .card + .grid, .grid + .card, .grid + .grid { margin-top: 16px; }
@@ -172,14 +179,16 @@
     .xproc th:first-child { width: 34%; }
     .xproc th:last-child { width: 22%; }
     .xnav-status { margin: 0; padding: 10px 16px; border-top: 1px solid var(--border-subtle); font-size: 14px; color: var(--text-subtle); }
-    .xnav-status .chip { text-transform: uppercase; margin: 2px 2px; }
+    .xnav-status .chip { margin: 2px 2px; }
     @media (max-width: 720px) {
       .xnav-grid { grid-template-columns: 1fr; }
       .xnav-home, .xnav-label, .xnav-row { grid-column: 1; grid-row: auto; }
       .xnav-home { border-right: 0; border-bottom: 1px solid var(--border-subtle); min-height: 44px; }
       .xnav-label { justify-content: flex-start; border-right: 0; padding: 8px 16px; }
     }
-    .chip { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    /* A pill, as Review Robin's: tiny, uppercase, 500, its edge kept
+       transparent so an outlined one does not grow. */
+    .chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; border: 1px solid transparent; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; white-space: nowrap; }
     .chip-info { background: var(--chip-info-bg); color: var(--chip-info-fg); }
     .chip-warn { background: var(--chip-warn-bg); color: var(--chip-warn-fg); }
     .chip-ok { background: var(--chip-ok-bg); color: var(--chip-ok-fg); }
@@ -192,13 +201,15 @@
     .btnrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
     .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 14px; border-radius: 6px; font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; border: 1px solid var(--accent); }
     .btn-primary { background: var(--accent); color: var(--on-accent); }
-    .btn-secondary { background: transparent; color: var(--accent); }
+    /* Secondary: neutral, as Review Robin's; the accent stays Primary's. */
+    .btn-secondary { background: var(--btn-secondary-bg); color: var(--btn-secondary-fg); border-color: var(--btn-secondary-border); }
+    .btn-secondary:not([disabled]):hover { background: var(--btn-secondary-bg-hover); }
     /* Outline-amber: serious but recoverable, as Return to draft. */
     .btn-alert { background: transparent; color: var(--amber); border-color: var(--amber); }
     /* Destructive (outline red): what cannot be undone, as Withdraw. */
     .btn-destructive { background: transparent; color: var(--danger); border-color: var(--danger); }
-    /* 0.85, as Residential's: disabled text stays at 4.5:1 or better. */
-    .btn[disabled] { opacity: 0.85; cursor: default; }
+    /* 0.5, as Review Robin's: a disabled control reads as disabled. */
+    .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
     .section { border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px 16px; }
     .section + .section, .facts + .section { margin-top: 12px; }
     .section h3 { margin: 0 0 4px; font-size: 15px; }
@@ -283,7 +294,9 @@
     .card .fb-pv-err { margin: 2px 0 0; font-size: 12px; color: var(--text-subtle); }
     .card .fb-pv-err.is-bad { color: var(--danger); }
     .fb-cards { display: flex; flex-direction: column; gap: 10px; }
-    .fc { border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-card); }
+    /* A card in a builder (Form's questions, Process's stages): a card's
+       edge, as Review Robin's (author, 2026-11-13). */
+    .fc { border: 2px solid var(--border-default); border-radius: 8px; background: var(--surface-card); }
     .fc-section { background: var(--surface-muted); border-color: var(--border-default); }
     .fc-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; }
     .fc-grip { border: 0; background: none; color: var(--text-subtle); cursor: grab; font-size: 16px; letter-spacing: -3px; padding: 6px 8px 6px 4px; border-radius: 4px; touch-action: none; }
