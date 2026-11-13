@@ -1,20 +1,20 @@
-{# Emails (ruling 14, segment AD1D): every template to applicants, kept in
-   one place; Process sets which steps send one, and when. Reviewers'
-   emails are Review Robin's. A placeholder until its own segment. #}
-<p>The emails applicants receive. Each is kept here; Process says which steps send one, and when. Panel members' invitations and reminders come from Review Robin.</p>
+{# Emails (rulings 14, 16): every template the exercise owes, kept in one
+   place. Process says which items email whom; each one ticked there is a
+   template here, named for its stage, item and audience. A placeholder
+   until its own segment. #}
+<p>Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Panel members' invitations and reminders come from Review Robin.</p>
 {% for e in emails %}
-{% set name, ok = e.name, e.ok %}
-<section class="card" data-email="{{ name }}">
-  <h2>{{ name }} <span class="chip chip-{{ 'ok' if ok else 'warn' }}">{{ "Set up" if ok else "Not set up" }}</span></h2>
+<section class="card" data-email="{{ e.name }}">
+  <h2>{{ e.name }} <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}">{{ "Written" if e.ok else "Owed" }}</span></h2>
   <p class="muted">{{ e.when }}</p>
-  <div class="field"><label>Subject <input type="text" value="{{ exercise.name ~ ': ' ~ name if ok else '' }}" disabled></label></div>
-  <div class="field"><label>Body <textarea rows="3" disabled>{{ "Dear [applicant name], …" if ok else "" }}</textarea></label></div>
+  <div class="field"><label>Subject <input type="text" value="{{ exercise.name ~ ': ' ~ e.name if e.ok else '' }}" disabled></label></div>
+  <div class="field"><label>Body <textarea rows="3" disabled>{{ ("Dear [" ~ ("applicant" if e.audience == "Applicants" else "evaluator") ~ " name], …") if e.ok else "" }}</textarea></label></div>
   <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Preview</button><button class="btn btn-secondary" type="button" disabled>Reset to default</button></div>
 </section>
 {% else %}
 <section class="card">
   <h2>No emails yet</h2>
-  <p class="muted">A receipt on submit is added when the form is first set up; each outcome's notice, when Process says it sends one.</p>
+  <p class="muted">Each email ticked on Process, the form's or an outcome's, is listed here as a template to write.</p>
 </section>
 {% endfor %}
 <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Save</button></div>

@@ -9,16 +9,19 @@
 
 {% macro grip() %}<button type="button" class="fc-grip" data-fc-grip aria-label="Move: drag, or press the up and down arrow keys" title="Drag to reorder">⋮⋮</button>{% endmacro %}
 
-{% macro form_item(emails) %}
+{% macro form_item(new=False) %}
 <div class="pc-item" data-item="form">
   <span class="fc-kicker">Form</span>
   <p class="pc-line">The application form opens and closes on this stage's dates. Its questions are built on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>.</p>
-  <div class="pc-row">
-    {% for e in emails if not e.outcome %}
-    <span class="pc-mail">{{ e.name }}: <span class="chip {{ 'chip-ok' if e.ok else 'chip-warn' }}">{{ "Set up" if e.ok else "Not set up" }}</span> <span class="muted">{{ e.when }}</span></span>
-    {% else %}
-    <span class="muted">No emails to applicants yet: the receipt and reminders are kept on Emails.</span>
-    {% endfor %}
+  {# Which emails it sends (ruling 16); each one ticked is a template owed on Emails. #}
+  <div class="pc-release" data-pc-release>
+    <span class="fc-l">Emails</span>
+    <div class="pc-row pc-aud" role="group" aria-label="Applicants, from the form">
+      <span class="pc-aud-h">Applicants</span>
+      <label class="pc-check"><input type="checkbox" data-rel="receipt"{% if new or sends('receipt', 'Applicants') %} checked{% endif %}> Receipt on submitting</label>
+      <label class="pc-check"><input type="checkbox" data-rel="reminder"{% if not new and sends('reminder', 'Applicants') %} checked{% endif %}> Reminder to drafts</label>
+    </div>
+    <p class="pc-line muted pc-hint">Each email ticked is a template owed on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}">Emails</a>.</p>
   </div>
   <div class="pc-item-foot"><button type="button" class="btn btn-secondary" data-pc-act="remove-form">Remove the form</button></div>
 </div>
@@ -50,7 +53,7 @@
 </div>
 {% endmacro %}
 
-{% macro outcome_item(plan, o, rule_text, emails) %}
+{% macro outcome_item(plan, o, rule_text) %}
 <div class="pc-item" data-item="outcome" data-key="{{ o.key }}" data-rule="{{ rule_json(o) | tojson | forceescape }}">
   <span class="fc-kicker" data-pc-kicker>Outcome {{ o.number }}</span>
   <div class="pc-row">
@@ -68,21 +71,21 @@
   </div>
   {{ rule_box(plan, o, rule_text) }}
   {# What its release does, per audience (author, 2026-11-13): the timeline
-     each sees on signing in to their participant page, and an email. #}
-  {% set sends = (emails | selectattr("outcome", "equalto", o.key) | list) if o.key else [] %}
+     each sees on signing in to their participant page, and an email. Each
+     email ticked is a template owed on Emails (ruling 16): no template is
+     picked here. #}
   <div class="pc-release" data-pc-release>
     <span class="fc-l">When released</span>
-    <p class="pc-line muted pc-hint">Update timeline: the timeline they see when they sign in.</p>
+    <p class="pc-line muted pc-hint">Update timeline: the timeline they see when they sign in. Send email: a template owed on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}">Emails</a>.</p>
     <div class="pc-row pc-aud" role="group" aria-label="Applicants, when released">
       <span class="pc-aud-h">Applicants</span>
       <label class="pc-check"><input type="checkbox" data-rel="applicants-timeline" checked> Update timeline</label>
-      <label class="pc-check"><input type="checkbox" data-rel="applicants-email"{% if sends %} checked{% endif %}> Send email</label>
-      <label class="fc-l pc-wide">Email<select class="fc-in" data-rel-template="applicants"{% if not sends %} disabled{% endif %}>{% if not sends %}<option value="" selected>Choose a template</option>{% endif %}{% for e in emails if e.outcome %}<option{% if e.outcome == o.key %} selected{% endif %}>{{ e.name }}{{ "" if e.ok else " (not set up)" }}</option>{% else %}<option>No templates yet: kept on Emails</option>{% endfor %}</select></label>
+      <label class="pc-check"><input type="checkbox" data-rel="applicants-email"{% if o.key and sends(o.key, 'Applicants') %} checked{% endif %}> Send email</label>
     </div>
     <div class="pc-row pc-aud" role="group" aria-label="Panel evaluators, when released">
       <span class="pc-aud-h">Panel evaluators</span>
       <label class="pc-check"><input type="checkbox" data-rel="evaluators-timeline"> Update timeline</label>
-      <label class="pc-check"><input type="checkbox" data-rel="evaluators-email"> Send email</label>
+      <label class="pc-check"><input type="checkbox" data-rel="evaluators-email"{% if o.key and sends(o.key, 'Panel evaluators') %} checked{% endif %}> Send email</label>
     </div>
   </div>
   <p class="pc-line muted">{{ ("Released " ~ o.released) if o.released else "Not released yet: its Released switch is on Applications." }}</p>
@@ -90,7 +93,7 @@
 </div>
 {% endmacro %}
 
-{% macro stage(plan, st, rule_text, emails, last, open=False) %}
+{% macro stage(plan, st, rule_text, last, open=False) %}
 {% set gates = st.columns | selectattr("via", "defined") | list %}
 {% set outs = st.columns | rejectattr("via", "defined") | list %}
 {% set dates = st.dates.split(" – ") if " – " in st.dates else [st.dates, ""] %}
@@ -113,9 +116,9 @@
       <label class="fc-l">To<input class="fc-in" data-pc="to" value="{{ dates[1] }}" placeholder="Date"></label>
       <label class="pc-check"><input type="checkbox" checked> Shown to applicants</label>
     </div>
-    {% if st.form %}{{ form_item(emails) }}{% endif %}
+    {% if st.form %}{{ form_item() }}{% endif %}
     {% for g in gates %}{{ gate_item(plan, g, rule_text) }}{% endfor %}
-    {% for o in outs %}{{ outcome_item(plan, o, rule_text, emails) }}{% endfor %}
+    {% for o in outs %}{{ outcome_item(plan, o, rule_text) }}{% endfor %}
     <p class="pc-line muted pc-empty">Nothing in this stage yet: add the form, a gate or an outcome.</p>
     <div class="pc-adds">
       <button type="button" class="btn btn-secondary" data-pc-act="gate"{% if st.form %} disabled title="A stage holding the form holds no gate"{% endif %}>+ Gate</button>

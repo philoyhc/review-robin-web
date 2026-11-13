@@ -3,6 +3,8 @@ placeholders on sample data, controls inert."""
 
 from __future__ import annotations
 
+import functools
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
@@ -106,6 +108,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         blank_outcome=stages.Outcome("", 0, "", (), "", ""),
         gate_state=workflow.gate_state,
         emails=workflow.emails(exercise.public_id),
+        sends=functools.partial(workflow.sends, exercise.public_id),
         form_state=workflow.form_state(exercise),
         wf_steps=workflow.steps(exercise),
         wf_groups_of=workflow.groups,

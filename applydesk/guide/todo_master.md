@@ -98,7 +98,7 @@ where a ruling below differs from it, the ruling wins.
       dates, every rule, what a release does), *Form*, *Gates* (one card
       per gate, its panel roster on it), *Emails* (every template to
       applicants, kept in one place; Process sets which steps send one,
-      and when); then
+      and when; *who it is to and how templates are named: ruling 16*); then
       an **Operations** row: *Applications*, *Evaluations* (each gate's
       progress and results), *Extract data*. Panels folds into Gates,
       Review becomes Evaluations, Reports becomes Extract data, Setup
@@ -154,6 +154,20 @@ where a ruling below differs from it, the ruling wins.
       form and an outcome (an outcome is optional: the sample's
       Call for applications has none); stages are added, moved and deleted,
       but the last one cannot be deleted.
+16. **Process says who is emailed; Emails lists every template owed**
+    (author, 2026-11-13; segment AD1E):
+    - On **Process** an item ticks whom it emails and never picks a
+      template: the form, its applicants' receipt and reminder; an
+      outcome's release, *Applicants* and *Panel evaluators*, each with
+      *Update timeline* (the timeline they see on signing in to their
+      participant page) and *Send email*.
+    - **Emails** lists one template for each item and audience ticked,
+      named for its stage: *Review: Outcome - Applicants*, *Review:
+      Outcome - Panel evaluators*, *Call for applications: Receipt -
+      Applicants*. Each is *Written* or *Owed*; an outcome with one owed
+      is not ready to release.
+    - So Process is set up in full without visiting Emails first; the
+      templates are written after, against the list it makes.
 
 ## MVP roadmap
 
