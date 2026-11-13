@@ -21,12 +21,12 @@
       {% for c in cards %}
         {% if c.kind == "section" %}{{ fc.section(c) }}
         {% elif c.kind == "pagebreak" %}{{ fc.pagebreak() }}
-        {% else %}{{ fc.field(c, summary, kept_size, card_types, people, pool_label, open=single) }}{% endif %}
+        {% else %}{{ fc.field(c, summary, kept_size, card_types, people, open=single) }}{% endif %}
       {% endfor %}
     </div>
     {# What + New, + Section and + Page break add: the same macros as the
        server's own cards. #}
-    <template id="fb-new-field">{{ fc.field(blank, summary, kept_size, card_types, people, pool_label, open=True) }}</template>
+    <template id="fb-new-field">{{ fc.field(blank, summary, kept_size, card_types, people, open=True) }}</template>
     <template id="fb-new-section">{{ fc.section(blank_section, open=True) }}</template>
     <template id="fb-new-pagebreak">{{ fc.pagebreak() }}</template>
   </div>
@@ -49,6 +49,7 @@
   </aside>
 </div>
 {% include "applydesk/operator/_form_draw.html" %}
+{% include "applydesk/operator/_panel_pick_js.html" %}
 <script>
 // Segment AD1B: the Form page's moves, in the browser only; a reload
 // restores the sample form. Collapse and expand, the type menu, the
@@ -105,7 +106,8 @@
       var lo = val(card, "min"), hi = val(card, "max");
       var who = span(lo, hi, (hi || lo) === "1" ? "person" : "people");
       var pool = card.querySelector('[data-f="pool"]');
-      return "Select people · " + [who, pool.options[pool.selectedIndex].text].filter(Boolean).join(" · ");
+      var chosen = pool.options[pool.selectedIndex];
+      return "Select people · " + [who, chosen ? chosen.textContent : "Institution-wide"].filter(Boolean).join(" · ");
     }
     if (t === "photo") {
       var k = kept(val(card, "ratio_w"), val(card, "ratio_h"));
@@ -347,7 +349,9 @@
           pool: card.querySelector('[data-f="pool"]').value,
           ratio_w: val(card, "ratio_w"), ratio_h: val(card, "ratio_h"), kept: kept(val(card, "ratio_w"), val(card, "ratio_h"))
         };
-      })
+      }),
+      // Panels made on this page (ruling 19), for the preview tab.
+      pools: window.applydeskMadePanels || {}
     });
   };
 

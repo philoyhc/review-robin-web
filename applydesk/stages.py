@@ -49,6 +49,7 @@ class Gate:
     via: str  # "RRW": a Review Robin session
     measure: str  # what its result is called: "Rating", "Score", ""
     rule: Rule | None = None
+    panel: str = ""  # who evaluates: a sample_data.Panel key, "" for none yet (ruling 19)
 
 
 @dataclass(frozen=True)
@@ -122,8 +123,8 @@ class Plan:
 _EVERYONE = Rule(
     (("status", "", "is", "Submitted"), ("last", "", "le", "1")), "Entered", "Not entered"
 )
-_G1 = Gate("g1", 1, "Peer Review", "RRW", "Rating", _EVERYONE)
-_G2 = Gate("g2", 2, "Faculty Panel Review", "RRW", "Score", _EVERYONE)
+_G1 = Gate("g1", 1, "Peer Review", "RRW", "Rating", _EVERYONE, "panel-a")
+_G2 = Gate("g2", 2, "Faculty Panel Review", "RRW", "Score", _EVERYONE, "panel-b")
 _O1 = Outcome(
     "o1",
     1,
@@ -141,6 +142,7 @@ _G3 = Gate(
     "RRW",
     "Score",
     Rule((("out", "o1", "is", "Shortlisted"),), "Entered", "Not entered"),
+    "interviewers",
 )
 _O2 = Outcome(
     "o2",
@@ -173,7 +175,7 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
             "",
             "1 Nov – 30 Nov",
             (
-                Gate("g1", 1, "Panel Review", "RRW", "Score"),
+                Gate("g1", 1, "Panel Review", "RRW", "Score", panel="panel-a"),
                 Outcome(
                     "o1",
                     1,

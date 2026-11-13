@@ -512,10 +512,10 @@ def test_select_people_turns_names_into_pills(page: Page) -> None:
 def test_select_people_keeps_to_its_pool(page: Page) -> None:
     box = _people_box(page, "Preferred reviewer")
     preview = page.locator("#fb-preview")
-    assert "Choose 1 person from the reviewer pool." in preview.inner_text()
+    assert "Choose 1 person from Reviewer pool." in preview.inner_text()
     box.press_sequentially("Daniel Koh,")
     assert preview.locator(".token").count() == 0
-    assert "Not found in the reviewer pool: Daniel Koh." in preview.inner_text()
+    assert "Not found in Reviewer pool: Daniel Koh." in preview.inner_text()
     box.fill("")
     box.press_sequentially("Dr Omar Aziz,")
     assert preview.locator(".token").count() == 1 and not box.is_visible()
@@ -586,3 +586,80 @@ def test_a_card_s_buttons_sit_flush_right_in_order(page: Page) -> None:
     # A gap between the buttons, not a gap at the left pushing Delete away.
     gaps = [b - a for a, b in zip(lefts, lefts[1:], strict=False)]
     assert max(gaps) < 200
+
+
+# --- Segment AD1F rung 2: + New panel on a Select people card (ruling 19) ---
+def _new_panel(page: Page) -> tuple[Locator, Locator]:
+    page.goto(FORM)
+    card = _card(page, "Preferred reviewer")
+    card.locator("[data-fc-toggle]").click()
+    card.locator('[data-f="pool"]').select_option("__new")
+    return card, card.locator("[data-newpanel]")
+
+
+def test_new_panel_opens_its_box_and_keeps_the_choice(page: Page) -> None:
+    card, box = _new_panel(page)
+    assert box.is_visible()
+    assert card.locator('[data-f="pool"]').input_value() == "pool"
+    summary = card.locator('[data-sum="type"]').text_content()
+    assert summary == "Select people · exactly 1 person · Reviewer pool"
+    box.get_by_role("button", name="Cancel").click()
+    assert not box.is_visible()
+    assert card.locator('[data-f="pool"]').input_value() == "pool"
+    card.locator('[data-f="pool"]').select_option("__new")
+    box.locator('[data-np="name"]').press("Escape")
+    assert not box.is_visible()
+
+
+def test_new_panel_refuses_what_it_cannot_make(page: Page) -> None:
+    _, box = _new_panel(page)
+    err = box.locator("[data-np-err]")
+    box.get_by_role("button", name="Create panel").click()
+    assert err.text_content() == "Name the panel. Add at least one email."
+    box.locator('[data-np="name"]').fill("panel a")
+    box.locator('[data-np="members"]').fill("kim@example.edu\nnot-an-email\nKIM@example.edu")
+    box.get_by_role("button", name="Create panel").click()
+    assert err.text_content() == (
+        "A panel is already called panel a. Not an email: not-an-email."
+        " Listed twice: KIM@example.edu."
+    )
+    assert box.is_visible()
+
+
+def test_new_panel_is_made_chosen_and_offered_everywhere(page: Page) -> None:
+    card, box = _new_panel(page)
+    box.locator('[data-np="name"]').fill("Panel C")
+    box.locator('[data-np="members"]').fill("Kim Lee <kim.lee@example.edu>, sam.ho@example.edu")
+    box.get_by_role("button", name="Create panel").click()
+    assert not box.is_visible()
+    menu = card.locator('[data-f="pool"]')
+    assert menu.evaluate("s => s.options[s.selectedIndex].textContent") == "Panel C"
+    assert card.locator('[data-sum="type"]').text_content() == (
+        "Select people · exactly 1 person · Panel C"
+    )
+    live = page.locator("[data-np-live]").text_content() or ""
+    assert "Panel C made, 2 people, and chosen." in live
+    # A card added after offers it too, before + New panel….
+    card.locator('[data-fc-act="new"]').click()
+    added = page.locator("#fb-cards .fc[data-open]").nth(1)
+    added.locator('[data-f="type"]').select_option("people")
+    options = added.locator('[data-f="pool"] option').all_text_contents()
+    assert options[-2:] == ["Panel C", "+ New panel…"]
+    # Preview looks people up in it.
+    page.locator("[data-fb-preview]").click()
+    preview = page.locator("#fb-preview")
+    assert "Choose 1 person from Panel C." in preview.inner_text()
+    box = preview.get_by_role("textbox", name="Preferred reviewer")
+    box.press_sequentially("Kim Lee,")
+    assert preview.locator(".token").count() == 1
+    # And the snapshot hands it to the preview tab.
+    snap = page.evaluate("JSON.parse(window.applydeskFormSnapshot())")
+    assert snap["pools"] == {
+        "new-1": {
+            "name": "Panel C",
+            "members": [
+                ["Kim Lee", "kim.lee@example.edu"],
+                ["sam.ho@example.edu", "sam.ho@example.edu"],
+            ],
+        }
+    }

@@ -1,0 +1,124 @@
+{# Wires every panel menu on the page (`_panel_pick.html`, ruling 19):
+   choosing *+ New panel…* opens the box under it, the menu keeping what
+   it had; *Create panel* checks the name and members, then adds the panel
+   to every menu on the page (and to those its templates add) and to
+   window.applydeskPools, and picks it. Text goes in by textContent only.
+   A panel made here is kept on this page only. #}
+<script>
+(function () {
+  if (window.applydeskPanelPick) return;
+  window.applydeskPanelPick = true;
+  // Panels made on this page, as window.applydeskPools holds each pool:
+  // {name, members: [[name, email], …]}. The Form's snapshot carries them
+  // to its preview tab.
+  var made = window.applydeskMadePanels = {};
+  var EMAIL = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
+  var seq = 0;
+
+  function menus() {
+    var all = Array.prototype.slice.call(document.querySelectorAll("select[data-panel-pick]"));
+    document.querySelectorAll("template").forEach(function (t) {
+      all = all.concat(Array.prototype.slice.call(t.content.querySelectorAll("select[data-panel-pick]")));
+    });
+    return all;
+  }
+  function boxOf(sel) {
+    var wrap = sel.closest("[data-pick-wrap]");
+    return wrap ? wrap.querySelector("[data-newpanel]") : null;
+  }
+  function fallback(sel) {
+    var d = Array.prototype.find.call(sel.options, function (o) { return o.defaultSelected && o.value !== "__new"; });
+    return d ? d.value : sel.options[0].value;
+  }
+  function open(box, on) {
+    box.hidden = !on;
+    box.querySelector("[data-np-err]").textContent = "";
+    if (on) box.querySelector('[data-np="name"]').focus();
+  }
+
+  // Parse the pasted members: one per line, or separated by commas or
+  // semicolons; each an email, or "Name <email>". Returns
+  // {members, bad, twice}.
+  function parse(text) {
+    var members = [], bad = [], twice = [], seen = {};
+    text.split(/[\n,;]+/).forEach(function (raw) {
+      var entry = raw.trim();
+      if (!entry) return;
+      var m = /^(.*?)<\s*([^<>]+?)\s*>$/.exec(entry);
+      var name = m ? m[1].trim().replace(/^"|"$/g, "") : "";
+      var email = m ? m[2] : entry;
+      if (!EMAIL.test(email)) { bad.push(entry); return; }
+      var k = email.toLowerCase();
+      if (seen[k]) { twice.push(email); return; }
+      seen[k] = true;
+      members.push([name || email, email]);
+    });
+    return { members: members, bad: bad, twice: twice };
+  }
+
+  function create(sel, box) {
+    var err = box.querySelector("[data-np-err]");
+    var name = box.querySelector('[data-np="name"]').value.trim();
+    var got = parse(box.querySelector('[data-np="members"]').value);
+    var taken = Array.prototype.some.call(sel.options, function (o) {
+      return o.value !== "__new" && o.textContent.trim().toLowerCase() === name.toLowerCase();
+    });
+    var say = [];
+    if (!name) say.push("Name the panel.");
+    else if (taken) say.push("A panel is already called " + name + ".");
+    if (got.bad.length) say.push("Not an email: " + got.bad.join(", ") + ".");
+    if (got.twice.length) say.push("Listed twice: " + got.twice.join(", ") + ".");
+    if (!got.members.length && !got.bad.length) say.push("Add at least one email.");
+    if (say.length) { err.textContent = say.join(" "); return; }
+    var key;
+    do { seq += 1; key = "new-" + seq; } while (Array.prototype.some.call(sel.options, function (o) { return o.value === key; }));
+    var pool = { name: name, members: got.members };
+    made[key] = pool;
+    window.applydeskPools = window.applydeskPools || {};
+    window.applydeskPools[key] = pool;
+    menus().forEach(function (m) {
+      var o = document.createElement("option");
+      o.value = key;
+      o.textContent = name;
+      m.insertBefore(o, m.querySelector('option[value="__new"]'));
+    });
+    sel.value = key;
+    sel.dataset.prev = key;
+    box.querySelector('[data-np="name"]').value = "";
+    box.querySelector('[data-np="members"]').value = "";
+    open(box, false);
+    var live = document.querySelector("[data-np-live]");
+    if (live) live.textContent = "Panel " + name + " made, " + got.members.length + (got.members.length === 1 ? " person" : " people") + ", and chosen.";
+    sel.dispatchEvent(new Event("input", { bubbles: true }));
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+    sel.focus();
+  }
+
+  // Capture: runs before the page's own input listeners, so a menu never
+  // shows "+ New panel…" as its choice to them.
+  document.addEventListener("input", function (e) {
+    var sel = e.target.closest && e.target.closest("select[data-panel-pick]");
+    if (!sel) return;
+    if (sel.value !== "__new") { sel.dataset.prev = sel.value; return; }
+    sel.value = sel.dataset.prev || fallback(sel);
+    var box = boxOf(sel);
+    if (box) open(box, true);
+  }, true);
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-np-act]");
+    if (!b) return;
+    var box = b.closest("[data-newpanel]");
+    var sel = box.closest("[data-pick-wrap]").querySelector("select[data-panel-pick]");
+    if (b.dataset.npAct === "cancel") { open(box, false); sel.focus(); }
+    else create(sel, box);
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    var box = e.target.closest && e.target.closest("[data-newpanel]");
+    if (!box) return;
+    open(box, false);
+    box.closest("[data-pick-wrap]").querySelector("select[data-panel-pick]").focus();
+  });
+})();
+</script>
+<p class="visually-hidden" data-np-live aria-live="polite"></p>

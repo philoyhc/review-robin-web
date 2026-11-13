@@ -42,7 +42,7 @@ def test_the_form_page_shows_its_title_and_every_card(client: TestClient) -> Non
     for c in sample_data.SAMPLE_FORM:
         if c.kind == "field":
             assert f'value="{c.label}"' in text
-            assert card_summary(c) in text
+            assert card_summary(c, sample_data.people_pools("wa9juxbc2t")) in text
 
 
 def test_every_type_is_in_the_type_menu(client: TestClient) -> None:
@@ -110,7 +110,7 @@ SUMMARY_CASES: list[tuple[FormCard, str]] = [
     ),
     (FormCard("field", "people"), "Select people · Institution-wide"),
     (
-        FormCard("field", "people", min="1", max="3", pool="panel:Panel A"),
+        FormCard("field", "people", min="1", max="3", pool="panel-a"),
         "Select people · 1 to 3 people · Panel A",
     ),
     (
@@ -125,9 +125,19 @@ SUMMARY_CASES: list[tuple[FormCard, str]] = [
 ]
 
 
+#: The model exercise's pools, which name the panels in SUMMARY_CASES.
+POOLS = sample_data.people_pools("wa9juxbc2t")
+
+
 @pytest.mark.parametrize(("card", "summary"), SUMMARY_CASES)
 def test_a_card_s_summary(card: FormCard, summary: str) -> None:
-    assert card_summary(card) == summary
+    assert card_summary(card, POOLS) == summary
+
+
+def test_a_pool_the_summary_is_not_given_reads_as_institution_wide() -> None:
+    assert card_summary(FormCard("field", "people", pool="pool")) == (
+        "Select people · Institution-wide"
+    )
 
 
 def test_a_photo_is_kept_600_px_on_its_longer_side() -> None:
@@ -144,9 +154,21 @@ def test_a_people_card_offers_the_exercise_s_pools(client: TestClient) -> None:
     for label in ("Institution-wide", "Panel A", "Panel B", "Reviewer pool", "Interviewers"):
         assert f">{label}</option>" in text
     pools = sample_data.people_pools("wa9juxbc2t")
-    assert list(pools) == ["institution", "panel:Panel A", "panel:Panel B", "pool", "interviewers"]
-    assert ("Daniel Koh", "daniel.koh@example.edu") in pools["institution"]
-    assert pools["pool"] == [(e.name, e.email) for e in sample_data.pool_of("wa9juxbc2t")]
+    assert list(pools) == ["institution", "panel-a", "panel-b", "pool", "interviewers"]
+    assert [p["name"] for p in pools.values()] == [
+        "Institution-wide",
+        "Panel A",
+        "Panel B",
+        "Reviewer pool",
+        "Interviewers",
+    ]
+    assert ("Daniel Koh", "daniel.koh@example.edu") in pools["institution"]["members"]
+    assert pools["pool"]["members"] == [
+        (e.name, e.email) for e in sample_data.pool_of("wa9juxbc2t")
+    ]
+    # Every panel member is someone in the institution.
+    for p in pools.values():
+        assert set(p["members"]) <= set(pools["institution"]["members"])
     # A blank exercise has no rosters yet: Institution-wide alone.
     assert list(sample_data.people_pools("n5wg8tjr3e")) == ["institution"]
 
@@ -155,6 +177,7 @@ def test_a_pool_the_exercise_lacks_reads_as_institution_wide(client: TestClient)
     # k7mfr3pq8z has panels and an interviewer, but no reviewer pool.
     card = next(c for c in sample_data.form_cards("k7mfr3pq8z") if c.type == "people")
     assert card.pool == "institution"
-    assert card_summary(card) == "Select people · exactly 1 person · Institution-wide"
+    pools = sample_data.people_pools("k7mfr3pq8z")
+    assert card_summary(card, pools) == "Select people · exactly 1 person · Institution-wide"
     text = client.get("/applydesk/operator/exercises/k7mfr3pq8z/form").text
     assert "Select people · exactly 1 person · Institution-wide" in text

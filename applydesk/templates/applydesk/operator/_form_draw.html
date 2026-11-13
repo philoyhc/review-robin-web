@@ -6,9 +6,11 @@
 <script type="application/json" id="fb-people">{{ people | tojson }}</script>
 <script>
 (function () {
-  // Who each Select people pool holds (sample_data.people_pools): the
-  // scaffold's stand-in for a directory search through Graph (AD4).
-  var POOLS = JSON.parse(document.getElementById("fb-people").textContent);
+  // Who each Select people pool holds, by key (sample_data.people_pools:
+  // Institution-wide, then the exercise's panels), each {name, members}:
+  // the scaffold's stand-in for a directory search through Graph (AD4).
+  // Shared with the panel picker, which adds the panels made on the page.
+  var POOLS = window.applydeskPools = window.applydeskPools || JSON.parse(document.getElementById("fb-people").textContent);
   function el(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -16,15 +18,14 @@
     return e;
   }
   var uid = 0;
-  var POOL_NAMES = { institution: "the institution", pool: "the reviewer pool", interviewers: "the interviewers" };
-  function poolName(key) { return key.indexOf("panel:") === 0 ? key.slice(6) : (POOL_NAMES[key] || POOL_NAMES.institution); }
+  function poolName(key) { return key === "institution" || !POOLS[key] ? "the institution" : POOLS[key].name; }
   // A box of people: each comma-separated name or email found in the
   // pool becomes a pill; what is not found stays in the box, said why.
   function people(c, id, label) {
     // A pool this exercise has no roster for reads as Institution-wide,
     // as the card's own menu shows it.
     var key = POOLS[c.pool] ? c.pool : "institution";
-    var members = POOLS[key] || [];
+    var members = POOLS[key] ? POOLS[key].members : [];
     var lo = /^\d+$/.test(c.min) ? parseInt(c.min, 10) : 0;
     var hi = /^\d+$/.test(c.max) ? parseInt(c.max, 10) : 0;
     var box = el("div", "tokens");
@@ -185,6 +186,8 @@
 
   window.applydeskDrawForm = function (body, form) {
     if (window.applydeskUnfitBoxes) window.applydeskUnfitBoxes(body);
+    // Panels made on the Form page (ruling 19), handed over in its snapshot.
+    Object.keys(form.pools || {}).forEach(function (k) { if (!POOLS[k]) POOLS[k] = form.pools[k]; });
     body.textContent = "";
     body.appendChild(el("h2", "fb-pv-form", form.title || "Untitled form"));
     if (form.description) body.appendChild(el("p", "fb-pv-help", form.description));
