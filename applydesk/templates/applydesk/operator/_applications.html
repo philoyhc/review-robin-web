@@ -11,10 +11,45 @@
       <option value="">All statuses</option><option>Submitted</option><option>Draft</option><option>Withdrawn</option>
     </select>
     <span class="ap-gap"></span>
-    <button class="btn btn-secondary" type="button" disabled title="Comes in the next build (segment AD1C, rung 3)">Fill by rule…</button>
-    <button class="btn btn-secondary" type="button" disabled title="Comes in the next build (segment AD1C, rung 3)">Upload CSV</button>
+    {% if cols %}
+    <button class="btn btn-secondary" type="button" data-ap-rule-open aria-expanded="false" aria-controls="ap-rule">Fill by rule…</button>
+    <button class="btn btn-secondary" type="button" data-ap-csv-open>Upload CSV</button>
+    <input type="file" accept=".csv,text/csv" data-ap-csv hidden aria-label="CSV file">
+    {% endif %}
     <button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>
   </div>
+  {% if cols %}
+  {# A rule: one column set from an earlier gate's result. It proposes;
+     nothing changes until Apply. #}
+  <section class="card ap-panel" id="ap-rule" data-ap-rule hidden aria-labelledby="ap-rule-h">
+    <h3 id="ap-rule-h">Fill by rule</h3>
+    <div class="ap-rule-row">
+      <label>Set<select class="ap-sel" data-ap-rule-target>
+        {% for c in cols %}<option value="{{ c.key }}">{{ "Gate " ~ c.number if c.via is defined else "Outcome " ~ c.number }}: {{ c.label }}</option>{% endfor %}
+      </select></label>
+      <label>to<select class="ap-sel" data-ap-rule-then></select></label>
+      <label>where<select class="ap-sel" data-ap-rule-source>
+        {% for c in cols if c.via is defined and c.measure %}<option value="{{ c.key }}">{{ c.measure }} at {{ c.label }}</option>{% endfor %}
+      </select></label>
+      <select class="ap-sel" data-ap-rule-op aria-label="Comparison"><option value="ge">≥</option><option value="lt">&lt;</option></select>
+      <input class="ap-search ap-num" data-ap-rule-at type="number" step="0.1" value="4.0" aria-label="Threshold">
+    </div>
+    <div class="ap-rule-row">
+      <label>Otherwise<select class="ap-sel" data-ap-rule-else></select></label>
+      <label class="ap-check"><input type="checkbox" data-ap-rule-pending checked> Change only cells still <em>Pending</em></label>
+      <button class="btn btn-secondary" type="button" data-ap-rule-go>Propose</button>
+    </div>
+  </section>
+  {# The proposal, from a rule or a CSV: what would change, and what
+     cannot be judged or read; Apply makes it so, on screen. #}
+  <section class="card ap-panel" data-ap-proposal hidden aria-labelledby="ap-prop-h" tabindex="-1">
+    <h3 id="ap-prop-h" data-ap-prop-title>Proposed changes</h3>
+    <p data-ap-prop-sum></p>
+    <div class="ap-prop-wrap"><table class="ap-prop"><thead><tr><th>Application</th><th>Applicant</th><th>Column</th><th>From</th><th>To</th></tr></thead><tbody data-ap-prop-rows></tbody></table></div>
+    <ul class="ap-prop-skip" data-ap-prop-skip></ul>
+    <div class="btnrow"><button class="btn btn-primary" type="button" data-ap-prop-apply>Apply</button><button class="btn btn-secondary" type="button" data-ap-prop-cancel>Cancel</button></div>
+  </section>
+  {% endif %}
   <div class="ap-wrap">
   <table class="ap-table">
     <thead>
@@ -28,10 +63,10 @@
         <th>Status<span class="ap-count" data-ap-count="status"></span></th>
         {% for r in plan.rounds %}{% for c in r.columns %}
           {% if c.via is defined %}
-          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span></th>
+          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate" data-label="{{ c.label }}" data-number="Gate {{ c.number }}" data-measure="{{ c.measure }}"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span></th>
           {% else %}
-          <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-first="{{ c.values[0] }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
-            <label class="ap-rel"><input type="checkbox" data-ap-release="{{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
+          <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-label="{{ c.label }}" data-number="Outcome {{ c.number }}" data-first="{{ c.values[0] }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
+            <label class="ap-rel"><input type="checkbox" data-ap-release="{{ c.label }}" aria-label="Released: {{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
             <span class="ap-relnote{{ ' ap-relnote-on' if c.released }}" data-ap-relnote>{{ c.released or "Not yet" }}</span>
           </th>
           {% endif %}
@@ -50,7 +85,7 @@
           {# A submitted application's outcomes are always settable, "—"
              until decided, so a hand change can advance it (Codex). #}
           {% if not cell.value and (c.via is defined or a.state != "Submitted") %}<span class="muted">—</span>
-          {% elif c.via is defined %}<button type="button" class="ap-adm" data-ap-adm data-v="{{ cell.value }}" aria-label="{{ c.label }} for {{ a.public_id }}: {{ cell.value }}">{{ cell.value }}</button>{% if cell.note %}<span class="ap-note">{{ cell.note }}</span>{% endif %}
+          {% elif c.via is defined %}<button type="button" class="ap-adm" data-ap-adm data-v="{{ cell.value }}"{% if cell.result is not none %} data-result="{{ cell.result }}"{% endif %} aria-label="{{ c.label }} for {{ a.public_id }}: {{ cell.value }}">{{ cell.value }}</button>{% if cell.note %}<span class="ap-note">{{ cell.note }}</span>{% endif %}
           {% else %}<select class="ap-oc" data-ap-oc data-v="{{ cell.value }}" aria-label="{{ c.label }} for {{ a.public_id }}">
               <option value=""{% if not cell.value %} selected{% endif %}>—</option>
               <option{% if cell.value == "Pending" %} selected{% endif %}>Pending</option>
@@ -79,6 +114,7 @@
     </span>
     {% endif %}
 
+    {% if cols %}<button class="btn btn-secondary" type="button" data-ap-csv-down>Download CSV</button>{% endif %}
     {% if not cols %}<span class="muted">No rounds yet: rounds, gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/setup') }}">Setup</a>.</span>{% endif %}
   </div>
   <p class="muted ap-help">A gate's chip cycles <em>Pending</em>, <em>Selected</em>, <em>Not selected</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> switch does what the Timeline sets. Rounds, gates, outcomes and dates come from Setup and the Timeline.</p>
@@ -200,6 +236,227 @@
       recount();
     });
   }
+  // --- Proposals: a rule or a CSV says what it would change; Apply
+  // makes it so, Cancel drops it (segment AD1C, rung 3). ---
+  var proposal = root.querySelector("[data-ap-proposal]");
+  var pending = [], opener = null;
+  function cellOf(r, key) { return r.querySelector('[data-cell="' + key + '"] [data-v]'); }
+  function idOf(r) { return r.querySelector(".ap-id code").textContent; }
+  function whoOf(r) { return r.querySelector(".ap-who strong").textContent; }
+  function choices(key) {
+    var h = head[key];
+    return h.dataset.kind === "gate" ? CYCLE : ["Pending"].concat(h.dataset.values.split("|"));
+  }
+  function td(text) { var c = document.createElement("td"); c.textContent = text; return c; }
+  function propose(title, changes, skipped, from) {
+    pending = changes;
+    opener = from || null;
+    proposal.querySelector("[data-ap-prop-title]").textContent = title;
+    proposal.querySelector("[data-ap-prop-sum]").textContent = changes.length
+      ? changes.length + (changes.length === 1 ? " change" : " changes") + " proposed. Nothing changes until Apply."
+      : "Nothing would change.";
+    var body = proposal.querySelector("[data-ap-prop-rows]");
+    body.textContent = "";
+    changes.forEach(function (c) {
+      var tr = document.createElement("tr");
+      [idOf(c.row), whoOf(c.row), head[c.key].dataset.label, c.from, c.to].forEach(function (t) { tr.appendChild(td(t)); });
+      body.appendChild(tr);
+    });
+    var skip = proposal.querySelector("[data-ap-prop-skip]");
+    skip.textContent = "";
+    skipped.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; skip.appendChild(li); });
+    proposal.querySelector("[data-ap-prop-apply]").disabled = !changes.length;
+    proposal.hidden = false;
+    proposal.focus();
+  }
+  if (proposal) {
+    // A cell changed by hand since the proposal keeps the hand's value.
+    proposal.querySelector("[data-ap-prop-apply]").addEventListener("click", function () {
+      var kept = 0;
+      pending.forEach(function (c) {
+        var el = cellOf(c.row, c.key);
+        if (!el || el.dataset.v !== c.from) { kept += 1; return; }
+        if (el.matches("[data-ap-adm]")) setAdm(el, c.to); else setOutcome(el, c.to);
+      });
+      close();
+      recount();
+      if (kept) window.alert(kept + (kept === 1 ? " cell was" : " cells were") + " changed by hand since the proposal, and kept as it stands.");
+    });
+    proposal.querySelector("[data-ap-prop-cancel]").addEventListener("click", close);
+  }
+  function close() {
+    pending = [];
+    proposal.hidden = true;
+    if (opener) opener.focus();
+  }
+
+  // Fill by rule: Set <column> to <value> where <result at gate> ≥ or <
+  // <threshold>, otherwise <value or leave>; only Pending cells, unless
+  // the operator says otherwise. Rows with no finished result are named.
+  var rule = root.querySelector("[data-ap-rule]");
+  if (rule) {
+    var ruleOpen = root.querySelector("[data-ap-rule-open]");
+    var target = rule.querySelector("[data-ap-rule-target]");
+    var then = rule.querySelector("[data-ap-rule-then]"), otherwise = rule.querySelector("[data-ap-rule-else]");
+    function fillValues() {
+      var vals = choices(target.value).filter(function (v) { return v !== "Pending"; });
+      then.textContent = ""; otherwise.textContent = "";
+      vals.forEach(function (v) { var o = document.createElement("option"); o.textContent = v; then.appendChild(o); });
+      ["Leave as is"].concat(vals).forEach(function (v) { var o = document.createElement("option"); o.textContent = v; otherwise.appendChild(o); });
+      if (vals.length > 1) otherwise.value = vals[vals.length - 1];
+    }
+    // The result a rule reads comes from a gate before the column it sets.
+    var source = rule.querySelector("[data-ap-rule-source]");
+    var order = heads.map(function (h) { return h.dataset.col; });
+    function fillSources() {
+      var at = order.indexOf(target.value), first = null;
+      Array.prototype.forEach.call(source.options, function (o) {
+        o.disabled = order.indexOf(o.value) >= at;
+        o.hidden = o.disabled;
+        if (!o.disabled && first === null) first = o.value;
+      });
+      if (source.selectedOptions[0] && source.selectedOptions[0].disabled || !source.value) source.value = first || "";
+      rule.querySelector("[data-ap-rule-go]").disabled = first === null;
+    }
+    target.value = (heads.filter(function (h) { return h.dataset.kind === "gate"; })[1] || heads[0]).dataset.col;
+    fillValues();
+    fillSources();
+    target.addEventListener("change", function () { fillValues(); fillSources(); });
+    ruleOpen.addEventListener("click", function () {
+      rule.hidden = !rule.hidden;
+      ruleOpen.setAttribute("aria-expanded", rule.hidden ? "false" : "true");
+      if (!rule.hidden) target.focus();
+    });
+    rule.querySelector("[data-ap-rule-go]").addEventListener("click", function () {
+      var src = source.value;
+      var ge = rule.querySelector("[data-ap-rule-op]").value === "ge";
+      var at = parseFloat(rule.querySelector("[data-ap-rule-at]").value);
+      var onlyPending = rule.querySelector("[data-ap-rule-pending]").checked;
+      var measure = head[src].dataset.measure, key = target.value;
+      if (isNaN(at)) { propose("Fill by rule", [], ["Enter a threshold."], rule.querySelector("[data-ap-rule-at]")); return; }
+      var changes = [], unjudged = [];
+      rows.forEach(function (r) {
+        var el = cellOf(r, key);
+        if (!el) return;  // a draft, or never admitted to this column
+        if (onlyPending && el.dataset.v !== "Pending") return;
+        var res = cellOf(r, src);
+        if (!res || res.dataset.v !== "Selected") return;  // never admitted there: nothing to read
+        if (res.dataset.result === undefined) { unjudged.push(idOf(r)); return; }
+        var met = ge ? parseFloat(res.dataset.result) >= at : parseFloat(res.dataset.result) < at;
+        var to = met ? then.value : otherwise.value;
+        if (to === "Leave as is" || to === el.dataset.v) return;
+        changes.push({ row: r, key: key, from: el.dataset.v, to: to });
+      });
+      var skipped = unjudged.length
+        ? [unjudged.length + (unjudged.length === 1 ? " application has" : " applications have") + " no finished " + measure + " at " + head[src].dataset.label + ", left as is: " + unjudged.join(", ") + "."]
+        : [];
+      propose("Fill by rule: " + head[key].dataset.label + " from " + measure + (ge ? " ≥ " : " < ") + at, changes, skipped, rule.querySelector("[data-ap-rule-go]"));
+    });
+  }
+
+  // Upload CSV: "Application ID", then a column per gate or outcome,
+  // named as its header ("Peer Review", or "Gate 1: Peer Review").
+  function parseCsv(text) {
+    var out = [], row = [], cell = "", quoted = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (quoted) {
+        if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+        else if (ch === '"') quoted = false;
+        else cell += ch;
+      } else if (ch === '"') quoted = true;
+      else if (ch === ",") { row.push(cell); cell = ""; }
+      else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && text[i + 1] === "\n") i++;
+        row.push(cell); cell = "";
+        if (row.some(function (c) { return c.trim(); })) out.push(row);
+        row = [];
+      } else cell += ch;
+    }
+    row.push(cell);
+    if (row.some(function (c) { return c.trim(); })) out.push(row);
+    return out;
+  }
+  function columnFor(name) {
+    var n = name.trim().toLowerCase();
+    var hit = heads.filter(function (h) {
+      return h.dataset.label.toLowerCase() === n || (h.dataset.number + ": " + h.dataset.label).toLowerCase() === n || h.dataset.number.toLowerCase() === n;
+    });
+    return hit.length ? hit[0].dataset.col : null;
+  }
+  function fromCsv(name, text) {
+    var table = parseCsv(text.replace(/^﻿/, ""));
+    if (!table.length) { propose("Upload CSV: " + name, [], ["The file is empty."], csvOpen); return; }
+    var header = table[0].map(function (h) { return h.trim(); });
+    var idAt = header.map(function (h) { return h.toLowerCase(); }).indexOf("application id");
+    if (idAt < 0) { propose("Upload CSV: " + name, [], ["No \"Application ID\" column: the first row names the columns."], csvOpen); return; }
+    var keys = header.map(function (h, i) { return i === idAt ? null : columnFor(h); });
+    var skipped = [];
+    // The columns Download CSV writes to describe a row are read past.
+    var described = ["applicant", "email", "status"];
+    header.forEach(function (h, i) {
+      if (i !== idAt && !keys[i] && h && described.indexOf(h.toLowerCase()) < 0) skipped.push("Column not on this page, ignored: " + h + ".");
+    });
+    // No inherited keys: an ID such as "__proto__" is simply unknown.
+    var byId = Object.create(null);
+    rows.forEach(function (r) { byId[idOf(r).toLowerCase()] = r; });
+    // One value per application and column: a repeat with the same value
+    // is read once; two different values leave the cell as is (Codex).
+    var wanted = Object.create(null), order = [], unknown = [];
+    table.slice(1).forEach(function (line, n) {
+      var id = (line[idAt] || "").trim();
+      var r = byId[id.toLowerCase()];
+      if (!r) { unknown.push(id || "(blank, line " + (n + 2) + ")"); return; }
+      keys.forEach(function (key, i) {
+        if (!key) return;
+        var raw = (line[i] || "").trim();
+        if (!raw) return;  // blank: leave the cell as it is
+        var val = choices(key).filter(function (v) { return v.toLowerCase() === raw.toLowerCase(); })[0];
+        if (!val) { skipped.push(id + ": \"" + raw + "\" is not a value of " + head[key].dataset.label + "."); return; }
+        var el = cellOf(r, key);
+        if (!el) { skipped.push(id + ": " + head[key].dataset.label + " cannot be set (a draft, or never admitted)."); return; }
+        var k = idOf(r) + "|" + key;
+        if (!(k in wanted)) { wanted[k] = { row: r, key: key, vals: [] }; order.push(k); }
+        if (wanted[k].vals.indexOf(val) < 0) wanted[k].vals.push(val);
+      });
+    });
+    var changes = [];
+    order.forEach(function (k) {
+      var w = wanted[k], el = cellOf(w.row, w.key);
+      if (w.vals.length > 1) {
+        skipped.push(idOf(w.row) + ": " + head[w.key].dataset.label + " given more than one value (" + w.vals.join(", ") + "), left as is.");
+        return;
+      }
+      if (el.dataset.v !== w.vals[0]) changes.push({ row: w.row, key: w.key, from: el.dataset.v, to: w.vals[0] });
+    });
+    if (unknown.length) skipped.unshift("Not in this exercise, ignored: " + unknown.join(", ") + ".");
+    propose("Upload CSV: " + name, changes, skipped, csvOpen);
+  }
+  var csv = root.querySelector("[data-ap-csv]"), csvOpen = root.querySelector("[data-ap-csv-open]");
+  if (csv) {
+    csvOpen.addEventListener("click", function () { csv.value = ""; csv.click(); });
+    csv.addEventListener("change", function () {
+      var f = csv.files && csv.files[0];
+      if (!f) return;
+      f.text().then(function (text) { fromCsv(f.name, text); });
+    });
+    // The table as it stands, in the shape an upload reads.
+    root.querySelector("[data-ap-csv-down]").addEventListener("click", function () {
+      function q(v) { return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+      var lines = [["Application ID", "Applicant", "Email", "Status"].concat(heads.map(function (h) { return h.dataset.label; })).map(q).join(",")];
+      rows.forEach(function (r) {
+        var cells = [idOf(r), whoOf(r), r.querySelector(".ap-mail").textContent, r.dataset.status].concat(heads.map(function (h) {
+          var el = cellOf(r, h.dataset.col); return el ? el.dataset.v : "";
+        }));
+        lines.push(cells.map(q).join(","));
+      });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([lines.join("\n") + "\n"], { type: "text/csv" }));
+      a.download = "applications.csv";
+      document.body.appendChild(a); a.click(); a.remove();
+    });
+  }
+
   recount();
   filter();
 })();

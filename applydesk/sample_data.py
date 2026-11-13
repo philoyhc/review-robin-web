@@ -1,4 +1,4 @@
-"""Sample data for the placeholders (segment AD1, item 2): four exercises,
+"""Sample data for the placeholders (segment AD1, item 2): five exercises,
 their applications, panels and profile pages, so every page of the URL
 map has something to show. Names and addresses are invented; IDs have the
 public-ID shape (`applydesk/ids.py`)."""
@@ -311,7 +311,6 @@ def _generated() -> tuple[Application, ...]:
         roll = rng.random()
         state = "Draft" if roll < 0.06 else "Withdrawn" if roll < 0.10 else "Submitted"
         day = rng.randint(2, 15) if state != "Withdrawn" else rng.randint(16, 31)
-        month = "Oct" if state != "Withdrawn" or day <= 31 else "Nov"
         made.append(
             Application(
                 new_id(),
@@ -320,7 +319,7 @@ def _generated() -> tuple[Application, ...]:
                 f"{first.lower()}.{last.lower()}@example.edu",
                 f"{_TOPICS[n % len(_TOPICS)]}",
                 state,
-                f"{day} {month} 2026",
+                f"{day} Oct 2026",
                 new_id(),
             )
         )

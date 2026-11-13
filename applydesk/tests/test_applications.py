@@ -69,6 +69,11 @@ def test_the_model_exercise_reads_as_partway_through() -> None:
         a, cells = row.application, row.cells
         if a.state == "Draft":
             assert all(not c.value for c in cells.values())
+        if a.state == "Withdrawn":
+            # Keeps what it had; "—" where it was never admitted.
+            assert all(not cells[k].value for k in ("g2", "o1", "g3", "o2", "o3"))
+            day = int(a.submitted.split()[0])
+            assert bool(cells["g1"].value) == (day >= 16)
         if cells["o1"].value == "Not shortlisted":
             assert cells["g3"].value == "Not selected" and not cells["o2"].value
         if cells["o1"].value == "Shortlisted":

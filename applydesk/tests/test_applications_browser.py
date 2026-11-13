@@ -142,3 +142,171 @@ def test_an_application_advanced_by_hand_can_be_given_later_outcomes(page: Page)
     assert row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "13 Nov"
     # A draft stays inert.
     assert _row(page, "wen.novak").locator('[data-cell="o2"] select').count() == 0
+
+
+# --- Rung 3: Fill by rule… and Upload CSV, proposing before they apply ---
+def test_a_rule_proposes_then_applies(page: Page) -> None:
+    page.goto(PAGE)
+    page.locator("[data-ap-rule-open]").click()
+    rule = page.locator("[data-ap-rule]")
+    rule.locator("[data-ap-rule-target]").select_option("o2")
+    rule.locator("[data-ap-rule-then]").select_option("Finalist")
+    rule.locator("[data-ap-rule-else]").select_option("Not a finalist")
+    rule.locator("[data-ap-rule-source]").select_option("g2")
+    rule.locator("[data-ap-rule-at]").fill("4.5")
+    before = _count(page, "o2")
+    rule.locator("[data-ap-rule-go]").click()
+    prop = page.locator("[data-ap-proposal]")
+    assert prop.is_visible()
+    n = prop.locator("[data-ap-prop-rows] tr").count()
+    assert n > 0
+    assert "proposed. Nothing changes until Apply." in prop.inner_text()
+    # Nothing has changed yet.
+    assert _count(page, "o2") == before
+    prop.locator("[data-ap-prop-apply]").click()
+    assert not prop.is_visible()
+    finalists = page.locator('[data-cell="o2"] select[data-v="Finalist"]').count()
+    others = page.locator('[data-cell="o2"] select[data-v="Not a finalist"]').count()
+    assert finalists + others == n and finalists > 0 and others > 0
+    assert _count(page, "o2").startswith(f"{finalists} finalist")
+
+
+def test_a_rule_names_what_it_cannot_judge(page: Page) -> None:
+    page.goto(PAGE)
+    page.locator("[data-ap-rule-open]").click()
+    rule = page.locator("[data-ap-rule]")
+    rule.locator("[data-ap-rule-target]").select_option("g2")
+    rule.locator("[data-ap-rule-source]").select_option("g1")
+    rule.locator("[data-ap-rule-at]").fill("3.5")
+    rule.locator("[data-ap-rule-go]").click()
+    prop = page.locator("[data-ap-proposal]")
+    # The two applications still waiting on peer reviews are pending at
+    # Gate 2 and have no finished Rating: named, not guessed.
+    assert "2 applications have no finished Rating at Peer Review" in prop.inner_text()
+    prop.locator("[data-ap-prop-cancel]").click()
+    assert not prop.is_visible()
+
+
+def test_a_csv_proposes_then_applies(page: Page) -> None:
+    page.goto(PAGE)
+    body = (
+        "Application ID,Gate 3: Interview,Finalists,Mystery\n"
+        "kenji-not-an-id,Selected,,\n"
+        "h6zr2tdw9p,Selected,,x\n"
+        "f2ps7nyh4k,Selected,,\n"
+        "m3qx8vkt2n,Maybe,,\n"
+    )
+    shortlisted = page.locator('[data-row]:has([data-cell="o2"] select)').first
+    sid = shortlisted.locator(".ap-id code").inner_text()
+    body += f'{sid},,"Finalist",\n'
+    page.locator("[data-ap-csv]").set_input_files(
+        files=[{"name": "decisions.csv", "mimeType": "text/csv", "buffer": body.encode()}]
+    )
+    prop = page.locator("[data-ap-proposal]")
+    assert "Upload CSV: decisions.csv" in prop.inner_text()
+    text = prop.inner_text()
+    assert "Column not on this page, ignored: Mystery." in text
+    assert "Not in this exercise, ignored: kenji-not-an-id." in text
+    assert 'm3qx8vkt2n: "Maybe" is not a value of Interview.' in text
+    assert "f2ps7nyh4k: Interview cannot be set (a draft, or never admitted)." in text
+    assert prop.locator("[data-ap-prop-rows] tr").count() == 2
+    prop.locator("[data-ap-prop-apply]").click()
+    assert (
+        _row(page, "kenji.russo").locator('[data-cell="g3"] [data-ap-adm]').inner_text()
+        == "Selected"
+    )
+    assert shortlisted.locator('[data-cell="o2"] select').input_value() == "Finalist"
+
+
+def test_the_table_downloads_as_the_csv_an_upload_reads(page: Page) -> None:
+    page.goto(PAGE)
+    with page.expect_download() as got:
+        page.locator("[data-ap-csv-down]").click()
+    text = got.value.path().read_text(encoding="utf-8")
+    lines = text.splitlines()
+    assert lines[0].startswith("Application ID,Applicant,Email,Status,Peer Review,")
+    assert len(lines) == 102
+    # Uploaded back, it changes nothing and leaves nothing out.
+    page.locator("[data-ap-csv]").set_input_files(
+        files=[{"name": "applications.csv", "mimeType": "text/csv", "buffer": text.encode()}]
+    )
+    prop = page.locator("[data-ap-proposal]")
+    assert "Nothing would change." in prop.inner_text()
+    assert prop.locator("[data-ap-prop-skip] li").count() == 0
+
+
+def test_apply_keeps_a_cell_changed_by_hand_since(page: Page) -> None:
+    page.goto(PAGE)
+    upper = "H6ZR2TDW9P"  # IDs match whatever their case
+    page.locator("[data-ap-csv]").set_input_files(
+        files=[
+            {
+                "name": "x.csv",
+                "mimeType": "text/csv",
+                "buffer": f"Application ID,Interview\n{upper},Selected\n".encode(),
+            }
+        ]
+    )
+    prop = page.locator("[data-ap-proposal]")
+    assert prop.locator("[data-ap-prop-rows] tr").count() == 1
+    chip = _row(page, "kenji.russo").locator('[data-cell="g3"] [data-ap-adm]')
+    chip.click()  # Not selected -> Pending, by hand
+    page.once("dialog", lambda d: d.accept())
+    prop.locator("[data-ap-prop-apply]").click()
+    assert chip.inner_text() == "Pending"
+    # Focus returns to what opened the proposal.
+    assert page.evaluate("document.activeElement.hasAttribute('data-ap-csv-open')")
+
+
+def test_a_rule_reads_only_an_earlier_gate(page: Page) -> None:
+    page.goto(PAGE)
+    page.locator("[data-ap-rule-open]").click()
+    rule = page.locator("[data-ap-rule]")
+    rule.locator("[data-ap-rule-target]").select_option("g1")
+    # Nothing comes before Peer Review: no source, no Propose.
+    assert rule.locator("[data-ap-rule-go]").is_disabled()
+    rule.locator("[data-ap-rule-target]").select_option("g2")
+    assert rule.locator("[data-ap-rule-source] option:not([disabled])").all_inner_texts() == [
+        "Rating at Peer Review"
+    ]
+
+
+def test_a_csv_giving_one_cell_two_values_leaves_it(page: Page) -> None:
+    # Codex: two rows for one application and column were both proposed
+    # against the same starting value, and Apply made only the first.
+    page.goto(PAGE)
+    body = (
+        "Application ID,Interview\n"
+        "h6zr2tdw9p,Selected\n"
+        "h6zr2tdw9p,Pending\n"
+        "m3qx8vkt2n,Selected\n"
+        "m3qx8vkt2n,selected\n"
+    )
+    page.locator("[data-ap-csv]").set_input_files(
+        files=[{"name": "twice.csv", "mimeType": "text/csv", "buffer": body.encode()}]
+    )
+    prop = page.locator("[data-ap-proposal]")
+    assert "h6zr2tdw9p: Interview given more than one value (Selected, Pending), left as is." in (
+        prop.inner_text()
+    )
+    rows = prop.locator("[data-ap-prop-rows] tr")
+    assert rows.count() == 1 and "m3qx8vkt2n" in rows.inner_text()
+    prop.locator("[data-ap-prop-apply]").click()
+    assert (
+        _row(page, "aisha.bello").locator('[data-cell="g3"] [data-ap-adm]').inner_text()
+        == "Selected"
+    )
+    assert _row(page, "kenji.russo").locator('[data-cell="g3"] [data-ap-adm]').inner_text() == (
+        "Not selected"
+    )
+
+
+def test_a_csv_id_like_an_object_key_is_just_unknown(page: Page) -> None:
+    # Codex: "__proto__" matched an inherited property and the upload threw.
+    page.goto(PAGE)
+    body = "Application ID,Interview\n__proto__,Selected\nconstructor,Selected\n"
+    page.locator("[data-ap-csv]").set_input_files(
+        files=[{"name": "odd.csv", "mimeType": "text/csv", "buffer": body.encode()}]
+    )
+    prop = page.locator("[data-ap-proposal]")
+    assert "Not in this exercise, ignored: __proto__, constructor." in prop.inner_text()
