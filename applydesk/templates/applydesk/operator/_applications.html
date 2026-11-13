@@ -47,9 +47,12 @@
         <td class="ap-stat">{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}<span class="ap-note">{{ a.submitted }}</span></td>
         {% for r in plan.rounds %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}
           <td class="{{ 'ap-out' if c.via is not defined }} {{ 'ap-r' if loop.first }}" data-cell="{{ c.key }}">
-          {% if not cell.value %}<span class="muted">—</span>
+          {# A submitted application's outcomes are always settable, "—"
+             until decided, so a hand change can advance it (Codex). #}
+          {% if not cell.value and (c.via is defined or a.state != "Submitted") %}<span class="muted">—</span>
           {% elif c.via is defined %}<button type="button" class="ap-adm" data-ap-adm data-v="{{ cell.value }}" aria-label="{{ c.label }} for {{ a.public_id }}: {{ cell.value }}">{{ cell.value }}</button>{% if cell.note %}<span class="ap-note">{{ cell.note }}</span>{% endif %}
           {% else %}<select class="ap-oc" data-ap-oc data-v="{{ cell.value }}" aria-label="{{ c.label }} for {{ a.public_id }}">
+              <option value=""{% if not cell.value %} selected{% endif %}>—</option>
               <option{% if cell.value == "Pending" %} selected{% endif %}>Pending</option>
               {% for v in c.values %}<option{% if v == cell.value %} selected{% endif %}>{{ v }}</option>{% endfor %}
             </select><span class="ap-note" data-ap-date data-due="Due {{ c.due }}">{{ cell.note }}</span>
@@ -134,7 +137,7 @@
     sel.value = v;
     sel.dataset.v = v;
     var date = sel.parentNode.querySelector("[data-ap-date]");
-    date.textContent = v === "Pending" ? date.dataset.due : TODAY;
+    date.textContent = v === "Pending" ? date.dataset.due : v ? TODAY : "";
     tone(sel);
   }
   root.querySelectorAll("[data-ap-adm], [data-ap-oc]").forEach(tone);

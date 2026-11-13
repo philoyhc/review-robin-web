@@ -128,3 +128,17 @@ def test_ticked_rows_are_set_together(page: Page) -> None:
         assert _row(page, who).locator('[data-cell="g3"] [data-ap-adm]').inner_text() == "Selected"
     # A draft has entered nothing: it is left alone.
     assert _row(page, "wen.novak").locator('[data-cell="g3"]').inner_text().strip() == "—"
+
+
+def test_an_application_advanced_by_hand_can_be_given_later_outcomes(page: Page) -> None:
+    # Codex: a submitted application outside the shortlist showed fixed
+    # "—" in Finalists and Final results, so a hand change stopped there.
+    page.goto(PAGE)
+    row = _row(page, "aisha.bello")
+    row.locator('[data-cell="o1"] select').select_option("Shortlisted")
+    finalists = row.locator('[data-cell="o2"] select')
+    assert finalists.input_value() == ""
+    finalists.select_option("Finalist")
+    assert row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "13 Nov"
+    # A draft stays inert.
+    assert _row(page, "wen.novak").locator('[data-cell="o2"] select').count() == 0
