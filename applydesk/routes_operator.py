@@ -101,6 +101,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         rule_text=stages.rule_text,
         rule_json=stages.rule_json,
         stage_problems=stages.problems,
+        blank_stage=stages.Stage(0, "", ""),
         gate_state=workflow.gate_state,
         emails=workflow.emails(exercise.public_id),
         form_state=workflow.form_state(exercise),

@@ -8,6 +8,8 @@ Process is a placeholder (AD1D): a read-only table per stage of what `applydesk/
 
 ## Decision
 
+**Process sets up the whole flow; the other Setup pages flesh out its nodes** (author, 2026-11-13): the operator lines up stage cards until the exercise's process is complete, then goes to Form, Gates and Emails for the detail of each node. So a stage card holds what places a node in the flow (its name, dates and milestones, what it holds, its rules) and links out for the rest (the form's questions, a gate's panel, an email's text).
+
 **The Form page's pattern, with stages for questions** (author, 2026-11-13: "model on Form"):
 
 1. **Layout.** Stage cards in timeline order, the Outline beside them in the right third, kept in view; below the cards on a phone. *Save* at the Outline's foot, disabled until AD2.
@@ -20,7 +22,7 @@ Process is a placeholder (AD1D): a read-only table per stage of what `applydesk/
 5. **Reordering** by a card's handle, dragged or with ↑ ↓, as Form's.
 6. **The Outline**: each stage by name and dates, its items beneath, the counts (stages, gates, outcomes), and any problem (a rule reading a later outcome, a gate a rule names that was deleted).
 7. ~~**Preview** shows the Workflow card as it would be, built from the cards on screen.~~ Held until the builder is complete (author, 2026-11-13: "hold off the Workflow card first; we complete the builder first").
-8. **Announcements** stay a card at the foot. **Milestones fold into the stages**: a stage's dates and an outcome's due date carry a *Shown to applicants* switch.
+8. ~~**Announcements** stay a card at the foot.~~ Removed: not part of the flow; their equivalent is part of the exercise's own setup (author, 2026-11-13). **Milestones fold into the stages**: a stage's dates and an outcome's due date carry a *Shown to applicants* switch.
 
 **Rejected:**
 - **A table of stages** (the placeholder): no room for rules, and nothing to reorder by hand.
@@ -55,7 +57,8 @@ Taken 2026-11-13 at `fb6e75f07`.
 ## Status
 
 Building. Base `fb6e75f07` for the cumulative read.
-- Rung 2, the scaffold: a card per stage (`operator/_process_cards.html`, one macro per card and item, as Form's), every card open and every action disabled until rung 3; an open card keeps its name, dates and what it holds in its head. The Outline lists the stages and their items with the counts and any `stages.problems`. The placeholder's milestones table is gone: its dates live on the stages (Decision 8, still open), the announcements keep their card.
+- Rung 2, the scaffold: a card per stage (`operator/_process_cards.html`, one macro per card and item, as Form's), every card open and every action disabled until rung 3; an open card keeps its name, dates and what it holds in its head. The Outline lists the stages and their items with the counts and any `stages.problems`. The placeholder's milestones table is gone: its dates live on the stages (Decision 8, the author's). The announcements card went at rung 3 (author: their equivalent is part of the exercise's setup).
+- Rung 3: the stage card moves (`_process.html`'s script): open and close (cards load collapsed unless alone); name and dates feed the head and the Outline, an empty name reading *Stage N*; *+ Stage*, *Replicate* (the copy leaves the form behind and gives its gates and outcome keys of their own), *Delete* (never the last); dragging or ↑ ↓, gates and outcomes renumbered by timeline; *+ Form* and *Remove the form* within ruling 15, the buttons saying why when refused. *+ Gate* and *+ Outcome* stay for rung 4. Built on the element alignment (#3853): the cards take Review Robin's 2px edge.
 
 ## PR ladder
 
@@ -82,7 +85,7 @@ Building. Base `fb6e75f07` for the cumulative read.
 ## Open questions
 
 - **Preview**: held until the builder is complete (author, 2026-11-13); what it shows is decided then.
-- **Milestones folded into stages** (Decision 8): agreeable, or keep a separate milestones list? (author, at rung 2).
+- **Milestones**: inside the stage cards (author, 2026-11-13: "stage milestones belong inside the stage cards"), as Decision 8 has it.
 - **What a gate before the form evaluates** (AD1D's open question): its rows before applications exist.
 - **`close_check.py` reads only RRW's `guide/`**: this close is checked by hand.
 
