@@ -50,7 +50,7 @@ def test_the_columns_follow_the_setup(client: TestClient) -> None:
 def test_every_application_is_a_row(client: TestClient) -> None:
     text = client.get(PAGE).text
     apps = sample_data.applications_of(EX)
-    assert len(apps) == 101
+    assert len(apps) == 102
     assert text.count("data-row ") == len(apps)
     # A submitted application's ID links to its file; a draft's does not.
     assert f'/files/{apps[0].file_id}"><code>{apps[0].public_id}</code></a>' in text
@@ -61,8 +61,8 @@ def test_every_application_is_a_row(client: TestClient) -> None:
 def test_the_model_exercise_reads_as_partway_through() -> None:
     plan = rounds.plan_of(EX)
     by_key = {c.key: c for c in plan.columns}
-    assert rounds.counts(plan, by_key["o1"]).startswith("24 shortlisted")
-    assert rounds.counts(plan, by_key["g2"]) == "49 entered · 2 to decide"
+    assert rounds.counts(plan, by_key["o1"]) == "26 shortlisted · 2 pending"
+    assert rounds.counts(plan, by_key["g3"]) == "27 entered · 2 to decide"
     o1, o2 = by_key["o1"], by_key["o2"]
     assert isinstance(o1, rounds.Outcome) and isinstance(o2, rounds.Outcome)
     assert o1.released and not o2.released
@@ -72,13 +72,17 @@ def test_the_model_exercise_reads_as_partway_through() -> None:
             assert all(not c.value for c in cells.values())
         if a.state == "Withdrawn":
             # Keeps what it had; "—" where it was never admitted.
-            assert all(not cells[k].value for k in ("g2", "o1", "g3", "o2", "o3"))
+            assert all(not cells[k].value for k in ("o1", "g3", "o2", "o3"))
             day = int(a.submitted.split()[0])
-            assert bool(cells["g1"].value) == (day >= 16)
-        if cells["o1"].value == "Not shortlisted":
+            assert bool(cells["g1"].value) == bool(cells["g2"].value) == (day >= 16)
+        if cells["o1"].value == "Not shortlisted" and not cells["g3"].by_hand:
             assert cells["g3"].value == "Not entered" and not cells["o2"].value
         if cells["o1"].value == "Shortlisted":
             assert cells["o3"].value == "Pending" and cells["o3"].note == "Due 12 Dec"
+        # Where Setup's rule decided it, the outcome follows its combined result.
+        comb = rounds.combined(row, o1)
+        if comb is not None and not cells["o1"].by_hand and cells["o1"].value != "Pending":
+            assert (cells["o1"].value == "Shortlisted") == (comb >= 4.2)
     notes = {c.note for r in plan.rows for c in r.cells.values()}
     assert {"Excluded: not eligible", "Added by operator: panel request"} <= notes
 

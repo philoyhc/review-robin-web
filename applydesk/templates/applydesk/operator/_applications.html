@@ -3,6 +3,7 @@
    each round's gates and outcomes as Setup and the Timeline set them.
    Every move works on screen; nothing is saved until AD2. #}
 {% set last = last_submitted(plan.rows) %}
+{% set rank = submitted_rank(plan.rows) %}
 {% set cols = plan.columns %}
 <div class="ap" data-applications>
   <div class="ap-tool">
@@ -12,7 +13,7 @@
     </select>
     <span class="ap-gap"></span>
     {% if cols %}
-    <button class="btn btn-secondary" type="button" data-ap-rule-open aria-expanded="false" aria-controls="ap-rule">Fill by rule…</button>
+    <button class="btn btn-secondary" type="button" data-ap-rule-open aria-expanded="false" aria-controls="ap-rule">Apply rules…</button>
     <button class="btn btn-secondary" type="button" data-ap-csv-open>Upload CSV</button>
     <input type="file" accept=".csv,text/csv" data-ap-csv hidden aria-label="CSV file">
     {% endif %}
@@ -21,22 +22,14 @@
   {% if cols %}
   {# A rule: one column set from an earlier gate's result. It proposes;
      nothing changes until Apply. #}
+  {# Rules are set with each gate and outcome on Setup (author,
+     2026-11-13); this page only applies them, and a hand overrides. #}
   <section class="card ap-panel" id="ap-rule" data-ap-rule hidden aria-labelledby="ap-rule-h">
-    <h3 id="ap-rule-h">Fill by rule</h3>
+    <h3 id="ap-rule-h">Apply rules</h3>
+    <p class="muted">Each column's rule, set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/setup') }}">Setup</a>, works out its cells in column order, so a rule that reads an earlier outcome sees it decided first. Nothing changes until you apply the proposal.</p>
     <div class="ap-rule-row">
-      <label>Set<select class="ap-sel" data-ap-rule-target>
-        {% for c in cols %}<option value="{{ c.key }}">{{ "Gate " ~ c.number if c.via is defined else "Outcome " ~ c.number }}: {{ c.label }}</option>{% endfor %}
-      </select></label>
-      <label>to<select class="ap-sel" data-ap-rule-then></select></label>
-      <label>where<select class="ap-sel" data-ap-rule-source>
-        {% for c in cols if c.via is defined and c.measure %}<option value="{{ c.key }}">{{ c.measure }} at {{ c.label }}</option>{% endfor %}
-      </select></label>
-      <select class="ap-sel" data-ap-rule-op aria-label="Comparison"><option value="ge">≥</option><option value="lt">&lt;</option></select>
-      <input class="ap-search ap-num" data-ap-rule-at type="number" step="0.1" value="4.0" aria-label="Threshold">
-    </div>
-    <div class="ap-rule-row">
-      <label>Otherwise<select class="ap-sel" data-ap-rule-else></select></label>
-      <label class="ap-check"><input type="checkbox" data-ap-rule-pending checked> Change only cells not yet decided (<em>—</em> or <em>Pending</em>)</label>
+      <label class="ap-check"><input type="checkbox" data-ap-rule-pending checked> Only cells not yet decided (<em>—</em> or <em>Pending</em>)</label>
+      <label class="ap-check"><input type="checkbox" data-ap-rule-hand> Also replace cells set by hand</label>
       <button class="btn btn-secondary" type="button" data-ap-rule-go>Propose</button>
     </div>
   </section>
@@ -63,9 +56,11 @@
         <th>Status<span class="ap-count" data-ap-count="status"></span></th>
         {% for r in plan.rounds %}{% for c in r.columns %}
           {% if c.via is defined %}
-          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate" data-label="{{ c.label }}" data-number="Gate {{ c.number }}" data-measure="{{ c.measure }}"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span></th>
+          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}" data-measure="{{ c.measure }}"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span></th>
           {% else %}
-          <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-label="{{ c.label }}" data-number="Outcome {{ c.number }}" data-first="{{ c.values[0] }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
+          <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-scope="{{ scope(plan, c) | map(attribute='key') | join('|') }}" data-weights="{% for k, w in c.weights %}{{ k }}:{{ w }}{{ '|' if not loop.last }}{% endfor %}" data-number="Outcome {{ c.number }}" data-first="{{ c.values[0] }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
+            {% if c.weights %}<span class="ap-weights">{% for k, w in c.weights %}{% for g in cols if g.key == k %}{{ g.label }} {{ (w * 100) | round | int }}%{% endfor %}{{ " · " if not loop.last }}{% endfor %}</span>{% endif %}
+            {% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>
             <label class="ap-rel"><input type="checkbox" data-ap-release="{{ c.label }}" aria-label="Released: {{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
             <span class="ap-relnote{{ ' ap-relnote-on' if c.released }}" data-ap-relnote>{{ c.released or "Not yet" }}</span>
           </th>
@@ -75,13 +70,13 @@
     </thead>
     <tbody>
     {% for row in plan.rows %}{% set a = row.application %}
-      <tr data-row data-status="{{ a.state }}" data-search="{{ (a.public_id ~ ' ' ~ a.applicant ~ ' ' ~ a.email) | lower }}"{% if a.public_id in last %} data-last{% endif %}>
+      <tr data-row data-status="{{ a.state }}" data-search="{{ (a.public_id ~ ' ' ~ a.applicant ~ ' ' ~ a.email) | lower }}"{% if a.public_id in last %} data-last{% endif %}{% if a.public_id in rank %} data-rank="{{ rank[a.public_id] }}"{% endif %}>
         <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ a.public_id }}">
           {% if a.state == "Submitted" %}<a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/files/' ~ a.file_id) }}"><code>{{ a.public_id }}</code></a>{% else %}<code>{{ a.public_id }}</code>{% endif %}</td>
         <td class="ap-who"><strong>{{ a.applicant }}</strong><span class="ap-mail">{{ a.email }}</span></td>
         <td class="ap-stat">{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}<span class="ap-note">{{ a.submitted }}</span></td>
         {% for r in plan.rounds %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}
-          <td class="{{ 'ap-out' if c.via is not defined }} {{ 'ap-r' if loop.first }}" data-cell="{{ c.key }}">
+          <td class="{{ 'ap-out' if c.via is not defined }} {{ 'ap-r' if loop.first }}" data-cell="{{ c.key }}"{% if cell.by_hand %} data-hand{% endif %}>
           {# A submitted application's outcomes are always settable, "—"
              until decided, so a hand change can advance it (Codex). #}
           {% if not cell.value and (c.via is defined or a.state != "Submitted") %}<span class="muted">—</span>
@@ -90,8 +85,8 @@
               <option value=""{% if not cell.value %} selected{% endif %}>—</option>
               <option{% if cell.value == "Pending" %} selected{% endif %}>Pending</option>
               {% for v in c.values %}<option{% if v == cell.value %} selected{% endif %}>{{ v }}</option>{% endfor %}
-            </select></span><span class="ap-note" data-ap-date data-due="Due {{ c.due }}">{{ cell.note }}</span>
-          {% endif %}</td>
+            </select></span>{% if c.weights %}<span class="ap-note ap-comb" data-ap-comb></span>{% endif %}<span class="ap-note" data-ap-date data-due="Due {{ c.due }}">{{ cell.note }}</span>
+          {% endif %}<span class="ap-hand">Set by hand</span></td>
         {% endfor %}{% endfor %}
       </tr>
     {% else %}
@@ -150,6 +145,7 @@
     el.classList.add(undecided(v) ? "ap-t-warn" : v === on ? "ap-t-good" : "ap-t-mute");
   }
   function recount() {
+    if (typeof showCombined === "function") showCombined();
     heads.forEach(function (h) {
       var key = h.dataset.col, tally = {};
       rows.forEach(function (r) {
@@ -174,6 +170,11 @@
     btn.setAttribute("aria-label", btn.getAttribute("aria-label").replace(/: [^:]*$/, ": " + (v === "—" ? "no status yet" : v)));
     tone(btn);
   }
+  // A cell set by hand overrides its column's rule, and says so.
+  function byHand(el, on) {
+    var td = el.closest("td");
+    if (on) td.setAttribute("data-hand", ""); else td.removeAttribute("data-hand");
+  }
   function setOutcome(sel, v) {
     sel.value = v;
     sel.dataset.v = v;
@@ -187,11 +188,12 @@
     var btn = e.target.closest("[data-ap-adm]");
     if (!btn) return;
     setAdm(btn, CYCLE[(CYCLE.indexOf(btn.dataset.v) + 1) % CYCLE.length]);
+    byHand(btn, true);
     recount();
   });
   root.addEventListener("change", function (e) {
     var sel = e.target.closest("[data-ap-oc]");
-    if (sel) { setOutcome(sel, sel.value); recount(); return; }
+    if (sel) { setOutcome(sel, sel.value); byHand(sel, true); recount(); return; }
     var rel = e.target.closest("[data-ap-release]");
     if (rel) {
       var name = rel.dataset.apRelease;
@@ -237,6 +239,7 @@
         var el = r.querySelector('[data-cell="' + setCol.value + '"] [data-v]');
         if (!el) return;  // a draft, or never admitted: nothing to set
         if (el.matches("[data-ap-adm]")) setAdm(el, setVal.value); else setOutcome(el, setVal.value);
+        byHand(el, true);
       });
       recount();
     });
@@ -282,6 +285,7 @@
         var el = cellOf(c.row, c.key);
         if (!el || el.dataset.v !== c.from) { kept += 1; return; }
         if (el.matches("[data-ap-adm]")) setAdm(el, c.to); else setOutcome(el, c.to);
+        byHand(el, !c.byRule);
       });
       close();
       recount();
@@ -295,67 +299,108 @@
     if (opener) opener.focus();
   }
 
-  // Fill by rule: Set <column> to <value> where <result at gate> ≥ or <
-  // <threshold>, otherwise <value or leave>; only Pending cells, unless
-  // the operator says otherwise. Rows with no finished result are named.
+  // An outcome's combined result: the weighted average of the finished
+  // results of the gates in its scope. A gate the application was not
+  // entered into is left out and the other weights rescaled; one entered
+  // with no finished result, or not yet decided, leaves it unknown.
+  function combinedOf(r, okey, val) {
+    var spec = head[okey].dataset.weights;
+    if (!spec) return { known: false, none: true };
+    var total = 0, weight = 0, unknown = false;
+    spec.split("|").forEach(function (part) {
+      var kw = part.split(":"), el = cellOf(r, kw[0]), w = parseFloat(kw[1]);
+      var v = val ? val(r, kw[0]) : el && el.dataset.v;
+      if (!el || v === "Not entered") return;
+      if (v === "—" || el.dataset.result === undefined) { unknown = true; return; }
+      total += w * parseFloat(el.dataset.result);
+      weight += w;
+    });
+    if (unknown) return { known: false, none: false };
+    if (!weight) return { known: false, none: true };
+    return { known: true, value: Math.round(total / weight * 100) / 100 };
+  }
+  function showCombined() {
+    rows.forEach(function (r) {
+      Array.prototype.forEach.call(r.querySelectorAll("[data-ap-comb]"), function (span) {
+        var c = combinedOf(r, span.closest("td").dataset.cell);
+        span.textContent = c.known ? "Combined " + c.value.toFixed(2) : "";
+      });
+    });
+  }
+
+  // Apply rules: each column's rule, set on Setup, in column order, so a
+  // rule reading an earlier outcome sees the value this run gives it. By
+  // default only cells not yet decided, never a cell set by hand unless
+  // asked; a condition that cannot be judged yet leaves the cell, named.
   var rule = root.querySelector("[data-ap-rule]");
   if (rule) {
-    var ruleOpen = root.querySelector("[data-ap-rule-open]");
-    var target = rule.querySelector("[data-ap-rule-target]");
-    var then = rule.querySelector("[data-ap-rule-then]"), otherwise = rule.querySelector("[data-ap-rule-else]");
-    function fillValues() {
-      var vals = choices(target.value).filter(function (v) { return !undecided(v); });
-      then.textContent = ""; otherwise.textContent = "";
-      vals.forEach(function (v) { var o = document.createElement("option"); o.textContent = v; then.appendChild(o); });
-      ["Leave as is"].concat(vals).forEach(function (v) { var o = document.createElement("option"); o.textContent = v; otherwise.appendChild(o); });
-      if (vals.length > 1) otherwise.value = vals[vals.length - 1];
-    }
-    // The result a rule reads comes from a gate before the column it sets.
-    var source = rule.querySelector("[data-ap-rule-source]");
-    var order = heads.map(function (h) { return h.dataset.col; });
-    function fillSources() {
-      var at = order.indexOf(target.value), first = null;
-      Array.prototype.forEach.call(source.options, function (o) {
-        o.disabled = order.indexOf(o.value) >= at;
-        o.hidden = o.disabled;
-        if (!o.disabled && first === null) first = o.value;
-      });
-      if (source.selectedOptions[0] && source.selectedOptions[0].disabled || !source.value) source.value = first || "";
-      rule.querySelector("[data-ap-rule-go]").disabled = first === null;
-    }
-    target.value = (heads.filter(function (h) { return h.dataset.kind === "gate"; })[1] || heads[0]).dataset.col;
-    fillValues();
-    fillSources();
-    target.addEventListener("change", function () { fillValues(); fillSources(); });
+    var ruleOpen = root.querySelector("[data-ap-rule-open]"), go = rule.querySelector("[data-ap-rule-go]");
     ruleOpen.addEventListener("click", function () {
       rule.hidden = !rule.hidden;
       ruleOpen.setAttribute("aria-expanded", rule.hidden ? "false" : "true");
-      if (!rule.hidden) target.focus();
+      if (!rule.hidden) go.focus();
     });
-    rule.querySelector("[data-ap-rule-go]").addEventListener("click", function () {
-      var src = source.value;
-      var ge = rule.querySelector("[data-ap-rule-op]").value === "ge";
-      var at = parseFloat(rule.querySelector("[data-ap-rule-at]").value);
+    function holds(r, cond, okey, val) {
+      var kind = cond[0], key = cond[1], op = cond[2], want = cond[3];
+      function cmp(x) { var t = parseFloat(want); return op === "ge" ? x >= t : x < t; }
+      if (kind === "status") return r.dataset.status === want;
+      if (kind === "last") return r.dataset.rank !== undefined && parseInt(r.dataset.rank, 10) <= parseInt(want, 10);
+      if (kind === "ent" || kind === "out") {
+        var v = val(r, key);
+        if (v === null) return false;  // a cell this application has not
+        if (v !== want && undecided(v)) return null;  // not decided yet: wait
+        return v === want;
+      }
+      if (kind === "res") {
+        var g = val(r, key), el = cellOf(r, key);
+        if (g === null || g === "Not entered") return false;
+        if (g === "—" || el.dataset.result === undefined) return null;
+        return cmp(parseFloat(el.dataset.result));
+      }
+      var c = combinedOf(r, okey, val);  // comb
+      if (c.known) return cmp(c.value);
+      return c.none ? false : null;
+    }
+    go.addEventListener("click", function () {
       var onlyPending = rule.querySelector("[data-ap-rule-pending]").checked;
-      var measure = head[src].dataset.measure, key = target.value;
-      if (isNaN(at)) { propose("Fill by rule", [], ["Enter a threshold."], rule.querySelector("[data-ap-rule-at]")); return; }
-      var changes = [], unjudged = [];
-      rows.forEach(function (r) {
+      var replaceHand = rule.querySelector("[data-ap-rule-hand]").checked;
+      var shadow = new Map(), changes = [], skipped = [];
+      function val(r, key) {
+        var k = r.rowIndex + "|" + key;
+        if (shadow.has(k)) return shadow.get(k);
         var el = cellOf(r, key);
-        if (!el) return;  // a draft, or never admitted to this column
-        if (onlyPending && !undecided(el.dataset.v)) return;
-        var res = cellOf(r, src);
-        if (!res || res.dataset.v !== "Entered") return;  // never entered there: nothing to read
-        if (res.dataset.result === undefined) { unjudged.push(idOf(r)); return; }
-        var met = ge ? parseFloat(res.dataset.result) >= at : parseFloat(res.dataset.result) < at;
-        var to = met ? then.value : otherwise.value;
-        if (to === "Leave as is" || to === el.dataset.v) return;
-        changes.push({ row: r, key: key, from: el.dataset.v, to: to });
+        return el ? el.dataset.v : null;
+      }
+      heads.forEach(function (h) {
+        var spec = JSON.parse(h.dataset.rule || "null");
+        if (!spec) return;
+        var key = h.dataset.col, unjudged = [];
+        var scoped = h.dataset.scope ? h.dataset.scope.split("|") : [];
+        rows.forEach(function (r) {
+          var el = cellOf(r, key);
+          if (!el) return;  // a draft, or a cell that cannot be set
+          // An outcome none of whose gates this application entered is
+          // not reached: it stays as it is.
+          if (scoped.length && scoped.every(function (g) { var v = val(r, g); return v === null || v === "Not entered"; })) return;
+          if (!replaceHand && el.closest("td").hasAttribute("data-hand")) return;
+          if (onlyPending && !undecided(el.dataset.v)) return;
+          var verdict = true;
+          spec.when.forEach(function (cond) {
+            if (verdict === false) return;
+            var x = holds(r, cond, key, val);
+            if (x === false) verdict = false; else if (x === null) verdict = null;
+          });
+          if (verdict === null) { unjudged.push(idOf(r)); return; }
+          var to = verdict ? spec.then : spec.otherwise;
+          if (to === el.dataset.v) return;
+          shadow.set(r.rowIndex + "|" + key, to);
+          changes.push({ row: r, key: key, from: el.dataset.v, to: to, byRule: true });
+        });
+        if (unjudged.length) {
+          skipped.push(h.dataset.label + ": " + unjudged.length + (unjudged.length === 1 ? " application cannot" : " applications cannot") + " be judged yet (a result not in), left as is: " + unjudged.join(", ") + ".");
+        }
       });
-      var skipped = unjudged.length
-        ? [unjudged.length + (unjudged.length === 1 ? " application has" : " applications have") + " no finished " + measure + " at " + head[src].dataset.label + ", left as is: " + unjudged.join(", ") + "."]
-        : [];
-      propose("Fill by rule: " + head[key].dataset.label + " from " + measure + (ge ? " ≥ " : " < ") + at, changes, skipped, rule.querySelector("[data-ap-rule-go]"));
+      propose("Apply rules", changes, skipped, go);
     });
   }
 

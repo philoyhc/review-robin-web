@@ -99,4 +99,8 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         plan=rounds.plan_of(exercise.public_id),
         counts=rounds.counts,
         last_submitted=rounds.last_submitted,
+        scope=rounds.scope,
+        submitted_rank=rounds.submitted_rank,
+        rule_text=rounds.rule_text,
+        rule_json=rounds.rule_json,
     )

@@ -71,10 +71,17 @@ where a ruling below differs from it, the ruling wins.
       and the Timeline. **Applications** is the control surface: who
       enters each gate (*—* for no status yet, *Entered*, *Not entered*;
       author, 2026-11-13) and each
-      outcome's value, set by hand, filled by a rule over an earlier
-      gate's result (e.g. Rating ≥ 4.0), or uploaded as a CSV keyed by
-      application ID. A rule or an upload is a proposal the operator
-      reviews before saving; a hand change always remains possible.
+      outcome's value, set by hand, by the column's rule, or uploaded as
+      a CSV keyed by application ID. **Rules are set on Setup, not here**
+      (author, 2026-11-13): Applications applies them, and the operator
+      overrides any cell by hand. A gate's rule reads the application's
+      status, whether it is the applicant's last submitted, and earlier
+      outcomes, never another gate; an outcome's reads the gates in its
+      scope (those since the previous outcome) and earlier outcomes. An
+      outcome may be a function of its gates' results: a weighted
+      average (e.g. 30% / 70%), a gate not entered dropping out and the
+      rest re-weighted; conditions combine with AND. A rule or an upload
+      is a proposal the operator reviews before saving.
     - The word **stage** stays with the exercise's timeline (Setup,
       Application, Review …); evaluation steps are **rounds**.
     - An applicant may send more than one application; the page shows

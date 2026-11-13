@@ -64,6 +64,8 @@ Building. Base `34f3d4b` for the cumulative read.
 
 - Rung 5 (author, 2026-11-13): gate chips cycle *—* (no status yet), *Entered*, *Not entered*, since a gate is whether an application is sent through it; outcomes keep their own values with *Pending*, from Setup, in a menu shaped and toned as a pill. Kept apart because a gate's three states suit a cycle and an outcome's open-ended values a one-pick menu (author, after asking). A rule's "undecided only" covers both *—* and *Pending*; a CSV takes `-` for *—*.
 
+- Rung 6 (author, 2026-11-13): rules belong to Setup; this page applies them. *Fill by rule…* becomes *Apply rules…*: every column's rule (`Rule` in `applydesk/rounds.py`, sample values until Setup holds them), in column order, so a rule reading an earlier outcome sees this run's value; undecided cells only unless unticked; a cell set by hand (marked "Set by hand") is kept unless asked; a condition not yet judgeable leaves the cell, named; an outcome none of whose gates the application entered is left. Each header shows its rule, or "Decided by hand". An outcome's **combined result** is the weighted average of its scope's gate results (`rounds.combined`; the sample's Shortlist is Peer Review 30%, Faculty Panel Review 70%, at ≥ 4.2). The sample now follows its rules: every last-submitted application enters Gates 1 and 2, a second application from one applicant shows the "last submitted" rule (102 applications), Final results are decided by hand. Supersedes "Rules beyond one threshold" in Out of scope.
+
 ## PR ladder
 
 1. **Plan** (this file), ruling 13, its README and roadmap rows.

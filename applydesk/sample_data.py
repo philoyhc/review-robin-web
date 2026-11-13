@@ -337,6 +337,18 @@ def _generated() -> tuple[Application, ...]:
         ),
     )
     made[3] = replace(twice, state="Submitted", submitted="5 Oct 2026")
+    # Another sends two and keeps both (author, 2026-11-13: a gate may
+    # take only the last N submitted by each applicant).
+    first = next(m for m in made[10:] if m.state == "Submitted")
+    made.append(
+        replace(
+            first,
+            public_id=new_id(),
+            file_id=new_id(),
+            title="A second proposal: " + first.title.lower(),
+            submitted="15 Oct 2026",
+        )
+    )
     return tuple(made)
 
 
