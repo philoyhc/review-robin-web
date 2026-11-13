@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
+from datetime import date, datetime
 
 from applydesk import sample_data
 from applydesk.sample_data import Application
@@ -23,12 +24,30 @@ ADMITTANCE: tuple[str, ...] = (NO_STATUS, "Entered", "Not entered")
 
 
 @dataclass(frozen=True)
+class Rule:
+    """How a column is filled, set with it on Setup (author, 2026-11-13);
+    the Applications page only applies it, and a hand can override.
+
+    ``when`` holds conditions that must all hold, each (kind, key, op,
+    value): ("status", "", "is", "Submitted"); ("last", "", "le", "1"),
+    one of the applicant's last N submitted; ("out", outcome, "is",
+    value); for an outcome only, ("res", gate, "ge"/"lt", "4.0") on a gate
+    in its scope, ("ent", gate, "is", "Entered") and ("comb", "", "ge"/"lt",
+    "4.2") on its combined result. A gate never reads another gate."""
+
+    when: tuple[tuple[str, str, str, str], ...]
+    then: str
+    otherwise: str
+
+
+@dataclass(frozen=True)
 class Gate:
     key: str
     number: int
     label: str
     via: str  # "RRW": a Review Robin session
     measure: str  # what its result is called: "Rating", "Score", ""
+    rule: Rule | None = None
 
 
 @dataclass(frozen=True)
@@ -39,6 +58,10 @@ class Outcome:
     values: tuple[str, ...]  # the decided values; Pending is always offered
     due: str
     released: str  # "" until released, else when and to whom
+    # Its combined result: a weighted average of the gates in its scope
+    # (author, 2026-11-13), set with the outcome on Setup; the sample's.
+    weights: tuple[tuple[str, float], ...] = ()
+    rule: Rule | None = None
 
 
 @dataclass(frozen=True)
@@ -53,6 +76,7 @@ class Cell:
     value: str  # an admittance, an outcome value, or "" for none ("—")
     note: str = ""  # under the chip: a gate's result, a reason, a date
     result: float | None = None  # a gate's finished result, which a rule reads
+    by_hand: bool = False  # set by hand, overriding the column's rule
 
 
 @dataclass(frozen=True)
@@ -74,8 +98,16 @@ class Plan:
         return tuple(c for r in self.rounds for c in r.columns)
 
 
-_G1 = Gate("g1", 1, "Peer Review", "RRW", "Rating")
-_G2 = Gate("g2", 2, "Faculty Panel Review", "RRW", "Score")
+# The model exercise's rules, as Setup will hold them (author, 2026-11-13).
+# Gates 1 and 2 run together and take each applicant's last submitted
+# application; the shortlist reads their combined result; the interview
+# takes the shortlist; Finalists reads the interview; Final results is
+# decided by hand.
+_EVERYONE = Rule(
+    (("status", "", "is", "Submitted"), ("last", "", "le", "1")), "Entered", "Not entered"
+)
+_G1 = Gate("g1", 1, "Peer Review", "RRW", "Rating", _EVERYONE)
+_G2 = Gate("g2", 2, "Faculty Panel Review", "RRW", "Score", _EVERYONE)
 _O1 = Outcome(
     "o1",
     1,
@@ -83,9 +115,27 @@ _O1 = Outcome(
     ("Shortlisted", "Not shortlisted"),
     "10 Nov",
     "10 Nov · to applicants",
+    (("g1", 0.3), ("g2", 0.7)),
+    Rule((("comb", "", "ge", "4.2"),), "Shortlisted", "Not shortlisted"),
 )
-_G3 = Gate("g3", 3, "Interview", "RRW", "")
-_O2 = Outcome("o2", 2, "Finalists", ("Finalist", "Not a finalist"), "24 Nov", "")
+_G3 = Gate(
+    "g3",
+    3,
+    "Interview",
+    "RRW",
+    "Score",
+    Rule((("out", "o1", "is", "Shortlisted"),), "Entered", "Not entered"),
+)
+_O2 = Outcome(
+    "o2",
+    2,
+    "Finalists",
+    ("Finalist", "Not a finalist"),
+    "24 Nov",
+    "",
+    (("g3", 1.0),),
+    Rule((("res", "g3", "ge", "4.0"),), "Finalist", "Not a finalist"),
+)
 _O3 = Outcome("o3", 3, "Final results", ("Awarded", "Waitlisted", "Not awarded"), "12 Dec", "")
 
 _ROUNDS: dict[str, tuple[str, tuple[Round, ...]]] = {
@@ -107,86 +157,98 @@ _ROUNDS: dict[str, tuple[str, tuple[Round, ...]]] = {
                 "1 Nov – 30 Nov",
                 (
                     Gate("g1", 1, "Panel Review", "RRW", "Score"),
-                    Outcome("o1", 1, "Final results", ("Awarded", "Not awarded"), "15 Dec", ""),
+                    Outcome(
+                        "o1",
+                        1,
+                        "Final results",
+                        ("Awarded", "Not awarded"),
+                        "15 Dec",
+                        "",
+                        (("g1", 1.0),),
+                    ),
                 ),
             ),
         ),
     ),
 }
 
-#: The model exercise's thresholds, as a rule would set them (rung 3).
-_PANEL_FROM = 3.5  # Rating at Peer Review to enter the Faculty Panel
-_SHORTLIST = 24  # the top Scores at the Faculty Panel
-
 
 def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
+    """The model exercise mid-way, as its rules left it plus a few hands:
+    one application excluded as not eligible, one added to the interview,
+    two whose peer reviews are still coming; Round 2's outcomes not yet
+    decided."""
     rng = random.Random("wa9juxbc2t rounds")
     rating = {a.public_id: round(rng.uniform(2.4, 4.9), 1) for a in apps}
     score = {
         a.public_id: round(min(5.0, rating[a.public_id] + rng.uniform(-0.6, 0.6)), 1) for a in apps
     }
+    rank = submitted_rank(tuple(Row(a, {}) for a in apps))
     submitted = [a for a in apps if a.state == "Submitted"]
-    excluded = {submitted[5].public_id}  # not eligible, set by hand
-    added = {next(a.public_id for a in submitted if 3.2 <= rating[a.public_id] < _PANEL_FROM)}
+    excluded = submitted[5].public_id  # not eligible, set by hand
     late = {submitted[-1].public_id, submitted[-2].public_id}  # reviews still coming
-    panel = [
-        a
-        for a in submitted
-        if a.public_id not in excluded | late
-        and (rating[a.public_id] >= _PANEL_FROM or a.public_id in added)
-    ]
-    shortlisted = {
-        a.public_id for a in sorted(panel, key=lambda a: -score[a.public_id])[:_SHORTLIST]
-    }
+    keys = ("g1", "g2", "o1", "g3", "o2", "o3")
     interviews = ("Interviewed 11 Nov", "Interviewed 12 Nov", "Scheduled 18 Nov", "")
+    added = ""
 
     rows: list[Row] = []
     for n, a in enumerate(apps):
         i = a.public_id
-        cells: dict[str, Cell] = {}
+        cells: dict[str, Cell] = {k: Cell("") for k in keys}
         if a.state == "Draft":
-            rows.append(Row(a, {k: Cell("") for k in ("g1", "g2", "o1", "g3", "o2", "o3")}))
-            continue
-        if a.state == "Withdrawn":
-            # It keeps what it had, and "—" where it was never admitted
-            # (the plan's Semantics): withdrawn before Round 1 opened (16
-            # Oct), nothing; during it, its place at Peer Review only.
-            day = int(a.submitted.split()[0])
-            during = a.submitted.split()[1] != "Oct" or day >= 16
-            cells = {k: Cell("") for k in ("g1", "g2", "o1", "g3", "o2", "o3")}
-            if during:
-                cells["g1"] = Cell("Entered", f"Withdrew {day} {a.submitted.split()[1]}")
             rows.append(Row(a, cells))
             continue
-        if i in excluded:
-            cells["g1"] = Cell("Not entered", "Excluded: not eligible")
-        elif i in late:
-            cells["g1"] = Cell("Entered", f"Rating {rating[i]} · 1 of 3")
-        else:
-            cells["g1"] = Cell("Entered", f"Rating {rating[i]} · 3 of 3", rating[i])
+        if a.state == "Withdrawn":
+            # It keeps what it had, and "—" where it was never entered:
+            # withdrawn before Round 1 opened (16 Oct), nothing; during it,
+            # its place at the Round 1 gates only.
+            day = int(a.submitted.split()[0])
+            if day >= 16:
+                cells["g1"] = Cell("Entered", f"Withdrew {day} Oct")
+                cells["g2"] = Cell("Entered", f"Withdrew {day} Oct")
+            rows.append(Row(a, cells))
+            continue
+        if rank.get(i, 0) != 1:  # not the applicant's last submitted
+            for k in ("g1", "g2"):
+                cells[k] = Cell("Not entered", "Not the applicant's last")
+            cells["g3"] = Cell("Not entered")  # Shortlist not reached: "—"
+            rows.append(Row(a, cells))
+            continue
+        if i == excluded:
+            for k in ("g1", "g2"):
+                cells[k] = Cell("Not entered", "Excluded: not eligible", by_hand=True)
+            cells["g3"] = Cell("Not entered")  # Shortlist not reached: "—"
+            rows.append(Row(a, cells))
+            continue
         if i in late:
-            cells["g2"] = Cell(NO_STATUS, "Waiting on Peer Review")
+            cells["g1"] = Cell("Entered", f"Rating {rating[i]} · 1 of 3")
+            cells["g2"] = Cell("Entered", f"Score {score[i]} · 2 of 4")
             cells["o1"] = Cell("Pending", "Due 10 Nov")
-        elif i in excluded:
-            cells["g2"] = Cell("Not entered")
-            cells["o1"] = Cell("Not shortlisted", "10 Nov")
-        else:
-            if i in added:
-                cells["g2"] = Cell("Entered", "Added by operator: panel request", score[i])
-            elif rating[i] >= _PANEL_FROM:
-                cells["g2"] = Cell("Entered", f"Score {score[i]} · 4 of 4", score[i])
-            else:
-                cells["g2"] = Cell("Not entered", f"Below {_PANEL_FROM} (Rating)")
-            cells["o1"] = Cell("Shortlisted" if i in shortlisted else "Not shortlisted", "10 Nov")
-        if i in shortlisted:
-            note = interviews[n % len(interviews)]
-            cells["g3"] = Cell("Entered" if note else NO_STATUS, note or "Not yet scheduled")
+            cells["g3"] = Cell(NO_STATUS)
             cells["o2"] = Cell("Pending", "Due 24 Nov")
             cells["o3"] = Cell("Pending", "Due 12 Dec")
+            rows.append(Row(a, cells))
+            continue
+        cells["g1"] = Cell("Entered", f"Rating {rating[i]} · 3 of 3", rating[i])
+        cells["g2"] = Cell("Entered", f"Score {score[i]} · 4 of 4", score[i])
+        mixed = round(0.3 * rating[i] + 0.7 * score[i], 2)
+        shortlisted = mixed >= 4.2
+        cells["o1"] = Cell("Shortlisted" if shortlisted else "Not shortlisted", "10 Nov")
+        if not shortlisted and not added and mixed >= 4.0:
+            added = i  # the panel asked to interview one just below
+            cells["g3"] = Cell("Entered", "Added by operator: panel request", by_hand=True)
+        elif shortlisted:
+            note = interviews[n % len(interviews)]
+            if note.startswith("Interviewed"):
+                mark = round(min(5.0, score[i] + rng.uniform(-0.5, 0.5)), 1)
+                cells["g3"] = Cell("Entered", f"Score {mark} · {note.split(' ', 1)[1]}", mark)
+            else:
+                cells["g3"] = Cell("Entered", note or "Not yet scheduled")
         else:
-            cells["g3"] = Cell(NO_STATUS if i in late else "Not entered")
-            cells["o2"] = Cell("Pending", "Due 24 Nov") if i in late else Cell("")
-            cells["o3"] = Cell("Pending", "Due 12 Dec") if i in late else Cell("")
+            cells["g3"] = Cell("Not entered")
+        if cells["g3"].value == "Entered":
+            cells["o2"] = Cell("Pending", "Due 24 Nov")
+            cells["o3"] = Cell("Pending", "Due 12 Dec")
         rows.append(Row(a, cells))
     return tuple(rows)
 
@@ -241,3 +303,91 @@ def last_submitted(rows: tuple[Row, ...]) -> frozenset[str]:
         if a.state == "Submitted":
             submitted[a.email.lower()] = a.public_id
     return frozenset({**latest, **submitted}.values())
+
+
+def scope(plan: Plan, outcome: Outcome) -> tuple[Gate, ...]:
+    """The gates an outcome reads: those between it and the outcome
+    before it, in column order (author, 2026-11-13)."""
+    gates: list[Gate] = []
+    for c in plan.columns:
+        if c is outcome:
+            return tuple(gates)
+        gates = [] if isinstance(c, Outcome) else [*gates, c]
+    return ()
+
+
+def combined(row: Row, outcome: Outcome) -> float | None:
+    """An outcome's combined result for one application: the weighted
+    average of its gates' finished results. A gate it was not entered
+    into is left out and the other weights rescaled; one it entered with
+    no finished result, or not yet decided, leaves it unknown (None)."""
+    total = weight = 0.0
+    for key, w in outcome.weights:
+        cell = row.cells.get(key)
+        if cell is None or not cell.value or cell.value == "Not entered":
+            continue
+        if cell.value == NO_STATUS or cell.result is None:
+            return None
+        total += w * cell.result
+        weight += w
+    return round(total / weight, 2) if weight else None
+
+
+def submitted_rank(rows: tuple[Row, ...]) -> dict[str, int]:
+    """Each submitted application's place among its applicant's submitted
+    ones, newest first (1 = last submitted); for "the last N submitted by
+    each applicant" in a gate's rule (author, 2026-11-13)."""
+    by_applicant: dict[str, list[tuple[date, int, str]]] = {}
+    for n, r in enumerate(rows):
+        a = r.application
+        if a.state == "Submitted":
+            when = datetime.strptime(a.submitted, "%d %b %Y").date()
+            by_applicant.setdefault(a.email.lower(), []).append((when, n, a.public_id))
+    return {
+        app_id: rank
+        for subs in by_applicant.values()
+        for rank, (_, _, app_id) in enumerate(sorted(subs, reverse=True), start=1)
+    }
+
+
+_SAID = {
+    "status": "Status",
+    "last": "the applicant's last submitted",
+    "lastN": "among the applicant's last {v} submitted",
+    "comb": "Combined",
+}
+
+
+def rule_text(plan: Plan, column: Gate | Outcome) -> str:
+    """A column's rule in a line, for its header, e.g. "Combined ≥ 4.2 →
+    Shortlisted, else Not shortlisted"; "" for a column decided by hand."""
+    if column.rule is None:
+        return ""
+    labels = {c.key: c.label for c in plan.columns}
+    parts: list[str] = []
+    for kind, key, op, value in column.rule.when:
+        sign = {"ge": "≥", "lt": "<"}.get(op, "is")
+        if kind == "last":
+            parts.append(_SAID["last"] if value == "1" else _SAID["lastN"].format(v=value))
+        elif kind == "res":
+            gate = next(c for c in plan.columns if c.key == key)
+            assert isinstance(gate, Gate)
+            parts.append(f"{gate.measure} at {gate.label} {sign} {value}")
+        elif kind == "ent":
+            parts.append(f"Entry at {labels[key]} is {value}")
+        elif kind == "out":
+            parts.append(f"{labels[key]} is {value or '—'}")
+        else:
+            parts.append(f"{_SAID[kind]} {sign} {value}")
+    return f"{' and '.join(parts)} → {column.rule.then}, else {column.rule.otherwise}"
+
+
+def rule_json(column: Gate | Outcome) -> dict[str, object] | None:
+    """The column's rule as the page's script reads it."""
+    if column.rule is None:
+        return None
+    return {
+        "when": [list(c) for c in column.rule.when],
+        "then": column.rule.then,
+        "otherwise": column.rule.otherwise,
+    }

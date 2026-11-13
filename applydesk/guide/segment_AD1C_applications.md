@@ -15,7 +15,7 @@ The Applications tab is a placeholder: a list with *Generate applicant profiles*
 3. **A gate cell** is a chip that cycles ~~*Pending → Selected → Not selected*~~ *— (no status yet) → Entered → Not entered* (author, rung 5: a gate is whether the application is sent through it); under it, the gate's result from Review Robin ("Rating 4.6 · 3 of 3") or why it was set ("Excluded: not eligible").
 4. **An outcome cell** is a menu of that outcome's values (shaped and toned as a gate's chip since rung 5), the date it was decided under it (or "Due …" from the Timeline). Each outcome header carries a **Released** switch and when and to whom it was released.
 5. **Column headers count** their column across every application ("86 entered · 2 to decide").
-6. **A toolbar**: search (ID, name, email), a status filter, *Fill by rule…*, *Upload CSV*, *Save*; after the rows, *All applications* or *Last applications* (each applicant's last submitted), and *Set ticked rows*.
+6. **A toolbar**: search (ID, name, email), a status filter, *Fill by rule…* (*Apply rules…* since rung 6), *Upload CSV*, *Save*; after the rows, *All applications* or *Last applications* (each applicant's last submitted), and *Set ticked rows*.
 7. **The application file** replaces "applicant profile" in what shows (ruling 13).
 
 **Rejected:**
@@ -29,7 +29,7 @@ The Applications tab is a placeholder: a list with *Generate applicant profiles*
 - **A draft** has "—" in every gate and outcome: it has entered nothing. **A withdrawn application** keeps what it had, and "—" where it was never admitted.
 - **Gate admittance** is per application and per gate; an outcome's value is one of that outcome's values, or *Pending*.
 - **Counts** follow every change on screen.
-- **Fill by rule…** takes a target column, an earlier gate's result, an operator and a threshold; it shows the rows it would change (from, to) and changes nothing until *Apply*. Rows it cannot judge (no result yet) are listed and left alone.
+- ~~**Fill by rule…** takes a target column, an earlier gate's result, an operator and a threshold;~~ **Apply rules…** (rung 6) applies each column's rule from Setup; it shows the rows it would change (from, to) and changes nothing until *Apply*. Rows it cannot judge (no result yet) are listed and left alone. It touches submitted applications only, and a rule proposal is dropped if the table changes before *Apply*, since later columns read earlier ones.
 - **Upload CSV** takes `Application ID` and one column per gate or outcome, named as in the header; unknown IDs, unknown columns and values that are not the column's are listed, and nothing applies until the operator confirms. The same review step as a rule.
 - **Set ticked rows** applies one value to one column for the ticked rows.
 - **Released** toggles per outcome; turning it on asks to confirm, and says what the Timeline's setup will do (here, sample text). Nothing is sent.
@@ -64,6 +64,8 @@ Building. Base `34f3d4b` for the cumulative read.
 
 - Rung 5 (author, 2026-11-13): gate chips cycle *—* (no status yet), *Entered*, *Not entered*, since a gate is whether an application is sent through it; outcomes keep their own values with *Pending*, from Setup, in a menu shaped and toned as a pill. Kept apart because a gate's three states suit a cycle and an outcome's open-ended values a one-pick menu (author, after asking). A rule's "undecided only" covers both *—* and *Pending*; a CSV takes `-` for *—*.
 
+- Rung 6, an iteration rung under ladder step 5 (author, 2026-11-13): rules belong to Setup; this page applies them. *Fill by rule…* becomes *Apply rules…*: every column's rule (`Rule` in `applydesk/rounds.py`, sample values until Setup holds them), in column order, so a rule reading an earlier outcome sees this run's value; undecided cells only unless unticked; a cell set by hand (marked "Set by hand") is kept unless asked; a condition not yet judgeable leaves the cell, named; an outcome none of whose gates the application entered is left; withdrawn and draft rows are never touched; a rule proposal is dropped if the table changes before *Apply*. "Last submitted" goes by submission date. Each header shows its rule, or "Decided by hand". An outcome's **combined result** is the weighted average of its scope's gate results (`rounds.combined`; the sample's Shortlist is Peer Review 30%, Faculty Panel Review 70%, at ≥ 4.2). The sample now follows its rules (a test applies every rule to every cell and changes only what is still to decide): every last-submitted application enters Gates 1 and 2, a second application from one applicant shows the "last submitted" rule (102 applications), Final results are decided by hand. Supersedes "Rules beyond one threshold" in Out of scope.
+
 ## PR ladder
 
 1. **Plan** (this file), ruling 13, its README and roadmap rows.
@@ -76,7 +78,7 @@ Building. Base `34f3d4b` for the cumulative read.
 ## Definition of done
 
 - The columns follow the sample setup: three rounds, three gates, three outcomes, in order, with their dates (test).
-- In Chromium: a chip cycles, an outcome is picked and dated, counts follow, a release asks to confirm, search and status filter, Set ticked rows, All / Last applications, Fill by rule… and Upload CSV proposing then applying (tests).
+- In Chromium: a chip cycles, an outcome is picked and dated, counts follow, a release asks to confirm, search and status filter, Set ticked rows, All / Last applications, Fill by rule… (Apply rules… since rung 6) and Upload CSV proposing then applying (tests).
 - "Profile" no longer shows anywhere an operator, reviewer or applicant reads (test).
 - The author has used the page locally and approved it.
 - `## Doc impact` section present and current
@@ -95,7 +97,7 @@ Building. Base `34f3d4b` for the cumulative read.
 
 - **Saving** any of it, and the real link to Review Robin (gate sessions, results coming back): AD2 gives the database, AD6 the handoff (`applydesk/guide/todo_master.md`, roadmap).
 - **Setting up rounds, gates and outcomes** (Setup, the Timeline) and **what a release sends**: their own segment, after this page shows what they must hold.
-- **Rules beyond one threshold** (combining gates, ranking a top N): later, if the author asks.
+- ~~**Rules beyond one threshold** (combining gates, ranking a top N)~~: combining gates came in at rung 6 (author); ranking a top N stays out.
 
 ## Doc impact
 

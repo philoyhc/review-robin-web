@@ -106,16 +106,16 @@ def test_a_release_asks_first(page: Page) -> None:
 def test_search_status_and_last_applications_filter(page: Page) -> None:
     page.goto(PAGE)
     shown = page.locator("[data-ap-shown]")
-    assert shown.inner_text() == "Showing 101 of 101"
+    assert shown.inner_text() == "Showing 102 of 102"
     page.locator("[data-ap-search]").fill("chen.farouk")
-    assert shown.inner_text() == "Showing 2 of 101"
+    assert shown.inner_text() == "Showing 2 of 102"
     page.locator("[data-ap-which]").select_option("last")
-    assert shown.inner_text() == "Showing 1 of 101"
+    assert shown.inner_text() == "Showing 1 of 102"
     assert "Submitted" in page.locator("[data-row]:visible").inner_text()
     page.locator("[data-ap-search]").fill("")
     page.locator("[data-ap-which]").select_option("all")
     page.locator("[data-ap-status]").select_option("Draft")
-    assert shown.inner_text() == "Showing 7 of 101"
+    assert shown.inner_text() == "Showing 7 of 102"
 
 
 def test_ticked_rows_are_set_together(page: Page) -> None:
@@ -146,48 +146,6 @@ def test_an_application_advanced_by_hand_can_be_given_later_outcomes(page: Page)
 
 
 # --- Rung 3: Fill by rule… and Upload CSV, proposing before they apply ---
-def test_a_rule_proposes_then_applies(page: Page) -> None:
-    page.goto(PAGE)
-    page.locator("[data-ap-rule-open]").click()
-    rule = page.locator("[data-ap-rule]")
-    rule.locator("[data-ap-rule-target]").select_option("o2")
-    rule.locator("[data-ap-rule-then]").select_option("Finalist")
-    rule.locator("[data-ap-rule-else]").select_option("Not a finalist")
-    rule.locator("[data-ap-rule-source]").select_option("g2")
-    rule.locator("[data-ap-rule-at]").fill("4.5")
-    before = _count(page, "o2")
-    rule.locator("[data-ap-rule-go]").click()
-    prop = page.locator("[data-ap-proposal]")
-    assert prop.is_visible()
-    n = prop.locator("[data-ap-prop-rows] tr").count()
-    assert n > 0
-    assert "proposed. Nothing changes until Apply." in prop.inner_text()
-    # Nothing has changed yet.
-    assert _count(page, "o2") == before
-    prop.locator("[data-ap-prop-apply]").click()
-    assert not prop.is_visible()
-    finalists = page.locator('[data-cell="o2"] select[data-v="Finalist"]').count()
-    others = page.locator('[data-cell="o2"] select[data-v="Not a finalist"]').count()
-    assert finalists + others == n and finalists > 0 and others > 0
-    assert _count(page, "o2").startswith(f"{finalists} finalist")
-
-
-def test_a_rule_names_what_it_cannot_judge(page: Page) -> None:
-    page.goto(PAGE)
-    page.locator("[data-ap-rule-open]").click()
-    rule = page.locator("[data-ap-rule]")
-    rule.locator("[data-ap-rule-target]").select_option("g2")
-    rule.locator("[data-ap-rule-source]").select_option("g1")
-    rule.locator("[data-ap-rule-at]").fill("3.5")
-    rule.locator("[data-ap-rule-go]").click()
-    prop = page.locator("[data-ap-proposal]")
-    # The two applications still waiting on peer reviews are pending at
-    # Gate 2 and have no finished Rating: named, not guessed.
-    assert "2 applications have no finished Rating at Peer Review" in prop.inner_text()
-    prop.locator("[data-ap-prop-cancel]").click()
-    assert not prop.is_visible()
-
-
 def test_a_csv_proposes_then_applies(page: Page) -> None:
     page.goto(PAGE)
     body = (
@@ -230,7 +188,7 @@ def test_the_table_downloads_as_the_csv_an_upload_reads(page: Page) -> None:
     lines = text.splitlines()
     assert "—" not in text
     assert lines[0].startswith("Application ID,Applicant,Email,Status,Peer Review,")
-    assert len(lines) == 102
+    assert len(lines) == 103
     # Uploaded back, it changes nothing and leaves nothing out.
     page.locator("[data-ap-csv]").set_input_files(
         files=[{"name": "applications.csv", "mimeType": "text/csv", "buffer": text.encode()}]
@@ -261,19 +219,6 @@ def test_apply_keeps_a_cell_changed_by_hand_since(page: Page) -> None:
     assert chip.inner_text() == "—"
     # Focus returns to what opened the proposal.
     assert page.evaluate("document.activeElement.hasAttribute('data-ap-csv-open')")
-
-
-def test_a_rule_reads_only_an_earlier_gate(page: Page) -> None:
-    page.goto(PAGE)
-    page.locator("[data-ap-rule-open]").click()
-    rule = page.locator("[data-ap-rule]")
-    rule.locator("[data-ap-rule-target]").select_option("g1")
-    # Nothing comes before Peer Review: no source, no Propose.
-    assert rule.locator("[data-ap-rule-go]").is_disabled()
-    rule.locator("[data-ap-rule-target]").select_option("g2")
-    assert rule.locator("[data-ap-rule-source] option:not([disabled])").all_inner_texts() == [
-        "Rating at Peer Review"
-    ]
 
 
 def test_a_csv_giving_one_cell_two_values_leaves_it(page: Page) -> None:
@@ -315,3 +260,141 @@ def test_a_csv_id_like_an_object_key_is_just_unknown(page: Page) -> None:
     )
     prop = page.locator("[data-ap-proposal]")
     assert "Not in this exercise, ignored: __proto__, constructor." in prop.inner_text()
+
+
+# --- Rung 6: rules set on Setup, applied here, a hand overrides (author,
+# 2026-11-13) ---
+def _apply_rules(page: Page, *, only_undecided: bool = True, replace_hand: bool = False) -> Locator:
+    rule = page.locator("[data-ap-rule]")
+    if rule.is_hidden():
+        page.locator("[data-ap-rule-open]").click()
+    rule.locator("[data-ap-rule-pending]").set_checked(only_undecided)
+    rule.locator("[data-ap-rule-hand]").set_checked(replace_hand)
+    rule.locator("[data-ap-rule-go]").click()
+    return page.locator("[data-ap-proposal]")
+
+
+def test_each_column_shows_its_rule_from_setup(page: Page) -> None:
+    page.goto(PAGE)
+    assert (
+        "Rule: Combined ≥ 4.2 → Shortlisted, else Not shortlisted"
+        in page.locator('th[data-col="o1"]').inner_text()
+    )
+    assert (
+        "Rule: Shortlist for interview is Shortlisted → Entered"
+        in page.locator('th[data-col="g3"]').inner_text()
+    )
+    assert "Decided by hand" in page.locator('th[data-col="o3"]').inner_text()
+    # No rule is built on this page.
+    assert page.locator("[data-ap-rule] select").count() == 0
+
+
+def test_apply_rules_proposes_in_column_order_and_waits_on_the_undecided(page: Page) -> None:
+    page.goto(PAGE)
+    prop = _apply_rules(page)
+    text = prop.inner_text()
+    # The two still waiting on peer reviews: no combined result yet.
+    assert "Shortlist for interview: 2 applications cannot be judged yet" in text
+    # The interview waits on their shortlist rather than turning them away.
+    assert "Interview: 2 applications cannot be judged yet" in text
+    rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
+    # Only the interviewed are judged for Finalists: the rest never reached it.
+    finalists = [r for r in rows if "\tFinalists\t" in r]
+    assert finalists and len(finalists) <= 27
+    prop.locator("[data-ap-prop-apply]").click()
+    decided = page.locator('[data-cell="o2"] select[data-v="Finalist"]').count()
+    assert decided > 0
+    assert _count(page, "o2").startswith(f"{decided} finalist")
+
+
+def test_a_cell_set_by_hand_is_marked_and_kept(page: Page) -> None:
+    page.goto(PAGE)
+    hand = page.locator('[data-row] td[data-cell="g1"][data-hand]')
+    assert hand.count() == 1 and "Set by hand" in hand.inner_text()
+    who = hand.locator("xpath=ancestor::tr").locator(".ap-id code").inner_text()
+    prop = _apply_rules(page, only_undecided=False)
+    rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
+    assert not [r for r in rows if who in r]
+    prop.locator("[data-ap-prop-cancel]").click()
+    prop = _apply_rules(page, only_undecided=False, replace_hand=True)
+    rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
+    assert [r for r in rows if who in r and "Peer Review" in r]
+    prop.locator("[data-ap-prop-apply]").click()
+    cell = page.locator(f'[data-row]:has(code:text-is("{who}")) td[data-cell="g1"]')
+    assert cell.get_attribute("data-hand") is None
+    # A change by hand marks the cell.
+    cell.locator("[data-ap-adm]").click()
+    assert cell.get_attribute("data-hand") == ""
+
+
+def test_a_gate_rule_takes_each_applicant_s_last_submitted(page: Page) -> None:
+    page.goto(PAGE)
+    earlier = page.locator('[data-row][data-rank="2"]')
+    assert earlier.count() == 1
+    assert earlier.locator('[data-cell="g1"] [data-ap-adm]').inner_text() == "Not entered"
+    assert page.locator('[data-row][data-rank="1"]').count() >= 80
+
+
+def test_the_page_shows_each_outcome_s_combined_result_and_weights(page: Page) -> None:
+    from applydesk import rounds
+
+    page.goto(PAGE)
+    head = page.locator('th[data-col="o1"]').inner_text()
+    assert "Peer Review 30% · Faculty Panel Review 70%" in head
+    plan = rounds.plan_of("wa9juxbc2t")
+    o1 = next(c for c in plan.columns if c.key == "o1")
+    assert isinstance(o1, rounds.Outcome)
+    shown = page.evaluate(
+        """() => Array.from(document.querySelectorAll('[data-row]')).map(r => [
+            r.querySelector('.ap-id code').textContent,
+            (r.querySelector('[data-cell="o1"] [data-ap-comb]') || {}).textContent || ""])"""
+    )
+    by_id = dict(shown)
+    for r in plan.rows:
+        if r.application.state == "Draft":
+            continue
+        want = rounds.combined(r, o1)
+        assert by_id[r.application.public_id] == ("" if want is None else f"Combined {want:.2f}"), (
+            r.application.public_id
+        )
+    # A hand change re-weighs it: Peer Review not entered leaves the score.
+    first = next(r for r in plan.rows if r.cells["g2"].result is not None)
+    row = _row(page, first.application.public_id)
+    chip = row.locator('[data-cell="g1"] [data-ap-adm]')
+    while chip.inner_text() != "Not entered":
+        chip.click()
+    assert (
+        row.locator('[data-cell="o1"] [data-ap-comb]').inner_text()
+        == f"Combined {first.cells['g2'].result:.2f}"
+    )
+
+
+def test_the_sample_follows_its_rules(page: Page) -> None:
+    """Every rule over every cell, decided or not, changes only what is
+    still to decide; withdrawn and draft rows are never touched."""
+    page.goto(PAGE)
+    prop = _apply_rules(page, only_undecided=False)
+    rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
+    assert rows
+    for r in rows:
+        assert r.split("\t")[3] in ("Pending", "—", ""), r
+    withdrawn = page.locator('[data-row][data-status="Withdrawn"] .ap-id code').all_inner_texts()
+    assert withdrawn and not [r for r in rows if r.split("\t")[0] in withdrawn]
+
+
+def test_a_rule_proposal_is_dropped_when_the_table_changes(page: Page) -> None:
+    page.goto(PAGE)
+    prop = _apply_rules(page)
+    first = prop.locator("[data-ap-prop-rows] tr").first.inner_text().split("\t")
+    messages: list[str] = []
+
+    def answer(d: Dialog) -> None:
+        messages.append(d.message)
+        d.accept()
+
+    page.on("dialog", answer)
+    row = _row(page, first[0])
+    row.locator('[data-cell="g3"] [data-ap-adm]').click()
+    prop.locator("[data-ap-prop-apply]").click()
+    assert messages and "propose again" in messages[0]
+    assert row.locator('[data-cell="o2"] select').get_attribute("data-v") == first[3]

@@ -71,10 +71,17 @@ where a ruling below differs from it, the ruling wins.
       and the Timeline. **Applications** is the control surface: who
       enters each gate (*—* for no status yet, *Entered*, *Not entered*;
       author, 2026-11-13) and each
-      outcome's value, set by hand, filled by a rule over an earlier
-      gate's result (e.g. Rating ≥ 4.0), or uploaded as a CSV keyed by
-      application ID. A rule or an upload is a proposal the operator
-      reviews before saving; a hand change always remains possible.
+      outcome's value, set by hand, by the column's rule, or uploaded as
+      a CSV keyed by application ID. **Rules are set on Setup, not here**
+      (author, 2026-11-13): Applications applies them, and the operator
+      overrides any cell by hand. A gate's rule reads the application's
+      status, whether it is the applicant's last submitted, and earlier
+      outcomes, never another gate; an outcome's reads the gates in its
+      scope (those since the previous outcome) and earlier outcomes. An
+      outcome may be a function of its gates' results: a weighted
+      average (e.g. 30% / 70%), a gate not entered dropping out and the
+      rest re-weighted; conditions combine with AND. A rule or an upload
+      is a proposal the operator reviews before saving.
     - The word **stage** stays with the exercise's timeline (Setup,
       Application, Review …); evaluation steps are **rounds**.
     - An applicant may send more than one application; the page shows
@@ -90,7 +97,7 @@ Segments in order; each gets a plan in this folder when it starts.
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
-| **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, fill by rule or CSV as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
+| **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the Application → Review stage boundary | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |

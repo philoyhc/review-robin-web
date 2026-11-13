@@ -50,7 +50,7 @@ def test_the_columns_follow_the_setup(client: TestClient) -> None:
 def test_every_application_is_a_row(client: TestClient) -> None:
     text = client.get(PAGE).text
     apps = sample_data.applications_of(EX)
-    assert len(apps) == 101
+    assert len(apps) == 102
     assert text.count("data-row ") == len(apps)
     # A submitted application's ID links to its file; a draft's does not.
     assert f'/files/{apps[0].file_id}"><code>{apps[0].public_id}</code></a>' in text
@@ -61,8 +61,8 @@ def test_every_application_is_a_row(client: TestClient) -> None:
 def test_the_model_exercise_reads_as_partway_through() -> None:
     plan = rounds.plan_of(EX)
     by_key = {c.key: c for c in plan.columns}
-    assert rounds.counts(plan, by_key["o1"]).startswith("24 shortlisted")
-    assert rounds.counts(plan, by_key["g2"]) == "49 entered · 2 to decide"
+    assert rounds.counts(plan, by_key["o1"]) == "26 shortlisted · 2 pending"
+    assert rounds.counts(plan, by_key["g3"]) == "27 entered · 2 to decide"
     o1, o2 = by_key["o1"], by_key["o2"]
     assert isinstance(o1, rounds.Outcome) and isinstance(o2, rounds.Outcome)
     assert o1.released and not o2.released
@@ -72,13 +72,17 @@ def test_the_model_exercise_reads_as_partway_through() -> None:
             assert all(not c.value for c in cells.values())
         if a.state == "Withdrawn":
             # Keeps what it had; "—" where it was never admitted.
-            assert all(not cells[k].value for k in ("g2", "o1", "g3", "o2", "o3"))
+            assert all(not cells[k].value for k in ("o1", "g3", "o2", "o3"))
             day = int(a.submitted.split()[0])
-            assert bool(cells["g1"].value) == (day >= 16)
-        if cells["o1"].value == "Not shortlisted":
+            assert bool(cells["g1"].value) == bool(cells["g2"].value) == (day >= 16)
+        if cells["o1"].value == "Not shortlisted" and not cells["g3"].by_hand:
             assert cells["g3"].value == "Not entered" and not cells["o2"].value
         if cells["o1"].value == "Shortlisted":
             assert cells["o3"].value == "Pending" and cells["o3"].note == "Due 12 Dec"
+        # Where Setup's rule decided it, the outcome follows its combined result.
+        comb = rounds.combined(row, o1)
+        if comb is not None and not cells["o1"].by_hand and cells["o1"].value != "Pending":
+            assert (cells["o1"].value == "Shortlisted") == (comb >= 4.2)
     notes = {c.note for r in plan.rows for c in r.cells.values()}
     assert {"Excluded: not eligible", "Added by operator: panel request"} <= notes
 
@@ -96,3 +100,103 @@ def test_an_exercise_without_rounds_ends_at_status(client: TestClient) -> None:
     text = client.get("/applydesk/operator/exercises/r6tm4kq9wz/applications").text
     assert "data-kind=" not in text
     assert "No rounds yet" in text
+
+
+# --- Rung 6: rules set on Setup (ruling 13) ---
+def test_every_rule_reads_only_what_its_column_may() -> None:
+    """A gate reads status, last submitted and earlier outcomes, never a
+    gate; an outcome reads the gates in its scope and earlier outcomes;
+    weights cover only its scope."""
+    for ex in (EX, "k7mfr3pq8z"):
+        plan = rounds.plan_of(ex)
+        seen: set[str] = set()
+        for c in plan.columns:
+            outcomes_before = {
+                k
+                for k in seen
+                if isinstance(next(x for x in plan.columns if x.key == k), rounds.Outcome)
+            }
+            in_scope = (
+                {g.key for g in rounds.scope(plan, c)} if isinstance(c, rounds.Outcome) else set()
+            )
+            if isinstance(c, rounds.Outcome):
+                assert {k for k, _ in c.weights} <= in_scope, c.key
+            for kind, key, _, _ in c.rule.when if c.rule else ():
+                if kind == "out":
+                    assert key in outcomes_before, (c.key, key)
+                elif kind in ("res", "ent", "comb"):
+                    assert isinstance(c, rounds.Outcome), (c.key, kind)
+                    assert kind == "comb" or key in in_scope, (c.key, key)
+                else:
+                    assert kind in ("status", "last"), kind
+            seen.add(c.key)
+
+
+def _with(cells: dict[str, rounds.Cell]) -> rounds.Row:
+    return rounds.Row(rounds.plan_of(EX).rows[0].application, cells)
+
+
+def test_a_combined_result_drops_a_gate_not_entered_and_reweights() -> None:
+    plan = rounds.plan_of(EX)
+    o1 = next(c for c in plan.columns if c.key == "o1")
+    assert isinstance(o1, rounds.Outcome)
+    both = _with(
+        {"g1": rounds.Cell("Entered", result=4.0), "g2": rounds.Cell("Entered", result=5.0)}
+    )
+    assert rounds.combined(both, o1) == 4.7
+    one = _with({"g1": rounds.Cell("Not entered"), "g2": rounds.Cell("Entered", result=3.5)})
+    assert rounds.combined(one, o1) == 3.5
+    waiting = _with({"g1": rounds.Cell("Entered"), "g2": rounds.Cell("Entered", result=3.5)})
+    assert rounds.combined(waiting, o1) is None
+    undecided = _with(
+        {"g1": rounds.Cell(rounds.NO_STATUS), "g2": rounds.Cell("Entered", result=3.5)}
+    )
+    assert rounds.combined(undecided, o1) is None
+    neither = _with({"g1": rounds.Cell("Not entered"), "g2": rounds.Cell("Not entered")})
+    assert rounds.combined(neither, o1) is None
+
+
+def test_scope_is_the_gates_since_the_previous_outcome() -> None:
+    plan = rounds.plan_of(EX)
+    by_key = {c.key: c for c in plan.columns}
+    for key, gates in (("o1", ["g1", "g2"]), ("o2", ["g3"]), ("o3", [])):
+        o = by_key[key]
+        assert isinstance(o, rounds.Outcome)
+        assert [g.key for g in rounds.scope(plan, o)] == gates
+
+
+def test_the_last_submitted_goes_by_date_not_order() -> None:
+    plan = rounds.plan_of(EX)
+    twice = [r for r in plan.rows if r.application.title.startswith("A second proposal")]
+    assert len(twice) == 1
+    email = twice[0].application.email
+    mine = [r for r in plan.rows if r.application.email == email]
+    rank = rounds.submitted_rank(tuple(reversed(mine)))
+    assert rank[twice[0].application.public_id] == 1
+    assert sorted(rank.values()) == [1, 2]
+
+
+def test_a_rule_reads_as_a_line() -> None:
+    plan = rounds.plan_of(EX)
+    by_key = {c.key: c for c in plan.columns}
+    assert rounds.rule_text(plan, by_key["g1"]) == (
+        "Status is Submitted and the applicant's last submitted → Entered, else Not entered"
+    )
+    assert rounds.rule_text(plan, by_key["o2"]) == (
+        "Score at Interview ≥ 4.0 → Finalist, else Not a finalist"
+    )
+    assert rounds.rule_text(plan, by_key["o3"]) == ""
+    two = rounds.Gate(
+        "gx",
+        9,
+        "X",
+        "RRW",
+        "",
+        rounds.Rule(
+            (("last", "", "le", "2"), ("ent", "g1", "is", "Entered")), "Entered", "Not entered"
+        ),
+    )
+    assert rounds.rule_text(plan, two) == (
+        "among the applicant's last 2 submitted and Entry at Peer Review is Entered"
+        " → Entered, else Not entered"
+    )
