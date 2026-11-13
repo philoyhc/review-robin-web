@@ -13,7 +13,7 @@
       <span class="wf-grp">{{ label }}</span>
       <ol class="wf-steps">
       {% for s in members %}
-      {% set is_now = now is not none and s == now %}
+      {% set is_now = now is sameas s %}
       <li class="wf-step{{ ' done' if s.done }}{{ ' now' if is_now }}" data-wf-step="{{ s.title }}"{% if is_now %} aria-current="step"{% endif %}>
         <span class="wf-dot" aria-hidden="true"></span>
         {% if s.kind %}<span class="wf-kind wf-kind-{{ 'g' if s.kind.startswith('Gate') else 'o' }}">{{ s.kind }}</span>{% endif %}
@@ -22,7 +22,7 @@
         <span class="wf-when">{{ s.when }}</span>
         {% if s.line %}<span class="wf-when">{{ s.line }}</span>{% endif %}
         {% if s.blocked %}<span class="wf-blocked">{{ s.blocked }}</span>{% endif %}
-        {% if is_now and s.link %}<a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/' ~ s.link) }}">Open {{ s.link | capitalize }}</a>
+        {% if s.link and s.link != section %}<a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/' ~ s.link) }}">Open {{ s.link | capitalize }}</a>
         {% elif s.action %}<button class="btn btn-secondary" type="button" disabled>{{ s.action }}</button>{% endif %}
       </li>
       {% endfor %}

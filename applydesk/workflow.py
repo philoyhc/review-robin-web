@@ -24,21 +24,36 @@ _GATES: dict[str, dict[str, tuple[str, str]]] = {
     "k7mfr3pq8z": {"g1": ("Sent", "3 of 5 reviewed")},
 }
 
-#: The templates to applicants each sample exercise keeps on Emails:
-#: (name, when it is sent, set up). Process says which steps send one.
-_EMAILS: dict[str, tuple[tuple[str, str, bool], ...]] = {
+
+@dataclass(frozen=True)
+class Email:
+    """A template to applicants, kept on Emails (ruling 14): its name, when
+    it is sent, whether it is set up, and the outcome whose release sends
+    it ("" for the receipt and reminders)."""
+
+    name: str
+    when: str
+    ok: bool
+    outcome: str = ""
+
+
+_RELEASE = "When the outcome is released"
+
+#: The templates each sample exercise keeps; Process says which steps
+#: send one.
+_EMAILS: dict[str, tuple[Email, ...]] = {
     "wa9juxbc2t": (
-        ("Receipt", "When an application is submitted", True),
-        ("Reminder", "To drafts, 7 days before the form closes", True),
-        ("Shortlist for interview", "When the outcome is released", True),
-        ("Finalists", "When the outcome is released", True),
-        ("Final results", "When the outcome is released", False),
+        Email("Receipt", "When an application is submitted", True),
+        Email("Reminder", "To drafts, 7 days before the form closes", True),
+        Email("Shortlist for interview", _RELEASE, True, "o1"),
+        Email("Finalists", _RELEASE, True, "o2"),
+        Email("Final results", _RELEASE, False, "o3"),
     ),
     "k7mfr3pq8z": (
-        ("Receipt", "When an application is submitted", True),
-        ("Award decision", "When the outcome is released", False),
+        Email("Receipt", "When an application is submitted", True),
+        Email("Award decision", _RELEASE, False, "o1"),
     ),
-    "r6tm4kq9wz": (("Receipt", "When an application is submitted", True),),
+    "r6tm4kq9wz": (Email("Receipt", "When an application is submitted", True),),
 }
 
 
@@ -64,8 +79,13 @@ def gate_state(exercise_id: str, key: str) -> tuple[str, str]:
     return _GATES.get(exercise_id, {}).get(key, ("Not ready", ""))
 
 
-def emails(exercise_id: str) -> tuple[tuple[str, str, bool], ...]:
+def emails(exercise_id: str) -> tuple[Email, ...]:
     return _EMAILS.get(exercise_id, ())
+
+
+def outcome_email(exercise_id: str, outcome_key: str) -> Email | None:
+    """The email an outcome's release sends, if Process says it sends one."""
+    return next((e for e in emails(exercise_id) if e.outcome == outcome_key), None)
 
 
 def status_row(exercise: Exercise) -> tuple[Pill, ...]:
@@ -80,7 +100,7 @@ def status_row(exercise: Exercise) -> tuple[Pill, ...]:
     done = sum(gate_state(exercise.public_id, g.key)[0] == "Results in" for g in gates)
     released = sum(bool(o.released) for o in outcomes)
     mail = emails(exercise.public_id)
-    kept = sum(ok for _, _, ok in mail)
+    kept = sum(e.ok for e in mail)
     return (
         Pill("Exercise", exercise.state, "ok" if exercise.state == "Published" else "warn"),
         Pill("Form", form, "warn" if form == "Draft" else "info"),
@@ -144,7 +164,6 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
             form == "Closed",
         )
     ]
-    mail = {name: ok for name, _, ok in emails(exercise.public_id)}
     for r in plan.rounds:
         for c in r.columns:
             if isinstance(c, rounds.Gate):
@@ -157,14 +176,17 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
                         state,
                         r.dates,
                         line,
-                        "" if state == "Results in" else "Send…",
+                        "" if state in ("Sent", "Results in") else "Send…",
                         state == "Results in",
                         link="evaluations" if state == "Sent" else "",
                     )
                 )
             else:
                 released = bool(c.released)
-                blocked = "" if mail.get(c.label, True) else "Not ready: no email for this outcome"
+                email = outcome_email(exercise.public_id, c.key)
+                blocked = (
+                    "" if email is None or email.ok else "Not ready: no email for this outcome"
+                )
                 out.append(
                     Step(
                         r.label,
@@ -184,7 +206,7 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
             "Close",
             "",
             "Close and archive",
-            "Archived" if exercise.state == "Archived" else "—",
+            exercise.state if exercise.state in ("Closed", "Archived") else "—",
             f"After {last}" if last else "After the last outcome",
             "Extract data first",
             "Close…",

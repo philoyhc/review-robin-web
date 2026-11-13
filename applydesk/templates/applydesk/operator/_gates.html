@@ -55,6 +55,21 @@
   <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Go to Process</a></div>
 </section>
 {% endfor %}
+{% set ns = namespace(interview=false) %}{% for g in gates if "Interview" in g.label %}{% set ns.interview = true %}{% endfor %}
+{% if interviewers and gates and not ns.interview %}
+<section class="card" data-roster="interviewers">
+  <h2>Interviewers</h2>
+  <p class="muted">Not yet on a gate: add an interview gate on Process, then copy them to it.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Interviewer</th><th>Role</th></tr></thead>
+    <tbody>
+    {% for e in interviewers %}<tr><td>{{ e.name }}<br><span class="muted">{{ e.email }}</span></td><td>{{ e.note or "—" }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endif %}
 <section class="card">
   <h2>Reviewer pool</h2>
   <p class="muted">Applicants choose their reviewer from this pool on the application form.</p>

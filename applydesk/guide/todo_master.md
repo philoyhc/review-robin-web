@@ -40,7 +40,8 @@ where a ruling below differs from it, the ruling wins.
     application ID, minted per handoff and mapped back only by
     ApplyDesk (AD6), since RRW shows `RevieweeEmail` under each name.
 11. **The operator's pages are Home, Setup, Form, Applications, Panels,
-    Review and Reports** (author, 2026-11-12). Home shows the timeline and
+    Review and Reports** (author, 2026-11-12; *the tabs superseded by
+    ruling 14*: Process, Gates, Evaluations and Extract data take them). Home shows the timeline and
     the current stage; Setup holds the timeline's setup; Form builds and
     previews the application form; Applications generates application
     files (ruling 13). **Panels holds the rosters ApplyDesk keeps (ruling 4)**:

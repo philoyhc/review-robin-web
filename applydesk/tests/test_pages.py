@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from applydesk import gate, sample_data
+from applydesk import gate, sample_data, workflow
 from applydesk.ids import PUBLIC_ID_ALPHABET, PUBLIC_ID_LENGTH, generate_public_id, is_public_id
 from applydesk.main import create_app
 from applydesk.tests._host import host_with
@@ -341,7 +341,9 @@ def test_process_carries_the_rounds_and_the_timeline(client: TestClient) -> None
     assert "Combined ≥ 4.2 → Shortlisted, else Not shortlisted" in text
     assert "Peer Review 30% · Faculty Panel Review 70%" in text
     assert "Decided by hand" in text  # Final results
-    assert 'On release <span class="chip chip-warn">Template not set up</span>' in text
+    assert (
+        'On release: Final results <span class="chip chip-warn">Template not set up</span>' in text
+    )
 
 
 def test_applications_generates_application_files(client: TestClient) -> None:
@@ -520,3 +522,44 @@ def test_a_draft_s_workflow_starts_at_opening_the_form(client: TestClient) -> No
     assert _steps(text) == ["Application form", "Close and archive"]
     assert "Next: <strong>Application form</strong> — Not open yet." in text
     assert "Open form…</button>" in text
+
+
+# --- Segment AD1D: the cumulative read's fixes ---
+def test_an_outcome_s_email_is_found_by_its_outcome_not_its_name(client: TestClient) -> None:
+    """Teaching Excellence: its outcome's email is "Award decision"."""
+    base = f"/applydesk/operator/exercises/{BLIND}"
+    process = client.get(f"{base}/process").text
+    assert 'On release: Award decision <span class="chip chip-warn">' in process
+    home = client.get(base).text
+    assert "Not ready: no email for this outcome" in home
+    emails = client.get(f"{base}/emails").text
+    assert 'data-email="Award decision"' in emails
+
+
+def test_the_breadcrumb_ends_at_the_page(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
+    crumbs = text[text.index('<nav class="crumbs"') :]
+    crumbs = crumbs[: crumbs.index("</nav>")]
+    assert re.findall(r">([^<>/]+)</(?:a|span)>", crumbs) == [
+        "Exercises",
+        "Undergraduate Research Fellowship 2027",
+        "Process",
+    ]
+    assert f'<a href="/applydesk/operator/exercises/{EX}">Undergraduate' in crumbs
+
+
+def test_every_old_roster_has_a_home_on_gates(client: TestClient) -> None:
+    """Teaching Excellence has an interviewer but no interview gate."""
+    text = client.get(f"/applydesk/operator/exercises/{BLIND}/gates").text
+    for e in sample_data.interviewers_of(BLIND):
+        assert e.name in text
+    assert 'data-roster="interviewers"' in text
+
+
+def test_a_sent_gate_opens_evaluations_except_from_evaluations(client: TestClient) -> None:
+    link = f'href="/applydesk/operator/exercises/{EX}/evaluations">Open Evaluations</a>'
+    assert link in client.get(f"/applydesk/operator/exercises/{EX}/applications").text
+    assert link not in client.get(f"/applydesk/operator/exercises/{EX}/evaluations").text
+    steps = workflow.steps(sample_data.exercise(EX) or sample_data.EXERCISES[0])
+    sent = [s for s in steps if s.state == "Sent"]
+    assert sent and all(s.action == "" and s.link == "evaluations" for s in sent)

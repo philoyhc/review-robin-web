@@ -26,7 +26,7 @@ Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID
 | `/` | Landing: links to *My ApplyDesk* and, for an operator, *Exercises* | Anyone signed in |
 | `/health` | Health, `200` signed out | Anyone |
 | `/operator/exercises` | Exercises lobby: the operator's exercises by state; New exercise | Operators |
-| `/operator/exercises/<id>` | Exercise Home: stage, state, counts, the next step; the timeline with the current stage marked (iteration 5) | The exercise's operators |
+| `/operator/exercises/<id>` | Exercise Home: stage, state, counts, the next step; the timeline with the current stage marked (iteration 5); from AD1D, the exercise's details and the Workflow card | The exercise's operators |
 | ~~`/operator/exercises/<id>/settings`~~ | Became Setup (iteration 5) | |
 | ~~`/operator/exercises/<id>/setup`~~ | Became Process; its details moved to Home (AD1D) | |
 | `/operator/exercises/<id>/process` | Rounds, gates and outcomes with their rules and emails; the timeline (AD1D) | 〃 |
