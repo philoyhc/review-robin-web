@@ -178,8 +178,7 @@ Segments in order; each gets a plan in this folder when it starts.
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
 | **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
-| **AD1E — The Process page** | Process as a stack of stage cards, as Form is: each stage's form, gates and outcome, their dates, rules (ruling 13's conditions) and emails; reordering and the Outline, Preview after the builder; nothing saved (ruling 15) | `applydesk/guide/segment_AD1E_process.md` |
-| AD1F onward — the other new pages | Gates, Emails, Evaluations and Extract data built out as working scaffolds, one segment each | After AD1E |
+| AD1F onward — the other new pages | Gates, Emails, Evaluations and Extract data built out as working scaffolds, one segment each | After AD1E (closed 2026-11-13) |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
@@ -191,6 +190,10 @@ Segments in order; each gets a plan in this folder when it starts.
 
 ## Open decisions
 
+- **Process's Preview** (AD1E): held until the builder is complete
+  (author, 2026-11-13); what it shows is decided then.
+- **What a gate before the form evaluates** (AD1D, AD1E): its rows
+  before any application exists.
 - **Applications in parts (ruling 15's next extension):** when it lands,
   and whether a part may be optional or repeated (references from more
   than one referee are their own case, with uploads and referees, G8).
