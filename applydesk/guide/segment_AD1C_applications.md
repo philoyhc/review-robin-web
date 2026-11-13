@@ -54,6 +54,11 @@ Taken 2026-11-13 at `34f3d4b`.
 | "profile" in ApplyDesk spec, to-do, README | 10 lines | `grep -rni "profile" applydesk/spec applydesk/guide/todo_master.md applydesk/README.md \| wc -l` |
 | Page tests that reach Applications or profiles | 31 tests in `test_pages.py` | `grep -c "def test" applydesk/tests/test_pages.py` |
 
+## Status
+
+Building. Base `34f3d4b` for the cumulative read.
+- Rung 2: the table. The rounds and each row's cells in `applydesk/rounds.py`; 98 generated applications join the model exercise's three in `sample_data` (101). The model exercise moves to mid-review (author, 2026-11-13: applications 1 Sep – 15 Oct, Round 2 under way), so a new sample exercise, *Postgraduate Conference Grant 2027* (`r6tm4kq9wz`), is the one open for applications. *Set ticked rows* sits under the table beside *All / Last applications*, keeping the toolbar on one line. *Fill by rule…* and *Upload CSV* render, inert until rung 3.
+
 ## PR ladder
 
 1. **Plan** (this file), ruling 13, its README and roadmap rows.
