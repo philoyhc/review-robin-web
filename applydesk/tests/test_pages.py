@@ -598,3 +598,19 @@ def test_applicants_see_whether_applications_are_open(client: TestClient) -> Non
     assert e is not None
     row = text[text.index(e.name) :]
     assert "Applications open" in row[: row.index("</p>")]
+
+
+def test_a_gate_stage_may_come_before_the_application(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Author, 2026-11-13: a gate first, its outcome deciding who may apply."""
+    model = stages._STAGES[EX]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    monkeypatch.setitem(stages._STAGES, EX, (model[1], model[0], *model[2:]))  # pyright: ignore[reportPrivateUsage]  -- as above
+    e = sample_data.exercise(EX)
+    assert e is not None
+    titles = [s.title for s in workflow.steps(e)]
+    assert titles.index("Faculty Panel Review") < titles.index("Application form")
+    text = client.get(f"/applydesk/operator/exercises/{EX}/applications").text
+    groups = re.findall(r"<th class=\"ap-(?:first|r)\"[^>]*><b>([^<]+)</b>", text)
+    assert groups == ["Applications", "Review", "Interview", "Decision"]
+    assert "From elsewhere" not in text

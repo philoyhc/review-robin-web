@@ -116,13 +116,21 @@ where a ruling below differs from it, the ruling wins.
     stages:
     - A **stage** has dates and a name the operator gives it, *Stage N*
       until then. Stages run one after another.
-    - A stage holds **the application**, or **one or more gates**, and an
-      **outcome**: never the application and a gate together. Only one
-      stage holds the application, and it comes first; an exercise may
-      have none, its applications collected upstream and loaded into the
-      Applications table. A stage may hold only an outcome: an offline
-      gate, as the model exercise's *Decision*, where the reviews and
-      interviews are collated for discussion before the final decision.
+    - A stage holds **the application**, or **one or more gates**, and
+      may hold an **outcome**: never the application and a gate together.
+      Only one stage holds the application, anywhere in the timeline (a
+      gate stage may come first, its outcome deciding who may apply); an
+      exercise may have none, its applications collected upstream and
+      loaded into the Applications table. A stage may hold only an
+      outcome: an offline gate, as the model exercise's *Decision*,
+      where the reviews and interviews are collated for discussion
+      before the final decision.
+    - **An outcome is optional** (author, 2026-11-13): it officially
+      notes a result that updates the timeline, and may tell reviewers,
+      applicants and others. It sits naturally in the stage whose gates
+      it is based on, though it need not: the sample could equally run
+      Application, Review, Shortlist for interview, Interview, Finalists,
+      Decision, each outcome a stage of its own.
     - The sample's stages are *Applications*, *Review*, *Interview* and
       *Decision*. The exercise's current stage is worked out from the
       timeline (the one holding its next step), not stored. Setup (a
