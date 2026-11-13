@@ -397,11 +397,12 @@
     header.forEach(function (h, i) {
       if (i !== idAt && !keys[i] && h && described.indexOf(h.toLowerCase()) < 0) skipped.push("Column not on this page, ignored: " + h + ".");
     });
-    var byId = {};
+    // No inherited keys: an ID such as "__proto__" is simply unknown.
+    var byId = Object.create(null);
     rows.forEach(function (r) { byId[idOf(r).toLowerCase()] = r; });
     // One value per application and column: a repeat with the same value
     // is read once; two different values leave the cell as is (Codex).
-    var wanted = {}, order = [], unknown = [];
+    var wanted = Object.create(null), order = [], unknown = [];
     table.slice(1).forEach(function (line, n) {
       var id = (line[idAt] || "").trim();
       var r = byId[id.toLowerCase()];

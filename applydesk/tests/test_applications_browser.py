@@ -299,3 +299,14 @@ def test_a_csv_giving_one_cell_two_values_leaves_it(page: Page) -> None:
     assert _row(page, "kenji.russo").locator('[data-cell="g3"] [data-ap-adm]').inner_text() == (
         "Not selected"
     )
+
+
+def test_a_csv_id_like_an_object_key_is_just_unknown(page: Page) -> None:
+    # Codex: "__proto__" matched an inherited property and the upload threw.
+    page.goto(PAGE)
+    body = "Application ID,Interview\n__proto__,Selected\nconstructor,Selected\n"
+    page.locator("[data-ap-csv]").set_input_files(
+        files=[{"name": "odd.csv", "mimeType": "text/csv", "buffer": body.encode()}]
+    )
+    prop = page.locator("[data-ap-proposal]")
+    assert "Not in this exercise, ignored: __proto__, constructor." in prop.inner_text()
