@@ -48,8 +48,8 @@
   <table class="ap-table">
     <thead>
       <tr class="ap-groups">
-        {% set ast = plan.stages[0] if plan.stages and plan.stages[0].application else none %}{# leads the identity columns only when first #}
-        <th class="ap-first" colspan="{{ 3 + (ast.columns | length if ast else 0) }}"><b>{{ ast.label if ast else "Applications" }}</b>{% if ast %}<span class="ap-when">{{ ast.dates }}</span>{% elif not plan.application_stage %}<span class="ap-when">From elsewhere</span>{% endif %}</th>
+        {% set ast = plan.stages[0] if plan.stages and plan.stages[0].form else none %}{# leads the identity columns only when first #}
+        <th class="ap-first" colspan="{{ 3 + (ast.columns | length if ast else 0) }}"><b>{{ ast.label if ast else "Applications" }}</b>{% if ast %}<span class="ap-when">{{ ast.dates }}</span>{% elif not plan.form_stage %}<span class="ap-when">From elsewhere</span>{% endif %}</th>
         {% for r in plan.stages if r.columns and r is not sameas ast %}<th class="ap-r" colspan="{{ r.columns | length }}"><b>{{ r.label }}</b><span class="ap-when">{{ r.dates }}</span></th>{% endfor %}
       </tr>
       <tr>

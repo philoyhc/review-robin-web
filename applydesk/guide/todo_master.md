@@ -116,9 +116,11 @@ where a ruling below differs from it, the ruling wins.
     stages:
     - A **stage** has dates and a name the operator gives it, *Stage N*
       until then. Stages run one after another.
-    - A stage holds **the application**, or **one or more gates**, and
-      may hold an **outcome**: never the application and a gate together.
-      Only one stage holds the application, anywhere in the timeline (a
+    - A stage holds **the form** (the application form: *Form* names
+      what a stage holds, so *application* means only the record an
+      applicant submits; author, 2026-11-13), or **one or more gates**,
+      and may hold an **outcome**: never the form and a gate together.
+      Only one stage holds the form, anywhere in the timeline (a
       gate stage may come first, its outcome deciding who may apply); an
       exercise may have none, its applications collected upstream and
       loaded into the Applications table. A stage may hold only an
@@ -143,14 +145,14 @@ where a ruling below differs from it, the ruling wins.
       joins the parts. Until then, ruling 15's one application stage
       stands; each form-holding stage names its form and an application
       keeps a status per part, so the extension adds without reworking.
-    - The sample's stages are *Applications*, *Review*, *Interview* and
-      *Decision*. The exercise's current stage is worked out from the
+    - The sample's stages are *Call for applications*, *Review*,
+      *Interview* and *Decision*. The exercise's current stage is worked out from the
       timeline (the one holding its next step), not stored. Setup (a
       draft) and Close are the exercise's state, not stages.
     - **Process is a stack of stage cards**, as Form is of question
       cards: a new exercise starts with one stage card offering the
-      application and an outcome (an outcome is optional: the sample's
-      Applications stage has none); stages are added, moved and deleted,
+      form and an outcome (an outcome is optional: the sample's
+      Call for applications has none); stages are added, moved and deleted,
       but the last one cannot be deleted.
 
 ## MVP roadmap

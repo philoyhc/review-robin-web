@@ -1,17 +1,17 @@
 {# Process (rulings 14, 15, segment AD1D): the exercise's timeline as its
-   stages, each holding the application, or gates, and perhaps an outcome; their
+   stages, each holding the form, or gates, and perhaps an outcome; their
    dates, every rule, and what each step sends. A placeholder until its
    own segment, which builds it as a stack of stage cards, as Form's. #}
 <section class="card">
   <h2>Stages</h2>
-  <p class="muted">The exercise's timeline. Stages run one after another; each holds the application, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Applications applies them.</p>
+  <p class="muted">The exercise's timeline. Stages run one after another; each holds the application form, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Applications applies them.</p>
   {% for r in plan.stages %}
   <h3>{{ r.label }} <span class="muted">· {{ r.dates }}</span></h3>
   <div class="table-wrap">
   <table class="xproc">
     <thead><tr><th>Step</th><th>Rule</th><th>Email to applicants</th></tr></thead>
     <tbody>
-    {% if r.application %}
+    {% if r.form %}
       <tr><td><strong>Application form</strong><br><span class="muted">Opens and closes on the stage's dates</span></td><td><span class="muted">—</span></td><td>{% for e in emails if not e.outcome %}{{ e.name }}{{ "" if e.ok else " (not set up)" }}{{ ", " if not loop.last }}{% else %}<span class="muted">None</span>{% endfor %}</td></tr>
     {% endif %}
     {% for c in r.columns %}

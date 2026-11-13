@@ -334,9 +334,9 @@ def test_process_carries_the_stages_and_the_milestones(client: TestClient) -> No
     text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
     assert "<h3>Milestones</h3>" in text
     assert "Add a milestone" in text and "New announcement" in text
-    for st in ("Applications", "Review", "Interview", "Decision"):
+    for st in ("Call for applications", "Review", "Interview", "Decision"):
         assert f"<h3>{st} <span" in text
-    assert "<strong>Application form</strong>" in text  # in Applications
+    assert "<strong>Application form</strong>" in text  # in Call for applications
     assert "Combined ≥ 4.2 → Shortlisted, else Not shortlisted" in text
     assert "Peer Review 30% · Faculty Panel Review 70%" in text
     assert "Decided by hand" in text  # Final results
@@ -487,7 +487,7 @@ def test_the_workflow_card_follows_the_timeline(client: TestClient) -> None:
         "Close and archive",
     ]
     groups = re.findall(r'<span class="wf-grp">([^<]+)</span>', text)
-    assert groups == ["Applications", "Review", "Interview", "Decision", "Close"]
+    assert groups == ["Call for applications", "Review", "Interview", "Decision", "Close"]
     # Next is the earliest step not done: Gate 3, sent, opening Evaluations.
     now = re.findall(r'data-wf-step="([^"]+)" aria-current="step"', text)
     assert now == ["Interview"]
@@ -624,7 +624,7 @@ def test_an_application_stage_later_in_the_timeline_keeps_the_headers_aligned(
     group sits at its place, once, and the group spans match the columns."""
     model = stages._STAGES[EX]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
     review, decision = model[1], model[3]
-    apply = stages.Stage(9, "Apply", "1 Sep – 15 Oct", decision.columns, application=True)
+    apply = stages.Stage(9, "Apply", "1 Sep – 15 Oct", decision.columns, form=True)
     monkeypatch.setitem(stages._STAGES, EX, (review, apply, model[2]))  # pyright: ignore[reportPrivateUsage]  -- as above
     text = client.get(f"/applydesk/operator/exercises/{EX}/applications").text
     start = text.index('<tr class="ap-groups">')
