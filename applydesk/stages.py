@@ -302,7 +302,8 @@ def plan_of(exercise_id: str) -> Plan:
 def problems(stages: tuple[Stage, ...]) -> tuple[str, ...]:
     """What breaks ruling 15's shape: at most one stage holds the
     application, and it comes first; no stage holds the application and a
-    gate."""
+    gate, or more than one outcome. (A stage left empty while it is set
+    up is allowed.)"""
     out: list[str] = []
     holding = [st for st in stages if st.application]
     if len(holding) > 1:
@@ -312,6 +313,8 @@ def problems(stages: tuple[Stage, ...]) -> tuple[str, ...]:
     for st in stages:
         if st.application and any(isinstance(c, Gate) for c in st.columns):
             out.append(f"{st.label} holds both the application and a gate.")
+        if sum(isinstance(c, Outcome) for c in st.columns) > 1:
+            out.append(f"{st.label} holds more than one outcome.")
     return tuple(out)
 
 

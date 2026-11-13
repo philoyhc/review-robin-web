@@ -39,8 +39,7 @@
       <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Publish</button></div>
       {% endif %}
     {% elif exercise.form_open %}
-      <p>Applications are open. Once they close, each gate of the next stage is sent to Review Robin from Evaluations.</p>
-      <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Close applications</button></div>
+      <p>Applications are open. The Workflow card above shows what follows once the form closes.</p>
     {% else %}
       <p>Assessment is under way in Review Robin. Its results come back on Evaluations.</p>
       <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations') }}">Go to Evaluations</a></div>

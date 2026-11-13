@@ -199,7 +199,10 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
                         blocked,
                     )
                 )
-    last = plan.stages[-1].dates.split("–")[-1].strip() if plan.stages else ""
+    # The close follows the last stage with something to decide: one
+    # holding only the application gives no date for it.
+    decided = [st for st in plan.stages if st.columns]
+    last = decided[-1].dates.split("–")[-1].strip() if decided else ""
     out.append(
         Step(
             "Close",

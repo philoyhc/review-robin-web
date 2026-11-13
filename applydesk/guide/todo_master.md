@@ -70,7 +70,7 @@ where a ruling below differs from it, the ruling wins.
       date; each outcome has a *Released* switch, and what a release does
       (to applicants, to reviewers, by email) is set with the Timeline.
     - Rounds, gates, outcomes and their dates are set up on **Setup**
-      and the Timeline. **Applications** is the control surface: who
+      and the Timeline (*stages, on Process: rulings 14, 15*). **Applications** is the control surface: who
       enters each gate (*—* for no status yet, *Entered*, *Not entered*;
       author, 2026-11-13) and each
       outcome's value, set by hand, by the column's rule, or uploaded as
@@ -84,8 +84,9 @@ where a ruling below differs from it, the ruling wins.
       average (e.g. 30% / 70%), a gate not entered dropping out and the
       rest re-weighted; conditions combine with AND. A rule or an upload
       is a proposal the operator reviews before saving.
-    - The word **stage** stays with the exercise's timeline (Setup,
-      Application, Review …); evaluation steps are **rounds**.
+    - ~~The word **stage** stays with the exercise's timeline (Setup,
+      Application, Review …); evaluation steps are **rounds**.~~ One word,
+      the **stage**, since ruling 15.
     - An applicant may send more than one application; the page shows
       all of them, or each applicant's last **submitted** one.
     - What a reviewer opens is the **application file**, one per
@@ -127,8 +128,9 @@ where a ruling below differs from it, the ruling wins.
       timeline (the one holding its next step), not stored. Setup (a
       draft) and Close are the exercise's state, not stages.
     - **Process is a stack of stage cards**, as Form is of question
-      cards: a new exercise starts with one stage holding the
-      application and an outcome; stages are added, moved and deleted,
+      cards: a new exercise starts with one stage card offering the
+      application and an outcome (an outcome is optional: the sample's
+      Applications stage has none); stages are added, moved and deleted,
       but the last one cannot be deleted.
 
 ## MVP roadmap
@@ -142,7 +144,7 @@ Segments in order; each gets a plan in this folder when it starts.
 | **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
 | AD1E onward — the new pages | Process (a stack of stage cards, as Form's, with their rules and dates: ruling 15), then Gates, Emails, Evaluations and Extract data built out as working scaffolds, one segment each | After AD1D |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
-| AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the Application → Review stage boundary | G2 (published changes), G3 (stages) |
+| AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
 | AD5 — Panels and application files | The rosters on Panels (ruling 11): assessment panels and the applications each assessor is asked to review (ruling 9), the reviewer pool, interviewers; application files generated, the file with its access check, audit and blind redaction | — |
 | AD6 — Assessment in Review Robin | Rosters from submitted applications, the pairs as tags, `ProfileLink` to the application file, the blind alias key (ruling 10), results back into ApplyDesk | The open items below |

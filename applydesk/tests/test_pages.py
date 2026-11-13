@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from applydesk import gate, sample_data, workflow
+from applydesk import gate, sample_data, stages, workflow
 from applydesk.ids import PUBLIC_ID_ALPHABET, PUBLIC_ID_LENGTH, generate_public_id, is_public_id
 from applydesk.main import create_app
 from applydesk.tests._host import host_with
@@ -19,7 +19,7 @@ from cordware.identity import Identity
 
 EX = "wa9juxbc2t"  # the model exercise: not blind, its Interview stage under way
 OPEN = "r6tm4kq9wz"  # open for applications
-BLIND = "k7mfr3pq8z"  # blind, Review stage
+BLIND = "k7mfr3pq8z"  # blind, in its unnamed Stage 2
 DRAFT = "c4xh2ndv6s"  # not published
 BLANK = "n5wg8tjr3e"  # just created: a name, nothing else
 
@@ -43,7 +43,7 @@ PAGES = (
     f"/applydesk/operator/exercises/{OPEN}",  # open for applications
     f"/applydesk/operator/exercises/{OPEN}/applications",  # only its first stage
     f"/applydesk/operator/exercises/{BLANK}/form/preview",
-    f"/applydesk/operator/exercises/{BLIND}",  # Review stage; blind review on
+    f"/applydesk/operator/exercises/{BLIND}",  # in Stage 2; blind review on
     f"/applydesk/operator/exercises/{BLIND}/gates",  # no reviewer pool
     f"/applydesk/operator/exercises/{BLIND}/evaluations",  # blind: the alias key
     f"/applydesk/operator/exercises/{DRAFT}/process",  # the Setup stage is now
@@ -561,3 +561,40 @@ def test_a_sent_gate_opens_evaluations_except_from_evaluations(client: TestClien
     steps = workflow.steps(sample_data.exercise(EX) or sample_data.EXERCISES[0])
     sent = [s for s in steps if s.state == "Sent"]
     assert sent and all(s.action == "" and s.link == "evaluations" for s in sent)
+
+
+# --- Rung 4's read: stages without an application, the close's date ---
+def test_the_close_follows_the_last_stage_with_something_to_decide(client: TestClient) -> None:
+    def close_line(exercise_id: str) -> str:
+        e = sample_data.exercise(exercise_id)
+        assert e is not None
+        return workflow.steps(e)[-1].when
+
+    assert close_line(EX) == "After 12 Dec"
+    assert close_line(OPEN) == "After the last outcome"  # only the application yet
+    assert close_line(BLANK) == "After the last outcome"
+    assert "After Dates not set" not in client.get(f"/applydesk/operator/exercises/{BLANK}").text
+
+
+def test_an_exercise_whose_applications_came_from_elsewhere(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ruling 15: no stage holds the application; the table is loaded
+    upstream, so the timeline starts at its first gate."""
+    upstream = stages._STAGES[EX][1:]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    monkeypatch.setitem(stages._STAGES, EX, upstream)  # pyright: ignore[reportPrivateUsage]  -- as above
+    e = sample_data.exercise(EX)
+    assert e is not None
+    assert [s.title for s in workflow.steps(e)][0] == "Peer Review"
+    assert workflow.current_stage(e) == "Interview"
+    text = client.get(f"/applydesk/operator/exercises/{EX}/applications").text
+    assert re.findall(r"<th class=\"ap-first\"[^>]*><b>([^<]+)</b>", text) == ["Applications"]
+    assert "From elsewhere" in text
+
+
+def test_applicants_see_whether_applications_are_open(client: TestClient) -> None:
+    text = client.get("/applydesk/me").text
+    e = sample_data.exercise(OPEN)
+    assert e is not None
+    row = text[text.index(e.name) :]
+    assert "Applications open" in row[: row.index("</p>")]

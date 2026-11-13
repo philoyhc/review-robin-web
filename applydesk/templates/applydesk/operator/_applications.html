@@ -48,8 +48,8 @@
     <thead>
       <tr class="ap-groups">
         {% set ast = plan.application_stage %}
-        <th class="ap-first" colspan="3"><b>{{ ast.label if ast else "Applications" }}</b>{% if ast %}<span class="ap-when">{{ ast.dates }}</span>{% else %}<span class="ap-when">From elsewhere</span>{% endif %}</th>
-        {% for r in plan.stages if r.columns %}<th class="ap-r" colspan="{{ r.columns | length }}"><b>{{ r.label }}</b><span class="ap-when">{{ r.dates }}</span></th>{% endfor %}
+        <th class="ap-first" colspan="{{ 3 + (ast.columns | length if ast else 0) }}"><b>{{ ast.label if ast else "Applications" }}</b>{% if ast %}<span class="ap-when">{{ ast.dates }}</span>{% else %}<span class="ap-when">From elsewhere</span>{% endif %}</th>
+        {% for r in plan.stages if r.columns and not r.application %}<th class="ap-r" colspan="{{ r.columns | length }}"><b>{{ r.label }}</b><span class="ap-when">{{ r.dates }}</span></th>{% endfor %}
       </tr>
       <tr>
         <th class="ap-first">Application</th>

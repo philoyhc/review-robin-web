@@ -222,3 +222,11 @@ def test_a_rule_reads_as_a_line() -> None:
         "among the applicant's last 2 submitted and Entry at Peer Review is Entered"
         " → Entered, else Not entered"
     )
+
+
+def test_a_stage_holds_one_outcome_at_most() -> None:
+    o = stages.Outcome("o1", 1, "A", ("Yes",), "", "")
+    two = (stages.Stage(1, "", "", (o, o)),)
+    assert stages.problems(two) == ("Stage 1 holds more than one outcome.",)
+    with_application = (stages.Stage(1, "Applications", "", (o,), application=True),)
+    assert stages.problems(with_application) == ()
