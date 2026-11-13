@@ -217,7 +217,7 @@ def plan_of(exercise_id: str) -> Plan:
 
 def counts(plan: Plan, column: Gate | Outcome) -> str:
     """A column header's tally across every application, e.g.
-    "86 selected · 2 pending"."""
+    "86 entered · 2 to decide"; an outcome's, "24 shortlisted · 2 pending"."""
     values = [
         r.cells[column.key].value for r in plan.rows if r.cells.get(column.key, Cell("")).value
     ]

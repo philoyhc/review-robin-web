@@ -14,7 +14,7 @@ The Applications tab is a placeholder: a list with *Generate applicant profiles*
 2. **Each round**, its From–To dates in the group header (from the Timeline): its gates, then any outcome placed after them. The sample: *Round 1* (Gate 1 Peer Review, Gate 2 Faculty Panel Review, Outcome 1 Shortlist for interview), *Round 2* (Gate 3 Interview, Outcome 2 Finalists), *Final* (Outcome 3 Final results). Every gate is a Review Robin session in the sample.
 3. **A gate cell** is a chip that cycles ~~*Pending → Selected → Not selected*~~ *— (no status yet) → Entered → Not entered* (author, rung 5: a gate is whether the application is sent through it); under it, the gate's result from Review Robin ("Rating 4.6 · 3 of 3") or why it was set ("Excluded: not eligible").
 4. **An outcome cell** is a menu of that outcome's values (shaped and toned as a gate's chip since rung 5), the date it was decided under it (or "Due …" from the Timeline). Each outcome header carries a **Released** switch and when and to whom it was released.
-5. **Column headers count** their column across every application ("86 selected · 2 pending").
+5. **Column headers count** their column across every application ("86 entered · 2 to decide").
 6. **A toolbar**: search (ID, name, email), a status filter, *Fill by rule…*, *Upload CSV*, *Save*; after the rows, *All applications* or *Last applications* (each applicant's last submitted), and *Set ticked rows*.
 7. **The application file** replaces "applicant profile" in what shows (ruling 13).
 

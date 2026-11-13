@@ -128,7 +128,7 @@ def test_ticked_rows_are_set_together(page: Page) -> None:
     for who in ("aisha.bello", "kenji.russo"):
         assert _row(page, who).locator('[data-cell="g3"] [data-ap-adm]').inner_text() == "Entered"
     # A draft has entered nothing: it is left alone.
-    assert _row(page, "wen.novak").locator('[data-cell="g3"]').inner_text().strip() == "—"
+    assert _row(page, "wen.novak").locator('[data-cell="g3"] [data-ap-adm]').count() == 0
 
 
 def test_an_application_advanced_by_hand_can_be_given_later_outcomes(page: Page) -> None:
@@ -223,8 +223,12 @@ def test_the_table_downloads_as_the_csv_an_upload_reads(page: Page) -> None:
     page.goto(PAGE)
     with page.expect_download() as got:
         page.locator("[data-ap-csv-down]").click()
-    text = got.value.path().read_text(encoding="utf-8")
+    raw = got.value.path().read_text(encoding="utf-8")
+    # A byte-order mark, so a spreadsheet reads it as UTF-8; no status is "-".
+    assert raw.startswith("\ufeff")
+    text = raw.removeprefix("\ufeff")
     lines = text.splitlines()
+    assert "—" not in text
     assert lines[0].startswith("Application ID,Applicant,Email,Status,Peer Review,")
     assert len(lines) == 102
     # Uploaded back, it changes nothing and leaves nothing out.

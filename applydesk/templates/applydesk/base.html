@@ -188,7 +188,7 @@
     /* An outcome's menu, shaped and toned as a gate's chip (author,
        2026-11-13): a pill with a ▾, opening that outcome's values. */
     .ap-ocw { position: relative; display: inline-block; max-width: 150px; }
-    .ap-ocw::after { content: "▾"; position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font-size: 10px; pointer-events: none; }
+    .ap-ocw::after { content: "▾"; content: "▾" / ""; position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font-size: 10px; pointer-events: none; }
     .ap-oc { field-sizing: content; -webkit-appearance: none; appearance: none; font: inherit; font-size: 12px; font-weight: 600; border-radius: 9999px; padding: 3px 22px 3px 9px; border: 1px solid var(--border-default); max-width: 150px; cursor: pointer; }
     .ap-t-good { background: var(--chip-ok-bg); color: var(--chip-ok-fg); border-color: var(--chip-ok-fg); }
     .ap-t-warn { background: var(--chip-warn-bg); color: var(--chip-warn-fg); border-color: var(--chip-warn-fg); }

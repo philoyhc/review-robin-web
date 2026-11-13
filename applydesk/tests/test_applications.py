@@ -62,6 +62,7 @@ def test_the_model_exercise_reads_as_partway_through() -> None:
     plan = rounds.plan_of(EX)
     by_key = {c.key: c for c in plan.columns}
     assert rounds.counts(plan, by_key["o1"]).startswith("24 shortlisted")
+    assert rounds.counts(plan, by_key["g2"]) == "49 entered · 2 to decide"
     o1, o2 = by_key["o1"], by_key["o2"]
     assert isinstance(o1, rounds.Outcome) and isinstance(o2, rounds.Outcome)
     assert o1.released and not o2.released
