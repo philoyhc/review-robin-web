@@ -54,7 +54,8 @@ operators under `/operator/exercises`, participants under `/me`.
   application's, and shows only the *Shown to reviewers* section. In a blind exercise it
   redacts the applicant's name and identifiers.
 - **The chrome** is the shared bar (`docs/header_chrome.md`): the app
-  icon, the workspace's top line over the area, a switcher of the
+  icon, the workspace's top line over *Apply Desk* (the app's name, as
+  Review Robin's bar names Review Robin; author, 2026-11-13), a switcher of the
   *Operator Lobby* (`/operator/exercises`, operators only) and the *User
   Lobby* (`/me`) then *All applications*, the Light/Dark toggle and the
   account menu. Each lobby's H1 and tab read its name, as Review Robin's

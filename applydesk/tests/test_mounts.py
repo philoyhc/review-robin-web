@@ -125,3 +125,13 @@ def test_the_switcher_names_the_lobbies(monkeypatch: pytest.MonkeyPatch) -> None
     me = client.get("/applydesk/me").text
     assert "<h1>User Lobby</h1>" in me
     assert "Operator Lobby" not in me  # a non-operator's switcher offers only theirs
+
+
+def test_the_bar_names_the_application() -> None:
+    """The name beside the icon is Apply Desk on every page, as Review
+    Robin's bar reads Review Robin (author, 2026-11-13)."""
+    client = TestClient(host_with(("applydesk",))[0])
+    for path in ("/applydesk/operator/exercises", "/applydesk/me"):
+        page = client.get(path).text
+        assert '<span class="sw-app">Apply Desk <span' in page, path
+        assert 'aria-label="Switch area: Apply Desk"' in page, path
