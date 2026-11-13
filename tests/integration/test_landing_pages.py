@@ -2,7 +2,7 @@
 
 ``/`` routes by role: operators + sys-admins → the session lobby,
 everyone else → the ``/me`` participant dashboard. ``/operator`` (and
-``/operator/``) redirect to the lobby unconditionally.
+``/operator/``) land the same way since segment 20N.
 """
 
 import pytest
@@ -119,3 +119,15 @@ def test_the_user_lobby_is_named_so(client: TestClient) -> None:
     body = client.get("/me").text
     assert "<title>User Lobby — Review Robin Web</title>" in body
     assert "<h1>User Lobby</h1>" in body
+
+
+def test_operator_bare_lands_a_sys_admin_on_the_operator_lobby(make_client, monkeypatch) -> None:
+    """A sys-admin who is not an operator still lands on the Operator
+    Lobby, as on `/` (segment 20N)."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["sam@example.edu"])
+    sam = AuthenticatedUser(
+        principal_id="sam-oid", email="sam@example.edu", name="Sam Sysadmin", provider="aad"
+    )
+    resp = make_client(sam).get("/operator", follow_redirects=False)
+    assert resp.status_code == 302
+    assert resp.headers["location"] == "/operator/sessions"

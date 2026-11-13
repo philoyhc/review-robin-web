@@ -26,6 +26,7 @@ The author (2026-11-13) asked for one vocabulary across the apps: **Operator Lob
 
 ## Judgment calls — decided
 
+- **Back-links and the error page's way out keep *Sessions* / *your reviews*** (2026-11-13): `return_to.py`'s *← Back to …* and `error_handlers.py`'s *Go to …* lead back, as a breadcrumb does, and the author left breadcrumbs alone; the author may rule otherwise. Prose naming the page (`/about`, the Guide, the handoff page) says *Operator Lobby*.
 - **The participant pages' Secondary *Your reviews* buttons** (`invite_mismatch.html`, `pre_open.html`, `summary.html`, `about.html`'s link) become *User Lobby*. They name the page they go to, like the switcher, and are not breadcrumbs.
 - **`Sessions Lobby` joins `RETIRED_TERMS`**, since no code constant derives *Operator Lobby*. *Your reviews* does not join it: it is plain English that live prose uses for other things.
 
@@ -79,3 +80,5 @@ Building (2026-11-13).
 - `spec/rehydrate.md` — the Rehydrate button sits in the Operator Lobby.
 - `spec/role_landing_and_visibility.md` — the dashboard's name, and `/operator` landing by role.
 - `docs/header_chrome.md` — §3's switcher rows: Operator Lobby and User Lobby.
+- `spec/operator_ui_concept.md` — the switcher's entries, and bare `/operator` landing by role, not unguarded.
+- `spec/permissions.md` — bare `/operator`'s row: signed in, landing by role.
