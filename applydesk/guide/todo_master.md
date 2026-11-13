@@ -96,13 +96,14 @@ where a ruling below differs from it, the ruling wins.
     Robin's chrome** (author, 2026-11-13; segment AD1D):
     - **Home**, then a **Setup** row: *Process* (stages, gates, outcomes,
       dates, every rule, what a release does), *Form*, *Gates* (one card
-      per gate, its panel roster on it), *Emails* (every template to
+      per gate, its panel roster on it; *a panel picked from Panels: ruling 19*), *Emails* (every template to
       applicants, kept in one place; Process sets which steps send one,
       and when; *who it is to and how templates are named: ruling 16*); then
       an **Operations** row: *Applications*, *Evaluations* (each gate's
       progress and results), *Extract data*. Panels folds into Gates,
       Review becomes Evaluations, Reports becomes Extract data, Setup
       becomes Process. Ruling 13's "Setup and the Timeline" is Process.
+      *Panels came back as its own tab after Gates: ruling 19.*
     - **Each item goes live on its own**: the form (*Draft → Open →
       Closed*), each gate (*Not ready → Ready → Sent → Results in*), each
       outcome (*Pending → Decided → Released*), then the exercise is
@@ -178,6 +179,20 @@ where a ruling below differs from it, the ruling wins.
     only) and the *User Lobby* (`/me`), each page titled so; `/` and
     `/operator` land by role. Until AD2 knows Apply Desk's operators, an
     operator is everyone on a local run and the super-admin deployed.
+19. **Panels is its own Setup tab, after Gates** (author, 2026-11-13;
+    segment AD1F), superseding ruling 14's fold of Panels into Gates:
+    - The Setup row is *Process · Form · Gates · Panels · Emails*. A
+      **panel** is a named roster of people kept by Apply Desk (ruling 4):
+      an assessment panel, the reviewer pool, the interviewers.
+    - **Form and Gates pick a panel** where they need one (a *Select
+      people* question's *Chosen from*, a gate's evaluators), and may make
+      one there: *+ New panel*, a name and pasted emails, with *Edit on
+      Panels →*. So Setup still runs forward without going back.
+    - **Panels** holds each panel's roster as a table, Review Robin's
+      roster page style, for the adjustments made after: rows added,
+      edited and removed, a CSV in and out, a *Used by* line, *Copy
+      panel*; a panel is retired only when nothing uses it. A gate already
+      sent keeps the roster it was sent with.
 
 ## MVP roadmap
 
@@ -188,7 +203,8 @@ Segments in order; each gets a plan in this folder when it starts.
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
 | **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
-| AD1F onward — the other new pages | Gates, Emails, Evaluations and Extract data built out as working scaffolds, one segment each | After AD1E (closed 2026-11-13) |
+| **AD1F — Gates and Panels** | Gates as gate cards beside an Outline; Panels as its own tab (ruling 19), a card per panel holding its roster table; Form's *Select people* and each gate picking or making a panel; nothing saved | `applydesk/guide/segment_AD1F_gates_panels.md` |
+| AD1G onward — the other new pages | Emails, Evaluations and Extract data built out as working scaffolds, one segment each | After AD1F |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
