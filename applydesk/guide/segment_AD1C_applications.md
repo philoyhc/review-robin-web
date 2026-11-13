@@ -39,7 +39,8 @@ The Applications tab is a placeholder: a list with *Generate applicant profiles*
 ## Judgment calls — decided
 
 - **The table renders on the server, moves happen in one inline script**, as AD1B: the server renders every cell from `sample_data`; the script cycles chips, opens menus, recounts and filters.
-- **The sample has about 100 applications**, generated deterministically in `sample_data` (a fixed seed), so counts and paging read as a real exercise; ten are written by hand for the cases (two applications from one applicant, a draft, a withdrawal, an exclusion, a manual addition).
+- **`wa9juxbc2t` (Undergraduate Research Fellowship 2027) is the model exercise** (author, 2026-11-13): it carries the full setup and is built out further as segments land; the other exercises keep a smaller setup (`k7mfr3pq8z`: one round), and the blank one none.
+- **The model exercise has about 100 applications**, generated deterministically in `sample_data` (a fixed seed), so counts and paging read as a real exercise; ten are written by hand for the cases (two applications from one applicant, a draft, a withdrawal, an exclusion, a manual addition).
 - **"Application file" renames what shows**: the button, the page title and the route `/me/exercises/<id>/files/<file id>`; the code's `profile_id` becomes `file_id`. All are placeholders; nothing stored depends on the old names.
 
 ## Blast radius (measured)
