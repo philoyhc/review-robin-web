@@ -1,6 +1,6 @@
 # Segment 20O — Browser tab titles as *Page · Review Robin*
 
-**Opened:** 2026-11-13 · **Theme:** one tab-title pattern across Cordware's apps · **Related:** `guide/segment_20N_lobbies.md`, `spec/visual_style_rrw.md`
+**Opened:** 2026-11-13 · **Theme:** one tab-title pattern across Cordware's apps · **Related:** `guide/archive/segment_20N_lobbies.md`, `spec/visual_style_rrw.md`
 
 ## Opportunity
 
