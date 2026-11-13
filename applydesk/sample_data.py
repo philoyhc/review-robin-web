@@ -8,6 +8,7 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import asdict, dataclass, replace
+from typing import TypedDict
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,36 @@ class Evaluator:
     name: str
     email: str
     note: str
+
+
+@dataclass(frozen=True)
+class Member:
+    """Someone on a panel: an email, unique in the panel; a name; a note
+    (a role or an area)."""
+
+    name: str
+    email: str
+    note: str = ""
+
+
+@dataclass(frozen=True)
+class Panel:
+    """A named roster Apply Desk keeps (rulings 4, 19): an assessment
+    panel, the reviewer pool, the interviewers. A Select people question
+    and a gate name it by ``key``."""
+
+    exercise_id: str
+    key: str
+    name: str
+    members: tuple[Member, ...]
+
+
+class Pool(TypedDict):
+    """A panel as a Select people question reads it, Institution-wide
+    included: its name and its members (name, email)."""
+
+    name: str
+    members: list[tuple[str, str]]
 
 
 EXERCISES: tuple[Exercise, ...] = (
@@ -362,17 +393,57 @@ ASSESSORS: tuple[Assessor, ...] = (
     Assessor("k7mfr3pq8z", "Mei Chen", "mei.chen@example.edu", ("q4tw9hcz3x",)),
 )
 
-# The pool an applicant chooses a reviewer from, and the interviewers.
-REVIEWER_POOL: tuple[Evaluator, ...] = (
-    Evaluator("wa9juxbc2t", "Dr Hana Ito", "hana.ito@example.edu", "Life Sciences"),
-    Evaluator("wa9juxbc2t", "Dr Omar Aziz", "omar.aziz@example.edu", "Engineering"),
-    Evaluator("wa9juxbc2t", "Dr Ruth Kahn", "ruth.kahn@example.edu", "Humanities"),
+# The exercises' panels (ruling 19), one sample each kind: assessment
+# panels, the pool an applicant chooses a reviewer from, the interviewers.
+# ASSESSORS above keeps who each assessor is asked to review (AD5, AD6).
+PANELS: tuple[Panel, ...] = (
+    Panel(
+        "wa9juxbc2t",
+        "panel-a",
+        "Panel A",
+        (Member("Zoe Tan", "zoe.tan@example.edu"), Member("Lars Berg", "lars.berg@example.edu")),
+    ),
+    Panel("wa9juxbc2t", "panel-b", "Panel B", (Member("Ana Lim", "ana.lim@example.edu"),)),
+    Panel(
+        "wa9juxbc2t",
+        "pool",
+        "Reviewer pool",
+        (
+            Member("Dr Hana Ito", "hana.ito@example.edu", "Life Sciences"),
+            Member("Dr Omar Aziz", "omar.aziz@example.edu", "Engineering"),
+            Member("Dr Ruth Kahn", "ruth.kahn@example.edu", "Humanities"),
+        ),
+    ),
+    Panel(
+        "wa9juxbc2t",
+        "interviewers",
+        "Interviewers",
+        (
+            Member("Prof Ivan Petrov", "ivan.petrov@example.edu", "Chair"),
+            Member("Dr Sara Ng", "sara.ng@example.edu"),
+        ),
+    ),
+    Panel(
+        "k7mfr3pq8z",
+        "panel-a",
+        "Panel A",
+        (Member("Priya Rao", "priya.rao@example.edu"), Member("Mei Chen", "mei.chen@example.edu")),
+    ),
+    Panel(
+        "k7mfr3pq8z",
+        "interviewers",
+        "Interviewers",
+        (Member("Prof Ben Ortiz", "ben.ortiz@example.edu", "Chair"),),
+    ),
 )
-INTERVIEWERS: tuple[Evaluator, ...] = (
-    Evaluator("wa9juxbc2t", "Prof Ivan Petrov", "ivan.petrov@example.edu", "Chair"),
-    Evaluator("wa9juxbc2t", "Dr Sara Ng", "sara.ng@example.edu", ""),
-    Evaluator("k7mfr3pq8z", "Prof Ben Ortiz", "ben.ortiz@example.edu", "Chair"),
-)
+
+
+def _roster(exercise_id: str, key: str) -> tuple[Evaluator, ...]:
+    panel = next((p for p in PANELS if p.exercise_id == exercise_id and p.key == key), None)
+    if panel is None:
+        return ()
+    return tuple(Evaluator(exercise_id, m.name, m.email, m.note) for m in panel.members)
+
 
 # The applicant form's two sections, as an applicant fills them in
 # (spec §5.1): the application file shows the first only.
@@ -442,7 +513,7 @@ class FormCard:
     exclusive: bool = True  # a list: choose one, else choose any
     ratio_w: str = "4"
     ratio_h: str = "5"
-    pool: str = "institution"  # Select people: a PEOPLE_POOLS key
+    pool: str = "institution"  # Select people: "institution" or a Panel key
     required: bool = False
     shown: bool = False  # shown to reviewers; a new card is not
 
@@ -590,44 +661,37 @@ def _span(lo: str, hi: str, unit: str = "") -> str:
 
 # Who a Select people question may name (segment AD1B): everyone in the
 # institution (looked up in Entra ID through Graph once forms are live,
-# AD4), or a roster on the Gates page (ruling 14). Keys: "institution", "pool",
-# "interviewers", or "panel:" and an assessment panel's name.
+# AD4), or one of the exercise's panels (ruling 19), by its key.
 #: The sample institution: everyone below, and two more, stand in for
 #: the directory Graph searches.
 _ELSEWHERE: tuple[tuple[str, str], ...] = (
     ("Daniel Koh", "daniel.koh@example.edu"),
     ("Priya Raman", "priya.raman@example.edu"),
 )
+INSTITUTION = "Institution-wide"
 
 
-def pool_label(key: str) -> str:
-    """A pool's name on the card and in its summary."""
-    if key.startswith("panel:"):
-        return key.removeprefix("panel:")
-    return {"pool": "Reviewer pool", "interviewers": "Interviewers"}.get(key, "Institution-wide")
+def panels_of(exercise_id: str) -> tuple[Panel, ...]:
+    return tuple(p for p in PANELS if p.exercise_id == exercise_id)
 
 
-def people_pools(exercise_id: str) -> dict[str, list[tuple[str, str]]]:
-    """Each pool a Select people question may use in this exercise, with
-    its members (name, email), Institution-wide first."""
-    pools: dict[str, list[tuple[str, str]]] = {}
-    for a in assessors_of(exercise_id):
-        pools.setdefault(f"panel:{a.panel}", []).append((a.name, a.email))
-    if pool := pool_of(exercise_id):
-        pools["pool"] = [(e.name, e.email) for e in pool]
-    if interviewers := interviewers_of(exercise_id):
-        pools["interviewers"] = [(e.name, e.email) for e in interviewers]
+def people_pools(exercise_id: str) -> dict[str, Pool]:
+    """Each pool a Select people question may use in this exercise:
+    Institution-wide first, then its panels in order."""
     everyone = {
         email: (name, email)
         for name, email in [
+            *((m.name, m.email) for p in PANELS for m in p.members),
             *((a.name, a.email) for a in ASSESSORS),
-            *((e.name, e.email) for e in (*REVIEWER_POOL, *INTERVIEWERS)),
             *_ELSEWHERE,
         ]
     }
-    panels = sorted(k for k in pools if k.startswith("panel:"))
-    order = [*panels, *(k for k in ("pool", "interviewers") if k in pools)]
-    return {"institution": sorted(everyone.values()), **{k: pools[k] for k in order}}
+    pools: dict[str, Pool] = {
+        "institution": {"name": INSTITUTION, "members": sorted(everyone.values())}
+    }
+    for p in panels_of(exercise_id):
+        pools[p.key] = {"name": p.name, "members": [(m.name, m.email) for m in p.members]}
+    return pools
 
 
 def _people(lo: str, hi: str) -> str:
@@ -636,9 +700,10 @@ def _people(lo: str, hi: str) -> str:
     return _span(lo, hi, unit)
 
 
-def card_summary(c: FormCard) -> str:
+def card_summary(c: FormCard, pools: dict[str, Pool] | None = None) -> str:
     """A collapsed card's summary of its settings; the page's script
-    computes the same as the card is edited."""
+    computes the same as the card is edited. A Select people card names
+    its pool from ``pools`` (the exercise's), else Institution-wide."""
     if c.type == "string":
         span = _span(c.min, c.max, "characters")
         return f"String · {span}" if span else "String"
@@ -656,7 +721,8 @@ def card_summary(c: FormCard) -> str:
             return "Photo · ratio not set"
         return f"Photo · {c.ratio_w}:{c.ratio_h}, kept {size[0]} × {size[1]}"
     if c.type == "people":
-        parts = [p for p in (_people(c.min, c.max), pool_label(c.pool)) if p]
+        pool = (pools or {}).get(c.pool)
+        parts = [p for p in (_people(c.min, c.max), pool["name"] if pool else INSTITUTION) if p]
         return f"Select people · {' · '.join(parts)}"
     return "Title and Description · display only"
 
@@ -703,11 +769,11 @@ def assessors_of(exercise_id: str) -> tuple[Assessor, ...]:
 
 
 def pool_of(exercise_id: str) -> tuple[Evaluator, ...]:
-    return tuple(e for e in REVIEWER_POOL if e.exercise_id == exercise_id)
+    return _roster(exercise_id, "pool")
 
 
 def interviewers_of(exercise_id: str) -> tuple[Evaluator, ...]:
-    return tuple(e for e in INTERVIEWERS if e.exercise_id == exercise_id)
+    return _roster(exercise_id, "interviewers")
 
 
 def application(exercise_id: str, public_id: str) -> Application | None:

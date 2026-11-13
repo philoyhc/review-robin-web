@@ -1,0 +1,25 @@
+{# Picking a panel, and making one in place (ruling 19, segment AD1F): a
+   Select people question's *Chosen from* and a gate's evaluators.
+   `menu` is the select, `new_box` the *+ New panel* box under it; the
+   script in `_panel_pick_js.html` wires every pair on the page. A panel
+   made here lives on this page only: nothing is saved until AD2. #}
+
+{% macro menu(pools, chosen, attrs="") %}
+<select class="fc-in" data-panel-pick {{ attrs | safe }}>
+  {% for key, p in pools.items() %}<option value="{{ key }}"{% if key == chosen %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
+  <option value="__new">+ New panel…</option>
+</select>
+{% endmacro %}
+
+{% macro new_box() %}
+<div class="np" data-newpanel hidden>
+  <label class="fc-l">Panel name<input class="fc-in" data-np="name" placeholder="e.g. Panel C"></label>
+  <label class="fc-l">Members<textarea class="fc-in" data-np="members" rows="3" placeholder="One per line: an email, or Name &lt;email&gt;"></textarea></label>
+  <p class="np-err" data-np-err aria-live="polite"></p>
+  <p class="muted np-note">Made here, the panel is kept on this page until saving comes (AD2).</p>
+  <div class="btnrow">
+    <button type="button" class="btn btn-primary" data-np-act="create">Create panel</button>
+    <button type="button" class="btn btn-secondary" data-np-act="cancel">Cancel</button>
+  </div>
+</div>
+{% endmacro %}

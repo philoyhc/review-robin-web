@@ -15,7 +15,9 @@
 </div>
 {% endmacro %}
 
-{% macro field(c, summary, kept_size, card_types, pools, pool_label, open=False) %}
+{% import "applydesk/operator/_panel_pick.html" as pick %}
+
+{% macro field(c, summary, kept_size, card_types, pools, open=False) %}
 {% set size = kept_size(c.ratio_w, c.ratio_h) %}
 <article class="fc" data-kind="field" data-type="{{ c.type }}"{% if open %} data-open{% endif %}>
   <div class="fc-head">
@@ -59,12 +61,11 @@
         </span>
       </div>
     </div>
-    <div class="fc-row g-people">
+    <div class="fc-row g-people" data-pick-wrap>
       <label class="fc-l">Min people<input class="fc-in" data-f="min" data-g="people" inputmode="numeric" value="{{ c.min if c.type == 'people' }}"></label>
       <label class="fc-l">Max people<input class="fc-in" data-f="max" data-g="people" inputmode="numeric" value="{{ c.max if c.type == 'people' }}"></label>
-      <label class="fc-l fc-wide">Chosen from<select class="fc-in" data-f="pool">
-        {% for key in pools %}<option value="{{ key }}"{% if key == c.pool %} selected{% endif %}>{{ pool_label(key) }}</option>{% endfor %}
-      </select></label>
+      <label class="fc-l fc-wide">Chosen from{{ pick.menu(pools, c.pool, 'data-f="pool"') }}</label>
+      {{ pick.new_box() }}
     </div>
     <div class="fc-row g-photo">
       <label class="fc-l fc-narrow">Ratio width<input class="fc-in" data-f="ratio_w" inputmode="numeric" value="{{ c.ratio_w }}"></label>

@@ -340,6 +340,12 @@
     .fc[data-type="string"] .g-string, .fc[data-type="integer"] .g-number, .fc[data-type="decimal"] .g-number,
     .fc[data-type="list"] .g-list, .fc[data-type="photo"] .g-photo, .fc[data-type="people"] .g-people, .fc .fc-flags { display: flex; }
     .fc .fc-flags { margin-top: 12px; }
+    /* + New panel, under a panel menu (ruling 19, segment AD1F). */
+    .np { flex: 1 1 100%; margin-top: 10px; padding: 4px 12px 12px; border: 1px dashed var(--border-default); border-radius: 8px; }
+    .np[hidden] { display: none; }
+    .np-err { margin: 8px 0 0; font-size: 13px; color: var(--danger); }
+    .np-err:empty { display: none; }
+    .np-note { margin: 6px 0 0; font-size: 12px; }
     .fc[data-type="text"] .g-req { display: none; }
     .fc[data-type="text"] [data-sum="required"] { display: none; }
     .l-t { display: none; }

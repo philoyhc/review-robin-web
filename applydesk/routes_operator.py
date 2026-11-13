@@ -89,10 +89,11 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         cards=sample_data.form_cards(exercise.public_id),
         form_heading=sample_data.form_heading(exercise.public_id),
         card_types=sample_data.CARD_TYPES,
-        summary=sample_data.card_summary,
+        summary=functools.partial(
+            sample_data.card_summary, pools=sample_data.people_pools(exercise.public_id)
+        ),
         kept_size=sample_data.kept_size,
         people=sample_data.people_pools(exercise.public_id),
-        pool_label=sample_data.pool_label,
         blank=sample_data.FormCard("field"),
         blank_section=sample_data.FormCard("section"),
         plan=stages.plan_of(exercise.public_id),
