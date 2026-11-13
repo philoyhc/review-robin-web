@@ -30,11 +30,11 @@ def application_or_404(
     return found
 
 
-def profile_or_404(exercise: sample_data.Exercise, profile_id: str) -> sample_data.Application:
-    """The application a profile page shows, by the profile's own ID."""
-    if not is_public_id(profile_id):
+def file_or_404(exercise: sample_data.Exercise, file_id: str) -> sample_data.Application:
+    """The application an application file shows, by the file's own ID."""
+    if not is_public_id(file_id):
         raise HTTPException(status_code=404)
-    found = sample_data.by_profile(exercise.public_id, profile_id)
+    found = sample_data.by_file(exercise.public_id, file_id)
     if found is None:
         raise HTTPException(status_code=404)
     return found

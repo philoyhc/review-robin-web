@@ -77,7 +77,7 @@
     {% for row in plan.rows %}{% set a = row.application %}
       <tr data-row data-status="{{ a.state }}" data-search="{{ (a.public_id ~ ' ' ~ a.applicant ~ ' ' ~ a.email) | lower }}"{% if a.public_id in last %} data-last{% endif %}>
         <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ a.public_id }}">
-          {% if a.state == "Submitted" %}<a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/profiles/' ~ a.profile_id) }}"><code>{{ a.public_id }}</code></a>{% else %}<code>{{ a.public_id }}</code>{% endif %}</td>
+          {% if a.state == "Submitted" %}<a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/files/' ~ a.file_id) }}"><code>{{ a.public_id }}</code></a>{% else %}<code>{{ a.public_id }}</code>{% endif %}</td>
         <td class="ap-who"><strong>{{ a.applicant }}</strong><span class="ap-mail">{{ a.email }}</span></td>
         <td class="ap-stat">{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}<span class="ap-note">{{ a.submitted }}</span></td>
         {% for r in plan.rounds %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}
@@ -120,7 +120,7 @@
   <p class="muted ap-help">A gate's chip cycles <em>Pending</em>, <em>Selected</em>, <em>Not selected</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> switch does what the Timeline sets. Rounds, gates, outcomes and dates come from Setup and the Timeline.</p>
 </div>
 <div class="btnrow">
-  <button class="btn btn-primary" type="button" disabled>Generate applicant profiles</button>
+  <button class="btn btn-primary" type="button" disabled>Generate application files</button>
   <button class="btn btn-alert" type="button" disabled>Return to draft</button>
 </div>
 <script>

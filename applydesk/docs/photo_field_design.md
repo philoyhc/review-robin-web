@@ -75,7 +75,7 @@ As U4's tool, which is where to read the code:
 
 - **Into the MVP?** Ruling 3 says no uploads; this needs no Blob (author).
 - **Blind exercises.** Ruling 6 redacts name and identifiers on the
-  profile page; a face is an identifier. Hide the photo there, or keep
+  application file; a face is an identifier. Hide the photo there, or keep
   the field under *Not shown to reviewers* in a blind exercise (author,
   at AD4/AD5).
 - **Required or optional**, per exercise (AD4's form builder).

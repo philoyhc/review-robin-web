@@ -1,5 +1,5 @@
 """Sample data for the placeholders (segment AD1, item 2): five exercises,
-their applications, panels and profile pages, so every page of the URL
+their applications, panels and application files, so every page of the URL
 map has something to show. Names and addresses are invented; IDs have the
 public-ID shape (`applydesk/ids.py`)."""
 
@@ -34,7 +34,7 @@ class Application:
     title: str
     state: str  # Draft, Submitted, Withdrawn
     submitted: str
-    profile_id: str
+    file_id: str
 
 
 @dataclass(frozen=True)
@@ -331,7 +331,7 @@ def _generated() -> tuple[Application, ...]:
         replace(
             twice,
             public_id=new_id(),
-            profile_id=new_id(),
+            file_id=new_id(),
             state="Withdrawn",
             submitted="4 Oct 2026",
         ),
@@ -363,7 +363,7 @@ INTERVIEWERS: tuple[Evaluator, ...] = (
 )
 
 # The applicant form's two sections, as an applicant fills them in
-# (spec §5.1): the profile page shows the first only.
+# (spec §5.1): the application file shows the first only.
 SHOWN_TO_REVIEWERS: tuple[tuple[str, str], ...] = (
     ("Project title", ""),
     (
@@ -443,7 +443,7 @@ SAMPLE_FORM: tuple[FormCard, ...] = (
         "Your proposed project",
         help=(
             "Tell us what you will work on and how. Assessors read the "
-            "questions marked shown on your applicant profile."
+            "questions marked shown on your application file."
         ),
         shown=True,
     ),
@@ -704,8 +704,8 @@ def application(exercise_id: str, public_id: str) -> Application | None:
     )
 
 
-def by_profile(exercise_id: str, profile_id: str) -> Application | None:
+def by_file(exercise_id: str, file_id: str) -> Application | None:
     return next(
-        (a for a in applications_of(exercise_id) if a.profile_id == profile_id),
+        (a for a in applications_of(exercise_id) if a.file_id == file_id),
         None,
     )

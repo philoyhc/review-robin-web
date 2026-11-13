@@ -47,8 +47,9 @@ operators under `/operator/exercises`, participants under `/me`.
 - **Public IDs** (`applydesk/ids.py`): 10 symbols from RRW's alphabet,
   `23456789abcdefghjkmnpqrstuvwxyz`, drawn at random. A path whose ID has
   any other shape, or names nothing, is a 404 before anything is read.
-- **The profile page** is named by its own ID, never the application's,
-  and shows only the *Shown to reviewers* section. In a blind exercise it
+- **The application file**, what a reviewer opens, one per application
+  (`/me/exercises/<id>/files/<file>`), is named by its own ID, never the
+  application's, and shows only the *Shown to reviewers* section. In a blind exercise it
   redacts the applicant's name and identifiers.
 - **The chrome** is the shared bar (`docs/header_chrome.md`): the app
   icon, the workspace's top line over the area, a switcher of *Exercises*

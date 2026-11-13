@@ -1,7 +1,7 @@
 {% extends "applydesk/base.html" %}
 {% block title %}{{ "Application" if exercise.blind else application.title }}{% endblock %}
 {% block content %}
-{# The application profile page (rulings 5, 6 and 9): the part shown to
+{# The application file (rulings 5, 6, 9 and 13): the part shown to
    reviewers only; in a blind exercise, no name or identifier. #}
 <div class="ptitle"><h1>{% if exercise.blind %}An application{% else %}{{ application.title }}{% endif %}</h1>{% if exercise.blind %}<span class="chip chip-mute">Blind review</span>{% endif %}</div>
 <p class="lede">{{ exercise.name }}</p>
