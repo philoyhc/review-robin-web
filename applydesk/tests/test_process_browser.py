@@ -461,3 +461,82 @@ def test_an_open_editor_follows_gates_added_and_renamed(page: Page) -> None:
         "Extra",
     ]
     assert gate.input_value() == "g1"  # its rule still reads the gate it read
+
+
+def test_an_outcome_s_release_is_set_per_audience(page: Page) -> None:
+    """When released: applicants and panel evaluators each get the
+    timeline updated, an email, or both (author, 2026-11-13)."""
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    groups = o1.locator(".pc-aud")
+    assert groups.locator(".pc-aud-h").all_inner_texts() == ["Applicants", "Panel evaluators"]
+    assert groups.nth(0).locator("input[type=checkbox]").evaluate_all(
+        "els => els.map(e => e.checked)"
+    ) == [True, True]
+    assert groups.nth(1).locator("input[type=checkbox]").evaluate_all(
+        "els => els.map(e => e.checked)"
+    ) == [False, False]
+    template = o1.locator('[data-rel-template="applicants"]')
+    assert template.input_value() == "Shortlist for interview"
+    o1.locator('[data-rel="applicants-email"]').uncheck()
+    assert template.is_disabled()
+    o1.locator('[data-rel="applicants-email"]').check()
+    assert template.is_enabled()
+
+
+def test_the_outline_opens_and_goes_to_a_stage_or_its_item(page: Page) -> None:
+    """As Form's Outline goes to a question (author, 2026-11-13)."""
+    page.goto(PAGE)
+    interview = _cards(page).nth(2)
+    assert interview.get_attribute("data-open") is None
+    page.locator("[data-pc-outline] .pc-o-stage").nth(2).click()
+    assert interview.get_attribute("data-open") == ""
+    assert interview.locator("[data-fc-toggle]").evaluate("e => e === document.activeElement")
+    page.locator("[data-pc-outline] .fb-o-item", has_text="Outcome 1").click()
+    review = _cards(page).nth(1)
+    assert review.get_attribute("data-open") == ""
+    assert page.evaluate("document.activeElement.value") == "Shortlist for interview"
+
+
+def test_a_new_outcome_sends_nothing_until_asked(page: Page) -> None:
+    page.goto(PAGE)
+    interview = _cards(page).nth(2)
+    _open(interview)
+    interview.locator('[data-pc-act="remove-outcome"]').click()
+    interview.locator('[data-pc-act="outcome"]').click()
+    added = interview.locator('.pc-item[data-item="outcome"]')
+    assert added.locator("input[type=checkbox]").evaluate_all("els => els.map(e => e.checked)") == [
+        True,
+        False,
+        False,
+        False,
+    ]
+    template = added.locator('[data-rel-template="applicants"]')
+    assert template.is_disabled() and template.input_value() == ""
+    added.locator('[data-rel="evaluators-email"]').check()
+    assert template.is_disabled()  # evaluators' email picks no applicants' template
+
+
+def test_a_replica_keeps_its_outcome_s_release(page: Page) -> None:
+    page.goto(PAGE)
+    review = _cards(page).nth(1)
+    _open(review)
+    review.locator('[data-rel="evaluators-timeline"]').check()
+    review.locator('[data-rel="applicants-email"]').uncheck()
+    review.locator('[data-fc-act="replicate"]').click()
+    copy = _cards(page).nth(2).locator('.pc-item[data-item="outcome"]')
+    assert copy.locator("input[type=checkbox]").evaluate_all("els => els.map(e => e.checked)") == [
+        True,
+        False,
+        True,
+        False,
+    ]
+    assert copy.locator('[data-rel-template="applicants"]').is_disabled()
+
+
+def test_the_outline_s_form_row_opens_the_form_s_stage(page: Page) -> None:
+    page.goto(PAGE)
+    page.locator("[data-pc-outline] .fb-o-item", has_text="Form").click()
+    first = _cards(page).nth(0)
+    assert first.get_attribute("data-open") == ""
+    assert first.locator("[data-fc-toggle]").evaluate("e => e === document.activeElement")

@@ -26,10 +26,10 @@
       <h2 id="pc-outline-h">Outline</h2>
       <ol class="pc-o" data-pc-outline>
         {% for st in plan.stages %}
-        <li><span class="pc-o-stage">{{ st.label }}</span> <span class="muted">{{ st.dates }}</span>
+        <li><button type="button" class="pc-o-stage">{{ st.label }}</button> <span class="muted">{{ st.dates }}</span>
           <ul class="fb-o-list">
-            {% if st.form %}<li>Form</li>{% endif %}
-            {% for c in st.columns %}<li>{{ ("Gate " ~ c.number) if c.via is defined else ("Outcome " ~ c.number) }}: {{ c.label }}</li>{% endfor %}
+            {% if st.form %}<li><button type="button" class="fb-o-item">Form</button></li>{% endif %}
+            {% for c in st.columns %}<li><button type="button" class="fb-o-item">{{ ("Gate " ~ c.number) if c.via is defined else ("Outcome " ~ c.number) }}: {{ c.label }}</button></li>{% endfor %}
           </ul>
         </li>
         {% endfor %}
@@ -110,6 +110,14 @@
       card.querySelector(".fc-body").classList.toggle("pc-body-empty", !card.querySelector(".pc-item"));
     });
   }
+  // An Outline click opens the stage's card and goes to it, or to the
+  // item within it, as Form's Outline goes to a question.
+  function goTo(card, item) {
+    setOpen(card, true);
+    (item || card).scrollIntoView({ block: item ? "center" : "start" });
+    var f = item ? item.querySelector('[data-pc="item-name"]') : null;
+    (f || card.querySelector("[data-fc-toggle]")).focus({ preventScroll: true });
+  }
   function el(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -129,15 +137,24 @@
       card.querySelector("[data-fc-grip]").setAttribute("aria-label", "Move " + labelOf(card) + ": drag, or press the up and down arrow keys");
       setOpen(card, card.hasAttribute("data-open"));
       var li = el("li"), sub = el("ul", "fb-o-list");
-      li.appendChild(el("span", "pc-o-stage", labelOf(card)));
+      var go = el("button", "pc-o-stage", labelOf(card));
+      go.type = "button";
+      go.addEventListener("click", function () { goTo(card); });
+      li.appendChild(go);
       li.appendChild(document.createTextNode(" "));
       li.appendChild(el("span", "muted", datesOf(card)));
-      if (items(card, "form").length) sub.appendChild(el("li", "", "Form"));
-      card.querySelectorAll(".pc-item[data-item=gate], .pc-item[data-item=outcome]").forEach(function (item) {
-        var gate = item.dataset.item === "gate";
-        var label = gate ? "Gate " + (++g) : "Outcome " + (++o);
-        item.querySelector("[data-pc-kicker]").textContent = label;
-        sub.appendChild(el("li", "", label + ": " + itemName(item, gate ? "Untitled gate" : "Untitled outcome")));
+      card.querySelectorAll(".pc-item").forEach(function (item) {
+        var kind = item.dataset.item, text = "Form";
+        if (kind !== "form") {
+          var label = kind === "gate" ? "Gate " + (++g) : "Outcome " + (++o);
+          item.querySelector("[data-pc-kicker]").textContent = label;
+          text = label + ": " + itemName(item, kind === "gate" ? "Untitled gate" : "Untitled outcome");
+        }
+        var row = el("li"), b = el("button", "fb-o-item", text);
+        b.type = "button";
+        b.addEventListener("click", function () { goTo(card, item); });
+        row.appendChild(b);
+        sub.appendChild(row);
       });
       li.appendChild(sub);
       outline.appendChild(li);
@@ -511,7 +528,13 @@
     live.textContent = "Moved " + labelOf(card) + " to " + (cards().indexOf(card) + 1) + " of " + cards().length + ".";
   });
 
-  list.addEventListener("change", function (e) { ruleEvent(e); });
+  list.addEventListener("change", function (e) {
+    if (ruleEvent(e)) return;
+    // Send email to applicants picks its template from Emails.
+    if (e.target.matches('[data-rel="applicants-email"]')) {
+      e.target.closest("[data-pc-release]").querySelector('[data-rel-template="applicants"]').disabled = !e.target.checked;
+    }
+  });
   list.addEventListener("click", function (e) {
     if (ruleEvent(e)) return;
     var card = e.target.closest(".pc");

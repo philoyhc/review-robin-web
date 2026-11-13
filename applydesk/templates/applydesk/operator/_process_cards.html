@@ -56,7 +56,6 @@
   <div class="pc-row">
     <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ o.label }}" placeholder="Untitled outcome"></label>
     <label class="fc-l">Due<input class="fc-in" value="{{ o.due }}" placeholder="Date"></label>
-    <label class="pc-check"><input type="checkbox" checked> Shown to applicants</label>
   </div>
   <label class="fc-l">Values<input class="fc-in" data-pc="values" value="{{ o.values | join(', ') }}" placeholder="Comma-separated, e.g. Shortlisted, Not shortlisted"></label>
   {# Its combined result: weights over the gates in its scope, those since
@@ -68,10 +67,23 @@
     {% endfor %}{% endfor %}
   </div>
   {{ rule_box(plan, o, rule_text) }}
-  <div class="pc-row">
-    <span class="fc-l pc-full">When released</span>
-    <label class="fc-l pc-wide">Email to applicants<select class="fc-in"><option>None</option>{% for e in emails if e.outcome %}<option{% if e.outcome == o.key %} selected{% endif %}>{{ e.name }}{{ "" if e.ok else " (not set up)" }}</option>{% endfor %}</select></label>
-    <label class="pc-check"><input type="checkbox"> Tell reviewers</label>
+  {# What its release does, per audience (author, 2026-11-13): the timeline
+     each sees on signing in to their participant page, and an email. #}
+  {% set sends = (emails | selectattr("outcome", "equalto", o.key) | list) if o.key else [] %}
+  <div class="pc-release" data-pc-release>
+    <span class="fc-l">When released</span>
+    <p class="pc-line muted pc-hint">Update timeline: the timeline they see when they sign in.</p>
+    <div class="pc-row pc-aud" role="group" aria-label="Applicants, when released">
+      <span class="pc-aud-h">Applicants</span>
+      <label class="pc-check"><input type="checkbox" data-rel="applicants-timeline" checked> Update timeline</label>
+      <label class="pc-check"><input type="checkbox" data-rel="applicants-email"{% if sends %} checked{% endif %}> Send email</label>
+      <label class="fc-l pc-wide">Email<select class="fc-in" data-rel-template="applicants"{% if not sends %} disabled{% endif %}>{% if not sends %}<option value="" selected>Choose a template</option>{% endif %}{% for e in emails if e.outcome %}<option{% if e.outcome == o.key %} selected{% endif %}>{{ e.name }}{{ "" if e.ok else " (not set up)" }}</option>{% else %}<option>No templates yet: kept on Emails</option>{% endfor %}</select></label>
+    </div>
+    <div class="pc-row pc-aud" role="group" aria-label="Panel evaluators, when released">
+      <span class="pc-aud-h">Panel evaluators</span>
+      <label class="pc-check"><input type="checkbox" data-rel="evaluators-timeline"> Update timeline</label>
+      <label class="pc-check"><input type="checkbox" data-rel="evaluators-email"> Send email</label>
+    </div>
   </div>
   <p class="pc-line muted">{{ ("Released " ~ o.released) if o.released else "Not released yet: its Released switch is on Applications." }}</p>
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-outcome">Remove the outcome</button></div>
