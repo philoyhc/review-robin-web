@@ -68,7 +68,9 @@ operators under `/operator/exercises`, participants under `/me`.
 - **Layout**: the operator's pages, `/operator/…`, take Review Robin's: a
   fixed 40 px left margin and up to 1400 px wide, desktop work surfaces.
   The participant's pages, `/me/…`, keep a centred column of 1232 px
-  (author, 2026-11-13).
+  (author, 2026-11-13). The bar's icon sits 24 px under the browser's
+  edge, and an exercise's breadcrumb just under the bar with no line
+  between, as in Review Robin.
 - **`/` and `/operator`** have no page of their own: they land an
   operator on the Operator Lobby and anyone else on the User Lobby, as
   Review Robin's do. Until AD2 knows Apply Desk's operators, an operator

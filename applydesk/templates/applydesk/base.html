@@ -70,7 +70,7 @@
 
     /* The bar (docs/header_chrome.md §2-§4), to Residential's measures. */
     .topbar { border-bottom: 1px solid var(--border-subtle); background: var(--surface-page); }
-    .tb-in { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 1232px; margin: 0 auto; padding: 8px 16px; }
+    .tb-in { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 1232px; margin: 0 auto; padding: 16px 16px 8px; }
     .switch, .acct-menu { position: relative; }
     .switch > summary { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 10px 4px 6px; margin-left: -6px; border-radius: 8px; cursor: pointer; list-style: none; }
     .switch > summary::-webkit-details-marker, .acct-menu > summary::-webkit-details-marker { display: none; }
@@ -108,6 +108,10 @@
        column. */
     body.op .tb-in, body.op .page { max-width: 1400px; margin: 0; padding-left: 40px; padding-right: 40px; }
     @media (max-width: 639px) { body.op .tb-in, body.op .page { padding-left: 16px; padding-right: 16px; } }
+    /* As Review Robin's chrome (author, 2026-11-13): the breadcrumb sits
+       just under the bar, one line below it, none between. */
+    body.crumbed .topbar { border-bottom: 0; }
+    body.crumbed .page { padding-top: 0; }
     .ptitle { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
     .ptitle h1 { margin: 0; font-size: 22px; }
     .lede { margin: 0 0 16px; color: var(--text-strong-subtle); font-size: 15px; }
@@ -419,7 +423,7 @@
     .redacted { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--surface-muted); color: var(--text-subtle); font-size: 13px; }
   </style>
 </head>
-<body{% if operator_page %} class="op"{% endif %}>
+<body class="{{ 'op' if operator_page }}{{ ' crumbed' if nav }}">
   <header class="topbar">
     <div class="tb-in">
       {# The bar names the application, as Review Robin's does (author,
