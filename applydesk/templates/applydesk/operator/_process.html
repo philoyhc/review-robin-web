@@ -1,10 +1,10 @@
 {# Process (rulings 14, 15, segment AD1D): the exercise's timeline as its
-   stages, each holding the application, or gates, and an outcome; their
+   stages, each holding the application, or gates, and perhaps an outcome; their
    dates, every rule, and what each step sends. A placeholder until its
    own segment, which builds it as a stack of stage cards, as Form's. #}
 <section class="card">
   <h2>Stages</h2>
-  <p class="muted">The exercise's timeline. Stages run one after another; each holds the application, or gates (which may run together), and an outcome after them. Every rule is set here; Applications applies them.</p>
+  <p class="muted">The exercise's timeline. Stages run one after another; each holds the application, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Applications applies them.</p>
   {% for r in plan.stages %}
   <h3>{{ r.label }} <span class="muted">· {{ r.dates }}</span></h3>
   <div class="table-wrap">

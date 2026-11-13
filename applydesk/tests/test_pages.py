@@ -614,3 +614,23 @@ def test_a_gate_stage_may_come_before_the_application(
     groups = re.findall(r"<th class=\"ap-(?:first|r)\"[^>]*><b>([^<]+)</b>", text)
     assert groups == ["Applications", "Review", "Interview", "Decision"]
     assert "From elsewhere" not in text
+    assert workflow.current_stage(e) == "Interview"
+
+
+def test_an_application_stage_later_in_the_timeline_keeps_the_headers_aligned(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An application stage that is not first, holding an outcome: its
+    group sits at its place, once, and the group spans match the columns."""
+    model = stages._STAGES[EX]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    review, decision = model[1], model[3]
+    apply = stages.Stage(9, "Apply", "1 Sep – 15 Oct", decision.columns, application=True)
+    monkeypatch.setitem(stages._STAGES, EX, (review, apply, model[2]))  # pyright: ignore[reportPrivateUsage]  -- as above
+    text = client.get(f"/applydesk/operator/exercises/{EX}/applications").text
+    start = text.index('<tr class="ap-groups">')
+    head = text[start : text.index("</thead>", start)]
+    groups = re.findall(r"<th class=\"ap-(?:first|r)\"[^>]*><b>([^<]+)</b>", head)
+    assert groups == ["Applications", "Review", "Apply", "Interview"]
+    spans = sum(int(n) for n in re.findall(r'colspan="(\d+)"', head))
+    second = head[head.index("</tr>") :]
+    assert spans == second.count("<th")

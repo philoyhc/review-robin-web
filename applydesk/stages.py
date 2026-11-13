@@ -2,8 +2,8 @@
 sample data.
 
 An exercise's timeline is a sequence of stages; a stage holds the
-application, or gates (which may run together), and an outcome after
-them. Process will set them up (a later segment); here they are fixed, and each
+application, or gates (which may run together), and may hold an outcome
+after them. Process will set them up (a later segment); here they are fixed, and each
 application's place at each gate and outcome is worked out from a seeded
 score, so the Applications page reads as an exercise partway through.
 Nothing is saved."""
@@ -67,9 +67,9 @@ class Outcome:
 
 @dataclass(frozen=True)
 class Stage:
-    """A step of the exercise's timeline (ruling 15): it may hold the
-    application, or gates, and an outcome; never the application and a
-    gate together. Named by the operator, "Stage N" until then."""
+    """A step of the exercise's timeline (ruling 15): it holds the
+    application, or gates, and may hold an outcome; never the application
+    and a gate together. Named by the operator, "Stage N" until then."""
 
     number: int
     name: str  # "" until the operator names it

@@ -1,6 +1,7 @@
 {# The Applications page (segment AD1C, ruling 13): the exercise's control
-   surface. A row per application; the Application stage's columns, then
-   each stage's gates and outcomes as Process sets them.
+   surface. A row per application; its identity columns (named for the
+   application stage when that stage comes first), then each stage's gates
+   and outcomes, in timeline order, as Process sets them.
    Every move works on screen; nothing is saved until AD2. #}
 {% set last = last_submitted(plan.rows) %}
 {% set rank = submitted_rank(plan.rows) %}
