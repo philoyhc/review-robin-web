@@ -11,7 +11,7 @@ from starlette.responses import Response
 from applydesk import sample_data, stages, workflow
 from applydesk.gate import placeholders_only
 from applydesk.lookups import exercise_or_404
-from applydesk.web import OPERATIONS_PAGES, SETUP_PAGES, exercise_nav, render
+from applydesk.web import OPERATIONS_PAGES, OPERATOR_LOBBY, SETUP_PAGES, exercise_nav, render
 
 router = APIRouter(prefix="/operator", dependencies=[Depends(placeholders_only)])
 
@@ -25,7 +25,7 @@ def exercises(request: Request) -> Response:
     return render(
         request,
         "applydesk/operator/exercises.html",
-        area="Exercises",
+        area=OPERATOR_LOBBY,
         exercises=sample_data.EXERCISES,
         applications=sample_data.applications_of,
         current_stage=workflow.current_stage,
@@ -38,7 +38,7 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
     return render(
         request,
         "applydesk/operator/home.html",
-        area="Exercises",
+        area=OPERATOR_LOBBY,
         nav=exercise_nav(exercise.public_id, ""),
         status=workflow.status_row(exercise),
         exercise=exercise,
@@ -60,7 +60,7 @@ def form_preview(request: Request, exercise_id: str) -> Response:
     return render(
         request,
         "applydesk/operator/form_preview.html",
-        area="Exercises",
+        area=OPERATOR_LOBBY,
         exercise=exercise,
         snapshot=sample_data.form_snapshot(exercise.public_id),
         people=sample_data.people_pools(exercise.public_id),
@@ -75,7 +75,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
     return render(
         request,
         "applydesk/operator/section.html",
-        area="Exercises",
+        area=OPERATOR_LOBBY,
         nav=exercise_nav(exercise.public_id, section),
         status=workflow.status_row(exercise),
         exercise=exercise,

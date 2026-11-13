@@ -72,11 +72,11 @@ needed to open it.
 
 | Application, viewer | First group |
 |---|---|
-| Review Robin, operator or sys admin | Sessions (the lobby); Your reviews |
-| Review Robin, participant | Your reviews |
+| Review Robin, operator or sys admin | Operator Lobby; User Lobby |
+| Review Robin, participant | User Lobby |
 | Residential Operations | Its areas, as today |
 | Support Logs | Its areas, as today |
-| Apply Desk | Exercises (operators); My Apply Desk |
+| Apply Desk | Operator Lobby (operators); User Lobby |
 
 A viewer with only one place and no other application still gets the
 menu, for All applications. A page that registers no places shows the

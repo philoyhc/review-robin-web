@@ -696,3 +696,20 @@ def test_an_owed_email_holds_back_only_a_release_to_come() -> None:
     assert by_title["Final results"].blocked == (
         "Not ready: its email to applicants is not written"
     )
+
+
+def test_is_operator_follows_the_gate(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ruling 18: until AD2, everyone locally; deployed, the super-admin."""
+    from starlette.requests import Request
+
+    request = Request({"type": "http", "headers": []})
+    assert gate.is_operator(request)  # a local run
+    monkeypatch.setattr(gate, "is_local", lambda: False)
+    someone = Identity(principal_id="1", email="someone@example.edu", name="Someone")
+    monkeypatch.setattr(gate, "current_identity", lambda request: someone)
+    assert not gate.is_operator(request)
+    monkeypatch.setattr(gate, "current_identity", lambda request: None)
+    assert not gate.is_operator(request)
+    monkeypatch.setattr(type(someone), "is_super_admin", property(lambda self: True))
+    monkeypatch.setattr(gate, "current_identity", lambda request: someone)
+    assert gate.is_operator(request)

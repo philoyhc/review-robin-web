@@ -13,7 +13,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 |---|---|
 | `applydesk/main.py` | The factory, `create_app` |
 | `applydesk/routes_health.py` | `/health` |
-| `applydesk/routes_home.py`, `routes_operator.py`, `routes_me.py` | The landing, the operator's pages and the participant's |
+| `applydesk/routes_home.py`, `routes_operator.py`, `routes_me.py` | The entry points (landing by role), the operator's pages and the participant's |
 | `applydesk/gate.py` | The placeholders' gate |
 | `applydesk/ids.py` | Public IDs: generation and the shape check |
 | `applydesk/web.py` | Templates, mount-aware URLs (`url()`, `is_here()`, `host_url()`) and the page chrome |
