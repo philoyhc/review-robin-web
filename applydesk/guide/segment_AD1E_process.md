@@ -52,6 +52,11 @@ Taken 2026-11-13 at `fb6e75f07`.
 | The stages model it edits | 433 lines | `wc -l applydesk/stages.py` |
 | Page tests naming Process | 11 lines | `grep -c "process" applydesk/tests/test_pages.py` |
 
+## Status
+
+Building. Base `fb6e75f07` for the cumulative read.
+- Rung 2, the scaffold: a card per stage (`operator/_process_cards.html`, one macro per card and item, as Form's), every card open and every action disabled until rung 3; an open card keeps its name, dates and what it holds in its head. The Outline lists the stages and their items with the counts and any `stages.problems`. The placeholder's milestones table is gone: its dates live on the stages (Decision 8, still open), the announcements keep their card.
+
 ## PR ladder
 
 1. **Plan** (this file), its README and roadmap rows.
