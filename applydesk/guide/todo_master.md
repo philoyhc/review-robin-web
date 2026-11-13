@@ -131,6 +131,18 @@ where a ruling below differs from it, the ruling wins.
       it is based on, though it need not: the sample could equally run
       Application, Review, Shortlist for interview, Interview, Finalists,
       Decision, each outcome a stage of its own.
+    - **Next extension, not the MVP: one application in parts**
+      (author, 2026-11-13). An exercise has one application per applicant,
+      which may come in parts across stages: the stage holding the
+      application creates it, and later form stages add a part (a full
+      proposal after an expression of interest, a finalist's budget or
+      referees, an award's acceptance). A later form stage admits by an
+      earlier outcome, as a gate does, and opens its form only to those;
+      its Applications column runs *Not invited → Invited → Draft →
+      Submitted*; Form picks between the forms; the application file
+      joins the parts. Until then, ruling 15's one application stage
+      stands; each form-holding stage names its form and an application
+      keeps a status per part, so the extension adds without reworking.
     - The sample's stages are *Applications*, *Review*, *Interview* and
       *Decision*. The exercise's current stage is worked out from the
       timeline (the one holding its next step), not stored. Setup (a
@@ -161,6 +173,10 @@ Segments in order; each gets a plan in this folder when it starts.
 | Later | Blob storage, then uploads and referees | G8, with IT |
 
 ## Open decisions
+
+- **Applications in parts (ruling 15's next extension):** when it lands,
+  and whether a part may be optional or repeated (references from more
+  than one referee are their own case, with uploads and referees, G8).
 
 - **The 23A open items (AD6):** `reviewees.unreachable_for_results` on
   every application ID; two concurrent first posts of one transfer; the
