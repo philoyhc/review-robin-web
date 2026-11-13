@@ -16,7 +16,7 @@ Process is a placeholder (AD1D): a read-only table per stage of what `applydesk/
 2. **A stage card**: its name (placeholder *Stage N*) and From–To dates at the top; then what it holds, each an **item** inside the card, in this order:
    - **Form** (one stage at most): when it opens and closes, a link to the Form tab, and its emails (the receipt, reminders).
    - **Gates** (one or more): name, how it runs (*A Review Robin session* or *Results entered here*), its result's measure, and its **entry rule**; its panel is on Gates, linked.
-   - **Outcome** (at most one): name, its values, due date, its **rule** (with the combined result's weights, when it reads one), what its release does (to whom; which email from Emails).
+   - **Outcome** (at most one): name, its values, due date, its **rule** (with the combined result's weights, when it reads one), what its release does (to whom; which email from Emails — *since ruling 16, only to whom: Emails lists the templates that makes owed*).
 3. **Collapsed**, a card shows its name, dates and a summary (`Form · opens 1 Sep, closes 15 Oct` / `2 gates · Outcome: Shortlist for interview`); cards load collapsed, a lone card open.
 4. **Buttons** along each card's foot, flush right, as Form's: *Replicate*, *+ Stage*, *Delete* (disabled, with a reason in its title, on the last stage). Inside the card: *+ Gate*, *+ Outcome*, *Form* — each disabled with its reason where ruling 15 forbids it (a gate beside the form, a second outcome, a second form).
 5. **Reordering** by a card's handle, dragged or with ↑ ↓, as Form's.
@@ -42,7 +42,7 @@ Process is a placeholder (AD1D): a read-only table per stage of what `applydesk/
 
 - **The page renders on the server, moves happen in one inline script**, as Form's; the cards are drawn from `stages.plan_of` so Process, Applications and the Workflow card agree on load.
 - **A collapsed form reads *Form*, not its dates** (2026-11-13): the form opens and closes on its stage's dates, already in the head beside it; Decision 3's example would say them twice.
-- **Emails are chosen, not written, here**: an outcome or the form picks a template by name from Emails (ruling 14); a missing one is offered as *Not set up*.
+- ~~**Emails are chosen, not written, here**: an outcome or the form picks a template by name from Emails (ruling 14); a missing one is offered as *Not set up*.~~ Superseded by ruling 16 (2026-11-13): an item ticks whom it emails; Emails lists every template owed.
 
 ## Blast radius (measured)
 
@@ -64,6 +64,7 @@ Building. Base for the cumulative read: `e7e0231b8`, main before rung 2, the ite
 - Rung 5: rules on the item. *Edit the rule* opens an editor: a row per condition, joined by AND, from ruling 13's kinds (a gate: status, the applicant's last N submitted, an earlier outcome; an outcome: a gate's result or entry among the gates before it, the combined result, an earlier outcome), then *Then* and *Otherwise* from the gate's entry or the outcome's values; *Decide by hand* clears it. Each item carries its rule as data (`stages.rule_json`), named by key; its line reads as Applications' header does. A rule left reading a later outcome, or a gate outside or gone from its scope, is named on the item and in the Outline. An outcome's weights follow the gates before it as they are added, removed or moved.
 - Reads: one, `diff-reviewer` on rungs 2–5 (`e7e0231b8..`), fixed in rung 5. It found a click on *Then* or *Otherwise* redrew the select away; any edit rebinding a flagged rule's gate or outcome to the first in scope; focus lost on most editor actions; a replica's rules and weights still naming the original's keys; the script wiping the server's `stages.problems` (now computed in the page too); weights changing silently, a new gate taking a share past 100 (it now takes what is left, the item saying the gates changed and naming a total that is not 100); and `stages.rule_text` wording a gone, unnamed or measureless column differently from the script. Also flagged now: a decision outside the outcome's values, a count or threshold that is not a number. Chromium tests for each, for dragging, and for every rule line against the server's.
 - Iteration 1 (author, 2026-11-13, at the browser check): an outcome's release is set per audience — *Applicants* and *Panel evaluators* each *Update timeline* (the timeline they see on signing in to their participant page) and *Send email*, the applicants' email picking its template from Emails. It replaces the outcome's *Shown to applicants*, *Email to applicants* and *Tell reviewers*. The Outline's stages and items are buttons: one opens its stage's card and goes to it, as Form's Outline does.
+- Iteration 2 (ruling 16, author, 2026-11-13): Process picks no template. The form ticks its applicants' receipt and reminder, an outcome *Send email* per audience; Emails lists every template that makes owed, named for its stage (*Review: Outcome - Applicants*), *Written* or *Owed* (`workflow.emails`, derived from the plan). An outcome with one owed is not ready to release.
 
 ## PR ladder
 

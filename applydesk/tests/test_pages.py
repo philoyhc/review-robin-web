@@ -300,7 +300,7 @@ def test_the_status_row_says_where_each_item_stands(client: TestClient) -> None:
     row = re.sub(r"<[^>]+>", "", row[: row.index("</p>")])
     assert row == (
         "Exercise: Published · Form: Closed · Gates: 2 of 3 done · "
-        "Outcomes: 1 of 3 released · Emails: 4 of 5 · Applications: 89 submitted"
+        "Outcomes: 1 of 3 released · Emails: 4 of 6 · Applications: 89 submitted"
     )
     blank = client.get(f"/applydesk/operator/exercises/{BLANK}/process").text
     assert 'Gates: <span class="chip chip-warn">none</span>' in blank
@@ -353,7 +353,10 @@ def test_process_is_a_stack_of_stage_cards(client: TestClient) -> None:
     assert "Combined ≥ 4.2 → Shortlisted, else Not shortlisted" in text
     assert 'value="30" inputmode="numeric" aria-label="Peer Review, percent"' in text
     assert "Decided by hand" in text  # Final results
-    assert "<option selected>Final results (not set up)</option>" in text
+    # Ruling 16: an outcome ticks whom it emails; Emails holds the template.
+    assert "data-rel-template" not in text
+    assert len(re.findall(r'data-rel="applicants-email" checked', text)) == 3
+    assert len(re.findall(r'data-rel="evaluators-email" checked', text)) == 1
     assert "4 stages · 3 gates · 3 outcomes" in full
     assert "announcement" not in text.lower()  # the exercise's own setup (author)
     # Ruling 15's shape, as the inert buttons say it.
@@ -395,11 +398,21 @@ def test_gates_carries_each_gate_with_its_panel(client: TestClient) -> None:
     assert "No pool: applicants do not choose a reviewer" in blind
 
 
-def test_emails_keeps_every_template_to_applicants(client: TestClient) -> None:
+def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> None:
+    """Ruling 16: one template per item and audience Process ticks, named
+    for its stage, in timeline order; written or owed."""
     text = client.get(f"/applydesk/operator/exercises/{EX}/emails").text
     names = re.findall(r'<section class="card" data-email="([^"]+)">', text)
-    assert names == ["Receipt", "Reminder", "Shortlist for interview", "Finalists", "Final results"]
-    assert text.count('<span class="chip chip-warn">Not set up</span>') == 1
+    assert names == [
+        "Call for applications: Receipt - Applicants",
+        "Call for applications: Reminder - Applicants",
+        "Review: Outcome - Applicants",
+        "Interview: Outcome - Applicants",
+        "Interview: Outcome - Panel evaluators",
+        "Decision: Outcome - Applicants",
+    ]
+    chips = re.findall(r'<span class="chip chip-\w+">(Written|Owed)</span>', text)
+    assert chips == ["Written", "Written", "Written", "Written", "Owed", "Owed"]
 
 
 def test_evaluations_lists_each_gate_s_progress(client: TestClient) -> None:
@@ -457,7 +470,8 @@ def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> Non
     assert cards.count('data-kind="field"') == 1 and 'placeholder="Untitled form"' in form
     assert "No applications yet." in client.get(f"{base}/applications").text
     assert "<h2>No gates yet</h2>" in client.get(f"{base}/gates").text
-    assert "<h2>No emails yet</h2>" in client.get(f"{base}/emails").text
+    # Ruling 16: a form's receipt is owed until Process says otherwise.
+    assert 'data-email="Stage 1: Receipt - Applicants"' in client.get(f"{base}/emails").text
     assert "No submitted applications yet." in client.get(f"{base}/extract").text
 
 
@@ -525,7 +539,7 @@ def test_the_workflow_card_follows_the_timeline(client: TestClient) -> None:
     assert now == ["Interview"]
     assert "Next: <strong>Gate 3 · Interview</strong> — 18 of 27 interviewed." in text
     assert f'href="/applydesk/operator/exercises/{EX}/evaluations">Open Evaluations</a>' in text
-    assert "Not ready: no email for this outcome" in text  # Final results
+    assert "Not ready: its email to applicants is not written" in text  # Final results
     # Every action is inert until AD2 (author, 2026-11-13).
     card = text[text.index('aria-labelledby="wf-h"') :]
     card = card[: card.index("</section>")]
@@ -555,15 +569,16 @@ def test_a_draft_s_workflow_starts_at_opening_the_form(client: TestClient) -> No
 
 
 # --- Segment AD1D: the cumulative read's fixes ---
-def test_an_outcome_s_email_is_found_by_its_outcome_not_its_name(client: TestClient) -> None:
-    """Teaching Excellence: its outcome's email is "Award decision"."""
+def test_an_unnamed_stage_names_its_owed_template(client: TestClient) -> None:
+    """Teaching Excellence: its outcome emails applicants, a template owed,
+    named for its stage as Process labels it."""
     base = f"/applydesk/operator/exercises/{BLIND}"
     process = client.get(f"{base}/process").text
-    assert "<option selected>Award decision (not set up)</option>" in process
+    assert 'data-rel="applicants-email" checked' in process
     home = client.get(base).text
-    assert "Not ready: no email for this outcome" in home
+    assert "Not ready: its email to applicants is not written" in home
     emails = client.get(f"{base}/emails").text
-    assert 'data-email="Award decision"' in emails
+    assert 'data-email="Stage 2: Outcome - Applicants"' in emails
 
 
 def test_the_breadcrumb_ends_at_the_page(client: TestClient) -> None:
@@ -666,3 +681,18 @@ def test_an_application_stage_later_in_the_timeline_keeps_the_headers_aligned(
     spans = sum(int(n) for n in re.findall(r'colspan="(\d+)"', head))
     second = head[head.index("</tr>") :]
     assert spans == second.count("<th")
+
+
+def test_an_owed_email_holds_back_only_a_release_to_come() -> None:
+    """Ruling 16: an owed email blocks an outcome not yet released, naming
+    every audience owed; one already released is not blocked."""
+    ex = sample_data.exercise(EX)
+    assert ex is not None
+    by_title = {s.title: s for s in workflow.steps(ex)}
+    assert by_title["Shortlist for interview"].blocked == ""  # released
+    assert by_title["Finalists"].blocked == (
+        "Not ready: its email to panel evaluators is not written"
+    )
+    assert by_title["Final results"].blocked == (
+        "Not ready: its email to applicants is not written"
+    )

@@ -25,35 +25,65 @@ _GATES: dict[str, dict[str, tuple[str, str]]] = {
 }
 
 
+APPLICANTS, EVALUATORS = "Applicants", "Panel evaluators"
+
+
 @dataclass(frozen=True)
 class Email:
-    """A template to applicants, kept on Emails (ruling 14): its name, when
-    it is sent, whether it is set up, and the outcome whose release sends
-    it ("" for the receipt and reminders)."""
+    """A template owed (ruling 16): Process says which items email whom,
+    and Emails lists one template per item and audience, named for its
+    stage, e.g. "Review: Outcome - Applicants". ``item`` is "receipt",
+    "reminder" or an outcome's key; ``ok`` whether it is written."""
 
     name: str
     when: str
     ok: bool
-    outcome: str = ""
+    item: str
+    audience: str
+
+    @property
+    def greeting(self) -> str:
+        """Whom its body addresses: "applicant" or "evaluator"."""
+        return "applicant" if self.audience == APPLICANTS else "evaluator"
 
 
-_RELEASE = "When the outcome is released"
+#: The form's emails, each to applicants: what it is, and when it goes.
+_FORM_MAIL = {
+    "receipt": ("Receipt", "When an application is submitted"),
+    "reminder": ("Reminder", "To drafts, 7 days before the form closes"),
+}
 
-#: The templates each sample exercise keeps; Process says which steps
-#: send one.
-_EMAILS: dict[str, tuple[Email, ...]] = {
-    "wa9juxbc2t": (
-        Email("Receipt", "When an application is submitted", True),
-        Email("Reminder", "To drafts, 7 days before the form closes", True),
-        Email("Shortlist for interview", _RELEASE, True, "o1"),
-        Email("Finalists", _RELEASE, True, "o2"),
-        Email("Final results", _RELEASE, False, "o3"),
+#: What each sample exercise's Process says emails whom: (item, audience).
+_SENDS: dict[str, frozenset[tuple[str, str]]] = {
+    "wa9juxbc2t": frozenset(
+        {
+            ("receipt", APPLICANTS),
+            ("reminder", APPLICANTS),
+            ("o1", APPLICANTS),
+            ("o2", APPLICANTS),
+            ("o2", EVALUATORS),
+            ("o3", APPLICANTS),
+        }
     ),
-    "k7mfr3pq8z": (
-        Email("Receipt", "When an application is submitted", True),
-        Email("Award decision", _RELEASE, False, "o1"),
+    "k7mfr3pq8z": frozenset({("receipt", APPLICANTS), ("o1", APPLICANTS)}),
+    "r6tm4kq9wz": frozenset({("receipt", APPLICANTS)}),
+}
+
+#: A form's receipt, for an exercise whose Process is not set up yet.
+_DEFAULT_SENDS = frozenset({("receipt", APPLICANTS)})
+
+#: The templates already written on Emails; the rest are owed.
+_WRITTEN: dict[str, frozenset[tuple[str, str]]] = {
+    "wa9juxbc2t": frozenset(
+        {
+            ("receipt", APPLICANTS),
+            ("reminder", APPLICANTS),
+            ("o1", APPLICANTS),
+            ("o2", APPLICANTS),
+        }
     ),
-    "r6tm4kq9wz": (Email("Receipt", "When an application is submitted", True),),
+    "k7mfr3pq8z": frozenset({("receipt", APPLICANTS)}),
+    "r6tm4kq9wz": frozenset({("receipt", APPLICANTS)}),
 }
 
 
@@ -79,13 +109,38 @@ def gate_state(exercise_id: str, key: str) -> tuple[str, str]:
     return _GATES.get(exercise_id, {}).get(key, ("Not ready", ""))
 
 
+def sends(exercise_id: str, item: str, audience: str) -> bool:
+    """Whether Process has the item ("receipt", "reminder" or an outcome's
+    key) email the audience."""
+    return (item, audience) in _SENDS.get(exercise_id, _DEFAULT_SENDS)
+
+
 def emails(exercise_id: str) -> tuple[Email, ...]:
-    return _EMAILS.get(exercise_id, ())
+    """Every template the exercise's Process makes owed, in timeline
+    order: the form's, then each outcome's per audience (ruling 16)."""
+    plan = stages.plan_of(exercise_id)
+    written = _WRITTEN.get(exercise_id, frozenset())
+    out: list[Email] = []
+    for st in plan.stages:
+        if st.form:
+            for item, (what, when) in _FORM_MAIL.items():
+                if sends(exercise_id, item, APPLICANTS):
+                    name = f"{st.label}: {what} - {APPLICANTS}"
+                    ok = (item, APPLICANTS) in written
+                    out.append(Email(name, when, ok, item, APPLICANTS))
+        for c in st.columns:
+            if isinstance(c, stages.Outcome):
+                for who in (APPLICANTS, EVALUATORS):
+                    if sends(exercise_id, c.key, who):
+                        name = f"{st.label}: Outcome - {who}"
+                        when = f"When {c.label} is released"
+                        out.append(Email(name, when, (c.key, who) in written, c.key, who))
+    return tuple(out)
 
 
-def outcome_email(exercise_id: str, outcome_key: str) -> Email | None:
-    """The email an outcome's release sends, if Process says it sends one."""
-    return next((e for e in emails(exercise_id) if e.outcome == outcome_key), None)
+def outcome_emails(exercise_id: str, outcome_key: str) -> tuple[Email, ...]:
+    """The emails an outcome's release sends, as Process sets them."""
+    return tuple(e for e in emails(exercise_id) if e.item == outcome_key)
 
 
 def status_row(exercise: Exercise) -> tuple[Pill, ...]:
@@ -181,9 +236,17 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
                 )
             else:
                 released = bool(c.released)
-                email = outcome_email(exercise.public_id, c.key)
+                # An owed email holds back a release still to come (ruling 16).
+                owed = [
+                    e.audience.lower()
+                    for e in outcome_emails(exercise.public_id, c.key)
+                    if not e.ok and not released
+                ]
                 blocked = (
-                    "" if email is None or email.ok else "Not ready: no email for this outcome"
+                    f"Not ready: its {'email' if len(owed) == 1 else 'emails'} to"
+                    f" {' and '.join(owed)} {'is' if len(owed) == 1 else 'are'} not written"
+                    if owed
+                    else ""
                 )
                 out.append(
                     Step(

@@ -13,13 +13,13 @@
   <div class="fb-main">
     <p class="muted pc-intro">The exercise's timeline, stage by stage. A stage holds the application form, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Applications applies them.</p>
     <div class="fb-cards" id="pc-cards">
-      {% for st in plan.stages %}{{ pc.stage(plan, st, rule_text, emails, last=(plan.stages | length == 1), open=(plan.stages | length == 1)) }}{% endfor %}
+      {% for st in plan.stages %}{{ pc.stage(plan, st, rule_text, last=(plan.stages | length == 1), open=(plan.stages | length == 1)) }}{% endfor %}
     </div>
     {# What + Stage and + Form add: the same macros as the server's own. #}
-    <template id="pc-new-stage">{{ pc.stage(plan, blank_stage, rule_text, emails, last=False, open=True) }}</template>
-    <template id="pc-new-form">{{ pc.form_item(emails) }}</template>
+    <template id="pc-new-stage">{{ pc.stage(plan, blank_stage, rule_text, last=False, open=True) }}</template>
+    <template id="pc-new-form">{{ pc.form_item(new=True) }}</template>
     <template id="pc-new-gate">{{ pc.gate_item(plan, blank_gate, rule_text) }}</template>
-    <template id="pc-new-outcome">{{ pc.outcome_item(plan, blank_outcome, rule_text, emails) }}</template>
+    <template id="pc-new-outcome">{{ pc.outcome_item(plan, blank_outcome, rule_text) }}</template>
   </div>
   <aside class="fb-side">
     <section class="card fb-outline" aria-labelledby="pc-outline-h">
@@ -528,13 +528,7 @@
     live.textContent = "Moved " + labelOf(card) + " to " + (cards().indexOf(card) + 1) + " of " + cards().length + ".";
   });
 
-  list.addEventListener("change", function (e) {
-    if (ruleEvent(e)) return;
-    // Send email to applicants picks its template from Emails.
-    if (e.target.matches('[data-rel="applicants-email"]')) {
-      e.target.closest("[data-pc-release]").querySelector('[data-rel-template="applicants"]').disabled = !e.target.checked;
-    }
-  });
+  list.addEventListener("change", function (e) { ruleEvent(e); });
   list.addEventListener("click", function (e) {
     if (ruleEvent(e)) return;
     var card = e.target.closest(".pc");
