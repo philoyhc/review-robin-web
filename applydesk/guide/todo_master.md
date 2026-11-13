@@ -18,12 +18,12 @@ where a ruling below differs from it, the ruling wins.
 4. **ApplyDesk keeps the roster of recognized assessors and referees, and
    what each may view.** To Review Robin they are ordinary reviewers; it
    holds no ApplyDesk authorization.
-5. **Reviewers read an application on ApplyDesk's application profile
-   page**, linked as each reviewee's `ProfileLink` in the handoff.
+5. **Reviewers read an application on ApplyDesk's application file**
+   (the profile page, renamed by ruling 13), linked as each reviewee's `ProfileLink` in the handoff.
    ApplyDesk decides each view itself, from the signed-in Cordware
    identity and its own roster. The page shows only the *Shown to
    reviewers* section.
-6. **Blind review is possible**: in a blind exercise the profile page
+6. **Blind review is possible**: in a blind exercise the application file
    redacts the applicant's name and identifiers.
 7. **Every exercise has a 10-character public ID**, in RRW's alphabet
    (`app/db/models/review_session.py`, `PUBLIC_ID_ALPHABET`).
@@ -31,9 +31,9 @@ where a ruling below differs from it, the ruling wins.
    `/applydesk/operator/exercises` and
    `/applydesk/operator/exercises/<id>/…`; participants under
    `/applydesk/me` and `/applydesk/me/exercises/<id>/…`.
-9. **A reviewer opens only the profiles of the applications they are
+9. **A reviewer opens only the application files of the applications they are
    asked to review** (AD5). ApplyDesk's roster holds that permission.
-   **The exercise's operators open every profile** (author, 2026-11-12).
+   **The exercise's operators open every application file** (author, 2026-11-12).
    How the same pairs reach Review Robin's assignments, through reviewer,
    reviewee or relationship tags, is decided at AD6.
 10. **A blind exercise sends Review Robin an alias key** in place of the
@@ -42,8 +42,8 @@ where a ruling below differs from it, the ruling wins.
 11. **The operator's pages are Home, Setup, Form, Applications, Panels,
     Review and Reports** (author, 2026-11-12). Home shows the timeline and
     the current stage; Setup holds the timeline's setup; Form builds and
-    previews the application form; Applications generates applicant
-    profiles. **Panels holds the rosters ApplyDesk keeps (ruling 4)**:
+    previews the application form; Applications generates application
+    files (ruling 13). **Panels holds the rosters ApplyDesk keeps (ruling 4)**:
     assessment panels, a reviewer pool applicants choose from on the form,
     and interviewers. Ruling 1's "panels" are the native assessment
     engine's, still out of the MVP; these are rosters. **Reports collates
@@ -93,8 +93,8 @@ Segments in order; each gets a plan in this folder when it starts.
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the Application → Review stage boundary | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
-| AD5 — Panels and profile page | The rosters on Panels (ruling 11): assessment panels and the applications each assessor is asked to review (ruling 9), the reviewer pool, interviewers; applicant profiles generated, the profile page with its access check, audit and blind redaction | — |
-| AD6 — Assessment in Review Robin | Rosters from submitted applications, the pairs as tags, `ProfileLink` to the profile page, the blind alias key (ruling 10), results back into ApplyDesk | The open items below |
+| AD5 — Panels and application files | The rosters on Panels (ruling 11): assessment panels and the applications each assessor is asked to review (ruling 9), the reviewer pool, interviewers; application files generated, the file with its access check, audit and blind redaction | — |
+| AD6 — Assessment in Review Robin | Rosters from submitted applications, the pairs as tags, `ProfileLink` to the application file, the blind alias key (ruling 10), results back into ApplyDesk | The open items below |
 | AD7 — Timeline and outcomes | Milestones, announcements, outcome import, embargo on read, release, correction | G5 (sender), G7 (publication) |
 | AD8 — Dashboard and Reports | Counts by state; Reports: every evaluation response collated (ruling 11), the export bundle | — |
 | Later | Blob storage, then uploads and referees | G8, with IT |
@@ -118,7 +118,7 @@ Segments in order; each gets a plan in this folder when it starts.
 - **Conditional questions: deferred** (author, 2026-11-12). A typical
   application form is linear; optional questions with help text cover
   the rest, and branching would reach Required, server checks, form
-  versions, the profile page and exports. If needed, the smallest shape:
+  versions, the application file and exports. If needed, the smallest shape:
   a section shown when one earlier *Choose one* list has a given option,
   one condition per section, hidden answers discarded on submit.
   Revisit when a real exercise would otherwise need two near-identical

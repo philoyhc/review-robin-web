@@ -1,6 +1,6 @@
 """The URL map as placeholders (segment AD1, item 2): every page answers
 locally, IDs are shape-checked, the gate holds deployed, every link stays
-in the mount, and a blind profile names nobody."""
+in the mount, and a blind application file names nobody."""
 
 from __future__ import annotations
 
@@ -48,8 +48,8 @@ PAGES = (
     f"/applydesk/me/exercises/{EX}",
     f"/applydesk/me/exercises/{BLIND}",  # applications have closed
     f"/applydesk/me/exercises/{EX}/applications/m3qx8vkt2n",
-    f"/applydesk/me/exercises/{EX}/profiles/p3bd7kq2wx",
-    f"/applydesk/me/exercises/{BLIND}/profiles/t8nv4hzm2c",
+    f"/applydesk/me/exercises/{EX}/files/p3bd7kq2wx",
+    f"/applydesk/me/exercises/{BLIND}/files/t8nv4hzm2c",
 )
 
 
@@ -79,10 +79,10 @@ def test_every_page_of_the_map_answers_locally(client: TestClient, path: str) ->
         f"/applydesk/me/exercises/{EX}/applications/zzzzzzzzzz",
         f"/applydesk/me/exercises/{EX}/applications/M3QX8VKT2N",  # an application ID's shape
         f"/applydesk/me/exercises/{EX}/applications/m3qx8vkt2",
-        f"/applydesk/me/exercises/{EX}/profiles/P3BD7KQ2WX",  # a profile ID's shape
-        f"/applydesk/me/exercises/{EX}/profiles/p3bd7kq2wx0",
-        f"/applydesk/me/exercises/{EX}/profiles/m3qx8vkt2n",  # an application ID is no profile ID
-        f"/applydesk/me/exercises/{BLIND}/profiles/p3bd7kq2wx",  # another exercise's profile
+        f"/applydesk/me/exercises/{EX}/files/P3BD7KQ2WX",  # a file ID's shape
+        f"/applydesk/me/exercises/{EX}/files/p3bd7kq2wx0",
+        f"/applydesk/me/exercises/{EX}/files/m3qx8vkt2n",  # an application ID is no file ID
+        f"/applydesk/me/exercises/{BLIND}/files/p3bd7kq2wx",  # another exercise's file
     ],
 )
 def test_a_malformed_or_unknown_id_is_a_404(client: TestClient, path: str) -> None:
@@ -95,7 +95,7 @@ def test_public_ids_have_rrw_s_shape() -> None:
         assert is_public_id(generate_public_id())
     samples = [e.public_id for e in sample_data.EXERCISES]
     samples += [a.public_id for a in sample_data.APPLICATIONS]
-    samples += [a.profile_id for a in sample_data.APPLICATIONS]
+    samples += [a.file_id for a in sample_data.APPLICATIONS]
     assert all(is_public_id(s) for s in samples)
     assert len(set(samples)) == len(samples)
 
@@ -139,24 +139,24 @@ def test_the_tabs_mark_the_current_page(client: TestClient) -> None:
     assert page.count('aria-current="page"') == 2  # the tab, and Exercises in the switcher
 
 
-def test_a_blind_profile_names_nobody(client: TestClient) -> None:
-    app = sample_data.by_profile(BLIND, "t8nv4hzm2c")
+def test_a_blind_application_file_names_nobody(client: TestClient) -> None:
+    app = sample_data.by_file(BLIND, "t8nv4hzm2c")
     assert app is not None
-    page = client.get(f"/applydesk/me/exercises/{BLIND}/profiles/t8nv4hzm2c").text
+    page = client.get(f"/applydesk/me/exercises/{BLIND}/files/t8nv4hzm2c").text
     for identifying in (app.applicant, app.email, app.public_id):
         assert identifying not in page, identifying
     assert "Redacted" in page
 
 
-def test_an_open_profile_names_the_applicant(client: TestClient) -> None:
-    page = client.get(f"/applydesk/me/exercises/{EX}/profiles/p3bd7kq2wx").text
+def test_an_open_application_file_names_the_applicant(client: TestClient) -> None:
+    page = client.get(f"/applydesk/me/exercises/{EX}/files/p3bd7kq2wx").text
     assert "Aisha Bello" in page
 
 
-@pytest.mark.parametrize("profile", ["p3bd7kq2wx", "t8nv4hzm2c"])
-def test_a_profile_shows_only_the_part_shown_to_reviewers(client: TestClient, profile: str) -> None:
-    exercise = EX if profile == "p3bd7kq2wx" else BLIND
-    page = client.get(f"/applydesk/me/exercises/{exercise}/profiles/{profile}").text
+@pytest.mark.parametrize("file", ["p3bd7kq2wx", "t8nv4hzm2c"])
+def test_a_file_shows_only_the_part_shown_to_reviewers(client: TestClient, file: str) -> None:
+    exercise = EX if file == "p3bd7kq2wx" else BLIND
+    page = client.get(f"/applydesk/me/exercises/{exercise}/files/{file}").text
     assert "Shown to reviewers" in page and "Not shown to reviewers" not in page
     for hidden in sample_data.NOT_SHOWN_TO_REVIEWERS:
         assert hidden not in page, hidden
@@ -290,11 +290,11 @@ def test_setup_carries_the_timeline_setup(client: TestClient) -> None:
     assert "Add a milestone" in text and "New announcement" in text
 
 
-def test_applications_generates_applicant_profiles(client: TestClient) -> None:
+def test_applications_generates_application_files(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/applications").text
-    assert "Generate applicant profiles" in text
-    # Operators open every profile (author, 2026-11-12).
-    assert "/applydesk/me/exercises/wa9juxbc2t/profiles/p3bd7kq2wx" in text
+    assert "Generate application files" in text
+    # Operators open every application file (author, 2026-11-12).
+    assert "/applydesk/me/exercises/wa9juxbc2t/files/p3bd7kq2wx" in text
 
 
 def test_panels_holds_the_three_rosters(client: TestClient) -> None:
@@ -390,3 +390,13 @@ def test_a_draft_with_nothing_missing_is_ready_to_publish(
 
 def test_the_blank_exercise_is_not_offered_to_applicants(client: TestClient) -> None:
     assert "Graduate Travel Grant 2027" not in client.get("/applydesk/me").text
+
+
+def test_profile_shows_nowhere_a_reader_sees(client: TestClient) -> None:
+    """Ruling 13: what a reviewer opens is the application file. Review
+    Robin's `ProfileLink` keeps its name: it is the handoff's field."""
+    for path in PAGES:
+        text = re.sub(r"<code>ProfileLink</code>", "", client.get(path).text)
+        visible = re.sub(r"<script.*?</script>|<[^>]+>", " ", text, flags=re.S)
+        assert "profile" not in visible.lower(), path
+    assert client.get(f"/applydesk/me/exercises/{EX}/profiles/p3bd7kq2wx").status_code == 404

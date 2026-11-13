@@ -19,7 +19,7 @@
 
 ## The URL map
 
-Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID, `<app>` an application's, `<profile>` a profile page's. Item 2 builds every row as a placeholder.
+Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID, `<app>` an application's, `<file>` an application file's (ruling 13; a profile page's until AD1C). Item 2 builds every row as a placeholder.
 
 | Path | Page | Who reaches it (when wired) |
 |---|---|---|
@@ -30,17 +30,17 @@ Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID
 | ~~`/operator/exercises/<id>/settings`~~ | Became Setup (iteration 5) | |
 | `/operator/exercises/<id>/setup` | Details, eligibility (open or invitation-only), blind review; the timeline: stages, milestones, announcements (iteration 5) | 〃 |
 | `/operator/exercises/<id>/form` | The application form builder (iteration 5); from AD1B, cards that move on screen (`applydesk/guide/archive/segment_AD1B_form_builder.md`) | 〃 |
-| `/operator/exercises/<id>/applications` | Applications by state; generate applicant profiles; import outcomes (iteration 5) | 〃 |
+| `/operator/exercises/<id>/applications` | Applications by state; generate applicant profiles; import outcomes (iteration 5); from AD1C, the control surface of rounds, gates and outcomes, generating application files | 〃 |
 | ~~`/operator/exercises/<id>/assessors`~~ | Became Panels (iteration 5) | |
 | `/operator/exercises/<id>/panels` | The rosters of evaluators: assessment panels (what each may view), the reviewer pool applicants choose from, interviewers (iteration 5) | 〃 |
 | `/operator/exercises/<id>/review` | Assessment in Review Robin: send, status, results back | 〃 |
 | ~~`/operator/exercises/<id>/timeline`~~ | Into Setup and Home; outcomes into Applications (iteration 5) | |
 | ~~`/operator/exercises/<id>/export`~~ | Became Reports (iteration 5) | |
 | `/operator/exercises/<id>/reports` | Every evaluation response collated, Review Robin's included; the data export (iteration 5) | 〃 |
-| `/me` | My ApplyDesk: my applications, exercises open to me, profiles I may read | Anyone signed in |
+| `/me` | My ApplyDesk: my applications, exercises open to me, application files I may read | Anyone signed in |
 | `/me/exercises/<id>` | An exercise as an applicant sees it: details, timeline, Apply | Eligible applicants |
 | `/me/exercises/<id>/applications/<app>` | My application: draft or submitted | Its applicant |
-| `/me/exercises/<id>/profiles/<profile>` | The application profile page: the *Shown to reviewers* section; in a blind exercise, the applicant's name and identifiers redacted | Assessors asked to review that application (ruling 9); the exercise's operators (author, 2026-11-12) |
+| `/me/exercises/<id>/files/<file>` | The application file (ruling 13; the profile page's path until AD1C): the *Shown to reviewers* section; in a blind exercise, the applicant's name and identifiers redacted | Assessors asked to review that application (ruling 9); the exercise's operators (author, 2026-11-12) |
 
 ## Semantics
 
