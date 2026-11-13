@@ -82,3 +82,15 @@ def test_favicon_is_the_rose_sheet_with_a_tick() -> None:
     icon = REGISTRY["applydesk"].icon
     for part in ("viewBox='0 0 32 32'", "rx='7'", "fill='%23be123c'", "clip-path='url(%23t)'"):
         assert part in icon, part
+
+
+def test_the_name_is_two_words_on_its_pages() -> None:
+    """Ruling 17: the name is Apply Desk; the URL stays /applydesk."""
+    client = TestClient(host_with(("applydesk",))[0])
+    landing = client.get("/applydesk/").text
+    assert "<title>Apply Desk · Apply Desk</title>" in landing
+    assert "<h1>Apply Desk</h1>" in landing
+    me = client.get("/applydesk/me").text
+    assert "<h1>My Apply Desk</h1>" in me
+    assert 'aria-current="page">My Apply Desk <span aria-hidden="true">✓</span>' in me
+    assert "ApplyDesk" not in landing + me

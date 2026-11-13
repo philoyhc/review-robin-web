@@ -76,7 +76,7 @@ needed to open it.
 | Review Robin, participant | Your reviews |
 | Residential Operations | Its areas, as today |
 | Support Logs | Its areas, as today |
-| ApplyDesk | Exercises (operators); My ApplyDesk |
+| Apply Desk | Exercises (operators); My Apply Desk |
 
 A viewer with only one place and no other application still gets the
 menu, for All applications. A page that registers no places shows the

@@ -22,8 +22,9 @@ rulings behind it are `applydesk/guide/todo_master.md`.
 | Landing-page title | `Apply Desk` |
 | Icon | A white application sheet on a rose (`#be123c`) tile, running off the bottom-right, a tick cut in rose (author, 2026-11-02). The source is `applydesk/templates/applydesk/base.html`, copied to `cordware/web/app_icons.py` |
 
-- The registry lists it after Residential's two applications and before
-  Utilities, which stays last.
+- The registry lists it second, after Review Robin and before
+  Residential's two applications and Utilities: the landing page's
+  order (author, 2026-11-13; `cordware/spec/host.md`).
 - The factory is a zero-argument callable returning a new `FastAPI`
   application with no schema pages (`/docs`, `/redoc`,
   `/openapi.json`). It reads no setting and opens no database.
