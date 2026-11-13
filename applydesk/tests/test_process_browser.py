@@ -163,3 +163,48 @@ def test_a_blank_exercise_starts_with_one_open_stage(page: Page) -> None:
     assert card.get_attribute("data-open") == ""
     assert card.locator('[data-sum="name"]').inner_text() == "Stage 1"
     assert card.locator('[data-fc-act="delete"]').is_disabled()
+
+
+# --- Rung 4: gates and the outcome, added and removed ---
+def test_gates_and_an_outcome_are_added_and_removed(page: Page) -> None:
+    page.goto(PAGE)
+    review = _cards(page).nth(1)
+    _open(review)
+    review.locator('[data-pc-act="gate"]').click()
+    items = review.locator(".pc-item").evaluate_all("els => els.map(e => e.dataset.item)")
+    assert items == ["gate", "gate", "gate", "outcome"]  # before the outcome
+    new = review.locator('.pc-item[data-item="gate"]').nth(2)
+    assert new.locator('[data-pc="item-name"]').evaluate("e => e === document.activeElement")
+    new.locator('[data-pc="item-name"]').fill("Community panel")
+    assert new.locator("[data-pc-kicker]").text_content() == "Gate 3"
+    outline = page.locator("[data-pc-outline]").inner_text()
+    assert "Gate 3: Community panel" in outline and "Gate 4: Interview" in outline
+    assert _counts(page) == "4 stages · 4 gates · 3 outcomes"
+    # One outcome per stage: its button refuses until it is removed.
+    add_out = review.locator('[data-pc-act="outcome"]')
+    assert add_out.is_disabled()
+    review.locator('[data-pc-act="remove-outcome"]').click()
+    assert add_out.is_enabled()
+    assert review.locator('[data-sum="holds"]').text_content() == "3 gates"
+    add_out.click()
+    assert review.locator('.pc-item[data-item="outcome"]').count() == 1
+    assert _counts(page) == "4 stages · 4 gates · 3 outcomes"
+    # Removing every gate lets the stage take the form, were it free.
+    for _ in range(3):
+        review.locator('[data-pc-act="remove-gate"]').first.click()
+    assert review.locator('[data-pc-act="form"]').get_attribute("title") == (
+        "Another stage holds the form"
+    )
+
+
+def test_a_stage_holding_the_form_takes_no_gate(page: Page) -> None:
+    page.goto(PAGE)
+    first = _cards(page).nth(0)
+    _open(first)
+    gate = first.locator('[data-pc-act="gate"]')
+    assert gate.is_disabled()
+    assert gate.get_attribute("title") == "A stage holding the form holds no gate"
+    first.locator('[data-pc-act="outcome"]').click()  # an outcome beside the form is fine
+    assert first.locator('[data-sum="holds"]').text_content() == "Form · Outcome: Untitled outcome"
+    first.locator('[data-pc-act="remove-form"]').click()
+    assert gate.is_enabled()

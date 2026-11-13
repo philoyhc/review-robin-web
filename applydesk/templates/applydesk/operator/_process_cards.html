@@ -3,7 +3,7 @@
    script will add share their markup (as Form's `_form_cards.html`).
    Rung 2 drew them; rung 3 wires the stage card itself (its name,
    dates, the form, adding, replicating, deleting and moving it); a gate's
-   and an outcome's own controls wait for rung 4, their rules for rung 5. Nothing here is
+   and an outcome's are added and removed (rung 4); rules wait for rung 5. Nothing here is
    saved. Imported with context, for the exercise's links. #}
 
 {% macro grip() %}<button type="button" class="fc-grip" data-fc-grip aria-label="Move: drag, or press the up and down arrow keys" title="Drag to reorder">⋮⋮</button>{% endmacro %}
@@ -32,7 +32,7 @@
 </div>
 {% endmacro %}
 
-{% macro gate_item(plan, g, rule_text) %}
+{% macro gate_item(plan, g, rule_text) %}{# g.number 0: a new gate, numbered by the page's script #}
 <div class="pc-item" data-item="gate" data-key="{{ g.key }}">
   <span class="fc-kicker" data-pc-kicker>Gate {{ g.number }}</span>
   <div class="pc-row">
@@ -42,7 +42,7 @@
   </div>
   {{ rule_box(plan, g, rule_text) }}
   <p class="pc-line muted">Its panel: on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/gates') }}">Gates</a>.</p>
-  <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-gate" disabled>Remove the gate</button></div>
+  <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-gate">Remove the gate</button></div>
 </div>
 {% endmacro %}
 
@@ -70,7 +70,7 @@
     <label class="pc-check"><input type="checkbox"> Tell reviewers</label>
   </div>
   <p class="pc-line muted">{{ ("Released " ~ o.released) if o.released else "Not released yet: its Released switch is on Applications." }}</p>
-  <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-outcome" disabled>Remove the outcome</button></div>
+  <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-outcome">Remove the outcome</button></div>
 </div>
 {% endmacro %}
 
@@ -102,8 +102,8 @@
     {% for o in outs %}{{ outcome_item(plan, o, rule_text, emails) }}{% endfor %}
     <p class="pc-line muted pc-empty">Nothing in this stage yet: add the form, a gate or an outcome.</p>
     <div class="pc-adds">
-      <button type="button" class="btn btn-secondary" data-pc-act="gate" disabled{% if st.form %} title="A stage holding the form holds no gate"{% endif %}>+ Gate</button>
-      <button type="button" class="btn btn-secondary" data-pc-act="outcome" disabled{% if outs %} title="A stage holds one outcome at most"{% endif %}>+ Outcome</button>
+      <button type="button" class="btn btn-secondary" data-pc-act="gate"{% if st.form %} disabled title="A stage holding the form holds no gate"{% endif %}>+ Gate</button>
+      <button type="button" class="btn btn-secondary" data-pc-act="outcome"{% if outs %} disabled title="A stage holds one outcome at most"{% endif %}>+ Outcome</button>
       <button type="button" class="btn btn-secondary" data-pc-act="form"{% if st.form %} disabled title="This stage holds the form"{% elif gates %} disabled title="A stage holding gates holds no form"{% elif plan.form_stage %} disabled title="Another stage holds the form"{% endif %}>+ Form</button>
     </div>
     <div class="fc-foot">
