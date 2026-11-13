@@ -34,18 +34,19 @@ point.
 | `title` | How the landing page names the application. Defaults to empty, and the page then shows the registry name. |
 | `icon` | The favicon the landing page draws before the title, an inline SVG data URI (`cordware/web/app_icons.py`). Defaults to empty: no icon. Not part of an entry's equality. Each registered application's is a copy of its own templates' favicon, held to it by `cordware/tests/test_landing.py` (author, 2026-10-31). |
 
-- Five entries, in this order:
+- Five entries, in this order, the landing page's (author, 2026-11-13). A
+  new application is given its place here, not the end by default:
 
   | Name | `path` | `factory` | `logger` | `title` |
   |---|---|---|---|---|
   | `reviewrobin` | `/reviewrobin` | `app.main:create_app` | `app` | `Review Robin` |
+  | `applydesk` | `/applydesk` | `applydesk.main:create_app` | `applydesk` | `Apply Desk` |
   | `residentialops` | `/residentialops` | `residentialapps.residentialops.main:create_app` | `residentialapps.residentialops` | `Residential Operations` |
   | `supportlogs` | `/supportlogs` | `residentialapps.supportlogs.main:create_app` | `residentialapps.supportlogs` | `Support Logs` |
-  | `applydesk` | `/applydesk` | `applydesk.main:create_app` | `applydesk` | `ApplyDesk` |
   | `utilities` | `/utilities` | `utilityapps.main:create_app` | `utilityapps` | `Utilities` |
 
   The two Residential applications' own contract is
-  `residentialapps/spec/applications.md`; ApplyDesk's is
+  `residentialapps/spec/applications.md`; Apply Desk's is
   `applydesk/spec/applications.md`; Utilities' is
   `utilityapps/spec/utilities.md`.
 - An unset `CORDWARE_APPS` mounts all five, so a deployment that does not
@@ -195,7 +196,7 @@ in front of it compresses: the gateway and App Service pass bodies through
   `cordware_health`. It is registered before any mount, so it answers ahead of
   an application mounted at `/`. Easy Auth excludes this path from sign-in.
   RRW's own probe is `/reviewrobin/health`, inside the mount; Residential's
-  are `/residentialops/health` and `/supportlogs/health`; ApplyDesk's is
+  are `/residentialops/health` and `/supportlogs/health`; Apply Desk's is
   `/applydesk/health`; Utilities' is `/utilities/health`.
 - The name differs from RRW's own `health` route on purpose: inside a mounted
   application `url_for` resolves through the host's router first, and

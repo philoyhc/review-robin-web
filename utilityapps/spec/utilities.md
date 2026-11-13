@@ -18,7 +18,7 @@ Utilities adds. The design it follows is
 | Landing-page title | `Utilities` |
 | Health | `GET /utilities/health`, route name `utilities_health` |
 
-- The registry lists it last, after Residential's two and ApplyDesk, so an unset
+- The registry lists it last, after Residential's two and Apply Desk, so an unset
   `CORDWARE_APPS` mounts it last and the landing page lists it so.
 - The factory is a zero-argument callable returning a new `FastAPI`
   application with no schema pages. It reads no setting and opens no
@@ -28,7 +28,7 @@ Utilities adds. The design it follows is
   `utilityapps/db.py` makes the engine and sessions on first use, so the
   factory, `/health` and the tools that need no database never open it.
   - **Models** are declared on Utilities' own `Base`
-    (`utilityapps/models.py`); no RRW, Residential or ApplyDesk model is
+    (`utilityapps/models.py`); no RRW, Residential or Apply Desk model is
     shared. One table so far: `photo_poc_photos` (`PhotoPocPhoto`).
   - **Migrations** are Utilities' own history, `utilityapps/alembic/`,
     run with `alembic -c utilityapps/alembic.ini`. Its version table is
@@ -96,7 +96,7 @@ Test replaces it.
 Segment 23A (`guide/archive/segment_23A_interop_poc.md`): one click
 creates a populated Review Robin draft session and opens its Session
 Home in a new tab. Review Robin's side is `spec/handoffs.md`. It is the
-example code for interoperability, kept once ApplyDesk's handoff exists
+example code for interoperability, kept once Apply Desk's handoff exists
 (author, 2026-11-11): `docs/interoperability_example.md` says what a
 sender takes from it.
 

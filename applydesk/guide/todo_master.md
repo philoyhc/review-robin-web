@@ -168,6 +168,11 @@ where a ruling below differs from it, the ruling wins.
       is not ready to release.
     - So Process is set up in full without visiting Emails first; the
       templates are written after, against the list it makes.
+17. **The name is *Apply Desk*** (author, 2026-11-13), two words, as
+    *Review Robin* and *Support Logs* are. It is what every page, title
+    and spec says. The URL, the package and every identifier stay
+    `applydesk`. New prose writes *Apply Desk*; older plans and docs keep
+    *ApplyDesk* until edited, as the US-spelling rule handles a word.
 
 ## MVP roadmap
 

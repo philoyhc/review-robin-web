@@ -1,7 +1,7 @@
 {# Gates (ruling 14, segment AD1D): one card per gate, who evaluates (its
    panel roster), what they see and how it runs; Panels folded in here.
    A placeholder until its own segment. #}
-<p>Who evaluates at each gate. ApplyDesk keeps every roster and what each person may view; to Review Robin they are ordinary reviewers.</p>
+<p>Who evaluates at each gate. Apply Desk keeps every roster and what each person may view; to Review Robin they are ordinary reviewers.</p>
 {% set gates = plan.columns | selectattr("via", "defined") | list %}
 {% for g in gates %}
 {% set st = gate_state(exercise.public_id, g.key) %}

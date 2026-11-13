@@ -20,10 +20,16 @@ def test_registry_entry() -> None:
         path="/applydesk",
         factory="applydesk.main:create_app",
         logger="applydesk",
-        title="ApplyDesk",
+        title="Apply Desk",
     )
-    # After the Residential applications, Utilities still last.
-    assert list(REGISTRY)[-2:] == ["applydesk", "utilities"]
+    # The landing page's order (author, 2026-11-13).
+    assert list(REGISTRY) == [
+        "reviewrobin",
+        "applydesk",
+        "residentialops",
+        "supportlogs",
+        "utilities",
+    ]
 
 
 def test_runs_alone() -> None:
@@ -31,7 +37,7 @@ def test_runs_alone() -> None:
     assert client.get(HEALTH).json() == {"status": "ok"}
     landing = client.get("/", follow_redirects=False)
     assert landing.status_code == 200
-    assert re.search(r'<a href="/applydesk/"><img [^>]*>ApplyDesk</a>', landing.text)
+    assert re.search(r'<a href="/applydesk/"><img [^>]*>Apply Desk</a>', landing.text)
     assert client.get("/reviewrobin/health").status_code == 404
     assert client.get("/utilities/health").status_code == 404
 
@@ -76,3 +82,15 @@ def test_favicon_is_the_rose_sheet_with_a_tick() -> None:
     icon = REGISTRY["applydesk"].icon
     for part in ("viewBox='0 0 32 32'", "rx='7'", "fill='%23be123c'", "clip-path='url(%23t)'"):
         assert part in icon, part
+
+
+def test_the_name_is_two_words_on_its_pages() -> None:
+    """Ruling 17: the name is Apply Desk; the URL stays /applydesk."""
+    client = TestClient(host_with(("applydesk",))[0])
+    landing = client.get("/applydesk/").text
+    assert "<title>Apply Desk · Apply Desk</title>" in landing
+    assert "<h1>Apply Desk</h1>" in landing
+    me = client.get("/applydesk/me").text
+    assert "<h1>My Apply Desk</h1>" in me
+    assert 'aria-current="page">My Apply Desk <span aria-hidden="true">✓</span>' in me
+    assert "ApplyDesk" not in landing + me

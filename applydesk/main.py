@@ -14,7 +14,7 @@ from applydesk.routes_operator import router as operator_router
 def create_app() -> FastAPI:
     # No schema pages, as Residential's and Utilities': not an API, and they
     # would list its routes to anyone signed out.
-    app = FastAPI(title="ApplyDesk", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="Apply Desk", docs_url=None, redoc_url=None, openapi_url=None)
     app.include_router(health_router)
     app.include_router(home_router)
     app.include_router(operator_router)

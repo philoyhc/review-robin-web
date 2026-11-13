@@ -1,4 +1,4 @@
-# ApplyDesk architecture
+# Apply Desk architecture
 
 > **Built so far:** segment AD1 built everything below: the package,
 > its health path and packaging (item 1), and the placeholder pages
@@ -19,7 +19,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/web.py` | Templates, mount-aware URLs (`url()`, `is_here()`, `host_url()`) and the page chrome |
 | `applydesk/sample_data.py` | The placeholders' sample exercises, applications, panels, reviewer pool and interviewers |
 | `applydesk/templates/applydesk/` | Its templates; `base.html` carries the favicon and the bar |
-| `applydesk/tests/` | ApplyDesk's tests, a package with its own `__init__.py`; `_host.py` builds the Cordware host with the real registry |
+| `applydesk/tests/` | Apply Desk's tests, a package with its own `__init__.py`; `_host.py` builds the Cordware host with the real registry |
 | `applydesk/docs/`, `applydesk/guide/`, `applydesk/spec/` | Prose, as RRW's three folders |
 
 Inside the application the layering will be RRW's (`spec/architecture.md`
@@ -48,4 +48,4 @@ depth and including literal dynamic imports.
 - Both CI workflows' unit shards run `applydesk/tests`.
 - `tools/ci_lanes.py` lists `applydesk/` in `APP_DIRS`: its `docs/`,
   `guide/`, `spec/` and `README.md` are prose, and a code change runs the
-  full lane. ApplyDesk has no lane of its own.
+  full lane. Apply Desk has no lane of its own.

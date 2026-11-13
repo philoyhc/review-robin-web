@@ -77,13 +77,13 @@ def _add_globals(env: _HasGlobals, **values: object) -> None:
 
 _add_globals(templates.env, url=_url, is_here=_is_here, host_url=_host_url)
 
-APP_NAME = "ApplyDesk"
+APP_NAME = "Apply Desk"
 
 #: The switcher's places (`docs/header_chrome.md` §3). Until AD2 knows who
 #: is an operator, every viewer of a placeholder sees both.
 PLACES: tuple[Mapping[str, str], ...] = (
     {"label": "Exercises", "path": "/operator/exercises"},
-    {"label": "My ApplyDesk", "path": "/me"},
+    {"label": "My Apply Desk", "path": "/me"},
 )
 
 
