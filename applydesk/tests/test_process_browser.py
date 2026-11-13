@@ -442,3 +442,22 @@ def test_a_later_rule_s_editor_follows_an_outcome_s_values(page: Page) -> None:
     value.select_option("Yes")
     assert _line(g3) == "Shortlist for interview is Yes → Entered, else Not entered"
     assert not g3.locator("[data-rule-warn]").is_visible()
+
+
+def test_an_open_editor_follows_gates_added_and_renamed(page: Page) -> None:
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    o1.locator('[data-pc-act="rule"]').click()
+    o1.locator(".pc-cond select").first.select_option("res")
+    review = _cards(page).nth(1)
+    review.locator('[data-pc-act="gate"]').click()
+    review.locator('.pc-item[data-item="gate"]').nth(2).locator('[data-pc="item-name"]').fill(
+        "Extra"
+    )
+    gate = o1.locator('.pc-cond select[aria-label="Gate"]')
+    assert gate.evaluate("e => [...e.options].map(o => o.text)") == [
+        "Peer Review",
+        "Faculty Panel Review",
+        "Extra",
+    ]
+    assert gate.input_value() == "g1"  # its rule still reads the gate it read

@@ -147,6 +147,12 @@
     counts.textContent = n + (n === 1 ? " stage" : " stages") + " · " + nGates + (nGates === 1 ? " gate" : " gates") + " · " + nOuts + (nOuts === 1 ? " outcome" : " outcomes");
     guards();
     rules();
+    // An open editor offers the gates and outcomes as they now stand,
+    // by their current names; one holding focus is left as it is.
+    columns().forEach(function (c) {
+      var ed = c.querySelector("[data-rule-ed]");
+      if (!ed.hidden && !ed.contains(document.activeElement)) drawEditor(c);
+    });
   }
 
   // --- Rules (rung 5): each gate's entry rule and each outcome's, from
@@ -552,9 +558,9 @@
     if (e.target.matches("[data-w-key]")) { var note = e.target.closest("[data-pc-weights]").querySelector("[data-w-note]"); if (note) note.textContent = ""; rules(); return; }
     if (e.target.matches('[data-pc="values"]')) {
       // Its own Then and Otherwise, and any later rule reading it, offer
-      // the values as they now stand; a chosen one gone stays, flagged.
+      // the values as they now stand (changed() redraws open editors); a
+      // chosen one gone stays, flagged.
       changed();
-      columns().forEach(function (c) { if (!c.querySelector("[data-rule-ed]").hidden) drawEditor(c); });
       return;
     }
     if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-name"], [data-pc="measure"], [data-pc="values"]')) changed();
