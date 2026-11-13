@@ -3,7 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{% endblock %} · Cordware Utilities</title>
+  {# A page names itself; the base adds the app, and a page with no title
+     of its own, the index, reads "Cordware Utilities" alone (author,
+     2026-11-13), as Review Robin's tabs do. #}
+  {% if false %}{% block title %}{% endblock %}{% endif %}
+  {% set _page_title = self.title() | trim %}
+  <title>{{ _page_title ~ " · " if _page_title }}Cordware Utilities</title>
   {# Cordware Utilities: a white wrench on amber, its head at top-left and
      its handle running off the bottom-right of the tile, the style of RRW's
      robin; the glyph is Lucide's "wrench", mirrored and filled (author,

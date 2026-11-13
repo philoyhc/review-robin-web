@@ -101,3 +101,10 @@ def test_favicon_is_the_amber_wrench_and_alerts_keep_the_status_hue() -> None:
     assert "#b45309" not in style.lower()
     assert re.search(r"\.alert\s*\{[^}]*border-color:\s*var\(--warn\)", style)
     assert re.search(r"\.alert strong\s*\{[^}]*color:\s*var\(--warn\)", style)
+
+
+def test_the_index_tab_reads_the_app_alone() -> None:
+    """The index's tab is "Cordware Utilities", not "Utilities · Cordware
+    Utilities"; a tool's tab names the tool first (author, 2026-11-13)."""
+    client = TestClient(host_with(("utilities",))[0])
+    assert "<title>Cordware Utilities</title>" in client.get("/utilities/").text
