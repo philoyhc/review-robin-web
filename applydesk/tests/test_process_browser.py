@@ -1,6 +1,7 @@
-"""The Process page in a real Chromium (segment AD1E rung 3): stage cards
-that open and close, take a name and dates, are added, replicated,
-deleted and moved, and hold the form within ruling 15, the Outline
+"""The Process page in a real Chromium (segment AD1E rungs 3–5): stage
+cards that open and close, take a name and dates, are added, replicated,
+deleted and moved, and hold the form within ruling 15; gates and an
+outcome added and removed; their rules and weights edited, the Outline
 following. Without a Chromium build the test skips, saying why;
 ``RRW_REQUIRE_BROWSER=1`` (set by CI) turns that skip into a failure."""
 
@@ -208,3 +209,216 @@ def test_a_stage_holding_the_form_takes_no_gate(page: Page) -> None:
     assert first.locator('[data-sum="holds"]').text_content() == "Form · Outcome: Untitled outcome"
     first.locator('[data-pc-act="remove-form"]').click()
     assert gate.is_enabled()
+
+
+# --- Rung 5: rules, edited on the item ---
+def _item(page: Page, key: str) -> Locator:
+    item = page.locator(f'.pc-item[data-key="{key}"]')
+    _open(item.locator("xpath=ancestor::article[1]"))
+    return item
+
+
+def _line(item: Locator) -> str:
+    return item.locator("[data-rule-line]").inner_text()
+
+
+def test_rule_lines_read_as_applications_headers(page: Page) -> None:
+    page.goto(PAGE)
+    assert _line(_item(page, "g1")) == (
+        "Status is Submitted and the applicant's last submitted → Entered, else Not entered"
+    )
+    assert _line(_item(page, "o1")) == "Combined ≥ 4.2 → Shortlisted, else Not shortlisted"
+    assert _line(_item(page, "g3")) == (
+        "Shortlist for interview is Shortlisted → Entered, else Not entered"
+    )
+    assert _line(_item(page, "o3")) == "Decided by hand"
+
+
+def test_a_rule_is_edited_extended_and_cleared(page: Page) -> None:
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    o1.locator('[data-pc-act="rule"]').click()
+    o1.locator(".pc-cond input").fill("4.5")
+    assert _line(o1) == "Combined ≥ 4.5 → Shortlisted, else Not shortlisted"
+    g3 = _item(page, "g3")
+    g3.locator('[data-pc-act="rule"]').click()
+    g3.locator('[data-rule-part="add"]').click()
+    assert _line(g3) == (
+        "Shortlist for interview is Shortlisted and Status is Submitted → Entered, else Not entered"
+    )
+    g3.locator(".pc-cond").nth(1).locator("select").first.select_option("last")
+    assert _line(g3).endswith("and the applicant's last submitted → Entered, else Not entered")
+    g3.locator('[data-rule-part="clear"]').click()
+    assert _line(g3) == "Decided by hand"
+    o2 = _item(page, "o2")
+    o2.locator('[data-pc-act="rule"]').click()
+    o2.locator(".pc-cond select").first.select_option("comb")
+    assert _line(o2) == "Combined ≥ 4.0 → Finalist, else Not a finalist"
+
+
+def test_a_rule_left_reading_a_later_outcome_is_named(page: Page) -> None:
+    page.goto(PAGE)
+    interview = _cards(page).nth(2)
+    interview.locator("[data-fc-grip]").focus()
+    page.keyboard.press("ArrowUp")
+    g3 = _item(page, "g3")
+    warn = g3.locator("[data-rule-warn]")
+    assert warn.is_visible()
+    assert warn.inner_text() == "This rule reads Shortlist for interview, which comes later."
+    issues = page.locator("[data-pc-issues]").inner_text()
+    assert "(Interview) reads Shortlist for interview, which comes later." in issues
+    _cards(page).nth(1).locator("[data-fc-grip]").focus()
+    page.keyboard.press("ArrowDown")
+    assert not warn.is_visible() and not page.locator("[data-pc-issues]").is_visible()
+
+
+def test_an_outcome_s_weights_follow_the_gates_before_it(page: Page) -> None:
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    weights = o1.locator("[data-pc-weights]")
+    assert weights.locator("[data-w-key]").evaluate_all("els => els.map(e => e.value)") == [
+        "30",
+        "70",
+    ]
+    review = _cards(page).nth(1)
+    review.locator('[data-pc-act="gate"]').click()
+    review.locator('.pc-item[data-item="gate"]').nth(2).locator('[data-pc="item-name"]').fill(
+        "Extra"
+    )
+    names = weights.locator("[data-w-name]").all_inner_texts()
+    assert names == ["Peer Review", "Faculty Panel Review", "Extra"]
+    assert weights.locator("[data-w-key]").evaluate_all("els => els.map(e => e.value)")[:2] == [
+        "30",
+        "70",
+    ]
+    for _ in range(2):
+        review.locator('[data-pc-act="remove-gate"]').first.click()
+    assert not weights.is_visible()  # one gate: no average to weigh
+
+
+# --- Rung 5, after the item's cold read ---
+def test_then_and_otherwise_are_chosen_with_the_mouse(page: Page) -> None:
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    o1.locator('[data-pc-act="rule"]').click()
+    then = o1.locator('[data-rule-part="then"]')
+    then.click()  # a click on the select must not redraw it away
+    assert then.evaluate("e => e.isConnected && document.activeElement === e")
+    then.select_option("Not shortlisted")
+    assert _line(o1) == "Combined ≥ 4.2 → Not shortlisted, else Not shortlisted"
+
+
+def test_a_flagged_rule_keeps_its_column_while_edited(page: Page) -> None:
+    page.goto(PAGE)
+    interview = _cards(page).nth(2)
+    _open(interview)
+    interview.locator('[data-pc-act="remove-gate"]').click()  # g3 goes
+    interview.locator('[data-pc-act="gate"]').click()
+    o2 = _item(page, "o2")
+    warn = o2.locator("[data-rule-warn]")
+    assert "no longer in the process" in (warn.text_content() or "")
+    o2.locator('[data-pc-act="rule"]').click()
+    o2.locator(".pc-cond input").fill("4.5")
+    assert _line(o2) == "Result at (removed) ≥ 4.5 → Finalist, else Not a finalist"
+    assert "no longer in the process" in (warn.text_content() or "")
+
+
+def test_focus_stays_in_the_editor(page: Page) -> None:
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    o1.locator('[data-pc-act="rule"]').click()
+    o1.locator(".pc-cond input").focus()
+    page.keyboard.press("Tab")
+    assert page.evaluate("document.activeElement.getAttribute('aria-label')") == (
+        "Remove condition 1"
+    )
+    o1.locator('[data-rule-part="add"]').click()
+    assert page.evaluate("document.activeElement.getAttribute('aria-label')") == "Condition 2"
+    o1.locator('[aria-label="Remove condition 2"]').click()
+    assert page.evaluate("document.activeElement.dataset.rulePart") == "add"
+    o1.locator(".pc-cond select").first.select_option("res")
+    assert page.evaluate("document.activeElement.getAttribute('aria-label')") == "Condition 1"
+    assert _line(o1) == "Rating at Peer Review ≥ 4.0 → Shortlisted, else Not shortlisted"
+
+
+def test_a_replica_s_rules_and_weights_read_its_own_gates(page: Page) -> None:
+    page.goto(PAGE)
+    review = _cards(page).nth(1)
+    _open(review)
+    review.locator('[data-fc-act="replicate"]').click()
+    copy = _cards(page).nth(2)
+    out = copy.locator('.pc-item[data-item="outcome"]')
+    assert out.locator("[data-w-key]").evaluate_all("els => els.map(e => e.value)") == [
+        "30",
+        "70",
+    ]
+    gate_keys = copy.locator('.pc-item[data-item="gate"]').evaluate_all(
+        "els => els.map(e => e.dataset.key)"
+    )
+    assert (
+        out.locator("[data-w-key]").evaluate_all("els => els.map(e => e.dataset.wKey)") == gate_keys
+    )
+    assert not out.locator("[data-rule-warn]").is_visible()
+
+
+def test_weights_say_when_their_gates_change_and_check_the_total(page: Page) -> None:
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    review = _cards(page).nth(1)
+    review.locator('[data-pc-act="gate"]').click()
+    weights = o1.locator("[data-pc-weights]")
+    assert weights.locator("[data-w-key]").evaluate_all("els => els.map(e => e.value)") == [
+        "30",
+        "70",
+        "0",
+    ]
+    assert weights.locator("[data-w-note]").inner_text() == (
+        "The gates before it changed: check these weights."
+    )
+    weights.locator("[data-w-key]").first.fill("20")
+    assert weights.locator("[data-w-note]").inner_text() == ""
+    assert o1.locator("[data-rule-warn]").inner_text() == (
+        "This outcome has weights adding up to 90, not 100."
+    )
+    assert "(Shortlist for interview) has weights adding up to 90, not 100." in (
+        page.locator("[data-pc-issues]").inner_text()
+    )
+
+
+def test_a_decision_outside_the_values_is_named(page: Page) -> None:
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    o1.locator('[data-pc-act="rule"]').click()
+    o1.locator('[data-pc="values"]').fill("Yes, No")
+    assert o1.locator('[data-rule-part="then"]').input_value() == "Shortlisted"
+    assert "decides “Shortlisted”, not among its values" in (
+        o1.locator("[data-rule-warn]").inner_text()
+    )
+
+
+def test_a_stage_is_dragged_by_its_handle(page: Page) -> None:
+    page.goto(PAGE)
+    grip = _cards(page).nth(2).locator("[data-fc-grip]")
+    target = _cards(page).nth(0).bounding_box()
+    box = grip.bounding_box()
+    assert target and box
+    page.mouse.move(box["x"] + 4, box["y"] + 4)
+    page.mouse.down()
+    page.mouse.move(target["x"] + 20, target["y"] + 4, steps=8)
+    page.mouse.up()
+    assert _names(page)[0] == "Interview"
+
+
+def test_every_rule_line_reads_as_the_server_wrote_it(page: Page) -> None:
+    """The script rewrites each line on load; it must agree with
+    `stages.rule_text` on every item, not just a sample."""
+    page.goto(PAGE)
+    served = page.evaluate(
+        """async () => {
+          const html = await (await fetch(location.href)).text();
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          return [...doc.querySelectorAll("#pc-cards [data-rule-line]")].map(e => e.textContent);
+        }"""
+    )
+    shown = page.locator("#pc-cards [data-rule-line]").all_text_contents()
+    assert shown == served and len(shown) > 4

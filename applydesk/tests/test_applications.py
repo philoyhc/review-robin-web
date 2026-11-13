@@ -224,6 +224,25 @@ def test_a_rule_reads_as_a_line() -> None:
     )
 
 
+def test_a_rule_reads_as_the_process_page_s_script_does_at_the_edges() -> None:
+    """A column gone, one unnamed, a gate with no measure and a blank
+    decision read as `_process.html`'s `condText` and `ruleText` write them."""
+    plan = stages.plan_of(EX)
+    blank = stages.Gate("gb", 9, "", "", "")
+    rule = stages.Rule(
+        (("res", "gb", "ge", "3"), ("ent", "gone", "is", "Entered"), ("out", "o1", "is", "")),
+        "",
+        "",
+    )
+    o = stages.Outcome("ox", 9, "X", (), "", "", rule=rule)
+    stub = stages.Stage(9, "", "", (blank, o))
+    with_blank = stages.Plan((*plan.stages, stub), plan.rows)
+    assert stages.rule_text(with_blank, o) == (
+        "Result at Untitled gate ≥ 3 and Entry at (removed) is Entered"
+        " and Shortlist for interview is — → —, else —"
+    )
+
+
 def test_a_stage_holds_one_outcome_at_most() -> None:
     o = stages.Outcome("o1", 1, "A", ("Yes",), "", "")
     two = (stages.Stage(1, "", "", (o, o)),)
