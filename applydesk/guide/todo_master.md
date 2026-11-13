@@ -93,7 +93,9 @@ where a ruling below differs from it, the ruling wins.
     Robin's chrome** (author, 2026-11-13; segment AD1D):
     - **Home**, then a **Setup** row: *Process* (rounds, gates, outcomes,
       dates, every rule, what a release does), *Form*, *Gates* (one card
-      per gate, its panel roster on it), *Emails* (to applicants); then
+      per gate, its panel roster on it), *Emails* (every template to
+      applicants, kept in one place; Process sets which steps send one,
+      and when); then
       an **Operations** row: *Applications*, *Evaluations* (each gate's
       progress and results), *Extract data*. Panels folds into Gates,
       Review becomes Evaluations, Reports becomes Extract data, Setup

@@ -17,10 +17,11 @@ An exercise has seven tabs in one row (Home, Setup, Form, Applications, Panels, 
 ```
 
 1. **Home**: the exercise's details, the Workflow card, owners, the danger zone (close and archive).
-2. **Setup**: **Process** (rounds, gates placed in them, outcomes, dates, every rule, what a release does), **Form** (AD1B), **Gates** (one card per gate: its panel roster, what the panel sees, how it is run, its result's measure), **Emails** (to applicants: the receipt, reminders before the form closes, a notice per outcome).
+2. **Setup**: **Process** (rounds, gates placed in them, outcomes, dates, every rule, what a release does), **Form** (AD1B), **Gates** (one card per gate: its panel roster, what the panel sees, how it is run, its result's measure), **Emails** (the one place the templates to applicants are kept: the receipt, reminders before the form closes, a notice per outcome; Process says which steps send one, and when).
 3. **Operations**: **Applications** (AD1C, the control surface), **Evaluations** (each gate's progress and results from Review Robin), **Extract data**.
-4. **A status row** under the chrome on every page: the exercise's state, then the form, gates, outcomes and emails at a glance.
-5. **The Workflow card** on Home and every Operations page: the timeline as a stepper, each item with its state; the one due next carries its action; one not ready says why.
+4. **Styled as Review Robin's** (author, 2026-11-13): a card under the breadcrumb (*Exercises / name*); *Exercise Home* double-height on the left; uppercase row labels with a triangle; the Setup row tinted blue, the Operations row green, the tabs sharing each row's width; the active tab white with its row's underline.
+5. **A status row** inside that card, under the tabs, on every page: the exercise's state, then the form, gates, outcomes and emails at a glance.
+6. **The Workflow card** on Home and every Operations page: the timeline as a stepper, each item with its state; the one due next carries its action; one not ready says why.
 
 **Rejected:**
 - **One tab per gate**: the chrome would change length with each exercise; one Gates tab with a card per gate keeps it stable, as Review Robin's Instruments page does.
@@ -42,7 +43,7 @@ An exercise has seven tabs in one row (Home, Setup, Form, Applications, Panels, 
 
 - **The Workflow card reads `applydesk/rounds.py`** for the model exercise, so it agrees with Applications; the other exercises get a shorter timeline from their own sample.
 - **Steps are columns, grouped by round**, as the Applications table's headers are: the same groups in the same order on both.
-- **The status row replaces the heading's chips** (state, stage) on exercise pages; the lobby keeps its chips.
+- **The status row replaces the heading's chips** (state, stage) on exercise pages, and the page's `h1` is the page's name (the exercise's on Home), the exercise's name moving to the breadcrumb, as in Review Robin; the lobby keeps its chips.
 
 ## Blast radius (measured)
 
@@ -78,8 +79,8 @@ Taken 2026-11-13 at `bf44ce575`.
 
 ## Open questions
 
-- **What each Workflow step's action does** before AD2 saves anything: a confirmation saying what would happen, or inert (author, at rung 3).
-- **Whether outcomes' email notices sit on Emails or with the outcome on Process** (author, when Emails is built).
+- **What each Workflow step's action does** before AD2: inert (author, 2026-11-13).
+- **Outcome emails**: the templates live on Emails, the one place they are kept; Process sets which steps send one and when (author, 2026-11-13).
 - **`close_check.py` reads only RRW's `guide/`**: this close is checked by hand, as AD1B's and AD1C's are.
 
 ## Out of scope
