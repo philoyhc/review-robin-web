@@ -1,4 +1,4 @@
-# ApplyDesk as the host sees it
+# Apply Desk as the host sees it
 
 > **Built so far:** segment AD1 built "The registry entry", "Health",
 > "Running alone" (item 1) and "The URL map" as placeholders on sample
@@ -7,8 +7,8 @@
 > nothing is saved. Segment AD1E built "The Process page" the same way,
 > with Emails listing the templates it makes owed (ruling 16).
 
-ApplyDesk's contract with the Cordware host. The host's side is
-`cordware/spec/host.md`; this file states only what ApplyDesk adds. The
+Apply Desk's contract with the Cordware host. The host's side is
+`cordware/spec/host.md`; this file states only what Apply Desk adds. The
 rulings behind it are `applydesk/guide/todo_master.md`.
 
 ## The registry entry
@@ -19,7 +19,7 @@ rulings behind it are `applydesk/guide/todo_master.md`.
 | Mount path | `/applydesk` |
 | Factory | `applydesk.main:create_app` |
 | Logger prefix | `applydesk` |
-| Landing-page title | `ApplyDesk` |
+| Landing-page title | `Apply Desk` |
 | Icon | A white application sheet on a rose (`#be123c`) tile, running off the bottom-right, a tick cut in rose (author, 2026-11-02). The source is `applydesk/templates/applydesk/base.html`, copied to `cordware/web/app_icons.py` |
 
 - The registry lists it after Residential's two applications and before
@@ -36,7 +36,7 @@ from Easy Auth is a deployment step.
 
 ## Running alone
 
-`CORDWARE_APPS=applydesk` starts with ApplyDesk alone; an unset value
+`CORDWARE_APPS=applydesk` starts with Apply Desk alone; an unset value
 mounts it beside every other application. Its records are stamped
 `application: applydesk` in the host's logs.
 
@@ -54,7 +54,7 @@ operators under `/operator/exercises`, participants under `/me`.
   redacts the applicant's name and identifiers.
 - **The chrome** is the shared bar (`docs/header_chrome.md`): the app
   icon, the workspace's top line over the area, a switcher of *Exercises*
-  and *My ApplyDesk* then *All applications*, the Light/Dark toggle and the
+  and *My Apply Desk* then *All applications*, the Light/Dark toggle and the
   account menu. An exercise's operator pages add Review Robin's chrome
   under a breadcrumb (ruling 14, segment AD1D): *Exercise Home*
   double-height on the left; a Setup row (Process, Form, Gates, Emails)

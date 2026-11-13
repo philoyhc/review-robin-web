@@ -11,4 +11,4 @@ router = APIRouter(dependencies=[Depends(placeholders_only)])
 
 @router.get("/", name="applydesk_home")
 def home(request: Request) -> Response:
-    return render(request, "applydesk/landing.html", area="ApplyDesk")
+    return render(request, "applydesk/landing.html", area="Apply Desk")

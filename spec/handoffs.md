@@ -8,7 +8,7 @@ as the interoperability proof of concept; the reads back to the sender
 offers. The only sender today is Utilities' *Interop proof of concept*
 (`utilityapps/spec/utilities.md`), which is also the example a real
 sender starts from (`docs/interoperability_example.md`); a change to
-this contract updates it in the same change. ApplyDesk's segment
+this contract updates it in the same change. Apply Desk's segment
 settles the final paths when it builds the real sender.
 
 ## 1. The flow

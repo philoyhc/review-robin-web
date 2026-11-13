@@ -20,10 +20,16 @@ def test_registry_entry() -> None:
         path="/applydesk",
         factory="applydesk.main:create_app",
         logger="applydesk",
-        title="ApplyDesk",
+        title="Apply Desk",
     )
-    # After the Residential applications, Utilities still last.
-    assert list(REGISTRY)[-2:] == ["applydesk", "utilities"]
+    # The landing page's order (author, 2026-11-13).
+    assert list(REGISTRY) == [
+        "reviewrobin",
+        "applydesk",
+        "residentialops",
+        "supportlogs",
+        "utilities",
+    ]
 
 
 def test_runs_alone() -> None:
@@ -31,7 +37,7 @@ def test_runs_alone() -> None:
     assert client.get(HEALTH).json() == {"status": "ok"}
     landing = client.get("/", follow_redirects=False)
     assert landing.status_code == 200
-    assert re.search(r'<a href="/applydesk/"><img [^>]*>ApplyDesk</a>', landing.text)
+    assert re.search(r'<a href="/applydesk/"><img [^>]*>Apply Desk</a>', landing.text)
     assert client.get("/reviewrobin/health").status_code == 404
     assert client.get("/utilities/health").status_code == 404
 

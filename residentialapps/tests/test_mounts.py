@@ -16,7 +16,7 @@ HEALTH = {"residentialops": "/residentialops/health", "supportlogs": "/supportlo
 
 
 def test_registry_entries() -> None:
-    assert list(REGISTRY)[:3] == ["reviewrobin", "residentialops", "supportlogs"]
+    assert list(REGISTRY)[2:4] == ["residentialops", "supportlogs"]
     assert REGISTRY["residentialops"] == AppEntry(
         path="/residentialops",
         factory="residentialapps.residentialops.main:create_app",
