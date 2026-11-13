@@ -152,7 +152,7 @@ Review Robin and ApplyDesk:
 |---|---|
 | A session's pages, operator or participant, Sessions Diagnostics' Outbox and Audit log included | The Unit of the operator who **created** the session, else the default. Co-owners do not change it |
 | An operator's other pages (lobby, Settings, Admin, Create session) | The viewer's own Unit, else the default |
-| Your reviews, whoever views it | The default, unless every session listed resolves to the same Unit (author, 2026-11-02: a session belongs to its creator's Unit; the viewer's own Unit plays no part here) |
+| User Lobby, whoever views it | The default, unless every session listed resolves to the same Unit (author, 2026-11-02: a session belongs to its creator's Unit; the viewer's own Unit plays no part here) |
 | About, Guide, Sign-in details | The viewer's own Unit if an operator, else the default |
 
 The creator's Unit is read when the page renders, so a sys admin's change

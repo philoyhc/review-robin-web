@@ -115,7 +115,7 @@ Top-to-bottom, the page renders:
 
 1. **Top bar** — the shared bar (`_partials/top_bar.html`) with
    `participant_bar=true`, per `spec/visual_style_rrw.md` "Top bar": no
-   breadcrumb row and no version. The switcher offers **Your reviews** (to
+   breadcrumb row and no version. The switcher offers **User Lobby** (to
    `/me`, on every page, marked on `/me`) and **All applications**; the
    account menu shows the viewer's name and email, optional **Guide**,
    **About** and **Sign out**. About and Guide carry `?return_to=<path>`
@@ -1350,7 +1350,7 @@ In preview mode:
 ## Dashboard (`/me`)
 
 The participant lobby — where a signed-in user lands directly (no
-invitation token) or via "Your reviews" from any session-scoped
+invitation token) or via "User Lobby" from any session-scoped
 chrome. Lists **every session the signed-in user touches in any
 participant role** (reviewer / reviewee / observer), as a
 cross-role union. The query hits all three rosters
@@ -1375,7 +1375,7 @@ Reviewer-specific columns (Reviewer status, deep-link target)
 populate only when the user is an active reviewer on that session;
 reviewee-/observer-only rows show `—` in those cells.
 
-- **H1** — "Your reviews".
+- **H1** — "User Lobby".
 - **Body** — single `.card` containing a `<table>` (one row per
   session, in the order above). **Six columns:**
   - **Session** — session name, with per-role pills on a second
@@ -1530,7 +1530,7 @@ dashboard's Session column once Reviewer Status is
   button linking to `/me/sessions/{id}/summary.csv` (dropped when no
   section is shown), a
   "Recall my submission" control (`POST /me/sessions/{id}/recall`),
-  and a secondary "Your reviews" link. Recall renders
+  and a secondary "User Lobby" link. Recall renders
   only while the session is still `ready` and the review's end has not
   passed (`can_recall`): past either, the form it would land on is
   read-only and Submit is refused, so a recall would strand the
@@ -1886,7 +1886,7 @@ A single `.banner.banner-warning` that:
   review to invite the address the viewer signs in with;
 - shows "Questions? Contact {help_contact}" when the session has one.
 
-Then one Secondary anchor, **Your reviews** → `/me`. There is no link
+Then one Secondary anchor, **User Lobby** → `/me`. There is no link
 to `/auth/me/debug`'s raw sign-in claims. This is the only reviewer-side page that returns a non-200
 status under normal flow **for a caller who is in the right place** —
 a 403, and unrelated to the session-scoped gates. Those answer 404 to
@@ -1908,7 +1908,7 @@ The mismatch page renders with the participant bar (no breadcrumb row;
 | Action row, review-level slot, after the divider | `Submit` |
 | Danger Zone | `Clear all` — copy explains "every response across every page" |
 
-The top bar's entries are `Your reviews`, `All applications`, `Guide`,
+The top bar's entries are `User Lobby`, `All applications`, `Guide`,
 `About` and `Sign out`.
 
 ### Friendly short label vs. long description
@@ -1979,7 +1979,7 @@ makes today + the small follow-on the deferred work needs.
   Every navigation is a server round-trip that drops unsaved typing
   on the current page: **Prev / Next**, **Cancel** (a GET reload),
   **browser-close**, **tab-close**, **address-bar change**, and
-  **the chrome's `Your reviews` link** all lose the current page's
+  **the chrome's `User Lobby` link** all lose the current page's
   unsaved edits with no prompt. The reviewer avoids loss by clicking
   Save before navigating.
 - **Design call.** The template already renders the hooks the

@@ -22,7 +22,7 @@ archived-sessions child page.
 - **URL.** `/operator/sessions`. The operator's root page; reached
   via the top-bar identity link or by signing in. `/` redirects
   here for any authenticated operator.
-- **Title.** `Operator Lobby — Review Robin Web` (browser tab) +
+- **Title.** `Operator Lobby · Review Robin` (browser tab) +
   `Operator Lobby` (page H1).
 - **Body class.** `ui-v2` (no reviewer modifier — this is an
   operator-only surface).

@@ -26,7 +26,7 @@ the per-row Send; `spec/email_infra_options.md` owns the dispatch leg. The desig
   where Relationships and Observers render only when
   `relationships_enabled` / `observers_enabled` is on.
   Tab label and breadcrumb leaf are both **Email Template**; the page
-  `<title>` is `Email Template — {session name}`.
+  `<title>` is `Email Template — {session name} · Review Robin`.
 - **The URL slug is `setup-invite`, not the page name.** It does not
   match the settled page name (Email Template,
   `spec/operator_ui_concept.md`) and is kept that way for link

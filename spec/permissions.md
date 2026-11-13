@@ -151,7 +151,7 @@ Two things the table implies and the code relies on:
 | `/me` dashboard, `/me/invite/{token}`, `/`, `/about`, `/guide` | `get_or_create_user` only | any signed-in user; `/me` renders an empty dashboard for a user with no roles; `/` **302s by role** — operator or sys-admin → `/operator/sessions`, everyone else → `/me` (never 301: the target follows a role that can change); `/about` is the "signed in but no access" landing; `/guide` **303s to `/about`** for a viewer with no Guide audience |
 | bare `/me/sessions/{id}` | none | a 303 to `/me/sessions/{id}/1`, whose handler applies `require_reviewer_in_session` |
 | `/auth/me`, `/auth/me/debug`, `/templates/starter.zip` / `demo.zip` / `full.zip` | `get_current_user` only (no `users` row created) | identity display and diagnostics; the setup-template downloads |
-| bare `/operator`, `/operator/` | none | a 302 to the lobby, deliberately unguarded so that one place — the lobby's `require_operator` — decides operator access |
+| bare `/operator`, `/operator/` | `get_or_create_user` only | a 302 by role, as `/` does: operator or sys-admin → `/operator/sessions`, everyone else → `/me`; the lobby's `require_operator` still decides operator access |
 | `/health` | none | liveness only |
 
 **Sys-admin does not mean edit access.** A sys-admin can *read*

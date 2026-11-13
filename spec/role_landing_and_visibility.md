@@ -32,7 +32,7 @@ do not gate whether the row is created.
 So in a deployment fronted by institutional MS365, **every account in
 the tenant can sign in.** Someone with no role lands on `/me` and reads:
 
-> **Your reviews** — You're signed in as their@address but there's
+> **User Lobby** — You're signed in as their@address but there's
 > nothing here for you right now. If you expected to see a review here,
 > contact the person running it. [About Review Robin]
 
@@ -55,6 +55,8 @@ never a 301 — the target changes when a role changes.
 | Reviewer only | 302 → `/me` | 200, lists their sessions | 303 → `/me?notice=organizers` |
 | Reviewee only | 302 → `/me` | 200, lists their sessions | 303 → `/me?notice=organizers` |
 | Observer only | 302 → `/me` | 200, lists their sessions | 303 → `/me?notice=organizers` |
+
+Bare `/operator` lands by role exactly as `/` does (operator or sys-admin → `/operator/sessions`, everyone else → `/me`), with no notice.
 
 The 303 on `/operator/sessions` is `OperatorAllowlistDenied`, handled in
 `app/main.py` — a bounce to the user's own home, not a 403 page.

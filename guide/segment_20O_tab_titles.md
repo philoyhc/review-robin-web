@@ -37,6 +37,14 @@ Taken 2026-11-13 at `984307e17`.
 | Tests asserting a `<title>` | 8 files | `grep -rln '<title>' tests` |
 | Specs naming *Review Robin Web* | 9 live files | `grep -rln "Review Robin Web" spec docs` |
 
+## Status
+
+Closed 2026-11-13. Plan #3865; build #3866 (rung 2, one build rung); close.
+
+- **As planned**: `base.html` owns ` · Review Robin` through `self.title()`; 17 templates dropped their *— Review Robin Web*; session and admin pages gained the app; the error page reads *404 — Not found · Review Robin*; the FastAPI title keeps *Review Robin Web*. Decision 1's literal `{% block title %}{% endblock %} · Review Robin` gave way to the `self.title()` form, which meets Semantics' empty-block rule.
+- **Reads: one.** `diff-reviewer` on rung 2 (base `e3388abbf`) confirmed the technique (overriding, `super()`, escaping once) and found two test gaps and two specs outside Doc impact; tests added, Doc impact extended. Codex: clean.
+- Cordware Utilities' index tab took the same base rule at the author's word (#3869).
+
 ## PR ladder
 
 1. **Plan** (this file), its README row and its `guide/todo_master.md` entry. Prose only.

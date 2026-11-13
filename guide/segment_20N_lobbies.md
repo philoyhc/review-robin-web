@@ -43,8 +43,12 @@ Taken 2026-11-13 at `0fec4eba0`.
 
 ## Status
 
-Building (2026-11-13).
-- Rung 2, the build: the switcher, both pages' H1 and `<title>`, the participant pages' Secondary buttons and `/about`'s link read *Operator Lobby* / *User Lobby*; `/operator` lands by role through `/`'s own handler. `Sessions Lobby` joined `RETIRED_TERMS`, so `spec/sessions_overview.md` and `spec/rehydrate.md` took the new name in this rung rather than at close (the gate fails otherwise); the other Doc impact specs wait for the close's `spec-writer`.
+Closed 2026-11-13. Plan #3860; build #3863 (rung 2, one build rung); close.
+
+- **As planned**: the switcher's *Operator Lobby* / *User Lobby*, both pages' H1 and `<title>`, the participant pages' Secondary buttons and `/about`'s link, and bare `/operator` landing by role through `/`'s own handler. `Sessions Lobby` joined `RETIRED_TERMS`, so two specs took the name in the build rung, not at close.
+- **Beyond the plan, at the author's word**: back-links read *← Back to Operator Lobby* / *← Back to User Lobby*, and the error page's way out *Go to the Operator Lobby* / *Go to the User Lobby* (the judgment call above). Breadcrumb trails keep *Sessions*. The Guide, `/about` and the handoff page name the Operator Lobby in their prose.
+- **Reads: one.** `diff-reviewer` on rung 2 (base `a98c1c9f7`) found the page prose still saying *Sessions* and two specs (`operator_ui_concept.md`, `permissions.md`) outside Doc impact; both fixed in the rung and Doc impact extended. Codex: clean.
+- Apply Desk's lobbies followed in Apply Desk's own ruling 18 (#3867).
 
 ## PR ladder
 
