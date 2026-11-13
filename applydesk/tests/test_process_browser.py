@@ -422,3 +422,23 @@ def test_every_rule_line_reads_as_the_server_wrote_it(page: Page) -> None:
     )
     shown = page.locator("#pc-cards [data-rule-line]").all_text_contents()
     assert shown == served and len(shown) > 4
+
+
+def test_a_later_rule_s_editor_follows_an_outcome_s_values(page: Page) -> None:
+    page.goto(PAGE)
+    g3 = _item(page, "g3")
+    g3.locator('[data-pc-act="rule"]').click()
+    o1 = _item(page, "o1")
+    o1.locator('[data-pc="values"]').fill("Yes, No")
+    value = g3.locator('.pc-cond select[aria-label="Value"]')
+    assert value.evaluate_all("els => [...els[0].options].map(o => o.value)") == [
+        "Shortlisted",
+        "Yes",
+        "No",
+    ]
+    assert "reads “Shortlisted”, not among the values of Shortlist for interview" in (
+        g3.locator("[data-rule-warn]").inner_text()
+    )
+    value.select_option("Yes")
+    assert _line(g3) == "Shortlist for interview is Yes → Entered, else Not entered"
+    assert not g3.locator("[data-rule-warn]").is_visible()

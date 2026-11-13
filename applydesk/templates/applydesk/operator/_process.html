@@ -206,6 +206,7 @@
       if (kind === "out") {
         if (!col) found.push("reads an outcome no longer in the process");
         else if (earlierOutcomes(item).indexOf(col) < 0) found.push("reads " + nameOf(col) + ", which comes later");
+        else if (c[3] && valuesOf(col).indexOf(c[3]) < 0) found.push("reads “" + c[3] + "”, not among the values of " + nameOf(col));
       } else if ((kind === "res" || kind === "ent") && !gate) {
         if (!col) found.push("reads a gate no longer in the process");
         else if (scopeOf(item).indexOf(col) < 0) found.push("reads " + nameOf(col) + ", outside the gates before it");
@@ -550,9 +551,10 @@
     if (e.target.closest("[data-rule-ed]")) { var item = e.target.closest(".pc-item"); setRule(item, readEditor(item)); rules(); return; }
     if (e.target.matches("[data-w-key]")) { var note = e.target.closest("[data-pc-weights]").querySelector("[data-w-note]"); if (note) note.textContent = ""; rules(); return; }
     if (e.target.matches('[data-pc="values"]')) {
-      var owner = e.target.closest(".pc-item"), open = owner.querySelector("[data-rule-ed]");
+      // Its own Then and Otherwise, and any later rule reading it, offer
+      // the values as they now stand; a chosen one gone stays, flagged.
       changed();
-      if (!open.hidden) drawEditor(owner);
+      columns().forEach(function (c) { if (!c.querySelector("[data-rule-ed]").hidden) drawEditor(c); });
       return;
     }
     if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-name"], [data-pc="measure"], [data-pc="values"]')) changed();
