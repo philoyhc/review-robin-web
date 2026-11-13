@@ -139,10 +139,11 @@ def test_the_bar_names_the_application() -> None:
 
 def test_operator_pages_take_review_robin_s_layout() -> None:
     """Operator pages: Review Robin's left-aligned wide layout; /me keeps
-    the centred column (author, 2026-11-13)."""
+    the centred column (author, 2026-11-13). An exercise's pages carry a
+    breadcrumb, with no line between it and the bar, as Review Robin's."""
     client = TestClient(host_with(("applydesk",))[0])
-    assert '<body class="op">' in client.get("/applydesk/operator/exercises").text
-    assert (
-        '<body class="op">' in client.get("/applydesk/operator/exercises/wa9juxbc2t/process").text
-    )
-    assert "<body>" in client.get("/applydesk/me").text
+    lobby = client.get("/applydesk/operator/exercises").text
+    process = client.get("/applydesk/operator/exercises/wa9juxbc2t/process").text
+    assert '<body class="op">' in lobby
+    assert '<body class="op crumbed">' in process
+    assert '<body class="">' in client.get("/applydesk/me").text
