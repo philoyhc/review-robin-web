@@ -4,7 +4,8 @@
 > "Running alone" (item 1) and "The URL map" as placeholders on sample
 > data (item 2), pending the author's approval in a browser. Segment AD1B
 > built "The Form page" as a working scaffold: every move works on screen,
-> nothing is saved.
+> nothing is saved. Segment AD1E built "The Process page" the same way,
+> with Emails listing the templates it makes owed (ruling 16).
 
 ApplyDesk's contract with the Cordware host. The host's side is
 `cordware/spec/host.md`; this file states only what ApplyDesk adds. The
@@ -148,3 +149,81 @@ shows the form's own card and one empty String card, open.
   form (AD4). Nothing typed in a preview is kept.
 - **Conditional questions** (branching) are not built: deferred, see
   `applydesk/guide/todo_master.md`.
+
+## The Process page
+
+The exercise's timeline as a stack of stage cards, on the Process tab,
+`/operator/exercises/<id>/process` (rulings 13–16). Process sets up the whole
+flow and every rule Applications applies; Form, Gates and Emails flesh out its
+nodes. Every move works in the browser; nothing is saved until AD2, and a
+reload restores the sample. A blank exercise shows one open card, *Stage 1*,
+holding the form. The cards are drawn from `stages.plan_of`, so Process,
+Applications and the Workflow card agree on load.
+
+- **Layout.** The cards in timeline order, the Outline beside them (as
+  Form's), *Save* at its foot, disabled until AD2.
+- **A stage card.** *Stage name* (an empty name reads *Stage N*, by position),
+  *From* and *To* dates, and *Shown to applicants*. Collapsed, it shows its
+  name, dates and a summary (`Form · Outcome: Shortlist`, `2 gates`,
+  `No gates`). Cards load collapsed; a lone card is open. Below, its items in
+  order: the form, gates, the outcome.
+- **Ruling 15, enforced as it is edited.** One stage holds the form, anywhere;
+  never the form and a gate together; one outcome at most per stage; an empty
+  stage is allowed. A button that would break it is disabled with the reason in
+  its title: *+ Gate* on the form's stage, *+ Form* on a stage with gates or
+  when another holds it, *+ Outcome* on a stage with one. `stages.problems`
+  words the same rules and the Outline names any breach.
+- **Buttons.** Along a card's foot, flush right: *Replicate*, *+ Stage*,
+  *Delete*. Each insert lands after the card and opens. *Delete* has no
+  confirmation and is disabled on the last stage. A replica leaves the form
+  behind; its gates and outcome take keys of their own, and its rules and
+  weights read them. Inside the card: *+ Gate* (after the last gate, before the
+  outcome), *+ Outcome*, *+ Form*; each item has *Remove the form* / *the gate*
+  / *the outcome*.
+- **Reordering** by the card's handle, dragged or with ↑ ↓ (announcing the new
+  position). Gates and outcomes are numbered by the timeline and renumber as
+  cards move; the Outline and Applications' headers follow.
+- **The form item.** When it opens and closes (the stage's dates), a link to
+  Form, and its *Emails* to applicants: *Receipt on submitting* and *Reminder
+  to drafts*. A new form ticks the receipt only.
+- **A gate.** *Name*, *Runs as* (*A Review Robin session* or *Results entered
+  here*), *Result* (its measure), its *Entry rule*, and a link to Gates for its
+  panel.
+- **The outcome.** *Name*, *Due*, *Values* (comma-separated), *Rule*, and, when
+  more than one gate is in scope, the *Combined result*: a weight per gate, as
+  percentages. Scope is the gates since the previous outcome (ruling 13); the
+  weights follow as gates are added, removed or moved, a new gate takes what is
+  left of 100, and the item says when the gates changed. *When released*, per
+  audience, *Applicants* and *Panel evaluators* each with *Update timeline*
+  (the timeline they see on signing in to their participant page) and *Send
+  email*. Whether it is released is set on Applications.
+- **The rule editor** (*Add a rule* / *Edit the rule*, on a gate or an outcome).
+  A row per condition, joined by AND, then *Then* and *Otherwise*; *Decide by
+  hand* clears it. Conditions are ruling 13's and no others:
+
+  | On | Kinds |
+  |---|---|
+  | A gate | Status; the applicant's last N submitted; an earlier outcome |
+  | An outcome | A gate's result (`≥` / `<` a number); entry at a gate; the combined result; an earlier outcome |
+
+  A gate's *Then* and *Otherwise* are *Entered* / *Not entered*; an outcome's
+  are its values. The item's line reads as Applications' header does
+  (`stages.rule_text`), *Decided by hand* for none. A rule names columns by key,
+  so moving a stage keeps its meaning. One that reads a later outcome, a gate
+  outside its outcome's scope, or a column since removed; decides or compares
+  with a value its target lacks; or has a count or threshold that is not a
+  number, is **flagged** on its item and in the Outline, and keeps reading what
+  it read (a removed column as *(removed)*) until the operator picks another.
+  Weights that are not numbers or do not total 100 are flagged likewise.
+- **The Outline** lists each stage by name and dates with its items beneath,
+  the counts (stages, gates, outcomes) and every problem. A stage or item is a
+  button: it opens its card and goes to it. Nothing in it is saved.
+- **Emails** (ruling 16). Process picks no template. Each email ticked, the
+  form's receipt and reminder or an outcome's *Send email* per audience, is a
+  template owed on the Emails page, named for its stage (*Review: Outcome -
+  Applicants*, *Call for applications: Receipt - Applicants*), one section each
+  in timeline order with a *Written* or *Owed* chip (`workflow.emails`). An
+  outcome with an owed email is not ready to release: the Workflow card says
+  which audiences' emails are not written, until it is released. Template text
+  and sending come later (Emails' own segment; AD6, AD7).
+- **Preview** of the Workflow card the cards describe is not built.
