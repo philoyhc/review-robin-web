@@ -151,6 +151,7 @@ def render(
         template,
         {
             "app_name": APP_NAME,
+            "operator_page": app_path(request).startswith("/operator"),
             "area": area,
             "places": [p for p in PLACES if operator or not p["operators"]],
             "nav": nav,

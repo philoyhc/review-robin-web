@@ -102,6 +102,12 @@
 
     /* The page. */
     .page { max-width: 1232px; margin: 0 auto; padding: 20px 16px 48px; }
+    /* Operator pages are desktop work surfaces, laid out as Review Robin's
+       (author, 2026-11-13): a fixed 40 px left margin and up to 1400 px
+       wide, not centred. The participant's pages, /me, keep the centred
+       column. */
+    body.op .tb-in, body.op .page { max-width: 1400px; margin: 0; padding-left: 40px; padding-right: 40px; }
+    @media (max-width: 639px) { body.op .tb-in, body.op .page { padding-left: 16px; padding-right: 16px; } }
     .ptitle { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
     .ptitle h1 { margin: 0; font-size: 22px; }
     .lede { margin: 0 0 16px; color: var(--text-strong-subtle); font-size: 15px; }
@@ -413,7 +419,7 @@
     .redacted { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--surface-muted); color: var(--text-subtle); font-size: 13px; }
   </style>
 </head>
-<body>
+<body{% if operator_page %} class="op"{% endif %}>
   <header class="topbar">
     <div class="tb-in">
       {# The bar names the application, as Review Robin's does (author,
