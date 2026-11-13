@@ -142,3 +142,35 @@ def test_the_reviewer_card_says_when_answers_can_change_and_be_read(
     assert "You can still read your answers until the review closes" in body
     assert "only if the people running it allow it" in body
     assert "revisit until the session closes" not in body
+
+
+def test_no_template_names_the_app_in_its_title_block() -> None:
+    """Segment 20O: the base adds " · Review Robin"; a block that named the
+    app too would read "X — Review Robin · Review Robin"."""
+    for path in sorted(_TEMPLATES.rglob("*.html")):
+        for block in re.findall(r"{% block title %}(.*?){% endblock %}", path.read_text(), re.S):
+            assert _BRAND not in block, (path, block)
+
+
+def test_a_page_without_a_title_reads_the_app_alone() -> None:
+    """The base's own title lines, run with an empty and a filled block."""
+    import jinja2
+
+    base = (_TEMPLATES / "base.html").read_text()
+    found = re.search(r"({% if false %}{% block title %}.*?</title>)", base, re.S)
+    assert found, "base.html's title lines moved"
+    head = found.group(1)
+    env = jinja2.Environment(
+        loader=jinja2.DictLoader(
+            {
+                "b.html": head,
+                "empty.html": '{% extends "b.html" %}',
+                "named.html": '{% extends "b.html" %}{% block title %}{{ name }}{% endblock %}',
+            }
+        ),
+        autoescape=True,
+    )
+    assert env.get_template("empty.html").render().strip().endswith("<title>Review Robin</title>")
+    assert "<title>A &amp; B · Review Robin</title>" in env.get_template("named.html").render(
+        name="A & B"
+    )
