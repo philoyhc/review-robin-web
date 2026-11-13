@@ -60,15 +60,16 @@ def test_a_gate_chip_cycles_and_the_count_follows(page: Page) -> None:
     page.goto(PAGE)
     before = _count(page, "g1")
     chip = _row(page, "kenji.russo").locator('[data-cell="g1"] [data-ap-adm]')
-    assert chip.inner_text() == "Selected"
+    assert chip.inner_text() == "Entered"
     chip.click()
-    assert chip.inner_text() == "Not selected"
+    assert chip.inner_text() == "Not entered"
     chip.click()
-    assert chip.inner_text() == "Pending"
+    assert chip.inner_text() == "—"
+    assert (chip.get_attribute("aria-label") or "").endswith(": no status yet")
     n = int(before.split()[0])
-    assert _count(page, "g1").startswith(f"{n - 1} selected · 1 pending")
+    assert _count(page, "g1").startswith(f"{n - 1} entered · 1 to decide")
     chip.click()
-    assert chip.inner_text() == "Selected" and _count(page, "g1") == before
+    assert chip.inner_text() == "Entered" and _count(page, "g1") == before
 
 
 def test_an_outcome_is_picked_and_dated(page: Page) -> None:
@@ -122,10 +123,10 @@ def test_ticked_rows_are_set_together(page: Page) -> None:
     for who in ("aisha.bello", "kenji.russo", "wen.novak"):
         _row(page, who).locator("[data-ap-tick]").check()
     page.locator("[data-ap-set-col]").select_option("g3")
-    page.locator("[data-ap-set-val]").select_option("Selected")
+    page.locator("[data-ap-set-val]").select_option("Entered")
     page.locator("[data-ap-set]").click()
     for who in ("aisha.bello", "kenji.russo"):
-        assert _row(page, who).locator('[data-cell="g3"] [data-ap-adm]').inner_text() == "Selected"
+        assert _row(page, who).locator('[data-cell="g3"] [data-ap-adm]').inner_text() == "Entered"
     # A draft has entered nothing: it is left alone.
     assert _row(page, "wen.novak").locator('[data-cell="g3"]').inner_text().strip() == "—"
 
@@ -191,9 +192,9 @@ def test_a_csv_proposes_then_applies(page: Page) -> None:
     page.goto(PAGE)
     body = (
         "Application ID,Gate 3: Interview,Finalists,Mystery\n"
-        "kenji-not-an-id,Selected,,\n"
-        "h6zr2tdw9p,Selected,,x\n"
-        "f2ps7nyh4k,Selected,,\n"
+        "kenji-not-an-id,Entered,,\n"
+        "h6zr2tdw9p,Entered,,x\n"
+        "f2ps7nyh4k,Entered,,\n"
         "m3qx8vkt2n,Maybe,,\n"
     )
     shortlisted = page.locator('[data-row]:has([data-cell="o2"] select)').first
@@ -213,7 +214,7 @@ def test_a_csv_proposes_then_applies(page: Page) -> None:
     prop.locator("[data-ap-prop-apply]").click()
     assert (
         _row(page, "kenji.russo").locator('[data-cell="g3"] [data-ap-adm]').inner_text()
-        == "Selected"
+        == "Entered"
     )
     assert shortlisted.locator('[data-cell="o2"] select').input_value() == "Finalist"
 
@@ -243,17 +244,17 @@ def test_apply_keeps_a_cell_changed_by_hand_since(page: Page) -> None:
             {
                 "name": "x.csv",
                 "mimeType": "text/csv",
-                "buffer": f"Application ID,Interview\n{upper},Selected\n".encode(),
+                "buffer": f"Application ID,Interview\n{upper},Entered\n".encode(),
             }
         ]
     )
     prop = page.locator("[data-ap-proposal]")
     assert prop.locator("[data-ap-prop-rows] tr").count() == 1
     chip = _row(page, "kenji.russo").locator('[data-cell="g3"] [data-ap-adm]')
-    chip.click()  # Not selected -> Pending, by hand
+    chip.click()  # Not entered -> no status, by hand
     page.once("dialog", lambda d: d.accept())
     prop.locator("[data-ap-prop-apply]").click()
-    assert chip.inner_text() == "Pending"
+    assert chip.inner_text() == "—"
     # Focus returns to what opened the proposal.
     assert page.evaluate("document.activeElement.hasAttribute('data-ap-csv-open')")
 
@@ -277,16 +278,16 @@ def test_a_csv_giving_one_cell_two_values_leaves_it(page: Page) -> None:
     page.goto(PAGE)
     body = (
         "Application ID,Interview\n"
-        "h6zr2tdw9p,Selected\n"
-        "h6zr2tdw9p,Pending\n"
-        "m3qx8vkt2n,Selected\n"
-        "m3qx8vkt2n,selected\n"
+        "h6zr2tdw9p,Entered\n"
+        "h6zr2tdw9p,-\n"
+        "m3qx8vkt2n,Entered\n"
+        "m3qx8vkt2n,entered\n"
     )
     page.locator("[data-ap-csv]").set_input_files(
         files=[{"name": "twice.csv", "mimeType": "text/csv", "buffer": body.encode()}]
     )
     prop = page.locator("[data-ap-proposal]")
-    assert "h6zr2tdw9p: Interview given more than one value (Selected, Pending), left as is." in (
+    assert "h6zr2tdw9p: Interview given more than one value (Entered, —), left as is." in (
         prop.inner_text()
     )
     rows = prop.locator("[data-ap-prop-rows] tr")
@@ -294,17 +295,17 @@ def test_a_csv_giving_one_cell_two_values_leaves_it(page: Page) -> None:
     prop.locator("[data-ap-prop-apply]").click()
     assert (
         _row(page, "aisha.bello").locator('[data-cell="g3"] [data-ap-adm]').inner_text()
-        == "Selected"
+        == "Entered"
     )
     assert _row(page, "kenji.russo").locator('[data-cell="g3"] [data-ap-adm]').inner_text() == (
-        "Not selected"
+        "Not entered"
     )
 
 
 def test_a_csv_id_like_an_object_key_is_just_unknown(page: Page) -> None:
     # Codex: "__proto__" matched an inherited property and the upload threw.
     page.goto(PAGE)
-    body = "Application ID,Interview\n__proto__,Selected\nconstructor,Selected\n"
+    body = "Application ID,Interview\n__proto__,Entered\nconstructor,Entered\n"
     page.locator("[data-ap-csv]").set_input_files(
         files=[{"name": "odd.csv", "mimeType": "text/csv", "buffer": body.encode()}]
     )

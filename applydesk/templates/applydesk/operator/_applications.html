@@ -36,7 +36,7 @@
     </div>
     <div class="ap-rule-row">
       <label>Otherwise<select class="ap-sel" data-ap-rule-else></select></label>
-      <label class="ap-check"><input type="checkbox" data-ap-rule-pending checked> Change only cells still <em>Pending</em></label>
+      <label class="ap-check"><input type="checkbox" data-ap-rule-pending checked> Change only cells not yet decided (<em>—</em> or <em>Pending</em>)</label>
       <button class="btn btn-secondary" type="button" data-ap-rule-go>Propose</button>
     </div>
   </section>
@@ -85,12 +85,12 @@
           {# A submitted application's outcomes are always settable, "—"
              until decided, so a hand change can advance it (Codex). #}
           {% if not cell.value and (c.via is defined or a.state != "Submitted") %}<span class="muted">—</span>
-          {% elif c.via is defined %}<button type="button" class="ap-adm" data-ap-adm data-v="{{ cell.value }}"{% if cell.result is not none %} data-result="{{ cell.result }}"{% endif %} aria-label="{{ c.label }} for {{ a.public_id }}: {{ cell.value }}">{{ cell.value }}</button>{% if cell.note %}<span class="ap-note">{{ cell.note }}</span>{% endif %}
-          {% else %}<select class="ap-oc" data-ap-oc data-v="{{ cell.value }}" aria-label="{{ c.label }} for {{ a.public_id }}">
+          {% elif c.via is defined %}<button type="button" class="ap-adm" data-ap-adm data-v="{{ cell.value }}"{% if cell.result is not none %} data-result="{{ cell.result }}"{% endif %} aria-label="{{ c.label }} for {{ a.public_id }}: {{ 'no status yet' if cell.value == '—' else cell.value }}">{{ cell.value }}</button>{% if cell.note %}<span class="ap-note">{{ cell.note }}</span>{% endif %}
+          {% else %}<span class="ap-ocw"><select class="ap-oc" data-ap-oc data-v="{{ cell.value }}" aria-label="{{ c.label }} for {{ a.public_id }}">
               <option value=""{% if not cell.value %} selected{% endif %}>—</option>
               <option{% if cell.value == "Pending" %} selected{% endif %}>Pending</option>
               {% for v in c.values %}<option{% if v == cell.value %} selected{% endif %}>{{ v }}</option>{% endfor %}
-            </select><span class="ap-note" data-ap-date data-due="Due {{ c.due }}">{{ cell.note }}</span>
+            </select></span><span class="ap-note" data-ap-date data-due="Due {{ c.due }}">{{ cell.note }}</span>
           {% endif %}</td>
         {% endfor %}{% endfor %}
       </tr>
@@ -117,7 +117,7 @@
     {% if cols %}<button class="btn btn-secondary" type="button" data-ap-csv-down>Download CSV</button>{% endif %}
     {% if not cols %}<span class="muted">No rounds yet: rounds, gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/setup') }}">Setup</a>.</span>{% endif %}
   </div>
-  <p class="muted ap-help">A gate's chip cycles <em>Pending</em>, <em>Selected</em>, <em>Not selected</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> switch does what the Timeline sets. Rounds, gates, outcomes and dates come from Setup and the Timeline.</p>
+  <p class="muted ap-help">A gate's chip says whether the application is sent through it, cycling <em>—</em> (no status yet), <em>Entered</em>, <em>Not entered</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> switch does what the Timeline sets. Rounds, gates, outcomes and dates come from Setup and the Timeline.</p>
 </div>
 <div class="btnrow">
   <button class="btn btn-primary" type="button" disabled>Generate application files</button>
@@ -130,20 +130,23 @@
 (function () {
   var root = document.querySelector("[data-applications]");
   if (!root) return;
-  var CYCLE = ["Pending", "Selected", "Not selected"];
+  // A gate: no status yet, then whether the application is sent through
+  // it. An outcome: Pending, then its values from Setup.
+  var CYCLE = ["—", "Entered", "Not entered"];
+  function undecided(v) { return v === "—" || v === "Pending"; }
   var TODAY = "13 Nov";
   var rows = Array.prototype.slice.call(root.querySelectorAll("[data-row]"));
   var heads = Array.prototype.slice.call(root.querySelectorAll("th[data-col]"));
 
   var head = {};
   heads.forEach(function (h) { head[h.dataset.col] = h; });
-  // A chip's tone: pending amber, the column's going-on value (Selected,
+  // A chip's tone: undecided amber, the column's going-on value (Entered,
   // Shortlisted, Finalist, Awarded) green, anything else muted.
   function tone(el) {
     var v = el.dataset.v, h = head[el.closest("td").dataset.cell];
-    var on = h.dataset.kind === "gate" ? "Selected" : h.dataset.first;
+    var on = h.dataset.kind === "gate" ? "Entered" : h.dataset.first;
     el.classList.remove("ap-t-warn", "ap-t-good", "ap-t-mute");
-    el.classList.add(v === "Pending" ? "ap-t-warn" : v === on ? "ap-t-good" : "ap-t-mute");
+    el.classList.add(undecided(v) ? "ap-t-warn" : v === on ? "ap-t-good" : "ap-t-mute");
   }
   function recount() {
     heads.forEach(function (h) {
@@ -152,10 +155,11 @@
         var el = r.querySelector('[data-cell="' + key + '"] [data-v]');
         if (el) tally[el.dataset.v] = (tally[el.dataset.v] || 0) + 1;
       });
-      var first = h.dataset.kind === "gate" ? "Selected" : h.dataset.first;
+      var gate = h.dataset.kind === "gate";
+      var first = gate ? "Entered" : h.dataset.first, open = gate ? "—" : "Pending";
       var parts = [];
       if (tally[first]) parts.push(tally[first] + " " + first.toLowerCase());
-      if (tally.Pending) parts.push(tally.Pending + " pending");
+      if (tally[open]) parts.push(tally[open] + (gate ? " to decide" : " pending"));
       h.querySelector("[data-ap-count]").textContent = parts.join(" · ") || "none yet";
     });
     var s = {};
@@ -166,13 +170,13 @@
   function setAdm(btn, v) {
     btn.dataset.v = v;
     btn.textContent = v;
-    btn.setAttribute("aria-label", btn.getAttribute("aria-label").replace(/: [^:]*$/, ": " + v));
+    btn.setAttribute("aria-label", btn.getAttribute("aria-label").replace(/: [^:]*$/, ": " + (v === "—" ? "no status yet" : v)));
     tone(btn);
   }
   function setOutcome(sel, v) {
     sel.value = v;
     sel.dataset.v = v;
-    var date = sel.parentNode.querySelector("[data-ap-date]");
+    var date = sel.closest("td").querySelector("[data-ap-date]");
     date.textContent = v === "Pending" ? date.dataset.due : v ? TODAY : "";
     tone(sel);
   }
@@ -299,7 +303,7 @@
     var target = rule.querySelector("[data-ap-rule-target]");
     var then = rule.querySelector("[data-ap-rule-then]"), otherwise = rule.querySelector("[data-ap-rule-else]");
     function fillValues() {
-      var vals = choices(target.value).filter(function (v) { return v !== "Pending"; });
+      var vals = choices(target.value).filter(function (v) { return !undecided(v); });
       then.textContent = ""; otherwise.textContent = "";
       vals.forEach(function (v) { var o = document.createElement("option"); o.textContent = v; then.appendChild(o); });
       ["Leave as is"].concat(vals).forEach(function (v) { var o = document.createElement("option"); o.textContent = v; otherwise.appendChild(o); });
@@ -338,9 +342,9 @@
       rows.forEach(function (r) {
         var el = cellOf(r, key);
         if (!el) return;  // a draft, or never admitted to this column
-        if (onlyPending && el.dataset.v !== "Pending") return;
+        if (onlyPending && !undecided(el.dataset.v)) return;
         var res = cellOf(r, src);
-        if (!res || res.dataset.v !== "Selected") return;  // never admitted there: nothing to read
+        if (!res || res.dataset.v !== "Entered") return;  // never entered there: nothing to read
         if (res.dataset.result === undefined) { unjudged.push(idOf(r)); return; }
         var met = ge ? parseFloat(res.dataset.result) >= at : parseFloat(res.dataset.result) < at;
         var to = met ? then.value : otherwise.value;
@@ -411,6 +415,7 @@
         if (!key) return;
         var raw = (line[i] || "").trim();
         if (!raw) return;  // blank: leave the cell as it is
+        if (raw === "-") raw = "—";  // no status yet, as a keyboard types it
         var val = choices(key).filter(function (v) { return v.toLowerCase() === raw.toLowerCase(); })[0];
         if (!val) { skipped.push(id + ": \"" + raw + "\" is not a value of " + head[key].dataset.label + "."); return; }
         var el = cellOf(r, key);

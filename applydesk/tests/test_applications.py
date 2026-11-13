@@ -75,7 +75,7 @@ def test_the_model_exercise_reads_as_partway_through() -> None:
             day = int(a.submitted.split()[0])
             assert bool(cells["g1"].value) == (day >= 16)
         if cells["o1"].value == "Not shortlisted":
-            assert cells["g3"].value == "Not selected" and not cells["o2"].value
+            assert cells["g3"].value == "Not entered" and not cells["o2"].value
         if cells["o1"].value == "Shortlisted":
             assert cells["o3"].value == "Pending" and cells["o3"].note == "Due 12 Dec"
     notes = {c.note for r in plan.rows for c in r.cells.values()}

@@ -69,7 +69,8 @@ where a ruling below differs from it, the ruling wins.
       (to applicants, to reviewers, by email) is set with the Timeline.
     - Rounds, gates, outcomes and their dates are set up on **Setup**
       and the Timeline. **Applications** is the control surface: who
-      enters each gate (*Pending*, *Selected*, *Not selected*) and each
+      enters each gate (*—* for no status yet, *Entered*, *Not entered*;
+      author, 2026-11-13) and each
       outcome's value, set by hand, filled by a rule over an earlier
       gate's result (e.g. Rating ≥ 4.0), or uploaded as a CSV keyed by
       application ID. A rule or an upload is a proposal the operator

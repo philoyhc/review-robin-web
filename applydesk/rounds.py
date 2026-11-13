@@ -15,8 +15,11 @@ from dataclasses import dataclass
 from applydesk import sample_data
 from applydesk.sample_data import Application
 
-#: Gate admittance, in the order a chip cycles.
-ADMITTANCE: tuple[str, ...] = ("Pending", "Selected", "Not selected")
+#: Gate admittance, in the order a chip cycles (author, 2026-11-13): no
+#: status yet, then whether the application is sent through the gate.
+#: Outcomes keep their own values, with Pending, from Setup.
+NO_STATUS = "—"
+ADMITTANCE: tuple[str, ...] = (NO_STATUS, "Entered", "Not entered")
 
 
 @dataclass(frozen=True)
@@ -152,36 +155,36 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
             during = a.submitted.split()[1] != "Oct" or day >= 16
             cells = {k: Cell("") for k in ("g1", "g2", "o1", "g3", "o2", "o3")}
             if during:
-                cells["g1"] = Cell("Selected", f"Withdrew {day} {a.submitted.split()[1]}")
+                cells["g1"] = Cell("Entered", f"Withdrew {day} {a.submitted.split()[1]}")
             rows.append(Row(a, cells))
             continue
         if i in excluded:
-            cells["g1"] = Cell("Not selected", "Excluded: not eligible")
+            cells["g1"] = Cell("Not entered", "Excluded: not eligible")
         elif i in late:
-            cells["g1"] = Cell("Selected", f"Rating {rating[i]} · 1 of 3")
+            cells["g1"] = Cell("Entered", f"Rating {rating[i]} · 1 of 3")
         else:
-            cells["g1"] = Cell("Selected", f"Rating {rating[i]} · 3 of 3", rating[i])
+            cells["g1"] = Cell("Entered", f"Rating {rating[i]} · 3 of 3", rating[i])
         if i in late:
-            cells["g2"] = Cell("Pending", "Waiting on Peer Review")
+            cells["g2"] = Cell(NO_STATUS, "Waiting on Peer Review")
             cells["o1"] = Cell("Pending", "Due 10 Nov")
         elif i in excluded:
-            cells["g2"] = Cell("Not selected")
+            cells["g2"] = Cell("Not entered")
             cells["o1"] = Cell("Not shortlisted", "10 Nov")
         else:
             if i in added:
-                cells["g2"] = Cell("Selected", "Added by operator: panel request", score[i])
+                cells["g2"] = Cell("Entered", "Added by operator: panel request", score[i])
             elif rating[i] >= _PANEL_FROM:
-                cells["g2"] = Cell("Selected", f"Score {score[i]} · 4 of 4", score[i])
+                cells["g2"] = Cell("Entered", f"Score {score[i]} · 4 of 4", score[i])
             else:
-                cells["g2"] = Cell("Not selected", f"Below {_PANEL_FROM} (Rating)")
+                cells["g2"] = Cell("Not entered", f"Below {_PANEL_FROM} (Rating)")
             cells["o1"] = Cell("Shortlisted" if i in shortlisted else "Not shortlisted", "10 Nov")
         if i in shortlisted:
             note = interviews[n % len(interviews)]
-            cells["g3"] = Cell("Selected" if note else "Pending", note or "Not yet scheduled")
+            cells["g3"] = Cell("Entered" if note else NO_STATUS, note or "Not yet scheduled")
             cells["o2"] = Cell("Pending", "Due 24 Nov")
             cells["o3"] = Cell("Pending", "Due 12 Dec")
         else:
-            cells["g3"] = Cell("Pending" if i in late else "Not selected")
+            cells["g3"] = Cell(NO_STATUS if i in late else "Not entered")
             cells["o2"] = Cell("Pending", "Due 24 Nov") if i in late else Cell("")
             cells["o3"] = Cell("Pending", "Due 12 Dec") if i in late else Cell("")
         rows.append(Row(a, cells))
@@ -193,7 +196,7 @@ def _small_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
         Row(
             a,
             {
-                "g1": Cell("Selected", "Score 4.1 · 2 of 2", 4.1),
+                "g1": Cell("Entered", "Score 4.1 · 2 of 2", 4.1),
                 "o1": Cell("Pending", "Due 15 Dec"),
             },
         )
@@ -219,7 +222,7 @@ def counts(plan: Plan, column: Gate | Outcome) -> str:
         r.cells[column.key].value for r in plan.rows if r.cells.get(column.key, Cell("")).value
     ]
     if isinstance(column, Gate):
-        order = [("Selected", "selected"), ("Pending", "pending")]
+        order = [("Entered", "entered"), (NO_STATUS, "to decide")]
     else:
         order = [(v, v.lower()) for v in column.values[:1]] + [("Pending", "pending")]
     parts = [f"{values.count(v)} {word}" for v, word in order if values.count(v)]
