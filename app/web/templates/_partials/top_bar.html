@@ -35,10 +35,10 @@
             <div class="tb-group-h">Review Robin</div>
             {% if _operator %}
               {% set _here = here_under('/operator/sessions') %}
-              <a href="{{ url('/operator/sessions') }}"{% if _here %} aria-current="page"{% endif %}>Sessions{% if _here %} <span aria-hidden="true">✓</span>{% endif %}</a>
+              <a href="{{ url('/operator/sessions') }}"{% if _here %} aria-current="page"{% endif %}>Operator Lobby{% if _here %} <span aria-hidden="true">✓</span>{% endif %}</a>
             {% endif %}
             {% set _here = is_here('/me') %}
-            <a href="{{ url('/me') }}" data-your-reviews{% if _here %} aria-current="page"{% endif %}>Your reviews{% if _here %} <span aria-hidden="true">✓</span>{% endif %}</a>
+            <a href="{{ url('/me') }}" data-your-reviews{% if _here %} aria-current="page"{% endif %}>User Lobby{% if _here %} <span aria-hidden="true">✓</span>{% endif %}</a>
           </div>
           <div class="tb-group">
             <div class="tb-group-h">Cordware</div>

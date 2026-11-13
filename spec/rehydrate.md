@@ -29,7 +29,7 @@ The reconstructed session is always named **`<original name>_REHYD`**
 (with a numeric suffix on collision — [§5](#5-naming-and-description)),
 carries a provenance note appended to its Description, and is created on a
 **dedicated `/operator/sessions/rehydrate` page** reached from a
-**`Rehydrate`** button in the Sessions Lobby. Every run is **gated on a
+**`Rehydrate`** button in the Operator Lobby. Every run is **gated on a
 mandatory pre-flight validation** ([§3](#3-entry-point-and-page)): the
 operator uploads the extract set, runs **Validate**, sees a findings +
 preview report, and only then can **Rehydrate**.
@@ -90,7 +90,7 @@ the feature rather than a part of it.
 ### 3.1 Getting there — the lobby "Rehydrate" button
 
 Rehydrate has its **own page**, not a card on Add New Session. It's reached
-from the **Sessions Lobby** (`/operator/sessions`): the Filter card's
+from the **Operator Lobby** (`/operator/sessions`): the Filter card's
 button row — today `Clear` · `Add new session` · `Go to Archive`
 (`app/web/templates/operator/sessions_list.html`) — gains a **`Rehydrate`**
 button **between `Add new` and `Go to Archive`**, linking to

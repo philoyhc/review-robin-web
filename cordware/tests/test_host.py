@@ -81,10 +81,11 @@ def test_host_alone_serves_no_application_path() -> None:
 def test_host_with_rrw_mounts_it_at_reviewrobin() -> None:
     client = TestClient(create_app(apps=("reviewrobin",)))
     assert client.get("/health").json() == {"status": "ok"}
-    # RRW's own unguarded redirect, under the mount.
+    # RRW answers under the mount: bare /operator lands by role since
+    # segment 20N, so a signed-out request meets RRW's own 401, not the
+    # host's 404.
     response = client.get("/reviewrobin/operator", follow_redirects=False)
-    assert response.status_code == 302
-    assert response.headers["location"] == "/reviewrobin/operator/sessions"
+    assert response.status_code == 401
     # The old root path is gone: no redirects from it (v0.8 non-goal).
     assert client.get("/operator", follow_redirects=False).status_code == 404
 

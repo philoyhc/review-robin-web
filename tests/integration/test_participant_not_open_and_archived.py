@@ -50,7 +50,7 @@ def test_every_not_open_state_reads_the_same(client: TestClient, db: Session, st
     body = client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "This review is not currently open." in body
     # One name for the dashboard (participant audit L1).
-    assert '<a class="btn secondary" href="/me">Your reviews</a>' in body
+    assert '<a class="btn secondary" href="/me">User Lobby</a>' in body
     for old in ("opens later", "has prepared the review", "has archived"):
         assert old not in body, old
 

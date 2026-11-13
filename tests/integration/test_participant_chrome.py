@@ -105,10 +105,10 @@ def test_sign_in_details_names_the_viewer(make_client) -> None:
     assert "<strong>Pat Participant</strong>" in body
 
 
-def test_about_names_the_dashboard_your_reviews(client: TestClient) -> None:
-    """One name for the dashboard (participant audit L1)."""
+def test_about_names_the_dashboard_the_user_lobby(client: TestClient) -> None:
+    """One name for the dashboard (participant audit L1; segment 20N)."""
     body = client.get("/about").text
-    assert '<a href="/me">Your reviews</a>' in body
+    assert '<a href="/me">User Lobby</a>' in body
     assert "My reviews" not in body
 
 

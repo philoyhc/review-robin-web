@@ -40,6 +40,11 @@ Taken 2026-11-13 at `0fec4eba0`.
 | Tests naming *Your reviews* or `data-your-reviews` | 6 files | `grep -rlF "Your reviews" tests; grep -rlF "data-your-reviews" tests` |
 | The `/operator` redirect | 1 handler | `app/main.py` `operator_root` |
 
+## Status
+
+Building (2026-11-13).
+- Rung 2, the build: the switcher, both pages' H1 and `<title>`, the participant pages' Secondary buttons and `/about`'s link read *Operator Lobby* / *User Lobby*; `/operator` lands by role through `/`'s own handler. `Sessions Lobby` joined `RETIRED_TERMS`, so `spec/sessions_overview.md` and `spec/rehydrate.md` took the new name in this rung rather than at close (the gate fails otherwise); the other Doc impact specs wait for the close's `spec-writer`.
+
 ## PR ladder
 
 1. **Plan** (this file), its README row and its `guide/todo_master.md` entry. Prose only.

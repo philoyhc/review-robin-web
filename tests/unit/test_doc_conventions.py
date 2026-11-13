@@ -33,7 +33,9 @@ LIVE_DOCS = sorted(
 # spec/ui_elements.md section 6 (see CLAUDE.md "Project conventions").
 # Matched literally and case-sensitively: these are exact display labels,
 # and "primary outline" in running prose is not one of them.
-RETIRED_TERMS = ("Primary Outline", "Alert Outline", "Danger Outline")
+# "Sessions Lobby" is the operator's landing page before segment 20N
+# named it the Operator Lobby; no code constant derives the new name.
+RETIRED_TERMS = ("Primary Outline", "Alert Outline", "Danger Outline", "Sessions Lobby")
 
 # Retired control *names*, which prose spells loosely — so matched by
 # pattern rather than by substring.

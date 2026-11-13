@@ -40,19 +40,20 @@ def test_operator_bare_redirects_to_lobby(client: TestClient) -> None:
         assert resp.headers["location"] == "/operator/sessions", path
 
 
-def test_operator_bare_redirect_is_unguarded_for_non_operators(make_client) -> None:
-    # The bare-/operator redirect fires for anyone; the lobby's own gate
-    # then applies the bounce. So a non-operator gets the redirect, not a
-    # 403/deny at /operator itself.
+def test_operator_bare_lands_a_non_operator_on_the_user_lobby(make_client) -> None:
+    # Segment 20N: bare /operator lands by role, as / does, so a
+    # non-operator goes straight to the User Lobby, not through the
+    # Operator Lobby's gate and its notice.
     rae = AuthenticatedUser(
         principal_id="rae-oid",
         email="rae@example.edu",
         name="Rae Reviewer",
         provider="aad",
     )
-    resp = make_client(rae).get("/operator", follow_redirects=False)
-    assert resp.status_code == 302
-    assert resp.headers["location"] == "/operator/sessions"
+    for path in ("/operator", "/operator/"):
+        resp = make_client(rae).get(path, follow_redirects=False)
+        assert resp.status_code == 302, path
+        assert resp.headers["location"] == "/me", path
 
 
 # --- /about absorbed the retired /request-access access-help role -----------
@@ -101,3 +102,20 @@ def test_me_chrome_carries_about_link(make_client) -> None:
     )
     body = make_client(rae).get("/me").text
     assert 'href="/about?return_to' in body
+
+
+# --- Segment 20N: the Operator Lobby and the User Lobby ---------------------
+
+
+def test_the_operator_lobby_is_named_so(client: TestClient) -> None:
+    body = client.get("/operator/sessions").text
+    assert "<title>Operator Lobby — Review Robin Web</title>" in body
+    assert "<h1>Operator Lobby</h1>" in body
+    assert 'aria-current="page">Operator Lobby <span aria-hidden="true">✓</span>' in body
+    assert "data-your-reviews>User Lobby</a>" in body  # the operator's switcher offers both
+
+
+def test_the_user_lobby_is_named_so(client: TestClient) -> None:
+    body = client.get("/me").text
+    assert "<title>User Lobby — Review Robin Web</title>" in body
+    assert "<h1>User Lobby</h1>" in body

@@ -1,4 +1,4 @@
-"""Reviewer dashboard — the "Your reviews" landing page listing
+"""Reviewer dashboard — the User Lobby, the landing page listing
 every session the signed-in user is an active reviewer on.
 
 Segment 17B Phase 2 PR A widened the table to five columns —

@@ -131,7 +131,7 @@ def test_reviewer_chrome_links_to_your_reviews_with_one_review(
 
     rae_client = make_client(rae)
     body = rae_client.get(f"/me/sessions/{review_session.public_id}").text
-    assert '<a href="/me" data-your-reviews>Your reviews</a>' in body
+    assert '<a href="/me" data-your-reviews>User Lobby</a>' in body
     assert "My Reviews" not in body
 
 
@@ -143,7 +143,7 @@ def test_the_dashboard_does_not_link_to_itself(
     assert response.status_code == 200
     # Since 20D the switcher lists it, marked current rather than
     # linked as a way back (`docs/header_chrome.md` §3).
-    assert 'data-your-reviews aria-current="page">Your reviews' in response.text
+    assert 'data-your-reviews aria-current="page">User Lobby' in response.text
 
 
 # ── D5: status icons ────────────────────────────────────────────────────
@@ -252,7 +252,7 @@ def test_invite_mismatch_renders_banner_warning(
     assert 'href="/auth/me/debug"' not in body
     assert "such as an alias" in body
     assert "Questions? Contact help@example.edu" in body
-    assert '<a class="btn secondary" href="/me">Your reviews</a>' in body
+    assert '<a class="btn secondary" href="/me">User Lobby</a>' in body
     # The legacy inline `style="border-color: #b91c1c; background: #fee2e2;"`
     # block on the wrapper card is gone — the .banner.banner-warning
     # primitive carries the framing now.
