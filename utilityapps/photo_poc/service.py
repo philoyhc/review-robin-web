@@ -1,5 +1,5 @@
 """The photo proof of concept's rules (segment U4, rung 3;
-`utilityapps/guide/segment_U4_photo_poc.md`, Semantics).
+`utilityapps/guide/archive/segment_U4_photo_poc.md`, Semantics).
 
 The browser sends the original upload and the window over it, in the
 image's own pixels: its center, width and the photo's turn (`Frame`). This

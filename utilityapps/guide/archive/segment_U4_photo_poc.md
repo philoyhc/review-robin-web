@@ -53,15 +53,14 @@ Taken 2026-11-12 at `12cba9a`.
 
 ## Status
 
-Building. Base `5974163` for the cumulative read.
-- Rung 2: the history's version table is `utilityapps_alembic_version`, so CI round-trips it on RRW's Postgres service database beside RRW's own; checked locally against Postgres 16 too.
-- Rung 3: Pillow 11 or later. Pillow's own bomb guard fires only at about 179 Mpx, so the service refuses beyond 40 Mpx itself, from the header, before any pixel is read; transparency lands on white.
-- Rung 4: the page is not on the Utilities index, as the interop proof of concept is not. Delete takes Destructive (outline red), new to Utilities' stylesheet: a deleted photo cannot be brought back.
-- Rung 5: the writes take a custom header, `X-Photo-Poc: 1`, as Utilities' JSON-only lookup takes its content type: a cross-site form cannot send either. The browser test serves the page through a `TestClient` behind a routed origin, as Residential's do, and runs in CI's unit shard.
-- **Read:** one `diff-reviewer` read of `5974163..` at rung 5, and Codex on rung 3 (#3824). Fixed: a JPEG comment and other inherited `info` no longer reach the saved file, and a color-key-transparent PNG lands on white (Codex); saving runs off the event loop; a phone JPEG Pillow reads as `MPO` is accepted; a color profile is converted to sRGB before it is dropped; a malformed crop number is a `400`, a body with no size a `411`; the bomb test proves no pixel is read; Delete's red has a dark-mode value. Accepted for the proof of concept: a 40 Mpx upload can take a few hundred MB while it is processed, to revisit before participant photos; the image's `ETag` beside `no-store` never earns a `304`, kept as the plan states it. Sound as read: the gate on every route, the write header, the window's rectangle against the server's tolerance, no XSS in the tiles, the database and its migration.
-- **Iteration** (author's local check, 2026-11-12: "works locally; add ability to rotate; make zoom and rotate usable with two finger touch"): a rotate slider and quarter-turn buttons; two fingers pinch and twist about their midpoint; a trackpad pinch zooms. The browser now sends the window as center, width and angle (`Frame`) in place of a rectangle, and the server cuts out the corners' bounding box, turns it and crops, so a large photo is never turned whole. A Chromium check put the saved photo within 2/255 of the window's screenshot at zoom 1.7 and 23.5°.
-- **Read:** one `diff-reviewer` read of the iteration. Fixed: near a quarter turn (about 77° to 103°, so both quarter-turn buttons) the piece cut before turning was too short for the upright window, and the saved photo came out stretched; the piece now covers the upright window too, and the window is cut at its exact size. The tests had sampled two colors only; a service test now matches the window against the whole photo turned at eleven angles, and a Chromium test matches the saved photo against the window's screenshot after each quarter turn. Also: right and middle mouse buttons no longer drag, a click focuses the window for the arrow keys, a lost pointer capture lets the finger go, the rotate slider's right end stays there. Noted, not changed: the zoom is relative to the smallest covering scale, so a turn rescales the photo.
-- **Refinement** (author, 2026-11-12): the zoom bar stands upright on the window's right, the rotate bar lies below it; the two quarter-turn buttons are gone, and the rotate bar snaps to −90°, 0° and 90° within 4°, marked by a `datalist` and labels. Its read: the arrow keys could not leave a waypoint (a 0.5° step snapped back), so stepping with the keys no longer snaps; a twist does not snap either, as written in the spec; the bar reads its value in degrees. The upright zoom bar needs `writing-mode` on range inputs (Chromium 124, Firefox 120, Safari 17.4); older browsers show it lying down.
+**Closed 2026-11-13** (author: "can close it"), the Cordware rung moved out: rungs 1–5 merged (`#3822`–`#3826`), plus the iteration and refinement the author's local checks asked for. Cordware's rung is its own PR, cordware#212, held as a draft until the import that brings `utilityapps/alembic/`; until then the tool runs locally and nowhere on Azure.
+
+Intended vs done:
+- **Database, service, page, wiring** as planned. Utilities' history records itself in `utilityapps_alembic_version`, so CI round-trips it beside RRW's on one Postgres database.
+- **The window became a frame, not a rectangle** (author's check: "add ability to rotate; make zoom and rotate usable with two finger touch"): the browser sends center, width and the photo's turn; the server cuts the corners' bounding box, turns it and crops, so a large photo is never turned whole. The zoom bar stands upright on the window's right, the rotate bar below it, snapping to −90°, 0° and 90° within 4° when dragged.
+- **Safety, as built:** the service refuses beyond 40 Mpx from the header before decoding (Pillow's own guard fires only near 179 Mpx); EXIF orientation applied, color profiles converted to sRGB, metadata and inherited `info` dropped, transparency on white; writes take an `X-Photo-Poc: 1` header a cross-site form cannot send; every route, the image's included, is the super-admin's.
+- **Reads:** one `diff-reviewer` read at rung 5, one on the iteration, one on the refinement, and Codex on each PR. They caught the stretched save near a quarter turn, an inherited JPEG comment, a phone's `MPO` JPEG refused, and keys that could not leave a snap point; all fixed. Accepted for the proof of concept: a 40 Mpx upload can take a few hundred MB while it is processed, and the image's `ETag` earns a `304` only from a client that sends `If-None-Match`, which `no-store` makes rare.
+- **Not done here:** the release's migration and a check on Azure (Definition of done, lines 1 and 5) wait on cordware#212 and the import. **Retention:** nothing was saved on Azure; local test photos are the author's.
 
 ## PR ladder
 
@@ -70,16 +69,16 @@ Building. Base `5974163` for the cumulative read.
 3. **The service.** Pillow; `utilityapps/photo_poc/service.py`: validate, orient, check the rectangle, crop, resize, encode, save, read, delete. Unit tests for each refusal, orientation, metadata stripped, the output size, and the bomb limit.
 4. **The page, scaffold-first.** The drop box, the window, the zoom control and Save, inert; the saved-photos list on sample tiles.
 5. **Wiring.** The cropping script, the upload, the list and the read-back route, delete; a browser test that drops a photo, zooms, saves and reads it back. Last build rung: `diff-reviewer` reads the cumulative diff.
-6. **Cordware.** Import rules for `utilityapps/alembic/`, the release's migration-table row for `utilityapps`, then import and release when the author says.
+6. ~~**Cordware.**~~ Moved to cordware#212, held for the import (closed without it, 2026-11-13).
 7. **Close.**
 
 ## Definition of done
 
-- A super-admin drops a photo of up to 5 MB, zooms and drags it in the window, saves, and sees it in the list at the fixed size and ratio (author's browser check, locally and on Azure).
+- A super-admin drops a photo of up to 5 MB, zooms and drags it in the window, saves, and sees it in the list at the fixed size and ratio (author's browser check, locally; on Azure after cordware#212).
 - A non-image, an over-size file, a decompression bomb and an out-of-bounds window are each refused with a message (tests).
 - Saved bytes carry no EXIF (test); a rotated phone photo saves upright (test and browser check).
 - Anyone but the super-admin gets `403` on every route, the image route included (test).
-- `utilityapps` migrates in the release (Cordware run).
+- ~~`utilityapps` migrates in the release (Cordware run).~~ With cordware#212, after the import.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py U4` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated

@@ -95,6 +95,12 @@ in a container and referenced by a stable key — removing the dependency on
 external image hosts and their availability / hotlink rules. (Adds
 content-type + size validation + a moderation/again-cost consideration.)
 
+*Photos met without Blob (Utilities segment U4, closed 2026-11-13):* the
+server re-encodes an uploaded photo, keeping only a 480 × 600 JPEG it
+wrote, in Postgres (`utilityapps/guide/archive/segment_U4_photo_poc.md`). Documents and other
+uploads cannot be made safe by re-encoding and still need Blob with
+scanning.
+
 ### 6. Audit-log cold storage / archival
 `audit_events` is the append-only spine and grows unbounded. Retention /
 purge is partly deferred (18C scheduled purge). **Blob would let** old

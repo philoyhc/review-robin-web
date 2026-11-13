@@ -16,7 +16,7 @@ def _now() -> datetime:
 
 class PhotoPocPhoto(Base):
     """One saved photo of the photo upload proof of concept: the server's
-    own re-encoded crop, never the upload (`utilityapps/guide/
+    own re-encoded crop, never the upload (`utilityapps/guide/archive/
     segment_U4_photo_poc.md`, Semantics)."""
 
     __tablename__ = "photo_poc_photos"

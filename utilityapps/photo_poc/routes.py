@@ -1,5 +1,5 @@
 """The photo proof of concept's routes (segment U4;
-`utilityapps/guide/segment_U4_photo_poc.md`). Super-admin only, every
+`utilityapps/guide/archive/segment_U4_photo_poc.md`). Super-admin only, every
 response `no-store`.
 
 The page's script posts the original file and the window over it
