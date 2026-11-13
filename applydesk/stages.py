@@ -403,23 +403,33 @@ def rule_text(plan: Plan, column: Gate | Outcome) -> str:
     Shortlisted, else Not shortlisted"; "" for a column decided by hand."""
     if column.rule is None:
         return ""
-    labels = {c.key: c.label for c in plan.columns}
+    cols = {c.key: c for c in plan.columns}
+
+    # As the Process page's script words them: a column gone reads
+    # "(removed)", one unnamed "Untitled …", a gate with no measure "Result".
+    def name(key: str) -> str:
+        c = cols.get(key)
+        if c is None:
+            return "(removed)"
+        return c.label or ("Untitled gate" if isinstance(c, Gate) else "Untitled outcome")
+
     parts: list[str] = []
     for kind, key, op, value in column.rule.when:
         sign = {"ge": "≥", "lt": "<"}.get(op, "is")
         if kind == "last":
             parts.append(_SAID["last"] if value == "1" else _SAID["lastN"].format(v=value))
         elif kind == "res":
-            gate = next(c for c in plan.columns if c.key == key)
-            assert isinstance(gate, Gate)
-            parts.append(f"{gate.measure} at {gate.label} {sign} {value}")
+            gate = cols.get(key)
+            measure = gate.measure if isinstance(gate, Gate) and gate.measure else "Result"
+            parts.append(f"{measure} at {name(key)} {sign} {value}")
         elif kind == "ent":
-            parts.append(f"Entry at {labels[key]} is {value}")
+            parts.append(f"Entry at {name(key)} is {value}")
         elif kind == "out":
-            parts.append(f"{labels[key]} is {value or '—'}")
+            parts.append(f"{name(key)} is {value or '—'}")
         else:
             parts.append(f"{_SAID[kind]} {sign} {value}")
-    return f"{' and '.join(parts)} → {column.rule.then}, else {column.rule.otherwise}"
+    then, otherwise = column.rule.then or "—", column.rule.otherwise or "—"
+    return f"{' and '.join(parts)} → {then}, else {otherwise}"
 
 
 def rule_json(column: Gate | Outcome) -> dict[str, object] | None:

@@ -356,6 +356,7 @@
        holding items (the form, gates, an outcome) in boxes of their own. */
     .pc-intro { margin: 0 0 12px; }
     .pc-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+    .pc-row[hidden] { display: none; }
     .pc-row > .fc-l { flex: 1 1 110px; }
     .pc-row > .pc-wide { flex: 3 1 220px; }
     .pc-row > .pc-narrow { flex: 0 1 120px; }
@@ -372,6 +373,15 @@
     .pc-rule .btn { margin-top: 6px; }
     .pc-item-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
     .pc-adds { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .pc-rule-warn { margin: 6px 0 0; color: var(--amber); font-size: 13px; }
+    .pc-rule-ed { margin-top: 10px; padding: 10px; border: 1px dashed var(--border-default); border-radius: 6px; background: var(--surface-card); }
+    .pc-cond { margin-bottom: 8px; }
+    .pc-cond > .fc-in { flex: 1 1 140px; width: auto; }
+    .pc-cond > .pc-num { flex: 0 1 90px; }
+    .pc-cond > .pc-op { flex: 0 0 64px; }
+    .pc-and { flex: 0 0 100%; font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-subtle); }
+    .pc-rule-ed > .btn { margin-top: 4px; margin-right: 8px; }
+    .pc-cond-then { margin-top: 8px; }
     .pc-o { margin: 0; padding-left: 18px; font-size: 14px; }
     .pc-o > li { margin: 6px 0; }
     .pc-o-stage { font-weight: 700; }

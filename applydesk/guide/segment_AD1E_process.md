@@ -41,6 +41,7 @@ Process is a placeholder (AD1D): a read-only table per stage of what `applydesk/
 ## Judgment calls — decided
 
 - **The page renders on the server, moves happen in one inline script**, as Form's; the cards are drawn from `stages.plan_of` so Process, Applications and the Workflow card agree on load.
+- **A collapsed form reads *Form*, not its dates** (2026-11-13): the form opens and closes on its stage's dates, already in the head beside it; Decision 3's example would say them twice.
 - **Emails are chosen, not written, here**: an outcome or the form picks a template by name from Emails (ruling 14); a missing one is offered as *Not set up*.
 
 ## Blast radius (measured)
@@ -56,10 +57,12 @@ Taken 2026-11-13 at `fb6e75f07`.
 
 ## Status
 
-Building. Base `fb6e75f07` for the cumulative read.
+Building. Base for the cumulative read: `e7e0231b8`, main before rung 2, the item's first code rung (rung 1 was prose; the style alignment, #3853, merged between them).
 - Rung 2, the scaffold: a card per stage (`operator/_process_cards.html`, one macro per card and item, as Form's), every card open and every action disabled until rung 3; an open card keeps its name, dates and what it holds in its head. The Outline lists the stages and their items with the counts and any `stages.problems`. The placeholder's milestones table is gone: its dates live on the stages (Decision 8, the author's). The announcements card went at rung 3 (author: their equivalent is part of the exercise's setup).
 - Rung 3: the stage card moves (`_process.html`'s script): open and close (cards load collapsed unless alone); name and dates feed the head and the Outline, an empty name reading *Stage N*; *+ Stage*, *Replicate* (the copy leaves the form behind and gives its gates and outcome keys of their own), *Delete* (never the last); dragging or ↑ ↓, gates and outcomes renumbered by timeline; *+ Form* and *Remove the form* within ruling 15, the buttons saying why when refused. *+ Gate* and *+ Outcome* stay for rung 4. Built on the element alignment (#3853): the cards take Review Robin's 2px edge.
 - Rung 4: *+ Gate* puts a gate after the stage's last, before its outcome; *+ Outcome* adds the one outcome a stage may hold; each removable. New items take keys of their own and are numbered by timeline; a new rule reads *Decided by hand* until rung 5. A stage holding the form refuses a gate, as one holding gates refuses the form.
+- Rung 5: rules on the item. *Edit the rule* opens an editor: a row per condition, joined by AND, from ruling 13's kinds (a gate: status, the applicant's last N submitted, an earlier outcome; an outcome: a gate's result or entry among the gates before it, the combined result, an earlier outcome), then *Then* and *Otherwise* from the gate's entry or the outcome's values; *Decide by hand* clears it. Each item carries its rule as data (`stages.rule_json`), named by key; its line reads as Applications' header does. A rule left reading a later outcome, or a gate outside or gone from its scope, is named on the item and in the Outline. An outcome's weights follow the gates before it as they are added, removed or moved.
+- Reads: one, `diff-reviewer` on rungs 2–5 (`e7e0231b8..`), fixed in rung 5. It found a click on *Then* or *Otherwise* redrew the select away; any edit rebinding a flagged rule's gate or outcome to the first in scope; focus lost on most editor actions; a replica's rules and weights still naming the original's keys; the script wiping the server's `stages.problems` (now computed in the page too); weights changing silently, a new gate taking a share past 100 (it now takes what is left, the item saying the gates changed and naming a total that is not 100); and `stages.rule_text` wording a gone, unnamed or measureless column differently from the script. Also flagged now: a decision outside the outcome's values, a count or threshold that is not a number. Chromium tests for each, for dragging, and for every rule line against the server's.
 
 ## PR ladder
 

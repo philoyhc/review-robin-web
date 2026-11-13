@@ -360,8 +360,8 @@ def test_process_is_a_stack_of_stage_cards(client: TestClient) -> None:
     assert 'disabled title="A stage holding the form holds no gate">+ Gate' in text
     assert 'disabled title="A stage holding gates holds no form">+ Form' in text
     assert 'disabled title="A stage holds one outcome at most">+ Outcome' in text
-    # Rung 3: the stage card's own actions work; a gate's and an
-    # outcome's wait for rung 4. Cards load collapsed, as Form's.
+    # The buttons ruling 15 refuses say why; the rest work in the
+    # browser. Cards load collapsed, as Form's.
     assert not re.findall(r"<article [^>]*data-open", text)
     assert (
         '<button type="button" class="btn btn-secondary" data-fc-act="new">+ Stage</button>' in text

@@ -3,12 +3,13 @@
    script will add share their markup (as Form's `_form_cards.html`).
    Rung 2 drew them; rung 3 wires the stage card itself (its name,
    dates, the form, adding, replicating, deleting and moving it); a gate's
-   and an outcome's are added and removed (rung 4); rules wait for rung 5. Nothing here is
+   and an outcome's are added and removed (rung 4); their rules are edited
+   (rung 5). Nothing here is
    saved. Imported with context, for the exercise's links. #}
 
 {% macro grip() %}<button type="button" class="fc-grip" data-fc-grip aria-label="Move: drag, or press the up and down arrow keys" title="Drag to reorder">⋮⋮</button>{% endmacro %}
 
-{% macro form_item(stage, emails) %}
+{% macro form_item(emails) %}
 <div class="pc-item" data-item="form">
   <span class="fc-kicker">Form</span>
   <p class="pc-line">The application form opens and closes on this stage's dates. Its questions are built on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>.</p>
@@ -28,17 +29,20 @@
 <div class="pc-rule">
   <span class="fc-l">{{ "Entry rule" if c.via is defined else "Rule" }}</span>
   <p class="pc-line" data-rule-line>{{ rt if rt else "Decided by hand" }}</p>
-  <button type="button" class="btn btn-secondary" data-pc-act="rule" disabled>{{ "Edit the rule" if rt else "Add a rule" }}</button>
+  <p class="pc-rule-warn" data-rule-warn hidden></p>
+  <button type="button" class="btn btn-secondary" data-pc-act="rule" aria-expanded="false">{{ "Edit the rule" if rt else "Add a rule" }}</button>
+  {# The editor, drawn by the page's script from the item's data-rule. #}
+  <div class="pc-rule-ed" data-rule-ed hidden></div>
 </div>
 {% endmacro %}
 
 {% macro gate_item(plan, g, rule_text) %}{# g.number 0: a new gate, numbered by the page's script #}
-<div class="pc-item" data-item="gate" data-key="{{ g.key }}">
+<div class="pc-item" data-item="gate" data-key="{{ g.key }}" data-rule="{{ rule_json(g) | tojson | forceescape }}">
   <span class="fc-kicker" data-pc-kicker>Gate {{ g.number }}</span>
   <div class="pc-row">
     <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ g.label }}" placeholder="Untitled gate"></label>
     <label class="fc-l">Runs as<select class="fc-in"><option{% if g.via == "RRW" %} selected{% endif %}>A Review Robin session</option><option{% if g.via != "RRW" %} selected{% endif %}>Results entered here</option></select></label>
-    <label class="fc-l pc-narrow">Result<input class="fc-in" value="{{ g.measure }}" placeholder="Score"></label>
+    <label class="fc-l pc-narrow">Result<input class="fc-in" data-pc="measure" value="{{ g.measure }}" placeholder="Score"></label>
   </div>
   {{ rule_box(plan, g, rule_text) }}
   <p class="pc-line muted">Its panel: on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/gates') }}">Gates</a>.</p>
@@ -47,22 +51,22 @@
 {% endmacro %}
 
 {% macro outcome_item(plan, o, rule_text, emails) %}
-<div class="pc-item" data-item="outcome" data-key="{{ o.key }}">
+<div class="pc-item" data-item="outcome" data-key="{{ o.key }}" data-rule="{{ rule_json(o) | tojson | forceescape }}">
   <span class="fc-kicker" data-pc-kicker>Outcome {{ o.number }}</span>
   <div class="pc-row">
     <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ o.label }}" placeholder="Untitled outcome"></label>
     <label class="fc-l">Due<input class="fc-in" value="{{ o.due }}" placeholder="Date"></label>
     <label class="pc-check"><input type="checkbox" checked> Shown to applicants</label>
   </div>
-  <label class="fc-l">Values<input class="fc-in" value="{{ o.values | join(', ') }}" placeholder="Comma-separated, e.g. Shortlisted, Not shortlisted"></label>
-  {% if o.weights | length > 1 %}
-  <div class="pc-row pc-weights">
-    <span class="fc-l pc-full">Combined result: a weighted average of the gates in its stage</span>
+  <label class="fc-l">Values<input class="fc-in" data-pc="values" value="{{ o.values | join(', ') }}" placeholder="Comma-separated, e.g. Shortlisted, Not shortlisted"></label>
+  {# Its combined result: weights over the gates in its scope, those since
+     the previous outcome (ruling 13); redrawn by the script as gates move. #}
+  <div class="pc-row pc-weights" data-pc-weights{% if o.weights | length < 2 %} hidden{% endif %}>
+    <span class="fc-l pc-full">Combined result: a weighted average of the gates before it</span>
     {% for k, w in o.weights %}{% for g in plan.columns if g.key == k %}
-    <label class="fc-l pc-narrow">{{ g.label }}<input class="fc-in" value="{{ (w * 100) | round | int }}" inputmode="numeric" aria-label="{{ g.label }}, percent"></label>
+    <label class="fc-l pc-narrow"><span data-w-name>{{ g.label }}</span><input class="fc-in" data-w-key="{{ k }}" value="{{ (w * 100) | round | int }}" inputmode="numeric" aria-label="{{ g.label }}, percent"></label>
     {% endfor %}{% endfor %}
   </div>
-  {% endif %}
   {{ rule_box(plan, o, rule_text) }}
   <div class="pc-row">
     <span class="fc-l pc-full">When released</span>
@@ -97,7 +101,7 @@
       <label class="fc-l">To<input class="fc-in" data-pc="to" value="{{ dates[1] }}" placeholder="Date"></label>
       <label class="pc-check"><input type="checkbox" checked> Shown to applicants</label>
     </div>
-    {% if st.form %}{{ form_item(st, emails) }}{% endif %}
+    {% if st.form %}{{ form_item(emails) }}{% endif %}
     {% for g in gates %}{{ gate_item(plan, g, rule_text) }}{% endfor %}
     {% for o in outs %}{{ outcome_item(plan, o, rule_text, emails) }}{% endfor %}
     <p class="pc-line muted pc-empty">Nothing in this stage yet: add the form, a gate or an outcome.</p>
