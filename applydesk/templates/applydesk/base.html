@@ -416,10 +416,12 @@
 <body>
   <header class="topbar">
     <div class="tb-in">
+      {# The bar names the application, as Review Robin's does (author,
+         2026-11-13); the switcher's tick marks the lobby you are in. #}
       <details class="switch" data-tb-menu>
-        <summary aria-label="Switch area: {{ area }}">
+        <summary aria-label="Switch area: {{ app_name }}">
           <span aria-hidden="true" class="tb-icon"></span>
-          <span class="sw-t">{% if top_line %}<span class="sw-unit">{{ top_line }}</span>{% endif %}<span class="sw-app">{{ area }} <span aria-hidden="true" class="caret">▾</span></span></span>
+          <span class="sw-t">{% if top_line %}<span class="sw-unit">{{ top_line }}</span>{% endif %}<span class="sw-app">{{ app_name }} <span aria-hidden="true" class="caret">▾</span></span></span>
         </summary>
         <nav class="menu" aria-label="Switch area">
           <div class="mg">
