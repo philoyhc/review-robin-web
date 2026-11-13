@@ -418,7 +418,9 @@
       html { font-size: 100%; background: var(--surface-page); }
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-        margin: 40px;
+        /* The bar sits close under the browser's edge, as Apply Desk's does
+           (author, 2026-11-13); the sides and foot keep their 40 px. */
+        margin: 12px 40px 40px;
         max-width: 1400px;
         color: var(--text-body);
         background: var(--surface-page);
