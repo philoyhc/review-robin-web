@@ -173,6 +173,11 @@ where a ruling below differs from it, the ruling wins.
     and spec says. The URL, the package and every identifier stay
     `applydesk`. New prose writes *Apply Desk*; older plans and docs keep
     *ApplyDesk* until edited, as the US-spelling rule handles a word.
+18. **Apply Desk's lobbies are Review Robin's** (author, 2026-11-13): the
+    switcher offers the *Operator Lobby* (`/operator/exercises`, operators
+    only) and the *User Lobby* (`/me`), each page titled so; `/` and
+    `/operator` land by role. Until AD2 knows Apply Desk's operators, an
+    operator is everyone on a local run and the super-admin deployed.
 
 ## MVP roadmap
 

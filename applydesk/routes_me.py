@@ -10,7 +10,7 @@ from starlette.responses import Response
 from applydesk import sample_data
 from applydesk.gate import placeholders_only
 from applydesk.lookups import application_or_404, exercise_or_404, file_or_404
-from applydesk.web import render
+from applydesk.web import USER_LOBBY, render
 
 router = APIRouter(prefix="/me", dependencies=[Depends(placeholders_only)])
 
@@ -21,7 +21,7 @@ def me(request: Request) -> Response:
     return render(
         request,
         "applydesk/me/home.html",
-        area="My Apply Desk",
+        area=USER_LOBBY,
         exercises=exercises,
         mine=sample_data.APPLICATIONS[:1],
         files=[(sample_data.exercise(a.exercise_id), a) for a in sample_data.APPLICATIONS[1:5:2]],
@@ -33,7 +33,7 @@ def exercise(request: Request, exercise_id: str) -> Response:
     found = exercise_or_404(exercise_id)
     if found.state != "Published":
         raise HTTPException(status_code=404)
-    return render(request, "applydesk/me/exercise.html", area="My Apply Desk", exercise=found)
+    return render(request, "applydesk/me/exercise.html", area=USER_LOBBY, exercise=found)
 
 
 @router.get(
@@ -45,7 +45,7 @@ def application(request: Request, exercise_id: str, application_id: str) -> Resp
     return render(
         request,
         "applydesk/me/application.html",
-        area="My Apply Desk",
+        area=USER_LOBBY,
         exercise=found,
         application=app,
         shown=sample_data.SHOWN_TO_REVIEWERS,
@@ -63,7 +63,7 @@ def application_file(request: Request, exercise_id: str, file_id: str) -> Respon
     return render(
         request,
         "applydesk/me/file.html",
-        area="My Apply Desk",
+        area=USER_LOBBY,
         exercise=found,
         application=app,
         shown=sample_data.SHOWN_TO_REVIEWERS,

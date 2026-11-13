@@ -13,6 +13,17 @@ from fastapi import HTTPException, Request
 from cordware.identity import current_identity, is_local
 
 
+def is_operator(request: Request) -> bool:
+    """Whether the viewer lands on the Operator Lobby and sees it in the
+    switcher (Cordware's lobbies, 2026-11-13). Until AD2 knows Apply Desk's
+    operators: everyone on a local run, deployed only the super-admin, the
+    one viewer a placeholder answers."""
+    if is_local():
+        return True
+    identity = current_identity(request)
+    return identity is not None and identity.is_super_admin
+
+
 def placeholders_only(request: Request) -> None:
     if is_local():
         return

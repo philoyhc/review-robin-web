@@ -22,6 +22,7 @@ from jinja2.runtime import Context
 from starlette.requests import HTTPConnection
 from starlette.responses import Response
 
+from applydesk.gate import is_operator
 from cordware.identity import current_identity, institution_name
 
 
@@ -79,11 +80,14 @@ _add_globals(templates.env, url=_url, is_here=_is_here, host_url=_host_url)
 
 APP_NAME = "Apply Desk"
 
-#: The switcher's places (`docs/header_chrome.md` §3). Until AD2 knows who
-#: is an operator, every viewer of a placeholder sees both.
-PLACES: tuple[Mapping[str, str], ...] = (
-    {"label": "Exercises", "path": "/operator/exercises"},
-    {"label": "My Apply Desk", "path": "/me"},
+OPERATOR_LOBBY, USER_LOBBY = "Operator Lobby", "User Lobby"
+
+#: The switcher's places (`docs/header_chrome.md` §3), named as Review
+#: Robin's are (author, 2026-11-13): the Operator Lobby for an operator
+#: (`gate.is_operator`), the User Lobby for everyone.
+PLACES: tuple[Mapping[str, Any], ...] = (
+    {"label": OPERATOR_LOBBY, "path": "/operator/exercises", "operators": True},
+    {"label": USER_LOBBY, "path": "/me", "operators": False},
 )
 
 
@@ -141,13 +145,14 @@ def render(
     the workspace's top line over ``area``, the switcher and the account
     menu; on an exercise's pages, ``nav``, its chrome (ruling 14)."""
     viewer = current_identity(request)
+    operator = is_operator(request)
     return templates.TemplateResponse(
         request,
         template,
         {
             "app_name": APP_NAME,
             "area": area,
-            "places": PLACES,
+            "places": [p for p in PLACES if operator or not p["operators"]],
             "nav": nav,
             "top_line": institution_name(),
             "viewer": viewer,

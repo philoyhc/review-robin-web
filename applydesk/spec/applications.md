@@ -54,9 +54,16 @@ operators under `/operator/exercises`, participants under `/me`.
   application's, and shows only the *Shown to reviewers* section. In a blind exercise it
   redacts the applicant's name and identifiers.
 - **The chrome** is the shared bar (`docs/header_chrome.md`): the app
-  icon, the workspace's top line over the area, a switcher of *Exercises*
-  and *My Apply Desk* then *All applications*, the Light/Dark toggle and the
-  account menu. An exercise's operator pages add Review Robin's chrome
+  icon, the workspace's top line over the area, a switcher of the
+  *Operator Lobby* (`/operator/exercises`, operators only) and the *User
+  Lobby* (`/me`) then *All applications*, the Light/Dark toggle and the
+  account menu. Each lobby's H1 and tab read its name, as Review Robin's
+  do (author, 2026-11-13).
+- **`/` and `/operator`** have no page of their own: they land an
+  operator on the Operator Lobby and anyone else on the User Lobby, as
+  Review Robin's do. Until AD2 knows Apply Desk's operators, an operator
+  is everyone on a local run and, deployed, the super-admin
+  (`gate.is_operator`). An exercise's operator pages add Review Robin's chrome
   under a breadcrumb (ruling 14, segment AD1D): *Exercise Home*
   double-height on the left; a Setup row (Process, Form, Gates, Emails)
   and an Operations row (Applications, Evaluations, Extract data); and a

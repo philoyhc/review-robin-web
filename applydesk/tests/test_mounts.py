@@ -7,6 +7,7 @@ from __future__ import annotations
 import logging
 import re
 
+import pytest
 from fastapi.testclient import TestClient
 
 from applydesk.tests._host import host_with
@@ -87,10 +88,40 @@ def test_favicon_is_the_rose_sheet_with_a_tick() -> None:
 def test_the_name_is_two_words_on_its_pages() -> None:
     """Ruling 17: the name is Apply Desk; the URL stays /applydesk."""
     client = TestClient(host_with(("applydesk",))[0])
-    landing = client.get("/applydesk/").text
-    assert "<title>Apply Desk · Apply Desk</title>" in landing
-    assert "<h1>Apply Desk</h1>" in landing
+    lobby = client.get("/applydesk/operator/exercises").text
+    assert "<title>Operator Lobby · Apply Desk</title>" in lobby
     me = client.get("/applydesk/me").text
-    assert "<h1>My Apply Desk</h1>" in me
-    assert 'aria-current="page">My Apply Desk <span aria-hidden="true">✓</span>' in me
-    assert "ApplyDesk" not in landing + me
+    assert "<title>User Lobby · Apply Desk</title>" in me
+    assert "ApplyDesk" not in lobby + me
+
+
+def test_the_entry_points_land_by_role(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`/` and `/operator` land an operator on the Operator Lobby and anyone
+    else on the User Lobby, as Review Robin's do (author, 2026-11-13)."""
+    from applydesk import routes_home
+
+    client = TestClient(host_with(("applydesk",))[0])
+    for path in ("/applydesk/", "/applydesk/operator", "/applydesk/operator/"):
+        got = client.get(path, follow_redirects=False)
+        assert (got.status_code, got.headers["location"]) == (
+            302,
+            "/applydesk/operator/exercises",
+        ), path
+    monkeypatch.setattr(routes_home, "is_operator", lambda request: False)
+    for path in ("/applydesk/", "/applydesk/operator"):
+        got = client.get(path, follow_redirects=False)
+        assert got.headers["location"] == "/applydesk/me", path
+
+
+def test_the_switcher_names_the_lobbies(monkeypatch: pytest.MonkeyPatch) -> None:
+    from applydesk import web
+
+    client = TestClient(host_with(("applydesk",))[0])
+    lobby = client.get("/applydesk/operator/exercises").text
+    assert "<h1>Operator Lobby</h1>" in lobby
+    assert 'aria-current="page">Operator Lobby <span aria-hidden="true">✓</span>' in lobby
+    assert ">User Lobby</a>" in lobby
+    monkeypatch.setattr(web, "is_operator", lambda request: False)
+    me = client.get("/applydesk/me").text
+    assert "<h1>User Lobby</h1>" in me
+    assert "Operator Lobby" not in me  # a non-operator's switcher offers only theirs
