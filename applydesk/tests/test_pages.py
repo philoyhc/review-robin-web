@@ -330,19 +330,41 @@ def test_the_lobby_names_each_exercise_s_current_stage(
     assert f"<td>{now}</td>" in row[: row.index("</tr>")]
 
 
-def test_process_carries_the_stages_and_the_milestones(client: TestClient) -> None:
+def _stage_cards(text: str) -> list[str]:
+    return re.findall(r'<article class="fc pc" data-kind="stage" data-stage="\d+"', text)
+
+
+def test_process_is_a_stack_of_stage_cards(client: TestClient) -> None:
+    """Segment AD1E rung 2, the scaffold: Form's pattern, a card per stage
+    holding its items, the Outline beside them."""
     text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
-    assert "<h3>Milestones</h3>" in text
-    assert "Add a milestone" in text and "New announcement" in text
-    for st in ("Call for applications", "Review", "Interview", "Decision"):
-        assert f"<h3>{st} <span" in text
-    assert "<strong>Application form</strong>" in text  # in Call for applications
+    names = re.findall(r'<span class="fc-q" data-sum="name">([^<]+)</span>', text)
+    assert names == ["Call for applications", "Review", "Interview", "Decision"]
+    assert len(_stage_cards(text)) == 4
+    items = re.findall(r'<div class="pc-item" data-item="(\w+)"', text)
+    assert items == ["form", "gate", "gate", "outcome", "gate", "outcome", "outcome"]
     assert "Combined ≥ 4.2 → Shortlisted, else Not shortlisted" in text
-    assert "Peer Review 30% · Faculty Panel Review 70%" in text
+    assert 'value="30" inputmode="numeric" aria-label="Peer Review, percent"' in text
     assert "Decided by hand" in text  # Final results
-    assert (
-        'On release: Final results <span class="chip chip-warn">Template not set up</span>' in text
-    )
+    assert "<option selected>Final results (not set up)</option>" in text
+    assert "4 stages · 3 gates · 3 outcomes" in text
+    assert "New announcement" in text
+    # Ruling 15's shape, as the inert buttons say it.
+    assert 'disabled title="A stage holding the form holds no gate">+ Gate' in text
+    assert 'disabled title="A stage holding gates holds no form">+ Form' in text
+    assert 'disabled title="A stage holds one outcome at most">+ Outcome' in text
+    # The scaffold: every control inert.
+    body = text[text.index("data-process") : text.index("</aside>")]
+    actions = re.findall(r"<button[^>]*class=\"btn [^>]*>", body)
+    assert actions and all("disabled" in b for b in actions)
+
+
+def test_a_blank_exercise_s_process_is_one_stage_holding_the_form(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{BLANK}/process").text
+    assert len(_stage_cards(text)) == 1
+    assert 'placeholder="Stage 1"' in text
+    assert re.findall(r'<div class="pc-item" data-item="(\w+)"', text) == ["form"]
+    assert 'disabled title="The last stage cannot be deleted">Delete' in text
 
 
 def test_applications_generates_application_files(client: TestClient) -> None:
@@ -527,7 +549,7 @@ def test_an_outcome_s_email_is_found_by_its_outcome_not_its_name(client: TestCli
     """Teaching Excellence: its outcome's email is "Award decision"."""
     base = f"/applydesk/operator/exercises/{BLIND}"
     process = client.get(f"{base}/process").text
-    assert 'On release: Award decision <span class="chip chip-warn">' in process
+    assert "<option selected>Award decision (not set up)</option>" in process
     home = client.get(base).text
     assert "Not ready: no email for this outcome" in home
     emails = client.get(f"{base}/emails").text
