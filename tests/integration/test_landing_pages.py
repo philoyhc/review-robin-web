@@ -109,7 +109,7 @@ def test_me_chrome_carries_about_link(make_client) -> None:
 
 def test_the_operator_lobby_is_named_so(client: TestClient) -> None:
     body = client.get("/operator/sessions").text
-    assert "<title>Operator Lobby — Review Robin Web</title>" in body
+    assert "<title>Operator Lobby · Review Robin</title>" in body
     assert "<h1>Operator Lobby</h1>" in body
     assert 'aria-current="page">Operator Lobby <span aria-hidden="true">✓</span>' in body
     assert "data-your-reviews>User Lobby</a>" in body  # the operator's switcher offers both
@@ -117,7 +117,7 @@ def test_the_operator_lobby_is_named_so(client: TestClient) -> None:
 
 def test_the_user_lobby_is_named_so(client: TestClient) -> None:
     body = client.get("/me").text
-    assert "<title>User Lobby — Review Robin Web</title>" in body
+    assert "<title>User Lobby · Review Robin</title>" in body
     assert "<h1>User Lobby</h1>" in body
 
 
@@ -131,3 +131,26 @@ def test_operator_bare_lands_a_sys_admin_on_the_operator_lobby(make_client, monk
     resp = make_client(sam).get("/operator", follow_redirects=False)
     assert resp.status_code == 302
     assert resp.headers["location"] == "/operator/sessions"
+
+
+# --- Segment 20O: every tab reads "Page · Review Robin" ---------------------
+
+
+def test_tabs_name_the_page_then_the_app(client: TestClient, monkeypatch) -> None:
+    import re
+
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    made = client.post(
+        "/operator/sessions", data={"name": "Tab Test", "code": "tab-1"}, follow_redirects=False
+    )
+    home = made.headers["location"].split("?", 1)[0]
+    pages = {
+        "/operator/sessions": "Operator Lobby · Review Robin",
+        "/me": "User Lobby · Review Robin",
+        f"{home}/reviewers": "Reviewers — Tab Test · Review Robin",
+        "/operator/sys-admin/sessions": "Sessions Diagnostics — Admin · Review Robin",
+    }
+    for path, want in pages.items():
+        body = client.get(path).text
+        found = re.search(r"<title>(.*?)</title>", body, re.S)
+        assert found and found.group(1).strip() == want, (path, found and found.group(1))
