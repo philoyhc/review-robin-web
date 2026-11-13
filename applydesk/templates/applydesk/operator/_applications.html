@@ -399,7 +399,9 @@
     });
     var byId = {};
     rows.forEach(function (r) { byId[idOf(r).toLowerCase()] = r; });
-    var changes = [], unknown = [];
+    // One value per application and column: a repeat with the same value
+    // is read once; two different values leave the cell as is (Codex).
+    var wanted = {}, order = [], unknown = [];
     table.slice(1).forEach(function (line, n) {
       var id = (line[idAt] || "").trim();
       var r = byId[id.toLowerCase()];
@@ -412,8 +414,19 @@
         if (!val) { skipped.push(id + ": \"" + raw + "\" is not a value of " + head[key].dataset.label + "."); return; }
         var el = cellOf(r, key);
         if (!el) { skipped.push(id + ": " + head[key].dataset.label + " cannot be set (a draft, or never admitted)."); return; }
-        if (el.dataset.v !== val) changes.push({ row: r, key: key, from: el.dataset.v, to: val });
+        var k = idOf(r) + "|" + key;
+        if (!(k in wanted)) { wanted[k] = { row: r, key: key, vals: [] }; order.push(k); }
+        if (wanted[k].vals.indexOf(val) < 0) wanted[k].vals.push(val);
       });
+    });
+    var changes = [];
+    order.forEach(function (k) {
+      var w = wanted[k], el = cellOf(w.row, w.key);
+      if (w.vals.length > 1) {
+        skipped.push(idOf(w.row) + ": " + head[w.key].dataset.label + " given more than one value (" + w.vals.join(", ") + "), left as is.");
+        return;
+      }
+      if (el.dataset.v !== w.vals[0]) changes.push({ row: w.row, key: w.key, from: el.dataset.v, to: w.vals[0] });
     });
     if (unknown.length) skipped.unshift("Not in this exercise, ignored: " + unknown.join(", ") + ".");
     propose("Upload CSV: " + name, changes, skipped, csvOpen);

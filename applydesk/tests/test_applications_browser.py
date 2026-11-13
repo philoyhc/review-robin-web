@@ -269,3 +269,33 @@ def test_a_rule_reads_only_an_earlier_gate(page: Page) -> None:
     assert rule.locator("[data-ap-rule-source] option:not([disabled])").all_inner_texts() == [
         "Rating at Peer Review"
     ]
+
+
+def test_a_csv_giving_one_cell_two_values_leaves_it(page: Page) -> None:
+    # Codex: two rows for one application and column were both proposed
+    # against the same starting value, and Apply made only the first.
+    page.goto(PAGE)
+    body = (
+        "Application ID,Interview\n"
+        "h6zr2tdw9p,Selected\n"
+        "h6zr2tdw9p,Pending\n"
+        "m3qx8vkt2n,Selected\n"
+        "m3qx8vkt2n,selected\n"
+    )
+    page.locator("[data-ap-csv]").set_input_files(
+        files=[{"name": "twice.csv", "mimeType": "text/csv", "buffer": body.encode()}]
+    )
+    prop = page.locator("[data-ap-proposal]")
+    assert "h6zr2tdw9p: Interview given more than one value (Selected, Pending), left as is." in (
+        prop.inner_text()
+    )
+    rows = prop.locator("[data-ap-prop-rows] tr")
+    assert rows.count() == 1 and "m3qx8vkt2n" in rows.inner_text()
+    prop.locator("[data-ap-prop-apply]").click()
+    assert (
+        _row(page, "aisha.bello").locator('[data-cell="g3"] [data-ap-adm]').inner_text()
+        == "Selected"
+    )
+    assert _row(page, "kenji.russo").locator('[data-cell="g3"] [data-ap-adm]').inner_text() == (
+        "Not selected"
+    )
