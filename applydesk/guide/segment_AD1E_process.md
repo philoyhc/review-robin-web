@@ -16,7 +16,7 @@ Process is a placeholder (AD1D): a read-only table per stage of what `applydesk/
 2. **A stage card**: its name (placeholder *Stage N*) and From–To dates at the top; then what it holds, each an **item** inside the card, in this order:
    - **Form** (one stage at most): when it opens and closes, a link to the Form tab, and its emails (the receipt, reminders).
    - **Gates** (one or more): name, how it runs (*A Review Robin session* or *Results entered here*), its result's measure, and its **entry rule**; its panel is on Gates, linked.
-   - **Outcome** (at most one): name, its values, due date, its **rule** (with the combined result's weights, when it reads one), what its release does (to whom; which email from Emails).
+   - **Outcome** (at most one): name, its values, due date, its **rule** (with the combined result's weights, when it reads one), what its release does (to whom; which email from Emails — *since ruling 16, only to whom: Emails lists the templates that makes owed*).
 3. **Collapsed**, a card shows its name, dates and a summary (`Form · opens 1 Sep, closes 15 Oct` / `2 gates · Outcome: Shortlist for interview`); cards load collapsed, a lone card open.
 4. **Buttons** along each card's foot, flush right, as Form's: *Replicate*, *+ Stage*, *Delete* (disabled, with a reason in its title, on the last stage). Inside the card: *+ Gate*, *+ Outcome*, *Form* — each disabled with its reason where ruling 15 forbids it (a gate beside the form, a second outcome, a second form).
 5. **Reordering** by a card's handle, dragged or with ↑ ↓, as Form's.
@@ -42,7 +42,7 @@ Process is a placeholder (AD1D): a read-only table per stage of what `applydesk/
 
 - **The page renders on the server, moves happen in one inline script**, as Form's; the cards are drawn from `stages.plan_of` so Process, Applications and the Workflow card agree on load.
 - **A collapsed form reads *Form*, not its dates** (2026-11-13): the form opens and closes on its stage's dates, already in the head beside it; Decision 3's example would say them twice.
-- **Emails are chosen, not written, here**: an outcome or the form picks a template by name from Emails (ruling 14); a missing one is offered as *Not set up*.
+- ~~**Emails are chosen, not written, here**: an outcome or the form picks a template by name from Emails (ruling 14); a missing one is offered as *Not set up*.~~ Superseded by ruling 16 (2026-11-13): an item ticks whom it emails; Emails lists every template owed.
 
 ## Blast radius (measured)
 

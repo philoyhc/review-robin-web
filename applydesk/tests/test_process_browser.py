@@ -497,7 +497,8 @@ def test_an_outcome_s_release_is_set_per_audience(page: Page) -> None:
     o1 = _item(page, "o1")
     groups = o1.locator(".pc-aud")
     assert groups.locator(".pc-aud-h").all_inner_texts() == ["Applicants", "Panel evaluators"]
-    assert _checks(o1) == [True, True, False, True]
+    assert _checks(o1) == [True, True, False, False]
+    assert _checks(_item(page, "o2")) == [True, True, False, True]
     assert o1.locator("select[data-rel-template]").count() == 0
     assert o1.locator(".pc-hint a").get_attribute("href") == (
         "/applydesk/operator/exercises/wa9juxbc2t/emails"
@@ -533,4 +534,4 @@ def test_a_replica_keeps_its_outcome_s_release(page: Page) -> None:
     review.locator('[data-rel="applicants-email"]').uncheck()
     review.locator('[data-fc-act="replicate"]').click()
     copy = _cards(page).nth(2).locator('.pc-item[data-item="outcome"]')
-    assert _checks(copy) == [True, False, True, True]
+    assert _checks(copy) == [True, False, True, False]

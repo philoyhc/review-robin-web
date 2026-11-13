@@ -42,9 +42,9 @@ class Email:
     audience: str
 
     @property
-    def outcome(self) -> str:
-        """The outcome whose release sends it; "" for the form's."""
-        return "" if self.item in _FORM_MAIL else self.item
+    def greeting(self) -> str:
+        """Whom its body addresses: "applicant" or "evaluator"."""
+        return "applicant" if self.audience == APPLICANTS else "evaluator"
 
 
 #: The form's emails, each to applicants: what it is, and when it goes.
@@ -60,14 +60,17 @@ _SENDS: dict[str, frozenset[tuple[str, str]]] = {
             ("receipt", APPLICANTS),
             ("reminder", APPLICANTS),
             ("o1", APPLICANTS),
-            ("o1", EVALUATORS),
             ("o2", APPLICANTS),
+            ("o2", EVALUATORS),
             ("o3", APPLICANTS),
         }
     ),
     "k7mfr3pq8z": frozenset({("receipt", APPLICANTS), ("o1", APPLICANTS)}),
     "r6tm4kq9wz": frozenset({("receipt", APPLICANTS)}),
 }
+
+#: A form's receipt, for an exercise whose Process is not set up yet.
+_DEFAULT_SENDS = frozenset({("receipt", APPLICANTS)})
 
 #: The templates already written on Emails; the rest are owed.
 _WRITTEN: dict[str, frozenset[tuple[str, str]]] = {
@@ -109,7 +112,7 @@ def gate_state(exercise_id: str, key: str) -> tuple[str, str]:
 def sends(exercise_id: str, item: str, audience: str) -> bool:
     """Whether Process has the item ("receipt", "reminder" or an outcome's
     key) email the audience."""
-    return (item, audience) in _SENDS.get(exercise_id, frozenset())
+    return (item, audience) in _SENDS.get(exercise_id, _DEFAULT_SENDS)
 
 
 def emails(exercise_id: str) -> tuple[Email, ...]:
@@ -233,10 +236,16 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
                 )
             else:
                 released = bool(c.released)
-                unwritten = [e for e in outcome_emails(exercise.public_id, c.key) if not e.ok]
+                # An owed email holds back a release still to come (ruling 16).
+                owed = [
+                    e.audience.lower()
+                    for e in outcome_emails(exercise.public_id, c.key)
+                    if not e.ok and not released
+                ]
                 blocked = (
-                    f"Not ready: its email to {unwritten[0].audience.lower()} is not written"
-                    if unwritten
+                    f"Not ready: its {'email' if len(owed) == 1 else 'emails'} to"
+                    f" {' and '.join(owed)} {'is' if len(owed) == 1 else 'are'} not written"
+                    if owed
                     else ""
                 )
                 out.append(

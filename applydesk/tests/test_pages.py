@@ -407,12 +407,12 @@ def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> N
         "Call for applications: Receipt - Applicants",
         "Call for applications: Reminder - Applicants",
         "Review: Outcome - Applicants",
-        "Review: Outcome - Panel evaluators",
         "Interview: Outcome - Applicants",
+        "Interview: Outcome - Panel evaluators",
         "Decision: Outcome - Applicants",
     ]
     chips = re.findall(r'<span class="chip chip-\w+">(Written|Owed)</span>', text)
-    assert chips == ["Written", "Written", "Written", "Owed", "Written", "Owed"]
+    assert chips == ["Written", "Written", "Written", "Written", "Owed", "Owed"]
 
 
 def test_evaluations_lists_each_gate_s_progress(client: TestClient) -> None:
@@ -470,7 +470,8 @@ def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> Non
     assert cards.count('data-kind="field"') == 1 and 'placeholder="Untitled form"' in form
     assert "No applications yet." in client.get(f"{base}/applications").text
     assert "<h2>No gates yet</h2>" in client.get(f"{base}/gates").text
-    assert "<h2>No emails yet</h2>" in client.get(f"{base}/emails").text
+    # Ruling 16: a form's receipt is owed until Process says otherwise.
+    assert 'data-email="Stage 1: Receipt - Applicants"' in client.get(f"{base}/emails").text
     assert "No submitted applications yet." in client.get(f"{base}/extract").text
 
 
@@ -568,15 +569,16 @@ def test_a_draft_s_workflow_starts_at_opening_the_form(client: TestClient) -> No
 
 
 # --- Segment AD1D: the cumulative read's fixes ---
-def test_an_outcome_s_email_is_found_by_its_outcome_not_its_name(client: TestClient) -> None:
-    """Teaching Excellence: its outcome emails applicants, a template owed."""
+def test_an_unnamed_stage_names_its_owed_template(client: TestClient) -> None:
+    """Teaching Excellence: its outcome emails applicants, a template owed,
+    named for its stage as Process labels it."""
     base = f"/applydesk/operator/exercises/{BLIND}"
     process = client.get(f"{base}/process").text
     assert 'data-rel="applicants-email" checked' in process
     home = client.get(base).text
     assert "Not ready: its email to applicants is not written" in home
     emails = client.get(f"{base}/emails").text
-    assert re.search(r'data-email="[^"]+: Outcome - Applicants"', emails)
+    assert 'data-email="Stage 2: Outcome - Applicants"' in emails
 
 
 def test_the_breadcrumb_ends_at_the_page(client: TestClient) -> None:
@@ -679,3 +681,18 @@ def test_an_application_stage_later_in_the_timeline_keeps_the_headers_aligned(
     spans = sum(int(n) for n in re.findall(r'colspan="(\d+)"', head))
     second = head[head.index("</tr>") :]
     assert spans == second.count("<th")
+
+
+def test_an_owed_email_holds_back_only_a_release_to_come() -> None:
+    """Ruling 16: an owed email blocks an outcome not yet released, naming
+    every audience owed; one already released is not blocked."""
+    ex = sample_data.exercise(EX)
+    assert ex is not None
+    by_title = {s.title: s for s in workflow.steps(ex)}
+    assert by_title["Shortlist for interview"].blocked == ""  # released
+    assert by_title["Finalists"].blocked == (
+        "Not ready: its email to panel evaluators is not written"
+    )
+    assert by_title["Final results"].blocked == (
+        "Not ready: its email to applicants is not written"
+    )

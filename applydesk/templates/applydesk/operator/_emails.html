@@ -8,7 +8,7 @@
   <h2>{{ e.name }} <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}">{{ "Written" if e.ok else "Owed" }}</span></h2>
   <p class="muted">{{ e.when }}</p>
   <div class="field"><label>Subject <input type="text" value="{{ exercise.name ~ ': ' ~ e.name if e.ok else '' }}" disabled></label></div>
-  <div class="field"><label>Body <textarea rows="3" disabled>{{ ("Dear [" ~ ("applicant" if e.audience == "Applicants" else "evaluator") ~ " name], …") if e.ok else "" }}</textarea></label></div>
+  <div class="field"><label>Body <textarea rows="3" disabled>{{ ("Dear [" ~ e.greeting ~ " name], …") if e.ok else "" }}</textarea></label></div>
   <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Preview</button><button class="btn btn-secondary" type="button" disabled>Reset to default</button></div>
 </section>
 {% else %}
