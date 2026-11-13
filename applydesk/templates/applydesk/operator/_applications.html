@@ -66,7 +66,7 @@
           <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate" data-label="{{ c.label }}" data-number="Gate {{ c.number }}" data-measure="{{ c.measure }}"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span></th>
           {% else %}
           <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-label="{{ c.label }}" data-number="Outcome {{ c.number }}" data-first="{{ c.values[0] }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
-            <label class="ap-rel"><input type="checkbox" data-ap-release="{{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
+            <label class="ap-rel"><input type="checkbox" data-ap-release="{{ c.label }}" aria-label="Released: {{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
             <span class="ap-relnote{{ ' ap-relnote-on' if c.released }}" data-ap-relnote>{{ c.released or "Not yet" }}</span>
           </th>
           {% endif %}
@@ -239,7 +239,7 @@
   // --- Proposals: a rule or a CSV says what it would change; Apply
   // makes it so, Cancel drops it (segment AD1C, rung 3). ---
   var proposal = root.querySelector("[data-ap-proposal]");
-  var pending = [];
+  var pending = [], opener = null;
   function cellOf(r, key) { return r.querySelector('[data-cell="' + key + '"] [data-v]'); }
   function idOf(r) { return r.querySelector(".ap-id code").textContent; }
   function whoOf(r) { return r.querySelector(".ap-who strong").textContent; }
@@ -248,8 +248,9 @@
     return h.dataset.kind === "gate" ? CYCLE : ["Pending"].concat(h.dataset.values.split("|"));
   }
   function td(text) { var c = document.createElement("td"); c.textContent = text; return c; }
-  function propose(title, changes, skipped) {
+  function propose(title, changes, skipped, from) {
     pending = changes;
+    opener = from || null;
     proposal.querySelector("[data-ap-prop-title]").textContent = title;
     proposal.querySelector("[data-ap-prop-sum]").textContent = changes.length
       ? changes.length + (changes.length === 1 ? " change" : " changes") + " proposed. Nothing changes until Apply."
@@ -269,19 +270,24 @@
     proposal.focus();
   }
   if (proposal) {
+    // A cell changed by hand since the proposal keeps the hand's value.
     proposal.querySelector("[data-ap-prop-apply]").addEventListener("click", function () {
+      var kept = 0;
       pending.forEach(function (c) {
         var el = cellOf(c.row, c.key);
+        if (!el || el.dataset.v !== c.from) { kept += 1; return; }
         if (el.matches("[data-ap-adm]")) setAdm(el, c.to); else setOutcome(el, c.to);
       });
-      pending = [];
-      proposal.hidden = true;
+      close();
       recount();
+      if (kept) window.alert(kept + (kept === 1 ? " cell was" : " cells were") + " changed by hand since the proposal, and kept as it stands.");
     });
-    proposal.querySelector("[data-ap-prop-cancel]").addEventListener("click", function () {
-      pending = [];
-      proposal.hidden = true;
-    });
+    proposal.querySelector("[data-ap-prop-cancel]").addEventListener("click", close);
+  }
+  function close() {
+    pending = [];
+    proposal.hidden = true;
+    if (opener) opener.focus();
   }
 
   // Fill by rule: Set <column> to <value> where <result at gate> ≥ or <
@@ -299,28 +305,43 @@
       ["Leave as is"].concat(vals).forEach(function (v) { var o = document.createElement("option"); o.textContent = v; otherwise.appendChild(o); });
       if (vals.length > 1) otherwise.value = vals[vals.length - 1];
     }
+    // The result a rule reads comes from a gate before the column it sets.
+    var source = rule.querySelector("[data-ap-rule-source]");
+    var order = heads.map(function (h) { return h.dataset.col; });
+    function fillSources() {
+      var at = order.indexOf(target.value), first = null;
+      Array.prototype.forEach.call(source.options, function (o) {
+        o.disabled = order.indexOf(o.value) >= at;
+        o.hidden = o.disabled;
+        if (!o.disabled && first === null) first = o.value;
+      });
+      if (source.selectedOptions[0] && source.selectedOptions[0].disabled || !source.value) source.value = first || "";
+      rule.querySelector("[data-ap-rule-go]").disabled = first === null;
+    }
     target.value = (heads.filter(function (h) { return h.dataset.kind === "gate"; })[1] || heads[0]).dataset.col;
     fillValues();
-    target.addEventListener("change", fillValues);
+    fillSources();
+    target.addEventListener("change", function () { fillValues(); fillSources(); });
     ruleOpen.addEventListener("click", function () {
       rule.hidden = !rule.hidden;
       ruleOpen.setAttribute("aria-expanded", rule.hidden ? "false" : "true");
       if (!rule.hidden) target.focus();
     });
     rule.querySelector("[data-ap-rule-go]").addEventListener("click", function () {
-      var src = rule.querySelector("[data-ap-rule-source]").value;
+      var src = source.value;
       var ge = rule.querySelector("[data-ap-rule-op]").value === "ge";
       var at = parseFloat(rule.querySelector("[data-ap-rule-at]").value);
       var onlyPending = rule.querySelector("[data-ap-rule-pending]").checked;
       var measure = head[src].dataset.measure, key = target.value;
-      if (isNaN(at)) { propose("Fill by rule", [], ["Enter a threshold."]); return; }
+      if (isNaN(at)) { propose("Fill by rule", [], ["Enter a threshold."], rule.querySelector("[data-ap-rule-at]")); return; }
       var changes = [], unjudged = [];
       rows.forEach(function (r) {
         var el = cellOf(r, key);
         if (!el) return;  // a draft, or never admitted to this column
         if (onlyPending && el.dataset.v !== "Pending") return;
         var res = cellOf(r, src);
-        if (!res || res.dataset.result === undefined) { unjudged.push(idOf(r)); return; }
+        if (!res || res.dataset.v !== "Selected") return;  // never admitted there: nothing to read
+        if (res.dataset.result === undefined) { unjudged.push(idOf(r)); return; }
         var met = ge ? parseFloat(res.dataset.result) >= at : parseFloat(res.dataset.result) < at;
         var to = met ? then.value : otherwise.value;
         if (to === "Leave as is" || to === el.dataset.v) return;
@@ -329,7 +350,7 @@
       var skipped = unjudged.length
         ? [unjudged.length + (unjudged.length === 1 ? " application has" : " applications have") + " no finished " + measure + " at " + head[src].dataset.label + ", left as is: " + unjudged.join(", ") + "."]
         : [];
-      propose("Fill by rule: " + head[key].dataset.label + " from " + measure + (ge ? " ≥ " : " < ") + at, changes, skipped);
+      propose("Fill by rule: " + head[key].dataset.label + " from " + measure + (ge ? " ≥ " : " < ") + at, changes, skipped, rule.querySelector("[data-ap-rule-go]"));
     });
   }
 
@@ -365,19 +386,23 @@
   }
   function fromCsv(name, text) {
     var table = parseCsv(text.replace(/^﻿/, ""));
-    if (!table.length) { propose("Upload CSV: " + name, [], ["The file is empty."]); return; }
+    if (!table.length) { propose("Upload CSV: " + name, [], ["The file is empty."], csvOpen); return; }
     var header = table[0].map(function (h) { return h.trim(); });
     var idAt = header.map(function (h) { return h.toLowerCase(); }).indexOf("application id");
-    if (idAt < 0) { propose("Upload CSV: " + name, [], ["No \"Application ID\" column: the first row names the columns."]); return; }
+    if (idAt < 0) { propose("Upload CSV: " + name, [], ["No \"Application ID\" column: the first row names the columns."], csvOpen); return; }
     var keys = header.map(function (h, i) { return i === idAt ? null : columnFor(h); });
     var skipped = [];
-    header.forEach(function (h, i) { if (i !== idAt && !keys[i] && h) skipped.push("Column not on this page, ignored: " + h + "."); });
+    // The columns Download CSV writes to describe a row are read past.
+    var described = ["applicant", "email", "status"];
+    header.forEach(function (h, i) {
+      if (i !== idAt && !keys[i] && h && described.indexOf(h.toLowerCase()) < 0) skipped.push("Column not on this page, ignored: " + h + ".");
+    });
     var byId = {};
-    rows.forEach(function (r) { byId[idOf(r)] = r; });
+    rows.forEach(function (r) { byId[idOf(r).toLowerCase()] = r; });
     var changes = [], unknown = [];
     table.slice(1).forEach(function (line, n) {
       var id = (line[idAt] || "").trim();
-      var r = byId[id];
+      var r = byId[id.toLowerCase()];
       if (!r) { unknown.push(id || "(blank, line " + (n + 2) + ")"); return; }
       keys.forEach(function (key, i) {
         if (!key) return;
@@ -391,11 +416,11 @@
       });
     });
     if (unknown.length) skipped.unshift("Not in this exercise, ignored: " + unknown.join(", ") + ".");
-    propose("Upload CSV: " + name, changes, skipped);
+    propose("Upload CSV: " + name, changes, skipped, csvOpen);
   }
-  var csv = root.querySelector("[data-ap-csv]");
+  var csv = root.querySelector("[data-ap-csv]"), csvOpen = root.querySelector("[data-ap-csv-open]");
   if (csv) {
-    root.querySelector("[data-ap-csv-open]").addEventListener("click", function () { csv.value = ""; csv.click(); });
+    csvOpen.addEventListener("click", function () { csv.value = ""; csv.click(); });
     csv.addEventListener("change", function () {
       var f = csv.files && csv.files[0];
       if (!f) return;

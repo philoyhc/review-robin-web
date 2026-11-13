@@ -226,3 +226,46 @@ def test_the_table_downloads_as_the_csv_an_upload_reads(page: Page) -> None:
     lines = text.splitlines()
     assert lines[0].startswith("Application ID,Applicant,Email,Status,Peer Review,")
     assert len(lines) == 102
+    # Uploaded back, it changes nothing and leaves nothing out.
+    page.locator("[data-ap-csv]").set_input_files(
+        files=[{"name": "applications.csv", "mimeType": "text/csv", "buffer": text.encode()}]
+    )
+    prop = page.locator("[data-ap-proposal]")
+    assert "Nothing would change." in prop.inner_text()
+    assert prop.locator("[data-ap-prop-skip] li").count() == 0
+
+
+def test_apply_keeps_a_cell_changed_by_hand_since(page: Page) -> None:
+    page.goto(PAGE)
+    upper = "H6ZR2TDW9P"  # IDs match whatever their case
+    page.locator("[data-ap-csv]").set_input_files(
+        files=[
+            {
+                "name": "x.csv",
+                "mimeType": "text/csv",
+                "buffer": f"Application ID,Interview\n{upper},Selected\n".encode(),
+            }
+        ]
+    )
+    prop = page.locator("[data-ap-proposal]")
+    assert prop.locator("[data-ap-prop-rows] tr").count() == 1
+    chip = _row(page, "kenji.russo").locator('[data-cell="g3"] [data-ap-adm]')
+    chip.click()  # Not selected -> Pending, by hand
+    page.once("dialog", lambda d: d.accept())
+    prop.locator("[data-ap-prop-apply]").click()
+    assert chip.inner_text() == "Pending"
+    # Focus returns to what opened the proposal.
+    assert page.evaluate("document.activeElement.hasAttribute('data-ap-csv-open')")
+
+
+def test_a_rule_reads_only_an_earlier_gate(page: Page) -> None:
+    page.goto(PAGE)
+    page.locator("[data-ap-rule-open]").click()
+    rule = page.locator("[data-ap-rule]")
+    rule.locator("[data-ap-rule-target]").select_option("g1")
+    # Nothing comes before Peer Review: no source, no Propose.
+    assert rule.locator("[data-ap-rule-go]").is_disabled()
+    rule.locator("[data-ap-rule-target]").select_option("g2")
+    assert rule.locator("[data-ap-rule-source] option:not([disabled])").all_inner_texts() == [
+        "Rating at Peer Review"
+    ]

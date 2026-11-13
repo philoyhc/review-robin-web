@@ -145,11 +145,14 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
             rows.append(Row(a, {k: Cell("") for k in ("g1", "g2", "o1", "g3", "o2", "o3")}))
             continue
         if a.state == "Withdrawn":
-            cells["g1"] = Cell("Not selected", "Withdrawn")
-            for k in ("g2", "g3"):
-                cells[k] = Cell("Not selected")
-            for k in ("o1", "o2", "o3"):
-                cells[k] = Cell("")
+            # It keeps what it had, and "—" where it was never admitted
+            # (the plan's Semantics): withdrawn before Round 1 opened (16
+            # Oct), nothing; during it, its place at Peer Review only.
+            day = int(a.submitted.split()[0])
+            during = a.submitted.split()[1] != "Oct" or day >= 16
+            cells = {k: Cell("") for k in ("g1", "g2", "o1", "g3", "o2", "o3")}
+            if during:
+                cells["g1"] = Cell("Selected", f"Withdrew {day} {a.submitted.split()[1]}")
             rows.append(Row(a, cells))
             continue
         if i in excluded:

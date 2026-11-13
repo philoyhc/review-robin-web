@@ -15,7 +15,7 @@ The Applications tab is a placeholder: a list with *Generate applicant profiles*
 3. **A gate cell** is a chip that cycles *Pending → Selected → Not selected*; under it, the gate's result from Review Robin ("Rating 4.6 · 3 of 3") or why it was set ("Excluded: not eligible").
 4. **An outcome cell** is a menu of that outcome's values, the date it was decided under it (or "Due …" from the Timeline). Each outcome header carries a **Released** switch and when and to whom it was released.
 5. **Column headers count** their column across every application ("86 selected · 2 pending").
-6. **A toolbar**: search (ID, name, email), a status filter, *Fill by rule…*, *Upload CSV*, *Set selected rows*, *Save*; after the rows, *All applications* or *Last applications* (each applicant's last submitted).
+6. **A toolbar**: search (ID, name, email), a status filter, *Fill by rule…*, *Upload CSV*, *Save*; after the rows, *All applications* or *Last applications* (each applicant's last submitted), and *Set ticked rows*.
 7. **The application file** replaces "applicant profile" in what shows (ruling 13).
 
 **Rejected:**
@@ -31,7 +31,7 @@ The Applications tab is a placeholder: a list with *Generate applicant profiles*
 - **Counts** follow every change on screen.
 - **Fill by rule…** takes a target column, an earlier gate's result, an operator and a threshold; it shows the rows it would change (from, to) and changes nothing until *Apply*. Rows it cannot judge (no result yet) are listed and left alone.
 - **Upload CSV** takes `Application ID` and one column per gate or outcome, named as in the header; unknown IDs, unknown columns and values that are not the column's are listed, and nothing applies until the operator confirms. The same review step as a rule.
-- **Set selected rows** applies one value to one column for the ticked rows.
+- **Set ticked rows** applies one value to one column for the ticked rows.
 - **Released** toggles per outcome; turning it on asks to confirm, and says what the Timeline's setup will do (here, sample text). Nothing is sent.
 - **Last applications**: per applicant (by email), the latest submitted application; an applicant with none submitted shows their latest of any status.
 - **Nothing is saved.** *Save* is disabled until AD2; a reload restores the sample.
@@ -40,7 +40,7 @@ The Applications tab is a placeholder: a list with *Generate applicant profiles*
 
 - **The table renders on the server, moves happen in one inline script**, as AD1B: the server renders every cell from `sample_data`; the script cycles chips, opens menus, recounts and filters.
 - **`wa9juxbc2t` (Undergraduate Research Fellowship 2027) is the model exercise** (author, 2026-11-13): it carries the full setup and is built out further as segments land; the other exercises keep a smaller setup (`k7mfr3pq8z`: one round), and the blank one none.
-- **The model exercise has about 100 applications**, generated deterministically in `sample_data` (a fixed seed), so counts and paging read as a real exercise; ten are written by hand for the cases (two applications from one applicant, a draft, a withdrawal, an exclusion, a manual addition).
+- **The model exercise has about 100 applications**, generated deterministically in `sample_data` (a fixed seed), so counts and paging read as a real exercise; three are written by hand; the cases (two applications from one applicant, drafts, withdrawals, an exclusion, a manual addition, reviews still coming) are generated or derived in `applydesk/rounds.py`.
 - **"Application file" renames what shows**: the button, the page title and the route `/me/exercises/<id>/files/<file id>`; the code's `profile_id` becomes `file_id`. All are placeholders; nothing stored depends on the old names.
 
 ## Blast radius (measured)
@@ -59,11 +59,12 @@ Taken 2026-11-13 at `34f3d4b`.
 Building. Base `34f3d4b` for the cumulative read.
 - Rung 2: the table. The rounds and each row's cells in `applydesk/rounds.py`; 98 generated applications join the model exercise's three in `sample_data` (101). The model exercise moves to mid-review (author, 2026-11-13: applications 1 Sep – 15 Oct, Round 2 under way), so a new sample exercise, *Postgraduate Conference Grant 2027* (`r6tm4kq9wz`), is the one open for applications. *Set ticked rows* sits under the table beside *All / Last applications*, keeping the toolbar on one line. *Fill by rule…* and *Upload CSV* render, inert until rung 3.
 - Rung 3: *Fill by rule…* (Set a column to a value where an earlier gate's Rating or Score is ≥ or < a threshold, otherwise a value or as is; Pending cells only unless unticked) and *Upload CSV* (`Application ID`, then columns named as their headers, with or without "Gate 1:") share one proposal panel: what would change, what was left and why; *Apply* or *Cancel*. A gate cell carries its finished result (`Cell.result`) for the rule; an unfinished one is named, not guessed. *Download CSV* gives the table in the shape an upload reads.
+- The cumulative read (rungs 1–3): 10 findings. Fixed: withdrawn rows keep only what they had; *Apply* keeps a cell changed by hand since the proposal; a downloaded CSV uploads back cleanly and IDs match in any case; a rule reads only an earlier gate, and only where it was Selected; focus returns after a proposal; each *Released* switch names its outcome. Left, for the author: Review, Reports and Panels still show the model exercise as not yet sent to Review Robin (the Review-tab open question).
 
 ## PR ladder
 
 1. **Plan** (this file), ruling 13, its README and roadmap rows.
-2. **The table.** Rounds, gates and outcomes in `sample_data`, about 100 sample applications with their cells; the grouped header with dates and counts; the Application, Applicant and Status columns; gate chips that cycle; outcome menus with dates; the release switches with their confirmation; search, status filter, *Set selected rows*, All / Last applications. Tests: the columns follow the setup; a Chromium test cycles a chip, picks an outcome, sees the counts follow, filters, switches to Last applications. Also carries the AD1B preview banner fix (its close, flag 1).
+2. **The table.** Rounds, gates and outcomes in `applydesk/rounds.py`, about 100 sample applications with their cells; the grouped header with dates and counts; the Application, Applicant and Status columns; gate chips that cycle; outcome menus with dates; the release switches with their confirmation; search, status filter, *Set ticked rows*, All / Last applications. Tests: the columns follow the setup; a Chromium test cycles a chip, picks an outcome, sees the counts follow, filters, switches to Last applications. Also carries the AD1B preview banner fix (its close, flag 1).
 3. **Fill by rule… and Upload CSV**: the proposal and its review, applied on screen. Tests for both, including the rows a rule cannot judge and a CSV's unknown IDs and values. Last build rung: `diff-reviewer` reads the cumulative diff.
 4. **The application file**: the rename of labels, page title, route and `profile_id`, with the spec's URL map. Its own read.
 5. **Iteration rungs**, as the author's browser checks ask.
@@ -72,7 +73,7 @@ Building. Base `34f3d4b` for the cumulative read.
 ## Definition of done
 
 - The columns follow the sample setup: three rounds, three gates, three outcomes, in order, with their dates (test).
-- In Chromium: a chip cycles, an outcome is picked and dated, counts follow, a release asks to confirm, search and status filter, Set selected rows, All / Last applications, Fill by rule… and Upload CSV proposing then applying (tests).
+- In Chromium: a chip cycles, an outcome is picked and dated, counts follow, a release asks to confirm, search and status filter, Set ticked rows, All / Last applications, Fill by rule… and Upload CSV proposing then applying (tests).
 - "Profile" no longer shows anywhere an operator, reviewer or applicant reads (test).
 - The author has used the page locally and approved it.
 - `## Doc impact` section present and current
