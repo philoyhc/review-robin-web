@@ -7,17 +7,13 @@
 {% include "applydesk/_placeholder.html" %}
 {% include "applydesk/operator/_details.html" %}
 {% set submitted = applications | selectattr("state", "equalto", "Submitted") | list %}
-<section class="card">
-  <h2>Timeline</h2>
-  {% include "applydesk/operator/_stages.html" %}
-</section>
 <div class="grid">
   <section class="card">
     <h2>Where it stands</h2>
     <dl class="facts">
       <dt>Exercise Code</dt><dd>{% if exercise.code %}<code>{{ exercise.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</dd>
       <dt>Opens</dt><dd>{{ exercise.opens }}</dd>
-      <dt>Application stage ends</dt><dd>{{ exercise.application_stage_ends }}{% if exercise.application_stage_ends != "Not set" %} (a hard deadline){% endif %}</dd>
+      <dt>Applications close</dt><dd>{{ exercise.application_stage_ends }}{% if exercise.application_stage_ends != "Not set" %} (a hard deadline){% endif %}</dd>
       <dt>Expected outcome</dt><dd>{{ exercise.expected_outcome }}</dd>
       <dt>Who may apply</dt><dd>{{ exercise.eligibility }}</dd>
     </dl>
@@ -42,9 +38,8 @@
       <p>Ready to publish: the details, the dates and the application form are complete.</p>
       <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Publish</button></div>
       {% endif %}
-    {% elif exercise.stage == "Application" %}
-      <p>Applications are open. When the Application stage ends, start the Review stage and send the submitted applications to Review Robin.</p>
-      <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Start the Review stage</button></div>
+    {% elif exercise.form_open %}
+      <p>Applications are open. The Workflow card above shows what follows once the form closes.</p>
     {% else %}
       <p>Assessment is under way in Review Robin. Its results come back on Evaluations.</p>
       <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations') }}">Go to Evaluations</a></div>

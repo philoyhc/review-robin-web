@@ -11,15 +11,15 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from applydesk import gate, sample_data, workflow
+from applydesk import gate, sample_data, stages, workflow
 from applydesk.ids import PUBLIC_ID_ALPHABET, PUBLIC_ID_LENGTH, generate_public_id, is_public_id
 from applydesk.main import create_app
 from applydesk.tests._host import host_with
 from cordware.identity import Identity
 
-EX = "wa9juxbc2t"  # the model exercise: not blind, Review stage, rounds under way
+EX = "wa9juxbc2t"  # the model exercise: not blind, its Interview stage under way
 OPEN = "r6tm4kq9wz"  # open for applications
-BLIND = "k7mfr3pq8z"  # blind, Review stage
+BLIND = "k7mfr3pq8z"  # blind, in its unnamed Stage 2
 DRAFT = "c4xh2ndv6s"  # not published
 BLANK = "n5wg8tjr3e"  # just created: a name, nothing else
 
@@ -41,9 +41,9 @@ PAGES = (
     ),
     f"/applydesk/operator/exercises/{EX}/form/preview",
     f"/applydesk/operator/exercises/{OPEN}",  # open for applications
-    f"/applydesk/operator/exercises/{OPEN}/applications",  # no rounds yet
+    f"/applydesk/operator/exercises/{OPEN}/applications",  # only its first stage
     f"/applydesk/operator/exercises/{BLANK}/form/preview",
-    f"/applydesk/operator/exercises/{BLIND}",  # Review stage; blind review on
+    f"/applydesk/operator/exercises/{BLIND}",  # in Stage 2; blind review on
     f"/applydesk/operator/exercises/{BLIND}/gates",  # no reviewer pool
     f"/applydesk/operator/exercises/{BLIND}/evaluations",  # blind: the alias key
     f"/applydesk/operator/exercises/{DRAFT}/process",  # the Setup stage is now
@@ -317,27 +317,26 @@ def test_the_retired_sections_are_gone(client: TestClient, old: str) -> None:
 
 @pytest.mark.parametrize(
     ("exercise_id", "now"),
-    [(DRAFT, "Setup"), (OPEN, "Applications"), (EX, "Review"), (BLIND, "Review")],
+    [(DRAFT, "Stage 1"), (OPEN, "Stage 1"), (EX, "Interview"), (BLIND, "Stage 2")],
 )
-def test_home_marks_the_current_stage_on_its_timeline(
+def test_the_lobby_names_each_exercise_s_current_stage(
     client: TestClient, exercise_id: str, now: str
 ) -> None:
-    text = client.get(f"/applydesk/operator/exercises/{exercise_id}").text
-    current = re.findall(r'aria-current="step">\s*<span class="stage-name">([^<]+)', text)
-    assert [c.strip() for c in current] == [now]
-    done = {"Setup": 0, "Applications": 1, "Review": 2}[now]
-    assert text.count('<span class="chip chip-mute">Done</span>') == done
-    for stage in ("Setup", "Applications", "Review", "Outcome"):
-        assert f'<span class="stage-name">{stage}' in text
+    """Ruling 15: the stage holding the exercise's next step."""
+    e = sample_data.exercise(exercise_id)
+    assert e is not None and workflow.current_stage(e) == now
+    lobby = client.get("/applydesk/operator/exercises").text
+    row = lobby[lobby.index(e.name) :]
+    assert f"<td>{now}</td>" in row[: row.index("</tr>")]
 
 
-def test_process_carries_the_rounds_and_the_timeline(client: TestClient) -> None:
+def test_process_carries_the_stages_and_the_milestones(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
-    assert '<ol class="stages"' in text and "<h3>Milestones</h3>" in text
-    assert 'aria-current="step"' in text
+    assert "<h3>Milestones</h3>" in text
     assert "Add a milestone" in text and "New announcement" in text
-    for r in ("Round 1", "Round 2", "Final"):
-        assert f"<h3>{r} <span" in text
+    for st in ("Applications", "Review", "Interview", "Decision"):
+        assert f"<h3>{st} <span" in text
+    assert "<strong>Application form</strong>" in text  # in Applications
     assert "Combined ≥ 4.2 → Shortlisted, else Not shortlisted" in text
     assert "Peer Review 30% · Faculty Panel Review 70%" in text
     assert "Decided by hand" in text  # Final results
@@ -413,8 +412,7 @@ def test_a_blank_exercise_lists_what_is_still_to_set_up(client: TestClient) -> N
         (f"{base}/form", "Application form"),
     ]
     assert "Dates not set" in home and "(a hard deadline)" not in home
-    current = re.findall(r'aria-current="step">\s*<span class="stage-name">([^<]+)', home)
-    assert [c.strip() for c in current] == ["Setup"]
+    assert re.findall(r'data-wf-step="([^"]+)" aria-current="step"', home) == ["Application form"]
 
 
 def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> None:
@@ -489,7 +487,7 @@ def test_the_workflow_card_follows_the_timeline(client: TestClient) -> None:
         "Close and archive",
     ]
     groups = re.findall(r'<span class="wf-grp">([^<]+)</span>', text)
-    assert groups == ["Application", "Round 1", "Round 2", "Final", "Close"]
+    assert groups == ["Applications", "Review", "Interview", "Decision", "Close"]
     # Next is the earliest step not done: Gate 3, sent, opening Evaluations.
     now = re.findall(r'data-wf-step="([^"]+)" aria-current="step"', text)
     assert now == ["Interview"]
@@ -563,3 +561,40 @@ def test_a_sent_gate_opens_evaluations_except_from_evaluations(client: TestClien
     steps = workflow.steps(sample_data.exercise(EX) or sample_data.EXERCISES[0])
     sent = [s for s in steps if s.state == "Sent"]
     assert sent and all(s.action == "" and s.link == "evaluations" for s in sent)
+
+
+# --- Rung 4's read: stages without an application, the close's date ---
+def test_the_close_follows_the_last_stage_with_something_to_decide(client: TestClient) -> None:
+    def close_line(exercise_id: str) -> str:
+        e = sample_data.exercise(exercise_id)
+        assert e is not None
+        return workflow.steps(e)[-1].when
+
+    assert close_line(EX) == "After 12 Dec"
+    assert close_line(OPEN) == "After the last outcome"  # only the application yet
+    assert close_line(BLANK) == "After the last outcome"
+    assert "After Dates not set" not in client.get(f"/applydesk/operator/exercises/{BLANK}").text
+
+
+def test_an_exercise_whose_applications_came_from_elsewhere(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ruling 15: no stage holds the application; the table is loaded
+    upstream, so the timeline starts at its first gate."""
+    upstream = stages._STAGES[EX][1:]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    monkeypatch.setitem(stages._STAGES, EX, upstream)  # pyright: ignore[reportPrivateUsage]  -- as above
+    e = sample_data.exercise(EX)
+    assert e is not None
+    assert [s.title for s in workflow.steps(e)][0] == "Peer Review"
+    assert workflow.current_stage(e) == "Interview"
+    text = client.get(f"/applydesk/operator/exercises/{EX}/applications").text
+    assert re.findall(r"<th class=\"ap-first\"[^>]*><b>([^<]+)</b>", text) == ["Applications"]
+    assert "From elsewhere" in text
+
+
+def test_applicants_see_whether_applications_are_open(client: TestClient) -> None:
+    text = client.get("/applydesk/me").text
+    e = sample_data.exercise(OPEN)
+    assert e is not None
+    row = text[text.index(e.name) :]
+    assert "Applications open" in row[: row.index("</p>")]

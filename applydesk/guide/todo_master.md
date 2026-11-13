@@ -58,7 +58,8 @@ where a ruling below differs from it, the ruling wins.
     question.
 
 13. **Evaluation runs in rounds of gates and outcomes, driven from the
-    Applications page** (author, 2026-11-12):
+    Applications page** (author, 2026-11-12; *rounds and the timeline's
+    stages became one, the stage, in ruling 15*):
     - A **round** is sequential; a round holds one or more **gates**,
       which may run at the same time. A gate is who evaluates (a Panels
       roster), what they see (which sections), how (a Review Robin
@@ -69,7 +70,7 @@ where a ruling below differs from it, the ruling wins.
       date; each outcome has a *Released* switch, and what a release does
       (to applicants, to reviewers, by email) is set with the Timeline.
     - Rounds, gates, outcomes and their dates are set up on **Setup**
-      and the Timeline. **Applications** is the control surface: who
+      and the Timeline (*stages, on Process: rulings 14, 15*). **Applications** is the control surface: who
       enters each gate (*—* for no status yet, *Entered*, *Not entered*;
       author, 2026-11-13) and each
       outcome's value, set by hand, by the column's rule, or uploaded as
@@ -83,8 +84,9 @@ where a ruling below differs from it, the ruling wins.
       average (e.g. 30% / 70%), a gate not entered dropping out and the
       rest re-weighted; conditions combine with AND. A rule or an upload
       is a proposal the operator reviews before saving.
-    - The word **stage** stays with the exercise's timeline (Setup,
-      Application, Review …); evaluation steps are **rounds**.
+    - ~~The word **stage** stays with the exercise's timeline (Setup,
+      Application, Review …); evaluation steps are **rounds**.~~ One word,
+      the **stage**, since ruling 15.
     - An applicant may send more than one application; the page shows
       all of them, or each applicant's last **submitted** one.
     - What a reviewer opens is the **application file**, one per
@@ -92,7 +94,7 @@ where a ruling below differs from it, the ruling wins.
       from the application ID, for ruling 10's blind exercises.
 14. **An exercise's pages follow the operator's workflow, in Review
     Robin's chrome** (author, 2026-11-13; segment AD1D):
-    - **Home**, then a **Setup** row: *Process* (rounds, gates, outcomes,
+    - **Home**, then a **Setup** row: *Process* (stages, gates, outcomes,
       dates, every rule, what a release does), *Form*, *Gates* (one card
       per gate, its panel roster on it), *Emails* (every template to
       applicants, kept in one place; Process sets which steps send one,
@@ -109,6 +111,27 @@ where a ruling below differs from it, the ruling wins.
     - **A Workflow card** on Home and every Operations page steps
       through them in timeline order, the next one carrying its action
       and what blocks it; there is no Validate tab.
+15. **The exercise's timeline is built of stages** (author, 2026-11-13;
+    segment AD1D), one word for ruling 13's rounds and the timeline's
+    stages:
+    - A **stage** has dates and a name the operator gives it, *Stage N*
+      until then. Stages run one after another.
+    - A stage holds **the application**, or **one or more gates**, and an
+      **outcome**: never the application and a gate together. Only one
+      stage holds the application, and it comes first; an exercise may
+      have none, its applications collected upstream and loaded into the
+      Applications table. A stage may hold only an outcome: an offline
+      gate, as the model exercise's *Decision*, where the reviews and
+      interviews are collated for discussion before the final decision.
+    - The sample's stages are *Applications*, *Review*, *Interview* and
+      *Decision*. The exercise's current stage is worked out from the
+      timeline (the one holding its next step), not stored. Setup (a
+      draft) and Close are the exercise's state, not stages.
+    - **Process is a stack of stage cards**, as Form is of question
+      cards: a new exercise starts with one stage card offering the
+      application and an outcome (an outcome is optional: the sample's
+      Applications stage has none); stages are added, moved and deleted,
+      but the last one cannot be deleted.
 
 ## MVP roadmap
 
@@ -119,9 +142,9 @@ Segments in order; each gets a plan in this folder when it starts.
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
 | **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
-| AD1E onward — the new pages | Process (rules and dates), then Gates, Emails, Evaluations and Extract data built out as working scaffolds, one segment each | After AD1D |
+| AD1E onward — the new pages | Process (a stack of stage cards, as Form's, with their rules and dates: ruling 15), then Gates, Emails, Evaluations and Extract data built out as working scaffolds, one segment each | After AD1D |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
-| AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the Application → Review stage boundary | G2 (published changes), G3 (stages) |
+| AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
 | AD5 — Panels and application files | The rosters on Panels (ruling 11): assessment panels and the applications each assessor is asked to review (ruling 9), the reviewer pool, interviewers; application files generated, the file with its access check, audit and blind redaction | — |
 | AD6 — Assessment in Review Robin | Rosters from submitted applications, the pairs as tags, `ProfileLink` to the application file, the blind alias key (ruling 10), results back into ApplyDesk | The open items below |

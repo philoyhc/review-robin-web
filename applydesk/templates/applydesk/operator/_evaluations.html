@@ -5,12 +5,12 @@
 {% if exercise.state == "Draft" %}
 <section class="card">
   <h2>Not yet</h2>
-  <p class="muted">Nothing to send: the exercise is a draft. Once it is published, each gate is sent to Review Robin from here when its round opens.</p>
+  <p class="muted">Nothing to send: the exercise is a draft. Once it is published, each gate is sent to Review Robin from here when its stage opens.</p>
 </section>
 {% elif not gates %}
 <section class="card">
   <h2>No gates yet</h2>
-  <p class="muted">Add rounds and gates on Process; each one's progress shows here once it is sent.</p>
+  <p class="muted">Add stages and gates on Process; each one's progress shows here once it is sent.</p>
 </section>
 {% else %}
 <section class="card">

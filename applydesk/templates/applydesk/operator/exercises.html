@@ -5,14 +5,14 @@
 {% include "applydesk/_placeholder.html" %}
 <div class="table-wrap">
 <table>
-  <thead><tr><th>Exercise</th><th>Exercise Code</th><th>State</th><th>Stage</th><th>Applications</th><th>Application stage ends</th></tr></thead>
+  <thead><tr><th>Exercise</th><th>Exercise Code</th><th>State</th><th>Stage</th><th>Applications</th><th>Applications close</th></tr></thead>
   <tbody>
   {% for e in exercises %}
     <tr>
       <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a></td>
       <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
       <td>{% with value = e.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</td>
-      <td>{{ e.stage }}</td>
+      <td>{{ current_stage(e) }}</td>
       <td>{{ applications(e.public_id) | length }}</td>
       <td>{{ e.application_stage_ends }}</td>
     </tr>

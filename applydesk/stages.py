@@ -1,8 +1,9 @@
-"""Rounds of gates and outcomes (ruling 13, segment AD1C), on sample data.
+"""The exercise's stages, their gates and outcomes (rulings 13, 15), on
+sample data.
 
-An exercise's evaluation runs in sequential rounds; a round holds gates,
-which may run together, and outcomes placed after them. Setup and the
-Timeline will hold these (a later segment); here they are fixed, and each
+An exercise's timeline is a sequence of stages; a stage holds the
+application, or gates (which may run together), and an outcome after
+them. Process will set them up (a later segment); here they are fixed, and each
 application's place at each gate and outcome is worked out from a seeded
 score, so the Applications page reads as an exercise partway through.
 Nothing is saved."""
@@ -65,10 +66,20 @@ class Outcome:
 
 
 @dataclass(frozen=True)
-class Round:
-    label: str
+class Stage:
+    """A step of the exercise's timeline (ruling 15): it may hold the
+    application, or gates, and an outcome; never the application and a
+    gate together. Named by the operator, "Stage N" until then."""
+
+    number: int
+    name: str  # "" until the operator names it
     dates: str
-    columns: tuple[Gate | Outcome, ...]
+    columns: tuple[Gate | Outcome, ...] = ()
+    application: bool = False
+
+    @property
+    def label(self) -> str:
+        return self.name or f"Stage {self.number}"
 
 
 @dataclass(frozen=True)
@@ -89,13 +100,18 @@ class Row:
 class Plan:
     """What the Applications page draws for one exercise."""
 
-    stage_dates: str  # the Application stage's From–To
-    rounds: tuple[Round, ...]
+    stages: tuple[Stage, ...]
     rows: tuple[Row, ...]
 
     @property
     def columns(self) -> tuple[Gate | Outcome, ...]:
-        return tuple(c for r in self.rounds for c in r.columns)
+        return tuple(c for st in self.stages for c in st.columns)
+
+    @property
+    def application_stage(self) -> Stage | None:
+        """The one stage holding the application, if any: an exercise
+        whose applications came from elsewhere has none (ruling 15)."""
+        return next((st for st in self.stages if st.application), None)
 
 
 # The model exercise's rules, as Setup will hold them (author, 2026-11-13).
@@ -138,34 +154,34 @@ _O2 = Outcome(
 )
 _O3 = Outcome("o3", 3, "Final results", ("Awarded", "Waitlisted", "Not awarded"), "12 Dec", "")
 
-_ROUNDS: dict[str, tuple[str, tuple[Round, ...]]] = {
-    # The model exercise (author, 2026-11-12/13): mock-up v3's setup.
+_STAGES: dict[str, tuple[Stage, ...]] = {
+    # The model exercise (author, 2026-11-13): its stages named.
     "wa9juxbc2t": (
-        "1 Sep – 15 Oct",
-        (
-            Round("Round 1", "16 Oct – 10 Nov", (_G1, _G2, _O1)),
-            Round("Round 2", "11 Nov – 24 Nov", (_G3, _O2)),
-            Round("Final", "25 Nov – 12 Dec", (_O3,)),
-        ),
+        Stage(1, "Applications", "1 Sep – 15 Oct", application=True),
+        Stage(2, "Review", "16 Oct – 10 Nov", (_G1, _G2, _O1)),
+        Stage(3, "Interview", "11 Nov – 24 Nov", (_G3, _O2)),
+        # The reviews and interviews collated for an offline discussion,
+        # then the decision: a stage holding only an outcome.
+        Stage(4, "Decision", "25 Nov – 12 Dec", (_O3,)),
     ),
-    # A smaller exercise: one round, read blind by one panel.
+    # A smaller exercise, read blind by one panel; its second stage not
+    # yet named.
     "k7mfr3pq8z": (
-        "1 Sep – 31 Oct",
-        (
-            Round(
-                "Round 1",
-                "1 Nov – 30 Nov",
-                (
-                    Gate("g1", 1, "Panel Review", "RRW", "Score"),
-                    Outcome(
-                        "o1",
-                        1,
-                        "Final results",
-                        ("Awarded", "Not awarded"),
-                        "15 Dec",
-                        "",
-                        (("g1", 1.0),),
-                    ),
+        Stage(1, "Applications", "1 Sep – 31 Oct", application=True),
+        Stage(
+            2,
+            "",
+            "1 Nov – 30 Nov",
+            (
+                Gate("g1", 1, "Panel Review", "RRW", "Score"),
+                Outcome(
+                    "o1",
+                    1,
+                    "Final results",
+                    ("Awarded", "Not awarded"),
+                    "15 Dec",
+                    "",
+                    (("g1", 1.0),),
                 ),
             ),
         ),
@@ -176,7 +192,7 @@ _ROUNDS: dict[str, tuple[str, tuple[Round, ...]]] = {
 def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
     """The model exercise mid-way, as its rules left it plus a few hands:
     one application excluded as not eligible, one added to the interview,
-    two whose peer reviews are still coming; Round 2's outcomes not yet
+    two whose peer reviews are still coming; the Interview stage's outcomes not yet
     decided."""
     rng = random.Random("wa9juxbc2t rounds")
     rating = {a.public_id: round(rng.uniform(2.4, 4.9), 1) for a in apps}
@@ -200,8 +216,8 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
             continue
         if a.state == "Withdrawn":
             # It keeps what it had, and "—" where it was never entered:
-            # withdrawn before Round 1 opened (16 Oct), nothing; during it,
-            # its place at the Round 1 gates only.
+            # withdrawn before the Review stage opened (16 Oct), nothing; during it,
+            # its place at the Review stage's gates only.
             day = int(a.submitted.split()[0])
             if day >= 16:
                 cells["g1"] = Cell("Entered", f"Withdrew {day} Oct")
@@ -267,14 +283,39 @@ def _small_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
 
 
 def plan_of(exercise_id: str) -> Plan:
-    """The rounds and every application's cells for one exercise; an
-    exercise with no rounds set up has none (columns end at Status)."""
+    """The stages and every application's cells for one exercise. An
+    exercise not yet set up has one stage, holding the application, as a
+    new exercise starts (ruling 15)."""
     apps = sample_data.applications_of(exercise_id)
-    if exercise_id not in _ROUNDS:
-        return Plan("", (), tuple(Row(a, {}) for a in apps))
-    stage, rounds = _ROUNDS[exercise_id]
+    if exercise_id not in _STAGES:
+        e = sample_data.exercise(exercise_id)
+        dates = (
+            "Dates not set"
+            if e is None or "Not set" in (e.opens, e.application_stage_ends)
+            else f"{e.opens} – {e.application_stage_ends}"
+        )
+        return Plan((Stage(1, "", dates, application=True),), tuple(Row(a, {}) for a in apps))
     rows = _model_rows(apps) if exercise_id == "wa9juxbc2t" else _small_rows(apps)
-    return Plan(stage, rounds, rows)
+    return Plan(_STAGES[exercise_id], rows)
+
+
+def problems(stages: tuple[Stage, ...]) -> tuple[str, ...]:
+    """What breaks ruling 15's shape: at most one stage holds the
+    application, and it comes first; no stage holds the application and a
+    gate, or more than one outcome. (A stage left empty while it is set
+    up is allowed.)"""
+    out: list[str] = []
+    holding = [st for st in stages if st.application]
+    if len(holding) > 1:
+        out.append("More than one stage holds the application.")
+    if holding and stages[0] is not holding[0]:
+        out.append("The stage holding the application is not the first.")
+    for st in stages:
+        if st.application and any(isinstance(c, Gate) for c in st.columns):
+            out.append(f"{st.label} holds both the application and a gate.")
+        if sum(isinstance(c, Outcome) for c in st.columns) > 1:
+            out.append(f"{st.label} holds more than one outcome.")
+    return tuple(out)
 
 
 def counts(plan: Plan, column: Gate | Outcome) -> str:
