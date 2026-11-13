@@ -62,6 +62,7 @@ def test_the_model_exercise_reads_as_partway_through() -> None:
     plan = rounds.plan_of(EX)
     by_key = {c.key: c for c in plan.columns}
     assert rounds.counts(plan, by_key["o1"]).startswith("24 shortlisted")
+    assert rounds.counts(plan, by_key["g2"]) == "49 entered · 2 to decide"
     o1, o2 = by_key["o1"], by_key["o2"]
     assert isinstance(o1, rounds.Outcome) and isinstance(o2, rounds.Outcome)
     assert o1.released and not o2.released
@@ -75,7 +76,7 @@ def test_the_model_exercise_reads_as_partway_through() -> None:
             day = int(a.submitted.split()[0])
             assert bool(cells["g1"].value) == (day >= 16)
         if cells["o1"].value == "Not shortlisted":
-            assert cells["g3"].value == "Not selected" and not cells["o2"].value
+            assert cells["g3"].value == "Not entered" and not cells["o2"].value
         if cells["o1"].value == "Shortlisted":
             assert cells["o3"].value == "Pending" and cells["o3"].note == "Due 12 Dec"
     notes = {c.note for r in plan.rows for c in r.cells.values()}

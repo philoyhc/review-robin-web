@@ -12,9 +12,9 @@ The Applications tab is a placeholder: a list with *Generate applicant profiles*
 
 1. **Application stage** (three columns): *Application* (the application ID, linking to its application file), *Applicant* (name, email), *Status* (Submitted / Draft / Withdrawn, its date under the chip).
 2. **Each round**, its From–To dates in the group header (from the Timeline): its gates, then any outcome placed after them. The sample: *Round 1* (Gate 1 Peer Review, Gate 2 Faculty Panel Review, Outcome 1 Shortlist for interview), *Round 2* (Gate 3 Interview, Outcome 2 Finalists), *Final* (Outcome 3 Final results). Every gate is a Review Robin session in the sample.
-3. **A gate cell** is a chip that cycles *Pending → Selected → Not selected*; under it, the gate's result from Review Robin ("Rating 4.6 · 3 of 3") or why it was set ("Excluded: not eligible").
-4. **An outcome cell** is a menu of that outcome's values, the date it was decided under it (or "Due …" from the Timeline). Each outcome header carries a **Released** switch and when and to whom it was released.
-5. **Column headers count** their column across every application ("86 selected · 2 pending").
+3. **A gate cell** is a chip that cycles ~~*Pending → Selected → Not selected*~~ *— (no status yet) → Entered → Not entered* (author, rung 5: a gate is whether the application is sent through it); under it, the gate's result from Review Robin ("Rating 4.6 · 3 of 3") or why it was set ("Excluded: not eligible").
+4. **An outcome cell** is a menu of that outcome's values (shaped and toned as a gate's chip since rung 5), the date it was decided under it (or "Due …" from the Timeline). Each outcome header carries a **Released** switch and when and to whom it was released.
+5. **Column headers count** their column across every application ("86 entered · 2 to decide").
 6. **A toolbar**: search (ID, name, email), a status filter, *Fill by rule…*, *Upload CSV*, *Save*; after the rows, *All applications* or *Last applications* (each applicant's last submitted), and *Set ticked rows*.
 7. **The application file** replaces "applicant profile" in what shows (ruling 13).
 
@@ -61,6 +61,8 @@ Building. Base `34f3d4b` for the cumulative read.
 - Rung 3: *Fill by rule…* (Set a column to a value where an earlier gate's Rating or Score is ≥ or < a threshold, otherwise a value or as is; Pending cells only unless unticked) and *Upload CSV* (`Application ID`, then columns named as their headers, with or without "Gate 1:") share one proposal panel: what would change, what was left and why; *Apply* or *Cancel*. A gate cell carries its finished result (`Cell.result`) for the rule; an unfinished one is named, not guessed. *Download CSV* gives the table in the shape an upload reads.
 - The cumulative read (rungs 1–3): 10 findings. Fixed: withdrawn rows keep only what they had; *Apply* keeps a cell changed by hand since the proposal; a downloaded CSV uploads back cleanly and IDs match in any case; a rule reads only an earlier gate, and only where it was Selected; focus returns after a proposal; each *Released* switch names its outcome. Left, for the author: Review, Reports and Panels still show the model exercise as not yet sent to Review Robin (the Review-tab open question).
 - Rung 4: the application file. Labels, the page title and the route (`/me/exercises/<id>/files/<file>`; the old `/profiles/` is a 404), `file_id`, `by_file`, `file_or_404`, `me/file.html`; the rulings, the spec's URL map and AD1's. Review Robin's `ProfileLink` keeps its name: it is the handoff's field. A test holds "profile" out of every page a reader sees.
+
+- Rung 5 (author, 2026-11-13): gate chips cycle *—* (no status yet), *Entered*, *Not entered*, since a gate is whether an application is sent through it; outcomes keep their own values with *Pending*, from Setup, in a menu shaped and toned as a pill. Kept apart because a gate's three states suit a cycle and an outcome's open-ended values a one-pick menu (author, after asking). A rule's "undecided only" covers both *—* and *Pending*; a CSV takes `-` for *—*.
 
 ## PR ladder
 
