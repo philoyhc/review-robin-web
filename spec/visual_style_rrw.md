@@ -338,7 +338,7 @@ The two-row session chrome (Setup row, Operations row) **does not appear** on th
 
 **One shared bar** for every Review Robin page, operator or participant (`_partials/top_bar.html`; the cross-application contract is `docs/header_chrome.md`). It is the `.chrome` block, one row that scrolls away with the page, and its bottom line is the header's: nothing below it belongs to the bar.
 
-- **Left:** the Review Robin icon (28 px, decorative) and two lines: the **top line** (12 px, `--text-subtle`; the viewer's Unit or the workspace institution name, omitted when empty; which one is `docs/header_chrome.md` §6) over "Review Robin ▾" (16 px, bold). The group is the **switcher**, a `details`/`summary` disclosure: first group "Review Robin", with **Sessions** (operators and sys admins) and **Your reviews**, the current one marked (✓ and `aria-current`); last group "Cordware", with **All applications**, the host's landing page, emitted through `host_url()`. With no signed-in viewer the group is static, without the ▾.
+- **Left:** the Review Robin icon (28 px, decorative) and two lines: the **top line** (12 px, `--text-subtle`; the viewer's Unit or the workspace institution name, omitted when empty; which one is `docs/header_chrome.md` §6) over "Review Robin ▾" (16 px, bold). The group is the **switcher**, a `details`/`summary` disclosure: first group "Review Robin", with **Operator Lobby** (operators and sys admins) and **User Lobby**, the current one marked (✓ and `aria-current`); last group "Cordware", with **All applications**, the host's landing page, emitted through `host_url()`. With no signed-in viewer the group is static, without the ▾.
 - **Right:** the Light/Dark toggle, the viewer's name (from 960 px) and the **avatar** (initials), which opens the **account menu**, in order:
   - The display name in bold, the email, and the tier ("super admin" or "sys admin") for a viewer holding one. Informational, not links; it lets a viewer on a shared computer confirm who is signed in.
   - Under 640 px, the Light/Dark toggle (it leaves the bar at that width).
@@ -352,7 +352,7 @@ The two-row session chrome (Setup row, Operations row) **does not appear** on th
   | Page | Name shown |
   |---|---|
   | A session's pages, operator or participant, **including the sys-admin diagnostics pages** (Outbox, Audit log) | The Unit of the operator who **created** the session, else the default. Co-owners do not change it |
-  | Your reviews, **whoever views it, operators included** | The Unit the listed sessions share, else the default (also when none are listed) |
+  | User Lobby, **whoever views it, operators included** | The Unit the listed sessions share, else the default (also when none are listed) |
   | Any other page (lobby, Settings, Admin, Create session, About, Guide, Sign-in details) | The viewer's own Unit if an operator or sys admin, else the default |
 
   The creator's Unit is read as the page renders, so a sys admin's change shows on existing sessions at once.
@@ -418,13 +418,15 @@ What this means in practice:
 - Per-session operator customization is **content-only** — session name, optional welcome message, optional institution name. No visual customization (colors, layout, branding imagery). See `spec/audience_and_identity_model.md` for the rationale.
 - Operator chrome (two-row session navigation, status strips, lifecycle badges) does **not** appear on reviewer pages. Reviewers don't navigate the operator's structure; they have their own.
 
-Every participant page's `<title>` ends ` — Review Robin Web`, as does the
-standalone error page's; the lighter "Review Robin" is the on-page identity
-only.
+Every page's `<title>` reads `Page · Review Robin`. `base.html` owns the
+` · Review Robin` suffix; a page's title block names only the page and keeps
+its own context (`Instruments — {session name}`, `Accounts Management — Admin`).
+A page with no title of its own reads `Review Robin`. The standalone error
+page, which does not extend `base.html`, reads `404 — Not found · Review Robin`.
 
 #### Top bar
 
-Reviewer-facing pages carry the shared bar (see "Top bar" under the non-session operator pages), without the breadcrumb row. The viewer's roles decide the entries: a participant's switcher offers Your reviews and All applications, and their account menu offers Guide, About and Sign out. **Your reviews** is reachable from every participant page, whatever the number of sessions, so a one-session reviewer, a reviewee and an observer always have a way back ("Your reviews" is the dashboard's one name). The top line follows the sessions' Units ("Top bar" above; `docs/header_chrome.md` §6). The bar is the same on all reviewer pages; its presence is what makes the surface recognizable as Review Robin across sessions.
+Reviewer-facing pages carry the shared bar (see "Top bar" under the non-session operator pages), without the breadcrumb row. The viewer's roles decide the entries: a participant's switcher offers User Lobby and All applications, and their account menu offers Guide, About and Sign out. **User Lobby** is reachable from every participant page, whatever the number of sessions, so a one-session reviewer, a reviewee and an observer always have a way back ("User Lobby" is the dashboard's one name). The top line follows the sessions' Units ("Top bar" above; `docs/header_chrome.md` §6). The bar is the same on all reviewer pages; its presence is what makes the surface recognizable as Review Robin across sessions.
 
 Sign-in has no page of its own: it is Azure Easy Auth's (`spec/audience_and_identity_model.md` "Auth posture").
 
@@ -436,7 +438,7 @@ The reviewer's "home" after sign-in. A simple list of pending and recent reviews
 
 **Body:**
 
-- **H1:** "Your reviews".
+- **H1:** "User Lobby".
 - A list of review cards, each showing:
   - Session name (linked to that session's response surface for this reviewer).
   - Deadline.
