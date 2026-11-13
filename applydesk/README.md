@@ -21,4 +21,5 @@ and the MVP roadmap are in `guide/todo_master.md`.
 | `guide/segment_AD1_skeleton.md` | Segment AD1 plan: the package and mount, then the URL map as placeholders |
 | `guide/segment_AD1C_applications.md` | Segment AD1C plan: the Applications page as the control surface, rounds of gates and outcomes as columns, nothing saved |
 | `guide/segment_AD1D_chrome.md` | Segment AD1D plan: an exercise's pages in Review Robin's chrome (Home, Setup, Operations) and the Workflow card |
+| `guide/segment_AD1F_gates_panels.md` | Segment AD1F plan: Gates as gate cards beside an Outline, Panels as its own tab of roster tables (ruling 19), Form and Gates picking or making a panel |
 | `guide/archive/README.md` | Closed segment plans: AD1B (the Form page) |
