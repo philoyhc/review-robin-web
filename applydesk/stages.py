@@ -2,7 +2,7 @@
 sample data.
 
 An exercise's timeline is a sequence of stages; a stage holds the
-application, or gates (which may run together), and may hold an outcome
+form, or gates (which may run together), and may hold an outcome
 after them. Process will set them up (a later segment); here they are fixed, and each
 application's place at each gate and outcome is worked out from a seeded
 score, so the Applications page reads as an exercise partway through.
@@ -68,14 +68,14 @@ class Outcome:
 @dataclass(frozen=True)
 class Stage:
     """A step of the exercise's timeline (ruling 15): it holds the
-    application, or gates, and may hold an outcome; never the application
+    application form, or gates, and may hold an outcome; never the form
     and a gate together. Named by the operator, "Stage N" until then."""
 
     number: int
     name: str  # "" until the operator names it
     dates: str
     columns: tuple[Gate | Outcome, ...] = ()
-    application: bool = False
+    form: bool = False  # holds the application form (ruling 15)
 
     @property
     def label(self) -> str:
@@ -108,10 +108,10 @@ class Plan:
         return tuple(c for st in self.stages for c in st.columns)
 
     @property
-    def application_stage(self) -> Stage | None:
-        """The one stage holding the application, if any: an exercise
+    def form_stage(self) -> Stage | None:
+        """The one stage holding the form, if any: an exercise
         whose applications came from elsewhere has none (ruling 15)."""
-        return next((st for st in self.stages if st.application), None)
+        return next((st for st in self.stages if st.form), None)
 
 
 # The model exercise's rules, as Setup will hold them (author, 2026-11-13).
@@ -157,7 +157,7 @@ _O3 = Outcome("o3", 3, "Final results", ("Awarded", "Waitlisted", "Not awarded")
 _STAGES: dict[str, tuple[Stage, ...]] = {
     # The model exercise (author, 2026-11-13): its stages named.
     "wa9juxbc2t": (
-        Stage(1, "Applications", "1 Sep – 15 Oct", application=True),
+        Stage(1, "Call for applications", "1 Sep – 15 Oct", form=True),
         Stage(2, "Review", "16 Oct – 10 Nov", (_G1, _G2, _O1)),
         Stage(3, "Interview", "11 Nov – 24 Nov", (_G3, _O2)),
         # The reviews and interviews collated for an offline discussion,
@@ -167,7 +167,7 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
     # A smaller exercise, read blind by one panel; its second stage not
     # yet named.
     "k7mfr3pq8z": (
-        Stage(1, "Applications", "1 Sep – 31 Oct", application=True),
+        Stage(1, "Call for applications", "1 Sep – 31 Oct", form=True),
         Stage(
             2,
             "",
@@ -284,7 +284,7 @@ def _small_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
 
 def plan_of(exercise_id: str) -> Plan:
     """The stages and every application's cells for one exercise. An
-    exercise not yet set up has one stage, holding the application, as a
+    exercise not yet set up has one stage, holding the form, as a
     new exercise starts (ruling 15)."""
     apps = sample_data.applications_of(exercise_id)
     if exercise_id not in _STAGES:
@@ -294,24 +294,24 @@ def plan_of(exercise_id: str) -> Plan:
             if e is None or "Not set" in (e.opens, e.application_stage_ends)
             else f"{e.opens} – {e.application_stage_ends}"
         )
-        return Plan((Stage(1, "", dates, application=True),), tuple(Row(a, {}) for a in apps))
+        return Plan((Stage(1, "", dates, form=True),), tuple(Row(a, {}) for a in apps))
     rows = _model_rows(apps) if exercise_id == "wa9juxbc2t" else _small_rows(apps)
     return Plan(_STAGES[exercise_id], rows)
 
 
 def problems(stages: tuple[Stage, ...]) -> tuple[str, ...]:
     """What breaks ruling 15's shape: at most one stage holds the
-    application, anywhere in the timeline (a gate may come first, its
+    form, anywhere in the timeline (a gate may come first, its
     outcome deciding who may apply: author, 2026-11-13); no stage holds
-    the application and a gate, or more than one outcome. (A stage left
+    the form and a gate, or more than one outcome. (A stage left
     empty while it is set up is allowed.)"""
     out: list[str] = []
-    holding = [st for st in stages if st.application]
+    holding = [st for st in stages if st.form]
     if len(holding) > 1:
-        out.append("More than one stage holds the application.")
+        out.append("More than one stage holds the form.")
     for st in stages:
-        if st.application and any(isinstance(c, Gate) for c in st.columns):
-            out.append(f"{st.label} holds both the application and a gate.")
+        if st.form and any(isinstance(c, Gate) for c in st.columns):
+            out.append(f"{st.label} holds both the form and a gate.")
         if sum(isinstance(c, Outcome) for c in st.columns) > 1:
             out.append(f"{st.label} holds more than one outcome.")
     return tuple(out)

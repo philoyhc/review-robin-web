@@ -100,7 +100,7 @@ EXERCISES: tuple[Exercise, ...] = (
         summary="Placements with partner organizations over the summer vacation.",
     ),
     # Open for applications, now that the model exercise is past its
-    # Applications stage (segment AD1C).
+    # Call for applications (segment AD1C).
     Exercise(
         public_id="r6tm4kq9wz",
         code="PCG-2027",

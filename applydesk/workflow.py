@@ -150,7 +150,7 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
     form = form_state(exercise)
     out: list[Step] = []
     for r in plan.stages:
-        if r.application:  # the form, where its stage sits in the timeline
+        if r.form:  # the form, where its stage sits in the timeline
             out.append(
                 Step(
                     r.label,

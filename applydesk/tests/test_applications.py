@@ -24,7 +24,7 @@ def client() -> TestClient:
 def test_the_columns_follow_the_setup(client: TestClient) -> None:
     text = client.get(PAGE).text
     groups = re.findall(r"<th class=\"ap-(?:first|r)\"[^>]*><b>([^<]+)</b>", text)
-    assert groups == ["Applications", "Review", "Interview", "Decision"]  # ruling 15
+    assert groups == ["Call for applications", "Review", "Interview", "Decision"]  # ruling 15
     for dates in ("1 Sep – 15 Oct", "16 Oct – 10 Nov", "11 Nov – 24 Nov", "25 Nov – 12 Dec"):
         assert dates in text
     heads = re.findall(r'data-col="(\w+)" data-kind="(\w+)"', text)
@@ -112,14 +112,14 @@ def test_every_sample_s_stages_keep_ruling_15_s_shape() -> None:
 
 def test_a_stage_may_not_hold_the_application_and_a_gate() -> None:
     gate = stages.Gate("g1", 1, "Panel", "RRW", "Score")
-    both = (stages.Stage(1, "", "", (gate,), application=True),)
+    both = (stages.Stage(1, "", "", (gate,), form=True),)
     two = (
-        stages.Stage(1, "A", "", application=True),
-        stages.Stage(2, "", "", application=True),
+        stages.Stage(1, "A", "", form=True),
+        stages.Stage(2, "", "", form=True),
     )
-    late = (stages.Stage(1, "", "", (gate,)), stages.Stage(2, "", "", application=True))
-    assert stages.problems(both) == ("Stage 1 holds both the application and a gate.",)
-    assert "More than one stage holds the application." in stages.problems(two)
+    late = (stages.Stage(1, "", "", (gate,)), stages.Stage(2, "", "", form=True))
+    assert stages.problems(both) == ("Stage 1 holds both the form and a gate.",)
+    assert "More than one stage holds the form." in stages.problems(two)
     assert stages.problems(late) == ()  # a gate may come first (author, 2026-11-13)
     assert stages.problems((stages.Stage(1, "", "", (gate,)),)) == ()  # from elsewhere
 
@@ -228,5 +228,5 @@ def test_a_stage_holds_one_outcome_at_most() -> None:
     o = stages.Outcome("o1", 1, "A", ("Yes",), "", "")
     two = (stages.Stage(1, "", "", (o, o)),)
     assert stages.problems(two) == ("Stage 1 holds more than one outcome.",)
-    with_application = (stages.Stage(1, "Applications", "", (o,), application=True),)
+    with_application = (stages.Stage(1, "Applications", "", (o,), form=True),)
     assert stages.problems(with_application) == ()
