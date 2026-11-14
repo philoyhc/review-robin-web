@@ -32,7 +32,6 @@ PAGES = (
         for section in (
             "process",
             "form",
-            "gates",
             "emails",
             "applications",
             "evaluations",
@@ -44,7 +43,7 @@ PAGES = (
     f"/applydesk/operator/exercises/{OPEN}/applications",  # only its first stage
     f"/applydesk/operator/exercises/{BLANK}/form/preview",
     f"/applydesk/operator/exercises/{BLIND}",  # in Stage 2; blind review on
-    f"/applydesk/operator/exercises/{BLIND}/gates",  # no reviewer pool
+    f"/applydesk/operator/exercises/{BLIND}/process",  # a panel no gate uses
     f"/applydesk/operator/exercises/{BLIND}/evaluations",  # blind: the alias key
     f"/applydesk/operator/exercises/{DRAFT}/process",  # the Setup stage is now
     f"/applydesk/operator/exercises/{DRAFT}",  # the Publish step
@@ -55,7 +54,6 @@ PAGES = (
         for section in (
             "process",
             "form",
-            "gates",
             "emails",
             "applications",
             "evaluations",
@@ -288,7 +286,7 @@ def test_the_chrome_follows_the_operator_s_workflow(client: TestClient) -> None:
     ops = grid[grid.index('class="xnav-row xnav-ops"') :]
     tab = r'<a class="xnav-tab[^"]*"[^>]*>([^<]+)</a>'
     assert home == ["Exercise Home"]
-    assert re.findall(tab, setup) == ["Process", "Form", "Gates", "Emails"]
+    assert re.findall(tab, setup) == ["Process", "Form", "Emails"]  # ruling 20
     assert re.findall(tab, ops) == ["Applications", "Evaluations", "Extract data"]
     assert '<nav class="crumbs" aria-label="Breadcrumb">' in text
     assert "<h1>Undergraduate Research Fellowship 2027</h1>" in text
@@ -309,7 +307,8 @@ def test_the_status_row_says_where_each_item_stands(client: TestClient) -> None:
 @pytest.mark.parametrize(
     "old",
     ["settings", "assessors", "timeline", "export", "report"]
-    + ["setup", "panels", "review", "reports"],  # ruling 14
+    + ["setup", "panels", "review", "reports"]  # ruling 14
+    + ["gates"],  # folded into Process, ruling 20
 )
 def test_the_retired_sections_are_gone(client: TestClient, old: str) -> None:
     assert client.get(f"/applydesk/operator/exercises/{EX}/{old}").status_code == 404
@@ -387,36 +386,32 @@ def test_applications_generates_application_files(client: TestClient) -> None:
     assert "/applydesk/me/exercises/wa9juxbc2t/files/p3bd7kq2wx" in text
 
 
-def test_gates_carries_each_gate_as_a_card_with_its_panel(client: TestClient) -> None:
-    """Segment AD1F: a card per gate in timeline order, its panel's chip
-    and members, the Outline beside; a sent gate keeps its panel."""
-    text = client.get(f"/applydesk/operator/exercises/{EX}/gates").text
-    assert re.findall(r'data-kind="gate" data-gate="(\w+)"', text) == ["g1", "g2", "g3"]
-    chips = re.findall(r'data-sum="panel">([^<]*)<', text)
-    assert chips == ["Panel A · 2 people", "Panel B · 1 person", "Interviewers · 2 people"]
+def test_a_gate_item_carries_its_panel(client: TestClient) -> None:
+    """Ruling 20: each gate item on Process names its panel in its head,
+    picks it under Evaluators and lists its members; a sent gate keeps
+    its panel. (The Outline's panel names are the script's: Chromium.)"""
+    text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
+    chips = re.findall(r"data-pi-panel>([^<]*)<", text)
+    assert chips[:3] == ["Panel A · 2 people", "Panel B · 1 person", "Interviewers · 2 people"]
     assert "Prof Ivan Petrov" in text  # the interviewers, on the Interview gate
-    assert re.findall(r'data-o-panel="\w+">([^<]*)<', text) == [
-        "Panel A",
-        "Panel B",
-        "Interviewers",
-    ]
     # Every gate here is sent: its menu is fixed.
-    assert text.count('data-gc-panel disabled title="Sent') == 3
+    assert text.count('data-pc-panel disabled title="Sent') == 3
     # A gate picks a panel, never Institution-wide.
-    menu = text[text.index("data-gc-panel") : text.index("</select>", text.index("data-gc-panel"))]
+    at = text.index("data-pc-panel")
+    menu = text[at : text.index("</select>", at)]
     assert ">Institution-wide<" not in menu and ">Reviewer pool<" in menu
     assert ">+ New panel…</option>" in menu
+    # No gate page to send anyone to.
+    assert "/gates" not in text
 
 
 def test_a_gate_with_no_panel_says_so(client: TestClient) -> None:
     """The draft's selection gate was added just in time: no panel yet,
-    and it has none to choose from but one it makes."""
-    text = client.get(f"/applydesk/operator/exercises/{DRAFT}/gates").text
-    assert re.findall(r'data-sum="panel">([^<]*)<', text) == ["No panel"]
+    and none to choose from but one it makes."""
+    text = client.get(f"/applydesk/operator/exercises/{DRAFT}/process").text
+    assert re.findall(r"data-pi-panel>([^<]*)<", text)[:1] == ["No panel"]
     assert '<option value="" selected>No panel yet</option>' in text
-    assert "data-gc-panel disabled" not in text
-    # A lone card loads open.
-    assert 'data-gate="g1" id="gate-g1" data-open' in text
+    assert "data-pc-panel disabled" not in text
 
 
 def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> None:
@@ -490,7 +485,6 @@ def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> Non
     cards = form[form.index('id="fb-cards"') : form.index('<template id="fb-new-field">')]
     assert cards.count('data-kind="field"') == 1 and 'placeholder="Untitled form"' in form
     assert "No applications yet." in client.get(f"{base}/applications").text
-    assert "<h2>No gates yet</h2>" in client.get(f"{base}/gates").text
     # Ruling 16: a form's receipt is owed until Process says otherwise.
     assert 'data-email="Stage 1: Receipt - Applicants"' in client.get(f"{base}/emails").text
     assert "No submitted applications yet." in client.get(f"{base}/extract").text
@@ -574,7 +568,7 @@ def test_the_workflow_card_sits_on_every_operations_page(client: TestClient, sec
     )
 
 
-@pytest.mark.parametrize("section", ["process", "form", "gates", "emails"])
+@pytest.mark.parametrize("section", ["process", "form", "emails"])
 def test_setup_pages_carry_no_workflow_card(client: TestClient, section: str) -> None:
     assert (
         'aria-labelledby="wf-h"'
@@ -614,10 +608,10 @@ def test_the_breadcrumb_ends_at_the_page(client: TestClient) -> None:
     assert f'<a href="/applydesk/operator/exercises/{EX}">Undergraduate' in crumbs
 
 
-def test_every_panel_is_offered_on_gates(client: TestClient) -> None:
+def test_every_panel_is_offered_to_a_gate(client: TestClient) -> None:
     """Teaching Excellence has interviewers but no interview gate: its
     panel is still offered on its one gate's menu (ruling 19)."""
-    text = client.get(f"/applydesk/operator/exercises/{BLIND}/gates").text
+    text = client.get(f"/applydesk/operator/exercises/{BLIND}/process").text
     assert '<option value="interviewers">Interviewers</option>' in text
 
 

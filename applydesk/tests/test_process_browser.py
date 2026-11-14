@@ -496,7 +496,10 @@ def test_the_outline_s_form_row_opens_the_form_s_stage(page: Page) -> None:
     page.locator("[data-pc-outline] .fb-o-item", has_text="Form").click()
     first = _cards(page).nth(0)
     assert first.get_attribute("data-open") == ""
-    assert first.locator("[data-fc-toggle]").evaluate("e => e === document.activeElement")
+    # The form item opens too, its own toggle taking focus (it has no name).
+    form = first.locator('.pc-item[data-item="form"]')
+    assert form.get_attribute("data-open") == ""
+    assert form.locator("[data-pi-toggle]").evaluate("e => e === document.activeElement")
 
 
 def _checks(item: Locator) -> list[bool]:
@@ -596,3 +599,75 @@ def test_a_lone_or_new_item_opens_and_the_outline_opens_an_item(page: Page) -> N
     g3 = page.locator('.pc-item[data-key="g3"]')
     assert g3.get_attribute("data-open") == ""
     assert g3.locator('[data-pc="item-name"]').evaluate("e => e === document.activeElement")
+
+
+# --- Segment AD1F rung 4c: a gate's Evaluators on Process (ruling 20) ---
+DRAFT = PAGE.replace("wa9juxbc2t", "c4xh2ndv6s")
+
+
+def test_a_gate_item_makes_and_picks_its_panel(page: Page) -> None:
+    page.goto(DRAFT)
+    selection = _cards(page).nth(1)
+    _open(selection)
+    gate = selection.locator('.pc-item[data-item="gate"]')
+    assert gate.get_attribute("data-open") == ""  # alone in its stage
+    issues = page.locator("[data-pc-issues]")
+    assert "Gate 1 (Placement interview) has no panel." in issues.inner_text()
+    assert page.locator("[data-o-panel]").text_content() == "No panel"
+    menu = gate.locator("[data-pc-panel]")
+    menu.select_option("__new")
+    box = gate.locator("[data-newpanel]")
+    box.locator('[data-np="name"]').fill("Interview panel")
+    box.locator('[data-np="members"]').fill("Ann Goh <ann.goh@example.edu>\nraj.k@example.edu")
+    box.get_by_role("button", name="Create panel").click()
+    assert gate.locator("[data-pi-panel]").text_content() == "Interview panel · 2 people"
+    members = gate.locator("[data-pc-members] li").all_inner_texts()
+    assert members == ["Ann Goh ann.goh@example.edu", "raj.k@example.edu"]
+    assert page.locator("[data-o-panel]").text_content() == "Interview panel"
+    assert "has no panel" not in issues.inner_text()
+    # A replica keeps the panel its gate was given.
+    selection.locator('[data-fc-act="replicate"]').click()
+    copy = _cards(page).nth(2).locator('.pc-item[data-item="gate"]')
+    assert copy.locator("[data-pi-panel]").text_content() == "Interview panel · 2 people"
+    # Back to none: the head and the Outline say so again.
+    menu.select_option("")
+    assert gate.locator("[data-pi-panel]").text_content() == "No panel"
+    assert "Gate 1 (Placement interview) has no panel." in issues.inner_text()
+
+
+def test_a_sent_gate_keeps_its_panel(page: Page) -> None:
+    page.goto(PAGE)
+    g3 = _item(page, "g3")
+    assert g3.locator("[data-pc-panel]").is_disabled()
+    assert "Prof Ivan Petrov" in g3.locator("[data-pc-members]").inner_text()
+    assert page.locator("[data-o-panel]").all_inner_texts() == [
+        "Panel A",
+        "Panel B",
+        "Interviewers",
+    ]
+
+
+def test_a_replica_of_a_sent_stage_is_not_sent(page: Page) -> None:
+    """The cold read on 4b-4c: a copy's gates and outcome are new, so
+    their panel can be chosen and nothing reads sent or released."""
+    page.goto(PAGE)
+    review = _cards(page).nth(1)
+    _open(review)
+    review.locator('[data-fc-act="replicate"]').click()
+    copy = _cards(page).nth(2)
+    states = copy.locator("[data-pi-state]").all_text_contents()
+    assert states == ["Not ready", "Not ready", "Not released"]
+    menus = copy.locator("[data-pc-panel]")
+    assert [menus.nth(i).is_enabled() for i in range(2)] == [True, True]
+    assert copy.locator("[data-pc-sent]").count() == 0
+    assert copy.locator("[data-pi-panel]").first.text_content() == "Panel A · 2 people"
+
+
+def test_an_item_left_alone_opens(page: Page) -> None:
+    page.goto(PAGE)
+    interview = _cards(page).nth(2)
+    _open_all(interview)
+    o2 = interview.locator('.pc-item[data-item="outcome"]')
+    o2.locator("[data-pi-toggle]").click()  # shut it
+    interview.locator('[data-pc-act="remove-gate"]').click()
+    assert o2.get_attribute("data-open") == ""
