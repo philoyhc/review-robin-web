@@ -204,6 +204,8 @@
     if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
     return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
   }
+  // Undoes csvCell's guard, so a file this page wrote reads back the same.
+  function unguard(v) { return /^'[=+\-@\t\r]/.test(v) ? v.slice(1) : v; }
   function parseCsv(text) {
     var out = [], row = [], cell = "", q = false;
     for (var i = 0; i < text.length; i++) {
@@ -215,7 +217,8 @@
       else cell += ch;
     }
     if (cell || row.length) { row.push(cell); out.push(row); }
-    out = out.filter(function (r) { return r.some(function (c) { return c.trim(); }); });
+    out = out.filter(function (r) { return r.some(function (c) { return c.trim(); }); })
+      .map(function (r) { return r.map(function (c) { return unguard(c.trim()); }); });
     out.unclosed = q;  // a quote left open swallowed the rest of the file
     return out;
   }

@@ -201,3 +201,23 @@ def test_a_panel_may_not_take_a_csv_column_s_name(page: Page) -> None:
     assert box.locator("[data-np-err]").inner_text() == (
         "Note names a column of the Panels CSV: choose another name."
     )
+
+
+def test_a_guarded_csv_reads_back_the_same(page: Page) -> None:
+    """Codex on #3882: a panel named -External exports as '-External;
+    the import undoes the guard, so its memberships come back."""
+    page.goto(PANELS)
+    page.locator('[data-pn-act="panel"]').click()
+    page.locator("[data-pn-newname]").fill("-External")
+    page.locator('[data-pn-act="create"]').click()
+    zoe = _row(page, "zoe.tan@example.edu")
+    zoe.locator('input[data-pn-panel="made-1"]').check()
+    zoe.locator('[data-pn="note"]').fill("=chair")
+    csv = page.evaluate("window.applydeskPanelsCsv()")
+    assert "'-External" in csv and "'=chair" in csv
+    zoe.locator('[data-pn-act="remove"]').click()
+    page.evaluate("(t) => window.applydeskPanelsImport(t)", csv)
+    assert page.locator("[data-pn-said]").inner_text().startswith("1 person added.")
+    back = page.locator("[data-pn-row]").last
+    assert back.locator('input[data-pn-panel="made-1"]').is_checked()
+    assert back.locator('[data-pn="note"]').input_value() == "=chair"
