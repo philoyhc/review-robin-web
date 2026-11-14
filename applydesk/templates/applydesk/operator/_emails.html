@@ -1,7 +1,8 @@
 {# Emails (rulings 14, 16): every template the exercise owes, kept in one
    place. Process says which items email whom; each one ticked there is a
    template here, named for its stage, item and audience. A placeholder
-   until its own segment. #}
+   until its own segment. Each template stands alone, so each card has
+   its own Save (ruling 23); the page has none. #}
 <p>Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Panel members' invitations and reminders come from Review Robin.</p>
 {% for e in emails %}
 <section class="card" data-email="{{ e.name }}">
@@ -9,7 +10,7 @@
   <p class="muted">{{ e.when }}</p>
   <div class="field"><label>Subject <input type="text" value="{{ exercise.name ~ ': ' ~ e.name if e.ok else '' }}" disabled></label></div>
   <div class="field"><label>Body <textarea rows="3" disabled>{{ ("Dear [" ~ e.greeting ~ " name], …") if e.ok else "" }}</textarea></label></div>
-  <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Preview</button><button class="btn btn-secondary" type="button" disabled>Reset to default</button></div>
+  <div class="btnrow"><button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button><button class="btn btn-secondary" type="button" disabled>Preview</button><button class="btn btn-secondary" type="button" disabled>Reset to default</button></div>
 </section>
 {% else %}
 <section class="card">
@@ -17,4 +18,3 @@
   <p class="muted">Each email ticked on Process, the form's or an outcome's, is listed here as a template to write.</p>
 </section>
 {% endfor %}
-<div class="btnrow"><button class="btn btn-primary" type="button" disabled>Save</button></div>
