@@ -416,23 +416,33 @@
     .pc-issues[hidden] { display: none; }
     /* Panels (segment AD1F, ruling 20): one table, a column per panel. */
     .pn-table { border-collapse: separate; border-spacing: 0; font-size: 13.5px; width: 100%; }
-    .pn-table th, .pn-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); text-align: left; vertical-align: middle; }
+    .pn-table th, .pn-table td { padding: 6px 5px; border-bottom: 1px solid var(--border-subtle); text-align: left; vertical-align: middle; }
     .pn-table thead th { position: sticky; top: 0; background: var(--surface-card); vertical-align: bottom; font-size: 12.5px; }
-    .pn-table .pn-in { margin-top: 0; padding: 5px 7px; min-width: 120px; }
-    .pn-col, .pn-tick { text-align: center; min-width: 96px; }
+    .pn-table .pn-in { margin-top: 0; padding: 5px 7px; width: 120px; }
+    .pn-table [data-pn="note"] { width: 100px; }
+    .pn-col, .pn-tick { text-align: center; min-width: 72px; }
     .pn-table th.pn-col { text-align: center; }
     .pn-h { display: block; font-weight: 700; font-size: 13.5px; }
     .pn-n, .pn-used { display: block; font-weight: 400; color: var(--text-subtle); }
     .pn-used { font-size: 11.5px; }
+    .pn-sent { display: block; font-size: 11.5px; font-weight: 400; color: var(--amber); }
     .pn-list { list-style: none; margin: 0; padding: 0; font-size: 14px; }
     .pn-list li { padding: 8px 0; border-bottom: 1px solid var(--border-subtle); }
     .pn-list-h { font-weight: 700; }
     .pn-list-used { display: block; font-size: 12.5px; color: var(--text-subtle); }
     .pn-list-act { display: flex; gap: 6px; margin-top: 6px; }
     .pn-list-act .btn { padding: 4px 10px; font-size: 13px; }
-    .pn-table .pn-email { min-width: 200px; }
+    .pn-table .pn-email { width: 190px; }
     .pn-remove { border: 0; background: none; font-size: 18px; line-height: 1; color: var(--danger); cursor: pointer; padding: 2px 6px; border-radius: 4px; }
     .pn-remove:disabled { color: var(--text-subtle); cursor: default; }
+    .pn-bad .pn-email { border-color: var(--danger); }
+    .pn-bad-why { display: block; font-size: 12px; color: var(--danger); }
+    .pn-bad-why:empty { display: none; }
+    .pn-file { cursor: pointer; }
+    .pn-csv-note, .pn-said { margin: 8px 0 0; font-size: 12.5px; }
+    .pn-said:empty { display: none; }
+    .pick-edit { align-self: flex-end; padding-bottom: 8px; font-size: 13.5px; white-space: nowrap; }
+    .pick-edit[hidden] { display: none; }
     /* A gate item's panel and its members (segment AD1F, ruling 20). */
     .gc-members { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
     .gc-members:empty { display: none; }

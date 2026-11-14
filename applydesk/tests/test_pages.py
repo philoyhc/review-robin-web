@@ -734,16 +734,19 @@ def test_is_operator_follows_the_gate(monkeypatch: pytest.MonkeyPatch) -> None:
 # --- Segment AD1F rung 4d: Panels, one table (ruling 20) ---
 def test_panels_is_one_table_a_column_per_panel(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/panels").text
-    heads = re.findall(r'<th scope="col" class="pn-col" data-panel="([\w-]+)">', text)
+    heads = re.findall(
+        r'<th scope="col" class="pn-col" id="panel-[\w-]+" data-panel="([\w-]+)"', text
+    )
     assert heads == ["panel-a", "panel-b", "pool", "interviewers"]
-    assert re.findall(r'<span class="pn-h">([^<]+)</span>', text) == [
+    assert re.findall(r'<span class="pn-h" data-pn-name>([^<]+)</span>', text) == [
         "Panel A",
         "Panel B",
         "Reviewer pool",
         "Interviewers",
     ]
     # Each person once, ticked on the panels they sit on.
-    assert text.count("data-pn-row") == 8
+    body = text[text.index("data-pn-body") : text.index("</tbody>")]
+    assert body.count("<tr data-pn-row>") == 8
     row = text[text.index('value="Zoe Tan"') :]
     row = row[: row.index("</tr>")]
     ticks = re.findall(r'data-pn-panel="([\w-]+)"( checked)?', row)
@@ -766,5 +769,46 @@ def test_a_panel_nothing_uses_may_be_retired(client: TestClient) -> None:
 
 def test_an_exercise_with_no_panels_says_so(client: TestClient) -> None:
     assert (
-        "<h2>No panels yet</h2>" in client.get(f"/applydesk/operator/exercises/{BLANK}/panels").text
+        "data-pn-empty>No panels yet"
+        in client.get(f"/applydesk/operator/exercises/{BLANK}/panels").text
     )
+
+
+# --- Segment AD1F 4d-4e cold read: roster, uses, sent panels ---
+def test_the_roster_lists_each_person_once_taking_a_later_name_and_note(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    p = sample_data.Panel
+    m = sample_data.Member
+    panels = (
+        p("x", "a", "A", (m("xu@y.edu", "xu@y.edu"), m("Ann", "ann@y.edu"))),
+        p("x", "b", "B", (m("Xu Yi", "XU@y.edu", "Chair"), m("Other", "ann@y.edu", "Lead"))),
+    )
+    monkeypatch.setattr(sample_data, "PANELS", panels)
+    rows = sample_data.roster("x")
+    assert [(r.name, r.email, r.note, sorted(k)) for r, k in rows] == [
+        ("Xu Yi", "xu@y.edu", "Chair", ["a", "b"]),
+        ("Ann", "ann@y.edu", "Lead", ["a", "b"]),
+    ]
+
+
+def test_what_uses_each_panel_and_what_was_sent_with_it() -> None:
+    assert stages.panel_uses(EX) == {
+        "pool": ("Form: Preferred reviewer",),
+        "panel-a": ("Gate 1: Peer Review",),
+        "panel-b": ("Gate 2: Faculty Panel Review",),
+        "interviewers": ("Gate 3: Interview",),
+    }
+    assert workflow.panels_sent(EX) == {
+        "panel-a": ("Gate 1",),
+        "panel-b": ("Gate 2",),
+        "interviewers": ("Gate 3",),
+    }
+    assert workflow.panels_sent(DRAFT) == {}
+
+
+def test_panels_says_a_sent_gate_keeps_its_roster(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/panels").text
+    assert "Gate 1 sent: changes apply from its next send" in text
+    item = text[text.index('<li data-panel="pool">') :]
+    assert "sent" not in item[: item.index("</li>")]  # the form's pool: no gate

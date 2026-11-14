@@ -77,6 +77,7 @@
      keeps the panel it was sent with. #}
   <div class="pc-row pc-evaluators" data-pick-wrap>
     <label class="fc-l pc-wide">Evaluators{{ pick.menu(panel_pools, g.panel, 'data-pc-panel' ~ (' disabled title="Sent: the gate keeps the panel it was sent with"' if sent else ''), empty="No panel yet") }}</label>
+    {{ pick.edit(url('/operator/exercises/' ~ exercise.public_id ~ '/panels'), g.panel) }}
     {{ pick.new_box() }}
   </div>
   <ul class="gc-members" data-pc-members>

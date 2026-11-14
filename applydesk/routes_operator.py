@@ -98,6 +98,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         panels=sample_data.panels_of(exercise.public_id),
         roster=sample_data.roster(exercise.public_id),
         uses=stages.panel_uses(exercise.public_id),
+        panels_sent=workflow.panels_sent(exercise.public_id),
         blank=sample_data.FormCard("field"),
         blank_section=sample_data.FormCard("section"),
         plan=stages.plan_of(exercise.public_id),

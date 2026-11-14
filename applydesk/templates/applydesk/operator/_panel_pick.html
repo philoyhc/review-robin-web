@@ -12,6 +12,11 @@
 </select>
 {% endmacro %}
 
+{# Beside a menu: the chosen panel on Panels (ruling 20). Hidden for
+   Institution-wide, no panel, or one made on this page and not yet on
+   Panels. `base` is the exercise's Panels page. #}
+{% macro edit(base, chosen) %}<a class="pick-edit" data-pick-edit data-base="{{ base }}" href="{{ base }}#panel-{{ chosen }}"{% if not chosen or chosen == "institution" %} hidden{% endif %}>Edit on Panels →</a>{% endmacro %}
+
 {% macro new_box() %}
 <div class="np" data-newpanel hidden>
   <label class="fc-l">Panel name<input class="fc-in" data-np="name" placeholder="e.g. Panel C"></label>

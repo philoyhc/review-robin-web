@@ -21,12 +21,12 @@
       {% for c in cards %}
         {% if c.kind == "section" %}{{ fc.section(c) }}
         {% elif c.kind == "pagebreak" %}{{ fc.pagebreak() }}
-        {% else %}{{ fc.field(c, summary, kept_size, card_types, people, open=single) }}{% endif %}
+        {% else %}{{ fc.field(c, summary, kept_size, card_types, people, url('/operator/exercises/' ~ exercise.public_id ~ '/panels'), open=single) }}{% endif %}
       {% endfor %}
     </div>
     {# What + New, + Section and + Page break add: the same macros as the
        server's own cards. #}
-    <template id="fb-new-field">{{ fc.field(blank, summary, kept_size, card_types, people, open=True) }}</template>
+    <template id="fb-new-field">{{ fc.field(blank, summary, kept_size, card_types, people, url('/operator/exercises/' ~ exercise.public_id ~ '/panels'), open=True) }}</template>
     <template id="fb-new-section">{{ fc.section(blank_section, open=True) }}</template>
     <template id="fb-new-pagebreak">{{ fc.pagebreak() }}</template>
   </div>
@@ -319,6 +319,7 @@
     card.querySelector('[data-f="ratio_h"]').value = "5";
     var pool = card.querySelector('[data-f="pool"]');
     pool.value = pool.dataset.prev = "institution";  // the picker goes back to this
+    if (window.applydeskPickRefresh) window.applydeskPickRefresh(pool);  // and its Edit link hides
     card.querySelectorAll('[data-f="exclusive"]').forEach(function (x) { x.setAttribute("aria-pressed", x.dataset.v === "true" ? "true" : "false"); });
     refresh(card); drawOutline();
   });
