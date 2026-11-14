@@ -3,8 +3,9 @@
    it, laid out as Review Robin's roster pages (author, 2026-11-14): a
    roster card above it, its pills the panels and their counts, and
    *Manage panels* where Review Robin has *Unlock*, holding the panels'
-   own controls and the CSV. Rows and panels are added, edited, copied,
-   retired and removed, each email checked. Nothing is saved. #}
+   own controls and the CSV. Rows and panels are added, edited, renamed,
+   retired and removed, each email checked; a row's ✓ keeps it on this
+   page, which nothing saves until the database (AD2). #}
 {% set used = panels | selectattr("key", "in", uses) | list %}
 {% macro count(n) %}{{ n }} {{ "person" if n == 1 else "people" }}{% endmacro %}
 {% macro sent_note(p) %}{{ panels_sent[p.key] | join(", ") }} {{ "was" if panels_sent[p.key] | length == 1 else "were" }} sent with the roster as it then stood: changes apply from {{ "its" if panels_sent[p.key] | length == 1 else "their" }} next send.{% endmacro %}
@@ -13,8 +14,8 @@
    live. Unselected, an email is text, red when the directory has no such
    person; selected, a verified email is a pill, clicked to change it,
    and one not found is typed against the directory. The last column, its
-   ×, is kept on every row so nothing moves as rows are selected. `sel`
-   draws a row selected. #}
+   ✓ and ×, is kept on every row so nothing moves as rows are selected.
+   `sel` draws a row selected. #}
 {% macro row(m, keys, panels, directory, sel=False) %}
 {% set name = m.name if m and m.name != m.email else "" %}
 {% set verified = m and m.email | lower in directory %}
@@ -30,13 +31,13 @@
   </td>
   <td><span class="pn-view" data-pn-view="note">{{ m.note if m }}</span><input class="fc-in pn-in" data-pn="note" value="{{ m.note if m }}" placeholder="Role or area" aria-label="Note"></td>
   {% for p in panels %}<td class="pn-tick"><input type="checkbox" data-pn-panel="{{ p.key }}"{% if p.key in keys %} checked{% endif %}{% if not sel %} disabled{% endif %} aria-label="On {{ p.name }}"></td>{% endfor %}
-  <td class="pn-x"><button type="button" class="pn-remove" data-pn-act="remove" aria-label="Remove {{ (m.name or m.email) if m else 'this person' }}" title="Remove">×</button></td>
+  <td class="pn-x"><button type="button" class="pn-save" data-pn-act="save" aria-label="Save {{ (m.name or m.email) if m else 'this person' }}" title="Save this row">✓</button><button type="button" class="pn-remove" data-pn-act="remove" aria-label="Remove {{ (m.name or m.email) if m else 'this person' }}" title="Remove">×</button></td>
 </tr>
 {% endmacro %}
 {% set directory = people.institution.members | map(attribute=1) | map("lower") | list %}
 {% macro sort(field, label) %}<button type="button" class="pn-sort" data-pn-sort="{{ field }}" aria-label="Sort by {{ label }}">{{ label }}<span aria-hidden="true">↕</span></button>{% endmacro %}
 <div class="pn" data-panels data-exercise="{{ exercise.public_id }}">
-  <p class="muted pc-intro">Everyone on this exercise's panels, a column for each panel. Tick a row, or several, to edit them. A panel is picked where it is needed: a <em>Select people</em> question on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>, a gate's evaluators on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>. Apply Desk keeps every panel and what each person may view; to Review Robin they are ordinary reviewers.</p>
+  <p class="muted pc-intro">Everyone on this exercise's panels, a column for each panel. Tick a row, or several, to edit them; ✓ keeps a row's changes, and unticking it without ✓ puts the row back as it was. A panel is picked where it is needed: a <em>Select people</em> question on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>, a gate's evaluators on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>. Apply Desk keeps every panel and what each person may view; to Review Robin they are ordinary reviewers.</p>
 
   {# The roster card, as Review Robin's: the roster's size and a pill per
      panel, readable always; Manage panels opens the panels' controls. #}
@@ -58,9 +59,9 @@
         <ul class="pn-list" data-pn-list>
           {% for p in panels %}
           <li data-panel="{{ p.key }}">
-            <span class="pn-list-h" data-pn-name>{{ p.name }}</span>
+            <input class="fc-in pn-list-h" data-pn-rename value="{{ p.name }}" aria-label="Name of {{ p.name }}">
             <span class="pn-list-act">
-              <button type="button" class="btn btn-secondary" data-pn-act="copy">Copy</button>
+              <button type="button" class="btn btn-secondary" data-pn-act="emails">Copy emails</button>
               <button type="button" class="btn btn-destructive" data-pn-act="retire"{% if uses.get(p.key) %} disabled title="In use: it can be retired once nothing uses it"{% endif %}>Retire</button>
             </span>
             <span class="pn-list-used"><span data-pn-count>{{ count(p.members | length) }}</span> · {% if uses.get(p.key) %}Used by {{ uses[p.key] | join(", ") }}{% else %}Not used yet{% endif %}</span>
@@ -68,15 +69,22 @@
           </li>
           {% endfor %}
         </ul>
-        <div class="np" data-pn-newbox hidden>
-          <label class="fc-l">Panel name<input class="fc-in" data-pn-newname placeholder="e.g. Panel C"></label>
-          <p class="np-err" data-pn-newerr aria-live="polite"></p>
-          <div class="btnrow">
-            <button type="button" class="btn btn-primary" data-pn-act="create">Create panel</button>
-            <button type="button" class="btn btn-secondary" data-pn-act="cancel">Cancel</button>
-          </div>
+        <p class="muted pn-csv-note">A name is changed where it stands: every column, pill and menu follows. <em>Copy emails</em> puts a panel's addresses on the clipboard, separated by commas.</p>
+      </section>
+      <div class="pn-manage-right">
+      {# A new panel, blank or from an existing one's people (author,
+         2026-11-14: Copy folded into adding). #}
+      <section class="card" aria-labelledby="pn-new-h">
+        <h3 id="pn-new-h">Add new panel</h3>
+        <div class="pn-newgrid">
+          <label class="fc-l">Name<input class="fc-in" data-pn-newname placeholder="e.g. Panel C"></label>
+          <label class="fc-l">People<select class="fc-in" data-pn-from>
+            <option value="">None: a blank panel</option>
+            {% for p in panels %}<option value="{{ p.key }}">As {{ p.name }}</option>{% endfor %}
+          </select></label>
         </div>
-        <div class="btnrow"><button class="btn btn-secondary" type="button" data-pn-act="panel">+ Panel</button></div>
+        <p class="np-err" data-pn-newerr aria-live="polite"></p>
+        <div class="btnrow"><button type="button" class="btn btn-primary" data-pn-act="create">Add panel</button></div>
       </section>
       <section class="card">
         <h3>Upload</h3>
@@ -86,17 +94,25 @@
           <button class="btn btn-secondary" type="button" data-pn-act="export">Export CSV</button>
         </div>
       </section>
+      </div>
     </div>
   </section>
 
   {# The table card, full width: Review Robin's toolbar, then the table. #}
   <section class="card pn-tablecard" aria-label="People on panels">
     <div class="pn-toolbar">
-      <label class="pn-search">Search<input class="fc-in" type="search" data-pn-search placeholder="Name, email or note"></label>
+      <label class="pn-search">Filter<input class="fc-in" type="search" data-pn-search placeholder="Name, email or note"></label>
       <button class="btn btn-secondary" type="button" data-pn-act="add">Add new</button>
     </div>
     <div class="table-wrap pn-wrap">
+      {# Fixed widths (author, 2026-11-14): a row turned to edit boxes
+         changes how it looks, never where the columns fall. #}
       <table class="pn-table" aria-label="Panels and their members">
+        <colgroup data-pn-cols>
+          <col class="pn-w-pick"><col class="pn-w-name"><col class="pn-w-email"><col class="pn-w-note">
+          {% for p in panels %}<col class="pn-w-panel">{% endfor %}
+          <col class="pn-w-x">
+        </colgroup>
         <thead>
           <tr data-pn-head>
             <th scope="col" class="pn-pick"><input type="checkbox" data-pn-select-all aria-label="Select every row"></th>
@@ -110,7 +126,7 @@
               {% if panels_sent.get(p.key) %}<span class="chip chip-warn pn-sent-chip" title="{{ sent_note(p) }}">Sent</span>{% endif %}
             </th>
             {% endfor %}
-            <th scope="col" class="pn-x"><span class="visually-hidden">Remove</span></th>
+            <th scope="col" class="pn-x"><span class="visually-hidden">Save or remove</span></th>
           </tr>
         </thead>
         <tbody data-pn-body>
@@ -118,11 +134,7 @@
         </tbody>
       </table>
     </div>
-    <p class="muted pn-nomatch" data-pn-nomatch hidden>No one matches the search.</p>
-    <div class="pn-foot">
-      <span class="muted" data-pn-counts>{{ count(roster | length) }} · {{ panels | length }} {{ "panel" if panels | length == 1 else "panels" }} · {{ used | length }} in use</span>
-      <button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>
-    </div>
+    <p class="muted pn-nomatch" data-pn-nomatch hidden>No one matches the filter.</p>
   </section>
 </div>
 <template id="pn-new-row">{{ row(none, (), panels, directory, sel=True) }}</template>
@@ -138,6 +150,8 @@
   var body = root.querySelector("[data-pn-body]"), head = root.querySelector("[data-pn-head]");
   var list = root.querySelector("[data-pn-list]"), said = root.querySelector("[data-pn-said]");
   var chips = root.querySelector("[data-pn-chips]"), manage = root.querySelector("[data-pn-manage]");
+  var cols_ = root.querySelector("[data-pn-cols]"), fromSel = root.querySelector("[data-pn-from]");
+  var newName = root.querySelector("[data-pn-newname]"), newErr = root.querySelector("[data-pn-newerr]");
   var EMAIL = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
   // The directory (Graph; the sample institution until AD4), as [name, email].
   var DIRECTORY = JSON.parse(document.getElementById("pn-people").textContent);
@@ -179,7 +193,6 @@
     problems.forEach(function (p) { issues.appendChild(el("li", "", p + ".")); });
     issues.hidden = !problems.length;
     var nCols = cols().length, nUsed = cols().filter(function (h) { return h.dataset.used; }).length;
-    root.querySelector("[data-pn-counts]").textContent = people(rows().length) + " · " + nCols + (nCols === 1 ? " panel" : " panels") + " · " + nUsed + " in use";
     root.querySelector("[data-pn-people]").textContent = rows().length;
     root.querySelector("[data-pn-inuse]").textContent = "· " + nUsed + " in use";
     root.querySelector("[data-pn-empty]").hidden = nCols > 0;
@@ -187,7 +200,67 @@
 
   // --- Selecting rows (ruling 22): a row is edited only while selected;
   // unselected, it is inert, its ticks too, and shows what its boxes hold.
-  function select(r, on) {
+  // What a row held when its tick went on: unticking without ✓ puts it
+  // back (author, 2026-11-14), so no change waits out of sight.
+  function snap(r) {
+    return {
+      name: val(r, "name"), note: val(r, "note"), email: val(r, "email"),
+      verified: r.querySelector(".pn-email-cell").hasAttribute("data-verified"),
+      panels: ticks(r)
+    };
+  }
+  // A row's ticks, as {panel key: on}.
+  function ticks(r) {
+    var out = {};
+    r.querySelectorAll("input[data-pn-panel]").forEach(function (c) { out[c.dataset.pnPanel] = c.checked; });
+    return out;
+  }
+  function restore(r, s) {
+    r.querySelector('[data-pn="name"]').value = s.name;
+    r.querySelector('[data-pn="note"]').value = s.note;
+    r.querySelector('[data-pn="email"]').value = s.email;
+    r.querySelector("[data-pn-pill]").textContent = s.verified ? s.email : "";
+    var entry = r.querySelector("[data-pn-entry]");
+    entry.value = s.verified ? "" : s.email;
+    delete entry.dataset.was;
+    var cell = r.querySelector(".pn-email-cell");
+    if (s.verified) cell.setAttribute("data-verified", ""); else cell.removeAttribute("data-verified");
+    // Only the columns the row had when ticked: one added since keeps its
+    // tick, one retired since is gone.
+    r.querySelectorAll("input[data-pn-panel]").forEach(function (c) {
+      if (c.dataset.pnPanel in s.panels) c.checked = s.panels[c.dataset.pnPanel];
+    });
+    label(r);
+    check();
+  }
+  // Whether a row holds what it did when ticked: its text, its email (a
+  // pill put back to change and left is the same email), and its ticks on
+  // the columns both then and now.
+  function same(r, s) {
+    var now = snap(r);
+    if (now.name !== s.name || now.note !== s.note || now.email.toLowerCase() !== s.email.toLowerCase()) return false;
+    return Object.keys(now.panels).every(function (k) { return !(k in s.panels) || now.panels[k] === s.panels[k]; });
+  }
+  // Several rows unticked at once say it once.
+  var batch = null;
+  function tell(text) { if (batch) batch.push(text); else said.textContent = text; }
+  // `how` is "save" to keep what the row holds; otherwise unticking puts
+  // it back, and a row added and never saved goes.
+  function select(r, on, how) {
+    if (on && !r.hasAttribute("data-sel")) r.pnSnap = snap(r);
+    if (!on && r.hasAttribute("data-sel") && how !== "save") {
+      var who = val(r, "name") || val(r, "email") || "The new row";
+      if (r.dataset.fresh) {
+        r.remove(); check(); filter(); selected();
+        tell("New row not saved, so not added.");
+        return;
+      }
+      if (r.pnSnap) {
+        var changed = !same(r, r.pnSnap);
+        restore(r, r.pnSnap);
+        if (changed) tell(who + ": changes not saved, so undone.");
+      }
+    }
     // An email put back to be changed, and left as it was, keeps its pill.
     var was = r.querySelector("[data-pn-entry][data-was]");
     if (!on && was) setEmail(r, was.dataset.was);
@@ -208,7 +281,7 @@
     all.checked = n > 0 && n === shown.length;
     all.indeterminate = n > 0 && n < shown.length;
   }
-  // Search, as Review Robin's toolbar: rows whose name, email or note
+  // Filter, as Review Robin's toolbar's search: rows whose name, email or note
   // hold the text; a selected row stays in view while it is edited. Run
   // again whenever a row changes, so what shows always matches the box.
   var search = root.querySelector("[data-pn-search]");
@@ -227,6 +300,7 @@
     r.querySelector("[data-pn-select]").setAttribute("aria-label", "Select " + who);
     r.querySelector('[data-pn-act="unverify"]').setAttribute("aria-label", "Change " + (val(r, "email") || "the email"));
     r.querySelector('[data-pn-act="remove"]').setAttribute("aria-label", "Remove " + who);
+    r.querySelector('[data-pn-act="save"]').setAttribute("aria-label", "Save " + who);
   }
   // An email typed into a selected row, looked up in the directory: one
   // found becomes the pill (and the name, if none is typed); one not found
@@ -268,8 +342,8 @@
       r.querySelector('[data-pn="note"]').value = m.note || "";
       setEmail(r, m.email || "");
       (m.panels || []).forEach(function (k) { var c = r.querySelector('input[data-pn-panel="' + k + '"]'); if (c) c.checked = true; });
-      select(r, false);  // an imported row arrives as the others are: inert
-    } else select(r, true);
+      select(r, false, "save");  // an imported row arrives as the others are: inert
+    } else { r.dataset.fresh = "1"; select(r, true); }
     return r;
   }
   function tick(key, on) {
@@ -292,6 +366,8 @@
     var n = el("span", "pn-n"); n.setAttribute("data-pn-count", "");
     th.appendChild(h); th.appendChild(n);
     head.lastElementChild.before(th);
+    cols_.lastElementChild.before(el("col", "pn-w-panel"));
+    var opt = el("option", "", "As " + name); opt.value = key; fromSel.appendChild(opt);
     // Its pill on the roster card, as the server draws one.
     var chip = el("span", "chip chip-info"); chip.setAttribute("data-panel", key);
     var cn = el("span", "", name); cn.setAttribute("data-pn-name", "");
@@ -299,15 +375,22 @@
     chip.appendChild(cn); chip.appendChild(document.createTextNode("\u00a0(")); chip.appendChild(cc); chip.appendChild(document.createTextNode(")"));
     chips.appendChild(chip);
     rows().forEach(function (r) {
-      var was = from ? r.querySelector('input[data-pn-panel="' + from + '"]') : null;
-      var td = tick(key, was && was.checked);
+      // From a panel, its people as saved: an open row's unsaved tick is
+      // not yet anyone's, and its snapshot learns the new column too.
+      var on = false;
+      if (from) {
+        var c = r.querySelector('input[data-pn-panel="' + from + '"]');
+        on = r.hasAttribute("data-sel") && r.pnSnap && from in r.pnSnap.panels ? r.pnSnap.panels[from] : !!(c && c.checked);
+      }
+      if (r.hasAttribute("data-sel") && r.pnSnap) r.pnSnap.panels[key] = on;
+      var td = tick(key, on);
       td.firstChild.disabled = !r.hasAttribute("data-sel");
       r.lastElementChild.before(td);
     });
     var li = el("li"); li.setAttribute("data-panel", key);
-    var lh = el("span", "pn-list-h", name); lh.setAttribute("data-pn-name", "");
+    var lh = el("input", "fc-in pn-list-h"); lh.value = name; lh.setAttribute("data-pn-rename", ""); lh.setAttribute("aria-label", "Name of " + name);
     var act = el("span", "pn-list-act");
-    [["copy", "Copy", "btn-secondary"], ["retire", "Retire", "btn-destructive"]].forEach(function (a) {
+    [["emails", "Copy emails", "btn-secondary"], ["retire", "Retire", "btn-destructive"]].forEach(function (a) {
       var b = el("button", "btn " + a[2], a[1]); b.type = "button"; b.setAttribute("data-pn-act", a[0]); act.appendChild(b);
     });
     var lu = el("span", "pn-list-used"), lc = el("span"); lc.setAttribute("data-pn-count", "");
@@ -317,9 +400,31 @@
     check();
     return key;
   }
-  function taken(name) {
-    return cols().some(function (h) { return nameOf(h.dataset.panel).toLowerCase() === name.toLowerCase(); });
+  function taken(name, except) {
+    return cols().some(function (h) { return h.dataset.panel !== except && nameOf(h.dataset.panel).toLowerCase() === name.toLowerCase(); });
   }
+  // Why a name will not do, or "".
+  function badName(name, except) {
+    if (!name) return "Name the panel.";
+    if (RESERVED.test(name)) return name + " names a CSV column: choose another name.";
+    if (taken(name, except)) return "A panel is already called " + name + ".";
+    return "";
+  }
+  // A panel renamed where it is listed: its column, pill, menu entry and
+  // ticks follow.
+  function rename(key, name) {
+    root.querySelectorAll('[data-panel="' + key + '"] [data-pn-name]').forEach(function (s) { s.textContent = name; });
+    var input = list.querySelector('li[data-panel="' + key + '"] [data-pn-rename]');
+    input.value = name; input.setAttribute("aria-label", "Name of " + name);
+    var o = fromSel.querySelector('option[value="' + key + '"]'); if (o) o.textContent = "As " + name;
+    body.querySelectorAll('input[data-pn-panel="' + key + '"]').forEach(function (c) { c.setAttribute("aria-label", "On " + name); });
+    check();  // the problems name panels too
+  }
+  // A panel's members' emails, comma-separated, as ticked now.
+  window.applydeskPanelEmails = function (key) {
+    return rows().filter(function (r) { var c = r.querySelector('input[data-pn-panel="' + key + '"]'); return c && c.checked; })
+      .map(function (r) { return val(r, "email"); }).filter(Boolean).join(", ");
+  };
   function retire(key) {
     if (used(key)) return;
     var name = nameOf(key);
@@ -327,9 +432,11 @@
     body.querySelectorAll('input[data-pn-panel="' + key + '"]').forEach(function (c) { c.closest("td").remove(); });
     list.querySelector('li[data-panel="' + key + '"]').remove();
     chips.querySelector('[data-panel="' + key + '"]').remove();
+    fromSel.querySelector('option[value="' + key + '"]').remove();
+    cols_.querySelector(".pn-w-panel").remove();
     said.textContent = name + " retired.";
     check();
-    root.querySelector('[data-pn-act="panel"]').focus();
+    newName.focus();
   }
 
   // --- CSV: Name, Email, Note, and a column per panel by its name ---
@@ -408,13 +515,26 @@
   root.addEventListener("input", function (e) { if (e.target.closest("[data-pn-row]") && !e.target.matches("[data-pn-entry]")) check(); });
   root.addEventListener("change", function (e) {
     if (e.target.matches("[data-pn-select]")) { select(e.target.closest("[data-pn-row]"), e.target.checked); return; }
+    if (e.target.matches("[data-pn-from]")) return;
     if (e.target.matches("[data-pn-select-all]")) {
-      // As Review Robin's: every row in view, not those a search hides.
+      // As Review Robin's: every row in view, not those the filter hides.
       var on = e.target.checked;
+      batch = [];
       rows().filter(function (r) { return !r.hidden; }).forEach(function (r) { select(r, on); });
+      if (batch.length) said.textContent = batch.join(" ");
+      batch = null;
       return;
     }
     if (e.target.matches("[data-pn-entry]")) { setEmail(e.target.closest("[data-pn-row]"), e.target.value); return; }
+    if (e.target.matches("[data-pn-rename]")) {
+      var key = e.target.closest("li[data-panel]").dataset.panel, was = nameOf(key), to = e.target.value.trim();
+      if (to === was) return;
+      var why = badName(to, key);
+      if (why) { e.target.value = was; said.textContent = why + " " + was + " keeps its name."; return; }
+      rename(key, to);
+      said.textContent = was + " is now " + to + ".";
+      return;
+    }
     if (e.target.matches("input[data-pn-panel]")) { check(); return; }
     if (e.target.matches("[data-pn-import]")) {
       var f = e.target.files && e.target.files[0];
@@ -422,7 +542,18 @@
       f.text().then(function (t) { window.applydeskPanelsImport(t); e.target.value = ""; });
     }
   });
-  var box = root.querySelector("[data-pn-newbox]"), newName = root.querySelector("[data-pn-newname]"), newErr = root.querySelector("[data-pn-newerr]");
+  // ✓ keeps a row: refused while the row has a problem.
+  function save(r) {
+    check();
+    var why = r.querySelector("[data-pn-why]").textContent;
+    var who = val(r, "name") || val(r, "email") || "This row";
+    if (why) { said.textContent = who + " is not saved: " + why.toLowerCase(); return; }
+    delete r.dataset.fresh;
+    select(r, false, "save");
+    said.textContent = who + " saved.";
+    // The filter may hide it now; then the filter box keeps the focus.
+    (r.hidden ? search : r.querySelector("[data-pn-select]")).focus();
+  }
   root.addEventListener("click", function (e) {
     var a = e.target.closest("[data-pn-act]");
     if (!a || a.disabled) return;
@@ -444,25 +575,24 @@
       said.textContent = (val(r, "name") || val(r, "email") || "A row") + " removed.";
       r.remove(); check(); filter(); selected();
       (next ? next.querySelector("[data-pn-select]") : root.querySelector('[data-pn-act="add"]')).focus();
+    } else if (what === "save") {
+      save(a.closest("[data-pn-row]"));
     } else if (what === "add") {
       addRow(null).querySelector('[data-pn="name"]').focus(); check();
-    } else if (what === "panel") {
-      box.hidden = false; newErr.textContent = ""; newName.focus();
-    } else if (what === "cancel") {
-      box.hidden = true; newName.value = "";
     } else if (what === "create") {
-      var name = newName.value.trim();
-      if (!name) { newErr.textContent = "Name the panel."; return; }
-      if (RESERVED.test(name)) { newErr.textContent = name + " names a CSV column: choose another name."; return; }
-      if (taken(name)) { newErr.textContent = "A panel is already called " + name + "."; return; }
-      addPanel(name, null);
-      box.hidden = true; newName.value = "";
-      said.textContent = "Panel " + name + " made: tick who sits on it.";
-    } else if (what === "copy" && li) {
-      var base = "Copy of " + nameOf(li.dataset.panel), n = base, i = 1;
-      while (taken(n)) n = base + " (" + (++i) + ")";
-      addPanel(n, li.dataset.panel);
-      said.textContent = n + " made, with the same people.";
+      // A new panel, blank or with an existing one's people.
+      var name = newName.value.trim(), from = fromSel.value, bad = badName(name);
+      newErr.textContent = bad;
+      if (bad) return;
+      addPanel(name, from || null);
+      newName.value = ""; fromSel.value = "";
+      said.textContent = from ? name + " added, with the people of " + nameOf(from) + "." : name + " added: tick who sits on it.";
+    } else if (what === "emails" && li) {
+      var text = window.applydeskPanelEmails(li.dataset.panel), pn = nameOf(li.dataset.panel);
+      if (!text) { said.textContent = pn + " has nobody on it yet."; return; }
+      var n = text.split(", ").length, done = "Copied " + n + (n === 1 ? " email" : " emails") + " of " + pn + ".";
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () { said.textContent = done; }, function () { said.textContent = pn + ": " + text; });
+      else said.textContent = pn + ": " + text;
     } else if (what === "retire" && li) {
       retire(li.dataset.panel);
     } else if (what === "manage") {
@@ -497,11 +627,12 @@
     });
   });
   root.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" && e.target.matches("[data-pn-entry]")) { e.preventDefault(); setEmail(e.target.closest("[data-pn-row]"), e.target.value); }
-  });
-  newName.addEventListener("keydown", function (e) {
-    if (e.key === "Enter") { e.preventDefault(); root.querySelector('[data-pn-act="create"]').click(); }
-    if (e.key === "Escape") root.querySelector('[data-pn-act="cancel"]').click();
+    if (e.key !== "Enter") return;
+    if (e.target.matches("[data-pn-entry]")) { e.preventDefault(); setEmail(e.target.closest("[data-pn-row]"), e.target.value); return; }
+    // Enter in a selected row's other boxes is its ✓.
+    if (e.target.matches('[data-pn-row] [data-pn="name"], [data-pn-row] [data-pn="note"]')) { e.preventDefault(); save(e.target.closest("[data-pn-row]")); return; }
+    if (e.target.matches("[data-pn-rename]")) { e.preventDefault(); e.target.blur(); return; }
+    if (e.target === newName) { e.preventDefault(); root.querySelector('[data-pn-act="create"]').click(); }
   });
   check();
 })();

@@ -34,8 +34,8 @@ def _count(page: Page, key: str) -> str:
 def test_ticks_rows_and_their_checks(page: Page) -> None:
     page.goto(PANELS)
     _manage(page)
-    counts = page.locator("[data-pn-counts]")
-    assert counts.inner_text() == "8 people · 4 panels · 4 in use"
+    people = page.locator("[data-pn-people]")
+    assert people.inner_text() == "8"
     zoe = _row(page, "zoe.tan@example.edu")
     # Ruling 22: a row is inert until selected, its ticks too.
     tick = zoe.locator('input[data-pn-panel="panel-b"]')
@@ -50,8 +50,18 @@ def test_ticks_rows_and_their_checks(page: Page) -> None:
     tick.check()
     assert _count(page, "panel-b") == "2 people"
     assert page.locator('li[data-panel="panel-b"] [data-pn-count]').inner_text() == "2 people"
+    # Unticked without ✓, the row is put back as it was.
     zoe.locator("[data-pn-select]").uncheck()
+    assert tick.is_disabled() and not tick.is_checked()
+    assert _count(page, "panel-b") == "1 person"
+    assert "changes not saved, so undone" in page.locator("[data-pn-said]").inner_text()
+    # ✓ keeps them.
+    zoe.locator("[data-pn-select]").check()
+    tick.check()
+    zoe.locator('[data-pn-act="save"]').click()
+    assert zoe.get_attribute("data-sel") is None
     assert tick.is_disabled() and tick.is_checked()
+    assert page.locator("[data-pn-said]").inner_text() == "Zoe Tan saved."
     # An email not in the directory, and a repeated one, are named, on the
     # row and in the card; one found is a pill and names a blank row.
     page.locator('[data-pn-act="add"]').click()
@@ -78,13 +88,13 @@ def test_ticks_rows_and_their_checks(page: Page) -> None:
     entry.press("Enter")
     assert new.locator('[data-pn="name"]').input_value() == "Daniel Koh"
     assert not page.locator("[data-pn-issues]").is_visible()
-    assert counts.inner_text() == "9 people · 4 panels · 4 in use"
+    assert people.inner_text() == "9"
     # Removing the only member of a panel in use is named.
     ana = _row(page, "ana.lim@example.edu")
     ana.locator("[data-pn-select]").check()
     ana.locator('[data-pn-act="remove"]').click()
     zoe.locator("[data-pn-select]").check()
-    tick.uncheck()
+    tick.uncheck()  # in the card while the row is open, before ✓
     assert "Panel B is in use with nobody on it." in page.locator("[data-pn-issues]").inner_text()
 
 
@@ -94,7 +104,6 @@ def test_panels_are_made_copied_and_retired_only_unused(page: Page) -> None:
     # Every sample panel is in use: none may be retired.
     retire = page.locator('li[data-panel] [data-pn-act="retire"]')
     assert all(retire.nth(i).is_disabled() for i in range(4))
-    page.locator('[data-pn-act="panel"]').click()
     name = page.locator("[data-pn-newname]")
     name.fill("panel a")
     page.locator('[data-pn-act="create"]').click()
@@ -107,17 +116,23 @@ def test_panels_are_made_copied_and_retired_only_unused(page: Page) -> None:
     assert sara.locator('input[data-pn-panel="made-1"]').is_disabled()
     sara.locator("[data-pn-select]").check()
     sara.locator('input[data-pn-panel="made-1"]').check()
-    # Copy keeps the people; a copy is unused, so it may be retired.
-    page.locator('li[data-panel="interviewers"] [data-pn-act="copy"]').click()
+    sara.locator('[data-pn-act="save"]').click()
+    # Added from an existing panel, it has its people; unused, it may be retired.
+    name.fill("Interview reserve")
+    page.locator("[data-pn-from]").select_option("interviewers")
+    page.locator('[data-pn-act="create"]').click()
     assert (
-        page.locator('th[data-panel="made-2"] [data-pn-name]').inner_text()
-        == "Copy of Interviewers"
+        page.locator('th[data-panel="made-2"] [data-pn-name]').inner_text() == "Interview reserve"
     )
     assert _count(page, "made-2") == "2 people"
+    assert page.locator("[data-pn-said]").inner_text() == (
+        "Interview reserve added, with the people of Interviewers."
+    )
     page.locator('li[data-panel="made-2"] [data-pn-act="retire"]').click()
     assert page.locator('th[data-panel="made-2"]').count() == 0
     assert page.locator('input[data-pn-panel="made-2"]').count() == 0
-    assert page.locator("[data-pn-counts]").inner_text() == "8 people · 5 panels · 4 in use"
+    assert page.locator('[data-pn-from] option[value="made-2"]').count() == 0
+    assert page.locator("[data-pn-chips] [data-panel]").count() == 5
     # A person added after a panel was made gets its box.
     page.locator('[data-pn-act="add"]').click()
     assert page.locator("[data-pn-row]").last.locator('input[data-pn-panel="made-1"]').count() == 1
@@ -219,7 +234,7 @@ def test_focus_stays_on_the_page_after_retire_and_the_last_remove(page: Page) ->
     page.goto(BLIND)
     _manage(page)
     page.locator('li[data-panel="interviewers"] [data-pn-act="retire"]').click()
-    assert page.evaluate("document.activeElement.dataset.pnAct") == "panel"
+    assert page.evaluate("document.activeElement.matches('[data-pn-newname]')")
     for _ in range(3):
         first = page.locator("[data-pn-row]").first
         first.locator("[data-pn-select]").check()
@@ -232,7 +247,6 @@ def test_a_panel_may_not_take_a_csv_column_s_name(page: Page) -> None:
     as its own on import."""
     page.goto(PANELS)
     _manage(page)
-    page.locator('[data-pn-act="panel"]').click()
     page.locator("[data-pn-newname]").fill("email")
     page.locator('[data-pn-act="create"]').click()
     err = page.locator("[data-pn-newerr]").inner_text()
@@ -256,7 +270,6 @@ def test_a_guarded_csv_reads_back_the_same(page: Page) -> None:
     the import undoes the guard, so its memberships come back."""
     page.goto(PANELS)
     _manage(page)
-    page.locator('[data-pn-act="panel"]').click()
     page.locator("[data-pn-newname]").fill("-External")
     page.locator('[data-pn-act="create"]').click()
     zoe = _row(page, "zoe.tan@example.edu")
@@ -283,7 +296,8 @@ def test_select_all_turns_every_row_live_and_back(page: Page) -> None:
     assert all(not ticks.nth(i).is_disabled() for i in range(ticks.count()))
     zoe = _row(page, "zoe.tan@example.edu")
     zoe.locator('[data-pn="note"]').fill("Chair")
-    zoe.locator("[data-pn-select]").uncheck()
+    zoe.locator('[data-pn="note"]').press("Enter")  # Enter is the row's ✓
+    assert zoe.get_attribute("data-sel") is None
     assert every.evaluate("e => e.indeterminate")
     every.check()  # a click on a part-ticked box selects every row
     assert zoe.get_attribute("data-sel") == ""
@@ -395,5 +409,102 @@ def test_search_select_all_and_remove_keep_to_the_rows_in_view(page: Page) -> No
     search.fill("zoe tan")
     zoe.locator("[data-pn-select]").check()
     zoe.locator('[data-pn="name"]').fill("Zara Tan")
-    zoe.locator("[data-pn-select]").uncheck()
+    zoe.locator('[data-pn-act="save"]').click()
     assert not zoe.is_visible()
+
+
+def test_a_row_is_kept_by_its_tick_mark_and_put_back_by_its_untick(page: Page) -> None:
+    """Author, 2026-11-14: ✓ keeps a row's changes; unticked without it,
+    the row is as it was, and a new row never saved is not added."""
+    page.goto(PANELS)
+    rows = page.locator("[data-pn-row]")
+    hana = rows.nth(3)  # by place: the locator by email would lose it as it changes
+    assert hana.locator('[data-pn-view="name"]').inner_text() == "Dr Hana Ito"
+    hana.locator("[data-pn-select]").check()
+    hana.locator('[data-pn="note"]').fill("Biology")
+    hana.locator('[data-pn-act="unverify"]').click()
+    hana.locator("[data-pn-entry]").fill("mei.chen@example.edu")
+    hana.locator("[data-pn-entry]").press("Enter")
+    hana.locator("[data-pn-select]").uncheck()
+    assert hana.locator('[data-pn-view="note"]').inner_text() == "Life Sciences"
+    assert hana.locator('[data-pn-view="email"]').inner_text() == "hana.ito@example.edu"
+    assert hana.locator('[data-pn="email"]').input_value() == "hana.ito@example.edu"
+    hana.locator("[data-pn-select]").check()
+    assert hana.locator("[data-pn-pill]").inner_text() == "hana.ito@example.edu"
+    # A row with a problem is not saved.
+    page.locator('[data-pn-act="add"]').click()
+    new = rows.last
+    new.locator('[data-pn-act="save"]').click()
+    assert new.get_attribute("data-sel") == ""
+    assert page.locator("[data-pn-said]").inner_text() == (
+        "This row is not saved: an email is needed."
+    )
+    # Unticked unsaved, it goes.
+    n = rows.count()
+    new.locator("[data-pn-select]").uncheck()
+    assert rows.count() == n - 1
+    assert page.locator("[data-pn-said]").inner_text() == "New row not saved, so not added."
+
+
+def test_panels_are_renamed_where_listed_and_their_emails_copied(page: Page) -> None:
+    page.goto(PANELS)
+    _manage(page)
+    box = page.locator('li[data-panel="panel-a"] [data-pn-rename]')
+    box.fill("Panel B")
+    box.press("Enter")
+    assert box.input_value() == "Panel A"
+    assert page.locator("[data-pn-said]").inner_text() == (
+        "A panel is already called Panel B. Panel A keeps its name."
+    )
+    box.fill("Peer panel")
+    box.press("Enter")
+    assert page.locator('th[data-panel="panel-a"] [data-pn-name]').inner_text() == "Peer panel"
+    assert page.locator('[data-pn-chips] [data-panel="panel-a"] [data-pn-name]').inner_text() == (
+        "Peer panel"
+    )
+    assert page.locator('[data-pn-from] option[value="panel-a"]').inner_text() == "As Peer panel"
+    assert page.evaluate("window.applydeskPanelEmails('interviewers')") == (
+        "ivan.petrov@example.edu, sara.ng@example.edu"
+    )
+
+
+def test_selecting_a_row_moves_no_column(page: Page) -> None:
+    """Author, 2026-11-14: fixed widths, so nothing jumps."""
+    page.goto(PANELS)
+    xs = "[...document.querySelectorAll('[data-pn-head] th')].map(t => t.getBoundingClientRect().x)"
+    before = page.evaluate(xs)
+    page.locator("[data-pn-select-all]").check()
+    assert page.evaluate(xs) == before
+
+
+def test_an_open_row_keeps_what_changes_around_it(page: Page) -> None:
+    """Cold read on rung 6c: a panel added from another while a row is
+    open, a pill clicked and left, and select-all unticking several."""
+    page.goto(PANELS)
+    _manage(page)
+    ivan = _row(page, "ivan.petrov@example.edu")  # on Interviewers
+    ivan.locator("[data-pn-select]").check()
+    page.locator("[data-pn-newname]").fill("Reserve")
+    page.locator("[data-pn-from]").select_option("interviewers")
+    page.locator('[data-pn-act="create"]').click()
+    ivan.locator('[data-pn-act="unverify"]').click()  # clicked, left as it was
+    ivan.locator("[data-pn-select]").uncheck()
+    assert ivan.locator('input[data-pn-panel="made-1"]').is_checked()
+    assert page.locator("[data-pn-said]").inner_text() == (
+        "Reserve added, with the people of Interviewers."
+    )  # nothing undone, so nothing said
+    assert ivan.locator('[data-pn-view="email"]').inner_text() == "ivan.petrov@example.edu"
+    # Select-all unticked over two changed rows says both.
+    page.locator("[data-pn-select-all]").check()
+    _row(page, "zoe.tan@example.edu").locator('[data-pn="note"]').fill("x")
+    _row(page, "ana.lim@example.edu").locator('[data-pn="note"]').fill("y")
+    page.locator("[data-pn-select-all]").uncheck()
+    assert page.locator("[data-pn-said]").inner_text() == (
+        "Zoe Tan: changes not saved, so undone. Ana Lim: changes not saved, so undone."
+    )
+    # Copied emails leave out a row with none.
+    page.locator('[data-pn-act="add"]').click()
+    page.locator("[data-pn-row]").last.locator('input[data-pn-panel="interviewers"]').check()
+    assert page.evaluate("window.applydeskPanelEmails('interviewers')") == (
+        "ivan.petrov@example.edu, sara.ng@example.edu"
+    )

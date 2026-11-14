@@ -755,7 +755,7 @@ def test_panels_is_one_table_a_column_per_panel(client: TestClient) -> None:
     assert [k for k, on in ticks if on] == ["panel-a"]
     # Used by, worked out from the form and the gates.
     assert "Form: Preferred reviewer" in text and "Gate 3: Interview" in text
-    assert "8 people · 4 panels · 4 in use" in text
+    assert "data-pn-people>8<" in text and "data-pn-inuse>· 4 in use<" in text
 
 
 def test_a_panel_nothing_uses_may_be_retired(client: TestClient) -> None:
@@ -765,7 +765,7 @@ def test_a_panel_nothing_uses_may_be_retired(client: TestClient) -> None:
     item = text[text.index('<li data-panel="interviewers">') :]
     item = item[: item.index("</li>")]
     assert "Not used yet" in item and 'title="In use' not in item
-    assert "3 people · 2 panels · 1 in use" in text
+    assert "data-pn-people>3<" in text and "data-pn-inuse>· 1 in use<" in text
     assert sample_data.roster(BLIND)[0][0].name == "Priya Rao"
 
 
