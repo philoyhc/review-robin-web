@@ -61,6 +61,7 @@ Taken 2026-11-13 at `fb6785690`.
 - **Rungs 1–3 built** (#3875 plan, #3876 Form's picker, rung 3 Gates). The Panels page waits for the author's choice of format (Open questions); Form and Gates came first at the author's word.
 - **The draft exercise gained a selection gate with no panel** (rung 3): every other sample gate is sent, so its menu is fixed, and Gates had nothing to pick on.
 - **Reads: one**, cumulative on rungs 2–3 (base `8b4fa6484`, main after the plan): one defect, the picker restoring a stale panel after Form's type change, also found by Codex on #3876 and fixed there; on Gates, a link to Process on the card and assessment-panel membership kept once (in `PANELS`). The quick create refusing a repeated email, where a table would skip it, is recorded in Semantics. Rung 4 takes its own read.
+- **Ruling 20's rungs** (#3878 plan, 4b items collapse, 4c Evaluators on Process and Gates retired). **Reads: one**, cumulative on 4b–4c (base `b40d21de2`): one defect, a replicated stage copying its gates' sent lock and its outcome's release, so the copy's gates could never take a panel; fixed in 4c. Also fixed: an item left alone opening, the Outline's Form entry focusing the item, a docstring. The Outline's panel names and *has no panel* are the script's, as rule problems are.
 
 ## PR ladder
 

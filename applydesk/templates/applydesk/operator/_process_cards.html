@@ -7,6 +7,8 @@
    (rung 5). Nothing here is
    saved. Imported with context, for the exercise's links. #}
 
+{% import "applydesk/operator/_panel_pick.html" as pick %}
+
 {% macro grip() %}<button type="button" class="fc-grip" data-fc-grip aria-label="Move: drag, or press the up and down arrow keys" title="Drag to reorder">⋮⋮</button>{% endmacro %}
 
 {# An item's head (segment AD1F, ruling 20): always shown, open or shut;
@@ -57,9 +59,12 @@
 {% endmacro %}
 
 {% macro gate_item(plan, g, rule_text, open=False) %}{# g.number 0: a new gate, numbered by the page's script #}
-{% set state = gate_state(exercise.public_id, g.key)[0] if g.key else "Not ready" %}
+{% set gs = gate_state(exercise.public_id, g.key) if g.key else ("Not ready", "") %}
+{% set state = gs[0] %}
+{% set sent = state in ("Sent", "Results in") %}
+{% set pool = panel_pools.get(g.panel) if g.panel else none %}
 <div class="pc-item" data-item="gate" data-key="{{ g.key }}" data-rule="{{ rule_json(g) | tojson | forceescape }}"{% if open %} data-open{% endif %}>
-  {% set chips %}<span class="chip chip-{{ 'ok' if state == 'Results in' else ('info' if state in ('Sent', 'Ready') else 'warn') }}">{{ state }}</span>{% endset %}
+  {% set chips %}<span class="chip chip-{{ 'ok' if state == 'Results in' else ('info' if state in ('Sent', 'Ready') else 'warn') }}" data-pi-state>{{ state }}</span><span class="chip {{ 'chip-mute' if pool else 'chip-warn' }}" data-pi-panel>{% if pool %}{{ pool.name }} · {{ pool.members | length }} {{ "person" if pool.members | length == 1 else "people" }}{% else %}No panel{% endif %}</span>{% endset %}
   {{ head("Gate " ~ g.number, g.label or "Untitled gate", chips, open) }}
   <div class="pi-body">
   <div class="pc-row">
@@ -68,7 +73,17 @@
     <label class="fc-l pc-narrow">Result<input class="fc-in" data-pc="measure" value="{{ g.measure }}" placeholder="Score"></label>
   </div>
   {{ rule_box(plan, g, rule_text) }}
-  <p class="pc-line muted">Its panel: on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/gates') }}">Gates</a>.</p>
+  {# Who evaluates (ruling 20): a panel, picked or made here; a sent gate
+     keeps the panel it was sent with. #}
+  <div class="pc-row pc-evaluators" data-pick-wrap>
+    <label class="fc-l pc-wide">Evaluators{{ pick.menu(panel_pools, g.panel, 'data-pc-panel' ~ (' disabled title="Sent: the gate keeps the panel it was sent with"' if sent else ''), empty="No panel yet") }}</label>
+    {{ pick.new_box() }}
+  </div>
+  <ul class="gc-members" data-pc-members>
+    {% for name, email in (pool.members if pool else []) %}<li>{{ name }}{% if name != email %} <span class="muted">{{ email }}</span>{% endif %}</li>{% endfor %}
+  </ul>
+  {% if sent %}<p class="pc-line muted" data-pc-sent>Sent with the panel as it then stood: changes to its roster apply from the gate's next send.</p>{% endif %}
+  <p class="pc-line muted">Panel sees: the application file, the <em>Shown to reviewers</em> part{% if exercise.blind %}, redacted{% endif %}.{% if gs[1] %}<span data-pc-sent> Progress: {{ gs[1] }}.</span>{% endif %}</p>
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-gate">Remove the gate</button></div>
   </div>
 </div>
@@ -77,7 +92,7 @@
 {% macro outcome_item(plan, o, rule_text, open=False) %}
 {% set n = (1 if o.key and sends(o.key, 'Applicants') else 0) + (1 if o.key and sends(o.key, 'Panel evaluators') else 0) %}
 <div class="pc-item" data-item="outcome" data-key="{{ o.key }}" data-rule="{{ rule_json(o) | tojson | forceescape }}"{% if open %} data-open{% endif %}>
-  {% set chips %}<span class="chip chip-{{ 'ok' if o.released else 'mute' }}">{{ "Released" if o.released else "Not released" }}</span>{{ emails_chip(n) }}{% endset %}
+  {% set chips %}<span class="chip chip-{{ 'ok' if o.released else 'mute' }}" data-pi-state>{{ "Released" if o.released else "Not released" }}</span>{{ emails_chip(n) }}{% endset %}
   {{ head("Outcome " ~ o.number, o.label or "Untitled outcome", chips, open) }}
   <div class="pi-body">
   <div class="pc-row">

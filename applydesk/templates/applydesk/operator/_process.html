@@ -9,6 +9,7 @@
 {% set gates = plan.columns | selectattr("via", "defined") | list %}
 {% set outs = plan.columns | rejectattr("via", "defined") | list %}
 {% set issues = stage_problems(plan.stages) %}
+<script type="application/json" id="pc-pools">{{ people | tojson }}</script>
 <div class="fb-split" data-process>
   <div class="fb-main">
     <p class="muted pc-intro">The exercise's timeline, stage by stage. A stage holds the application form, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Applications applies them.</p>
@@ -43,6 +44,7 @@
     </section>
   </aside>
 </div>
+{% include "applydesk/operator/_panel_pick_js.html" %}
 <script>
 // Segment AD1E rung 3: the stage card moves, in the browser only; a reload
 // restores the sample. Collapse and expand; the name and dates feeding the
@@ -60,6 +62,14 @@
   var counts = root.querySelector("[data-pc-counts]");
   var live = root.querySelector("[data-pc-live]");
   var keys = 0, edits = 0;
+  // Each pool by key, {name, members}, shared with the panel picker,
+  // which adds the panels made on the page (ruling 20).
+  window.applydeskPools = window.applydeskPools || JSON.parse(document.getElementById("pc-pools").textContent);
+  var POOLS = window.applydeskPools;
+  function panelOf(item) {
+    var m = item.querySelector("[data-pc-panel]");
+    return m && m.value && POOLS[m.value] ? POOLS[m.value] : null;
+  }
   function cards() { return Array.prototype.slice.call(list.children); }
   function items(card, kind) { return Array.prototype.slice.call(card.querySelectorAll('.pc-item[data-item="' + kind + '"]')); }
   function field(card, f) { var i = card.querySelector('[data-pc="' + f + '"]'); return i ? i.value.trim() : ""; }
@@ -121,9 +131,25 @@
     t.setAttribute("aria-label", (open ? "Collapse " : "Expand ") + item.querySelector("[data-pc-kicker]").textContent);
   }
   function heads(card) {
-    card.querySelectorAll(".pc-item").forEach(function (item) {
+    // An item left alone in its stage opens, as one alone on load does.
+    var all = card.querySelectorAll(".pc-item"), was = card.dataset.items;
+    card.dataset.items = String(all.length);
+    if (all.length === 1 && was && was !== "1") all[0].setAttribute("data-open", "");
+    all.forEach(function (item) {
       var kind = item.dataset.item;
       if (kind !== "form") item.querySelector("[data-pi-name]").textContent = itemName(item, kind === "gate" ? "Untitled gate" : "Untitled outcome");
+      if (kind === "gate") {
+        var pool = panelOf(item), pc = item.querySelector("[data-pi-panel]");
+        pc.textContent = pool ? pool.name + " · " + pool.members.length + (pool.members.length === 1 ? " person" : " people") : "No panel";
+        pc.className = "chip " + (pool ? "chip-mute" : "chip-warn");
+        var ul = item.querySelector("[data-pc-members]");
+        ul.textContent = "";
+        (pool ? pool.members : []).forEach(function (m) {
+          var li = el("li", "", m[0]);
+          if (m[0] !== m[1]) { li.appendChild(document.createTextNode(" ")); li.appendChild(el("span", "muted", m[1])); }
+          ul.appendChild(li);
+        });
+      }
       var chip = item.querySelector("[data-pi-emails]");
       if (chip) {
         var n = item.querySelectorAll('input[data-rel="receipt"]:checked, input[data-rel="reminder"]:checked, input[data-rel$="-email"]:checked').length;
@@ -136,7 +162,7 @@
     setOpen(card, true);
     if (item) itemOpen(item, true);
     (item || card).scrollIntoView({ block: item ? "center" : "start" });
-    var f = item ? item.querySelector('[data-pc="item-name"]') : null;
+    var f = item ? item.querySelector('[data-pc="item-name"]') || item.querySelector("[data-pi-toggle]") : null;
     (f || card.querySelector("[data-fc-toggle]")).focus({ preventScroll: true });
   }
   function el(tag, cls, text) {
@@ -175,6 +201,13 @@
         b.type = "button";
         b.addEventListener("click", function () { goTo(card, item); });
         row.appendChild(b);
+        if (kind === "gate") {
+          var pool = panelOf(item);
+          row.appendChild(document.createTextNode(" "));
+          var who = el("span", "muted", pool ? pool.name : "No panel");
+          who.setAttribute("data-o-panel", "");
+          row.appendChild(who);
+        }
         sub.appendChild(row);
       });
       li.appendChild(sub);
@@ -330,6 +363,7 @@
       if (btn.getAttribute("aria-expanded") !== "true") btn.textContent = rule ? "Edit the rule" : "Add a rule";
       var who = item.querySelector("[data-pc-kicker]").textContent + " (" + nameOf(item) + ") ";
       found.forEach(function (f) { all.push(who + f + "."); });
+      if (item.dataset.item === "gate" && !panelOf(item)) all.push(who + "has no panel.");
       if (weighed) all.push(who + weighed + ".");
     });
     var issues = root.querySelector("[data-pc-issues]");
@@ -484,6 +518,16 @@
         item.dataset.key = k;
       });
       added.querySelectorAll("select").forEach(function (s, i) { s.value = card.querySelectorAll("select")[i].value; });
+      // Its gates and outcome are new: nothing of theirs is sent or
+      // released, so each gate's panel can still be chosen.
+      added.querySelectorAll(".pc-item[data-key]").forEach(function (item) {
+        var gate = item.dataset.item === "gate", st = item.querySelector("[data-pi-state]");
+        st.textContent = gate ? "Not ready" : "Not released";
+        st.className = "chip " + (gate ? "chip-warn" : "chip-mute");
+        item.querySelectorAll("[data-pc-sent]").forEach(function (x) { x.remove(); });
+        var menu = item.querySelector("[data-pc-panel]");
+        if (menu) { menu.disabled = false; menu.removeAttribute("title"); }
+      });
       // The copy's rules and weights read its own gates and outcome.
       added.querySelectorAll(".pc-item[data-key]").forEach(function (item) {
         var rule = ruleOf(item);
@@ -598,6 +642,7 @@
     if (e.target.closest("[data-fc-toggle]")) setOpen(card, !card.hasAttribute("data-open"));
   });
   list.addEventListener("input", function (e) {
+    if (e.target.matches("[data-pc-panel]")) { changed(); return; }
     if (e.target.closest("[data-rule-ed]")) { var item = e.target.closest(".pc-item"); setRule(item, readEditor(item)); rules(); return; }
     if (e.target.matches("[data-w-key]")) { var note = e.target.closest("[data-pc-weights]").querySelector("[data-w-note]"); if (note) note.textContent = ""; rules(); return; }
     if (e.target.matches('[data-pc="values"]')) {

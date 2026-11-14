@@ -91,12 +91,12 @@ PLACES: tuple[Mapping[str, Any], ...] = (
 )
 
 
-#: An exercise's pages beyond Home, in the chrome's two rows (ruling 14):
+#: An exercise's pages beyond Home, in the chrome's two rows (ruling 14;
+#: Gates folded into Process by ruling 20, Panels to take its slot):
 #: (path segment, tab label).
 SETUP_PAGES: tuple[tuple[str, str], ...] = (
     ("process", "Process"),
     ("form", "Form"),
-    ("gates", "Gates"),
     ("emails", "Emails"),
 )
 OPERATIONS_PAGES: tuple[tuple[str, str], ...] = (
