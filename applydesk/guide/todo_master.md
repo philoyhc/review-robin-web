@@ -272,8 +272,7 @@ Segments in order; each gets a plan in this folder when it starts.
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
 | **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
-| **AD1F — Gates and Panels** | Form's *Select people* and each gate picking or making a panel (ruling 19); Gates folded into Process, whose items collapse, and Panels in its slot as one table with a column per panel (ruling 20); a gate's results, each a response field and a derivation (ruling 21); nothing saved | `applydesk/guide/segment_AD1F_gates_panels.md` |
-| AD1G onward — the other new pages | Emails, Evaluations and Extract data built out as working scaffolds, one segment each | After AD1F |
+| AD1G onward — the other new pages | Emails, Evaluations and Extract data built out as working scaffolds, one segment each | Next |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
@@ -315,5 +314,7 @@ Segments in order; each gets a plan in this folder when it starts.
   one condition per section, hidden answers discarded on submit.
   Revisit when a real exercise would otherwise need two near-identical
   forms, or operators keep writing "skip this if…" in help text.
+- **A panel shared across exercises** (AD1F): an institution's standing
+  pool, the author's when AD5 stores panels.
 - **Raise early with IT:** Blob storage (spec §5.3) and the `applydesk`
   database, beside 14G's mailbox question.
