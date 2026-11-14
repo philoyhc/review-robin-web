@@ -115,6 +115,7 @@ Taken 2026-11-13 at `fb6785690`.
 7d. *Manage panels*: a rename takes ✓ or Enter; Esc or leaving the box puts it back.
 7e. **Panels on the browser check (author, 2026-11-14).** A selected row taller, its boxes at the top and a line kept beneath for its message; a verified email a pill whether the row is open or not; *Add new panel*'s blank panel takes *Members* as Form's *Select people* box does (a row added for anyone without one); *Manage panels*, open, shows *Cancel*, *Save* and *Close* at its bottom right, the toggle hidden, names waiting for *Save*, the ✓ by each box gone. Takes its own read.
 7f. **A panel added waits for Save (author, 2026-11-14).** *Add panel* an outline button, so *Save* is the card's one primary; a panel added there is marked *not saved yet* until *Save*, and *Cancel* (or *Close*, confirmed) takes it back with the rows it brought, a row saved with its own ✓ staying. Takes its own read.
+7g. **Retire waits for Save; the table's columns (author, 2026-11-14).** *Retire* marks a panel *not saved yet*, its heading and chip struck through, until *Save* retires it or *Cancel* keeps it; the filter matches the panels a row is on; a *Show columns:* chip per panel hides and shows its column, after Review Robin's rosters (not remembered across a reload until AD2). Takes its own read.
 5. **Iteration rungs**, as the author's browser checks ask.
 6. **Close**, only after the author's browser check.
 

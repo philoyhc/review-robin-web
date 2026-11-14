@@ -140,11 +140,90 @@ def test_panels_are_made_copied_and_retired_only_unused(page: Page) -> None:
 
 
 def test_a_panel_nothing_uses_retires(page: Page) -> None:
+    """Retire waits for Save (author, 2026-11-14): the column stays, struck,
+    until Save retires it, and Cancel keeps it."""
     page.goto(BLIND)
     _manage(page)
-    page.locator('li[data-panel="interviewers"] [data-pn-act="retire"]').click()
-    assert page.locator("th[data-panel] [data-pn-name]").all_inner_texts() == ["Panel A"]
-    assert "Interviewers retired." in page.locator("[data-pn-said]").inner_text()
+    heads = page.locator("th[data-panel] [data-pn-name]")
+    retire = page.locator('li[data-panel="interviewers"] [data-pn-act="retire"]')
+    save = page.locator('[data-pn-act="save-names"]')
+    retire.click()
+    assert heads.all_inner_texts() == ["Panel A", "Interviewers"]
+    assert "pn-retiring" in (
+        page.locator('th[data-panel="interviewers"]').get_attribute("class") or ""
+    )
+    assert page.locator('li[data-panel="interviewers"] [data-pn-unsaved]').inner_text() == (
+        "Retired: not saved yet"
+    )
+    assert retire.is_disabled() and save.is_enabled()
+    said = page.locator("[data-pn-said]")
+    assert said.inner_text() == "Interviewers to be retired. Save retires it; Cancel keeps it."
+    page.locator('[data-pn-act="cancel-names"]').click()
+    assert heads.all_inner_texts() == ["Panel A", "Interviewers"]
+    assert "pn-retiring" not in (
+        page.locator('th[data-panel="interviewers"]').get_attribute("class") or ""
+    )
+    assert retire.is_enabled() and save.is_disabled()
+    assert page.locator("[data-pn-unsaved]").count() == 0
+    # Close, confirmed, keeps it too.
+    retire.click()
+    page.once("dialog", lambda d: d.accept())
+    page.locator('[data-pn-act="close"]').click()
+    assert heads.all_inner_texts() == ["Panel A", "Interviewers"]
+    _manage(page)
+    assert retire.is_enabled()
+    # Saved, it goes first, so another panel may take its name in the same Save.
+    retire.click()
+    page.locator('li[data-panel="panel-a"] [data-pn-rename]').fill("Interviewers")
+    save.click()
+    assert heads.all_inner_texts() == ["Interviewers"]
+    assert said.inner_text() == "Interviewers retired. Panel A is now Interviewers."
+    assert page.locator('[data-pn-show][data-panel="interviewers"]').count() == 0
+    assert page.locator("col.pn-w-panel").count() == 1
+
+
+def test_the_filter_matches_a_panel_s_name(page: Page) -> None:
+    page.goto(PANELS)
+    search = page.locator("[data-pn-search]")
+    search.fill("interviewers")
+    shown = page.locator("[data-pn-row]:visible")
+    assert shown.count() == 2
+    for i in range(2):
+        assert shown.nth(i).locator('input[data-pn-panel="interviewers"]').is_checked()
+
+
+def test_show_columns_hides_and_shows_a_panel(page: Page) -> None:
+    """As Review Robin's rosters (author, 2026-11-14): a chip per panel."""
+    page.goto(PANELS)
+    chip = page.locator('[data-pn-show][data-panel="panel-b"]')
+    assert chip.get_attribute("aria-pressed") == "true"
+    head = page.locator('th[data-panel="panel-b"]')
+    cell = page.locator("[data-pn-row]").first.locator('input[data-pn-panel="panel-b"]')
+    n = page.locator("col.pn-w-panel").count()
+    chip.click()
+    assert chip.get_attribute("aria-pressed") == "false"
+    assert not head.is_visible() and not cell.is_visible()
+    assert page.locator("col.pn-w-panel").count() == n - 1
+    # A row added while it is hidden has its cell hidden too.
+    page.locator('[data-pn-act="add"]').click()
+    assert (
+        not page.locator("[data-pn-row]")
+        .first.locator('input[data-pn-panel="panel-b"]')
+        .is_visible()
+    )
+    page.locator("[data-pn-row]").first.locator("[data-pn-select]").uncheck()
+    # A panel added later gets a chip, and its name follows a rename.
+    _manage(page)
+    page.locator("[data-pn-newname]").fill("Panel C")
+    page.locator('[data-pn-act="create"]').click()
+    made = page.locator('[data-pn-show][data-panel="made-1"]')
+    assert made.inner_text() == "Panel C"
+    page.locator('li[data-panel="made-1"] [data-pn-rename]').fill("Panel D")
+    page.locator('[data-pn-act="save-names"]').click()
+    assert made.inner_text() == "Panel D"
+    chip.click()
+    assert head.is_visible() and cell.is_visible()
+    assert page.locator("col.pn-w-panel").count() == n + 1
 
 
 def test_a_csv_goes_out_and_comes_in(page: Page) -> None:
