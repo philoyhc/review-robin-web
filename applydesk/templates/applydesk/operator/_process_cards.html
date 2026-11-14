@@ -9,9 +9,25 @@
 
 {% macro grip() %}<button type="button" class="fc-grip" data-fc-grip aria-label="Move: drag, or press the up and down arrow keys" title="Drag to reorder">⋮⋮</button>{% endmacro %}
 
-{% macro form_item(new=False) %}
-<div class="pc-item" data-item="form">
-  <span class="fc-kicker">Form</span>
+{# An item's head (segment AD1F, ruling 20): always shown, open or shut;
+   its toggle opens the body below. The chips are worked out again by the
+   page's script as the item is edited. #}
+{% macro head(kicker, name, chips, open) %}
+<div class="pi-head">
+  <button type="button" class="fc-toggle" data-pi-toggle aria-expanded="{{ 'true' if open else 'false' }}" aria-label="{{ 'Collapse' if open else 'Expand' }} {{ kicker }}"></button>
+  <div class="pi-texts"><span class="fc-kicker" data-pc-kicker>{{ kicker }}</span><span class="pi-name" data-pi-name>{{ name }}</span></div>
+  <span class="fc-chips">{{ chips }}</span>
+</div>
+{% endmacro %}
+
+{% macro emails_chip(n) %}<span class="chip chip-mute" data-pi-emails>{{ "No email" if n == 0 else (n ~ (" email" if n == 1 else " emails")) }}</span>{% endmacro %}
+
+{% macro form_item(new=False, open=False) %}
+{% set n = 1 if new else ((1 if sends('receipt', 'Applicants') else 0) + (1 if sends('reminder', 'Applicants') else 0)) %}
+<div class="pc-item" data-item="form"{% if open %} data-open{% endif %}>
+  {% set chips %}<span class="chip chip-{{ 'info' if form_state == 'Open' else ('mute' if form_state == 'Closed' else 'warn') }}">{{ form_state }}</span>{{ emails_chip(n) }}{% endset %}
+  {{ head("Form", "Application form", chips, open) }}
+  <div class="pi-body">
   <p class="pc-line">The application form opens and closes on this stage's dates. Its questions are built on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>.</p>
   {# Which emails it sends (ruling 16); each one ticked is a template owed on Emails. #}
   <div class="pc-release" data-pc-release>
@@ -24,6 +40,7 @@
     <p class="pc-line muted pc-hint">Each email ticked is a template owed on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}">Emails</a>.</p>
   </div>
   <div class="pc-item-foot"><button type="button" class="btn btn-secondary" data-pc-act="remove-form">Remove the form</button></div>
+  </div>
 </div>
 {% endmacro %}
 
@@ -39,9 +56,12 @@
 </div>
 {% endmacro %}
 
-{% macro gate_item(plan, g, rule_text) %}{# g.number 0: a new gate, numbered by the page's script #}
-<div class="pc-item" data-item="gate" data-key="{{ g.key }}" data-rule="{{ rule_json(g) | tojson | forceescape }}">
-  <span class="fc-kicker" data-pc-kicker>Gate {{ g.number }}</span>
+{% macro gate_item(plan, g, rule_text, open=False) %}{# g.number 0: a new gate, numbered by the page's script #}
+{% set state = gate_state(exercise.public_id, g.key)[0] if g.key else "Not ready" %}
+<div class="pc-item" data-item="gate" data-key="{{ g.key }}" data-rule="{{ rule_json(g) | tojson | forceescape }}"{% if open %} data-open{% endif %}>
+  {% set chips %}<span class="chip chip-{{ 'ok' if state == 'Results in' else ('info' if state in ('Sent', 'Ready') else 'warn') }}">{{ state }}</span>{% endset %}
+  {{ head("Gate " ~ g.number, g.label or "Untitled gate", chips, open) }}
+  <div class="pi-body">
   <div class="pc-row">
     <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ g.label }}" placeholder="Untitled gate"></label>
     <label class="fc-l">Runs as<select class="fc-in"><option{% if g.via == "RRW" %} selected{% endif %}>A Review Robin session</option><option{% if g.via != "RRW" %} selected{% endif %}>Results entered here</option></select></label>
@@ -50,12 +70,16 @@
   {{ rule_box(plan, g, rule_text) }}
   <p class="pc-line muted">Its panel: on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/gates') }}">Gates</a>.</p>
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-gate">Remove the gate</button></div>
+  </div>
 </div>
 {% endmacro %}
 
-{% macro outcome_item(plan, o, rule_text) %}
-<div class="pc-item" data-item="outcome" data-key="{{ o.key }}" data-rule="{{ rule_json(o) | tojson | forceescape }}">
-  <span class="fc-kicker" data-pc-kicker>Outcome {{ o.number }}</span>
+{% macro outcome_item(plan, o, rule_text, open=False) %}
+{% set n = (1 if o.key and sends(o.key, 'Applicants') else 0) + (1 if o.key and sends(o.key, 'Panel evaluators') else 0) %}
+<div class="pc-item" data-item="outcome" data-key="{{ o.key }}" data-rule="{{ rule_json(o) | tojson | forceescape }}"{% if open %} data-open{% endif %}>
+  {% set chips %}<span class="chip chip-{{ 'ok' if o.released else 'mute' }}">{{ "Released" if o.released else "Not released" }}</span>{{ emails_chip(n) }}{% endset %}
+  {{ head("Outcome " ~ o.number, o.label or "Untitled outcome", chips, open) }}
+  <div class="pi-body">
   <div class="pc-row">
     <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ o.label }}" placeholder="Untitled outcome"></label>
     <label class="fc-l">Due<input class="fc-in" value="{{ o.due }}" placeholder="Date"></label>
@@ -90,6 +114,7 @@
   </div>
   <p class="pc-line muted">{{ ("Released " ~ o.released) if o.released else "Not released yet: its Released switch is on Applications." }}</p>
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-outcome">Remove the outcome</button></div>
+  </div>
 </div>
 {% endmacro %}
 
@@ -116,9 +141,11 @@
       <label class="fc-l">To<input class="fc-in" data-pc="to" value="{{ dates[1] }}" placeholder="Date"></label>
       <label class="pc-check"><input type="checkbox" checked> Shown to applicants</label>
     </div>
-    {% if st.form %}{{ form_item() }}{% endif %}
-    {% for g in gates %}{{ gate_item(plan, g, rule_text) }}{% endfor %}
-    {% for o in outs %}{{ outcome_item(plan, o, rule_text) }}{% endfor %}
+    {# An item alone in its stage opens; with others, each shows its head. #}
+    {% set lone = ((1 if st.form else 0) + st.columns | length) == 1 %}
+    {% if st.form %}{{ form_item(open=lone) }}{% endif %}
+    {% for g in gates %}{{ gate_item(plan, g, rule_text, open=lone) }}{% endfor %}
+    {% for o in outs %}{{ outcome_item(plan, o, rule_text, open=lone) }}{% endfor %}
     <p class="pc-line muted pc-empty">Nothing in this stage yet: add the form, a gate or an outcome.</p>
     <div class="pc-adds">
       <button type="button" class="btn btn-secondary" data-pc-act="gate"{% if st.form %} disabled title="A stage holding the form holds no gate"{% endif %}>+ Gate</button>

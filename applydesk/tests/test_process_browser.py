@@ -170,7 +170,7 @@ def test_a_blank_exercise_starts_with_one_open_stage(page: Page) -> None:
 def test_gates_and_an_outcome_are_added_and_removed(page: Page) -> None:
     page.goto(PAGE)
     review = _cards(page).nth(1)
-    _open(review)
+    _open_all(review)
     review.locator('[data-pc-act="gate"]').click()
     items = review.locator(".pc-item").evaluate_all("els => els.map(e => e.dataset.item)")
     assert items == ["gate", "gate", "gate", "outcome"]  # before the outcome
@@ -215,7 +215,20 @@ def test_a_stage_holding_the_form_takes_no_gate(page: Page) -> None:
 def _item(page: Page, key: str) -> Locator:
     item = page.locator(f'.pc-item[data-key="{key}"]')
     _open(item.locator("xpath=ancestor::article[1]"))
+    _open_item(item)
     return item
+
+
+def _open_item(item: Locator) -> None:
+    if item.get_attribute("data-open") is None:
+        item.locator("[data-pi-toggle]").click()
+
+
+def _open_all(card: Locator) -> None:
+    """A stage card and every item in it, open (ruling 20)."""
+    _open(card)
+    for i in range(card.locator(".pc-item").count()):
+        _open_item(card.locator(".pc-item").nth(i))
 
 
 def _line(item: Locator) -> str:
@@ -281,6 +294,7 @@ def test_an_outcome_s_weights_follow_the_gates_before_it(page: Page) -> None:
         "70",
     ]
     review = _cards(page).nth(1)
+    _open_all(review)
     review.locator('[data-pc-act="gate"]').click()
     review.locator('.pc-item[data-item="gate"]').nth(2).locator('[data-pc="item-name"]').fill(
         "Extra"
@@ -311,7 +325,7 @@ def test_then_and_otherwise_are_chosen_with_the_mouse(page: Page) -> None:
 def test_a_flagged_rule_keeps_its_column_while_edited(page: Page) -> None:
     page.goto(PAGE)
     interview = _cards(page).nth(2)
-    _open(interview)
+    _open_all(interview)
     interview.locator('[data-pc-act="remove-gate"]').click()  # g3 goes
     interview.locator('[data-pc-act="gate"]').click()
     o2 = _item(page, "o2")
@@ -508,7 +522,7 @@ def test_an_outcome_s_release_is_set_per_audience(page: Page) -> None:
 def test_a_new_outcome_and_form_send_what_is_usual(page: Page) -> None:
     page.goto(PAGE)
     interview = _cards(page).nth(2)
-    _open(interview)
+    _open_all(interview)
     interview.locator('[data-pc-act="remove-outcome"]').click()
     interview.locator('[data-pc-act="outcome"]').click()
     assert _checks(interview.locator('.pc-item[data-item="outcome"]')) == [
@@ -518,7 +532,7 @@ def test_a_new_outcome_and_form_send_what_is_usual(page: Page) -> None:
         False,
     ]
     first = _cards(page).nth(0)
-    _open(first)
+    _open_all(first)
     form = first.locator('.pc-item[data-item="form"]')
     assert _checks(form) == [True, True]  # the sample's receipt and reminder
     form.locator('[data-pc-act="remove-form"]').click()
@@ -529,9 +543,56 @@ def test_a_new_outcome_and_form_send_what_is_usual(page: Page) -> None:
 def test_a_replica_keeps_its_outcome_s_release(page: Page) -> None:
     page.goto(PAGE)
     review = _cards(page).nth(1)
-    _open(review)
+    _open_all(review)
     review.locator('[data-rel="evaluators-timeline"]').check()
     review.locator('[data-rel="applicants-email"]').uncheck()
     review.locator('[data-fc-act="replicate"]').click()
     copy = _cards(page).nth(2).locator('.pc-item[data-item="outcome"]')
     assert _checks(copy) == [True, False, True, False]
+
+
+# --- Segment AD1F rung 4b: items collapse inside their stage (ruling 20) ---
+def test_items_open_and_shut_their_heads_always_named(page: Page) -> None:
+    page.goto(PAGE)
+    review = _cards(page).nth(1)
+    _open(review)
+    items = review.locator(".pc-item")
+    # Three items in the stage: each shows its head, shut.
+    assert items.evaluate_all("els => els.map(e => e.hasAttribute('data-open'))") == [
+        False,
+        False,
+        False,
+    ]
+    heads = review.locator("[data-pi-name]").all_inner_texts()
+    assert heads == ["Peer Review", "Faculty Panel Review", "Shortlist for interview"]
+    g1 = review.locator('.pc-item[data-key="g1"]')
+    assert g1.locator(".chip").first.text_content() == "Results in"
+    assert not g1.locator('[data-pc="item-name"]').is_visible()
+    toggle = g1.locator("[data-pi-toggle]")
+    toggle.click()
+    assert g1.get_attribute("data-open") == ""
+    assert toggle.get_attribute("aria-label") == "Collapse Gate 1"
+    g1.locator('[data-pc="item-name"]').fill("Peer read")
+    assert g1.locator("[data-pi-name]").text_content() == "Peer read"
+    toggle.click()
+    assert g1.get_attribute("data-open") is None
+    # The outcome's email chip follows its boxes.
+    o1 = review.locator('.pc-item[data-key="o1"]')
+    assert o1.locator("[data-pi-emails]").text_content() == "1 email"
+    _open_item(o1)
+    o1.locator('[data-rel="evaluators-email"]').check()
+    assert o1.locator("[data-pi-emails]").text_content() == "2 emails"
+
+
+def test_a_lone_or_new_item_opens_and_the_outline_opens_an_item(page: Page) -> None:
+    page.goto(PAGE)
+    decision = _cards(page).nth(3)  # holds only its outcome
+    assert decision.locator(".pc-item").get_attribute("data-open") == ""
+    review = _cards(page).nth(1)
+    _open(review)
+    review.locator('[data-pc-act="gate"]').click()
+    assert review.locator('.pc-item[data-item="gate"]').nth(2).get_attribute("data-open") == ""
+    page.locator("[data-pc-outline] .fb-o-item", has_text="Gate 4: Interview").click()
+    g3 = page.locator('.pc-item[data-key="g3"]')
+    assert g3.get_attribute("data-open") == ""
+    assert g3.locator('[data-pc="item-name"]').evaluate("e => e === document.activeElement")
