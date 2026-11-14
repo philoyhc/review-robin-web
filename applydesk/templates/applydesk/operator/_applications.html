@@ -216,7 +216,9 @@
   function changes() {
     if (!base) return 0;
     var now = state(), n = 0;
-    now.cells.forEach(function (c, i) { var b = base.cells[i]; if (c.v !== b.v || c.hand !== b.hand) n += 1; });
+    // A cell's date too: Apply can put a value back with today's date
+    // (Codex on #3892).
+    now.cells.forEach(function (c, i) { var b = base.cells[i]; if (c.v !== b.v || c.hand !== b.hand || c.date !== b.date) n += 1; });
     now.rels.forEach(function (c, i) { if (c.on !== base.rels[i].on || c.note !== base.rels[i].note) n += 1; });
     return n;
   }

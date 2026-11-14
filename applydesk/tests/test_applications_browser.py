@@ -495,3 +495,15 @@ def test_the_lock_guards_rules_csv_and_open_proposals(page: Page) -> None:
         "() => { const e = new Event('beforeunload', {cancelable: true});"
         " window.dispatchEvent(e); return e.defaultPrevented; }"
     )
+
+
+def test_a_date_alone_changed_is_still_a_change(page: Page) -> None:
+    """Codex on #3892: Apply can put a value back with today's date; the
+    count read only values and hand marks, so that went uncounted."""
+    page.goto(PAGE)
+    _unlock(page)
+    page.evaluate("() => { document.querySelector('[data-ap-date]').textContent = 'Changed'; }")
+    assert page.evaluate(
+        "() => { const e = new Event('beforeunload', {cancelable: true});"
+        " window.dispatchEvent(e); return e.defaultPrevented; }"
+    )
