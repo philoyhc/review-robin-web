@@ -218,14 +218,16 @@ where a ruling below differs from it, the ruling wins.
       (the field's type), sum, count. List fields: share choosing a
       value (a percentage) or most common (the list) — never mapped to
       numbers: a numeric scale is a numeric field, explained in its
-      help text. String fields: all, joined, for reading. A result
+      help text. String fields: all, joined, for reading. Count is any
+      field's (author, 2026-11-14). A result
       *Entered here* takes the field's type as it is. A result needs a
       minimum number of responses, else it has none yet.
     - **The fields are Review Robin's setup**: the gate lists what its
       session's instrument must ask; the handshake itself is AD6's.
     - Result 1 is the gate's headline (Applications' chip). Outcome rules
       and weights read a gate's named result; only numbers are weighed
-      or compared, a list is matched, a string is read only.
+      or compared, a list is matched, a string is read only (a count of
+      either is a number).
 22. **People are entered as Residential's and Review Robin's are**
     (author, 2026-11-14; segment AD1F), across Apply Desk:
     - **A box that takes several people** works and looks as the boxes on

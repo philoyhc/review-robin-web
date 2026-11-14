@@ -967,3 +967,13 @@ def test_a_0_weight_on_an_unknown_result_leaves_the_combined_result_known() -> N
     )
     with_bare = stages.Plan(swapped, plan.rows)
     assert stages.weight_rows(with_bare, bare) == (("g1.r1", 30), ("g2.r1", 70), ("g2.r2", 0))
+
+
+def test_count_is_any_field_s() -> None:
+    """Author, 2026-11-14: how many responded is offered for a list or a
+    string as for a number, an integer from 0 that a rule may compare."""
+    for kind in ("integer", "decimal", "list", "string"):
+        assert "count" in stages.ALLOWED[kind]
+    said = stages.GateResult("r2", "Comments", stages.Field("string", max="2000"), "count")
+    assert stages.result_type(said) == "Integer, from 0"
+    assert stages.comparable(said) == "number"

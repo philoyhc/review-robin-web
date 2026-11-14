@@ -47,6 +47,8 @@ After the author's browser check of ruling 20's rungs: a gate's single *Result* 
 | String | all, joined | String, for reading |
 | any (*Entered here*) | entered by hand or a CSV column | the field as defined |
 
+*Amended 2026-11-14 (author): count of responses is any field's, List and String too.*
+
 A result needs a minimum number of responses (default 1), else it has none yet. A List is never mapped to numbers (author: a numeric scale is a numeric field, its help text saying what the numbers mean). On the gate item, results are rows that read as Form's card summaries and edit in place, not a third level of collapsing card; under them, *For Review Robin* lists the fields the session's instrument must ask. Result 1 is the gate's headline. Outcome rules and weights read a gate's named result: numbers are compared and weighed, a list matched, a string read only.
 
 **Rejected:** a second, result-level definition beside the field (the derivation already fixes it); mapping list options to numbers (author).
@@ -86,7 +88,7 @@ Taken 2026-11-13 at `fb6785690`.
   - a replicated stage kept its sent gates' lock on results, *Runs as* and *+ Result*;
   - *Runs as* did not redraw rules and weights;
   - a removed result's key was reused, re-binding a rule silently.
-- **Also from the 5b–5d read.** Fixed: a new gate's first result unnumbered; a share's option reset as its options were retyped; the server and the script disagreeing on a share with none chosen; a 0% weight's skip untested; a bare weight key drawn as 0; leftovers. Ruled to the letter: *count* is a numeric field's alone and a string is read only; *sum*'s type gives n × its bounds. Latent, for AD2: a list headline (Result 1) has no value on Applications, whose cells carry it as a number.
+- **Also from the 5b–5d read.** Fixed: a new gate's first result unnumbered; a share's option reset as its options were retyped; the server and the script disagreeing on a share with none chosen; a 0% weight's skip untested; a bare weight key drawn as 0; leftovers. Ruled to the letter: *count* is a numeric field's alone (widened 2026-11-14 by the author: *count* is any field's) and a string is read only; *sum*'s type gives n × its bounds. Latent, for AD2: a list headline (Result 1) has no value on Applications, whose cells carry it as a number.
 
 ## PR ladder
 

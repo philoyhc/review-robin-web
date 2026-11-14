@@ -60,18 +60,19 @@ DERIVATIONS: tuple[tuple[str, str], ...] = (
     ("min", "Lowest"),
     ("max", "Highest"),
     ("sum", "Sum"),
-    ("count", "Count of responses"),
     ("share", "Share choosing"),
     ("mode", "Most common"),
     ("join", "All, joined"),
+    # Any field's, so last: each type's menu reads as ALLOWED lists it.
+    ("count", "Count of responses"),
     ("entered", "Entered here"),
 )
 ALLOWED: dict[str, tuple[str, ...]] = {
     "integer": ("mean", "median", "min", "max", "sum", "count"),
     "decimal": ("mean", "median", "min", "max", "sum", "count"),
-    # Count is a numeric field's alone; a string is for reading (ruling 21).
-    "list": ("share", "mode"),
-    "string": ("join",),
+    # Count, how many responded, is any field's (author, 2026-11-14).
+    "list": ("share", "mode", "count"),
+    "string": ("join", "count"),
 }
 
 

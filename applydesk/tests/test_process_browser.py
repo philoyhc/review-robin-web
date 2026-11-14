@@ -724,7 +724,15 @@ def test_a_result_s_derivations_follow_its_field(page: Page) -> None:
     assert derive.locator("option").all_text_contents() == [
         "Share choosing",
         "Most common",
+        "Count of responses",  # any field's (author, 2026-11-14)
     ]
+    row.locator('[data-r="type"]').select_option("string")
+    assert derive.locator("option").all_text_contents() == ["All, joined", "Count of responses"]
+    derive.select_option("count")
+    assert row.locator("[data-pr-type]").text_content() == "Integer, from 0"
+    row.locator('[data-r="type"]').select_option("list")
+    assert derive.input_value() == "count"  # kept: the list allows it too
+    derive.select_option("share")
     row.locator('[data-r="options"]').fill("Yes, No")
     derive.select_option("share")
     row.locator('[data-r="value"]').select_option("Yes")
