@@ -345,7 +345,8 @@ def test_the_page_shows_each_outcome_s_combined_result_and_weights(page: Page) -
 
     page.goto(PAGE)
     head = page.locator('th[data-col="o1"]').inner_text()
-    assert "Peer Review 30% · Faculty Panel Review 70%" in head
+    # Each weight names a gate's result (ruling 21).
+    assert "Rating at Peer Review 30% · Score at Faculty Panel Review 70%" in head
     plan = stages.plan_of("wa9juxbc2t")
     o1 = next(c for c in plan.columns if c.key == "o1")
     assert isinstance(o1, stages.Outcome)

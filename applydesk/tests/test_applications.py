@@ -142,13 +142,14 @@ def test_every_rule_reads_only_what_its_column_may() -> None:
                 {g.key for g in stages.scope(plan, c)} if isinstance(c, stages.Outcome) else set()
             )
             if isinstance(c, stages.Outcome):
-                assert {k for k, _ in c.weights} <= in_scope, c.key
+                # A weight names a gate's result, "g1.r1" (ruling 21).
+                assert {stages.split_key(k)[0] for k, _ in c.weights} <= in_scope, c.key
             for kind, key, _, _ in c.rule.when if c.rule else ():
                 if kind == "out":
                     assert key in outcomes_before, (c.key, key)
                 elif kind in ("res", "ent", "comb"):
                     assert isinstance(c, stages.Outcome), (c.key, kind)
-                    assert kind == "comb" or key in in_scope, (c.key, key)
+                    assert kind == "comb" or stages.split_key(key)[0] in in_scope, (c.key, key)
                 else:
                     assert kind in ("status", "last"), kind
             seen.add(c.key)
