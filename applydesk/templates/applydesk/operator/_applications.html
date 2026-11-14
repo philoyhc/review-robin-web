@@ -2,7 +2,10 @@
    surface. A row per application; its identity columns (named for the
    application stage when that stage comes first), then each stage's gates
    and outcomes, in timeline order, as Process sets them.
-   Every move works on screen; nothing is saved until AD2. #}
+   Every move works on screen; nothing is saved until AD2. A control
+   surface (ruling 23): the table is locked until *Unlock*, then every
+   cell, the rules, the CSV and the releases are live; *Lock* keeps what
+   changed and *Undo changes* puts it back. Ticks only choose rows. #}
 {% set last = last_submitted(plan.rows) %}
 {% set rank = submitted_rank(plan.rows) %}
 {% set cols = plan.columns %}
@@ -14,12 +17,15 @@
     </select>
     <span class="ap-gap"></span>
     {% if cols %}
-    <button class="btn btn-secondary" type="button" data-ap-rule-open aria-expanded="false" aria-controls="ap-rule">Apply rules…</button>
-    <button class="btn btn-secondary" type="button" data-ap-csv-open>Upload CSV</button>
+    <button class="btn btn-secondary" type="button" data-ap-rule-open data-ap-locks disabled aria-expanded="false" aria-controls="ap-rule">Apply rules…</button>
+    <button class="btn btn-secondary" type="button" data-ap-csv-open data-ap-locks disabled>Upload CSV</button>
     <input type="file" accept=".csv,text/csv" data-ap-csv hidden aria-label="CSV file">
     {% endif %}
-    <button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>
+    <span class="ap-changes" data-ap-changes hidden></span>
+    <button class="btn btn-secondary" type="button" data-ap-undo hidden>Undo changes</button>
+    <button class="btn btn-secondary" type="button" data-ap-lock title="Unlock the table to change it">Unlock</button>
   </div>
+  <p class="ap-said" data-ap-said aria-live="polite"></p>
   {% if cols %}
   {# A rule: one column set from an earlier gate's result. It proposes;
      nothing changes until Apply. #}
@@ -31,7 +37,7 @@
     <div class="ap-rule-row">
       <label class="ap-check"><input type="checkbox" data-ap-rule-pending checked> Only cells not yet decided (<em>—</em> or <em>Pending</em>)</label>
       <label class="ap-check"><input type="checkbox" data-ap-rule-hand> Also replace cells set by hand</label>
-      <button class="btn btn-secondary" type="button" data-ap-rule-go>Propose</button>
+      <button class="btn btn-secondary" type="button" data-ap-rule-go data-ap-locks disabled>Propose</button>
     </div>
   </section>
   {# The proposal, from a rule or a CSV: what would change, and what
@@ -63,7 +69,7 @@
           <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-scope="{{ scope(plan, c) | map(attribute='key') | join('|') }}" data-weights="{% for k, w in c.weights %}{{ k }}:{{ w }}{{ '|' if not loop.last }}{% endfor %}" data-number="Outcome {{ c.number }}" data-first="{{ c.values[0] }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
             {% if c.weights %}<span class="ap-weights">{% for k, w in c.weights if w %}{{ result_label(k) }} {{ (w * 100) | round | int }}%{{ " · " if not loop.last }}{% endfor %}</span>{% endif %}
             {% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>
-            <label class="ap-rel"><input type="checkbox" data-ap-release="{{ c.label }}" aria-label="Released: {{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
+            <label class="ap-rel"><input type="checkbox" data-ap-release="{{ c.label }}" data-ap-locks disabled aria-label="Released: {{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
             <span class="ap-relnote{{ ' ap-relnote-on' if c.released }}" data-ap-relnote>{{ c.released or "Not yet" }}</span>
           </th>
           {% endif %}
@@ -82,8 +88,8 @@
           {# A submitted application's outcomes are always settable, "—"
              until decided, so a hand change can advance it (Codex). #}
           {% if not cell.value and (c.via is defined or a.state != "Submitted") %}<span class="muted">—</span>
-          {% elif c.via is defined %}<button type="button" class="ap-adm" data-ap-adm data-v="{{ cell.value }}"{% if cell.result is not none %} data-result="{{ cell.result }}"{% endif %}{% for k, v in cell.extra %} data-{{ k }}="{{ v }}"{% endfor %} aria-label="{{ c.label }} for {{ a.public_id }}: {{ 'no status yet' if cell.value == '—' else cell.value }}">{{ cell.value }}</button>{% if cell.note %}<span class="ap-note">{{ cell.note }}</span>{% endif %}
-          {% else %}<span class="ap-ocw"><select class="ap-oc" data-ap-oc data-v="{{ cell.value }}" aria-label="{{ c.label }} for {{ a.public_id }}">
+          {% elif c.via is defined %}<button type="button" class="ap-adm" data-ap-adm data-ap-locks disabled data-v="{{ cell.value }}"{% if cell.result is not none %} data-result="{{ cell.result }}"{% endif %}{% for k, v in cell.extra %} data-{{ k }}="{{ v }}"{% endfor %} aria-label="{{ c.label }} for {{ a.public_id }}: {{ 'no status yet' if cell.value == '—' else cell.value }}">{{ cell.value }}</button>{% if cell.note %}<span class="ap-note">{{ cell.note }}</span>{% endif %}
+          {% else %}<span class="ap-ocw"><select class="ap-oc" data-ap-oc data-ap-locks disabled data-v="{{ cell.value }}" aria-label="{{ c.label }} for {{ a.public_id }}">
               <option value=""{% if not cell.value %} selected{% endif %}>—</option>
               <option{% if cell.value == "Pending" %} selected{% endif %}>Pending</option>
               {% for v in c.values %}<option{% if v == cell.value %} selected{% endif %}>{{ v }}</option>{% endfor %}
@@ -107,7 +113,7 @@
         {% for c in cols %}<option value="{{ c.key }}">{{ "Gate " ~ c.number if c.via is defined else "Outcome " ~ c.number }}: {{ c.label }}</option>{% endfor %}
       </select>
       <select class="ap-sel" data-ap-set-val aria-label="Value to set"></select>
-      <button class="btn btn-secondary" type="button" data-ap-set>Set ticked rows</button>
+      <button class="btn btn-secondary" type="button" data-ap-set data-ap-locks disabled>Set ticked rows</button>
     </span>
     {% endif %}
 
@@ -148,6 +154,7 @@
   }
   function recount() {
     if (typeof showCombined === "function") showCombined();
+    if (typeof showChanges === "function") showChanges();
     heads.forEach(function (h) {
       var key = h.dataset.col, tally = {};
       rows.forEach(function (r) {
@@ -186,14 +193,97 @@
   }
   root.querySelectorAll("[data-ap-adm], [data-ap-oc]").forEach(tone);
 
+  // --- The lock (ruling 23): a control surface, worked down its columns,
+  // so the whole table is unlocked at once. What it held when unlocked is
+  // kept, to count the changes and to undo them. ---
+  var lockBtn = root.querySelector("[data-ap-lock]"), undoBtn = root.querySelector("[data-ap-undo]");
+  var changesEl = root.querySelector("[data-ap-changes]"), said = root.querySelector("[data-ap-said]");
+  var unlocked = false, base = null;
+  function state() {
+    var cells = [];
+    rows.forEach(function (r) {
+      r.querySelectorAll("[data-cell]").forEach(function (td) {
+        var el = td.querySelector("[data-v]"), date = td.querySelector("[data-ap-date]");
+        cells.push({ td: td, v: el ? el.dataset.v : null, hand: td.hasAttribute("data-hand"), date: date ? date.textContent : null });
+      });
+    });
+    var rels = Array.prototype.map.call(root.querySelectorAll("[data-ap-release]"), function (c) {
+      var note = c.closest("th").querySelector("[data-ap-relnote]");
+      return { box: c, on: c.checked, note: note.textContent };
+    });
+    return { cells: cells, rels: rels };
+  }
+  function changes() {
+    if (!base) return 0;
+    var now = state(), n = 0;
+    // A cell's date too: Apply can put a value back with today's date
+    // (Codex on #3892).
+    now.cells.forEach(function (c, i) { var b = base.cells[i]; if (c.v !== b.v || c.hand !== b.hand || c.date !== b.date) n += 1; });
+    now.rels.forEach(function (c, i) { if (c.on !== base.rels[i].on || c.note !== base.rels[i].note) n += 1; });
+    return n;
+  }
+  function showChanges() {
+    var n = changes();
+    changesEl.textContent = n ? n + (n === 1 ? " change" : " changes") + " since unlocked" : "No changes yet";
+    changesEl.hidden = !unlocked;
+    undoBtn.hidden = !unlocked;
+    undoBtn.disabled = !n;
+  }
+  function setLocked(lock) {
+    unlocked = !lock;
+    root.querySelectorAll("[data-ap-locks]").forEach(function (el) { el.disabled = lock; });
+    if (lock) root.removeAttribute("data-unlocked"); else root.setAttribute("data-unlocked", "");
+    lockBtn.textContent = lock ? "Unlock" : "Lock";
+    lockBtn.title = lock ? "Unlock the table to change it" : "Keep the changes and lock the table";
+    showChanges();
+  }
+  lockBtn.addEventListener("click", function () {
+    if (!unlocked) { base = state(); setLocked(false); said.textContent = "Unlocked: the table can be changed."; return; }
+    var n = changes(), dropped = !!(proposal && !proposal.hidden);
+    if (dropped) close();
+    var rulePanel = root.querySelector("[data-ap-rule]");
+    if (rulePanel && !rulePanel.hidden) {
+      rulePanel.hidden = true;
+      root.querySelector("[data-ap-rule-open]").setAttribute("aria-expanded", "false");
+    }
+    base = null;
+    setLocked(true);
+    said.textContent = (n ? n + (n === 1 ? " change kept" : " changes kept") + "; the table is locked." : "Locked.") +
+      (dropped ? " The open proposal was not applied." : "");
+    lockBtn.focus();
+  });
+  undoBtn.addEventListener("click", function () {
+    base.cells.forEach(function (c) {
+      var el = c.td.querySelector("[data-v]");
+      if (el && c.v !== null) { if (el.matches("[data-ap-adm]")) setAdm(el, c.v); else setOutcome(el, c.v); }
+      var date = c.td.querySelector("[data-ap-date]");
+      if (date && c.date !== null) date.textContent = c.date;
+      if (c.hand) c.td.setAttribute("data-hand", ""); else c.td.removeAttribute("data-hand");
+    });
+    base.rels.forEach(function (c) {
+      c.box.checked = c.on;
+      var note = c.box.closest("th").querySelector("[data-ap-relnote]");
+      note.textContent = c.note;
+      note.classList.toggle("ap-relnote-on", c.on);
+    });
+    recount();
+    said.textContent = "Changes undone: the table is as it was unlocked.";
+    lockBtn.focus();
+  });
+  // Leaving with changes pending asks first.
+  window.addEventListener("beforeunload", function (e) {
+    if (unlocked && changes()) { e.preventDefault(); e.returnValue = ""; }
+  });
+
   root.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-ap-adm]");
-    if (!btn) return;
+    if (!btn || !unlocked) return;
     setAdm(btn, CYCLE[(CYCLE.indexOf(btn.dataset.v) + 1) % CYCLE.length]);
     byHand(btn, true);
     recount();
   });
   root.addEventListener("change", function (e) {
+    if (!unlocked) return;  // the lock guards each move, not only the controls' disabled state
     var sel = e.target.closest("[data-ap-oc]");
     if (sel) { setOutcome(sel, sel.value); byHand(sel, true); recount(); return; }
     var rel = e.target.closest("[data-ap-release]");
@@ -206,6 +296,7 @@
       var note = rel.closest("th").querySelector("[data-ap-relnote]");
       note.textContent = rel.checked ? TODAY + " · as the Timeline sets" : "Not yet";
       note.classList.toggle("ap-relnote-on", rel.checked);
+      showChanges();
     }
   });
 
@@ -236,6 +327,7 @@
     values();
     setCol.addEventListener("change", values);
     root.querySelector("[data-ap-set]").addEventListener("click", function () {
+      if (!unlocked) return;
       rows.forEach(function (r) {
         if (r.hidden || !r.querySelector("[data-ap-tick]").checked) return;
         var el = r.querySelector('[data-cell="' + setCol.value + '"] [data-v]');
@@ -294,13 +386,14 @@
     var skip = proposal.querySelector("[data-ap-prop-skip]");
     skip.textContent = "";
     skipped.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; skip.appendChild(li); });
-    proposal.querySelector("[data-ap-prop-apply]").disabled = !changes.length;
+    proposal.querySelector("[data-ap-prop-apply]").disabled = !changes.length || !unlocked;
     proposal.hidden = false;
     proposal.focus();
   }
   if (proposal) {
     // A cell changed by hand since the proposal keeps the hand's value.
     proposal.querySelector("[data-ap-prop-apply]").addEventListener("click", function () {
+      if (!unlocked) { close(); return; }
       if (proposedAt !== null && proposedAt !== tableState()) {
         close();
         window.alert("The table changed since this proposal, and a rule may read what changed. Nothing was applied: propose again.");
@@ -395,6 +488,7 @@
       return c.known ? cmp(c.value) : null;  // as stages.combined: unknown
     }
     go.addEventListener("click", function () {
+      if (!unlocked) return;
       var onlyPending = rule.querySelector("[data-ap-rule-pending]").checked;
       var replaceHand = rule.querySelector("[data-ap-rule-hand]").checked;
       var shadow = new Map(), changes = [], skipped = [];
@@ -523,8 +617,8 @@
     csvOpen.addEventListener("click", function () { csv.value = ""; csv.click(); });
     csv.addEventListener("change", function () {
       var f = csv.files && csv.files[0];
-      if (!f) return;
-      f.text().then(function (text) { fromCsv(f.name, text); });
+      if (!f || !unlocked) return;
+      f.text().then(function (text) { if (unlocked) fromCsv(f.name, text); });
     });
     // The table as it stands, in the shape an upload reads.
     root.querySelector("[data-ap-csv-down]").addEventListener("click", function () {

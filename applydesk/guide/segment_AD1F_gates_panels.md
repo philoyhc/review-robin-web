@@ -109,6 +109,10 @@ Taken 2026-11-13 at `fb6785690`.
 6b. **Panels as Review Robin's roster page (author, 2026-11-14, from a mock-up).** No side card: the table full width under a roster card of pills (people, each panel and its count) with *Manage panels* where Review Robin has *Unlock*, holding *Copy*, *Retire*, *+ Panel* and the CSV; Review Robin's toolbar (*Search*, *Add new*), grey header band and ↕ sorts; a *Sent* chip on a sent panel's column; the × column kept on every row, its × on a selected one only; the email text when unselected, a pill without × when selected, clicked to change. No selection strip. *Used by* leaves the column header for *Manage panels* (and the header's tooltip). Search and select-all act on the rows in view; the sorted column shows ↑ or ↓, as Review Robin's badge. Takes its own read.
 6c. **Panels refined (author, 2026-11-14, on the browser check).** Fixed column widths, so selecting a row moves nothing; ✓ at a selected row's end keeps its changes (Enter too), and unticking without it puts the row back, a new row unsaved going; no page *Save* and no counts under the table; *Search* renamed *Filter*; in *Manage panels*, each panel's name edited in place and *Copy emails* (to the clipboard, comma-separated), and an *Add new panel* card above *Upload*, blank or with an existing panel's people, folding in *Copy*. Takes its own read.
 6d. **Panels touch-ups (author, 2026-11-14).** The new-panel menu reads *Copy from Panel A*; every header left-aligned, a panel's ticks under its name; *Add new* opens its row at the top (an imported row still joins the end). Confirmed, unchanged: *Manage panels* edits already apply at once. Takes its own read.
+7a. **Saving by the surface's shape (ruling 23), one PR each, each its own read.** *Applications* as a control surface (author, 2026-11-14: "worked down one column", so one lock for the table, not a row's): locked, every cell, *Set ticked rows*, *Apply rules*, *Upload CSV* and *Released* are inert; *Unlock* opens them, *Lock* keeps the changes, *Undo changes* puts the table back as unlocked; a count of changes and a warning on leaving meanwhile; the toolbar, sticky, carries them; its *Save* goes. Ticks only choose rows.
+7b. *Form* and *Process* keep the Outline's *Save*, gaining an *Unsaved changes* marker and a warning on leaving.
+7c. *Emails*: a *Save* on each template card; the page's goes.
+7d. *Manage panels*: a rename takes ✓ or Enter; Esc or leaving the box puts it back.
 5. **Iteration rungs**, as the author's browser checks ask.
 6. **Close**, only after the author's browser check.
 
@@ -139,7 +143,7 @@ Taken 2026-11-13 at `fb6785690`.
 
 ## Doc impact
 
-- `applydesk/spec/applications.md` — the Setup row with Panels in Gates' slot; *Chosen from* naming panels and *+ New panel…* in "The Form page"; collapsing items, *Evaluators* and a gate's results (ruling 21) in "The Process page"; a "The Panels page" section after it (at close).
+- `applydesk/spec/applications.md` — the Setup row with Panels in Gates' slot; *Chosen from* naming panels and *+ New panel…* in "The Form page"; collapsing items, *Evaluators* and a gate's results (ruling 21) in "The Process page"; a "The Panels page" section after it; how each page keeps an edit (ruling 23: Panels' rows, Applications' lock, Form's and Process's *Save*, Emails' per card) in each page's section (at close).
 - `applydesk/spec/architecture.md` — `sample_data.py`'s row: panels in place of the three rosters (rung 2).
-- `applydesk/guide/todo_master.md` — ruling 19 and the AD1F roadmap row (rung 1); the row deleted at close.
+- `applydesk/guide/todo_master.md` — rulings 19 to 23 and the AD1F roadmap row (rung 1); the row deleted at close.
 - `applydesk/README.md` — this plan's row (rung 1), moved to the archive's index at close.
