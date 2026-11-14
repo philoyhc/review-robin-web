@@ -536,6 +536,7 @@
         if (via) { via.disabled = false; via.removeAttribute("title"); }
         var addR = item.querySelector('[data-pr-act="add"]');
         if (addR) { addR.removeAttribute("data-sent"); addR.disabled = false; addR.removeAttribute("title"); }
+        if (item.dataset.item === "gate") drawResults(item);  // three at most, as anywhere (Codex)
       });
       // The copy's rules and weights read its own gates and outcome.
       added.querySelectorAll(".pc-item[data-key]").forEach(function (item) {
@@ -768,6 +769,7 @@
     if (!a || a.disabled) return;
     var item = a.closest(".pc-item");
     if (a.dataset.prAct === "add") {
+      if (item.querySelectorAll("[data-result]").length >= 3) return;  // three at most
       var keys = Array.prototype.map.call(item.querySelectorAll("[data-result]"), function (r) { return r.dataset.result; });
       // A removed result's key is never reused: a rule left reading it
       // stays flagged rather than binding to the new one.

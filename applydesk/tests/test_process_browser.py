@@ -829,3 +829,15 @@ def test_a_share_keeps_its_option_while_the_options_are_retyped(page: Page) -> N
     row.locator('[data-r="options"]').fill("Yes, N")
     row.locator('[data-r="options"]').fill("Yes, No")
     assert row.locator('[data-r="value"]').input_value() == "No"
+
+
+def test_a_replica_keeps_three_results_at_most(page: Page) -> None:
+    """Codex on #3885: a copy of a gate with three results took a fourth."""
+    gate = _draft_gate(page)
+    gate.locator('[data-pr-act="add"]').click()
+    gate.locator('[data-pr-act="add"]').click()
+    _cards(page).nth(1).locator('[data-fc-act="replicate"]').click()
+    copy = _cards(page).nth(2).locator('.pc-item[data-item="gate"]')
+    add = copy.locator('[data-pr-act="add"]')
+    assert add.is_disabled() and add.get_attribute("title") == "A gate yields three results at most"
+    assert copy.locator("[data-result]").count() == 3
