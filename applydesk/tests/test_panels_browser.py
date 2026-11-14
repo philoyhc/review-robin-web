@@ -178,3 +178,26 @@ def test_focus_stays_on_the_page_after_retire_and_the_last_remove(page: Page) ->
     for _ in range(3):
         page.locator("[data-pn-row]").first.locator('[data-pn-act="remove"]').click()
     assert page.evaluate("document.activeElement.dataset.pnAct") == "add"
+
+
+def test_a_panel_may_not_take_a_csv_column_s_name(page: Page) -> None:
+    """Codex on #3882: a panel called Email would read the Email column
+    as its own on import."""
+    page.goto(PANELS)
+    page.locator('[data-pn-act="panel"]').click()
+    page.locator("[data-pn-newname]").fill("email")
+    page.locator('[data-pn-act="create"]').click()
+    err = page.locator("[data-pn-newerr]").inner_text()
+    assert err == "email names a CSV column: choose another name."
+    # Nor may one made in place, on Form.
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/wa9juxbc2t/form")
+    card = page.locator(".fc", has=page.locator('[data-sum="label"]:text-is("Preferred reviewer")'))
+    card.locator("[data-fc-toggle]").click()
+    card.locator('[data-f="pool"]').select_option("__new")
+    box = card.locator("[data-newpanel]")
+    box.locator('[data-np="name"]').fill("Note")
+    box.locator('[data-np="members"]').fill("a@example.edu")
+    box.get_by_role("button", name="Create panel").click()
+    assert box.locator("[data-np-err]").inner_text() == (
+        "Note names a column of the Panels CSV: choose another name."
+    )

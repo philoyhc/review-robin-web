@@ -86,6 +86,7 @@
     var wrong = [];
     if (!name) wrong.push("Name the panel.");
     else if (taken) wrong.push("A panel is already called " + name + ".");
+    else if (/^(name|email|note)$/i.test(name)) wrong.push(name + " names a column of the Panels CSV: choose another name.");
     if (got.bad.length) wrong.push("Not an email: " + got.bad.join(", ") + ".");
     if (got.twice.length) wrong.push("Listed twice: " + got.twice.join(", ") + ".");
     if (!got.members.length && !got.bad.length) wrong.push("Add at least one email.");

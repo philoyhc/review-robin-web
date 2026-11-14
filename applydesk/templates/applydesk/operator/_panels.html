@@ -92,6 +92,8 @@
   var body = root.querySelector("[data-pn-body]"), head = root.querySelector("[data-pn-head]");
   var list = root.querySelector("[data-pn-list]"), said = root.querySelector("[data-pn-said]");
   var EMAIL = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
+  // A CSV's own columns: no panel may take their names.
+  var RESERVED = /^\s*(name|email|note)\s*$/i;
   var seq = 0;
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
   function people(n) { return n + (n === 1 ? " person" : " people"); }
@@ -246,7 +248,11 @@
       if (seen[email.toLowerCase()]) { skipped.push(email); return; }
       seen[email.toLowerCase()] = true;
       var on = [];
-      hdr.forEach(function (h, i) { var v = (cells[i] || "").trim().toLowerCase(); if (byName[h] && v && v !== "0" && v !== "no" && v !== "false") on.push(byName[h]); });
+      hdr.forEach(function (h, i) {
+        if (i === at.name || i === at.email || i === at.note) return;  // never a panel's column
+        var v = (cells[i] || "").trim().toLowerCase();
+        if (byName[h] && v && v !== "0" && v !== "no" && v !== "false") on.push(byName[h]);
+      });
       addRow({ name: get(at.name), email: email, note: get(at.note), panels: on });
       added += 1;
     });
@@ -286,6 +292,7 @@
     } else if (what === "create") {
       var name = newName.value.trim();
       if (!name) { newErr.textContent = "Name the panel."; return; }
+      if (RESERVED.test(name)) { newErr.textContent = name + " names a CSV column: choose another name."; return; }
       if (taken(name)) { newErr.textContent = "A panel is already called " + name + "."; return; }
       addPanel(name, null);
       box.hidden = true; newName.value = "";
