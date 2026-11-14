@@ -183,8 +183,16 @@
     if (!sel) return;
     if (sel.value !== "__new") { sel.dataset.prev = sel.value; editLink(sel); return; }
     sel.value = sel.dataset.prev || fallback(sel);
+    // Opening the box is not a change: the event goes no further, nor
+    // the change event the browser sends after it.
+    e.stopImmediatePropagation();
+    sel.dataset.pickedNew = "1";
     var box = boxOf(sel);
     if (box) open(box, true);
+  }, true);
+  document.addEventListener("change", function (e) {
+    var sel = e.target.closest && e.target.closest("select[data-panel-pick]");
+    if (sel && sel.dataset.pickedNew) { delete sel.dataset.pickedNew; e.stopImmediatePropagation(); }
   }, true);
   document.addEventListener("input", function (e) {
     if (e.target.matches && e.target.matches('[data-np="members"]') && e.target.value.indexOf(",") >= 0) {
