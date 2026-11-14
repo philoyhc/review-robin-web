@@ -443,6 +443,14 @@
     .pn-said:empty { display: none; }
     .pick-edit { align-self: flex-end; padding-bottom: 8px; font-size: 13.5px; white-space: nowrap; }
     .pick-edit[hidden] { display: none; }
+    /* A gate's results (segment AD1F, ruling 21): rows that read as Form's summaries. */
+    .pc-results { margin-top: 12px; }
+    .pr-row { display: flex; gap: 10px; align-items: flex-start; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--surface-card); }
+    .pr-n { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--surface-muted); font-size: 12px; font-weight: 700; text-align: center; line-height: 20px; }
+    .pr-texts { min-width: 0; }
+    .pr-name { display: block; font-weight: 600; font-size: 14px; }
+    .pr-sum { display: block; font-size: 13px; color: var(--text-subtle); overflow-wrap: anywhere; }
+    .pr-foot { justify-content: flex-start; margin-top: 8px; }
     /* A gate item's panel and its members (segment AD1F, ruling 20). */
     .gc-members { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
     .gc-members:empty { display: none; }

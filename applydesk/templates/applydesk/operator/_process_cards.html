@@ -64,13 +64,11 @@
 {% set sent = state in ("Sent", "Results in") %}
 {% set pool = panel_pools.get(g.panel) if g.panel else none %}
 <div class="pc-item" data-item="gate" data-key="{{ g.key }}" data-rule="{{ rule_json(g) | tojson | forceescape }}"{% if open %} data-open{% endif %}>
-  {% set chips %}<span class="chip chip-{{ 'ok' if state == 'Results in' else ('info' if state in ('Sent', 'Ready') else 'warn') }}" data-pi-state>{{ state }}</span><span class="chip {{ 'chip-mute' if pool else 'chip-warn' }}" data-pi-panel>{% if pool %}{{ pool.name }} · {{ pool.members | length }} {{ "person" if pool.members | length == 1 else "people" }}{% else %}No panel{% endif %}</span>{% endset %}
+  {% set chips %}<span class="chip chip-{{ 'ok' if state == 'Results in' else ('info' if state in ('Sent', 'Ready') else 'warn') }}" data-pi-state>{{ state }}</span><span class="chip chip-mute" data-pi-results>{{ g.results | length }} {{ "result" if g.results | length == 1 else "results" }}</span><span class="chip {{ 'chip-mute' if pool else 'chip-warn' }}" data-pi-panel>{% if pool %}{{ pool.name }} · {{ pool.members | length }} {{ "person" if pool.members | length == 1 else "people" }}{% else %}No panel{% endif %}</span>{% endset %}
   {{ head("Gate " ~ g.number, g.label or "Untitled gate", chips, open) }}
   <div class="pi-body">
   <div class="pc-row">
     <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ g.label }}" placeholder="Untitled gate"></label>
-    <label class="fc-l">Runs as<select class="fc-in"><option{% if g.via == "RRW" %} selected{% endif %}>A Review Robin session</option><option{% if g.via != "RRW" %} selected{% endif %}>Results entered here</option></select></label>
-    <label class="fc-l pc-narrow">Result<input class="fc-in" data-pc="measure" value="{{ g.measure }}" placeholder="Score"></label>
   </div>
   {{ rule_box(plan, g, rule_text) }}
   {# Who evaluates (ruling 20): a panel, picked or made here; a sent gate
@@ -85,6 +83,26 @@
   </ul>
   {% if sent %}<p class="pc-line muted" data-pc-sent>Sent with the panel as it then stood: changes to its roster apply from the gate's next send.</p>{% endif %}
   <p class="pc-line muted">Panel sees: the application file, the <em>Shown to reviewers</em> part{% if exercise.blind %}, redacted{% endif %}.{% if gs[1] %}<span data-pc-sent> Progress: {{ gs[1] }}.</span>{% endif %}</p>
+  <div class="pc-row">
+    <label class="fc-l">Runs as<select class="fc-in" data-pc="via"><option{% if g.via == "RRW" %} selected{% endif %}>A Review Robin session</option><option{% if g.via != "RRW" %} selected{% endif %}>Results entered here</option></select></label>
+  </div>
+  {# Its results (ruling 21): up to three, each the field evaluators answer
+     and how the answers become the result, which sets its type. #}
+  <div class="pc-results" data-pc-results>
+    <span class="fc-l">Results</span>
+    {% for r in g.results %}
+    <div class="pr-row" data-result="{{ r.key }}" data-name="{{ r.name }}">
+      <span class="pr-n">{{ loop.index }}</span>
+      <span class="pr-texts"><span class="pr-name">{{ r.name or "Untitled result" }}</span><span class="pr-sum" data-pr-sum>{{ result_summary(r) }}</span></span>
+    </div>
+    {% else %}
+    <p class="pc-line muted" data-pr-none>No results yet: a gate yields up to three.</p>
+    {% endfor %}
+    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" disabled title="Comes in the next rung">+ Result</button></div>
+  </div>
+  {% if g.via == "RRW" and g.results %}
+  <p class="pc-line muted pr-rrw" data-pr-rrw>For Review Robin, each evaluator answers: {% for r in g.results %}<strong>{{ r.name or "Untitled result" }}</strong> ({{ field_text(r.field) }}){{ "; " if not loop.last }}{% endfor %}.</p>
+  {% endif %}
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-gate">Remove the gate</button></div>
   </div>
 </div>

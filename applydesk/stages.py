@@ -41,15 +41,79 @@ class Rule:
     otherwise: str
 
 
+#: A response field's types, as Review Robin's instrument fields take
+#: them (ruling 21): (key, label).
+FIELD_TYPES: tuple[tuple[str, str], ...] = (
+    ("integer", "Integer"),
+    ("decimal", "Decimal"),
+    ("list", "List"),
+    ("string", "String"),
+)
+
+#: How a result is derived from its field's responses (ruling 21): (key,
+#: label), and the ones each field type allows. "entered" is a gate run
+#: as Results entered here: the value is entered, not derived.
+DERIVATIONS: tuple[tuple[str, str], ...] = (
+    ("mean", "Mean"),
+    ("median", "Median"),
+    ("min", "Lowest"),
+    ("max", "Highest"),
+    ("sum", "Sum"),
+    ("count", "Count of responses"),
+    ("share", "Share choosing"),
+    ("mode", "Most common"),
+    ("join", "All, joined"),
+    ("entered", "Entered here"),
+)
+ALLOWED: dict[str, tuple[str, ...]] = {
+    "integer": ("mean", "median", "min", "max", "sum", "count"),
+    "decimal": ("mean", "median", "min", "max", "sum", "count"),
+    "list": ("share", "mode", "count"),
+    "string": ("join", "count"),
+}
+
+
+@dataclass(frozen=True)
+class Field:
+    """The response field each evaluator fills in (ruling 21), in Review
+    Robin's terms: a type and its bounds, or a list's options."""
+
+    type: str = "integer"
+    min: str = ""
+    max: str = ""
+    step: str = ""
+    options: str = ""  # a list's, comma-separated
+
+
+@dataclass(frozen=True)
+class GateResult:
+    """One of a gate's results (ruling 21): a name, the field evaluators
+    answer, and how the answers become the result; the derivation sets
+    its type. ``value`` is the option a share counts; ``at_least`` the
+    responses it needs before it has a result."""
+
+    key: str
+    name: str
+    field: Field
+    derive: str
+    value: str = ""
+    at_least: int = 1
+
+
 @dataclass(frozen=True)
 class Gate:
     key: str
     number: int
     label: str
     via: str  # "RRW": a Review Robin session
-    measure: str  # what its result is called: "Rating", "Score", ""
+    results: tuple[GateResult, ...] = ()  # up to three (ruling 21); the first is the headline
     rule: Rule | None = None
     panel: str = ""  # who evaluates: a sample_data.Panel key, "" for none yet (ruling 19)
+
+    @property
+    def measure(self) -> str:
+        """Its headline result's name, as a rule reads it ("" for none)."""
+        return self.results[0].name if self.results else ""
 
 
 @dataclass(frozen=True)
@@ -123,8 +187,37 @@ class Plan:
 _EVERYONE = Rule(
     (("status", "", "is", "Submitted"), ("last", "", "le", "1")), "Entered", "Not entered"
 )
-_G1 = Gate("g1", 1, "Peer Review", "RRW", "Rating", _EVERYONE, "panel-a")
-_G2 = Gate("g2", 2, "Faculty Panel Review", "RRW", "Score", _EVERYONE, "panel-b")
+_LIKERT = Field("integer", "1", "5", "1")
+_G1 = Gate(
+    "g1",
+    1,
+    "Peer Review",
+    "RRW",
+    (
+        GateResult("r1", "Rating", _LIKERT, "mean", at_least=2),
+        GateResult("r2", "Comments", Field("string", max="2000"), "join"),
+    ),
+    _EVERYONE,
+    "panel-a",
+)
+_G2 = Gate(
+    "g2",
+    2,
+    "Faculty Panel Review",
+    "RRW",
+    (
+        GateResult("r1", "Score", _LIKERT, "mean"),
+        GateResult(
+            "r2",
+            "Recommendation",
+            Field("list", options="Fund, Fund if possible, Do not fund"),
+            "share",
+            "Fund",
+        ),
+    ),
+    _EVERYONE,
+    "panel-b",
+)
 _O1 = Outcome(
     "o1",
     1,
@@ -140,7 +233,7 @@ _G3 = Gate(
     3,
     "Interview",
     "RRW",
-    "Score",
+    (GateResult("r1", "Score", _LIKERT, "mean", at_least=2),),
     Rule((("out", "o1", "is", "Shortlisted"),), "Entered", "Not entered"),
     "interviewers",
 )
@@ -162,7 +255,18 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
     "c4xh2ndv6s": (
         Stage(1, "", "Dates not set", form=True),
         Stage(
-            2, "Selection", "Dates not set", (Gate("g1", 1, "Placement interview", "", "Score"),)
+            2,
+            "Selection",
+            "Dates not set",
+            (
+                Gate(
+                    "g1",
+                    1,
+                    "Placement interview",
+                    "",
+                    (GateResult("r1", "Score", Field("decimal", "0", "10", "0.5"), "entered"),),
+                ),
+            ),
         ),
     ),
     # The model exercise (author, 2026-11-13): its stages named.
@@ -183,7 +287,14 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
             "",
             "1 Nov – 30 Nov",
             (
-                Gate("g1", 1, "Panel Review", "RRW", "Score", panel="panel-a"),
+                Gate(
+                    "g1",
+                    1,
+                    "Panel Review",
+                    "RRW",
+                    (GateResult("r1", "Score", _LIKERT, "mean"),),
+                    panel="panel-a",
+                ),
                 Outcome(
                     "o1",
                     1,
@@ -466,3 +577,64 @@ def panel_uses(exercise_id: str) -> dict[str, tuple[str, ...]]:
         if isinstance(column, Gate) and column.panel:
             uses.setdefault(column.panel, []).append(f"Gate {column.number}: {column.label}")
     return {k: tuple(v) for k, v in uses.items()}
+
+
+def _bounds(lo: str, hi: str) -> str:
+    """ "1 to 5", "up to 5", "at least 1", or ""."""
+    if lo and hi:
+        return f"{lo} to {hi}"
+    if hi:
+        return f"up to {hi}"
+    if lo:
+        return f"at least {lo}"
+    return ""
+
+
+def field_text(f: Field) -> str:
+    """A response field as Review Robin's instrument will ask it, e.g.
+    "Integer 1 to 5, step 1"; the page's script writes the same."""
+    if f.type == "list":
+        options = ", ".join(o.strip() for o in f.options.split(",") if o.strip())
+        return f"List: {options}" if options else "List, no options yet"
+    if f.type == "string":
+        return f"String, up to {f.max} characters" if f.max else "String"
+    name = "Integer" if f.type == "integer" else "Decimal"
+    parts = [p for p in (_bounds(f.min, f.max), f"step {f.step}" if f.step else "") if p]
+    return f"{name} {', '.join(parts)}" if parts else name
+
+
+def result_type(r: GateResult) -> str:
+    """The result's type, which its derivation sets (ruling 21)."""
+    f = r.field
+    if r.derive == "entered":
+        return field_text(f)
+    if r.derive in ("mean", "median"):
+        span = _bounds(f.min, f.max)
+        return f"Decimal {span}" if span else "Decimal"
+    if r.derive in ("min", "max"):
+        return field_text(f)
+    if r.derive == "sum":
+        return "Integer" if f.type == "integer" else "Decimal"
+    if r.derive == "count":
+        return "Integer, from 0"
+    if r.derive == "share":
+        return "Decimal 0 to 100 (%)"
+    if r.derive == "mode":
+        return field_text(f)
+    return "String, for reading"
+
+
+def derivation_text(r: GateResult) -> str:
+    """How the responses become the result, e.g. "Mean of 2 or more"."""
+    if r.derive == "entered":
+        return "Entered here"
+    label = dict(DERIVATIONS).get(r.derive, r.derive)
+    if r.derive == "share":
+        label = f"Share choosing {r.value or '(no option)'}"
+    return f"{label}, from {r.at_least} or more" if r.at_least > 1 else label
+
+
+def result_summary(r: GateResult) -> str:
+    """A result's row, collapsed: what is asked, how it is derived, and
+    what it gives; the page's script writes the same."""
+    return f"{field_text(r.field)} · {derivation_text(r)} → {result_type(r)}"
