@@ -653,3 +653,23 @@ def test_a_refused_rename_keeps_its_name_from_being_taken(page: Page) -> None:
         "A panel is already called Panel B. Panel A keeps its name. "
         "Email names a CSV column: choose another name. Panel B keeps its name."
     )
+
+
+def test_a_saved_row_is_matched_by_its_new_email(page: Page) -> None:
+    """Codex on #3896: a row saved with a new email kept its old snapshot,
+    and Members matched by the old email."""
+    page.goto(PANELS)
+    zoe = page.locator("[data-pn-row]").first  # by place: her email changes
+    zoe.locator("[data-pn-select]").check()
+    zoe.locator('[data-pn-act="unverify"]').click()
+    zoe.locator("[data-pn-entry]").fill("daniel.koh@example.edu")
+    zoe.locator("[data-pn-entry]").press("Enter")
+    zoe.locator('[data-pn-act="save"]').click()
+    _manage(page)
+    page.locator("[data-pn-members]").fill("zoe.tan@example.edu")
+    page.locator("[data-pn-newname]").fill("Reserve")
+    page.locator('[data-pn-act="create"]').click()
+    assert not zoe.locator('input[data-pn-panel="made-1"]').is_checked()
+    added = page.locator("[data-pn-row]").last
+    assert added.locator('[data-pn="email"]').input_value() == "zoe.tan@example.edu"
+    assert added.locator('input[data-pn-panel="made-1"]').is_checked()

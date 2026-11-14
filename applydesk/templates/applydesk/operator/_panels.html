@@ -280,7 +280,7 @@
     // An email put back to be changed, and left as it was, keeps its pill.
     var was = r.querySelector("[data-pn-entry][data-was]");
     if (!on && was) setEmail(r, was.dataset.was);
-    if (on) r.setAttribute("data-sel", ""); else r.removeAttribute("data-sel");
+    if (on) r.setAttribute("data-sel", ""); else { r.removeAttribute("data-sel"); delete r.pnSnap; }  // a closed row holds no snapshot
     if (!on) filter();
     r.querySelector("[data-pn-select]").checked = on;
     r.querySelectorAll("input[data-pn-panel]").forEach(function (c) { c.disabled = !on; });
@@ -722,12 +722,12 @@
         // new row not yet kept, is not yet anyone.
         var r = rows().filter(function (x) {
           if (x.dataset.fresh) return false;
-          var saved = x.pnSnap ? x.pnSnap.email : val(x, "email");
+          var saved = x.hasAttribute("data-sel") && x.pnSnap ? x.pnSnap.email : val(x, "email");
           return saved.toLowerCase() === p[1].toLowerCase();
         })[0];
         if (!r) { addRow({ name: p[0], email: p[1], note: "", panels: [key] }); return; }
         r.querySelector('input[data-pn-panel="' + key + '"]').checked = true;
-        if (r.pnSnap) r.pnSnap.panels[key] = true;
+        if (r.hasAttribute("data-sel") && r.pnSnap) r.pnSnap.panels[key] = true;
       });
       mBox.querySelectorAll(".token").forEach(function (t) { t.remove(); });
       mIn.value = ""; newName.value = ""; fromSel.value = ""; mWrap.hidden = false;
