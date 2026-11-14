@@ -343,8 +343,9 @@ def test_the_page_reads_as_review_robin_s_roster(page: Page) -> None:
     toggle = page.locator('[data-pn-act="manage"]')
     toggle.click()
     assert manage.is_visible() and toggle.get_attribute("aria-expanded") == "true"
-    toggle.click()
-    assert not manage.is_visible() and toggle.inner_text() == "Manage panels"
+    assert not toggle.is_visible()  # open, the card's own Cancel, Save and Close
+    page.locator('[data-pn-act="close"]').click()
+    assert not manage.is_visible() and toggle.is_visible()
     assert toggle.get_attribute("aria-expanded") == "false"
     # No side card: the table card is the page's width.
     assert page.locator(".fb-side, .pn-ctl").count() == 0
@@ -537,38 +538,102 @@ def test_add_new_opens_its_row_at_the_top(page: Page) -> None:
     assert first.locator('[data-pn="name"]').evaluate("e => e === document.activeElement")
 
 
-def test_a_rename_waits_for_its_tick_mark(page: Page) -> None:
-    """Ruling 23, a card of actions: a typed name waits for ✓ or Enter;
-    Esc or leaving the box puts the old one back."""
+def test_names_are_kept_by_save_and_undone_by_cancel(page: Page) -> None:
+    """Author, 2026-11-14: in Manage panels, Save keeps typed names and
+    Cancel undoes them, neither closing the card; Close asks first."""
     page.goto(PANELS)
     _manage(page)
-    li = page.locator('li[data-panel="panel-b"]')
-    box, ok = li.locator("[data-pn-rename]"), li.locator('[data-pn-act="rename"]')
+    save, cancel = (
+        page.locator('[data-pn-act="save-names"]'),
+        page.locator('[data-pn-act="cancel-names"]'),
+    )
+    box = page.locator('li[data-panel="panel-b"] [data-pn-rename]')
     head = page.locator('th[data-panel="panel-b"] [data-pn-name]')
-    assert not ok.is_visible()
+    assert save.is_disabled()
     box.fill("Faculty panel")
-    assert ok.is_visible() and head.inner_text() == "Panel B"
-    box.press("Escape")
-    assert box.input_value() == "Panel B" and not ok.is_visible()
+    assert save.is_enabled() and head.inner_text() == "Panel B"
+    cancel.click()
+    assert box.input_value() == "Panel B" and save.is_disabled()
+    assert page.locator("[data-pn-manage]").is_visible()
     box.fill("Faculty panel")
-    page.locator("[data-pn-newname]").focus()  # leaving the box
-    assert box.input_value() == "Panel B" and head.inner_text() == "Panel B"
-    assert page.locator("[data-pn-said]").inner_text() == "Panel B keeps its name."
-    box.fill("Faculty panel")
-    ok.click()
-    assert head.inner_text() == "Faculty panel" and not ok.is_visible()
+    page.locator("[data-pn-newname]").focus()  # leaving the box keeps the typing
+    assert box.input_value() == "Faculty panel"
+    save.click()
+    assert head.inner_text() == "Faculty panel" and save.is_disabled()
     assert page.locator("[data-pn-said]").inner_text() == "Panel B is now Faculty panel."
+    assert page.locator("[data-pn-manage]").is_visible()
+    # Close with a name typed and not saved asks; declined, nothing closes.
+    box.fill("Other")
+    page.once("dialog", lambda d: d.dismiss())
+    page.locator('[data-pn-act="close"]').click()
+    assert page.locator("[data-pn-manage]").is_visible() and box.input_value() == "Other"
+    page.once("dialog", lambda d: d.accept())
+    page.locator('[data-pn-act="close"]').click()
+    assert (
+        not page.locator("[data-pn-manage]").is_visible() and box.input_value() == "Faculty panel"
+    )
 
 
-def test_a_rename_left_from_its_tick_mark_is_put_back(page: Page) -> None:
-    """Cold read on rung 7d: tabbing to ✓ and on left the name pending."""
+def test_a_blank_panel_takes_its_members_as_pills(page: Page) -> None:
+    """Author, 2026-11-14: Add new panel's Members, as Form's Select
+    people box; someone with no row is added, someone with one ticked."""
     page.goto(PANELS)
     _manage(page)
-    li = page.locator('li[data-panel="panel-b"]')
-    box = li.locator("[data-pn-rename]")
-    box.fill("Faculty panel")
-    box.press("Tab")  # to its ✓: still the rename
-    assert box.input_value() == "Faculty panel"
-    li.locator('[data-pn-act="rename"]').press("Tab")  # and on: leaving it
-    assert box.input_value() == "Panel B"
-    assert not li.locator('[data-pn-act="rename"]').is_visible()
+    members = page.locator("[data-pn-members]")
+    members.press_sequentially("Daniel Koh, zoe.tan@example.edu, nobody,")
+    assert page.locator("[data-pn-tokens] .token").count() == 2
+    assert page.locator("[data-pn-newerr]").inner_text() == "Not found in the directory: nobody."
+    page.locator("[data-pn-newname]").fill("Reserve")
+    page.locator('[data-pn-act="create"]').click()
+    assert page.locator('th[data-panel="made-1"]').count() == 0  # refused: nobody is left over
+    members.fill("")
+    page.locator('[data-pn-act="create"]').click()
+    assert page.locator("[data-pn-said]").inner_text() == "Reserve added, with 2 people."
+    assert _row(page, "zoe.tan@example.edu").locator('input[data-pn-panel="made-1"]').is_checked()
+    dan = page.locator("[data-pn-row]").last
+    assert dan.locator('[data-pn-view="name"]').inner_text() == "Daniel Koh"
+    assert dan.locator('input[data-pn-panel="made-1"]').is_checked()
+    assert page.locator("[data-pn-tokens] .token").count() == 0
+    # Copying a panel's people needs no Members.
+    page.locator("[data-pn-from]").select_option("interviewers")
+    assert not page.locator("[data-pn-members-wrap]").is_visible()
+
+
+def test_a_verified_email_is_a_pill_and_a_message_moves_no_box(page: Page) -> None:
+    """Author, 2026-11-14: a directory match is a pill even unselected;
+    a selected row keeps a line for its message."""
+    page.goto(PANELS)
+    zoe = page.locator("[data-pn-row]").first  # by place: her email changes below
+    pill = zoe.locator('[data-pn-view="email"]')
+    assert pill.inner_text() == "zoe.tan@example.edu"
+    assert pill.evaluate("e => getComputedStyle(e).borderRadius") == "9999px"
+    # From no message to one: the next row stays where it was.
+    zoe.locator("[data-pn-select]").check()
+    # Measured from Zoe's own row: the problems list above the table grows too.
+    gap = "e => e.nextElementSibling.getBoundingClientRect().top - e.getBoundingClientRect().top"
+    before = zoe.evaluate(gap)
+    zoe.locator('[data-pn-act="unverify"]').click()
+    zoe.locator("[data-pn-entry]").fill("nobody")
+    zoe.locator("[data-pn-entry]").press("Enter")
+    assert zoe.locator("[data-pn-why]").inner_text() == "Not found in the directory."
+    assert zoe.evaluate(gap) == before
+
+
+def test_names_saved_together_may_swap(page: Page) -> None:
+    """Cold read on rung 7e: names are judged as they would all stand."""
+    page.goto(PANELS)
+    _manage(page)
+    a = page.locator('li[data-panel="panel-a"] [data-pn-rename]')
+    b = page.locator('li[data-panel="panel-b"] [data-pn-rename]')
+    a.fill("Panel B")
+    b.fill("Panel A")
+    page.locator('[data-pn-act="save-names"]').click()
+    assert page.locator('th[data-panel="panel-a"] [data-pn-name]').inner_text() == "Panel B"
+    assert page.locator('th[data-panel="panel-b"] [data-pn-name]').inner_text() == "Panel A"
+    a.fill("Same")
+    b.fill("same")
+    page.locator('[data-pn-act="save-names"]').click()
+    assert page.locator("[data-pn-said]").inner_text() == (
+        "Two panels would be called Same. Panel B keeps its name. "
+        "Two panels would be called same. Panel A keeps its name."
+    )

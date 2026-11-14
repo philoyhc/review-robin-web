@@ -49,6 +49,13 @@
       <span class="pn-chips" data-pn-chips>{% for p in panels %}<span class="chip chip-info" data-panel="{{ p.key }}"><span data-pn-name>{{ p.name }}</span>&nbsp;(<span data-pn-num>{{ p.members | length }}</span>)</span>{% endfor %}</span>
       <span class="pn-rl" data-pn-inuse>· {{ used | length }} in use</span>
       <button class="btn btn-secondary pn-manage" type="button" data-pn-act="manage" aria-expanded="false" aria-controls="pn-manage">Manage panels</button>
+      {# Open, the card's own buttons (author, 2026-11-14): Cancel and Save
+         for the names typed in it, neither closing it; Close. #}
+      <span class="pn-manage pn-manage-acts" data-pn-manage-acts hidden>
+        <button class="btn btn-secondary" type="button" data-pn-act="cancel-names">Cancel</button>
+        <button class="btn btn-primary" type="button" data-pn-act="save-names" disabled>Save</button>
+        <button class="btn btn-secondary" type="button" data-pn-act="close">Close</button>
+      </span>
     </div>
     <p class="muted" data-pn-empty{% if panels %} hidden{% endif %}>No panels yet: make one in <em>Manage panels</em>, or with <em>+ New panel</em> where a question or a gate needs one.</p>
     <ul class="pc-issues" data-pn-issues hidden></ul>
@@ -59,7 +66,7 @@
         <ul class="pn-list" data-pn-list>
           {% for p in panels %}
           <li data-panel="{{ p.key }}">
-            <span class="pn-rename"><input class="fc-in pn-list-h" data-pn-rename value="{{ p.name }}" aria-label="Name of {{ p.name }}"><button type="button" class="pn-save pn-rename-ok" data-pn-act="rename" hidden aria-label="Keep the new name of {{ p.name }}" title="Keep the new name">✓</button></span>
+            <input class="fc-in pn-list-h" data-pn-rename value="{{ p.name }}" aria-label="Name of {{ p.name }}">
             <span class="pn-list-act">
               <button type="button" class="btn btn-secondary" data-pn-act="emails">Copy emails</button>
               <button type="button" class="btn btn-destructive" data-pn-act="retire"{% if uses.get(p.key) %} disabled title="In use: it can be retired once nothing uses it"{% endif %}>Retire</button>
@@ -69,7 +76,7 @@
           </li>
           {% endfor %}
         </ul>
-        <p class="muted pn-csv-note">A name is changed where it stands: every column, pill and menu follows. <em>Copy emails</em> puts a panel's addresses on the clipboard, separated by commas.</p>
+        <p class="muted pn-csv-note">A name is changed where it stands, and kept with <em>Save</em> above: every column, pill and menu follows. <em>Copy emails</em> puts a panel's addresses on the clipboard, separated by commas.</p>
       </section>
       <div class="pn-manage-right">
       {# A new panel, blank or from an existing one's people (author,
@@ -82,6 +89,14 @@
             <option value="">None: a blank panel</option>
             {% for p in panels %}<option value="{{ p.key }}">Copy from {{ p.name }}</option>{% endfor %}
           </select></label>
+        </div>
+        {# A blank panel takes its members here, as Form's Select people
+           box does: names or emails, separated by commas, each found in
+           the directory a pill with x (ruling 22). #}
+        <div class="fc-l pn-members" data-pn-members-wrap><span>Members</span>
+          <div class="tokens" role="group" aria-label="Members" data-pn-tokens>
+            <input class="token-input" type="text" data-pn-members list="pn-directory" autocomplete="off" aria-label="Add a member" placeholder="Name or email; separate several with commas">
+          </div>
         </div>
         <p class="np-err" data-pn-newerr aria-live="polite"></p>
         <div class="btnrow"><button type="button" class="btn btn-primary" data-pn-act="create">Add panel</button></div>
@@ -396,11 +411,8 @@
       r.lastElementChild.before(td);
     });
     var li = el("li"); li.setAttribute("data-panel", key);
-    var lw = el("span", "pn-rename"), lh = el("input", "fc-in pn-list-h"), ok = el("button", "pn-save pn-rename-ok", "✓");
-    lh.value = name; lh.setAttribute("data-pn-rename", ""); lh.setAttribute("aria-label", "Name of " + name);
-    ok.type = "button"; ok.hidden = true; ok.setAttribute("data-pn-act", "rename");
-    ok.setAttribute("aria-label", "Keep the new name of " + name); ok.title = "Keep the new name";
-    lw.appendChild(lh); lw.appendChild(ok);
+    var lw = el("input", "fc-in pn-list-h");
+    lw.value = name; lw.setAttribute("data-pn-rename", ""); lw.setAttribute("aria-label", "Name of " + name);
     var act = el("span", "pn-list-act");
     [["emails", "Copy emails", "btn-secondary"], ["retire", "Retire", "btn-destructive"]].forEach(function (a) {
       var b = el("button", "btn " + a[2], a[1]); b.type = "button"; b.setAttribute("data-pn-act", a[0]); act.appendChild(b);
@@ -428,46 +440,53 @@
     root.querySelectorAll('[data-panel="' + key + '"] [data-pn-name]').forEach(function (s) { s.textContent = name; });
     var input = list.querySelector('li[data-panel="' + key + '"] [data-pn-rename]');
     input.value = name; input.setAttribute("aria-label", "Name of " + name);
-    input.parentNode.querySelector("[data-pn-act=rename]").setAttribute("aria-label", "Keep the new name of " + name);
     var o = fromSel.querySelector('option[value="' + key + '"]'); if (o) o.textContent = "Copy from " + name;
     body.querySelectorAll('input[data-pn-panel="' + key + '"]').forEach(function (c) { c.setAttribute("aria-label", "On " + name); });
     check();  // the problems name panels too
   }
-  // A rename (ruling 23, a card of actions): typed, it waits for ✓ or
-  // Enter; Esc or leaving the box puts the name back.
-  function keepName(input) {
-    var key = input.closest("li[data-panel]").dataset.panel, was = nameOf(key), to = input.value.trim();
-    input.parentNode.querySelector("[data-pn-act=rename]").hidden = true;
-    if (to === was) { input.value = was; return; }
-    var why = badName(to, key);
-    if (why) { input.value = was; said.textContent = why + " " + was + " keeps its name."; return; }
-    rename(key, to);
-    said.textContent = was + " is now " + to + ".";
+  // Renames (author, 2026-11-14): typed in Manage panels, kept by its
+  // Save (Enter too) and undone by its Cancel, neither closing the card.
+  var saveNames = root.querySelector('[data-pn-act="save-names"]');
+  function renames() {
+    return Array.prototype.filter.call(list.querySelectorAll("[data-pn-rename]"), function (box) {
+      return box.value.trim() !== nameOf(box.closest("li[data-panel]").dataset.panel);
+    });
   }
-  function dropName(input) {
-    var key = input.closest("li[data-panel]").dataset.panel;
-    input.parentNode.querySelector("[data-pn-act=rename]").hidden = true;
-    if (input.value.trim() !== nameOf(key)) { input.value = nameOf(key); said.textContent = nameOf(key) + " keeps its name."; }
+  function namesPending() { saveNames.disabled = !renames().length; }
+  // Every name is judged against the names as they would all stand after
+  // the save, so neither the order of the list nor a swap matters.
+  function keepNames() {
+    var pending = renames(), told = [], after = {};
+    cols().forEach(function (h) { after[h.dataset.panel] = nameOf(h.dataset.panel); });
+    pending.forEach(function (box) { after[box.closest("li[data-panel]").dataset.panel] = box.value.trim(); });
+    var refused = {};
+    pending.forEach(function (box) {
+      var key = box.closest("li[data-panel]").dataset.panel, to = after[key];
+      var clash = Object.keys(after).filter(function (k) { return k !== key && after[k].toLowerCase() === to.toLowerCase(); })[0];
+      var moving = clash && pending.some(function (b) { return b.closest("li[data-panel]").dataset.panel === clash; });
+      var why = !to ? "Name the panel." : RESERVED.test(to) ? to + " names a CSV column: choose another name."
+        : clash ? (moving ? "Two panels would be called " + to + "." : "A panel is already called " + after[clash] + ".") : "";
+      if (why) refused[key] = why;
+    });
+    pending.forEach(function (box) {
+      var key = box.closest("li[data-panel]").dataset.panel, was = nameOf(key), to = after[key];
+      if (refused[key]) { box.value = was; told.push(refused[key] + " " + was + " keeps its name."); return; }
+      rename(key, to);
+      told.push(was + " is now " + to + ".");
+    });
+    if (told.length) said.textContent = told.join(" ");
+    namesPending();
   }
-  list.addEventListener("input", function (e) {
-    if (!e.target.matches("[data-pn-rename]")) return;
-    var key = e.target.closest("li[data-panel]").dataset.panel;
-    e.target.parentNode.querySelector("[data-pn-act=rename]").hidden = e.target.value.trim() === nameOf(key);
-  });
-  // A press on ✓ keeps the focus in the box, so every browser sees the
-  // click (Safari and Firefox on macOS do not focus a button pressed).
-  list.addEventListener("mousedown", function (e) {
-    if (e.target.closest("[data-pn-act=rename]")) e.preventDefault();
-  });
-  list.addEventListener("focusout", function (e) {
-    var box = e.target.matches("[data-pn-rename]") ? e.target
-      : e.target.matches("[data-pn-act=rename]") ? e.target.parentNode.querySelector("[data-pn-rename]") : null;
-    if (!box) return;
-    // Between the box and its own ✓ is still the rename; anywhere else is
-    // leaving it, and the old name comes back.
-    var pair = box.parentNode;
-    if (e.relatedTarget && pair.contains(e.relatedTarget)) return;
-    dropName(box);
+  function dropNames(quiet) {
+    var n = renames().length;
+    renames().forEach(function (box) { box.value = nameOf(box.closest("li[data-panel]").dataset.panel); });
+    if (n && !quiet) said.textContent = n === 1 ? "The name change is undone." : "The name changes are undone.";
+    namesPending();
+  }
+  list.addEventListener("input", function (e) { if (e.target.matches("[data-pn-rename]")) namesPending(); });
+  // Leaving with a name typed and not saved asks first, as Close does.
+  window.addEventListener("beforeunload", function (e) {
+    if (renames().length) { e.preventDefault(); e.returnValue = ""; }
   });
   // A panel's members' emails, comma-separated, as ticked now.
   window.applydeskPanelEmails = function (key) {
@@ -482,9 +501,11 @@
     list.querySelector('li[data-panel="' + key + '"]').remove();
     chips.querySelector('[data-panel="' + key + '"]').remove();
     fromSel.querySelector('option[value="' + key + '"]').remove();
+    mWrap.hidden = !!fromSel.value;  // the menu fell back to a blank panel, which takes Members
     cols_.querySelector(".pn-w-panel").remove();
     said.textContent = name + " retired.";
     check();
+    namesPending();
     newName.focus();
   }
 
@@ -582,6 +603,61 @@
       f.text().then(function (t) { window.applydeskPanelsImport(t); e.target.value = ""; });
     }
   });
+  // --- A blank panel's Members (author, 2026-11-14), as Form's Select
+  // people box: each finished entry (before a comma, or all on Enter,
+  // leaving the box or Add panel) found in the directory a pill with x;
+  // one not found stays in the box, said why. ---
+  var mWrap = root.querySelector("[data-pn-members-wrap]"), mBox = root.querySelector("[data-pn-tokens]");
+  var mIn = root.querySelector("[data-pn-members]");
+  function mPill(p) {
+    if (mBox.querySelector('.token[data-email="' + p[1].toLowerCase() + '"]')) return false;
+    var t = el("span", "token", p[0]), x = el("button", "token-x", "×");
+    t.dataset.email = p[1].toLowerCase(); t.dataset.name = p[0]; t.title = p[1];
+    x.type = "button"; x.setAttribute("aria-label", "Remove " + p[0] + " from Members");
+    t.appendChild(x);
+    mBox.insertBefore(t, mIn);
+    return true;
+  }
+  function mTake(all) {
+    var parts = mIn.value.split(","), rest = all ? "" : parts.pop().replace(/^\s+/, "");
+    var missed = [], twice = [], again = [];
+    parts.forEach(function (raw) {
+      var entry = raw.trim();
+      if (!entry) return;
+      var found = window.applydeskFind(entry, DIRECTORY);
+      if (found.person) { if (!mPill(found.person)) again.push(found.person[0]); }
+      else (found.twice ? twice : missed).push(entry);
+    });
+    var left = missed.concat(twice), value = all ? left.join(", ") : left.concat([rest]).join(", ");
+    if (mIn.value !== value) mIn.value = value;
+    var told = [];
+    if (missed.length) told.push("Not found in the directory: " + missed.join(", ") + ".");
+    if (twice.length) told.push("Two people share the name " + twice.join(", ") + ": use the email.");
+    if (again.length) told.push("Already chosen: " + again.join(", ") + ".");
+    newErr.textContent = told.join(" ");
+    return left.length === 0;
+  }
+  function mPeople() {
+    return Array.prototype.map.call(mBox.querySelectorAll(".token"), function (t) { return [t.dataset.name, t.title]; });
+  }
+  mIn.addEventListener("input", function () { if (mIn.value.indexOf(",") >= 0) mTake(false); });
+  mIn.addEventListener("focusout", function () { if (mIn.value.trim()) mTake(true); });
+  mIn.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); mTake(true); }
+    else if (e.key === "Backspace" && !mIn.value) {
+      var last = mIn.previousElementSibling;
+      if (last && last.classList.contains("token")) { said.textContent = last.dataset.name + " removed from Members."; last.remove(); }
+    }
+  });
+  mBox.addEventListener("click", function (e) {
+    var x = e.target.closest(".token-x");
+    if (!x) return;
+    said.textContent = x.closest(".token").dataset.name + " removed from Members.";
+    x.closest(".token").remove();
+    mIn.focus();
+  });
+  // Copying a panel's people needs no Members.
+  fromSel.addEventListener("change", function () { mWrap.hidden = !!fromSel.value; });
   // ✓ keeps a row: refused while the row has a problem.
   function save(r) {
     check();
@@ -624,13 +700,32 @@
       var name = newName.value.trim(), from = fromSel.value, bad = badName(name);
       newErr.textContent = bad;
       if (bad) return;
-      addPanel(name, from || null);
-      newName.value = ""; fromSel.value = "";
-      said.textContent = from ? name + " added, with the people of " + nameOf(from) + "." : name + " added: tick who sits on it.";
-    } else if (what === "rename" && li) {
-      var box = li.querySelector("[data-pn-rename]");
-      keepName(box);
-      box.focus();
+      if (!from && !mTake(true)) return;  // an entry not found: said why, nothing added
+      var who = from ? [] : mPeople();
+      var key = addPanel(name, from || null);
+      // A blank panel's members: ticked where they have a row, added
+      // (as saved) where they have none.
+      who.forEach(function (p) {
+        // By the email a row holds as saved: an open row's typing, or a
+        // new row not yet kept, is not yet anyone.
+        var r = rows().filter(function (x) {
+          if (x.dataset.fresh) return false;
+          var saved = x.pnSnap ? x.pnSnap.email : val(x, "email");
+          return saved.toLowerCase() === p[1].toLowerCase();
+        })[0];
+        if (!r) { addRow({ name: p[0], email: p[1], note: "", panels: [key] }); return; }
+        r.querySelector('input[data-pn-panel="' + key + '"]').checked = true;
+        if (r.pnSnap) r.pnSnap.panels[key] = true;
+      });
+      mBox.querySelectorAll(".token").forEach(function (t) { t.remove(); });
+      mIn.value = ""; newName.value = ""; fromSel.value = ""; mWrap.hidden = false;
+      check(); filter();
+      said.textContent = from ? name + " added, with the people of " + nameOf(from) + "."
+        : who.length ? name + " added, with " + people(who.length) + "." : name + " added: tick who sits on it.";
+    } else if (what === "save-names") {
+      keepNames();
+    } else if (what === "cancel-names") {
+      dropNames(false);
     } else if (what === "emails" && li) {
       var text = window.applydeskPanelEmails(li.dataset.panel), pn = nameOf(li.dataset.panel);
       if (!text) { said.textContent = pn + " has nobody on it yet."; return; }
@@ -639,11 +734,17 @@
       else said.textContent = pn + ": " + text;
     } else if (what === "retire" && li) {
       retire(li.dataset.panel);
-    } else if (what === "manage") {
-      var open = manage.hidden;
-      manage.hidden = !open;
-      a.setAttribute("aria-expanded", String(open));
-      a.textContent = open ? "Close" : "Manage panels";
+    } else if (what === "manage" || what === "close") {
+      var opening = what === "manage";
+      // Closing with names typed and not saved asks first.
+      if (!opening && renames().length && !window.confirm("Close without saving the name changes?")) return;
+      if (!opening) dropNames(true);
+      var toggle = root.querySelector('[data-pn-act="manage"]'), acts = root.querySelector("[data-pn-manage-acts]");
+      manage.hidden = !opening;
+      toggle.hidden = opening;
+      acts.hidden = !opening;
+      toggle.setAttribute("aria-expanded", String(opening));
+      (opening ? root.querySelector('[data-pn-act="close"]') : toggle).focus();
     } else if (what === "export") {
       var link = el("a");
       link.href = URL.createObjectURL(new Blob([window.applydeskPanelsCsv()], { type: "text/csv" }));
@@ -671,12 +772,14 @@
     });
   });
   root.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && e.target.matches("[data-pn-rename]")) { dropName(e.target); return; }
+    if (e.key === "Escape" && e.target.matches("[data-pn-rename]")) {
+      e.target.value = nameOf(e.target.closest("li[data-panel]").dataset.panel); namesPending(); return;
+    }
     if (e.key !== "Enter") return;
     if (e.target.matches("[data-pn-entry]")) { e.preventDefault(); setEmail(e.target.closest("[data-pn-row]"), e.target.value); return; }
     // Enter in a selected row's other boxes is its ✓.
     if (e.target.matches('[data-pn-row] [data-pn="name"], [data-pn-row] [data-pn="note"]')) { e.preventDefault(); save(e.target.closest("[data-pn-row]")); return; }
-    if (e.target.matches("[data-pn-rename]")) { e.preventDefault(); keepName(e.target); return; }
+    if (e.target.matches("[data-pn-rename]")) { e.preventDefault(); keepNames(); return; }
     if (e.target === newName) { e.preventDefault(); root.querySelector('[data-pn-act="create"]').click(); }
   });
   check();
