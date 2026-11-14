@@ -433,6 +433,10 @@ def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> N
     ]
     chips = re.findall(r'<span class="chip chip-\w+">(Written|Owed)</span>', text)
     assert chips == ["Written", "Written", "Written", "Written", "Owed", "Owed"]
+    # Ruling 23: a Save on each template card, none for the page.
+    cards = text.split('<section class="card" data-email=')[1:]
+    assert all(c.split("</section>")[0].count(">Save</button>") == 1 for c in cards)
+    assert text.count(">Save</button>") == len(cards)
 
 
 def test_evaluations_lists_each_gate_s_progress(client: TestClient) -> None:
