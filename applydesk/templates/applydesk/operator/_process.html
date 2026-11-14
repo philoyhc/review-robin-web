@@ -21,6 +21,8 @@
     <template id="pc-new-form">{{ pc.form_item(new=True, open=True) }}</template>
     <template id="pc-new-gate">{{ pc.gate_item(plan, blank_gate, rule_text, open=True) }}</template>
     <template id="pc-new-outcome">{{ pc.outcome_item(plan, blank_outcome, rule_text, open=True) }}</template>
+    <template id="pc-new-result">{{ pc.result_row(blank_result, "RRW") }}</template>
+    <script type="application/json" id="pc-derivations">{{ {"labels": derivations, "allowed": allowed} | tojson }}</script>
   </div>
   <aside class="fb-side">
     <section class="card fb-outline" aria-labelledby="pc-outline-h">
@@ -528,6 +530,12 @@
         item.querySelectorAll("[data-pc-sent]").forEach(function (x) { x.remove(); });
         var menu = item.querySelector("[data-pc-panel]");
         if (menu) { menu.disabled = false; menu.removeAttribute("title"); }
+        // Its results, how it runs and + Result are its own to set too.
+        item.querySelectorAll("[data-pr-ed]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
+        var via = item.querySelector('[data-pc="via"]');
+        if (via) { via.disabled = false; via.removeAttribute("title"); }
+        var addR = item.querySelector('[data-pr-act="add"]');
+        if (addR) { addR.removeAttribute("data-sent"); addR.disabled = false; addR.removeAttribute("title"); }
       });
       // The copy's rules and weights read its own gates and outcome.
       added.querySelectorAll(".pc-item[data-key]").forEach(function (item) {
@@ -625,6 +633,7 @@
         var outcome = card.querySelector('.pc-item[data-item="outcome"]');
         var anchor = kind === "gate" && outcome ? outcome : card.querySelector(".pc-empty");
         anchor.before(added);
+        if (kind === "gate") drawResults(added);  // its first result, numbered
         changed();
         added.querySelector('[data-pc="item-name"]').focus();
       } else if (p.dataset.pcAct === "rule") {
@@ -655,6 +664,144 @@
     }
     if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-name"], [data-pc="values"]')) changed();
   });
+  // --- A gate's results (ruling 21): up to three, each a response field
+  // and a derivation, which sets the result's type. As stages.field_text,
+  // result_type and result_summary: the two must read the same. ---
+  var DERIV = JSON.parse(document.getElementById("pc-derivations").textContent);
+  var DLABEL = {}; DERIV.labels.forEach(function (d) { DLABEL[d[0]] = d[1]; });
+  function rv(row, f) { var i = row.querySelector('[data-r="' + f + '"]'); return i ? i.value.trim() : ""; }
+  function opts(text) { return text.split(",").map(function (o) { return o.trim(); }).filter(Boolean); }
+  function span(lo, hi) { return lo && hi ? lo + " to " + hi : hi ? "up to " + hi : lo ? "at least " + lo : ""; }
+  function readResult(row) {
+    var type = rv(row, "type");
+    return {
+      name: rv(row, "name"), type: type,
+      min: type === "integer" || type === "decimal" ? rv(row, "min") : "",
+      max: type === "integer" || type === "decimal" ? rv(row, "max") : type === "string" ? rv(row, "maxlen") : "",
+      step: type === "integer" || type === "decimal" ? rv(row, "step") : "",
+      options: type === "list" ? rv(row, "options") : "",
+      derive: rv(row, "derive"), value: rv(row, "value"),
+      atLeast: /^\d+$/.test(rv(row, "at_least")) ? parseInt(rv(row, "at_least"), 10) : 1
+    };
+  }
+  function fieldText(r) {
+    if (r.type === "list") { var o = opts(r.options); return o.length ? "List: " + o.join(", ") : "List, no options yet"; }
+    if (r.type === "string") return r.max ? "String, up to " + r.max + " characters" : "String";
+    var parts = [span(r.min, r.max), r.step ? "step " + r.step : ""].filter(Boolean);
+    return (r.type === "integer" ? "Integer" : "Decimal") + (parts.length ? " " + parts.join(", ") : "");
+  }
+  function resultType(r) {
+    if (r.derive === "entered" || r.derive === "min" || r.derive === "max" || r.derive === "mode") return fieldText(r);
+    if (r.derive === "mean" || r.derive === "median") { var b = span(r.min, r.max); return b ? "Decimal " + b : "Decimal"; }
+    if (r.derive === "sum") { var sb = span(r.min, r.max); return (r.type === "integer" ? "Integer" : "Decimal") + (sb ? ", n × " + sb : ""); }
+    if (r.derive === "count") return "Integer, from 0";
+    if (r.derive === "share") return "Decimal 0 to 100 (%)";
+    return "String, for reading";
+  }
+  function derivationText(r) {
+    if (r.derive === "entered") return "Entered here";
+    var label = r.derive === "share" ? "Share choosing " + (r.value || "(no option)") : (DLABEL[r.derive] || r.derive);
+    return r.atLeast > 1 ? label + ", from " + r.atLeast + " or more" : label;
+  }
+  function viaOf(item) { var v = item.querySelector('[data-pc="via"]'); return v ? v.value : "RRW"; }
+  // One result's editor and summary, its derivations kept to what its
+  // field and its gate allow.
+  function drawResult(row, via) {
+    var type = rv(row, "type");
+    row.querySelector('[data-r-g="number"]').hidden = !(type === "integer" || type === "decimal");
+    row.querySelector('[data-r-g="string"]').hidden = type !== "string";
+    row.querySelector('[data-r-g="list"]').hidden = type !== "list";
+    var d = row.querySelector('[data-r="derive"]'), was = d.value;
+    var allowed = via === "RRW" ? DERIV.allowed[type] : ["entered"];
+    d.textContent = "";
+    allowed.forEach(function (k) { var o = el("option", "", DLABEL[k]); o.value = k; d.appendChild(o); });
+    d.value = allowed.indexOf(was) >= 0 ? was : allowed[0];
+    // The option a share counts: kept by name while the options are
+    // edited (row.dataset.share), so retyping one does not lose it.
+    var v = row.querySelector('[data-r="value"]');
+    if (row.dataset.share === undefined) row.dataset.share = v.value;
+    v.textContent = "";
+    opts(rv(row, "options")).forEach(function (o) { var e = el("option", "", o); e.value = o; v.appendChild(e); });
+    if (opts(rv(row, "options")).indexOf(row.dataset.share) >= 0) v.value = row.dataset.share;
+    row.querySelector('[data-r-g="share"]').hidden = d.value !== "share";
+    row.querySelector('[data-r-g="atleast"]').hidden = d.value === "entered";
+    var r = readResult(row);
+    row.dataset.name = r.name;
+    row.querySelector("[data-pr-name]").textContent = r.name || "Untitled result";
+    row.querySelector("[data-pr-sum]").textContent = fieldText(r) + " · " + derivationText(r) + " → " + resultType(r);
+    row.querySelector("[data-pr-type]").textContent = resultType(r);
+  }
+  // A gate's results as a whole: numbered, counted, three at most, and
+  // what Review Robin's instrument must ask.
+  function drawResults(item) {
+    var rows = Array.prototype.slice.call(item.querySelectorAll("[data-result]")), via = viaOf(item);
+    if (!item.dataset.nextResult) {
+      item.dataset.nextResult = String(1 + rows.reduce(function (m, r) { return Math.max(m, Number(r.dataset.result.slice(1)) || 0); }, 0));
+    }
+    rows.forEach(function (row, i) { row.querySelector("[data-pr-n]").textContent = String(i + 1); drawResult(row, via); });
+    item.querySelector("[data-pr-none]").hidden = rows.length > 0;
+    var chip = item.querySelector("[data-pi-results]");
+    chip.textContent = rows.length + (rows.length === 1 ? " result" : " results");
+    var add = item.querySelector('[data-pr-act="add"]');
+    if (!add.hasAttribute("data-sent")) {
+      add.disabled = rows.length >= 3;
+      if (add.disabled) add.title = "A gate yields three results at most"; else add.removeAttribute("title");
+    }
+    var rrw = item.querySelector("[data-pr-rrw]");
+    rrw.textContent = "";
+    rrw.hidden = via !== "RRW" || !rows.length;
+    rrw.appendChild(document.createTextNode("For Review Robin, each evaluator answers: "));
+    rows.forEach(function (row, i) {
+      var r = readResult(row);
+      rrw.appendChild(el("strong", "", r.name || "Untitled result"));
+      rrw.appendChild(document.createTextNode(" (" + fieldText(r) + ")" + (i < rows.length - 1 ? "; " : ".")));
+    });
+  }
+  function openResult(row, open) {
+    row.querySelector("[data-pr-ed]").hidden = !open;
+    row.querySelector("[data-pr-toggle]").setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  list.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-pr-toggle]");
+    if (t) { var row = t.closest("[data-result]"); openResult(row, row.querySelector("[data-pr-ed]").hidden); return; }
+    var a = e.target.closest("[data-pr-act]");
+    if (!a || a.disabled) return;
+    var item = a.closest(".pc-item");
+    if (a.dataset.prAct === "add") {
+      var keys = Array.prototype.map.call(item.querySelectorAll("[data-result]"), function (r) { return r.dataset.result; });
+      // A removed result's key is never reused: a rule left reading it
+      // stays flagged rather than binding to the new one.
+      var n = Number(item.dataset.nextResult) || 1;
+      while (keys.indexOf("r" + n) >= 0) n += 1;
+      item.dataset.nextResult = String(n + 1);
+      var added = fresh("pc-new-result");
+      added.dataset.result = "r" + n;
+      item.querySelector("[data-pr-list]").appendChild(added);
+      openResult(added, true);
+      drawResults(item); changed();
+      added.querySelector('[data-r="name"]').focus();
+    } else if (a.dataset.prAct === "remove") {
+      a.closest("[data-result]").remove();
+      drawResults(item); changed();
+      item.querySelector('[data-pr-act="add"]').focus();
+    }
+  });
+  function resultEvent(e) {
+    var row = e.target.closest("[data-result]");
+    if (row && e.target.matches("[data-r]")) {
+      var item = row.closest(".pc-item");
+      if (e.target.dataset.r === "value") row.dataset.share = e.target.value;
+      drawResults(item);
+      if (e.target.dataset.r === "name") changed();  // a rule names Result 1
+      return true;
+    }
+    if (e.target.matches('[data-pc="via"]')) { drawResults(e.target.closest(".pc-item")); changed(); return true; }
+    return false;
+  }
+  list.addEventListener("input", resultEvent, true);
+  list.addEventListener("change", resultEvent, true);
+  Array.prototype.forEach.call(list.querySelectorAll('.pc-item[data-item="gate"]'), drawResults);
+
   changed();
 })();
 </script>

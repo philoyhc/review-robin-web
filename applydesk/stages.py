@@ -68,8 +68,9 @@ DERIVATIONS: tuple[tuple[str, str], ...] = (
 ALLOWED: dict[str, tuple[str, ...]] = {
     "integer": ("mean", "median", "min", "max", "sum", "count"),
     "decimal": ("mean", "median", "min", "max", "sum", "count"),
-    "list": ("share", "mode", "count"),
-    "string": ("join", "count"),
+    # Count is a numeric field's alone; a string is for reading (ruling 21).
+    "list": ("share", "mode"),
+    "string": ("join",),
 }
 
 
@@ -614,7 +615,9 @@ def result_type(r: GateResult) -> str:
     if r.derive in ("min", "max"):
         return field_text(f)
     if r.derive == "sum":
-        return "Integer" if f.type == "integer" else "Decimal"
+        span = _bounds(f.min, f.max)
+        name = "Integer" if f.type == "integer" else "Decimal"
+        return f"{name}, n × {span}" if span else name
     if r.derive == "count":
         return "Integer, from 0"
     if r.derive == "share":
@@ -630,7 +633,9 @@ def derivation_text(r: GateResult) -> str:
         return "Entered here"
     label = dict(DERIVATIONS).get(r.derive, r.derive)
     if r.derive == "share":
-        label = f"Share choosing {r.value or '(no option)'}"
+        # As the page's menu: the first option when none is chosen.
+        first = next((o.strip() for o in r.field.options.split(",") if o.strip()), "")
+        label = f"Share choosing {r.value or first or '(no option)'}"
     return f"{label}, from {r.at_least} or more" if r.at_least > 1 else label
 
 

@@ -671,3 +671,161 @@ def test_an_item_left_alone_opens(page: Page) -> None:
     o2.locator("[data-pi-toggle]").click()  # shut it
     interview.locator('[data-pc-act="remove-gate"]').click()
     assert o2.get_attribute("data-open") == ""
+
+
+# --- Segment AD1F rung 5c: a gate's results edited (ruling 21) ---
+# Every gate in the model exercise is sent, so its results are fixed; the
+# draft's selection gate is not.
+DRAFT_PAGE = PAGE.replace("wa9juxbc2t", "c4xh2ndv6s")
+
+
+def _draft_gate(page: Page, via: str = "RRW") -> Locator:
+    page.goto(DRAFT_PAGE)
+    _open(_cards(page).nth(1))
+    gate = page.locator('.pc-item[data-item="gate"]')
+    gate.locator('[data-pc="via"]').select_option(via)
+    return gate
+
+
+def _result(item: Locator, n: int) -> Locator:
+    row = item.locator("[data-result]").nth(n)
+    if row.locator("[data-pr-ed]").is_hidden():
+        row.locator("[data-pr-toggle]").click()
+    return row
+
+
+def test_a_result_s_derivations_follow_its_field(page: Page) -> None:
+    gate = _draft_gate(page)
+    row = _result(gate, 0)
+    derive = row.locator('[data-r="derive"]')
+    assert derive.locator("option").all_text_contents() == [
+        "Mean",
+        "Median",
+        "Lowest",
+        "Highest",
+        "Sum",
+        "Count of responses",
+    ]
+    row.locator('[data-r="type"]').select_option("list")
+    assert derive.locator("option").all_text_contents() == [
+        "Share choosing",
+        "Most common",
+    ]
+    row.locator('[data-r="options"]').fill("Yes, No")
+    derive.select_option("share")
+    row.locator('[data-r="value"]').select_option("Yes")
+    row.locator('[data-r="at_least"]').fill("2")
+    assert row.locator("[data-pr-sum]").text_content() == (
+        "List: Yes, No · Share choosing Yes, from 2 or more → Decimal 0 to 100 (%)"
+    )
+    assert row.locator("[data-pr-type]").text_content() == "Decimal 0 to 100 (%)"
+    row.locator('[data-r="name"]').fill("Recommend")
+    assert row.locator("[data-pr-name]").text_content() == "Recommend"
+    assert gate.locator("[data-result]").first.get_attribute("data-name") == "Recommend"
+    assert gate.locator("[data-pr-rrw]").text_content() == (
+        "For Review Robin, each evaluator answers: Recommend (List: Yes, No)."
+    )
+
+
+def test_results_are_added_to_three_and_removed(page: Page) -> None:
+    gate = _draft_gate(page)
+    add = gate.locator('[data-pr-act="add"]')
+    add.click()
+    new = gate.locator("[data-result]").nth(1)
+    assert new.get_attribute("data-result") == "r2"
+    assert new.locator('[data-r="name"]').evaluate("e => e === document.activeElement")
+    assert new.locator("[data-pr-n]").text_content() == "2"
+    add.click()
+    assert gate.locator("[data-pi-results]").text_content() == "3 results"
+    assert add.is_disabled() and add.get_attribute("title") == "A gate yields three results at most"
+    _result(gate, 0).locator('[data-pr-act="remove"]').click()
+    assert gate.locator("[data-pr-n]").all_text_contents() == ["1", "2"]
+    assert add.is_enabled()
+
+
+def test_runs_as_switches_every_result_s_derivation(page: Page) -> None:
+    gate = _draft_gate(page, "entered")
+    row = _result(gate, 0)
+    assert row.locator('[data-r="derive"] option').all_text_contents() == ["Entered here"]
+    assert not row.locator('[data-r-g="atleast"]').is_visible()
+    assert not gate.locator("[data-pr-rrw]").is_visible()
+    gate.locator('[data-pc="via"]').select_option("RRW")
+    assert row.locator('[data-r="derive"]').input_value() == "mean"
+    assert row.locator("[data-pr-sum]").text_content() == (
+        "Decimal 0 to 10, step 0.5 · Mean → Decimal 0 to 10"
+    )
+    assert gate.locator("[data-pr-rrw]").is_visible()
+    gate.locator('[data-pc="via"]').select_option("entered")
+    assert row.locator('[data-r="derive"]').input_value() == "entered"
+
+
+def test_a_sent_gate_keeps_its_results(page: Page) -> None:
+    page.goto(PAGE)
+    g3 = _item(page, "g3")
+    assert g3.locator('[data-pr-act="add"]').is_disabled()
+    assert g3.locator("[data-pr-ed]").first.evaluate("e => e.disabled")
+    assert g3.locator('[data-pc="via"]').is_disabled()
+    assert _line(_item(page, "o2")).startswith("Score at Interview ≥ 4.0")
+
+
+def test_the_script_s_result_summaries_match_the_server_s(page: Page) -> None:
+    from applydesk.tests.test_pages import RESULT_CASES
+
+    gate = _draft_gate(page)
+    row = _result(gate, 0)
+    for r, expected in RESULT_CASES:
+        if r.derive == "entered":
+            continue  # a gate run here: the test above
+        f = r.field
+        row.locator('[data-r="type"]').select_option(f.type)
+        if f.type in ("integer", "decimal"):
+            for k in ("min", "max", "step"):
+                row.locator(f'[data-r="{k}"]').fill(getattr(f, k))
+        elif f.type == "string":
+            row.locator('[data-r="maxlen"]').fill(f.max)
+        else:
+            row.locator('[data-r="options"]').fill(f.options)
+        row.locator('[data-r="derive"]').select_option(r.derive)
+        if r.derive == "share":
+            # None chosen: the menu's first option, as the server words it.
+            row.locator('[data-r="value"]').select_option(
+                r.value or f.options.split(",")[0].strip()
+            )
+        row.locator('[data-r="at_least"]').fill(str(r.at_least))
+        assert row.locator("[data-pr-sum]").text_content() == expected, r
+
+
+# --- The 5b-5c cold read ---
+def test_a_replica_of_a_sent_stage_s_results_are_its_own_to_set(page: Page) -> None:
+    page.goto(PAGE)
+    review = _cards(page).nth(1)
+    _open(review)
+    review.locator('[data-fc-act="replicate"]').click()
+    gate = _cards(page).nth(2).locator('.pc-item[data-item="gate"]').first
+    assert gate.locator('[data-pc="via"]').is_enabled()
+    assert gate.locator('[data-pr-act="add"]').is_enabled()
+    assert not gate.locator("[data-pr-ed]").first.evaluate("e => e.disabled")
+
+
+def test_a_removed_result_s_key_is_not_reused(page: Page) -> None:
+    gate = _draft_gate(page)
+    add = gate.locator('[data-pr-act="add"]')
+    add.click()
+    _result(gate, 1).locator('[data-pr-act="remove"]').click()
+    add.click()
+    assert gate.locator("[data-result]").evaluate_all("els => els.map(e => e.dataset.result)") == [
+        "r1",
+        "r3",
+    ]
+
+
+def test_a_share_keeps_its_option_while_the_options_are_retyped(page: Page) -> None:
+    gate = _draft_gate(page)
+    row = _result(gate, 0)
+    row.locator('[data-r="type"]').select_option("list")
+    row.locator('[data-r="options"]').fill("Yes, No")
+    row.locator('[data-r="derive"]').select_option("share")
+    row.locator('[data-r="value"]').select_option("No")
+    row.locator('[data-r="options"]').fill("Yes, N")
+    row.locator('[data-r="options"]').fill("Yes, No")
+    assert row.locator('[data-r="value"]').input_value() == "No"

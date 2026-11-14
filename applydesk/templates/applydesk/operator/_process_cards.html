@@ -58,6 +58,45 @@
 </div>
 {% endmacro %}
 
+{# A result's row (ruling 21): its summary, and an editor for its name,
+   the response field evaluators fill in, and how their answers become
+   the result. The page's script keeps the derivations to what the field
+   allows (Entered here alone, for a gate whose results are entered). #}
+{% macro result_row(r, via, sent=False) %}
+{% set f = r.field %}
+<div class="pr-row" data-result="{{ r.key }}" data-name="{{ r.name }}">
+  <button type="button" class="pr-head" data-pr-toggle aria-expanded="false">
+    <span class="pr-n" data-pr-n></span>
+    <span class="pr-texts"><span class="pr-name" data-pr-name>{{ r.name or "Untitled result" }}</span><span class="pr-sum" data-pr-sum>{{ result_summary(r) }}</span></span>
+  </button>
+  <fieldset class="pr-ed" data-pr-ed hidden{% if sent %} disabled title="Sent: the gate keeps its results"{% endif %}>
+    <legend class="visually-hidden">{{ r.name or "Untitled result" }}</legend>
+    <div class="pc-row">
+      <label class="fc-l pc-wide">Name<input class="fc-in" data-r="name" value="{{ r.name }}" placeholder="e.g. Rating"></label>
+      <label class="fc-l">Response field<select class="fc-in" data-r="type">{% for k, l in field_types %}<option value="{{ k }}"{% if k == f.type %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+    </div>
+    <div class="pc-row" data-r-g="number">
+      <label class="fc-l pc-narrow">Min<input class="fc-in" data-r="min" inputmode="decimal" value="{{ f.min if f.type in ('integer', 'decimal') }}"></label>
+      <label class="fc-l pc-narrow">Max<input class="fc-in" data-r="max" inputmode="decimal" value="{{ f.max if f.type in ('integer', 'decimal') }}"></label>
+      <label class="fc-l pc-narrow">Step<input class="fc-in" data-r="step" inputmode="decimal" value="{{ f.step if f.type in ('integer', 'decimal') }}"></label>
+    </div>
+    <div class="pc-row" data-r-g="string">
+      <label class="fc-l pc-narrow">Max length<input class="fc-in" data-r="maxlen" inputmode="numeric" value="{{ f.max if f.type == 'string' }}"></label>
+    </div>
+    <div class="pc-row" data-r-g="list">
+      <label class="fc-l pc-wide">Options (comma-separated)<input class="fc-in" data-r="options" value="{{ f.options }}"></label>
+    </div>
+    <div class="pc-row">
+      <label class="fc-l">Derived as<select class="fc-in" data-r="derive">{% for k, l in derivations if (k == "entered") == (via != "RRW") and (k == "entered" or k in allowed[f.type]) %}<option value="{{ k }}"{% if k == r.derive %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+      <label class="fc-l" data-r-g="share">Choosing<select class="fc-in" data-r="value">{% for o in f.options.split(",") if o.strip() %}<option{% if o.strip() == r.value %} selected{% endif %}>{{ o.strip() }}</option>{% endfor %}</select></label>
+      <label class="fc-l pc-narrow" data-r-g="atleast">From at least<input class="fc-in" data-r="at_least" inputmode="numeric" value="{{ r.at_least }}" aria-label="Responses needed, at least"></label>
+    </div>
+    <p class="pc-line">Result: <strong data-pr-type>{{ result_type(r) }}</strong></p>
+    <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pr-act="remove">Remove the result</button></div>
+  </fieldset>
+</div>
+{% endmacro %}
+
 {% macro gate_item(plan, g, rule_text, open=False) %}{# g.number 0: a new gate, numbered by the page's script #}
 {% set gs = gate_state(exercise.public_id, g.key) if g.key else ("Not ready", "") %}
 {% set state = gs[0] %}
@@ -84,25 +123,17 @@
   {% if sent %}<p class="pc-line muted" data-pc-sent>Sent with the panel as it then stood: changes to its roster apply from the gate's next send.</p>{% endif %}
   <p class="pc-line muted">Panel sees: the application file, the <em>Shown to reviewers</em> part{% if exercise.blind %}, redacted{% endif %}.{% if gs[1] %}<span data-pc-sent> Progress: {{ gs[1] }}.</span>{% endif %}</p>
   <div class="pc-row">
-    <label class="fc-l">Runs as<select class="fc-in" data-pc="via"><option{% if g.via == "RRW" %} selected{% endif %}>A Review Robin session</option><option{% if g.via != "RRW" %} selected{% endif %}>Results entered here</option></select></label>
+    <label class="fc-l">Runs as<select class="fc-in" data-pc="via"{% if sent %} disabled title="Sent: the gate keeps how it runs"{% endif %}><option value="RRW"{% if g.via == "RRW" %} selected{% endif %}>A Review Robin session</option><option value="entered"{% if g.via != "RRW" %} selected{% endif %}>Results entered here</option></select></label>
   </div>
   {# Its results (ruling 21): up to three, each the field evaluators answer
      and how the answers become the result, which sets its type. #}
   <div class="pc-results" data-pc-results>
     <span class="fc-l">Results</span>
-    {% for r in g.results %}
-    <div class="pr-row" data-result="{{ r.key }}" data-name="{{ r.name }}">
-      <span class="pr-n">{{ loop.index }}</span>
-      <span class="pr-texts"><span class="pr-name">{{ r.name or "Untitled result" }}</span><span class="pr-sum" data-pr-sum>{{ result_summary(r) }}</span></span>
-    </div>
-    {% else %}
-    <p class="pc-line muted" data-pr-none>No results yet: a gate yields up to three.</p>
-    {% endfor %}
-    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" disabled title="Comes in the next rung">+ Result</button></div>
+    <div class="pr-list" data-pr-list>{% for r in g.results %}{{ result_row(r, g.via, sent) }}{% endfor %}</div>
+    <p class="pc-line muted" data-pr-none{% if g.results %} hidden{% endif %}>No results yet: a gate yields up to three.</p>
+    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-pr-act="add"{% if sent %} data-sent disabled title="Sent: the gate keeps its results"{% elif g.results | length >= 3 %} disabled title="A gate yields three results at most"{% endif %}>+ Result</button></div>
   </div>
-  {% if g.via == "RRW" and g.results %}
-  <p class="pc-line muted pr-rrw" data-pr-rrw>For Review Robin, each evaluator answers: {% for r in g.results %}<strong>{{ r.name or "Untitled result" }}</strong> ({{ field_text(r.field) }}){{ "; " if not loop.last }}{% endfor %}.</p>
-  {% endif %}
+  <p class="pc-line muted pr-rrw" data-pr-rrw{% if g.via != "RRW" or not g.results %} hidden{% endif %}>For Review Robin, each evaluator answers: {% for r in g.results %}<strong>{{ r.name or "Untitled result" }}</strong> ({{ field_text(r.field) }}){{ "; " if not loop.last }}{% endfor %}.</p>
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-gate">Remove the gate</button></div>
   </div>
 </div>

@@ -819,39 +819,49 @@ F, R = stages.Field, stages.GateResult
 LIKERT = F("integer", "1", "5", "1")
 
 
-@pytest.mark.parametrize(
-    ("result", "summary"),
-    [
-        (R("r1", "Rating", LIKERT, "mean"), "Integer 1 to 5, step 1 · Mean → Decimal 1 to 5"),
-        (
-            R("r1", "Rating", LIKERT, "median", at_least=2),
-            "Integer 1 to 5, step 1 · Median, from 2 or more → Decimal 1 to 5",
-        ),
-        (R("r1", "Low", LIKERT, "min"), "Integer 1 to 5, step 1 · Lowest → Integer 1 to 5, step 1"),
-        (R("r1", "Total", F("decimal", "0"), "sum"), "Decimal at least 0 · Sum → Decimal"),
-        (R("r1", "N", F("string"), "count"), "String · Count of responses → Integer, from 0"),
-        (
-            R("r1", "Rec", F("list", options="Fund, Do not fund"), "share", "Fund"),
-            "List: Fund, Do not fund · Share choosing Fund → Decimal 0 to 100 (%)",
-        ),
-        (
-            R("r1", "Rec", F("list", options="A,B"), "mode"),
-            "List: A, B · Most common → List: A, B",
-        ),
-        (
-            R("r1", "Notes", F("string", max="500"), "join"),
-            "String, up to 500 characters · All, joined → String, for reading",
-        ),
-        (
-            R("r1", "Score", F("decimal", "0", "10", "0.5"), "entered"),
-            "Decimal 0 to 10, step 0.5 · Entered here → Decimal 0 to 10, step 0.5",
-        ),
-        (
-            R("r1", "X", F("list"), "mode"),
-            "List, no options yet · Most common → List, no options yet",
-        ),
-    ],
-)
+RESULT_CASES: list[tuple[stages.GateResult, str]] = [
+    (R("r1", "Rating", LIKERT, "mean"), "Integer 1 to 5, step 1 · Mean → Decimal 1 to 5"),
+    (
+        R("r1", "Rating", LIKERT, "median", at_least=2),
+        "Integer 1 to 5, step 1 · Median, from 2 or more → Decimal 1 to 5",
+    ),
+    (R("r1", "Low", LIKERT, "min"), "Integer 1 to 5, step 1 · Lowest → Integer 1 to 5, step 1"),
+    (
+        R("r1", "Total", F("decimal", "0"), "sum"),
+        "Decimal at least 0 · Sum → Decimal, n × at least 0",
+    ),
+    (
+        R("r1", "N", LIKERT, "count"),
+        "Integer 1 to 5, step 1 · Count of responses → Integer, from 0",
+    ),
+    (
+        R("r1", "Rec", F("list", options="Fund, Do not fund"), "share"),
+        "List: Fund, Do not fund · Share choosing Fund → Decimal 0 to 100 (%)",
+    ),
+    (
+        R("r1", "Rec", F("list", options="Fund, Do not fund"), "share", "Fund"),
+        "List: Fund, Do not fund · Share choosing Fund → Decimal 0 to 100 (%)",
+    ),
+    (
+        R("r1", "Rec", F("list", options="A,B"), "mode"),
+        "List: A, B · Most common → List: A, B",
+    ),
+    (
+        R("r1", "Notes", F("string", max="500"), "join"),
+        "String, up to 500 characters · All, joined → String, for reading",
+    ),
+    (
+        R("r1", "Score", F("decimal", "0", "10", "0.5"), "entered"),
+        "Decimal 0 to 10, step 0.5 · Entered here → Decimal 0 to 10, step 0.5",
+    ),
+    (
+        R("r1", "X", F("list"), "mode"),
+        "List, no options yet · Most common → List, no options yet",
+    ),
+]
+
+
+@pytest.mark.parametrize(("result", "summary"), RESULT_CASES)
 def test_a_result_reads_its_field_derivation_and_type(
     result: stages.GateResult, summary: str
 ) -> None:
@@ -868,7 +878,7 @@ def test_every_derivation_a_field_allows_is_known() -> None:
 def test_a_gate_item_lists_its_results_and_what_review_robin_asks(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
     g1 = text[text.index('data-key="g1"') : text.index('data-key="g2"')]
-    assert re.findall(r'class="pr-name">([^<]+)<', g1) == ["Rating", "Comments"]
+    assert re.findall(r'class="pr-name" data-pr-name>([^<]+)<', g1) == ["Rating", "Comments"]
     assert "Integer 1 to 5, step 1 · Mean, from 2 or more → Decimal 1 to 5" in g1
     assert "data-pi-results>2 results<" in g1
     assert (
@@ -878,4 +888,7 @@ def test_a_gate_item_lists_its_results_and_what_review_robin_asks(client: TestCl
     # A gate whose results are entered here asks Review Robin nothing.
     draft = client.get(f"/applydesk/operator/exercises/{DRAFT}/process").text
     assert "Decimal 0 to 10, step 0.5 · Entered here" in draft
-    assert "For Review Robin" not in draft
+    assert '<p class="pc-line muted pr-rrw" data-pr-rrw hidden>' in draft
+    # Its derivation menu offers Entered here alone.
+    at = draft.index('data-r="derive"')
+    assert draft[at : draft.index("</select>", at)].count("<option") == 1
