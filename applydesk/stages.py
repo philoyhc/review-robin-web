@@ -451,3 +451,18 @@ def rule_json(column: Gate | Outcome) -> dict[str, object] | None:
         "then": column.rule.then,
         "otherwise": column.rule.otherwise,
     }
+
+
+def panel_uses(exercise_id: str) -> dict[str, tuple[str, ...]]:
+    """What uses each of the exercise's panels (ruling 19), by panel key,
+    in page order: the form's Select people questions, then each gate in
+    timeline order, e.g. ("Form: Preferred reviewer", "Gate 1: Peer
+    Review"). A panel nothing uses has no entry."""
+    uses: dict[str, list[str]] = {}
+    for c in sample_data.form_cards(exercise_id):
+        if c.kind == "field" and c.type == "people" and c.pool != "institution":
+            uses.setdefault(c.pool, []).append(f"Form: {c.label or 'Untitled question'}")
+    for column in plan_of(exercise_id).columns:
+        if isinstance(column, Gate) and column.panel:
+            uses.setdefault(column.panel, []).append(f"Gate {column.number}: {column.label}")
+    return {k: tuple(v) for k, v in uses.items()}

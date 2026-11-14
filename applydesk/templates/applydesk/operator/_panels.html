@@ -1,0 +1,76 @@
+{# Panels (rulings 19, 20; segment AD1F): everyone on the exercise's
+   panels in one table, a column per panel ticking who sits on it, and a
+   control card floating on the right. Rung 4d draws it from the sample,
+   its controls inert; rung 4e wires them. Nothing is saved. #}
+{% set used = panels | selectattr("key", "in", uses) | list %}
+<div class="fb-split pn" data-panels>
+  <div class="fb-main">
+    <p class="muted pc-intro">Everyone on this exercise's panels, a column for each panel. A panel is picked where it is needed: a <em>Select people</em> question on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>, a gate's evaluators on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>. Apply Desk keeps every panel and what each person may view; to Review Robin they are ordinary reviewers.</p>
+    {% if panels %}
+    <div class="table-wrap pn-wrap">
+      <table class="pn-table" aria-label="Panels and their members">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Email</th>
+            <th scope="col">Note</th>
+            {% for p in panels %}
+            <th scope="col" class="pn-col" data-panel="{{ p.key }}">
+              <span class="pn-h">{{ p.name }}</span>
+              <span class="pn-n" data-pn-count>{{ p.members | length }} {{ "person" if p.members | length == 1 else "people" }}</span>
+              <span class="pn-used">{% if uses.get(p.key) %}{{ uses[p.key] | join(" · ") }}{% else %}Not used yet{% endif %}</span>
+            </th>
+            {% endfor %}
+            <th scope="col"><span class="visually-hidden">Remove</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m, keys in roster %}
+          <tr data-pn-row>
+            <td><input class="fc-in pn-in" data-pn="name" value="{{ m.name if m.name != m.email }}" placeholder="Name" aria-label="Name"></td>
+            <td><input class="fc-in pn-in pn-email" data-pn="email" value="{{ m.email }}" aria-label="Email"></td>
+            <td><input class="fc-in pn-in" data-pn="note" value="{{ m.note }}" placeholder="Role or area" aria-label="Note"></td>
+            {% for p in panels %}
+            <td class="pn-tick"><input type="checkbox" data-pn-panel="{{ p.key }}"{% if p.key in keys %} checked{% endif %} aria-label="{{ m.name }} on {{ p.name }}"></td>
+            {% endfor %}
+            <td><button type="button" class="pn-remove" disabled aria-label="Remove {{ m.name or m.email }}" title="Remove">×</button></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <section class="card">
+      <h2>No panels yet</h2>
+      <p class="muted">Make one with <em>+ Panel</em>, or with <em>+ New panel</em> where a question or a gate needs one.</p>
+    </section>
+    {% endif %}
+  </div>
+  <aside class="fb-side">
+    <section class="card fb-outline pn-ctl" aria-labelledby="pn-ctl-h">
+      <h2 id="pn-ctl-h">Panels</h2>
+      <ul class="pn-list" data-pn-list>
+        {% for p in panels %}
+        <li data-panel="{{ p.key }}">
+          <span class="pn-list-h">{{ p.name }}</span> <span class="muted">{{ p.members | length }} {{ "person" if p.members | length == 1 else "people" }}</span>
+          <span class="pn-list-used">{% if uses.get(p.key) %}Used by {{ uses[p.key] | join(", ") }}{% else %}Not used yet{% endif %}</span>
+          <span class="pn-list-act">
+            <button type="button" class="btn btn-secondary" disabled>Copy</button>
+            <button type="button" class="btn btn-destructive" disabled{% if uses.get(p.key) %} title="In use: it can be retired once nothing uses it"{% endif %}>Retire</button>
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="muted fb-counts" data-pn-counts>{{ roster | length }} {{ "person" if roster | length == 1 else "people" }} · {{ panels | length }} {{ "panel" if panels | length == 1 else "panels" }} · {{ used | length }} in use</p>
+      <div class="btnrow">
+        <button class="btn btn-secondary" type="button" disabled>+ Add person</button>
+        <button class="btn btn-secondary" type="button" disabled>+ Panel</button>
+        <button class="btn btn-secondary" type="button" disabled>Import CSV</button>
+        <button class="btn btn-secondary" type="button" disabled>Export CSV</button>
+      </div>
+      <div class="btnrow">
+        <button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>
+      </div>
+    </section>
+  </aside>
+</div>
