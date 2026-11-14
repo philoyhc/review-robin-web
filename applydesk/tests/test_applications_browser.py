@@ -52,12 +52,18 @@ def _count(page: Page, key: str) -> str:
     return page.locator(f'[data-ap-count="{key}"]').inner_text()
 
 
+def _unlock(page: Page) -> None:
+    """Ruling 23: the table is a control surface, locked until Unlock."""
+    page.locator("[data-ap-lock]").click()
+
+
 def _row(page: Page, text: str) -> Locator:
     return page.locator("[data-row]", has_text=text).first
 
 
 def test_a_gate_chip_cycles_and_the_count_follows(page: Page) -> None:
     page.goto(PAGE)
+    _unlock(page)
     before = _count(page, "g1")
     chip = _row(page, "kenji.russo").locator('[data-cell="g1"] [data-ap-adm]')
     assert chip.inner_text() == "Entered"
@@ -74,6 +80,7 @@ def test_a_gate_chip_cycles_and_the_count_follows(page: Page) -> None:
 
 def test_an_outcome_is_picked_and_dated(page: Page) -> None:
     page.goto(PAGE)
+    _unlock(page)
     row = _row(page, "aisha.rahman")
     pick = row.locator('[data-cell="o2"] select')
     assert row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "Due 24 Nov"
@@ -86,6 +93,7 @@ def test_an_outcome_is_picked_and_dated(page: Page) -> None:
 
 def test_a_release_asks_first(page: Page) -> None:
     page.goto(PAGE)
+    _unlock(page)
     switch = page.locator('[data-ap-release="Finalists"]')
     answers: list[str] = []
 
@@ -120,6 +128,7 @@ def test_search_status_and_last_applications_filter(page: Page) -> None:
 
 def test_ticked_rows_are_set_together(page: Page) -> None:
     page.goto(PAGE)
+    _unlock(page)
     for who in ("aisha.bello", "kenji.russo", "wen.novak"):
         _row(page, who).locator("[data-ap-tick]").check()
     page.locator("[data-ap-set-col]").select_option("g3")
@@ -135,6 +144,7 @@ def test_an_application_advanced_by_hand_can_be_given_later_outcomes(page: Page)
     # Codex: a submitted application outside the shortlist showed fixed
     # "—" in Finalists and Final results, so a hand change stopped there.
     page.goto(PAGE)
+    _unlock(page)
     row = _row(page, "aisha.bello")
     row.locator('[data-cell="o1"] select').select_option("Shortlisted")
     finalists = row.locator('[data-cell="o2"] select')
@@ -148,6 +158,7 @@ def test_an_application_advanced_by_hand_can_be_given_later_outcomes(page: Page)
 # --- Rung 3: Fill by rule… and Upload CSV, proposing before they apply ---
 def test_a_csv_proposes_then_applies(page: Page) -> None:
     page.goto(PAGE)
+    _unlock(page)
     body = (
         "Application ID,Gate 3: Interview,Finalists,Mystery\n"
         "kenji-not-an-id,Entered,,\n"
@@ -180,6 +191,7 @@ def test_a_csv_proposes_then_applies(page: Page) -> None:
 
 def test_the_table_downloads_as_the_csv_an_upload_reads(page: Page) -> None:
     page.goto(PAGE)
+    _unlock(page)
     with page.expect_download() as got:
         page.locator("[data-ap-csv-down]").click()
     raw = got.value.path().read_text(encoding="utf-8")
@@ -202,6 +214,7 @@ def test_the_table_downloads_as_the_csv_an_upload_reads(page: Page) -> None:
 
 def test_apply_keeps_a_cell_changed_by_hand_since(page: Page) -> None:
     page.goto(PAGE)
+    _unlock(page)
     upper = "H6ZR2TDW9P"  # IDs match whatever their case
     page.locator("[data-ap-csv]").set_input_files(
         files=[
@@ -228,6 +241,7 @@ def test_a_csv_giving_one_cell_two_values_leaves_it(page: Page) -> None:
     # Codex: two rows for one application and column were both proposed
     # against the same starting value, and Apply made only the first.
     page.goto(PAGE)
+    _unlock(page)
     body = (
         "Application ID,Interview\n"
         "h6zr2tdw9p,Entered\n"
@@ -258,6 +272,7 @@ def test_a_csv_giving_one_cell_two_values_leaves_it(page: Page) -> None:
 def test_a_csv_id_like_an_object_key_is_just_unknown(page: Page) -> None:
     # Codex: "__proto__" matched an inherited property and the upload threw.
     page.goto(PAGE)
+    _unlock(page)
     body = "Application ID,Interview\n__proto__,Entered\nconstructor,Entered\n"
     page.locator("[data-ap-csv]").set_input_files(
         files=[{"name": "odd.csv", "mimeType": "text/csv", "buffer": body.encode()}]
@@ -296,6 +311,7 @@ def test_each_column_shows_its_rule_from_setup(page: Page) -> None:
 
 def test_apply_rules_proposes_in_column_order_and_waits_on_the_undecided(page: Page) -> None:
     page.goto(PAGE)
+    _unlock(page)
     prop = _apply_rules(page)
     text = prop.inner_text()
     # The two still waiting on peer reviews: no combined result yet.
@@ -314,6 +330,7 @@ def test_apply_rules_proposes_in_column_order_and_waits_on_the_undecided(page: P
 
 def test_a_cell_set_by_hand_is_marked_and_kept(page: Page) -> None:
     page.goto(PAGE)
+    _unlock(page)
     hand = page.locator('[data-row] td[data-cell="g1"][data-hand]')
     assert hand.count() == 1 and "Set by hand" in hand.inner_text()
     who = hand.locator("xpath=ancestor::tr").locator(".ap-id code").inner_text()
@@ -344,6 +361,7 @@ def test_the_page_shows_each_outcome_s_combined_result_and_weights(page: Page) -
     from applydesk import stages
 
     page.goto(PAGE)
+    _unlock(page)
     head = page.locator('th[data-col="o1"]').inner_text()
     # Each weight names a gate's result (ruling 21).
     assert "Rating at Peer Review 30% · Score at Faculty Panel Review 70%" in head
@@ -379,6 +397,7 @@ def test_the_sample_follows_its_rules(page: Page) -> None:
     """Every rule over every cell, decided or not, changes only what is
     still to decide; withdrawn and draft rows are never touched."""
     page.goto(PAGE)
+    _unlock(page)
     prop = _apply_rules(page, only_undecided=False)
     rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
     assert rows
@@ -390,6 +409,7 @@ def test_the_sample_follows_its_rules(page: Page) -> None:
 
 def test_a_rule_proposal_is_dropped_when_the_table_changes(page: Page) -> None:
     page.goto(PAGE)
+    _unlock(page)
     prop = _apply_rules(page)
     first = prop.locator("[data-ap-prop-rows] tr").first.inner_text().split("\t")
     messages: list[str] = []
@@ -404,3 +424,74 @@ def test_a_rule_proposal_is_dropped_when_the_table_changes(page: Page) -> None:
     prop.locator("[data-ap-prop-apply]").click()
     assert messages and "propose again" in messages[0]
     assert row.locator('[data-cell="o2"] select').get_attribute("data-v") == first[3]
+
+
+def test_the_table_is_locked_until_unlocked_and_undo_puts_it_back(page: Page) -> None:
+    """Ruling 23 (author, 2026-11-14): a control surface worked down its
+    columns, so one lock for the whole table."""
+    page.goto(PAGE)
+    chip = _row(page, "kenji.russo").locator('[data-cell="g1"] [data-ap-adm]')
+    lock = page.locator("[data-ap-lock]")
+    assert chip.is_disabled() and page.locator("[data-ap-set]").is_disabled()
+    assert page.locator("[data-ap-rule-open]").is_disabled()
+    assert page.locator("[data-ap-release]").first.is_disabled()
+    assert not page.locator("[data-ap-undo]").is_visible()
+    # Ticks only choose rows: live while locked.
+    tick = _row(page, "kenji.russo").locator("[data-ap-tick]")
+    assert not tick.is_disabled()
+    lock.click()
+    assert lock.inner_text() == "Lock"
+    assert page.locator("[data-ap-changes]").inner_text() == "No changes yet"
+    before = chip.inner_text()
+    chip.click()
+    assert page.locator("[data-ap-changes]").inner_text() == "1 change since unlocked"
+    # Leaving with a change pending asks first.
+    assert page.evaluate(
+        "() => { const e = new Event('beforeunload', {cancelable: true});"
+        " window.dispatchEvent(e); return e.defaultPrevented; }"
+    )
+    page.locator("[data-ap-undo]").click()
+    assert chip.inner_text() == before
+    assert page.locator("[data-ap-changes]").inner_text() == "No changes yet"
+    chip.click()
+    after = chip.inner_text()
+    lock.click()
+    assert chip.is_disabled() and chip.inner_text() == after
+    assert page.locator("[data-ap-said]").inner_text() == "1 change kept; the table is locked."
+
+
+def test_the_lock_guards_rules_csv_and_open_proposals(page: Page) -> None:
+    """Cold read on rung 7a: Propose and a proposal's Apply escaped the
+    lock, and a CSV could reach a locked table."""
+    page.goto(PAGE)
+    assert page.locator("[data-ap-csv-open]").is_disabled()
+    assert page.locator('[data-cell="o2"] select').first.is_disabled()
+    _unlock(page)
+    page.locator("[data-ap-rule-open]").click()
+    assert page.locator("[data-ap-rule-go]").is_enabled()
+    page.locator("[data-ap-rule-go]").click()
+    assert page.locator("[data-ap-proposal]").is_visible()
+    page.locator("[data-ap-lock]").click()
+    assert not page.locator("[data-ap-proposal]").is_visible()
+    assert not page.locator("[data-ap-rule]").is_visible()
+    assert page.locator("[data-ap-rule-open]").get_attribute("aria-expanded") == "false"
+    assert (
+        page.locator("[data-ap-said]").inner_text() == "Locked. The open proposal was not applied."
+    )
+    assert page.evaluate("document.activeElement.matches('[data-ap-lock]')")
+    # A CSV chosen while locked proposes nothing.
+    page.locator("[data-ap-csv]").set_input_files(
+        files=[
+            {
+                "name": "x.csv",
+                "mimeType": "text/csv",
+                "buffer": b"Application ID,Shortlist for interview\r\n",
+            }
+        ]
+    )
+    assert not page.locator("[data-ap-proposal]").is_visible()
+    # No pending change, no leaving question.
+    assert not page.evaluate(
+        "() => { const e = new Event('beforeunload', {cancelable: true});"
+        " window.dispatchEvent(e); return e.defaultPrevented; }"
+    )

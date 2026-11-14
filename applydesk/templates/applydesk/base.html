@@ -236,7 +236,18 @@
     /* The Applications page (segment AD1C): a row per application, a
        column per gate and outcome under its stage, the first column kept
        in view; mock-up v3. */
-    .ap-tool { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+    /* The toolbar stays in view: Unlock, Lock and the change count are
+       always in reach on a long table (ruling 23). */
+    .ap-tool { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; position: sticky; top: 0; z-index: 3; background: var(--surface-page); padding: 8px 0; }
+    .ap-changes { font-size: 13px; color: var(--amber); }
+    .ap-tool [hidden] { display: none; }
+    .ap-said { margin: 0 0 8px; font-size: 13px; min-height: 0; }
+    /* Locked, a cell reads as its chip, not as a control. */
+    .ap-adm:disabled, .ap-oc:disabled { cursor: default; opacity: 1; }
+    .ap-oc:disabled { padding-right: 9px; }
+    .ap-ocw:has(.ap-oc:disabled)::after { display: none; }
+    .ap-rel:has(input:disabled) { cursor: default; }
+    [data-applications][data-unlocked] .ap-wrap { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
     .ap-gap { flex: 1; }
     .ap-search, .ap-sel { font: inherit; font-size: 14px; padding: 6px 9px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card); color: var(--text-body); }
     .ap-search { width: 230px; max-width: 100%; }

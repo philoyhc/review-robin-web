@@ -240,6 +240,24 @@ where a ruling below differs from it, the ruling wins.
       cells then edit boxes; several rows may be selected at once; an
       unselected row is inert, its ticks too, so nothing is changed by
       accident. A verified email is a pill; a name is typed.
+23. **How an edit is kept depends on the surface's shape** (author,
+    2026-11-14; segment AD1F), so nothing waits out of sight:
+    - **A roster table** (Panels): a row is ticked to edit, its ✓ keeps
+      it (Enter too), and unticking without ✓ puts it back; no page Save.
+    - **A control surface** (Applications), worked down its columns
+      rather than along a row: the whole table is locked, and *Unlock*
+      opens every cell, *Set ticked rows*, the rules, the CSV and the
+      releases; *Lock* keeps what changed and *Undo changes* puts the
+      table back as it was unlocked, a count of the changes showing
+      meanwhile and a warning on leaving with any pending. Ticks only
+      choose rows.
+    - **A builder of cards that depend on each other** (Form, Process):
+      one Save, in the Outline card that stays in view, with an *Unsaved
+      changes* marker and a warning on leaving with changes pending.
+    - **Cards that stand alone** (Emails): a Save on each card.
+    - **A card of actions** (Manage panels, as Review Robin's Unlock
+      panel): each button acts at once; a text box there takes ✓ or
+      Enter, Esc or leaving it puts it back.
 
 ## MVP roadmap
 
