@@ -256,10 +256,12 @@ where a ruling below differs from it, the ruling wins.
       changes* marker and a warning on leaving with changes pending.
     - **Cards that stand alone** (Emails): a Save on each card.
     - **A card of actions** (Manage panels, as Review Robin's Unlock
-      panel): each button acts at once; what is typed there (a panel's
-      name) waits for the card's own *Save* (Enter too), *Cancel* undoes
-      it, neither closing the card, and *Close* asks first while any
-      waits (author, 2026-11-14, replacing a ✓ by each box).
+      panel): its buttons act at once, but what changes the panels' list
+      (a name typed, a panel added) waits for the card's own *Save*
+      (Enter too), *Cancel* takes it back, neither closing the card, and
+      *Close* asks first while any waits (author, 2026-11-14, replacing
+      a ✓ by each box; *Add panel* an outline button, Save the card's
+      one primary).
 
 ## MVP roadmap
 

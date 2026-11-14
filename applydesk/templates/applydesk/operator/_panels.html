@@ -69,7 +69,7 @@
           </li>
           {% endfor %}
         </ul>
-        <p class="muted pn-csv-note">A name is changed where it stands, and kept with <em>Save</em> below: every column, pill and menu follows. <em>Copy emails</em> puts a panel's addresses on the clipboard, separated by commas.</p>
+        <p class="muted pn-csv-note">A name changed here, and a panel added here, wait for <em>Save</em> below, and <em>Cancel</em> takes them back: every column, pill and menu follows. <em>Copy emails</em> puts a panel's addresses on the clipboard, separated by commas.</p>
       </section>
       <div class="pn-manage-right">
       {# A new panel, blank or from an existing one's people (author,
@@ -92,7 +92,7 @@
           </div>
         </div>
         <p class="np-err" data-pn-newerr aria-live="polite"></p>
-        <div class="btnrow"><button type="button" class="btn btn-primary" data-pn-act="create">Add panel</button></div>
+        <div class="btnrow"><button type="button" class="btn btn-secondary" data-pn-act="create">Add panel</button></div>
       </section>
       <section class="card">
         <h3>Upload</h3>
@@ -104,7 +104,8 @@
       </section>
       </div>
       {# The card's own buttons, at its bottom right (author, 2026-11-14):
-         Cancel and Save for the names typed in it, neither closing it;
+         Cancel and Save for what changes the panels' list (a name typed, a
+         panel added), neither closing it;
          Close. #}
       <span class="pn-manage-acts" data-pn-manage-acts hidden>
         <button class="btn btn-secondary" type="button" data-pn-act="cancel-names">Cancel</button>
@@ -453,7 +454,11 @@
       return box.value.trim() !== nameOf(box.closest("li[data-panel]").dataset.panel);
     });
   }
-  function namesPending() { saveNames.disabled = !renames().length; }
+  // Panels added in the card and not yet saved (author, 2026-11-14): kept
+  // by its Save, taken back by its Cancel, as a typed name is.
+  var added = [];
+  function anyPending() { return renames().length > 0 || added.length > 0; }
+  function namesPending() { saveNames.disabled = !anyPending(); }
   // Every name is judged against the names as they would all stand after
   // the save, so neither the order of the list nor a swap matters.
   function keepNames() {
@@ -486,19 +491,39 @@
       rename(key, to);
       told.push(was + " is now " + to + ".");
     });
+    return told;
+  }
+  // Save: the names typed, then the panels added, kept.
+  function keepAll() {
+    var told = keepNames();
+    added.forEach(function (key) {
+      var note = list.querySelector('li[data-panel="' + key + '"] [data-pn-unsaved]');
+      if (note) note.remove();
+      body.querySelectorAll('[data-pn-row][data-new-with="' + key + '"]').forEach(function (r) { delete r.dataset.newWith; });
+      told.push(nameOf(key) + " kept.");
+    });
+    added = [];
     if (told.length) said.textContent = told.join(" ");
     namesPending();
   }
-  function dropNames(quiet) {
-    var n = renames().length;
+  // Cancel: the names typed put back, the panels added taken back with
+  // the rows they brought.
+  function dropAll(quiet) {
+    var n = renames().length, m = added.length;
     renames().forEach(function (box) { box.value = nameOf(box.closest("li[data-panel]").dataset.panel); });
-    if (n && !quiet) said.textContent = n === 1 ? "The name change is undone." : "The name changes are undone.";
+    added.slice().forEach(function (key) {
+      body.querySelectorAll('[data-pn-row][data-new-with="' + key + '"]').forEach(function (r) { r.remove(); });
+      dropPanel(key);
+    });
+    added = [];
+    check(); filter(); selected();
+    if ((n || m) && !quiet) said.textContent = "Changes not saved, so undone.";
     namesPending();
   }
   list.addEventListener("input", function (e) { if (e.target.matches("[data-pn-rename]")) namesPending(); });
-  // Leaving with a name typed and not saved asks first, as Close does.
+  // Leaving with a name or a panel not saved asks first, as Close does.
   window.addEventListener("beforeunload", function (e) {
-    if (renames().length) { e.preventDefault(); e.returnValue = ""; }
+    if (anyPending()) { e.preventDefault(); e.returnValue = ""; }
   });
   // A panel's members' emails, comma-separated, as ticked now.
   window.applydeskPanelEmails = function (key) {
@@ -507,7 +532,19 @@
   };
   function retire(key) {
     if (used(key)) return;
-    var name = nameOf(key);
+    var name = nameOf(key), unsaved = added.indexOf(key) >= 0;
+    // Never saved, it is taken back as Cancel would, rows it brought too.
+    if (unsaved) body.querySelectorAll('[data-pn-row][data-new-with="' + key + '"]').forEach(function (r) { r.remove(); });
+    dropPanel(key);
+    filter(); selected();
+    said.textContent = unsaved ? name + " taken back: it was not saved." : name + " retired.";
+    check();
+    namesPending();
+    newName.focus();
+  }
+  // A panel's column, pill, list entry and menu entry gone.
+  function dropPanel(key) {
+    added = added.filter(function (k) { return k !== key; });
     head.querySelector('th[data-panel="' + key + '"]').remove();
     body.querySelectorAll('input[data-pn-panel="' + key + '"]').forEach(function (c) { c.closest("td").remove(); });
     list.querySelector('li[data-panel="' + key + '"]').remove();
@@ -515,10 +552,6 @@
     fromSel.querySelector('option[value="' + key + '"]').remove();
     mWrap.hidden = !!fromSel.value;  // the menu fell back to a blank panel, which takes Members
     cols_.querySelector(".pn-w-panel").remove();
-    said.textContent = name + " retired.";
-    check();
-    namesPending();
-    newName.focus();
   }
 
   // --- CSV: Name, Email, Note, and a column per panel by its name ---
@@ -564,7 +597,7 @@
     if (at.email < 0) { said.textContent = "No Email column: nothing imported."; return; }
     var byName = {};
     cols().forEach(function (h) { byName[nameOf(h.dataset.panel).toLowerCase()] = h.dataset.panel; });
-    var seen = {}, added = 0, skipped = [], bad = [], unknown = [], missing = [];
+    var seen = {}, took = 0, skipped = [], bad = [], unknown = [], missing = [];
     rows().forEach(function (r) { seen[val(r, "email").toLowerCase()] = true; });
     hdr.forEach(function (h, i) { if (i !== at.name && i !== at.email && i !== at.note && h && !byName[h]) unknown.push(table[0][i].trim()); });
     table.slice(1).forEach(function (cells) {
@@ -581,9 +614,9 @@
         if (byName[h] && v && v !== "0" && v !== "no" && v !== "false") on.push(byName[h]);
       });
       addRow({ name: get(at.name), email: email, note: get(at.note), panels: on });
-      added += 1;
+      took += 1;
     });
-    var parts = [people(added) + " added."];
+    var parts = [people(took) + " added."];
     if (skipped.length) parts.push("Already listed, not added: " + skipped.join(", ") + ".");
     if (bad.length) parts.push("Not an email, not added: " + bad.join(", ") + ".");
     if (missing.length) parts.push("Not found in the directory, not added: " + missing.join(", ") + ".");
@@ -677,6 +710,7 @@
     var who = val(r, "name") || val(r, "email") || "This row";
     if (why) { said.textContent = who + " is not saved: " + why.toLowerCase(); return; }
     delete r.dataset.fresh;
+    delete r.dataset.newWith;  // kept with its own ✓, it stays if its panel is taken back
     select(r, false, "save");
     said.textContent = who + " saved.";
     // The filter may hide it now; then the filter box keeps the focus.
@@ -725,19 +759,25 @@
           var saved = x.hasAttribute("data-sel") && x.pnSnap ? x.pnSnap.email : val(x, "email");
           return saved.toLowerCase() === p[1].toLowerCase();
         })[0];
-        if (!r) { addRow({ name: p[0], email: p[1], note: "", panels: [key] }); return; }
+        // A row it brings goes too if the panel is taken back unsaved.
+        if (!r) { addRow({ name: p[0], email: p[1], note: "", panels: [key] }).dataset.newWith = key; return; }
         r.querySelector('input[data-pn-panel="' + key + '"]').checked = true;
         if (r.hasAttribute("data-sel") && r.pnSnap) r.pnSnap.panels[key] = true;
       });
       mBox.querySelectorAll(".token").forEach(function (t) { t.remove(); });
       mIn.value = ""; newName.value = ""; fromSel.value = ""; mWrap.hidden = false;
-      check(); filter();
-      said.textContent = from ? name + " added, with the people of " + nameOf(from) + "."
-        : who.length ? name + " added, with " + people(who.length) + "." : name + " added: tick who sits on it.";
+      // Not kept until Save; Cancel takes it back.
+      added.push(key);
+      var mark = el("span", "pn-unsaved", "Added: not saved yet"); mark.setAttribute("data-pn-unsaved", "");
+      list.querySelector('li[data-panel="' + key + '"]').appendChild(mark);
+      check(); filter(); namesPending();
+      said.textContent = (from ? name + " added, with the people of " + nameOf(from) + "."
+        : who.length ? name + " added, with " + people(who.length) + "." : name + " added: tick who sits on it.") +
+        " Save keeps it; Cancel takes it back.";
     } else if (what === "save-names") {
-      keepNames();
+      keepAll();
     } else if (what === "cancel-names") {
-      dropNames(false);
+      dropAll(false);
     } else if (what === "emails" && li) {
       var text = window.applydeskPanelEmails(li.dataset.panel), pn = nameOf(li.dataset.panel);
       if (!text) { said.textContent = pn + " has nobody on it yet."; return; }
@@ -748,9 +788,9 @@
       retire(li.dataset.panel);
     } else if (what === "manage" || what === "close") {
       var opening = what === "manage";
-      // Closing with names typed and not saved asks first.
-      if (!opening && renames().length && !window.confirm("Close without saving the name changes?")) return;
-      if (!opening) dropNames(true);
+      // Closing with a name or a panel not saved asks first.
+      if (!opening && anyPending() && !window.confirm("Close without saving the changes?")) return;
+      if (!opening) dropAll(false);  // says what was undone, if anything
       var toggle = root.querySelector('[data-pn-act="manage"]'), acts = root.querySelector("[data-pn-manage-acts]");
       manage.hidden = !opening;
       toggle.hidden = opening;
@@ -791,7 +831,7 @@
     if (e.target.matches("[data-pn-entry]")) { e.preventDefault(); setEmail(e.target.closest("[data-pn-row]"), e.target.value); return; }
     // Enter in a selected row's other boxes is its ✓.
     if (e.target.matches('[data-pn-row] [data-pn="name"], [data-pn-row] [data-pn="note"]')) { e.preventDefault(); save(e.target.closest("[data-pn-row]")); return; }
-    if (e.target.matches("[data-pn-rename]")) { e.preventDefault(); keepNames(); return; }
+    if (e.target.matches("[data-pn-rename]")) { e.preventDefault(); keepAll(); return; }
     if (e.target === newName) { e.preventDefault(); root.querySelector('[data-pn-act="create"]').click(); }
   });
   check();
