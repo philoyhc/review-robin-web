@@ -127,6 +127,7 @@ def test_panels_are_made_copied_and_retired_only_unused(page: Page) -> None:
     assert _count(page, "made-2") == "2 people"
     assert page.locator("[data-pn-said]").inner_text() == (
         "Interview reserve added, with the people of Interviewers."
+        " Save keeps it; Cancel takes it back."
     )
     page.locator('li[data-panel="made-2"] [data-pn-act="retire"]').click()
     assert page.locator('th[data-panel="made-2"]').count() == 0
@@ -495,7 +496,7 @@ def test_an_open_row_keeps_what_changes_around_it(page: Page) -> None:
     ivan.locator("[data-pn-select]").uncheck()
     assert ivan.locator('input[data-pn-panel="made-1"]').is_checked()
     assert page.locator("[data-pn-said]").inner_text() == (
-        "Reserve added, with the people of Interviewers."
+        "Reserve added, with the people of Interviewers. Save keeps it; Cancel takes it back."
     )  # nothing undone, so nothing said
     assert ivan.locator('[data-pn-view="email"]').inner_text() == "ivan.petrov@example.edu"
     # Select-all unticked over two changed rows says both.
@@ -588,7 +589,9 @@ def test_a_blank_panel_takes_its_members_as_pills(page: Page) -> None:
     assert page.locator('th[data-panel="made-1"]').count() == 0  # refused: nobody is left over
     members.fill("")
     page.locator('[data-pn-act="create"]').click()
-    assert page.locator("[data-pn-said]").inner_text() == "Reserve added, with 2 people."
+    assert page.locator("[data-pn-said]").inner_text() == (
+        "Reserve added, with 2 people. Save keeps it; Cancel takes it back."
+    )
     assert _row(page, "zoe.tan@example.edu").locator('input[data-pn-panel="made-1"]').is_checked()
     dan = page.locator("[data-pn-row]").last
     assert dan.locator('[data-pn-view="name"]').inner_text() == "Daniel Koh"
@@ -673,3 +676,90 @@ def test_a_saved_row_is_matched_by_its_new_email(page: Page) -> None:
     added = page.locator("[data-pn-row]").last
     assert added.locator('[data-pn="email"]').input_value() == "zoe.tan@example.edu"
     assert added.locator('input[data-pn-panel="made-1"]').is_checked()
+
+
+def test_a_panel_added_waits_for_save(page: Page) -> None:
+    """Author, 2026-11-14: Add panel is outlined, Save the one primary; a
+    panel added is taken back by Cancel, rows it brought too, and kept by
+    Save."""
+    page.goto(PANELS)
+    _manage(page)
+    add = page.locator('[data-pn-act="create"]')
+    assert "btn-secondary" in (add.get_attribute("class") or "")
+    save, cancel = (
+        page.locator('[data-pn-act="save-names"]'),
+        page.locator('[data-pn-act="cancel-names"]'),
+    )
+    rows = page.locator("[data-pn-row]")
+    n = rows.count()
+    page.locator("[data-pn-newname]").fill("Reserve")
+    page.locator("[data-pn-members]").fill("Daniel Koh, zoe.tan@example.edu")
+    add.click()
+    assert save.is_enabled() and rows.count() == n + 1
+    assert (
+        page.locator('li[data-panel="made-1"] [data-pn-unsaved]').inner_text()
+        == "Added: not saved yet"
+    )
+    cancel.click()
+    assert page.locator('th[data-panel="made-1"]').count() == 0 and rows.count() == n
+    assert (
+        save.is_disabled()
+        and page.locator("[data-pn-said]").inner_text() == "Changes not saved, so undone."
+    )
+    page.locator("[data-pn-newname]").fill("Reserve")
+    add.click()
+    save.click()
+    assert page.locator('th[data-panel="made-2"] [data-pn-name]').inner_text() == "Reserve"
+    assert page.locator('li[data-panel="made-2"] [data-pn-unsaved]').count() == 0
+    assert page.locator("[data-pn-said]").inner_text() == "Reserve kept."
+    # Close with one pending asks; accepted, it is taken back.
+    page.locator("[data-pn-newname]").fill("Spare")
+    add.click()
+    page.once("dialog", lambda d: d.accept())
+    page.locator('[data-pn-act="close"]').click()
+    assert page.locator('th[data-panel="made-3"]').count() == 0
+
+
+def test_rows_a_panel_brought_follow_it(page: Page) -> None:
+    """Cold read on rung 7f: Save keeps the rows a panel brought, Close
+    (confirmed) and Retire take them back with it, and a row kept with its
+    own ✓ stays."""
+    page.goto(PANELS)
+    _manage(page)
+    rows = page.locator("[data-pn-row]")
+    n = rows.count()
+    add = page.locator('[data-pn-act="create"]')
+    # Save keeps them.
+    page.locator("[data-pn-newname]").fill("Kept")
+    page.locator("[data-pn-members]").fill("Daniel Koh")
+    add.click()
+    page.locator('[data-pn-act="save-names"]').click()
+    assert rows.count() == n + 1
+    # Retire, unsaved: taken back with its row.
+    page.locator("[data-pn-newname]").fill("Gone")
+    page.locator("[data-pn-members]").fill("Priya Raman")
+    add.click()
+    assert rows.count() == n + 2
+    page.locator('li[data-panel="made-2"] [data-pn-act="retire"]').click()
+    assert rows.count() == n + 1
+    assert page.locator("[data-pn-said]").inner_text() == "Gone taken back: it was not saved."
+    assert page.locator('[data-pn-act="save-names"]').is_disabled()
+    # A row kept with its own ✓ stays when its panel is taken back.
+    page.locator("[data-pn-newname]").fill("Spare")
+    page.locator("[data-pn-members]").fill("mei.chen@example.edu")
+    add.click()
+    mei = rows.last
+    mei.locator("[data-pn-select]").check()
+    mei.locator('[data-pn="note"]').fill("Visiting")
+    mei.locator('[data-pn-act="save"]').click()
+    page.once("dialog", lambda d: d.accept())
+    page.locator('[data-pn-act="close"]').click()
+    assert rows.count() == n + 2
+    assert page.locator("[data-pn-said]").inner_text() == "Changes not saved, so undone."
+    assert (
+        page.evaluate(
+            "() => { const e = new Event('beforeunload', {cancelable: true});"
+            " window.dispatchEvent(e); return e.defaultPrevented; }"
+        )
+        is False
+    )
