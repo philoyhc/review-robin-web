@@ -811,7 +811,9 @@ def test_what_uses_each_panel_and_what_was_sent_with_it() -> None:
 
 def test_panels_says_a_sent_gate_keeps_its_roster(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/panels").text
-    assert "Gate 1 sent: changes apply from its next send" in text
+    note = "Gate 1 was sent with the roster as it then stood: changes apply from its next send."
+    assert f'<span class="pn-sent">{note}</span>' in text  # under Manage panels
+    assert f'title="{note}">Sent</span>' in text  # and as its column's chip
     item = text[text.index('<li data-panel="pool">') :]
     assert "sent" not in item[: item.index("</li>")]  # the form's pool: no gate
 
