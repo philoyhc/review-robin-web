@@ -32,6 +32,25 @@ After the author's browser check of rungs 2–3: **Gates folds into Process, and
 
 **Rejected:** keeping a Gates page beside Process. It set a gate's panel on a second page, away from the gate's other settings, for a view the Outline gives.
 
+## Decision — results (ruling 21, 2026-11-14)
+
+After the author's browser check of ruling 20's rungs: a gate's single *Result* box becomes **up to three results**, each a name, the **response field** each evaluator fills in, and a **derivation**. The derivation sets the result's type (author: "the derivation rule determines the data type of the result so there's no need to a separate definition"):
+
+| Field | Derivations | Result |
+|---|---|---|
+| Integer, Decimal | mean, median | Decimal, the field's bounds |
+| | min, max | the field's type and bounds |
+| | sum | the field's type, n × its bounds |
+| | count of responses | Integer, from 0 |
+| List | share choosing a value | Decimal, 0 to 100 (%) |
+| | most common | List, the field's options |
+| String | all, joined | String, for reading |
+| any (*Entered here*) | entered by hand or a CSV column | the field as defined |
+
+A result needs a minimum number of responses (default 1), else it has none yet. A List is never mapped to numbers (author: a numeric scale is a numeric field, its help text saying what the numbers mean). On the gate item, results are rows that read as Form's card summaries and edit in place, not a third level of collapsing card; under them, *For Review Robin* lists the fields the session's instrument must ask. Result 1 is the gate's headline. Outcome rules and weights read a gate's named result: numbers are compared and weighed, a list matched, a string read only.
+
+**Rejected:** a second, result-level definition beside the field (the derivation already fixes it); mapping list options to numbers (author).
+
 ## Semantics
 
 - **A panel's key**, not its name, is what a question or gate holds; renaming a panel renames it everywhere on the page.
@@ -75,6 +94,10 @@ Taken 2026-11-13 at `fb6785690`.
 4c. **Evaluators on gate items; Gates retired.** The menu and *+ New panel*, members, sent gates fixed, the Outline naming panels; the Gates tab, page and its tests removed. Chromium tests. `diff-reviewer` reads 4b–4c.
 4d. **Panels scaffold.** The tab in Gates' slot; the table from the sample, a column per panel, and the control card, inert.
 4e. **Panels wired.** Rows and panel columns added, edited and removed with their checks; ticking membership; CSV in and out; *Copy*, *Retire*; *Edit on Panels →* on Form and Process. Chromium tests. `diff-reviewer` reads 4d–4e.
+5a. **Plan amended**: ruling 21, this section.
+5b. **Results on the gate item, scaffold.** The model (a gate's results: name, response field, derivation, minimum responses) and the sample's; the rows drawn with their summaries and *For Review Robin*; the gate's head counting them. Must not touch rules or weights.
+5c. **Results edited in the browser.** *+ Result* (three at most), remove, each row's field, derivation and minimum; the derivations a field type allows; the summary, the result type and *For Review Robin* following. Chromium tests.
+5d. **Rules and weights read a named result.** The rule editor, `rule_text` and Applications' headers name a gate's result; numbers compared and weighed, a list matched, a string offered to neither. Chromium tests. `diff-reviewer` reads 5b–5d.
 5. **Iteration rungs**, as the author's browser checks ask.
 6. **Close**, only after the author's browser check.
 
@@ -83,6 +106,7 @@ Taken 2026-11-13 at `fb6785690`.
 - The Setup row reads Process, Form, Panels, Emails (test; ruling 20).
 - Process's items collapse, each head with its chips; a gate item carries *Evaluators*; the Gates page is gone (tests).
 - Panels shows one table, a column per panel with its count and *Used by*, and the control card (test).
+- A gate item holds up to three results, each a response field and a derivation fixing its type; rules and weights read a named result (tests; ruling 21).
 - In Chromium: a panel made on Form and on Process and chosen; a row added, edited, removed and refused (bad or duplicate email); a CSV imported and exported; a panel copied, and retired only when unused (tests).
 - The author has used the pages locally and approved them.
 - `## Doc impact` section present and current
@@ -104,7 +128,7 @@ Taken 2026-11-13 at `fb6785690`.
 
 ## Doc impact
 
-- `applydesk/spec/applications.md` — the Setup row with Panels in Gates' slot; *Chosen from* naming panels and *+ New panel…* in "The Form page"; collapsing items and *Evaluators* in "The Process page"; a "The Panels page" section after it (at close).
+- `applydesk/spec/applications.md` — the Setup row with Panels in Gates' slot; *Chosen from* naming panels and *+ New panel…* in "The Form page"; collapsing items, *Evaluators* and a gate's results (ruling 21) in "The Process page"; a "The Panels page" section after it (at close).
 - `applydesk/spec/architecture.md` — `sample_data.py`'s row: panels in place of the three rosters (rung 2).
 - `applydesk/guide/todo_master.md` — ruling 19 and the AD1F roadmap row (rung 1); the row deleted at close.
 - `applydesk/README.md` — this plan's row (rung 1), moved to the archive's index at close.

@@ -205,6 +205,27 @@ where a ruling below differs from it, the ruling wins.
       *+ New panel*).
     - **Panels is one table**: a row per person, a column per panel
       ticking who sits on it, and a control card floating on the right.
+21. **A gate yields up to three results, each derived** (author,
+    2026-11-14; segment AD1F):
+    - A gate item on Process holds its name, *Runs as*, entry rule,
+      evaluators, and up to three **results**. A result has a name, the
+      **response field** each evaluator fills in (String, Integer,
+      Decimal or List, with Review Robin's bounds: Min, Max, Step,
+      options), and a **derivation** that turns the responses into the
+      gate's result for an application.
+    - **The derivation sets the result's type**; there is no second
+      definition. Numeric fields: mean or median (Decimal), min or max
+      (the field's type), sum, count. List fields: share choosing a
+      value (a percentage) or most common (the list) — never mapped to
+      numbers: a numeric scale is a numeric field, explained in its
+      help text. String fields: all, joined, for reading. A result
+      *Entered here* takes the field's type as it is. A result needs a
+      minimum number of responses, else it has none yet.
+    - **The fields are Review Robin's setup**: the gate lists what its
+      session's instrument must ask; the handshake itself is AD6's.
+    - Result 1 is the gate's headline (Applications' chip). Outcome rules
+      and weights read a gate's named result; only numbers are weighed
+      or compared, a list is matched, a string is read only.
 
 ## MVP roadmap
 
@@ -215,7 +236,7 @@ Segments in order; each gets a plan in this folder when it starts.
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
 | **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
-| **AD1F — Gates and Panels** | Form's *Select people* and each gate picking or making a panel (ruling 19); Gates folded into Process, whose items collapse, and Panels in its slot as one table with a column per panel (ruling 20); nothing saved | `applydesk/guide/segment_AD1F_gates_panels.md` |
+| **AD1F — Gates and Panels** | Form's *Select people* and each gate picking or making a panel (ruling 19); Gates folded into Process, whose items collapse, and Panels in its slot as one table with a column per panel (ruling 20); a gate's results, each a response field and a derivation (ruling 21); nothing saved | `applydesk/guide/segment_AD1F_gates_panels.md` |
 | AD1G onward — the other new pages | Emails, Evaluations and Extract data built out as working scaffolds, one segment each | After AD1F |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
