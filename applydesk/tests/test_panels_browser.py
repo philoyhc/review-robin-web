@@ -637,3 +637,19 @@ def test_names_saved_together_may_swap(page: Page) -> None:
         "Two panels would be called Same. Panel B keeps its name. "
         "Two panels would be called same. Panel A keeps its name."
     )
+
+
+def test_a_refused_rename_keeps_its_name_from_being_taken(page: Page) -> None:
+    """Codex on #3896: Panel A to Panel B, Panel B to Email (refused) left
+    two panels called Panel B."""
+    page.goto(PANELS)
+    _manage(page)
+    page.locator('li[data-panel="panel-a"] [data-pn-rename]').fill("Panel B")
+    page.locator('li[data-panel="panel-b"] [data-pn-rename]').fill("Email")
+    page.locator('[data-pn-act="save-names"]').click()
+    heads = page.locator("th[data-panel] [data-pn-name]").all_inner_texts()
+    assert heads.count("Panel B") == 1 and "Panel A" in heads
+    assert page.locator("[data-pn-said]").inner_text() == (
+        "A panel is already called Panel B. Panel A keeps its name. "
+        "Email names a CSV column: choose another name. Panel B keeps its name."
+    )

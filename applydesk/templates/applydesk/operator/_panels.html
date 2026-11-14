@@ -49,13 +49,6 @@
       <span class="pn-chips" data-pn-chips>{% for p in panels %}<span class="chip chip-info" data-panel="{{ p.key }}"><span data-pn-name>{{ p.name }}</span>&nbsp;(<span data-pn-num>{{ p.members | length }}</span>)</span>{% endfor %}</span>
       <span class="pn-rl" data-pn-inuse>· {{ used | length }} in use</span>
       <button class="btn btn-secondary pn-manage" type="button" data-pn-act="manage" aria-expanded="false" aria-controls="pn-manage">Manage panels</button>
-      {# Open, the card's own buttons (author, 2026-11-14): Cancel and Save
-         for the names typed in it, neither closing it; Close. #}
-      <span class="pn-manage pn-manage-acts" data-pn-manage-acts hidden>
-        <button class="btn btn-secondary" type="button" data-pn-act="cancel-names">Cancel</button>
-        <button class="btn btn-primary" type="button" data-pn-act="save-names" disabled>Save</button>
-        <button class="btn btn-secondary" type="button" data-pn-act="close">Close</button>
-      </span>
     </div>
     <p class="muted" data-pn-empty{% if panels %} hidden{% endif %}>No panels yet: make one in <em>Manage panels</em>, or with <em>+ New panel</em> where a question or a gate needs one.</p>
     <ul class="pc-issues" data-pn-issues hidden></ul>
@@ -76,7 +69,7 @@
           </li>
           {% endfor %}
         </ul>
-        <p class="muted pn-csv-note">A name is changed where it stands, and kept with <em>Save</em> above: every column, pill and menu follows. <em>Copy emails</em> puts a panel's addresses on the clipboard, separated by commas.</p>
+        <p class="muted pn-csv-note">A name is changed where it stands, and kept with <em>Save</em> below: every column, pill and menu follows. <em>Copy emails</em> puts a panel's addresses on the clipboard, separated by commas.</p>
       </section>
       <div class="pn-manage-right">
       {# A new panel, blank or from an existing one's people (author,
@@ -110,6 +103,14 @@
         </div>
       </section>
       </div>
+      {# The card's own buttons, at its bottom right (author, 2026-11-14):
+         Cancel and Save for the names typed in it, neither closing it;
+         Close. #}
+      <span class="pn-manage-acts" data-pn-manage-acts hidden>
+        <button class="btn btn-secondary" type="button" data-pn-act="cancel-names">Cancel</button>
+        <button class="btn btn-primary" type="button" data-pn-act="save-names" disabled>Save</button>
+        <button class="btn btn-secondary" type="button" data-pn-act="close">Close</button>
+      </span>
     </div>
   </section>
 
@@ -459,15 +460,26 @@
     var pending = renames(), told = [], after = {};
     cols().forEach(function (h) { after[h.dataset.panel] = nameOf(h.dataset.panel); });
     pending.forEach(function (box) { after[box.closest("li[data-panel]").dataset.panel] = box.value.trim(); });
-    var refused = {};
-    pending.forEach(function (box) {
-      var key = box.closest("li[data-panel]").dataset.panel, to = after[key];
-      var clash = Object.keys(after).filter(function (k) { return k !== key && after[k].toLowerCase() === to.toLowerCase(); })[0];
-      var moving = clash && pending.some(function (b) { return b.closest("li[data-panel]").dataset.panel === clash; });
-      var why = !to ? "Name the panel." : RESERVED.test(to) ? to + " names a CSV column: choose another name."
-        : clash ? (moving ? "Two panels would be called " + to + "." : "A panel is already called " + after[clash] + ".") : "";
-      if (why) refused[key] = why;
-    });
+    // A refused name leaves its panel as it was, which can make another
+    // rename clash (Codex on #3896): judged again until nothing more is
+    // refused, so the names that stand are always all different.
+    var refused = {}, more = true;
+    while (more) {
+      // Each pass is judged as a whole, both sides of a clash refused
+      // together, so the order of the list never decides which stands.
+      more = false;
+      var now = {};
+      pending.forEach(function (box) {
+        var key = box.closest("li[data-panel]").dataset.panel, to = after[key];
+        if (refused[key]) return;
+        var clash = Object.keys(after).filter(function (k) { return k !== key && after[k].toLowerCase() === to.toLowerCase(); })[0];
+        var moving = clash && !refused[clash] && pending.some(function (b) { return b.closest("li[data-panel]").dataset.panel === clash; });
+        var why = !to ? "Name the panel." : RESERVED.test(to) ? to + " names a CSV column: choose another name."
+          : clash ? (moving ? "Two panels would be called " + to + "." : "A panel is already called " + after[clash] + ".") : "";
+        if (why) now[key] = why;
+      });
+      Object.keys(now).forEach(function (key) { refused[key] = now[key]; after[key] = nameOf(key); more = true; });
+    }
     pending.forEach(function (box) {
       var key = box.closest("li[data-panel]").dataset.panel, was = nameOf(key), to = after[key];
       if (refused[key]) { box.value = was; told.push(refused[key] + " " + was + " keeps its name."); return; }

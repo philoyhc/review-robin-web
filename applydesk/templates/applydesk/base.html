@@ -449,7 +449,7 @@
     .pn-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); }
     .pn-list-h { font-weight: 700; margin-top: 0; padding: 3px 8px; max-width: 260px; }
     .pn-manage-right { display: grid; gap: 16px; align-content: start; }
-    .pn-manage-acts { display: inline-flex; gap: 8px; }
+    .pn-manage-acts { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
     .pn-manage-acts[hidden], .pn-manage[hidden] { display: none; }
     .pn-members { margin-top: 10px; }
     .pn-members[hidden] { display: none; }
