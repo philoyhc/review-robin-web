@@ -455,8 +455,10 @@
     .pn-sort { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
     .pn-sort span { margin-left: 4px; color: var(--text-subtle); font-size: 12px; }
     .pn-table .pn-in { margin-top: 0; padding: 3px 8px; width: 100%; box-sizing: border-box; font-size: 14px; }
-    .pn-col, .pn-tick { text-align: center; min-width: 84px; }
-    .pn-table th.pn-col { text-align: center; }
+    /* Every header left-aligned (as .pn-table th already sets), a panel's
+       ticks under its name's start (author, 2026-11-14). */
+    .pn-col, .pn-tick { min-width: 84px; }
+    .pn-tick input, .pn-pick input { margin-left: 0; }
     .pn-h { display: block; }
     .pn-n { display: block; font-weight: 400; font-size: 11.5px; color: var(--text-subtle); }
     .pn-sent-chip { margin-top: 3px; font-size: 10.5px; padding: 1px 6px; }
@@ -473,7 +475,7 @@
     .pn-csv-note { margin: 0 0 12px; font-size: 13px; }
     .pn-said { margin: 8px 0 0; font-size: 13px; }
     .pn-said:empty { display: none; }
-    .pn-pick { width: 28px; text-align: center; }
+    .pn-pick { width: 28px; }
     .pn-table [data-pn-row][data-sel] > td { background: var(--accent-tint); }
     .pn-table [data-pn-row][data-sel] > td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
     .pn-table [data-pn-row][data-sel] > td:last-child { box-shadow: inset -4px 0 0 var(--accent); }
