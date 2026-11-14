@@ -65,7 +65,7 @@ def test_ticks_rows_and_their_checks(page: Page) -> None:
     # An email not in the directory, and a repeated one, are named, on the
     # row and in the card; one found is a pill and names a blank row.
     page.locator('[data-pn-act="add"]').click()
-    new = page.locator("[data-pn-row]").last
+    new = page.locator("[data-pn-row]").first
     assert new.get_attribute("data-sel") == ""
     assert new.locator('[data-pn="name"]').evaluate("e => e === document.activeElement")
     new.locator('[data-pn="name"]').fill("Kim Lee")
@@ -135,7 +135,7 @@ def test_panels_are_made_copied_and_retired_only_unused(page: Page) -> None:
     assert page.locator("[data-pn-chips] [data-panel]").count() == 5
     # A person added after a panel was made gets its box.
     page.locator('[data-pn-act="add"]').click()
-    assert page.locator("[data-pn-row]").last.locator('input[data-pn-panel="made-1"]').count() == 1
+    assert page.locator("[data-pn-row]").first.locator('input[data-pn-panel="made-1"]').count() == 1
 
 
 def test_a_panel_nothing_uses_retires(page: Page) -> None:
@@ -218,7 +218,7 @@ def test_a_panel_made_in_place_has_no_edit_link_yet(page: Page) -> None:
 def test_csv_guards_formulas_and_refuses_an_open_quote(page: Page) -> None:
     page.goto(PANELS)
     page.locator('[data-pn-act="add"]').click()
-    row = page.locator("[data-pn-row]").last
+    row = page.locator("[data-pn-row]").first
     row.locator('[data-pn="name"]').fill("=SUM(A1)")
     row.locator("[data-pn-entry]").fill("mei.chen@example.edu")
     row.locator("[data-pn-entry]").press("Enter")
@@ -433,7 +433,7 @@ def test_a_row_is_kept_by_its_tick_mark_and_put_back_by_its_untick(page: Page) -
     assert hana.locator("[data-pn-pill]").inner_text() == "hana.ito@example.edu"
     # A row with a problem is not saved.
     page.locator('[data-pn-act="add"]').click()
-    new = rows.last
+    new = rows.first
     new.locator('[data-pn-act="save"]').click()
     assert new.get_attribute("data-sel") == ""
     assert page.locator("[data-pn-said]").inner_text() == (
@@ -462,7 +462,10 @@ def test_panels_are_renamed_where_listed_and_their_emails_copied(page: Page) -> 
     assert page.locator('[data-pn-chips] [data-panel="panel-a"] [data-pn-name]').inner_text() == (
         "Peer panel"
     )
-    assert page.locator('[data-pn-from] option[value="panel-a"]').inner_text() == "As Peer panel"
+    assert (
+        page.locator('[data-pn-from] option[value="panel-a"]').inner_text()
+        == "Copy from Peer panel"
+    )
     assert page.evaluate("window.applydeskPanelEmails('interviewers')") == (
         "ivan.petrov@example.edu, sara.ng@example.edu"
     )
@@ -504,7 +507,7 @@ def test_an_open_row_keeps_what_changes_around_it(page: Page) -> None:
     )
     # Copied emails leave out a row with none.
     page.locator('[data-pn-act="add"]').click()
-    page.locator("[data-pn-row]").last.locator('input[data-pn-panel="interviewers"]').check()
+    page.locator("[data-pn-row]").first.locator('input[data-pn-panel="interviewers"]').check()
     assert page.evaluate("window.applydeskPanelEmails('interviewers')") == (
         "ivan.petrov@example.edu, sara.ng@example.edu"
     )
@@ -516,10 +519,19 @@ def test_a_new_row_unsaved_is_on_no_panel_a_copy_takes(page: Page) -> None:
     page.goto(PANELS)
     _manage(page)
     page.locator('[data-pn-act="add"]').click()
-    new = page.locator("[data-pn-row]").last
+    new = page.locator("[data-pn-row]").first
     new.locator('input[data-pn-panel="interviewers"]').check()
     page.locator("[data-pn-newname]").fill("Reserve")
     page.locator("[data-pn-from]").select_option("interviewers")
     page.locator('[data-pn-act="create"]').click()
     assert not new.locator('input[data-pn-panel="made-1"]').is_checked()
     assert _count(page, "made-1") == "2 people"
+
+
+def test_add_new_opens_its_row_at_the_top(page: Page) -> None:
+    """Author, 2026-11-14: by the button; an imported row joins the end."""
+    page.goto(PANELS)
+    page.locator('[data-pn-act="add"]').click()
+    first = page.locator("[data-pn-row]").first
+    assert first.get_attribute("data-fresh") == "1"
+    assert first.locator('[data-pn="name"]').evaluate("e => e === document.activeElement")

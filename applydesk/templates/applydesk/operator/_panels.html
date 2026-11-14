@@ -80,7 +80,7 @@
           <label class="fc-l">Name<input class="fc-in" data-pn-newname placeholder="e.g. Panel C"></label>
           <label class="fc-l">People<select class="fc-in" data-pn-from>
             <option value="">None: a blank panel</option>
-            {% for p in panels %}<option value="{{ p.key }}">As {{ p.name }}</option>{% endfor %}
+            {% for p in panels %}<option value="{{ p.key }}">Copy from {{ p.name }}</option>{% endfor %}
           </select></label>
         </div>
         <p class="np-err" data-pn-newerr aria-live="polite"></p>
@@ -336,7 +336,9 @@
     r.querySelectorAll("td.pn-tick").forEach(function (td) { td.remove(); });
     var last = r.lastElementChild;
     cols().forEach(function (h) { last.before(tick(h.dataset.panel)); });
-    body.appendChild(r);
+    // Add new opens its row at the top, by the button; an imported one
+    // joins the end (author, 2026-11-14).
+    if (m) body.appendChild(r); else body.insertBefore(r, body.firstElementChild);
     if (m) {
       r.querySelector('[data-pn="name"]').value = m.name || "";
       r.querySelector('[data-pn="note"]').value = m.note || "";
@@ -373,7 +375,7 @@
     th.appendChild(h); th.appendChild(n);
     head.lastElementChild.before(th);
     cols_.lastElementChild.before(el("col", "pn-w-panel"));
-    var opt = el("option", "", "As " + name); opt.value = key; fromSel.appendChild(opt);
+    var opt = el("option", "", "Copy from " + name); opt.value = key; fromSel.appendChild(opt);
     // Its pill on the roster card, as the server draws one.
     var chip = el("span", "chip chip-info"); chip.setAttribute("data-panel", key);
     var cn = el("span", "", name); cn.setAttribute("data-pn-name", "");
@@ -422,7 +424,7 @@
     root.querySelectorAll('[data-panel="' + key + '"] [data-pn-name]').forEach(function (s) { s.textContent = name; });
     var input = list.querySelector('li[data-panel="' + key + '"] [data-pn-rename]');
     input.value = name; input.setAttribute("aria-label", "Name of " + name);
-    var o = fromSel.querySelector('option[value="' + key + '"]'); if (o) o.textContent = "As " + name;
+    var o = fromSel.querySelector('option[value="' + key + '"]'); if (o) o.textContent = "Copy from " + name;
     body.querySelectorAll('input[data-pn-panel="' + key + '"]').forEach(function (c) { c.setAttribute("aria-label", "On " + name); });
     check();  // the problems name panels too
   }
