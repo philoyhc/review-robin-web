@@ -463,6 +463,16 @@
     .pn-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: flex-end; gap: 10px; margin-bottom: 14px; }
     .pn-search { display: grid; gap: 4px; font-size: 13px; color: var(--text-subtle); }
     .pn-search .fc-in { margin-top: 0; width: min(300px, 70vw); }
+    /* Show columns, after Review Robin's rosters: a chip per panel, filled
+       while its column shows. A panel retired and not yet saved has its
+       heading and its chip struck through. */
+    .pn-showcols { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 14px; }
+    .pn-showcols[hidden] { display: none; }
+    .pn-show { font: inherit; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 9999px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+    .pn-show[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+    .pn-table .pn-off { display: none; }
+    .pn-table th.pn-retiring .pn-h, .pn-show.pn-retiring { text-decoration: line-through; }
+    .pn-table th.pn-retiring { opacity: 0.6; }
     /* Fixed widths: selecting a row changes its look, never the columns. */
     .pn-table { border-collapse: separate; border-spacing: 0; font-size: 14px; width: 100%; table-layout: fixed; min-width: 860px; }
     .pn-w-pick { width: 40px; } .pn-w-name { width: 19%; } .pn-w-email { width: 25%; } .pn-w-note { width: 17%; }

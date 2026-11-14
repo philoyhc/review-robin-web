@@ -69,7 +69,7 @@
           </li>
           {% endfor %}
         </ul>
-        <p class="muted pn-csv-note">A name changed here, and a panel added here, wait for <em>Save</em> below, and <em>Cancel</em> takes them back: every column, pill and menu follows. <em>Copy emails</em> puts a panel's addresses on the clipboard, separated by commas.</p>
+        <p class="muted pn-csv-note">A name changed here, and a panel added or retired here, wait for <em>Save</em> below, and <em>Cancel</em> takes them back: every column, pill and menu follows. <em>Copy emails</em> puts a panel's addresses on the clipboard, separated by commas.</p>
       </section>
       <div class="pn-manage-right">
       {# A new panel, blank or from an existing one's people (author,
@@ -105,7 +105,7 @@
       </div>
       {# The card's own buttons, at its bottom right (author, 2026-11-14):
          Cancel and Save for what changes the panels' list (a name typed, a
-         panel added), neither closing it;
+         panel added or retired), neither closing it;
          Close. #}
       <span class="pn-manage-acts" data-pn-manage-acts hidden>
         <button class="btn btn-secondary" type="button" data-pn-act="cancel-names">Cancel</button>
@@ -118,9 +118,13 @@
   {# The table card, full width: Review Robin's toolbar, then the table. #}
   <section class="card pn-tablecard" aria-label="People on panels">
     <div class="pn-toolbar">
-      <label class="pn-search">Filter<input class="fc-in" type="search" data-pn-search placeholder="Name, email or note"></label>
+      <label class="pn-search">Filter<input class="fc-in" type="search" data-pn-search placeholder="Name, email, note or panel"></label>
       <button class="btn btn-secondary" type="button" data-pn-act="add">Add new</button>
     </div>
+    {# A chip per panel, after Review Robin's rosters' Show columns: pressed,
+       its column shows (author, 2026-11-14). Not remembered across a
+       reload, as nothing on this page is until AD2. #}
+    <p class="pn-showcols" data-pn-showcols{% if not panels %} hidden{% endif %}><span>Show columns:</span>{% for p in panels %}<button type="button" class="pn-show" data-panel="{{ p.key }}" data-pn-show aria-pressed="true"><span data-pn-name>{{ p.name }}</span></button>{% endfor %}</p>
     <div class="table-wrap pn-wrap">
       {# Fixed widths (author, 2026-11-14): a row turned to edit boxes
          changes how it looks, never where the columns fall. #}
@@ -169,6 +173,7 @@
   var chips = root.querySelector("[data-pn-chips]"), manage = root.querySelector("[data-pn-manage]");
   var cols_ = root.querySelector("[data-pn-cols]"), fromSel = root.querySelector("[data-pn-from]");
   var newName = root.querySelector("[data-pn-newname]"), newErr = root.querySelector("[data-pn-newerr]");
+  var showRow = root.querySelector("[data-pn-showcols]"), off = {};  // panels whose column is hidden
   var EMAIL = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
   // The directory (Graph; the sample institution until AD4), as [name, email].
   var DIRECTORY = JSON.parse(document.getElementById("pn-people").textContent);
@@ -214,6 +219,30 @@
     root.querySelector("[data-pn-inuse]").textContent = "· " + nUsed + " in use";
     root.querySelector("[data-pn-empty]").hidden = nCols > 0;
   }
+
+  // Show columns: a hidden panel's header and cells go, and the table
+  // keeps one width per column shown, so the rest never move.
+  function paint() {
+    var n = 0;
+    cols().forEach(function (h) {
+      var k = h.dataset.panel, hide = !!off[k];
+      h.classList.toggle("pn-off", hide);
+      body.querySelectorAll('input[data-pn-panel="' + k + '"]').forEach(function (c) { c.closest("td").classList.toggle("pn-off", hide); });
+      if (!hide) n += 1;
+    });
+    var have = cols_.querySelectorAll(".pn-w-panel").length;
+    for (; have < n; have++) cols_.lastElementChild.before(el("col", "pn-w-panel"));
+    for (; have > n; have--) cols_.querySelector(".pn-w-panel").remove();
+    showRow.hidden = !cols().length;
+  }
+  showRow.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-pn-show]");
+    if (!b) return;
+    var on = b.getAttribute("aria-pressed") !== "true";
+    b.setAttribute("aria-pressed", String(on));
+    if (on) delete off[b.dataset.panel]; else off[b.dataset.panel] = true;
+    paint();
+  });
 
   // --- Selecting rows (ruling 22): a row is edited only while selected;
   // unselected, it is inert, its ticks too, and shows what its boxes hold.
@@ -299,13 +328,19 @@
     all.indeterminate = n > 0 && n < shown.length;
   }
   // Filter, as Review Robin's toolbar's search: rows whose name, email or note
-  // hold the text; a selected row stays in view while it is edited. Run
+  // hold the text, or who are on a panel whose name does (author,
+  // 2026-11-14); a selected row stays in view while it is edited. Run
   // again whenever a row changes, so what shows always matches the box.
   var search = root.querySelector("[data-pn-search]");
   function filter() {
     var t = search.value.trim().toLowerCase(), any = false;
     rows().forEach(function (r) {
-      var hay = [val(r, "name"), val(r, "email"), val(r, "note")].join(" ").toLowerCase();
+      var hay = [val(r, "name"), val(r, "email"), val(r, "note")];
+      cols().forEach(function (h) {
+        var c = r.querySelector('input[data-pn-panel="' + h.dataset.panel + '"]');
+        if (c && c.checked) hay.push(nameOf(h.dataset.panel));
+      });
+      hay = hay.join(" ").toLowerCase();
       r.hidden = !!t && hay.indexOf(t) < 0 && !r.hasAttribute("data-sel");
       if (!r.hidden) any = true;
     });
@@ -356,6 +391,7 @@
     // Add new opens its row at the top, by the button; an imported one
     // joins the end (author, 2026-11-14).
     if (m) body.appendChild(r); else body.insertBefore(r, body.firstElementChild);
+    paint();  // a hidden column's cell hidden here too
     if (m) {
       r.querySelector('[data-pn="name"]').value = m.name || "";
       r.querySelector('[data-pn="note"]').value = m.note || "";
@@ -391,7 +427,6 @@
     var n = el("span", "pn-n"); n.setAttribute("data-pn-count", "");
     th.appendChild(h); th.appendChild(n);
     head.lastElementChild.before(th);
-    cols_.lastElementChild.before(el("col", "pn-w-panel"));
     var opt = el("option", "", "Copy from " + name); opt.value = key; fromSel.appendChild(opt);
     // Its pill on the roster card, as the server draws one.
     var chip = el("span", "chip chip-info"); chip.setAttribute("data-panel", key);
@@ -399,6 +434,10 @@
     var cc = el("span", "", "0"); cc.setAttribute("data-pn-num", "");
     chip.appendChild(cn); chip.appendChild(document.createTextNode("\u00a0(")); chip.appendChild(cc); chip.appendChild(document.createTextNode(")"));
     chips.appendChild(chip);
+    var sb = el("button", "pn-show"); sb.type = "button";
+    sb.setAttribute("data-panel", key); sb.setAttribute("data-pn-show", ""); sb.setAttribute("aria-pressed", "true");
+    var sn = el("span", "", name); sn.setAttribute("data-pn-name", ""); sb.appendChild(sn);
+    showRow.appendChild(sb);
     rows().forEach(function (r) {
       // From a panel, its people as saved: an open row's unsaved tick is
       // not yet anyone's, and its snapshot learns the new column too.
@@ -423,6 +462,7 @@
     lu.appendChild(lc); lu.appendChild(document.createTextNode(" · Not used yet"));
     li.appendChild(lw); li.appendChild(act); li.appendChild(lu);
     list.appendChild(li);
+    paint();
     check();
     return key;
   }
@@ -457,7 +497,10 @@
   // Panels added in the card and not yet saved (author, 2026-11-14): kept
   // by its Save, taken back by its Cancel, as a typed name is.
   var added = [];
-  function anyPending() { return renames().length > 0 || added.length > 0; }
+  // Panels retired in the card and not yet saved: their columns stay,
+  // struck through, until Save retires them; Cancel keeps them.
+  var retiring = [];
+  function anyPending() { return renames().length > 0 || added.length > 0 || retiring.length > 0; }
   function namesPending() { saveNames.disabled = !anyPending(); }
   // Every name is judged against the names as they would all stand after
   // the save, so neither the order of the list nor a swap matters.
@@ -493,9 +536,12 @@
     });
     return told;
   }
-  // Save: the names typed, then the panels added, kept.
+  // Save: the panels retired go first, so their names are free; then the
+  // names typed, then the panels added, kept.
   function keepAll() {
-    var told = keepNames();
+    var gone = retiring.map(function (key) { var n = nameOf(key); dropPanel(key); return n + " retired."; });
+    retiring = [];
+    var told = gone.concat(keepNames());
     added.forEach(function (key) {
       var note = list.querySelector('li[data-panel="' + key + '"] [data-pn-unsaved]');
       if (note) note.remove();
@@ -504,13 +550,22 @@
     });
     added = [];
     if (told.length) said.textContent = told.join(" ");
+    check(); filter(); selected();
     namesPending();
   }
   // Cancel: the names typed put back, the panels added taken back with
   // the rows they brought.
   function dropAll(quiet) {
-    var n = renames().length, m = added.length;
+    var n = renames().length, m = added.length + retiring.length;
     renames().forEach(function (box) { box.value = nameOf(box.closest("li[data-panel]").dataset.panel); });
+    retiring.forEach(function (key) {
+      var li = list.querySelector('li[data-panel="' + key + '"]');
+      li.querySelector("[data-pn-unsaved]").remove();
+      li.querySelector('[data-pn-act="retire"]').disabled = false;
+      head.querySelector('th[data-panel="' + key + '"]').classList.remove("pn-retiring");
+      showRow.querySelector('[data-panel="' + key + '"]').classList.remove("pn-retiring");
+    });
+    retiring = [];
     added.slice().forEach(function (key) {
       body.querySelectorAll('[data-pn-row][data-new-with="' + key + '"]').forEach(function (r) { r.remove(); });
       dropPanel(key);
@@ -530,28 +585,42 @@
     return rows().filter(function (r) { var c = r.querySelector('input[data-pn-panel="' + key + '"]'); return c && c.checked; })
       .map(function (r) { return val(r, "email"); }).filter(Boolean).join(", ");
   };
+  // Retire waits for Save (author, 2026-11-14), as an added panel does;
+  // a panel never saved is taken back at once, as Cancel would, with the
+  // rows it brought.
   function retire(key) {
-    if (used(key)) return;
-    var name = nameOf(key), unsaved = added.indexOf(key) >= 0;
-    // Never saved, it is taken back as Cancel would, rows it brought too.
-    if (unsaved) body.querySelectorAll('[data-pn-row][data-new-with="' + key + '"]').forEach(function (r) { r.remove(); });
-    dropPanel(key);
-    filter(); selected();
-    said.textContent = unsaved ? name + " taken back: it was not saved." : name + " retired.";
-    check();
+    if (used(key) || retiring.indexOf(key) >= 0) return;
+    var name = nameOf(key), li = list.querySelector('li[data-panel="' + key + '"]');
+    if (added.indexOf(key) >= 0) {
+      body.querySelectorAll('[data-pn-row][data-new-with="' + key + '"]').forEach(function (r) { r.remove(); });
+      dropPanel(key);
+      filter(); selected(); check();
+      said.textContent = name + " taken back: it was not saved.";
+    } else {
+      retiring.push(key);
+      li.querySelector('[data-pn-act="retire"]').disabled = true;
+      var mark = el("span", "pn-unsaved", "Retired: not saved yet"); mark.setAttribute("data-pn-unsaved", "");
+      li.appendChild(mark);
+      head.querySelector('th[data-panel="' + key + '"]').classList.add("pn-retiring");
+      showRow.querySelector('[data-panel="' + key + '"]').classList.add("pn-retiring");
+      said.textContent = name + " to be retired. Save retires it; Cancel keeps it.";
+    }
     namesPending();
     newName.focus();
   }
   // A panel's column, pill, list entry and menu entry gone.
   function dropPanel(key) {
     added = added.filter(function (k) { return k !== key; });
+    retiring = retiring.filter(function (k) { return k !== key; });
+    delete off[key];
+    showRow.querySelector('[data-panel="' + key + '"]').remove();
     head.querySelector('th[data-panel="' + key + '"]').remove();
     body.querySelectorAll('input[data-pn-panel="' + key + '"]').forEach(function (c) { c.closest("td").remove(); });
     list.querySelector('li[data-panel="' + key + '"]').remove();
     chips.querySelector('[data-panel="' + key + '"]').remove();
     fromSel.querySelector('option[value="' + key + '"]').remove();
     mWrap.hidden = !!fromSel.value;  // the menu fell back to a blank panel, which takes Members
-    cols_.querySelector(".pn-w-panel").remove();
+    paint();
   }
 
   // --- CSV: Name, Email, Note, and a column per panel by its name ---

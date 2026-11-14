@@ -257,7 +257,7 @@ where a ruling below differs from it, the ruling wins.
     - **Cards that stand alone** (Emails): a Save on each card.
     - **A card of actions** (Manage panels, as Review Robin's Unlock
       panel): its buttons act at once, but what changes the panels' list
-      (a name typed, a panel added) waits for the card's own *Save*
+      (a name typed, a panel added or retired) waits for the card's own *Save*
       (Enter too), *Cancel* takes it back, neither closing the card, and
       *Close* asks first while any waits (author, 2026-11-14, replacing
       a ✓ by each box; *Add panel* an outline button, Save the card's
