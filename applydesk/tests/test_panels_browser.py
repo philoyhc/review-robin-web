@@ -508,3 +508,18 @@ def test_an_open_row_keeps_what_changes_around_it(page: Page) -> None:
     assert page.evaluate("window.applydeskPanelEmails('interviewers')") == (
         "ivan.petrov@example.edu, sara.ng@example.edu"
     )
+
+
+def test_a_new_row_unsaved_is_on_no_panel_a_copy_takes(page: Page) -> None:
+    """Codex on #3890: a panel added from another copied a new row's
+    unsaved tick."""
+    page.goto(PANELS)
+    _manage(page)
+    page.locator('[data-pn-act="add"]').click()
+    new = page.locator("[data-pn-row]").last
+    new.locator('input[data-pn-panel="interviewers"]').check()
+    page.locator("[data-pn-newname]").fill("Reserve")
+    page.locator("[data-pn-from]").select_option("interviewers")
+    page.locator('[data-pn-act="create"]').click()
+    assert not new.locator('input[data-pn-panel="made-1"]').is_checked()
+    assert _count(page, "made-1") == "2 people"

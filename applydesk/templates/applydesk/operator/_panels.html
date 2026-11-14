@@ -343,7 +343,13 @@
       setEmail(r, m.email || "");
       (m.panels || []).forEach(function (k) { var c = r.querySelector('input[data-pn-panel="' + k + '"]'); if (c) c.checked = true; });
       select(r, false, "save");  // an imported row arrives as the others are: inert
-    } else { r.dataset.fresh = "1"; select(r, true); }
+    } else {
+      // A new row is drawn selected; its snapshot is taken as it opens, so
+      // it is on no panel until its ✓ (Codex on #3890).
+      r.dataset.fresh = "1";
+      r.removeAttribute("data-sel");
+      select(r, true);
+    }
     return r;
   }
   function tick(key, on) {
