@@ -59,7 +59,7 @@
         <ul class="pn-list" data-pn-list>
           {% for p in panels %}
           <li data-panel="{{ p.key }}">
-            <input class="fc-in pn-list-h" data-pn-rename value="{{ p.name }}" aria-label="Name of {{ p.name }}">
+            <span class="pn-rename"><input class="fc-in pn-list-h" data-pn-rename value="{{ p.name }}" aria-label="Name of {{ p.name }}"><button type="button" class="pn-save pn-rename-ok" data-pn-act="rename" hidden aria-label="Keep the new name of {{ p.name }}" title="Keep the new name">✓</button></span>
             <span class="pn-list-act">
               <button type="button" class="btn btn-secondary" data-pn-act="emails">Copy emails</button>
               <button type="button" class="btn btn-destructive" data-pn-act="retire"{% if uses.get(p.key) %} disabled title="In use: it can be retired once nothing uses it"{% endif %}>Retire</button>
@@ -396,14 +396,18 @@
       r.lastElementChild.before(td);
     });
     var li = el("li"); li.setAttribute("data-panel", key);
-    var lh = el("input", "fc-in pn-list-h"); lh.value = name; lh.setAttribute("data-pn-rename", ""); lh.setAttribute("aria-label", "Name of " + name);
+    var lw = el("span", "pn-rename"), lh = el("input", "fc-in pn-list-h"), ok = el("button", "pn-save pn-rename-ok", "✓");
+    lh.value = name; lh.setAttribute("data-pn-rename", ""); lh.setAttribute("aria-label", "Name of " + name);
+    ok.type = "button"; ok.hidden = true; ok.setAttribute("data-pn-act", "rename");
+    ok.setAttribute("aria-label", "Keep the new name of " + name); ok.title = "Keep the new name";
+    lw.appendChild(lh); lw.appendChild(ok);
     var act = el("span", "pn-list-act");
     [["emails", "Copy emails", "btn-secondary"], ["retire", "Retire", "btn-destructive"]].forEach(function (a) {
       var b = el("button", "btn " + a[2], a[1]); b.type = "button"; b.setAttribute("data-pn-act", a[0]); act.appendChild(b);
     });
     var lu = el("span", "pn-list-used"), lc = el("span"); lc.setAttribute("data-pn-count", "");
     lu.appendChild(lc); lu.appendChild(document.createTextNode(" · Not used yet"));
-    li.appendChild(lh); li.appendChild(act); li.appendChild(lu);
+    li.appendChild(lw); li.appendChild(act); li.appendChild(lu);
     list.appendChild(li);
     check();
     return key;
@@ -424,10 +428,47 @@
     root.querySelectorAll('[data-panel="' + key + '"] [data-pn-name]').forEach(function (s) { s.textContent = name; });
     var input = list.querySelector('li[data-panel="' + key + '"] [data-pn-rename]');
     input.value = name; input.setAttribute("aria-label", "Name of " + name);
+    input.parentNode.querySelector("[data-pn-act=rename]").setAttribute("aria-label", "Keep the new name of " + name);
     var o = fromSel.querySelector('option[value="' + key + '"]'); if (o) o.textContent = "Copy from " + name;
     body.querySelectorAll('input[data-pn-panel="' + key + '"]').forEach(function (c) { c.setAttribute("aria-label", "On " + name); });
     check();  // the problems name panels too
   }
+  // A rename (ruling 23, a card of actions): typed, it waits for ✓ or
+  // Enter; Esc or leaving the box puts the name back.
+  function keepName(input) {
+    var key = input.closest("li[data-panel]").dataset.panel, was = nameOf(key), to = input.value.trim();
+    input.parentNode.querySelector("[data-pn-act=rename]").hidden = true;
+    if (to === was) { input.value = was; return; }
+    var why = badName(to, key);
+    if (why) { input.value = was; said.textContent = why + " " + was + " keeps its name."; return; }
+    rename(key, to);
+    said.textContent = was + " is now " + to + ".";
+  }
+  function dropName(input) {
+    var key = input.closest("li[data-panel]").dataset.panel;
+    input.parentNode.querySelector("[data-pn-act=rename]").hidden = true;
+    if (input.value.trim() !== nameOf(key)) { input.value = nameOf(key); said.textContent = nameOf(key) + " keeps its name."; }
+  }
+  list.addEventListener("input", function (e) {
+    if (!e.target.matches("[data-pn-rename]")) return;
+    var key = e.target.closest("li[data-panel]").dataset.panel;
+    e.target.parentNode.querySelector("[data-pn-act=rename]").hidden = e.target.value.trim() === nameOf(key);
+  });
+  // A press on ✓ keeps the focus in the box, so every browser sees the
+  // click (Safari and Firefox on macOS do not focus a button pressed).
+  list.addEventListener("mousedown", function (e) {
+    if (e.target.closest("[data-pn-act=rename]")) e.preventDefault();
+  });
+  list.addEventListener("focusout", function (e) {
+    var box = e.target.matches("[data-pn-rename]") ? e.target
+      : e.target.matches("[data-pn-act=rename]") ? e.target.parentNode.querySelector("[data-pn-rename]") : null;
+    if (!box) return;
+    // Between the box and its own ✓ is still the rename; anywhere else is
+    // leaving it, and the old name comes back.
+    var pair = box.parentNode;
+    if (e.relatedTarget && pair.contains(e.relatedTarget)) return;
+    dropName(box);
+  });
   // A panel's members' emails, comma-separated, as ticked now.
   window.applydeskPanelEmails = function (key) {
     return rows().filter(function (r) { var c = r.querySelector('input[data-pn-panel="' + key + '"]'); return c && c.checked; })
@@ -534,15 +575,6 @@
       return;
     }
     if (e.target.matches("[data-pn-entry]")) { setEmail(e.target.closest("[data-pn-row]"), e.target.value); return; }
-    if (e.target.matches("[data-pn-rename]")) {
-      var key = e.target.closest("li[data-panel]").dataset.panel, was = nameOf(key), to = e.target.value.trim();
-      if (to === was) return;
-      var why = badName(to, key);
-      if (why) { e.target.value = was; said.textContent = why + " " + was + " keeps its name."; return; }
-      rename(key, to);
-      said.textContent = was + " is now " + to + ".";
-      return;
-    }
     if (e.target.matches("input[data-pn-panel]")) { check(); return; }
     if (e.target.matches("[data-pn-import]")) {
       var f = e.target.files && e.target.files[0];
@@ -595,6 +627,10 @@
       addPanel(name, from || null);
       newName.value = ""; fromSel.value = "";
       said.textContent = from ? name + " added, with the people of " + nameOf(from) + "." : name + " added: tick who sits on it.";
+    } else if (what === "rename" && li) {
+      var box = li.querySelector("[data-pn-rename]");
+      keepName(box);
+      box.focus();
     } else if (what === "emails" && li) {
       var text = window.applydeskPanelEmails(li.dataset.panel), pn = nameOf(li.dataset.panel);
       if (!text) { said.textContent = pn + " has nobody on it yet."; return; }
@@ -635,11 +671,12 @@
     });
   });
   root.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && e.target.matches("[data-pn-rename]")) { dropName(e.target); return; }
     if (e.key !== "Enter") return;
     if (e.target.matches("[data-pn-entry]")) { e.preventDefault(); setEmail(e.target.closest("[data-pn-row]"), e.target.value); return; }
     // Enter in a selected row's other boxes is its ✓.
     if (e.target.matches('[data-pn-row] [data-pn="name"], [data-pn-row] [data-pn="note"]')) { e.preventDefault(); save(e.target.closest("[data-pn-row]")); return; }
-    if (e.target.matches("[data-pn-rename]")) { e.preventDefault(); e.target.blur(); return; }
+    if (e.target.matches("[data-pn-rename]")) { e.preventDefault(); keepName(e.target); return; }
     if (e.target === newName) { e.preventDefault(); root.querySelector('[data-pn-act="create"]').click(); }
   });
   check();
