@@ -632,11 +632,11 @@ def test_a_gate_item_makes_and_picks_its_panel(page: Page) -> None:
     menu.select_option("__new")
     box = gate.locator("[data-newpanel]")
     box.locator('[data-np="name"]').fill("Interview panel")
-    box.locator('[data-np="members"]').fill("Ann Goh <ann.goh@example.edu>\nraj.k@example.edu")
+    box.locator('[data-np="members"]').fill("Daniel Koh, priya.raman@example.edu")
     box.get_by_role("button", name="Create panel").click()
     assert gate.locator("[data-pi-panel]").text_content() == "Interview panel · 2 people"
     members = gate.locator("[data-pc-members] li").all_inner_texts()
-    assert members == ["Ann Goh ann.goh@example.edu", "raj.k@example.edu"]
+    assert members == ["Daniel Koh daniel.koh@example.edu", "Priya Raman priya.raman@example.edu"]
     assert page.locator("[data-o-panel]").text_content() == "Interview panel"
     assert "has no panel" not in issues.inner_text()
     # A replica keeps the panel its gate was given.

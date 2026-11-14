@@ -20,7 +20,13 @@
 {% macro new_box() %}
 <div class="np" data-newpanel hidden>
   <label class="fc-l">Panel name<input class="fc-in" data-np="name" placeholder="e.g. Panel C"></label>
-  <label class="fc-l">Members<textarea class="fc-in" data-np="members" rows="3" placeholder="One per line: an email, or Name &lt;email&gt;"></textarea></label>
+  {# Members (ruling 22): as Residential's people boxes, each name or email
+     found in the directory a pill with ×; separate several with commas. #}
+  <div class="fc-l"><span>Members</span>
+    <div class="tokens" role="group" aria-label="Members" data-np-tokens>
+      <input class="token-input" type="text" data-np="members" autocomplete="off" aria-label="Add a member" placeholder="Name or email; separate several with commas">
+    </div>
+  </div>
   <p class="np-err" data-np-err aria-live="polite"></p>
   <p class="muted np-note">Made here, the panel is kept on this page until saving comes (AD2).</p>
   <div class="btnrow">

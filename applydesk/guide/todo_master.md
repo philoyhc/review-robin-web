@@ -226,6 +226,18 @@ where a ruling below differs from it, the ruling wins.
     - Result 1 is the gate's headline (Applications' chip). Outcome rules
       and weights read a gate's named result; only numbers are weighed
       or compared, a list is matched, a string is read only.
+22. **People are entered as Residential's and Review Robin's are**
+    (author, 2026-11-14; segment AD1F), across Apply Desk:
+    - **A box that takes several people** works and looks as the boxes on
+      Residential's `/residentialops/rosters/assignments` do: names or
+      emails typed, separated by commas, each found in the directory
+      (Graph; the sample institution until AD4) a pill with ×; what is not
+      found stays in the box, said why.
+    - **A table of people with more about each** (a panel's roster) is
+      Review Robin's roster table: a row is edited by selecting it, its
+      cells then edit boxes; several rows may be selected at once; an
+      unselected row is inert, its ticks too, so nothing is changed by
+      accident. A verified email is a pill; a name is typed.
 
 ## MVP roadmap
 

@@ -1,0 +1,21 @@
+{# Finding people in the directory (author, 2026-11-14): an email, or a
+   name, typed is looked up in the institution's directory, which Graph
+   will search once forms are live (AD4); until then the sample
+   institution (`sample_data.people_pools(...)["institution"]`) stands in.
+   window.applydeskFind(entry, people) returns {person: [name, email]},
+   {twice: true} for a name two people share, or {} for no one found.
+   Shared by the + New panel box and the Panels table. #}
+<script>
+(function () {
+  if (window.applydeskFind) return;
+  window.applydeskFind = function (entry, people) {
+    var t = (entry || "").trim().toLowerCase();
+    if (!t) return {};
+    var byEmail = people.filter(function (p) { return p[1].toLowerCase() === t; });
+    if (byEmail.length) return { person: byEmail[0] };
+    var byName = people.filter(function (p) { return p[0].toLowerCase() === t; });
+    if (byName.length > 1) return { twice: true };
+    return byName.length ? { person: byName[0] } : {};
+  };
+})();
+</script>
