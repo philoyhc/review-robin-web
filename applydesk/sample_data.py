@@ -694,6 +694,22 @@ def people_pools(exercise_id: str) -> dict[str, Pool]:
     return pools
 
 
+def roster(exercise_id: str) -> tuple[tuple[Member, frozenset[str]], ...]:
+    """Everyone on the exercise's panels, once each (by email, any case),
+    in the order first met, with the keys of the panels they sit on: the
+    Panels table's rows (ruling 20). A name or note is the first given."""
+    rows: dict[str, tuple[Member, set[str]]] = {}
+    for p in panels_of(exercise_id):
+        for m in p.members:
+            k = m.email.lower()
+            if k not in rows:
+                rows[k] = (m, set())
+            elif not rows[k][0].note and m.note:
+                rows[k] = (replace(rows[k][0], note=m.note), rows[k][1])
+            rows[k][1].add(p.key)
+    return tuple((m, frozenset(keys)) for m, keys in rows.values())
+
+
 def panel_pools(exercise_id: str) -> dict[str, Pool]:
     """The exercise's panels alone, in order, as a gate picks from them:
     a gate is evaluated by a panel, never Institution-wide."""

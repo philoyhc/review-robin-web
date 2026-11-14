@@ -32,6 +32,7 @@ PAGES = (
         for section in (
             "process",
             "form",
+            "panels",
             "emails",
             "applications",
             "evaluations",
@@ -54,6 +55,7 @@ PAGES = (
         for section in (
             "process",
             "form",
+            "panels",
             "emails",
             "applications",
             "evaluations",
@@ -286,7 +288,7 @@ def test_the_chrome_follows_the_operator_s_workflow(client: TestClient) -> None:
     ops = grid[grid.index('class="xnav-row xnav-ops"') :]
     tab = r'<a class="xnav-tab[^"]*"[^>]*>([^<]+)</a>'
     assert home == ["Exercise Home"]
-    assert re.findall(tab, setup) == ["Process", "Form", "Emails"]  # ruling 20
+    assert re.findall(tab, setup) == ["Process", "Form", "Panels", "Emails"]  # ruling 20
     assert re.findall(tab, ops) == ["Applications", "Evaluations", "Extract data"]
     assert '<nav class="crumbs" aria-label="Breadcrumb">' in text
     assert "<h1>Undergraduate Research Fellowship 2027</h1>" in text
@@ -307,7 +309,7 @@ def test_the_status_row_says_where_each_item_stands(client: TestClient) -> None:
 @pytest.mark.parametrize(
     "old",
     ["settings", "assessors", "timeline", "export", "report"]
-    + ["setup", "panels", "review", "reports"]  # ruling 14
+    + ["setup", "review", "reports"]  # ruling 14 (Panels came back, ruling 20)
     + ["gates"],  # folded into Process, ruling 20
 )
 def test_the_retired_sections_are_gone(client: TestClient, old: str) -> None:
@@ -568,7 +570,7 @@ def test_the_workflow_card_sits_on_every_operations_page(client: TestClient, sec
     )
 
 
-@pytest.mark.parametrize("section", ["process", "form", "emails"])
+@pytest.mark.parametrize("section", ["process", "form", "panels", "emails"])
 def test_setup_pages_carry_no_workflow_card(client: TestClient, section: str) -> None:
     assert (
         'aria-labelledby="wf-h"'
@@ -727,3 +729,42 @@ def test_is_operator_follows_the_gate(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(type(someone), "is_super_admin", property(lambda self: True))
     monkeypatch.setattr(gate, "current_identity", lambda request: someone)
     assert gate.is_operator(request)
+
+
+# --- Segment AD1F rung 4d: Panels, one table (ruling 20) ---
+def test_panels_is_one_table_a_column_per_panel(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/panels").text
+    heads = re.findall(r'<th scope="col" class="pn-col" data-panel="([\w-]+)">', text)
+    assert heads == ["panel-a", "panel-b", "pool", "interviewers"]
+    assert re.findall(r'<span class="pn-h">([^<]+)</span>', text) == [
+        "Panel A",
+        "Panel B",
+        "Reviewer pool",
+        "Interviewers",
+    ]
+    # Each person once, ticked on the panels they sit on.
+    assert text.count("data-pn-row") == 8
+    row = text[text.index('value="Zoe Tan"') :]
+    row = row[: row.index("</tr>")]
+    ticks = re.findall(r'data-pn-panel="([\w-]+)"( checked)?', row)
+    assert [k for k, on in ticks if on] == ["panel-a"]
+    # Used by, worked out from the form and the gates.
+    assert "Form: Preferred reviewer" in text and "Gate 3: Interview" in text
+    assert "8 people · 4 panels · 4 in use" in text
+
+
+def test_a_panel_nothing_uses_may_be_retired(client: TestClient) -> None:
+    """Teaching Excellence's interviewers sit on no gate: not used yet,
+    so Retire carries no reason against it."""
+    text = client.get(f"/applydesk/operator/exercises/{BLIND}/panels").text
+    item = text[text.index('<li data-panel="interviewers">') :]
+    item = item[: item.index("</li>")]
+    assert "Not used yet" in item and 'title="In use' not in item
+    assert "3 people · 2 panels · 1 in use" in text
+    assert sample_data.roster(BLIND)[0][0].name == "Priya Rao"
+
+
+def test_an_exercise_with_no_panels_says_so(client: TestClient) -> None:
+    assert (
+        "<h2>No panels yet</h2>" in client.get(f"/applydesk/operator/exercises/{BLANK}/panels").text
+    )
