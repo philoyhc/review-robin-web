@@ -17,7 +17,7 @@
 
 {% import "applydesk/operator/_panel_pick.html" as pick %}
 
-{% macro field(c, summary, kept_size, card_types, pools, open=False) %}
+{% macro field(c, summary, kept_size, card_types, pools, panels_url, open=False) %}
 {% set size = kept_size(c.ratio_w, c.ratio_h) %}
 <article class="fc" data-kind="field" data-type="{{ c.type }}"{% if open %} data-open{% endif %}>
   <div class="fc-head">
@@ -65,6 +65,7 @@
       <label class="fc-l">Min people<input class="fc-in" data-f="min" data-g="people" inputmode="numeric" value="{{ c.min if c.type == 'people' }}"></label>
       <label class="fc-l">Max people<input class="fc-in" data-f="max" data-g="people" inputmode="numeric" value="{{ c.max if c.type == 'people' }}"></label>
       <label class="fc-l fc-wide">Chosen from{{ pick.menu(pools, c.pool, 'data-f="pool"') }}</label>
+      {{ pick.edit(panels_url, c.pool) }}
       {{ pick.new_box() }}
     </div>
     <div class="fc-row g-photo">

@@ -305,3 +305,15 @@ def current_stage(exercise: Exercise) -> str:
         return now.group
     plan = stages.plan_of(exercise.public_id)
     return plan.stages[-1].label if plan.stages else ""
+
+
+def panels_sent(exercise_id: str) -> dict[str, tuple[str, ...]]:
+    """The sent gates each panel evaluates, by panel key (AD1F Semantics):
+    a gate already sent keeps the roster it was sent with, which the
+    Panels page says, e.g. {"panel-a": ("Gate 1",)}."""
+    sent: dict[str, list[str]] = {}
+    for c in stages.plan_of(exercise_id).columns:
+        state = gate_state(exercise_id, c.key)[0] if isinstance(c, stages.Gate) else ""
+        if isinstance(c, stages.Gate) and c.panel and state in ("Sent", "Results in"):
+            sent.setdefault(c.panel, []).append(f"Gate {c.number}")
+    return {k: tuple(v) for k, v in sent.items()}

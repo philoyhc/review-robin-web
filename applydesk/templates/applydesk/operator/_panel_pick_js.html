@@ -22,6 +22,16 @@
     });
     return all;
   }
+  // Edit on Panels →, for a panel already there.
+  function editLink(sel) {
+    var wrap = sel.closest("[data-pick-wrap]"), a = wrap && wrap.querySelector("[data-pick-edit]");
+    if (!a) return;
+    var v = sel.value;
+    a.hidden = !v || v === "institution" || v.indexOf("new-") === 0;
+    a.href = a.dataset.base + "#panel-" + v;
+  }
+  // For a page that sets a menu in code, which fires no event.
+  window.applydeskPickRefresh = editLink;
   function boxOf(sel) {
     var wrap = sel.closest("[data-pick-wrap]");
     return wrap ? wrap.querySelector("[data-newpanel]") : null;
@@ -94,6 +104,7 @@
     });
     sel.value = key;
     sel.dataset.prev = key;
+    editLink(sel);
     box.querySelector('[data-np="name"]').value = "";
     box.querySelector('[data-np="members"]').value = "";
     open(box, false);
@@ -121,7 +132,7 @@
   document.addEventListener("input", function (e) {
     var sel = e.target.closest && e.target.closest("select[data-panel-pick]");
     if (!sel) return;
-    if (sel.value !== "__new") { sel.dataset.prev = sel.value; return; }
+    if (sel.value !== "__new") { sel.dataset.prev = sel.value; editLink(sel); return; }
     sel.value = sel.dataset.prev || fallback(sel);
     var box = boxOf(sel);
     if (box) open(box, true);

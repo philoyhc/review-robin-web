@@ -697,15 +697,22 @@ def people_pools(exercise_id: str) -> dict[str, Pool]:
 def roster(exercise_id: str) -> tuple[tuple[Member, frozenset[str]], ...]:
     """Everyone on the exercise's panels, once each (by email, any case),
     in the order first met, with the keys of the panels they sit on: the
-    Panels table's rows (ruling 20). A name or note is the first given."""
+    Panels table's rows (ruling 20). A name or a note left blank where
+    first met is taken from a later panel that gives one; a name that is
+    only the email counts as blank."""
     rows: dict[str, tuple[Member, set[str]]] = {}
     for p in panels_of(exercise_id):
         for m in p.members:
             k = m.email.lower()
             if k not in rows:
                 rows[k] = (m, set())
-            elif not rows[k][0].note and m.note:
-                rows[k] = (replace(rows[k][0], note=m.note), rows[k][1])
+            else:
+                seen = rows[k][0]
+                if seen.name in ("", seen.email) and m.name not in ("", m.email):
+                    seen = replace(seen, name=m.name)
+                if not seen.note and m.note:
+                    seen = replace(seen, note=m.note)
+                rows[k] = (seen, rows[k][1])
             rows[k][1].add(p.key)
     return tuple((m, frozenset(keys)) for m, keys in rows.values())
 

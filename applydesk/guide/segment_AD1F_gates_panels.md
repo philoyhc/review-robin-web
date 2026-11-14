@@ -62,6 +62,7 @@ Taken 2026-11-13 at `fb6785690`.
 - **The draft exercise gained a selection gate with no panel** (rung 3): every other sample gate is sent, so its menu is fixed, and Gates had nothing to pick on.
 - **Reads: one**, cumulative on rungs 2–3 (base `8b4fa6484`, main after the plan): one defect, the picker restoring a stale panel after Form's type change, also found by Codex on #3876 and fixed there; on Gates, a link to Process on the card and assessment-panel membership kept once (in `PANELS`). The quick create refusing a repeated email, where a table would skip it, is recorded in Semantics. Rung 4 takes its own read.
 - **Ruling 20's rungs** (#3878 plan, 4b items collapse, 4c Evaluators on Process and Gates retired). **Reads: one**, cumulative on 4b–4c (base `b40d21de2`): one defect, a replicated stage copying its gates' sent lock and its outcome's release, so the copy's gates could never take a panel; fixed in 4c. Also fixed: an item left alone opening, the Outline's Form entry focusing the item, a docstring. The Outline's panel names and *has no panel* are the script's, as rule problems are.
+- **Panels** (4d scaffold, 4e wired). **Reads: one**, cumulative on 4d–4e (base `a3c4a82cc`): one defect, Form's type change leaving *Edit on Panels →* beside Institution-wide; Panels not saying a sent gate keeps its roster (Semantics); also a name taken from a later panel, an unclosed CSV quote refused, exported cells guarded against formulas, focus after Retire and the last Remove, and the tests the read found thin. All fixed in 4e.
 
 ## PR ladder
 
@@ -79,7 +80,7 @@ Taken 2026-11-13 at `fb6785690`.
 
 ## Definition of done
 
-- The Setup row reads Process, Form, Gates, Panels, Emails (test).
+- The Setup row reads Process, Form, Panels, Emails (test; ruling 20).
 - Process's items collapse, each head with its chips; a gate item carries *Evaluators*; the Gates page is gone (tests).
 - Panels shows one table, a column per panel with its count and *Used by*, and the control card (test).
 - In Chromium: a panel made on Form and on Process and chosen; a row added, edited, removed and refused (bad or duplicate email); a CSV imported and exported; a panel copied, and retired only when unused (tests).
