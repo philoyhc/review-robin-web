@@ -615,21 +615,42 @@ def test_new_panel_refuses_what_it_cannot_make(page: Page) -> None:
     _, box = _new_panel(page)
     err = box.locator("[data-np-err]")
     box.get_by_role("button", name="Create panel").click()
-    assert err.text_content() == "Name the panel. Add at least one email."
+    assert err.text_content() == "Name the panel. Add at least one member."
     box.locator('[data-np="name"]').fill("panel a")
-    box.locator('[data-np="members"]').fill("kim@example.edu\nnot-an-email\nKIM@example.edu")
+    # Ruling 22: entries are looked up in the directory; one not found, or
+    # a name two people share, stays in the box, said why.
+    box.locator('[data-np="members"]').fill("kim@example.edu, DANIEL.KOH@example.edu")
     box.get_by_role("button", name="Create panel").click()
     assert err.text_content() == (
-        "A panel is already called panel a. Not an email: not-an-email."
-        " Listed twice: KIM@example.edu."
+        "A panel is already called panel a. Not found in the directory: kim@example.edu."
     )
+    assert box.locator("[data-np-tokens] .token").count() == 1
+    assert box.locator('[data-np="members"]').input_value() == "kim@example.edu"
     assert box.is_visible()
+    # Typed on past one not found, the next entry starts after its comma.
+    members = box.locator('[data-np="members"]')
+    members.fill("")
+    members.press_sequentially("kim, Priya Raman,")
+    assert members.input_value() == "kim, "
+    assert box.locator("[data-np-tokens] .token").count() == 2
+    members.press_sequentially("DANIEL.KOH@example.edu,")
+    assert err.text_content() == ("Not found in the directory: kim. Already chosen: Daniel Koh.")
+    # Leaving the box takes what is in it.
+    members.fill("mei.chen@example.edu")
+    box.locator('[data-np="name"]').focus()
+    assert box.locator("[data-np-tokens] .token").count() == 3
 
 
 def test_new_panel_is_made_chosen_and_offered_everywhere(page: Page) -> None:
     card, box = _new_panel(page)
     box.locator('[data-np="name"]').fill("Panel C")
-    box.locator('[data-np="members"]').fill("Kim Lee <kim.lee@example.edu>, sam.ho@example.edu")
+    members = box.locator('[data-np="members"]')
+    members.press_sequentially("Daniel Koh, priya.raman@example.edu,")
+    tokens = box.locator("[data-np-tokens] .token")
+    assert tokens.count() == 2 and members.input_value() == ""
+    members.press_sequentially("mei.chen@example.edu,")
+    tokens.nth(2).locator(".token-x").click()  # × takes a pill out
+    assert tokens.count() == 2
     box.get_by_role("button", name="Create panel").click()
     assert not box.is_visible()
     menu = card.locator('[data-f="pool"]')
@@ -650,7 +671,7 @@ def test_new_panel_is_made_chosen_and_offered_everywhere(page: Page) -> None:
     preview = page.locator("#fb-preview")
     assert "Choose 1 person from Panel C." in preview.inner_text()
     box = preview.get_by_role("textbox", name="Preferred reviewer")
-    box.press_sequentially("Kim Lee,")
+    box.press_sequentially("Daniel Koh,")
     assert preview.locator(".token").count() == 1
     # And the snapshot hands it to the preview tab.
     snap = page.evaluate("JSON.parse(window.applydeskFormSnapshot())")
@@ -658,8 +679,8 @@ def test_new_panel_is_made_chosen_and_offered_everywhere(page: Page) -> None:
         "new-1": {
             "name": "Panel C",
             "members": [
-                ["Kim Lee", "kim.lee@example.edu"],
-                ["sam.ho@example.edu", "sam.ho@example.edu"],
+                ["Daniel Koh", "daniel.koh@example.edu"],
+                ["Priya Raman", "priya.raman@example.edu"],
             ],
         }
     }

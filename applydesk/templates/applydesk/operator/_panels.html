@@ -5,23 +5,38 @@
    removed, each email checked, a CSV in and out. Nothing is saved. #}
 {% set used = panels | selectattr("key", "in", uses) | list %}
 {% macro count(n) %}{{ n }} {{ "person" if n == 1 else "people" }}{% endmacro %}
-{% macro row(m, keys, panels) %}
-<tr data-pn-row>
-  <td><input class="fc-in pn-in" data-pn="name" value="{{ m.name if m and m.name != m.email }}" placeholder="Name" aria-label="Name"></td>
-  <td><input class="fc-in pn-in pn-email" data-pn="email" value="{{ m.email if m }}" placeholder="name@example.edu" aria-label="Email"><span class="pn-bad-why" data-pn-why></span></td>
-  <td><input class="fc-in pn-in" data-pn="note" value="{{ m.note if m }}" placeholder="Role or area" aria-label="Note"></td>
-  {% for p in panels %}<td class="pn-tick"><input type="checkbox" data-pn-panel="{{ p.key }}"{% if p.key in keys %} checked{% endif %} aria-label="On {{ p.name }}"></td>{% endfor %}
+{# A row (ruling 22), as Review Robin's rosters: inert until selected,
+   its tick or a click on it; selected, its cells are edit boxes and its
+   panel ticks live. A verified email is a pill; one not found in the
+   directory is typed, against it. `sel` draws a row selected. #}
+{% macro row(m, keys, panels, directory, sel=False) %}
+{% set name = m.name if m and m.name != m.email else "" %}
+{% set verified = m and m.email | lower in directory %}
+<tr data-pn-row{% if sel %} data-sel{% endif %}>
+  <td class="pn-pick"><input type="checkbox" data-pn-select aria-label="Select {{ name or (m.email if m else 'this row') }}"{% if sel %} checked{% endif %}></td>
+  <td><span class="pn-view" data-pn-view="name">{{ name }}</span><input class="fc-in pn-in" data-pn="name" value="{{ name }}" placeholder="Name" aria-label="Name"></td>
+  <td class="pn-email-cell"{% if verified %} data-verified{% endif %}>
+    <input type="hidden" data-pn="email" value="{{ m.email if m }}">
+    <span class="token pn-pill" data-pn-pill title="Matched to a directory account"><span data-pn-pill-text>{{ m.email if verified }}</span><button type="button" class="token-x pn-unpill" data-pn-act="unverify" aria-label="Change {{ m.email if m }}">×</button></span>
+    <span class="pn-view pn-unmatched" data-pn-view="email">{{ m.email if m and not verified }}</span>
+    <input class="fc-in pn-in pn-email" data-pn-entry list="pn-directory" value="{{ m.email if m and not verified }}" placeholder="Name or email" aria-label="Email" autocomplete="off">
+    <span class="pn-bad-why" data-pn-why></span>
+  </td>
+  <td><span class="pn-view" data-pn-view="note">{{ m.note if m }}</span><input class="fc-in pn-in" data-pn="note" value="{{ m.note if m }}" placeholder="Role or area" aria-label="Note"></td>
+  {% for p in panels %}<td class="pn-tick"><input type="checkbox" data-pn-panel="{{ p.key }}"{% if p.key in keys %} checked{% endif %}{% if not sel %} disabled{% endif %} aria-label="On {{ p.name }}"></td>{% endfor %}
   <td><button type="button" class="pn-remove" data-pn-act="remove" aria-label="Remove {{ (m.name or m.email) if m else 'this person' }}" title="Remove">×</button></td>
 </tr>
 {% endmacro %}
+{% set directory = people.institution.members | map(attribute=1) | map("lower") | list %}
 <div class="fb-split pn" data-panels data-exercise="{{ exercise.public_id }}">
   <div class="fb-main">
-    <p class="muted pc-intro">Everyone on this exercise's panels, a column for each panel. A panel is picked where it is needed: a <em>Select people</em> question on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>, a gate's evaluators on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>. Apply Desk keeps every panel and what each person may view; to Review Robin they are ordinary reviewers.</p>
+    <p class="muted pc-intro">Everyone on this exercise's panels, a column for each panel. Select a row, or several, to edit them; an unselected row is left as it is. A panel is picked where it is needed: a <em>Select people</em> question on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>, a gate's evaluators on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>. Apply Desk keeps every panel and what each person may view; to Review Robin they are ordinary reviewers.</p>
     <p class="muted" data-pn-empty{% if panels %} hidden{% endif %}>No panels yet: make one with <em>+ Panel</em>, or with <em>+ New panel</em> where a question or a gate needs one.</p>
     <div class="table-wrap pn-wrap">
       <table class="pn-table" aria-label="Panels and their members">
         <thead>
           <tr data-pn-head>
+            <th scope="col" class="pn-pick"><input type="checkbox" data-pn-select-all aria-label="Select every row"></th>
             <th scope="col">Name</th>
             <th scope="col">Email</th>
             <th scope="col">Note</th>
@@ -37,7 +52,7 @@
           </tr>
         </thead>
         <tbody data-pn-body>
-          {% for m, keys in roster %}{{ row(m, keys, panels) }}{% endfor %}
+          {% for m, keys in roster %}{{ row(m, keys, panels, directory) }}{% endfor %}
         </tbody>
       </table>
     </div>
@@ -82,7 +97,10 @@
     </section>
   </aside>
 </div>
-<template id="pn-new-row">{{ row(none, (), panels) }}</template>
+<template id="pn-new-row">{{ row(none, (), panels, directory, sel=True) }}</template>
+<datalist id="pn-directory">{% for n, e in people.institution.members %}<option value="{{ e }}">{{ n }}</option>{% endfor %}</datalist>
+<script type="application/json" id="pn-people">{{ people.institution.members | tojson }}</script>
+{% include "applydesk/operator/_directory_js.html" %}
 <script>
 // Segment AD1F rung 4e: the Panels page's moves, in the browser only; a
 // reload restores the sample. Text goes in by textContent only.
@@ -92,6 +110,8 @@
   var body = root.querySelector("[data-pn-body]"), head = root.querySelector("[data-pn-head]");
   var list = root.querySelector("[data-pn-list]"), said = root.querySelector("[data-pn-said]");
   var EMAIL = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
+  // The directory (Graph; the sample institution until AD4), as [name, email].
+  var DIRECTORY = JSON.parse(document.getElementById("pn-people").textContent);
   // A CSV's own columns: no panel may take their names.
   var RESERVED = /^\s*(name|email|note)\s*$/i;
   var seq = 0;
@@ -103,14 +123,14 @@
   function used(key) { var h = head.querySelector('th[data-panel="' + key + '"]'); return !!(h && h.dataset.used); }
   function val(r, f) { return r.querySelector('[data-pn="' + f + '"]').value.trim(); }
 
-  // Each email checked as typed: its shape, and once in the table.
+  // Each email checked: found in the directory, and once in the table.
   function check() {
     var seen = {}, problems = [];
     rows().forEach(function (r) { var e = val(r, "email").toLowerCase(); if (e) seen[e] = (seen[e] || 0) + 1; });
     rows().forEach(function (r) {
       var e = val(r, "email"), why = "";
       if (!e) why = "An email is needed.";
-      else if (!EMAIL.test(e)) why = "Not an email.";
+      else if (!r.querySelector("[data-verified]") && !r.querySelector("[data-pn-entry][data-was]")) why = "Not found in the directory.";
       else if (seen[e.toLowerCase()] > 1) why = "Listed more than once.";
       r.classList.toggle("pn-bad", !!why);
       r.querySelector("[data-pn-why]").textContent = why;
@@ -132,19 +152,76 @@
     root.querySelector("[data-pn-empty]").hidden = nCols > 0;
   }
 
+  // --- Selecting rows (ruling 22): a row is edited only while selected;
+  // unselected, it is inert, its ticks too, and shows what its boxes hold.
+  function select(r, on) {
+    // An email × put back to be changed, and left as it was, keeps its pill.
+    var was = r.querySelector("[data-pn-entry][data-was]");
+    if (!on && was) setEmail(r, was.dataset.was);
+    if (on) r.setAttribute("data-sel", ""); else r.removeAttribute("data-sel");
+    r.querySelector("[data-pn-select]").checked = on;
+    r.querySelectorAll("input[data-pn-panel]").forEach(function (c) { c.disabled = !on; });
+    if (!on) {
+      ["name", "note"].forEach(function (f) { r.querySelector('[data-pn-view="' + f + '"]').textContent = val(r, f); });
+      r.querySelector('[data-pn-view="email"]').textContent = r.querySelector("[data-verified]") ? "" : val(r, "email");
+    }
+    selected();
+  }
+  // The header's tick: all, some or none selected.
+  function selected() {
+    var all = root.querySelector("[data-pn-select-all]"), n = rows().filter(function (x) { return x.hasAttribute("data-sel"); }).length;
+    all.checked = n > 0 && n === rows().length;
+    all.indeterminate = n > 0 && n < rows().length;
+  }
+  // A row's labels follow who is on it.
+  function label(r) {
+    var who = val(r, "name") || val(r, "email") || "this row";
+    r.querySelector("[data-pn-select]").setAttribute("aria-label", "Select " + who);
+    r.querySelector('[data-pn-act="unverify"]').setAttribute("aria-label", "Change " + (val(r, "email") || "the email"));
+    r.querySelector('[data-pn-act="remove"]').setAttribute("aria-label", "Remove " + who);
+  }
+  // An email typed into a selected row, looked up in the directory: one
+  // found becomes the pill (and the name, if none is typed); one not found
+  // stays, said why.
+  function setEmail(r, entry) {
+    var cell = r.querySelector(".pn-email-cell"), box = r.querySelector("[data-pn-entry]");
+    // Enter clears the box it found a pill from; the blur after it fires a
+    // change on that empty box, which is not an edit.
+    if (!entry.trim() && cell.hasAttribute("data-verified")) return;
+    var focused = document.activeElement === box;
+    delete box.dataset.was;
+    var found = window.applydeskFind(entry, DIRECTORY);
+    var hidden = r.querySelector('[data-pn="email"]'), pill = r.querySelector("[data-pn-pill]");
+    if (found.person) {
+      hidden.value = found.person[1];
+      pill.querySelector("[data-pn-pill-text]").textContent = found.person[1];
+      cell.setAttribute("data-verified", "");
+      r.querySelector("[data-pn-entry]").value = "";
+      var name = r.querySelector('[data-pn="name"]');
+      if (!name.value.trim()) name.value = found.person[0];
+      // The box goes as the pill comes: the keyboard stays in the row.
+      if (focused) r.querySelector('[data-pn-act="unverify"]').focus();
+    } else {
+      hidden.value = entry.trim();
+      cell.removeAttribute("data-verified");
+    }
+    label(r);
+    check();
+  }
   function addRow(m) {
     var r = document.getElementById("pn-new-row").content.firstElementChild.cloneNode(true);
     // The template has the server's panels: the columns made since join it.
     r.querySelectorAll("td.pn-tick").forEach(function (td) { td.remove(); });
     var last = r.lastElementChild;
     cols().forEach(function (h) { last.before(tick(h.dataset.panel)); });
+    body.appendChild(r);
     if (m) {
       r.querySelector('[data-pn="name"]').value = m.name || "";
-      r.querySelector('[data-pn="email"]').value = m.email || "";
       r.querySelector('[data-pn="note"]').value = m.note || "";
+      setEmail(r, m.email || "");
       (m.panels || []).forEach(function (k) { var c = r.querySelector('input[data-pn-panel="' + k + '"]'); if (c) c.checked = true; });
-    }
-    body.appendChild(r);
+      select(r, false);  // an imported row arrives as the others are: inert
+    } else select(r, true);
     return r;
   }
   function tick(key, on) {
@@ -169,7 +246,9 @@
     head.lastElementChild.before(th);
     rows().forEach(function (r) {
       var was = from ? r.querySelector('input[data-pn-panel="' + from + '"]') : null;
-      r.lastElementChild.before(tick(key, was && was.checked));
+      var td = tick(key, was && was.checked);
+      td.firstChild.disabled = !r.hasAttribute("data-sel");
+      r.lastElementChild.before(td);
     });
     var li = el("li"); li.setAttribute("data-panel", key);
     var lh = el("span", "pn-list-h", name); lh.setAttribute("data-pn-name", "");
@@ -241,13 +320,14 @@
     if (at.email < 0) { said.textContent = "No Email column: nothing imported."; return; }
     var byName = {};
     cols().forEach(function (h) { byName[nameOf(h.dataset.panel).toLowerCase()] = h.dataset.panel; });
-    var seen = {}, added = 0, skipped = [], bad = [], unknown = [];
+    var seen = {}, added = 0, skipped = [], bad = [], unknown = [], missing = [];
     rows().forEach(function (r) { seen[val(r, "email").toLowerCase()] = true; });
     hdr.forEach(function (h, i) { if (i !== at.name && i !== at.email && i !== at.note && h && !byName[h]) unknown.push(table[0][i].trim()); });
     table.slice(1).forEach(function (cells) {
       function get(i) { return i < 0 ? "" : (cells[i] || "").trim(); }
       var email = get(at.email);
       if (!EMAIL.test(email)) { bad.push(email || "(blank)"); return; }
+      if (!window.applydeskFind(email, DIRECTORY).person) { missing.push(email); return; }
       if (seen[email.toLowerCase()]) { skipped.push(email); return; }
       seen[email.toLowerCase()] = true;
       var on = [];
@@ -262,13 +342,17 @@
     var parts = [people(added) + " added."];
     if (skipped.length) parts.push("Already listed, not added: " + skipped.join(", ") + ".");
     if (bad.length) parts.push("Not an email, not added: " + bad.join(", ") + ".");
+    if (missing.length) parts.push("Not found in the directory, not added: " + missing.join(", ") + ".");
     if (unknown.length) parts.push("No panel called: " + unknown.join(", ") + ".");
     said.textContent = parts.join(" ");
     check();
   };
 
-  root.addEventListener("input", function (e) { if (e.target.closest("[data-pn-row]")) check(); });
+  root.addEventListener("input", function (e) { if (e.target.closest("[data-pn-row]") && !e.target.matches("[data-pn-entry]")) check(); });
   root.addEventListener("change", function (e) {
+    if (e.target.matches("[data-pn-select]")) { select(e.target.closest("[data-pn-row]"), e.target.checked); return; }
+    if (e.target.matches("[data-pn-select-all]")) { var on = e.target.checked; rows().forEach(function (r) { select(r, on); }); return; }
+    if (e.target.matches("[data-pn-entry]")) { setEmail(e.target.closest("[data-pn-row]"), e.target.value); return; }
     if (e.target.matches("input[data-pn-panel]")) { check(); return; }
     if (e.target.matches("[data-pn-import]")) {
       var f = e.target.files && e.target.files[0];
@@ -281,11 +365,20 @@
     var a = e.target.closest("[data-pn-act]");
     if (!a || a.disabled) return;
     var what = a.dataset.pnAct, li = a.closest("li[data-panel]");
-    if (what === "remove") {
+    if (what === "unverify") {
+      // The pill goes back to its text to be changed; until it is, the row
+      // keeps the person it had.
+      var rr = a.closest("[data-pn-row]"), entry = rr.querySelector("[data-pn-entry]");
+      entry.value = val(rr, "email");
+      rr.querySelector(".pn-email-cell").removeAttribute("data-verified");
+      entry.dataset.was = entry.value;
+      entry.focus();
+      entry.select();
+    } else if (what === "remove") {
       var r = a.closest("[data-pn-row]"), next = r.nextElementSibling || r.previousElementSibling;
       said.textContent = (val(r, "name") || val(r, "email") || "A row") + " removed.";
-      r.remove(); check();
-      (next ? next.querySelector('[data-pn="name"]') : root.querySelector('[data-pn-act="add"]')).focus();
+      r.remove(); check(); selected();
+      (next ? next.querySelector("[data-pn-select]") : root.querySelector('[data-pn-act="add"]')).focus();
     } else if (what === "add") {
       addRow(null).querySelector('[data-pn="name"]').focus(); check();
     } else if (what === "panel") {
@@ -314,6 +407,9 @@
       document.body.appendChild(link); link.click(); link.remove();
       said.textContent = "Exported " + people(rows().length) + ".";
     }
+  });
+  root.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && e.target.matches("[data-pn-entry]")) { e.preventDefault(); setEmail(e.target.closest("[data-pn-row]"), e.target.value); }
   });
   newName.addEventListener("keydown", function (e) {
     if (e.key === "Enter") { e.preventDefault(); root.querySelector('[data-pn-act="create"]').click(); }

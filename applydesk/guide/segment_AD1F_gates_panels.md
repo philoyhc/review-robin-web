@@ -103,6 +103,7 @@ Taken 2026-11-13 at `fb6785690`.
 5b. **Results on the gate item, scaffold.** The model (a gate's results: name, response field, derivation, minimum responses) and the sample's; the rows drawn with their summaries and *For Review Robin*; the gate's head counting them. Must not touch rules or weights.
 5c. **Results edited in the browser.** *+ Result* (three at most), remove, each row's field, derivation and minimum; the derivations a field type allows; the summary, the result type and *For Review Robin* following. Chromium tests.
 5d. **Rules and weights read a named result.** The rule editor, `rule_text` and Applications' headers name a gate's result; numbers compared and weighed, a list matched, a string offered to neither. Chromium tests. `diff-reviewer` reads 5b–5d.
+6a. **People as Residential's and Review Robin's (ruling 22, after the author's browser check).** *+ New panel*'s Members a token box found in the directory; the Panels table's rows selected to edit, inert otherwise, a verified email a pill. Chromium tests; takes its own read.
 5. **Iteration rungs**, as the author's browser checks ask.
 6. **Close**, only after the author's browser check.
 

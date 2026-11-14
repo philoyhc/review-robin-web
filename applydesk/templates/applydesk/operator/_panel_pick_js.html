@@ -4,6 +4,7 @@
    to every menu on the page (and to those its templates add) and to
    window.applydeskPools, and picks it. Text goes in by textContent only.
    A panel made here is kept on this page only. #}
+{% include "applydesk/operator/_directory_js.html" %}
 <script>
 (function () {
   if (window.applydeskPanelPick) return;
@@ -12,7 +13,6 @@
   // {name, members: [[name, email], …]}. The Form's snapshot carries them
   // to its preview tab.
   var made = window.applydeskMadePanels = {};
-  var EMAIL = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
   var seq = 0;
 
   function menus() {
@@ -56,30 +56,78 @@
     if (live) live.textContent = text;
   }
 
-  // Parse the pasted members: one per line, or separated by commas or
-  // semicolons; each an email, or "Name <email>". Returns
-  // {members, bad, twice}.
-  function parse(text) {
-    var members = [], bad = [], twice = [], seen = {};
-    text.split(/[\n,;]+/).forEach(function (raw) {
+  // Members (ruling 22): each finished entry (before a comma, or all on
+  // Enter or Create) looked up in the directory; one found becomes a pill
+  // with ×, one not found stays in the box, said why.
+  function directory() {
+    var pools = window.applydeskPools || {};
+    return pools.institution ? pools.institution.members : [];
+  }
+  // Picking from a typed list, as Residential's box: the directory's
+  // emails, labelled with names, made once for every box on the page.
+  function suggestions(input) {
+    if (!document.getElementById("np-directory")) {
+      var dl = document.createElement("datalist");
+      dl.id = "np-directory";
+      directory().forEach(function (p) {
+        var o = document.createElement("option");
+        o.value = p[1];
+        o.label = p[0];
+        dl.appendChild(o);
+      });
+      document.body.appendChild(dl);
+    }
+    input.setAttribute("list", "np-directory");
+  }
+  function pill(box, person) {
+    var tokens = box.querySelector("[data-np-tokens]"), input = tokens.querySelector('[data-np="members"]');
+    if (tokens.querySelector('.token[data-email="' + person[1].toLowerCase() + '"]')) return false;
+    var t = document.createElement("span"), x = document.createElement("button");
+    t.className = "token";
+    t.dataset.email = person[1].toLowerCase();
+    t.dataset.name = person[0];
+    t.title = person[1];
+    t.textContent = person[0];
+    x.type = "button";
+    x.className = "token-x";
+    x.textContent = "×";
+    x.setAttribute("aria-label", "Remove " + person[0] + " from Members");
+    t.appendChild(x);
+    tokens.insertBefore(t, input);
+    return true;
+  }
+  function take(box, all) {
+    var input = box.querySelector('[data-np="members"]'), err = box.querySelector("[data-np-err]");
+    var parts = input.value.split(","), rest = all ? "" : parts.pop().replace(/^\s+/, "");
+    var missed = [], twice = [], again = [];
+    parts.forEach(function (raw) {
       var entry = raw.trim();
       if (!entry) return;
-      var m = /^(.*?)<\s*([^<>]+?)\s*>$/.exec(entry);
-      var name = m ? m[1].trim().replace(/^"|"$/g, "") : "";
-      var email = m ? m[2] : entry;
-      if (!EMAIL.test(email)) { bad.push(entry); return; }
-      var k = email.toLowerCase();
-      if (seen[k]) { twice.push(email); return; }
-      seen[k] = true;
-      members.push([name || email, email]);
+      var found = window.applydeskFind(entry, directory());
+      if (found.person) { if (!pill(box, found.person)) again.push(found.person[0]); }
+      else (found.twice ? twice : missed).push(entry);
     });
-    return { members: members, bad: bad, twice: twice };
+    var left = missed.concat(twice);
+    // An entry not found keeps its comma while typing goes on, as the
+    // Form preview's box: the next entry starts after it, not inside it.
+    var value = all ? left.join(", ") : left.concat([rest]).join(", ");
+    if (input.value !== value) input.value = value;
+    var said = [];
+    if (missed.length) said.push("Not found in the directory: " + missed.join(", ") + ".");
+    if (twice.length) said.push("Two people share the name " + twice.join(", ") + ": use the email.");
+    if (again.length) said.push("Already chosen: " + again.join(", ") + ".");
+    err.textContent = said.join(" ");
+    return left.length === 0;
+  }
+  function members(box) {
+    return Array.prototype.map.call(box.querySelectorAll("[data-np-tokens] .token"), function (t) { return [t.dataset.name, t.title]; });
   }
 
   function create(sel, box) {
     var err = box.querySelector("[data-np-err]");
     var name = box.querySelector('[data-np="name"]').value.trim();
-    var got = parse(box.querySelector('[data-np="members"]').value);
+    var clean = take(box, true), said = err.textContent;
+    var got = { members: members(box) };
     var taken = Array.prototype.some.call(sel.options, function (o) {
       return o.value !== "__new" && o.textContent.trim().toLowerCase() === name.toLowerCase();
     });
@@ -87,9 +135,8 @@
     if (!name) wrong.push("Name the panel.");
     else if (taken) wrong.push("A panel is already called " + name + ".");
     else if (/^(name|email|note)$/i.test(name)) wrong.push(name + " names a column of the Panels CSV: choose another name.");
-    if (got.bad.length) wrong.push("Not an email: " + got.bad.join(", ") + ".");
-    if (got.twice.length) wrong.push("Listed twice: " + got.twice.join(", ") + ".");
-    if (!got.members.length && !got.bad.length) wrong.push("Add at least one email.");
+    if (!clean) wrong.push(said);
+    else if (!got.members.length) wrong.push("Add at least one member.");
     if (wrong.length) { err.textContent = wrong.join(" "); return; }
     var key;
     do { seq += 1; key = "new-" + seq; } while (Array.prototype.some.call(sel.options, function (o) { return o.value === key; }));
@@ -108,6 +155,7 @@
     editLink(sel);
     box.querySelector('[data-np="name"]').value = "";
     box.querySelector('[data-np="members"]').value = "";
+    box.querySelectorAll("[data-np-tokens] .token").forEach(function (t) { t.remove(); });
     open(box, false);
     say("Panel " + name + " made, " + got.members.length + (got.members.length === 1 ? " person" : " people") + ", and chosen.");
     sel.dispatchEvent(new Event("input", { bubbles: true }));
@@ -138,7 +186,29 @@
     var box = boxOf(sel);
     if (box) open(box, true);
   }, true);
+  document.addEventListener("input", function (e) {
+    if (e.target.matches && e.target.matches('[data-np="members"]') && e.target.value.indexOf(",") >= 0) {
+      take(e.target.closest("[data-newpanel]"), false);
+    }
+  });
+  document.addEventListener("focusin", function (e) {
+    if (e.target.matches && e.target.matches('[data-np="members"]')) suggestions(e.target);
+  });
+  // Leaving the box takes what is in it, as Residential's does.
+  document.addEventListener("focusout", function (e) {
+    if (e.target.matches && e.target.matches('[data-np="members"]') && e.target.value.trim()) {
+      take(e.target.closest("[data-newpanel]"), true);
+    }
+  });
   document.addEventListener("click", function (e) {
+    var x = e.target.closest && e.target.closest("[data-np-tokens] .token-x");
+    if (x) {
+      var tokens = x.closest("[data-np-tokens]");
+      say(x.closest(".token").dataset.name + " removed from Members.");
+      x.closest(".token").remove();
+      tokens.querySelector('[data-np="members"]').focus();
+      return;
+    }
     var b = e.target.closest && e.target.closest("[data-np-act]");
     if (!b) return;
     var box = b.closest("[data-newpanel]");
@@ -147,6 +217,16 @@
     else create(sel, box);
   });
   document.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && e.target.matches && e.target.matches('[data-np="members"]')) {
+      e.preventDefault();
+      take(e.target.closest("[data-newpanel]"), true);
+      return;
+    }
+    if (e.key === "Backspace" && e.target.matches && e.target.matches('[data-np="members"]') && !e.target.value) {
+      var prev = e.target.previousElementSibling;  // the last pill goes, as Residential's
+      if (prev && prev.classList.contains("token")) { say(prev.dataset.name + " removed from Members."); prev.remove(); }
+      return;
+    }
     if (e.key !== "Escape") return;
     var box = e.target.closest && e.target.closest("[data-newpanel]");
     if (!box) return;

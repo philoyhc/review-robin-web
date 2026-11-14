@@ -441,6 +441,16 @@
     .pn-file { cursor: pointer; }
     .pn-csv-note, .pn-said { margin: 8px 0 0; font-size: 12.5px; }
     .pn-said:empty { display: none; }
+    /* Panels rows (ruling 22): inert until selected, as Review Robin's
+       rosters; a selected row's cells are edit boxes, railed in accent. */
+    .pn-pick { width: 28px; text-align: center; }
+    .pn-table [data-pn-row] { cursor: pointer; }
+    .pn-table [data-pn-row][data-sel] { cursor: default; background: var(--accent-tint); }
+    .pn-table [data-pn-row][data-sel] > td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
+    [data-pn-row]:not([data-sel]) .pn-in, [data-pn-row]:not([data-sel]) .pn-remove, [data-pn-row]:not([data-sel]) .pn-unpill { display: none; }
+    [data-pn-row][data-sel] .pn-view { display: none; }
+    .pn-email-cell:not([data-verified]) .pn-pill, .pn-email-cell[data-verified] .pn-email, .pn-email-cell[data-verified] .pn-unmatched { display: none; }
+    .pn-unmatched { color: var(--danger); }
     .pick-edit { align-self: flex-end; padding-bottom: 8px; font-size: 13.5px; white-space: nowrap; }
     .pick-edit[hidden] { display: none; }
     /* A gate's results (segment AD1F, ruling 21): rows that read as Form's summaries. */
