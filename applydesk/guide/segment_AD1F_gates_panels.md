@@ -1,6 +1,6 @@
 # Segment AD1F — Apply Desk: Gates and Panels
 
-**Opened:** 2026-11-13 · **Theme:** Form's *Select people* and each gate picking or making a panel (ruling 19); the Gates page rebuilt as Process and Form are, gate cards beside an Outline; then Panels as its own Setup tab, its format the author's to choose; every move working in the browser, nothing saved · **Related:** `applydesk/guide/todo_master.md` (rulings 4, 14, 19), `applydesk/guide/archive/segment_AD1E_process.md` (the page shape this repeats), `applydesk/spec/applications.md` ("The Form page", "The Process page")
+**Opened:** 2026-11-13 · **Theme:** Form's *Select people* and each gate picking or making a panel (ruling 19); Gates folded into Process, whose items collapse, and Panels in its slot as one table with a column per panel (ruling 20); every move working in the browser, nothing saved · **Related:** `applydesk/guide/todo_master.md` (rulings 4, 14, 19), `applydesk/guide/archive/segment_AD1E_process.md` (the page shape this repeats), `applydesk/spec/applications.md` ("The Form page", "The Process page")
 
 ## Opportunity
 
@@ -20,6 +20,17 @@ Gates is AD1D's placeholder: one plain card per gate, with Gate 1 showing every 
 - **Panels folded into Gates** (ruling 14): several tables under the gate definitions over-stuff the page, and a roster serves Form too.
 - **Panels only on their own page, picked by name elsewhere**: the operator would set up Panels before Form and Gates, going backwards through Setup; the quick create keeps it forward.
 - **Panels before Gates in the row**: a panel is needed by what Form and Gates set up; it is fleshed out after them.
+
+## Decision — amended (ruling 20, 2026-11-13)
+
+After the author's browser check of rungs 2–3: **Gates folds into Process, and Panels takes its slot.** Decisions 1, 3 and 4 above are superseded as follows; 2 and 5 stand.
+
+1. **The Setup row** reads *Process · Form · Panels · Emails*.
+2. **Process's items collapse** (author: "make the sub cards (Form, Gate, Outcome) inside each Stage card collapsible too"). An item's head always shows its kicker and name, and chips: a gate's state and panel (*Panel A · 2 people*, or *No panel*); an outcome's release and the emails it owes; the form's state and emails. An open stage shows its items collapsed; an item alone in its stage, or just added, opens.
+3. **A gate item gains *Evaluators*** (author: "Process > Gate cards will need the same Evaluators menu with + New panel box"): the shared menu and box, the panel's members, *Panel sees* and its progress; a sent gate's menu is fixed. The Outline names each gate's panel and lists *Gate N has no panel* among its problems. The Gates page and tab retire in the same rung, so a panel is set in one place throughout.
+4. **Panels is one table, a column per panel** (author: "one table, one column per panel, with a floating control card to the right"): a row per person (*Name*, *Email*, *Note*), a column per panel ticking who sits on it, its header naming the panel with its count and *Used by*. The control card floats on the right, kept in view: *+ Add person*, *+ Panel*, *Import CSV*, *Export CSV*, the panels with *Copy* and *Retire* (only when unused), the problems, *Save*.
+
+**Rejected:** keeping a Gates page beside Process. It set a gate's panel on a second page, away from the gate's other settings, for a view the Outline gives.
 
 ## Semantics
 
@@ -55,17 +66,22 @@ Taken 2026-11-13 at `fb6785690`.
 
 1. **Plan** (this file), ruling 19, the roadmap row, the README row.
 2. **The panels model and Form's picker.** `Panel` and its sample panels; a gate names its panel; Form's *Chosen from* listing panels with *+ New panel…*, the quick create working in the browser. Chromium tests for the quick create. Must not touch Gates' page or add the Panels tab.
-3. **Gates as gate cards.** The cards and Outline from the sample, collapsing; the panel menu and *+ New panel…* box (shared with Form's); the Outline following the panel chosen. Chromium tests. Last build rung before the Panels ruling: `diff-reviewer` reads the cumulative diff.
-4. **Panels**, once its format is chosen: the tab and its page (scaffold, then wired, as the ruling sizes it), *Edit on Panels →* on Form and Gates. It takes its own read.
+3. **Gates as gate cards.** The cards and Outline from the sample, collapsing; the panel menu and *+ New panel…* box (shared with Form's); the Outline following the panel chosen. Chromium tests. Last build rung before the Panels ruling: `diff-reviewer` reads the cumulative diff. *(Built, #3877; folded into Process by ruling 20.)*
+4. ~~**Panels**, once its format is chosen~~ — taken by ruling 20's rungs:
+4a. **Plan amended**: ruling 20, this section.
+4b. **Process's items collapse.** Heads with their chips, open and shut, an open rule editor kept, the Outline opening an item; Process only. Chromium tests.
+4c. **Evaluators on gate items; Gates retired.** The menu and *+ New panel*, members, sent gates fixed, the Outline naming panels; the Gates tab, page and its tests removed. Chromium tests. `diff-reviewer` reads 4b–4c.
+4d. **Panels scaffold.** The tab in Gates' slot; the table from the sample, a column per panel, and the control card, inert.
+4e. **Panels wired.** Rows and panel columns added, edited and removed with their checks; ticking membership; CSV in and out; *Copy*, *Retire*; *Edit on Panels →* on Form and Process. Chromium tests. `diff-reviewer` reads 4d–4e.
 5. **Iteration rungs**, as the author's browser checks ask.
 6. **Close**, only after the author's browser check.
 
 ## Definition of done
 
 - The Setup row reads Process, Form, Gates, Panels, Emails (test).
-- Gates shows each gate as a card in timeline order with its panel, and the Outline (test).
-- Panels shows each panel as a card with its roster table and *Used by* (test).
-- In Chromium: a panel made on Form and on Gates and chosen; a row added, edited, removed and refused (bad or duplicate email); a CSV imported and exported; a panel copied, and retired only when unused (tests).
+- Process's items collapse, each head with its chips; a gate item carries *Evaluators*; the Gates page is gone (tests).
+- Panels shows one table, a column per panel with its count and *Used by*, and the control card (test).
+- In Chromium: a panel made on Form and on Process and chosen; a row added, edited, removed and refused (bad or duplicate email); a CSV imported and exported; a panel copied, and retired only when unused (tests).
 - The author has used the pages locally and approved them.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py AD1F` exits 0; any warning adjudicated
@@ -75,7 +91,7 @@ Taken 2026-11-13 at `fb6785690`.
 
 ## Open questions
 
-- **The Panels page's format** (the author's): a card per panel holding its table, or everyone in one table with a column per panel (Decision 4).
+- **The Panels page's format**: one table, a column per panel, a floating control card (author, 2026-11-13; ruling 20).
 - **A panel shared across exercises** (an institution's standing pool): the author's, when AD5 stores panels.
 - **`close_check.py` reads only RRW's `guide/`**: this close is checked by hand, as AD1E's was.
 
@@ -86,7 +102,7 @@ Taken 2026-11-13 at `fb6785690`.
 
 ## Doc impact
 
-- `applydesk/spec/applications.md` — the Setup row with Panels; *Chosen from* naming panels and *+ New panel…* in "The Form page"; "The Gates page" and "The Panels page" sections, after "The Process page" (at close).
+- `applydesk/spec/applications.md` — the Setup row with Panels in Gates' slot; *Chosen from* naming panels and *+ New panel…* in "The Form page"; collapsing items and *Evaluators* in "The Process page"; a "The Panels page" section after it (at close).
 - `applydesk/spec/architecture.md` — `sample_data.py`'s row: panels in place of the three rosters (rung 2).
 - `applydesk/guide/todo_master.md` — ruling 19 and the AD1F roadmap row (rung 1); the row deleted at close.
 - `applydesk/README.md` — this plan's row (rung 1), moved to the archive's index at close.

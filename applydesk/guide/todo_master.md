@@ -103,7 +103,8 @@ where a ruling below differs from it, the ruling wins.
       progress and results), *Extract data*. Panels folds into Gates,
       Review becomes Evaluations, Reports becomes Extract data, Setup
       becomes Process. Ruling 13's "Setup and the Timeline" is Process.
-      *Panels came back as its own tab after Gates: ruling 19.*
+      *Panels came back as its own tab after Gates: ruling 19; Gates
+      folded into Process, Panels in its slot: ruling 20.*
     - **Each item goes live on its own**: the form (*Draft → Open →
       Closed*), each gate (*Not ready → Ready → Sent → Results in*), each
       outcome (*Pending → Decided → Released*), then the exercise is
@@ -181,7 +182,8 @@ where a ruling below differs from it, the ruling wins.
     operator is everyone on a local run and the super-admin deployed.
 19. **Panels is its own Setup tab, after Gates** (author, 2026-11-13;
     segment AD1F), superseding ruling 14's fold of Panels into Gates:
-    - The Setup row is *Process · Form · Gates · Panels · Emails*. A
+    - The Setup row is *Process · Form · Gates · Panels · Emails*
+      (*Process · Form · Panels · Emails* since ruling 20). A
       **panel** is a named roster of people kept by Apply Desk (ruling 4):
       an assessment panel, the reviewer pool, the interviewers.
     - **Form and Gates pick a panel** where they need one (a *Select
@@ -195,6 +197,15 @@ where a ruling below differs from it, the ruling wins.
       panel*; a panel is retired only when nothing uses it. A gate already
       sent keeps the roster it was sent with.
 
+20. **Gates folds into Process; Panels takes its slot** (author,
+    2026-11-13; segment AD1F), amending rulings 14 and 19:
+    - The Setup row is *Process · Form · Panels · Emails*. Process's
+      items (the form, a gate, an outcome) collapse inside their stage
+      card, and a gate item picks its panel there (*Evaluators*, with
+      *+ New panel*).
+    - **Panels is one table**: a row per person, a column per panel
+      ticking who sits on it, and a control card floating on the right.
+
 ## MVP roadmap
 
 Segments in order; each gets a plan in this folder when it starts.
@@ -204,7 +215,7 @@ Segments in order; each gets a plan in this folder when it starts.
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
 | **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
-| **AD1F — Gates and Panels** | Form's *Select people* and each gate picking or making a panel (ruling 19); Gates as gate cards beside an Outline; then Panels as its own tab, its format the author's; nothing saved | `applydesk/guide/segment_AD1F_gates_panels.md` |
+| **AD1F — Gates and Panels** | Form's *Select people* and each gate picking or making a panel (ruling 19); Gates folded into Process, whose items collapse, and Panels in its slot as one table with a column per panel (ruling 20); nothing saved | `applydesk/guide/segment_AD1F_gates_panels.md` |
 | AD1G onward — the other new pages | Emails, Evaluations and Extract data built out as working scaffolds, one segment each | After AD1F |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
