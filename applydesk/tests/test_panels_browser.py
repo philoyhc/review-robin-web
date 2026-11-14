@@ -535,3 +535,40 @@ def test_add_new_opens_its_row_at_the_top(page: Page) -> None:
     first = page.locator("[data-pn-row]").first
     assert first.get_attribute("data-fresh") == "1"
     assert first.locator('[data-pn="name"]').evaluate("e => e === document.activeElement")
+
+
+def test_a_rename_waits_for_its_tick_mark(page: Page) -> None:
+    """Ruling 23, a card of actions: a typed name waits for ✓ or Enter;
+    Esc or leaving the box puts the old one back."""
+    page.goto(PANELS)
+    _manage(page)
+    li = page.locator('li[data-panel="panel-b"]')
+    box, ok = li.locator("[data-pn-rename]"), li.locator('[data-pn-act="rename"]')
+    head = page.locator('th[data-panel="panel-b"] [data-pn-name]')
+    assert not ok.is_visible()
+    box.fill("Faculty panel")
+    assert ok.is_visible() and head.inner_text() == "Panel B"
+    box.press("Escape")
+    assert box.input_value() == "Panel B" and not ok.is_visible()
+    box.fill("Faculty panel")
+    page.locator("[data-pn-newname]").focus()  # leaving the box
+    assert box.input_value() == "Panel B" and head.inner_text() == "Panel B"
+    assert page.locator("[data-pn-said]").inner_text() == "Panel B keeps its name."
+    box.fill("Faculty panel")
+    ok.click()
+    assert head.inner_text() == "Faculty panel" and not ok.is_visible()
+    assert page.locator("[data-pn-said]").inner_text() == "Panel B is now Faculty panel."
+
+
+def test_a_rename_left_from_its_tick_mark_is_put_back(page: Page) -> None:
+    """Cold read on rung 7d: tabbing to ✓ and on left the name pending."""
+    page.goto(PANELS)
+    _manage(page)
+    li = page.locator('li[data-panel="panel-b"]')
+    box = li.locator("[data-pn-rename]")
+    box.fill("Faculty panel")
+    box.press("Tab")  # to its ✓: still the rename
+    assert box.input_value() == "Faculty panel"
+    li.locator('[data-pn-act="rename"]').press("Tab")  # and on: leaving it
+    assert box.input_value() == "Panel B"
+    assert not li.locator('[data-pn-act="rename"]').is_visible()
