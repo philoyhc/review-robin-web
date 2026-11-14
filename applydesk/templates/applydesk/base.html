@@ -391,6 +391,14 @@
     .pc-rule { margin-top: 10px; }
     .pc-rule .btn { margin-top: 6px; }
     .pc-item-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+    /* An item's head and body (segment AD1F, ruling 20): shut, the head alone. */
+    .pi-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .pi-texts { flex: 1 1 160px; min-width: 0; }
+    .pi-name { display: block; font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+    .pc-item:not([data-open]) .pi-body { display: none; }
+    .fc .pc-item .fc-toggle::before { content: "▸"; }
+    .fc .pc-item[data-open] .fc-toggle::before { content: "▾"; }
+    .pc-item[data-open] .pi-head { padding-bottom: 6px; border-bottom: 1px solid var(--border-subtle); }
     .pc-adds { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
     .pc-rule-warn { margin: 6px 0 0; color: var(--amber); font-size: 13px; }
     .pc-rule-ed { margin-top: 10px; padding: 10px; border: 1px dashed var(--border-default); border-radius: 6px; background: var(--surface-card); }

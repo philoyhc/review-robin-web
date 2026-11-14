@@ -17,9 +17,9 @@
     </div>
     {# What + Stage and + Form add: the same macros as the server's own. #}
     <template id="pc-new-stage">{{ pc.stage(plan, blank_stage, rule_text, last=False, open=True) }}</template>
-    <template id="pc-new-form">{{ pc.form_item(new=True) }}</template>
-    <template id="pc-new-gate">{{ pc.gate_item(plan, blank_gate, rule_text) }}</template>
-    <template id="pc-new-outcome">{{ pc.outcome_item(plan, blank_outcome, rule_text) }}</template>
+    <template id="pc-new-form">{{ pc.form_item(new=True, open=True) }}</template>
+    <template id="pc-new-gate">{{ pc.gate_item(plan, blank_gate, rule_text, open=True) }}</template>
+    <template id="pc-new-outcome">{{ pc.outcome_item(plan, blank_outcome, rule_text, open=True) }}</template>
   </div>
   <aside class="fb-side">
     <section class="card fb-outline" aria-labelledby="pc-outline-h">
@@ -112,8 +112,29 @@
   }
   // An Outline click opens the stage's card and goes to it, or to the
   // item within it, as Form's Outline goes to a question.
+  // An item opens and shuts inside its stage (ruling 20); shut, its head
+  // still names it and carries its chips.
+  function itemOpen(item, open) {
+    if (open) item.setAttribute("data-open", ""); else item.removeAttribute("data-open");
+    var t = item.querySelector("[data-pi-toggle]");
+    t.setAttribute("aria-expanded", open ? "true" : "false");
+    t.setAttribute("aria-label", (open ? "Collapse " : "Expand ") + item.querySelector("[data-pc-kicker]").textContent);
+  }
+  function heads(card) {
+    card.querySelectorAll(".pc-item").forEach(function (item) {
+      var kind = item.dataset.item;
+      if (kind !== "form") item.querySelector("[data-pi-name]").textContent = itemName(item, kind === "gate" ? "Untitled gate" : "Untitled outcome");
+      var chip = item.querySelector("[data-pi-emails]");
+      if (chip) {
+        var n = item.querySelectorAll('input[data-rel="receipt"]:checked, input[data-rel="reminder"]:checked, input[data-rel$="-email"]:checked').length;
+        chip.textContent = n === 0 ? "No email" : n + (n === 1 ? " email" : " emails");
+      }
+      itemOpen(item, item.hasAttribute("data-open"));
+    });
+  }
   function goTo(card, item) {
     setOpen(card, true);
+    if (item) itemOpen(item, true);
     (item || card).scrollIntoView({ block: item ? "center" : "start" });
     var f = item ? item.querySelector('[data-pc="item-name"]') : null;
     (f || card.querySelector("[data-fc-toggle]")).focus({ preventScroll: true });
@@ -158,6 +179,7 @@
       });
       li.appendChild(sub);
       outline.appendChild(li);
+      heads(card);
     });
     nGates = g; nOuts = o;
     var n = cards().length;
@@ -528,9 +550,14 @@
     live.textContent = "Moved " + labelOf(card) + " to " + (cards().indexOf(card) + 1) + " of " + cards().length + ".";
   });
 
-  list.addEventListener("change", function (e) { ruleEvent(e); });
+  list.addEventListener("change", function (e) {
+    if (e.target.matches("input[data-rel]")) { heads(e.target.closest(".pc")); return; }
+    ruleEvent(e);
+  });
   list.addEventListener("click", function (e) {
     if (ruleEvent(e)) return;
+    var pt = e.target.closest("[data-pi-toggle]");
+    if (pt) { var it = pt.closest(".pc-item"); itemOpen(it, !it.hasAttribute("data-open")); return; }
     var card = e.target.closest(".pc");
     if (!card) return;
     var a = e.target.closest("[data-fc-act]");
