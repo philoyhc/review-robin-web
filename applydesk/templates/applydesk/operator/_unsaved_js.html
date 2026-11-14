@@ -1,0 +1,45 @@
+{# Unsaved changes on a builder of cards (ruling 23, segment AD1F rung
+   7b): Form's and Process's one Save, in the Outline that stays in view,
+   gains a marker once anything is changed, and leaving with it showing
+   asks first. A change is an edit to a field or a move that adds,
+   replicates or removes; opening a card, a preview or the + New panel box
+   is not. A move (drag or arrow keys), a toggle (Required, Choose
+   one or any) and the rule editor's own buttons change no field, so the
+   card lists and those attributes are watched too, once the page has
+   drawn itself. Nothing is saved until AD2, so the marker stays until a
+   reload. #}
+<script>
+(function () {
+  document.querySelectorAll("[data-unsaved-root]").forEach(function (root) {
+    var mark = root.querySelector("[data-unsaved]"), dirty = false;
+    // Neither a preview's answers nor a panel box not yet created.
+    function counts(el) { return !el.closest("#fb-preview, [data-newpanel]"); }
+    function changed() {
+      if (dirty) return;
+      dirty = true;
+      mark.hidden = false;
+    }
+    root.addEventListener("input", function (e) { if (counts(e.target)) changed(); });
+    root.addEventListener("change", function (e) { if (counts(e.target)) changed(); });
+    root.addEventListener("click", function (e) {
+      var a = e.target.closest("[data-fc-act], [data-pc-act], [data-pr-act]");
+      if (!a || !counts(a)) return;
+      var act = a.dataset.fcAct || a.dataset.pcAct || a.dataset.prAct;
+      if (act !== "rule") changed();  // the rule editor opening is not a change
+    });
+    // Watched from when the page has drawn itself, so drawing is not a
+    // change: the card lists' order and membership, a toggle's state, a
+    // rule rewritten by its editor's buttons.
+    document.addEventListener("DOMContentLoaded", function () {
+      var watch = new MutationObserver(function (records) {
+        if (records.some(function (m) { return counts(m.target); })) changed();
+      });
+      root.querySelectorAll("#fb-cards, #pc-cards").forEach(function (list) { watch.observe(list, { childList: true }); });
+      watch.observe(root, { subtree: true, attributes: true, attributeFilter: ["aria-pressed", "data-rule"] });
+    });
+    window.addEventListener("beforeunload", function (e) {
+      if (dirty) { e.preventDefault(); e.returnValue = ""; }
+    });
+  });
+})();
+</script>

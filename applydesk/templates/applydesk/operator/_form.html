@@ -3,7 +3,7 @@
    browser and nothing is saved until AD2. #}
 {% import "applydesk/operator/_form_cards.html" as fc %}
 {% set single = (cards | selectattr("kind", "equalto", "field") | list | length) == 1 %}
-<div class="fb-split" data-form-builder data-exercise="{{ exercise.public_id }}">
+<div class="fb-split" data-form-builder data-unsaved-root data-exercise="{{ exercise.public_id }}">
   <div class="fb-main">
     {# The form's own title and description: collapsible, never moved or
        deleted. #}
@@ -43,6 +43,7 @@
       <div class="btnrow">
         <button type="button" class="btn btn-secondary" data-fb-preview>Preview</button>
         <button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>
+        <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
       </div>
       <p class="muted fb-pv-note"><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form/preview') }}" target="applydesk-preview-{{ exercise.public_id }}" rel="opener" data-fb-preview-tab>Open the preview in a new tab</a></p>
     </section>
@@ -50,6 +51,7 @@
 </div>
 {% include "applydesk/operator/_form_draw.html" %}
 {% include "applydesk/operator/_panel_pick_js.html" %}
+{% include "applydesk/operator/_unsaved_js.html" %}
 <script>
 // Segment AD1B: the Form page's moves, in the browser only; a reload
 // restores the sample form. Collapse and expand, the type menu, the

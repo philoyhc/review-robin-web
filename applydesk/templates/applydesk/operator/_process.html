@@ -10,7 +10,7 @@
 {% set outs = plan.columns | rejectattr("via", "defined") | list %}
 {% set issues = stage_problems(plan.stages) %}
 <script type="application/json" id="pc-pools">{{ people | tojson }}</script>
-<div class="fb-split" data-process>
+<div class="fb-split" data-process data-unsaved-root>
   <div class="fb-main">
     <p class="muted pc-intro">The exercise's timeline, stage by stage. A stage holds the application form, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Applications applies them.</p>
     <div class="fb-cards" id="pc-cards">
@@ -42,11 +42,13 @@
       <p class="visually-hidden" data-pc-live aria-live="polite"></p>
       <div class="btnrow">
         <button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>
+        <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
       </div>
     </section>
   </aside>
 </div>
 {% include "applydesk/operator/_panel_pick_js.html" %}
+{% include "applydesk/operator/_unsaved_js.html" %}
 <script>
 // Segment AD1E rung 3: the stage card moves, in the browser only; a reload
 // restores the sample. Collapse and expand; the name and dates feeding the
