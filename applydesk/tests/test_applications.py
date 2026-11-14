@@ -111,7 +111,7 @@ def test_every_sample_s_stages_keep_ruling_15_s_shape() -> None:
 
 
 def test_a_stage_may_not_hold_the_application_and_a_gate() -> None:
-    gate = stages.Gate("g1", 1, "Panel", "RRW", "Score")
+    gate = stages.Gate("g1", 1, "Panel", "RRW")
     both = (stages.Stage(1, "", "", (gate,), form=True),)
     two = (
         stages.Stage(1, "A", "", form=True),
@@ -213,8 +213,7 @@ def test_a_rule_reads_as_a_line() -> None:
         9,
         "X",
         "RRW",
-        "",
-        stages.Rule(
+        rule=stages.Rule(
             (("last", "", "le", "2"), ("ent", "g1", "is", "Entered")), "Entered", "Not entered"
         ),
     )
@@ -228,7 +227,7 @@ def test_a_rule_reads_as_the_process_page_s_script_does_at_the_edges() -> None:
     """A column gone, one unnamed, a gate with no measure and a blank
     decision read as `_process.html`'s `condText` and `ruleText` write them."""
     plan = stages.plan_of(EX)
-    blank = stages.Gate("gb", 9, "", "", "")
+    blank = stages.Gate("gb", 9, "", "")
     rule = stages.Rule(
         (("res", "gb", "ge", "3"), ("ent", "gone", "is", "Entered"), ("out", "o1", "is", "")),
         "",

@@ -812,3 +812,70 @@ def test_panels_says_a_sent_gate_keeps_its_roster(client: TestClient) -> None:
     assert "Gate 1 sent: changes apply from its next send" in text
     item = text[text.index('<li data-panel="pool">') :]
     assert "sent" not in item[: item.index("</li>")]  # the form's pool: no gate
+
+
+# --- Segment AD1F rung 5b: a gate's results (ruling 21) ---
+F, R = stages.Field, stages.GateResult
+LIKERT = F("integer", "1", "5", "1")
+
+
+@pytest.mark.parametrize(
+    ("result", "summary"),
+    [
+        (R("r1", "Rating", LIKERT, "mean"), "Integer 1 to 5, step 1 · Mean → Decimal 1 to 5"),
+        (
+            R("r1", "Rating", LIKERT, "median", at_least=2),
+            "Integer 1 to 5, step 1 · Median, from 2 or more → Decimal 1 to 5",
+        ),
+        (R("r1", "Low", LIKERT, "min"), "Integer 1 to 5, step 1 · Lowest → Integer 1 to 5, step 1"),
+        (R("r1", "Total", F("decimal", "0"), "sum"), "Decimal at least 0 · Sum → Decimal"),
+        (R("r1", "N", F("string"), "count"), "String · Count of responses → Integer, from 0"),
+        (
+            R("r1", "Rec", F("list", options="Fund, Do not fund"), "share", "Fund"),
+            "List: Fund, Do not fund · Share choosing Fund → Decimal 0 to 100 (%)",
+        ),
+        (
+            R("r1", "Rec", F("list", options="A,B"), "mode"),
+            "List: A, B · Most common → List: A, B",
+        ),
+        (
+            R("r1", "Notes", F("string", max="500"), "join"),
+            "String, up to 500 characters · All, joined → String, for reading",
+        ),
+        (
+            R("r1", "Score", F("decimal", "0", "10", "0.5"), "entered"),
+            "Decimal 0 to 10, step 0.5 · Entered here → Decimal 0 to 10, step 0.5",
+        ),
+        (
+            R("r1", "X", F("list"), "mode"),
+            "List, no options yet · Most common → List, no options yet",
+        ),
+    ],
+)
+def test_a_result_reads_its_field_derivation_and_type(
+    result: stages.GateResult, summary: str
+) -> None:
+    assert stages.result_summary(result) == summary
+
+
+def test_every_derivation_a_field_allows_is_known() -> None:
+    known = dict(stages.DERIVATIONS)
+    for kind, allowed in stages.ALLOWED.items():
+        assert kind in dict(stages.FIELD_TYPES)
+        assert all(d in known for d in allowed)
+
+
+def test_a_gate_item_lists_its_results_and_what_review_robin_asks(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
+    g1 = text[text.index('data-key="g1"') : text.index('data-key="g2"')]
+    assert re.findall(r'class="pr-name">([^<]+)<', g1) == ["Rating", "Comments"]
+    assert "Integer 1 to 5, step 1 · Mean, from 2 or more → Decimal 1 to 5" in g1
+    assert "data-pi-results>2 results<" in g1
+    assert (
+        "For Review Robin, each evaluator answers: <strong>Rating</strong> (Integer 1 to 5,"
+        " step 1); <strong>Comments</strong> (String, up to 2000 characters)."
+    ) in g1
+    # A gate whose results are entered here asks Review Robin nothing.
+    draft = client.get(f"/applydesk/operator/exercises/{DRAFT}/process").text
+    assert "Decimal 0 to 10, step 0.5 · Entered here" in draft
+    assert "For Review Robin" not in draft

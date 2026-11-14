@@ -244,7 +244,8 @@
     var v = outcome.querySelector('[data-pc="values"]');
     return (v ? v.value : "").split(",").map(function (x) { return x.trim(); }).filter(Boolean);
   }
-  function measureOf(gate) { var m = gate.querySelector('[data-pc="measure"]'); return (m && m.value.trim()) || "Result"; }
+  // A gate's headline result, as a rule reads it (ruling 21): Result 1's name.
+  function measureOf(gate) { var r = gate.querySelector("[data-result]"); return (r && r.dataset.name) || "Result"; }
   function nameOf(item) { return itemName(item, item.dataset.item === "gate" ? "Untitled gate" : "Untitled outcome"); }
   // The gates an outcome reads: those since the previous outcome.
   function scopeOf(outcome) {
@@ -652,7 +653,7 @@
       changed();
       return;
     }
-    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-name"], [data-pc="measure"], [data-pc="values"]')) changed();
+    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-name"], [data-pc="values"]')) changed();
   });
   changed();
 })();
