@@ -58,10 +58,10 @@
         <th>Status<span class="ap-count" data-ap-count="status"></span></th>
         {% for r in plan.stages %}{% for c in r.columns %}
           {% if c.via is defined %}
-          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}" data-measure="{{ c.measure }}"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span></th>
+          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span></th>
           {% else %}
           <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-scope="{{ scope(plan, c) | map(attribute='key') | join('|') }}" data-weights="{% for k, w in c.weights %}{{ k }}:{{ w }}{{ '|' if not loop.last }}{% endfor %}" data-number="Outcome {{ c.number }}" data-first="{{ c.values[0] }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
-            {% if c.weights %}<span class="ap-weights">{% for k, w in c.weights %}{% for g in cols if g.key == k %}{{ g.label }} {{ (w * 100) | round | int }}%{% endfor %}{{ " · " if not loop.last }}{% endfor %}</span>{% endif %}
+            {% if c.weights %}<span class="ap-weights">{% for k, w in c.weights if w %}{{ result_label(k) }} {{ (w * 100) | round | int }}%{{ " · " if not loop.last }}{% endfor %}</span>{% endif %}
             {% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>
             <label class="ap-rel"><input type="checkbox" data-ap-release="{{ c.label }}" aria-label="Released: {{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
             <span class="ap-relnote{{ ' ap-relnote-on' if c.released }}" data-ap-relnote>{{ c.released or "Not yet" }}</span>
@@ -82,7 +82,7 @@
           {# A submitted application's outcomes are always settable, "—"
              until decided, so a hand change can advance it (Codex). #}
           {% if not cell.value and (c.via is defined or a.state != "Submitted") %}<span class="muted">—</span>
-          {% elif c.via is defined %}<button type="button" class="ap-adm" data-ap-adm data-v="{{ cell.value }}"{% if cell.result is not none %} data-result="{{ cell.result }}"{% endif %} aria-label="{{ c.label }} for {{ a.public_id }}: {{ 'no status yet' if cell.value == '—' else cell.value }}">{{ cell.value }}</button>{% if cell.note %}<span class="ap-note">{{ cell.note }}</span>{% endif %}
+          {% elif c.via is defined %}<button type="button" class="ap-adm" data-ap-adm data-v="{{ cell.value }}"{% if cell.result is not none %} data-result="{{ cell.result }}"{% endif %}{% for k, v in cell.extra %} data-{{ k }}="{{ v }}"{% endfor %} aria-label="{{ c.label }} for {{ a.public_id }}: {{ 'no status yet' if cell.value == '—' else cell.value }}">{{ cell.value }}</button>{% if cell.note %}<span class="ap-note">{{ cell.note }}</span>{% endif %}
           {% else %}<span class="ap-ocw"><select class="ap-oc" data-ap-oc data-v="{{ cell.value }}" aria-label="{{ c.label }} for {{ a.public_id }}">
               <option value=""{% if not cell.value %} selected{% endif %}>—</option>
               <option{% if cell.value == "Pending" %} selected{% endif %}>Pending</option>
@@ -251,6 +251,13 @@
   var proposal = root.querySelector("[data-ap-proposal]");
   var pending = [], opener = null;
   function cellOf(r, key) { return r.querySelector('[data-cell="' + key + '"] [data-v]'); }
+  // A rule's or a weight's key, "g1.r2": the gate's cell and the result
+  // it names (ruling 21); a bare gate key reads its first result.
+  function gateKey(key) { return key.split(".")[0]; }
+  function resultAt(el, key) {
+    var r = key.split(".")[1] || "r1";
+    return el ? (r === "r1" ? el.dataset.result : el.dataset[r]) : undefined;
+  }
   function idOf(r) { return r.querySelector(".ap-id code").textContent; }
   function whoOf(r) { return r.querySelector(".ap-who strong").textContent; }
   function choices(key) {
@@ -327,11 +334,13 @@
     if (!spec) return { known: false };
     var total = 0, weight = 0, unknown = false;
     spec.split("|").forEach(function (part) {
-      var kw = part.split(":"), el = cellOf(r, kw[0]), w = parseFloat(kw[1]);
-      var v = val ? val(r, kw[0]) : el && el.dataset.v;
+      var kw = part.split(":"), g = gateKey(kw[0]), el = cellOf(r, g), w = parseFloat(kw[1]);
+      if (!w) return;  // weighed at 0%: no part in it
+      var v = val ? val(r, g) : el && el.dataset.v;
       if (!el || v === "Not entered") return;
-      if (v === "—" || el.dataset.result === undefined) { unknown = true; return; }
-      total += w * parseFloat(el.dataset.result);
+      var x = resultAt(el, kw[0]);
+      if (v === "—" || x === undefined) { unknown = true; return; }
+      total += w * parseFloat(x);
       weight += w;
     });
     if (unknown) return { known: false };
@@ -377,10 +386,10 @@
         return v === want;
       }
       if (kind === "res") {
-        var g = val(r, key), el = cellOf(r, key);
+        var g = val(r, gateKey(key)), el = cellOf(r, gateKey(key)), x = resultAt(el, key);
         if (g === null || g === "Not entered") return false;
-        if (g === "—" || el.dataset.result === undefined) return null;
-        return cmp(parseFloat(el.dataset.result));
+        if (g === "—" || x === undefined) return null;
+        return op === "is" ? x === want : cmp(parseFloat(x));  // a list is matched (ruling 21)
       }
       var c = combinedOf(r, okey, val);  // comb
       return c.known ? cmp(c.value) : null;  // as stages.combined: unknown

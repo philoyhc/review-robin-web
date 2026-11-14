@@ -82,6 +82,11 @@ Taken 2026-11-13 at `fb6785690`.
 - **Reads: one**, cumulative on rungs 2–3 (base `8b4fa6484`, main after the plan): one defect, the picker restoring a stale panel after Form's type change, also found by Codex on #3876 and fixed there; on Gates, a link to Process on the card and assessment-panel membership kept once (in `PANELS`). The quick create refusing a repeated email, where a table would skip it, is recorded in Semantics. Rung 4 takes its own read.
 - **Ruling 20's rungs** (#3878 plan, 4b items collapse, 4c Evaluators on Process and Gates retired). **Reads: one**, cumulative on 4b–4c (base `b40d21de2`): one defect, a replicated stage copying its gates' sent lock and its outcome's release, so the copy's gates could never take a panel; fixed in 4c. Also fixed: an item left alone opening, the Outline's Form entry focusing the item, a docstring. The Outline's panel names and *has no panel* are the script's, as rule problems are.
 - **Panels** (4d scaffold, 4e wired). **Reads: one**, cumulative on 4d–4e (base `a3c4a82cc`): one defect, Form's type change leaving *Edit on Panels →* beside Institution-wide; Panels not saying a sent gate keeps its roster (Semantics); also a name taken from a later panel, an unclosed CSV quote refused, exported cells guarded against formulas, focus after Retire and the last Remove, and the tests the read found thin. All fixed in 4e.
+- **Ruling 21's rungs** (#3883 plan, #3884 5b, 5c, 5d). **Reads: one**, cumulative on 5b–5d (base `a8ce84dfc`). Three defects, fixed in 5c:
+  - a replicated stage kept its sent gates' lock on results, *Runs as* and *+ Result*;
+  - *Runs as* did not redraw rules and weights;
+  - a removed result's key was reused, re-binding a rule silently.
+- **Also from the 5b–5d read.** Fixed: a new gate's first result unnumbered; a share's option reset as its options were retyped; the server and the script disagreeing on a share with none chosen; a 0% weight's skip untested; a bare weight key drawn as 0; leftovers. Ruled to the letter: *count* is a numeric field's alone and a string is read only; *sum*'s type gives n × its bounds. Latent, for AD2: a list headline (Result 1) has no value on Applications, whose cells carry it as a number.
 
 ## PR ladder
 

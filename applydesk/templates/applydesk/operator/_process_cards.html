@@ -152,11 +152,12 @@
   <label class="fc-l">Values<input class="fc-in" data-pc="values" value="{{ o.values | join(', ') }}" placeholder="Comma-separated, e.g. Shortlisted, Not shortlisted"></label>
   {# Its combined result: weights over the gates in its scope, those since
      the previous outcome (ruling 13); redrawn by the script as gates move. #}
-  <div class="pc-row pc-weights" data-pc-weights{% if o.weights | length < 2 %} hidden{% endif %}>
-    <span class="fc-l pc-full">Combined result: a weighted average of the gates before it</span>
-    {% for k, w in o.weights %}{% for g in plan.columns if g.key == k %}
-    <label class="fc-l pc-narrow"><span data-w-name>{{ g.label }}</span><input class="fc-in" data-w-key="{{ k }}" value="{{ (w * 100) | round | int }}" inputmode="numeric" aria-label="{{ g.label }}, percent"></label>
-    {% endfor %}{% endfor %}
+  {% set wrows = weight_rows(plan, o) if o.key else () %}
+  <div class="pc-row pc-weights" data-pc-weights{% if o.key %} data-keys="{{ wrows | map(attribute=0) | join('|') }}"{% endif %}{% if wrows | length < 2 %} hidden{% endif %}>
+    <span class="fc-l pc-full">Combined result: a weighted average of the gates' numeric results before it</span>
+    {% for k, pct in wrows %}
+    <label class="fc-l pc-narrow"><span data-w-name>{{ result_label(k) }}</span><input class="fc-in" data-w-key="{{ k }}" value="{{ pct }}" inputmode="numeric" aria-label="{{ result_label(k) }}, percent"></label>
+    {% endfor %}
   </div>
   {{ rule_box(plan, o, rule_text) }}
   {# What its release does, per audience (author, 2026-11-13): the timeline

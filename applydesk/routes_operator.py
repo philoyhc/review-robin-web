@@ -108,9 +108,14 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         submitted_rank=stages.submitted_rank,
         rule_text=stages.rule_text,
         rule_json=stages.rule_json,
+        weight_rows=stages.weight_rows,
+        result_label=functools.partial(stages.result_label, stages.plan_of(exercise.public_id)),
         stage_problems=stages.problems,
         blank_stage=stages.Stage(0, "", ""),
-        blank_gate=stages.Gate("", 0, "", "RRW"),
+        # A new gate starts with one blank result, as a new form a String card.
+        blank_gate=stages.Gate(
+            "", 0, "", "RRW", (stages.GateResult("r1", "", stages.Field(), "mean"),)
+        ),
         result_summary=stages.result_summary,
         result_type=stages.result_type,
         field_types=stages.FIELD_TYPES,

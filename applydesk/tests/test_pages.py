@@ -352,7 +352,9 @@ def test_process_is_a_stack_of_stage_cards(client: TestClient) -> None:
     items = re.findall(r'<div class="pc-item" data-item="(\w+)"', text)
     assert items == ["form", "gate", "gate", "outcome", "gate", "outcome", "outcome"]
     assert "Combined ≥ 4.2 → Shortlisted, else Not shortlisted" in text
-    assert 'value="30" inputmode="numeric" aria-label="Peer Review, percent"' in text
+    assert 'value="30" inputmode="numeric" aria-label="Rating at Peer Review, percent"' in text
+    # Every numeric result in scope is drawn; one not weighed reads 0.
+    assert 'data-w-key="g2.r2" value="0"' in text
     assert "Decided by hand" in text  # Final results
     # Ruling 16: an outcome ticks whom it emails; Emails holds the template.
     assert "data-rel-template" not in text
@@ -892,3 +894,76 @@ def test_a_gate_item_lists_its_results_and_what_review_robin_asks(client: TestCl
     # Its derivation menu offers Entered here alone.
     at = draft.index('data-r="derive"')
     assert draft[at : draft.index("</select>", at)].count("<option") == 1
+
+
+# --- Segment AD1F rung 5d: rules and weights read a named result (ruling 21) ---
+def test_a_key_names_a_gate_s_result() -> None:
+    plan = stages.plan_of(EX)
+    assert stages.split_key("g2.r2") == ("g2", "r2")
+    assert stages.split_key("g2") == ("g2", "r1")  # a bare gate reads its first
+    assert stages.result_label(plan, "g2.r2") == "Recommendation at Faculty Panel Review"
+    assert stages.result_label(plan, "g2.r9") == "Result at Faculty Panel Review"
+    assert stages.result_label(plan, "gone.r1") == "Result at (removed)"
+    o2 = next(c for c in plan.columns if c.key == "o2")
+    assert stages.rule_text(plan, o2) == (
+        "Score at Interview ≥ 4.0 → Finalist, else Not a finalist"
+    )
+    list_rule = stages.Rule((("res", "g2.r2", "is", "Fund"),), "Finalist", "Not a finalist")
+    with_list = stages.Outcome("ox", 9, "X", (), "", "", rule=list_rule)
+    assert stages.rule_text(plan, with_list).startswith(
+        "Recommendation at Faculty Panel Review is Fund"
+    )
+
+
+def test_what_a_rule_may_do_with_a_result() -> None:
+    assert stages.comparable(R("r1", "x", LIKERT, "mean")) == "number"
+    assert stages.comparable(R("r1", "x", F("list", options="A"), "share", "A")) == "number"
+    assert stages.comparable(R("r1", "x", F("list", options="A"), "mode")) == "list"
+    assert stages.comparable(R("r1", "x", F("string"), "count")) == "number"
+    assert stages.comparable(R("r1", "x", F("string"), "join")) == ""
+    assert stages.comparable(R("r1", "x", F("decimal"), "entered")) == "number"
+
+
+def test_a_combined_result_reads_named_results_and_skips_a_0_weight() -> None:
+    plan = stages.plan_of(EX)
+    o1 = next(c for c in plan.columns if c.key == "o1")
+    assert isinstance(o1, stages.Outcome)
+    row = next(r for r in plan.rows if r.cells["g2"].extra)
+    g1, g2 = row.cells["g1"].result, row.cells["g2"].result
+    assert g1 is not None and g2 is not None
+    assert stages.combined(row, o1) == round(0.3 * g1 + 0.7 * g2, 2)
+    share = float(dict(row.cells["g2"].extra)["r2"])
+    on_share = stages.Outcome("ox", 9, "X", (), "", "", (("g2.r2", 1.0), ("g1.r1", 0.0)))
+    assert stages.combined(row, on_share) == share
+    # Process draws every numeric result in scope, 0 for one not weighed.
+    assert stages.weight_rows(plan, o1) == (("g1.r1", 30), ("g2.r1", 70), ("g2.r2", 0))
+
+
+def test_applications_carries_a_gate_s_other_results(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}/applications").text
+    assert re.search(r'data-result="[\d.]+" data-r2="\d+"', text)
+    assert "Rating at Peer Review 30% · Score at Faculty Panel Review 70%" in text
+
+
+def test_a_0_weight_on_an_unknown_result_leaves_the_combined_result_known() -> None:
+    """The 5b-5d cold read: only an unknown result tells the skip apart."""
+    app = sample_data.applications_of(EX)[0]
+    row = stages.Row(
+        app,
+        {"g1": stages.Cell("Entered", "", None), "g2": stages.Cell("Entered", "", 4.0)},
+    )
+    o = stages.Outcome("ox", 9, "X", (), "", "", (("g2.r1", 1.0), ("g1.r1", 0.0)))
+    assert stages.combined(row, o) == 4.0
+    # A bare key, "g1", is drawn as its first result, as combined reads it.
+    import dataclasses
+
+    plan = stages.plan_of(EX)
+    o1 = next(c for c in plan.columns if c.key == "o1")
+    assert isinstance(o1, stages.Outcome)
+    bare = dataclasses.replace(o1, weights=(("g1", 0.3), ("g2", 0.7)))
+    swapped = tuple(
+        dataclasses.replace(st, columns=tuple(bare if c.key == "o1" else c for c in st.columns))
+        for st in plan.stages
+    )
+    with_bare = stages.Plan(swapped, plan.rows)
+    assert stages.weight_rows(with_bare, bare) == (("g1.r1", 30), ("g2.r1", 70), ("g2.r2", 0))

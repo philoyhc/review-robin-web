@@ -289,9 +289,12 @@ def test_an_outcome_s_weights_follow_the_gates_before_it(page: Page) -> None:
     page.goto(PAGE)
     o1 = _item(page, "o1")
     weights = o1.locator("[data-pc-weights]")
+    # Every numeric result of its gates (ruling 21); the recommendation's
+    # share is not weighed.
     assert weights.locator("[data-w-key]").evaluate_all("els => els.map(e => e.value)") == [
         "30",
         "70",
+        "0",
     ]
     review = _cards(page).nth(1)
     _open_all(review)
@@ -300,7 +303,12 @@ def test_an_outcome_s_weights_follow_the_gates_before_it(page: Page) -> None:
         "Extra"
     )
     names = weights.locator("[data-w-name]").all_inner_texts()
-    assert names == ["Peer Review", "Faculty Panel Review", "Extra"]
+    assert names == [
+        "Rating at Peer Review",
+        "Score at Faculty Panel Review",
+        "Recommendation at Faculty Panel Review",
+        "Untitled result at Extra",
+    ]
     assert weights.locator("[data-w-key]").evaluate_all("els => els.map(e => e.value)")[:2] == [
         "30",
         "70",
@@ -365,13 +373,16 @@ def test_a_replica_s_rules_and_weights_read_its_own_gates(page: Page) -> None:
     assert out.locator("[data-w-key]").evaluate_all("els => els.map(e => e.value)") == [
         "30",
         "70",
+        "0",
     ]
-    gate_keys = copy.locator('.pc-item[data-item="gate"]').evaluate_all(
+    g = copy.locator('.pc-item[data-item="gate"]').evaluate_all(
         "els => els.map(e => e.dataset.key)"
     )
-    assert (
-        out.locator("[data-w-key]").evaluate_all("els => els.map(e => e.dataset.wKey)") == gate_keys
-    )
+    assert out.locator("[data-w-key]").evaluate_all("els => els.map(e => e.dataset.wKey)") == [
+        f"{g[0]}.r1",
+        f"{g[1]}.r1",
+        f"{g[1]}.r2",
+    ]
     assert not out.locator("[data-rule-warn]").is_visible()
 
 
@@ -385,9 +396,10 @@ def test_weights_say_when_their_gates_change_and_check_the_total(page: Page) -> 
         "30",
         "70",
         "0",
+        "0",
     ]
     assert weights.locator("[data-w-note]").inner_text() == (
-        "The gates before it changed: check these weights."
+        "The results before it changed: check these weights."
     )
     weights.locator("[data-w-key]").first.fill("20")
     assert weights.locator("[data-w-note]").inner_text() == ""
@@ -468,13 +480,15 @@ def test_an_open_editor_follows_gates_added_and_renamed(page: Page) -> None:
     review.locator('.pc-item[data-item="gate"]').nth(2).locator('[data-pc="item-name"]').fill(
         "Extra"
     )
-    gate = o1.locator('.pc-cond select[aria-label="Gate"]')
-    assert gate.evaluate("e => [...e.options].map(o => o.text)") == [
-        "Peer Review",
-        "Faculty Panel Review",
-        "Extra",
+    result = o1.locator('.pc-cond select[aria-label="Result"]')
+    # A gate's results a rule can read (ruling 21): not its comments.
+    assert result.evaluate("e => [...e.options].map(o => o.text)") == [
+        "Rating at Peer Review",
+        "Score at Faculty Panel Review",
+        "Recommendation at Faculty Panel Review",
+        "Untitled result at Extra",
     ]
-    assert gate.input_value() == "g1"  # its rule still reads the gate it read
+    assert result.input_value() == "g1.r1"  # its rule still reads the result it read
 
 
 def test_the_outline_opens_and_goes_to_a_stage_or_its_item(page: Page) -> None:
@@ -841,3 +855,42 @@ def test_a_replica_keeps_three_results_at_most(page: Page) -> None:
     add = copy.locator('[data-pr-act="add"]')
     assert add.is_disabled() and add.get_attribute("title") == "A gate yields three results at most"
     assert copy.locator("[data-result]").count() == 3
+
+
+# --- Segment AD1F rung 5d: rules read a named result (ruling 21) ---
+def test_a_rule_matches_a_list_result_and_names_one_it_cannot_read(page: Page) -> None:
+    page.goto(PAGE)
+    review = _cards(page).nth(1)
+    _open(review)
+    review.locator('[data-pc-act="gate"]').click()
+    gate = review.locator('.pc-item[data-item="gate"]').nth(2)
+    gate.locator('[data-pc="item-name"]').fill("Vote")
+    row = gate.locator("[data-result]").first
+    if row.locator("[data-pr-ed]").is_hidden():
+        row.locator("[data-pr-toggle]").click()
+    row.locator('[data-r="name"]').fill("Verdict")
+    row.locator('[data-r="type"]').select_option("list")
+    row.locator('[data-r="options"]').fill("Yes, No")
+    row.locator('[data-r="derive"]').select_option("mode")
+    o1 = _item(page, "o1")
+    o1.locator('[data-pc-act="rule"]').click()
+    first = o1.locator(".pc-cond").first
+    first.locator("select").first.select_option("res")
+    first.locator('select[aria-label="Result"]').select_option(label="Verdict at Vote")
+    assert first.locator('select[aria-label="Comparison"] option').all_text_contents() == ["is"]
+    first.locator('select[aria-label="Value"]').select_option("No")
+    assert _line(o1).startswith("Verdict at Vote is No")
+    # Turned into a string, it can no longer be read: the rule says so.
+    row.locator('[data-r="type"]').select_option("string")
+    assert "reads Verdict at Vote, which a rule cannot compare" in (
+        o1.locator("[data-rule-warn]").inner_text()
+    )
+
+
+def test_a_new_gate_s_first_result_is_numbered(page: Page) -> None:
+    page.goto(PAGE)
+    review = _cards(page).nth(1)
+    _open(review)
+    review.locator('[data-pc-act="gate"]').click()
+    gate = review.locator('.pc-item[data-item="gate"]').nth(2)
+    assert gate.locator("[data-pr-n]").all_text_contents() == ["1"]

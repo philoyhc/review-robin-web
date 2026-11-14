@@ -32,7 +32,8 @@ class Rule:
     ``when`` holds conditions that must all hold, each (kind, key, op,
     value): ("status", "", "is", "Submitted"); ("last", "", "le", "1"),
     one of the applicant's last N submitted; ("out", outcome, "is",
-    value); for an outcome only, ("res", gate, "ge"/"lt", "4.0") on a gate
+    value); for an outcome only, ("res", "gate.result", "ge"/"lt", "4.0") on
+    a gate's numeric result, or "is" a value of its list result (ruling 21), on a gate
     in its scope, ("ent", gate, "is", "Entered") and ("comb", "", "ge"/"lt",
     "4.2") on its combined result. A gate never reads another gate."""
 
@@ -113,7 +114,8 @@ class Gate:
 
     @property
     def measure(self) -> str:
-        """Its headline result's name, as a rule reads it ("" for none)."""
+        """Its headline result's name ("" for none): Result 1, shown under
+        its chip on Applications; rules name a result by key (ruling 21)."""
         return self.results[0].name if self.results else ""
 
 
@@ -154,6 +156,9 @@ class Cell:
     note: str = ""  # under the chip: a gate's result, a reason, a date
     result: float | None = None  # a gate's finished result, which a rule reads
     by_hand: bool = False  # set by hand, overriding the column's rule
+    # A gate's other finished results, by result key ("r2", "r3"); its
+    # first is ``result`` (ruling 21). As text: a share's percent, a list's value.
+    extra: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -226,7 +231,7 @@ _O1 = Outcome(
     ("Shortlisted", "Not shortlisted"),
     "10 Nov",
     "10 Nov · to applicants",
-    (("g1", 0.3), ("g2", 0.7)),
+    (("g1.r1", 0.3), ("g2.r1", 0.7)),
     Rule((("comb", "", "ge", "4.2"),), "Shortlisted", "Not shortlisted"),
 )
 _G3 = Gate(
@@ -245,8 +250,8 @@ _O2 = Outcome(
     ("Finalist", "Not a finalist"),
     "24 Nov",
     "",
-    (("g3", 1.0),),
-    Rule((("res", "g3", "ge", "4.0"),), "Finalist", "Not a finalist"),
+    (("g3.r1", 1.0),),
+    Rule((("res", "g3.r1", "ge", "4.0"),), "Finalist", "Not a finalist"),
 )
 _O3 = Outcome("o3", 3, "Final results", ("Awarded", "Waitlisted", "Not awarded"), "12 Dec", "")
 
@@ -303,7 +308,7 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
                     ("Awarded", "Not awarded"),
                     "15 Dec",
                     "",
-                    (("g1", 1.0),),
+                    (("g1.r1", 1.0),),
                 ),
             ),
         ),
@@ -368,7 +373,11 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
             rows.append(Row(a, cells))
             continue
         cells["g1"] = Cell("Entered", f"Rating {rating[i]} · 3 of 3", rating[i])
-        cells["g2"] = Cell("Entered", f"Score {score[i]} · 4 of 4", score[i])
+        # The faculty panel's recommendations: of four, how many said Fund.
+        funds = random.Random(f"recommend {i}").randint(0, 4) * 25
+        cells["g2"] = Cell(
+            "Entered", f"Score {score[i]} · 4 of 4", score[i], extra=(("r2", str(funds)),)
+        )
         mixed = round(0.3 * rating[i] + 0.7 * score[i], 2)
         shortlisted = mixed >= 4.2
         cells["o1"] = Cell("Shortlisted" if shortlisted else "Not shortlisted", "10 Nov")
@@ -478,6 +487,51 @@ def scope(plan: Plan, outcome: Outcome) -> tuple[Gate, ...]:
     return ()
 
 
+def split_key(key: str) -> tuple[str, str]:
+    """A rule's or a weight's key, "g1.r2", as (gate key, result key); a
+    bare gate key reads its first result (ruling 21)."""
+    gate, _, result = key.partition(".")
+    return gate, result or "r1"
+
+
+def comparable(r: GateResult) -> str:
+    """What a rule may do with a result (ruling 21): "number" (compared,
+    weighed), "list" (matched against an option) or "" (read only)."""
+    if r.derive in ("mean", "median", "sum", "count", "share"):
+        return "number"
+    if r.field.type in ("integer", "decimal"):
+        return "number"  # lowest, highest or entered
+    return "list" if r.field.type == "list" else ""
+
+
+def result_of(plan: Plan, key: str) -> tuple[Gate | None, GateResult | None]:
+    """The gate and result a key names, either None where gone."""
+    gate_key, result_key = split_key(key)
+    gate = next((c for c in plan.columns if isinstance(c, Gate) and c.key == gate_key), None)
+    if gate is None:
+        return None, None
+    return gate, next((r for r in gate.results if r.key == result_key), None)
+
+
+def result_label(plan: Plan, key: str) -> str:
+    """A key as a rule or a weight names it: "Rating at Peer Review"; as
+    the Process page's script writes it."""
+    gate, result = result_of(plan, key)
+    where = (gate.label or "Untitled gate") if gate else "(removed)"
+    what = (result.name or "Untitled result") if result else "Result"
+    return f"{what} at {where}"
+
+
+def _result_value(cell: Cell, result_key: str) -> float | None:
+    if result_key == "r1":
+        return cell.result
+    raw = dict(cell.extra).get(result_key)
+    try:
+        return float(raw) if raw is not None else None
+    except ValueError:
+        return None
+
+
 def combined(row: Row, outcome: Outcome) -> float | None:
     """An outcome's combined result for one application: the weighted
     average of its gates' finished results. A gate it was not entered
@@ -485,12 +539,16 @@ def combined(row: Row, outcome: Outcome) -> float | None:
     no finished result, or not yet decided, leaves it unknown (None)."""
     total = weight = 0.0
     for key, w in outcome.weights:
-        cell = row.cells.get(key)
+        gate_key, result_key = split_key(key)
+        cell = row.cells.get(gate_key)
         if cell is None or not cell.value or cell.value == "Not entered":
             continue
-        if cell.value == NO_STATUS or cell.result is None:
+        if not w:
+            continue  # a result weighed at 0% plays no part
+        value = _result_value(cell, result_key)
+        if cell.value == NO_STATUS or value is None:
             return None
-        total += w * cell.result
+        total += w * value
         weight += w
     return round(total / weight, 2) if weight else None
 
@@ -528,7 +586,7 @@ def rule_text(plan: Plan, column: Gate | Outcome) -> str:
     cols = {c.key: c for c in plan.columns}
 
     # As the Process page's script words them: a column gone reads
-    # "(removed)", one unnamed "Untitled …", a gate with no measure "Result".
+    # "(removed)", one unnamed "Untitled …", a result gone "Result".
     def name(key: str) -> str:
         c = cols.get(key)
         if c is None:
@@ -541,9 +599,7 @@ def rule_text(plan: Plan, column: Gate | Outcome) -> str:
         if kind == "last":
             parts.append(_SAID["last"] if value == "1" else _SAID["lastN"].format(v=value))
         elif kind == "res":
-            gate = cols.get(key)
-            measure = gate.measure if isinstance(gate, Gate) and gate.measure else "Result"
-            parts.append(f"{measure} at {name(key)} {sign} {value}")
+            parts.append(f"{result_label(plan, key)} {sign} {value}")
         elif kind == "ent":
             parts.append(f"Entry at {name(key)} is {value}")
         elif kind == "out":
@@ -643,3 +699,16 @@ def result_summary(r: GateResult) -> str:
     """A result's row, collapsed: what is asked, how it is derived, and
     what it gives; the page's script writes the same."""
     return f"{field_text(r.field)} · {derivation_text(r)} → {result_type(r)}"
+
+
+def weight_rows(plan: Plan, outcome: Outcome) -> tuple[tuple[str, int], ...]:
+    """An outcome's weights as Process draws them (ruling 21): every
+    numeric result of the gates in its scope, in order, each its percent,
+    0 for one it does not weigh."""
+    set_ = {".".join(split_key(k)): w for k, w in outcome.weights}  # a bare key reads r1
+    return tuple(
+        (f"{g.key}.{r.key}", round(set_.get(f"{g.key}.{r.key}", 0.0) * 100))
+        for g in scope(plan, outcome)
+        for r in g.results
+        if comparable(r) == "number"
+    )
