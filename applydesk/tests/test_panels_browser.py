@@ -21,19 +21,28 @@ def _row(page: Page, email: str) -> Locator:
     )
 
 
+def _manage(page: Page) -> None:
+    """Opens Manage panels, where the panels' own controls and the CSV are
+    (author, 2026-11-14: as Review Robin's Unlock)."""
+    page.locator('[data-pn-act="manage"]').click()
+
+
 def _count(page: Page, key: str) -> str:
     return page.locator(f'th[data-panel="{key}"] [data-pn-count]').inner_text()
 
 
 def test_ticks_rows_and_their_checks(page: Page) -> None:
     page.goto(PANELS)
+    _manage(page)
     counts = page.locator("[data-pn-counts]")
     assert counts.inner_text() == "8 people · 4 panels · 4 in use"
     zoe = _row(page, "zoe.tan@example.edu")
     # Ruling 22: a row is inert until selected, its ticks too.
     tick = zoe.locator('input[data-pn-panel="panel-b"]')
     assert tick.is_disabled() and not zoe.locator('[data-pn="name"]').is_visible()
-    assert zoe.locator("[data-pn-pill]").is_visible()
+    # Unselected, the email is text, as Review Robin's rosters show it.
+    assert not zoe.locator("[data-pn-pill]").is_visible()
+    assert zoe.locator('[data-pn-view="email"]').inner_text() == "zoe.tan@example.edu"
     zoe.locator('[data-pn-view="name"]').click()  # only its tick selects it, as RRW's
     assert zoe.get_attribute("data-sel") is None
     zoe.locator("[data-pn-select]").check()
@@ -81,6 +90,7 @@ def test_ticks_rows_and_their_checks(page: Page) -> None:
 
 def test_panels_are_made_copied_and_retired_only_unused(page: Page) -> None:
     page.goto(PANELS)
+    _manage(page)
     # Every sample panel is in use: none may be retired.
     retire = page.locator('li[data-panel] [data-pn-act="retire"]')
     assert all(retire.nth(i).is_disabled() for i in range(4))
@@ -115,6 +125,7 @@ def test_panels_are_made_copied_and_retired_only_unused(page: Page) -> None:
 
 def test_a_panel_nothing_uses_retires(page: Page) -> None:
     page.goto(BLIND)
+    _manage(page)
     page.locator('li[data-panel="interviewers"] [data-pn-act="retire"]').click()
     assert page.locator("th[data-panel] [data-pn-name]").all_inner_texts() == ["Panel A"]
     assert "Interviewers retired." in page.locator("[data-pn-said]").inner_text()
@@ -206,6 +217,7 @@ def test_csv_guards_formulas_and_refuses_an_open_quote(page: Page) -> None:
 
 def test_focus_stays_on_the_page_after_retire_and_the_last_remove(page: Page) -> None:
     page.goto(BLIND)
+    _manage(page)
     page.locator('li[data-panel="interviewers"] [data-pn-act="retire"]').click()
     assert page.evaluate("document.activeElement.dataset.pnAct") == "panel"
     for _ in range(3):
@@ -219,6 +231,7 @@ def test_a_panel_may_not_take_a_csv_column_s_name(page: Page) -> None:
     """Codex on #3882: a panel called Email would read the Email column
     as its own on import."""
     page.goto(PANELS)
+    _manage(page)
     page.locator('[data-pn-act="panel"]').click()
     page.locator("[data-pn-newname]").fill("email")
     page.locator('[data-pn-act="create"]').click()
@@ -242,6 +255,7 @@ def test_a_guarded_csv_reads_back_the_same(page: Page) -> None:
     """Codex on #3882: a panel named -External exports as '-External;
     the import undoes the guard, so its memberships come back."""
     page.goto(PANELS)
+    _manage(page)
     page.locator('[data-pn-act="panel"]').click()
     page.locator("[data-pn-newname]").fill("-External")
     page.locator('[data-pn-act="create"]').click()
@@ -287,8 +301,9 @@ def test_an_email_put_back_and_left_keeps_its_pill(page: Page) -> None:
     zoe.locator('[data-pn-act="unverify"]').click()
     assert zoe.locator("[data-pn-why]").inner_text() == ""
     zoe.locator("[data-pn-select]").uncheck()
-    assert zoe.locator("[data-pn-pill]").is_visible()
-    assert not zoe.locator('[data-pn-view="email"]').is_visible()
+    zoe.locator("[data-pn-select]").check()
+    assert zoe.locator("[data-pn-pill]").is_visible()  # still verified
+    assert zoe.locator("[data-pn-why]").inner_text() == ""
 
 
 def test_removing_rows_keeps_focus_and_the_header_tick(page: Page) -> None:
@@ -302,3 +317,83 @@ def test_removing_rows_keeps_focus_and_the_header_tick(page: Page) -> None:
     assert page.evaluate("document.activeElement.matches('[data-pn-select]')")
     rows.nth(0).locator('[data-pn-act="remove"]').click()
     assert not every.evaluate("e => e.indeterminate || e.checked")
+
+
+def test_the_page_reads_as_review_robin_s_roster(page: Page) -> None:
+    """Author, 2026-11-14: no side card; a roster card of pills with
+    Manage panels, a toolbar, the x column kept on every row, and no x on
+    the pill."""
+    page.goto(PANELS)
+    manage = page.locator("[data-pn-manage]")
+    assert not manage.is_visible()
+    toggle = page.locator('[data-pn-act="manage"]')
+    toggle.click()
+    assert manage.is_visible() and toggle.get_attribute("aria-expanded") == "true"
+    toggle.click()
+    assert not manage.is_visible() and toggle.inner_text() == "Manage panels"
+    assert toggle.get_attribute("aria-expanded") == "false"
+    # No side card: the table card is the page's width.
+    assert page.locator(".fb-side, .pn-ctl").count() == 0
+    # Every row keeps its last cell; only a selected one shows its x.
+    rows = page.locator("[data-pn-row]")
+    assert rows.locator("td.pn-x").count() == rows.count()
+    zoe = _row(page, "zoe.tan@example.edu")
+    assert not zoe.locator('[data-pn-act="remove"]').is_visible()
+    zoe.locator("[data-pn-select]").check()
+    assert zoe.locator('[data-pn-act="remove"]').is_visible()
+    assert zoe.locator("[data-pn-pill]").inner_text() == "zoe.tan@example.edu"  # no x
+    # The roster card's pill follows the ticks.
+    chip = page.locator('[data-pn-chips] [data-panel="panel-b"]')
+    assert chip.text_content() == "Panel B\u00a0(1)"
+    zoe.locator('input[data-pn-panel="panel-b"]').check()
+    assert chip.text_content() == "Panel B\u00a0(2)"
+    # Search keeps the rows that match, and the one being edited.
+    page.locator("[data-pn-search]").fill("engineering")
+    shown = [r for r in range(rows.count()) if rows.nth(r).is_visible()]
+    assert len(shown) == 2  # Dr Omar Aziz, and Zoe Tan, selected
+    page.locator("[data-pn-search]").fill("")
+    # Sorting by name, then back.
+    page.locator('[data-pn-sort="name"]').click()
+    names = rows.locator('[data-pn="name"]').evaluate_all("es => es.map(e => e.value)")
+    assert names == sorted(names, key=str.lower)
+    page.locator('[data-pn-sort="name"]').click()
+    names = rows.locator('[data-pn="name"]').evaluate_all("es => es.map(e => e.value)")
+    assert names == sorted(names, key=str.lower, reverse=True)
+    name_th = page.locator("th", has=page.locator('[data-pn-sort="name"]'))
+    assert name_th.get_attribute("aria-sort") == "descending"
+    assert page.locator('[data-pn-sort="name"] span').inner_text() == "↓"
+    # Another column starts ascending; the first goes back to ↕.
+    page.locator('[data-pn-sort="note"]').click()
+    assert name_th.get_attribute("aria-sort") is None
+    assert page.locator('[data-pn-sort="name"] span').inner_text() == "↕"
+    assert page.locator('[data-pn-sort="note"] span').inner_text() == "↑"
+
+
+def test_search_select_all_and_remove_keep_to_the_rows_in_view(page: Page) -> None:
+    """Cold read on rung 6b: select-all took hidden rows; a remove under a
+    search focused a hidden one."""
+    page.goto(PANELS)
+    search = page.locator("[data-pn-search]")
+    search.fill("dr ")
+    rows = page.locator("[data-pn-row]")
+    shown = [i for i in range(rows.count()) if rows.nth(i).is_visible()]
+    assert len(shown) == 4  # Hana Ito, Omar Aziz, Ruth Kahn, Sara Ng
+    page.locator("[data-pn-select-all]").check()
+    assert page.locator("[data-pn-row][data-sel]").count() == 4
+    zoe = _row(page, "zoe.tan@example.edu")
+    assert not zoe.is_visible() and zoe.get_attribute("data-sel") is None
+    for _ in range(4):
+        page.locator("[data-pn-row][data-sel]").first.locator('[data-pn-act="remove"]').click()
+        focus = page.evaluate(
+            "document.activeElement.matches('[data-pn-select], [data-pn-act=add]')"
+        )
+        assert focus
+    assert page.locator("[data-pn-nomatch]").is_visible()
+    search.fill("")
+    assert not page.locator("[data-pn-nomatch]").is_visible()
+    # An unticked row that no longer matches leaves the view.
+    search.fill("zoe tan")
+    zoe.locator("[data-pn-select]").check()
+    zoe.locator('[data-pn="name"]').fill("Zara Tan")
+    zoe.locator("[data-pn-select]").uncheck()
+    assert not zoe.is_visible()

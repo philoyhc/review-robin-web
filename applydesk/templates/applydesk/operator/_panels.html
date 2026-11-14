@@ -1,14 +1,20 @@
-{# Panels (rulings 19, 20; segment AD1F): everyone on the exercise's
-   panels in one table, a column per panel ticking who sits on it, and a
-   control card floating on the right. Rung 4d drew it from the sample;
-   rung 4e wires it: rows and panels added, edited, copied, retired and
-   removed, each email checked, a CSV in and out. Nothing is saved. #}
+{# Panels (rulings 19, 20, 22; segment AD1F): everyone on the exercise's
+   panels in one full-width table, a column per panel ticking who sits on
+   it, laid out as Review Robin's roster pages (author, 2026-11-14): a
+   roster card above it, its pills the panels and their counts, and
+   *Manage panels* where Review Robin has *Unlock*, holding the panels'
+   own controls and the CSV. Rows and panels are added, edited, copied,
+   retired and removed, each email checked. Nothing is saved. #}
 {% set used = panels | selectattr("key", "in", uses) | list %}
 {% macro count(n) %}{{ n }} {{ "person" if n == 1 else "people" }}{% endmacro %}
-{# A row (ruling 22), as Review Robin's rosters: inert until selected,
-   its tick or a click on it; selected, its cells are edit boxes and its
-   panel ticks live. A verified email is a pill; one not found in the
-   directory is typed, against it. `sel` draws a row selected. #}
+{% macro sent_note(p) %}{{ panels_sent[p.key] | join(", ") }} {{ "was" if panels_sent[p.key] | length == 1 else "were" }} sent with the roster as it then stood: changes apply from {{ "its" if panels_sent[p.key] | length == 1 else "their" }} next send.{% endmacro %}
+{# A row (ruling 22), as Review Robin's rosters: inert until its tick
+   selects it; selected, its cells are edit boxes and its panel ticks
+   live. Unselected, an email is text, red when the directory has no such
+   person; selected, a verified email is a pill, clicked to change it,
+   and one not found is typed against the directory. The last column, its
+   ×, is kept on every row so nothing moves as rows are selected. `sel`
+   draws a row selected. #}
 {% macro row(m, keys, panels, directory, sel=False) %}
 {% set name = m.name if m and m.name != m.email else "" %}
 {% set verified = m and m.email | lower in directory %}
@@ -17,38 +23,94 @@
   <td><span class="pn-view" data-pn-view="name">{{ name }}</span><input class="fc-in pn-in" data-pn="name" value="{{ name }}" placeholder="Name" aria-label="Name"></td>
   <td class="pn-email-cell"{% if verified %} data-verified{% endif %}>
     <input type="hidden" data-pn="email" value="{{ m.email if m }}">
-    <span class="token pn-pill" data-pn-pill title="Matched to a directory account"><span data-pn-pill-text>{{ m.email if verified }}</span><button type="button" class="token-x pn-unpill" data-pn-act="unverify" aria-label="Change {{ m.email if m }}">×</button></span>
-    <span class="pn-view pn-unmatched" data-pn-view="email">{{ m.email if m and not verified }}</span>
+    <span class="pn-view pn-addr" data-pn-view="email">{{ m.email if m }}</span>
+    <button type="button" class="pn-pill" data-pn-pill data-pn-act="unverify" title="Matched to a directory account: click to change" aria-label="Change {{ m.email if m }}">{{ m.email if verified }}</button>
     <input class="fc-in pn-in pn-email" data-pn-entry list="pn-directory" value="{{ m.email if m and not verified }}" placeholder="Name or email" aria-label="Email" autocomplete="off">
     <span class="pn-bad-why" data-pn-why></span>
   </td>
   <td><span class="pn-view" data-pn-view="note">{{ m.note if m }}</span><input class="fc-in pn-in" data-pn="note" value="{{ m.note if m }}" placeholder="Role or area" aria-label="Note"></td>
   {% for p in panels %}<td class="pn-tick"><input type="checkbox" data-pn-panel="{{ p.key }}"{% if p.key in keys %} checked{% endif %}{% if not sel %} disabled{% endif %} aria-label="On {{ p.name }}"></td>{% endfor %}
-  <td><button type="button" class="pn-remove" data-pn-act="remove" aria-label="Remove {{ (m.name or m.email) if m else 'this person' }}" title="Remove">×</button></td>
+  <td class="pn-x"><button type="button" class="pn-remove" data-pn-act="remove" aria-label="Remove {{ (m.name or m.email) if m else 'this person' }}" title="Remove">×</button></td>
 </tr>
 {% endmacro %}
 {% set directory = people.institution.members | map(attribute=1) | map("lower") | list %}
-<div class="fb-split pn" data-panels data-exercise="{{ exercise.public_id }}">
-  <div class="fb-main">
-    <p class="muted pc-intro">Everyone on this exercise's panels, a column for each panel. Select a row, or several, to edit them; an unselected row is left as it is. A panel is picked where it is needed: a <em>Select people</em> question on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>, a gate's evaluators on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>. Apply Desk keeps every panel and what each person may view; to Review Robin they are ordinary reviewers.</p>
-    <p class="muted" data-pn-empty{% if panels %} hidden{% endif %}>No panels yet: make one with <em>+ Panel</em>, or with <em>+ New panel</em> where a question or a gate needs one.</p>
+{% macro sort(field, label) %}<button type="button" class="pn-sort" data-pn-sort="{{ field }}" aria-label="Sort by {{ label }}">{{ label }}<span aria-hidden="true">↕</span></button>{% endmacro %}
+<div class="pn" data-panels data-exercise="{{ exercise.public_id }}">
+  <p class="muted pc-intro">Everyone on this exercise's panels, a column for each panel. Tick a row, or several, to edit them. A panel is picked where it is needed: a <em>Select people</em> question on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>, a gate's evaluators on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>. Apply Desk keeps every panel and what each person may view; to Review Robin they are ordinary reviewers.</p>
+
+  {# The roster card, as Review Robin's: the roster's size and a pill per
+     panel, readable always; Manage panels opens the panels' controls. #}
+  <section class="card pn-roster" aria-label="Panels roster">
+    <div class="pn-readout">
+      <span class="pn-rl">People:</span> <span class="chip chip-info" data-pn-people>{{ roster | length }}</span>
+      <span class="pn-rsep" aria-hidden="true">|</span>
+      <span class="pn-rl">Panels:</span>
+      <span class="pn-chips" data-pn-chips>{% for p in panels %}<span class="chip chip-info" data-panel="{{ p.key }}"><span data-pn-name>{{ p.name }}</span>&nbsp;(<span data-pn-num>{{ p.members | length }}</span>)</span>{% endfor %}</span>
+      <span class="pn-rl" data-pn-inuse>· {{ used | length }} in use</span>
+      <button class="btn btn-secondary pn-manage" type="button" data-pn-act="manage" aria-expanded="false" aria-controls="pn-manage">Manage panels</button>
+    </div>
+    <p class="muted" data-pn-empty{% if panels %} hidden{% endif %}>No panels yet: make one in <em>Manage panels</em>, or with <em>+ New panel</em> where a question or a gate needs one.</p>
+    <ul class="pc-issues" data-pn-issues hidden></ul>
+    <p class="pn-said" data-pn-said aria-live="polite"></p>
+    <div class="pn-manage-panel" id="pn-manage" data-pn-manage hidden>
+      <section class="card">
+        <h3>Panels</h3>
+        <ul class="pn-list" data-pn-list>
+          {% for p in panels %}
+          <li data-panel="{{ p.key }}">
+            <span class="pn-list-h" data-pn-name>{{ p.name }}</span>
+            <span class="pn-list-act">
+              <button type="button" class="btn btn-secondary" data-pn-act="copy">Copy</button>
+              <button type="button" class="btn btn-destructive" data-pn-act="retire"{% if uses.get(p.key) %} disabled title="In use: it can be retired once nothing uses it"{% endif %}>Retire</button>
+            </span>
+            <span class="pn-list-used"><span data-pn-count>{{ count(p.members | length) }}</span> · {% if uses.get(p.key) %}Used by {{ uses[p.key] | join(", ") }}{% else %}Not used yet{% endif %}</span>
+            {% if panels_sent.get(p.key) %}<span class="pn-sent">{{ sent_note(p) }}</span>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        <div class="np" data-pn-newbox hidden>
+          <label class="fc-l">Panel name<input class="fc-in" data-pn-newname placeholder="e.g. Panel C"></label>
+          <p class="np-err" data-pn-newerr aria-live="polite"></p>
+          <div class="btnrow">
+            <button type="button" class="btn btn-primary" data-pn-act="create">Create panel</button>
+            <button type="button" class="btn btn-secondary" data-pn-act="cancel">Cancel</button>
+          </div>
+        </div>
+        <div class="btnrow"><button class="btn btn-secondary" type="button" data-pn-act="panel">+ Panel</button></div>
+      </section>
+      <section class="card">
+        <h3>Upload</h3>
+        <p class="muted pn-csv-note">A CSV has <code>Name</code>, <code>Email</code> and <code>Note</code>, and a column per panel by its name, marked for each member. People not found in the directory are left out and named.</p>
+        <div class="btnrow">
+          <label class="btn btn-secondary pn-file">Import CSV<input type="file" accept=".csv,text/csv" data-pn-import class="visually-hidden"></label>
+          <button class="btn btn-secondary" type="button" data-pn-act="export">Export CSV</button>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  {# The table card, full width: Review Robin's toolbar, then the table. #}
+  <section class="card pn-tablecard" aria-label="People on panels">
+    <div class="pn-toolbar">
+      <label class="pn-search">Search<input class="fc-in" type="search" data-pn-search placeholder="Name, email or note"></label>
+      <button class="btn btn-secondary" type="button" data-pn-act="add">Add new</button>
+    </div>
     <div class="table-wrap pn-wrap">
       <table class="pn-table" aria-label="Panels and their members">
         <thead>
           <tr data-pn-head>
             <th scope="col" class="pn-pick"><input type="checkbox" data-pn-select-all aria-label="Select every row"></th>
-            <th scope="col">Name</th>
-            <th scope="col">Email</th>
-            <th scope="col">Note</th>
+            <th scope="col">{{ sort("name", "Name") }}</th>
+            <th scope="col">{{ sort("email", "Email") }}</th>
+            <th scope="col">{{ sort("note", "Note") }}</th>
             {% for p in panels %}
-            <th scope="col" class="pn-col" id="panel-{{ p.key }}" data-panel="{{ p.key }}" data-used="{{ uses.get(p.key, ()) | join(' · ') }}">
+            <th scope="col" class="pn-col" id="panel-{{ p.key }}" data-panel="{{ p.key }}" data-used="{{ uses.get(p.key, ()) | join(' · ') }}" title="{% if uses.get(p.key) %}Used by {{ uses[p.key] | join(', ') }}{% else %}Not used yet{% endif %}">
               <span class="pn-h" data-pn-name>{{ p.name }}</span>
               <span class="pn-n" data-pn-count>{{ count(p.members | length) }}</span>
-              <span class="pn-used">{% if uses.get(p.key) %}{{ uses[p.key] | join(" · ") }}{% else %}Not used yet{% endif %}</span>
-              {% if panels_sent.get(p.key) %}<span class="pn-sent">{{ panels_sent[p.key] | join(", ") }} sent: changes apply from {{ "its" if panels_sent[p.key] | length == 1 else "their" }} next send</span>{% endif %}
+              {% if panels_sent.get(p.key) %}<span class="chip chip-warn pn-sent-chip" title="{{ sent_note(p) }}">Sent</span>{% endif %}
             </th>
             {% endfor %}
-            <th scope="col"><span class="visually-hidden">Remove</span></th>
+            <th scope="col" class="pn-x"><span class="visually-hidden">Remove</span></th>
           </tr>
         </thead>
         <tbody data-pn-body>
@@ -56,46 +118,12 @@
         </tbody>
       </table>
     </div>
-  </div>
-  <aside class="fb-side">
-    <section class="card fb-outline pn-ctl" aria-labelledby="pn-ctl-h">
-      <h2 id="pn-ctl-h">Panels</h2>
-      <ul class="pn-list" data-pn-list>
-        {% for p in panels %}
-        <li data-panel="{{ p.key }}">
-          <span class="pn-list-h" data-pn-name>{{ p.name }}</span> <span class="muted" data-pn-count>{{ count(p.members | length) }}</span>
-          <span class="pn-list-used">{% if uses.get(p.key) %}Used by {{ uses[p.key] | join(", ") }}{% else %}Not used yet{% endif %}</span>
-          {% if panels_sent.get(p.key) %}<span class="pn-sent">{{ panels_sent[p.key] | join(", ") }} was sent with the roster as it then stood: changes apply from {{ "its" if panels_sent[p.key] | length == 1 else "their" }} next send.</span>{% endif %}
-          <span class="pn-list-act">
-            <button type="button" class="btn btn-secondary" data-pn-act="copy">Copy</button>
-            <button type="button" class="btn btn-destructive" data-pn-act="retire"{% if uses.get(p.key) %} disabled title="In use: it can be retired once nothing uses it"{% endif %}>Retire</button>
-          </span>
-        </li>
-        {% endfor %}
-      </ul>
-      <p class="muted fb-counts" data-pn-counts>{{ count(roster | length) }} · {{ panels | length }} {{ "panel" if panels | length == 1 else "panels" }} · {{ used | length }} in use</p>
-      <ul class="pc-issues" data-pn-issues hidden></ul>
-      <div class="np" data-pn-newbox hidden>
-        <label class="fc-l">Panel name<input class="fc-in" data-pn-newname placeholder="e.g. Panel C"></label>
-        <p class="np-err" data-pn-newerr aria-live="polite"></p>
-        <div class="btnrow">
-          <button type="button" class="btn btn-primary" data-pn-act="create">Create panel</button>
-          <button type="button" class="btn btn-secondary" data-pn-act="cancel">Cancel</button>
-        </div>
-      </div>
-      <div class="btnrow">
-        <button class="btn btn-secondary" type="button" data-pn-act="add">+ Add person</button>
-        <button class="btn btn-secondary" type="button" data-pn-act="panel">+ Panel</button>
-        <label class="btn btn-secondary pn-file">Import CSV<input type="file" accept=".csv,text/csv" data-pn-import class="visually-hidden"></label>
-        <button class="btn btn-secondary" type="button" data-pn-act="export">Export CSV</button>
-      </div>
-      <p class="muted pn-csv-note">A CSV has <code>Name</code>, <code>Email</code> and <code>Note</code>, and a column per panel by its name, marked for each member.</p>
-      <p class="pn-said" data-pn-said aria-live="polite"></p>
-      <div class="btnrow">
-        <button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>
-      </div>
-    </section>
-  </aside>
+    <p class="muted pn-nomatch" data-pn-nomatch hidden>No one matches the search.</p>
+    <div class="pn-foot">
+      <span class="muted" data-pn-counts>{{ count(roster | length) }} · {{ panels | length }} {{ "panel" if panels | length == 1 else "panels" }} · {{ used | length }} in use</span>
+      <button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>
+    </div>
+  </section>
 </div>
 <template id="pn-new-row">{{ row(none, (), panels, directory, sel=True) }}</template>
 <datalist id="pn-directory">{% for n, e in people.institution.members %}<option value="{{ e }}">{{ n }}</option>{% endfor %}</datalist>
@@ -109,6 +137,7 @@
   if (!root) return;
   var body = root.querySelector("[data-pn-body]"), head = root.querySelector("[data-pn-head]");
   var list = root.querySelector("[data-pn-list]"), said = root.querySelector("[data-pn-said]");
+  var chips = root.querySelector("[data-pn-chips]"), manage = root.querySelector("[data-pn-manage]");
   var EMAIL = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
   // The directory (Graph; the sample institution until AD4), as [name, email].
   var DIRECTORY = JSON.parse(document.getElementById("pn-people").textContent);
@@ -141,6 +170,8 @@
       h.querySelector("[data-pn-count]").textContent = people(n);
       var li = list.querySelector('li[data-panel="' + h.dataset.panel + '"]');
       if (li) li.querySelector("[data-pn-count]").textContent = people(n);
+      var chip = chips.querySelector('[data-panel="' + h.dataset.panel + '"] [data-pn-num]');
+      if (chip) chip.textContent = n;
       if (!n && h.dataset.used) problems.push(nameOf(h.dataset.panel) + " is in use with nobody on it");
     });
     var issues = root.querySelector("[data-pn-issues]");
@@ -149,29 +180,46 @@
     issues.hidden = !problems.length;
     var nCols = cols().length, nUsed = cols().filter(function (h) { return h.dataset.used; }).length;
     root.querySelector("[data-pn-counts]").textContent = people(rows().length) + " · " + nCols + (nCols === 1 ? " panel" : " panels") + " · " + nUsed + " in use";
+    root.querySelector("[data-pn-people]").textContent = rows().length;
+    root.querySelector("[data-pn-inuse]").textContent = "· " + nUsed + " in use";
     root.querySelector("[data-pn-empty]").hidden = nCols > 0;
   }
 
   // --- Selecting rows (ruling 22): a row is edited only while selected;
   // unselected, it is inert, its ticks too, and shows what its boxes hold.
   function select(r, on) {
-    // An email × put back to be changed, and left as it was, keeps its pill.
+    // An email put back to be changed, and left as it was, keeps its pill.
     var was = r.querySelector("[data-pn-entry][data-was]");
     if (!on && was) setEmail(r, was.dataset.was);
     if (on) r.setAttribute("data-sel", ""); else r.removeAttribute("data-sel");
+    if (!on) filter();
     r.querySelector("[data-pn-select]").checked = on;
     r.querySelectorAll("input[data-pn-panel]").forEach(function (c) { c.disabled = !on; });
     if (!on) {
       ["name", "note"].forEach(function (f) { r.querySelector('[data-pn-view="' + f + '"]').textContent = val(r, f); });
-      r.querySelector('[data-pn-view="email"]').textContent = r.querySelector("[data-verified]") ? "" : val(r, "email");
+      r.querySelector('[data-pn-view="email"]').textContent = val(r, "email");
     }
     selected();
   }
   // The header's tick: all, some or none selected.
   function selected() {
-    var all = root.querySelector("[data-pn-select-all]"), n = rows().filter(function (x) { return x.hasAttribute("data-sel"); }).length;
-    all.checked = n > 0 && n === rows().length;
-    all.indeterminate = n > 0 && n < rows().length;
+    var all = root.querySelector("[data-pn-select-all]"), shown = rows().filter(function (x) { return !x.hidden; });
+    var n = shown.filter(function (x) { return x.hasAttribute("data-sel"); }).length;
+    all.checked = n > 0 && n === shown.length;
+    all.indeterminate = n > 0 && n < shown.length;
+  }
+  // Search, as Review Robin's toolbar: rows whose name, email or note
+  // hold the text; a selected row stays in view while it is edited. Run
+  // again whenever a row changes, so what shows always matches the box.
+  var search = root.querySelector("[data-pn-search]");
+  function filter() {
+    var t = search.value.trim().toLowerCase(), any = false;
+    rows().forEach(function (r) {
+      var hay = [val(r, "name"), val(r, "email"), val(r, "note")].join(" ").toLowerCase();
+      r.hidden = !!t && hay.indexOf(t) < 0 && !r.hasAttribute("data-sel");
+      if (!r.hidden) any = true;
+    });
+    root.querySelector("[data-pn-nomatch]").hidden = any || !t;
   }
   // A row's labels follow who is on it.
   function label(r) {
@@ -194,13 +242,13 @@
     var hidden = r.querySelector('[data-pn="email"]'), pill = r.querySelector("[data-pn-pill]");
     if (found.person) {
       hidden.value = found.person[1];
-      pill.querySelector("[data-pn-pill-text]").textContent = found.person[1];
+      pill.textContent = found.person[1];
       cell.setAttribute("data-verified", "");
       r.querySelector("[data-pn-entry]").value = "";
       var name = r.querySelector('[data-pn="name"]');
       if (!name.value.trim()) name.value = found.person[0];
       // The box goes as the pill comes: the keyboard stays in the row.
-      if (focused) r.querySelector('[data-pn-act="unverify"]').focus();
+      if (focused) pill.focus();
     } else {
       hidden.value = entry.trim();
       cell.removeAttribute("data-verified");
@@ -239,11 +287,17 @@
     do { key = "made-" + (++seq); } while (head.querySelector('th[data-panel="' + key + '"]'));
     var th = el("th", "pn-col");
     th.scope = "col"; th.id = "panel-" + key;
-    th.setAttribute("data-panel", key); th.setAttribute("data-used", "");
+    th.setAttribute("data-panel", key); th.setAttribute("data-used", ""); th.title = "Not used yet";
     var h = el("span", "pn-h", name); h.setAttribute("data-pn-name", "");
     var n = el("span", "pn-n"); n.setAttribute("data-pn-count", "");
-    th.appendChild(h); th.appendChild(n); th.appendChild(el("span", "pn-used", "Not used yet"));
+    th.appendChild(h); th.appendChild(n);
     head.lastElementChild.before(th);
+    // Its pill on the roster card, as the server draws one.
+    var chip = el("span", "chip chip-info"); chip.setAttribute("data-panel", key);
+    var cn = el("span", "", name); cn.setAttribute("data-pn-name", "");
+    var cc = el("span", "", "0"); cc.setAttribute("data-pn-num", "");
+    chip.appendChild(cn); chip.appendChild(document.createTextNode("\u00a0(")); chip.appendChild(cc); chip.appendChild(document.createTextNode(")"));
+    chips.appendChild(chip);
     rows().forEach(function (r) {
       var was = from ? r.querySelector('input[data-pn-panel="' + from + '"]') : null;
       var td = tick(key, was && was.checked);
@@ -252,13 +306,13 @@
     });
     var li = el("li"); li.setAttribute("data-panel", key);
     var lh = el("span", "pn-list-h", name); lh.setAttribute("data-pn-name", "");
-    var lc = el("span", "muted"); lc.setAttribute("data-pn-count", "");
     var act = el("span", "pn-list-act");
     [["copy", "Copy", "btn-secondary"], ["retire", "Retire", "btn-destructive"]].forEach(function (a) {
       var b = el("button", "btn " + a[2], a[1]); b.type = "button"; b.setAttribute("data-pn-act", a[0]); act.appendChild(b);
     });
-    li.appendChild(lh); li.appendChild(document.createTextNode(" ")); li.appendChild(lc);
-    li.appendChild(el("span", "pn-list-used", "Not used yet")); li.appendChild(act);
+    var lu = el("span", "pn-list-used"), lc = el("span"); lc.setAttribute("data-pn-count", "");
+    lu.appendChild(lc); lu.appendChild(document.createTextNode(" · Not used yet"));
+    li.appendChild(lh); li.appendChild(act); li.appendChild(lu);
     list.appendChild(li);
     check();
     return key;
@@ -272,6 +326,7 @@
     head.querySelector('th[data-panel="' + key + '"]').remove();
     body.querySelectorAll('input[data-pn-panel="' + key + '"]').forEach(function (c) { c.closest("td").remove(); });
     list.querySelector('li[data-panel="' + key + '"]').remove();
+    chips.querySelector('[data-panel="' + key + '"]').remove();
     said.textContent = name + " retired.";
     check();
     root.querySelector('[data-pn-act="panel"]').focus();
@@ -346,12 +401,19 @@
     if (unknown.length) parts.push("No panel called: " + unknown.join(", ") + ".");
     said.textContent = parts.join(" ");
     check();
+    filter();
+    selected();
   };
 
   root.addEventListener("input", function (e) { if (e.target.closest("[data-pn-row]") && !e.target.matches("[data-pn-entry]")) check(); });
   root.addEventListener("change", function (e) {
     if (e.target.matches("[data-pn-select]")) { select(e.target.closest("[data-pn-row]"), e.target.checked); return; }
-    if (e.target.matches("[data-pn-select-all]")) { var on = e.target.checked; rows().forEach(function (r) { select(r, on); }); return; }
+    if (e.target.matches("[data-pn-select-all]")) {
+      // As Review Robin's: every row in view, not those a search hides.
+      var on = e.target.checked;
+      rows().filter(function (r) { return !r.hidden; }).forEach(function (r) { select(r, on); });
+      return;
+    }
     if (e.target.matches("[data-pn-entry]")) { setEmail(e.target.closest("[data-pn-row]"), e.target.value); return; }
     if (e.target.matches("input[data-pn-panel]")) { check(); return; }
     if (e.target.matches("[data-pn-import]")) {
@@ -375,9 +437,12 @@
       entry.focus();
       entry.select();
     } else if (what === "remove") {
-      var r = a.closest("[data-pn-row]"), next = r.nextElementSibling || r.previousElementSibling;
+      var r = a.closest("[data-pn-row]"), next = null;
+      // The nearest row in view takes the focus: a hidden one cannot.
+      for (var sib = r.nextElementSibling; sib && !next; sib = sib.nextElementSibling) if (!sib.hidden) next = sib;
+      for (sib = r.previousElementSibling; sib && !next; sib = sib.previousElementSibling) if (!sib.hidden) next = sib;
       said.textContent = (val(r, "name") || val(r, "email") || "A row") + " removed.";
-      r.remove(); check(); selected();
+      r.remove(); check(); filter(); selected();
       (next ? next.querySelector("[data-pn-select]") : root.querySelector('[data-pn-act="add"]')).focus();
     } else if (what === "add") {
       addRow(null).querySelector('[data-pn="name"]').focus(); check();
@@ -400,6 +465,11 @@
       said.textContent = n + " made, with the same people.";
     } else if (what === "retire" && li) {
       retire(li.dataset.panel);
+    } else if (what === "manage") {
+      var open = manage.hidden;
+      manage.hidden = !open;
+      a.setAttribute("aria-expanded", String(open));
+      a.textContent = open ? "Close" : "Manage panels";
     } else if (what === "export") {
       var link = el("a");
       link.href = URL.createObjectURL(new Blob([window.applydeskPanelsCsv()], { type: "text/csv" }));
@@ -407,6 +477,24 @@
       document.body.appendChild(link); link.click(); link.remove();
       said.textContent = "Exported " + people(rows().length) + ".";
     }
+  });
+  search.addEventListener("input", function () { filter(); selected(); });
+  // Sorting by a column, as Review Robin's ↕: ascending, then descending.
+  root.querySelectorAll("[data-pn-sort]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var f = b.dataset.pnSort, down = b.dataset.dir === "asc";
+      root.querySelectorAll("[data-pn-sort]").forEach(function (o) {
+        delete o.dataset.dir; o.closest("th").removeAttribute("aria-sort");
+        o.querySelector("span").textContent = "↕";
+      });
+      b.dataset.dir = down ? "desc" : "asc";
+      b.querySelector("span").textContent = down ? "↓" : "↑";  // as Review Robin's badge
+      b.closest("th").setAttribute("aria-sort", down ? "descending" : "ascending");
+      rows().sort(function (x, y) {
+        var c = val(x, f).localeCompare(val(y, f), undefined, { sensitivity: "base" });
+        return down ? -c : c;
+      }).forEach(function (r) { body.appendChild(r); });
+    });
   });
   root.addEventListener("keydown", function (e) {
     if (e.key === "Enter" && e.target.matches("[data-pn-entry]")) { e.preventDefault(); setEmail(e.target.closest("[data-pn-row]"), e.target.value); }
