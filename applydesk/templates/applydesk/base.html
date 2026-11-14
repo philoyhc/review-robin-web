@@ -445,7 +445,11 @@
     .pick-edit[hidden] { display: none; }
     /* A gate's results (segment AD1F, ruling 21): rows that read as Form's summaries. */
     .pc-results { margin-top: 12px; }
-    .pr-row { display: flex; gap: 10px; align-items: flex-start; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--surface-card); }
+    .pr-row { margin-top: 6px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--surface-card); }
+    .pr-head { display: flex; gap: 10px; align-items: flex-start; width: 100%; padding: 8px 10px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+    .pr-head[aria-expanded="true"] { border-bottom: 1px solid var(--border-subtle); }
+    .pr-ed { margin: 0; padding: 4px 12px 10px; border: 0; min-width: 0; }
+    .pr-ed[hidden], .pr-ed [hidden] { display: none; }
     .pr-n { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--surface-muted); font-size: 12px; font-weight: 700; text-align: center; line-height: 20px; }
     .pr-texts { min-width: 0; }
     .pr-name { display: block; font-weight: 600; font-size: 14px; }
