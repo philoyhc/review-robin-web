@@ -81,6 +81,37 @@ def reviewees_csv() -> str:
     )
 
 
+#: The review's instrument (segment 23D), in Review Robin's Settings CSV
+#: (`spec/csv_contracts.md` §3.3): a 1-5 score keyed ``score`` and a comment
+#: keyed ``comment``, the keys `results.csv` reports answers under, and
+#: its assignment-rule links set, so the draft arrives set up. No release
+#: date: the draft releases nothing until its operator does.
+INSTRUMENT = "Mock review"
+
+
+def settings_csv() -> str:
+    rows: list[list[str]] = [
+        ["instruments[1].name", INSTRUMENT, "string"],
+        ["instruments[1].band1_touched_links", '["link1","link2","link3"]', "json"],
+    ]
+    fields = (
+        ("score", "Score", "1-to-5int", "Integer", ("1", "5", "1")),
+        ("comment", "Comment", "text", "String", None),
+    )
+    for n, (key, label, response_type, data_type, bounds) in enumerate(fields, start=1):
+        at = f"instruments[1].response_fields[{n}]"
+        rows += [
+            [f"{at}.field_key", key, "string"],
+            [f"{at}.label", label, "string"],
+            [f"{at}.response_type", response_type, "string"],
+            [f"{at}.data_type", data_type, "string"],
+            [f"{at}.visible", "true", "boolean"],
+        ]
+        if bounds:
+            rows += [[f"{at}.{k}", v, "decimal"] for k, v in zip(("min", "max", "step"), bounds)]
+    return _csv(["field", "value", "data_type"], rows)
+
+
 def bundle(people: tuple[Reviewer, ...]) -> dict[str, object]:
     """The handoff bundle without its per-click parts: the page's script
     adds a fresh ``transfer_id`` and a session code (`spec/handoffs.md`)."""
@@ -90,5 +121,9 @@ def bundle(people: tuple[Reviewer, ...]) -> dict[str, object]:
         "operation": "reviewrobin.create_draft_session",
         "source_app": "utilities",
         "session_suggestion": {"name": EXERCISE},
-        "files": {"reviewers": reviewers_csv(people), "reviewees": reviewees_csv()},
+        "files": {
+            "reviewers": reviewers_csv(people),
+            "reviewees": reviewees_csv(),
+            "settings": settings_csv(),
+        },
     }

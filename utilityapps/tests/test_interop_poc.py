@@ -31,6 +31,7 @@ def test_the_page_shows_the_mock_exercise_and_its_files(client: TestClient) -> N
         assert application.id in page.text
     assert "admin@example.edu" in page.text  # the signed-in operator is a reviewer
     assert "<code>reviewers.csv</code>" in page.text and "<code>reviewees.csv</code>" in page.text
+    assert "<code>settings.csv</code>" in page.text
 
 
 def test_the_button_posts_to_review_robins_create_route(client: TestClient) -> None:
@@ -60,7 +61,7 @@ def test_the_page_carries_the_bundle_less_its_per_click_parts(client: TestClient
     assert bundle["protocol"] == "cordware.csv-handoff" and bundle["protocol_version"] == 1
     assert bundle["operation"] == "reviewrobin.create_draft_session"
     assert "transfer_id" not in bundle and "code" not in bundle["session_suggestion"]
-    assert set(bundle["files"]) == {"reviewers", "reviewees"}  # rosters only
+    assert set(bundle["files"]) == {"reviewers", "reviewees", "settings"}  # segment 23D
     assert "SCH27-0006" in bundle["files"]["reviewees"]
 
 

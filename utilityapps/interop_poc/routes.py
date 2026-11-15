@@ -29,10 +29,12 @@ def page(request: Request) -> Response:
         "interop_poc/page.html",
         {
             "exercise": mock.EXERCISE,
+            "instrument": mock.INSTRUMENT,
             "reviewers": people,
             "applications": mock.APPLICATIONS,
             "reviewers_csv": mock.reviewers_csv(people),
             "reviewees_csv": mock.reviewees_csv(),
+            "settings_csv": mock.settings_csv(),
             "bundle": mock.bundle(people),
         },
         headers=_NO_STORE,

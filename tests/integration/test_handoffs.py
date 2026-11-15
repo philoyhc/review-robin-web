@@ -205,6 +205,26 @@ def test_a_settings_file_sets_up_the_drafts_instrument(client: TestClient, db: S
     assert created.detail is not None and created.detail["counts"] == {"files": 3}
 
 
+def test_the_utilities_mock_bundle_arrives_set_up(client: TestClient, db: Session) -> None:
+    """The proof of concept's own bundle (segment 23D), as its page sends
+    it, creates a draft whose instrument answers under the keys it set."""
+    from utilityapps.interop_poc import mock
+
+    bundle: dict[str, Any] = {
+        **mock.bundle(mock.reviewers("Admin", "admin@example.edu")),
+        "transfer_id": str(uuid.uuid4()),
+    }
+    bundle["session_suggestion"] = {**bundle["session_suggestion"], "code": "POC-MOCK-1"}
+    reply = _post(client, bundle)
+    assert reply.status_code == 201, reply.text
+    instrument = db.scalars(select(Instrument)).one()
+    assert instrument.name == mock.INSTRUMENT
+    assert sorted(f.field_key for f in instrument.response_fields) == ["comment", "score"]
+    status = _status(client, bundle["transfer_id"]).json()
+    assert status["status_row"]["instruments_set_up"] == 1
+    assert status["schedule"]["responses_release_at"] is None  # releases nothing
+
+
 def test_a_refused_settings_file_leaves_no_session_and_says_why(
     client: TestClient, db: Session
 ) -> None:
