@@ -63,7 +63,7 @@ A JSON object:
 | `transfer_id` | a UUID, chosen by the sender per transfer |
 | `source_app` | the sender's name, 1–64 characters |
 | `session_suggestion` | `{name, code}`: the draft's name (1–255) and code (1–64), checked as New session checks them |
-| `files` | CSV text by kind: `reviewers` and `reviewees` required; `relationships`, `observers` and `settings` optional. Any other kind is refused, the key named ASCII-escaped. `settings` is a Settings CSV (`spec/csv_contracts.md` §3.3), since segment 23D (`guide/segment_23D_handoff_settings.md`): the 2026-11-04 ruling that a handoff sends rosters only (`guide/interoperability.md`) is amended so a sender sets up the draft's instruments too |
+| `files` | CSV text by kind: `reviewers` and `reviewees` required; `relationships`, `observers` and `settings` optional. Any other kind is refused, the key named ASCII-escaped. `settings` is a Settings CSV (`spec/csv_contracts.md` §3.3), so a sender sets up the draft's instruments too |
 
 Every text must be valid Unicode with no NUL character (Postgres text
 refuses one). Any envelope fault is `422 invalid_package` with lines in

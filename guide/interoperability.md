@@ -13,8 +13,8 @@ so the handoff needs no rework later. It builds no interoperability.
 - **v1 sends rosters only** (*amended 2026-11-15, segment 23D: a
   Settings file may go with them, setting up the draft's instruments;
   `spec/handoffs.md` §4*). Reviewers, Reviewees, Observers and
-  Relationships (as pair context); no `settings.csv`. Instruments, fields
-  and rules are built in RRW.
+  Relationships (as pair context); since 23D a `settings.csv` may set up
+  the instruments too.
 - **One operator in both apps.** Two apps interoperate only for a person
   who is an operator in both; no cross-app delegation.
 - **Pre-position, don't build.** Unbuilt segments take the choices below;

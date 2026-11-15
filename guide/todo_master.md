@@ -48,13 +48,9 @@ is the author's call.
    reminder already past due on every open session in one pass, after
    operators may have reminded by hand: 14G marks those skipped, not
    sent, when it turns the setting on.
-2. **23D — The handoff takes settings** (for Apply Desk's ruling 26,
-   author 2026-11-15): the bundle may carry a Settings CSV, applied
-   after the rosters in the same create, and the Utilities proof of
-   concept sends one. **Plan:** `guide/segment_23D_handoff_settings.md`.
-3. **The handoff re-sends to a draft not yet opened** (Apply Desk's
+2. **The handoff re-sends to a draft not yet opened** (Apply Desk's
    ruling 24; unscheduled, before Apply Desk's AD6): `spec/handoffs.md`
-   creates only. A plan when it starts; with 23D it retires
+   creates only. A plan when it starts; with 23D (closed) it retires
    `guide/interoperability.md` §5's revisit.
 
 ### Stubs
