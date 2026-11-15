@@ -637,6 +637,21 @@ def workflow_stop_release(
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
+    if linked_apps.release_off(review_session):
+        # No window to stop on a linked session (segment 23E); the card
+        # does not offer the button, and a stamp would outlive Unlink.
+        return urls.redirect(
+            request,
+            url=_redirect_url(
+                review_session.public_id,
+                return_to,
+                super_status="failed",
+                super_button="stop_release",
+                super_step="precondition",
+                super_error="linked_release",
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
     try:
         lifecycle.stop_responses_release(
             db,

@@ -769,6 +769,13 @@ def release_responses_now(
         code="archived",
         message="Archived sessions can't have responses released.",
     )
+    session_guard.require_state(
+        db,
+        review_session,
+        lambda locked: not linked_apps.release_off(locked),
+        code="linked",
+        message=linked_apps.off_message(review_session, "Release"),
+    )
     now = datetime.now(UTC)
     cleared_until = review_session.responses_release_until is not None
     review_session.responses_release_at = now
@@ -819,6 +826,13 @@ def stop_responses_release(
         lambda locked: not is_archived(locked),
         code="archived",
         message="Archived sessions can't have releases stopped.",
+    )
+    session_guard.require_state(
+        db,
+        review_session,
+        lambda locked: not linked_apps.release_off(locked),
+        code="linked",
+        message=linked_apps.off_message(review_session, "Release"),
     )
     now = datetime.now(UTC)
     review_session.responses_release_until = now

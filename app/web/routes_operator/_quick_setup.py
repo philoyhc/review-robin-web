@@ -46,6 +46,7 @@ from app.services import (
     date_formatting,
     handoffs,
     held_uploads,
+    linked_apps,
     operator_settings,
     scheduled_events,
     session_config_io,
@@ -667,6 +668,10 @@ async def _run_quick_setup_contents(
     symmetric = sessions.symmetric_review_after_settings(db, review_session, settings_symmetric)
     if "reviewees" in contents and symmetric:
         return _SlotRefusal("reviewees", _SlotFailure("symmetric_reviewees"))
+    # Segment 23E — observers are off on a linked session: a roster for
+    # them is refused, so an upload cannot turn them on.
+    if "observers" in contents and linked_apps.observers_off(review_session):
+        return _SlotRefusal("observers", _SlotFailure("observers_off"))
 
     # In the threadpool too: a Settings file with a short row is
     # validated under the session lock (findings S3).

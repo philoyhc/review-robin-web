@@ -453,7 +453,21 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   (`has_relationships` / `has_observers`), mirroring the service-layer
   guard against orphaning data. Such a chip is a fixed switch
   (`.tag-chip.is-fixed`, `spec/ui_elements.md` §9): solid, with no edge
-  or pointer and a lock glyph.
+  or pointer and a lock glyph. On a linked session (below) the
+  Observers chip is an inert, off `.tag-chip.is-locked` span in both
+  modes (`data-observers-off`), titled with the link.
+- **Session is linked with** (`#config-linked-app`, segment 23E), only on
+  a session another application created through the handoff
+  (`linked_app`, `spec/handoffs.md` §5): one chip naming the application,
+  on. Locked it only shows; unlocked it is a button that asks
+  (`window.confirm`) and then posts `/unlink`, making the session native
+  (`session.unlinked`), with the help line "Click to unlink: the session
+  becomes native." Like every edit-mode control it is reached only in
+  draft or validated. The optional-tabs and linked groups share the left
+  of a two-column row under Tags (`.config-toggle-columns`), Rosters the
+  right. On a linked session **Release responses from / until** show
+  "Off: see in {application}" in both modes and render no input, and
+  the status row adds a `Linked: {application}` pill.
 - **Rosters** (`#config-symmetric-review`, a `role="group"` labeled
   "Rosters") — one chip, **Symmetric review** (`symmetric_review`), in
   the same chip style: the Reviewers roster is also the Reviewees roster

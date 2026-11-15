@@ -13,15 +13,27 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, Instrument, Observer, ReviewSession
+from app.db.models import (
+    AuditEvent,
+    Instrument,
+    InstrumentViewPolicy,
+    Observer,
+    Reviewee,
+    ReviewSession,
+)
 from app.services import linked_apps, session_clone, session_config_io
 from app.services import session_lifecycle as lifecycle
 from app.services.validation import validate_session_setup
-from app.web.views import build_reviewer_visibility_rows, build_workflow_card_context
+from app.web.views import (
+    build_quick_setup_context,
+    build_reviewer_visibility_rows,
+    build_workflow_card_context,
+)
 
 from .test_handoffs import REVIEWEES, REVIEWERS, SETTINGS, _bundle, _post, _status
 
@@ -221,7 +233,7 @@ def _with_settings() -> dict[str, str]:
 
 def test_the_collation_page_is_closed(client: TestClient, db: Session) -> None:
     review_session, _ = _created(client, db)
-    # Not reachable through any control; set directly to show the gate holds.
+    # Every control refuses this state; set directly to show the gate holds.
     review_session.observers_enabled = True
     review_session.status = "ready"
     db.add(Observer(session_id=review_session.id, email="alice@example.edu", display_name="A"))
@@ -246,3 +258,58 @@ def test_validate_raises_no_unreachable_results_warning(client: TestClient, db: 
     assert "reviewees.email_or_identifier" not in fields()
     review_session.linked_app = None
     assert "reviewees.email_or_identifier" in fields()
+
+
+def test_the_results_page_is_closed_until_unlink(client: TestClient, db: Session) -> None:
+    """A reviewee granted Raw after release, the window's anchor reached:
+    404 while linked, the page once Unlink makes the session native."""
+    review_session, _ = _created(client, db, files=_with_settings())
+    instrument = db.scalars(select(Instrument)).one()
+    db.add(
+        InstrumentViewPolicy(
+            instrument_id=instrument.id,
+            audience="reviewee",
+            after_release_granularity="row",
+            after_release_identification="identified",
+        )
+    )
+    db.add(
+        Reviewee(session_id=review_session.id, name="Al", email_or_identifier="alice@example.edu")
+    )
+    _expired_with_release(db, review_session)
+    url = f"/me/sessions/{review_session.public_id}/results"
+    assert client.get(url).status_code == 404
+    home = f"/operator/sessions/{review_session.public_id}"
+    assert client.post(f"{home}/unlink", follow_redirects=False).status_code == 303
+    assert client.get(url).status_code == 200
+
+
+def test_stop_release_is_refused_by_route_and_service(client: TestClient, db: Session) -> None:
+    review_session, _ = _created(client, db)
+    review_session.status = "expired"
+    db.commit()
+    reply = client.post(
+        f"/operator/sessions/{review_session.public_id}/workflow/stop-release",
+        follow_redirects=False,
+    )
+    assert "super_error=linked_release" in reply.headers["location"]
+    db.refresh(review_session)
+    assert review_session.responses_release_until is None
+    user = review_session.created_by_user
+    for service in (lifecycle.release_responses_now, lifecycle.stop_responses_release):
+        with pytest.raises(lifecycle.SessionStateConflict):
+            service(db, review_session=review_session, user=user)
+
+
+def test_quick_setup_offers_and_takes_no_observers(client: TestClient, db: Session) -> None:
+    review_session, _ = _created(client, db)
+    slots = {slot.key for slot in build_quick_setup_context(db, review_session).slots}
+    assert "observers" not in slots
+    client.post(
+        f"/operator/sessions/{review_session.public_id}/quick-setup/observers",
+        files={"file": ("obs.csv", b"ObserverName,ObserverEmail\nOren,oren@example.edu\n")},
+        follow_redirects=False,
+    )
+    db.refresh(review_session)
+    assert not review_session.observers_enabled
+    assert db.scalars(select(Observer)).first() is None
