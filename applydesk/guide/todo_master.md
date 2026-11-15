@@ -359,9 +359,10 @@ where a ruling below differs from it, the ruling wins.
     - **Apply Desk sends Review Robin the session's settings** with its
       rosters: the instrument (a field per result, its key prescribed),
       visibility releasing nothing after the window, and the schedule
-      from the gate's dates. Review Robin's handoff takes no settings
-      yet: queued there (`guide/todo_master.md`, its queued segments).
-      Until then the operator builds them by hand (ruling 24).
+      from the window of the stage holding the gate (a gate has no dates of
+      its own: author, 2026-11-15) as its start and end. Review Robin's
+      handoff takes them since its segment 23D; its 23E (planned) marks
+      the session as Apply Desk's, turning off Review Robin's release.
 
 ## MVP roadmap
 
