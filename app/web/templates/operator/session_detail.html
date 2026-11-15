@@ -385,7 +385,7 @@
             <input type="text" id="mock-invite-offsets" name="invite_offsets"
                    data-edit-only form="config-save-{{ session.id }}"
                    value="{{ invite_offsets_input_value }}"
-                   placeholder="e.g. -P1D, -PT2H" aria-describedby="invite-offsets-help">
+                   aria-describedby="invite-offsets-help">
             <p class="form-help" id="invite-offsets-help" data-edit-only>Offset from Start, e.g., -P1D, -PT2H</p>
           </div>
           <div>
@@ -406,7 +406,7 @@
             <input type="text" id="mock-reminder-offsets" name="reminder_offsets"
                    data-edit-only form="config-save-{{ session.id }}"
                    value="{{ reminder_offsets_input_value }}"
-                   placeholder="e.g. -P2D, -PT4H" aria-describedby="reminder-offsets-help">
+                   aria-describedby="reminder-offsets-help">
             {# 14E rung 0: auto-send off until mail can go on a clock;
                off, the offsets time the Workflow card's due prompts (14F
                rung 5a), so the labels say *Prompt to*. #}

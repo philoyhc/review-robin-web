@@ -371,10 +371,12 @@ plain `<label>` above its value:
   shows as a pill next to its **resolved send datetime**
   (`views.build_offset_display_rows`). **With scheduled email off**
   (`RRW_SCHEDULED_SEND`, the default; `spec/settings_inventory.md`) the
-  two fields are live as **prompts**, labeled "Prompt to send invites"
-  and "Prompt to send reminders", with the line
-  "Scheduled email under development: the Workflow card prompts you when
-  each is due." A Save checks them exactly as when on, and each pill still
+  two fields are live as **prompts**, labeled "Prompt to send invites
+  (optional)" and "Prompt to send reminders (optional)", each box's
+  anchor and an example below it as helper text ("Offset from Start,
+  e.g., -P1D, -PT2H"; "Offset from End, …"), with no placeholder and no
+  further line (author, 2026-11-15; the Create page reads the same). A
+  Save checks them exactly as when on, and each pill still
   shows its resolved moment, now the moment the prompt comes due
   (`spec/lifecycle.md` §8.1, `spec/workflow_card.md` "Due prompts").
   Resolved fire-moments read
