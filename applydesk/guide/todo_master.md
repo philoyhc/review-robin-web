@@ -262,6 +262,43 @@ where a ruling below differs from it, the ruling wins.
       *Close* asks first while any waits (author, 2026-11-14, replacing
       a ✓ by each box; *Add panel* an outline button, Save the card's
       one primary).
+24. **A gate run in Review Robin is sent from Apply Desk** (author,
+    2026-11-15): the session is Review Robin's, created through Apply
+    Desk's handoff (`spec/handoffs.md`), and Apply Desk keeps the link.
+    The sequence, set-up done (Process, Panels, Form):
+    - **Publish** the exercise, refused while Process's Outline names a
+      problem (a Review Robin gate with no panel, an empty panel, no
+      result). **Open** the form, applicants apply, **close** it; an
+      exercise with no form loads its applications on Applications.
+    - **Application files** are made at submit or when the form closes,
+      the operator's choice on Form.
+    - **Who enters the gate** is decided on Applications (the entry
+      rule as a proposal, cells by hand or CSV, *Lock* keeping it),
+      every application *Entered* or *Not entered*.
+    - **The gate is Ready** once the exercise is published, its entry is
+      decided with at least one entered, its panel has members and it has
+      a result. It may be sent **before its stage's dates**, which
+      guide; the Workflow card names what blocks it.
+    - **Send to Review Robin** shows the bundle first: the session's
+      name and code; reviewers, the panel; reviewees, the entered
+      applications (the application ID, or ruling 10's alias, as
+      `RevieweeEmail`; the application file as `ProfileLink`); and *For
+      Review Robin*, each result's field **with the field key Apply Desk
+      prescribes**. Sent, Apply Desk keeps the transfer, the session and
+      who was sent; the tab lands on the draft's Session Home.
+    - **In Review Robin** the operator builds the instrument to that
+      list, the field keys as given, then sets assignments and the
+      schedule, validates, invites and activates.
+    - **Changes after Send**: while the session has not opened, made in
+      Apply Desk and sent again to the same draft (a contract Review
+      Robin's handoff does not offer yet); once it has opened, made in
+      Review Robin.
+    - **Results** come back on Evaluations by *Pull results*, matched on
+      the prescribed field keys (a missing key asks for a mapping),
+      each result derived as its gate says, filling the gate's column on
+      Applications.
+    - **Who reviews which application** is open: it needs the gate card
+      expanded (Open decisions).
 
 ## MVP roadmap
 
@@ -314,6 +351,10 @@ Segments in order; each gets a plan in this folder when it starts.
   one condition per section, hidden answers discarded on submit.
   Revisit when a real exercise would otherwise need two near-identical
   forms, or operators keep writing "skip this if…" in help text.
+- **Who reviews which application at a gate** (ruling 24): everyone on
+  the panel every entered application, or pairs Apply Desk makes and
+  sends (ruling 9 needs Apply Desk to know them, for the application
+  file); the author's, with the gate card expanded.
 - **A panel shared across exercises** (AD1F): an institution's standing
   pool, the author's when AD5 stores panels.
 - **Raise early with IT:** Blob storage (spec §5.3) and the `applydesk`
