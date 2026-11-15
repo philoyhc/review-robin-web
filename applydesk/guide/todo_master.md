@@ -113,9 +113,10 @@ where a ruling below differs from it, the ruling wins.
       outcome (*Pending → Decided → Released*), then the exercise is
       closed and archived. An item locks when it goes live; the rest
       stays editable, so a later gate can be set up just in time.
-    - **A Workflow card** on Home and every Operations page steps
+    - ~~**A Workflow card** on Home and every Operations page steps
       through them in timeline order, the next one carrying its action
-      and what blocks it; there is no Validate tab.
+      and what blocks it~~ (*removed, author 2026-11-15: derivative of the
+      other pages, it can wait*); there is no Validate tab.
 15. **The exercise's timeline is built of stages** (author, 2026-11-13;
     segment AD1D), one word for ruling 13's rounds and the timeline's
     stages:
@@ -283,7 +284,7 @@ where a ruling below differs from it, the ruling wins.
     - **The gate is Ready** once the exercise is published, its entry is
       decided with at least one entered, every row entered has a dossier
       (ruling 25), its panel has members and it has a result. It may be sent **before its stage's dates**, which
-      guide; the Workflow card names what blocks it.
+      guide.
     - **Send to Review Robin** shows the bundle first: the session's
       name and code; reviewers, the panel; reviewees, the entered
       rows (the application ID, or the dossier's own where there is no
@@ -325,13 +326,12 @@ where a ruling below differs from it, the ruling wins.
     - **A dossier reads its sources as they change**, but sending a gate
       **freezes the version its panel sees**: a later form part or gate
       result adds to it without changing what an earlier panel read.
-    - **The Workflow card** gains a step for Create dossiers (ruling 26), and a
-      gate is not Ready until every row entered at it has a dossier.
+    - A gate is not Ready until every row entered at it has a dossier.
     - **The Applications page becomes Dossiers** (author, 2026-11-15),
       at `/operator/exercises/<id>/dossiers`: a row per dossier, an
       application's where it has one.
-    - **Open:** Create dossiers' states on the Workflow card
-      (ruling 14).
+    - **Open:** Create dossiers' states, for when a Workflow card
+      returns (ruling 14).
 26. **A dossier is written in parts, by the form, gates and outcomes**
     (author, 2026-11-15), amending ruling 25:
     - **A dossier** is the complete, readable file on one candidate's
@@ -371,7 +371,7 @@ Segments in order; each gets a plan in this folder when it starts.
 |---|---|---|
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
-| **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
+| **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14; removed 2026-11-15); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
 | AD1G onward — the other new pages | Emails, Evaluations and Extract data built out as working scaffolds, one segment each | Next |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |

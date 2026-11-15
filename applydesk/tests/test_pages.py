@@ -462,7 +462,9 @@ def test_extract_data_collates_every_evaluation_and_exports(client: TestClient) 
 def test_a_draft_exercise_s_timeline_reads_cleanly(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
     assert "Not set to Not set" not in text and "Expected Not set" not in text
-    assert "Dates not set" in text
+    draft = sample_data.exercise(DRAFT)
+    assert draft is not None
+    assert workflow.steps(draft)[0].when == "Dates not set"
 
 
 def test_a_blank_exercise_lists_what_is_still_to_set_up(client: TestClient) -> None:
@@ -481,8 +483,10 @@ def test_a_blank_exercise_lists_what_is_still_to_set_up(client: TestClient) -> N
         (f"{base}/process", "Dates"),
         (f"{base}/form", "Application form"),
     ]
-    assert "Dates not set" in home and "(a hard deadline)" not in home
-    assert re.findall(r'data-wf-step="([^"]+)" aria-current="step"', home) == ["Application form"]
+    assert "(a hard deadline)" not in home
+    blank = sample_data.exercise(BLANK)
+    assert blank is not None
+    assert workflow.steps(blank)[0].when == "Dates not set"
 
 
 def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> None:
@@ -539,14 +543,14 @@ def test_profile_shows_nowhere_a_reader_sees(client: TestClient) -> None:
     assert client.get(f"/applydesk/me/exercises/{EX}/profiles/p3bd7kq2wx").status_code == 404
 
 
-# --- Segment AD1D rung 3: the Workflow card (ruling 14) ---
-def _steps(text: str) -> list[str]:
-    return re.findall(r'data-wf-step="([^"]+)"', text)
-
-
-def test_the_workflow_card_follows_the_timeline(client: TestClient) -> None:
-    text = client.get(f"/applydesk/operator/exercises/{EX}").text
-    assert _steps(text) == [
+# --- Segment AD1D rung 3: the timeline, step by step (ruling 14). The
+# Workflow card that drew it is gone (author, 2026-11-15); the steps
+# still name the current stage. ---
+def test_the_timeline_steps_follow_the_stages() -> None:
+    e = sample_data.exercise(EX)
+    assert e is not None
+    all_steps = workflow.steps(e)
+    assert [s.title for s in all_steps] == [
         "Application form",
         "Peer Review",
         "Faculty Panel Review",
@@ -556,41 +560,34 @@ def test_the_workflow_card_follows_the_timeline(client: TestClient) -> None:
         "Final results",
         "Close and archive",
     ]
-    groups = re.findall(r'<span class="wf-grp">([^<]+)</span>', text)
-    assert groups == ["Call for applications", "Review", "Interview", "Decision", "Close"]
-    # Next is the earliest step not done: Gate 3, sent, opening Evaluations.
-    now = re.findall(r'data-wf-step="([^"]+)" aria-current="step"', text)
-    assert now == ["Interview"]
-    assert "Next: <strong>Gate 3 · Interview</strong> — 18 of 27 interviewed." in text
-    assert f'href="/applydesk/operator/exercises/{EX}/evaluations">Open Evaluations</a>' in text
-    assert "Not ready: its email to applicants is not written" in text  # Final results
-    assert "Decided on Dossiers" in text  # ruling 25
-    # Every action is inert until AD2 (author, 2026-11-13).
-    card = text[text.index('aria-labelledby="wf-h"') :]
-    card = card[: card.index("</section>")]
-    assert "<button" in card and card.count("<button") == card.count("disabled>")
+    # Next is the earliest step not done: Gate 3, sent.
+    now = workflow.next_step(all_steps)
+    assert now is not None and (now.title, now.line) == ("Interview", "18 of 27 interviewed")
+    assert workflow.current_stage(e) == "Interview"
+    final = next(s for s in all_steps if s.title == "Final results")
+    assert final.blocked == "Not ready: its email to applicants is not written"
 
 
-@pytest.mark.parametrize("section", ["dossiers", "evaluations", "extract"])
-def test_the_workflow_card_sits_on_every_operations_page(client: TestClient, section: str) -> None:
-    assert (
-        'aria-labelledby="wf-h"' in client.get(f"/applydesk/operator/exercises/{EX}/{section}").text
+@pytest.mark.parametrize(
+    "section",
+    ["", "/process", "/form", "/panels", "/emails", "/dossiers", "/evaluations", "/extract"],
+)
+def test_no_page_carries_a_workflow_card(client: TestClient, section: str) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{EX}{section}").text
+    assert 'aria-labelledby="wf-h"' not in text and "data-wf-step" not in text
+
+
+def test_a_blank_exercise_s_timeline_starts_at_opening_the_form() -> None:
+    e = sample_data.exercise(BLANK)
+    assert e is not None
+    all_steps = workflow.steps(e)
+    assert [s.title for s in all_steps] == ["Application form", "Close and archive"]
+    now = workflow.next_step(all_steps)
+    assert now is not None and (now.title, now.line, now.action) == (
+        "Application form",
+        "Not open yet",
+        "Open form…",
     )
-
-
-@pytest.mark.parametrize("section", ["process", "form", "panels", "emails"])
-def test_setup_pages_carry_no_workflow_card(client: TestClient, section: str) -> None:
-    assert (
-        'aria-labelledby="wf-h"'
-        not in client.get(f"/applydesk/operator/exercises/{EX}/{section}").text
-    )
-
-
-def test_a_draft_s_workflow_starts_at_opening_the_form(client: TestClient) -> None:
-    text = client.get(f"/applydesk/operator/exercises/{BLANK}").text
-    assert _steps(text) == ["Application form", "Close and archive"]
-    assert "Next: <strong>Application form</strong> — Not open yet." in text
-    assert "Open form…</button>" in text
 
 
 # --- Segment AD1D: the cumulative read's fixes ---
@@ -600,8 +597,10 @@ def test_an_unnamed_stage_names_its_owed_template(client: TestClient) -> None:
     base = f"/applydesk/operator/exercises/{BLIND}"
     process = client.get(f"{base}/process").text
     assert 'data-rel="applicants-email" checked' in process
-    home = client.get(base).text
-    assert "Not ready: its email to applicants is not written" in home
+    blind = sample_data.exercise(BLIND)
+    assert blind is not None
+    blocked = [s.blocked for s in workflow.steps(blind) if s.blocked]
+    assert blocked == ["Not ready: its email to applicants is not written"]
     emails = client.get(f"{base}/emails").text
     assert 'data-email="Stage 2: Outcome - Applicants"' in emails
 
@@ -625,10 +624,7 @@ def test_every_panel_is_offered_to_a_gate(client: TestClient) -> None:
     assert '<option value="interviewers">Interviewers</option>' in text
 
 
-def test_a_sent_gate_opens_evaluations_except_from_evaluations(client: TestClient) -> None:
-    link = f'href="/applydesk/operator/exercises/{EX}/evaluations">Open Evaluations</a>'
-    assert link in client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
-    assert link not in client.get(f"/applydesk/operator/exercises/{EX}/evaluations").text
+def test_a_sent_gate_points_to_evaluations() -> None:
     steps = workflow.steps(sample_data.exercise(EX) or sample_data.EXERCISES[0])
     sent = [s for s in steps if s.state == "Sent"]
     assert sent and all(s.action == "" and s.link == "evaluations" for s in sent)

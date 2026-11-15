@@ -183,7 +183,9 @@ flow and every rule Dossiers applies; Form, Panels and Emails flesh out its
 nodes. Every move works in the browser; nothing is saved until AD2, and a
 reload restores the sample. A blank exercise shows one open card, *Stage 1*,
 holding the form. The cards are drawn from `stages.plan_of`, so Process,
-Dossiers and the Workflow card agree on load.
+Dossiers and the status row agree on load. There is no Workflow card:
+ruling 14's was removed (author, 2026-11-15: derivative of the other
+pages, it can wait); `workflow.steps` still names the current stage.
 
 - **Layout.** The cards in timeline order, the Outline beside them (as
   Form's), *Save* at its foot, disabled until AD2.
@@ -288,10 +290,12 @@ Dossiers and the Workflow card agree on load.
   template owed on the Emails page, named for its stage (*Review: Outcome -
   Applicants*, *Call for applications: Receipt - Applicants*), one section each
   in timeline order with a *Written* or *Owed* chip (`workflow.emails`). An
-  outcome with an owed email is not ready to release: the Workflow card says
-  which audiences' emails are not written, until it is released. Template text
-  and sending come later (Emails' own segment; AD6, AD7).
-- **Preview** of the Workflow card the cards describe is not built.
+  outcome with an owed email is not ready to release. `workflow.steps`
+  records which audiences' emails are not written, but no page shows it
+  until a Workflow card returns; meanwhile the *Owed* chips and the status
+  row's Emails pill do. Template text and sending come later (Emails' own
+  segment; AD6, AD7).
+- **Preview** of the timeline the cards describe is not built.
 
 ## The Panels page
 

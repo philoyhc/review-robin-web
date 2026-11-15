@@ -3,7 +3,6 @@
 {% block content %}
 <div class="ptitle"><h1>{{ exercise.name }}</h1></div>
 <p class="lede">{{ exercise.summary or "No summary yet." }}</p>
-{% include "applydesk/operator/_workflow.html" %}
 {% include "applydesk/_placeholder.html" %}
 {% include "applydesk/operator/_details.html" %}
 {% set submitted = applications | selectattr("state", "equalto", "Submitted") | list %}
@@ -39,7 +38,7 @@
       <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Publish</button></div>
       {% endif %}
     {% elif exercise.form_open %}
-      <p>Applications are open. The Workflow card above shows what follows once the form closes.</p>
+      <p>Applications are open. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> shows what follows once the form closes.</p>
     {% else %}
       <p>Assessment is under way in Review Robin. Its results come back on Evaluations.</p>
       <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations') }}">Go to Evaluations</a></div>
