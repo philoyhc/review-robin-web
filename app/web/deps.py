@@ -52,6 +52,7 @@ from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.logging_config import get_logger
 from app.services import (
+    linked_apps,
     operator_settings,
     participants,
     permissions,
@@ -550,7 +551,9 @@ def require_observer_in_session(
         if viewer.matches(o, o.email):
             matched = o
             break
-    if matched is None:
+    # Observers are off on a linked session (segment 23E): its roster
+    # stays empty, and the gate holds even if a row were there.
+    if matched is None or linked_apps.observers_off(review_session):
         log.warning(
             "permission denied",
             extra={

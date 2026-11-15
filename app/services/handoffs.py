@@ -197,6 +197,17 @@ def parse_bundle(body: bytes) -> Bundle:
             reason="symmetric_review",
             slot="settings",
         )
+    # Observers are off on a session its profile links (segment 23E): a
+    # roster for them is refused rather than dropped unread.
+    profile = linked_apps.profile_for(source_app)
+    if profile is not None and profile.observers_off and "observers" in contents:
+        raise HandoffError(
+            "invalid_setup",
+            422,
+            [f"Observers are off on a session linked to {profile.name}: send no observers file."],
+            reason="observers_off",
+            slot="observers",
+        )
     return Bundle(transfer_id, source_app, name, code, contents)
 
 

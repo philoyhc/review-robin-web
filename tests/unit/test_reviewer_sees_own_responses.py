@@ -34,6 +34,7 @@ def _session(status: str, *, released: bool = False) -> ReviewSession:
         responses_release_at=_NOW - dt.timedelta(hours=1) if released else None,
         responses_release_until=None,
         deadline=None,
+        linked_app=None,  # native (segment 23E)
     )
     return cast(ReviewSession, fake)
 

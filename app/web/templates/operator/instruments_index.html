@@ -2086,6 +2086,10 @@
                          data-new-model-vp-identity-input="{{ _aud }}"
                          value="{{ _st.get('reviewer_identity_stored', '') }}">
                   {% endfor %}
+                {# Segment 23E — on a linked session the application shows
+                   results: the after-the-window cells name it, fixed. The
+                   hidden inputs above keep the stored modes, unread. #}
+                {% set _released_in = linked.shows_results if (linked and linked.release_off) else "" %}
                 <table class="vp-grid" style="width: 100%; border-collapse: collapse;">
                   <thead>
                     <tr style="text-align: left;">
@@ -2103,8 +2107,10 @@
                       <td style="padding: 4px 8px;">You (reviewer)</td>
                       <td style="padding: 4px 8px;">{{ b3_static_pill("Raw responses") }}</td>
                       <td style="padding: 4px 8px;">
+                        {% if _released_in %}{{ b3_static_pill("See in " ~ _released_in) }}{% else %}
                         {{ b3_mode_cycle("peer_reviewer", "after_release",
                                           ["", "raw"], _pr.after_release_mode) }}
+                        {% endif %}
                       </td>
                     </tr>
                     {# Reviewees — responses about them. Not shown while the
@@ -2114,16 +2120,21 @@
                       <td style="padding: 4px 8px;">Reviewees</td>
                       <td style="padding: 4px 8px;">{{ b3_static_pill("Not shown") }}</td>
                       <td style="padding: 4px 8px;">
+                        {% if _released_in %}{{ b3_static_pill("See in " ~ _released_in) }}{% else %}
                         {{ b3_mode_cycle("reviewee", "after_release",
                                           ["", "raw", "anonymized", "summarized"],
                                           _re.after_release_mode) }}
                         {{ b3_identity_chip("reviewee", _re) }}
+                        {% endif %}
                       </td>
                     </tr>
                     {# Observers — cross-cohort. While the session runs
                        only — or Anonymized summaries (per-row views of
                        unfinished data are held back to release); all
                        four after release. #}
+                    {# Segment 23E — observers are off on a linked session:
+                       no row. #}
+                    {% if not (linked and linked.observers_off) %}
                     <tr class="row-group-start" data-new-model-vp-observers-row>
                       <td style="padding: 4px 8px;">Observers</td>
                       <td style="padding: 4px 8px;">
@@ -2142,6 +2153,7 @@
                       <td colspan="3" class="muted"
                           style="padding: 4px 8px; font-size: 0.85em;">Observers are shown here for setup only; reviewers don't see this row.</td>
                     </tr>
+                    {% endif %}
                   </tbody>
                 </table>
                 </div>

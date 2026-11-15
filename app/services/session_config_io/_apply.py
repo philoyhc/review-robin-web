@@ -45,6 +45,7 @@ from ._apply_parse import (
     _parse_rows,
     session_fallback_length_errors,
     session_fired_offset_errors,
+    session_linked_errors,
     session_offset_errors,
     session_schedule_order_errors,
 )
@@ -143,6 +144,7 @@ def _validate(
     errors += session_schedule_order_errors(plan, review_session)
     errors += session_offset_errors(plan, review_session)
     errors += session_fired_offset_errors(plan, review_session)
+    errors += session_linked_errors(plan, review_session)
     return plan, errors
 
 

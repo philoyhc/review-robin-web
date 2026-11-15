@@ -59,6 +59,7 @@ Taken 2026-11-15 at `eaa9324d9`.
 ## Status
 
 - **Rung 2** (2026-11-15, the author: "update interop-poc to test out the 23E idea"): the mark, with a second profile, `utilities`, so the Utilities proof of concept's drafts link as Apply Desk's will and the idea can be tried before Apply Desk sends. Its status card shows *Linked*. Profile text names the application (*See in Utilities*), so the card stays honest for each.
+- **Rung 3** (2026-11-15): the profile's effects, each held in a service, not only hidden: `is_response_release_window_open` is False on a linked session (so the reviewee results gate closes with it), the details Save, the Settings import and the release route refuse a release value, and observers are refused at the handoff, the Save and the import, with `require_observer_in_session` 404ing. The visibility cells read *See in …* on the reviewer's card as well as the operator's: the reviewer's card would otherwise mislead the same way.
 
 ## PR ladder
 

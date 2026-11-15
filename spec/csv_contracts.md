@@ -703,6 +703,11 @@ the round-trip notes below.
    card checks the stored list again on every Save. The card's lead-time
    floor, which measures from now, is the one rule waived, so an
    exported schedule whose moments have since passed still imports.
+   On a session linked to another application (segment 23E,
+   `linked_apps`), a `session.responses_release_at` or
+   `session.responses_release_until` naming a value, and a
+   `session.observers_enabled` of true, are errors naming the link; a
+   blank release row passes, so the session's own export imports back.
    A `session_rule_sets[N].rules_json` the rule engine would refuse
    to load is an error naming the field (`rules_payload_error` in
    `app/schemas/rules.py`, the check the reader makes), and so is an

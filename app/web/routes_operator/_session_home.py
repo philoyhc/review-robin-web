@@ -435,6 +435,21 @@ def _apply_session_config_form(
             detail=str(exc),
         ) from exc
 
+    # A linked session's profile turns release and observers off (segment
+    # 23E): the card renders their controls disabled, so a value here was
+    # not typed into this page.
+    if linked_apps.release_off(review_session) and (
+        parsed_responses_release_at is not None or parsed_responses_release_until is not None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=linked_apps.off_message(review_session, "Release"),
+        )
+    if linked_apps.observers_off(review_session) and observers_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=linked_apps.off_message(review_session, "Observers"),
+        )
     try:
         payload = SessionCreate(
             name=name,

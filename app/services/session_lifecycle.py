@@ -26,7 +26,7 @@ from app.db.models import (
 from app.json_shapes import json_object
 from app.logging_config import get_logger
 from app.schemas.validation import Severity, ValidationIssue
-from app.services import audit, session_guard, unit_of_work
+from app.services import audit, linked_apps, session_guard, unit_of_work
 from app.services.session_guard import LifecycleError
 from app.services.session_guard import (
     SessionStateConflict as SessionStateConflict,  # re-exported
@@ -174,8 +174,12 @@ def is_response_release_window_open(
     before activation. The anchor is left in place and simply goes inert
     — re-closing the session re-opens the window on the schedule they
     originally set, which is what "release at time T" should mean.
+
+    **Never on a linked session** (segment 23E): its application shows
+    results in Review Robin's place, so no after-release grant resolves,
+    whatever the anchors say.
     """
-    if not is_expired(review_session):
+    if not is_expired(review_session) or linked_apps.release_off(review_session):
         return False
     anchor = _as_utc(review_session.responses_release_at)
     if anchor is None:

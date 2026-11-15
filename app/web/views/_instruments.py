@@ -39,7 +39,7 @@ from app.db.models import (
     User,
 )
 from app.json_shapes import json_list
-from app.services import field_labels, visibility_policies
+from app.services import field_labels, linked_apps, visibility_policies
 from app.services import instruments as instruments_service
 from app.services import session_lifecycle as lifecycle
 from app.services._queries import slot_has_data
@@ -1105,6 +1105,9 @@ def build_instruments_context(
     return {
         "user": user,
         "session": review_session,
+        # Segment 23E — a linked session's profile: the visibility
+        # editor's after-the-window cells name its application.
+        "linked": linked_apps.profile_of(review_session),
         "status_pills": session_status_pills(db, review_session),
         "instruments": instruments,
         "is_ready": is_ready,
@@ -1346,6 +1349,9 @@ def build_reviewer_visibility_rows(
     viewers and the reviewer doesn't need to reason about them
     (the card's heading suffix "(other than admin)" makes that
     explicit).
+
+    On a linked session (segment 23E) every after-the-window cell reads
+    *See in {application}*, its mode blank, so no identity pill follows.
     """
     result: dict[int, list[dict[str, str]]] = {}
     audiences: list[tuple[str, str]] = [
@@ -1354,6 +1360,10 @@ def build_reviewer_visibility_rows(
     ]
     for instrument in instruments:
         persisted = visibility_policies.list_for_instrument(db, instrument.id)
+        # Segment 23E — on a linked session the application shows
+        # results: the after-the-window cell names it, whatever is stored.
+        linked = linked_apps.profile_of(instrument.session)
+        released_in = linked.shows_results if linked and linked.release_off else None
         rows: list[dict[str, str]] = []
         for audience, label in audiences:
             row = persisted.get(audience)
@@ -1376,13 +1386,17 @@ def build_reviewer_visibility_rows(
                     "audience": audience,
                     "audience_label": label,
                     "while_ongoing_label": _REVIEWER_VP_MODE_LABELS[wo_mode],
-                    "after_release_label": _REVIEWER_VP_MODE_LABELS[ar_mode],
+                    "after_release_label": (
+                        f"See in {released_in}"
+                        if released_in
+                        else _REVIEWER_VP_MODE_LABELS[ar_mode]
+                    ),
                     # How much of the reviewer the Raw released view
                     # names; shown after a Raw cell on the reviewee row.
                     "reviewer_identity_label": REVIEWER_IDENTITY_LABELS[level],
                     # ProfileLink updates Item 2: the identity-level pill
                     # follows a Raw released cell.
-                    "after_release_mode": ar_mode or "",
+                    "after_release_mode": "" if released_in else (ar_mode or ""),
                 }
             )
         result[instrument.id] = rows

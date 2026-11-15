@@ -247,6 +247,13 @@
                        data-config-input form="config-save-{{ session.id }}"
                        {% if session.relationships_enabled %}checked{% endif %}
                        {% if has_relationships %}disabled{% endif %}>Relationships</label>
+              {% if linked and linked.observers_off %}
+              {# Segment 23E — observers are off on a linked session: the
+                 chip shows, off, and cannot be turned on until Unlink. #}
+              <span class="pill pill-count tag-chip is-locked" role="checkbox"
+                    aria-checked="false" aria-disabled="true" data-observers-off
+                    title="Observers are off: the session is linked to {{ linked.name }}.">Observers</span>
+              {% else %}
               <label class="pill pill-count tag-chip{% if has_observers %} is-fixed{% endif %}"
                      {% if has_observers %}title="The session has observers, so the tab stays on."{% endif %}>
                 <input type="checkbox" class="visually-hidden"
@@ -254,6 +261,7 @@
                        data-config-input form="config-save-{{ session.id }}"
                        {% if session.observers_enabled %}checked{% endif %}
                        {% if has_observers %}disabled{% endif %}>Observers</label>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -360,11 +368,18 @@
                  wrap_attrs={"data-edit-only": ""}, label="End") }}
           </div>
           <div>
+            {% if linked and linked.release_off %}
+            {# Segment 23E — the linked application shows results: the
+               release window is off, and the form sends no value. #}
+            <label>Release responses from</label>
+            <div class="config-value" data-release-off>Off: see in {{ linked.shows_results }}</div>
+            {% else %}
             <label for="mock-release-from">Release responses from (optional)</label>
             <div class="config-value" data-display-only>{{ (session.responses_release_at | format_datetime) if session.responses_release_at else "—" }}</div>
             {{ datetime_field("mock-release-from", "responses_release_at", responses_release_at_input_value,
                  attrs={"form": "config-save-" ~ session.id, "data-tz-utc": format_datetime_local(session.responses_release_at, 'UTC')},
                  wrap_attrs={"data-edit-only": ""}, label="Release responses from") }}
+            {% endif %}
           </div>
           <div>
             <label for="mock-invite-offsets">{% if scheduled_send %}Send invites{% else %}Prompt to send invites{% endif %} (optional)</label>
@@ -413,11 +428,18 @@
             <p class="form-help" id="reminder-offsets-help" data-edit-only>Offset from End, e.g., -P1D, -PT2H</p>
           </div>
           <div>
+            {% if linked and linked.release_off %}
+            {# Segment 23E — the linked application shows results: the
+               release window is off, and the form sends no value. #}
+            <label>Release responses until</label>
+            <div class="config-value" data-release-off>Off: see in {{ linked.shows_results }}</div>
+            {% else %}
             <label for="mock-release-until">Release responses until (optional)</label>
             <div class="config-value" data-display-only>{{ (session.responses_release_until | format_datetime) if session.responses_release_until else "—" }}</div>
             {{ datetime_field("mock-release-until", "responses_release_until", responses_release_until_input_value,
                  attrs={"form": "config-save-" ~ session.id, "data-tz-utc": format_datetime_local(session.responses_release_until, 'UTC')},
                  wrap_attrs={"data-edit-only": ""}, label="Release responses until") }}
+            {% endif %}
           </div>
         </div>
         {# Save / Cancel / Lock cluster at the foot of the right column,

@@ -49,6 +49,7 @@ from app.services import (
     due_actions,
     email_dispatch,
     invitations,
+    linked_apps,
     scheduled_events,
     validation,
 )
@@ -189,8 +190,15 @@ def build_workflow_card_context(
     # been 4 already, leaving no room for Stop on top of a
     # backdated release_at) and matches the spec narrative —
     # responses are released *because the session is over*.
-    release_responses_visible = is_expired and not is_archived and not response_release_window_open
-    stop_release_visible = response_release_window_open and is_expired and not is_archived
+    # A linked session's application shows results in Review Robin's
+    # place (segment 23E): neither release action is offered.
+    release_off = linked_apps.release_off(review_session)
+    release_responses_visible = (
+        is_expired and not is_archived and not response_release_window_open and not release_off
+    )
+    stop_release_visible = (
+        response_release_window_open and is_expired and not is_archived and not release_off
+    )
     archive_visible = is_expired
     return {
         "is_draft": is_draft,
@@ -373,6 +381,7 @@ SUPER_ERROR_MESSAGES: dict[str, str] = {
     "not_ready": "Session must be activated before it can be closed.",
     "archived_release": "Archived sessions can't have responses released.",
     "archived_stop_release": "Archived sessions can't have releases stopped.",
+    "linked_release": "Release is off: the session is linked to another application.",
 }
 """The failure banner's second line, by the ``super_error`` code the
 workflow routes redirect with. The URL carries the code and never the

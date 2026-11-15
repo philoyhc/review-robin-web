@@ -57,6 +57,7 @@ __all__ = [
     "_parse_rows",
     "session_fallback_length_errors",
     "session_fired_offset_errors",
+    "session_linked_errors",
     "session_offset_errors",
     "session_schedule_order_errors",
     "split_rows",
@@ -417,6 +418,35 @@ def session_offset_errors(plan: _ParsedConfig, review_session: ReviewSession) ->
             )
         except ScheduledActivateError as exc:
             errors.append(ApplyError(row_number=0, field=f"session.{column}", message=str(exc)))
+    return errors
+
+
+def session_linked_errors(plan: _ParsedConfig, review_session: ReviewSession) -> list[ApplyError]:
+    """Refuse what a linked session's profile turns off (segment 23E): a
+    release-window row naming a value, and observers turned on. Blank
+    release rows pass, so the session's own export imports back."""
+    from app.services import linked_apps
+
+    overrides = plan.session_overrides
+    errors: list[ApplyError] = []
+    if linked_apps.release_off(review_session):
+        for key in ("responses_release_at", "responses_release_until"):
+            if overrides.get(key) is not None:
+                errors.append(
+                    ApplyError(
+                        row_number=0,
+                        field=f"session.{key}",
+                        message=linked_apps.off_message(review_session, "Release"),
+                    )
+                )
+    if linked_apps.observers_off(review_session) and overrides.get("observers_enabled"):
+        errors.append(
+            ApplyError(
+                row_number=0,
+                field="session.observers_enabled",
+                message=linked_apps.off_message(review_session, "Observers"),
+            )
+        )
     return errors
 
 

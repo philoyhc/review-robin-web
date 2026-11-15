@@ -95,8 +95,8 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   included), and the session's other settings, among them its
   description, deadline, help contact, timezone and schedule. A schedule
   it carries counts as the operator's own: a `scheduled_activate_at`
-  activates the draft once it is prepared, and a `responses_release_at`
-  releases on its date. Never the draft's name and code (fill-blanks,
+  activates the draft once it is prepared, and on a native session a
+  `responses_release_at` releases on its date. Never the draft's name and code (fill-blanks,
   set by the suggestion), its owner, or its state (`session.status` is
   ignored on import). **Symmetric review** turns on only while both
   rosters are empty, which a handoff never has, so a file asking for it
@@ -120,6 +120,14 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   (`applydesk`; `utilities`, the proof of concept) sets the draft's
   `linked_app` with its transfer record; any other links nothing. Session
   Home shows the link, and **Unlink** clears it (`session.unlinked`).
+  The mark is set before the files apply, so the profile holds for them:
+  an `observers` file is refused up front (`422 invalid_setup`, `slot`
+  `observers`, `reason` `observers_off`), and a settings file naming a
+  release date or turning observers on is refused as the Settings import
+  refuses it (`spec/csv_contracts.md` §3.3). On a linked session the
+  release window never opens, observers stay off, and the visibility
+  card's after-the-window cells name the application
+  (`spec/visibility_policy.md` §3.4).
 - **Receipt:** `201` `{status: "created", session_ref, session_code, session_home_url}`.
   The URL is app-relative, emitted through `app/web/urls.py`.
 

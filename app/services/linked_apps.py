@@ -54,6 +54,26 @@ def profile_of(review_session: ReviewSession) -> LinkedProfile | None:
     return LINKED_APPS.get(key) if key else None
 
 
+def release_off(review_session: ReviewSession) -> bool:
+    """Whether the release window is off: the linked application shows
+    results in Review Robin's place."""
+    profile = profile_of(review_session)
+    return profile is not None and profile.release_off
+
+
+def observers_off(review_session: ReviewSession) -> bool:
+    """Whether observers are off on this session."""
+    profile = profile_of(review_session)
+    return profile is not None and profile.observers_off
+
+
+def off_message(review_session: ReviewSession, what: str) -> str:
+    """The refusal naming the link: ``what`` is off on this session."""
+    profile = profile_of(review_session)
+    name = profile.name if profile else "another application"
+    return f"{what} is off: this session is linked to {name}."
+
+
 def linked_name(review_session: ReviewSession) -> str:
     """The linked application's name, or "" for a native session (the
     status row's *Linked* pill, a Jinja filter)."""

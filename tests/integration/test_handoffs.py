@@ -270,8 +270,11 @@ def test_a_settings_file_sets_what_the_settings_import_sets(
         "email_overrides.invitation.subject,Your review,string\r\n"
         "session.status,active,enum\r\n"
     )
+    # A native session's: a linked one refuses the release row (23E,
+    # tests/integration/test_linked_sessions.py).
     bundle = _bundle(
-        files={"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": SETTINGS + extra}
+        source_app="otherapp",
+        files={"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": SETTINGS + extra},
     )
     reply = _post(client, bundle)
     assert reply.status_code == 201, reply.text
