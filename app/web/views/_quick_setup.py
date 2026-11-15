@@ -31,7 +31,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.schemas.validation import ValidationIssue
-from app.services import csv_imports, session_config_io
+from app.services import csv_imports, linked_apps, session_config_io
 from app.services import relationships as relationships_service
 from app.services import session_lifecycle as lifecycle
 
@@ -348,25 +348,27 @@ def build_quick_setup_context(
         ),
     ]
     # Observers slot — always shown, as on the New session card
-    # (``guide/quick_setup_update.md`` Item 2). An upload that saves rows
+    # (``guide/quick_setup_update.md`` Item 2), except on a linked session,
+    # whose observers are off (segment 23E). An upload that saves rows
     # turns ``observers_enabled`` on, so the rows never sit behind a
     # hidden tab.
-    slots.append(
-        QuickSetupSlot(
-            key="observers",
-            label="Observers",
-            count=observer_count,
-            mode="file_upload",
-            is_wired=True,
-            wire_url=f"/operator/sessions/{review_session.public_id}/quick-setup/observers",
-            coming_in=None,
-            error_message=_error_for("observers"),
-            error_details=_details_for("observers"),
-            error_reason=_reason_for("observers"),
-            cancel_url=cancel_url_for("observers"),
-            held_filename=(held or {}).get("observers"),
+    if not linked_apps.observers_off(review_session):
+        slots.append(
+            QuickSetupSlot(
+                key="observers",
+                label="Observers",
+                count=observer_count,
+                mode="file_upload",
+                is_wired=True,
+                wire_url=f"/operator/sessions/{review_session.public_id}/quick-setup/observers",
+                coming_in=None,
+                error_message=_error_for("observers"),
+                error_details=_details_for("observers"),
+                error_reason=_reason_for("observers"),
+                cancel_url=cancel_url_for("observers"),
+                held_filename=(held or {}).get("observers"),
+            )
         )
-    )
     slots.append(
         QuickSetupSlot(
             key="settings",
@@ -593,6 +595,10 @@ def _quick_setup_error_message(
         )
     if reason == "needs_confirm":
         return "Tick the replacement-confirmation box just above Submit, then submit again."
+    if reason == "observers_off":
+        return (
+            "Nothing was imported. Observers are off: the session is linked to another application."
+        )
     if reason == "symmetric_reviewees":
         return (
             "Nothing was imported. Under symmetric review the reviewees are "

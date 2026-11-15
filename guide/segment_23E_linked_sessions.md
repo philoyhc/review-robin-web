@@ -59,6 +59,8 @@ Taken 2026-11-15 at `eaa9324d9`.
 ## Status
 
 - **Rung 2** (2026-11-15, the author: "update interop-poc to test out the 23E idea"): the mark, with a second profile, `utilities`, so the Utilities proof of concept's drafts link as Apply Desk's will and the idea can be tried before Apply Desk sends. Its status card shows *Linked*. Profile text names the application (*See in Utilities*), so the card stays honest for each.
+- **Rung 3** (2026-11-15): the profile's effects. Release: `is_response_release_window_open` is False on a linked session (so no after-release grant resolves and the reviewee results gate closes with it), and `release_responses_now` / `stop_responses_release` refuse it; the release routes and the details Save refuse it first, the Settings import too. Observers: refused at the handoff, the Save, the Settings import and a Quick Setup upload (its slot not offered, `turn_on_populated_features` skipping them), with `require_observer_in_session` 404ing. The *See in …* cells show on the reviewer's card as well as the operator's: it would otherwise mislead the same way.
+- **Cumulative read, rungs 2–3** (one read): one high finding, a Quick Setup observers upload turning observers on, fixed; Stop release ungated, fixed in route and service; `spec/session_home.md` added to the doc impact; three weak tests strengthened (results 404 then 200 after Unlink, Stop release, the Quick Setup slot). It also noted that rung 2 carried the Create page's offset-label change, the author's request in the same round, unrelated to the link.
 
 ## PR ladder
 
@@ -82,7 +84,7 @@ Taken 2026-11-15 at `eaa9324d9`.
 ## Open questions
 
 - **Which audiences read *See in Apply Desk***: proposed reviewees and reviewers (Apply Desk's *Candidate* and panels), observers *Not shown*; confirmed by the author at the rung 3 browser check.
-- **Unlink's place**: Session Home beside the badge, or the session's details card; settled at rung 2.
+- ~~**Unlink's place**~~ — the details card's *Session is linked with* chip, with a *Linked* pill in the status row (author, rung 2); reached, like every card edit, in draft or validated only.
 
 ## Out of scope
 
@@ -97,5 +99,6 @@ Taken 2026-11-15 at `eaa9324d9`.
 - `spec/lifecycle.md` — the release window off on a linked session; Unlink.
 - `spec/csv_contracts.md` — §3.3: release rows refused on a linked session.
 - `spec/settings_inventory.md` — `linked_app`, not a Settings field.
+- `spec/session_home.md` — the details card's *Session is linked with* group, Unlink, the Observers and release fields off, the status row's pill (added at the rung 3 read).
 - `guide/README.md` — this plan's row (rung 1), moved to `guide/archive/README.md` at close.
 - `guide/todo_master.md` — the queue entry (rung 1); deleted at close.

@@ -23,6 +23,7 @@ from app.schemas.sessions import SessionCreate
 from app.services import (
     audit,
     date_formatting,
+    linked_apps,
     operator_settings,
     owner_reports,
     unit_of_work,
@@ -583,6 +584,8 @@ def turn_on_populated_features(
         field_name = FEATURE_TOGGLE_FOR_ROSTER.get(roster)
         if field_name is None:
             continue
+        if field_name == "observers_enabled" and linked_apps.observers_off(review_session):
+            continue  # off on a linked session (segment 23E)
         was_on = before.get(field_name, getattr(review_session, field_name))
         if not getattr(review_session, field_name):
             setattr(review_session, field_name, True)

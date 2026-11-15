@@ -26,7 +26,7 @@ from app.db.models import (
 from app.json_shapes import json_object
 from app.logging_config import get_logger
 from app.schemas.validation import Severity, ValidationIssue
-from app.services import audit, session_guard, unit_of_work
+from app.services import audit, linked_apps, session_guard, unit_of_work
 from app.services.session_guard import LifecycleError
 from app.services.session_guard import (
     SessionStateConflict as SessionStateConflict,  # re-exported
@@ -174,8 +174,12 @@ def is_response_release_window_open(
     before activation. The anchor is left in place and simply goes inert
     — re-closing the session re-opens the window on the schedule they
     originally set, which is what "release at time T" should mean.
+
+    **Never on a linked session** (segment 23E): its application shows
+    results in Review Robin's place, so no after-release grant resolves,
+    whatever the anchors say.
     """
-    if not is_expired(review_session):
+    if not is_expired(review_session) or linked_apps.release_off(review_session):
         return False
     anchor = _as_utc(review_session.responses_release_at)
     if anchor is None:
@@ -765,6 +769,13 @@ def release_responses_now(
         code="archived",
         message="Archived sessions can't have responses released.",
     )
+    session_guard.require_state(
+        db,
+        review_session,
+        lambda locked: not linked_apps.release_off(locked),
+        code="linked",
+        message=linked_apps.off_message(review_session, "Release"),
+    )
     now = datetime.now(UTC)
     cleared_until = review_session.responses_release_until is not None
     review_session.responses_release_at = now
@@ -815,6 +826,13 @@ def stop_responses_release(
         lambda locked: not is_archived(locked),
         code="archived",
         message="Archived sessions can't have releases stopped.",
+    )
+    session_guard.require_state(
+        db,
+        review_session,
+        lambda locked: not linked_apps.release_off(locked),
+        code="linked",
+        message=linked_apps.off_message(review_session, "Release"),
     )
     now = datetime.now(UTC)
     review_session.responses_release_until = now

@@ -20,6 +20,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.schemas.validation import Severity, ValidationIssue
+from app.services import linked_apps
 from app.services.csv_imports import is_comparable_identity
 from app.services.email_identity import normalize_email, normalize_object_id
 from app.services.participants import is_email_identified
@@ -540,7 +541,12 @@ def _check_reviewees_unreachable_for_results(
 
     Non-blocking — the operator may have non-email reviewees on
     purpose (anonymous IDs for analysis-only). The warning just
-    surfaces the implication so they decide knowingly."""
+    surfaces the implication so they decide knowingly.
+
+    Not raised on a linked session (segment 23E): its application shows
+    results, so no reviewee reaches the surface either way."""
+    if linked_apps.release_off(review_session):
+        return
     unreachable = [r for r in inputs.active_reviewees if not is_email_identified(r)]
     if not unreachable:
         return

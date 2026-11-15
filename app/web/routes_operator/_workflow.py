@@ -43,7 +43,7 @@ from starlette import status
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import assignments, audit, due_actions, invitations, validation
+from app.services import assignments, audit, due_actions, invitations, linked_apps, validation
 from app.services import session_lifecycle as lifecycle
 from app.web import urls
 from app.web.deps import (
@@ -567,6 +567,21 @@ def workflow_release_responses(
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
+    if linked_apps.release_off(review_session):
+        # The linked application shows results in Review Robin's place
+        # (segment 23E); the card does not offer the button.
+        return urls.redirect(
+            request,
+            url=_redirect_url(
+                review_session.public_id,
+                return_to,
+                super_status="failed",
+                super_button="release_responses",
+                super_step="precondition",
+                super_error="linked_release",
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
     try:
         lifecycle.release_responses_now(
             db,
@@ -619,6 +634,21 @@ def workflow_stop_release(
                 super_button="stop_release",
                 super_step="precondition",
                 super_error="archived_stop_release",
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    if linked_apps.release_off(review_session):
+        # No window to stop on a linked session (segment 23E); the card
+        # does not offer the button, and a stamp would outlive Unlink.
+        return urls.redirect(
+            request,
+            url=_redirect_url(
+                review_session.public_id,
+                return_to,
+                super_status="failed",
+                super_button="stop_release",
+                super_step="precondition",
+                super_error="linked_release",
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
