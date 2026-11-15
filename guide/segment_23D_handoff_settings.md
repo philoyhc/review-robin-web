@@ -44,6 +44,10 @@ Taken 2026-11-15 at `92d698547`.
 | Handoff tests; the sender's | 906, 150 lines | `wc -l tests/integration/test_handoffs.py utilityapps/tests/test_interop_poc.py` |
 | The mock sender | 94 lines | `wc -l utilityapps/interop_poc/mock.py` |
 
+## Status
+
+- **Rung 2** (2026-11-15): `handoffs.OPTIONAL_FILES` takes `settings`; nothing else in the route changed, the pipeline already applying a settings slot. *Releasing nothing* needs no rows: a draft releases nothing until the operator releases, or a `session.responses_release_at` is set, and the mock sends neither (open question 1 answered).
+
 ## PR ladder
 
 1. **Plan** (this file), its README row, the queued entry in `guide/todo_master.md` narrowed to the re-send.

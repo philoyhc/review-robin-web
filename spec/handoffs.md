@@ -63,7 +63,7 @@ A JSON object:
 | `transfer_id` | a UUID, chosen by the sender per transfer |
 | `source_app` | the sender's name, 1–64 characters |
 | `session_suggestion` | `{name, code}`: the draft's name (1–255) and code (1–64), checked as New session checks them |
-| `files` | CSV text by kind: `reviewers` and `reviewees` required, `relationships` and `observers` optional (rosters only, interop spec §13.1). `settings` or any other kind is refused, the key named ASCII-escaped |
+| `files` | CSV text by kind: `reviewers` and `reviewees` required; `relationships`, `observers` and `settings` optional. Any other kind is refused, the key named ASCII-escaped. `settings` is a Settings CSV (`spec/csv_contracts.md` §3.3), since segment 23D (`guide/segment_23D_handoff_settings.md`): the 2026-11-04 ruling that a handoff sends rosters only (`guide/interoperability.md`) is amended so a sender sets up the draft's instruments too |
 
 Every text must be valid Unicode with no NUL character (Postgres text
 refuses one). Any envelope fault is `422 invalid_package` with lines in
@@ -81,7 +81,16 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   gets the `303` of §2.
 - **The rosters** go through Quick Setup's pipeline
   (`_run_quick_setup_contents`), every slot saved in one unit, with the
-  session's directory (`spec/quick_setup_card_spec.md`).
+  session's directory (`spec/quick_setup_card_spec.md`). **A settings
+  file** goes through it too, after the rosters (`SLOT_ORDER`), with the
+  Settings import's own checks and two-phase apply. Its `session.name`
+  and `session.code` rows are fill-blanks (`spec/csv_contracts.md` §3.3)
+  and the suggestion has set both, so the file cannot rename the draft;
+  symmetric review stays off, the rosters being present. A refused
+  settings file is `422 invalid_setup` with `slot` `settings`, as a
+  refused roster is, and the draft goes with it. It sets nothing to
+  release: a schedule it carries is the sender's, and nothing runs
+  until the operator activates.
 - **Refused, the draft goes with it** (author, 2026-11-11): the route
   rolls back and deletes the session, its audit events included. A
   refused roster is `422 invalid_setup` with `slot`, `reason` and the

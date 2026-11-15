@@ -10,7 +10,9 @@ so the handoff needs no rework later. It builds no interoperability.
 
 **Rulings it rests on** (author, 2026-11-04; the spec's §13.1):
 
-- **v1 sends rosters only.** Reviewers, Reviewees, Observers and
+- **v1 sends rosters only** (*amended 2026-11-15, segment 23D: a
+  Settings file may go with them, setting up the draft's instruments;
+  `spec/handoffs.md` §4*). Reviewers, Reviewees, Observers and
   Relationships (as pair context); no `settings.csv`. Instruments, fields
   and rules are built in RRW.
 - **One operator in both apps.** Two apps interoperate only for a person

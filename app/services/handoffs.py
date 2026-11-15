@@ -42,9 +42,11 @@ PROTOCOL_VERSION = 1
 OPERATION = "reviewrobin.create_draft_session"
 #: The whole request body, CSVs included.
 MAX_BYTES = 1024 * 1024
-#: Rosters only (interop spec §13.1): no Settings file.
+#: The rosters, and since segment 23D a Settings file (`spec/csv_contracts.md`
+#: §3.3), which Quick Setup applies after them: a sender sets up the draft's
+#: instruments in the same create.
 REQUIRED_FILES = ("reviewers", "reviewees")
-OPTIONAL_FILES = ("relationships", "observers")
+OPTIONAL_FILES = ("relationships", "observers", "settings")
 #: The audit event written with the draft, before its rosters; its
 #: ``context`` carries the transfer, which is how a replay is recognized.
 EVENT = "session.handoff_created"
@@ -159,7 +161,7 @@ def parse_bundle(body: bytes) -> Bundle:
             # no UTF-8 response can (a lone surrogate).
             [
                 f"Not accepted: {', '.join(json.dumps(k) for k in unknown)}. "
-                f"Rosters only: {', '.join(sorted(allowed))}."
+                f"Accepted: {', '.join(sorted(allowed))}."
             ],
         )
     missing = [kind for kind in REQUIRED_FILES if kind not in files]
