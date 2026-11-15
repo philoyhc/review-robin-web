@@ -20,7 +20,7 @@ concept*. This document says what to take from it and what not to.
 | Part | File | Shows |
 |---|---|---|
 | The page and its gate | `utilityapps/interop_poc/routes.py` | One GET, super-admin only, every response `no-store` |
-| The bundle | `utilityapps/interop_poc/mock.py` | Rosters in Review Robin's own CSV formats; an application ID as the reviewee's opaque key; a profile link per application; a Settings CSV setting up the instrument, its field keys the sender's to choose (segment 23D) |
+| The bundle | `utilityapps/interop_poc/mock.py` | Rosters in Review Robin's own CSV formats; an application ID as the reviewee's opaque key; a profile link per application; a Settings CSV setting up the instrument, its field keys the sender's to choose |
 | The create and the reads | `utilityapps/templates/interop_poc/page.html` | The browser-side flow below, in two inline scripts |
 | The sender's tests | `utilityapps/tests/test_interop_poc.py` | What the page must keep doing |
 | Review Robin's side | `app/web/routes_operator/_handoffs.py`, `app/services/handoffs.py`, `app/web/views/_handoffs.py`, `tests/integration/test_handoffs.py` | The receiving routes and their tests |

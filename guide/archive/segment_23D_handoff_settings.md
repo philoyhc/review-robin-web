@@ -46,8 +46,11 @@ Taken 2026-11-15 at `92d698547`.
 
 ## Status
 
-- **Rung 2** (2026-11-15): `handoffs.OPTIONAL_FILES` takes `settings`; nothing else in the route changed, the pipeline already applying a settings slot. *Releasing nothing* needs no rows: a draft releases nothing until the operator releases, or a `session.responses_release_at` is set, and the mock sends neither (open question 1 answered).
-- **Rung 3** (2026-11-15): the mock sends *Mock review*. **Read** (cumulative, rungs 2–3, base `bddf897c4`): no defect in the create; a settings file turning on symmetric review was refused as a Reviewees roster, now refused before anything is made, naming the settings; `spec/handoffs.md` under-stated what a file may set (email templates' CC and BCC, help contact, a schedule that runs once prepared), now listed; stale "rosters only" prose fixed. Tests pin both, and a replay with settings.
+**Closed 2026-11-15**, after the author's check that the proof of concept's draft arrives with its instrument. Built as planned (#3903 plan, #3904 rungs 2–3): `handoffs.OPTIONAL_FILES` takes `settings`, the route otherwise unchanged; the mock sends *Mock review*.
+
+- **Read: one**, cumulative on rungs 2–3 (base `bddf897c4`). No defect in the create. Fixed in #3904: a file asking for symmetric review was refused as a Reviewees roster, now refused up front naming the settings (Semantics amended); `spec/handoffs.md` under-stated what a file may set (email templates' CC and BCC, help contact, a schedule), now listed; stale "rosters only" prose.
+- **Answered:** a draft releases nothing until its operator releases or a `responses_release_at` is set, so the file needs no visibility rows; a sent `scheduled_activate_at` fires only once the operator has prepared the draft (the clock's `validated → ready`).
+- **Next, from the close** (author, 2026-11-15): the gate's window as start and end in the file; a session Apply Desk sent marked so Review Robin's release controls say results are shown in Apply Desk's dossiers.
 
 ## PR ladder
 
@@ -70,8 +73,8 @@ Taken 2026-11-15 at `92d698547`.
 
 ## Open questions
 
-- **Visibility "releasing nothing"** (ruling 26): whether a draft's defaults already release nothing, or the file must set each instrument's view policies to hidden; settled at rung 2 against `spec/visibility_policy.md`, the mock sending what it needs.
-- **The schedule's dates**: whether the mock sends any. Proposed: none, so the proof shows instruments only and the operator sets dates, until Apply Desk sends a gate's.
+- **Releasing nothing**: needs no rows; a draft releases nothing until told (Status).
+- **The schedule's dates**: the mock sent none; a gate's window is the next step (Status).
 
 ## Out of scope
 
