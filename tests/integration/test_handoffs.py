@@ -240,6 +240,51 @@ def test_a_refused_settings_file_leaves_no_session_and_says_why(
     assert _count(db, Reviewer) == 0
 
 
+def test_a_settings_file_may_not_turn_on_symmetric_review(client: TestClient, db: Session) -> None:
+    """Cold read on 23D: it would refuse the reviewees roster, blaming the
+    wrong file; refused before anything is made, naming the settings."""
+    turned_on = SETTINGS + "session.symmetric_review,true,boolean\r\n"
+    reply = _post(
+        client,
+        _bundle(files={"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": turned_on}),
+    )
+    assert reply.status_code == 422, reply.text
+    body = reply.json()
+    assert (body["error"], body["slot"], body["reason"]) == (
+        "invalid_setup",
+        "settings",
+        "symmetric_review",
+    )
+    assert _count(db, ReviewSession) == 0
+
+
+def test_a_settings_file_sets_what_the_settings_import_sets(
+    client: TestClient, db: Session
+) -> None:
+    """What a sender's file may set (spec/handoffs.md §5): the session's
+    other settings and email templates, as the Settings import does; never
+    its name, code, owner or lifecycle state."""
+    extra = (
+        "session.help_contact,office@example.edu,string\r\n"
+        "session.responses_release_at,2027-03-01T09:00:00+00:00,datetime\r\n"
+        "email_overrides.invitation.subject,Your review,string\r\n"
+        "session.status,active,enum\r\n"
+    )
+    bundle = _bundle(
+        files={"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": SETTINGS + extra}
+    )
+    reply = _post(client, bundle)
+    assert reply.status_code == 201, reply.text
+    review_session = db.scalars(select(ReviewSession)).one()
+    assert review_session.status == "draft"  # machine-derived, ignored on import
+    assert review_session.help_contact == "office@example.edu"
+    assert review_session.responses_release_at is not None
+    # A replay finds the one draft, its instrument applied once.
+    again = _post(client, bundle)
+    assert again.status_code == 200 and again.json()["status"] == "already_created"
+    assert _count(db, ReviewSession) == 1 and _count(db, Instrument) == 1
+
+
 def test_a_taken_code_is_a_conflict(client: TestClient, db: Session) -> None:
     assert _post(client, _bundle()).status_code == 201
     second = _post(client, _bundle())

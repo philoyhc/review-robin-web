@@ -20,7 +20,7 @@ The Utilities proof of concept sends one: an instrument with two response fields
 ## Semantics
 
 - **Identity.** The session's name and code come from `session_suggestion`, as now. The settings file's `session.name` and `session.code` rows are fill-blanks (`spec/csv_contracts.md` §3.3, "two rules"), and both are set, so the file cannot rename the draft; `description`, `deadline` and `help_contact` fill only where blank, as on New session.
-- **Order.** Rosters, then settings, Quick Setup's `SLOT_ORDER`. Symmetric review in the file turns on only while both rosters are empty, so a handoff's file cannot turn it on (rosters are required): it stays off, not refused, as on New session.
+- **Order.** Rosters, then settings, Quick Setup's `SLOT_ORDER`. Symmetric review turns on only while both rosters are empty, which a handoff never has: a file asking for it is refused, naming the settings (*amended at rung 3 on the cold read: the pipeline refused it as a Reviewees roster*).
 - **Instruments** are replace-all, so the draft holds exactly the file's. A `rules_json` or Band 1 rule the card would refuse is refused here, by the same checks.
 - **Schedule.** A schedule out of order is an error naming the field. Nothing fires: the draft is not activated (`spec/handoffs.md` §1), and 14E's clock acts only on what an operator set, which a handed-off schedule now is. *Decided at the plan:* a sent schedule is set by the operator's own handoff click, so it counts as set; the holding page and the receipt say nothing is sent.
 - **Size.** The 1 MiB body cap (`handoffs.MAX_BYTES`) covers the settings file too; its own caps are §3.3's.
@@ -47,6 +47,7 @@ Taken 2026-11-15 at `92d698547`.
 ## Status
 
 - **Rung 2** (2026-11-15): `handoffs.OPTIONAL_FILES` takes `settings`; nothing else in the route changed, the pipeline already applying a settings slot. *Releasing nothing* needs no rows: a draft releases nothing until the operator releases, or a `session.responses_release_at` is set, and the mock sends neither (open question 1 answered).
+- **Rung 3** (2026-11-15): the mock sends *Mock review*. **Read** (cumulative, rungs 2–3, base `bddf897c4`): no defect in the create; a settings file turning on symmetric review was refused as a Reviewees roster, now refused before anything is made, naming the settings; `spec/handoffs.md` under-stated what a file may set (email templates' CC and BCC, help contact, a schedule that runs once prepared), now listed; stale "rosters only" prose fixed. Tests pin both, and a replay with settings.
 
 ## PR ladder
 
@@ -59,7 +60,7 @@ Taken 2026-11-15 at `92d698547`.
 
 - A handoff with a `settings` file creates a draft with its instrument set up (`tests/integration/test_handoffs.py`).
 - A refused settings file refuses the handoff, `slot: "settings"`, and leaves no draft (test).
-- The Utilities proof of concept's click lands on a draft whose status reads `instruments_set_up` (`utilityapps/tests/test_interop_poc.py`).
+- The Utilities proof of concept's bundle lands on a draft whose status reads `instruments_set_up` (`tests/integration/test_handoffs.py`, posting the mock's own bundle).
 - `spec/handoffs.md` names `settings` as optional and its semantics; `guide/interoperability.md` records the change to its rosters-only ruling.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 23D` exits 0; any warning adjudicated

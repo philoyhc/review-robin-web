@@ -19,7 +19,7 @@ cross-app credential:
 
 1. The sender opens a new tab **during the click** (so pop-up blockers
    allow it) on `GET /operator/handoffs/new`, a holding page.
-2. It posts a **bundle** of roster CSVs to `POST /operator/handoffs/sessions`.
+2. It posts a **bundle** of roster CSVs, and optionally a Settings CSV, to `POST /operator/handoffs/sessions`.
 3. Review Robin creates a **draft** session from it, all or nothing, and
    answers with a receipt carrying the session's Session Home URL.
 4. The sender moves the tab there. If the tab was blocked, it shows the
@@ -88,9 +88,23 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   and the suggestion has set both, so the file cannot rename the draft;
   symmetric review stays off, the rosters being present. A refused
   settings file is `422 invalid_setup` with `slot` `settings`, as a
-  refused roster is, and the draft goes with it. It sets nothing to
-  release: a schedule it carries is the sender's, and nothing runs
-  until the operator activates.
+  refused roster is, and the draft goes with it.
+- **What a settings file may set** is what the Settings import sets on
+  a new session (`spec/csv_contracts.md` §3.3): instruments, rule sets,
+  data shapes and session tags, the email templates (their CC and BCC
+  included), and the session's other settings, among them its
+  description, deadline, help contact, timezone and schedule. A schedule
+  it carries counts as the operator's own: a `scheduled_activate_at`
+  activates the draft once it is prepared, and a `responses_release_at`
+  releases on its date. Never the draft's name and code (fill-blanks,
+  set by the suggestion), its owner, or its state (`session.status` is
+  ignored on import). **Symmetric review** turns on only while both
+  rosters are empty, which a handoff never has, so a file asking for it
+  is refused before anything is made: `422 invalid_setup`, `slot`
+  `settings`, `reason` `symmetric_review`. The sender is the operator's
+  own browser (one operator in both apps, `guide/interoperability.md`),
+  so these are the operator's settings; a sender sends only what its
+  session needs.
 - **Refused, the draft goes with it** (author, 2026-11-11): the route
   rolls back and deletes the session, its audit events included. A
   refused roster is `422 invalid_setup` with `slot`, `reason` and the
@@ -146,8 +160,8 @@ after any other refusal it starts a new transfer.
 | `session.handoff_results_exported` | `counts(rows)`, `context` `{transfer_id, file, etag}` | a `results.csv` or `completion.csv` fetched (§10); a `304` writes nothing |
 
 All three are registered in `EVENT_SCHEMAS`. The draft's own
-`session.created` and the roster saves' events are written as for New
-session. A status read writes nothing: reads never audit.
+`session.created`, the roster saves' events and a settings file's
+`session.settings_imported` are written as for New session. A status read writes nothing: reads never audit.
 
 ## 9. Tests
 

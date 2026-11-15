@@ -1,7 +1,8 @@
 """Handoffs from another Cordware application (segment 23A).
 
 The interop proof of concept's create: another application's operator
-posts a bundle of roster CSVs, and Review Robin makes a draft session
+posts a bundle of roster CSVs, and since segment 23D a Settings CSV, and
+Review Robin makes a draft session
 from it with its own importers (`spec/handoffs.md`;
 `cordware/docs/cordware_interoperability_consolidated_spec_v0.3.md`
 §6.3). This module owns the bundle's shape and the replay lookup; the
@@ -33,7 +34,14 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.services import audit, csv_imports, monitoring, permissions, unit_of_work
+from app.services import (
+    audit,
+    csv_imports,
+    monitoring,
+    permissions,
+    session_config_io,
+    unit_of_work,
+)
 from app.services.date_formatting import iso_in_zone
 from app.services.sessions import resolve_session_timezone
 
@@ -72,6 +80,7 @@ class HandoffError(Exception):
         *,
         review_session: ReviewSession | None = None,
         reason: str | None = None,
+        slot: str | None = None,
     ) -> None:
         super().__init__(code)
         self.code = code
@@ -79,6 +88,7 @@ class HandoffError(Exception):
         self.details = details or []
         self.review_session = review_session
         self.reason = reason
+        self.slot = slot
 
 
 @dataclass(frozen=True)
@@ -175,6 +185,17 @@ def parse_bundle(body: bytes) -> Bundle:
         if not isinstance(value, str):
             raise HandoffError("invalid_package", 422, [f"`files.{kind}` must be CSV text."])
         contents[kind] = _encoded(value, f"files.{kind}")
+    # Symmetric review turns on only while both rosters are empty, and a
+    # handoff always carries them: refused here, naming the file that asks
+    # for it, rather than as a Reviewees refusal (segment 23D, cold read).
+    if "settings" in contents and session_config_io.settings_symmetric_review(contents["settings"]):
+        raise HandoffError(
+            "invalid_setup",
+            422,
+            ["A handoff's settings may not turn on symmetric review: it carries its rosters."],
+            reason="symmetric_review",
+            slot="settings",
+        )
     return Bundle(transfer_id, source_app, name, code, contents)
 
 
