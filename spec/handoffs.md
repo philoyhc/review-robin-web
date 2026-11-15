@@ -121,8 +121,10 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   `linked_app` with its transfer record; any other links nothing. Session
   Home shows the link, and **Unlink** clears it (`session.unlinked`).
   The mark is set before the files apply, so the profile holds for them:
-  an `observers` file is refused up front (`422 invalid_setup`, `slot`
-  `observers`, `reason` `observers_off`), and a settings file naming a
+  an `observers` file is refused before the draft is made, after the
+  replay lookup so a transfer completed before the link still answers
+  `already_created` (`422 invalid_setup`, `slot` `observers`, `reason`
+  `observers_off`), and a settings file naming a
   release date or turning observers on is refused as the Settings import
   refuses it (`spec/csv_contracts.md` §3.3). On a linked session the
   release window never opens, observers stay off, and the visibility

@@ -1600,6 +1600,10 @@ async def create_handoff_session(
             _handoff_receipt(request, prior, "already_created"), headers=_HANDOFF_HEADERS
         )
     try:
+        handoffs.check_linked(bundle)
+    except handoffs.HandoffError as exc:
+        return _handoff_refused(request, exc)
+    try:
         sessions.ensure_code_available(db, bundle.code)
     except sessions.SessionCodeTakenError:
         return _handoff_error("session_code_conflict", status.HTTP_409_CONFLICT)

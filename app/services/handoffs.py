@@ -197,10 +197,16 @@ def parse_bundle(body: bytes) -> Bundle:
             reason="symmetric_review",
             slot="settings",
         )
-    # Observers are off on a session its profile links (segment 23E): a
-    # roster for them is refused rather than dropped unread.
-    profile = linked_apps.profile_for(source_app)
-    if profile is not None and profile.observers_off and "observers" in contents:
+    return Bundle(transfer_id, source_app, name, code, contents)
+
+
+def check_linked(bundle: Bundle) -> None:
+    """Refuse what a linked profile turns off before a new draft is made
+    (segment 23E): observers are off, so an ``observers`` file is refused
+    rather than dropped unread. Checked after the replay lookup, so a
+    transfer completed before 23E still answers ``already_created``."""
+    profile = linked_apps.profile_for(bundle.source_app)
+    if profile is not None and profile.observers_off and "observers" in bundle.files:
         raise HandoffError(
             "invalid_setup",
             422,
@@ -208,7 +214,6 @@ def parse_bundle(body: bytes) -> Bundle:
             reason="observers_off",
             slot="observers",
         )
-    return Bundle(transfer_id, source_app, name, code, contents)
 
 
 @dataclass(frozen=True)

@@ -313,3 +313,18 @@ def test_quick_setup_offers_and_takes_no_observers(client: TestClient, db: Sessi
     db.refresh(review_session)
     assert not review_session.observers_enabled
     assert db.scalars(select(Observer)).first() is None
+
+
+def test_a_transfer_from_before_the_link_still_replays(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A transfer completed before 23E, observers file and all, answers
+    ``already_created`` on a retry rather than the new refusal (Codex)."""
+    observers = "ObserverEmail,ObserverName\r\nolu@example.edu,Olu\r\n"
+    bundle = _bundle(files={"reviewers": REVIEWERS, "reviewees": REVIEWEES, "observers": observers})
+    with monkeypatch.context() as before_23e:
+        before_23e.setattr(linked_apps, "LINKED_APPS", {})
+        assert _post(client, bundle).status_code == 201
+    again = _post(client, bundle)
+    assert again.status_code == 200 and again.json()["status"] == "already_created"
+    assert db.scalars(select(ReviewSession)).one().linked_app is None
