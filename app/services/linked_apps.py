@@ -39,7 +39,7 @@ class LinkedProfile:
 #: 2026-11-15).
 LINKED_APPS: dict[str, LinkedProfile] = {
     "applydesk": LinkedProfile("applydesk", "Apply Desk", "Apply Desk"),
-    "utilities": LinkedProfile("utilities", "Utilities (interop proof of concept)", "Utilities"),
+    "utilities": LinkedProfile("utilities", "Utilities", "Utilities"),
 }
 
 
@@ -52,6 +52,13 @@ def profile_of(review_session: ReviewSession) -> LinkedProfile | None:
     """The session's profile, or None for a native session."""
     key = review_session.linked_app
     return LINKED_APPS.get(key) if key else None
+
+
+def linked_name(review_session: ReviewSession) -> str:
+    """The linked application's name, or "" for a native session (the
+    status row's *Linked* pill, a Jinja filter)."""
+    profile = profile_of(review_session)
+    return profile.name if profile else ""
 
 
 def unlink(

@@ -117,5 +117,11 @@
     {% else %}
       <span class="pill pill-empty">{{ status_pills.responses_label }}</span>
     {% endif %}
+    {# Segment 23E: a session another application created and links. #}
+    {% set _linked = session | linked_name %}
+    {% if _linked %}
+    &middot;
+    <span class="pill pill-info" data-linked-pill>Linked: {{ _linked }}</span>
+    {% endif %}
   </p>
 </div>

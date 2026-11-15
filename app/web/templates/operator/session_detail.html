@@ -101,19 +101,6 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
-  {# Segment 23E — a session another application created and still
-     links: which one, and Unlink to make it native. #}
-  {% if linked %}
-  <div class="card" id="linked-app" data-linked-app="{{ session.linked_app }}">
-    <p><span class="pill pill-info">Linked to {{ linked.name }}</span>
-      Created through its handoff. Results from this session are shown in {{ linked.shows_results }}, not here.</p>
-    <form method="post" action="{{ url('/operator/sessions/' ~ session.public_id ~ '/unlink') }}">
-      <button type="submit" class="btn alert">Unlink</button>
-      <span class="muted">Makes the session native: Review Robin's own release and observers come back.</span>
-    </form>
-  </div>
-  {% endif %}
-
   {# Workflow card — full-width, just below the chrome. Same partial
      the Operations-row pages render; ``next_action_return_to="home"``
      so the super-button / pause / revert / invitation forms all
@@ -228,6 +215,10 @@
            so a click toggles the box and the form posts it as before. The
            wrappers carry the mode attribute because ``.col-chip-row`` sets
            ``display: flex`` and would outrank the mode's ``display: none``. #}
+        {# Under Tags, two quarter-width columns (author, 2026-11-15): the
+           optional tabs and the link on the left, Rosters on the right. #}
+        <div class="config-toggle-columns">
+        <div>
         <div id="config-optional-tabs" role="group"
              aria-labelledby="config-optional-tabs-heading">
           <label id="config-optional-tabs-heading">Optional setup tabs and pages</label>
@@ -266,6 +257,31 @@
             </div>
           </div>
         </div>
+        {# Segment 23E — the application the session is linked to: one
+           chip, on. Locked it only shows; unlocked, a click asks, then
+           unlinks (the session becomes native). Only a handoff links. #}
+        {% if linked %}
+        <div id="config-linked-app" class="config-field-gap" role="group"
+             aria-labelledby="config-linked-app-heading" data-linked-app="{{ session.linked_app }}">
+          <label id="config-linked-app-heading">Session is linked with</label>
+          <div data-display-only>
+            <div class="col-chip-row">
+              <span class="pill pill-count tag-chip is-locked is-selected"
+                    role="checkbox" aria-checked="true" aria-disabled="true">{{ linked.name }}</span>
+            </div>
+          </div>
+          <div data-edit-only>
+            <form method="post" class="col-chip-row"
+                  action="{{ url('/operator/sessions/' ~ session.public_id ~ '/unlink') }}"
+                  onsubmit="return window.confirm('Unlink from {{ linked.name }}? Review Robin\'s own release and observers come back, and results are no longer left to {{ linked.shows_results }}. Only a new handoff links a session.');">
+              <button type="submit" class="pill pill-count tag-chip is-selected"
+                      aria-pressed="true" title="Unlink: the session becomes native">{{ linked.name }}</button>
+            </form>
+            <p class="form-help">Click to unlink: the session becomes native.</p>
+          </div>
+        </div>
+        {% endif %}
+        </div>
         {# 20B — the Symmetric review toggle: its own group, not a tab,
            since it decides that the Reviewers roster is also the
            Reviewees roster. It turns on only while both rosters are
@@ -293,6 +309,7 @@
                        {% if symmetric_locked %}disabled{% endif %}>Symmetric review</label>
             </div>
           </div>
+        </div>
         </div>
       </div>
 
@@ -350,7 +367,7 @@
                  wrap_attrs={"data-edit-only": ""}, label="Release responses from") }}
           </div>
           <div>
-            <label for="mock-invite-offsets">{% if scheduled_send %}Send invites{% else %}Prompt to send invites{% endif %} (offset from Start; optional)</label>
+            <label for="mock-invite-offsets">{% if scheduled_send %}Send invites{% else %}Prompt to send invites{% endif %} (optional)</label>
             {# Display mode: each offset as a pill + a small gap + its
                resolved send datetime as a second pill. #}
             <div data-display-only>
@@ -368,11 +385,11 @@
             <input type="text" id="mock-invite-offsets" name="invite_offsets"
                    data-edit-only form="config-save-{{ session.id }}"
                    value="{{ invite_offsets_input_value }}"
-                   placeholder="e.g. -P1D, -PT2H"
-                   {% if not scheduled_send %}aria-describedby="scheduled-send-off"{% endif %}>
+                   placeholder="e.g. -P1D, -PT2H" aria-describedby="invite-offsets-help">
+            <p class="form-help" id="invite-offsets-help" data-edit-only>Offset from Start, e.g., -P1D, -PT2H</p>
           </div>
           <div>
-            <label for="mock-reminder-offsets">{% if scheduled_send %}Send reminders{% else %}Prompt to send reminders{% endif %} (offset from End; optional)</label>
+            <label for="mock-reminder-offsets">{% if scheduled_send %}Send reminders{% else %}Prompt to send reminders{% endif %} (optional)</label>
             {# Display mode: each offset pill + its resolved send datetime. #}
             <div data-display-only>
               {% if reminder_offset_rows %}
@@ -389,13 +406,11 @@
             <input type="text" id="mock-reminder-offsets" name="reminder_offsets"
                    data-edit-only form="config-save-{{ session.id }}"
                    value="{{ reminder_offsets_input_value }}"
-                   placeholder="e.g. -P2D, -PT4H"
-                   {% if not scheduled_send %}aria-describedby="scheduled-send-off"{% endif %}>
+                   placeholder="e.g. -P2D, -PT4H" aria-describedby="reminder-offsets-help">
             {# 14E rung 0: auto-send off until mail can go on a clock;
-               off, the offsets time the due prompts (14F rung 5a). #}
-            {% if not scheduled_send %}
-              <p class="muted" id="scheduled-send-off" data-scheduled-send-off>Scheduled email under development: the Workflow card prompts you when each is due.</p>
-            {% endif %}
+               off, the offsets time the Workflow card's due prompts (14F
+               rung 5a), so the labels say *Prompt to*. #}
+            <p class="form-help" id="reminder-offsets-help" data-edit-only>Offset from End, e.g., -P1D, -PT2H</p>
           </div>
           <div>
             <label for="mock-release-until">Release responses until (optional)</label>

@@ -85,19 +85,21 @@ def test_the_fields_are_live_as_prompts_with_their_line(
     rs.invite_offsets = ["-P1D"]
     db.commit()
     home = client.get(f"/operator/sessions/{rs.public_id}?unlocked=1").text
-    assert LINE in home
+    # Session Home's card (author, 2026-11-15): no line; the offset's
+    # anchor and an example under each box, as the Tags hint is.
+    assert LINE not in home
     assert 'value="-P1D"' in home
-    for page_text, names in (
-        (page, ("invite_offsets", "reminder_offsets")),
-        (home, ("invite_offsets", "reminder_offsets")),
-    ):
-        for name in names:
-            tag = page_text.split(f'name="{name}"')[1].split(">")[0]
-            assert "disabled" not in tag, name
-            assert 'aria-describedby="scheduled-send-off"' in tag, name
-    for page_text in (page, home):
-        assert "Prompt to send invites (offset from Start; optional)" in page_text
-        assert "Prompt to send reminders (offset from End; optional)" in page_text
+    for name in ("invite_offsets", "reminder_offsets"):
+        tag = page.split(f'name="{name}"')[1].split(">")[0]
+        assert "disabled" not in tag, name
+        assert 'aria-describedby="scheduled-send-off"' in tag, name
+        assert "disabled" not in home.split(f'name="{name}"')[1].split(">")[0], name
+    assert "Prompt to send invites (offset from Start; optional)" in page
+    assert "Prompt to send reminders (offset from End; optional)" in page
+    assert "Prompt to send invites (optional)" in home
+    assert "Prompt to send reminders (optional)" in home
+    assert "Offset from Start, e.g., -P1D, -PT2H" in home
+    assert "Offset from End, e.g., -P1D, -PT2H" in home
 
 
 def test_session_home_shows_each_offsets_due_moment(

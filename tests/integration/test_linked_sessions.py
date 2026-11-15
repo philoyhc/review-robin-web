@@ -54,13 +54,15 @@ def test_session_home_shows_the_link_and_unlink_makes_it_native(
     review_session, _ = _created(client, db)
     home = f"/operator/sessions/{review_session.public_id}"
     page = client.get(home).text
-    assert 'data-linked-app="utilities"' in page
-    assert "Linked to Utilities (interop proof of concept)" in page
+    assert 'data-linked-app="utilities"' in page  # Session details' chip
+    assert "Linked: Utilities</span>" in page  # the status row's pill
+    assert "Session is linked with" in page
     reply = client.post(f"{home}/unlink", follow_redirects=False)
     assert reply.status_code == 303
     db.refresh(review_session)
     assert review_session.linked_app is None
-    assert "data-linked-app" not in client.get(home).text
+    after = client.get(home).text
+    assert "data-linked-app" not in after and "data-linked-pill" not in after
     event = db.scalars(select(AuditEvent).where(AuditEvent.event_type == "session.unlinked")).one()
     assert event.detail is not None and event.detail["changes"]["linked_app"] == [
         "utilities",

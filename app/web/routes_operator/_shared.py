@@ -166,6 +166,8 @@ urls.add_globals(
 urls.add_filters(
     _templates,
     lifecycle_label=lifecycle_display.lifecycle_display_label,
+    # Segment 23E: a session's linked application, by name ("" if none).
+    linked_name=linked_apps.linked_name,
     # Canonical date / time display formatting — Segment 18B PR 1 / PR 2.
     # Context-aware: the filters resolve their display zone from the
     # ``display_timezone`` context key the processor above injects.
