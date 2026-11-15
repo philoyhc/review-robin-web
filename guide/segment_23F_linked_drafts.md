@@ -29,10 +29,10 @@ Owned while the session is **unopened** (draft or validated). Once it is activat
 
 ### The re-send
 
-- **The operation:** `POST /operator/handoffs/sessions/{session_ref}`, the envelope of §4 with `operation` `reviewrobin.update_draft_session` and no `session_suggestion`; browser-mediated and signed in, as the create.
+- **The operation:** `POST /operator/handoffs/{transfer_id}/update`, naming the draft by the transfer that created it, as the status and results reads do (a sender names its transfer, never a free session reference: interop spec §6.6); the body is the envelope of §4 with its own new `transfer_id`, `operation` `reviewrobin.update_draft_session` and no `session_suggestion`. Browser-mediated and signed in, as the create.
 - **The files:** `reviewers` and `reviewees` required, `relationships` optional: the rosters are the application's whole picture, so an absent Relationships file clears them. `settings` optional: absent leaves the owned settings as they are; present, it may carry only owned rows (any other row refused, naming the field) and applies them as targeted updates, instruments matched by ordinal (added or removed to match), the rest of each instrument kept.
 - **All or nothing**, through Quick Setup's pipeline as the create; a validated draft returns to draft (`invalidate_if_validated`).
-- **Refused:** a `session_ref` that is not a session linked to this `source_app` (`404 not_linked`); one the operator may not operate (`403`); an opened session (`409 session_opened`); a file refused as the create refuses it (`422 invalid_setup`, `slot`).
+- **Refused:** a creating transfer that is unknown, incomplete, or whose session is not linked to this `source_app` (`404 not_linked`); one the operator may not operate (`403`); an opened session (`409 session_opened`); a file refused as the create refuses it (`422 invalid_setup`, `slot`).
 - **Replay:** a repeated `transfer_id` answers `200 already_updated` without applying again (audit event `session.handoff_updated`, its context the transfer).
 - **Receipt:** `200 {status: "updated", session_ref, session_code, session_home_url}`.
 
@@ -59,7 +59,8 @@ Owned while the session is **unopened** (draft or validated). Once it is activat
 
 ## Judgment calls — decided
 
-- **A separate operation, not a flag on the create**: the create's replay is by `transfer_id` into a new draft; an update names its draft.
+- **A separate operation, not a flag on the create**: the create's replay is by `transfer_id` into a new draft; an update names its draft, by the creating transfer.
+- **An absent Relationships file clears the pairs** by the roster replace's own cascade (`csv_imports` deletes a replaced roster's relationships), so the re-send needs no clearing step of its own.
 - **Locks only while unopened**: after activation Review Robin's lifecycle already locks setup, and ruling 24 gives later changes to Review Robin.
 
 ## Blast radius (measured)
