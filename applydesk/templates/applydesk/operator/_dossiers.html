@@ -1,5 +1,6 @@
-{# The Applications page (segment AD1C, ruling 13): the exercise's control
-   surface. A row per application; its identity columns (named for the
+{# The Dossiers page (segment AD1C, ruling 13; renamed by ruling 25): the exercise's control
+   surface. A row per dossier, built from the applications until the
+   Dossiers item is (ruling 25); its identity columns (named for the
    application stage when that stage comes first), then each stage's gates
    and outcomes, in timeline order, as Process sets them.
    Every move works on screen; nothing is saved until AD2. A control
@@ -55,7 +56,7 @@
     <thead>
       <tr class="ap-groups">
         {% set ast = plan.stages[0] if plan.stages and plan.stages[0].form else none %}{# leads the identity columns only when first #}
-        <th class="ap-first" colspan="{{ 3 + (ast.columns | length if ast else 0) }}"><b>{{ ast.label if ast else "Applications" }}</b>{% if ast %}<span class="ap-when">{{ ast.dates }}</span>{% elif not plan.form_stage %}<span class="ap-when">From elsewhere</span>{% endif %}</th>
+        <th class="ap-first" colspan="{{ 3 + (ast.columns | length if ast else 0) }}"><b>{{ ast.label if ast else "Dossiers" }}</b>{% if ast %}<span class="ap-when">{{ ast.dates }}</span>{% elif not plan.form_stage %}<span class="ap-when">From elsewhere</span>{% endif %}</th>
         {% for r in plan.stages if r.columns and r is not sameas ast %}<th class="ap-r" colspan="{{ r.columns | length }}"><b>{{ r.label }}</b><span class="ap-when">{{ r.dates }}</span></th>{% endfor %}
       </tr>
       <tr>
@@ -127,7 +128,7 @@
   <button class="btn btn-alert" type="button" disabled>Return to draft</button>
 </div>
 <script>
-// Segment AD1C: the Applications page's moves, on screen only; a reload
+// Segment AD1C: the Dossiers page's moves, on screen only; a reload
 // restores the sample. Chips cycle, outcomes are picked and dated, the
 // counts follow, releases confirm, rows filter and are set in bulk.
 (function () {

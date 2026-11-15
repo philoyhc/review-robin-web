@@ -5,7 +5,7 @@ An exercise's timeline is a sequence of stages; a stage holds the
 form, or gates (which may run together), and may hold an outcome
 after them. Process will set them up (a later segment); here they are fixed, and each
 application's place at each gate and outcome is worked out from a seeded
-score, so the Applications page reads as an exercise partway through.
+score, so the Dossiers page reads as an exercise partway through.
 Nothing is saved."""
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ ADMITTANCE: tuple[str, ...] = (NO_STATUS, "Entered", "Not entered")
 @dataclass(frozen=True)
 class Rule:
     """How a column is filled, set with it on Process (rulings 13, 14);
-    the Applications page only applies it, and a hand can override.
+    the Dossiers page only applies it, and a hand can override.
 
     ``when`` holds conditions that must all hold, each (kind, key, op,
     value): ("status", "", "is", "Submitted"); ("last", "", "le", "1"),
@@ -116,7 +116,7 @@ class Gate:
     @property
     def measure(self) -> str:
         """Its headline result's name ("" for none): Result 1, shown under
-        its chip on Applications; rules name a result by key (ruling 21)."""
+        its chip on Dossiers; rules name a result by key (ruling 21)."""
         return self.results[0].name if self.results else ""
 
 
@@ -170,7 +170,7 @@ class Row:
 
 @dataclass(frozen=True)
 class Plan:
-    """What the Applications page draws for one exercise."""
+    """What the Dossiers page draws for one exercise."""
 
     stages: tuple[Stage, ...]
     rows: tuple[Row, ...]

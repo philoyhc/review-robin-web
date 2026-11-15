@@ -235,7 +235,7 @@ _WRITTEN: tuple[Application, ...] = (
 )
 
 # The model exercise's other applications, generated with a fixed seed
-# so the Applications page reads as a real call of about 100 (segment
+# so the Dossiers page reads as a real call of about 100 (segment
 # AD1C): names, IDs, statuses and dates are the same on every run.
 _FIRST = (
     "Aisha",

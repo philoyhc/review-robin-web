@@ -31,7 +31,7 @@ Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID
 | ~~`/operator/exercises/<id>/setup`~~ | Became Process; its details moved to Home (AD1D) | |
 | `/operator/exercises/<id>/process` | Rounds, gates and outcomes with their rules and emails; the timeline (AD1D) | 〃 |
 | `/operator/exercises/<id>/form` | The application form builder (iteration 5); from AD1B, cards that move on screen (`applydesk/guide/archive/segment_AD1B_form_builder.md`) | 〃 |
-| `/operator/exercises/<id>/applications` | Applications by state; generate applicant profiles; import outcomes (iteration 5); from AD1C, the control surface of rounds, gates and outcomes, generating dossiers | 〃 |
+| `/operator/exercises/<id>/dossiers` | Dossiers (ruling 25; `/applications`, the Applications page, until 2026-11-15); applications by state; generate applicant profiles; import outcomes (iteration 5); from AD1C, the control surface of rounds, gates and outcomes, generating dossiers | 〃 |
 | ~~`/operator/exercises/<id>/assessors`~~ | Became Panels (iteration 5) | |
 | ~~`/operator/exercises/<id>/panels`~~ | Into Gates (AD1D) | |
 | `/operator/exercises/<id>/gates` | One card per gate with its panel; the reviewer pool (AD1D) | 〃 |

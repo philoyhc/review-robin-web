@@ -58,7 +58,8 @@ where a ruling below differs from it, the ruling wins.
     question.
 
 13. **Evaluation runs in rounds of gates and outcomes, driven from the
-    Applications page** (author, 2026-11-12; *rounds and the timeline's
+    Applications page** (author, 2026-11-12; *the page renamed Dossiers by
+    ruling 25*; *rounds and the timeline's
     stages became one, the stage, in ruling 15*):
     - A **round** is sequential; a round holds one or more **gates**,
       which may run at the same time. A gate is who evaluates (a Panels
@@ -70,12 +71,12 @@ where a ruling below differs from it, the ruling wins.
       date; each outcome has a *Released* switch, and what a release does
       (to applicants, to reviewers, by email) is set with the Timeline.
     - Rounds, gates, outcomes and their dates are set up on **Setup**
-      and the Timeline (*stages, on Process: rulings 14, 15*). **Applications** is the control surface: who
+      and the Timeline (*stages, on Process: rulings 14, 15*). **Dossiers** (*Applications* until ruling 25) is the control surface: who
       enters each gate (*—* for no status yet, *Entered*, *Not entered*;
       author, 2026-11-13) and each
       outcome's value, set by hand, by the column's rule, or uploaded as
       a CSV keyed by application ID. **Rules are set on Setup, not here**
-      (author, 2026-11-13): Applications applies them, and the operator
+      (author, 2026-11-13): Dossiers applies them, and the operator
       overrides any cell by hand. A gate's rule reads the application's
       status, whether it is the applicant's last submitted, and earlier
       outcomes, never another gate; an outcome's reads the gates in its
@@ -100,7 +101,7 @@ where a ruling below differs from it, the ruling wins.
       per gate, its panel roster on it; *a panel picked from Panels: ruling 19*), *Emails* (every template to
       applicants, kept in one place; Process sets which steps send one,
       and when; *who it is to and how templates are named: ruling 16*); then
-      an **Operations** row: *Applications*, *Evaluations* (each gate's
+      an **Operations** row: *Dossiers* (*Applications* until ruling 25), *Evaluations* (each gate's
       progress and results), *Extract data*. Panels folds into Gates,
       Review becomes Evaluations, Reports becomes Extract data, Setup
       becomes Process. Ruling 13's "Setup and the Timeline" is Process.
@@ -144,7 +145,7 @@ where a ruling below differs from it, the ruling wins.
       proposal after an expression of interest, a finalist's budget or
       referees, an award's acceptance). A later form stage admits by an
       earlier outcome, as a gate does, and opens its form only to those;
-      its Applications column runs *Not invited → Invited → Draft →
+      its Dossiers column runs *Not invited → Invited → Draft →
       Submitted*; Form picks between the forms; the dossier
       joins the parts. Until then, ruling 15's one application stage
       stands; each form-holding stage names its form and an application
@@ -226,7 +227,7 @@ where a ruling below differs from it, the ruling wins.
       minimum number of responses, else it has none yet.
     - **The fields are Review Robin's setup**: the gate lists what its
       session's instrument must ask; the handshake itself is AD6's.
-    - Result 1 is the gate's headline (Applications' chip). Outcome rules
+    - Result 1 is the gate's headline (Dossiers' chip). Outcome rules
       and weights read a gate's named result; only numbers are weighed
       or compared, a list is matched, a string is read only (a count of
       either is a number).
@@ -246,7 +247,7 @@ where a ruling below differs from it, the ruling wins.
     2026-11-14; segment AD1F), so nothing waits out of sight:
     - **A roster table** (Panels): a row is ticked to edit, its ✓ keeps
       it (Enter too), and unticking without ✓ puts it back; no page Save.
-    - **A control surface** (Applications), worked down its columns
+    - **A control surface** (Dossiers), worked down its columns
       rather than along a row: the whole table is locked, and *Unlock*
       opens every cell, *Set ticked rows*, the rules, the CSV and the
       releases; *Lock* keeps what changed and *Undo changes* puts the
@@ -275,7 +276,7 @@ where a ruling below differs from it, the ruling wins.
     - **Dossiers** are made as the stage's Dossiers item says (ruling
       25): from the form at submit or when it closes, the operator's
       choice, or from an upload or an earlier outcome's list.
-    - **Who enters the gate** is decided on Applications (the entry
+    - **Who enters the gate** is decided on Dossiers (the entry
       rule as a proposal, cells by hand or CSV, *Lock* keeping it),
       every row *Entered* or *Not entered*.
     - **The gate is Ready** once the exercise is published, its entry is
@@ -299,7 +300,7 @@ where a ruling below differs from it, the ruling wins.
     - **Results** come back on Evaluations by *Pull results*, matched on
       the prescribed field keys (a missing key asks for a mapping),
       each result derived as its gate says, filling the gate's column on
-      Applications.
+      Dossiers.
     - **Who reviews which application** is open: it needs the gate card
       expanded (Open decisions).
 
@@ -323,9 +324,11 @@ where a ruling below differs from it, the ruling wins.
       result adds to it without changing what an earlier panel read.
     - **The Workflow card** gains its step (*Make dossiers…*), and a
       gate is not Ready until every row entered at it has a dossier.
-    - **Open:** whether the Applications page becomes *Dossiers* (its
-      rows are dossiers once there is no form), and the Dossiers item's
-      states on the Workflow card (ruling 14).
+    - **The Applications page becomes Dossiers** (author, 2026-11-15),
+      at `/operator/exercises/<id>/dossiers`: a row per dossier, an
+      application's where it has one.
+    - **Open:** the Dossiers item's states on the Workflow card
+      (ruling 14).
 
 ## MVP roadmap
 

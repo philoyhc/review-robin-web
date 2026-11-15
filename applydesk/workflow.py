@@ -255,7 +255,7 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
                         c.label,
                         "Released" if released else "Pending",
                         c.released or f"Due {c.due}",
-                        "" if released else "Decided on Applications",
+                        "" if released else "Decided on Dossiers",
                         "" if released else "Release…",
                         released,
                         blocked,

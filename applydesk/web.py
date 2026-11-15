@@ -101,7 +101,7 @@ SETUP_PAGES: tuple[tuple[str, str], ...] = (
     ("emails", "Emails"),
 )
 OPERATIONS_PAGES: tuple[tuple[str, str], ...] = (
-    ("applications", "Applications"),
+    ("dossiers", "Dossiers"),
     ("evaluations", "Evaluations"),
     ("extract", "Extract data"),
 )

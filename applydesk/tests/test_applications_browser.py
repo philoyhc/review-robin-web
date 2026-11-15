@@ -16,7 +16,7 @@ from playwright.sync_api import Dialog, Error, Locator, Page, Route, sync_playwr
 from applydesk.tests._host import host_with
 
 ORIGIN = "http://applydesk.test"
-PAGE = f"{ORIGIN}/applydesk/operator/exercises/wa9juxbc2t/applications"
+PAGE = f"{ORIGIN}/applydesk/operator/exercises/wa9juxbc2t/dossiers"
 
 
 @pytest.fixture
