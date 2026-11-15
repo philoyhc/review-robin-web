@@ -17,8 +17,9 @@ Apply Desk's ruling 26 has Apply Desk, not Review Robin, show results: its dossi
 | Review Robin feature | Linked to Apply Desk |
 |---|---|
 | Release window (`responses_release_at` / `_until`) | Off: the schedule's fields disabled, a Settings import's values refused, *Release responses* and *Stop release* not offered |
-| Visibility card, *after the window* cells | Fixed text in place of the mode (author, 2026-11-15): **See in Apply Desk** for an audience Apply Desk's dossiers can show results to (reviewees, as its *Candidate*; reviewers, as its panels), **Not shown** for one it cannot (observers). *During the window* cells unchanged |
-| Reviewee results and observer collation pages | Closed: no grant resolves on a linked session |
+| Observers | Off (author, 2026-11-15): `session.observers_enabled` false at the create; an `observers` file in the bundle refused; a Settings import turning them on refused; the Observers setup page not offered; the observer collation page closed |
+| Visibility card, *after the window* cells | Fixed text in place of the mode (author, 2026-11-15): **See in Apply Desk** for an audience Apply Desk's dossiers can show results to (reviewees, as its *Candidate*; reviewers, as its panels), **Not shown** for any other. No observer column, observers being off. *During the window* cells unchanged |
+| Reviewee results page | Closed: no grant resolves on a linked session |
 | Validate `reviewees.unreachable_for_results` | Not raised |
 | Everything else | Unchanged |
 
@@ -32,14 +33,14 @@ Apply Desk's ruling 26 has Apply Desk, not Review Robin, show results: its dossi
 
 - **Existing sessions** stay native: the migration adds a nullable column, no backfill. A session handed off before 23E is not linked (its operator may still release).
 - **A replay** finds the session already marked; nothing changes.
-- **Unlink** restores every native control at once; a release window left blank stays blank. It does not reopen anything already refused.
+- **Unlink** restores every native control at once; a release window left blank stays blank, and observers stay off until the owner turns them on. It does not reopen anything already refused.
 - **A Settings import** onto a linked session refuses `session.responses_release_at` / `_until` rows naming a value, with an error naming the link; blank rows pass. The export writes blanks.
 - **Lifecycle.** A linked session still activates, runs and expires as a native one; only release is Apply Desk's. Archive and retention are unchanged.
 - **The status read** (`spec/handoffs.md` §10) reports `linked_app`, so the sender can confirm the link held.
 
 ## Judgment calls — decided
 
-- **Observers stay possible** on a linked session (an operator may add one); their collation page is closed, the card says *Not shown*.
+- ~~**Observers stay possible** on a linked session~~ — *reversed by the author, 2026-11-15: observers are off on an Apply Desk session (the profile's table).* Unlink lets the owner turn them back on.
 - **The mark is a string, not an enum column**: profiles are code, and a value without a profile reads as native.
 
 ## Blast radius (measured)
@@ -51,6 +52,7 @@ Taken 2026-11-15 at `eaa9324d9`.
 | Templates naming the release window | 4 | `grep -rln "Release from\|responses_release_at" app/web/templates \| wc -l` |
 | The visibility card and next-action card | 2 | `grep -rln "view_policies\|Visibility" app/web/templates/operator/instruments_index.html app/web/templates/operator/partials/next_action_card.html` |
 | Participant gates to close | 2 | `grep -rln "require_reviewee_with_current_grant\|require_observer_in_session" app/web/routes_reviewer` |
+| Observer setup routes (*added 2026-11-15, same tree*) | 1 | `grep -rln "observers_enabled" app/web/routes_operator/_setup_observers.py` |
 | Visibility service | 669 lines | `wc -l app/services/visibility_policies.py` |
 | Files raising the unreachable warning | 4 | `grep -rln "unreachable_for_results" app --include=*.py` |
 
@@ -64,7 +66,7 @@ Taken 2026-11-15 at `eaa9324d9`.
 ## Definition of done
 
 - A handed-off session from `applydesk` carries `linked_app`; a native one, a Settings import or a copy never does (`tests/integration/test_handoffs.py`, a new `tests/integration/test_linked_sessions.py`).
-- On a linked session: no release action, the schedule's release fields disabled, a Settings import's release values refused, the after-the-window cells reading *See in Apply Desk* / *Not shown*, the results and collation pages 404, no `reviewees.unreachable_for_results` (tests).
+- On a linked session: observers off, an `observers` file refused at the create, no release action, the schedule's release fields disabled, a Settings import's release values refused, the after-the-window cells reading *See in Apply Desk* / *Not shown*, the results and collation pages 404, no `reviewees.unreachable_for_results` (tests).
 - Unlink restores the native controls and is audited (test).
 - The migration upgrades and downgrades on Postgres (`ci-postgres`).
 - `## Doc impact` section present and current
@@ -86,7 +88,7 @@ Taken 2026-11-15 at `eaa9324d9`.
 
 ## Doc impact
 
-- `spec/handoffs.md` — §5: the create sets `linked_app`; §10: the status reports it.
+- `spec/handoffs.md` — §4: an `observers` file refused for a linked application's bundle; §5: the create sets `linked_app`; §10: the status reports it.
 - `spec/visibility_policy.md` — a linked session's after-the-window cells and closed participant pages.
 - `spec/lifecycle.md` — the release window off on a linked session; Unlink.
 - `spec/csv_contracts.md` — §3.3: release rows refused on a linked session.
