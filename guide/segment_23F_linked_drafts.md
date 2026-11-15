@@ -22,7 +22,7 @@ Owned while the session is **unopened** (draft or validated). Once it is activat
 | Session identity | `session.name` and `session.code`: set at the create from the suggestion, never re-sent | Description, help contact, tags, retention, archive offset |
 | Instrument: the instrument itself | `name`; which instruments exist and their order (matched by ordinal) | `description`, `short_label`, `intro_layout`, `accepting_responses` |
 | Instrument: its response fields | the field set: `field_key` (prescribed, ruling 24), `label`, `response_type`, `data_type`, `required`, `visible`, `min` / `max` / `step`, `list_csv` options, branching (`branch_*`) | `help_text` and `help_text_visible` *(author's call: proposed Review Robin's)*; `response_layout`, `starts_new_page` |
-| Instrument: who reviews whom | `band1_touched_links`, `band2_state`, `rule_set_name` and the `session_rule_sets[N]` it names, `group_kind`, `self_reviews_active`, `self_review_handling` | — |
+| Instrument: who reviews whom (the assignment rules, author 2026-11-15) | `band1_touched_links`, `band2_state`, `rule_set_name` and the `session_rule_sets[N]` it names, `group_kind`, `self_reviews_active`, `self_review_handling`. Two shapes expected: **All – All – Individual** (Links 1–3; the proof of concept's today) and **All – By relationships – Individual** (Link 2 held to the pairs Apply Desk sends, ruling 27) | — |
 | Instrument: what reviewers see | — | Display fields (Band 3) and their sort, `display_layout`, column chips and widths |
 | Visibility | — (23E fixes the after-the-window text; `view_policies` rows are kept, unread) | — |
 | Email templates, participant self-fields | — | All |
@@ -98,6 +98,7 @@ Taken 2026-11-15 at `320e71820`.
 
 - **The ownership table**: the author's inspection, before rung 3 (settings) and rung 6 (instruments). Rungs 2 and 5 depend only on the rosters row.
 - **Response field help text**: proposed Review Robin's; the author's call with the table.
+- **How *By relationships* is sent**: Link 2 as a rule on the relationship tag the Relationships file carries, or a Link 2 mode of its own; settled at rung 3, whichever the Settings CSV already carries without a new field.
 
 ## Out of scope
 
