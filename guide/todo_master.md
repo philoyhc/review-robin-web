@@ -48,6 +48,15 @@ is the author's call.
    reminder already past due on every open session in one pass, after
    operators may have reminded by hand: 14G marks those skipped, not
    sent, when it turns the setting on.
+2. **The handoff takes settings, and re-sends to a draft** (for Apply
+   Desk's ruling 26, author 2026-11-15; unscheduled, before Apply
+   Desk's AD6). `spec/handoffs.md` §4 refuses a `settings` file and
+   creates only. Apply Desk will send the instrument (a field per
+   result, its key prescribed), visibility releasing nothing after the
+   window, and the schedule, through the Settings importer
+   (`spec/csv_contracts.md` §3.3), all or nothing as the rosters; and
+   send again to a draft not yet opened. A plan when it starts; it
+   retires `guide/interoperability.md` §5's revisit.
 
 ### Stubs
 

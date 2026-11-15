@@ -18,7 +18,8 @@ where a ruling below differs from it, the ruling wins.
 4. **ApplyDesk keeps the roster of recognized assessors and referees, and
    what each may view.** To Review Robin they are ordinary reviewers; it
    holds no ApplyDesk authorization.
-5. **Reviewers read an application on ApplyDesk's dossier**
+5. **Reviewers read an application on ApplyDesk's dossier** (*the parts
+   their panel may see: ruling 26*)
    (the profile page, renamed by rulings 13 and 25), linked as each reviewee's `ProfileLink` in the handoff.
    ApplyDesk decides each view itself, from the signed-in Cordware
    identity and its own roster. The page shows only the *Shown to
@@ -291,7 +292,7 @@ where a ruling below differs from it, the ruling wins.
       prescribes**. Sent, Apply Desk keeps the transfer, the session and
       who was sent; the tab lands on the draft's Session Home.
     - **In Review Robin** the operator builds the instrument to that
-      list, the field keys as given, then sets assignments and the
+      list (until Apply Desk sends it, ruling 26), the field keys as given, then sets assignments and the
       schedule, validates, invites and activates.
     - **Changes after Send**: while the session has not opened, made in
       Apply Desk and sent again to the same draft (a contract Review
@@ -313,22 +314,54 @@ where a ruling below differs from it, the ruling wins.
       or proposal (rulings 5, 6, 9 and 13's *application file*, renamed),
       with its own ID; an **application** is only what an applicant
       submits through Form, one source of a dossier.
-    - **A Dossiers item** is a new kind of item a stage holds, beside
+    - *Superseded by ruling 26: the form and gates write dossiers
+      themselves; the one Dossiers item left is Create dossiers.* ~~**A
+      Dossiers item** is a new kind of item a stage holds, beside
       the form, gates and an outcome, one at most per stage. It says
       where its dossiers come from (the form's submissions, at submit
       or when it closes; an upload of candidates; an earlier outcome's
       list) and what they show (the *Shown to reviewers* answers,
-      uploaded fields, earlier gate results and outcomes as ticked).
+      uploaded fields, earlier gate results and outcomes as ticked).~~
     - **A dossier reads its sources as they change**, but sending a gate
       **freezes the version its panel sees**: a later form part or gate
       result adds to it without changing what an earlier panel read.
-    - **The Workflow card** gains its step (*Make dossiers…*), and a
+    - **The Workflow card** gains a step for Create dossiers (ruling 26), and a
       gate is not Ready until every row entered at it has a dossier.
     - **The Applications page becomes Dossiers** (author, 2026-11-15),
       at `/operator/exercises/<id>/dossiers`: a row per dossier, an
       application's where it has one.
-    - **Open:** the Dossiers item's states on the Workflow card
+    - **Open:** Create dossiers' states on the Workflow card
       (ruling 14).
+26. **A dossier is written in parts, by the form, gates and outcomes**
+    (author, 2026-11-15), amending ruling 25:
+    - **A dossier** is the complete, readable file on one candidate's
+      one entry: a candidate with two applications has two dossiers.
+    - **It is made of parts**, each with an **audience**, any of:
+      *Operators*; *Candidate*; a panel's *all members*; a panel's
+      *assigned evaluators only*. And each with **when it becomes
+      visible**: the stage from which its audience sees it. A part
+      that opens to different audiences at different times is two
+      parts.
+    - **The form writes parts**: each section names its part (replacing
+      *Shown to reviewers* / *Not shown*), written at submit or at the
+      form's close (ruling 24's choice).
+    - **A gate writes its raw results**: each evaluator's responses, as
+      the parts it names, when it concludes. A Review Robin session run
+      through Apply Desk releases nothing after its window; who sees
+      results is the parts' audiences, on Apply Desk.
+    - **An outcome writes the derived**: its value and combined result,
+      as the parts it names.
+    - **Create dossiers** is the one Dossiers item: an upload of
+      candidates from upstream (an ID column and fields mapped to parts),
+      in a stage before the first gate that needs them, where no form
+      comes first. *Add dossiers* on the Dossiers page takes late or
+      paper entries by the same upload, outside the timeline.
+    - **Apply Desk sends Review Robin the session's settings** with its
+      rosters: the instrument (a field per result, its key prescribed),
+      visibility releasing nothing after the window, and the schedule
+      from the gate's dates. Review Robin's handoff takes no settings
+      yet: queued there (`guide/todo_master.md`, its queued segments).
+      Until then the operator builds them by hand (ruling 24).
 
 ## MVP roadmap
 
