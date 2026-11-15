@@ -440,6 +440,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.handoff_created": EventSchema(_IDENTITY | {"counts", "context"}),
     # ... and once its rosters have saved: the transfer is complete.
     "session.handoff_completed": EventSchema(_IDENTITY | {"counts", "context"}),
+    "session.handoff_updated": EventSchema(_IDENTITY | {"counts", "context"}),
     "session.handoff_results_exported": EventSchema(_IDENTITY | {"counts", "context"}),
     # Segment 23E: a linked session made native by its operator.
     "session.unlinked": EventSchema(_IDENTITY | {"changes"}),

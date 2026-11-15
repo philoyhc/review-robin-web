@@ -1559,16 +1559,8 @@ def _handoff_receipt(
     }
 
 
-@router.post("/handoffs/sessions", response_model=None)
-async def create_handoff_session(
-    request: Request,
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> JSONResponse:
-    """Create a draft session from another application's rosters, and its
-    settings when it sends them, all or nothing (`spec/handoffs.md`). The
-    package gate has already checked that the signer-in is an RRW
-    operator. Nothing is prepared, activated, invited or sent here."""
+async def _handoff_body(request: Request) -> bytes | JSONResponse:
+    """The request's body, or the refusal of its headers or size."""
     # A JSON body is the cross-site guard, as the directory endpoints';
     # a browser that names any other origin is refused outright.
     if request.headers.get("sec-fetch-site", "same-origin") != "same-origin":
@@ -1586,6 +1578,22 @@ async def create_handoff_session(
     body = await request.body()
     if len(body) > handoffs.MAX_BYTES:
         return _handoff_error("invalid_package", status.HTTP_413_CONTENT_TOO_LARGE)
+    return body
+
+
+@router.post("/handoffs/sessions", response_model=None)
+async def create_handoff_session(
+    request: Request,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Create a draft session from another application's rosters, and its
+    settings when it sends them, all or nothing (`spec/handoffs.md`). The
+    package gate has already checked that the signer-in is an RRW
+    operator. Nothing is prepared, activated, invited or sent here."""
+    body = await _handoff_body(request)
+    if isinstance(body, JSONResponse):
+        return body
     try:
         bundle = handoffs.parse_bundle(body)
     except handoffs.HandoffError as exc:
@@ -1676,4 +1684,73 @@ async def create_handoff_session(
         _handoff_receipt(request, review_session, "created"),
         status_code=status.HTTP_201_CREATED,
         headers=_HANDOFF_HEADERS,
+    )
+
+
+@router.post("/handoffs/{transfer_id}/update", response_model=None)
+async def update_handoff_session(
+    transfer_id: str,
+    request: Request,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Re-send a linked, unopened draft's rosters (segment 23F): the draft
+    the transfer ``transfer_id`` created, its rosters replaced all or
+    nothing through the create's pipeline (`spec/handoffs.md`)."""
+    body = await _handoff_body(request)
+    if isinstance(body, JSONResponse):
+        return body
+    try:
+        bundle = handoffs.parse_bundle(body, operation=handoffs.UPDATE_OPERATION)
+        prior = handoffs.prior_update(db, user, bundle)
+    except handoffs.HandoffError as exc:
+        return _handoff_refused(request, exc)
+    if prior is not None:
+        return JSONResponse(
+            _handoff_receipt(request, prior, "already_updated"), headers=_HANDOFF_HEADERS
+        )
+    try:
+        review_session = handoffs.update_target(db, user, transfer_id, bundle)
+        handoffs.check_linked(bundle)
+    except handoffs.HandoffError as exc:
+        return _handoff_refused(request, exc)
+    if "settings" in bundle.files:
+        # Rung 3 applies the owned settings; until then a re-send carries
+        # rosters only, refused whole rather than half-applied.
+        return _handoff_error(
+            "invalid_package",
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            ["A re-send does not take a settings file yet: send the rosters."],
+        )
+    correlation_id = request_correlation_id()
+    refusal = await _run_quick_setup_contents(
+        contents=bundle.files,
+        filenames={kind: f"{kind}.csv" for kind in bundle.files},
+        review_session=review_session,
+        user=user,
+        db=db,
+        confirm_replace="true",
+        acknowledge_response_loss=None,
+        replacing=True,
+        correlation_id=correlation_id,
+        directory=directory_or_none(request),
+    )
+    if refusal is not None:
+        db.rollback()
+        if refusal.failure.reason == views.DIRECTORY_SIGN_IN:
+            return _handoff_error(
+                "directory_sign_in",
+                status.HTTP_409_CONFLICT,
+                ["Your Review Robin sign-in to the directory has lapsed."],
+            )
+        return _handoff_error(
+            "invalid_setup",
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            refusal.failure.details,
+            slot=refusal.kind,
+            reason=refusal.failure.reason,
+        )
+    handoffs.record_updated(db, review_session, user, bundle, correlation_id)
+    return JSONResponse(
+        _handoff_receipt(request, review_session, "updated"), headers=_HANDOFF_HEADERS
     )

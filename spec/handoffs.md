@@ -34,6 +34,7 @@ no mail (interop spec §3 invariant 4): the draft waits for its operator.
 |---|---|---|
 | `GET /operator/handoffs/new` | the package gate `require_operator` | The holding page: says a draft is being set up and that nothing is sent, links the Sessions lobby, and offers nothing else to do. `no-store`. |
 | `POST /operator/handoffs/sessions` | the package gate `require_operator` | The create (§3–§6). Every answer is JSON and `no-store`. |
+| `POST /operator/handoffs/{transfer_id}/update` | the package gate `require_operator` | The re-send to the draft that transfer created (§6a, segment 23F). JSON, `no-store`, the §3 request checks. |
 
 A non-operator gets the package gate's usual `303` to `/me`, as does an
 operator the owner-eligibility lock refuses (`OperatorAllowlistDenied`,
@@ -156,6 +157,38 @@ transfer, so the proof of concept needs no table:
 Two concurrent first posts of one transfer can still make two sessions:
 accepted for a proof of concept, whose sender disables its button.
 
+## 6a. The re-send — a linked, unopened draft kept current
+
+Segment 23F (`guide/segment_23F_linked_drafts.md`): while a linked
+session is unopened, its rosters are the linked application's, which
+re-sends them rather than Review Robin editing them (Apply Desk's ruling
+24).
+
+- **Naming the draft:** the path's `transfer_id` is the transfer that
+  created it, as §10's reads name theirs; a sender never names a free
+  session reference (interop spec §6.6). The body is §4's envelope with
+  its own new `transfer_id`, `operation` `reviewrobin.update_draft_session`
+  and no `session_suggestion`.
+- **Files:** `reviewers` and `reviewees` required, `relationships`
+  optional. The rosters are the application's whole picture: they replace
+  the draft's, and the replace's own cascade drops the pairs, so an absent
+  Relationships file leaves none. An `observers` file is refused as at the
+  create (§5). A `settings` file is refused for now
+  (`422 invalid_package`).
+- **All or nothing**, through the create's pipeline
+  (`_run_quick_setup_contents`, replacing); a refused file leaves the draft
+  as it was (`422 invalid_setup` with `slot`), and a validated draft
+  returns to draft as any roster replace makes it.
+- **Refused:** a creating transfer unknown or incomplete, or whose session
+  is not linked to this `source_app` (unlinked included), is
+  `404 not_linked`; one the operator may not operate, `403`; a session
+  activated or later, `409 session_opened` (a session reverted to draft is
+  unopened again); one holding responses, `409 session_has_responses`.
+- **Replay:** `session.handoff_updated` records the re-send's
+  `transfer_id`; a repeat answers `200 already_updated` and applies
+  nothing (another operator's, `409 duplicate_conflict`).
+- **Receipt:** `200 {status: "updated", session_ref, session_code, session_home_url}`.
+
 ## 7. Errors
 
 Every refusal is `{"error": <code>}`, with `details` (lines for the sender
@@ -172,15 +205,17 @@ after any other refusal it starts a new transfer.
 |---|---|---|
 | `session.handoff_created` | `counts(files=n)`, `context` `{transfer_id, source_app}` | with the draft, before its rosters |
 | `session.handoff_completed` | `counts(reviewers, reviewees)`, same `context` | once the rosters have saved, or on the replay that finds them saved |
+| `session.handoff_updated` | `counts(reviewers, reviewees)`, `context` `{transfer_id, source_app}` | once a re-send's rosters have saved (§6a) |
 | `session.handoff_results_exported` | `counts(rows)`, `context` `{transfer_id, file, etag}` | a `results.csv` or `completion.csv` fetched (§10); a `304` writes nothing |
 
-All three are registered in `EVENT_SCHEMAS`. The draft's own
+All four are registered in `EVENT_SCHEMAS`. The draft's own
 `session.created`, the roster saves' events and a settings file's
 `session.settings_imported` are written as for New session. A status read writes nothing: reads never audit.
 
 ## 9. Tests
 
-`tests/integration/test_handoffs.py` (the routes), and
+`tests/integration/test_handoffs.py` (the routes),
+`tests/integration/test_handoff_update.py` (the re-send), and
 `utilityapps/tests/test_interop_poc.py` (the sender's page and bundle).
 
 ## 10. Reading back: status and results
