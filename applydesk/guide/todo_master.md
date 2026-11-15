@@ -303,8 +303,8 @@ where a ruling below differs from it, the ruling wins.
       the prescribed field keys (a missing key asks for a mapping),
       each result derived as its gate says, filling the gate's column on
       Dossiers.
-    - **Who reviews which application** is open: it needs the gate card
-      expanded (Open decisions).
+    - **Who reviews which dossier** is ruling 27's: Apply Desk makes the
+      pairs and sends them as `relationships.csv`.
 
 25. **What a panel opens is the dossier, made by a Dossiers item**
     (author, 2026-11-15), since an exercise need not start with an
@@ -363,6 +363,39 @@ where a ruling below differs from it, the ruling wins.
       its own: author, 2026-11-15) as its start and end. Review Robin's
       handoff takes them since its segment 23D; its 23E (planned) marks
       the session as Apply Desk's, turning off Review Robin's release.
+27. **A gate's evaluators come from ranked sources; Apply Desk makes the
+    pairs** (author, 2026-11-15). Process sets the rules on the gate;
+    the **Evaluations** page shows each gate's evaluator-by-candidate
+    assignments and carries their operations.
+    - **Sources**, ranked in order on the gate, each with a **min** and a
+      **max** per dossier: **nominated evaluators** (named by the candidate
+      in a *Select people* question on Form; referees, ruling 2, are not
+      yet) and **panels**, one or more, each giving members to a
+      dossier. A last row, **Total**, sets the overall min and max per
+      dossier, within what the sources allow: its min no lower than the
+      sources' mins together, its max no higher than their maxes.
+    - **Counts are of distinct evaluators**: someone in two sources counts
+      once, for the higher-ranked.
+    - **Filling a dossier**: sources are taken in rank order, each giving
+      as many as it has, up to its max; lower-ranked sources then supply
+      what is still needed to reach the Total's min, never fewer than
+      their own min; nothing passes the Total's max. With *nominated: 0-2*,
+      *Panel A: 1-3* and *Total: 3-3*, a candidate who nominated no one
+      gets three from Panel A, and one who nominated two gets one. A
+      dossier that cannot be filled is not ready for the gate.
+    - **Automatic assignment** gives every dossier its counts, spreads the
+      work evenly across each panel's members, and never pairs a known
+      conflict (a nominated evaluator who is also on the panel counts
+      once; the candidate themselves never).
+    - **Three modes**, set on the gate: **automatic**; **Apply Desk
+      suggests, the operator approves** (on Evaluations); **the operator
+      assigns** (on Evaluations). A gate is Ready only when every entered
+      dossier is assigned, or approved.
+    - **The pairs go to Review Robin** as `relationships.csv`, the
+      instrument keeping only those pairs; they are a gate's *assigned
+      evaluators* audience (ruling 26) and decide who opens which dossier
+      (ruling 9). After Send, ruling 24: edited in Apply Desk until the
+      session opens, then in Review Robin.
 
 ## MVP roadmap
 
@@ -415,10 +448,6 @@ Segments in order; each gets a plan in this folder when it starts.
   one condition per section, hidden answers discarded on submit.
   Revisit when a real exercise would otherwise need two near-identical
   forms, or operators keep writing "skip this if…" in help text.
-- **Who reviews which application at a gate** (ruling 24): everyone on
-  the panel every entered application, or pairs Apply Desk makes and
-  sends (ruling 9 needs Apply Desk to know them, for the application
-  file); the author's, with the gate card expanded.
 - **A panel shared across exercises** (AD1F): an institution's standing
   pool, the author's when AD5 stores panels.
 - **Raise early with IT:** Blob storage (spec §5.3) and the `applydesk`
