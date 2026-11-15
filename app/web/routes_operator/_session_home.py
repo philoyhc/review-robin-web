@@ -31,6 +31,7 @@ from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
 from app.services import (
     date_formatting,
+    linked_apps,
     operator_settings,
     permissions,
     responses,
@@ -575,6 +576,24 @@ def session_delete_data(
         review_session=review_session,
         user=user,
         correlation_id=request_correlation_id(),
+    )
+    return urls.redirect(
+        request,
+        url=f"/operator/sessions/{review_session.public_id}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/unlink")
+def session_unlink(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Segment 23E: make a linked session native, audited."""
+    linked_apps.unlink(
+        db, review_session=review_session, user=user, correlation_id=request_correlation_id()
     )
     return urls.redirect(
         request,

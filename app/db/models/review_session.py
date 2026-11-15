@@ -203,6 +203,11 @@ class ReviewSession(Base, TimestampMixin):
         Boolean, default=False, nullable=False, server_default=false()
     )
 
+    # Segment 23E: the application that created the session through the
+    # handoff (``app/services/linked_apps.py``); null for a native session.
+    # Set by the handoff's create only, cleared by Unlink.
+    linked_app: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
     created_by_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"), index=True, nullable=False
     )

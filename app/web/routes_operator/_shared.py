@@ -46,6 +46,7 @@ from app.services import (
     date_formatting,
     directory_accounts,
     lifecycle_display,
+    linked_apps,
     operator_settings,
     roster_bulk,
     scheduled_events,
@@ -983,6 +984,7 @@ def render_session_home(
         {
             "user": user,
             "session": review_session,
+            "linked": linked_apps.profile_of(review_session),
             "setup_rows": setup_rows,
             "status_pills": views.session_status_pills(db, review_session),
             "has_responses": lifecycle.session_has_responses(db, review_session),

@@ -99,6 +99,8 @@ def handoff_status(db: Session, review_session: ReviewSession) -> dict[str, obje
         "status_schema_version": STATUS_SCHEMA_VERSION,
         "session_ref": review_session.public_id,
         "session_code": review_session.code,
+        # Segment 23E: the application the session is linked to, or None.
+        "linked_app": review_session.linked_app,
         "name": review_session.name,
         "state": review_session.status,
         "state_label": lifecycle_display_label(review_session.status),

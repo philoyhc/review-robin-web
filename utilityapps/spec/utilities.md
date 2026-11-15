@@ -107,7 +107,10 @@ sender takes from it.
   (`applydesk.invalid`); and a Settings CSV setting up
   one instrument, *Mock review*, with a 1-5 score keyed `score` and a
   comment keyed `comment`, its assignment-rule links set and no release
-  date. Shown on the page as the three CSVs it sends.
+  date. Shown on the page as the three CSVs it sends. Its `source_app`,
+  `utilities`, has a linked profile in Review Robin (`spec/handoffs.md`
+  §5), so each draft it creates is linked, as Apply Desk's will be, and
+  its status card says so.
 - **The bundle** sits in the page as JSON; the script adds a fresh
   `transfer_id` and a `POC-<YYMMDD-HHMMSS>` code per transfer.
 - **Create in Review Robin** opens the holding tab during the click,

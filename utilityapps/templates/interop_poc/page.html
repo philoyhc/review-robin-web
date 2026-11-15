@@ -34,6 +34,7 @@
     <p class="note">Review Robin's own readings of the session, its keys as it sends them (status version 3). A failed check shows unavailable, never old counts or zero.</p>
     <dl class="note" id="poc-status-fields">
       <dt>State</dt><dd>Draft, Validated, Activated, Closed or Archived, as Review Robin shows it</dd>
+      <dt>Linked</dt><dd>Whether Review Robin holds the session as this application's, turning off what the application shows in its place</dd>
       <dt>Status row</dt><dd>The row on every session page: the four rosters, instruments set up, assignments, invitations, responses</dd>
       <dt>Workflow</dt><dd>The Workflow card: whether setup is complete, and the actions it offers now</dd>
       <dt>Validation</dt><dd>The Validate page's issues, read without validating</dd>
@@ -147,6 +148,9 @@
       var nodes = [el("h3", "Status: " + item.session_code)];
       nodes.push(pairs([
         ["State", body.state_label + " (" + body.state + ")"],
+        // Segment 23E: the session is this application's, so Review Robin
+        // turns off what it would show in its place.
+        ["Linked", body.linked_app ? "Yes, as " + body.linked_app : "No: a native session"],
         ["Checked", "Review Robin " + when(body.as_of) + "; this page " + new Date().toLocaleString()]
       ]));
       nodes.push(el("h4", "Status row"));

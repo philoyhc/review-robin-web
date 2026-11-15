@@ -149,3 +149,8 @@ def test_refresh_status_shows_review_robins_own_readings(client: TestClient) -> 
     assert 'el("details")' in text and "innerHTML" not in text
     # 23B's counts are gone with version 1.
     assert "body.counts" not in text
+
+
+def test_the_status_says_whether_the_session_is_linked(client: TestClient) -> None:
+    """Segment 23E: the proof of concept links its sessions, and says so."""
+    assert '["Linked", body.linked_app ?' in client.get(PAGE).text

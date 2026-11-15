@@ -101,6 +101,19 @@
     {% include "operator/partials/session_setup_status_row.html" %}
   </div>
 
+  {# Segment 23E — a session another application created and still
+     links: which one, and Unlink to make it native. #}
+  {% if linked %}
+  <div class="card" id="linked-app" data-linked-app="{{ session.linked_app }}">
+    <p><span class="pill pill-info">Linked to {{ linked.name }}</span>
+      Created through its handoff. Results from this session are shown in {{ linked.shows_results }}, not here.</p>
+    <form method="post" action="{{ url('/operator/sessions/' ~ session.public_id ~ '/unlink') }}">
+      <button type="submit" class="btn alert">Unlink</button>
+      <span class="muted">Makes the session native: Review Robin's own release and observers come back.</span>
+    </form>
+  </div>
+  {% endif %}
+
   {# Workflow card — full-width, just below the chrome. Same partial
      the Operations-row pages render; ``next_action_return_to="home"``
      so the super-button / pause / revert / invitation forms all

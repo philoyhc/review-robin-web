@@ -115,6 +115,11 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   leaves the draft with its rosters, which a replay completes (§6).
   New session's own behavior is unchanged: it still keeps the draft when a
   file is refused.
+- **The link** (segment 23E, `guide/segment_23E_linked_sessions.md`): a
+  `source_app` with a profile in `app/services/linked_apps.py`
+  (`applydesk`; `utilities`, the proof of concept) sets the draft's
+  `linked_app` with its transfer record; any other links nothing. Session
+  Home shows the link, and **Unlink** clears it (`session.unlinked`).
 - **Receipt:** `201` `{status: "created", session_ref, session_code, session_home_url}`.
   The URL is app-relative, emitted through `app/web/urls.py`.
 
@@ -195,7 +200,7 @@ Refusals are §7's JSON. Every answer is `no-store`, under the package gate.
 **Status** (`status_schema_version` 3): Review Robin's own
 readings of the session, each from the function its pages read, so a
 number the sender sees is the one Review Robin shows. It is assembled by
-a view adapter (`app/web/views/_handoffs.py`). Identity: `session_ref`,
+a view adapter (`app/web/views/_handoffs.py`). Identity: `session_ref`, `linked_app` (segment 23E: the application the session is linked to, or null),
 `session_code`, `name`, the lifecycle `state` (the enum) and `state_label`
 (as Review Robin shows it), `session_home_url` and `as_of`. Then:
 
