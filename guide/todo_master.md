@@ -49,14 +49,17 @@ is the author's call.
    operators may have reminded by hand: 14G marks those skipped, not
    sent, when it turns the setting on.
 2. **23E — Sessions linked to another application** (for Apply Desk's
-   ruling 26, author 2026-11-15; planned, not yet built): a handoff's
+   ruling 26, author 2026-11-15; built, closing after the author's
+   browser check): a handoff's
    session carries `linked_app`, and Apply Desk's profile turns off
    Review Robin's release and rewords the visibility card.
    **Plan:** `guide/segment_23E_linked_sessions.md`.
-3. **The handoff re-sends to a draft not yet opened** (Apply Desk's
-   ruling 24; unscheduled, before Apply Desk's AD6): `spec/handoffs.md`
-   creates only. A plan when it starts; with 23D (closed) it retires
+3. **23F — The linked application keeps its draft current** (Apply
+   Desk's ruling 24, author 2026-11-15): a re-send replaces a linked,
+   unopened draft's rosters and the set-up the application owns, and
+   Review Robin locks them there. With 23D (closed) it retires
    `guide/interoperability.md` §5's revisit.
+   **Plan:** `guide/segment_23F_linked_drafts.md`.
 
 ### Stubs
 
