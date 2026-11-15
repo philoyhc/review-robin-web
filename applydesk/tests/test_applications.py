@@ -13,7 +13,7 @@ from applydesk import sample_data, stages
 from applydesk.tests._host import host_with
 
 EX = "wa9juxbc2t"
-PAGE = f"/applydesk/operator/exercises/{EX}/applications"
+PAGE = f"/applydesk/operator/exercises/{EX}/dossiers"
 
 
 @pytest.fixture
@@ -52,8 +52,8 @@ def test_every_application_is_a_row(client: TestClient) -> None:
     apps = sample_data.applications_of(EX)
     assert len(apps) == 102
     assert text.count("data-row ") == len(apps)
-    # A submitted application's ID links to its file; a draft's does not.
-    assert f'/files/{apps[0].file_id}"><code>{apps[0].public_id}</code></a>' in text
+    # A submitted application's ID links to its dossier; a draft's does not.
+    assert f'/dossiers/{apps[0].dossier_id}"><code>{apps[0].public_id}</code></a>' in text
     draft = next(a for a in apps if a.state == "Draft")
     assert f"<code>{draft.public_id}</code></td>" in text
 
@@ -99,7 +99,7 @@ def test_last_applications_keep_each_applicant_s_last_submitted() -> None:
 def test_an_exercise_with_only_its_first_stage_ends_at_status(client: TestClient) -> None:
     """A new exercise starts with one stage, holding the application,
     named "Stage 1" until the operator names it (ruling 15)."""
-    text = client.get("/applydesk/operator/exercises/r6tm4kq9wz/applications").text
+    text = client.get("/applydesk/operator/exercises/r6tm4kq9wz/dossiers").text
     assert "data-kind=" not in text
     assert "No gates or outcomes yet" in text
     assert re.findall(r"<th class=\"ap-first\"[^>]*><b>([^<]+)</b>", text) == ["Stage 1"]

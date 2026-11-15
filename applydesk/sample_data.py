@@ -1,5 +1,5 @@
 """Sample data for the placeholders (segment AD1, item 2): five exercises,
-their applications, panels and application files, so every page of the URL
+their applications, panels and dossiers, so every page of the URL
 map has something to show. Names and addresses are invented; IDs have the
 public-ID shape (`applydesk/ids.py`)."""
 
@@ -35,7 +35,7 @@ class Application:
     title: str
     state: str  # Draft, Submitted, Withdrawn
     submitted: str
-    file_id: str
+    dossier_id: str
 
 
 @dataclass(frozen=True)
@@ -235,7 +235,7 @@ _WRITTEN: tuple[Application, ...] = (
 )
 
 # The model exercise's other applications, generated with a fixed seed
-# so the Applications page reads as a real call of about 100 (segment
+# so the Dossiers page reads as a real call of about 100 (segment
 # AD1C): names, IDs, statuses and dates are the same on every run.
 _FIRST = (
     "Aisha",
@@ -361,7 +361,7 @@ def _generated() -> tuple[Application, ...]:
         replace(
             twice,
             public_id=new_id(),
-            file_id=new_id(),
+            dossier_id=new_id(),
             state="Withdrawn",
             submitted="4 Oct 2026",
         ),
@@ -374,7 +374,7 @@ def _generated() -> tuple[Application, ...]:
         replace(
             first,
             public_id=new_id(),
-            file_id=new_id(),
+            dossier_id=new_id(),
             title="A second proposal: " + first.title.lower(),
             submitted="15 Oct 2026",
         )
@@ -446,7 +446,7 @@ def _roster(exercise_id: str, key: str) -> tuple[Evaluator, ...]:
 
 
 # The applicant form's two sections, as an applicant fills them in
-# (spec §5.1): the application file shows the first only.
+# (spec §5.1): the dossier shows the first only.
 SHOWN_TO_REVIEWERS: tuple[tuple[str, str], ...] = (
     ("Project title", ""),
     (
@@ -524,10 +524,7 @@ SAMPLE_FORM: tuple[FormCard, ...] = (
         "field",
         "text",
         "Your proposed project",
-        help=(
-            "Tell us what you will work on and how. Assessors read the "
-            "questions marked shown on your application file."
-        ),
+        help=("Tell us what you will work on and how. Assessors read the questions marked shown."),
         shown=True,
     ),
     FormCard("field", "string", "Project title", min="1", max="120", required=True, shown=True),
@@ -812,8 +809,8 @@ def application(exercise_id: str, public_id: str) -> Application | None:
     )
 
 
-def by_file(exercise_id: str, file_id: str) -> Application | None:
+def by_dossier(exercise_id: str, dossier_id: str) -> Application | None:
     return next(
-        (a for a in applications_of(exercise_id) if a.file_id == file_id),
+        (a for a in applications_of(exercise_id) if a.dossier_id == dossier_id),
         None,
     )

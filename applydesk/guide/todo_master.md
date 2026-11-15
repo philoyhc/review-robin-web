@@ -18,12 +18,12 @@ where a ruling below differs from it, the ruling wins.
 4. **ApplyDesk keeps the roster of recognized assessors and referees, and
    what each may view.** To Review Robin they are ordinary reviewers; it
    holds no ApplyDesk authorization.
-5. **Reviewers read an application on ApplyDesk's application file**
-   (the profile page, renamed by ruling 13), linked as each reviewee's `ProfileLink` in the handoff.
+5. **Reviewers read an application on ApplyDesk's dossier**
+   (the profile page, renamed by rulings 13 and 25), linked as each reviewee's `ProfileLink` in the handoff.
    ApplyDesk decides each view itself, from the signed-in Cordware
    identity and its own roster. The page shows only the *Shown to
    reviewers* section.
-6. **Blind review is possible**: in a blind exercise the application file
+6. **Blind review is possible**: in a blind exercise the dossier
    redacts the applicant's name and identifiers.
 7. **Every exercise has a 10-character public ID**, in RRW's alphabet
    (`app/db/models/review_session.py`, `PUBLIC_ID_ALPHABET`).
@@ -31,9 +31,9 @@ where a ruling below differs from it, the ruling wins.
    `/applydesk/operator/exercises` and
    `/applydesk/operator/exercises/<id>/…`; participants under
    `/applydesk/me` and `/applydesk/me/exercises/<id>/…`.
-9. **A reviewer opens only the application files of the applications they are
+9. **A reviewer opens only the dossiers of the applications they are
    asked to review** (AD5). ApplyDesk's roster holds that permission.
-   **The exercise's operators open every application file** (author, 2026-11-12).
+   **The exercise's operators open every dossier** (author, 2026-11-12).
    How the same pairs reach Review Robin's assignments, through reviewer,
    reviewee or relationship tags, is decided at AD6.
 10. **A blind exercise sends Review Robin an alias key** in place of the
@@ -58,7 +58,8 @@ where a ruling below differs from it, the ruling wins.
     question.
 
 13. **Evaluation runs in rounds of gates and outcomes, driven from the
-    Applications page** (author, 2026-11-12; *rounds and the timeline's
+    Applications page** (author, 2026-11-12; *the page renamed Dossiers by
+    ruling 25*; *rounds and the timeline's
     stages became one, the stage, in ruling 15*):
     - A **round** is sequential; a round holds one or more **gates**,
       which may run at the same time. A gate is who evaluates (a Panels
@@ -70,12 +71,12 @@ where a ruling below differs from it, the ruling wins.
       date; each outcome has a *Released* switch, and what a release does
       (to applicants, to reviewers, by email) is set with the Timeline.
     - Rounds, gates, outcomes and their dates are set up on **Setup**
-      and the Timeline (*stages, on Process: rulings 14, 15*). **Applications** is the control surface: who
+      and the Timeline (*stages, on Process: rulings 14, 15*). **Dossiers** (*Applications* until ruling 25) is the control surface: who
       enters each gate (*—* for no status yet, *Entered*, *Not entered*;
       author, 2026-11-13) and each
       outcome's value, set by hand, by the column's rule, or uploaded as
       a CSV keyed by application ID. **Rules are set on Setup, not here**
-      (author, 2026-11-13): Applications applies them, and the operator
+      (author, 2026-11-13): Dossiers applies them, and the operator
       overrides any cell by hand. A gate's rule reads the application's
       status, whether it is the applicant's last submitted, and earlier
       outcomes, never another gate; an outcome's reads the gates in its
@@ -89,8 +90,9 @@ where a ruling below differs from it, the ruling wins.
       the **stage**, since ruling 15.
     - An applicant may send more than one application; the page shows
       all of them, or each applicant's last **submitted** one.
-    - What a reviewer opens is the **application file**, one per
-      application (ruling 5's "profile page"); it keeps its own ID apart
+    - What a reviewer opens is the **dossier** (ruling 25), one per
+      application, or per candidate where there is none (ruling 5's
+      "profile page"); it keeps its own ID apart
       from the application ID, for ruling 10's blind exercises.
 14. **An exercise's pages follow the operator's workflow, in Review
     Robin's chrome** (author, 2026-11-13; segment AD1D):
@@ -99,7 +101,7 @@ where a ruling below differs from it, the ruling wins.
       per gate, its panel roster on it; *a panel picked from Panels: ruling 19*), *Emails* (every template to
       applicants, kept in one place; Process sets which steps send one,
       and when; *who it is to and how templates are named: ruling 16*); then
-      an **Operations** row: *Applications*, *Evaluations* (each gate's
+      an **Operations** row: *Dossiers* (*Applications* until ruling 25), *Evaluations* (each gate's
       progress and results), *Extract data*. Panels folds into Gates,
       Review becomes Evaluations, Reports becomes Extract data, Setup
       becomes Process. Ruling 13's "Setup and the Timeline" is Process.
@@ -122,10 +124,11 @@ where a ruling below differs from it, the ruling wins.
       what a stage holds, so *application* means only the record an
       applicant submits; author, 2026-11-13), or **one or more gates**,
       and may hold an **outcome**: never the form and a gate together.
+      Any stage may also hold a **Dossiers** item (ruling 25).
       Only one stage holds the form, anywhere in the timeline (a
       gate stage may come first, its outcome deciding who may apply); an
-      exercise may have none, its applications collected upstream and
-      loaded into the Applications table. A stage may hold only an
+      exercise may have none, its candidates collected upstream and
+      loaded as dossiers (ruling 25). A stage may hold only an
       outcome: an offline gate, as the model exercise's *Decision*,
       where the reviews and interviews are collated for discussion
       before the final decision.
@@ -142,8 +145,8 @@ where a ruling below differs from it, the ruling wins.
       proposal after an expression of interest, a finalist's budget or
       referees, an award's acceptance). A later form stage admits by an
       earlier outcome, as a gate does, and opens its form only to those;
-      its Applications column runs *Not invited → Invited → Draft →
-      Submitted*; Form picks between the forms; the application file
+      its Dossiers column runs *Not invited → Invited → Draft →
+      Submitted*; Form picks between the forms; the dossier
       joins the parts. Until then, ruling 15's one application stage
       stands; each form-holding stage names its form and an application
       keeps a status per part, so the extension adds without reworking.
@@ -224,7 +227,7 @@ where a ruling below differs from it, the ruling wins.
       minimum number of responses, else it has none yet.
     - **The fields are Review Robin's setup**: the gate lists what its
       session's instrument must ask; the handshake itself is AD6's.
-    - Result 1 is the gate's headline (Applications' chip). Outcome rules
+    - Result 1 is the gate's headline (Dossiers' chip). Outcome rules
       and weights read a gate's named result; only numbers are weighed
       or compared, a list is matched, a string is read only (a count of
       either is a number).
@@ -244,7 +247,7 @@ where a ruling below differs from it, the ruling wins.
     2026-11-14; segment AD1F), so nothing waits out of sight:
     - **A roster table** (Panels): a row is ticked to edit, its ✓ keeps
       it (Enter too), and unticking without ✓ puts it back; no page Save.
-    - **A control surface** (Applications), worked down its columns
+    - **A control surface** (Dossiers), worked down its columns
       rather than along a row: the whole table is locked, and *Unlock*
       opens every cell, *Set ticked rows*, the rules, the CSV and the
       releases; *Lock* keeps what changed and *Undo changes* puts the
@@ -269,20 +272,21 @@ where a ruling below differs from it, the ruling wins.
     - **Publish** the exercise, refused while Process's Outline names a
       problem (a Review Robin gate with no panel, an empty panel, no
       result). **Open** the form, applicants apply, **close** it; an
-      exercise with no form loads its applications on Applications.
-    - **Application files** are made at submit or when the form closes,
-      the operator's choice on Form.
-    - **Who enters the gate** is decided on Applications (the entry
+      exercise with no form loads its candidates as dossiers instead.
+    - **Dossiers** are made as the stage's Dossiers item says (ruling
+      25): from the form at submit or when it closes, the operator's
+      choice, or from an upload or an earlier outcome's list.
+    - **Who enters the gate** is decided on Dossiers (the entry
       rule as a proposal, cells by hand or CSV, *Lock* keeping it),
-      every application *Entered* or *Not entered*.
+      every row *Entered* or *Not entered*.
     - **The gate is Ready** once the exercise is published, its entry is
-      decided with at least one entered, its panel has members and it has
-      a result. It may be sent **before its stage's dates**, which
+      decided with at least one entered, every row entered has a dossier
+      (ruling 25), its panel has members and it has a result. It may be sent **before its stage's dates**, which
       guide; the Workflow card names what blocks it.
     - **Send to Review Robin** shows the bundle first: the session's
       name and code; reviewers, the panel; reviewees, the entered
-      applications (the application ID, or ruling 10's alias, as
-      `RevieweeEmail`; the application file as `ProfileLink`); and *For
+      rows (the application ID, or the dossier's own where there is no
+      application, or ruling 10's alias, as `RevieweeEmail`; the dossier as `ProfileLink`); and *For
       Review Robin*, each result's field **with the field key Apply Desk
       prescribes**. Sent, Apply Desk keeps the transfer, the session and
       who was sent; the tab lands on the draft's Session Home.
@@ -296,9 +300,35 @@ where a ruling below differs from it, the ruling wins.
     - **Results** come back on Evaluations by *Pull results*, matched on
       the prescribed field keys (a missing key asks for a mapping),
       each result derived as its gate says, filling the gate's column on
-      Applications.
+      Dossiers.
     - **Who reviews which application** is open: it needs the gate card
       expanded (Open decisions).
+
+25. **What a panel opens is the dossier, made by a Dossiers item**
+    (author, 2026-11-15), since an exercise need not start with an
+    application: a nomination gate may come first, its outcome the
+    invitees, or candidates from an upstream process may go straight
+    through gates with no form at all.
+    - **The dossier** is the record a panel opens about one candidate
+      or proposal (rulings 5, 6, 9 and 13's *application file*, renamed),
+      with its own ID; an **application** is only what an applicant
+      submits through Form, one source of a dossier.
+    - **A Dossiers item** is a new kind of item a stage holds, beside
+      the form, gates and an outcome, one at most per stage. It says
+      where its dossiers come from (the form's submissions, at submit
+      or when it closes; an upload of candidates; an earlier outcome's
+      list) and what they show (the *Shown to reviewers* answers,
+      uploaded fields, earlier gate results and outcomes as ticked).
+    - **A dossier reads its sources as they change**, but sending a gate
+      **freezes the version its panel sees**: a later form part or gate
+      result adds to it without changing what an earlier panel read.
+    - **The Workflow card** gains its step (*Make dossiers…*), and a
+      gate is not Ready until every row entered at it has a dossier.
+    - **The Applications page becomes Dossiers** (author, 2026-11-15),
+      at `/operator/exercises/<id>/dossiers`: a row per dossier, an
+      application's where it has one.
+    - **Open:** the Dossiers item's states on the Workflow card
+      (ruling 14).
 
 ## MVP roadmap
 
@@ -313,8 +343,8 @@ Segments in order; each gets a plan in this folder when it starts.
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
-| AD5 — Panels and application files | The rosters on Panels (ruling 11): assessment panels and the applications each assessor is asked to review (ruling 9), the reviewer pool, interviewers; application files generated, the file with its access check, audit and blind redaction | — |
-| AD6 — Assessment in Review Robin | Rosters from submitted applications, the pairs as tags, `ProfileLink` to the application file, the blind alias key (ruling 10), results back into ApplyDesk | The open items below |
+| AD5 — Panels and dossiers | The rosters on Panels (ruling 11): assessment panels and the applications each assessor is asked to review (ruling 9), the reviewer pool, interviewers; dossiers generated, the dossier with its access check, audit and blind redaction | — |
+| AD6 — Assessment in Review Robin | Rosters from submitted applications, the pairs as tags, `ProfileLink` to the dossier, the blind alias key (ruling 10), results back into ApplyDesk | The open items below |
 | AD7 — Timeline and outcomes | Milestones, announcements, outcome import, embargo on read, release, correction | G5 (sender), G7 (publication) |
 | AD8 — Dashboard and Reports | Counts by state; Reports: every evaluation response collated (ruling 11), the export bundle | — |
 | Later | Blob storage, then uploads and referees | G8, with IT |
@@ -346,7 +376,7 @@ Segments in order; each gets a plan in this folder when it starts.
 - **Conditional questions: deferred** (author, 2026-11-12). A typical
   application form is linear; optional questions with help text cover
   the rest, and branching would reach Required, server checks, form
-  versions, the application file and exports. If needed, the smallest shape:
+  versions, the dossier and exports. If needed, the smallest shape:
   a section shown when one earlier *Choose one* list has a given option,
   one condition per section, hidden answers discarded on submit.
   Revisit when a real exercise would otherwise need two near-identical

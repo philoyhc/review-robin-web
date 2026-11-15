@@ -1,5 +1,6 @@
-{# The Applications page (segment AD1C, ruling 13): the exercise's control
-   surface. A row per application; its identity columns (named for the
+{# The Dossiers page (segment AD1C, ruling 13; renamed by ruling 25): the exercise's control
+   surface. A row per dossier, built from the applications until the
+   Dossiers item is (ruling 25); its identity columns (named for the
    application stage when that stage comes first), then each stage's gates
    and outcomes, in timeline order, as Process sets them.
    Every move works on screen; nothing is saved until AD2. A control
@@ -55,7 +56,7 @@
     <thead>
       <tr class="ap-groups">
         {% set ast = plan.stages[0] if plan.stages and plan.stages[0].form else none %}{# leads the identity columns only when first #}
-        <th class="ap-first" colspan="{{ 3 + (ast.columns | length if ast else 0) }}"><b>{{ ast.label if ast else "Applications" }}</b>{% if ast %}<span class="ap-when">{{ ast.dates }}</span>{% elif not plan.form_stage %}<span class="ap-when">From elsewhere</span>{% endif %}</th>
+        <th class="ap-first" colspan="{{ 3 + (ast.columns | length if ast else 0) }}"><b>{{ ast.label if ast else "Dossiers" }}</b>{% if ast %}<span class="ap-when">{{ ast.dates }}</span>{% elif not plan.form_stage %}<span class="ap-when">From elsewhere</span>{% endif %}</th>
         {% for r in plan.stages if r.columns and r is not sameas ast %}<th class="ap-r" colspan="{{ r.columns | length }}"><b>{{ r.label }}</b><span class="ap-when">{{ r.dates }}</span></th>{% endfor %}
       </tr>
       <tr>
@@ -80,7 +81,7 @@
     {% for row in plan.rows %}{% set a = row.application %}
       <tr data-row data-status="{{ a.state }}" data-search="{{ (a.public_id ~ ' ' ~ a.applicant ~ ' ' ~ a.email) | lower }}"{% if a.public_id in last %} data-last{% endif %}{% if a.public_id in rank %} data-rank="{{ rank[a.public_id] }}"{% endif %}>
         <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ a.public_id }}">
-          {% if a.state == "Submitted" %}<a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/files/' ~ a.file_id) }}"><code>{{ a.public_id }}</code></a>{% else %}<code>{{ a.public_id }}</code>{% endif %}</td>
+          {% if a.state == "Submitted" %}<a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ a.dossier_id) }}"><code>{{ a.public_id }}</code></a>{% else %}<code>{{ a.public_id }}</code>{% endif %}</td>
         <td class="ap-who"><strong>{{ a.applicant }}</strong><span class="ap-mail">{{ a.email }}</span></td>
         <td class="ap-stat">{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}<span class="ap-note">{{ a.submitted }}</span></td>
         {% for r in plan.stages %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}
@@ -123,11 +124,11 @@
   <p class="muted ap-help">A gate's chip says whether the application is sent through it, cycling <em>—</em> (no status yet), <em>Entered</em>, <em>Not entered</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> switch does what Process sets. Stages, gates, outcomes, dates and rules come from Process.</p>
 </div>
 <div class="btnrow">
-  <button class="btn btn-primary" type="button" disabled>Generate application files</button>
+  <button class="btn btn-primary" type="button" disabled>Generate dossiers</button>
   <button class="btn btn-alert" type="button" disabled>Return to draft</button>
 </div>
 <script>
-// Segment AD1C: the Applications page's moves, on screen only; a reload
+// Segment AD1C: the Dossiers page's moves, on screen only; a reload
 // restores the sample. Chips cycle, outcomes are picked and dated, the
 // counts follow, releases confirm, rows filter and are set in bulk.
 (function () {

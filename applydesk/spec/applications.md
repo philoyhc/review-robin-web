@@ -49,8 +49,8 @@ operators under `/operator/exercises`, participants under `/me`.
 - **Public IDs** (`applydesk/ids.py`): 10 symbols from RRW's alphabet,
   `23456789abcdefghjkmnpqrstuvwxyz`, drawn at random. A path whose ID has
   any other shape, or names nothing, is a 404 before anything is read.
-- **The application file**, what a reviewer opens, one per application
-  (`/me/exercises/<id>/files/<file>`), is named by its own ID, never the
+- **The dossier**, what a reviewer opens, one per application
+  (`/me/exercises/<id>/dossiers/<dossier>`), is named by its own ID, never the
   application's, and shows only the *Shown to reviewers* section. In a blind exercise it
   redacts the applicant's name and identifiers.
 - **The chrome** is the shared bar (`docs/header_chrome.md`): the app
@@ -62,7 +62,7 @@ operators under `/operator/exercises`, participants under `/me`.
   do (author, 2026-11-13). An exercise's operator pages add Review Robin's chrome
   under a breadcrumb (ruling 14, segment AD1D): *Exercise Home*
   double-height on the left; a Setup row (Process, Form, Panels, Emails)
-  and an Operations row (Applications, Evaluations, Extract data); and a
+  and an Operations row (Dossiers, Evaluations, Extract data); and a
   status row of the exercise, its form, gates, outcomes, emails and
   applications.
 - **Layout**: the operator's pages, `/operator/…`, take Review Robin's: a
@@ -179,11 +179,11 @@ shows the form's own card and one empty String card, open.
 
 The exercise's timeline as a stack of stage cards, on the Process tab,
 `/operator/exercises/<id>/process` (rulings 13–16). Process sets up the whole
-flow and every rule Applications applies; Form, Panels and Emails flesh out its
+flow and every rule Dossiers applies; Form, Panels and Emails flesh out its
 nodes. Every move works in the browser; nothing is saved until AD2, and a
 reload restores the sample. A blank exercise shows one open card, *Stage 1*,
 holding the form. The cards are drawn from `stages.plan_of`, so Process,
-Applications and the Workflow card agree on load.
+Dossiers and the Workflow card agree on load.
 
 - **Layout.** The cards in timeline order, the Outline beside them (as
   Form's), *Save* at its foot, disabled until AD2.
@@ -207,7 +207,7 @@ Applications and the Workflow card agree on load.
   / *the outcome*.
 - **Reordering** by the card's handle, dragged or with ↑ ↓ (announcing the new
   position). Gates and outcomes are numbered by the timeline and renumber as
-  cards move; the Outline and Applications' headers follow.
+  cards move; the Outline and Dossiers' headers follow.
 - **Items collapse.** A stage's items each have a head, always shown, with
   its kicker, name and chips, and a toggle for the body: a gate's state,
   results count and panel (*Panel A · 2 people*, or *No panel*); an
@@ -253,7 +253,7 @@ Applications and the Workflow card agree on load.
   left of 100, and the item says when the gates changed. *When released*, per
   audience, *Applicants* and *Panel evaluators* each with *Update timeline*
   (the timeline they see on signing in to their participant page) and *Send
-  email*. Whether it is released is set on Applications.
+  email*. Whether it is released is set on Dossiers.
 - **The rule editor** (*Add a rule* / *Edit the rule*, on a gate or an outcome).
   A row per condition, joined by AND, then *Then* and *Otherwise*; *Decide by
   hand* clears it. Conditions are ruling 13's and no others:
@@ -264,7 +264,7 @@ Applications and the Workflow card agree on load.
   | An outcome | A named gate result (`≥` / `<` a number, or *is* a list's option); entry at a gate; the combined result; an earlier outcome |
 
   A gate's *Then* and *Otherwise* are *Entered* / *Not entered*; an outcome's
-  are its values. The item's line reads as Applications' header does
+  are its values. The item's line reads as Dossiers' header does
   (`stages.rule_text`), *Decided by hand* for none. A rule names columns by key,
   so moving a stage keeps its meaning. One that reads a later outcome, a gate
   outside its outcome's scope, or a column since removed; decides or compares
@@ -273,7 +273,7 @@ Applications and the Workflow card agree on load.
   it read (a removed column as *(removed)*) until the operator picks another.
   Weights that are not numbers or do not total 100 are flagged likewise.
   A rule or weight names a gate's *result* (`stages.result_label`, *Rating at
-  Peer Review*), and Applications' headers say the same: a number (a mean,
+  Peer Review*), and Dossiers' headers say the same: a number (a mean,
   median, sum, count, share, or a numeric field's lowest, highest or entered
   value) is compared and weighed, a list matched, a string offered to
   neither (`stages.comparable`). Only numeric results take a weight.
@@ -348,8 +348,11 @@ A panel made on Form or Process appears here only once saved (AD2).
 - **A sent gate** (`workflow.gate_state`: *Sent*, *Results in*) keeps the
   roster it was sent with: its panel says so here and on Process.
 
-## The Applications page
+## The Dossiers page
 
+At `/operator/exercises/<id>/dossiers` (the Applications page until ruling
+25): a row per dossier, an application's where it has one; until the
+Dossiers item is built (ruling 25), the rows are the sample's applications.
 A control surface (ruling 23), worked down its columns. The whole table is
 locked until *Unlock*; then every cell, *Set ticked rows*, *Apply rules…*,
 *Upload CSV* and each outcome's *Released* are live. *Lock* keeps what

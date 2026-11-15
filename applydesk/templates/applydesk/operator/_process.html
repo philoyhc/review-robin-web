@@ -12,7 +12,7 @@
 <script type="application/json" id="pc-pools">{{ people | tojson }}</script>
 <div class="fb-split" data-process data-unsaved-root>
   <div class="fb-main">
-    <p class="muted pc-intro">The exercise's timeline, stage by stage. A stage holds the application form, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Applications applies them.</p>
+    <p class="muted pc-intro">The exercise's timeline, stage by stage. A stage holds the application form, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Dossiers applies them.</p>
     <div class="fb-cards" id="pc-cards">
       {% for st in plan.stages %}{{ pc.stage(plan, st, rule_text, last=(plan.stages | length == 1), open=(plan.stages | length == 1)) }}{% endfor %}
     </div>
