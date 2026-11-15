@@ -3,7 +3,8 @@ sample data.
 
 Each item goes live on its own: the application form, each gate, each
 outcome, then the exercise's close. This module gives each its state
-for the chrome's status row and the Workflow card. Until AD2 saves an
+for the chrome's status row and the current stage (the Workflow card
+was removed, author 2026-11-15: it can wait). Until AD2 saves an
 exercise, the states are fixed per sample exercise; nothing is saved."""
 
 from __future__ import annotations
@@ -180,7 +181,7 @@ def status_row(exercise: Exercise) -> tuple[Pill, ...]:
 
 @dataclass(frozen=True)
 class Step:
-    """One step on the Workflow card: the form, a gate, an outcome or the
+    """One step of the timeline: the form, a gate, an outcome or the
     close, in timeline order (ruling 14)."""
 
     group: str  # the stage it sits in, by its label, or "Close"
@@ -196,7 +197,7 @@ class Step:
 
 
 def steps(exercise: Exercise) -> tuple[Step, ...]:
-    """The exercise's timeline as the Workflow card steps through it: each
+    """The exercise's timeline, step by step: each
     stage's application form, gates and outcomes in their set order, then
     the close (ruling 15). An exercise whose applications came from
     elsewhere has no form step."""
@@ -281,19 +282,8 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
 
 
 def next_step(all_steps: tuple[Step, ...]) -> Step | None:
-    """The earliest step not yet done: the one the card marks."""
+    """The earliest step not yet done: it names the current stage."""
     return next((s for s in all_steps if not s.done), None)
-
-
-def groups(all_steps: tuple[Step, ...]) -> tuple[tuple[str, tuple[Step, ...]], ...]:
-    """The card's groups in order, each with its steps."""
-    out: list[tuple[str, list[Step]]] = []
-    for s in all_steps:
-        if out and out[-1][0] == s.group:
-            out[-1][1].append(s)
-        else:
-            out.append((s.group, [s]))
-    return tuple((label, tuple(members)) for label, members in out)
 
 
 def current_stage(exercise: Exercise) -> str:
