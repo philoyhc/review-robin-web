@@ -37,6 +37,7 @@ from app.db.models import (
 from app.services import (
     audit,
     csv_imports,
+    linked_apps,
     monitoring,
     permissions,
     session_config_io,
@@ -298,7 +299,11 @@ def record_created(
     retry after anything later finds it, and commit both as one unit: the
     draft is created with ``commit=False`` so it never lands without its
     record. A discarded draft takes the record with it
-    (``sessions.delete_session`` drops its events)."""
+    (``sessions.delete_session`` drops its events). A ``source_app`` with
+    a linked profile marks the draft as that application's (segment 23E)."""
+    profile = linked_apps.profile_for(bundle.source_app)
+    if profile is not None:
+        review_session.linked_app = profile.key
     audit.write_event(
         db,
         event_type=EVENT,

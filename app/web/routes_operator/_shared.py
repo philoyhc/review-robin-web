@@ -46,6 +46,7 @@ from app.services import (
     date_formatting,
     directory_accounts,
     lifecycle_display,
+    linked_apps,
     operator_settings,
     roster_bulk,
     scheduled_events,
@@ -165,6 +166,8 @@ urls.add_globals(
 urls.add_filters(
     _templates,
     lifecycle_label=lifecycle_display.lifecycle_display_label,
+    # Segment 23E: a session's linked application, by name ("" if none).
+    linked_name=linked_apps.linked_name,
     # Canonical date / time display formatting — Segment 18B PR 1 / PR 2.
     # Context-aware: the filters resolve their display zone from the
     # ``display_timezone`` context key the processor above injects.
@@ -983,6 +986,7 @@ def render_session_home(
         {
             "user": user,
             "session": review_session,
+            "linked": linked_apps.profile_of(review_session),
             "setup_rows": setup_rows,
             "status_pills": views.session_status_pills(db, review_session),
             "has_responses": lifecycle.session_has_responses(db, review_session),

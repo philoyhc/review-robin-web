@@ -986,8 +986,9 @@ def test_session_config_card_display_edit_swap(client: TestClient, db: Session) 
 
 
 def test_offset_boxes_carry_the_create_pages_examples(client: TestClient, db: Session) -> None:
-    """Session Home's two offset boxes show the same example offsets as
-    the Create page's (author, 2026-10-13): they were blank there."""
+    """Session Home's two offset boxes give the same example as the Create
+    page's (author, 2026-10-13), now as helper text under each box rather
+    than a placeholder (author, 2026-11-15)."""
     import re
 
     review_session = _make_session(client, db, code="cfg-offset-ph")
@@ -1001,9 +1002,10 @@ def test_offset_boxes_carry_the_create_pages_examples(client: TestClient, db: Se
         create_input = re.search(rf'<input[^>]*id="{create_id}"[^>]*>', create)
         home_input = re.search(rf'<input[^>]*id="{home_id}"[^>]*>', home)
         assert create_input and home_input
-        placeholder = re.search(r'placeholder="([^"]+)"', create_input.group(0))
-        assert placeholder
-        assert f'placeholder="{placeholder.group(1)}"' in home_input.group(0)
+        assert "placeholder" not in create_input.group(0)
+        assert "placeholder" not in home_input.group(0)
+    for helper in ("Offset from Start, e.g., -P1D, -PT2H", "Offset from End, e.g., -P1D, -PT2H"):
+        assert helper in create and helper in home
 
 
 def test_config_card_editing_param_renders_edit_mode(client: TestClient, db: Session) -> None:

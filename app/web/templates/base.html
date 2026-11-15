@@ -843,6 +843,14 @@
       /* Session Home's Tags field sits a step further from the Description
          box than a label's own top margin puts it (19U Item 3). */
       .config-field-gap { margin-top: var(--space-3); }
+      /* Segment 23E: under Tags, two quarter-width columns (the optional
+         tabs and the link | Rosters), the card's left half split in two. */
+      .config-toggle-columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 20px;
+        align-items: start;
+      }
       /* User interface settings — both toggles on one line, label text at
          normal weight/size. On New session the checkbox comes first, as
          every checkbox does (20C Item 2); Session Home's toggles are chips. */

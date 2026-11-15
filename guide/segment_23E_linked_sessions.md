@@ -56,6 +56,10 @@ Taken 2026-11-15 at `eaa9324d9`.
 | Visibility service | 669 lines | `wc -l app/services/visibility_policies.py` |
 | Files raising the unreachable warning | 4 | `grep -rln "unreachable_for_results" app --include=*.py` |
 
+## Status
+
+- **Rung 2** (2026-11-15, the author: "update interop-poc to test out the 23E idea"): the mark, with a second profile, `utilities`, so the Utilities proof of concept's drafts link as Apply Desk's will and the idea can be tried before Apply Desk sends. Its status card shows *Linked*. Profile text names the application (*See in Utilities*), so the card stays honest for each.
+
 ## PR ladder
 
 1. **Plan** (this file), its README row, the queue entry.

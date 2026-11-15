@@ -79,25 +79,25 @@ def test_the_shipped_default_is_off(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_the_fields_are_live_as_prompts_with_their_line(
     client: TestClient, db: Session, send_off: None
 ) -> None:
+    """Off, the offsets time the Workflow card's prompts: live boxes,
+    labelled *Prompt to*, each with its anchor and an example below it
+    (author, 2026-11-15: the under-development line and the placeholders
+    went, on the Create page and Session Home alike)."""
     page = client.get("/operator/sessions/new").text
-    assert LINE in page
     rs = _client_session(client, db, "off-render")
     rs.invite_offsets = ["-P1D"]
     db.commit()
     home = client.get(f"/operator/sessions/{rs.public_id}?unlocked=1").text
-    assert LINE in home
     assert 'value="-P1D"' in home
-    for page_text, names in (
-        (page, ("invite_offsets", "reminder_offsets")),
-        (home, ("invite_offsets", "reminder_offsets")),
-    ):
-        for name in names:
-            tag = page_text.split(f'name="{name}"')[1].split(">")[0]
-            assert "disabled" not in tag, name
-            assert 'aria-describedby="scheduled-send-off"' in tag, name
     for page_text in (page, home):
-        assert "Prompt to send invites (offset from Start; optional)" in page_text
-        assert "Prompt to send reminders (offset from End; optional)" in page_text
+        assert LINE not in page_text
+        for name in ("invite_offsets", "reminder_offsets"):
+            tag = page_text.split(f'name="{name}"')[1].split(">")[0]
+            assert "disabled" not in tag and "placeholder" not in tag, name
+        assert "Prompt to send invites (optional)" in page_text
+        assert "Prompt to send reminders (optional)" in page_text
+        assert "Offset from Start, e.g., -P1D, -PT2H" in page_text
+        assert "Offset from End, e.g., -P1D, -PT2H" in page_text
 
 
 def test_session_home_shows_each_offsets_due_moment(
