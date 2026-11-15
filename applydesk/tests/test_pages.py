@@ -1,6 +1,6 @@
 """The URL map as placeholders (segment AD1, item 2): every page answers
 locally, IDs are shape-checked, the gate holds deployed, every link stays
-in the mount, and a blind application file names nobody."""
+in the mount, and a blind dossier names nobody."""
 
 from __future__ import annotations
 
@@ -66,8 +66,8 @@ PAGES = (
     f"/applydesk/me/exercises/{EX}",
     f"/applydesk/me/exercises/{BLIND}",  # applications have closed
     f"/applydesk/me/exercises/{EX}/applications/m3qx8vkt2n",
-    f"/applydesk/me/exercises/{EX}/files/p3bd7kq2wx",
-    f"/applydesk/me/exercises/{BLIND}/files/t8nv4hzm2c",
+    f"/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx",
+    f"/applydesk/me/exercises/{BLIND}/dossiers/t8nv4hzm2c",
 )
 
 
@@ -97,10 +97,10 @@ def test_every_page_of_the_map_answers_locally(client: TestClient, path: str) ->
         f"/applydesk/me/exercises/{EX}/applications/zzzzzzzzzz",
         f"/applydesk/me/exercises/{EX}/applications/M3QX8VKT2N",  # an application ID's shape
         f"/applydesk/me/exercises/{EX}/applications/m3qx8vkt2",
-        f"/applydesk/me/exercises/{EX}/files/P3BD7KQ2WX",  # a file ID's shape
-        f"/applydesk/me/exercises/{EX}/files/p3bd7kq2wx0",
-        f"/applydesk/me/exercises/{EX}/files/m3qx8vkt2n",  # an application ID is no file ID
-        f"/applydesk/me/exercises/{BLIND}/files/p3bd7kq2wx",  # another exercise's file
+        f"/applydesk/me/exercises/{EX}/dossiers/P3BD7KQ2WX",  # a dossier ID's shape
+        f"/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx0",
+        f"/applydesk/me/exercises/{EX}/dossiers/m3qx8vkt2n",  # an application ID is no dossier ID
+        f"/applydesk/me/exercises/{BLIND}/dossiers/p3bd7kq2wx",  # another exercise's dossier
     ],
 )
 def test_a_malformed_or_unknown_id_is_a_404(client: TestClient, path: str) -> None:
@@ -113,7 +113,7 @@ def test_public_ids_have_rrw_s_shape() -> None:
         assert is_public_id(generate_public_id())
     samples = [e.public_id for e in sample_data.EXERCISES]
     samples += [a.public_id for a in sample_data.APPLICATIONS]
-    samples += [a.file_id for a in sample_data.APPLICATIONS]
+    samples += [a.dossier_id for a in sample_data.APPLICATIONS]
     assert all(is_public_id(s) for s in samples)
     assert len(set(samples)) == len(samples)
 
@@ -165,24 +165,24 @@ def test_the_tabs_mark_the_current_page(client: TestClient) -> None:
     assert '<a class="xnav-home on"' in home and 'class="xnav-tab on"' not in home
 
 
-def test_a_blind_application_file_names_nobody(client: TestClient) -> None:
-    app = sample_data.by_file(BLIND, "t8nv4hzm2c")
+def test_a_blind_dossier_names_nobody(client: TestClient) -> None:
+    app = sample_data.by_dossier(BLIND, "t8nv4hzm2c")
     assert app is not None
-    page = client.get(f"/applydesk/me/exercises/{BLIND}/files/t8nv4hzm2c").text
+    page = client.get(f"/applydesk/me/exercises/{BLIND}/dossiers/t8nv4hzm2c").text
     for identifying in (app.applicant, app.email, app.public_id):
         assert identifying not in page, identifying
     assert "Redacted" in page
 
 
-def test_an_open_application_file_names_the_applicant(client: TestClient) -> None:
-    page = client.get(f"/applydesk/me/exercises/{EX}/files/p3bd7kq2wx").text
+def test_an_open_dossier_names_the_applicant(client: TestClient) -> None:
+    page = client.get(f"/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx").text
     assert "Aisha Bello" in page
 
 
-@pytest.mark.parametrize("file", ["p3bd7kq2wx", "t8nv4hzm2c"])
-def test_a_file_shows_only_the_part_shown_to_reviewers(client: TestClient, file: str) -> None:
-    exercise = EX if file == "p3bd7kq2wx" else BLIND
-    page = client.get(f"/applydesk/me/exercises/{exercise}/files/{file}").text
+@pytest.mark.parametrize("dossier", ["p3bd7kq2wx", "t8nv4hzm2c"])
+def test_a_dossier_shows_only_the_part_shown_to_reviewers(client: TestClient, dossier: str) -> None:
+    exercise = EX if dossier == "p3bd7kq2wx" else BLIND
+    page = client.get(f"/applydesk/me/exercises/{exercise}/dossiers/{dossier}").text
     assert "Shown to reviewers" in page and "Not shown to reviewers" not in page
     for hidden in sample_data.NOT_SHOWN_TO_REVIEWERS:
         assert hidden not in page, hidden
@@ -383,11 +383,11 @@ def test_a_blank_exercise_s_process_is_one_stage_holding_the_form(client: TestCl
     assert 'disabled title="The last stage cannot be deleted">Delete' in text
 
 
-def test_applications_generates_application_files(client: TestClient) -> None:
+def test_applications_generates_dossiers(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/applications").text
-    assert "Generate application files" in text
-    # Operators open every application file (author, 2026-11-12).
-    assert "/applydesk/me/exercises/wa9juxbc2t/files/p3bd7kq2wx" in text
+    assert "Generate dossiers" in text
+    # Operators open every dossier (author, 2026-11-12).
+    assert "/applydesk/me/exercises/wa9juxbc2t/dossiers/p3bd7kq2wx" in text
 
 
 def test_a_gate_item_carries_its_panel(client: TestClient) -> None:
@@ -528,7 +528,7 @@ def test_the_blank_exercise_is_not_offered_to_applicants(client: TestClient) -> 
 
 
 def test_profile_shows_nowhere_a_reader_sees(client: TestClient) -> None:
-    """Ruling 13: what a reviewer opens is the application file. Review
+    """Rulings 13 and 25: what a reviewer opens is the dossier. Review
     Robin's `ProfileLink` keeps its name: it is the handoff's field."""
     # The raw page: text, attributes (aria-label, title, placeholder) and
     # the scripts' strings alike.

@@ -30,11 +30,11 @@ def application_or_404(
     return found
 
 
-def file_or_404(exercise: sample_data.Exercise, file_id: str) -> sample_data.Application:
-    """The application an application file shows, by the file's own ID."""
-    if not is_public_id(file_id):
+def dossier_or_404(exercise: sample_data.Exercise, dossier_id: str) -> sample_data.Application:
+    """The application a dossier shows, by the dossier's own ID."""
+    if not is_public_id(dossier_id):
         raise HTTPException(status_code=404)
-    found = sample_data.by_file(exercise.public_id, file_id)
+    found = sample_data.by_dossier(exercise.public_id, dossier_id)
     if found is None:
         raise HTTPException(status_code=404)
     return found

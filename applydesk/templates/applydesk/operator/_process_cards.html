@@ -121,7 +121,7 @@
     {% for name, email in (pool.members if pool else []) %}<li>{{ name }}{% if name != email %} <span class="muted">{{ email }}</span>{% endif %}</li>{% endfor %}
   </ul>
   {% if sent %}<p class="pc-line muted" data-pc-sent>Sent with the panel as it then stood: changes to its roster apply from the gate's next send.</p>{% endif %}
-  <p class="pc-line muted">Panel sees: the application file, the <em>Shown to reviewers</em> part{% if exercise.blind %}, redacted{% endif %}.{% if gs[1] %}<span data-pc-sent> Progress: {{ gs[1] }}.</span>{% endif %}</p>
+  <p class="pc-line muted">Panel sees: the dossier, the <em>Shown to reviewers</em> part{% if exercise.blind %}, redacted{% endif %}.{% if gs[1] %}<span data-pc-sent> Progress: {{ gs[1] }}.</span>{% endif %}</p>
   <div class="pc-row">
     <label class="fc-l">Runs as<select class="fc-in" data-pc="via"{% if sent %} disabled title="Sent: the gate keeps how it runs"{% endif %}><option value="RRW"{% if g.via == "RRW" %} selected{% endif %}>A Review Robin session</option><option value="entered"{% if g.via != "RRW" %} selected{% endif %}>Results entered here</option></select></label>
   </div>

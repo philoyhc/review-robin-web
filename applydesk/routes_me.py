@@ -1,5 +1,5 @@
 """The participant's pages, `/me/…` (segment AD1, item 2): an applicant's
-exercises and applications, and the application file an assessor
+exercises and applications, and the dossier an assessor
 opens from Review Robin. Placeholders on sample data."""
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from starlette.responses import Response
 
 from applydesk import sample_data
 from applydesk.gate import placeholders_only
-from applydesk.lookups import application_or_404, exercise_or_404, file_or_404
+from applydesk.lookups import application_or_404, dossier_or_404, exercise_or_404
 from applydesk.web import USER_LOBBY, render
 
 router = APIRouter(prefix="/me", dependencies=[Depends(placeholders_only)])
@@ -24,7 +24,9 @@ def me(request: Request) -> Response:
         area=USER_LOBBY,
         exercises=exercises,
         mine=sample_data.APPLICATIONS[:1],
-        files=[(sample_data.exercise(a.exercise_id), a) for a in sample_data.APPLICATIONS[1:5:2]],
+        dossiers=[
+            (sample_data.exercise(a.exercise_id), a) for a in sample_data.APPLICATIONS[1:5:2]
+        ],
     )
 
 
@@ -53,16 +55,16 @@ def application(request: Request, exercise_id: str, application_id: str) -> Resp
     )
 
 
-@router.get("/exercises/{exercise_id}/files/{file_id}", name="applydesk_me_file")
-def application_file(request: Request, exercise_id: str, file_id: str) -> Response:
-    """The application file (rulings 5, 6, 9 and 13): the *Shown to
+@router.get("/exercises/{exercise_id}/dossiers/{dossier_id}", name="applydesk_me_dossier")
+def dossier(request: Request, exercise_id: str, dossier_id: str) -> Response:
+    """The dossier (rulings 5, 6, 9, 13 and 25): the *Shown to
     reviewers* section only; in a blind exercise the applicant's name and
     identifiers redacted. Named by its own ID, never the application's."""
     found = exercise_or_404(exercise_id)
-    app = file_or_404(found, file_id)
+    app = dossier_or_404(found, dossier_id)
     return render(
         request,
-        "applydesk/me/file.html",
+        "applydesk/me/dossier.html",
         area=USER_LOBBY,
         exercise=found,
         application=app,

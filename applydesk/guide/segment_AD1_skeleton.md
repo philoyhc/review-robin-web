@@ -19,7 +19,7 @@
 
 ## The URL map
 
-Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID, `<app>` an application's, `<file>` an application file's (ruling 13; a profile page's until AD1C). Item 2 builds every row as a placeholder.
+Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID, `<app>` an application's, `<dossier>` a dossier's (ruling 25; an application file's until 2026-11-15, a profile page's until AD1C). Item 2 builds every row as a placeholder.
 
 | Path | Page | Who reaches it (when wired) |
 |---|---|---|
@@ -31,7 +31,7 @@ Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID
 | ~~`/operator/exercises/<id>/setup`~~ | Became Process; its details moved to Home (AD1D) | |
 | `/operator/exercises/<id>/process` | Rounds, gates and outcomes with their rules and emails; the timeline (AD1D) | 〃 |
 | `/operator/exercises/<id>/form` | The application form builder (iteration 5); from AD1B, cards that move on screen (`applydesk/guide/archive/segment_AD1B_form_builder.md`) | 〃 |
-| `/operator/exercises/<id>/applications` | Applications by state; generate applicant profiles; import outcomes (iteration 5); from AD1C, the control surface of rounds, gates and outcomes, generating application files | 〃 |
+| `/operator/exercises/<id>/applications` | Applications by state; generate applicant profiles; import outcomes (iteration 5); from AD1C, the control surface of rounds, gates and outcomes, generating dossiers | 〃 |
 | ~~`/operator/exercises/<id>/assessors`~~ | Became Panels (iteration 5) | |
 | ~~`/operator/exercises/<id>/panels`~~ | Into Gates (AD1D) | |
 | `/operator/exercises/<id>/gates` | One card per gate with its panel; the reviewer pool (AD1D) | 〃 |
@@ -42,10 +42,10 @@ Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID
 | ~~`/operator/exercises/<id>/export`~~ | Became Reports (iteration 5) | |
 | ~~`/operator/exercises/<id>/reports`~~ | Became Extract data (AD1D) | |
 | `/operator/exercises/<id>/extract` | Every evaluation response collated; the data export (AD1D) | 〃 |
-| `/me` | My ApplyDesk: my applications, exercises open to me, application files I may read | Anyone signed in |
+| `/me` | My ApplyDesk: my applications, exercises open to me, dossiers I may read | Anyone signed in |
 | `/me/exercises/<id>` | An exercise as an applicant sees it: details, timeline, Apply | Eligible applicants |
 | `/me/exercises/<id>/applications/<app>` | My application: draft or submitted | Its applicant |
-| `/me/exercises/<id>/files/<file>` | The application file (ruling 13; the profile page's path until AD1C): the *Shown to reviewers* section; in a blind exercise, the applicant's name and identifiers redacted | Assessors asked to review that application (ruling 9); the exercise's operators (author, 2026-11-12) |
+| `/me/exercises/<id>/dossiers/<dossier>` | The dossier (ruling 25; `/files/<file>`, the application file, until 2026-11-15; the profile page's path until AD1C): the *Shown to reviewers* section; in a blind exercise, the applicant's name and identifiers redacted | Assessors asked to review that application (ruling 9); the exercise's operators (author, 2026-11-12) |
 
 ## Semantics
 
@@ -53,13 +53,13 @@ Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID
 - **Running alone:** `CORDWARE_APPS=applydesk` starts, and so does ApplyDesk beside every other application.
 - **Boundaries** (spec §10.1): `applydesk` never imports `app`, `residentialapps` or `utilityapps`, and nothing imports `applydesk`, except the host's registry, which names its factory as a string.
 - **Exercise IDs:** 10 symbols from RRW's alphabet (`23456789abcdefghjkmnpqrstuvwxyz`, no look-alikes), drawn at random. The sample data uses IDs of that shape, and a route refuses any other shape with a 404, as RRW's `get_by_public_id` does.
-- **File IDs are not application IDs.** A reviewer's URL names the application file (a profile page's until AD1C), never the application, so a blind profile's address carries nothing an applicant's own pages use.
+- **File IDs are not application IDs.** A reviewer's URL names the dossier (an application file's until ruling 25, a profile page's until AD1C), never the application, so a blind profile's address carries nothing an applicant's own pages use.
 - **Placeholders answer only locally, or a previewer**, as Residential's preview gate does (`residentialapps/spec/applications.md`). Deployed, nobody else reaches a page until it is wired.
 
 ## Judgment calls — decided
 
 - **ApplyDesk keeps its own copy of the ID alphabet** rather than importing RRW's. Ruling 7 makes it a shared convention, not shared code, and the boundary forbids the import.
-- **Participant paths sit under `/me`** whatever the role: an applicant's application and an assessor's application file share the namespace, as RRW's reviewer and reviewee pages do.
+- **Participant paths sit under `/me`** whatever the role: an applicant's application and an assessor's dossier share the namespace, as RRW's reviewer and reviewee pages do.
 - **The landing page follows the shared header's landing pattern** (`docs/header_chrome.md`), not a page of its own design.
 
 ## Blast radius (measured)

@@ -52,8 +52,8 @@ def test_every_application_is_a_row(client: TestClient) -> None:
     apps = sample_data.applications_of(EX)
     assert len(apps) == 102
     assert text.count("data-row ") == len(apps)
-    # A submitted application's ID links to its file; a draft's does not.
-    assert f'/files/{apps[0].file_id}"><code>{apps[0].public_id}</code></a>' in text
+    # A submitted application's ID links to its dossier; a draft's does not.
+    assert f'/dossiers/{apps[0].dossier_id}"><code>{apps[0].public_id}</code></a>' in text
     draft = next(a for a in apps if a.state == "Draft")
     assert f"<code>{draft.public_id}</code></td>" in text
 
