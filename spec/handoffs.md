@@ -19,7 +19,7 @@ cross-app credential:
 
 1. The sender opens a new tab **during the click** (so pop-up blockers
    allow it) on `GET /operator/handoffs/new`, a holding page.
-2. It posts a **bundle** of roster CSVs to `POST /operator/handoffs/sessions`.
+2. It posts a **bundle** of roster CSVs, and optionally a Settings CSV, to `POST /operator/handoffs/sessions`.
 3. Review Robin creates a **draft** session from it, all or nothing, and
    answers with a receipt carrying the session's Session Home URL.
 4. The sender moves the tab there. If the tab was blocked, it shows the
@@ -63,7 +63,7 @@ A JSON object:
 | `transfer_id` | a UUID, chosen by the sender per transfer |
 | `source_app` | the sender's name, 1–64 characters |
 | `session_suggestion` | `{name, code}`: the draft's name (1–255) and code (1–64), checked as New session checks them |
-| `files` | CSV text by kind: `reviewers` and `reviewees` required, `relationships` and `observers` optional (rosters only, interop spec §13.1). `settings` or any other kind is refused, the key named ASCII-escaped |
+| `files` | CSV text by kind: `reviewers` and `reviewees` required; `relationships`, `observers` and `settings` optional. Any other kind is refused, the key named ASCII-escaped. `settings` is a Settings CSV (`spec/csv_contracts.md` §3.3), since segment 23D (`guide/segment_23D_handoff_settings.md`): the 2026-11-04 ruling that a handoff sends rosters only (`guide/interoperability.md`) is amended so a sender sets up the draft's instruments too |
 
 Every text must be valid Unicode with no NUL character (Postgres text
 refuses one). Any envelope fault is `422 invalid_package` with lines in
@@ -81,7 +81,30 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   gets the `303` of §2.
 - **The rosters** go through Quick Setup's pipeline
   (`_run_quick_setup_contents`), every slot saved in one unit, with the
-  session's directory (`spec/quick_setup_card_spec.md`).
+  session's directory (`spec/quick_setup_card_spec.md`). **A settings
+  file** goes through it too, after the rosters (`SLOT_ORDER`), with the
+  Settings import's own checks and two-phase apply. Its `session.name`
+  and `session.code` rows are fill-blanks (`spec/csv_contracts.md` §3.3)
+  and the suggestion has set both, so the file cannot rename the draft;
+  symmetric review stays off, the rosters being present. A refused
+  settings file is `422 invalid_setup` with `slot` `settings`, as a
+  refused roster is, and the draft goes with it.
+- **What a settings file may set** is what the Settings import sets on
+  a new session (`spec/csv_contracts.md` §3.3): instruments, rule sets,
+  data shapes and session tags, the email templates (their CC and BCC
+  included), and the session's other settings, among them its
+  description, deadline, help contact, timezone and schedule. A schedule
+  it carries counts as the operator's own: a `scheduled_activate_at`
+  activates the draft once it is prepared, and a `responses_release_at`
+  releases on its date. Never the draft's name and code (fill-blanks,
+  set by the suggestion), its owner, or its state (`session.status` is
+  ignored on import). **Symmetric review** turns on only while both
+  rosters are empty, which a handoff never has, so a file asking for it
+  is refused before anything is made: `422 invalid_setup`, `slot`
+  `settings`, `reason` `symmetric_review`. The sender is the operator's
+  own browser (one operator in both apps, `guide/interoperability.md`),
+  so these are the operator's settings; a sender sends only what its
+  session needs.
 - **Refused, the draft goes with it** (author, 2026-11-11): the route
   rolls back and deletes the session, its audit events included. A
   refused roster is `422 invalid_setup` with `slot`, `reason` and the
@@ -137,8 +160,8 @@ after any other refusal it starts a new transfer.
 | `session.handoff_results_exported` | `counts(rows)`, `context` `{transfer_id, file, etag}` | a `results.csv` or `completion.csv` fetched (§10); a `304` writes nothing |
 
 All three are registered in `EVENT_SCHEMAS`. The draft's own
-`session.created` and the roster saves' events are written as for New
-session. A status read writes nothing: reads never audit.
+`session.created`, the roster saves' events and a settings file's
+`session.settings_imported` are written as for New session. A status read writes nothing: reads never audit.
 
 ## 9. Tests
 

@@ -104,7 +104,10 @@ sender takes from it.
   2027*, three synthetic `example.edu` reviewers plus the signed-in
   super-admin, and six applications whose IDs are the reviewees' opaque
   `RevieweeEmail` keys, each with a placeholder `ProfileLink`
-  (`applydesk.invalid`). Shown on the page as the two CSVs it sends.
+  (`applydesk.invalid`); and since segment 23D a Settings CSV setting up
+  one instrument, *Mock review*, with a 1-5 score keyed `score` and a
+  comment keyed `comment`, its assignment-rule links set and no release
+  date. Shown on the page as the three CSVs it sends.
 - **The bundle** sits in the page as JSON; the script adds a fresh
   `transfer_id` and a `POC-<YYMMDD-HHMMSS>` code per transfer.
 - **Create in Review Robin** opens the holding tab during the click,

@@ -1536,6 +1536,8 @@ def _handoff_refused(request: Request, exc: handoffs.HandoffError) -> JSONRespon
     extra: dict[str, str] = {}
     if exc.reason:
         extra["reason"] = exc.reason
+    if exc.slot:
+        extra["slot"] = exc.slot
     if exc.review_session is not None:
         extra["session_home_url"] = _session_home(request, exc.review_session)
     return _handoff_error(exc.code, exc.status, exc.details, **extra)
@@ -1558,10 +1560,10 @@ async def create_handoff_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> JSONResponse:
-    """Create a draft session from another application's rosters, all or
-    nothing (`spec/handoffs.md`). The package gate has already checked
-    that the signer-in is an RRW operator. Nothing is prepared, activated,
-    invited or sent."""
+    """Create a draft session from another application's rosters, and its
+    settings when it sends them, all or nothing (`spec/handoffs.md`). The
+    package gate has already checked that the signer-in is an RRW
+    operator. Nothing is prepared, activated, invited or sent here."""
     # A JSON body is the cross-site guard, as the directory endpoints';
     # a browser that names any other origin is refused outright.
     if request.headers.get("sec-fetch-site", "same-origin") != "same-origin":
@@ -1616,7 +1618,7 @@ async def create_handoff_session(
 
     def discard() -> None:
         # All or nothing (author, 2026-11-11): the draft goes with its
-        # rosters when they do not all apply.
+        # files when they do not all apply, settings included (23D).
         db.rollback()
         sessions.delete_session(
             db, review_session=review_session, user=user, correlation_id=correlation_id

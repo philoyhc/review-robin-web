@@ -158,6 +158,133 @@ def test_a_refused_roster_leaves_no_session_and_says_why(client: TestClient, db:
     assert fixed.status_code == 201
 
 
+#: A Settings file (`spec/csv_contracts.md` §3.3) setting up one instrument
+#: (segment 23D): two keyed response fields, its assignment-rule links set,
+#: and a name and code the draft's suggestion must win over.
+SETTINGS = (
+    "field,value,data_type\r\n"
+    "session.name,Renamed by the file,string\r\n"
+    "session.code,FILE-CODE,string\r\n"
+    "instruments[1].name,Mock review,string\r\n"
+    'instruments[1].band1_touched_links,"[""link1"",""link2"",""link3""]",json\r\n'
+    "instruments[1].response_fields[1].field_key,score,string\r\n"
+    "instruments[1].response_fields[1].label,Score,string\r\n"
+    "instruments[1].response_fields[1].response_type,1-to-5int,string\r\n"
+    "instruments[1].response_fields[1].data_type,Integer,string\r\n"
+    "instruments[1].response_fields[1].min,1,decimal\r\n"
+    "instruments[1].response_fields[1].max,5,decimal\r\n"
+    "instruments[1].response_fields[1].step,1,decimal\r\n"
+    "instruments[1].response_fields[1].visible,true,boolean\r\n"
+    "instruments[1].response_fields[2].field_key,comment,string\r\n"
+    "instruments[1].response_fields[2].label,Comment,string\r\n"
+    "instruments[1].response_fields[2].response_type,text,string\r\n"
+    "instruments[1].response_fields[2].data_type,String,string\r\n"
+    "instruments[1].response_fields[2].visible,true,boolean\r\n"
+)
+
+
+def test_a_settings_file_sets_up_the_drafts_instrument(client: TestClient, db: Session) -> None:
+    """Segment 23D: settings are applied after the rosters, in the same
+    create; the suggestion names the draft, whatever the file says."""
+    bundle = _bundle(files={"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": SETTINGS})
+    reply = _post(client, bundle)
+    assert reply.status_code == 201, reply.text
+    review_session = db.scalars(select(ReviewSession)).one()
+    assert (review_session.name, review_session.code) == ("Mock Scholarship 2027", "POC-TEST-1")
+    assert review_session.status == "draft"
+    instrument = db.scalars(select(Instrument)).one()
+    assert instrument.name == "Mock review"
+    keys = [f.field_key for f in sorted(instrument.response_fields, key=lambda f: f.order)]
+    assert keys == ["score", "comment"]
+    status = _status(client, bundle["transfer_id"]).json()
+    assert status["status_row"]["instruments_set_up"] == 1, status["status_row"]
+    assert _count(db, Assignment) == 0 and _count(db, Invitation) == 0
+    created = db.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == "session.handoff_created")
+    ).one()
+    assert created.detail is not None and created.detail["counts"] == {"files": 3}
+
+
+def test_the_utilities_mock_bundle_arrives_set_up(client: TestClient, db: Session) -> None:
+    """The proof of concept's own bundle (segment 23D), as its page sends
+    it, creates a draft whose instrument answers under the keys it set."""
+    from utilityapps.interop_poc import mock
+
+    bundle: dict[str, Any] = {
+        **mock.bundle(mock.reviewers("Admin", "admin@example.edu")),
+        "transfer_id": str(uuid.uuid4()),
+    }
+    bundle["session_suggestion"] = {**bundle["session_suggestion"], "code": "POC-MOCK-1"}
+    reply = _post(client, bundle)
+    assert reply.status_code == 201, reply.text
+    instrument = db.scalars(select(Instrument)).one()
+    assert instrument.name == mock.INSTRUMENT
+    assert sorted(f.field_key for f in instrument.response_fields) == ["comment", "score"]
+    status = _status(client, bundle["transfer_id"]).json()
+    assert status["status_row"]["instruments_set_up"] == 1
+    assert status["schedule"]["responses_release_at"] is None  # releases nothing
+
+
+def test_a_refused_settings_file_leaves_no_session_and_says_why(
+    client: TestClient, db: Session
+) -> None:
+    bad = SETTINGS + "instruments[1].response_fields[3].field_key,Not A Key,string\r\n"
+    reply = _post(
+        client, _bundle(files={"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": bad})
+    )
+    assert reply.status_code == 422, reply.text
+    body = reply.json()
+    assert body["error"] == "invalid_setup" and body["slot"] == "settings"
+    assert body.get("details")
+    assert _count(db, ReviewSession) == 0 and _count(db, Instrument) == 0
+    assert _count(db, Reviewer) == 0
+
+
+def test_a_settings_file_may_not_turn_on_symmetric_review(client: TestClient, db: Session) -> None:
+    """Cold read on 23D: it would refuse the reviewees roster, blaming the
+    wrong file; refused before anything is made, naming the settings."""
+    turned_on = SETTINGS + "session.symmetric_review,true,boolean\r\n"
+    reply = _post(
+        client,
+        _bundle(files={"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": turned_on}),
+    )
+    assert reply.status_code == 422, reply.text
+    body = reply.json()
+    assert (body["error"], body["slot"], body["reason"]) == (
+        "invalid_setup",
+        "settings",
+        "symmetric_review",
+    )
+    assert _count(db, ReviewSession) == 0
+
+
+def test_a_settings_file_sets_what_the_settings_import_sets(
+    client: TestClient, db: Session
+) -> None:
+    """What a sender's file may set (spec/handoffs.md §5): the session's
+    other settings and email templates, as the Settings import does; never
+    its name, code, owner or lifecycle state."""
+    extra = (
+        "session.help_contact,office@example.edu,string\r\n"
+        "session.responses_release_at,2027-03-01T09:00:00+00:00,datetime\r\n"
+        "email_overrides.invitation.subject,Your review,string\r\n"
+        "session.status,active,enum\r\n"
+    )
+    bundle = _bundle(
+        files={"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": SETTINGS + extra}
+    )
+    reply = _post(client, bundle)
+    assert reply.status_code == 201, reply.text
+    review_session = db.scalars(select(ReviewSession)).one()
+    assert review_session.status == "draft"  # machine-derived, ignored on import
+    assert review_session.help_contact == "office@example.edu"
+    assert review_session.responses_release_at is not None
+    # A replay finds the one draft, its instrument applied once.
+    again = _post(client, bundle)
+    assert again.status_code == 200 and again.json()["status"] == "already_created"
+    assert _count(db, ReviewSession) == 1 and _count(db, Instrument) == 1
+
+
 def test_a_taken_code_is_a_conflict(client: TestClient, db: Session) -> None:
     assert _post(client, _bundle()).status_code == 201
     second = _post(client, _bundle())
@@ -172,7 +299,7 @@ def test_the_envelope_is_checked(client: TestClient, db: Session) -> None:
         (_bundle(transfer_id="not-a-uuid"), 422, "invalid_package"),
         (_bundle(files={"reviewers": REVIEWERS}), 422, "invalid_package"),
         (
-            _bundle(files={"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": "x"}),
+            _bundle(files={"reviewers": REVIEWERS, "reviewees": REVIEWEES, "templates": "x"}),
             422,
             "invalid_package",
         ),
