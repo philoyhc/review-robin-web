@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.models import ReviewSession
 from app.json_shapes import json_list
-from app.services import audit
+from app.services import audit, linked_apps
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
 
@@ -206,8 +206,12 @@ def _fire_invite_entry(
         "offset": offset_str,
         "scheduled_at": scheduled_iso,
     }
-    if not (lifecycle.is_validated(locked) or lifecycle.is_ready(locked)):
-        skip_reason: str | None = "not_prepared"
+    # Segment 23F — a linked application that takes the email lock sends
+    # its own mail: Review Robin's schedule sends nothing for it.
+    if linked_apps.locks(locked, linked_apps.Lock.EMAIL):
+        skip_reason: str | None = "linked_app_email_off"
+    elif not (lifecycle.is_validated(locked) or lifecycle.is_ready(locked)):
+        skip_reason = "not_prepared"
     elif not invitations_service.has_invitations(db, locked.id):
         skip_reason = "invitations_not_created"
     else:

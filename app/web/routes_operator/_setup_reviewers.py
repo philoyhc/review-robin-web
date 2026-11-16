@@ -46,6 +46,7 @@ from app.web.routes_operator._shared import (
     _templates,
     account_resolver,
     acknowledged_loss,
+    require_rosters_open_session,
 )
 
 router = APIRouter()
@@ -86,7 +87,7 @@ async def reviewers_import_submit(
     merge: str | None = Form(default=None),
     acknowledge_group_clear: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_rosters_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -162,7 +163,7 @@ def _render_reviewers_page(
     # ``archived`` (no revert form: ``/revert`` 409s from there).
     # Observers already passed this for its checkbox exception.
     is_archived = lifecycle.is_archived(review_session)
-    if not lifecycle.is_editable(review_session):
+    if not views.rosters_editable(review_session):
         # Edit / Add are setup mutations: the editor renders only where
         # `create` / `update` accept (`_require_editable`, draft or
         # validated). Was `is_ready`, which left a live editor on
@@ -336,7 +337,9 @@ def _render_reviewers_page(
             # and a live Delete while every mutation 409d. This is what
             # ``_require_editable`` enforces, so page and route agree by
             # construction rather than by two lists kept in step.
-            "is_editable": lifecycle.is_editable(review_session),
+            "is_editable": views.rosters_editable(review_session),
+            "rosters_linked_to": views.rosters_linked_to(review_session),
+            "self_fields_open": views.self_fields_open(review_session),
             # 19I Item 12 rung 2 — the chips' has-data flags, answered
             # over the whole roster by query rather than by scanning
             # whichever rows this render produced. Keyed by the page's
@@ -419,7 +422,7 @@ def reviewers_create(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_rosters_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -499,7 +502,7 @@ def reviewers_update(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_rosters_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -581,7 +584,7 @@ def reviewers_bulk_inactivate(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_rosters_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -606,7 +609,7 @@ def reviewers_bulk_reactivate(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_rosters_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -629,7 +632,7 @@ def reviewers_delete_all(
     request: Request,
     confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_rosters_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -682,7 +685,7 @@ _REVIEWER_SLOTS: tuple[tuple[str, str], ...] = (
 )
 async def reviewers_save_field_labels(
     request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_rosters_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -707,7 +710,7 @@ def reviewers_bulk_delete(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_rosters_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:

@@ -50,6 +50,7 @@ from app.web.routes_operator._shared import (
     account_resolver,
     acknowledged_loss,
     require_reviewees_editable_session,
+    require_reviewees_open_session,
 )
 
 router = APIRouter()
@@ -90,7 +91,7 @@ async def reviewees_import_submit(
     merge: str | None = Form(default=None),
     acknowledge_group_clear: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_reviewees_editable_session),
+    review_session: ReviewSession = Depends(require_reviewees_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -170,7 +171,7 @@ def _render_reviewees_page(
     # ``archived`` (no revert form: ``/revert`` 409s from there).
     # Observers already passed this for its checkbox exception.
     is_archived = lifecycle.is_archived(review_session)
-    if not lifecycle.is_editable(review_session) or review_session.symmetric_review:
+    if not views.rosters_editable(review_session) or review_session.symmetric_review:
         # The editor renders only where `create` / `update` accept
         # (`_require_editable`). Was `is_ready` (findings C3). Under
         # symmetric review they answer 409 (20B), so it renders nowhere.
@@ -332,7 +333,9 @@ def _render_reviewees_page(
             # and a live Delete while every mutation 409d. This is what
             # ``_require_editable`` enforces, so page and route agree by
             # construction rather than by two lists kept in step.
-            "is_editable": lifecycle.is_editable(review_session),
+            "is_editable": views.rosters_editable(review_session),
+            "rosters_linked_to": views.rosters_linked_to(review_session),
+            "self_fields_open": views.self_fields_open(review_session),
             "panel_open": panel_open,
             # 19I Item 12 rung 2 — the chips' has-data flags, answered
             # over the whole roster by query rather than by scanning
@@ -431,7 +434,7 @@ def reviewees_create(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_reviewees_editable_session),
+    review_session: ReviewSession = Depends(require_reviewees_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -513,7 +516,7 @@ def reviewees_update(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_reviewees_editable_session),
+    review_session: ReviewSession = Depends(require_reviewees_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -615,7 +618,7 @@ def reviewees_bulk_inactivate(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_reviewees_editable_session),
+    review_session: ReviewSession = Depends(require_reviewees_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -640,7 +643,7 @@ def reviewees_bulk_reactivate(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_reviewees_editable_session),
+    review_session: ReviewSession = Depends(require_reviewees_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -663,7 +666,7 @@ def reviewees_delete_all(
     request: Request,
     confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_reviewees_editable_session),
+    review_session: ReviewSession = Depends(require_reviewees_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -696,7 +699,7 @@ _REVIEWEE_SLOTS: tuple[tuple[str, str], ...] = (
 )
 async def reviewees_save_field_labels(
     request: Request,
-    review_session: ReviewSession = Depends(require_reviewees_editable_session),
+    review_session: ReviewSession = Depends(require_reviewees_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -726,7 +729,7 @@ def reviewees_bulk_delete(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_reviewees_editable_session),
+    review_session: ReviewSession = Depends(require_reviewees_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:

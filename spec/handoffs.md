@@ -121,6 +121,8 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   (`applydesk`; `utilities`, the proof of concept) sets the draft's
   `linked_app` with its transfer record; any other links nothing. Session
   Home shows the link, and **Unlink** clears it (`session.unlinked`).
+  A linked draft starts with the Relationships tab on
+  (`relationships_enabled`, segment 23F): its application sends the pairs.
   A profile is a set of named locks (`linked_apps.Lock`) and the settings
   fields it owns (segment 23F rung 2a): Apply Desk takes every lock;
   Utilities keeps Review Robin's email on. Profiles are code, never data

@@ -763,6 +763,11 @@ sub-module (`app/web/routes_operator/_workflow.py`):
   `lifecycle.stop_responses_release` → stamps
   `responses_release_until = now()` (the release window closes
   immediately). Emits `session.responses_release_stopped`.
+- **Neither Send invites nor Send reminders on a linked session** whose
+  application takes the email lock (`linked_apps.Lock.EMAIL`, segment
+  23F): both visibility flags are false, no due prompt is listed, and
+  `invitations/send-all` and `invitations/remind-incomplete` are `409`.
+  The application sends its own email.
 - **Neither Release nor Stop release on a linked session**
   (`linked_apps.locks(session, Lock.RELEASE)`, `spec/handoffs.md` §5):
   both visibility predicates also require the lock off, and a direct POST to either

@@ -412,3 +412,69 @@ def test_the_lobby_refuses_a_linked_sessions_details_and_tags(
     assert not list(db.scalars(select(SessionTag)))
     lobby = client.get("/operator/sessions").text
     assert 'data-linked="Utilities"' in lobby
+
+
+# ── 23F rung 6: the roster and email locks, and the defaults ───────────
+
+
+def test_the_roster_pages_are_read_only(client: TestClient, db: Session) -> None:
+    review_session, _ = _created(client, db)
+    base = f"/operator/sessions/{review_session.public_id}"
+    for page in ("reviewers", "reviewees", "relationships"):
+        text = client.get(f"{base}/{page}").text
+        assert "data-rosters-linked" in text and "come from Utilities" in text, page
+        # A revisited editor URL opens no editor (Codex on #3924).
+        editor = client.get(f"{base}/{page}?add=1").text
+        assert f"Add new {page[:-1]}" not in editor, page
+    # The self-fields cards stay Review Robin's: on the page, not in a panel.
+    for page, card in (("reviewers", "reviewer"), ("reviewees", "reviewee")):
+        text = client.get(f"{base}/{page}").text
+        assert "data-linked-self-fields" in text and f'id="{card}-self-fields-form"' in text
+        assert 'id="roster-unlock-panel"' not in text
+    reply = client.post(f"{base}/reviewers/self-fields", data={"fields": ["name"]})
+    assert reply.status_code in (200, 303), reply.text
+    reviewer_id = db.scalars(select(Reviewer.id)).first()
+    editor = client.get(f"{base}/reviewers?edit_id={reviewer_id}").text
+    assert "Edit reviewer" not in editor
+    writes = [
+        ("reviewers/create", {"name": "Zed", "email": "zed@example.edu"}),
+        ("reviewees/create", {"name": "Zoe", "email_or_identifier": "SCH27-9999"}),
+        ("reviewers/delete-all", {"confirm": "true"}),
+    ]
+    for path, data in writes:
+        reply = client.post(f"{base}/{path}", data=data, follow_redirects=False)
+        assert reply.status_code == 409, path
+    reply = client.post(
+        f"{base}/reviewers/import",
+        files={"file": ("r.csv", b"ReviewerName,ReviewerEmail\nZed,zed@example.edu\n")},
+        follow_redirects=False,
+    )
+    assert reply.status_code == 409
+    assert "zed@example.edu" not in set(db.scalars(select(Reviewer.email)))
+
+
+def test_relationships_are_on_from_the_create(client: TestClient, db: Session) -> None:
+    review_session, _ = _created(client, db)
+    assert review_session.relationships_enabled
+
+
+def test_apply_desk_sends_its_own_email_and_utilities_keeps_review_robins(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Utilities keeps the email locks off (the switchboard's second
+    profile); Apply Desk takes them."""
+    review_session, _ = _created(client, db)
+    base = f"/operator/sessions/{review_session.public_id}"
+    assert "/setup-invite" in client.get(base).text  # Utilities: email on
+    assert client.get(f"{base}/setup-invite").status_code == 200
+    review_session.linked_app = "applydesk"
+    db.commit()
+    home = client.get(base).text
+    assert f'href="{base}/setup-invite"' not in home
+    assert client.get(f"{base}/setup-invite").status_code == 409
+    for path in ("invitations/send-all", "invitations/remind-incomplete"):
+        assert client.post(f"{base}/{path}", follow_redirects=False).status_code == 409, path
+    review_session.status = "ready"
+    db.commit()
+    card = build_workflow_card_context(db, review_session, return_to="")
+    assert not card["send_invites_visible"] and not card["send_reminders_visible"]

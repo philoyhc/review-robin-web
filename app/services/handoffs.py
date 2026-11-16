@@ -335,6 +335,9 @@ def record_created(
     profile = linked_apps.profile_for(bundle.source_app)
     if profile is not None:
         review_session.linked_app = profile.key
+        # The linked application sends the pairs (segment 23F, author
+        # 2026-11-16): the Relationships tab is on from the start.
+        review_session.relationships_enabled = True
     audit.write_event(
         db,
         event_type=EVENT,

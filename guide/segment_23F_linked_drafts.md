@@ -125,6 +125,7 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 
 ## Status
 
+- **Rung 6 built** (2026-11-16): the roster lock (every roster write `409`, the pages read-only with the lock card naming the application), the email lock (Email Template tab and page, the Workflow card's bulk sends and due prompts, reminders, the submit acknowledgement) and the invitation-send lock (per-row Send, Regenerate, Regenerate all); Relationships on at the create. Utilities keeps both email locks off, so its drafts still email.
 - **Rung 5b built** (2026-11-16): the details, Quick Setup and Settings-import locks, each refused where it is written (the `/config` save, the lobby's edit and bulk tags, the Quick Setup and Settings routes through dependencies), and the Linked application card in Quick Setup's place with Unlink, moved out of Session details. The handoff's own create and re-send still run the Quick Setup pipeline, which the locks gate at its routes, not in it.
 - **Rung 5 split** (2026-11-16, Codex on #3922, `CLAUDE.md` scaffold-first): **5a** lands the Linked application card as a scaffold (real copy and layout, Unlink inert, under Quick Setup); **5b** is the rest of rung 5 (the locks, the card in Quick Setup's place, Unlink wired and moved out of Session details).
 - **Rung 4 built** (2026-11-16): Utilities' *Sent to Review Robin* rows take a **Re-send**, posting `mock.resend_bundle` (one reviewer and one application dropped, the description, help contact and a tag re-sent) to the update route; a retry after no answer resends the same transfer.
@@ -189,7 +190,8 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 ## Doc impact
 
 - `spec/handoffs.md` — the update operation: envelope, files, refusals, replay, receipt; what a re-sent settings file may carry.
-- `spec/lifecycle.md` — the release lock named as a switchboard lock (rung 2a).
+- `spec/lifecycle.md` — the release lock named as a switchboard lock (rung 2a); the scheduled sends' `linked_app_email_off` skip (rung 6).
+- `spec/architecture.md` — the `linked_app_email_off` reason on the scheduled invite and reminder skips (rung 6, the cold read).
 - `spec/csv_contracts.md` — §3.3: the owned rows a re-send applies, and the Settings import refused on a linked, unopened session.
 - `spec/session_home.md` — Session details never unlocked while linked; the Linked application card with Unlink; Quick Setup hidden.
 - `spec/setup_pages.md` — the roster pages inactive on a linked session.

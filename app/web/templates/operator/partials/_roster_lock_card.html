@@ -44,7 +44,17 @@
    ``expired`` reads **Closed** to an operator
    (``app/services/lifecycle_display.py``), so the copy says closed. #}
 {% if lock_when is defined and lock_when is not none %}{% set _locked = lock_when %}{% else %}{% set _locked = not is_editable %}{% endif %}
-{% if _locked %}
+{% if _locked and rosters_linked_to is defined and rosters_linked_to %}
+  {# Segment 23F — a linked application's rosters: re-sent by it, not
+     edited here; the way out is Unlink, on Session Home. #}
+  <div class="card lock" data-rosters-linked>
+    <p style="margin: 0;">
+      {{ lock_subject }} come from {{ rosters_linked_to }}, which updates them by re-sending.
+      To edit them here, unlink the session on
+      <a href="{{ url('/operator/sessions/' ~ session.public_id) }}#linked-app-card">Session Home</a>.
+    </p>
+  </div>
+{% elif _locked %}
   <div class="card lock">
     <p style="margin: 0 0 12px 0;">
       {% if is_ready %}

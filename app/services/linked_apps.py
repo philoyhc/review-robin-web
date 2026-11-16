@@ -123,6 +123,12 @@ def locks(review_session: ReviewSession, lock: Lock) -> bool:
     return profile is not None and profile.has(lock)
 
 
+def locks_named(review_session: ReviewSession, name: str) -> bool:
+    """:func:`locks` by the lock's value, for a template
+    (``session | linked_locks("email")``)."""
+    return locks(review_session, Lock(name))
+
+
 def off_message(review_session: ReviewSession, what: str) -> str:
     """The refusal naming the link: ``what`` is off on this session."""
     profile = profile_of(review_session)

@@ -55,8 +55,12 @@
     {% endif %}
     <a class="nav-tab{% if current_page == 'Instruments' %} active{% endif %}"
        href="{{ url('/operator/sessions/' ~ session.public_id ~ '/instruments') }}">Instruments</a>
+    {# Segment 23F — a linked application that sends its own email takes
+       the Email Template tab off. #}
+    {% if not session | linked_locks("email") %}
     <a class="nav-tab{% if current_page == 'Email Template' %} active{% endif %}"
        href="{{ url('/operator/sessions/' ~ session.public_id ~ '/setup-invite') }}">Email Template</a>
+    {% endif %}
   </div>
 
   <div class="row-label ops-row{% if _ops_active %} active-group{% endif %}">Operations</div>
