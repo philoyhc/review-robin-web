@@ -1753,14 +1753,21 @@ async def update_handoff_session(
             replacing=True,
             correlation_id=correlation_id,
             directory=directory_or_none(request),
-            # Under the save's lock: still linked, unopened and without
-            # responses, so an Unlink or an activation since the checks
-            # above refuses rather than being overwritten; and the record
-            # commits with the rosters, so a retry finds it.
-            unit_guard=lambda: handoffs.check_update_target(db, review_session, bundle),
+            # Under the save's lock: not applied by an overlapping retry,
+            # still linked, unopened and without responses, so neither a
+            # duplicate nor an Unlink or activation since the checks above
+            # is overwritten; and the record commits with the rosters, so
+            # a retry finds it.
+            unit_guard=lambda: handoffs.guard_update(db, user, review_session, bundle),
             unit_record=lambda: handoffs.record_updated(
                 db, review_session, user, bundle, correlation_id
             ),
+        )
+    except handoffs.AlreadyUpdated as done:
+        db.rollback()
+        return JSONResponse(
+            _handoff_receipt(request, done.review_session, "already_updated"),
+            headers=_HANDOFF_HEADERS,
         )
     except handoffs.HandoffError as exc:
         db.rollback()

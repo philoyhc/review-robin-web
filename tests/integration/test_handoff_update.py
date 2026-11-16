@@ -225,3 +225,42 @@ def test_a_replay_rechecks_the_operator(
     monkeypatch.setattr(handoffs.permissions, "user_can_view_session", lambda *_: False)
     again = _resend(client, created, bundle)
     assert again.status_code == 403 and again.json()["error"] == "not_authorized"
+
+
+def test_an_overlapping_retry_applies_once(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Transfer A pauses after its first replay lookup while A completes and
+    a newer B applies; A, resumed, finds its record under the lock and
+    applies nothing, so B's rosters stand (Codex on #3915)."""
+    _, created = _created(client, db)
+    first = _update_bundle()
+    newer = _update_bundle(
+        files={
+            "reviewers": "ReviewerName,ReviewerEmail\r\nDee,dee@example.edu\r\n",
+            "reviewees": REVIEWEES,
+        }
+    )
+    real = handoffs.prior_update
+    paused: list[int] = []
+
+    def overlap(db_: Session, user: Any, bundle: Any) -> Any:
+        found = real(db_, user, bundle)
+        if bundle.transfer_id == first["transfer_id"] and not paused:
+            paused.append(1)
+            # Meanwhile: A completes, then B.
+            monkeypatch.setattr(handoffs, "prior_update", real)
+            assert _resend(client, created, first).status_code == 200
+            assert _resend(client, created, newer).status_code == 200
+            monkeypatch.setattr(handoffs, "prior_update", overlap)
+        return found
+
+    monkeypatch.setattr(handoffs, "prior_update", overlap)
+    reply = _resend(client, created, first)
+    assert reply.status_code == 200 and reply.json()["status"] == "already_updated"
+    db.expire_all()
+    assert _emails(db) == {"dee@example.edu"}
+    records = db.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == "session.handoff_updated")
+    ).all()
+    assert len(records) == 2

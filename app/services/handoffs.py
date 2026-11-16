@@ -408,6 +408,27 @@ def update_target(db: Session, user: User, created_transfer: str, bundle: Bundle
     return review_session
 
 
+class AlreadyUpdated(Exception):
+    """A re-send whose transfer another request applied while this one
+    was being checked: found under the save's lock, it applies nothing."""
+
+    def __init__(self, review_session: ReviewSession) -> None:
+        super().__init__(review_session.public_id)
+        self.review_session = review_session
+
+
+def guard_update(db: Session, user: User, review_session: ReviewSession, bundle: Bundle) -> None:
+    """The re-send's checks under the save's lock (``_save_uploads``):
+    :class:`AlreadyUpdated` when its transfer has applied since the first
+    replay lookup (an overlapping retry, Codex on #3915), so a delayed
+    duplicate cannot overwrite a newer re-send; else
+    :func:`check_update_target` again."""
+    prior = prior_update(db, user, bundle)
+    if prior is not None:
+        raise AlreadyUpdated(prior)
+    check_update_target(db, review_session, bundle)
+
+
 def check_update_target(db: Session, review_session: ReviewSession, bundle: Bundle) -> None:
     """:class:`HandoffError` unless the draft is still the sender's to
     update: linked to its application, unopened, without responses. Run
