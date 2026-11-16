@@ -114,7 +114,7 @@ sender takes from it.
   testing), Start, End and the tags every Apply Desk session carries,
   `applydesk` and the exercise's starting year (`2027`), and the gate's instrument, *Gate 1:
   Panel review* with the gate's description, a 1-5 score keyed `score`
-  and a comment keyed `comment`, each with help text; no release date.
+  and a comment keyed `comment`, each with help text, the score required and the comment not (the application decides); no release date.
   Its re-send changes the description, End, the gate's name and the
   help text, and keeps the tags. Shown on the page as the CSVs it sends. Its `source_app`,
   `utilities`, has a linked profile in Review Robin (`spec/handoffs.md`

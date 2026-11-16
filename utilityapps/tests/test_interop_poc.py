@@ -194,6 +194,10 @@ def test_the_relationships_pair_everyone_tagged_by_panel() -> None:
     assert set(reviewees[0]) == {"RevieweeName", "RevieweeEmail", "ProfileLink"}
     assert "session.display_timezone,Asia/Singapore" in mock.settings_csv()
     assert "session.display_timezone,Asia/Singapore" in mock.resend_settings_csv()
+    # Whether a field is required is the application's (author, 2026-11-16).
+    settings = mock.settings_csv()
+    assert "instruments[1].response_fields[1].required,true,boolean" in settings
+    assert "instruments[1].response_fields[2].required,false,boolean" in settings
 
 
 def test_the_sent_list_can_be_cleared(client: TestClient) -> None:
