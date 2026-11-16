@@ -627,7 +627,9 @@ def _set_up_instruments(db: Session) -> None:
 
 
 def test_status_reports_the_session_and_its_counts(client: TestClient, db: Session) -> None:
-    bundle = _bundle()
+    # A native draft: a linked one's instrument is set up at the create
+    # (23F rung 7a, tests/integration/test_linked_sessions.py).
+    bundle = _bundle(source_app="otherapp")
     created = _post(client, bundle).json()
     reply = _status(client, bundle["transfer_id"])
     assert reply.status_code == 200, reply.text

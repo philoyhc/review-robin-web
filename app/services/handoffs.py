@@ -38,6 +38,7 @@ from app.services import (
     audit,
     csv_imports,
     linked_apps,
+    linked_instruments,
     monitoring,
     permissions,
     session_config_io,
@@ -293,7 +294,7 @@ def replayed(db: Session, user: User, bundle: Bundle) -> ReviewSession | None:
     the sender keeps its transfer and tries again), or a transfer cut off
     before its rosters saved, whose draft is left for its operator rather
     than deleted. A transfer cut off between the roster save and its
-    completion record gets the record here."""
+    completion record gets the instrument set-up and the record here."""
     prior = prior_transfer(db, bundle.transfer_id)
     if prior is None:
         return None
@@ -315,6 +316,9 @@ def replayed(db: Session, user: User, bundle: Bundle) -> ReviewSession | None:
                 ["An earlier try of this transfer stopped before its rosters were saved."],
                 review_session=prior.review_session,
             )
+        # The create's own last steps, which the cut-off try never reached
+        # (the cold read of 23F): the instrument set-up commits on its own.
+        set_up_instrument(db, prior.review_session, user)
         record_completed(db, prior.review_session, user, bundle)
     return prior.review_session
 
@@ -363,6 +367,22 @@ def check_rosters(db: Session, review_session: ReviewSession) -> None:
             ["A handoff needs at least one reviewer and one reviewee."],
             reason="empty_roster",
         )
+
+
+def set_up_instrument(db: Session, review_session: ReviewSession, user: User) -> None:
+    """For a linked application that takes the instrument lock (segment
+    23F rung 7a), the draft's one instrument with the fixed assignment rule
+    and the display default (``linked_instruments.set_up``), committed;
+    :class:`HandoffError` when the files made other than one instrument."""
+    if not linked_apps.locks(review_session, linked_apps.Lock.INSTRUMENT_STRUCTURE):
+        return
+    try:
+        linked_instruments.set_up(db, review_session, actor=user)
+    except linked_instruments.NotOneInstrument as exc:
+        raise HandoffError(
+            "invalid_setup", 422, [str(exc)], reason="one_instrument", slot="settings"
+        ) from exc
+    unit_of_work.commit(db)
 
 
 def record_completed(

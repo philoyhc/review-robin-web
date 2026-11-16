@@ -1723,6 +1723,7 @@ async def create_handoff_session(
         )
     try:
         handoffs.check_rosters(db, review_session)
+        handoffs.set_up_instrument(db, review_session, user)
     except handoffs.HandoffError as exc:
         discard()
         return _handoff_refused(request, exc)
