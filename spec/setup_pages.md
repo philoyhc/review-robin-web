@@ -305,9 +305,8 @@ the directory recheck (`require_rosters_open_session` and its two
 siblings in `_shared.py`). The application re-sends them
 (`spec/handoffs.md` §6a). Editor URLs (`?add=1`, `?edit_id=`) open no editor
 there. The **What reviewers / reviewees see of their own entry** cards
-stay Review Robin's: with no Unlock panel on those pages, each renders
-on the page itself (`data-linked-self-fields`, `views.self_fields_open`),
-and its `/self-fields` save stays open.
+are not offered (author, 2026-11-16: a linked session's roster tags are
+unused), and their `/self-fields` saves are `409` with the rosters.
 
 ## The roster card and the Unlock panel
 

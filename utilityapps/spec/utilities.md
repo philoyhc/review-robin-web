@@ -104,10 +104,15 @@ sender takes from it.
   2027*, three synthetic `example.edu` reviewers plus the signed-in
   super-admin, and six applications whose IDs are the reviewees' opaque
   `RevieweeEmail` keys, each with a placeholder `ProfileLink`
-  (`applydesk.invalid`); and a Settings CSV setting up
+  (`applydesk.invalid`), with no roster tags; a Relationships file
+  pairing every reviewer with every application, each pair's
+  `PairContextTag1` the reviewer's panel under the friendly label
+  *Apply-Desk-Link*, so the fixed rule assigns them
+  all (segment 23F); and a Settings CSV setting the display timezone to
+  `Asia/Singapore` (a zone unlike the host's, for testing) and setting up
   one instrument, *Mock review*, with a 1-5 score keyed `score` and a
   comment keyed `comment`, its assignment-rule links set and no release
-  date. Shown on the page as the three CSVs it sends. Its `source_app`,
+  date. Shown on the page as the CSVs it sends. Its `source_app`,
   `utilities`, has a linked profile in Review Robin (`spec/handoffs.md`
   §5), so each draft it creates is linked, as Apply Desk's will be, and
   its status card says so.
@@ -143,8 +148,9 @@ sender takes from it.
     (`mock.resend_bundle`, operation `reviewrobin.update_draft_session`)
     to `/operator/handoffs/{transfer_id}/update`, named by the session's
     creating transfer. It drops one reviewer and one application and
-    re-sends the session settings a linked application owns
-    (description, help contact, a tag). A refusal names the error, with
+    re-sends the relationships of those left and the session settings
+    a linked application owns (description, help contact, the timezone,
+    a tag). A refusal names the error, with
     the slot, reason and detail lines; a `5xx` or no answer keeps the
     re-send's transfer, so trying again applies it once.
 

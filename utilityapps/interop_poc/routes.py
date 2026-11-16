@@ -34,6 +34,7 @@ def page(request: Request) -> Response:
             "applications": mock.APPLICATIONS,
             "reviewers_csv": mock.reviewers_csv(people),
             "reviewees_csv": mock.reviewees_csv(),
+            "relationships_csv": mock.relationships_csv(people),
             "settings_csv": mock.settings_csv(),
             "bundle": mock.bundle(people),
             "resend_bundle": mock.resend_bundle(people),

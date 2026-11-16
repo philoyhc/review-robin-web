@@ -43,6 +43,7 @@ from app.web.roster_import import (
 )
 from app.web.routes_operator._shared import (
     _redirect_keeping_selection,
+    _refuse_locked_rosters,
     _require_editable,
     _row_action_anchor,
     _setup_row_window,
@@ -335,7 +336,6 @@ def _render_reviewees_page(
             # construction rather than by two lists kept in step.
             "is_editable": views.rosters_editable(review_session),
             "rosters_linked_to": views.rosters_linked_to(review_session),
-            "self_fields_open": views.self_fields_open(review_session),
             "panel_open": panel_open,
             # 19I Item 12 rung 2 — the chips' has-data flags, answered
             # over the whole roster by query rather than by scanning
@@ -602,6 +602,8 @@ async def reviewees_save_self_fields(
     """Save what reviewees see of their own entry (participant info
     Item 4), as the Reviewers card saves Item 1's: the ticked chips plus
     ``keep``, the selected keys the card offered no chip for."""
+    # Segment 23F: a linked application's roster tags are unused.
+    _refuse_locked_rosters(review_session)
     return await roster_actions.save_self_fields(
         request,
         participant="reviewee",

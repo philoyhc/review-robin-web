@@ -30,8 +30,8 @@ from app.db.models import (
     ReviewSession,
     SessionTag,
 )
+from app.services import field_labels, linked_apps, session_clone, session_config_io
 from app.services import instruments as instruments_service
-from app.services import linked_apps, session_clone, session_config_io
 from app.services import session_lifecycle as lifecycle
 from app.services.validation import validate_session_setup
 from app.web.views import (
@@ -428,13 +428,15 @@ def test_the_roster_pages_are_read_only(client: TestClient, db: Session) -> None
         # A revisited editor URL opens no editor (Codex on #3924).
         editor = client.get(f"{base}/{page}?add=1").text
         assert f"Add new {page[:-1]}" not in editor, page
-    # The self-fields cards stay Review Robin's: on the page, not in a panel.
+    # No self-fields cards: a linked session's roster tags are unused
+    # (author, 2026-11-16), and their saves are locked with the rosters.
     for page, card in (("reviewers", "reviewer"), ("reviewees", "reviewee")):
         text = client.get(f"{base}/{page}").text
-        assert "data-linked-self-fields" in text and f'id="{card}-self-fields-form"' in text
-        assert 'id="roster-unlock-panel"' not in text
-    reply = client.post(f"{base}/reviewers/self-fields", data={"fields": ["name"]})
-    assert reply.status_code in (200, 303), reply.text
+        assert f'id="{card}-self-fields-form"' not in text, page
+        reply = client.post(
+            f"{base}/{page}/self-fields", data={"fields": ["name"]}, follow_redirects=False
+        )
+        assert reply.status_code == 409, page
     reviewer_id = db.scalars(select(Reviewer.id)).first()
     editor = client.get(f"{base}/reviewers?edit_id={reviewer_id}").text
     assert "Edit reviewer" not in editor
@@ -636,3 +638,22 @@ def test_a_native_page_keeps_its_structure_controls(client: TestClient, db: Sess
     review_session, _ = _created(client, db, source_app="otherapp", files=_with_settings())
     page = client.get(_base(review_session)).text
     assert "data-linked-rule" not in page and "+Instrument</button>" in page
+
+
+def test_the_mock_bundle_arrives_paired_and_in_its_timezone(
+    client: TestClient, db: Session
+) -> None:
+    """Utilities' proof of concept (segment 23F, author 2026-11-16): no
+    roster tags, every pair related and tagged, and Asia/Singapore."""
+    from app.db.models import Relationship
+    from utilityapps.interop_poc import mock
+
+    people = mock.reviewers("Admin", "admin@example.edu")
+    review_session, _ = _created(client, db, files=mock.bundle(people)["files"])
+    assert review_session.display_timezone == "Asia/Singapore"
+    pairs = db.scalars(select(Relationship)).all()
+    assert len(pairs) == len(people) * len(mock.APPLICATIONS)
+    assert all(pair.tag_1 for pair in pairs)
+    assert not any(r.tag_1 for r in db.scalars(select(Reviewer)))
+    db.refresh(review_session)
+    assert field_labels.resolve(review_session, "pair_context", "1") == "Apply-Desk-Link"

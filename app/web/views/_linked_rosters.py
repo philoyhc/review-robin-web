@@ -25,13 +25,3 @@ def rosters_linked_to(review_session: ReviewSession) -> str:
     if linked_apps.locks(review_session, linked_apps.Lock.ROSTERS):
         return linked_apps.linked_name(review_session)
     return ""
-
-
-def self_fields_open(review_session: ReviewSession) -> bool:
-    """Whether a linked draft's roster page shows its *What … see of their
-    own entry* card on the page itself: the rosters are the application's,
-    so the Unlock panel that holds the card is not offered, but the card's
-    settings stay Review Robin's (Codex on #3924)."""
-    return lifecycle.is_editable(review_session) and linked_apps.locks(
-        review_session, linked_apps.Lock.ROSTERS
-    )
