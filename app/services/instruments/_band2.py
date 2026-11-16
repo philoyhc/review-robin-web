@@ -1141,3 +1141,82 @@ def _sync_display_field_visibility(
             visible=desired,
             actor=actor,
         )
+
+
+def replace_response_fields(
+    db: Session,
+    *,
+    instrument: Instrument,
+    fields: list[dict[str, Any]],
+    actor: User,
+) -> None:
+    """Replace the instrument's response fields with ``fields``, in their
+    order, matched to the stored ones by ``field_key`` (segment 23F rung
+    7b: a linked application's re-send, whose keys its results are read
+    back by). A matched field keeps its id, so its column width; a
+    stored field the list does not name is deleted, its width with it;
+    every field is left unbranched, since branching is not the
+    application's to send. Each entry carries ``field_key``, ``label``,
+    ``response_type``, ``data_type``, ``min``, ``max``, ``step``,
+    ``list_csv``, ``required``, ``help_text``, ``help_text_visible`` and
+    ``visible``, checked by the caller (the Settings import's row
+    checks). Audited and un-validating as the card's Save is
+    (``instrument.response_fields_saved``), and only flushes, for the
+    caller's unit. Refuses a field holding responses
+    (:class:`ResponsesPresentError`)."""
+    from app.services.instruments._response_fields import (
+        ResponsesPresentError,
+        validation_block_from_inline,
+    )
+
+    lifecycle.require_editable(db, instrument.session)
+    before = _response_field_snapshot(instrument)
+    stored = {f.field_key: f for f in instrument.response_fields}
+    wanted = {str(entry["field_key"]) for entry in fields}
+    widths = dict(instrument.column_widths or {})
+    for key, field in stored.items():
+        if key in wanted:
+            continue
+        count = _response_count_for_field(db, field.id)
+        if count > 0:
+            raise ResponsesPresentError(count)
+        widths.pop(f"rf_{field.id}", None)
+        db.delete(field)
+    for field in instrument.response_fields:
+        field.branch_parent_id = None
+        field.branch_op = None
+        field.branch_value = None
+        field.branch_mode = None
+    db.flush()
+    for order, entry in enumerate(fields):
+        key = str(entry["field_key"])
+        field = stored.get(key) if key in wanted else None
+        if field is None:
+            field = InstrumentResponseField(instrument_id=instrument.id, field_key=key)
+            db.add(field)
+        field.label = str(entry["label"])
+        field.order = order
+        field.required = bool(entry["required"])
+        field.visible = bool(entry["visible"])
+        field.help_text = entry["help_text"]
+        field.help_text_visible = bool(entry["help_text_visible"])
+        field._inline_response_type = entry["response_type"]
+        field._inline_data_type = entry["data_type"]
+        field._inline_min = entry["min"]
+        field._inline_max = entry["max"]
+        field._inline_step = entry["step"]
+        field._inline_list_csv = entry["list_csv"]
+        field.validation = validation_block_from_inline(
+            entry["data_type"], entry["min"], entry["max"], entry["step"], entry["list_csv"]
+        )
+    if widths != (instrument.column_widths or {}):
+        instrument.column_widths = widths or None
+    db.flush()
+    db.refresh(instrument, ["response_fields"])
+    _record_response_field_changes(
+        db,
+        instrument=instrument,
+        before=before,
+        after=_response_field_snapshot(instrument),
+        actor=actor,
+    )

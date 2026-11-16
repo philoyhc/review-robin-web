@@ -191,7 +191,20 @@ re-sends them rather than Review Robin editing them (Apply Desk's ruling
   code, description, timezone, help contact, Start, End, Relationships
   switch, and the session tags (`session_tags[N].tag`). Any other row is
   `422 invalid_setup`, `slot` `settings`, `reason` `not_owned`, naming the
-  fields; instrument rows are not taken yet. A row of fewer than three
+  fields. A profile taking the instrument lock also owns its one
+  instrument's rows (segment 23F rung 7b): `instruments[1].name` (the
+  short label follows it, cut to 32 characters), `.description`, and each
+  `response_fields[m]`'s definition (key, label, response type, data
+  type, bounds, list, required, help text and its visibility, visible;
+  no branching, and a data type is required). Field rows, when present,
+  replace the fields in the file's order, matched to the stored ones by
+  `field_key` so a kept field keeps its id and column width
+  (`instrument.response_fields_saved`). A file carrying instrument rows
+  carries `instruments[1].name`, as the import requires; a rename is
+  `instrument.renamed`; a draft holding other than one instrument refuses
+  them (`422`, `slot` `settings`). A re-send's reviewee save seeds no
+  display field: the instrument's display fields stay the operator's.
+  A row of fewer than three
   cells is refused, as the Settings import refuses it. The rows are
   checked as the import's row checks check them, plus the schedule's order on the values
   the session will hold, a timezone the app knows and a name and code

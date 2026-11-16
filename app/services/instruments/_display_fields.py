@@ -391,7 +391,7 @@ def delete_display_field(db: Session, *, field: InstrumentDisplayField, actor: U
             "source_field": captured["source_field"],
         },
     )
-    db.commit()
+    unit_of_work.commit(db)
 
 
 def move_display_field(

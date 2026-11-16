@@ -55,7 +55,7 @@ from ._band1 import (
 
 # Band 2 state + the Band 3 dual-write — carved into
 # ``_band2.py`` in Segment 18N PR 2.
-from ._band2 import set_band2_state
+from ._band2 import replace_response_fields, set_band2_state
 
 # Response Type Definitions slice retired 2026-05-26 — the per-
 # session ``response_type_definitions`` table dropped alongside the
@@ -234,6 +234,7 @@ __all__ = [
     "prune_unpopulated_display_fields",
     "seed_display_fields_from_assignments",
     "seed_display_fields_from_reviewees",
+    "replace_response_fields",
     "set_band2_state",
     "IntroLayoutError",
     "effective_intro_layout",

@@ -26,6 +26,7 @@ from app.db.models import (
 from app.services import handoffs, session_lifecycle
 from utilityapps.interop_poc import mock
 
+from ._lookups import detail_of
 from .test_handoffs import REVIEWEES, REVIEWERS, SETTINGS, _bundle, _post
 
 NEW_REVIEWERS = "ReviewerName,ReviewerEmail,ReviewerTag1\r\nCal,cal@example.edu,Panel B\r\n"
@@ -454,3 +455,136 @@ def test_the_proof_of_concepts_re_send_updates_its_draft(client: TestClient, db:
     )
     assert review_session.description == "Updated by a re-send from Utilities"
     assert sorted(db.scalars(select(SessionTag.tag))) == ["interop-poc"]
+
+
+#: A re-send of the gate's instrument (segment 23F rung 7b): renamed,
+#: described, ``comment`` relabeled and moved first, ``score`` dropped and
+#: a ``recommend`` list added.
+INSTRUMENT_SETTINGS = (
+    "field,value,data_type\r\n"
+    "instruments[1].name,Gate 2: Interviews with the scholarship panel,string\r\n"
+    "instruments[1].description,Rate each interview,string\r\n"
+    "instruments[1].response_fields[1].field_key,comment,string\r\n"
+    "instruments[1].response_fields[1].label,Comments,string\r\n"
+    "instruments[1].response_fields[1].response_type,text,string\r\n"
+    "instruments[1].response_fields[1].data_type,String,string\r\n"
+    "instruments[1].response_fields[1].help_text,Two lines at most,string\r\n"
+    "instruments[1].response_fields[2].field_key,recommend,string\r\n"
+    "instruments[1].response_fields[2].label,Recommend?,string\r\n"
+    "instruments[1].response_fields[2].response_type,list,string\r\n"
+    "instruments[1].response_fields[2].data_type,List,string\r\n"
+    'instruments[1].response_fields[2].list_csv,"Yes,No",string\r\n'
+    "instruments[1].response_fields[2].required,true,boolean\r\n"
+)
+
+
+def _instrument_created(client: TestClient, db: Session) -> tuple[ReviewSession, str]:
+    files = {"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": mock.settings_csv()}
+    return _created(client, db, files=files)
+
+
+def test_a_resend_writes_the_instruments_owned_rows(client: TestClient, db: Session) -> None:
+    _, created = _instrument_created(client, db)
+    instrument = db.scalars(select(Instrument)).one()
+    comment_id = next(f.id for f in instrument.response_fields if f.field_key == "comment")
+    instrument.column_widths = {"rf_" + str(comment_id): 240}
+    db.commit()
+    reply = _resend(client, created, _update_bundle(files=_with(INSTRUMENT_SETTINGS)))
+    assert reply.status_code == 200, reply.text
+    db.expire_all()
+    instrument = db.scalars(select(Instrument)).one()
+    assert instrument.name == "Gate 2: Interviews with the scholarship panel"
+    assert instrument.short_label == "Gate 2: Interviews with the scho"
+    assert instrument.description == "Rate each interview"
+    fields = sorted(instrument.response_fields, key=lambda f: f.order)
+    assert [(f.field_key, f.label, f.required) for f in fields] == [
+        ("comment", "Comments", False),
+        ("recommend", "Recommend?", True),
+    ]
+    # Matched by key: the same row, its width kept.
+    assert fields[0].id == comment_id and fields[0].help_text == "Two lines at most"
+    assert instrument.column_widths == {f"rf_{comment_id}": 240}
+    assert fields[1]._inline_list_csv == "Yes,No"
+    saved = db.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == "instrument.response_fields_saved")
+    ).one()
+    assert detail_of(saved)["set_changes"]["removed"] == [{"field_key": "score", "label": "Score"}]
+
+
+def test_a_resend_without_field_rows_keeps_the_fields(client: TestClient, db: Session) -> None:
+    _, created = _instrument_created(client, db)
+    named = "field,value,data_type\r\ninstruments[1].name,Gate 3,string\r\n"
+    reply = _resend(client, created, _update_bundle(files=_with(named)))
+    assert reply.status_code == 200, reply.text
+    db.expire_all()
+    instrument = db.scalars(select(Instrument)).one()
+    assert (instrument.name, instrument.short_label) == ("Gate 3", "Gate 3")
+    assert {f.field_key for f in instrument.response_fields} == {"score", "comment"}
+
+
+def test_a_branch_row_is_not_the_applications(client: TestClient, db: Session) -> None:
+    _, created = _instrument_created(client, db)
+    branched = INSTRUMENT_SETTINGS + (
+        "instruments[1].response_fields[2].branch_parent,comment,string\r\n"
+    )
+    reply = _resend(client, created, _update_bundle(files=_with(branched)))
+    body = reply.json()
+    assert reply.status_code == 422 and body["reason"] == "not_owned"
+
+
+def test_a_field_without_a_data_type_is_refused(client: TestClient, db: Session) -> None:
+    _, created = _instrument_created(client, db)
+    untyped = INSTRUMENT_SETTINGS.replace(
+        "instruments[1].response_fields[2].data_type,List,string\r\n", ""
+    )
+    reply = _resend(client, created, _update_bundle(files=_with(untyped)))
+    body = reply.json()
+    assert reply.status_code == 422 and body["slot"] == "settings"
+    assert "response_fields[2].data_type" in body["details"][0]
+    db.expire_all()
+    assert {f.field_key for f in db.scalars(select(Instrument)).one().response_fields} == {
+        "score",
+        "comment",
+    }
+
+
+def _display_sources(db: Session) -> set[tuple[str, str]]:
+    instrument = db.scalars(select(Instrument)).one()
+    db.refresh(instrument, ["display_fields"])
+    return {(f.source_type, f.source_field) for f in instrument.display_fields}
+
+
+def test_a_resend_seeds_no_display_field(client: TestClient, db: Session) -> None:
+    """The display fields are the operator's from the create on: a re-send
+    whose reviewees carry a tag adds no tag field back (the cold read)."""
+    _, created = _instrument_created(client, db)
+    before = _display_sources(db)
+    assert not any(field.startswith("tag_") for _, field in before)
+    reply = _resend(client, created, _update_bundle())
+    assert reply.status_code == 200, reply.text
+    db.expire_all()
+    assert _display_sources(db) == before
+
+
+def test_instrument_rows_on_a_draft_of_two_instruments_are_refused(
+    client: TestClient, db: Session
+) -> None:
+    """Not a 500 (the cold read): the rows name ``instruments[1]`` of a
+    draft that must hold one."""
+    review_session, created = _instrument_created(client, db)
+    db.add(Instrument(session_id=review_session.id, name="Another", order=1))
+    db.commit()
+    reply = _resend(client, created, _update_bundle(files=_with(INSTRUMENT_SETTINGS)))
+    assert reply.status_code == 422 and reply.json()["slot"] == "settings"
+
+
+def test_a_rename_is_audited(client: TestClient, db: Session) -> None:
+    _, created = _instrument_created(client, db)
+    reply = _resend(client, created, _update_bundle(files=_with(INSTRUMENT_SETTINGS)))
+    assert reply.status_code == 200, reply.text
+    renamed = db.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == "instrument.renamed")
+    ).one()
+    assert detail_of(renamed)["changes"]["name"][1] == (
+        "Gate 2: Interviews with the scholarship panel"
+    )

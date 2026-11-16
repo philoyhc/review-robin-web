@@ -52,7 +52,7 @@ from ._apply_parse import (
 from ._apply_rule_set import _apply_session_rule_sets
 from ._apply_session import _apply_session_metadata
 from ._apply_session_tag import _apply_session_tags
-from ._apply_shared import _ParsedConfig
+from ._apply_shared import _InstrumentSpec, _ParsedConfig
 from ._rows import Row
 
 
@@ -157,6 +157,12 @@ class SessionSettings:
 
     overrides: dict[str, object]
     tags: list[str] | None
+    #: ``instruments[1]``'s parsed rows (segment 23F rung 7b), or None when
+    #: the file carries no instrument row.
+    instrument: _InstrumentSpec | None = None
+    #: The ``instruments[1].*`` paths the file carries, so a caller can
+    #: tell a row sent blank from a row not sent.
+    instrument_rows: frozenset[str] = frozenset()
 
 
 def parse_session_settings(rows: list[Row]) -> tuple[SessionSettings, list[ApplyError]]:
@@ -169,7 +175,15 @@ def parse_session_settings(rows: list[Row]) -> tuple[SessionSettings, list[Apply
     plan, errors = _parse_rows(rows)
     has_tags = any(row.field.startswith("session_tags[") for row in rows)
     tags = list(plan.session_tags) if has_tags else None
-    return SessionSettings(dict(plan.session_overrides), tags), errors
+    instrument_rows = frozenset(
+        row.field.strip() for row in rows if row.field.strip().startswith("instruments[1].")
+    )
+    return (
+        SessionSettings(
+            dict(plan.session_overrides), tags, plan.instruments.get(1), instrument_rows
+        ),
+        errors,
+    )
 
 
 def validate_session_config(
