@@ -1983,13 +1983,16 @@
                    none, and no blank line, when the heading has none. #}
                 <p class="rs-instrument-subtitle muted"
                    data-intro-description-view data-lock-only{% if not _heading.subtitle %} hidden{% endif %}>{{ _heading.subtitle or '' }}</p>
-                <textarea data-intro-description-input data-unlock-only
+                {# The box fits its text (``data-fit-box``, the answer
+                   boxes' script): no drag handle, two lines at least
+                   (author, 2026-11-16). #}
+                <textarea data-intro-description-input data-unlock-only data-fit-box rows="2"
                           form="dfsave-{{ instrument.id }}" name="description"
                           {% if linked and linked.has("instrument_structure") %}readonly data-linked-fixed{% endif %}
                           placeholder="(no description)"
                           maxlength="2000"
                           style="width: 100%; margin-top: 4px;
-                                 min-height: 6.5em; box-sizing: border-box;
+                                 min-height: 0; box-sizing: border-box;
                                  font: inherit; padding: 4px 6px;">{{ instrument.description or '' }}</textarea>
               </div>
               {# 19Y Item 2 — in Layout 1 the help rows sit here, under the
@@ -3452,11 +3455,14 @@
             var inCard = intro.getAttribute('data-intro-layout') === 'layout_2';
             var heading = intro.querySelector('[data-rs-help-rows="heading"]');
             var helpCard = intro.querySelector('[data-rs-help-rows="card"]');
-            // The boxes about to be replaced leave the watch with them.
-            window.rrwUnfitBoxes(intro);
+            // The boxes about to be replaced leave the watch with them:
+            // the help rows' homes only, so the description box, which
+            // stays, stays watched (it fits on unlock, 2026-11-16).
+            var homes = [heading, helpCard].filter(Boolean);
+            homes.forEach(function (home) { window.rrwUnfitBoxes(home); });
             if (heading) { heading.innerHTML = inCard ? '' : html; }
             if (helpCard) { helpCard.innerHTML = inCard ? html : ''; }
-            window.rrwFitBoxes(intro);
+            homes.forEach(function (home) { window.rrwFitBoxes(home); });
           }
           // 19Y Item 5 — a help text's edit box grows with its text (the
           // author, 2026-10-20): its height follows its content above the

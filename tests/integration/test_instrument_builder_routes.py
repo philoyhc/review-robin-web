@@ -7000,16 +7000,17 @@ def test_new_rule_operand_visibility_follows_cycle_default(client: TestClient, d
     assert "defaultCycle[0] === 'IS THE SAME AS' || defaultCycle[0] === 'IS DIFFERENT FROM'" in body
 
 
-def test_description_edit_box_is_taller(client: TestClient, db: Session):
-    """The preview-band description edit box reclaims the vertical
-    space the retired ✎/✓ buttons used to occupy — a taller
-    min-height on the unlock-only textarea."""
+def test_description_edit_box_fits_its_text(client: TestClient, db: Session):
+    """The preview-band description edit box fits its text (author,
+    2026-11-16), as the answer boxes do: the fit script's box, two lines
+    at least, no fixed height and so no drag handle."""
     review_session, new_model = _new_model_with_tags(client, db, code="descr-box-height")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments?editing={new_model.id}"
     ).text
-    assert "data-intro-description-input" in body
-    assert "min-height: 6.5em" in body
+    box = must_search(r"<textarea data-intro-description-input[^>]*>", body).group(0)
+    assert "data-fit-box" in box and 'rows="2"' in box
+    assert "min-height: 0" in box and "6.5em" not in body
 
 
 def test_19h1_save_returns_setup_state_for_both_pills(client: TestClient, db: Session) -> None:

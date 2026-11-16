@@ -686,8 +686,9 @@ everywhere, so "you can click this" reads the same way on every control.
 > taken on (`data-fit-on`) takes `resize: none; overflow: hidden` instead:
 > it fits its text, and a drag would be undone by the next keystroke. Without
 > script it keeps the native vertical handle. The reviewer's String answer box
-> (`spec/reviewer-surface.md`, "Cell renderers") and the instrument card's
-> help-text edit box (`spec/instruments.md`, "Help rows") are such boxes. The
+> (`spec/reviewer-surface.md`, "Cell renderers"), the instrument card's
+> help-text edit box (`spec/instruments.md`, "Help rows") and its
+> description edit box (`spec/instruments.md`, "Description") are such boxes. The
 > Band 2 preview's disabled response boxes take `resize: none` outright
 > (`spec/instruments.md`, "Preview row"), because a drag there persists
 > nowhere.
