@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 from app.db.models import (
     AuditEvent,
     Instrument,
+    InstrumentDisplayField,
     InstrumentViewPolicy,
     Observer,
     Reviewee,
@@ -29,6 +30,7 @@ from app.db.models import (
     ReviewSession,
     SessionTag,
 )
+from app.services import instruments as instruments_service
 from app.services import linked_apps, session_clone, session_config_io
 from app.services import session_lifecycle as lifecycle
 from app.services.validation import validate_session_setup
@@ -478,3 +480,77 @@ def test_apply_desk_sends_its_own_email_and_utilities_keeps_review_robins(
     db.commit()
     card = build_workflow_card_context(db, review_session, return_to="")
     assert not card["send_invites_visible"] and not card["send_reminders_visible"]
+
+
+# ── 23F rung 7a: the instrument ────────────────────────────────────────
+
+
+def test_the_create_fixes_the_rule_and_the_display_default(client: TestClient, db: Session) -> None:
+    """One instrument, its rule fixed by Review Robin (assign where a
+    relationship exists), its display fields starting from the dossier
+    link."""
+    review_session, _ = _created(client, db, files=_with_settings())
+    instrument = db.scalars(select(Instrument)).one()
+    assert set(instrument.band1_touched_links or []) == {"link1", "link2", "link3"}
+    assert instrument.group_kind is None
+    state = instruments_service.decode_band1_state(instrument, db)
+    assert state["link1"]["mode"] == "all"
+    assert state["link2"]["mode"] == "filter"
+    assert [(r["field"], r["op"]) for r in state["link2"]["rules"]] == [
+        ("pair_context.tag1", "IS FILLED")
+    ]
+    shown = {
+        (f.source_type, f.source_field)
+        for f in db.scalars(
+            select(InstrumentDisplayField).where(
+                InstrumentDisplayField.instrument_id == instrument.id
+            )
+        )
+    }
+    assert ("reviewee", "profile_link") in shown
+    assert not {s for s in shown if s[1].startswith("tag_")}
+
+
+def test_a_create_making_two_instruments_is_refused(client: TestClient, db: Session) -> None:
+    second = (
+        "instruments[2].name,Second look,string\r\n"
+        "instruments[2].response_fields[1].field_key,note,string\r\n"
+        "instruments[2].response_fields[1].label,Note,string\r\n"
+        "instruments[2].response_fields[1].response_type,text,string\r\n"
+        "instruments[2].response_fields[1].data_type,String,string\r\n"
+    )
+    files = {"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": SETTINGS + second}
+    reply = _post(client, _bundle(files=files))
+    assert reply.status_code == 422 and reply.json()["reason"] == "one_instrument"
+    assert db.scalars(select(ReviewSession)).first() is None
+
+
+def test_a_replay_of_a_cut_off_create_sets_the_instrument_up(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A create cut off after its rosters saved, before the instrument
+    set-up, gets the set-up from its replay, with the record (the cold
+    read of 23F)."""
+    from app.services import handoffs
+
+    real = handoffs.set_up_instrument
+    calls: list[int] = []
+
+    def dies_first(*args: Any) -> None:
+        calls.append(1)
+        if len(calls) == 1:
+            raise RuntimeError("cut off")
+        real(*args)
+
+    monkeypatch.setattr(handoffs, "set_up_instrument", dies_first)
+    bundle = _bundle(files=_with_settings())
+    with pytest.raises(RuntimeError):
+        _post(client, bundle)
+    db.rollback()
+    again = _post(client, bundle)
+    assert again.status_code == 200 and again.json()["status"] == "already_created"
+    instrument = db.scalars(select(Instrument)).one()
+    db.refresh(instrument)
+    assert set(instrument.band1_touched_links or []) == {"link1", "link2", "link3"}
+    state = instruments_service.decode_band1_state(instrument, db)
+    assert state["link2"]["mode"] == "filter"

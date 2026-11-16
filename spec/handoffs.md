@@ -127,6 +127,12 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   fields it owns (segment 23F rung 2a): Apply Desk takes every lock;
   Utilities keeps Review Robin's email on. Profiles are code, never data
   a bundle can set.
+  Under the instrument lock the create's files must make one instrument
+  (else `422 invalid_setup`, `slot` `settings`, `reason` `one_instrument`);
+  Review Robin then fixes its assignment rule (All /
+  `pair_context.tag1 IS FILLED` / Individual: assign where a relationship
+  exists) and starts its display fields at the fixed pair and the dossier
+  link (`app/services/linked_instruments.py`, segment 23F rung 7a).
   The mark is set before the files apply, so the profile holds for them:
   an `observers` file is refused before the draft is made, after the
   replay lookup so a transfer completed before the link still answers

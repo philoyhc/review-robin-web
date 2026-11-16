@@ -529,6 +529,14 @@ region, never its scroller. A rule's tag select shrinks from half its
 row to make room for a wider operator, so "IS DIFFERENT FROM" never
 spills either.
 
+**A linked instrument** (segment 23F rung 7a): when a linked
+application's profile takes the instrument lock, its draft holds one
+instrument, and the create fixes its rule — Link 1 *All*, Link 2
+`pair_context.tag1 IS FILLED` (assign where a relationship exists),
+Link 3 *Individual*, every link marked set — and starts its display
+fields at the fixed pair and the dossier link (`ProfileLink`), through
+`app/services/linked_instruments.py`.
+
 | Column | Link (operator label) | Vocabulary |
 |---|---|---|
 | Left | Link 1 — Who does the review | `reviewer.tag1 / 2 / 3` |
