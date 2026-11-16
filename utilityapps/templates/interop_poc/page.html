@@ -29,6 +29,7 @@
       </tbody>
     </table>
     <div id="poc-sent-detail" role="status" aria-live="polite"></div>
+    <p id="poc-sent-clear-row" hidden><button type="button" class="btn secondary" id="poc-sent-clear">Clear list</button></p>
     <details>
     <summary>What each read shows</summary>
     <h3>Status</h3>
@@ -291,7 +292,22 @@
         });
       });
     }
+    var clearButton = document.getElementById("poc-sent-clear");
+    // The row, not the button, is hidden: ``.btn`` sets a display that
+    // overrides the button's own ``hidden``.
+    var clearRow = document.getElementById("poc-sent-clear-row");
+    // Forget the sessions this browser sent (author, 2026-11-16): the list
+    // lives in this browser, so clearing it deletes nothing in Review Robin.
+    clearButton.addEventListener("click", function () {
+      if (!window.confirm("Clear the list of sessions sent from this browser? The sessions stay in Review Robin.")) { return; }
+      sent = [];
+      pendingResend = {};
+      save(sent);
+      detail.replaceChildren();
+      render();
+    });
     function render() {
+      clearRow.hidden = !sent.length;
       if (!sent.length) {
         var empty = el("tr", null, "note");
         var td = el("td", "No sessions sent from this browser yet.");
@@ -386,7 +402,9 @@
       render();
     });
     window.addEventListener("storage", function (event) {
-      if (event.key === KEY) { sent = merged(load(), sent); render(); }
+      // A clear in another tab writes an empty list; follow it rather
+      // than merge this tab's copy back in.
+      if (event.key === KEY) { sent = event.newValue === "[]" ? [] : merged(load(), sent); render(); }
     });
     render();
   })();

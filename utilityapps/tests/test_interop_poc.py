@@ -194,3 +194,13 @@ def test_the_relationships_pair_everyone_tagged_by_panel() -> None:
     assert set(reviewees[0]) == {"RevieweeName", "RevieweeEmail", "ProfileLink"}
     assert "session.display_timezone,Asia/Singapore" in mock.settings_csv()
     assert "session.display_timezone,Asia/Singapore" in mock.resend_settings_csv()
+
+
+def test_the_sent_list_can_be_cleared(client: TestClient) -> None:
+    """The author's ruling (2026-11-16): a Clear list button, shown while the
+    list has a session, empties the browser's list after a confirm and
+    leaves the sessions in Review Robin; another tab follows the clear."""
+    text = client.get(PAGE).text
+    assert 'id="poc-sent-clear-row" hidden>' in text and ">Clear list</button>" in text
+    assert "The sessions stay in Review Robin." in text
+    assert 'event.newValue === "[]" ? []' in text

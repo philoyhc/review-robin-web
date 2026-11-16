@@ -134,7 +134,10 @@ sender takes from it.
 - Text is inserted with `textContent` only; every response is `no-store`.
 - **Sent to Review Robin**: the sessions this browser
   created, kept in `localStorage` (not in Utilities' database; clearing it
-  forgets the list, not the sessions; open tabs keep it in step). Each offers:
+  forgets the list, not the sessions; open tabs keep it in step). **Clear
+  list**, shown while the list has a session, asks, then empties it in
+  every open tab (author, 2026-11-16); the sessions stay in Review Robin.
+  Each offers:
   - **Refresh status**: reads Review Robin's status (`spec/handoffs.md`
     §10, version 3) and shows each section as Review Robin
     reports it, its keys as sent (only the state carries its display
