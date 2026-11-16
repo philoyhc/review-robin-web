@@ -376,7 +376,11 @@
               {% endif %}
             </td>
             <td class="col-shrink">
-              {% if row.invitation %}
+              {% if row.invitation and session | linked_locks("invitation_send") %}
+                {# Segment 23F — the linked application shares the session
+                   link; nothing is sent from here. #}
+                <span class="muted" data-invitations-linked>Shared by {{ session | linked_name }}</span>
+              {% elif row.invitation %}
                 {% if row.invitation.status == "pending" %}
                   <form method="post"
                         action="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations/' ~ row.invitation.id ~ '/send') }}"

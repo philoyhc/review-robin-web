@@ -168,6 +168,9 @@ urls.add_filters(
     lifecycle_label=lifecycle_display.lifecycle_display_label,
     # Segment 23E: a session's linked application, by name ("" if none).
     linked_name=linked_apps.linked_name,
+    # Segment 23F: whether a session's linked application takes a lock,
+    # by its name (``session | linked_locks("email")``).
+    linked_locks=linked_apps.locks_named,
     # Canonical date / time display formatting — Segment 18B PR 1 / PR 2.
     # Context-aware: the filters resolve their display zone from the
     # ``display_timezone`` context key the processor above injects.
@@ -347,6 +350,96 @@ def require_reviewees_editable_session(
             ),
         )
     return review_session
+
+
+def _refuse_locked_rosters(review_session: ReviewSession) -> None:
+    """409 when the session's linked application takes the rosters (segment
+    23F): they come from its re-send, and the pages show them read-only."""
+    if linked_apps.locks(review_session, linked_apps.Lock.ROSTERS):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=linked_apps.off_message(review_session, "Editing the rosters"),
+        )
+
+
+def require_rosters_open_session(
+    review_session: ReviewSession = Depends(require_session_operator),
+) -> ReviewSession:
+    """A roster write's gate: the operator gate, and the rosters not a
+    linked application's (segment 23F)."""
+    _refuse_locked_rosters(review_session)
+    return review_session
+
+
+def require_reviewees_open_session(
+    review_session: ReviewSession = Depends(require_reviewees_editable_session),
+) -> ReviewSession:
+    """``require_reviewees_editable_session``, and the rosters not a linked
+    application's (segment 23F)."""
+    _refuse_locked_rosters(review_session)
+    return review_session
+
+
+def require_relationships_open_session(
+    review_session: ReviewSession = Depends(require_relationships_enabled_session),
+) -> ReviewSession:
+    """``require_relationships_enabled_session``, and the rosters not a
+    linked application's (segment 23F)."""
+    _refuse_locked_rosters(review_session)
+    return review_session
+
+
+def rosters_editable(review_session: ReviewSession) -> bool:
+    """A roster page's ``is_editable``: the lifecycle's, and not a linked
+    application's rosters (segment 23F)."""
+    return lifecycle.is_editable(review_session) and not linked_apps.locks(
+        review_session, linked_apps.Lock.ROSTERS
+    )
+
+
+def refuse_locked(review_session: ReviewSession, lock: linked_apps.Lock, what: str) -> None:
+    """409 when the session's linked application takes ``lock`` (segment
+    23F), for a route whose gate yields more than the session."""
+    if linked_apps.locks(review_session, lock):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=linked_apps.off_message(review_session, what),
+        )
+
+
+def _refusing(lock: linked_apps.Lock, what: str) -> Callable[..., ReviewSession]:
+    """A dependency: the operator gate, and 409 when the session's linked
+    application takes ``lock`` (segment 23F)."""
+
+    def gate(
+        review_session: ReviewSession = Depends(require_session_operator),
+    ) -> ReviewSession:
+        if linked_apps.locks(review_session, lock):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=linked_apps.off_message(review_session, what),
+            )
+        return review_session
+
+    return gate
+
+
+#: Review Robin's email on a session, refused where its linked application
+#: sends its own (segment 23F): templates, bulk sends and reminders.
+require_email_open_session = _refusing(linked_apps.Lock.EMAIL, "Review Robin's email")
+#: The Invitations page's Send and Regenerate, refused where the linked
+#: application shares the session link itself (segment 23F).
+require_invitation_send_open_session = _refusing(
+    linked_apps.Lock.INVITATION_SEND, "Sending invitations"
+)
+
+
+def rosters_linked_to(review_session: ReviewSession) -> str:
+    """The application whose rosters these are (segment 23F), or "": the
+    roster pages' lock card names it."""
+    if linked_apps.locks(review_session, linked_apps.Lock.ROSTERS):
+        return linked_apps.linked_name(review_session)
+    return ""
 
 
 def require_observers_enabled_session(

@@ -292,6 +292,19 @@ below describe what that panel holds.
    upload stays the bulk-create path; the row expander covers
    single-row authoring.
 
+## A linked application's rosters
+
+On a session whose linked application takes the rosters lock
+(`linked_apps.Lock.ROSTERS`, segment 23F) the Reviewers, Reviewees and
+Relationships pages render as a locked page does (`is_editable` false,
+`rosters_editable`): the lock card says the rosters come from the
+application and links Session Home's Linked application card, with no
+revert form. Every roster write is `409`: import, add, edit,
+inactivate, reactivate, delete, delete-all, the field-label editor and
+the directory recheck (`require_rosters_open_session` and its two
+siblings in `_shared.py`). The application re-sends them
+(`spec/handoffs.md` §6a).
+
 ## The roster card and the Unlock panel
 
 **All four roster pages have this shape**, and none of them differs in

@@ -1180,9 +1180,9 @@ canonical "no payload" marker.
 | `session.scheduled_activation_retry` / `_failed_persistent` | `reason` + `context` | `{"session_id": 17, ..., "reason": "<repr(exc)>", "context": {"scheduled_at": "...", "attempt": 1}}` (`attempts` on `_failed_persistent`) |
 | `session.invite_schedule_updated` / `session.reminder_schedule_updated` | `changes` | `{"session_id": 17, ..., "changes": {"invite_offsets": [null, ["-P1D", "-PT2H"]]}}` |
 | `session.scheduled_invites_fired` | `counts` + `context` | `{"session_id": 17, ..., "counts": {"sent": 12}, "context": {"anchor_at": "2026-06-01T09:00:00+00:00", "offset_index": 0, "offset": "-P1D", "scheduled_at": "2026-05-31T09:00:00+00:00", "actual_fired_at": "2026-05-31T09:00:42+00:00"}}` |
-| `session.scheduled_invites_skipped` | `reason` + `context` | `{"session_id": 17, ..., "reason": "not_prepared" \| "invitations_not_created", "context": {"anchor_at": "...", "offset_index": 0, "offset": "-P1D", "scheduled_at": "..."}}` |
+| `session.scheduled_invites_skipped` | `reason` + `context` | `{"session_id": 17, ..., "reason": "linked_app_email_off" \| "not_prepared" \| "invitations_not_created", "context": {"anchor_at": "...", "offset_index": 0, "offset": "-P1D", "scheduled_at": "..."}}` |
 | `session.scheduled_reminders_fired` | `counts` + `context` | Same shape as `scheduled_invites_fired`, anchored on `deadline`. |
-| `session.scheduled_reminders_skipped` | `reason` + `context` | `reason ∈ {"not_ready", "no_invitations", "outside_response_window"}`; same context keys. |
+| `session.scheduled_reminders_skipped` | `reason` + `context` | `reason ∈ {"linked_app_email_off", "not_ready", "no_invitations", "outside_response_window"}`; same context keys. |
 | `session.scheduled_invites_handled` / `session.scheduled_reminders_handled` | `context` | The Workflow card's **Mark as done** on a due prompt; same context keys as `_fired` (`anchor_at`, `offset_index`, `offset`, `scheduled_at`). Counted as fired for dedup (`spec/lifecycle.md` §8.2.6). |
 | `session.scheduled_event_failed` | `reason` + `context` | `{"session_id": 17, ..., "reason": "<repr(exc), first 200 characters>", "context": {"trigger": "invites" \| "activation" \| "reminders"}}`. Written by `observe_scheduled_events` when a trigger raises; not repeated while that trigger's latest one records the same reason. |
 

@@ -951,8 +951,8 @@ current anchor as done. Per-event preconditions:
 | Event | Precondition at fire time | Skip reason |
 |---|---|---|
 | Scheduled activation | `session.status == "validated"` **and** a fresh readiness report has no errors; warnings are acknowledged by the trigger itself (§2.4) | `not_validated` / `has_errors` (`needs_acknowledge` is mapped to a skip too, but cannot arise) |
-| Auto-send invites | `session.status in {"validated", "ready"}` (Prepared) **and** invitations already created (Prepare creates them) | `not_prepared` / `invitations_not_created` |
-| Auto-send reminders | `session.status == "ready"` (subsumes Prepared) **and** invitations exist **and** within accepting-responses window | `not_ready` / `no_invitations` / `outside_response_window` |
+| Auto-send invites | `session.status in {"validated", "ready"}` (Prepared) **and** invitations already created (Prepare creates them) | `linked_app_email_off` (segment 23F: a linked application takes the email lock) / `not_prepared` / `invitations_not_created` |
+| Auto-send reminders | `session.status == "ready"` (subsumes Prepared) **and** invitations exist **and** within accepting-responses window | `linked_app_email_off` / `not_ready` / `no_invitations` / `outside_response_window` |
 
 Release-from and Release-until are not fired events. The release
 window is evaluated at read time by

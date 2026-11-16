@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.models import EmailOutbox, ReviewSession
 from app.json_shapes import json_list
-from app.services import audit
+from app.services import audit, linked_apps
 from app.services import invitations as invitations_service
 from app.services import session_lifecycle as lifecycle
 
@@ -206,8 +206,12 @@ def _fire_reminder_entry(
         "offset": offset_str,
         "scheduled_at": scheduled_iso,
     }
-    if not lifecycle.is_ready(locked):
-        skip_reason: str | None = "not_ready"
+    # Segment 23F — a linked application that takes the email lock sends
+    # its own mail: Review Robin's schedule sends nothing for it.
+    if linked_apps.locks(locked, linked_apps.Lock.EMAIL):
+        skip_reason: str | None = "linked_app_email_off"
+    elif not lifecycle.is_ready(locked):
+        skip_reason = "not_ready"
     elif not invitations_service.has_invitations(db, locked.id):
         skip_reason = "no_invitations"
     # A due reminder is counted from the deadline, so one is set; a

@@ -19,9 +19,8 @@ from app.web import breadcrumbs, urls, views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
-    require_session_operator,
 )
-from app.web.routes_operator._shared import _templates
+from app.web.routes_operator._shared import _templates, require_email_open_session
 from cordware import graph
 
 router = APIRouter()
@@ -81,7 +80,7 @@ def _composer_page(
 def setupinvite_form(
     request: Request,
     template: str = Query(default="invitation"),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_email_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
@@ -97,7 +96,7 @@ def setupinvite_form(
 async def setupinvite_save(
     request: Request,
     template: str = Form(default="invitation"),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_email_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -151,7 +150,7 @@ async def setupinvite_save(
 async def setupinvite_send_test(
     request: Request,
     template: str = Form(default="invitation"),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_email_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
@@ -201,7 +200,7 @@ def setupinvite_reset(
     request: Request,
     template: str = Form(...),
     field: str = Form(...),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_email_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:

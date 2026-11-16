@@ -58,6 +58,9 @@ from app.web.routes_operator._shared import (
     _templates,
     acknowledged_loss,
     require_relationships_enabled_session,
+    require_relationships_open_session,
+    rosters_editable,
+    rosters_linked_to,
 )
 
 router = APIRouter()
@@ -128,7 +131,7 @@ async def relationships_import_submit(
     append: str | None = Form(default=None),
     merge: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_relationships_enabled_session),
+    review_session: ReviewSession = Depends(require_relationships_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -317,7 +320,7 @@ def relationships_delete_all(
     request: Request,
     confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_relationships_enabled_session),
+    review_session: ReviewSession = Depends(require_relationships_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -382,7 +385,7 @@ def relationships_create(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_relationships_enabled_session),
+    review_session: ReviewSession = Depends(require_relationships_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -505,7 +508,7 @@ def relationships_update(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_relationships_enabled_session),
+    review_session: ReviewSession = Depends(require_relationships_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -612,7 +615,7 @@ def relationships_bulk_inactivate(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_relationships_enabled_session),
+    review_session: ReviewSession = Depends(require_relationships_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -663,7 +666,7 @@ def relationships_bulk_reactivate(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_relationships_enabled_session),
+    review_session: ReviewSession = Depends(require_relationships_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -1017,7 +1020,8 @@ def _render_relationships_page(
             # and a live Delete while every mutation 409d. This is what
             # ``_require_editable`` enforces, so page and route agree by
             # construction rather than by two lists kept in step.
-            "is_editable": lifecycle.is_editable(review_session),
+            "is_editable": rosters_editable(review_session),
+            "rosters_linked_to": rosters_linked_to(review_session),
             "edit_id": edit_id,
             "add_mode": add_mode,
             # 19O.5 rung 4 — ONE answer, read by two surfaces, under
@@ -1105,7 +1109,7 @@ _PAIR_CONTEXT_SLOTS: tuple[tuple[str, str], ...] = (
 )
 async def relationships_save_field_labels(
     request: Request,
-    review_session: ReviewSession = Depends(require_relationships_enabled_session),
+    review_session: ReviewSession = Depends(require_relationships_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -1134,7 +1138,7 @@ def relationships_bulk_delete(
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
-    review_session: ReviewSession = Depends(require_relationships_enabled_session),
+    review_session: ReviewSession = Depends(require_relationships_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:

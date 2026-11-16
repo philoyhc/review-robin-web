@@ -34,6 +34,7 @@ from app.web.routes_operator._shared import (
     ROSTER_PARSERS,
     directory_or_none,
     directory_search_response,
+    require_rosters_open_session,
     roster_address,
 )
 
@@ -207,7 +208,7 @@ async def roster_directory_recheck(
     roster: str = Form(...),
     since: str | None = Form(None),
     stop: str | None = Form(None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_rosters_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:

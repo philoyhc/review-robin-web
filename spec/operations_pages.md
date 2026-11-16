@@ -370,6 +370,17 @@ carries an empty `data-sort-value`; both the server-side
 regardless of direction, so the two halves cannot disagree about
 where those rows land.
 
+### On a linked session
+
+Where the linked application takes the invitation-send lock
+(`linked_apps.Lock.INVITATION_SEND`, segment 23F) each row's actions read
+*Shared by {application}* and the per-row Send and Regenerate, and
+Regenerate all, are `409`; where it takes the email lock, per-row Send
+reminder is `409` too. The application shares the session link, and a
+reviewer signs in (matched by email). The Email Template tab is not
+shown, its page is `409`, and the responses-received confirmation is not
+queued (`invitations.queue_responses_received`).
+
 ### Per-row action buttons
 
 Rendered in the rightmost (unlabelled) column when an `Invitation`

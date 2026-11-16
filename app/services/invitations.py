@@ -30,7 +30,7 @@ from app.db.models import (
     User,
 )
 from app.logging_config import get_logger
-from app.services import audit, directory_accounts, email_templates
+from app.services import audit, directory_accounts, email_templates, linked_apps
 from app.services import session_lifecycle as lifecycle
 from app.services.session_guard import lock_session
 
@@ -1171,6 +1171,9 @@ def queue_responses_received(
       the reviewer is not shown an error for a submission that landed.
     """
     if not email_templates.responses_received_enabled(review_session):
+        return None
+    # A linked application sends its own email (segment 23F).
+    if linked_apps.locks(review_session, linked_apps.Lock.EMAIL):
         return None
     # Read before anything can fail: after a rollback these attributes
     # would reload from the database, which may be what failed.

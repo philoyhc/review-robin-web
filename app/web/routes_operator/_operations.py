@@ -26,7 +26,14 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
-from app.services import assignments, email_dispatch, invitations, monitoring, validation
+from app.services import (
+    assignments,
+    email_dispatch,
+    invitations,
+    linked_apps,
+    monitoring,
+    validation,
+)
 from app.services import session_lifecycle as lifecycle
 from app.services._queries import tag_slot_presence
 from app.services.email_identity import normalize_email
@@ -42,6 +49,9 @@ from app.web.routes_operator._shared import (
     _require_reviewer_in_session,
     _templates,
     observe_scheduled_events_on_load,
+    refuse_locked,
+    require_email_open_session,
+    require_invitation_send_open_session,
 )
 from cordware import graph
 
@@ -813,7 +823,7 @@ def invitation_reviewer_detail_legacy(
 def invitations_send_all(
     request: Request,
     return_to: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_email_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -843,7 +853,7 @@ def invitations_send_all(
 @router.post("/sessions/{session_id}/invitations/regenerate-all")
 def invitations_regenerate_all(
     request: Request,
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_invitation_send_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -874,6 +884,7 @@ def invitations_regenerate(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     invitation, review_session = bundle
+    refuse_locked(review_session, linked_apps.Lock.INVITATION_SEND, "Sending invitations")
     # 14F follow-up 1 (author, 2026-11-06): a prepared session may email
     # and re-issue invitations ahead of opening, as Send all could.
     _require_validated_or_ready(review_session)
@@ -898,6 +909,7 @@ def invitations_send_one(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     invitation, review_session = bundle
+    refuse_locked(review_session, linked_apps.Lock.INVITATION_SEND, "Sending invitations")
     _require_validated_or_ready(review_session)  # 14F follow-up 1
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
@@ -1169,6 +1181,7 @@ def invitations_remind_one(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     invitation, review_session = bundle
+    refuse_locked(review_session, linked_apps.Lock.EMAIL, "Review Robin's email")
     _require_ready(review_session)
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
@@ -1218,7 +1231,7 @@ def invitations_remind_one(
 def invitations_remind_incomplete(
     request: Request,
     return_to: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(require_email_open_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:

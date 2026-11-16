@@ -180,6 +180,10 @@ def build_workflow_card_context(
     )
     activate_visible = is_validated
     send_reminders_visible = is_ready and invitations_sent
+    # A linked application that sends its own email (segment 23F): neither
+    # bulk send is offered.
+    if linked_apps.locks(review_session, linked_apps.Lock.EMAIL):
+        send_invites_visible = send_reminders_visible = False
     close_visible = is_ready
     # Release / Stop release stay inert pre-close: the operator
     # only takes the manual release shortcut after a session has
@@ -246,6 +250,10 @@ def build_due_lines(db: Session, review_session: ReviewSession) -> list[dict[str
     Each carries what *Mark as done* posts back."""
     session_tz = sessions_service.resolve_session_timezone(review_session)
     lines: list[dict[str, Any]] = []
+    # Nothing is due from Review Robin where the linked application sends
+    # the email (segment 23F).
+    if linked_apps.locks(review_session, linked_apps.Lock.EMAIL):
+        return lines
     for action in due_actions.due_actions(db, review_session):
         when = date_formatting.format_datetime(action.due_at, session_tz)
         n = action.count
