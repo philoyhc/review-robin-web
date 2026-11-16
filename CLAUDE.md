@@ -232,7 +232,8 @@ reject it.
   `residentialapps/tests/test_columns_browser.py`,
   `residentialapps/tests/test_supportlogs_log_browser.py`,
   `residentialapps/tests/test_leave_dates_browser.py`, and Utilities'
-  `utilityapps/tests/test_photo_poc_browser.py`, which need a
+  `utilityapps/tests/test_photo_poc_browser.py` and
+  `utilityapps/tests/test_interop_poc_browser.py`, which need a
   Chromium build (preinstalled in the web sandbox) and skip with a reason
   without one; CI sets
   `RRW_REQUIRE_BROWSER=1` so a missing browser fails there. They also run in

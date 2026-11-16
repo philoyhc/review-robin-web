@@ -29,6 +29,7 @@
       </tbody>
     </table>
     <div id="poc-sent-detail" role="status" aria-live="polite"></div>
+    <p id="poc-sent-clear-row" hidden><button type="button" class="btn destructive" id="poc-sent-clear">Clear list</button></p>
     <details>
     <summary>What each read shows</summary>
     <h3>Status</h3>
@@ -118,8 +119,16 @@
         return problems[body.error] || ("Review Robin answered " + (body.error || reply.status) + ".");
       }, function () { return "Review Robin answered " + reply.status + "."; });
     }
-    function unavailable(heading, why) {
-      detail.replaceChildren(el("h3", heading), el("p", "Unavailable, last checked " + new Date().toLocaleString() + ". " + why, "error"));
+    // A reply that lands after Clear list (here or in another tab) paints
+    // nothing: its session is no longer this page's (Codex on #3931).
+    function listed(item) {
+      return sent.some(function (s) { return s.transfer_id === item.transfer_id; });
+    }
+    function show(item, nodes) {
+      if (listed(item)) detail.replaceChildren.apply(detail, nodes);
+    }
+    function unavailable(item, heading, why) {
+      show(item, [el("h3", heading), el("p", "Unavailable, last checked " + new Date().toLocaleString() + ". " + why, "error")]);
     }
     // Segment 23C: status v3 is Review Robin's own readings, shown as it
     // labels them; this page interprets none of them.
@@ -152,7 +161,7 @@
     function yes(flag) { return flag ? "yes" : "no"; }
     function showStatus(item, body) {
       if (body.status_schema_version !== STATUS_VERSION) {
-        unavailable("Status: " + item.session_code, "Review Robin answered status version " + body.status_schema_version + "; this page reads version " + STATUS_VERSION + ".");
+        unavailable(item, "Status: " + item.session_code, "Review Robin answered status version " + body.status_schema_version + "; this page reads version " + STATUS_VERSION + ".");
         return;
       }
       var r = body.status_row, s = body.schedule, w = body.workflow, v = body.validation, g = body.progress;
@@ -223,7 +232,7 @@
       var p = el("p");
       p.appendChild(link);
       nodes.push(p);
-      detail.replaceChildren.apply(detail, nodes);
+      show(item, nodes);
     }
     function parseCsv(text) {
       // RFC 4180: quoted fields, doubled quotes, CRLF rows.
@@ -278,7 +287,7 @@
       wrap.appendChild(table);
       if (answers) nodes.push(wrap);
       else nodes.push(el("p", "No answers have been submitted yet."));
-      detail.replaceChildren.apply(detail, nodes);
+      show(item, nodes);
     }
     function fetchCsv(item, name) {
       return ask(item, name).then(function (reply) {
@@ -291,7 +300,22 @@
         });
       });
     }
+    var clearButton = document.getElementById("poc-sent-clear");
+    // The row, not the button, is hidden: ``.btn`` sets a display that
+    // overrides the button's own ``hidden``.
+    var clearRow = document.getElementById("poc-sent-clear-row");
+    // Forget the sessions this browser sent (author, 2026-11-16): the list
+    // lives in this browser, so clearing it deletes nothing in Review Robin.
+    clearButton.addEventListener("click", function () {
+      if (!window.confirm("Clear the list of sessions sent from this browser? This page can then no longer refresh, fetch results for or re-send them. The sessions stay in Review Robin.")) { return; }
+      sent = [];
+      pendingResend = {};
+      save(sent);
+      detail.replaceChildren();
+      render();
+    });
     function render() {
+      clearRow.hidden = !sent.length;
       if (!sent.length) {
         var empty = el("tr", null, "note");
         var td = el("td", "No sessions sent from this browser yet.");
@@ -312,10 +336,10 @@
           status.disabled = true;
           detail.replaceChildren(el("p", "Asking Review Robin…", "note"));
           ask(item, "status", { headers: { "Accept": "application/json" } }).then(function (reply) {
-            if (!reply.ok) return refusal(reply).then(function (why) { unavailable("Status: " + item.session_code, why); });
+            if (!reply.ok) return refusal(reply).then(function (why) { unavailable(item, "Status: " + item.session_code, why); });
             return reply.json().then(function (body) { showStatus(item, body); });
           }).catch(function () {
-            unavailable("Status: " + item.session_code, "Review Robin did not answer.");
+            unavailable(item, "Status: " + item.session_code, "Review Robin did not answer.");
           }).finally(function () { status.disabled = false; });
         });
         var results = el("button", "Fetch results", "btn secondary");
@@ -330,7 +354,7 @@
               showResults(item, results, completion, results.asOf);
             });
           }).catch(function (err) {
-            unavailable("Results: " + item.session_code, err && err.message ? err.message : "Review Robin did not answer.");
+            unavailable(item, "Results: " + item.session_code, err && err.message ? err.message : "Review Robin did not answer.");
           }).finally(function () { results.disabled = false; });
         });
         var resend = el("button", "Re-send", "btn secondary");
@@ -346,7 +370,7 @@
             body: JSON.stringify(Object.assign({}, resendBase, { transfer_id: id }))
           }).then(function (reply) {
             if (reply.status >= 500) {
-              unavailable("Re-send: " + item.session_code, "Review Robin failed (" + reply.status + "). Try again: the same re-send is sent, so it applies once.");
+              unavailable(item, "Re-send: " + item.session_code, "Review Robin failed (" + reply.status + "). Try again: the same re-send is sent, so it applies once.");
               return;
             }
             if (!reply.ok) {
@@ -359,18 +383,18 @@
                   body.details.forEach(function (line) { list.appendChild(el("li", line)); });
                   nodes.push(list);
                 }
-                detail.replaceChildren.apply(detail, nodes);
-              }, function () { return refusal(reply).then(function (why) { unavailable("Re-send: " + item.session_code, why); }); });
+                show(item, nodes);
+              }, function () { return refusal(reply).then(function (why) { unavailable(item, "Re-send: " + item.session_code, why); }); });
             }
             // Forget the transfer only once its receipt is read: a reply cut
             // off mid-body leaves it applied, and a retry under the same id
             // answers already_updated rather than replacing again (Codex).
             return reply.json().then(function (body) {
               delete pendingResend[item.transfer_id];
-              detail.replaceChildren(el("h3", "Re-send: " + item.session_code), el("p", (body.status === "already_updated" ? "Already updated: " : "Updated: ") + body.session_code + ". Refresh status to see the rosters it now holds.", "note"));
+              show(item, [el("h3", "Re-send: " + item.session_code), el("p", (body.status === "already_updated" ? "Already updated: " : "Updated: ") + body.session_code + ". Refresh status to see the rosters it now holds.", "note")]);
             });
           }).catch(function () {
-            unavailable("Re-send: " + item.session_code, "Review Robin did not answer. Try again: the same re-send is sent, so it applies once.");
+            unavailable(item, "Re-send: " + item.session_code, "Review Robin did not answer. Try again: the same re-send is sent, so it applies once.");
           }).finally(function () { resend.disabled = false; });
         });
         var a = el("td"); a.appendChild(status); tr.appendChild(a);
@@ -386,7 +410,17 @@
       render();
     });
     window.addEventListener("storage", function (event) {
-      if (event.key === KEY) { sent = merged(load(), sent); render(); }
+      // A clear in another tab writes an empty list; follow it rather
+      // than merge this tab's copy back in.
+      if (event.key !== KEY) return;
+      if (event.newValue === "[]") {
+        sent = [];
+        pendingResend = {};
+        detail.replaceChildren();
+      } else {
+        sent = merged(load(), sent);
+      }
+      render();
     });
     render();
   })();
