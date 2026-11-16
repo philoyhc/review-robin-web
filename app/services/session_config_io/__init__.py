@@ -52,6 +52,12 @@ from app.services.session_config_io._apply import (
 )
 from app.services.session_config_io._apply_parse import ApplyError, split_rows
 
+# The parsed ``instruments[n]`` rows, for a caller that applies an
+# instrument's rows itself (a handoff re-send, segment 23F rung 7b).
+from app.services.session_config_io._apply_shared import (
+    _InstrumentSpec as InstrumentSpec,
+)
+
 # ``_ParseError`` / ``_parse_group_kind`` are re-exported for the
 # unit test that exercises the group-kind cell parser directly.
 from app.services.session_config_io._apply_shared import (
@@ -59,6 +65,9 @@ from app.services.session_config_io._apply_shared import (
 )
 from app.services.session_config_io._apply_shared import (
     _ParseError as _ParseError,
+)
+from app.services.session_config_io._apply_shared import (
+    _ResponseFieldSpec as ResponseFieldSpec,
 )
 from app.services.session_config_io._rows import HEADER, Row
 from app.services.session_config_io._serialize import serialize_session_config
@@ -95,7 +104,9 @@ __all__ = [
     "ApplyError",
     "ApplyResult",
     "HEADER",
+    "InstrumentSpec",
     "InstrumentsWouldDelete",
+    "ResponseFieldSpec",
     "Row",
     "SessionSettings",
     "apply_session_config",

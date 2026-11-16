@@ -48,6 +48,7 @@ from app.services import (
     handoffs,
     held_uploads,
     linked_apps,
+    linked_instruments,
     linked_settings,
     operator_settings,
     scheduled_events,
@@ -1791,11 +1792,21 @@ async def update_handoff_session(
             return _handoff_error("session_code_conflict", status.HTTP_409_CONFLICT)
     correlation_id = request_correlation_id()
 
+    # A linked instrument's display fields are the operator's from the
+    # create on: read under the lock, before the reviewee save seeds more.
+    shown: set[tuple[str, str]] = set()
+
+    def guard() -> None:
+        handoffs.guard_update(db, user, review_session, bundle)
+        if linked_apps.locks(review_session, linked_apps.Lock.INSTRUMENT_STRUCTURE):
+            shown.update(linked_instruments.display_sources(db, review_session))
+
     def record() -> None:
         if settings is not None:
             linked_settings.apply(
                 db, review_session, settings, user=user, correlation_id=correlation_id
             )
+        linked_instruments.keep_display_fields(db, review_session, shown, actor=user)
         handoffs.record_updated(db, review_session, user, bundle, correlation_id)
 
     try:
@@ -1815,7 +1826,7 @@ async def update_handoff_session(
             # duplicate nor an Unlink or activation since the checks above
             # is overwritten; and the settings and the record commit with
             # the rosters, so a retry finds the whole re-send or none of it.
-            unit_guard=lambda: handoffs.guard_update(db, user, review_session, bundle),
+            unit_guard=guard,
             unit_record=record,
         )
     except sessions.SessionCodeTakenError:

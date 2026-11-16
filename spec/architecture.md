@@ -1168,6 +1168,7 @@ canonical "no payload" marker.
 | `session.updated` | `changes` | `{"session_id": 17, "session_code": "CS101", "changes": {"name": ["Spring", "Spring v2"]}}` |
 | `session.deleted` | `snapshot` (no top-level identity) | `{"snapshot": {"id": 17, "code": "CS101", "name": "Final Review"}}` |
 | `session.invalidated` | `reason` (no payload) | `{"session_id": 17, "session_code": "CS101", "reason": "reviewer_created"}` |
+| `instrument.renamed` | `changes` + `refs` | `{"session_id": 17, "session_code": "GATE-2", "refs": {"instrument_id": 7}, "changes": {"name": ["Gate 1", "Gate 2: Interviews"]}}`; written when a linked application's re-send renames its instrument (segment 23F rung 7b) |
 | `instrument.band1_links_set` | `changes` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "changes": {"band1_touched_links": [["link1"], ["link1", "link2"]]}}`; a change to which Links are set also reverts a validated session to draft |
 | `instrument.closed` | `reason` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "reason": "deadline", "context": {"deadline": "2026-06-01T00:00:00+00:00"}}` |
 | `assignments.generated` | `counts` + `context` + `refs` | `{"session_id": 17, "session_code": "CS101", "refs": {"instrument_id": 7}, "counts": {"new": 104, "deleted": 0, "kept": 0, "responses_deleted": 0, "pairs": 104, "instruments": 1}, "context": {"mode": "rule_based"}}` |

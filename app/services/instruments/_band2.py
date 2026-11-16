@@ -420,6 +420,7 @@ def _record_response_field_changes(
     before: dict[int, dict[str, Any]],
     after: dict[int, dict[str, Any]],
     actor: User,
+    include_branches: bool = False,
 ) -> None:
     """The card's Save rewrites response fields through
     ``_sync_response_fields_to_db``, so the edit, not the request,
@@ -429,7 +430,9 @@ def _record_response_field_changes(
     does neither. Order is compared as a rank among the fields both
     sides hold, as ``bulk_save_fields`` does, since the sync renumbers
     a seeded 1, 2 to 0, 1. A branch edit un-validates here but is left
-    out of the event: ``_apply_branch_rules`` audits it per field."""
+    out of the event: ``_apply_branch_rules`` audits it per field. A caller
+    that has no such pass (a linked re-send, ``replace_response_fields``)
+    sets ``include_branches`` and the branch attributes ride the event."""
     added = [
         {"field_key": after[i]["field_key"], "label": after[i]["label"]}
         for i in after.keys() - before.keys()
@@ -447,7 +450,7 @@ def _record_response_field_changes(
         for attr in _RESPONSE_FIELD_ATTRS:
             if before[i][attr] == after[i][attr]:
                 continue
-            if attr in _BRANCH_ATTRS:
+            if attr in _BRANCH_ATTRS and not include_branches:
                 branch_changed = True
             else:
                 changes[attr.lstrip("_")] = [before[i][attr], after[i][attr]]
@@ -613,6 +616,32 @@ def _validate_response_field_shape(rf: dict[str, Any]) -> str | None:
             return "List options must include at least one entry."
         return None
     return None
+
+
+def response_field_shape_error(
+    data_type: str | None,
+    min_: float | None,
+    max_: float | None,
+    step: float | None,
+    list_csv: str | None,
+) -> str | None:
+    """The card's authoring-shape rule (``_validate_response_field_shape``)
+    for a field defined outside the card: a linked re-send's rows (segment
+    23F rung 7b, Codex on #3926). ``data_type`` is the inline label
+    (``Integer``, ``Decimal``, ``String``, ``List``)."""
+
+    def text(value: float | None) -> str:
+        return "" if value is None else str(value)
+
+    return _validate_response_field_shape(
+        {
+            "data_type": (data_type or "string").strip().lower(),
+            "min": text(min_),
+            "max": text(max_),
+            "step": text(step),
+            "list_options": list_csv or "",
+        }
+    )
 
 
 def _band2_unique_field_key(name: str, used_keys: set[str], existing_key: str | None = None) -> str:
@@ -1141,3 +1170,85 @@ def _sync_display_field_visibility(
             visible=desired,
             actor=actor,
         )
+
+
+def replace_response_fields(
+    db: Session,
+    *,
+    instrument: Instrument,
+    fields: list[dict[str, Any]],
+    actor: User,
+) -> None:
+    """Replace the instrument's response fields with ``fields``, in their
+    order, matched to the stored ones by ``field_key`` (segment 23F rung
+    7b: a linked application's re-send, whose keys its results are read
+    back by). A matched field keeps its id, so its column width; a
+    stored field the list does not name is deleted, its width with it;
+    every field is left unbranched, since branching is not the
+    application's to send. Each entry carries ``field_key``, ``label``,
+    ``response_type``, ``data_type``, ``min``, ``max``, ``step``,
+    ``list_csv``, ``required``, ``help_text``, ``help_text_visible`` and
+    ``visible``, checked by the caller (the Settings import's row
+    checks). Audited and un-validating as the card's Save is
+    (``instrument.response_fields_saved``), and only flushes, for the
+    caller's unit. Refuses a field holding responses
+    (:class:`ResponsesPresentError`)."""
+    from app.services.instruments._response_fields import (
+        ResponsesPresentError,
+        validation_block_from_inline,
+    )
+
+    lifecycle.require_editable(db, instrument.session)
+    before = _response_field_snapshot(instrument)
+    stored = {f.field_key: f for f in instrument.response_fields}
+    wanted = {str(entry["field_key"]) for entry in fields}
+    widths = dict(instrument.column_widths or {})
+    for key, field in stored.items():
+        if key in wanted:
+            continue
+        count = _response_count_for_field(db, field.id)
+        if count > 0:
+            raise ResponsesPresentError(count)
+        widths.pop(f"rf_{field.id}", None)
+        db.delete(field)
+    for field in instrument.response_fields:
+        field.branch_parent_id = None
+        field.branch_op = None
+        field.branch_value = None
+        field.branch_mode = None
+    db.flush()
+    for order, entry in enumerate(fields):
+        key = str(entry["field_key"])
+        field = stored.get(key) if key in wanted else None
+        if field is None:
+            field = InstrumentResponseField(instrument_id=instrument.id, field_key=key)
+            db.add(field)
+        field.label = str(entry["label"])
+        field.order = order
+        field.required = bool(entry["required"])
+        field.visible = bool(entry["visible"])
+        field.help_text = entry["help_text"]
+        field.help_text_visible = bool(entry["help_text_visible"])
+        field._inline_response_type = entry["response_type"]
+        field._inline_data_type = entry["data_type"]
+        field._inline_min = entry["min"]
+        field._inline_max = entry["max"]
+        field._inline_step = entry["step"]
+        field._inline_list_csv = entry["list_csv"]
+        field.validation = validation_block_from_inline(
+            entry["data_type"], entry["min"], entry["max"], entry["step"], entry["list_csv"]
+        )
+    if widths != (instrument.column_widths or {}):
+        instrument.column_widths = widths or None
+    db.flush()
+    db.refresh(instrument, ["response_fields"])
+    # No ``_apply_branch_rules`` runs here to audit a cleared branch, so
+    # the branch attributes ride this event (Codex on #3926).
+    _record_response_field_changes(
+        db,
+        instrument=instrument,
+        before=before,
+        after=_response_field_snapshot(instrument),
+        actor=actor,
+        include_branches=True,
+    )

@@ -535,7 +535,9 @@ instrument, and the create fixes its rule — Link 1 *All*, Link 2
 `pair_context.tag1 IS FILLED` (assign where a relationship exists),
 Link 3 *Individual*, every link marked set — and starts its display
 fields at the fixed pair and the dossier link (`ProfileLink`), through
-`app/services/linked_instruments.py`.
+`app/services/linked_instruments.py`. A re-send writes its name (the
+short label following it), description and response fields, matched by
+`field_key` (rung 7b, `spec/handoffs.md`).
 
 | Column | Link (operator label) | Vocabulary |
 |---|---|---|

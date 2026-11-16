@@ -13,6 +13,7 @@ are written, not filled only when blank as the import fills them.
 from __future__ import annotations
 
 import csv
+import dataclasses
 import io
 import re
 from datetime import datetime
@@ -22,8 +23,14 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
-from app.services import operator_settings, scheduled_events, session_tags, sessions
-from app.services.linked_apps import LinkedProfile
+from app.services import (
+    linked_instruments,
+    operator_settings,
+    scheduled_events,
+    session_tags,
+    sessions,
+)
+from app.services.linked_apps import LinkedProfile, Lock
 from app.services.session_config_io import (
     HEADER,
     Row,
@@ -71,6 +78,8 @@ def is_owned(profile: LinkedProfile, field: str) -> bool:
     """Whether a Settings field path is the linked application's."""
     if field in profile.owned_settings:
         return True
+    if profile.has(Lock.INSTRUMENT_STRUCTURE) and linked_instruments.owns_row(field):
+        return True
     return TAGS in profile.owned_settings and _TAG_ROW.match(field) is not None
 
 
@@ -112,6 +121,14 @@ def prepare(
     settings, errors = parse_session_settings(rows)
     if errors:
         raise SettingsRefused([f"{error.field}: {error.message}" for error in errors])
+    if settings.instrument is not None:
+        try:
+            linked_instruments.the_instrument(db, review_session)
+        except linked_instruments.NotOneInstrument as exc:
+            raise SettingsRefused([str(exc)]) from exc
+        problems = linked_instruments.row_errors(settings.instrument, settings.instrument_rows)
+        if problems:
+            raise SettingsRefused(problems)
     overrides = _normalized(settings.overrides)
     try:
         sessions.edit_payload(
@@ -129,7 +146,7 @@ def prepare(
             db, str(overrides["code"]), exclude_session_id=review_session.id
         )
     check_schedule(review_session, overrides)
-    return SessionSettings(overrides, settings.tags)
+    return dataclasses.replace(settings, overrides=overrides)
 
 
 def check_schedule(review_session: ReviewSession, overrides: dict[str, object]) -> None:
@@ -186,6 +203,10 @@ def apply(
             user=user,
             timezone_name=cast("str | None", overrides["display_timezone"]),
             correlation_id=correlation_id,
+        )
+    if settings.instrument is not None:
+        linked_instruments.apply_owned(
+            db, review_session, settings.instrument, settings.instrument_rows, actor=user
         )
     if settings.tags is not None:
         session_tags.set_tags(
