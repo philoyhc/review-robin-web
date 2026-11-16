@@ -125,7 +125,7 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 
 ## Status (closed 2026-11-16)
 
-**Intended vs done.** The re-send and the locks shipped as amended, in rungs 2 to 7k (#3918 to #3936) and the close. The ladder became:
+**Intended vs done.** The re-send and the locks shipped as amended, in PRs #3917 to #3938 (rungs 2 to 7k, two plan PRs and the close). The ladder became:
 - **2** the re-send of rosters (`POST /operator/handoffs/{transfer_id}/update`), with one refusal the plan did not name: `409 session_has_responses` (a reverted draft can hold responses).
 - **2a** the switchboard: `linked_apps.Lock` (nine), per-profile locks and owned settings, one check `linked_apps.locks(session, lock)`; 23E's release and observers flags retired.
 - **3** the owned session rows, written directly in the save's unit rather than merged into the export and imported (the import rebuilds every instrument and would move the ordinals Apply Desk reads back by).
@@ -135,7 +135,7 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 - **Close**: `spec/linked_sessions.md`, by lock so another application is a profile entry (author), with `tests/unit/test_linked_sessions_spec.py`.
 
 **Decisions confirmed at build.**
-- Locks are refused at routes or route dependencies, not in services: the handoff's own create and re-send run the same pipeline (Definition of done amended).
+- 23F's locks are refused at routes or route dependencies, not in services: the handoff's own create and re-send run the same pipeline (Definition of done amended). 23E's `release` and `observers` stay guarded in their services as well.
 - The card's Save ignores owned inputs rather than refusing, since the page posts every band at once.
 - A linked instrument's fields stay unbranched; branching from the application is later (Out of scope).
 - Tags and display identity are Apply Desk's: `applydesk`; a confidential gate sends "Name redacted" and the Dossier ID.

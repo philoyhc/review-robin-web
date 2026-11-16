@@ -49,15 +49,21 @@ and a later re-send is `404 not_linked`.
   `not_owned`). They are written directly (`linked_settings`), not
   through the Settings import. A profile that takes `instrument_structure`
   also owns the instrument rows of that section.
-- **Locks are refused at routes, not in services.** The handoff's own
-  create and re-send run the same Quick Setup pipeline as the operator's
-  uploads, so a service-level refusal would block them. A route gate
-  answers `409` with `linked_apps.off_message` (*"{what} is off: this
-  session is linked to {application}."*): the dependencies
-  `require_rosters_open_session` (and its two siblings),
-  `require_email_open_session`, `require_invitation_send_open_session`,
-  and the helpers `refuse_locked` and `refuse_linked_structure`, all in
-  `app/web/routes_operator/_shared.py`.
+- **Where locks are refused.** 23F's locks are refused at routes, not in
+  services: the handoff's own create and re-send run the same Quick Setup
+  pipeline as the operator's uploads, so a service-level refusal would
+  block them. Most route gates answer `409` with
+  `linked_apps.off_message` (*"{what} is off: this session is linked to
+  {application}."*), through the dependencies and helpers in
+  `app/web/routes_operator/_shared.py` (`require_rosters_open_session`
+  and its siblings, `require_email_open_session`,
+  `require_invitation_send_open_session`, `refuse_locked`,
+  `refuse_linked_structure`) and checks inline in a few routes (Quick
+  Setup, the Settings import, Session details, the lobby, the Workflow
+  card). 23E's `release` and `observers` are also guarded in their
+  services (`session_lifecycle`, `sessions`, the Settings import's parse,
+  `handoffs.check_linked`), and some of those answer `422` or redirect
+  with an error; each lock's section says which.
 
 ## The locks
 
@@ -220,8 +226,6 @@ Which instruments exist and their owned parts (`spec/instruments.md`
   file, so a profile without it accepts one.
 
 ## Profiles
-
-Both applications take every lock and own `SESSION_FIELDS`.
 
 | Application (`source_app`) | Name shown | Locks | Owned settings |
 |---|---|---|---|
