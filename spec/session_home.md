@@ -468,6 +468,11 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   right. On a linked session **Release responses from / until** show
   "Off: see in {application}" in both modes and render no input, and
   the status row adds a `Linked: {application}` pill.
+- **The Linked application card** (`#linked-app-card`, segment 23F rung
+  5a), only on a linked session: half width, in the bottom-left column
+  under Quick Setup, saying what the link means and holding an
+  **Unlink** (`.btn.alert`), inert until rung 5b wires it and moves it
+  there from Session details.
 - **Rosters** (`#config-symmetric-review`, a `role="group"` labeled
   "Rosters") — one chip, **Symmetric review** (`symmetric_review`), in
   the same chip style: the Reviewers roster is also the Reviewees roster
