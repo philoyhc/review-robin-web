@@ -1052,7 +1052,13 @@ def render_session_home(
             "config_editing": (
                 editing
                 and (lifecycle.is_draft(review_session) or lifecycle.is_validated(review_session))
+                and not linked_apps.locks(review_session, linked_apps.Lock.SESSION_DETAILS)
             ),
+            # Segment 23F — a linked application's session details are its
+            # own: the card never unlocks, and Quick Setup gives way to the
+            # Linked application card.
+            "details_locked": linked_apps.locks(review_session, linked_apps.Lock.SESSION_DETAILS),
+            "quick_setup_locked": linked_apps.locks(review_session, linked_apps.Lock.QUICK_SETUP),
             "timezone_options": operator_settings.timezone_options(),
             "current_session_timezone": session_tz,
             "has_relationships": sessions_service._has_relationships(db, review_session.id),

@@ -15,6 +15,7 @@ from app.config import settings
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import (
+    linked_apps,
     scheduled_events,
     session_clone,
     session_guard,
@@ -160,6 +161,10 @@ def sessions_bulk_tags(
         review_session = sessions.get_for_user(db, user, session_id)
         if review_session is None:
             continue
+        # A linked application's tags are its own (segment 23F): skipped,
+        # as a session the operator cannot reach is.
+        if linked_apps.locks(review_session, linked_apps.Lock.SESSION_DETAILS):
+            continue
         for raw in raw_tags:
             try:
                 if op == "add":
@@ -276,6 +281,13 @@ def lobby_edit_submit(
     stale post can't slip past that gate. No change here demotes a
     ``validated`` session (findings Cc5, ``sessions.update_session``).
     """
+    # A linked application's name, code, End and tags are its own
+    # (segment 23F): the expander shows them read-only.
+    if linked_apps.locks(review_session, linked_apps.Lock.SESSION_DETAILS):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=linked_apps.off_message(review_session, "Editing the session details"),
+        )
     correlation_id = request_correlation_id()
     # The whole save runs under the session lock the scheduled-event
     # observers take, re-reading the row first (findings Bc3). Tags take

@@ -206,6 +206,13 @@ def _apply_session_config_form(
     # before the schedule is written. Editing session metadata touches
     # only scalar ``sessions`` columns.
     lifecycle.require_editable(db, review_session)
+    # A linked application's session details are its own (segment 23F):
+    # the card never unlocks, so a post here was not made on this page.
+    if linked_apps.locks(review_session, linked_apps.Lock.SESSION_DETAILS):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=linked_apps.off_message(review_session, "Editing the session details"),
+        )
 
     # A code another session holds is refused before anything is
     # written, rather than reaching the unique constraint as a 500.

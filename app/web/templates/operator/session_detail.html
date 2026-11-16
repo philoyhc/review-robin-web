@@ -266,26 +266,15 @@
           </div>
         </div>
         {# Segment 23E — the application the session is linked to: one
-           chip, on. Locked it only shows; unlocked, a click asks, then
-           unlinks (the session becomes native). Only a handoff links. #}
+           chip, on, shown only. Unlink is the Linked application card's
+           (segment 23F); only a handoff links. #}
         {% if linked %}
         <div id="config-linked-app" class="config-field-gap" role="group"
              aria-labelledby="config-linked-app-heading" data-linked-app="{{ session.linked_app }}">
           <label id="config-linked-app-heading">Session is linked with</label>
-          <div data-display-only>
-            <div class="col-chip-row">
-              <span class="pill pill-count tag-chip is-locked is-selected"
-                    role="checkbox" aria-checked="true" aria-disabled="true">{{ linked.name }}</span>
-            </div>
-          </div>
-          <div data-edit-only>
-            <form method="post" class="col-chip-row"
-                  action="{{ url('/operator/sessions/' ~ session.public_id ~ '/unlink') }}"
-                  onsubmit="return window.confirm('Unlink from {{ linked.name }}? Review Robin\'s own release and observers come back, and results are no longer left to {{ linked.shows_results }}. Only a new handoff links a session.');">
-              <button type="submit" class="pill pill-count tag-chip is-selected"
-                      aria-pressed="true" title="Unlink: the session becomes native">{{ linked.name }}</button>
-            </form>
-            <p class="form-help">Click to unlink: the session becomes native.</p>
+          <div class="col-chip-row">
+            <span class="pill pill-count tag-chip is-locked is-selected"
+                  role="checkbox" aria-checked="true" aria-disabled="true">{{ linked.name }}</span>
           </div>
         </div>
         {% endif %}
@@ -462,7 +451,11 @@
              onclick="return sessionConfig.cancel(this);">Cancel</a>
           {# Home's own path, not ``here()``: a refused Quick
              Setup upload renders this page at its POST's URL (O7). #}
-          {% if is_draft or is_validated %}
+          {% if details_locked %}
+            {# Segment 23F — the linked application's details: never unlocked. #}
+            <a class="btn secondary" data-config-lock-toggle aria-disabled="true" data-details-locked
+               title="Set by {{ linked.name }}. Unlink the session to edit its details here.">Unlock</a>
+          {% elif is_draft or is_validated %}
             <a class="btn secondary" data-config-lock-toggle
                href="{{ url('/operator/sessions/' ~ session.public_id) }}{% if not config_editing %}?editing=1{% endif %}#session-config"
                onclick="return sessionConfig.toggle(this);">{{ 'Lock' if config_editing else 'Unlock' }}</a>
@@ -611,8 +604,12 @@
       {# 18R Item 4 Slice 1 — Quick Setup relocated to the bottom of
          the left column ("bottom left"). A distinct card, greyed
          only when unavailable; its redirects land on Home. #}
-      {% include "operator/partials/_quick_setup_card.html" %}
-      {# Segment 23F rung 5a — the Linked application card (scaffold). #}
+      {# Segment 23F — a linked session's rosters and set-up come from its
+         application: the Linked application card holds Unlink, in Quick
+         Setup's place when the application takes Quick Setup. #}
+      {% if not quick_setup_locked %}
+        {% include "operator/partials/_quick_setup_card.html" %}
+      {% endif %}
       {% if linked %}
         {% include "operator/partials/_linked_app_card.html" %}
       {% endif %}
