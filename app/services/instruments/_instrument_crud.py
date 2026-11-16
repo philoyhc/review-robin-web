@@ -297,15 +297,34 @@ def repair_display_fields(db: Session, review_session: ReviewSession) -> bool:
         seed_display_fields_from_assignments(db, review_session)
     else:
         # Rung 7k: the relationship's tag is never shown there, so a row an
-        # earlier Prepare seeded (shown) is switched off.
+        # earlier Prepare seeded (shown) is switched off, audited as the
+        # operator's own hide is (Codex on #3936), with no actor: the
+        # repair, not a person, made the change.
         for field in db.scalars(
             select(InstrumentDisplayField)
             .join(Instrument, Instrument.id == InstrumentDisplayField.instrument_id)
             .where(Instrument.session_id == review_session.id)
             .where(InstrumentDisplayField.source_type == "pair_context")
             .where(InstrumentDisplayField.visible.is_(True))
-        ):
+        ).all():
             field.visible = False
+            audit.write_event(
+                db,
+                event_type="instrument.display_field_updated",
+                summary=(
+                    f"Hid display field {field.source_type}.{field.source_field} "
+                    f"on instrument {_instrument_label(field.instrument)}: "
+                    "the linked application's relationship tag is never shown"
+                ),
+                actor_user_id=None,
+                session=review_session,
+                payload=audit.changes({"visible": [True, False]}),
+                refs={"instrument_id": field.instrument_id, "display_field_id": field.id},
+                context={
+                    "source_type": field.source_type,
+                    "source_field": field.source_field,
+                },
+            )
     db.commit()
     return True
 

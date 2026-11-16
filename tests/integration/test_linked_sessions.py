@@ -909,6 +909,12 @@ def test_an_existing_relationship_tag_row_is_held_off(client: TestClient, db: Se
         select(InstrumentDisplayField).where(InstrumentDisplayField.source_type == "pair_context")
     ).one()
     assert not pair.visible
+    # Audited, as an operator's hide is (Codex on #3936).
+    hid = db.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == "instrument.display_field_updated")
+    ).one()
+    assert hid.actor_user_id is None and hid.detail is not None
+    assert hid.detail["changes"] == {"visible": [True, False]}
     url = f"{_base(review_session)}/{instrument.id}/display-fields/{pair.id}/edit"
     assert client.post(url, data={"visible": "true"}).status_code == 409
     # The hold strips a relationship tag's key, padded or not, from a save.
