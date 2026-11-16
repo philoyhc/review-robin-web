@@ -92,16 +92,11 @@ class LinkedProfile:
 #: Every application a session may link to, by the ``source_app`` its
 #: handoff sends. Apply Desk takes every lock. Utilities' interop proof of
 #: concept links as Apply Desk will, so the profile can be tried before
-#: Apply Desk sends (author, 2026-11-15), but keeps Review Robin's email
-#: on (author, 2026-11-16), so a second profile proves the switchboard.
+#: Apply Desk sends (author, 2026-11-15), email included (author,
+#: 2026-11-16, rung 7j: it had kept Review Robin's email on).
 LINKED_APPS: dict[str, LinkedProfile] = {
     "applydesk": LinkedProfile("applydesk", "Apply Desk", "Apply Desk"),
-    "utilities": LinkedProfile(
-        "utilities",
-        "Utilities",
-        "Utilities",
-        locks=frozenset(Lock) - {Lock.EMAIL, Lock.INVITATION_SEND},
-    ),
+    "utilities": LinkedProfile("utilities", "Utilities", "Utilities"),
 }
 
 

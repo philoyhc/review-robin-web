@@ -543,7 +543,9 @@ active tab is selected by `?email=<kind>`; sibling links retain the reviewer
 detail URL and end in `#email-previews`, so changing tabs returns to the
 region rather than the top of the page. Each tab uses the same renderer as
 its eventual send path, with a placeholder invitation URL where previewing
-must not mint or rotate a real token.
+must not mint or rotate a real token. On a session whose linked application
+takes the email lock the region is not rendered: Review Robin sends that
+session no email (segment 23F rung 7j).
 
 ### Empty-state copy
 

@@ -125,7 +125,8 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   (`relationships_enabled`, segment 23F): its application sends the pairs.
   A profile is a set of named locks (`linked_apps.Lock`) and the settings
   fields it owns (segment 23F rung 2a): Apply Desk takes every lock;
-  Utilities keeps Review Robin's email on. Profiles are code, never data
+  Utilities' proof of concept takes every lock too (rung 7j; it had kept
+  Review Robin's email on). Profiles are code, never data
   a bundle can set.
   Under the instrument lock the create's files must make one instrument
   (else `422 invalid_setup`, `slot` `settings`, `reason` `one_instrument`);
