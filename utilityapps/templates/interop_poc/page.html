@@ -362,8 +362,11 @@
                 detail.replaceChildren.apply(detail, nodes);
               }, function () { return refusal(reply).then(function (why) { unavailable("Re-send: " + item.session_code, why); }); });
             }
-            delete pendingResend[item.transfer_id];
+            // Forget the transfer only once its receipt is read: a reply cut
+            // off mid-body leaves it applied, and a retry under the same id
+            // answers already_updated rather than replacing again (Codex).
             return reply.json().then(function (body) {
+              delete pendingResend[item.transfer_id];
               detail.replaceChildren(el("h3", "Re-send: " + item.session_code), el("p", (body.status === "already_updated" ? "Already updated: " : "Updated: ") + body.session_code + ". Refresh status to see the rosters it now holds.", "note"));
             });
           }).catch(function () {

@@ -6,6 +6,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -172,4 +173,8 @@ def test_each_sent_session_can_be_re_sent(client: TestClient) -> None:
     assert '<th scope="col">Re-send</th>' in text and 'ask(item, "update"' in text
     # A re-send that never answered keeps its transfer, so a retry applies once.
     assert "pendingResend[item.transfer_id] || crypto.randomUUID()" in text
+    # ...and a success forgets it only once the receipt is read (Codex on #3921).
+    assert re.search(
+        r"return reply\.json\(\)\.then\(function \(body\) \{\s*delete pendingResend", text
+    )
     assert "session_opened:" in text and "session_has_responses:" in text
