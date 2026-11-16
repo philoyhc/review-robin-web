@@ -125,6 +125,7 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 
 ## Status
 
+- **Switchboard added 2026-11-16** (rung 2a): named locks per profile, so another application with different needs is a profile entry. Utilities keeps email on.
 - **Instruments decided 2026-11-16** (above): one per gate, the rule fixed by Review Robin, fields and their order Apply Desk's, presentation Review Robin's; rung 7 re-cut.
 - **Amended 2026-11-16** by the author's lock list (above): locks for as long as linked, more session fields owned, email off, Quick Setup hidden, a Linked application card; instruments wait for the assignment model. Rung 3's first build (owned settings incl. instruments) is held unpushed and will be re-cut to the session rows.
 - **Rung 2** (2026-11-15): the re-send of rosters, at `POST /operator/handoffs/{transfer_id}/update`. One refusal the plan did not name: a draft holding responses (`409 session_has_responses`), since a session reverted to draft (unopened again, author) can hold them and a roster replace would discard them.
@@ -133,6 +134,14 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 
 1. **Plan** (this file), its README row, the queue entry replacing item 3.
 2. **The re-send: rosters.** The operation, route, service, replay, refusals, audit (`EVENT_SCHEMAS`); `spec/handoffs.md`. Settings refused on a re-send until rung 3. Tests.
+2a. **The switchboard** (author, 2026-11-16; before rung 3, so every later lock uses it):
+   - A profile's switches become a set of named locks, `LinkedProfile.locks: frozenset[Lock]`, from a fixed menu. It covers 23E's release and observers plus 23F's.
+   - One check at every gate: `linked_apps.locks(session, Lock.X)`.
+   - Each profile lists the settings fields it owns, which is what a re-send accepts.
+   - Profiles stay in code, never in the database or the bundle.
+   - Apply Desk's profile takes every lock. Utilities' keeps email on (no email or invitation-send locks), so a second profile proves the generality.
+   - Policies particular to Apply Desk (the fixed rule, the display default, one instrument per gate) stay its profile's until a second application needs them.
+   - No behavior change for Apply Desk. Tests.
 3. ~~**The re-send: settings.**~~ Re-cut by the amendment: **the re-send: session settings** — the owned session rows (name, code, description, timezone, help contact, tags, Start, End, relationships switch) merged into the draft's export and imported; code conflicts refused. Instrument rows wait for the assignment model. Tests.
 4. **The proof of concept re-sends.** Utilities' page sends changed rosters and session settings to its linked draft. Tests.
 5. ~~**The locks: rosters and session.**~~ Re-cut: **the Linked application card and the session locks** — the card with Unlink; Quick Setup hidden; Session details never unlocked; the lobby's inline edit and bulk tags refused; the Settings import refused. Each refused in its service. Tests.
