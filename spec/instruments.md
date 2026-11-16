@@ -550,7 +550,9 @@ chip with the lock glyph and every other control takes the inactive look
 (rung 7h). Whether each field is required is the application's too. The
 dossier link's display field is held as it stands (its chip locked, as the
 fixed pair's: both Band 2 saves keep it, `linked_instruments.hold_profile`,
-and the per-field display routes refuse it, `409`). The card's Save writes the
+and the per-field display routes refuse it, `409`). The relationship's tags
+are never display fields there: Prepare seeds none, and an existing row is
+held off the same way (rung 7k). The card's Save writes the
 rest (the other display fields, layouts, widths, sort, visibility) and
 leaves the owned parts as they are; the routes that change only owned parts (add, replicate,
 delete, page break, the field rows, identity) are `409`.
@@ -1005,7 +1007,9 @@ Top-of-band intro card carrying:
   policy the short label is **edited from the card title** in the
   `<summary>` above (`Setup → Instruments` card), not from this
   preview surface.
-- **Description** — a lock-driven view/edit swap: a read-only
+- **Description** — a lock-driven view/edit swap (on a linked instrument
+  the paragraph only, locked or not: the application's text, segment 23F
+  rung 7k): a read-only
   paragraph when the card is locked (`data-intro-description-view`),
   the reviewer's subtitle spaced as the surface spaces it and hidden
   when the heading has none, so no blank line;

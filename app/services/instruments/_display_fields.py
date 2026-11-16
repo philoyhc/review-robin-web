@@ -626,7 +626,15 @@ def seed_display_fields_from_assignments(db: Session, review_session: ReviewSess
     the session, idempotently adds an ``InstrumentDisplayField`` row
     for each populated slot. Returns the total number of new
     display-field rows created.
+
+    None on a linked instrument (segment 23F rung 7k, author 2026-11-16):
+    the relationship's tag is how the application pairs its reviewers,
+    never a column a reviewer sees.
     """
+    from app.services import linked_apps
+
+    if linked_apps.locks(review_session, linked_apps.Lock.INSTRUMENT_STRUCTURE):
+        return 0
     pair_present = {1: False, 2: False, 3: False}
     for slot in (1, 2, 3):
         col = getattr(Relationship, f"tag_{slot}")
