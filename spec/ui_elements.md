@@ -870,10 +870,14 @@ fill only while its box is ticked, so a switch fixed off stays the off
 chip, with the glyph. A `<label>` chip whose box is disabled is fixed
 too, read off the box (`label.tag-chip:has(> input:disabled)`), so a
 script that disables or re-enables the box needs no class in step: the
-display-field table's Name and Email chips, on a group-scoped
+display-field table's Name and Email chips (and Profile on a linked
+instrument), on a group-scoped
 instrument the fields a group row can't show (`spec/instruments.md`
 "Display-field table"), and a response field whose branch parent is
-hidden ("Response fields"). It is per item: a card's locked view stays
+hidden ("Response fields"). Every chip inside a linked instrument's
+fixed region (`[data-linked-fixed]`: Band 1's rule chips, the
+response-field chips) is fixed too, read off the region, beside the
+region's other controls taking the inactive look (segment 23F rung 7h). It is per item: a card's locked view stays
 `is-locked`, or on a locked Instruments card the plain pill (above). Its other use is the Instruments
 Visibility card's cells whose mode isn't the operator's to choose
 (`spec/instruments.md` "Visibility card"), and the Assignments page's

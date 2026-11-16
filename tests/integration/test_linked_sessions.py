@@ -752,3 +752,44 @@ def test_the_page_shows_profile_held_and_the_structure_fixed(
     row = page.split('data-source-field="profile_link"')[1].split("</tr>")[0]
     assert 'data-held="true"' in row and "disabled" in row and "Set by Utilities" in row
     assert "box.disabled = locked || off || row.getAttribute('data-held') === 'true';" in page
+
+
+@pytest.mark.parametrize("action", ["edit", "delete", "add"])
+def test_the_per_field_routes_refuse_the_dossier_link(
+    client: TestClient, db: Session, action: str
+) -> None:
+    """The per-field display routes cannot hide, remove or re-add Profile
+    on a linked instrument (the cold read of 23F rung 7h)."""
+    from utilityapps.interop_poc import mock
+
+    people = mock.reviewers("Admin", "admin@example.edu")
+    review_session, _ = _created(client, db, files=mock.bundle(people)["files"])
+    instrument = db.scalars(select(Instrument)).one()
+    profile = next(f for f in instrument.display_fields if f.source_field == "profile_link")
+    base = f"{_base(review_session)}/{instrument.id}/display-fields"
+    if action == "add":
+        reply = client.post(base, data={"source_pair": "reviewee:profile_link"})
+    else:
+        reply = client.post(f"{base}/{profile.id}/{action}", data={})
+    assert reply.status_code == 409, reply.text
+    assert _profile_shown(db)
+
+
+def test_a_crafted_tick_shows_no_hidden_dossier_link(client: TestClient, db: Session) -> None:
+    """The hold works both ways: a Save cannot tick a hidden Profile on."""
+    from utilityapps.interop_poc import mock
+
+    people = mock.reviewers("Admin", "admin@example.edu")
+    review_session, _ = _created(client, db, files=mock.bundle(people)["files"])
+    instrument = db.scalars(select(Instrument)).one()
+    for field in instrument.display_fields:
+        if field.source_field == "profile_link":
+            field.visible = False
+    db.commit()
+    keys = ["reviewee.name", "reviewee.email_or_identifier", "reviewee.profile_link"]
+    reply = client.post(
+        f"{_base(review_session)}/{instrument.id}/band2-state",
+        json={"selected_display_keys": keys},
+    )
+    assert reply.status_code == 200, reply.text
+    assert not _profile_shown(db)

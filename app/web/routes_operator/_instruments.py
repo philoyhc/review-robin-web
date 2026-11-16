@@ -381,6 +381,9 @@ def instrument_add_display_field(
             status_code=status.HTTP_303_SEE_OTHER,
         )
     source_type, source_field = source_pair.split(":", 1)
+    if (source_type, source_field) == linked_instruments.PROFILE_LINK:
+        # The dossier link is the linked application's (23F rung 7h).
+        refuse_linked_structure(review_session)
 
     try:
         instruments_service.add_display_field(
@@ -416,6 +419,8 @@ def instrument_edit_display_field(
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
     field = _require_display_field_in_instrument(df_id, instrument, db)
+    if (field.source_type, field.source_field) == linked_instruments.PROFILE_LINK:
+        refuse_linked_structure(review_session)  # 23F rung 7h: the application's
 
     # ``label`` form parameter retired in Segment 15A Slice 2 —
     # the per-instrument label override is no longer editable.
@@ -450,6 +455,8 @@ def instrument_delete_display_field(
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
     field = _require_display_field_in_instrument(df_id, instrument, db)
+    if (field.source_type, field.source_field) == linked_instruments.PROFILE_LINK:
+        refuse_linked_structure(review_session)  # 23F rung 7h: the application's
 
     try:
         instruments_service.delete_display_field(db, field=field, actor=user)
