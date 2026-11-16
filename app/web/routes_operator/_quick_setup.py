@@ -674,7 +674,7 @@ async def _run_quick_setup_contents(
         return _SlotRefusal("reviewees", _SlotFailure("symmetric_reviewees"))
     # Segment 23E — observers are off on a linked session: a roster for
     # them is refused, so an upload cannot turn them on.
-    if "observers" in contents and linked_apps.observers_off(review_session):
+    if "observers" in contents and linked_apps.locks(review_session, linked_apps.Lock.OBSERVERS):
         return _SlotRefusal("observers", _SlotFailure("observers_off"))
 
     # In the threadpool too: a Settings file with a short row is

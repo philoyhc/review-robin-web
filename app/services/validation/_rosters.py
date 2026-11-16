@@ -545,7 +545,7 @@ def _check_reviewees_unreachable_for_results(
 
     Not raised on a linked session (segment 23E): its application shows
     results, so no reviewee reaches the surface either way."""
-    if linked_apps.release_off(review_session):
+    if linked_apps.locks(review_session, linked_apps.Lock.RELEASE):
         return
     unreachable = [r for r in inputs.active_reviewees if not is_email_identified(r)]
     if not unreachable:

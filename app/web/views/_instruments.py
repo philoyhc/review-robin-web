@@ -1363,7 +1363,9 @@ def build_reviewer_visibility_rows(
         # Segment 23E — on a linked session the application shows
         # results: the after-the-window cell names it, whatever is stored.
         linked = linked_apps.profile_of(instrument.session)
-        released_in = linked.shows_results if linked and linked.release_off else None
+        released_in = (
+            linked.shows_results if linked and linked.has(linked_apps.Lock.RELEASE) else None
+        )
         rows: list[dict[str, str]] = []
         for audience, label in audiences:
             row = persisted.get(audience)

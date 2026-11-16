@@ -217,7 +217,11 @@ def check_linked(bundle: Bundle) -> None:
     rather than dropped unread. Checked after the replay lookup, so a
     transfer completed before 23E still answers ``already_created``."""
     profile = linked_apps.profile_for(bundle.source_app)
-    if profile is not None and profile.observers_off and "observers" in bundle.files:
+    if (
+        profile is not None
+        and profile.has(linked_apps.Lock.OBSERVERS)
+        and "observers" in bundle.files
+    ):
         raise HandoffError(
             "invalid_setup",
             422,

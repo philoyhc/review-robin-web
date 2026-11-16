@@ -192,7 +192,7 @@ def build_workflow_card_context(
     # responses are released *because the session is over*.
     # A linked session's application shows results in Review Robin's
     # place (segment 23E): neither release action is offered.
-    release_off = linked_apps.release_off(review_session)
+    release_off = linked_apps.locks(review_session, linked_apps.Lock.RELEASE)
     release_responses_visible = (
         is_expired and not is_archived and not response_release_window_open and not release_off
     )

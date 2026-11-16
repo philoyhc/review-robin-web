@@ -64,7 +64,24 @@ def test_an_unknown_source_app_links_nothing(client: TestClient, db: Session) ->
 def test_apply_desk_has_a_profile() -> None:
     profile = linked_apps.profile_for("applydesk")
     assert profile is not None and profile.name == "Apply Desk"
-    assert profile.release_off and profile.observers_off
+    assert profile.locks == frozenset(linked_apps.Lock)  # every lock
+
+
+def test_the_switchboard_lets_a_profile_differ(client: TestClient, db: Session) -> None:
+    """A profile is a set of named locks (23F rung 2a): Utilities keeps
+    Review Robin's email on; a native session takes no lock."""
+    review_session, _ = _created(client, db)
+    utilities = linked_apps.profile_for("utilities")
+    assert utilities is not None
+    assert utilities.locks == frozenset(linked_apps.Lock) - {
+        linked_apps.Lock.EMAIL,
+        linked_apps.Lock.INVITATION_SEND,
+    }
+    assert utilities.has("release") and not utilities.has("email")
+    assert linked_apps.locks(review_session, linked_apps.Lock.RELEASE)
+    assert not linked_apps.locks(review_session, linked_apps.Lock.EMAIL)
+    review_session.linked_app = None
+    assert not any(linked_apps.locks(review_session, lock) for lock in linked_apps.Lock)
 
 
 def test_session_home_shows_the_link_and_unlink_makes_it_native(

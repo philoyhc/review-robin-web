@@ -179,7 +179,9 @@ def is_response_release_window_open(
     results in Review Robin's place, so no after-release grant resolves,
     whatever the anchors say.
     """
-    if not is_expired(review_session) or linked_apps.release_off(review_session):
+    if not is_expired(review_session) or linked_apps.locks(
+        review_session, linked_apps.Lock.RELEASE
+    ):
         return False
     anchor = _as_utc(review_session.responses_release_at)
     if anchor is None:
@@ -772,7 +774,7 @@ def release_responses_now(
     session_guard.require_state(
         db,
         review_session,
-        lambda locked: not linked_apps.release_off(locked),
+        lambda locked: not linked_apps.locks(locked, linked_apps.Lock.RELEASE),
         code="linked",
         message=linked_apps.off_message(review_session, "Release"),
     )
@@ -830,7 +832,7 @@ def stop_responses_release(
     session_guard.require_state(
         db,
         review_session,
-        lambda locked: not linked_apps.release_off(locked),
+        lambda locked: not linked_apps.locks(locked, linked_apps.Lock.RELEASE),
         code="linked",
         message=linked_apps.off_message(review_session, "Release"),
     )

@@ -247,7 +247,7 @@
                        data-config-input form="config-save-{{ session.id }}"
                        {% if session.relationships_enabled %}checked{% endif %}
                        {% if has_relationships %}disabled{% endif %}>Relationships</label>
-              {% if linked and linked.observers_off %}
+              {% if linked and linked.has("observers") %}
               {# Segment 23E — observers are off on a linked session: the
                  chip shows, off, and cannot be turned on until Unlink. #}
               <span class="pill pill-count tag-chip is-locked" role="checkbox"
@@ -368,7 +368,7 @@
                  wrap_attrs={"data-edit-only": ""}, label="End") }}
           </div>
           <div>
-            {% if linked and linked.release_off %}
+            {% if linked and linked.has("release") %}
             {# Segment 23E — the linked application shows results: the
                release window is off, and the form sends no value. #}
             <label>Release responses from</label>
@@ -428,7 +428,7 @@
             <p class="form-help" id="reminder-offsets-help" data-edit-only>Offset from End, e.g., -P1D, -PT2H</p>
           </div>
           <div>
-            {% if linked and linked.release_off %}
+            {% if linked and linked.has("release") %}
             {# Segment 23E — the linked application shows results: the
                release window is off, and the form sends no value. #}
             <label>Release responses until</label>

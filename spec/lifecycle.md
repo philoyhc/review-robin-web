@@ -887,8 +887,8 @@ The "End" anchor (`deadline`) is also the anchor for the close at the
 review's end (§4), which is live, and with no End the review's end is
 Release-from (`session_lifecycle.review_end`).
 
-A session linked to another application (segment 23E,
-`linked_apps.release_off`) has no release window: the details card shows
+A session whose linked application takes the release lock (segment 23E,
+`linked_apps.locks(session, Lock.RELEASE)`) has no release window: the details card shows
 Release from / until as *Off*, its Save and the Settings import refuse a
 value, the Workflow card offers neither Release nor Stop release, and
 `is_response_release_window_open` is False. Unlink restores them.

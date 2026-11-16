@@ -553,7 +553,7 @@ def require_observer_in_session(
             break
     # Observers are off on a linked session (segment 23E): its roster
     # stays empty, and the gate holds even if a row were there.
-    if matched is None or linked_apps.observers_off(review_session):
+    if matched is None or linked_apps.locks(review_session, linked_apps.Lock.OBSERVERS):
         log.warning(
             "permission denied",
             extra={
