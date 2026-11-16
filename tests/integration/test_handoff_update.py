@@ -433,3 +433,24 @@ def test_the_schedule_is_rechecked_under_the_lock(
     assert _emails(db) == {"cal@example.edu"}
     assert review_session.scheduled_activate_at is not None
     assert review_session.scheduled_activate_at.day == 1
+
+
+def test_the_proof_of_concepts_re_send_updates_its_draft(client: TestClient, db: Session) -> None:
+    """Segment 23F rung 4: Utilities' re-send bundle, applied to a draft its
+    create made, drops a reviewer and an application and re-sends the
+    session settings it owns."""
+    people = mock.reviewers("Al Operator", "alice@example.edu")
+    suggestion = {"name": mock.EXERCISE, "code": "POC-RESEND"}  # the page adds a code
+    review_session, created = _created(
+        client, db, **{**mock.bundle(people), "session_suggestion": suggestion}
+    )
+    bundle = {**mock.resend_bundle(people), "transfer_id": str(uuid.uuid4())}
+    reply = _resend(client, created, bundle)
+    assert reply.status_code == 200, reply.text
+    db.expire_all()
+    assert mock.RESEND_DROPS_REVIEWER not in _emails(db)
+    assert mock.RESEND_DROPS_APPLICATION not in set(
+        db.scalars(select(Reviewee.email_or_identifier))
+    )
+    assert review_session.description == "Updated by a re-send from Utilities"
+    assert sorted(db.scalars(select(SessionTag.tag))) == ["interop-poc"]

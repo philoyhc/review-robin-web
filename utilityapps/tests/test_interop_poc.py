@@ -6,6 +6,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -154,3 +155,26 @@ def test_refresh_status_shows_review_robins_own_readings(client: TestClient) -> 
 def test_the_status_says_whether_the_session_is_linked(client: TestClient) -> None:
     """Segment 23E: the proof of concept links its sessions, and says so."""
     assert '["Linked", body.linked_app ?' in client.get(PAGE).text
+
+
+def test_each_sent_session_can_be_re_sent(client: TestClient) -> None:
+    """Segment 23F rung 4: a Re-send per session posts the update bundle to
+    the update route named by the creating transfer."""
+    text = client.get(PAGE).text
+    start = text.index('<script type="application/json" id="poc-resend">') + len(
+        '<script type="application/json" id="poc-resend">'
+    )
+    bundle = json.loads(text[start : text.index("</script>", start)])
+    assert bundle["operation"] == "reviewrobin.update_draft_session"
+    assert "transfer_id" not in bundle and "session_suggestion" not in bundle
+    assert set(bundle["files"]) == {"reviewers", "reviewees", "settings"}
+    assert mock.RESEND_DROPS_REVIEWER not in bundle["files"]["reviewers"]
+    assert mock.RESEND_DROPS_APPLICATION not in bundle["files"]["reviewees"]
+    assert '<th scope="col">Re-send</th>' in text and 'ask(item, "update"' in text
+    # A re-send that never answered keeps its transfer, so a retry applies once.
+    assert "pendingResend[item.transfer_id] || crypto.randomUUID()" in text
+    # ...and a success forgets it only once the receipt is read (Codex on #3921).
+    assert re.search(
+        r"return reply\.json\(\)\.then\(function \(body\) \{\s*delete pendingResend", text
+    )
+    assert "session_opened:" in text and "session_has_responses:" in text
