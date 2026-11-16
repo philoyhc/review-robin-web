@@ -148,6 +148,29 @@ def _validate(
     return plan, errors
 
 
+@dataclass(frozen=True)
+class SessionSettings:
+    """A Settings file's ``session.*`` values and session tags, parsed and
+    checked as the import checks them, for a caller that applies them
+    itself (a handoff re-send, segment 23F). ``tags`` is None when the
+    file carries no tag row."""
+
+    overrides: dict[str, object]
+    tags: list[str] | None
+
+
+def parse_session_settings(
+    review_session: ReviewSession, rows: list[Row]
+) -> tuple[SessionSettings, list[ApplyError]]:
+    """Phase 1 alone, keeping the parsed session values: the import's
+    parse and checks (types, lengths, the schedule's order on the values
+    the session would hold, offsets), nothing written."""
+    plan, errors = _validate(review_session, rows)
+    has_tags = any(row.field.startswith("session_tags[") for row in rows)
+    tags = list(plan.session_tags) if has_tags else None
+    return SessionSettings(dict(plan.session_overrides), tags), errors
+
+
 def validate_session_config(
     review_session: ReviewSession,
     rows: list[Row],

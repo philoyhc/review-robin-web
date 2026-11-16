@@ -13,7 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, SessionOperator, SessionTag, User
-from app.services import audit
+from app.services import audit, unit_of_work
 
 MAX_TAG_LENGTH = 64
 
@@ -198,7 +198,9 @@ def set_tags(
             context={"tag": tag},
             correlation_id=correlation_id,
         )
-    db.commit()
+    # Inside a caller's unit (a handoff re-send, segment 23F) this only
+    # flushes; alone it commits, as before.
+    unit_of_work.commit(db)
     return (to_add, to_remove)
 
 
