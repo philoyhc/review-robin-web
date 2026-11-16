@@ -48,7 +48,7 @@ from app.db.models.instrument import (
     RESPONSE_LAYOUT_DEFAULT,
     RESPONSE_LAYOUTS,
 )
-from app.services import audit, session_guard, unit_of_work
+from app.services import audit, linked_apps, session_guard, unit_of_work
 from app.services import session_lifecycle as lifecycle
 from app.services.instruments._band1 import _band1_rule_set_name, record_band1_links_set
 from app.services.instruments._field_refs import repoint_sort, repoint_widths
@@ -288,8 +288,13 @@ def repair_display_fields(db: Session, review_session: ReviewSession) -> bool:
     # reviewee.* before pair_context.* — falls out naturally: any stale
     # rows are gone, then the seeds append fresh in sequence.
     prune_unpopulated_display_fields(db, review_session)
-    seed_display_fields_from_reviewees(db, review_session)
-    seed_display_fields_from_assignments(db, review_session)
+    # Segment 23F: a linked instrument's display fields are the operator's
+    # from the create on (*Instruments decided*), so the lazy seeds would
+    # put back every column the create trimmed, the relationship's tag
+    # among them (author, 2026-11-16).
+    if not linked_apps.locks(review_session, linked_apps.Lock.INSTRUMENT_STRUCTURE):
+        seed_display_fields_from_reviewees(db, review_session)
+        seed_display_fields_from_assignments(db, review_session)
     db.commit()
     return True
 

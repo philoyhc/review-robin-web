@@ -462,7 +462,8 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   on, shown only. The optional-tabs and linked groups share the left
   of a two-column row under Tags (`.config-toggle-columns`), Rosters the
   right. On a linked session **Release responses from / until** show
-  "Off: see in {application}" in both modes and render no input, and
+  "—", as any unset field does, and render no input (the card never
+  unlocks there, so no field is marked as the application's), and
   the status row adds a `Linked: {application}` pill.
 - **On a linked session whose application takes the details lock**
   (`linked_apps.Lock.SESSION_DETAILS`, segment 23F) the card never

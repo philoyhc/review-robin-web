@@ -359,9 +359,11 @@
           <div>
             {% if linked and linked.has("release") %}
             {# Segment 23E — the linked application shows results: the
-               release window is off, and the form sends no value. #}
-            <label>Release responses from</label>
-            <div class="config-value" data-release-off>Off: see in {{ linked.shows_results }}</div>
+               release window is off, and the form sends no value. Shown as
+               any unset field is, since the card never unlocks (author,
+               2026-11-16). #}
+            <label>Release responses from (optional)</label>
+            <div class="config-value" data-release-off>—</div>
             {% else %}
             <label for="mock-release-from">Release responses from (optional)</label>
             <div class="config-value" data-display-only>{{ (session.responses_release_at | format_datetime) if session.responses_release_at else "—" }}</div>
@@ -419,9 +421,11 @@
           <div>
             {% if linked and linked.has("release") %}
             {# Segment 23E — the linked application shows results: the
-               release window is off, and the form sends no value. #}
-            <label>Release responses until</label>
-            <div class="config-value" data-release-off>Off: see in {{ linked.shows_results }}</div>
+               release window is off, and the form sends no value. Shown as
+               any unset field is, since the card never unlocks (author,
+               2026-11-16). #}
+            <label>Release responses until (optional)</label>
+            <div class="config-value" data-release-off>—</div>
             {% else %}
             <label for="mock-release-until">Release responses until (optional)</label>
             <div class="config-value" data-display-only>{{ (session.responses_release_until | format_datetime) if session.responses_release_until else "—" }}</div>

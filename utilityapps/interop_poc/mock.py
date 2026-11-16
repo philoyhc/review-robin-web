@@ -106,20 +106,47 @@ TIMEZONE = "Asia/Singapore"
 #: keyed ``comment``, the keys `results.csv` reports answers under, and
 #: its assignment-rule links set, so the draft arrives set up. No release
 #: date: the draft releases nothing until its operator does.
-INSTRUMENT = "Mock review"
+INSTRUMENT = "Gate 1: Panel review"
+#: The gate's description, which the instrument's description follows.
+GATE_DESCRIPTION = "Score each application and say why, for the panel's shortlist."
+#: The review window, in the mock's timezone.
+START = "2027-01-11T09:00:00+08:00"
+END = "2027-01-25T17:00:00+08:00"
+#: The re-send's changes: a later End, a renamed gate and fuller help.
+RESEND_END = "2027-01-29T17:00:00+08:00"
+RESEND_INSTRUMENT = "Gate 1: Panel review (extended)"
+#: The tags every Apply Desk session carries (author, 2026-11-16): the
+#: application and the year its exercise starts.
+TAGS = ("applydesk", START[:4])
+
+_FIELDS = (
+    ("score", "Score", "1-to-5int", "Integer", ("1", "5", "1"), "1 is weak, 5 is outstanding."),
+    ("comment", "Comment", "text", "String", None, "A sentence or two the panel can read."),
+)
 
 
-def settings_csv() -> str:
-    rows: list[list[str]] = [
+def _session_rows(description: str, end: str, tags: tuple[str, ...]) -> list[list[str]]:
+    """Every session field a linked application owns
+    (``LinkedProfile.owned_settings``), filled."""
+    rows = [
+        ["session.description", description, "string"],
+        ["session.help_contact", "interop-poc@example.edu", "string"],
         ["session.display_timezone", TIMEZONE, "string"],
-        ["instruments[1].name", INSTRUMENT, "string"],
-        ["instruments[1].band1_touched_links", '["link1","link2","link3"]', "json"],
+        ["session.scheduled_activate_at", START, "datetime"],
+        ["session.deadline", end, "datetime"],
     ]
-    fields = (
-        ("score", "Score", "1-to-5int", "Integer", ("1", "5", "1")),
-        ("comment", "Comment", "text", "String", None),
-    )
-    for n, (key, label, response_type, data_type, bounds) in enumerate(fields, start=1):
+    rows += [[f"session_tags[{n}].tag", tag, "string"] for n, tag in enumerate(tags, start=1)]
+    return rows
+
+
+def _instrument_rows(name: str, help_suffix: str = "") -> list[list[str]]:
+    """The gate's instrument: its name and description, and its response
+    fields with their help text, in the application's order."""
+    rows = [
+        ["instruments[1].name", name, "string"],
+        ["instruments[1].description", GATE_DESCRIPTION, "string"],
+    ]
+    for n, (key, label, response_type, data_type, bounds, help_text) in enumerate(_FIELDS, start=1):
         at = f"instruments[1].response_fields[{n}]"
         rows += [
             [f"{at}.field_key", key, "string"],
@@ -127,10 +154,20 @@ def settings_csv() -> str:
             [f"{at}.response_type", response_type, "string"],
             [f"{at}.data_type", data_type, "string"],
             [f"{at}.visible", "true", "boolean"],
+            [f"{at}.help_text", help_text + help_suffix, "string"],
+            [f"{at}.help_text_visible", "true", "boolean"],
         ]
         if bounds:
             rows += [[f"{at}.{k}", v, "decimal"] for k, v in zip(("min", "max", "step"), bounds)]
-    return _csv(["field", "value", "data_type"], rows)
+    return rows
+
+
+def settings_csv() -> str:
+    """The create's Settings CSV: every session field and instrument part
+    the application owns (author, 2026-11-16: the proof of concept
+    populates all of them), so the draft arrives filled."""
+    rows = _session_rows("Mock scholarship applications, panel review.", END, TAGS)
+    return _csv(["field", "value", "data_type"], rows + _instrument_rows(INSTRUMENT))
 
 
 def bundle(people: tuple[Reviewer, ...]) -> dict[str, object]:
@@ -159,16 +196,13 @@ RESEND_DROPS_APPLICATION = "SCH27-0006"
 
 
 def resend_settings_csv() -> str:
-    """The session fields a linked application owns (``LinkedProfile.
-    owned_settings``), changed as an update would change them."""
+    """The owned rows again, changed as an update would change them: the
+    description, a later End, the gate renamed and the help text fuller;
+    the tags stay Apply Desk's two."""
+    rows = _session_rows("Updated by a re-send from Utilities", RESEND_END, TAGS)
     return _csv(
         ["field", "value", "data_type"],
-        [
-            ["session.description", "Updated by a re-send from Utilities", "string"],
-            ["session.help_contact", "interop-poc@example.edu", "string"],
-            ["session.display_timezone", TIMEZONE, "string"],
-            ["session_tags[1].tag", "interop-poc", "string"],
-        ],
+        rows + _instrument_rows(RESEND_INSTRUMENT, " (Updated by a re-send.)"),
     )
 
 
