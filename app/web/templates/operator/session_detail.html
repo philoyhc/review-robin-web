@@ -356,22 +356,21 @@
                  attrs={"form": "config-save-" ~ session.id, "data-tz-utc": format_datetime_local(session.deadline, 'UTC')},
                  wrap_attrs={"data-edit-only": ""}, label="End") }}
           </div>
+          {# Segment 23E/23F — hidden where the linked application takes the
+             release lock: it shows results, and the card never unlocks
+             (author, 2026-11-16). #}
+          {% if not (linked and linked.has("release")) %}
           <div>
-            {% if linked and linked.has("release") %}
-            {# Segment 23E — the linked application shows results: the
-               release window is off, and the form sends no value. Shown as
-               any unset field is, since the card never unlocks (author,
-               2026-11-16). #}
-            <label>Release responses from (optional)</label>
-            <div class="config-value" data-release-off>—</div>
-            {% else %}
             <label for="mock-release-from">Release responses from (optional)</label>
             <div class="config-value" data-display-only>{{ (session.responses_release_at | format_datetime) if session.responses_release_at else "—" }}</div>
             {{ datetime_field("mock-release-from", "responses_release_at", responses_release_at_input_value,
                  attrs={"form": "config-save-" ~ session.id, "data-tz-utc": format_datetime_local(session.responses_release_at, 'UTC')},
                  wrap_attrs={"data-edit-only": ""}, label="Release responses from") }}
-            {% endif %}
           </div>
+          {% endif %}
+          {# Segment 23F — hidden where the linked application takes the email
+             lock: Review Robin sends it no mail (author, 2026-11-16). #}
+          {% if not (linked and linked.has("email")) %}
           <div>
             <label for="mock-invite-offsets">{% if scheduled_send %}Send invites{% else %}Prompt to send invites{% endif %} (optional)</label>
             {# Display mode: each offset as a pill + a small gap + its
@@ -394,6 +393,10 @@
                    aria-describedby="invite-offsets-help">
             <p class="form-help" id="invite-offsets-help" data-edit-only>Offset from Start, e.g., -P1D, -PT2H</p>
           </div>
+          {% endif %}
+          {# Segment 23F — hidden where the linked application takes the email
+             lock: Review Robin sends it no mail (author, 2026-11-16). #}
+          {% if not (linked and linked.has("email")) %}
           <div>
             <label for="mock-reminder-offsets">{% if scheduled_send %}Send reminders{% else %}Prompt to send reminders{% endif %} (optional)</label>
             {# Display mode: each offset pill + its resolved send datetime. #}
@@ -418,22 +421,19 @@
                rung 5a), so the labels say *Prompt to*. #}
             <p class="form-help" id="reminder-offsets-help" data-edit-only>Offset from End, e.g., -P1D, -PT2H</p>
           </div>
+          {% endif %}
+          {# Segment 23E/23F — hidden where the linked application takes the
+             release lock: it shows results, and the card never unlocks
+             (author, 2026-11-16). #}
+          {% if not (linked and linked.has("release")) %}
           <div>
-            {% if linked and linked.has("release") %}
-            {# Segment 23E — the linked application shows results: the
-               release window is off, and the form sends no value. Shown as
-               any unset field is, since the card never unlocks (author,
-               2026-11-16). #}
-            <label>Release responses until (optional)</label>
-            <div class="config-value" data-release-off>—</div>
-            {% else %}
             <label for="mock-release-until">Release responses until (optional)</label>
             <div class="config-value" data-display-only>{{ (session.responses_release_until | format_datetime) if session.responses_release_until else "—" }}</div>
             {{ datetime_field("mock-release-until", "responses_release_until", responses_release_until_input_value,
                  attrs={"form": "config-save-" ~ session.id, "data-tz-utc": format_datetime_local(session.responses_release_until, 'UTC')},
                  wrap_attrs={"data-edit-only": ""}, label="Release responses until") }}
-            {% endif %}
           </div>
+          {% endif %}
         </div>
         {# Save / Cancel / Lock cluster at the foot of the right column,
            flushed right (18R Item 4 Slice 3 — wired; 19U Item 2 moved it
