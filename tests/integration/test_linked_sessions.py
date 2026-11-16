@@ -74,18 +74,15 @@ def test_apply_desk_has_a_profile() -> None:
 
 
 def test_the_switchboard_lets_a_profile_differ(client: TestClient, db: Session) -> None:
-    """A profile is a set of named locks (23F rung 2a): Utilities keeps
-    Review Robin's email on; a native session takes no lock."""
+    """A profile is a set of named locks (23F rung 2a); a native session
+    takes no lock. Utilities takes every lock, as Apply Desk does (rung
+    7j), so a profile taking fewer is built here."""
     review_session, _ = _created(client, db)
     utilities = linked_apps.profile_for("utilities")
-    assert utilities is not None
-    assert utilities.locks == frozenset(linked_apps.Lock) - {
-        linked_apps.Lock.EMAIL,
-        linked_apps.Lock.INVITATION_SEND,
-    }
-    assert utilities.has("release") and not utilities.has("email")
-    assert linked_apps.locks(review_session, linked_apps.Lock.RELEASE)
-    assert not linked_apps.locks(review_session, linked_apps.Lock.EMAIL)
+    assert utilities is not None and utilities.locks == frozenset(linked_apps.Lock)
+    assert linked_apps.locks(review_session, linked_apps.Lock.EMAIL)
+    partial = linked_apps.LinkedProfile("x", "X", "X", locks=frozenset({linked_apps.Lock.RELEASE}))
+    assert partial.has("release") and not partial.has("email")
     review_session.linked_app = None
     assert not any(linked_apps.locks(review_session, lock) for lock in linked_apps.Lock)
 
@@ -172,12 +169,7 @@ def test_session_details_shows_release_and_observers_off(client: TestClient, db:
     page = client.get(f"/operator/sessions/{review_session.public_id}").text
     # Hidden on a linked session (author, 2026-11-16): the card never unlocks.
     assert "Release responses from" not in page and "Release responses until" not in page
-    # Utilities keeps Review Robin's email, so its prompts stay; Apply
-    # Desk's sessions take the email lock and hide them.
-    assert 'name="invite_offsets"' in page and 'name="reminder_offsets"' in page
-    review_session.linked_app = "applydesk"
-    db.commit()
-    page = client.get(f"/operator/sessions/{review_session.public_id}").text
+    # The email lock hides the prompts (Utilities takes it from rung 7j).
     assert 'name="invite_offsets"' not in page and 'name="reminder_offsets"' not in page
     assert 'name="responses_release_at"' not in page
     assert 'name="responses_release_until"' not in page
@@ -471,16 +463,19 @@ def test_relationships_are_on_from_the_create(client: TestClient, db: Session) -
     assert review_session.relationships_enabled
 
 
-def test_apply_desk_sends_its_own_email_and_utilities_keeps_review_robins(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("app", ["applydesk", "utilities"])
+def test_a_linked_application_sends_its_own_email(
+    client: TestClient, db: Session, app: str
 ) -> None:
-    """Utilities keeps the email locks off (the switchboard's second
-    profile); Apply Desk takes them."""
+    """Apply Desk takes the email locks, and Utilities with it from rung 7j
+    (author, 2026-11-16); a native session keeps Review Robin's email."""
     review_session, _ = _created(client, db)
     base = f"/operator/sessions/{review_session.public_id}"
-    assert "/setup-invite" in client.get(base).text  # Utilities: email on
+    review_session.linked_app = None
+    db.commit()
+    assert "/setup-invite" in client.get(base).text
     assert client.get(f"{base}/setup-invite").status_code == 200
-    review_session.linked_app = "applydesk"
+    review_session.linked_app = app
     db.commit()
     home = client.get(base).text
     assert f'href="{base}/setup-invite"' not in home
@@ -794,3 +789,53 @@ def test_a_crafted_tick_shows_no_hidden_dossier_link(client: TestClient, db: Ses
     )
     assert reply.status_code == 200, reply.text
     assert not _profile_shown(db)
+
+
+def test_the_reviewer_page_shows_no_email_preview_under_the_email_lock(
+    client: TestClient, db: Session
+) -> None:
+    """The Invitations reviewer page's Invitation / Reminder / Responses
+    received card is gone where the linked application sends its own
+    email (author, 2026-11-16); a native session keeps it."""
+    review_session, _ = _created(client, db)
+    reviewer = db.scalars(select(Reviewer)).first()
+    assert reviewer is not None
+    url = f"/operator/sessions/{review_session.public_id}/invitations/reviewers/{reviewer.id}"
+    page = client.get(url)
+    assert page.status_code == 200 and 'id="email-previews"' not in page.text
+    review_session.linked_app = None
+    db.commit()
+    assert 'id="email-previews"' in client.get(url).text
+
+
+def test_the_release_and_email_locks_hide_their_fields_apart(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Session details hides the release fields and the prompts on their
+    own locks: a profile with release but not email keeps the prompts."""
+    review_session, _ = _created(client, db)
+    utilities = linked_apps.LINKED_APPS["utilities"]
+    monkeypatch.setitem(
+        linked_apps.LINKED_APPS,
+        "utilities",
+        dataclasses.replace(
+            utilities,
+            locks=utilities.locks - {linked_apps.Lock.EMAIL, linked_apps.Lock.INVITATION_SEND},
+        ),
+    )
+    page = client.get(f"/operator/sessions/{review_session.public_id}").text
+    assert 'name="responses_release_at"' not in page
+    assert 'name="invite_offsets"' in page and 'name="reminder_offsets"' in page
+
+
+def test_the_email_copy_goes_with_the_email_locks(client: TestClient, db: Session) -> None:
+    """Under the email locks the Invitations page's Send note and the
+    status row's Email Template pill go too (the cold read of 7j)."""
+    review_session, _ = _created(client, db)
+    url = f"/operator/sessions/{review_session.public_id}/invitations"
+    page = client.get(url).text
+    assert "data-send-note" not in page and "Email Template:" not in page
+    review_session.linked_app = None
+    db.commit()
+    page = client.get(url).text
+    assert "data-send-note" in page and "Email Template:" in page

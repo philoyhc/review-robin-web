@@ -1,7 +1,11 @@
 """Session details keeps each field in its place when a linked application
-hides some (author, 2026-11-16): with the release fields hidden, the two
+hides some (author, 2026-11-16): with the release fields gone, the two
 prompts stay in the right-hand column, Invites above Reminders, rather
-than flowing under End."""
+than flowing under End. No profile hides the release fields and keeps the
+prompts (Utilities takes the email lock too from rung 7j), so the test
+takes the release cells off a native page: it checks the grid's
+placement, and `tests/integration/test_linked_sessions.py` the template's
+branching."""
 
 from __future__ import annotations
 
@@ -9,7 +13,7 @@ from collections.abc import Callable
 
 from playwright.sync_api import Page
 
-from .conftest import LiveServer, app_url
+from .conftest import app_url
 
 
 def _box(page: Page, label_for: str) -> dict[str, float]:
@@ -19,33 +23,16 @@ def _box(page: Page, label_for: str) -> dict[str, float]:
     )
 
 
-def _relink(database_url: str, session_id: str, app: str) -> None:
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import Session
-
-    from app.db.models import ReviewSession
-
-    from ._builder import session_pk
-
-    engine = create_engine(database_url)
-    try:
-        with Session(engine) as db:
-            review_session = db.get(ReviewSession, session_pk(database_url, session_id))
-            assert review_session is not None
-            review_session.linked_app = app
-            db.commit()
-    finally:
-        engine.dispose()
-
-
 def test_the_prompts_keep_their_column_without_the_release_fields(
-    page: Page, live_server: LiveServer, new_session: Callable[[], str]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
-    _relink(live_server.database_url, session_id, "utilities")  # release off, email on
     page.set_viewport_size({"width": 1700, "height": 1000})
     page.goto(app_url(f"/operator/sessions/{session_id}"))
-    assert page.locator('label[for="mock-release-from"]').count() == 0
+    page.evaluate(
+        """() => ['mock-release-from', 'mock-release-until'].forEach(id =>
+            document.querySelector(`label[for="${id}"]`).parentElement.remove())"""
+    )
     start, end = _box(page, "mock-start"), _box(page, "mock-end")
     invites, reminders = _box(page, "mock-invite-offsets"), _box(page, "mock-reminder-offsets")
     assert invites["left"] > start["left"] and invites["top"] == start["top"]

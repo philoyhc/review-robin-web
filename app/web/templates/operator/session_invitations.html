@@ -74,11 +74,15 @@
     {# 14F rung 3a: per-row Send and Send reminder email one reviewer
        from the operator's mailbox; the bulk sends wait for 14G. Replaces
        the findings F12 note that no email was delivered. #}
+    {# 23F rung 7j — not where the linked application shares the link:
+       every row reads "Shared by …" there. #}
+    {% if not session | linked_locks("invitation_send") %}
     <p class="muted" style="margin-top: 0;" data-send-note>
       Send and Send reminder email one reviewer from your own mailbox.
       Sending to everyone at once isn't available yet: share the session
       link instead.
     </p>
+    {% endif %}
     <p>
       Eligible reviewers
       <span class="pill pill-count">{{ eligible_count }}</span>

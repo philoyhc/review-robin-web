@@ -221,5 +221,9 @@
     </div>
   {% endif %}
 
-  {% include "operator/partials/_email_preview_region.html" %}
+  {# Segment 23F rung 7j — no email previews where the linked application
+     sends its own email (the email lock): Review Robin sends none. #}
+  {% if not session | linked_locks("email") %}
+    {% include "operator/partials/_email_preview_region.html" %}
+  {% endif %}
 {% endblock %}
