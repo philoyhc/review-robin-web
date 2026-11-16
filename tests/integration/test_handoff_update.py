@@ -1,5 +1,5 @@
 """The handoff's re-send (segment 23F rung 2,
-`guide/segment_23F_linked_drafts.md`): the linked application replaces an
+`guide/archive/segment_23F_linked_drafts.md`): the linked application replaces an
 unopened draft's rosters, naming the draft by the transfer that created it.
 """
 

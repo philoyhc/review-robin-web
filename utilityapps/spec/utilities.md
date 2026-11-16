@@ -157,9 +157,8 @@ sender takes from it.
     (`mock.resend_bundle`, operation `reviewrobin.update_draft_session`)
     to `/operator/handoffs/{transfer_id}/update`, named by the session's
     creating transfer. It drops one reviewer and one application and
-    re-sends the relationships of those left and the session settings
-    a linked application owns (description, help contact, the timezone,
-    a tag). A refusal names the error, with
+    re-sends the relationships of those left and the owned settings
+    as changed above (`spec/linked_sessions.md`). A refusal names the error, with
     the slot, reason and detail lines; a `5xx` or no answer keeps the
     re-send's transfer, so trying again applies it once.
 

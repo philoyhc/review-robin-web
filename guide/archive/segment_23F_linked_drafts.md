@@ -142,6 +142,8 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 - The Assignments page's instrument chip needs no lock: it only filters the preview.
 - Utilities kept email on through 7i as the switchboard's second profile; from 7j it takes every lock, and a test builds a partial profile instead.
 
+**Close.** `spec-writer` wrote `spec/linked_sessions.md` and found three specs the manifest had not named (above, added); no code bug. `spec/quick_setup_card_spec.md`, `spec/reviewer-surface.md` and `spec/session_owners.md` needed nothing.
+
 **Reads.** One cumulative `diff-reviewer` read at 7c (no blocking findings; six should-fix, fixed in 6, 7a, 7b and 7c), then one read per later code rung, each acted on in its PR. Codex findings were fixed in their PRs. #3933 (the description box fits its text) shipped beside the segment, outside its ladder.
 
 ## PR ladder
@@ -212,6 +214,9 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 - `utilityapps/spec/utilities.md` — the proof of concept's Re-send (rung 4).
 - `spec/linked_sessions.md` — new at the close (author, 2026-11-16): the single reference for what a link changes, organized by lock so another application is a different selection of locks, not new prose; Apply Desk is likely the median case.
 - `spec/ui_elements.md` — §9: a chip inside a linked instrument's fixed region is fixed (rung 7h).
+- `spec/email_template_editor.md` — §3: the page's routes refuse under the `email` lock (found by the close's spec pass).
+- `spec/permissions.md` — §2: the linked-lock dependencies in the gate catalogue (the close's spec pass).
+- `spec/validate_page.md` — `reviewees.unreachable_for_results` not raised under the `release` lock (the close's spec pass).
 - `guide/interoperability.md` — §5's revisit retired into this segment.
 - `guide/README.md` — this plan's row (rung 1), moved to `guide/archive/README.md` at close.
 - `guide/todo_master.md` — the queue entry (rung 1); deleted at close.

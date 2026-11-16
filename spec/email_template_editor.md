@@ -152,7 +152,9 @@ line says to reload.
 ## 3. Routes
 
 All four routes gate on **`require_session_operator`** and nothing
-else (§5).
+else (§5), except on a linked session whose application takes the
+`email` lock: `require_email_open_session` answers `409` and the tab is
+not shown (`spec/linked_sessions.md`).
 
 | Route | Behaviour |
 |---|---|
