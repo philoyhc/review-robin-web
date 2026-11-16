@@ -454,7 +454,15 @@ def test_the_proof_of_concepts_re_send_updates_its_draft(client: TestClient, db:
         db.scalars(select(Reviewee.email_or_identifier))
     )
     assert review_session.description == "Updated by a re-send from Utilities"
-    assert sorted(db.scalars(select(SessionTag.tag))) == ["interop-poc"]
+    assert sorted(db.scalars(select(SessionTag.tag))) == ["2027", "applydesk"]
+    # Every owned part changed as the re-send changes it (author, 2026-11-16).
+    assert review_session.deadline is not None and review_session.deadline.day == 29
+    instrument = db.scalars(select(Instrument)).one()
+    assert (instrument.name, instrument.description) == (
+        mock.RESEND_INSTRUMENT,
+        mock.GATE_DESCRIPTION,
+    )
+    assert all("re-send" in (f.help_text or "") for f in instrument.response_fields)
 
 
 #: A re-send of the gate's instrument (segment 23F rung 7b): renamed,

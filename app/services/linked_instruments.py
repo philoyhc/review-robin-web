@@ -159,6 +159,14 @@ def set_up(db: Session, review_session: ReviewSession, *, actor: User) -> Instru
     instrument = the_instrument(db, review_session)
     fix_rule(db, instrument, actor=actor)
     default_display_fields(db, instrument, actor=actor)
+    # The short label follows the gate's name, as a re-send's does.
+    if instrument.name:
+        instruments_service.update_short_label(
+            db,
+            instrument=instrument,
+            short_label=instrument.name.strip()[:SHORT_LABEL_MAX],
+            actor=actor,
+        )
     db.flush()
     return instrument
 

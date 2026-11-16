@@ -108,11 +108,15 @@ sender takes from it.
   pairing every reviewer with every application, each pair's
   `PairContextTag1` the reviewer's panel under the friendly label
   *Apply-Desk-Link*, so the fixed rule assigns them
-  all (segment 23F); and a Settings CSV setting the display timezone to
-  `Asia/Singapore` (a zone unlike the host's, for testing) and setting up
-  one instrument, *Mock review*, with a 1-5 score keyed `score` and a
-  comment keyed `comment`, its assignment-rule links set and no release
-  date. Shown on the page as the CSVs it sends. Its `source_app`,
+  all (segment 23F); and a Settings CSV filling every part a linked
+  application owns (author, 2026-11-16): the description, help contact,
+  the display timezone `Asia/Singapore` (a zone unlike the host's, for
+  testing), Start, End and the tags every Apply Desk session carries,
+  `applydesk` and the exercise's starting year (`2027`), and the gate's instrument, *Gate 1:
+  Panel review* with the gate's description, a 1-5 score keyed `score`
+  and a comment keyed `comment`, each with help text; no release date.
+  Its re-send changes the description, End, the gate's name and the
+  help text, and keeps the tags. Shown on the page as the CSVs it sends. Its `source_app`,
   `utilities`, has a linked profile in Review Robin (`spec/handoffs.md`
   §5), so each draft it creates is linked, as Apply Desk's will be, and
   its status card says so.

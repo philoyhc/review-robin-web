@@ -537,7 +537,11 @@ Link 3 *Individual*, every link marked set — and starts its display
 fields at the fixed pair and the dossier link (`ProfileLink`), through
 `app/services/linked_instruments.py`. A re-send writes its name (the
 short label following it), description and response fields, matched by
-`field_key` (rung 7b, `spec/handoffs.md`). On the Instruments page
+`field_key` (rung 7b, `spec/handoffs.md`). Its short label follows the
+name from the create on, and the page's display-field repair adds none
+back: it keeps the locked pair but skips the reviewee and relationship
+seeds, so the relationship's tag is never a display field (rung 7e). On
+the Instruments page
 (rung 7c) the card shows no Replicate, Delete, +Instrument or +Page break;
 the rule, the response-field table, the short label and the description
 render fixed (`data-linked-fixed`, inert even when the card is unlocked),

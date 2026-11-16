@@ -169,7 +169,8 @@ def test_the_workflow_card_offers_no_release(client: TestClient, db: Session) ->
 def test_session_details_shows_release_and_observers_off(client: TestClient, db: Session) -> None:
     review_session, _ = _created(client, db)
     page = client.get(f"/operator/sessions/{review_session.public_id}").text
-    assert page.count("Off: see in Utilities") == 2
+    # Shown as any unset field is (author, 2026-11-16): the card never unlocks.
+    assert "Off: see in" not in page and page.count("data-release-off") == 2
     assert 'name="responses_release_at"' not in page
     assert 'name="responses_release_until"' not in page
     assert "data-observers-off" in page and 'name="observers_enabled"' not in page
@@ -657,3 +658,34 @@ def test_the_mock_bundle_arrives_paired_and_in_its_timezone(
     assert not any(r.tag_1 for r in db.scalars(select(Reviewer)))
     db.refresh(review_session)
     assert field_labels.resolve(review_session, "pair_context", "1") == "Apply-Desk-Link"
+
+
+def test_the_page_seeds_no_display_field_back(client: TestClient, db: Session) -> None:
+    """The Instruments page's display-field repair adds none back on a
+    linked instrument: the relationship's tag (Apply-Desk-Link) and the
+    roster columns the create trimmed stay off (author, 2026-11-16)."""
+    from utilityapps.interop_poc import mock
+
+    people = mock.reviewers("Admin", "admin@example.edu")
+    review_session, _ = _created(client, db, files=mock.bundle(people)["files"])
+    client.get(_base(review_session))
+    db.expire_all()
+    sources = {(f.source_type, f.source_field) for f in db.scalars(select(InstrumentDisplayField))}
+    assert not any(kind == "pair_context" for kind, _ in sources)
+    assert ("reviewee", "profile_link") in sources
+
+
+def test_the_mock_create_arrives_filled(client: TestClient, db: Session) -> None:
+    """Every part the application owns arrives with the create (author,
+    2026-11-16): the session's fields and the gate's instrument."""
+    from utilityapps.interop_poc import mock
+
+    people = mock.reviewers("Admin", "admin@example.edu")
+    review_session, _ = _created(client, db, files=mock.bundle(people)["files"])
+    assert review_session.description and review_session.help_contact
+    assert review_session.scheduled_activate_at and review_session.deadline
+    assert sorted(t.tag for t in db.scalars(select(SessionTag))) == ["2027", "applydesk"]
+    instrument = db.scalars(select(Instrument)).one()
+    assert (instrument.name, instrument.description) == (mock.INSTRUMENT, mock.GATE_DESCRIPTION)
+    assert instrument.short_label == mock.INSTRUMENT
+    assert all(f.help_text and f.help_text_visible for f in instrument.response_fields)
