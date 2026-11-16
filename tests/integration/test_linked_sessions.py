@@ -1,5 +1,5 @@
 """Segment 23E: a session another application created through the
-handoff carries ``linked_app`` (`guide/segment_23E_linked_sessions.md`),
+handoff carries ``linked_app`` (`guide/archive/segment_23E_linked_sessions.md`),
 and its profile turns off what that application does in Review Robin's
 place: the release window, observers, the after-the-window visibility
 cells, and the reviewee results warning.

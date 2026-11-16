@@ -1,6 +1,6 @@
 """sessions.linked_app: the application a session is linked to
 
-Segment 23E (``guide/segment_23E_linked_sessions.md``): a session another
+Segment 23E (``guide/archive/segment_23E_linked_sessions.md``): a session another
 application created through the handoff names it, so Review Robin can turn
 off what that application does in its place. Nullable, no backfill: every
 existing session is native. The downgrade drops it.

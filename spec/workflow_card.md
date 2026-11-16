@@ -763,6 +763,10 @@ sub-module (`app/web/routes_operator/_workflow.py`):
   `lifecycle.stop_responses_release` → stamps
   `responses_release_until = now()` (the release window closes
   immediately). Emits `session.responses_release_stopped`.
+- **Neither Release nor Stop release on a linked session**
+  (`linked_apps.release_off`, `spec/handoffs.md` §5): both visibility
+  predicates also require `not release_off`, and a direct POST to either
+  route redirects with `super_error=linked_release`.
 - **Archive session** posts to
   `/operator/sessions/{id}/workflow/archive` via
   `next-action-archive-form`. Live in State 10 only

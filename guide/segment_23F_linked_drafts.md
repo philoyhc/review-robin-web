@@ -1,6 +1,6 @@
 # Segment 23F — Interoperability: the linked application keeps its draft current
 
-**Opened:** 2026-11-15 · **Theme:** while a linked session is unopened, its rosters and the set-up the linked application sends are that application's: it re-sends them to the draft, and Review Robin stops editing them · **Related:** `guide/archive/segment_23D_handoff_settings.md`, `guide/segment_23E_linked_sessions.md`, `spec/handoffs.md`, `applydesk/guide/todo_master.md` (rulings 24, 26, 27)
+**Opened:** 2026-11-15 · **Theme:** while a linked session is unopened, its rosters and the set-up the linked application sends are that application's: it re-sends them to the draft, and Review Robin stops editing them · **Related:** `guide/archive/segment_23D_handoff_settings.md`, `guide/archive/segment_23E_linked_sessions.md`, `spec/handoffs.md`, `applydesk/guide/todo_master.md` (rulings 24, 26, 27)
 
 ## Opportunity
 

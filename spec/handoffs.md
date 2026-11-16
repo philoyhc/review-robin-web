@@ -116,7 +116,7 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   leaves the draft with its rosters, which a replay completes (§6).
   New session's own behavior is unchanged: it still keeps the draft when a
   file is refused.
-- **The link** (segment 23E, `guide/segment_23E_linked_sessions.md`): a
+- **The link** (segment 23E, `guide/archive/segment_23E_linked_sessions.md`): a
   `source_app` with a profile in `app/services/linked_apps.py`
   (`applydesk`; `utilities`, the proof of concept) sets the draft's
   `linked_app` with its transfer record; any other links nothing. Session
