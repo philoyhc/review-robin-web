@@ -786,7 +786,8 @@ def test_a_crafted_tick_shows_no_hidden_dossier_link(client: TestClient, db: Ses
         if field.source_field == "profile_link":
             field.visible = False
     db.commit()
-    keys = ["reviewee.name", "reviewee.email_or_identifier", "reviewee.profile_link"]
+    # Padded, as `set_band2_state` strips it (Codex on #3932).
+    keys = ["reviewee.name", "reviewee.email_or_identifier", " reviewee.profile_link "]
     reply = client.post(
         f"{_base(review_session)}/{instrument.id}/band2-state",
         json={"selected_display_keys": keys},

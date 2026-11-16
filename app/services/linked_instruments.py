@@ -275,7 +275,9 @@ def hold_profile(instrument: Instrument, state: dict[str, Any]) -> None:
         (field.source_type, field.source_field) == PROFILE_LINK and field.visible
         for field in instrument.display_fields
     )
-    held: list[object] = [k for k in keys if k != key]
+    # Compared as ``set_band2_state`` reads them, stripped, so a padded
+    # key cannot slip past (Codex on #3932).
+    held: list[object] = [k for k in keys if str(k).strip() != key]
     if shown:
         held.append(key)
     state["selected_display_keys"] = held
