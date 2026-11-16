@@ -32,7 +32,13 @@ from app.db.models import (
     ReviewSession,
     SessionTag,
 )
-from app.services import field_labels, linked_apps, session_clone, session_config_io
+from app.services import (
+    field_labels,
+    linked_apps,
+    linked_instruments,
+    session_clone,
+    session_config_io,
+)
 from app.services import instruments as instruments_service
 from app.services import session_lifecycle as lifecycle
 from app.services.validation import validate_session_setup
@@ -880,6 +886,8 @@ def test_an_existing_relationship_tag_row_is_held_off(client: TestClient, db: Se
     row = page.split('data-source-type="pair_context"')[1].split("</tr>")[0]
     assert 'data-held="true"' in row and "disabled" in row and " checked" not in row
     assert "data-new-model-df-move" not in row
+    tr = page.split('data-source-type="pair_context"')[0].rsplit("<tr", 1)[1]
+    assert 'data-reorderable="false"' in tr + row  # no neighbor can swap it either
     db.expire_all()
     pair = db.scalars(
         select(InstrumentDisplayField).where(InstrumentDisplayField.source_type == "pair_context")
@@ -887,15 +895,13 @@ def test_an_existing_relationship_tag_row_is_held_off(client: TestClient, db: Se
     assert not pair.visible
     url = f"{_base(review_session)}/{instrument.id}/display-fields/{pair.id}/edit"
     assert client.post(url, data={"visible": "true"}).status_code == 409
-    keys = ["reviewee.name", "reviewee.email_or_identifier", " pair_context.tag_1 "]
-    reply = client.post(
-        f"{_base(review_session)}/{instrument.id}/band2-state",
-        json={"selected_display_keys": keys},
-    )
-    assert reply.status_code == 200, reply.text
-    db.expire_all()
-    after = db.get(InstrumentDisplayField, pair.id)
-    assert after is not None and not after.visible
+    # The hold strips a relationship tag's key, padded or not, from a save.
+    state: dict[str, object] = {
+        "selected_display_keys": ["reviewee.name", " pair_context.tag_1 ", "pair_context.1"]
+    }
+    linked_instruments.hold_profile(instrument, state)
+    kept = state["selected_display_keys"]
+    assert isinstance(kept, list) and not any("pair_context" in str(k) for k in kept)
 
 
 def test_a_linked_description_is_shown_not_edited(client: TestClient, db: Session) -> None:
