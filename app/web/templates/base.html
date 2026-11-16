@@ -3138,7 +3138,8 @@
          and re-enable theirs as the unit of review changes, so no script
          has to keep a class in step. */
       body.ui-v2 .tag-chip.is-fixed,
-      body.ui-v2 label.tag-chip:has(> input:disabled) {
+      body.ui-v2 label.tag-chip:has(> input:disabled),
+      body.ui-v2 [data-linked-fixed] .tag-chip {
         cursor: default;
         border-color: transparent;
         box-shadow: none;
@@ -3149,7 +3150,8 @@
         color: var(--selected-fg);
       }
       body.ui-v2 .tag-chip.is-fixed::before,
-      body.ui-v2 label.tag-chip:has(> input:disabled)::before {
+      body.ui-v2 label.tag-chip:has(> input:disabled)::before,
+      body.ui-v2 [data-linked-fixed] .tag-chip::before {
         content: "";
         display: inline-block;
         width: 0.8em;
@@ -3159,6 +3161,22 @@
         background: currentColor;
         -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M4 7V5a4 4 0 1 1 8 0v2h1v8H3V7h1zm2 0h4V5a2 2 0 1 0-4 0v2z'/></svg>") no-repeat center / contain;
         mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M4 7V5a4 4 0 1 1 8 0v2h1v8H3V7h1zm2 0h4V5a2 2 0 1 0-4 0v2z'/></svg>") no-repeat center / contain;
+      }
+      /* Segment 23F rung 7h (author, 2026-11-16): a linked instrument's
+         fixed structure looks fixed. Inside a ``[data-linked-fixed]``
+         region (Band 1's rule, Band 3's response-field rows) every chip
+         is a fixed chip (the selectors above) and every other control
+         takes the inactive look. The region is already ``inert``; this
+         only says so. */
+      body.ui-v2 [data-linked-fixed] .btn {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      body.ui-v2 [data-linked-fixed] :is(input, select, textarea):not([type="checkbox"]) {
+        background: var(--surface-muted);
+        color: var(--text-subtle);
+        cursor: not-allowed;
+        opacity: 0.7;
       }
       /* A chip that is a ``<label>`` keeps the pill's box, not the
          form label's block and margins, and shows its hidden box's

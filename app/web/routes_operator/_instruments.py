@@ -29,7 +29,7 @@ from app.json_shapes import json_list, json_object
 from app.services import (
     instruments as instruments_service,
 )
-from app.services import linked_apps, unit_of_work, visibility_policies
+from app.services import linked_apps, linked_instruments, unit_of_work, visibility_policies
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.web import urls, views
@@ -381,6 +381,9 @@ def instrument_add_display_field(
             status_code=status.HTTP_303_SEE_OTHER,
         )
     source_type, source_field = source_pair.split(":", 1)
+    if (source_type, source_field) == linked_instruments.PROFILE_LINK:
+        # The dossier link is the linked application's (23F rung 7h).
+        refuse_linked_structure(review_session)
 
     try:
         instruments_service.add_display_field(
@@ -416,6 +419,8 @@ def instrument_edit_display_field(
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
     field = _require_display_field_in_instrument(df_id, instrument, db)
+    if (field.source_type, field.source_field) == linked_instruments.PROFILE_LINK:
+        refuse_linked_structure(review_session)  # 23F rung 7h: the application's
 
     # ``label`` form parameter retired in Segment 15A Slice 2 —
     # the per-instrument label override is no longer editable.
@@ -450,6 +455,8 @@ def instrument_delete_display_field(
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
     field = _require_display_field_in_instrument(df_id, instrument, db)
+    if (field.source_type, field.source_field) == linked_instruments.PROFILE_LINK:
+        refuse_linked_structure(review_session)  # 23F rung 7h: the application's
 
     try:
         instruments_service.delete_display_field(db, field=field, actor=user)
@@ -1049,8 +1056,10 @@ async def instrument_consolidated_save(
                 except (TypeError, ValueError):
                     band2_state = None
                 if band2_state is not None and structure_fixed:
-                    # The response fields are the linked application's.
+                    # The response fields and the dossier link's display
+                    # are the linked application's.
                     band2_state.pop("response_fields", None)
+                    linked_instruments.hold_profile(instrument, band2_state)
                 if band2_state is not None:
                     acknowledged_drop = bool(band2_state.get("acknowledged_drop", False))
                     try:

@@ -545,9 +545,14 @@ the Instruments page
 (rung 7c) the card shows no Replicate, Delete, +Instrument or +Page break;
 the rule, the response-field table, the short label and the description
 render fixed (`data-linked-fixed`, inert even when the card is unlocked),
-with a line naming the application. The card's Save writes the rest
-(display fields, layouts, widths, sort, visibility) and leaves the owned
-parts as they are; the routes that change only owned parts (add, replicate,
+with a line naming the application; inside them every chip is a fixed
+chip with the lock glyph and every other control takes the inactive look
+(rung 7h). Whether each field is required is the application's too. The
+dossier link's display field is held as it stands (its chip locked, as the
+fixed pair's: both Band 2 saves keep it, `linked_instruments.hold_profile`,
+and the per-field display routes refuse it, `409`). The card's Save writes the
+rest (the other display fields, layouts, widths, sort, visibility) and
+leaves the owned parts as they are; the routes that change only owned parts (add, replicate,
 delete, page break, the field rows, identity) are `409`.
 
 | Column | Link (operator label) | Vocabulary |

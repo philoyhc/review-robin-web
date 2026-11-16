@@ -8812,7 +8812,8 @@ def test_locked_display_fields_cannot_be_unselected(client: TestClient, db: Sess
     refresh = body[start : body.index("\n          }\n", start)]
     assert "if (locked) { box.checked = !off; }" in refresh
     assert "else if (off) { box.checked = false; }" in refresh
-    assert "box.disabled = locked || off;" in refresh
+    # A linked instrument's held field (Profile, 23F rung 7h) stays fixed too.
+    assert "box.disabled = locked || off || row.getAttribute('data-held') === 'true';" in refresh
     assert (
         "box.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');"
         in refresh

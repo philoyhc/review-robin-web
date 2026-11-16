@@ -177,7 +177,8 @@ def test_a_fixed_chip_drops_the_edge_and_keeps_the_fill(client: TestClient, db: 
 
     block = _rule(
         css,
-        "body.ui-v2 .tag-chip.is-fixed,\n      body.ui-v2 label.tag-chip:has(> input:disabled)",
+        "body.ui-v2 .tag-chip.is-fixed,\n      body.ui-v2 label.tag-chip:has(> input:disabled),\n"
+        "      body.ui-v2 [data-linked-fixed] .tag-chip",  # 23F rung 7h
     )
     assert block is not None
     assert "cursor: default" in block
@@ -194,7 +195,8 @@ def test_a_fixed_chip_drops_the_edge_and_keeps_the_fill(client: TestClient, db: 
     glyph = _rule(
         css,
         "body.ui-v2 .tag-chip.is-fixed::before,\n"
-        "      body.ui-v2 label.tag-chip:has(> input:disabled)::before",
+        "      body.ui-v2 label.tag-chip:has(> input:disabled)::before,\n"
+        "      body.ui-v2 [data-linked-fixed] .tag-chip::before",
     )
     assert glyph is not None and "mask:" in glyph and "currentColor" in glyph
 

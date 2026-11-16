@@ -119,9 +119,20 @@ RESEND_INSTRUMENT = "Gate 1: Panel review (extended)"
 #: application and the year its exercise starts.
 TAGS = ("applydesk", START[:4])
 
+#: Each field: key, label, response type, data type, bounds, help text,
+#: and whether it is required (author, 2026-11-16: the application decides;
+#: the score is, the comment is not).
 _FIELDS = (
-    ("score", "Score", "1-to-5int", "Integer", ("1", "5", "1"), "1 is weak, 5 is outstanding."),
-    ("comment", "Comment", "text", "String", None, "A sentence or two the panel can read."),
+    (
+        "score",
+        "Score",
+        "1-to-5int",
+        "Integer",
+        ("1", "5", "1"),
+        "1 is weak, 5 is outstanding.",
+        True,
+    ),
+    ("comment", "Comment", "text", "String", None, "A sentence or two the panel can read.", False),
 )
 
 
@@ -146,7 +157,9 @@ def _instrument_rows(name: str, help_suffix: str = "") -> list[list[str]]:
         ["instruments[1].name", name, "string"],
         ["instruments[1].description", GATE_DESCRIPTION, "string"],
     ]
-    for n, (key, label, response_type, data_type, bounds, help_text) in enumerate(_FIELDS, start=1):
+    for n, (key, label, response_type, data_type, bounds, help_text, required) in enumerate(
+        _FIELDS, start=1
+    ):
         at = f"instruments[1].response_fields[{n}]"
         rows += [
             [f"{at}.field_key", key, "string"],
@@ -154,6 +167,7 @@ def _instrument_rows(name: str, help_suffix: str = "") -> list[list[str]]:
             [f"{at}.response_type", response_type, "string"],
             [f"{at}.data_type", data_type, "string"],
             [f"{at}.visible", "true", "boolean"],
+            [f"{at}.required", "true" if required else "false", "boolean"],
             [f"{at}.help_text", help_text + help_suffix, "string"],
             [f"{at}.help_text_visible", "true", "boolean"],
         ]
