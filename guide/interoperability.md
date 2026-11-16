@@ -130,6 +130,11 @@ initiate step against mock rosters, before ApplyDesk; the contract is
 
 ## 5. When the revisit comes
 
+**Retired (2026-11-16).** Segments 23D, 23E and 23F were the revisit: the
+handoff sets up a linked draft, the linked application owns and re-sends
+it, and Review Robin locks it there (`spec/handoffs.md`,
+`spec/linked_sessions.md`). The text below is kept as the record of the plan.
+
 Start from the handoff's §3 reconciliation report against the `main` of
 the day; §1 above answers part of it. The sender's code starts from the
 example, `docs/interoperability_example.md`. Then a segment plan, whose

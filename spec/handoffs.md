@@ -124,10 +124,8 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   A linked draft starts with the Relationships tab on
   (`relationships_enabled`, segment 23F): its application sends the pairs.
   A profile is a set of named locks (`linked_apps.Lock`) and the settings
-  fields it owns (segment 23F rung 2a): Apply Desk takes every lock;
-  Utilities' proof of concept takes every lock too (rung 7j; it had kept
-  Review Robin's email on). Profiles are code, never data
-  a bundle can set.
+  fields it owns (segment 23F rung 2a), by lock in `spec/linked_sessions.md`.
+  Profiles are code, never data a bundle can set.
   Under the instrument lock the create's files must make one instrument
   (else `422 invalid_setup`, `slot` `settings`, `reason` `one_instrument`);
   Review Robin then fixes its assignment rule (All /
@@ -172,7 +170,7 @@ accepted for a proof of concept, whose sender disables its button.
 
 ## 6a. The re-send — a linked, unopened draft kept current
 
-Segment 23F (`guide/segment_23F_linked_drafts.md`): while a linked
+Segment 23F (`guide/archive/segment_23F_linked_drafts.md`): while a linked
 session is unopened, its rosters are the linked application's, which
 re-sends them rather than Review Robin editing them (Apply Desk's ruling
 24).

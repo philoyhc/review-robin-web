@@ -1,5 +1,5 @@
 """A linked application's instrument (segment 23F rung 7a,
-`guide/segment_23F_linked_drafts.md`, *Instruments decided*).
+`guide/archive/segment_23F_linked_drafts.md`, *Instruments decided*).
 
 One instrument per gate: a gate filters to one set of pairwise
 assignments, which its application sends as the Relationships file. So

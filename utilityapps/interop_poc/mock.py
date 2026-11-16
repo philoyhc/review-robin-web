@@ -212,7 +212,7 @@ RESEND_DROPS_APPLICATION = "SCH27-0006"
 def resend_settings_csv() -> str:
     """The owned rows again, changed as an update would change them: the
     description, a later End, the gate renamed and the help text fuller;
-    the tags stay Apply Desk's two."""
+    the tag stays Apply Desk's ``applydesk``."""
     rows = _session_rows("Updated by a re-send from Utilities", RESEND_END, TAGS)
     return _csv(
         ["field", "value", "data_type"],

@@ -48,12 +48,6 @@ is the author's call.
    reminder already past due on every open session in one pass, after
    operators may have reminded by hand: 14G marks those skipped, not
    sent, when it turns the setting on.
-2. **23F — The linked application keeps its draft current** (Apply
-   Desk's ruling 24, author 2026-11-15): a re-send replaces a linked,
-   unopened draft's rosters and the set-up the application owns, and
-   Review Robin locks them there. With 23D (closed) it retires
-   `guide/interoperability.md` §5's revisit.
-   **Plan:** `guide/segment_23F_linked_drafts.md`.
 
 ### Stubs
 

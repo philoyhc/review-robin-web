@@ -1,5 +1,5 @@
 """The session settings a linked application owns and re-sends (segment
-23F rung 3, `guide/segment_23F_linked_drafts.md`).
+23F rung 3, `guide/archive/segment_23F_linked_drafts.md`).
 
 A re-send's settings file carries only the rows its application's profile
 owns (``LinkedProfile.owned_settings``): the session's name, code,
