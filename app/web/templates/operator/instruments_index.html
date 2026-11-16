@@ -3455,11 +3455,14 @@
             var inCard = intro.getAttribute('data-intro-layout') === 'layout_2';
             var heading = intro.querySelector('[data-rs-help-rows="heading"]');
             var helpCard = intro.querySelector('[data-rs-help-rows="card"]');
-            // The boxes about to be replaced leave the watch with them.
-            window.rrwUnfitBoxes(intro);
+            // The boxes about to be replaced leave the watch with them:
+            // the help rows' homes only, so the description box, which
+            // stays, stays watched (it fits on unlock, 2026-11-16).
+            var homes = [heading, helpCard].filter(Boolean);
+            homes.forEach(function (home) { window.rrwUnfitBoxes(home); });
             if (heading) { heading.innerHTML = inCard ? '' : html; }
             if (helpCard) { helpCard.innerHTML = inCard ? html : ''; }
-            window.rrwFitBoxes(intro);
+            homes.forEach(function (home) { window.rrwFitBoxes(home); });
           }
           // 19Y Item 5 — a help text's edit box grows with its text (the
           // author, 2026-10-20): its height follows its content above the
