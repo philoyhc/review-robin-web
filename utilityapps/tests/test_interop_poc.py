@@ -203,4 +203,4 @@ def test_the_sent_list_can_be_cleared(client: TestClient) -> None:
     text = client.get(PAGE).text
     assert 'id="poc-sent-clear-row" hidden>' in text and ">Clear list</button>" in text
     assert "The sessions stay in Review Robin." in text
-    assert 'event.newValue === "[]" ? []' in text
+    assert 'class="btn destructive" id="poc-sent-clear"' in text

@@ -1,6 +1,7 @@
 """The interop proof of concept's Clear list in a real Chromium (segment 23F,
 author 2026-11-16): the button shows while the browser's list has a session,
-asks, then empties the list, in this tab and in its storage. Pages go
+asks, then empties the list, in this tab, in its storage and in
+another open tab. Pages go
 through a ``TestClient`` behind a routed origin, as the photo proof of
 concept's browser test does. Without a Chromium build the test skips,
 saying why; ``RRW_REQUIRE_BROWSER=1`` (set by CI) turns that skip into a
@@ -58,11 +59,13 @@ def page(client: TestClient) -> Iterator[Page]:
             if os.environ.get("RRW_REQUIRE_BROWSER") == "1":
                 pytest.fail(f"{reason}, and RRW_REQUIRE_BROWSER=1", pytrace=False)
             pytest.skip(reason)
-        tab = browser.new_page(viewport={"width": 1000, "height": 900})
+        # One context, so a second tab shares this one's storage and
+        # receives its ``storage`` events.
+        context = browser.new_context(viewport={"width": 1000, "height": 900})
         errors: list[str] = []
-        tab.on("pageerror", lambda exc: errors.append(str(exc)))
-        tab.route(f"{ORIGIN}/**", serve)
-        yield tab
+        context.on("weberror", lambda error: errors.append(str(error.error)))
+        context.route(f"{ORIGIN}/**", serve)
+        yield context.new_page()
         browser.close()
         assert errors == [], f"page errors: {errors}"
 
@@ -85,3 +88,20 @@ def test_clear_list_empties_the_browsers_list(page: Page) -> None:
     expect(page.locator("#poc-sent-rows")).to_contain_text("No sessions sent")
     expect(clear).to_be_hidden()
     assert json.loads(page.evaluate(f"localStorage.getItem('{KEY}')")) == []
+
+
+def test_another_tab_follows_the_clear(page: Page) -> None:
+    page.goto(PAGE)
+    page.evaluate("([key, list]) => localStorage.setItem(key, JSON.stringify(list))", [KEY, SENT])
+    page.reload()
+    other = page.context.new_page()
+    other.goto(PAGE)
+    expect(other.locator("#poc-sent-rows")).to_contain_text("POC-CLEAR-1")
+    # A panel the other tab had open goes with the list (diff-reviewer).
+    other.evaluate("document.getElementById('poc-sent-detail').textContent = 'Status: POC-CLEAR-1'")
+
+    page.once("dialog", lambda dialog: dialog.accept())
+    page.locator("#poc-sent-clear").click()
+    expect(other.locator("#poc-sent-rows")).to_contain_text("No sessions sent")
+    expect(other.locator("#poc-sent-clear")).to_be_hidden()
+    expect(other.locator("#poc-sent-detail")).to_be_empty()

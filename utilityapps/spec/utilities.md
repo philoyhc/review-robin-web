@@ -135,8 +135,10 @@ sender takes from it.
 - **Sent to Review Robin**: the sessions this browser
   created, kept in `localStorage` (not in Utilities' database; clearing it
   forgets the list, not the sessions; open tabs keep it in step). **Clear
-  list**, shown while the list has a session, asks, then empties it in
-  every open tab (author, 2026-11-16); the sessions stay in Review Robin.
+  list** (Destructive), shown while the list has a session, asks, then
+  empties it, with any pending re-send and the open detail panel, in every
+  open tab (author, 2026-11-16); the sessions stay in Review Robin, out of
+  this page's reach.
   Each offers:
   - **Refresh status**: reads Review Robin's status (`spec/handoffs.md`
     §10, version 3) and shows each section as Review Robin
