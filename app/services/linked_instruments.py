@@ -261,12 +261,20 @@ def keep_display_fields(
         instruments_service.delete_display_field(db, field=field, actor=actor)
 
 
+def holds_display(source_type: str, source_field: str) -> bool:
+    """Whether a linked instrument holds this display field as it stands:
+    the dossier link (shown as sent) and the relationship's tags (never
+    shown; rung 7k, author 2026-11-16)."""
+    return (source_type, source_field) == PROFILE_LINK or source_type == "pair_context"
+
+
 def hold_profile(instrument: Instrument, state: dict[str, Any]) -> None:
-    """Keep the dossier link's display selection as it stands in a Band 2
-    save's ``state`` (author, 2026-11-16): on a linked instrument it is
-    the application's, like the fixed pair, so the operator's tick neither
-    adds nor removes it. A state without ``selected_display_keys`` leaves
-    the selections alone already."""
+    """Keep the held display selections as they stand in a Band 2 save's
+    ``state`` (author, 2026-11-16): on a linked instrument the dossier
+    link is the application's, like the fixed pair, and the relationship's
+    tags are never shown, so the operator's tick neither adds nor removes
+    either. A state without ``selected_display_keys`` leaves the
+    selections alone already."""
     keys = json_list(state.get("selected_display_keys"))
     if keys is None:
         return
@@ -277,7 +285,9 @@ def hold_profile(instrument: Instrument, state: dict[str, Any]) -> None:
     )
     # Compared as ``set_band2_state`` reads them, stripped, so a padded
     # key cannot slip past (Codex on #3932).
-    held: list[object] = [k for k in keys if str(k).strip() != key]
+    held: list[object] = [
+        k for k in keys if str(k).strip() != key and not str(k).strip().startswith("pair_context.")
+    ]
     if shown:
         held.append(key)
     state["selected_display_keys"] = held

@@ -11,6 +11,7 @@ be tried first.
 from __future__ import annotations
 
 import dataclasses
+import html
 import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -687,7 +688,7 @@ def test_the_mock_create_arrives_filled(client: TestClient, db: Session) -> None
     review_session, _ = _created(client, db, files=mock.bundle(people)["files"])
     assert review_session.description and review_session.help_contact
     assert review_session.scheduled_activate_at and review_session.deadline
-    assert sorted(t.tag for t in db.scalars(select(SessionTag))) == ["2027", "applydesk"]
+    assert [t.tag for t in db.scalars(select(SessionTag))] == ["applydesk"]
     instrument = db.scalars(select(Instrument)).one()
     assert (instrument.name, instrument.description) == (mock.INSTRUMENT, mock.GATE_DESCRIPTION)
     assert instrument.short_label == mock.INSTRUMENT
@@ -839,3 +840,72 @@ def test_the_email_copy_goes_with_the_email_locks(client: TestClient, db: Sessio
     db.commit()
     page = client.get(url).text
     assert "data-send-note" in page and "Email Template:" in page
+
+
+def _mock_session(client: TestClient, db: Session) -> tuple[ReviewSession, Instrument]:
+    from utilityapps.interop_poc import mock
+
+    people = mock.reviewers("Admin", "admin@example.edu")
+    review_session, _ = _created(client, db, files=mock.bundle(people)["files"])
+    return review_session, db.scalars(select(Instrument)).one()
+
+
+def test_prepare_seeds_no_relationship_tag_display_field(client: TestClient, db: Session) -> None:
+    """The relationship's tag is never a display field on a linked
+    instrument (author, 2026-11-16, rung 7k): Prepare's seed skips it."""
+    review_session, _ = _mock_session(client, db)
+    assert instruments_service.seed_display_fields_from_assignments(db, review_session) == 0
+    assert not db.scalars(
+        select(InstrumentDisplayField).where(InstrumentDisplayField.source_type == "pair_context")
+    ).all()
+
+
+def test_an_existing_relationship_tag_row_is_held_off(client: TestClient, db: Session) -> None:
+    """A row an earlier Prepare seeded (shown) is switched off on the
+    page, rendered fixed off, refused by the per-field route, and a Save
+    cannot tick it back on."""
+    review_session, instrument = _mock_session(client, db)
+    db.add(
+        InstrumentDisplayField(
+            instrument_id=instrument.id,
+            label="",
+            source_type="pair_context",
+            source_field="1",
+            order=9,
+            visible=True,
+        )
+    )
+    db.commit()
+    page = client.get(_base(review_session)).text
+    row = page.split('data-source-type="pair_context"')[1].split("</tr>")[0]
+    assert 'data-held="true"' in row and "disabled" in row and " checked" not in row
+    assert "data-new-model-df-move" not in row
+    db.expire_all()
+    pair = db.scalars(
+        select(InstrumentDisplayField).where(InstrumentDisplayField.source_type == "pair_context")
+    ).one()
+    assert not pair.visible
+    url = f"{_base(review_session)}/{instrument.id}/display-fields/{pair.id}/edit"
+    assert client.post(url, data={"visible": "true"}).status_code == 409
+    keys = ["reviewee.name", "reviewee.email_or_identifier", " pair_context.tag_1 "]
+    reply = client.post(
+        f"{_base(review_session)}/{instrument.id}/band2-state",
+        json={"selected_display_keys": keys},
+    )
+    assert reply.status_code == 200, reply.text
+    db.expire_all()
+    after = db.get(InstrumentDisplayField, pair.id)
+    assert after is not None and not after.visible
+
+
+def test_a_linked_description_is_shown_not_edited(client: TestClient, db: Session) -> None:
+    """A linked instrument's description is the application's: the page
+    shows it, locked or not, and offers no box (author, 2026-11-16)."""
+    from utilityapps.interop_poc import mock
+
+    review_session, instrument = _mock_session(client, db)
+    page = client.get(f"{_base(review_session)}?editing={instrument.id}").text
+    assert "data-intro-description-input" not in page.split("<script")[0]
+    view = page.split("data-intro-description-view")[1].split("</p>")[0]
+    assert "data-lock-only" not in view
+    assert html.unescape(view.split(">", 1)[1]).strip() == mock.GATE_DESCRIPTION

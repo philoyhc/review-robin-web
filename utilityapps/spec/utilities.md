@@ -111,8 +111,8 @@ sender takes from it.
   all (segment 23F); and a Settings CSV filling every part a linked
   application owns (author, 2026-11-16): the description, help contact,
   the display timezone `Asia/Singapore` (a zone unlike the host's, for
-  testing), Start, End and the tags every Apply Desk session carries,
-  `applydesk` and the exercise's starting year (`2027`), and the gate's instrument, *Gate 1:
+  testing), Start, End and the tag every Apply Desk session carries,
+  `applydesk` (author, 2026-11-16), and the gate's instrument, *Gate 1:
   Panel review* with the gate's description, a 1-5 score keyed `score`
   and a comment keyed `comment`, each with help text, the score required and the comment not (the application decides); no release date.
   Its re-send changes the description, End, the gate's name and the

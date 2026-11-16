@@ -295,6 +295,17 @@ def repair_display_fields(db: Session, review_session: ReviewSession) -> bool:
     if not linked_apps.locks(review_session, linked_apps.Lock.INSTRUMENT_STRUCTURE):
         seed_display_fields_from_reviewees(db, review_session)
         seed_display_fields_from_assignments(db, review_session)
+    else:
+        # Rung 7k: the relationship's tag is never shown there, so a row an
+        # earlier Prepare seeded (shown) is switched off.
+        for field in db.scalars(
+            select(InstrumentDisplayField)
+            .join(Instrument, Instrument.id == InstrumentDisplayField.instrument_id)
+            .where(Instrument.session_id == review_session.id)
+            .where(InstrumentDisplayField.source_type == "pair_context")
+            .where(InstrumentDisplayField.visible.is_(True))
+        ):
+            field.visible = False
     db.commit()
     return True
 

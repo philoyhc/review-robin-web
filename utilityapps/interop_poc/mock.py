@@ -115,9 +115,9 @@ END = "2027-01-25T17:00:00+08:00"
 #: The re-send's changes: a later End, a renamed gate and fuller help.
 RESEND_END = "2027-01-29T17:00:00+08:00"
 RESEND_INSTRUMENT = "Gate 1: Panel review (extended)"
-#: The tags every Apply Desk session carries (author, 2026-11-16): the
-#: application and the year its exercise starts.
-TAGS = ("applydesk", START[:4])
+#: The tag every Apply Desk session carries (author, 2026-11-16; the
+#: exercise's year dropped the same day).
+TAGS = ("applydesk",)
 
 #: Each field: key, label, response type, data type, bounds, help text,
 #: and whether it is required (author, 2026-11-16: the application decides;

@@ -1981,19 +1981,24 @@
               <div data-intro-description-block>
                 {# The reviewer's subtitle, spaced as the surface's is;
                    none, and no blank line, when the heading has none. #}
+                {# Segment 23F rung 7k — on a linked instrument the
+                   description is the application's: shown, never a box,
+                   locked or not (as its help text is; author, 2026-11-16). #}
+                {% set _desc_fixed = linked and linked.has("instrument_structure") %}
                 <p class="rs-instrument-subtitle muted"
-                   data-intro-description-view data-lock-only{% if not _heading.subtitle %} hidden{% endif %}>{{ _heading.subtitle or '' }}</p>
+                   data-intro-description-view{% if not _desc_fixed %} data-lock-only{% endif %}{% if not _heading.subtitle %} hidden{% endif %}>{{ _heading.subtitle or '' }}</p>
+                {% if not _desc_fixed %}
                 {# The box fits its text (``data-fit-box``, the answer
                    boxes' script): no drag handle, two lines at least
                    (author, 2026-11-16). #}
                 <textarea data-intro-description-input data-unlock-only data-fit-box rows="2"
                           form="dfsave-{{ instrument.id }}" name="description"
-                          {% if linked and linked.has("instrument_structure") %}readonly data-linked-fixed{% endif %}
                           placeholder="(no description)"
                           maxlength="2000"
                           style="width: 100%; margin-top: 4px;
                                  min-height: 0; box-sizing: border-box;
                                  font: inherit; padding: 4px 6px;">{{ instrument.description or '' }}</textarea>
+                {% endif %}
               </div>
               {# 19Y Item 2 — in Layout 1 the help rows sit here, under the
                  description, JS-built by ``rebuildPreview``
@@ -4748,11 +4753,12 @@
             <tbody>
               {% for field in _band2.fields %}
                 {% set _group_off = _saved_unit_mode == "grouped" and not field.selectable_in_group %}
-                {% set _on = (field.locked or field.key in _band2.selected_display_keys) and not _group_off %}
-                {# Segment 23F rung 7h — on a linked instrument the dossier
-                   link's display is the application's, held as it stands
+                {# Segment 23F rungs 7h, 7k — on a linked instrument the
+                   dossier link's display is the application's, held as it
+                   stands, and the relationship's tags are held off
                    (``linked_instruments.hold_profile``). #}
-                {% set _held = linked and linked.has("instrument_structure") and field.source_type == "reviewee" and field.source_field == "profile_link" %}
+                {% set _held = linked and linked.has("instrument_structure") and ((field.source_type == "reviewee" and field.source_field == "profile_link") or field.source_type == "pair_context") %}
+                {% set _on = (field.locked or field.key in _band2.selected_display_keys) and not _group_off and not (_held and field.source_type == "pair_context") %}
                 {% set _title_on = ('Always shown — pinned ' ~ field.pinned) if field.locked else (('Set by ' ~ linked.name) if _held else 'Show this column') %}
                 <tr data-new-model-df-row data-key="{{ field.key }}"
                     data-label="{{ field.label }}"
@@ -4778,7 +4784,7 @@
                   <td class="col-shrink">
                     {# 20M Item 1 — Profile rides beside the name, so its
                        row, pinned after Email, takes no arrows. #}
-                    {% if not field.locked and not field.beside_name %}
+                    {% if not field.locked and not field.beside_name and not _held %}
                       <button type="button" class="btn secondary btn-short"
                               data-new-model-df-move="up"
                               {% if loop.previtem is not defined or loop.previtem.locked or loop.previtem.beside_name %}disabled{% endif %}
