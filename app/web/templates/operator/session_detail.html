@@ -336,20 +336,23 @@
                    placeholder="Search by offset (GMT+8) or name (Singapore)">
           </div>
         </div>
+        {# Each cell names its place (Start, End, Release from down the
+           left; the two prompts and Release until down the right), so a
+           cell a linked application hides leaves its row empty rather
+           than pulling the next cell into its column (author, 2026-11-16). #}
         <div style="display: grid;
                     grid-template-columns: 1fr 1fr;
                     grid-template-rows: auto auto auto;
-                    grid-auto-flow: column;
                     column-gap: 20px;
                     margin: 0;">
-          <div>
+          <div style="grid-area: 1 / 1;">
             <label for="mock-start">Start (optional)</label>
             <div class="config-value" data-display-only>{{ (session.scheduled_activate_at | format_datetime) if session.scheduled_activate_at else "—" }}</div>
             {{ datetime_field("mock-start", "scheduled_activate_at", scheduled_activate_at_input_value,
                  attrs={"form": "config-save-" ~ session.id, "data-tz-utc": format_datetime_local(session.scheduled_activate_at, 'UTC')},
                  wrap_attrs={"data-edit-only": ""}, label="Start") }}
           </div>
-          <div>
+          <div style="grid-area: 2 / 1;">
             <label for="mock-end">End (optional)</label>
             <div class="config-value" data-display-only>{{ (session.deadline | format_datetime) if session.deadline else "—" }}</div>
             {{ datetime_field("mock-end", "deadline", deadline_input_value,
@@ -360,7 +363,7 @@
              release lock: it shows results, and the card never unlocks
              (author, 2026-11-16). #}
           {% if not (linked and linked.has("release")) %}
-          <div>
+          <div style="grid-area: 3 / 1;">
             <label for="mock-release-from">Release responses from (optional)</label>
             <div class="config-value" data-display-only>{{ (session.responses_release_at | format_datetime) if session.responses_release_at else "—" }}</div>
             {{ datetime_field("mock-release-from", "responses_release_at", responses_release_at_input_value,
@@ -371,7 +374,7 @@
           {# Segment 23F — hidden where the linked application takes the email
              lock: Review Robin sends it no mail (author, 2026-11-16). #}
           {% if not (linked and linked.has("email")) %}
-          <div>
+          <div style="grid-area: 1 / 2;">
             <label for="mock-invite-offsets">{% if scheduled_send %}Send invites{% else %}Prompt to send invites{% endif %} (optional)</label>
             {# Display mode: each offset as a pill + a small gap + its
                resolved send datetime as a second pill. #}
@@ -397,7 +400,7 @@
           {# Segment 23F — hidden where the linked application takes the email
              lock: Review Robin sends it no mail (author, 2026-11-16). #}
           {% if not (linked and linked.has("email")) %}
-          <div>
+          <div style="grid-area: 2 / 2;">
             <label for="mock-reminder-offsets">{% if scheduled_send %}Send reminders{% else %}Prompt to send reminders{% endif %} (optional)</label>
             {# Display mode: each offset pill + its resolved send datetime. #}
             <div data-display-only>
@@ -426,7 +429,7 @@
              release lock: it shows results, and the card never unlocks
              (author, 2026-11-16). #}
           {% if not (linked and linked.has("release")) %}
-          <div>
+          <div style="grid-area: 3 / 2;">
             <label for="mock-release-until">Release responses until (optional)</label>
             <div class="config-value" data-display-only>{{ (session.responses_release_until | format_datetime) if session.responses_release_until else "—" }}</div>
             {{ datetime_field("mock-release-until", "responses_release_until", responses_release_until_input_value,
