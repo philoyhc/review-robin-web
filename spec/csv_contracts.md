@@ -708,6 +708,9 @@ the round-trip notes below.
    `session.responses_release_until` naming a value, and a
    `session.observers_enabled` of true, are errors naming the link; a
    blank release row passes, so the session's own export imports back.
+   On a linked session whose application takes
+   `linked_apps.Lock.SETTINGS_IMPORT` (segment 23F) the Settings import
+   is refused (`409`).
    A handoff re-send (`spec/handoffs.md` §6a) checks a file of the
    session rows the linked application owns with these same checks, and
    writes them directly rather than through the import's rebuild.

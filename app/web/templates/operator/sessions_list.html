@@ -173,6 +173,7 @@
             <tr data-tags='{{ tags_by_session.get(s.id, []) | tojson }}'
                 data-session-id="{{ s.public_id }}"
                 data-status="{{ s.status }}"
+                {% if s | linked_name %}data-linked="{{ s | linked_name }}"{% endif %}
                 data-deadline="{{ format_datetime_box(s.deadline, session_timezone(s)) }}">
               <td>
                 <a href="{{ url('/operator/sessions/' ~ s.public_id) }}">{{ s.name }}</a>
@@ -532,6 +533,9 @@
           // Session Home's Details card use (findings B2).
           var rowStatus = row.getAttribute("data-status");
           var isEditable = rowStatus === "draft" || rowStatus === "validated";
+          // Segment 23F — a linked session's details and tags are its
+          // application's: every box read-only, Save off.
+          var linkedTo = row.getAttribute("data-linked");
           var fields = {
             name: cells[0].textContent.trim(),
             code: cells[1].textContent.trim(),
@@ -559,7 +563,7 @@
               input.setAttribute("data-seeded-value", input.value);
               // Name / Code / Deadline edit in draft or validated;
               // Tags always.
-              if (key !== "tags" && !isEditable) input.disabled = true;
+              if ((key !== "tags" && !isEditable) || linkedTo) input.disabled = true;
             }
           );
           // Deadline's calendar and clear buttons (19X Item 6), wired
@@ -572,6 +576,10 @@
             return el ? el.value : "";
           }
           var save = node.querySelector("[data-expander-save]");
+          if (save && linkedTo) {
+            save.disabled = true;
+            save.title = "Set by " + linkedTo + ". Unlink the session to edit it here.";
+          }
           if (save) save.addEventListener("click", function () {
             submitExpanderForm(
               {{ url('/operator/sessions/') | tojson }} +

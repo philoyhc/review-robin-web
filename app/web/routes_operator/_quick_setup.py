@@ -1193,6 +1193,34 @@ async def _single_slot(
     )
 
 
+def _quick_setup_session(
+    review_session: ReviewSession = Depends(require_session_operator),
+) -> ReviewSession:
+    """The session for a Quick Setup upload, refused when its linked
+    application takes Quick Setup (segment 23F): the card is hidden there,
+    and its rosters and set-up come from the application."""
+    if linked_apps.locks(review_session, linked_apps.Lock.QUICK_SETUP):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=linked_apps.off_message(review_session, "Quick Setup"),
+        )
+    return review_session
+
+
+def _settings_import_session(
+    review_session: ReviewSession = Depends(require_session_operator),
+) -> ReviewSession:
+    """The session for a Settings import, refused when its linked
+    application takes the import (segment 23F): the import rebuilds every
+    instrument, which is the application's set-up."""
+    if linked_apps.locks(review_session, linked_apps.Lock.SETTINGS_IMPORT):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=linked_apps.off_message(review_session, "The Settings import"),
+        )
+    return review_session
+
+
 @router.post(
     "/sessions/{session_id}/quick-setup/reviewers",
     response_class=HTMLResponse,
@@ -1203,7 +1231,7 @@ async def quick_setup_reviewers_submit(
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(_quick_setup_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -1229,7 +1257,7 @@ async def quick_setup_reviewees_submit(
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(_quick_setup_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -1255,7 +1283,7 @@ async def quick_setup_relationships_submit(
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(_quick_setup_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -1285,7 +1313,7 @@ async def quick_setup_observers_submit(
     request: Request,
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(_quick_setup_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -1321,7 +1349,7 @@ async def quick_setup_submit_all(
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     acknowledge_instrument_deletion: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(_quick_setup_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
@@ -1447,7 +1475,7 @@ async def import_session_config(
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     acknowledge_instrument_deletion: str | None = Form(default=None),
-    review_session: ReviewSession = Depends(require_session_operator),
+    review_session: ReviewSession = Depends(_settings_import_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:

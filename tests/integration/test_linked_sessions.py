@@ -10,6 +10,7 @@ be tried first.
 
 from __future__ import annotations
 
+import dataclasses
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -24,7 +25,9 @@ from app.db.models import (
     InstrumentViewPolicy,
     Observer,
     Reviewee,
+    Reviewer,
     ReviewSession,
+    SessionTag,
 )
 from app.services import linked_apps, session_clone, session_config_io
 from app.services import session_lifecycle as lifecycle
@@ -93,9 +96,9 @@ def test_session_home_shows_the_link_and_unlink_makes_it_native(
     assert 'data-linked-app="utilities"' in page  # Session details' chip
     assert "Linked: Utilities</span>" in page  # the status row's pill
     assert "Session is linked with" in page
-    # Rung 5a: the Linked application card, its Unlink inert for now.
+    # The Linked application card holds Unlink (rung 5b; inert in 5a).
     assert 'id="linked-app-card"' in page
-    assert "data-linked-app-unlink>Unlink</button>" in page
+    assert "data-linked-app-unlink" not in page
     reply = client.post(f"{home}/unlink", follow_redirects=False)
     assert reply.status_code == 303
     db.refresh(review_session)
@@ -183,8 +186,19 @@ def _save(client: TestClient, review_session: ReviewSession, **form: str) -> int
     ).status_code
 
 
-def test_the_details_save_refuses_release_and_observers(client: TestClient, db: Session) -> None:
+def test_the_details_save_refuses_release_and_observers(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With the details lock (23F) the card's Save is refused whole; a
+    profile without it still refuses release and observers (23E)."""
     review_session, _ = _created(client, db)
+    assert _save(client, review_session) == 409
+    utilities = linked_apps.LINKED_APPS["utilities"]
+    monkeypatch.setitem(
+        linked_apps.LINKED_APPS,
+        "utilities",
+        dataclasses.replace(utilities, locks=utilities.locks - {linked_apps.Lock.SESSION_DETAILS}),
+    )
     assert _save(client, review_session, responses_release_at="2030-01-01 09:00") == 422
     assert _save(client, review_session, observers_enabled="true") == 422
     assert _save(client, review_session) == 303  # the card's own Save
@@ -349,3 +363,52 @@ def test_a_transfer_from_before_the_link_still_replays(
     again = _post(client, bundle)
     assert again.status_code == 200 and again.json()["status"] == "already_created"
     assert db.scalars(select(ReviewSession)).one().linked_app is None
+
+
+# ── 23F rung 5: the Linked application card and the session locks ─────
+
+
+def test_session_details_never_unlock_and_the_card_holds_unlink(
+    client: TestClient, db: Session
+) -> None:
+    review_session, _ = _created(client, db)
+    page = client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
+    assert 'data-config-mode="display"' in page  # ?editing=1 does not unlock it
+    assert "data-details-locked" in page
+    assert "data-linked-app-card" in page and "/unlink" in page
+    assert 'id="quick-setup-reviewers"' not in page
+    review_session.linked_app = None
+    db.commit()
+    native = client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
+    assert 'data-config-mode="edit"' in native and "data-linked-app-card" not in native
+
+
+def test_quick_setup_and_the_settings_import_are_refused(client: TestClient, db: Session) -> None:
+    review_session, _ = _created(client, db)
+    base = f"/operator/sessions/{review_session.public_id}/quick-setup"
+    reviewers = b"ReviewerName,ReviewerEmail\nZed,zed@example.edu\n"
+    reply = client.post(f"{base}/reviewers", files={"file": ("r.csv", reviewers)})
+    assert reply.status_code == 409
+    assert "zed@example.edu" not in set(db.scalars(select(Reviewer.email)))
+
+
+def test_the_lobby_refuses_a_linked_sessions_details_and_tags(
+    client: TestClient, db: Session
+) -> None:
+    review_session, _ = _created(client, db)
+    reply = client.post(
+        f"/operator/sessions/{review_session.public_id}/lobby-edit",
+        data={"name": "Renamed", "code": review_session.code, "tags": "x"},
+        follow_redirects=False,
+    )
+    assert reply.status_code == 409
+    client.post(
+        "/operator/sessions/bulk-tags",
+        data={"session_ids": [review_session.id], "tags": "bulk", "op": "add"},
+        follow_redirects=False,
+    )
+    db.expire_all()
+    assert review_session.name != "Renamed"
+    assert not list(db.scalars(select(SessionTag)))
+    lobby = client.get("/operator/sessions").text
+    assert 'data-linked="Utilities"' in lobby

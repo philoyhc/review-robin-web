@@ -282,6 +282,11 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   Ticking two or more rows opens the `bulk-expander` instead — bulk
   tag add/remove (`bulk-tags`), bulk purge-and-archive, and a
   gated bulk Delete.
+- **A linked session** (segment 23F, its application taking
+  `linked_apps.Lock.SESSION_DETAILS`) carries `data-linked`: its
+  expander's Name / Code / Deadline / Tags are read-only and Save is
+  off, `lobby-edit` is `409`, and `bulk-tags` skips it. Its application
+  re-sends those fields (`spec/handoffs.md` §6a).
 - **Purge and archive** skips any session `lifecycle.can_archive`
   refuses (`ready` or already `archived`) — `spec/lifecycle.md` §1. It
   shares its route and service with the Extract data page's Archive

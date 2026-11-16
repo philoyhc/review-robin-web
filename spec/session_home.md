@@ -459,20 +459,24 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
 - **Session is linked with** (`#config-linked-app`, segment 23E), only on
   a session another application created through the handoff
   (`linked_app`, `spec/handoffs.md` §5): one chip naming the application,
-  on. Locked it only shows; unlocked it is a button that asks
-  (`window.confirm`) and then posts `/unlink`, making the session native
-  (`session.unlinked`), with the help line "Click to unlink: the session
-  becomes native." Like every edit-mode control it is reached only in
-  draft or validated. The optional-tabs and linked groups share the left
+  on, shown only. The optional-tabs and linked groups share the left
   of a two-column row under Tags (`.config-toggle-columns`), Rosters the
   right. On a linked session **Release responses from / until** show
   "Off: see in {application}" in both modes and render no input, and
   the status row adds a `Linked: {application}` pill.
-- **The Linked application card** (`#linked-app-card`, segment 23F rung
-  5a), only on a linked session: half width, in the bottom-left column
-  under Quick Setup, saying what the link means and holding an
-  **Unlink** (`.btn.alert`), inert until rung 5b wires it and moves it
-  there from Session details.
+- **On a linked session whose application takes the details lock**
+  (`linked_apps.Lock.SESSION_DETAILS`, segment 23F) the card never
+  unlocks: `?editing=1` renders display mode, *Unlock* is inert, titled
+  "Set by {application}. Unlink the session to edit its details here.",
+  and `POST /config` is `409`. The application re-sends these fields
+  (`spec/handoffs.md` §6a).
+- **The Linked application card** (`#linked-app-card`, segment 23F),
+  half width at the top of the bottom-left column on a linked session:
+  what the link means, and **Unlink** (`window.confirm`, then `POST
+  /unlink`, `session.unlinked`), which makes the session native. Where
+  the application takes the Quick Setup lock
+  (`linked_apps.Lock.QUICK_SETUP`), Quick Setup is not rendered and this
+  card takes its place.
 - **Rosters** (`#config-symmetric-review`, a `role="group"` labeled
   "Rosters") — one chip, **Symmetric review** (`symmetric_review`), in
   the same chip style: the Reviewers roster is also the Reviewees roster
