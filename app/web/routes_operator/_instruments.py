@@ -29,7 +29,7 @@ from app.json_shapes import json_list, json_object
 from app.services import (
     instruments as instruments_service,
 )
-from app.services import linked_apps, unit_of_work, visibility_policies
+from app.services import linked_apps, linked_instruments, unit_of_work, visibility_policies
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.web import urls, views
@@ -1049,8 +1049,10 @@ async def instrument_consolidated_save(
                 except (TypeError, ValueError):
                     band2_state = None
                 if band2_state is not None and structure_fixed:
-                    # The response fields are the linked application's.
+                    # The response fields and the dossier link's display
+                    # are the linked application's.
                     band2_state.pop("response_fields", None)
+                    linked_instruments.hold_profile(instrument, band2_state)
                 if band2_state is not None:
                     acknowledged_drop = bool(band2_state.get("acknowledged_drop", False))
                     try:

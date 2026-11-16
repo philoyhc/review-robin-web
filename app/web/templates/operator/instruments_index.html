@@ -2365,7 +2365,7 @@
               var locked = row.getAttribute('data-locked') === 'true';
               if (locked) { box.checked = !off; }
               else if (off) { box.checked = false; }
-              box.disabled = locked || off;
+              box.disabled = locked || off || row.getAttribute('data-held') === 'true';
               // The tooltip sits on the chip, the box being hidden, and on
               // the box too, for assistive technology.
               box.title = off ? 'Not shown on group rows' : box.getAttribute('data-title-on');
@@ -4743,7 +4743,11 @@
               {% for field in _band2.fields %}
                 {% set _group_off = _saved_unit_mode == "grouped" and not field.selectable_in_group %}
                 {% set _on = (field.locked or field.key in _band2.selected_display_keys) and not _group_off %}
-                {% set _title_on = ('Always shown — pinned ' ~ field.pinned) if field.locked else 'Show this column' %}
+                {# Segment 23F rung 7h — on a linked instrument the dossier
+                   link's display is the application's, held as it stands
+                   (``linked_instruments.hold_profile``). #}
+                {% set _held = linked and linked.has("instrument_structure") and field.source_type == "reviewee" and field.source_field == "profile_link" %}
+                {% set _title_on = ('Always shown — pinned ' ~ field.pinned) if field.locked else (('Set by ' ~ linked.name) if _held else 'Show this column') %}
                 <tr data-new-model-df-row data-key="{{ field.key }}"
                     data-label="{{ field.label }}"
                     data-source-type="{{ field.source_type }}"
@@ -4754,11 +4758,12 @@
                     data-width="{{ field.width_px or '' }}"
                     data-reorderable="{{ 'true' if field.reorderable else 'false' }}"
                     {% if field.beside_name %}data-beside-name="true"{% endif %}
-                    {% if field.locked %}data-locked="true"{% endif %}>
+                    {% if field.locked %}data-locked="true"{% endif %}
+                    {% if _held %}data-held="true"{% endif %}>
                   <td><label class="pill pill-count tag-chip"
                              title="{{ 'Not shown on group rows' if _group_off else _title_on }}"><input
                            type="checkbox" class="visually-hidden" data-new-model-df-active
-                           {% if field.locked or _group_off %}disabled{% endif %}
+                           {% if field.locked or _held or _group_off %}disabled{% endif %}
                            {% if _on %}checked{% endif %}
                            aria-label="Show {{ field.label }}"
                            data-title-on="{{ _title_on }}"

@@ -37,7 +37,7 @@ from app.db.models import Instrument, ReviewSession, User
 from app.db.session import get_db
 from app.json_shapes import json_list, json_object
 from app.services import instruments as instruments_service
-from app.services import linked_apps, unit_of_work
+from app.services import linked_apps, linked_instruments, unit_of_work
 from app.web.deps import get_or_create_user
 from app.web.routes_operator._shared import (
     _require_instrument_editable,
@@ -102,8 +102,10 @@ async def instrument_band2_state(
     body = await require_json_object(request, label="band2-state")
     if linked_apps.locks(instrument.session, linked_apps.Lock.INSTRUMENT_STRUCTURE):
         # Segment 23F rung 7c — the response fields are the linked
-        # application's; the display selections stay the operator's.
+        # application's; the display selections stay the operator's,
+        # but the dossier link's (rung 7h, author 2026-11-16).
         body.pop("response_fields", None)
+        linked_instruments.hold_profile(instrument, body)
 
     # Segment 18K PR 4 — Band 2 chip un-pin confirm guard. The
     # operator-side JS shows a ``confirm()`` naming the field +

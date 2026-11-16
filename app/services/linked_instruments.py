@@ -29,6 +29,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, InstrumentDisplayField, ReviewSession, User
+from app.json_shapes import json_list
 from app.services import audit
 from app.services import instruments as instruments_service
 from app.services.instruments import record_band1_links_set
@@ -258,3 +259,23 @@ def keep_display_fields(
         if source in before or instruments_service.is_locked_display_source(*source):
             continue
         instruments_service.delete_display_field(db, field=field, actor=actor)
+
+
+def hold_profile(instrument: Instrument, state: dict[str, Any]) -> None:
+    """Keep the dossier link's display selection as it stands in a Band 2
+    save's ``state`` (author, 2026-11-16): on a linked instrument it is
+    the application's, like the fixed pair, so the operator's tick neither
+    adds nor removes it. A state without ``selected_display_keys`` leaves
+    the selections alone already."""
+    keys = json_list(state.get("selected_display_keys"))
+    if keys is None:
+        return
+    key = ".".join(PROFILE_LINK)
+    shown = any(
+        (field.source_type, field.source_field) == PROFILE_LINK and field.visible
+        for field in instrument.display_fields
+    )
+    held: list[object] = [k for k in keys if k != key]
+    if shown:
+        held.append(key)
+    state["selected_display_keys"] = held
