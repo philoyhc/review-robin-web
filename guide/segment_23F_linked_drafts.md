@@ -125,6 +125,7 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 
 ## Status
 
+- **Close adds `spec/linked_sessions.md`** (author, 2026-11-16): one reference for linking, by lock, so the next application linked is a profile entry plus this page's table; the locks are written to be independent (rung 7j's test of release without email is the pattern).
 - **Rung 7k** (author's browser check, 2026-11-16): the tag is `applydesk` alone (no year); (superseding 7e's `2027`); the relationship's tag is never a display field on a linked instrument (Prepare's seed skips it, an existing row is held off with the lock, and saves and the per-field routes keep it off); a linked instrument's description is shown, never an edit box, as its help text is.
 - **Rung 7j** (author, 2026-11-16): Utilities takes the email and invitation-send locks too, so its sessions send no Review Robin email (the Email Template tab and page, per-row Send / Regenerate, the bulk sends and prompts); the Invitations reviewer page's email-preview card is hidden under the email lock. The switchboard's second profile goes with it (a test builds a partial profile instead). The Assignments page's instrument chip needs no lock: it only filters the preview table. Cold read: the Invitations Send note and the status row's Email Template pill go under the locks too. Earlier Status lines saying Utilities keeps email are superseded here.
 - **Rung 7i** (author's browser check, 2026-11-16): with the release fields hidden, Session details' prompts flowed under End; each cell of that grid now names its place, so a hidden cell leaves its row empty.
@@ -180,6 +181,7 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 - A re-send replaces a linked draft's rosters and owned settings all or nothing; refused when opened, unlinked or another application's; a replay applies once (`tests/integration/test_handoff_update.py`).
 - The proof of concept re-sends and its draft changes (`utilityapps/tests/test_interop_poc.py`).
 - On a linked session, opened or not, every lock in the amended Decision refuses ~~in its service~~ at its route or route dependency (amended at build, see Status), and Unlink lifts them (tests).
+- `spec/linked_sessions.md` exists: one section per `linked_apps.Lock` (what it hides, refuses and holds, page by page, each pointing to the owning spec), what linking does whatever the locks (the fixed rule, the display start, Relationships on), the profile table (application → locks), and how to add an application; `tests/unit/` fails on a `Lock` member the page does not name (added at the close, author 2026-11-16).
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 23F` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -212,6 +214,8 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 - `spec/instruments.md` — a linked instrument: the fixed rule, the owned parts fixed, add / replicate / delete inactive, display fields starting from Name + ProfileLink.
 - `spec/operations_pages.md` — the Invitations page without *Send* / *Regenerate* on a linked session (instruments amendment).
 - `utilityapps/spec/utilities.md` — the proof of concept's Re-send (rung 4).
+- `spec/linked_sessions.md` — new at the close (author, 2026-11-16): the single reference for what a link changes, organized by lock so another application is a different selection of locks, not new prose; Apply Desk is likely the median case.
+- `spec/ui_elements.md` — §9: a chip inside a linked instrument's fixed region is fixed (rung 7h).
 - `guide/interoperability.md` — §5's revisit retired into this segment.
 - `guide/README.md` — this plan's row (rung 1), moved to `guide/archive/README.md` at close.
 - `guide/todo_master.md` — the queue entry (rung 1); deleted at close.
