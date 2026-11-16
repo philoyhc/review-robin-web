@@ -420,6 +420,7 @@ def _record_response_field_changes(
     before: dict[int, dict[str, Any]],
     after: dict[int, dict[str, Any]],
     actor: User,
+    include_branches: bool = False,
 ) -> None:
     """The card's Save rewrites response fields through
     ``_sync_response_fields_to_db``, so the edit, not the request,
@@ -429,7 +430,9 @@ def _record_response_field_changes(
     does neither. Order is compared as a rank among the fields both
     sides hold, as ``bulk_save_fields`` does, since the sync renumbers
     a seeded 1, 2 to 0, 1. A branch edit un-validates here but is left
-    out of the event: ``_apply_branch_rules`` audits it per field."""
+    out of the event: ``_apply_branch_rules`` audits it per field. A caller
+    that has no such pass (a linked re-send, ``replace_response_fields``)
+    sets ``include_branches`` and the branch attributes ride the event."""
     added = [
         {"field_key": after[i]["field_key"], "label": after[i]["label"]}
         for i in after.keys() - before.keys()
@@ -447,7 +450,7 @@ def _record_response_field_changes(
         for attr in _RESPONSE_FIELD_ATTRS:
             if before[i][attr] == after[i][attr]:
                 continue
-            if attr in _BRANCH_ATTRS:
+            if attr in _BRANCH_ATTRS and not include_branches:
                 branch_changed = True
             else:
                 changes[attr.lstrip("_")] = [before[i][attr], after[i][attr]]
@@ -1213,10 +1216,13 @@ def replace_response_fields(
         instrument.column_widths = widths or None
     db.flush()
     db.refresh(instrument, ["response_fields"])
+    # No ``_apply_branch_rules`` runs here to audit a cleared branch, so
+    # the branch attributes ride this event (Codex on #3926).
     _record_response_field_changes(
         db,
         instrument=instrument,
         before=before,
         after=_response_field_snapshot(instrument),
         actor=actor,
+        include_branches=True,
     )

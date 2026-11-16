@@ -588,3 +588,38 @@ def test_a_rename_is_audited(client: TestClient, db: Session) -> None:
     assert detail_of(renamed)["changes"]["name"][1] == (
         "Gate 2: Interviews with the scholarship panel"
     )
+
+
+def test_a_cleared_branch_is_audited(client: TestClient, db: Session) -> None:
+    """A re-send leaves every field unbranched; a branch it clears is in the
+    event, though the card's Save audits branches elsewhere (Codex on #3926)."""
+    _, created = _instrument_created(client, db)
+    instrument = db.scalars(select(Instrument)).one()
+    fields = {f.field_key: f for f in instrument.response_fields}
+    fields["comment"].branch_parent_id = fields["score"].id
+    fields["score"].branch_op = "eq"
+    fields["score"].branch_value = "5"
+    db.commit()
+    keep_both = (
+        "field,value,data_type\r\n"
+        "instruments[1].name,Mock review,string\r\n"
+        "instruments[1].response_fields[1].field_key,score,string\r\n"
+        "instruments[1].response_fields[1].label,Score,string\r\n"
+        "instruments[1].response_fields[1].response_type,1-to-5int,string\r\n"
+        "instruments[1].response_fields[1].data_type,Integer,string\r\n"
+        "instruments[1].response_fields[1].min,1,decimal\r\n"
+        "instruments[1].response_fields[1].max,5,decimal\r\n"
+        "instruments[1].response_fields[1].step,1,decimal\r\n"
+        "instruments[1].response_fields[2].field_key,comment,string\r\n"
+        "instruments[1].response_fields[2].label,Comment,string\r\n"
+        "instruments[1].response_fields[2].response_type,text,string\r\n"
+        "instruments[1].response_fields[2].data_type,String,string\r\n"
+    )
+    reply = _resend(client, created, _update_bundle(files=_with(keep_both)))
+    assert reply.status_code == 200, reply.text
+    saved = db.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == "instrument.response_fields_saved")
+    ).one()
+    changed = {u["field_key"]: u["changes"] for u in detail_of(saved)["set_changes"]["updated"]}
+    assert "branch_parent_id" in changed["comment"]
+    assert "branch_op" in changed["score"] and "branch_value" in changed["score"]
