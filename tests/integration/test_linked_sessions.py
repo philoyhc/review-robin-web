@@ -169,8 +169,15 @@ def test_the_workflow_card_offers_no_release(client: TestClient, db: Session) ->
 def test_session_details_shows_release_and_observers_off(client: TestClient, db: Session) -> None:
     review_session, _ = _created(client, db)
     page = client.get(f"/operator/sessions/{review_session.public_id}").text
-    # Shown as any unset field is (author, 2026-11-16): the card never unlocks.
-    assert "Off: see in" not in page and page.count("data-release-off") == 2
+    # Hidden on a linked session (author, 2026-11-16): the card never unlocks.
+    assert "Release responses from" not in page and "Release responses until" not in page
+    # Utilities keeps Review Robin's email, so its prompts stay; Apply
+    # Desk's sessions take the email lock and hide them.
+    assert 'name="invite_offsets"' in page and 'name="reminder_offsets"' in page
+    review_session.linked_app = "applydesk"
+    db.commit()
+    page = client.get(f"/operator/sessions/{review_session.public_id}").text
+    assert 'name="invite_offsets"' not in page and 'name="reminder_offsets"' not in page
     assert 'name="responses_release_at"' not in page
     assert 'name="responses_release_until"' not in page
     assert "data-observers-off" in page and 'name="observers_enabled"' not in page

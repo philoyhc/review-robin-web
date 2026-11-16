@@ -461,9 +461,10 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   (`linked_app`, `spec/handoffs.md` §5): one chip naming the application,
   on, shown only. The optional-tabs and linked groups share the left
   of a two-column row under Tags (`.config-toggle-columns`), Rosters the
-  right. On a linked session **Release responses from / until** show
-  "—", as any unset field does, and render no input (the card never
-  unlocks there, so no field is marked as the application's), and
+  right. On a linked session (the card never unlocks there) **Release
+  responses from / until** are not shown where the application takes the
+  release lock, and **Prompt to send invites / reminders** where it takes
+  the email lock (author, 2026-11-16); and
   the status row adds a `Linked: {application}` pill.
 - **On a linked session whose application takes the details lock**
   (`linked_apps.Lock.SESSION_DETAILS`, segment 23F) the card never
