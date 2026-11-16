@@ -397,6 +397,86 @@ where a ruling below differs from it, the ruling wins.
       (ruling 9). After Send, ruling 24: edited in Apply Desk until the
       session opens, then in Review Robin.
 
+## What a linked Review Robin gate needs (2026-11-16)
+
+Review Robin's side is built and closed (RRW segment 23F): a gate sent
+from Apply Desk becomes a **linked** Review Robin session, locked to what
+Apply Desk sends (`spec/linked_sessions.md`, `spec/handoffs.md`; the
+working reference sender is Utilities' `utilityapps/interop_poc/`). Apply
+Desk has no sender yet. What it needs, in three layers (author: UI first,
+rulings after this list):
+
+**A. Process > Gates: what the operator enters for each gate**
+- **Name** (built) and a **description** (new): the instrument's name
+  and description in Review Robin.
+- **Start and End** as real date-times in the exercise's **timezone**
+  (stage dates are free text today, `stages.py`); Start before End. A
+  sent Start activates the session once prepared, which ends re-sends.
+- **Help contact** (new; or the exercise's, see rulings).
+- **Each result**: label (built), type and bounds or options (built),
+  plus **required** and **help text** (new), and a stable **field key**
+  (`r1`… today; Review Robin reports answers under it).
+- **Evaluators**: the ranked sources and their tags (AD1G). Every pair
+  carries its source as the relationship tag, no comma.
+- **Confidential**: whether the gate is blind, which decides what
+  Review Robin shows as each reviewee's name and key.
+
+**B. Evaluations > Gates: what the operator does with each gate**
+- **Send** (now disabled): live when the gate is Ready; opens Review
+  Robin's holding tab, posts the bundle, lands on the new session;
+  refusals shown with their reason.
+- **Re-send** while the session is unopened: after any change to the
+  dossiers, pairs, results, dates or description; refusals shown
+  (`session_opened`, `session_has_responses` → Review Robin's *Delete
+  data*, `not_linked`, `session_code_conflict`, `invalid_setup`).
+- **Status** (now *Pull*, disabled): state, progress and each reviewer's
+  completion; *Unavailable* when the read fails or its version differs.
+- **Results**: `results.csv` and `completion.csv`, each answer mapped to
+  its dossier and result, each gate result derived (ruling 21).
+- **Link state**: linked, or detached after an Unlink in Review Robin
+  (no re-send then).
+- **Invite and remind**: Review Robin emails no one on a linked session;
+  Apply Desk emails reviewers a link to Review Robin's `/me`, where they
+  sign in (their `ReviewerEmail` is their sign-in address).
+
+**C. Underneath**
+- **Persistence (AD2)**: stages with date-times and timezone, gates,
+  results with their metadata, pairs, and per gate the **transfer
+  record** (the creating `transfer_id` every later call is keyed by,
+  the session code, what was sent).
+- **Bundle builders**: reviewers (name, email; no tags), reviewees (key,
+  name, `ProfileLink` as an absolute URL), relationships
+  (`PairContextTag1.Apply-Desk-Link`), settings rows (the session's
+  description, help contact, timezone, Start, End, the tag `applydesk`;
+  one instrument and its response fields). `source_app` exactly
+  `applydesk`. Never: observers, release, branching, rules, layouts.
+- **The browser-mediated calls**: create, re-send, status, results, with
+  retry and replay as `spec/handoffs.md` §6–7 say.
+- **Results mapping and derivation** into dossiers (ruling 21), raw
+  results as dossier parts when the gate concludes (ruling 26).
+- **Dossier access (AD5)**: a reviewer opens only the dossiers paired to
+  them (ruling 9); the version frozen at send (ruling 25); blind
+  redaction matching what Review Robin shows.
+- **Emails (AD7)**: the gate invitation and reminder templates; release
+  through dossier parts (Review Robin releases nothing).
+
+**Rulings to settle (after the list)**
+- Ruling 24's "after opening, made in Review Robin" is superseded: a
+  linked session stays locked; changes come by revert-and-re-send or
+  Unlink.
+- A sent gate read-only (AD1F, AD1G) versus re-sending before it opens.
+- Confidential identity: 23F's "Name redacted" plus the Dossier ID, or
+  ruling 10's per-handoff alias key.
+- Each gate's Review Robin session name and code (unique there).
+- Where the description and help contact come from (gate or exercise).
+- What marks a gate concluded, for writing results.
+- How Apply Desk's operators line up with Review Robin's.
+- Ruling 9's and AD6's "tags decided at AD6": settled by 23F.
+
+**Order** (UI first): A as scaffolds on Process > Gates, then B on
+Evaluations > Gates; then AD2's persistence; AD5; AD6 as rungs (builders,
+Send, re-send, status and results, Unlink); AD7's emails.
+
 ## MVP roadmap
 
 Segments in order; each gets a plan in this folder when it starts.
@@ -427,8 +507,9 @@ Segments in order; each gets a plan in this folder when it starts.
   and whether a part may be optional or repeated (references from more
   than one referee are their own case, with uploads and referees, G8).
 
-- **The 23A open items (AD6):** `reviewees.unreachable_for_results` on
-  every application ID; two concurrent first posts of one transfer; the
+- **The 23A open items (AD6):** ~~`reviewees.unreachable_for_results` on
+  every application ID~~ (not raised under the `release` lock, RRW 23F);
+  two concurrent first posts of one transfer; the
   new-user race in `get_or_create_user` (`guide/interoperability.md` §4).
 - **Unattended send (AD7):** Cordware's host sends as the signed-in
   user (`cordware/graph.py`, `/me/sendMail`); a send with no one signed
