@@ -396,3 +396,40 @@ def test_a_schedule_moved_past_the_old_end_is_accepted(client: TestClient, db: S
     assert reply.status_code == 200, reply.text
     db.expire_all()
     assert review_session.deadline is not None and review_session.deadline.month == 4
+
+
+def test_the_schedule_is_rechecked_under_the_lock(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An overlapping re-send that moved End since the first check is seen
+    under the save's lock (Codex on #3920): a Start now after that End is
+    refused, and the rosters stay as they were."""
+    from datetime import UTC, datetime
+
+    review_session, created = _created(client, db)
+    march = (
+        "field,value,data_type\r\n"
+        "session.scheduled_activate_at,2030-03-01T09:00:00+00:00,datetime\r\n"
+        "session.deadline,2030-03-08T17:00:00+00:00,datetime\r\n"
+    )
+    assert _resend(client, created, _update_bundle(files=_with(march))).status_code == 200
+    real = handoffs.guard_update
+
+    def end_moved_meanwhile(db_: Session, user: Any, session_: ReviewSession, bundle: Any) -> None:
+        session_.deadline = datetime(2030, 3, 4, 17, tzinfo=UTC)
+        db_.flush()  # as if committed by the other re-send
+        real(db_, user, session_, bundle)
+
+    monkeypatch.setattr(handoffs, "guard_update", end_moved_meanwhile)
+    start_only = (
+        "field,value,data_type\r\n"
+        "session.scheduled_activate_at,2030-03-06T09:00:00+00:00,datetime\r\n"
+    )
+    files = {"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": start_only}
+    reply = _resend(client, created, _update_bundle(files=files))
+    assert reply.status_code == 422, reply.text
+    assert reply.json()["slot"] == "settings"
+    db.expire_all()
+    assert _emails(db) == {"cal@example.edu"}
+    assert review_session.scheduled_activate_at is not None
+    assert review_session.scheduled_activate_at.day == 1

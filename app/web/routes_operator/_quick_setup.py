@@ -1792,6 +1792,12 @@ async def update_handoff_session(
     except sessions.SessionCodeTakenError:
         db.rollback()
         return _handoff_error("session_code_conflict", status.HTTP_409_CONFLICT)
+    except linked_settings.SettingsRefused as exc:
+        # The schedule, rechecked under the lock (``linked_settings.apply``).
+        db.rollback()
+        return _handoff_error(
+            "invalid_setup", status.HTTP_422_UNPROCESSABLE_CONTENT, exc.details, slot="settings"
+        )
     except handoffs.AlreadyUpdated as done:
         db.rollback()
         return JSONResponse(

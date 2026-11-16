@@ -128,8 +128,14 @@ def prepare(
         sessions.ensure_code_available(
             db, str(overrides["code"]), exclude_session_id=review_session.id
         )
-    # The order is checked on the values the session will hold: a re-send
-    # writes End, where the import would only fill it when blank.
+    check_schedule(review_session, overrides)
+    return SessionSettings(overrides, settings.tags)
+
+
+def check_schedule(review_session: ReviewSession, overrides: dict[str, object]) -> None:
+    """The schedule's order on the values the session will hold: a re-send
+    writes End, where the import would only fill it when blank.
+    :class:`SettingsRefused` when out of order."""
     try:
         scheduled_events.validate_schedule_ordering(
             scheduled_activate_at=_when(
@@ -140,7 +146,6 @@ def prepare(
         )
     except scheduled_events.ScheduledActivateError as exc:
         raise SettingsRefused([str(exc)]) from exc
-    return SessionSettings(overrides, settings.tags)
 
 
 def apply(
@@ -153,9 +158,14 @@ def apply(
 ) -> None:
     """Write checked settings through the services that own each field,
     each audited as an operator's edit would be. Inside a caller's unit
-    (the re-send's save) these only flush. The code is checked again
-    here, under that unit's session lock."""
+    (the re-send's save) these only flush. The code and the schedule's
+    order are checked again here, under that unit's session lock, against
+    the values an overlapping re-send may have committed since
+    :func:`prepare` (Codex on #3920): :class:`SettingsRefused` when the
+    order no longer holds."""
     overrides = settings.overrides
+    if "scheduled_activate_at" in overrides or "deadline" in overrides:
+        check_schedule(review_session, overrides)
     if "code" in overrides:
         sessions.ensure_code_available(
             db, str(overrides["code"]), exclude_session_id=review_session.id
