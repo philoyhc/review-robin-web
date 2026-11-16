@@ -51,8 +51,6 @@ from app.web.routes_operator._shared import (
     acknowledged_loss,
     require_reviewees_editable_session,
     require_reviewees_open_session,
-    rosters_editable,
-    rosters_linked_to,
 )
 
 router = APIRouter()
@@ -173,7 +171,7 @@ def _render_reviewees_page(
     # ``archived`` (no revert form: ``/revert`` 409s from there).
     # Observers already passed this for its checkbox exception.
     is_archived = lifecycle.is_archived(review_session)
-    if not lifecycle.is_editable(review_session) or review_session.symmetric_review:
+    if not views.rosters_editable(review_session) or review_session.symmetric_review:
         # The editor renders only where `create` / `update` accept
         # (`_require_editable`). Was `is_ready` (findings C3). Under
         # symmetric review they answer 409 (20B), so it renders nowhere.
@@ -335,8 +333,8 @@ def _render_reviewees_page(
             # and a live Delete while every mutation 409d. This is what
             # ``_require_editable`` enforces, so page and route agree by
             # construction rather than by two lists kept in step.
-            "is_editable": rosters_editable(review_session),
-            "rosters_linked_to": rosters_linked_to(review_session),
+            "is_editable": views.rosters_editable(review_session),
+            "rosters_linked_to": views.rosters_linked_to(review_session),
             "panel_open": panel_open,
             # 19I Item 12 rung 2 — the chips' has-data flags, answered
             # over the whole roster by query rather than by scanning

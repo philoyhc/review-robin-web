@@ -47,8 +47,6 @@ from app.web.routes_operator._shared import (
     account_resolver,
     acknowledged_loss,
     require_rosters_open_session,
-    rosters_editable,
-    rosters_linked_to,
 )
 
 router = APIRouter()
@@ -165,7 +163,7 @@ def _render_reviewers_page(
     # ``archived`` (no revert form: ``/revert`` 409s from there).
     # Observers already passed this for its checkbox exception.
     is_archived = lifecycle.is_archived(review_session)
-    if not lifecycle.is_editable(review_session):
+    if not views.rosters_editable(review_session):
         # Edit / Add are setup mutations: the editor renders only where
         # `create` / `update` accept (`_require_editable`, draft or
         # validated). Was `is_ready`, which left a live editor on
@@ -339,8 +337,8 @@ def _render_reviewers_page(
             # and a live Delete while every mutation 409d. This is what
             # ``_require_editable`` enforces, so page and route agree by
             # construction rather than by two lists kept in step.
-            "is_editable": rosters_editable(review_session),
-            "rosters_linked_to": rosters_linked_to(review_session),
+            "is_editable": views.rosters_editable(review_session),
+            "rosters_linked_to": views.rosters_linked_to(review_session),
             # 19I Item 12 rung 2 — the chips' has-data flags, answered
             # over the whole roster by query rather than by scanning
             # whichever rows this render produced. Keyed by the page's

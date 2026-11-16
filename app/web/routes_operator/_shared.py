@@ -389,14 +389,6 @@ def require_relationships_open_session(
     return review_session
 
 
-def rosters_editable(review_session: ReviewSession) -> bool:
-    """A roster page's ``is_editable``: the lifecycle's, and not a linked
-    application's rosters (segment 23F)."""
-    return lifecycle.is_editable(review_session) and not linked_apps.locks(
-        review_session, linked_apps.Lock.ROSTERS
-    )
-
-
 def refuse_locked(review_session: ReviewSession, lock: linked_apps.Lock, what: str) -> None:
     """409 when the session's linked application takes ``lock`` (segment
     23F), for a route whose gate yields more than the session."""
@@ -432,14 +424,6 @@ require_email_open_session = _refusing(linked_apps.Lock.EMAIL, "Review Robin's e
 require_invitation_send_open_session = _refusing(
     linked_apps.Lock.INVITATION_SEND, "Sending invitations"
 )
-
-
-def rosters_linked_to(review_session: ReviewSession) -> str:
-    """The application whose rosters these are (segment 23F), or "": the
-    roster pages' lock card names it."""
-    if linked_apps.locks(review_session, linked_apps.Lock.ROSTERS):
-        return linked_apps.linked_name(review_session)
-    return ""
 
 
 def require_observers_enabled_session(

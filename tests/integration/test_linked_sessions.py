@@ -423,6 +423,12 @@ def test_the_roster_pages_are_read_only(client: TestClient, db: Session) -> None
     for page in ("reviewers", "reviewees", "relationships"):
         text = client.get(f"{base}/{page}").text
         assert "data-rosters-linked" in text and "come from Utilities" in text, page
+        # A revisited editor URL opens no editor (Codex on #3924).
+        editor = client.get(f"{base}/{page}?add=1").text
+        assert f"Add new {page[:-1]}" not in editor, page
+    reviewer_id = db.scalars(select(Reviewer.id)).first()
+    editor = client.get(f"{base}/reviewers?edit_id={reviewer_id}").text
+    assert "Edit reviewer" not in editor
     writes = [
         ("reviewers/create", {"name": "Zed", "email": "zed@example.edu"}),
         ("reviewees/create", {"name": "Zoe", "email_or_identifier": "SCH27-9999"}),

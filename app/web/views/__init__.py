@@ -135,6 +135,7 @@ from ._instruments import (
 
 # Manage Invitations page rows (sliced in PR 3).
 from ._invitations import InvitationsRow, build_invitations_rows
+from ._linked_rosters import rosters_editable, rosters_linked_to
 from ._observer_collation import (
     InstrumentCollationSection,
     ObserverCollationContext,
@@ -327,6 +328,8 @@ from ._workflow_card import (
 )
 
 __all__ = [
+    "rosters_editable",
+    "rosters_linked_to",
     "ClockCard",
     "InstanceCard",
     "clock_card",
