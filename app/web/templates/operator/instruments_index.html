@@ -4768,7 +4768,7 @@
                     data-selectable-in-group="{{ 'true' if field.selectable_in_group else 'false' }}"
                     data-display-field-id="{{ field.display_field_id }}"
                     data-width="{{ field.width_px or '' }}"
-                    data-reorderable="{{ 'true' if field.reorderable and not _held else 'false' }}"
+                    data-reorderable="{{ 'true' if field.reorderable else 'false' }}"
                     {% if field.beside_name %}data-beside-name="true"{% endif %}
                     {% if field.locked %}data-locked="true"{% endif %}
                     {% if _held %}data-held="true"{% endif %}>

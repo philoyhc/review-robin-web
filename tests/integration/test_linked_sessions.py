@@ -13,6 +13,7 @@ from __future__ import annotations
 import dataclasses
 import html
 import json
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -48,6 +49,7 @@ from app.web.views import (
     build_workflow_card_context,
 )
 
+from ._lookups import must_search
 from .test_handoffs import REVIEWEES, REVIEWERS, SETTINGS, _bundle, _post, _status
 
 
@@ -886,8 +888,22 @@ def test_an_existing_relationship_tag_row_is_held_off(client: TestClient, db: Se
     row = page.split('data-source-type="pair_context"')[1].split("</tr>")[0]
     assert 'data-held="true"' in row and "disabled" in row and " checked" not in row
     assert "data-new-model-df-move" not in row
-    tr = page.split('data-source-type="pair_context"')[0].rsplit("<tr", 1)[1]
-    assert 'data-reorderable="false"' in tr + row  # no neighbor can swap it either
+    # Still reorderable: the order snapshot must name every unlocked row,
+    # or the card's Save is refused (Codex on #3936). Collect it as the
+    # page's script does, reversed, and save.
+    tags = re.findall(r"<tr data-new-model-df-row[^>]*>", page)
+    ids = [
+        int(must_search(r'data-display-field-id="(\d+)"', tag).group(1))
+        for tag in tags
+        if 'data-reorderable="true"' in tag
+    ]
+    pair_tag = next(tag for tag in tags if 'data-source-type="pair_context"' in tag)
+    assert 'data-reorderable="true"' in pair_tag and len(ids) >= 2
+    reply = client.post(
+        f"{_base(review_session)}/{instrument.id}/save",
+        data={"link2_mode": "all", "display_field_order_snapshot": json.dumps(ids[::-1])},
+    )
+    assert reply.status_code == 200, reply.text
     db.expire_all()
     pair = db.scalars(
         select(InstrumentDisplayField).where(InstrumentDisplayField.source_type == "pair_context")
