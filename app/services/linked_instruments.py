@@ -69,14 +69,22 @@ def owns_row(field: str) -> bool:
 
 def row_errors(spec: InstrumentSpec, rows: frozenset[str]) -> list[str]:
     """What the import's checks leave to this: every sent field names its
-    data type, since a linked field has no default to fall back on."""
+    data type, since a linked field has no default to fall back on, and
+    its bounds pass the card's shape rule (Codex on #3926)."""
     if not any(".response_fields[" in row for row in rows):
         return []
-    return [
-        f"instruments[1].response_fields[{m}].data_type: data_type is required"
-        for m, field in sorted(spec.response_fields.items())
-        if not field.data_type
-    ]
+    errors: list[str] = []
+    for m, field in sorted(spec.response_fields.items()):
+        at = f"instruments[1].response_fields[{m}]"
+        if not field.data_type:
+            errors.append(f"{at}.data_type: data_type is required")
+            continue
+        shape = instruments_service.response_field_shape_error(
+            field.data_type, field.min, field.max, field.step, field.list_csv
+        )
+        if shape:
+            errors.append(f"{at}: {shape}")
+    return errors
 
 
 def the_instrument(db: Session, review_session: ReviewSession) -> Instrument:

@@ -618,6 +618,32 @@ def _validate_response_field_shape(rf: dict[str, Any]) -> str | None:
     return None
 
 
+def response_field_shape_error(
+    data_type: str | None,
+    min_: float | None,
+    max_: float | None,
+    step: float | None,
+    list_csv: str | None,
+) -> str | None:
+    """The card's authoring-shape rule (``_validate_response_field_shape``)
+    for a field defined outside the card: a linked re-send's rows (segment
+    23F rung 7b, Codex on #3926). ``data_type`` is the inline label
+    (``Integer``, ``Decimal``, ``String``, ``List``)."""
+
+    def text(value: float | None) -> str:
+        return "" if value is None else str(value)
+
+    return _validate_response_field_shape(
+        {
+            "data_type": (data_type or "string").strip().lower(),
+            "min": text(min_),
+            "max": text(max_),
+            "step": text(step),
+            "list_options": list_csv or "",
+        }
+    )
+
+
 def _band2_unique_field_key(name: str, used_keys: set[str], existing_key: str | None = None) -> str:
     """Slugify ``name`` to a field_key, suffixing -2 / -3 / ...
     on collision. If ``existing_key`` is supplied and already

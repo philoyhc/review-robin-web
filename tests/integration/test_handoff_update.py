@@ -623,3 +623,29 @@ def test_a_cleared_branch_is_audited(client: TestClient, db: Session) -> None:
     changed = {u["field_key"]: u["changes"] for u in detail_of(saved)["set_changes"]["updated"]}
     assert "branch_parent_id" in changed["comment"]
     assert "branch_op" in changed["score"] and "branch_value" in changed["score"]
+
+
+def test_a_field_with_impossible_bounds_is_refused(client: TestClient, db: Session) -> None:
+    """The card's shape rule holds for a re-sent field (Codex on #3926):
+    Max under Min is refused, and the fields stay as they were."""
+    _, created = _instrument_created(client, db)
+    upside_down = (
+        "field,value,data_type\r\n"
+        "instruments[1].name,Mock review,string\r\n"
+        "instruments[1].response_fields[1].field_key,score,string\r\n"
+        "instruments[1].response_fields[1].label,Score,string\r\n"
+        "instruments[1].response_fields[1].response_type,1-to-5int,string\r\n"
+        "instruments[1].response_fields[1].data_type,Integer,string\r\n"
+        "instruments[1].response_fields[1].min,5,decimal\r\n"
+        "instruments[1].response_fields[1].max,1,decimal\r\n"
+        "instruments[1].response_fields[1].required,true,boolean\r\n"
+    )
+    reply = _resend(client, created, _update_bundle(files=_with(upside_down)))
+    body = reply.json()
+    assert reply.status_code == 422 and body["slot"] == "settings"
+    assert "Max must be at least Min" in body["details"][0]
+    db.expire_all()
+    score = next(
+        f for f in db.scalars(select(Instrument)).one().response_fields if f.field_key == "score"
+    )
+    assert (score._inline_min, score._inline_max) == (1, 5)
