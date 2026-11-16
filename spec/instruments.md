@@ -1009,7 +1009,9 @@ Top-of-band intro card carrying:
   paragraph when the card is locked (`data-intro-description-view`),
   the reviewer's subtitle spaced as the surface spaces it and hidden
   when the heading has none, so no blank line;
-  a `data-intro-description-input` textarea when unlocked. The
+  a `data-intro-description-input` textarea when unlocked, which fits
+  its text through `base.html`'s shared fit (`data-fit-box`, two rows at
+  least, no drag handle; author, 2026-11-16). The
   textarea binds to the card's `dfsave-{id}` form
   (`name="description"`), so its value commits with the bulk Save
   through the consolidated `/save` endpoint. When the card locks,
