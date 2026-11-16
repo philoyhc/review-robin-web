@@ -49,9 +49,34 @@ Owned while the session is **unopened** (draft or validated). Once it is activat
 - **Lock everything on a linked draft.** The author kept the lock to rosters and the identified set-up; the rest is the operator's.
 - **Diff the re-sent rosters row by row.** A draft has no responses and pairs are rebuilt at Prepare, so a whole-roster replace loses nothing and is the import's existing path.
 
+## Decision amended (author, 2026-11-16)
+
+The author's lock list supersedes *The locks* above and widens the ownership table. Instruments wait for the author's assignment model.
+
+- **For as long as the session is linked**, whatever its state, not only while unopened. The re-send still applies only to an unopened draft (rung 2). After the session opens, changes come by reverting it to draft (and *Delete data* if it holds responses) for Apply Desk to re-send, or by Unlink.
+- **Session details**: the card never unlocks while linked; its chip is display-only.
+  - Owned by Apply Desk and re-sent with the session: `session.name`, `session.code`, `session.description`, `session.display_timezone`, `session.help_contact`, the session tags (`session_tags[N].tag`), Start (`scheduled_activate_at`) and End (`deadline`).
+  - A re-sent code another session holds is `409 session_code_conflict`, as at the create. Name and code are written on a re-send, not filled only when blank.
+  - The lobby's inline edit and bulk tags refuse a linked session's name, code and tags.
+- **A *Linked application* card**: half width, at the top of the bottom-left column, where Quick Setup was.
+  - It names the application and says the rosters and set-up come from it.
+  - It holds the confirm-Unlink, moved out of Session details.
+- **Quick Setup**: hidden while linked; the Linked application card takes its place.
+- **Owners and Danger zone**: stay active for the MVP. *Delete data* clears responses so Apply Desk can repopulate by a re-send.
+- **Rosters** (Reviewers, Reviewees, Relationships):
+  - Inactive: uploads and delete-all, row add, edit and delete, directory add, and roster tags.
+  - Each is refused in its service.
+- **Email**: Review Robin sends none for a linked session; Apply Desk sends from inside itself.
+  - The email templates page (`_setup_invite.py`) is inactive.
+  - The Workflow card's *Send invites* and *Send reminders* are not offered.
+  - The submit acknowledgement (`invitations.queue_responses_received`) is not queued.
+  - Apply Desk's emails link to Review Robin's `/me`: a reviewer reaches the session by signing in, matched by email; the token link only stamps *opened*.
+- **Settings import**: refused (as planned).
+- **Instruments**: to be decided with the author's assignment model; the instrument rows of the table stand as proposed until then.
+
 ## Semantics
 
-- **Opened** means activated or later; a session reverted to draft is unopened again (author).
+- **Opened** means activated or later; a session reverted to draft is unopened again (author). Opened or not, a linked session stays locked (amendment).
 - **Unlink** ends ownership at once: every lock lifts, and a later re-send is `404 not_linked`.
 - **A settings row naming an instrument ordinal past the re-send's count** removes that instrument and its operator-owned properties; a new ordinal gets the defaults.
 - **The release and observers rows** stay refused as 23E refuses them.
@@ -61,38 +86,42 @@ Owned while the session is **unopened** (draft or validated). Once it is activat
 
 - **A separate operation, not a flag on the create**: the create's replay is by `transfer_id` into a new draft; an update names its draft, by the creating transfer.
 - **An absent Relationships file clears the pairs** by the roster replace's own cascade (`csv_imports` deletes a replaced roster's relationships), so the re-send needs no clearing step of its own.
-- **Locks only while unopened**: after activation Review Robin's lifecycle already locks setup, and ruling 24 gives later changes to Review Robin.
+- ~~**Locks only while unopened**~~ — superseded (author, 2026-11-16): the locks hold for as long as the session is linked.
 
 ## Blast radius (measured)
 
-Taken 2026-11-15 at `320e71820`.
+Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24897a`.
 
 | What | Count | Command |
 |---|---|---|
 | Roster page POST routes | 29 | `grep -c "@router.post" app/web/routes_operator/_setup_reviewers.py app/web/routes_operator/_setup_reviewees.py app/web/routes_operator/_setup_relationships.py` |
 | Quick Setup, directory, Settings POST routes | 9, 3, 2 | `grep -c "@router.post" app/web/routes_operator/_quick_setup.py app/web/routes_operator/_directory.py app/web/routes_operator/_settings.py` |
 | Instrument POST routes | 23 | `grep -rn "@router.post" app/web/routes_operator/_instruments*.py \| wc -l` |
+| Email templates page POST routes (amendment) | 3 | `grep -c "@router.post" app/web/routes_operator/_setup_invite.py` |
+| Session Home and lobby POST routes (amendment) | 8, 7 | `grep -c "@router.post" app/web/routes_operator/_session_home.py app/web/routes_operator/_lobby.py` |
 | Settings field paths exported | 71 | `grep -o '\.[a-z_0-9]*"' app/services/session_config_io/_serialize.py \| sort -u \| wc -l` |
 
 ## Status
 
+- **Amended 2026-11-16** by the author's lock list (above): locks for as long as linked, more session fields owned, email off, Quick Setup hidden, a Linked application card; instruments wait for the assignment model. Rung 3's first build (owned settings incl. instruments) is held unpushed and will be re-cut to the session rows.
 - **Rung 2** (2026-11-15): the re-send of rosters, at `POST /operator/handoffs/{transfer_id}/update`. One refusal the plan did not name: a draft holding responses (`409 session_has_responses`), since a session reverted to draft (unopened again, author) can hold them and a roster replace would discard them.
 
 ## PR ladder
 
 1. **Plan** (this file), its README row, the queue entry replacing item 3.
 2. **The re-send: rosters.** The operation, route, service, replay, refusals, audit (`EVENT_SCHEMAS`); `spec/handoffs.md`. Settings refused on a re-send until rung 3. Tests.
-3. **The re-send: settings.** The targeted apply of owned rows; instruments by ordinal. Tests.
-4. **The proof of concept re-sends.** Utilities' page sends changed rosters and bounds to its linked draft. Tests.
-5. **The locks: rosters and session.** Quick Setup, the three roster pages and directory add, the Settings import, Start and End; each refused in its service. Tests.
-6. **The locks: instruments.** The owned instrument fields fixed on the Instruments page and refused in their routes' services. Tests. Last build rung: `diff-reviewer` reads 2–6.
-7. **Close**, after the author's browser check.
+3. ~~**The re-send: settings.**~~ Re-cut by the amendment: **the re-send: session settings** — the owned session rows (name, code, description, timezone, help contact, tags, Start, End, relationships switch) merged into the draft's export and imported; code conflicts refused. Instrument rows wait for the assignment model. Tests.
+4. **The proof of concept re-sends.** Utilities' page sends changed rosters and session settings to its linked draft. Tests.
+5. ~~**The locks: rosters and session.**~~ Re-cut: **the Linked application card and the session locks** — the card with Unlink; Quick Setup hidden; Session details never unlocked; the lobby's inline edit and bulk tags refused; the Settings import refused. Each refused in its service. Tests.
+6. **The locks: rosters and email** (new). The roster pages' uploads, rows, directory add and tags; the email templates page, *Send invites* / *Send reminders*, the submit acknowledgement. Tests.
+7. ~~**The locks: instruments.**~~ Deferred to the assignment model: the instrument rows of the re-send and their locks, planned when it lands.
+8. **Close**, after the author's browser check. The last build rung before it takes the cumulative `diff-reviewer` read from rung 2.
 
 ## Definition of done
 
 - A re-send replaces a linked draft's rosters and owned settings all or nothing; refused when opened, unlinked or another application's; a replay applies once (`tests/integration/test_handoff_update.py`).
 - The proof of concept re-sends and its draft changes (`utilityapps/tests/test_interop_poc.py`).
-- On a linked, unopened session every lock in the Decision refuses in its service, and Unlink lifts them (tests).
+- On a linked session, opened or not, every lock in the amended Decision refuses in its service, and Unlink lifts them (tests).
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 23F` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -101,22 +130,24 @@ Taken 2026-11-15 at `320e71820`.
 
 ## Open questions
 
-- **The ownership table**: the author's inspection, before rung 3 (settings) and rung 6 (instruments). Rungs 2 and 5 depend only on the rosters row.
-- **Response field help text**: proposed Review Robin's; the author's call with the table.
+- ~~**The ownership table**~~: the session rows settled by the amendment (author, 2026-11-16); the instrument rows wait for the assignment model.
+- **Response field help text**: proposed Review Robin's; decided with the instrument rows.
 - **How *By relationships* is sent**: Link 2 as a rule on the relationship tag the Relationships file carries, or a Link 2 mode of its own; settled at rung 3, whichever the Settings CSV already carries without a new field.
 
 ## Out of scope
 
 - **Apply Desk's sending** (its AD6): Apply Desk's side of the re-send.
-- **Changes after the session opens**: Review Robin's, under its own rules (ruling 24).
+- ~~**Changes after the session opens**~~: superseded by the amendment; a linked session stays locked, and changes come through Apply Desk after a revert, or Unlink.
 - **Results back to Apply Desk**: `spec/handoffs.md`'s exports, unchanged.
 
 ## Doc impact
 
 - `spec/handoffs.md` — the update operation: envelope, files, refusals, replay, receipt; what a re-sent settings file may carry.
 - `spec/csv_contracts.md` — §3.3: the owned rows a re-send applies, and the Settings import refused on a linked, unopened session.
-- `spec/session_home.md` — Start and End from the application; the Quick Setup card's line.
-- `spec/setup_pages.md` — the roster pages read-only on a linked, unopened session.
+- `spec/session_home.md` — Session details never unlocked while linked; the Linked application card with Unlink; Quick Setup hidden.
+- `spec/setup_pages.md` — the roster pages inactive on a linked session.
+- `spec/sessions_overview.md` — the lobby's inline edit and bulk tags refuse a linked session (amendment).
+- `spec/workflow_card.md` — *Send invites* and *Send reminders* not offered on a linked session (amendment).
 - `spec/instruments.md` — the owned instrument fields fixed.
 - `guide/interoperability.md` — §5's revisit retired into this segment.
 - `guide/README.md` — this plan's row (rung 1), moved to `guide/archive/README.md` at close.
