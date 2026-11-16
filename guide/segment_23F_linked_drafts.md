@@ -125,6 +125,7 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 
 ## Status
 
+- **Rung 3 built** (2026-11-16): the owned session rows checked as the Settings import checks them (`session_config_io.parse_session_settings`), plus the schedule's order on the final values, and written directly through `sessions.update_session`, `set_session_display_timezone` and `session_tags.set_tags` in the save's unit, rather than merged into the export and imported: the import rebuilds every instrument, which would move instrument ordinals and fields Apply Desk reads back by. `session_tags.set_tags` now commits through `unit_of_work` so it nests. The first, held build (merge-and-import, instruments included) is superseded.
 - **Rung 2a built** (2026-11-16): `linked_apps.Lock` (nine locks), `LinkedProfile.locks` / `owned_settings` / `has`, `linked_apps.locks(session, lock)` at every 23E gate; `release_off` / `observers_off` retired. Locks no gate checks yet have no effect until their rung.
 - **Switchboard added 2026-11-16** (rung 2a): named locks per profile, so another application with different needs is a profile entry. Utilities keeps email on.
 - **Instruments decided 2026-11-16** (above): one per gate, the rule fixed by Review Robin, fields and their order Apply Desk's, presentation Review Robin's; rung 7 re-cut.

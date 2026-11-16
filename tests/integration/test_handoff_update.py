@@ -14,8 +14,17 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, Relationship, Reviewee, Reviewer, ReviewSession
+from app.db.models import (
+    AuditEvent,
+    Instrument,
+    Relationship,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+    SessionTag,
+)
 from app.services import handoffs, session_lifecycle
+from utilityapps.interop_poc import mock
 
 from .test_handoffs import REVIEWEES, REVIEWERS, SETTINGS, _bundle, _post
 
@@ -155,9 +164,10 @@ def test_the_envelope_is_the_update_operations(client: TestClient, db: Session) 
     files = {"reviewers": NEW_REVIEWERS, "reviewees": REVIEWEES, "observers": observers}
     refused = _resend(client, created, _update_bundle(files=files))
     assert refused.status_code == 422 and refused.json()["slot"] == "observers"
+    # The create's settings carry instruments, which are not the session's.
     with_settings = {"reviewers": NEW_REVIEWERS, "reviewees": REVIEWEES, "settings": SETTINGS}
-    not_yet = _resend(client, created, _update_bundle(files=with_settings))
-    assert not_yet.status_code == 422
+    not_owned = _resend(client, created, _update_bundle(files=with_settings))
+    assert not_owned.status_code == 422 and not_owned.json()["reason"] == "not_owned"
     assert "cal@example.edu" not in _emails(db)
 
 
@@ -264,3 +274,162 @@ def test_an_overlapping_retry_applies_once(
         select(AuditEvent).where(AuditEvent.event_type == "session.handoff_updated")
     ).all()
     assert len(records) == 2
+
+
+# ── Rung 3: the session settings ──────────────────────────────────────
+
+SESSION_SETTINGS = (
+    "field,value,data_type\r\n"
+    "session.name,Gate 2: Interviews,string\r\n"
+    "session.code,GATE-2,string\r\n"
+    "session.description,Second-round interviews,string\r\n"
+    "session.display_timezone,Asia/Singapore,string\r\n"
+    "session.help_contact,office@example.edu,string\r\n"
+    "session.scheduled_activate_at,2030-03-01T09:00:00+08:00,datetime\r\n"
+    "session.deadline,2030-03-08T17:00:00+08:00,datetime\r\n"
+    "session_tags[1].tag,Scholarships,string\r\n"
+    "session_tags[2].tag,2030,string\r\n"
+)
+
+
+def _with(settings: str) -> dict[str, str]:
+    return {"reviewers": NEW_REVIEWERS, "reviewees": REVIEWEES, "settings": settings}
+
+
+def test_a_resend_writes_the_owned_session_settings(client: TestClient, db: Session) -> None:
+    files = {"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": mock.settings_csv()}
+    review_session, created = _created(client, db, files=files)
+    instrument_id = db.scalars(select(Instrument.id)).one()
+    reply = _resend(client, created, _update_bundle(files=_with(SESSION_SETTINGS)))
+    assert reply.status_code == 200, reply.text
+    db.expire_all()
+    assert (review_session.name, review_session.code) == ("Gate 2: Interviews", "GATE-2")
+    assert review_session.description == "Second-round interviews"
+    assert review_session.display_timezone == "Asia/Singapore"
+    assert review_session.help_contact == "office@example.edu"
+    assert review_session.deadline is not None and review_session.deadline.day == 8
+    assert sorted(db.scalars(select(SessionTag.tag))) == ["2030", "scholarships"]
+    # No instrument moved: the same row, its fields untouched.
+    assert db.scalars(select(Instrument.id)).one() == instrument_id
+    assert reply.json()["session_code"] == "GATE-2"
+    assert _emails(db) == {"cal@example.edu"}
+
+
+def test_a_row_the_application_does_not_own_is_refused(client: TestClient, db: Session) -> None:
+    review_session, created = _created(client, db)
+    foreign = SESSION_SETTINGS + "session.invite_offsets,-P1D,string\r\n"
+    reply = _resend(client, created, _update_bundle(files=_with(foreign)))
+    body = reply.json()
+    assert reply.status_code == 422 and (body["slot"], body["reason"]) == ("settings", "not_owned")
+    assert "session.invite_offsets" in body["details"][0]
+    db.expire_all()
+    assert review_session.code == "POC-TEST-1" and "cal@example.edu" not in _emails(db)
+
+
+def test_a_code_another_session_holds_is_a_conflict(client: TestClient, db: Session) -> None:
+    review_session, created = _created(client, db)
+    other = _bundle(session_suggestion={"name": "Other", "code": "GATE-2"})
+    assert _post(client, other).status_code == 201
+    reply = _resend(client, created, _update_bundle(files=_with(SESSION_SETTINGS)))
+    assert reply.status_code == 409 and reply.json()["error"] == "session_code_conflict"
+    db.expire_all()
+    assert review_session.code == "POC-TEST-1"
+
+
+def test_settings_the_checks_refuse_leave_the_draft_as_it_was(
+    client: TestClient, db: Session
+) -> None:
+    review_session, created = _created(client, db)
+    cases = [
+        "field,value,data_type\r\nsession.display_timezone,Mars/Base,string\r\n",
+        "field,value,data_type\r\nsession.deadline,not a date,datetime\r\n",
+        # End before Start.
+        "field,value,data_type\r\n"
+        "session.scheduled_activate_at,2030-03-08T09:00:00+00:00,datetime\r\n"
+        "session.deadline,2030-03-01T09:00:00+00:00,datetime\r\n",
+        "field,value,data_type\r\nsession.code,,string\r\n",
+    ]
+    for settings in cases:
+        reply = _resend(client, created, _update_bundle(files=_with(settings)))
+        assert reply.status_code == 422 and reply.json()["slot"] == "settings", settings
+    db.expire_all()
+    assert review_session.code == "POC-TEST-1" and review_session.deadline is None
+    assert "cal@example.edu" not in _emails(db)
+
+
+def test_a_settings_only_change_keeps_what_the_file_leaves_out(
+    client: TestClient, db: Session
+) -> None:
+    review_session, created = _created(client, db)
+    only_name = "field,value,data_type\r\nsession.name,Renamed,string\r\n"
+    files = {"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": only_name}
+    assert _resend(client, created, _update_bundle(files=files)).status_code == 200
+    db.expire_all()
+    assert (review_session.name, review_session.code) == ("Renamed", "POC-TEST-1")
+
+
+def test_a_short_settings_row_is_refused_not_padded(client: TestClient, db: Session) -> None:
+    """A truncated row is refused as the import refuses it, rather than
+    read as a blank value that clears the field (Codex on #3920)."""
+    review_session, created = _created(client, db)
+    with_end = "field,value,data_type\r\nsession.deadline,2030-03-08T17:00:00+00:00,datetime\r\n"
+    assert _resend(client, created, _update_bundle(files=_with(with_end))).status_code == 200
+    short = "field,value,data_type\r\nsession.deadline\r\n"
+    reply = _resend(client, created, _update_bundle(files=_with(short)))
+    assert reply.status_code == 422 and reply.json()["slot"] == "settings"
+    db.expire_all()
+    assert review_session.deadline is not None
+
+
+def test_a_schedule_moved_past_the_old_end_is_accepted(client: TestClient, db: Session) -> None:
+    """The order is checked on the values the re-send writes, not the
+    import's fill-blank End (Codex on #3920)."""
+    review_session, created = _created(client, db)
+    march = (
+        "field,value,data_type\r\n"
+        "session.scheduled_activate_at,2030-03-01T09:00:00+00:00,datetime\r\n"
+        "session.deadline,2030-03-08T17:00:00+00:00,datetime\r\n"
+    )
+    assert _resend(client, created, _update_bundle(files=_with(march))).status_code == 200
+    april = march.replace("2030-03-", "2030-04-")
+    reply = _resend(client, created, _update_bundle(files=_with(april)))
+    assert reply.status_code == 200, reply.text
+    db.expire_all()
+    assert review_session.deadline is not None and review_session.deadline.month == 4
+
+
+def test_the_schedule_is_rechecked_under_the_lock(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An overlapping re-send that moved End since the first check is seen
+    under the save's lock (Codex on #3920): a Start now after that End is
+    refused, and the rosters stay as they were."""
+    from datetime import UTC, datetime
+
+    review_session, created = _created(client, db)
+    march = (
+        "field,value,data_type\r\n"
+        "session.scheduled_activate_at,2030-03-01T09:00:00+00:00,datetime\r\n"
+        "session.deadline,2030-03-08T17:00:00+00:00,datetime\r\n"
+    )
+    assert _resend(client, created, _update_bundle(files=_with(march))).status_code == 200
+    real = handoffs.guard_update
+
+    def end_moved_meanwhile(db_: Session, user: Any, session_: ReviewSession, bundle: Any) -> None:
+        session_.deadline = datetime(2030, 3, 4, 17, tzinfo=UTC)
+        db_.flush()  # as if committed by the other re-send
+        real(db_, user, session_, bundle)
+
+    monkeypatch.setattr(handoffs, "guard_update", end_moved_meanwhile)
+    start_only = (
+        "field,value,data_type\r\n"
+        "session.scheduled_activate_at,2030-03-06T09:00:00+00:00,datetime\r\n"
+    )
+    files = {"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": start_only}
+    reply = _resend(client, created, _update_bundle(files=files))
+    assert reply.status_code == 422, reply.text
+    assert reply.json()["slot"] == "settings"
+    db.expire_all()
+    assert _emails(db) == {"cal@example.edu"}
+    assert review_session.scheduled_activate_at is not None
+    assert review_session.scheduled_activate_at.day == 1

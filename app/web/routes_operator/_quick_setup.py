@@ -48,6 +48,7 @@ from app.services import (
     handoffs,
     held_uploads,
     linked_apps,
+    linked_settings,
     operator_settings,
     scheduled_events,
     session_config_io,
@@ -1712,9 +1713,10 @@ async def update_handoff_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> JSONResponse:
-    """Re-send a linked, unopened draft's rosters (segment 23F): the draft
-    the transfer ``transfer_id`` created, its rosters replaced all or
-    nothing through the create's pipeline (`spec/handoffs.md`)."""
+    """Re-send a linked, unopened draft's rosters and the session settings
+    its application owns (segment 23F): the draft the transfer
+    ``transfer_id`` created, updated all or nothing through the create's
+    pipeline (`spec/handoffs.md` §6a)."""
     body = await _handoff_body(request)
     if isinstance(body, JSONResponse):
         return body
@@ -1732,19 +1734,45 @@ async def update_handoff_session(
         handoffs.check_linked(bundle)
     except handoffs.HandoffError as exc:
         return _handoff_refused(request, exc)
-    if "settings" in bundle.files:
-        # Rung 3 applies the owned settings; until then a re-send carries
-        # rosters only, refused whole rather than half-applied.
-        return _handoff_error(
-            "invalid_package",
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-            ["A re-send does not take a settings file yet: send the rosters."],
-        )
+    # A settings file carries the session fields the application owns
+    # (rung 3): checked here, written in the save's unit with the rosters.
+    files = dict(bundle.files)
+    sent_settings = files.pop("settings", None)
+    settings: session_config_io.SessionSettings | None = None
+    profile = linked_apps.profile_of(review_session)
+    if sent_settings is not None and profile is not None:
+        try:
+            settings = linked_settings.prepare(db, review_session, profile, sent_settings)
+        except linked_settings.NotOwned as exc:
+            return _handoff_error(
+                "invalid_setup",
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                [f"Not the sending application's to set: {', '.join(exc.fields)}."],
+                slot="settings",
+                reason="not_owned",
+            )
+        except linked_settings.SettingsRefused as exc:
+            return _handoff_error(
+                "invalid_setup",
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                exc.details,
+                slot="settings",
+            )
+        except sessions.SessionCodeTakenError:
+            return _handoff_error("session_code_conflict", status.HTTP_409_CONFLICT)
     correlation_id = request_correlation_id()
+
+    def record() -> None:
+        if settings is not None:
+            linked_settings.apply(
+                db, review_session, settings, user=user, correlation_id=correlation_id
+            )
+        handoffs.record_updated(db, review_session, user, bundle, correlation_id)
+
     try:
         refusal = await _run_quick_setup_contents(
-            contents=bundle.files,
-            filenames={kind: f"{kind}.csv" for kind in bundle.files},
+            contents=files,
+            filenames={kind: f"{kind}.csv" for kind in files},
             review_session=review_session,
             user=user,
             db=db,
@@ -1756,12 +1784,19 @@ async def update_handoff_session(
             # Under the save's lock: not applied by an overlapping retry,
             # still linked, unopened and without responses, so neither a
             # duplicate nor an Unlink or activation since the checks above
-            # is overwritten; and the record commits with the rosters, so
-            # a retry finds it.
+            # is overwritten; and the settings and the record commit with
+            # the rosters, so a retry finds the whole re-send or none of it.
             unit_guard=lambda: handoffs.guard_update(db, user, review_session, bundle),
-            unit_record=lambda: handoffs.record_updated(
-                db, review_session, user, bundle, correlation_id
-            ),
+            unit_record=record,
+        )
+    except sessions.SessionCodeTakenError:
+        db.rollback()
+        return _handoff_error("session_code_conflict", status.HTTP_409_CONFLICT)
+    except linked_settings.SettingsRefused as exc:
+        # The schedule, rechecked under the lock (``linked_settings.apply``).
+        db.rollback()
+        return _handoff_error(
+            "invalid_setup", status.HTTP_422_UNPROCESSABLE_CONTENT, exc.details, slot="settings"
         )
     except handoffs.AlreadyUpdated as done:
         db.rollback()

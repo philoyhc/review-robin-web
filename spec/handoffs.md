@@ -177,8 +177,24 @@ re-sends them rather than Review Robin editing them (Apply Desk's ruling
   optional. The rosters are the application's whole picture: they replace
   the draft's, and the replace's own cascade drops the pairs, so an absent
   Relationships file leaves none. An `observers` file is refused as at the
-  create (§5). A `settings` file is refused for now
-  (`422 invalid_package`).
+  create (§5).
+- **A settings file** is optional and carries only the session fields its
+  application's profile owns (`LinkedProfile.owned_settings`): the name,
+  code, description, timezone, help contact, Start, End, Relationships
+  switch, and the session tags (`session_tags[N].tag`). Any other row is
+  `422 invalid_setup`, `slot` `settings`, `reason` `not_owned`, naming the
+  fields; instrument rows are not taken yet. A row of fewer than three
+  cells is refused, as the Settings import refuses it. The rows are
+  checked as the import's row checks check them, plus the schedule's order on the values
+  the session will hold, a timezone the app knows and a name and code
+  New session would accept (`422 invalid_setup`, `slot` `settings`); a
+  code another session holds is `409 session_code_conflict`. They are
+  written directly (`app/services/linked_settings.py`) through the
+  services that own each field, audited as an operator's edit, in the
+  save's unit with the rosters; name and code are written, not filled
+  only when blank. Nothing else of the draft moves: no instrument is
+  rebuilt. A field the file leaves out keeps the draft's value; tag rows,
+  when present, replace the session's tags.
 - **All or nothing**, through the create's pipeline
   (`_run_quick_setup_contents`, replacing); a refused file leaves the draft
   as it was (`422 invalid_setup` with `slot`), and a validated draft

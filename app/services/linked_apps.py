@@ -64,6 +64,9 @@ SESSION_FIELDS = frozenset(
         "session.scheduled_activate_at",
         "session.deadline",
         "session.relationships_enabled",
+        # The session's tags, every ``session_tags[N].tag`` row
+        # (``linked_settings.TAGS``).
+        "session_tags",
     }
 )
 
