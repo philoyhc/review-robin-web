@@ -20,11 +20,12 @@
        data-handoffs-url="{{ host_url('/reviewrobin/operator/handoffs/') }}">
     <h2 id="sent-h">Sent to Review Robin</h2>
     <p>The sessions this browser created. For each, read its live status, or fetch its submitted answers as CSV, keyed by application ID. Both ask Review Robin as you, so you need to operate that session there.</p>
-    <p class="note">Kept in this browser only; clearing it forgets the list, not the sessions. Nothing here changes anything in Review Robin.</p>
+    <p class="note">Kept in this browser only; clearing it forgets the list, not the sessions. Status and Results change nothing in Review Robin.</p>
+    <p><strong>Re-send</strong> updates a session while it is still a draft, as Apply Desk will after Send: it drops <code>{{ resend_drops[0] }}</code> and application <code>{{ resend_drops[1] }}</code>, and re-sends the session settings below. Review Robin refuses it once the session has opened, or if it has been unlinked.</p>
     <table>
-      <thead><tr><th scope="col">Session</th><th scope="col">Sent</th><th scope="col">Status</th><th scope="col">Results</th></tr></thead>
+      <thead><tr><th scope="col">Session</th><th scope="col">Sent</th><th scope="col">Status</th><th scope="col">Results</th><th scope="col">Re-send</th></tr></thead>
       <tbody id="poc-sent-rows">
-        <tr class="note"><td colspan="4">No sessions sent from this browser yet.</td></tr>
+        <tr class="note"><td colspan="5">No sessions sent from this browser yet.</td></tr>
       </tbody>
     </table>
     <div id="poc-sent-detail" role="status" aria-live="polite"></div>
@@ -49,6 +50,7 @@
     <p class="note"><code>completion.csv</code>: one row per assignment and where it stands: not started, in progress or submitted.</p>
     </details>
   </div>
+  <script type="application/json" id="poc-resend">{{ resend_bundle | tojson }}</script>
   <script>
   // Segment 23B, rung 4: the sessions this browser sent, and the reverse
   // flow's reads. Kept in localStorage (Utilities has no database); every
@@ -60,10 +62,19 @@
     var base = card.dataset.handoffsUrl;
     var KEY = "interop-poc.sent";
     var problems = {
-      not_linked: "Review Robin has no finished handoff with this transfer.",
+      not_linked: "Review Robin has no finished handoff with this transfer, or the session is no longer linked.",
       not_authorized: "You do not operate this session in Review Robin now.",
-      transfer_incomplete: "This transfer did not finish, so its session has nothing to report."
+      transfer_incomplete: "This transfer did not finish, so its session has nothing to report.",
+      session_opened: "The session has opened in Review Robin, so it no longer takes a re-send.",
+      session_has_responses: "The session holds responses, which a re-send would discard.",
+      invalid_setup: "Review Robin refused a file, so nothing changed.",
+      session_code_conflict: "Another session holds that code, so nothing changed.",
+      duplicate_conflict: "Another person sent this re-send."
     };
+    var resendBase = JSON.parse(document.getElementById("poc-resend").textContent);
+    // A re-send that never answered keeps its transfer id, so trying again
+    // cannot apply it twice (Review Robin answers already_updated).
+    var pendingResend = {};
     function el(tag, text, cls) {
       var node = document.createElement(tag);
       if (text !== undefined && text !== null) node.textContent = String(text);
@@ -284,7 +295,7 @@
       if (!sent.length) {
         var empty = el("tr", null, "note");
         var td = el("td", "No sessions sent from this browser yet.");
-        td.colSpan = 4;
+        td.colSpan = 5;
         empty.appendChild(td);
         rows.replaceChildren(empty);
         return;
@@ -322,8 +333,46 @@
             unavailable("Results: " + item.session_code, err && err.message ? err.message : "Review Robin did not answer.");
           }).finally(function () { results.disabled = false; });
         });
+        var resend = el("button", "Re-send", "btn secondary");
+        resend.type = "button";
+        resend.addEventListener("click", function () {
+          resend.disabled = true;
+          detail.replaceChildren(el("p", "Re-sending to Review Robin…", "note"));
+          var id = pendingResend[item.transfer_id] || crypto.randomUUID();
+          pendingResend[item.transfer_id] = id;
+          ask(item, "update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify(Object.assign({}, resendBase, { transfer_id: id }))
+          }).then(function (reply) {
+            if (reply.status >= 500) {
+              unavailable("Re-send: " + item.session_code, "Review Robin failed (" + reply.status + "). Try again: the same re-send is sent, so it applies once.");
+              return;
+            }
+            if (!reply.ok) {
+              delete pendingResend[item.transfer_id];
+              return reply.json().then(function (body) {
+                var nodes = [el("h3", "Re-send: " + item.session_code), el("p", problems[body.error] || ("Review Robin answered " + (body.error || reply.status) + "."), "error")];
+                if (body.slot) nodes.push(el("p", "File: " + body.slot + ".csv" + (body.reason ? " (" + body.reason + ")" : ""), "note"));
+                if (body.details && body.details.length) {
+                  var list = el("ul");
+                  body.details.forEach(function (line) { list.appendChild(el("li", line)); });
+                  nodes.push(list);
+                }
+                detail.replaceChildren.apply(detail, nodes);
+              }, function () { return refusal(reply).then(function (why) { unavailable("Re-send: " + item.session_code, why); }); });
+            }
+            delete pendingResend[item.transfer_id];
+            return reply.json().then(function (body) {
+              detail.replaceChildren(el("h3", "Re-send: " + item.session_code), el("p", (body.status === "already_updated" ? "Already updated: " : "Updated: ") + body.session_code + ". Refresh status to see the rosters it now holds.", "note"));
+            });
+          }).catch(function () {
+            unavailable("Re-send: " + item.session_code, "Review Robin did not answer. Try again: the same re-send is sent, so it applies once.");
+          }).finally(function () { resend.disabled = false; });
+        });
         var a = el("td"); a.appendChild(status); tr.appendChild(a);
         var b = el("td"); b.appendChild(results); tr.appendChild(b);
+        var c = el("td"); c.appendChild(resend); tr.appendChild(c);
         return tr;
       }));
     }
@@ -485,5 +534,8 @@
     <pre class="sample">{{ reviewees_csv }}</pre>
     <h3><code>settings.csv</code></h3>
     <pre class="sample">{{ settings_csv }}</pre>
+    <h3><code>settings.csv</code> on a re-send</h3>
+    <p class="note">Only the session fields Apply Desk owns; the rosters are re-sent whole.</p>
+    <pre class="sample">{{ resend_settings_csv }}</pre>
   </div>
 {% endblock %}

@@ -139,6 +139,14 @@ sender takes from it.
   - **Fetch results**: reads `results.csv`, then `completion.csv`, shows
     the answers in a table and offers both downloads. A refused
     `results.csv` fetches no `completion.csv`.
+  - **Re-send** (segment 23F rung 4): posts the update bundle
+    (`mock.resend_bundle`, operation `reviewrobin.update_draft_session`)
+    to `/operator/handoffs/{transfer_id}/update`, named by the session's
+    creating transfer. It drops one reviewer and one application and
+    re-sends the session settings a linked application owns
+    (description, help contact, a tag). A refusal names the error, with
+    the slot, reason and detail lines; a `5xx` or no answer keeps the
+    re-send's transfer, so trying again applies it once.
 
 Templates write app paths through `url()` in `utilityapps/web.py`, which
 adds the mount's prefix; `host_url()` marks a path that is the host's.

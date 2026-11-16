@@ -36,6 +36,9 @@ def page(request: Request) -> Response:
             "reviewees_csv": mock.reviewees_csv(),
             "settings_csv": mock.settings_csv(),
             "bundle": mock.bundle(people),
+            "resend_bundle": mock.resend_bundle(people),
+            "resend_settings_csv": mock.resend_settings_csv(),
+            "resend_drops": (mock.RESEND_DROPS_REVIEWER, mock.RESEND_DROPS_APPLICATION),
         },
         headers=_NO_STORE,
     )

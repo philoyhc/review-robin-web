@@ -127,3 +127,49 @@ def bundle(people: tuple[Reviewer, ...]) -> dict[str, object]:
             "settings": settings_csv(),
         },
     }
+
+
+#: What a re-send changes (segment 23F rung 4): the draft as Apply Desk
+#: would update it after Send. One reviewer and one application are
+#: dropped, and the session settings Apply Desk owns are re-sent.
+RESEND_DROPS_REVIEWER = "cai.reviewer@example.edu"
+RESEND_DROPS_APPLICATION = "SCH27-0006"
+
+
+def resend_settings_csv() -> str:
+    """The session fields a linked application owns (``LinkedProfile.
+    owned_settings``), changed as an update would change them."""
+    return _csv(
+        ["field", "value", "data_type"],
+        [
+            ["session.description", "Updated by a re-send from Utilities", "string"],
+            ["session.help_contact", "interop-poc@example.edu", "string"],
+            ["session_tags[1].tag", "interop-poc", "string"],
+        ],
+    )
+
+
+def resend_bundle(people: tuple[Reviewer, ...]) -> dict[str, object]:
+    """The re-send bundle without its per-click ``transfer_id``: the page's
+    script posts it to the update route named by the creating transfer
+    (`spec/handoffs.md` §6a)."""
+    kept = tuple(p for p in people if p.email != RESEND_DROPS_REVIEWER)
+    reviewees = _csv(
+        ["RevieweeName", "RevieweeEmail", "RevieweeTag1", "ProfileLink"],
+        [
+            [a.applicant, a.id, a.faculty, a.profile_link]
+            for a in APPLICATIONS
+            if a.id != RESEND_DROPS_APPLICATION
+        ],
+    )
+    return {
+        "protocol": "cordware.csv-handoff",
+        "protocol_version": 1,
+        "operation": "reviewrobin.update_draft_session",
+        "source_app": "utilities",
+        "files": {
+            "reviewers": reviewers_csv(kept),
+            "reviewees": reviewees,
+            "settings": resend_settings_csv(),
+        },
+    }
