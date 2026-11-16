@@ -72,7 +72,29 @@ The author's lock list supersedes *The locks* above and widens the ownership tab
   - The submit acknowledgement (`invitations.queue_responses_received`) is not queued.
   - Apply Desk's emails link to Review Robin's `/me`: a reviewer reaches the session by signing in, matched by email; the token link only stamps *opened*.
 - **Settings import**: refused (as planned).
-- **Instruments**: to be decided with the author's assignment model; the instrument rows of the table stand as proposed until then.
+- **Instruments**: decided below (*Instruments decided*), superseding the instrument rows of the table.
+- **Defaults at the create** (author, 2026-11-16): the Relationships tab on (`relationships_enabled`), the Email templates tab off.
+- **Invitations page**: no *Send* and no *Regenerate*. Apply Desk shares the session link, and a reviewer signs in; per-reviewer tokens are not needed.
+
+## Instruments decided (author, 2026-11-16)
+
+**One instrument per gate**: every gate filters to one set of pairwise assignments (ruling 27), so a different assignment rule, the reason for several instruments in a native session, never arises.
+
+| Instrument part | Owner on a linked session |
+|---|---|
+| Which instruments exist | Apply Desk: exactly one. *+Instrument*, *Replicate*, *Delete* and page breaks inactive |
+| `name`, `short_label` | Apply Desk: the gate's name, both |
+| `description` | Apply Desk: the gate's description |
+| Assignment rule (Band 1) | **Fixed by Review Robin**, not sent: Link 1 *All*, Link 2 a rule `pair_context.tag1 IS FILLED`, Link 3 *Individual*. In effect: assign where a relationship exists. No Group. |
+| Response fields | Apply Desk, in its order: `field_key`, `label`, `help_text`, `help_text_visible`, `response_type`, `data_type`, `required`, `visible`, bounds, `list_csv`, branching |
+| Layouts (intro, responses, display), column widths | Review Robin, through the card's Lock / Unlock |
+| Display fields | Review Robin, starting from **Name + ProfileLink** (the dossier link). For a blind gate Apply Desk sends the Dossier ID as the reviewee's name, so Review Robin needs nothing new |
+| Card colour | Review Robin, as now |
+| Visibility | Fixed by 23E |
+
+- **The pair tag**: Apply Desk fills `PairContextTag1` on every relationship it sends, with the evaluator's source (*Nominated*, *Panel A*), so the rule matches every pair it sends and the reviewer sees why.
+- **A re-send's settings** carry the instrument's owned rows; anything else on it, the assignment rows included, is refused as not owned. The field set and its order replace the draft's.
+
 
 ## Semantics
 
@@ -103,6 +125,8 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 
 ## Status
 
+- **Switchboard added 2026-11-16** (rung 2a): named locks per profile, so another application with different needs is a profile entry. Utilities keeps email on.
+- **Instruments decided 2026-11-16** (above): one per gate, the rule fixed by Review Robin, fields and their order Apply Desk's, presentation Review Robin's; rung 7 re-cut.
 - **Amended 2026-11-16** by the author's lock list (above): locks for as long as linked, more session fields owned, email off, Quick Setup hidden, a Linked application card; instruments wait for the assignment model. Rung 3's first build (owned settings incl. instruments) is held unpushed and will be re-cut to the session rows.
 - **Rung 2** (2026-11-15): the re-send of rosters, at `POST /operator/handoffs/{transfer_id}/update`. One refusal the plan did not name: a draft holding responses (`409 session_has_responses`), since a session reverted to draft (unopened again, author) can hold them and a roster replace would discard them.
 
@@ -110,11 +134,28 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 
 1. **Plan** (this file), its README row, the queue entry replacing item 3.
 2. **The re-send: rosters.** The operation, route, service, replay, refusals, audit (`EVENT_SCHEMAS`); `spec/handoffs.md`. Settings refused on a re-send until rung 3. Tests.
+2a. **The switchboard** (author, 2026-11-16; before rung 3, so every later lock uses it):
+   - A profile's switches become a set of named locks, `LinkedProfile.locks: frozenset[Lock]`, from a fixed menu. It covers 23E's release and observers plus 23F's.
+   - One check at every gate: `linked_apps.locks(session, Lock.X)`.
+   - Each profile lists the settings fields it owns, which is what a re-send accepts.
+   - Profiles stay in code, never in the database or the bundle.
+   - Apply Desk's profile takes every lock. Utilities' keeps email on (no email or invitation-send locks), so a second profile proves the generality.
+   - Policies particular to Apply Desk (the fixed rule, the display default, one instrument per gate) stay its profile's until a second application needs them.
+   - No behavior change for Apply Desk. Tests.
 3. ~~**The re-send: settings.**~~ Re-cut by the amendment: **the re-send: session settings** — the owned session rows (name, code, description, timezone, help contact, tags, Start, End, relationships switch) merged into the draft's export and imported; code conflicts refused. Instrument rows wait for the assignment model. Tests.
 4. **The proof of concept re-sends.** Utilities' page sends changed rosters and session settings to its linked draft. Tests.
 5. ~~**The locks: rosters and session.**~~ Re-cut: **the Linked application card and the session locks** — the card with Unlink; Quick Setup hidden; Session details never unlocked; the lobby's inline edit and bulk tags refused; the Settings import refused. Each refused in its service. Tests.
-6. **The locks: rosters and email** (new). The roster pages' uploads, rows, directory add and tags; the email templates page, *Send invites* / *Send reminders*, the submit acknowledgement. Tests.
-7. ~~**The locks: instruments.**~~ Deferred to the assignment model: the instrument rows of the re-send and their locks, planned when it lands.
+6. **The locks: rosters and email** (new).
+   - The roster pages' uploads, rows, directory add and tags.
+   - The Email templates tab off, *Send invites* / *Send reminders*, the submit acknowledgement.
+   - The Invitations page without *Send* / *Regenerate*.
+   - The Relationships tab on at the create.
+   - Tests.
+7. ~~**The locks: instruments.**~~ Deferred to the assignment model; now **the instrument** (*Instruments decided*):
+   - Review Robin fixes the assignment rule on a linked instrument; display fields start from Name + ProfileLink.
+   - The re-send carries the one instrument's owned rows.
+   - On the Instruments page, the owned parts are fixed and the add, replicate, delete and page-break controls inactive, each refused in its service.
+   - Tests.
 8. **Close**, after the author's browser check. The last build rung before it takes the cumulative `diff-reviewer` read from rung 2.
 
 ## Definition of done
@@ -131,8 +172,8 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 ## Open questions
 
 - ~~**The ownership table**~~: the session rows settled by the amendment (author, 2026-11-16); the instrument rows wait for the assignment model.
-- **Response field help text**: proposed Review Robin's; decided with the instrument rows.
-- **How *By relationships* is sent**: Link 2 as a rule on the relationship tag the Relationships file carries, or a Link 2 mode of its own; settled at rung 3, whichever the Settings CSV already carries without a new field.
+- ~~**Response field help text**~~: Apply Desk's (author, 2026-11-16).
+- ~~**How *By relationships* is sent**~~: not sent. Review Robin fixes the rule on a linked instrument, `pair_context.tag1 IS FILLED`; Apply Desk fills the tag (author, 2026-11-16).
 
 ## Out of scope
 
@@ -148,7 +189,8 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 - `spec/setup_pages.md` — the roster pages inactive on a linked session.
 - `spec/sessions_overview.md` — the lobby's inline edit and bulk tags refuse a linked session (amendment).
 - `spec/workflow_card.md` — *Send invites* and *Send reminders* not offered on a linked session (amendment).
-- `spec/instruments.md` — the owned instrument fields fixed.
+- `spec/instruments.md` — a linked instrument: the fixed rule, the owned parts fixed, add / replicate / delete inactive, display fields starting from Name + ProfileLink.
+- `spec/operations_pages.md` — the Invitations page without *Send* / *Regenerate* on a linked session (instruments amendment).
 - `guide/interoperability.md` — §5's revisit retired into this segment.
 - `guide/README.md` — this plan's row (rung 1), moved to `guide/archive/README.md` at close.
 - `guide/todo_master.md` — the queue entry (rung 1); deleted at close.
