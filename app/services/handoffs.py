@@ -390,6 +390,10 @@ def prior_update(db: Session, user: User, bundle: Bundle) -> ReviewSession | Non
         return None
     if done.actor_user_id != user.id:
         raise HandoffError("duplicate_conflict", 409)
+    # Checked now, not at the first post, as a create's replay checks it
+    # (Codex on #3915): an operator removed since reads no receipt.
+    if not permissions.user_can_view_session(db, user, done.session.id):
+        raise HandoffError("not_authorized", 403)
     return done.session
 
 
@@ -400,6 +404,16 @@ def update_target(db: Session, user: User, created_transfer: str, bundle: Bundle
     and unopened, and hold no responses (a session reverted to draft can):
     replacing its rosters would discard them."""
     review_session = linked(db, user, created_transfer)
+    check_update_target(db, review_session, bundle)
+    return review_session
+
+
+def check_update_target(db: Session, review_session: ReviewSession, bundle: Bundle) -> None:
+    """:class:`HandoffError` unless the draft is still the sender's to
+    update: linked to its application, unopened, without responses. Run
+    before the files are checked, and again under the save's lock
+    (``_save_uploads``), so an Unlink or an activation in between refuses
+    the re-send rather than being overwritten (Codex on #3915)."""
     profile = linked_apps.profile_for(bundle.source_app)
     if profile is None or review_session.linked_app != profile.key:
         raise HandoffError("not_linked", 404)
@@ -417,7 +431,6 @@ def update_target(db: Session, user: User, created_transfer: str, bundle: Bundle
             ["The session holds responses, which a re-send would discard."],
             review_session=review_session,
         )
-    return review_session
 
 
 def record_updated(
@@ -427,8 +440,9 @@ def record_updated(
     bundle: Bundle,
     correlation_id: str | None,
 ) -> None:
-    """The re-send's record, once its files have applied: a repeat of its
-    ``transfer_id`` reads it (:func:`prior_update`)."""
+    """The re-send's record, written in its save's unit so it commits with
+    the rosters (``_save_uploads``): a repeat of its ``transfer_id`` reads
+    it (:func:`prior_update`). Flushes only; the unit commits."""
     audit.write_event(
         db,
         event_type=UPDATED,
@@ -442,7 +456,7 @@ def record_updated(
         context=_transfer_context(bundle),
         correlation_id=correlation_id,
     )
-    unit_of_work.commit(db)
+    db.flush()
 
 
 def linked(db: Session, user: User, transfer_id: str) -> ReviewSession:

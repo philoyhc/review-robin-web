@@ -15,7 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, Relationship, Reviewee, Reviewer, ReviewSession
-from app.services import session_lifecycle
+from app.services import handoffs, session_lifecycle
 
 from .test_handoffs import REVIEWEES, REVIEWERS, SETTINGS, _bundle, _post
 
@@ -171,3 +171,57 @@ def test_a_draft_holding_responses_is_refused(
     reply = _resend(client, created, _update_bundle())
     assert reply.status_code == 409 and reply.json()["error"] == "session_has_responses"
     assert "cal@example.edu" not in _emails(db)
+
+
+def test_an_unlink_during_the_resend_refuses_it(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The link is checked again under the save's lock (Codex on #3915): a
+    draft unlinked after the first check keeps its rosters."""
+    review_session, created = _created(client, db)
+    real = handoffs.check_update_target
+    calls: list[int] = []
+
+    def unlink_after_first(db_: Session, session_: ReviewSession, bundle: Any) -> None:
+        calls.append(1)
+        if len(calls) == 2:  # the check under the lock
+            session_.linked_app = None
+        real(db_, session_, bundle)
+
+    monkeypatch.setattr(handoffs, "check_update_target", unlink_after_first)
+    reply = _resend(client, created, _update_bundle())
+    assert reply.status_code == 404 and reply.json()["error"] == "not_linked"
+    assert len(calls) == 2
+    db.expire_all()
+    assert _emails(db) == {"ada@example.edu", "ben@example.edu"}
+    assert not db.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == "session.handoff_updated")
+    ).all()
+
+
+def test_the_record_commits_with_the_rosters(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A record that fails takes the rosters back with it (Codex on #3915):
+    no transfer applies without the record a retry reads."""
+    _, created = _created(client, db)
+
+    def broken(*_: Any) -> None:
+        raise RuntimeError("record failed")
+
+    monkeypatch.setattr(handoffs, "record_updated", broken)
+    with pytest.raises(RuntimeError):
+        _resend(client, created, _update_bundle())
+    db.rollback()
+    assert _emails(db) == {"ada@example.edu", "ben@example.edu"}
+
+
+def test_a_replay_rechecks_the_operator(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, created = _created(client, db)
+    bundle = _update_bundle()
+    assert _resend(client, created, bundle).status_code == 200
+    monkeypatch.setattr(handoffs.permissions, "user_can_view_session", lambda *_: False)
+    again = _resend(client, created, bundle)
+    assert again.status_code == 403 and again.json()["error"] == "not_authorized"

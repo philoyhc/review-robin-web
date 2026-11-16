@@ -13,6 +13,7 @@ of its tight coupling to the helpers in this slice).
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from typing import TypedDict, cast
@@ -647,10 +648,13 @@ async def _run_quick_setup_contents(
     correlation_id: str | None = None,
     acknowledge_instrument_deletion: str | None = None,
     directory: Directory | None = None,
+    unit_guard: Callable[[], None] | None = None,
+    unit_record: Callable[[], None] | None = None,
 ) -> _SlotRefusal | None:
     """:func:`_run_quick_setup` on bytes already read, in slot order:
     the submit-all route feeds it files a refused submit held (segment
-    19W) beside the ones chosen now."""
+    19W) beside the ones chosen now. ``unit_guard`` and ``unit_record``
+    run inside the save unit (:func:`_save_uploads`)."""
 
     if not contents:
         return None
@@ -721,6 +725,8 @@ async def _run_quick_setup_contents(
                 acknowledged_loss(acknowledge_instrument_deletion) if replacing else None
             ),
             acknowledged_group_loss=acknowledged_loss(acknowledge_response_loss),
+            unit_guard=unit_guard,
+            unit_record=unit_record,
         )
     except _UnitRefused as exc:
         return exc.refusal
@@ -883,10 +889,18 @@ def _save_uploads(
     acknowledged_deletions: int | None = None,
     acknowledged_group_loss: int = 0,
     symmetric_target: bool | None = None,
+    unit_guard: Callable[[], None] | None = None,
+    unit_record: Callable[[], None] | None = None,
 ) -> None:
     """Save every checked file in one ``unit_of_work.atomic``: the
     per-entity savers nest inside it, so nothing commits until the last
     slot has saved, and any refusal rolls every slot back.
+
+    ``unit_guard`` runs once the session lock is held, before any save,
+    and refuses by raising; ``unit_record`` runs after the last save,
+    and writes without committing. A handoff re-send rechecks its link
+    under the lock and records its transfer in the same commit as the
+    rosters (segment 23F, Codex on #3915).
 
     Each roster saver locks the session and re-reads it (findings Bc4),
     so an activation committed since the checks refuses here, with the
@@ -903,6 +917,8 @@ def _save_uploads(
             # request turned on since this one loaded the session is not
             # logged as flipped again (Codex on #3002).
             session_guard.lock_session(db, review_session)
+            if unit_guard is not None:
+                unit_guard()
             # Segment 20B — Settings save last (``SLOT_ORDER``), so a file
             # that sets symmetric review sets it here, first: turned on
             # beside empty rosters, this submit's reviewers mirror; turned
@@ -954,6 +970,8 @@ def _save_uploads(
                     reason="quick_setup_upload",
                     correlation_id=correlation_id,
                 )
+            if unit_record is not None:
+                unit_record()
     except lifecycle.SessionStateConflict as exc:
         # Segment 20B: a turn-on committed since the checks refuses a
         # Reviewees file under the lock (Codex on #3490).
@@ -1723,18 +1741,30 @@ async def update_handoff_session(
             ["A re-send does not take a settings file yet: send the rosters."],
         )
     correlation_id = request_correlation_id()
-    refusal = await _run_quick_setup_contents(
-        contents=bundle.files,
-        filenames={kind: f"{kind}.csv" for kind in bundle.files},
-        review_session=review_session,
-        user=user,
-        db=db,
-        confirm_replace="true",
-        acknowledge_response_loss=None,
-        replacing=True,
-        correlation_id=correlation_id,
-        directory=directory_or_none(request),
-    )
+    try:
+        refusal = await _run_quick_setup_contents(
+            contents=bundle.files,
+            filenames={kind: f"{kind}.csv" for kind in bundle.files},
+            review_session=review_session,
+            user=user,
+            db=db,
+            confirm_replace="true",
+            acknowledge_response_loss=None,
+            replacing=True,
+            correlation_id=correlation_id,
+            directory=directory_or_none(request),
+            # Under the save's lock: still linked, unopened and without
+            # responses, so an Unlink or an activation since the checks
+            # above refuses rather than being overwritten; and the record
+            # commits with the rosters, so a retry finds it.
+            unit_guard=lambda: handoffs.check_update_target(db, review_session, bundle),
+            unit_record=lambda: handoffs.record_updated(
+                db, review_session, user, bundle, correlation_id
+            ),
+        )
+    except handoffs.HandoffError as exc:
+        db.rollback()
+        return _handoff_refused(request, exc)
     if refusal is not None:
         db.rollback()
         if refusal.failure.reason == views.DIRECTORY_SIGN_IN:
@@ -1750,7 +1780,6 @@ async def update_handoff_session(
             slot=refusal.kind,
             reason=refusal.failure.reason,
         )
-    handoffs.record_updated(db, review_session, user, bundle, correlation_id)
     return JSONResponse(
         _handoff_receipt(request, review_session, "updated"), headers=_HANDOFF_HEADERS
     )

@@ -184,9 +184,14 @@ re-sends them rather than Review Robin editing them (Apply Desk's ruling
   `404 not_linked`; one the operator may not operate, `403`; a session
   activated or later, `409 session_opened` (a session reverted to draft is
   unopened again); one holding responses, `409 session_has_responses`.
+- **Under the save's lock** the draft is checked again (still linked,
+  unopened, without responses), so an Unlink or an activation since the
+  first check refuses the re-send rather than being overwritten.
 - **Replay:** `session.handoff_updated` records the re-send's
-  `transfer_id`; a repeat answers `200 already_updated` and applies
-  nothing (another operator's, `409 duplicate_conflict`).
+  `transfer_id`, in the same commit as its rosters, so no re-send applies
+  without the record a retry reads. A repeat answers `200 already_updated`
+  and applies nothing; another operator's is `409 duplicate_conflict`,
+  and one the operator may no longer operate, checked now, `403`.
 - **Receipt:** `200 {status: "updated", session_ref, session_code, session_home_url}`.
 
 ## 7. Errors
