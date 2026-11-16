@@ -3,7 +3,9 @@ hides some (author, 2026-11-16): with the release fields gone, the two
 prompts stay in the right-hand column, Invites above Reminders, rather
 than flowing under End. No profile hides the release fields and keeps the
 prompts (Utilities takes the email lock too from rung 7j), so the test
-takes the release cells off a native page, as the template would."""
+takes the release cells off a native page: it checks the grid's
+placement, and `tests/integration/test_linked_sessions.py` the template's
+branching."""
 
 from __future__ import annotations
 

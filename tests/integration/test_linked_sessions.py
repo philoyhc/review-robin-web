@@ -806,3 +806,36 @@ def test_the_reviewer_page_shows_no_email_preview_under_the_email_lock(
     review_session.linked_app = None
     db.commit()
     assert 'id="email-previews"' in client.get(url).text
+
+
+def test_the_release_and_email_locks_hide_their_fields_apart(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Session details hides the release fields and the prompts on their
+    own locks: a profile with release but not email keeps the prompts."""
+    review_session, _ = _created(client, db)
+    utilities = linked_apps.LINKED_APPS["utilities"]
+    monkeypatch.setitem(
+        linked_apps.LINKED_APPS,
+        "utilities",
+        dataclasses.replace(
+            utilities,
+            locks=utilities.locks - {linked_apps.Lock.EMAIL, linked_apps.Lock.INVITATION_SEND},
+        ),
+    )
+    page = client.get(f"/operator/sessions/{review_session.public_id}").text
+    assert 'name="responses_release_at"' not in page
+    assert 'name="invite_offsets"' in page and 'name="reminder_offsets"' in page
+
+
+def test_the_email_copy_goes_with_the_email_locks(client: TestClient, db: Session) -> None:
+    """Under the email locks the Invitations page's Send note and the
+    status row's Email Template pill go too (the cold read of 7j)."""
+    review_session, _ = _created(client, db)
+    url = f"/operator/sessions/{review_session.public_id}/invitations"
+    page = client.get(url).text
+    assert "data-send-note" not in page and "Email Template:" not in page
+    review_session.linked_app = None
+    db.commit()
+    page = client.get(url).text
+    assert "data-send-note" in page and "Email Template:" in page

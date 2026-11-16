@@ -81,12 +81,16 @@
       <span class="pill pill-warning" data-instruments-configured-pill>{{ status_pills.instruments_configured }} /
         {{ status_pills.instrument_count }}</span>
     {% endif %}
+    {# 23F rung 7j — no Email Template pill where the linked application
+       sends its own email: the tab and page are gone. #}
+    {% if not session | linked_locks("email") %}
     &middot;
     Email Template:
     {% if status_pills.email_invites_set_up %}
       <span class="pill pill-info">Set up</span>
     {% else %}
       <span class="pill pill-warning">Not set up</span>
+    {% endif %}
     {% endif %}
     &middot;
     Invitations:
