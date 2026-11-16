@@ -303,7 +303,11 @@ revert form. Every roster write is `409`: import, add, edit,
 inactivate, reactivate, delete, delete-all, the field-label editor and
 the directory recheck (`require_rosters_open_session` and its two
 siblings in `_shared.py`). The application re-sends them
-(`spec/handoffs.md` §6a).
+(`spec/handoffs.md` §6a). Editor URLs (`?add=1`, `?edit_id=`) open no editor
+there. The **What reviewers / reviewees see of their own entry** cards
+stay Review Robin's: with no Unlock panel on those pages, each renders
+on the page itself (`data-linked-self-fields`, `views.self_fields_open`),
+and its `/self-fields` save stays open.
 
 ## The roster card and the Unlock panel
 

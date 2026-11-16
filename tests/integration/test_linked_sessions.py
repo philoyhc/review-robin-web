@@ -426,6 +426,13 @@ def test_the_roster_pages_are_read_only(client: TestClient, db: Session) -> None
         # A revisited editor URL opens no editor (Codex on #3924).
         editor = client.get(f"{base}/{page}?add=1").text
         assert f"Add new {page[:-1]}" not in editor, page
+    # The self-fields cards stay Review Robin's: on the page, not in a panel.
+    for page, card in (("reviewers", "reviewer"), ("reviewees", "reviewee")):
+        text = client.get(f"{base}/{page}").text
+        assert "data-linked-self-fields" in text and f'id="{card}-self-fields-form"' in text
+        assert 'id="roster-unlock-panel"' not in text
+    reply = client.post(f"{base}/reviewers/self-fields", data={"fields": ["name"]})
+    assert reply.status_code in (200, 303), reply.text
     reviewer_id = db.scalars(select(Reviewer.id)).first()
     editor = client.get(f"{base}/reviewers?edit_id={reviewer_id}").text
     assert "Edit reviewer" not in editor

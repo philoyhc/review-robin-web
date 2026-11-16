@@ -339,6 +339,7 @@ def _render_reviewers_page(
             # construction rather than by two lists kept in step.
             "is_editable": views.rosters_editable(review_session),
             "rosters_linked_to": views.rosters_linked_to(review_session),
+            "self_fields_open": views.self_fields_open(review_session),
             # 19I Item 12 rung 2 — the chips' has-data flags, answered
             # over the whole roster by query rather than by scanning
             # whichever rows this render produced. Keyed by the page's
