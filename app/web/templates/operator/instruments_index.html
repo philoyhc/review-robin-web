@@ -2089,7 +2089,7 @@
                 {# Segment 23E — on a linked session the application shows
                    results: the after-the-window cells name it, fixed. The
                    hidden inputs above keep the stored modes, unread. #}
-                {% set _released_in = linked.shows_results if (linked and linked.release_off) else "" %}
+                {% set _released_in = linked.shows_results if (linked and linked.has("release")) else "" %}
                 <table class="vp-grid" style="width: 100%; border-collapse: collapse;">
                   <thead>
                     <tr style="text-align: left;">
@@ -2134,7 +2134,7 @@
                        four after release. #}
                     {# Segment 23E — observers are off on a linked session:
                        no row. #}
-                    {% if not (linked and linked.observers_off) %}
+                    {% if not (linked and linked.has("observers")) %}
                     <tr class="row-group-start" data-new-model-vp-observers-row>
                       <td style="padding: 4px 8px;">Observers</td>
                       <td style="padding: 4px 8px;">

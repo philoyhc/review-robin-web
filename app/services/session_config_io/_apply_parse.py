@@ -429,7 +429,7 @@ def session_linked_errors(plan: _ParsedConfig, review_session: ReviewSession) ->
 
     overrides = plan.session_overrides
     errors: list[ApplyError] = []
-    if linked_apps.release_off(review_session):
+    if linked_apps.locks(review_session, linked_apps.Lock.RELEASE):
         for key in ("responses_release_at", "responses_release_until"):
             if overrides.get(key) is not None:
                 errors.append(
@@ -439,7 +439,9 @@ def session_linked_errors(plan: _ParsedConfig, review_session: ReviewSession) ->
                         message=linked_apps.off_message(review_session, "Release"),
                     )
                 )
-    if linked_apps.observers_off(review_session) and overrides.get("observers_enabled"):
+    if linked_apps.locks(review_session, linked_apps.Lock.OBSERVERS) and overrides.get(
+        "observers_enabled"
+    ):
         errors.append(
             ApplyError(
                 row_number=0,

@@ -352,7 +352,7 @@ def build_quick_setup_context(
     # whose observers are off (segment 23E). An upload that saves rows
     # turns ``observers_enabled`` on, so the rows never sit behind a
     # hidden tab.
-    if not linked_apps.observers_off(review_session):
+    if not linked_apps.locks(review_session, linked_apps.Lock.OBSERVERS):
         slots.append(
             QuickSetupSlot(
                 key="observers",

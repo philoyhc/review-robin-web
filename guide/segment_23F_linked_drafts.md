@@ -125,6 +125,7 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 
 ## Status
 
+- **Rung 2a built** (2026-11-16): `linked_apps.Lock` (nine locks), `LinkedProfile.locks` / `owned_settings` / `has`, `linked_apps.locks(session, lock)` at every 23E gate; `release_off` / `observers_off` retired. Locks no gate checks yet have no effect until their rung.
 - **Switchboard added 2026-11-16** (rung 2a): named locks per profile, so another application with different needs is a profile entry. Utilities keeps email on.
 - **Instruments decided 2026-11-16** (above): one per gate, the rule fixed by Review Robin, fields and their order Apply Desk's, presentation Review Robin's; rung 7 re-cut.
 - **Amended 2026-11-16** by the author's lock list (above): locks for as long as linked, more session fields owned, email off, Quick Setup hidden, a Linked application card; instruments wait for the assignment model. Rung 3's first build (owned settings incl. instruments) is held unpushed and will be re-cut to the session rows.
@@ -184,11 +185,12 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 ## Doc impact
 
 - `spec/handoffs.md` — the update operation: envelope, files, refusals, replay, receipt; what a re-sent settings file may carry.
+- `spec/lifecycle.md` — the release lock named as a switchboard lock (rung 2a).
 - `spec/csv_contracts.md` — §3.3: the owned rows a re-send applies, and the Settings import refused on a linked, unopened session.
 - `spec/session_home.md` — Session details never unlocked while linked; the Linked application card with Unlink; Quick Setup hidden.
 - `spec/setup_pages.md` — the roster pages inactive on a linked session.
 - `spec/sessions_overview.md` — the lobby's inline edit and bulk tags refuse a linked session (amendment).
-- `spec/workflow_card.md` — *Send invites* and *Send reminders* not offered on a linked session (amendment).
+- `spec/workflow_card.md` — *Send invites* and *Send reminders* not offered on a linked session (amendment); the release lock named as a switchboard lock (rung 2a).
 - `spec/instruments.md` — a linked instrument: the fixed rule, the owned parts fixed, add / replicate / delete inactive, display fields starting from Name + ProfileLink.
 - `spec/operations_pages.md` — the Invitations page without *Send* / *Regenerate* on a linked session (instruments amendment).
 - `guide/interoperability.md` — §5's revisit retired into this segment.

@@ -567,7 +567,7 @@ def workflow_release_responses(
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    if linked_apps.release_off(review_session):
+    if linked_apps.locks(review_session, linked_apps.Lock.RELEASE):
         # The linked application shows results in Review Robin's place
         # (segment 23E); the card does not offer the button.
         return urls.redirect(
@@ -637,7 +637,7 @@ def workflow_stop_release(
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    if linked_apps.release_off(review_session):
+    if linked_apps.locks(review_session, linked_apps.Lock.RELEASE):
         # No window to stop on a linked session (segment 23E); the card
         # does not offer the button, and a stamp would outlive Unlink.
         return urls.redirect(
