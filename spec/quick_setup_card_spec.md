@@ -45,6 +45,7 @@ The card contains five live slots on both variants — Reviewers, Reviewees, Rel
 
 **Slot 4 — Observers** (right column, middle).
 - Same shape as Reviewers, saved through the Observers importer. Renders whatever `observers_enabled` says; an upload that saves rows turns it on (**Turning tabs on**).
+- **Not offered on a linked session** (`spec/handoffs.md` §5; `app/services/linked_apps.py`): Home's card omits the slot, a submit that carries an Observers file anyway is refused with the `observers_off` reason (**Result reporting**), and **Turning tabs on** skips observers.
 
 **Slot 5 — Session settings** (right column, bottom).
 - File upload accepting a session-settings CSV: the three-column `field,value,data_type` form `serialize_session_config` writes (`spec/csv_contracts.md` §3.3; `app/services/session_config_io/`).
