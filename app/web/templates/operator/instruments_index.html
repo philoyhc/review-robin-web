@@ -1703,6 +1703,7 @@
            data-new-model-band2-saved-boundary-fields="{{ _band2.saved_reviewee_boundary_fields }}"
            data-new-model-band2-sample-member-ids="{{ _band2.sample_group_member_ids | join(',') }}"
            data-new-model-band2-edit-mode="{{ 1 if is_editing else 0 }}"
+           {% if linked and linked.has("instrument_structure") %}data-linked-structure{% endif %}
            data-new-model-band2-sort-spec='{{ _band2.sort_spec | tojson }}'>
         <div style="display: flex; align-items: center; gap: 12px;
                     margin: 0 0 12px 0;">
@@ -3410,7 +3411,10 @@
           function buildResponseFieldHelpRows(card) {
             var pills = helpVisibleResponsePills(card);
             if (pills.length === 0) { return ''; }
-            var unlocked = card.getAttribute('data-new-model-band2-edit-mode') === '1';
+            // Segment 23F rung 7c — a linked application's help text is
+            // its own: shown, never a textarea (Codex on #3927).
+            var unlocked = card.getAttribute('data-new-model-band2-edit-mode') === '1'
+              && !card.hasAttribute('data-linked-structure');
             var html = '';
             pills.forEach(function (p) {
               var keyAttr = esc(p.key || '');
