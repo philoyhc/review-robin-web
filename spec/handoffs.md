@@ -183,8 +183,9 @@ re-sends them rather than Review Robin editing them (Apply Desk's ruling
   code, description, timezone, help contact, Start, End, Relationships
   switch, and the session tags (`session_tags[N].tag`). Any other row is
   `422 invalid_setup`, `slot` `settings`, `reason` `not_owned`, naming the
-  fields; instrument rows are not taken yet. The rows are checked as the
-  Settings import checks them, plus the schedule's order on the values
+  fields; instrument rows are not taken yet. A row of fewer than three
+  cells is refused, as the Settings import refuses it. The rows are
+  checked as the import's row checks check them, plus the schedule's order on the values
   the session will hold, a timezone the app knows and a name and code
   New session would accept (`422 invalid_setup`, `slot` `settings`); a
   code another session holds is `409 session_code_conflict`. They are

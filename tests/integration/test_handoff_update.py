@@ -366,3 +366,33 @@ def test_a_settings_only_change_keeps_what_the_file_leaves_out(
     assert _resend(client, created, _update_bundle(files=files)).status_code == 200
     db.expire_all()
     assert (review_session.name, review_session.code) == ("Renamed", "POC-TEST-1")
+
+
+def test_a_short_settings_row_is_refused_not_padded(client: TestClient, db: Session) -> None:
+    """A truncated row is refused as the import refuses it, rather than
+    read as a blank value that clears the field (Codex on #3920)."""
+    review_session, created = _created(client, db)
+    with_end = "field,value,data_type\r\nsession.deadline,2030-03-08T17:00:00+00:00,datetime\r\n"
+    assert _resend(client, created, _update_bundle(files=_with(with_end))).status_code == 200
+    short = "field,value,data_type\r\nsession.deadline\r\n"
+    reply = _resend(client, created, _update_bundle(files=_with(short)))
+    assert reply.status_code == 422 and reply.json()["slot"] == "settings"
+    db.expire_all()
+    assert review_session.deadline is not None
+
+
+def test_a_schedule_moved_past_the_old_end_is_accepted(client: TestClient, db: Session) -> None:
+    """The order is checked on the values the re-send writes, not the
+    import's fill-blank End (Codex on #3920)."""
+    review_session, created = _created(client, db)
+    march = (
+        "field,value,data_type\r\n"
+        "session.scheduled_activate_at,2030-03-01T09:00:00+00:00,datetime\r\n"
+        "session.deadline,2030-03-08T17:00:00+00:00,datetime\r\n"
+    )
+    assert _resend(client, created, _update_bundle(files=_with(march))).status_code == 200
+    april = march.replace("2030-03-", "2030-04-")
+    reply = _resend(client, created, _update_bundle(files=_with(april)))
+    assert reply.status_code == 200, reply.text
+    db.expire_all()
+    assert review_session.deadline is not None and review_session.deadline.month == 4

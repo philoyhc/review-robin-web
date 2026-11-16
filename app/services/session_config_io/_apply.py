@@ -159,13 +159,14 @@ class SessionSettings:
     tags: list[str] | None
 
 
-def parse_session_settings(
-    review_session: ReviewSession, rows: list[Row]
-) -> tuple[SessionSettings, list[ApplyError]]:
-    """Phase 1 alone, keeping the parsed session values: the import's
-    parse and checks (types, lengths, the schedule's order on the values
-    the session would hold, offsets), nothing written."""
-    plan, errors = _validate(review_session, rows)
+def parse_session_settings(rows: list[Row]) -> tuple[SessionSettings, list[ApplyError]]:
+    """The import's row parse and per-row checks (types, lengths), keeping
+    the parsed session values; nothing written. No check against the
+    session's stored values: the import's schedule check treats End as a
+    fill-blank, and a caller that writes every value it carries (a
+    handoff re-send) checks the order on the values it will write
+    (Codex on #3920)."""
+    plan, errors = _parse_rows(rows)
     has_tags = any(row.field.startswith("session_tags[") for row in rows)
     tags = list(plan.session_tags) if has_tags else None
     return SessionSettings(dict(plan.session_overrides), tags), errors

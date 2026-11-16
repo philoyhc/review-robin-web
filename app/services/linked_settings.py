@@ -24,7 +24,13 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession, User
 from app.services import operator_settings, scheduled_events, session_tags, sessions
 from app.services.linked_apps import LinkedProfile
-from app.services.session_config_io import HEADER, Row, SessionSettings, parse_session_settings
+from app.services.session_config_io import (
+    HEADER,
+    Row,
+    SessionSettings,
+    parse_session_settings,
+    split_rows,
+)
 
 #: The ``owned_settings`` entry that owns the session's tags.
 TAGS = "session_tags"
@@ -69,17 +75,23 @@ def is_owned(profile: LinkedProfile, field: str) -> bool:
 
 
 def read_rows(content: bytes) -> list[Row]:
-    """A settings file's data rows, its header dropped. Undecodable or
-    malformed content reads as no rows; the checks then find nothing to
-    apply, as an empty file."""
+    """A settings file's data rows, its header dropped, read as the
+    Settings import reads them (``session_config_io.split_rows``): a row
+    of fewer than three cells, or holding a NUL, is refused rather than
+    padded into a blank value that would clear a field (Codex on #3920).
+    :class:`SettingsRefused` for those, and for content that is not
+    UTF-8 CSV."""
     try:
         reader = csv.reader(io.StringIO(content.decode("utf-8-sig")))
         raw = [cells for cells in reader if any(cell.strip() for cell in cells)]
-    except (UnicodeDecodeError, csv.Error):
-        return []
+    except (UnicodeDecodeError, csv.Error) as exc:
+        raise SettingsRefused(["The settings file is not UTF-8 CSV."]) from exc
     if raw and tuple(cell.strip().lower() for cell in raw[0][:3]) == HEADER:
         raw = raw[1:]
-    return [Row(*(cells + ["", "", ""])[:3]) for cells in raw]
+    rows, errors = split_rows(raw)
+    if errors:
+        raise SettingsRefused([f"row {e.row_number}: {e.message}" for e in errors])
+    return rows
 
 
 def prepare(
@@ -88,7 +100,8 @@ def prepare(
     """The re-sent settings, checked and not yet written.
 
     :class:`NotOwned` for any row the profile does not own;
-    :class:`SettingsRefused` for what the import's checks refuse, a name
+    :class:`SettingsRefused` for a malformed row, what the import's row
+    checks refuse, a name
     or code ``SessionCreate`` refuses, an unknown timezone, or a schedule
     out of order on the values the session would hold;
     ``sessions.SessionCodeTakenError`` for a code another session holds."""
@@ -96,7 +109,7 @@ def prepare(
     foreign = sorted({row.field for row in rows if not is_owned(profile, row.field)})
     if foreign:
         raise NotOwned(foreign)
-    settings, errors = parse_session_settings(review_session, rows)
+    settings, errors = parse_session_settings(rows)
     if errors:
         raise SettingsRefused([f"{error.field}: {error.message}" for error in errors])
     overrides = _normalized(settings.overrides)
@@ -115,8 +128,8 @@ def prepare(
         sessions.ensure_code_available(
             db, str(overrides["code"]), exclude_session_id=review_session.id
         )
-    # The import checks End as a fill-blank; a re-send writes it, so the
-    # order is checked again on the values the session will hold.
+    # The order is checked on the values the session will hold: a re-send
+    # writes End, where the import would only fill it when blank.
     try:
         scheduled_events.validate_schedule_ordering(
             scheduled_activate_at=_when(
