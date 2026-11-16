@@ -1,0 +1,12 @@
+{# Segment 23F rung 5a — the Linked application card, scaffold: real copy
+   and layout, its Unlink inert until rung 5b wires it (CLAUDE.md,
+   scaffold-first). Half width, in the bottom-left column under Quick
+   Setup; rung 5b puts it in Quick Setup's place and moves Unlink here
+   from Session details. #}
+<div class="card" id="linked-app-card" data-linked-app-card>
+  <h2>Linked application</h2>
+  <p>This session is linked to <strong>{{ linked.name }}</strong>, which created it. Its rosters and set-up come from {{ linked.name }}, and Review Robin turns off what {{ linked.name }} does in its place: results are seen in {{ linked.shows_results }}.</p>
+  <p class="muted">Unlink to manage the session here instead. Only a new handoff links a session again.</p>
+  <button type="button" class="btn alert" disabled aria-disabled="true"
+          title="Not wired yet: unlink from Session details for now." data-linked-app-unlink>Unlink</button>
+</div>

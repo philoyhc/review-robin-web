@@ -612,6 +612,10 @@
          the left column ("bottom left"). A distinct card, greyed
          only when unavailable; its redirects land on Home. #}
       {% include "operator/partials/_quick_setup_card.html" %}
+      {# Segment 23F rung 5a — the Linked application card (scaffold). #}
+      {% if linked %}
+        {% include "operator/partials/_linked_app_card.html" %}
+      {% endif %}
     </div>
 
     {# Bottom-right column — the Owners card (its own comment below), then
