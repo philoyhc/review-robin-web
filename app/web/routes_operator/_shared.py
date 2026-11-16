@@ -399,6 +399,15 @@ def refuse_locked(review_session: ReviewSession, lock: linked_apps.Lock, what: s
         )
 
 
+def refuse_linked_structure(review_session: ReviewSession) -> None:
+    """409 for a change to a linked instrument's structure (segment 23F
+    rung 7c): its application sends the fields, and Review Robin fixes
+    the rule and holds one instrument."""
+    refuse_locked(
+        review_session, linked_apps.Lock.INSTRUMENT_STRUCTURE, "Changing the instrument's structure"
+    )
+
+
 def _refusing(lock: linked_apps.Lock, what: str) -> Callable[..., ReviewSession]:
     """A dependency: the operator gate, and 409 when the session's linked
     application takes ``lock`` (segment 23F)."""

@@ -29,9 +29,9 @@ from app.json_shapes import json_list, json_object
 from app.services import (
     instruments as instruments_service,
 )
+from app.services import linked_apps, unit_of_work, visibility_policies
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
-from app.services import unit_of_work, visibility_policies
 from app.web import urls, views
 from app.web.deps import (
     get_or_create_user,
@@ -44,6 +44,7 @@ from app.web.routes_operator._shared import (
     _require_instrument_in_session,
     _templates,
     acknowledged_loss,
+    refuse_linked_structure,
     require_json_object,
 )
 
@@ -135,6 +136,7 @@ def instrument_edit_description(
 ) -> RedirectResponse:
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
+    refuse_linked_structure(review_session)
     instruments_service.update_instrument_description(
         db,
         instrument=instrument,
@@ -161,6 +163,7 @@ def instrument_add_field(
 ) -> RedirectResponse:
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
+    refuse_linked_structure(review_session)
 
     key = (field_key or "").strip()
     if not key:
@@ -206,6 +209,7 @@ def instrument_add_default_field(
 ) -> RedirectResponse:
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
+    refuse_linked_structure(review_session)
     try:
         instruments_service.add_default_response_field(
             db, instrument=instrument, after_field_id=after, actor=user
@@ -240,6 +244,7 @@ def instrument_edit_field(
 ) -> RedirectResponse:
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
+    refuse_linked_structure(review_session)
     field = _require_response_field_in_instrument(field_id, instrument, db)
 
     # Validation now derives from the field's Response Type
@@ -286,6 +291,7 @@ def instrument_delete_field(
 ) -> RedirectResponse:
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
+    refuse_linked_structure(review_session)
     field = _require_response_field_in_instrument(field_id, instrument, db)
 
     try:
@@ -331,6 +337,7 @@ def instrument_move_field(
 ) -> RedirectResponse:
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
+    refuse_linked_structure(review_session)
     field = _require_response_field_in_instrument(field_id, instrument, db)
     if direction not in ("up", "down"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
@@ -497,6 +504,7 @@ async def instrument_bulk_save_fields(
 ) -> RedirectResponse:
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
+    structure_fixed = linked_apps.locks(review_session, linked_apps.Lock.INSTRUMENT_STRUCTURE)
 
     form = await request.form()
 
@@ -510,54 +518,58 @@ async def instrument_bulk_save_fields(
         # off the table-driven bulk-save logic for them and call the Band 1
         # service helpers instead.
         with unit_of_work.single_commit(db):
-            try:
-                band1 = instruments_service.parse_band1_form(form)
-            except instruments_service.Band1ParseError as exc:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=str(exc),
-                ) from exc
-            link3_mode, link3_pairs, link3_touched = instruments_service.parse_link3_form(form)
-            # Read before the Link 3 write: the self-review flag clears on an
-            # individual → group move (19O Item 2 follow-up).
-            previous_group_kind = instrument.group_kind
-            try:
-                instruments_service.set_band1_assignment_rules(
-                    db, instrument=instrument, actor=user, link3_mode=link3_mode, **band1
-                )
-            except instruments_service.Band1ParseError as exc:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=str(exc),
-                ) from exc
-            try:
-                instruments_service.set_unit_of_review(
+            # Segment 23F rung 7c — a linked instrument's rule is fixed by
+            # Review Robin (``linked_instruments``): the card's Band 1 / Link 3
+            # and self-review inputs are inert there and never written.
+            if not structure_fixed:
+                try:
+                    band1 = instruments_service.parse_band1_form(form)
+                except instruments_service.Band1ParseError as exc:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=str(exc),
+                    ) from exc
+                link3_mode, link3_pairs, link3_touched = instruments_service.parse_link3_form(form)
+                # Read before the Link 3 write: the self-review flag clears on an
+                # individual → group move (19O Item 2 follow-up).
+                previous_group_kind = instrument.group_kind
+                try:
+                    instruments_service.set_band1_assignment_rules(
+                        db, instrument=instrument, actor=user, link3_mode=link3_mode, **band1
+                    )
+                except instruments_service.Band1ParseError as exc:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=str(exc),
+                    ) from exc
+                try:
+                    instruments_service.set_unit_of_review(
+                        db,
+                        instrument=instrument,
+                        mode=link3_mode,
+                        boundary_pairs=link3_pairs,
+                        actor=user,
+                        touched=link3_touched,
+                        acknowledged_loss=acknowledged_loss(form.get("acknowledge_response_loss")),
+                    )
+                except responses_service.GroupAnswersWouldClear as exc:
+                    # The no-JS fallback refuses as its other steps do; the
+                    # card's tick rides this form too (``form="dfsave-<id>"``).
+                    db.rollback()
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail=str(exc),
+                    ) from exc
+                instruments_service.set_exclude_self_reviews(
                     db,
                     instrument=instrument,
-                    mode=link3_mode,
-                    boundary_pairs=link3_pairs,
+                    value=instruments_service.resolve_exclude_self_reviews(
+                        instrument=instrument,
+                        form_value=instruments_service.parse_exclude_self_reviews_form(form),
+                        previous_group_kind=previous_group_kind,
+                    ),
                     actor=user,
-                    touched=link3_touched,
-                    acknowledged_loss=acknowledged_loss(form.get("acknowledge_response_loss")),
                 )
-            except responses_service.GroupAnswersWouldClear as exc:
-                # The no-JS fallback refuses as its other steps do; the
-                # card's tick rides this form too (``form="dfsave-<id>"``).
-                db.rollback()
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=str(exc),
-                ) from exc
-            instruments_service.set_exclude_self_reviews(
-                db,
-                instrument=instrument,
-                value=instruments_service.resolve_exclude_self_reviews(
-                    instrument=instrument,
-                    form_value=instruments_service.parse_exclude_self_reviews_form(form),
-                    previous_group_kind=previous_group_kind,
-                ),
-                actor=user,
-            )
             # Column-widths race fix: the drag-resize handler POSTs to
             # /column-widths asynchronously. A fast Save click can win
             # the race and navigate the page before the async fetch
@@ -648,7 +660,7 @@ async def instrument_bulk_save_fields(
             # Identity edits (description / short_label) come through the
             # same bulk-save form on the new-model card; reuse the same
             # block at the bottom of the standard handler.
-            if "description" in form:
+            if "description" in form and not structure_fixed:
                 submitted_desc = form.get("description")
                 cleaned = (
                     submitted_desc.strip() if isinstance(submitted_desc, str) else None
@@ -660,7 +672,7 @@ async def instrument_bulk_save_fields(
                         description=cleaned,
                         actor=user,
                     )
-            if "short_label" in form:
+            if "short_label" in form and not structure_fixed:
                 submitted_label = form.get("short_label")
                 try:
                     instruments_service.update_short_label(
@@ -810,6 +822,7 @@ async def instrument_consolidated_save(
     """
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
+    structure_fixed = linked_apps.locks(review_session, linked_apps.Lock.INSTRUMENT_STRUCTURE)
 
     form = await request.form()
 
@@ -832,53 +845,57 @@ async def instrument_consolidated_save(
 
         with unit_of_work.single_commit(db):
             # Band 1 (Link 1 / Link 2) + Link 3 unit-of-review.
-            try:
-                band1 = instruments_service.parse_band1_form(form)
-            except instruments_service.Band1ParseError as exc:
-                return _fail(str(exc))
-            link3_mode, link3_pairs, link3_touched = instruments_service.parse_link3_form(form)
-            # Read before the Link 3 write: the self-review flag clears on an
-            # individual → group move (19O Item 2 follow-up).
-            previous_group_kind = instrument.group_kind
-            try:
-                instruments_service.set_band1_assignment_rules(
-                    db, instrument=instrument, actor=user, link3_mode=link3_mode, **band1
-                )
-            except instruments_service.Band1ParseError as exc:
-                return _fail(str(exc))
-            try:
-                instruments_service.set_unit_of_review(
+            # Segment 23F rung 7c — a linked instrument's rule is fixed by
+            # Review Robin (``linked_instruments``): the card's Band 1 / Link 3
+            # and self-review inputs are inert there and never written.
+            if not structure_fixed:
+                try:
+                    band1 = instruments_service.parse_band1_form(form)
+                except instruments_service.Band1ParseError as exc:
+                    return _fail(str(exc))
+                link3_mode, link3_pairs, link3_touched = instruments_service.parse_link3_form(form)
+                # Read before the Link 3 write: the self-review flag clears on an
+                # individual → group move (19O Item 2 follow-up).
+                previous_group_kind = instrument.group_kind
+                try:
+                    instruments_service.set_band1_assignment_rules(
+                        db, instrument=instrument, actor=user, link3_mode=link3_mode, **band1
+                    )
+                except instruments_service.Band1ParseError as exc:
+                    return _fail(str(exc))
+                try:
+                    instruments_service.set_unit_of_review(
+                        db,
+                        instrument=instrument,
+                        mode=link3_mode,
+                        boundary_pairs=link3_pairs,
+                        actor=user,
+                        touched=link3_touched,
+                        acknowledged_loss=acknowledged_loss(form.get("acknowledge_response_loss")),
+                    )
+                except responses_service.GroupAnswersWouldClear as exc:
+                    # Refuse, then re-offer (author's ruling 2026-10-17): the
+                    # card shows the count with a ``Yes, clear them`` tick and
+                    # its next Save sends that count as ``acknowledge_response_loss``.
+                    db.rollback()
+                    return JSONResponse(
+                        {
+                            "ok": False,
+                            "errors": [str(exc)],
+                            "confirm_group_clear": exc.count,
+                        },
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    )
+                instruments_service.set_exclude_self_reviews(
                     db,
                     instrument=instrument,
-                    mode=link3_mode,
-                    boundary_pairs=link3_pairs,
+                    value=instruments_service.resolve_exclude_self_reviews(
+                        instrument=instrument,
+                        form_value=instruments_service.parse_exclude_self_reviews_form(form),
+                        previous_group_kind=previous_group_kind,
+                    ),
                     actor=user,
-                    touched=link3_touched,
-                    acknowledged_loss=acknowledged_loss(form.get("acknowledge_response_loss")),
                 )
-            except responses_service.GroupAnswersWouldClear as exc:
-                # Refuse, then re-offer (author's ruling 2026-10-17): the
-                # card shows the count with a ``Yes, clear them`` tick and
-                # its next Save sends that count as ``acknowledge_response_loss``.
-                db.rollback()
-                return JSONResponse(
-                    {
-                        "ok": False,
-                        "errors": [str(exc)],
-                        "confirm_group_clear": exc.count,
-                    },
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                )
-            instruments_service.set_exclude_self_reviews(
-                db,
-                instrument=instrument,
-                value=instruments_service.resolve_exclude_self_reviews(
-                    instrument=instrument,
-                    form_value=instruments_service.parse_exclude_self_reviews_form(form),
-                    previous_group_kind=previous_group_kind,
-                ),
-                actor=user,
-            )
 
             # Column widths (mirrored into the form snapshot on every drag).
             snapshot = form.get("column_widths_snapshot")
@@ -919,7 +936,7 @@ async def instrument_consolidated_save(
             # Identity (description / short_label) — present only if the card
             # still rides them on the form (defensive; new-model cards edit
             # them inline via /identity).
-            if "description" in form:
+            if "description" in form and not structure_fixed:
                 submitted_desc = form.get("description")
                 cleaned = (
                     submitted_desc.strip() if isinstance(submitted_desc, str) else None
@@ -931,7 +948,7 @@ async def instrument_consolidated_save(
                         description=cleaned,
                         actor=user,
                     )
-            if "short_label" in form:
+            if "short_label" in form and not structure_fixed:
                 submitted_label = form.get("short_label")
                 try:
                     instruments_service.update_short_label(
@@ -1031,6 +1048,9 @@ async def instrument_consolidated_save(
                     band2_state = json_object(_json.loads(band2_snapshot))
                 except (TypeError, ValueError):
                     band2_state = None
+                if band2_state is not None and structure_fixed:
+                    # The response fields are the linked application's.
+                    band2_state.pop("response_fields", None)
                 if band2_state is not None:
                     acknowledged_drop = bool(band2_state.get("acknowledged_drop", False))
                     try:
@@ -1157,6 +1177,7 @@ def instruments_add_new_model(
     back-compat with the template's existing form action.
     """
     _require_instrument_editable(review_session)
+    refuse_linked_structure(review_session)
     instrument = instruments_service.create_instrument(
         db,
         review_session=review_session,
@@ -1181,6 +1202,7 @@ def instruments_replicate(
     immediately after the source (Segment 13C PR 3)."""
     source, review_session = bundle
     _require_instrument_editable(review_session)
+    refuse_linked_structure(review_session)
     instrument = instruments_service.replicate_instrument(
         db,
         review_session=review_session,
@@ -1204,6 +1226,7 @@ def instruments_delete(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     _require_instrument_editable(review_session)
+    refuse_linked_structure(review_session)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1314,6 +1337,7 @@ async def instrument_set_identity(
     """
     instrument, _ = bundle
     _require_instrument_editable(instrument.session)
+    refuse_linked_structure(instrument.session)
     body = await require_json_object(request, label="identity")
 
     # Everything after the request body is read runs in the threadpool:

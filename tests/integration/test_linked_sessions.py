@@ -554,3 +554,85 @@ def test_a_replay_of_a_cut_off_create_sets_the_instrument_up(
     assert set(instrument.band1_touched_links or []) == {"link1", "link2", "link3"}
     state = instruments_service.decode_band1_state(instrument, db)
     assert state["link2"]["mode"] == "filter"
+
+
+# --- Segment 23F rung 7c: the Instruments page locks ---------------------
+
+
+def _base(review_session: ReviewSession) -> str:
+    return f"/operator/sessions/{review_session.public_id}/instruments"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/add-new-model",
+        "/{id}/replicate",
+        "/{id}/page-break/create",
+        "/{id}/fields/add-row",
+    ],
+)
+def test_the_structure_routes_refuse_a_linked_instrument(
+    client: TestClient, db: Session, path: str
+) -> None:
+    review_session, _ = _created(client, db, files=_with_settings())
+    instrument = db.scalars(select(Instrument)).one()
+    reply = client.post(_base(review_session) + path.format(id=instrument.id), data={})
+    assert reply.status_code == 409, reply.text
+    assert "linked to Utilities" in reply.text
+    assert len(db.scalars(select(Instrument)).all()) == 1
+
+
+def test_the_identity_route_refuses_a_linked_instrument(client: TestClient, db: Session) -> None:
+    review_session, _ = _created(client, db, files=_with_settings())
+    instrument = db.scalars(select(Instrument)).one()
+    reply = client.post(
+        f"{_base(review_session)}/{instrument.id}/identity", json={"short_label": "Mine"}
+    )
+    assert reply.status_code == 409
+
+
+def test_the_save_keeps_the_owned_parts_and_writes_the_rest(
+    client: TestClient, db: Session
+) -> None:
+    """The card's Save on a linked instrument writes what is Review
+    Robin's (here the display layout) and leaves the rule, the identity and
+    the response fields as the application set them."""
+    review_session, _ = _created(client, db, files=_with_settings())
+    instrument = db.scalars(select(Instrument)).one()
+    rule_before = instruments_service.decode_band1_state(instrument, db)
+    label_before = instrument.short_label
+    keys_before = [f.field_key for f in sorted(instrument.response_fields, key=lambda f: f.order)]
+    reply = client.post(
+        f"{_base(review_session)}/{instrument.id}/save",
+        data={
+            "link2_mode": "all",
+            "short_label": "Renamed",
+            "description": "Mine now",
+            "display_layout": "stacked",
+            "band2_state_snapshot": '{"response_fields": []}',
+        },
+    )
+    assert reply.status_code == 200, reply.text
+    db.expire_all()
+    instrument = db.scalars(select(Instrument)).one()
+    assert instrument.display_layout == "stacked"
+    assert instrument.short_label == label_before and instrument.description != "Mine now"
+    assert instruments_service.decode_band1_state(instrument, db) == rule_before
+    assert [
+        f.field_key for f in sorted(instrument.response_fields, key=lambda f: f.order)
+    ] == keys_before
+
+
+def test_the_page_shows_the_instrument_fixed(client: TestClient, db: Session) -> None:
+    review_session, _ = _created(client, db, files=_with_settings())
+    page = client.get(_base(review_session)).text
+    assert "data-linked-rule" in page and "data-linked-fields" in page
+    assert "+Instrument</button>" not in page and ">Replicate</button>" not in page
+    assert "+Page break</button>" not in page
+
+
+def test_a_native_page_keeps_its_structure_controls(client: TestClient, db: Session) -> None:
+    review_session, _ = _created(client, db, source_app="otherapp", files=_with_settings())
+    page = client.get(_base(review_session)).text
+    assert "data-linked-rule" not in page and "+Instrument</button>" in page

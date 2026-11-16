@@ -195,6 +195,9 @@
                 data-new-model-cancel="{{ instrument.id }}"
                 onclick="newModelCancelEdits(this)"
                 disabled>Cancel</button>
+        {# Segment 23F rung 7c — a linked application's draft holds its one
+           instrument: no Replicate, Delete, +Instrument or +Page break. #}
+        {% if not (linked and linked.has("instrument_structure")) %}
         {# Replicate — clone this instrument's content into a new
            card slotted immediately after it (Segment 13C PR 3). #}
         <form method="post"
@@ -239,6 +242,7 @@
                   data-instrument-page-break-add="{{ instrument.id }}"
                   {% if add_delete_disabled or page_break_disabled %}disabled title="{{ page_break_title or add_delete_disabled_title }}"{% endif %}>+Page break</button>
         </form>
+        {% endif %}
         {# Save / Lock semantics — Wave 4 takeover. Save persists the
            pending batch (Band 1 form fields + Band 3 rows);
            Lock toggles between view and edit modes by adding or
@@ -444,6 +448,7 @@
             <input type="text"
                    data-card-title-input data-unlock-only
                    form="dfsave-{{ instrument.id }}" name="short_label"
+                   {% if linked and linked.has("instrument_structure") %}readonly data-linked-fixed{% endif %}
                    autocomplete="off"
                    maxlength="32"
                    value="{{ instrument.short_label or '' }}"
@@ -815,8 +820,13 @@
          spilling past their dividers (19T Item 12A). The grid, not the
          scroller, is the lock region, so a locked card scrolls too. #}
       <div class="table-scroll">
-      <div data-lock-region class="band1-grid"
-           {% if not is_editing %}inert aria-hidden="true"{% endif %}>
+      {# Segment 23F rung 7c — on a linked instrument Review Robin fixes
+         the rule: never a lock region, so unlocking leaves it inert. #}
+      {% if linked and linked.has("instrument_structure") %}
+      <p class="muted linked-note" data-linked-rule>Fixed by Review Robin for {{ linked.name }}: every pair {{ linked.name }} sends is reviewed.</p>
+      {% endif %}
+      <div {% if linked and linked.has("instrument_structure") %}data-linked-fixed inert{% else %}data-lock-region{% endif %} class="band1-grid"
+           {% if not (linked and linked.has("instrument_structure")) and not is_editing %}inert aria-hidden="true"{% endif %}>
         <div style="padding: 0 16px 0 0; display: flex; flex-direction: column;">
           {{ new_model_rule_list("link1", instrument.id, _band1_state.link1,
               "Who does the review", _link1_tags,
@@ -1693,6 +1703,7 @@
            data-new-model-band2-saved-boundary-fields="{{ _band2.saved_reviewee_boundary_fields }}"
            data-new-model-band2-sample-member-ids="{{ _band2.sample_group_member_ids | join(',') }}"
            data-new-model-band2-edit-mode="{{ 1 if is_editing else 0 }}"
+           {% if linked and linked.has("instrument_structure") %}data-linked-structure{% endif %}
            data-new-model-band2-sort-spec='{{ _band2.sort_spec | tojson }}'>
         <div style="display: flex; align-items: center; gap: 12px;
                     margin: 0 0 12px 0;">
@@ -1974,6 +1985,7 @@
                    data-intro-description-view data-lock-only{% if not _heading.subtitle %} hidden{% endif %}>{{ _heading.subtitle or '' }}</p>
                 <textarea data-intro-description-input data-unlock-only
                           form="dfsave-{{ instrument.id }}" name="description"
+                          {% if linked and linked.has("instrument_structure") %}readonly data-linked-fixed{% endif %}
                           placeholder="(no description)"
                           maxlength="2000"
                           style="width: 100%; margin-top: 4px;
@@ -3399,7 +3411,10 @@
           function buildResponseFieldHelpRows(card) {
             var pills = helpVisibleResponsePills(card);
             if (pills.length === 0) { return ''; }
-            var unlocked = card.getAttribute('data-new-model-band2-edit-mode') === '1';
+            // Segment 23F rung 7c — a linked application's help text is
+            // its own: shown, never a textarea (Codex on #3927).
+            var unlocked = card.getAttribute('data-new-model-band2-edit-mode') === '1'
+              && !card.hasAttribute('data-linked-structure');
             var html = '';
             pills.forEach(function (p) {
               var keyAttr = esc(p.key || '');
@@ -4878,10 +4893,13 @@
           {% set _rfs = _band2.response_fields %}
           {% set _next_idx = (_rfs | length) %}
           <div class="table-scroll">
-          <table class="rf-table" data-new-model-rf-rows data-lock-region
+          {% if linked and linked.has("instrument_structure") %}
+          <p class="muted linked-note" data-linked-fields>The response fields come from {{ linked.name }}.</p>
+          {% endif %}
+          <table class="rf-table" data-new-model-rf-rows
                data-new-model-rf-row-counter="{{ _next_idx + 1 }}"
                data-new-model-rf-branch-ops='{{ _band2.branch_ops | tojson }}'
-               {% if not is_editing %}inert aria-hidden="true"{% endif %}>
+               {% if linked and linked.has("instrument_structure") %}data-linked-fixed inert{% else %}data-lock-region{% if not is_editing %} inert aria-hidden="true"{% endif %}{% endif %}>
             {# 19T Item 10 — one <tbody> per group: a field on its own, or
                a parent with its condition row and the fields it governs
                (``views._response_field_groups``), a field inside it
