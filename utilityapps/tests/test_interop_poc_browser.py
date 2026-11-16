@@ -105,3 +105,23 @@ def test_another_tab_follows_the_clear(page: Page) -> None:
     expect(other.locator("#poc-sent-rows")).to_contain_text("No sessions sent")
     expect(other.locator("#poc-sent-clear")).to_be_hidden()
     expect(other.locator("#poc-sent-detail")).to_be_empty()
+
+
+def test_a_reply_after_the_clear_paints_nothing(page: Page) -> None:
+    """Codex on #3931: a status read still out when the list is cleared
+    must not reopen the detail panel for the forgotten session."""
+    held: list[Route] = []
+    page.route("**/status", lambda route: held.append(route))
+    page.goto(PAGE)
+    page.evaluate("([key, list]) => localStorage.setItem(key, JSON.stringify(list))", [KEY, SENT])
+    page.reload()
+    page.get_by_role("button", name="Refresh status").click()
+    expect(page.locator("#poc-sent-detail")).to_contain_text("Asking Review Robin")
+
+    page.once("dialog", lambda dialog: dialog.accept())
+    page.locator("#poc-sent-clear").click()
+    expect(page.locator("#poc-sent-rows")).to_contain_text("No sessions sent")
+    with page.expect_response("**/status"):
+        held[0].fulfill(status=200, json={"status_schema_version": 0})
+    page.wait_for_function("() => true")  # let the reply's callbacks run
+    expect(page.locator("#poc-sent-detail")).to_be_empty()
