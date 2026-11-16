@@ -43,12 +43,16 @@ from app.services import (
     session_config_io,
     unit_of_work,
 )
+from app.services import session_lifecycle as lifecycle
 from app.services.date_formatting import iso_in_zone
 from app.services.sessions import resolve_session_timezone
 
 PROTOCOL = "cordware.csv-handoff"
 PROTOCOL_VERSION = 1
 OPERATION = "reviewrobin.create_draft_session"
+#: The re-send to a linked, unopened draft (segment 23F): it names the
+#: draft by the transfer that created it.
+UPDATE_OPERATION = "reviewrobin.update_draft_session"
 #: The whole request body, CSVs included.
 MAX_BYTES = 1024 * 1024
 #: The rosters, and since segment 23D a Settings file (`spec/csv_contracts.md`
@@ -62,6 +66,9 @@ EVENT = "session.handoff_created"
 #: Written once the rosters have saved: the mark of a complete transfer,
 #: independent of what the rosters hold later (an operator may clear one).
 COMPLETED = "session.handoff_completed"
+#: Written once a re-send has applied (segment 23F); a repeat of its
+#: ``transfer_id`` finds it and applies nothing.
+UPDATED = "session.handoff_updated"
 #: How long after its draft a transfer with no rosters yet counts as still
 #: running: past the create's 120 s directory budget and the roster save,
 #: with room to spare. Older, it was cut off.
@@ -125,9 +132,11 @@ def _text(data: dict[str, object], key: str, limit: int) -> str:
     return value.strip()
 
 
-def parse_bundle(body: bytes) -> Bundle:
+def parse_bundle(body: bytes, *, operation: str = OPERATION) -> Bundle:
     """The bundle, or :class:`HandoffError`. Checks the envelope only:
-    the CSVs are Quick Setup's to check, with its own parsers and caps."""
+    the CSVs are Quick Setup's to check, with its own parsers and caps.
+    ``operation`` is the one the route serves: a re-send
+    (:data:`UPDATE_OPERATION`) carries no ``session_suggestion``."""
     try:
         raw: object = json.loads(body)
     except (ValueError, UnicodeDecodeError, RecursionError) as exc:
@@ -139,12 +148,12 @@ def parse_bundle(body: bytes) -> Bundle:
     if (
         data.get("protocol") != PROTOCOL
         or data.get("protocol_version") != PROTOCOL_VERSION
-        or data.get("operation") != OPERATION
+        or data.get("operation") != operation
     ):
         raise HandoffError(
             "unsupported_version",
             422,
-            [f"Expected `{PROTOCOL}` version {PROTOCOL_VERSION}, operation `{OPERATION}`."],
+            [f"Expected `{PROTOCOL}` version {PROTOCOL_VERSION}, operation `{operation}`."],
         )
     transfer_id = _text(data, "transfer_id", 64)
     try:
@@ -152,12 +161,14 @@ def parse_bundle(body: bytes) -> Bundle:
     except ValueError as exc:
         raise HandoffError("invalid_package", 422, ["`transfer_id` must be a UUID."]) from exc
     source_app = _text(data, "source_app", 64)
-    suggestion = data.get("session_suggestion")
-    if not isinstance(suggestion, dict):
-        raise HandoffError("invalid_package", 422, ["`session_suggestion` must be an object."])
-    suggestion = cast(dict[str, object], suggestion)
-    name = _text(suggestion, "name", 255)
-    code = _text(suggestion, "code", 64)
+    name = code = ""
+    if operation == OPERATION:
+        suggestion = data.get("session_suggestion")
+        if not isinstance(suggestion, dict):
+            raise HandoffError("invalid_package", 422, ["`session_suggestion` must be an object."])
+        suggestion = cast(dict[str, object], suggestion)
+        name = _text(suggestion, "name", 255)
+        code = _text(suggestion, "code", 64)
     files = data.get("files")
     if not isinstance(files, dict):
         raise HandoffError("invalid_package", 422, ["`files` must be an object."])
@@ -365,6 +376,108 @@ def record_completed(
         context=_transfer_context(bundle),
     )
     unit_of_work.commit(db)
+
+
+def prior_update(db: Session, user: User, bundle: Bundle) -> ReviewSession | None:
+    """The session a re-send of this ``transfer_id`` already updated, for a
+    repeat to answer ``already_updated``; ``None`` when it is new. Another
+    operator's transfer is ``409 duplicate_conflict``, as a create's is."""
+    events = db.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == UPDATED).order_by(AuditEvent.id)
+    ).all()
+    done = next((e for e in events if _transfer_of(e) == bundle.transfer_id), None)
+    if done is None or done.session is None:
+        return None
+    if done.actor_user_id != user.id:
+        raise HandoffError("duplicate_conflict", 409)
+    # Checked now, not at the first post, as a create's replay checks it
+    # (Codex on #3915): an operator removed since reads no receipt.
+    if not permissions.user_can_view_session(db, user, done.session.id):
+        raise HandoffError("not_authorized", 403)
+    return done.session
+
+
+def update_target(db: Session, user: User, created_transfer: str, bundle: Bundle) -> ReviewSession:
+    """The draft a re-send updates (segment 23F), or :class:`HandoffError`.
+    Named by the transfer that created it, as the reads name theirs
+    (:func:`linked`); it must still be linked to the sender's application
+    and unopened, and hold no responses (a session reverted to draft can):
+    replacing its rosters would discard them."""
+    review_session = linked(db, user, created_transfer)
+    check_update_target(db, review_session, bundle)
+    return review_session
+
+
+class AlreadyUpdated(Exception):
+    """A re-send whose transfer another request applied while this one
+    was being checked: found under the save's lock, it applies nothing."""
+
+    def __init__(self, review_session: ReviewSession) -> None:
+        super().__init__(review_session.public_id)
+        self.review_session = review_session
+
+
+def guard_update(db: Session, user: User, review_session: ReviewSession, bundle: Bundle) -> None:
+    """The re-send's checks under the save's lock (``_save_uploads``):
+    :class:`AlreadyUpdated` when its transfer has applied since the first
+    replay lookup (an overlapping retry, Codex on #3915), so a delayed
+    duplicate cannot overwrite a newer re-send; else
+    :func:`check_update_target` again."""
+    prior = prior_update(db, user, bundle)
+    if prior is not None:
+        raise AlreadyUpdated(prior)
+    check_update_target(db, review_session, bundle)
+
+
+def check_update_target(db: Session, review_session: ReviewSession, bundle: Bundle) -> None:
+    """:class:`HandoffError` unless the draft is still the sender's to
+    update: linked to its application, unopened, without responses. Run
+    before the files are checked, and again under the save's lock
+    (``_save_uploads``), so an Unlink or an activation in between refuses
+    the re-send rather than being overwritten (Codex on #3915)."""
+    profile = linked_apps.profile_for(bundle.source_app)
+    if profile is None or review_session.linked_app != profile.key:
+        raise HandoffError("not_linked", 404)
+    if not lifecycle.is_editable(review_session):
+        raise HandoffError(
+            "session_opened",
+            409,
+            ["The session has opened in Review Robin: change it there."],
+            review_session=review_session,
+        )
+    if lifecycle.session_has_responses(db, review_session):
+        raise HandoffError(
+            "session_has_responses",
+            409,
+            ["The session holds responses, which a re-send would discard."],
+            review_session=review_session,
+        )
+
+
+def record_updated(
+    db: Session,
+    review_session: ReviewSession,
+    user: User,
+    bundle: Bundle,
+    correlation_id: str | None,
+) -> None:
+    """The re-send's record, written in its save's unit so it commits with
+    the rosters (``_save_uploads``): a repeat of its ``transfer_id`` reads
+    it (:func:`prior_update`). Flushes only; the unit commits."""
+    audit.write_event(
+        db,
+        event_type=UPDATED,
+        summary=f"Session {review_session.code} updated from {bundle.source_app}",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.counts(
+            reviewers=csv_imports.existing_reviewer_count(db, review_session.id),
+            reviewees=csv_imports.existing_reviewee_count(db, review_session.id),
+        ),
+        context=_transfer_context(bundle),
+        correlation_id=correlation_id,
+    )
+    db.flush()
 
 
 def linked(db: Session, user: User, transfer_id: str) -> ReviewSession:

@@ -74,6 +74,10 @@ Taken 2026-11-15 at `320e71820`.
 | Instrument POST routes | 23 | `grep -rn "@router.post" app/web/routes_operator/_instruments*.py \| wc -l` |
 | Settings field paths exported | 71 | `grep -o '\.[a-z_0-9]*"' app/services/session_config_io/_serialize.py \| sort -u \| wc -l` |
 
+## Status
+
+- **Rung 2** (2026-11-15): the re-send of rosters, at `POST /operator/handoffs/{transfer_id}/update`. One refusal the plan did not name: a draft holding responses (`409 session_has_responses`), since a session reverted to draft (unopened again, author) can hold them and a roster replace would discard them.
+
 ## PR ladder
 
 1. **Plan** (this file), its README row, the queue entry replacing item 3.

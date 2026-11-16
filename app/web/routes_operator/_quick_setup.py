@@ -13,6 +13,7 @@ of its tight coupling to the helpers in this slice).
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from typing import TypedDict, cast
@@ -647,10 +648,13 @@ async def _run_quick_setup_contents(
     correlation_id: str | None = None,
     acknowledge_instrument_deletion: str | None = None,
     directory: Directory | None = None,
+    unit_guard: Callable[[], None] | None = None,
+    unit_record: Callable[[], None] | None = None,
 ) -> _SlotRefusal | None:
     """:func:`_run_quick_setup` on bytes already read, in slot order:
     the submit-all route feeds it files a refused submit held (segment
-    19W) beside the ones chosen now."""
+    19W) beside the ones chosen now. ``unit_guard`` and ``unit_record``
+    run inside the save unit (:func:`_save_uploads`)."""
 
     if not contents:
         return None
@@ -721,6 +725,8 @@ async def _run_quick_setup_contents(
                 acknowledged_loss(acknowledge_instrument_deletion) if replacing else None
             ),
             acknowledged_group_loss=acknowledged_loss(acknowledge_response_loss),
+            unit_guard=unit_guard,
+            unit_record=unit_record,
         )
     except _UnitRefused as exc:
         return exc.refusal
@@ -883,10 +889,18 @@ def _save_uploads(
     acknowledged_deletions: int | None = None,
     acknowledged_group_loss: int = 0,
     symmetric_target: bool | None = None,
+    unit_guard: Callable[[], None] | None = None,
+    unit_record: Callable[[], None] | None = None,
 ) -> None:
     """Save every checked file in one ``unit_of_work.atomic``: the
     per-entity savers nest inside it, so nothing commits until the last
     slot has saved, and any refusal rolls every slot back.
+
+    ``unit_guard`` runs once the session lock is held, before any save,
+    and refuses by raising; ``unit_record`` runs after the last save,
+    and writes without committing. A handoff re-send rechecks its link
+    under the lock and records its transfer in the same commit as the
+    rosters (segment 23F, Codex on #3915).
 
     Each roster saver locks the session and re-reads it (findings Bc4),
     so an activation committed since the checks refuses here, with the
@@ -903,6 +917,8 @@ def _save_uploads(
             # request turned on since this one loaded the session is not
             # logged as flipped again (Codex on #3002).
             session_guard.lock_session(db, review_session)
+            if unit_guard is not None:
+                unit_guard()
             # Segment 20B — Settings save last (``SLOT_ORDER``), so a file
             # that sets symmetric review sets it here, first: turned on
             # beside empty rosters, this submit's reviewers mirror; turned
@@ -954,6 +970,8 @@ def _save_uploads(
                     reason="quick_setup_upload",
                     correlation_id=correlation_id,
                 )
+            if unit_record is not None:
+                unit_record()
     except lifecycle.SessionStateConflict as exc:
         # Segment 20B: a turn-on committed since the checks refuses a
         # Reviewees file under the lock (Codex on #3490).
@@ -1559,16 +1577,8 @@ def _handoff_receipt(
     }
 
 
-@router.post("/handoffs/sessions", response_model=None)
-async def create_handoff_session(
-    request: Request,
-    user: User = Depends(get_or_create_user),
-    db: Session = Depends(get_db),
-) -> JSONResponse:
-    """Create a draft session from another application's rosters, and its
-    settings when it sends them, all or nothing (`spec/handoffs.md`). The
-    package gate has already checked that the signer-in is an RRW
-    operator. Nothing is prepared, activated, invited or sent here."""
+async def _handoff_body(request: Request) -> bytes | JSONResponse:
+    """The request's body, or the refusal of its headers or size."""
     # A JSON body is the cross-site guard, as the directory endpoints';
     # a browser that names any other origin is refused outright.
     if request.headers.get("sec-fetch-site", "same-origin") != "same-origin":
@@ -1586,6 +1596,22 @@ async def create_handoff_session(
     body = await request.body()
     if len(body) > handoffs.MAX_BYTES:
         return _handoff_error("invalid_package", status.HTTP_413_CONTENT_TOO_LARGE)
+    return body
+
+
+@router.post("/handoffs/sessions", response_model=None)
+async def create_handoff_session(
+    request: Request,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Create a draft session from another application's rosters, and its
+    settings when it sends them, all or nothing (`spec/handoffs.md`). The
+    package gate has already checked that the signer-in is an RRW
+    operator. Nothing is prepared, activated, invited or sent here."""
+    body = await _handoff_body(request)
+    if isinstance(body, JSONResponse):
+        return body
     try:
         bundle = handoffs.parse_bundle(body)
     except handoffs.HandoffError as exc:
@@ -1676,4 +1702,91 @@ async def create_handoff_session(
         _handoff_receipt(request, review_session, "created"),
         status_code=status.HTTP_201_CREATED,
         headers=_HANDOFF_HEADERS,
+    )
+
+
+@router.post("/handoffs/{transfer_id}/update", response_model=None)
+async def update_handoff_session(
+    transfer_id: str,
+    request: Request,
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    """Re-send a linked, unopened draft's rosters (segment 23F): the draft
+    the transfer ``transfer_id`` created, its rosters replaced all or
+    nothing through the create's pipeline (`spec/handoffs.md`)."""
+    body = await _handoff_body(request)
+    if isinstance(body, JSONResponse):
+        return body
+    try:
+        bundle = handoffs.parse_bundle(body, operation=handoffs.UPDATE_OPERATION)
+        prior = handoffs.prior_update(db, user, bundle)
+    except handoffs.HandoffError as exc:
+        return _handoff_refused(request, exc)
+    if prior is not None:
+        return JSONResponse(
+            _handoff_receipt(request, prior, "already_updated"), headers=_HANDOFF_HEADERS
+        )
+    try:
+        review_session = handoffs.update_target(db, user, transfer_id, bundle)
+        handoffs.check_linked(bundle)
+    except handoffs.HandoffError as exc:
+        return _handoff_refused(request, exc)
+    if "settings" in bundle.files:
+        # Rung 3 applies the owned settings; until then a re-send carries
+        # rosters only, refused whole rather than half-applied.
+        return _handoff_error(
+            "invalid_package",
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            ["A re-send does not take a settings file yet: send the rosters."],
+        )
+    correlation_id = request_correlation_id()
+    try:
+        refusal = await _run_quick_setup_contents(
+            contents=bundle.files,
+            filenames={kind: f"{kind}.csv" for kind in bundle.files},
+            review_session=review_session,
+            user=user,
+            db=db,
+            confirm_replace="true",
+            acknowledge_response_loss=None,
+            replacing=True,
+            correlation_id=correlation_id,
+            directory=directory_or_none(request),
+            # Under the save's lock: not applied by an overlapping retry,
+            # still linked, unopened and without responses, so neither a
+            # duplicate nor an Unlink or activation since the checks above
+            # is overwritten; and the record commits with the rosters, so
+            # a retry finds it.
+            unit_guard=lambda: handoffs.guard_update(db, user, review_session, bundle),
+            unit_record=lambda: handoffs.record_updated(
+                db, review_session, user, bundle, correlation_id
+            ),
+        )
+    except handoffs.AlreadyUpdated as done:
+        db.rollback()
+        return JSONResponse(
+            _handoff_receipt(request, done.review_session, "already_updated"),
+            headers=_HANDOFF_HEADERS,
+        )
+    except handoffs.HandoffError as exc:
+        db.rollback()
+        return _handoff_refused(request, exc)
+    if refusal is not None:
+        db.rollback()
+        if refusal.failure.reason == views.DIRECTORY_SIGN_IN:
+            return _handoff_error(
+                "directory_sign_in",
+                status.HTTP_409_CONFLICT,
+                ["Your Review Robin sign-in to the directory has lapsed."],
+            )
+        return _handoff_error(
+            "invalid_setup",
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            refusal.failure.details,
+            slot=refusal.kind,
+            reason=refusal.failure.reason,
+        )
+    return JSONResponse(
+        _handoff_receipt(request, review_session, "updated"), headers=_HANDOFF_HEADERS
     )
