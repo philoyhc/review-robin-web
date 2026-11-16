@@ -125,6 +125,8 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 
 ## Status
 
+- **Cumulative read** (2026-11-16, `diff-reviewer` on `002c31d13..` the 7c head): one read, no blocking findings; six should-fix and four nits. Fixed in their rungs: scheduled invites and reminders now skip under the email lock (6); a cut-off create's replay runs the instrument set-up, and the unit of review goes through `set_unit_of_review` (7a); a draft of other than one instrument refuses instrument rows, a re-send seeds no display field, and a rename is audited (`instrument.renamed`) (7b); the Band 1 test markup and a `linked-note` class (7c). **Locks are refused at routes, not in services**: the handoff's own create and re-send run the same Quick Setup pipeline, so a service-level refusal would block them; the ladder's "refused in its service" and the Definition of done are amended to match. **Branching ruled** (author, 2026-11-16): a linked instrument's fields stay unbranched for now; branching from the application comes later (Out of scope).
+- **7c built** (2026-11-16): the Instruments page locks. Structure routes (add, replicate, delete, page break, field rows, identity) `409` through `refuse_linked_structure`; the card's Save and the Band 2 route skip the rule, identity and response fields and write the rest. The template hides the four structure buttons and renders the rule, field table and identity fixed and outside the lock regions. Judgment call: the Save ignores owned inputs rather than refusing, since the page posts every band at once.
 - **7b built** (2026-11-16): a re-send's settings file may carry the instrument's owned rows (name, description, response fields; no branching, data type required), written by `linked_instruments.apply_owned`: the short label follows the name, and field rows replace the fields by `field_key` (`instruments.replace_response_fields`), so a kept field keeps its id and width. Judgment call: every field is left unbranched, since branching is not the application's to send.
 - **Rung 7 split** (2026-11-16) into 7a (the fixed rule and the display default, at the create), 7b (the re-send carries the instrument's owned rows) and 7c (the Instruments page locks). **7a built**: a linked draft whose profile takes `INSTRUMENT_STRUCTURE` must hold one instrument (else `422 invalid_setup`, `reason` `one_instrument`); `linked_instruments.set_up` sets its Band 1 to All / `pair_context.tag1 IS FILLED` / Individual through `set_band1_assignment_rules`, every link marked set, and trims the display fields to the fixed pair and `ProfileLink`.
 - **Rung 6 built** (2026-11-16): the roster lock (every roster write `409`, the pages read-only with the lock card naming the application), the email lock (Email Template tab and page, the Workflow card's bulk sends and due prompts, reminders, the submit acknowledgement) and the invitation-send lock (per-row Send, Regenerate, Regenerate all); Relationships on at the create. Utilities keeps both email locks off, so its drafts still email.
@@ -170,7 +172,7 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 
 - A re-send replaces a linked draft's rosters and owned settings all or nothing; refused when opened, unlinked or another application's; a replay applies once (`tests/integration/test_handoff_update.py`).
 - The proof of concept re-sends and its draft changes (`utilityapps/tests/test_interop_poc.py`).
-- On a linked session, opened or not, every lock in the amended Decision refuses in its service, and Unlink lifts them (tests).
+- On a linked session, opened or not, every lock in the amended Decision refuses ~~in its service~~ at its route or route dependency (amended at build, see Status), and Unlink lifts them (tests).
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 23F` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -188,6 +190,7 @@ Taken 2026-11-15 at `320e71820`; the amendment's rows taken 2026-11-16 at `a7c24
 - **Apply Desk's sending** (its AD6): Apply Desk's side of the re-send.
 - ~~**Changes after the session opens**~~: superseded by the amendment; a linked session stays locked, and changes come through Apply Desk after a revert, or Unlink.
 - **Results back to Apply Desk**: `spec/handoffs.md`'s exports, unchanged.
+- **Branching from the application** (author, 2026-11-16): a re-send refuses branch rows and leaves every field unbranched for now; carrying branch rows is later work.
 
 ## Doc impact
 

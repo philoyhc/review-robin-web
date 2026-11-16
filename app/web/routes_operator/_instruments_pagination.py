@@ -36,6 +36,7 @@ from app.web.routes_operator._shared import (
     _instruments_redirect,
     _require_instrument_editable,
     _require_instrument_in_session,
+    refuse_linked_structure,
     require_json_object,
 )
 
@@ -56,6 +57,7 @@ def instrument_page_break_create(
     """
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
+    refuse_linked_structure(review_session)
     try:
         instruments_service.create_page_break_after(db, instrument=instrument, actor=user)
     except ValueError as exc:
@@ -79,6 +81,7 @@ def instrument_page_break_delete(
     """
     instrument, review_session = bundle
     _require_instrument_editable(review_session)
+    refuse_linked_structure(review_session)
     try:
         instruments_service.clear_page_break(db, instrument=instrument, actor=user)
     except ValueError as exc:

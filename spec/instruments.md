@@ -537,7 +537,14 @@ Link 3 *Individual*, every link marked set — and starts its display
 fields at the fixed pair and the dossier link (`ProfileLink`), through
 `app/services/linked_instruments.py`. A re-send writes its name (the
 short label following it), description and response fields, matched by
-`field_key` (rung 7b, `spec/handoffs.md`).
+`field_key` (rung 7b, `spec/handoffs.md`). On the Instruments page
+(rung 7c) the card shows no Replicate, Delete, +Instrument or +Page break;
+the rule, the response-field table, the short label and the description
+render fixed (`data-linked-fixed`, inert even when the card is unlocked),
+with a line naming the application. The card's Save writes the rest
+(display fields, layouts, widths, sort, visibility) and leaves the owned
+parts as they are; the routes that change only owned parts (add, replicate,
+delete, page break, the field rows, identity) are `409`.
 
 | Column | Link (operator label) | Vocabulary |
 |---|---|---|
