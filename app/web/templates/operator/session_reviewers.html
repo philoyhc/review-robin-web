@@ -248,13 +248,6 @@
        `test_field_labels_editor_routes` asserts a locked page carries no
        "Save labels" anywhere, and the Unlock panel holds one. The
        readouts above stay — they are informational. #}
-    {# Segment 23F — a linked draft's rosters are its application's, so no
-       Unlock panel; the self-fields card, Review Robin's, stands here. #}
-    {% if self_fields_open and not edit_mode %}
-      <div class="unlock-stack" data-linked-self-fields>
-        {% include "operator/partials/_reviewer_self_fields.html" %}
-      </div>
-    {% endif %}
     {% if unlock_available %}
       {# `panel_open` is server state, not a second source of truth for
          the JS toggle below: the toggle still owns every click, this

@@ -62,7 +62,8 @@ def test_the_page_carries_the_bundle_less_its_per_click_parts(client: TestClient
     assert bundle["protocol"] == "cordware.csv-handoff" and bundle["protocol_version"] == 1
     assert bundle["operation"] == "reviewrobin.create_draft_session"
     assert "transfer_id" not in bundle and "code" not in bundle["session_suggestion"]
-    assert set(bundle["files"]) == {"reviewers", "reviewees", "settings"}  # segment 23D
+    # Segment 23D; relationships from 23F (the fixed rule assigns by them).
+    assert set(bundle["files"]) == {"reviewers", "reviewees", "relationships", "settings"}
     assert "SCH27-0006" in bundle["files"]["reviewees"]
 
 
@@ -70,7 +71,8 @@ def test_the_files_are_review_robins_roster_formats() -> None:
     people = mock.reviewers("Admin", "admin@example.edu")
     reviewers = list(csv.DictReader(io.StringIO(mock.reviewers_csv(people))))
     assert [r["ReviewerEmail"] for r in reviewers][-1] == "admin@example.edu"
-    assert set(reviewers[0]) == {"ReviewerName", "ReviewerEmail", "ReviewerTag1"}
+    # No roster tags (segment 23F): the relationship's tag is the panel.
+    assert set(reviewers[0]) == {"ReviewerName", "ReviewerEmail"}
     reviewees = list(csv.DictReader(io.StringIO(mock.reviewees_csv())))
     assert len(reviewees) == 6
     assert reviewees[0]["RevieweeEmail"] == "SCH27-0001"  # the application ID, an opaque key
@@ -167,7 +169,7 @@ def test_each_sent_session_can_be_re_sent(client: TestClient) -> None:
     bundle = json.loads(text[start : text.index("</script>", start)])
     assert bundle["operation"] == "reviewrobin.update_draft_session"
     assert "transfer_id" not in bundle and "session_suggestion" not in bundle
-    assert set(bundle["files"]) == {"reviewers", "reviewees", "settings"}
+    assert set(bundle["files"]) == {"reviewers", "reviewees", "relationships", "settings"}
     assert mock.RESEND_DROPS_REVIEWER not in bundle["files"]["reviewers"]
     assert mock.RESEND_DROPS_APPLICATION not in bundle["files"]["reviewees"]
     assert '<th scope="col">Re-send</th>' in text and 'ask(item, "update"' in text
@@ -178,3 +180,17 @@ def test_each_sent_session_can_be_re_sent(client: TestClient) -> None:
         r"return reply\.json\(\)\.then\(function \(body\) \{\s*delete pendingResend", text
     )
     assert "session_opened:" in text and "session_has_responses:" in text
+
+
+def test_the_relationships_pair_everyone_tagged_by_panel() -> None:
+    """Segment 23F: every reviewer with every application, the pair's tag
+    the reviewer's panel, so the fixed rule assigns them all; the
+    reviewees carry no tag."""
+    people = mock.reviewers("Admin", "admin@example.edu")
+    pairs = list(csv.DictReader(io.StringIO(mock.relationships_csv(people))))
+    assert len(pairs) == len(people) * len(mock.APPLICATIONS)
+    assert all(p["PairContextTag1.Apply-Desk-Link"] for p in pairs)
+    reviewees = list(csv.DictReader(io.StringIO(mock.reviewees_csv())))
+    assert set(reviewees[0]) == {"RevieweeName", "RevieweeEmail", "ProfileLink"}
+    assert "session.display_timezone,Asia/Singapore" in mock.settings_csv()
+    assert "session.display_timezone,Asia/Singapore" in mock.resend_settings_csv()

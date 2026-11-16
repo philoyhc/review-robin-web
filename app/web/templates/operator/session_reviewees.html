@@ -217,13 +217,6 @@
        `test_field_labels_editor_routes` asserts a locked page carries no
        "Save labels" anywhere, and this panel holds one. The readouts
        above stay — they are informational in every state. #}
-    {# Segment 23F — a linked draft's rosters are its application's, so no
-       Unlock panel; the self-fields card, Review Robin's, stands here. #}
-    {% if self_fields_open and not edit_mode and not session.symmetric_review %}
-      <div class="unlock-stack" data-linked-self-fields>
-        {% include "operator/partials/_reviewee_self_fields.html" %}
-      </div>
-    {% endif %}
     {% if unlock_available %}
       <div class="unlock-panel" id="roster-unlock-panel"{% if not panel_open %} hidden{% endif %}>
         {# Left column: what reviewees see of themselves (participant

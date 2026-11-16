@@ -67,18 +67,38 @@ def _csv(header: list[str], rows: list[list[str]]) -> str:
     return buffer.getvalue()
 
 
+# No roster tags (author, 2026-11-16): a linked session assigns by its
+# relationships, whose tag carries the evaluator's source (the panel).
 def reviewers_csv(people: tuple[Reviewer, ...]) -> str:
+    return _csv(["ReviewerName", "ReviewerEmail"], [[p.name, p.email] for p in people])
+
+
+def reviewees_csv(applications: tuple[Application, ...] = APPLICATIONS) -> str:
     return _csv(
-        ["ReviewerName", "ReviewerEmail", "ReviewerTag1"],
-        [[p.name, p.email, p.panel] for p in people],
+        ["RevieweeName", "RevieweeEmail", "ProfileLink"],
+        [[a.applicant, a.id, a.profile_link] for a in applications],
     )
 
 
-def reviewees_csv() -> str:
+def relationships_csv(
+    people: tuple[Reviewer, ...], applications: tuple[Application, ...] = APPLICATIONS
+) -> str:
+    """Every reviewer with every application, the pair tagged with the
+    reviewer's panel: the relationship the fixed rule assigns by
+    (``pair_context.tag1 IS FILLED``, segment 23F rung 7a)."""
     return _csv(
-        ["RevieweeName", "RevieweeEmail", "RevieweeTag1", "ProfileLink"],
-        [[a.applicant, a.id, a.faculty, a.profile_link] for a in APPLICATIONS],
+        ["ReviewerEmail", "RevieweeEmail", f"PairContextTag1.{PAIR_LABEL}"],
+        [[p.email, a.id, p.panel] for p in people for a in applications],
     )
+
+
+#: The relationship tag's friendly label (author, 2026-11-16), set by the
+#: header's ``.Label`` suffix (`spec/csv_contracts.md`).
+PAIR_LABEL = "Apply-Desk-Link"
+
+#: The timezone the mock sends (author, 2026-11-16: a zone unlike the
+#: host's, so a test shows the setting arrived).
+TIMEZONE = "Asia/Singapore"
 
 
 #: The review's instrument (segment 23D), in Review Robin's Settings CSV
@@ -91,6 +111,7 @@ INSTRUMENT = "Mock review"
 
 def settings_csv() -> str:
     rows: list[list[str]] = [
+        ["session.display_timezone", TIMEZONE, "string"],
         ["instruments[1].name", INSTRUMENT, "string"],
         ["instruments[1].band1_touched_links", '["link1","link2","link3"]', "json"],
     ]
@@ -124,6 +145,7 @@ def bundle(people: tuple[Reviewer, ...]) -> dict[str, object]:
         "files": {
             "reviewers": reviewers_csv(people),
             "reviewees": reviewees_csv(),
+            "relationships": relationships_csv(people),
             "settings": settings_csv(),
         },
     }
@@ -144,6 +166,7 @@ def resend_settings_csv() -> str:
         [
             ["session.description", "Updated by a re-send from Utilities", "string"],
             ["session.help_contact", "interop-poc@example.edu", "string"],
+            ["session.display_timezone", TIMEZONE, "string"],
             ["session_tags[1].tag", "interop-poc", "string"],
         ],
     )
@@ -154,14 +177,7 @@ def resend_bundle(people: tuple[Reviewer, ...]) -> dict[str, object]:
     script posts it to the update route named by the creating transfer
     (`spec/handoffs.md` §6a)."""
     kept = tuple(p for p in people if p.email != RESEND_DROPS_REVIEWER)
-    reviewees = _csv(
-        ["RevieweeName", "RevieweeEmail", "RevieweeTag1", "ProfileLink"],
-        [
-            [a.applicant, a.id, a.faculty, a.profile_link]
-            for a in APPLICATIONS
-            if a.id != RESEND_DROPS_APPLICATION
-        ],
-    )
+    applications = tuple(a for a in APPLICATIONS if a.id != RESEND_DROPS_APPLICATION)
     return {
         "protocol": "cordware.csv-handoff",
         "protocol_version": 1,
@@ -169,7 +185,8 @@ def resend_bundle(people: tuple[Reviewer, ...]) -> dict[str, object]:
         "source_app": "utilities",
         "files": {
             "reviewers": reviewers_csv(kept),
-            "reviewees": reviewees,
+            "reviewees": reviewees_csv(applications),
+            "relationships": relationships_csv(kept, applications),
             "settings": resend_settings_csv(),
         },
     }
