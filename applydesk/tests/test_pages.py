@@ -617,7 +617,7 @@ def test_a_gate_s_page_is_only_a_gate_s(client: TestClient) -> None:
     draft = client.get(f"/applydesk/operator/exercises/{DRAFT}/evaluations/gate_1")
     assert draft.status_code == 404
     blind = client.get(f"/applydesk/operator/exercises/{BLIND}/evaluations/gate_1").text
-    assert "<th>Dossier</th>" in blind and "<th>Candidate</th>" not in blind
+    assert 'data-sort-key="candidate">Dossier<' in blind and ">Candidate<a" not in blind
 
 
 def test_a_dossier_with_no_evaluator_is_one_row() -> None:
@@ -628,6 +628,63 @@ def test_a_dossier_with_no_evaluator_is_one_row() -> None:
     assert [(p.name, p.source) for p in pairs] == [("", ""), ("A", "Panel A"), ("B", "Panel A")]
     assert stages.matching(pairs, "B@X") == pairs[2:]
     assert stages.matching(pairs, app.public_id.upper()) == pairs
+
+
+def test_a_gate_s_table_sorts_as_review_robin_s_tables() -> None:
+    """Author, 2026-11-17: a click sorts by a column, again reverses, again
+    clears; shift-click adds to the cascade (three at most), then
+    reverses, then drops the column; unknown keys are dropped."""
+    up, down = (("evaluator", False),), (("evaluator", True),)
+    assert paging.plain_click((), "evaluator") == up
+    assert paging.plain_click(up, "evaluator") == down
+    assert paging.plain_click(down, "evaluator") == ()
+    both = (("candidate", False), ("evaluator", False))
+    assert paging.plain_click(both, "evaluator") == up  # replaces the cascade
+    assert paging.shift_click(up, "candidate") == (("evaluator", False), ("candidate", False))
+    assert paging.shift_click(both, "evaluator") == (("candidate", False), ("evaluator", True))
+    assert paging.shift_click((("candidate", False), ("evaluator", True)), "evaluator") == (
+        ("candidate", False),
+    )
+    three = (*both, ("source", False))
+    assert paging.shift_click(three, "state") == three  # three at most
+    assert paging.parse_sort("-state,bogus,state,evaluator") == (
+        ("state", True),
+        ("evaluator", False),
+    )
+    assert paging.sort_text((("state", True), ("evaluator", False))) == "-state,evaluator"
+    assert [paging.sort_badge(both, k) for k in ("candidate", "evaluator", "state")] == [
+        "▲1",
+        "▲2",
+        "↕",
+    ]
+    assert paging.sort_badge(down, "evaluator") == "▼"
+
+
+def test_a_gate_s_page_sorts_every_page_on_the_server(client: TestClient) -> None:
+    base = f"/applydesk/operator/exercises/{EX}/evaluations/gate_1"
+    first = client.get(f"{base}?sort=evaluator").text
+    evaluators = re.findall(r'data-ev-pair="([^"]+)"', first)
+    names = [n for n in re.findall(r'<td><span title="[^"]+">([^<]+)</span></td>', first)]
+    assert names == sorted(names, key=str.casefold) and len(evaluators) == 200
+    last = client.get(f"{base}?sort=-evaluator&offset=2800").text
+    tail = re.findall(r'<td><span title="[^"]+">([^<]+)</span></td>', last)
+    # Reversed, the last page ends with the name the first began with.
+    assert tail[-1] == names[0]
+    assert '<th class="ev-sortable" data-sort-key="evaluator" aria-sort="descending">' in last
+    # The pager, the range menu and the search keep the sort; a new order
+    # starts at the first page and keeps the filter.
+    assert f'href="{base}?sort=-evaluator&amp;offset=2600#ev-table-card"' in last
+    assert '<input type="hidden" name="sort" value="-evaluator">' in last
+    found = client.get(f"{base}?q=kenji&sort=candidate&offset=0").text
+    assert f'href="{base}?q=kenji&amp;sort=-candidate#ev-table-card" data-shift-href' in found
+    assert f'data-shift-href="{base}?q=kenji&amp;sort=candidate%2Cevaluator#ev-table-card"' in found
+
+
+def test_a_blind_gate_sorts_by_the_dossier(client: TestClient) -> None:
+    base = f"/applydesk/operator/exercises/{BLIND}/evaluations/gate_1"
+    text = client.get(f"{base}?sort=candidate").text
+    shown = re.findall(r"<tr data-ev-row=\"\w+\"[^>]*>\s*<td>(\w+)</td>", text)
+    assert shown == sorted(shown) and shown
 
 
 def test_pages_snap_and_clamp() -> None:

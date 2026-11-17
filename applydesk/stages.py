@@ -1114,6 +1114,33 @@ def matching(pairs: tuple[Pair, ...], query: str, blind: bool = False) -> tuple[
     return tuple(p for p in pairs if holds(p))
 
 
+def sorted_pairs(
+    pairs: tuple[Pair, ...],
+    spec: tuple[tuple[str, bool], ...],
+    gate: Gate,
+    sent: bool,
+    blind: bool = False,
+) -> tuple[Pair, ...]:
+    """The pairs in a gate table's sort cascade (segment AD1H): by
+    candidate (the dossier ID in a blind exercise), evaluator, source or
+    state, any case, each up or down; the fill's order breaks ties."""
+
+    def value(p: Pair, key: str) -> str:
+        app = p.of.application
+        if key == "candidate":
+            return (app.dossier_id if blind else app.applicant).casefold()
+        if key == "evaluator":
+            return p.name.casefold()
+        if key == "source":
+            return p.source.casefold()
+        return assignment_state(gate, sent, p.of).casefold()
+
+    out = list(pairs)
+    for key, desc in reversed(spec):  # stable: the last key first
+        out.sort(key=lambda p: value(p, key), reverse=desc)
+    return tuple(out)
+
+
 def assignment_state(gate: Gate, sent: bool, a: Assignment) -> str:
     """A row's state on Evaluations, by the gate's mode: *Short by n*
     when the Total's min is not met; else *Filled* (Automatic),

@@ -51,3 +51,57 @@ def page(total: int, offset: int, size: int = PAGE_SIZE) -> Page:
     start = max(0, offset) // size * size
     last = ((total - 1) // size) * size if total else 0
     return Page(min(start, last), total, size)
+
+
+#: The columns a gate's table sorts by (segment AD1H, author 2026-11-17),
+#: as Review Robin's rosters: a cascade of up to three, each up or down.
+SORT_KEYS: tuple[str, ...] = ("candidate", "evaluator", "source", "state")
+SORT_MAX = 3
+
+Sort = tuple[tuple[str, bool], ...]  # (key, descending), in cascade order
+
+
+def parse_sort(raw: str) -> Sort:
+    """``?sort=candidate,-state`` as a cascade: known keys only, each
+    once, three at most; anything else is dropped."""
+    out: list[tuple[str, bool]] = []
+    for part in raw.split(","):
+        part = part.strip()
+        desc = part.startswith("-")
+        key = part.removeprefix("-")
+        if key in SORT_KEYS and key not in (k for k, _ in out) and len(out) < SORT_MAX:
+            out.append((key, desc))
+    return tuple(out)
+
+
+def sort_text(spec: Sort) -> str:
+    return ",".join(("-" if desc else "") + key for key, desc in spec)
+
+
+def plain_click(spec: Sort, key: str) -> Sort:
+    """As Review Robin's header click: the sole sorted column cycles up,
+    down, unsorted; any other click sorts by that column alone, up."""
+    if len(spec) == 1 and spec[0][0] == key:
+        return () if spec[0][1] else ((key, True),)
+    return ((key, False),)
+
+
+def shift_click(spec: Sort, key: str) -> Sort:
+    """As Review Robin's shift-click: an unsorted column joins the cascade
+    up (three at most); a sorted one goes down, then drops out."""
+    keys = [k for k, _ in spec]
+    if key not in keys:
+        return (*spec, (key, False)) if len(spec) < SORT_MAX else spec
+    i = keys.index(key)
+    if not spec[i][1]:
+        return (*spec[:i], (key, True), *spec[i + 1 :])
+    return (*spec[:i], *spec[i + 1 :])
+
+
+def sort_badge(spec: Sort, key: str) -> str:
+    """The header's mark: ↕ unsorted; ▲ or ▼, numbered in a cascade."""
+    for n, (k, desc) in enumerate(spec, start=1):
+        if k == key:
+            arrow = "▼" if desc else "▲"
+            return f"{arrow}{n}" if len(spec) > 1 else arrow
+    return "↕"
