@@ -522,14 +522,17 @@
         // Ruling 30: branches in order, the first whose conditions all hold
         // giving its value, none holding the else. A branch taking the best
         // N ranks the dossiers it reaches whose other conditions hold, ties
-        // at the cut all taken; it waits while any of them has no result.
-        // Every reached dossier is ranked, a hand-set or decided one too;
-        // only the cells the options allow are proposed.
+        // at the cut all taken. Every reached dossier is ranked, a hand-set
+        // or decided one too; only the cells the options allow are
+        // proposed. A ranking waits (cold read on rungs 2-3) while any
+        // dossier could still join it: one with no result, one whose other
+        // condition here cannot be judged yet, or one an earlier branch
+        // left waiting, which may yet fall through to this one.
         var branches = [{ when: spec.when, then: spec.then }].concat(spec.more || []);
-        var verdicts = new Map(), left = reach.slice();
+        var verdicts = new Map(), left = reach.slice(), held = 0;
         branches.forEach(function (b) {
           var tops = b.when.filter(function (c) { return c[0] === "top"; });
-          var passing = [], rest = [];
+          var passing = [], rest = [], unsure = 0;
           left.forEach(function (r) {
             var verdict = true;
             b.when.forEach(function (cond) {
@@ -537,7 +540,7 @@
               var x = holds(r, cond, key, val);
               if (x === false) verdict = false; else if (x === null) verdict = null;
             });
-            if (verdict === null) verdicts.set(r, null);
+            if (verdict === null) { verdicts.set(r, null); unsure += 1; }
             else if (verdict) passing.push(r);
             else rest.push(r);
           });
@@ -547,28 +550,30 @@
               var g = val(r, gateKey(t[1])), x = resultAt(cellOf(r, gateKey(t[1])), t[1]);
               return { r: r, x: (g === "Not entered" || g === null) ? -Infinity : (g === "—" || x === undefined ? NaN : parseFloat(x)) };
             });
-            if (scored.some(function (s) { return isNaN(s.x); })) {
-              passing.forEach(function (r) { verdicts.set(r, null); });
-              passing = [];
-              return;
-            }
             // One not entered at the gate has no place in its ranking.
             scored = scored.filter(function (s) {
               if (s.x === -Infinity) { rest.push(s.r); return false; }
               return true;
             });
+            if (held + unsure > 0 || scored.some(function (s) { return isNaN(s.x); })) {
+              scored.forEach(function (s) { verdicts.set(s.r, null); });
+              unsure += scored.length;
+              passing = [];
+              return;
+            }
             scored.sort(function (a, b) { return b.x - a.x; });
             var n = parseInt(t[3], 10) || 0;
             var cut = n > 0 && scored.length > n ? scored[n - 1].x : -Infinity;
             var kept = scored.filter(function (s, i) { return i < n || s.x === cut; });
             if (kept.length > n && n > 0) {
-              skipped.push(h.dataset.label + ": " + kept.length + " at the cut of " + n + ", tied, all taken.");
+              skipped.push(h.dataset.label + ": " + kept.length + " at the cut of " + n + ": tied.");
             }
             var keep = new Set(kept.map(function (s) { return s.r; }));
             passing.forEach(function (r) { if (!keep.has(r)) rest.push(r); });
             passing = passing.filter(function (r) { return keep.has(r); });
           });
           passing.forEach(function (r) { verdicts.set(r, b.then); });
+          held += unsure;
           left = rest;
         });
         left.forEach(function (r) { verdicts.set(r, spec.otherwise); });

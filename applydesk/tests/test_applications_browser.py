@@ -13,6 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 from playwright.sync_api import Dialog, Error, Locator, Page, Route, sync_playwright
 
+from applydesk import sample_data, stages
 from applydesk.tests._host import host_with
 
 ORIGIN = "http://applydesk.test"
@@ -328,51 +329,59 @@ def test_apply_rules_proposes_in_column_order_and_waits_on_the_undecided(page: P
     assert _count(page, "g3").startswith("27 entered")
 
 
+def _set_rule(page: Page, key: str, rule: dict[str, object]) -> None:
+    """A rule set on a column's header, as Process will: the sample has no
+    branched rule until AD1H rung 6."""
+    page.evaluate(
+        '([k, r]) => { document.querySelector(`th[data-col="${k}"]`).dataset.rule ='
+        " JSON.stringify(r); }",
+        [key, rule],
+    )
+
+
+def _by_answer() -> dict[str, list[stages.Row]]:
+    """The model exercise's reached rows (submitted, entered at Peer
+    Review), grouped by their answer to *Field of study*."""
+    groups: dict[str, list[stages.Row]] = {}
+    for r in stages.plan_of("wa9juxbc2t").rows:
+        if r.application.state == "Submitted" and r.cells["g1"].value == "Entered":
+            answer = sample_data.answers("wa9juxbc2t", r.application)["Field of study"]
+            groups.setdefault(answer, []).append(r)
+    return groups
+
+
 def test_a_branched_rule_takes_a_form_answer_and_the_best_n(page: Page) -> None:
     """Ruling 30: a rule's branches in order, the first holding deciding;
     a form answer; the best N among those its branch reaches, ties at the
-    cut all taken. The sample has no such rule until AD1H rung 6, so the
-    test sets one on the Shortlist's header, as Process will."""
-    from applydesk import sample_data, stages
-
+    cut all taken and said so."""
+    groups = _by_answer()
+    # A field whose every dossier has its rating in, so its ranking runs.
+    field, rows = next(
+        (f, rs) for f, rs in groups.items() if all(r.cells["g1"].result is not None for r in rs)
+    )
+    results = sorted((r.cells["g1"].result or 0 for r in rows), reverse=True)
+    n = next(i for i in range(2, len(results)) if results[i - 1] == results[i])  # a tie at the cut
+    cut = results[n - 1]
     page.goto(PAGE)
     _unlock(page)
-    n = 5
-    rule = {
-        "when": [
-            ["form", "Field of study", "is", "Engineering"],
-            ["res", "g1.r1", "ge", "0"],
-            ["top", "g1.r1", "le", str(n)],
-        ],
-        "then": "Shortlisted",
-        "otherwise": "Not shortlisted",
-        "more": [{"when": [["res", "g2.r1", "ge", "4.5"]], "then": "Shortlisted"}],
-    }
-    page.evaluate(
-        "r => { document.querySelector('th[data-col=\"o1\"]').dataset.rule = JSON.stringify(r); }",
-        rule,
+    _set_rule(
+        page,
+        "o1",
+        {
+            "when": [["form", "Field of study", "is", field], ["top", "g1.r1", "le", str(n)]],
+            "then": "Shortlisted",
+            "otherwise": "Not shortlisted",
+            "more": [{"when": [["res", "g2.r1", "ge", "4.5"]], "then": "Shortlisted"}],
+        },
     )
-    # What the rule should give, worked out from the sample.
-    plan = stages.plan_of("wa9juxbc2t")
-    reached = [
-        r
-        for r in plan.rows
-        if r.application.state == "Submitted" and r.cells["g1"].value == "Entered"
-    ]
-    eng = [
-        r
-        for r in reached
-        if sample_data.answers("wa9juxbc2t", r.application)["Field of study"] == "Engineering"
-        and r.cells["g1"].result is not None
-    ]
-    eng.sort(key=lambda r: -(r.cells["g1"].result or 0))
-    cut = eng[n - 1].cells["g1"].result
-    best = {r.application.public_id for r in eng if (r.cells["g1"].result or 0) >= (cut or 0)}
     prop = _apply_rules(page, only_undecided=False)
-    if len(best) > n:
-        assert f"{len(best)} at the cut of {n}, tied, all taken" in prop.inner_text()
+    taken = sum(1 for x in results if x >= cut)
+    assert taken > n and f"Shortlist for interview: {taken} at the cut of {n}: tied." in (
+        prop.inner_text()
+    )
     prop.locator("[data-ap-prop-apply]").click()
-    for r in reached:
+    best = {r.application.public_id for r in rows if (r.cells["g1"].result or 0) >= cut}
+    for r in (r for rs in groups.values() for r in rs):
         i = r.application.public_id
         if r.cells["g1"].result is None:
             continue  # its peer reviews still coming: waits
@@ -380,6 +389,45 @@ def test_a_branched_rule_takes_a_form_answer_and_the_best_n(page: Page) -> None:
         g2 = r.cells["g2"].result or 0
         want = "Shortlisted" if i in best or g2 >= 4.5 else "Not shortlisted"
         assert got == want, i
+
+
+def test_the_best_n_waits_while_one_it_could_rank_is_not_in(page: Page) -> None:
+    """The cold read on rungs 2-3: a dossier whose rating is still coming
+    could outrank the rest, so the ranking waits for it, not for one
+    dossier but for the whole branch; the next branch still decides
+    those the first does not reach."""
+    groups = _by_answer()
+    field, rows = next(
+        (f, rs) for f, rs in groups.items() if any(r.cells["g1"].result is None for r in rs)
+    )
+    page.goto(PAGE)
+    _unlock(page)
+    _set_rule(
+        page,
+        "o1",
+        {
+            # The other condition first: a rating still coming waits there too.
+            "when": [
+                ["res", "g2.r1", "ge", "0"],
+                ["form", "Field of study", "is", field],
+                ["top", "g1.r1", "le", "3"],
+            ],
+            "then": "Shortlisted",
+            "otherwise": "Not shortlisted",
+        },
+    )
+    prop = _apply_rules(page, only_undecided=False)
+    text = prop.inner_text()
+    assert f"Shortlist for interview: {len(rows)} applications cannot be judged yet" in text
+    proposed = [
+        p
+        for p in prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
+        if "\tShortlist for interview\t" in p
+    ]
+    ids = {r.application.public_id for r in rows}
+    assert not [p for p in proposed if any(i in p for i in ids)]
+    # Elsewhere the rule decides: every other field's shortlisted turn Not.
+    assert proposed and all(p.endswith("Not shortlisted") for p in proposed)
 
 
 def test_a_cell_set_by_hand_is_marked_and_kept(page: Page) -> None:
