@@ -40,7 +40,10 @@ def test_each_stage_has_its_dates_state_and_share() -> None:
     assert sum(s.share for s in t.stages) == pytest.approx(1.0)
     # A share is the stage's days: Review's 37 of 93 days.
     assert t.stages[1].share == pytest.approx(37 / 93)
-    assert t.now is t.stages[2] and t.stages[2].progress == pytest.approx(8 / 25)
+    assert t.now is t.stages[2] and t.stages[2].progress == pytest.approx(8.5 / 26)
+    # Today along the track, in the same shares the segments are drawn in.
+    assert t.today_at == pytest.approx(t.stages[2].offset + t.stages[2].share * 8.5 / 26)
+    assert t.stages[2].offset == pytest.approx(t.stages[0].share + t.stages[1].share)
 
 
 def test_a_stage_s_state_follows_today() -> None:
@@ -78,7 +81,7 @@ def test_items_say_what_happens_and_nothing_operator_only() -> None:
         ),
     ]
     assert t.stages[2].items[-1] == timeline.Item(
-        "outcome-due", "Outcome · expected 4 Dec", "Selection."
+        "outcome-due", "Outcome · expected December 2026", "Selection."
     )
     said = " ".join(i.kicker + i.text for s in t.stages for i in s.items)
     for operator_only in (
@@ -97,9 +100,9 @@ def test_home_is_the_timeline_beside_details(client: TestClient) -> None:
     grid = home[home.index('<div class="hm-grid">') :]
     assert grid.index("data-timeline") < grid.index('id="details"')
     assert re.findall(r'data-tl-stage="(\d)"', home) == ["1", "2", "3"]
-    assert 'data-tl-flex="0.3978"' in home and 'data-tl-p="32.0"' in home
+    assert 'data-tl-flex="0.3978"' in home and 'data-tl-p="32.7"' in home
     assert "Today · 17 Nov" in home
-    assert "Now: Interviews, until 4 Dec. Next: Selection, expected 4 Dec." in home
+    assert "Now: Interviews, until 4 Dec. Next: Selection, expected December 2026." in home
     # The old fact cards are gone: their facts are the status row's and
     # the timeline's.
     for gone in ("Where it stands", "<h2>Counts</h2>", "<h2>Next step</h2>", 'class="lede"'):
@@ -108,7 +111,9 @@ def test_home_is_the_timeline_beside_details(client: TestClient) -> None:
     # Details: Description where Summary was, locked until rung 4.
     details = home[home.index('id="details"') :]
     assert "<dt>Description</dt>" in details and "Summary" not in details
-    assert 'data-dt-lock disabled title="Editing comes next' in details
+    assert 'data-dt-lock disabled title="Editing the details comes later"' in details
+    # The line under the timeline points to where the stage is worked.
+    assert f'<a href="/applydesk/operator/exercises/{EX}/evaluations">Go to Evaluations</a>' in home
 
 
 def test_a_draft_s_home_says_what_publishing_needs(client: TestClient) -> None:
@@ -118,3 +123,83 @@ def test_a_draft_s_home_says_what_publishing_needs(client: TestClient) -> None:
     assert "Still to set up before it can be published:" in home
     published = client.get(f"/applydesk/operator/exercises/{EX}").text
     assert "<h2>Publish</h2>" not in published
+
+
+def test_dates_hold_to_what_a_stage_says() -> None:
+    """Cold read of rung 2: an impossible day or an end before its start
+    is no dates; a year rolls over from the stage before; a hyphen serves
+    as the dash; one date is a one-day stage."""
+    after = date(2026, 9, 1)
+    assert timeline._dates("31 Feb – 3 Mar", after) == (None, None)  # pyright: ignore[reportPrivateUsage]  -- the parser itself
+    assert timeline._dates("3 Oct 2026 – 1 Oct 2026", after) == (None, None)  # pyright: ignore[reportPrivateUsage]  -- as above
+    assert timeline._dates("5 Jan - 30 Jan", date(2026, 12, 20)) == (  # pyright: ignore[reportPrivateUsage]  -- as above
+        date(2027, 1, 5),
+        date(2027, 1, 30),
+    )
+    assert timeline._dates("30 Sep", after) == (date(2026, 9, 30), date(2026, 9, 30))  # pyright: ignore[reportPrivateUsage]  -- as above
+    assert timeline._dates("1 September 2026 – 3 Oct", after)[0] == date(2026, 9, 1)  # pyright: ignore[reportPrivateUsage]  -- as above
+
+
+def test_today_between_stages_is_said_and_marked() -> None:
+    gap = _of(EX, date(2026, 11, 7))
+    assert [s.state for s in gap.stages] == ["Closed", "Done", "Next"]
+    assert gap.today_text == "Today, 7 Nov, is between Review and Interviews."
+    assert gap.today_at == pytest.approx(gap.stages[2].offset)
+    assert _of(EX, date(2026, 8, 1)).today_text == "Today, 1 Aug, is before Applications."
+    assert _of(EX, date(2026, 11, 6)).stages[1].state == "Now"  # its last day is in it
+    assert _of(DRAFT).today_at is None and _of(DRAFT).today_text == ""
+
+
+def test_an_outcome_released_to_others_reads_as_to_come(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from dataclasses import replace
+
+    from applydesk import stages
+
+    plan = stages.plan_of(EX)
+    o1 = next(c for c in plan.columns if isinstance(c, stages.Outcome) and c.key == "o1")
+    hidden = replace(o1, released="6 Nov · to panels")
+    monkeypatch.setattr(
+        stages,
+        "plan_of",
+        lambda _: replace(
+            plan,
+            stages=tuple(
+                replace(st, columns=tuple(hidden if c is o1 else c for c in st.columns))
+                for st in plan.stages
+            ),
+        ),
+    )
+    items = _of(EX).stages[1].items
+    assert items[-1] == timeline.Item(
+        "outcome-due", "Outcome · expected December 2026", "Shortlisting."
+    )
+
+
+def test_a_mix_of_dated_and_undated_stages_shares_the_track(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two dated stages take two-thirds, by their days; the undated one
+    the third that is left."""
+    from dataclasses import replace
+
+    from applydesk import stages
+
+    plan = stages.plan_of(EX)
+    undated = replace(plan.stages[2], dates="Dates not set")
+    monkeypatch.setattr(
+        stages, "plan_of", lambda _: replace(plan, stages=(*plan.stages[:2], undated))
+    )
+    t = _of(EX)
+    assert [round(s.share, 4) for s in t.stages] == [
+        round(30 / 67 * 2 / 3, 4),
+        round(37 / 67 * 2 / 3, 4),
+        round(1 / 3, 4),
+    ]
+    assert t.stages[2].state == "Next" and sum(s.share for s in t.stages) == pytest.approx(1.0)
+
+
+def test_the_status_row_says_one_draft(client: TestClient) -> None:
+    text = client.get("/applydesk/operator/exercises/r6tm4kq9wz").text
+    assert "1 submitted · 1 draft<" in text

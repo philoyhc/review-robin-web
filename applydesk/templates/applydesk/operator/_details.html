@@ -1,7 +1,7 @@
 {# The exercise's details, on Home (segment AD1I): locked until Unlock,
    as Dossiers' table (ruling 23). Unlock is inert until rung 4. #}
 <section class="card dt" id="details" data-details>
-  <div class="tl-head"><h2>Details</h2><button class="btn btn-secondary" type="button" data-dt-lock disabled title="Editing comes next (segment AD1I, rung 4)">Unlock</button></div>
+  <div class="cardhead"><h2>Details</h2><button class="btn btn-secondary" type="button" data-dt-lock disabled title="Editing the details comes later">Unlock</button></div>
   <dl class="facts">
     <dt>Name</dt><dd>{{ exercise.name }}</dd>
     <dt>Exercise Code</dt><dd>{% if exercise.code %}<code>{{ exercise.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</dd>
@@ -13,6 +13,8 @@
   </dl>
   <p class="dt-sec">Who may apply</p>
   <p class="dt-val">{% if exercise.eligibility == "Not set" %}<span class="muted">Not set</span>{% else %}{{ exercise.eligibility }}{% endif %}</p>
+  <p class="muted dt-note">Invitation only hides the exercise from everyone not on its list, direct links included.</p>
   <p class="dt-sec">Review</p>
   <p class="dt-val">Blind review: <strong>{{ "On" if exercise.blind else "Off" }}</strong></p>
+  <p class="muted dt-note">On, assessors' dossiers redact the applicant's name and identifiers, and Review Robin receives an alias key in place of each application ID.</p>
 </section>

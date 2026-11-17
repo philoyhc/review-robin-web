@@ -186,7 +186,8 @@ def status_row(exercise: Exercise) -> tuple[Pill, ...]:
         # With the drafts, as Home's Counts card had them (segment AD1I).
         Pill(
             "Applications",
-            f"{submitted} submitted" + (f" · {drafts} drafts" if drafts else ""),
+            f"{submitted} submitted"
+            + (f" · {drafts} {'draft' if drafts == 1 else 'drafts'}" if drafts else ""),
             "info" if submitted else "mute",
         ),
     )

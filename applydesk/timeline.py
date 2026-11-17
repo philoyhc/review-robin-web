@@ -23,7 +23,7 @@ _MONTHS = {
         ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"), 1
     )
 }
-_DAY = re.compile(r"(\d{1,2}) ([A-Z][a-z]{2})(?: (\d{4}))?")
+_DAY = re.compile(r"\b(\d{1,2}) ([A-Z][a-z]{2})[a-z]*(?: (\d{4}))?\b")
 
 
 @dataclass(frozen=True)
@@ -47,6 +47,7 @@ class StageView:
     share: float  # of the exercise's days, for the horizontal track
     progress: float  # how far today is through it, 0 to 1
     items: tuple[Item, ...]
+    offset: float = 0.0  # where it starts along the track: the shares before it
 
 
 @dataclass(frozen=True)
@@ -60,37 +61,73 @@ class Timeline:
     def now(self) -> StageView | None:
         return next((s for s in self.stages if s.state == "Now"), None)
 
-    def at(self, d: date) -> float:
-        """Where a day falls along the whole track, 0 to 1."""
-        if not self.start or not self.end or self.end <= self.start:
-            return 0.0
-        return min(1.0, max(0.0, (d - self.start).days / (self.end - self.start).days))
+    @property
+    def today_at(self) -> float | None:
+        """Where today falls along the track, in the stages' shares (as
+        the segments are drawn): within the stage under way, at the start
+        of the next one when between two, at either end outside them;
+        None when no stage has dates."""
+        dated = [s for s in self.stages if s.start and s.end]
+        if not dated:
+            return None
+        for s in self.stages:
+            if s.state == "Now":
+                return s.offset + s.share * s.progress
+        ahead = next((s for s in dated if s.start and self.today < s.start), None)
+        return ahead.offset if ahead else 1.0
+
+    @property
+    def today_text(self) -> str:
+        """Where today falls, in words: the track's marker for a reader
+        who cannot see it."""
+        when = short(self.today)
+        if self.now:
+            return f"Today, {when}, is in {self.now.name}."
+        dated = [s for s in self.stages if s.start and s.end]
+        if not dated:
+            return ""
+        before = [s for s in dated if s.end and s.end < self.today]
+        after = [s for s in dated if s.start and s.start > self.today]
+        if before and after:
+            return f"Today, {when}, is between {before[-1].name} and {after[0].name}."
+        return (
+            f"Today, {when}, is before {after[0].name}."
+            if after
+            else f"Today, {when}, is after {before[-1].name}."
+        )
 
 
 def short(d: date) -> str:
     return f"{d.day} {d.strftime('%b')}"
 
 
-def _dates(text: str, year: int) -> tuple[date | None, date | None]:
+def _dates(text: str, after: date) -> tuple[date | None, date | None]:
     """A stage's "1 Sep – 30 Sep" or "1 Nov 2026 – 31 Jan 2027, 23:59"
-    as days: a year left out is the one before it, rolling over when the
-    end comes before the start; anything else is no dates."""
+    as days. A day without its year takes the first that puts it on or
+    after ``after`` (the stage before it ends, or the exercise opens);
+    one date is a one-day stage. Anything else, an impossible day or an
+    end before its start among them, is no dates (cold read)."""
     found = _DAY.findall(text)
     if not found or any(m not in _MONTHS for _, m, _ in found):
         return None, None
     days: list[date] = []
     for day, month, y in found[:2]:
-        year = int(y) if y else year
-        d = date(year, _MONTHS[month], int(day))
-        if days and d < days[0] and not y:
-            d = date(year + 1, d.month, d.day)
+        floor = days[-1] if days else after
+        try:
+            d = date(int(y) if y else floor.year, _MONTHS[month], int(day))
+            if not y and d < floor:
+                d = date(d.year + 1, d.month, d.day)
+        except ValueError:
+            return None, None
         days.append(d)
-    return days[0], days[-1]
+    return (days[0], days[-1]) if days[-1] >= days[0] else (None, None)
 
 
-def _year(e: Exercise) -> int:
-    m = re.search(r"\d{4}", e.opens)
-    return int(m.group()) if m else TODAY.year
+def _opens(e: Exercise) -> date:
+    """Where the stages' days begin to count: the exercise's opening, or
+    the start of today's year."""
+    start, _ = _dates(e.opens, date(TODAY.year, 1, 1))
+    return start or date(TODAY.year, 1, 1)
 
 
 def _items(st: stages.Stage, e: Exercise) -> tuple[Item, ...]:
@@ -104,14 +141,16 @@ def _items(st: stages.Stage, e: Exercise) -> tuple[Item, ...]:
         if isinstance(c, stages.Gate):
             out.append(Item("step", "Step", f"{c.label}." if c.label else "A step."))
         else:
-            if c.released:
-                when = c.released.split(" · ")[0]
+            # Released to applicants: its values are theirs to read; one
+            # released to anyone else reads as still to come (cold read).
+            when, _, to = c.released.partition(" · ")
+            if c.released and (not to or "applicants" in to.lower()):
                 vs = list(c.values)
                 values = ", ".join(vs[:-1]) + (" or " if len(vs) > 1 else "") + vs[-1] if vs else ""
                 text = f"{c.label}: {values}." if values else f"{c.label}."
                 out.append(Item("outcome", f"Outcome · released {when}", text))
             else:
-                expected = c.due or e.expected_outcome
+                expected = e.expected_outcome  # the applicants' estimate, not Process's due
                 kicker = "Outcome" + (f" · expected {expected}" if expected != "Not set" else "")
                 out.append(Item("outcome-due", kicker, f"{c.label}."))
     return tuple(out)
@@ -120,13 +159,13 @@ def _items(st: stages.Stage, e: Exercise) -> tuple[Item, ...]:
 def of(e: Exercise, today: date = TODAY) -> Timeline:
     """The exercise's timeline from Process's stages (Semantics, AD1I)."""
     plan = stages.plan_of(e.public_id)
-    year = _year(e)
+    floor = _opens(e)
     spans: list[tuple[date | None, date | None]] = []
     for st in plan.stages:
-        s, f = _dates(st.dates, year)
+        s, f = _dates(st.dates, floor)
         spans.append((s, f))
         if f:
-            year = f.year
+            floor = f
     known = [d for span in spans for d in span if d]
     start, end = (min(known), max(known)) if known else (None, None)
     # A dated stage's share is its days' part of the dated stages' share;
@@ -136,6 +175,7 @@ def of(e: Exercise, today: date = TODAY) -> Timeline:
     dated = sum(1 for d in days if d)
     dated_share = dated / n if dated < n else 1.0
     views: list[StageView] = []
+    offset = 0.0
     for st, (s, f), d in zip(plan.stages, spans, days, strict=True):
         if d:
             share = d / sum(days) * dated_share
@@ -147,11 +187,15 @@ def of(e: Exercise, today: date = TODAY) -> Timeline:
             state = "Now"
         else:
             state = "Next"
-        progress = ((today - s).days / max(1, (f - s).days)) if state == "Now" and s and f else 0.0
+        # As the share counts days: a stage's last day is in it.
+        progress = ((today - s).days + 0.5) / d if state == "Now" and s and d else 0.0
         when = f"{short(s)} – {short(f)}" if s and f else "Dates not set"
         views.append(
-            StageView(st.number, st.label, s, f, when, state, share, progress, _items(st, e))
+            StageView(
+                st.number, st.label, s, f, when, state, share, progress, _items(st, e), offset
+            )
         )
+        offset += share
     return Timeline(tuple(views), start, end, today)
 
 

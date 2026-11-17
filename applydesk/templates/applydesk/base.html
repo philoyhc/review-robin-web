@@ -134,19 +134,20 @@
     .hm-grid > .card + .card { margin-top: 0; }
     .hm-grid + .card { margin-top: 16px; }
     @media (max-width: 899px) { .hm-grid { grid-template-columns: minmax(0, 1fr); } }
-    .tl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
-    .tl-head h2 { margin: 0; }
+    .cardhead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+    .cardhead h2 { margin: 0; }
+    .tl:not(.tl-ready) .tl-scale, .tl:not(.tl-ready) .tl-today { visibility: hidden; }  /* placed by the script */
     .tl-sub { font-size: 13px; color: var(--text-subtle); margin: 0 0 14px; }
     /* The track: each stage's share of the exercise's days. */
     .tl-track { position: relative; margin: 34px 4px 10px; height: 14px; display: flex; gap: 3px; }
     .tl-seg { flex: 1; position: relative; height: 100%; min-width: 24px; border-radius: 7px; border: 2px solid var(--accent); box-sizing: border-box; }
     .tl-seg.tl-done, .tl-seg.tl-closed { background: var(--accent); }
-    .tl-seg.tl-now { background: linear-gradient(90deg, var(--accent) var(--p), var(--accent-tint) var(--p)); }
+    .tl-seg.tl-now { background: linear-gradient(90deg, var(--accent) var(--p, 0%), var(--accent-tint) var(--p, 0%)); }
     .tl-seg.tl-next { background: var(--surface-card); border-style: dashed; }
     .tl-name { position: absolute; bottom: 20px; left: 0; font-size: 12px; font-weight: 700; color: var(--text-strong-subtle); white-space: nowrap; }
     .tl-ms { position: absolute; top: 50%; left: 100%; width: 12px; height: 12px; transform: translate(-50%, -50%) rotate(45deg); background: var(--surface-card); border: 2px solid var(--text-body); z-index: 1; }
     .tl-ms.tl-ms-done { background: var(--text-body); }
-    .tl-today { position: absolute; top: -8px; bottom: -8px; width: 2px; background: var(--text-body); }
+    .tl-today { position: absolute; top: -8px; bottom: -8px; width: 2px; background: var(--text-body); z-index: 2; }
     .tl-today span { position: absolute; top: 28px; left: 50%; transform: translateX(-50%); font-size: 11.5px; font-weight: 700; white-space: nowrap; background: var(--surface-card); padding: 0 4px; }
     .tl-scale { position: relative; height: 14px; font-size: 11.5px; color: var(--text-subtle); margin: 30px 4px 22px; }
     .tl-scale span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
@@ -173,6 +174,7 @@
     .dt dd { overflow-wrap: anywhere; }
     .card .dt-sec { margin: 18px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-subtle); font-weight: 700; }
     .card .dt-val { margin: 0; font-size: 14px; }
+    .card .dt-note { margin: 4px 0 0; font-size: 12.5px; }
     .card p { margin: 0 0 8px; }
     .muted { color: var(--text-subtle); }
     dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }
