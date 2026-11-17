@@ -6,7 +6,7 @@ by CI) turns that skip into a failure."""
 
 from __future__ import annotations
 
-from playwright.sync_api import Dialog, Page
+from playwright.sync_api import Dialog, Page, expect
 
 from applydesk.tests.test_form_browser import page as page
 
@@ -25,9 +25,9 @@ def test_the_timeline_flips_and_the_choice_is_kept(page: Page) -> None:
     assert switch.get_by_role("button", name="Horizontal").get_attribute("aria-pressed") == "true"
     # Equal widths: every stage's bar as wide as the next (Decision amended).
     widths = page.locator(".tl-bar").evaluate_all(
-        "els => els.map(e => Math.round(e.closest('.tl-stage').getBoundingClientRect().width))"
+        "els => els.map(e => Math.round(e.getBoundingClientRect().width))"
     )
-    assert len(set(widths)) == 1
+    assert len(set(widths)) == 1, widths  # the last one too (cold read)
     # Today sits inside the stage under way, at its place in that stage.
     bar = page.locator(".tl-now .tl-bar").bounding_box()
     today = page.locator(".tl-now .tl-today").bounding_box()
@@ -116,23 +116,25 @@ def test_details_refuse_what_cannot_hold(page: Page) -> None:
     why = card.locator("[data-dt-why]")
     card.locator('[data-dt="name"]').fill("  ")
     card.get_by_role("button", name="Lock", exact=True).click()
-    assert why.inner_text() == "A name is needed."
+    expect(why).to_have_text("A name is needed.")
+    assert card.locator('[data-dt="name"]').get_attribute("aria-invalid") == "true"
     assert card.locator('[data-dt="name"]').evaluate("e => e === document.activeElement")
     card.locator('[data-dt="name"]').fill("Summer Internship Scheme 2027")
     # A draft's code may change, but never to another exercise's, any case.
     card.get_by_label("Exercise Code").fill("ra-2027")
     card.get_by_role("button", name="Lock", exact=True).click()
-    assert why.inner_text() == (
+    expect(why).to_have_text(
         "ra-2027 is already Recruitment and Selection of Residential Assistants's code."
     )
     card.get_by_label("Exercise Code").fill("SIS-2028")
     card.get_by_label("Help contact").fill("not an address")
     card.get_by_role("button", name="Lock", exact=True).click()
-    assert why.inner_text() == "A help contact is an email address."
+    expect(why).to_have_text("A help contact is an email address.")
     card.get_by_label("Help contact").fill("interns@example.edu")
     card.get_by_role("button", name="Lock", exact=True).click()
     assert card.locator('[data-dt-show="code"]').inner_text() == "SIS-2028"
     assert card.locator('[data-dt-show="contact"]').inner_text() == "interns@example.edu"
+    assert card.locator("[aria-invalid]").count() == 0
 
 
 def test_leaving_with_changes_asks_first(page: Page) -> None:
@@ -149,3 +151,12 @@ def test_leaving_with_changes_asks_first(page: Page) -> None:
     page.once("dialog", answer)
     page.reload()
     assert asked == ["beforeunload"]
+
+
+def test_enter_on_blind_review_does_not_lock(page: Page) -> None:
+    page.goto(HOME)
+    card = page.locator("[data-details]")
+    card.get_by_role("button", name="Unlock").click()
+    card.get_by_role("checkbox", name="Blind review").focus()
+    page.keyboard.press("Enter")
+    assert card.get_attribute("data-unlocked") is not None

@@ -1,6 +1,6 @@
 """The exercise's timeline as Home and the applicant's page draw it
-(segment AD1I): each stage with its dates, its state against today, its
-and its items in words an applicant reads.
+(segment AD1I): each stage with its dates, its state against today, how
+far today is through it, and its items in words an applicant reads.
 Nothing operator-only goes in (panels, rules, pairs, modes), so one shape
 serves both pages. Today is the sample's until AD2.
 """
@@ -188,3 +188,9 @@ def next_step(e: Exercise, t: Timeline) -> str:
         expected = due.kicker.partition(" · ")[2]
         line += f" Next: {due.text.rstrip('.')}" + (f", {expected}." if expected else ".")
     return line
+
+
+def gate_running(e: Exercise, t: Timeline) -> bool:
+    """Whether the stage under way holds a gate, so the Next step line
+    points to Evaluations, where it is worked (a draft's never does)."""
+    return e.state != "Draft" and t.now is not None and any(i.kind == "step" for i in t.now.items)

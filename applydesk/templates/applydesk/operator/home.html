@@ -7,7 +7,7 @@
    fact cards fold into the status row and the line under the timeline. #}
 {# The line under the timeline points to where the stage under way is
    worked: Evaluations, while a gate runs. #}
-{% set next_link = url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations') if tl.now and tl.now.items | selectattr("kind", "equalto", "step") | list and exercise.state != "Draft" else "" %}
+{% set next_link = url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations') if gate_running else "" %}
 <div class="hm-grid">
   {% include "applydesk/_timeline.html" %}
   {% include "applydesk/operator/_details.html" %}

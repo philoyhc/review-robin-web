@@ -16,6 +16,7 @@
     {% else %}
       <p>Applications have closed.</p>
     {% endif %}
+    {% if exercise.expected_outcome != "Not set" %}<p class="muted dt-note">Results expected {{ exercise.expected_outcome }} (an estimate).</p>{% endif %}
   </section>
 </div>
 {% endblock %}

@@ -153,7 +153,7 @@
     .tl-dot { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--accent); background: var(--surface-card); font-size: 12px; font-weight: 700; color: var(--accent); box-sizing: border-box; }
     .tl-done .tl-dot, .tl-closed .tl-dot { background: var(--accent); color: var(--on-accent); }
     .tl-now .tl-dot { box-shadow: 0 0 0 4px var(--accent-tint); }
-    .tl-name { margin: 0; font-size: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .tl-name { margin: 0; font-size: 15px; overflow-wrap: anywhere; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .card .tl-when { margin: 2px 0 8px; font-size: 13px; color: var(--text-subtle); }
     .tl-items { margin: 0; padding: 0; list-style: none; font-size: 13.5px; }
     .tl-items li { padding: 6px 8px; border-radius: 6px; background: var(--surface-muted); margin-bottom: 6px; overflow-wrap: break-word; }
@@ -165,10 +165,12 @@
     /* Horizontal: equal segments heading a column per stage (Decision
        amended); the bar first, then the dot and name, dates, items. */
     .tl[data-layout="h"] .tl-stages { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; margin-top: 30px; }
-    .tl[data-layout="h"] .tl-stage { display: grid; grid-template-columns: 24px minmax(0, 1fr); column-gap: 8px; align-content: start; grid-template-areas: "bar bar" "dot name" "when when" "items items"; padding-right: 8px; }
-    .tl[data-layout="h"] .tl-bar { grid-area: bar; height: 14px; margin: 0 -8px 10px 0; }
+    .tl[data-layout="h"] .tl-stage { display: grid; grid-template-columns: 24px minmax(0, 1fr); column-gap: 8px; align-content: start; grid-template-areas: "bar bar" "dot name" "when when" "items items"; }
+    .tl[data-layout="h"] .tl-stage > :not(.tl-bar) { margin-right: 8px; }  /* the bars stay equal and meet */
+    .tl[data-layout="h"] .tl-bar { grid-area: bar; height: 14px; margin-bottom: 10px; }
     .tl[data-layout="h"] .tl-stage:first-child .tl-bar { border-radius: 7px 0 0 7px; }
-    .tl[data-layout="h"] .tl-stage:last-child .tl-bar { border-radius: 0 7px 7px 0; margin-right: 0; }
+    .tl[data-layout="h"] .tl-stage:last-child .tl-bar { border-radius: 0 7px 7px 0; }
+    .tl[data-layout="h"] .tl-stage:only-child .tl-bar { border-radius: 7px; }
     .tl[data-layout="h"] .tl-now .tl-bar { background: linear-gradient(90deg, var(--accent) var(--p, 0%), var(--accent-tint) var(--p, 0%)); }
     .tl[data-layout="h"] .tl-dot { grid-area: dot; align-self: center; }
     .tl[data-layout="h"] .tl-name { grid-area: name; align-self: center; }

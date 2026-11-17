@@ -215,6 +215,7 @@ def test_the_applicant_s_page_shows_the_same_timeline_and_nothing_operator_only(
 
     assert stages_of(mine) == stages_of(home)
     assert "Today, 17 Nov, is in Interviews." in mine
+    assert "Results expected December 2026 (an estimate)." in mine
     timeline_card = mine[
         mine.index("data-timeline") : mine.index("</section>", mine.index("data-timeline"))
     ]
