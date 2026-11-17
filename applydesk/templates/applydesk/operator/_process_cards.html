@@ -184,7 +184,7 @@
         <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ g.label }}" placeholder="Untitled gate"></label>
         <label class="fc-l">Type<select class="fc-in" data-pc="type" disabled title="Every gate runs in Review Robin for now">{% for k, label in gate_types %}<option value="{{ k }}"{% if k == (g.via or "RRW") %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
       </div>
-      <label class="fc-l">Description<textarea class="fc-in" rows="2" data-pc="description" placeholder="What evaluators do at this gate, as Review Robin shows it"{{ sent_attr(sent) }}>{{ g.description }}</textarea></label>
+      <label class="fc-l">Description<textarea class="fc-in" rows="1" data-fit-box data-pc="description" placeholder="What evaluators do at this gate, as Review Robin shows it"{{ sent_attr(sent) }}>{{ g.description }}</textarea></label>
       <label class="gsw"><input type="checkbox" data-pc="confidential"{% if g.confidential %} checked{% endif %}{{ sent_attr(sent) }}> <span><strong>Confidential</strong> <span class="muted">· Review Robin shows each candidate as <em>Name redacted</em>, with their key</span></span></label>
       {{ rule_box(plan, g, rule_text, sec=False) }}
     </div>

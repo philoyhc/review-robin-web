@@ -73,6 +73,19 @@
   window.applydeskPools = window.applydeskPools || JSON.parse(document.getElementById("pc-pools").textContent);
   var POOLS = window.applydeskPools;
   function cards() { return Array.prototype.slice.call(list.children); }
+  // A description box grows with its text, as Review Robin's instrument
+  // boxes do (author, 2026-11-17): fitted as it is typed in, and when the
+  // card holding it opens, since a shut card's box has no height to read.
+  function fitBox(ta) {
+    if (!ta.getClientRects().length) return;
+    var cs = getComputedStyle(ta);
+    ta.style.height = "auto";
+    ta.style.height = ta.scrollHeight + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth) + "px";
+  }
+  list.addEventListener("input", function (e) { if (e.target.matches("textarea[data-fit-box]")) fitBox(e.target); });
+  list.addEventListener("toggle", function (e) {
+    if (e.target.open) e.target.querySelectorAll("textarea[data-fit-box]").forEach(fitBox);
+  }, true);
   // --- A gate's evaluators (ruling 27, segment AD1G): ranked sources,
   // each a kind, its question or panel, and a min and max per dossier; a
   // Total held within their mins and maxes together, named on the

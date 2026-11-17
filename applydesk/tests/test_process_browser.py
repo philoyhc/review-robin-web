@@ -1205,3 +1205,19 @@ def test_a_new_gate_s_field_shows_only_its_type_s_settings(page: Page) -> None:
     assert not fld.locator('[data-q-g="string"]').is_visible()
     assert not fld.locator('[data-q-g="list"]').is_visible()
     assert fld.locator("[data-rf-n]").text_content() == "1"
+
+
+def test_a_gate_s_description_grows_with_its_text(page: Page) -> None:
+    """The author, 2026-11-17: no resize handle; the box fits its text,
+    as Review Robin's instrument boxes do."""
+    page.goto(PAGE)
+    g1 = _item(page, "g1")
+    box = g1.locator('[data-pc="description"]')
+    assert box.evaluate("e => getComputedStyle(e).resize") == "none"
+    fits = "e => Math.abs(e.clientHeight - e.scrollHeight) <= 1"
+    assert box.evaluate(fits)  # fitted when its card opened
+    before = box.evaluate("e => e.offsetHeight")
+    gate = _peer_copy(page)
+    box = gate.locator('[data-pc="description"]')
+    box.fill("A line. " * 60)
+    assert box.evaluate("e => e.offsetHeight") > before and box.evaluate(fits)

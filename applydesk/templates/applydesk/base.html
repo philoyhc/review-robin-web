@@ -546,6 +546,9 @@
     .gsec[open] .gsec-s { display: none; }
     .gsec-b { padding: 0 14px 14px; }
     .gsec-b > .pc-row:first-child > .fc-l { margin-top: 0; }
+    /* A box that grows with its text, as Review Robin's instrument boxes
+       (author, 2026-11-17): no resize handle, no scroll bar. */
+    textarea[data-fit-box] { resize: none; overflow: hidden; min-height: 0; }
     .gsw { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; }
     .gsw input { width: 18px; height: 18px; }
     /* A gate's or an outcome's main sections, each under a rule. */
