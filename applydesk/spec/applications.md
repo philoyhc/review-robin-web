@@ -175,6 +175,17 @@ shows the form's own card and one empty String card, open.
 - **Conditional questions** (branching) are not built: deferred, see
   `applydesk/guide/todo_master.md`.
 
+## Exercise Home
+
+The Details card on Home, `/operator/exercises/<id>`, lists the exercise's
+name, code and summary, then its *Help contact* and *Timezone*: Review
+Robin's for every gate (`sample_data.Exercise.help_contact` / `timezone`,
+read through `help_contact(e)` / `timezone(e)`, template globals in
+`applydesk/web.py`). An unset one reads the operator settings' default
+(`DEFAULT_HELP_CONTACT`, `DEFAULT_TIMEZONE`) followed by *· the default*.
+Neither is editable yet; that comes with Home's own work
+(`applydesk/guide/todo_master.md`). Process shows both read-only.
+
 ## The Process page
 
 The exercise's timeline as a stack of stage cards, on the Process tab,
@@ -232,7 +243,9 @@ pages, it can wait); `workflow.steps` still names the current stage.
   - **Gate**: *Name*; *Type* (a disabled menu, *Review Robin session*, kept
     for other kinds); *Description* (Review Robin's instrument description);
     *Confidential* (per gate: Review Robin shows each candidate as *Name
-    redacted* with their key); the *Entry rule*.
+    redacted* with their key); the *Entry rule*. The exercise's *Help
+    contact* and *Timezone* show read-only, linking to Home, where they are
+    set: they are Review Robin's for every gate.
   - **Evaluators** (ruling 27): a row per ranked **source**, in order
     (▲ ▼; a row's **+** adds the next, × removes; *+ Source* shows only
     when there is none), each a *Kind*, its *Min* and *Max* per dossier:
@@ -260,6 +273,8 @@ pages, it can wait); `workflow.steps` still names the current stage.
     each, edited in place: *Label*, *Type* (Integer, Decimal, List or
     String, with Min/Max/Step, Max length or Options), *Required*, and *Help*
     (shown under the field in Review Robin); *+ Field*, *Remove the field*.
+    Each shows its **Key**, read-only: what Review Robin reports the field's
+    answers under. A new field takes `f<n>`, the first not in use on the gate.
     A gate with none lists one per result.
   - **Results**: up to three (*+ Result* disabled at three), rows that read
     as Form's card summaries and edit in place. Each has a *Name*, the
@@ -286,8 +301,18 @@ pages, it can wait); `workflow.steps` still names the current stage.
     and the note under its chip says how many scores it took (*3.9 from 26
     of 30*). A dossier whose every score is 0 has no result (*No view from
     30*), and a rule reading it waits. Under the fields, *For Review Robin*
-    lists what each evaluator answers, a required field saying so. Result 1
+    lists what each evaluator answers, a required field saying so and a field
+    with help carrying it (`(<type>, required; help: “…”)`). Result 1
     is the gate's headline.
+  - **What Review Robin receives**: a line above that list, `Review Robin
+    receives <name>: <description>, open <stage From to To> (<timezone>);
+    help contact <contact>; tagged applydesk.` The description loses its
+    trailing periods and is left out, with its colon, when empty; the window
+    reads *when its stage's dates are set* while the stage's dates are empty
+    or *Dates not set*. The page's script redraws it on every edit of the
+    gate's name or description or the stage's dates. Once the gate's session
+    has opened it is frozen as sent (`data-fixed`), though the stage's dates
+    may still change.
 - **The outcome.** *Name*, *Due*, *Values* (comma-separated), *Rule*, and, when
   more than one gate is in scope, the *Combined result*: a weight per gate's numeric result, as
   percentages; weights that all sit at 0 are no combined result, flagged only when a rule reads one. Scope is the gates since the previous outcome (ruling 13); the
