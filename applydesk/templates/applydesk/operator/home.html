@@ -2,47 +2,24 @@
 {% block title %}{{ exercise.name }}{% endblock %}
 {% block content %}
 <div class="ptitle"><h1>{{ exercise.name }}</h1></div>
-<p class="lede">{{ exercise.summary or "No summary yet." }}</p>
 {% include "applydesk/_placeholder.html" %}
-{% include "applydesk/operator/_details.html" %}
-{% set submitted = applications | selectattr("state", "equalto", "Submitted") | list %}
-<div class="grid">
-  <section class="card">
-    <h2>Where it stands</h2>
-    <dl class="facts">
-      <dt>Exercise Code</dt><dd>{% if exercise.code %}<code>{{ exercise.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</dd>
-      <dt>Opens</dt><dd>{{ exercise.opens }}</dd>
-      <dt>Applications close</dt><dd>{{ exercise.application_stage_ends }}{% if exercise.application_stage_ends != "Not set" %} (a hard deadline){% endif %}</dd>
-      <dt>Expected outcome</dt><dd>{{ exercise.expected_outcome }}</dd>
-      <dt>Who may apply</dt><dd>{{ exercise.eligibility }}</dd>
-    </dl>
-  </section>
-  <section class="card">
-    <h2>Counts</h2>
-    <dl class="facts">
-      <dt>Applications</dt><dd>{{ applications | length }}</dd>
-      <dt>Submitted</dt><dd>{{ submitted | length }}</dd>
-      <dt>Drafts</dt><dd>{{ applications | selectattr("state", "equalto", "Draft") | list | length }}</dd>
-      <dt>On panels</dt><dd>{{ assessors | length }}</dd>
-    </dl>
-  </section>
-  <section class="card">
-    <h2>Next step</h2>
-    {% if exercise.state == "Draft" %}
-      {% if missing %}
-      <p>Still to set up before it can be published:</p>
-      <ul>{% for label, tab in missing %}<li><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ ('/' ~ tab if tab else '')) }}{{ '' if tab else '#details' }}">{{ label }}</a></li>{% endfor %}</ul>
-      <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Publish</button></div>
-      {% else %}
-      <p>Ready to publish: the details, the dates and the application form are complete.</p>
-      <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Publish</button></div>
-      {% endif %}
-    {% elif exercise.form_open %}
-      <p>Applications are open. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> shows what follows once the form closes.</p>
-    {% else %}
-      <p>Assessment is under way in Review Robin. Its results come back on Evaluations.</p>
-      <div class="btnrow"><a class="btn btn-secondary" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations') }}">Go to Evaluations</a></div>
-    {% endif %}
-  </section>
+{# Segment AD1I: the timeline two-thirds wide, Details one-third; the old
+   fact cards fold into the status row and the line under the timeline. #}
+<div class="hm-grid">
+  {% include "applydesk/_timeline.html" %}
+  {% include "applydesk/operator/_details.html" %}
 </div>
+{% if exercise.state == "Draft" %}
+<section class="card hm-publish">
+  <h2>Publish</h2>
+  {% if missing %}
+  <p>Still to set up before it can be published:</p>
+  <ul>{% for label, tab in missing %}<li><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ ('/' ~ tab if tab else '')) }}{{ '' if tab else '#details' }}">{{ label }}</a></li>{% endfor %}</ul>
+  <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Publish</button></div>
+  {% else %}
+  <p>Ready to publish: the details, the dates and the application form are complete.</p>
+  <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Publish</button></div>
+  {% endif %}
+</section>
+{% endif %}
 {% endblock %}

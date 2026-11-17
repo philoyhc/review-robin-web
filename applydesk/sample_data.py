@@ -965,7 +965,7 @@ def setup_missing(e: Exercise) -> tuple[tuple[str, str], ...]:
     if not e.code:
         missing.append(("Exercise Code", ""))
     if not e.summary:
-        missing.append(("Summary", ""))
+        missing.append(("Description", ""))
     if e.eligibility == "Not set":
         missing.append(("Who may apply", ""))
     if "Not set" in (e.opens, e.application_stage_ends):

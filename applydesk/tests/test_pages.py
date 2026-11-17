@@ -306,7 +306,7 @@ def test_the_status_row_says_where_each_item_stands(client: TestClient) -> None:
     row = re.sub(r"<[^>]+>", "", row[: row.index("</p>")])
     assert row == (
         "Exercise: Published · Form: Closed · Gates: 2 of 3 done · "
-        "Outcomes: 1 of 2 released · Emails: 3 of 5 · Applications: 100 submitted"
+        "Outcomes: 1 of 2 released · Emails: 3 of 5 · Applications: 100 submitted · 3 drafts"
     )
     blank = client.get(f"/applydesk/operator/exercises/{BLANK}/process").text
     assert 'Gates: <span class="chip chip-warn">none</span>' in blank
@@ -479,7 +479,8 @@ def test_a_draft_exercise_s_timeline_reads_cleanly(client: TestClient) -> None:
 def test_a_blank_exercise_lists_what_is_still_to_set_up(client: TestClient) -> None:
     """Author, 2026-11-12: one exercise as just created, with only a name."""
     home = client.get(f"/applydesk/operator/exercises/{BLANK}").text
-    assert "<h1>Graduate Travel Grant 2027</h1>" in home and "No summary yet." in home
+    assert "<h1>Graduate Travel Grant 2027</h1>" in home
+    assert '<dt>Description</dt><dd><span class="muted">Not set</span>' in home
     assert "Still to set up before it can be published:" in home
     missing = home[home.index("Still to set up") :]
     missing = missing[: missing.index("</ul>")]
@@ -487,7 +488,7 @@ def test_a_blank_exercise_lists_what_is_still_to_set_up(client: TestClient) -> N
     # Each item links to where it is set: Home's details, Process, Form.
     assert re.findall(r'<li><a href="([^"]+)">([^<]+)</a></li>', missing) == [
         (f"{base}#details", "Exercise Code"),
-        (f"{base}#details", "Summary"),
+        (f"{base}#details", "Description"),
         (f"{base}#details", "Who may apply"),
         (f"{base}/process", "Dates"),
         (f"{base}/form", "Application form"),
