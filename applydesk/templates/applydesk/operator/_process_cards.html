@@ -110,12 +110,51 @@
     <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ g.label }}" placeholder="Untitled gate"></label>
   </div>
   {{ rule_box(plan, g, rule_text) }}
-  {# Who evaluates (ruling 20): a panel, picked or made here; a sent gate
-     keeps the panel it was sent with. #}
-  <div class="pc-row pc-evaluators" data-pick-wrap>
-    <label class="fc-l pc-wide">Evaluators{{ pick.menu(panel_pools, g.panel, 'data-pc-panel' ~ (' disabled title="Sent: the gate keeps the panel it was sent with"' if sent else ''), empty="No panel yet") }}</label>
-    {{ pick.edit(url('/operator/exercises/' ~ exercise.public_id ~ '/panels'), g.panel) }}
-    {{ pick.new_box() }}
+  {# Who evaluates (ruling 27, segment AD1G): ranked sources, each giving
+     a min to a max per dossier, a Total within them, and how the pairs
+     are made. Rung 3's scaffold: the panel source keeps the working panel
+     picker (ruling 20; a sent gate keeps its panel); the rest is inert
+     until rung 4 wires it. #}
+  {% set ev = sources_of(g) %}
+  {% set srcs = ev[0] or [{"kind": "panel", "ref": "", "min": "", "max": ""}] %}
+  {% set bounds = total_bounds(ev[0]) %}
+  {% set picker = namespace(placed=false) %}
+  <div class="pc-sources" data-pc-sources>
+    <span class="fc-l">Evaluators</span>
+    <div class="ps-list" data-ps-list>
+    {% for s in srcs %}
+      {% set has_picker = s.kind == "panel" and not picker.placed %}
+      <div class="ps-row{% if has_picker %} pc-evaluators{% endif %}" data-ps-row data-kind="{{ s.kind }}"{% if has_picker %} data-pick-wrap{% endif %}>
+        <span class="ps-rank" data-ps-rank>{{ loop.index }}</span>
+        <select class="fc-in ps-kind" data-ps="kind" disabled aria-label="Source {{ loop.index }}: kind">{% for k, label in source_kinds %}<option value="{{ k }}"{% if k == s.kind %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+        {% if has_picker %}{% set picker.placed = true %}
+        <div class="ps-ref">
+          {{ pick.menu(panel_pools, g.panel, 'data-pc-panel' ~ (' disabled title="Sent: the gate keeps the panel it was sent with"' if sent else '') ~ ' aria-label="Source ' ~ loop.index ~ ': panel"', empty="No panel yet") }}
+          {{ pick.edit(url('/operator/exercises/' ~ exercise.public_id ~ '/panels'), g.panel) }}
+        </div>
+        {% else %}
+        <span class="ps-ref"><select class="fc-in" data-ps="ref" disabled aria-label="Source {{ loop.index }}: {{ 'question' if s.kind == 'nominated' else 'panel' }}"><option>{{ s.ref if s.kind == "nominated" else (panel_pools[s.ref].name if s.ref in panel_pools else s.ref) }}</option></select></span>
+        {% endif %}
+        <label class="ps-n">Min<input class="fc-in" data-ps="min" value="{{ s.min }}" inputmode="numeric" disabled></label>
+        <label class="ps-n">Max<input class="fc-in" data-ps="max" value="{{ s.max }}" inputmode="numeric" disabled></label>
+        {% if has_picker %}{{ pick.new_box() }}{% endif %}
+        <span class="ps-acts"><button type="button" class="btn btn-secondary" data-ps-act="up" disabled aria-label="Move up">↑</button><button type="button" class="btn btn-secondary" data-ps-act="down" disabled aria-label="Move down">↓</button><button type="button" class="btn btn-destructive" data-ps-act="remove" disabled aria-label="Remove the source">×</button></span>
+      </div>
+    {% endfor %}
+      <div class="ps-row ps-total" data-ps-total>
+        <span class="ps-rank"></span>
+        <strong class="ps-kind">Total</strong>
+        <span class="ps-ref muted" data-ps-bounds>{% if ev[0] %}within {{ bounds[0] }}–{{ bounds[1] }}{% endif %}</span>
+        <label class="ps-n">Min<input class="fc-in" data-ps="total-min" value="{{ ev[1].min if ev[0] else '' }}" inputmode="numeric" disabled></label>
+        <label class="ps-n">Max<input class="fc-in" data-ps="total-max" value="{{ ev[1].max if ev[0] else '' }}" inputmode="numeric" disabled></label>
+        <span class="ps-acts"></span>
+      </div>
+    </div>
+    <div class="pc-item-foot"><button type="button" class="btn btn-secondary" data-ps-act="add" disabled>+ Source</button></div>
+    <div class="pc-row ps-mode">
+      <span class="fc-l">Assignment</span>
+      <span class="seg" role="group" aria-label="Assignment" data-ps-mode>{% for k, label in modes %}<button type="button" data-mode="{{ k }}" aria-pressed="{{ 'true' if k == g.mode else 'false' }}" disabled>{{ label }}</button>{% endfor %}</span>
+    </div>
   </div>
   <ul class="gc-members" data-pc-members>
     {% for name, email in (pool.members if pool else []) %}<li>{{ name }}{% if name != email %} <span class="muted">{{ email }}</span>{% endif %}</li>{% endfor %}

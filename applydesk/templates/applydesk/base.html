@@ -507,6 +507,18 @@
     .pr-sum { display: block; font-size: 13px; color: var(--text-subtle); overflow-wrap: anywhere; }
     .pr-foot { justify-content: flex-start; margin-top: 8px; }
     /* A gate item's panel and its members (segment AD1F, ruling 20). */
+    /* A gate's evaluator sources (ruling 27, segment AD1G): rank, kind,
+       which, min, max, actions; the Total row the same columns. */
+    .ps-row { display: grid; grid-template-columns: 24px 130px minmax(0, 1fr) 72px 72px 116px; gap: 8px; align-items: end; margin-top: 8px; }
+    .ps-rank { align-self: center; font-weight: 600; text-align: center; }
+    .ps-kind { align-self: center; }
+    .ps-n { display: flex; flex-direction: column; font-size: 12px; }
+    .ps-acts { display: inline-flex; gap: 4px; }
+    .ps-total { border-top: 1px solid var(--border-subtle); padding-top: 8px; }
+    .ps-acts .btn { min-width: 34px; padding: 0 8px; }
+    .ps-row > .np { grid-column: 1 / -1; order: 1; }
+    .ps-mode { align-items: center; gap: 8px; }
+    @media (max-width: 640px) { .ps-row { grid-template-columns: 24px 1fr 1fr; } }
     .gc-members { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
     .gc-members:empty { display: none; }
     .pc-empty { display: none; }
