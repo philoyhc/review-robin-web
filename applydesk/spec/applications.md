@@ -212,26 +212,62 @@ pages, it can wait); `workflow.steps` still names the current stage.
   cards move; the Outline and Dossiers' headers follow.
 - **Items collapse.** A stage's items each have a head, always shown, with
   its kicker, name and chips, and a toggle for the body: a gate's state,
-  results count and panel (*Panel A · 2 people*, or *No panel*); an
+  results count and evaluators (*Nominated 0–2 · Panel A 1–3 · Total 3*, or
+  *No evaluators*; amber on a problem); an
   outcome's release and emails; the form's state and emails. An open stage
   shows its items collapsed; an item alone in its stage, or just added, is
   open. The chips follow the edits.
 - **The form item.** When it opens and closes (the stage's dates), a link to
   Form, and its *Emails* to applicants: *Receipt on submitting* and *Reminder
   to drafts*. A new form ticks the receipt only.
-- **A gate.** *Name*, its *Entry rule*, *Evaluators*, *Runs as* (*A Review
-  Robin session* or *Results entered here*) and its results.
-  - *Evaluators* is the panel menu and *+ New panel…* box Form uses (above),
-    *Edit on Panels →*, the panel's members and *Panel sees* with the gate's
-    progress. A sent gate (`workflow.gate_state`: *Sent*, *Results in*) has
-    its menu, *Runs as* and results fixed, and says it keeps the roster it
-    was sent with.
-  - *Results*: up to three (*+ Result* disabled at three), rows that read as
-    Form's card summaries and edit in place. Each has a *Name*, a *Response
-    field* the evaluators fill in (Integer, Decimal, List or String, with
-    Min/Max/Step, Max length or Options), *Derived as*, and *From at least*
-    responses (default 1; fewer and the result is none yet). **The
-    derivation fixes the result's type; there is no second definition:**
+- **A gate** is one Review Robin run (ruling 28), in four parts, in this
+  order. The *Gate* and *Evaluators* cards are collapsible, start shut and
+  say what they hold on their summary line (`stages.gate_summary`,
+  `evaluators_summary`); a new gate, and an Outline jump to one, open the
+  *Gate* card for its name. Start and End are the stage's. The gate is
+  *fixed* once its Review Robin session has opened (`workflow.gate_opened`:
+  *Results in*, or *Sent* with its session under way): every control in it
+  is disabled and a line says so. Sent but unopened, it is still changed
+  here, each change re-sent.
+  - **Gate**: *Name*; *Type* (a disabled menu, *Review Robin session*, kept
+    for other kinds); *Description* (Review Robin's instrument description);
+    *Confidential* (per gate: Review Robin shows each candidate as *Name
+    redacted* with their key); the *Entry rule*.
+  - **Evaluators** (ruling 27): a row per ranked **source**, in order
+    (▲ ▼; a row's **+** adds the next, × removes; *+ Source* shows only
+    when there is none), each a *Kind*, its *Min* and *Max* per dossier:
+    - *Nominated*, the people a candidate named in a *Select people*
+      question of Form, picked by its label, offered only when the form has
+      one; or
+    - *Panel*, by the shared menu and *+ New panel…* box Form uses (above)
+      with *Edit on Panels →*; a panel's members are on Panels, not listed.
+
+    Then the **Total**: its *Min* and *Max*, with the bounds the sources allow
+    (their mins together, their maxes together) beside it. A Total outside
+    them is a problem on the Outline, never silently clamped
+    (`stages.total_problem`). The Outline also names a gate with no source,
+    a source with no panel or question, a min above its max and a missing
+    number. **Assignment** is a menu: *Automatic*, *Suggested, then
+    approved*, *Assigned by the operator* (what each does is "The
+    Evaluations page"). The filling rule is `stages.fill`: sources in rank
+    order, the first giving as many as it has up to its max, each lower one
+    topping up to the Total's min and never under its own min, nothing past
+    the Total's max; evaluators distinct by email, a person in two sources
+    counted for the higher; the candidate never their own evaluator. A
+    dossier it cannot fill is *Short*. A panel gives its least-loaded
+    members first. Referees are not a source.
+  - **Response fields**: what each evaluator answers in Review Robin, a row
+    each, edited in place: *Label*, *Type* (Integer, Decimal, List or
+    String, with Min/Max/Step, Max length or Options), *Required*, and *Help*
+    (shown under the field in Review Robin); *+ Field*, *Remove the field*.
+    A gate with none lists one per result.
+  - **Results**: up to three (*+ Result* disabled at three), rows that read
+    as Form's card summaries and edit in place. Each has a *Name*, the
+    response field it collates (*From*), *Derived as*, and *From at least*
+    responses (default 1; fewer and the result is none yet). A result whose
+    field was removed reads *No field chosen* and is a problem on the Outline.
+    **The derivation fixes the result's type; there is no second
+    definition:**
 
     | Field | Derivation | Result |
     |---|---|---|
@@ -242,34 +278,55 @@ pages, it can wait); `workflow.steps` still names the current stage.
     | | Most common | List, the field's options |
     | String | All, joined | String, for reading |
     | any | Count of responses | Integer, from 0 |
-    | any, *Results entered here* | Entered here | the field as defined |
 
     A List is never mapped to numbers: a numeric scale is a numeric field,
-    its help text saying what the numbers mean. For a Review Robin session,
-    *For Review Robin* lists the fields its instrument must ask. Result 1 is
-    the gate's headline.
+    its help text saying what the numbers mean. A Mean or Median offers
+    *Ignoring 0 (no view)*, for a scale whose 0 means *no view*: the 0s are
+    left out (`stages.averaged`), the result's line reads *Mean, ignoring 0*
+    and the note under its chip says how many scores it took (*3.9 from 26
+    of 30*). A dossier whose every score is 0 has no result (*No view from
+    30*), and a rule reading it waits. Under the fields, *For Review Robin*
+    lists what each evaluator answers, a required field saying so. Result 1
+    is the gate's headline.
 - **The outcome.** *Name*, *Due*, *Values* (comma-separated), *Rule*, and, when
   more than one gate is in scope, the *Combined result*: a weight per gate's numeric result, as
-  percentages. Scope is the gates since the previous outcome (ruling 13); the
+  percentages; weights that all sit at 0 are no combined result, flagged only when a rule reads one. Scope is the gates since the previous outcome (ruling 13); the
   weights follow as gates are added, removed or moved, a new gate takes what is
   left of 100, and the item says when the gates changed. *When released*, per
   audience, *Applicants* and *Panel evaluators* each with *Update timeline*
   (the timeline they see on signing in to their participant page) and *Send
   email*. Whether it is released is set on Dossiers.
 - **The rule editor** (*Add a rule* / *Edit the rule*, on a gate or an outcome).
-  A row per condition, joined by AND, then *Then* and *Otherwise*; *Decide by
-  hand* clears it. Conditions are ruling 13's and no others:
+  A rule is **branches** (ruling 30): *if … then A; else if … then B; …
+  else Z*. Each branch is a row per condition, joined by AND, with its own
+  *+ Condition* and *Then*; *+ Else if* adds a branch, *Remove branch* drops
+  one, and a branch whose last condition goes is dropped; the rule has one
+  *Otherwise*. The first branch whose conditions all hold decides, none
+  holding gives *Otherwise*; a one-branch rule is a single *if … then …,
+  else …*. *Decide by hand* clears it. Conditions:
 
   | On | Kinds |
   |---|---|
-  | A gate | Status; the applicant's last N submitted; an earlier outcome |
-  | An outcome | A named gate result (`≥` / `<` a number, or *is* a list's option); entry at a gate; the combined result; an earlier outcome |
+  | A gate | Status; the applicant's last N submitted; an earlier outcome; a form answer |
+  | An outcome | A named gate result (`≥` / `<` a number, or *is* a list's option); entry at a gate; the combined result; an earlier outcome; a form answer; the best N |
 
-  A gate's *Then* and *Otherwise* are *Entered* / *Not entered*; an outcome's
-  are its values. The item's line reads as Dossiers' header does
+  - **A form answer** is the application's answer, as submitted, to a
+    choose-one *List* question of Form, *is* one of its options.
+  - **The best N** (`top`, an outcome's) ranks, by a gate's numeric result,
+    the dossiers its branch reaches and keeps the N highest; a tie at the cut
+    takes every tied dossier, and Dossiers' proposal says so (*21 at the cut
+    of 20: tied*). Fewer than N take them all. A dossier not entered at the
+    gate has no place in the ranking and falls to the next branch; while any
+    dossier the branch could still take lacks a result, the branch waits and
+    proposes nothing.
+
+  A gate's *Then*s and *Otherwise* are *Entered* / *Not entered*; an
+  outcome's are its values. The item's line reads as Dossiers' header does
   (`stages.rule_text`), *Decided by hand* for none. A rule names columns by key,
   so moving a stage keeps its meaning. One that reads a later outcome, a gate
-  outside its outcome's scope, or a column since removed; decides or compares
+  outside its outcome's scope, or a column since removed; a form question gone from Form, or an answer
+  not among its options; a best N that is not a whole number or ranks by a
+  result that is not a number; decides or compares
   with a value its target lacks; or has a count or threshold that is not a
   number, is **flagged** on its item and in the Outline, and keeps reading what
   it read (a removed column as *(removed)*) until the operator picks another.
@@ -281,7 +338,7 @@ pages, it can wait); `workflow.steps` still names the current stage.
   neither (`stages.comparable`). Only numeric results take a weight.
 - **The Outline** lists each stage by name and dates with its items beneath,
   the counts (stages, gates, outcomes) and every problem, among them a gate
-  with no panel. A stage or item is a button: it opens its card and goes to
+  with no evaluators. A stage or item is a button: it opens its card and goes to
   it. *Save* and the *Unsaved changes* marker sit at its foot, kept as Form's
   are (ruling 23): *Save* disabled until AD2, a warning on leaving with
   changes pending. Nothing in it is saved.
