@@ -1016,6 +1016,31 @@ def test_count_is_any_field_s() -> None:
     assert stages.comparable(said) == "number"
 
 
+def test_a_gate_s_metrics_and_its_source_columns_are_named(client: TestClient) -> None:
+    """The author, 2026-11-17 (rung 4b): a gate's section is Metrics, what
+    each evaluator answers and how the answers make its result; the source
+    rows' first column is Order. A metric's result keeps its name."""
+    text = client.get(f"/applydesk/operator/exercises/{DRAFT}/process").text
+    gate = text[text.index('data-item="gate"') : text.index('data-pc-act="remove-gate"')]
+    assert '<span class="fc-l">Metrics</span>' in gate and ">Results<" not in gate
+    assert "how the answers make the gate's result" in gate
+    assert ">+ Metric</button>" in gate and ">Remove the metric</button>" in gate
+    assert "Result: <strong data-pr-type>" in gate  # the derived value keeps its name
+    head = text[
+        text.index("data-ps-headrow>") : text.index("</div>", text.index("data-ps-headrow>"))
+    ]
+    assert re.findall(r"<span>([^<]*)</span>", head) == [
+        "Order",
+        "Kind",
+        "Source",
+        "Min",
+        "Max",
+        "",
+    ]
+    sent = client.get(f"/applydesk/operator/exercises/{EX}/process").text
+    assert 'title="Sent: the gate keeps its metrics">+ Metric' in sent
+
+
 def test_a_gate_lists_its_evaluator_sources(client: TestClient) -> None:
     """Ruling 27 (AD1G rungs 3-4): a gate's Evaluators are ranked sources,
     each a kind, its question or panel, a min and max, a Total within
