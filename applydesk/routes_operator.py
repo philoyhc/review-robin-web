@@ -81,7 +81,7 @@ def gate_evaluations(
         raise HTTPException(status_code=404)
     rows, spread = stages.assignments(exercise.public_id, found)
     pairs = stages.pairs_of(rows)
-    shown = stages.matching(pairs, q)
+    shown = stages.matching(pairs, q, exercise.blind)
     where = paging.page(len(shown), offset, paging.PAGE_SIZE)
     state = workflow.gate_state(exercise.public_id, found.key)
     return render(

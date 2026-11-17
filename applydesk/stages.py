@@ -1075,17 +1075,23 @@ def pairs_of(rows: tuple[Assignment, ...]) -> tuple[Pair, ...]:
     )
 
 
-def matching(pairs: tuple[Pair, ...], query: str) -> tuple[Pair, ...]:
+def matching(pairs: tuple[Pair, ...], query: str, blind: bool = False) -> tuple[Pair, ...]:
     """The pairs whose candidate (name, email, application or dossier ID)
     or evaluator (name or email) holds ``query``, any case; all for an
-    empty one."""
+    empty one. In a blind exercise a candidate is found by the dossier ID
+    the page shows, never by who they are (Codex on #3958)."""
     q = query.strip().casefold()
     if not q:
         return pairs
 
     def holds(p: Pair) -> bool:
         app = p.of.application
-        said = (app.applicant, app.email, app.public_id, app.dossier_id, p.name, p.email)
+        who = (
+            (app.dossier_id,)
+            if blind
+            else (app.applicant, app.email, app.public_id, app.dossier_id)
+        )
+        said = (*who, p.name, p.email)
         return any(q in text.casefold() for text in said)
 
     return tuple(p for p in pairs if holds(p))

@@ -587,6 +587,16 @@ def test_a_gate_s_page_finds_a_candidate_or_an_evaluator(client: TestClient) -> 
     assert "None of 184 matching" in none and "data-ev-row=" not in none
 
 
+def test_a_blind_gate_s_page_finds_a_candidate_only_by_the_dossier(client: TestClient) -> None:
+    """Codex on #3958: a blind page shows the dossier ID, so a search by
+    the applicant's name, email or application ID must not find them."""
+    base = f"/applydesk/operator/exercises/{BLIND}/evaluations/gate_1"
+    app = sample_data.applications_of(BLIND)[0]
+    for q in (app.applicant.split()[0], app.email, app.public_id):
+        assert "data-ev-row=" not in client.get(f"{base}?q={q}").text, q
+    assert f'data-ev-row="{app.public_id}"' in client.get(f"{base}?q={app.dossier_id}").text
+
+
 def test_a_gate_s_page_is_only_a_gate_s(client: TestClient) -> None:
     base = f"/applydesk/operator/exercises/{EX}/evaluations"
     for tail in ("gate_9", "gate_0", "gate_x", "g1", "gate_01"):
