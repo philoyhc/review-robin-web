@@ -628,7 +628,9 @@ def test_a_gate_item_makes_and_picks_its_panel(page: Page) -> None:
     issues = page.locator("[data-pc-issues]")
     assert "Gate 1 (Placement interview) has no evaluators." in issues.inner_text()
     assert page.locator("[data-o-panel]").text_content() == "No evaluators"
+    assert not page.locator("[data-unsaved]").is_visible()
     gate.locator('[data-ps-act="add"]').click()
+    assert page.locator("[data-unsaved]").is_visible()  # a source's buttons are changes
     assert "Gate 1 (Placement interview) has no panel chosen for source 1." in issues.inner_text()
     gate.locator('[data-ps="total-min"]').fill("1")
     gate.locator('[data-ps="total-max"]').fill("1")
@@ -775,6 +777,7 @@ def test_a_row_s_plus_adds_the_next_source_under_it(page: Page) -> None:
     """The author, 2026-11-17: + before × adds a source, no separate
     + Source while there are rows."""
     gate = _peer_copy(page)
+    assert gate.locator("[data-ps-headrow]").is_visible()  # over the rows
     gate.locator("[data-ps-row]").first.locator('[data-ps-act="insert"]').click()
     assert _kinds(gate) == ["nominated", "panel", "panel"]
     assert gate.locator("[data-ps-rank]").all_inner_texts() == ["1", "2", "3"]

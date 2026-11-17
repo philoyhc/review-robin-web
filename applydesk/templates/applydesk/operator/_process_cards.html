@@ -32,7 +32,7 @@
   <div class="pi-body">
   <p class="pc-line">The application form opens and closes on this stage's dates. Its questions are built on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>.</p>
   {# Which emails it sends (ruling 16); each one ticked is a template owed on Emails. #}
-  <div class="pc-release" data-pc-release>
+  <div class="pc-release pi-sec" data-pc-release>
     <span class="fc-l">Emails</span>
     <div class="pc-row pc-aud" role="group" aria-label="Applicants, from the form">
       <span class="pc-aud-h">Applicants</span>
@@ -150,7 +150,7 @@
       <div class="ps-row ps-total" data-ps-total>
         <span class="ps-rank"></span>
         <strong class="ps-kind">Total</strong>
-        <span class="ps-ref muted" data-ps-bounds>{% if ev[0] %}within {{ bounds[0] }}–{{ bounds[1] }}{% else %}No sources{% endif %}</span>
+        <span class="ps-bounds muted" data-ps-bounds>{% if ev[0] %}within {{ bounds[0] }}–{{ bounds[1] }}{% else %}No sources{% endif %}</span>
         <input class="fc-in" data-ps="total-min" value="{{ ev[1].min }}" inputmode="numeric" aria-label="Total: min"{{ sent_attr(sent) }}>
         <input class="fc-in" data-ps="total-max" value="{{ ev[1].max }}" inputmode="numeric" aria-label="Total: max"{{ sent_attr(sent) }}>
         <span class="ps-acts"></span>
@@ -173,7 +173,7 @@
   </div>
   {# Its results (ruling 21): up to three, each the field evaluators answer
      and how the answers become the result, which sets its type. #}
-  <div class="pc-results" data-pc-results>
+  <div class="pc-results pi-sec" data-pc-results>
     <span class="fc-l">Results</span>
     <div class="pr-list" data-pr-list>{% for r in g.results %}{{ result_row(r, g.via, sent) }}{% endfor %}</div>
     <p class="pc-line muted" data-pr-none{% if g.results %} hidden{% endif %}>No results yet: a gate yields up to three.</p>
@@ -199,7 +199,7 @@
   {# Its combined result: weights over the gates in its scope, those since
      the previous outcome (ruling 13); redrawn by the script as gates move. #}
   {% set wrows = weight_rows(plan, o) if o.key else () %}
-  <div class="pc-row pc-weights" data-pc-weights{% if o.key %} data-keys="{{ wrows | map(attribute=0) | join('|') }}"{% endif %}{% if wrows | length < 2 %} hidden{% endif %}>
+  <div class="pc-row pc-weights pi-sec" data-pc-weights{% if o.key %} data-keys="{{ wrows | map(attribute=0) | join('|') }}"{% endif %}{% if wrows | length < 2 %} hidden{% endif %}>
     <span class="fc-l pc-full">Combined result: a weighted average of the gates' numeric results before it</span>
     {% for k, pct in wrows %}
     <label class="fc-l pc-narrow"><span data-w-name>{{ result_label(k) }}</span><input class="fc-in" data-w-key="{{ k }}" value="{{ pct }}" inputmode="numeric" aria-label="{{ result_label(k) }}, percent"></label>
@@ -210,7 +210,7 @@
      each sees on signing in to their participant page, and an email. Each
      email ticked is a template owed on Emails (ruling 16): no template is
      picked here. #}
-  <div class="pc-release" data-pc-release>
+  <div class="pc-release pi-sec" data-pc-release>
     <span class="fc-l">When released</span>
     <p class="pc-line muted pc-hint">Update timeline: the timeline they see when they sign in. Send email: a template owed on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}">Emails</a>.</p>
     <div class="pc-row pc-aud" role="group" aria-label="Applicants, when released">

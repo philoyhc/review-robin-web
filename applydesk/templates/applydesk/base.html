@@ -516,16 +516,16 @@
     /* Room under every menu for its *Edit on Panels* link, shown or not,
        so the rows keep one height and their controls line up. */
     .ps-ref { position: relative; padding-bottom: 20px; }
-    .ps-ref .pick-edit { position: absolute; left: 0; bottom: 0; font-size: 13px; }
+    .ps-ref .pick-edit { position: absolute; left: 0; bottom: 0; padding-bottom: 0; font-size: 13px; line-height: 18px; }
     .ps-acts { display: inline-flex; gap: 4px; }
     .ps-total { border-top: 1px solid var(--border-subtle); padding-top: 8px; }
-    .ps-total .ps-kind, .ps-total .ps-ref { padding-top: 8px; }
+    .ps-total .ps-kind, .ps-total .ps-bounds { padding-top: 8px; }
     .ps-acts .btn { min-width: 34px; padding: 0 8px; }
     .ps-row > .np { grid-column: 1 / -1; order: 1; }
     .ps-mode { align-items: center; gap: 8px; }
     /* A gate's or an outcome's main sections, each under a rule. */
     .pi-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
-    .pi-sec > .fc-l:first-child, .pi-sec > .fc-l:first-child + * > .fc-l, .pi-sec.pc-row > .fc-l { margin-top: 0; }
+    .pi-sec > .fc-l:first-child, .pi-sec.pc-row > .fc-l { margin-top: 0; }
     @media (max-width: 640px) { .ps-row { grid-template-columns: 24px 1fr 1fr; } .ps-headrow { display: none; } }
     /* Evaluations' assignments (ruling 27, segment AD1G): a card per gate,
        collapsed to its head; each evaluator a pill marked by its source. */
