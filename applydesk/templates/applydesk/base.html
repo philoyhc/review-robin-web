@@ -509,16 +509,24 @@
     /* A gate item's panel and its members (segment AD1F, ruling 20). */
     /* A gate's evaluator sources (ruling 27, segment AD1G): rank, kind,
        which, min, max, actions; the Total row the same columns. */
-    .ps-row { display: grid; grid-template-columns: 24px 130px minmax(0, 1fr) 72px 72px 116px; gap: 8px; align-items: end; margin-top: 8px; }
-    .ps-rank { align-self: center; font-weight: 600; text-align: center; }
-    .ps-kind { align-self: center; }
-    .ps-n { display: flex; flex-direction: column; font-size: 12px; }
+    .ps-row { display: grid; grid-template-columns: 24px 120px minmax(0, 1fr) 64px 64px 150px; gap: 8px; align-items: start; margin-top: 8px; }
+    .ps-headrow { margin-top: 4px; font-size: 12px; color: var(--text-subtle); }
+    .ps-headrow[hidden], [data-ps-empty][hidden] { display: none; }
+    .ps-rank { align-self: start; padding-top: 8px; font-weight: 600; text-align: center; }
+    /* Room under every menu for its *Edit on Panels* link, shown or not,
+       so the rows keep one height and their controls line up. */
+    .ps-ref { position: relative; padding-bottom: 20px; }
+    .ps-ref .pick-edit { position: absolute; left: 0; bottom: 0; font-size: 13px; }
     .ps-acts { display: inline-flex; gap: 4px; }
     .ps-total { border-top: 1px solid var(--border-subtle); padding-top: 8px; }
+    .ps-total .ps-kind, .ps-total .ps-ref { padding-top: 8px; }
     .ps-acts .btn { min-width: 34px; padding: 0 8px; }
     .ps-row > .np { grid-column: 1 / -1; order: 1; }
     .ps-mode { align-items: center; gap: 8px; }
-    @media (max-width: 640px) { .ps-row { grid-template-columns: 24px 1fr 1fr; } }
+    /* A gate's or an outcome's main sections, each under a rule. */
+    .pi-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
+    .pi-sec > .fc-l:first-child, .pi-sec > .fc-l:first-child + * > .fc-l, .pi-sec.pc-row > .fc-l { margin-top: 0; }
+    @media (max-width: 640px) { .ps-row { grid-template-columns: 24px 1fr 1fr; } .ps-headrow { display: none; } }
     /* Evaluations' assignments (ruling 27, segment AD1G): a card per gate,
        collapsed to its head; each evaluator a pill marked by its source. */
     .ev-h { margin: 24px 0 8px; }

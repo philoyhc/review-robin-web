@@ -726,6 +726,8 @@ def test_sources_are_ranked_and_removed(page: Page) -> None:
     # Removing Panel A leaves the Total's max above what is left.
     gate.locator("[data-ps-row]").first.locator('[data-ps-act="remove"]').click()
     assert _kinds(gate) == ["nominated"]
+    # Focus goes to the row that took its place.
+    assert gate.locator('[data-ps-act="remove"]').evaluate("e => e === document.activeElement")
     assert gate.locator("[data-ps-bounds]").text_content() == "within 0–1"
     issues = page.locator("[data-pc-issues]")
     assert "has its Total's max above the sources' maxes together (1)." in issues.inner_text()
@@ -736,12 +738,14 @@ def test_sources_are_ranked_and_removed(page: Page) -> None:
     gate.locator("[data-ps-row]").first.locator('[data-ps-act="remove"]').click()
     assert gate.locator('[data-ps-act="add"]').evaluate("e => e === document.activeElement")
     assert gate.locator("[data-ps-bounds]").text_content() == "No sources"
+    assert not gate.locator("[data-ps-headrow]").is_visible()
     assert gate.locator("[data-pi-panel]").text_content() == "No evaluators"
 
 
 def test_a_source_takes_its_kind_and_its_bounds(page: Page) -> None:
     gate = _peer_copy(page)
-    gate.locator('[data-ps-act="add"]').click()
+    assert not gate.locator('[data-ps-act="add"]').is_visible()  # a row's + adds instead
+    gate.locator("[data-ps-row]").nth(1).locator('[data-ps-act="insert"]').click()
     added = gate.locator("[data-ps-row]").nth(2)
     assert added.locator('[data-ps="kind"]').evaluate("e => e === document.activeElement")
     assert added.locator("[data-ps-rank]").text_content() == "3"
@@ -765,6 +769,18 @@ def test_a_source_takes_its_kind_and_its_bounds(page: Page) -> None:
         gate.locator("[data-pi-panel]").text_content()
         == "Nominated 0–1 · Panel A 1–2 · Nominated 3–? · Total 2"
     )
+
+
+def test_a_row_s_plus_adds_the_next_source_under_it(page: Page) -> None:
+    """The author, 2026-11-17: + before × adds a source, no separate
+    + Source while there are rows."""
+    gate = _peer_copy(page)
+    gate.locator("[data-ps-row]").first.locator('[data-ps-act="insert"]').click()
+    assert _kinds(gate) == ["nominated", "panel", "panel"]
+    assert gate.locator("[data-ps-rank]").all_inner_texts() == ["1", "2", "3"]
+    added = gate.locator("[data-ps-row]").nth(1)
+    assert added.locator('[data-ps="kind"]').evaluate("e => e === document.activeElement")
+    assert added.locator('[data-ps="min"]').input_value() == "1"
 
 
 def test_the_assignment_mode_is_one_of_three(page: Page) -> None:

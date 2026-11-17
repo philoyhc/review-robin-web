@@ -136,7 +136,7 @@
       row.querySelector('[data-ps="question"]').setAttribute("aria-label", "Source " + n + ": question");
       row.querySelector('[data-ps="min"]').setAttribute("aria-label", "Source " + n + ": min");
       row.querySelector('[data-ps="max"]').setAttribute("aria-label", "Source " + n + ": max");
-      [["up", "Move source " + n + " up", i === 0], ["down", "Move source " + n + " down", i === rows.length - 1], ["remove", "Remove source " + n, false]].forEach(function (a) {
+      [["up", "Move source " + n + " up", i === 0], ["down", "Move source " + n + " down", i === rows.length - 1], ["insert", "Add a source after source " + n, false], ["remove", "Remove source " + n, false]].forEach(function (a) {
         var b = row.querySelector('[data-ps-act="' + a[0] + '"]');
         b.setAttribute("aria-label", a[1]);
         if (!sent) b.disabled = a[2];
@@ -144,6 +144,9 @@
     });
     var b = srcBounds(sourcesOf(item));
     item.querySelector("[data-ps-bounds]").textContent = rows.length ? "within " + b[0] + "–" + b[1] : "No sources";
+    // The columns' names show over rows; with none, + Source stands alone.
+    item.querySelector("[data-ps-headrow]").hidden = !rows.length;
+    item.querySelector("[data-ps-empty]").hidden = rows.length > 0;
   }
   // The members of the gate's panel sources, each once, in rank order.
   function sourceMembers(item) {
@@ -160,24 +163,29 @@
   function sourceEvent(e) {
     var b = e.target.closest("[data-ps-act], [data-ps-mode] [data-mode]");
     if (!b || b.disabled) return false;
-    var item = b.closest(".pc-item"), box = item.querySelector("[data-pc-sources]");
+    var item = b.closest(".pc-item");
     if (b.dataset.mode) {
       if (b.getAttribute("aria-pressed") === "true") return true;  // already chosen: no change
-      box.querySelectorAll("[data-mode]").forEach(function (m) { m.setAttribute("aria-pressed", m === b ? "true" : "false"); });
+      item.querySelectorAll("[data-ps-mode] [data-mode]").forEach(function (m) { m.setAttribute("aria-pressed", m === b ? "true" : "false"); });
       return true;
     }
     var act = b.dataset.psAct, row = b.closest("[data-ps-row]");
-    if (act === "add") {
+    if (act === "add" || act === "insert") {
+      // A row's + adds the next source under it; + Source, the first.
       var added = fresh("pc-new-source");
-      item.querySelector("[data-ps-total]").before(added);
+      if (row) row.after(added); else item.querySelector("[data-ps-total]").before(added);
       drawSources(item);
       changed();
       added.querySelector('[data-ps="kind"]').focus();
     } else if (act === "remove") {
+      // Focus goes to the row taking its place, else the one above, else
+      // + Source.
+      var next = row.nextElementSibling, prev = row.previousElementSibling;
       row.remove();
       drawSources(item);
       changed();
-      box.querySelector('[data-ps-act="add"]').focus();
+      var stay = next && next.matches("[data-ps-row]") ? next : prev && prev.matches("[data-ps-row]") ? prev : null;
+      (stay ? stay.querySelector('[data-ps-act="remove"]') : item.querySelector('[data-ps-act="add"]')).focus();
     } else {
       var other = act === "up" ? row.previousElementSibling : row.nextElementSibling;
       if (act === "up") other.before(row); else other.after(row);
@@ -702,7 +710,7 @@
         var srcBox = item.querySelector("[data-pc-sources]");
         if (srcBox) {
           srcBox.removeAttribute("data-sent");
-          srcBox.querySelectorAll("[data-ps], [data-ps-act], [data-mode]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
+          item.querySelectorAll("[data-pc-sources] [data-ps], [data-pc-sources] [data-ps-act], [data-ps-mode] [data-mode]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
           drawSources(item);
         }
         // Its results, how it runs and + Result are its own to set too.
