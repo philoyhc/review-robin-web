@@ -743,7 +743,7 @@
         if (addF) { addF.removeAttribute("data-sent"); addF.disabled = false; addF.removeAttribute("title"); }
         var addR = item.querySelector('[data-pr-act="add"]');
         if (addR) { addR.removeAttribute("data-sent"); addR.disabled = false; addR.removeAttribute("title"); }
-        if (item.dataset.item === "gate") drawResults(item);  // three at most, as anywhere (Codex)
+        if (item.dataset.item === "gate") drawFields(item);  // its fields, and three results at most (Codex)
       });
       // The copy's rules and weights read its own gates and outcome.
       added.querySelectorAll(".pc-item[data-key]").forEach(function (item) {
@@ -843,7 +843,7 @@
         var outcome = card.querySelector('.pc-item[data-item="outcome"]');
         var anchor = kind === "gate" && outcome ? outcome : card.querySelector(".pc-empty");
         anchor.before(added);
-        if (kind === "gate") drawResults(added);  // its first result, numbered
+        if (kind === "gate") drawFields(added);  // its first field and result, numbered and shaped (Codex)
         changed();
         // A new gate opens its Gate card, so its name can be typed at once.
         var own = added.querySelector('details[data-gsec="gate"]');

@@ -1190,3 +1190,18 @@ def test_a_sent_gate_keeps_its_fields(page: Page) -> None:
     g3 = _item(page, "g3")
     assert g3.locator('[data-rf-act="add"]').is_disabled()
     assert g3.locator("[data-rf-ed]").first.evaluate("e => e.disabled")
+
+
+def test_a_new_gate_s_field_shows_only_its_type_s_settings(page: Page) -> None:
+    """Codex on #3950: a gate added in the browser drew its results but not
+    its fields, so its Integer field showed Max length and Options too."""
+    page.goto(PAGE)
+    review = _cards(page).nth(1)
+    _open(review)
+    review.locator('[data-pc-act="gate"]').click()
+    new = review.locator('.pc-item[data-item="gate"]').nth(2)
+    fld = _field(new, 0)
+    assert fld.locator('[data-q-g="number"]').is_visible()
+    assert not fld.locator('[data-q-g="string"]').is_visible()
+    assert not fld.locator('[data-q-g="list"]').is_visible()
+    assert fld.locator("[data-rf-n]").text_content() == "1"

@@ -120,15 +120,16 @@
       <label class="fc-l pc-wide">Label<input class="fc-in" data-q="label" value="{{ f.label }}" placeholder="e.g. Rating"></label>
       <label class="fc-l">Type<select class="fc-in" data-q="type">{% for k, l in field_types %}<option value="{{ k }}"{% if k == t.type %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
     </div>
-    <div class="pc-row" data-q-g="number">
+    {# Only the type's own settings show, from the first draw (Codex). #}
+    <div class="pc-row" data-q-g="number"{% if t.type not in ("integer", "decimal") %} hidden{% endif %}>
       <label class="fc-l pc-narrow">Min<input class="fc-in" data-q="min" inputmode="decimal" value="{{ t.min if t.type in ('integer', 'decimal') }}"></label>
       <label class="fc-l pc-narrow">Max<input class="fc-in" data-q="max" inputmode="decimal" value="{{ t.max if t.type in ('integer', 'decimal') }}"></label>
       <label class="fc-l pc-narrow">Step<input class="fc-in" data-q="step" inputmode="decimal" value="{{ t.step if t.type in ('integer', 'decimal') }}"></label>
     </div>
-    <div class="pc-row" data-q-g="string">
+    <div class="pc-row" data-q-g="string"{% if t.type != "string" %} hidden{% endif %}>
       <label class="fc-l pc-narrow">Max length<input class="fc-in" data-q="maxlen" inputmode="numeric" value="{{ t.max if t.type == 'string' }}"></label>
     </div>
-    <div class="pc-row" data-q-g="list">
+    <div class="pc-row" data-q-g="list"{% if t.type != "list" %} hidden{% endif %}>
       <label class="fc-l pc-wide">Options (comma-separated)<input class="fc-in" data-q="options" value="{{ t.options }}"></label>
     </div>
     <label class="gsw"><input type="checkbox" data-q="required"{% if f.required %} checked{% endif %}> <strong>Required</strong></label>
