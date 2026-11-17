@@ -295,7 +295,7 @@ def test_the_chrome_follows_the_operator_s_workflow(client: TestClient) -> None:
     assert re.findall(tab, setup) == ["Process", "Form", "Panels", "Emails"]  # ruling 20
     assert re.findall(tab, ops) == ["Dossiers", "Evaluations", "Extract data"]  # ruling 25
     assert '<nav class="crumbs" aria-label="Breadcrumb">' in text
-    assert "<h1>Undergraduate Research Fellowship 2027</h1>" in text
+    assert "<h1>Recruitment and Selection of Residential Assistants</h1>" in text
 
 
 def test_the_status_row_says_where_each_item_stands(client: TestClient) -> None:
@@ -304,7 +304,7 @@ def test_the_status_row_says_where_each_item_stands(client: TestClient) -> None:
     row = re.sub(r"<[^>]+>", "", row[: row.index("</p>")])
     assert row == (
         "Exercise: Published · Form: Closed · Gates: 2 of 3 done · "
-        "Outcomes: 1 of 3 released · Emails: 4 of 6 · Applications: 89 submitted"
+        "Outcomes: 1 of 2 released · Emails: 3 of 5 · Applications: 100 submitted"
     )
     blank = client.get(f"/applydesk/operator/exercises/{BLANK}/process").text
     assert 'Gates: <span class="chip chip-warn">none</span>' in blank
@@ -322,7 +322,7 @@ def test_the_retired_sections_are_gone(client: TestClient, old: str) -> None:
 
 @pytest.mark.parametrize(
     ("exercise_id", "now"),
-    [(DRAFT, "Stage 1"), (OPEN, "Stage 1"), (EX, "Interview"), (BLIND, "Stage 2")],
+    [(DRAFT, "Stage 1"), (OPEN, "Stage 1"), (EX, "Interviews"), (BLIND, "Stage 2")],
 )
 def test_the_lobby_names_each_exercise_s_current_stage(
     client: TestClient, exercise_id: str, now: str
@@ -351,20 +351,17 @@ def test_process_is_a_stack_of_stage_cards(client: TestClient) -> None:
     full = client.get(f"/applydesk/operator/exercises/{EX}/process").text
     text = _page(full)
     names = re.findall(r'<span class="fc-q" data-sum="name">([^<]+)</span>', text)
-    assert names == ["Call for applications", "Review", "Interview", "Decision"]
-    assert len(_stage_cards(text)) == 4
+    assert names == ["Applications", "Review", "Interviews"]
+    assert len(_stage_cards(text)) == 3
     items = re.findall(r'<div class="pc-item" data-item="(\w+)"', text)
-    assert items == ["form", "gate", "gate", "outcome", "gate", "outcome", "outcome"]
-    assert "Combined ≥ 4.2 → Shortlisted, else Not shortlisted" in text
-    assert 'value="30" inputmode="numeric" aria-label="Rating at Peer Review, percent"' in text
-    # Every numeric result in scope is drawn; one not weighed reads 0.
-    assert 'data-w-key="g2.r2" value="0"' in text
-    assert "Decided by hand" in text  # Final results
+    assert items == ["form", "gate", "gate", "outcome", "gate", "outcome"]
+    # Ruling 30's rules, branched, as the Dossiers page's headers.
+    assert "Shortlisting is Re-appointment → Selected; else if Shortlisting is Interview" in text
     # Ruling 16: an outcome ticks whom it emails; Emails holds the template.
     assert "data-rel-template" not in text
-    assert len(re.findall(r'data-rel="applicants-email" checked', text)) == 3
+    assert len(re.findall(r'data-rel="applicants-email" checked', text)) == 2
     assert len(re.findall(r'data-rel="evaluators-email" checked', text)) == 1
-    assert "4 stages · 3 gates · 3 outcomes" in full
+    assert "3 stages · 3 gates · 2 outcomes" in full
     assert "announcement" not in text.lower()  # the exercise's own setup (author)
     # Ruling 15's shape, as the inert buttons say it.
     assert 'disabled title="A stage holding the form holds no gate">+ Gate' in text
@@ -402,19 +399,18 @@ def test_a_gate_item_carries_its_evaluators(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
     chips = re.findall(r"data-pi-panel>([^<]*)<", text)
     assert chips[:3] == [
-        "Nominated 0–1 · Panel A 1–2 · Total 2",
-        "Panel B 1 · Total 1",
-        "Interviewers 2 · Total 2",
+        "Current RAs 29–30 · Total 29–30",
+        "Office staff 5 · Total 5",
+        "Residential staff 2 · Total 2",
     ]
     assert "data-pc-members" not in text  # members are on Panels, not listed (author)
-    # The Review stage's gates have opened: their panel menus are fixed (the
-    # Peer Review's nominated row has one too, hidden); the Interview gate,
-    # not yet sent, is still set here (ruling 29).
-    assert text.count('data-pc-panel data-ps="panel" disabled title="Its session has opened') == 3
+    # The Review stage's gates have opened: their panel menus are fixed; the
+    # staff interview, not yet sent, is still set here (ruling 29).
+    assert text.count('data-pc-panel data-ps="panel" disabled title="Its session has opened') == 2
     # A gate picks a panel, never Institution-wide.
     at = text.index("data-pc-panel")
     menu = text[at : text.index("</select>", at)]
-    assert ">Institution-wide<" not in menu and ">Reviewer pool<" in menu
+    assert ">Institution-wide<" not in menu and ">Residential staff<" in menu
     assert ">+ New panel…</option>" in menu
     # No gate page to send anyone to.
     assert "/gates" not in text
@@ -436,15 +432,14 @@ def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> N
     text = client.get(f"/applydesk/operator/exercises/{EX}/emails").text
     names = re.findall(r'<section class="card" data-email="([^"]+)">', text)
     assert names == [
-        "Call for applications: Receipt - Applicants",
-        "Call for applications: Reminder - Applicants",
+        "Applications: Receipt - Applicants",
+        "Applications: Reminder - Applicants",
         "Review: Outcome - Applicants",
-        "Interview: Outcome - Applicants",
-        "Interview: Outcome - Panel evaluators",
-        "Decision: Outcome - Applicants",
+        "Interviews: Outcome - Applicants",
+        "Interviews: Outcome - Panel evaluators",
     ]
     chips = re.findall(r'<span class="chip chip-\w+">(Written|Owed)</span>', text)
-    assert chips == ["Written", "Written", "Written", "Written", "Owed", "Owed"]
+    assert chips == ["Written", "Written", "Written", "Owed", "Owed"]
     # Ruling 23: a Save on each template card, none for the page.
     cards = text.split('<section class="card" data-email=')[1:]
     assert all(c.split("</section>")[0].count(">Save</button>") == 1 for c in cards)
@@ -455,7 +450,7 @@ def test_evaluations_lists_each_gate_s_progress(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/evaluations").text
     assert re.findall(r'<tr data-gate="(\w+)">', text) == ["g1", "g2", "g3"]
     # Mid-stage (ruling 29): the Interview gate is ready, not yet sent.
-    assert "Send to Review Robin</button>" in text and "18 of 27" not in text
+    assert "Send to Review Robin</button>" in text and "100 of 100 reviewed" in text
 
 
 def test_extract_data_collates_every_evaluation_and_exports(client: TestClient) -> None:
@@ -465,8 +460,8 @@ def test_extract_data_collates_every_evaluation_and_exports(client: TestClient) 
     assert "<h2>Evaluation responses</h2>" in text
     for column in ("Assessment", "Interview", "Pool reviewer"):
         assert f"<th>{column}" in text
-    assert "2 of 2 submitted · mean 4.5 of 5" in text  # from Review Robin
-    assert "Received from Dr Hana Ito" in text  # the pool reviewer
+    assert "Peer review 29 of 29 · Office checks 5 of 5" in text  # from Review Robin
+    assert "Not interviewed: re-appointment" in text
     assert "Pull results from Review Robin" in text
     assert "<h2>Export bundle</h2>" in text and "Download export" in text
 
@@ -524,67 +519,72 @@ def test_a_set_up_draft_lists_only_what_it_lacks(client: TestClient) -> None:
 def test_evaluations_shows_each_gate_s_assignments(client: TestClient) -> None:
     """Ruling 27, and AD1H's page per gate: Evaluations keeps a short card
     per gate (mode, counts, load) linking to the gate's page, which holds
-    a row per entered dossier with its evaluators marked by source and
-    its state; a sent gate's operations disabled, saying why."""
+    a row per pair, its source and its state; a sent gate's operations
+    disabled, saying why."""
     text = client.get(f"/applydesk/operator/exercises/{EX}/evaluations").text
     assert re.findall(r'data-ev-gate="(\w+)" data-mode="(\w+)"', text) == [
         ("g1", "automatic"),
-        ("g2", "suggested"),
-        ("g3", "automatic"),
+        ("g2", "automatic"),
+        ("g3", "suggested"),
     ]
     g1 = text[text.index('data-ev-gate="g1"') : text.index('data-ev-gate="g2"')]
-    assert "92 dossiers · 92 filled" in g1
-    assert re.search(r"Panel A: Zoe Tan \d+ · Lars Berg \d+", g1)
-    link = f'href="/applydesk/operator/exercises/{EX}/evaluations/gate_1">Assignments (184 pairs)'
+    assert "100 dossiers · 100 filled" in g1
+    assert re.search(r"Current RAs: Aisha Bello \d+ · ", g1)
+    link = f'href="/applydesk/operator/exercises/{EX}/evaluations/gate_1">Assignments (2,980 rows)'
     assert link in g1
     assert "data-ev-row" not in text  # the rows are the gate's page's
     page = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_1").text
-    assert "<title>Gate 1 · Peer Review · Undergraduate Research Fellowship 2027" in page
-    # A row per pair (author, 2026-11-17): two evaluators each.
-    assert page.count("data-ev-row=") == 184 == page.count("data-ev-pair=")
-    assert 'data-ev-source="Nominated"' in page and 'data-ev-source="Panel A"' in page
+    assert "<title>Gate 1 · Peer review · Recruitment and Selection of Residential" in page
+    # A row per pair (author, 2026-11-17), 200 to a page.
+    assert page.count("data-ev-row=") == 200 == page.count('data-ev-source="Current RAs"')
     assert 'data-ev-act="rerun" disabled title="Its session has opened' in page
-    assert "1–184 of 184" in page and "data-ev-pager" in page
-    assert "Next page" not in page  # one page: no steps
-    g2 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_2").text
-    assert ">Approved<" in g2 and 'data-ev-act="approve-all" disabled' in g2
-    assert 'data-ev-act="remove" aria-label="Remove Ana Lim from ' in g2
+    assert "1–200 of 2,980" in page
+    g3 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text
+    # Ready, not sent (ruling 29): its pairs suggested, still the operator's.
+    assert g3.count("data-ev-row=") == 80 and g3.count(">Suggested<") == 80
+    assert 'data-ev-act="approve-all" disabled>Approve all' in g3  # inert until AD1G 6b
+    assert 'data-ev-act="remove" aria-label="Remove ' in g3 and "Its session has opened" not in g3
 
 
-def test_a_gate_s_page_shows_200_rows_at_a_time(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Segment AD1H: a page of rows at a time, as Review Robin's rosters;
-    the offset snapped to a page and clamped to the last; the steps and
-    the range menu keep the filter."""
-    monkeypatch.setattr(paging, "PAGE_SIZE", 40)
+def test_a_gate_s_page_shows_200_rows_at_a_time(client: TestClient) -> None:
+    """Segment AD1H: Gate 1's 2,980 pairs, 200 at a time, as Review
+    Robin's rosters; the offset snapped to a page and clamped to the last;
+    the steps and the range menu keep the filter."""
     base = f"/applydesk/operator/exercises/{EX}/evaluations/gate_1"
     first = client.get(base).text
-    assert first.count("data-ev-row=") == 40 and "1–40 of 184" in first
-    assert f'href="{base}?offset=40#ev-table-card" aria-label="Next page"' in first
+    assert f'href="{base}?offset=200#ev-table-card" aria-label="Next page"' in first
     assert 'is-inactive" aria-disabled="true" aria-label="Previous page"' in first
     ranges = re.findall(r"<li>(?:<a [^>]*>|<span [^>]*>)([^<]+)<", first)
-    assert ranges == ["1–40", "41–80", "81–120", "121–160", "161–184"]
-    last = client.get(f"{base}?offset=999").text
-    assert last.count("data-ev-row=") == 24 and "161–184 of 184" in last
-    assert "41–80 of 184" in client.get(f"{base}?offset=45").text  # snapped to its page
-    assert client.get(f"{base}?offset=-5").text.count("data-ev-row=") == 40
+    assert len(ranges) == 15 and ranges[0] == "1–200" and ranges[-1] == "2,801–2,980"
+    last = client.get(f"{base}?offset=99999").text
+    assert last.count("data-ev-row=") == 180 and "2,801–2,980 of 2,980" in last
+    assert "201–400 of 2,980" in client.get(f"{base}?offset=250").text  # snapped to its page
+    assert client.get(f"{base}?offset=-5").text.count("data-ev-row=") == 200
     found = client.get(f"{base}?q=example.edu").text  # every row: the filter kept
-    assert f'href="{base}?q=example.edu&amp;offset=40#ev-table-card"' in found
+    assert f'href="{base}?q=example.edu&amp;offset=200#ev-table-card"' in found
 
 
 def test_a_gate_s_page_finds_a_candidate_or_an_evaluator(client: TestClient) -> None:
     base = f"/applydesk/operator/exercises/{EX}/evaluations/gate_1"
     one = client.get(f"{base}?q=KENJI").text
-    assert one.count('data-ev-row="h6zr2tdw9p"') == 2 == one.count("data-ev-row=")
+    # Kenji's 30 reviewers; Kenji reviews no one, not being an RA.
+    assert one.count('data-ev-row="h6zr2tdw9p"') == 30 == one.count("data-ev-row=")
     assert "matching “KENJI”" in one
     assert f'<a class="btn btn-secondary" href="{base}">Clear</a>' in one
-    zoe = client.get(f"{base}?q=zoe.tan@example.edu").text  # her pairs only
-    n = zoe.count("data-ev-row=")
-    assert 0 < n < 92 and n == zoe.count('data-ev-pair="zoe.tan@example.edu"')
-    assert f"of {n} matching" in zoe
+    aisha = client.get(f"{base}?q=aisha.bello@example.edu").text
+    # Hers: 29 reviewing her, and the 99 others she reviews.
+    assert aisha.count('data-ev-row="m3qx8vkt2n"') == 29
+    assert aisha.count('data-ev-pair="aisha.bello@example.edu"') == 99
+    assert "1–128 of 128 matching" in aisha
     none = client.get(f"{base}?q=nobody-at-all").text
-    assert "None of 184 matching" in none and "data-ev-row=" not in none
+    assert "None of 2,980 matching" in none and "data-ev-row=" not in none
+
+
+def test_a_gate_s_page_reads_a_bad_offset_as_the_first_page(client: TestClient) -> None:
+    base = f"/applydesk/operator/exercises/{EX}/evaluations/gate_1"
+    for offset in ("abc", "1.5", ""):
+        page = client.get(f"{base}?offset={offset}")
+        assert page.status_code == 200 and "1–200 of 2,980" in page.text, offset
 
 
 def test_a_blind_gate_s_page_finds_a_candidate_only_by_the_dossier(client: TestClient) -> None:
@@ -595,6 +595,18 @@ def test_a_blind_gate_s_page_finds_a_candidate_only_by_the_dossier(client: TestC
     for q in (app.applicant.split()[0], app.email, app.public_id):
         assert "data-ev-row=" not in client.get(f"{base}?q={q}").text, q
     assert f'data-ev-row="{app.public_id}"' in client.get(f"{base}?q={app.dossier_id}").text
+
+
+def test_a_sent_suggested_gate_s_pairs_are_approved_and_fixed(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Once its session opens (ruling 29), a Suggested gate's pairs read
+    Approved and its operations are Review Robin's."""
+    monkeypatch.setitem(workflow._GATES[EX], "g3", ("Sent", "12 of 80 reviewed"))  # pyright: ignore[reportPrivateUsage]  -- a sample's state
+    page = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text
+    assert page.count(">Approved<") == 80 and ">Suggested<" not in page
+    assert 'data-ev-act="approve-all" disabled title="Its session has opened' in page
+    assert "Its session has opened: its pairs are Review Robin's to change." in page
 
 
 def test_a_gate_s_page_is_only_a_gate_s(client: TestClient) -> None:
@@ -671,20 +683,25 @@ def test_the_timeline_steps_follow_the_stages() -> None:
     all_steps = workflow.steps(e)
     assert [s.title for s in all_steps] == [
         "Application form",
-        "Peer Review",
-        "Faculty Panel Review",
-        "Shortlist for interview",
-        "Interview",
-        "Finalists",
-        "Final results",
+        "Peer review",
+        "Office checks",
+        "Shortlisting",
+        "Staff interview",
+        "Selection",
         "Close and archive",
     ]
     # Next is the earliest step not done: Gate 3, ready to send (ruling 29).
     now = workflow.next_step(all_steps)
-    assert now is not None and (now.title, now.state, now.action) == ("Interview", "Ready", "Send…")
-    assert workflow.current_stage(e) == "Interview"
-    final = next(s for s in all_steps if s.title == "Final results")
-    assert final.blocked == "Not ready: its email to applicants is not written"
+    assert now is not None and (now.title, now.state, now.action) == (
+        "Staff interview",
+        "Ready",
+        "Send…",
+    )
+    assert workflow.current_stage(e) == "Interviews"
+    final = next(s for s in all_steps if s.title == "Selection")
+    assert (
+        final.blocked == "Not ready: its emails to applicants and panel evaluators are not written"
+    )
 
 
 @pytest.mark.parametrize(
@@ -730,10 +747,10 @@ def test_the_breadcrumb_ends_at_the_page(client: TestClient) -> None:
     crumbs = crumbs[: crumbs.index("</nav>")]
     assert re.findall(r">([^<>/]+)</(?:a|span)>", crumbs) == [
         "Exercises",
-        "Undergraduate Research Fellowship 2027",
+        "Recruitment and Selection of Residential Assistants",
         "Process",
     ]
-    assert f'<a href="/applydesk/operator/exercises/{EX}">Undergraduate' in crumbs
+    assert f'<a href="/applydesk/operator/exercises/{EX}">Recruitment' in crumbs
 
 
 def test_every_panel_is_offered_to_a_gate(client: TestClient) -> None:
@@ -756,7 +773,7 @@ def test_the_close_follows_the_last_stage_with_something_to_decide(client: TestC
         assert e is not None
         return workflow.steps(e)[-1].when
 
-    assert close_line(EX) == "After 12 Dec"
+    assert close_line(EX) == "After 4 Dec"
     assert close_line(OPEN) == "After the last outcome"  # only the application yet
     assert close_line(BLANK) == "After the last outcome"
     assert "After Dates not set" not in client.get(f"/applydesk/operator/exercises/{BLANK}").text
@@ -771,8 +788,8 @@ def test_an_exercise_whose_applications_came_from_elsewhere(
     monkeypatch.setitem(stages._STAGES, EX, upstream)  # pyright: ignore[reportPrivateUsage]  -- as above
     e = sample_data.exercise(EX)
     assert e is not None
-    assert [s.title for s in workflow.steps(e)][0] == "Peer Review"
-    assert workflow.current_stage(e) == "Interview"
+    assert [s.title for s in workflow.steps(e)][0] == "Peer review"
+    assert workflow.current_stage(e) == "Interviews"
     text = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
     assert re.findall(r"<th class=\"ap-first\"[^>]*><b>([^<]+)</b>", text) == ["Dossiers"]
     assert "From elsewhere" in text
@@ -795,12 +812,12 @@ def test_a_gate_stage_may_come_before_the_application(
     e = sample_data.exercise(EX)
     assert e is not None
     titles = [s.title for s in workflow.steps(e)]
-    assert titles.index("Faculty Panel Review") < titles.index("Application form")
+    assert titles.index("Office checks") < titles.index("Application form")
     text = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
     groups = re.findall(r"<th class=\"ap-(?:first|r)\"[^>]*><b>([^<]+)</b>", text)
-    assert groups == ["Dossiers", "Review", "Interview", "Decision"]
+    assert groups == ["Dossiers", "Review", "Interviews"]
     assert "From elsewhere" not in text
-    assert workflow.current_stage(e) == "Interview"
+    assert workflow.current_stage(e) == "Interviews"
 
 
 def test_an_application_stage_later_in_the_timeline_keeps_the_headers_aligned(
@@ -809,14 +826,16 @@ def test_an_application_stage_later_in_the_timeline_keeps_the_headers_aligned(
     """An application stage that is not first, holding an outcome: its
     group sits at its place, once, and the group spans match the columns."""
     model = stages._STAGES[EX]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
-    review, decision = model[1], model[3]
-    apply = stages.Stage(9, "Apply", "1 Sep – 15 Oct", decision.columns, form=True)
-    monkeypatch.setitem(stages._STAGES, EX, (review, apply, model[2]))  # pyright: ignore[reportPrivateUsage]  -- as above
+    review, interviews = model[1], model[2]
+    selection = stages.Stage(4, "Later", "", interviews.columns[1:])
+    interview = stages.Stage(3, "Interviews", "", interviews.columns[:1])
+    apply = stages.Stage(9, "Apply", "1 Sep – 15 Oct", selection.columns, form=True)
+    monkeypatch.setitem(stages._STAGES, EX, (review, interview, apply))  # pyright: ignore[reportPrivateUsage]  -- as above
     text = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
     start = text.index('<tr class="ap-groups">')
     head = text[start : text.index("</thead>", start)]
     groups = re.findall(r"<th class=\"ap-(?:first|r)\"[^>]*><b>([^<]+)</b>", head)
-    assert groups == ["Dossiers", "Review", "Apply", "Interview"]
+    assert groups == ["Dossiers", "Review", "Interviews", "Apply"]
     spans = sum(int(n) for n in re.findall(r'colspan="(\d+)"', head))
     second = head[head.index("</tr>") :]
     assert spans == second.count("<th")
@@ -828,12 +847,9 @@ def test_an_owed_email_holds_back_only_a_release_to_come() -> None:
     ex = sample_data.exercise(EX)
     assert ex is not None
     by_title = {s.title: s for s in workflow.steps(ex)}
-    assert by_title["Shortlist for interview"].blocked == ""  # released
-    assert by_title["Finalists"].blocked == (
-        "Not ready: its email to panel evaluators is not written"
-    )
-    assert by_title["Final results"].blocked == (
-        "Not ready: its email to applicants is not written"
+    assert by_title["Shortlisting"].blocked == ""  # released
+    assert by_title["Selection"].blocked == (
+        "Not ready: its emails to applicants and panel evaluators are not written"
     )
 
 
@@ -860,23 +876,22 @@ def test_panels_is_one_table_a_column_per_panel(client: TestClient) -> None:
     heads = re.findall(
         r'<th scope="col" class="pn-col" id="panel-[\w-]+" data-panel="([\w-]+)"', text
     )
-    assert heads == ["panel-a", "panel-b", "pool", "interviewers"]
+    assert heads == ["current-ras", "office", "residential-staff"]
     assert re.findall(r'<span class="pn-h" data-pn-name>([^<]+)</span>', text) == [
-        "Panel A",
-        "Panel B",
-        "Reviewer pool",
-        "Interviewers",
+        "Current RAs",
+        "Office staff",
+        "Residential staff",
     ]
     # Each person once, ticked on the panels they sit on.
     body = text[text.index("data-pn-body") : text.index("</tbody>")]
-    assert body.count("<tr data-pn-row>") == 8
-    row = text[text.index('value="Zoe Tan"') :]
+    assert body.count("<tr data-pn-row>") == 48
+    row = text[text.index('value="Aisha Bello"') :]
     row = row[: row.index("</tr>")]
     ticks = re.findall(r'data-pn-panel="([\w-]+)"( checked)?', row)
-    assert [k for k, on in ticks if on] == ["panel-a"]
-    # Used by, worked out from the form and the gates.
-    assert "Form: Preferred reviewer" in text and "Gate 3: Interview" in text
-    assert "data-pn-people>8<" in text and "data-pn-inuse>· 4 in use<" in text
+    assert [k for k, on in ticks if on] == ["current-ras"]
+    # Used by, worked out from the gates.
+    assert "Gate 1: Peer review" in text and "Gate 3: Staff interview" in text
+    assert "data-pn-people>48<" in text and "data-pn-inuse>· 3 in use<" in text
 
 
 def test_a_panel_nothing_uses_may_be_retired(client: TestClient) -> None:
@@ -917,15 +932,15 @@ def test_the_roster_lists_each_person_once_taking_a_later_name_and_note(
 
 def test_what_uses_each_panel_and_what_was_sent_with_it() -> None:
     assert stages.panel_uses(EX) == {
-        "pool": ("Form: Preferred reviewer",),
-        "panel-a": ("Gate 1: Peer Review",),
-        "panel-b": ("Gate 2: Faculty Panel Review",),
-        "interviewers": ("Gate 3: Interview",),
+        "current-ras": ("Gate 1: Peer review",),
+        "office": ("Gate 2: Office checks",),
+        "residential-staff": ("Gate 3: Staff interview",),
     }
-    assert workflow.panels_sent(EX) == {  # the Interview gate not yet sent
-        "panel-a": ("Gate 1",),
-        "panel-b": ("Gate 2",),
+    assert workflow.panels_sent(EX) == {  # the staff interview not yet sent
+        "current-ras": ("Gate 1",),
+        "office": ("Gate 2",),
     }
+    assert stages.panel_uses(OPEN) == {"pool": ("Form: Preferred reviewer",)}
     assert workflow.panels_sent(DRAFT) == {}
 
 
@@ -934,8 +949,8 @@ def test_panels_says_a_sent_gate_keeps_its_roster(client: TestClient) -> None:
     note = "Gate 1 was sent with the roster as it then stood: changes apply from its next send."
     assert f'<span class="pn-sent">{note}</span>' in text  # under Manage panels
     assert f'title="{note}">Sent</span>' in text  # and as its column's chip
-    item = text[text.index('<li data-panel="pool">') :]
-    assert "sent" not in item[: item.index("</li>")]  # the form's pool: no gate
+    item = text[text.index('<li data-panel="residential-staff">') :]
+    assert "sent" not in item[: item.index("</li>")]  # the staff interview: not yet sent
 
 
 # --- Segment AD1F rung 5b: a gate's results (ruling 21) ---
@@ -1023,15 +1038,16 @@ def test_every_derivation_a_field_allows_is_known() -> None:
 def test_a_gate_item_lists_its_results_and_what_review_robin_asks(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
     g1 = text[text.index('data-key="g1"') : text.index('data-key="g2"')]
-    assert re.findall(r'class="pr-name" data-pr-name>([^<]+)<', g1) == ["Rating", "Comments"]
-    # A result names the field it collates (ruling 28).
-    assert "From Rating · Mean, from 2 or more → Decimal 1 to 5" in g1
-    assert '<option value="rating" selected>Rating</option>' in g1
+    assert re.findall(r'class="pr-name" data-pr-name>([^<]+)<', g1) == ["Mean score", "Comments"]
+    # A result names the field it collates (ruling 28), its 0s left out (30).
+    assert "From Score · Mean, ignoring 0 → Decimal 0 to 5" in g1
+    assert '<option value="score" selected>Score</option>' in g1
+    assert 'data-r="ignore_zero" checked' in g1
     assert "data-pi-results>2 results<" in g1
     # Review Robin asks the response fields, a required one saying so.
     assert (
-        "For Review Robin, each evaluator answers: <strong>Rating</strong> (Integer 1 to 5,"
-        " step 1, required); <strong>Comments</strong> (String, up to 2000 characters)."
+        "For Review Robin, each evaluator answers: <strong>Score</strong> (Integer 0 to 5,"
+        " step 1, required); <strong>Comment</strong> (String, up to 2000 characters)."
     ) in g1
     # Every gate runs in Review Robin (ruling 28): the draft's too, its
     # derivations a decimal field's, none entered here.
@@ -1048,18 +1064,12 @@ def test_a_key_names_a_gate_s_result() -> None:
     plan = stages.plan_of(EX)
     assert stages.split_key("g2.r2") == ("g2", "r2")
     assert stages.split_key("g2") == ("g2", "r1")  # a bare gate reads its first
-    assert stages.result_label(plan, "g2.r2") == "Recommendation at Faculty Panel Review"
-    assert stages.result_label(plan, "g2.r9") == "Result at Faculty Panel Review"
+    assert stages.result_label(plan, "g2.r2") == "Minor concerns at Office checks"
+    assert stages.result_label(plan, "g2.r9") == "Result at Office checks"
     assert stages.result_label(plan, "gone.r1") == "Result at (removed)"
-    o2 = next(c for c in plan.columns if c.key == "o2")
-    assert stages.rule_text(plan, o2) == (
-        "Score at Interview ≥ 4.0 → Finalist, else Not a finalist"
-    )
-    list_rule = stages.Rule((("res", "g2.r2", "is", "Fund"),), "Finalist", "Not a finalist")
+    list_rule = stages.Rule((("res", "g2.r1", "is", "Fund"),), "Yes", "No")
     with_list = stages.Outcome("ox", 9, "X", (), "", "", rule=list_rule)
-    assert stages.rule_text(plan, with_list).startswith(
-        "Recommendation at Faculty Panel Review is Fund"
-    )
+    assert stages.rule_text(plan, with_list).startswith("Major concerns at Office checks is Fund")
 
 
 def test_what_a_rule_may_do_with_a_result() -> None:
@@ -1075,21 +1085,23 @@ def test_a_combined_result_reads_named_results_and_skips_a_0_weight() -> None:
     plan = stages.plan_of(EX)
     o1 = next(c for c in plan.columns if c.key == "o1")
     assert isinstance(o1, stages.Outcome)
-    row = next(r for r in plan.rows if r.cells["g2"].extra)
+    row = next(r for r in plan.rows if dict(r.cells["g2"].extra).get("r2", "0") != "0")
     g1, g2 = row.cells["g1"].result, row.cells["g2"].result
     assert g1 is not None and g2 is not None
-    assert stages.combined(row, o1) == round(0.3 * g1 + 0.7 * g2, 2)
-    share = float(dict(row.cells["g2"].extra)["r2"])
-    on_share = stages.Outcome("ox", 9, "X", (), "", "", (("g2.r2", 1.0), ("g1.r1", 0.0)))
-    assert stages.combined(row, on_share) == share
-    # Process draws every numeric result in scope, 0 for one not weighed.
-    assert stages.weight_rows(plan, o1) == (("g1.r1", 30), ("g2.r1", 70), ("g2.r2", 0))
+    weighed = stages.Outcome("ox", 9, "X", (), "", "", (("g1.r1", 0.3), ("g2.r1", 0.7)))
+    assert stages.combined(row, weighed) == round(0.3 * g1 + 0.7 * g2, 2)
+    minor = float(dict(row.cells["g2"].extra)["r2"])
+    on_minor = stages.Outcome("ox", 9, "X", (), "", "", (("g2.r2", 1.0), ("g1.r1", 0.0)))
+    assert stages.combined(row, on_minor) == minor
+    # Process draws every numeric result in scope, 0 for one not weighed:
+    # the Shortlisting weighs none, its rule reading the results alone.
+    assert stages.weight_rows(plan, o1) == (("g1.r1", 0), ("g2.r1", 0), ("g2.r2", 0))
 
 
 def test_applications_carries_a_gate_s_other_results(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
     assert re.search(r'data-result="[\d.]+" data-r2="\d+"', text)
-    assert "Rating at Peer Review 30% · Score at Faculty Panel Review 70%" in text
+    assert "Interview score at Staff interview 100%" in text
 
 
 def test_a_0_weight_on_an_unknown_result_leaves_the_combined_result_known() -> None:
@@ -1136,18 +1148,18 @@ def test_a_gate_card_follows_ruling_28(client: TestClient) -> None:
     assert '<details class="gsec" data-gsec="gate" open' not in gate  # shut on load
     sums = re.findall(r"data-gsec-sum>([^<]*)<", gate)
     assert sums[0].startswith("Review Robin session · Enters: Status is Submitted")
-    assert sums[1] == "Nominated 0–1 · Panel A 1–2 · Total 2 · Automatic"
+    assert sums[1] == "Current RAs 29–30 · Total 29–30 · Automatic"
     assert '<select class="fc-in" data-pc="type" disabled' in gate
     assert ">Review Robin session</option>" in gate
-    assert "Two reviewers read each dossier" in gate  # its description
+    assert "Every current RA scores every applicant" in gate  # its description
     assert 'data-pc="confidential"' in gate and ">Confidential<" in gate
     order = [
         gate.index(m)
         for m in ('data-gsec="gate"', 'data-gsec="evaluators"', ">Response fields<", ">Results<")
     ]
     assert order == sorted(order)
-    assert re.findall(r'data-rf="(\w+)"', gate) == ["rating", "comments"]
-    assert "Integer 1 to 5, step 1 · Required · Help: 1 weak, 5 outstanding" in gate
+    assert re.findall(r'data-rf="(\w+)"', gate) == ["score", "comment"]
+    assert "Integer 0 to 5, step 1 · Required · Help: 0 = Don" in gate
     assert "Runs as" not in text and "Entered here" not in text
     head = gate[gate.index("data-ps-headrow>") :]
     head = head[: head.index("</div>")]
@@ -1199,11 +1211,11 @@ def test_a_gate_lists_its_evaluator_sources(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
     gate = text[text.index('data-item="gate"') : text.index('data-pc-act="remove-gate"')]
     rows = re.findall(r'data-ps-row data-kind="(\w+)"', gate)
-    assert rows == ["nominated", "panel"]
-    assert "<option selected>Preferred reviewer</option>" in gate
-    assert re.findall(r'data-ps="(?:min|max)" value="(\d*)"', gate) == ["0", "1", "1", "2"]
-    assert re.findall(r'data-ps="total-(?:min|max)" value="(\d*)"', gate) == ["2", "2"]
-    assert "within 1–3" in gate
+    assert rows == ["panel"]
+    assert '<option value="current-ras" selected>Current RAs</option>' in gate
+    assert re.findall(r'data-ps="(?:min|max)" value="(\d*)"', gate) == ["29", "30"]
+    assert re.findall(r'data-ps="total-(?:min|max)" value="(\d*)"', gate) == ["29", "30"]
+    assert "within 29–30" in gate
     assert '<option value="automatic" selected>Automatic</option>' in gate
     assert '<select class="fc-in" data-ps="mode" disabled' in gate
     for control in ('data-ps="kind"', 'data-ps-act="up"', 'data-ps-act="add"', 'data-ps="min"'):

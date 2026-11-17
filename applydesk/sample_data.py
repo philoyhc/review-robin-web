@@ -91,18 +91,22 @@ class Pool(TypedDict):
 EXERCISES: tuple[Exercise, ...] = (
     Exercise(
         public_id="wa9juxbc2t",
-        code="URF-2027",
-        name="Undergraduate Research Fellowship 2027",
+        code="RA-2027",
+        name="Recruitment and Selection of Residential Assistants",
         state="Published",
-        # The model exercise (author, 2026-11-13): partway through
-        # evaluation, its Interview stage under way (`applydesk/stages.py`).
+        # The model exercise (ruling 30, segment AD1H): the author's RA
+        # recruitment, in the middle of Stage 3, its interview pairs being
+        # approved (`applydesk/stages.py`).
         form_open=False,
         eligibility="Open to all signed in",
         blind=False,
         opens="1 Sep 2026",
-        application_stage_ends="15 Oct 2026, 23:59",
-        expected_outcome="12 Dec 2026",
-        summary="Funding for a semester of supervised research, with a stipend.",
+        application_stage_ends="30 Sep 2026, 23:59",
+        expected_outcome="December 2026",
+        summary=(
+            "Residential Assistants look after the residents of their house for"
+            " the 2027/28 academic year; current RAs may apply to return."
+        ),
     ),
     Exercise(
         public_id="k7mfr3pq8z",
@@ -163,14 +167,16 @@ EXERCISES: tuple[Exercise, ...] = (
 )
 
 _WRITTEN: tuple[Application, ...] = (
+    # The model exercise's (ruling 30): Aisha a current RA applying to
+    # return, Kenji a new applicant, Wen's still a draft.
     Application(
         "m3qx8vkt2n",
         "wa9juxbc2t",
         "Aisha Bello",
         "aisha.bello@example.edu",
-        "Soil microbes and drought tolerance",
+        "RA application · Tembusu House",
         "Submitted",
-        "3 Oct 2026",
+        "3 Sep 2026",
         "p3bd7kq2wx",
     ),
     Application(
@@ -178,9 +184,9 @@ _WRITTEN: tuple[Application, ...] = (
         "wa9juxbc2t",
         "Kenji Russo",
         "kenji.russo@example.edu",
-        "Low-cost sensors for air quality",
+        "RA application · Cendana House",
         "Submitted",
-        "5 Oct 2026",
+        "5 Sep 2026",
         "r9ck4xbm7t",
     ),
     Application(
@@ -188,9 +194,9 @@ _WRITTEN: tuple[Application, ...] = (
         "wa9juxbc2t",
         "Wen Novak",
         "wen.novak@example.edu",
-        "Oral histories of a fishing village",
+        "RA application · Saga House",
         "Draft",
-        "14 Oct 2026",
+        "14 Sep 2026",
         "w5jh8ntq3d",
     ),
     Application(
@@ -300,28 +306,27 @@ _LAST = (
     "Ng",
     "Abbott",
 )
-_TOPICS = (
-    "Coral bleaching thresholds",
-    "Bias in loan approval models",
-    "Urban heat islands",
-    "Microplastics in mangroves",
-    "Early modern letter networks",
-    "Battery recycling yields",
-    "Sleep and exam performance",
-    "Street food and public health",
-    "Translation of folk songs",
-    "Soft robots for fruit picking",
-    "Rainwater harvesting in high-rises",
-    "Dialect drift online",
-)
+#: The houses an RA may serve in (ruling 30's sample).
+RESIDENCES: tuple[str, ...] = ("Cendana House", "Elm House", "Saga House", "Tembusu House")
+
+
+def _person(n: int, names: set[str]) -> tuple[str, str]:
+    """The ``n``-th invented person, a name not yet in ``names``."""
+    first, k = _FIRST[n % len(_FIRST)], (n * 7) % len(_LAST)
+    while f"{first} {_LAST[k]}" in names:  # one person per name
+        k = (k + 1) % len(_LAST)
+    name = f"{first} {_LAST[k]}"
+    names.add(name)
+    return name, f"{first.lower()}.{_LAST[k].lower()}@example.edu"
 
 
 def _generated() -> tuple[Application, ...]:
-    import random
-
+    """The model exercise's other applications (ruling 30): one each, 98
+    more submitted (100 in all), two drafts and one withdrawn before the
+    form closed; names, IDs and dates the same on every run."""
     from applydesk.ids import PUBLIC_ID_ALPHABET, PUBLIC_ID_LENGTH
 
-    rng = random.Random("wa9juxbc2t")
+    rng = random.Random("wa9juxbc2t ra")
     taken = {"m3qx8vkt2n", "h6zr2tdw9p", "f2ps7nyh4k", "b8yd3mkr6v", "q4tw9hcz3x"}
 
     def new_id() -> str:
@@ -331,64 +336,49 @@ def _generated() -> tuple[Application, ...]:
                 taken.add(value)
                 return value
 
+    states = ["Submitted"] * 98 + ["Draft"] * 2 + ["Withdrawn"]
+    rng.shuffle(states)
+    names = {"Aisha Bello", "Kenji Russo", "Wen Novak"}
     made: list[Application] = []
-    names: set[str] = set()
-    for n in range(97):
-        first, k = _FIRST[n % len(_FIRST)], (n * 7) % len(_LAST)
-        while f"{first} {_LAST[k]}" in names:  # one person per name
-            k = (k + 1) % len(_LAST)
-        last = _LAST[k]
-        names.add(f"{first} {last}")
-        roll = rng.random()
-        state = "Draft" if roll < 0.06 else "Withdrawn" if roll < 0.10 else "Submitted"
-        day = rng.randint(2, 15) if state != "Withdrawn" else rng.randint(16, 31)
+    for n, state in enumerate(states):
+        name, email = _person(n, names)
+        day = 18 if state == "Withdrawn" else rng.randint(2, 30)
         made.append(
             Application(
                 new_id(),
                 "wa9juxbc2t",
-                f"{first} {last}",
-                f"{first.lower()}.{last.lower()}@example.edu",
-                f"{_TOPICS[n % len(_TOPICS)]}",
+                name,
+                email,
+                f"RA application · {rng.choice(RESIDENCES)}",
                 state,
-                f"{day} Oct 2026",
+                f"{day} Sep 2026",
                 new_id(),
             )
         )
-    # One applicant sends twice (author, 2026-11-12): the first is
-    # withdrawn when the second is submitted.
-    twice = made[2]
-    made.insert(
-        2,
-        replace(
-            twice,
-            public_id=new_id(),
-            dossier_id=new_id(),
-            state="Withdrawn",
-            submitted="4 Oct 2026",
-        ),
-    )
-    made[3] = replace(twice, state="Submitted", submitted="5 Oct 2026")
-    # Another sends two and keeps both (author, 2026-11-13: a gate may
-    # take only the last N submitted by each applicant).
-    first = next(m for m in made[10:] if m.state == "Submitted")
-    made.append(
-        replace(
-            first,
-            public_id=new_id(),
-            dossier_id=new_id(),
-            title="A second proposal: " + first.title.lower(),
-            submitted="15 Oct 2026",
-        )
-    )
     return tuple(made)
 
 
 APPLICATIONS: tuple[Application, ...] = _WRITTEN + _generated()
 
+
+def _current_ras() -> tuple[Member, ...]:
+    """The 30 current RAs (ruling 30): 20 applying to return, Aisha among
+    them, and 10 who are not; each with their house."""
+    rng = random.Random("wa9juxbc2t current RAs")
+    mine = [a for a in APPLICATIONS if a.exercise_id == "wa9juxbc2t" and a.state == "Submitted"]
+    returning = [mine[0], *rng.sample([a for a in mine[2:]], 19)]  # Aisha; never Kenji
+    names = {a.applicant for a in APPLICATIONS}
+    leaving = [_person(200 + n, names) for n in range(10)]
+    people = [(a.applicant, a.email) for a in returning] + leaving
+    return tuple(
+        Member(name, email, RESIDENCES[i % len(RESIDENCES)])
+        for i, (name, email) in enumerate(people)
+    )
+
+
+CURRENT_RAS: tuple[Member, ...] = _current_ras()
+
 ASSESSORS: tuple[Assessor, ...] = (
-    Assessor("wa9juxbc2t", "Zoe Tan", "zoe.tan@example.edu", ("m3qx8vkt2n", "h6zr2tdw9p")),
-    Assessor("wa9juxbc2t", "Lars Berg", "lars.berg@example.edu", ("m3qx8vkt2n",)),
-    Assessor("wa9juxbc2t", "Ana Lim", "ana.lim@example.edu", ("h6zr2tdw9p",)),
     Assessor("k7mfr3pq8z", "Priya Rao", "priya.rao@example.edu", ("b8yd3mkr6v", "q4tw9hcz3x")),
     Assessor("k7mfr3pq8z", "Mei Chen", "mei.chen@example.edu", ("q4tw9hcz3x",)),
 )
@@ -398,15 +388,57 @@ ASSESSORS: tuple[Assessor, ...] = (
 # ASSESSORS above keeps only who each assessor is asked to review (AD5,
 # AD6); which panel they sit on is here.
 PANELS: tuple[Panel, ...] = (
+    # The model exercise's three (ruling 30): the current RAs, who review
+    # every applicant but themselves; the offices, who check every one;
+    # the residential staff, two of whom interview each shortlisted.
+    Panel("wa9juxbc2t", "current-ras", "Current RAs", CURRENT_RAS),
     Panel(
         "wa9juxbc2t",
+        "office",
+        "Office staff",
+        (
+            Member("Grace Lim", "grace.lim@example.edu", "Housing Office"),
+            Member("Daniel Ong", "daniel.ong@example.edu", "Student Conduct"),
+            Member("Farida Hassan", "farida.hassan@example.edu", "Counselling"),
+            Member("Marcus Wee", "marcus.wee@example.edu", "Finance"),
+            Member("Irene Goh", "irene.goh@example.edu", "Student Life"),
+        ),
+    ),
+    Panel(
+        "wa9juxbc2t",
+        "residential-staff",
+        "Residential staff",
+        tuple(
+            Member(name, f"{name.split()[-2].lower()}.{name.split()[-1].lower()}@example.edu", note)
+            for name, note in (
+                ("Dr Hana Ito", "Master, Tembusu House"),
+                ("Dr Omar Aziz", "Master, Cendana House"),
+                ("Dr Ruth Kahn", "Master, Elm House"),
+                ("Dr Sara Ng", "Master, Saga House"),
+                ("Prof Ivan Petrov", "Resident Fellow"),
+                ("Dr Mei Lin", "Resident Fellow"),
+                ("Dr Tom Reyes", "Resident Fellow"),
+                ("Dr Asha Nair", "Resident Fellow"),
+                ("Dr Ken Sato", "Resident Fellow"),
+                ("Dr Lucy Park", "Resident Fellow"),
+                ("Ms Joy Tan", "Residence Manager"),
+                ("Mr Ravi Das", "Residence Manager"),
+                ("Ms Nora Lee", "Residential Life"),
+            )
+        ),
+    ),
+    # The conference grant, open for applications, has its panels ready
+    # (AD1H: the fellowship's four, the builders' sample since the model
+    # exercise became the RA recruitment).
+    Panel(
+        "r6tm4kq9wz",
         "panel-a",
         "Panel A",
         (Member("Zoe Tan", "zoe.tan@example.edu"), Member("Lars Berg", "lars.berg@example.edu")),
     ),
-    Panel("wa9juxbc2t", "panel-b", "Panel B", (Member("Ana Lim", "ana.lim@example.edu"),)),
+    Panel("r6tm4kq9wz", "panel-b", "Panel B", (Member("Ana Lim", "ana.lim@example.edu"),)),
     Panel(
-        "wa9juxbc2t",
+        "r6tm4kq9wz",
         "pool",
         "Reviewer pool",
         (
@@ -416,7 +448,7 @@ PANELS: tuple[Panel, ...] = (
         ),
     ),
     Panel(
-        "wa9juxbc2t",
+        "r6tm4kq9wz",
         "interviewers",
         "Interviewers",
         (
@@ -448,6 +480,16 @@ def _roster(exercise_id: str, key: str) -> tuple[Evaluator, ...]:
 
 # The applicant form's two sections, as an applicant fills them in
 # (spec §5.1): the dossier shows the first only.
+_SHOWN_RA: tuple[tuple[str, str], ...] = (
+    ("Year of study", ""),
+    ("Faculty", ""),
+    ("Currently an RA?", ""),
+    ("Residence", ""),
+    ("Why you want to be an RA", "What you would bring to your house's residents."),
+    ("Relevant experience", "Leadership, peer support or community work."),
+)
+_NOT_SHOWN_RA: tuple[str, ...] = ("Preferred name", "Matriculation number")
+
 SHOWN_TO_REVIEWERS: tuple[tuple[str, str], ...] = (
     ("Project title", ""),
     (
@@ -470,14 +512,12 @@ NOT_SHOWN_TO_REVIEWERS: tuple[str, ...] = (
 # interviews, and the reviewer an applicant chose from the pool.
 RESPONSES: dict[str, dict[str, str]] = {
     "m3qx8vkt2n": {
-        "assessment": "2 of 2 submitted · mean 4.5 of 5",
-        "interview": "Not yet",
-        "pool": "Received from Dr Hana Ito",
+        "assessment": "Peer review 29 of 29 · Office checks 5 of 5",
+        "interview": "Not interviewed: re-appointment",
     },
     "h6zr2tdw9p": {
-        "assessment": "1 of 2 submitted",
+        "assessment": "Peer review 30 of 30 · Office checks 5 of 5",
         "interview": "Not yet",
-        "pool": "Awaited from Dr Omar Aziz",
     },
 }
 
@@ -593,6 +633,80 @@ SAMPLE_FORM: tuple[FormCard, ...] = (
 
 FORM_DESCRIPTION = "Tell us about the project you propose for the semester."
 
+#: The model exercise's form (ruling 30): the usual fields, whether the
+#: applicant is a current RA among them, which its rules read.
+_RA_FORM: tuple[FormCard, ...] = (
+    FormCard("section", label="About you"),
+    FormCard(
+        "field",
+        "text",
+        "Applying to be a Residential Assistant",
+        help=(
+            "Your name and email come from your sign-in. Reviewers read the questions marked shown."
+        ),
+        shown=True,
+    ),
+    FormCard("field", "string", "Preferred name", max="60"),
+    FormCard("field", "string", "Matriculation number", min="9", max="9", required=True),
+    FormCard(
+        "field",
+        "list",
+        "Year of study",
+        options="Year 1, Year 2, Year 3, Year 4, Graduate",
+        required=True,
+        shown=True,
+    ),
+    FormCard(
+        "field",
+        "list",
+        "Faculty",
+        options=(
+            "Arts and Social Sciences, Business, Computing, Engineering, Law, Medicine, Science"
+        ),
+        required=True,
+        shown=True,
+    ),
+    FormCard(
+        "field",
+        "list",
+        "Currently an RA?",
+        help="Yes if you are an RA this year and apply to return.",
+        options="Yes, No",
+        required=True,
+        shown=True,
+    ),
+    FormCard(
+        "field",
+        "list",
+        "Residence",
+        help="The house you would serve in.",
+        options=", ".join(RESIDENCES),
+        required=True,
+        shown=True,
+    ),
+    FormCard("pagebreak"),
+    FormCard("section", label="Your application"),
+    FormCard(
+        "field",
+        "string",
+        "Why you want to be an RA",
+        help="What you would bring to your house's residents.",
+        max="2000",
+        required=True,
+        shown=True,
+    ),
+    FormCard(
+        "field",
+        "string",
+        "Relevant experience",
+        help="Leadership, peer support or community work.",
+        max="2000",
+        shown=True,
+    ),
+    FormCard("field", "photo", "Photo", help="A recent head-and-shoulders photo."),
+)
+_RA_DESCRIPTION = "Apply to be a Residential Assistant for 2027/28, or to return as one."
+
 
 def form_cards(exercise_id: str) -> tuple[FormCard, ...]:
     """The Form page's cards: one empty question for a form with none."""
@@ -603,7 +717,7 @@ def form_cards(exercise_id: str) -> tuple[FormCard, ...]:
     pools = people_pools(exercise_id)
     return tuple(
         replace(c, pool="institution") if c.type == "people" and c.pool not in pools else c
-        for c in SAMPLE_FORM
+        for c in (_RA_FORM if exercise_id == "wa9juxbc2t" else SAMPLE_FORM)
     )
 
 
@@ -611,7 +725,9 @@ def form_heading(exercise_id: str) -> tuple[str, str]:
     """The form's own title and description."""
     if exercise_id in EMPTY_FORMS:
         return "", ""
-    return "Application form", FORM_DESCRIPTION
+    return "Application form", (
+        _RA_DESCRIPTION if exercise_id == "wa9juxbc2t" else FORM_DESCRIPTION
+    )
 
 
 def form_snapshot(exercise_id: str) -> dict[str, object]:
@@ -737,6 +853,10 @@ def answers(exercise_id: str, application: Application) -> dict[str, str]:
     for label, options in list_questions(exercise_id).items():
         if options:
             out[label] = random.Random(f"answer {application.public_id} {label}").choice(options)
+    if exercise_id == "wa9juxbc2t":  # what the sample knows, not chance
+        ras = {m.email.casefold() for m in CURRENT_RAS}
+        out["Currently an RA?"] = "Yes" if application.email.casefold() in ras else "No"
+        out["Residence"] = application.title.split(" · ")[-1]
     return out
 
 
@@ -810,6 +930,8 @@ def form_of(exercise_id: str) -> tuple[tuple[tuple[str, str], ...], tuple[str, .
     """The application form's two sections: shown to reviewers, not shown."""
     if exercise_id in EMPTY_FORMS:
         return (), ()
+    if exercise_id == "wa9juxbc2t":
+        return _SHOWN_RA, _NOT_SHOWN_RA
     return SHOWN_TO_REVIEWERS, NOT_SHOWN_TO_REVIEWERS
 
 

@@ -261,89 +261,111 @@ class Plan:
         return next((st for st in self.stages if st.form), None)
 
 
-# The model exercise's rules, as Setup will hold them (author, 2026-11-13).
-# Gates 1 and 2 run together and take each applicant's last submitted
-# application; the shortlist reads their combined result; the interview
-# takes the shortlist; Finalists reads the interview; Final results is
-# decided by hand.
-_EVERYONE = Rule(
-    (("status", "", "is", "Submitted"), ("last", "", "le", "1")), "Entered", "Not entered"
-)
 _LIKERT = Field("integer", "1", "5", "1")
+
+# The model exercise (ruling 30, segment AD1H): the RA recruitment. One
+# application each, so a gate takes every submitted one. Stage 2 reviews
+# every applicant twice over: the current RAs score them (0 is *don't
+# know*, so the mean leaves it out) and the offices flag concerns; the
+# shortlist sends a current RA to re-appointment and a new applicant to
+# interview. Stage 3 interviews them, two residential staff each, and
+# selects the best 20 beside the re-appointed.
+_SUBMITTED = Rule((("status", "", "is", "Submitted"),), "Entered", "Not entered")
+_SCORE = Field("integer", "0", "5", "1")
+_CONCERNS = Field("list", options="No concerns, Minor concerns, Major concerns")
+_COMMENT = Field("string", max="2000")
 _G1 = Gate(
     "g1",
     1,
-    "Peer Review",
+    "Peer review",
     "RRW",
     (
-        GateResult("r1", "Rating", _LIKERT, "mean", at_least=2, source="rating"),
-        GateResult("r2", "Comments", Field("string", max="2000"), "join", source="comments"),
+        GateResult("r1", "Mean score", _SCORE, "mean", source="score", ignore_zero=True),
+        GateResult("r2", "Comments", _COMMENT, "join", source="comment"),
     ),
-    _EVERYONE,
-    "panel-a",
-    # Ruling 27's shape (segment AD1G): the candidate's preferred reviewer
-    # first, Panel A topping up to two.
-    (Source("nominated", "Preferred reviewer", 0, 1), Source("panel", "panel-a", 1, 2)),
-    Total(2, 2),
-    description=(
-        "Two reviewers read each dossier's Shown to reviewers part and rate it,"
-        " one the applicant's preferred reviewer where they named one."
-    ),
+    _SUBMITTED,
+    "current-ras",
+    # Every current RA reviews every applicant but themselves: 30 for a
+    # new applicant, 29 for a returning one.
+    (Source("panel", "current-ras", 29, 30),),
+    Total(29, 30),
+    description="Every current RA scores every applicant, never themselves.",
     fields=(
-        ResponseField("rating", "Rating", _LIKERT, True, "1 weak, 5 outstanding"),
-        ResponseField("comments", "Comments", Field("string", max="2000")),
+        ResponseField("score", "Score", _SCORE, True, "0 = Don't know enough about this candidate"),
+        ResponseField("comment", "Comment", _COMMENT),
     ),
 )
 _G2 = Gate(
     "g2",
     2,
-    "Faculty Panel Review",
+    "Office checks",
     "RRW",
     (
-        GateResult("r1", "Score", _LIKERT, "mean"),
-        GateResult(
-            "r2",
-            "Recommendation",
-            Field("list", options="Fund, Fund if possible, Do not fund"),
-            "share",
-            "Fund",
-        ),
+        GateResult("r1", "Major concerns", _CONCERNS, "share", "Major concerns", source="concerns"),
+        GateResult("r2", "Minor concerns", _CONCERNS, "share", "Minor concerns", source="concerns"),
+        GateResult("r3", "Comments", _COMMENT, "join", source="comment"),
     ),
-    _EVERYONE,
-    "panel-b",
-    # Its pairs were suggested, then approved before sending (AD1G).
-    mode="suggested",
+    _SUBMITTED,
+    "office",
+    (Source("panel", "office", 5, 5),),
+    Total(5, 5),
+    description="Each office checks every applicant, mainly to mark out cases with concerns.",
+    confidential=True,
+    fields=(
+        ResponseField("concerns", "Concerns", _CONCERNS, True),
+        ResponseField("comment", "Comment", _COMMENT),
+    ),
 )
+_PASSED = (("res", "g1.r1", "ge", "3.5"), ("res", "g2.r1", "lt", "1"))
 _O1 = Outcome(
     "o1",
     1,
-    "Shortlist for interview",
-    ("Shortlisted", "Not shortlisted"),
-    "10 Nov",
-    "10 Nov · to applicants",
-    (("g1.r1", 0.3), ("g2.r1", 0.7)),
-    Rule((("comb", "", "ge", "4.2"),), "Shortlisted", "Not shortlisted"),
+    "Shortlisting",
+    ("Re-appointment", "Interview", "Not shortlisted"),
+    "6 Nov",
+    "6 Nov · to applicants",
+    rule=Rule(
+        (*_PASSED, ("form", "Currently an RA?", "is", "Yes")),
+        "Re-appointment",
+        "Not shortlisted",
+        ((_PASSED, "Interview"),),
+    ),
 )
 _G3 = Gate(
     "g3",
     3,
-    "Interview",
+    "Staff interview",
     "RRW",
-    (GateResult("r1", "Score", _LIKERT, "mean", at_least=2),),
-    Rule((("out", "o1", "is", "Shortlisted"),), "Entered", "Not entered"),
-    "interviewers",
+    (
+        GateResult("r1", "Interview score", _LIKERT, "mean", at_least=2, source="score"),
+        GateResult("r2", "Comments", _COMMENT, "join", source="comment"),
+    ),
+    Rule((("out", "o1", "is", "Interview"),), "Entered", "Not entered"),
+    "residential-staff",
+    (Source("panel", "residential-staff", 2, 2),),
+    Total(2, 2),
+    mode="suggested",
+    description="Two residential staff interview each applicant, the load spread.",
+    fields=(
+        ResponseField("score", "Score", _LIKERT, True, "1 weak, 5 outstanding"),
+        ResponseField("comment", "Comment", _COMMENT, True),
+    ),
 )
 _O2 = Outcome(
     "o2",
     2,
-    "Finalists",
-    ("Finalist", "Not a finalist"),
-    "24 Nov",
+    "Selection",
+    ("Selected", "Not selected"),
+    "4 Dec",
     "",
     (("g3.r1", 1.0),),
-    Rule((("res", "g3.r1", "ge", "4.0"),), "Finalist", "Not a finalist"),
+    Rule(
+        (("out", "o1", "is", "Re-appointment"),),
+        "Selected",
+        "Not selected",
+        (((("out", "o1", "is", "Interview"), ("top", "g3.r1", "le", "20")), "Selected"),),
+    ),
 )
-_O3 = Outcome("o3", 3, "Final results", ("Awarded", "Waitlisted", "Not awarded"), "12 Dec", "")
 
 _STAGES: dict[str, tuple[Stage, ...]] = {
     # A draft still being set up (segment AD1F): its selection gate added
@@ -367,12 +389,9 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
     ),
     # The model exercise (author, 2026-11-13): its stages named.
     "wa9juxbc2t": (
-        Stage(1, "Call for applications", "1 Sep – 15 Oct", form=True),
-        Stage(2, "Review", "16 Oct – 10 Nov", (_G1, _G2, _O1)),
-        Stage(3, "Interview", "11 Nov – 24 Nov", (_G3, _O2)),
-        # The reviews and interviews collated for an offline discussion,
-        # then the decision: a stage holding only an outcome.
-        Stage(4, "Decision", "25 Nov – 12 Dec", (_O3,)),
+        Stage(1, "Applications", "1 Sep – 30 Sep", form=True),
+        Stage(2, "Review", "1 Oct – 6 Nov", (_G1, _G2, _O1)),
+        Stage(3, "Interviews", "9 Nov – 4 Dec", (_G3, _O2)),
     ),
     # A smaller exercise, read blind by one panel; its second stage not
     # yet named.
@@ -407,88 +426,70 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
 
 
 def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
-    """The model exercise mid-way, as its rules left it plus a few hands:
-    one application excluded as not eligible, one added to the interview,
-    two whose peer reviews are still coming; the Interview stage's outcomes not yet
-    decided."""
-    rng = random.Random("wa9juxbc2t rounds")
-    rating = {a.public_id: round(rng.uniform(2.4, 4.9), 1) for a in apps}
-    score = {
-        a.public_id: round(min(5.0, rating[a.public_id] + rng.uniform(-0.6, 0.6)), 1) for a in apps
-    }
-    rank = submitted_rank(tuple(Row(a, {}) for a in apps))
+    """The RA recruitment in the middle of Stage 3 (ruling 30): every
+    submitted application reviewed and checked; 15 of the 20 current RAs
+    to re-appointment and 40 new applicants to interview, one of them by
+    hand; the interviews entered but not yet sent, so no scores and
+    Selection pending, a re-appointed RA's as much as an interviewee's."""
+    rng = random.Random("wa9juxbc2t ra rounds")
+    ras = {m.email.casefold() for m in sample_data.CURRENT_RAS}
     submitted = [a for a in apps if a.state == "Submitted"]
-    excluded = submitted[5].public_id  # not eligible, set by hand
-    late = {submitted[-1].public_id, submitted[-2].public_id}  # reviews still coming
-    keys = ("g1", "g2", "o1", "g3", "o2", "o3")
-    added = ""
-
+    returning = [a for a in submitted if a.email.casefold() in ras]
+    new = [a for a in submitted if a.email.casefold() not in ras]
+    # Aisha returns and Kenji is interviewed: the pages' examples.
+    back = {returning[0].public_id, *(a.public_id for a in rng.sample(returning[1:], 14))}
+    ahead = {new[0].public_id, *(a.public_id for a in rng.sample(new[1:], 39))}
+    # One the panel asked to interview, just under the bar (set by hand).
+    by_hand = next(a.public_id for a in new if a.public_id not in ahead)
+    ahead.add(by_hand)
+    ahead.discard(next(a.public_id for a in reversed(new) if a.public_id in ahead))
+    keys = ("g1", "g2", "o1", "g3", "o2")
     rows: list[Row] = []
     for a in apps:
         i = a.public_id
         cells: dict[str, Cell] = {k: Cell("") for k in keys}
-        if a.state == "Draft":
+        if a.state != "Submitted":
+            # A draft has nothing; one withdrawn in September, before the
+            # Review stage opened, was never entered.
             rows.append(Row(a, cells))
             continue
-        if a.state == "Withdrawn":
-            # It keeps what it had, and "—" where it was never entered:
-            # withdrawn before the Review stage opened (16 Oct), nothing; during it,
-            # its place at the Review stage's gates only.
-            day = int(a.submitted.split()[0])
-            if day >= 16:
-                cells["g1"] = Cell("Entered", f"Withdrew {day} Oct")
-                cells["g2"] = Cell("Entered", f"Withdrew {day} Oct")
-            rows.append(Row(a, cells))
-            continue
-        if rank.get(i, 0) != 1:  # not the applicant's last submitted
-            for k in ("g1", "g2"):
-                cells[k] = Cell("Not entered", "Not the applicant's last")
-            cells["g3"] = Cell("Not entered")  # Shortlist not reached: "—"
-            rows.append(Row(a, cells))
-            continue
-        if i == excluded:
-            for k in ("g1", "g2"):
-                cells[k] = Cell("Not entered", "Excluded: not eligible", by_hand=True)
-            cells["g3"] = Cell("Not entered")  # Shortlist not reached: "—"
-            rows.append(Row(a, cells))
-            continue
-        if i in late:
-            cells["g1"] = Cell("Entered", f"Rating {rating[i]} · 1 of 3")
-            cells["g2"] = Cell("Entered", f"Score {score[i]} · 2 of 4")
-            cells["o1"] = Cell("Pending", "Due 10 Nov")
-            cells["g3"] = Cell(NO_STATUS)
-            cells["o2"] = Cell("Pending", "Due 24 Nov")
-            cells["o3"] = Cell("Pending", "Due 12 Dec")
-            rows.append(Row(a, cells))
-            continue
-        cells["g1"] = Cell("Entered", f"Rating {rating[i]} · 3 of 3", rating[i])
-        # The faculty panel's recommendations: of four, how many said Fund.
-        funds = random.Random(f"recommend {i}").randint(0, 4) * 25
-        cells["g2"] = Cell(
-            "Entered", f"Score {score[i]} · 4 of 4", score[i], extra=(("r2", str(funds)),)
-        )
-        mixed = round(0.3 * rating[i] + 0.7 * score[i], 2)
-        shortlisted = mixed >= 4.2
-        cells["o1"] = Cell("Shortlisted" if shortlisted else "Not shortlisted", "10 Nov")
-        if not shortlisted and not added and mixed >= 4.0:
-            added = i  # the panel asked to interview one just below
-            cells["g3"] = Cell("Entered", "Added by operator: panel request", by_hand=True)
-        elif shortlisted:
-            # Mid-stage (ruling 29): entered, the gate not yet sent.
+        r = random.Random(f"ra {i}")
+        reviewers = 29 if a.email.casefold() in ras else 30
+        passed = i in back or (i in ahead and i != by_hand)
+        # Gate 1: each reviewer's score, 0 from those who do not know the
+        # applicant, and their mean with the 0s left out (`averaged`).
+        knew = reviewers - r.randint(0, 9)
+        if passed:
+            aim = round(r.uniform(3.6, 4.9), 1)
+        elif i == by_hand:
+            aim = 3.4
+        else:
+            aim = round(r.uniform(2.2, 4.6), 1)
+        total = round(aim * knew)
+        scores = (total // knew + 1,) * (total % knew) + (total // knew,) * (knew - total % knew)
+        got, taken = averaged((*scores, *(0,) * (reviewers - knew)), "mean", True)
+        mean = got if got is not None else 0.0
+        # Gate 2: a major concern from any office keeps one off the list.
+        major = 0 if passed or i == by_hand or mean < 3.5 else r.randint(1, 2)
+        cells["g1"] = Cell("Entered", mean_note(got, taken, reviewers), got)
+        minor = r.randint(0, 5 - major) if r.random() < 0.4 else 0
+        concern = f"Major concerns from {major} of 5" if major else "No major concerns"
+        cells["g2"] = Cell("Entered", concern, major * 20.0, extra=(("r2", str(minor * 20)),))
+        if i in back:
+            cells["o1"] = Cell("Re-appointment", "6 Nov")
+        elif i == by_hand:
+            cells["o1"] = Cell("Interview", "Set by hand: panel request", by_hand=True)
+        elif i in ahead:
+            cells["o1"] = Cell("Interview", "6 Nov")
+        else:
+            cells["o1"] = Cell("Not shortlisted", "6 Nov")
+        if cells["o1"].value == "Interview":
             cells["g3"] = Cell("Entered", "Not yet sent")
         else:
             cells["g3"] = Cell("Not entered")
-        if cells["g3"].value == "Entered":
-            cells["o2"] = Cell("Pending", "Due 24 Nov")
-            cells["o3"] = Cell("Pending", "Due 12 Dec")
+        if cells["o1"].value != "Not shortlisted":
+            cells["o2"] = Cell("Pending", "Due 4 Dec")
         rows.append(Row(a, cells))
-    # Mid-stage (ruling 29): the last three shortlisted are still to be
-    # let into the Interview, so Apply rules has their entry to propose;
-    # their finalist decision is not reached yet, their final one pending.
-    waiting = [r for r in rows if r.cells["g3"].note == "Not yet sent"][-3:]
-    for r in waiting:
-        r.cells["g3"] = Cell(NO_STATUS)
-        r.cells["o2"] = Cell("")
     return tuple(rows)
 
 
@@ -540,16 +541,24 @@ def problems(stages: tuple[Stage, ...]) -> tuple[str, ...]:
     return tuple(out)
 
 
+def going_on(outcome: Outcome) -> tuple[str, ...]:
+    """An outcome's values that take an application on: every one but the
+    last (ruling 30's Shortlisting: Re-appointment and Interview, not Not
+    shortlisted); a single value is itself."""
+    return outcome.values[:-1] if len(outcome.values) > 1 else outcome.values
+
+
 def counts(plan: Plan, column: Gate | Outcome) -> str:
     """A column header's tally across every application, e.g.
-    "86 entered · 2 to decide"; an outcome's, "24 shortlisted · 2 pending"."""
+    "86 entered · 2 to decide"; an outcome's, "24 shortlisted · 2 pending",
+    each value that takes one on counted (`going_on`)."""
     values = [
         r.cells[column.key].value for r in plan.rows if r.cells.get(column.key, Cell("")).value
     ]
     if isinstance(column, Gate):
         order = [("Entered", "entered"), (NO_STATUS, "to decide")]
     else:
-        order = [(v, v.lower()) for v in column.values[:1]] + [("Pending", "pending")]
+        order = [(v, v.lower()) for v in going_on(column)] + [("Pending", "pending")]
     parts = [f"{values.count(v)} {word}" for v, word in order if values.count(v)]
     return " · ".join(parts) or "none yet"
 
@@ -801,6 +810,14 @@ def averaged(values: tuple[float, ...], derive: str, ignore_zero: bool) -> tuple
     else:
         value = sum(taken) / len(taken)
     return round(value, 2), len(taken)
+
+
+def mean_note(value: float | None, taken: int, of: int) -> str:
+    """A mean's note under its chip: "3.7 from 27 of 29", the scores it
+    took of those asked; "No view from 30" when none scored (ruling 30)."""
+    if value is None:
+        return f"No view from {of}"
+    return f"{value:.1f} from {taken} of {of}"
 
 
 def derivation_text(r: GateResult) -> str:

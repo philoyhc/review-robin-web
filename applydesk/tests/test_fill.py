@@ -91,10 +91,10 @@ def test_the_totals_bounds() -> None:
 
 def test_a_sample_gate_reads_its_panel_as_its_source() -> None:
     gate = Gate("g1", 1, "Panel Review", "RRW", panel="panel-a")
-    sources, total = stages.sources_of("wa9juxbc2t", gate)
+    sources, total = stages.sources_of("k7mfr3pq8z", gate)
     assert len(sources) == 1 and sources[0].kind == "panel" and sources[0].ref == "panel-a"
     assert sources[0].min == sources[0].max == total.min == total.max > 0
-    assert stages.sources_of("wa9juxbc2t", Gate("g9", 9, "x", "RRW")) == ((), Total(0, 0))
+    assert stages.sources_of("k7mfr3pq8z", Gate("g9", 9, "x", "RRW")) == ((), Total(0, 0))
 
 
 def test_the_head_warns_as_the_page_script_does() -> None:
@@ -121,40 +121,50 @@ def _gate(exercise_id: str, key: str) -> Gate:
 
 
 def test_a_gate_s_dossiers_are_filled_and_its_panel_spread_evenly() -> None:
-    """The model's Peer Review: each entered dossier gets two, a nominee
-    first where the applicant named one; Panel A shares the rest evenly."""
+    """The RA recruitment (ruling 30): every current RA reviews every
+    applicant but themselves; two residential staff interview each
+    shortlisted, the load spread evenly."""
     rows, spread = stages.assignments("wa9juxbc2t", _gate("wa9juxbc2t", "g1"))
     plan = stages.plan_of("wa9juxbc2t")
     entered = [r for r in plan.rows if r.cells["g1"].value == "Entered"]
     assert [a.application for a in rows] == [r.application for r in entered]
-    assert all(len(a.evaluators) == 2 and not a.short for a in rows)
     assert all(a.application.email not in {e for _, e, _ in a.evaluators} for a in rows)
-    named = [a for a in rows if a.evaluators[0][2] == "Nominated"]
-    assert 0 < len(named) < len(rows)  # one in five names no one
+    ras = {m.email for m in sample_data.CURRENT_RAS}
+    for a in rows:
+        assert len(a.evaluators) == (29 if a.application.email in ras else 30) and not a.short
+    assert sum(len(a.evaluators) for a in rows) == 2_980
     ((panel, counts),) = spread
-    assert panel == "Panel A" and abs(counts[0][1] - counts[1][1]) <= 1
-    assert stages.assignment_counts(rows) == f"{len(rows)} dossiers · {len(rows)} filled"
+    assert panel == "Current RAs" and len(counts) == 30
+    assert stages.assignment_counts(rows) == "100 dossiers · 100 filled"
+    rows, spread = stages.assignments("wa9juxbc2t", _gate("wa9juxbc2t", "g3"))
+    assert len(rows) == 40 and all(len(a.evaluators) == 2 for a in rows)
+    ((panel, counts),) = spread
+    loads = [n for _, n in counts]
+    assert panel == "Residential staff" and sum(loads) == 80 and max(loads) - min(loads) <= 1
 
 
 def test_a_row_s_state_follows_the_mode() -> None:
-    rows, _ = stages.assignments("wa9juxbc2t", _gate("wa9juxbc2t", "g2"))
-    g2 = _gate("wa9juxbc2t", "g2")
-    assert g2.mode == "suggested"
-    assert stages.assignment_state(g2, True, rows[0]) == "Approved"
-    assert stages.assignment_state(g2, False, rows[0]) == "Suggested"
+    g3 = _gate("wa9juxbc2t", "g3")
+    rows, _ = stages.assignments("wa9juxbc2t", g3)
+    assert g3.mode == "suggested"
+    assert stages.assignment_state(g3, True, rows[0]) == "Approved"
+    assert stages.assignment_state(g3, False, rows[0]) == "Suggested"
     short = stages.Assignment(rows[0].application, (), 2, ())
-    assert stages.assignment_state(g2, False, short) == "Short by 2"
+    assert stages.assignment_state(g3, False, short) == "Short by 2"
     assigned = Gate("g9", 9, "x", "RRW", mode="assigned")
     assert stages.assignment_state(assigned, False, short) == "Not assigned"
     assert stages.assignment_counts((short,)) == "1 dossier · 0 filled · 1 short"
 
 
 def test_a_nominee_comes_from_the_question_s_pool() -> None:
-    pool = {e for _, e in sample_data.people_pools("wa9juxbc2t")["pool"]["members"]}
-    apps = sample_data.applications_of("wa9juxbc2t")
-    named = [sample_data.nominees("wa9juxbc2t", a, "Preferred reviewer") for a in apps]
+    ex = "r6tm4kq9wz"  # the conference grant's form asks for a preferred reviewer
+    pool = {e for _, e in sample_data.people_pools(ex)["pool"]["members"]}
+    apps = sample_data.applications_of(ex)
+    named = [sample_data.nominees(ex, a, "Preferred reviewer") for a in apps]
     assert all(len(n) <= 1 and set(n) <= pool for n in named)
-    assert sample_data.nominees("wa9juxbc2t", apps[0], "No such question") == ()
+    assert sample_data.nominees(ex, apps[0], "No such question") == ()
+    # The RA recruitment asks for none (ruling 30).
+    assert stages.nominee_questions("wa9juxbc2t") == ()
 
 
 def test_a_result_reads_its_chosen_field() -> None:

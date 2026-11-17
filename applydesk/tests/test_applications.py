@@ -24,8 +24,8 @@ def client() -> TestClient:
 def test_the_columns_follow_the_setup(client: TestClient) -> None:
     text = client.get(PAGE).text
     groups = re.findall(r"<th class=\"ap-(?:first|r)\"[^>]*><b>([^<]+)</b>", text)
-    assert groups == ["Call for applications", "Review", "Interview", "Decision"]  # ruling 15
-    for dates in ("1 Sep – 15 Oct", "16 Oct – 10 Nov", "11 Nov – 24 Nov", "25 Nov – 12 Dec"):
+    assert groups == ["Applications", "Review", "Interviews"]  # ruling 15
+    for dates in ("1 Sep – 30 Sep", "1 Oct – 6 Nov", "9 Nov – 4 Dec"):
         assert dates in text
     heads = re.findall(r'data-col="(\w+)" data-kind="(\w+)"', text)
     assert heads == [
@@ -34,23 +34,15 @@ def test_the_columns_follow_the_setup(client: TestClient) -> None:
         ("o1", "outcome"),
         ("g3", "gate"),
         ("o2", "outcome"),
-        ("o3", "outcome"),
     ]
-    for label in (
-        "Peer Review",
-        "Faculty Panel Review",
-        "Shortlist for interview",
-        "Interview",
-        "Finalists",
-        "Final results",
-    ):
+    for label in ("Peer review", "Office checks", "Shortlisting", "Staff interview", "Selection"):
         assert label in text
 
 
 def test_every_application_is_a_row(client: TestClient) -> None:
     text = client.get(PAGE).text
     apps = sample_data.applications_of(EX)
-    assert len(apps) == 102
+    assert len(apps) == 104  # 100 submitted, two drafts and one withdrawn, and Wen's draft
     assert text.count("data-row ") == len(apps)
     # A submitted application's ID links to its dossier; a draft's does not.
     assert f'/dossiers/{apps[0].dossier_id}"><code>{apps[0].public_id}</code></a>' in text
@@ -59,43 +51,84 @@ def test_every_application_is_a_row(client: TestClient) -> None:
 
 
 def test_the_model_exercise_reads_as_partway_through() -> None:
+    """Ruling 30: the RA recruitment in the middle of Stage 3. One
+    application each; every submitted one reviewed and checked; 15 of the
+    20 current RAs to re-appointment and 40 new applicants to interview,
+    one set by hand; the interviews not yet sent, Selection pending."""
     plan = stages.plan_of(EX)
     by_key = {c.key: c for c in plan.columns}
-    assert stages.counts(plan, by_key["o1"]) == "26 shortlisted · 2 pending"
-    # Mid-stage (ruling 29): three shortlisted still to be let in, beside
-    # the two whose peer reviews are coming.
-    assert stages.counts(plan, by_key["g3"]) == "24 entered · 5 to decide"
+    assert stages.counts(plan, by_key["g1"]) == "100 entered"
+    # Each value that takes one on is counted (the cold read on AD1H 4-6).
+    assert stages.counts(plan, by_key["o1"]) == "15 re-appointment · 40 interview"
+    assert stages.counts(plan, by_key["g3"]) == "40 entered"
+    assert stages.counts(plan, by_key["o2"]) == "55 pending"
     o1, o2 = by_key["o1"], by_key["o2"]
     assert isinstance(o1, stages.Outcome) and isinstance(o2, stages.Outcome)
     assert o1.released and not o2.released
+    ras = {m.email for m in sample_data.CURRENT_RAS}
+    decided: dict[str, list[bool]] = {"Re-appointment": [], "Interview": [], "Not shortlisted": []}
     for row in plan.rows:
         a, cells = row.application, row.cells
-        if a.state == "Draft":
+        if a.state != "Submitted":
             assert all(not c.value for c in cells.values())
-        if a.state == "Withdrawn":
-            # Keeps what it had; "—" where it was never admitted.
-            assert all(not cells[k].value for k in ("o1", "g3", "o2", "o3"))
-            day = int(a.submitted.split()[0])
-            assert bool(cells["g1"].value) == bool(cells["g2"].value) == (day >= 16)
-        if cells["o1"].value == "Not shortlisted" and not cells["g3"].by_hand:
-            assert cells["g3"].value == "Not entered" and not cells["o2"].value
-        if cells["o1"].value == "Shortlisted":
-            assert cells["o3"].value == "Pending" and cells["o3"].note == "Due 12 Dec"
-        # Where Setup's rule decided it, the outcome follows its combined result.
-        comb = stages.combined(row, o1)
-        if comb is not None and not cells["o1"].by_hand and cells["o1"].value != "Pending":
-            assert (cells["o1"].value == "Shortlisted") == (comb >= 4.2)
-    notes = {c.note for r in plan.rows for c in r.cells.values()}
-    assert {"Excluded: not eligible", "Added by operator: panel request"} <= notes
+            continue
+        decided[cells["o1"].value].append(a.email in ras)
+        # Where the rule decided it, the cell is what the rule says.
+        mean, major = cells["g1"].result, cells["g2"].result
+        assert mean is not None and major is not None
+        passed = mean >= 3.5 and major < 1
+        rule = (
+            ("Re-appointment" if a.email in ras else "Interview") if passed else "Not shortlisted"
+        )
+        if not cells["o1"].by_hand:
+            assert cells["o1"].value == rule, a.public_id
+        entered = cells["o1"].value == "Interview"
+        assert cells["g3"].value == ("Entered" if entered else "Not entered")
+        reached = cells["o1"].value != "Not shortlisted"
+        assert cells["o2"].value == ("Pending" if reached else "")
+    assert decided["Re-appointment"] == [True] * 15
+    assert decided["Interview"] == [False] * 40
+    assert decided["Not shortlisted"].count(True) == 5
+    hand = [r for r in plan.rows if r.cells["o1"].by_hand]
+    assert len(hand) == 1 and hand[0].cells["o1"].note == "Set by hand: panel request"
+    # Gate 1's note says how many scored: those who did not know them left out.
+    aisha = next(r for r in plan.rows if r.application.public_id == "m3qx8vkt2n")
+    assert re.fullmatch(r"\d\.\d from \d+ of 29", aisha.cells["g1"].note)
+    assert aisha.cells["o1"].value == "Re-appointment"
+    kenji = next(r for r in plan.rows if r.application.public_id == "h6zr2tdw9p")
+    assert kenji.cells["o1"].value == "Interview" and kenji.cells["g1"].note.endswith("of 30")
+
+
+def test_a_mean_s_note_says_how_many_scored() -> None:
+    """Ruling 30: Gate 1's mean leaves out the 0s; its note says how many
+    scored of those asked, or that none had a view."""
+    assert stages.mean_note(3.59, 27, 29) == "3.6 from 27 of 29"
+    assert stages.mean_note(None, 0, 30) == "No view from 30"
+    plan = stages.plan_of(EX)
+    for row in plan.rows:
+        g1 = row.cells["g1"]
+        if g1.value == "Entered":
+            m = re.fullmatch(r"(\d\.\d) from (\d+) of (29|30)", g1.note)
+            assert m and g1.result is not None and f"{g1.result:.1f}" == m.group(1), g1.note
+
+
+def _app(i: str, email: str, state: str, day: int) -> sample_data.Application:
+    return sample_data.Application(i, EX, "X", email, "", state, f"{day} Sep 2026", "d" + i)
 
 
 def test_last_applications_keep_each_applicant_s_last_submitted() -> None:
-    plan = stages.plan_of(EX)
-    last = stages.last_submitted(plan.rows)
-    twice = [r.application for r in plan.rows if r.application.applicant == "Chen Farouk"]
-    assert [a.state for a in twice] == ["Withdrawn", "Submitted"]
-    assert twice[1].public_id in last and twice[0].public_id not in last
-    assert len(last) == len({r.application.email for r in plan.rows})
+    """A gate may take an applicant's last submitted (author, 2026-11-13);
+    the RA recruitment takes one each, so this reads made-up rows."""
+    rows = tuple(
+        stages.Row(a, {})
+        for a in (
+            _app("a1", "x@e.edu", "Withdrawn", 3),
+            _app("a2", "x@e.edu", "Submitted", 5),
+            _app("a3", "y@e.edu", "Draft", 4),
+        )
+    )
+    last = stages.last_submitted(rows)
+    assert last == frozenset({"a2", "a3"})
 
 
 def test_an_exercise_with_only_its_first_stage_ends_at_status(client: TestClient) -> None:
@@ -146,14 +179,19 @@ def test_every_rule_reads_only_what_its_column_may() -> None:
             if isinstance(c, stages.Outcome):
                 # A weight names a gate's result, "g1.r1" (ruling 21).
                 assert {stages.split_key(k)[0] for k, _ in c.weights} <= in_scope, c.key
-            for kind, key, _, _ in c.rule.when if c.rule else ():
+            for kind, key, _, _ in (
+                (k for when, _ in c.rule.branches for k in when) if c.rule else ()
+            ):
                 if kind == "out":
                     assert key in outcomes_before, (c.key, key)
                 elif kind in ("res", "ent", "comb"):
                     assert isinstance(c, stages.Outcome), (c.key, kind)
                     assert kind == "comb" or stages.split_key(key)[0] in in_scope, (c.key, key)
+                elif kind == "top":
+                    assert isinstance(c, stages.Outcome), (c.key, kind)
+                    assert stages.split_key(key)[0] in in_scope, (c.key, key)
                 else:
-                    assert kind in ("status", "last"), kind
+                    assert kind in ("status", "last", "form"), kind
             seen.add(c.key)
 
 
@@ -162,9 +200,7 @@ def _with(cells: dict[str, stages.Cell]) -> stages.Row:
 
 
 def test_a_combined_result_drops_a_gate_not_entered_and_reweights() -> None:
-    plan = stages.plan_of(EX)
-    o1 = next(c for c in plan.columns if c.key == "o1")
-    assert isinstance(o1, stages.Outcome)
+    o1 = stages.Outcome("o1", 1, "X", ("Yes", "No"), "", "", (("g1", 0.3), ("g2", 0.7)))
     both = _with(
         {"g1": stages.Cell("Entered", result=4.0), "g2": stages.Cell("Entered", result=5.0)}
     )
@@ -184,33 +220,25 @@ def test_a_combined_result_drops_a_gate_not_entered_and_reweights() -> None:
 def test_scope_is_the_gates_since_the_previous_outcome() -> None:
     plan = stages.plan_of(EX)
     by_key = {c.key: c for c in plan.columns}
-    for key, gates in (("o1", ["g1", "g2"]), ("o2", ["g3"]), ("o3", [])):
+    for key, gates in (("o1", ["g1", "g2"]), ("o2", ["g3"])):
         o = by_key[key]
         assert isinstance(o, stages.Outcome)
         assert [g.key for g in stages.scope(plan, o)] == gates
 
 
 def test_the_last_submitted_goes_by_date_not_order() -> None:
-    plan = stages.plan_of(EX)
-    twice = [r for r in plan.rows if r.application.title.startswith("A second proposal")]
-    assert len(twice) == 1
-    email = twice[0].application.email
-    mine = [r for r in plan.rows if r.application.email == email]
-    rank = stages.submitted_rank(tuple(reversed(mine)))
-    assert rank[twice[0].application.public_id] == 1
-    assert sorted(rank.values()) == [1, 2]
+    mine = (_app("b2", "z@e.edu", "Submitted", 20), _app("b1", "z@e.edu", "Submitted", 9))
+    rank = stages.submitted_rank(tuple(stages.Row(a, {}) for a in mine))
+    assert rank == {"b2": 1, "b1": 2}
 
 
 def test_a_rule_reads_as_a_line() -> None:
     plan = stages.plan_of(EX)
     by_key = {c.key: c for c in plan.columns}
-    assert stages.rule_text(plan, by_key["g1"]) == (
-        "Status is Submitted and the applicant's last submitted → Entered, else Not entered"
+    assert stages.rule_text(plan, by_key["g1"]) == "Status is Submitted → Entered, else Not entered"
+    assert stages.rule_text(plan, by_key["g3"]) == (
+        "Shortlisting is Interview → Entered, else Not entered"
     )
-    assert stages.rule_text(plan, by_key["o2"]) == (
-        "Score at Interview ≥ 4.0 → Finalist, else Not a finalist"
-    )
-    assert stages.rule_text(plan, by_key["o3"]) == ""
     two = stages.Gate(
         "gx",
         9,
@@ -221,46 +249,55 @@ def test_a_rule_reads_as_a_line() -> None:
         ),
     )
     assert stages.rule_text(plan, two) == (
-        "among the applicant's last 2 submitted and Entry at Peer Review is Entered"
+        "among the applicant's last 2 submitted and Entry at Peer review is Entered"
         " → Entered, else Not entered"
     )
 
 
 def test_a_rule_branches_and_reads_a_form_answer_and_the_best_n() -> None:
     """Ruling 30: further branches tried in order, an answer to a List
-    question, the best N by a result; its line and its JSON."""
+    question, the best N by a result; the model exercise's two rules as
+    lines, and one as JSON."""
     plan = stages.plan_of(EX)
-    rule = stages.Rule(
-        (("form", "Field of study", "is", "Engineering"), ("top", "g1.r1", "le", "20")),
-        "Shortlisted",
-        "Not shortlisted",
-        ((((("res", "g2.r1", "ge", "4.5"),), "Shortlisted")),),
+    by_key = {c.key: c for c in plan.columns}
+    assert stages.rule_text(plan, by_key["o1"]) == (
+        "Mean score at Peer review ≥ 3.5 and Major concerns at Office checks < 1 and"
+        " Currently an RA? is Yes → Re-appointment; else if Mean score at Peer review ≥ 3.5"
+        " and Major concerns at Office checks < 1 → Interview, else Not shortlisted"
     )
-    out = stages.Outcome("ox", 9, "X", ("Shortlisted", "Not shortlisted"), "", "", rule=rule)
-    assert [then for _, then in rule.branches] == ["Shortlisted", "Shortlisted"]
-    assert stages.rule_text(plan, out) == (
-        "Field of study is Engineering and the best 20 by Rating at Peer Review → Shortlisted;"
-        " else if Score at Faculty Panel Review ≥ 4.5 → Shortlisted, else Not shortlisted"
+    assert stages.rule_text(plan, by_key["o2"]) == (
+        "Shortlisting is Re-appointment → Selected; else if Shortlisting is Interview and"
+        " the best 20 by Interview score at Staff interview → Selected, else Not selected"
     )
-    assert stages.rule_json(out) == {
-        "when": [["form", "Field of study", "is", "Engineering"], ["top", "g1.r1", "le", "20"]],
-        "then": "Shortlisted",
-        "otherwise": "Not shortlisted",
-        "more": [{"when": [["res", "g2.r1", "ge", "4.5"]], "then": "Shortlisted"}],
+    o2 = by_key["o2"]
+    assert o2.rule is not None and [then for _, then in o2.rule.branches] == ["Selected"] * 2
+    assert stages.rule_json(o2) == {
+        "when": [["out", "o1", "is", "Re-appointment"]],
+        "then": "Selected",
+        "otherwise": "Not selected",
+        "more": [
+            {
+                "when": [["out", "o1", "is", "Interview"], ["top", "g3.r1", "le", "20"]],
+                "then": "Selected",
+            }
+        ],
     }
     # A one-branch rule's JSON is as before: the page's editor reads it.
-    o1 = next(c for c in plan.columns if c.key == "o1")
-    assert "more" not in (stages.rule_json(o1) or {})
+    assert "more" not in (stages.rule_json(by_key["g3"]) or {})
 
 
 def test_an_application_answers_the_form_s_list_questions() -> None:
-    apps = sample_data.applications_of(EX)
-    got = [sample_data.answers(EX, a) for a in apps[:20]]
-    assert all(set(g) == {"Field of study"} for g in got)
-    options = {"Life Sciences", "Engineering", "Humanities"}
-    assert all(g["Field of study"] in options for g in got)
-    assert len({g["Field of study"] for g in got}) == 3  # spread, not one
-    assert got == [sample_data.answers(EX, a) for a in apps[:20]]  # seeded
+    """Ruling 30's form answers: whether one is a current RA, and their
+    house, are what the sample knows; the rest seeded."""
+    apps = [a for a in sample_data.applications_of(EX) if a.state == "Submitted"]
+    got = [sample_data.answers(EX, a) for a in apps]
+    assert set(got[0]) == {"Year of study", "Faculty", "Currently an RA?", "Residence"}
+    ras = {m.email for m in sample_data.CURRENT_RAS}
+    assert [g["Currently an RA?"] == "Yes" for g in got] == [a.email in ras for a in apps]
+    assert sum(g["Currently an RA?"] == "Yes" for g in got) == 20
+    assert all(a.title.endswith(g["Residence"]) for a, g in zip(apps, got, strict=True))
+    assert len({g["Faculty"] for g in got}) > 3  # spread, not one
+    assert got == [sample_data.answers(EX, a) for a in apps]  # seeded
     assert sample_data.answers("n5wg8tjr3e", apps[0]) == {}  # no questions
 
 
@@ -279,7 +316,7 @@ def test_a_rule_reads_as_the_process_page_s_script_does_at_the_edges() -> None:
     with_blank = stages.Plan((*plan.stages, stub), plan.rows)
     assert stages.rule_text(with_blank, o) == (
         "Result at Untitled gate ≥ 3 and Entry at (removed) is Entered"
-        " and Shortlist for interview is — → —, else —"
+        " and Shortlisting is — → —, else —"
     )
 
 

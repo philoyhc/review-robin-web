@@ -14,7 +14,7 @@ from applydesk import sample_data
 from applydesk.sample_data import FormCard, card_summary, kept_size
 from applydesk.tests._host import host_with
 
-EX = "wa9juxbc2t"
+EX = "r6tm4kq9wz"  # open, with the builders' sample form and panels (AD1H)
 BLANK = "n5wg8tjr3e"
 FORM = f"/applydesk/operator/exercises/{EX}/form"
 
@@ -42,7 +42,7 @@ def test_the_form_page_shows_its_title_and_every_card(client: TestClient) -> Non
     for c in sample_data.SAMPLE_FORM:
         if c.kind == "field":
             assert f'value="{c.label}"' in text
-            assert card_summary(c, sample_data.people_pools("wa9juxbc2t")) in text
+            assert card_summary(c, sample_data.people_pools(EX)) in text
 
 
 def test_every_type_is_in_the_type_menu(client: TestClient) -> None:
@@ -126,7 +126,7 @@ SUMMARY_CASES: list[tuple[FormCard, str]] = [
 
 
 #: The model exercise's pools, which name the panels in SUMMARY_CASES.
-POOLS = sample_data.people_pools("wa9juxbc2t")
+POOLS = sample_data.people_pools(EX)
 
 
 @pytest.mark.parametrize(("card", "summary"), SUMMARY_CASES)
@@ -153,7 +153,7 @@ def test_a_people_card_offers_the_exercise_s_pools(client: TestClient) -> None:
     text = client.get(FORM).text
     for label in ("Institution-wide", "Panel A", "Panel B", "Reviewer pool", "Interviewers"):
         assert f">{label}</option>" in text
-    pools = sample_data.people_pools("wa9juxbc2t")
+    pools = sample_data.people_pools(EX)
     assert list(pools) == ["institution", "panel-a", "panel-b", "pool", "interviewers"]
     assert [p["name"] for p in pools.values()] == [
         "Institution-wide",
@@ -163,9 +163,7 @@ def test_a_people_card_offers_the_exercise_s_pools(client: TestClient) -> None:
         "Interviewers",
     ]
     assert ("Daniel Koh", "daniel.koh@example.edu") in pools["institution"]["members"]
-    assert pools["pool"]["members"] == [
-        (e.name, e.email) for e in sample_data.pool_of("wa9juxbc2t")
-    ]
+    assert pools["pool"]["members"] == [(e.name, e.email) for e in sample_data.pool_of(EX)]
     # Every panel member is someone in the institution.
     for p in pools.values():
         assert set(p["members"]) <= set(pools["institution"]["members"])
