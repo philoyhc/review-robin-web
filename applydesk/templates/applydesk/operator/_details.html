@@ -1,20 +1,121 @@
 {# The exercise's details, on Home (segment AD1I): locked until Unlock,
-   as Dossiers' table (ruling 23). Unlock is inert until rung 4. #}
-<section class="card dt" id="details" data-details>
-  <div class="cardhead"><h2>Details</h2><button class="btn btn-secondary" type="button" data-dt-lock disabled title="Editing the details comes later">Unlock</button></div>
-  <dl class="facts">
-    <dt>Name</dt><dd>{{ exercise.name }}</dd>
-    <dt>Exercise Code</dt><dd>{% if exercise.code %}<code>{{ exercise.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</dd>
-    <dt>Description</dt><dd>{% if exercise.summary %}{{ exercise.summary }}{% else %}<span class="muted">Not set</span>{% endif %}</dd>
-    {# Review Robin's for every gate (AD1G amendment): the exercise's, or
-       the operator settings' default until one is set. #}
-    <dt>Help contact</dt><dd>{{ help_contact(exercise) }}{% if not exercise.help_contact %} <span class="muted">· the default</span>{% endif %}</dd>
-    <dt>Timezone</dt><dd>{{ timezone(exercise) }}{% if not exercise.timezone %} <span class="muted">· the default</span>{% endif %}</dd>
-  </dl>
-  <p class="dt-sec">Who may apply</p>
-  <p class="dt-val">{% if exercise.eligibility == "Not set" %}<span class="muted">Not set</span>{% else %}{{ exercise.eligibility }}{% endif %}</p>
-  <p class="muted dt-note">Invitation only hides the exercise from everyone not on its list, direct links included.</p>
-  <p class="dt-sec">Review</p>
-  <p class="dt-val">Blind review: <strong>{{ "On" if exercise.blind else "Off" }}</strong></p>
-  <p class="muted dt-note">On, assessors' dossiers redact the applicant's name and identifiers, and Review Robin receives an alias key in place of each application ID.</p>
+   as Dossiers' table (ruling 23). Unlocked, each is a field saying where
+   it is used; Lock keeps the changes on this page, refusing an empty
+   name, a clashing code or a help contact that is not an address;
+   Discard changes puts the last kept values back. A published exercise's
+   code and who may apply are fixed (G2). Nothing is saved until AD2. #}
+{% set live = exercise.state != "Draft" %}
+<section class="card dt" id="details" data-details data-dt-codes="{{ other_codes | tojson | forceescape }}" data-dt-default-contact="{{ default_contact }}">
+  <div class="cardhead"><h2>Details</h2>
+    <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
+    <button class="btn btn-secondary" type="button" data-dt-lock title="Unlock the details to change them">Unlock</button>
+  </div>
+  <div data-dt-view>
+    <dl class="facts">
+      <dt>Name</dt><dd data-dt-show="name">{{ exercise.name }}</dd>
+      <dt>Exercise Code</dt><dd data-dt-show="code">{% if exercise.code %}<code>{{ exercise.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</dd>
+      <dt>Description</dt><dd data-dt-show="description">{% if exercise.summary %}{{ exercise.summary }}{% else %}<span class="muted">Not set</span>{% endif %}</dd>
+      {# Review Robin's for every gate (AD1G amendment): the exercise's, or
+         the operator settings' default until one is set. #}
+      <dt>Help contact</dt><dd data-dt-show="contact">{{ help_contact(exercise) }}{% if not exercise.help_contact %} <span class="muted">· the default</span>{% endif %}</dd>
+      <dt>Timezone</dt><dd data-dt-show="timezone">{{ timezone(exercise) }}{% if not exercise.timezone %} <span class="muted">· the default</span>{% endif %}</dd>
+    </dl>
+    <p class="dt-sec">Who may apply</p>
+    <p class="dt-val" data-dt-show="eligibility">{% if exercise.eligibility == "Not set" %}<span class="muted">Not set</span>{% else %}{{ exercise.eligibility }}{% endif %}</p>
+    <p class="muted dt-note">Invitation only hides the exercise from everyone not on its list, direct links included.</p>
+    <p class="dt-sec">Review</p>
+    <p class="dt-val">Blind review: <strong data-dt-show="blind">{{ "On" if exercise.blind else "Off" }}</strong></p>
+    <p class="muted dt-note">On, assessors' dossiers redact the applicant's name and identifiers, and Review Robin receives an alias key in place of each application ID.</p>
+  </div>
+  <form class="dt-form" data-dt-form hidden novalidate>
+    <label class="fc-l">Name <span class="dt-why">· the exercise's, everywhere</span><input class="fc-in" data-dt="name" value="{{ exercise.name }}" required></label>
+    <label class="fc-l">Exercise Code <span class="dt-why">· {{ "fixed once published" if live else "unique, as a Review Robin session's code" }}</span><input class="fc-in" data-dt="code" value="{{ exercise.code }}"{% if live %} disabled title="Fixed once published: a change waits for re-publishing (G2)"{% endif %}></label>
+    <label class="fc-l">Description <span class="dt-why">· shown to applicants</span><textarea class="fc-in" rows="3" data-dt="description">{{ exercise.summary }}</textarea></label>
+    <label class="fc-l">Help contact <span class="dt-why">· on every gate in Review Robin; empty, the default</span><input class="fc-in" type="email" data-dt="contact" value="{{ exercise.help_contact }}" placeholder="{{ default_contact }}"></label>
+    <label class="fc-l">Timezone <span class="dt-why">· the timeline's and every gate's</span><select class="fc-in" data-dt="timezone">{% for z in timezones %}<option value="{{ z }}"{% if z == timezone(exercise) %} selected{% endif %}>{{ z }}{{ " (the default)" if loop.first }}</option>{% endfor %}</select></label>
+    <label class="fc-l">Who may apply{% if live %} <span class="dt-why">· fixed once published</span>{% endif %}<select class="fc-in" data-dt="eligibility"{% if live %} disabled title="Fixed once published: a change waits for re-publishing (G2)"{% endif %}>{% for v in ("Open to all signed in", "Invitation only") %}<option{% if v == exercise.eligibility %} selected{% endif %}>{{ v }}</option>{% endfor %}{% if exercise.eligibility == "Not set" %}<option value="Not set" selected>Not set</option>{% endif %}</select></label>
+    <label class="dt-check"><input type="checkbox" data-dt="blind"{% if exercise.blind %} checked{% endif %}> <span><strong>Blind review</strong> <span class="dt-why">· dossiers redact the applicant</span></span></label>
+    <p class="dt-why" data-dt-why role="alert"></p>
+    <div class="btnrow"><button class="btn btn-primary" type="button" data-dt-act="lock">Lock</button><button class="btn btn-secondary" type="button" data-dt-act="discard">Discard changes</button></div>
+  </form>
+  <p class="dt-said" data-dt-said role="status"></p>
 </section>
+<script>
+(function () {
+  var card = document.querySelector("[data-details]");
+  if (!card) return;
+  var form = card.querySelector("[data-dt-form]"), view = card.querySelector("[data-dt-view]");
+  var unlock = card.querySelector("[data-dt-lock]"), mark = card.querySelector("[data-unsaved]");
+  var why = card.querySelector("[data-dt-why]"), said = card.querySelector("[data-dt-said]");
+  var codes = JSON.parse(card.dataset.dtCodes || "[]");
+  var defContact = card.dataset.dtDefaultContact;
+  var defZone = form.querySelector('[data-dt="timezone"] option').value;
+  function field(k) { return form.querySelector('[data-dt="' + k + '"]'); }
+  function read() {
+    var v = {};
+    form.querySelectorAll("[data-dt]").forEach(function (f) { v[f.dataset.dt] = f.type === "checkbox" ? f.checked : f.value.trim(); });
+    return v;
+  }
+  function write(v) {
+    form.querySelectorAll("[data-dt]").forEach(function (f) { if (f.type === "checkbox") f.checked = v[f.dataset.dt]; else f.value = v[f.dataset.dt]; });
+  }
+  var loaded = read(), kept = read();
+  function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+  // Unsaved: anything changed since the page loaded, kept or not.
+  function draw() { mark.hidden = same(read(), loaded) && same(kept, loaded); }
+  function text(el, value, fallback) {
+    el.textContent = "";
+    if (value) { el.textContent = value; return; }
+    var s = document.createElement("span"); s.className = "muted"; s.textContent = fallback; el.appendChild(s);
+  }
+  function show(v) {
+    text(card.querySelector('[data-dt-show="name"]'), v.name, "Not set");
+    var code = card.querySelector('[data-dt-show="code"]');
+    if (v.code) { code.textContent = ""; var c = document.createElement("code"); c.textContent = v.code; code.appendChild(c); } else text(code, "", "Not set");
+    text(card.querySelector('[data-dt-show="description"]'), v.description, "Not set");
+    var contact = card.querySelector('[data-dt-show="contact"]');
+    contact.textContent = v.contact || defContact;
+    if (!v.contact) { var d = document.createElement("span"); d.className = "muted"; d.textContent = " · the default"; contact.appendChild(d); }
+    var zone = card.querySelector('[data-dt-show="timezone"]');
+    zone.textContent = v.timezone;
+    if (v.timezone === defZone) { var z = document.createElement("span"); z.className = "muted"; z.textContent = " · the default"; zone.appendChild(z); }
+    text(card.querySelector('[data-dt-show="eligibility"]'), v.eligibility === "Not set" ? "" : v.eligibility, "Not set");
+    card.querySelector('[data-dt-show="blind"]').textContent = v.blind ? "On" : "Off";
+  }
+  function open(on) {
+    form.hidden = !on; view.hidden = on; unlock.hidden = on;
+    card.toggleAttribute("data-unlocked", on);
+    why.textContent = "";
+    (on ? field("name") : unlock).focus();
+  }
+  // What Lock refuses (Semantics): an empty name, another exercise's code
+  // (any case), a help contact that is not an address.
+  function refusal(v) {
+    if (!v.name) return ["name", "A name is needed."];
+    var clash = codes.filter(function (c) { return v.code && c[0].toLowerCase() === v.code.toLowerCase(); })[0];
+    if (clash) return ["code", v.code + " is already " + clash[1] + "'s code."];
+    if (v.contact && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.contact)) return ["contact", "A help contact is an email address."];
+    return null;
+  }
+  unlock.addEventListener("click", function () { said.textContent = ""; open(true); });
+  form.addEventListener("input", draw);
+  form.addEventListener("change", draw);
+  form.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-dt-act]");
+    if (!b) return;
+    if (b.dataset.dtAct === "discard") {
+      write(kept); open(false); draw();
+      said.textContent = "Changes discarded.";
+      return;
+    }
+    var v = read(), no = refusal(v);
+    if (no) { why.textContent = no[1]; field(no[0]).focus(); return; }
+    kept = v; show(v); open(false); draw();
+    said.textContent = same(v, loaded) ? "Locked." : "Locked: changed on this page; nothing is saved until AD2.";
+  });
+  form.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); form.querySelector('[data-dt-act="lock"]').click(); }
+  });
+  window.addEventListener("beforeunload", function (e) { if (!mark.hidden) { e.preventDefault(); e.returnValue = ""; } });
+})();
+</script>

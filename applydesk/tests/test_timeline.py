@@ -110,7 +110,7 @@ def test_home_is_the_timeline_beside_details(client: TestClient) -> None:
     # Details: Description where Summary was, locked until rung 4.
     details = home[home.index('id="details"') :]
     assert "<dt>Description</dt>" in details and "Summary" not in details
-    assert 'data-dt-lock disabled title="Editing the details comes later"' in details
+    assert 'data-dt-lock title="Unlock the details to change them">Unlock' in details
     # The line under the timeline points to where the stage is worked.
     assert f'<a href="/applydesk/operator/exercises/{EX}/evaluations">Go to Evaluations</a>' in home
 

@@ -48,6 +48,15 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         short=timeline.short,
         next_line=timeline.next_step(exercise, tl),
         missing=sample_data.setup_missing(exercise),
+        timezones=sample_data.TIMEZONES,
+        default_contact=sample_data.DEFAULT_HELP_CONTACT,
+        # Every other exercise's code and name, so Details refuses a
+        # clashing code on the page (segment AD1I Semantics).
+        other_codes=[
+            [e.code, e.name]
+            for e in sample_data.EXERCISES
+            if e.code and e.public_id != exercise.public_id
+        ],
     )
 
 
