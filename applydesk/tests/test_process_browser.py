@@ -1140,8 +1140,8 @@ def test_response_fields_are_added_edited_and_removed(page: Page) -> None:
     assert source.locator("option").all_text_contents() == ["Choose a field", "Score", "Fit"]
     source.select_option("f2")
     assert row.locator('[data-r="derive"] option').all_text_contents()[0] == "Share choosing"
-    assert (
-        row.locator("[data-pr-sum]").text_content().startswith("From Fit · Share choosing Strong")
+    assert (row.locator("[data-pr-sum]").text_content() or "").startswith(
+        "From Fit · Share choosing Strong"
     )
     # The field gone, the result has none, and the Outline says so.
     new.locator('[data-rf-act="remove"]').click()
