@@ -67,7 +67,12 @@ def form_preview(request: Request, exercise_id: str) -> Response:
 
 @router.get("/exercises/{exercise_id}/evaluations/{gate}", name="applydesk_gate_evaluations")
 def gate_evaluations(
-    request: Request, exercise_id: str, gate: str, offset: str = "0", q: str = ""
+    request: Request,
+    exercise_id: str,
+    gate: str,
+    offset: str = "0",
+    q: str = "",
+    sort: str = "",
 ) -> Response:
     """A gate's assignments on a page of their own (segment AD1H): one
     gate may pair 30 evaluators with 100 dossiers, so its pairs show a
@@ -81,11 +86,17 @@ def gate_evaluations(
         raise HTTPException(status_code=404)
     rows, spread = stages.assignments(exercise.public_id, found)
     pairs = stages.pairs_of(rows)
-    shown = stages.matching(pairs, q, exercise.blind)
+    state = workflow.gate_state(exercise.public_id, found.key)
+    sent = workflow.gate_opened(*state)
+    # Sorted on the server, across every page (author, 2026-11-17: as
+    # Review Robin's tables; a page shows 200 of up to 2,980).
+    order = paging.parse_sort(sort)
+    shown = stages.sorted_pairs(
+        stages.matching(pairs, q, exercise.blind), order, found, sent, exercise.blind
+    )
     # An offset that is not a whole number reads as the first page.
     start = int(offset) if re.fullmatch(r"-?[0-9]+", offset) else 0
     where = paging.page(len(shown), start, paging.PAGE_SIZE)
-    state = workflow.gate_state(exercise.public_id, found.key)
     return render(
         request,
         "applydesk/operator/gate_evaluations.html",
@@ -95,7 +106,12 @@ def gate_evaluations(
         exercise=exercise,
         gate=found,
         state=state,
-        sent=workflow.gate_opened(*state),
+        sent=sent,
+        order=order,
+        sort_text=paging.sort_text,
+        plain_click=paging.plain_click,
+        shift_click=paging.shift_click,
+        sort_badge=paging.sort_badge,
         all_rows=rows,
         all_pairs=pairs,
         rows=shown[where.offset : where.end],

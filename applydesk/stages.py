@@ -11,6 +11,7 @@ Nothing is saved."""
 from __future__ import annotations
 
 import random
+import re
 from dataclasses import dataclass, replace
 from datetime import date, datetime
 
@@ -1112,6 +1113,40 @@ def matching(pairs: tuple[Pair, ...], query: str, blind: bool = False) -> tuple[
         return any(q in text.casefold() for text in said)
 
     return tuple(p for p in pairs if holds(p))
+
+
+def sorted_pairs(
+    pairs: tuple[Pair, ...],
+    spec: tuple[tuple[str, bool], ...],
+    gate: Gate,
+    sent: bool,
+    blind: bool = False,
+) -> tuple[Pair, ...]:
+    """The pairs in a gate table's sort cascade (segment AD1H): by
+    candidate (the dossier ID in a blind exercise), evaluator, source or
+    state, any case, each up or down; the fill's order breaks ties. As
+    Review Robin's tables, an empty cell sorts last either way and a
+    number as a number (*Short by 2* before *Short by 10*)."""
+
+    def text(p: Pair, key: str) -> str:
+        app = p.of.application
+        if key == "candidate":
+            return app.dossier_id if blind else app.applicant
+        if key == "evaluator":
+            return p.name
+        if key == "source":
+            return p.source
+        return assignment_state(gate, sent, p.of)
+
+    def value(p: Pair, key: str, desc: bool) -> tuple[bool, str]:
+        t = text(p, key).casefold()
+        natural = re.sub(r"\d+", lambda m: m.group().zfill(12), t)
+        return (not t) != desc, natural
+
+    out = list(pairs)
+    for key, desc in reversed(spec):  # stable: the last key first
+        out.sort(key=lambda p: value(p, key, desc), reverse=desc)
+    return tuple(out)
 
 
 def assignment_state(gate: Gate, sent: bool, a: Assignment) -> str:

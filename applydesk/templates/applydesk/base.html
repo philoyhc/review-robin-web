@@ -577,6 +577,10 @@
     .ev-step { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-link); text-decoration: none; }
     .ev-step.is-inactive { color: var(--text-subtle); }
     .ev-ranges { position: relative; }
+    .ev-sortable { white-space: nowrap; }
+    .ev-sort-btn { display: inline-flex; align-items: center; justify-content: center; margin-left: 4px; padding: 0 4px; min-width: 18px; height: 18px; line-height: 1; border: 1px solid transparent; border-radius: 4px; color: var(--text-subtle); font-size: 0.85em; text-decoration: none; }
+    .ev-sort-btn:hover { border-color: var(--border-default); background: var(--surface-muted); }
+    .ev-sort-badge { font-variant-numeric: tabular-nums; }
     .ev-ranges > summary { cursor: pointer; padding: 4px 8px; border: 1px solid var(--border-default); border-radius: 6px; list-style: none; }
     .ev-ranges ul { position: absolute; z-index: 5; margin: 4px 0 0; padding: 6px 0; list-style: none; background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 6px; max-height: 280px; overflow: auto; }
     .ev-ranges li > * { display: block; padding: 4px 14px; white-space: nowrap; }

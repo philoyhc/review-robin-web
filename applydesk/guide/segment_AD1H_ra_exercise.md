@@ -69,6 +69,7 @@ Taken 2026-11-17 at `4c2efddba`.
 - **Rung 6 built** (2026-11-17): the RA recruitment replaces the fellowship as `wa9juxbc2t`: 104 applications (100 submitted, 20 of them current RAs; three drafts, one withdrawn), the form (`_RA_FORM`, *Currently an RA?* and *Residence* known to the sample, not seeded), *Current RAs* (30), *Office staff* (5), *Residential staff* (13); the stages and rules as the Decision says, Gate 2 also counting *Minor concerns*; rows mid Stage 3 (15 re-appointment, 40 interview, one of them set by hand, 3.4 against the 3.5 bar; Gate 3 entered, unsent; Selection pending). Gate 1 pairs 2,980, Gate 3 80 (six or seven a staff member).
 - **Decisions confirmed at build (rung 6):** an outcome a dossier reached by an earlier one's value is open though it entered none of its gates (Dossiers' `notReached`: a cell already *Pending* or decided is reached), so Selection proposes the re-appointed; weights all 0 are no combined result, a problem only for a rule reading one (Process's `weights`); Aisha and Kenji keep their IDs, as the RA and the new applicant the pages cite; the fellowship's panels move to the conference grant (`r6tm4kq9wz`, open), so the Form and Panels builders' tests keep a *Select people* question and four panels; the fellowship's process stays as a test fixture (`applydesk/tests/_fellowship.py`), installed on the conference grant for the Process editor's tests, which want a combined result, a nominated source and an outcome decided by hand that the RA recruitment does not have. The gate page lists a row per pair (author, 2026-11-17), not per dossier.
 - **Reads, rungs 4–6**: `diff-reviewer` on `75b330bd3..26eb8f659`, no blocker; fixed in rung 6's PR: Selection reached only where the sample had opened it, not by Shortlisting's value set by hand or by the same run (Dossiers' `sentOn`); a three-valued outcome counting and toning only its first value (`stages.going_on`); the Gate 1 means written by hand, now each reviewer's score through `stages.averaged` with `stages.mean_note`; tests weakened in the move restored (the script's combined result against `stages.combined` on every row, a best N waiting on another condition, column order, a sent *Suggested* gate's page); a blind gate page found by name (now by dossier only); a bad `offset` a 422 (now the first page); the card's count in rows as its page's; dead `.ev-pill` CSS; the fixture's written emails. Kept: the fixture itself (its docstring says what it is not for), the gate page's breadcrumb (its *← Evaluations* link), *Pool reviewer* on Extract data (a placeholder).
+- **Rung 6a** (author, 2026-11-17, at the rung 6 check): the gate table sorts as Review Robin's (`spec/sort_by_reviewee.md`'s clicks and badges, `1↑`, `2↓`; an empty cell last, numbers as numbers): a column's ↕ sorts it, again reverses, again clears; shift-click adds it to a cascade of three. On the server (`paging.parse_sort`, `stages.sorted_pairs`), not the page's script as Review Robin's, since a page holds 200 of up to 2,980 rows; the order rides the link (`?sort=evaluator,-state`), the pager, range menu and search keep it, a new order starts at the first page; a blind table sorts by the dossier ID. Its cold read: no blocker; a blind-sort test that could not tell ID from name, empty cells first going up, badges unlike Review Robin's, and the Clear link dropping the order, all fixed in the rung.
 
 ## PR ladder
 
@@ -78,6 +79,7 @@ Taken 2026-11-17 at `4c2efddba`.
 4. **A mean ignoring 0**: the result option on Process, the derivation, its note. Chromium tests.
 5. **The gate page, scaffold.** The route, Evaluations' short cards linking to it, the table paged 200 with its pager and filter, on the current sample; operations inert.
 6. **The RA exercise.** The sample replaced as the Decision lays it out: exercise, applications, form, panels, stages and rules, rows mid Stage 3, gate states, emails, responses; every test that named the fellowship moved to it. May split in two (people and form; stages and rows) if the diff reads better so. `diff-reviewer` reads 4–6.
+6a. *(added at the rung 6 check)* **Sort**: the gate table sorts as Review Robin's, on the server. Its own `diff-reviewer` read.
 7. **Close**, after the author's browser check. AD1G resumes at rung 6b on the gate page.
 
 ## Definition of done
@@ -85,7 +87,7 @@ Taken 2026-11-17 at `4c2efddba`.
 - The model exercise is the RA recruitment, mid Stage 3, with the counts the Decision gives (tests).
 - A rule branches, reads a form answer and takes the best N, on Process and in *Apply rules* (tests, Chromium tests).
 - A mean may ignore 0 (tests).
-- Each gate has its page, paged 200 and filtered (tests, Chromium tests).
+- Each gate has its page, paged 200, filtered and sorted (tests, Chromium tests).
 - The author has used the pages locally and approved them.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py AD1H` exits 0; any warning adjudicated
@@ -107,6 +109,6 @@ Taken 2026-11-17 at `4c2efddba`.
 
 ## Doc impact
 
-- `applydesk/spec/applications.md` — "The Process page": a rule's branches and its form-answer and best-N conditions; a result's *ignoring 0*; weights all at 0 are no combined result, flagged only for a rule reading one (rung 6); "The Dossiers page": an outcome reached on an earlier one's value alone, and every value that takes one on counted and toned (rung 6); "The Evaluations page": the gate page, its pager and filter (a blind one by the dossier only); the model exercise named where the spec cites it (at close).
+- `applydesk/spec/applications.md` — "The Process page": a rule's branches and its form-answer and best-N conditions; a result's *ignoring 0*; weights all at 0 are no combined result, flagged only for a rule reading one (rung 6); "The Dossiers page": an outcome reached on an earlier one's value alone, and every value that takes one on counted and toned (rung 6); "The Evaluations page": the gate page, its pager, filter (a blind one by the dossier only) and sort (rung 6a); the model exercise named where the spec cites it (at close).
 - `applydesk/guide/todo_master.md` — ruling 30 and the AD1H roadmap row (rung 1); the row deleted at close.
 - `applydesk/README.md` — this plan's row (rung 1), moved to the archive's index at close.
