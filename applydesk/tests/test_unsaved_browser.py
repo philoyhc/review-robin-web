@@ -9,7 +9,7 @@ from playwright.sync_api import Page
 
 from applydesk.tests.test_form_browser import FORM
 from applydesk.tests.test_form_browser import page as page  # the fixture, re-exported
-from applydesk.tests.test_process_browser import PAGE as PROCESS
+from applydesk.tests.test_process_browser import MODEL as PROCESS
 
 LEAVES = (
     "() => { const e = new Event('beforeunload', {cancelable: true});"

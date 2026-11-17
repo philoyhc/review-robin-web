@@ -536,6 +536,10 @@
     if (box.hidden) return "";
     var total = 0, bad = false;
     box.querySelectorAll("[data-w-key]").forEach(function (i) { var v = Number(i.value); if (i.value.trim() === "" || isNaN(v)) bad = true; else total += v; });
+    // All at 0, it has no combined result: a problem only for a rule
+    // that reads one (ruling 30's Shortlisting reads its results alone).
+    var reads = branchesOf(ruleOf(outcome)).some(function (b) { return b.when.some(function (c) { return c[0] === "comb"; }); });
+    if (!bad && total === 0 && !reads) return "";
     return bad ? "has weights that are not all numbers" : total !== 100 ? "has weights adding up to " + total + ", not 100" : "";
   }
   // Ruling 15's shape, as `stages.problems` words it.

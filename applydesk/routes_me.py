@@ -50,8 +50,8 @@ def application(request: Request, exercise_id: str, application_id: str) -> Resp
         area=USER_LOBBY,
         exercise=found,
         application=app,
-        shown=sample_data.SHOWN_TO_REVIEWERS,
-        not_shown=sample_data.NOT_SHOWN_TO_REVIEWERS,
+        shown=sample_data.form_of(found.public_id)[0],
+        not_shown=sample_data.form_of(found.public_id)[1],
     )
 
 
@@ -68,5 +68,5 @@ def dossier(request: Request, exercise_id: str, dossier_id: str) -> Response:
         area=USER_LOBBY,
         exercise=found,
         application=app,
-        shown=sample_data.SHOWN_TO_REVIEWERS,
+        shown=sample_data.form_of(found.public_id)[0],
     )

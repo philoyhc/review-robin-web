@@ -82,20 +82,20 @@ def test_a_gate_chip_cycles_and_the_count_follows(page: Page) -> None:
 def test_an_outcome_is_picked_and_dated(page: Page) -> None:
     page.goto(PAGE)
     _unlock(page)
-    row = _row(page, "aisha.rahman")
+    row = _row(page, "kenji.russo")
     pick = row.locator('[data-cell="o2"] select')
-    assert row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "Due 24 Nov"
-    pick.select_option("Finalist")
+    assert row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "Due 4 Dec"
+    pick.select_option("Selected")
     assert row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "13 Nov"
-    assert _count(page, "o2").startswith("1 finalist")
+    assert _count(page, "o2").startswith("1 selected")
     pick.select_option("Pending")
-    assert row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "Due 24 Nov"
+    assert row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "Due 4 Dec"
 
 
 def test_a_release_asks_first(page: Page) -> None:
     page.goto(PAGE)
     _unlock(page)
-    switch = page.locator('[data-ap-release="Finalists"]')
+    switch = page.locator('[data-ap-release="Selection"]')
     answers: list[str] = []
 
     def dismiss(d: Dialog) -> None:
@@ -115,16 +115,15 @@ def test_a_release_asks_first(page: Page) -> None:
 def test_search_status_and_last_applications_filter(page: Page) -> None:
     page.goto(PAGE)
     shown = page.locator("[data-ap-shown]")
-    assert shown.inner_text() == "Showing 102 of 102"
-    page.locator("[data-ap-search]").fill("chen.farouk")
-    assert shown.inner_text() == "Showing 2 of 102"
-    page.locator("[data-ap-which]").select_option("last")
-    assert shown.inner_text() == "Showing 1 of 102"
-    assert "Submitted" in (page.locator("[data-row]:visible").text_content() or "")
+    assert shown.inner_text() == "Showing 104 of 104"
+    page.locator("[data-ap-search]").fill("chen.")
+    assert shown.inner_text() == "Showing 4 of 104"
+    page.locator("[data-ap-which]").select_option("last")  # one each (ruling 30)
+    assert shown.inner_text() == "Showing 4 of 104"
     page.locator("[data-ap-search]").fill("")
     page.locator("[data-ap-which]").select_option("all")
     page.locator("[data-ap-status]").select_option("Draft")
-    assert shown.inner_text() == "Showing 7 of 102"
+    assert shown.inner_text() == "Showing 3 of 104"
 
 
 def test_ticked_rows_are_set_together(page: Page) -> None:
@@ -143,14 +142,14 @@ def test_ticked_rows_are_set_together(page: Page) -> None:
 
 def test_an_application_advanced_by_hand_can_be_given_later_outcomes(page: Page) -> None:
     # Codex: a submitted application outside the shortlist showed fixed
-    # "—" in Finalists and Final results, so a hand change stopped there.
+    # "—" in its later outcomes, so a hand change stopped there.
     page.goto(PAGE)
     _unlock(page)
-    row = _row(page, "aisha.bello")
-    row.locator('[data-cell="o1"] select').select_option("Shortlisted")
-    finalists = row.locator('[data-cell="o2"] select')
-    assert finalists.input_value() == ""
-    finalists.select_option("Finalist")
+    row = _row(page, "ben.sato")  # not shortlisted
+    selection = row.locator('[data-cell="o2"] select')
+    assert selection.input_value() == ""
+    row.locator('[data-cell="o1"] select').select_option("Interview")
+    selection.select_option("Selected")
     assert row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "13 Nov"
     # A draft stays inert.
     assert _row(page, "wen.novak").locator('[data-cell="o2"] select').count() == 0
@@ -161,15 +160,13 @@ def test_a_csv_proposes_then_applies(page: Page) -> None:
     page.goto(PAGE)
     _unlock(page)
     body = (
-        "Application ID,Gate 3: Interview,Finalists,Mystery\n"
+        "Application ID,Gate 3: Staff interview,Selection,Mystery\n"
         "kenji-not-an-id,Entered,,\n"
-        "h6zr2tdw9p,Entered,,x\n"
+        "nzhhny6gaa,Entered,,x\n"
         "f2ps7nyh4k,Entered,,\n"
         "m3qx8vkt2n,Maybe,,\n"
+        'h6zr2tdw9p,,"Selected",\n'
     )
-    shortlisted = page.locator('[data-row]:has([data-cell="o2"] select)').first
-    sid = shortlisted.locator(".ap-id code").inner_text()
-    body += f'{sid},,"Finalist",\n'
     page.locator("[data-ap-csv]").set_input_files(
         files=[{"name": "decisions.csv", "mimeType": "text/csv", "buffer": body.encode()}]
     )
@@ -179,15 +176,14 @@ def test_a_csv_proposes_then_applies(page: Page) -> None:
     text = prop.inner_text()
     assert "Column not on this page, ignored: Mystery." in text
     assert "Not in this exercise, ignored: kenji-not-an-id." in text
-    assert 'm3qx8vkt2n: "Maybe" is not a value of Interview.' in text
-    assert "f2ps7nyh4k: Interview cannot be set (a draft, or never admitted)." in text
+    assert 'm3qx8vkt2n: "Maybe" is not a value of Staff interview.' in text
+    assert "f2ps7nyh4k: Staff interview cannot be set (a draft, or never admitted)." in text
     assert prop.locator("[data-ap-prop-rows] tr").count() == 2
     prop.locator("[data-ap-prop-apply]").click()
     assert (
-        _row(page, "kenji.russo").locator('[data-cell="g3"] [data-ap-adm]').inner_text()
-        == "Entered"
+        _row(page, "ben.sato").locator('[data-cell="g3"] [data-ap-adm]').inner_text() == "Entered"
     )
-    assert shortlisted.locator('[data-cell="o2"] select').input_value() == "Finalist"
+    assert _row(page, "kenji.russo").locator('[data-cell="o2"] select').input_value() == "Selected"
 
 
 def test_the_table_downloads_as_the_csv_an_upload_reads(page: Page) -> None:
@@ -201,8 +197,11 @@ def test_the_table_downloads_as_the_csv_an_upload_reads(page: Page) -> None:
     text = raw.removeprefix("\ufeff")
     lines = text.splitlines()
     assert "—" not in text
-    assert lines[0].startswith("Application ID,Applicant,Email,Status,Peer Review,")
-    assert len(lines) == 103
+    assert lines[0] == (
+        "Application ID,Applicant,Email,Status,Peer review,Office checks,Shortlisting,"
+        "Staff interview,Selection"
+    )
+    assert len(lines) == 105
     # Uploaded back, it changes nothing and leaves nothing out.
     page.locator("[data-ap-csv]").set_input_files(
         files=[{"name": "applications.csv", "mimeType": "text/csv", "buffer": text.encode()}]
@@ -216,20 +215,20 @@ def test_the_table_downloads_as_the_csv_an_upload_reads(page: Page) -> None:
 def test_apply_keeps_a_cell_changed_by_hand_since(page: Page) -> None:
     page.goto(PAGE)
     _unlock(page)
-    upper = "H6ZR2TDW9P"  # IDs match whatever their case
+    upper = "NZHHNY6GAA"  # IDs match whatever their case
     page.locator("[data-ap-csv]").set_input_files(
         files=[
             {
                 "name": "x.csv",
                 "mimeType": "text/csv",
-                "buffer": f"Application ID,Interview\n{upper},Entered\n".encode(),
+                "buffer": f"Application ID,Staff interview\n{upper},Entered\n".encode(),
             }
         ]
     )
     page.locator("[data-ap-proposal]").wait_for(state="visible")  # read async
     prop = page.locator("[data-ap-proposal]")
     assert prop.locator("[data-ap-prop-rows] tr").count() == 1
-    chip = _row(page, "kenji.russo").locator('[data-cell="g3"] [data-ap-adm]')
+    chip = _row(page, "ben.sato").locator('[data-cell="g3"] [data-ap-adm]')
     chip.click()  # Not entered -> no status, by hand
     page.once("dialog", lambda d: d.accept())
     prop.locator("[data-ap-prop-apply]").click()
@@ -244,9 +243,9 @@ def test_a_csv_giving_one_cell_two_values_leaves_it(page: Page) -> None:
     page.goto(PAGE)
     _unlock(page)
     body = (
-        "Application ID,Interview\n"
-        "h6zr2tdw9p,Entered\n"
-        "h6zr2tdw9p,-\n"
+        "Application ID,Staff interview\n"
+        "nzhhny6gaa,Entered\n"
+        "nzhhny6gaa,-\n"
         "m3qx8vkt2n,Entered\n"
         "m3qx8vkt2n,entered\n"
     )
@@ -255,7 +254,7 @@ def test_a_csv_giving_one_cell_two_values_leaves_it(page: Page) -> None:
     )
     page.locator("[data-ap-proposal]").wait_for(state="visible")  # read async
     prop = page.locator("[data-ap-proposal]")
-    assert "h6zr2tdw9p: Interview given more than one value (Entered, —), left as is." in (
+    assert "nzhhny6gaa: Staff interview given more than one value (Entered, —), left as is." in (
         prop.inner_text()
     )
     rows = prop.locator("[data-ap-prop-rows] tr")
@@ -265,7 +264,7 @@ def test_a_csv_giving_one_cell_two_values_leaves_it(page: Page) -> None:
         _row(page, "aisha.bello").locator('[data-cell="g3"] [data-ap-adm]').inner_text()
         == "Entered"
     )
-    assert _row(page, "kenji.russo").locator('[data-cell="g3"] [data-ap-adm]').inner_text() == (
+    assert _row(page, "ben.sato").locator('[data-cell="g3"] [data-ap-adm]').inner_text() == (
         "Not entered"
     )
 
@@ -274,7 +273,7 @@ def test_a_csv_id_like_an_object_key_is_just_unknown(page: Page) -> None:
     # Codex: "__proto__" matched an inherited property and the upload threw.
     page.goto(PAGE)
     _unlock(page)
-    body = "Application ID,Interview\n__proto__,Entered\nconstructor,Entered\n"
+    body = "Application ID,Staff interview\n__proto__,Entered\nconstructor,Entered\n"
     page.locator("[data-ap-csv]").set_input_files(
         files=[{"name": "odd.csv", "mimeType": "text/csv", "buffer": body.encode()}]
     )
@@ -298,35 +297,32 @@ def _apply_rules(page: Page, *, only_undecided: bool = True, replace_hand: bool 
 def test_each_column_shows_its_rule_from_setup(page: Page) -> None:
     page.goto(PAGE)
     assert (
-        "Rule: Combined ≥ 4.2 → Shortlisted, else Not shortlisted"
+        "Rule: Mean score at Peer review ≥ 3.5 and Major concerns at Office checks < 1 and"
+        " Currently an RA? is Yes → Re-appointment; else if"
         in page.locator('th[data-col="o1"]').inner_text()
     )
     assert (
-        "Rule: Shortlist for interview is Shortlisted → Entered"
+        "Rule: Shortlisting is Interview → Entered"
         in page.locator('th[data-col="g3"]').inner_text()
     )
-    assert "Decided by hand" in page.locator('th[data-col="o3"]').inner_text()
     # No rule is built on this page.
     assert page.locator("[data-ap-rule] select").count() == 0
 
 
 def test_apply_rules_proposes_in_column_order_and_waits_on_the_undecided(page: Page) -> None:
+    """Mid Stage 3 (ruling 30): the re-appointed are selected now, their
+    Selection open though they skip the interview; the interviewed wait,
+    their best 20 not known until the interviews are in."""
     page.goto(PAGE)
     _unlock(page)
     prop = _apply_rules(page)
     text = prop.inner_text()
-    # The two still waiting on peer reviews: no combined result yet.
-    assert "Shortlist for interview: 2 applications cannot be judged yet" in text
-    # The interview waits on their shortlist rather than turning them away.
-    assert "Interview: 2 applications cannot be judged yet" in text
+    assert "Selection: 40 applications cannot be judged yet" in text
     rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
-    # Mid-stage (ruling 29): the three shortlisted still to be let in are
-    # entered; no one is judged for Finalists, the interview not yet run.
-    interview = [r for r in rows if "\tInterview\t" in r]
-    assert len(interview) == 3 and all("Entered" in r for r in interview)
-    assert not [r for r in rows if "\tFinalists\t" in r]
+    assert len(rows) == 15 and all("\tSelection\tPending\tSelected" in r for r in rows)
+    assert any(r.startswith("m3qx8vkt2n\tAisha Bello") for r in rows)
     prop.locator("[data-ap-prop-apply]").click()
-    assert _count(page, "g3").startswith("27 entered")
+    assert _count(page, "o2").startswith("15 selected · 40 pending")
 
 
 def _set_rule(page: Page, key: str, rule: dict[str, object]) -> None:
@@ -339,13 +335,13 @@ def _set_rule(page: Page, key: str, rule: dict[str, object]) -> None:
     )
 
 
-def _by_answer() -> dict[str, list[stages.Row]]:
-    """The model exercise's reached rows (submitted, entered at Peer
-    Review), grouped by their answer to *Field of study*."""
+def _by_answer(question: str) -> dict[str, list[stages.Row]]:
+    """The model exercise's submitted rows, grouped by their answer to a
+    List question on its form."""
     groups: dict[str, list[stages.Row]] = {}
     for r in stages.plan_of("wa9juxbc2t").rows:
-        if r.application.state == "Submitted" and r.cells["g1"].value == "Entered":
-            answer = sample_data.answers("wa9juxbc2t", r.application)["Field of study"]
+        if r.application.state == "Submitted":
+            answer = sample_data.answers("wa9juxbc2t", r.application)[question]
             groups.setdefault(answer, []).append(r)
     return groups
 
@@ -353,14 +349,18 @@ def _by_answer() -> dict[str, list[stages.Row]]:
 def test_a_branched_rule_takes_a_form_answer_and_the_best_n(page: Page) -> None:
     """Ruling 30: a rule's branches in order, the first holding deciding;
     a form answer; the best N among those its branch reaches, ties at the
-    cut all taken and said so."""
-    groups = _by_answer()
-    # A field whose every dossier has its rating in, so its ranking runs.
-    field, rows = next(
-        (f, rs) for f, rs in groups.items() if all(r.cells["g1"].result is not None for r in rs)
+    cut all taken and said so. Set on the Shortlisting's header, as
+    Process would, so that the sample's own rule is not the only case."""
+    groups = _by_answer("Faculty")
+    # A faculty with a tie at some cut, so the tie is shown.
+    field, rows, n = next(
+        (f, rs, i)
+        for f, rs in sorted(groups.items())
+        for xs in [sorted((r.cells["g1"].result or 0 for r in rs), reverse=True)]
+        for i in range(2, len(xs))
+        if xs[i - 1] == xs[i]
     )
     results = sorted((r.cells["g1"].result or 0 for r in rows), reverse=True)
-    n = next(i for i in range(2, len(results)) if results[i - 1] == results[i])  # a tie at the cut
     cut = results[n - 1]
     page.goto(PAGE)
     _unlock(page)
@@ -368,65 +368,62 @@ def test_a_branched_rule_takes_a_form_answer_and_the_best_n(page: Page) -> None:
         page,
         "o1",
         {
-            "when": [["form", "Field of study", "is", field], ["top", "g1.r1", "le", str(n)]],
-            "then": "Shortlisted",
+            "when": [["form", "Faculty", "is", field], ["top", "g1.r1", "le", str(n)]],
+            "then": "Re-appointment",
             "otherwise": "Not shortlisted",
-            "more": [{"when": [["res", "g2.r1", "ge", "4.5"]], "then": "Shortlisted"}],
+            "more": [{"when": [["res", "g2.r1", "ge", "20"]], "then": "Interview"}],
         },
     )
     prop = _apply_rules(page, only_undecided=False)
     taken = sum(1 for x in results if x >= cut)
-    assert taken > n and f"Shortlist for interview: {taken} at the cut of {n}: tied." in (
-        prop.inner_text()
-    )
+    assert taken > n and f"Shortlisting: {taken} at the cut of {n}: tied." in prop.inner_text()
     prop.locator("[data-ap-prop-apply]").click()
     best = {r.application.public_id for r in rows if (r.cells["g1"].result or 0) >= cut}
     for r in (r for rs in groups.values() for r in rs):
+        if r.cells["o1"].by_hand:
+            continue  # kept: the options leave a hand alone
         i = r.application.public_id
-        if r.cells["g1"].result is None:
-            continue  # its peer reviews still coming: waits
         got = _row(page, i).locator('[data-cell="o1"] select').get_attribute("data-v")
-        g2 = r.cells["g2"].result or 0
-        want = "Shortlisted" if i in best or g2 >= 4.5 else "Not shortlisted"
+        major = r.cells["g2"].result or 0
+        want = "Re-appointment" if i in best else "Interview" if major >= 20 else "Not shortlisted"
         assert got == want, i
 
 
 def test_the_best_n_waits_while_one_it_could_rank_is_not_in(page: Page) -> None:
-    """The cold read on rungs 2-3: a dossier whose rating is still coming
-    could outrank the rest, so the ranking waits for it, not for one
-    dossier but for the whole branch; the next branch still decides
-    those the first does not reach."""
-    groups = _by_answer()
-    field, rows = next(
-        (f, rs) for f, rs in groups.items() if any(r.cells["g1"].result is None for r in rs)
-    )
+    """The cold read on rungs 2-3: a dossier whose score is still coming
+    could outrank the rest, so the ranking waits for the whole branch;
+    those the branch does not reach are still decided."""
+    groups = _by_answer("Faculty")
+    field, rows = sorted(groups.items())[0]
     page.goto(PAGE)
     _unlock(page)
+    # One of them still waiting on its peer reviews: no result yet.
+    page.evaluate(
+        "i => { delete [...document.querySelectorAll('[data-row]')].find("
+        "r => r.querySelector('.ap-id code').textContent === i)"
+        ".querySelector('[data-cell=\"g1\"] [data-v]').dataset.result; }",
+        rows[0].application.public_id,
+    )
     _set_rule(
         page,
         "o1",
         {
-            # The other condition first: a rating still coming waits there too.
-            "when": [
-                ["res", "g2.r1", "ge", "0"],
-                ["form", "Field of study", "is", field],
-                ["top", "g1.r1", "le", "3"],
-            ],
-            "then": "Shortlisted",
+            "when": [["form", "Faculty", "is", field], ["top", "g1.r1", "le", "3"]],
+            "then": "Interview",
             "otherwise": "Not shortlisted",
         },
     )
-    prop = _apply_rules(page, only_undecided=False)
+    prop = _apply_rules(page, only_undecided=False, replace_hand=True)
     text = prop.inner_text()
-    assert f"Shortlist for interview: {len(rows)} applications cannot be judged yet" in text
+    assert f"Shortlisting: {len(rows)} applications cannot be judged yet" in text
     proposed = [
         p
         for p in prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
-        if "\tShortlist for interview\t" in p
+        if "\tShortlisting\t" in p
     ]
     ids = {r.application.public_id for r in rows}
     assert not [p for p in proposed if any(i in p for i in ids)]
-    # Elsewhere the rule decides: every other field's shortlisted turn Not.
+    # Elsewhere the rule decides: every other faculty's shortlisted turn Not.
     assert proposed and all(p.endswith("Not shortlisted") for p in proposed)
 
 
@@ -558,66 +555,53 @@ def test_a_dossier_waiting_elsewhere_holds_back_only_a_ranking_it_could_join(
 def test_a_cell_set_by_hand_is_marked_and_kept(page: Page) -> None:
     page.goto(PAGE)
     _unlock(page)
-    hand = page.locator('[data-row] td[data-cell="g1"][data-hand]')
-    assert hand.count() == 1 and "Set by hand" in hand.inner_text()
+    hand = page.locator('[data-row] td[data-cell="o1"][data-hand]')
+    assert hand.count() == 1 and "Set by hand: panel request" in hand.inner_text()
     who = hand.locator("xpath=ancestor::tr").locator(".ap-id code").inner_text()
     prop = _apply_rules(page, only_undecided=False)
     rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
-    assert not [r for r in rows if who in r]
+    assert not [r for r in rows if who in r and "\tShortlisting\t" in r]
     prop.locator("[data-ap-prop-cancel]").click()
     prop = _apply_rules(page, only_undecided=False, replace_hand=True)
     rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
-    assert [r for r in rows if who in r and "Peer Review" in r]
+    # Its mean is just under the bar: the rule would not interview it.
+    assert [
+        r for r in rows if who in r and r.endswith("\tShortlisting\tInterview\tNot shortlisted")
+    ]
     prop.locator("[data-ap-prop-apply]").click()
-    cell = page.locator(f'[data-row]:has(code:text-is("{who}")) td[data-cell="g1"]')
+    cell = page.locator(f'[data-row]:has(code:text-is("{who}")) td[data-cell="o1"]')
     assert cell.get_attribute("data-hand") is None
     # A change by hand marks the cell.
-    cell.locator("[data-ap-adm]").click()
+    cell.locator("select").select_option("Interview")
     assert cell.get_attribute("data-hand") == ""
 
 
-def test_a_gate_rule_takes_each_applicant_s_last_submitted(page: Page) -> None:
+def test_a_gate_rule_takes_each_applicant_s_one_application(page: Page) -> None:
+    """One application each (ruling 30): every submitted one is its
+    applicant's last, so a gate entering the last submitted takes all."""
     page.goto(PAGE)
-    earlier = page.locator('[data-row][data-rank="2"]')
-    assert earlier.count() == 1
-    assert earlier.locator('[data-cell="g1"] [data-ap-adm]').inner_text() == "Not entered"
-    assert page.locator('[data-row][data-rank="1"]').count() >= 80
+    assert page.locator('[data-row][data-rank="2"]').count() == 0
+    assert page.locator('[data-row][data-rank="1"]').count() == 100
 
 
 def test_the_page_shows_each_outcome_s_combined_result_and_weights(page: Page) -> None:
-    from applydesk import stages
-
     page.goto(PAGE)
     _unlock(page)
-    head = page.locator('th[data-col="o1"]').inner_text()
+    head = page.locator('th[data-col="o2"]').inner_text()
     # Each weight names a gate's result (ruling 21).
-    assert "Rating at Peer Review 30% · Score at Faculty Panel Review 70%" in head
-    plan = stages.plan_of("wa9juxbc2t")
-    o1 = next(c for c in plan.columns if c.key == "o1")
-    assert isinstance(o1, stages.Outcome)
-    shown = page.evaluate(
-        """() => Array.from(document.querySelectorAll('[data-row]')).map(r => [
-            r.querySelector('.ap-id code').textContent,
-            (r.querySelector('[data-cell="o1"] [data-ap-comb]') || {}).textContent || ""])"""
-    )
-    by_id = dict(shown)
-    for r in plan.rows:
-        if r.application.state == "Draft":
-            continue
-        want = stages.combined(r, o1)
-        assert by_id[r.application.public_id] == ("" if want is None else f"Combined {want:.2f}"), (
-            r.application.public_id
-        )
-    # A hand change re-weighs it: Peer Review not entered leaves the score.
-    first = next(r for r in plan.rows if r.cells["g2"].result is not None)
-    row = _row(page, first.application.public_id)
-    chip = row.locator('[data-cell="g1"] [data-ap-adm]')
+    assert "Interview score at Staff interview 100%" in head
+    combs = page.locator('[data-cell="o2"] [data-ap-comb]')
+    assert combs.count() > 0 and not "".join(combs.all_inner_texts())  # none interviewed yet
+    # A result in, and the table redrawn by a change, shows it combined.
+    kenji = _row(page, "kenji.russo")
+    kenji.locator('[data-cell="g3"] [data-v]').evaluate("e => { e.dataset.result = '4.5'; }")
+    _row(page, "ben.sato").locator('[data-cell="g3"] [data-ap-adm]').click()
+    assert kenji.locator('[data-cell="o2"] [data-ap-comb]').inner_text() == "Combined 4.50"
+    # Not entered at the interview, it has nothing to combine.
+    chip = kenji.locator('[data-cell="g3"] [data-ap-adm]')
     while chip.inner_text() != "Not entered":
         chip.click()
-    assert (
-        row.locator('[data-cell="o1"] [data-ap-comb]').inner_text()
-        == f"Combined {first.cells['g2'].result:.2f}"
-    )
+    assert kenji.locator('[data-cell="o2"] [data-ap-comb]').inner_text() == ""
 
 
 def test_the_sample_follows_its_rules(page: Page) -> None:
@@ -639,6 +623,7 @@ def test_a_rule_proposal_is_dropped_when_the_table_changes(page: Page) -> None:
     _unlock(page)
     prop = _apply_rules(page)
     first = prop.locator("[data-ap-prop-rows] tr").first.inner_text().split("\t")
+    assert first[2:] == ["Selection", "Pending", "Selected"]  # a re-appointed RA
     messages: list[str] = []
 
     def answer(d: Dialog) -> None:
@@ -646,12 +631,11 @@ def test_a_rule_proposal_is_dropped_when_the_table_changes(page: Page) -> None:
         d.accept()
 
     page.on("dialog", answer)
-    # The first proposal: one of the three still to be let into the Interview.
     row = _row(page, first[0])
     row.locator('[data-cell="g1"] [data-ap-adm]').click()  # the table changes
     prop.locator("[data-ap-prop-apply]").click()
     assert messages and "propose again" in messages[0]
-    assert row.locator('[data-cell="g3"] [data-ap-adm]').get_attribute("data-v") == first[3]
+    assert row.locator('[data-cell="o2"] select').get_attribute("data-v") == "Pending"
 
 
 def test_the_table_is_locked_until_unlocked_and_undo_puts_it_back(page: Page) -> None:
@@ -713,7 +697,7 @@ def test_the_lock_guards_rules_csv_and_open_proposals(page: Page) -> None:
             {
                 "name": "x.csv",
                 "mimeType": "text/csv",
-                "buffer": b"Application ID,Shortlist for interview\r\n",
+                "buffer": b"Application ID,Shortlisting\r\n",
             }
         ]
     )

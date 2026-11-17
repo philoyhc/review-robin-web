@@ -3,7 +3,11 @@ cards that open and close, take a name and dates, are added, replicated,
 deleted and moved, and hold the form within ruling 15; gates and an
 outcome added and removed; their rules and weights edited, the Outline
 following. Without a Chromium build the test skips, saying why;
-``RRW_REQUIRE_BROWSER=1`` (set by CI) turns that skip into a failure."""
+``RRW_REQUIRE_BROWSER=1`` (set by CI) turns that skip into a failure.
+
+The editor's tests run on the fellowship's process, installed on the
+conference grant (`applydesk/tests/_fellowship.py`, segment AD1H); the
+model exercise's own, the RA recruitment's, at the end (``MODEL``)."""
 
 from __future__ import annotations
 
@@ -16,15 +20,18 @@ from fastapi.testclient import TestClient
 from playwright.sync_api import Error, Locator, Page, Route, sync_playwright
 
 from applydesk import stages
+from applydesk.tests import _fellowship
 from applydesk.tests._host import host_with
 
 ORIGIN = "http://applydesk.test"
-PAGE = f"{ORIGIN}/applydesk/operator/exercises/wa9juxbc2t/process"
+PAGE = f"{ORIGIN}/applydesk/operator/exercises/{_fellowship.EX}/process"
+MODEL = f"{ORIGIN}/applydesk/operator/exercises/wa9juxbc2t/process"
 BLANK = f"{ORIGIN}/applydesk/operator/exercises/n5wg8tjr3e/process"
 
 
 @pytest.fixture
-def page() -> Iterator[Page]:
+def page(monkeypatch: pytest.MonkeyPatch) -> Iterator[Page]:
+    _fellowship.install(monkeypatch)
     client = TestClient(host_with(("applydesk",))[0])
 
     def serve(route: Route) -> None:
@@ -654,7 +661,7 @@ def test_an_outcome_s_release_is_set_per_audience(page: Page) -> None:
     assert _checks(_item(page, "o2")) == [True, True, False, True]
     assert o1.locator("select[data-rel-template]").count() == 0
     assert o1.locator(".pc-hint a").get_attribute("href") == (
-        "/applydesk/operator/exercises/wa9juxbc2t/emails"
+        f"/applydesk/operator/exercises/{_fellowship.EX}/emails"
     )
 
 
@@ -739,7 +746,7 @@ def test_a_lone_or_new_item_opens_and_the_outline_opens_an_item(page: Page) -> N
 
 
 # --- Segment AD1F rung 4c: a gate's Evaluators on Process (ruling 20) ---
-DRAFT = PAGE.replace("wa9juxbc2t", "c4xh2ndv6s")
+DRAFT = f"{ORIGIN}/applydesk/operator/exercises/c4xh2ndv6s/process"
 
 
 def test_a_gate_item_makes_and_picks_its_panel(page: Page) -> None:
@@ -976,7 +983,7 @@ def test_an_item_left_alone_opens(page: Page) -> None:
 # --- Segment AD1F rung 5c: a gate's results edited (ruling 21) ---
 # Every gate in the model exercise is sent, so its results are fixed; the
 # draft's selection gate is not.
-DRAFT_PAGE = PAGE.replace("wa9juxbc2t", "c4xh2ndv6s")
+DRAFT_PAGE = f"{ORIGIN}/applydesk/operator/exercises/c4xh2ndv6s/process"
 
 
 def _draft_gate(page: Page) -> Locator:
@@ -1353,3 +1360,46 @@ def test_a_gate_s_description_grows_with_its_text(page: Page) -> None:
     box = gate.locator('[data-pc="description"]')
     box.fill("A line. " * 60)
     assert box.evaluate("e => e.offsetHeight") > before and box.evaluate(fits)
+
+
+# --- Segment AD1H rung 6: the model exercise's own process (ruling 30) ---
+def test_the_model_exercise_s_branched_rules_draw_as_the_server_does(page: Page) -> None:
+    """The RA recruitment's rules branch and read a form answer and the
+    best N: the script's lines are the server's, and none is a problem."""
+    page.goto(MODEL)
+    served = page.evaluate(
+        """async () => {
+          const html = await (await fetch(location.href)).text();
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          return [...doc.querySelectorAll("#pc-cards [data-rule-line]")].map(e => e.textContent);
+        }"""
+    )
+    shown = page.locator("#pc-cards [data-rule-line]").all_text_contents()
+    assert shown == served and len(shown) == 5
+    assert any("Currently an RA? is Yes" in line for line in shown)
+    assert any("the best 20 by Interview score at Staff interview" in line for line in shown)
+    # Weights all 0 are no combined result, which its rule does not read.
+    assert not page.locator("[data-pc-issues]").is_visible()
+    o1 = _item(page, "o1")
+    assert not o1.locator("[data-rule-warn]").is_visible()
+    o1.locator('[data-pc-act="rule"]').click()
+    assert o1.locator(".pc-branch").count() == 2
+    # A rule reading the combined result, with no weights, is named.
+    o1.locator(".pc-cond select").first.select_option("comb")
+    assert "This outcome has weights adding up to 0, not 100." in (
+        o1.locator("[data-rule-warn]").inner_text()
+    )
+
+
+def test_the_model_exercise_s_review_is_fixed_and_its_interview_open(page: Page) -> None:
+    page.goto(MODEL)
+    g1 = _item(page, "g1")
+    assert g1.locator("[data-pc-sent]").inner_text() == (
+        "Its Review Robin session has opened: its settings are fixed here."
+    )
+    assert g1.locator('[data-r="ignore_zero"]').first.is_checked()
+    assert g1.locator("[data-pr-ed]").first.evaluate("e => e.disabled")
+    g3 = _item(page, "g3")
+    assert g3.locator("[data-pc-sent]").count() == 0
+    assert g3.locator('[data-ps="mode"]').input_value() == "suggested"
+    assert not g3.locator('[data-ps="mode"]').is_disabled()

@@ -517,8 +517,10 @@
           // A withdrawn application keeps what it had; a draft has nothing.
           if (r.dataset.status !== "Submitted") return;
           // An outcome none of whose gates this application entered is
-          // not reached: it stays as it is.
-          if (h.dataset.kind === "outcome" && notReached(r, key, val)) return;
+          // not reached: it stays as it is, unless its cell is already
+          // open (Pending or decided), as when an earlier outcome sent it
+          // straight on (ruling 30: re-appointment skips the interview).
+          if (h.dataset.kind === "outcome" && val(r, key) === "" && notReached(r, key, val)) return;
           reach.push(r);
         });
         // Ruling 30: branches in order, the first whose conditions all hold

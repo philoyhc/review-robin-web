@@ -17,7 +17,7 @@ from applydesk.tests._host import host_with
 from applydesk.tests.test_form import SUMMARY_CASES
 
 ORIGIN = "http://applydesk.test"
-FORM = f"{ORIGIN}/applydesk/operator/exercises/wa9juxbc2t/form"
+FORM = f"{ORIGIN}/applydesk/operator/exercises/r6tm4kq9wz/form"
 BLANK = f"{ORIGIN}/applydesk/operator/exercises/n5wg8tjr3e/form"
 
 

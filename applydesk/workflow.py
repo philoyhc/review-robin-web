@@ -18,10 +18,10 @@ from applydesk.sample_data import Exercise
 #: Sent → Results in). A gate missing here is not ready.
 _GATES: dict[str, dict[str, tuple[str, str]]] = {
     "wa9juxbc2t": {
-        "g1": ("Results in", "92 of 92 reviewed"),
-        "g2": ("Results in", "92 of 92 reviewed"),
-        # Mid-stage (ruling 29): the Interview gate entered, its pairs being
-        # worked on Evaluations, not yet sent.
+        "g1": ("Results in", "100 of 100 reviewed"),
+        "g2": ("Results in", "100 of 100 reviewed"),
+        # Mid Stage 3 (rulings 29, 30): the staff interview entered, its
+        # pairs being approved on Evaluations, not yet sent.
         "g3": ("Ready", ""),
     },
     "k7mfr3pq8z": {"g1": ("Sent", "3 of 5 reviewed")},
@@ -65,7 +65,6 @@ _SENDS: dict[str, frozenset[tuple[str, str]]] = {
             ("o1", APPLICANTS),
             ("o2", APPLICANTS),
             ("o2", EVALUATORS),
-            ("o3", APPLICANTS),
         }
     ),
     "k7mfr3pq8z": frozenset({("receipt", APPLICANTS), ("o1", APPLICANTS)}),
@@ -82,7 +81,6 @@ _WRITTEN: dict[str, frozenset[tuple[str, str]]] = {
             ("receipt", APPLICANTS),
             ("reminder", APPLICANTS),
             ("o1", APPLICANTS),
-            ("o2", APPLICANTS),
         }
     ),
     "k7mfr3pq8z": frozenset({("receipt", APPLICANTS)}),
