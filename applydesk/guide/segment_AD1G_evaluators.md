@@ -27,6 +27,20 @@ A gate item names one panel (`stages.Gate.panel`, AD1F) and says nothing of who 
 - **A source's own *N per dossier* without a min and max.** Ruling 27 gives each a min and max; *N* is min = max.
 - **Leaving pairs to Review Robin's rules.** Apply Desk must know them for dossier access (ruling 9) and the *assigned evaluators* audience (ruling 26).
 
+## Decision amended (author, 2026-11-17): the rest of Process > Gates
+
+Review Robin's side of a linked gate is built (RRW 23F, `spec/linked_sessions.md`). What a gate item on Process must collect from the operator for it (`applydesk/guide/todo_master.md`, "What a linked Review Robin gate needs", layer A) joins this segment; Evaluations > Gates' sending, status and results (layer B) is a later segment. On a gate run in Review Robin:
+
+1. **The gate's own fields**:
+   - a **description**, beside its name (Review Robin's instrument description);
+   - **Start** and **End**, date-times, shown in the **exercise's timezone** (Setup), defaulting from the gate's stage, Start before End; a line says a sent Start opens the session once Review Robin's operator prepares it;
+   - a **help contact** (an email), defaulting from the exercise's;
+   - **Confidential**: the exercise's blind setting shown on the gate, and what Review Robin will show for each reviewee (the name or *Name redacted*, and the key).
+2. **Each result's fields**, in its editor: **required** (a switch), **help text** (what Review Robin shows the evaluator under the field), and its **field key**, shown read-only (prescribed: what Review Robin reports the answers under).
+3. **The *For Review Robin* line** grows into a short summary of what will be sent: the instrument's name, its fields with required and help, the window, the tag `applydesk`.
+
+Nothing is sent or saved here: the fields live in the browser, a reload restoring the sample, as the rest of the segment.
+
 ## Semantics
 
 - **The Total's bounds** are recomputed as sources change; a Total outside them is shown as a problem on the Outline, not silently clamped.
@@ -59,13 +73,17 @@ Taken 2026-11-15 at `31465d3cc`.
 4. **Evaluators wired.** Add, rank, remove a source; min and max; the Total's bounds; the mode. Chromium tests. `diff-reviewer` reads 2–4.
 5. **Evaluations scaffold.** A card per gate, its table and load line drawn from `stages.fill` on the sample's dossiers; inert controls.
 6. **Evaluations wired.** The three modes' operations in the browser. Chromium tests. `diff-reviewer` reads 5–6.
-7. **Close**, after the author's browser check.
+7. ~~**Close**, after the author's browser check.~~ Moved to 10 by the amendment.
+8. **The gate's and results' fields, scaffold** (amendment): description, Start and End with the timezone, help contact, Confidential; each result's required, help text and field key; the fuller *For Review Robin* summary; drawn from the sample, inert. `stages` gains the fields, the sample filling them.
+9. **The fields wired**: edited in the browser, Start before End, a required switch and help text per result, the summary following; a sent gate read-only. Chromium tests. `diff-reviewer` reads 8–9.
+10. **Close**, after the author's browser check.
 
 ## Definition of done
 
 - A gate holds ranked sources, a Total and a mode; `stages.fill` fills per ruling 27 (tests, the author's examples among them).
 - Process edits the Evaluators in the browser, the Total held within its bounds (Chromium tests).
 - Evaluations shows each gate's assignments and works its mode (Chromium tests).
+- A gate run in Review Robin collects its description, window, timezone, help contact and confidentiality, and each result its required, help text and field key; the *For Review Robin* summary shows them (Chromium tests).
 - The author has used the pages locally and approved them.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py AD1G` exits 0; any warning adjudicated
@@ -77,16 +95,18 @@ Taken 2026-11-15 at `31465d3cc`.
 
 - **The Total's label**: *Total*, proposed with ruling 27; the author's at the rung 3 check.
 - **Suggested mode's re-run**: whether a re-run keeps approved rows; proposed yes, settled at rung 6.
+- **Confidential per gate or per exercise**: the exercise's blind setting today; the author's (the todo's rulings list).
+- **The help contact and the timezone's home**: the exercise's, defaulted onto each gate; the author's at the rung 8 check.
 - **`close_check.py` reads only RRW's `guide/`**: this close is checked by hand, as AD1E's and AD1F's.
 
 ## Out of scope
 
-- **Sending** the pairs (AD6) and saving them (AD2).
+- **Sending** the pairs (AD6) and saving them (AD2); Evaluations > Gates' Send, re-send, status and results (a later segment, author 2026-11-17).
 - **Referees** as a source (ruling 2).
 - **Tag or department conflicts**, until ruled.
 
 ## Doc impact
 
-- `applydesk/spec/applications.md` — "The Process page": a gate's Evaluators as ranked sources, the Total and the mode; "The Evaluations page": a section for its assignments and operations (at close).
+- `applydesk/spec/applications.md` — "The Process page": a gate's Evaluators as ranked sources, the Total and the mode, and (amendment) a gate's description, window, timezone, help contact, confidentiality and each result's required, help text and field key; "The Evaluations page": a section for its assignments and operations (at close).
 - `applydesk/guide/todo_master.md` — the AD1G roadmap row (rung 1); deleted at close.
 - `applydesk/README.md` — this plan's row (rung 1), moved to the archive's index at close.
