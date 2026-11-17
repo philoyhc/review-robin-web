@@ -20,7 +20,7 @@ Rejected: **the layout as the exercise's setting**, chosen by the operator for a
 
 ## Decision amended (author, 2026-11-17, at the rung 2 check)
 
-The horizontal layout is **one graphic, equal widths**: the bar's segments are the stages' column heads, one per stage, equal in width so each sits over its own column; the current one fills to today. The proportional track, its date scale and the separate row of numbered dots go (they said the same thing twice). A stage's length is its dates, under its name. Mock-up: equal-width, three and five stages and a phone, in the rung 3 PR.
+The horizontal layout is **one graphic, equal widths**: the bar's segments are the stages' column heads, one per stage, equal in width so each sits over its own column; the current one fills to today. The proportional track, its date scale and the separate row of numbered dots go (they said the same thing twice). A stage's length is its dates, under its name. Mock-up: `applydesk/docs/home/` (v3: three and five stages and a phone).
 
 ## Semantics
 
@@ -55,6 +55,9 @@ Taken 2026-11-17 at `696b14d9b`.
 - **Rung 3 built** (2026-11-17): the horizontal layout equal-width (Decision amended), the proportional track, its scale and the dots row gone; one list of stages drawn either way by CSS, the switch kept in `localStorage` (`applydesk-timeline`), starting Vertical on a phone or past four stages, the server's start without the script. `timeline.py` drops the shares and the track position.
 
 - **Rung 4 built** (2026-11-17): Details behind *Unlock*, a field each with where it is used; *Lock* keeps the changes on the page, refusing an empty name, another exercise's code (any case) and a help contact that is not an address; *Discard changes* puts back the last kept; *Unsaved changes* and the leave warning from any change since load. A published exercise's code and who may apply show fixed, saying so. Found at build: `.btn`'s display kept a `hidden` *Unlock* showing beside *Lock*.
+
+- **Rung 5 built** (2026-11-17): the applicant's exercise page draws the same partial beside *Apply*, without the Next step line; its old *Timeline* list of three dates goes. Today and the state chips show there too, as proposed (the open question's).
+- **Read, rungs 2–5** (`fad887534..`, after rung 2's own): no blocker; fixed in rung 5: the last horizontal bar 8px short and a single stage's left corners square; a timezone outside Details' list kept, not changed by Lock, and *· the default* alike on page and after Lock; *Go to Evaluations* decided in `timeline.gate_running`, not the template; the switch script once per timeline; a refusal said again and its field marked `aria-invalid`; Enter on *Blind review* does not Lock; the form `autocomplete="off"`; the applicant's *Results expected … (an estimate)* back; the v3 mock-ups committed. Left: Lock's changes stay in the card (the timeline's timezone and the title follow at AD2).
 
 ## PR ladder
 

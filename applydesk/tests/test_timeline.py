@@ -193,3 +193,40 @@ def test_past_four_stages_the_timeline_starts_vertical(
 def test_the_status_row_says_one_draft(client: TestClient) -> None:
     text = client.get("/applydesk/operator/exercises/r6tm4kq9wz").text
     assert "1 submitted · 1 draft<" in text
+
+
+def test_the_applicant_s_page_shows_the_same_timeline_and_nothing_operator_only(
+    client: TestClient,
+) -> None:
+    """Rung 5: the partial Home draws, as applicants see it; no Next step
+    line, no link into operator pages, and none of Process's machinery:
+    panels, their members, modes, rules or pair counts."""
+    from applydesk import stages
+
+    mine = client.get(f"/applydesk/me/exercises/{EX}").text
+    home = client.get(f"/applydesk/operator/exercises/{EX}").text
+
+    def stages_of(page: str) -> str:
+        return page[
+            page.index('<ol class="tl-stages">') : page.index(
+                "</ol>", page.index('<ol class="tl-stages">')
+            )
+        ]
+
+    assert stages_of(mine) == stages_of(home)
+    assert "Today, 17 Nov, is in Interviews." in mine
+    assert "Results expected December 2026 (an estimate)." in mine
+    timeline_card = mine[
+        mine.index("data-timeline") : mine.index("</section>", mine.index("data-timeline"))
+    ]
+    # The header's Operator Lobby link is the signed-in operator's, not the card's.
+    assert "data-tl-next" not in timeline_card and "/operator/" not in timeline_card
+    plan = stages.plan_of(EX)
+    pools = sample_data.panel_pools(EX)
+    operator_only = [p["name"] for p in pools.values()]
+    operator_only += [name for p in pools.values() for name, _ in p["members"]]
+    operator_only += [label for _, label in stages.MODES]
+    operator_only += [stages.rule_text(plan, c) for c in plan.columns if stages.rule_text(plan, c)]
+    operator_only += ["pairs", "Evaluations", "≥"]
+    for text in operator_only:
+        assert text not in timeline_card, text

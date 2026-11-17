@@ -47,6 +47,7 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         tl=tl,
         short=timeline.short,
         next_line=timeline.next_step(exercise, tl),
+        gate_running=timeline.gate_running(exercise, tl),
         missing=sample_data.setup_missing(exercise),
         timezones=sample_data.TIMEZONES,
         default_contact=sample_data.DEFAULT_HELP_CONTACT,

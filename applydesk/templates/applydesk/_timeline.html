@@ -32,7 +32,8 @@
    it the stage under way shows unfilled and the layout is the server's
    starting one. #}
 <script>
-document.querySelectorAll("[data-timeline]").forEach(function (t) {
+document.querySelectorAll("[data-timeline]:not([data-tl-on])").forEach(function (t) {
+  t.setAttribute("data-tl-on", "");  // once each, however many timelines include this
   var KEY = "applydesk-timeline", phone = window.matchMedia("(max-width: 639px)").matches;
   var stored = null;
   try { stored = localStorage.getItem(KEY); } catch (e) { /* storage blocked: the starting rule */ }
