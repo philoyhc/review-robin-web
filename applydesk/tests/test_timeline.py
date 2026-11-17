@@ -29,7 +29,7 @@ def _of(exercise_id: str, today: date = timeline.TODAY) -> timeline.Timeline:
     return timeline.of(e, today)
 
 
-def test_each_stage_has_its_dates_state_and_share() -> None:
+def test_each_stage_has_its_dates_state_and_progress() -> None:
     t = _of(EX)
     assert [(s.name, s.when, s.state) for s in t.stages] == [
         ("Applications", "1 Sep – 30 Sep", "Closed"),
@@ -37,13 +37,7 @@ def test_each_stage_has_its_dates_state_and_share() -> None:
         ("Interviews", "9 Nov – 4 Dec", "Now"),
     ]
     assert (t.start, t.end) == (date(2026, 9, 1), date(2026, 12, 4))
-    assert sum(s.share for s in t.stages) == pytest.approx(1.0)
-    # A share is the stage's days: Review's 37 of 93 days.
-    assert t.stages[1].share == pytest.approx(37 / 93)
     assert t.now is t.stages[2] and t.stages[2].progress == pytest.approx(8.5 / 26)
-    # Today along the track, in the same shares the segments are drawn in.
-    assert t.today_at == pytest.approx(t.stages[2].offset + t.stages[2].share * 8.5 / 26)
-    assert t.stages[2].offset == pytest.approx(t.stages[0].share + t.stages[1].share)
 
 
 def test_a_stage_s_state_follows_today() -> None:
@@ -57,14 +51,14 @@ def test_a_stage_s_state_follows_today() -> None:
     assert timeline.next_step(e, before) == "Next: Applications, from 1 Sep."
 
 
-def test_dates_roll_over_the_year_and_undated_stages_share_equally() -> None:
+def test_dates_roll_over_the_year_and_undated_stages_wait() -> None:
     pcg = _of(PCG)
     assert (pcg.stages[0].start, pcg.stages[0].end) == (date(2026, 11, 1), date(2027, 1, 31))
     assert pcg.stages[0].state == "Now"
     draft = _of(DRAFT)
-    assert [(s.when, s.state, s.share) for s in draft.stages] == [
-        ("Dates not set", "Next", 0.5),
-        ("Dates not set", "Next", 0.5),
+    assert [(s.when, s.state, s.progress) for s in draft.stages] == [
+        ("Dates not set", "Next", 0.0),
+        ("Dates not set", "Next", 0.0),
     ]
     assert draft.start is None
 
@@ -100,7 +94,12 @@ def test_home_is_the_timeline_beside_details(client: TestClient) -> None:
     grid = home[home.index('<div class="hm-grid">') :]
     assert grid.index("data-timeline") < grid.index('id="details"')
     assert re.findall(r'data-tl-stage="(\d)"', home) == ["1", "2", "3"]
-    assert 'data-tl-flex="0.3978"' in home and 'data-tl-p="32.7"' in home
+    assert 'data-tl-p="32.7"' in home
+    # Equal widths (Decision amended): no proportions ride the page.
+    assert "data-tl-flex" not in home and "tl-scale" not in home
+    # Three stages start Horizontal; the switch shows once the script runs.
+    assert 'data-timeline data-layout="h" data-tl-count="3"' in home
+    assert '<div class="tl-switch" role="group" aria-label="Timeline layout" hidden>' in home
     assert "Today · 17 Nov" in home
     assert "Now: Interviews, until 4 Dec. Next: Selection, expected December 2026." in home
     # The old fact cards are gone: their facts are the status row's and
@@ -144,10 +143,9 @@ def test_today_between_stages_is_said_and_marked() -> None:
     gap = _of(EX, date(2026, 11, 7))
     assert [s.state for s in gap.stages] == ["Closed", "Done", "Next"]
     assert gap.today_text == "Today, 7 Nov, is between Review and Interviews."
-    assert gap.today_at == pytest.approx(gap.stages[2].offset)
     assert _of(EX, date(2026, 8, 1)).today_text == "Today, 1 Aug, is before Applications."
     assert _of(EX, date(2026, 11, 6)).stages[1].state == "Now"  # its last day is in it
-    assert _of(DRAFT).today_at is None and _of(DRAFT).today_text == ""
+    assert _of(DRAFT).today_text == ""
 
 
 def test_an_outcome_released_to_others_reads_as_to_come(
@@ -177,27 +175,19 @@ def test_an_outcome_released_to_others_reads_as_to_come(
     )
 
 
-def test_a_mix_of_dated_and_undated_stages_shares_the_track(
-    monkeypatch: pytest.MonkeyPatch,
+def test_past_four_stages_the_timeline_starts_vertical(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Two dated stages take two-thirds, by their days; the undated one
-    the third that is left."""
+    """Decision 3: an exercise of five stages starts Vertical."""
     from dataclasses import replace
 
     from applydesk import stages
 
     plan = stages.plan_of(EX)
-    undated = replace(plan.stages[2], dates="Dates not set")
-    monkeypatch.setattr(
-        stages, "plan_of", lambda _: replace(plan, stages=(*plan.stages[:2], undated))
-    )
-    t = _of(EX)
-    assert [round(s.share, 4) for s in t.stages] == [
-        round(30 / 67 * 2 / 3, 4),
-        round(37 / 67 * 2 / 3, 4),
-        round(1 / 3, 4),
-    ]
-    assert t.stages[2].state == "Next" and sum(s.share for s in t.stages) == pytest.approx(1.0)
+    more = tuple(replace(plan.stages[2], number=n) for n in (4, 5))
+    monkeypatch.setattr(stages, "plan_of", lambda _: replace(plan, stages=(*plan.stages, *more)))
+    home = client.get(f"/applydesk/operator/exercises/{EX}").text
+    assert 'data-timeline data-layout="v" data-tl-count="5"' in home
 
 
 def test_the_status_row_says_one_draft(client: TestClient) -> None:

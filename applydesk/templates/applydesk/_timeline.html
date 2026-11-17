@@ -1,37 +1,54 @@
 {# The exercise's timeline (segment AD1I), drawn from Process by
    `applydesk/timeline.py`: Home's and the applicant's page's alike, so
-   nothing operator-only goes in; today's place is said in words too. Horizontal for now: a track whose
-   stages take their share of the days, today marked, then a column per
-   stage with its items. #}
-{% set ns = namespace(at=0.0) %}
-<section class="card tl" data-timeline>
-  <div class="cardhead"><h2>Timeline</h2></div>
-  <p class="tl-sub">{{ tl.stages | length }} {{ "stage" if tl.stages | length == 1 else "stages" }}{% if tl.start %}, {{ short(tl.start) }} to {{ short(tl.end) }} {{ tl.end.year }}{% endif %}, in {{ timezone(exercise) }} time.{% if tl.today_text %} {{ tl.today_text }}{% endif %}</p>
-  <div class="tl-track" aria-hidden="true">
-    {% for s in tl.stages %}<div class="tl-seg tl-{{ s.state | lower }}" data-tl-flex="{{ '%.4f' % s.share }}"{% if s.state == 'Now' %} data-tl-p="{{ '%.1f' % (s.progress * 100) }}"{% endif %}><span class="tl-name">{{ s.number }} · {{ s.name }}</span><i class="tl-ms{% if s.state in ('Done', 'Closed') %} tl-ms-done{% endif %}"></i></div>{% endfor %}
-    {% if tl.today_at is not none %}<span class="tl-today" data-tl-left="{{ '%.1f' % (tl.today_at * 100) }}"><span>Today · {{ short(tl.today) }}</span></span>{% endif %}
+   nothing operator-only goes in; today's place is said in words too.
+   One list of stages, drawn two ways (Decision, Decision amended):
+   Horizontal, a bar of equal segments heading a column per stage;
+   Vertical, a date gutter and a spine through each stage's dot. Each
+   viewer flips it, kept in their browser; it starts Vertical on a phone
+   or past four stages. #}
+<section class="card tl" data-timeline data-layout="{{ 'v' if tl.stages | length > 4 else 'h' }}" data-tl-count="{{ tl.stages | length }}">
+  <div class="cardhead"><h2>Timeline</h2>
+    <div class="tl-switch" role="group" aria-label="Timeline layout" hidden>
+      <button type="button" data-tl-layout="h" aria-pressed="false">Horizontal</button>
+      <button type="button" data-tl-layout="v" aria-pressed="false">Vertical</button>
+    </div>
   </div>
-  {% if tl.start %}<div class="tl-scale" aria-hidden="true">{% for s in tl.stages if s.start %}<span data-tl-left="{{ '%.1f' % (s.offset * 100) }}">{{ short(s.start) }}</span>{% endfor %}<span data-tl-left="100">{{ short(tl.end) }}</span></div>{% endif %}
-  <ol class="tl-steps">
+  <p class="tl-sub">{{ tl.stages | length }} {{ "stage" if tl.stages | length == 1 else "stages" }}{% if tl.start %}, {{ short(tl.start) }} to {{ short(tl.end) }} {{ tl.end.year }}{% endif %}, in {{ timezone(exercise) }} time.{% if tl.today_text %} {{ tl.today_text }}{% endif %}</p>
+  <ol class="tl-stages">
     {% for s in tl.stages %}
-    <li class="tl-step tl-{{ s.state | lower }}" data-tl-stage="{{ s.number }}">
+    <li class="tl-stage tl-{{ s.state | lower }}" data-tl-stage="{{ s.number }}"{% if s.state == "Now" %} data-tl-p="{{ '%.1f' % (s.progress * 100) }}"{% endif %}>
+      <div class="tl-bar" aria-hidden="true">{% if s.state == "Now" %}<span class="tl-today"><span>Today · {{ short(tl.today) }}</span></span>{% endif %}</div>
       <span class="tl-dot" aria-hidden="true">{{ "✓" if s.state in ("Done", "Closed") else s.number }}</span>
-      <h3>{{ s.name }} <span class="chip chip-{{ 'ok' if s.state in ('Done', 'Closed') else ('info' if s.state == 'Now' else 'mute') }}">{{ s.state }}</span></h3>
+      <h3 class="tl-name">{{ s.name }} <span class="chip chip-{{ 'ok' if s.state in ('Done', 'Closed') else ('info' if s.state == 'Now' else 'mute') }}">{{ s.state }}</span></h3>
       <p class="tl-when">{{ s.when }}</p>
-      <ul>{% for i in s.items %}<li class="tl-i-{{ i.kind }}"><b>{{ i.kicker }}</b>{{ i.text }}</li>{% endfor %}</ul>
+      <ul class="tl-items">{% for i in s.items %}<li class="tl-i-{{ i.kind }}"><b>{{ i.kicker }}</b>{{ i.text }}</li>{% endfor %}</ul>
     </li>
     {% endfor %}
   </ol>
   {% if next_line %}<p class="tl-nextline" data-tl-next>{{ next_line }}{% if next_link %} <a href="{{ next_link }}">Go to Evaluations</a>{% endif %}</p>{% endif %}
 </section>
-{# The track's proportions, from the server's figures: no inline styles
-   in the page (applydesk/tests/test_pages.py); without the script the
-   stages share the track equally. #}
+{# Today's place in its stage, and the layout: no inline styles in the
+   page (applydesk/tests/test_pages.py), so the script sets them; without
+   it the stage under way shows unfilled and the layout is the server's
+   starting one. #}
 <script>
 document.querySelectorAll("[data-timeline]").forEach(function (t) {
-  t.querySelectorAll("[data-tl-flex]").forEach(function (e) { e.style.flex = e.dataset.tlFlex; });
+  var KEY = "applydesk-timeline", phone = window.matchMedia("(max-width: 639px)").matches;
+  var stored = null;
+  try { stored = localStorage.getItem(KEY); } catch (e) { /* storage blocked: the starting rule */ }
+  function show(layout) {
+    t.dataset.layout = layout;
+    t.querySelectorAll("[data-tl-layout]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.tlLayout === layout)); });
+  }
+  show(stored === "h" || stored === "v" ? stored : (phone || Number(t.dataset.tlCount) > 4 ? "v" : "h"));
   t.querySelectorAll("[data-tl-p]").forEach(function (e) { e.style.setProperty("--p", e.dataset.tlP + "%"); });
-  t.querySelectorAll("[data-tl-left]").forEach(function (e) { e.style.left = e.dataset.tlLeft + "%"; });
-  t.classList.add("tl-ready");  // the scale and today shown once placed
+  t.querySelector(".tl-switch").hidden = false;
+  t.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-tl-layout]");
+    if (!b) return;
+    show(b.dataset.tlLayout);
+    try { localStorage.setItem(KEY, b.dataset.tlLayout); } catch (err) { /* this page only */ }
+  });
+  t.classList.add("tl-ready");
 });
 </script>
