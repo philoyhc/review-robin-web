@@ -12,6 +12,29 @@
   {% include "applydesk/_timeline.html" %}
   {% include "applydesk/operator/_details.html" %}
 </div>
+{# Side by side, the two cards share a height only when theirs are
+   close (author, at the rung 5 check): within a fifth of the taller. #}
+<script>
+(function () {
+  var grid = document.querySelector(".hm-grid");
+  if (!grid) return;
+  function fit() {
+    grid.classList.remove("is-equal-height");
+    var cards = Array.prototype.slice.call(grid.querySelectorAll(":scope > .card"));  // not the partial's script
+    var tops = cards.map(function (c) { return c.getBoundingClientRect().top; });
+    if (cards.length < 2 || Math.abs(tops[0] - tops[1]) > 1) return;  // stacked
+    var hs = cards.map(function (c) { return c.getBoundingClientRect().height; });
+    var hi = Math.max.apply(null, hs), lo = Math.min.apply(null, hs);
+    grid.classList.toggle("is-equal-height", hi - lo <= hi / 5);
+  }
+  fit();
+  var queued = false;
+  function soon() { if (!queued) { queued = true; window.requestAnimationFrame(function () { queued = false; fit(); }); } }
+  window.addEventListener("resize", soon);
+  grid.addEventListener("input", soon);  // the unsaved marker or a longer field changes a height (cold read)
+  grid.addEventListener("click", function (e) { if (e.target.closest("[data-tl-layout], [data-dt-lock], [data-dt-act]")) window.setTimeout(fit, 0); });
+})();
+</script>
 {% if exercise.state == "Draft" %}
 <section class="card hm-publish">
   <h2>Publish</h2>

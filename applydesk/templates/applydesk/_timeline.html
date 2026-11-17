@@ -1,12 +1,13 @@
 {# The exercise's timeline (segment AD1I), drawn from Process by
    `applydesk/timeline.py`: Home's and the applicant's page's alike, so
-   nothing operator-only goes in; today's place is said in words too.
+   nothing operator-only goes in but the operator's part, drawn only
+   where the page passes `ops` (Home); today's place is said in words too.
    One list of stages, drawn two ways (Decision, Decision amended):
    Horizontal, a bar of equal segments heading a column per stage;
    Vertical, a date gutter and a spine through each stage's dot. Each
    viewer flips it, kept in their browser; it starts Vertical on a phone
    or past four stages. #}
-<section class="card tl" data-timeline data-layout="{{ 'v' if tl.stages | length > 4 else 'h' }}" data-tl-count="{{ tl.stages | length }}">
+<section class="card tl{{ ' tl-ops' if ops }}" data-timeline data-layout="{{ 'v' if tl.stages | length > 4 else 'h' }}" data-tl-count="{{ tl.stages | length }}">
   <div class="cardhead"><h2>Timeline</h2>
     <div class="tl-switch" role="group" aria-label="Timeline layout" hidden>
       <button type="button" data-tl-layout="h" aria-pressed="false">Horizontal</button>
@@ -22,6 +23,12 @@
       <h3 class="tl-name">{{ s.name }} <span class="chip chip-{{ 'ok' if s.state in ('Done', 'Closed') else ('info' if s.state == 'Now' else 'mute') }}">{{ s.state }}</span></h3>
       <p class="tl-when">{{ s.when }}</p>
       <ul class="tl-items">{% for i in s.items %}<li class="tl-i-{{ i.kind }}"><b>{{ i.kicker }}</b>{{ i.text }}</li>{% endfor %}</ul>
+      {# The operator's part (Decision amended again), only where the page
+         passes it: Home does, the applicant's page never does. #}
+      {% if ops %}<div class="tl-op" data-tl-op>
+        <span class="tl-op-k">Operator only</span>
+        {% for r in ops[loop.index0] %}<div class="tl-op-row"><b>{{ r.label }} <span class="chip chip-{{ r.tone }}">{{ r.state }}</span></b><span>{{ r.detail }}</span>{% if r.target == "dossiers" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers') }}">Dossiers</a>{% elif r.target %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ r.target) }}">Gate {{ r.target }}</a>{% endif %}</div>{% endfor %}
+      </div>{% endif %}
     </li>
     {% endfor %}
   </ol>
