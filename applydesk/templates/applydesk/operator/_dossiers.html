@@ -79,7 +79,7 @@
     </thead>
     <tbody>
     {% for row in plan.rows %}{% set a = row.application %}
-      <tr data-row data-status="{{ a.state }}" data-search="{{ (a.public_id ~ ' ' ~ a.applicant ~ ' ' ~ a.email) | lower }}"{% if a.public_id in last %} data-last{% endif %}{% if a.public_id in rank %} data-rank="{{ rank[a.public_id] }}"{% endif %}>
+      <tr data-row data-status="{{ a.state }}" data-search="{{ (a.public_id ~ ' ' ~ a.applicant ~ ' ' ~ a.email) | lower }}"{% if a.public_id in last %} data-last{% endif %}{% if a.public_id in rank %} data-rank="{{ rank[a.public_id] }}"{% endif %} data-answers="{{ answers(a) | tojson | forceescape }}">
         <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ a.public_id }}">
           {% if a.state == "Submitted" %}<a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ a.dossier_id) }}"><code>{{ a.public_id }}</code></a>{% else %}<code>{{ a.public_id }}</code>{% endif %}</td>
         <td class="ap-who"><strong>{{ a.applicant }}</strong><span class="ap-mail">{{ a.email }}</span></td>
@@ -471,6 +471,14 @@
       var kind = cond[0], key = cond[1], op = cond[2], want = cond[3];
       function cmp(x) { var t = parseFloat(want); return op === "ge" ? x >= t : x < t; }
       if (kind === "status") return r.dataset.status === want;
+      if (kind === "form") {  // ruling 30: the answer to a List question
+        var ans = {};
+        try { ans = JSON.parse(r.dataset.answers || "{}"); } catch (e) { ans = {}; }
+        return ans[key] === want;
+      }
+      // Ranked across the branch, below; one not entered at the gate has
+      // no place in it, so the branch fails it now (Codex on #3955).
+      if (kind === "top") { var tg = val(r, gateKey(key)); return tg !== null && tg !== "Not entered"; }
       if (kind === "last") return r.dataset.rank !== undefined && parseInt(r.dataset.rank, 10) <= parseInt(want, 10);
       if (kind === "ent" || kind === "out") {
         var v = val(r, key);
@@ -502,7 +510,7 @@
       heads.forEach(function (h) {
         var spec = JSON.parse(h.dataset.rule || "null");
         if (!spec) return;
-        var key = h.dataset.col, unjudged = [];
+        var key = h.dataset.col, unjudged = [], reach = [];
         rows.forEach(function (r) {
           var el = cellOf(r, key);
           if (!el) return;  // a draft, or a cell that cannot be set
@@ -511,16 +519,79 @@
           // An outcome none of whose gates this application entered is
           // not reached: it stays as it is.
           if (h.dataset.kind === "outcome" && notReached(r, key, val)) return;
+          reach.push(r);
+        });
+        // Ruling 30: branches in order, the first whose conditions all hold
+        // giving its value, none holding the else. A branch taking the best
+        // N ranks the dossiers it reaches whose other conditions hold, ties
+        // at the cut all taken. Every reached dossier is ranked, a hand-set
+        // or decided one too; only the cells the options allow are
+        // proposed. A ranking waits (cold read on rungs 2-3) while any
+        // dossier could still join it: one with no result, one whose other
+        // condition here cannot be judged yet, or one an earlier branch
+        // left waiting that this branch's other conditions do not rule out
+        // (Codex on #3955), which may yet fall through to it.
+        var branches = [{ when: spec.when, then: spec.then }].concat(spec.more || []);
+        var verdicts = new Map(), left = reach.slice(), held = [];
+        branches.forEach(function (b) {
+          var tops = b.when.filter(function (c) { return c[0] === "top"; });
+          var others = b.when;
+          var passing = [], rest = [], unsure = [];
+          function couldJoin(r) {
+            return others.every(function (c) { return holds(r, c, key, val) !== false; });
+          }
+          left.forEach(function (r) {
+            var verdict = true;
+            b.when.forEach(function (cond) {
+              if (verdict === false) return;
+              var x = holds(r, cond, key, val);
+              if (x === false) verdict = false; else if (x === null) verdict = null;
+            });
+            if (verdict === null) { verdicts.set(r, null); unsure.push(r); }
+            else if (verdict) passing.push(r);
+            else rest.push(r);
+          });
+          tops.forEach(function (t) {
+            if (!passing.length) return;
+            var scored = passing.map(function (r) {
+              var g = val(r, gateKey(t[1])), x = resultAt(cellOf(r, gateKey(t[1])), t[1]);
+              return { r: r, x: (g === "Not entered" || g === null) ? -Infinity : (g === "—" || x === undefined ? NaN : parseFloat(x)) };
+            });
+            // One not entered at the gate has no place in its ranking: it
+            // goes on to the next branch, once (Codex on #3955).
+            scored = scored.filter(function (s) {
+              if (s.x === -Infinity) { rest.push(s.r); return false; }
+              return true;
+            });
+            passing = scored.map(function (s) { return s.r; });
+            var waiting = unsure.length > 0 || held.some(couldJoin);
+            if (waiting || scored.some(function (s) { return isNaN(s.x); })) {
+              passing.forEach(function (r) { verdicts.set(r, null); unsure.push(r); });
+              passing = [];
+              return;
+            }
+            scored.sort(function (a, b) { return b.x - a.x; });
+            var n = parseInt(t[3], 10) || 0;
+            var cut = n > 0 && scored.length > n ? scored[n - 1].x : -Infinity;
+            var kept = scored.filter(function (s, i) { return i < n || s.x === cut; });
+            if (kept.length > n && n > 0) {
+              skipped.push(h.dataset.label + ": " + kept.length + " at the cut of " + n + ": tied.");
+            }
+            var keep = new Set(kept.map(function (s) { return s.r; }));
+            passing.forEach(function (r) { if (!keep.has(r)) rest.push(r); });
+            passing = passing.filter(function (r) { return keep.has(r); });
+          });
+          passing.forEach(function (r) { verdicts.set(r, b.then); });
+          held = held.concat(unsure);
+          left = rest;
+        });
+        left.forEach(function (r) { verdicts.set(r, spec.otherwise); });
+        reach.forEach(function (r) {
+          var el = cellOf(r, key);
           if (!replaceHand && el.closest("td").hasAttribute("data-hand")) return;
           if (onlyPending && !undecided(el.dataset.v)) return;
-          var verdict = true;
-          spec.when.forEach(function (cond) {
-            if (verdict === false) return;
-            var x = holds(r, cond, key, val);
-            if (x === false) verdict = false; else if (x === null) verdict = null;
-          });
-          if (verdict === null) { unjudged.push(idOf(r)); return; }
-          var to = verdict ? spec.then : spec.otherwise;
+          var to = verdicts.get(r);
+          if (to === null) { unjudged.push(idOf(r)); return; }
           if (to === el.dataset.v) return;
           shadow.set(r.rowIndex + "|" + key, to);
           changes.push({ row: r, key: key, from: el.dataset.v, to: to, byRule: true });

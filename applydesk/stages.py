@@ -35,11 +35,24 @@ class Rule:
     value); for an outcome only, ("res", "gate.result", "ge"/"lt", "4.0") on
     a gate's numeric result, or "is" a value of its list result (ruling 21), on a gate
     in its scope, ("ent", gate, "is", "Entered") and ("comb", "", "ge"/"lt",
-    "4.2") on its combined result. A gate never reads another gate."""
+    "4.2") on its combined result. A gate never reads another gate.
+
+    Ruling 30 adds ("form", question, "is", value), the application's
+    answer to a *List* question on Form, and ("top", "gate.result", "le",
+    "20"), the best N by a result among the dossiers its branch reaches
+    (ties at the cut all taken); and ``more``, further branches tried in
+    order after the first: the first whose conditions all hold gives its
+    value, none holding gives ``otherwise``."""
 
     when: tuple[tuple[str, str, str, str], ...]
     then: str
     otherwise: str
+    more: tuple[tuple[tuple[tuple[str, str, str, str], ...], str], ...] = ()
+
+    @property
+    def branches(self) -> tuple[tuple[tuple[tuple[str, str, str, str], ...], str], ...]:
+        """Every branch in order, (conditions, value), the first included."""
+        return ((self.when, self.then), *self.more)
 
 
 #: A response field's types, as Review Robin's instrument fields take
@@ -669,32 +682,43 @@ def rule_text(plan: Plan, column: Gate | Outcome) -> str:
             return "(removed)"
         return c.label or ("Untitled gate" if isinstance(c, Gate) else "Untitled outcome")
 
-    parts: list[str] = []
-    for kind, key, op, value in column.rule.when:
+    def said(kind: str, key: str, op: str, value: str) -> str:
         sign = {"ge": "≥", "lt": "<"}.get(op, "is")
         if kind == "last":
-            parts.append(_SAID["last"] if value == "1" else _SAID["lastN"].format(v=value))
-        elif kind == "res":
-            parts.append(f"{result_label(plan, key)} {sign} {value}")
-        elif kind == "ent":
-            parts.append(f"Entry at {name(key)} is {value}")
-        elif kind == "out":
-            parts.append(f"{name(key)} is {value or '—'}")
-        else:
-            parts.append(f"{_SAID[kind]} {sign} {value}")
-    then, otherwise = column.rule.then or "—", column.rule.otherwise or "—"
-    return f"{' and '.join(parts)} → {then}, else {otherwise}"
+            return _SAID["last"] if value == "1" else _SAID["lastN"].format(v=value)
+        if kind == "res":
+            return f"{result_label(plan, key)} {sign} {value}"
+        if kind == "ent":
+            return f"Entry at {name(key)} is {value}"
+        if kind == "out":
+            return f"{name(key)} is {value or '—'}"
+        if kind == "form":
+            return f"{key or 'Untitled question'} is {value or '—'}"
+        if kind == "top":
+            return f"the best {value} by {result_label(plan, key)}"
+        return f"{_SAID[kind]} {sign} {value}"
+
+    lines = [
+        f"{' and '.join(said(*c) for c in when)} → {then or '—'}"
+        for when, then in column.rule.branches
+    ]
+    return f"{'; else if '.join(lines)}, else {column.rule.otherwise or '—'}"
 
 
 def rule_json(column: Gate | Outcome) -> dict[str, object] | None:
     """The column's rule as the page's script reads it."""
     if column.rule is None:
         return None
-    return {
+    out: dict[str, object] = {
         "when": [list(c) for c in column.rule.when],
         "then": column.rule.then,
         "otherwise": column.rule.otherwise,
     }
+    if column.rule.more:  # ruling 30's further branches, in order
+        out["more"] = [
+            {"when": [list(c) for c in when], "then": then} for when, then in column.rule.more
+        ]
+    return out
 
 
 def panel_uses(exercise_id: str) -> dict[str, tuple[str, ...]]:
