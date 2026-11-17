@@ -211,7 +211,8 @@ where a ruling below differs from it, the ruling wins.
     - **Panels is one table**: a row per person, a column per panel
       ticking who sits on it, and a control card floating on the right.
 21. **A gate yields up to three results, each derived** (author,
-    2026-11-14; segment AD1F):
+    2026-11-14; segment AD1F; *amended by ruling 28: response fields and
+    results are separate lists, and no gate runs as* Results entered here):
     - A gate item on Process holds its name, *Runs as*, entry rule,
       evaluators, and up to three **results**. A result has a name, the
       **response field** each evaluator fills in (String, Integer,
@@ -397,6 +398,26 @@ where a ruling below differs from it, the ruling wins.
       (ruling 9). After Send, ruling 24: edited in Apply Desk until the
       session opens, then in Review Robin.
 
+28. **A gate is one Review Robin run, and its card follows what that run
+    needs** (author, 2026-11-17), amending rulings 21 and 24:
+    - A gate puts those it enters through **one** evaluation run, yielding
+      up to three results. More runs are more gates.
+    - **Every gate runs in Review Robin** for now. The card's **Type** is a
+      menu fixed at *Review Robin session*, kept for other kinds later.
+      *Runs as* and *Results entered here* go: nothing in Apply Desk keys
+      in a gate's results. An operator's decision needs no gate: it is an
+      outcome *Decided by hand*, keyed on Dossiers.
+    - **The card**, in order: a collapsible **Gate** card (Name and Type,
+      Description, **Confidential**, Entry rule); a collapsible
+      **Evaluators** card (sources, Total, members, Assignment); then
+      **Response fields**, what each evaluator answers (type, bounds or
+      options, required, help); then **Results**, up to three. Both cards
+      start collapsed, each saying what it holds.
+    - **A result names the response field it collates** and its
+      derivation, which still sets its type (ruling 21); fields and
+      results are no longer one row.
+    - **Start and End are the stage's**, not the gate's.
+
 ## What a linked Review Robin gate needs (2026-11-16)
 
 Review Robin's side is built and closed (RRW segment 23F): a gate sent
@@ -409,15 +430,17 @@ rulings after this list):
 **A. Process > Gates: what the operator enters for each gate**
 - **Name** (built) and a **description** (new): the instrument's name
   and description in Review Robin.
-- **Start and End** as real date-times in the exercise's **timezone**
-  (stage dates are free text today, `stages.py`); Start before End. A
-  sent Start activates the session once prepared, which ends re-sends.
+- **Start and End**, the gate's **stage's** (ruling 28), as real
+  date-times in the exercise's **timezone** (stage dates are free text
+  today, `stages.py`); Start before End. A sent Start activates the
+  session once prepared, which ends re-sends.
 - **Help contact** and **timezone**: the exercise's, on Setup, each
   defaulted from Apply Desk's operator settings, as Review Robin's are
   (author, 2026-11-17); shown on each gate.
-- **Each result**: label (built), type and bounds or options (built),
-  plus **required** and **help text** (new), and a stable **field key**
-  (`r1`… today; Review Robin reports answers under it).
+- **Each response field** (ruling 28): label, type and bounds or
+  options, **required** and **help text**, and a stable **field key**
+  (Review Robin reports answers under it); **each result** names the
+  field it collates and its derivation.
 - **Evaluators**: the ranked sources and their tags (AD1G). Every pair
   carries its source as the relationship tag, no comma.
 - **Confidential** (per gate, author 2026-11-17): whether the gate is blind, which decides what
@@ -489,7 +512,7 @@ Segments in order; each gets a plan in this folder when it starts.
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
 | **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14; removed 2026-11-15); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
-| **AD1G — Evaluators and Evaluations** | A gate's evaluators from ranked sources with a Total and a mode, on Process; Evaluations showing and working each gate's assignments (ruling 27); the rest of Process > Gates for a linked Review Robin gate (layer A above, author 2026-11-17); nothing saved | `applydesk/guide/segment_AD1G_evaluators.md` |
+| **AD1G — Evaluators and Evaluations** | A gate's evaluators from ranked sources with a Total and a mode, on Process; Evaluations showing and working each gate's assignments (ruling 27); the rest of Process > Gates for a linked Review Robin gate (layer A above, author 2026-11-17), the gate card as ruling 28 lays it out; nothing saved | `applydesk/guide/segment_AD1G_evaluators.md` |
 | AD1H onward — the other new pages | Emails and Extract data built out as working scaffolds, one segment each | After AD1G |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |

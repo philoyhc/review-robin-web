@@ -42,6 +42,19 @@ Review Robin's side of a linked gate is built (RRW 23F, `spec/linked_sessions.md
 
 Nothing is sent or saved here: the fields live in the browser, a reload restoring the sample, as the rest of the segment.
 
+## Decision amended again (author, 2026-11-17): the gate card (ruling 28)
+
+A gate is **one Review Robin run**; its card follows what that run needs, in this order (mock-up approved at the rung 4b check):
+
+1. A collapsible **Gate** card: **Name** and **Type** (a menu fixed at *Review Robin session*, kept for other kinds later), **Description**, **Confidential**, **Entry rule**. Shut, it says the type, confidentiality and the rule.
+2. A collapsible **Evaluators** card: the sources, the Total (no rule above it), the panels' members, **Assignment**. Shut, it says the sources, the Total and the mode.
+3. **Response fields**: what each evaluator answers, each with its type and bounds or options, **required** and **help text**; *+ Field*.
+4. **Results**: up to three, each naming the **response field** it collates and its derivation (which sets its type, ruling 21); *+ Result*.
+
+Both cards start collapsed. *Runs as* and *Results entered here* go. **Start and End are the stage's**, so item 1's window above is struck; Confidential and the description move into the Gate card, and item 2's required and help text into Response fields. The gate's head counts its results.
+
+**Rejected:** results entered on Dossiers (nothing keys them in; an operator's decision is an outcome *Decided by hand*, needing no gate); a gate of several runs (more runs are more gates).
+
 ## Semantics
 
 - **The Total's bounds** are recomputed as sources change; a Total outside them is shown as a problem on the Outline, not silently clamped.
@@ -74,6 +87,7 @@ Taken 2026-11-15 at `31465d3cc`.
 - **Rung 4 built** (2026-11-17): every source row carries both menus (the question, the shared panel picker), the kind showing one; ↑ ↓ rank, × removes, *+ Source* adds a panel of one; the head's chip (`stages.sources_summary`) and the Outline read the sources; the Outline names a source with no panel or question, a min above its max, a missing number, and a Total outside its bounds (as `stages.total_problem`). A new gate starts with no sources (*No evaluators*), not AD1F's empty panel menu. `stages.fill` counts a nominated dossier toward the load too (Codex on rung 2).
 - **Reads, rungs 2–4**: Codex on rung 2, one finding (the load), fixed. `diff-reviewer` on the cumulative diff (`7e0322828..1c2ec878c`), six findings, none blocking, all fixed in rung 4: the *+ New panel* box shut when a source turns Nominated; the Total's inputs named for screen readers; the server's chip warning as the script's (`stages.sources_warn`); a replica test pinned to its three menus; choosing the chosen mode no change; the sent line naming its evaluators. `Gate.panel` still feeds `stages.panel_uses` and `workflow`'s sends; they read the sources with Evaluations (rung 5). A panel used twice, or a max above its panel's size, is not flagged: for the author at the rung 4 check.
 - **Rung 5 built** (2026-11-17): Evaluations keeps its Gates table and gains *Assignments*, a card per gate collapsed to its head (mode, *92 dossiers · 92 filled*), a row per entered dossier with its evaluators as pills marked by source and its state, and a load line per panel (`stages.assignments`, `assignment_state`, `assignment_counts`). The sample's nominations are `sample_data.nominees`: from the question's pool, one applicant in five naming no one. Faculty Panel Review becomes *Suggested, then approved*, so the sample shows two modes. Every sample gate is sent, so its operations show disabled, saying why; rung 6 needs an unsent gate to work them on, for the author at the rung 5 check.
+- **Rung 4b** (#3947, author's check of 4a): one height for a row's controls, *Order*, *Results* as *Metrics*; closed unmerged when ruling 28 reshaped the card, its alignment and *Order* carried into 4c, *Metrics* superseded by Response fields and Results.
 - **Rung 4a** (author, 2026-11-17, at the rung 4 check): the source rows' controls aligned under one header row (*Kind*, *Source*, *Min*, *Max*), with room kept under every menu for its *Edit on Panels* link; ▲ ▼ for rank, as Review Robin's builders; a row's **+** before × adds the next source, *+ Source* showing only when there are none; and a rule between a gate's main sections (rule, Evaluators, Assignment, Runs as, Results) and an outcome's (weights, rule, release), and the form's release. Its cold read: nothing blocking; the link's padding, the Total's spacing, two test pins and this line's overclaim, all fixed.
 
 ## PR ladder
@@ -82,11 +96,13 @@ Taken 2026-11-15 at `31465d3cc`.
 2. **The model and the rule.** `stages.Source`, `Gate.sources` and the Total, mode; `stages.fill` with its tests (the author's two examples, distinctness, shortfall, the Total's bounds); the sample's gates as panel sources. Must not change a page.
 3. **Evaluators on the gate, scaffold.** The rows, Total and mode drawn from the sample; the head's chip; the Outline's problems; inert controls.
 4. **Evaluators wired.** Add, rank, remove a source; min and max; the Total's bounds; the mode. Chromium tests. `diff-reviewer` reads 2–4.
+4c. **The gate card, scaffold** (ruling 28): the Gate and Evaluators cards, collapsible and shut, each with its summary; Type, Description and Confidential; Response fields and Results as two lists, a result naming its field; *Runs as* gone; a row's controls one height under *Order* (from 4b). `stages`: a gate's fields and results apart, `Gate.via` and *Entered here* retired; the sample's gates and the draft's *Placement interview* filled. New controls inert.
+4d. **The gate card, wired**: the cards open and shut, their summaries following; Description and Confidential edited; fields added, edited and removed, results the same, a result's field menu following the fields. Chromium tests. `diff-reviewer` reads 4c–4d.
 5. **Evaluations scaffold.** A card per gate, its table and load line drawn from `stages.fill` on the sample's dossiers; inert controls.
 6. **Evaluations wired.** The three modes' operations in the browser. Chromium tests. `diff-reviewer` reads 5–6.
 7. ~~**Close**, after the author's browser check.~~ Moved to 10 by the amendment.
-8. **The gate's and results' fields, scaffold** (amendment): description, Start and End with the timezone, Confidential; Setup's help contact and timezone; each result's required, help text and field key; the fuller *For Review Robin* summary; drawn from the sample, inert. `stages` gains the fields, the sample filling them.
-9. **The fields wired**: edited in the browser, Start before End, a required switch and help text per result, the summary following; a sent gate read-only. Chromium tests. `diff-reviewer` reads 8–9.
+8. **Setup and the summary, scaffold** (amendment, narrowed by ruling 28: the gate's own fields moved to 4c): Setup's help contact and timezone; each response field's key, read-only; the fuller *For Review Robin* summary; drawn from the sample, inert.
+9. **Setup and the summary wired**: edited in the browser, the summary following; a sent gate read-only. Chromium tests. `diff-reviewer` reads 8–9.
 10. **Close**, after the author's browser check.
 
 ## Definition of done
@@ -94,7 +110,7 @@ Taken 2026-11-15 at `31465d3cc`.
 - A gate holds ranked sources, a Total and a mode; `stages.fill` fills per ruling 27 (tests, the author's examples among them).
 - Process edits the Evaluators in the browser, the Total held within its bounds (Chromium tests).
 - Evaluations shows each gate's assignments and works its mode (Chromium tests).
-- A gate run in Review Robin collects its description, window and confidentiality, Setup the exercise's help contact and timezone, and each result its required, help text and field key; the *For Review Robin* summary shows them (Chromium tests).
+- A gate's card follows ruling 28: Gate and Evaluators cards collapsible, shut, with summaries; its description and confidentiality; response fields (required, help, key) and results naming their field (Chromium tests). Setup collects the exercise's help contact and timezone; the *For Review Robin* summary shows them.
 - The author has used the pages locally and approved them.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py AD1G` exits 0; any warning adjudicated
