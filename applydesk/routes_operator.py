@@ -124,7 +124,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         gate_state=workflow.gate_state,
         sources_of=functools.partial(stages.sources_of, exercise.public_id),
         total_bounds=stages.total_bounds,
-        total_problem=stages.total_problem,
+        sources_warn=stages.sources_warn,
         sources_summary=stages.sources_summary,
         source_members=stages.source_members,
         nominee_questions=stages.nominee_questions(exercise.public_id),

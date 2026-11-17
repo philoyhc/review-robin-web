@@ -832,6 +832,20 @@ def sources_summary(
     return " · ".join([*parts, f"Total {_n(total.min, total.max)}"])
 
 
+def sources_warn(
+    sources: tuple[Source, ...], total: Total, pools: dict[str, sample_data.Pool]
+) -> bool:
+    """Whether a gate head's chip warns, as the page script's
+    ``sourceProblems``: no sources, a panel not chosen, a question not
+    chosen, a min above its max, or a Total outside its bounds."""
+    return bool(total_problem(sources, total)) or any(
+        (s.kind == "panel" and s.ref not in pools)
+        or (s.kind == "nominated" and not s.ref)
+        or s.min > s.max
+        for s in sources
+    )
+
+
 def source_members(
     sources: tuple[Source, ...], pools: dict[str, sample_data.Pool]
 ) -> list[tuple[str, str]]:

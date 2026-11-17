@@ -129,6 +129,8 @@
       row.dataset.kind = kind;
       row.querySelector("[data-ps-rank]").textContent = String(n);
       row.querySelectorAll("[data-ps-for]").forEach(function (f) { f.hidden = f.dataset.psFor !== kind; });
+      // The + New panel box is the panel's: a Nominated source shuts it.
+      if (kind !== "panel") row.querySelector("[data-newpanel]").hidden = true;
       row.querySelector('[data-ps="kind"]').setAttribute("aria-label", "Source " + n + ": kind");
       row.querySelector('[data-ps="panel"]').setAttribute("aria-label", "Source " + n + ": panel");
       row.querySelector('[data-ps="question"]').setAttribute("aria-label", "Source " + n + ": question");
@@ -160,6 +162,7 @@
     if (!b || b.disabled) return false;
     var item = b.closest(".pc-item"), box = item.querySelector("[data-pc-sources]");
     if (b.dataset.mode) {
+      if (b.getAttribute("aria-pressed") === "true") return true;  // already chosen: no change
       box.querySelectorAll("[data-mode]").forEach(function (m) { m.setAttribute("aria-pressed", m === b ? "true" : "false"); });
       return true;
     }

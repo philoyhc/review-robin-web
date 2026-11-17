@@ -4,7 +4,7 @@ never their own, and the work spread across a panel."""
 
 from __future__ import annotations
 
-from applydesk import stages
+from applydesk import sample_data, stages
 from applydesk.stages import Gate, Source, Total, fill, total_problem
 
 NOMINATED = Source("nominated", "q-referees", 0, 2)
@@ -95,3 +95,17 @@ def test_a_sample_gate_reads_its_panel_as_its_source() -> None:
     assert len(sources) == 1 and sources[0].kind == "panel" and sources[0].ref == "panel-a"
     assert sources[0].min == sources[0].max == total.min == total.max > 0
     assert stages.sources_of("wa9juxbc2t", Gate("g9", 9, "x", "RRW")) == ((), Total(0, 0))
+
+
+def test_the_head_warns_as_the_page_script_does() -> None:
+    """The cold read on rungs 2-4: the server's chip warns on what the
+    script's ``sourceProblems`` names, not only on the Total."""
+    pools: dict[str, sample_data.Pool] = {
+        "panel-a": {"name": "Panel A", "members": [("A", "a@x.edu")]}
+    }
+    ok = (Source("panel", "panel-a", 1, 1),)
+    assert not stages.sources_warn(ok, Total(1, 1), pools)
+    assert stages.sources_warn((Source("panel", "gone", 1, 1),), Total(1, 1), pools)
+    assert stages.sources_warn((Source("nominated", "", 0, 1),), Total(0, 1), pools)
+    assert stages.sources_warn((Source("panel", "panel-a", 2, 1),), Total(1, 2), pools)
+    assert stages.sources_warn((), Total(0, 0), pools)

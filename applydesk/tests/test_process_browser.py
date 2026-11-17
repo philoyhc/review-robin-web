@@ -679,7 +679,9 @@ def test_a_replica_of_a_sent_stage_is_not_sent(page: Page) -> None:
     states = copy.locator("[data-pi-state]").all_text_contents()
     assert states == ["Not ready", "Not ready", "Not released"]
     menus = copy.locator("[data-pc-panel]")
-    assert all(menus.nth(i).is_enabled() for i in range(menus.count()))
+    # Peer Review's two (its nominated row's hidden) and Panel B's one.
+    assert menus.count() == 3
+    assert all(menus.nth(i).is_enabled() for i in range(3))
     assert copy.locator("[data-pc-sent]").count() == 0
     assert (
         copy.locator("[data-pi-panel]").first.text_content()
@@ -768,9 +770,28 @@ def test_a_source_takes_its_kind_and_its_bounds(page: Page) -> None:
 def test_the_assignment_mode_is_one_of_three(page: Page) -> None:
     gate = _peer_copy(page)
     mode = gate.locator("[data-ps-mode]")
+    # The chosen one again rewrites nothing, so the page is not marked
+    # changed by it (the cold read on rungs 2-4).
+    mode.evaluate(
+        "m => { window.psMuts = 0; new MutationObserver(r => { window.psMuts += r.length; })"
+        ".observe(m, { subtree: true, attributes: true }); }"
+    )
+    mode.get_by_role("button", name="Automatic").click()
+    assert page.evaluate("window.psMuts") == 0
     mode.get_by_role("button", name="Suggested, then approved").click()
     pressed = [b.get_attribute("aria-pressed") for b in mode.locator("button").all()]
     assert pressed == ["false", "true", "false"]
+
+
+def test_a_nominated_source_shuts_the_new_panel_box(page: Page) -> None:
+    """The cold read on rungs 2-4: the + New panel box is the panel
+    menu's, so turning the source Nominated shuts it."""
+    gate = _peer_copy(page)
+    row = gate.locator("[data-ps-row]").nth(1)
+    row.locator("[data-pc-panel]").select_option("__new")
+    assert row.locator("[data-newpanel]").is_visible()
+    row.locator('[data-ps="kind"]').select_option("nominated")
+    assert not row.locator("[data-newpanel]").is_visible()
 
 
 def test_an_item_left_alone_opens(page: Page) -> None:
