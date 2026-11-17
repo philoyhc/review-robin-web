@@ -70,7 +70,7 @@
     <span class="pr-n" data-pr-n></span>
     <span class="pr-texts"><span class="pr-name" data-pr-name>{{ r.name or "Untitled result" }}</span><span class="pr-sum" data-pr-sum>{% if src %}From {{ src.label or "Untitled field" }} · {{ derivation_text(rc) }} → {{ result_type(rc) }}{% else %}No field chosen{% endif %}</span></span>
   </button>
-  <fieldset class="pr-ed" data-pr-ed hidden{% if sent %} disabled title="Sent: the gate keeps its results"{% endif %}>
+  <fieldset class="pr-ed" data-pr-ed hidden{% if sent %} disabled title="Its session has opened: the gate keeps its results"{% endif %}>
     <legend class="visually-hidden">{{ r.name or "Untitled result" }}</legend>
     <div class="pc-row">
       <label class="fc-l pc-wide">Name<input class="fc-in" data-r="name" value="{{ r.name }}" placeholder="e.g. Mean rating"></label>
@@ -114,7 +114,7 @@
     <span class="pr-n" data-rf-n></span>
     <span class="pr-texts"><span class="pr-name" data-rf-name>{{ f.label or "Untitled field" }}</span><span class="pr-sum" data-rf-sum>{{ field_summary(f) }}</span></span>
   </button>
-  <fieldset class="pr-ed" data-rf-ed hidden{% if sent %} disabled title="Sent: the gate keeps its fields"{% endif %}>
+  <fieldset class="pr-ed" data-rf-ed hidden{% if sent %} disabled title="Its session has opened: the gate keeps its fields"{% endif %}>
     <legend class="visually-hidden">{{ f.label or "Untitled field" }}</legend>
     <div class="pc-row">
       <label class="fc-l pc-wide">Label<input class="fc-in" data-q="label" value="{{ f.label }}" placeholder="e.g. Rating"></label>
@@ -140,7 +140,7 @@
 {% endmacro %}
 
 {# A sent gate's evaluators are fixed (ruling 24). #}
-{% macro sent_attr(sent) %}{% if sent %} disabled title="Sent: the gate keeps its evaluators"{% endif %}{% endmacro %}
+{% macro sent_attr(sent) %}{% if sent %} disabled title="Its session has opened: the gate keeps its evaluators"{% endif %}{% endmacro %}
 
 {# One evaluator source (ruling 27): its rank, kind, which question or
    panel, min and max per dossier, and its moves. Both the question and
@@ -151,7 +151,7 @@
   <span class="ps-rank" data-ps-rank>{{ n }}</span>
   <select class="fc-in ps-kind" data-ps="kind" aria-label="Source {{ n }}: kind"{{ sent_attr(sent) }}>{% for k, label in source_kinds %}<option value="{{ k }}"{% if k == s.kind %} selected{% endif %}{% if k == "nominated" and not nominee_questions %} disabled{% endif %}>{{ label }}</option>{% endfor %}</select>
   <div class="ps-ref" data-ps-for="panel"{% if s.kind != "panel" %} hidden{% endif %}>
-    {{ pick.menu(panel_pools, s.ref if s.kind == "panel" else "", 'data-pc-panel data-ps="panel"' ~ (' disabled title="Sent: the gate keeps its evaluators"' if sent else '') ~ ' aria-label="Source ' ~ n ~ ': panel"', empty="No panel yet") }}
+    {{ pick.menu(panel_pools, s.ref if s.kind == "panel" else "", 'data-pc-panel data-ps="panel"' ~ (' disabled title="Its session has opened: the gate keeps its evaluators"' if sent else '') ~ ' aria-label="Source ' ~ n ~ ': panel"', empty="No panel yet") }}
     {{ pick.edit(url('/operator/exercises/' ~ exercise.public_id ~ '/panels'), s.ref if s.kind == "panel" else "") }}
   </div>
   <div class="ps-ref" data-ps-for="nominated"{% if s.kind != "nominated" %} hidden{% endif %}>
@@ -167,18 +167,19 @@
 {% macro gate_item(plan, g, rule_text, open=False) %}{# g.number 0: a new gate, numbered by the page's script #}
 {% set gs = gate_state(exercise.public_id, g.key) if g.key else ("Not ready", "") %}
 {% set state = gs[0] %}
-{% set sent = state in ("Sent", "Results in") %}
+{# Fixed once its session opens (ruling 29); sent and unopened, it is
+   still changed here, each change re-sent. #}
+{% set sent = gate_opened(state, gs[1]) %}
 {% set ev = sources_of(g) %}
 {% set ev_problem = sources_warn(ev[0], ev[1], panel_pools) %}
 <div class="pc-item" data-item="gate" data-key="{{ g.key }}" data-rule="{{ rule_json(g) | tojson | forceescape }}"{% if open %} data-open{% endif %}>
   {% set chips %}<span class="chip chip-{{ 'ok' if state == 'Results in' else ('info' if state in ('Sent', 'Ready') else 'warn') }}" data-pi-state>{{ state }}</span><span class="chip chip-mute" data-pi-results>{{ g.results | length }} {{ "result" if g.results | length == 1 else "results" }}</span><span class="chip {{ 'chip-warn' if ev_problem else 'chip-mute' }}" data-pi-panel>{{ sources_summary(ev[0], ev[1], panel_pools) }}</span>{% endset %}
   {{ head("Gate " ~ g.number, g.label or "Untitled gate", chips, open) }}
   <div class="pi-body">
-  {# A sent gate says so once, for all of it: its settings are fixed here
-     (AD1F, AD1G). Whether one may be re-sent before its session opens is
-     an open ruling (todo, "Rulings to settle"). Its progress is
+  {# A sent gate says so once, for all of it (ruling 29). Its progress is
      Evaluations' to show, not Process's. #}
-  {% if sent %}<p class="pc-line muted pc-sent-note" data-pc-sent>Sent to Review Robin: its settings are fixed here.</p>{% endif %}
+  {% if sent %}<p class="pc-line muted pc-sent-note" data-pc-sent>Its Review Robin session has opened: its settings are fixed here.</p>
+  {% elif state == "Sent" %}<p class="pc-line muted pc-sent-note" data-pc-sent>Sent to Review Robin: changes are re-sent until its session opens.</p>{% endif %}
   {# Ruling 28: a gate is one Review Robin run. Its own fields and who
      evaluates sit in two cards, shut until opened, each saying what it
      holds; then what evaluators answer, then the results. #}
@@ -234,7 +235,7 @@
     <p class="pc-line muted pc-hint">What each evaluator answers in Review Robin, field by field. Evaluators read the dossier's <em>Shown to reviewers</em> part{% if exercise.blind %}, redacted{% endif %}.</p>
     <div class="pr-list" data-rf-list>{% for f in fields_of(g) %}{{ field_row(f, sent) }}{% endfor %}</div>
     <p class="pc-line muted" data-rf-none{% if fields_of(g) %} hidden{% endif %}>No response fields yet: a result collates one.</p>
-    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-rf-act="add"{% if sent %} data-sent disabled title="Sent: the gate keeps its fields"{% endif %}>+ Field</button></div>
+    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-rf-act="add"{% if sent %} data-sent disabled title="Its session has opened: the gate keeps its fields"{% endif %}>+ Field</button></div>
   </div>
   {# Its results (rulings 21, 28): up to three, each naming the response
      field it collates and how the answers become the result, which sets
@@ -244,7 +245,7 @@
     <p class="pc-line muted pc-hint">What the gate yields, collated from the response fields: each shows on Dossiers and feeds outcomes and later gates' rules. Up to three.</p>
     <div class="pr-list" data-pr-list>{% for r in g.results %}{{ result_row(r, sent, source_field(g, r), fields_of(g)) }}{% endfor %}</div>
     <p class="pc-line muted" data-pr-none{% if g.results %} hidden{% endif %}>No results yet: a gate yields up to three.</p>
-    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-pr-act="add"{% if sent %} data-sent disabled title="Sent: the gate keeps its results"{% elif g.results | length >= 3 %} disabled title="A gate yields three results at most"{% endif %}>+ Result</button></div>
+    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-pr-act="add"{% if sent %} data-sent disabled title="Its session has opened: the gate keeps its results"{% elif g.results | length >= 3 %} disabled title="A gate yields three results at most"{% endif %}>+ Result</button></div>
   </div>
   {% set fs = fields_of(g) %}
   <p class="pc-line muted pr-rrw" data-pr-rrw{% if not fs %} hidden{% endif %}>For Review Robin, each evaluator answers: {% for f in fs %}<strong>{{ f.label or "Untitled field" }}</strong> ({{ field_text(f.field) }}{{ ", required" if f.required }}){{ "; " if not loop.last }}{% endfor %}.</p>

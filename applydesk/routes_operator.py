@@ -122,6 +122,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         field_text=stages.field_text,
         blank_outcome=stages.Outcome("", 0, "", (), "", ""),
         gate_state=workflow.gate_state,
+        gate_opened=workflow.gate_opened,
         sources_of=functools.partial(stages.sources_of, exercise.public_id),
         total_bounds=stages.total_bounds,
         sources_warn=stages.sources_warn,

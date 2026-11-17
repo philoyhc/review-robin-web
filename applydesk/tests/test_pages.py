@@ -404,9 +404,10 @@ def test_a_gate_item_carries_its_evaluators(client: TestClient) -> None:
         "Interviewers 2 · Total 2",
     ]
     assert "data-pc-members" not in text  # members are on Panels, not listed (author)
-    # Every gate here is sent: its panel menus are fixed (the Peer
-    # Review's nominated row has one too, hidden).
-    assert text.count('data-pc-panel data-ps="panel" disabled title="Sent') == 4
+    # The Review stage's gates have opened: their panel menus are fixed (the
+    # Peer Review's nominated row has one too, hidden); the Interview gate,
+    # not yet sent, is still set here (ruling 29).
+    assert text.count('data-pc-panel data-ps="panel" disabled title="Its session has opened') == 3
     # A gate picks a panel, never Institution-wide.
     at = text.index("data-pc-panel")
     menu = text[at : text.index("</select>", at)]
@@ -450,7 +451,8 @@ def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> N
 def test_evaluations_lists_each_gate_s_progress(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/evaluations").text
     assert re.findall(r'<tr data-gate="(\w+)">', text) == ["g1", "g2", "g3"]
-    assert "18 of 27 interviewed" in text and "Pull results</button>" in text
+    # Mid-stage (ruling 29): the Interview gate is ready, not yet sent.
+    assert "Send to Review Robin</button>" in text and "18 of 27" not in text
 
 
 def test_extract_data_collates_every_evaluation_and_exports(client: TestClient) -> None:
@@ -532,7 +534,7 @@ def test_evaluations_shows_each_gate_s_assignments(client: TestClient) -> None:
     assert "92 dossiers · 92 filled" in g1
     assert 'data-ev-source="Nominated"' in g1 and 'data-ev-source="Panel A"' in g1
     assert re.search(r"Panel A: Zoe Tan \d+ · Lars Berg \d+", g1)
-    assert 'data-ev-act="rerun" disabled title="Sent' in g1
+    assert 'data-ev-act="rerun" disabled title="Its session has opened' in g1
     g2 = text[text.index('data-ev-gate="g2"') : text.index('data-ev-gate="g3"')]
     assert ">Approved<" in g2 and 'data-ev-act="approve-all" disabled' in g2
 
@@ -593,9 +595,9 @@ def test_the_timeline_steps_follow_the_stages() -> None:
         "Final results",
         "Close and archive",
     ]
-    # Next is the earliest step not done: Gate 3, sent.
+    # Next is the earliest step not done: Gate 3, ready to send (ruling 29).
     now = workflow.next_step(all_steps)
-    assert now is not None and (now.title, now.line) == ("Interview", "18 of 27 interviewed")
+    assert now is not None and (now.title, now.state, now.action) == ("Interview", "Ready", "Send…")
     assert workflow.current_stage(e) == "Interview"
     final = next(s for s in all_steps if s.title == "Final results")
     assert final.blocked == "Not ready: its email to applicants is not written"
@@ -658,7 +660,7 @@ def test_every_panel_is_offered_to_a_gate(client: TestClient) -> None:
 
 
 def test_a_sent_gate_points_to_evaluations() -> None:
-    steps = workflow.steps(sample_data.exercise(EX) or sample_data.EXERCISES[0])
+    steps = workflow.steps(sample_data.exercise(BLIND) or sample_data.EXERCISES[0])
     sent = [s for s in steps if s.state == "Sent"]
     assert sent and all(s.action == "" and s.link == "evaluations" for s in sent)
 
@@ -836,10 +838,9 @@ def test_what_uses_each_panel_and_what_was_sent_with_it() -> None:
         "panel-b": ("Gate 2: Faculty Panel Review",),
         "interviewers": ("Gate 3: Interview",),
     }
-    assert workflow.panels_sent(EX) == {
+    assert workflow.panels_sent(EX) == {  # the Interview gate not yet sent
         "panel-a": ("Gate 1",),
         "panel-b": ("Gate 2",),
-        "interviewers": ("Gate 3",),
     }
     assert workflow.panels_sent(DRAFT) == {}
 
