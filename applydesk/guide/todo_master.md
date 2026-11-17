@@ -417,6 +417,15 @@ where a ruling below differs from it, the ruling wins.
       derivation, which still sets its type (ruling 21); fields and
       results are no longer one row.
     - **Start and End are the stage's**, not the gate's.
+29. **A sent gate can be changed and re-sent until its session opens**
+    (author, 2026-11-17), settling the open question below: its card
+    stays editable while sent and unopened, each change re-sent; once the
+    session opens it is fixed in Apply Desk (a linked session stays
+    locked: changes then come by revert-and-re-send or Unlink, in Review
+    Robin). **The model exercise is mid-stage**: its Review stage's gates
+    are sent and their results in; its Interview stage is under way, its
+    gate entered but not yet sent, its pairs being worked on Evaluations
+    (AD1G rung 6), so no interview results or finalists yet.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
@@ -489,7 +498,8 @@ rulings after this list):
 - Ruling 24's "after opening, made in Review Robin" is superseded: a
   linked session stays locked; changes come by revert-and-re-send or
   Unlink.
-- A sent gate read-only (AD1F, AD1G) versus re-sending before it opens.
+- ~~A sent gate read-only (AD1F, AD1G) versus re-sending before it opens~~:
+  re-sent until it opens (ruling 29).
 - Confidential identity: 23F's "Name redacted" plus the Dossier ID, or
   ruling 10's per-handoff alias key.
 - Each gate's Review Robin session name and code (unique there).
