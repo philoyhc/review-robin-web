@@ -822,8 +822,8 @@ def fill(
     the lower sources' mins. Evaluators are distinct by email (any case),
     a person in two sources counted for the higher-ranked, and the
     candidate never their own. A panel gives its least-loaded members
-    first; ``load`` counts each evaluator's dossiers across calls, so the
-    work spreads evenly."""
+    first; ``load`` counts each evaluator's dossiers across calls, from
+    every source, so the work spreads evenly."""
     chosen: list[tuple[str, int]] = []
     seen = {candidate.casefold()} if candidate else set[str]()
     unmet: list[int] = []
@@ -843,7 +843,7 @@ def fill(
         for person in given:
             seen.add(person.casefold())
             chosen.append((person, rank))
-            if load is not None and source.kind == "panel":
+            if load is not None:  # every dossier counts, a nominated one too (Codex)
                 load[person.casefold()] = load.get(person.casefold(), 0) + 1
         if len(given) < source.min:
             unmet.append(rank)

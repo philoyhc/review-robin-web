@@ -66,6 +66,19 @@ def test_a_panel_spreads_its_work_evenly() -> None:
     assert sorted(load.values()) == [1, 1, 1, 1]
 
 
+def test_a_nominated_dossier_counts_toward_the_load() -> None:
+    """Codex on rung 2: Alice nominated four times is not the least-loaded
+    panel member for the next dossier; Bob, with none, is."""
+    sources = (Source("nominated", "q", 0, 1), Source("panel", "p", 0, 1))
+    total, panel = Total(1, 2), ("alice@x.edu", "bob@x.edu")
+    load: dict[str, int] = {}
+    for _ in range(4):
+        fill(sources, total, (("alice@x.edu",), panel), load=load)
+    assert load == {"alice@x.edu": 4}
+    result = fill(sources, Total(1, 1), ((), panel), load=load)
+    assert result.evaluators == (("bob@x.edu", 1),)
+
+
 def test_the_totals_bounds() -> None:
     sources = (NOMINATED, PANEL_A)
     assert stages.total_bounds(sources) == (1, 5)
