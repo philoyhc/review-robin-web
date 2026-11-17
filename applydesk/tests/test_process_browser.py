@@ -628,7 +628,9 @@ def test_a_gate_item_makes_and_picks_its_panel(page: Page) -> None:
     issues = page.locator("[data-pc-issues]")
     assert "Gate 1 (Placement interview) has no evaluators." in issues.inner_text()
     assert page.locator("[data-o-panel]").text_content() == "No evaluators"
+    assert not page.locator("[data-unsaved]").is_visible()
     gate.locator('[data-ps-act="add"]').click()
+    assert page.locator("[data-unsaved]").is_visible()  # a source's buttons are changes
     assert "Gate 1 (Placement interview) has no panel chosen for source 1." in issues.inner_text()
     gate.locator('[data-ps="total-min"]').fill("1")
     gate.locator('[data-ps="total-max"]').fill("1")
@@ -726,6 +728,8 @@ def test_sources_are_ranked_and_removed(page: Page) -> None:
     # Removing Panel A leaves the Total's max above what is left.
     gate.locator("[data-ps-row]").first.locator('[data-ps-act="remove"]').click()
     assert _kinds(gate) == ["nominated"]
+    # Focus goes to the row that took its place.
+    assert gate.locator('[data-ps-act="remove"]').evaluate("e => e === document.activeElement")
     assert gate.locator("[data-ps-bounds]").text_content() == "within 0–1"
     issues = page.locator("[data-pc-issues]")
     assert "has its Total's max above the sources' maxes together (1)." in issues.inner_text()
@@ -736,12 +740,14 @@ def test_sources_are_ranked_and_removed(page: Page) -> None:
     gate.locator("[data-ps-row]").first.locator('[data-ps-act="remove"]').click()
     assert gate.locator('[data-ps-act="add"]').evaluate("e => e === document.activeElement")
     assert gate.locator("[data-ps-bounds]").text_content() == "No sources"
+    assert not gate.locator("[data-ps-headrow]").is_visible()
     assert gate.locator("[data-pi-panel]").text_content() == "No evaluators"
 
 
 def test_a_source_takes_its_kind_and_its_bounds(page: Page) -> None:
     gate = _peer_copy(page)
-    gate.locator('[data-ps-act="add"]').click()
+    assert not gate.locator('[data-ps-act="add"]').is_visible()  # a row's + adds instead
+    gate.locator("[data-ps-row]").nth(1).locator('[data-ps-act="insert"]').click()
     added = gate.locator("[data-ps-row]").nth(2)
     assert added.locator('[data-ps="kind"]').evaluate("e => e === document.activeElement")
     assert added.locator("[data-ps-rank]").text_content() == "3"
@@ -765,6 +771,37 @@ def test_a_source_takes_its_kind_and_its_bounds(page: Page) -> None:
         gate.locator("[data-pi-panel]").text_content()
         == "Nominated 0–1 · Panel A 1–2 · Nominated 3–? · Total 2"
     )
+
+
+def test_a_row_s_plus_adds_the_next_source_under_it(page: Page) -> None:
+    """The author, 2026-11-17: + before × adds a source, no separate
+    + Source while there are rows."""
+    gate = _peer_copy(page)
+    assert gate.locator("[data-ps-headrow]").is_visible()  # over the rows
+    gate.locator("[data-ps-row]").first.locator('[data-ps-act="insert"]').click()
+    assert _kinds(gate) == ["nominated", "panel", "panel"]
+    assert gate.locator("[data-ps-rank]").all_inner_texts() == ["1", "2", "3"]
+    added = gate.locator("[data-ps-row]").nth(1)
+    assert added.locator('[data-ps="kind"]').evaluate("e => e === document.activeElement")
+    assert added.locator('[data-ps="min"]').input_value() == "1"
+
+
+def test_each_bound_is_named_where_the_header_row_is_not(page: Page) -> None:
+    """Codex on rung 4a: the header row names the bounds over rows on a
+    wide screen; without rows, the Total's own captions do; on a narrow
+    screen, every bound's."""
+    gate = _peer_copy(page)
+    caps = gate.locator(".ps-cap")
+    assert not any(caps.nth(i).is_visible() for i in range(caps.count()))
+    for _ in range(2):
+        gate.locator("[data-ps-row]").first.locator('[data-ps-act="remove"]').click()
+    total = gate.locator("[data-ps-total] .ps-cap")
+    assert total.all_inner_texts() == ["Min", "Max"] and total.first.is_visible()
+    gate.locator('[data-ps-act="add"]').click()
+    assert not total.first.is_visible()
+    page.set_viewport_size({"width": 600, "height": 900})
+    row = gate.locator("[data-ps-row]").first
+    assert row.locator(".ps-cap").first.is_visible() and total.first.is_visible()
 
 
 def test_the_assignment_mode_is_one_of_three(page: Page) -> None:
