@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 from playwright.sync_api import Error, Locator, Page, Route, sync_playwright
 
+from applydesk import stages
 from applydesk.tests._host import host_with
 
 ORIGIN = "http://applydesk.test"
@@ -865,6 +866,14 @@ def _draft_gate(page: Page) -> Locator:
     return gate
 
 
+def _field(item: Locator, n: int) -> Locator:
+    """A response field's row, its editor open (ruling 28)."""
+    row = item.locator("[data-rf]").nth(n)
+    if row.locator("[data-rf-ed]").is_hidden():
+        row.locator("[data-rf-toggle]").click()
+    return row
+
+
 def _result(item: Locator, n: int) -> Locator:
     row = item.locator("[data-result]").nth(n)
     if row.locator("[data-pr-ed]").is_hidden():
@@ -875,6 +884,7 @@ def _result(item: Locator, n: int) -> Locator:
 def test_a_result_s_derivations_follow_its_field(page: Page) -> None:
     gate = _draft_gate(page)
     row = _result(gate, 0)
+    fld = _field(gate, 0)
     derive = row.locator('[data-r="derive"]')
     assert derive.locator("option").all_text_contents() == [
         "Mean",
@@ -884,32 +894,32 @@ def test_a_result_s_derivations_follow_its_field(page: Page) -> None:
         "Sum",
         "Count of responses",
     ]
-    row.locator('[data-r="type"]').select_option("list")
+    fld.locator('[data-q="type"]').select_option("list")
     assert derive.locator("option").all_text_contents() == [
         "Share choosing",
         "Most common",
         "Count of responses",  # any field's (author, 2026-11-14)
     ]
-    row.locator('[data-r="type"]').select_option("string")
+    fld.locator('[data-q="type"]').select_option("string")
     assert derive.locator("option").all_text_contents() == ["All, joined", "Count of responses"]
     derive.select_option("count")
     assert row.locator("[data-pr-type]").text_content() == "Integer, from 0"
-    row.locator('[data-r="type"]').select_option("list")
+    fld.locator('[data-q="type"]').select_option("list")
     assert derive.input_value() == "count"  # kept: the list allows it too
     derive.select_option("share")
-    row.locator('[data-r="options"]').fill("Yes, No")
+    fld.locator('[data-q="options"]').fill("Yes, No")
     derive.select_option("share")
     row.locator('[data-r="value"]').select_option("Yes")
     row.locator('[data-r="at_least"]').fill("2")
     assert row.locator("[data-pr-sum]").text_content() == (
-        "List: Yes, No · Share choosing Yes, from 2 or more → Decimal 0 to 100 (%)"
+        "From Score · Share choosing Yes, from 2 or more → Decimal 0 to 100 (%)"
     )
     assert row.locator("[data-pr-type]").text_content() == "Decimal 0 to 100 (%)"
     row.locator('[data-r="name"]').fill("Recommend")
     assert row.locator("[data-pr-name]").text_content() == "Recommend"
     assert gate.locator("[data-result]").first.get_attribute("data-name") == "Recommend"
     assert gate.locator("[data-pr-rrw]").text_content() == (
-        "For Review Robin, each evaluator answers: Recommend (List: Yes, No)."
+        "For Review Robin, each evaluator answers: Score (List: Yes, No)."
     )
 
 
@@ -938,9 +948,7 @@ def test_every_gate_derives_its_results_in_review_robin(page: Page) -> None:
     options = row.locator('[data-r="derive"] option').all_text_contents()
     assert "Entered here" not in options and options[0] == "Mean"
     assert row.locator('[data-r-g="atleast"]').is_visible()
-    assert row.locator("[data-pr-sum]").text_content() == (
-        "Decimal 0 to 10, step 0.5 · Mean → Decimal 0 to 10"
-    )
+    assert row.locator("[data-pr-sum]").text_content() == ("From Score · Mean → Decimal 0 to 10")
     assert gate.locator("[data-pr-rrw]").is_visible()
 
 
@@ -958,16 +966,17 @@ def test_the_script_s_result_summaries_match_the_server_s(page: Page) -> None:
 
     gate = _draft_gate(page)
     row = _result(gate, 0)
-    for r, expected in RESULT_CASES:
+    fld = _field(gate, 0)
+    for r, _ in RESULT_CASES:
         f = r.field
-        row.locator('[data-r="type"]').select_option(f.type)
+        fld.locator('[data-q="type"]').select_option(f.type)
         if f.type in ("integer", "decimal"):
             for k in ("min", "max", "step"):
-                row.locator(f'[data-r="{k}"]').fill(getattr(f, k))
+                fld.locator(f'[data-q="{k}"]').fill(getattr(f, k))
         elif f.type == "string":
-            row.locator('[data-r="maxlen"]').fill(f.max)
+            fld.locator('[data-q="maxlen"]').fill(f.max)
         else:
-            row.locator('[data-r="options"]').fill(f.options)
+            fld.locator('[data-q="options"]').fill(f.options)
         row.locator('[data-r="derive"]').select_option(r.derive)
         if r.derive == "share":
             # None chosen: the menu's first option, as the server words it.
@@ -975,7 +984,10 @@ def test_the_script_s_result_summaries_match_the_server_s(page: Page) -> None:
                 r.value or f.options.split(",")[0].strip()
             )
         row.locator('[data-r="at_least"]').fill(str(r.at_least))
-        assert row.locator("[data-pr-sum]").text_content() == expected, r
+        # The whole line as the server draws it for a result reading this
+        # field (stages.collated; Score, the draft's field, renamed by none).
+        server = f"From Score · {stages.derivation_text(r)} → {stages.result_type(r)}"
+        assert row.locator("[data-pr-sum]").text_content() == server, r
 
 
 # --- The 5b-5c cold read ---
@@ -989,6 +1001,8 @@ def test_a_replica_of_a_sent_stage_s_results_are_its_own_to_set(page: Page) -> N
     assert gate.locator('[data-pc="confidential"]').is_enabled()
     assert gate.locator('[data-pr-act="add"]').is_enabled()
     assert not gate.locator("[data-pr-ed]").first.evaluate("e => e.disabled")
+    assert gate.locator('[data-rf-act="add"]').is_enabled()  # its fields too (ruling 28)
+    assert not gate.locator("[data-rf-ed]").first.evaluate("e => e.disabled")
 
 
 def test_a_removed_result_s_key_is_not_reused(page: Page) -> None:
@@ -1006,12 +1020,13 @@ def test_a_removed_result_s_key_is_not_reused(page: Page) -> None:
 def test_a_share_keeps_its_option_while_the_options_are_retyped(page: Page) -> None:
     gate = _draft_gate(page)
     row = _result(gate, 0)
-    row.locator('[data-r="type"]').select_option("list")
-    row.locator('[data-r="options"]').fill("Yes, No")
+    fld = _field(gate, 0)
+    fld.locator('[data-q="type"]').select_option("list")
+    fld.locator('[data-q="options"]').fill("Yes, No")
     row.locator('[data-r="derive"]').select_option("share")
     row.locator('[data-r="value"]').select_option("No")
-    row.locator('[data-r="options"]').fill("Yes, N")
-    row.locator('[data-r="options"]').fill("Yes, No")
+    fld.locator('[data-q="options"]').fill("Yes, N")
+    fld.locator('[data-q="options"]').fill("Yes, No")
     assert row.locator('[data-r="value"]').input_value() == "No"
 
 
@@ -1038,9 +1053,10 @@ def test_a_rule_matches_a_list_result_and_names_one_it_cannot_read(page: Page) -
     row = gate.locator("[data-result]").first
     if row.locator("[data-pr-ed]").is_hidden():
         row.locator("[data-pr-toggle]").click()
+    fld = _field(gate, 0)
     row.locator('[data-r="name"]').fill("Verdict")
-    row.locator('[data-r="type"]').select_option("list")
-    row.locator('[data-r="options"]').fill("Yes, No")
+    fld.locator('[data-q="type"]').select_option("list")
+    fld.locator('[data-q="options"]').fill("Yes, No")
     row.locator('[data-r="derive"]').select_option("mode")
     o1 = _item(page, "o1")
     o1.locator('[data-pc-act="rule"]').click()
@@ -1051,7 +1067,7 @@ def test_a_rule_matches_a_list_result_and_names_one_it_cannot_read(page: Page) -
     first.locator('select[aria-label="Value"]').select_option("No")
     assert _line(o1).startswith("Verdict at Vote is No")
     # Turned into a string, it can no longer be read: the rule says so.
-    row.locator('[data-r="type"]').select_option("string")
+    fld.locator('[data-q="type"]').select_option("string")
     assert "reads Verdict at Vote, which a rule cannot compare" in (
         o1.locator("[data-rule-warn]").inner_text()
     )
@@ -1098,3 +1114,110 @@ def test_a_new_gate_and_an_outline_jump_open_the_gate_card(page: Page) -> None:
     g3 = page.locator('.pc-item[data-key="g3"]')
     assert g3.locator('[data-gsec="gate"]').evaluate("e => e.open")
     assert g3.locator('[data-pc="item-name"]').evaluate("e => e === document.activeElement")
+
+
+# --- Segment AD1G rung 4d: the gate card wired (ruling 28) ---
+
+
+def test_response_fields_are_added_edited_and_removed(page: Page) -> None:
+    gate = _draft_gate(page)
+    gate.locator('[data-rf-act="add"]').click()
+    new = gate.locator("[data-rf]").nth(1)
+    assert new.get_attribute("data-rf") == "f2"
+    assert new.locator('[data-q="label"]').evaluate("e => e === document.activeElement")
+    new.locator('[data-q="label"]').fill("Fit")
+    new.locator('[data-q="type"]').select_option("list")
+    new.locator('[data-q="options"]').fill("Strong, Weak")
+    new.locator('[data-q="required"]').check()
+    new.locator('[data-q="help"]').fill("Fit to the programme")
+    assert new.locator("[data-rf-sum]").text_content() == (
+        "List: Strong, Weak · Required · Help: Fit to the programme"
+    )
+    assert gate.locator("[data-pr-rrw]").text_content() == (
+        "For Review Robin, each evaluator answers: Score (Decimal 0 to 10, step 0.5);"
+        " Fit (List: Strong, Weak, required)."
+    )
+    assert page.locator("[data-unsaved]").is_visible()
+    # A result chooses the field it collates; its derivations follow it.
+    row = _result(gate, 0)
+    source = row.locator('[data-r="source"]')
+    assert source.locator("option").all_text_contents() == ["Choose a field", "Score", "Fit"]
+    source.select_option("f2")
+    assert row.locator('[data-r="derive"] option').all_text_contents()[0] == "Share choosing"
+    assert (row.locator("[data-pr-sum]").text_content() or "").startswith(
+        "From Fit · Share choosing Strong"
+    )
+    # The field gone, the result has none, and the Outline says so.
+    new.locator('[data-rf-act="remove"]').click()
+    assert source.input_value() == ""
+    assert row.locator("[data-pr-sum]").text_content() == "No field chosen"
+    # With no field, nothing to derive and no type a rule could read.
+    assert row.locator('[data-r="derive"] option').count() == 0
+    assert row.locator("[data-pr-type]").text_content() == "None until a field is chosen"
+    assert "Gate 1 (Placement interview) has result 1 with no field chosen." in (
+        page.locator("[data-pc-issues]").inner_text()
+    )
+    assert gate.locator('[data-rf-act="add"]').evaluate("e => e === document.activeElement")
+
+
+def test_the_shut_cards_lines_follow_edits(page: Page) -> None:
+    gate = _draft_gate(page)
+    line = gate.locator('[data-gsec="gate"] [data-gsec-sum]')
+    # As the server's stages.gate_summary: the draft's gate has no rule yet.
+    assert line.text_content() == "Review Robin session · Entry decided by hand"
+    gate.locator('[data-pc="confidential"]').check()
+    assert line.text_content() == "Review Robin session · Confidential · Entry decided by hand"
+    who = gate.locator('[data-gsec="evaluators"] [data-gsec-sum]')
+    assert who.text_content() == "No evaluators · Automatic"
+    gate.locator("[data-ps-mode]").get_by_role("button", name="Assigned by the operator").click()
+    assert who.text_content() == "No evaluators · Assigned by the operator"
+
+
+def test_the_shut_gate_line_follows_its_rule(page: Page) -> None:
+    """The cold read on 4c-4d: a rule cleared shows on the shut card at
+    once, not at the next unrelated edit."""
+    gate = _peer_copy(page)
+    line = gate.locator('[data-gsec="gate"] [data-gsec-sum]')
+    assert line.text_content() == "Review Robin session · Enters: " + _line(gate)
+    gate.locator('[data-pc-act="rule"]').click()
+    gate.locator('[data-rule-part="clear"]').click()
+    assert _line(gate) == "Decided by hand"
+    assert line.text_content() == "Review Robin session · Entry decided by hand"
+
+
+def test_a_sent_gate_keeps_its_fields(page: Page) -> None:
+    page.goto(PAGE)
+    g3 = _item(page, "g3")
+    assert g3.locator('[data-rf-act="add"]').is_disabled()
+    assert g3.locator("[data-rf-ed]").first.evaluate("e => e.disabled")
+
+
+def test_a_new_gate_s_field_shows_only_its_type_s_settings(page: Page) -> None:
+    """Codex on #3950: a gate added in the browser drew its results but not
+    its fields, so its Integer field showed Max length and Options too."""
+    page.goto(PAGE)
+    review = _cards(page).nth(1)
+    _open(review)
+    review.locator('[data-pc-act="gate"]').click()
+    new = review.locator('.pc-item[data-item="gate"]').nth(2)
+    fld = _field(new, 0)
+    assert fld.locator('[data-q-g="number"]').is_visible()
+    assert not fld.locator('[data-q-g="string"]').is_visible()
+    assert not fld.locator('[data-q-g="list"]').is_visible()
+    assert fld.locator("[data-rf-n]").text_content() == "1"
+
+
+def test_a_gate_s_description_grows_with_its_text(page: Page) -> None:
+    """The author, 2026-11-17: no resize handle; the box fits its text,
+    as Review Robin's instrument boxes do."""
+    page.goto(PAGE)
+    g1 = _item(page, "g1")
+    box = g1.locator('[data-pc="description"]')
+    assert box.evaluate("e => getComputedStyle(e).resize") == "none"
+    fits = "e => Math.abs(e.clientHeight - e.scrollHeight) <= 1"
+    assert box.evaluate(fits)  # fitted when its card opened
+    before = box.evaluate("e => e.offsetHeight")
+    gate = _peer_copy(page)
+    box = gate.locator('[data-pc="description"]')
+    box.fill("A line. " * 60)
+    assert box.evaluate("e => e.offsetHeight") > before and box.evaluate(fits)

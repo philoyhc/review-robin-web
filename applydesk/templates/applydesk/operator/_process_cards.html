@@ -62,19 +62,25 @@
    the response field evaluators fill in, and how their answers become
    the result. The page's script keeps the derivations to what the field
    allows; every gate runs in Review Robin (ruling 28). #}
-{% macro result_row(r, via, sent=False) %}
-{% set f = r.field %}
+{% macro result_row(r, sent=False, src=none, fields=()) %}
+{% set f = src.field if src else r.field %}
+{% set rc = collated(r, src) %}
 <div class="pr-row" data-result="{{ r.key }}" data-name="{{ r.name }}">
   <button type="button" class="pr-head" data-pr-toggle aria-expanded="false">
     <span class="pr-n" data-pr-n></span>
-    <span class="pr-texts"><span class="pr-name" data-pr-name>{{ r.name or "Untitled result" }}</span><span class="pr-sum" data-pr-sum>{{ result_summary(r) }}</span></span>
+    <span class="pr-texts"><span class="pr-name" data-pr-name>{{ r.name or "Untitled result" }}</span><span class="pr-sum" data-pr-sum>{% if src %}From {{ src.label or "Untitled field" }} · {{ derivation_text(rc) }} → {{ result_type(rc) }}{% else %}No field chosen{% endif %}</span></span>
   </button>
   <fieldset class="pr-ed" data-pr-ed hidden{% if sent %} disabled title="Sent: the gate keeps its results"{% endif %}>
     <legend class="visually-hidden">{{ r.name or "Untitled result" }}</legend>
     <div class="pc-row">
-      <label class="fc-l pc-wide">Name<input class="fc-in" data-r="name" value="{{ r.name }}" placeholder="e.g. Rating"></label>
-      <label class="fc-l">Response field<select class="fc-in" data-r="type">{% for k, l in field_types %}<option value="{{ k }}"{% if k == f.type %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+      <label class="fc-l pc-wide">Name<input class="fc-in" data-r="name" value="{{ r.name }}" placeholder="e.g. Mean rating"></label>
+      {# Ruling 28: a result collates one response field, chosen here. #}
+      <label class="fc-l">From<select class="fc-in" data-r="source"><option value=""{% if not src %} selected{% endif %}>Choose a field</option>{% for rf in fields %}<option value="{{ rf.key }}"{% if src and rf.key == src.key %} selected{% endif %}>{{ rf.label or "Untitled field" }}</option>{% endfor %}</select></label>
     </div>
+    {# The chosen field's definition, kept in step with it by the page's
+       script: the derivations and the result's type read it. #}
+    <div data-r-g="field" hidden>
+    <select data-r="type">{% for k, l in field_types %}<option value="{{ k }}"{% if k == f.type %} selected{% endif %}>{{ l }}</option>{% endfor %}</select>
     <div class="pc-row" data-r-g="number">
       <label class="fc-l pc-narrow">Min<input class="fc-in" data-r="min" inputmode="decimal" value="{{ f.min if f.type in ('integer', 'decimal') }}"></label>
       <label class="fc-l pc-narrow">Max<input class="fc-in" data-r="max" inputmode="decimal" value="{{ f.max if f.type in ('integer', 'decimal') }}"></label>
@@ -86,6 +92,7 @@
     <div class="pc-row" data-r-g="list">
       <label class="fc-l pc-wide">Options (comma-separated)<input class="fc-in" data-r="options" value="{{ f.options }}"></label>
     </div>
+    </div>
     <div class="pc-row">
       <label class="fc-l">Derived as<select class="fc-in" data-r="derive">{% for k, l in derivations if k in allowed[f.type] %}<option value="{{ k }}"{% if k == r.derive %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
       <label class="fc-l" data-r-g="share">Choosing<select class="fc-in" data-r="value">{% for o in f.options.split(",") if o.strip() %}<option{% if o.strip() == r.value %} selected{% endif %}>{{ o.strip() }}</option>{% endfor %}</select></label>
@@ -93,6 +100,41 @@
     </div>
     <p class="pc-line">Result: <strong data-pr-type>{{ result_type(r) }}</strong></p>
     <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pr-act="remove">Remove the result</button></div>
+  </fieldset>
+</div>
+{% endmacro %}
+
+{# A response field's row (ruling 28): what each evaluator answers, its
+   type and bounds or options, whether it must be answered, and the help
+   Review Robin shows under it. #}
+{% macro field_row(f, sent=False) %}
+{% set t = f.field %}
+<div class="pr-row" data-rf="{{ f.key }}">
+  <button type="button" class="pr-head" data-rf-toggle aria-expanded="false">
+    <span class="pr-n" data-rf-n></span>
+    <span class="pr-texts"><span class="pr-name" data-rf-name>{{ f.label or "Untitled field" }}</span><span class="pr-sum" data-rf-sum>{{ field_summary(f) }}</span></span>
+  </button>
+  <fieldset class="pr-ed" data-rf-ed hidden{% if sent %} disabled title="Sent: the gate keeps its fields"{% endif %}>
+    <legend class="visually-hidden">{{ f.label or "Untitled field" }}</legend>
+    <div class="pc-row">
+      <label class="fc-l pc-wide">Label<input class="fc-in" data-q="label" value="{{ f.label }}" placeholder="e.g. Rating"></label>
+      <label class="fc-l">Type<select class="fc-in" data-q="type">{% for k, l in field_types %}<option value="{{ k }}"{% if k == t.type %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+    </div>
+    {# Only the type's own settings show, from the first draw (Codex). #}
+    <div class="pc-row" data-q-g="number"{% if t.type not in ("integer", "decimal") %} hidden{% endif %}>
+      <label class="fc-l pc-narrow">Min<input class="fc-in" data-q="min" inputmode="decimal" value="{{ t.min if t.type in ('integer', 'decimal') }}"></label>
+      <label class="fc-l pc-narrow">Max<input class="fc-in" data-q="max" inputmode="decimal" value="{{ t.max if t.type in ('integer', 'decimal') }}"></label>
+      <label class="fc-l pc-narrow">Step<input class="fc-in" data-q="step" inputmode="decimal" value="{{ t.step if t.type in ('integer', 'decimal') }}"></label>
+    </div>
+    <div class="pc-row" data-q-g="string"{% if t.type != "string" %} hidden{% endif %}>
+      <label class="fc-l pc-narrow">Max length<input class="fc-in" data-q="maxlen" inputmode="numeric" value="{{ t.max if t.type == 'string' }}"></label>
+    </div>
+    <div class="pc-row" data-q-g="list"{% if t.type != "list" %} hidden{% endif %}>
+      <label class="fc-l pc-wide">Options (comma-separated)<input class="fc-in" data-q="options" value="{{ t.options }}"></label>
+    </div>
+    <label class="gsw"><input type="checkbox" data-q="required"{% if f.required %} checked{% endif %}> <strong>Required</strong></label>
+    <label class="fc-l">Help<input class="fc-in" data-q="help" value="{{ f.help }}" placeholder="Shown under the field in Review Robin"></label>
+    <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-rf-act="remove">Remove the field</button></div>
   </fieldset>
 </div>
 {% endmacro %}
@@ -142,7 +184,7 @@
         <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ g.label }}" placeholder="Untitled gate"></label>
         <label class="fc-l">Type<select class="fc-in" data-pc="type" disabled title="Every gate runs in Review Robin for now">{% for k, label in gate_types %}<option value="{{ k }}"{% if k == (g.via or "RRW") %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
       </div>
-      <label class="fc-l">Description<textarea class="fc-in" rows="2" data-pc="description" placeholder="What evaluators do at this gate, as Review Robin shows it"{{ sent_attr(sent) }}>{{ g.description }}</textarea></label>
+      <label class="fc-l">Description<textarea class="fc-in" rows="1" data-fit-box data-pc="description" placeholder="What evaluators do at this gate, as Review Robin shows it"{{ sent_attr(sent) }}>{{ g.description }}</textarea></label>
       <label class="gsw"><input type="checkbox" data-pc="confidential"{% if g.confidential %} checked{% endif %}{{ sent_attr(sent) }}> <span><strong>Confidential</strong> <span class="muted">· Review Robin shows each candidate as <em>Name redacted</em>, with their key</span></span></label>
       {{ rule_box(plan, g, rule_text, sec=False) }}
     </div>
@@ -184,26 +226,26 @@
     </div>
   </details>
   {# What each evaluator answers in Review Robin (ruling 28): a field's
-     type and bounds, whether it must be answered, and its help. Rung 4c's
-     scaffold: listed from the sample, + Field inert until 4d. #}
+     type and bounds, whether it must be answered, and its help. #}
   <div class="pc-fields pi-sec" data-pc-fields>
     <span class="fc-l">Response fields</span>
     <p class="pc-line muted pc-hint">What each evaluator answers in Review Robin, field by field.</p>
-    <div class="pr-list">{% for f in fields_of(g) %}<div class="pr-row" data-rf="{{ f.key }}"><div class="pr-head"><span class="pr-n">{{ loop.index }}</span><span class="pr-texts"><span class="pr-name">{{ f.label or "Untitled field" }}</span><span class="pr-sum">{{ field_summary(f) }}</span></span></div></div>{% endfor %}</div>
-    <p class="pc-line muted"{% if fields_of(g) %} hidden{% endif %}>No response fields yet.</p>
-    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-rf-act="add" disabled title="Fields are added from rung 4d">+ Field</button></div>
+    <div class="pr-list" data-rf-list>{% for f in fields_of(g) %}{{ field_row(f, sent) }}{% endfor %}</div>
+    <p class="pc-line muted" data-rf-none{% if fields_of(g) %} hidden{% endif %}>No response fields yet: a result collates one.</p>
+    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-rf-act="add"{% if sent %} data-sent disabled title="Sent: the gate keeps its fields"{% endif %}>+ Field</button></div>
   </div>
-  {# Its results (ruling 21): up to three, each the field evaluators answer
-     and how the answers become the result, which sets its type. Until
-     4d each row still carries its field; ruling 28 has it name one. #}
+  {# Its results (rulings 21, 28): up to three, each naming the response
+     field it collates and how the answers become the result, which sets
+     its type. #}
   <div class="pc-results pi-sec" data-pc-results>
     <span class="fc-l">Results</span>
     <p class="pc-line muted pc-hint">What the gate yields, collated from the response fields: each shows on Dossiers and feeds outcomes and later gates' rules. Up to three.</p>
-    <div class="pr-list" data-pr-list>{% for r in g.results %}{{ result_row(r, g.via, sent) }}{% endfor %}</div>
+    <div class="pr-list" data-pr-list>{% for r in g.results %}{{ result_row(r, sent, source_field(g, r), fields_of(g)) }}{% endfor %}</div>
     <p class="pc-line muted" data-pr-none{% if g.results %} hidden{% endif %}>No results yet: a gate yields up to three.</p>
     <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-pr-act="add"{% if sent %} data-sent disabled title="Sent: the gate keeps its results"{% elif g.results | length >= 3 %} disabled title="A gate yields three results at most"{% endif %}>+ Result</button></div>
   </div>
-  <p class="pc-line muted pr-rrw" data-pr-rrw{% if g.via != "RRW" or not g.results %} hidden{% endif %}>For Review Robin, each evaluator answers: {% for r in g.results %}<strong>{{ r.name or "Untitled result" }}</strong> ({{ field_text(r.field) }}){{ "; " if not loop.last }}{% endfor %}.</p>
+  {% set fs = fields_of(g) %}
+  <p class="pc-line muted pr-rrw" data-pr-rrw{% if not fs %} hidden{% endif %}>For Review Robin, each evaluator answers: {% for f in fs %}<strong>{{ f.label or "Untitled field" }}</strong> ({{ field_text(f.field) }}{{ ", required" if f.required }}){{ "; " if not loop.last }}{% endfor %}.</p>
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-gate">Remove the gate</button></div>
   </div>
 </div>

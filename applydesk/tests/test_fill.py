@@ -155,3 +155,17 @@ def test_a_nominee_comes_from_the_question_s_pool() -> None:
     named = [sample_data.nominees("wa9juxbc2t", a, "Preferred reviewer") for a in apps]
     assert all(len(n) <= 1 and set(n) <= pool for n in named)
     assert sample_data.nominees("wa9juxbc2t", apps[0], "No such question") == ()
+
+
+def test_a_result_reads_its_chosen_field() -> None:
+    """Ruling 28 (the cold read on 4c-4d): a result's derivation and type
+    read the field it names; a gate listing its fields assumes none."""
+    likert = stages.Field("integer", "1", "5", "1")
+    words = stages.Field("string", max="100")
+    r = stages.GateResult("r1", "Rating", words, "mean", source="rating")
+    g = Gate("g9", 9, "x", "RRW", (r,), fields=(stages.ResponseField("rating", "Rating", likert),))
+    src = stages.source_field(g, r)
+    assert src is not None and stages.result_type(stages.collated(r, src)) == "Decimal 1 to 5"
+    unnamed = stages.GateResult("r2", "Other", likert, "mean")
+    g2 = Gate("g9", 9, "x", "RRW", (unnamed,), fields=g.fields)
+    assert stages.source_field(g2, unnamed) is None

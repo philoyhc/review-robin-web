@@ -11,7 +11,7 @@ Nothing is saved."""
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 
 from applydesk import sample_data
@@ -100,8 +100,10 @@ class GateResult:
     derive: str
     value: str = ""
     at_least: int = 1
-    # The response field it collates, by key (ruling 28); "" reads as the
-    # field it carries, until 4d moves the type to the field alone.
+    # The response field it collates, by key (ruling 28). ``field`` is that
+    # field's definition as the sample gives it; on Process the chosen
+    # field's governs (``collated``). "" on a gate listing no fields reads
+    # the field in its place (``fields_of``'s fallback).
     source: str = ""
 
 
@@ -1059,8 +1061,16 @@ def source_field(gate: Gate, result: GateResult) -> ResponseField | None:
     fields = fields_of(gate)
     if result.source:
         return next((f for f in fields if f.key == result.source), None)
+    if gate.fields:
+        return None  # a gate listing its fields names them; none is assumed
     at = gate.results.index(result) if result in gate.results else -1
     return fields[at] if 0 <= at < len(fields) else None
+
+
+def collated(result: GateResult, source: ResponseField | None) -> GateResult:
+    """The result as its chosen field makes it (ruling 28): its derivation
+    and type read that field's definition, as the page's script does."""
+    return replace(result, field=source.field) if source else result
 
 
 def field_summary(f: ResponseField) -> str:
