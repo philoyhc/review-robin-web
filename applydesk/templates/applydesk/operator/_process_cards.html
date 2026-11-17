@@ -67,10 +67,10 @@
 <div class="pr-row" data-result="{{ r.key }}" data-name="{{ r.name }}">
   <button type="button" class="pr-head" data-pr-toggle aria-expanded="false">
     <span class="pr-n" data-pr-n></span>
-    <span class="pr-texts"><span class="pr-name" data-pr-name>{{ r.name or "Untitled result" }}</span><span class="pr-sum" data-pr-sum>{{ result_summary(r) }}</span></span>
+    <span class="pr-texts"><span class="pr-name" data-pr-name>{{ r.name or "Untitled metric" }}</span><span class="pr-sum" data-pr-sum>{{ result_summary(r) }}</span></span>
   </button>
-  <fieldset class="pr-ed" data-pr-ed hidden{% if sent %} disabled title="Sent: the gate keeps its results"{% endif %}>
-    <legend class="visually-hidden">{{ r.name or "Untitled result" }}</legend>
+  <fieldset class="pr-ed" data-pr-ed hidden{% if sent %} disabled title="Sent: the gate keeps its metrics"{% endif %}>
+    <legend class="visually-hidden">{{ r.name or "Untitled metric" }}</legend>
     <div class="pc-row">
       <label class="fc-l pc-wide">Name<input class="fc-in" data-r="name" value="{{ r.name }}" placeholder="e.g. Rating"></label>
       <label class="fc-l">Response field<select class="fc-in" data-r="type">{% for k, l in field_types %}<option value="{{ k }}"{% if k == f.type %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
@@ -92,7 +92,7 @@
       <label class="fc-l pc-narrow" data-r-g="atleast">From at least<input class="fc-in" data-r="at_least" inputmode="numeric" value="{{ r.at_least }}" aria-label="Responses needed, at least"></label>
     </div>
     <p class="pc-line">Result: <strong data-pr-type>{{ result_type(r) }}</strong></p>
-    <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pr-act="remove">Remove the result</button></div>
+    <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pr-act="remove">Remove the metric</button></div>
   </fieldset>
 </div>
 {% endmacro %}
@@ -129,7 +129,7 @@
 {% set ev = sources_of(g) %}
 {% set ev_problem = sources_warn(ev[0], ev[1], panel_pools) %}
 <div class="pc-item" data-item="gate" data-key="{{ g.key }}" data-rule="{{ rule_json(g) | tojson | forceescape }}"{% if open %} data-open{% endif %}>
-  {% set chips %}<span class="chip chip-{{ 'ok' if state == 'Results in' else ('info' if state in ('Sent', 'Ready') else 'warn') }}" data-pi-state>{{ state }}</span><span class="chip chip-mute" data-pi-results>{{ g.results | length }} {{ "result" if g.results | length == 1 else "results" }}</span><span class="chip {{ 'chip-warn' if ev_problem else 'chip-mute' }}" data-pi-panel>{{ sources_summary(ev[0], ev[1], panel_pools) }}</span>{% endset %}
+  {% set chips %}<span class="chip chip-{{ 'ok' if state == 'Results in' else ('info' if state in ('Sent', 'Ready') else 'warn') }}" data-pi-state>{{ state }}</span><span class="chip chip-mute" data-pi-results>{{ g.results | length }} {{ "metric" if g.results | length == 1 else "metrics" }}</span><span class="chip {{ 'chip-warn' if ev_problem else 'chip-mute' }}" data-pi-panel>{{ sources_summary(ev[0], ev[1], panel_pools) }}</span>{% endset %}
   {{ head("Gate " ~ g.number, g.label or "Untitled gate", chips, open) }}
   <div class="pi-body">
   <div class="pc-row">
@@ -145,7 +145,7 @@
     <span class="fc-l">Evaluators</span>
     <div class="ps-list" data-ps-list>
       {# The columns' names, once, so every row's controls line up. #}
-      <div class="ps-row ps-headrow" aria-hidden="true"{% if not ev[0] %} hidden{% endif %} data-ps-headrow><span></span><span>Kind</span><span>Source</span><span>Min</span><span>Max</span><span></span></div>
+      <div class="ps-row ps-headrow" aria-hidden="true"{% if not ev[0] %} hidden{% endif %} data-ps-headrow><span>Order</span><span>Kind</span><span>Source</span><span>Min</span><span>Max</span><span></span></div>
     {% for s in ev[0] %}{{ source_row(s, loop.index, sent) }}{% endfor %}
       <div class="ps-row ps-total" data-ps-total>
         <span class="ps-rank"></span>
@@ -174,12 +174,13 @@
   {# Its results (ruling 21): up to three, each the field evaluators answer
      and how the answers become the result, which sets its type. #}
   <div class="pc-results pi-sec" data-pc-results>
-    <span class="fc-l">Results</span>
+    <span class="fc-l">Metrics</span>
+    <p class="pc-line muted pc-hint">What each evaluator answers, and how the answers make the gate's result.</p>
     <div class="pr-list" data-pr-list>{% for r in g.results %}{{ result_row(r, g.via, sent) }}{% endfor %}</div>
-    <p class="pc-line muted" data-pr-none{% if g.results %} hidden{% endif %}>No results yet: a gate yields up to three.</p>
-    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-pr-act="add"{% if sent %} data-sent disabled title="Sent: the gate keeps its results"{% elif g.results | length >= 3 %} disabled title="A gate yields three results at most"{% endif %}>+ Result</button></div>
+    <p class="pc-line muted" data-pr-none{% if g.results %} hidden{% endif %}>No metrics yet: a gate takes up to three, each making a result.</p>
+    <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-pr-act="add"{% if sent %} data-sent disabled title="Sent: the gate keeps its metrics"{% elif g.results | length >= 3 %} disabled title="A gate takes three metrics at most"{% endif %}>+ Metric</button></div>
   </div>
-  <p class="pc-line muted pr-rrw" data-pr-rrw{% if g.via != "RRW" or not g.results %} hidden{% endif %}>For Review Robin, each evaluator answers: {% for r in g.results %}<strong>{{ r.name or "Untitled result" }}</strong> ({{ field_text(r.field) }}){{ "; " if not loop.last }}{% endfor %}.</p>
+  <p class="pc-line muted pr-rrw" data-pr-rrw{% if g.via != "RRW" or not g.results %} hidden{% endif %}>For Review Robin, each evaluator answers: {% for r in g.results %}<strong>{{ r.name or "Untitled metric" }}</strong> ({{ field_text(r.field) }}){{ "; " if not loop.last }}{% endfor %}.</p>
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-gate">Remove the gate</button></div>
   </div>
 </div>

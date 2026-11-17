@@ -912,8 +912,8 @@ def test_results_are_added_to_three_and_removed(page: Page) -> None:
     assert new.locator('[data-r="name"]').evaluate("e => e === document.activeElement")
     assert new.locator("[data-pr-n]").text_content() == "2"
     add.click()
-    assert gate.locator("[data-pi-results]").text_content() == "3 results"
-    assert add.is_disabled() and add.get_attribute("title") == "A gate yields three results at most"
+    assert gate.locator("[data-pi-results]").text_content() == "3 metrics"
+    assert add.is_disabled() and add.get_attribute("title") == "A gate takes three metrics at most"
     _result(gate, 0).locator('[data-pr-act="remove"]').click()
     assert gate.locator("[data-pr-n]").all_text_contents() == ["1", "2"]
     assert add.is_enabled()
@@ -1015,7 +1015,7 @@ def test_a_replica_keeps_three_results_at_most(page: Page) -> None:
     _cards(page).nth(1).locator('[data-fc-act="replicate"]').click()
     copy = _cards(page).nth(2).locator('.pc-item[data-item="gate"]')
     add = copy.locator('[data-pr-act="add"]')
-    assert add.is_disabled() and add.get_attribute("title") == "A gate yields three results at most"
+    assert add.is_disabled() and add.get_attribute("title") == "A gate takes three metrics at most"
     assert copy.locator("[data-result]").count() == 3
 
 

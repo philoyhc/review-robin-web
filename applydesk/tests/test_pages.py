@@ -919,7 +919,7 @@ def test_a_gate_item_lists_its_results_and_what_review_robin_asks(client: TestCl
     g1 = text[text.index('data-key="g1"') : text.index('data-key="g2"')]
     assert re.findall(r'class="pr-name" data-pr-name>([^<]+)<', g1) == ["Rating", "Comments"]
     assert "Integer 1 to 5, step 1 · Mean, from 2 or more → Decimal 1 to 5" in g1
-    assert "data-pi-results>2 results<" in g1
+    assert "data-pi-results>2 metrics<" in g1
     assert (
         "For Review Robin, each evaluator answers: <strong>Rating</strong> (Integer 1 to 5,"
         " step 1); <strong>Comments</strong> (String, up to 2000 characters)."

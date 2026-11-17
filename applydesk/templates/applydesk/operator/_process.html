@@ -713,7 +713,7 @@
           item.querySelectorAll("[data-pc-sources] [data-ps], [data-pc-sources] [data-ps-act], [data-ps-mode] [data-mode]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
           drawSources(item);
         }
-        // Its results, how it runs and + Result are its own to set too.
+        // Its metrics, how it runs and + Metric are its own to set too.
         item.querySelectorAll("[data-pr-ed]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
         var via = item.querySelector('[data-pc="via"]');
         if (via) { via.disabled = false; via.removeAttribute("title"); }
@@ -913,7 +913,7 @@
     row.querySelector('[data-r-g="atleast"]').hidden = d.value === "entered";
     var r = readResult(row);
     row.dataset.name = r.name;
-    row.querySelector("[data-pr-name]").textContent = r.name || "Untitled result";
+    row.querySelector("[data-pr-name]").textContent = r.name || "Untitled metric";
     row.querySelector("[data-pr-sum]").textContent = fieldText(r) + " · " + derivationText(r) + " → " + resultType(r);
     row.querySelector("[data-pr-type]").textContent = resultType(r);
   }
@@ -927,11 +927,11 @@
     rows.forEach(function (row, i) { row.querySelector("[data-pr-n]").textContent = String(i + 1); drawResult(row, via); });
     item.querySelector("[data-pr-none]").hidden = rows.length > 0;
     var chip = item.querySelector("[data-pi-results]");
-    chip.textContent = rows.length + (rows.length === 1 ? " result" : " results");
+    chip.textContent = rows.length + (rows.length === 1 ? " metric" : " metrics");
     var add = item.querySelector('[data-pr-act="add"]');
     if (!add.hasAttribute("data-sent")) {
       add.disabled = rows.length >= 3;
-      if (add.disabled) add.title = "A gate yields three results at most"; else add.removeAttribute("title");
+      if (add.disabled) add.title = "A gate takes three metrics at most"; else add.removeAttribute("title");
     }
     var rrw = item.querySelector("[data-pr-rrw]");
     rrw.textContent = "";
@@ -939,7 +939,7 @@
     rrw.appendChild(document.createTextNode("For Review Robin, each evaluator answers: "));
     rows.forEach(function (row, i) {
       var r = readResult(row);
-      rrw.appendChild(el("strong", "", r.name || "Untitled result"));
+      rrw.appendChild(el("strong", "", r.name || "Untitled metric"));
       rrw.appendChild(document.createTextNode(" (" + fieldText(r) + ")" + (i < rows.length - 1 ? "; " : ".")));
     });
   }
