@@ -1443,3 +1443,20 @@ def test_what_was_sent_stays_once_the_session_opens(page: Page) -> None:
     _open(stage)
     stage.locator('[data-pc="from"]').fill("2 Oct")
     assert send.text_content() == before and "open 1 Oct to 6 Nov" in (before or "")
+
+
+def test_a_replica_of_an_opened_gate_follows_its_own_settings(page: Page) -> None:
+    """Codex on #3963: the copy is unsent, so its line is not frozen."""
+    page.goto(MODEL)
+    stage = page.locator('.pc-item[data-key="g1"]').locator(
+        "xpath=ancestor::article[@data-kind='stage']"
+    )
+    _open(stage)
+    stage.locator('[data-fc-act="replicate"]').click()
+    copy = stage.locator("xpath=following-sibling::article[@data-kind='stage'][1]")
+    gate = copy.locator('.pc-item[data-item="gate"]').first
+    send = gate.locator("[data-pr-send]")
+    assert send.get_attribute("data-fixed") is None
+    _open(copy)
+    copy.locator('[data-pc="from"]').fill("2 Oct")
+    assert "open 2 Oct to" in (send.text_content() or "")

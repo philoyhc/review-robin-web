@@ -827,6 +827,9 @@
         st.textContent = gate ? "Not ready" : "Not released";
         st.className = "chip " + (gate ? "chip-warn" : "chip-mute");
         item.querySelectorAll("[data-pc-sent]").forEach(function (x) { x.remove(); });
+        // Not sent: its line follows its own settings again (Codex).
+        var send = item.querySelector("[data-pr-send]");
+        if (send) send.removeAttribute("data-fixed");
         var srcBox = item.querySelector("[data-pc-sources]");
         if (srcBox) {
           srcBox.removeAttribute("data-sent");
