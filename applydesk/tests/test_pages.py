@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterator
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
@@ -653,11 +654,11 @@ def test_a_gate_s_table_sorts_as_review_robin_s_tables() -> None:
     )
     assert paging.sort_text((("state", True), ("evaluator", False))) == "-state,evaluator"
     assert [paging.sort_badge(both, k) for k in ("candidate", "evaluator", "state")] == [
-        "▲1",
-        "▲2",
+        "1↑",
+        "2↑",
         "↕",
     ]
-    assert paging.sort_badge(down, "evaluator") == "▼"
+    assert paging.sort_badge(down, "evaluator") == "1↓"
 
 
 def test_a_gate_s_page_sorts_every_page_on_the_server(client: TestClient) -> None:
@@ -678,6 +679,7 @@ def test_a_gate_s_page_sorts_every_page_on_the_server(client: TestClient) -> Non
     found = client.get(f"{base}?q=kenji&sort=candidate&offset=0").text
     assert f'href="{base}?q=kenji&amp;sort=-candidate#ev-table-card" data-shift-href' in found
     assert f'data-shift-href="{base}?q=kenji&amp;sort=candidate%2Cevaluator#ev-table-card"' in found
+    assert f'<a class="btn btn-secondary" href="{base}?sort=candidate">Clear</a>' in found
 
 
 def test_a_blind_gate_sorts_by_the_dossier(client: TestClient) -> None:
@@ -685,6 +687,31 @@ def test_a_blind_gate_sorts_by_the_dossier(client: TestClient) -> None:
     text = client.get(f"{base}?sort=candidate").text
     shown = re.findall(r"<tr data-ev-row=\"\w+\"[^>]*>\s*<td>(\w+)</td>", text)
     assert shown == sorted(shown) and shown
+    # The sample's IDs and names fall in one order, so the rule itself:
+    # by the ID when blind, by the name otherwise.
+    zed, abe = _pair("Abe Ng", "z9", "Dr A"), _pair("Zed Ong", "a1", "Dr B")
+    order = (("candidate", False),)
+    gate = cast(stages.Gate, None)  # read only by the State column
+    assert stages.sorted_pairs((zed, abe), order, gate, False, blind=True) == (abe, zed)
+    assert stages.sorted_pairs((abe, zed), order, gate, False) == (zed, abe)
+
+
+def _pair(applicant: str, dossier: str, evaluator: str, source: str = "") -> stages.Pair:
+    app = SimpleNamespace(applicant=applicant, dossier_id=dossier)
+    of = cast(stages.Assignment, SimpleNamespace(application=app))
+    return stages.Pair(of=of, name=evaluator, source=source)
+
+
+def test_a_gate_s_sort_puts_empty_cells_last_and_numbers_as_numbers() -> None:
+    """As Review Robin's tables: a dossier with no evaluator yet sorts
+    last up or down, and *Panel 2* before *Panel 10*."""
+    none_yet, b, a = _pair("C", "c", ""), _pair("B", "b", "Bo"), _pair("A", "a", "Al")
+    gate = cast(stages.Gate, None)  # read only by the State column
+    for desc, want in ((False, (a, b, none_yet)), (True, (b, a, none_yet))):
+        got = stages.sorted_pairs((none_yet, b, a), (("evaluator", desc),), gate, False)
+        assert got == want, desc
+    ten, two = _pair("X", "x", "E", "Panel 10"), _pair("Y", "y", "F", "Panel 2")
+    assert stages.sorted_pairs((ten, two), (("source", False),), gate, False) == (two, ten)
 
 
 def test_pages_snap_and_clamp() -> None:

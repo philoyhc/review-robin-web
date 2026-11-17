@@ -25,15 +25,15 @@
     {% if gate.mode != "automatic" %}<button type="button" class="btn btn-secondary" data-ev-act="add"{{ off }}>+ Pair</button>{% endif %}
     {% if sent %}<span class="muted">Its session has opened: its pairs are Review Robin's to change.</span>{% endif %}
   </div>
-  {% set st = sort_text(order) %}
+  {% set order_text = sort_text(order) %}
   <form class="ev-find" method="get" action="{{ url(here) }}" role="search">
     <label class="fc-l">Find a candidate or an evaluator<input class="fc-in" type="search" name="q" value="{{ q }}" data-ev-find></label>
-    {% if st %}<input type="hidden" name="sort" value="{{ st }}">{% endif %}
+    {% if order_text %}<input type="hidden" name="sort" value="{{ order_text }}">{% endif %}
     <button class="btn btn-secondary" type="submit">Find</button>
-    {% if q %}<a class="btn btn-secondary" href="{{ url(here ~ (('?sort=' ~ (st | urlencode)) if st else '')) }}">Clear</a>{% endif %}
+    {% if q %}<a class="btn btn-secondary" href="{{ url(here ~ (('?sort=' ~ (order_text | urlencode)) if order_text else '')) }}">Clear</a>{% endif %}
   </form>
   {# The query a link keeps: the filter and the sort (the page's own). #}
-  {% set qs = (('q=' ~ (q | urlencode) ~ '&') if q else '') ~ (('sort=' ~ (st | urlencode) ~ '&') if st else '') %}
+  {% set qs = (('q=' ~ (q | urlencode) ~ '&') if q else '') ~ (('sort=' ~ (order_text | urlencode) ~ '&') if order_text else '') %}
   {% set qf = ('q=' ~ (q | urlencode) ~ '&') if q else '' %}
   <div class="ev-pager" data-ev-pager>
     <span class="muted" data-ev-showing>{% if matched %}{{ "{:,}".format(where.offset + 1) }}–{{ "{:,}".format(where.end) }} of {{ "{:,}".format(matched) }}{% else %}None of {{ "{:,}".format(all_pairs | length) }}{% endif %}{% if q %} matching “{{ q }}”{% endif %}</span>
@@ -52,7 +52,8 @@
        it, again to reverse, again to clear; shift-click adds it to the
        cascade (three at most). On the server, so every page follows;
        a new order starts at the first page. #}
-    {% macro sorter(key, label) %}{% set p = sort_text(plain_click(order, key)) %}{% set s = sort_text(shift_click(order, key)) %}<th class="ev-sortable" data-sort-key="{{ key }}"{% for k, d in order if k == key %} aria-sort="{{ 'descending' if d else 'ascending' }}"{% endfor %}>{{ label }}<a class="ev-sort-btn" href="{{ url(here ~ '?' ~ qf ~ (('sort=' ~ (p | urlencode)) if p else ''))  }}#ev-table-card" data-shift-href="{{ url(here ~ '?' ~ qf ~ (('sort=' ~ (s | urlencode)) if s else '')) }}#ev-table-card" aria-label="Sort by {{ label }}"><span class="ev-sort-badge">{{ sort_badge(order, key) }}</span></a></th>{% endmacro %}
+    {% macro sorter(key, label) %}{% set p = sort_text(plain_click(order, key)) %}{% set s = sort_text(shift_click(order, key)) %}<th class="ev-sortable" data-sort-key="{{ key }}"{% if order and order[0][0] == key %} aria-sort="{{ 'descending' if order[0][1] else 'ascending' }}"{% endif %}>{{ label }}<a class="ev-sort-btn" href="{{ url(sorted_to(p)) }}#ev-table-card" data-shift-href="{{ url(sorted_to(s)) }}#ev-table-card" aria-label="Sort by {{ label }}"><span class="ev-sort-badge" aria-hidden="true">{{ sort_badge(order, key) }}</span></a></th>{% endmacro %}
+    {% macro sorted_to(text) %}{% set tail = (qf ~ (('sort=' ~ (text | urlencode)) if text else '')).rstrip('&') %}{{ here ~ (('?' ~ tail) if tail else '') }}{% endmacro %}
     <thead><tr>{{ sorter("candidate", "Dossier" if exercise.blind else "Candidate") }}{{ sorter("evaluator", "Evaluator") }}{{ sorter("source", "Source") }}{{ sorter("state", "State") }}{% if gate.mode != "automatic" %}<th></th>{% endif %}</tr></thead>
     <tbody>
     {% for p in rows %}

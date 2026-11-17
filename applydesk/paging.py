@@ -99,9 +99,9 @@ def shift_click(spec: Sort, key: str) -> Sort:
 
 
 def sort_badge(spec: Sort, key: str) -> str:
-    """The header's mark: ↕ unsorted; ▲ or ▼, numbered in a cascade."""
+    """The header's mark, as Review Robin's: ↕ unsorted, else its place in
+    the cascade and its direction, ``1↑`` or ``2↓``."""
     for n, (k, desc) in enumerate(spec, start=1):
         if k == key:
-            arrow = "▼" if desc else "▲"
-            return f"{arrow}{n}" if len(spec) > 1 else arrow
+            return f"{n}{'↓' if desc else '↑'}"
     return "↕"
