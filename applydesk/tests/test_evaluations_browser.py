@@ -301,3 +301,49 @@ def test_no_one_is_offered_to_review_themself(page: Page, monkeypatch: pytest.Mo
     assert page.locator("[data-ev-add-evaluator] option").count() == 0
     page.get_by_role("button", name="Add the pair").click()
     assert page.locator("[data-ev-add-why]").inner_text() == "No one left to add from its panels."
+
+
+def test_undo_and_add_hold_the_limits_and_the_picker_follows(page: Page) -> None:
+    """Codex on #3961: Undo cannot take a dossier past its max, and the
+    open + Pair picker follows an Undo, so no evaluator is added twice."""
+    page.goto(GATE3)
+    rows = page.locator("tbody tr:not([data-ev-added])", has_text="Kenji Russo")
+    first, second = rows.nth(0), rows.nth(1)
+    gone = first.locator("td").nth(1).inner_text()
+    first.get_by_role("button", name="Remove").click()
+    page.get_by_role("button", name="+ Pair").click()
+    page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
+    fresh = next(
+        o
+        for o in page.locator("[data-ev-add-evaluator] option").all_inner_texts()
+        if not o.startswith(gone + " ·")
+    )
+    page.locator("[data-ev-add-evaluator]").select_option(label=fresh)
+    page.get_by_role("button", name="Add the pair").click()
+    # Back at its max of two: Undo would make three.
+    first.get_by_role("button", name="Undo", exact=False).click()
+    assert first.locator("[data-ev-state]").text_content() == "Removed"
+    assert page.locator("[data-ev-said]").inner_text() == (
+        "Not undone: Kenji Russo already has the most evaluators, 2. Remove one first."
+    )
+    # The picker follows: both removed, the first chosen, then undone.
+    page.locator("tbody tr[data-ev-added]").get_by_role("button", name="Remove").click()
+    second.get_by_role("button", name="Remove").click()
+    page.locator("[data-ev-add-evaluator]").select_option(
+        label=next(
+            o
+            for o in page.locator("[data-ev-add-evaluator] option").all_inner_texts()
+            if o.startswith(gone + " ·")
+        )
+    )
+    first.get_by_role("button", name="Undo", exact=False).click()
+    offered = page.locator("[data-ev-add-evaluator] option").all_inner_texts()
+    assert not [o for o in offered if o.startswith(gone + " ·")]
+    page.get_by_role("button", name="Add the pair").click()
+    assert _counts(page) == "40 dossiers · 40 filled"
+    assert (
+        page.locator("tbody tr", has_text="Kenji Russo")
+        .locator("td:nth-child(2)", has_text=gone)
+        .count()
+        == 1
+    )

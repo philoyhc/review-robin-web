@@ -39,6 +39,9 @@
       all.findIndex(function (b) { return b && b.d === a.d && b.e === a.e; }) === i;
   }).map(function (a) { return { d: a.d, e: a.e, n: sources[a.e][0], s: sources[a.e][1] }; });
   if (DATA.mode === "automatic") ch.removed = [], ch.added = [];
+  var kept = ch.added;  // and only within the Total's and the sources' max
+  ch.added = [];
+  kept.forEach(function (a) { if (!full(a.d, a.e, a.s)) ch.added.push(a); });
   ch.approved = DATA.mode !== "suggested" ? [] : ch.approved.filter(function (k, i, a) {
     return a.indexOf(k) === i && (sample[k] || ch.added.some(function (x) { return id(x.d, x.e) === k; }));
   });
@@ -68,6 +71,15 @@
     if (unmet(d)) return "Short";
     if (DATA.mode === "suggested") return ch.approved.indexOf(id(d, e)) >= 0 ? "Approved" : "Suggested";
     return DATA.mode === "assigned" ? "Assigned" : "Filled";
+  }
+  // Why dossier d cannot take evaluator e from source src, or "": the
+  // Total's max, then the source's, as + Pair and Undo both hold them.
+  function full(d, e, src) {
+    if (pairs().some(function (p) { return p[0] === d && p[1] === e; })) return (sources[e] ? sources[e][0] : e) + " is already on " + names[d] + ".";
+    if (count(d) >= DATA.max) return names[d] + " already has the most evaluators, " + DATA.max + ".";
+    var cap = bounds[src];
+    if (cap && count(d, src) >= cap[1]) return names[d] + " already has the most from " + src + ", " + cap[1] + ".";
+    return "";
   }
   function tone(chip, st) {
     chip.textContent = st;
@@ -134,6 +146,7 @@
     });
     var all = card.querySelector('[data-ev-act="approve-all"]');
     if (all) all.disabled = pairs().every(function (p) { return ch.approved.indexOf(id(p[0], p[1])) >= 0; });
+    if (box && !box.hidden) fillEvaluators();  // the picker follows every change
     card.querySelector("[data-ev-unsaved]").hidden = !dirty();
     card.querySelector('[data-ev-act="discard"]').hidden = !dirty();
     keep();
@@ -143,7 +156,7 @@
   // not the candidate, not already on it, while it is under the max.
   var box = card.querySelector("[data-ev-add]");
   function fillEvaluators() {
-    var who = box.querySelector("[data-ev-add-who]").value, sel = box.querySelector("[data-ev-add-evaluator]");
+    var who = box.querySelector("[data-ev-add-who]").value, sel = box.querySelector("[data-ev-add-evaluator]"), was = sel.value;
     var on = pairs().filter(function (p) { return p[0] === who; }).map(function (p) { return p[1]; });
     sel.textContent = "";
     Object.keys(sources).forEach(function (e) {
@@ -152,6 +165,7 @@
       o.value = e; o.textContent = sources[e][0] + " · " + sources[e][1];
       sel.appendChild(o);
     });
+    if (was && Array.prototype.some.call(sel.options, function (o) { return o.value === was; })) sel.value = was;
   }
   function openAdd(open) {
     var btn = card.querySelector('[data-ev-act="add"]');
@@ -184,6 +198,9 @@
         ch.added = ch.added.filter(function (a) { return id(a.d, a.e) !== k; });
         ch.approved = ch.approved.filter(function (x) { return x !== k; });
       } else if (ch.removed.indexOf(k) >= 0) {  // Undo: as it was, approved or not
+        var src0 = (DATA.pairs.filter(function (p) { return id(p[0], p[1]) === k; })[0] || [])[3];
+        var stop = full(d, em, src0);
+        if (stop) { said.textContent = "Not undone: " + stop + " Remove one first."; return; }
         ch.removed.splice(ch.removed.indexOf(k), 1);
       } else {
         ch.removed.push(k);
@@ -215,9 +232,8 @@
       var who = box.querySelector("[data-ev-add-who]").value, ev = box.querySelector("[data-ev-add-evaluator]").value;
       var why = box.querySelector("[data-ev-add-why]");
       if (!ev) { why.textContent = "No one left to add from its panels."; return; }
-      if (count(who) >= DATA.max) { why.textContent = names[who] + " already has the most evaluators, " + DATA.max + "."; return; }
-      var from = sources[ev][1], cap = bounds[from];
-      if (cap && count(who, from) >= cap[1]) { why.textContent = names[who] + " already has the most from " + from + ", " + cap[1] + "."; return; }
+      var stop2 = full(who, ev, sources[ev][1]);
+      if (stop2) { why.textContent = stop2; return; }
       var k2 = id(who, ev);
       if (ch.removed.indexOf(k2) >= 0) ch.removed.splice(ch.removed.indexOf(k2), 1);
       else ch.added.push({ d: who, e: ev, n: sources[ev][0], s: sources[ev][1] });
