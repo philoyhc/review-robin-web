@@ -115,8 +115,8 @@
   <div class="ps-ref" data-ps-for="nominated"{% if s.kind != "nominated" %} hidden{% endif %}>
     <select class="fc-in" data-ps="question" aria-label="Source {{ n }}: question"{{ sent_attr(sent) }}>{% for q in nominee_questions %}<option{% if s.kind == "nominated" and q == s.ref %} selected{% endif %}>{{ q }}</option>{% endfor %}</select>
   </div>
-  <input class="fc-in" data-ps="min" value="{{ s.min }}" inputmode="numeric" aria-label="Source {{ n }}: min"{{ sent_attr(sent) }}>
-  <input class="fc-in" data-ps="max" value="{{ s.max }}" inputmode="numeric" aria-label="Source {{ n }}: max"{{ sent_attr(sent) }}>
+  <label class="ps-n"><span class="ps-cap">Min</span><input class="fc-in" data-ps="min" value="{{ s.min }}" inputmode="numeric" aria-label="Source {{ n }}: min"{{ sent_attr(sent) }}></label>
+  <label class="ps-n"><span class="ps-cap">Max</span><input class="fc-in" data-ps="max" value="{{ s.max }}" inputmode="numeric" aria-label="Source {{ n }}: max"{{ sent_attr(sent) }}></label>
   {{ pick.new_box() }}
   <span class="ps-acts"><button type="button" class="btn btn-secondary" data-ps-act="up" aria-label="Move source {{ n }} up"{{ sent_attr(sent) }}>▲</button><button type="button" class="btn btn-secondary" data-ps-act="down" aria-label="Move source {{ n }} down"{{ sent_attr(sent) }}>▼</button><button type="button" class="btn btn-secondary" data-ps-act="insert" aria-label="Add a source after source {{ n }}"{{ sent_attr(sent) }}>+</button><button type="button" class="btn btn-destructive" data-ps-act="remove" aria-label="Remove source {{ n }}"{{ sent_attr(sent) }}>×</button></span>
 </div>
@@ -151,8 +151,8 @@
         <span class="ps-rank"></span>
         <strong class="ps-kind">Total</strong>
         <span class="ps-bounds muted" data-ps-bounds>{% if ev[0] %}within {{ bounds[0] }}–{{ bounds[1] }}{% else %}No sources{% endif %}</span>
-        <input class="fc-in" data-ps="total-min" value="{{ ev[1].min }}" inputmode="numeric" aria-label="Total: min"{{ sent_attr(sent) }}>
-        <input class="fc-in" data-ps="total-max" value="{{ ev[1].max }}" inputmode="numeric" aria-label="Total: max"{{ sent_attr(sent) }}>
+        <label class="ps-n"><span class="ps-cap">Min</span><input class="fc-in" data-ps="total-min" value="{{ ev[1].min }}" inputmode="numeric" aria-label="Total: min"{{ sent_attr(sent) }}></label>
+        <label class="ps-n"><span class="ps-cap">Max</span><input class="fc-in" data-ps="total-max" value="{{ ev[1].max }}" inputmode="numeric" aria-label="Total: max"{{ sent_attr(sent) }}></label>
         <span class="ps-acts"></span>
       </div>
     </div>

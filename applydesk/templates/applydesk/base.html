@@ -512,6 +512,12 @@
     .ps-row { display: grid; grid-template-columns: 24px 120px minmax(0, 1fr) 64px 64px 150px; gap: 8px; align-items: start; margin-top: 8px; }
     .ps-headrow { margin-top: 4px; font-size: 12px; color: var(--text-subtle); }
     .ps-headrow[hidden], [data-ps-empty][hidden] { display: none; }
+    /* Each bound's own caption, shown only where the header row cannot
+       name it: on a narrow screen, and the Total's when there are no
+       sources (Codex on rung 4a). */
+    .ps-n { display: flex; flex-direction: column; }
+    .ps-cap { display: none; font-size: 12px; color: var(--text-subtle); }
+    .ps-headrow[hidden] ~ .ps-total .ps-cap { display: block; }
     .ps-rank { align-self: start; padding-top: 8px; font-weight: 600; text-align: center; }
     /* Room under every menu for its *Edit on Panels* link, shown or not,
        so the rows keep one height and their controls line up. */
@@ -526,7 +532,7 @@
     /* A gate's or an outcome's main sections, each under a rule. */
     .pi-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
     .pi-sec > .fc-l:first-child, .pi-sec.pc-row > .fc-l { margin-top: 0; }
-    @media (max-width: 640px) { .ps-row { grid-template-columns: 24px 1fr 1fr; } .ps-headrow { display: none; } }
+    @media (max-width: 640px) { .ps-row { grid-template-columns: 24px 1fr 1fr; } .ps-headrow { display: none; } .ps-cap { display: block; } }
     /* Evaluations' assignments (ruling 27, segment AD1G): a card per gate,
        collapsed to its head; each evaluator a pill marked by its source. */
     .ev-h { margin: 24px 0 8px; }

@@ -786,6 +786,24 @@ def test_a_row_s_plus_adds_the_next_source_under_it(page: Page) -> None:
     assert added.locator('[data-ps="min"]').input_value() == "1"
 
 
+def test_each_bound_is_named_where_the_header_row_is_not(page: Page) -> None:
+    """Codex on rung 4a: the header row names the bounds over rows on a
+    wide screen; without rows, the Total's own captions do; on a narrow
+    screen, every bound's."""
+    gate = _peer_copy(page)
+    caps = gate.locator(".ps-cap")
+    assert not any(caps.nth(i).is_visible() for i in range(caps.count()))
+    for _ in range(2):
+        gate.locator("[data-ps-row]").first.locator('[data-ps-act="remove"]').click()
+    total = gate.locator("[data-ps-total] .ps-cap")
+    assert total.all_inner_texts() == ["Min", "Max"] and total.first.is_visible()
+    gate.locator('[data-ps-act="add"]').click()
+    assert not total.first.is_visible()
+    page.set_viewport_size({"width": 600, "height": 900})
+    row = gate.locator("[data-ps-row]").first
+    assert row.locator(".ps-cap").first.is_visible() and total.first.is_visible()
+
+
 def test_the_assignment_mode_is_one_of_three(page: Page) -> None:
     gate = _peer_copy(page)
     mode = gate.locator("[data-ps-mode]")
