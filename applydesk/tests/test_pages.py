@@ -391,16 +391,22 @@ def test_applications_generates_dossiers(client: TestClient) -> None:
     assert "/applydesk/me/exercises/wa9juxbc2t/dossiers/p3bd7kq2wx" in text
 
 
-def test_a_gate_item_carries_its_panel(client: TestClient) -> None:
-    """Ruling 20: each gate item on Process names its panel in its head,
-    picks it under Evaluators and lists its members; a sent gate keeps
-    its panel. (The Outline's panel names are the script's: Chromium.)"""
+def test_a_gate_item_carries_its_evaluators(client: TestClient) -> None:
+    """Ruling 27 (AD1G): each gate item's head reads its sources and Total,
+    as stages.sources_summary; Evaluators lists the panel sources'
+    members; a sent gate keeps its sources. (The Outline's are the
+    script's: Chromium.)"""
     text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
     chips = re.findall(r"data-pi-panel>([^<]*)<", text)
-    assert chips[:3] == ["Panel A · 2 people", "Panel B · 1 person", "Interviewers · 2 people"]
+    assert chips[:3] == [
+        "Nominated 0–1 · Panel A 1–2 · Total 2",
+        "Panel B 1 · Total 1",
+        "Interviewers 2 · Total 2",
+    ]
     assert "Prof Ivan Petrov" in text  # the interviewers, on the Interview gate
-    # Every gate here is sent: its menu is fixed.
-    assert text.count('data-pc-panel disabled title="Sent') == 3
+    # Every gate here is sent: its panel menus are fixed (the Peer
+    # Review's nominated row has one too, hidden).
+    assert text.count('data-pc-panel data-ps="panel" disabled title="Sent') == 4
     # A gate picks a panel, never Institution-wide.
     at = text.index("data-pc-panel")
     menu = text[at : text.index("</select>", at)]
@@ -410,13 +416,14 @@ def test_a_gate_item_carries_its_panel(client: TestClient) -> None:
     assert "/gates" not in text
 
 
-def test_a_gate_with_no_panel_says_so(client: TestClient) -> None:
-    """The draft's selection gate was added just in time: no panel yet,
-    and none to choose from but one it makes."""
+def test_a_gate_with_no_panel_has_no_evaluators(client: TestClient) -> None:
+    """The draft's selection gate was added just in time: no sources yet,
+    and + Source to add one."""
     text = client.get(f"/applydesk/operator/exercises/{DRAFT}/process").text
-    assert re.findall(r"data-pi-panel>([^<]*)<", text)[:1] == ["No panel"]
-    assert '<option value="" selected>No panel yet</option>' in text
-    assert "data-pc-panel disabled" not in text
+    assert re.findall(r"data-pi-panel>([^<]*)<", text)[:1] == ["No evaluators"]
+    gate = text[text.index('data-item="gate"') : text.index('data-pc-act="remove-gate"')]
+    assert "data-ps-row" not in gate and ">No sources<" in gate
+    assert 'data-ps-act="add">+ Source<' in gate
 
 
 def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> None:
@@ -984,15 +991,14 @@ def test_count_is_any_field_s() -> None:
 
 
 def test_a_gate_lists_its_evaluator_sources(client: TestClient) -> None:
-    """Ruling 27 (AD1G rung 3, scaffold): a gate's Evaluators are ranked
-    sources, each with a min and max, a Total within them and the
-    assignment mode; the panel source keeps the working picker, the rest
-    inert until rung 4."""
+    """Ruling 27 (AD1G rungs 3-4): a gate's Evaluators are ranked sources,
+    each a kind, its question or panel, a min and max, a Total within
+    them and the assignment mode; a sent gate's are fixed."""
     text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
     gate = text[text.index('data-item="gate"') : text.index('data-pc-act="remove-gate"')]
     rows = re.findall(r'data-ps-row data-kind="(\w+)"', gate)
     assert rows == ["nominated", "panel"]
-    assert ">Preferred reviewer<" in gate and "data-pc-panel" in gate
+    assert "<option selected>Preferred reviewer</option>" in gate
     assert re.findall(r'data-ps="(?:min|max)" value="(\d*)"', gate) == ["0", "1", "1", "2"]
     assert re.findall(r'data-ps="total-(?:min|max)" value="(\d*)"', gate) == ["2", "2"]
     assert "within 1–3" in gate
@@ -1002,8 +1008,13 @@ def test_a_gate_lists_its_evaluator_sources(client: TestClient) -> None:
         assert "disabled" in gate[at : gate.index(">", at)], control
 
 
-def test_a_gate_with_no_panel_offers_one_panel_source(client: TestClient) -> None:
+def test_a_new_source_is_a_panel_of_one(client: TestClient) -> None:
+    """+ Source adds the page's blank source: a panel, none chosen yet,
+    one per dossier; its controls live (not sent)."""
     text = client.get(f"/applydesk/operator/exercises/{DRAFT}/process").text
-    gate = text[text.index('data-item="gate"') : text.index('data-pc-act="remove-gate"')]
-    assert re.findall(r'data-ps-row data-kind="(\w+)"', gate) == ["panel"]
-    assert '<option value="" selected>No panel yet</option>' in gate
+    tpl = text[text.index('<template id="pc-new-source">') :]
+    tpl = tpl[: tpl.index("</template>")]
+    assert re.findall(r'data-ps-row data-kind="(\w+)"', tpl) == ["panel"]
+    assert '<option value="" selected>No panel yet</option>' in tpl
+    assert re.findall(r'data-ps="(?:min|max)" value="(\d*)"', tpl) == ["1", "1"]
+    assert "disabled title" not in tpl

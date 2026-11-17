@@ -70,15 +70,13 @@ def test_what_is_not_a_change_leaves_no_mark(page: Page) -> None:
     page.locator("#fb-preview input[type=text], #fb-preview textarea").first.fill("an answer")
     page.locator("[data-fb-preview]").click()
     assert not mark.is_visible()
-    page.goto(PROCESS.replace("wa9juxbc2t", "c4xh2ndv6s"))  # a draft: its gate unsent
-    stage = page.locator("#pc-cards > .pc").nth(1)
-    stage.locator("[data-fc-toggle]").first.click()
-    gate = stage.locator('.pc-item[data-item="gate"]').first
-    if gate.get_attribute("data-open") is None:
-        gate.locator("[data-pi-toggle]").click()
-    gate.locator("[data-pc-panel]").select_option("__new")
-    gate.get_by_role("button", name="Cancel").click()
+    card = page.locator(".fc", has=page.locator('[data-sum="label"]:text-is("Preferred reviewer")'))
+    card.locator("[data-fc-toggle]").click()
+    card.locator("select[data-panel-pick]").select_option("__new")
+    card.get_by_role("button", name="Cancel").click()
     assert not mark.is_visible()
+    page.goto(PROCESS.replace("wa9juxbc2t", "c4xh2ndv6s"))  # a draft: its gate unsent
+    page.locator("#pc-cards > .pc").nth(1).locator("[data-fc-toggle]").first.click()
     rule = page.locator('[data-pc-act="rule"]:visible').first
     rule.click()
     assert not mark.is_visible()

@@ -795,6 +795,73 @@ def total_problem(sources: tuple[Source, ...], total: Total) -> str:
     return ""
 
 
+def nominee_questions(exercise_id: str) -> tuple[str, ...]:
+    """The form's *Select people* questions by label, as a nominated
+    source picks one (ruling 27): offered only when the form has one."""
+    return tuple(
+        c.label or "Untitled question"
+        for c in sample_data.form_cards(exercise_id)
+        if c.kind == "field" and c.type == "people"
+    )
+
+
+def _n(lo: int, hi: int) -> str:
+    return str(lo) if lo == hi else f"{lo}–{hi}"
+
+
+def sources_summary(
+    sources: tuple[Source, ...], total: Total, pools: dict[str, sample_data.Pool]
+) -> str:
+    """A gate head's chip (AD1G): each source by kind or panel with its
+    min to max, then the Total, e.g. "Nominated 0–1 · Panel A 1–2 ·
+    Total 2"; "No evaluators" for none. The page script reads the same."""
+    if not sources:
+        return "No evaluators"
+    parts = [
+        (
+            "Nominated"
+            if s.kind == "nominated"
+            else pools[s.ref]["name"]
+            if s.ref in pools
+            else "No panel"
+        )
+        + " "
+        + _n(s.min, s.max)
+        for s in sources
+    ]
+    return " · ".join([*parts, f"Total {_n(total.min, total.max)}"])
+
+
+def sources_warn(
+    sources: tuple[Source, ...], total: Total, pools: dict[str, sample_data.Pool]
+) -> bool:
+    """Whether a gate head's chip warns, as the page script's
+    ``sourceProblems``: no sources, a panel not chosen, a question not
+    chosen, a min above its max, or a Total outside its bounds."""
+    return bool(total_problem(sources, total)) or any(
+        (s.kind == "panel" and s.ref not in pools)
+        or (s.kind == "nominated" and not s.ref)
+        or s.min > s.max
+        for s in sources
+    )
+
+
+def source_members(
+    sources: tuple[Source, ...], pools: dict[str, sample_data.Pool]
+) -> list[tuple[str, str]]:
+    """The people the gate's panel sources hold, each once, in rank order."""
+    seen: set[str] = set()
+    out: list[tuple[str, str]] = []
+    for s in sources:
+        if s.kind != "panel" or s.ref not in pools:
+            continue
+        for name, email in pools[s.ref]["members"]:
+            if email.casefold() not in seen:
+                seen.add(email.casefold())
+                out.append((name, email))
+    return out
+
+
 @dataclass(frozen=True)
 class Filling:
     """A dossier's evaluators as ``stages.fill`` gives them: each with the

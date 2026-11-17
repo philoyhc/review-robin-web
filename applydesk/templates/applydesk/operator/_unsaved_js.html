@@ -3,7 +3,7 @@
    gains a marker once anything is changed, and leaving with it showing
    asks first. A change is an edit to a field or a move that adds,
    replicates or removes; opening a card, a preview or the + New panel box
-   is not. A move (drag or arrow keys), a toggle (Required, Choose
+   is not. A move (drag, arrow keys or a source's ↑ ↓), a toggle (Required, Choose
    one or any) and the rule editor's own buttons change no field, so the
    card lists and those attributes are watched too, once the page has
    drawn itself. Nothing is saved until AD2, so the marker stays until a
@@ -22,9 +22,9 @@
     root.addEventListener("input", function (e) { if (counts(e.target)) changed(); });
     root.addEventListener("change", function (e) { if (counts(e.target)) changed(); });
     root.addEventListener("click", function (e) {
-      var a = e.target.closest("[data-fc-act], [data-pc-act], [data-pr-act]");
+      var a = e.target.closest("[data-fc-act], [data-pc-act], [data-pr-act], [data-ps-act]");
       if (!a || !counts(a)) return;
-      var act = a.dataset.fcAct || a.dataset.pcAct || a.dataset.prAct;
+      var act = a.dataset.fcAct || a.dataset.pcAct || a.dataset.prAct || a.dataset.psAct;
       if (act !== "rule") changed();  // the rule editor opening is not a change
     });
     // Watched from when the page has drawn itself, so drawing is not a
