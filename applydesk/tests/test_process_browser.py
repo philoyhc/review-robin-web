@@ -668,21 +668,24 @@ def test_a_gate_item_makes_and_picks_its_panel(page: Page) -> None:
 
 def test_a_sent_gate_keeps_its_panel(page: Page) -> None:
     page.goto(PAGE)
-    g3 = _item(page, "g3")
-    assert g3.locator("[data-pc-panel]").is_disabled()
-    # A sent gate says so once, at its top; its progress is Evaluations'.
-    note = g3.locator("[data-pc-sent]")
-    assert (
-        note.count() == 1
-        and note.inner_text() == "Sent to Review Robin: its settings are fixed here."
+    g1 = _item(page, "g1")
+    assert g1.locator("[data-pc-panel]").first.is_disabled()
+    # An opened gate says so once, at its top; its progress is Evaluations'.
+    note = g1.locator("[data-pc-sent]")
+    assert note.count() == 1 and note.inner_text() == (
+        "Its Review Robin session has opened: its settings are fixed here."
     )
+    # Mid-stage (ruling 29): the Interview gate is ready, not sent, so it
+    # carries no note and its panel can still change.
+    g3 = _item(page, "g3")
+    assert g3.locator("[data-pc-sent]").count() == 0
+    assert not g3.locator("[data-pc-panel]").is_disabled()
     assert page.locator("[data-o-panel]").all_inner_texts() == [
         "Nominated, Panel A",
         "Panel B",
         "Interviewers",
     ]
     # Drawing the ranks leaves a sent gate's arrows fixed.
-    g1 = _item(page, "g1")
     assert g1.locator('[data-ps-act="down"]').first.is_disabled()
 
 
@@ -959,10 +962,14 @@ def test_every_gate_derives_its_results_in_review_robin(page: Page) -> None:
 
 def test_a_sent_gate_keeps_its_results(page: Page) -> None:
     page.goto(PAGE)
-    g3 = _item(page, "g3")
-    assert g3.locator('[data-pr-act="add"]').is_disabled()
-    assert g3.locator("[data-pr-ed]").first.evaluate("e => e.disabled")
-    assert g3.locator('[data-pc="description"]').is_disabled()
+    g1 = _item(page, "g1")
+    assert g1.locator('[data-pr-act="add"]').is_disabled()
+    assert g1.locator("[data-pr-ed]").first.evaluate("e => e.disabled")
+    assert g1.locator('[data-pc="description"]').is_disabled()
+    g3 = _item(page, "g3")  # ready, not sent: still the operator's to change
+    assert not g3.locator('[data-pr-act="add"]').is_disabled()
+    assert not g3.locator("[data-pr-ed]").first.evaluate("e => e.disabled")
+    assert not g3.locator('[data-pc="description"]').is_disabled()
     assert _line(_item(page, "o2")).startswith("Score at Interview ≥ 4.0")
 
 
@@ -1192,9 +1199,12 @@ def test_the_shut_gate_line_follows_its_rule(page: Page) -> None:
 
 def test_a_sent_gate_keeps_its_fields(page: Page) -> None:
     page.goto(PAGE)
-    g3 = _item(page, "g3")
-    assert g3.locator('[data-rf-act="add"]').is_disabled()
-    assert g3.locator("[data-rf-ed]").first.evaluate("e => e.disabled")
+    g1 = _item(page, "g1")
+    assert g1.locator('[data-rf-act="add"]').is_disabled()
+    assert g1.locator("[data-rf-ed]").first.evaluate("e => e.disabled")
+    g3 = _item(page, "g3")  # ready, not sent
+    assert not g3.locator('[data-rf-act="add"]').is_disabled()
+    assert not g3.locator("[data-rf-ed]").first.evaluate("e => e.disabled")
 
 
 def test_a_new_gate_s_field_shows_only_its_type_s_settings(page: Page) -> None:

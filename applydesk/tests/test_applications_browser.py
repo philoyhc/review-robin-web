@@ -319,13 +319,13 @@ def test_apply_rules_proposes_in_column_order_and_waits_on_the_undecided(page: P
     # The interview waits on their shortlist rather than turning them away.
     assert "Interview: 2 applications cannot be judged yet" in text
     rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
-    # Only the interviewed are judged for Finalists: the rest never reached it.
-    finalists = [r for r in rows if "\tFinalists\t" in r]
-    assert finalists and len(finalists) <= 27
+    # Mid-stage (ruling 29): the three shortlisted still to be let in are
+    # entered; no one is judged for Finalists, the interview not yet run.
+    interview = [r for r in rows if "\tInterview\t" in r]
+    assert len(interview) == 3 and all("Entered" in r for r in interview)
+    assert not [r for r in rows if "\tFinalists\t" in r]
     prop.locator("[data-ap-prop-apply]").click()
-    decided = page.locator('[data-cell="o2"] select[data-v="Finalist"]').count()
-    assert decided > 0
-    assert _count(page, "o2").startswith(f"{decided} finalist")
+    assert _count(page, "g3").startswith("27 entered")
 
 
 def test_a_cell_set_by_hand_is_marked_and_kept(page: Page) -> None:
@@ -419,11 +419,12 @@ def test_a_rule_proposal_is_dropped_when_the_table_changes(page: Page) -> None:
         d.accept()
 
     page.on("dialog", answer)
+    # The first proposal: one of the three still to be let into the Interview.
     row = _row(page, first[0])
-    row.locator('[data-cell="g3"] [data-ap-adm]').click()
+    row.locator('[data-cell="g1"] [data-ap-adm]').click()  # the table changes
     prop.locator("[data-ap-prop-apply]").click()
     assert messages and "propose again" in messages[0]
-    assert row.locator('[data-cell="o2"] select').get_attribute("data-v") == first[3]
+    assert row.locator('[data-cell="g3"] [data-ap-adm]').get_attribute("data-v") == first[3]
 
 
 def test_the_table_is_locked_until_unlocked_and_undo_puts_it_back(page: Page) -> None:

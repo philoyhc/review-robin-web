@@ -38,9 +38,9 @@
 <h2 class="ev-h">Assignments</h2>
 {% for g in gates %}
 {% set st = gate_state(exercise.public_id, g.key) %}
-{% set sent = st[0] in ("Sent", "Results in") %}
+{% set sent = gate_opened(st[0], st[1]) %}
 {% set got = assignments(g) %}
-{% set off %} disabled{% if sent %} title="Sent: its pairs are Review Robin's to change"{% endif %}{% endset %}
+{% set off %} disabled{% if sent %} title="Its session has opened: its pairs are Review Robin's to change"{% endif %}{% endset %}
 {% set mode_label = (modes | selectattr(0, "equalto", g.mode) | first)[1] %}
 <details class="card ev-gate" data-ev-gate="{{ g.key }}" data-mode="{{ g.mode }}">
   <summary class="ev-head">
@@ -54,7 +54,7 @@
   <div class="btnrow ev-ops">
     {% if g.mode == "automatic" %}<button type="button" class="btn btn-secondary" data-ev-act="rerun"{{ off }}>Re-run</button>
     {% elif g.mode == "suggested" %}<button type="button" class="btn btn-primary" data-ev-act="approve-all"{{ off }}>Approve all</button>{% endif %}
-    {% if sent %}<span class="muted">Sent: its pairs are Review Robin's to change.</span>{% endif %}
+    {% if sent %}<span class="muted">Its session has opened: its pairs are Review Robin's to change.</span>{% endif %}
   </div>
   <div class="table-wrap">
   <table class="ev-table">

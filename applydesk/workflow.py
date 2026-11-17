@@ -20,7 +20,9 @@ _GATES: dict[str, dict[str, tuple[str, str]]] = {
     "wa9juxbc2t": {
         "g1": ("Results in", "92 of 92 reviewed"),
         "g2": ("Results in", "92 of 92 reviewed"),
-        "g3": ("Sent", "18 of 27 interviewed"),
+        # Mid-stage (ruling 29): the Interview gate entered, its pairs being
+        # worked on Evaluations, not yet sent.
+        "g3": ("Ready", ""),
     },
     "k7mfr3pq8z": {"g1": ("Sent", "3 of 5 reviewed")},
 }
@@ -103,6 +105,13 @@ def form_state(exercise: Exercise) -> str:
     if exercise.state == "Draft":
         return "Draft"
     return "Open" if exercise.form_open else "Closed"
+
+
+def gate_opened(state: str, line: str) -> bool:
+    """Whether a gate's Review Robin session has opened (ruling 29): its
+    results are in, or it is sent and under way. A sent gate whose session
+    has not opened is still changed on Process, each change re-sent."""
+    return state == "Results in" or (state == "Sent" and bool(line))
 
 
 def gate_state(exercise_id: str, key: str) -> tuple[str, str]:

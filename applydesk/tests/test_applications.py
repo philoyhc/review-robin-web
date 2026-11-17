@@ -62,7 +62,9 @@ def test_the_model_exercise_reads_as_partway_through() -> None:
     plan = stages.plan_of(EX)
     by_key = {c.key: c for c in plan.columns}
     assert stages.counts(plan, by_key["o1"]) == "26 shortlisted · 2 pending"
-    assert stages.counts(plan, by_key["g3"]) == "27 entered · 2 to decide"
+    # Mid-stage (ruling 29): three shortlisted still to be let in, beside
+    # the two whose peer reviews are coming.
+    assert stages.counts(plan, by_key["g3"]) == "24 entered · 5 to decide"
     o1, o2 = by_key["o1"], by_key["o2"]
     assert isinstance(o1, stages.Outcome) and isinstance(o2, stages.Outcome)
     assert o1.released and not o2.released

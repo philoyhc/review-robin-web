@@ -405,11 +405,10 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
     excluded = submitted[5].public_id  # not eligible, set by hand
     late = {submitted[-1].public_id, submitted[-2].public_id}  # reviews still coming
     keys = ("g1", "g2", "o1", "g3", "o2", "o3")
-    interviews = ("Interviewed 11 Nov", "Interviewed 12 Nov", "Scheduled 18 Nov", "")
     added = ""
 
     rows: list[Row] = []
-    for n, a in enumerate(apps):
+    for a in apps:
         i = a.public_id
         cells: dict[str, Cell] = {k: Cell("") for k in keys}
         if a.state == "Draft":
@@ -459,18 +458,21 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
             added = i  # the panel asked to interview one just below
             cells["g3"] = Cell("Entered", "Added by operator: panel request", by_hand=True)
         elif shortlisted:
-            note = interviews[n % len(interviews)]
-            if note.startswith("Interviewed"):
-                mark = round(min(5.0, score[i] + rng.uniform(-0.5, 0.5)), 1)
-                cells["g3"] = Cell("Entered", f"Score {mark} · {note.split(' ', 1)[1]}", mark)
-            else:
-                cells["g3"] = Cell("Entered", note or "Not yet scheduled")
+            # Mid-stage (ruling 29): entered, the gate not yet sent.
+            cells["g3"] = Cell("Entered", "Not yet sent")
         else:
             cells["g3"] = Cell("Not entered")
         if cells["g3"].value == "Entered":
             cells["o2"] = Cell("Pending", "Due 24 Nov")
             cells["o3"] = Cell("Pending", "Due 12 Dec")
         rows.append(Row(a, cells))
+    # Mid-stage (ruling 29): the last three shortlisted are still to be
+    # let into the Interview, so Apply rules has their entry to propose;
+    # their finalist decision is not reached yet, their final one pending.
+    waiting = [r for r in rows if r.cells["g3"].note == "Not yet sent"][-3:]
+    for r in waiting:
+        r.cells["g3"] = Cell(NO_STATUS)
+        r.cells["o2"] = Cell("")
     return tuple(rows)
 
 
