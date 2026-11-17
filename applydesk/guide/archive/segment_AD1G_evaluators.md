@@ -89,6 +89,7 @@ Closed 2026-11-17, after the author's browser check of rung 6b. Intended versus 
 - **The gate card** grew past the plan (amendments; ruling 28, rungs 4a–4e): Gate and Evaluators cards shut with summaries; Type, Description and Confidential; response fields edited in place, each result reading one (**From**); *Runs as* and *Entered here* gone; no panelist list and no progress on Process (Evaluations shows progress). Rung 4b closed unmerged, carried into 4c.
 - **Ruling 29** (rung 6a): a sent gate is re-sent until its session opens, then fixed (`workflow.gate_opened`); the sample moved mid-stage so a gate is unsent.
 - **Evaluations** (rung 5, then 6b): built first as a card per gate; ruling 30 paused the segment at 6b for AD1H, which moved the rows to a page per gate. Rung 6b wired the operations there, by mode, kept in the tab and reconciled on load; *Undo* and *+ Pair* held to the Total's and the source's max (Codex on #3961).
+- **Rungs 8–9 not built** (Setup's help contact and timezone, a field's key read-only, the fuller *For Review Robin* summary): found by `spec-writer` at the close; carried to `applydesk/guide/todo_master.md` (author).
 - **Reads**: Codex on rungs 2, 4c and 6b (1 + 0 + 2 findings, all fixed). `diff-reviewer` three times: rungs 2–4 (six, none blocking), 4c–4d (one defect, five lesser), 6b (none blocking; nine fixed, one an open question below; its Escape test found the + Pair box showing on load). All fixed in the rung read.
 
 ## PR ladder
@@ -102,8 +103,8 @@ Closed 2026-11-17, after the author's browser check of rung 6b. Intended versus 
 5. **Evaluations scaffold.** A card per gate, its table and load line drawn from `stages.fill` on the sample's dossiers; inert controls.
 6. **Evaluations wired.** The three modes' operations in the browser. Chromium tests. `diff-reviewer` reads 5–6.
 7. ~~**Close**, after the author's browser check.~~ Moved to 10 by the amendment.
-8. **Setup and the summary, scaffold** (amendment, narrowed by ruling 28: the gate's own fields moved to 4c): Setup's help contact and timezone; each response field's key, read-only; the fuller *For Review Robin* summary; drawn from the sample, inert.
-9. **Setup and the summary wired**: edited in the browser, the summary following; a sent gate read-only. Chromium tests. `diff-reviewer` reads 8–9.
+8. ~~**Setup and the summary, scaffold** (amendment, narrowed by ruling 28: the gate's own fields moved to 4c): Setup's help contact and timezone; each response field's key, read-only; the fuller *For Review Robin* summary; drawn from the sample, inert.~~ Not built; carried to `applydesk/guide/todo_master.md` (author, 2026-11-17, at the close).
+9. ~~**Setup and the summary wired**: edited in the browser, the summary following; a sent gate read-only. Chromium tests. `diff-reviewer` reads 8–9.~~ Not built; carried to `applydesk/guide/todo_master.md` (author, 2026-11-17, at the close).
 10. **Close**, after the author's browser check.
 
 ## Definition of done
@@ -111,7 +112,7 @@ Closed 2026-11-17, after the author's browser check of rung 6b. Intended versus 
 - A gate holds ranked sources, a Total and a mode; `stages.fill` fills per ruling 27 (tests, the author's examples among them).
 - Process edits the Evaluators in the browser, the Total held within its bounds (Chromium tests).
 - Evaluations shows each gate's assignments and works its mode (Chromium tests).
-- A gate's card follows ruling 28: Gate and Evaluators cards collapsible, shut, with summaries; its description and confidentiality; response fields (required, help, key) and results naming their field (Chromium tests). Setup collects the exercise's help contact and timezone; the *For Review Robin* summary shows them.
+- A gate's card follows ruling 28: Gate and Evaluators cards collapsible, shut, with summaries; its description and confidentiality; response fields (required, help, key) and results naming their field (Chromium tests). ~~Setup collects the exercise's help contact and timezone; the *For Review Robin* summary shows them.~~ Carried forward with rungs 8–9.
 - The author has used the pages locally and approved them.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py AD1G` exits 0; any warning adjudicated
