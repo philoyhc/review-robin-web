@@ -131,6 +131,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         fields_of=stages.fields_of,
         field_summary=stages.field_summary,
         source_field=stages.source_field,
+        collated=stages.collated,
         derivation_text=stages.derivation_text,
         blank_field=stages.ResponseField("", "", stages.Field()),
         assignments=functools.partial(stages.assignments, exercise.public_id),

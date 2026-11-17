@@ -62,12 +62,13 @@
    the response field evaluators fill in, and how their answers become
    the result. The page's script keeps the derivations to what the field
    allows; every gate runs in Review Robin (ruling 28). #}
-{% macro result_row(r, via, sent=False, src=none, fields=()) %}
+{% macro result_row(r, sent=False, src=none, fields=()) %}
 {% set f = src.field if src else r.field %}
+{% set rc = collated(r, src) %}
 <div class="pr-row" data-result="{{ r.key }}" data-name="{{ r.name }}">
   <button type="button" class="pr-head" data-pr-toggle aria-expanded="false">
     <span class="pr-n" data-pr-n></span>
-    <span class="pr-texts"><span class="pr-name" data-pr-name>{{ r.name or "Untitled result" }}</span><span class="pr-sum" data-pr-sum>{% if src %}From {{ src.label or "Untitled field" }} · {{ derivation_text(r) }} → {{ result_type(r) }}{% else %}No field chosen{% endif %}</span></span>
+    <span class="pr-texts"><span class="pr-name" data-pr-name>{{ r.name or "Untitled result" }}</span><span class="pr-sum" data-pr-sum>{% if src %}From {{ src.label or "Untitled field" }} · {{ derivation_text(rc) }} → {{ result_type(rc) }}{% else %}No field chosen{% endif %}</span></span>
   </button>
   <fieldset class="pr-ed" data-pr-ed hidden{% if sent %} disabled title="Sent: the gate keeps its results"{% endif %}>
     <legend class="visually-hidden">{{ r.name or "Untitled result" }}</legend>
@@ -238,7 +239,7 @@
   <div class="pc-results pi-sec" data-pc-results>
     <span class="fc-l">Results</span>
     <p class="pc-line muted pc-hint">What the gate yields, collated from the response fields: each shows on Dossiers and feeds outcomes and later gates' rules. Up to three.</p>
-    <div class="pr-list" data-pr-list>{% for r in g.results %}{{ result_row(r, g.via, sent, source_field(g, r), fields_of(g)) }}{% endfor %}</div>
+    <div class="pr-list" data-pr-list>{% for r in g.results %}{{ result_row(r, sent, source_field(g, r), fields_of(g)) }}{% endfor %}</div>
     <p class="pc-line muted" data-pr-none{% if g.results %} hidden{% endif %}>No results yet: a gate yields up to three.</p>
     <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-pr-act="add"{% if sent %} data-sent disabled title="Sent: the gate keeps its results"{% elif g.results | length >= 3 %} disabled title="A gate yields three results at most"{% endif %}>+ Result</button></div>
   </div>

@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 from playwright.sync_api import Error, Locator, Page, Route, sync_playwright
 
+from applydesk import stages
 from applydesk.tests._host import host_with
 
 ORIGIN = "http://applydesk.test"
@@ -966,7 +967,7 @@ def test_the_script_s_result_summaries_match_the_server_s(page: Page) -> None:
     gate = _draft_gate(page)
     row = _result(gate, 0)
     fld = _field(gate, 0)
-    for r, expected in RESULT_CASES:
+    for r, _ in RESULT_CASES:
         f = r.field
         fld.locator('[data-q="type"]').select_option(f.type)
         if f.type in ("integer", "decimal"):
@@ -983,9 +984,10 @@ def test_the_script_s_result_summaries_match_the_server_s(page: Page) -> None:
                 r.value or f.options.split(",")[0].strip()
             )
         row.locator('[data-r="at_least"]').fill(str(r.at_least))
-        # The script names the field it reads; the rest as the server's.
-        tail = expected.split(" · ", 1)[1]
-        assert row.locator("[data-pr-sum]").text_content() == "From Score · " + tail, r
+        # The whole line as the server draws it for a result reading this
+        # field (stages.collated; Score, the draft's field, renamed by none).
+        server = f"From Score · {stages.derivation_text(r)} → {stages.result_type(r)}"
+        assert row.locator("[data-pr-sum]").text_content() == server, r
 
 
 # --- The 5b-5c cold read ---
@@ -999,6 +1001,8 @@ def test_a_replica_of_a_sent_stage_s_results_are_its_own_to_set(page: Page) -> N
     assert gate.locator('[data-pc="confidential"]').is_enabled()
     assert gate.locator('[data-pr-act="add"]').is_enabled()
     assert not gate.locator("[data-pr-ed]").first.evaluate("e => e.disabled")
+    assert gate.locator('[data-rf-act="add"]').is_enabled()  # its fields too (ruling 28)
+    assert not gate.locator("[data-rf-ed]").first.evaluate("e => e.disabled")
 
 
 def test_a_removed_result_s_key_is_not_reused(page: Page) -> None:
@@ -1147,6 +1151,9 @@ def test_response_fields_are_added_edited_and_removed(page: Page) -> None:
     new.locator('[data-rf-act="remove"]').click()
     assert source.input_value() == ""
     assert row.locator("[data-pr-sum]").text_content() == "No field chosen"
+    # With no field, nothing to derive and no type a rule could read.
+    assert row.locator('[data-r="derive"] option').count() == 0
+    assert row.locator("[data-pr-type]").text_content() == "None until a field is chosen"
     assert "Gate 1 (Placement interview) has result 1 with no field chosen." in (
         page.locator("[data-pc-issues]").inner_text()
     )
@@ -1164,6 +1171,18 @@ def test_the_shut_cards_lines_follow_edits(page: Page) -> None:
     assert who.text_content() == "No evaluators · Automatic"
     gate.locator("[data-ps-mode]").get_by_role("button", name="Assigned by the operator").click()
     assert who.text_content() == "No evaluators · Assigned by the operator"
+
+
+def test_the_shut_gate_line_follows_its_rule(page: Page) -> None:
+    """The cold read on 4c-4d: a rule cleared shows on the shut card at
+    once, not at the next unrelated edit."""
+    gate = _peer_copy(page)
+    line = gate.locator('[data-gsec="gate"] [data-gsec-sum]')
+    assert line.text_content() == "Review Robin session · Enters: " + _line(gate)
+    gate.locator('[data-pc-act="rule"]').click()
+    gate.locator('[data-rule-part="clear"]').click()
+    assert _line(gate) == "Decided by hand"
+    assert line.text_content() == "Review Robin session · Entry decided by hand"
 
 
 def test_a_sent_gate_keeps_its_fields(page: Page) -> None:

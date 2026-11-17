@@ -22,7 +22,7 @@
     <template id="pc-new-gate">{{ pc.gate_item(plan, blank_gate, rule_text, open=True) }}</template>
     <template id="pc-new-outcome">{{ pc.outcome_item(plan, blank_outcome, rule_text, open=True) }}</template>
     <template id="pc-new-source">{{ pc.source_row(blank_source, 0, False) }}</template>
-    <template id="pc-new-result">{{ pc.result_row(blank_result, "RRW") }}</template>
+    <template id="pc-new-result">{{ pc.result_row(blank_result) }}</template>
     <template id="pc-new-field">{{ pc.field_row(blank_field) }}</template>
     <script type="application/json" id="pc-derivations">{{ {"labels": derivations, "allowed": allowed} | tojson }}</script>
   </div>
@@ -269,13 +269,8 @@
       if (kind === "gate") {
         var pc = item.querySelector("[data-pi-panel]");
         pc.textContent = summary(item);
-        // The shut cards' lines (ruling 28), as stages.gate_summary and
-        // evaluators_summary.
-        var line = item.querySelector("[data-rule-line]").textContent;
-        var conf = item.querySelector('[data-pc="confidential"]');
-        item.querySelector('[data-gsec="gate"] [data-gsec-sum]').textContent = ["Review Robin session"]
-          .concat(conf && conf.checked ? ["Confidential"] : [])
-          .concat([line && line !== "Decided by hand" ? "Enters: " + line : "Entry decided by hand"]).join(" · ");
+        // The shut Evaluators card's line (ruling 28), as
+        // stages.evaluators_summary; the Gate card's follows its rule (rules()).
         var mode = item.querySelector('[data-ps-mode] [aria-pressed="true"]');
         item.querySelector('[data-gsec="evaluators"] [data-gsec-sum]').textContent = summary(item) + (mode ? " · " + mode.textContent : "");
         pc.className = "chip " + (sourceProblems(item).length ? "chip-warn" : "chip-mute");
@@ -530,12 +525,22 @@
     });
     return out;
   }
+  // The shut Gate card's line (ruling 28), as stages.gate_summary: drawn
+  // with the rule line it reads, so a rule edited or cleared shows at once.
+  function gateLine(item) {
+    var line = item.querySelector("[data-rule-line]").textContent;
+    var conf = item.querySelector('[data-pc="confidential"]');
+    item.querySelector('[data-gsec="gate"] [data-gsec-sum]').textContent = ["Review Robin session"]
+      .concat(conf && conf.checked ? ["Confidential"] : [])
+      .concat([line && line !== "Decided by hand" ? "Enters: " + line : "Entry decided by hand"]).join(" · ");
+  }
   function rules() {
     var all = stageProblems();
     columns().forEach(function (item) {
       var rule = ruleOf(item), found = problemsOf(item, rule);
       var weighed = item.dataset.item === "outcome" ? weights(item) : "";
       item.querySelector("[data-rule-line]").textContent = ruleText(rule);
+      if (item.dataset.item === "gate") gateLine(item);
       var warn = item.querySelector("[data-rule-warn]");
       warn.hidden = !found.length && !weighed;
       warn.textContent = ((found.length ? "This rule " + found.join("; ") + ". " : "") + (weighed ? "This outcome " + weighed + "." : "")).trim();
@@ -732,12 +737,10 @@
           item.querySelectorAll("[data-pc-sources] [data-ps], [data-pc-sources] [data-ps-act], [data-ps-mode] [data-mode], [data-pc=\"description\"], [data-pc=\"confidential\"]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
           drawSources(item);
         }
-        // Its results, how it runs and + Result are its own to set too.
+        // Its fields, results, + Field and + Result are its own to set too.
         item.querySelectorAll("[data-pr-ed], [data-rf-ed]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
         var addF = item.querySelector('[data-rf-act="add"]');
         if (addF) { addF.removeAttribute("data-sent"); addF.disabled = false; addF.removeAttribute("title"); }
-        var via = item.querySelector('[data-pc="via"]');
-        if (via) { via.disabled = false; via.removeAttribute("title"); }
         var addR = item.querySelector('[data-pr-act="add"]');
         if (addR) { addR.removeAttribute("data-sent"); addR.disabled = false; addR.removeAttribute("title"); }
         if (item.dataset.item === "gate") drawResults(item);  // three at most, as anywhere (Codex)
@@ -874,9 +877,10 @@
     }
     if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-name"], [data-pc="values"], [data-pc="confidential"]')) changed();
   });
-  // --- A gate's results (ruling 21): up to three, each a response field
-  // and a derivation, which sets the result's type. As stages.field_text,
-  // result_type and result_summary: the two must read the same. ---
+  // --- A gate's results (rulings 21, 28): up to three, each the response
+  // field it collates and a derivation, which sets the result's type. As stages.field_text,
+  // result_type and the From line the server draws (stages.collated): the
+  // two must read the same. ---
   var DERIV = JSON.parse(document.getElementById("pc-derivations").textContent);
   var DLABEL = {}; DERIV.labels.forEach(function (d) { DLABEL[d[0]] = d[1]; });
   function rv(row, f) { var i = row.querySelector('[data-r="' + f + '"]'); return i ? i.value.trim() : ""; }
@@ -912,16 +916,15 @@
     var label = r.derive === "share" ? "Share choosing " + (r.value || "(no option)") : (DLABEL[r.derive] || r.derive);
     return r.atLeast > 1 ? label + ", from " + r.atLeast + " or more" : label;
   }
-  function viaOf(item) { var v = item.querySelector('[data-pc="via"]'); return v ? v.value : "RRW"; }
   // One result's editor and summary, its derivations kept to what its
   // field and its gate allow.
-  function drawResult(row, via) {
+  function drawResult(row) {
     var type = rv(row, "type");
     row.querySelector('[data-r-g="number"]').hidden = !(type === "integer" || type === "decimal");
     row.querySelector('[data-r-g="string"]').hidden = type !== "string";
     row.querySelector('[data-r-g="list"]').hidden = type !== "list";
     var d = row.querySelector('[data-r="derive"]'), was = d.value;
-    var allowed = DERIV.allowed[type];
+    var allowed = DERIV.allowed[type] || [];
     d.textContent = "";
     allowed.forEach(function (k) { var o = el("option", "", DLABEL[k]); o.value = k; d.appendChild(o); });
     d.value = allowed.indexOf(was) >= 0 ? was : allowed[0];
@@ -937,12 +940,12 @@
     row.dataset.name = r.name;
     row.querySelector("[data-pr-name]").textContent = r.name || "Untitled result";
     row.querySelector("[data-pr-sum]").textContent = row.dataset.src ? "From " + row.dataset.src + " · " + derivationText(r) + " → " + resultType(r) : "No field chosen";
-    row.querySelector("[data-pr-type]").textContent = resultType(r);
+    row.querySelector("[data-pr-type]").textContent = row.dataset.src ? resultType(r) : "None until a field is chosen";
   }
   // A gate's results as a whole: numbered, counted, three at most, and
   // what Review Robin's instrument must ask.
   function drawResults(item) {
-    var rows = Array.prototype.slice.call(item.querySelectorAll("[data-result]")), via = viaOf(item);
+    var rows = Array.prototype.slice.call(item.querySelectorAll("[data-result]"));
     if (!item.dataset.nextResult) {
       item.dataset.nextResult = String(1 + rows.reduce(function (m, r) { return Math.max(m, Number(r.dataset.result.slice(1)) || 0); }, 0));
     }
@@ -951,7 +954,7 @@
       row.querySelector("[data-pr-n]").textContent = String(i + 1);
       var f = syncSource(row, fields, order);
       if (f) row.dataset.src = f.label || "Untitled field"; else delete row.dataset.src;
-      drawResult(row, via);
+      drawResult(row);
     });
     item.querySelector("[data-pr-none]").hidden = rows.length > 0;
     var chip = item.querySelector("[data-pi-results]");
@@ -1006,8 +1009,12 @@
     order.forEach(function (k) { var o = el("option", "", fields[k].label || "Untitled field"); o.value = k; sel.appendChild(o); });
     sel.value = fields[was] ? was : "";
     var f = fields[sel.value];
-    if (!f) return null;
     var set = function (r, v) { var i = row.querySelector('[data-r="' + r + '"]'); if (i) i.value = v; };
+    if (!f) {
+      // No field, no definition: nothing to derive, nothing a rule reads.
+      ["type", "min", "max", "step", "maxlen", "options"].forEach(function (r) { set(r, ""); });
+      return null;
+    }
     set("type", f.type);
     set("min", f.type === "integer" || f.type === "decimal" ? f.min : "");
     set("max", f.type === "integer" || f.type === "decimal" ? f.max : "");
@@ -1102,7 +1109,6 @@
       changed();  // a rule or a weight reads a result by name and by kind
       return true;
     }
-    if (e.target.matches('[data-pc="via"]')) { drawResults(e.target.closest(".pc-item")); changed(); return true; }
     return false;
   }
   list.addEventListener("input", resultEvent, true);
