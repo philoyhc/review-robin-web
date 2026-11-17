@@ -422,6 +422,96 @@ a count of the changes shows, and leaving the page with any pending asks
 first. Ticks only choose rows. The page has no *Save*; nothing is kept until
 AD2.
 
+*Apply rules…* proposes each outcome and gate cell from the rule Process
+holds (branches in order, a form answer from the application's answers, the
+best N), as a proposal the operator approves; a hand-set cell is kept unless
+*Also replace cells set by hand* is ticked. An outcome whose gates a dossier entered none of is not reached
+and stays as it is, unless its cell is already open (*Pending* or decided) or
+a branch of its rule reads earlier outcomes' values alone and they hold, set
+by hand or by the same run: re-appointment skips the interview and still
+reaches *Selection*. An outcome's **going-on values** are every one but its
+last (`stages.going_on`; *Re-appointment* and *Interview*, not *Not
+shortlisted*): each is counted in its column head and toned green, the rest
+muted, undecided amber. A mean's note under its chip says how many scores it
+took (`stages.mean_note`).
+
+## The Evaluations page
+
+At `/operator/exercises/<id>/evaluations`: the **Gates** table (gate, type,
+state, progress, and *Send to Review Robin* / *Pull results*, disabled until
+the later segment that sends), then **Assignments**, a short card per gate:
+its mode, its counts (*42 dossiers · 40 filled · 2 short*, over every pair),
+its load line per panel source (*Ana 6 · Ben 5 …*) and a link, *Assignments
+(n rows)*, to the gate's own page. A draft exercise shows neither. Nothing is
+saved until AD2; a reload restores the sample.
+
+**The gate page**, `…/evaluations/gate_<n>` (`routes_operator.gate_evaluations`),
+404 for a gate the exercise lacks or a draft exercise: the gate's head (its
+mode and counts), its load lines and a table with **a row per pair**,
+*Candidate*, *Evaluator*, *Source*, *State*; a dossier with no evaluator yet
+is one row, *None yet*. A blind exercise shows the dossier ID as the
+candidate. The pairs are `stages.assignments`, drawn as the gate's mode and
+sources fill them. A gate can pair 30 evaluators with 100 dossiers, so the
+table is paged and queried in the URL (`offset`, `q`, `sort`), and a link
+keeps all of them.
+
+- **Paging** (`applydesk/paging.py`): 200 rows a page, a pager as Review
+  Robin's rosters, « ‹, a range menu of every page (*201–400*), › »; an
+  offset is snapped to a page and one past the last clamps to the last, one
+  that is not a whole number is the first page.
+- **Filter**, *Find a candidate or an evaluator*: the candidate's name, email,
+  application or dossier ID, or the pair's evaluator's name or email, any
+  case (`stages.matching`). A blind exercise's candidate is found by the
+  dossier ID alone, never by who they are. *Clear* drops the filter, not the
+  sort.
+- **Sort**, as Review Robin's tables (`spec/sort_by_reviewee.md`), on the
+  server because a page holds 200 of the gate's rows (`paging.parse_sort`,
+  `stages.sorted_pairs`): a column's ↕ sorts it up, again down, again clears
+  it; shift-click adds it to a cascade of three. A header shows its place
+  and direction, `1↑`, `2↓`. An empty cell sorts last either way and numbers
+  sort as numbers (*Short by 2* before *Short by 10*); the fill's order
+  breaks ties. A new order starts at the first page; the pager, range menu
+  and filter keep it. A blind table sorts by dossier ID.
+- **States**, by mode (`stages.assignment_state`): *Short by n* when the
+  Total's min is not met, *Short* when a source gives less than its own min,
+  else *Filled* (Automatic), *Suggested* then *Approved* (Suggested), *Not
+  assigned* then *Assigned* (Assigned). A pair removed in the tab reads
+  *Removed*. The head's counts and the load lines follow **every** pair, not
+  the page's.
+
+**Operations**, by the gate's mode (`Assignment` on Process); they work in
+the browser (`_gate_ops_js.html`):
+
+| Mode | Starts as | Operations |
+|---|---|---|
+| Automatic | every dossier filled as its sources give | *Re-run* (back to the fill) |
+| Suggested, then approved | the fill, each pair *Suggested* | *Approve* a pair, *Approve all*, *Remove* (then *Undo*), *+ Pair* |
+| Assigned by the operator | empty, every dossier *Not assigned* | *+ Pair*, *Remove* |
+
+- **Kept in the tab.** Changes live in `sessionStorage` under
+  `applydesk-ev:<exercise>:<gate>:<mode>`, so paging, sorting and searching
+  keep them; *Unsaved changes* and *Discard changes* show while any exist,
+  and Discard puts the sample back. On load they are reconciled against the
+  sample, the mode and the limits: a stale pair, an approval the mode lacks or
+  an addition past a limit is dropped.
+- **+ Pair** opens a panel to choose a dossier and an evaluator. The
+  evaluators offered are the gate's panel members less the candidate and
+  those already on the dossier; it refuses a pair that would pass the
+  Total's max or the source's max, saying why. **Undo is held to the same
+  limits** and says why it did not undo. An added pair shows on the first page
+  only, and under a filter only if it matches; removing it takes its approval
+  with it, while Undo keeps an approval.
+- **Off** once the gate's session has opened (`workflow.gate_opened`: its
+  pairs are Review Robin's to change), with the reason in each button's title;
+  and off until the page's script has run.
+- **A blind gate's + Pair** cannot leave out the candidate themself: the
+  page's data names no candidate there. Open, for AD2, where the server checks
+  the pair.
+
+The model exercise, *Recruitment and Selection of Residential Assistants*
+(`wa9juxbc2t`), has gates that pair a panel of 30 with every applicant, so
+the paged table is exercised there.
+
 ## The Emails page
 
 Every template the exercise owes (see Process, "Emails"). Each template card
