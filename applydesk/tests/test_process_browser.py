@@ -1260,6 +1260,8 @@ def test_response_fields_are_added_edited_and_removed(page: Page) -> None:
     gate.locator('[data-rf-act="add"]').click()
     new = gate.locator("[data-rf]").nth(1)
     assert new.get_attribute("data-rf") == "f2"
+    assert new.locator("[data-rf-key]").input_value() == "f2"  # read-only, prescribed
+    assert new.locator("[data-rf-key]").get_attribute("readonly") is not None
     assert new.locator('[data-q="label"]').evaluate("e => e === document.activeElement")
     new.locator('[data-q="label"]').fill("Fit")
     new.locator('[data-q="type"]').select_option("list")
@@ -1271,7 +1273,7 @@ def test_response_fields_are_added_edited_and_removed(page: Page) -> None:
     )
     assert gate.locator("[data-pr-rrw]").text_content() == (
         "For Review Robin, each evaluator answers: Score (Decimal 0 to 10, step 0.5);"
-        " Fit (List: Strong, Weak, required)."
+        " Fit (List: Strong, Weak, required; help: “Fit to the programme”)."
     )
     assert page.locator("[data-unsaved]").is_visible()
     # A result chooses the field it collates; its derivations follow it.
@@ -1403,3 +1405,58 @@ def test_the_model_exercise_s_review_is_fixed_and_its_interview_open(page: Page)
     assert g3.locator("[data-pc-sent]").count() == 0
     assert g3.locator('[data-ps="mode"]').input_value() == "suggested"
     assert not g3.locator('[data-ps="mode"]').is_disabled()
+
+
+# --- AD1G rungs 8-9 (carried, author 2026-11-17): what will be sent ---
+
+
+def test_what_will_be_sent_follows_the_gate_and_its_stage(page: Page) -> None:
+    """The line names the instrument, its stage's window in the
+    exercise's timezone, the help contact and the tag, and follows the
+    name, the description and the stage's dates, each on its own."""
+    gate = _draft_gate(page)
+    send = gate.locator("[data-pr-send]")
+    assert "open when its stage's dates are set (Asia/Singapore)" in (send.text_content() or "")
+    gate.locator('[data-pc="item-name"]').fill("Placement chat")
+    assert (send.text_content() or "").startswith("Review Robin receives Placement chat, open")
+    gate.locator('[data-pc="description"]').fill("Talk about the placement...")
+    assert (send.text_content() or "").startswith(
+        "Review Robin receives Placement chat: Talk about the placement, open"
+    )
+    stage = gate.locator("xpath=ancestor::article[@data-kind='stage']")
+    stage.locator('[data-pc="from"]').fill("1 Mar")
+    stage.locator('[data-pc="to"]').fill("15 Mar")
+    assert send.text_content() == (
+        "Review Robin receives Placement chat: Talk about the placement, open 1 Mar to"
+        " 15 Mar (Asia/Singapore); help contact applydesk-help@example.edu; tagged applydesk."
+    )
+
+
+def test_what_was_sent_stays_once_the_session_opens(page: Page) -> None:
+    """A gate whose session has opened keeps its line, though its stage's
+    dates are still edited."""
+    page.goto(MODEL)
+    gate = page.locator('.pc-item[data-key="g1"]')
+    send = gate.locator("[data-pr-send]")
+    before = send.text_content()
+    stage = gate.locator("xpath=ancestor::article[@data-kind='stage']")
+    _open(stage)
+    stage.locator('[data-pc="from"]').fill("2 Oct")
+    assert send.text_content() == before and "open 1 Oct to 6 Nov" in (before or "")
+
+
+def test_a_replica_of_an_opened_gate_follows_its_own_settings(page: Page) -> None:
+    """Codex on #3963: the copy is unsent, so its line is not frozen."""
+    page.goto(MODEL)
+    stage = page.locator('.pc-item[data-key="g1"]').locator(
+        "xpath=ancestor::article[@data-kind='stage']"
+    )
+    _open(stage)
+    stage.locator('[data-fc-act="replicate"]').click()
+    copy = stage.locator("xpath=following-sibling::article[@data-kind='stage'][1]")
+    gate = copy.locator('.pc-item[data-item="gate"]').first
+    send = gate.locator("[data-pr-send]")
+    assert send.get_attribute("data-fixed") is None
+    _open(copy)
+    copy.locator('[data-pc="from"]').fill("2 Oct")
+    assert "open 2 Oct to" in (send.text_content() or "")

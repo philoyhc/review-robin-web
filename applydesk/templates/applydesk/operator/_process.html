@@ -326,6 +326,7 @@
         b.addEventListener("click", function () { goTo(card, item); });
         row.appendChild(b);
         if (kind === "gate") {
+          drawSend(item, card);
           var srcs = sourcesOf(item);
           row.appendChild(document.createTextNode(" "));
           var who = el("span", "muted", srcs.length ? srcs.map(srcName).join(", ") : "No evaluators");
@@ -826,6 +827,9 @@
         st.textContent = gate ? "Not ready" : "Not released";
         st.className = "chip " + (gate ? "chip-warn" : "chip-mute");
         item.querySelectorAll("[data-pc-sent]").forEach(function (x) { x.remove(); });
+        // Not sent: its line follows its own settings again (Codex).
+        var send = item.querySelector("[data-pr-send]");
+        if (send) send.removeAttribute("data-fixed");
         var srcBox = item.querySelector("[data-pc-sources]");
         if (srcBox) {
           srcBox.removeAttribute("data-sent");
@@ -974,7 +978,7 @@
       changed();
       return;
     }
-    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-name"], [data-pc="values"], [data-pc="confidential"]')) changed();
+    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-name"], [data-pc="values"], [data-pc="confidential"], [data-pc="description"]')) changed();
   });
   // --- A gate's results (rulings 21, 28): up to three, each the response
   // field it collates and a derivation, which sets the result's type. As stages.field_text,
@@ -1074,8 +1078,23 @@
     order.forEach(function (k, i) {
       var f = fields[k];
       rrw.appendChild(el("strong", "", f.label || "Untitled field"));
-      rrw.appendChild(document.createTextNode(" (" + fieldText(f) + (f.required ? ", required" : "") + ")" + (i < order.length - 1 ? "; " : ".")));
+      rrw.appendChild(document.createTextNode(" (" + fieldText(f) + (f.required ? ", required" : "") + (f.help ? "; help: \u201c" + f.help + "\u201d" : "") + ")" + (i < order.length - 1 ? "; " : ".")));
     });
+  }
+  // What will be sent (AD1G amendment): the instrument's name and
+  // description, its stage's dates in the exercise's timezone, the help
+  // contact and the tag, as the server draws it.
+  function drawSend(item, card) {
+    var p = item.querySelector("[data-pr-send]");
+    if (!p || p.hasAttribute("data-fixed")) return;  // its session has opened
+    var win = [field(card, "from"), field(card, "to")].filter(function (x) { return x && x !== "Dates not set"; }).join(" to ") || "when its stage's dates are set";
+    var d = item.querySelector('[data-pc="description"]'), desc = d ? d.value.trim().replace(/\.+$/, "").trim() : "";
+    p.textContent = "";
+    p.appendChild(document.createTextNode("Review Robin receives "));
+    p.appendChild(el("strong", "", itemName(item, "Untitled gate")));
+    p.appendChild(document.createTextNode((desc ? ": " + desc : "") + ", open " + win + " (" + p.dataset.tz + "); help contact " + p.dataset.contact + "; tagged "));
+    p.appendChild(el("code", "", "applydesk"));
+    p.appendChild(document.createTextNode("."));
   }
   // --- A gate's response fields (ruling 28): what each evaluator answers,
   // edited in place; each result names the one it collates, its hidden
@@ -1154,6 +1173,7 @@
       while (keys.indexOf("f" + n) >= 0) n += 1;
       var added = fresh("pc-new-field");
       added.dataset.rf = "f" + n;
+      added.querySelector("[data-rf-key]").value = "f" + n;
       item.querySelector("[data-rf-list]").appendChild(added);
       openField(added, true);
       drawFields(item); changed();
