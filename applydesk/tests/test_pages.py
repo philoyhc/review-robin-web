@@ -516,6 +516,32 @@ def test_a_set_up_draft_lists_only_what_it_lacks(client: TestClient) -> None:
     assert re.findall(r"<a [^>]*>([^<]+)</a></li>", missing[: missing.index("</ul>")]) == ["Dates"]
 
 
+def test_evaluations_shows_each_gate_s_assignments(client: TestClient) -> None:
+    """Ruling 27 (AD1G rung 5, scaffold): a card per gate, collapsed to its
+    head (mode, counts), a row per entered dossier with its evaluators
+    marked by source and its state; a load line per panel; a sent gate's
+    operations disabled, saying why."""
+    text = client.get(f"/applydesk/operator/exercises/{EX}/evaluations").text
+    assert re.findall(r'data-ev-gate="(\w+)" data-mode="(\w+)"', text) == [
+        ("g1", "automatic"),
+        ("g2", "suggested"),
+        ("g3", "automatic"),
+    ]
+    assert '<details class="card ev-gate" data-ev-gate="g1" data-mode="automatic" open' not in text
+    g1 = text[text.index('data-ev-gate="g1"') : text.index('data-ev-gate="g2"')]
+    assert "92 dossiers · 92 filled" in g1
+    assert 'data-ev-source="Nominated"' in g1 and 'data-ev-source="Panel A"' in g1
+    assert re.search(r"Panel A: Zoe Tan \d+ · Lars Berg \d+", g1)
+    assert 'data-ev-act="rerun" disabled title="Sent' in g1
+    g2 = text[text.index('data-ev-gate="g2"') : text.index('data-ev-gate="g3"')]
+    assert ">Approved<" in g2 and 'data-ev-act="approve-all" disabled' in g2
+
+
+def test_a_blind_exercise_s_assignments_show_the_dossier(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{BLIND}/evaluations").text
+    assert "<th>Dossier</th>" in text and "<th>Candidate</th>" not in text
+
+
 def test_a_blank_exercise_s_details_and_evaluations_say_not_yet(client: TestClient) -> None:
     base = f"/applydesk/operator/exercises/{BLANK}"
     home = client.get(base).text

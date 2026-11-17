@@ -109,3 +109,49 @@ def test_the_head_warns_as_the_page_script_does() -> None:
     assert stages.sources_warn((Source("nominated", "", 0, 1),), Total(0, 1), pools)
     assert stages.sources_warn((Source("panel", "panel-a", 2, 1),), Total(1, 2), pools)
     assert stages.sources_warn((), Total(0, 0), pools)
+
+
+# --- AD1G rung 5: each gate's assignments, for Evaluations ---
+
+
+def _gate(exercise_id: str, key: str) -> Gate:
+    return next(
+        c for c in stages.plan_of(exercise_id).columns if isinstance(c, Gate) and c.key == key
+    )
+
+
+def test_a_gate_s_dossiers_are_filled_and_its_panel_spread_evenly() -> None:
+    """The model's Peer Review: each entered dossier gets two, a nominee
+    first where the applicant named one; Panel A shares the rest evenly."""
+    rows, spread = stages.assignments("wa9juxbc2t", _gate("wa9juxbc2t", "g1"))
+    plan = stages.plan_of("wa9juxbc2t")
+    entered = [r for r in plan.rows if r.cells["g1"].value == "Entered"]
+    assert [a.application for a in rows] == [r.application for r in entered]
+    assert all(len(a.evaluators) == 2 and not a.short for a in rows)
+    assert all(a.application.email not in {e for _, e, _ in a.evaluators} for a in rows)
+    named = [a for a in rows if a.evaluators[0][2] == "Nominated"]
+    assert 0 < len(named) < len(rows)  # one in five names no one
+    ((panel, counts),) = spread
+    assert panel == "Panel A" and abs(counts[0][1] - counts[1][1]) <= 1
+    assert stages.assignment_counts(rows) == f"{len(rows)} dossiers · {len(rows)} filled"
+
+
+def test_a_row_s_state_follows_the_mode() -> None:
+    rows, _ = stages.assignments("wa9juxbc2t", _gate("wa9juxbc2t", "g2"))
+    g2 = _gate("wa9juxbc2t", "g2")
+    assert g2.mode == "suggested"
+    assert stages.assignment_state(g2, True, rows[0]) == "Approved"
+    assert stages.assignment_state(g2, False, rows[0]) == "Suggested"
+    short = stages.Assignment(rows[0].application, (), 2, ())
+    assert stages.assignment_state(g2, False, short) == "Short by 2"
+    assigned = Gate("g9", 9, "x", "RRW", mode="assigned")
+    assert stages.assignment_state(assigned, False, short) == "Not assigned"
+    assert stages.assignment_counts((short,)) == "1 dossier · 0 filled · 1 short"
+
+
+def test_a_nominee_comes_from_the_question_s_pool() -> None:
+    pool = {e for _, e in sample_data.people_pools("wa9juxbc2t")["pool"]["members"]}
+    apps = sample_data.applications_of("wa9juxbc2t")
+    named = [sample_data.nominees("wa9juxbc2t", a, "Preferred reviewer") for a in apps]
+    assert all(len(n) <= 1 and set(n) <= pool for n in named)
+    assert sample_data.nominees("wa9juxbc2t", apps[0], "No such question") == ()
