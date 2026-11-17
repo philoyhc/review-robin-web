@@ -244,6 +244,10 @@ _G1 = Gate(
     ),
     _EVERYONE,
     "panel-a",
+    # Ruling 27's shape (segment AD1G): the candidate's preferred reviewer
+    # first, Panel A topping up to two.
+    (Source("nominated", "Preferred reviewer", 0, 1), Source("panel", "panel-a", 1, 2)),
+    Total(2, 2),
 )
 _G2 = Gate(
     "g2",

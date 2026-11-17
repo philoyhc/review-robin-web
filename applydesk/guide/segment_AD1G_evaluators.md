@@ -68,6 +68,10 @@ Taken 2026-11-15 at `31465d3cc`.
 | Lines reading `.panel`, outside tests | 29 | `grep -rn "\.panel\b" applydesk --include=*.py --include=*.html \| grep -v tests \| wc -l` |
 | The model and sample | 715, 816 lines | `wc -l applydesk/stages.py applydesk/sample_data.py` |
 
+## Status
+
+- **Rung 3 built** (2026-11-17): the Evaluators as ranked source rows (kind, which, min, max, rank and remove), the Total row with its bounds, *+ Source* and the Assignment choice, drawn from `stages.sources_of`; the model exercise's Peer Review gate shows ruling 27's shape (*Preferred reviewer* 0–1, Panel A 1–2, Total 2–2). The panel source keeps the working panel picker (and its *+ New panel* box, spanning the row); everything else inert. The head's chip and the Outline's problems still read the panel: they are the page script's, and move with rung 4's wiring.
+
 ## PR ladder
 
 1. **Plan** (this file), its README row, the roadmap row.

@@ -981,3 +981,29 @@ def test_count_is_any_field_s() -> None:
     said = stages.GateResult("r2", "Comments", stages.Field("string", max="2000"), "count")
     assert stages.result_type(said) == "Integer, from 0"
     assert stages.comparable(said) == "number"
+
+
+def test_a_gate_lists_its_evaluator_sources(client: TestClient) -> None:
+    """Ruling 27 (AD1G rung 3, scaffold): a gate's Evaluators are ranked
+    sources, each with a min and max, a Total within them and the
+    assignment mode; the panel source keeps the working picker, the rest
+    inert until rung 4."""
+    text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
+    gate = text[text.index('data-item="gate"') : text.index('data-pc-act="remove-gate"')]
+    rows = re.findall(r'data-ps-row data-kind="(\w+)"', gate)
+    assert rows == ["nominated", "panel"]
+    assert ">Preferred reviewer<" in gate and "data-pc-panel" in gate
+    assert re.findall(r'data-ps="(?:min|max)" value="(\d*)"', gate) == ["0", "1", "1", "2"]
+    assert re.findall(r'data-ps="total-(?:min|max)" value="(\d*)"', gate) == ["2", "2"]
+    assert "within 1–3" in gate
+    assert 'data-mode="automatic" aria-pressed="true" disabled' in gate
+    for control in ('data-ps="kind"', 'data-ps-act="up"', 'data-ps-act="add"', 'data-ps="min"'):
+        at = gate.index(control)
+        assert "disabled" in gate[at : gate.index(">", at)], control
+
+
+def test_a_gate_with_no_panel_offers_one_panel_source(client: TestClient) -> None:
+    text = client.get(f"/applydesk/operator/exercises/{DRAFT}/process").text
+    gate = text[text.index('data-item="gate"') : text.index('data-pc-act="remove-gate"')]
+    assert re.findall(r'data-ps-row data-kind="(\w+)"', gate) == ["panel"]
+    assert '<option value="" selected>No panel yet</option>' in gate
