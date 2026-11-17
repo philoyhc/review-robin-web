@@ -914,16 +914,19 @@ def test_a_gate_item_lists_its_results_and_what_review_robin_asks(client: TestCl
     text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
     g1 = text[text.index('data-key="g1"') : text.index('data-key="g2"')]
     assert re.findall(r'class="pr-name" data-pr-name>([^<]+)<', g1) == ["Rating", "Comments"]
-    assert "Integer 1 to 5, step 1 · Mean, from 2 or more → Decimal 1 to 5" in g1
+    # A result names the field it collates (ruling 28).
+    assert "From Rating · Mean, from 2 or more → Decimal 1 to 5" in g1
+    assert '<option value="rating" selected>Rating</option>' in g1
     assert "data-pi-results>2 results<" in g1
+    # Review Robin asks the response fields, a required one saying so.
     assert (
         "For Review Robin, each evaluator answers: <strong>Rating</strong> (Integer 1 to 5,"
-        " step 1); <strong>Comments</strong> (String, up to 2000 characters)."
+        " step 1, required); <strong>Comments</strong> (String, up to 2000 characters)."
     ) in g1
     # Every gate runs in Review Robin (ruling 28): the draft's too, its
     # derivations a decimal field's, none entered here.
     draft = client.get(f"/applydesk/operator/exercises/{DRAFT}/process").text
-    assert "Decimal 0 to 10, step 0.5 · Mean → Decimal 0 to 10" in draft
+    assert "From Score · Mean → Decimal 0 to 10" in draft
     assert "For Review Robin, each evaluator answers: <strong>Score</strong>" in draft
     at = draft.index('data-r="derive"')
     menu = draft[at : draft.index("</select>", at)]
