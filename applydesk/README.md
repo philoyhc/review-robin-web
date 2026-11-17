@@ -15,10 +15,12 @@ and the MVP roadmap are in `guide/todo_master.md`.
 | `docs/applydesk_functional_spec_v0.6b_agent_handoff.md` | The functional baseline (v0.6b, 2 November 2026); where a ruling in `guide/todo_master.md` differs, the ruling wins |
 | `docs/photo_field_design.md`, `docs/photo_field/` | The applicant photo field's design and mock-ups (2026-11-12), from Utilities' photo proof of concept; not scheduled |
 | `docs/chrome/` | Mock-ups of the exercise chrome and Workflow card (2026-11-13), for segment AD1D |
+| `docs/home/` | Mock-ups of Exercise Home (2026-11-17), for segment AD1I: the timeline horizontal (v1, Details locked and unlocked) and vertical (v2, desktop and phone) |
 | `spec/applications.md` | Apply Desk as the host sees it: registry entry, health, running alone, the URL map |
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and CI |
 | `guide/todo_master.md` | Rulings, the MVP roadmap and open decisions |
 | `guide/segment_AD1_skeleton.md` | Segment AD1 plan: the package and mount, then the URL map as placeholders |
 | `guide/segment_AD1C_applications.md` | Segment AD1C plan: the Applications page as the control surface, rounds of gates and outcomes as columns, nothing saved |
 | `guide/segment_AD1D_chrome.md` | Segment AD1D plan: an exercise's pages in Review Robin's chrome (Home, Setup, Operations) and the Workflow card |
+| `guide/segment_AD1I_home.md` | Segment AD1I plan: Exercise Home in two columns, a graphical timeline by stages the applicant's page shares, horizontal or vertical as each viewer flips it, beside a Details card unlocked to edit |
 | `guide/archive/README.md` | Closed segment plans: AD1B (the Form page), AD1E (Process), AD1F (Gates and Panels), AD1G (Evaluators and Evaluations), AD1H (the RA model exercise) |
