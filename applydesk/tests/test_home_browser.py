@@ -160,3 +160,30 @@ def test_enter_on_blind_review_does_not_lock(page: Page) -> None:
     card.get_by_role("checkbox", name="Blind review").focus()
     page.keyboard.press("Enter")
     assert card.get_attribute("data-unlocked") is not None
+
+
+# --- Rung 5a: cards side by side share a height only when theirs are close ---
+
+
+def test_cards_share_a_height_only_when_theirs_are_close(page: Page) -> None:
+    page.goto(HOME)  # three stages and their operator rows: far taller than Details
+    grid = page.locator(".hm-grid")
+    assert "is-equal-height" not in (grid.get_attribute("class") or "")
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/r6tm4kq9wz")  # one stage: close
+    assert "is-equal-height" in (grid.get_attribute("class") or "")
+    heights = page.locator(".hm-grid > .card").evaluate_all(
+        "els => els.map(e => Math.round(e.getBoundingClientRect().height))"
+    )
+    assert len(set(heights)) == 1, heights
+    # Stacked on a phone, each keeps its own height.
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.reload()
+    assert "is-equal-height" not in (grid.get_attribute("class") or "")
+
+
+def test_the_operator_part_lines_up_across_stages(page: Page) -> None:
+    page.goto(HOME)
+    tops = page.locator(".tl-op").evaluate_all(
+        "els => els.map(e => Math.round(e.getBoundingClientRect().top))"
+    )
+    assert len(tops) == 3 and len(set(tops)) == 1, tops

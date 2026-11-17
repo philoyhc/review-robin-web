@@ -9,7 +9,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
-from applydesk import paging, sample_data, stages, timeline, workflow
+from applydesk import home_ops, paging, sample_data, stages, timeline, workflow
 from applydesk.gate import placeholders_only
 from applydesk.lookups import exercise_or_404
 from applydesk.web import OPERATIONS_PAGES, OPERATOR_LOBBY, SETUP_PAGES, exercise_nav, render
@@ -48,6 +48,7 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         short=timeline.short,
         next_line=timeline.next_step(exercise, tl),
         gate_running=timeline.gate_running(exercise, tl),
+        ops=home_ops.of(exercise),
         missing=sample_data.setup_missing(exercise),
         timezones=sample_data.TIMEZONES,
         default_contact=sample_data.DEFAULT_HELP_CONTACT,

@@ -22,6 +22,11 @@ Rejected: **the layout as the exercise's setting**, chosen by the operator for a
 
 The horizontal layout is **one graphic, equal widths**: the bar's segments are the stages' column heads, one per stage, equal in width so each sits over its own column; the current one fills to today. The proportional track, its date scale and the separate row of numbered dots go (they said the same thing twice). A stage's length is its dates, under its name. Mock-up: `applydesk/docs/home/` (v3: three and five stages and a phone).
 
+## Decision amended again (author, 2026-11-17, at the rung 5 check)
+
+1. **The timeline in two parts**: above a rule, what participants may see (the partial the applicant's page draws); below it, the operator's: per stage, the form's state and counts, each gate's state, mode, evaluators, pairs and progress (linking to its Evaluations page), each outcome's state and counts (linking to Dossiers). The columns align across the rule (Horizontal); Vertical puts the operator's part on the right of each stage. Mock-ups `applydesk/docs/home/` (v4).
+2. **Cards side by side share a height only when theirs are close**, as Review Robin's `is-equal-height` pairs: a short card beside a much taller one keeps its own height (author).
+
 ## Semantics
 
 - **Stage state**: *Done* when its last date has passed (the Applications stage reads *Closed*), *Now* when today falls within it, *Next* otherwise; a stage with no dates is *Next* and says its dates are not set. Today is the sample's (17 Nov 2026) until AD2.
@@ -59,6 +64,8 @@ Taken 2026-11-17 at `696b14d9b`.
 - **Rung 5 built** (2026-11-17): the applicant's exercise page draws the same partial beside *Apply*, without the Next step line; its old *Timeline* list of three dates goes. Today and the state chips show there too, as proposed (the open question's).
 - **Read, rungs 2–5** (`fad887534..`, after rung 2's own): no blocker; fixed in rung 5: the last horizontal bar 8px short and a single stage's left corners square; a timezone outside Details' list kept, not changed by Lock, and *· the default* alike on page and after Lock; *Go to Evaluations* decided in `timeline.gate_running`, not the template; the switch script once per timeline; a refusal said again and its field marked `aria-invalid`; Enter on *Blind review* does not Lock; the form `autocomplete="off"`; the applicant's *Results expected … (an estimate)* back; the v3 mock-ups committed. Left: Lock's changes stay in the card (the timeline's timezone and the title follow at AD2).
 
+- **Rung 5a built** (2026-11-17): the operator's part (`applydesk/home_ops.py`, apart from `timeline.py`), drawn only where the page passes `ops`: under a rule each stage's form, gates and outcomes, aligned across stages by a subgrid (Horizontal), on the right (Vertical), under the items on a phone. Cards share a height when within a fifth of the taller, side by side only; found at build: the partial's script is a grid child too.
+
 ## PR ladder
 
 1. **Plan** (this file), the two mock-ups in `applydesk/docs/home/`, the README rows, the roadmap row.
@@ -66,6 +73,7 @@ Taken 2026-11-17 at `696b14d9b`.
 3. **The two layouts**: Vertical, the switch, the starting rule, kept per viewer. Chromium tests.
 4. **Details unlocked**: edit in place, *Lock* / *Discard changes*, the unsaved marker and leave warning, the refusals. Chromium tests.
 5. **The applicant's timeline**: `me/exercise.html` uses the partial, nothing operator-only in it (tests on what it must not show). `diff-reviewer` reads 2–5.
+5a. *(added at the rung 5 check)* **The operator's part and equal heights** (Decision amended again). Its own `diff-reviewer` read.
 6. **Close**, after the author's browser check.
 
 ## Definition of done

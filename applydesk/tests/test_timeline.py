@@ -213,7 +213,12 @@ def test_the_applicant_s_page_shows_the_same_timeline_and_nothing_operator_only(
             )
         ]
 
-    assert stages_of(mine) == stages_of(home)
+    # The participants' part alike; Home adds only its operator part.
+    home_part = re.sub(
+        r'\s*<div class="tl-op" data-tl-op>.*?\n      </div>', "", stages_of(home), flags=re.S
+    )
+    assert "data-tl-op" in home and "data-tl-op" not in mine
+    assert re.sub(r"\s+", " ", home_part) == re.sub(r"\s+", " ", stages_of(mine))
     assert "Today, 17 Nov, is in Interviews." in mine
     assert "Results expected December 2026 (an estimate)." in mine
     timeline_card = mine[
@@ -230,3 +235,41 @@ def test_the_applicant_s_page_shows_the_same_timeline_and_nothing_operator_only(
     operator_only += ["pairs", "Evaluations", "≥"]
     for text in operator_only:
         assert text not in timeline_card, text
+
+
+def test_home_s_operator_part_says_how_each_stage_stands() -> None:
+    """Decision amended again: per stage, the form's state and counts, each
+    gate's state, mode, evaluators, pairs and progress, each outcome's
+    state and counts; a draft's gates link nowhere yet."""
+    from applydesk import home_ops
+
+    e = sample_data.exercise(EX)
+    assert e is not None
+    rows = home_ops.of(e)
+    assert [[r.label for r in st] for st in rows] == [
+        ["Form"],
+        ["Peer review", "Office checks", "Shortlisting"],
+        ["Staff interview", "Selection"],
+    ]
+    form, (g1, _, o1), (g3, o2) = rows[0][0], rows[1], rows[2]
+    assert (form.state, form.detail) == ("Closed", "100 submitted · 3 drafts")
+    assert (g1.state, g1.target) == ("Results in", "1")
+    assert "2,980 pairs · 100 of 100 reviewed" in g1.detail
+    assert g3.detail == (
+        "Suggested, then approved · Residential staff 2 · Total 2 · 80 pairs · not sent"
+    )
+    assert (o1.state, o1.detail) == (
+        "Released",
+        "15 Re-appointment · 40 Interview · 45 Not shortlisted · released 6 Nov to applicants",
+    )
+    assert (o2.state, o2.detail, o2.target) == ("Pending", "55 to decide", "dossiers")
+    draft = sample_data.exercise(DRAFT)
+    assert draft is not None
+    assert home_ops.of(draft)[1][0].target == ""
+
+
+def test_home_draws_the_operator_part_and_links_where_it_is_worked(client: TestClient) -> None:
+    home = client.get(f"/applydesk/operator/exercises/{EX}").text
+    assert home.count("data-tl-op") == 3 and 'class="card tl tl-ops"' in home
+    assert f'href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Gate 3</a>' in home
+    assert f'href="/applydesk/operator/exercises/{EX}/dossiers">Dossiers</a>' in home
