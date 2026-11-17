@@ -6,6 +6,7 @@ public-ID shape (`applydesk/ids.py`)."""
 from __future__ import annotations
 
 import math
+import random
 import re
 from dataclasses import asdict, dataclass, replace
 from typing import TypedDict
@@ -689,6 +690,31 @@ def people_pools(exercise_id: str) -> dict[str, Pool]:
     for p in panels_of(exercise_id):
         pools[p.key] = {"name": p.name, "members": [(m.name, m.email) for m in p.members]}
     return pools
+
+
+def nominees(exercise_id: str, application: Application, question: str) -> tuple[str, ...]:
+    """Whom an applicant named in a *Select people* question, by email
+    (segment AD1G's sample): drawn from the question's pool, up to its
+    max, one applicant in five naming no one. Nothing is stored until AD2."""
+    card = next(
+        (
+            c
+            for c in form_cards(exercise_id)
+            if c.kind == "field"
+            and c.type == "people"
+            and (c.label or "Untitled question") == question
+        ),
+        None,
+    )
+    if card is None:
+        return ()
+    pools = people_pools(exercise_id)
+    members = pools.get(card.pool, pools["institution"])["members"]
+    rng = random.Random(f"nominee {application.public_id} {question}")
+    if not members or rng.random() < 0.2:
+        return ()
+    most = int(card.max) if _DIGITS.fullmatch(card.max) else 1
+    return tuple(email for _, email in rng.sample(members, min(max(most, 1), len(members))))
 
 
 def roster(exercise_id: str) -> tuple[tuple[Member, frozenset[str]], ...]:

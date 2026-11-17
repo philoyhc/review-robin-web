@@ -266,6 +266,8 @@ _G2 = Gate(
     ),
     _EVERYONE,
     "panel-b",
+    # Its pairs were suggested, then approved before sending (AD1G).
+    mode="suggested",
 )
 _O1 = Outcome(
     "o1",
@@ -919,3 +921,96 @@ def fill(
         if len(given) < source.min:
             unmet.append(rank)
     return Filling(tuple(chosen), max(0, total.min - len(chosen)), tuple(unmet))
+
+
+@dataclass(frozen=True)
+class Assignment:
+    """One dossier's row on Evaluations (AD1G): its application, its
+    evaluators as (name, email, the source's label) and how ``fill``
+    left it."""
+
+    application: Application
+    evaluators: tuple[tuple[str, str, str], ...]
+    short: int
+    unmet: tuple[int, ...]
+
+
+def source_label(source: Source, pools: dict[str, sample_data.Pool]) -> str:
+    """A pill's mark: *Nominated*, or the panel's name."""
+    if source.kind == "nominated":
+        return "Nominated"
+    return pools[source.ref]["name"] if source.ref in pools else "No panel"
+
+
+def assignments(
+    exercise_id: str, gate: Gate
+) -> tuple[tuple[Assignment, ...], tuple[tuple[str, tuple[tuple[str, int], ...]], ...]]:
+    """The gate's dossiers and their evaluators (ruling 27), filled as
+    Automatic and the suggestion fill them: every application entered at
+    the gate, in Dossiers' order, through ``fill`` with one load across
+    them; then, per panel source, each member's count of dossiers. An
+    *Assigned by the operator* gate starts empty. Sample data: nothing is
+    saved until AD2."""
+    sources, total = sources_of(exercise_id, gate)
+    panels = sample_data.panel_pools(exercise_id)
+    names = {
+        e.casefold(): n for n, e in sample_data.people_pools(exercise_id)["institution"]["members"]
+    }
+    for pool in panels.values():
+        names.update({e.casefold(): n for n, e in pool["members"]})
+    load: dict[str, int] = {}
+    rows: list[Assignment] = []
+    for row in plan_of(exercise_id).rows:
+        if row.cells.get(gate.key, Cell("")).value != "Entered":
+            continue
+        app = row.application
+        if gate.mode == "assigned" or not sources:
+            rows.append(Assignment(app, (), total.min, ()))
+            continue
+        offers = tuple(
+            sample_data.nominees(exercise_id, app, s.ref)
+            if s.kind == "nominated"
+            else tuple(e for _, e in panels.get(s.ref, {"name": "", "members": []})["members"])
+            for s in sources
+        )
+        got = fill(sources, total, offers, candidate=app.email, load=load)
+        pills = tuple(
+            (names.get(e.casefold(), e), e, source_label(sources[rank], panels))
+            for e, rank in got.evaluators
+        )
+        rows.append(Assignment(app, pills, got.short, got.unmet))
+    spread = tuple(
+        (
+            panels[s.ref]["name"],
+            tuple((n, load.get(e.casefold(), 0)) for n, e in panels[s.ref]["members"]),
+        )
+        for s in sources
+        if s.kind == "panel" and s.ref in panels
+    )
+    return tuple(rows), spread
+
+
+def assignment_state(gate: Gate, sent: bool, a: Assignment) -> str:
+    """A row's state on Evaluations, by the gate's mode: *Short by n*
+    when the Total's min is not met; else *Filled* (Automatic),
+    *Suggested* or, once sent, *Approved* (Suggested), and *Not assigned*
+    or *Assigned* (by the operator)."""
+    if gate.mode == "assigned" and not a.evaluators:
+        return "Not assigned"
+    if a.short or a.unmet:
+        return f"Short by {a.short}" if a.short else "Short"
+    if gate.mode == "suggested":
+        return "Approved" if sent else "Suggested"
+    return "Assigned" if gate.mode == "assigned" else "Filled"
+
+
+def assignment_counts(rows: tuple[Assignment, ...]) -> str:
+    """A gate card's head: "92 dossiers · 90 filled · 2 short"."""
+    short = sum(1 for a in rows if a.short or a.unmet or not a.evaluators)
+    parts = [
+        f"{len(rows)} {'dossier' if len(rows) == 1 else 'dossiers'}",
+        f"{len(rows) - short} filled",
+    ]
+    if short:
+        parts.append(f"{short} short")
+    return " · ".join(parts)
