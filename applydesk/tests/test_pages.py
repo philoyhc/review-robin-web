@@ -1068,6 +1068,20 @@ def test_a_confidential_gate_says_so_when_shut(client: TestClient) -> None:
     assert [(f.key, f.label) for f in fields] == [("f1", "Score")]
 
 
+def test_a_gate_card_shows_no_progress_and_says_what_evaluators_read(
+    client: TestClient,
+) -> None:
+    """The author, 2026-11-17 (rung 4e): progress is Evaluations', not
+    Process's; what evaluators read sits under Response fields, redacted
+    in a blind exercise."""
+    text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
+    assert "Progress:" not in text and "Panel sees" not in text
+    fields = text[text.index("data-pc-fields") : text.index("data-pc-results")]
+    assert "Evaluators read the dossier's <em>Shown to reviewers</em> part." in fields
+    blind = client.get(f"/applydesk/operator/exercises/{BLIND}/process").text
+    assert "<em>Shown to reviewers</em> part, redacted." in blind
+
+
 def test_a_gate_lists_its_evaluator_sources(client: TestClient) -> None:
     """Ruling 27 (AD1G rungs 3-4): a gate's Evaluators are ranked sources,
     each a kind, its question or panel, a min and max, a Total within

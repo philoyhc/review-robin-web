@@ -174,9 +174,11 @@
   {% set chips %}<span class="chip chip-{{ 'ok' if state == 'Results in' else ('info' if state in ('Sent', 'Ready') else 'warn') }}" data-pi-state>{{ state }}</span><span class="chip chip-mute" data-pi-results>{{ g.results | length }} {{ "result" if g.results | length == 1 else "results" }}</span><span class="chip {{ 'chip-warn' if ev_problem else 'chip-mute' }}" data-pi-panel>{{ sources_summary(ev[0], ev[1], panel_pools) }}</span>{% endset %}
   {{ head("Gate " ~ g.number, g.label or "Untitled gate", chips, open) }}
   <div class="pi-body">
-  {# A sent gate says so once, for all of it (ruling 24). Its progress is
+  {# A sent gate says so once, for all of it: its settings are fixed here
+     (AD1F, AD1G). Whether one may be re-sent before its session opens is
+     an open ruling (todo, "Rulings to settle"). Its progress is
      Evaluations' to show, not Process's. #}
-  {% if sent %}<p class="pc-line muted pc-sent-note" data-pc-sent>Sent: changes before its session opens are re-sent; after that, they are made in Review Robin.</p>{% endif %}
+  {% if sent %}<p class="pc-line muted pc-sent-note" data-pc-sent>Sent to Review Robin: its settings are fixed here.</p>{% endif %}
   {# Ruling 28: a gate is one Review Robin run. Its own fields and who
      evaluates sit in two cards, shut until opened, each saying what it
      holds; then what evaluators answer, then the results. #}

@@ -672,8 +672,10 @@ def test_a_sent_gate_keeps_its_panel(page: Page) -> None:
     assert g3.locator("[data-pc-panel]").is_disabled()
     # A sent gate says so once, at its top; its progress is Evaluations'.
     note = g3.locator("[data-pc-sent]")
-    assert note.count() == 1 and note.inner_text().startswith("Sent: changes before its session")
-    assert "Progress" not in g3.inner_text()
+    assert (
+        note.count() == 1
+        and note.inner_text() == "Sent to Review Robin: its settings are fixed here."
+    )
     assert page.locator("[data-o-panel]").all_inner_texts() == [
         "Nominated, Panel A",
         "Panel B",
