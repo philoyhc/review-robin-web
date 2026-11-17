@@ -36,6 +36,17 @@ class Exercise:
 #: value until AD2 keeps the settings).
 DEFAULT_HELP_CONTACT = "applydesk-help@example.edu"
 DEFAULT_TIMEZONE = "Asia/Singapore"
+#: What Details offers (segment AD1I): the default first, then a few an
+#: exercise run from elsewhere would want, until AD2 offers the full list.
+TIMEZONES = (
+    DEFAULT_TIMEZONE,
+    "Asia/Hong_Kong",
+    "Asia/Tokyo",
+    "Australia/Sydney",
+    "Europe/London",
+    "America/New_York",
+    "UTC",
+)
 
 
 def help_contact(e: Exercise) -> str:

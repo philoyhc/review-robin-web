@@ -480,7 +480,10 @@ def test_a_blank_exercise_lists_what_is_still_to_set_up(client: TestClient) -> N
     """Author, 2026-11-12: one exercise as just created, with only a name."""
     home = client.get(f"/applydesk/operator/exercises/{BLANK}").text
     assert "<h1>Graduate Travel Grant 2027</h1>" in home
-    assert '<dt>Description</dt><dd><span class="muted">Not set</span>' in home
+    assert (
+        '<dt>Description</dt><dd data-dt-show="description"><span class="muted">Not set</span>'
+        in home
+    )
     assert "Still to set up before it can be published:" in home
     missing = home[home.index("Still to set up") :]
     missing = missing[: missing.index("</ul>")]
@@ -748,10 +751,16 @@ def test_a_blank_exercise_s_details_and_evaluations_say_not_yet(client: TestClie
     assert home.count('<span class="muted">Not set</span>') >= 2  # code, summary
     # The help contact and timezone start as the operator settings'
     # defaults (AD1G amendment); the model exercise sets its own contact.
-    assert '<dd>applydesk-help@example.edu <span class="muted">· the default</span>' in home
-    assert '<dd>Asia/Singapore <span class="muted">· the default</span>' in home
+    assert (
+        '<dd data-dt-show="contact">applydesk-help@example.edu'
+        ' <span class="muted">· the default</span>' in home
+    )
+    assert (
+        '<dd data-dt-show="timezone">Asia/Singapore <span class="muted">· the default</span>'
+        in home
+    )
     model = client.get("/applydesk/operator/exercises/wa9juxbc2t").text
-    assert "<dd>ra-recruitment@example.edu</dd>" in model
+    assert '<dd data-dt-show="contact">ra-recruitment@example.edu</dd>' in model
     review = client.get(f"{base}/evaluations").text
     assert "Nothing to send: the exercise is a draft." in review
     assert "Send to Review Robin</button>" not in review

@@ -198,6 +198,18 @@
     .card .dt-sec { margin: 18px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-subtle); font-weight: 700; }
     .card .dt-val { margin: 0; font-size: 14px; }
     .card .dt-note { margin: 4px 0 0; font-size: 12.5px; }
+    /* Unlocked, as Dossiers' table: the accent border, a field each. */
+    .dt[data-unlocked] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .dt [hidden] { display: none; }  /* .btn's display would keep Unlock showing */
+    .dt .cardhead .fb-unsaved { margin-left: auto; }
+    .dt-form .fc-l { display: block; margin: 0 0 10px; }
+    .dt-form textarea.fc-in { resize: vertical; }
+    .dt-form .fc-in:disabled { background: var(--surface-muted); color: var(--text-subtle); border-style: dashed; }
+    .dt-why { font-weight: 400; color: var(--text-subtle); font-size: 12.5px; }
+    .card p.dt-why:empty, .card .dt-said:empty { display: none; }
+    .card p.dt-why { color: var(--amber); font-weight: 600; margin: 4px 0 8px; }
+    .dt-check { display: flex; gap: 8px; align-items: center; font-size: 14px; margin: 4px 0 10px; }
+    .card .dt-said { margin: 10px 0 0; font-size: 13px; color: var(--text-subtle); }
     .card p { margin: 0 0 8px; }
     .muted { color: var(--text-subtle); }
     dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }
