@@ -5,22 +5,43 @@
    changes are kept in this tab (sessionStorage, by exercise and gate)
    and drawn on every page; Discard changes puts the sample back. The
    states, the head's counts and the load line follow every pair, not
-   only the page's (#ev-data). Nothing is saved until AD2. #}
+   only the page's (#ev-data), a source's min and max as the Total's.
+   Changes kept from an earlier visit are checked against the sample
+   and the mode first, so a stale one cannot count. Nothing is saved
+   until AD2. #}
 <script>
 (function () {
   var DATA = JSON.parse(document.getElementById("ev-data").textContent);
   var card = document.getElementById("ev-table-card");
-  var STORE = "applydesk-ev:" + DATA.key;
+  var STORE = "applydesk-ev:" + DATA.key + ":" + DATA.mode;
   var said = card.querySelector("[data-ev-said]");
   var names = {}, emailOf = {};
   DATA.dossiers.forEach(function (d) { names[d[0]] = d[1]; emailOf[d[0]] = d[2]; });
   var sources = {};
   DATA.panels.forEach(function (p) { p[1].forEach(function (m) { if (!(m[1] in sources)) sources[m[1]] = [m[0], p[0]]; }); });
+  var bounds = {};  // a source's label: [min, max]
+  DATA.sources.forEach(function (b) { bounds[b[0]] = [b[1], b[2]]; });
+  var sample = {};
+  DATA.pairs.forEach(function (p) { sample[p[0] + "|" + p[1]] = true; });
 
   // The tab's changes: pairs removed and added, and those approved.
   function blank() { return { removed: [], added: [], approved: [] }; }
   var ch = blank();
   try { ch = JSON.parse(sessionStorage.getItem(STORE) || "null") || blank(); } catch (e) { ch = blank(); }
+  // Only what still holds: a removed or approved pair of the sample, an
+  // added one of an entered dossier and a panel member, not already in
+  // the sample; approvals only where the mode has them.
+  function list(x) { return Array.isArray(x) ? x : []; }
+  ch = { removed: list(ch && ch.removed), added: list(ch && ch.added), approved: list(ch && ch.approved) };
+  ch.removed = ch.removed.filter(function (k, i, a) { return sample[k] && a.indexOf(k) === i; });
+  ch.added = ch.added.filter(function (a, i, all) {
+    return a && a.d in names && a.e in sources && !sample[id(a.d, a.e)] && a.e !== emailOf[a.d] &&
+      all.findIndex(function (b) { return b && b.d === a.d && b.e === a.e; }) === i;
+  }).map(function (a) { return { d: a.d, e: a.e, n: sources[a.e][0], s: sources[a.e][1] }; });
+  if (DATA.mode === "automatic") ch.removed = [], ch.added = [];
+  ch.approved = DATA.mode !== "suggested" ? [] : ch.approved.filter(function (k, i, a) {
+    return a.indexOf(k) === i && (sample[k] || ch.added.some(function (x) { return id(x.d, x.e) === k; }));
+  });
   function keep() {
     try {
       if (dirty()) sessionStorage.setItem(STORE, JSON.stringify(ch));
@@ -36,11 +57,15 @@
     var out = DATA.pairs.filter(function (p) { return ch.removed.indexOf(id(p[0], p[1])) < 0; });
     return out.concat(ch.added.map(function (a) { return [a.d, a.e, a.n, a.s]; }));
   }
-  function count(d) { return pairs().filter(function (p) { return p[0] === d; }).length; }
+  function count(d, src) { return pairs().filter(function (p) { return p[0] === d && (src === undefined || p[3] === src); }).length; }
+  // As the server's fill: a source given fewer than its min leaves the
+  // dossier short, the Total's min met or not.
+  function unmet(d) { return Object.keys(bounds).some(function (b) { return count(d, b) < bounds[b][0]; }); }
   function stateOf(d, e) {
     var n = count(d);
     if (DATA.mode === "assigned" && n === 0) return "Not assigned";
     if (n < DATA.min) return "Short by " + (DATA.min - n);
+    if (unmet(d)) return "Short";
     if (DATA.mode === "suggested") return ch.approved.indexOf(id(d, e)) >= 0 ? "Approved" : "Suggested";
     return DATA.mode === "assigned" ? "Assigned" : "Filled";
   }
@@ -62,10 +87,17 @@
     tr.cells[2].firstChild.textContent = a.s;
     return tr;
   }
+  // An added pair shows on the first page, and under a search only if
+  // it matches, as the server's find (the dossier ID alone when blind).
+  function shown(a) {
+    if (!DATA.first) return false;
+    var q = DATA.q.toLowerCase();
+    return !q || [names[a.d], emailOf[a.d], DATA.blind ? "" : a.d, a.n, a.e].some(function (t) { return t && t.toLowerCase().indexOf(q) >= 0; });
+  }
   function draw() {
     var body = card.querySelector("tbody");
     body.querySelectorAll("tr[data-ev-added]").forEach(function (tr) { tr.remove(); });
-    ch.added.slice().reverse().forEach(function (a) { body.insertBefore(addedRow(a), body.firstChild); });
+    ch.added.filter(shown).reverse().forEach(function (a) { body.insertBefore(addedRow(a), body.firstChild); });
     body.querySelectorAll("tr[data-ev-row]").forEach(function (tr) {
       var d = tr.dataset.evRow, e = tr.dataset.evPair, chip = tr.querySelector("[data-ev-state]");
       var rm = tr.querySelector('[data-ev-act="remove"]'), ok = tr.querySelector('[data-ev-act="approve"]');
@@ -90,7 +122,7 @@
       }
     });
     // The head's counts and the load line, over every pair.
-    var short = DATA.dossiers.filter(function (dd) { var n = count(dd[0]); return n === 0 || n < DATA.min; }).length;
+    var short = DATA.dossiers.filter(function (dd) { var n = count(dd[0]); return n === 0 || n < DATA.min || unmet(dd[0]); }).length;
     var n = DATA.dossiers.length;
     card.closest("main, body").querySelector("[data-ev-counts]").textContent =
       n + (n === 1 ? " dossier" : " dossiers") + " · " + (n - short) + " filled" + (short ? " · " + short + " short" : "");
@@ -134,7 +166,12 @@
     fillEvaluators();
     who.focus();
   }
-  if (box) box.querySelector("[data-ev-add-who]").addEventListener("change", fillEvaluators);
+  if (box) {
+    box.querySelector("[data-ev-add-who]").addEventListener("change", fillEvaluators);
+    box.addEventListener("keydown", function (e) { if (e.key === "Escape") openAdd(false); });
+  }
+  // The page works now: its operations, rendered off until the script ran.
+  card.querySelectorAll("button[data-ev-wait]").forEach(function (b) { b.disabled = false; b.removeAttribute("data-ev-wait"); });
 
   card.addEventListener("click", function (e) {
     var b = e.target.closest("[data-ev-act]");
@@ -143,24 +180,29 @@
     said.textContent = "";
     if (act === "remove") {
       var d = tr.dataset.evRow, em = tr.dataset.evPair, k = id(d, em);
-      if (tr.hasAttribute("data-ev-added")) {
+      if (tr.hasAttribute("data-ev-added")) {  // gone, its approval with it
         ch.added = ch.added.filter(function (a) { return id(a.d, a.e) !== k; });
-      } else if (ch.removed.indexOf(k) >= 0) {
+        ch.approved = ch.approved.filter(function (x) { return x !== k; });
+      } else if (ch.removed.indexOf(k) >= 0) {  // Undo: as it was, approved or not
         ch.removed.splice(ch.removed.indexOf(k), 1);
       } else {
         ch.removed.push(k);
       }
-      ch.approved = ch.approved.filter(function (x) { return x !== k || ch.removed.indexOf(k) < 0; });
       draw();
       var again = Array.prototype.find.call(card.querySelectorAll("tr[data-ev-row]"), function (r) { return r.dataset.evRow === d && r.dataset.evPair === em; });
       (again && again.querySelector('[data-ev-act="remove"]') || card.querySelector('[data-ev-act="add"]')).focus();
     } else if (act === "approve") {
       ch.approved.push(id(tr.dataset.evRow, tr.dataset.evPair));
       draw();
+      said.textContent = tr.cells[1].textContent.replace(/\s*Added$/, "").trim() + " approved for " + names[tr.dataset.evRow] + ".";
+      tr.querySelector('[data-ev-act="remove"]').focus();
     } else if (act === "approve-all") {
-      ch.approved = pairs().map(function (p) { return id(p[0], p[1]); });
+      var before = ch.approved.filter(function (k) { return !pairs().some(function (p) { return id(p[0], p[1]) === k; }); });
+      var now = pairs().map(function (p) { return id(p[0], p[1]); });
+      ch.approved = before.concat(now);
       draw();
-      said.textContent = "All " + ch.approved.length + " pairs approved.";
+      said.textContent = "All " + now.length + " pairs approved.";
+      card.querySelector('[data-ev-act="add"]').focus();
     } else if (act === "rerun") {
       ch = blank();
       draw();
@@ -174,6 +216,8 @@
       var why = box.querySelector("[data-ev-add-why]");
       if (!ev) { why.textContent = "No one left to add from its panels."; return; }
       if (count(who) >= DATA.max) { why.textContent = names[who] + " already has the most evaluators, " + DATA.max + "."; return; }
+      var from = sources[ev][1], cap = bounds[from];
+      if (cap && count(who, from) >= cap[1]) { why.textContent = names[who] + " already has the most from " + from + ", " + cap[1] + "."; return; }
       var k2 = id(who, ev);
       if (ch.removed.indexOf(k2) >= 0) ch.removed.splice(ch.removed.indexOf(k2), 1);
       else ch.added.push({ d: who, e: ev, n: sources[ev][0], s: sources[ev][1] });

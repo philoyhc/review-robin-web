@@ -4,6 +4,7 @@ in the mount, and a blind dossier names nobody."""
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Iterator
 from types import SimpleNamespace
@@ -543,7 +544,9 @@ def test_evaluations_shows_each_gate_s_assignments(client: TestClient) -> None:
     g3 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text
     # Ready, not sent (ruling 29): its pairs suggested, still the operator's.
     assert g3.count("data-ev-row=") == 80 and g3.count(">Suggested<") == 80
-    assert 'data-ev-act="approve-all">Approve all' in g3  # the operator's (AD1G 6b)
+    assert (
+        'data-ev-act="approve-all" disabled data-ev-wait>Approve all' in g3
+    )  # the operator's (AD1G 6b)
     assert 'id="ev-data"' in g3 and 'id="ev-data"' not in page  # a sent gate's are not
     assert 'data-ev-act="remove" aria-label="Remove ' in g3 and "Its session has opened" not in g3
 
@@ -695,6 +698,19 @@ def test_a_blind_gate_sorts_by_the_dossier(client: TestClient) -> None:
     gate = cast(stages.Gate, None)  # read only by the State column
     assert stages.sorted_pairs((zed, abe), order, gate, False, blind=True) == (abe, zed)
     assert stages.sorted_pairs((abe, zed), order, gate, False) == (zed, abe)
+
+
+def test_a_blind_gate_s_page_data_names_no_candidate() -> None:
+    """AD1G rung 6b: the script's data on a blind page carries dossier
+    IDs and evaluators, never a candidate's name or email."""
+    gate = stages.gate_numbered(stages.plan_of(BLIND), 1)
+    assert gate is not None
+    rows, _ = stages.assignments(BLIND, gate)
+    data = json.dumps(stages.page_data(BLIND, gate, rows, blind=True))
+    for a in rows:
+        assert a.application.applicant not in data
+        assert a.application.email.lower() not in data
+        assert a.application.dossier_id in data
 
 
 def _pair(applicant: str, dossier: str, evaluator: str, source: str = "") -> stages.Pair:

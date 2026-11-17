@@ -114,7 +114,11 @@ def gate_evaluations(
         sort_badge=paging.sort_badge,
         # Its operations' data (AD1G rung 6b), for a gate still the
         # operator's to change.
-        ev_data=None if sent else stages.page_data(exercise.public_id, found, rows, exercise.blind),
+        ev_data=None
+        if sent
+        else stages.page_data(
+            exercise.public_id, found, rows, exercise.blind, q, where.offset == 0
+        ),
         all_rows=rows,
         all_pairs=pairs,
         rows=shown[where.offset : where.end],

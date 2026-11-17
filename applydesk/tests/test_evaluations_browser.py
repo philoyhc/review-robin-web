@@ -1,5 +1,6 @@
 """The gate pages under Evaluations in a real Chromium (segment AD1H):
-the table sorted as Review Robin's, click and shift-click. Without a
+the table sorted as Review Robin's, click and shift-click; and AD1G
+rung 6b's operations by mode, kept in the tab. Without a
 Chromium build the test skips, saying why; ``RRW_REQUIRE_BROWSER=1``
 (set by CI) turns that skip into a failure."""
 
@@ -97,6 +98,10 @@ def test_a_pair_is_removed_and_added_within_the_total(page: Page) -> None:
     more; the head's counts and the load line follow every pair."""
     page.goto(GATE3)
     assert _counts(page) == "40 dossiers · 40 filled"
+    assert not page.locator("[data-ev-add]").is_visible()  # closed until + Pair
+    page.get_by_role("button", name="+ Pair").click()
+    page.get_by_role("button", name="Cancel").click()
+    assert not page.locator("[data-ev-add]").is_visible()
     load = page.locator("[data-ev-load]").inner_text()
     pair = _row(page, "Kenji Russo")
     evaluator = pair.locator("td").nth(1).inner_text()
@@ -112,7 +117,16 @@ def test_a_pair_is_removed_and_added_within_the_total(page: Page) -> None:
     offered = page.locator("[data-ev-add-evaluator] option").all_inner_texts()
     other_name = other.locator("td").nth(1).inner_text()
     assert not [o for o in offered if o.startswith(other_name + " ·")]
-    # One who was not on it: adding back the one removed only undoes it.
+    # Adding back the one removed only undoes the removal.
+    back = next(o for o in offered if o.startswith(evaluator + " ·"))
+    page.locator("[data-ev-add-evaluator]").select_option(label=back)
+    page.get_by_role("button", name="Add the pair").click()
+    assert page.locator("tbody tr[data-ev-added]").count() == 0
+    assert pair.locator("[data-ev-state]").text_content() == "Suggested"
+    assert not page.locator("[data-ev-unsaved]").is_visible()
+    pair.get_by_role("button", name="Remove").click()
+    # One who was not on it is added.
+    offered = page.locator("[data-ev-add-evaluator] option").all_inner_texts()
     fresh = next(o for o in offered if not o.startswith(evaluator + " ·"))
     page.locator("[data-ev-add-evaluator]").select_option(label=fresh)
     page.get_by_role("button", name="Add the pair").click()
@@ -160,6 +174,118 @@ def test_an_automatic_gate_re_runs(page: Page, monkeypatch: pytest.MonkeyPatch) 
     page.get_by_role("button", name="Re-run").click()
     assert page.locator("[data-ev-said]").inner_text() == (
         "Re-run: every dossier filled as its sources give."
+    )
+    # An Automatic gate takes no change by hand, so a re-run leaves the
+    # fill as it was and nothing unsaved.
+    assert set(page.locator("tbody [data-ev-state]").all_text_contents()) == {"Filled"}
+    assert not page.locator("[data-ev-unsaved]").is_visible()
+
+
+def test_an_approval_stands_through_undo_and_goes_with_an_added_pair(page: Page) -> None:
+    page.goto(GATE3)
+    pair = _row(page, "Kenji Russo")
+    pair.get_by_role("button", name="Approve").click()
+    assert page.locator("[data-ev-said]").inner_text().endswith("approved for Kenji Russo.")
+    assert pair.get_by_role("button", name="Remove").evaluate("b => b === document.activeElement")
+    pair.get_by_role("button", name="Remove").click()
+    pair.get_by_role("button", name="Undo", exact=False).click()
+    assert pair.locator("[data-ev-state]").text_content() == "Approved"
+    page.get_by_role("button", name="Discard changes").click()
+    # An added pair approved, then removed: no change is left behind.
+    page.get_by_role("button", name="+ Pair").click()
+    page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
+    pair.get_by_role("button", name="Remove").click()
+    page.get_by_role("button", name="Add the pair").click()
+    added = page.locator("tbody tr[data-ev-added]")
+    added.get_by_role("button", name="Approve").click()
+    added.get_by_role("button", name="Remove").click()
+    pair.get_by_role("button", name="Undo", exact=False).click()
+    assert not page.locator("[data-ev-unsaved]").is_visible()
+    page.locator("[data-ev-add-who]").press("Escape")  # the box still open
+    assert not page.locator("[data-ev-add]").is_visible()
+
+
+def test_added_pairs_show_on_the_first_page_and_as_the_search_finds(
+    page: Page, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from applydesk import paging
+
+    monkeypatch.setattr(paging, "PAGE_SIZE", 40)
+    page.goto(GATE3)
+    pair = _row(page, "Kenji Russo")
+    gone = pair.locator("td").nth(1).inner_text()
+    pair.get_by_role("button", name="Remove").click()
+    page.get_by_role("button", name="+ Pair").click()
+    page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
+    fresh = next(
+        o
+        for o in page.locator("[data-ev-add-evaluator] option").all_inner_texts()
+        if not o.startswith(gone + " ·")
+    )
+    page.locator("[data-ev-add-evaluator]").select_option(label=fresh)
+    page.get_by_role("button", name="Add the pair").click()
+    added = page.locator("tbody tr[data-ev-added]")
+    name = added.locator("td").nth(1).locator("span").first.inner_text()
+    page.goto(f"{GATE3}?offset=40")
+    assert added.count() == 0  # the first page's only
+    page.goto(f"{GATE3}?q=nobody-at-all")
+    assert added.count() == 0
+    page.goto(f"{GATE3}?q={name.split()[-1]}")
+    assert added.count() == 1
+    page.goto(f"{GATE3}?q=kenji")
+    assert added.count() == 1
+
+
+def test_a_stale_change_kept_in_the_tab_counts_for_nothing(page: Page) -> None:
+    page.goto(GATE3)
+    page.evaluate(
+        """() => sessionStorage.setItem("applydesk-ev:wa9juxbc2t:g3:suggested", JSON.stringify({
+            removed: ["nobody|x@example.edu"],
+            added: [{d: "gone", e: "x@example.edu", n: "X", s: "Y"}],
+            approved: ["nobody|y@example.edu"]}))"""
+    )
+    page.reload()
+    assert not page.locator("[data-ev-unsaved]").is_visible()
+    assert page.locator("tbody tr[data-ev-added]").count() == 0
+    page.evaluate("""() => sessionStorage.setItem("applydesk-ev:wa9juxbc2t:g3:suggested", "{}")""")
+    page.reload()
+    assert not page.locator("[data-ev-unsaved]").is_visible()
+
+
+def test_a_source_s_min_and_max_hold_as_the_total_s(
+    page: Page, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """As the server's fill: a dossier its second source gives fewer than
+    that source's min is short, its Total met or not; + Pair stops at a
+    source's max."""
+    from applydesk.stages import Source, Total
+
+    two = (Source("panel", "residential-staff", 1, 2), Source("panel", "current-ras", 1, 1))
+    _as(monkeypatch, "g3", sources=two, total=Total(2, 3))
+    page.goto(GATE3)
+    assert "short" not in _counts(page)
+    pair = page.locator("tbody tr", has_text="Kenji Russo").filter(has_text="Current RAs").first
+    pair.get_by_role("button", name="Remove").click()
+    others = page.locator("tbody tr:not(.ev-removed)", has_text="Kenji Russo")
+    assert set(others.locator("[data-ev-state]").all_text_contents()) == {"Short"}
+    assert _counts(page).endswith("· 1 short")
+    pair.get_by_role("button", name="Undo", exact=False).click()
+    # Under the Total's max of 3 once a staff member is off it, but at
+    # Current RAs' max of 1.
+    page.locator("tbody tr", has_text="Kenji Russo").filter(
+        has_text="Residential staff"
+    ).first.get_by_role("button", name="Remove").click()
+    page.get_by_role("button", name="+ Pair").click()
+    page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
+    ra = next(
+        o
+        for o in page.locator("[data-ev-add-evaluator] option").all_inner_texts()
+        if o.endswith("· Current RAs")
+    )
+    page.locator("[data-ev-add-evaluator]").select_option(label=ra)
+    page.get_by_role("button", name="Add the pair").click()
+    assert page.locator("[data-ev-add-why]").inner_text() == (
+        "Kenji Russo already has the most from Current RAs, 1."
     )
 
 

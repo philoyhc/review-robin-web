@@ -8,7 +8,9 @@
    until discarded; nothing is saved until AD2. #}
 {% set base = '/operator/exercises/' ~ exercise.public_id ~ '/evaluations' %}
 {% set here = base ~ '/gate_' ~ gate.number %}
-{% set off %}{% if sent %} disabled title="Its session has opened: its pairs are Review Robin's to change"{% endif %}{% endset %}
+{# Off once its session has opened; off until the operations' script
+   has run otherwise, so a page without it offers nothing inert. #}
+{% set off %}{% if sent %} disabled title="Its session has opened: its pairs are Review Robin's to change"{% else %} disabled data-ev-wait{% endif %}{% endset %}
 {% block title %}Gate {{ gate.number }} · {{ gate.label or "Untitled gate" }} · {{ exercise.name }}{% endblock %}
 {% block content %}
 <p class="ev-back"><a href="{{ url(base) }}">← Evaluations</a></p>
@@ -23,9 +25,9 @@
   <div class="btnrow ev-ops">
     {% if gate.mode == "automatic" %}<button type="button" class="btn btn-secondary" data-ev-act="rerun"{{ off }}>Re-run</button>
     {% elif gate.mode == "suggested" %}<button type="button" class="btn btn-primary" data-ev-act="approve-all"{{ off }}>Approve all</button>{% endif %}
-    {% if gate.mode != "automatic" %}<button type="button" class="btn btn-secondary" data-ev-act="add" aria-expanded="false" aria-controls="ev-add"{{ off }}>+ Pair</button>{% endif %}
+    {% if gate.mode != "automatic" %}<button type="button" class="btn btn-secondary" data-ev-act="add" {% if ev_data %} aria-expanded="false" aria-controls="ev-add"{% endif %}{{ off }}>+ Pair</button>{% endif %}
     {% if sent %}<span class="muted">Its session has opened: its pairs are Review Robin's to change.</span>
-    {% else %}<span class="ev-unsaved" data-ev-unsaved hidden>Unsaved changes</span>
+    {% else %}<span class="fb-unsaved" data-ev-unsaved hidden>Unsaved changes</span>
     <button type="button" class="btn btn-secondary" data-ev-act="discard" hidden>Discard changes</button>{% endif %}
     <span class="muted" data-ev-said role="status"></span>
   </div>
