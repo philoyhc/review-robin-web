@@ -96,6 +96,8 @@
     <div class="pc-row">
       <label class="fc-l">Derived as<select class="fc-in" data-r="derive">{% for k, l in derivations if k in allowed[f.type] %}<option value="{{ k }}"{% if k == r.derive %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
       <label class="fc-l" data-r-g="share">Choosing<select class="fc-in" data-r="value">{% for o in f.options.split(",") if o.strip() %}<option{% if o.strip() == r.value %} selected{% endif %}>{{ o.strip() }}</option>{% endfor %}</select></label>
+      {# Ruling 30: a mean or median may leave out the 0s (no view). #}
+      <label class="gsw" data-r-g="zero"{% if r.derive not in ("mean", "median") %} hidden{% endif %}><input type="checkbox" data-r="ignore_zero"{% if r.ignore_zero %} checked{% endif %}> Ignoring 0 (no view)</label>
       <label class="fc-l pc-narrow" data-r-g="atleast">From at least<input class="fc-in" data-r="at_least" inputmode="numeric" value="{{ r.at_least }}" aria-label="Responses needed, at least"></label>
     </div>
     <p class="pc-line">Result: <strong data-pr-type>{{ result_type(r) }}</strong></p>

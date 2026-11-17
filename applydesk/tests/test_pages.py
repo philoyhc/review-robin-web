@@ -861,6 +861,15 @@ LIKERT = F("integer", "1", "5", "1")
 
 RESULT_CASES: list[tuple[stages.GateResult, str]] = [
     (R("r1", "Rating", LIKERT, "mean"), "Integer 1 to 5, step 1 · Mean → Decimal 1 to 5"),
+    # Ruling 30: a 0 that means *no view* left out.
+    (
+        R("r1", "Score", F("integer", "0", "5", "1"), "mean", ignore_zero=True),
+        "Integer 0 to 5, step 1 · Mean, ignoring 0 → Decimal 0 to 5",
+    ),
+    (
+        R("r1", "Score", F("integer", "0", "5", "1"), "median", at_least=2, ignore_zero=True),
+        "Integer 0 to 5, step 1 · Median, ignoring 0, from 2 or more → Decimal 0 to 5",
+    ),
     (
         R("r1", "Rating", LIKERT, "median", at_least=2),
         "Integer 1 to 5, step 1 · Median, from 2 or more → Decimal 1 to 5",
@@ -902,6 +911,22 @@ def test_a_result_reads_its_field_derivation_and_type(
     result: stages.GateResult, summary: str
 ) -> None:
     assert stages.result_summary(result) == summary
+
+
+def test_a_mean_or_median_may_leave_out_the_0s() -> None:
+    """Ruling 30: a 0 that means *no view* is not a score; all 0s give no
+    result, and the count taken says how many scored."""
+    assert stages.averaged((4, 0, 5, 0, 3), "mean", True) == (4.0, 3)
+    assert stages.averaged((4, 0, 5, 0, 3), "mean", False) == (2.4, 5)
+    assert stages.averaged((0, 0), "mean", True) == (None, 0)
+    assert stages.averaged((5, 0, 1, 2), "median", True) == (2, 3)
+    assert stages.averaged((5, 0, 1, 2, 4), "median", True) == (3.0, 4)
+    assert stages.averaged((), "mean", False) == (None, 0)
+    # Only a mean or a median offers it; another derivation reads as before.
+    count = stages.GateResult(
+        "r1", "N", stages.Field("integer", "0", "5"), "count", ignore_zero=True
+    )
+    assert stages.derivation_text(count) == "Count of responses"
 
 
 def test_every_derivation_a_field_allows_is_known() -> None:

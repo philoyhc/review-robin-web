@@ -1109,6 +1109,10 @@ def test_the_script_s_result_summaries_match_the_server_s(page: Page) -> None:
                 r.value or f.options.split(",")[0].strip()
             )
         row.locator('[data-r="at_least"]').fill(str(r.at_least))
+        if r.derive in stages.ZERO_DERIVATIONS:
+            row.locator('[data-r="ignore_zero"]').set_checked(r.ignore_zero)
+        else:  # offered only for a mean or a median (ruling 30)
+            assert row.locator('[data-r-g="zero"]').is_hidden()
         # The whole line as the server draws it for a result reading this
         # field (stages.collated; Score, the draft's field, renamed by none).
         server = f"From Score · {stages.derivation_text(r)} → {stages.result_type(r)}"

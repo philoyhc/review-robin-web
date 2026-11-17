@@ -990,7 +990,8 @@
       step: type === "integer" || type === "decimal" ? rv(row, "step") : "",
       options: type === "list" ? rv(row, "options") : "",
       derive: rv(row, "derive"), value: rv(row, "value"),
-      atLeast: /^\d+$/.test(rv(row, "at_least")) ? parseInt(rv(row, "at_least"), 10) : 1
+      atLeast: /^\d+$/.test(rv(row, "at_least")) ? parseInt(rv(row, "at_least"), 10) : 1,
+      ignoreZero: !!(row.querySelector('[data-r="ignore_zero"]') || {}).checked
     };
   }
   function fieldText(r) {
@@ -1009,6 +1010,7 @@
   }
   function derivationText(r) {
     var label = r.derive === "share" ? "Share choosing " + (r.value || "(no option)") : (DLABEL[r.derive] || r.derive);
+    if (r.ignoreZero && (r.derive === "mean" || r.derive === "median")) label += ", ignoring 0";
     return r.atLeast > 1 ? label + ", from " + r.atLeast + " or more" : label;
   }
   // One result's editor and summary, its derivations kept to what its
@@ -1031,6 +1033,7 @@
     opts(rv(row, "options")).forEach(function (o) { var e = el("option", "", o); e.value = o; v.appendChild(e); });
     if (opts(rv(row, "options")).indexOf(row.dataset.share) >= 0) v.value = row.dataset.share;
     row.querySelector('[data-r-g="share"]').hidden = d.value !== "share";
+    row.querySelector('[data-r-g="zero"]').hidden = d.value !== "mean" && d.value !== "median";
     var r = readResult(row);
     row.dataset.name = r.name;
     row.querySelector("[data-pr-name]").textContent = r.name || "Untitled result";

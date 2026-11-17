@@ -118,6 +118,9 @@ class GateResult:
     # field's governs (``collated``). "" on a gate listing no fields reads
     # the field in its place (``fields_of``'s fallback).
     source: str = ""
+    # Ruling 30: a mean or median leaving out the 0s, for a scale whose 0
+    # means *no view* (*Don't know enough about this candidate*).
+    ignore_zero: bool = False
 
 
 @dataclass(frozen=True)
@@ -781,9 +784,30 @@ def result_type(r: GateResult) -> str:
     return "String, for reading"
 
 
+#: The derivations that may leave out the 0s (ruling 30).
+ZERO_DERIVATIONS: tuple[str, ...] = ("mean", "median")
+
+
+def averaged(values: tuple[float, ...], derive: str, ignore_zero: bool) -> tuple[float | None, int]:
+    """A mean or median of the responses and how many it took: with
+    ``ignore_zero``, the 0s (*no view*) left out, so all 0s give no
+    result (ruling 30)."""
+    taken = sorted(v for v in values if not (ignore_zero and v == 0))
+    if not taken:
+        return None, 0
+    if derive == "median":
+        mid = len(taken) // 2
+        value = taken[mid] if len(taken) % 2 else (taken[mid - 1] + taken[mid]) / 2
+    else:
+        value = sum(taken) / len(taken)
+    return round(value, 2), len(taken)
+
+
 def derivation_text(r: GateResult) -> str:
     """How the responses become the result, e.g. "Mean of 2 or more"."""
     label = dict(DERIVATIONS).get(r.derive, r.derive)
+    if r.ignore_zero and r.derive in ZERO_DERIVATIONS:
+        label = f"{label}, ignoring 0"
     if r.derive == "share":
         # As the page's menu: the first option when none is chosen.
         first = next((o.strip() for o in r.field.options.split(",") if o.strip()), "")
