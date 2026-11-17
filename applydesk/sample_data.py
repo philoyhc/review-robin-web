@@ -717,18 +717,26 @@ def nominees(exercise_id: str, application: Application, question: str) -> tuple
     return tuple(email for _, email in rng.sample(members, min(max(most, 1), len(members))))
 
 
+def list_questions(exercise_id: str) -> dict[str, list[str]]:
+    """The form's choose-one *List* questions and their options, by label:
+    what a rule's form-answer condition may read (ruling 30)."""
+    out: dict[str, list[str]] = {}
+    for c in form_cards(exercise_id):
+        if c.kind == "field" and c.type == "list" and c.exclusive:
+            out[c.label or "Untitled question"] = [
+                o.strip() for o in c.options.split(",") if o.strip()
+            ]
+    return out
+
+
 def answers(exercise_id: str, application: Application) -> dict[str, str]:
     """The application's answers to the form's *List* questions, by label
     (ruling 30's form-answer condition reads them): a choose-one list's
     option, seeded per application. Nothing is stored until AD4."""
     out: dict[str, str] = {}
-    for c in form_cards(exercise_id):
-        if c.kind != "field" or c.type != "list" or not c.exclusive:
-            continue
-        options = [o.strip() for o in c.options.split(",") if o.strip()]
+    for label, options in list_questions(exercise_id).items():
         if options:
-            rng = random.Random(f"answer {application.public_id} {c.label}")
-            out[c.label or "Untitled question"] = rng.choice(options)
+            out[label] = random.Random(f"answer {application.public_id} {label}").choice(options)
     return out
 
 
