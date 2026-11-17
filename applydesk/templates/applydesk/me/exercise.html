@@ -4,15 +4,10 @@
 <div class="ptitle"><h1>{{ exercise.name }}</h1></div>
 <p class="lede">{{ exercise.summary }}</p>
 {% include "applydesk/_placeholder.html" %}
-<div class="grid">
-  <section class="card">
-    <h2>Timeline</h2>
-    <dl class="facts">
-      <dt>Applications open</dt><dd>{{ exercise.opens }}</dd>
-      <dt>Applications close</dt><dd>{{ exercise.application_stage_ends }}</dd>
-      <dt>Expected outcome</dt><dd>{{ exercise.expected_outcome }} <span class="muted">(an estimate)</span></dd>
-    </dl>
-  </section>
+{# Segment AD1I, rung 5: the operator's Home timeline, as applicants see
+   it, beside how to apply. #}
+<div class="hm-grid">
+  {% include "applydesk/_timeline.html" %}
   <section class="card">
     <h2>Apply</h2>
     {% if exercise.form_open %}

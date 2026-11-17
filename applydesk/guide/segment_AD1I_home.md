@@ -56,6 +56,8 @@ Taken 2026-11-17 at `696b14d9b`.
 
 - **Rung 4 built** (2026-11-17): Details behind *Unlock*, a field each with where it is used; *Lock* keeps the changes on the page, refusing an empty name, another exercise's code (any case) and a help contact that is not an address; *Discard changes* puts back the last kept; *Unsaved changes* and the leave warning from any change since load. A published exercise's code and who may apply show fixed, saying so. Found at build: `.btn`'s display kept a `hidden` *Unlock* showing beside *Lock*.
 
+- **Rung 5 built** (2026-11-17): the applicant's exercise page draws the same partial beside *Apply*, without the Next step line; its old *Timeline* list of three dates goes. Today and the state chips show there too, as proposed (the open question's).
+
 ## PR ladder
 
 1. **Plan** (this file), the two mock-ups in `applydesk/docs/home/`, the README rows, the roadmap row.

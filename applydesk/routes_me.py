@@ -7,7 +7,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
-from applydesk import sample_data
+from applydesk import sample_data, timeline
 from applydesk.gate import placeholders_only
 from applydesk.lookups import application_or_404, dossier_or_404, exercise_or_404
 from applydesk.web import USER_LOBBY, render
@@ -35,7 +35,16 @@ def exercise(request: Request, exercise_id: str) -> Response:
     found = exercise_or_404(exercise_id)
     if found.state != "Published":
         raise HTTPException(status_code=404)
-    return render(request, "applydesk/me/exercise.html", area=USER_LOBBY, exercise=found)
+    # The same timeline as the operator's Home (segment AD1I, rung 5): it
+    # holds nothing operator-only, and takes no Next step line.
+    return render(
+        request,
+        "applydesk/me/exercise.html",
+        area=USER_LOBBY,
+        exercise=found,
+        tl=timeline.of(found),
+        short=timeline.short,
+    )
 
 
 @router.get(
