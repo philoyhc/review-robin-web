@@ -478,6 +478,42 @@ def test_one_not_entered_at_a_ranking_goes_on_once(page: Page) -> None:
         assert got == "Not shortlisted", i
 
 
+def test_one_a_ranking_cannot_take_falls_through_though_another_condition_waits(
+    page: Page,
+) -> None:
+    """Codex on #3955: a dossier not entered at the ranking's gate cannot
+    join the branch, so it goes on to the next even while the branch's
+    other condition waits on its result."""
+    x = next(
+        r.application.public_id
+        for r in stages.plan_of("wa9juxbc2t").rows
+        if r.cells["o1"].value == "Shortlisted"
+    )
+    page.goto(PAGE)
+    _unlock(page)
+    page.evaluate(_FILL_RESULTS)
+    _cell(page, x, "g1").evaluate("e => { e.dataset.v = 'Not entered'; }")
+    _cell(page, x, "g2").evaluate("e => { delete e.dataset.result; }")
+    page.evaluate(
+        "() => { for (const k of ['g1', 'g2']) "
+        "document.querySelector(`th[data-col=\"${k}\"]`).dataset.rule = 'null'; }"
+    )
+    _set_rule(
+        page,
+        "o1",
+        {
+            "when": [["res", "g2.r1", "ge", "0"], ["top", "g1.r1", "le", "3"]],
+            "then": "Shortlisted",
+            "otherwise": "Not shortlisted",
+        },
+    )
+    prop = _apply_rules(page, only_undecided=False, replace_hand=True)
+    notes = prop.locator("[data-ap-prop-skip] li").all_inner_texts()
+    assert not [n for n in notes if n.startswith("Shortlist for interview") and "judged" in n]
+    got = [r for r in prop.locator("[data-ap-prop-rows] tr").all_inner_texts() if r.startswith(x)]
+    assert got and got[0].endswith("\tShortlist for interview\tShortlisted\tNot shortlisted"), got
+
+
 def test_a_dossier_waiting_elsewhere_holds_back_only_a_ranking_it_could_join(
     page: Page,
 ) -> None:

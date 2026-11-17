@@ -476,7 +476,9 @@
         try { ans = JSON.parse(r.dataset.answers || "{}"); } catch (e) { ans = {}; }
         return ans[key] === want;
       }
-      if (kind === "top") return true;  // ranked across the branch, below
+      // Ranked across the branch, below; one not entered at the gate has
+      // no place in it, so the branch fails it now (Codex on #3955).
+      if (kind === "top") { var tg = val(r, gateKey(key)); return tg !== null && tg !== "Not entered"; }
       if (kind === "last") return r.dataset.rank !== undefined && parseInt(r.dataset.rank, 10) <= parseInt(want, 10);
       if (kind === "ent" || kind === "out") {
         var v = val(r, key);
@@ -533,7 +535,7 @@
         var verdicts = new Map(), left = reach.slice(), held = [];
         branches.forEach(function (b) {
           var tops = b.when.filter(function (c) { return c[0] === "top"; });
-          var others = b.when.filter(function (c) { return c[0] !== "top"; });
+          var others = b.when;
           var passing = [], rest = [], unsure = [];
           function couldJoin(r) {
             return others.every(function (c) { return holds(r, c, key, val) !== false; });
