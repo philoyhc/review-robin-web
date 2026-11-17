@@ -1411,20 +1411,35 @@ def test_the_model_exercise_s_review_is_fixed_and_its_interview_open(page: Page)
 
 
 def test_what_will_be_sent_follows_the_gate_and_its_stage(page: Page) -> None:
-    """The *Sent to Review Robin* line names the instrument, its stage's
-    window in the exercise's timezone, the help contact and the tag, and
-    follows the name, description and the stage's dates as they change."""
+    """The line names the instrument, its stage's window in the
+    exercise's timezone, the help contact and the tag, and follows the
+    name, the description and the stage's dates, each on its own."""
     gate = _draft_gate(page)
     send = gate.locator("[data-pr-send]")
+    assert "open when its stage's dates are set (Asia/Singapore)" in (send.text_content() or "")
     gate.locator('[data-pc="item-name"]').fill("Placement chat")
-    gate.locator('[data-pc="description"]').fill("Talk about the placement.")
+    assert (send.text_content() or "").startswith("Review Robin receives Placement chat, open")
+    gate.locator('[data-pc="description"]').fill("Talk about the placement...")
+    assert (send.text_content() or "").startswith(
+        "Review Robin receives Placement chat: Talk about the placement, open"
+    )
     stage = gate.locator("xpath=ancestor::article[@data-kind='stage']")
     stage.locator('[data-pc="from"]').fill("1 Mar")
     stage.locator('[data-pc="to"]').fill("15 Mar")
     assert send.text_content() == (
-        "Sent to Review Robin as Placement chat: Talk about the placement. Open 1 Mar to"
+        "Review Robin receives Placement chat: Talk about the placement, open 1 Mar to"
         " 15 Mar (Asia/Singapore); help contact applydesk-help@example.edu; tagged applydesk."
     )
-    stage.locator('[data-pc="to"]').fill("")
-    stage.locator('[data-pc="from"]').fill("")
-    assert "Open when its stage's dates are set (Asia/Singapore)" in (send.text_content() or "")
+
+
+def test_what_was_sent_stays_once_the_session_opens(page: Page) -> None:
+    """A gate whose session has opened keeps its line, though its stage's
+    dates are still edited."""
+    page.goto(MODEL)
+    gate = page.locator('.pc-item[data-key="g1"]')
+    send = gate.locator("[data-pr-send]")
+    before = send.text_content()
+    stage = gate.locator("xpath=ancestor::article[@data-kind='stage']")
+    _open(stage)
+    stage.locator('[data-pc="from"]').fill("2 Oct")
+    assert send.text_content() == before and "open 1 Oct to 6 Nov" in (before or "")

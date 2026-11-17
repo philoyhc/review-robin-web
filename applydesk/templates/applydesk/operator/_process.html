@@ -1083,14 +1083,13 @@
   // contact and the tag, as the server draws it.
   function drawSend(item, card) {
     var p = item.querySelector("[data-pr-send]");
-    if (!p) return;
-    var a = field(card, "from"), b = field(card, "to");
-    var win = [a, b].filter(Boolean).join(" to ") || "when its stage's dates are set";
-    var d = item.querySelector('[data-pc="description"]'), desc = d ? d.value.trim().replace(/\.+$/, "") : "";
+    if (!p || p.hasAttribute("data-fixed")) return;  // its session has opened
+    var win = [field(card, "from"), field(card, "to")].filter(function (x) { return x && x !== "Dates not set"; }).join(" to ") || "when its stage's dates are set";
+    var d = item.querySelector('[data-pc="description"]'), desc = d ? d.value.trim().replace(/\.+$/, "").trim() : "";
     p.textContent = "";
-    p.appendChild(document.createTextNode("Sent to Review Robin as "));
+    p.appendChild(document.createTextNode("Review Robin receives "));
     p.appendChild(el("strong", "", itemName(item, "Untitled gate")));
-    p.appendChild(document.createTextNode((desc ? ": " + desc : "") + ". Open " + win + " (" + p.dataset.tz + "); help contact " + p.dataset.contact + "; tagged "));
+    p.appendChild(document.createTextNode((desc ? ": " + desc : "") + ", open " + win + " (" + p.dataset.tz + "); help contact " + p.dataset.contact + "; tagged "));
     p.appendChild(el("code", "", "applydesk"));
     p.appendChild(document.createTextNode("."));
   }

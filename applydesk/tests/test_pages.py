@@ -1159,11 +1159,15 @@ def test_a_gate_item_lists_its_results_and_what_review_robin_asks(client: TestCl
     # What will be sent (AD1G amendment): the instrument, its stage's
     # window in the exercise's timezone, the help contact, the tag.
     assert (
-        "Sent to Review Robin as <strong>Peer review</strong>: Every current RA scores every"
-        " applicant, never themselves. Open 1 Oct to 6 Nov (Asia/Singapore); help contact"
+        "Review Robin receives <strong>Peer review</strong>: Every current RA scores every"
+        " applicant, never themselves, open 1 Oct to 6 Nov (Asia/Singapore); help contact"
         " ra-recruitment@example.edu; tagged <code>applydesk</code>."
     ) in g1
     assert "Help contact <strong>ra-recruitment@example.edu</strong> · Timezone" in g1
+    assert (
+        'data-pr-send data-tz="Asia/Singapore" data-contact="ra-recruitment@example.edu"'
+        " data-fixed>" in g1
+    )
     # Each response field's key, read-only: what Review Robin reports under.
     assert re.search(r'Key<input class="fc-in" data-rf-key value="\w+" readonly', g1)
     # Every gate runs in Review Robin (ruling 28): the draft's too, its
@@ -1171,6 +1175,8 @@ def test_a_gate_item_lists_its_results_and_what_review_robin_asks(client: TestCl
     draft = client.get(f"/applydesk/operator/exercises/{DRAFT}/process").text
     assert "From Score · Mean → Decimal 0 to 10" in draft
     assert "For Review Robin, each evaluator answers: <strong>Score</strong>" in draft
+    # A stage whose dates say they are not set has no window yet.
+    assert "open when its stage&#39;s dates are set (Asia/Singapore)" in draft
     at = draft.index('data-r="derive"')
     menu = draft[at : draft.index("</select>", at)]
     assert menu.count("<option") == len(stages.ALLOWED["decimal"]) and "Entered here" not in menu

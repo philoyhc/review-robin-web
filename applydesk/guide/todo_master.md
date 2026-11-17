@@ -516,6 +516,10 @@ rulings after this list):
 - ~~Where the help contact comes from~~: the exercise's (author,
   2026-11-17); the description is the gate's.
 - What marks a gate concluded, for writing results.
+- Editing the exercise's help contact and timezone on Home: shown there
+  and on every gate since AD1G's carried rungs 8–9, each the operator
+  settings' default until set, but Home's details are not yet edited;
+  with Home's work.
 - Panels' *Sent* chip still marks a gate sent, not one whose session has
   opened (ruling 29); the spec says the same. Align when Panels is next
   touched.

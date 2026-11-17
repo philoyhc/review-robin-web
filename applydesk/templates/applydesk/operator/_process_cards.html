@@ -258,7 +258,10 @@
   {# What will be sent (AD1G amendment): the instrument, its window in
      the exercise's timezone, the help contact and the tag; then what
      each evaluator answers. The page's script keeps both in step. #}
-  <p class="pc-line muted pr-rrw" data-pr-send data-tz="{{ timezone(exercise) }}" data-contact="{{ help_contact(exercise) }}">Sent to Review Robin as <strong>{{ g.label or "Untitled gate" }}</strong>{{ (": " ~ g.description.strip().rstrip(".")) if g.description.strip() }}. Open {{ window or "when its stage's dates are set" }} ({{ timezone(exercise) }}); help contact {{ help_contact(exercise) }}; tagged <code>applydesk</code>.</p>
+  {% set desc = g.description.strip().rstrip(".").strip() %}
+  {# Fixed with the gate once its session opens: the stage's dates may
+     still be edited, but what was sent stays as sent. #}
+  <p class="pc-line muted pr-rrw" data-pr-send data-tz="{{ timezone(exercise) }}" data-contact="{{ help_contact(exercise) }}"{% if sent %} data-fixed{% endif %}>Review Robin receives <strong>{{ g.label.strip() or "Untitled gate" }}</strong>{{ (": " ~ desc) if desc }}, open {{ window or "when its stage's dates are set" }} ({{ timezone(exercise) }}); help contact {{ help_contact(exercise) }}; tagged <code>applydesk</code>.</p>
   <p class="pc-line muted pr-rrw" data-pr-rrw{% if not fs %} hidden{% endif %}>For Review Robin, each evaluator answers: {% for f in fs %}<strong>{{ f.label or "Untitled field" }}</strong> ({{ field_text(f.field) }}{{ ", required" if f.required }}{{ ("; help: “" ~ f.help ~ "”") if f.help }}){{ "; " if not loop.last }}{% endfor %}.</p>
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-gate">Remove the gate</button></div>
   </div>
@@ -336,7 +339,7 @@
     {# An item alone in its stage opens; with others, each shows its head. #}
     {% set lone = ((1 if st.form else 0) + st.columns | length) == 1 %}
     {% if st.form %}{{ form_item(open=lone) }}{% endif %}
-    {% for g in gates %}{{ gate_item(plan, g, rule_text, open=lone, window=dates | select | join(" to ")) }}{% endfor %}
+    {% for g in gates %}{{ gate_item(plan, g, rule_text, open=lone, window=dates | reject("in", ("", "Dates not set")) | join(" to ")) }}{% endfor %}
     {% for o in outs %}{{ outcome_item(plan, o, rule_text, open=lone) }}{% endfor %}
     <p class="pc-line muted pc-empty">Nothing in this stage yet: add the form, a gate or an outcome.</p>
     <div class="pc-adds">
