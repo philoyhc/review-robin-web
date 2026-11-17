@@ -890,10 +890,6 @@ RESULT_CASES: list[tuple[stages.GateResult, str]] = [
         "String, up to 500 characters · All, joined → String, for reading",
     ),
     (
-        R("r1", "Score", F("decimal", "0", "10", "0.5"), "entered"),
-        "Decimal 0 to 10, step 0.5 · Entered here → Decimal 0 to 10, step 0.5",
-    ),
-    (
         R("r1", "X", F("list"), "mode"),
         "List, no options yet · Most common → List, no options yet",
     ),
@@ -924,13 +920,14 @@ def test_a_gate_item_lists_its_results_and_what_review_robin_asks(client: TestCl
         "For Review Robin, each evaluator answers: <strong>Rating</strong> (Integer 1 to 5,"
         " step 1); <strong>Comments</strong> (String, up to 2000 characters)."
     ) in g1
-    # A gate whose results are entered here asks Review Robin nothing.
+    # Every gate runs in Review Robin (ruling 28): the draft's too, its
+    # derivations a decimal field's, none entered here.
     draft = client.get(f"/applydesk/operator/exercises/{DRAFT}/process").text
-    assert "Decimal 0 to 10, step 0.5 · Entered here" in draft
-    assert '<p class="pc-line muted pr-rrw" data-pr-rrw hidden>' in draft
-    # Its derivation menu offers Entered here alone.
+    assert "Decimal 0 to 10, step 0.5 · Mean → Decimal 0 to 10" in draft
+    assert "For Review Robin, each evaluator answers: <strong>Score</strong>" in draft
     at = draft.index('data-r="derive"')
-    assert draft[at : draft.index("</select>", at)].count("<option") == 1
+    menu = draft[at : draft.index("</select>", at)]
+    assert menu.count("<option") == len(stages.ALLOWED["decimal"]) and "Entered here" not in menu
 
 
 # --- Segment AD1F rung 5d: rules and weights read a named result (ruling 21) ---
@@ -958,7 +955,7 @@ def test_what_a_rule_may_do_with_a_result() -> None:
     assert stages.comparable(R("r1", "x", F("list", options="A"), "mode")) == "list"
     assert stages.comparable(R("r1", "x", F("string"), "count")) == "number"
     assert stages.comparable(R("r1", "x", F("string"), "join")) == ""
-    assert stages.comparable(R("r1", "x", F("decimal"), "entered")) == "number"
+    assert stages.comparable(R("r1", "x", F("decimal"), "min")) == "number"
 
 
 def test_a_combined_result_reads_named_results_and_skips_a_0_weight() -> None:
@@ -1014,6 +1011,58 @@ def test_count_is_any_field_s() -> None:
     said = stages.GateResult("r2", "Comments", stages.Field("string", max="2000"), "count")
     assert stages.result_type(said) == "Integer, from 0"
     assert stages.comparable(said) == "number"
+
+
+def test_a_gate_card_follows_ruling_28(client: TestClient) -> None:
+    """Ruling 28 (AD1G rung 4c, scaffold): a gate's own fields and its
+    evaluators sit in two cards, shut, each saying what it holds; Type is
+    fixed at Review Robin; then Response fields, then Results; no Runs as."""
+    text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
+    gate = text[text.index('data-item="gate"') : text.index('data-pc-act="remove-gate"')]
+    assert re.findall(r'<details class="gsec" data-gsec="(\w+)"', gate) == ["gate", "evaluators"]
+    assert '<details class="gsec" data-gsec="gate" open' not in gate  # shut on load
+    sums = re.findall(r"data-gsec-sum>([^<]*)<", gate)
+    assert sums[0].startswith("Review Robin session · Enters: Status is Submitted")
+    assert sums[1] == "Nominated 0–1 · Panel A 1–2 · Total 2 · Automatic"
+    assert '<select class="fc-in" data-pc="type" disabled' in gate
+    assert ">Review Robin session</option>" in gate
+    assert "Two reviewers read each dossier" in gate  # its description
+    assert 'data-pc="confidential"' in gate and ">Confidential<" in gate
+    order = [
+        gate.index(m)
+        for m in ('data-gsec="gate"', 'data-gsec="evaluators"', ">Response fields<", ">Results<")
+    ]
+    assert order == sorted(order)
+    assert re.findall(r'data-rf="(\w+)"', gate) == ["rating", "comments"]
+    assert "Integer 1 to 5, step 1 · Required · Help: 1 weak, 5 outstanding" in gate
+    assert "Runs as" not in text and "Entered here" not in text
+    head = gate[gate.index("data-ps-headrow>") :]
+    head = head[: head.index("</div>")]
+    assert re.findall(r"<span>([^<]*)</span>", head) == [
+        "Order",
+        "Kind",
+        "Source",
+        "Min",
+        "Max",
+        "",
+    ]
+
+
+def test_a_confidential_gate_says_so_when_shut(client: TestClient) -> None:
+    from applydesk import stages
+
+    gate = stages.Gate("g9", 9, "x", "RRW", confidential=True)
+    plan = stages.plan_of(EX)
+    assert (
+        stages.gate_summary(plan, gate)
+        == "Review Robin session · Confidential · Entry decided by hand"
+    )
+    fields = stages.fields_of(
+        stages.Gate(
+            "g9", 9, "x", "RRW", (stages.GateResult("r1", "Score", stages.Field(), "mean"),)
+        )
+    )
+    assert [(f.key, f.label) for f in fields] == [("f1", "Score")]
 
 
 def test_a_gate_lists_its_evaluator_sources(client: TestClient) -> None:

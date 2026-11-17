@@ -222,6 +222,14 @@ def _item(page: Page, key: str) -> Locator:
 def _open_item(item: Locator) -> None:
     if item.get_attribute("data-open") is None:
         item.locator("[data-pi-toggle]").click()
+    _open_cards(item)
+
+
+def _open_cards(item: Locator) -> None:
+    """A gate's Gate and Evaluators cards, open: shut on load (ruling 28)."""
+    cards = item.locator("details.gsec:not([open]) > summary")
+    while cards.count():
+        cards.first.click()
 
 
 def _open_all(card: Locator) -> None:
@@ -589,6 +597,7 @@ def test_items_open_and_shut_their_heads_always_named(page: Page) -> None:
     toggle.click()
     assert g1.get_attribute("data-open") == ""
     assert toggle.get_attribute("aria-label") == "Collapse Gate 1"
+    _open_cards(g1)
     g1.locator('[data-pc="item-name"]').fill("Peer read")
     assert g1.locator("[data-pi-name]").text_content() == "Peer read"
     toggle.click()
@@ -625,6 +634,7 @@ def test_a_gate_item_makes_and_picks_its_panel(page: Page) -> None:
     _open(selection)
     gate = selection.locator('.pc-item[data-item="gate"]')
     assert gate.get_attribute("data-open") == ""  # alone in its stage
+    _open_cards(gate)
     issues = page.locator("[data-pc-issues]")
     assert "Gate 1 (Placement interview) has no evaluators." in issues.inner_text()
     assert page.locator("[data-o-panel]").text_content() == "No evaluators"
@@ -847,11 +857,11 @@ def test_an_item_left_alone_opens(page: Page) -> None:
 DRAFT_PAGE = PAGE.replace("wa9juxbc2t", "c4xh2ndv6s")
 
 
-def _draft_gate(page: Page, via: str = "RRW") -> Locator:
+def _draft_gate(page: Page) -> Locator:
     page.goto(DRAFT_PAGE)
     _open(_cards(page).nth(1))
     gate = page.locator('.pc-item[data-item="gate"]')
-    gate.locator('[data-pc="via"]').select_option(via)
+    _open_cards(gate)
     return gate
 
 
@@ -919,20 +929,19 @@ def test_results_are_added_to_three_and_removed(page: Page) -> None:
     assert add.is_enabled()
 
 
-def test_runs_as_switches_every_result_s_derivation(page: Page) -> None:
-    gate = _draft_gate(page, "entered")
+def test_every_gate_derives_its_results_in_review_robin(page: Page) -> None:
+    """Ruling 28 retires Runs as and Entered here: a gate's results are
+    derived, at least one response each, and Review Robin asks for them."""
+    gate = _draft_gate(page)
+    assert gate.locator('[data-pc="via"]').count() == 0
     row = _result(gate, 0)
-    assert row.locator('[data-r="derive"] option').all_text_contents() == ["Entered here"]
-    assert not row.locator('[data-r-g="atleast"]').is_visible()
-    assert not gate.locator("[data-pr-rrw]").is_visible()
-    gate.locator('[data-pc="via"]').select_option("RRW")
-    assert row.locator('[data-r="derive"]').input_value() == "mean"
+    options = row.locator('[data-r="derive"] option').all_text_contents()
+    assert "Entered here" not in options and options[0] == "Mean"
+    assert row.locator('[data-r-g="atleast"]').is_visible()
     assert row.locator("[data-pr-sum]").text_content() == (
         "Decimal 0 to 10, step 0.5 · Mean → Decimal 0 to 10"
     )
     assert gate.locator("[data-pr-rrw]").is_visible()
-    gate.locator('[data-pc="via"]').select_option("entered")
-    assert row.locator('[data-r="derive"]').input_value() == "entered"
 
 
 def test_a_sent_gate_keeps_its_results(page: Page) -> None:
@@ -940,7 +949,7 @@ def test_a_sent_gate_keeps_its_results(page: Page) -> None:
     g3 = _item(page, "g3")
     assert g3.locator('[data-pr-act="add"]').is_disabled()
     assert g3.locator("[data-pr-ed]").first.evaluate("e => e.disabled")
-    assert g3.locator('[data-pc="via"]').is_disabled()
+    assert g3.locator('[data-pc="description"]').is_disabled()
     assert _line(_item(page, "o2")).startswith("Score at Interview ≥ 4.0")
 
 
@@ -950,8 +959,6 @@ def test_the_script_s_result_summaries_match_the_server_s(page: Page) -> None:
     gate = _draft_gate(page)
     row = _result(gate, 0)
     for r, expected in RESULT_CASES:
-        if r.derive == "entered":
-            continue  # a gate run here: the test above
         f = r.field
         row.locator('[data-r="type"]').select_option(f.type)
         if f.type in ("integer", "decimal"):
@@ -978,7 +985,8 @@ def test_a_replica_of_a_sent_stage_s_results_are_its_own_to_set(page: Page) -> N
     _open(review)
     review.locator('[data-fc-act="replicate"]').click()
     gate = _cards(page).nth(2).locator('.pc-item[data-item="gate"]').first
-    assert gate.locator('[data-pc="via"]').is_enabled()
+    assert gate.locator('[data-pc="description"]').is_enabled()
+    assert gate.locator('[data-pc="confidential"]').is_enabled()
     assert gate.locator('[data-pr-act="add"]').is_enabled()
     assert not gate.locator("[data-pr-ed]").first.evaluate("e => e.disabled")
 
@@ -1056,3 +1064,37 @@ def test_a_new_gate_s_first_result_is_numbered(page: Page) -> None:
     review.locator('[data-pc-act="gate"]').click()
     gate = review.locator('.pc-item[data-item="gate"]').nth(2)
     assert gate.locator("[data-pr-n]").all_text_contents() == ["1"]
+
+
+# --- Segment AD1G rung 4c: the gate card (ruling 28) ---
+
+
+def test_a_gate_s_cards_start_shut_and_say_what_they_hold(page: Page) -> None:
+    page.goto(PAGE)
+    g1 = page.locator('.pc-item[data-key="g1"]')
+    _open(g1.locator("xpath=ancestor::article[1]"))
+    if g1.get_attribute("data-open") is None:
+        g1.locator("[data-pi-toggle]").click()
+    cards = g1.locator("details.gsec")
+    assert cards.evaluate_all("els => els.map(e => e.open)") == [False, False]
+    assert g1.locator('[data-gsec="evaluators"] [data-gsec-sum]').is_visible()
+    assert not g1.locator('[data-pc="item-name"]').is_visible()
+    g1.locator('[data-gsec="gate"] > summary').click()
+    assert g1.locator('[data-pc="item-name"]').is_visible()
+    assert not g1.locator('[data-gsec="gate"] [data-gsec-sum]').is_visible()
+    # Response fields and Results stand outside the cards, always shown.
+    assert g1.locator("[data-rf]").count() == 2 and g1.locator("[data-result]").count() == 2
+
+
+def test_a_new_gate_and_an_outline_jump_open_the_gate_card(page: Page) -> None:
+    page.goto(PAGE)
+    review = _cards(page).nth(1)
+    _open(review)
+    review.locator('[data-pc-act="gate"]').click()
+    new = review.locator('.pc-item[data-item="gate"]').nth(2)
+    assert new.locator('[data-gsec="gate"]').evaluate("e => e.open")
+    assert new.locator('[data-pc="item-name"]').evaluate("e => e === document.activeElement")
+    page.locator("[data-pc-outline] .fb-o-item", has_text="Gate 4: Interview").click()
+    g3 = page.locator('.pc-item[data-key="g3"]')
+    assert g3.locator('[data-gsec="gate"]').evaluate("e => e.open")
+    assert g3.locator('[data-pc="item-name"]').evaluate("e => e === document.activeElement")

@@ -289,6 +289,9 @@
     if (item) itemOpen(item, true);
     (item || card).scrollIntoView({ block: item ? "center" : "start" });
     var f = item ? item.querySelector('[data-pc="item-name"]') || item.querySelector("[data-pi-toggle]") : null;
+    // A gate's name sits in its Gate card (ruling 28), shut until opened.
+    var shut = f && f.closest("details:not([open])");
+    if (shut) shut.open = true;
     (f || card.querySelector("[data-fc-toggle]")).focus({ preventScroll: true });
   }
   function el(tag, cls, text) {
@@ -710,7 +713,7 @@
         var srcBox = item.querySelector("[data-pc-sources]");
         if (srcBox) {
           srcBox.removeAttribute("data-sent");
-          item.querySelectorAll("[data-pc-sources] [data-ps], [data-pc-sources] [data-ps-act], [data-ps-mode] [data-mode]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
+          item.querySelectorAll("[data-pc-sources] [data-ps], [data-pc-sources] [data-ps-act], [data-ps-mode] [data-mode], [data-pc=\"description\"], [data-pc=\"confidential\"]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
           drawSources(item);
         }
         // Its results, how it runs and + Result are its own to set too.
@@ -821,6 +824,9 @@
         anchor.before(added);
         if (kind === "gate") drawResults(added);  // its first result, numbered
         changed();
+        // A new gate opens its Gate card, so its name can be typed at once.
+        var own = added.querySelector('details[data-gsec="gate"]');
+        if (own) own.open = true;
         added.querySelector('[data-pc="item-name"]').focus();
       } else if (p.dataset.pcAct === "rule") {
         var item = p.closest(".pc-item"), ed = item.querySelector("[data-rule-ed]"), open = ed.hidden;
@@ -877,7 +883,7 @@
     return (r.type === "integer" ? "Integer" : "Decimal") + (parts.length ? " " + parts.join(", ") : "");
   }
   function resultType(r) {
-    if (r.derive === "entered" || r.derive === "min" || r.derive === "max" || r.derive === "mode") return fieldText(r);
+    if (r.derive === "min" || r.derive === "max" || r.derive === "mode") return fieldText(r);
     if (r.derive === "mean" || r.derive === "median") { var b = span(r.min, r.max); return b ? "Decimal " + b : "Decimal"; }
     if (r.derive === "sum") { var sb = span(r.min, r.max); return (r.type === "integer" ? "Integer" : "Decimal") + (sb ? ", n × " + sb : ""); }
     if (r.derive === "count") return "Integer, from 0";
@@ -885,7 +891,6 @@
     return "String, for reading";
   }
   function derivationText(r) {
-    if (r.derive === "entered") return "Entered here";
     var label = r.derive === "share" ? "Share choosing " + (r.value || "(no option)") : (DLABEL[r.derive] || r.derive);
     return r.atLeast > 1 ? label + ", from " + r.atLeast + " or more" : label;
   }
@@ -898,7 +903,7 @@
     row.querySelector('[data-r-g="string"]').hidden = type !== "string";
     row.querySelector('[data-r-g="list"]').hidden = type !== "list";
     var d = row.querySelector('[data-r="derive"]'), was = d.value;
-    var allowed = via === "RRW" ? DERIV.allowed[type] : ["entered"];
+    var allowed = DERIV.allowed[type];
     d.textContent = "";
     allowed.forEach(function (k) { var o = el("option", "", DLABEL[k]); o.value = k; d.appendChild(o); });
     d.value = allowed.indexOf(was) >= 0 ? was : allowed[0];
@@ -910,7 +915,6 @@
     opts(rv(row, "options")).forEach(function (o) { var e = el("option", "", o); e.value = o; v.appendChild(e); });
     if (opts(rv(row, "options")).indexOf(row.dataset.share) >= 0) v.value = row.dataset.share;
     row.querySelector('[data-r-g="share"]').hidden = d.value !== "share";
-    row.querySelector('[data-r-g="atleast"]').hidden = d.value === "entered";
     var r = readResult(row);
     row.dataset.name = r.name;
     row.querySelector("[data-pr-name]").textContent = r.name || "Untitled result";

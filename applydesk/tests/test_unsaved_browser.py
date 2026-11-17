@@ -77,6 +77,8 @@ def test_what_is_not_a_change_leaves_no_mark(page: Page) -> None:
     assert not mark.is_visible()
     page.goto(PROCESS.replace("wa9juxbc2t", "c4xh2ndv6s"))  # a draft: its gate unsent
     page.locator("#pc-cards > .pc").nth(1).locator("[data-fc-toggle]").first.click()
+    page.locator('details[data-gsec="gate"] > summary').first.click()  # opening a card is no change
+    assert not mark.is_visible()
     rule = page.locator('[data-pc-act="rule"]:visible').first
     rule.click()
     assert not mark.is_visible()

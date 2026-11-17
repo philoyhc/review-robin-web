@@ -52,8 +52,8 @@ FIELD_TYPES: tuple[tuple[str, str], ...] = (
 )
 
 #: How a result is derived from its field's responses (ruling 21): (key,
-#: label), and the ones each field type allows. "entered" is a gate run
-#: as Results entered here: the value is entered, not derived.
+#: label), and the ones each field type allows. Every gate runs in Review
+#: Robin (ruling 28), so every result is derived; none is entered here.
 DERIVATIONS: tuple[tuple[str, str], ...] = (
     ("mean", "Mean"),
     ("median", "Median"),
@@ -65,7 +65,6 @@ DERIVATIONS: tuple[tuple[str, str], ...] = (
     ("join", "All, joined"),
     # Any field's, so last: each type's menu reads as ALLOWED lists it.
     ("count", "Count of responses"),
-    ("entered", "Entered here"),
 )
 ALLOWED: dict[str, tuple[str, ...]] = {
     "integer": ("mean", "median", "min", "max", "sum", "count"),
@@ -101,6 +100,22 @@ class GateResult:
     derive: str
     value: str = ""
     at_least: int = 1
+    # The response field it collates, by key (ruling 28); "" reads as the
+    # field it carries, until 4d moves the type to the field alone.
+    source: str = ""
+
+
+@dataclass(frozen=True)
+class ResponseField:
+    """What each evaluator answers in Review Robin (ruling 28): a label,
+    its type and bounds, whether it must be answered, and the help shown
+    under it. ``key`` is what Review Robin reports the answers under."""
+
+    key: str
+    label: str
+    field: Field
+    required: bool = False
+    help: str = ""
 
 
 #: The kinds of evaluator source (ruling 27): the people a candidate named
@@ -150,6 +165,10 @@ class Gate:
     sources: tuple[Source, ...] = ()
     total: Total | None = None
     mode: str = "automatic"
+    # Ruling 28: the gate card's own fields, and what evaluators answer.
+    description: str = ""
+    confidential: bool = False
+    fields: tuple[ResponseField, ...] = ()
 
     @property
     def measure(self) -> str:
@@ -239,8 +258,8 @@ _G1 = Gate(
     "Peer Review",
     "RRW",
     (
-        GateResult("r1", "Rating", _LIKERT, "mean", at_least=2),
-        GateResult("r2", "Comments", Field("string", max="2000"), "join"),
+        GateResult("r1", "Rating", _LIKERT, "mean", at_least=2, source="rating"),
+        GateResult("r2", "Comments", Field("string", max="2000"), "join", source="comments"),
     ),
     _EVERYONE,
     "panel-a",
@@ -248,6 +267,14 @@ _G1 = Gate(
     # first, Panel A topping up to two.
     (Source("nominated", "Preferred reviewer", 0, 1), Source("panel", "panel-a", 1, 2)),
     Total(2, 2),
+    description=(
+        "Two reviewers read each dossier's Shown to reviewers part and rate it,"
+        " one the applicant's preferred reviewer where they named one."
+    ),
+    fields=(
+        ResponseField("rating", "Rating", _LIKERT, True, "1 weak, 5 outstanding"),
+        ResponseField("comments", "Comments", Field("string", max="2000")),
+    ),
 )
 _G2 = Gate(
     "g2",
@@ -314,8 +341,8 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
                     "g1",
                     1,
                     "Placement interview",
-                    "",
-                    (GateResult("r1", "Score", Field("decimal", "0", "10", "0.5"), "entered"),),
+                    "RRW",
+                    (GateResult("r1", "Score", Field("decimal", "0", "10", "0.5"), "mean"),),
                 ),
             ),
         ),
@@ -545,7 +572,7 @@ def comparable(r: GateResult) -> str:
     if r.derive in ("mean", "median", "sum", "count", "share"):
         return "number"
     if r.field.type in ("integer", "decimal"):
-        return "number"  # lowest, highest or entered
+        return "number"  # lowest or highest
     return "list" if r.field.type == "list" else ""
 
 
@@ -708,8 +735,6 @@ def field_text(f: Field) -> str:
 def result_type(r: GateResult) -> str:
     """The result's type, which its derivation sets (ruling 21)."""
     f = r.field
-    if r.derive == "entered":
-        return field_text(f)
     if r.derive in ("mean", "median"):
         span = _bounds(f.min, f.max)
         return f"Decimal {span}" if span else "Decimal"
@@ -730,8 +755,6 @@ def result_type(r: GateResult) -> str:
 
 def derivation_text(r: GateResult) -> str:
     """How the responses become the result, e.g. "Mean of 2 or more"."""
-    if r.derive == "entered":
-        return "Entered here"
     label = dict(DERIVATIONS).get(r.derive, r.derive)
     if r.derive == "share":
         # As the page's menu: the first option when none is chosen.
@@ -1014,3 +1037,55 @@ def assignment_counts(rows: tuple[Assignment, ...]) -> str:
     if short:
         parts.append(f"{short} short")
     return " · ".join(parts)
+
+
+#: A gate's kinds (ruling 28): only a Review Robin run for now, the menu
+#: kept for other kinds later.
+GATE_TYPES: tuple[tuple[str, str], ...] = (("RRW", "Review Robin session"),)
+
+
+def fields_of(gate: Gate) -> tuple[ResponseField, ...]:
+    """A gate's response fields (ruling 28). A sample gate that lists none
+    reads one per result, from the field the result carries, so nothing
+    it shows changes until edited (as ``sources_of``)."""
+    if gate.fields:
+        return gate.fields
+    return tuple(ResponseField(f"f{i}", r.name, r.field) for i, r in enumerate(gate.results, 1))
+
+
+def source_field(gate: Gate, result: GateResult) -> ResponseField | None:
+    """The response field a result collates: by its ``source`` key, else
+    the field in its place (``fields_of``'s fallback)."""
+    fields = fields_of(gate)
+    if result.source:
+        return next((f for f in fields if f.key == result.source), None)
+    at = gate.results.index(result) if result in gate.results else -1
+    return fields[at] if 0 <= at < len(fields) else None
+
+
+def field_summary(f: ResponseField) -> str:
+    """A response field's row: "Integer 1 to 5, step 1 · Required · Help:
+    1 weak, 5 outstanding"."""
+    parts = [field_text(f.field), "Required" if f.required else "Optional"]
+    if f.help:
+        parts.append(f"Help: {f.help}")
+    return " · ".join(parts)
+
+
+def gate_summary(plan: Plan, gate: Gate) -> str:
+    """The shut Gate card's line (ruling 28): its type, whether it is
+    confidential, and who it enters."""
+    rule = rule_text(plan, gate)
+    parts = [dict(GATE_TYPES).get(gate.via or "RRW", "Review Robin session")]
+    if gate.confidential:
+        parts.append("Confidential")
+    parts.append(f"Enters: {rule}" if rule else "Entry decided by hand")
+    return " · ".join(parts)
+
+
+def evaluators_summary(
+    sources: tuple[Source, ...], total: Total, mode: str, pools: dict[str, sample_data.Pool]
+) -> str:
+    """The shut Evaluators card's line: the sources and Total, then the
+    mode, e.g. "Nominated 0–1 · Panel A 1–2 · Total 2 · Automatic"."""
+    return f"{sources_summary(sources, total, pools)} · {dict(MODES).get(mode, mode)}"

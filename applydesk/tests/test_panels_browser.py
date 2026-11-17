@@ -287,6 +287,7 @@ def test_a_panel_made_in_place_has_no_edit_link_yet(page: Page) -> None:
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/c4xh2ndv6s/process")
     page.locator("#pc-cards > .pc").nth(1).locator("[data-fc-toggle]").first.click()
     gate = page.locator('.pc-item[data-item="gate"]')
+    gate.locator('details[data-gsec="evaluators"] > summary').click()  # shut on load (ruling 28)
     gate.locator('[data-ps-act="add"]').click()
     link = gate.locator("[data-pick-edit]")
     gate.locator("[data-pc-panel]").select_option("__new")

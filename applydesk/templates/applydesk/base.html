@@ -509,7 +509,7 @@
     /* A gate item's panel and its members (segment AD1F, ruling 20). */
     /* A gate's evaluator sources (ruling 27, segment AD1G): rank, kind,
        which, min, max, actions; the Total row the same columns. */
-    .ps-row { display: grid; grid-template-columns: 24px 120px minmax(0, 1fr) 64px 64px 150px; gap: 8px; align-items: start; margin-top: 8px; }
+    .ps-row { display: grid; grid-template-columns: 44px 120px minmax(0, 1fr) 64px 64px 150px; gap: 8px; align-items: start; margin-top: 8px; }
     .ps-headrow { margin-top: 4px; font-size: 12px; color: var(--text-subtle); }
     .ps-headrow[hidden], [data-ps-empty][hidden] { display: none; }
     /* Each bound's own caption, shown only where the header row cannot
@@ -518,17 +518,36 @@
     .ps-n { display: flex; flex-direction: column; }
     .ps-cap { display: none; font-size: 12px; color: var(--text-subtle); }
     .ps-headrow[hidden] ~ .ps-total .ps-cap { display: block; }
-    .ps-rank { align-self: start; padding-top: 8px; font-weight: 600; text-align: center; }
+    /* One height for every control in a row, menus, bounds and buttons
+       alike, so they sit on one line (author, 2026-11-17). */
+    .ps-row { --ps-h: 38px; }
+    .ps-row select.fc-in, .ps-row input.fc-in, .ps-acts .btn { height: var(--ps-h); min-height: 0; box-sizing: border-box; margin: 0; }
+    .ps-acts .btn { display: inline-flex; align-items: center; justify-content: center; padding-top: 0; padding-bottom: 0; }
+    .ps-rank { align-self: start; line-height: var(--ps-h); font-weight: 600; text-align: center; }
+    .ps-headrow > :first-child { text-align: center; }
     /* Room under every menu for its *Edit on Panels* link, shown or not,
        so the rows keep one height and their controls line up. */
     .ps-ref { position: relative; padding-bottom: 20px; }
     .ps-ref .pick-edit { position: absolute; left: 0; bottom: 0; padding-bottom: 0; font-size: 13px; line-height: 18px; }
     .ps-acts { display: inline-flex; gap: 4px; }
-    .ps-total { border-top: 1px solid var(--border-subtle); padding-top: 8px; }
-    .ps-total .ps-kind, .ps-total .ps-bounds { padding-top: 8px; }
+    .ps-total { padding-top: 4px; }
+    .ps-total .ps-kind, .ps-total .ps-bounds { line-height: var(--ps-h); }
     .ps-acts .btn { min-width: 34px; padding: 0 8px; }
     .ps-row > .np { grid-column: 1 / -1; order: 1; }
     .ps-mode { align-items: center; gap: 8px; }
+    /* A gate's two cards (ruling 28): shut, each says what it holds. */
+    .gsec { margin-top: 12px; border: 1px solid var(--border-default); border-radius: 8px; background: var(--surface-card); }
+    .gsec > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 10px 14px; cursor: pointer; list-style: none; }
+    .gsec > summary::-webkit-details-marker { display: none; }
+    .gsec > summary::before { content: "▸"; color: var(--text-subtle); }
+    .gsec[open] > summary::before { content: "▾"; }
+    .gsec-t { font-weight: 600; }
+    .gsec-s { color: var(--text-subtle); font-size: 14px; }
+    .gsec[open] .gsec-s { display: none; }
+    .gsec-b { padding: 0 14px 14px; }
+    .gsec-b > .pc-row:first-child > .fc-l { margin-top: 0; }
+    .gsw { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; }
+    .gsw input { width: 18px; height: 18px; }
     /* A gate's or an outcome's main sections, each under a rule. */
     .pi-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
     .pi-sec > .fc-l:first-child, .pi-sec.pc-row > .fc-l { margin-top: 0; }
