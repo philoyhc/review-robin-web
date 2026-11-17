@@ -412,13 +412,15 @@ rulings after this list):
 - **Start and End** as real date-times in the exercise's **timezone**
   (stage dates are free text today, `stages.py`); Start before End. A
   sent Start activates the session once prepared, which ends re-sends.
-- **Help contact** (new; or the exercise's, see rulings).
+- **Help contact** and **timezone**: the exercise's, on Setup, each
+  defaulted from Apply Desk's operator settings, as Review Robin's are
+  (author, 2026-11-17); shown on each gate.
 - **Each result**: label (built), type and bounds or options (built),
   plus **required** and **help text** (new), and a stable **field key**
   (`r1`… today; Review Robin reports answers under it).
 - **Evaluators**: the ranked sources and their tags (AD1G). Every pair
   carries its source as the relationship tag, no comma.
-- **Confidential**: whether the gate is blind, which decides what
+- **Confidential** (per gate, author 2026-11-17): whether the gate is blind, which decides what
   Review Robin shows as each reviewee's name and key.
 
 **B. Evaluations > Gates: what the operator does with each gate**
@@ -468,13 +470,14 @@ rulings after this list):
 - Confidential identity: 23F's "Name redacted" plus the Dossier ID, or
   ruling 10's per-handoff alias key.
 - Each gate's Review Robin session name and code (unique there).
-- Where the description and help contact come from (gate or exercise).
+- ~~Where the help contact comes from~~: the exercise's (author,
+  2026-11-17); the description is the gate's.
 - What marks a gate concluded, for writing results.
 - How Apply Desk's operators line up with Review Robin's.
 - Ruling 9's and AD6's "tags decided at AD6": settled by 23F.
 
-**Order** (UI first): A as scaffolds on Process > Gates, then B on
-Evaluations > Gates; then AD2's persistence; AD5; AD6 as rungs (builders,
+**Order** (UI first): A in AD1G (its rungs 8–9, author 2026-11-17),
+then B on Evaluations > Gates as a new segment; then AD2's persistence; AD5; AD6 as rungs (builders,
 Send, re-send, status and results, Unlink); AD7's emails.
 
 ## MVP roadmap
@@ -486,7 +489,7 @@ Segments in order; each gets a plan in this folder when it starts.
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
 | **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14; removed 2026-11-15); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
-| **AD1G — Evaluators and Evaluations** | A gate's evaluators from ranked sources with a Total and a mode, on Process; Evaluations showing and working each gate's assignments (ruling 27); nothing saved | `applydesk/guide/segment_AD1G_evaluators.md` |
+| **AD1G — Evaluators and Evaluations** | A gate's evaluators from ranked sources with a Total and a mode, on Process; Evaluations showing and working each gate's assignments (ruling 27); the rest of Process > Gates for a linked Review Robin gate (layer A above, author 2026-11-17); nothing saved | `applydesk/guide/segment_AD1G_evaluators.md` |
 | AD1H onward — the other new pages | Emails and Extract data built out as working scaffolds, one segment each | After AD1G |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
