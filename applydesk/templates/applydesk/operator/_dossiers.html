@@ -527,12 +527,17 @@
         // proposed. A ranking waits (cold read on rungs 2-3) while any
         // dossier could still join it: one with no result, one whose other
         // condition here cannot be judged yet, or one an earlier branch
-        // left waiting, which may yet fall through to this one.
+        // left waiting that this branch's other conditions do not rule out
+        // (Codex on #3955), which may yet fall through to it.
         var branches = [{ when: spec.when, then: spec.then }].concat(spec.more || []);
-        var verdicts = new Map(), left = reach.slice(), held = 0;
+        var verdicts = new Map(), left = reach.slice(), held = [];
         branches.forEach(function (b) {
           var tops = b.when.filter(function (c) { return c[0] === "top"; });
-          var passing = [], rest = [], unsure = 0;
+          var others = b.when.filter(function (c) { return c[0] !== "top"; });
+          var passing = [], rest = [], unsure = [];
+          function couldJoin(r) {
+            return others.every(function (c) { return holds(r, c, key, val) !== false; });
+          }
           left.forEach(function (r) {
             var verdict = true;
             b.when.forEach(function (cond) {
@@ -540,7 +545,7 @@
               var x = holds(r, cond, key, val);
               if (x === false) verdict = false; else if (x === null) verdict = null;
             });
-            if (verdict === null) { verdicts.set(r, null); unsure += 1; }
+            if (verdict === null) { verdicts.set(r, null); unsure.push(r); }
             else if (verdict) passing.push(r);
             else rest.push(r);
           });
@@ -550,14 +555,16 @@
               var g = val(r, gateKey(t[1])), x = resultAt(cellOf(r, gateKey(t[1])), t[1]);
               return { r: r, x: (g === "Not entered" || g === null) ? -Infinity : (g === "—" || x === undefined ? NaN : parseFloat(x)) };
             });
-            // One not entered at the gate has no place in its ranking.
+            // One not entered at the gate has no place in its ranking: it
+            // goes on to the next branch, once (Codex on #3955).
             scored = scored.filter(function (s) {
               if (s.x === -Infinity) { rest.push(s.r); return false; }
               return true;
             });
-            if (held + unsure > 0 || scored.some(function (s) { return isNaN(s.x); })) {
-              scored.forEach(function (s) { verdicts.set(s.r, null); });
-              unsure += scored.length;
+            passing = scored.map(function (s) { return s.r; });
+            var waiting = unsure.length > 0 || held.some(couldJoin);
+            if (waiting || scored.some(function (s) { return isNaN(s.x); })) {
+              passing.forEach(function (r) { verdicts.set(r, null); unsure.push(r); });
               passing = [];
               return;
             }
@@ -573,7 +580,7 @@
             passing = passing.filter(function (r) { return keep.has(r); });
           });
           passing.forEach(function (r) { verdicts.set(r, b.then); });
-          held += unsure;
+          held = held.concat(unsure);
           left = rest;
         });
         left.forEach(function (r) { verdicts.set(r, spec.otherwise); });
