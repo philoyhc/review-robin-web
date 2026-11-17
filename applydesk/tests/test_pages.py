@@ -744,8 +744,13 @@ def test_pages_snap_and_clamp() -> None:
 def test_a_blank_exercise_s_details_and_evaluations_say_not_yet(client: TestClient) -> None:
     base = f"/applydesk/operator/exercises/{BLANK}"
     home = client.get(base).text
-    assert home.count('<span class="muted">Not set</span>') >= 3  # code, summary, contact
-    assert "fellowships@example.edu" not in home
+    assert home.count('<span class="muted">Not set</span>') >= 2  # code, summary
+    # The help contact and timezone start as the operator settings'
+    # defaults (AD1G amendment); the model exercise sets its own contact.
+    assert '<dd>applydesk-help@example.edu <span class="muted">· the default</span>' in home
+    assert '<dd>Asia/Singapore <span class="muted">· the default</span>' in home
+    model = client.get("/applydesk/operator/exercises/wa9juxbc2t").text
+    assert "<dd>ra-recruitment@example.edu</dd>" in model
     review = client.get(f"{base}/evaluations").text
     assert "Nothing to send: the exercise is a draft." in review
     assert "Send to Review Robin</button>" not in review
@@ -1148,8 +1153,19 @@ def test_a_gate_item_lists_its_results_and_what_review_robin_asks(client: TestCl
     # Review Robin asks the response fields, a required one saying so.
     assert (
         "For Review Robin, each evaluator answers: <strong>Score</strong> (Integer 0 to 5,"
-        " step 1, required); <strong>Comment</strong> (String, up to 2000 characters)."
+        " step 1, required; help: “0 = Don&#39;t know enough about this candidate”);"
+        " <strong>Comment</strong> (String, up to 2000 characters)."
     ) in g1
+    # What will be sent (AD1G amendment): the instrument, its stage's
+    # window in the exercise's timezone, the help contact, the tag.
+    assert (
+        "Sent to Review Robin as <strong>Peer review</strong>: Every current RA scores every"
+        " applicant, never themselves. Open 1 Oct to 6 Nov (Asia/Singapore); help contact"
+        " ra-recruitment@example.edu; tagged <code>applydesk</code>."
+    ) in g1
+    assert "Help contact <strong>ra-recruitment@example.edu</strong> · Timezone" in g1
+    # Each response field's key, read-only: what Review Robin reports under.
+    assert re.search(r'Key<input class="fc-in" data-rf-key value="\w+" readonly', g1)
     # Every gate runs in Review Robin (ruling 28): the draft's too, its
     # derivations a decimal field's, none entered here.
     draft = client.get(f"/applydesk/operator/exercises/{DRAFT}/process").text

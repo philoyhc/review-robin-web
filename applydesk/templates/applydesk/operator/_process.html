@@ -326,6 +326,7 @@
         b.addEventListener("click", function () { goTo(card, item); });
         row.appendChild(b);
         if (kind === "gate") {
+          drawSend(item, card);
           var srcs = sourcesOf(item);
           row.appendChild(document.createTextNode(" "));
           var who = el("span", "muted", srcs.length ? srcs.map(srcName).join(", ") : "No evaluators");
@@ -974,7 +975,7 @@
       changed();
       return;
     }
-    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-name"], [data-pc="values"], [data-pc="confidential"]')) changed();
+    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-name"], [data-pc="values"], [data-pc="confidential"], [data-pc="description"]')) changed();
   });
   // --- A gate's results (rulings 21, 28): up to three, each the response
   // field it collates and a derivation, which sets the result's type. As stages.field_text,
@@ -1074,8 +1075,24 @@
     order.forEach(function (k, i) {
       var f = fields[k];
       rrw.appendChild(el("strong", "", f.label || "Untitled field"));
-      rrw.appendChild(document.createTextNode(" (" + fieldText(f) + (f.required ? ", required" : "") + ")" + (i < order.length - 1 ? "; " : ".")));
+      rrw.appendChild(document.createTextNode(" (" + fieldText(f) + (f.required ? ", required" : "") + (f.help ? "; help: \u201c" + f.help + "\u201d" : "") + ")" + (i < order.length - 1 ? "; " : ".")));
     });
+  }
+  // What will be sent (AD1G amendment): the instrument's name and
+  // description, its stage's dates in the exercise's timezone, the help
+  // contact and the tag, as the server draws it.
+  function drawSend(item, card) {
+    var p = item.querySelector("[data-pr-send]");
+    if (!p) return;
+    var a = field(card, "from"), b = field(card, "to");
+    var win = [a, b].filter(Boolean).join(" to ") || "when its stage's dates are set";
+    var d = item.querySelector('[data-pc="description"]'), desc = d ? d.value.trim().replace(/\.+$/, "") : "";
+    p.textContent = "";
+    p.appendChild(document.createTextNode("Sent to Review Robin as "));
+    p.appendChild(el("strong", "", itemName(item, "Untitled gate")));
+    p.appendChild(document.createTextNode((desc ? ": " + desc : "") + ". Open " + win + " (" + p.dataset.tz + "); help contact " + p.dataset.contact + "; tagged "));
+    p.appendChild(el("code", "", "applydesk"));
+    p.appendChild(document.createTextNode("."));
   }
   // --- A gate's response fields (ruling 28): what each evaluator answers,
   // edited in place; each result names the one it collates, its hidden
@@ -1154,6 +1171,7 @@
       while (keys.indexOf("f" + n) >= 0) n += 1;
       var added = fresh("pc-new-field");
       added.dataset.rf = "f" + n;
+      added.querySelector("[data-rf-key]").value = "f" + n;
       item.querySelector("[data-rf-list]").appendChild(added);
       openField(added, true);
       drawFields(item); changed();

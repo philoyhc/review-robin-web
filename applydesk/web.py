@@ -22,6 +22,7 @@ from jinja2.runtime import Context
 from starlette.requests import HTTPConnection
 from starlette.responses import Response
 
+from applydesk import sample_data
 from applydesk.gate import is_operator
 from cordware.identity import current_identity, institution_name
 
@@ -77,6 +78,9 @@ def _add_globals(env: _HasGlobals, **values: object) -> None:
 
 
 _add_globals(templates.env, url=_url, is_here=_is_here, host_url=_host_url)
+# The exercise's help contact and timezone, read on Home and on every
+# gate's card (AD1G amendment).
+_add_globals(templates.env, help_contact=sample_data.help_contact, timezone=sample_data.timezone)
 
 APP_NAME = "Apply Desk"
 

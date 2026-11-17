@@ -1260,6 +1260,8 @@ def test_response_fields_are_added_edited_and_removed(page: Page) -> None:
     gate.locator('[data-rf-act="add"]').click()
     new = gate.locator("[data-rf]").nth(1)
     assert new.get_attribute("data-rf") == "f2"
+    assert new.locator("[data-rf-key]").input_value() == "f2"  # read-only, prescribed
+    assert new.locator("[data-rf-key]").get_attribute("readonly") is not None
     assert new.locator('[data-q="label"]').evaluate("e => e === document.activeElement")
     new.locator('[data-q="label"]').fill("Fit")
     new.locator('[data-q="type"]').select_option("list")
@@ -1271,7 +1273,7 @@ def test_response_fields_are_added_edited_and_removed(page: Page) -> None:
     )
     assert gate.locator("[data-pr-rrw]").text_content() == (
         "For Review Robin, each evaluator answers: Score (Decimal 0 to 10, step 0.5);"
-        " Fit (List: Strong, Weak, required)."
+        " Fit (List: Strong, Weak, required; help: “Fit to the programme”)."
     )
     assert page.locator("[data-unsaved]").is_visible()
     # A result chooses the field it collates; its derivations follow it.
@@ -1403,3 +1405,26 @@ def test_the_model_exercise_s_review_is_fixed_and_its_interview_open(page: Page)
     assert g3.locator("[data-pc-sent]").count() == 0
     assert g3.locator('[data-ps="mode"]').input_value() == "suggested"
     assert not g3.locator('[data-ps="mode"]').is_disabled()
+
+
+# --- AD1G rungs 8-9 (carried, author 2026-11-17): what will be sent ---
+
+
+def test_what_will_be_sent_follows_the_gate_and_its_stage(page: Page) -> None:
+    """The *Sent to Review Robin* line names the instrument, its stage's
+    window in the exercise's timezone, the help contact and the tag, and
+    follows the name, description and the stage's dates as they change."""
+    gate = _draft_gate(page)
+    send = gate.locator("[data-pr-send]")
+    gate.locator('[data-pc="item-name"]').fill("Placement chat")
+    gate.locator('[data-pc="description"]').fill("Talk about the placement.")
+    stage = gate.locator("xpath=ancestor::article[@data-kind='stage']")
+    stage.locator('[data-pc="from"]').fill("1 Mar")
+    stage.locator('[data-pc="to"]').fill("15 Mar")
+    assert send.text_content() == (
+        "Sent to Review Robin as Placement chat: Talk about the placement. Open 1 Mar to"
+        " 15 Mar (Asia/Singapore); help contact applydesk-help@example.edu; tagged applydesk."
+    )
+    stage.locator('[data-pc="to"]').fill("")
+    stage.locator('[data-pc="from"]').fill("")
+    assert "Open when its stage's dates are set (Asia/Singapore)" in (send.text_content() or "")

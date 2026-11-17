@@ -7,7 +7,10 @@
       <dt>Name</dt><dd>{{ exercise.name }}</dd>
       <dt>Exercise Code</dt><dd>{% if exercise.code %}<code>{{ exercise.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</dd>
       <dt>Summary</dt><dd>{% if exercise.summary %}{{ exercise.summary }}{% else %}<span class="muted">Not set</span>{% endif %}</dd>
-      <dt>Contact</dt><dd>{% if exercise.code %}fellowships@example.edu{% else %}<span class="muted">Not set</span>{% endif %}</dd>
+      {# Review Robin's for every gate (AD1G amendment): the exercise's, or
+         the operator settings' default until one is set. #}
+      <dt>Help contact</dt><dd>{{ help_contact(exercise) }}{% if not exercise.help_contact %} <span class="muted">· the default</span>{% endif %}</dd>
+      <dt>Timezone</dt><dd>{{ timezone(exercise) }}{% if not exercise.timezone %} <span class="muted">· the default</span>{% endif %}</dd>
     </dl>
   </section>
   <section class="card">

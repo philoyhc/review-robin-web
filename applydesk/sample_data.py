@@ -25,6 +25,27 @@ class Exercise:
     application_stage_ends: str
     expected_outcome: str
     summary: str
+    # Review Robin's help contact and timezone for every gate it runs
+    # (AD1G amendment): the exercise's, "" taking the operator settings'
+    # defaults below, as Review Robin's sessions take its own.
+    help_contact: str = ""
+    timezone: str = ""
+
+
+#: Apply Desk's operator settings' defaults for a new exercise (a sample
+#: value until AD2 keeps the settings).
+DEFAULT_HELP_CONTACT = "applydesk-help@example.edu"
+DEFAULT_TIMEZONE = "Asia/Singapore"
+
+
+def help_contact(e: Exercise) -> str:
+    """The exercise's help contact, or the operator settings' default."""
+    return e.help_contact or DEFAULT_HELP_CONTACT
+
+
+def timezone(e: Exercise) -> str:
+    """The exercise's timezone, or the operator settings' default."""
+    return e.timezone or DEFAULT_TIMEZONE
 
 
 @dataclass(frozen=True)
@@ -107,6 +128,7 @@ EXERCISES: tuple[Exercise, ...] = (
             "Residential Assistants look after the residents of their house for"
             " the 2027/28 academic year; current RAs may apply to return."
         ),
+        help_contact="ra-recruitment@example.edu",
     ),
     Exercise(
         public_id="k7mfr3pq8z",

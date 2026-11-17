@@ -120,6 +120,9 @@
     <legend class="visually-hidden">{{ f.label or "Untitled field" }}</legend>
     <div class="pc-row">
       <label class="fc-l pc-wide">Label<input class="fc-in" data-q="label" value="{{ f.label }}" placeholder="e.g. Rating"></label>
+      {# Prescribed, never edited: what Review Robin reports the answers
+         under (AD1G amendment). #}
+      <label class="fc-l pc-narrow">Key<input class="fc-in" data-rf-key value="{{ f.key }}" readonly title="What Review Robin reports this field's answers under"></label>
       <label class="fc-l">Type<select class="fc-in" data-q="type">{% for k, l in field_types %}<option value="{{ k }}"{% if k == t.type %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
     </div>
     {# Only the type's own settings show, from the first draw (Codex). #}
@@ -166,7 +169,7 @@
 </div>
 {% endmacro %}
 
-{% macro gate_item(plan, g, rule_text, open=False) %}{# g.number 0: a new gate, numbered by the page's script #}
+{% macro gate_item(plan, g, rule_text, open=False, window="") %}{# g.number 0: a new gate, numbered by the page's script #}
 {% set gs = gate_state(exercise.public_id, g.key) if g.key else ("Not ready", "") %}
 {% set state = gs[0] %}
 {# Fixed once its session opens (ruling 29); sent and unopened, it is
@@ -194,6 +197,8 @@
       </div>
       <label class="fc-l">Description<textarea class="fc-in" rows="1" data-fit-box data-pc="description" placeholder="What evaluators do at this gate, as Review Robin shows it"{{ sent_attr(sent) }}>{{ g.description }}</textarea></label>
       <label class="gsw"><input type="checkbox" data-pc="confidential"{% if g.confidential %} checked{% endif %}{{ sent_attr(sent) }}> <span><strong>Confidential</strong> <span class="muted">· Review Robin shows each candidate as <em>Name redacted</em>, with their key</span></span></label>
+      {# Review Robin's for every gate: the exercise's, set on Home. #}
+      <p class="pc-line muted" data-pc-ex>Help contact <strong>{{ help_contact(exercise) }}</strong> · Timezone <strong>{{ timezone(exercise) }}</strong> · the exercise's, set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id) }}#details">Home</a></p>
       {{ rule_box(plan, g, rule_text, sec=False) }}
     </div>
   </details>
@@ -250,7 +255,11 @@
     <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-pr-act="add"{% if sent %} data-sent disabled title="Its session has opened: the gate keeps its results"{% elif g.results | length >= 3 %} disabled title="A gate yields three results at most"{% endif %}>+ Result</button></div>
   </div>
   {% set fs = fields_of(g) %}
-  <p class="pc-line muted pr-rrw" data-pr-rrw{% if not fs %} hidden{% endif %}>For Review Robin, each evaluator answers: {% for f in fs %}<strong>{{ f.label or "Untitled field" }}</strong> ({{ field_text(f.field) }}{{ ", required" if f.required }}){{ "; " if not loop.last }}{% endfor %}.</p>
+  {# What will be sent (AD1G amendment): the instrument, its window in
+     the exercise's timezone, the help contact and the tag; then what
+     each evaluator answers. The page's script keeps both in step. #}
+  <p class="pc-line muted pr-rrw" data-pr-send data-tz="{{ timezone(exercise) }}" data-contact="{{ help_contact(exercise) }}">Sent to Review Robin as <strong>{{ g.label or "Untitled gate" }}</strong>{{ (": " ~ g.description.strip().rstrip(".")) if g.description.strip() }}. Open {{ window or "when its stage's dates are set" }} ({{ timezone(exercise) }}); help contact {{ help_contact(exercise) }}; tagged <code>applydesk</code>.</p>
+  <p class="pc-line muted pr-rrw" data-pr-rrw{% if not fs %} hidden{% endif %}>For Review Robin, each evaluator answers: {% for f in fs %}<strong>{{ f.label or "Untitled field" }}</strong> ({{ field_text(f.field) }}{{ ", required" if f.required }}{{ ("; help: “" ~ f.help ~ "”") if f.help }}){{ "; " if not loop.last }}{% endfor %}.</p>
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-gate">Remove the gate</button></div>
   </div>
 </div>
@@ -327,7 +336,7 @@
     {# An item alone in its stage opens; with others, each shows its head. #}
     {% set lone = ((1 if st.form else 0) + st.columns | length) == 1 %}
     {% if st.form %}{{ form_item(open=lone) }}{% endif %}
-    {% for g in gates %}{{ gate_item(plan, g, rule_text, open=lone) }}{% endfor %}
+    {% for g in gates %}{{ gate_item(plan, g, rule_text, open=lone, window=dates | select | join(" to ")) }}{% endfor %}
     {% for o in outs %}{{ outcome_item(plan, o, rule_text, open=lone) }}{% endfor %}
     <p class="pc-line muted pc-empty">Nothing in this stage yet: add the form, a gate or an outcome.</p>
     <div class="pc-adds">
