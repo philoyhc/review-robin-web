@@ -104,6 +104,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         scope=stages.scope,
         submitted_rank=stages.submitted_rank,
         answers=functools.partial(sample_data.answers, exercise.public_id),
+        form_lists=sample_data.list_questions(exercise.public_id),
         rule_text=stages.rule_text,
         rule_json=stages.rule_json,
         weight_rows=stages.weight_rows,

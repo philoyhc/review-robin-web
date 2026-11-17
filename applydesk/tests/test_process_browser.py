@@ -7,6 +7,7 @@ following. Without a Chromium build the test skips, saying why;
 
 from __future__ import annotations
 
+import json
 import os
 from collections.abc import Iterator
 
@@ -278,6 +279,83 @@ def test_a_rule_is_edited_extended_and_cleared(page: Page) -> None:
     assert _line(o2) == "Combined ≥ 4.0 → Finalist, else Not a finalist"
 
 
+def test_a_rule_branches_reads_a_form_answer_and_takes_the_best_n(page: Page) -> None:
+    """Ruling 30 (segment AD1H rung 3): *+ Else if* adds a branch, tried
+    after the first; a form answer and the best N are conditions; a
+    branch removed leaves the rule as it was."""
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    o1.locator('[data-pc-act="rule"]').click()
+    o1.locator('[data-rule-part="add-branch"]').click()
+    assert _line(o1) == (
+        "Combined ≥ 4.2 → Shortlisted; else if Rating at Peer Review ≥ 4.0 → Shortlisted,"
+        " else Not shortlisted"
+    )
+    second = o1.locator('.pc-branch[data-branch="1"]')
+    second.locator(".pc-cond select").first.select_option("form")
+    answer = second.locator('select[aria-label="Answer, branch 2"]')
+    assert answer.evaluate("e => [...e.options].map(o => o.value)") == [
+        "Life Sciences",
+        "Engineering",
+        "Humanities",
+    ]
+    answer.select_option("Engineering")
+    second.locator('[data-rule-part="add"]').click()
+    second.locator(".pc-cond").nth(1).locator("select").first.select_option("top")
+    count = second.locator('.pc-cond input[aria-label="How many, branch 2"]')
+    count.fill("x")
+    assert "takes the best “x”, not a whole number" in o1.locator("[data-rule-warn]").inner_text()
+    count.fill("5")
+    second.locator('[data-rule-part="then"]').select_option("Not shortlisted")
+    assert _line(o1) == (
+        "Combined ≥ 4.2 → Shortlisted; else if Field of study is Engineering and the best 5"
+        " by Rating at Peer Review → Not shortlisted, else Not shortlisted"
+    )
+    assert not o1.locator("[data-rule-warn]").is_visible()
+    assert json.loads(o1.get_attribute("data-rule") or "null")["more"] == [
+        {
+            "when": [
+                ["form", "Field of study", "is", "Engineering"],
+                ["top", "g1.r1", "le", "5"],
+            ],
+            "then": "Not shortlisted",
+        }
+    ]
+    # A branch removed, focus goes to the branch before it.
+    o1.locator('[data-rule-part="add-branch"]').click()
+    assert o1.locator(".pc-branch").count() == 3
+    o1.locator('[aria-label="Remove branch 3"]').click()
+    assert o1.locator(".pc-branch").count() == 2
+    assert o1.locator('.pc-branch[data-branch="1"] [data-rule-part="add"]').evaluate(
+        "e => e === document.activeElement"
+    )
+    # Its last condition removed, a branch goes with it.
+    second.locator('[data-rule-part="remove"]').nth(1).click()
+    second.locator('[data-rule-part="remove"]').first.click()
+    assert _line(o1) == "Combined ≥ 4.2 → Shortlisted, else Not shortlisted"
+    assert o1.locator(".pc-branch").count() == 1
+    # A gate reads a form answer, never a ranking: it reads no results.
+    g3 = _item(page, "g3")
+    g3.locator('[data-pc-act="rule"]').click()
+    kinds = g3.locator(".pc-cond select").first.evaluate("e => [...e.options].map(o => o.value)")
+    assert "form" in kinds and "top" not in kinds
+
+
+def test_a_form_answer_the_form_no_longer_asks_is_named(page: Page) -> None:
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    rule = {
+        "when": [["form", "Year of study", "is", "2"]],
+        "then": "Shortlisted",
+        "otherwise": "Not shortlisted",
+    }
+    o1.evaluate("(e, r) => { e.dataset.rule = JSON.stringify(r); }", rule)
+    o1.locator('[data-pc="values"]').fill("Shortlisted, Not shortlisted")  # redraws
+    assert "reads “Year of study”, not a List question on the form" in (
+        o1.locator("[data-rule-warn]").inner_text()
+    )
+
+
 def test_a_rule_left_reading_a_later_outcome_is_named(page: Page) -> None:
     page.goto(PAGE)
     interview = _cards(page).nth(2)
@@ -393,6 +471,41 @@ def test_a_replica_s_rules_and_weights_read_its_own_gates(page: Page) -> None:
         f"{g[1]}.r2",
     ]
     assert not out.locator("[data-rule-warn]").is_visible()
+
+
+def test_a_replica_s_branched_rule_reads_its_own_gates(page: Page) -> None:
+    """The cold read on rungs 2-3: a replica's rule renames the gate keys
+    in every branch, a best N's included, and leaves a form answer's
+    question as it is."""
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    rule = {
+        "when": [["res", "g1.r1", "ge", "4"]],
+        "then": "Shortlisted",
+        "otherwise": "Not shortlisted",
+        "more": [
+            {
+                "when": [
+                    ["form", "Field of study", "is", "Engineering"],
+                    ["top", "g2.r1", "le", "5"],
+                ],
+                "then": "Shortlisted",
+            }
+        ],
+    }
+    o1.evaluate("(e, r) => { e.dataset.rule = JSON.stringify(r); }", rule)
+    review = _cards(page).nth(1)
+    review.locator('[data-fc-act="replicate"]').click()
+    copy = _cards(page).nth(2)
+    g = copy.locator('.pc-item[data-item="gate"]').evaluate_all(
+        "els => els.map(e => e.dataset.key)"
+    )
+    got = json.loads(copy.locator('.pc-item[data-item="outcome"]').get_attribute("data-rule") or "")
+    assert got["when"] == [["res", f"{g[0]}.r1", "ge", "4"]]
+    assert got["more"][0]["when"] == [
+        ["form", "Field of study", "is", "Engineering"],
+        ["top", f"{g[1]}.r1", "le", "5"],
+    ]
 
 
 def test_weights_say_when_their_gates_change_and_check_the_total(page: Page) -> None:

@@ -10,6 +10,7 @@
 {% set outs = plan.columns | rejectattr("via", "defined") | list %}
 {% set issues = stage_problems(plan.stages) %}
 <script type="application/json" id="pc-pools">{{ people | tojson }}</script>
+<script type="application/json" id="pc-form-lists">{{ form_lists | tojson }}</script>
 <div class="fb-split" data-process data-unsaved-root>
   <div class="fb-main">
     <p class="muted pc-intro">The exercise's timeline, stage by stage. A stage holds the application form, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Dossiers applies them.</p>
@@ -354,10 +355,26 @@
   // ruling 13's conditions joined by AND; a rule names columns by key, so
   // moving a stage keeps its meaning, and one left reading a later outcome
   // or a gate outside its scope is named on its item and in the Outline.
+  // Ruling 30 adds a form answer (either column) and the best N (an
+  // outcome's), and branches: if … then A; else if … then B; else Z.
   var KINDS = {
-    gate: [["status", "Status"], ["last", "Applicant's last submitted"], ["out", "An earlier outcome"]],
-    outcome: [["res", "A gate's result"], ["ent", "Entry at a gate"], ["comb", "Combined result"], ["out", "An earlier outcome"]]
+    gate: [["status", "Status"], ["last", "Applicant's last submitted"], ["out", "An earlier outcome"], ["form", "A form answer"]],
+    outcome: [["res", "A gate's result"], ["ent", "Entry at a gate"], ["comb", "Combined result"], ["out", "An earlier outcome"], ["form", "A form answer"], ["top", "The best N"]]
   };
+  // The form's choose-one List questions and their options, by label.
+  var FORM_LISTS = JSON.parse(document.getElementById("pc-form-lists").textContent);
+  function branchesOf(rule) {
+    return rule ? [{ when: rule.when || [], then: rule.then }].concat(rule.more || []) : [];
+  }
+  // A rule from its branches, those with no condition left dropped; none
+  // left is a column decided by hand.
+  function joinRule(branches, otherwise) {
+    var kept = branches.filter(function (b) { return b.when.length; });
+    if (!kept.length) return null;
+    var rule = { when: kept[0].when, then: kept[0].then, otherwise: otherwise };
+    if (kept.length > 1) rule.more = kept.slice(1).map(function (b) { return { when: b.when, then: b.then }; });
+    return rule;
+  }
   var SIGN = { ge: "≥", lt: "<" };
   function columns() { return Array.prototype.slice.call(list.querySelectorAll(".pc-item[data-item=gate], .pc-item[data-item=outcome]")); }
   function byKey(key) { return columns().filter(function (c) { return c.dataset.key === key; })[0] || null; }
@@ -425,23 +442,31 @@
     if (kind === "res") return resultLabel(key) + " " + (op === "is" ? "is" : SIGN[op]) + " " + value;
     if (kind === "ent") return "Entry at " + label + " is " + value;
     if (kind === "out") return label + " is " + (value || "—");
+    if (kind === "form") return (key || "Untitled question") + " is " + (value || "—");
+    if (kind === "top") return "the best " + value + " by " + resultLabel(key);
     return "Combined " + SIGN[op] + " " + value;
   }
+  // As stages.rule_text: "A → X; else if B → Y, else Z".
   function ruleText(rule) {
     if (!rule || !rule.when || !rule.when.length) return "Decided by hand";
-    return rule.when.map(condText).join(" and ") + " → " + (rule.then || "—") + ", else " + (rule.otherwise || "—");
+    return branchesOf(rule).map(function (b) {
+      return b.when.map(condText).join(" and ") + " → " + (b.then || "—");
+    }).join("; else if ") + ", else " + (rule.otherwise || "—");
   }
   function problemsOf(item, rule) {
     var found = [];
     if (!rule) return found;
     var gate = item.dataset.item === "gate";
-    rule.when.forEach(function (c) {
-      var kind = c[0], key = c[1], col = key ? byKey(kind === "res" ? gateKey(key) : key) : null;
+    var conds = [], decides = [];
+    branchesOf(rule).forEach(function (b) { conds = conds.concat(b.when); decides.push(b.then); });
+    conds.forEach(function (c) {
+      var kind = c[0], key = c[1], res = kind === "res" || kind === "top";
+      var col = key && kind !== "form" ? byKey(res ? gateKey(key) : key) : null;
       if (kind === "out") {
         if (!col) found.push("reads an outcome no longer in the process");
         else if (earlierOutcomes(item).indexOf(col) < 0) found.push("reads " + nameOf(col) + ", which comes later");
         else if (c[3] && valuesOf(col).indexOf(c[3]) < 0) found.push("reads “" + c[3] + "”, not among the values of " + nameOf(col));
-      } else if ((kind === "res" || kind === "ent") && !gate) {
+      } else if ((res || kind === "ent") && !gate) {
         if (!col) found.push("reads a gate no longer in the process");
         else if (scopeOf(item).indexOf(col) < 0) found.push("reads " + nameOf(col) + ", outside the gates before it");
       }
@@ -456,10 +481,20 @@
         else if (rk === "number" && (c[3].trim() === "" || isNaN(Number(c[3])))) found.push("compares with “" + c[3] + "”, not a number");
       }
       if (kind === "comb" && (c[3].trim() === "" || isNaN(Number(c[3])))) found.push("compares with “" + c[3] + "”, not a number");
+      if (kind === "top" && col && !gate) {
+        var trow = resultRow(key);
+        if (!trow) found.push("reads a result no longer on " + nameOf(col));
+        else if (kindOfResult(trow) !== "number") found.push("ranks by " + resultLabel(key) + ", which is not a number");
+      }
+      if (kind === "top" && !/^[1-9][0-9]*$/.test(c[3])) found.push("takes the best “" + c[3] + "”, not a whole number");
+      if (kind === "form") {
+        if (!(key in FORM_LISTS)) found.push("reads “" + key + "”, not a List question on the form");
+        else if (FORM_LISTS[key].indexOf(c[3]) < 0) found.push("reads “" + c[3] + "”, not among the options of " + key);
+      }
     });
     if (!gate) {
       var vals = valuesOf(item);
-      [rule.then, rule.otherwise].forEach(function (v) {
+      decides.concat([rule.otherwise]).forEach(function (v) {
         if (v && vals.indexOf(v) < 0) found.push("decides “" + v + "”, not among its values");
       });
     }
@@ -574,72 +609,113 @@
   }
   function keyName(key) { var c = key ? byKey(key) : null; return c ? nameOf(c) : "(removed)"; }
   function pairs(list) { return list.map(function (x) { return [x, x]; }); }
+  // A condition's row: its kind, then what the kind reads.
+  function condRow(item, cond, i, bi) {
+    var row = el("div", "pc-row pc-cond"), k = cond[0];
+    // A later branch's controls say which branch they are in.
+    function lab(text) { return bi ? text + ", branch " + (bi + 1) : text; }
+    if (i) row.appendChild(el("span", "pc-and", "and"));
+    row.appendChild(select(KINDS[item.dataset.item], k, lab("Condition " + (i + 1))));
+    var rrow = k === "res" ? resultRow(cond[1]) : null, rkind = rrow ? kindOfResult(rrow) : "number";
+    if (k === "res") {
+      row.appendChild(select(resOptions(item), cond[1], lab("Result"), resultLabel(cond[1])));
+    } else if (k === "top") {
+      row.appendChild(select(resOptions(item, "number"), cond[1], lab("Ranked by"), resultLabel(cond[1])));
+    } else if (k === "ent") {
+      row.appendChild(select(scopeOf(item).map(function (g) { return [g.dataset.key, nameOf(g)]; }), cond[1], lab("Gate"), keyName(cond[1])));
+    } else if (k === "out") {
+      row.appendChild(select(earlierOutcomes(item).map(function (o) { return [o.dataset.key, nameOf(o)]; }), cond[1], lab("Outcome"), keyName(cond[1])));
+    } else if (k === "form") {
+      row.appendChild(select(pairs(Object.keys(FORM_LISTS)), cond[1], lab("Question")));
+    }
+    if (k === "res" || k === "comb") {
+      var op = select(k === "res" && rkind === "list" ? [["is", "is"]] : [["ge", "≥"], ["lt", "<"]], cond[2], lab("Comparison"), cond[2] === "is" ? "is" : SIGN[cond[2]] || cond[2]);
+      op.classList.add("pc-op"); row.appendChild(op);
+    }
+    var value;
+    if (k === "status") value = select(pairs(["Submitted", "Draft", "Withdrawn"]), cond[3], lab("Status"));
+    else if (k === "ent") value = select(pairs(["Entered", "Not entered"]), cond[3], lab("Entry"));
+    else if (k === "out") { var o = byKey(cond[1]); value = select(pairs(o ? valuesOf(o) : []), cond[3], lab("Value")); }
+    else if (k === "res" && rkind === "list") value = select(pairs(optionsOf(rrow)), cond[3], lab("Value"));
+    else if (k === "form") value = select(pairs(FORM_LISTS[cond[1]] || []), cond[3], lab("Answer"));
+    else { value = el("input", "fc-in pc-num"); value.value = cond[3]; value.inputMode = "decimal"; value.setAttribute("aria-label", lab(k === "last" || k === "top" ? "How many" : "Threshold")); }
+    value.dataset.cond = "value";
+    row.appendChild(value);
+    var rm = el("button", "btn btn-secondary", "Remove");
+    rm.setAttribute("aria-label", "Remove condition " + (i + 1) + (bi ? " of branch " + (bi + 1) : ""));
+    rm.type = "button"; rm.dataset.rulePart = "remove"; rm.dataset.index = String(i); rm.dataset.branch = String(bi);
+    row.appendChild(rm);
+    row.dataset.index = String(i);
+    row.dataset.branch = String(bi);
+    return row;
+  }
+  function button(text, part, bi) {
+    var b = el("button", "btn btn-secondary", text);
+    b.type = "button"; b.dataset.rulePart = part;
+    if (bi !== undefined) b.dataset.branch = String(bi);
+    return b;
+  }
   function drawEditor(item) {
     var ed = item.querySelector("[data-rule-ed]"), kind = item.dataset.item;
-    var rule = ruleOf(item) || { when: [], then: "", otherwise: "" };
-    var outcomes = function () { return earlierOutcomes(item); };
+    var rule = ruleOf(item), bs = rule ? branchesOf(rule) : [{ when: [], then: "" }];
     var results = kind === "gate" ? ["Entered", "Not entered"] : valuesOf(item);
     ed.textContent = "";
-    rule.when.forEach(function (cond, i) {
-      var row = el("div", "pc-row pc-cond"), k = cond[0];
-      if (i) row.appendChild(el("span", "pc-and", "and"));
-      row.appendChild(select(KINDS[kind], k, "Condition " + (i + 1)));
-      var rrow = k === "res" ? resultRow(cond[1]) : null, rkind = rrow ? kindOfResult(rrow) : "number";
-      if (k === "res") {
-        row.appendChild(select(resOptions(item), cond[1], "Result", resultLabel(cond[1])));
-      } else if (k === "ent") {
-        row.appendChild(select(scopeOf(item).map(function (g) { return [g.dataset.key, nameOf(g)]; }), cond[1], "Gate", keyName(cond[1])));
-      } else if (k === "out") {
-        row.appendChild(select(outcomes().map(function (o) { return [o.dataset.key, nameOf(o)]; }), cond[1], "Outcome", keyName(cond[1])));
+    bs.forEach(function (b, bi) {
+      var box = el("div", "pc-branch");
+      box.dataset.branch = String(bi);
+      if (bi) {
+        var head = el("div", "pc-row pc-branch-head");
+        head.appendChild(el("span", "pc-branch-label", "Else if"));
+        var rmb = button("Remove branch", "remove-branch", bi);
+        rmb.setAttribute("aria-label", "Remove branch " + (bi + 1));
+        head.appendChild(rmb);
+        box.appendChild(head);
       }
-      if (k === "res" || k === "comb") {
-        var op = select(k === "res" && rkind === "list" ? [["is", "is"]] : [["ge", "≥"], ["lt", "<"]], cond[2], "Comparison", cond[2] === "is" ? "is" : SIGN[cond[2]] || cond[2]);
-        op.classList.add("pc-op"); row.appendChild(op);
+      b.when.forEach(function (cond, i) { box.appendChild(condRow(item, cond, i, bi)); });
+      box.appendChild(button("+ Condition", "add", bi));
+      if (rule) {
+        var lt = el("label", "fc-l", "Then"), then = select(pairs(results), b.then || results[0] || "", bi ? "Then, branch " + (bi + 1) : "Then");
+        then.dataset.rulePart = "then"; then.dataset.branch = String(bi);
+        lt.appendChild(then);
+        var row = el("div", "pc-row pc-cond-then");
+        row.appendChild(lt);
+        box.appendChild(row);
       }
-      var value;
-      if (k === "status") value = select(pairs(["Submitted", "Draft", "Withdrawn"]), cond[3], "Status");
-      else if (k === "ent") value = select(pairs(["Entered", "Not entered"]), cond[3], "Entry");
-      else if (k === "out") { var o = byKey(cond[1]); value = select(pairs(o ? valuesOf(o) : []), cond[3], "Value"); }
-      else if (k === "res" && rkind === "list") value = select(pairs(optionsOf(rrow)), cond[3], "Value");
-      else { value = el("input", "fc-in pc-num"); value.value = cond[3]; value.inputMode = "decimal"; value.setAttribute("aria-label", k === "last" ? "How many" : "Threshold"); }
-      value.dataset.cond = "value";
-      row.appendChild(value);
-      var rm = el("button", "btn btn-secondary", "Remove");
-      rm.setAttribute("aria-label", "Remove condition " + (i + 1));
-      rm.type = "button"; rm.dataset.rulePart = "remove"; rm.dataset.index = String(i);
-      row.appendChild(rm);
-      row.dataset.index = String(i);
-      ed.appendChild(row);
+      ed.appendChild(box);
     });
-    var add = el("button", "btn btn-secondary", "+ Condition");
-    add.type = "button"; add.dataset.rulePart = "add";
-    var tail = el("div", "pc-row pc-cond-then");
-    var then = select(pairs(results), rule.then || results[0] || "", "Then"), other = select(pairs(results), rule.otherwise || results[1] || results[0] || "", "Otherwise");
-    then.dataset.rulePart = "then"; other.dataset.rulePart = "otherwise";
-    var lt = el("label", "fc-l", "Then"), lo = el("label", "fc-l", "Otherwise");
-    lt.appendChild(then); lo.appendChild(other);
-    var hand = el("button", "btn btn-secondary", "Decide by hand");
-    hand.type = "button"; hand.dataset.rulePart = "clear";
-    tail.appendChild(lt); tail.appendChild(lo);
-    ed.appendChild(add);
-    if (rule.when.length) { ed.appendChild(tail); ed.appendChild(hand); }
+    if (!rule) return;
+    ed.appendChild(button("+ Else if", "add-branch"));
+    var tail = el("div", "pc-row pc-cond-then"), lo = el("label", "fc-l", "Otherwise");
+    var other = select(pairs(results), rule.otherwise || results[1] || results[0] || "", "Otherwise");
+    other.dataset.rulePart = "otherwise";
+    lo.appendChild(other); tail.appendChild(lo);
+    ed.appendChild(tail);
+    ed.appendChild(button("Decide by hand", "clear"));
   }
-  // Reads the editor back into the item's rule, row by row.
-  function readEditor(item) {
-    var ed = item.querySelector("[data-rule-ed]"), rule = ruleOf(item) || { when: [], then: "", otherwise: "" };
-    rule.when = Array.prototype.map.call(ed.querySelectorAll(".pc-cond"), function (row) {
-      var sel = row.querySelectorAll("select, input"), k = sel[0].value, i = 1, key = "", op = "is", value = "";
-      if (k === "res" || k === "ent" || k === "out") key = sel[i++] ? sel[i - 1].value : "";
-      if (k === "res" || k === "comb") op = sel[i++].value;
-      if (k === "last") op = "le";
-      value = sel[i] ? sel[i].value : "";
-      return [k, key, op, value];
+  // Reads the editor back into the item's rule, branch by branch, row
+  // by row; null when no branch has a condition.
+  function readCond(row) {
+    var sel = row.querySelectorAll("select, input"), k = sel[0].value, i = 1, key = "", op = "is";
+    if (["res", "ent", "out", "form", "top"].indexOf(k) >= 0) key = sel[i++] ? sel[i - 1].value : "";
+    if (k === "res" || k === "comb") op = sel[i++].value;
+    if (k === "last" || k === "top") op = "le";
+    return [k, key, op, sel[i] ? sel[i].value : ""];
+  }
+  function readBranches(item) {
+    var ed = item.querySelector("[data-rule-ed]"), old = branchesOf(ruleOf(item));
+    return Array.prototype.map.call(ed.querySelectorAll(".pc-branch"), function (box, bi) {
+      var t = box.querySelector('[data-rule-part="then"]');
+      return {
+        when: Array.prototype.map.call(box.querySelectorAll(".pc-cond"), readCond),
+        then: t ? t.value : (old[bi] ? old[bi].then : "")
+      };
     });
-    var then = ed.querySelector('[data-rule-part="then"]'), other = ed.querySelector('[data-rule-part="otherwise"]');
-    if (then) rule.then = then.value;
-    if (other) rule.otherwise = other.value;
-    return rule.when.length ? rule : null;
   }
+  function otherwiseOf(item) {
+    var o = item.querySelector('[data-rule-ed] [data-rule-part="otherwise"]'), r = ruleOf(item);
+    return o ? o.value : (r ? r.otherwise : "");
+  }
+  function readEditor(item) { return joinRule(readBranches(item), otherwiseOf(item)); }
   // A fresh condition of the item's first kind, filled sensibly.
   function blankCond(item) {
     if (item.dataset.item === "gate") return ["status", "", "is", "Submitted"];
@@ -657,42 +733,69 @@
     if (k === "status") return [k, "", "is", "Submitted"];
     if (k === "last") return [k, "", "le", "1"];
     if (k === "comb") return [k, "", "ge", "4.0"];
+    if (k === "form") { var q = Object.keys(FORM_LISTS)[0] || ""; return [k, q, "is", q ? (FORM_LISTS[q][0] || "") : ""]; }
+    if (k === "top") { var t = resOptions(item, "number")[0]; return [k, t ? t[0] : "", "le", "10"]; }
     if (k === "out") { var o = earlierOutcomes(item).slice(-1)[0]; return [k, o ? o.dataset.key : "", "is", o ? (valuesOf(o)[0] || "") : ""]; }
     var g = scopeOf(item)[0], r = resOptions(item)[0];
     return k === "ent" ? [k, g ? g.dataset.key : "", "is", "Entered"] : r ? resCond(r[0]) : [k, "", "ge", "4.0"];
   }
-  // Puts focus back after the editor is redrawn: the control at `n` in
-  // row `row` (-1, its last), else + Condition.
-  function focusIn(item, row, n) {
-    var ed = item.querySelector("[data-rule-ed]"), r = row === null ? null : ed.querySelectorAll(".pc-cond")[row], t = null;
+  // Puts focus back after the editor is redrawn: in branch `at.b`, the
+  // control at `n` in row `at.i` (-1, its last), else that branch's
+  // + Condition, else the first.
+  function focusIn(item, at, n) {
+    var ed = item.querySelector("[data-rule-ed]"), t = null;
+    var box = at ? ed.querySelectorAll(".pc-branch")[at.b] : null;
+    var r = box && at.i !== null ? box.querySelectorAll(".pc-cond")[at.i] : null;
     if (r) { var cs = r.querySelectorAll("select, input, button"); t = cs[n < 0 ? cs.length - 1 : n]; }
+    if (!t && box) t = box.querySelector('[data-rule-part="add"]');
     (t || ed.querySelector('[data-rule-part="add"]')).focus();
   }
   function ruleEvent(e) {
     var ed = e.target.closest("[data-rule-ed]");
     if (!ed) return false;
     var item = ed.closest(".pc-item"), part = e.target.dataset.rulePart;
-    var acts = part === "add" || part === "remove" || part === "clear";
+    var acts = ["add", "remove", "clear", "add-branch", "remove-branch"].indexOf(part) >= 0;
     // A click on a select is the operator choosing: only a button acts.
     if (e.type === "click" && !acts) return true;
-    var rule = ruleOf(item) || { when: [], then: "", otherwise: "" }, redraw = acts, at = null, n = 0;
-    if (part === "add") { rule = readEditor(item) || rule; rule.when.push(blankCond(item)); at = rule.when.length - 1; if (!rule.then) { var r = item.dataset.item === "gate" ? ["Entered", "Not entered"] : valuesOf(item); rule.then = r[0] || ""; rule.otherwise = r[1] || r[0] || ""; } }
-    else if (part === "remove") { rule = readEditor(item) || rule; at = Number(e.target.dataset.index); n = -1; rule.when.splice(at, 1); if (!rule.when.length) rule = null; }
-    else if (part === "clear") rule = null;
-    else {
-      // A row's kind, or the outcome it reads, reshapes the row: redraw it.
+    var results = item.dataset.item === "gate" ? ["Entered", "Not entered"] : valuesOf(item);
+    var bs = readBranches(item), other = otherwiseOf(item), redraw = acts, at = null, n = 0;
+    var bi = Number(e.target.dataset.branch || 0);
+    if (!ruleOf(item)) other = results[1] || results[0] || "";
+    if (part === "add") {
+      bs[bi].when.push(blankCond(item));
+      if (!bs[bi].then) bs[bi].then = results[0] || "";
+      at = { b: bi, i: bs[bi].when.length - 1 };
+    } else if (part === "remove") {
+      var i = Number(e.target.dataset.index);
+      bs[bi].when.splice(i, 1);
+      at = { b: bi, i: i }; n = -1;
+    } else if (part === "add-branch") {
+      bs.push({ when: [blankCond(item)], then: results[0] || "" });
+      at = { b: bs.length - 1, i: 0 };
+    } else if (part === "remove-branch") {
+      bs.splice(bi, 1);
+      at = { b: bi - 1, i: null };
+    } else if (part === "clear") {
+      bs = [];
+    } else {
+      // A row's kind, or what it reads, reshapes the row: redraw it.
       var row = e.target.closest(".pc-cond"), sels = row ? row.querySelectorAll("select") : [];
-      rule = readEditor(item);
-      if (row && rule) {
-        var i = Number(row.dataset.index), cs = Array.prototype.slice.call(row.querySelectorAll("select, input, button"));
-        if (e.target === sels[0]) { rule.when[i] = fixCond(item, [e.target.value]); redraw = true; }
-        else if (rule.when[i][0] === "out" && e.target === sels[1]) { var o = byKey(e.target.value); rule.when[i][3] = o ? (valuesOf(o)[0] || "") : ""; redraw = true; }
-        else if (rule.when[i][0] === "res" && e.target === sels[1]) { rule.when[i] = resCond(e.target.value, rule.when[i][3]); redraw = true; }
-        at = i; n = cs.indexOf(e.target);
+      if (row) {
+        var b = Number(row.dataset.branch), j = Number(row.dataset.index), c = bs[b].when[j];
+        var cs = Array.prototype.slice.call(row.querySelectorAll("select, input, button"));
+        if (e.target === sels[0]) { bs[b].when[j] = fixCond(item, [e.target.value]); redraw = true; }
+        else if (c[0] === "out" && e.target === sels[1]) { var o = byKey(e.target.value); c[3] = o ? (valuesOf(o)[0] || "") : ""; redraw = true; }
+        else if (c[0] === "res" && e.target === sels[1]) { bs[b].when[j] = resCond(e.target.value, c[3]); redraw = true; }
+        else if (c[0] === "form" && e.target === sels[1]) { c[3] = (FORM_LISTS[e.target.value] || [])[0] || ""; redraw = true; }
+        at = { b: b, i: j }; n = cs.indexOf(e.target);
       }
     }
+    // A branch emptied goes, and the focus with what is left of it.
+    var before = bs.length;
+    var rule = joinRule(bs, other);
+    if (rule && at && branchesOf(rule).length < before) at = { b: Math.min(at.b, branchesOf(rule).length - 1), i: null };
     setRule(item, rule);
-    if (redraw) { drawEditor(item); focusIn(item, at, n); }
+    if (redraw) { drawEditor(item); focusIn(item, rule ? at : null, n); }
     rules();
     return true;
   }
@@ -738,7 +841,10 @@
         var rule = ruleOf(item);
         // A key may name a result, "g1.r2": its gate part is renamed.
         function re(k) { var p = k.split("."); return p[0] in renamed ? [renamed[p[0]]].concat(p.slice(1)).join(".") : k; }
-        if (rule) { rule.when.forEach(function (c) { c[1] = re(c[1]); }); setRule(item, rule); }
+        if (rule) {
+          branchesOf(rule).forEach(function (b) { b.when.forEach(function (c) { if (c[0] !== "form") c[1] = re(c[1]); }); });
+          setRule(item, rule);
+        }
         item.querySelectorAll("[data-w-key]").forEach(function (i) { i.dataset.wKey = re(i.dataset.wKey); });
         var box = item.querySelector("[data-pc-weights]");
         if (box && box.dataset.keys) box.dataset.keys = box.dataset.keys.split("|").map(re).join("|");
