@@ -1,0 +1,192 @@
+{# A gate page's operations (AD1G rung 6b, ruling 27), by the gate's mode:
+   Suggested, then approved: Approve a pair, Approve all, Remove, + Pair;
+   Assigned by the operator: + Pair, Remove; Automatic: Re-run. The page
+   shows 200 of the gate's pairs and reloads to page or sort, so the
+   changes are kept in this tab (sessionStorage, by exercise and gate)
+   and drawn on every page; Discard changes puts the sample back. The
+   states, the head's counts and the load line follow every pair, not
+   only the page's (#ev-data). Nothing is saved until AD2. #}
+<script>
+(function () {
+  var DATA = JSON.parse(document.getElementById("ev-data").textContent);
+  var card = document.getElementById("ev-table-card");
+  var STORE = "applydesk-ev:" + DATA.key;
+  var said = card.querySelector("[data-ev-said]");
+  var names = {}, emailOf = {};
+  DATA.dossiers.forEach(function (d) { names[d[0]] = d[1]; emailOf[d[0]] = d[2]; });
+  var sources = {};
+  DATA.panels.forEach(function (p) { p[1].forEach(function (m) { if (!(m[1] in sources)) sources[m[1]] = [m[0], p[0]]; }); });
+
+  // The tab's changes: pairs removed and added, and those approved.
+  function blank() { return { removed: [], added: [], approved: [] }; }
+  var ch = blank();
+  try { ch = JSON.parse(sessionStorage.getItem(STORE) || "null") || blank(); } catch (e) { ch = blank(); }
+  function keep() {
+    try {
+      if (dirty()) sessionStorage.setItem(STORE, JSON.stringify(ch));
+      else sessionStorage.removeItem(STORE);
+    } catch (e) { /* a private window: the page's changes stay on it */ }
+  }
+  function dirty() { return ch.removed.length + ch.added.length + ch.approved.length > 0; }
+  function id(d, e) { return d + "|" + e; }
+
+  // Every pair as it now stands: the sample's less those removed, and
+  // those added.
+  function pairs() {
+    var out = DATA.pairs.filter(function (p) { return ch.removed.indexOf(id(p[0], p[1])) < 0; });
+    return out.concat(ch.added.map(function (a) { return [a.d, a.e, a.n, a.s]; }));
+  }
+  function count(d) { return pairs().filter(function (p) { return p[0] === d; }).length; }
+  function stateOf(d, e) {
+    var n = count(d);
+    if (DATA.mode === "assigned" && n === 0) return "Not assigned";
+    if (n < DATA.min) return "Short by " + (DATA.min - n);
+    if (DATA.mode === "suggested") return ch.approved.indexOf(id(d, e)) >= 0 ? "Approved" : "Suggested";
+    return DATA.mode === "assigned" ? "Assigned" : "Filled";
+  }
+  function tone(chip, st) {
+    chip.textContent = st;
+    chip.className = "chip chip-" + (/^Short|^Not assigned|^Removed/.test(st) ? "warn" : st === "Suggested" ? "info" : "ok");
+  }
+
+  // An added pair is a row at the top of the page, marked so.
+  function addedRow(a) {
+    var tr = document.createElement("tr");
+    tr.dataset.evRow = a.d; tr.dataset.evPair = a.e; tr.dataset.evAdded = "";
+    tr.innerHTML = "<td></td><td><span></span> <span class=\"ev-added-mark\">Added</span></td><td><span class=\"ev-src\"></span></td><td><span data-ev-state></span></td>" +
+      "<td class=\"ev-acts\"><button type=\"button\" class=\"btn btn-secondary\" data-ev-act=\"remove\"></button>" +
+      (DATA.mode === "suggested" ? " <button type=\"button\" class=\"btn btn-secondary\" data-ev-act=\"approve\">Approve</button>" : "") + "</td>";
+    tr.cells[0].textContent = names[a.d];
+    tr.cells[1].firstChild.textContent = a.n;
+    tr.cells[1].firstChild.title = a.e;
+    tr.cells[2].firstChild.textContent = a.s;
+    return tr;
+  }
+  function draw() {
+    var body = card.querySelector("tbody");
+    body.querySelectorAll("tr[data-ev-added]").forEach(function (tr) { tr.remove(); });
+    ch.added.slice().reverse().forEach(function (a) { body.insertBefore(addedRow(a), body.firstChild); });
+    body.querySelectorAll("tr[data-ev-row]").forEach(function (tr) {
+      var d = tr.dataset.evRow, e = tr.dataset.evPair, chip = tr.querySelector("[data-ev-state]");
+      var rm = tr.querySelector('[data-ev-act="remove"]'), ok = tr.querySelector('[data-ev-act="approve"]');
+      if (!e) {  // a dossier with none yet: gone once it has one
+        tr.hidden = count(d) > 0;
+        tone(chip, stateOf(d, ""));
+        return;
+      }
+      var gone = !tr.hasAttribute("data-ev-added") && ch.removed.indexOf(id(d, e)) >= 0;
+      tr.classList.toggle("ev-removed", gone);
+      tone(chip, gone ? "Removed" : stateOf(d, e));
+      var who = tr.cells[1].textContent.replace(/\s*Added$/, "").trim();
+      if (rm) {
+        rm.textContent = gone ? "Undo" : "Remove";
+        rm.setAttribute("aria-label", (gone ? "Undo removing " : "Remove ") + who + " from " + names[d]);
+      }
+      if (ok) {
+        var done = ch.approved.indexOf(id(d, e)) >= 0;
+        ok.hidden = gone;
+        ok.textContent = done ? "Approved" : "Approve";
+        ok.disabled = done;
+      }
+    });
+    // The head's counts and the load line, over every pair.
+    var short = DATA.dossiers.filter(function (dd) { var n = count(dd[0]); return n === 0 || n < DATA.min; }).length;
+    var n = DATA.dossiers.length;
+    card.closest("main, body").querySelector("[data-ev-counts]").textContent =
+      n + (n === 1 ? " dossier" : " dossiers") + " · " + (n - short) + " filled" + (short ? " · " + short + " short" : "");
+    var load = {};
+    pairs().forEach(function (p) { load[p[1]] = (load[p[1]] || 0) + 1; });
+    card.querySelectorAll("[data-ev-load]").forEach(function (line, i) {
+      var panel = DATA.panels[i];
+      if (panel) line.textContent = panel[0] + ": " + panel[1].map(function (m) { return m[0] + " " + (load[m[1]] || 0); }).join(" · ");
+    });
+    var all = card.querySelector('[data-ev-act="approve-all"]');
+    if (all) all.disabled = pairs().every(function (p) { return ch.approved.indexOf(id(p[0], p[1])) >= 0; });
+    card.querySelector("[data-ev-unsaved]").hidden = !dirty();
+    card.querySelector('[data-ev-act="discard"]').hidden = !dirty();
+    keep();
+  }
+
+  // + Pair: a dossier, then an evaluator from its panel sources who is
+  // not the candidate, not already on it, while it is under the max.
+  var box = card.querySelector("[data-ev-add]");
+  function fillEvaluators() {
+    var who = box.querySelector("[data-ev-add-who]").value, sel = box.querySelector("[data-ev-add-evaluator]");
+    var on = pairs().filter(function (p) { return p[0] === who; }).map(function (p) { return p[1]; });
+    sel.textContent = "";
+    Object.keys(sources).forEach(function (e) {
+      if (e === emailOf[who] || on.indexOf(e) >= 0) return;
+      var o = document.createElement("option");
+      o.value = e; o.textContent = sources[e][0] + " · " + sources[e][1];
+      sel.appendChild(o);
+    });
+  }
+  function openAdd(open) {
+    var btn = card.querySelector('[data-ev-act="add"]');
+    box.hidden = !open;
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+    box.querySelector("[data-ev-add-why]").textContent = "";
+    if (!open) { btn.focus(); return; }
+    var who = box.querySelector("[data-ev-add-who]");
+    if (!who.options.length) {
+      DATA.dossiers.forEach(function (d) { var o = document.createElement("option"); o.value = d[0]; o.textContent = d[1]; who.appendChild(o); });
+    }
+    fillEvaluators();
+    who.focus();
+  }
+  if (box) box.querySelector("[data-ev-add-who]").addEventListener("change", fillEvaluators);
+
+  card.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-ev-act]");
+    if (!b || b.disabled) return;
+    var act = b.dataset.evAct, tr = b.closest("tr");
+    said.textContent = "";
+    if (act === "remove") {
+      var d = tr.dataset.evRow, em = tr.dataset.evPair, k = id(d, em);
+      if (tr.hasAttribute("data-ev-added")) {
+        ch.added = ch.added.filter(function (a) { return id(a.d, a.e) !== k; });
+      } else if (ch.removed.indexOf(k) >= 0) {
+        ch.removed.splice(ch.removed.indexOf(k), 1);
+      } else {
+        ch.removed.push(k);
+      }
+      ch.approved = ch.approved.filter(function (x) { return x !== k || ch.removed.indexOf(k) < 0; });
+      draw();
+      var again = Array.prototype.find.call(card.querySelectorAll("tr[data-ev-row]"), function (r) { return r.dataset.evRow === d && r.dataset.evPair === em; });
+      (again && again.querySelector('[data-ev-act="remove"]') || card.querySelector('[data-ev-act="add"]')).focus();
+    } else if (act === "approve") {
+      ch.approved.push(id(tr.dataset.evRow, tr.dataset.evPair));
+      draw();
+    } else if (act === "approve-all") {
+      ch.approved = pairs().map(function (p) { return id(p[0], p[1]); });
+      draw();
+      said.textContent = "All " + ch.approved.length + " pairs approved.";
+    } else if (act === "rerun") {
+      ch = blank();
+      draw();
+      said.textContent = "Re-run: every dossier filled as its sources give.";
+    } else if (act === "add") {
+      openAdd(box.hidden);
+    } else if (act === "add-cancel") {
+      openAdd(false);
+    } else if (act === "add-pair") {
+      var who = box.querySelector("[data-ev-add-who]").value, ev = box.querySelector("[data-ev-add-evaluator]").value;
+      var why = box.querySelector("[data-ev-add-why]");
+      if (!ev) { why.textContent = "No one left to add from its panels."; return; }
+      if (count(who) >= DATA.max) { why.textContent = names[who] + " already has the most evaluators, " + DATA.max + "."; return; }
+      var k2 = id(who, ev);
+      if (ch.removed.indexOf(k2) >= 0) ch.removed.splice(ch.removed.indexOf(k2), 1);
+      else ch.added.push({ d: who, e: ev, n: sources[ev][0], s: sources[ev][1] });
+      draw();
+      fillEvaluators();
+      said.textContent = sources[ev][0] + " added to " + names[who] + ".";
+    } else if (act === "discard") {
+      ch = blank();
+      draw();
+      said.textContent = "Changes discarded: the pairs are the sample's again.";
+      card.querySelector('[data-ev-act="add"], [data-ev-act="approve-all"], [data-ev-act="rerun"]').focus();
+    }
+  });
+  draw();
+})();
+</script>

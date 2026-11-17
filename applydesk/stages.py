@@ -1149,6 +1149,43 @@ def sorted_pairs(
     return tuple(out)
 
 
+def page_data(
+    exercise_id: str, gate: Gate, rows: tuple[Assignment, ...], blind: bool = False
+) -> dict[str, object]:
+    """What a gate page's script needs to work its mode's operations in
+    the browser (AD1G rung 6b): the Total, every dossier and pair (not
+    only the page's), and each panel source's members, so a change shows
+    in the states, the counts and the load line whatever page is open. A
+    blind exercise sends no candidate's name or email. Nothing is saved
+    until AD2."""
+    sources, total = sources_of(exercise_id, gate)
+    panels = sample_data.panel_pools(exercise_id)
+    return {
+        "key": f"{exercise_id}:{gate.key}",
+        "mode": gate.mode,
+        "min": total.min,
+        "max": total.max,
+        "dossiers": [
+            [
+                a.application.public_id,
+                a.application.dossier_id if blind else a.application.applicant,
+                "" if blind else a.application.email.casefold(),
+            ]
+            for a in rows
+        ],
+        "pairs": [
+            [a.application.public_id, e.casefold(), n, src]
+            for a in rows
+            for n, e, src in a.evaluators
+        ],
+        "panels": [
+            [panels[s.ref]["name"], [[n, e.casefold()] for n, e in panels[s.ref]["members"]]]
+            for s in sources
+            if s.kind == "panel" and s.ref in panels
+        ],
+    }
+
+
 def assignment_state(gate: Gate, sent: bool, a: Assignment) -> str:
     """A row's state on Evaluations, by the gate's mode: *Short by n*
     when the Total's min is not met; else *Filled* (Automatic),

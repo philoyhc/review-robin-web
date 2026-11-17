@@ -543,7 +543,8 @@ def test_evaluations_shows_each_gate_s_assignments(client: TestClient) -> None:
     g3 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text
     # Ready, not sent (ruling 29): its pairs suggested, still the operator's.
     assert g3.count("data-ev-row=") == 80 and g3.count(">Suggested<") == 80
-    assert 'data-ev-act="approve-all" disabled>Approve all' in g3  # inert until AD1G 6b
+    assert 'data-ev-act="approve-all">Approve all' in g3  # the operator's (AD1G 6b)
+    assert 'id="ev-data"' in g3 and 'id="ev-data"' not in page  # a sent gate's are not
     assert 'data-ev-act="remove" aria-label="Remove ' in g3 and "Its session has opened" not in g3
 
 

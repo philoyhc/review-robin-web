@@ -3,17 +3,18 @@
    one gate may pair 30 evaluators with 100 dossiers, so each pair is a
    row (author, 2026-11-17), 200 at a time, filtered by candidate or
    evaluator; Evaluations keeps a
-   short card per gate linking here. The mode's operations are inert
-   until AD1G rung 6b. Nothing is saved. #}
+   short card per gate linking here. Its mode's operations work in the
+   browser (AD1G rung 6b), kept in this tab across its pages and sorts
+   until discarded; nothing is saved until AD2. #}
 {% set base = '/operator/exercises/' ~ exercise.public_id ~ '/evaluations' %}
 {% set here = base ~ '/gate_' ~ gate.number %}
-{% set off %} disabled{% if sent %} title="Its session has opened: its pairs are Review Robin's to change"{% endif %}{% endset %}
+{% set off %}{% if sent %} disabled title="Its session has opened: its pairs are Review Robin's to change"{% endif %}{% endset %}
 {% block title %}Gate {{ gate.number }} · {{ gate.label or "Untitled gate" }} · {{ exercise.name }}{% endblock %}
 {% block content %}
 <p class="ev-back"><a href="{{ url(base) }}">← Evaluations</a></p>
 <div class="ptitle"><h1><span class="muted">Gate {{ gate.number }}</span> {{ gate.label or "Untitled gate" }}</h1>
   <span class="ev-head"><span class="chip chip-mute" data-ev-mode>{{ mode_label }}</span> <span class="muted" data-ev-counts>{{ assignment_counts(all_rows) }}</span></span></div>
-<p class="placeholder"><strong>Placeholder.</strong> Sample data; the operations do nothing yet, and nothing here is saved (segment AD1H).</p>
+<p class="placeholder"><strong>Placeholder.</strong> Sample data; the operations work on screen and are kept in this tab across its pages, but nothing here is saved (AD1G rung 6b).</p>
 <section class="card" id="ev-table-card" data-ev-gate="{{ gate.key }}" data-mode="{{ gate.mode }}">
   {% for panel, members in spread %}<p class="muted ev-load" data-ev-load>{{ panel }}: {% for name, n in members %}{{ name }} {{ n }}{{ " · " if not loop.last }}{% endfor %}</p>{% endfor %}
   {% if not all_rows %}
@@ -22,9 +23,23 @@
   <div class="btnrow ev-ops">
     {% if gate.mode == "automatic" %}<button type="button" class="btn btn-secondary" data-ev-act="rerun"{{ off }}>Re-run</button>
     {% elif gate.mode == "suggested" %}<button type="button" class="btn btn-primary" data-ev-act="approve-all"{{ off }}>Approve all</button>{% endif %}
-    {% if gate.mode != "automatic" %}<button type="button" class="btn btn-secondary" data-ev-act="add"{{ off }}>+ Pair</button>{% endif %}
-    {% if sent %}<span class="muted">Its session has opened: its pairs are Review Robin's to change.</span>{% endif %}
+    {% if gate.mode != "automatic" %}<button type="button" class="btn btn-secondary" data-ev-act="add" aria-expanded="false" aria-controls="ev-add"{{ off }}>+ Pair</button>{% endif %}
+    {% if sent %}<span class="muted">Its session has opened: its pairs are Review Robin's to change.</span>
+    {% else %}<span class="ev-unsaved" data-ev-unsaved hidden>Unsaved changes</span>
+    <button type="button" class="btn btn-secondary" data-ev-act="discard" hidden>Discard changes</button>{% endif %}
+    <span class="muted" data-ev-said role="status"></span>
   </div>
+  {% if ev_data and gate.mode != "automatic" %}
+  {# + Pair: a dossier and an evaluator from its panel sources, within
+     the Total's max; never the candidate themself. #}
+  <div class="ev-add" id="ev-add" data-ev-add hidden>
+    <label class="fc-l">{{ "Dossier" if exercise.blind else "Candidate" }}<select class="fc-in" data-ev-add-who></select></label>
+    <label class="fc-l">Evaluator<select class="fc-in" data-ev-add-evaluator></select></label>
+    <button type="button" class="btn btn-primary" data-ev-act="add-pair">Add the pair</button>
+    <button type="button" class="btn btn-secondary" data-ev-act="add-cancel">Cancel</button>
+    <span class="ev-add-why" data-ev-add-why role="alert"></span>
+  </div>
+  {% endif %}
   {% set order_text = sort_text(order) %}
   <form class="ev-find" method="get" action="{{ url(here) }}" role="search">
     <label class="fc-l">Find a candidate or an evaluator<input class="fc-in" type="search" name="q" value="{{ q }}" data-ev-find></label>
@@ -59,7 +74,7 @@
     {% for p in rows %}
       {% set a = p.of %}
       {% set st = assignment_state(gate, sent, a) %}
-      <tr data-ev-row="{{ a.application.public_id }}"{% if p.email %} data-ev-pair="{{ p.email }}"{% endif %}>
+      <tr data-ev-row="{{ a.application.public_id }}"{% if p.email %} data-ev-pair="{{ p.email | lower }}"{% endif %}>
         <td>{% if exercise.blind %}{{ a.application.dossier_id }}{% else %}{{ a.application.applicant }}{% endif %}</td>
         <td>{% if p.email %}<span title="{{ p.email }}">{{ p.name }}</span>{% else %}<span class="muted">None yet</span>{% endif %}</td>
         <td><span class="ev-src" data-ev-source="{{ p.source }}">{{ p.source or "—" }}</span></td>
@@ -72,6 +87,8 @@
   </div>
   {% endif %}
 </section>
+{% if ev_data %}<script type="application/json" id="ev-data">{{ ev_data | tojson }}</script>
+{% include "applydesk/operator/_gate_ops_js.html" %}{% endif %}
 <script>
   // Shift-click on a column's sort adds it to the cascade (as Review
   // Robin's tables); a plain click follows the link.

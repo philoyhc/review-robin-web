@@ -578,6 +578,13 @@
     .ev-step.is-inactive { color: var(--text-subtle); }
     .ev-ranges { position: relative; }
     .ev-sortable { white-space: nowrap; }
+    .ev-unsaved { font-weight: 700; color: var(--amber); }
+    .ev-add { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 0 0 12px; padding: 10px; border: 1px dashed var(--border-default); border-radius: 6px; }
+    .ev-add .fc-l { flex: 1 1 220px; margin: 0; }
+    .ev-add-why { flex: 1 0 100%; color: var(--amber); font-size: 13px; }
+    .ev-add-why:empty { display: none; }
+    .ev-added-mark { font-size: 12px; font-weight: 700; color: var(--text-subtle); text-transform: uppercase; }
+    tr.ev-removed td:nth-child(-n+3) { text-decoration: line-through; color: var(--text-subtle); }
     .ev-sort-btn { display: inline-flex; align-items: center; justify-content: center; margin-left: 4px; padding: 0 4px; min-width: 18px; height: 18px; line-height: 1; border: 1px solid transparent; border-radius: 4px; color: var(--text-subtle); font-size: 0.85em; text-decoration: none; }
     .ev-sort-btn:hover { border-color: var(--border-default); background: var(--surface-muted); }
     .ev-sort-badge { font-variant-numeric: tabular-nums; }
