@@ -97,13 +97,39 @@
 </div>
 {% endmacro %}
 
+{# A sent gate's evaluators are fixed (ruling 24). #}
+{% macro sent_attr(sent) %}{% if sent %} disabled title="Sent: the gate keeps its evaluators"{% endif %}{% endmacro %}
+
+{# One evaluator source (ruling 27): its rank, kind, which question or
+   panel, min and max per dossier, and its moves. Both the question and
+   the panel menus are here, the kind showing one; the panel's is the
+   shared picker with its *+ New panel* box (AD1F). #}
+{% macro source_row(s, n, sent) %}
+<div class="ps-row" data-ps-row data-kind="{{ s.kind }}" data-pick-wrap>
+  <span class="ps-rank" data-ps-rank>{{ n }}</span>
+  <select class="fc-in ps-kind" data-ps="kind" aria-label="Source {{ n }}: kind"{{ sent_attr(sent) }}>{% for k, label in source_kinds %}<option value="{{ k }}"{% if k == s.kind %} selected{% endif %}{% if k == "nominated" and not nominee_questions %} disabled{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <div class="ps-ref" data-ps-for="panel"{% if s.kind != "panel" %} hidden{% endif %}>
+    {{ pick.menu(panel_pools, s.ref if s.kind == "panel" else "", 'data-pc-panel data-ps="panel"' ~ (' disabled title="Sent: the gate keeps its evaluators"' if sent else '') ~ ' aria-label="Source ' ~ n ~ ': panel"', empty="No panel yet") }}
+    {{ pick.edit(url('/operator/exercises/' ~ exercise.public_id ~ '/panels'), s.ref if s.kind == "panel" else "") }}
+  </div>
+  <div class="ps-ref" data-ps-for="nominated"{% if s.kind != "nominated" %} hidden{% endif %}>
+    <select class="fc-in" data-ps="question" aria-label="Source {{ n }}: question"{{ sent_attr(sent) }}>{% for q in nominee_questions %}<option{% if s.kind == "nominated" and q == s.ref %} selected{% endif %}>{{ q }}</option>{% endfor %}</select>
+  </div>
+  <label class="ps-n">Min<input class="fc-in" data-ps="min" value="{{ s.min }}" inputmode="numeric"{{ sent_attr(sent) }}></label>
+  <label class="ps-n">Max<input class="fc-in" data-ps="max" value="{{ s.max }}" inputmode="numeric"{{ sent_attr(sent) }}></label>
+  {{ pick.new_box() }}
+  <span class="ps-acts"><button type="button" class="btn btn-secondary" data-ps-act="up" aria-label="Move source {{ n }} up"{{ sent_attr(sent) }}>↑</button><button type="button" class="btn btn-secondary" data-ps-act="down" aria-label="Move source {{ n }} down"{{ sent_attr(sent) }}>↓</button><button type="button" class="btn btn-destructive" data-ps-act="remove" aria-label="Remove source {{ n }}"{{ sent_attr(sent) }}>×</button></span>
+</div>
+{% endmacro %}
+
 {% macro gate_item(plan, g, rule_text, open=False) %}{# g.number 0: a new gate, numbered by the page's script #}
 {% set gs = gate_state(exercise.public_id, g.key) if g.key else ("Not ready", "") %}
 {% set state = gs[0] %}
 {% set sent = state in ("Sent", "Results in") %}
-{% set pool = panel_pools.get(g.panel) if g.panel else none %}
+{% set ev = sources_of(g) %}
+{% set ev_problem = total_problem(ev[0], ev[1]) %}
 <div class="pc-item" data-item="gate" data-key="{{ g.key }}" data-rule="{{ rule_json(g) | tojson | forceescape }}"{% if open %} data-open{% endif %}>
-  {% set chips %}<span class="chip chip-{{ 'ok' if state == 'Results in' else ('info' if state in ('Sent', 'Ready') else 'warn') }}" data-pi-state>{{ state }}</span><span class="chip chip-mute" data-pi-results>{{ g.results | length }} {{ "result" if g.results | length == 1 else "results" }}</span><span class="chip {{ 'chip-mute' if pool else 'chip-warn' }}" data-pi-panel>{% if pool %}{{ pool.name }} · {{ pool.members | length }} {{ "person" if pool.members | length == 1 else "people" }}{% else %}No panel{% endif %}</span>{% endset %}
+  {% set chips %}<span class="chip chip-{{ 'ok' if state == 'Results in' else ('info' if state in ('Sent', 'Ready') else 'warn') }}" data-pi-state>{{ state }}</span><span class="chip chip-mute" data-pi-results>{{ g.results | length }} {{ "result" if g.results | length == 1 else "results" }}</span><span class="chip {{ 'chip-warn' if ev_problem else 'chip-mute' }}" data-pi-panel>{{ sources_summary(ev[0], ev[1], panel_pools) }}</span>{% endset %}
   {{ head("Gate " ~ g.number, g.label or "Untitled gate", chips, open) }}
   <div class="pi-body">
   <div class="pc-row">
@@ -112,52 +138,30 @@
   {{ rule_box(plan, g, rule_text) }}
   {# Who evaluates (ruling 27, segment AD1G): ranked sources, each giving
      a min to a max per dossier, a Total within them, and how the pairs
-     are made. Rung 3's scaffold: the panel source keeps the working panel
-     picker (ruling 20; a sent gate keeps its panel); the rest is inert
-     until rung 4 wires it. #}
-  {% set ev = sources_of(g) %}
-  {% set srcs = ev[0] or [{"kind": "panel", "ref": "", "min": "", "max": ""}] %}
+     are made. The page script ranks, adds and removes sources and checks
+     the Total; a sent gate keeps them all (ruling 24). #}
   {% set bounds = total_bounds(ev[0]) %}
-  {% set picker = namespace(placed=false) %}
-  <div class="pc-sources" data-pc-sources>
+  <div class="pc-sources" data-pc-sources{% if sent %} data-sent{% endif %}>
     <span class="fc-l">Evaluators</span>
     <div class="ps-list" data-ps-list>
-    {% for s in srcs %}
-      {% set has_picker = s.kind == "panel" and not picker.placed %}
-      <div class="ps-row{% if has_picker %} pc-evaluators{% endif %}" data-ps-row data-kind="{{ s.kind }}"{% if has_picker %} data-pick-wrap{% endif %}>
-        <span class="ps-rank" data-ps-rank>{{ loop.index }}</span>
-        <select class="fc-in ps-kind" data-ps="kind" disabled aria-label="Source {{ loop.index }}: kind">{% for k, label in source_kinds %}<option value="{{ k }}"{% if k == s.kind %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
-        {% if has_picker %}{% set picker.placed = true %}
-        <div class="ps-ref">
-          {{ pick.menu(panel_pools, g.panel, 'data-pc-panel' ~ (' disabled title="Sent: the gate keeps the panel it was sent with"' if sent else '') ~ ' aria-label="Source ' ~ loop.index ~ ': panel"', empty="No panel yet") }}
-          {{ pick.edit(url('/operator/exercises/' ~ exercise.public_id ~ '/panels'), g.panel) }}
-        </div>
-        {% else %}
-        <span class="ps-ref"><select class="fc-in" data-ps="ref" disabled aria-label="Source {{ loop.index }}: {{ 'question' if s.kind == 'nominated' else 'panel' }}"><option>{{ s.ref if s.kind == "nominated" else (panel_pools[s.ref].name if s.ref in panel_pools else s.ref) }}</option></select></span>
-        {% endif %}
-        <label class="ps-n">Min<input class="fc-in" data-ps="min" value="{{ s.min }}" inputmode="numeric" disabled></label>
-        <label class="ps-n">Max<input class="fc-in" data-ps="max" value="{{ s.max }}" inputmode="numeric" disabled></label>
-        {% if has_picker %}{{ pick.new_box() }}{% endif %}
-        <span class="ps-acts"><button type="button" class="btn btn-secondary" data-ps-act="up" disabled aria-label="Move up">↑</button><button type="button" class="btn btn-secondary" data-ps-act="down" disabled aria-label="Move down">↓</button><button type="button" class="btn btn-destructive" data-ps-act="remove" disabled aria-label="Remove the source">×</button></span>
-      </div>
-    {% endfor %}
+    {% for s in ev[0] %}{{ source_row(s, loop.index, sent) }}{% endfor %}
       <div class="ps-row ps-total" data-ps-total>
         <span class="ps-rank"></span>
         <strong class="ps-kind">Total</strong>
-        <span class="ps-ref muted" data-ps-bounds>{% if ev[0] %}within {{ bounds[0] }}–{{ bounds[1] }}{% endif %}</span>
-        <label class="ps-n">Min<input class="fc-in" data-ps="total-min" value="{{ ev[1].min if ev[0] else '' }}" inputmode="numeric" disabled></label>
-        <label class="ps-n">Max<input class="fc-in" data-ps="total-max" value="{{ ev[1].max if ev[0] else '' }}" inputmode="numeric" disabled></label>
+        <span class="ps-ref muted" data-ps-bounds>{% if ev[0] %}within {{ bounds[0] }}–{{ bounds[1] }}{% else %}No sources{% endif %}</span>
+        <label class="ps-n">Min<input class="fc-in" data-ps="total-min" value="{{ ev[1].min }}" inputmode="numeric"{{ sent_attr(sent) }}></label>
+        <label class="ps-n">Max<input class="fc-in" data-ps="total-max" value="{{ ev[1].max }}" inputmode="numeric"{{ sent_attr(sent) }}></label>
         <span class="ps-acts"></span>
       </div>
     </div>
-    <div class="pc-item-foot"><button type="button" class="btn btn-secondary" data-ps-act="add" disabled>+ Source</button></div>
+    <div class="pc-item-foot"><button type="button" class="btn btn-secondary" data-ps-act="add"{{ sent_attr(sent) }}>+ Source</button></div>
     <div class="pc-row ps-mode">
       <span class="fc-l">Assignment</span>
-      <span class="seg" role="group" aria-label="Assignment" data-ps-mode>{% for k, label in modes %}<button type="button" data-mode="{{ k }}" aria-pressed="{{ 'true' if k == g.mode else 'false' }}" disabled>{{ label }}</button>{% endfor %}</span>
+      <span class="seg" role="group" aria-label="Assignment" data-ps-mode>{% for k, label in modes %}<button type="button" data-mode="{{ k }}" aria-pressed="{{ 'true' if k == g.mode else 'false' }}"{{ sent_attr(sent) }}>{{ label }}</button>{% endfor %}</span>
     </div>
   </div>
   <ul class="gc-members" data-pc-members>
-    {% for name, email in (pool.members if pool else []) %}<li>{{ name }}{% if name != email %} <span class="muted">{{ email }}</span>{% endif %}</li>{% endfor %}
+    {% for name, email in source_members(ev[0], panel_pools) %}<li>{{ name }}{% if name != email %} <span class="muted">{{ email }}</span>{% endif %}</li>{% endfor %}
   </ul>
   {% if sent %}<p class="pc-line muted" data-pc-sent>Sent with the panel as it then stood: changes to its roster apply from the gate's next send.</p>{% endif %}
   <p class="pc-line muted">Panel sees: the dossier, the <em>Shown to reviewers</em> part{% if exercise.blind %}, redacted{% endif %}.{% if gs[1] %}<span data-pc-sent> Progress: {{ gs[1] }}.</span>{% endif %}</p>

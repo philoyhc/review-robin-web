@@ -626,27 +626,31 @@ def test_a_gate_item_makes_and_picks_its_panel(page: Page) -> None:
     gate = selection.locator('.pc-item[data-item="gate"]')
     assert gate.get_attribute("data-open") == ""  # alone in its stage
     issues = page.locator("[data-pc-issues]")
-    assert "Gate 1 (Placement interview) has no panel." in issues.inner_text()
-    assert page.locator("[data-o-panel]").text_content() == "No panel"
+    assert "Gate 1 (Placement interview) has no evaluators." in issues.inner_text()
+    assert page.locator("[data-o-panel]").text_content() == "No evaluators"
+    gate.locator('[data-ps-act="add"]').click()
+    assert "Gate 1 (Placement interview) has no panel chosen for source 1." in issues.inner_text()
+    gate.locator('[data-ps="total-min"]').fill("1")
+    gate.locator('[data-ps="total-max"]').fill("1")
     menu = gate.locator("[data-pc-panel]")
     menu.select_option("__new")
     box = gate.locator("[data-newpanel]")
     box.locator('[data-np="name"]').fill("Interview panel")
     box.locator('[data-np="members"]').fill("Daniel Koh, priya.raman@example.edu")
     box.get_by_role("button", name="Create panel").click()
-    assert gate.locator("[data-pi-panel]").text_content() == "Interview panel · 2 people"
+    assert gate.locator("[data-pi-panel]").text_content() == "Interview panel 1 · Total 1"
     members = gate.locator("[data-pc-members] li").all_inner_texts()
     assert members == ["Daniel Koh daniel.koh@example.edu", "Priya Raman priya.raman@example.edu"]
     assert page.locator("[data-o-panel]").text_content() == "Interview panel"
-    assert "has no panel" not in issues.inner_text()
-    # A replica keeps the panel its gate was given.
+    assert "Gate 1" not in issues.inner_text()
+    # A replica keeps the sources its gate was given.
     selection.locator('[data-fc-act="replicate"]').click()
     copy = _cards(page).nth(2).locator('.pc-item[data-item="gate"]')
-    assert copy.locator("[data-pi-panel]").text_content() == "Interview panel · 2 people"
+    assert copy.locator("[data-pi-panel]").text_content() == "Interview panel 1 · Total 1"
     # Back to none: the head and the Outline say so again.
     menu.select_option("")
-    assert gate.locator("[data-pi-panel]").text_content() == "No panel"
-    assert "Gate 1 (Placement interview) has no panel." in issues.inner_text()
+    assert gate.locator("[data-pi-panel]").text_content() == "No panel 1 · Total 1"
+    assert "Gate 1 (Placement interview) has no panel chosen for source 1." in issues.inner_text()
 
 
 def test_a_sent_gate_keeps_its_panel(page: Page) -> None:
@@ -655,15 +659,18 @@ def test_a_sent_gate_keeps_its_panel(page: Page) -> None:
     assert g3.locator("[data-pc-panel]").is_disabled()
     assert "Prof Ivan Petrov" in g3.locator("[data-pc-members]").inner_text()
     assert page.locator("[data-o-panel]").all_inner_texts() == [
-        "Panel A",
+        "Nominated, Panel A",
         "Panel B",
         "Interviewers",
     ]
+    # Drawing the ranks leaves a sent gate's arrows fixed.
+    g1 = _item(page, "g1")
+    assert g1.locator('[data-ps-act="down"]').first.is_disabled()
 
 
 def test_a_replica_of_a_sent_stage_is_not_sent(page: Page) -> None:
     """The cold read on 4b-4c: a copy's gates and outcome are new, so
-    their panel can be chosen and nothing reads sent or released."""
+    their sources can be changed and nothing reads sent or released."""
     page.goto(PAGE)
     review = _cards(page).nth(1)
     _open(review)
@@ -672,9 +679,98 @@ def test_a_replica_of_a_sent_stage_is_not_sent(page: Page) -> None:
     states = copy.locator("[data-pi-state]").all_text_contents()
     assert states == ["Not ready", "Not ready", "Not released"]
     menus = copy.locator("[data-pc-panel]")
-    assert [menus.nth(i).is_enabled() for i in range(2)] == [True, True]
+    assert all(menus.nth(i).is_enabled() for i in range(menus.count()))
     assert copy.locator("[data-pc-sent]").count() == 0
-    assert copy.locator("[data-pi-panel]").first.text_content() == "Panel A · 2 people"
+    assert (
+        copy.locator("[data-pi-panel]").first.text_content()
+        == "Nominated 0–1 · Panel A 1–2 · Total 2"
+    )
+
+
+# --- Segment AD1G rung 4: a gate's evaluator sources wired (ruling 27) ---
+
+
+def _peer_copy(page: Page) -> Locator:
+    """An unsent copy of the Peer Review gate: Nominated 0–1, Panel A 1–2,
+    Total 2."""
+    page.goto(PAGE)
+    review = _cards(page).nth(1)
+    _open(review)
+    review.locator('[data-fc-act="replicate"]').click()
+    gate = _cards(page).nth(2).locator('.pc-item[data-item="gate"]').first
+    _open_item(gate)
+    return gate
+
+
+def _kinds(gate: Locator) -> list[str | None]:
+    rows = gate.locator("[data-ps-row]")
+    return [rows.nth(i).get_attribute("data-kind") for i in range(rows.count())]
+
+
+def test_sources_are_ranked_and_removed(page: Page) -> None:
+    gate = _peer_copy(page)
+    assert _kinds(gate) == ["nominated", "panel"]
+    first = gate.locator("[data-ps-row]").first
+    assert first.locator('[data-ps-act="up"]').is_disabled()
+    first.locator('[data-ps-act="down"]').click()
+    assert _kinds(gate) == ["panel", "nominated"]
+    assert gate.locator("[data-ps-rank]").all_inner_texts() == ["1", "2"]
+    assert gate.locator("[data-pi-panel]").text_content() == "Panel A 1–2 · Nominated 0–1 · Total 2"
+    # At the bottom its down arrow is off, so focus moves to its up arrow.
+    moved = gate.locator("[data-ps-row]").nth(1)
+    assert moved.locator('[data-ps-act="up"]').evaluate("e => e === document.activeElement")
+    assert page.locator("[data-pc-live]").text_content() == "Source moved to 2."
+    assert page.locator("[data-unsaved]").is_visible()
+    # Removing Panel A leaves the Total's max above what is left.
+    gate.locator("[data-ps-row]").first.locator('[data-ps-act="remove"]').click()
+    assert _kinds(gate) == ["nominated"]
+    assert gate.locator("[data-ps-bounds]").text_content() == "within 0–1"
+    issues = page.locator("[data-pc-issues]")
+    assert "has its Total's max above the sources' maxes together (1)." in issues.inner_text()
+    assert "chip-warn" in (gate.locator("[data-pi-panel]").get_attribute("class") or "")
+    gate.locator('[data-ps="total-min"]').fill("1")
+    gate.locator('[data-ps="total-max"]').fill("1")
+    assert "Total" not in issues.inner_text()
+    gate.locator("[data-ps-row]").first.locator('[data-ps-act="remove"]').click()
+    assert gate.locator('[data-ps-act="add"]').evaluate("e => e === document.activeElement")
+    assert gate.locator("[data-ps-bounds]").text_content() == "No sources"
+    assert gate.locator("[data-pi-panel]").text_content() == "No evaluators"
+
+
+def test_a_source_takes_its_kind_and_its_bounds(page: Page) -> None:
+    gate = _peer_copy(page)
+    gate.locator('[data-ps-act="add"]').click()
+    added = gate.locator("[data-ps-row]").nth(2)
+    assert added.locator('[data-ps="kind"]').evaluate("e => e === document.activeElement")
+    assert added.locator("[data-ps-rank]").text_content() == "3"
+    assert added.locator('[data-ps="panel"]').is_visible()
+    assert not added.locator('[data-ps="question"]').is_visible()
+    added.locator('[data-ps="kind"]').select_option("nominated")
+    assert added.get_attribute("data-kind") == "nominated"
+    assert added.locator('[data-ps="question"]').is_visible()
+    assert not added.locator('[data-ps="panel"]').is_visible()
+    assert gate.locator("[data-ps-bounds]").text_content() == "within 2–4"
+    added.locator('[data-ps="min"]').fill("3")
+    issues = page.locator("[data-pc-issues]").inner_text()
+    assert "has source 3's min above its max." in issues
+    assert "has its Total's min below the sources' mins together (4)." in issues
+    added.locator('[data-ps="max"]').fill("x")
+    assert (
+        "needs a whole-number min and max for source 3."
+        in page.locator("[data-pc-issues]").inner_text()
+    )
+    assert (
+        gate.locator("[data-pi-panel]").text_content()
+        == "Nominated 0–1 · Panel A 1–2 · Nominated 3–? · Total 2"
+    )
+
+
+def test_the_assignment_mode_is_one_of_three(page: Page) -> None:
+    gate = _peer_copy(page)
+    mode = gate.locator("[data-ps-mode]")
+    mode.get_by_role("button", name="Suggested, then approved").click()
+    pressed = [b.get_attribute("aria-pressed") for b in mode.locator("button").all()]
+    assert pressed == ["false", "true", "false"]
 
 
 def test_an_item_left_alone_opens(page: Page) -> None:

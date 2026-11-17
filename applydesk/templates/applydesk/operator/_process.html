@@ -21,6 +21,7 @@
     <template id="pc-new-form">{{ pc.form_item(new=True, open=True) }}</template>
     <template id="pc-new-gate">{{ pc.gate_item(plan, blank_gate, rule_text, open=True) }}</template>
     <template id="pc-new-outcome">{{ pc.outcome_item(plan, blank_outcome, rule_text, open=True) }}</template>
+    <template id="pc-new-source">{{ pc.source_row(blank_source, 0, False) }}</template>
     <template id="pc-new-result">{{ pc.result_row(blank_result, "RRW") }}</template>
     <script type="application/json" id="pc-derivations">{{ {"labels": derivations, "allowed": allowed} | tojson }}</script>
   </div>
@@ -70,11 +71,121 @@
   // which adds the panels made on the page (ruling 20).
   window.applydeskPools = window.applydeskPools || JSON.parse(document.getElementById("pc-pools").textContent);
   var POOLS = window.applydeskPools;
-  function panelOf(item) {
-    var m = item.querySelector("[data-pc-panel]");
-    return m && m.value && POOLS[m.value] ? POOLS[m.value] : null;
-  }
   function cards() { return Array.prototype.slice.call(list.children); }
+  // --- A gate's evaluators (ruling 27, segment AD1G): ranked sources,
+  // each a kind, its question or panel, and a min and max per dossier; a
+  // Total held within their mins and maxes together, named on the
+  // Outline when it is not, never clamped; and how the pairs are made.
+  // As stages.sources_summary and total_problem: the two read the same.
+  function srcRows(item) { return Array.prototype.slice.call(item.querySelectorAll("[data-ps-row]")); }
+  function whole(input) { var v = input.value.trim(); return /^\d+$/.test(v) ? parseInt(v, 10) : null; }
+  function sourcesOf(item) {
+    return srcRows(item).map(function (row) {
+      var kind = row.querySelector('[data-ps="kind"]').value;
+      return {
+        kind: kind,
+        ref: row.querySelector(kind === "panel" ? '[data-ps="panel"]' : '[data-ps="question"]').value,
+        min: whole(row.querySelector('[data-ps="min"]')),
+        max: whole(row.querySelector('[data-ps="max"]'))
+      };
+    });
+  }
+  function totalOf(item) {
+    return { min: whole(item.querySelector('[data-ps="total-min"]')), max: whole(item.querySelector('[data-ps="total-max"]')) };
+  }
+  function nspan(lo, hi) { return lo === hi ? String(lo === null ? "?" : lo) : (lo === null ? "?" : lo) + "–" + (hi === null ? "?" : hi); }
+  function srcName(s) { return s.kind === "nominated" ? "Nominated" : POOLS[s.ref] ? POOLS[s.ref].name : "No panel"; }
+  function srcBounds(srcs) {
+    return srcs.reduce(function (b, s) { return [b[0] + (s.min || 0), b[1] + (s.max || 0)]; }, [0, 0]);
+  }
+  function summary(item) {
+    var srcs = sourcesOf(item), t = totalOf(item);
+    if (!srcs.length) return "No evaluators";
+    return srcs.map(function (s) { return srcName(s) + " " + nspan(s.min, s.max); }).concat(["Total " + nspan(t.min, t.max)]).join(" · ");
+  }
+  function sourceProblems(item) {
+    var srcs = sourcesOf(item), t = totalOf(item), out = [];
+    if (!srcs.length) return ["has no evaluators"];
+    srcs.forEach(function (s, i) {
+      var n = i + 1;
+      if (s.kind === "panel" && !POOLS[s.ref]) out.push("has no panel chosen for source " + n);
+      if (s.kind === "nominated" && !s.ref) out.push("has no question chosen for source " + n);
+      if (s.min === null || s.max === null) out.push("needs a whole-number min and max for source " + n);
+      else if (s.min > s.max) out.push("has source " + n + "'s min above its max");
+    });
+    if (t.min === null || t.max === null) { out.push("needs a whole-number min and max for its Total"); return out; }
+    var b = srcBounds(srcs);
+    if (t.min > t.max) out.push("has its Total's min above its max");
+    else if (t.min < b[0]) out.push("has its Total's min below the sources' mins together (" + b[0] + ")");
+    else if (t.max > b[1]) out.push("has its Total's max above the sources' maxes together (" + b[1] + ")");
+    return out;
+  }
+  // Ranks, labels, the kind's menu shown, the edges' arrows and the
+  // Total's bounds, as the sources now stand.
+  function drawSources(item) {
+    var box = item.querySelector("[data-pc-sources]"), sent = box.hasAttribute("data-sent"), rows = srcRows(item);
+    rows.forEach(function (row, i) {
+      var n = i + 1, kind = row.querySelector('[data-ps="kind"]').value;
+      row.dataset.kind = kind;
+      row.querySelector("[data-ps-rank]").textContent = String(n);
+      row.querySelectorAll("[data-ps-for]").forEach(function (f) { f.hidden = f.dataset.psFor !== kind; });
+      row.querySelector('[data-ps="kind"]').setAttribute("aria-label", "Source " + n + ": kind");
+      row.querySelector('[data-ps="panel"]').setAttribute("aria-label", "Source " + n + ": panel");
+      row.querySelector('[data-ps="question"]').setAttribute("aria-label", "Source " + n + ": question");
+      row.querySelector('[data-ps="min"]').setAttribute("aria-label", "Source " + n + ": min");
+      row.querySelector('[data-ps="max"]').setAttribute("aria-label", "Source " + n + ": max");
+      [["up", "Move source " + n + " up", i === 0], ["down", "Move source " + n + " down", i === rows.length - 1], ["remove", "Remove source " + n, false]].forEach(function (a) {
+        var b = row.querySelector('[data-ps-act="' + a[0] + '"]');
+        b.setAttribute("aria-label", a[1]);
+        if (!sent) b.disabled = a[2];
+      });
+    });
+    var b = srcBounds(sourcesOf(item));
+    item.querySelector("[data-ps-bounds]").textContent = rows.length ? "within " + b[0] + "–" + b[1] : "No sources";
+  }
+  // The members of the gate's panel sources, each once, in rank order.
+  function sourceMembers(item) {
+    var seen = {}, out = [];
+    sourcesOf(item).forEach(function (s) {
+      if (s.kind !== "panel" || !POOLS[s.ref]) return;
+      POOLS[s.ref].members.forEach(function (m) {
+        var k = m[1].toLowerCase();
+        if (!seen[k]) { seen[k] = true; out.push(m); }
+      });
+    });
+    return out;
+  }
+  function sourceEvent(e) {
+    var b = e.target.closest("[data-ps-act], [data-ps-mode] [data-mode]");
+    if (!b || b.disabled) return false;
+    var item = b.closest(".pc-item"), box = item.querySelector("[data-pc-sources]");
+    if (b.dataset.mode) {
+      box.querySelectorAll("[data-mode]").forEach(function (m) { m.setAttribute("aria-pressed", m === b ? "true" : "false"); });
+      return true;
+    }
+    var act = b.dataset.psAct, row = b.closest("[data-ps-row]");
+    if (act === "add") {
+      var added = fresh("pc-new-source");
+      item.querySelector("[data-ps-total]").before(added);
+      drawSources(item);
+      changed();
+      added.querySelector('[data-ps="kind"]').focus();
+    } else if (act === "remove") {
+      row.remove();
+      drawSources(item);
+      changed();
+      box.querySelector('[data-ps-act="add"]').focus();
+    } else {
+      var other = act === "up" ? row.previousElementSibling : row.nextElementSibling;
+      if (act === "up") other.before(row); else other.after(row);
+      drawSources(item);
+      changed();
+      // The arrow keeps focus; at an edge, now disabled, the other does.
+      (b.disabled ? row.querySelector('[data-ps-act="' + (act === "up" ? "down" : "up") + '"]') : b).focus();
+      live.textContent = "Source moved to " + row.querySelector("[data-ps-rank]").textContent + ".";
+    }
+    return true;
+  }
   function items(card, kind) { return Array.prototype.slice.call(card.querySelectorAll('.pc-item[data-item="' + kind + '"]')); }
   function field(card, f) { var i = card.querySelector('[data-pc="' + f + '"]'); return i ? i.value.trim() : ""; }
   function labelOf(card) { return field(card, "name") || "Stage " + (cards().indexOf(card) + 1); }
@@ -143,12 +254,12 @@
       var kind = item.dataset.item;
       if (kind !== "form") item.querySelector("[data-pi-name]").textContent = itemName(item, kind === "gate" ? "Untitled gate" : "Untitled outcome");
       if (kind === "gate") {
-        var pool = panelOf(item), pc = item.querySelector("[data-pi-panel]");
-        pc.textContent = pool ? pool.name + " · " + pool.members.length + (pool.members.length === 1 ? " person" : " people") : "No panel";
-        pc.className = "chip " + (pool ? "chip-mute" : "chip-warn");
+        var pc = item.querySelector("[data-pi-panel]");
+        pc.textContent = summary(item);
+        pc.className = "chip " + (sourceProblems(item).length ? "chip-warn" : "chip-mute");
         var ul = item.querySelector("[data-pc-members]");
         ul.textContent = "";
-        (pool ? pool.members : []).forEach(function (m) {
+        sourceMembers(item).forEach(function (m) {
           var li = el("li", "", m[0]);
           if (m[0] !== m[1]) { li.appendChild(document.createTextNode(" ")); li.appendChild(el("span", "muted", m[1])); }
           ul.appendChild(li);
@@ -206,9 +317,9 @@
         b.addEventListener("click", function () { goTo(card, item); });
         row.appendChild(b);
         if (kind === "gate") {
-          var pool = panelOf(item);
+          var srcs = sourcesOf(item);
           row.appendChild(document.createTextNode(" "));
-          var who = el("span", "muted", pool ? pool.name : "No panel");
+          var who = el("span", "muted", srcs.length ? srcs.map(srcName).join(", ") : "No evaluators");
           who.setAttribute("data-o-panel", "");
           row.appendChild(who);
         }
@@ -409,7 +520,7 @@
       if (btn.getAttribute("aria-expanded") !== "true") btn.textContent = rule ? "Edit the rule" : "Add a rule";
       var who = item.querySelector("[data-pc-kicker]").textContent + " (" + nameOf(item) + ") ";
       found.forEach(function (f) { all.push(who + f + "."); });
-      if (item.dataset.item === "gate" && !panelOf(item)) all.push(who + "has no panel.");
+      if (item.dataset.item === "gate") sourceProblems(item).forEach(function (f) { all.push(who + f + "."); });
       if (weighed) all.push(who + weighed + ".");
     });
     var issues = root.querySelector("[data-pc-issues]");
@@ -585,8 +696,12 @@
         st.textContent = gate ? "Not ready" : "Not released";
         st.className = "chip " + (gate ? "chip-warn" : "chip-mute");
         item.querySelectorAll("[data-pc-sent]").forEach(function (x) { x.remove(); });
-        var menu = item.querySelector("[data-pc-panel]");
-        if (menu) { menu.disabled = false; menu.removeAttribute("title"); }
+        var srcBox = item.querySelector("[data-pc-sources]");
+        if (srcBox) {
+          srcBox.removeAttribute("data-sent");
+          srcBox.querySelectorAll("[data-ps], [data-ps-act], [data-mode]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
+          drawSources(item);
+        }
         // Its results, how it runs and + Result are its own to set too.
         item.querySelectorAll("[data-pr-ed]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
         var via = item.querySelector('[data-pc="via"]');
@@ -668,7 +783,7 @@
     ruleEvent(e);
   });
   list.addEventListener("click", function (e) {
-    if (ruleEvent(e)) return;
+    if (ruleEvent(e) || sourceEvent(e)) return;
     var pt = e.target.closest("[data-pi-toggle]");
     if (pt) { var it = pt.closest(".pc-item"); itemOpen(it, !it.hasAttribute("data-open")); return; }
     var card = e.target.closest(".pc");
@@ -712,7 +827,7 @@
     if (e.target.closest("[data-fc-toggle]")) setOpen(card, !card.hasAttribute("data-open"));
   });
   list.addEventListener("input", function (e) {
-    if (e.target.matches("[data-pc-panel]")) { changed(); return; }
+    if (e.target.closest("[data-pc-sources]")) { drawSources(e.target.closest(".pc-item")); changed(); return; }
     if (e.target.closest("[data-rule-ed]")) { var item = e.target.closest(".pc-item"); setRule(item, readEditor(item)); rules(); return; }
     if (e.target.matches("[data-w-key]")) { var note = e.target.closest("[data-pc-weights]").querySelector("[data-w-note]"); if (note) note.textContent = ""; rules(); return; }
     if (e.target.matches('[data-pc="values"]')) {
@@ -863,6 +978,7 @@
   list.addEventListener("change", resultEvent, true);
   Array.prototype.forEach.call(list.querySelectorAll('.pc-item[data-item="gate"]'), drawResults);
 
+  list.querySelectorAll('.pc-item[data-item="gate"]').forEach(drawSources);
   changed();
 })();
 </script>

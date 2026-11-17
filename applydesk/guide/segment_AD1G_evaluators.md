@@ -70,7 +70,8 @@ Taken 2026-11-15 at `31465d3cc`.
 
 ## Status
 
-- **Rung 3 built** (2026-11-17): the Evaluators as ranked source rows (kind, which, min, max, rank and remove), the Total row with its bounds, *+ Source* and the Assignment choice, drawn from `stages.sources_of`; the model exercise's Peer Review gate shows ruling 27's shape (*Preferred reviewer* 0–1, Panel A 1–2, Total 2–2). The panel source keeps the working panel picker (and its *+ New panel* box, spanning the row); everything else inert. The head's chip and the Outline's problems still read the panel: they are the page script's, and move with rung 4's wiring.
+- **Rung 3 built** (2026-11-17): the Evaluators as ranked source rows, the Total with its bounds, *+ Source* and the Assignment choice, drawn from `stages.sources_of`; the model exercise's Peer Review gate shows ruling 27's shape (*Preferred reviewer* 0–1, Panel A 1–2, Total 2–2).
+- **Rung 4 built** (2026-11-17): every source row carries both menus (the question, the shared panel picker), the kind showing one; ↑ ↓ rank, × removes, *+ Source* adds a panel of one; the head's chip (`stages.sources_summary`) and the Outline read the sources; the Outline names a source with no panel or question, a min above its max, a missing number, and a Total outside its bounds (as `stages.total_problem`). A new gate starts with no sources (*No evaluators*), not AD1F's empty panel menu. `stages.fill` counts a nominated dossier toward the load too (Codex on rung 2).
 
 ## PR ladder
 
