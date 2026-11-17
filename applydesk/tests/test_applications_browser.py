@@ -484,11 +484,10 @@ def test_one_a_ranking_cannot_take_falls_through_though_another_condition_waits(
     x = next(
         r.application.public_id
         for r in stages.plan_of("wa9juxbc2t").rows
-        if r.cells["o1"].value == "Shortlisted"
+        if r.cells["o1"].value == "Interview" and not r.cells["o1"].by_hand
     )
     page.goto(PAGE)
     _unlock(page)
-    page.evaluate(_FILL_RESULTS)
     _cell(page, x, "g1").evaluate("e => { e.dataset.v = 'Not entered'; }")
     _cell(page, x, "g2").evaluate("e => { delete e.dataset.result; }")
     page.evaluate(
@@ -500,15 +499,15 @@ def test_one_a_ranking_cannot_take_falls_through_though_another_condition_waits(
         "o1",
         {
             "when": [["res", "g2.r1", "ge", "0"], ["top", "g1.r1", "le", "3"]],
-            "then": "Shortlisted",
+            "then": "Interview",
             "otherwise": "Not shortlisted",
         },
     )
     prop = _apply_rules(page, only_undecided=False, replace_hand=True)
     notes = prop.locator("[data-ap-prop-skip] li").all_inner_texts()
-    assert not [n for n in notes if n.startswith("Shortlist for interview") and "judged" in n]
+    assert not [n for n in notes if n.startswith("Shortlisting") and "judged" in n]
     got = [r for r in prop.locator("[data-ap-prop-rows] tr").all_inner_texts() if r.startswith(x)]
-    assert got and got[0].endswith("\tShortlist for interview\tShortlisted\tNot shortlisted"), got
+    assert got and got[0].endswith("\tShortlisting\tInterview\tNot shortlisted"), got
 
 
 def test_a_dossier_waiting_elsewhere_holds_back_only_a_ranking_it_could_join(
@@ -516,25 +515,21 @@ def test_a_dossier_waiting_elsewhere_holds_back_only_a_ranking_it_could_join(
 ) -> None:
     """Codex on #3955: one an earlier branch left waiting held back every
     later best N, even one whose other conditions rule it out."""
-    groups = _by_answer()
+    groups = _by_answer("Faculty")
     eng = groups["Engineering"][0].application.public_id
     page.goto(PAGE)
     _unlock(page)
-    page.evaluate(_FILL_RESULTS)
     _cell(page, eng, "g2").evaluate("e => { delete e.dataset.result; }")  # its checks coming
     _set_rule(
         page,
         "o1",
         {
-            "when": [["form", "Field of study", "is", "Engineering"], ["res", "g2.r1", "ge", "0"]],
-            "then": "Shortlisted",
-            "otherwise": "Shortlisted",
+            "when": [["form", "Faculty", "is", "Engineering"], ["res", "g2.r1", "ge", "0"]],
+            "then": "Interview",
+            "otherwise": "Interview",
             "more": [
                 {
-                    "when": [
-                        ["form", "Field of study", "is", "Humanities"],
-                        ["top", "g1.r1", "le", "3"],
-                    ],
+                    "when": [["form", "Faculty", "is", "Law"], ["top", "g1.r1", "le", "3"]],
                     "then": "Not shortlisted",
                 }
             ],
@@ -542,14 +537,139 @@ def test_a_dossier_waiting_elsewhere_holds_back_only_a_ranking_it_could_join(
     )
     prop = _apply_rules(page, only_undecided=False)
     text = prop.inner_text()
-    assert "Shortlist for interview: 1 application cannot be judged yet" in text
-    assert eng in text
+    assert "Shortlisting: 1 application cannot be judged yet" in text and eng in text
     proposed = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
-    humanities = {r.application.public_id for r in groups["Humanities"]}
-    ranked = [
-        p for p in proposed if p.split("\t")[0] in humanities and p.endswith("Not shortlisted")
+    law = {r.application.public_id for r in groups["Law"]}
+    ranked = [p for p in proposed if p.split("\t")[0] in law and p.endswith("Not shortlisted")]
+    assert 1 <= len(ranked) <= 3 + 2  # the best 3 not already so, or more tied at the cut
+
+
+def test_the_best_n_waits_on_another_condition_not_yet_judged(page: Page) -> None:
+    """The cold read on rungs 2-3: a dossier whose other condition in the
+    branch cannot be judged yet could still outrank the rest, so the
+    ranking waits for it."""
+    field, rows = sorted(_by_answer("Faculty").items())[0]
+    page.goto(PAGE)
+    _unlock(page)
+    _cell(page, rows[0].application.public_id, "g2").evaluate("e => { delete e.dataset.result; }")
+    _set_rule(
+        page,
+        "o1",
+        {
+            "when": [
+                ["res", "g2.r1", "lt", "100"],
+                ["form", "Faculty", "is", field],
+                ["top", "g1.r1", "le", "3"],
+            ],
+            "then": "Interview",
+            "otherwise": "Not shortlisted",
+        },
+    )
+    prop = _apply_rules(page, only_undecided=False, replace_hand=True)
+    assert f"Shortlisting: {len(rows)} applications cannot be judged yet" in prop.inner_text()
+
+
+def test_a_later_column_reads_what_an_earlier_one_proposes(page: Page) -> None:
+    """Rules run in column order: a later column reads the value an
+    earlier one proposes in the same run, and waits on one undecided."""
+    page.goto(PAGE)
+    _unlock(page)
+    hand = page.locator('[data-row]:has(td[data-cell="o1"][data-hand])')
+    who = hand.locator(".ap-id code").inner_text()
+    # An interviewee's Shortlisting back to Pending, its peer reviews still
+    # coming: the Shortlisting cannot decide it, so its entry waits.
+    kenji = _row(page, "kenji.russo")
+    kenji.locator('[data-cell="o1"] select').select_option("Pending")
+    _cell(page, "h6zr2tdw9p", "g1").evaluate("e => { delete e.dataset.result; }")
+    prop = _apply_rules(page, only_undecided=False, replace_hand=True)
+    rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
+    # The one set by hand goes back to the rule's Not shortlisted, and so
+    # the interview, in the same run, turns it away.
+    assert f"{who}\t" in "".join(
+        r for r in rows if r.endswith("\tShortlisting\tInterview\tNot shortlisted")
+    )
+    assert [
+        r
+        for r in rows
+        if r.startswith(who) and r.endswith("\tStaff interview\tEntered\tNot entered")
     ]
-    assert 3 <= len(ranked) <= 3 + 2  # the best 3, or more tied at the cut
+    assert "Staff interview: 1 application cannot be judged yet" in prop.inner_text()
+
+
+def test_selection_reaches_one_sent_on_by_shortlisting_alone(page: Page) -> None:
+    """The cold read on AD1H 4-6: a current RA put down for re-appointment,
+    by hand or by this very run, reaches Selection though they enter no
+    interview; one not shortlisted does not."""
+    plan = stages.plan_of("wa9juxbc2t")
+    ras = {m.email for m in sample_data.CURRENT_RAS}
+    out = [
+        r
+        for r in plan.rows
+        if r.application.email in ras and r.cells["o1"].value == "Not shortlisted"
+    ]
+    major = next(
+        r for r in out if (r.cells["g2"].result or 0) > 0 and (r.cells["g1"].result or 0) >= 3.5
+    )
+    low = next(r for r in out if r is not major)
+    page.goto(PAGE)
+    _unlock(page)
+    # One by hand, one whose major concern the office withdrew (the rule
+    # now re-appoints them in this run).
+    _row(page, low.application.public_id).locator('[data-cell="o1"] select').select_option(
+        "Re-appointment"
+    )
+    _cell(page, major.application.public_id, "g2").evaluate("e => { e.dataset.result = '0'; }")
+    prop = _apply_rules(page, only_undecided=False)  # its decided Shortlisting too
+    rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
+    for r in (low, major):
+        i = r.application.public_id
+        assert [p for p in rows if p.startswith(i) and p.endswith("\tSelection\t\tSelected")], i
+    assert not [p for p in rows if p.startswith("nzhhny6gaa") and "\tSelection\t" in p]
+
+
+def test_the_page_combines_results_as_the_server_does(page: Page) -> None:
+    """The script's combined result is `stages.combined`'s, weights read by
+    key and rescaled when a gate is not entered (ruling 21). The RA
+    recruitment weighs nothing it shows two gates of, so the Shortlisting
+    is given weights here, as Process would."""
+    plan = stages.plan_of("wa9juxbc2t")
+    weighed = stages.Outcome("o1", 1, "X", (), "", "", (("g1.r1", 0.3), ("g2.r2", 0.7)))
+    page.goto(PAGE)
+    _unlock(page)
+    page.evaluate(
+        """() => {
+          document.querySelector('th[data-col="o1"]').dataset.weights = "g1.r1:0.3|g2.r2:0.7";
+          for (const td of document.querySelectorAll('td[data-cell="o1"]')) {
+            const s = document.createElement("span");
+            s.setAttribute("data-ap-comb", "");
+            td.appendChild(s);
+          }
+        }"""
+    )
+    # A change redraws them all.
+    chip = _row(page, "ben.sato").locator('[data-cell="g3"] [data-ap-adm]')
+    chip.click()
+    shown = dict(
+        page.evaluate(
+            """() => Array.from(document.querySelectorAll('[data-row]')).map(r => [
+            r.querySelector('.ap-id code').textContent,
+            (r.querySelector('[data-cell="o1"] [data-ap-comb]') || {}).textContent || ""])"""
+        )
+    )
+    for r in plan.rows:
+        if r.application.state != "Submitted":
+            continue
+        want = stages.combined(r, weighed)
+        assert shown[r.application.public_id] == ("" if want is None else f"Combined {want:.2f}")
+    # Office checks not entered: Gate 1's alone.
+    kenji = next(r for r in plan.rows if r.application.public_id == "h6zr2tdw9p")
+    row = _row(page, "kenji.russo")
+    g2 = row.locator('[data-cell="g2"] [data-ap-adm]')
+    while g2.inner_text() != "Not entered":
+        g2.click()
+    assert row.locator('[data-cell="o1"] [data-ap-comb]').inner_text() == (
+        f"Combined {kenji.cells['g1'].result:.2f}"
+    )
 
 
 def test_a_cell_set_by_hand_is_marked_and_kept(page: Page) -> None:

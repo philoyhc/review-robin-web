@@ -456,17 +456,22 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
         r = random.Random(f"ra {i}")
         reviewers = 29 if a.email.casefold() in ras else 30
         passed = i in back or (i in ahead and i != by_hand)
-        # Gate 1: the mean of those who knew the applicant, 0s left out.
+        # Gate 1: each reviewer's score, 0 from those who do not know the
+        # applicant, and their mean with the 0s left out (`averaged`).
         knew = reviewers - r.randint(0, 9)
         if passed:
-            mean = round(r.uniform(3.5, 4.9), 1)
+            aim = round(r.uniform(3.6, 4.9), 1)
         elif i == by_hand:
-            mean = 3.4
+            aim = 3.4
         else:
-            mean = round(r.uniform(2.2, 4.6), 1)
+            aim = round(r.uniform(2.2, 4.6), 1)
+        total = round(aim * knew)
+        scores = (total // knew + 1,) * (total % knew) + (total // knew,) * (knew - total % knew)
+        got, taken = averaged((*scores, *(0,) * (reviewers - knew)), "mean", True)
+        mean = got if got is not None else 0.0
         # Gate 2: a major concern from any office keeps one off the list.
         major = 0 if passed or i == by_hand or mean < 3.5 else r.randint(1, 2)
-        cells["g1"] = Cell("Entered", f"{mean} from {knew} of {reviewers}", mean)
+        cells["g1"] = Cell("Entered", mean_note(got, taken, reviewers), got)
         minor = r.randint(0, 5 - major) if r.random() < 0.4 else 0
         concern = f"Major concerns from {major} of 5" if major else "No major concerns"
         cells["g2"] = Cell("Entered", concern, major * 20.0, extra=(("r2", str(minor * 20)),))
@@ -536,16 +541,24 @@ def problems(stages: tuple[Stage, ...]) -> tuple[str, ...]:
     return tuple(out)
 
 
+def going_on(outcome: Outcome) -> tuple[str, ...]:
+    """An outcome's values that take an application on: every one but the
+    last (ruling 30's Shortlisting: Re-appointment and Interview, not Not
+    shortlisted); a single value is itself."""
+    return outcome.values[:-1] if len(outcome.values) > 1 else outcome.values
+
+
 def counts(plan: Plan, column: Gate | Outcome) -> str:
     """A column header's tally across every application, e.g.
-    "86 entered · 2 to decide"; an outcome's, "24 shortlisted · 2 pending"."""
+    "86 entered · 2 to decide"; an outcome's, "24 shortlisted · 2 pending",
+    each value that takes one on counted (`going_on`)."""
     values = [
         r.cells[column.key].value for r in plan.rows if r.cells.get(column.key, Cell("")).value
     ]
     if isinstance(column, Gate):
         order = [("Entered", "entered"), (NO_STATUS, "to decide")]
     else:
-        order = [(v, v.lower()) for v in column.values[:1]] + [("Pending", "pending")]
+        order = [(v, v.lower()) for v in going_on(column)] + [("Pending", "pending")]
     parts = [f"{values.count(v)} {word}" for v, word in order if values.count(v)]
     return " · ".join(parts) or "none yet"
 
@@ -797,6 +810,14 @@ def averaged(values: tuple[float, ...], derive: str, ignore_zero: bool) -> tuple
     else:
         value = sum(taken) / len(taken)
     return round(value, 2), len(taken)
+
+
+def mean_note(value: float | None, taken: int, of: int) -> str:
+    """A mean's note under its chip: "3.7 from 27 of 29", the scores it
+    took of those asked; "No view from 30" when none scored (ruling 30)."""
+    if value is None:
+        return f"No view from {of}"
+    return f"{value:.1f} from {taken} of {of}"
 
 
 def derivation_text(r: GateResult) -> str:

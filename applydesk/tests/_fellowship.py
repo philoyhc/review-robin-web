@@ -5,7 +5,13 @@ weights, a nominated source, an outcome decided by hand and four stages,
 so they install this one on the conference grant (``EX``), whose form
 asks for a preferred reviewer and whose panels are the fellowship's. Its
 gates are as the fellowship left them: Review sent and in, the Interview
-ready (ruling 29)."""
+ready (ruling 29).
+
+It is a copy, frozen as the fellowship left it: nothing ties it to
+`applydesk/stages.py`, and the conference grant it sits on is open for
+applications, which the fellowship never was while sending gates. Use it
+for what the editor does with a process's shape, never for what an
+exercise's state means."""
 
 from __future__ import annotations
 
@@ -130,9 +136,20 @@ SENDS = frozenset(
 )
 
 
+WRITTEN = frozenset(
+    {
+        ("receipt", APPLICANTS),
+        ("reminder", APPLICANTS),
+        ("o1", APPLICANTS),
+        ("o2", APPLICANTS),
+    }
+)
+
+
 def install(monkeypatch: pytest.MonkeyPatch) -> str:
     """The fellowship's process on ``EX``, for one test; its ID."""
     monkeypatch.setitem(stages._STAGES, EX, STAGES)  # pyright: ignore[reportPrivateUsage]  -- a test's sample
     monkeypatch.setitem(workflow._GATES, EX, GATES)  # pyright: ignore[reportPrivateUsage]  -- as above
     monkeypatch.setitem(workflow._SENDS, EX, SENDS)  # pyright: ignore[reportPrivateUsage]  -- as above
+    monkeypatch.setitem(workflow._WRITTEN, EX, WRITTEN)  # pyright: ignore[reportPrivateUsage]  -- as above
     return EX

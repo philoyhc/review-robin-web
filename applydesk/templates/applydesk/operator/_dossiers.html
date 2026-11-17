@@ -67,7 +67,7 @@
           {% if c.via is defined %}
           <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span></th>
           {% else %}
-          <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-scope="{{ scope(plan, c) | map(attribute='key') | join('|') }}" data-weights="{% for k, w in c.weights %}{{ k }}:{{ w }}{{ '|' if not loop.last }}{% endfor %}" data-number="Outcome {{ c.number }}" data-first="{{ c.values[0] }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
+          <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-scope="{{ scope(plan, c) | map(attribute='key') | join('|') }}" data-weights="{% for k, w in c.weights %}{{ k }}:{{ w }}{{ '|' if not loop.last }}{% endfor %}" data-number="Outcome {{ c.number }}" data-first="{{ c.values[0] }}" data-on="{{ going_on(c) | join('|') }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
             {% if c.weights %}<span class="ap-weights">{% for k, w in c.weights if w %}{{ result_label(k) }} {{ (w * 100) | round | int }}%{{ " · " if not loop.last }}{% endfor %}</span>{% endif %}
             {% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>
             <label class="ap-rel"><input type="checkbox" data-ap-release="{{ c.label }}" data-ap-locks disabled aria-label="Released: {{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
@@ -145,13 +145,14 @@
 
   var head = {};
   heads.forEach(function (h) { head[h.dataset.col] = h; });
-  // A chip's tone: undecided amber, the column's going-on value (Entered,
-  // Shortlisted, Finalist, Awarded) green, anything else muted.
+  // A chip's tone: undecided amber, a going-on value (Entered, and an
+  // outcome's every value but its last: Re-appointment and Interview, not
+  // Not shortlisted, as stages.going_on) green, anything else muted.
+  function onValues(h) { return h.dataset.kind === "gate" ? ["Entered"] : h.dataset.on.split("|"); }
   function tone(el) {
     var v = el.dataset.v, h = head[el.closest("td").dataset.cell];
-    var on = h.dataset.kind === "gate" ? "Entered" : h.dataset.first;
     el.classList.remove("ap-t-warn", "ap-t-good", "ap-t-mute");
-    el.classList.add(undecided(v) ? "ap-t-warn" : v === on ? "ap-t-good" : "ap-t-mute");
+    el.classList.add(undecided(v) ? "ap-t-warn" : onValues(h).indexOf(v) >= 0 ? "ap-t-good" : "ap-t-mute");
   }
   function recount() {
     if (typeof showCombined === "function") showCombined();
@@ -162,10 +163,9 @@
         var el = r.querySelector('[data-cell="' + key + '"] [data-v]');
         if (el) tally[el.dataset.v] = (tally[el.dataset.v] || 0) + 1;
       });
-      var gate = h.dataset.kind === "gate";
-      var first = gate ? "Entered" : h.dataset.first, open = gate ? "—" : "Pending";
+      var gate = h.dataset.kind === "gate", open = gate ? "—" : "Pending";
       var parts = [];
-      if (tally[first]) parts.push(tally[first] + " " + first.toLowerCase());
+      onValues(h).forEach(function (v) { if (tally[v]) parts.push(tally[v] + " " + v.toLowerCase()); });
       if (tally[open]) parts.push(tally[open] + (gate ? " to decide" : " pending"));
       h.querySelector("[data-ap-count]").textContent = parts.join(" · ") || "none yet";
     });
@@ -467,6 +467,16 @@
       var scoped = head[okey].dataset.scope ? head[okey].dataset.scope.split("|") : [];
       return scoped.length > 0 && scoped.every(function (g) { var v = val(r, g); return v === null || v === "Not entered"; });
     }
+    // A branch reading earlier outcomes and nothing of its own gates, all
+    // of whose conditions hold: it decides without the gates.
+    function sentOn(r, okey, spec, val) {
+      if (!spec) return false;
+      return [{ when: spec.when }].concat(spec.more || []).some(function (b) {
+        var outs = b.when.filter(function (c) { return c[0] === "out"; });
+        return outs.length > 0 && outs.length === b.when.filter(function (c) { return c[0] !== "form"; }).length &&
+          b.when.every(function (c) { return holds(r, c, okey, val) === true; });
+      });
+    }
     function holds(r, cond, okey, val) {
       var kind = cond[0], key = cond[1], op = cond[2], want = cond[3];
       function cmp(x) { var t = parseFloat(want); return op === "ge" ? x >= t : x < t; }
@@ -517,10 +527,11 @@
           // A withdrawn application keeps what it had; a draft has nothing.
           if (r.dataset.status !== "Submitted") return;
           // An outcome none of whose gates this application entered is
-          // not reached: it stays as it is, unless its cell is already
-          // open (Pending or decided), as when an earlier outcome sent it
-          // straight on (ruling 30: re-appointment skips the interview).
-          if (h.dataset.kind === "outcome" && val(r, key) === "" && notReached(r, key, val)) return;
+          // not reached: it stays as it is, unless its cell is already open
+          // (Pending or decided), or a branch of its rule takes it on an
+          // earlier outcome's value alone (ruling 30: re-appointment skips
+          // the interview), that value set by hand or by this very run.
+          if (h.dataset.kind === "outcome" && val(r, key) === "" && notReached(r, key, val) && !sentOn(r, key, spec, val)) return;
           reach.push(r);
         });
         // Ruling 30: branches in order, the first whose conditions all hold

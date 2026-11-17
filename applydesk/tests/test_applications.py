@@ -58,7 +58,8 @@ def test_the_model_exercise_reads_as_partway_through() -> None:
     plan = stages.plan_of(EX)
     by_key = {c.key: c for c in plan.columns}
     assert stages.counts(plan, by_key["g1"]) == "100 entered"
-    assert stages.counts(plan, by_key["o1"]) == "15 re-appointment"
+    # Each value that takes one on is counted (the cold read on AD1H 4-6).
+    assert stages.counts(plan, by_key["o1"]) == "15 re-appointment · 40 interview"
     assert stages.counts(plan, by_key["g3"]) == "40 entered"
     assert stages.counts(plan, by_key["o2"]) == "55 pending"
     o1, o2 = by_key["o1"], by_key["o2"]
@@ -96,6 +97,19 @@ def test_the_model_exercise_reads_as_partway_through() -> None:
     assert aisha.cells["o1"].value == "Re-appointment"
     kenji = next(r for r in plan.rows if r.application.public_id == "h6zr2tdw9p")
     assert kenji.cells["o1"].value == "Interview" and kenji.cells["g1"].note.endswith("of 30")
+
+
+def test_a_mean_s_note_says_how_many_scored() -> None:
+    """Ruling 30: Gate 1's mean leaves out the 0s; its note says how many
+    scored of those asked, or that none had a view."""
+    assert stages.mean_note(3.59, 27, 29) == "3.6 from 27 of 29"
+    assert stages.mean_note(None, 0, 30) == "No view from 30"
+    plan = stages.plan_of(EX)
+    for row in plan.rows:
+        g1 = row.cells["g1"]
+        if g1.value == "Entered":
+            m = re.fullmatch(r"(\d\.\d) from (\d+) of (29|30)", g1.note)
+            assert m and g1.result is not None and f"{g1.result:.1f}" == m.group(1), g1.note
 
 
 def _app(i: str, email: str, state: str, day: int) -> sample_data.Application:

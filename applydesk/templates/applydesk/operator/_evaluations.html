@@ -44,7 +44,7 @@
     <span><span class="muted">Gate {{ g.number }}</span> <strong>{{ g.label }}</strong></span>
     <span class="chip chip-mute" data-ev-mode>{{ mode_label }}</span>
     <span class="muted" data-ev-counts>{{ assignment_counts(got[0]) }}</span>
-    <a class="btn btn-secondary ev-open" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ g.number) }}">Assignments ({{ "{:,}".format(got[0] | map(attribute='evaluators') | map('length') | sum) }} pairs)</a>
+    <a class="btn btn-secondary ev-open" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ g.number) }}">Assignments ({{ "{:,}".format(pairs_of(got[0]) | length) }} rows)</a>
   </div>
   {% for panel, members in got[1] %}<p class="muted ev-load" data-ev-load>{{ panel }}: {% for name, n in members %}{{ name }} {{ n }}{{ " · " if not loop.last }}{% endfor %}</p>{% endfor %}
 </section>

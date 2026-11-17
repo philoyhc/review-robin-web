@@ -67,7 +67,7 @@ def form_preview(request: Request, exercise_id: str) -> Response:
 
 @router.get("/exercises/{exercise_id}/evaluations/{gate}", name="applydesk_gate_evaluations")
 def gate_evaluations(
-    request: Request, exercise_id: str, gate: str, offset: int = 0, q: str = ""
+    request: Request, exercise_id: str, gate: str, offset: str = "0", q: str = ""
 ) -> Response:
     """A gate's assignments on a page of their own (segment AD1H): one
     gate may pair 30 evaluators with 100 dossiers, so its pairs show a
@@ -82,7 +82,9 @@ def gate_evaluations(
     rows, spread = stages.assignments(exercise.public_id, found)
     pairs = stages.pairs_of(rows)
     shown = stages.matching(pairs, q, exercise.blind)
-    where = paging.page(len(shown), offset, paging.PAGE_SIZE)
+    # An offset that is not a whole number reads as the first page.
+    start = int(offset) if re.fullmatch(r"-?[0-9]+", offset) else 0
+    where = paging.page(len(shown), start, paging.PAGE_SIZE)
     state = workflow.gate_state(exercise.public_id, found.key)
     return render(
         request,
@@ -143,6 +145,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         blank_section=sample_data.FormCard("section"),
         plan=stages.plan_of(exercise.public_id),
         counts=stages.counts,
+        going_on=stages.going_on,
         last_submitted=stages.last_submitted,
         scope=stages.scope,
         submitted_rank=stages.submitted_rank,
@@ -183,6 +186,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         assignments=functools.partial(stages.assignments, exercise.public_id),
         assignment_state=stages.assignment_state,
         assignment_counts=stages.assignment_counts,
+        pairs_of=stages.pairs_of,
         sources_summary=stages.sources_summary,
         nominee_questions=stages.nominee_questions(exercise.public_id),
         blank_source=stages.Source("panel", "", 1, 1),

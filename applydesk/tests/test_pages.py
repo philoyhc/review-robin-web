@@ -530,7 +530,7 @@ def test_evaluations_shows_each_gate_s_assignments(client: TestClient) -> None:
     g1 = text[text.index('data-ev-gate="g1"') : text.index('data-ev-gate="g2"')]
     assert "100 dossiers · 100 filled" in g1
     assert re.search(r"Current RAs: Aisha Bello \d+ · ", g1)
-    link = f'href="/applydesk/operator/exercises/{EX}/evaluations/gate_1">Assignments (2,980 pairs)'
+    link = f'href="/applydesk/operator/exercises/{EX}/evaluations/gate_1">Assignments (2,980 rows)'
     assert link in g1
     assert "data-ev-row" not in text  # the rows are the gate's page's
     page = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_1").text
@@ -580,6 +580,13 @@ def test_a_gate_s_page_finds_a_candidate_or_an_evaluator(client: TestClient) -> 
     assert "None of 2,980 matching" in none and "data-ev-row=" not in none
 
 
+def test_a_gate_s_page_reads_a_bad_offset_as_the_first_page(client: TestClient) -> None:
+    base = f"/applydesk/operator/exercises/{EX}/evaluations/gate_1"
+    for offset in ("abc", "1.5", ""):
+        page = client.get(f"{base}?offset={offset}")
+        assert page.status_code == 200 and "1–200 of 2,980" in page.text, offset
+
+
 def test_a_blind_gate_s_page_finds_a_candidate_only_by_the_dossier(client: TestClient) -> None:
     """Codex on #3958: a blind page shows the dossier ID, so a search by
     the applicant's name, email or application ID must not find them."""
@@ -588,6 +595,18 @@ def test_a_blind_gate_s_page_finds_a_candidate_only_by_the_dossier(client: TestC
     for q in (app.applicant.split()[0], app.email, app.public_id):
         assert "data-ev-row=" not in client.get(f"{base}?q={q}").text, q
     assert f'data-ev-row="{app.public_id}"' in client.get(f"{base}?q={app.dossier_id}").text
+
+
+def test_a_sent_suggested_gate_s_pairs_are_approved_and_fixed(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Once its session opens (ruling 29), a Suggested gate's pairs read
+    Approved and its operations are Review Robin's."""
+    monkeypatch.setitem(workflow._GATES[EX], "g3", ("Sent", "12 of 80 reviewed"))  # pyright: ignore[reportPrivateUsage]  -- a sample's state
+    page = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text
+    assert page.count(">Approved<") == 80 and ">Suggested<" not in page
+    assert 'data-ev-act="approve-all" disabled title="Its session has opened' in page
+    assert "Its session has opened: its pairs are Review Robin's to change." in page
 
 
 def test_a_gate_s_page_is_only_a_gate_s(client: TestClient) -> None:
