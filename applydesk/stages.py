@@ -103,6 +103,38 @@ class GateResult:
     at_least: int = 1
 
 
+#: The kinds of evaluator source (ruling 27): the people a candidate named
+#: in a *Select people* question on Form, or a panel's members.
+SOURCE_KINDS: tuple[tuple[str, str], ...] = (("nominated", "Nominated"), ("panel", "Panel"))
+#: How a gate's pairs are made (ruling 27).
+MODES: tuple[tuple[str, str], ...] = (
+    ("automatic", "Automatic"),
+    ("suggested", "Suggested, then approved"),
+    ("assigned", "Assigned by the operator"),
+)
+
+
+@dataclass(frozen=True)
+class Source:
+    """One of a gate's evaluator sources (ruling 27), ranked by its place
+    in ``Gate.sources``: ``kind`` is ``nominated`` (``ref`` the Form's
+    *Select people* question) or ``panel`` (``ref`` the panel's key); it
+    gives ``min`` to ``max`` evaluators to each dossier."""
+
+    kind: str
+    ref: str
+    min: int
+    max: int
+
+
+@dataclass(frozen=True)
+class Total:
+    """A gate's overall evaluators per dossier (ruling 27's *Total*)."""
+
+    min: int
+    max: int
+
+
 @dataclass(frozen=True)
 class Gate:
     key: str
@@ -112,6 +144,12 @@ class Gate:
     results: tuple[GateResult, ...] = ()  # up to three (ruling 21); the first is the headline
     rule: Rule | None = None
     panel: str = ""  # who evaluates: a sample_data.Panel key, "" for none yet (ruling 19)
+    # Ruling 27 (segment AD1G): the ranked sources, the Total and the mode.
+    # Empty sources read as ``panel`` alone (``sources_of``) until the pages
+    # move to them (AD1G rung 3).
+    sources: tuple[Source, ...] = ()
+    total: Total | None = None
+    mode: str = "automatic"
 
     @property
     def measure(self) -> str:
@@ -713,3 +751,100 @@ def weight_rows(plan: Plan, outcome: Outcome) -> tuple[tuple[str, int], ...]:
         for r in g.results
         if comparable(r) == "number"
     )
+
+
+# ── A gate's evaluators (ruling 27, segment AD1G) ─────────────────────────
+
+
+def sources_of(exercise_id: str, gate: Gate) -> tuple[tuple[Source, ...], Total]:
+    """The gate's ranked sources and Total. A sample gate that names only a
+    panel reads as that panel, min = max = its size, so nothing it shows
+    changes until edited (AD1G judgment call)."""
+    if gate.sources:
+        lo, hi = total_bounds(gate.sources)
+        return gate.sources, gate.total or Total(lo, hi)
+    if not gate.panel:
+        return (), Total(0, 0)
+    pool = sample_data.panel_pools(exercise_id).get(gate.panel)
+    size = len(pool["members"]) if pool else 0
+    return (Source("panel", gate.panel, size, size),), Total(size, size)
+
+
+def total_bounds(sources: tuple[Source, ...]) -> tuple[int, int]:
+    """What the Total may be: no lower than the sources' mins together, no
+    higher than their maxes (ruling 27)."""
+    return sum(s.min for s in sources), sum(s.max for s in sources)
+
+
+def total_problem(sources: tuple[Source, ...], total: Total) -> str:
+    """Why the gate's Total cannot hold, or "" (shown on the Outline, not
+    silently clamped)."""
+    if not sources:
+        return "no evaluators"
+    lo, hi = total_bounds(sources)
+    if total.min > total.max:
+        return "the Total's min is above its max"
+    if total.min < lo:
+        return f"the Total's min is below the sources' mins together ({lo})"
+    if total.max > hi:
+        return f"the Total's max is above the sources' maxes together ({hi})"
+    return ""
+
+
+@dataclass(frozen=True)
+class Filling:
+    """A dossier's evaluators as ``stages.fill`` gives them: each with the
+    rank of the source it came from; ``short`` is how many the Total's
+    min still lacks, ``unmet`` the sources given fewer than their min."""
+
+    evaluators: tuple[tuple[str, int], ...]
+    short: int = 0
+    unmet: tuple[int, ...] = ()
+
+    @property
+    def filled(self) -> bool:
+        return self.short == 0 and not self.unmet
+
+
+def fill(
+    sources: tuple[Source, ...],
+    total: Total,
+    offers: tuple[tuple[str, ...], ...],
+    candidate: str = "",
+    load: dict[str, int] | None = None,
+) -> Filling:
+    """One dossier's evaluators (ruling 27). ``offers[i]`` is who source
+    ``i`` can give this dossier: a nominated source the people the
+    candidate named, in their order; a panel its members. Sources are
+    taken in rank order: the first gives as many as it has, up to its max;
+    each lower one gives what the Total's min still needs, never fewer
+    than its own min; nothing passes the Total's max, and room is kept for
+    the lower sources' mins. Evaluators are distinct by email (any case),
+    a person in two sources counted for the higher-ranked, and the
+    candidate never their own. A panel gives its least-loaded members
+    first; ``load`` counts each evaluator's dossiers across calls, so the
+    work spreads evenly."""
+    chosen: list[tuple[str, int]] = []
+    seen = {candidate.casefold()} if candidate else set[str]()
+    unmet: list[int] = []
+    for rank, (source, people) in enumerate(zip(sources, offers, strict=True)):
+        available: list[str] = []
+        for person in people:
+            if person.casefold() not in seen and person.casefold() not in {
+                p.casefold() for p in available
+            }:
+                available.append(person)
+        if source.kind == "panel" and load is not None:
+            available.sort(key=lambda p: load.get(p.casefold(), 0))
+        reserved = sum(s.min for s in sources[rank + 1 :])
+        room = max(0, total.max - len(chosen) - reserved)
+        want = source.max if rank == 0 else max(source.min, total.min - len(chosen))
+        given = available[: max(0, min(len(available), source.max, want, room))]
+        for person in given:
+            seen.add(person.casefold())
+            chosen.append((person, rank))
+            if load is not None and source.kind == "panel":
+                load[person.casefold()] = load.get(person.casefold(), 0) + 1
+        if len(given) < source.min:
+            unmet.append(rank)
+    return Filling(tuple(chosen), max(0, total.min - len(chosen)), tuple(unmet))

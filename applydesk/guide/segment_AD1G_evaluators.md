@@ -53,6 +53,8 @@ Nothing is sent or saved here: the fields live in the browser, a reload restorin
 ## Judgment calls — decided
 
 - **`Gate.panel` gives way to `Gate.sources`**, a panel being one kind of source; the sample's gates become a panel source each, min = max = their current panel's size, so nothing they show changes until edited.
+- **Who gives what** (2026-11-17, rung 2): the first-ranked source gives as many as it has, up to its max; each lower one gives what the Total's min still needs, never fewer than its own min; the first keeps room for the lower sources' mins. Both of ruling 27's examples hold; the author's to confirm at the rung 3 check.
+- **Until the pages move (rung 3)**, `Gate.panel` stays and a gate with no `sources` reads as its panel, min = max = the panel's size (`stages.sources_of`).
 - **Conflicts are the ones the data knows**: the candidate, and a person in two sources. Department or tag conflicts wait for a ruling.
 
 ## Blast radius (measured)
