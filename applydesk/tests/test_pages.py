@@ -403,7 +403,7 @@ def test_a_gate_item_carries_its_evaluators(client: TestClient) -> None:
         "Panel B 1 · Total 1",
         "Interviewers 2 · Total 2",
     ]
-    assert "Prof Ivan Petrov" in text  # the interviewers, on the Interview gate
+    assert "data-pc-members" not in text  # members are on Panels, not listed (author)
     # Every gate here is sent: its panel menus are fixed (the Peer
     # Review's nominated row has one too, hidden).
     assert text.count('data-pc-panel data-ps="panel" disabled title="Sent') == 4
@@ -1080,7 +1080,8 @@ def test_a_gate_lists_its_evaluator_sources(client: TestClient) -> None:
     assert re.findall(r'data-ps="(?:min|max)" value="(\d*)"', gate) == ["0", "1", "1", "2"]
     assert re.findall(r'data-ps="total-(?:min|max)" value="(\d*)"', gate) == ["2", "2"]
     assert "within 1–3" in gate
-    assert 'data-mode="automatic" aria-pressed="true" disabled' in gate
+    assert '<option value="automatic" selected>Automatic</option>' in gate
+    assert '<select class="fc-in" data-ps="mode" disabled' in gate
     for control in ('data-ps="kind"', 'data-ps-act="up"', 'data-ps-act="add"', 'data-ps="min"'):
         at = gate.index(control)
         assert "disabled" in gate[at : gate.index(">", at)], control

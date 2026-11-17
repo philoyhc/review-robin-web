@@ -162,28 +162,10 @@
     item.querySelector("[data-ps-headrow]").hidden = !rows.length;
     item.querySelector("[data-ps-empty]").hidden = rows.length > 0;
   }
-  // The members of the gate's panel sources, each once, in rank order.
-  function sourceMembers(item) {
-    var seen = {}, out = [];
-    sourcesOf(item).forEach(function (s) {
-      if (s.kind !== "panel" || !POOLS[s.ref]) return;
-      POOLS[s.ref].members.forEach(function (m) {
-        var k = m[1].toLowerCase();
-        if (!seen[k]) { seen[k] = true; out.push(m); }
-      });
-    });
-    return out;
-  }
   function sourceEvent(e) {
-    var b = e.target.closest("[data-ps-act], [data-ps-mode] [data-mode]");
+    var b = e.target.closest("[data-ps-act]");
     if (!b || b.disabled) return false;
     var item = b.closest(".pc-item");
-    if (b.dataset.mode) {
-      if (b.getAttribute("aria-pressed") === "true") return true;  // already chosen: no change
-      item.querySelectorAll("[data-ps-mode] [data-mode]").forEach(function (m) { m.setAttribute("aria-pressed", m === b ? "true" : "false"); });
-      changed();  // the shut Evaluators card names the mode
-      return true;
-    }
     var act = b.dataset.psAct, row = b.closest("[data-ps-row]");
     if (act === "add" || act === "insert") {
       // A row's + adds the next source under it; + Source, the first.
@@ -284,16 +266,9 @@
         pc.textContent = summary(item);
         // The shut Evaluators card's line (ruling 28), as
         // stages.evaluators_summary; the Gate card's follows its rule (rules()).
-        var mode = item.querySelector('[data-ps-mode] [aria-pressed="true"]');
-        item.querySelector('[data-gsec="evaluators"] [data-gsec-sum]').textContent = summary(item) + (mode ? " · " + mode.textContent : "");
+        var mode = item.querySelector('[data-ps="mode"]');
+        item.querySelector('[data-gsec="evaluators"] [data-gsec-sum]').textContent = summary(item) + (mode ? " · " + mode.selectedOptions[0].textContent : "");
         pc.className = "chip " + (sourceProblems(item).length ? "chip-warn" : "chip-mute");
-        var ul = item.querySelector("[data-pc-members]");
-        ul.textContent = "";
-        sourceMembers(item).forEach(function (m) {
-          var li = el("li", "", m[0]);
-          if (m[0] !== m[1]) { li.appendChild(document.createTextNode(" ")); li.appendChild(el("span", "muted", m[1])); }
-          ul.appendChild(li);
-        });
       }
       var chip = item.querySelector("[data-pi-emails]");
       if (chip) {
@@ -747,7 +722,7 @@
         var srcBox = item.querySelector("[data-pc-sources]");
         if (srcBox) {
           srcBox.removeAttribute("data-sent");
-          item.querySelectorAll("[data-pc-sources] [data-ps], [data-pc-sources] [data-ps-act], [data-ps-mode] [data-mode], [data-pc=\"description\"], [data-pc=\"confidential\"]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
+          item.querySelectorAll("[data-pc-sources] [data-ps], [data-pc-sources] [data-ps-act], [data-ps=\"mode\"], [data-pc=\"description\"], [data-pc=\"confidential\"]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
           drawSources(item);
         }
         // Its fields, results, + Field and + Result are its own to set too.
@@ -879,6 +854,7 @@
   });
   list.addEventListener("input", function (e) {
     if (e.target.closest("[data-pc-sources]")) { drawSources(e.target.closest(".pc-item")); changed(); return; }
+    if (e.target.matches('[data-ps="mode"]')) { changed(); return; }  // the shut Evaluators card names the mode
     if (e.target.closest("[data-rule-ed]")) { var item = e.target.closest(".pc-item"); setRule(item, readEditor(item)); rules(); return; }
     if (e.target.matches("[data-w-key]")) { var note = e.target.closest("[data-pc-weights]").querySelector("[data-w-note]"); if (note) note.textContent = ""; rules(); return; }
     if (e.target.matches('[data-pc="values"]')) {

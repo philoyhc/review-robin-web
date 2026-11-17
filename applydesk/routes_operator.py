@@ -138,7 +138,6 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         assignment_state=stages.assignment_state,
         assignment_counts=stages.assignment_counts,
         sources_summary=stages.sources_summary,
-        source_members=stages.source_members,
         nominee_questions=stages.nominee_questions(exercise.public_id),
         blank_source=stages.Source("panel", "", 1, 1),
         source_kinds=stages.SOURCE_KINDS,
