@@ -426,6 +426,16 @@ where a ruling below differs from it, the ruling wins.
     are sent and their results in; its Interview stage is under way, its
     gate entered but not yet sent, its pairs being worked on Evaluations
     (AD1G rung 6), so no interview results or finalists yet.
+30. **The model exercise is the author's residential assistants'
+    recruitment** (author, 2026-11-17; segment AD1H), mid Stage 3, its
+    staff interview gate entered and its pairs being approved. It needs,
+    and so gets: rules with **ordered branches**, a condition on a **form
+    answer**, and **the best N** by a result, the app proposing and the
+    operator approving; a mean **ignoring 0** (a *Don't know* score); and
+    **a page per gate** under Evaluations, its assignments paged 200 at a
+    time, since one gate pairs 30 reviewers with 100 applicants. Its
+    sample drops nominations; Gate 3's pairs are *Suggested, then
+    approved*; *not Major concerns* means no one chose it.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
@@ -523,7 +533,8 @@ Segments in order; each gets a plan in this folder when it starts.
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
 | **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14; removed 2026-11-15); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
 | **AD1G — Evaluators and Evaluations** | A gate's evaluators from ranked sources with a Total and a mode, on Process; Evaluations showing and working each gate's assignments (ruling 27); the rest of Process > Gates for a linked Review Robin gate (layer A above, author 2026-11-17), the gate card as ruling 28 lays it out; nothing saved | `applydesk/guide/segment_AD1G_evaluators.md` |
-| AD1H onward — the other new pages | Emails and Extract data built out as working scaffolds, one segment each | After AD1G |
+| **AD1H — The RA model exercise** | The model exercise rebuilt as the RA recruitment (ruling 30); rules with branches, a form answer and the best N; a mean ignoring 0; a page per gate under Evaluations, paged; nothing saved | `applydesk/guide/segment_AD1H_ra_exercise.md`; AD1G pauses at rung 6b for it |
+| AD1I onward — the other new pages | Emails and Extract data built out as working scaffolds, one segment each | After AD1G |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
