@@ -28,7 +28,10 @@
     grid.classList.toggle("is-equal-height", hi - lo <= hi / 5);
   }
   fit();
-  window.addEventListener("resize", fit);
+  var queued = false;
+  function soon() { if (!queued) { queued = true; window.requestAnimationFrame(function () { queued = false; fit(); }); } }
+  window.addEventListener("resize", soon);
+  grid.addEventListener("input", soon);  // the unsaved marker or a longer field changes a height (cold read)
   grid.addEventListener("click", function (e) { if (e.target.closest("[data-tl-layout], [data-dt-lock], [data-dt-act]")) window.setTimeout(fit, 0); });
 })();
 </script>

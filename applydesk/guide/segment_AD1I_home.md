@@ -64,7 +64,7 @@ Taken 2026-11-17 at `696b14d9b`.
 - **Rung 5 built** (2026-11-17): the applicant's exercise page draws the same partial beside *Apply*, without the Next step line; its old *Timeline* list of three dates goes. Today and the state chips show there too, as proposed (the open question's).
 - **Read, rungs 2–5** (`fad887534..`, after rung 2's own): no blocker; fixed in rung 5: the last horizontal bar 8px short and a single stage's left corners square; a timezone outside Details' list kept, not changed by Lock, and *· the default* alike on page and after Lock; *Go to Evaluations* decided in `timeline.gate_running`, not the template; the switch script once per timeline; a refusal said again and its field marked `aria-invalid`; Enter on *Blind review* does not Lock; the form `autocomplete="off"`; the applicant's *Results expected … (an estimate)* back; the v3 mock-ups committed. Left: Lock's changes stay in the card (the timeline's timezone and the title follow at AD2).
 
-- **Rung 5a built** (2026-11-17): the operator's part (`applydesk/home_ops.py`, apart from `timeline.py`), drawn only where the page passes `ops`: under a rule each stage's form, gates and outcomes, aligned across stages by a subgrid (Horizontal), on the right (Vertical), under the items on a phone. Cards share a height when within a fifth of the taller, side by side only; found at build: the partial's script is a grid child too.
+- **Rung 5a built** (2026-11-17): the operator's part (`applydesk/home_ops.py`, apart from `timeline.py`), drawn only where the page passes `ops`: under a rule each stage's form, gates and outcomes, aligned across stages by a subgrid (Horizontal), on the right (Vertical), under the items on a phone. Cards share a height when within a fifth of the taller, side by side only; found at build: the partial's script is a grid child too. Its read: no blocker; fixed in the rung: an outcome's tally Dossiers' (`stages.counts`) and its state the Workflow card's *Released* / *Pending*, not a third word; the cards stay blocks when stretched (a flex column changed their margins); the participants' part spaced as the applicant's (the subgrid inherited a 4px row gap; Chromium test); *Operator only* hidden visually, not from screen readers, past the first stage; a refit on input; the partial's comment. Left: a sample's canned gate progress beside counted pairs (`k7mfr3pq8z`), until AD2.
 
 ## PR ladder
 
@@ -103,6 +103,6 @@ Taken 2026-11-17 at `696b14d9b`.
 
 ## Doc impact
 
-- `applydesk/spec/applications.md` — "Exercise Home": the two columns, the timeline and its layouts, Details unlocked, the Next step line; the URL map's Home line; the applicant's exercise page's timeline (at close).
+- `applydesk/spec/applications.md` — "Exercise Home": the two columns, the timeline and its layouts, its operator's part (rung 5a), equal heights when close, Details unlocked, the Next step line; the URL map's Home line; the applicant's exercise page's timeline (at close).
 - `applydesk/guide/todo_master.md` — the AD1I roadmap row and the owed help contact and timezone editing (rung 1); deleted at close.
 - `applydesk/README.md` — this plan's row and `docs/home/` (rung 1), the plan's row moved to the archive's index at close.

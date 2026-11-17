@@ -260,9 +260,9 @@ def test_home_s_operator_part_says_how_each_stage_stands() -> None:
     )
     assert (o1.state, o1.detail) == (
         "Released",
-        "15 Re-appointment · 40 Interview · 45 Not shortlisted · released 6 Nov to applicants",
+        "15 re-appointment · 40 interview · released 6 Nov to applicants",  # Dossiers' tally
     )
-    assert (o2.state, o2.detail, o2.target) == ("Pending", "55 to decide", "dossiers")
+    assert (o2.state, o2.detail, o2.target) == ("Pending", "55 pending", "dossiers")
     draft = sample_data.exercise(DRAFT)
     assert draft is not None
     assert home_ops.of(draft)[1][0].target == ""

@@ -187,3 +187,11 @@ def test_the_operator_part_lines_up_across_stages(page: Page) -> None:
         "els => els.map(e => Math.round(e.getBoundingClientRect().top))"
     )
     assert len(tops) == 3 and len(set(tops)) == 1, tops
+    # The participants' part spaced as on the applicant's page (cold read).
+    bar = page.locator(".tl-now .tl-bar").bounding_box()
+    dot = page.locator(".tl-now .tl-dot").bounding_box()
+    page.goto(f"{ORIGIN}/applydesk/me/exercises/wa9juxbc2t")
+    bar2 = page.locator(".tl-now .tl-bar").bounding_box()
+    dot2 = page.locator(".tl-now .tl-dot").bounding_box()
+    assert bar and dot and bar2 and dot2
+    assert round(dot["y"] - bar["y"]) == round(dot2["y"] - bar2["y"])

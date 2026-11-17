@@ -8,7 +8,6 @@ draws; nothing here reaches that page.
 
 from __future__ import annotations
 
-from collections import Counter
 from dataclasses import dataclass
 
 from applydesk import sample_data, stages, workflow
@@ -63,17 +62,14 @@ def _gate(e: Exercise, g: stages.Gate) -> Row:
 
 
 def _outcome(e: Exercise, o: stages.Outcome, plan: stages.Plan) -> Row:
-    counts = Counter(r.cells[o.key].value for r in plan.rows if o.key in r.cells)
-    decided = [f"{counts[v]:,} {v}" for v in o.values if counts.get(v)]
-    pending = counts.get("Pending", 0)
-    parts = decided + ([f"{pending:,} to decide"] if pending else [])
+    """Dossiers' column tally (`stages.counts`) and, as the Workflow card
+    says it, *Released* or *Pending* (cold read: one vocabulary)."""
+    detail = stages.counts(plan, o)
     if o.released:
         when, _, to = o.released.partition(" · ")
-        parts.append(f"released {when}" + (f" {to}" if to else ""))
-        state, tone = "Released", "ok"
-    else:
-        state, tone = ("Pending", "mute") if pending or not decided else ("Decided", "info")
-    return Row(o.label or "Untitled outcome", state, tone, " · ".join(parts), "dossiers")
+        detail += f" · released {when}" + (f" {to}" if to else "")
+        return Row(o.label or "Untitled outcome", "Released", "ok", detail, "dossiers")
+    return Row(o.label or "Untitled outcome", "Pending", "mute", detail, "dossiers")
 
 
 def of(e: Exercise) -> tuple[tuple[Row, ...], ...]:

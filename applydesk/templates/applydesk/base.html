@@ -198,22 +198,20 @@
     .tl-op-row b { display: flex; gap: 6px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
     .tl-op-row > span { display: block; color: var(--text-subtle); }
     .tl-op-row a { font-size: 12.5px; }
-    .tl.tl-ops[data-layout="h"] .tl-stages { grid-template-rows: auto auto auto 1fr auto; }
+    .tl.tl-ops[data-layout="h"] .tl-stages { grid-template-rows: auto auto auto 1fr auto; row-gap: 0; }  /* the participants' part spaced as the applicant's */
     .tl.tl-ops[data-layout="h"] .tl-stage { grid-row: span 5; grid-template-rows: subgrid; grid-template-areas: "bar bar" "dot name" "when when" "items items" "op op"; }
     .tl[data-layout="h"] .tl-op { grid-area: op; border-top: 1px solid var(--border-default); margin-top: 6px; padding-top: 10px; }
     .tl[data-layout="h"] .tl-stage > .tl-op { margin-right: 0; padding-right: 8px; }
     .tl.tl-ops[data-layout="v"] .tl-stage { grid-template-columns: 96px 24px minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; grid-template-areas: "when dot name op" "when bar items op"; }
     .tl[data-layout="v"] .tl-op { grid-area: op; border-left: 1px solid var(--border-default); margin-left: 12px; padding: 0 0 18px 14px; }
-    .tl[data-layout="v"] .tl-stage:not(:first-child) .tl-op-k { display: none; }
+    .tl[data-layout="v"] .tl-stage:not(:first-child) .tl-op-k { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }  /* still read aloud */
     /* Cards side by side share a height only when theirs are close (the
        page's script decides, as Review Robin's .is-equal-height). */
-    .hm-grid.is-equal-height { align-items: stretch; }
-    .hm-grid.is-equal-height > .card { display: flex; flex-direction: column; }
-    .hm-grid.is-equal-height > .card > .tl-nextline { margin-top: auto; }
+    .hm-grid.is-equal-height { align-items: stretch; }  /* the cards stay blocks: their margins as ever (cold read) */
     @media (max-width: 639px) {
       .tl.tl-ops[data-layout="v"] .tl-stage { grid-template-columns: 64px 24px minmax(0, 1fr); grid-template-rows: auto auto auto; grid-template-areas: "when dot name" "when bar items" "when bar op"; }
       .tl[data-layout="v"] .tl-op { border-left: 0; margin-left: 0; padding: 0 0 18px; }
-      .tl[data-layout="v"] .tl-stage:not(:first-child) .tl-op-k { display: block; }
+      .tl[data-layout="v"] .tl-stage:not(:first-child) .tl-op-k { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
       .tl[data-layout="v"] .tl-stage { grid-template-columns: 64px 24px minmax(0, 1fr); column-gap: 8px; }
       .tl[data-layout="v"] .tl-today span { white-space: normal; width: 56px; text-align: right; line-height: 1.2; top: -7px; }
     }
