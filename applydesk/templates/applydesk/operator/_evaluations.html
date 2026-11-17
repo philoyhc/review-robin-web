@@ -32,48 +32,21 @@
   </div>
   <p class="muted">Sending a gate creates a Review Robin session from the applications entered at it and its panel, each dossier as its <code>ProfileLink</code>{% if exercise.blind %}, and an alias key in place of each application ID{% endif %}. Results come back by application and fill the gate's column on Dossiers.</p>
 </section>
-{# Each gate's assignments (ruling 27, segment AD1G rung 5, scaffold): a
-   card per gate, collapsed to its head, its dossiers' evaluators drawn
-   from stages.assignments; the mode's operations inert until rung 6. #}
+{# Each gate's assignments (ruling 27): a short card per gate, its mode,
+   counts and load, linking to the gate's own page (segment AD1H), where
+   its rows show 200 at a time. #}
 <h2 class="ev-h">Assignments</h2>
 {% for g in gates %}
-{% set st = gate_state(exercise.public_id, g.key) %}
-{% set sent = gate_opened(st[0], st[1]) %}
 {% set got = assignments(g) %}
-{% set off %} disabled{% if sent %} title="Its session has opened: its pairs are Review Robin's to change"{% endif %}{% endset %}
 {% set mode_label = (modes | selectattr(0, "equalto", g.mode) | first)[1] %}
-<details class="card ev-gate" data-ev-gate="{{ g.key }}" data-mode="{{ g.mode }}">
-  <summary class="ev-head">
+<section class="card ev-gate" data-ev-gate="{{ g.key }}" data-mode="{{ g.mode }}">
+  <div class="ev-head">
     <span><span class="muted">Gate {{ g.number }}</span> <strong>{{ g.label }}</strong></span>
     <span class="chip chip-mute" data-ev-mode>{{ mode_label }}</span>
     <span class="muted" data-ev-counts>{{ assignment_counts(got[0]) }}</span>
-  </summary>
-  {% if not got[0] %}
-  <p class="muted">No dossiers entered at this gate yet.</p>
-  {% else %}
-  <div class="btnrow ev-ops">
-    {% if g.mode == "automatic" %}<button type="button" class="btn btn-secondary" data-ev-act="rerun"{{ off }}>Re-run</button>
-    {% elif g.mode == "suggested" %}<button type="button" class="btn btn-primary" data-ev-act="approve-all"{{ off }}>Approve all</button>{% endif %}
-    {% if sent %}<span class="muted">Its session has opened: its pairs are Review Robin's to change.</span>{% endif %}
-  </div>
-  <div class="table-wrap">
-  <table class="ev-table">
-    <thead><tr><th>{{ "Dossier" if exercise.blind else "Candidate" }}</th><th>Evaluators</th><th>State</th>{% if g.mode != "automatic" %}<th></th>{% endif %}</tr></thead>
-    <tbody>
-    {% for a in got[0] %}
-      {% set state = assignment_state(g, sent, a) %}
-      <tr data-ev-row="{{ a.application.public_id }}">
-        <td>{% if exercise.blind %}{{ a.application.dossier_id }}{% else %}{{ a.application.applicant }}{% endif %}</td>
-        <td><span class="ev-pills">{% for name, email, source in a.evaluators %}<span class="ev-pill" title="{{ email }}" data-ev-source="{{ source }}">{{ name }} <span class="ev-src">· {{ source }}</span>{% if g.mode != "automatic" %}<button type="button" class="token-x" aria-label="Remove {{ name }}"{{ off }}>×</button>{% endif %}</span>{% endfor %}</span></td>
-        <td><span class="chip chip-{{ 'warn' if state.startswith('Short') or state == 'Not assigned' else ('info' if state == 'Suggested' else 'ok') }}" data-ev-state>{{ state }}</span></td>
-        {% if g.mode != "automatic" %}<td class="ev-acts"><button type="button" class="btn btn-secondary" data-ev-act="add"{{ off }}>+ Evaluator</button>{% if g.mode == "suggested" %} <button type="button" class="btn btn-secondary" data-ev-act="approve"{{ off }}>Approve</button>{% endif %}</td>{% endif %}
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+    <a class="btn btn-secondary ev-open" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ g.number) }}">Assignments ({{ "{:,}".format(got[0] | map(attribute='evaluators') | map('length') | sum) }} pairs)</a>
   </div>
   {% for panel, members in got[1] %}<p class="muted ev-load" data-ev-load>{{ panel }}: {% for name, n in members %}{{ name }} {{ n }}{{ " · " if not loop.last }}{% endfor %}</p>{% endfor %}
-  {% endif %}
-</details>
+</section>
 {% endfor %}
 {% endif %}

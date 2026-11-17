@@ -4,11 +4,12 @@ placeholders on sample data, controls inert."""
 from __future__ import annotations
 
 import functools
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
-from applydesk import sample_data, stages, workflow
+from applydesk import paging, sample_data, stages, workflow
 from applydesk.gate import placeholders_only
 from applydesk.lookups import exercise_or_404
 from applydesk.web import OPERATIONS_PAGES, OPERATOR_LOBBY, SETUP_PAGES, exercise_nav, render
@@ -61,6 +62,48 @@ def form_preview(request: Request, exercise_id: str) -> Response:
         exercise=exercise,
         snapshot=sample_data.form_snapshot(exercise.public_id),
         people=sample_data.people_pools(exercise.public_id),
+    )
+
+
+@router.get("/exercises/{exercise_id}/evaluations/{gate}", name="applydesk_gate_evaluations")
+def gate_evaluations(
+    request: Request, exercise_id: str, gate: str, offset: int = 0, q: str = ""
+) -> Response:
+    """A gate's assignments on a page of their own (segment AD1H): one
+    gate may pair 30 evaluators with 100 dossiers, so its pairs show a
+    row each (author, 2026-11-17), 200 at a time, filtered by candidate
+    or evaluator."""
+    exercise = exercise_or_404(exercise_id)
+    number = re.fullmatch(r"gate_([1-9][0-9]*)", gate)
+    plan = stages.plan_of(exercise.public_id)
+    found = stages.gate_numbered(plan, int(number.group(1))) if number else None
+    if found is None or exercise.state == "Draft":
+        raise HTTPException(status_code=404)
+    rows, spread = stages.assignments(exercise.public_id, found)
+    pairs = stages.pairs_of(rows)
+    shown = stages.matching(pairs, q, exercise.blind)
+    where = paging.page(len(shown), offset, paging.PAGE_SIZE)
+    state = workflow.gate_state(exercise.public_id, found.key)
+    return render(
+        request,
+        "applydesk/operator/gate_evaluations.html",
+        area=OPERATOR_LOBBY,
+        nav=exercise_nav(exercise.public_id, "evaluations"),
+        status=workflow.status_row(exercise),
+        exercise=exercise,
+        gate=found,
+        state=state,
+        sent=workflow.gate_opened(*state),
+        all_rows=rows,
+        all_pairs=pairs,
+        rows=shown[where.offset : where.end],
+        matched=len(shown),
+        spread=spread,
+        where=where,
+        q=q.strip(),
+        mode_label=dict(stages.MODES).get(found.mode, found.mode),
+        assignment_state=stages.assignment_state,
+        assignment_counts=stages.assignment_counts,
     )
 
 

@@ -563,8 +563,6 @@
     /* Evaluations' assignments (ruling 27, segment AD1G): a card per gate,
        collapsed to its head; each evaluator a pill marked by its source. */
     .ev-h { margin: 24px 0 8px; }
-    .ev-gate > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; cursor: pointer; }
-    .ev-gate[open] > summary { margin-bottom: 12px; }
     .ev-ops { justify-content: flex-start; align-items: center; margin-bottom: 8px; }
     .ev-pills { display: inline-flex; flex-wrap: wrap; gap: 4px; }
     .ev-pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 4px 2px 10px; border: 1px solid var(--border-default); border-radius: 999px; background: var(--surface-muted); color: var(--text-body); font-size: 13px; }
@@ -573,6 +571,19 @@
     .ev-src { font-size: 12px; color: var(--text-subtle); }
     .ev-acts { white-space: nowrap; }
     .ev-load { margin: 8px 0 0; }
+    .ev-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+    .ev-open { margin-left: auto; }
+    .ev-back { margin: 0 0 8px; font-size: 14px; }
+    .ev-find { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 12px 0; }
+    .ev-find .fc-l { flex: 1 1 260px; margin: 0; }
+    .ev-pager { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .ev-pager > .muted { margin-right: auto; }
+    .ev-step { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-link); text-decoration: none; }
+    .ev-step.is-inactive { color: var(--text-subtle); }
+    .ev-ranges { position: relative; }
+    .ev-ranges > summary { cursor: pointer; padding: 4px 8px; border: 1px solid var(--border-default); border-radius: 6px; list-style: none; }
+    .ev-ranges ul { position: absolute; z-index: 5; margin: 4px 0 0; padding: 6px 0; list-style: none; background: var(--surface-card); border: 1px solid var(--border-default); border-radius: 6px; max-height: 280px; overflow: auto; }
+    .ev-ranges li > * { display: block; padding: 4px 14px; white-space: nowrap; }
     .pc-sent-note { margin: 0 0 4px; }
     .pc-empty { display: none; }
     .pc-body-empty .pc-empty { display: block; }
