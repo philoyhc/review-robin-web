@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from applydesk import gate, sample_data, stages, workflow
+from applydesk import gate, paging, sample_data, stages, workflow
 from applydesk.ids import PUBLIC_ID_ALPHABET, PUBLIC_ID_LENGTH, generate_public_id, is_public_id
 from applydesk.main import create_app
 from applydesk.tests._host import host_with
@@ -40,12 +40,15 @@ PAGES = (
         )
     ),
     f"/applydesk/operator/exercises/{EX}/form/preview",
+    f"/applydesk/operator/exercises/{EX}/evaluations/gate_1",  # a gate's own page (AD1H)
+    f"/applydesk/operator/exercises/{EX}/evaluations/gate_2?q=lim&offset=200",
     f"/applydesk/operator/exercises/{OPEN}",  # open for applications
     f"/applydesk/operator/exercises/{OPEN}/dossiers",  # only its first stage
     f"/applydesk/operator/exercises/{BLANK}/form/preview",
     f"/applydesk/operator/exercises/{BLIND}",  # in Stage 2; blind review on
     f"/applydesk/operator/exercises/{BLIND}/process",  # a panel no gate uses
     f"/applydesk/operator/exercises/{BLIND}/evaluations",  # blind: the alias key
+    f"/applydesk/operator/exercises/{BLIND}/evaluations/gate_1",
     f"/applydesk/operator/exercises/{DRAFT}/process",  # the Setup stage is now
     f"/applydesk/operator/exercises/{DRAFT}",  # the Publish step
     f"/applydesk/operator/exercises/{DRAFT}/dossiers",  # none yet
@@ -519,29 +522,100 @@ def test_a_set_up_draft_lists_only_what_it_lacks(client: TestClient) -> None:
 
 
 def test_evaluations_shows_each_gate_s_assignments(client: TestClient) -> None:
-    """Ruling 27 (AD1G rung 5, scaffold): a card per gate, collapsed to its
-    head (mode, counts), a row per entered dossier with its evaluators
-    marked by source and its state; a load line per panel; a sent gate's
-    operations disabled, saying why."""
+    """Ruling 27, and AD1H's page per gate: Evaluations keeps a short card
+    per gate (mode, counts, load) linking to the gate's page, which holds
+    a row per entered dossier with its evaluators marked by source and
+    its state; a sent gate's operations disabled, saying why."""
     text = client.get(f"/applydesk/operator/exercises/{EX}/evaluations").text
     assert re.findall(r'data-ev-gate="(\w+)" data-mode="(\w+)"', text) == [
         ("g1", "automatic"),
         ("g2", "suggested"),
         ("g3", "automatic"),
     ]
-    assert '<details class="card ev-gate" data-ev-gate="g1" data-mode="automatic" open' not in text
     g1 = text[text.index('data-ev-gate="g1"') : text.index('data-ev-gate="g2"')]
     assert "92 dossiers · 92 filled" in g1
-    assert 'data-ev-source="Nominated"' in g1 and 'data-ev-source="Panel A"' in g1
     assert re.search(r"Panel A: Zoe Tan \d+ · Lars Berg \d+", g1)
-    assert 'data-ev-act="rerun" disabled title="Its session has opened' in g1
-    g2 = text[text.index('data-ev-gate="g2"') : text.index('data-ev-gate="g3"')]
+    link = f'href="/applydesk/operator/exercises/{EX}/evaluations/gate_1">Assignments (184 pairs)'
+    assert link in g1
+    assert "data-ev-row" not in text  # the rows are the gate's page's
+    page = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_1").text
+    assert "<title>Gate 1 · Peer Review · Undergraduate Research Fellowship 2027" in page
+    # A row per pair (author, 2026-11-17): two evaluators each.
+    assert page.count("data-ev-row=") == 184 == page.count("data-ev-pair=")
+    assert 'data-ev-source="Nominated"' in page and 'data-ev-source="Panel A"' in page
+    assert 'data-ev-act="rerun" disabled title="Its session has opened' in page
+    assert "1–184 of 184" in page and "data-ev-pager" in page
+    assert "Next page" not in page  # one page: no steps
+    g2 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_2").text
     assert ">Approved<" in g2 and 'data-ev-act="approve-all" disabled' in g2
+    assert 'data-ev-act="remove" aria-label="Remove Ana Lim from ' in g2
 
 
-def test_a_blind_exercise_s_assignments_show_the_dossier(client: TestClient) -> None:
-    text = client.get(f"/applydesk/operator/exercises/{BLIND}/evaluations").text
-    assert "<th>Dossier</th>" in text and "<th>Candidate</th>" not in text
+def test_a_gate_s_page_shows_200_rows_at_a_time(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Segment AD1H: a page of rows at a time, as Review Robin's rosters;
+    the offset snapped to a page and clamped to the last; the steps and
+    the range menu keep the filter."""
+    monkeypatch.setattr(paging, "PAGE_SIZE", 40)
+    base = f"/applydesk/operator/exercises/{EX}/evaluations/gate_1"
+    first = client.get(base).text
+    assert first.count("data-ev-row=") == 40 and "1–40 of 184" in first
+    assert f'href="{base}?offset=40#ev-table-card" aria-label="Next page"' in first
+    assert 'is-inactive" aria-disabled="true" aria-label="Previous page"' in first
+    ranges = re.findall(r"<li>(?:<a [^>]*>|<span [^>]*>)([^<]+)<", first)
+    assert ranges == ["1–40", "41–80", "81–120", "121–160", "161–184"]
+    last = client.get(f"{base}?offset=999").text
+    assert last.count("data-ev-row=") == 24 and "161–184 of 184" in last
+    assert "41–80 of 184" in client.get(f"{base}?offset=45").text  # snapped to its page
+    assert client.get(f"{base}?offset=-5").text.count("data-ev-row=") == 40
+    found = client.get(f"{base}?q=example.edu").text  # every row: the filter kept
+    assert f'href="{base}?q=example.edu&amp;offset=40#ev-table-card"' in found
+
+
+def test_a_gate_s_page_finds_a_candidate_or_an_evaluator(client: TestClient) -> None:
+    base = f"/applydesk/operator/exercises/{EX}/evaluations/gate_1"
+    one = client.get(f"{base}?q=KENJI").text
+    assert one.count('data-ev-row="h6zr2tdw9p"') == 2 == one.count("data-ev-row=")
+    assert "matching “KENJI”" in one
+    assert f'<a class="btn btn-secondary" href="{base}">Clear</a>' in one
+    zoe = client.get(f"{base}?q=zoe.tan@example.edu").text  # her pairs only
+    n = zoe.count("data-ev-row=")
+    assert 0 < n < 92 and n == zoe.count('data-ev-pair="zoe.tan@example.edu"')
+    assert f"of {n} matching" in zoe
+    none = client.get(f"{base}?q=nobody-at-all").text
+    assert "None of 184 matching" in none and "data-ev-row=" not in none
+
+
+def test_a_gate_s_page_is_only_a_gate_s(client: TestClient) -> None:
+    base = f"/applydesk/operator/exercises/{EX}/evaluations"
+    for tail in ("gate_9", "gate_0", "gate_x", "g1", "gate_01"):
+        assert client.get(f"{base}/{tail}").status_code == 404, tail
+    # A draft sends nothing, so it has no assignments to show.
+    draft = client.get(f"/applydesk/operator/exercises/{DRAFT}/evaluations/gate_1")
+    assert draft.status_code == 404
+    blind = client.get(f"/applydesk/operator/exercises/{BLIND}/evaluations/gate_1").text
+    assert "<th>Dossier</th>" in blind and "<th>Candidate</th>" not in blind
+
+
+def test_a_dossier_with_no_evaluator_is_one_row() -> None:
+    app = sample_data.applications_of(EX)[0]
+    none = stages.Assignment(app, (), 2, ())
+    two = stages.Assignment(app, (("A", "a@x", "Panel A"), ("B", "b@x", "Panel A")), 0, ())
+    pairs = stages.pairs_of((none, two))
+    assert [(p.name, p.source) for p in pairs] == [("", ""), ("A", "Panel A"), ("B", "Panel A")]
+    assert stages.matching(pairs, "B@X") == pairs[2:]
+    assert stages.matching(pairs, app.public_id.upper()) == pairs
+
+
+def test_pages_snap_and_clamp() -> None:
+    assert paging.page(0, 50) == paging.Page(0, 0)
+    assert paging.page(450, 399).offset == 200
+    assert paging.page(450, 10_000).offset == 400
+    p = paging.page(450, 200)
+    assert (p.end, p.last, p.previous, p.following) == (400, 400, 0, 400)
+    assert paging.page(450, 400).following is None
+    assert paging.page(3_000, 0).ranges[-1] == (2_800, "2,801–3,000", False)
 
 
 def test_a_blank_exercise_s_details_and_evaluations_say_not_yet(client: TestClient) -> None:

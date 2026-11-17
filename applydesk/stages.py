@@ -1049,6 +1049,48 @@ def assignments(
     return tuple(rows), spread
 
 
+def gate_numbered(plan: Plan, number: int) -> Gate | None:
+    """The plan's gate numbered ``number`` (its page under Evaluations,
+    ``…/evaluations/gate_<n>``, segment AD1H), None if none is."""
+    return next((c for c in plan.columns if isinstance(c, Gate) and c.number == number), None)
+
+
+@dataclass(frozen=True)
+class Pair:
+    """One row on a gate's page (segment AD1H, author 2026-11-17): a
+    dossier and one evaluator, by name, email and the source's label; a
+    dossier with none yet is one row with an empty evaluator. ``of`` is
+    the dossier's whole assignment, whose state the row shows."""
+
+    of: Assignment
+    name: str = ""
+    email: str = ""
+    source: str = ""
+
+
+def pairs_of(rows: tuple[Assignment, ...]) -> tuple[Pair, ...]:
+    """Every pair of the gate, a dossier's in the order ``fill`` gave."""
+    return tuple(
+        p for a in rows for p in (tuple(Pair(a, n, e, s) for n, e, s in a.evaluators) or (Pair(a),))
+    )
+
+
+def matching(pairs: tuple[Pair, ...], query: str) -> tuple[Pair, ...]:
+    """The pairs whose candidate (name, email, application or dossier ID)
+    or evaluator (name or email) holds ``query``, any case; all for an
+    empty one."""
+    q = query.strip().casefold()
+    if not q:
+        return pairs
+
+    def holds(p: Pair) -> bool:
+        app = p.of.application
+        said = (app.applicant, app.email, app.public_id, app.dossier_id, p.name, p.email)
+        return any(q in text.casefold() for text in said)
+
+    return tuple(p for p in pairs if holds(p))
+
+
 def assignment_state(gate: Gate, sent: bool, a: Assignment) -> str:
     """A row's state on Evaluations, by the gate's mode: *Short by n*
     when the Total's min is not met; else *Filled* (Automatic),
