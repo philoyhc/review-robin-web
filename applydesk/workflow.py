@@ -159,6 +159,7 @@ def status_row(exercise: Exercise) -> tuple[Pill, ...]:
     outcomes = [c for c in plan.columns if isinstance(c, stages.Outcome)]
     apps = sample_data.applications_of(exercise.public_id)
     submitted = sum(a.state == "Submitted" for a in apps)
+    drafts = sum(a.state == "Draft" for a in apps)
     form = form_state(exercise)
     done = sum(gate_state(exercise.public_id, g.key)[0] == "Results in" for g in gates)
     released = sum(bool(o.released) for o in outcomes)
@@ -182,7 +183,13 @@ def status_row(exercise: Exercise) -> tuple[Pill, ...]:
             f"{kept} of {len(mail)}" if mail else "none",
             "info" if mail and kept == len(mail) else "warn",
         ),
-        Pill("Applications", f"{submitted} submitted", "info" if submitted else "mute"),
+        # With the drafts, as Home's Counts card had them (segment AD1I).
+        Pill(
+            "Applications",
+            f"{submitted} submitted"
+            + (f" · {drafts} {'draft' if drafts == 1 else 'drafts'}" if drafts else ""),
+            "info" if submitted else "mute",
+        ),
     )
 
 

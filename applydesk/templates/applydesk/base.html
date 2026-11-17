@@ -128,6 +128,53 @@
     .field input, .field textarea { width: 100%; font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card); color: var(--text-body); }
     .card h3 { margin: 12px 0 6px; font-size: 15px; }
     .card h2 { margin: 0 0 8px; font-size: 17px; }
+    /* Exercise Home (segment AD1I): the timeline two-thirds, Details
+       one-third; one column on a phone. */
+    .hm-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+    .hm-grid > .card + .card { margin-top: 0; }
+    .hm-grid + .card { margin-top: 16px; }
+    @media (max-width: 899px) { .hm-grid { grid-template-columns: minmax(0, 1fr); } }
+    .cardhead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+    .cardhead h2 { margin: 0; }
+    .tl:not(.tl-ready) .tl-scale, .tl:not(.tl-ready) .tl-today { visibility: hidden; }  /* placed by the script */
+    .tl-sub { font-size: 13px; color: var(--text-subtle); margin: 0 0 14px; }
+    /* The track: each stage's share of the exercise's days. */
+    .tl-track { position: relative; margin: 34px 4px 10px; height: 14px; display: flex; gap: 3px; }
+    .tl-seg { flex: 1; position: relative; height: 100%; min-width: 24px; border-radius: 7px; border: 2px solid var(--accent); box-sizing: border-box; }
+    .tl-seg.tl-done, .tl-seg.tl-closed { background: var(--accent); }
+    .tl-seg.tl-now { background: linear-gradient(90deg, var(--accent) var(--p, 0%), var(--accent-tint) var(--p, 0%)); }
+    .tl-seg.tl-next { background: var(--surface-card); border-style: dashed; }
+    .tl-name { position: absolute; bottom: 20px; left: 0; font-size: 12px; font-weight: 700; color: var(--text-strong-subtle); white-space: nowrap; }
+    .tl-ms { position: absolute; top: 50%; left: 100%; width: 12px; height: 12px; transform: translate(-50%, -50%) rotate(45deg); background: var(--surface-card); border: 2px solid var(--text-body); z-index: 1; }
+    .tl-ms.tl-ms-done { background: var(--text-body); }
+    .tl-today { position: absolute; top: -8px; bottom: -8px; width: 2px; background: var(--text-body); z-index: 2; }
+    .tl-today span { position: absolute; top: 28px; left: 50%; transform: translateX(-50%); font-size: 11.5px; font-weight: 700; white-space: nowrap; background: var(--surface-card); padding: 0 4px; }
+    .tl-scale { position: relative; height: 14px; font-size: 11.5px; color: var(--text-subtle); margin: 30px 4px 22px; }
+    .tl-scale span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+    .tl-scale span:first-child { transform: none; }
+    .tl-scale span:last-child { transform: translateX(-100%); }
+    /* The steps: one column per stage, a dot and a line between. */
+    .tl-track + .tl-steps { margin-top: 30px; }  /* no dates, no scale */
+    .tl-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 14px; }
+    .tl-step { position: relative; padding-top: 30px; min-width: 0; }
+    .tl-step::before { content: ""; position: absolute; top: 11px; left: 22px; right: -14px; height: 2px; background: var(--border-subtle); }
+    .tl-step:last-child::before { display: none; }
+    .tl-step.tl-done::before, .tl-step.tl-closed::before { background: var(--accent); }
+    .tl-dot { position: absolute; top: 0; left: 0; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--accent); background: var(--surface-card); display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--accent); box-sizing: border-box; }
+    .tl-step.tl-done .tl-dot, .tl-step.tl-closed .tl-dot { background: var(--accent); color: var(--on-accent); }
+    .tl-step.tl-now .tl-dot { box-shadow: 0 0 0 4px var(--accent-tint); }
+    .tl-step h3 { margin: 0 0 2px; font-size: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .tl-when { font-size: 13px; color: var(--text-subtle); margin: 0 0 8px; }
+    .tl-step ul { margin: 0; padding: 0; list-style: none; font-size: 13.5px; }
+    .tl-step li { padding: 6px 8px; border-radius: 6px; background: var(--surface-muted); margin-bottom: 6px; overflow-wrap: break-word; }
+    .tl-step li b { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-subtle); font-weight: 700; }
+    .tl-step li.tl-i-outcome, .tl-step li.tl-i-outcome-due, .tl-step li.tl-i-milestone { background: var(--accent-tint); }
+    .tl-nextline { margin: 14px 0 0; font-size: 14px; border-top: 1px solid var(--border-subtle); padding-top: 10px; }
+    /* Details: locked facts, unlocked fields (rung 4). */
+    .dt dd { overflow-wrap: anywhere; }
+    .card .dt-sec { margin: 18px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-subtle); font-weight: 700; }
+    .card .dt-val { margin: 0; font-size: 14px; }
+    .card .dt-note { margin: 4px 0 0; font-size: 12.5px; }
     .card p { margin: 0 0 8px; }
     .muted { color: var(--text-subtle); }
     dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }

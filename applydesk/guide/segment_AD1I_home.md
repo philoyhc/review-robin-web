@@ -44,6 +44,10 @@ Taken 2026-11-17 at `696b14d9b`.
 - Code: `routes_operator.exercise_home`, `workflow.status_row`, `sample_data.setup_missing`; new `applydesk/timeline.py`.
 - Spec: `applydesk/spec/applications.md` "Exercise Home" (line 178).
 
+## Status
+
+- **Rung 2 built** (2026-11-17): the scaffold as the ladder says. Diverging from Semantics: a draft's missing setup stays a *Publish* card under the two columns (today's list and button), not the Next step line, which says what a draft's timeline is; the lede goes (the description is in Details). Its cold read: no blocker; fixed in the rung, each with a test: the expected date the exercise's estimate, not Process's due (applicants read it); an outcome's values only once released to applicants; an impossible day or an end before its start is no dates, not a 500; the year rolls over from the stage before; the scale and today placed in the segments' own shares; today said in words, between stages too; the track hidden until placed, the Now segment filled without the script; *1 draft*; Details' two explanations back.
+
 ## PR ladder
 
 1. **Plan** (this file), the two mock-ups in `applydesk/docs/home/`, the README rows, the roadmap row.

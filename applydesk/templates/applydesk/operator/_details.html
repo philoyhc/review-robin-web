@@ -1,26 +1,20 @@
-{# The exercise's details, on Home (ruling 14): what Setup held before
-   AD1D. #}
-<div class="grid" id="details">
-  <section class="card">
-    <h2>Details</h2>
-    <dl class="facts">
-      <dt>Name</dt><dd>{{ exercise.name }}</dd>
-      <dt>Exercise Code</dt><dd>{% if exercise.code %}<code>{{ exercise.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</dd>
-      <dt>Summary</dt><dd>{% if exercise.summary %}{{ exercise.summary }}{% else %}<span class="muted">Not set</span>{% endif %}</dd>
-      {# Review Robin's for every gate (AD1G amendment): the exercise's, or
-         the operator settings' default until one is set. #}
-      <dt>Help contact</dt><dd>{{ help_contact(exercise) }}{% if not exercise.help_contact %} <span class="muted">· the default</span>{% endif %}</dd>
-      <dt>Timezone</dt><dd>{{ timezone(exercise) }}{% if not exercise.timezone %} <span class="muted">· the default</span>{% endif %}</dd>
-    </dl>
-  </section>
-  <section class="card">
-    <h2>Who may apply</h2>
-    <p>{{ exercise.eligibility }}</p>
-    <p class="muted">Invitation only hides the exercise from everyone not on its list, direct links included.</p>
-  </section>
-  <section class="card">
-    <h2>Review</h2>
-    <p>Blind review: <strong>{{ "On" if exercise.blind else "Off" }}</strong></p>
-    <p class="muted">On, assessors' dossiers redact the applicant's name and identifiers, and Review Robin receives an alias key in place of each application ID.</p>
-  </section>
-</div>
+{# The exercise's details, on Home (segment AD1I): locked until Unlock,
+   as Dossiers' table (ruling 23). Unlock is inert until rung 4. #}
+<section class="card dt" id="details" data-details>
+  <div class="cardhead"><h2>Details</h2><button class="btn btn-secondary" type="button" data-dt-lock disabled title="Editing the details comes later">Unlock</button></div>
+  <dl class="facts">
+    <dt>Name</dt><dd>{{ exercise.name }}</dd>
+    <dt>Exercise Code</dt><dd>{% if exercise.code %}<code>{{ exercise.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</dd>
+    <dt>Description</dt><dd>{% if exercise.summary %}{{ exercise.summary }}{% else %}<span class="muted">Not set</span>{% endif %}</dd>
+    {# Review Robin's for every gate (AD1G amendment): the exercise's, or
+       the operator settings' default until one is set. #}
+    <dt>Help contact</dt><dd>{{ help_contact(exercise) }}{% if not exercise.help_contact %} <span class="muted">· the default</span>{% endif %}</dd>
+    <dt>Timezone</dt><dd>{{ timezone(exercise) }}{% if not exercise.timezone %} <span class="muted">· the default</span>{% endif %}</dd>
+  </dl>
+  <p class="dt-sec">Who may apply</p>
+  <p class="dt-val">{% if exercise.eligibility == "Not set" %}<span class="muted">Not set</span>{% else %}{{ exercise.eligibility }}{% endif %}</p>
+  <p class="muted dt-note">Invitation only hides the exercise from everyone not on its list, direct links included.</p>
+  <p class="dt-sec">Review</p>
+  <p class="dt-val">Blind review: <strong>{{ "On" if exercise.blind else "Off" }}</strong></p>
+  <p class="muted dt-note">On, assessors' dossiers redact the applicant's name and identifiers, and Review Robin receives an alias key in place of each application ID.</p>
+</section>
