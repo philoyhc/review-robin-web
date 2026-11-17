@@ -226,6 +226,44 @@ def test_a_rule_reads_as_a_line() -> None:
     )
 
 
+def test_a_rule_branches_and_reads_a_form_answer_and_the_best_n() -> None:
+    """Ruling 30: further branches tried in order, an answer to a List
+    question, the best N by a result; its line and its JSON."""
+    plan = stages.plan_of(EX)
+    rule = stages.Rule(
+        (("form", "Field of study", "is", "Engineering"), ("top", "g1.r1", "le", "20")),
+        "Shortlisted",
+        "Not shortlisted",
+        ((((("res", "g2.r1", "ge", "4.5"),), "Shortlisted")),),
+    )
+    out = stages.Outcome("ox", 9, "X", ("Shortlisted", "Not shortlisted"), "", "", rule=rule)
+    assert [then for _, then in rule.branches] == ["Shortlisted", "Shortlisted"]
+    assert stages.rule_text(plan, out) == (
+        "Field of study is Engineering and the best 20 by Rating at Peer Review → Shortlisted;"
+        " else if Score at Faculty Panel Review ≥ 4.5 → Shortlisted, else Not shortlisted"
+    )
+    assert stages.rule_json(out) == {
+        "when": [["form", "Field of study", "is", "Engineering"], ["top", "g1.r1", "le", "20"]],
+        "then": "Shortlisted",
+        "otherwise": "Not shortlisted",
+        "more": [{"when": [["res", "g2.r1", "ge", "4.5"]], "then": "Shortlisted"}],
+    }
+    # A one-branch rule's JSON is as before: the page's editor reads it.
+    o1 = next(c for c in plan.columns if c.key == "o1")
+    assert "more" not in (stages.rule_json(o1) or {})
+
+
+def test_an_application_answers_the_form_s_list_questions() -> None:
+    apps = sample_data.applications_of(EX)
+    got = [sample_data.answers(EX, a) for a in apps[:20]]
+    assert all(set(g) == {"Field of study"} for g in got)
+    options = {"Life Sciences", "Engineering", "Humanities"}
+    assert all(g["Field of study"] in options for g in got)
+    assert len({g["Field of study"] for g in got}) == 3  # spread, not one
+    assert got == [sample_data.answers(EX, a) for a in apps[:20]]  # seeded
+    assert sample_data.answers("n5wg8tjr3e", apps[0]) == {}  # no questions
+
+
 def test_a_rule_reads_as_the_process_page_s_script_does_at_the_edges() -> None:
     """A column gone, one unnamed, a gate with no measure and a blank
     decision read as `_process.html`'s `condText` and `ruleText` write them."""

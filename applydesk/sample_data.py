@@ -717,6 +717,21 @@ def nominees(exercise_id: str, application: Application, question: str) -> tuple
     return tuple(email for _, email in rng.sample(members, min(max(most, 1), len(members))))
 
 
+def answers(exercise_id: str, application: Application) -> dict[str, str]:
+    """The application's answers to the form's *List* questions, by label
+    (ruling 30's form-answer condition reads them): a choose-one list's
+    option, seeded per application. Nothing is stored until AD4."""
+    out: dict[str, str] = {}
+    for c in form_cards(exercise_id):
+        if c.kind != "field" or c.type != "list" or not c.exclusive:
+            continue
+        options = [o.strip() for o in c.options.split(",") if o.strip()]
+        if options:
+            rng = random.Random(f"answer {application.public_id} {c.label}")
+            out[c.label or "Untitled question"] = rng.choice(options)
+    return out
+
+
 def roster(exercise_id: str) -> tuple[tuple[Member, frozenset[str]], ...]:
     """Everyone on the exercise's panels, once each (by email, any case),
     in the order first met, with the keys of the panels they sit on: the

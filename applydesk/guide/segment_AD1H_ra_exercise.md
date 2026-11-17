@@ -59,6 +59,10 @@ Taken 2026-11-17 at `4c2efddba`.
 | Apply Desk tests | 274 functions | `grep -c "def test" applydesk/tests/*.py` |
 | Evaluations' template | 79 lines | `wc -l applydesk/templates/applydesk/operator/_evaluations.html` |
 
+## Status
+
+- **Rung 2 built** (2026-11-17): `stages.Rule` gains `more`, further branches after the first (`Rule.branches`); `rule_text` reads them (*…; else if … → B, else Z*), and the `form` and `top` conditions; `rule_json` adds `more` only when there are some, so Process's editor reads a one-branch rule as before. Dossiers' *Apply rules* takes the branches in order, a form answer from each row's answers (`sample_data.answers`, a choose-one *List* question's option, seeded), and the best N: ranked among the dossiers the branch reaches whose other conditions hold, a hand-set or decided cell ranked too though only the cells the options allow are proposed; one not entered at the gate takes no place; the branch waits while any of them lacks a result; ties at the cut all taken, the proposal saying so.
+
 ## PR ladder
 
 1. **Plan** (this file), ruling 30, its README row, the roadmap row; AD1G's Status notes the pause.
