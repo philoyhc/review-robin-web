@@ -412,13 +412,15 @@ rulings after this list):
 - **Start and End** as real date-times in the exercise's **timezone**
   (stage dates are free text today, `stages.py`); Start before End. A
   sent Start activates the session once prepared, which ends re-sends.
-- **Help contact** (new; or the exercise's, see rulings).
+- **Help contact** and **timezone**: the exercise's, on Setup, each
+  defaulted from Apply Desk's operator settings, as Review Robin's are
+  (author, 2026-11-17); shown on each gate.
 - **Each result**: label (built), type and bounds or options (built),
   plus **required** and **help text** (new), and a stable **field key**
   (`r1`… today; Review Robin reports answers under it).
 - **Evaluators**: the ranked sources and their tags (AD1G). Every pair
   carries its source as the relationship tag, no comma.
-- **Confidential**: whether the gate is blind, which decides what
+- **Confidential** (per gate, author 2026-11-17): whether the gate is blind, which decides what
   Review Robin shows as each reviewee's name and key.
 
 **B. Evaluations > Gates: what the operator does with each gate**
@@ -468,7 +470,8 @@ rulings after this list):
 - Confidential identity: 23F's "Name redacted" plus the Dossier ID, or
   ruling 10's per-handoff alias key.
 - Each gate's Review Robin session name and code (unique there).
-- Where the description and help contact come from (gate or exercise).
+- ~~Where the help contact comes from~~: the exercise's (author,
+  2026-11-17); the description is the gate's.
 - What marks a gate concluded, for writing results.
 - How Apply Desk's operators line up with Review Robin's.
 - Ruling 9's and AD6's "tags decided at AD6": settled by 23F.

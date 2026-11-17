@@ -33,10 +33,11 @@ Review Robin's side of a linked gate is built (RRW 23F, `spec/linked_sessions.md
 
 1. **The gate's own fields**:
    - a **description**, beside its name (Review Robin's instrument description);
-   - **Start** and **End**, date-times, shown in the **exercise's timezone** (Setup), defaulting from the gate's stage, Start before End; a line says a sent Start opens the session once Review Robin's operator prepares it;
-   - a **help contact** (an email), defaulting from the exercise's;
-   - **Confidential**: the exercise's blind setting shown on the gate, and what Review Robin will show for each reviewee (the name or *Name redacted*, and the key).
+   - **Start** and **End**, date-times, shown in the **exercise's timezone**, defaulting from the gate's stage, Start before End; a line says a sent Start opens the session once Review Robin's operator prepares it;
+   - **Confidential**, a switch on the gate (author: per gate), and what Review Robin will show for each reviewee (the name or *Name redacted*, and the key);
+   - the exercise's **help contact** and **timezone** are shown on the gate, read-only: they are the exercise's (Setup), each defaulted from Apply Desk's operator settings, as Review Robin's are (author, 2026-11-17).
 2. **Each result's fields**, in its editor: **required** (a switch), **help text** (what Review Robin shows the evaluator under the field), and its **field key**, shown read-only (prescribed: what Review Robin reports the answers under).
+2a. **Setup** gains the exercise's **help contact** and **timezone**, prefilled from the operator settings' defaults (a sample value until AD2).
 3. **The *For Review Robin* line** grows into a short summary of what will be sent: the instrument's name, its fields with required and help, the window, the tag `applydesk`.
 
 Nothing is sent or saved here: the fields live in the browser, a reload restoring the sample, as the rest of the segment.
@@ -74,7 +75,7 @@ Taken 2026-11-15 at `31465d3cc`.
 5. **Evaluations scaffold.** A card per gate, its table and load line drawn from `stages.fill` on the sample's dossiers; inert controls.
 6. **Evaluations wired.** The three modes' operations in the browser. Chromium tests. `diff-reviewer` reads 5–6.
 7. ~~**Close**, after the author's browser check.~~ Moved to 10 by the amendment.
-8. **The gate's and results' fields, scaffold** (amendment): description, Start and End with the timezone, help contact, Confidential; each result's required, help text and field key; the fuller *For Review Robin* summary; drawn from the sample, inert. `stages` gains the fields, the sample filling them.
+8. **The gate's and results' fields, scaffold** (amendment): description, Start and End with the timezone, Confidential; Setup's help contact and timezone; each result's required, help text and field key; the fuller *For Review Robin* summary; drawn from the sample, inert. `stages` gains the fields, the sample filling them.
 9. **The fields wired**: edited in the browser, Start before End, a required switch and help text per result, the summary following; a sent gate read-only. Chromium tests. `diff-reviewer` reads 8–9.
 10. **Close**, after the author's browser check.
 
@@ -83,7 +84,7 @@ Taken 2026-11-15 at `31465d3cc`.
 - A gate holds ranked sources, a Total and a mode; `stages.fill` fills per ruling 27 (tests, the author's examples among them).
 - Process edits the Evaluators in the browser, the Total held within its bounds (Chromium tests).
 - Evaluations shows each gate's assignments and works its mode (Chromium tests).
-- A gate run in Review Robin collects its description, window, timezone, help contact and confidentiality, and each result its required, help text and field key; the *For Review Robin* summary shows them (Chromium tests).
+- A gate run in Review Robin collects its description, window and confidentiality, Setup the exercise's help contact and timezone, and each result its required, help text and field key; the *For Review Robin* summary shows them (Chromium tests).
 - The author has used the pages locally and approved them.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py AD1G` exits 0; any warning adjudicated
@@ -95,8 +96,8 @@ Taken 2026-11-15 at `31465d3cc`.
 
 - **The Total's label**: *Total*, proposed with ruling 27; the author's at the rung 3 check.
 - **Suggested mode's re-run**: whether a re-run keeps approved rows; proposed yes, settled at rung 6.
-- **Confidential per gate or per exercise**: the exercise's blind setting today; the author's (the todo's rulings list).
-- **The help contact and the timezone's home**: the exercise's, defaulted onto each gate; the author's at the rung 8 check.
+- ~~**Confidential per gate or per exercise**~~: per gate (author, 2026-11-17).
+- ~~**The help contact and the timezone's home**~~: the exercise's, each defaulted from Apply Desk's operator settings as Review Robin's are (author, 2026-11-17); Setup carries them.
 - **`close_check.py` reads only RRW's `guide/`**: this close is checked by hand, as AD1E's and AD1F's.
 
 ## Out of scope
