@@ -75,13 +75,14 @@ def test_leave_records_wait_for_a_forward_range(page: Page) -> None:  # noqa: F8
     """Codex, 2026-11-10: a From moved past To waits for To instead of
     submitting a backwards range; a forward one applies."""
     page.goto(ORIGIN + "/ra-leave/staff/records?as=Sam%20Lee")
+    # fill() fires the date input's own change event: a second one,
+    # dispatched by hand, submitted the form twice, the second navigation
+    # aborting the first (net::ERR_ABORTED in CI, 2026-11-17).
     page.fill("#from", "2026-12-01")
-    page.locator("#from").dispatch_event("change")
     page.wait_for_timeout(300)
     assert "period=custom" not in page.url  # no reload: To still 3 Nov
     with page.expect_navigation():
         page.fill("#to", "2026-12-31")
-        page.locator("#to").dispatch_event("change")
     assert "from=2026-12-01" in page.url and "to=2026-12-31" in page.url
 
 
