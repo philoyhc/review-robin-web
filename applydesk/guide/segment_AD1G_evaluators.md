@@ -96,6 +96,7 @@ Taken 2026-11-15 at `31465d3cc`.
 - **Rulings 29** (author, 2026-11-17): a sent gate is changed and re-sent until its session opens, then fixed; the model exercise is mid-stage, its Interview gate entered but unsent, so rung 6 works its pairs. Rung 6 therefore also moves the sample (the Interview gate *Ready*, its dossiers without interview results, its outcomes pending) and the card's sent note follows the ruling (editable and re-sent while unopened; fixed once open).
 - **Rung 6a built** (2026-11-17): the sample mid-stage per ruling 29. The Interview gate is *Ready* and unsent; three shortlisted dossiers wait to be let in (*24 entered · 5 to decide*); no interview results and Finalists pending, so *Apply rules* proposes the three entries. `workflow.gate_opened` decides whether a gate is fixed: *Results in*, or *Sent* with its session opened. An opened gate's card reads *Its Review Robin session has opened: its settings are fixed here.*; a sent, unopened one says it is re-sent until then. The fixed-gate tests move to Peer Review (g1), and the Interview gate is pinned editable.
 - **Paused at rung 6b** (author, 2026-11-17): ruling 30 rebuilds the model exercise as the RA recruitment, with a page per gate under Evaluations (segment AD1H). Rung 6b resumes there, its operations on the gate page.
+- **Rung 6b built** (2026-11-17): the gate page's operations, on screen and kept in the tab (sessionStorage by exercise and gate) across its 200-row pages and sorts, with *Discard changes* to put the sample back. *Suggested*: *Approve*, *Approve all*, *Remove* (and *Undo*), *+ Pair*. *Assigned*: *+ Pair*, *Remove*. *Automatic*: *Re-run*. *+ Pair* offers the dossier's panel sources less the candidate and those already on it, and refuses past the max. States, head counts and load lines follow every pair, not the page's (`stages.page_data`). A sent gate keeps its operations disabled. Its cold read (rung 6b's diff; rung 5's was read with 4c–4d): no blocker; fixed in the rung, each with a test: a source's min and max held as the server's fill holds them (*Short*, *already has the most from …*); an added pair's approval goes with it, Undo keeps an approval; changes kept in the tab checked against the sample and the mode; added pairs only on the first page and as the search finds; focus and a message after *Approve*, Escape closes + Pair; the + Pair box's `hidden` overridden by its `display` (it showed on load: the read's Escape test found it); buttons off until the script runs.
 
 ## PR ladder
 
@@ -128,9 +129,10 @@ Taken 2026-11-15 at `31465d3cc`.
 ## Open questions
 
 - **The Total's label**: *Total*, proposed with ruling 27; the author's at the rung 3 check.
-- **Suggested mode's re-run**: whether a re-run keeps approved rows; proposed yes, settled at rung 6.
+- ~~**Suggested mode's re-run**~~: none; a suggested gate has no *Re-run*, and *Discard changes* puts the suggestion back (rung 6b).
 - ~~**Confidential per gate or per exercise**~~: per gate (author, 2026-11-17).
 - ~~**The help contact and the timezone's home**~~: the exercise's, each defaulted from Apply Desk's operator settings as Review Robin's are (author, 2026-11-17); Setup carries them.
+- **+ Pair on a blind gate**: its data names no candidate, so it cannot leave out the candidate themself without saying which dossier is whose; the sample's blind gate is sent, so nothing shows it. For AD2, where the server checks the pair (rung 6b's cold read).
 - **`close_check.py` reads only RRW's `guide/`**: this close is checked by hand, as AD1E's and AD1F's.
 
 ## Out of scope

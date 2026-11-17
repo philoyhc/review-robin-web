@@ -1,0 +1,252 @@
+{# A gate page's operations (AD1G rung 6b, ruling 27), by the gate's mode:
+   Suggested, then approved: Approve a pair, Approve all, Remove, + Pair;
+   Assigned by the operator: + Pair, Remove; Automatic: Re-run. The page
+   shows 200 of the gate's pairs and reloads to page or sort, so the
+   changes are kept in this tab (sessionStorage, by exercise and gate)
+   and drawn on every page; Discard changes puts the sample back. The
+   states, the head's counts and the load line follow every pair, not
+   only the page's (#ev-data), a source's min and max as the Total's.
+   Changes kept from an earlier visit are checked against the sample
+   and the mode first, so a stale one cannot count. Nothing is saved
+   until AD2. #}
+<script>
+(function () {
+  var DATA = JSON.parse(document.getElementById("ev-data").textContent);
+  var card = document.getElementById("ev-table-card");
+  var STORE = "applydesk-ev:" + DATA.key + ":" + DATA.mode;
+  var said = card.querySelector("[data-ev-said]");
+  var names = {}, emailOf = {};
+  DATA.dossiers.forEach(function (d) { names[d[0]] = d[1]; emailOf[d[0]] = d[2]; });
+  var sources = {};
+  DATA.panels.forEach(function (p) { p[1].forEach(function (m) { if (!(m[1] in sources)) sources[m[1]] = [m[0], p[0]]; }); });
+  var bounds = {};  // a source's label: [min, max]
+  DATA.sources.forEach(function (b) { bounds[b[0]] = [b[1], b[2]]; });
+  var sample = {};
+  DATA.pairs.forEach(function (p) { sample[p[0] + "|" + p[1]] = true; });
+
+  // The tab's changes: pairs removed and added, and those approved.
+  function blank() { return { removed: [], added: [], approved: [] }; }
+  var ch = blank();
+  try { ch = JSON.parse(sessionStorage.getItem(STORE) || "null") || blank(); } catch (e) { ch = blank(); }
+  // Only what still holds: a removed or approved pair of the sample, an
+  // added one of an entered dossier and a panel member, not already in
+  // the sample; approvals only where the mode has them.
+  function list(x) { return Array.isArray(x) ? x : []; }
+  ch = { removed: list(ch && ch.removed), added: list(ch && ch.added), approved: list(ch && ch.approved) };
+  ch.removed = ch.removed.filter(function (k, i, a) { return sample[k] && a.indexOf(k) === i; });
+  ch.added = ch.added.filter(function (a, i, all) {
+    return a && a.d in names && a.e in sources && !sample[id(a.d, a.e)] && a.e !== emailOf[a.d] &&
+      all.findIndex(function (b) { return b && b.d === a.d && b.e === a.e; }) === i;
+  }).map(function (a) { return { d: a.d, e: a.e, n: sources[a.e][0], s: sources[a.e][1] }; });
+  if (DATA.mode === "automatic") ch.removed = [], ch.added = [];
+  var kept = ch.added;  // and only within the Total's and the sources' max
+  ch.added = [];
+  kept.forEach(function (a) { if (!full(a.d, a.e, a.s)) ch.added.push(a); });
+  ch.approved = DATA.mode !== "suggested" ? [] : ch.approved.filter(function (k, i, a) {
+    return a.indexOf(k) === i && (sample[k] || ch.added.some(function (x) { return id(x.d, x.e) === k; }));
+  });
+  function keep() {
+    try {
+      if (dirty()) sessionStorage.setItem(STORE, JSON.stringify(ch));
+      else sessionStorage.removeItem(STORE);
+    } catch (e) { /* a private window: the page's changes stay on it */ }
+  }
+  function dirty() { return ch.removed.length + ch.added.length + ch.approved.length > 0; }
+  function id(d, e) { return d + "|" + e; }
+
+  // Every pair as it now stands: the sample's less those removed, and
+  // those added.
+  function pairs() {
+    var out = DATA.pairs.filter(function (p) { return ch.removed.indexOf(id(p[0], p[1])) < 0; });
+    return out.concat(ch.added.map(function (a) { return [a.d, a.e, a.n, a.s]; }));
+  }
+  function count(d, src) { return pairs().filter(function (p) { return p[0] === d && (src === undefined || p[3] === src); }).length; }
+  // As the server's fill: a source given fewer than its min leaves the
+  // dossier short, the Total's min met or not.
+  function unmet(d) { return Object.keys(bounds).some(function (b) { return count(d, b) < bounds[b][0]; }); }
+  function stateOf(d, e) {
+    var n = count(d);
+    if (DATA.mode === "assigned" && n === 0) return "Not assigned";
+    if (n < DATA.min) return "Short by " + (DATA.min - n);
+    if (unmet(d)) return "Short";
+    if (DATA.mode === "suggested") return ch.approved.indexOf(id(d, e)) >= 0 ? "Approved" : "Suggested";
+    return DATA.mode === "assigned" ? "Assigned" : "Filled";
+  }
+  // Why dossier d cannot take evaluator e from source src, or "": the
+  // Total's max, then the source's, as + Pair and Undo both hold them.
+  function full(d, e, src) {
+    if (pairs().some(function (p) { return p[0] === d && p[1] === e; })) return (sources[e] ? sources[e][0] : e) + " is already on " + names[d] + ".";
+    if (count(d) >= DATA.max) return names[d] + " already has the most evaluators, " + DATA.max + ".";
+    var cap = bounds[src];
+    if (cap && count(d, src) >= cap[1]) return names[d] + " already has the most from " + src + ", " + cap[1] + ".";
+    return "";
+  }
+  function tone(chip, st) {
+    chip.textContent = st;
+    chip.className = "chip chip-" + (/^Short|^Not assigned|^Removed/.test(st) ? "warn" : st === "Suggested" ? "info" : "ok");
+  }
+
+  // An added pair is a row at the top of the page, marked so.
+  function addedRow(a) {
+    var tr = document.createElement("tr");
+    tr.dataset.evRow = a.d; tr.dataset.evPair = a.e; tr.dataset.evAdded = "";
+    tr.innerHTML = "<td></td><td><span></span> <span class=\"ev-added-mark\">Added</span></td><td><span class=\"ev-src\"></span></td><td><span data-ev-state></span></td>" +
+      "<td class=\"ev-acts\"><button type=\"button\" class=\"btn btn-secondary\" data-ev-act=\"remove\"></button>" +
+      (DATA.mode === "suggested" ? " <button type=\"button\" class=\"btn btn-secondary\" data-ev-act=\"approve\">Approve</button>" : "") + "</td>";
+    tr.cells[0].textContent = names[a.d];
+    tr.cells[1].firstChild.textContent = a.n;
+    tr.cells[1].firstChild.title = a.e;
+    tr.cells[2].firstChild.textContent = a.s;
+    return tr;
+  }
+  // An added pair shows on the first page, and under a search only if
+  // it matches, as the server's find (the dossier ID alone when blind).
+  function shown(a) {
+    if (!DATA.first) return false;
+    var q = DATA.q.toLowerCase();
+    return !q || [names[a.d], emailOf[a.d], DATA.blind ? "" : a.d, a.n, a.e].some(function (t) { return t && t.toLowerCase().indexOf(q) >= 0; });
+  }
+  function draw() {
+    var body = card.querySelector("tbody");
+    body.querySelectorAll("tr[data-ev-added]").forEach(function (tr) { tr.remove(); });
+    ch.added.filter(shown).reverse().forEach(function (a) { body.insertBefore(addedRow(a), body.firstChild); });
+    body.querySelectorAll("tr[data-ev-row]").forEach(function (tr) {
+      var d = tr.dataset.evRow, e = tr.dataset.evPair, chip = tr.querySelector("[data-ev-state]");
+      var rm = tr.querySelector('[data-ev-act="remove"]'), ok = tr.querySelector('[data-ev-act="approve"]');
+      if (!e) {  // a dossier with none yet: gone once it has one
+        tr.hidden = count(d) > 0;
+        tone(chip, stateOf(d, ""));
+        return;
+      }
+      var gone = !tr.hasAttribute("data-ev-added") && ch.removed.indexOf(id(d, e)) >= 0;
+      tr.classList.toggle("ev-removed", gone);
+      tone(chip, gone ? "Removed" : stateOf(d, e));
+      var who = tr.cells[1].textContent.replace(/\s*Added$/, "").trim();
+      if (rm) {
+        rm.textContent = gone ? "Undo" : "Remove";
+        rm.setAttribute("aria-label", (gone ? "Undo removing " : "Remove ") + who + " from " + names[d]);
+      }
+      if (ok) {
+        var done = ch.approved.indexOf(id(d, e)) >= 0;
+        ok.hidden = gone;
+        ok.textContent = done ? "Approved" : "Approve";
+        ok.disabled = done;
+      }
+    });
+    // The head's counts and the load line, over every pair.
+    var short = DATA.dossiers.filter(function (dd) { var n = count(dd[0]); return n === 0 || n < DATA.min || unmet(dd[0]); }).length;
+    var n = DATA.dossiers.length;
+    card.closest("main, body").querySelector("[data-ev-counts]").textContent =
+      n + (n === 1 ? " dossier" : " dossiers") + " · " + (n - short) + " filled" + (short ? " · " + short + " short" : "");
+    var load = {};
+    pairs().forEach(function (p) { load[p[1]] = (load[p[1]] || 0) + 1; });
+    card.querySelectorAll("[data-ev-load]").forEach(function (line, i) {
+      var panel = DATA.panels[i];
+      if (panel) line.textContent = panel[0] + ": " + panel[1].map(function (m) { return m[0] + " " + (load[m[1]] || 0); }).join(" · ");
+    });
+    var all = card.querySelector('[data-ev-act="approve-all"]');
+    if (all) all.disabled = pairs().every(function (p) { return ch.approved.indexOf(id(p[0], p[1])) >= 0; });
+    if (box && !box.hidden) fillEvaluators();  // the picker follows every change
+    card.querySelector("[data-ev-unsaved]").hidden = !dirty();
+    card.querySelector('[data-ev-act="discard"]').hidden = !dirty();
+    keep();
+  }
+
+  // + Pair: a dossier, then an evaluator from its panel sources who is
+  // not the candidate, not already on it, while it is under the max.
+  var box = card.querySelector("[data-ev-add]");
+  function fillEvaluators() {
+    var who = box.querySelector("[data-ev-add-who]").value, sel = box.querySelector("[data-ev-add-evaluator]"), was = sel.value;
+    var on = pairs().filter(function (p) { return p[0] === who; }).map(function (p) { return p[1]; });
+    sel.textContent = "";
+    Object.keys(sources).forEach(function (e) {
+      if (e === emailOf[who] || on.indexOf(e) >= 0) return;
+      var o = document.createElement("option");
+      o.value = e; o.textContent = sources[e][0] + " · " + sources[e][1];
+      sel.appendChild(o);
+    });
+    if (was && Array.prototype.some.call(sel.options, function (o) { return o.value === was; })) sel.value = was;
+  }
+  function openAdd(open) {
+    var btn = card.querySelector('[data-ev-act="add"]');
+    box.hidden = !open;
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+    box.querySelector("[data-ev-add-why]").textContent = "";
+    if (!open) { btn.focus(); return; }
+    var who = box.querySelector("[data-ev-add-who]");
+    if (!who.options.length) {
+      DATA.dossiers.forEach(function (d) { var o = document.createElement("option"); o.value = d[0]; o.textContent = d[1]; who.appendChild(o); });
+    }
+    fillEvaluators();
+    who.focus();
+  }
+  if (box) {
+    box.querySelector("[data-ev-add-who]").addEventListener("change", fillEvaluators);
+    box.addEventListener("keydown", function (e) { if (e.key === "Escape") openAdd(false); });
+  }
+  // The page works now: its operations, rendered off until the script ran.
+  card.querySelectorAll("button[data-ev-wait]").forEach(function (b) { b.disabled = false; b.removeAttribute("data-ev-wait"); });
+
+  card.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-ev-act]");
+    if (!b || b.disabled) return;
+    var act = b.dataset.evAct, tr = b.closest("tr");
+    said.textContent = "";
+    if (act === "remove") {
+      var d = tr.dataset.evRow, em = tr.dataset.evPair, k = id(d, em);
+      if (tr.hasAttribute("data-ev-added")) {  // gone, its approval with it
+        ch.added = ch.added.filter(function (a) { return id(a.d, a.e) !== k; });
+        ch.approved = ch.approved.filter(function (x) { return x !== k; });
+      } else if (ch.removed.indexOf(k) >= 0) {  // Undo: as it was, approved or not
+        var src0 = (DATA.pairs.filter(function (p) { return id(p[0], p[1]) === k; })[0] || [])[3];
+        var stop = full(d, em, src0);
+        if (stop) { said.textContent = "Not undone: " + stop + " Remove one first."; return; }
+        ch.removed.splice(ch.removed.indexOf(k), 1);
+      } else {
+        ch.removed.push(k);
+      }
+      draw();
+      var again = Array.prototype.find.call(card.querySelectorAll("tr[data-ev-row]"), function (r) { return r.dataset.evRow === d && r.dataset.evPair === em; });
+      (again && again.querySelector('[data-ev-act="remove"]') || card.querySelector('[data-ev-act="add"]')).focus();
+    } else if (act === "approve") {
+      ch.approved.push(id(tr.dataset.evRow, tr.dataset.evPair));
+      draw();
+      said.textContent = tr.cells[1].textContent.replace(/\s*Added$/, "").trim() + " approved for " + names[tr.dataset.evRow] + ".";
+      tr.querySelector('[data-ev-act="remove"]').focus();
+    } else if (act === "approve-all") {
+      var before = ch.approved.filter(function (k) { return !pairs().some(function (p) { return id(p[0], p[1]) === k; }); });
+      var now = pairs().map(function (p) { return id(p[0], p[1]); });
+      ch.approved = before.concat(now);
+      draw();
+      said.textContent = "All " + now.length + " pairs approved.";
+      card.querySelector('[data-ev-act="add"]').focus();
+    } else if (act === "rerun") {
+      ch = blank();
+      draw();
+      said.textContent = "Re-run: every dossier filled as its sources give.";
+    } else if (act === "add") {
+      openAdd(box.hidden);
+    } else if (act === "add-cancel") {
+      openAdd(false);
+    } else if (act === "add-pair") {
+      var who = box.querySelector("[data-ev-add-who]").value, ev = box.querySelector("[data-ev-add-evaluator]").value;
+      var why = box.querySelector("[data-ev-add-why]");
+      if (!ev) { why.textContent = "No one left to add from its panels."; return; }
+      var stop2 = full(who, ev, sources[ev][1]);
+      if (stop2) { why.textContent = stop2; return; }
+      var k2 = id(who, ev);
+      if (ch.removed.indexOf(k2) >= 0) ch.removed.splice(ch.removed.indexOf(k2), 1);
+      else ch.added.push({ d: who, e: ev, n: sources[ev][0], s: sources[ev][1] });
+      draw();
+      fillEvaluators();
+      said.textContent = sources[ev][0] + " added to " + names[who] + ".";
+    } else if (act === "discard") {
+      ch = blank();
+      draw();
+      said.textContent = "Changes discarded: the pairs are the sample's again.";
+      card.querySelector('[data-ev-act="add"], [data-ev-act="approve-all"], [data-ev-act="rerun"]').focus();
+    }
+  });
+  draw();
+})();
+</script>

@@ -1149,6 +1149,53 @@ def sorted_pairs(
     return tuple(out)
 
 
+def page_data(
+    exercise_id: str,
+    gate: Gate,
+    rows: tuple[Assignment, ...],
+    blind: bool = False,
+    query: str = "",
+    first: bool = True,
+) -> dict[str, object]:
+    """What a gate page's script needs to work its mode's operations in
+    the browser (AD1G rung 6b): the Total, every dossier and pair (not
+    only the page's), and each panel source's members, so a change shows
+    in the states, the counts and the load line whatever page is open. A
+    blind exercise sends no candidate's name or email, so its + Pair
+    cannot leave out the candidate themself (an open question for AD2).
+    ``query`` and ``first`` are the page's search and whether it is the
+    first page, where pairs added in the tab show. Emails are lowercased
+    as the rows' ``data-ev-pair``. Nothing is saved until AD2."""
+    sources, total = sources_of(exercise_id, gate)
+    panels = sample_data.panel_pools(exercise_id)
+    return {
+        "key": f"{exercise_id}:{gate.key}",
+        "mode": gate.mode,
+        "min": total.min,
+        "max": total.max,
+        "sources": [[source_label(s, panels), s.min, s.max] for s in sources],
+        "q": query.strip(),
+        "first": first,
+        "blind": blind,
+        "dossiers": [
+            [
+                a.application.public_id,
+                a.application.dossier_id if blind else a.application.applicant,
+                "" if blind else a.application.email.lower(),
+            ]
+            for a in rows
+        ],
+        "pairs": [
+            [a.application.public_id, e.lower(), n, src] for a in rows for n, e, src in a.evaluators
+        ],
+        "panels": [
+            [panels[s.ref]["name"], [[n, e.lower()] for n, e in panels[s.ref]["members"]]]
+            for s in sources
+            if s.kind == "panel" and s.ref in panels
+        ],
+    }
+
+
 def assignment_state(gate: Gate, sent: bool, a: Assignment) -> str:
     """A row's state on Evaluations, by the gate's mode: *Short by n*
     when the Total's min is not met; else *Filled* (Automatic),
