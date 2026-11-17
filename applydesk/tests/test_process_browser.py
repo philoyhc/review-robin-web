@@ -652,8 +652,8 @@ def test_a_gate_item_makes_and_picks_its_panel(page: Page) -> None:
     box.locator('[data-np="members"]').fill("Daniel Koh, priya.raman@example.edu")
     box.get_by_role("button", name="Create panel").click()
     assert gate.locator("[data-pi-panel]").text_content() == "Interview panel 1 · Total 1"
-    members = gate.locator("[data-pc-members] li").all_inner_texts()
-    assert members == ["Daniel Koh daniel.koh@example.edu", "Priya Raman priya.raman@example.edu"]
+    # Its members are on Panels, not listed here (author, 2026-11-17).
+    assert gate.locator("[data-pc-members]").count() == 0
     assert page.locator("[data-o-panel]").text_content() == "Interview panel"
     assert "Gate 1" not in issues.inner_text()
     # A replica keeps the sources its gate was given.
@@ -670,7 +670,12 @@ def test_a_sent_gate_keeps_its_panel(page: Page) -> None:
     page.goto(PAGE)
     g3 = _item(page, "g3")
     assert g3.locator("[data-pc-panel]").is_disabled()
-    assert "Prof Ivan Petrov" in g3.locator("[data-pc-members]").inner_text()
+    # A sent gate says so once, at its top; its progress is Evaluations'.
+    note = g3.locator("[data-pc-sent]")
+    assert (
+        note.count() == 1
+        and note.inner_text() == "Sent to Review Robin: its settings are fixed here."
+    )
     assert page.locator("[data-o-panel]").all_inner_texts() == [
         "Nominated, Panel A",
         "Panel B",
@@ -816,19 +821,19 @@ def test_each_bound_is_named_where_the_header_row_is_not(page: Page) -> None:
 
 
 def test_the_assignment_mode_is_one_of_three(page: Page) -> None:
+    """A plain menu, as the card's other settings (author, 2026-11-17)."""
     gate = _peer_copy(page)
-    mode = gate.locator("[data-ps-mode]")
-    # The chosen one again rewrites nothing, so the page is not marked
-    # changed by it (the cold read on rungs 2-4).
-    mode.evaluate(
-        "m => { window.psMuts = 0; new MutationObserver(r => { window.psMuts += r.length; })"
-        ".observe(m, { subtree: true, attributes: true }); }"
+    mode = gate.locator('[data-ps="mode"]')
+    assert mode.locator("option").all_text_contents() == [
+        "Automatic",
+        "Suggested, then approved",
+        "Assigned by the operator",
+    ]
+    assert mode.input_value() == "automatic"
+    mode.select_option("suggested")
+    assert gate.locator('[data-gsec="evaluators"] [data-gsec-sum]').text_content() == (
+        "Nominated 0–1 · Panel A 1–2 · Total 2 · Suggested, then approved"
     )
-    mode.get_by_role("button", name="Automatic").click()
-    assert page.evaluate("window.psMuts") == 0
-    mode.get_by_role("button", name="Suggested, then approved").click()
-    pressed = [b.get_attribute("aria-pressed") for b in mode.locator("button").all()]
-    assert pressed == ["false", "true", "false"]
 
 
 def test_a_nominated_source_shuts_the_new_panel_box(page: Page) -> None:
@@ -1169,7 +1174,7 @@ def test_the_shut_cards_lines_follow_edits(page: Page) -> None:
     assert line.text_content() == "Review Robin session · Confidential · Entry decided by hand"
     who = gate.locator('[data-gsec="evaluators"] [data-gsec-sum]')
     assert who.text_content() == "No evaluators · Automatic"
-    gate.locator("[data-ps-mode]").get_by_role("button", name="Assigned by the operator").click()
+    gate.locator('[data-ps="mode"]').select_option("assigned")
     assert who.text_content() == "No evaluators · Assigned by the operator"
 
 

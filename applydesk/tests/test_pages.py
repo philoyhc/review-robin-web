@@ -403,7 +403,7 @@ def test_a_gate_item_carries_its_evaluators(client: TestClient) -> None:
         "Panel B 1 · Total 1",
         "Interviewers 2 · Total 2",
     ]
-    assert "Prof Ivan Petrov" in text  # the interviewers, on the Interview gate
+    assert "data-pc-members" not in text  # members are on Panels, not listed (author)
     # Every gate here is sent: its panel menus are fixed (the Peer
     # Review's nominated row has one too, hidden).
     assert text.count('data-pc-panel data-ps="panel" disabled title="Sent') == 4
@@ -1068,6 +1068,20 @@ def test_a_confidential_gate_says_so_when_shut(client: TestClient) -> None:
     assert [(f.key, f.label) for f in fields] == [("f1", "Score")]
 
 
+def test_a_gate_card_shows_no_progress_and_says_what_evaluators_read(
+    client: TestClient,
+) -> None:
+    """The author, 2026-11-17 (rung 4e): progress is Evaluations', not
+    Process's; what evaluators read sits under Response fields, redacted
+    in a blind exercise."""
+    text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
+    assert "Progress:" not in text and "Panel sees" not in text
+    fields = text[text.index("data-pc-fields") : text.index("data-pc-results")]
+    assert "Evaluators read the dossier's <em>Shown to reviewers</em> part." in fields
+    blind = client.get(f"/applydesk/operator/exercises/{BLIND}/process").text
+    assert "<em>Shown to reviewers</em> part, redacted." in blind
+
+
 def test_a_gate_lists_its_evaluator_sources(client: TestClient) -> None:
     """Ruling 27 (AD1G rungs 3-4): a gate's Evaluators are ranked sources,
     each a kind, its question or panel, a min and max, a Total within
@@ -1080,7 +1094,8 @@ def test_a_gate_lists_its_evaluator_sources(client: TestClient) -> None:
     assert re.findall(r'data-ps="(?:min|max)" value="(\d*)"', gate) == ["0", "1", "1", "2"]
     assert re.findall(r'data-ps="total-(?:min|max)" value="(\d*)"', gate) == ["2", "2"]
     assert "within 1–3" in gate
-    assert 'data-mode="automatic" aria-pressed="true" disabled' in gate
+    assert '<option value="automatic" selected>Automatic</option>' in gate
+    assert '<select class="fc-in" data-ps="mode" disabled' in gate
     for control in ('data-ps="kind"', 'data-ps-act="up"', 'data-ps-act="add"', 'data-ps="min"'):
         at = gate.index(control)
         assert "disabled" in gate[at : gate.index(">", at)], control

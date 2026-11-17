@@ -873,22 +873,6 @@ def sources_warn(
     )
 
 
-def source_members(
-    sources: tuple[Source, ...], pools: dict[str, sample_data.Pool]
-) -> list[tuple[str, str]]:
-    """The people the gate's panel sources hold, each once, in rank order."""
-    seen: set[str] = set()
-    out: list[tuple[str, str]] = []
-    for s in sources:
-        if s.kind != "panel" or s.ref not in pools:
-            continue
-        for name, email in pools[s.ref]["members"]:
-            if email.casefold() not in seen:
-                seen.add(email.casefold())
-                out.append((name, email))
-    return out
-
-
 @dataclass(frozen=True)
 class Filling:
     """A dossier's evaluators as ``stages.fill`` gives them: each with the

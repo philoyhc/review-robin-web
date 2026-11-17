@@ -174,6 +174,11 @@
   {% set chips %}<span class="chip chip-{{ 'ok' if state == 'Results in' else ('info' if state in ('Sent', 'Ready') else 'warn') }}" data-pi-state>{{ state }}</span><span class="chip chip-mute" data-pi-results>{{ g.results | length }} {{ "result" if g.results | length == 1 else "results" }}</span><span class="chip {{ 'chip-warn' if ev_problem else 'chip-mute' }}" data-pi-panel>{{ sources_summary(ev[0], ev[1], panel_pools) }}</span>{% endset %}
   {{ head("Gate " ~ g.number, g.label or "Untitled gate", chips, open) }}
   <div class="pi-body">
+  {# A sent gate says so once, for all of it: its settings are fixed here
+     (AD1F, AD1G). Whether one may be re-sent before its session opens is
+     an open ruling (todo, "Rulings to settle"). Its progress is
+     Evaluations' to show, not Process's. #}
+  {% if sent %}<p class="pc-line muted pc-sent-note" data-pc-sent>Sent to Review Robin: its settings are fixed here.</p>{% endif %}
   {# Ruling 28: a gate is one Review Robin run. Its own fields and who
      evaluates sit in two cards, shut until opened, each saying what it
      holds; then what evaluators answer, then the results. #}
@@ -213,15 +218,12 @@
     </div>
     {# A row's + adds the next source; with none, this does. #}
     <div class="pc-item-foot" data-ps-empty{% if ev[0] %} hidden{% endif %}><button type="button" class="btn btn-secondary" data-ps-act="add"{{ sent_attr(sent) }}>+ Source</button></div>
-    <ul class="gc-members" data-pc-members>
-      {% for name, email in source_members(ev[0], panel_pools) %}<li>{{ name }}{% if name != email %} <span class="muted">{{ email }}</span>{% endif %}</li>{% endfor %}
-    </ul>
-    {% if sent %}<p class="pc-line muted" data-pc-sent>Sent with its evaluators as they then stood: changes to a panel's roster apply from the gate's next send.</p>{% endif %}
-    <p class="pc-line muted">Panel sees: the dossier, the <em>Shown to reviewers</em> part{% if exercise.blind %}, redacted{% endif %}.{% if gs[1] %}<span data-pc-sent> Progress: {{ gs[1] }}.</span>{% endif %}</p>
   </div>
+  {# How the pairs are made (ruling 27): a menu, as the card's other
+     settings (author, 2026-11-17). A panel's members are on Panels, each
+     panel row linking there, not listed here: a panel can be long. #}
   <div class="pc-row ps-mode">
-    <span class="fc-l">Assignment</span>
-    <span class="seg" role="group" aria-label="Assignment" data-ps-mode>{% for k, label in modes %}<button type="button" data-mode="{{ k }}" aria-pressed="{{ 'true' if k == g.mode else 'false' }}"{{ sent_attr(sent) }}>{{ label }}</button>{% endfor %}</span>
+    <label class="fc-l">Assignment<select class="fc-in" data-ps="mode"{{ sent_attr(sent) }}>{% for k, label in modes %}<option value="{{ k }}"{% if k == g.mode %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
   </div>
     </div>
   </details>
@@ -229,7 +231,7 @@
      type and bounds, whether it must be answered, and its help. #}
   <div class="pc-fields pi-sec" data-pc-fields>
     <span class="fc-l">Response fields</span>
-    <p class="pc-line muted pc-hint">What each evaluator answers in Review Robin, field by field.</p>
+    <p class="pc-line muted pc-hint">What each evaluator answers in Review Robin, field by field. Evaluators read the dossier's <em>Shown to reviewers</em> part{% if exercise.blind %}, redacted{% endif %}.</p>
     <div class="pr-list" data-rf-list>{% for f in fields_of(g) %}{{ field_row(f, sent) }}{% endfor %}</div>
     <p class="pc-line muted" data-rf-none{% if fields_of(g) %} hidden{% endif %}>No response fields yet: a result collates one.</p>
     <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-rf-act="add"{% if sent %} data-sent disabled title="Sent: the gate keeps its fields"{% endif %}>+ Field</button></div>
