@@ -18,10 +18,14 @@ The author's, 2026-11-17, on two mock-ups (`applydesk/docs/home/`):
 
 Rejected: **the layout as the exercise's setting**, chosen by the operator for applicants: the author made it each viewer's, as Review Robin's table sorts are; an exercise's shape still picks the starting layout. **One fixed layout**: the vertical one holds more stages and items without compressing them, the horizontal one reads at a glance; neither serves every exercise.
 
+## Decision amended (author, 2026-11-17, at the rung 2 check)
+
+The horizontal layout is **one graphic, equal widths**: the bar's segments are the stages' column heads, one per stage, equal in width so each sits over its own column; the current one fills to today. The proportional track, its date scale and the separate row of numbered dots go (they said the same thing twice). A stage's length is its dates, under its name. Mock-up: equal-width, three and five stages and a phone, in the rung 3 PR.
+
 ## Semantics
 
 - **Stage state**: *Done* when its last date has passed (the Applications stage reads *Closed*), *Now* when today falls within it, *Next* otherwise; a stage with no dates is *Next* and says its dates are not set. Today is the sample's (17 Nov 2026) until AD2.
-- **Proportion** (Horizontal): a stage's share of the days from the first stage's start to the last's end; a stage with no dates takes an equal share of what is left; gaps between stages are not drawn.
+- ~~**Proportion** (Horizontal): a stage's share of the days~~: equal widths (Decision amended). Today's place in the current stage is its share of that stage's days, in either layout.
 - **Items**: the form as *You · Apply online*, and its close as a milestone; each gate as a *Step* in Process's order, named by its name (a gate with no name: *A step*); each outcome by name with *released <date>* or *expected <expected outcome>*; outcome values listed only once released.
 - **Shown to applicants**: Process's per-stage *Shown to applicants* is not modelled yet (a static box); until it is, every stage shows. A hidden stage, when it is, is left out of the applicant's timeline and marked on the operator's.
 - **The switch**: `localStorage` `applydesk-timeline` (`h` / `v`), one choice for every exercise; storage blocked, the starting rule applies.
@@ -47,6 +51,8 @@ Taken 2026-11-17 at `696b14d9b`.
 ## Status
 
 - **Rung 2 built** (2026-11-17): the scaffold as the ladder says. Diverging from Semantics: a draft's missing setup stays a *Publish* card under the two columns (today's list and button), not the Next step line, which says what a draft's timeline is; the lede goes (the description is in Details). Its cold read: no blocker; fixed in the rung, each with a test: the expected date the exercise's estimate, not Process's due (applicants read it); an outcome's values only once released to applicants; an impossible day or an end before its start is no dates, not a 500; the year rolls over from the stage before; the scale and today placed in the segments' own shares; today said in words, between stages too; the track hidden until placed, the Now segment filled without the script; *1 draft*; Details' two explanations back.
+
+- **Rung 3 built** (2026-11-17): the horizontal layout equal-width (Decision amended), the proportional track, its scale and the dots row gone; one list of stages drawn either way by CSS, the switch kept in `localStorage` (`applydesk-timeline`), starting Vertical on a phone or past four stages, the server's start without the script. `timeline.py` drops the shares and the track position.
 
 ## PR ladder
 
