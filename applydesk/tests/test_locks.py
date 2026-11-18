@@ -268,3 +268,18 @@ def test_every_published_sample_stage_passes_its_own_checks(public_id: str) -> N
     for st in stages.plan_of(public_id).stages:
         if st.status == "Published":
             assert locks.publish_problems(e, st) == (), st.label
+
+
+def test_a_release_waits_on_its_owed_emails() -> None:
+    """AD-21: Released stays off while an email it sends is owed; a
+    release already made may be withdrawn."""
+    e, review, interviews = _e(RA), _stage(RA, 2), _stage(RA, 3)
+    o1, o2 = review.columns[2], interviews.columns[1]
+    assert isinstance(o1, stages.Outcome) and isinstance(o2, stages.Outcome)
+    assert locks.release_lock(e, o1) == locks.OPEN  # released already
+    lock = locks.release_lock(e, o2)
+    assert lock.fixed
+    assert lock.reason == (
+        "Write its emails on Emails first: Interviews: Outcome - Applicants;"
+        " Interviews: Outcome - Panel evaluators"
+    )

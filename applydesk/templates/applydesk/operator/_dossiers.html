@@ -64,13 +64,14 @@
         <th>Applicant</th>
         <th>Status<span class="ap-count" data-ap-count="status"></span></th>
         {% for r in plan.stages %}{% for c in r.columns %}
-          {% if c.via is defined %}
-          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span></th>
+          {% if c.via is defined %}{% set cl = cells_lock(c) %}
+          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate"{% if cl.fixed %} data-ap-fixed="{{ cl.reason }}"{% endif %} data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>{% if cl.fixed %}<span class="ap-rule-line ap-fixed">Fixed: its Review Robin session has opened</span>{% endif %}</th>
           {% else %}
           <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-scope="{{ scope(plan, c) | map(attribute='key') | join('|') }}" data-weights="{% for k, w in c.weights %}{{ k }}:{{ w }}{{ '|' if not loop.last }}{% endfor %}" data-number="Outcome {{ c.number }}" data-first="{{ c.values[0] }}" data-on="{{ going_on(c) | join('|') }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
             {% if c.weights %}<span class="ap-weights">{% for k, w in c.weights if w %}{{ result_label(k) }} {{ (w * 100) | round | int }}%{{ " · " if not loop.last }}{% endfor %}</span>{% endif %}
             {% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>
-            <label class="ap-rel"><input type="checkbox" data-ap-release="{{ c.label }}" data-ap-locks disabled aria-label="Released: {{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
+            {% set rl = release_lock(c) %}
+            <label class="ap-rel"{% if rl.fixed %} title="{{ rl.reason }}"{% endif %}><input type="checkbox" data-ap-release="{{ c.label }}" data-ap-locks disabled{% if rl.fixed %} data-ap-fixed="{{ rl.reason }}"{% endif %} aria-label="Released: {{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
             <span class="ap-relnote{{ ' ap-relnote-on' if c.released }}" data-ap-relnote>{{ c.released or "Not yet" }}</span>
           </th>
           {% endif %}
@@ -89,7 +90,7 @@
           {# A submitted application's outcomes are always settable, "—"
              until decided, so a hand change can advance it (Codex). #}
           {% if not cell.value and (c.via is defined or a.state != "Submitted") %}<span class="muted">—</span>
-          {% elif c.via is defined %}<button type="button" class="ap-adm" data-ap-adm data-ap-locks disabled data-v="{{ cell.value }}"{% if cell.result is not none %} data-result="{{ cell.result }}"{% endif %}{% for k, v in cell.extra %} data-{{ k }}="{{ v }}"{% endfor %} aria-label="{{ c.label }} for {{ a.public_id }}: {{ 'no status yet' if cell.value == '—' else cell.value }}">{{ cell.value }}</button>{% if cell.note %}<span class="ap-note">{{ cell.note }}</span>{% endif %}
+          {% elif c.via is defined %}{% set cl = cells_lock(c) %}<button type="button" class="ap-adm" data-ap-adm data-ap-locks disabled{% if cl.fixed %} data-ap-fixed title="{{ cl.reason }}"{% endif %} data-v="{{ cell.value }}"{% if cell.result is not none %} data-result="{{ cell.result }}"{% endif %}{% for k, v in cell.extra %} data-{{ k }}="{{ v }}"{% endfor %} aria-label="{{ c.label }} for {{ a.public_id }}: {{ 'no status yet' if cell.value == '—' else cell.value }}">{{ cell.value }}</button>{% if cell.note %}<span class="ap-note">{{ cell.note }}</span>{% endif %}
           {% else %}<span class="ap-ocw"><select class="ap-oc" data-ap-oc data-ap-locks disabled data-v="{{ cell.value }}" aria-label="{{ c.label }} for {{ a.public_id }}">
               <option value=""{% if not cell.value %} selected{% endif %}>—</option>
               <option{% if cell.value == "Pending" %} selected{% endif %}>Pending</option>
@@ -232,7 +233,9 @@
   }
   function setLocked(lock) {
     unlocked = !lock;
-    root.querySelectorAll("[data-ap-locks]").forEach(function (el) { el.disabled = lock; });
+    // A gate whose session has opened keeps its entries, and a release
+    // waits on its emails (segment AD1K, AD-04, AD-21), unlocked or not.
+    root.querySelectorAll("[data-ap-locks]").forEach(function (el) { el.disabled = lock || el.hasAttribute("data-ap-fixed"); });
     if (lock) root.removeAttribute("data-unlocked"); else root.setAttribute("data-unlocked", "");
     lockBtn.textContent = lock ? "Unlock" : "Lock";
     lockBtn.title = lock ? "Unlock the table to change it" : "Keep the changes and lock the table";
@@ -278,7 +281,7 @@
 
   root.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-ap-adm]");
-    if (!btn || !unlocked) return;
+    if (!btn || !unlocked || btn.hasAttribute("data-ap-fixed")) return;
     setAdm(btn, CYCLE[(CYCLE.indexOf(btn.dataset.v) + 1) % CYCLE.length]);
     byHand(btn, true);
     recount();
@@ -289,9 +292,15 @@
     if (sel) { setOutcome(sel, sel.value); byHand(sel, true); recount(); return; }
     var rel = e.target.closest("[data-ap-release]");
     if (rel) {
-      var name = rel.dataset.apRelease;
+      var name = rel.dataset.apRelease, col = rel.closest("th").dataset.col;
+      // Cells it reached still undecided are named before a release (AD-21).
+      var open = rows.filter(function (r) {
+        var sel = r.querySelector('[data-cell="' + col + '"] [data-ap-oc]');
+        return sel && (!sel.value || sel.value === "Pending");
+      }).length;
+      var warn = open ? open + (open === 1 ? " dossier is" : " dossiers are") + " still undecided or Pending here. " : "";
       var ok = window.confirm(rel.checked
-        ? "Release " + name + "? What a release does (to applicants, to reviewers, by email) is set with the Timeline. Nothing is sent from this mock-up."
+        ? warn + "Release " + name + "? What a release does (to applicants, to reviewers, by email) is set with the Timeline. Nothing is sent from this mock-up."
         : "Withdraw the release of " + name + "?");
       if (!ok) { rel.checked = !rel.checked; return; }
       var note = rel.closest("th").querySelector("[data-ap-relnote]");
@@ -332,7 +341,7 @@
       rows.forEach(function (r) {
         if (r.hidden || !r.querySelector("[data-ap-tick]").checked) return;
         var el = r.querySelector('[data-cell="' + setCol.value + '"] [data-v]');
-        if (!el) return;  // a draft, or never admitted: nothing to set
+        if (!el || el.hasAttribute("data-ap-fixed")) return;  // a draft, never admitted, or fixed
         if (el.matches("[data-ap-adm]")) setAdm(el, setVal.value); else setOutcome(el, setVal.value);
         byHand(el, true);
       });
@@ -403,7 +412,7 @@
       var kept = 0;
       pending.forEach(function (c) {
         var el = cellOf(c.row, c.key);
-        if (!el || el.dataset.v !== c.from) { kept += 1; return; }
+        if (!el || el.dataset.v !== c.from || el.hasAttribute("data-ap-fixed")) { kept += 1; return; }
         if (el.matches("[data-ap-adm]")) setAdm(el, c.to); else setOutcome(el, c.to);
         byHand(el, !c.byRule);
       });
@@ -521,6 +530,7 @@
         var spec = JSON.parse(h.dataset.rule || "null");
         if (!spec) return;
         var key = h.dataset.col, unjudged = [], reach = [];
+        if (h.dataset.apFixed) { skipped.push(h.dataset.label + ": fixed, its Review Robin session has opened."); return; }
         rows.forEach(function (r) {
           var el = cellOf(r, key);
           if (!el) return;  // a draft, or a cell that cannot be set
@@ -680,6 +690,7 @@
         if (!val) { skipped.push(id + ": \"" + typed + "\" is not a value of " + head[key].dataset.label + "."); return; }
         var el = cellOf(r, key);
         if (!el) { skipped.push(id + ": " + head[key].dataset.label + " cannot be set (a draft, or never admitted)."); return; }
+        if (el.hasAttribute("data-ap-fixed")) { skipped.push(id + ": " + head[key].dataset.label + " is fixed: its Review Robin session has opened."); return; }
         var k = idOf(r) + "|" + key;
         if (!(k in wanted)) { wanted[k] = { row: r, key: key, vals: [] }; order.push(k); }
         if (wanted[k].vals.indexOf(val) < 0) wanted[k].vals.push(val);

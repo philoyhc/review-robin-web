@@ -178,6 +178,17 @@ def cells_lock(e: Exercise, gate: stages.Gate) -> Lock:
     return OPEN
 
 
+def release_lock(e: Exercise, outcome: stages.Outcome) -> Lock:
+    """An outcome's Released switch (AD-21): off while an email its release
+    sends is owed on Emails. A release already made can be withdrawn."""
+    if outcome.released:
+        return OPEN
+    owed = [m.name for m in workflow.outcome_emails(e.public_id, outcome.key) if not m.ok]
+    if owed:
+        return Lock(True, "Write its emails on Emails first: " + "; ".join(owed))
+    return OPEN
+
+
 def blind_lock(e: Exercise) -> Lock:
     """Blind review, fixed once the first stage holding a gate is
     published (author, 2026-11-18; AD-05)."""

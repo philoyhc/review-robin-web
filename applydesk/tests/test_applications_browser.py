@@ -13,8 +13,18 @@ import pytest
 from fastapi.testclient import TestClient
 from playwright.sync_api import Dialog, Error, Locator, Page, Route, sync_playwright
 
-from applydesk import sample_data, stages
+from applydesk import locks, sample_data, stages
 from applydesk.tests._host import host_with
+
+
+@pytest.fixture(autouse=True)
+def _table_open(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests work the table: an opened gate's cells and a release
+    waiting on its emails (segment AD1K) are opened here; the locks have
+    tests of their own (``test_locks_browser.py``)."""
+    monkeypatch.setattr(locks, "cells_lock", lambda e, g: locks.OPEN)
+    monkeypatch.setattr(locks, "release_lock", lambda e, o: locks.OPEN)
+
 
 ORIGIN = "http://applydesk.test"
 PAGE = f"{ORIGIN}/applydesk/operator/exercises/wa9juxbc2t/dossiers"
@@ -105,6 +115,8 @@ def test_a_release_asks_first(page: Page) -> None:
     page.once("dialog", dismiss)
     switch.click()
     assert "Timeline" in answers[0] and not switch.is_checked()
+    # Its reached cells still undecided are named first (AD-21).
+    assert " still undecided or Pending here. Release Selection?" in answers[0]
     page.once("dialog", lambda d: d.accept())
     switch.click()
     assert switch.is_checked()

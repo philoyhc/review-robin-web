@@ -3,8 +3,9 @@
    browser and nothing is saved until AD2. #}
 {% import "applydesk/operator/_form_cards.html" as fc %}
 {% set single = (cards | selectattr("kind", "equalto", "field") | list | length) == 1 %}
-<div class="fb-split" data-form-builder data-unsaved-root data-exercise="{{ exercise.public_id }}">
+<div class="fb-split" data-form-builder data-unsaved-root data-exercise="{{ exercise.public_id }}"{% if form_lock.fixed %} data-fb-fixed="{{ form_lock.reason }}"{% endif %}>
   <div class="fb-main">
+    {% if form_lock.fixed %}<p class="pc-line muted fb-fixed-note" data-fb-fixed-note>{{ form_lock.reason }}. The form reads as applicants see it; its cards open and shut.</p>{% endif %}
     {# The form's own title and description: collapsible, never moved or
        deleted. #}
     <section class="fc fb-title" data-kind="title" aria-label="The form's title and description"{% if single %} data-open{% endif %}>
@@ -250,7 +251,7 @@
   var drag = null;
   list.addEventListener("pointerdown", function (e) {
     var grip = e.target.closest("[data-fc-grip]");
-    if (!grip || (e.pointerType === "mouse" && e.button !== 0)) return;
+    if (!grip || grip.disabled || (e.pointerType === "mouse" && e.button !== 0)) return;
     e.preventDefault();
     drag = grip.closest("[data-kind]");
     drag.classList.add("fc-dragging");
@@ -372,5 +373,19 @@
   previewBtn.addEventListener("click", function () { showPreview(!main.hidden); });
 
   changed();
+})();
+</script>
+{# Segment AD1K (AD-03): the form, fixed once its stage is published. Its
+   cards still open and shut to be read; nothing else moves. #}
+<script>
+(function () {
+  var root = document.querySelector("[data-form-builder][data-fb-fixed]");
+  if (!root) return;
+  var why = root.dataset.fbFixed;
+  root.querySelectorAll(".fb-main input, .fb-main select, .fb-main textarea, .fb-main button").forEach(function (c) {
+    if (c.matches("[data-fc-toggle]")) return;
+    c.disabled = true;
+    c.title = why;
+  });
 })();
 </script>

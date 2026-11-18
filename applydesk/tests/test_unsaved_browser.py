@@ -5,12 +5,22 @@ a change. Skips without a Chromium build, as `test_form_browser.py`'s."""
 
 from __future__ import annotations
 
+import pytest
 from playwright.sync_api import Page
 
+from applydesk import locks
 from applydesk.tests.test_form_browser import FORM
 from applydesk.tests.test_form_browser import page as page  # the fixture, re-exported
 from applydesk.tests.test_process_browser import MODEL as PROCESS
 from applydesk.tests.test_process_browser import ORIGIN
+
+
+@pytest.fixture(autouse=True)
+def _form_open(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests edit the form: its lock (segment AD1K) is opened, as a
+    draft exercise's would be; the lock has tests of its own."""
+    monkeypatch.setattr(locks, "form_lock", lambda e: locks.OPEN)
+
 
 DRAFT_PROCESS = f"{ORIGIN}/applydesk/operator/exercises/c4xh2ndv6s/process"
 

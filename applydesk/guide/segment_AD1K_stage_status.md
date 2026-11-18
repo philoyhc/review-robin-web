@@ -119,6 +119,7 @@ Taken 2026-11-18 at `d6c20bdf8`.
   - **Status.** `Stage.status` is Draft or Published on the sample, and `applydesk/locks.py` derives the rest: Overdue, Completed, the exercise's status, publish problems, each part's lock with its reason, and a revert's warnings.
   - **Rung 2a, item dates** (author, 2026-11-18): `Gate.when`, `Outcome.due_at` and `Stage.form_when`, each defaulting to the stage's through `stages.window`; `stages.date_problems` joins the publish checks.
   - **Rung 3 split in two**, so each half is checked in a browser alone: 3a the date-time inputs, 3b the status, Publish, Revert and the locks. A published stage's items are fixed by one fieldset each, after their dates; an opened gate's fieldset stays fixed through a revert. Publish lists the server's checks as the page loaded; only the "stage before it" line follows the page.
+  - **Rung 4 built** (2026-11-18): the Form builder reads only, its cards still opening (AD-03); an opened gate's cells stay fixed when Dossiers is unlocked, and rules and CSVs skip them, saying so (AD-04); blind review is fixed on Details (AD-05); *Released* waits on the outcome's owed emails and names undecided cells before a release (AD-21). **A published gate not yet opened keeps live cells**: entering applications is the stage's work while it runs, so only the session opening fixes them.
   - **Kept in `stages.py`.** `_exercise_span` still reads the two exercise fields, until those are typed at AD2.
 
 ## PR ladder
