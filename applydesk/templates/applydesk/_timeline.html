@@ -27,6 +27,7 @@
          passes it: Home does, the applicant's page never does. #}
       {% if ops %}<div class="tl-op" data-tl-op>
         <span class="tl-op-k">Operator only</span>
+        {% if stage_rows and loop.index0 < stage_rows | length %}{% set sr = stage_rows[loop.index0] %}<div class="tl-op-row" data-tl-status><b>Stage <span class="chip chip-{{ STATUS_CHIP[sr[1]] }}">{{ sr[1] }}</span></b><span>{{ ("Waiting on: " ~ sr[3] | join("; ")) if sr[3] else "" }}</span><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a></div>{% endif %}
         {% for r in ops[loop.index0] %}<div class="tl-op-row"><b>{{ r.label }} <span class="chip chip-{{ r.tone }}">{{ r.state }}</span></b><span>{{ r.detail }}</span>{% if r.target == "dossiers" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers') }}">Dossiers</a>{% elif r.target %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ r.target) }}">Gate {{ r.target }}</a>{% endif %}</div>{% endfor %}
       </div>{% endif %}
     </li>

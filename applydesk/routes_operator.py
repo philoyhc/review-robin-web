@@ -28,9 +28,35 @@ def exercises(request: Request) -> Response:
         "applydesk/operator/exercises.html",
         area=OPERATOR_LOBBY,
         exercises=sample_data.EXERCISES,
+        exercise_status=locks.exercise_status,
         applications=sample_data.applications_of,
         current_stage=workflow.current_stage,
     )
+
+
+def home_stage_rows(
+    exercise: sample_data.Exercise,
+) -> list[tuple[stages.Stage, str, tuple[str, ...], tuple[str, ...]]]:
+    """Each stage for Home's Publish card and timeline (segment AD1K): it,
+    its status, what keeps a draft from publishing, what an overdue one
+    still waits on."""
+    plan = stages.plan_of(exercise.public_id).stages
+    # The first stage's setup is listed with links to where each is set
+    # (``missing``); its problems leave out what that list says.
+    linked = {f"{label} is not set." for label, _ in sample_data.setup_missing(exercise)}
+    if any(label == "Dates" for label, _ in sample_data.setup_missing(exercise)) and plan:
+        linked.add(f"{plan[0].label} has no start and end.")
+    if any(label == "Application form" for label, _ in sample_data.setup_missing(exercise)):
+        linked.add("The application form has no questions.")
+    rows = []
+    for i, st in enumerate(plan):
+        status = locks.stage_status(exercise, st)
+        problems = locks.publish_problems(exercise, st) if status == "Draft" else ()
+        if i == 0:
+            problems = tuple(p for p in problems if p not in linked)
+        waiting = locks.outstanding(exercise, st) if status == "Overdue" else ()
+        rows.append((st, status, problems, waiting))
+    return rows
 
 
 @router.get("/exercises/{exercise_id}", name="applydesk_exercise_home")
@@ -53,6 +79,8 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         timezones=sample_data.TIMEZONES,
         default_contact=sample_data.DEFAULT_HELP_CONTACT,
         blind_lock=locks.blind_lock(exercise),
+        stage_rows=home_stage_rows(exercise),
+        STATUS_CHIP=locks.STATUS_CHIP,
         # Every other exercise's code and name, so Details refuses a
         # clashing code on the page (segment AD1I Semantics).
         other_codes=[

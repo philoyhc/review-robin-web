@@ -830,8 +830,9 @@ def test_a_draft_with_nothing_missing_is_ready_to_publish(
 ) -> None:
     monkeypatch.setattr(sample_data, "setup_missing", lambda e: ())
     home = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
-    assert "Ready to publish: the details, the dates and the application form are complete." in home
-    assert '<button class="btn btn-primary" type="button" disabled>Publish</button>' in home
+    # Its first stage's own checks still name its dates (segment AD1K).
+    assert "<li>Stage 1 has no start and end.</li>" in home
+    assert 'on <a href="/applydesk/operator/exercises/c4xh2ndv6s/process">Process</a>' in home
 
 
 def test_the_blank_exercise_is_not_offered_to_applicants(client: TestClient) -> None:
@@ -1439,3 +1440,14 @@ def test_process_names_what_keeps_each_stage_from_publishing(client: TestClient)
     assert "data-pc-status>Published</span>" in model
     assert 'data-locked="Interviews is published: revert it to draft to change this"' in model
     assert "Interviews is published: what it holds is fixed until it is reverted to draft." in model
+
+
+def test_home_and_the_lobby_say_each_stage_s_status(client: TestClient) -> None:
+    """Segment AD1K: the timeline's operator part names each stage's
+    status; the lobby and the status row the exercise's, from its stages."""
+    home = client.get("/applydesk/operator/exercises/wa9juxbc2t").text
+    rows = re.findall(r'data-tl-status><b>Stage <span class="chip chip-\w+">(\w+)</span>', home)
+    assert rows == ["Completed", "Completed", "Published"]
+    lobby = client.get("/applydesk/operator/exercises").text
+    assert '<span class="chip chip-mute">Draft</span>' in lobby
+    assert '<span class="chip chip-ok">Published</span>' in lobby

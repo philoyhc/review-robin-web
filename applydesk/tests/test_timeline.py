@@ -117,11 +117,18 @@ def test_home_is_the_timeline_beside_details(client: TestClient) -> None:
 
 def test_a_draft_s_home_says_what_publishing_needs(client: TestClient) -> None:
     home = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
-    assert home.count("Dates not set") == 2 and "Today ·" not in home
+    # The timeline's two stages, and the Publish card's (segment AD1K).
+    assert home.count("Dates not set") == 4 and "Today ·" not in home
     assert "A draft: the timeline is what applicants will see once it is published." in home
     assert "Still to set up before it can be published:" in home
+    # A published exercise's card says each stage's status (segment AD1K).
     published = client.get(f"/applydesk/operator/exercises/{EX}").text
-    assert "<h2>Publish</h2>" not in published
+    card = published[published.index("data-hm-publish") :]
+    assert re.findall(r'class="chip chip-\w+">(\w+)</span>', card[: card.index("</section>")]) == [
+        "Completed",
+        "Completed",
+        "Published",
+    ]
 
 
 def test_a_stage_s_dates_are_typed_and_printed_as_before() -> None:

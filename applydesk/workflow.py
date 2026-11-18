@@ -160,13 +160,18 @@ def status_row(exercise: Exercise) -> tuple[Pill, ...]:
     apps = sample_data.applications_of(exercise.public_id)
     submitted = sum(a.state == "Submitted" for a in apps)
     drafts = sum(a.state == "Draft" for a in apps)
+    # The exercise's status follows its stages (segment AD1K); imported
+    # here, as locks reads this module.
+    from applydesk import locks
+
+    ex_status = locks.exercise_status(exercise)
     form = form_state(exercise)
     done = sum(gate_state(exercise.public_id, g.key)[0] == "Results in" for g in gates)
     released = sum(bool(o.released) for o in outcomes)
     mail = emails(exercise.public_id)
     kept = sum(e.ok for e in mail)
     return (
-        Pill("Exercise", exercise.state, "ok" if exercise.state == "Published" else "warn"),
+        Pill("Exercise", ex_status, "ok" if ex_status in ("Published", "Completed") else "warn"),
         Pill("Form", form, "warn" if form == "Draft" else "info"),
         Pill(
             "Gates",
