@@ -244,12 +244,12 @@ Conventions: `.py` paths are relative to `applydesk/`, `.html` paths to `applyde
 
 ## For the author
 
-1. **Rule engine scope.** Is the branching, best-N engine (R13, R30) confirmed for the MVP despite FS §15.3's "no decision engine", and does Automatic's even spread override FS §7.7? Does evaluation move server-side at AD2? → AD-61, AD-62, AD-63
-2. **Dossier at AD2 or AD5?** Its own table at AD2, or a column until AD5? Is the ID minted at draft, at submit or at form close? → AD-44, AD-08
-3. **Visibility vocabulary.** Per-card `shown`, section Shown/Not shown, or R26's parts with audiences: which one does AD2 persist? → AD-64, AD-26, AD-93
-4. **Approval granularity.** Under *Suggested, then approved*, is approval per pair (as the JS does) or per dossier (as the server reads)? Is it revocable? → AD-47, AD-25, AD-33
+1. *Ruled (R31):* engine confirmed; evaluation design open. **Rule engine scope.** Is the branching, best-N engine (R13, R30) confirmed for the MVP despite FS §15.3's "no decision engine", and does Automatic's even spread override FS §7.7? Does evaluation move server-side at AD2? → AD-61, AD-62, AD-63
+2. *Ruled (R32):* own table at AD2, minted at submit (proposed). **Dossier at AD2 or AD5?** Its own table at AD2, or a column until AD5? Is the ID minted at draft, at submit or at form close? → AD-44, AD-08
+3. *Ruled (R33):* per dossier part. **Visibility vocabulary.** Per-card `shown`, section Shown/Not shown, or R26's parts with audiences: which one does AD2 persist? → AD-64, AD-26, AD-93
+4. *Ruled (R34):* per dossier. **Approval granularity.** Under *Suggested, then approved*, is approval per pair (as the JS does) or per dossier (as the server reads)? Is it revocable? → AD-47, AD-25, AD-33
 5. **Stable gate handle.** Should gate URLs and Extract file names use a stable key, not the positional number? → AD-48
-6. **Blind and confidential.** Is `blind` locked at publish or at the first send? Does a gate's `confidential` redact the dossier for its evaluators and hide names on its page? → AD-05, AD-65
+6. *Ruled in part (R35):* blind locks when its stage is published; `confidential`'s reach still open. **Blind and confidential.** Is `blind` locked at publish or at the first send? Does a gate's `confidential` redact the dossier for its evaluators and hide names on its page? → AD-05, AD-65
 7. **Outcome lifecycle.** Is *Decided* a stored state distinct from "every cell has a value"? Is release per audience with separate times? → AD-34, AD-21
 8. **Panel roles.** Do "pool" and "interviewers" keep any special meaning, or are all panels generic? → AD-50
 9. **`expected_outcome`.** A free-text estimate for applicants, or derived from the last outcome's `due_on`? → AD-56

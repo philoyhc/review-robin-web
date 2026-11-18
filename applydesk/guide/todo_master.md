@@ -437,6 +437,34 @@ where a ruling below differs from it, the ruling wins.
     sample drops nominations; Gate 3's pairs are *Suggested, then
     approved*; *not Major concerns* means no one chose it.
 
+31. **The rule engine stays in the MVP** (author, 2026-11-18, on the
+    assessment's AD-61 to AD-63): branching rules, *the best N* and
+    Automatic's even spread are confirmed, overriding the functional
+    spec's "no decision engine" (§15.3) and "no balancing" (§7.7). How
+    it is evaluated, and where (a server-side evaluator at AD2), needs
+    thinking through before AD2.
+32. **The dossier is its own table at AD2** (author, 2026-11-18; AD-44):
+    pairs, cells, results, parts and the alias key hang off it, not the
+    application. Proposed: minted at submit, so a draft has none.
+33. **What a reader sees is set per dossier part** (author, 2026-11-18;
+    AD-64): the parts of ruling 26, each with its audiences, are the one
+    vocabulary; per-card *shown* and section *Shown / Not shown* go, and
+    the terms are standardized to *part*.
+34. **Approval is per dossier** (author, 2026-11-18; AD-47): under
+    *Suggested, then approved*, the operator approves a dossier's
+    evaluators together, not pair by pair.
+35. **Each stage has its own status: Draft, Published, Completed**
+    (author, 2026-11-18): what locks, locks when its stage is published
+    (blind review among it, AD-05). A published stage may be reverted to
+    draft, audited.
+36. **A Review Robin gate comes in two types** (author, 2026-11-18):
+    *Review Robin*, the default, its instrument locked as today; and
+    *Review Robin (advanced)*, whose instrument starts with the gate's
+    response fields, which Review Robin may not delete, but may reorder,
+    require or not, add fields to and branch between (e.g. a
+    *Familiarity* rating, Score and Comments shown only above a
+    threshold). Its own segment: `guide/segment_23G_linked_advanced_instrument.md`.
+
 ## What a linked Review Robin gate needs (2026-11-16)
 
 Review Robin's side is built and closed (RRW segment 23F): a gate sent
