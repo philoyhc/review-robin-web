@@ -46,6 +46,11 @@ Taken 2026-11-18 at `31c2f7ff3`.
 - Tests: `applydesk/tests/test_pages.py` (`test_extract_data_collates_every_evaluation_and_exports`, the empty case).
 - Spec: `applydesk/spec/applications.md` (only the Operations row names it; the page's contract is new).
 
+## Status
+
+- **Rung 2 built** (2026-11-18): the six cards as the v1 mock-up, inert; the files' shapes from `applydesk/extract.py`.
+- **Rung 3 built** (2026-11-18): each card's CSV and the two ZIPs (`/extract/<file>`, the chips as query parameters), a manifest first in each ZIP saying a gate not sent; the chips shape the links and are kept per viewer. Diverging: a gate's per-pair answers are **sample answers seeded per pair**, as the sample has none until Review Robin's handoff (AD5); *Applicants as* on *Extract all data* governs the gate and outcome files, the applications file always naming its applicants; *Setup* stays off until rung 4.
+
 ## PR ladder
 
 1. **Plan** (this file), the v1 mock-ups in `applydesk/docs/extract/`, the README rows, the roadmap row.
