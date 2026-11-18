@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 import zipfile
 
 import pytest
@@ -120,7 +121,8 @@ def test_the_page_links_each_download(client: TestClient) -> None:
         assert f'data-xd-dl="{f}" href="{BASE}/{f}"' in text
     assert 'data-xd-dl="gate_3.csv"' not in text  # not sent
     blank = client.get("/applydesk/operator/exercises/n5wg8tjr3e/extract").text
-    assert "data-xd-dl=" not in blank  # nothing to extract: no link
+    # Nothing submitted: only the setup can be extracted (Semantics).
+    assert re.findall(r'data-xd-dl="([^"]+)"', blank) == ["setup.zip"]
 
 
 def test_a_select_people_answer_is_exported(client: TestClient) -> None:
@@ -133,3 +135,51 @@ def test_a_select_people_answer_is_exported(client: TestClient) -> None:
     margaret = next(r for r in rows[1:] if r[2] == "Margaret Liu")
     app = next(a for a in sample_data.applications_of(tea) if a.applicant == "Margaret Liu")
     assert margaret[col] == "; ".join(sample_data.nominees(tea, app, "Preferred reviewer")) != ""
+
+
+def test_the_alias_key_joins_dossier_to_applicant(client: TestClient) -> None:
+    r = client.get(f"{BASE}/alias_key.csv")
+    assert 'filename="alias_key.csv"' in r.headers["content-disposition"]
+    rows = _rows(r.content)
+    assert rows[0] == ["dossier_id", "application_id", "applicant", "email"]
+    assert rows[1] == ["p3bd7kq2wx", "m3qx8vkt2n", "Aisha Bello", "aisha.bello@example.edu"]
+    assert len(rows) - 1 == 104  # every application, drafts included
+    # Never inside Extract all data, whatever it carries (kept apart).
+    z = zipfile.ZipFile(
+        io.BytesIO(client.get(f"{BASE}/all.zip?carries=applications,gates,outcomes,setup").content)
+    )
+    assert "alias_key.csv" not in z.namelist()
+
+
+def test_extract_setup_one_csv_per_setup_page(client: TestClient) -> None:
+    r = client.get(f"{BASE}/setup.zip")
+    assert 'filename="ra_2027_setup.zip"' in r.headers["content-disposition"]
+    z = zipfile.ZipFile(io.BytesIO(r.content))
+    assert z.namelist() == ["manifest.csv", "form.csv", "process.csv", "panels.csv", "emails.csv"]
+    form = _rows(z.read("form.csv"))
+    assert form[0][:4] == ["order", "kind", "type", "label"]
+    assert ["1", "section", "", "About you"] == form[1][:4]
+    process = _rows(z.read("process.csv"))
+    gate1 = next(r for r in process if r[3] == "gate" and r[4] == "1")
+    assert gate1[5] == "Peer review" and gate1[7] == "Automatic"
+    assert gate1[11] == "Status is Submitted → Entered, else Not entered"
+    shortlisting = next(r for r in process if r[5] == "Shortlisting")
+    assert shortlisting[9] == "Re-appointment; Interview; Not shortlisted"
+    assert ["Current RAs", "Aisha Bello", "aisha.bello@example.edu", "Cendana House"] in _rows(
+        z.read("panels.csv")
+    )
+    assert _rows(z.read("emails.csv"))[1][-1] == "yes"
+    # The chips choose the pages; all.zip carries them under setup/.
+    z = zipfile.ZipFile(io.BytesIO(client.get(f"{BASE}/setup.zip?carries=form,emails").content))
+    assert z.namelist() == ["manifest.csv", "form.csv", "emails.csv"]
+    z = zipfile.ZipFile(io.BytesIO(client.get(f"{BASE}/all.zip?carries=setup").content))
+    assert z.namelist() == [
+        "manifest.csv",
+        "setup/form.csv",
+        "setup/process.csv",
+        "setup/panels.csv",
+        "setup/emails.csv",
+    ]
+    # A draft's setup extracts too.
+    draft = client.get("/applydesk/operator/exercises/n5wg8tjr3e/extract/setup.zip")
+    assert draft.status_code == 200

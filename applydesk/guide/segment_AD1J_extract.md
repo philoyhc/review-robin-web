@@ -50,6 +50,7 @@ Taken 2026-11-18 at `31c2f7ff3`.
 
 - **Rung 2 built** (2026-11-18): the six cards as the v1 mock-up, inert; the files' shapes from `applydesk/extract.py`.
 - **Rung 3 built** (2026-11-18): each card's CSV and the two ZIPs (`/extract/<file>`, the chips as query parameters), a manifest first in each ZIP saying a gate not sent; the chips shape the links and are kept per viewer. Diverging: a gate's per-pair answers are **sample answers seeded per pair**, as the sample has none until Review Robin's handoff (AD5); *Applicants as* on *Extract all data* governs the gate and outcome files, the applications file always naming its applicants; *Setup* stays off until rung 4.
+- **Rung 4 built** (2026-11-18): the alias key (every application, drafts included; never inside *Extract all data*) and Extract setup's four CSVs (`setup.zip`, its chips choosing the pages; a draft's too), *Setup* in *Extract all data* under `setup/`, off by default.
 
 ## PR ladder
 

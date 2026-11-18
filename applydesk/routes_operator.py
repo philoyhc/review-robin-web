@@ -175,7 +175,8 @@ def extract_file(
 ) -> Response:
     """Extract data's downloads (segment AD1J, rung 3), shaped by the
     cards' chips: ``rows`` last|all, ``drafts`` 1, ``shape`` pair|application,
-    ``applicants`` names|ids, ``carries`` the ZIP's files, ``orows`` the
+    ``applicants`` names|ids, ``carries`` a ZIP's files (Extract all data's,
+    or Extract setup's pages), ``orows`` the
     ZIP's outcomes rows (the Outcomes card's). Sample data;
     logged from AD2."""
     exercise = exercise_or_404(exercise_id)
@@ -202,7 +203,7 @@ def extract_file(
         return _download(f"{code}_gates.zip", body, "application/zip")
     if file == "all.zip":
         names = _pick(applicants, ("names", "ids")) == "names"
-        wanted = frozenset(carries.split(",")) if carries else extract.CARRIES
+        wanted = frozenset(carries.split(",")) if carries else extract.DEFAULT_CARRIES
         body = extract.all_zip(
             exercise,
             wanted & extract.CARRIES,
@@ -213,6 +214,12 @@ def extract_file(
             _pick(orows, ("last", "all")),
         )
         return _download(f"{code}_extract.zip", body, "application/zip")
+    if file == "alias_key.csv":
+        return _csv(file, extract.alias_key(exercise))
+    if file == "setup.zip":
+        parts = frozenset(carries.split(",")) if carries else extract.SETUP_PARTS
+        body = extract.setup_zip(exercise, parts & extract.SETUP_PARTS)
+        return _download(f"{code}_setup.zip", body, "application/zip")
     raise HTTPException(status_code=404)
 
 

@@ -5,17 +5,17 @@
    Each download is a link the card's chips shape (rung 3), each viewer's
    chips kept in their browser; without the script, the defaults. The
    files are `applydesk/extract.py`'s; the alias key and the setup files
-   come at rung 4. #}
+   since rung 4, the setup's even for a draft. #}
 {% macro seg(key, options, label) -%}
 <span class="seg" role="group" aria-label="{{ label }}" data-xd-k="{{ key }}">{% for v, o in options %}<button type="button" data-xd-v="{{ v }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ o }}</button>{% endfor %}</span>
 {%- endmacro %}
-{% macro tog(value, name, on=True, later=False) -%}
-<button type="button" class="btn btn-toggle" data-xd-t="{{ value }}" aria-pressed="{{ 'true' if on else 'false' }}"{% if later %} disabled title="With Extract setup's files (rung 4)"{% endif %}>{{ name }}</button>
+{% macro tog(value, name, on=True) -%}
+<button type="button" class="btn btn-toggle" data-xd-t="{{ value }}" aria-pressed="{{ 'true' if on else 'false' }}">{{ name }}</button>
 {%- endmacro %}
 {% set nothing = extract.submitted == 0 %}
 {% set base = '/operator/exercises/' ~ exercise.public_id ~ '/extract/' %}
-{% macro dl(file, label, cls="btn-primary") -%}
-{% if nothing %}<button class="btn {{ cls }}" type="button" disabled>{{ label }}</button>{% else %}<a class="btn {{ cls }}" data-xd-dl="{{ file }}" href="{{ url(base ~ file) }}" download>{{ label }}</a>{% endif %}
+{% macro dl(file, label, cls="btn-primary", always=False) -%}
+{% if nothing and not always %}<button class="btn {{ cls }}" type="button" disabled>{{ label }}</button>{% else %}<a class="btn {{ cls }}" data-xd-dl="{{ file }}" href="{{ url(base ~ file) }}" download>{{ label }}</a>{% endif %}
 {%- endmacro %}
 {% macro columns(cols) -%}
 <p class="xd-cols"><span class="visually-hidden">Columns: </span>{{ cols | join(", ") }}</p>
@@ -25,7 +25,7 @@
   <section class="card" data-xd-card="all">
     <h2>Extract all data</h2>
     <p class="xd-help">One ZIP for offline selection: a manifest, then every file the cards below make, as each is set.</p>
-    <div class="xd-chips"><span class="xd-k">Carries</span>{{ tog("applications", "Applications") }}{{ tog("gates", "Gates") }}{{ tog("outcomes", "Outcomes") }}{{ tog("setup", "Setup", False, True) }}</div>
+    <div class="xd-chips"><span class="xd-k">Carries</span>{{ tog("applications", "Applications") }}{{ tog("gates", "Gates") }}{{ tog("outcomes", "Outcomes") }}{{ tog("setup", "Setup", False) }}</div>
     <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("names", "Names"), ("ids", "Dossier IDs")), "Applicants as") }}</div>
     <p class="xd-cols" data-xd-files>{{ extract.zip_name }}: {{ extract.files | join(" · ") }}</p>
     <div class="btnrow">{{ dl("all.zip", "Zip all") }}</div>
@@ -71,14 +71,14 @@
     <h2>Alias key</h2>
     <p class="xd-help">Dossier ID to applicant, the key Review Robin never sees. Keep it apart from the files above; every download is logged.</p>
     {{ columns(alias_columns) }}
-    <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Download key</button></div>
+    <div class="btnrow">{{ dl("alias_key.csv", "Download key", "btn-secondary") }}</div>
   </section>
   <section class="card" data-xd-card="setup">
     <h2>Extract setup</h2>
     <p class="xd-help">The exercise's setup as files, to clone it into a new exercise: Form, Process (stages, gates, outcomes and rules), Panels and Emails.</p>
-    <div class="xd-chips"><span class="xd-k">Carries</span>{{ tog("form", "Form", True, True) }}{{ tog("process", "Process", True, True) }}{{ tog("panels", "Panels", True, True) }}{{ tog("emails", "Emails", True, True) }}</div>
+    <div class="xd-chips"><span class="xd-k">Carries</span>{{ tog("form", "Form") }}{{ tog("process", "Process") }}{{ tog("panels", "Panels") }}{{ tog("emails", "Emails") }}</div>
     <p class="xd-cols">{{ setup_files | join(" · ") }}</p>
-    <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Zip setup</button></div>
+    <div class="btnrow">{{ dl("setup.zip", "Zip setup", "btn-secondary", always=True) }}</div>
   </section>
 </div>
 <script>

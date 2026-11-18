@@ -28,10 +28,13 @@ APPLICATION_KEYS = ("application_id", "dossier_id", "applicant", "email", "state
 PAIR_KEYS = ("dossier_id", "evaluator", "evaluator_email")
 #: The alias key: the one file that joins a Dossier ID to its applicant.
 ALIAS_KEYS = ("dossier_id", "application_id", "applicant", "email")
-#: What *Extract all data* may carry until Extract setup's files (rung 4).
-CARRIES = frozenset({"applications", "gates", "outcomes"})
+#: What *Extract all data* may carry; the alias key never (kept apart).
+CARRIES = frozenset({"applications", "gates", "outcomes", "setup"})
+#: What it carries until a viewer says otherwise: setup is for cloning.
+DEFAULT_CARRIES = frozenset({"applications", "gates", "outcomes"})
 #: Extract setup's files, one per Setup page (author, 2026-11-18: CSV).
 SETUP_FILES = ("form.csv", "process.csv", "panels.csv", "emails.csv")
+SETUP_PARTS = frozenset(f.removesuffix(".csv") for f in SETUP_FILES)
 
 
 @dataclass(frozen=True)
@@ -298,7 +301,7 @@ def gates_zip(e: Exercise, shape: str = "pair", names: bool = False) -> bytes:
 
 def all_zip(
     e: Exercise,
-    carries: frozenset[str] = CARRIES,
+    carries: frozenset[str] = DEFAULT_CARRIES,
     names: bool = True,
     rows: str = "last",
     drafts: bool = False,
@@ -324,4 +327,116 @@ def all_zip(
                 files.append((g.name, table))
     if "outcomes" in carries:
         files.append(("outcomes.csv", outcomes(e, outcome_rows, names)))
+    if "setup" in carries:
+        files += [(f"setup/{n}", t) for n, t in setup(e, SETUP_PARTS)]
     return _zip(files, notes)
+
+
+# --- The alias key and the setup (rung 4) ---
+
+
+def alias_key(e: Exercise) -> Table:
+    """Dossier ID to applicant, every application's, drafts included: the
+    one file joining what Review Robin sees to who it is."""
+    return ALIAS_KEYS, [
+        [a.dossier_id, a.public_id, a.applicant, a.email]
+        for a in sample_data.applications_of(e.public_id)
+    ]
+
+
+def _yes(flag: bool) -> str:
+    return "yes" if flag else "no"
+
+
+def _form(e: Exercise) -> Table:
+    """The form's cards in order, each as the Form page sets it."""
+    header = (
+        "order", "kind", "type", "label", "help", "min", "max", "step",
+        "options", "choose", "required", "shown_to_reviewers", "pool",
+    )  # fmt: skip
+    body = [
+        [
+            str(i),
+            c.kind,
+            c.type if c.kind == "field" else "",
+            c.label,
+            c.help,
+            c.min,
+            c.max,
+            c.step,
+            c.options,
+            ("one" if c.exclusive else "any") if c.type == "list" else "",
+            _yes(c.required),
+            _yes(c.shown),
+            c.pool if c.type == "people" else "",
+        ]  # fmt: skip
+        for i, c in enumerate(sample_data.form_cards(e.public_id), 1)
+    ]
+    return header, body
+
+
+def _process(e: Exercise) -> Table:
+    """Each stage and what it holds, a row each: the form, each gate with
+    its evaluators and results, each outcome with its values; the rules
+    in words, as Process reads them."""
+    plan = stages.plan_of(e.public_id)
+    pools = sample_data.panel_pools(e.public_id)
+    header = (
+        "stage", "stage_name", "dates", "kind", "number", "label",
+        "evaluators", "mode", "results", "values", "due", "rule",
+    )  # fmt: skip
+    body: list[list[str]] = []
+    for st in plan.stages:
+        head = [str(st.number), st.label, st.dates]
+        if st.form:
+            body.append(head + ["form", "", "Application form", "", "", "", "", "", ""])
+        for c in st.columns:
+            rule = stages.rule_text(plan, c)
+            if isinstance(c, stages.Gate):
+                sources, total = stages.sources_of(e.public_id, c)
+                body.append(
+                    head
+                    + [
+                        "gate",
+                        str(c.number),
+                        c.label,
+                        stages.sources_summary(sources, total, pools),
+                    ]
+                    + [dict(stages.MODES).get(c.mode, c.mode), "; ".join(r.name for r in c.results)]
+                    + ["", "", rule]
+                )
+            else:
+                body.append(
+                    head
+                    + ["outcome", str(c.number), c.label, "", "", ""]
+                    + ["; ".join(c.values), c.due, rule]
+                )
+    return header, body
+
+
+def _panels(e: Exercise) -> Table:
+    """Each panel's members, a row each."""
+    return ("panel", "name", "email", "note"), [
+        [p.name, m.name, m.email, m.note]
+        for p in sample_data.panels_of(e.public_id)
+        for m in p.members
+    ]
+
+
+def _emails(e: Exercise) -> Table:
+    """Each template Process makes owed, and whether it is written."""
+    return ("template", "when", "item", "audience", "written"), [
+        [m.name, m.when, m.item, m.audience, _yes(m.ok)] for m in workflow.emails(e.public_id)
+    ]
+
+
+_SETUP = {"form": _form, "process": _process, "panels": _panels, "emails": _emails}
+
+
+def setup(e: Exercise, parts: frozenset[str] = SETUP_PARTS) -> list[tuple[str, Table]]:
+    """Extract setup's files, in Setup's order, the ones asked for."""
+    return [(f"{k}.csv", fn(e)) for k, fn in _SETUP.items() if k in parts]
+
+
+def setup_zip(e: Exercise, parts: frozenset[str] = SETUP_PARTS) -> bytes:
+    return _zip(setup(e, parts))
