@@ -474,8 +474,11 @@
     .seg { display: inline-flex; border: 1px solid var(--accent); border-radius: 6px; overflow: hidden; margin-top: 3px; }
     .seg button { border: 0; background: transparent; color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; padding: 0 12px; min-height: 34px; white-space: nowrap; cursor: pointer; }
     .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
-    .btn-toggle { background: transparent; color: var(--accent); }
-    .btn-toggle[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+    /* Toggle, a per-row flag (spec/ui_elements.md §6, ruling 47): off takes
+       Secondary's tokens, on Primary's. Many-of chips are .pn-show pills,
+       one-of choices .seg. */
+    .btn-toggle { background: var(--btn-secondary-bg); color: var(--btn-secondary-fg); border-color: var(--btn-secondary-border); }
+    .btn-toggle[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
     .fc-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border-subtle); margin-top: 14px; padding-top: 12px; }
     .fc-break { display: flex; align-items: center; gap: 10px; color: var(--text-subtle); font-size: 13px; font-weight: 600; margin: 6px 0; }
     .fc-break::after { content: ""; flex: 1; border-top: 2px dashed var(--border-default); order: 1; }
