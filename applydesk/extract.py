@@ -450,7 +450,7 @@ def _form(e: Exercise) -> Table:
     """The form's cards in order, each as the Form page sets it."""
     header = (
         "order", "kind", "type", "label", "help", "min", "max", "step",
-        "options", "choose", "required", "shown_to_reviewers", "pool",
+        "options", "choose", "required", "shown_to_evaluators", "pool",
     )  # fmt: skip
     body = [
         [

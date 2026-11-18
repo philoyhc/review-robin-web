@@ -51,7 +51,7 @@ operators under `/operator/exercises`, participants under `/me`.
 - **Public IDs** (`applydesk/ids.py`): 10 symbols from RRW's alphabet,
   `23456789abcdefghjkmnpqrstuvwxyz`, drawn at random. A path whose ID has
   any other shape, or names nothing, is a 404 before anything is read.
-- **The dossier**, what a reviewer opens, one per application
+- **The dossier**, what an evaluator opens, one per application
   (`/me/exercises/<id>/dossiers/<dossier>`), is named by its own ID, never the
   application's, and shows only the *Shown to evaluators* section. In a blind exercise it
   redacts the applicant's name and identifiers. It and the applicant's own
@@ -340,13 +340,13 @@ pages, it can wait); `workflow.steps` still names the current stage.
   - **Gate**: *Name*; *Type* (a disabled menu, *Review Robin session*, kept
     for other kinds); *Description* (Review Robin's instrument description);
     *Confidential* (per gate: Review Robin shows each applicant as *Name
-    redacted* with their key); the *Entry rule*. The exercise's *Help
+    redacted* with their Dossier ID); the *Entry rule*. The exercise's *Help
     contact* and *Timezone* show read-only, linking to Home, where they are
     set: they are Review Robin's for every gate.
   - **Evaluators** (ruling 27): a row per ranked **source**, in order
     (▲ ▼; a row's **+** adds the next, × removes; *+ Source* shows only
     when there is none), each a *Kind*, its *Min* and *Max* per dossier:
-    - *Nominated*, the people a candidate named in a *Select people*
+    - *Nominated*, the people a applicant named in a *Select people*
       question of Form, picked by its label, offered only when the form has
       one; or
     - *Panel*, by the shared menu and *+ New panel…* box Form uses (above)
@@ -363,7 +363,7 @@ pages, it can wait); `workflow.steps` still names the current stage.
     order, the first giving as many as it has up to its max, each lower one
     topping up to the Total's min and never under its own min, nothing past
     the Total's max; evaluators distinct by email, a person in two sources
-    counted for the higher; the candidate never their own evaluator. A
+    counted for the higher; the applicant never their own evaluator. A
     dossier it cannot fill is *Short*. A panel gives its least-loaded
     members first. Referees are not a source.
   - **Response fields**: what each evaluator answers in Review Robin, a row
@@ -523,7 +523,7 @@ pages, it can wait); `workflow.steps` still names the current stage.
 The Setup tab for everyone on the exercise's panels (rulings 19, 20, 22, 23),
 `/operator/exercises/<id>/panels`. A **panel** (`sample_data.Panel`: key,
 name, members) is a named roster Apply Desk keeps: an assessment panel, the
-reviewer pool, the interviewers. Form and Process hold a panel's *key*, not
+evaluator pool, the interviewers. Form and Process hold a panel's *key*, not
 its name, so a rename follows everywhere. Panels laid out as Review Robin's
 roster pages: a roster card, then one full-width table. Every move works in
 the browser; nothing is saved until AD2, and a reload restores the sample.
@@ -642,9 +642,9 @@ saved until AD2; a reload restores the sample.
 Exercise / Evaluations / *Gate n · label*. The gate's head (its
 state chip, as Evaluations' Gates table, its mode and counts, and its
 disabled *Send to Review Robin* or *Pull results*, AD6), its load lines and a table with **a row per pair**,
-*Candidate*, *Evaluator*, *Source*, *State*; a dossier with no evaluator yet
+*Applicant*, *Evaluator*, *Source*, *State*; a dossier with no evaluator yet
 is one row, *None yet*. A blind exercise shows the dossier ID as the
-candidate. The pairs are `stages.assignments`, drawn as the gate's mode and
+applicant. The pairs are `stages.assignments`, drawn as the gate's mode and
 sources fill them. A gate can pair 30 evaluators with 100 dossiers, so the
 table is paged and queried in the URL (`offset`, `q`, `sort`), and a link
 keeps all of them.
@@ -654,9 +654,9 @@ keeps all of them.
   on one line and repeated below a table longer than a page; an
   offset is snapped to a page and one past the last clamps to the last, one
   that is not a whole number is the first page.
-- **Filter**, *Find an applicant or an evaluator*: the candidate's name, email,
+- **Filter**, *Find an applicant or an evaluator*: the applicant's name, email,
   application or dossier ID, or the pair's evaluator's name or email, any
-  case (`stages.matching`). A blind exercise's candidate is found by the
+  case (`stages.matching`). A blind exercise's applicant is found by the
   dossier ID alone, never by who they are. *Clear* drops the filter, not the
   sort.
 - **Sort**, as Review Robin's tables (`spec/sort_by_reviewee.md`), on the
@@ -694,7 +694,7 @@ the browser (`_gate_ops_js.html`):
   sample, the mode and the limits: a stale pair, an approval the mode lacks or
   an addition past a limit is dropped.
 - **+ Pair** opens a panel to choose a dossier and an evaluator. The
-  evaluators offered are the gate's panel members less the candidate and
+  evaluators offered are the gate's panel members less the applicant and
   those already on the dossier; it refuses a pair that would pass the
   Total's max or the source's max, saying why. **Undo is held to the same
   limits** and says why it did not undo. An added pair shows on the first page
@@ -703,8 +703,8 @@ the browser (`_gate_ops_js.html`):
 - **Off** once the gate's session has opened (`workflow.gate_opened`: its
   pairs are Review Robin's to change), with the reason in each button's title;
   and off until the page's script has run.
-- **A blind gate's + Pair** cannot leave out the candidate themself: the
-  page's data names no candidate there. Open, for AD2, where the server checks
+- **A blind gate's + Pair** cannot leave out the applicant themself: the
+  page's data names no applicant there. Open, for AD2, where the server checks
   the pair.
 
 The model exercise, *Recruitment and Selection of Residential Assistants*
@@ -799,7 +799,7 @@ from AD2.
     all data*.
   - **Setup CSVs**, one per Setup page, in Setup's order, from `extract.setup`:
     `form.csv` (a row per card: order, kind, type, label, help, bounds,
-    options, choose, required, shown to evaluators, pool); `process.csv` (a
+    options, choose, required, `shown_to_evaluators`, pool); `process.csv` (a
     row per stage item, *form*, *gate* or *outcome*, with its evaluators,
     mode, results, values, due and rule in words, and under each gate a
     *field* row per response field and a *result* row per result, their

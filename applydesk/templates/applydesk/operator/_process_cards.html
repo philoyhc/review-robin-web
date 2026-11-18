@@ -216,7 +216,7 @@
         <label class="fc-l">Type<select class="fc-in" data-pc="type" disabled title="Every gate runs in Review Robin for now">{% for k, label in gate_types %}<option value="{{ k }}"{% if k == (g.via or "RRW") %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
       </div>
       <label class="fc-l">Description<textarea class="fc-in" rows="1" data-fit-box data-pc="description" placeholder="What evaluators do at this gate, as Review Robin shows it"{{ sent_attr(sent) }}>{{ g.description }}</textarea></label>
-      <label class="gsw"><input type="checkbox" data-pc="confidential"{% if g.confidential %} checked{% endif %}{{ sent_attr(sent) }}> <span><strong>Confidential</strong> <span class="muted">· Review Robin shows each applicant as <em>Name redacted</em>, with their key</span></span></label>
+      <label class="gsw"><input type="checkbox" data-pc="confidential"{% if g.confidential %} checked{% endif %}{{ sent_attr(sent) }}> <span><strong>Confidential</strong> <span class="muted">· Review Robin shows each applicant as <em>Name redacted</em>, with their Dossier ID</span></span></label>
       {# Review Robin's for every gate: the exercise's, set on Home. #}
       <p class="pc-line muted" data-pc-ex>Help contact <strong>{{ help_contact(exercise) }}</strong> · Timezone <strong>{{ timezone(exercise) }}</strong> · the exercise's, set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id) }}#details">Home</a></p>
       {{ rule_box(plan, g, rule_text, sec=False) }}

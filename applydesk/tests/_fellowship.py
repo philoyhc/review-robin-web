@@ -54,7 +54,7 @@ _G1 = Gate(
     (Source("nominated", "Preferred evaluator", 0, 1), Source("panel", "panel-a", 1, 2)),
     Total(2, 2),
     description=(
-        "Two reviewers read each dossier's Shown to evaluators part and rate it,"
+        "Two evaluators read each dossier's Shown to evaluators part and rate it,"
         " one the applicant's preferred reviewer where they named one."
     ),
     fields=(

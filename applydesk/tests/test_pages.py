@@ -1544,12 +1544,17 @@ def test_crumbs_and_headings_after_the_register(client: TestClient) -> None:
         page = client.get(path).text
         assert 'class="crumbs" aria-label="Breadcrumb"' in page and 'class=" crumbed"' in page
         assert '<a href="/applydesk/me">User Lobby</a>' in page
+        # Each crumb keeps its separator (AD-102).
+        root = '<a href="/applydesk/me">User Lobby</a><span aria-hidden="true">/</span>'
+        assert f'<span class="crumb">{root}</span>' in page
         assert f'aria-current="page">{current}' in page
     app = client.get(f"{me}/applications/f2ps7nyh4k").text
     assert "<h3" not in app.split('class="page"', 1)[-1].split("<footer", 1)[0]
     gate = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_1").text
     crumb = gate[gate.index('class="crumbs"') : gate.index("</nav>", gate.index('class="crumbs"'))]
     assert "/evaluations" in crumb and 'aria-current="page">Gate 1 · ' in crumb
+    assert crumb.count('<span class="crumb">') == 3  # root, exercise, Evaluations (AD-102)
+    assert ">Operator Lobby</a>" in crumb
     assert "← Evaluations" not in gate
     assert '<h2 id="ev-pairs-h">Pairs</h2>' in gate
     # The pager twice on a long table, its count once (AD-108).
