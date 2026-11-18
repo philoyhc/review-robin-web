@@ -21,7 +21,7 @@ The author's, 2026-11-18 (ruling 35).
 
 1. **A stage is Draft, Published or Completed.**
    - **Publish** makes it live and locks what it holds.
-   - **Mark completed** ends it, locking its results as well.
+   - **Completed** follows when all its items are (Decision amended), locking its results as well.
    - **Revert to draft** takes a Published stage back to Draft. It needs a reason, and the revert is audited at AD2.
 2. **The exercise's status follows its stages.**
    - It is a Draft until its first stage is published.
@@ -49,11 +49,22 @@ Rejected:
 - **One status for the whole exercise, locking everything at publish:** a later stage could no longer be set up while the first runs, which is how exercises are worked.
 - **Locks keyed on gate state alone** (sent or opened, as today): that leaves the form, outcomes, dates and blind review with no lock at all, and keeps two notions of "fixed".
 
+## Decision amended (author, 2026-11-18, on the open questions)
+
+- **Completed is derived, not marked.** A stage is completed when all its items are:
+  - its form closed;
+  - each gate's results in;
+  - its outcome released, if it holds one.
+
+  There is no *Mark completed*.
+- **Blind review** locks when the first stage holding a gate is published.
+- **A revert after a gate has opened** is allowed. The gate stays fixed (ruling 29), and the confirm says so.
+
 ## Semantics
 
 - **Transitions.**
   - Draft → Published: *Publish stage*, refused while that stage's checks name a problem.
-  - Published → Completed: *Mark completed*, offered once the stage's outcomes are released, or once its form has closed for a form stage.
+  - Published → Completed: by itself, once every item of the stage is completed (Decision amended).
   - Published → Draft: *Revert to draft*, with a reason.
   - Completed is final in the MVP.
   - A stage may not be published before the one before it.
@@ -93,7 +104,7 @@ Taken 2026-11-18 at `d6c20bdf8`.
    - `applydesk/locks.py`: what each part's lock is, and its reason.
    - Tests only, no page change.
 3. **Process:**
-   - Each stage's status chip, with *Publish stage*, *Mark completed* and *Revert to draft* (with a reason), page-only, with confirms.
+   - Each stage's status chip, with *Publish stage* and *Revert to draft* (with a reason), page-only, with confirms.
    - A published stage's parts locked, reasons shown (AD-01, AD-02).
    - Publish checks the stage's Outline (AD-20).
    - Chromium tests.
@@ -125,9 +136,9 @@ Taken 2026-11-18 at `d6c20bdf8`.
 
 ## Open questions
 
-- **When blind review locks.** At the first stage holding a gate being published (proposed), or at the exercise's first stage? The author's: ruling 35 says "at publish of stage".
-- **When *Mark completed* is offered.** Once the stage's outcomes are released (proposed), or freely? The author's.
-- **Revert after a gate opened.** Allowed with the gate staying fixed (proposed), or refused? The author's.
+- ~~When blind review locks~~: when the first stage holding a gate is published (author, 2026-11-18).
+- ~~When a stage completes~~: when all its items are, so there is no *Mark completed* (author, 2026-11-18).
+- ~~Revert after a gate opened~~: allowed, the gate staying fixed (author, 2026-11-18).
 - **`close_check.py` reads only RRW's `guide/`:** this close is checked by hand, as AD1G's to AD1J's.
 
 ## Out of scope
