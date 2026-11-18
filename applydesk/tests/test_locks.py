@@ -173,3 +173,22 @@ def test_a_reversed_range_is_no_dates(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "Interviews ends before it starts." in locks.publish_problems(e, back)
     assert locks.stage_status(e, back, datetime(2027, 1, 1)) == "Published"
     assert timeline.of(e).stages[2].when == "Dates not set"
+
+
+def test_publishing_reads_how_a_rule_compares(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex: a result compared with what is not a number, or a combined
+    result likewise, blocks the stage as Process's Outline says."""
+    e = _e(RA)
+    model = stages._STAGES[RA]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    interviews = model[2]
+    g3, o2 = interviews.columns
+    assert isinstance(o2, stages.Outcome) and o2.rule
+    bad = replace(
+        o2.rule,
+        when=(("res", "g3.r1", "ge", "not-a-number"), ("comb", "", "ge", "x")),
+    )
+    broken = replace(interviews, columns=(g3, replace(o2, rule=bad)))
+    monkeypatch.setitem(stages._STAGES, RA, (*model[:2], broken))  # pyright: ignore[reportPrivateUsage]  -- as above
+    problems = locks.publish_problems(e, broken)
+    assert "Selection's rule compares with \u201cnot-a-number\u201d, not a number." in problems
+    assert "Selection's rule compares with \u201cx\u201d, not a number." in problems

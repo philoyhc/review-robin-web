@@ -699,6 +699,39 @@ def result_of(plan: Plan, key: str) -> tuple[Gate | None, GateResult | None]:
     return gate, next((r for r in gate.results if r.key == result_key), None)
 
 
+def _is_number(value: str) -> bool:
+    """As the page's ``!isNaN(Number(v))`` on a non-blank value."""
+    try:
+        float(value.strip())
+    except ValueError:
+        return False
+    return bool(value.strip())
+
+
+def _compare_problems(
+    plan: Plan, kind: str, key: str, op: str, value: str, gate: Gate, result: GateResult
+) -> list[str]:
+    """How a rule compares a result, as Process's Outline checks it
+    (Codex): a list matched against one of its options, a number compared
+    with a number, a ranking by a number."""
+    rc = collated(result, source_field(gate, result))
+    k, label = comparable(rc), result_label(plan, key)
+    if kind == "top":
+        return [] if k == "number" else [f"ranks by {label}, which is not a number"]
+    if not k:
+        return [f"reads {label}, which a rule cannot compare"]
+    if k == "list" and op != "is":
+        return [f"compares {label}, a list, as a number"]
+    if k == "number" and op == "is":
+        return [f"matches {label}, a number, as a list"]
+    options = [o.strip() for o in rc.field.options.split(",") if o.strip()]
+    if k == "list" and value not in options:
+        return [f"reads \u201c{value}\u201d, not among the options of {label}"]
+    if k == "number" and not _is_number(value):
+        return [f"compares with \u201c{value}\u201d, not a number"]
+    return []
+
+
 def rule_problems(
     plan: Plan, column: Gate | Outcome, forms: dict[str, list[str]]
 ) -> tuple[str, ...]:
@@ -735,6 +768,10 @@ def rule_problems(
                     found.append(f"reads {gate.label}, outside the gates before it")
                 elif kind != "ent" and result is None:
                     found.append(f"reads a result no longer on {gate.label}")
+                elif result is not None:
+                    found += _compare_problems(plan, kind, key, _op, value, gate, result)
+            if kind == "comb" and not _is_number(value):
+                found.append(f"compares with \u201c{value}\u201d, not a number")
             if kind in ("last", "top") and not re.fullmatch(r"[1-9][0-9]*", value):
                 found.append(f"takes \u201c{value}\u201d, not a whole number")
             if kind == "form":
