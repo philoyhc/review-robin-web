@@ -33,7 +33,7 @@ The author's, 2026-11-18 (ruling 35).
    - **The form**, when its stage holds it: the Form builder becomes read-only.
    - **Its gates:** name, rule, results, sources and removal.
    - **Its outcomes:** values, rule and removal.
-   - **The stage itself:** its dates, and its deletion.
+   - **The stage itself:** its start, and its deletion. Its end and its items' ends stay editable, as an extension (Decision amended).
    - **Blind review**, once the first stage holding a gate is published.
 
    Draft stages stay fully editable beside it.
@@ -63,6 +63,8 @@ Rejected:
   - a stage cannot be published without a start and an end, each a date and a time in the exercise's time zone;
   - when its end passes, it completes once all its items are;
   - an item still open at its end keeps the stage Published, marked *Overdue* with what is outstanding.
+
+- **An extension is how a stage is kept open or reopened** (author, 2026-11-18): the operator moves the end of the stage and of its items later. A Completed or Overdue stage whose end moves past now is Published again. So a stage's and its items' end dates stay editable after publish, even once completed; its start, and everything else it holds, stays locked.
 
   This makes AD-56's typed dates part of this segment: a stage's start and end are typed date-times, not free text. Process's date fields become date-time inputs, and the three parsers go.
 
