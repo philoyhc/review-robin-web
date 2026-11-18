@@ -50,7 +50,7 @@
         {% if linked %}<p>Still to set up before it can be published:</p>
         <ul>{% for label, tab in linked %}<li><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ ('/' ~ tab if tab else '')) }}{{ '' if tab else '#details' }}">{{ label }}</a></li>{% endfor %}</ul>{% endif %}
         {% if rest %}<ul class="hm-problems">{% for p in rest %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
-        {% if not linked and not rest %}<p class="muted">Ready to publish: the details, the dates and the application form are complete.</p>{% endif %}
+        {% if not linked and not rest %}<p class="muted">{{ "Ready to publish: the details, the dates and the application form are complete." if loop.first else "Ready to publish." }}</p>{% endif %}
       {% endif %}
       {% if waiting %}<p class="muted">Waiting on: {{ waiting | join("; ") }}.</p>{% endif %}
     </li>

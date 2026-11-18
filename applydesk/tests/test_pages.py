@@ -1450,4 +1450,4 @@ def test_home_and_the_lobby_say_each_stage_s_status(client: TestClient) -> None:
     assert rows == ["Completed", "Completed", "Published"]
     lobby = client.get("/applydesk/operator/exercises").text
     assert '<span class="chip chip-mute">Draft</span>' in lobby
-    assert '<span class="chip chip-ok">Published</span>' in lobby
+    assert '<span class="chip chip-info">Published</span>' in lobby  # as a stage's

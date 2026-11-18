@@ -121,6 +121,10 @@ Taken 2026-11-18 at `d6c20bdf8`.
   - **Rung 3 split in two**, so each half is checked in a browser alone: 3a the date-time inputs, 3b the status, Publish, Revert and the locks. A published stage's items are fixed by one fieldset each, after their dates; an opened gate's fieldset stays fixed through a revert. Publish lists the server's checks as the page loaded; only the "stage before it" line follows the page.
   - **Rung 4 built** (2026-11-18): the Form builder reads only, its cards still opening (AD-03); an opened gate's cells stay fixed when Dossiers is unlocked, and rules and CSVs skip them, saying so (AD-04); blind review is fixed on Details (AD-05); *Released* waits on the outcome's owed emails and names undecided cells before a release (AD-21). **A published gate not yet opened keeps live cells**: entering applications is the stage's work while it runs, so only the session opening fixes them.
   - **Rung 5 built** (2026-11-18): Home's Publish card lists every stage with its status, a draft's problems, and the first stage's setup linked as before; publishing stays on Process, which the card links. The timeline's operator part leads with each stage's status, and the lobby and the status row show the exercise's, derived from its stages.
+  - **Item read** (`diff-reviewer`, rungs 2–5 from `048acca9e`, one read): 14 findings, fixed in 3b and 5 but for the following.
+    - A published item's start, the order of published stages, and the publishing order on the page were open; now fixed.
+    - The undecided count before a release counted rows an earlier outcome stopped; now only reached ones.
+    - Owed: `Exercise.state` still drives *live* on Details, Evaluations and the form's state (AD3's, with Closed and Archived); spec prose at the close.
   - **Kept in `stages.py`.** `_exercise_span` still reads the two exercise fields, until those are typed at AD2.
 
 ## PR ladder

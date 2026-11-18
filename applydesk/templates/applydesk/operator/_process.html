@@ -210,7 +210,9 @@
   }
   // An item's window: its own dates, else its stage's (author, 2026-11-18).
   function windowOf(item, card) {
-    var a = field(item, "item-from") || field(card, "from"), b = field(item, "item-to") || field(card, "to");
+    // As stages.window: its own window whole, else its stage's (cold read).
+    var own = field(item, "item-from") && field(item, "item-to");
+    var a = own ? field(item, "item-from") : field(card, "from"), b = own ? field(item, "item-to") : field(card, "to");
     return a && b && a < b ? shortDay(a) + " to " + shortDay(b) : "";
   }
   function itemName(item, fallback) {

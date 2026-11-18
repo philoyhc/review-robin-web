@@ -48,7 +48,7 @@ def test_an_opened_gate_s_cells_stay_fixed_when_unlocked(page: Page) -> None:
     assert g3.is_enabled()  # not sent yet: its entries still move
 
 
-def test_a_release_waits_on_its_emails_and_names_what_is_undecided(page: Page) -> None:
+def test_a_release_waits_on_its_emails_and_a_withdrawn_one_too(page: Page) -> None:
     page.goto(f"{MODEL}/dossiers")
     page.locator("[data-ap-lock]").click()
     selection = page.locator('[data-ap-release="Selection"]')
@@ -66,6 +66,7 @@ def test_a_release_waits_on_its_emails_and_names_what_is_undecided(page: Page) -
     page.once("dialog", dismiss)
     shortlisting.click()
     assert said and said[0].startswith("Withdraw the release of Shortlisting")
+    assert shortlisting.is_checked()  # dismissed: still released
 
 
 def test_blind_review_is_fixed_once_a_gate_s_stage_is_published(page: Page) -> None:

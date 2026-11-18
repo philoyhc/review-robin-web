@@ -171,7 +171,10 @@ def status_row(exercise: Exercise) -> tuple[Pill, ...]:
     mail = emails(exercise.public_id)
     kept = sum(e.ok for e in mail)
     return (
-        Pill("Exercise", ex_status, "ok" if ex_status in ("Published", "Completed") else "warn"),
+        # As each stage's chip on Process and Home (locks.STATUS_CHIP).
+        Pill(
+            "Exercise", ex_status, {"Published": "info", "Completed": "ok"}.get(ex_status, "warn")
+        ),
         Pill("Form", form, "warn" if form == "Draft" else "info"),
         Pill(
             "Gates",
