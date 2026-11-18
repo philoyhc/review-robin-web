@@ -141,3 +141,21 @@ def test_publishing_reads_the_outline_s_checks(monkeypatch: pytest.MonkeyPatch) 
     assert any(p.startswith("Gate 3 (Staff interview): the Total's") for p in problems)
     assert "Selection's rule reads an outcome no longer in the process." in problems
     assert "Selection's rule decides \u201cHired\u201d, not among its values." in problems
+
+
+def test_publishing_reads_each_source(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex: a source whose panel is gone gives no evaluators, whatever
+    its Total, so the stage cannot be published."""
+    e = _e(RA)
+    model = stages._STAGES[RA]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    interviews = model[2]
+    g3, o2 = interviews.columns
+    assert isinstance(g3, stages.Gate)
+    gone = replace(
+        g3, sources=(stages.Source("panel", "missing-panel", 2, 2),), total=stages.Total(2, 2)
+    )
+    broken = replace(interviews, columns=(gone, o2))
+    monkeypatch.setitem(stages._STAGES, RA, (*model[:2], broken))  # pyright: ignore[reportPrivateUsage]  -- as above
+    assert locks.publish_problems(e, broken) == (
+        "Gate 3 (Staff interview): source 1's panel is gone.",
+    )

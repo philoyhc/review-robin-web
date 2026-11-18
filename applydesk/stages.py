@@ -1061,12 +1061,24 @@ def sources_warn(
     """Whether a gate head's chip warns, as the page script's
     ``sourceProblems``: no sources, a panel not chosen, a question not
     chosen, a min above its max, or a Total outside its bounds."""
-    return bool(total_problem(sources, total)) or any(
-        (s.kind == "panel" and s.ref not in pools)
-        or (s.kind == "nominated" and not s.ref)
-        or s.min > s.max
-        for s in sources
-    )
+    return bool(total_problem(sources, total) or source_problems(sources, pools))
+
+
+def source_problems(
+    sources: tuple[Source, ...], pools: dict[str, sample_data.Pool]
+) -> tuple[str, ...]:
+    """Each source that cannot give evaluators, in words, as the page
+    script's ``sourceProblems``: a panel not chosen or gone, a question
+    not chosen, a min above its max. Publishing reads it too (Codex)."""
+    out: list[str] = []
+    for n, s in enumerate(sources, 1):
+        if s.kind == "panel" and s.ref not in pools:
+            out.append(f"source {n} has no panel" if not s.ref else f"source {n}'s panel is gone")
+        elif s.kind == "nominated" and not s.ref:
+            out.append(f"source {n} has no question chosen")
+        if s.min > s.max:
+            out.append(f"source {n}'s min is above its max")
+    return tuple(out)
 
 
 @dataclass(frozen=True)
