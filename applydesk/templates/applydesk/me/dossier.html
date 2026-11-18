@@ -13,7 +13,7 @@
 </dl>
 <div class="section">
   <h2>Shown to reviewers</h2>
-  <dl class="facts">{% for label, help in shown %}<dt>{{ label }}</dt><dd>{{ application.title if loop.first else help }}</dd>{% endfor %}</dl>
+  <dl class="facts">{% for label, value in shown %}<dt>{{ label }}</dt><dd{% if value == "—" %} class="muted"{% endif %}>{{ value }}</dd>{% else %}<dt class="muted">None</dt>{% endfor %}</dl>
 </div>
 <p class="muted">Reviewers open this dossier because they are asked to review it, and score it in Review Robin; the exercise's operators open every dossier (ruling 9).</p>
 {% endblock %}
