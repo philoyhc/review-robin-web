@@ -177,14 +177,71 @@ shows the form's own card and one empty String card, open.
 
 ## Exercise Home
 
-The Details card on Home, `/operator/exercises/<id>`, lists the exercise's
-name, code and summary, then its *Help contact* and *Timezone*: Review
-Robin's for every gate (`sample_data.Exercise.help_contact` / `timezone`,
-read through `help_contact(e)` / `timezone(e)`, template globals in
-`applydesk/web.py`). An unset one reads the operator settings' default
-(`DEFAULT_HELP_CONTACT`, `DEFAULT_TIMEZONE`) followed by *· the default*.
-Neither is editable yet; that comes with Home's own work
-(`applydesk/guide/todo_master.md`). Process shows both read-only.
+Home, `/operator/exercises/<id>`, is two columns: the **Timeline** card
+(two-thirds) and the **Details** card (one-third), one column from 899px down,
+Details below. The status row carries *Applications: N submitted · M drafts*
+(`workflow.status_row`). Under the timeline a *Next step* line says where
+today falls (`timeline.next_step`), with *Go to Evaluations* while a gate runs
+(`timeline.gate_running`). A Draft also gets a *Publish* card below the columns,
+listing what setup is missing (`sample_data.setup_missing`). Cards side by
+side share a height only when within a fifth of the taller; a short card
+beside a much taller one keeps its own.
+
+### The timeline
+
+Drawn from Process's stages by `applydesk/timeline.py` (the participant-safe
+adapter) through the partial `applydesk/templates/applydesk/_timeline.html`,
+which Home and the applicant's exercise page (`/me/exercises/<id>`) both
+include.
+
+- **Stage**: name, dates and a state. *Done* when its last date has passed
+  (*Closed* for the stage holding the form), *Now* when today falls within it,
+  *Next* otherwise; a stage with no (or impossible) dates is *Next* and reads
+  *Dates not set*. Today is the sample's until AD2, marked on the current
+  stage at its share of that stage's days and said in words, between stages
+  too.
+- **Items**: the form as *You*, its close as a *Milestone*, each gate as a
+  *Step* by name (*A step.* unnamed), each outcome by name with *released
+  <date>* or *expected <the exercise's expected outcome>*. Outcome values
+  appear only once released to applicants. Nothing operator-only (panels,
+  rules, pairs, modes) is in this shape.
+- **Layouts**: *Horizontal*, a bar of equal-width segments each heading its
+  stage's column, the current one filled to today; *Vertical*, a date gutter
+  and a spine through each stage's node, items beside it. The switch is per
+  viewer, operator or applicant, in `localStorage` `applydesk-timeline`
+  (`h` / `v`), one choice for every exercise. With no stored choice it starts
+  Vertical on a phone (max-width 639px) or past four stages, Horizontal
+  otherwise; storage blocked, that rule applies.
+- **The operator's part** (`applydesk/home_ops.py`), only where the page
+  passes `ops`, which is Home alone. Below a rule (Horizontal, aligned across
+  stages), to the right of each stage (Vertical), under the items on a phone:
+  the form's state with submitted and draft counts; each gate's state, mode,
+  evaluators, pairs and progress, linking to its Evaluations gate page (no
+  link for a Draft); each outcome's Dossiers tally and *Released* /
+  *Pending*, linking to Dossiers. It never appears on the applicant's page.
+- **The applicant's page** draws the same partial beside *Apply*, without the
+  operator's part or the Next step line, and shows only a Published exercise.
+  A per-stage *Shown to applicants* is not modelled: every stage shows.
+
+### Details
+
+Name, Exercise Code, Description (`Exercise.summary`), Help contact,
+Timezone, Who may apply and Blind review, locked until *Unlock*. A Help
+contact or Timezone left unset reads the operator settings' default
+(`DEFAULT_HELP_CONTACT`, `DEFAULT_TIMEZONE`) followed by *· the default*
+(`help_contact(e)` / `timezone(e)`, template globals in `applydesk/web.py`).
+Unlocked, each is a field with a line saying where it is used.
+
+- *Lock* keeps the changes on the page; *Discard changes* restores the last
+  kept values. *Unsaved changes* shows, and the browser warns on leaving, from
+  any change since load.
+- *Lock* refuses an empty Name, an Exercise Code another exercise holds (any
+  case, saying whose) and a Help contact that is not an email address. The
+  Timezone is chosen from `sample_data.TIMEZONES`, the default first.
+- A published exercise's Exercise Code and Who may apply are fixed, saying
+  so; changing them waits for re-publishing (G2).
+- Nothing is saved until AD2: a reload restores the sample. Process shows
+  Help contact and Timezone read-only.
 
 ## The Process page
 

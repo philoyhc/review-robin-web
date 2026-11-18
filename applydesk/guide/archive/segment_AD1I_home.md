@@ -55,16 +55,12 @@ Taken 2026-11-17 at `696b14d9b`.
 
 ## Status
 
-- **Rung 2 built** (2026-11-17): the scaffold as the ladder says. Diverging from Semantics: a draft's missing setup stays a *Publish* card under the two columns (today's list and button), not the Next step line, which says what a draft's timeline is; the lede goes (the description is in Details). Its cold read: no blocker; fixed in the rung, each with a test: the expected date the exercise's estimate, not Process's due (applicants read it); an outcome's values only once released to applicants; an impossible day or an end before its start is no dates, not a 500; the year rolls over from the stage before; the scale and today placed in the segments' own shares; today said in words, between stages too; the track hidden until placed, the Now segment filled without the script; *1 draft*; Details' two explanations back.
+Closed 2026-11-18 after the author's browser check. Rungs 1–5 and 5a shipped as the ladder says, with the two amendments above; each rung's cold-read fixes are in its PR.
 
-- **Rung 3 built** (2026-11-17): the horizontal layout equal-width (Decision amended), the proportional track, its scale and the dots row gone; one list of stages drawn either way by CSS, the switch kept in `localStorage` (`applydesk-timeline`), starting Vertical on a phone or past four stages, the server's start without the script. `timeline.py` drops the shares and the track position.
-
-- **Rung 4 built** (2026-11-17): Details behind *Unlock*, a field each with where it is used; *Lock* keeps the changes on the page, refusing an empty name, another exercise's code (any case) and a help contact that is not an address; *Discard changes* puts back the last kept; *Unsaved changes* and the leave warning from any change since load. A published exercise's code and who may apply show fixed, saying so. Found at build: `.btn`'s display kept a `hidden` *Unlock* showing beside *Lock*.
-
-- **Rung 5 built** (2026-11-17): the applicant's exercise page draws the same partial beside *Apply*, without the Next step line; its old *Timeline* list of three dates goes. Today and the state chips show there too, as proposed (the open question's).
-- **Read, rungs 2–5** (`fad887534..`, after rung 2's own): no blocker; fixed in rung 5: the last horizontal bar 8px short and a single stage's left corners square; a timezone outside Details' list kept, not changed by Lock, and *· the default* alike on page and after Lock; *Go to Evaluations* decided in `timeline.gate_running`, not the template; the switch script once per timeline; a refusal said again and its field marked `aria-invalid`; Enter on *Blind review* does not Lock; the form `autocomplete="off"`; the applicant's *Results expected … (an estimate)* back; the v3 mock-ups committed. Left: Lock's changes stay in the card (the timeline's timezone and the title follow at AD2).
-
-- **Rung 5a built** (2026-11-17): the operator's part (`applydesk/home_ops.py`, apart from `timeline.py`), drawn only where the page passes `ops`: under a rule each stage's form, gates and outcomes, aligned across stages by a subgrid (Horizontal), on the right (Vertical), under the items on a phone. Cards share a height when within a fifth of the taller, side by side only; found at build: the partial's script is a grid child too. Its read: no blocker; fixed in the rung: an outcome's tally Dossiers' (`stages.counts`) and its state the Workflow card's *Released* / *Pending*, not a third word; the cards stay blocks when stretched (a flex column changed their margins); the participants' part spaced as the applicant's (the subgrid inherited a 4px row gap; Chromium test); *Operator only* hidden visually, not from screen readers, past the first stage; a refit on input; the partial's comment. Left: a sample's canned gate progress beside counted pairs (`k7mfr3pq8z`), until AD2.
+- **Diverging from Semantics**: a draft's missing setup stays a *Publish* card under the columns, and its Next step line says what a draft's timeline is; the lede goes from Home (the description is in Details) but stays on the applicant's page; a stage holding the form reads *Closed* when done; Home goes to one column under 900px, the phone breakpoint (639px) deciding only the starting layout and where the operator's part sits.
+- **Decisions confirmed at build**: today and the state chips show on the applicant's timeline too; an outcome's operator row takes Dossiers' tally and the Workflow card's *Released* / *Pending*; cards stay blocks when stretched; *Go to Evaluations* is `timeline.gate_running`'s; Lock's changes stay in the card until AD2.
+- **Reads**: three `diff-reviewer` reads (rung 2's, rungs 2–5 cumulative, rung 5a's); no blocker; their fixes landed in the rung read.
+- **Left**: a sample's canned gate progress beside counted pairs (`k7mfr3pq8z`), until AD2; *Shown to applicants* per stage not modelled (every stage shows).
 
 ## PR ladder
 
@@ -91,9 +87,9 @@ Taken 2026-11-17 at `696b14d9b`.
 
 ## Open questions
 
-- **Today and the state chips on the applicant's timeline**: shown, as the operator's (proposed); the author's at the rung 5 check.
-- **A stage hidden from applicants**: its box on Process modelled here or later; proposed later, every stage shown until then.
-- **`close_check.py` reads only RRW's `guide/`**: this close is checked by hand, as AD1G's and AD1H's.
+- ~~Today and the state chips on the applicant's timeline~~: shown (author, rung 5 check).
+- **A stage hidden from applicants**: later, with Process's *Shown to applicants*; every stage shows until then.
+- ~~`close_check.py` reads only RRW's `guide/`~~: this close checked by hand, as AD1G's and AD1H's.
 
 ## Out of scope
 
