@@ -60,8 +60,7 @@ def application(request: Request, exercise_id: str, application_id: str) -> Resp
         area=USER_LOBBY,
         exercise=found,
         application=app,
-        shown=sample_data.form_of(found.public_id)[0],
-        not_shown=sample_data.form_of(found.public_id)[1],
+        answered=sample_data.form_answers(found.public_id, app),
         form_state=workflow.form_state(found),
     )
 
@@ -79,5 +78,5 @@ def dossier(request: Request, exercise_id: str, dossier_id: str) -> Response:
         area=USER_LOBBY,
         exercise=found,
         application=app,
-        shown=sample_data.form_of(found.public_id)[0],
+        shown=sample_data.form_answers(found.public_id, app)[0],
     )

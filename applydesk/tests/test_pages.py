@@ -190,8 +190,23 @@ def test_a_dossier_shows_only_the_part_shown_to_reviewers(client: TestClient, do
     exercise = EX if dossier == "p3bd7kq2wx" else BLIND
     page = client.get(f"/applydesk/me/exercises/{exercise}/dossiers/{dossier}").text
     assert "Shown to reviewers" in page and "Not shown to reviewers" not in page
-    for hidden in sample_data.NOT_SHOWN_TO_REVIEWERS:
-        assert hidden not in page, hidden
+    app = next(a for a in sample_data.APPLICATIONS if a.dossier_id == dossier)
+    shown, hidden = sample_data.form_answers(exercise, app)
+    for label, _ in hidden:
+        assert f"<dt>{label}</dt>" not in page, label
+    for label, _ in shown:
+        assert f"<dt>{label}</dt>" in page, label
+
+
+def test_the_application_reads_its_form_and_answers(client: TestClient) -> None:
+    """AD-26: the Form's questions in order with the seeded answers, "—"
+    where none; no hand-kept list, no title against the first field."""
+    page = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
+    assert "<dt>Year of study</dt><dd>Year 4</dd>" in page
+    assert "<dt>Residence</dt><dd>Tembusu House</dd>" in page
+    assert '<dt>Matriculation number</dt><dd class="muted">—</dd>' in page
+    assert "<dt>Photo</dt>" in page and "Expected graduation" not in page
+    assert not hasattr(sample_data, "form_of")
 
 
 def test_the_bar_s_icon_is_the_favicon(client: TestClient) -> None:

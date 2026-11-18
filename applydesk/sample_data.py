@@ -513,38 +513,11 @@ def _roster(exercise_id: str, key: str) -> tuple[Evaluator, ...]:
 
 # The applicant form's two sections, as an applicant fills them in
 # (spec §5.1): the dossier shows the first only.
-_SHOWN_RA: tuple[tuple[str, str], ...] = (
-    ("Year of study", ""),
-    ("Faculty", ""),
-    ("Currently an RA?", ""),
-    ("Residence", ""),
-    ("Why you want to be an RA", "What you would bring to your house's residents."),
-    ("Relevant experience", "Leadership, peer support or community work."),
-)
-_NOT_SHOWN_RA: tuple[str, ...] = ("Preferred name", "Matriculation number")
-
-SHOWN_TO_REVIEWERS: tuple[tuple[str, str], ...] = (
-    ("Project title", ""),
-    (
-        "Summary",
-        "What the project asks, why it matters, and what the semester will produce.",
-    ),
-    ("Methods", "How the work will be done, with a timeline by month."),
-    ("Relevant experience", "Courses, projects or work that prepare the applicant."),
-)
-NOT_SHOWN_TO_REVIEWERS: tuple[str, ...] = (
-    "Preferred reviewer (from the reviewer pool)",
-    "Matriculation number",
-    "Expected graduation",
-    "Financial aid held",
-)
-
-
 # The application form as the Form page builds it (segment AD1B): the
 # form's own title and description, then its cards in order. A card is
 # a question or text block ("field"), a section's title ("section") or
-# a page break ("pagebreak"). The applicant pages still read the two
-# lists above until AD4 renders a stored form (AD-26).
+# a page break ("pagebreak"). The applicant and dossier pages read these
+# cards with ``answers`` (``form_answers``, AD-26).
 # ASCII digits only, as the page's /^\d+$/: str.isdecimal() takes others.
 _DIGITS = re.compile(r"[0-9]+")
 
@@ -944,13 +917,21 @@ def card_summary(c: FormCard, pools: dict[str, Pool] | None = None) -> str:
 EMPTY_FORMS: frozenset[str] = frozenset({"n5wg8tjr3e"})
 
 
-def form_of(exercise_id: str) -> tuple[tuple[tuple[str, str], ...], tuple[str, ...]]:
-    """The application form's two sections: shown to reviewers, not shown."""
-    if exercise_id in EMPTY_FORMS:
-        return (), ()
-    if exercise_id == "wa9juxbc2t":
-        return _SHOWN_RA, _NOT_SHOWN_RA
-    return SHOWN_TO_REVIEWERS, NOT_SHOWN_TO_REVIEWERS
+def form_answers(
+    exercise_id: str, application: Application
+) -> tuple[tuple[tuple[str, str], ...], tuple[tuple[str, str], ...]]:
+    """The application as its form asks it (AD-26): each question of the
+    Form's cards, in order, with its answer, "—" where the sample holds
+    none; split into shown to reviewers and not shown. Text blocks and
+    unlabeled questions are not questions; the title is the page's own."""
+    given = answers(exercise_id, application)
+    shown: list[tuple[str, str]] = []
+    hidden: list[tuple[str, str]] = []
+    for c in form_cards(exercise_id):
+        if c.kind != "field" or c.type == "text" or not c.label:
+            continue
+        (shown if c.shown else hidden).append((c.label, given.get(c.label) or "—"))
+    return tuple(shown), tuple(hidden)
 
 
 def setup_missing(e: Exercise) -> tuple[tuple[str, str], ...]:
