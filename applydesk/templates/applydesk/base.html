@@ -132,10 +132,6 @@
        one-third; one column on a phone. */
     .hm-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
     .hm-grid > .card + .card { margin-top: 0; }
-    .hm-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-    .hm-side > .card { margin: 0; }
-    /* Sharing the timeline's height, the column's last card takes the rest. */
-    .hm-grid.is-equal-height .hm-side > .card:last-of-type { flex: 1 1 auto; }
     @media (max-width: 899px) { .hm-grid { grid-template-columns: minmax(0, 1fr); } }
     .cardhead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
     .cardhead h2 { margin: 0; }
@@ -201,6 +197,8 @@
     .tl-op-row b { display: flex; gap: 6px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
     .tl-op-row > span { display: block; color: var(--text-subtle); }
     .tl-op-row a { font-size: 12.5px; }
+    .tl-op-h { display: block; font-weight: 600; margin-top: 4px; }
+    .tl-op-list { margin: 2px 0 4px; padding-left: 16px; color: var(--text-subtle); }
     .tl.tl-ops[data-layout="h"] .tl-stages { grid-template-rows: auto auto auto 1fr auto; row-gap: 0; }  /* the participants' part spaced as the applicant's */
     .tl.tl-ops[data-layout="h"] .tl-stage { grid-row: span 5; grid-template-rows: subgrid; grid-template-areas: "bar bar" "dot name" "when when" "items items" "op op"; }
     .tl[data-layout="h"] .tl-op { grid-area: op; border-top: 1px solid var(--border-default); margin-top: 6px; padding-top: 10px; }

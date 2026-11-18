@@ -27,7 +27,16 @@
          passes it: Home does, the applicant's page never does. #}
       {% if ops %}<div class="tl-op" data-tl-op>
         <span class="tl-op-k">Operator only</span>
-        {% if stage_rows and loop.index0 < stage_rows | length %}{% set sr = stage_rows[loop.index0] %}<div class="tl-op-row" data-tl-status><b>Stage <span class="chip chip-{{ STATUS_CHIP[sr[1]] }}">{{ sr[1] }}</span></b><span>{{ ("Waiting on: " ~ sr[3] | join("; ")) if sr[3] else "" }}</span><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a></div>{% endif %}
+        {# Each stage's status (segment AD1K); a draft's blockers, its first
+           stage's setup linked to where each is set (author, at the AD1K
+           check: in place of a Publish card). #}
+        {% if stage_rows and loop.index0 < stage_rows | length %}{% set sr = stage_rows[loop.index0] %}<div class="tl-op-row" data-tl-status><b>Stage <span class="chip chip-{{ STATUS_CHIP[sr.status] }}">{{ sr.status }}</span></b>
+          {% if sr.status == "Draft" %}
+            {% if sr.setup or sr.blocking %}<span class="tl-op-h">Blocking publication</span>
+            <ul class="tl-op-list" data-tl-blocking>{% for label, tab in sr.setup %}<li><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ ('/' ~ tab if tab else '')) }}{{ '' if tab else '#details' }}">{{ label }}</a> not set</li>{% endfor %}{% for p in sr.blocking %}<li>{{ p }}</li>{% endfor %}</ul>
+            {% else %}<span>Ready to publish.</span>{% endif %}
+          {% elif sr.waiting %}<span>Waiting on: {{ sr.waiting | join("; ") }}.</span>{% endif %}
+          <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a></div>{% endif %}
         {% for r in ops[loop.index0] %}<div class="tl-op-row"><b>{{ r.label }} <span class="chip chip-{{ r.tone }}">{{ r.state }}</span></b><span>{{ r.detail }}</span>{% if r.target == "dossiers" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers') }}">Dossiers</a>{% elif r.target %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ r.target) }}">Gate {{ r.target }}</a>{% endif %}</div>{% endfor %}
       </div>{% endif %}
     </li>

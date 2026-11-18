@@ -10,45 +10,17 @@
 {% set next_link = url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations') if gate_running else "" %}
 <div class="hm-grid">
   {% include "applydesk/_timeline.html" %}
-  {# Details, then Publish below it, one column 16px apart (author, at
-     the AD1K check). #}
-  <div class="hm-side">
   {% include "applydesk/operator/_details.html" %}
-  {# Publish, stage by stage (ruling 35, segment AD1K): each stage's status,
-     and what keeps a draft from publishing. Publishing itself is on
-     Process, where the stage and its locks are. #}
-  <section class="card hm-publish" data-hm-publish>
-    <h2>Publish</h2>
-    <ul class="hm-stages">
-    {% for st, status, problems, waiting in stage_rows %}
-      <li data-hm-stage="{{ st.number }}"><b>{{ st.label }}</b> <span class="muted">{{ st.dates }}</span> <span class="chip chip-{{ STATUS_CHIP[status] }}">{{ status }}</span>
-        {% if status == "Draft" %}
-          {# The first stage's setup links to where each is set, as before. #}
-          {% set linked = missing if loop.first else () %}
-          {% set rest = problems %}
-          {% if linked %}<p>Still to set up before it can be published:</p>
-          <ul>{% for label, tab in linked %}<li><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ ('/' ~ tab if tab else '')) }}{{ '' if tab else '#details' }}">{{ label }}</a></li>{% endfor %}</ul>{% endif %}
-          {% if rest %}<ul class="hm-problems">{% for p in rest %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
-          {% if not linked and not rest %}<p class="muted">{{ "Ready to publish: the details, the dates and the application form are complete." if loop.first else "Ready to publish." }}</p>{% endif %}
-        {% endif %}
-        {% if waiting %}<p class="muted">Waiting on: {{ waiting | join("; ") }}.</p>{% endif %}
-      </li>
-    {% endfor %}
-    </ul>
-    <p class="muted">A stage is published, or reverted to draft, on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</p>
-  </section>
-  </div>
 </div>
-{# Side by side, the timeline and the column of Details and Publish
-   share a height only when theirs are close (author, at the rung 5
-   check): within a fifth of the taller. #}
+{# Side by side, the two cards share a height only when theirs are
+   close (author, at the rung 5 check): within a fifth of the taller. #}
 <script>
 (function () {
   var grid = document.querySelector(".hm-grid");
   if (!grid) return;
   function fit() {
     grid.classList.remove("is-equal-height");
-    var cards = Array.prototype.slice.call(grid.querySelectorAll(":scope > .card, :scope > .hm-side"));  // not the partial's script
+    var cards = Array.prototype.slice.call(grid.querySelectorAll(":scope > .card"));  // not the partial's script
     var tops = cards.map(function (c) { return c.getBoundingClientRect().top; });
     if (cards.length < 2 || Math.abs(tops[0] - tops[1]) > 1) return;  // stacked
     var hs = cards.map(function (c) { return c.getBoundingClientRect().height; });

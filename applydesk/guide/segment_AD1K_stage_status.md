@@ -127,7 +127,7 @@ Taken 2026-11-18 at `d6c20bdf8`.
     - A published item's start, the order of published stages, and the publishing order on the page were open; now fixed.
     - The undecided count before a release counted rows an earlier outcome stopped; now only reached ones.
     - Owed: `Exercise.state` still drives *live* on Details, Evaluations and the form's state (AD3's, with Closed and Archived); spec prose at the close.
-  - **At the author's check** (2026-11-18): Home's Publish card moved below Details in its column, 16px apart.
+  - **At the author's check** (2026-11-18): Home's Publish card went: it repeated the timeline's operator part, which now carries each draft stage's blockers under *Blocking publication* (the first stage's setup linked to where each is set), or *Ready to publish*. Register rows AD-01 to AD-05, AD-20, AD-21, AD-56 and AD-106 struck.
   - **Kept in `stages.py`.** `_exercise_span` still reads the two exercise fields, until those are typed at AD2.
 
 ## PR ladder
