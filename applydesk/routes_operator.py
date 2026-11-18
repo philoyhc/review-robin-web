@@ -157,6 +157,10 @@ def _csv(name: str, table: extract.Table) -> Response:
     return _download(name, extract.csv_bytes(table), "text/csv; charset=utf-8")
 
 
+def _zip(name: str, body: bytes) -> Response:
+    return _download(name, body, "application/zip")
+
+
 def _pick(value: str, allowed: tuple[str, ...]) -> str:
     """A chip's value from the query, else its default (the first)."""
     return value if value in allowed else allowed[0]
@@ -172,37 +176,41 @@ def extract_file(
     applicants: str = "",
     carries: str = "",
     orows: str = "",
+    sparts: str = "",
 ) -> Response:
     """Extract data's downloads (segment AD1J, rung 3), shaped by the
     cards' chips: ``rows`` last|all, ``drafts`` 1, ``shape`` pair|application,
-    ``applicants`` names|ids, ``carries`` the ZIP's files, ``orows`` the
-    ZIP's outcomes rows (the Outcomes card's). Sample data;
+    ``applicants`` names|ids (else the file's default,
+    ``extract.names_by_default``), ``carries`` a ZIP's files (Extract all data's,
+    or Extract setup's pages), ``orows`` the
+    ZIP's outcomes rows (the Outcomes card's), ``sparts`` its setup pages
+    (Extract setup's). Sample data;
     logged from AD2."""
     exercise = exercise_or_404(exercise_id)
     rows = _pick(rows, ("last", "all"))
     shape = _pick(shape, ("pair", "application"))
-    code = extract.of(exercise).zip_name.removesuffix("_extract.zip")
+    names = (
+        applicants == "names"
+        if applicants in ("names", "ids")
+        else extract.names_by_default(exercise, file)
+    )
     if file == "applications.csv":
         return _csv(file, extract.applications(exercise, rows, drafts == "1"))
     if file == "outcomes.csv":
-        names = _pick(applicants, ("names", "ids")) == "names"
         return _csv(file, extract.outcomes(exercise, rows, names))
+    if file == "alias_key.csv":
+        return _csv(file, extract.alias_key(exercise))
     gate = re.fullmatch(r"gate_([1-9][0-9]*)\.csv", file)
     if gate:
-        names = _pick(applicants, ("ids", "names")) == "names"
-        table = extract.gate(exercise, int(gate.group(1)), shape, names)
-        if table is None:
+        found = extract.gate_file(exercise, int(gate.group(1)), shape, names)
+        if found is None:
             raise HTTPException(status_code=404)  # no such gate, or not sent
-        number = int(gate.group(1))
-        name = next(g.name for g in extract.of(exercise).gates if g.number == number)
-        return _csv(name, table)
+        return _csv(*found)
     if file == "gates.zip":
-        names = _pick(applicants, ("ids", "names")) == "names"
         body = extract.gates_zip(exercise, shape, names)
-        return _download(f"{code}_gates.zip", body, "application/zip")
+        return _zip(extract.zip_name(exercise, "gates"), body)
     if file == "all.zip":
-        names = _pick(applicants, ("names", "ids")) == "names"
-        wanted = frozenset(carries.split(",")) if carries else extract.CARRIES
+        wanted = frozenset(carries.split(",")) if carries else extract.DEFAULT_CARRIES
         body = extract.all_zip(
             exercise,
             wanted & extract.CARRIES,
@@ -211,8 +219,13 @@ def extract_file(
             drafts == "1",
             shape,
             _pick(orows, ("last", "all")),
+            (frozenset(sparts.split(",")) if sparts else extract.SETUP_PARTS) & extract.SETUP_PARTS,
         )
-        return _download(f"{code}_extract.zip", body, "application/zip")
+        return _zip(extract.zip_name(exercise, "extract"), body)
+    if file == "setup.zip":
+        parts = frozenset(carries.split(",")) if carries else extract.SETUP_PARTS
+        body = extract.setup_zip(exercise, parts & extract.SETUP_PARTS)
+        return _zip(extract.zip_name(exercise, "setup"), body)
     raise HTTPException(status_code=404)
 
 
@@ -235,6 +248,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         pool=sample_data.pool_of(exercise.public_id),
         interviewers=sample_data.interviewers_of(exercise.public_id),
         extract=extract.of(exercise) if section == "extract" else None,
+        all_names=extract.names_by_default(exercise, "all.zip"),
         alias_columns=extract.ALIAS_KEYS,
         setup_files=extract.SETUP_FILES,
         cards=sample_data.form_cards(exercise.public_id),

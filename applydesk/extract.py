@@ -3,10 +3,13 @@ columns, and each gate's rows, as Review Robin's Extract data cuts a
 session's data. The page's cards and the downloads (rung 3) read this one
 shape; nothing here is drawn on screen as data.
 
-The files are CSV in Review Robin's envelope (UTF-8 with a byte-order mark,
-a header row). A gate's answers per pair are sample answers seeded per
-pair until Review Robin's handoff returns real ones (AD5); every other
-value is the sample's own.
+The files are CSV with a header row, UTF-8 with a byte-order mark so
+Excel reads them as UTF-8: Apply Desk's choice, which Review Robin's
+importers tolerate on read (`spec/csv_contracts.md` §1) though its own
+extracts write none. Where the sample has no answer (a gate's answers per
+pair, a form's text, number and photo questions) the files carry sample
+answers seeded per application or pair, the same every time, until the
+forms and Review Robin's handoff supply real ones (AD4, AD5).
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ import re
 import zipfile
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from datetime import date
 
 from applydesk import sample_data, stages, workflow
 from applydesk.sample_data import Exercise
@@ -28,10 +32,13 @@ APPLICATION_KEYS = ("application_id", "dossier_id", "applicant", "email", "state
 PAIR_KEYS = ("dossier_id", "evaluator", "evaluator_email")
 #: The alias key: the one file that joins a Dossier ID to its applicant.
 ALIAS_KEYS = ("dossier_id", "application_id", "applicant", "email")
-#: What *Extract all data* may carry until Extract setup's files (rung 4).
-CARRIES = frozenset({"applications", "gates", "outcomes"})
+#: What *Extract all data* may carry; the alias key never (kept apart).
+CARRIES = frozenset({"applications", "gates", "outcomes", "setup"})
+#: What it carries until a viewer says otherwise: setup is for cloning.
+DEFAULT_CARRIES = frozenset({"applications", "gates", "outcomes"})
 #: Extract setup's files, one per Setup page (author, 2026-11-18: CSV).
 SETUP_FILES = ("form.csv", "process.csv", "panels.csv", "emails.csv")
+SETUP_PARTS = frozenset(f.removesuffix(".csv") for f in SETUP_FILES)
 
 
 @dataclass(frozen=True)
@@ -113,12 +120,34 @@ def _outcome_columns(plan: stages.Plan, names: bool = True) -> tuple[str, ...]:
     return tuple(out)
 
 
+def sensitive(e: Exercise) -> bool:
+    """Blind review on, or a confidential gate: files name applicants only
+    when asked (Semantics: such a gate's file defaults to Dossier IDs)."""
+    plan = stages.plan_of(e.public_id)
+    return e.blind or any(isinstance(c, stages.Gate) and c.confidential for c in plan.columns)
+
+
+def names_by_default(e: Exercise, file: str) -> bool:
+    """*Applicants as*'s starting value for a file: a gate's by Dossier ID;
+    the outcomes by name; *Extract all data* by name unless ``sensitive``."""
+    if file.startswith("gate"):
+        return False
+    if file == "all.zip":
+        return not sensitive(e)
+    return True
+
+
+def zip_name(e: Exercise, kind: str, on: date | None = None) -> str:
+    """``<code>_<kind>_<date>.zip`` (Semantics), e.g. ra_2027_extract_2026-11-18.zip."""
+    return f"{slug(e.code or e.public_id)}_{kind}_{(on or date.today()).isoformat()}.zip"
+
+
 def of(e: Exercise) -> Extract:
     plan = stages.plan_of(e.public_id)
     apps = sample_data.applications_of(e.public_id)
     gates = tuple(_gate(e, c) for c in plan.columns if isinstance(c, stages.Gate))
     return Extract(
-        f"{slug(e.code or e.public_id)}_extract.zip",
+        zip_name(e, "extract"),
         sum(a.state == "Submitted" for a in apps),
         e.state == "Draft",
         APPLICATION_KEYS + _questions(e.public_id),
@@ -132,13 +161,24 @@ def of(e: Exercise) -> Extract:
 Table = tuple[tuple[str, ...], list[list[str]]]  # a header and its rows
 
 
+_FORMULA = re.compile(r"[=+\-@\t\r]")
+_NUMBER = re.compile(r"-?[0-9]+(\.[0-9]+)?")
+
+
+def safe(cell: str) -> str:
+    """A cell a spreadsheet will not run as a formula: one starting with
+    =, +, -, @, a tab or a return gets a leading apostrophe, a number
+    aside (applicants' own text lands here from AD4; cold read)."""
+    return "'" + cell if _FORMULA.match(cell) and not _NUMBER.fullmatch(cell) else cell
+
+
 def csv_bytes(table: Table) -> bytes:
-    """A table as Review Robin's CSV envelope: UTF-8 with a BOM, so Excel
-    reads it as UTF-8, and a header row."""
+    """A table as CSV: a header row, each cell ``safe``, UTF-8 with a BOM
+    so Excel reads it as UTF-8 (Apply Desk's choice; module docstring)."""
     out = io.StringIO()
     w = csv.writer(out, lineterminator="\r\n")
-    w.writerow(table[0])
-    w.writerows(table[1])
+    w.writerow([safe(c) for c in table[0]])
+    w.writerows([[safe(c) for c in row] for row in table[1]])
     return ("\ufeff" + out.getvalue()).encode("utf-8")
 
 
@@ -148,13 +188,13 @@ def _number(x: float | None) -> str:
 
 def _shown(plan: stages.Plan, rows: str, drafts: bool = False) -> list[stages.Row]:
     """*Last applications* or *All applications* (ruling 13), submitted
-    ones only unless drafts are asked for."""
+    ones only unless drafts are asked for: drafts, never a withdrawn one."""
     last = stages.last_submitted(plan.rows) if rows == "last" else None
     return [
         r
         for r in plan.rows
         if (last is None or r.application.public_id in last)
-        and (drafts or r.application.state == "Submitted")
+        and (r.application.state == "Submitted" or (drafts and r.application.state == "Draft"))
     ]
 
 
@@ -163,24 +203,55 @@ def applications(e: Exercise, rows: str = "last", drafts: bool = False) -> Table
     answer, in the form's order."""
     plan = stages.plan_of(e.public_id)
     questions = _questions(e.public_id)
-    people = [
-        c.label
-        for c in sample_data.form_cards(e.public_id)
-        if c.kind == "field" and c.type == "people" and c.label
-    ]
+    cards = {
+        c.label: c for c in sample_data.form_cards(e.public_id) if c.kind == "field" and c.label
+    }
     out: list[list[str]] = []
     for r in _shown(plan, rows, drafts):
         a = r.application
-        answers = sample_data.answers(e.public_id, a)
-        # A Select people question's choices are the nominees (Codex),
-        # joined as a list question's are (Semantics).
-        for q in people:
-            answers[q] = "; ".join(sample_data.nominees(e.public_id, a, q))
+        known = sample_data.answers(e.public_id, a)
         out.append(
             [a.public_id, a.dossier_id, a.applicant, a.email, a.state, a.submitted]
-            + [answers.get(q, "") for q in questions]
+            + [known.get(q) or _form_answer(e, a, cards[q]) for q in questions]
         )
     return APPLICATION_KEYS + questions, out
+
+
+_TEXT = (
+    "I enjoy bringing people together.",
+    "Two years on my house committee.",
+    "Organised orientation week for first years.",
+    "",
+)
+
+
+def _form_answer(e: Exercise, a: sample_data.Application, c: sample_data.FormCard) -> str:
+    """An answer the sample does not hold, seeded per application and
+    question (module docstring): a Select people question's nominees
+    (Codex) and a choose-any list's choices joined by "; " (Semantics); a
+    number within its bounds; a photo its file name; text a canned line."""
+    n = _seed(a.public_id, c.label)
+    if c.type == "people":
+        return "; ".join(sample_data.nominees(e.public_id, a, c.label))
+    if c.type == "list":
+        options = [o.strip() for o in c.options.split(",") if o.strip()]
+        if not options:
+            return ""
+        picked = [o for i, o in enumerate(options) if (n >> i) & 1] or options[:1]
+        return options[n % len(options)] if c.exclusive else "; ".join(picked)
+    if c.type in ("integer", "decimal"):
+        lo = int(float(c.min)) if _NUMBER.fullmatch(c.min) else 0
+        hi = int(float(c.max)) if _NUMBER.fullmatch(c.max) else lo + 10
+        return str(lo + n % (max(hi - lo, 0) + 1))
+    if c.type == "photo":
+        return f"{a.dossier_id}.jpg"
+    label = c.label.lower()
+    if "name" in label:
+        return a.applicant.split()[0]
+    if "number" in label:
+        return f"A{n % 10**7:07d}{'ABEHJLMNRUWX'[n % 12]}"
+    text = _TEXT[n % len(_TEXT)]
+    return text or ("" if not c.required else _TEXT[0])
 
 
 def _results(c: stages.Cell | None, g: stages.Gate) -> list[str]:
@@ -210,6 +281,15 @@ def _answer(f: stages.ResponseField, *key: str) -> str:
         options = [o.strip() for o in t.options.split(",")]
         return options[0] if n % 10 < 7 else options[n % len(options)]
     return _COMMENTS[n % len(_COMMENTS)]
+
+
+def gate_file(
+    e: Exercise, number: int, shape: str = "pair", names: bool = False
+) -> tuple[str, Table] | None:
+    """A gate's file and its name, or None for a gate not sent or none."""
+    g = next((x for x in of(e).gates if x.number == number), None)
+    table = gate(e, number, shape, names) if g else None
+    return (g.name, table) if g and table else None
 
 
 def gate(e: Exercise, number: int, shape: str = "pair", names: bool = False) -> Table | None:
@@ -298,18 +378,19 @@ def gates_zip(e: Exercise, shape: str = "pair", names: bool = False) -> bytes:
 
 def all_zip(
     e: Exercise,
-    carries: frozenset[str] = CARRIES,
+    carries: frozenset[str] = DEFAULT_CARRIES,
     names: bool = True,
     rows: str = "last",
     drafts: bool = False,
     shape: str = "pair",
     outcome_rows: str = "last",
+    setup_parts: frozenset[str] = SETUP_PARTS,
 ) -> bytes:
     """*Extract all data*: the files the cards make as each is set, the
     applicants named or not as the card says (the applications file is
     the applicants' own, so it always names them). ``rows`` and ``drafts``
     are the Applications card's, ``shape`` By gate's, ``outcome_rows``
-    the Outcomes card's (Codex)."""
+    the Outcomes card's, ``setup_parts`` Extract setup's (Codex)."""
     x = of(e)
     files: list[tuple[str, Table]] = []
     notes: list[tuple[str, str]] = []
@@ -324,4 +405,159 @@ def all_zip(
                 files.append((g.name, table))
     if "outcomes" in carries:
         files.append(("outcomes.csv", outcomes(e, outcome_rows, names)))
+    if "setup" in carries:
+        files += [(f"setup/{n}", t) for n, t in setup(e, setup_parts)]
     return _zip(files, notes)
+
+
+# --- The alias key and the setup (rung 4) ---
+
+
+def alias_key(e: Exercise) -> Table:
+    """Dossier ID to applicant, every application's, drafts included: the
+    one file joining what Review Robin sees to who it is."""
+    return ALIAS_KEYS, [
+        [a.dossier_id, a.public_id, a.applicant, a.email]
+        for a in sample_data.applications_of(e.public_id)
+    ]
+
+
+def _yes(flag: bool) -> str:
+    return "yes" if flag else "no"
+
+
+def _form(e: Exercise) -> Table:
+    """The form's cards in order, each as the Form page sets it."""
+    header = (
+        "order", "kind", "type", "label", "help", "min", "max", "step",
+        "options", "choose", "required", "shown_to_reviewers", "pool",
+    )  # fmt: skip
+    body = [
+        [
+            str(i),
+            c.kind,
+            c.type if c.kind == "field" else "",
+            c.label,
+            c.help,
+            c.min,
+            c.max,
+            c.step,
+            c.options,
+            ("one" if c.exclusive else "any") if c.type == "list" else "",
+            _yes(c.required),
+            _yes(c.shown),
+            c.pool if c.type == "people" else "",
+        ]  # fmt: skip
+        for i, c in enumerate(sample_data.form_cards(e.public_id), 1)
+    ]
+    return header, body
+
+
+def _field(f: stages.Field) -> dict[str, str]:
+    return {"type": f.type, "min": f.min, "max": f.max, "step": f.step, "options": f.options}
+
+
+def _detail(**settings: str) -> str:
+    """Settings as ``name=value; …``, the empty ones left out."""
+    return "; ".join(f"{k}={v}" for k, v in settings.items() if v)
+
+
+def _process(e: Exercise) -> Table:
+    """Each stage and what it holds, a row each: the form, each gate with
+    its evaluators and results, each outcome with its values; the rules
+    in words, as Process reads them. Under each gate, a ``field`` row per
+    response field and a ``result`` row per result, their settings in
+    ``detail`` as ``name=value; …`` (Codex: enough to rebuild the gate)."""
+    plan = stages.plan_of(e.public_id)
+    pools = sample_data.panel_pools(e.public_id)
+    header = (
+        "stage", "stage_name", "dates", "kind", "number", "label",
+        "evaluators", "mode", "results", "values", "due", "rule", "detail",
+    )  # fmt: skip
+    body: list[list[str]] = []
+    for st in plan.stages:
+        head = [str(st.number), st.label, st.dates]
+        if st.form:
+            body.append(head + ["form", "", "Application form", "", "", "", "", "", "", ""])
+        for c in st.columns:
+            rule = stages.rule_text(plan, c)
+            if isinstance(c, stages.Gate):
+                sources, total = stages.sources_of(e.public_id, c)
+                body.append(
+                    head
+                    + [
+                        "gate",
+                        str(c.number),
+                        c.label,
+                        stages.sources_summary(sources, total, pools),
+                    ]
+                    + [dict(stages.MODES).get(c.mode, c.mode), "; ".join(r.name for r in c.results)]
+                    + [
+                        "",
+                        "",
+                        rule,
+                        _detail(confidential=_yes(c.confidential), about=c.description),
+                    ]
+                )
+                for f in stages.fields_of(c):
+                    body.append(
+                        head
+                        + ["field", str(c.number), f.label, "", "", "", "", "", ""]
+                        + [
+                            _detail(
+                                key=f.key, **_field(f.field), required=_yes(f.required), help=f.help
+                            )
+                        ]
+                    )
+                for r in c.results:
+                    body.append(
+                        head
+                        + ["result", str(c.number), r.name, "", "", "", "", "", ""]
+                        + [
+                            _detail(
+                                key=r.key,
+                                derive=r.derive,
+                                source=r.source,
+                                value=r.value,
+                                at_least=str(r.at_least),
+                                ignore_zero=_yes(r.ignore_zero),
+                                **_field(r.field),
+                            )
+                        ]
+                    )
+            else:
+                body.append(
+                    head
+                    + ["outcome", str(c.number), c.label, "", "", ""]
+                    + ["; ".join(c.values), c.due, rule]
+                    + [_detail(weights=", ".join(f"{k} {w:g}" for k, w in c.weights))]
+                )
+    return header, body
+
+
+def _panels(e: Exercise) -> Table:
+    """Each panel's members, a row each."""
+    return ("panel", "name", "email", "note"), [
+        [p.name, m.name, m.email, m.note]
+        for p in sample_data.panels_of(e.public_id)
+        for m in p.members
+    ]
+
+
+def _emails(e: Exercise) -> Table:
+    """Each template Process makes owed, and whether it is written."""
+    return ("template", "when", "item", "audience", "written"), [
+        [m.name, m.when, m.item, m.audience, _yes(m.ok)] for m in workflow.emails(e.public_id)
+    ]
+
+
+_SETUP = {"form": _form, "process": _process, "panels": _panels, "emails": _emails}
+
+
+def setup(e: Exercise, parts: frozenset[str] = SETUP_PARTS) -> list[tuple[str, Table]]:
+    """Extract setup's files, in Setup's order, the ones asked for."""
+    return [(f"{k}.csv", fn(e)) for k, fn in _SETUP.items() if k in parts]
+
+
+def setup_zip(e: Exercise, parts: frozenset[str] = SETUP_PARTS) -> bytes:
+    return _zip(setup(e, parts))

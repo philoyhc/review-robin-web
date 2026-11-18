@@ -60,3 +60,18 @@ def test_without_storage_the_chips_still_shape_the_links(page: Page) -> None:
     out = page.locator('[data-xd-card="outcomes"]')
     out.get_by_role("button", name="All applications").click()
     assert _href(page, "outcomes", "outcomes.csv").endswith("?rows=all")
+
+
+def test_setup_rides_in_zip_all_when_asked(page: Page) -> None:
+    page.goto(PAGE)
+    every = page.locator('[data-xd-card="all"]')
+    assert "setup" not in _href(page, "all", "all.zip")  # off by default: setup is for cloning
+    every.get_by_role("button", name="Setup").click()
+    assert "setup" in _href(page, "all", "all.zip")
+    setup = page.locator('[data-xd-card="setup"]')
+    setup.get_by_role("button", name="Panels").click()
+    assert _href(page, "setup", "setup.zip").endswith("?carries=form%2Cprocess%2Cemails")
+    # Zip all carries those pages too, and its files line says so (Codex).
+    assert "sparts=form%2Cprocess%2Cemails" in _href(page, "all", "all.zip")
+    panels = every.locator('[data-xd-page="panels"]')
+    assert panels.is_hidden() and every.locator('[data-xd-page="form"]').is_visible()

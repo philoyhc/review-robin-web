@@ -468,10 +468,24 @@ def test_extract_data_is_download_cards_and_shows_no_data(client: TestClient) ->
         "alias",
         "setup",
     ]
-    for h in ("Extract all data", "Applications", "By gate", "Outcomes", "Alias key"):
+    for h in (
+        "Extract all data",
+        "Applications",
+        "By gate",
+        "Outcomes",
+        "Alias key",
+        "Extract setup",
+    ):
         assert f"<h2>{h}</h2>" in text
     assert "Evaluation responses" not in text and "Record interview scores" not in text
-    assert "ra_2027_extract.zip: manifest.csv · applications.csv · gate_1_peer_review.csv" in text
+    assert re.search(
+        r"ra_2027_extract_\d{4}-\d\d-\d\d\.zip: <span>manifest\.csv</span> "
+        r'<span data-xd-part="applications">· applications\.csv</span> '
+        r'<span data-xd-part="gates">· gate_1_peer_review\.csv</span>',
+        text,
+    )
+    # A confidential gate: Extract all data starts on Dossier IDs, saying why.
+    assert "Dossier IDs to start with: a gate is confidential." in text
     # A gate not sent has no file; a confidential one says so.
     gate3 = text[text.index('data-xd-gate="3"') :]
     assert "Not sent" in gate3[: gate3.index("</tr>")]
