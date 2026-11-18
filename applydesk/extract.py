@@ -3,10 +3,13 @@ columns, and each gate's rows, as Review Robin's Extract data cuts a
 session's data. The page's cards and the downloads (rung 3) read this one
 shape; nothing here is drawn on screen as data.
 
-The files are CSV in Review Robin's envelope (UTF-8 with a byte-order mark,
-a header row). A gate's answers per pair are sample answers seeded per
-pair until Review Robin's handoff returns real ones (AD5); every other
-value is the sample's own.
+The files are CSV with a header row, UTF-8 with a byte-order mark so
+Excel reads them as UTF-8: Apply Desk's choice, which Review Robin's
+importers tolerate on read (`spec/csv_contracts.md` §1) though its own
+extracts write none. Where the sample has no answer (a gate's answers per
+pair, a form's text, number and photo questions) the files carry sample
+answers seeded per application or pair, the same every time, until the
+forms and Review Robin's handoff supply real ones (AD4, AD5).
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ import re
 import zipfile
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from datetime import date
 
 from applydesk import sample_data, stages, workflow
 from applydesk.sample_data import Exercise
@@ -116,12 +120,34 @@ def _outcome_columns(plan: stages.Plan, names: bool = True) -> tuple[str, ...]:
     return tuple(out)
 
 
+def sensitive(e: Exercise) -> bool:
+    """Blind review on, or a confidential gate: files name applicants only
+    when asked (Semantics: such a gate's file defaults to Dossier IDs)."""
+    plan = stages.plan_of(e.public_id)
+    return e.blind or any(isinstance(c, stages.Gate) and c.confidential for c in plan.columns)
+
+
+def names_by_default(e: Exercise, file: str) -> bool:
+    """*Applicants as*'s starting value for a file: a gate's by Dossier ID;
+    the outcomes by name; *Extract all data* by name unless ``sensitive``."""
+    if file.startswith("gate"):
+        return False
+    if file == "all.zip":
+        return not sensitive(e)
+    return True
+
+
+def zip_name(e: Exercise, kind: str, on: date | None = None) -> str:
+    """``<code>_<kind>_<date>.zip`` (Semantics), e.g. ra_2027_extract_2026-11-18.zip."""
+    return f"{slug(e.code or e.public_id)}_{kind}_{(on or date.today()).isoformat()}.zip"
+
+
 def of(e: Exercise) -> Extract:
     plan = stages.plan_of(e.public_id)
     apps = sample_data.applications_of(e.public_id)
     gates = tuple(_gate(e, c) for c in plan.columns if isinstance(c, stages.Gate))
     return Extract(
-        f"{slug(e.code or e.public_id)}_extract.zip",
+        zip_name(e, "extract"),
         sum(a.state == "Submitted" for a in apps),
         e.state == "Draft",
         APPLICATION_KEYS + _questions(e.public_id),
@@ -135,13 +161,24 @@ def of(e: Exercise) -> Extract:
 Table = tuple[tuple[str, ...], list[list[str]]]  # a header and its rows
 
 
+_FORMULA = re.compile(r"[=+\-@\t\r]")
+_NUMBER = re.compile(r"-?[0-9]+(\.[0-9]+)?")
+
+
+def safe(cell: str) -> str:
+    """A cell a spreadsheet will not run as a formula: one starting with
+    =, +, -, @, a tab or a return gets a leading apostrophe, a number
+    aside (applicants' own text lands here from AD4; cold read)."""
+    return "'" + cell if _FORMULA.match(cell) and not _NUMBER.fullmatch(cell) else cell
+
+
 def csv_bytes(table: Table) -> bytes:
-    """A table as Review Robin's CSV envelope: UTF-8 with a BOM, so Excel
-    reads it as UTF-8, and a header row."""
+    """A table as CSV: a header row, each cell ``safe``, UTF-8 with a BOM
+    so Excel reads it as UTF-8 (Apply Desk's choice; module docstring)."""
     out = io.StringIO()
     w = csv.writer(out, lineterminator="\r\n")
-    w.writerow(table[0])
-    w.writerows(table[1])
+    w.writerow([safe(c) for c in table[0]])
+    w.writerows([[safe(c) for c in row] for row in table[1]])
     return ("\ufeff" + out.getvalue()).encode("utf-8")
 
 
@@ -151,13 +188,13 @@ def _number(x: float | None) -> str:
 
 def _shown(plan: stages.Plan, rows: str, drafts: bool = False) -> list[stages.Row]:
     """*Last applications* or *All applications* (ruling 13), submitted
-    ones only unless drafts are asked for."""
+    ones only unless drafts are asked for: drafts, never a withdrawn one."""
     last = stages.last_submitted(plan.rows) if rows == "last" else None
     return [
         r
         for r in plan.rows
         if (last is None or r.application.public_id in last)
-        and (drafts or r.application.state == "Submitted")
+        and (r.application.state == "Submitted" or (drafts and r.application.state == "Draft"))
     ]
 
 
@@ -166,24 +203,55 @@ def applications(e: Exercise, rows: str = "last", drafts: bool = False) -> Table
     answer, in the form's order."""
     plan = stages.plan_of(e.public_id)
     questions = _questions(e.public_id)
-    people = [
-        c.label
-        for c in sample_data.form_cards(e.public_id)
-        if c.kind == "field" and c.type == "people" and c.label
-    ]
+    cards = {
+        c.label: c for c in sample_data.form_cards(e.public_id) if c.kind == "field" and c.label
+    }
     out: list[list[str]] = []
     for r in _shown(plan, rows, drafts):
         a = r.application
-        answers = sample_data.answers(e.public_id, a)
-        # A Select people question's choices are the nominees (Codex),
-        # joined as a list question's are (Semantics).
-        for q in people:
-            answers[q] = "; ".join(sample_data.nominees(e.public_id, a, q))
+        known = sample_data.answers(e.public_id, a)
         out.append(
             [a.public_id, a.dossier_id, a.applicant, a.email, a.state, a.submitted]
-            + [answers.get(q, "") for q in questions]
+            + [known.get(q) or _form_answer(e, a, cards[q]) for q in questions]
         )
     return APPLICATION_KEYS + questions, out
+
+
+_TEXT = (
+    "I enjoy bringing people together.",
+    "Two years on my house committee.",
+    "Organised orientation week for first years.",
+    "",
+)
+
+
+def _form_answer(e: Exercise, a: sample_data.Application, c: sample_data.FormCard) -> str:
+    """An answer the sample does not hold, seeded per application and
+    question (module docstring): a Select people question's nominees
+    (Codex) and a choose-any list's choices joined by "; " (Semantics); a
+    number within its bounds; a photo its file name; text a canned line."""
+    n = _seed(a.public_id, c.label)
+    if c.type == "people":
+        return "; ".join(sample_data.nominees(e.public_id, a, c.label))
+    if c.type == "list":
+        options = [o.strip() for o in c.options.split(",") if o.strip()]
+        if not options:
+            return ""
+        picked = [o for i, o in enumerate(options) if (n >> i) & 1] or options[:1]
+        return options[n % len(options)] if c.exclusive else "; ".join(picked)
+    if c.type in ("integer", "decimal"):
+        lo = int(float(c.min)) if _NUMBER.fullmatch(c.min) else 0
+        hi = int(float(c.max)) if _NUMBER.fullmatch(c.max) else lo + 10
+        return str(lo + n % (max(hi - lo, 0) + 1))
+    if c.type == "photo":
+        return f"{a.dossier_id}.jpg"
+    label = c.label.lower()
+    if "name" in label:
+        return a.applicant.split()[0]
+    if "number" in label:
+        return f"A{n % 10**7:07d}{'ABEHJLMNRUWX'[n % 12]}"
+    text = _TEXT[n % len(_TEXT)]
+    return text or ("" if not c.required else _TEXT[0])
 
 
 def _results(c: stages.Cell | None, g: stages.Gate) -> list[str]:
@@ -213,6 +281,15 @@ def _answer(f: stages.ResponseField, *key: str) -> str:
         options = [o.strip() for o in t.options.split(",")]
         return options[0] if n % 10 < 7 else options[n % len(options)]
     return _COMMENTS[n % len(_COMMENTS)]
+
+
+def gate_file(
+    e: Exercise, number: int, shape: str = "pair", names: bool = False
+) -> tuple[str, Table] | None:
+    """A gate's file and its name, or None for a gate not sent or none."""
+    g = next((x for x in of(e).gates if x.number == number), None)
+    table = gate(e, number, shape, names) if g else None
+    return (g.name, table) if g and table else None
 
 
 def gate(e: Exercise, number: int, shape: str = "pair", names: bool = False) -> Table | None:

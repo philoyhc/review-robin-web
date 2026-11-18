@@ -6,16 +6,16 @@
    chips kept in their browser; without the script, the defaults. The
    files are `applydesk/extract.py`'s; the alias key and the setup files
    since rung 4, the setup's even for a draft. #}
-{% macro seg(key, options, label) -%}
-<span class="seg" role="group" aria-label="{{ label }}" data-xd-k="{{ key }}">{% for v, o in options %}<button type="button" data-xd-v="{{ v }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ o }}</button>{% endfor %}</span>
+{% macro seg(key, options, label, on=none) -%}
+<span class="seg" role="group" aria-label="{{ label }}" data-xd-k="{{ key }}">{% for v, o in options %}<button type="button" data-xd-v="{{ v }}" aria-pressed="{{ 'true' if (v == on if on is not none else loop.first) else 'false' }}">{{ o }}</button>{% endfor %}</span>
 {%- endmacro %}
 {% macro tog(value, name, on=True) -%}
 <button type="button" class="btn btn-toggle" data-xd-t="{{ value }}" aria-pressed="{{ 'true' if on else 'false' }}">{{ name }}</button>
 {%- endmacro %}
 {% set nothing = extract.submitted == 0 %}
 {% set base = '/operator/exercises/' ~ exercise.public_id ~ '/extract/' %}
-{% macro dl(file, label, cls="btn-primary", always=False) -%}
-{% if nothing and not always %}<button class="btn {{ cls }}" type="button" disabled>{{ label }}</button>{% else %}<a class="btn {{ cls }}" data-xd-dl="{{ file }}" href="{{ url(base ~ file) }}" download>{{ label }}</a>{% endif %}
+{% macro dl(file, label, cls="btn-primary", always=False, name="") -%}
+{% if nothing and not always %}<button class="btn {{ cls }}" type="button" disabled>{{ label }}</button>{% else %}<a class="btn {{ cls }}" data-xd-dl="{{ file }}" href="{{ url(base ~ file) }}"{% if name %} aria-label="{{ name }}"{% endif %} download>{{ label }}</a>{% endif %}
 {%- endmacro %}
 {% macro columns(cols) -%}
 <p class="xd-cols"><span class="visually-hidden">Columns: </span>{{ cols | join(", ") }}</p>
@@ -25,9 +25,11 @@
   <section class="card" data-xd-card="all">
     <h2>Extract all data</h2>
     <p class="xd-help">One ZIP for offline selection: a manifest, then every file the cards below make, as each is set.</p>
-    <div class="xd-chips"><span class="xd-k">Carries</span>{{ tog("applications", "Applications") }}{{ tog("gates", "Gates") }}{{ tog("outcomes", "Outcomes") }}{{ tog("setup", "Setup", False) }}</div>
-    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("names", "Names"), ("ids", "Dossier IDs")), "Applicants as") }}</div>
-    <p class="xd-cols" data-xd-files>{{ extract.zip_name }}: {{ extract.files | join(" · ") }}</p>
+    <div class="xd-chips" role="group" aria-label="The ZIP carries"><span class="xd-k" aria-hidden="true">Carries</span>{{ tog("applications", "Applications") }}{{ tog("gates", "Gates") }}{{ tog("outcomes", "Outcomes") }}{{ tog("setup", "Setup", False) }}</div>
+    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("names", "Names"), ("ids", "Dossier IDs")), "Applicants as", "names" if all_names else "ids") }}</div>
+    {% if not all_names %}<p class="muted xd-note">Dossier IDs to start with: {{ "blind review is on" if exercise.blind else "a gate is confidential" }}.</p>{% endif %}
+    {# The files as the Carries chips say; the script hides what is off. #}
+    <p class="xd-cols" data-xd-files>{{ extract.zip_name }}: <span>manifest.csv</span> <span data-xd-part="applications">· applications.csv</span>{% for g in extract.gates if g.sent %} <span data-xd-part="gates">· {{ g.name }}</span>{% endfor %} <span data-xd-part="outcomes">· outcomes.csv</span>{% for f in setup_files %} <span data-xd-part="setup" hidden>· setup/{{ f }}</span>{% endfor %}</p>
     <div class="btnrow">{{ dl("all.zip", "Zip all") }}</div>
   </section>
   <section class="card" data-xd-card="applications">
@@ -50,11 +52,11 @@
       {% for g in extract.gates %}
         <tr data-xd-gate="{{ g.number }}"><td>{{ g.number }} · {{ g.label }}{% if g.confidential %} <span class="chip chip-mute">Confidential</span>{% endif %}</td>
           <td>{% if g.sent %}{{ "{:,}".format(g.pairs) }} {{ "pair" if g.pairs == 1 else "pairs" }}{% else %}<span class="muted">Not sent</span>{% endif %}</td>
-          <td>{% if g.sent %}{{ dl("gate_" ~ g.number ~ ".csv", "CSV", "btn-secondary xd-csv") }}{% else %}<span class="muted">—</span>{% endif %}</td></tr>
+          <td>{% if g.sent %}{{ dl("gate_" ~ g.number ~ ".csv", "CSV", "btn-secondary xd-csv", name="Gate " ~ g.number ~ " CSV") }}{% else %}<span class="muted">—</span>{% endif %}</td></tr>
       {% endfor %}
       </tbody>
     </table>
-    {% for g in extract.gates if g.sent %}{% if loop.first %}{{ columns(g.columns) }}{% endif %}{% endfor %}
+    {% for g in extract.gates if g.sent %}{% if loop.first %}<p class="xd-k xd-shape">A row per pair, by Dossier ID:</p>{{ columns(g.columns) }}{% endif %}{% endfor %}
     {% else %}
     <p class="muted">No gates yet: Process adds them.</p>
     {% endif %}
@@ -76,7 +78,7 @@
   <section class="card" data-xd-card="setup">
     <h2>Extract setup</h2>
     <p class="xd-help">The exercise's setup as files, to clone it into a new exercise: Form, Process (stages, gates, outcomes and rules), Panels and Emails.</p>
-    <div class="xd-chips"><span class="xd-k">Carries</span>{{ tog("form", "Form") }}{{ tog("process", "Process") }}{{ tog("panels", "Panels") }}{{ tog("emails", "Emails") }}</div>
+    <div class="xd-chips" role="group" aria-label="The setup ZIP carries"><span class="xd-k" aria-hidden="true">Carries</span>{{ tog("form", "Form") }}{{ tog("process", "Process") }}{{ tog("panels", "Panels") }}{{ tog("emails", "Emails") }}</div>
     <p class="xd-cols">{{ setup_files | join(" · ") }}</p>
     <div class="btnrow">{{ dl("setup.zip", "Zip setup", "btn-secondary", always=True) }}</div>
   </section>
@@ -112,6 +114,10 @@
     return q;
   }
   function draw(card) {
+    card.querySelectorAll("[data-xd-part]").forEach(function (span) {
+      var t = card.querySelector('[data-xd-t="' + span.dataset.xdPart + '"]');
+      span.hidden = !(t && t.getAttribute("aria-pressed") === "true");
+    });
     var p = state(card);
     if (card.dataset.xdCard === "all") p = borrowed(p);
     var q = p.toString();

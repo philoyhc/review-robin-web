@@ -41,7 +41,8 @@ def test_applications_csv_a_row_per_application(client: TestClient) -> None:
     assert first["applicant"] == "Aisha Bello" and first["Year of study"] == "Year 4"
     assert len(rows) - 1 == 100  # last applications: each applicant's latest submitted
     drafts = _rows(client.get(f"{BASE}/applications.csv?rows=all&drafts=1").content)
-    assert len(drafts) - 1 == 104 and {"Draft"} <= {r[4] for r in drafts[1:]}
+    # Drafts, never a withdrawn application (cold read).
+    assert {r[4] for r in drafts[1:]} == {"Submitted", "Draft"} and len(drafts) - 1 == 103
 
 
 def test_a_gate_csv_by_pair_or_by_application(client: TestClient) -> None:
@@ -79,7 +80,9 @@ def test_outcomes_csv(client: TestClient) -> None:
 def test_the_zips_carry_a_manifest_and_what_the_chips_say(client: TestClient) -> None:
     r = client.get(f"{BASE}/all.zip")
     assert r.headers["content-type"] == "application/zip"
-    assert 'filename="ra_2027_extract.zip"' in r.headers["content-disposition"]
+    assert re.search(
+        r'filename="ra_2027_extract_\d{4}-\d\d-\d\d\.zip"', r.headers["content-disposition"]
+    )
     z = zipfile.ZipFile(io.BytesIO(r.content))
     assert z.namelist() == [
         "manifest.csv",
@@ -108,7 +111,7 @@ def test_the_zips_carry_a_manifest_and_what_the_chips_say(client: TestClient) ->
             client.get(f"{BASE}/all.zip?rows=all&drafts=1&shape=application&orows=last").content
         )
     )
-    assert len(_rows(z.read("applications.csv"))) - 1 == 104
+    assert len(_rows(z.read("applications.csv"))) - 1 == 103
     assert _rows(z.read("gate_1_peer_review.csv"))[0][-2:] == ["Mean score", "Comments"]
     assert len(_rows(z.read("outcomes.csv"))) - 1 == 100
     gates = zipfile.ZipFile(io.BytesIO(client.get(f"{BASE}/gates.zip").content))
@@ -153,7 +156,9 @@ def test_the_alias_key_joins_dossier_to_applicant(client: TestClient) -> None:
 
 def test_extract_setup_one_csv_per_setup_page(client: TestClient) -> None:
     r = client.get(f"{BASE}/setup.zip")
-    assert 'filename="ra_2027_setup.zip"' in r.headers["content-disposition"]
+    assert re.search(
+        r'filename="ra_2027_setup_\d{4}-\d\d-\d\d\.zip"', r.headers["content-disposition"]
+    )
     z = zipfile.ZipFile(io.BytesIO(r.content))
     assert z.namelist() == ["manifest.csv", "form.csv", "process.csv", "panels.csv", "emails.csv"]
     form = _rows(z.read("form.csv"))
@@ -183,3 +188,41 @@ def test_extract_setup_one_csv_per_setup_page(client: TestClient) -> None:
     # A draft's setup extracts too.
     draft = client.get("/applydesk/operator/exercises/n5wg8tjr3e/extract/setup.zip")
     assert draft.status_code == 200
+
+
+def test_every_form_question_has_an_answer(client: TestClient) -> None:
+    """Cold read: text, number and photo questions are filled (seeded
+    sample answers), not left blank; a photo is its file name."""
+    rows = _rows(client.get(f"{BASE}/applications.csv").content)
+    first = dict(zip(rows[0], rows[1], strict=True))
+    assert first["Photo"] == "p3bd7kq2wx.jpg"
+    assert first["Preferred name"] == "Aisha"
+    assert re.fullmatch(r"A\d{7}[A-Z]", first["Matriculation number"])
+    numbers = rows[0].index("Year of study")
+    assert all(r[numbers] for r in rows[1:])
+    tea = _rows(
+        client.get("/applydesk/operator/exercises/k7mfr3pq8z/extract/applications.csv").content
+    )
+    months = tea[0].index("Months the project will run")
+    assert all(r[months].isdigit() for r in tea[1:])
+    gpa = tea[0].index("Cumulative GPA")
+    assert all(r[gpa] != "" for r in tea[1:])
+
+
+def test_zip_all_names_no_one_by_default_on_a_sensitive_exercise(client: TestClient) -> None:
+    """Semantics: a confidential gate's file defaults to Dossier IDs; the RA
+    exercise's Office checks is confidential, so Zip all starts on IDs."""
+    z = zipfile.ZipFile(io.BytesIO(client.get(f"{BASE}/all.zip").content))
+    assert "applicant" not in _rows(z.read("gate_2_office_checks.csv"))[0]
+    assert "applicant" not in _rows(z.read("outcomes.csv"))[0]
+    named = zipfile.ZipFile(io.BytesIO(client.get(f"{BASE}/all.zip?applicants=names").content))
+    assert "applicant" in _rows(named.read("gate_2_office_checks.csv"))[0]
+
+
+def test_a_cell_never_runs_as_a_formula() -> None:
+    assert extract.safe("=HYPERLINK(1)") == "'=HYPERLINK(1)"
+    assert extract.safe("@SUM(A1)") == "'@SUM(A1)" and extract.safe("+44 20") == "'+44 20"
+    assert extract.safe("-1") == "-1" and extract.safe("3.81") == "3.81"
+    assert extract.safe("- a list") == "'- a list"
+    body = extract.csv_bytes((("a",), [["=1+1"]])).decode("utf-8-sig")
+    assert body.splitlines()[1] == "'=1+1"
