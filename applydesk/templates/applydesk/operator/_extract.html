@@ -9,8 +9,10 @@
 {% macro seg(key, options, label, on=none) -%}
 <span class="seg" role="group" aria-label="{{ label }}" data-xd-k="{{ key }}">{% for v, o in options %}<button type="button" data-xd-v="{{ v }}" aria-pressed="{{ 'true' if (v == on if on is not none else loop.first) else 'false' }}">{{ o }}</button>{% endfor %}</span>
 {%- endmacro %}
+{# A multi-select chip is a pill (ruling 47, AD-68), as Panels' Show
+   columns: never a Primary-looking button. #}
 {% macro tog(value, name, on=True) -%}
-<button type="button" class="btn btn-toggle" data-xd-t="{{ value }}" aria-pressed="{{ 'true' if on else 'false' }}">{{ name }}</button>
+<button type="button" class="pn-show" data-xd-t="{{ value }}" aria-pressed="{{ 'true' if on else 'false' }}">{{ name }}</button>
 {%- endmacro %}
 {% set nothing = extract.submitted == 0 %}
 {% set base = '/operator/exercises/' ~ exercise.public_id ~ '/extract/' %}

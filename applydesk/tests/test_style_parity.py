@@ -46,6 +46,8 @@ RULES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         ("padding", "border-radius", "font-size", "font-weight", "text-transform"),
     ),
     ("body.ui-v2 .btn.secondary", ".btn-secondary", ("background", "color", "border-color")),
+    # The off Toggle is Secondary (spec/ui_elements.md §6, ruling 47).
+    ("body.ui-v2 .btn.secondary", ".btn-toggle", ("background", "color", "border-color")),
     ('body.ui-v2 .btn[aria-disabled="true"]', ".btn[disabled]", ("opacity", "cursor")),
 )
 

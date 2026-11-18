@@ -741,8 +741,9 @@ from AD2.
   setup*. Each has a heading, a line on what its file answers, chips, the
   file's columns in a line and its download at the foot. No card draws a
   data table; *By gate* lists its gates with row counts.
-- **Chips** shape the download's link. Each viewer's are kept in
-  `localStorage` `applydesk-extract-<id>`; with storage blocked, or no script,
+- **Chips** shape the download's link: a many-of chip (*Carries*, Extract
+  setup's pages) is a `.pn-show` pill, a one-of choice a `.seg` (ruling 47).
+  Each viewer's are kept in `localStorage` `applydesk-extract-<id>`; with storage blocked, or no script,
   the defaults apply. *Zip all*'s link also takes the other cards' settings
   (Applications' rows and drafts, By gate's shape, Outcomes' rows, Extract
   setup's pages) so the ZIP carries each file as its card is set.
