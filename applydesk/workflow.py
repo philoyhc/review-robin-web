@@ -161,23 +161,34 @@ class Counts:
     withdrawn: int
 
 
-def withdrawal_closed_by(exercise_id: str, public_id: str) -> str:
-    """Ruling 45: an applicant may withdraw until a gate holding their
-    dossier is sent. The first such gate's name ("Gate 2"), else ""."""
+def closed_by(exercise_id: str) -> dict[str, str]:
+    """Ruling 45: a submitted application may be withdrawn, or returned to
+    draft by the operator, until a gate holding its dossier is sent
+    (*Sent* or *Results in*; ruling 29's not-yet-opened gate counts as
+    sent). By application: the first such gate's label, for every
+    submitted application it has closed."""
     plan = stages.plan_of(exercise_id)
-    row = next((r for r in plan.rows if r.application.public_id == public_id), None)
-    if row is None:
-        return ""
-    for c in plan.columns:
-        if not isinstance(c, stages.Gate) or gate_state(exercise_id, c.key)[0] not in (
-            "Sent",
-            "Results in",
-        ):
+    sent = [
+        c
+        for c in plan.columns
+        if isinstance(c, stages.Gate)
+        and gate_state(exercise_id, c.key)[0] in ("Sent", "Results in")
+    ]
+    out: dict[str, str] = {}
+    for r in plan.rows:
+        if r.application.state != "Submitted":
             continue
-        cell = row.cells.get(c.key)
-        if cell and cell.value == "Entered":
-            return f"Gate {c.number}"
-    return ""
+        for c in sent:
+            cell = r.cells.get(c.key)
+            if cell and cell.value == "Entered":
+                out[r.application.public_id] = c.label or f"Gate {c.number}"
+                break
+    return out
+
+
+def withdrawal_closed_by(exercise_id: str, public_id: str) -> str:
+    """The gate that closed this application's withdrawal, else ""."""
+    return closed_by(exercise_id).get(public_id, "")
 
 
 def counts_of(exercise_id: str) -> Counts:

@@ -414,12 +414,25 @@ def test_a_blank_exercise_s_process_is_one_stage_holding_the_form(client: TestCl
     assert 'disabled title="The last stage cannot be deleted">Delete' in text
 
 
-def test_applications_generates_dossiers(client: TestClient) -> None:
+def test_dossiers_returns_to_draft_by_row_and_ticked(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ruling 45: no Generate dossiers; Return to draft on a submitted row
+    until a gate holding its dossier is sent, and for the ticked rows,
+    gates or none."""
     text = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
-    # Ruling 45: no Generate dossiers; Return to draft per row and ticked.
-    assert "Generate dossiers" not in text
-    assert 'aria-label="Return m3qx8vkt2n to draft">Return to draft</button>' in text
-    assert ">Return ticked to draft</button>" in text
+    assert "Generate dossiers" not in text and ">Return ticked to draft</button>" in text
+    # wa9's Gate 1 has results in: every entered dossier is past returning.
+    assert 'aria-label="Return m3qx8vkt2n to draft"' not in text
+    monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Ready", ""))
+    open_ = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
+    assert 'aria-label="Return m3qx8vkt2n to draft">Return to draft</button>' in open_
+    assert 'aria-label="Return f2ps7nyh4k to draft"' not in open_  # a draft
+    # Sent but not yet opened counts as sent (ruling 29's gate still closes it).
+    monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Sent", ""))
+    assert workflow.withdrawal_closed_by(EX, "m3qx8vkt2n") == "Peer review"
+    nogates = client.get("/applydesk/operator/exercises/r6tm4kq9wz/dossiers").text
+    assert ">Return ticked to draft</button>" in nogates
     # Operators open every dossier (author, 2026-11-12).
     assert "/applydesk/me/exercises/wa9juxbc2t/dossiers/p3bd7kq2wx" in text
 
@@ -1722,8 +1735,8 @@ def test_withdrawal_closes_once_a_gate_holding_the_dossier_is_sent(
     """Ruling 45: an applicant may withdraw (Outline-amber, AD4) until a
     gate holding their dossier is sent; then the page says which."""
     page = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
-    assert workflow.withdrawal_closed_by("wa9juxbc2t", "m3qx8vkt2n") == "Gate 1"
-    assert "You can no longer withdraw: Gate 1" in page and ">Withdraw</button>" not in page
+    assert workflow.withdrawal_closed_by("wa9juxbc2t", "m3qx8vkt2n") == "Peer review"
+    assert "your application has gone to Peer review" in page and ">Withdraw</button>" not in page
     monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Ready", ""))
     open_page = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
     assert (
