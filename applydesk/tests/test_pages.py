@@ -13,7 +13,7 @@ from typing import Any, cast
 import pytest
 from fastapi.testclient import TestClient
 
-from applydesk import extract, gate, paging, sample_data, stages, workflow
+from applydesk import extract, gate, locks, paging, sample_data, stages, workflow
 from applydesk.ids import PUBLIC_ID_ALPHABET, PUBLIC_ID_LENGTH, generate_public_id, is_public_id
 from applydesk.main import create_app
 from applydesk.tests._host import host_with
@@ -541,12 +541,13 @@ def test_a_blank_exercise_lists_what_is_still_to_set_up(client: TestClient) -> N
         '<dt>Description</dt><dd data-dt-show="description"><span class="muted">Not set</span>'
         in home
     )
-    assert "Still to set up before it can be published:" in home
-    missing = home[home.index("Still to set up") :]
+    # Its stage's blockers, in the timeline's operator part (AD1K, at the
+    # author's check), each linked to where it is set.
+    assert "Blocking publication" in home
+    missing = home[home.index("data-tl-blocking") :]
     missing = missing[: missing.index("</ul>")]
     base = "/applydesk/operator/exercises/n5wg8tjr3e"
-    # Each item links to where it is set: Home's details, Process, Form.
-    assert re.findall(r'<li><a href="([^"]+)">([^<]+)</a></li>', missing) == [
+    assert re.findall(r'<li><a href="([^"]+)">([^<]+)</a> not set</li>', missing) == [
         (f"{base}#details", "Exercise Code"),
         (f"{base}#details", "Description"),
         (f"{base}#details", "Who may apply"),
@@ -577,8 +578,10 @@ def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> Non
 
 def test_a_set_up_draft_lists_only_what_it_lacks(client: TestClient) -> None:
     home = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
-    missing = home[home.index("Still to set up") :]
-    assert re.findall(r"<a [^>]*>([^<]+)</a></li>", missing[: missing.index("</ul>")]) == ["Dates"]
+    missing = home[home.index("data-tl-blocking") :]
+    assert re.findall(r"<a [^>]*>([^<]+)</a> not set", missing[: missing.index("</ul>")]) == [
+        "Dates"
+    ]
 
 
 def test_evaluations_shows_each_gate_s_assignments(client: TestClient) -> None:
@@ -832,7 +835,7 @@ def test_a_draft_with_nothing_missing_is_ready_to_publish(
     home = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
     # Its first stage's own checks still name its dates (segment AD1K).
     assert "<li>Stage 1 has no start and end.</li>" in home
-    assert 'on <a href="/applydesk/operator/exercises/c4xh2ndv6s/process">Process</a>' in home
+    assert home.count("Blocking publication") == 2  # and Selection's
 
 
 def test_the_blank_exercise_is_not_offered_to_applicants(client: TestClient) -> None:
@@ -1451,3 +1454,14 @@ def test_home_and_the_lobby_say_each_stage_s_status(client: TestClient) -> None:
     lobby = client.get("/applydesk/operator/exercises").text
     assert '<span class="chip chip-mute">Draft</span>' in lobby
     assert '<span class="chip chip-info">Published</span>' in lobby  # as a stage's
+
+
+def test_a_stage_with_nothing_blocking_is_ready_to_publish(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AD1K, at the author's check: a draft stage nothing blocks says so
+    in the timeline's operator part."""
+    monkeypatch.setattr(locks, "publish_problems", lambda e, st: ())
+    monkeypatch.setattr(sample_data, "setup_missing", lambda e: ())
+    home = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
+    assert home.count("Ready to publish.") == 2 and "Blocking publication" not in home

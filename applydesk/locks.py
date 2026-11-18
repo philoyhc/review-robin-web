@@ -219,26 +219,40 @@ def revert_warnings(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
     return tuple(out)
 
 
-def stage_rows(
-    exercise: Exercise,
-) -> list[tuple[stages.Stage, str, tuple[str, ...], tuple[str, ...]]]:
-    """Each stage for Home's Publish card and timeline (segment AD1K): it,
-    its status, what keeps a draft from publishing, what an overdue one
-    still waits on."""
+@dataclass(frozen=True)
+class StageRow:
+    """A stage as the timeline's operator part shows it (segment AD1K):
+    its status; for a draft, what blocks publishing, the first stage's
+    setup linked to where each is set (``setup``, page and label); for an
+    overdue one, what it still waits on."""
+
+    stage: stages.Stage
+    status: str
+    blocking: tuple[str, ...]
+    setup: tuple[tuple[str, str], ...]
+    waiting: tuple[str, ...]
+
+
+def stage_rows(exercise: Exercise) -> list[StageRow]:
+    """Each stage's row for the timeline's operator part."""
     plan = stages.plan_of(exercise.public_id).stages
-    # The first stage's setup is listed with links to where each is set
-    # (``missing``); its problems leave out what that list says.
-    linked = {f"{label} is not set." for label, _ in sample_data.setup_missing(exercise)}
-    if any(label == "Dates" for label, _ in sample_data.setup_missing(exercise)) and plan:
+    missing = sample_data.setup_missing(exercise)
+    # The first stage's setup is listed with links to where each is set;
+    # its problems leave out what that list says.
+    linked = {f"{label} is not set." for label, _ in missing}
+    if any(label == "Dates" for label, _ in missing) and plan:
         linked.add(f"{plan[0].label} has no start and end.")
-    if any(label == "Application form" for label, _ in sample_data.setup_missing(exercise)):
+    if any(label == "Application form" for label, _ in missing):
         linked.add("The application form has no questions.")
-    rows: list[tuple[stages.Stage, str, tuple[str, ...], tuple[str, ...]]] = []
+    rows: list[StageRow] = []
     for i, st in enumerate(plan):
         status = stage_status(exercise, st)
-        problems = publish_problems(exercise, st) if status == "Draft" else ()
-        if i == 0:
-            problems = tuple(p for p in problems if p not in linked)
+        draft = status == "Draft"
+        blocking = publish_problems(exercise, st) if draft else ()
+        setup: tuple[tuple[str, str], ...] = ()
+        if i == 0 and draft:
+            blocking = tuple(p for p in blocking if p not in linked)
+            setup = tuple(missing)
         waiting = outstanding(exercise, st) if status == "Overdue" else ()
-        rows.append((st, status, problems, waiting))
+        rows.append(StageRow(st, status, blocking, setup, waiting))
     return rows
