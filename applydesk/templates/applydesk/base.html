@@ -223,6 +223,20 @@
     .card .dt-note { margin: 4px 0 0; font-size: 12.5px; }
     /* Unlocked, as Dossiers' table: the accent border, a field each. */
     .dt[data-unlocked] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    /* Extract data (segment AD1J): download cards two to a row, after
+       Review Robin's .extract-data-grid; one column under 900px. */
+    .xd-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+    .xd-grid > .card { margin: 0; display: flex; flex-direction: column; }  /* each download at its card's foot */
+    .xd-grid > .card > .btnrow { margin-top: auto; padding-top: 10px; }
+    .card .xd-help { font-size: 14px; color: var(--text-subtle); margin: 0 0 10px; }
+    .xd-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px; }
+    .xd-k { font-weight: 700; color: var(--text-subtle); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; min-width: 7.5em; }
+    .card .xd-cols { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--text-subtle); background: var(--surface-muted); border-radius: 6px; padding: 6px 8px; margin: 0 0 6px; overflow-wrap: anywhere; }
+    .xd-gates { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 0 0 8px; }
+    .xd-gates th, .xd-gates td { padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); text-align: left; }
+    .xd-csv { min-height: 30px; padding: 0 10px; font-size: 13px; }
+    .xd-empty { margin: 0 0 12px; }
+    @media (max-width: 899px) { .xd-grid { grid-template-columns: 1fr; } }
     .dt [hidden] { display: none; }  /* .btnrow's and .btn's display would keep them showing */
     .dt .cardhead .fb-unsaved { margin-left: auto; }
     /* Unlock and Lock at the foot, on the right, a stretched card's too
