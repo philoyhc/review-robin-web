@@ -633,7 +633,7 @@ def test_the_page_combines_results_as_the_server_does(page: Page) -> None:
     recruitment weighs nothing it shows two gates of, so the Shortlisting
     is given weights here, as Process would."""
     plan = stages.plan_of("wa9juxbc2t")
-    weighed = stages.Outcome("o1", 1, "X", (), "", "", (("g1.r1", 0.3), ("g2.r2", 0.7)))
+    weighed = stages.Outcome("o1", 1, "X", (), None, "", (("g1.r1", 0.3), ("g2.r2", 0.7)))
     page.goto(PAGE)
     _unlock(page)
     page.evaluate(

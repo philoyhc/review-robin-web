@@ -85,6 +85,7 @@ def publish_problems(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
         out.append(f"{st.label} has no start and end.")
     elif not st.when.valid:
         out.append(f"{st.label} ends before it starts.")
+    out += stages.date_problems(plan, st)
     before = [s for s in plan.stages if s.number < st.number]
     if before and before[-1].status != "Published":
         out.append(f"{before[-1].label} is not published yet.")

@@ -66,6 +66,14 @@ Rejected:
 
 - **An extension is how a stage is kept open or reopened** (author, 2026-11-18): the operator moves the end of the stage and of its items later. A Completed or Overdue stage whose end moves past now is Published again. So a stage's and its items' end dates stay editable after publish, even once completed; its start, and everything else it holds, stays locked.
 
+- **Each item has its own dates inside its stage's** (author, 2026-11-18). A stage holding an outcome cannot end when its gates do, since the outcome is decided after their results are in. So:
+  - the stage's start and end bound everything it holds;
+  - the form has its open and close, and a gate its review window;
+  - an outcome has its due, no sooner than the gates it reads close;
+  - an item with none set runs on the stage's dates; an outcome is due at its end.
+
+  Publishing refuses an item outside its stage, or the wrong way round. The stage still completes at its own end (Semantics).
+
   This makes AD-56's typed dates part of this segment: a stage's start and end are typed date-times, not free text. Process's date fields become date-time inputs, and the three parsers go.
 
 ## Semantics
@@ -109,6 +117,7 @@ Taken 2026-11-18 at `d6c20bdf8`.
 - **Rung 2 built** (2026-11-18):
   - **Typed dates.** A stage's dates are typed (`stages.StageDates`, `span`), each a date and a time. The pages print them as before through `Stage.dates`. The timeline's text parser is gone, and so is `workflow`'s split. Process's two template splits wait for its date-time inputs at rung 3.
   - **Status.** `Stage.status` is Draft or Published on the sample, and `applydesk/locks.py` derives the rest: Overdue, Completed, the exercise's status, publish problems, each part's lock with its reason, and a revert's warnings.
+  - **Rung 2a, item dates** (author, 2026-11-18): `Gate.when`, `Outcome.due_at` and `Stage.form_when`, each defaulting to the stage's through `stages.window`; `stages.date_problems` joins the publish checks.
   - **Kept in `stages.py`.** `_exercise_span` still reads the two exercise fields, until those are typed at AD2.
 
 ## PR ladder
@@ -120,9 +129,10 @@ Taken 2026-11-18 at `d6c20bdf8`.
    - The exercise's status derived from its stages.
    - `applydesk/locks.py`: what each part's lock is, and its reason.
    - Tests only, no page change.
+2a. **Item dates** (Decision amended): each item's typed dates, defaulting to its stage's; publish refuses one outside its stage, reversed, or an outcome due before its gates close. Tests only, no page change.
 3. **Process:**
    - Each stage's status chip, with *Publish stage* and *Revert to draft* (with a reason), page-only, with confirms.
-   - The stage's dates as date-time inputs; Publish refuses a stage without both.
+   - The stage's and its items' dates as date-time inputs; Publish refuses a stage without both.
    - A published stage's parts locked, reasons shown (AD-01, AD-02).
    - Publish checks the stage's Outline (AD-20).
    - Chromium tests.

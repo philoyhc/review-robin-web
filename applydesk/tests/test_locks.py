@@ -192,3 +192,53 @@ def test_publishing_reads_how_a_rule_compares(monkeypatch: pytest.MonkeyPatch) -
     problems = locks.publish_problems(e, broken)
     assert "Selection's rule compares with \u201cnot-a-number\u201d, not a number." in problems
     assert "Selection's rule compares with \u201cx\u201d, not a number." in problems
+
+
+def test_an_item_s_dates_default_to_its_stage_s() -> None:
+    """Author, 2026-11-18: an item with no dates of its own runs on its
+    stage's; an outcome's are the stage's start to its due."""
+    first, review = _stage(RA, 1), _stage(RA, 2)
+    assert stages.window(first, None) == first.when
+    g1, o1 = review.columns[0], review.columns[2]
+    assert isinstance(g1, stages.Gate) and isinstance(o1, stages.Outcome)
+    assert stages.window(review, g1) == g1.when
+    w = stages.window(review, o1)
+    assert review.when is not None and w is not None
+    assert (w.start, w.end) == (review.when.start, o1.due_at)
+    blank = replace(o1, due_at=None)
+    assert stages.window(review, blank) == review.when
+
+
+def test_items_fall_inside_their_stage(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Author, 2026-11-18: each item's dates sit inside its stage's, and
+    an outcome is due no sooner than the gates it reads close."""
+    e = _e(RA)
+    model = stages._STAGES[RA]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    interviews = model[2]
+    g3, o2 = interviews.columns
+    assert isinstance(g3, stages.Gate) and isinstance(o2, stages.Outcome)
+    late = replace(g3, when=stages.span(stages.day(2026, 11, 9), stages.day(2026, 12, 9)))
+    early = replace(o2, due_at=stages.day(2026, 11, 20, 17))
+    broken = replace(interviews, columns=(late, early))
+    monkeypatch.setitem(stages._STAGES, RA, (*model[:2], broken))  # pyright: ignore[reportPrivateUsage]  -- as above
+    assert locks.publish_problems(e, broken) == (
+        "Gate 3 (Staff interview) runs outside the dates of Interviews.",
+        "Selection is due before Staff interview closes.",
+    )
+    after = replace(o2, due_at=stages.day(2026, 12, 10))
+    backwards = replace(
+        g3, when=stages.StageDates(stages.day(2026, 12, 1), stages.day(2026, 11, 10))
+    )
+    broken = replace(interviews, columns=(backwards, after))
+    monkeypatch.setitem(stages._STAGES, RA, (*model[:2], broken))  # pyright: ignore[reportPrivateUsage]  -- as above
+    assert locks.publish_problems(e, broken) == (
+        "Gate 3 (Staff interview) ends before it starts.",
+        "Selection is due outside the dates of Interviews.",
+    )
+
+
+def test_the_form_s_dates_sit_inside_its_stage() -> None:
+    e, first = _e(RA), _stage(RA, 1)
+    assert first.when is not None
+    wide = replace(first, form_when=stages.span(first.when.start, stages.day(2026, 10, 3)))
+    assert locks.publish_problems(e, wide) == ("The form runs outside the dates of Applications.",)

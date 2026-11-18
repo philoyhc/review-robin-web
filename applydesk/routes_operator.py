@@ -291,7 +291,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         allowed=stages.ALLOWED,
         blank_result=stages.GateResult("", "", stages.Field(), "mean"),
         field_text=stages.field_text,
-        blank_outcome=stages.Outcome("", 0, "", (), "", ""),
+        blank_outcome=stages.Outcome("", 0, "", (), None, ""),
         gate_state=workflow.gate_state,
         gate_opened=workflow.gate_opened,
         sources_of=functools.partial(stages.sources_of, exercise.public_id),
