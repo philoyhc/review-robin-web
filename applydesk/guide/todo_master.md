@@ -468,6 +468,44 @@ where a ruling below differs from it, the ruling wins.
     require or not, add fields to and branch between (e.g. a
     *Familiarity* rating, Score and Comments shown only above a
     threshold). Its own segment: `guide/segment_23G_linked_advanced_instrument.md`.
+37. **A gate's handle is a stable key** (author, 2026-11-18; AD-48): its
+    URL and Extract file names use a per-exercise key that never moves;
+    the number is for display only. Built at AD2, when gates are stored.
+38. **An outcome's *Decided* is derived; release is per audience**
+    (author, 2026-11-18; AD-34, AD-21): *Decided* shows when every reached
+    cell has a value, and is not stored; release is recorded for each
+    audience (applicants, reviewers) with its own time.
+39. **Every panel is generic** (author, 2026-11-18; AD-50): what a panel
+    does comes from where it is used; the sample's *pool* and
+    *interviewers* keys lose any special meaning at AD2.
+40. ***Results expected* is free text** (author, 2026-11-18; AD-56): typed
+    on Details, shown to applicants as an estimate, never computed.
+41. **A Closed exercise stays on `/me`, read-only** (author, 2026-11-18;
+    AD-37, AD-28): the operator closes it after the last release, and
+    applicants keep seeing it with their released results; Archived drops
+    it from `/me`.
+42. **A confidential gate hides names on its page and files** (author,
+    2026-11-18; AD-65, completing ruling 35's open part): its page and
+    files show Dossier IDs, as blind review does exercise-wide; its
+    evaluators' dossier is unchanged.
+43. **The confidential identity is the Dossier ID** (author, 2026-11-18;
+    AD-67): Review Robin receives the Dossier ID in place of the
+    application ID; Extract's *Alias key* maps it back. No per-handoff
+    alias.
+44. **One term: *evaluator*; the root stays *Operator Lobby*** (author,
+    2026-11-18; AD-89, AD-90, AD-102): operators and applicants alike
+    read *evaluator*.
+45. **Withdrawal ends when a gate holding the dossier is sent** (author,
+    2026-11-18; AD-30, AD-08): until then an applicant may withdraw
+    (Outline-amber, with a confirm). The operator's *Return to draft* is
+    a per-row action on Dossiers, and in bulk through the ticks;
+    *Generate dossiers* goes.
+46. ***Shown to applicants* is modelled per stage** (author, 2026-11-18;
+    AD-09): a stage left unticked is hidden from the applicant's
+    timeline.
+47. **Pills pick many, a segmented control picks one** (author,
+    2026-11-18; AD-68, AD-69): multi-select chips use the `.pn-show`
+    pill, one-of choices the `.seg` control; no other variant.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
@@ -581,6 +619,15 @@ Segments in order; each gets a plan in this folder when it starts.
 | AD7 — Timeline and outcomes | Milestones, announcements, outcome import, embargo on read, release, correction | G5 (sender), G7 (publication) |
 | AD8 — Dashboard | Counts by state; the export bundle is Extract data, built in AD1J (ruling 14) | — |
 | Later | Blob storage, then uploads and referees | G8, with IT |
+
+## Follow-ups from closed plans (AD-124)
+
+- **AD5:** a list headline (Result 1) has no value on Dossiers (AD1F).
+- **AD5:** a panel used twice in one gate, or a max above its panel's
+  size, is not flagged (AD1G).
+- **Layer B:** a gate's progress line is canned beside counted pairs
+  (AD1I; AD-32).
+- **Form:** card drag has no Escape and no auto-scroll (AD1B).
 
 ## Open decisions
 
