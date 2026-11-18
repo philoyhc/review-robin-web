@@ -346,10 +346,16 @@
 {% set problems = publish_problems(st) if st.number else () %}
 <div class="pc-status" data-pc-status-box>
   <p class="pc-line muted" data-pc-locked-note{% if status == "Draft" %} hidden{% endif %}>{{ st.label }} is published: what it holds is fixed until it is reverted to draft. Its end, and its items' ends, stay editable, to extend it.</p>
-  {% if status == "Overdue" %}<p class="pc-line pc-overdue" data-pc-overdue>Overdue: {{ outstanding(st) | join("; ") }}. Move its end later to keep it open.</p>{% endif %}
+  {# What it still waits on: the page derives Overdue or Completed from
+     its end as an extension moves it (Codex). #}
+  {% set waiting = outstanding(st) if st.number else () %}
+  <p class="pc-line pc-overdue" data-pc-overdue data-waiting="{{ waiting | join('; ') }}"{% if status != "Overdue" %} hidden{% endif %}>Overdue: {{ waiting | join("; ") }}. Move its end later to keep it open.</p>
   <div data-pc-problems{% if status != "Draft" or not problems %} hidden{% endif %}>
     <p class="pc-line">Before it can be published:</p>
-    <ul class="pc-issues">{% for p in problems %}<li{% if p.endswith(" is not published yet.") %} data-pc-prev{% endif %}>{{ p }}</li>{% endfor %}</ul>
+    {% set ns = namespace(prev=false) %}
+    {# The stage before it, followed by the page: there whether or not it
+       was a problem when the page loaded (Codex). #}
+    <ul class="pc-issues">{% for p in problems %}{% set prev = p.endswith(" is not published yet.") %}{% if prev %}{% set ns.prev = true %}{% endif %}<li{% if prev %} data-pc-prev{% endif %}>{{ p }}</li>{% endfor %}{% if not ns.prev %}<li data-pc-prev hidden></li>{% endif %}</ul>
   </div>
   <div class="btnrow">
     <button type="button" class="btn btn-primary" data-pc-st="publish"{% if status != "Draft" %} hidden{% endif %}{% if not st.number %} data-pc-new disabled title="A new stage is checked for publishing once saved (AD2)"{% elif problems %} disabled title="Put right what is listed first"{% endif %}>Publish stage</button>

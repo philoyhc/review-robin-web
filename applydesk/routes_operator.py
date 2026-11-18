@@ -288,6 +288,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         revert_warnings=functools.partial(locks.revert_warnings, exercise),
         outstanding=functools.partial(locks.outstanding, exercise),
         STATUS_CHIP=locks.STATUS_CHIP,
+        now_value=stages.local_value(locks.NOW),
         window=stages.window,
         window_text=stages.window_text,
         blank_stage=stages.Stage(0, "", None),

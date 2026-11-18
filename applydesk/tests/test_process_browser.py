@@ -1575,12 +1575,18 @@ def test_publishing_waits_on_the_stage_before_and_names_problems(page: Page) -> 
         .endswith("Call for applications is not published yet.")
     )
     first.locator('[data-pc-st="publish"]').click()
-    assert first.locator("[data-pc-status]").text_content() == "Published"
+    # Its end has passed and its form is still open: published, overdue.
+    assert first.locator("[data-pc-status]").text_content() == "Overdue"
+    assert first.locator("[data-pc-overdue]").inner_text().startswith(
+        "Overdue: the form is still open."
+    )
     assert first.locator('[data-pc="name"]').is_disabled()
     assert publish.is_enabled()
     assert not review.locator("[data-pc-problems]").is_visible()
     publish.click()
-    assert review.locator("[data-pc-status]").text_content() == "Published"
+    # Its end has passed with its gates' results in and its outcome
+    # released: complete as soon as it is published.
+    assert review.locator("[data-pc-status]").text_content() == "Completed"
 
 
 def test_a_copy_of_a_published_stage_is_a_draft(page: Page) -> None:
@@ -1594,3 +1600,35 @@ def test_a_copy_of_a_published_stage_is_a_draft(page: Page) -> None:
     assert copy.locator('[data-pc-st="publish"]').is_disabled()  # checked once saved
     _open_all(copy)
     assert copy.locator('.pc-item[data-item="outcome"] [data-pc="item-name"]').is_enabled()
+
+
+def test_a_revert_before_a_published_stage_blocks_its_republishing(page: Page) -> None:
+    """Codex: revert Interviews, then Review: Interviews may not be
+    published again while Review is a draft."""
+    page.goto(MODEL)
+    review, interviews = _cards(page).nth(1), _cards(page).nth(2)
+    _revert(interviews)
+    publish = interviews.locator('[data-pc-st="publish"]')
+    assert publish.is_enabled()
+    _revert(review)
+    assert publish.is_disabled()
+    assert (
+        interviews.locator("[data-pc-problems]")
+        .inner_text()
+        .endswith("Review is not published yet.")
+    )
+
+
+def test_an_extension_reopens_a_completed_stage(page: Page) -> None:
+    """Codex, and the author's ruling: moving a Completed stage's end past
+    now makes it Published again; moving it back completes it."""
+    page.goto(MODEL)
+    review = _cards(page).nth(1)
+    _open(review)
+    chip = review.locator("[data-pc-status]")
+    assert chip.text_content() == "Completed"
+    end = review.locator('[data-pc="to"]')
+    end.fill("2026-11-20T23:59")
+    assert chip.text_content() == "Published"
+    end.fill("2026-11-06T23:59")
+    assert chip.text_content() == "Completed"

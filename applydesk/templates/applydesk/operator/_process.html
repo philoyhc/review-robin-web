@@ -11,7 +11,7 @@
 {% set issues = stage_problems(plan.stages) %}
 <script type="application/json" id="pc-pools">{{ people | tojson }}</script>
 <script type="application/json" id="pc-form-lists">{{ form_lists | tojson }}</script>
-<div class="fb-split" data-process data-unsaved-root>
+<div class="fb-split" data-process data-unsaved-root data-now="{{ now_value }}">
   <div class="fb-main">
     <p class="muted pc-intro">The exercise's timeline, stage by stage. A stage holds the application form, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Dossiers applies them.</p>
     <div class="fb-cards" id="pc-cards">
@@ -267,6 +267,9 @@
         prev.hidden = !before || before.dataset.status !== "Draft";
         if (before) prev.textContent = labelOf(before) + " is not published yet.";
       }
+      // A published stage's status follows its end, as an extension moves
+      // it (Codex): Published until it passes, then Overdue or Completed.
+      if (card.dataset.status !== "Draft") derive(card);
       var open = Array.prototype.filter.call(box.querySelectorAll("[data-pc-problems] li"), function (li) { return !li.hidden; }).length;
       box.querySelector("[data-pc-problems]").hidden = card.dataset.status !== "Draft" || !open;
       var pub = box.querySelector('[data-pc-st="publish"]');
@@ -295,8 +298,21 @@
       if (r) f.title = r; else f.removeAttribute("title");
     });
   }
-  // Publish and revert, on this page only: nothing is saved until AD2.
+  // The sample's now (locks.NOW), against which a published stage's end
+  // decides Published, Overdue or Completed.
+  var NOW = root.dataset.now;
   var STATUS_CHIP = { Draft: "mute", Published: "info", Overdue: "warn", Completed: "ok" };
+  function derive(card) {
+    var end = field(card, "to"), od = card.querySelector("[data-pc-overdue]");
+    var waiting = od ? od.dataset.waiting : "";
+    var status = !end || NOW <= end ? "Published" : waiting ? "Overdue" : "Completed";
+    card.dataset.status = status;
+    var chip = card.querySelector("[data-pc-status]");
+    chip.textContent = status;
+    chip.className = "chip chip-" + STATUS_CHIP[status];
+    if (od) od.hidden = status !== "Overdue";
+  }
+  // Publish and revert, on this page only: nothing is saved until AD2.
   function setStatus(card, status) {
     card.dataset.status = status;
     var chip = card.querySelector("[data-pc-status]");
@@ -311,8 +327,7 @@
     rv.hidden = draft;
     rv.setAttribute("aria-expanded", "false");
     box.querySelector("[data-pc-revert]").hidden = true;
-    var od = box.querySelector("[data-pc-overdue]");
-    if (od) od.hidden = draft;
+    if (draft) box.querySelector("[data-pc-overdue]").hidden = true;
     guards();
   }
   function statusEvent(e) {
@@ -916,8 +931,16 @@
       // A copy is a new stage: a draft, nothing in it opened (AD1K).
       added.querySelectorAll("[data-pc-lock]").forEach(function (f) { delete f.dataset.opened; });
       var copyBox = added.querySelector("[data-pc-status-box]");
-      copyBox.querySelectorAll("[data-pc-overdue], [data-pc-revert] > p.muted").forEach(function (x) { x.remove(); });
-      copyBox.querySelector("[data-pc-problems] ul").textContent = "";
+      copyBox.querySelectorAll("[data-pc-revert] > p.muted").forEach(function (x) { x.remove(); });
+      var copyOd = copyBox.querySelector("[data-pc-overdue]");
+      copyOd.dataset.waiting = "";
+      copyOd.hidden = true;
+      var copyList = copyBox.querySelector("[data-pc-problems] ul");
+      copyList.textContent = "";
+      var copyPrev = document.createElement("li");
+      copyPrev.setAttribute("data-pc-prev", "");
+      copyPrev.hidden = true;
+      copyList.appendChild(copyPrev);
       var pub = copyBox.querySelector('[data-pc-st="publish"]');
       pub.disabled = true;
       pub.setAttribute("data-pc-new", "");
