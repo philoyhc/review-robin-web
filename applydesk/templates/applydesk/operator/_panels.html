@@ -31,12 +31,12 @@
   </td>
   <td><span class="pn-view" data-pn-view="note">{{ m.note if m }}</span><input class="fc-in pn-in" data-pn="note" value="{{ m.note if m }}" placeholder="Role or area" aria-label="Note"></td>
   {% for p in panels %}<td class="pn-tick"><input type="checkbox" data-pn-panel="{{ p.key }}"{% if p.key in keys %} checked{% endif %}{% if not sel %} disabled{% endif %} aria-label="On {{ p.name }}"></td>{% endfor %}
-  <td class="pn-x"><button type="button" class="pn-save" data-pn-act="save" aria-label="Save {{ (m.name or m.email) if m else 'this person' }}" title="Save this row">✓</button><button type="button" class="pn-remove" data-pn-act="remove" aria-label="Remove {{ (m.name or m.email) if m else 'this person' }}" title="Remove">×</button></td>
+  <td class="pn-x"><button type="button" class="pn-save" data-pn-act="save" aria-label="Keep {{ (m.name or m.email) if m else 'this person' }}" title="Keep this row's changes on the page">✓</button><button type="button" class="pn-remove" data-pn-act="remove" aria-label="Remove {{ (m.name or m.email) if m else 'this person' }}" title="Remove">×</button></td>
 </tr>
 {% endmacro %}
 {% set directory = people.institution.members | map(attribute=1) | map("lower") | list %}
 {% macro sort(field, label) %}<button type="button" class="pn-sort" data-pn-sort="{{ field }}" aria-label="Sort by {{ label }}">{{ label }}<span aria-hidden="true">↕</span></button>{% endmacro %}
-<div class="pn" data-panels data-exercise="{{ exercise.public_id }}">
+<div class="pn" data-panels data-exercise="{{ exercise.public_id }}" data-pn-opened="{{ panels_sent | list | tojson | forceescape }}">
   <p class="muted pc-intro">Everyone on this exercise's panels, a column for each panel. Tick a row, or several, to edit them; ✓ keeps a row's changes, and unticking it without ✓ puts the row back as it was. A panel is picked where it is needed: a <em>Select people</em> question on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>, a gate's evaluators on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>. Apply Desk keeps every panel and what each person may view; to Review Robin they are ordinary reviewers.</p>
 
   {# The roster card, as Review Robin's: the roster's size and a pill per
@@ -53,6 +53,7 @@
     <p class="muted" data-pn-empty{% if panels %} hidden{% endif %}>No panels yet: make one in <em>Manage panels</em>, or with <em>+ New panel</em> where a question or a gate needs one.</p>
     <ul class="pc-issues" data-pn-issues hidden></ul>
     <p class="pn-said" data-pn-said aria-live="polite"></p>
+    <p class="fb-unsaved" data-pn-kept hidden>Changes on this page, not saved until AD2</p>
     <div class="pn-manage-panel" id="pn-manage" data-pn-manage hidden>
       <section class="card">
         <h2>Panels</h2>
@@ -352,7 +353,7 @@
     r.querySelector("[data-pn-select]").setAttribute("aria-label", "Select " + who);
     r.querySelector('[data-pn-act="unverify"]').setAttribute("aria-label", "Change " + (val(r, "email") || "the email"));
     r.querySelector('[data-pn-act="remove"]').setAttribute("aria-label", "Remove " + who);
-    r.querySelector('[data-pn-act="save"]').setAttribute("aria-label", "Save " + who);
+    r.querySelector('[data-pn-act="save"]').setAttribute("aria-label", "Keep " + who);
   }
   // An email typed into a selected row, looked up in the directory: one
   // found becomes the pill (and the name, if none is typed); one not found
@@ -501,6 +502,14 @@
   // struck through, until Save retires them; Cancel keeps them.
   var retiring = [];
   function anyPending() { return renames().length > 0 || added.length > 0 || retiring.length > 0; }
+  // What ✓, ×, Save and an import keep stays on this page only: marked,
+  // and leaving asks (AD-07).
+  var keptMark = root.querySelector("[data-pn-kept]"), keptAny = false;
+  function kept() { keptAny = true; keptMark.hidden = false; }
+  // A row ticked and changed, not yet kept with ✓, is lost on leaving too.
+  function rowsPending() {
+    return rows().some(function (r) { return r.hasAttribute("data-sel") && (r.dataset.fresh || (r.pnSnap && !same(r, r.pnSnap))); });
+  }
   function namesPending() { saveNames.disabled = !anyPending(); }
   // Every name is judged against the names as they would all stand after
   // the save, so neither the order of the list nor a swap matters.
@@ -539,9 +548,14 @@
   // Save: the panels retired go first, so their names are free; then the
   // names typed, then the panels added, kept.
   function keepAll() {
+    // Save and Enter alike: what they keep is on this page only, marked
+    // once something is kept; a refused rename alone keeps nothing (Codex).
+    var names = function () { return cols().map(function (h) { return nameOf(h.dataset.panel); }).join("\n"); };
+    var before = names(), keeping = retiring.length + added.length;
     var gone = retiring.map(function (key) { var n = nameOf(key); dropPanel(key); return n + " retired."; });
     retiring = [];
     var told = gone.concat(keepNames());
+    if (keeping || names() !== before) kept();
     added.forEach(function (key) {
       var note = list.querySelector('li[data-panel="' + key + '"] [data-pn-unsaved]');
       if (note) note.remove();
@@ -578,7 +592,7 @@
   list.addEventListener("input", function (e) { if (e.target.matches("[data-pn-rename]")) namesPending(); });
   // Leaving with a name or a panel not saved asks first, as Close does.
   window.addEventListener("beforeunload", function (e) {
-    if (anyPending()) { e.preventDefault(); e.returnValue = ""; }
+    if (anyPending() || keptAny || rowsPending()) { e.preventDefault(); e.returnValue = ""; }
   });
   // A panel's members' emails, comma-separated, as ticked now.
   window.applydeskPanelEmails = function (key) {
@@ -691,6 +705,7 @@
     if (missing.length) parts.push("Not found in the directory, not added: " + missing.join(", ") + ".");
     if (unknown.length) parts.push("No panel called: " + unknown.join(", ") + ".");
     said.textContent = parts.join(" ");
+    if (took) kept();
     check();
     filter();
     selected();
@@ -778,10 +793,14 @@
     var why = r.querySelector("[data-pn-why]").textContent;
     var who = val(r, "name") || val(r, "email") || "This row";
     if (why) { said.textContent = who + " is not saved: " + why.toLowerCase(); return; }
+    // Kept only when something changed: a new row, one a panel brought
+    // (✓ keeps it apart from that panel, Codex), or one edited (cold read).
+    var changedRow = !!r.dataset.fresh || !!r.dataset.newWith || !r.pnSnap || !same(r, r.pnSnap);
     delete r.dataset.fresh;
     delete r.dataset.newWith;  // kept with its own ✓, it stays if its panel is taken back
     select(r, false, "save");
-    said.textContent = who + " saved.";
+    said.textContent = changedRow ? who + " kept on this page." : who + ": nothing changed.";
+    if (changedRow) kept();
     // The filter may hide it now; then the filter box keeps the focus.
     (r.hidden ? search : r.querySelector("[data-pn-select]")).focus();
   }
@@ -800,6 +819,14 @@
       entry.select();
     } else if (what === "remove") {
       var r = a.closest("[data-pn-row]"), next = null;
+      // A member of a panel an opened gate keeps, as kept (not as ticked
+      // while editing): asked first (AD-07). A new row was never a member.
+      var opened = r.dataset.fresh ? [] : JSON.parse(root.dataset.pnOpened || "[]").filter(function (k) {
+        if (r.hasAttribute("data-sel") && r.pnSnap && k in r.pnSnap.panels) return r.pnSnap.panels[k];
+        var c = r.querySelector('input[data-pn-panel="' + k + '"]'); return c && c.checked;
+      });
+      if (opened.length && !window.confirm((val(r, "name") || val(r, "email")) + " is on a panel an opened gate keeps. Remove them from the roster anyway?")) return;
+      if (!r.dataset.fresh && !r.dataset.newWith) kept();
       // The nearest row in view takes the focus: a hidden one cannot.
       for (var sib = r.nextElementSibling; sib && !next; sib = sib.nextElementSibling) if (!sib.hidden) next = sib;
       for (sib = r.previousElementSibling; sib && !next; sib = sib.previousElementSibling) if (!sib.hidden) next = sib;

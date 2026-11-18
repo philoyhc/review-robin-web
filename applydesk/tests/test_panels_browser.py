@@ -71,7 +71,7 @@ def test_ticks_rows_and_their_checks(page: Page) -> None:
     zoe.locator('[data-pn-act="save"]').click()
     assert zoe.get_attribute("data-sel") is None
     assert tick.is_disabled() and tick.is_checked()
-    assert page.locator("[data-pn-said]").inner_text() == "Zoe Tan saved."
+    assert page.locator("[data-pn-said]").inner_text() == "Zoe Tan kept on this page."
     # An email not in the directory, and a repeated one, are named, on the
     # row and in the card; one found is a pill and names a blank row.
     page.locator('[data-pn-act="add"]').click()
@@ -326,6 +326,7 @@ def test_csv_guards_formulas_and_refuses_an_open_quote(page: Page) -> None:
 
 def test_focus_stays_on_the_page_after_retire_and_the_last_remove(page: Page) -> None:
     page.goto(BLIND)
+    page.on("dialog", lambda d: d.accept())  # × on an opened gate's member asks (AD-07)
     _manage(page)
     page.locator('li[data-panel="interviewers"] [data-pn-act="retire"]').click()
     assert page.evaluate("document.activeElement.matches('[data-pn-newname]')")
@@ -416,6 +417,7 @@ def test_an_email_put_back_and_left_keeps_its_pill(page: Page) -> None:
 
 def test_removing_rows_keeps_focus_and_the_header_tick(page: Page) -> None:
     page.goto(BLIND)
+    page.on("dialog", lambda d: d.accept())  # × on an opened gate's member asks (AD-07)
     rows = page.locator("[data-pn-row]")
     rows.nth(0).locator("[data-pn-select]").check()
     rows.nth(1).locator("[data-pn-select]").check()
@@ -818,6 +820,7 @@ def test_rows_a_panel_brought_follow_it(page: Page) -> None:
     (confirmed) and Retire take them back with it, and a row kept with its
     own ✓ stays."""
     page.goto(PANELS)
+    page.on("dialog", lambda d: d.accept())  # × on an opened gate's member asks (AD-07)
     _manage(page)
     rows = page.locator("[data-pn-row]")
     n = rows.count()
@@ -854,5 +857,5 @@ def test_rows_a_panel_brought_follow_it(page: Page) -> None:
             "() => { const e = new Event('beforeunload', {cancelable: true});"
             " window.dispatchEvent(e); return e.defaultPrevented; }"
         )
-        is False
+        is True  # Mei's row, kept with ✓, is on this page only (AD-07)
     )
