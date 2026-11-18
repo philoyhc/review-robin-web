@@ -106,7 +106,7 @@ def of(e: Exercise, today: date = TODAY) -> Timeline:
     plan = stages.plan_of(e.public_id)
     # A stage's declared start and end (segment AD1K): typed, no parsing.
     spans: list[tuple[date | None, date | None]] = [
-        (st.when.start.date(), st.when.end.date()) if st.when else (None, None)
+        (st.when.start.date(), st.when.end.date()) if st.when and st.when.valid else (None, None)
         for st in plan.stages
     ]
     known = [d for span in spans for d in span if d]

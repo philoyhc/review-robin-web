@@ -57,7 +57,7 @@ def stage_status(e: Exercise, st: stages.Stage, now: datetime = NOW) -> str:
     """Draft, Published, Overdue or Completed (ruling 35; Semantics)."""
     if st.status != "Published":
         return "Draft"
-    if st.when is None or now <= st.when.end:
+    if st.when is None or not st.when.valid or now <= st.when.end:
         return "Published"
     return "Overdue" if outstanding(e, st) else "Completed"
 
@@ -83,6 +83,8 @@ def publish_problems(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
     out: list[str] = []
     if st.when is None:
         out.append(f"{st.label} has no start and end.")
+    elif not st.when.valid:
+        out.append(f"{st.label} ends before it starts.")
     before = [s for s in plan.stages if s.number < st.number]
     if before and before[-1].status != "Published":
         out.append(f"{before[-1].label} is not published yet.")

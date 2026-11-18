@@ -8,7 +8,7 @@ from datetime import datetime
 
 import pytest
 
-from applydesk import locks, sample_data, stages
+from applydesk import locks, sample_data, stages, timeline
 
 RA = "wa9juxbc2t"  # stages 1–2 done, stage 3 under way
 DRAFT = "c4xh2ndv6s"  # nothing published, a gate with no evaluators
@@ -159,3 +159,17 @@ def test_publishing_reads_each_source(monkeypatch: pytest.MonkeyPatch) -> None:
     assert locks.publish_problems(e, broken) == (
         "Gate 3 (Staff interview): source 1's panel is gone.",
     )
+
+
+def test_a_reversed_range_is_no_dates(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex: an end before the start is refused at publishing, never
+    completes a stage, and the timeline shows no dates for it."""
+    e = _e(RA)
+    model = stages._STAGES[RA]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    interviews = model[2]
+    assert interviews.when is not None
+    back = replace(interviews, when=stages.StageDates(interviews.when.end, interviews.when.start))
+    monkeypatch.setitem(stages._STAGES, RA, (*model[:2], back))  # pyright: ignore[reportPrivateUsage]  -- as above
+    assert "Interviews ends before it starts." in locks.publish_problems(e, back)
+    assert locks.stage_status(e, back, datetime(2027, 1, 1)) == "Published"
+    assert timeline.of(e).stages[2].when == "Dates not set"

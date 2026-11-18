@@ -224,6 +224,13 @@ class StageDates:
     start: datetime
     end: datetime
 
+    @property
+    def valid(self) -> bool:
+        """Its end after its start: a reversed range is no dates to the
+        timeline and to a stage's status, and refused at publishing
+        (Codex; the old parser refused it too)."""
+        return self.end > self.start
+
 
 def day(y: int, m: int, d: int, hh: int = 0, mm: int = 0) -> datetime:
     return datetime(y, m, d, hh, mm)
