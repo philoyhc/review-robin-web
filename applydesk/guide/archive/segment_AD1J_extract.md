@@ -48,10 +48,11 @@ Taken 2026-11-18 at `31c2f7ff3`.
 
 ## Status
 
-- **Rung 2 built** (2026-11-18): the six cards as the v1 mock-up, inert; the files' shapes from `applydesk/extract.py`.
-- **Rung 3 built** (2026-11-18): each card's CSV and the two ZIPs (`/extract/<file>`, the chips as query parameters), a manifest first in each ZIP saying a gate not sent; the chips shape the links and are kept per viewer. Diverging: a gate's per-pair answers are **sample answers seeded per pair**, as the sample has none until Review Robin's handoff (AD5); *Applicants as* on *Extract all data* governs the gate and outcome files, the applications file always naming its applicants; *Setup* stays off until rung 4.
-- **Rung 4 built** (2026-11-18): the alias key (every application, drafts included; never inside *Extract all data*) and Extract setup's four CSVs (`setup.zip`, its chips choosing the pages; a draft's too), *Setup* in *Extract all data* under `setup/`, off by default.
-- **Read, rungs 2–4** (`832631f84..`): no blocker; fixed in rung 4: a form's text, number and photo answers seeded rather than blank (a photo its file name; a choose-any list joined); *Extract all data* starting on Dossier IDs when blind review is on or a gate is confidential, saying why; *Drafts* never bringing in a withdrawn application; the ZIPs dated; a cell starting `=`, `+`, `-`, `@` made inert with an apostrophe (a number aside), as applicants' text lands here from AD4; the BOM stated as Apply Desk's choice (Review Robin's importers tolerate it, its extracts write none); the files line following *Carries*; each gate's link named; the defaults in `extract.py`, not the route. Left: one page line for the empty and draft cases, not one per card.
+Closed 2026-11-18 after the author's browser check. Rungs 1–4 shipped as the ladder says (#3971, #3973, #3974, #3975).
+
+- **Diverging from Semantics**: where the sample holds no answer (a gate's per pair; a form's text, number and photo questions) the files carry sample answers seeded per pair or application, until AD4 and AD5; *Applicants as* on *Extract all data* governs the gate and outcome files, the applications file always naming its applicants; the empty and draft cases are one page line, not one per card.
+- **Decisions confirmed at build**: the BOM is Apply Desk's choice (Review Robin's extracts write none); a cell starting `=`, `+`, `-`, `@` made inert, a number aside; *Zip all* takes each card's settings (Codex) and starts on Dossier IDs when blind review is on or a gate is confidential; the alias key never inside it; `process.csv` carries each gate's fields and results in a `detail` column, enough to rebuild it (Codex); Select people answers are the nominees (Codex).
+- **Reads**: one `diff-reviewer` read, rungs 2–4 cumulative (`832631f84..`), no blocker, its findings fixed in rung 4; Codex six findings across rungs 3–4, all fixed.
 
 ## PR ladder
 
@@ -77,7 +78,7 @@ Taken 2026-11-18 at `31c2f7ff3`.
 
 - ~~Setup files' format~~: CSV, one per page (author, 2026-11-18).
 - ~~Interview scores recorded by hand~~: not on Extract data (author, 2026-11-18); the placeholder's *Record interview scores* goes, and how hand-entered scores come in is open in `applydesk/guide/todo_master.md`.
-- **`close_check.py` reads only RRW's `guide/`**: this close is checked by hand, as AD1G's to AD1I's.
+- ~~`close_check.py` reads only RRW's `guide/`~~: this close checked by hand, as AD1G's to AD1I's.
 
 ## Out of scope
 
