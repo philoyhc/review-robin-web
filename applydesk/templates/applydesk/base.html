@@ -478,6 +478,7 @@
        Secondary's tokens, on Primary's. Many-of chips are .pn-show pills,
        one-of choices .seg. */
     .btn-toggle { background: var(--btn-secondary-bg); color: var(--btn-secondary-fg); border-color: var(--btn-secondary-border); }
+    .btn-toggle:not([disabled]):not([aria-pressed="true"]):hover { background: var(--btn-secondary-bg-hover); }
     .btn-toggle[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
     .fc-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border-subtle); margin-top: 14px; padding-top: 12px; }
     .fc-break { display: flex; align-items: center; gap: 10px; color: var(--text-subtle); font-size: 13px; font-weight: 600; margin: 6px 0; }

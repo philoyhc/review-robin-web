@@ -1743,3 +1743,11 @@ def test_withdrawal_closes_once_a_gate_holding_the_dossier_is_sent(
         'class="btn btn-alert" type="button" disabled title="Withdrawing comes with AD4">Withdraw'
         in open_page
     )
+
+
+def test_extract_s_many_of_chips_are_pills(client: TestClient) -> None:
+    """Ruling 47, AD-68: Carries and Extract setup's pages are .pn-show
+    pills, never Primary-looking buttons."""
+    page = client.get(f"/applydesk/operator/exercises/{EX}/extract").text
+    chips = re.findall(r'<button type="button" class="([^"]+)" data-xd-t=', page)
+    assert chips and set(chips) == {"pn-show"}
