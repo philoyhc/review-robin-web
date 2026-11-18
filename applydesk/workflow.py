@@ -161,6 +161,25 @@ class Counts:
     withdrawn: int
 
 
+def withdrawal_closed_by(exercise_id: str, public_id: str) -> str:
+    """Ruling 45: an applicant may withdraw until a gate holding their
+    dossier is sent. The first such gate's name ("Gate 2"), else ""."""
+    plan = stages.plan_of(exercise_id)
+    row = next((r for r in plan.rows if r.application.public_id == public_id), None)
+    if row is None:
+        return ""
+    for c in plan.columns:
+        if not isinstance(c, stages.Gate) or gate_state(exercise_id, c.key)[0] not in (
+            "Sent",
+            "Results in",
+        ):
+            continue
+        cell = row.cells.get(c.key)
+        if cell and cell.value == "Entered":
+            return f"Gate {c.number}"
+    return ""
+
+
 def counts_of(exercise_id: str) -> Counts:
     apps = sample_data.applications_of(exercise_id)
     return Counts(

@@ -69,6 +69,7 @@ def application(request: Request, exercise_id: str, application_id: str) -> Resp
         application=app,
         answered=extract.form_answers(found, app),
         form_state=workflow.form_state(found),
+        withdrawal_closed_by=workflow.withdrawal_closed_by(found.public_id, app.public_id),
         # Only the applicant's own (cold read): another's page names none.
         results=stages.released_results(found.public_id, app.public_id)
         if app.public_id in sample_data.MINE
