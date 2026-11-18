@@ -1261,7 +1261,7 @@ def test_a_key_names_a_gate_s_result() -> None:
     assert stages.result_label(plan, "g2.r9") == "Result at Office checks"
     assert stages.result_label(plan, "gone.r1") == "Result at (removed)"
     list_rule = stages.Rule((("res", "g2.r1", "is", "Fund"),), "Yes", "No")
-    with_list = stages.Outcome("ox", 9, "X", (), "", "", rule=list_rule)
+    with_list = stages.Outcome("ox", 9, "X", (), None, "", rule=list_rule)
     assert stages.rule_text(plan, with_list).startswith("Major concerns at Office checks is Fund")
 
 
@@ -1281,10 +1281,10 @@ def test_a_combined_result_reads_named_results_and_skips_a_0_weight() -> None:
     row = next(r for r in plan.rows if dict(r.cells["g2"].extra).get("r2", "0") != "0")
     g1, g2 = row.cells["g1"].result, row.cells["g2"].result
     assert g1 is not None and g2 is not None
-    weighed = stages.Outcome("ox", 9, "X", (), "", "", (("g1.r1", 0.3), ("g2.r1", 0.7)))
+    weighed = stages.Outcome("ox", 9, "X", (), None, "", (("g1.r1", 0.3), ("g2.r1", 0.7)))
     assert stages.combined(row, weighed) == round(0.3 * g1 + 0.7 * g2, 2)
     minor = float(dict(row.cells["g2"].extra)["r2"])
-    on_minor = stages.Outcome("ox", 9, "X", (), "", "", (("g2.r2", 1.0), ("g1.r1", 0.0)))
+    on_minor = stages.Outcome("ox", 9, "X", (), None, "", (("g2.r2", 1.0), ("g1.r1", 0.0)))
     assert stages.combined(row, on_minor) == minor
     # Process draws every numeric result in scope, 0 for one not weighed:
     # the Shortlisting weighs none, its rule reading the results alone.
@@ -1304,7 +1304,7 @@ def test_a_0_weight_on_an_unknown_result_leaves_the_combined_result_known() -> N
         app,
         {"g1": stages.Cell("Entered", "", None), "g2": stages.Cell("Entered", "", 4.0)},
     )
-    o = stages.Outcome("ox", 9, "X", (), "", "", (("g2.r1", 1.0), ("g1.r1", 0.0)))
+    o = stages.Outcome("ox", 9, "X", (), None, "", (("g2.r1", 1.0), ("g1.r1", 0.0)))
     assert stages.combined(row, o) == 4.0
     # A bare key, "g1", is drawn as its first result, as combined reads it.
     import dataclasses

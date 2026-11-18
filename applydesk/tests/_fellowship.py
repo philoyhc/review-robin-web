@@ -87,7 +87,7 @@ _O1 = Outcome(
     1,
     "Shortlist for interview",
     ("Shortlisted", "Not shortlisted"),
-    "10 Nov",
+    day(2026, 11, 10, 23, 59),
     "10 Nov · to applicants",
     (("g1.r1", 0.3), ("g2.r1", 0.7)),
     Rule((("comb", "", "ge", "4.2"),), "Shortlisted", "Not shortlisted"),
@@ -106,12 +106,19 @@ _O2 = Outcome(
     2,
     "Finalists",
     ("Finalist", "Not a finalist"),
-    "24 Nov",
+    day(2026, 11, 24, 23, 59),
     "",
     (("g3.r1", 1.0),),
     Rule((("res", "g3.r1", "ge", "4.0"),), "Finalist", "Not a finalist"),
 )
-_O3 = Outcome("o3", 3, "Final results", ("Awarded", "Waitlisted", "Not awarded"), "12 Dec", "")
+_O3 = Outcome(
+    "o3",
+    3,
+    "Final results",
+    ("Awarded", "Waitlisted", "Not awarded"),
+    day(2026, 12, 12, 23, 59),
+    "",
+)
 
 
 STAGES: tuple[Stage, ...] = (

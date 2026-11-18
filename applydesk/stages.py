@@ -188,6 +188,9 @@ class Gate:
     description: str = ""
     confidential: bool = False
     fields: tuple[ResponseField, ...] = ()
+    # Its review window, inside its stage's dates (author, 2026-11-18);
+    # None runs it on the stage's (``window``).
+    when: StageDates | None = None
 
     @property
     def measure(self) -> str:
@@ -202,12 +205,19 @@ class Outcome:
     number: int
     label: str
     values: tuple[str, ...]  # the decided values; Pending is always offered
-    due: str
+    # When it is to be released, inside its stage and after the gates it
+    # reads close (author, 2026-11-18); None is the stage's end (``window``).
+    due_at: datetime | None
     released: str  # "" until released, else when and to whom
     # Its combined result: a weighted average of the gates in its scope
     # (author, 2026-11-13), set with the outcome on Process; the sample's.
     weights: tuple[tuple[str, float], ...] = ()
     rule: Rule | None = None
+
+    @property
+    def due(self) -> str:
+        """Its due day as the pages print it, e.g. "4 Dec"; "" unset."""
+        return short_day(self.due_at) if self.due_at else ""
 
 
 def short_day(d: datetime | date) -> str:
@@ -263,6 +273,9 @@ class Stage:
     columns: tuple[Gate | Outcome, ...] = ()
     form: bool = False  # holds the application form (ruling 15)
     status: str = "Draft"
+    # The form's open and close, inside the stage's dates (author,
+    # 2026-11-18); None is the stage's (``window``).
+    form_when: StageDates | None = None
 
     @property
     def dates(self) -> str:
@@ -344,6 +357,7 @@ _G1 = Gate(
         ResponseField("score", "Score", _SCORE, True, "0 = Don't know enough about this candidate"),
         ResponseField("comment", "Comment", _COMMENT),
     ),
+    when=span(day(2026, 10, 1), day(2026, 10, 31)),
 )
 _G2 = Gate(
     "g2",
@@ -365,6 +379,7 @@ _G2 = Gate(
         ResponseField("concerns", "Concerns", _CONCERNS, True),
         ResponseField("comment", "Comment", _COMMENT),
     ),
+    when=span(day(2026, 10, 1), day(2026, 10, 31)),
 )
 _PASSED = (("res", "g1.r1", "ge", "3.5"), ("res", "g2.r1", "lt", "1"))
 _O1 = Outcome(
@@ -372,7 +387,7 @@ _O1 = Outcome(
     1,
     "Shortlisting",
     ("Re-appointment", "Interview", "Not shortlisted"),
-    "6 Nov",
+    day(2026, 11, 6, 17),
     "6 Nov · to applicants",
     rule=Rule(
         (*_PASSED, ("form", "Currently an RA?", "is", "Yes")),
@@ -396,6 +411,7 @@ _G3 = Gate(
     Total(2, 2),
     mode="suggested",
     description="Two residential staff interview each applicant, the load spread.",
+    when=span(day(2026, 11, 9), day(2026, 12, 2)),
     fields=(
         ResponseField("score", "Score", _LIKERT, True, "1 weak, 5 outstanding"),
         ResponseField("comment", "Comment", _COMMENT, True),
@@ -406,7 +422,7 @@ _O2 = Outcome(
     2,
     "Selection",
     ("Selected", "Not selected"),
-    "4 Dec",
+    day(2026, 12, 4, 17),
     "",
     (("g3.r1", 1.0),),
     Rule(
@@ -416,6 +432,19 @@ _O2 = Outcome(
         (((("out", "o1", "is", "Interview"), ("top", "g3.r1", "le", "20")), "Selected"),),
     ),
 )
+
+# The small exercise's outcome, due at its stage's end: its gate has no
+# window of its own, so it runs to that end too (Codex).
+_K_O1 = Outcome(
+    "o1",
+    1,
+    "Final results",
+    ("Awarded", "Not awarded"),
+    day(2026, 11, 30, 23, 59),
+    "",
+    (("g1.r1", 1.0),),
+)
+
 
 _STAGES: dict[str, tuple[Stage, ...]] = {
     # A draft still being set up (segment AD1F): its selection gate added
@@ -484,15 +513,7 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
                     (GateResult("r1", "Score", _LIKERT, "mean"),),
                     panel="panel-a",
                 ),
-                Outcome(
-                    "o1",
-                    1,
-                    "Final results",
-                    ("Awarded", "Not awarded"),
-                    "15 Dec",
-                    "",
-                    (("g1.r1", 1.0),),
-                ),
+                _K_O1,
             ),
             status="Published",
         ),
@@ -563,7 +584,7 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
         else:
             cells["g3"] = Cell("Not entered")
         if cells["o1"].value != "Not shortlisted":
-            cells["o2"] = Cell("Pending", "Due 4 Dec")
+            cells["o2"] = Cell("Pending", f"Due {_O2.due}")
         rows.append(Row(a, cells))
     return tuple(rows)
 
@@ -574,7 +595,7 @@ def _small_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
             a,
             {
                 "g1": Cell("Entered", "Score 4.1 · 2 of 2", 4.1),
-                "o1": Cell("Pending", "Due 15 Dec"),
+                "o1": Cell("Pending", f"Due {_K_O1.due}"),
             },
         )
         for a in apps
@@ -697,6 +718,52 @@ def result_of(plan: Plan, key: str) -> tuple[Gate | None, GateResult | None]:
     if gate is None:
         return None, None
     return gate, next((r for r in gate.results if r.key == result_key), None)
+
+
+def window(st: Stage, item: Gate | Outcome | None) -> StageDates | None:
+    """An item's dates, its own or else its stage's (author, 2026-11-18):
+    the form's (``None``) open and close, a gate's review window, an
+    outcome's from the stage's start to when it is due."""
+    if st.when is None:
+        return None
+    if item is None:
+        return st.form_when or st.when
+    if isinstance(item, Gate):
+        return item.when or st.when
+    return StageDates(st.when.start, item.due_at or st.when.end)
+
+
+def date_problems(plan: Plan, st: Stage) -> tuple[str, ...]:
+    """Each item's dates against its stage's (author, 2026-11-18): inside
+    them, the right way round, and an outcome due no sooner than the
+    gates it reads close. Nothing while the stage's own are unset."""
+    if st.when is None or not st.when.valid:
+        return ()
+    bounds = st.when
+    named: list[tuple[str, Gate | Outcome | None]] = [("The form", None)] if st.form else []
+    named += [
+        (f"Gate {c.number} ({c.label or 'untitled'})", c)
+        if isinstance(c, Gate)
+        else (c.label or "The outcome", c)
+        for c in st.columns
+    ]
+    out: list[str] = []
+    for name, item in named:
+        w = window(st, item)
+        assert w is not None
+        if not w.valid:
+            out.append(f"{name} ends before it starts.")
+        elif w.start < bounds.start or w.end > bounds.end:
+            what = "is due" if isinstance(item, Outcome) else "runs"
+            out.append(f"{name} {what} outside the dates of {st.label}.")
+        if isinstance(item, Outcome):
+            # A gate it reads may sit in an earlier stage (Codex).
+            for g in scope(plan, item):
+                home = next((s for s in plan.stages if g in s.columns), None)
+                gw = window(home, g) if home else None
+                if gw is not None and w.end < gw.end:
+                    out.append(f"{name} is due before {g.label or 'its gate'} closes.")
+    return tuple(out)
 
 
 def _is_number(value: str) -> bool:

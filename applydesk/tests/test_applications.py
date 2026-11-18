@@ -200,7 +200,7 @@ def _with(cells: dict[str, stages.Cell]) -> stages.Row:
 
 
 def test_a_combined_result_drops_a_gate_not_entered_and_reweights() -> None:
-    o1 = stages.Outcome("o1", 1, "X", ("Yes", "No"), "", "", (("g1", 0.3), ("g2", 0.7)))
+    o1 = stages.Outcome("o1", 1, "X", ("Yes", "No"), None, "", (("g1", 0.3), ("g2", 0.7)))
     both = _with(
         {"g1": stages.Cell("Entered", result=4.0), "g2": stages.Cell("Entered", result=5.0)}
     )
@@ -311,7 +311,7 @@ def test_a_rule_reads_as_the_process_page_s_script_does_at_the_edges() -> None:
         "",
         "",
     )
-    o = stages.Outcome("ox", 9, "X", (), "", "", rule=rule)
+    o = stages.Outcome("ox", 9, "X", (), None, "", rule=rule)
     stub = stages.Stage(9, "", None, (blank, o))
     with_blank = stages.Plan((*plan.stages, stub), plan.rows)
     assert stages.rule_text(with_blank, o) == (
@@ -321,7 +321,7 @@ def test_a_rule_reads_as_the_process_page_s_script_does_at_the_edges() -> None:
 
 
 def test_a_stage_holds_one_outcome_at_most() -> None:
-    o = stages.Outcome("o1", 1, "A", ("Yes",), "", "")
+    o = stages.Outcome("o1", 1, "A", ("Yes",), None, "")
     two = (stages.Stage(1, "", None, (o, o)),)
     assert stages.problems(two) == ("Stage 1 holds more than one outcome.",)
     with_application = (stages.Stage(1, "Applications", None, (o,), form=True),)
