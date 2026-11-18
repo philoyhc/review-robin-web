@@ -101,18 +101,20 @@ def _items(st: stages.Stage, e: Exercise) -> tuple[Item, ...]:
     return tuple(out)
 
 
-def of(e: Exercise, today: date = TODAY) -> Timeline:
-    """The exercise's timeline from Process's stages (Semantics, AD1I)."""
+def of(e: Exercise, today: date = TODAY, applicant: bool = False) -> Timeline:
+    """The exercise's timeline from Process's stages (Semantics, AD1I);
+    for an ``applicant``, only the stages *Shown to applicants* (ruling 46)."""
     plan = stages.plan_of(e.public_id)
+    kept = [st for st in plan.stages if st.shown or not applicant]
     # A stage's declared start and end (segment AD1K): typed, no parsing.
     spans: list[tuple[date | None, date | None]] = [
         (st.when.start.date(), st.when.end.date()) if st.when and st.when.valid else (None, None)
-        for st in plan.stages
+        for st in kept
     ]
     known = [d for span in spans for d in span if d]
     start, end = (min(known), max(known)) if known else (None, None)
     views: list[StageView] = []
-    for st, (s, f) in zip(plan.stages, spans, strict=True):
+    for st, (s, f) in zip(kept, spans, strict=True):
         d = (f - s).days + 1 if s and f else 0
         if s and f and f < today:
             state = "Closed" if st.form else "Done"

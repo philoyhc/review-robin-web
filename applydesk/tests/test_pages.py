@@ -1589,3 +1589,123 @@ def test_one_count_of_applications_everywhere(client: TestClient) -> None:
     assert "<th>Submitted</th>" in lobby and "<td>100</td>" in lobby
     home = client.get(f"/applydesk/operator/exercises/{EX}").text
     assert "100 submitted · 3 drafts" in home
+
+
+def test_an_applicant_reads_their_released_result(client: TestClient) -> None:
+    """Ruling 41, AD-28: once an outcome is released to applicants, the
+    applicant's own value shows on the exercise and application pages."""
+    me = "/applydesk/me/exercises/wa9juxbc2t"
+    page = client.get(me).text
+    assert "Your result, Shortlisting: <strong>Re-appointment</strong>" in page
+    app = client.get(f"{me}/applications/m3qx8vkt2n").text
+    assert "<h2>Your results</h2>" in app and "Re-appointment" in app
+    draft = client.get(f"{me}/applications/f2ps7nyh4k").text
+    assert "Your results" not in draft  # nothing decided for a draft
+
+
+def test_a_closed_exercise_stays_on_me_read_only(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ruling 41, AD-37: Closed stays on /me with its results; Archived and
+    Draft do not."""
+    import dataclasses
+
+    ex = sample_data.exercise("wa9juxbc2t")
+    assert ex is not None
+    closed = dataclasses.replace(ex, state="Closed")
+    monkeypatch.setattr(
+        sample_data,
+        "EXERCISES",
+        tuple(closed if e.public_id == ex.public_id else e for e in sample_data.EXERCISES),
+    )
+    monkeypatch.setattr(sample_data, "exercise", lambda i: closed if i == ex.public_id else None)
+    lobby = client.get("/applydesk/me").text
+    assert "Closed: its released results stay here" in lobby
+    page = client.get("/applydesk/me/exercises/wa9juxbc2t").text
+    assert "This exercise is closed." in page and "Your result, Shortlisting" in page
+    archived = dataclasses.replace(ex, state="Archived")
+    monkeypatch.setattr(sample_data, "exercise", lambda i: archived)
+    assert client.get("/applydesk/me/exercises/wa9juxbc2t").status_code == 404
+
+
+def test_a_confidential_gate_s_page_shows_dossier_ids(client: TestClient) -> None:
+    """Ruling 42, AD-65: a confidential gate's page shows Dossier IDs, not
+    names, as its files do; a gate that is not confidential names them."""
+    base = f"/applydesk/operator/exercises/{EX}/evaluations"
+    conf = client.get(f"{base}/gate_2").text
+    assert 'data-sort-key="candidate">Dossier<' in conf
+    assert "Aisha Bello" not in conf
+    assert re.search(r"<td><code>\w{10}</code></td>", conf)
+    named = client.get(f"{base}/gate_1").text
+    assert 'data-sort-key="candidate">Applicant<' in named
+
+
+def test_blind_review_starts_outcomes_csv_with_dossier_ids() -> None:
+    """AD-65: outcomes.csv names applicants by default only without blind
+    review; Extract all data follows sensitive()."""
+    import dataclasses
+
+    ex = sample_data.exercise(EX)
+    assert ex is not None
+    assert extract.names_by_default(ex, "outcomes.csv")
+    blind = dataclasses.replace(ex, blind=True)
+    assert not extract.names_by_default(blind, "outcomes.csv")
+    assert extract.names_by_default(blind, "applications.csv")
+
+
+def test_another_application_s_page_shows_no_results(client: TestClient) -> None:
+    """Cold read: Your results is the applicant's own, never another's."""
+    other = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/h6zr2tdw9p").text
+    assert "Your results" not in other
+
+
+def test_archived_closes_the_application_and_dossier_pages(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Author, 2026-11-18: an Archived exercise's application and dossier
+    pages close with it; a Closed one's stay."""
+    import dataclasses
+
+    ex = sample_data.exercise("wa9juxbc2t")
+    assert ex is not None
+    me = "/applydesk/me/exercises/wa9juxbc2t"
+    for state, code in (("Archived", 404), ("Draft", 404), ("Closed", 200)):
+        moved = dataclasses.replace(ex, state=state)
+        monkeypatch.setattr(sample_data, "exercise", lambda i, m=moved: m)
+        assert client.get(f"{me}/applications/m3qx8vkt2n").status_code == code, state
+        assert client.get(f"{me}/dossiers/p3bd7kq2wx").status_code == code, state
+
+
+def test_a_hidden_applicant_on_a_panel_is_never_their_own_evaluator() -> None:
+    """Author, 2026-11-18: a blind or confidential gate's data names no
+    applicant, but gives each dossier the panel member it may not take."""
+    plan = stages.plan_of(EX)
+    gate = next(c for c in plan.columns if isinstance(c, stages.Gate) and c.number == 1)
+    rows, _ = stages.assignments(EX, gate)
+    data = stages.page_data(EX, gate, rows, blind=True)
+    dossiers = cast(list[list[str]], data["dossiers"])
+    panel = {
+        e.lower()
+        for p in cast(list[list[Any]], data["panels"])
+        for _, e in cast(list[list[str]], p[1])
+    }
+    assert all(d[2] == "" for d in dossiers)  # no email for who they are
+    selfs = [d[3] for d in dossiers if d[3]]
+    assert selfs and all(s in panel for s in selfs)  # current RAs reapplying
+
+
+def test_the_outcomes_card_follows_its_file_under_blind_review(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Cold read: blind, the Outcomes card starts on Dossier IDs, says
+    why, lists no applicant columns, and lets the operator choose Names."""
+    import dataclasses
+
+    ex = sample_data.exercise(EX)
+    assert ex is not None
+    blind = dataclasses.replace(ex, blind=True)
+    monkeypatch.setattr(sample_data, "exercise", lambda i: blind)
+    page = client.get(f"/applydesk/operator/exercises/{EX}/extract").text
+    card = page[page.index('data-xd-card="outcomes"') : page.index('data-xd-card="alias"')]
+    assert "Dossier IDs to start with: blind review is on." in card
+    assert 'data-xd-v="ids" aria-pressed="true"' in card and "applicant, email" not in card

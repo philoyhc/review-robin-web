@@ -16,6 +16,10 @@
   <p class="muted">Only you and this exercise's operators see this part.</p>
   <dl class="facts">{% for label, value in answered[1] %}<dt>{{ label }}</dt><dd{% if value == "—" %} class="muted"{% endif %}>{{ value }}</dd>{% else %}<dt class="muted">None</dt>{% endfor %}</dl>
 </div>
+{% if results %}<div class="section">
+  <h2>Your results</h2>
+  <dl class="facts">{% for label, value, when in results %}<dt>{{ label }}</dt><dd><strong>{{ value }}</strong> <span class="muted">· released {{ when }}</span></dd>{% endfor %}</dl>
+</div>{% endif %}
 <div class="btnrow">
   {% if application.state == "Draft" and form_state == "Closed" %}<p class="muted">Applications closed on {{ exercise.application_stage_ends }}.</p>
   {% elif application.state == "Draft" %}<button class="btn btn-secondary" type="button" disabled title="Applying opens with AD4">Save draft</button><button class="btn btn-primary" type="button" disabled title="Applying opens with AD4">Submit</button>

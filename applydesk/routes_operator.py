@@ -105,12 +105,13 @@ def gate_evaluations(
     pairs = stages.pairs_of(rows)
     state = workflow.gate_state(exercise.public_id, found.key)
     sent = workflow.gate_opened(*state)
+    # Blind review, or a confidential gate (ruling 42): its page shows
+    # Dossier IDs, never names, as its files do.
+    ids_only = exercise.blind or found.confidential
     # Sorted on the server, across every page (author, 2026-11-17: as
     # Review Robin's tables; a page shows 200 of up to 2,980).
     order = paging.parse_sort(sort)
-    shown = stages.sorted_pairs(
-        stages.matching(pairs, q, exercise.blind), order, found, sent, exercise.blind
-    )
+    shown = stages.sorted_pairs(stages.matching(pairs, q, ids_only), order, found, sent, ids_only)
     # An offset that is not a whole number reads as the first page.
     start = int(offset) if re.fullmatch(r"-?[0-9]+", offset) else 0
     where = paging.page(len(shown), start, paging.PAGE_SIZE)
@@ -123,6 +124,7 @@ def gate_evaluations(
         status=workflow.status_row(exercise),
         exercise=exercise,
         gate=found,
+        ids_only=ids_only,
         state=state,
         sent=sent,
         order=order,
@@ -134,9 +136,7 @@ def gate_evaluations(
         # operator's to change.
         ev_data=None
         if sent
-        else stages.page_data(
-            exercise.public_id, found, rows, exercise.blind, q, where.offset == 0
-        ),
+        else stages.page_data(exercise.public_id, found, rows, ids_only, q, where.offset == 0),
         all_rows=rows,
         all_pairs=pairs,
         rows=shown[where.offset : where.end],

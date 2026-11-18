@@ -36,7 +36,7 @@
   {# + Pair: a dossier and an evaluator from its panel sources, within
      the Total's max; never the candidate themself. #}
   <div class="ev-add" id="ev-add" data-ev-add hidden>
-    <label class="fc-l">{{ "Dossier" if exercise.blind else "Applicant" }}<select class="fc-in" data-ev-add-who></select></label>
+    <label class="fc-l">{{ "Dossier" if ids_only else "Applicant" }}<select class="fc-in" data-ev-add-who></select></label>
     <label class="fc-l">Evaluator<select class="fc-in" data-ev-add-evaluator></select></label>
     <button type="button" class="btn btn-primary" data-ev-act="add-pair">Add the pair</button>
     <button type="button" class="btn btn-secondary" data-ev-act="add-cancel">Cancel</button>
@@ -77,17 +77,17 @@
        a new order starts at the first page. #}
     {% macro sorter(key, label) %}{% set p = sort_text(plain_click(order, key)) %}{% set s = sort_text(shift_click(order, key)) %}<th class="ev-sortable" data-sort-key="{{ key }}"{% if order and order[0][0] == key %} aria-sort="{{ 'descending' if order[0][1] else 'ascending' }}"{% endif %}>{{ label }}<a class="ev-sort-btn" href="{{ url(sorted_to(p)) }}#ev-table-card" data-shift-href="{{ url(sorted_to(s)) }}#ev-table-card" aria-label="Sort by {{ label }}"><span class="ev-sort-badge" aria-hidden="true">{{ sort_badge(order, key) }}</span></a></th>{% endmacro %}
     {% macro sorted_to(text) %}{% set tail = (qf ~ (('sort=' ~ (text | urlencode)) if text else '')).rstrip('&') %}{{ here ~ (('?' ~ tail) if tail else '') }}{% endmacro %}
-    <thead><tr>{{ sorter("candidate", "Dossier" if exercise.blind else "Applicant") }}{{ sorter("evaluator", "Evaluator") }}{{ sorter("source", "Source") }}{{ sorter("state", "State") }}{% if gate.mode != "automatic" %}<th></th>{% endif %}</tr></thead>
+    <thead><tr>{{ sorter("candidate", "Dossier" if ids_only else "Applicant") }}{{ sorter("evaluator", "Evaluator") }}{{ sorter("source", "Source") }}{{ sorter("state", "State") }}{% if gate.mode != "automatic" %}<th></th>{% endif %}</tr></thead>
     <tbody>
     {% for p in rows %}
       {% set a = p.of %}
       {% set st = assignment_state(gate, sent, a) %}
       <tr data-ev-row="{{ a.application.public_id }}"{% if p.email %} data-ev-pair="{{ p.email | lower }}"{% endif %}>
-        <td>{% if exercise.blind %}<code>{{ a.application.dossier_id }}</code>{% else %}{{ a.application.applicant }}{% endif %}</td>
+        <td>{% if ids_only %}<code>{{ a.application.dossier_id }}</code>{% else %}{{ a.application.applicant }}{% endif %}</td>
         <td>{% if p.email %}<span title="{{ p.email }}">{{ p.name }}</span>{% else %}<span class="muted">None yet</span>{% endif %}</td>
         <td><span class="ev-src" data-ev-source="{{ p.source }}">{{ p.source or "—" }}</span></td>
         <td><span class="chip chip-{{ 'warn' if st.startswith('Short') or st == 'Not assigned' else ('info' if st == 'Suggested' else 'ok') }}" data-ev-state>{{ st }}</span></td>
-        {% if gate.mode != "automatic" %}<td class="ev-acts">{% if p.email %}<button type="button" class="btn btn-secondary" data-ev-act="remove" aria-label="Remove {{ p.name }} from {{ a.application.dossier_id if exercise.blind else a.application.applicant }}"{{ off }}>Remove</button>{% endif %}{% if gate.mode == "suggested" and p.email %} <button type="button" class="btn btn-secondary" data-ev-act="approve"{{ off }}>Approve</button>{% endif %}</td>{% endif %}
+        {% if gate.mode != "automatic" %}<td class="ev-acts">{% if p.email %}<button type="button" class="btn btn-secondary" data-ev-act="remove" aria-label="Remove {{ p.name }} from {{ a.application.dossier_id if ids_only else a.application.applicant }}"{{ off }}>Remove</button>{% endif %}{% if gate.mode == "suggested" and p.email %} <button type="button" class="btn btn-secondary" data-ev-act="approve"{{ off }}>Approve</button>{% endif %}</td>{% endif %}
       </tr>
     {% endfor %}
     </tbody>

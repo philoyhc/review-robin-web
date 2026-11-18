@@ -274,6 +274,7 @@ class Stage:
     columns: tuple[Gate | Outcome, ...] = ()
     form: bool = False  # holds the application form (ruling 15)
     status: str = "Draft"
+    shown: bool = True  # on the applicant's timeline (ruling 46); False hides it there
     # The form's open and close, inside the stage's dates (author,
     # 2026-11-18); None is the stage's (``window``).
     form_when: StageDates | None = None
@@ -1337,6 +1338,23 @@ def assignments(
     return tuple(rows), spread
 
 
+def released_results(exercise_id: str, public_id: str) -> tuple[tuple[str, str, str], ...]:
+    """An application's results released to applicants (ruling 41, AD-28):
+    (outcome, its value, when), in timeline order; none until released,
+    and none undecided. Read from Dossiers' cells; AD7 stores them."""
+    plan = plan_of(exercise_id)
+    row = next((r for r in plan.rows if r.application.public_id == public_id), None)
+    out: list[tuple[str, str, str]] = []
+    for c in plan.columns:
+        if not isinstance(c, Outcome) or not c.released:
+            continue
+        when, _, to = c.released.partition(" · ")
+        cell = row.cells.get(c.key) if row else None
+        if (not to or "applicants" in to.lower()) and cell and cell.value in c.values:
+            out.append((c.label, cell.value, when))
+    return tuple(out)
+
+
 def gate_numbered(plan: Plan, number: int) -> Gate | None:
     """The plan's gate numbered ``number`` (its page under Evaluations,
     ``…/evaluations/gate_<n>``, segment AD1H), None if none is."""
@@ -1431,13 +1449,21 @@ def page_data(
     the browser (AD1G rung 6b): the Total, every dossier and pair (not
     only the page's), and each panel source's members, so a change shows
     in the states, the counts and the load line whatever page is open. A
-    blind exercise sends no candidate's name or email, so its + Pair
-    cannot leave out the candidate themself (an open question for AD2).
+    blind exercise or a confidential gate sends no applicant's name or
+    email; each dossier's fourth field is the one evaluator + Pair must
+    leave out, the applicant when they sit on its panels, else "" (author,
+    2026-11-18), so no one is paired with themself.
     ``query`` and ``first`` are the page's search and whether it is the
     first page, where pairs added in the tab show. Emails are lowercased
     as the rows' ``data-ev-pair``. Nothing is saved until AD2."""
     sources, total = sources_of(exercise_id, gate)
     panels = sample_data.panel_pools(exercise_id)
+    on_panels = {
+        e.lower()
+        for s in sources
+        if s.kind == "panel" and s.ref in panels
+        for _, e in panels[s.ref]["members"]
+    }
     return {
         "key": f"{exercise_id}:{gate.key}",
         "mode": gate.mode,
@@ -1452,6 +1478,7 @@ def page_data(
                 a.application.public_id,
                 a.application.dossier_id if blind else a.application.applicant,
                 "" if blind else a.application.email.lower(),
+                a.application.email.lower() if a.application.email.lower() in on_panels else "",
             ]
             for a in rows
         ],

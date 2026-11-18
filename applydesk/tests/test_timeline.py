@@ -294,3 +294,23 @@ def test_the_running_gate_is_the_one_being_worked(monkeypatch: pytest.MonkeyPatc
     assert timeline.running_gate(e, tl) == 2
     states["g1"] = ("Sent", "")
     assert timeline.running_gate(e, tl) == 1
+
+
+def test_a_stage_not_shown_to_applicants_is_not_on_theirs(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ruling 46, AD-09: Process's *Shown to applicants* is modelled: a
+    stage left unticked is hidden from the applicant's timeline only."""
+    import dataclasses
+
+    plan = stages.plan_of(EX)
+    hidden = plan.stages[1]
+    sts = tuple(dataclasses.replace(s, shown=False) if s is hidden else s for s in plan.stages)
+    monkeypatch.setattr(stages, "plan_of", lambda _id: dataclasses.replace(plan, stages=sts))
+    e = sample_data.exercise(EX)
+    assert e is not None
+    mine = [v.number for v in timeline.of(e, applicant=True).stages]
+    theirs = [v.number for v in timeline.of(e).stages]
+    assert hidden.number not in mine and hidden.number in theirs
+    process = client.get(f"/applydesk/operator/exercises/{EX}/process").text
+    assert 'data-pc="shown"> Shown to applicants' in process  # its tick unticked
