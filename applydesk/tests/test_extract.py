@@ -81,7 +81,7 @@ def test_the_zips_carry_a_manifest_and_what_the_chips_say(client: TestClient) ->
     r = client.get(f"{BASE}/all.zip")
     assert r.headers["content-type"] == "application/zip"
     assert re.search(
-        r'filename="ra_2027_extract_\d{4}-\d\d-\d\d\.zip"', r.headers["content-disposition"]
+        r'filename="ra_2027_extract_2026-11-17\.zip"', r.headers["content-disposition"]
     )
     z = zipfile.ZipFile(io.BytesIO(r.content))
     assert z.namelist() == [

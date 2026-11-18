@@ -12,6 +12,9 @@
   {% include "applydesk/_timeline.html" %}
   <section class="card">
     <h2>Apply</h2>
+    {# Each of the applicant's own applications here, so the exercise leads
+       to them (AD-27). #}
+    {% for a in mine %}<p><a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/applications/' ~ a.public_id) }}">Your application{{ " (draft)" if a.state == "Draft" }}</a> {% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</p>{% endfor %}
     {% if exercise.form_open %}
       <p>Start an application; you can save a draft and come back before applications close.</p>
       <div class="btnrow"><button class="btn btn-primary" type="button" disabled title="Applying opens with AD4">Start an application</button></div>

@@ -96,7 +96,9 @@ def test_an_outcome_is_picked_and_dated(page: Page) -> None:
     pick = row.locator('[data-cell="o2"] select')
     assert row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "Due 4 Dec"
     pick.select_option("Selected")
-    assert row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "13 Nov"
+    assert (
+        row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "17 Nov"
+    )  # timeline.TODAY (AD-40)
     assert _count(page, "o2").startswith("1 selected")
     pick.select_option("Pending")
     assert row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "Due 4 Dec"
@@ -124,7 +126,7 @@ def test_a_release_asks_first(page: Page) -> None:
     switch.click()
     assert switch.is_checked()
     note = page.locator('th[data-col="o2"] [data-ap-relnote]').inner_text()
-    assert note.startswith("13 Nov")
+    assert note.startswith("17 Nov")
 
 
 def test_search_status_and_last_applications_filter(page: Page) -> None:
@@ -155,6 +157,28 @@ def test_ticked_rows_are_set_together(page: Page) -> None:
     assert _row(page, "wen.novak").locator('[data-cell="g3"] [data-ap-adm]').count() == 0
 
 
+def test_the_header_tick_ticks_the_rows_in_view(page: Page) -> None:
+    """AD-22: the header's tick for every row in view, and Set with none
+    ticked says so."""
+    page.goto(PAGE)
+    _unlock(page)
+    page.locator("[data-ap-set]").click()
+    assert page.locator("[data-ap-said]").inner_text().startswith("No rows ticked")
+    page.locator("[data-ap-status]").select_option("Draft")
+    every = page.locator("[data-ap-tick-all]")
+    every.check()
+    assert page.locator("[data-row]:not([hidden]) [data-ap-tick]:checked").count() == 3
+    assert page.locator("[data-row][hidden] [data-ap-tick]:checked").count() == 0
+    page.locator("[data-row]:not([hidden]) [data-ap-tick]").first.uncheck()
+    assert every.evaluate("e => e.indeterminate && !e.checked")
+    page.locator("[data-ap-status]").select_option("")
+    assert every.evaluate("e => e.indeterminate")  # 2 of 104 in view
+    every.click()  # from part-ticked, as a checkbox does: every row in view
+    assert page.locator("[data-row] [data-ap-tick]:checked").count() == 104
+    every.click()
+    assert page.locator("[data-row] [data-ap-tick]:checked").count() == 0
+
+
 def test_an_application_advanced_by_hand_can_be_given_later_outcomes(page: Page) -> None:
     # Codex: a submitted application outside the shortlist showed fixed
     # "—" in its later outcomes, so a hand change stopped there.
@@ -165,7 +189,9 @@ def test_an_application_advanced_by_hand_can_be_given_later_outcomes(page: Page)
     assert selection.input_value() == ""
     row.locator('[data-cell="o1"] select').select_option("Interview")
     selection.select_option("Selected")
-    assert row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "13 Nov"
+    assert (
+        row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "17 Nov"
+    )  # timeline.TODAY (AD-40)
     # A draft stays inert.
     assert _row(page, "wen.novak").locator('[data-cell="o2"] select').count() == 0
 
@@ -225,6 +251,27 @@ def test_the_table_downloads_as_the_csv_an_upload_reads(page: Page) -> None:
     prop = page.locator("[data-ap-proposal]")
     assert "Nothing would change." in prop.inner_text()
     assert prop.locator("[data-ap-prop-skip] li").count() == 0
+
+
+def test_the_csv_is_the_rows_in_view_named_for_the_exercise(page: Page) -> None:
+    """AD-66: the filter holds, the name does not clash with Extract's
+    applications.csv, and a formula-like cell is guarded."""
+    page.goto(PAGE)
+    page.locator("[data-ap-search]").fill("kenji.russo")
+    page.evaluate(
+        """() => { var m = document.querySelector('[data-row] .ap-mail');
+        m.textContent = '=HYPERLINK(1)'; }"""
+    )
+    with page.expect_download() as got:
+        page.locator("[data-ap-csv-down]").click()
+    name = got.value.suggested_filename
+    assert name.endswith(".csv") and "_dossiers_" in name
+    lines = got.value.path().read_text(encoding="utf-8").removeprefix("\ufeff").splitlines()
+    assert len(lines) == 1 + page.locator("[data-row]:not([hidden])").count()
+    page.locator("[data-ap-search]").fill("")
+    with page.expect_download() as got:
+        page.locator("[data-ap-csv-down]").click()
+    assert ",'=HYPERLINK(1)," in got.value.path().read_text(encoding="utf-8")
 
 
 def test_apply_keeps_a_cell_changed_by_hand_since(page: Page) -> None:

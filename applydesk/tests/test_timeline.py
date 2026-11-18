@@ -112,7 +112,10 @@ def test_home_is_the_timeline_beside_details(client: TestClient) -> None:
     assert "<dt>Description</dt>" in details and "Summary" not in details
     assert 'data-dt-lock title="Unlock the details to change them">Unlock' in details
     # The line under the timeline points to where the stage is worked.
-    assert f'<a href="/applydesk/operator/exercises/{EX}/evaluations">Go to Evaluations</a>' in home
+    # Its gate's own page, where the pairs are (AD-24).
+    assert (
+        f'<a href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Go to Gate 3</a>' in home
+    )
 
 
 def test_a_draft_s_home_says_what_publishing_needs(client: TestClient) -> None:

@@ -188,8 +188,8 @@ Home, `/operator/exercises/<id>`, is two columns: the **Timeline** card
 Details below. The status row (`workflow.status_row`) opens with the exercise's status,
 derived from its stages ("Stage status"), and carries *Applications: N
 submitted · M drafts*. Under the timeline a *Next step* line says where
-today falls (`timeline.next_step`), with *Go to Evaluations* while a gate runs
-(`timeline.gate_running`). Home has no Publish card: publishing is per stage,
+today falls (`timeline.next_step`), with *Go to Gate N*, its page under Evaluations, while a gate runs
+(`timeline.running_gate`). Home has no Publish card: publishing is per stage,
 on Process, and the timeline's operator part says what blocks each stage.
 Cards side by
 side share a height only when within a fifth of the taller; a short card

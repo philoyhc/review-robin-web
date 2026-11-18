@@ -150,7 +150,12 @@ def next_step(e: Exercise, t: Timeline) -> str:
     return line
 
 
-def gate_running(e: Exercise, t: Timeline) -> bool:
-    """Whether the stage under way holds a gate, so the Next step line
-    points to Evaluations, where it is worked (a draft's never does)."""
-    return e.state != "Draft" and t.now is not None and any(i.kind == "step" for i in t.now.items)
+def running_gate(e: Exercise, t: Timeline) -> int | None:
+    """The number of the first gate in the stage under way, so the Next
+    step line points to that gate's page, where it is worked (AD-24); none
+    for a draft, or a stage holding no gate."""
+    if e.state == "Draft" or t.now is None:
+        return None
+    st = next((s for s in stages.plan_of(e.public_id).stages if s.number == t.now.number), None)
+    gate = next((c for c in st.columns if isinstance(c, stages.Gate)), None) if st else None
+    return gate.number if gate else None

@@ -179,8 +179,9 @@ class Gate:
     rule: Rule | None = None
     panel: str = ""  # who evaluates: a sample_data.Panel key, "" for none yet (ruling 19)
     # Ruling 27 (segment AD1G): the ranked sources, the Total and the mode.
-    # Empty sources read as ``panel`` alone (``sources_of``) until the pages
-    # move to them (AD1G rung 3).
+    # Empty sources read as ``panel`` alone (``sources_of``): the sample's
+    # older gates name only a panel. What uses a panel reads ``sources_of``
+    # (``gate_panels``), never ``panel`` (AD-49); AD2 stores sources alone.
     sources: tuple[Source, ...] = ()
     total: Total | None = None
     mode: str = "automatic"
@@ -993,9 +994,17 @@ def panel_uses(exercise_id: str) -> dict[str, tuple[str, ...]]:
         if c.kind == "field" and c.type == "people" and c.pool != "institution":
             uses.setdefault(c.pool, []).append(f"Form: {c.label or 'Untitled question'}")
     for column in plan_of(exercise_id).columns:
-        if isinstance(column, Gate) and column.panel:
-            uses.setdefault(column.panel, []).append(f"Gate {column.number}: {column.label}")
+        if isinstance(column, Gate):
+            for key in gate_panels(exercise_id, column):
+                uses.setdefault(key, []).append(f"Gate {column.number}: {column.label}")
     return {k: tuple(v) for k, v in uses.items()}
+
+
+def gate_panels(exercise_id: str, gate: Gate) -> tuple[str, ...]:
+    """The panels a gate draws evaluators from, in rank order: every panel
+    source, not just the first (AD-49)."""
+    srcs, _ = sources_of(exercise_id, gate)
+    return tuple(dict.fromkeys(s.ref for s in srcs if s.kind == "panel"))
 
 
 def _bounds(lo: str, hi: str) -> str:

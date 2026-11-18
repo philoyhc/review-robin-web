@@ -42,7 +42,7 @@
     </li>
     {% endfor %}
   </ol>
-  {% if next_line %}<p class="tl-nextline" data-tl-next>{{ next_line }}{% if next_link %} <a href="{{ next_link }}">Go to Evaluations</a>{% endif %}</p>{% endif %}
+  {% if next_line %}<p class="tl-nextline" data-tl-next>{{ next_line }}{% if next_link %} <a href="{{ next_link }}">{{ next_label }}</a>{% endif %}</p>{% endif %}
 </section>
 {# Today's place in its stage, and the layout: no inline styles in the
    page (applydesk/tests/test_pages.py), so the script sets them; without

@@ -6,8 +6,9 @@
 {# Segment AD1I: the timeline two-thirds wide, Details one-third; the old
    fact cards fold into the status row and the line under the timeline. #}
 {# The line under the timeline points to where the stage under way is
-   worked: Evaluations, while a gate runs. #}
-{% set next_link = url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations') if gate_running else "" %}
+   worked: its gate's page under Evaluations, while a gate runs (AD-24). #}
+{% set next_link = url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ running_gate) if running_gate else "" %}
+{% set next_label = "Go to Gate " ~ running_gate if running_gate else "" %}
 <div class="hm-grid">
   {% include "applydesk/_timeline.html" %}
   {% include "applydesk/operator/_details.html" %}
