@@ -137,14 +137,8 @@ def test_details_lock_and_unlock_sit_at_the_card_s_foot_on_the_right(page: Page)
     lock = placed(card, "Lock")
     discard = card.get_by_role("button", name="Discard changes").bounding_box()
     assert discard and discard["x"] < lock  # Discard changes, then Lock
-    # Stretched to a taller timeline's height, Unlock still at the foot.
-    page.reload()
-    page.evaluate(
-        "() => { const t = document.querySelector('[data-timeline]');"
-        " t.style.minHeight = (document.querySelector('[data-details]').offsetHeight + 120) + 'px';"
-        " document.querySelector('.hm-grid').classList.add('is-equal-height'); }"
-    )
-    placed(card, "Unlock")
+    # Details keeps its own height beside a taller timeline now: Publish
+    # below it takes the stretch (test_publish_sits_below_details_...).
 
 
 def test_details_refuse_what_cannot_hold(page: Page) -> None:
@@ -249,3 +243,15 @@ def test_publish_sits_below_details_one_gap_apart(page: Page) -> None:
     assert publish["x"] == details["x"] and publish["width"] == details["width"]
     assert round(publish["y"] - (details["y"] + details["height"])) == 16
     assert round(details["x"] - (timeline["x"] + timeline["width"])) == 16
+    # Sharing the timeline's height, Publish takes the rest of the column:
+    # its foot is the timeline's (cold read: the grid's stretch alone ends
+    # the column there, not the card).
+    page.evaluate(
+        "() => { const t = document.querySelector('[data-timeline]');"
+        " t.style.minHeight = (document.querySelector('.hm-side').offsetHeight + 80) + 'px';"
+        " document.querySelector('.hm-grid').classList.add('is-equal-height'); }"
+    )
+    publish = page.locator("[data-hm-publish]").bounding_box()
+    timeline = page.locator("[data-timeline]").bounding_box()
+    assert publish and timeline
+    assert round(publish["y"] + publish["height"]) == round(timeline["y"] + timeline["height"])
