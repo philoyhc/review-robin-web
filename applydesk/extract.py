@@ -502,7 +502,7 @@ def _process(e: Exercise) -> Table:
                 for f in stages.fields_of(c):
                     body.append(
                         head
-                        + ["field", str(c.number), f.label, "", "", "", "", "", "", ""]
+                        + ["field", str(c.number), f.label, "", "", "", "", "", ""]
                         + [
                             _detail(
                                 key=f.key, **_field(f.field), required=_yes(f.required), help=f.help
@@ -512,7 +512,7 @@ def _process(e: Exercise) -> Table:
                 for r in c.results:
                     body.append(
                         head
-                        + ["result", str(c.number), r.name, "", "", "", "", "", "", ""]
+                        + ["result", str(c.number), r.name, "", "", "", "", "", ""]
                         + [
                             _detail(
                                 key=r.key,

@@ -234,6 +234,15 @@ def test_process_csv_keeps_each_gate_s_fields_and_results(client: TestClient) ->
     z = zipfile.ZipFile(io.BytesIO(client.get(f"{BASE}/setup.zip").content))
     rows = _rows(z.read("process.csv"))
     assert rows[0][-1] == "detail"
+    # Every row as wide as the header (Codex): settings under ``detail``.
+    for name in z.namelist():
+        table = _rows(z.read(name))
+        assert {len(r) for r in table} == {len(table[0])}, name
+    detail = {
+        (r["kind"], r["label"]): r["detail"]
+        for r in csv.DictReader(io.StringIO(z.read("process.csv").decode("utf-8-sig")))
+    }
+    assert "derive=mean" in detail[("result", "Mean score")]
     score = next(r for r in rows if r[3] == "field" and r[4] == "1" and r[5] == "Score")
     assert "type=integer; min=0; max=5" in score[-1] and "required=yes" in score[-1]
     mean = next(r for r in rows if r[3] == "result" and r[5] == "Mean score")
