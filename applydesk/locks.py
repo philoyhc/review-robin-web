@@ -92,13 +92,22 @@ def publish_problems(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
         ]
     if st.form and e.public_id in sample_data.EMPTY_FORMS:
         out.append("The application form has no questions.")
+    forms = sample_data.list_questions(e.public_id)
     for c in st.columns:
         if isinstance(c, stages.Gate):
-            sources, _ = stages.sources_of(e.public_id, c)
-            if not sources:
-                out.append(f"Gate {c.number} ({c.label or 'untitled'}) has no evaluators.")
-        elif not c.values:
-            out.append(f"{c.label or 'The outcome'} has no values.")
+            name = f"Gate {c.number} ({c.label or 'untitled'})"
+            sources, total = stages.sources_of(e.public_id, c)
+            why = stages.total_problem(sources, total)
+            if why == "no evaluators":
+                out.append(f"{name} has no evaluators.")
+            elif why:
+                out.append(f"{name}: {why}.")
+        else:
+            name = c.label or "The outcome"
+            if not c.values:
+                out.append(f"{name} has no values.")
+        # Process's Outline checks (Codex): what the rule reads must hold.
+        out += [f"{name}'s rule {why}." for why in stages.rule_problems(plan, c, forms)]
     return tuple(out)
 
 

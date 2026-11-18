@@ -692,6 +692,57 @@ def result_of(plan: Plan, key: str) -> tuple[Gate | None, GateResult | None]:
     return gate, next((r for r in gate.results if r.key == result_key), None)
 
 
+def rule_problems(
+    plan: Plan, column: Gate | Outcome, forms: dict[str, list[str]]
+) -> tuple[str, ...]:
+    """What a column's rule reads that no longer holds, as Process's
+    Outline says it (segment AD1K, Codex): an outcome gone, or not before
+    it; a gate or result gone, or outside an outcome's scope; a value not
+    among an outcome's values or a list result's options; a form answer
+    not a List question's option (``forms``, the form's List questions);
+    a count not a whole number. The page's script says the same in place;
+    publishing reads this."""
+    rule = column.rule
+    if rule is None:
+        return ()
+    found: list[str] = []
+    cols = {c.key: c for c in plan.columns}
+    order = list(plan.columns)
+    earlier = order[: order.index(column)] if column in order else []
+    in_scope = scope(plan, column) if isinstance(column, Outcome) else ()
+    for when, _ in rule.branches:
+        for kind, key, _op, value in when:
+            if kind == "out":
+                out = cols.get(key)
+                if not isinstance(out, Outcome):
+                    found.append("reads an outcome no longer in the process")
+                elif out not in earlier:
+                    found.append(f"reads {out.label}, which comes later")
+                elif value and value not in out.values:
+                    found.append(f"reads \u201c{value}\u201d, not among the values of {out.label}")
+            elif kind in ("res", "top", "ent") and isinstance(column, Outcome):
+                gate, result = result_of(plan, key) if kind != "ent" else (cols.get(key), None)
+                if not isinstance(gate, Gate):
+                    found.append("reads a gate no longer in the process")
+                elif gate not in in_scope:
+                    found.append(f"reads {gate.label}, outside the gates before it")
+                elif kind != "ent" and result is None:
+                    found.append(f"reads a result no longer on {gate.label}")
+            if kind in ("last", "top") and not re.fullmatch(r"[1-9][0-9]*", value):
+                found.append(f"takes \u201c{value}\u201d, not a whole number")
+            if kind == "form":
+                if key not in forms:
+                    found.append(f"reads \u201c{key}\u201d, not a List question on the form")
+                elif value not in forms[key]:
+                    found.append(f"reads \u201c{value}\u201d, not among the options of {key}")
+    if isinstance(column, Outcome):
+        allowed = set(column.values) | {"Pending"}
+        for value in (*(then for _, then in rule.branches), rule.otherwise):
+            if value and value not in allowed:
+                found.append(f"decides \u201c{value}\u201d, not among its values")
+    return tuple(dict.fromkeys(found))
+
+
 def result_label(plan: Plan, key: str) -> str:
     """A key as a rule or a weight names it: "Rating at Peer Review"; as
     the Process page's script writes it."""

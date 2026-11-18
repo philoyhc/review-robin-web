@@ -6,6 +6,8 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import datetime
 
+import pytest
+
 from applydesk import locks, sample_data, stages
 
 RA = "wa9juxbc2t"  # stages 1–2 done, stage 3 under way
@@ -121,3 +123,21 @@ def test_a_revert_says_what_stays() -> None:
         "Gate 2's Review Robin session has opened: it stays fixed.",
     )
     assert locks.revert_warnings(e, _stage(RA, 3)) == ()
+
+
+def test_publishing_reads_the_outline_s_checks(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex: a gate whose Total cannot hold, or a rule reading what is
+    gone, blocks its stage as Process's Outline says."""
+    e = _e(RA)
+    model = stages._STAGES[RA]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    interviews = model[2]
+    g3, o2 = interviews.columns
+    assert isinstance(g3, stages.Gate) and isinstance(o2, stages.Outcome) and o2.rule
+    bad_gate = replace(g3, total=stages.Total(0, 999))
+    bad_rule = replace(o2.rule, when=(("out", "o9", "is", "Interview"),), then="Hired")
+    broken = replace(interviews, columns=(bad_gate, replace(o2, rule=bad_rule)))
+    monkeypatch.setitem(stages._STAGES, RA, (*model[:2], broken))  # pyright: ignore[reportPrivateUsage]  -- as above
+    problems = locks.publish_problems(e, broken)
+    assert any(p.startswith("Gate 3 (Staff interview): the Total's") for p in problems)
+    assert "Selection's rule reads an outcome no longer in the process." in problems
+    assert "Selection's rule decides \u201cHired\u201d, not among its values." in problems
