@@ -145,6 +145,69 @@ def gate_evaluations(
     )
 
 
+def _download(name: str, body: bytes, media_type: str) -> Response:
+    return Response(
+        body,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
+
+
+def _csv(name: str, table: extract.Table) -> Response:
+    return _download(name, extract.csv_bytes(table), "text/csv; charset=utf-8")
+
+
+def _pick(value: str, allowed: tuple[str, ...]) -> str:
+    """A chip's value from the query, else its default (the first)."""
+    return value if value in allowed else allowed[0]
+
+
+@router.get("/exercises/{exercise_id}/extract/{file}", name="applydesk_extract_file")
+def extract_file(
+    exercise_id: str,
+    file: str,
+    rows: str = "",
+    drafts: str = "",
+    shape: str = "",
+    applicants: str = "",
+    carries: str = "",
+) -> Response:
+    """Extract data's downloads (segment AD1J, rung 3), shaped by the
+    cards' chips: ``rows`` last|all, ``drafts`` 1, ``shape`` pair|application,
+    ``applicants`` names|ids, ``carries`` the ZIP's files. Sample data;
+    logged from AD2."""
+    exercise = exercise_or_404(exercise_id)
+    rows = _pick(rows, ("last", "all"))
+    shape = _pick(shape, ("pair", "application"))
+    code = extract.of(exercise).zip_name.removesuffix("_extract.zip")
+    if file == "applications.csv":
+        return _csv(file, extract.applications(exercise, rows, drafts == "1"))
+    if file == "outcomes.csv":
+        names = _pick(applicants, ("names", "ids")) == "names"
+        return _csv(file, extract.outcomes(exercise, rows, names))
+    gate = re.fullmatch(r"gate_([1-9][0-9]*)\.csv", file)
+    if gate:
+        names = _pick(applicants, ("ids", "names")) == "names"
+        table = extract.gate(exercise, int(gate.group(1)), shape, names)
+        if table is None:
+            raise HTTPException(status_code=404)  # no such gate, or not sent
+        number = int(gate.group(1))
+        name = next(g.name for g in extract.of(exercise).gates if g.number == number)
+        return _csv(name, table)
+    if file == "gates.zip":
+        names = _pick(applicants, ("ids", "names")) == "names"
+        body = extract.gates_zip(exercise, shape, names)
+        return _download(f"{code}_gates.zip", body, "application/zip")
+    if file == "all.zip":
+        names = _pick(applicants, ("names", "ids")) == "names"
+        wanted = frozenset(carries.split(",")) if carries else extract.CARRIES
+        body = extract.all_zip(
+            exercise, wanted & extract.CARRIES, names, rows, drafts == "1", shape
+        )
+        return _download(f"{code}_extract.zip", body, "application/zip")
+    raise HTTPException(status_code=404)
+
+
 @router.get("/exercises/{exercise_id}/{section}", name="applydesk_exercise_section")
 def exercise_section(request: Request, exercise_id: str, section: str) -> Response:
     exercise = exercise_or_404(exercise_id)

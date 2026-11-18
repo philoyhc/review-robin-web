@@ -497,9 +497,10 @@ def test_extract_s_files_follow_the_exercise(client: TestClient) -> None:
         ("gate_2_office_checks.csv", 500, True),
         ("gate_3_staff_interview.csv", 80, False),
     ]
-    assert x.outcome_columns[:4] == (
+    assert x.outcome_columns[:5] == (
         "dossier_id",
         "applicant",
+        "email",
         "Peer review: Mean score",
         "Peer review: Comments",
     )

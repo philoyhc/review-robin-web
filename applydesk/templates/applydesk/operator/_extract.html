@@ -2,41 +2,47 @@
    exercise's data into files for offline selection and show none of it
    (Dossiers and each gate's page show it). Each card says what its file
    holds, its chips, the file's columns, and its download at the foot.
-   A scaffold: the chips and downloads do nothing until rung 3; the
-   files' shapes are `applydesk/extract.py`'s. #}
-{% macro seg(options, on=0, label="") -%}
-<span class="seg" role="group"{% if label %} aria-label="{{ label }}"{% endif %}>{% for o in options %}<button type="button" aria-pressed="{{ 'true' if loop.index0 == on else 'false' }}">{{ o }}</button>{% endfor %}</span>
+   Each download is a link the card's chips shape (rung 3), each viewer's
+   chips kept in their browser; without the script, the defaults. The
+   files are `applydesk/extract.py`'s; the alias key and the setup files
+   come at rung 4. #}
+{% macro seg(key, options, label) -%}
+<span class="seg" role="group" aria-label="{{ label }}" data-xd-k="{{ key }}">{% for v, o in options %}<button type="button" data-xd-v="{{ v }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">{{ o }}</button>{% endfor %}</span>
 {%- endmacro %}
-{% macro tog(name, on=True) -%}
-<button type="button" class="btn btn-toggle" aria-pressed="{{ 'true' if on else 'false' }}">{{ name }}</button>
+{% macro tog(value, name, on=True, later=False) -%}
+<button type="button" class="btn btn-toggle" data-xd-t="{{ value }}" aria-pressed="{{ 'true' if on else 'false' }}"{% if later %} disabled title="With Extract setup's files (rung 4)"{% endif %}>{{ name }}</button>
+{%- endmacro %}
+{% set nothing = extract.submitted == 0 %}
+{% set base = '/operator/exercises/' ~ exercise.public_id ~ '/extract/' %}
+{% macro dl(file, label, cls="btn-primary") -%}
+{% if nothing %}<button class="btn {{ cls }}" type="button" disabled>{{ label }}</button>{% else %}<a class="btn {{ cls }}" data-xd-dl="{{ file }}" href="{{ url(base ~ file) }}" download>{{ label }}</a>{% endif %}
 {%- endmacro %}
 {% macro columns(cols) -%}
 <p class="xd-cols"><span class="visually-hidden">Columns: </span>{{ cols | join(", ") }}</p>
 {%- endmacro %}
-{% set nothing = extract.submitted == 0 %}
 {% if nothing %}<p class="muted xd-empty" data-xd-empty>No submitted applications yet.{% if extract.draft %} A draft exercise: only its setup can be extracted.{% endif %}</p>{% endif %}
-<div class="xd-grid" data-xd>
+<div class="xd-grid" data-xd="{{ exercise.public_id }}">
   <section class="card" data-xd-card="all">
     <h2>Extract all data</h2>
     <p class="xd-help">One ZIP for offline selection: a manifest, then every file the cards below make, as each is set.</p>
-    <div class="xd-chips"><span class="xd-k">Carries</span>{{ tog("Applications") }}{{ tog("Gates") }}{{ tog("Outcomes") }}{{ tog("Setup", False) }}</div>
-    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg(("Names", "Dossier IDs"), label="Applicants as") }}</div>
+    <div class="xd-chips"><span class="xd-k">Carries</span>{{ tog("applications", "Applications") }}{{ tog("gates", "Gates") }}{{ tog("outcomes", "Outcomes") }}{{ tog("setup", "Setup", False, True) }}</div>
+    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("names", "Names"), ("ids", "Dossier IDs")), "Applicants as") }}</div>
     <p class="xd-cols" data-xd-files>{{ extract.zip_name }}: {{ extract.files | join(" · ") }}</p>
-    <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Zip all</button></div>
+    <div class="btnrow">{{ dl("all.zip", "Zip all") }}</div>
   </section>
   <section class="card" data-xd-card="applications">
     <h2>Applications</h2>
     <p class="xd-help">One row per application: who and when, then a column per form question, in the form's order.</p>
-    <div class="xd-chips"><span class="xd-k">Rows</span>{{ seg(("Last applications", "All applications"), label="Rows") }}</div>
-    <div class="xd-chips"><span class="xd-k">Drafts</span>{{ seg(("Left out", "Included"), label="Drafts") }}</div>
+    <div class="xd-chips"><span class="xd-k">Rows</span>{{ seg("rows", (("last", "Last applications"), ("all", "All applications")), "Rows") }}</div>
+    <div class="xd-chips"><span class="xd-k">Drafts</span>{{ seg("drafts", (("", "Left out"), ("1", "Included")), "Drafts") }}</div>
     {{ columns(extract.application_columns) }}
-    <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Download CSV</button></div>
+    <div class="btnrow">{{ dl("applications.csv", "Download CSV") }}</div>
   </section>
   <section class="card" data-xd-card="gates">
     <h2>By gate</h2>
     <p class="xd-help">One file per gate, one row per pair: the application, the evaluator, then a column per response field, as Review Robin returned it.</p>
-    <div class="xd-chips"><span class="xd-k">Shape</span>{{ seg(("A row per pair", "A row per application"), label="Shape") }}</div>
-    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg(("Dossier IDs", "Names"), label="Applicants as") }}</div>
+    <div class="xd-chips"><span class="xd-k">Shape</span>{{ seg("shape", (("pair", "A row per pair"), ("application", "A row per application")), "Shape") }}</div>
+    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("ids", "Dossier IDs"), ("names", "Names")), "Applicants as") }}</div>
     {% if extract.gates %}
     <table class="xd-gates">
       <thead><tr><th>Gate</th><th>Rows</th><th><span class="visually-hidden">File</span></th></tr></thead>
@@ -44,7 +50,7 @@
       {% for g in extract.gates %}
         <tr data-xd-gate="{{ g.number }}"><td>{{ g.number }} · {{ g.label }}{% if g.confidential %} <span class="chip chip-mute">Confidential</span>{% endif %}</td>
           <td>{% if g.sent %}{{ "{:,}".format(g.pairs) }} {{ "pair" if g.pairs == 1 else "pairs" }}{% else %}<span class="muted">Not sent</span>{% endif %}</td>
-          <td>{% if g.sent %}<button class="btn btn-secondary xd-csv" type="button" disabled title="{{ g.name }}">CSV</button>{% else %}<span class="muted">—</span>{% endif %}</td></tr>
+          <td>{% if g.sent %}{{ dl("gate_" ~ g.number ~ ".csv", "CSV", "btn-secondary xd-csv") }}{% else %}<span class="muted">—</span>{% endif %}</td></tr>
       {% endfor %}
       </tbody>
     </table>
@@ -52,14 +58,14 @@
     {% else %}
     <p class="muted">No gates yet: Process adds them.</p>
     {% endif %}
-    <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Zip gates</button></div>
+    <div class="btnrow">{% if extract.gates | selectattr("sent") | list %}{{ dl("gates.zip", "Zip gates") }}{% else %}<button class="btn btn-primary" type="button" disabled>Zip gates</button>{% endif %}</div>
   </section>
   <section class="card" data-xd-card="outcomes">
     <h2>Outcomes</h2>
     <p class="xd-help">One row per application: each gate's results as Dossiers collates them, then each outcome's value and when it was released.</p>
-    <div class="xd-chips"><span class="xd-k">Rows</span>{{ seg(("Last applications", "All applications"), label="Rows") }}</div>
+    <div class="xd-chips"><span class="xd-k">Rows</span>{{ seg("rows", (("last", "Last applications"), ("all", "All applications")), "Rows") }}</div>
     {{ columns(extract.outcome_columns) }}
-    <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Download CSV</button></div>
+    <div class="btnrow">{{ dl("outcomes.csv", "Download CSV") }}</div>
   </section>
   <section class="card" data-xd-card="alias">
     <h2>Alias key</h2>
@@ -70,8 +76,62 @@
   <section class="card" data-xd-card="setup">
     <h2>Extract setup</h2>
     <p class="xd-help">The exercise's setup as files, to clone it into a new exercise: Form, Process (stages, gates, outcomes and rules), Panels and Emails.</p>
-    <div class="xd-chips"><span class="xd-k">Carries</span>{{ tog("Form") }}{{ tog("Process") }}{{ tog("Panels") }}{{ tog("Emails") }}</div>
+    <div class="xd-chips"><span class="xd-k">Carries</span>{{ tog("form", "Form", True, True) }}{{ tog("process", "Process", True, True) }}{{ tog("panels", "Panels", True, True) }}{{ tog("emails", "Emails", True, True) }}</div>
     <p class="xd-cols">{{ setup_files | join(" · ") }}</p>
     <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Zip setup</button></div>
   </section>
 </div>
+<script>
+/* Each card's chips shape its downloads' links and are kept per viewer
+   in localStorage (`applydesk-extract-<id>`), as Review Robin's Extract
+   data keeps its chips (segment AD1J, rung 3). */
+(function () {
+  var grid = document.querySelector("[data-xd]");
+  if (!grid) return;
+  var key = "applydesk-extract-" + grid.dataset.xd, kept = {};
+  try { kept = JSON.parse(localStorage.getItem(key) || "{}") || {}; } catch (e) { kept = {}; }
+  function save() { try { localStorage.setItem(key, JSON.stringify(kept)); } catch (e) { /* the page still works */ } }
+  function state(card) {
+    var q = new URLSearchParams();
+    card.querySelectorAll("[data-xd-k]").forEach(function (g) {
+      var on = g.querySelector('[aria-pressed="true"]');
+      if (on && on.dataset.xdV) q.set(g.dataset.xdK, on.dataset.xdV);
+    });
+    var carries = Array.prototype.filter.call(card.querySelectorAll("[data-xd-t]:not([disabled])"), function (t) { return t.getAttribute("aria-pressed") === "true"; });
+    if (card.querySelector("[data-xd-t]:not([disabled])")) q.set("carries", carries.map(function (t) { return t.dataset.xdT; }).join(",") || "none");
+    return q;
+  }
+  function draw(card) {
+    var q = state(card).toString();
+    card.querySelectorAll("a[data-xd-dl]").forEach(function (a) {
+      a.href = a.href.split("?")[0] + (q ? "?" + q : "");
+    });
+  }
+  grid.querySelectorAll("[data-xd-card]").forEach(function (card) {
+    var mine = kept[card.dataset.xdCard] || {};
+    card.querySelectorAll("[data-xd-k]").forEach(function (g) {
+      var want = mine[g.dataset.xdK];
+      if (want === undefined) return;
+      g.querySelectorAll("[data-xd-v]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.xdV === want ? "true" : "false"); });
+    });
+    card.querySelectorAll("[data-xd-t]:not([disabled])").forEach(function (t) {
+      if (mine.carries) t.setAttribute("aria-pressed", mine.carries.indexOf(t.dataset.xdT) >= 0 ? "true" : "false");
+    });
+    draw(card);
+    card.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-xd-v], [data-xd-t]");
+      if (!b || b.disabled) return;
+      if (b.dataset.xdT !== undefined) {
+        b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") === "true" ? "false" : "true");
+      } else {
+        b.parentNode.querySelectorAll("[data-xd-v]").forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+      }
+      var q = state(card), m = {};
+      q.forEach(function (v, k) { m[k] = k === "carries" ? v.split(",") : v; });
+      card.querySelectorAll("[data-xd-k]").forEach(function (g) { if (!(g.dataset.xdK in m)) m[g.dataset.xdK] = ""; });
+      kept[card.dataset.xdCard] = m; save();
+      draw(card);
+    });
+  });
+})();
+</script>
