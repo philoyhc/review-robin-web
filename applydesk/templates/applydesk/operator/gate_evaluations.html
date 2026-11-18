@@ -53,20 +53,22 @@
   {# The query a link keeps: the filter and the sort (the page's own). #}
   {% set qs = (('q=' ~ (q | urlencode) ~ '&') if q else '') ~ (('sort=' ~ (order_text | urlencode) ~ '&') if order_text else '') %}
   {% set qf = ('q=' ~ (q | urlencode) ~ '&') if q else '' %}
-  {% set pager %}
-  <div class="ev-pager" data-ev-pager>
-    <span class="muted" data-ev-showing>{% if matched %}{{ "{:,}".format(where.offset + 1) }}–{{ "{:,}".format(where.end) }} of {{ "{:,}".format(matched) }}{% else %}None of {{ "{:,}".format(all_pairs | length) }}{% endif %}{% if q %} matching “{{ q }}”{% endif %}</span>
+  {% macro step(glyph, label, target) %}{% if target is not none %}<a class="btn-icon ev-step" href="{{ url(here ~ '?' ~ qs ~ 'offset=' ~ target) }}#ev-table-card" aria-label="{{ label }}">{{ glyph }}</a>{% else %}<span class="btn-icon ev-step is-inactive" aria-disabled="true" aria-label="{{ label }}">{{ glyph }}</span>{% endif %}{% endmacro %}
+  {# Above the table, and again below it on a long one (AD-108): the
+     steps and the range menu kept on one line. #}
+  {% macro pager(foot=false) %}
+  <div class="ev-pager" {{ "data-ev-pager-foot" if foot else "data-ev-pager" }}>
+    <span class="muted"{% if not foot %} data-ev-showing{% endif %}>{% if matched %}{{ "{:,}".format(where.offset + 1) }}–{{ "{:,}".format(where.end) }} of {{ "{:,}".format(matched) }}{% else %}None of {{ "{:,}".format(all_pairs | length) }}{% endif %}{% if q %} matching “{{ q }}”{% endif %}</span>
     {% if where.total > where.size %}
-    {% macro step(glyph, label, target) %}{% if target is not none %}<a class="btn-icon ev-step" href="{{ url(here ~ '?' ~ qs ~ 'offset=' ~ target) }}#ev-table-card" aria-label="{{ label }}">{{ glyph }}</a>{% else %}<span class="btn-icon ev-step is-inactive" aria-disabled="true" aria-label="{{ label }}">{{ glyph }}</span>{% endif %}{% endmacro %}
-    {{ step("«", "First page", 0 if where.offset else none) }}{{ step("‹", "Previous page", where.previous) }}
+    <span class="ev-steps">{{ step("«", "First page", 0 if where.offset else none) }}{{ step("‹", "Previous page", where.previous) }}
     <details class="ev-ranges"><summary>Rows {{ "{:,}".format(where.offset + 1) }}–{{ "{:,}".format(where.end) }}</summary>
       <ul>{% for start, label, on in where.ranges %}<li>{% if on %}<span aria-current="true">{{ label }}</span>{% else %}<a href="{{ url(here ~ '?' ~ qs ~ 'offset=' ~ start) }}#ev-table-card">{{ label }}</a>{% endif %}</li>{% endfor %}</ul>
     </details>
-    {{ step("›", "Next page", where.following) }}{{ step("»", "Last page", where.last if where.offset != where.last else none) }}
+    {{ step("›", "Next page", where.following) }}{{ step("»", "Last page", where.last if where.offset != where.last else none) }}</span>
     {% endif %}
   </div>
-  {% endset %}
-  {{ pager }}
+  {% endmacro %}
+  {{ pager() }}
   <div class="table-wrap">
   <table class="ev-table">
     {# Sorted as Review Robin's tables: a click on a column's ↕ sorts by
@@ -92,7 +94,7 @@
   </table>
   </div>
   {# The pager again below a long table (AD-108). #}
-  {% if where.total > where.size %}{{ pager | replace('data-ev-pager', 'data-ev-pager-foot') | replace(' data-ev-showing', '') }}{% endif %}
+  {% if where.total > where.size %}{{ pager(foot=true) }}{% endif %}
   {% endif %}
 </section>
 {% if ev_data %}<script type="application/json" id="ev-data">{{ ev_data | tojson }}</script>

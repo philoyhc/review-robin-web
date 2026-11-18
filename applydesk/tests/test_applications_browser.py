@@ -698,6 +698,9 @@ def test_a_cell_set_by_hand_is_marked_and_kept(page: Page) -> None:
     assert not [r for r in rows if who in r and "\tShortlisting\t" in r]
     prop.locator("[data-ap-prop-cancel]").press("Escape")  # Esc is Cancel (AD-104)
     assert prop.is_hidden()
+    prop = _apply_rules(page, only_undecided=False)
+    prop.locator("[data-ap-prop-cancel]").click()  # and so is Cancel
+    assert prop.is_hidden()
     prop = _apply_rules(page, only_undecided=False, replace_hand=True)
     rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
     # Its mean is just under the bar: the rule would not interview it.

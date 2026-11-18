@@ -248,8 +248,9 @@ contact or Timezone left unset reads the operator settings' default
 (`help_contact(e)` / `timezone(e)`, template globals in `applydesk/web.py`).
 Unlocked, each is a field with a line saying where it is used.
 
-- *Lock* keeps the changes on the page; *Discard changes* restores the last
-  kept values. *Unsaved changes* shows, and the browser warns on leaving, from
+- *Lock* keeps the changes on the page; *Discard changes*, or Esc, restores
+  the last kept values, saying *Changes discarded.* only when something
+  changed. *Unsaved changes* shows, and the browser warns on leaving, from
   any change since load.
 - *Lock* refuses an empty Name, an Exercise code another exercise holds (any
   case, saying whose) and a Help contact that is not an email address. The
@@ -582,7 +583,7 @@ AD2.
 
 *Apply rules…* proposes each outcome and gate cell from the rule Process
 holds (branches in order, a form answer from the application's answers, the
-best N), as a proposal the operator approves; a hand-set cell is kept unless
+best N), as a proposal the operator approves (Esc is its *Cancel*); a hand-set cell is kept unless
 *Also replace cells set by hand* is ticked. An outcome whose gates a dossier entered none of is not reached
 and stays as it is, unless its cell is already open (*Pending* or decided) or
 a branch of its rule reads earlier outcomes' values alone and they hold, set
@@ -617,7 +618,8 @@ its load line per panel source (*Ana 6 · Ben 5 …*) and a link, *Assignments
 saved until AD2; a reload restores the sample.
 
 **The gate page**, `…/evaluations/gate_<n>` (`routes_operator.gate_evaluations`),
-404 for a gate the exercise lacks or a draft exercise: the gate's head (its
+404 for a gate the exercise lacks or a draft exercise. Its breadcrumb runs
+Exercise / Evaluations / *Gate n · label*. The gate's head (its
 mode and counts), its load lines and a table with **a row per pair**,
 *Candidate*, *Evaluator*, *Source*, *State*; a dossier with no evaluator yet
 is one row, *None yet*. A blind exercise shows the dossier ID as the
@@ -627,7 +629,8 @@ table is paged and queried in the URL (`offset`, `q`, `sort`), and a link
 keeps all of them.
 
 - **Paging** (`applydesk/paging.py`): 200 rows a page, a pager as Review
-  Robin's rosters, « ‹, a range menu of every page (*201–400*), › »; an
+  Robin's rosters, « ‹, a range menu of every page (*201–400*), › », kept
+  on one line and repeated below a table longer than a page; an
   offset is snapped to a page and one past the last clamps to the last, one
   that is not a whole number is the first page.
 - **Filter**, *Find a candidate or an evaluator*: the candidate's name, email,

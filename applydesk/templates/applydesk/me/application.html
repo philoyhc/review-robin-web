@@ -1,4 +1,5 @@
 {% extends "applydesk/base.html" %}
+{% set crumbed = true %}{# the crumb just under the bar, as an exercise's (cold read) #}
 {% block title %}{{ application.title }}{% endblock %}
 {% block content %}
 <nav class="crumbs" aria-label="Breadcrumb"><a href="{{ url('/me') }}">User Lobby</a><span aria-hidden="true">/</span><a href="{{ url('/me/exercises/' ~ exercise.public_id) }}">{{ exercise.name }}</a><span aria-hidden="true">/</span><span aria-current="page">Your application</span></nav>
