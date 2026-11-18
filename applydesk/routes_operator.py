@@ -254,6 +254,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         interviewers=sample_data.interviewers_of(exercise.public_id),
         extract=extract.of(exercise) if section == "extract" else None,
         dossiers_csv=extract.zip_name(exercise, "dossiers", ext="csv"),
+        redraft_closed=workflow.closed_by(exercise.public_id) if section == "dossiers" else {},
         today=timeline.short(timeline.TODAY),
         all_names=extract.names_by_default(exercise, "all.zip"),
         alias_columns=extract.ALIAS_KEYS,

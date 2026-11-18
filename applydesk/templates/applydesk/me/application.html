@@ -23,6 +23,9 @@
 <div class="btnrow">
   {% if application.state == "Draft" and form_state == "Closed" %}<p class="muted">Applications closed on {{ exercise.application_stage_ends }}.</p>
   {% elif application.state == "Draft" %}<button class="btn btn-secondary" type="button" disabled title="Applying opens with AD4">Save draft</button><button class="btn btn-primary" type="button" disabled title="Applying opens with AD4">Submit</button>
-  {% else %}<button class="btn btn-destructive" type="button" disabled>Withdraw</button>{% endif %}
+  {# Ruling 45: until a gate holding the dossier is sent; Outline-amber,
+     with a confirm once AD4 builds it. #}
+  {% elif application.state == "Submitted" and withdrawal_closed_by %}<p class="muted">You can no longer withdraw: your application has gone to {{ withdrawal_closed_by }}.</p>
+  {% elif application.state == "Submitted" %}<button class="btn btn-alert" type="button" disabled title="Withdrawing comes with AD4">Withdraw</button>{% endif %}
 </div>
 {% endblock %}

@@ -251,6 +251,9 @@ include.
   read-only, its *Apply* saying it is closed; Draft and Archived do not,
   and their application and dossier pages answer 404 (author, 2026-11-18).
   *Your results* is the applicant's own: another application's page shows none.
+  A submitted application may be withdrawn (*Withdraw*, Outline-amber, with a
+  confirm, AD4) until a gate holding its dossier is sent; then the page names the
+  gate it has gone to (`workflow.closed_by`, ruling 45).
   Closing and archiving themselves are not built (AD3).
   A stage left unticked in Process's *Shown to applicants* is not on it
   (`Stage.shown`, ruling 46); the operator's Home shows every stage.
@@ -603,7 +606,10 @@ below. *Lock* keeps what
 changed; *Undo changes* puts the table back as it was when unlocked; meanwhile
 a count of the changes shows. Locked, what differs from the page as loaded
 stays marked (*N changes on this page, not saved until AD2*), and leaving the page with any pending or
-kept asks first. Ticks only choose rows; the *Application* header's tick ticks every
+kept asks first. *Return to draft* is a submitted row's own (Outline-amber)
+until a gate holding its dossier is sent, as withdrawal is, and *Return
+ticked to draft* the ticked rows', gates or none (ruling 45; both AD4). Ticks
+only choose rows; the *Application* header's tick ticks every
 row in view, or clears them, and *Set ticked rows* with none ticked says *No
 rows ticked*. *Download CSV* writes the rows in view in the shape *Upload
 CSV* reads, a cell a spreadsheet would run as a formula guarded with `'` (a

@@ -304,10 +304,12 @@ def test_the_lobby_names_exercises_by_code_not_id(client: TestClient) -> None:
     assert len(set(codes)) == len(codes)
 
 
-def test_withdraw_is_destructive(client: TestClient) -> None:
-    """The applicant cannot undo a withdrawal (author, 2026-11-12)."""
+def test_withdraw_is_outline_amber(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ruling 45 (2026-11-18, over the 2026-11-12 Destructive): Withdraw is
+    Outline-amber, with a confirm once AD4 builds it."""
+    monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Ready", ""))
     page = client.get(f"/applydesk/me/exercises/{EX}/applications/h6zr2tdw9p").text
-    assert '<button class="btn btn-destructive" type="button" disabled>Withdraw</button>' in page
+    assert 'class="btn btn-destructive"' not in page and 'class="btn btn-alert"' in page
 
 
 def test_the_chrome_follows_the_operator_s_workflow(client: TestClient) -> None:
@@ -412,9 +414,25 @@ def test_a_blank_exercise_s_process_is_one_stage_holding_the_form(client: TestCl
     assert 'disabled title="The last stage cannot be deleted">Delete' in text
 
 
-def test_applications_generates_dossiers(client: TestClient) -> None:
+def test_dossiers_returns_to_draft_by_row_and_ticked(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ruling 45: no Generate dossiers; Return to draft on a submitted row
+    until a gate holding its dossier is sent, and for the ticked rows,
+    gates or none."""
     text = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
-    assert "Generate dossiers" in text
+    assert "Generate dossiers" not in text and ">Return ticked to draft</button>" in text
+    # wa9's Gate 1 has results in: every entered dossier is past returning.
+    assert 'aria-label="Return m3qx8vkt2n to draft"' not in text
+    monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Ready", ""))
+    open_ = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
+    assert 'aria-label="Return m3qx8vkt2n to draft">Return to draft</button>' in open_
+    assert 'aria-label="Return f2ps7nyh4k to draft"' not in open_  # a draft
+    # Sent but not yet opened counts as sent (ruling 29's gate still closes it).
+    monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Sent", ""))
+    assert workflow.withdrawal_closed_by(EX, "m3qx8vkt2n") == "Peer review"
+    nogates = client.get("/applydesk/operator/exercises/r6tm4kq9wz/dossiers").text
+    assert ">Return ticked to draft</button>" in nogates
     # Operators open every dossier (author, 2026-11-12).
     assert "/applydesk/me/exercises/wa9juxbc2t/dossiers/p3bd7kq2wx" in text
 
@@ -1709,3 +1727,19 @@ def test_the_outcomes_card_follows_its_file_under_blind_review(
     card = page[page.index('data-xd-card="outcomes"') : page.index('data-xd-card="alias"')]
     assert "Dossier IDs to start with: blind review is on." in card
     assert 'data-xd-v="ids" aria-pressed="true"' in card and "applicant, email" not in card
+
+
+def test_withdrawal_closes_once_a_gate_holding_the_dossier_is_sent(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ruling 45: an applicant may withdraw (Outline-amber, AD4) until a
+    gate holding their dossier is sent; then the page says which."""
+    page = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
+    assert workflow.withdrawal_closed_by("wa9juxbc2t", "m3qx8vkt2n") == "Peer review"
+    assert "your application has gone to Peer review" in page and ">Withdraw</button>" not in page
+    monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Ready", ""))
+    open_page = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
+    assert (
+        'class="btn btn-alert" type="button" disabled title="Withdrawing comes with AD4">Withdraw'
+        in open_page
+    )
