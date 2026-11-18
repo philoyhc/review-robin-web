@@ -173,7 +173,7 @@ def test_an_automatic_gate_re_runs(page: Page, monkeypatch: pytest.MonkeyPatch) 
     assert set(page.locator("tbody [data-ev-state]").all_text_contents()) == {"Filled"}
     page.get_by_role("button", name="Re-run").click()
     assert page.locator("[data-ev-said]").inner_text() == (
-        "Re-run: every dossier filled as its sources give."
+        "Nothing to re-run yet: the pairs are the fill's own until rosters feed it (AD5)."
     )
     # An Automatic gate takes no change by hand, so a re-run leaves the
     # fill as it was and nothing unsaved.

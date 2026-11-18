@@ -72,7 +72,7 @@ where a ruling below differs from it, the ruling wins.
     - An **outcome** (shortlisted, finalist, awarded …) sits after a
       gate or at the end. It is a point on the Timeline, with its own
       date; each outcome has a *Released* switch, and what a release does
-      (to applicants, to reviewers, by email) is set with the Timeline.
+      (to applicants, to reviewers, by email) is set on Process.
     - Rounds, gates, outcomes and their dates are set up on **Setup**
       and the Timeline (*stages, on Process: rulings 14, 15*). **Dossiers** (*Applications* until ruling 25) is the control surface: who
       enters each gate (*—* for no status yet, *Entered*, *Not entered*;
@@ -172,8 +172,8 @@ where a ruling below differs from it, the ruling wins.
       *Update timeline* (the timeline they see on signing in to their
       participant page) and *Send email*.
     - **Emails** lists one template for each item and audience ticked,
-      named for its stage: *Review: Outcome - Applicants*, *Review:
-      Outcome - Panel evaluators*, *Call for applications: Receipt -
+      named for its stage: *Review: Outcome · Applicants*, *Review:
+      Outcome · Panel evaluators*, *Call for applications: Receipt ·
       Applicants*. Each is *Written* or *Owed*; an outcome with one owed
       is not ready to release.
     - So Process is set up in full without visiting Emails first; the

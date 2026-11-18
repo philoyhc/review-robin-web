@@ -544,7 +544,7 @@ NOT_SHOWN_TO_REVIEWERS: tuple[str, ...] = (
 # form's own title and description, then its cards in order. A card is
 # a question or text block ("field"), a section's title ("section") or
 # a page break ("pagebreak"). The applicant pages still read the two
-# lists above until AD4 renders a stored form.
+# lists above until AD4 renders a stored form (AD-26).
 # ASCII digits only, as the page's /^\d+$/: str.isdecimal() takes others.
 _DIGITS = re.compile(r"[0-9]+")
 
@@ -959,7 +959,7 @@ def setup_missing(e: Exercise) -> tuple[tuple[str, str], ...]:
     Process's, then the Form's."""
     missing: list[tuple[str, str]] = []
     if not e.code:
-        missing.append(("Exercise Code", ""))
+        missing.append(("Exercise code", ""))
     if not e.summary:
         missing.append(("Description", ""))
     if e.eligibility == "Not set":

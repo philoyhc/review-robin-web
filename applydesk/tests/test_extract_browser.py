@@ -75,3 +75,36 @@ def test_setup_rides_in_zip_all_when_asked(page: Page) -> None:
     assert "sparts=form%2Cprocess%2Cemails" in _href(page, "all", "all.zip")
     panels = every.locator('[data-xd-page="panels"]')
     assert panels.is_hidden() and every.locator('[data-xd-page="form"]').is_visible()
+
+
+def test_zip_all_carrying_nothing_is_off(page: Page) -> None:
+    """AD-17: with every Carries chip off, Zip all would hold only the
+    manifest, so it is off, saying why."""
+    page.goto(PAGE)
+    every = page.locator('[data-xd-card="all"]')
+    link = every.locator('a[data-xd-dl="all.zip"]')
+    assert link.get_attribute("aria-disabled") is None
+    pressed = every.locator('[data-xd-t][aria-pressed="true"]')
+    while pressed.count():
+        pressed.first.click()
+    assert link.get_attribute("aria-disabled") == "true"
+    assert link.get_attribute("title") == "Tick a file to carry first"
+    assert link.get_attribute("tabindex") == "-1"  # off for the keyboard too
+    every.locator("[data-xd-t]").first.click()
+    assert link.get_attribute("aria-disabled") is None
+
+
+def test_zip_all_carrying_only_setup_with_no_setup_page_is_off(page: Page) -> None:
+    """Cold read: Setup carried, but every Extract setup page off, is
+    still a manifest alone."""
+    page.goto(PAGE)
+    every = page.locator('[data-xd-card="all"]')
+    link = every.locator('a[data-xd-dl="all.zip"]')
+    for part in ("applications", "gates", "outcomes", "setup"):
+        chip = every.locator(f'[data-xd-t="{part}"]')
+        if (chip.get_attribute("aria-pressed") == "true") != (part == "setup"):
+            chip.click()
+    pages = page.locator('[data-xd-card="setup"] [data-xd-t][aria-pressed="true"]')
+    while pages.count():
+        pages.first.click()
+    assert link.get_attribute("aria-disabled") == "true"

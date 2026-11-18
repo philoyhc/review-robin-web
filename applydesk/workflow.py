@@ -35,7 +35,7 @@ APPLICANTS, EVALUATORS = "Applicants", "Panel evaluators"
 class Email:
     """A template owed (ruling 16): Process says which items email whom,
     and Emails lists one template per item and audience, named for its
-    stage, e.g. "Review: Outcome - Applicants". ``item`` is "receipt",
+    stage, e.g. "Review: Outcome · Applicants". ``item`` is "receipt",
     "reminder" or an outcome's key; ``ok`` whether it is written."""
 
     name: str
@@ -133,14 +133,14 @@ def emails(exercise_id: str) -> tuple[Email, ...]:
         if st.form:
             for item, (what, when) in _FORM_MAIL.items():
                 if sends(exercise_id, item, APPLICANTS):
-                    name = f"{st.label}: {what} - {APPLICANTS}"
+                    name = f"{st.label}: {what} · {APPLICANTS}"
                     ok = (item, APPLICANTS) in written
                     out.append(Email(name, when, ok, item, APPLICANTS))
         for c in st.columns:
             if isinstance(c, stages.Outcome):
                 for who in (APPLICANTS, EVALUATORS):
                     if sends(exercise_id, c.key, who):
-                        name = f"{st.label}: Outcome - {who}"
+                        name = f"{st.label}: Outcome · {who}"
                         when = f"When {c.label} is released"
                         out.append(Email(name, when, (c.key, who) in written, c.key, who))
     return tuple(out)

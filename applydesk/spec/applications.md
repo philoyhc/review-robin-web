@@ -241,7 +241,7 @@ include.
 
 ### Details
 
-Name, Exercise Code, Description (`Exercise.summary`), Help contact,
+Name, Exercise code, Description (`Exercise.summary`), Help contact,
 Timezone, Who may apply and Blind review, locked until *Unlock*. A Help
 contact or Timezone left unset reads the operator settings' default
 (`DEFAULT_HELP_CONTACT`, `DEFAULT_TIMEZONE`) followed by *· the default*
@@ -251,10 +251,10 @@ Unlocked, each is a field with a line saying where it is used.
 - *Lock* keeps the changes on the page; *Discard changes* restores the last
   kept values. *Unsaved changes* shows, and the browser warns on leaving, from
   any change since load.
-- *Lock* refuses an empty Name, an Exercise Code another exercise holds (any
+- *Lock* refuses an empty Name, an Exercise code another exercise holds (any
   case, saying whose) and a Help contact that is not an email address. The
   Timezone is chosen from `sample_data.TIMEZONES`, the default first.
-- A published exercise's Exercise Code and Who may apply are fixed, saying
+- A published exercise's Exercise code and Who may apply are fixed, saying
   so; changing them waits for re-publishing (G2).
 - **Blind review** is fixed, with its reason, once the first stage holding a
   gate is published (`locks.blind_lock`).
@@ -500,8 +500,8 @@ pages, it can wait); `workflow.steps` still names the current stage.
   changes pending. Nothing in it is saved.
 - **Emails** (ruling 16). Process picks no template. Each email ticked, the
   form's receipt and reminder or an outcome's *Send email* per audience, is a
-  template owed on the Emails page, named for its stage (*Review: Outcome -
-  Applicants*, *Call for applications: Receipt - Applicants*), one section each
+  template owed on the Emails page, named for its stage (*Review: Outcome ·
+  Applicants*, *Call for applications: Receipt · Applicants*), one section each
   in timeline order with a *Written* or *Owed* chip (`workflow.emails`). An
   outcome with an owed email is not ready to release. `workflow.steps`
   records which audiences' emails are not written, but no page shows it
@@ -702,6 +702,9 @@ from AD2.
   the defaults apply. *Zip all*'s link also takes the other cards' settings
   (Applications' rows and drafts, By gate's shape, Outcomes' rows, Extract
   setup's pages) so the ZIP carries each file as its card is set.
+  While its files line names only `manifest.csv` (nothing carried, or Setup
+  carried with every setup page off), *Zip all* is off, titled *Tick a file
+  to carry first*.
 
 | Card | Chips (default first) | Download |
 |---|---|---|
@@ -775,7 +778,7 @@ from AD2.
     settings in `detail` as `name=value; …`, enough to rebuild the gate);
     `panels.csv` (panel, name, email, note); `emails.csv` (each template
     owed and whether it is written).
-- **The ZIPs.** Named `<code>_<kind>_<date>.zip` (the Exercise Code, or the
+- **The ZIPs.** Named `<code>_<kind>_<date>.zip` (the Exercise code, or the
   ID if none, as a file-name slug; today's date; kind `extract`, `gates` or
   `setup`), each with `manifest.csv` first: a row per file with its row
   count, then a row per gate left out with the note *Not sent*. *Zip all*

@@ -54,7 +54,7 @@ def test_a_release_waits_on_its_emails_and_a_withdrawn_one_too(page: Page) -> No
     selection = page.locator('[data-ap-release="Selection"]')
     assert selection.is_disabled()
     title = page.locator('th[data-col="o2"] .ap-rel').get_attribute("title") or ""
-    assert title.startswith("Write its emails on Emails first: Interviews: Outcome - Applicants")
+    assert title.startswith("Write its emails on Emails first: Interviews: Outcome · Applicants")
     shortlisting = page.locator('[data-ap-release="Shortlisting"]')
     assert shortlisting.is_enabled()  # released already: it may be withdrawn
     said: list[str] = []

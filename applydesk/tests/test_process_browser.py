@@ -422,8 +422,8 @@ def test_an_outcome_s_weights_follow_the_gates_before_it(page: Page) -> None:
     names = weights.locator("[data-w-name]").all_inner_texts()
     assert names == [
         "Rating at Peer Review",
-        "Score at Faculty Panel Review",
-        "Recommendation at Faculty Panel Review",
+        "Score at Faculty Panel review",
+        "Recommendation at Faculty Panel review",
         "Untitled result at Extra",
     ]
     assert weights.locator("[data-w-key]").evaluate_all("els => els.map(e => e.value)")[:2] == [
@@ -635,8 +635,8 @@ def test_an_open_editor_follows_gates_added_and_renamed(page: Page) -> None:
     # A gate's results a rule can read (ruling 21): not its comments.
     assert result.evaluate("e => [...e.options].map(o => o.text)") == [
         "Rating at Peer Review",
-        "Score at Faculty Panel Review",
-        "Recommendation at Faculty Panel Review",
+        "Score at Faculty Panel review",
+        "Recommendation at Faculty Panel review",
         "Untitled result at Extra",
     ]
     assert result.input_value() == "g1.r1"  # its rule still reads the result it read
@@ -732,7 +732,7 @@ def test_items_open_and_shut_their_heads_always_named(page: Page) -> None:
         False,
     ]
     heads = review.locator("[data-pi-name]").all_inner_texts()
-    assert heads == ["Peer Review", "Faculty Panel Review", "Shortlist for interview"]
+    assert heads == ["Peer Review", "Faculty Panel review", "Shortlist for interview"]
     g1 = review.locator('.pc-item[data-key="g1"]')
     assert g1.locator(".chip").first.text_content() == "Results in"
     assert not g1.locator('[data-pc="item-name"]').is_visible()
