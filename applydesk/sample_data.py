@@ -975,6 +975,20 @@ def exercise(public_id: str) -> Exercise | None:
     return next((e for e in EXERCISES if e.public_id == public_id), None)
 
 
+#: The signed-in applicant's applications on the /me pages, a submitted one
+#: and a draft, until AD2 matches them by email (AD-27).
+MINE = ("m3qx8vkt2n", "f2ps7nyh4k")
+
+
+def my_applications(exercise_id: str | None = None) -> tuple[Application, ...]:
+    """The sample applicant's applications, of one exercise or all (AD-27)."""
+    return tuple(
+        a
+        for a in APPLICATIONS
+        if a.public_id in MINE and (exercise_id is None or a.exercise_id == exercise_id)
+    )
+
+
 def applications_of(exercise_id: str) -> tuple[Application, ...]:
     return tuple(a for a in APPLICATIONS if a.exercise_id == exercise_id)
 

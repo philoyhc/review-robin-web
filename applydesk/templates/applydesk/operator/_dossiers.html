@@ -10,7 +10,7 @@
 {% set last = last_submitted(plan.rows) %}
 {% set rank = submitted_rank(plan.rows) %}
 {% set cols = plan.columns %}
-<div class="ap" data-applications>
+<div class="ap" data-applications data-ap-csv-name="{{ dossiers_csv }}">
   <div class="ap-tool">
     <input type="search" class="ap-search" data-ap-search placeholder="Search ID, name or email" aria-label="Search applications">
     <select class="ap-sel" data-ap-status aria-label="Status">
@@ -60,7 +60,7 @@
         {% for r in plan.stages if r.columns and r is not sameas ast %}<th class="ap-r" colspan="{{ r.columns | length }}"><b>{{ r.label }}</b><span class="ap-when">{{ r.dates }}</span></th>{% endfor %}
       </tr>
       <tr>
-        <th class="ap-first">Application</th>
+        <th class="ap-first"><input type="checkbox" data-ap-tick-all aria-label="Tick every row in view"> Application</th>
         <th>Applicant</th>
         <th>Status<span class="ap-count" data-ap-count="status"></span></th>
         {% for r in plan.stages %}{% for c in r.columns %}
@@ -140,7 +140,7 @@
   var CYCLE = ["—", "Entered", "Not entered"];
   // Not yet decided: a gate's —, an outcome's Pending or its "—" ("").
   function undecided(v) { return v === "—" || v === "Pending" || v === ""; }
-  var TODAY = "13 Nov";
+  var TODAY = {{ today | tojson }};  // the one clock, timeline.TODAY (AD-40)
   var rows = Array.prototype.slice.call(root.querySelectorAll("[data-row]"));
   var heads = Array.prototype.slice.call(root.querySelectorAll("th[data-col]"));
 
@@ -173,7 +173,7 @@
     var s = {};
     rows.forEach(function (r) { s[r.dataset.status] = (s[r.dataset.status] || 0) + 1; });
     root.querySelector('[data-ap-count="status"]').textContent = ["Submitted", "Draft", "Withdrawn"]
-      .filter(function (k) { return s[k]; }).map(function (k) { return s[k] + " " + k.toLowerCase(); }).join(" · ");
+      .filter(function (k) { return s[k]; }).map(function (k) { return s[k] + " " + k.toLowerCase() + (k === "Draft" && s[k] !== 1 ? "s" : ""); }).join(" · ");  // "3 drafts" (AD-41)
   }
   function setAdm(btn, v) {
     btn.dataset.v = v;
@@ -346,10 +346,25 @@
       if (on) n += 1;
     });
     shown.textContent = "Showing " + n + " of " + rows.length;
+    if (tickAll) drawTickAll();
   }
   [search, status, which].forEach(function (el) { el.addEventListener("input", filter); });
 
-  // Set the ticked rows: one value for one column.
+  // Set the ticked rows: one value for one column. The header's tick
+  // ticks every row in view, or clears them (AD-22).
+  var tickAll = root.querySelector("[data-ap-tick-all]");
+  function ticked() { return rows.filter(function (r) { return !r.hidden && r.querySelector("[data-ap-tick]").checked; }); }
+  function drawTickAll() {
+    var inView = rows.filter(function (r) { return !r.hidden; }).length, n = ticked().length;
+    tickAll.checked = inView > 0 && n === inView;
+    tickAll.indeterminate = n > 0 && n < inView;
+  }
+  tickAll.addEventListener("change", function () {
+    var on = tickAll.checked;
+    rows.forEach(function (r) { if (!r.hidden) r.querySelector("[data-ap-tick]").checked = on; });
+    drawTickAll();
+  });
+  root.addEventListener("change", function (e) { if (e.target.matches("[data-ap-tick]")) drawTickAll(); });
   var setCol = root.querySelector("[data-ap-set-col]"), setVal = root.querySelector("[data-ap-set-val]");
   function values() {
     if (!setCol) return;
@@ -363,6 +378,8 @@
     setCol.addEventListener("change", values);
     root.querySelector("[data-ap-set]").addEventListener("click", function () {
       if (!unlocked) return;
+      // Nothing ticked in view is said, not silently done (AD-22).
+      if (!ticked().length) { said.textContent = "No rows ticked: tick the rows to set first."; return; }
       rows.forEach(function (r) {
         if (r.hidden || !r.querySelector("[data-ap-tick]").checked) return;
         var el = r.querySelector('[data-cell="' + setCol.value + '"] [data-v]');
@@ -687,7 +704,10 @@
   function fromCsv(name, text) {
     var table = parseCsv(text.replace(/^﻿/, ""));
     if (!table.length) { propose("Upload CSV: " + name, [], ["The file is empty."], csvOpen); return; }
-    var header = table[0].map(function (h) { return h.trim(); });
+    // Download CSV's guard undone, as Panels' unguard: a header or a cell
+    // that came back as "'=…" reads as it was written (AD-66).
+    function unguard(v) { return /^'[=+\-@\t\r]/.test(v) ? v.slice(1) : v; }
+    var header = table[0].map(function (h) { return unguard(h.trim()); });
     var idAt = header.map(function (h) { return h.toLowerCase(); }).indexOf("application id");
     if (idAt < 0) { propose("Upload CSV: " + name, [], ["No \"Application ID\" column: the first row names the columns."], csvOpen); return; }
     var keys = header.map(function (h, i) { return i === idAt ? null : columnFor(h); });
@@ -709,7 +729,7 @@
       if (!r) { unknown.push(id || "(blank, line " + (n + 2) + ")"); return; }
       keys.forEach(function (key, i) {
         if (!key) return;
-        var raw = (line[i] || "").trim();
+        var raw = unguard((line[i] || "").trim());
         if (!raw) return;  // blank: leave the cell as it is
         var typed = raw;
         if (raw === "-" || raw === "–") raw = "—";  // no status yet, as a keyboard or a spreadsheet types it
@@ -743,11 +763,17 @@
       if (!f || !unlocked) return;
       f.text().then(function (text) { if (unlocked) fromCsv(f.name, text); });
     });
-    // The table as it stands, in the shape an upload reads.
+    // The rows in view, in the shape an upload reads (AD-66): a cell a
+    // spreadsheet would run as a formula is guarded, as Panels' csvCell;
+    // a lone "-" (no status) is not one.
     root.querySelector("[data-ap-csv-down]").addEventListener("click", function () {
-      function q(v) { return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+      function q(v) {
+        if (v !== "-" && /^[=+\-@\t\r]/.test(v)) v = "'" + v;
+        return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+      }
       var lines = [["Application ID", "Applicant", "Email", "Status"].concat(heads.map(function (h) { return h.dataset.label; })).map(q).join(",")];
       rows.forEach(function (r) {
+        if (r.hidden) return;
         var cells = [idOf(r), whoOf(r), r.querySelector(".ap-mail").textContent, r.dataset.status].concat(heads.map(function (h) {
           // "-" for no status: plain ASCII survives a spreadsheet's round trip.
           var el = cellOf(r, h.dataset.col); return el ? (el.dataset.v === "—" ? "-" : el.dataset.v) : "";
@@ -756,7 +782,7 @@
       });
       var a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob(["\ufeff" + lines.join("\n") + "\n"], { type: "text/csv" }));
-      a.download = "applications.csv";
+      a.download = root.dataset.apCsvName;
       document.body.appendChild(a); a.click(); a.remove();
     });
   }

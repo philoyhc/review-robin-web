@@ -1126,14 +1126,32 @@ def test_what_uses_each_panel_and_what_was_sent_with_it() -> None:
     assert workflow.panels_sent(DRAFT) == {}
 
 
+def test_every_panel_source_of_a_gate_counts(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AD-49: a second-rank panel source is used by its gate and kept with
+    it once the gate's session opens; a gate merely sent keeps nothing."""
+    import dataclasses
+
+    plan = stages.plan_of(EX)
+    g1 = next(c for c in plan.columns if isinstance(c, stages.Gate) and c.number == 1)
+    two = (stages.Source("panel", "current-ras", 1, 2), stages.Source("panel", "office", 0, 1))
+    g1b = dataclasses.replace(g1, sources=two)
+    assert stages.gate_panels(EX, g1b) == ("current-ras", "office")
+    sts = tuple(
+        dataclasses.replace(st, columns=tuple(g1b if c is g1 else c for c in st.columns))
+        for st in plan.stages
+    )
+    monkeypatch.setattr(stages, "plan_of", lambda _id: dataclasses.replace(plan, stages=sts))
+    assert stages.panel_uses(EX)["office"] == ("Gate 1: Peer review", "Gate 2: Office checks")
+    assert workflow.panels_sent(EX)["office"] == ("Gate 1", "Gate 2")
+    monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Sent", ""))  # not yet opened
+    assert workflow.panels_sent(EX) == {}
+
+
 def test_panels_says_a_sent_gate_keeps_its_roster(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/panels").text
-    note = (
-        "Gate 1 was sent with the roster as it then stood:"
-        " a gate keeps that roster once its session opens (ruling 29)."
-    )
+    note = "Gate 1 has opened with the roster as it then stood, and keeps it (ruling 29)."
     assert f'<span class="pn-sent">{note}</span>' in text  # under Manage panels
-    assert f'title="{note}">Sent</span>' in text  # and as its column's chip
+    assert f'title="{note}">Opened</span>' in text  # and as its column's chip
     item = text[text.index('<li data-panel="residential-staff">') :]
     assert "sent" not in item[: item.index("</li>")]  # the staff interview: not yet sent
 
@@ -1513,3 +1531,32 @@ def test_crumbs_and_headings_after_the_register(client: TestClient) -> None:
     # The pager twice on a long table, its count once (AD-108).
     assert gate.count("data-ev-pager-foot") == 1 + gate.count(".ev-pager[data-ev-pager-foot]")
     assert gate.count("data-ev-showing") == 1
+    # The gate's state and its Review Robin action in its head (AD-23).
+    head = gate[gate.index('class="ev-head"') : gate.index("</div>", gate.index('class="ev-head"'))]
+    assert "data-gate-state>Results in<" in head  # done: no action left
+    g2 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text  # Ready
+    head = g2[g2.index('class="ev-head"') : g2.index("</div>", g2.index('class="ev-head"'))]
+    assert "data-gate-state" in head and "comes with AD6" in head
+
+
+def test_the_applicant_reaches_each_of_their_applications(client: TestClient) -> None:
+    """AD-27: the lobby and the exercise page list each of the applicant's
+    applications, the draft included."""
+    me = "/applydesk/me/exercises/wa9juxbc2t"
+    lobby = client.get("/applydesk/me").text
+    page = client.get(me).text
+    for app in ("m3qx8vkt2n", "f2ps7nyh4k"):
+        assert f'href="{me}/applications/{app}"' in lobby
+        assert f'href="{me}/applications/{app}"' in page
+
+
+def test_one_count_of_applications_everywhere(client: TestClient) -> None:
+    """AD-41: the lobby, Home and the status row count the same submitted
+    applications, drafts and the withdrawn one apart; "draft" pluralized."""
+    c = workflow.counts_of(EX)
+    assert (c.submitted, c.drafts) == (100, 3)
+    assert workflow.plural(1, "draft") == "1 draft" and workflow.plural(3, "draft") == "3 drafts"
+    lobby = client.get("/applydesk/operator").text
+    assert "<th>Submitted</th>" in lobby and "<td>100</td>" in lobby
+    home = client.get(f"/applydesk/operator/exercises/{EX}").text
+    assert "100 submitted · 3 drafts" in home

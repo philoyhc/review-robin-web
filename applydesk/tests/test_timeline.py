@@ -112,7 +112,10 @@ def test_home_is_the_timeline_beside_details(client: TestClient) -> None:
     assert "<dt>Description</dt>" in details and "Summary" not in details
     assert 'data-dt-lock title="Unlock the details to change them">Unlock' in details
     # The line under the timeline points to where the stage is worked.
-    assert f'<a href="/applydesk/operator/exercises/{EX}/evaluations">Go to Evaluations</a>' in home
+    # Its gate's own page, where the pairs are (AD-24).
+    assert (
+        f'<a href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Go to Gate 3</a>' in home
+    )
 
 
 def test_a_draft_s_home_says_what_publishing_needs(client: TestClient) -> None:
@@ -274,3 +277,20 @@ def test_home_draws_the_operator_part_and_links_where_it_is_worked(client: TestC
     assert home.count("data-tl-op") == 3 and 'class="card tl tl-ops"' in home
     assert f'href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Gate 3</a>' in home
     assert f'href="/applydesk/operator/exercises/{EX}/dossiers">Dossiers</a>' in home
+
+
+def test_the_running_gate_is_the_one_being_worked(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AD-24, cold read: in a stage of several gates, the first whose
+    results are not in; all in, the last."""
+    from applydesk import workflow
+
+    e = sample_data.exercise(EX)
+    assert e is not None
+    tl = timeline.of(e, today=date(2026, 10, 20))  # inside stage 2: Gates 1 and 2
+    assert tl.now is not None and tl.now.number == 2
+    assert timeline.running_gate(e, tl) == 2  # both results in: the last
+    states = {"g1": ("Results in", ""), "g2": ("Sent", "3 of 100 reviewed")}
+    monkeypatch.setattr(workflow, "gate_state", lambda _e, k: states.get(k, ("Ready", "")))
+    assert timeline.running_gate(e, tl) == 2
+    states["g1"] = ("Sent", "")
+    assert timeline.running_gate(e, tl) == 1

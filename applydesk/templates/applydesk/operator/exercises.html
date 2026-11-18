@@ -5,7 +5,7 @@
 {% include "applydesk/_placeholder.html" %}
 <div class="table-wrap">
 <table>
-  <thead><tr><th>Exercise</th><th>Exercise code</th><th>State</th><th>Stage</th><th>Applications</th><th>Applications close</th></tr></thead>
+  <thead><tr><th>Exercise</th><th>Exercise code</th><th>State</th><th>Stage</th><th>Submitted</th><th>Applications close</th></tr></thead>
   <tbody>
   {% for e in exercises %}
     <tr>
@@ -13,7 +13,7 @@
       <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
       <td>{% with value = exercise_status(e) %}{% include "applydesk/_state_chip.html" %}{% endwith %}</td>
       <td>{{ current_stage(e) }}</td>
-      <td>{{ applications(e.public_id) | length }}</td>
+      <td>{{ "{:,}".format(counts(e.public_id).submitted) }}</td>
       <td>{{ e.application_stage_ends }}</td>
     </tr>
   {% endfor %}

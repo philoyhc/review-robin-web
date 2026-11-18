@@ -29,7 +29,7 @@ def exercises(request: Request) -> Response:
         area=OPERATOR_LOBBY,
         exercises=sample_data.EXERCISES,
         exercise_status=locks.exercise_status,
-        applications=sample_data.applications_of,
+        counts=workflow.counts_of,
         current_stage=workflow.current_stage,
     )
 
@@ -48,7 +48,7 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         tl=tl,
         short=timeline.short,
         next_line=timeline.next_step(exercise, tl),
-        gate_running=timeline.gate_running(exercise, tl),
+        running_gate=timeline.running_gate(exercise, tl),
         ops=home_ops.of(exercise),
         missing=sample_data.setup_missing(exercise),
         timezones=sample_data.TIMEZONES,
@@ -253,6 +253,8 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         pool=sample_data.pool_of(exercise.public_id),
         interviewers=sample_data.interviewers_of(exercise.public_id),
         extract=extract.of(exercise) if section == "extract" else None,
+        dossiers_csv=extract.zip_name(exercise, "dossiers", ext="csv"),
+        today=timeline.short(timeline.TODAY),
         all_names=extract.names_by_default(exercise, "all.zip"),
         alias_columns=extract.ALIAS_KEYS,
         setup_files=extract.SETUP_FILES,

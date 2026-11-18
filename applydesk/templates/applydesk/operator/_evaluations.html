@@ -13,6 +13,7 @@
   <p class="muted">Add stages and gates on Process; each one's progress shows here once it is sent.</p>
 </section>
 {% else %}
+{% import "applydesk/operator/_gate_state.html" as gs %}
 <section class="card">
   <h2>Gates</h2>
   <div class="table-wrap">
@@ -23,9 +24,9 @@
       {% set st = gate_state(exercise.public_id, g.key) %}
       <tr data-gate="{{ g.key }}"><td><span class="muted">Gate {{ g.number }}</span><br><strong>{{ g.label }}</strong></td>
         <td>Review Robin</td>
-        <td><span class="chip chip-{{ 'ok' if st[0] == 'Results in' else ('info' if st[0] in ('Sent', 'Ready') else 'warn') }}">{{ st[0] }}</span></td>
+        <td>{{ gs.chip(st) }}</td>
         <td>{{ st[1] or "—" }}</td>
-        <td>{% if st[0] == "Sent" %}<button class="btn btn-secondary" type="button" disabled title="Pulling results comes with AD6">Pull results</button>{% elif st[0] in ("Not ready", "Ready") %}<button class="btn btn-secondary" type="button" disabled title="Sending comes with AD6">Send to Review Robin</button>{% endif %}</td></tr>
+        <td>{{ gs.action(st) }}</td></tr>
     {% endfor %}
     </tbody>
   </table>

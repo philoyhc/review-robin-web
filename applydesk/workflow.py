@@ -151,15 +151,38 @@ def outcome_emails(exercise_id: str, outcome_key: str) -> tuple[Email, ...]:
     return tuple(e for e in emails(exercise_id) if e.item == outcome_key)
 
 
+@dataclass(frozen=True)
+class Counts:
+    """An exercise's applications by state, the one count every page uses
+    (AD-41): the lobby, Home's form line and the status row."""
+
+    submitted: int
+    drafts: int
+    withdrawn: int
+
+
+def counts_of(exercise_id: str) -> Counts:
+    apps = sample_data.applications_of(exercise_id)
+    return Counts(
+        sum(a.state == "Submitted" for a in apps),
+        sum(a.state == "Draft" for a in apps),
+        sum(a.state == "Withdrawn" for a in apps),
+    )
+
+
+def plural(n: int, one: str, many: str = "") -> str:
+    """ "1 draft", "3 drafts": the one pluralizer (AD-41)."""
+    return f"{n:,} {one if n == 1 else (many or one + 's')}"
+
+
 def status_row(exercise: Exercise) -> tuple[Pill, ...]:
     """The chrome's status row: the exercise, then the form, gates,
     outcomes and emails, then applications received."""
     plan = stages.plan_of(exercise.public_id)
     gates = [c for c in plan.columns if isinstance(c, stages.Gate)]
     outcomes = [c for c in plan.columns if isinstance(c, stages.Outcome)]
-    apps = sample_data.applications_of(exercise.public_id)
-    submitted = sum(a.state == "Submitted" for a in apps)
-    drafts = sum(a.state == "Draft" for a in apps)
+    counted = counts_of(exercise.public_id)
+    submitted, drafts = counted.submitted, counted.drafts
     # The exercise's status follows its stages (segment AD1K); imported
     # here, as locks reads this module.
     from applydesk import locks
@@ -194,8 +217,7 @@ def status_row(exercise: Exercise) -> tuple[Pill, ...]:
         # With the drafts, as Home's Counts card had them (segment AD1I).
         Pill(
             "Applications",
-            f"{submitted} submitted"
-            + (f" · {drafts} {'draft' if drafts == 1 else 'drafts'}" if drafts else ""),
+            f"{submitted:,} submitted" + (f" · {plural(drafts, 'draft')}" if drafts else ""),
             "info" if submitted else "mute",
         ),
     )
@@ -224,7 +246,6 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
     the close (ruling 15). An exercise whose applications came from
     elsewhere has no form step."""
     plan = stages.plan_of(exercise.public_id)
-    apps = sample_data.applications_of(exercise.public_id)
     form = form_state(exercise)
     out: list[Step] = []
     for r in plan.stages:
@@ -236,7 +257,9 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
                     "Application form",
                     form,
                     r.dates,
-                    f"{len(apps)} received" if form != "Draft" else "Not open yet",
+                    f"{counts_of(exercise.public_id).submitted:,} submitted"
+                    if form != "Draft"
+                    else "Not open yet",
                     {"Draft": "Open form…", "Open": "Close form…"}.get(form, ""),
                     form == "Closed",
                 )
@@ -321,12 +344,13 @@ def current_stage(exercise: Exercise) -> str:
 
 
 def panels_sent(exercise_id: str) -> dict[str, tuple[str, ...]]:
-    """The sent gates each panel evaluates, by panel key (AD1F Semantics):
-    a gate already sent keeps the roster it was sent with, which the
-    Panels page says, e.g. {"panel-a": ("Gate 1",)}."""
+    """The opened gates each panel evaluates, by panel key (AD1F
+    Semantics, ruling 29): a gate whose Review Robin session has opened
+    keeps the roster it opened with, which the Panels page says, e.g.
+    {"panel-a": ("Gate 1",)}. Every panel source counts (AD-49)."""
     sent: dict[str, list[str]] = {}
     for c in stages.plan_of(exercise_id).columns:
-        state = gate_state(exercise_id, c.key)[0] if isinstance(c, stages.Gate) else ""
-        if isinstance(c, stages.Gate) and c.panel and state in ("Sent", "Results in"):
-            sent.setdefault(c.panel, []).append(f"Gate {c.number}")
+        if isinstance(c, stages.Gate) and gate_opened(*gate_state(exercise_id, c.key)):
+            for key in stages.gate_panels(exercise_id, c):
+                sent.setdefault(key, []).append(f"Gate {c.number}")
     return {k: tuple(v) for k, v in sent.items()}

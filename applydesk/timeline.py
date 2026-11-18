@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
-from applydesk import stages
+from applydesk import stages, workflow
 from applydesk.sample_data import Exercise
 
 #: The sample's today (the model exercise is mid Stage 3, ruling 30).
@@ -150,7 +150,15 @@ def next_step(e: Exercise, t: Timeline) -> str:
     return line
 
 
-def gate_running(e: Exercise, t: Timeline) -> bool:
-    """Whether the stage under way holds a gate, so the Next step line
-    points to Evaluations, where it is worked (a draft's never does)."""
-    return e.state != "Draft" and t.now is not None and any(i.kind == "step" for i in t.now.items)
+def running_gate(e: Exercise, t: Timeline) -> int | None:
+    """The gate being worked in the stage under way, so the Next step line
+    points to its page (AD-24): the stage's first gate whose results are
+    not in, else its last; none for a draft, or a stage holding no gate."""
+    if e.state == "Draft" or t.now is None:
+        return None
+    st = next((s for s in stages.plan_of(e.public_id).stages if s.number == t.now.number), None)
+    gates = [c for c in st.columns if isinstance(c, stages.Gate)] if st else []
+    if not gates:
+        return None
+    working = (g for g in gates if workflow.gate_state(e.public_id, g.key)[0] != "Results in")
+    return next(working, gates[-1]).number

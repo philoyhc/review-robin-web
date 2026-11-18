@@ -1,0 +1,5 @@
+{# A gate's state chip and its Review Robin action, as Evaluations' Gates
+   table and the gate page's head both show them (AD-23); ``st`` is
+   workflow.gate_state's (state, progress). Sending and pulling are AD6's. #}
+{% macro chip(st) %}<span class="chip chip-{{ 'ok' if st[0] == 'Results in' else ('info' if st[0] in ('Sent', 'Ready') else 'warn') }}" data-gate-state>{{ st[0] }}</span>{% endmacro %}
+{% macro action(st) %}{% if st[0] == "Sent" %}<button class="btn btn-secondary" type="button" disabled title="Pulling results comes with AD6">Pull results</button>{% elif st[0] in ("Not ready", "Ready") %}<button class="btn btn-secondary" type="button" disabled title="Sending comes with AD6">Send to Review Robin</button>{% endif %}{% endmacro %}

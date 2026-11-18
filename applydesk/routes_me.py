@@ -23,7 +23,7 @@ def me(request: Request) -> Response:
         "applydesk/me/home.html",
         area=USER_LOBBY,
         exercises=exercises,
-        mine=sample_data.APPLICATIONS[:1],
+        mine=sample_data.my_applications(),
         dossiers=[
             (sample_data.exercise(a.exercise_id), a) for a in sample_data.APPLICATIONS[1:5:2]
         ],
@@ -44,6 +44,7 @@ def exercise(request: Request, exercise_id: str) -> Response:
         exercise=found,
         tl=timeline.of(found),
         short=timeline.short,
+        mine=sample_data.my_applications(found.public_id),
     )
 
 

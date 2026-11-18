@@ -188,8 +188,8 @@ Home, `/operator/exercises/<id>`, is two columns: the **Timeline** card
 Details below. The status row (`workflow.status_row`) opens with the exercise's status,
 derived from its stages ("Stage status"), and carries *Applications: N
 submitted · M drafts*. Under the timeline a *Next step* line says where
-today falls (`timeline.next_step`), with *Go to Evaluations* while a gate runs
-(`timeline.gate_running`). Home has no Publish card: publishing is per stage,
+today falls (`timeline.next_step`), with *Go to Gate N*, its page under Evaluations, while a gate runs
+(`timeline.running_gate`). Home has no Publish card: publishing is per stage,
 on Process, and the timeline's operator part says what blocks each stage.
 Cards side by
 side share a height only when within a fifth of the taller; a short card
@@ -237,6 +237,9 @@ include.
   *Pending*, linking to Dossiers. It never appears on the applicant's page.
 - **The applicant's page** draws the same partial beside *Apply*, without the
   operator's part or the Next step line, and shows only a Published exercise.
+  *Apply* links each of the applicant's own applications there (*Your
+  application*), as the User Lobby's *My applications* lists them all
+  (`sample_data.my_applications` until AD2).
   A per-stage *Shown to applicants* is not modelled: every stage shows.
 
 ### Details
@@ -531,8 +534,8 @@ A panel made on Form or Process appears here only once saved (AD2).
   - *Panels*: each panel's name edited in place, *Copy emails* (its addresses,
     comma-separated, to the clipboard) and *Retire*, disabled with its
     reason while a question or gate uses the panel. Each shows its count and
-    *Used by* (*Gate 1: Peer Review*) or *Not used yet*; a sent panel says it
-    is kept as sent.
+    *Used by* (*Gate 1: Peer Review*) or *Not used yet*; a panel an opened
+    gate uses says that gate keeps it.
   - *Add new panel*: *Name*, then *People* (*None: a blank panel* or *Copy
     from* a panel). A blank panel takes *Members* in the token box Form's
     *+ New panel…* has; a row is added for anyone not yet in the table.
@@ -563,8 +566,10 @@ A panel made on Form or Process appears here only once saved (AD2).
   directory, is a pill, clicked to change it; unticked it reads as text, red
   when the directory has no such person. There is no page *Save*.
 - **Checks.** An email is required, found in the directory and listed once.
-- **A sent gate** (`workflow.gate_state`: *Sent*, *Results in*) keeps the
-  roster it was sent with: its panel says so here and on Process.
+- **An opened gate** (`workflow.gate_opened`: its Review Robin session has
+  opened, ruling 29) keeps the roster it opened with: its panel says so here,
+  with an *Opened* chip, and on Process. Every panel source of a gate counts
+  (`stages.gate_panels`), for *Used by* and the *Retire* guard too.
 
 ## The Dossiers page
 
@@ -578,8 +583,12 @@ locked until *Unlock*; then every cell, *Set ticked rows*, *Apply rules…*,
 below. *Lock* keeps what
 changed; *Undo changes* puts the table back as it was when unlocked; meanwhile
 a count of the changes shows, and leaving the page with any pending asks
-first. Ticks only choose rows. The page has no *Save*; nothing is kept until
-AD2.
+first. Ticks only choose rows; the *Application* header's tick ticks every
+row in view, or clears them, and *Set ticked rows* with none ticked says *No
+rows ticked*. *Download CSV* writes the rows in view in the shape *Upload
+CSV* reads, a cell a spreadsheet would run as a formula guarded with `'` (a
+lone `-`, no status, is not), named `<code>_dossiers_<date>.csv`; *Upload
+CSV* undoes the guard. The page has no *Save*; nothing is kept until AD2.
 
 *Apply rules…* proposes each outcome and gate cell from the rule Process
 holds (branches in order, a form answer from the application's answers, the
@@ -620,7 +629,8 @@ saved until AD2; a reload restores the sample.
 **The gate page**, `…/evaluations/gate_<n>` (`routes_operator.gate_evaluations`),
 404 for a gate the exercise lacks or a draft exercise. Its breadcrumb runs
 Exercise / Evaluations / *Gate n · label*. The gate's head (its
-mode and counts), its load lines and a table with **a row per pair**,
+state chip, as Evaluations' Gates table, its mode and counts, and its
+disabled *Send to Review Robin* or *Pull results*, AD6), its load lines and a table with **a row per pair**,
 *Candidate*, *Evaluator*, *Source*, *State*; a dossier with no evaluator yet
 is one row, *None yet*. A blind exercise shows the dossier ID as the
 candidate. The pairs are `stages.assignments`, drawn as the gate's mode and
