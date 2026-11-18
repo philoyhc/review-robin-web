@@ -171,10 +171,12 @@ def extract_file(
     shape: str = "",
     applicants: str = "",
     carries: str = "",
+    orows: str = "",
 ) -> Response:
     """Extract data's downloads (segment AD1J, rung 3), shaped by the
     cards' chips: ``rows`` last|all, ``drafts`` 1, ``shape`` pair|application,
-    ``applicants`` names|ids, ``carries`` the ZIP's files. Sample data;
+    ``applicants`` names|ids, ``carries`` the ZIP's files, ``orows`` the
+    ZIP's outcomes rows (the Outcomes card's). Sample data;
     logged from AD2."""
     exercise = exercise_or_404(exercise_id)
     rows = _pick(rows, ("last", "all"))
@@ -202,7 +204,13 @@ def extract_file(
         names = _pick(applicants, ("names", "ids")) == "names"
         wanted = frozenset(carries.split(",")) if carries else extract.CARRIES
         body = extract.all_zip(
-            exercise, wanted & extract.CARRIES, names, rows, drafts == "1", shape
+            exercise,
+            wanted & extract.CARRIES,
+            names,
+            rows,
+            drafts == "1",
+            shape,
+            _pick(orows, ("last", "all")),
         )
         return _download(f"{code}_extract.zip", body, "application/zip")
     raise HTTPException(status_code=404)

@@ -294,10 +294,13 @@ def all_zip(
     rows: str = "last",
     drafts: bool = False,
     shape: str = "pair",
+    outcome_rows: str = "last",
 ) -> bytes:
     """*Extract all data*: the files the cards make as each is set, the
     applicants named or not as the card says (the applications file is
-    the applicants' own, so it always names them)."""
+    the applicants' own, so it always names them). ``rows`` and ``drafts``
+    are the Applications card's, ``shape`` By gate's, ``outcome_rows``
+    the Outcomes card's (Codex)."""
     x = of(e)
     files: list[tuple[str, Table]] = []
     notes: list[tuple[str, str]] = []
@@ -311,5 +314,5 @@ def all_zip(
             else:
                 files.append((g.name, table))
     if "outcomes" in carries:
-        files.append(("outcomes.csv", outcomes(e, rows, names)))
+        files.append(("outcomes.csv", outcomes(e, outcome_rows, names)))
     return _zip(files, notes)

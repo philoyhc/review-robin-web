@@ -32,7 +32,15 @@ def test_chips_shape_the_links_and_are_kept(page: Page) -> None:
     every = page.locator('[data-xd-card="all"]')
     every.get_by_role("button", name="Applications").click()
     assert "carries=gates%2Coutcomes" in _href(page, "all", "all.zip")
+    # Zip all carries each file as its own card is set (Codex).
+    zip_all = _href(page, "all", "all.zip")
+    assert "rows=all" in zip_all and "drafts=1" in zip_all and "shape=application" in zip_all
+    out = page.locator('[data-xd-card="outcomes"]')
+    assert "orows=last" in zip_all
+    out.get_by_role("button", name="All applications").click()
+    assert "orows=all" in _href(page, "all", "all.zip")
     page.reload()  # kept in this browser
+    assert "drafts=1" in _href(page, "all", "all.zip")  # drawn after every card's chips are back
     assert apps.get_by_role("button", name="All applications").get_attribute("aria-pressed") == (
         "true"
     )

@@ -101,8 +101,20 @@
     if (card.querySelector("[data-xd-t]:not([disabled])")) q.set("carries", carries.map(function (t) { return t.dataset.xdT; }).join(",") || "none");
     return q;
   }
+  function cardOf(name) { return grid.querySelector('[data-xd-card="' + name + '"]'); }
+  // Zip all carries every file as its own card is set (Codex): the
+  // Applications card's rows and drafts, By gate's shape, Outcomes' rows.
+  function borrowed(q) {
+    var apps = cardOf("applications"), gates = cardOf("gates"), outs = cardOf("outcomes");
+    if (apps) state(apps).forEach(function (v, k) { q.set(k, v); });
+    if (gates && state(gates).get("shape")) q.set("shape", state(gates).get("shape"));
+    if (outs && state(outs).get("rows")) q.set("orows", state(outs).get("rows"));
+    return q;
+  }
   function draw(card) {
-    var q = state(card).toString();
+    var p = state(card);
+    if (card.dataset.xdCard === "all") p = borrowed(p);
+    var q = p.toString();
     card.querySelectorAll("a[data-xd-dl]").forEach(function (a) {
       a.href = a.href.split("?")[0] + (q ? "?" + q : "");
     });
@@ -117,7 +129,6 @@
     card.querySelectorAll("[data-xd-t]:not([disabled])").forEach(function (t) {
       if (mine.carries) t.setAttribute("aria-pressed", mine.carries.indexOf(t.dataset.xdT) >= 0 ? "true" : "false");
     });
-    draw(card);
     card.addEventListener("click", function (e) {
       var b = e.target.closest("[data-xd-v], [data-xd-t]");
       if (!b || b.disabled) return;
@@ -130,8 +141,9 @@
       q.forEach(function (v, k) { m[k] = k === "carries" ? v.split(",") : v; });
       card.querySelectorAll("[data-xd-k]").forEach(function (g) { if (!(g.dataset.xdK in m)) m[g.dataset.xdK] = ""; });
       kept[card.dataset.xdCard] = m; save();
-      draw(card);
+      grid.querySelectorAll("[data-xd-card]").forEach(draw);
     });
   });
+  grid.querySelectorAll("[data-xd-card]").forEach(draw);  // once every card's chips are back
 })();
 </script>

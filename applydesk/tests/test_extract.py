@@ -101,6 +101,15 @@ def test_the_zips_carry_a_manifest_and_what_the_chips_say(client: TestClient) ->
         "outcomes.csv",
     ]
     assert "applicant" not in _rows(z.read("outcomes.csv"))[0]
+    # The other cards' settings ride along (Codex): drafts, the shape, Outcomes' rows.
+    z = zipfile.ZipFile(
+        io.BytesIO(
+            client.get(f"{BASE}/all.zip?rows=all&drafts=1&shape=application&orows=last").content
+        )
+    )
+    assert len(_rows(z.read("applications.csv"))) - 1 == 104
+    assert _rows(z.read("gate_1_peer_review.csv"))[0][-2:] == ["Mean score", "Comments"]
+    assert len(_rows(z.read("outcomes.csv"))) - 1 == 100
     gates = zipfile.ZipFile(io.BytesIO(client.get(f"{BASE}/gates.zip").content))
     assert gates.namelist()[0] == "manifest.csv" and len(gates.namelist()) == 3
 
