@@ -55,9 +55,10 @@ operators under `/operator/exercises`, participants under `/me`.
   (`/me/exercises/<id>/dossiers/<dossier>`), is named by its own ID, never the
   application's, and shows only the *Shown to reviewers* section. In a blind exercise it
   redacts the applicant's name and identifiers. It and the applicant's own
-  application page read the Form's questions in order with the application's
-  answers, *—* where there is none (`sample_data.form_answers`); the title is
-  the page's heading alone.
+  application page read the Form's questions (text blocks aside), grouped
+  by visibility in the Form's order, with the answers Extract writes, *—*
+  where there is none (`extract.form_answers`); the title is the page's
+  heading alone.
 - **The chrome** is the shared bar (`docs/header_chrome.md`): the app
   icon, the workspace's top line over *Apply Desk* (the app's name, as
   Review Robin's bar names Review Robin; author, 2026-11-13), a switcher of the

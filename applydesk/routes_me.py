@@ -7,7 +7,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
-from applydesk import sample_data, timeline, workflow
+from applydesk import extract, sample_data, timeline, workflow
 from applydesk.gate import placeholders_only
 from applydesk.lookups import application_or_404, dossier_or_404, exercise_or_404
 from applydesk.web import USER_LOBBY, render
@@ -60,7 +60,7 @@ def application(request: Request, exercise_id: str, application_id: str) -> Resp
         area=USER_LOBBY,
         exercise=found,
         application=app,
-        answered=sample_data.form_answers(found.public_id, app),
+        answered=extract.form_answers(found, app),
         form_state=workflow.form_state(found),
     )
 
@@ -78,5 +78,5 @@ def dossier(request: Request, exercise_id: str, dossier_id: str) -> Response:
         area=USER_LOBBY,
         exercise=found,
         application=app,
-        shown=sample_data.form_answers(found.public_id, app)[0],
+        shown=extract.form_answers(found, app)[0],
     )

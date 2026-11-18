@@ -256,6 +256,24 @@ def _form_answer(e: Exercise, a: sample_data.Application, c: sample_data.FormCar
     return text or ("" if not c.required else _TEXT[0])
 
 
+def form_answers(
+    e: Exercise, a: sample_data.Application
+) -> tuple[tuple[tuple[str, str], ...], tuple[tuple[str, str], ...]]:
+    """The application as its form asks it (AD-26), the same answers
+    Extract writes: each question of the Form's cards, in order, "—" where
+    it has none; split into shown to reviewers and not shown. Text blocks
+    and unlabeled questions are not questions; the title is the page's own."""
+    known = sample_data.answers(e.public_id, a)
+    shown: list[tuple[str, str]] = []
+    hidden: list[tuple[str, str]] = []
+    for c in sample_data.form_cards(e.public_id):
+        if c.kind != "field" or c.type == "text" or not c.label:
+            continue
+        value = known.get(c.label) or _form_answer(e, a, c)
+        (shown if c.shown else hidden).append((c.label, value or "—"))
+    return tuple(shown), tuple(hidden)
+
+
 def _results(c: stages.Cell | None, g: stages.Gate) -> list[str]:
     """A gate's results for one dossier as Dossiers collates them: the
     first is the cell's ``result``, the others its ``extra``."""
