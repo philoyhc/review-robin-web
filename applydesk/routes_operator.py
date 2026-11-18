@@ -48,7 +48,7 @@ def home_stage_rows(
         linked.add(f"{plan[0].label} has no start and end.")
     if any(label == "Application form" for label, _ in sample_data.setup_missing(exercise)):
         linked.add("The application form has no questions.")
-    rows = []
+    rows: list[tuple[stages.Stage, str, tuple[str, ...], tuple[str, ...]]] = []
     for i, st in enumerate(plan):
         status = locks.stage_status(exercise, st)
         problems = locks.publish_problems(exercise, st) if status == "Draft" else ()
