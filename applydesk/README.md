@@ -23,5 +23,6 @@ and the MVP roadmap are in `guide/todo_master.md`.
 | `guide/segment_AD1_skeleton.md` | Segment AD1 plan: the package and mount, then the URL map as placeholders |
 | `guide/segment_AD1C_applications.md` | Segment AD1C plan: the Applications page as the control surface, rounds of gates and outcomes as columns, nothing saved |
 | `guide/segment_AD1D_chrome.md` | Segment AD1D plan: an exercise's pages in Review Robin's chrome (Home, Setup, Operations) and the Workflow card |
+| `guide/segment_AD1K_stage_status.md` | Segment AD1K plan: a status per stage (Draft, Published, Completed; ruling 35) with an audited revert, and everything a published stage holds locked on every page, its reasons said; the assessment's locking rows |
 | `guide/findings_2026-11-18_assessment.md` | Findings register from the 2026-11-18 assessment of every Apply Desk screen: UI consistency, intended actions, data model and spec gaps, 125 rows (AD-01 to AD-125) to clear, with the rulings it needs |
 | `guide/archive/README.md` | Closed segment plans: AD1B (the Form page), AD1E (Process), AD1F (Gates and Panels), AD1G (Evaluators and Evaluations), AD1H (the RA model exercise), AD1I (Exercise Home), AD1J (Extract data) |
