@@ -1682,3 +1682,30 @@ def test_publish_checks_the_dates_as_they_stand(page: Page) -> None:
     assert (
         "Interviews has no start and end." in interviews.locator("[data-pc-problems]").inner_text()
     )
+
+
+def test_publish_marks_the_page_unsaved(page: Page) -> None:
+    """Codex: publishing, the first change on the page, shows Unsaved
+    changes and asks before leaving."""
+    page.goto(PAGE)
+    first = _cards(page).nth(0)
+    _open(first)
+    mark = page.locator("[data-unsaved]")
+    assert not mark.is_visible()
+    first.locator('[data-pc-st="publish"]').click()
+    assert mark.is_visible()
+
+
+def test_an_open_revert_shuts_when_a_later_stage_is_published(page: Page) -> None:
+    """Codex: an open revert panel cannot leave a draft before a stage
+    published since it opened."""
+    page.goto(MODEL)
+    review, interviews = _cards(page).nth(1), _cards(page).nth(2)
+    _revert(interviews)
+    _open(review)
+    review.locator('[data-pc-st="revert"]').click()
+    review.locator("[data-pc-reason]").fill("A change of mind")
+    interviews.locator('[data-pc-st="publish"]').click()
+    assert not review.locator("[data-pc-revert]").is_visible()
+    assert review.locator('[data-pc-st="revert"]').is_disabled()
+    assert review.locator("[data-pc-status]").text_content() == "Completed"

@@ -282,6 +282,15 @@
       var later = all.slice(i + 1).filter(function (c) { return c.dataset.status !== "Draft"; })[0];
       rv.disabled = !!later;
       if (later) rv.title = "Revert " + labelOf(later) + " first: it comes after this stage"; else rv.removeAttribute("title");
+      // A revert panel already open shuts once a later stage is published
+      // again (Codex), so its confirm cannot leave a draft before it.
+      var panel = box.querySelector("[data-pc-revert]");
+      if (later && !panel.hidden) {
+        panel.hidden = true;
+        rv.setAttribute("aria-expanded", "false");
+        box.querySelector('[data-pc-st="confirm"]').disabled = true;
+        box.querySelector("[data-pc-reason]").value = "";
+      }
       var pub = box.querySelector('[data-pc-st="publish"]');
       if (pub.hasAttribute("data-pc-new")) return;
       pub.disabled = open > 0;
@@ -376,6 +385,8 @@
       rv.setAttribute("aria-expanded", "false");
       rv.focus();
     } else if (what === "confirm") {
+      var all = cards();
+      if (all.slice(all.indexOf(card) + 1).some(function (c) { return c.dataset.status !== "Draft"; })) return true;
       reason.value = "";
       b.disabled = true;
       setStatus(card, "Draft");
