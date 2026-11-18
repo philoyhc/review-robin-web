@@ -523,6 +523,7 @@ rulings after this list):
   saying which dossier is whose: the server checks the pair at AD2
   (AD1G rung 6b's cold read).
 - How Apply Desk's operators line up with Review Robin's.
+- Scores entered by hand (an interview held outside Review Robin): every gate's scores come from Review Robin today and only outcomes are set by hand, on Dossiers; not on Extract data (author, 2026-11-18, AD1J). Where they belong is open.
 - Ruling 9's and AD6's "tags decided at AD6": settled by 23F.
 
 **Order** (UI first): A done in AD1G (closed 2026-11-17),
@@ -538,7 +539,8 @@ Segments in order; each gets a plan in this folder when it starts.
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
 | **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14; removed 2026-11-15); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
-| AD1J onward — the other new pages | Emails and Extract data built out as working scaffolds, one segment each | — |
+| **AD1J — Extract data** | Extract data as Review Robin's: download cards (all data, applications, by gate, outcomes, the alias key, setup), each file shaped by chips and built from the sample; nothing on screen, nothing saved | `applydesk/guide/segment_AD1J_extract.md` |
+| AD1K onward — the other new pages | Emails built out as a working scaffold | After AD1J |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
