@@ -67,14 +67,21 @@ def _counts(page: Page) -> str:
     return page.locator("[data-ev-counts]").inner_text()
 
 
-def test_pairs_are_approved_one_by_one_or_all_and_kept_across_pages(page: Page) -> None:
+def test_pairs_are_approved_by_dossier_or_all_and_kept_across_pages(page: Page) -> None:
     page.goto(GATE3)
     kenji = _row(page, "Kenji Russo")
+    kenjis = page.locator("tbody tr", has_text="Kenji Russo").locator("[data-ev-state]")
     assert kenji.locator("[data-ev-state]").text_content() == "Suggested"
     assert not page.locator("[data-ev-unsaved]").is_visible()
     kenji.get_by_role("button", name="Approve").click()
-    assert kenji.locator("[data-ev-state]").text_content() == "Approved"
-    assert kenji.locator('[data-ev-act="approve"]').is_disabled()
+    # Ruling 34: a dossier's evaluators are approved together.
+    assert kenjis.count() == 2 and set(kenjis.all_text_contents()) == {"Approved"}
+    assert page.locator("[data-ev-said]").inner_text() == "Evaluators approved for Kenji Russo."
+    # AD-25: a second click on Approved takes the approval back.
+    kenji.get_by_role("button", name="Approved").click()
+    assert set(kenjis.all_text_contents()) == {"Suggested"}
+    assert not page.locator("[data-ev-unsaved]").is_visible()
+    kenji.get_by_role("button", name="Approve").click()
     assert page.locator("[data-ev-unsaved]").is_visible()
     # Kept in the tab: a sort reloads the page, the approval stands.
     page.get_by_role("link", name="Sort by Evaluator").click()
@@ -86,11 +93,26 @@ def test_pairs_are_approved_one_by_one_or_all_and_kept_across_pages(page: Page) 
     assert page.locator("[data-ev-said]").inner_text() == "All 80 pairs approved."
     assert set(page.locator("tbody [data-ev-state]").all_text_contents()) == {"Approved"}
     assert page.get_by_role("button", name="Approve all").is_disabled()
+    # AD-25: discarding more than a few changes asks first.
+    asked: list[str] = []
+    page.once("dialog", lambda d: (asked.append(d.message), d.dismiss())[1])
+    page.get_by_role("button", name="Discard changes").click()
+    assert asked and "Discard all 80 changes" in asked[0]
+    assert set(page.locator("tbody [data-ev-state]").all_text_contents()) == {"Approved"}
+    page.once("dialog", lambda d: d.accept())
     page.get_by_role("button", name="Discard changes").click()
     assert set(page.locator("tbody [data-ev-state]").all_text_contents()) == {"Suggested"}
     assert not page.locator("[data-ev-unsaved]").is_visible()
     page.reload()
     assert set(page.locator("tbody [data-ev-state]").all_text_contents()) == {"Suggested"}
+    # AD-25: Approve all asks first while a dossier is short; declined,
+    # nothing is approved.
+    _row(page, "Kenji Russo").get_by_role("button", name="Remove").click()
+    asked.clear()
+    page.once("dialog", lambda d: (asked.append(d.message), d.dismiss())[1])
+    page.get_by_role("button", name="Approve all").click()
+    assert asked == ["Approve every pair? 1 dossier is still short of evaluators."]
+    assert "Approved" not in page.locator("tbody [data-ev-state]").all_text_contents()
 
 
 def test_a_pair_is_removed_and_added_within_the_total(page: Page) -> None:
@@ -190,7 +212,7 @@ def test_an_approval_stands_through_undo_and_goes_with_an_added_pair(page: Page)
     page.goto(GATE3)
     pair = _row(page, "Kenji Russo")
     pair.get_by_role("button", name="Approve").click()
-    assert page.locator("[data-ev-said]").inner_text().endswith("approved for Kenji Russo.")
+    assert page.locator("[data-ev-said]").inner_text() == "Evaluators approved for Kenji Russo."
     assert pair.get_by_role("button", name="Remove").evaluate("b => b === document.activeElement")
     pair.get_by_role("button", name="Remove").click()
     pair.get_by_role("button", name="Undo", exact=False).click()
@@ -203,6 +225,12 @@ def test_an_approval_stands_through_undo_and_goes_with_an_added_pair(page: Page)
     page.get_by_role("button", name="Add the pair").click()
     added = page.locator("tbody tr[data-ev-added]")
     added.get_by_role("button", name="Approve").click()
+    # The dossier's other pair is approved with it (ruling 34), and taken
+    # back with it.
+    other = page.locator("tbody tr:not([data-ev-added])", has_text="Kenji Russo").nth(1)
+    assert other.locator("[data-ev-state]").text_content() == "Approved"
+    added.get_by_role("button", name="Approved").click()
+    assert other.locator("[data-ev-state]").text_content() == "Suggested"
     added.get_by_role("button", name="Remove").click()
     pair.get_by_role("button", name="Undo", exact=False).click()
     assert not page.locator("[data-ev-unsaved]").is_visible()

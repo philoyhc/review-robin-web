@@ -1,5 +1,5 @@
 {# A gate page's operations (AD1G rung 6b, ruling 27), by the gate's mode:
-   Suggested, then approved: Approve a pair, Approve all, Remove, + Pair;
+   Suggested, then approved: Approve a dossier's pairs (ruling 34), Approve all, Remove, + Pair;
    Assigned by the operator and Automatic: + Pair, Remove (an Automatic fill
    is never re-made, only edited by hand, ruling 48). The page
    shows 200 of the gate's pairs and reloads to page or sort, so the
@@ -132,8 +132,10 @@
       if (ok) {
         var done = ch.approved.indexOf(id(d, e)) >= 0;
         ok.hidden = gone;
+        // A dossier's evaluators are approved together (ruling 34); a
+        // second click on Approved takes the approval back (AD-25).
         ok.textContent = done ? "Approved" : "Approve";
-        ok.disabled = done;
+        ok.title = done ? "Click to take back the approval of " + names[d] + "'s evaluators" : "Approve " + names[d] + "'s evaluators together";
       }
     });
     // The head's counts and the load line, over every pair.
@@ -212,11 +214,20 @@
       var again = Array.prototype.find.call(card.querySelectorAll("tr[data-ev-row]"), function (r) { return r.dataset.evRow === d && r.dataset.evPair === em; });
       (again && again.querySelector('[data-ev-act="remove"]') || card.querySelector('[data-ev-act="add"]')).focus();
     } else if (act === "approve") {
-      ch.approved.push(id(tr.dataset.evRow, tr.dataset.evPair));
+      // Per dossier (ruling 34): every pair it has now, approved or taken
+      // back together; a pair added later waits for its own approval.
+      var dd = tr.dataset.evRow;
+      var keys = pairs().filter(function (p) { return p[0] === dd; }).map(function (p) { return id(p[0], p[1]); });
+      var was = keys.every(function (k) { return ch.approved.indexOf(k) >= 0; });
+      ch.approved = ch.approved.filter(function (k) { return keys.indexOf(k) < 0; });
+      if (!was) ch.approved = ch.approved.concat(keys);
       draw();
-      said.textContent = tr.cells[1].textContent.replace(/\s*Added$/, "").trim() + " approved for " + names[tr.dataset.evRow] + ".";
+      said.textContent = (was ? "Evaluators no longer approved for " : "Evaluators approved for ") + names[dd] + ".";
       tr.querySelector('[data-ev-act="remove"]').focus();
     } else if (act === "approve-all") {
+      // Approving a short dossier's pairs leaves it short: said first (AD-25).
+      var shortN = DATA.dossiers.filter(function (dd) { var n = count(dd[0]); return n === 0 || n < DATA.min || unmet(dd[0]); }).length;
+      if (shortN && !window.confirm("Approve every pair? " + shortN + (shortN === 1 ? " dossier is" : " dossiers are") + " still short of evaluators.")) return;
       var before = ch.approved.filter(function (k) { return !pairs().some(function (p) { return id(p[0], p[1]) === k; }); });
       var now = pairs().map(function (p) { return id(p[0], p[1]); });
       ch.approved = before.concat(now);
@@ -240,6 +251,9 @@
       fillEvaluators();
       said.textContent = sources[ev][0] + " added to " + names[who] + ".";
     } else if (act === "discard") {
+      // More than a few changes are asked about first (AD-25).
+      var n = ch.removed.length + ch.added.length + ch.approved.length;
+      if (n > 3 && !window.confirm("Discard all " + n + " changes made in this tab?")) return;
       ch = blank();
       draw();
       said.textContent = "Changes discarded: the pairs are the sample's again.";
