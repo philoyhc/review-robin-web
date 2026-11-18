@@ -166,19 +166,19 @@ def test_an_assigned_gate_starts_empty_and_takes_pairs(
     assert _counts(page) == "40 dossiers · 1 filled · 39 short"
 
 
-def test_an_automatic_gate_re_runs(page: Page, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_an_automatic_gate_is_edited_by_hand_never_re_run(
+    page: Page, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ruling 48: an Automatic fill is never re-made, only edited by hand:
+    no Re-run, and + Pair and Remove as the other modes."""
     _as(monkeypatch, "g3", mode="automatic")
     page.goto(GATE3)
-    assert page.get_by_role("button", name="+ Pair").count() == 0
-    assert set(page.locator("tbody [data-ev-state]").all_text_contents()) == {"Filled"}
-    page.get_by_role("button", name="Re-run").click()
-    assert page.locator("[data-ev-said]").inner_text() == (
-        "Nothing to re-run yet: the pairs are the fill's own until rosters feed it (AD5)."
-    )
-    # An Automatic gate takes no change by hand, so a re-run leaves the
-    # fill as it was and nothing unsaved.
-    assert set(page.locator("tbody [data-ev-state]").all_text_contents()) == {"Filled"}
-    assert not page.locator("[data-ev-unsaved]").is_visible()
+    assert page.get_by_role("button", name="Re-run").count() == 0
+    assert page.get_by_role("button", name="+ Pair").count() == 1
+    pair = page.locator("tbody tr").first
+    pair.get_by_role("button", name="Remove").click()
+    assert pair.locator("[data-ev-state]").text_content() == "Removed"
+    assert page.locator("[data-ev-unsaved]").is_visible()
 
 
 def test_an_approval_stands_through_undo_and_goes_with_an_added_pair(page: Page) -> None:

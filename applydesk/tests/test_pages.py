@@ -428,8 +428,11 @@ def test_dossiers_returns_to_draft_by_row_and_ticked(
     open_ = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
     assert 'aria-label="Return m3qx8vkt2n to draft">Return to draft</button>' in open_
     assert 'aria-label="Return f2ps7nyh4k to draft"' not in open_  # a draft
-    # Sent but not yet opened counts as sent (ruling 29's gate still closes it).
-    monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Sent", ""))
+    # Ruling 49: a sent gate, opened or not, keeps it open until it completes.
+    for sent in (("Sent", ""), ("Sent", "3 of 5 reviewed")):
+        monkeypatch.setattr(workflow, "gate_state", lambda _e, _k, s=sent: s)
+        assert workflow.withdrawal_closed_by(EX, "m3qx8vkt2n") == ""
+    monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Results in", "done"))
     assert workflow.withdrawal_closed_by(EX, "m3qx8vkt2n") == "Peer review"
     nogates = client.get("/applydesk/operator/exercises/r6tm4kq9wz/dossiers").text
     assert ">Return ticked to draft</button>" in nogates
@@ -649,7 +652,10 @@ def test_evaluations_shows_each_gate_s_assignments(client: TestClient) -> None:
     assert "<title>Gate 1 · Peer review · Recruitment and Selection of Residential" in page
     # A row per pair (author, 2026-11-17), 200 to a page.
     assert page.count("data-ev-row=") == 200 == page.count('data-ev-source="Current RAs"')
-    assert 'data-ev-act="rerun" disabled title="Its session has opened' in page
+    assert (
+        'data-ev-act="add"  disabled title="Its session has opened' in page
+    )  # no Re-run (ruling 48)
+    assert 'data-ev-act="rerun"' not in page
     assert "1–200 of 2,980" in page
     g3 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text
     # Ready, not sent (ruling 29): its pairs suggested, still the operator's.
