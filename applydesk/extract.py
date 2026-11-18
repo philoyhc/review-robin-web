@@ -163,10 +163,19 @@ def applications(e: Exercise, rows: str = "last", drafts: bool = False) -> Table
     answer, in the form's order."""
     plan = stages.plan_of(e.public_id)
     questions = _questions(e.public_id)
+    people = [
+        c.label
+        for c in sample_data.form_cards(e.public_id)
+        if c.kind == "field" and c.type == "people" and c.label
+    ]
     out: list[list[str]] = []
     for r in _shown(plan, rows, drafts):
         a = r.application
         answers = sample_data.answers(e.public_id, a)
+        # A Select people question's choices are the nominees (Codex),
+        # joined as a list question's are (Semantics).
+        for q in people:
+            answers[q] = "; ".join(sample_data.nominees(e.public_id, a, q))
         out.append(
             [a.public_id, a.dossier_id, a.applicant, a.email, a.state, a.submitted]
             + [answers.get(q, "") for q in questions]

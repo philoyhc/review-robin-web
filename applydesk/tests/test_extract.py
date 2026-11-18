@@ -121,3 +121,15 @@ def test_the_page_links_each_download(client: TestClient) -> None:
     assert 'data-xd-dl="gate_3.csv"' not in text  # not sent
     blank = client.get("/applydesk/operator/exercises/n5wg8tjr3e/extract").text
     assert "data-xd-dl=" not in blank  # nothing to extract: no link
+
+
+def test_a_select_people_answer_is_exported(client: TestClient) -> None:
+    """Codex: a Select people question's choices are the nominees."""
+    tea = "k7mfr3pq8z"
+    rows = _rows(
+        client.get(f"/applydesk/operator/exercises/{tea}/extract/applications.csv").content
+    )
+    col = rows[0].index("Preferred reviewer")
+    margaret = next(r for r in rows[1:] if r[2] == "Margaret Liu")
+    app = next(a for a in sample_data.applications_of(tea) if a.applicant == "Margaret Liu")
+    assert margaret[col] == "; ".join(sample_data.nominees(tea, app, "Preferred reviewer")) != ""
