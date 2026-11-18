@@ -1589,3 +1589,40 @@ def test_one_count_of_applications_everywhere(client: TestClient) -> None:
     assert "<th>Submitted</th>" in lobby and "<td>100</td>" in lobby
     home = client.get(f"/applydesk/operator/exercises/{EX}").text
     assert "100 submitted · 3 drafts" in home
+
+
+def test_an_applicant_reads_their_released_result(client: TestClient) -> None:
+    """Ruling 41, AD-28: once an outcome is released to applicants, the
+    applicant's own value shows on the exercise and application pages."""
+    me = "/applydesk/me/exercises/wa9juxbc2t"
+    page = client.get(me).text
+    assert "Your result, Shortlisting: <strong>Re-appointment</strong>" in page
+    app = client.get(f"{me}/applications/m3qx8vkt2n").text
+    assert "<h2>Your results</h2>" in app and "Re-appointment" in app
+    draft = client.get(f"{me}/applications/f2ps7nyh4k").text
+    assert "Your results" not in draft  # nothing decided for a draft
+
+
+def test_a_closed_exercise_stays_on_me_read_only(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ruling 41, AD-37: Closed stays on /me with its results; Archived and
+    Draft do not."""
+    import dataclasses
+
+    ex = sample_data.exercise("wa9juxbc2t")
+    assert ex is not None
+    closed = dataclasses.replace(ex, state="Closed")
+    monkeypatch.setattr(
+        sample_data,
+        "EXERCISES",
+        tuple(closed if e.public_id == ex.public_id else e for e in sample_data.EXERCISES),
+    )
+    monkeypatch.setattr(sample_data, "exercise", lambda i: closed if i == ex.public_id else None)
+    lobby = client.get("/applydesk/me").text
+    assert "Closed: its released results stay here" in lobby
+    page = client.get("/applydesk/me/exercises/wa9juxbc2t").text
+    assert "This exercise is closed." in page and "Your result, Shortlisting" in page
+    archived = dataclasses.replace(ex, state="Archived")
+    monkeypatch.setattr(sample_data, "exercise", lambda i: archived)
+    assert client.get("/applydesk/me/exercises/wa9juxbc2t").status_code == 404

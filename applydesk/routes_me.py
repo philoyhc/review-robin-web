@@ -7,17 +7,21 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
-from applydesk import extract, sample_data, timeline, workflow
+from applydesk import extract, sample_data, stages, timeline, workflow
 from applydesk.gate import placeholders_only
 from applydesk.lookups import application_or_404, dossier_or_404, exercise_or_404
 from applydesk.web import USER_LOBBY, render
 
 router = APIRouter(prefix="/me", dependencies=[Depends(placeholders_only)])
 
+#: What an applicant sees on /me (ruling 41): a Closed exercise stays,
+#: read-only, with its released results; Draft and Archived do not.
+ON_ME = ("Published", "Closed")
+
 
 @router.get("", name="applydesk_me")
 def me(request: Request) -> Response:
-    exercises = [e for e in sample_data.EXERCISES if e.state == "Published"]
+    exercises = [e for e in sample_data.EXERCISES if e.state in ON_ME]
     return render(
         request,
         "applydesk/me/home.html",
@@ -33,7 +37,7 @@ def me(request: Request) -> Response:
 @router.get("/exercises/{exercise_id}", name="applydesk_me_exercise")
 def exercise(request: Request, exercise_id: str) -> Response:
     found = exercise_or_404(exercise_id)
-    if found.state != "Published":
+    if found.state not in ON_ME:
         raise HTTPException(status_code=404)
     # The same timeline as the operator's Home (segment AD1I, rung 5): it
     # holds nothing operator-only, and takes no Next step line.
@@ -45,6 +49,7 @@ def exercise(request: Request, exercise_id: str) -> Response:
         tl=timeline.of(found),
         short=timeline.short,
         mine=sample_data.my_applications(found.public_id),
+        results=stages.released_results,
     )
 
 
@@ -62,6 +67,7 @@ def application(request: Request, exercise_id: str, application_id: str) -> Resp
         application=app,
         answered=extract.form_answers(found, app),
         form_state=workflow.form_state(found),
+        results=stages.released_results(found.public_id, app.public_id),
     )
 
 

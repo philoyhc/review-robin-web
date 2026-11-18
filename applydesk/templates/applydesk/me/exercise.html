@@ -14,8 +14,12 @@
     <h2>Apply</h2>
     {# Each of the applicant's own applications here, so the exercise leads
        to them (AD-27). #}
-    {% for a in mine %}<p><a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/applications/' ~ a.public_id) }}">Your application</a> {% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</p>{% endfor %}
-    {% if exercise.form_open %}
+    {% for a in mine %}<p><a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/applications/' ~ a.public_id) }}">Your application</a> {% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</p>
+    {# Its results once released to applicants (ruling 41, AD-28); AD7 sends them. #}
+    {% for label, value, when in results(exercise.public_id, a.public_id) %}<p class="me-result">Your result, {{ label }}: <strong>{{ value }}</strong> <span class="muted">· released {{ when }}</span></p>{% endfor %}{% endfor %}
+    {% if exercise.state == "Closed" %}
+      <p>This exercise is closed. What was released to you stays here.</p>
+    {% elif exercise.form_open %}
       <p>Start an application; you can save a draft and come back before applications close.</p>
       <div class="btnrow"><button class="btn btn-primary" type="button" disabled title="Applying opens with AD4">Start an application</button></div>
     {% else %}

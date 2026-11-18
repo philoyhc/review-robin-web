@@ -1337,6 +1337,23 @@ def assignments(
     return tuple(rows), spread
 
 
+def released_results(exercise_id: str, public_id: str) -> tuple[tuple[str, str, str], ...]:
+    """An application's results released to applicants (ruling 41, AD-28):
+    (outcome, its value, when), in timeline order; none until released,
+    and none undecided. Read from Dossiers' cells; AD7 stores them."""
+    plan = plan_of(exercise_id)
+    row = next((r for r in plan.rows if r.application.public_id == public_id), None)
+    out: list[tuple[str, str, str]] = []
+    for c in plan.columns:
+        if not isinstance(c, Outcome) or not c.released:
+            continue
+        when, _, to = c.released.partition(" · ")
+        cell = row.cells.get(c.key) if row else None
+        if (not to or "applicants" in to.lower()) and cell and cell.value in c.values:
+            out.append((c.label, cell.value, when))
+    return tuple(out)
+
+
 def gate_numbered(plan: Plan, number: int) -> Gate | None:
     """The plan's gate numbered ``number`` (its page under Evaluations,
     ``…/evaluations/gate_<n>``, segment AD1H), None if none is."""

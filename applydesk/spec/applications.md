@@ -244,6 +244,12 @@ include.
   *Apply* links each of the applicant's own applications there (*Your
   application*), as the User Lobby's *My applications* lists them all
   (`sample_data.my_applications` until AD2).
+  Under each, every outcome released to applicants gives *Your result*
+  with the applicant's own value and when (`stages.released_results`; the
+  application page lists them as *Your results*); AD7 sends them. `/me`
+  shows Published and Closed exercises (ruling 41): a Closed one stays,
+  read-only, its *Apply* saying it is closed; Draft and Archived do not.
+  Closing and archiving themselves are not built (AD3).
   A per-stage *Shown to applicants* is not modelled: every stage shows.
 
 ### Details
