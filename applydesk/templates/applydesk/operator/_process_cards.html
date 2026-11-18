@@ -35,7 +35,7 @@
 {# What a published stage holds, fixed (segment AD1K): one fieldset per
    item, after its dates, which stay editable as an extension. An opened
    gate's stays fixed through a revert (ruling 29), ``data-opened``. #}
-{% macro lock_open(lock) %}<fieldset class="pc-lock" data-pc-lock{% if lock.fixed %} disabled title="{{ lock.reason }}"{% endif %}{% if lock.reason.startswith("Its Review Robin session") %} data-opened="{{ lock.reason }}"{% endif %}>{% endmacro %}
+{% macro lock_open(lock) %}<fieldset class="pc-lock" data-pc-lock{% if lock.fixed %} disabled title="{{ lock.reason }}"{% endif %}{% if lock.opened %} data-opened="{{ lock.reason }}"{% endif %}>{% endmacro %}
 
 {% macro emails_chip(n) %}<span class="chip chip-mute" data-pi-emails>{{ "No email" if n == 0 else (n ~ (" email" if n == 1 else " emails")) }}</span>{% endmacro %}
 
@@ -355,7 +355,7 @@
     {% set ns = namespace(prev=false) %}
     {# The stage before it, followed by the page: there whether or not it
        was a problem when the page loaded (Codex). #}
-    <ul class="pc-issues">{% for p in problems %}{% set prev = p.endswith(" is not published yet.") %}{% if prev %}{% set ns.prev = true %}{% endif %}<li{% if prev %} data-pc-prev{% endif %}>{{ p }}</li>{% endfor %}{% if not ns.prev %}<li data-pc-prev hidden></li>{% endif %}</ul>
+    <ul class="pc-issues"><li data-pc-dates-problem hidden></li>{% for p in problems if not p.startswith(st.label ~ " has no start and end") and not p.startswith(st.label ~ " ends before it starts") %}{% set prev = p.endswith(" is not published yet.") %}{% if prev %}{% set ns.prev = true %}{% endif %}<li{% if prev %} data-pc-prev{% endif %}>{{ p }}</li>{% endfor %}{% if not ns.prev %}<li data-pc-prev hidden></li>{% endif %}</ul>
   </div>
   <div class="btnrow">
     <button type="button" class="btn btn-primary" data-pc-st="publish"{% if status != "Draft" %} hidden{% endif %}{% if not st.number %} data-pc-new disabled title="A new stage is checked for publishing once saved (AD2)"{% elif problems %} disabled title="Put right what is listed first"{% endif %}>Publish stage</button>

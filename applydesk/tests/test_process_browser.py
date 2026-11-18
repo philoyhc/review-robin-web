@@ -251,7 +251,13 @@ def _open_cards(item: Locator) -> None:
 
 
 def _revert(card: Locator) -> None:
-    """A published stage reverted to draft on the page, with a reason."""
+    """A published stage reverted to draft on the page, with a reason;
+    the published stages after it first, as the page asks."""
+    later = card.locator(
+        "xpath=following-sibling::article[@data-kind='stage'][@data-status!='Draft']"
+    )
+    for i in reversed(range(later.count())):
+        _revert(later.nth(i))
     _open(card)
     card.locator('[data-pc-st="revert"]').click()
     card.locator("[data-pc-reason]").fill("To fix a rule")
@@ -1472,7 +1478,8 @@ def test_a_replica_of_an_opened_gate_follows_its_own_settings(page: Page) -> Non
     )
     _open(stage)
     stage.locator('[data-fc-act="replicate"]').click()
-    copy = stage.locator("xpath=following-sibling::article[@data-kind='stage'][1]")
+    # A copy goes after the last published stage, so none falls behind it.
+    copy = _cards(page).last
     gate = copy.locator('.pc-item[data-item="gate"]').first
     send = gate.locator("[data-pr-send]")
     assert send.get_attribute("data-fixed") is None
@@ -1497,6 +1504,7 @@ def test_dates_are_date_times_and_an_item_s_window_follows(page: Page) -> None:
     assert due.input_value() == "2026-12-04T17:00"
     send = gate.locator("[data-pr-send]")
     assert "open 9 Nov to 2 Dec" in (send.text_content() or "")
+    _revert(stage)  # its start, and its gate's, are fixed while published
     gate.locator('[data-pc="item-from"]').fill("")
     gate.locator('[data-pc="item-to"]').fill("")
     stage.locator('[data-pc="to"]').fill("2026-12-11T23:59")
@@ -1541,7 +1549,11 @@ def test_a_revert_needs_a_reason_and_leaves_an_opened_gate_fixed(page: Page) -> 
     page.goto(MODEL)
     review = _cards(page).nth(1)
     _open_all(review)
-    review.locator('[data-pc-st="revert"]').click()
+    revert = review.locator('[data-pc-st="revert"]')
+    assert revert.is_disabled()  # Interviews, after it, is published
+    assert revert.get_attribute("title") == "Revert Interviews first: it comes after this stage"
+    _revert(_cards(page).nth(2))
+    revert.click()
     panel = review.locator("[data-pc-revert]")
     assert "Gate 1's Review Robin session has opened: it stays fixed." in panel.inner_text()
     confirm = review.locator('[data-pc-st="confirm"]')
@@ -1577,8 +1589,10 @@ def test_publishing_waits_on_the_stage_before_and_names_problems(page: Page) -> 
     first.locator('[data-pc-st="publish"]').click()
     # Its end has passed and its form is still open: published, overdue.
     assert first.locator("[data-pc-status]").text_content() == "Overdue"
-    assert first.locator("[data-pc-overdue]").inner_text().startswith(
-        "Overdue: the form is still open."
+    assert (
+        first.locator("[data-pc-overdue]")
+        .inner_text()
+        .startswith("Overdue: the form is still open.")
     )
     assert first.locator('[data-pc="name"]').is_disabled()
     assert publish.is_enabled()
@@ -1632,3 +1646,39 @@ def test_an_extension_reopens_a_completed_stage(page: Page) -> None:
     assert chip.text_content() == "Published"
     end.fill("2026-11-06T23:59")
     assert chip.text_content() == "Completed"
+
+
+def test_published_stages_keep_their_order_and_start(page: Page) -> None:
+    """AD1K cold read: a new stage or a copy goes after the published
+    ones and cannot move above them; a published item's start is fixed,
+    its end not."""
+    page.goto(MODEL)
+    first = _cards(page).nth(0)
+    _open(first)
+    first.locator('[data-fc-act="new"]').click()
+    new = _cards(page).nth(3)
+    assert new.get_attribute("data-status") == "Draft"
+    new.locator("[data-fc-grip]").press("ArrowUp")
+    assert _cards(page).nth(3).get_attribute("data-status") == "Draft"  # stayed last
+    interviews = _cards(page).nth(2)
+    _open_all(interviews)
+    g3 = interviews.locator('.pc-item[data-key="g3"]')
+    assert g3.locator('[data-pc="item-from"]').is_disabled()
+    assert g3.locator('[data-pc="item-to"]').is_enabled()
+    g1 = _cards(page).nth(1).locator('.pc-item[data-key="g1"]')
+    assert g1.locator('[data-pc="item-from"]').is_disabled()
+
+
+def test_publish_checks_the_dates_as_they_stand(page: Page) -> None:
+    """AD1K cold read: a reverted stage whose end is cleared may not be
+    published again until it has one."""
+    page.goto(MODEL)
+    interviews = _cards(page).nth(2)
+    _revert(interviews)
+    publish = interviews.locator('[data-pc-st="publish"]')
+    assert publish.is_enabled()
+    interviews.locator('[data-pc="to"]').fill("")
+    assert publish.is_disabled()
+    assert (
+        "Interviews has no start and end." in interviews.locator("[data-pc-problems]").inner_text()
+    )

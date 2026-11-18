@@ -270,8 +270,18 @@
       // A published stage's status follows its end, as an extension moves
       // it (Codex): Published until it passes, then Overdue or Completed.
       if (card.dataset.status !== "Draft") derive(card);
+      // Its dates, checked as they now stand (cold read): both, in order.
+      var dates = box.querySelector("[data-pc-dates-problem]"), a = field(card, "from"), b = field(card, "to");
+      dates.hidden = !!(a && b && a < b);
+      dates.textContent = !a || !b ? labelOf(card) + " has no start and end." : labelOf(card) + " ends before it starts.";
       var open = Array.prototype.filter.call(box.querySelectorAll("[data-pc-problems] li"), function (li) { return !li.hidden; }).length;
       box.querySelector("[data-pc-problems]").hidden = card.dataset.status !== "Draft" || !open;
+      // A revert goes from the last published stage back (cold read), so
+      // no draft is left before a published one.
+      var rv = box.querySelector('[data-pc-st="revert"]');
+      var later = all.slice(i + 1).filter(function (c) { return c.dataset.status !== "Draft"; })[0];
+      rv.disabled = !!later;
+      if (later) rv.title = "Revert " + labelOf(later) + " first: it comes after this stage"; else rv.removeAttribute("title");
       var pub = box.querySelector('[data-pc-st="publish"]');
       if (pub.hasAttribute("data-pc-new")) return;
       pub.disabled = open > 0;
@@ -292,6 +302,14 @@
     if (why) {
       card.querySelectorAll('.pc-adds [data-pc-act], [data-fc-act="delete"]').forEach(function (b) { b.disabled = true; b.title = why; });
     }
+    // An item's start is fixed with its stage, an opened gate's always;
+    // its end stays editable, to extend it (Decision amended).
+    card.querySelectorAll('.pc-item [data-pc="item-from"]').forEach(function (i) {
+      var lock = i.closest(".pc-item").querySelector("[data-pc-lock]");
+      var r = (lock && lock.dataset.opened) || why;
+      i.disabled = !!r;
+      if (r) i.title = r; else i.removeAttribute("title");
+    });
     card.querySelectorAll("[data-pc-lock]").forEach(function (f) {
       var r = f.dataset.opened || why;
       f.disabled = !!r;
@@ -311,6 +329,13 @@
     chip.textContent = status;
     chip.className = "chip chip-" + STATUS_CHIP[status];
     if (od) od.hidden = status !== "Overdue";
+  }
+  // A draft never goes before a published stage (AD1K cold read): the
+  // published ones keep their order and their numbers.
+  function lastLive() {
+    var all = cards(), at = -1;
+    all.forEach(function (c, i) { if (c.dataset.status !== "Draft") at = i; });
+    return at;
   }
   // Publish and revert, on this page only: nothing is saved until AD2.
   function setStatus(card, status) {
@@ -937,6 +962,9 @@
       copyOd.hidden = true;
       var copyList = copyBox.querySelector("[data-pc-problems] ul");
       copyList.textContent = "";
+      var copyDates = document.createElement("li");
+      copyDates.setAttribute("data-pc-dates-problem", "");
+      copyList.appendChild(copyDates);
       var copyPrev = document.createElement("li");
       copyPrev.setAttribute("data-pc-prev", "");
       copyPrev.hidden = true;
@@ -1001,7 +1029,8 @@
       return;
     }
     if (!added) return;
-    card.after(added);
+    var at = lastLive(), all = cards();
+    (all.indexOf(card) < at ? all[at] : card).after(added);
     if (added.dataset.status !== "Draft") setStatus(added, "Draft");
     changed();
     added.querySelector('[data-pc="name"]').focus();
@@ -1025,8 +1054,12 @@
       return false;
     });
     if (!over) return;
-    var box = over.getBoundingClientRect();
-    if (e.clientY < box.top + box.height / 2) over.before(drag); else over.after(drag);
+    var box = over.getBoundingClientRect(), all = cards();
+    var before = e.clientY < box.top + box.height / 2;
+    // Not above a published stage, nor the last of them (cold read).
+    var to = all.indexOf(over) + (before ? 0 : 1);
+    if (to <= lastLive()) return;
+    if (before) over.before(drag); else over.after(drag);
   });
   function drop() {
     if (!drag) return;
@@ -1041,6 +1074,8 @@
     if (!grip || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
     e.preventDefault();
     var card = grip.closest(".pc");
+    var above = card.previousElementSibling;
+    if (e.key === "ArrowUp" && above && above.dataset.status !== "Draft") return;  // published stages keep their place
     if (e.key === "ArrowUp" && card.previousElementSibling) card.previousElementSibling.before(card);
     else if (e.key === "ArrowDown" && card.nextElementSibling) card.nextElementSibling.after(card);
     grip.focus();

@@ -30,6 +30,9 @@ class Lock:
 
     fixed: bool
     reason: str = ""
+    # Fixed by an opened Review Robin session, which a revert leaves be
+    # (ruling 29), rather than by its stage.
+    opened: bool = False
 
 
 OPEN = Lock(False)
@@ -157,7 +160,11 @@ def item_lock(e: Exercise, item: stages.Gate | stages.Outcome) -> Lock:
     if isinstance(item, stages.Gate):
         state, line = workflow.gate_state(e.public_id, item.key)
         if workflow.gate_opened(state, line):
-            return Lock(True, "Its Review Robin session has opened: the gate keeps its settings")
+            return Lock(
+                True,
+                "Its Review Robin session has opened: the gate keeps its settings",
+                opened=True,
+            )
     st = _stage_of(e, item.key)
     return _published(e, st) if st else OPEN
 
