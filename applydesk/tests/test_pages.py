@@ -626,7 +626,9 @@ def test_a_gate_s_page_shows_200_rows_at_a_time(client: TestClient) -> None:
     assert f'href="{base}?offset=200#ev-table-card" aria-label="Next page"' in first
     assert 'is-inactive" aria-disabled="true" aria-label="Previous page"' in first
     ranges = re.findall(r"<li>(?:<a [^>]*>|<span [^>]*>)([^<]+)<", first)
-    assert len(ranges) == 15 and ranges[0] == "1–200" and ranges[-1] == "2,801–2,980"
+    # The pager again below the table (AD-108): the same 15 ranges twice.
+    assert len(ranges) == 30 and ranges[:15] == ranges[15:]
+    assert ranges[0] == "1–200" and ranges[14] == "2,801–2,980"
     last = client.get(f"{base}?offset=99999").text
     assert last.count("data-ev-row=") == 180 and "2,801–2,980 of 2,980" in last
     assert "201–400 of 2,980" in client.get(f"{base}?offset=250").text  # snapped to its page
@@ -1490,3 +1492,24 @@ def test_pages_say_what_works_and_what_is_not_built(client: TestClient) -> None:
     # A draft on an exercise whose form has closed says so (AD-29).
     draft = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/f2ps7nyh4k").text
     assert "Applications closed on 30 Sep 2026, 23:59." in draft and ">Submit<" not in draft
+
+
+def test_crumbs_and_headings_after_the_register(client: TestClient) -> None:
+    """AD-100, 101, 103: the /me pages and the gate page carry a crumb
+    just under the bar; card and section titles are h2."""
+    me = "/applydesk/me/exercises/wa9juxbc2t"
+    for path, current in ((me, ""), (f"{me}/applications/f2ps7nyh4k", "Your application")):
+        page = client.get(path).text
+        assert 'class="crumbs" aria-label="Breadcrumb"' in page and 'class=" crumbed"' in page
+        assert '<a href="/applydesk/me">User Lobby</a>' in page
+        assert f'aria-current="page">{current}' in page
+    app = client.get(f"{me}/applications/f2ps7nyh4k").text
+    assert "<h3" not in app.split('class="page"', 1)[-1].split("<footer", 1)[0]
+    gate = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_1").text
+    crumb = gate[gate.index('class="crumbs"') : gate.index("</nav>", gate.index('class="crumbs"'))]
+    assert "/evaluations" in crumb and 'aria-current="page">Gate 1 · ' in crumb
+    assert "← Evaluations" not in gate
+    assert '<h2 id="ev-pairs-h">Pairs</h2>' in gate
+    # The pager twice on a long table, its count once (AD-108).
+    assert gate.count("data-ev-pager-foot") == 1 + gate.count(".ev-pager[data-ev-pager-foot]")
+    assert gate.count("data-ev-showing") == 1

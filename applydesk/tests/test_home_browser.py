@@ -119,6 +119,22 @@ def test_details_unlock_edit_and_lock(page: Page) -> None:
     )
 
 
+def test_esc_discards_and_says_so_only_when_something_changed(page: Page) -> None:
+    """AD-104: Esc is Discard changes; nothing changed, nothing is said."""
+    page.goto(HOME)
+    card = page.locator("[data-details]")
+    said = card.locator("[data-dt-said]")
+    card.get_by_role("button", name="Unlock").click()
+    card.get_by_role("button", name="Discard changes").click()
+    assert said.inner_text() == ""
+    card.get_by_role("button", name="Unlock").click()
+    card.get_by_label("Description").fill("Something else.")
+    card.get_by_label("Description").press("Escape")
+    assert card.get_attribute("data-unlocked") is None
+    assert said.inner_text() == "Changes discarded."
+    assert "Something else." not in card.locator('[data-dt-show="description"]').inner_text()
+
+
 def test_details_lock_and_unlock_sit_at_the_card_s_foot_on_the_right(page: Page) -> None:
     def placed(card: Locator, name: str) -> float:
         box = card.bounding_box()

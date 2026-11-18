@@ -115,8 +115,10 @@
     var b = e.target.closest("[data-dt-act]");
     if (!b) return;
     if (b.dataset.dtAct === "discard") {
+      // Said only when something changed (AD-104).
+      var changed = !same(read(), kept);
       write(kept); open(false); draw();
-      said.textContent = "Changes discarded.";
+      said.textContent = changed ? "Changes discarded." : "";
       return;
     }
     var v = read(), no = refusal(v);
@@ -126,6 +128,8 @@
     said.textContent = same(v, loaded) ? "Locked." : "Locked: changed on this page; nothing is saved until AD2.";
   });
   form.addEventListener("keydown", function (e) {
+    // Esc discards, as Panels' and + Pair's close (AD-104).
+    if (e.key === "Escape") { e.preventDefault(); form.querySelector('[data-dt-act="discard"]').click(); return; }
     if (e.key === "Enter" && e.target.tagName === "INPUT" && e.target.type !== "checkbox") { e.preventDefault(); form.querySelector('[data-dt-act="lock"]').click(); }
   });
   window.addEventListener("beforeunload", function (e) { if (!mark.hidden) { e.preventDefault(); e.returnValue = ""; } });

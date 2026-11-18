@@ -1,6 +1,8 @@
 {% extends "applydesk/base.html" %}
+{% set crumbed = true %}{# the crumb just under the bar, as an exercise's (cold read) #}
 {% block title %}{{ "Application" if exercise.blind else application.title }}{% endblock %}
 {% block content %}
+<nav class="crumbs" aria-label="Breadcrumb"><a href="{{ url('/me') }}">User Lobby</a><span aria-hidden="true">/</span><a href="{{ url('/me/exercises/' ~ exercise.public_id) }}">{{ exercise.name }}</a><span aria-hidden="true">/</span><span aria-current="page">Dossier</span></nav>
 {# The dossier (rulings 5, 6, 9, 13 and 25): the part shown to
    reviewers only; in a blind exercise, no name or identifier. #}
 <div class="ptitle"><h1>{% if exercise.blind %}An application{% else %}{{ application.title }}{% endif %}</h1>{% if exercise.blind %}<span class="chip chip-mute">Blind review</span>{% endif %}</div>
@@ -10,7 +12,7 @@
   <dt>Applicant</dt><dd>{% if exercise.blind %}<span class="redacted">Redacted</span>{% else %}{{ application.applicant }}{% endif %}</dd>
 </dl>
 <div class="section">
-  <h3>Shown to reviewers</h3>
+  <h2>Shown to reviewers</h2>
   <dl class="facts">{% for label, help in shown %}<dt>{{ label }}</dt><dd>{{ application.title if loop.first else help }}</dd>{% endfor %}</dl>
 </div>
 <p class="muted">Reviewers open this dossier because they are asked to review it, and score it in Review Robin; the exercise's operators open every dossier (ruling 9).</p>
