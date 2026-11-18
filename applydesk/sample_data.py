@@ -540,21 +540,6 @@ NOT_SHOWN_TO_REVIEWERS: tuple[str, ...] = (
 )
 
 
-# Evaluation responses by application, from every source (author,
-# 2026-11-12: Reports collates them): Review Robin's assessments, the
-# interviews, and the reviewer an applicant chose from the pool.
-RESPONSES: dict[str, dict[str, str]] = {
-    "m3qx8vkt2n": {
-        "assessment": "Peer review 29 of 29 · Office checks 5 of 5",
-        "interview": "Not interviewed: re-appointment",
-    },
-    "h6zr2tdw9p": {
-        "assessment": "Peer review 30 of 30 · Office checks 5 of 5",
-        "interview": "Not yet",
-    },
-}
-
-
 # The application form as the Form page builds it (segment AD1B): the
 # form's own title and description, then its cards in order. A card is
 # a question or text block ("field"), a section's title ("section") or

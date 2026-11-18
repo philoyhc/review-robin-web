@@ -13,7 +13,7 @@ from typing import Any, cast
 import pytest
 from fastapi.testclient import TestClient
 
-from applydesk import gate, paging, sample_data, stages, workflow
+from applydesk import extract, gate, paging, sample_data, stages, workflow
 from applydesk.ids import PUBLIC_ID_ALPHABET, PUBLIC_ID_LENGTH, generate_public_id, is_public_id
 from applydesk.main import create_app
 from applydesk.tests._host import host_with
@@ -455,17 +455,59 @@ def test_evaluations_lists_each_gate_s_progress(client: TestClient) -> None:
     assert "Send to Review Robin</button>" in text and "100 of 100 reviewed" in text
 
 
-def test_extract_data_collates_every_evaluation_and_exports(client: TestClient) -> None:
-    """Author, 2026-11-12: the evaluation responses, Review Robin's
-    included, beside the data export (Reports until ruling 14)."""
+def test_extract_data_is_download_cards_and_shows_no_data(client: TestClient) -> None:
+    """Segment AD1J: Review Robin's Extract data, cards that cut the data
+    into files; the old collation table goes (Dossiers and the gate pages
+    show the data)."""
     text = client.get(f"/applydesk/operator/exercises/{EX}/extract").text
-    assert "<h2>Evaluation responses</h2>" in text
-    for column in ("Assessment", "Interview", "Pool reviewer"):
-        assert f"<th>{column}" in text
-    assert "Peer review 29 of 29 · Office checks 5 of 5" in text  # from Review Robin
-    assert "Not interviewed: re-appointment" in text
-    assert "Pull results from Review Robin" in text
-    assert "<h2>Export bundle</h2>" in text and "Download export" in text
+    assert re.findall(r'data-xd-card="(\w+)"', text) == [
+        "all",
+        "applications",
+        "gates",
+        "outcomes",
+        "alias",
+        "setup",
+    ]
+    for h in ("Extract all data", "Applications", "By gate", "Outcomes", "Alias key"):
+        assert f"<h2>{h}</h2>" in text
+    assert "Evaluation responses" not in text and "Record interview scores" not in text
+    assert "ra_2027_extract.zip: manifest.csv · applications.csv · gate_1_peer_review.csv" in text
+    # A gate not sent has no file; a confidential one says so.
+    gate3 = text[text.index('data-xd-gate="3"') :]
+    assert "Not sent" in gate3[: gate3.index("</tr>")]
+    gate2 = text[text.index('data-xd-gate="2"') :]
+    assert "Confidential" in gate2[: gate2.index("</tr>")] and "500 pairs" in gate2
+    assert "dossier_id, evaluator, evaluator_email, Score, Comment" in text
+    assert "dossier_id, application_id, applicant, email" in text  # the alias key
+    assert "form.csv · process.csv · panels.csv · emails.csv" in text  # CSV (author)
+    assert "No submitted applications yet." not in text
+    assert ".xd-grid { display: grid;" in text  # two to a row (base.html)
+
+
+def test_extract_s_files_follow_the_exercise(client: TestClient) -> None:
+    ra = sample_data.exercise(EX)
+    assert ra is not None
+    x = extract.of(ra)
+    assert x.application_columns[:6] == extract.APPLICATION_KEYS
+    # A column per question, in the form's order; no section or text block.
+    assert x.application_columns[6:9] == ("Preferred name", "Matriculation number", "Year of study")
+    assert "About you" not in x.application_columns
+    assert [(g.name, g.pairs, g.sent) for g in x.gates] == [
+        ("gate_1_peer_review.csv", 2980, True),
+        ("gate_2_office_checks.csv", 500, True),
+        ("gate_3_staff_interview.csv", 80, False),
+    ]
+    assert x.outcome_columns[:4] == (
+        "dossier_id",
+        "applicant",
+        "Peer review: Mean score",
+        "Peer review: Comments",
+    )
+    assert "Shortlisting released" in x.outcome_columns
+    assert extract.slug("Staff interview / Panel 2") == "staff_interview_panel_2"
+    draft = sample_data.exercise(DRAFT)
+    assert draft is not None
+    assert not any(g.sent for g in extract.of(draft).gates)  # a draft sent nothing
 
 
 def test_a_draft_exercise_s_timeline_reads_cleanly(client: TestClient) -> None:
@@ -513,7 +555,9 @@ def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> Non
     assert "No applications yet." in client.get(f"{base}/dossiers").text
     # Ruling 16: a form's receipt is owed until Process says otherwise.
     assert 'data-email="Stage 1: Receipt - Applicants"' in client.get(f"{base}/emails").text
-    assert "No submitted applications yet." in client.get(f"{base}/extract").text
+    xd = client.get(f"{base}/extract").text
+    assert "No submitted applications yet. A draft exercise: only its setup can be extracted." in xd
+    assert "No gates yet: Process adds them." in xd
 
 
 def test_a_set_up_draft_lists_only_what_it_lacks(client: TestClient) -> None:

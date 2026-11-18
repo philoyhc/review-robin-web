@@ -9,7 +9,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
-from applydesk import home_ops, paging, sample_data, stages, timeline, workflow
+from applydesk import extract, home_ops, paging, sample_data, stages, timeline, workflow
 from applydesk.gate import placeholders_only
 from applydesk.lookups import exercise_or_404
 from applydesk.web import OPERATIONS_PAGES, OPERATOR_LOBBY, SETUP_PAGES, exercise_nav, render
@@ -163,7 +163,9 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         assessors=sample_data.assessors_of(exercise.public_id),
         pool=sample_data.pool_of(exercise.public_id),
         interviewers=sample_data.interviewers_of(exercise.public_id),
-        responses=sample_data.RESPONSES,
+        extract=extract.of(exercise) if section == "extract" else None,
+        alias_columns=extract.ALIAS_KEYS,
+        setup_files=extract.SETUP_FILES,
         cards=sample_data.form_cards(exercise.public_id),
         form_heading=sample_data.form_heading(exercise.public_id),
         card_types=sample_data.CARD_TYPES,

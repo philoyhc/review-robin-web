@@ -1,34 +1,77 @@
-{# Extract data (ruling 14, segment AD1D): what Reports held; every
-   evaluation of each application, and the export. A placeholder until
-   its own segment. #}
-<section class="card">
-  <h2>Evaluation responses</h2>
-  <p class="muted">Every evaluation of each application in one place: the assessments in Review Robin, pulled back by application{% if exercise.blind %} through the alias key{% endif %}; the interviews; and the reviewer an applicant chose from the pool.</p>
-  <div class="table-wrap">
-  <table>
-    <thead><tr><th>Application</th><th>Assessment <span class="muted">(Review Robin)</span></th><th>Interview</th><th>Pool reviewer</th></tr></thead>
-    <tbody>
-    {% for a in applications if a.state == "Submitted" %}
-      {% set r = responses.get(a.public_id, {}) %}
-      <tr><td>{{ a.title }}<br><span class="muted"><code>{{ a.public_id }}</code></span></td>
-        <td>{{ r.assessment or "Not sent yet" }}</td><td>{{ r.interview or "—" }}</td><td>{{ r.pool or "—" }}</td></tr>
-    {% else %}
-      <tr><td colspan="4" class="muted">No submitted applications yet.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  </div>
-  <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Pull results from Review Robin</button><button class="btn btn-secondary" type="button" disabled>Record interview scores</button></div>
-</section>
-<div class="grid">
-  <section class="card">
-    <h2>Export bundle</h2>
-    <p>A ZIP for offline selection: a manifest, the applications with both sections, the panels, and every evaluation response collated above.</p>
-    <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Download export</button></div>
+{# Extract data (segment AD1J): Review Robin's, cards that cut the
+   exercise's data into files for offline selection and show none of it
+   (Dossiers and each gate's page show it). Each card says what its file
+   holds, its chips, the file's columns, and its download at the foot.
+   A scaffold: the chips and downloads do nothing until rung 3; the
+   files' shapes are `applydesk/extract.py`'s. #}
+{% macro seg(options, on=0, label="") -%}
+<span class="seg" role="group"{% if label %} aria-label="{{ label }}"{% endif %}>{% for o in options %}<button type="button" aria-pressed="{{ 'true' if loop.index0 == on else 'false' }}">{{ o }}</button>{% endfor %}</span>
+{%- endmacro %}
+{% macro tog(name, on=True) -%}
+<button type="button" class="btn btn-toggle" aria-pressed="{{ 'true' if on else 'false' }}">{{ name }}</button>
+{%- endmacro %}
+{% macro columns(cols) -%}
+<p class="xd-cols"><span class="visually-hidden">Columns: </span>{{ cols | join(", ") }}</p>
+{%- endmacro %}
+{% set nothing = extract.submitted == 0 %}
+{% if nothing %}<p class="muted xd-empty" data-xd-empty>No submitted applications yet.{% if extract.draft %} A draft exercise: only its setup can be extracted.{% endif %}</p>{% endif %}
+<div class="xd-grid" data-xd>
+  <section class="card" data-xd-card="all">
+    <h2>Extract all data</h2>
+    <p class="xd-help">One ZIP for offline selection: a manifest, then every file the cards below make, as each is set.</p>
+    <div class="xd-chips"><span class="xd-k">Carries</span>{{ tog("Applications") }}{{ tog("Gates") }}{{ tog("Outcomes") }}{{ tog("Setup", False) }}</div>
+    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg(("Names", "Dossier IDs"), label="Applicants as") }}</div>
+    <p class="xd-cols" data-xd-files>{{ extract.zip_name }}: {{ extract.files | join(" · ") }}</p>
+    <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Zip all</button></div>
   </section>
-  <section class="card">
-    <h2>Single files</h2>
-    <p class="muted">CSV, one row each.</p>
-    <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Applications</button><button class="btn btn-secondary" type="button" disabled>Panels</button><button class="btn btn-secondary" type="button" disabled>Evaluation responses</button></div>
+  <section class="card" data-xd-card="applications">
+    <h2>Applications</h2>
+    <p class="xd-help">One row per application: who and when, then a column per form question, in the form's order.</p>
+    <div class="xd-chips"><span class="xd-k">Rows</span>{{ seg(("Last applications", "All applications"), label="Rows") }}</div>
+    <div class="xd-chips"><span class="xd-k">Drafts</span>{{ seg(("Left out", "Included"), label="Drafts") }}</div>
+    {{ columns(extract.application_columns) }}
+    <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Download CSV</button></div>
+  </section>
+  <section class="card" data-xd-card="gates">
+    <h2>By gate</h2>
+    <p class="xd-help">One file per gate, one row per pair: the application, the evaluator, then a column per response field, as Review Robin returned it.</p>
+    <div class="xd-chips"><span class="xd-k">Shape</span>{{ seg(("A row per pair", "A row per application"), label="Shape") }}</div>
+    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg(("Dossier IDs", "Names"), label="Applicants as") }}</div>
+    {% if extract.gates %}
+    <table class="xd-gates">
+      <thead><tr><th>Gate</th><th>Rows</th><th><span class="visually-hidden">File</span></th></tr></thead>
+      <tbody>
+      {% for g in extract.gates %}
+        <tr data-xd-gate="{{ g.number }}"><td>{{ g.number }} · {{ g.label }}{% if g.confidential %} <span class="chip chip-mute">Confidential</span>{% endif %}</td>
+          <td>{% if g.sent %}{{ "{:,}".format(g.pairs) }} {{ "pair" if g.pairs == 1 else "pairs" }}{% else %}<span class="muted">Not sent</span>{% endif %}</td>
+          <td>{% if g.sent %}<button class="btn btn-secondary xd-csv" type="button" disabled title="{{ g.name }}">CSV</button>{% else %}<span class="muted">—</span>{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% for g in extract.gates if g.sent %}{% if loop.first %}{{ columns(g.columns) }}{% endif %}{% endfor %}
+    {% else %}
+    <p class="muted">No gates yet: Process adds them.</p>
+    {% endif %}
+    <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Zip gates</button></div>
+  </section>
+  <section class="card" data-xd-card="outcomes">
+    <h2>Outcomes</h2>
+    <p class="xd-help">One row per application: each gate's results as Dossiers collates them, then each outcome's value and when it was released.</p>
+    <div class="xd-chips"><span class="xd-k">Rows</span>{{ seg(("Last applications", "All applications"), label="Rows") }}</div>
+    {{ columns(extract.outcome_columns) }}
+    <div class="btnrow"><button class="btn btn-primary" type="button" disabled>Download CSV</button></div>
+  </section>
+  <section class="card" data-xd-card="alias">
+    <h2>Alias key</h2>
+    <p class="xd-help">Dossier ID to applicant, the key Review Robin never sees. Keep it apart from the files above; every download is logged.</p>
+    {{ columns(alias_columns) }}
+    <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Download key</button></div>
+  </section>
+  <section class="card" data-xd-card="setup">
+    <h2>Extract setup</h2>
+    <p class="xd-help">The exercise's setup as files, to clone it into a new exercise: Form, Process (stages, gates, outcomes and rules), Panels and Emails.</p>
+    <div class="xd-chips"><span class="xd-k">Carries</span>{{ tog("Form") }}{{ tog("Process") }}{{ tog("Panels") }}{{ tog("Emails") }}</div>
+    <p class="xd-cols">{{ setup_files | join(" · ") }}</p>
+    <div class="btnrow"><button class="btn btn-secondary" type="button" disabled>Zip setup</button></div>
   </section>
 </div>
