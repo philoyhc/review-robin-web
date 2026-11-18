@@ -210,17 +210,66 @@ class Outcome:
     rule: Rule | None = None
 
 
+def short_day(d: datetime | date) -> str:
+    """A day as the pages print it, e.g. "1 Sep"."""
+    return f"{d.day} {d.strftime('%b')}"
+
+
+@dataclass(frozen=True)
+class StageDates:
+    """A stage's start and end (segment AD1K, author 2026-11-18): each a
+    date and a time in the exercise's time zone, declared before the
+    stage can be published, its end what completes it."""
+
+    start: datetime
+    end: datetime
+
+    @property
+    def valid(self) -> bool:
+        """Its end after its start: a reversed range is no dates to the
+        timeline and to a stage's status, and refused at publishing
+        (Codex; the old parser refused it too)."""
+        return self.end > self.start
+
+
+def day(y: int, m: int, d: int, hh: int = 0, mm: int = 0) -> datetime:
+    return datetime(y, m, d, hh, mm)
+
+
+def span(start: datetime, end: datetime) -> StageDates:
+    """A stage running from ``start`` to ``end``, a bare day's end taken
+    as its last minute (23:59)."""
+    if end.hour == 0 and end.minute == 0:
+        end = end.replace(hour=23, minute=59)
+    return StageDates(start, end)
+
+
+#: A stage's declared status (ruling 35); Completed and Overdue follow
+#: from its end and its items (``stage_status``).
+STAGE_STATUSES = ("Draft", "Published")
+
+
 @dataclass(frozen=True)
 class Stage:
     """A step of the exercise's timeline (ruling 15): it holds the
     application form, or gates, and may hold an outcome; never the form
-    and a gate together. Named by the operator, "Stage N" until then."""
+    and a gate together. Named by the operator, "Stage N" until then.
+    ``when`` is its declared start and end, None until set; ``status``
+    the operator's Draft or Published (ruling 35)."""
 
     number: int
     name: str  # "" until the operator names it
-    dates: str
+    when: StageDates | None
     columns: tuple[Gate | Outcome, ...] = ()
     form: bool = False  # holds the application form (ruling 15)
+    status: str = "Draft"
+
+    @property
+    def dates(self) -> str:
+        """The dates as the pages print them, e.g. "1 Sep – 30 Sep"."""
+        if self.when is None:
+            return "Dates not set"
+        return f"{short_day(self.when.start)} – {short_day(self.when.end)}"
 
     @property
     def label(self) -> str:
@@ -372,11 +421,11 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
     # A draft still being set up (segment AD1F): its selection gate added
     # just in time, its panel not chosen yet.
     "c4xh2ndv6s": (
-        Stage(1, "", "Dates not set", form=True),
+        Stage(1, "", None, form=True),
         Stage(
             2,
             "Selection",
-            "Dates not set",
+            None,
             (
                 Gate(
                     "g1",
@@ -390,18 +439,42 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
     ),
     # The model exercise (author, 2026-11-13): its stages named.
     "wa9juxbc2t": (
-        Stage(1, "Applications", "1 Sep – 30 Sep", form=True),
-        Stage(2, "Review", "1 Oct – 6 Nov", (_G1, _G2, _O1)),
-        Stage(3, "Interviews", "9 Nov – 4 Dec", (_G3, _O2)),
+        Stage(
+            1,
+            "Applications",
+            span(day(2026, 9, 1), day(2026, 9, 30)),
+            form=True,
+            status="Published",
+        ),
+        Stage(
+            2,
+            "Review",
+            span(day(2026, 10, 1), day(2026, 11, 6)),
+            (_G1, _G2, _O1),
+            status="Published",
+        ),
+        Stage(
+            3,
+            "Interviews",
+            span(day(2026, 11, 9), day(2026, 12, 4)),
+            (_G3, _O2),
+            status="Published",
+        ),
     ),
     # A smaller exercise, read blind by one panel; its second stage not
     # yet named.
     "k7mfr3pq8z": (
-        Stage(1, "Call for applications", "1 Sep – 31 Oct", form=True),
+        Stage(
+            1,
+            "Call for applications",
+            span(day(2026, 9, 1), day(2026, 10, 31)),
+            form=True,
+            status="Published",
+        ),
         Stage(
             2,
             "",
-            "1 Nov – 30 Nov",
+            span(day(2026, 11, 1), day(2026, 11, 30)),
             (
                 Gate(
                     "g1",
@@ -421,6 +494,7 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
                     (("g1.r1", 1.0),),
                 ),
             ),
+            status="Published",
         ),
     ),
 }
@@ -507,6 +581,18 @@ def _small_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
     )
 
 
+def _exercise_span(e: sample_data.Exercise) -> StageDates | None:
+    """The one stage of an exercise with no stages laid out, from its
+    opening and its applications' close ("1 Nov 2026", "31 Jan 2027,
+    23:59"); None while either is "Not set"."""
+    try:
+        start = datetime.strptime(e.opens, "%d %b %Y")
+        end = datetime.strptime(e.application_stage_ends, "%d %b %Y, %H:%M")
+    except ValueError:
+        return None
+    return StageDates(start, end)
+
+
 def plan_of(exercise_id: str) -> Plan:
     """The stages and every application's cells for one exercise. An
     exercise not yet set up has one stage, holding the form, as a
@@ -514,12 +600,10 @@ def plan_of(exercise_id: str) -> Plan:
     apps = sample_data.applications_of(exercise_id)
     if exercise_id not in _STAGES:
         e = sample_data.exercise(exercise_id)
-        dates = (
-            "Dates not set"
-            if e is None or "Not set" in (e.opens, e.application_stage_ends)
-            else f"{e.opens} – {e.application_stage_ends}"
-        )
-        return Plan((Stage(1, "", dates, form=True),), tuple(Row(a, {}) for a in apps))
+        when = _exercise_span(e) if e else None
+        status = "Draft" if e is None or e.state == "Draft" else "Published"
+        only = Stage(1, "", when, form=True, status=status)
+        return Plan((only,), tuple(Row(a, {}) for a in apps))
     rows = _model_rows(apps) if exercise_id == "wa9juxbc2t" else _small_rows(apps)
     return Plan(_STAGES[exercise_id], rows)
 
@@ -613,6 +697,94 @@ def result_of(plan: Plan, key: str) -> tuple[Gate | None, GateResult | None]:
     if gate is None:
         return None, None
     return gate, next((r for r in gate.results if r.key == result_key), None)
+
+
+def _is_number(value: str) -> bool:
+    """As the page's ``!isNaN(Number(v))`` on a non-blank value."""
+    try:
+        float(value.strip())
+    except ValueError:
+        return False
+    return bool(value.strip())
+
+
+def _compare_problems(
+    plan: Plan, kind: str, key: str, op: str, value: str, gate: Gate, result: GateResult
+) -> list[str]:
+    """How a rule compares a result, as Process's Outline checks it
+    (Codex): a list matched against one of its options, a number compared
+    with a number, a ranking by a number."""
+    rc = collated(result, source_field(gate, result))
+    k, label = comparable(rc), result_label(plan, key)
+    if kind == "top":
+        return [] if k == "number" else [f"ranks by {label}, which is not a number"]
+    if not k:
+        return [f"reads {label}, which a rule cannot compare"]
+    if k == "list" and op != "is":
+        return [f"compares {label}, a list, as a number"]
+    if k == "number" and op == "is":
+        return [f"matches {label}, a number, as a list"]
+    options = [o.strip() for o in rc.field.options.split(",") if o.strip()]
+    if k == "list" and value not in options:
+        return [f"reads \u201c{value}\u201d, not among the options of {label}"]
+    if k == "number" and not _is_number(value):
+        return [f"compares with \u201c{value}\u201d, not a number"]
+    return []
+
+
+def rule_problems(
+    plan: Plan, column: Gate | Outcome, forms: dict[str, list[str]]
+) -> tuple[str, ...]:
+    """What a column's rule reads that no longer holds, as Process's
+    Outline says it (segment AD1K, Codex): an outcome gone, or not before
+    it; a gate or result gone, or outside an outcome's scope; a value not
+    among an outcome's values or a list result's options; a form answer
+    not a List question's option (``forms``, the form's List questions);
+    a count not a whole number. The page's script says the same in place;
+    publishing reads this."""
+    rule = column.rule
+    if rule is None:
+        return ()
+    found: list[str] = []
+    cols = {c.key: c for c in plan.columns}
+    order = list(plan.columns)
+    earlier = order[: order.index(column)] if column in order else []
+    in_scope = scope(plan, column) if isinstance(column, Outcome) else ()
+    for when, _ in rule.branches:
+        for kind, key, _op, value in when:
+            if kind == "out":
+                out = cols.get(key)
+                if not isinstance(out, Outcome):
+                    found.append("reads an outcome no longer in the process")
+                elif out not in earlier:
+                    found.append(f"reads {out.label}, which comes later")
+                elif value and value not in out.values:
+                    found.append(f"reads \u201c{value}\u201d, not among the values of {out.label}")
+            elif kind in ("res", "top", "ent") and isinstance(column, Outcome):
+                gate, result = result_of(plan, key) if kind != "ent" else (cols.get(key), None)
+                if not isinstance(gate, Gate):
+                    found.append("reads a gate no longer in the process")
+                elif gate not in in_scope:
+                    found.append(f"reads {gate.label}, outside the gates before it")
+                elif kind != "ent" and result is None:
+                    found.append(f"reads a result no longer on {gate.label}")
+                elif result is not None:
+                    found += _compare_problems(plan, kind, key, _op, value, gate, result)
+            if kind == "comb" and not _is_number(value):
+                found.append(f"compares with \u201c{value}\u201d, not a number")
+            if kind in ("last", "top") and not re.fullmatch(r"[1-9][0-9]*", value):
+                found.append(f"takes \u201c{value}\u201d, not a whole number")
+            if kind == "form":
+                if key not in forms:
+                    found.append(f"reads \u201c{key}\u201d, not a List question on the form")
+                elif value not in forms[key]:
+                    found.append(f"reads \u201c{value}\u201d, not among the options of {key}")
+    if isinstance(column, Outcome):
+        allowed = set(column.values) | {"Pending"}
+        for value in (*(then for _, then in rule.branches), rule.otherwise):
+            if value and value not in allowed:
+                found.append(f"decides \u201c{value}\u201d, not among its values")
+    return tuple(dict.fromkeys(found))
 
 
 def result_label(plan: Plan, key: str) -> str:
@@ -933,12 +1105,24 @@ def sources_warn(
     """Whether a gate head's chip warns, as the page script's
     ``sourceProblems``: no sources, a panel not chosen, a question not
     chosen, a min above its max, or a Total outside its bounds."""
-    return bool(total_problem(sources, total)) or any(
-        (s.kind == "panel" and s.ref not in pools)
-        or (s.kind == "nominated" and not s.ref)
-        or s.min > s.max
-        for s in sources
-    )
+    return bool(total_problem(sources, total) or source_problems(sources, pools))
+
+
+def source_problems(
+    sources: tuple[Source, ...], pools: dict[str, sample_data.Pool]
+) -> tuple[str, ...]:
+    """Each source that cannot give evaluators, in words, as the page
+    script's ``sourceProblems``: a panel not chosen or gone, a question
+    not chosen, a min above its max. Publishing reads it too (Codex)."""
+    out: list[str] = []
+    for n, s in enumerate(sources, 1):
+        if s.kind == "panel" and s.ref not in pools:
+            out.append(f"source {n} has no panel" if not s.ref else f"source {n}'s panel is gone")
+        elif s.kind == "nominated" and not s.ref:
+            out.append(f"source {n} has no question chosen")
+        if s.min > s.max:
+            out.append(f"source {n}'s min is above its max")
+    return tuple(out)
 
 
 @dataclass(frozen=True)

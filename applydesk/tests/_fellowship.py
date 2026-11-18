@@ -28,6 +28,8 @@ from applydesk.stages import (
     Source,
     Stage,
     Total,
+    day,
+    span,
 )
 
 EX = "r6tm4kq9wz"
@@ -113,10 +115,10 @@ _O3 = Outcome("o3", 3, "Final results", ("Awarded", "Waitlisted", "Not awarded")
 
 
 STAGES: tuple[Stage, ...] = (
-    Stage(1, "Call for applications", "1 Sep – 15 Oct", form=True),
-    Stage(2, "Review", "16 Oct – 10 Nov", (_G1, _G2, _O1)),
-    Stage(3, "Interview", "11 Nov – 24 Nov", (_G3, _O2)),
-    Stage(4, "Decision", "25 Nov – 12 Dec", (_O3,)),
+    Stage(1, "Call for applications", span(day(2026, 9, 1), day(2026, 10, 15)), form=True),
+    Stage(2, "Review", span(day(2026, 10, 16), day(2026, 11, 10)), (_G1, _G2, _O1)),
+    Stage(3, "Interview", span(day(2026, 11, 11), day(2026, 11, 24)), (_G3, _O2)),
+    Stage(4, "Decision", span(day(2026, 11, 25), day(2026, 12, 12)), (_O3,)),
 )
 GATES = {
     "g1": ("Results in", "92 of 92 reviewed"),

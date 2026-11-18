@@ -7,7 +7,6 @@ serves both pages. Today is the sample's until AD2.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from datetime import date
 
@@ -16,14 +15,6 @@ from applydesk.sample_data import Exercise
 
 #: The sample's today (the model exercise is mid Stage 3, ruling 30).
 TODAY = date(2026, 11, 17)
-
-_MONTHS = {
-    m: i
-    for i, m in enumerate(
-        ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"), 1
-    )
-}
-_DAY = re.compile(r"\b(\d{1,2}) ([A-Z][a-z]{2})[a-z]*(?: (\d{4}))?\b")
 
 
 @dataclass(frozen=True)
@@ -84,35 +75,6 @@ def short(d: date) -> str:
     return f"{d.day} {d.strftime('%b')}"
 
 
-def _dates(text: str, after: date) -> tuple[date | None, date | None]:
-    """A stage's "1 Sep – 30 Sep" or "1 Nov 2026 – 31 Jan 2027, 23:59"
-    as days. A day without its year takes the first that puts it on or
-    after ``after`` (the stage before it ends, or the exercise opens);
-    one date is a one-day stage. Anything else, an impossible day or an
-    end before its start among them, is no dates (cold read)."""
-    found = _DAY.findall(text)
-    if not found or any(m not in _MONTHS for _, m, _ in found):
-        return None, None
-    days: list[date] = []
-    for day, month, y in found[:2]:
-        floor = days[-1] if days else after
-        try:
-            d = date(int(y) if y else floor.year, _MONTHS[month], int(day))
-            if not y and d < floor:
-                d = date(d.year + 1, d.month, d.day)
-        except ValueError:
-            return None, None
-        days.append(d)
-    return (days[0], days[-1]) if days[-1] >= days[0] else (None, None)
-
-
-def _opens(e: Exercise) -> date:
-    """Where the stages' days begin to count: the exercise's opening, or
-    the start of today's year."""
-    start, _ = _dates(e.opens, date(TODAY.year, 1, 1))
-    return start or date(TODAY.year, 1, 1)
-
-
 def _items(st: stages.Stage, e: Exercise) -> tuple[Item, ...]:
     out: list[Item] = []
     if st.form:
@@ -142,13 +104,11 @@ def _items(st: stages.Stage, e: Exercise) -> tuple[Item, ...]:
 def of(e: Exercise, today: date = TODAY) -> Timeline:
     """The exercise's timeline from Process's stages (Semantics, AD1I)."""
     plan = stages.plan_of(e.public_id)
-    floor = _opens(e)
-    spans: list[tuple[date | None, date | None]] = []
-    for st in plan.stages:
-        s, f = _dates(st.dates, floor)
-        spans.append((s, f))
-        if f:
-            floor = f
+    # A stage's declared start and end (segment AD1K): typed, no parsing.
+    spans: list[tuple[date | None, date | None]] = [
+        (st.when.start.date(), st.when.end.date()) if st.when and st.when.valid else (None, None)
+        for st in plan.stages
+    ]
     known = [d for span in spans for d in span if d]
     start, end = (min(known), max(known)) if known else (None, None)
     views: list[StageView] = []
