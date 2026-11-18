@@ -113,6 +113,12 @@ def test_dossiers_marks_what_lock_kept_and_asks_before_leaving(page: Page) -> No
     assert marker.inner_text() == "1 change on this page, not saved until AD2"
     assert "kept on this page" in page.locator("[data-ap-said]").inner_text()
     assert page.evaluate(LEAVES)
+    # The same cell changed again over a second Lock counts once: the count
+    # is of what differs from the page as loaded (cold read).
+    page.locator("[data-ap-lock]").click()
+    page.locator("[data-row] [data-ap-adm]:not([disabled])").first.click()
+    page.locator("[data-ap-lock]").click()
+    assert marker.inner_text() == "1 change on this page, not saved until AD2"
 
 
 def test_panels_marks_what_is_kept_and_asks_before_leaving(page: Page) -> None:
@@ -137,6 +143,18 @@ def test_panels_marks_what_is_kept_and_asks_before_leaving(page: Page) -> None:
     opened.first.locator('[data-pn-act="remove"]').click()
     assert asked and "opened gate keeps" in asked[0]
     assert page.locator("[data-pn-row]", has_text=who).count() == 1  # dismissed: kept
+    assert not mark.is_visible() and not page.evaluate(LEAVES)  # nothing kept yet
+    opened.first.locator('[data-pn-act="save"]').click()  # untouched: nothing changed
+    assert page.locator("[data-pn-said]").inner_text().endswith("nothing changed.")
+    assert not mark.is_visible()
+    # A new row removed was never kept.
+    page.locator('[data-pn-act="add"]').click()
+    page.locator("[data-pn-row]").first.locator('[data-pn-act="remove"]').click()
+    assert not mark.is_visible() and not page.evaluate(LEAVES)
+    # A ticked row with changes ✓ has not kept asks on leaving.
+    opened.first.locator("[data-pn-select]").check()
+    opened.first.locator('[data-pn="note"]').fill("Edited")
+    assert page.evaluate(LEAVES) and not mark.is_visible()
     opened.first.locator('[data-pn-act="save"]').click()
     assert page.locator("[data-pn-said]").inner_text().endswith("kept on this page.")
     assert mark.is_visible() and page.evaluate(LEAVES)
@@ -154,4 +172,12 @@ def test_the_gate_page_asks_before_leaving_its_pages_with_changes(page: Page) ->
         " a.addEventListener('click', e => e.preventDefault(), {once: true}); a.click(); }"
     )
     assert not page.evaluate(LEAVES)  # a click on its own sort: staying
-    assert page.evaluate(LEAVES)  # and the next leave asks again
+    page.wait_for_timeout(1100)
+    assert page.evaluate(LEAVES)  # that click led nowhere: a later leave asks (cold read)
+    page.evaluate(
+        "() => { const a = document.querySelector('a.ev-sort-btn');"
+        " a.addEventListener('click', e => e.preventDefault(), {once: true});"
+        " a.dispatchEvent(new MouseEvent('click',"
+        " {bubbles: true, cancelable: true, ctrlKey: true})); }"
+    )
+    assert page.evaluate(LEAVES)  # a new tab is not staying

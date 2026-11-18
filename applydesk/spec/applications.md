@@ -554,10 +554,12 @@ A panel made on Form or Process appears here only once saved (AD2).
     the rows an added panel brought (a row kept with its own ✓ stays); neither
     closes the card. Enter in a name box is *Save*, Esc puts that name back.
     *Close* asks first while any waits. *Copy emails* and the CSV act at once.
-  - Whatever ✓, ×, *Save* or an import keeps is on the page only: ✓ says
-    *kept on this page*, the page shows *Changes on this page, not saved
-    until AD2*, and leaving asks first. × on a member of a panel an opened
-    gate keeps asks before removing them.
+  - Whatever ✓, ×, *Save* or an import changes is on the page only: ✓ says
+    *kept on this page* (*nothing changed* on an untouched row), the page
+    shows *Changes on this page, not saved until AD2*, and leaving asks
+    first, as it does while a ticked row holds changes ✓ has not kept. ×
+    on a member of a panel an opened gate keeps (as kept, not as ticked
+    while editing) asks before removing them.
 - **The table.** *Filter* (matches name, email, note and the names of the
   panels a row is on; a row being edited stays in view) and *Add new*, which
   opens a blank row at the top (an imported row joins the end). *Show
@@ -590,8 +592,8 @@ locked until *Unlock*; then every cell, *Set ticked rows*, *Apply rules…*,
 *Upload CSV* and each outcome's *Released* are live, but for the fixed ones
 below. *Lock* keeps what
 changed; *Undo changes* puts the table back as it was when unlocked; meanwhile
-a count of the changes shows. Locked, what Lock kept stays marked (*N changes
-on this page, not saved until AD2*), and leaving the page with any pending or
+a count of the changes shows. Locked, what differs from the page as loaded
+stays marked (*N changes on this page, not saved until AD2*), and leaving the page with any pending or
 kept asks first. Ticks only choose rows; the *Application* header's tick ticks every
 row in view, or clears them, and *Set ticked rows* with none ticked says *No
 rows ticked*. *Download CSV* writes the rows in view in the shape *Upload
@@ -683,9 +685,12 @@ the browser (`_gate_ops_js.html`):
 
 - **Kept in the tab.** Changes live in `sessionStorage` under
   `applydesk-ev:<exercise>:<gate>:<mode>`, so paging, sorting and searching
-  keep them; *Unsaved changes* and *Discard changes* show while any exist,
+  keep them; *Changes in this tab, not saved until AD2* and *Discard
+  changes* show while any exist,
   and Discard puts the sample back. Leaving the gate's pages with any asks
-  first; its own pager, sort and filter do not. On load they are reconciled against the
+  first, a reload included, since the browser cannot tell a reload from
+  closing the tab, which loses them; its own pager, sort and filter do
+  not. On load they are reconciled against the
   sample, the mode and the limits: a stale pair, an approval the mode lacks or
   an addition past a limit is dropped.
 - **+ Pair** opens a panel to choose a dossier and an evaluator. The

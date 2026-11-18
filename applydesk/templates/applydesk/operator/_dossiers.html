@@ -200,7 +200,7 @@
   // kept, to count the changes and to undo them. ---
   var lockBtn = root.querySelector("[data-ap-lock]"), undoBtn = root.querySelector("[data-ap-undo]");
   var changesEl = root.querySelector("[data-ap-changes]"), said = root.querySelector("[data-ap-said]");
-  var unlocked = false, base = null, keptN = 0;  // changes Lock kept since the page loaded
+  var unlocked = false, base = null, keptN = 0, loaded = null;  // keptN: what differs from the page as loaded, at the last Lock
   function state() {
     var cells = [];
     rows.forEach(function (r) {
@@ -215,13 +215,14 @@
     });
     return { cells: cells, rels: rels };
   }
-  function changes() {
-    if (!base) return 0;
+  function changes(ref) {
+    var b0 = ref || base;
+    if (!b0) return 0;
     var now = state(), n = 0;
     // A cell's date too: Apply can put a value back with today's date
     // (Codex on #3892).
-    now.cells.forEach(function (c, i) { var b = base.cells[i]; if (c.v !== b.v || c.hand !== b.hand || c.date !== b.date) n += 1; });
-    now.rels.forEach(function (c, i) { if (c.on !== base.rels[i].on || c.note !== base.rels[i].note) n += 1; });
+    now.cells.forEach(function (c, i) { var b = b0.cells[i]; if (c.v !== b.v || c.hand !== b.hand || c.date !== b.date) n += 1; });
+    now.rels.forEach(function (c, i) { if (c.on !== b0.rels[i].on || c.note !== b0.rels[i].note) n += 1; });
     return n;
   }
   function showChanges() {
@@ -254,7 +255,8 @@
       root.querySelector("[data-ap-rule-open]").setAttribute("aria-expanded", "false");
     }
     base = null;
-    keptN += n;
+    // Net of the page as loaded, so a change put back is not counted (cold read).
+    keptN = changes(loaded);
     setLocked(true);
     said.textContent = (n ? n + (n === 1 ? " change kept" : " changes kept") + " on this page; the table is locked." : "Locked.") +
       (dropped ? " The open proposal was not applied." : "");
@@ -793,5 +795,6 @@
 
   recount();
   filter();
+  loaded = state();
 })();
 </script>

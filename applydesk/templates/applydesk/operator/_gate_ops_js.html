@@ -253,17 +253,20 @@
   draw();
   // Leaving the gate's pages with changes asks first (AD-07); its own
   // pager, sort and filter keep them in the tab, so do not ask.
+  // Decided only for the navigation that follows: a click that opens a
+  // new tab, or is cancelled, does not stop a later leave from asking.
   var staying = false;
+  function stay() { staying = true; window.setTimeout(function () { staying = false; }, 1000); }
   document.addEventListener("click", function (e) {
     var link = e.target.closest("a[href]");
-    staying = !!link && link.pathname === window.location.pathname;
+    if (link && link.pathname === window.location.pathname && !(e.ctrlKey || e.metaKey || e.altKey) && link.target !== "_blank") stay();
   }, true);
   document.addEventListener("submit", function (e) {
-    staying = e.target.getAttribute("method") !== "post";
+    var f = e.target, action = new URL(f.action || window.location.href, window.location.href);
+    if ((f.getAttribute("method") || "get").toLowerCase() === "get" && action.pathname === window.location.pathname) stay();
   }, true);
   window.addEventListener("beforeunload", function (e) {
     if (dirty() && !staying) { e.preventDefault(); e.returnValue = ""; }
-    staying = false;
   });
 })();
 </script>
