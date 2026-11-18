@@ -109,6 +109,23 @@ def test_details_unlock_edit_and_lock(page: Page) -> None:
     )
 
 
+def test_details_lock_and_unlock_sit_at_the_card_s_foot_on_the_right(page: Page) -> None:
+    page.goto(HOME)
+    card = page.locator("[data-details]")
+    box = card.bounding_box()
+
+    def placed(name: str) -> None:
+        b = card.get_by_role("button", name=name, exact=True).bounding_box()
+        assert box and b
+        assert box["x"] + box["width"] - (b["x"] + b["width"]) < 40  # on the right
+        assert box["y"] + box["height"] - (b["y"] + b["height"]) < 40  # at the foot
+
+    placed("Unlock")
+    card.get_by_role("button", name="Unlock").click()
+    box = card.bounding_box()
+    placed("Lock")
+
+
 def test_details_refuse_what_cannot_hold(page: Page) -> None:
     page.goto(DRAFT_HOME)
     card = page.locator("[data-details]")

@@ -8,7 +8,6 @@
 <section class="card dt" id="details" data-details data-dt-codes="{{ other_codes | tojson | forceescape }}" data-dt-default-contact="{{ default_contact }}">
   <div class="cardhead"><h2>Details</h2>
     <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
-    <button class="btn btn-secondary" type="button" data-dt-lock title="Unlock the details to change them">Unlock</button>
   </div>
   <div data-dt-view>
     <dl class="facts">
@@ -36,9 +35,11 @@
     <label class="fc-l">Who may apply{% if live %} <span class="dt-why">· fixed once published</span>{% endif %}<select class="fc-in" data-dt="eligibility"{% if live %} disabled title="Fixed once published: a change waits for re-publishing (G2)"{% endif %}>{% for v in ("Open to all signed in", "Invitation only") %}<option{% if v == exercise.eligibility %} selected{% endif %}>{{ v }}</option>{% endfor %}{% if exercise.eligibility == "Not set" %}<option value="Not set" selected>Not set</option>{% endif %}</select></label>
     <label class="dt-check"><input type="checkbox" data-dt="blind"{% if exercise.blind %} checked{% endif %}> <span><strong>Blind review</strong> <span class="dt-why">· dossiers redact the applicant</span></span></label>
     <p class="dt-why" id="dt-why" data-dt-why role="alert"></p>
-    <div class="btnrow"><button class="btn btn-primary" type="button" data-dt-act="lock">Lock</button><button class="btn btn-secondary" type="button" data-dt-act="discard">Discard changes</button></div>
+    <div class="btnrow dt-foot"><button class="btn btn-secondary" type="button" data-dt-act="discard">Discard changes</button><button class="btn btn-primary" type="button" data-dt-act="lock">Lock</button></div>
   </form>
   <p class="dt-said" data-dt-said role="status"></p>
+  {# Unlock and Lock at the card's foot, on the right (author, 2026-11-18). #}
+  <div class="btnrow dt-foot"><button class="btn btn-secondary" type="button" data-dt-lock title="Unlock the details to change them">Unlock</button></div>
 </section>
 <script>
 (function () {
@@ -83,7 +84,7 @@
     card.querySelector('[data-dt-show="blind"]').textContent = v.blind ? "On" : "Off";
   }
   function open(on) {
-    form.hidden = !on; view.hidden = on; unlock.hidden = on;
+    form.hidden = !on; view.hidden = on; unlock.parentNode.hidden = on;  // its foot row too
     card.toggleAttribute("data-unlocked", on);
     why.textContent = "";
     (on ? field("name") : unlock).focus();
