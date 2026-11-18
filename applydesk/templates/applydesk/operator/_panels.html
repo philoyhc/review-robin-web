@@ -548,6 +548,8 @@
   // Save: the panels retired go first, so their names are free; then the
   // names typed, then the panels added, kept.
   function keepAll() {
+    // Save and Enter alike: what they keep is on this page only (Codex).
+    if (anyPending()) kept();
     var gone = retiring.map(function (key) { var n = nameOf(key); dropPanel(key); return n + " retired."; });
     retiring = [];
     var told = gone.concat(keepNames());
@@ -866,7 +868,6 @@
         " Save keeps it; Cancel takes it back.";
     } else if (what === "save-names") {
       keepAll();
-      kept();
     } else if (what === "cancel-names") {
       dropAll(false);
     } else if (what === "emails" && li) {

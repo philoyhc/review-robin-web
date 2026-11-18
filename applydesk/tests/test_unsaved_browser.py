@@ -181,3 +181,14 @@ def test_the_gate_page_asks_before_leaving_its_pages_with_changes(page: Page) ->
         " {bubbles: true, cancelable: true, ctrlKey: true})); }"
     )
     assert page.evaluate(LEAVES)  # a new tab is not staying
+
+
+def test_panels_marks_a_rename_kept_with_enter(page: Page) -> None:
+    """Codex on #3996: Enter in a name box keeps it as Save does, so the
+    page is marked and leaving asks."""
+    page.goto(f"{MODEL}/panels")
+    page.locator('[data-pn-act="manage"]').click()
+    name = page.locator("[data-pn-rename]").first
+    name.fill(name.input_value() + " (renamed)")
+    name.press("Enter")
+    assert page.locator("[data-pn-kept]").is_visible() and page.evaluate(LEAVES)
