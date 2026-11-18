@@ -36,7 +36,8 @@ where a ruling below differs from it, the ruling wins.
    asked to review** (AD5). ApplyDesk's roster holds that permission.
    **The exercise's operators open every dossier** (author, 2026-11-12).
    How the same pairs reach Review Robin's assignments, through reviewer,
-   reviewee or relationship tags, is decided at AD6.
+   reviewee or relationship tags, is decided at AD6. *(Settled by 23F and
+   ruling 27: a linked gate sends `relationships.csv`.)*
 10. **A blind exercise sends Review Robin an alias key** in place of the
     application ID, minted per handoff and mapped back only by
     ApplyDesk (AD6), since RRW shows `RevieweeEmail` under each name.
@@ -50,7 +51,8 @@ where a ruling below differs from it, the ruling wins.
     and interviewers. Ruling 1's "panels" are the native assessment
     engine's, still out of the MVP; these are rosters. **Reports collates
     every evaluation response**, Review Robin's included, beside the data
-    export.
+    export. *(Reports became Extract data, ruling 14; AD1J built the
+    bundle.)*
 
 12. **A photo is a question type in the MVP** (author, 2026-11-12): the
     one upload ruling 3 allows, since it needs no Blob storage (the
@@ -153,7 +155,8 @@ where a ruling below differs from it, the ruling wins.
       stands; each form-holding stage names its form and an application
       keeps a status per part, so the extension adds without reworking.
     - The sample's stages are *Call for applications*, *Review*,
-      *Interview* and *Decision*. The exercise's current stage is worked out from the
+      *Interview* and *Decision*. *(The model exercise now has three:
+      Applications, Review, Interviews; ruling 30.)* The exercise's current stage is worked out from the
       timeline (the one holding its next step), not stored. Setup (a
       draft) and Close are the exercise's state, not stages.
     - **Process is a stack of stage cards**, as Form is of question
@@ -210,6 +213,7 @@ where a ruling below differs from it, the ruling wins.
       *+ New panel*).
     - **Panels is one table**: a row per person, a column per panel
       ticking who sits on it, and a control card floating on the right.
+      *(Superseded by rulings 22 and 23: Manage panels above the table.)*
 21. **A gate yields up to three results, each derived** (author,
     2026-11-14; segment AD1F; *amended by ruling 28: response fields and
     results are separate lists, and no gate runs as* Results entered here):
@@ -277,7 +281,7 @@ where a ruling below differs from it, the ruling wins.
       result). **Open** the form, applicants apply, **close** it; an
       exercise with no form loads its candidates as dossiers instead.
     - **Dossiers** are made as the stage's Dossiers item says (ruling
-      25): from the form at submit or when it closes, the operator's
+      25; *the Dossiers item struck by ruling 26*): from the form at submit or when it closes, the operator's
       choice, or from an upload or an earlier outcome's list.
     - **Who enters the gate** is decided on Dossiers (the entry
       rule as a proposal, cells by hand or CSV, *Lock* keeping it),
@@ -481,7 +485,7 @@ rulings after this list):
   date-times in the exercise's **timezone** (stage dates are free text
   today, `stages.py`); Start before End. A sent Start activates the
   session once prepared, which ends re-sends.
-- **Help contact** and **timezone**: the exercise's, on Setup, each
+- **Help contact** and **timezone**: the exercise's, on Home's Details, each
   defaulted from Apply Desk's operator settings, as Review Robin's are
   (author, 2026-11-17); shown on each gate.
 - **Each response field** (ruling 28): label, type and bounds or
@@ -533,9 +537,9 @@ rulings after this list):
   through dossier parts (Review Robin releases nothing).
 
 **Rulings to settle (after the list)**
-- Ruling 24's "after opening, made in Review Robin" is superseded: a
-  linked session stays locked; changes come by revert-and-re-send or
-  Unlink.
+- ~~Ruling 24's "after opening, made in Review Robin"~~: superseded by
+  ruling 29; a linked session stays locked; changes come by
+  revert-and-re-send or Unlink.
 - ~~A sent gate read-only (AD1F, AD1G) versus re-sending before it opens~~:
   re-sent until it opens (ruling 29).
 - Confidential identity: 23F's "Name redacted" plus the Dossier ID, or
@@ -552,7 +556,7 @@ rulings after this list):
   (AD1G rung 6b's cold read).
 - How Apply Desk's operators line up with Review Robin's.
 - Scores entered by hand (an interview held outside Review Robin): every gate's scores come from Review Robin today and only outcomes are set by hand, on Dossiers; not on Extract data (author, 2026-11-18, AD1J). Where they belong is open.
-- Ruling 9's and AD6's "tags decided at AD6": settled by 23F.
+- ~~Ruling 9's and AD6's "tags decided at AD6"~~: settled by 23F.
 
 **Order** (UI first): A done in AD1G (closed 2026-11-17),
 then B on Evaluations > Gates as a new segment; then AD2's persistence; AD5; AD6 as rungs (builders,
@@ -567,14 +571,15 @@ Segments in order; each gets a plan in this folder when it starts.
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
 | **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14; removed 2026-11-15); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
-| AD1L onward — the other new pages | Emails built out as a working scaffold | Next |
+| AD1L — Emails | Emails built out as a working scaffold | Next |
+| Layer B — Gates to Review Robin | Send, re-send, status, results, link state, invite and remind, on Evaluations > Gates (the "Order" above) | After AD1L |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
-| AD5 — Panels and dossiers | The rosters on Panels (ruling 11): assessment panels and the applications each assessor is asked to review (ruling 9), the reviewer pool, interviewers; dossiers generated, the dossier with its access check, audit and blind redaction | — |
-| AD6 — Assessment in Review Robin | Rosters from submitted applications, the pairs as tags, `ProfileLink` to the dossier, the blind alias key (ruling 10), results back into ApplyDesk | The open items below |
+| AD5 — Panels and dossiers | The rosters on Panels (rulings 19, 22), each gate's evaluators from its ranked sources (ruling 27); dossiers made from the form or by *Create dossiers* (rulings 25, 26), the dossier with its access check, audit and blind redaction | — |
+| AD6 — Assessment in Review Robin | Rosters from dossiers (rulings 25, 26), the pairs as `relationships.csv` (ruling 27, 23F), `ProfileLink` to the dossier, the blind alias key (ruling 10), results back into ApplyDesk | The open items below |
 | AD7 — Timeline and outcomes | Milestones, announcements, outcome import, embargo on read, release, correction | G5 (sender), G7 (publication) |
-| AD8 — Dashboard and Reports | Counts by state; Reports: every evaluation response collated (ruling 11), the export bundle | — |
+| AD8 — Dashboard | Counts by state; the export bundle is Extract data, built in AD1J (ruling 14) | — |
 | Later | Blob storage, then uploads and referees | G8, with IT |
 
 ## Open decisions

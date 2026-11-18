@@ -1,5 +1,9 @@
 # ApplyDesk — the applicant photo field (design)
 
+> **Superseded in part (2026-11-18):** ruling 12 put the photo in the MVP,
+> its aspect ratio set per question, and Form builds it. The fixed 4:5 /
+> 480×600 below, and "not scheduled", are this design's, kept as written.
+
 **Saved:** 2026-11-12, by the author's ruling: "Save the spec for Apply
 Desk's use later." A design, not a contract, and not scheduled. Ruling 3
 in `applydesk/guide/todo_master.md` keeps uploads out of the MVP; this

@@ -568,8 +568,9 @@ A panel made on Form or Process appears here only once saved (AD2).
 ## The Dossiers page
 
 At `/operator/exercises/<id>/dossiers` (the Applications page until ruling
-25): a row per dossier, an application's where it has one; until the
-Dossiers item is built (ruling 25), the rows are the sample's applications.
+25): a row per dossier, an application's where it has one; until dossiers
+are made (*Create dossiers*, ruling 26), the rows are the sample's
+applications.
 A control surface (ruling 23), worked down its columns. The whole table is
 locked until *Unlock*; then every cell, *Set ticked rows*, *Apply rules…*,
 *Upload CSV* and each outcome's *Released* are live, but for the fixed ones
