@@ -52,6 +52,7 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         missing=sample_data.setup_missing(exercise),
         timezones=sample_data.TIMEZONES,
         default_contact=sample_data.DEFAULT_HELP_CONTACT,
+        blind_lock=locks.blind_lock(exercise),
         # Every other exercise's code and name, so Details refuses a
         # clashing code on the page (segment AD1I Semantics).
         other_codes=[
@@ -289,6 +290,9 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         outstanding=functools.partial(locks.outstanding, exercise),
         STATUS_CHIP=locks.STATUS_CHIP,
         now_value=stages.local_value(locks.NOW),
+        cells_lock=functools.partial(locks.cells_lock, exercise),
+        release_lock=functools.partial(locks.release_lock, exercise),
+        blind_lock=locks.blind_lock(exercise),
         window=stages.window,
         window_text=stages.window_text,
         blank_stage=stages.Stage(0, "", None),

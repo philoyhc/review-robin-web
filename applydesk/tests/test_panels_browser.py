@@ -6,10 +6,20 @@ to a chosen panel. Skips without a Chromium build, as
 
 from __future__ import annotations
 
+import pytest
 from playwright.sync_api import Locator, Page
 
+from applydesk import locks
 from applydesk.tests.test_form_browser import ORIGIN
 from applydesk.tests.test_form_browser import page as page  # the fixture, re-exported
+
+
+@pytest.fixture(autouse=True)
+def _form_open(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests edit the form: its lock (segment AD1K) is opened, as a
+    draft exercise's would be; the lock has tests of its own."""
+    monkeypatch.setattr(locks, "form_lock", lambda e: locks.OPEN)
+
 
 PANELS = f"{ORIGIN}/applydesk/operator/exercises/r6tm4kq9wz/panels"
 BLIND = f"{ORIGIN}/applydesk/operator/exercises/k7mfr3pq8z/panels"

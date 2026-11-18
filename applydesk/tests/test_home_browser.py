@@ -6,9 +6,19 @@ by CI) turns that skip into a failure."""
 
 from __future__ import annotations
 
+import pytest
 from playwright.sync_api import Dialog, Locator, Page, expect
 
+from applydesk import locks
 from applydesk.tests.test_form_browser import page as page
+
+
+@pytest.fixture(autouse=True)
+def _blind_open(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests edit Details: blind review's lock (segment AD1K) is
+    opened here; it has a test of its own (``test_locks_browser.py``)."""
+    monkeypatch.setattr(locks, "blind_lock", lambda e: locks.OPEN)
+
 
 ORIGIN = "http://applydesk.test"
 HOME = f"{ORIGIN}/applydesk/operator/exercises/wa9juxbc2t"

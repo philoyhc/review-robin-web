@@ -13,8 +13,17 @@ import pytest
 from fastapi.testclient import TestClient
 from playwright.sync_api import Error, Locator, Page, Route, sync_playwright
 
+from applydesk import locks
 from applydesk.tests._host import host_with
 from applydesk.tests.test_form import SUMMARY_CASES
+
+
+@pytest.fixture(autouse=True)
+def _form_open(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests edit the form: its lock (segment AD1K) is opened, as a
+    draft exercise's would be; the lock has tests of its own."""
+    monkeypatch.setattr(locks, "form_lock", lambda e: locks.OPEN)
+
 
 ORIGIN = "http://applydesk.test"
 FORM = f"{ORIGIN}/applydesk/operator/exercises/r6tm4kq9wz/form"
