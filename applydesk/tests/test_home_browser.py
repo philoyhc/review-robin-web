@@ -137,14 +137,8 @@ def test_details_lock_and_unlock_sit_at_the_card_s_foot_on_the_right(page: Page)
     lock = placed(card, "Lock")
     discard = card.get_by_role("button", name="Discard changes").bounding_box()
     assert discard and discard["x"] < lock  # Discard changes, then Lock
-    # Stretched to a taller timeline's height, Unlock still at the foot.
-    page.reload()
-    page.evaluate(
-        "() => { const t = document.querySelector('[data-timeline]');"
-        " t.style.minHeight = (document.querySelector('[data-details]').offsetHeight + 120) + 'px';"
-        " document.querySelector('.hm-grid').classList.add('is-equal-height'); }"
-    )
-    placed(card, "Unlock")
+    # Details keeps its own height beside a taller timeline now: Publish
+    # below it takes the stretch (test_publish_sits_below_details_...).
 
 
 def test_details_refuse_what_cannot_hold(page: Page) -> None:
@@ -204,12 +198,15 @@ def test_enter_on_blind_review_does_not_lock(page: Page) -> None:
 
 
 def test_cards_share_a_height_only_when_theirs_are_close(page: Page) -> None:
-    page.goto(HOME)  # three stages and their operator rows: far taller than Details
+    # A draft's Publish card lists what each stage lacks: its column, with
+    # Details, far taller than the timeline (Publish moved beside it).
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/c4xh2ndv6s")
     grid = page.locator(".hm-grid")
     assert "is-equal-height" not in (grid.get_attribute("class") or "")
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/r6tm4kq9wz")  # one stage: close
     assert "is-equal-height" in (grid.get_attribute("class") or "")
-    heights = page.locator(".hm-grid > .card").evaluate_all(
+    # The timeline, and the column of Details and Publish below it.
+    heights = page.locator(".hm-grid > .card, .hm-grid > .hm-side").evaluate_all(
         "els => els.map(e => Math.round(e.getBoundingClientRect().height))"
     )
     assert len(set(heights)) == 1, heights
@@ -233,3 +230,28 @@ def test_the_operator_part_lines_up_across_stages(page: Page) -> None:
     dot2 = page.locator(".tl-now .tl-dot").bounding_box()
     assert bar and dot and bar2 and dot2
     assert round(dot["y"] - bar["y"]) == round(dot2["y"] - bar2["y"])
+
+
+def test_publish_sits_below_details_one_gap_apart(page: Page) -> None:
+    """Author, at the AD1K check: Publish in Details' column, below it,
+    16px apart, as the cards beside them."""
+    page.goto(HOME)
+    details = page.locator("[data-details]").bounding_box()
+    publish = page.locator("[data-hm-publish]").bounding_box()
+    timeline = page.locator("[data-timeline]").bounding_box()
+    assert details and publish and timeline
+    assert publish["x"] == details["x"] and publish["width"] == details["width"]
+    assert round(publish["y"] - (details["y"] + details["height"])) == 16
+    assert round(details["x"] - (timeline["x"] + timeline["width"])) == 16
+    # Sharing the timeline's height, Publish takes the rest of the column:
+    # its foot is the timeline's (cold read: the grid's stretch alone ends
+    # the column there, not the card).
+    page.evaluate(
+        "() => { const t = document.querySelector('[data-timeline]');"
+        " t.style.minHeight = (document.querySelector('.hm-side').offsetHeight + 80) + 'px';"
+        " document.querySelector('.hm-grid').classList.add('is-equal-height'); }"
+    )
+    publish = page.locator("[data-hm-publish]").bounding_box()
+    timeline = page.locator("[data-timeline]").bounding_box()
+    assert publish and timeline
+    assert round(publish["y"] + publish["height"]) == round(timeline["y"] + timeline["height"])

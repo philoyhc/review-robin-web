@@ -206,7 +206,7 @@ Conventions: `.py` paths are relative to `applydesk/`, `.html` paths to `applyde
 
 | ID | Sev | Finding | Where | Fix | Was |
 |---|---|---|---|---|---|
-| AD-106 | M | The Publish card sits flush (0px) against the timeline/Details grid: `.hm-grid + .card` never matches because a `<script>` sits between them. | Home `n5wg8tjr3e`; `base.html:135`; `operator/home.html:17-38` | Code: move the script after the card, or give `.hm-publish` its own `margin-top:16px`. | UI-07 |
+| ~~AD-106~~ | M | The Publish card sits flush (0px) against the timeline/Details grid: `.hm-grid + .card` never matches because a `<script>` sits between them. | Home `n5wg8tjr3e`; `base.html:135`; `operator/home.html:17-38` | Code: move the script after the card, or give `.hm-publish` its own `margin-top:16px`. | UI-07 |
 | AD-107 | M | Evaluations' "Assignments" h2 is 24px (browser default) against the page h1's 22px; `.ev-h` sets only margins. | `base.html:693` | Code: give `.ev-h` 17–18px, or make it a card head. | UI-08 |
 | AD-108 | L | The gate page's pager is above the table only; it uses an undefined `.btn-icon` plus bordered link-blue `.ev-step` boxes; at 390px "›" and "»" wrap to a second line. | `operator/gate_evaluations.html:55-60`; `base.html:703-706` | Code: port `.btn-icon`, repeat the pager below, `flex-wrap:nowrap` on the step group. | UI-23 |
 | AD-109 | L | Breakpoints at 959, 899, 736, 720, 640, 639 and 1116px; `.ps-row` collapses at 640 (off by one) and the chrome stacks at 720. | `base.html:100-101,110,136,241,291,328-329,547,690` | Code: ≤639 / ≤899 plus Form's documented 736/1116; move 640→639, 720→639 or 899. | UI-40 |

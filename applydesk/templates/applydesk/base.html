@@ -132,7 +132,10 @@
        one-third; one column on a phone. */
     .hm-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
     .hm-grid > .card + .card { margin-top: 0; }
-    .hm-grid + .card { margin-top: 16px; }
+    .hm-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    .hm-side > .card { margin: 0; }
+    /* Sharing the timeline's height, the column's last card takes the rest. */
+    .hm-grid.is-equal-height .hm-side > .card:last-of-type { flex: 1 1 auto; }
     @media (max-width: 899px) { .hm-grid { grid-template-columns: minmax(0, 1fr); } }
     .cardhead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
     .cardhead h2 { margin: 0; }
