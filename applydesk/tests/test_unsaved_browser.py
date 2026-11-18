@@ -192,3 +192,15 @@ def test_panels_marks_a_rename_kept_with_enter(page: Page) -> None:
     name.fill(name.input_value() + " (renamed)")
     name.press("Enter")
     assert page.locator("[data-pn-kept]").is_visible() and page.evaluate(LEAVES)
+
+
+def test_panels_does_not_mark_a_refused_rename(page: Page) -> None:
+    """Codex on #3996: a rename refused (a CSV column's name) keeps
+    nothing, so the page is not marked."""
+    page.goto(f"{MODEL}/panels")
+    page.locator('[data-pn-act="manage"]').click()
+    name = page.locator("[data-pn-rename]").first
+    name.fill("Email")
+    name.press("Enter")
+    assert "keeps its name" in page.locator("[data-pn-said]").inner_text()
+    assert not page.locator("[data-pn-kept]").is_visible() and not page.evaluate(LEAVES)

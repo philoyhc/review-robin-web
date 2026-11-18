@@ -548,11 +548,14 @@
   // Save: the panels retired go first, so their names are free; then the
   // names typed, then the panels added, kept.
   function keepAll() {
-    // Save and Enter alike: what they keep is on this page only (Codex).
-    if (anyPending()) kept();
+    // Save and Enter alike: what they keep is on this page only, marked
+    // once something is kept; a refused rename alone keeps nothing (Codex).
+    var names = function () { return cols().map(function (h) { return nameOf(h.dataset.panel); }).join("\n"); };
+    var before = names(), keeping = retiring.length + added.length;
     var gone = retiring.map(function (key) { var n = nameOf(key); dropPanel(key); return n + " retired."; });
     retiring = [];
     var told = gone.concat(keepNames());
+    if (keeping || names() !== before) kept();
     added.forEach(function (key) {
       var note = list.querySelector('li[data-panel="' + key + '"] [data-pn-unsaved]');
       if (note) note.remove();
