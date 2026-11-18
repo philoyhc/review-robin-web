@@ -279,6 +279,9 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         weight_rows=stages.weight_rows,
         result_label=functools.partial(stages.result_label, stages.plan_of(exercise.public_id)),
         stage_problems=stages.problems,
+        local_value=stages.local_value,
+        window=stages.window,
+        window_text=stages.window_text,
         blank_stage=stages.Stage(0, "", None),
         # A new gate starts with one blank result, as a new form a String card.
         blank_gate=stages.Gate(

@@ -83,7 +83,7 @@ def test_a_card_opens_and_its_name_and_dates_follow(page: Page) -> None:
     _open(review)
     assert review.get_attribute("data-open") == ""
     review.locator('[data-pc="name"]').fill("Peer and panel review")
-    review.locator('[data-pc="to"]').fill("12 Nov")
+    review.locator('[data-pc="to"]').fill("2026-11-12T23:59")
     assert review.locator('[data-sum="name"]').inner_text() == "Peer and panel review"
     assert review.locator('[data-sum="dates"]').inner_text() == "16 Oct – 12 Nov"
     outline = page.locator("[data-pc-outline]").inner_text()
@@ -1424,8 +1424,8 @@ def test_what_will_be_sent_follows_the_gate_and_its_stage(page: Page) -> None:
         "Review Robin receives Placement chat: Talk about the placement, open"
     )
     stage = gate.locator("xpath=ancestor::article[@data-kind='stage']")
-    stage.locator('[data-pc="from"]').fill("1 Mar")
-    stage.locator('[data-pc="to"]').fill("15 Mar")
+    stage.locator('[data-pc="from"]').fill("2027-03-01T00:00")
+    stage.locator('[data-pc="to"]').fill("2027-03-15T23:59")
     assert send.text_content() == (
         "Review Robin receives Placement chat: Talk about the placement, open 1 Mar to"
         " 15 Mar (Asia/Singapore); help contact applydesk-help@example.edu; tagged applydesk."
@@ -1441,8 +1441,8 @@ def test_what_was_sent_stays_once_the_session_opens(page: Page) -> None:
     before = send.text_content()
     stage = gate.locator("xpath=ancestor::article[@data-kind='stage']")
     _open(stage)
-    stage.locator('[data-pc="from"]').fill("2 Oct")
-    assert send.text_content() == before and "open 1 Oct to 6 Nov" in (before or "")
+    stage.locator('[data-pc="from"]').fill("2026-10-02T00:00")
+    assert send.text_content() == before and "open 1 Oct to 31 Oct" in (before or "")
 
 
 def test_a_replica_of_an_opened_gate_follows_its_own_settings(page: Page) -> None:
@@ -1458,5 +1458,28 @@ def test_a_replica_of_an_opened_gate_follows_its_own_settings(page: Page) -> Non
     send = gate.locator("[data-pr-send]")
     assert send.get_attribute("data-fixed") is None
     _open(copy)
-    copy.locator('[data-pc="from"]').fill("2 Oct")
-    assert "open 2 Oct to" in (send.text_content() or "")
+    _open_item(gate)
+    gate.locator('[data-pc="item-from"]').fill("2026-10-02T00:00")
+    assert "open 2 Oct to 31 Oct" in (send.text_content() or "")
+
+
+def test_dates_are_date_times_and_an_item_s_window_follows(page: Page) -> None:
+    """Segment AD1K (author, 2026-11-18): a stage's and its items' dates
+    are date-time inputs; a gate's send line reads its own window, or its
+    stage's while its own is blank."""
+    page.goto(MODEL)
+    stage = _cards(page).nth(2)
+    _open_all(stage)
+    assert stage.locator('[data-pc="from"]').input_value() == "2026-11-09T00:00"
+    assert stage.locator('[data-pc="to"]').input_value() == "2026-12-04T23:59"
+    gate = stage.locator('.pc-item[data-key="g3"]')
+    assert gate.locator('[data-pc="item-to"]').input_value() == "2026-12-02T23:59"
+    due = stage.locator('.pc-item[data-key="o2"] [data-pc="due"]')
+    assert due.input_value() == "2026-12-04T17:00"
+    send = gate.locator("[data-pr-send]")
+    assert "open 9 Nov to 2 Dec" in (send.text_content() or "")
+    gate.locator('[data-pc="item-from"]').fill("")
+    gate.locator('[data-pc="item-to"]').fill("")
+    stage.locator('[data-pc="to"]').fill("2026-12-11T23:59")
+    assert "open 9 Nov to 11 Dec" in (send.text_content() or "")
+    assert stage.locator('[data-sum="dates"]').inner_text() == "9 Nov – 11 Dec"

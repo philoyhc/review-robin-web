@@ -198,9 +198,20 @@
   function items(card, kind) { return Array.prototype.slice.call(card.querySelectorAll('.pc-item[data-item="' + kind + '"]')); }
   function field(card, f) { var i = card.querySelector('[data-pc="' + f + '"]'); return i ? i.value.trim() : ""; }
   function labelOf(card) { return field(card, "name") || "Stage " + (cards().indexOf(card) + 1); }
+  // A datetime-local value, "2026-11-09T00:00", as the pages print a day.
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function shortDay(v) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v || "");
+    return m ? Number(m[3]) + " " + MONTHS[Number(m[2]) - 1] : "";
+  }
   function datesOf(card) {
-    var a = field(card, "from"), b = field(card, "to");
+    var a = shortDay(field(card, "from")), b = shortDay(field(card, "to"));
     return a && b ? a + " – " + b : (a || b || "Dates not set");
+  }
+  // An item's window: its own dates, else its stage's (author, 2026-11-18).
+  function windowOf(item, card) {
+    var a = field(item, "item-from") || field(card, "from"), b = field(item, "item-to") || field(card, "to");
+    return a && b && a < b ? shortDay(a) + " to " + shortDay(b) : "";
   }
   function itemName(item, fallback) {
     var i = item.querySelector('[data-pc="item-name"]');
@@ -978,7 +989,7 @@
       changed();
       return;
     }
-    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-name"], [data-pc="values"], [data-pc="confidential"], [data-pc="description"]')) changed();
+    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-from"], [data-pc="item-to"], [data-pc="item-name"], [data-pc="values"], [data-pc="confidential"], [data-pc="description"]')) changed();
   });
   // --- A gate's results (rulings 21, 28): up to three, each the response
   // field it collates and a derivation, which sets the result's type. As stages.field_text,
@@ -1087,7 +1098,7 @@
   function drawSend(item, card) {
     var p = item.querySelector("[data-pr-send]");
     if (!p || p.hasAttribute("data-fixed")) return;  // its session has opened
-    var win = [field(card, "from"), field(card, "to")].filter(function (x) { return x && x !== "Dates not set"; }).join(" to ") || "when its stage's dates are set";
+    var win = windowOf(item, card) || "when its stage's dates are set";
     var d = item.querySelector('[data-pc="description"]'), desc = d ? d.value.trim().replace(/\.+$/, "").trim() : "";
     p.textContent = "";
     p.appendChild(document.createTextNode("Review Robin receives "));

@@ -720,6 +720,16 @@ def result_of(plan: Plan, key: str) -> tuple[Gate | None, GateResult | None]:
     return gate, next((r for r in gate.results if r.key == result_key), None)
 
 
+def local_value(d: datetime | None) -> str:
+    """A date-time as a ``datetime-local`` input holds it, "" for none."""
+    return d.strftime("%Y-%m-%dT%H:%M") if d else ""
+
+
+def window_text(w: StageDates | None) -> str:
+    """A window as a gate's send line says it, e.g. "1 Oct to 31 Oct"."""
+    return f"{short_day(w.start)} to {short_day(w.end)}" if w and w.valid else ""
+
+
 def window(st: Stage, item: Gate | Outcome | None) -> StageDates | None:
     """An item's dates, its own or else its stage's (author, 2026-11-18):
     the form's (``None``) open and close, a gate's review window, an

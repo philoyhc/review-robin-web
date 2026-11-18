@@ -22,15 +22,26 @@
 </div>
 {% endmacro %}
 
+{# An item's own dates (author, 2026-11-18): date-time inputs inside its
+   stage's; blank runs it on the stage's. #}
+{% macro item_dates(w, first="From", second="To") %}
+<div class="pc-row pc-dates" data-pc-dates>
+  <label class="fc-l">{{ first }}<input class="fc-in" type="datetime-local" data-pc="item-from" value="{{ local_value(w.start if w else none) }}"></label>
+  <label class="fc-l">{{ second }}<input class="fc-in" type="datetime-local" data-pc="item-to" value="{{ local_value(w.end if w else none) }}"></label>
+  <span class="pc-line muted pc-hint">Blank: the stage's dates.</span>
+</div>
+{% endmacro %}
+
 {% macro emails_chip(n) %}<span class="chip chip-mute" data-pi-emails>{{ "No email" if n == 0 else (n ~ (" email" if n == 1 else " emails")) }}</span>{% endmacro %}
 
-{% macro form_item(new=False, open=False) %}
+{% macro form_item(new=False, open=False, w=none) %}
 {% set n = 1 if new else ((1 if sends('receipt', 'Applicants') else 0) + (1 if sends('reminder', 'Applicants') else 0)) %}
 <div class="pc-item" data-item="form"{% if open %} data-open{% endif %}>
   {% set chips %}<span class="chip chip-{{ 'info' if form_state == 'Open' else ('mute' if form_state == 'Closed' else 'warn') }}">{{ form_state }}</span>{{ emails_chip(n) }}{% endset %}
   {{ head("Form", "Application form", chips, open) }}
   <div class="pi-body">
-  <p class="pc-line">The application form opens and closes on this stage's dates. Its questions are built on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>.</p>
+  {{ item_dates(w, "Opens", "Closes") }}
+  <p class="pc-line">The application form opens and closes on these dates, or its stage's. Its questions are built on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>.</p>
   {# Which emails it sends (ruling 16); each one ticked is a template owed on Emails. #}
   <div class="pc-release pi-sec" data-pc-release>
     <span class="fc-l">Emails</span>
@@ -191,6 +202,7 @@
   <details class="gsec" data-gsec="gate">
     <summary><span class="gsec-t">Gate</span><span class="gsec-s" data-gsec-sum>{{ gate_summary(plan, g) }}</span></summary>
     <div class="gsec-b">
+      {{ item_dates(g.when) }}
       <div class="pc-row">
         <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ g.label }}" placeholder="Untitled gate"></label>
         <label class="fc-l">Type<select class="fc-in" data-pc="type" disabled title="Every gate runs in Review Robin for now">{% for k, label in gate_types %}<option value="{{ k }}"{% if k == (g.via or "RRW") %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
@@ -276,7 +288,7 @@
   <div class="pi-body">
   <div class="pc-row">
     <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ o.label }}" placeholder="Untitled outcome"></label>
-    <label class="fc-l">Due<input class="fc-in" value="{{ o.due }}" placeholder="Date"></label>
+    <label class="fc-l">Due<input class="fc-in" type="datetime-local" data-pc="due" value="{{ local_value(o.due_at) }}"></label>
   </div>
   <label class="fc-l">Values<input class="fc-in" data-pc="values" value="{{ o.values | join(', ') }}" placeholder="Comma-separated, e.g. Shortlisted, Not shortlisted"></label>
   {# Its combined result: weights over the gates in its scope, those since
@@ -316,7 +328,6 @@
 {% macro stage(plan, st, rule_text, last, open=False) %}
 {% set gates = st.columns | selectattr("via", "defined") | list %}
 {% set outs = st.columns | rejectattr("via", "defined") | list %}
-{% set dates = st.dates.split(" – ") if " – " in st.dates else [st.dates, ""] %}
 <article class="fc pc" data-kind="stage" data-stage="{{ st.number }}"{% if open %} data-open{% endif %}>
   <div class="fc-head">
     {{ grip() }}
@@ -332,14 +343,14 @@
   <div class="fc-body{% if not st.form and not st.columns %} pc-body-empty{% endif %}">
     <div class="pc-row">
       <label class="fc-l pc-wide">Stage name<input class="fc-in" data-pc="name" value="{{ st.name }}" placeholder="Stage {{ st.number }}"></label>
-      <label class="fc-l">From<input class="fc-in" data-pc="from" value="{{ dates[0] }}" placeholder="Date"></label>
-      <label class="fc-l">To<input class="fc-in" data-pc="to" value="{{ dates[1] }}" placeholder="Date"></label>
+      <label class="fc-l">Starts<input class="fc-in" type="datetime-local" data-pc="from" value="{{ local_value(st.when.start if st.when else none) }}"></label>
+      <label class="fc-l">Ends<input class="fc-in" type="datetime-local" data-pc="to" value="{{ local_value(st.when.end if st.when else none) }}"></label>
       <label class="pc-check"><input type="checkbox" checked> Shown to applicants</label>
     </div>
     {# An item alone in its stage opens; with others, each shows its head. #}
     {% set lone = ((1 if st.form else 0) + st.columns | length) == 1 %}
-    {% if st.form %}{{ form_item(open=lone) }}{% endif %}
-    {% for g in gates %}{{ gate_item(plan, g, rule_text, open=lone, window=dates | reject("in", ("", "Dates not set")) | join(" to ")) }}{% endfor %}
+    {% if st.form %}{{ form_item(open=lone, w=st.form_when) }}{% endif %}
+    {% for g in gates %}{{ gate_item(plan, g, rule_text, open=lone, window=window_text(window(st, g))) }}{% endfor %}
     {% for o in outs %}{{ outcome_item(plan, o, rule_text, open=lone) }}{% endfor %}
     <p class="pc-line muted pc-empty">Nothing in this stage yet: add the form, a gate or an outcome.</p>
     <div class="pc-adds">
