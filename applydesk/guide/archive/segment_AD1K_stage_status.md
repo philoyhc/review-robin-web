@@ -116,19 +116,26 @@ Taken 2026-11-18 at `d6c20bdf8`.
 
 ## Status
 
-- **Rung 2 built** (2026-11-18):
-  - **Typed dates.** A stage's dates are typed (`stages.StageDates`, `span`), each a date and a time. The pages print them as before through `Stage.dates`. The timeline's text parser is gone, and so is `workflow`'s split. Process's two template splits wait for its date-time inputs at rung 3.
-  - **Status.** `Stage.status` is Draft or Published on the sample, and `applydesk/locks.py` derives the rest: Overdue, Completed, the exercise's status, publish problems, each part's lock with its reason, and a revert's warnings.
-  - **Rung 2a, item dates** (author, 2026-11-18): `Gate.when`, `Outcome.due_at` and `Stage.form_when`, each defaulting to the stage's through `stages.window`; `stages.date_problems` joins the publish checks.
-  - **Rung 3 split in two**, so each half is checked in a browser alone: 3a the date-time inputs, 3b the status, Publish, Revert and the locks. A published stage's items are fixed by one fieldset each, after their dates; an opened gate's fieldset stays fixed through a revert. Publish lists the server's checks as the page loaded; only the "stage before it" line follows the page.
-  - **Rung 4 built** (2026-11-18): the Form builder reads only, its cards still opening (AD-03); an opened gate's cells stay fixed when Dossiers is unlocked, and rules and CSVs skip them, saying so (AD-04); blind review is fixed on Details (AD-05); *Released* waits on the outcome's owed emails and names undecided cells before a release (AD-21). **A published gate not yet opened keeps live cells**: entering applications is the stage's work while it runs, so only the session opening fixes them.
-  - **Rung 5 built** (2026-11-18): Home's Publish card lists every stage with its status, a draft's problems, and the first stage's setup linked as before; publishing stays on Process, which the card links. The timeline's operator part leads with each stage's status, and the lobby and the status row show the exercise's, derived from its stages.
-  - **Item read** (`diff-reviewer`, rungs 2–5 from `048acca9e`, one read): 14 findings, fixed in 3b and 5 but for the following.
-    - A published item's start, the order of published stages, and the publishing order on the page were open; now fixed.
-    - The undecided count before a release counted rows an earlier outcome stopped; now only reached ones.
-    - Owed: `Exercise.state` still drives *live* on Details, Evaluations and the form's state (AD3's, with Closed and Archived); spec prose at the close.
-  - **At the author's check** (2026-11-18): Home's Publish card went: it repeated the timeline's operator part, which now carries each draft stage's blockers under *Blocking publication* (the first stage's setup linked to where each is set), or *Ready to publish*. Register rows AD-01 to AD-05, AD-20, AD-21, AD-56 and AD-106 struck.
-  - **Kept in `stages.py`.** `_exercise_span` still reads the two exercise fields, until those are typed at AD2.
+**Closed 2026-11-18.** Built in seven PRs: rungs 2 (#3980), 2a (#3981), 3a (#3982), 3b (#3983), 4 (#3984) and 5 (#3985), then two from the author's check (#3986, #3987). Every Definition-of-done line holds.
+
+**What the ladder became:**
+- **Rung 2a, item dates** (author, on rung 2): each item's typed dates inside its stage's (Decision amended).
+- **Rung 3 split** into 3a (date-time inputs) and 3b (status, Publish, Revert, locks), each checked in a browser alone.
+- **Home's Publish card dropped** at the author's check: it repeated the timeline's operator part, which now carries each draft stage's blockers under *Blocking publication*, or *Ready to publish*.
+
+**Decisions confirmed at build:**
+- A published stage fixes its name and *Shown to applicants* as well (author, on the item read); only ends stay editable.
+- Order holds by construction: a new stage or a copy goes after the last published one, no draft moves above one, and a revert goes from the last published stage back.
+- A published gate not yet opened keeps live cells on Dossiers: entering applications is the stage's work while it runs, so only the session opening fixes them.
+- Publish lists the server's checks as the page loaded, except two that follow the page: the stage before it, and its own dates.
+
+**Reads:** one `diff-reviewer` item read (rungs 2–5, from `048acca9e`) found 14 findings, the real ones fixed in 3b and 5; one read of #3986 found 4, fixed there. Codex found 13 across the PRs, all fixed.
+
+**Spec:** `spec-writer` wrote `applydesk/spec/applications.md` at the close, following the code where the plan's intent moved (no Publish card; a gate's own window; Dossiers' cells fixed only once a session opens).
+
+**Owed:**
+- `Exercise.state` still decides *live* on Details, Evaluations and the form's state (AD3, with Closed and Archived).
+- `_exercise_span` reads the two exercise fields, and `expected_outcome` stays text (AD2).
 
 ## PR ladder
 
@@ -153,7 +160,7 @@ Taken 2026-11-18 at `d6c20bdf8`.
    - *Released* gated on owed emails and undecided cells (AD-21).
    - Chromium tests.
 5. **Home and the lobby:**
-   - The Publish card per stage.
+   - ~~The Publish card per stage.~~ Dropped at the author's check (Status).
    - Statuses in the timeline's operator part and the lobby.
    - The exercise's derived status in the status row.
    - `diff-reviewer` reads rungs 2–5.
@@ -178,7 +185,7 @@ Taken 2026-11-18 at `d6c20bdf8`.
 - ~~When blind review locks~~: when the first stage holding a gate is published (author, 2026-11-18).
 - ~~When a stage completes~~: when all its items are, so there is no *Mark completed* (author, 2026-11-18).
 - ~~Revert after a gate opened~~: allowed, the gate staying fixed (author, 2026-11-18).
-- **`close_check.py` reads only RRW's `guide/`:** this close is checked by hand, as AD1G's to AD1J's.
+- ~~`close_check.py` reads only RRW's `guide/`~~: checked by hand, as AD1G's to AD1J's.
 
 ## Out of scope
 

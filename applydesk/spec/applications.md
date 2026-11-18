@@ -5,7 +5,9 @@
 > data (item 2), pending the author's approval in a browser. Segment AD1B
 > built "The Form page" as a working scaffold: every move works on screen,
 > nothing is saved. Segment AD1E built "The Process page" the same way,
-> with Emails listing the templates it makes owed (ruling 16).
+> with Emails listing the templates it makes owed (ruling 16). Segment AD1K
+> gave each stage a status and made a published stage's contents fixed on every
+> page that shows them (ruling 35), the same way: on the sample, nothing saved.
 
 Apply Desk's contract with the Cordware host. The host's side is
 `cordware/spec/host.md`; this file states only what Apply Desk adds. The
@@ -172,6 +174,10 @@ shows the form's own card and one empty String card, open.
   maximum, naming what it dropped. The pools are sample rosters;
   looking people up in Entra ID through Graph comes with the applicant's
   form (AD4). Nothing typed in a preview is kept.
+- **Read-only once its stage is published** (`locks.form_lock`). Every control
+  but each card's toggle is disabled with the reason in its title, a line says
+  so, and the cards still open and shut to be read; the Outline and Preview
+  still work.
 - **Conditional questions** (branching) are not built: deferred, see
   `applydesk/guide/todo_master.md`.
 
@@ -179,11 +185,13 @@ shows the form's own card and one empty String card, open.
 
 Home, `/operator/exercises/<id>`, is two columns: the **Timeline** card
 (two-thirds) and the **Details** card (one-third), one column from 899px down,
-Details below. The status row carries *Applications: N submitted · M drafts*
-(`workflow.status_row`). Under the timeline a *Next step* line says where
+Details below. The status row (`workflow.status_row`) opens with the exercise's status,
+derived from its stages ("Stage status"), and carries *Applications: N
+submitted · M drafts*. Under the timeline a *Next step* line says where
 today falls (`timeline.next_step`), with *Go to Evaluations* while a gate runs
-(`timeline.gate_running`). A Draft also gets a *Publish* card below the columns,
-listing what setup is missing (`sample_data.setup_missing`). Cards side by
+(`timeline.gate_running`). Home has no Publish card: publishing is per stage,
+on Process, and the timeline's operator part says what blocks each stage.
+Cards side by
 side share a height only when within a fifth of the taller; a short card
 beside a much taller one keeps its own.
 
@@ -196,7 +204,7 @@ include.
 
 - **Stage**: name, dates and a state. *Done* when its last date has passed
   (*Closed* for the stage holding the form), *Now* when today falls within it,
-  *Next* otherwise; a stage with no (or impossible) dates is *Next* and reads
+  *Next* otherwise (the calendar's, apart from the stage's status); a stage with no (or impossible) dates is *Next* and reads
   *Dates not set*. Today is the sample's until AD2, marked on the current
   stage at its share of that stage's days and said in words, between stages
   too.
@@ -214,8 +222,16 @@ include.
   otherwise; storage blocked, that rule applies.
 - **The operator's part** (`applydesk/home_ops.py`), only where the page
   passes `ops`, which is Home alone. Below a rule (Horizontal, aligned across
-  stages), to the right of each stage (Vertical), under the items on a phone:
-  the form's state with submitted and draft counts; each gate's state, mode,
+  stages), to the right of each stage (Vertical), under the items on a phone,
+  each stage leads with its status chip (`locks.stage_rows`):
+  - a Draft lists *Blocking publication*, each one `locks.publish_problems`
+    names, or says *Ready to publish.* The first stage's missing setup is
+    linked to where each is set (Home's details, Process, Form), in place of
+    the problem that repeats it;
+  - an Overdue stage says *Waiting on:* what is outstanding;
+  - each row links to Process.
+
+  Then the form's state with submitted and draft counts; each gate's state, mode,
   evaluators, pairs and progress, linking to its Evaluations gate page (no
   link for a Draft); each outcome's Dossiers tally and *Released* /
   *Pending*, linking to Dossiers. It never appears on the applicant's page.
@@ -240,6 +256,8 @@ Unlocked, each is a field with a line saying where it is used.
   Timezone is chosen from `sample_data.TIMEZONES`, the default first.
 - A published exercise's Exercise Code and Who may apply are fixed, saying
   so; changing them waits for re-publishing (G2).
+- **Blind review** is fixed, with its reason, once the first stage holding a
+  gate is published (`locks.blind_lock`).
 - Nothing is saved until AD2: a reload restores the sample. Process shows
   Help contact and Timezone read-only.
 
@@ -258,10 +276,22 @@ pages, it can wait); `workflow.steps` still names the current stage.
 - **Layout.** The cards in timeline order, the Outline beside them (as
   Form's), *Save* at its foot, disabled until AD2.
 - **A stage card.** *Stage name* (an empty name reads *Stage N*, by position),
-  *From* and *To* dates, and *Shown to applicants*. Collapsed, it shows its
-  name, dates and a summary (`Form · Outcome: Shortlist`, `2 gates`,
-  `No gates`). Cards load collapsed; a lone card is open. Below, its items in
-  order: the form, gates, the outcome.
+  *Starts* and *Ends*, and *Shown to applicants*. Collapsed, it shows its
+  name, dates, status chip and a summary (`Form · Outcome: Shortlist`,
+  `2 gates`, `No gates`). Cards load collapsed; a lone card is open. At its
+  head, its status box ("Stage status"); below, its items in order: the form,
+  gates, the outcome.
+- **Dates are typed** (author, 2026-11-18). A stage's *Starts* and *Ends* are
+  date-time inputs (`stages.StageDates`, in the exercise's time zone; a bare
+  day's end is its last minute, 23:59); an empty or reversed pair is no dates.
+  Each item carries its own, inside its stage's: the form's *Opens* and
+  *Closes*, a gate's *From* and *To* (its review window), an outcome's *Due*.
+  Left blank, an item runs on its stage's dates and an outcome is due at its
+  end (`stages.window`; `Stage.form_when`, `Gate.when`, `Outcome.due_at`). An
+  outcome is due no sooner than the gates it reads close, those of an earlier
+  stage included. `stages.date_problems` words what breaks this: an item
+  outside its stage, reversed, or an outcome due before its gate closes. The
+  stage's end is what completes it, whatever its items' dates.
 - **Ruling 15, enforced as it is edited.** One stage holds the form, anywhere;
   never the form and a gate together; one outcome at most per stage; an empty
   stage is allowed. A button that would break it is disabled with the reason in
@@ -285,18 +315,20 @@ pages, it can wait); `workflow.steps` still names the current stage.
   outcome's release and emails; the form's state and emails. An open stage
   shows its items collapsed; an item alone in its stage, or just added, is
   open. The chips follow the edits.
-- **The form item.** When it opens and closes (the stage's dates), a link to
-  Form, and its *Emails* to applicants: *Receipt on submitting* and *Reminder
+- **The form item.** When it opens and closes (its own dates, else the
+  stage's), a link to Form, and its *Emails* to applicants: *Receipt on submitting* and *Reminder
   to drafts*. A new form ticks the receipt only.
 - **A gate** is one Review Robin run (ruling 28), in four parts, in this
   order. The *Gate* and *Evaluators* cards are collapsible, start shut and
   say what they hold on their summary line (`stages.gate_summary`,
   `evaluators_summary`); a new gate, and an Outline jump to one, open the
-  *Gate* card for its name. Start and End are the stage's. The gate is
-  *fixed* once its Review Robin session has opened (`workflow.gate_opened`:
-  *Results in*, or *Sent* with its session under way): every control in it
-  is disabled and a line says so. Sent but unopened, it is still changed
-  here, each change re-sent.
+  *Gate* card for its name. Its window is its own dates, else the stage's.
+  The gate is *fixed* once its Review Robin session has opened
+  (`workflow.gate_opened`: *Results in*, or *Sent* with its session under
+  way): every control in it is disabled and a line says so, a revert of its
+  stage leaving it so (ruling 29). Sent but unopened, it is still changed
+  here, each change re-sent, unless its stage is published ("Stage
+  status").
   - **Gate**: *Name*; *Type* (a disabled menu, *Review Robin session*, kept
     for other kinds); *Description* (Review Robin's instrument description);
     *Confidential* (per gate: Review Robin shows each candidate as *Name
@@ -362,15 +394,15 @@ pages, it can wait); `workflow.steps` still names the current stage.
     with help carrying it (`(<type>, required; help: “…”)`). Result 1
     is the gate's headline.
   - **What Review Robin receives**: a line above that list, `Review Robin
-    receives <name>: <description>, open <stage From to To> (<timezone>);
-    help contact <contact>; tagged applydesk.` The description loses its
+    receives <name>: <description>, open <window> (<timezone>); help contact
+    <contact>; tagged applydesk.` The window is the gate's own (`<From> to
+    <To>`, `stages.window_text`), else its stage's. The description loses its
     trailing periods and is left out, with its colon, when empty; the window
-    reads *when its stage's dates are set* while the stage's dates are empty
-    or *Dates not set*. The page's script redraws it on every edit of the
-    gate's name or description or the stage's dates. Once the gate's session
-    has opened it is frozen as sent (`data-fixed`), though the stage's dates
-    may still change.
-- **The outcome.** *Name*, *Due*, *Values* (comma-separated), *Rule*, and, when
+    reads *when its stage's dates are set* while there is none valid. The
+    page's script redraws it on every edit of the gate's name, description or
+    dates, or the stage's. Once the gate's session has opened it is frozen as
+    sent (`data-fixed`), though the dates may still change.
+- **The outcome.** *Name*, *Due* (a date-time, blank for the stage's end), *Values* (comma-separated), *Rule*, and, when
   more than one gate is in scope, the *Combined result*: a weight per gate's numeric result, as
   percentages; weights that all sit at 0 are no combined result, flagged only when a rule reads one. Scope is the gates since the previous outcome (ruling 13); the
   weights follow as gates are added, removed or moved, a new gate takes what is
@@ -418,6 +450,48 @@ pages, it can wait); `workflow.steps` still names the current stage.
   median, sum, count, share, or a numeric field's lowest, highest or entered
   value) is compared and weighed, a list matched, a string offered to
   neither (`stages.comparable`). Only numeric results take a weight.
+- **Stage status** (ruling 35; author, 2026-11-18). Each stage is *Draft*,
+  *Published*, *Overdue* or *Completed* (`locks.stage_status`); the operator
+  declares only Draft and Published (`Stage.status`), the rest follow from its
+  end and its items, against the sample's now (`locks.NOW`; the page's script
+  derives them again as an end moves). The status box, in the card's body, and
+  its chip carry it.
+  - **Publish stage** takes a Draft to Published, and is disabled, saying why,
+    while `locks.publish_problems` names anything, which the box lists: the
+    stage has no start and end, or ends before it starts; an item's dates
+    (above); the stage before it is not published (a stage is never published
+    before the one before it); for the first stage, Home's details; a form with
+    no questions; a gate with no evaluators, a source with none to give, a
+    Total outside its sources' bounds; an outcome with no values; any rule that
+    reads what no longer holds (`stages.rule_problems`). A stage added on the
+    page waits to be checked until saved (AD2).
+  - **Completed** and **Overdue** are derived, never set: once the stage's end
+    has passed it is Completed when every item is complete (the form closed,
+    each gate's results in, the outcome released) and Overdue otherwise,
+    saying *Waiting on* what is outstanding (`locks.outstanding`). Items done
+    before the end leave it Published until then. Moving the end, or an item's,
+    past now makes it Published again: an **extension** is how a stage is kept
+    open or reopened.
+  - **Revert to draft** takes a Published stage back, with a reason (required;
+    audited at AD2), from the last published stage back, so no Draft precedes a
+    Published one. Its confirm says an opened gate stays fixed and how many
+    submitted applications stay submitted (`locks.revert_warnings`).
+  - **The exercise's status** is derived (`locks.exercise_status`): Draft while
+    every stage is, Completed when every stage is, otherwise Published. The
+    lobby's *State* chip, the status row and Home read it; Closed and Archived
+    stay `Exercise.state`'s (AD3).
+  - **A published stage fixes**, each control disabled with its reason
+    (`locks.stage_lock`, `item_lock`; one source, so no page disagrees): its
+    name, *Starts*, *Shown to applicants* and its place in the order; adding to
+    it and deleting it; and every setting of every item (the form's emails, a
+    gate's name, rule, sources, fields and results, an outcome's name, values,
+    rule and release emails, removing either), also an item's start date. Only
+    ends stay editable (the stage's *Ends*, each item's end: *Closes*, *To*,
+    *Due*), a stage's own fix being a revert. A gate whose session has opened is
+    fixed whatever its stage's status. Draft stages stay fully editable.
+  - **Elsewhere**, the same locks: Form is read-only ("The Form page"),
+    Dossiers fixes an opened gate's cells and gates *Released* on owed emails
+    ("The Dossiers page"), and Home fixes blind review ("Details").
 - **The Outline** lists each stage by name and dates with its items beneath,
   the counts (stages, gates, outcomes) and every problem, among them a gate
   with no evaluators. A stage or item is a button: it opens its card and goes to
@@ -498,7 +572,8 @@ At `/operator/exercises/<id>/dossiers` (the Applications page until ruling
 Dossiers item is built (ruling 25), the rows are the sample's applications.
 A control surface (ruling 23), worked down its columns. The whole table is
 locked until *Unlock*; then every cell, *Set ticked rows*, *Apply rules…*,
-*Upload CSV* and each outcome's *Released* are live. *Lock* keeps what
+*Upload CSV* and each outcome's *Released* are live, but for the fixed ones
+below. *Lock* keeps what
 changed; *Undo changes* puts the table back as it was when unlocked; meanwhile
 a count of the changes shows, and leaving the page with any pending asks
 first. Ticks only choose rows. The page has no *Save*; nothing is kept until
@@ -516,6 +591,19 @@ last (`stages.going_on`; *Re-appointment* and *Interview*, not *Not
 shortlisted*): each is counted in its column head and toned green, the rest
 muted, undecided amber. A mean's note under its chip says how many scores it
 took (`stages.mean_note`).
+
+- **A gate's cells are fixed once its Review Robin session has opened**
+  (`locks.cells_lock`; entry flips there change who the results cover). The
+  column says so, its cells stay disabled when the table is unlocked, and
+  *Set ticked rows*, *Apply rules…* and *Upload CSV* skip them, naming what
+  they skipped. A gate whose stage is published but not yet opened keeps live
+  cells: entering applications is that stage's work while it runs.
+- **Released waits on its emails** (`locks.release_lock`): the switch is off,
+  with the reason, while an email the release sends is owed on Emails, and a
+  release withdrawn waits on them to be made again. Before a release, the
+  dossiers it reaches that are still undecided or *Pending* are counted; a
+  row none of whose gates entered it is not reached, unless a branch of the
+  rule reads earlier outcomes alone and they hold.
 
 ## The Evaluations page
 
