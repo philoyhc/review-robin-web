@@ -30,6 +30,8 @@ class Lock:
 
     fixed: bool
     reason: str = ""
+    # A released outcome's owed emails: open now, they bar a re-release.
+    owed: str = ""
     # Fixed by an opened Review Robin session, which a revert leaves be
     # (ruling 29), rather than by its stage.
     opened: bool = False
@@ -181,12 +183,12 @@ def cells_lock(e: Exercise, gate: stages.Gate) -> Lock:
 def release_lock(e: Exercise, outcome: stages.Outcome) -> Lock:
     """An outcome's Released switch (AD-21): off while an email its release
     sends is owed on Emails. A release already made can be withdrawn."""
-    if outcome.released:
-        return OPEN
     owed = [m.name for m in workflow.outcome_emails(e.public_id, outcome.key) if not m.ok]
-    if owed:
-        return Lock(True, "Write its emails on Emails first: " + "; ".join(owed))
-    return OPEN
+    why = "Write its emails on Emails first: " + "; ".join(owed) if owed else ""
+    if outcome.released:
+        # Withdrawn and released again, it waits on them too (Codex).
+        return Lock(False, owed=why)
+    return Lock(True, why) if owed else OPEN
 
 
 def blind_lock(e: Exercise) -> Lock:

@@ -71,7 +71,7 @@
             {% if c.weights %}<span class="ap-weights">{% for k, w in c.weights if w %}{{ result_label(k) }} {{ (w * 100) | round | int }}%{{ " · " if not loop.last }}{% endfor %}</span>{% endif %}
             {% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>
             {% set rl = release_lock(c) %}
-            <label class="ap-rel"{% if rl.fixed %} title="{{ rl.reason }}"{% endif %}><input type="checkbox" data-ap-release="{{ c.label }}" data-ap-locks disabled{% if rl.fixed %} data-ap-fixed="{{ rl.reason }}"{% endif %} aria-label="Released: {{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
+            <label class="ap-rel"{% if rl.fixed %} title="{{ rl.reason }}"{% endif %}><input type="checkbox" data-ap-release="{{ c.label }}" data-ap-locks disabled{% if rl.fixed %} data-ap-fixed="{{ rl.reason }}"{% endif %}{% if rl.owed %} data-ap-owed="{{ rl.owed }}"{% endif %} aria-label="Released: {{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
             <span class="ap-relnote{{ ' ap-relnote-on' if c.released }}" data-ap-relnote>{{ c.released or "Not yet" }}</span>
           </th>
           {% endif %}
@@ -293,11 +293,36 @@
     var rel = e.target.closest("[data-ap-release]");
     if (rel) {
       var name = rel.dataset.apRelease, col = rel.closest("th").dataset.col;
-      // Cells it reached still undecided are named before a release (AD-21).
+      // Cells it reached still undecided are named before a release
+      // (AD-21): reached as Apply rules reaches them (Codex), so not a row
+      // none of whose gates entered it, unless a branch reading earlier
+      // outcomes alone takes it.
+      var h = head[col], scoped = (h.dataset.scope || "").split("|").filter(Boolean);
+      var spec = JSON.parse(h.dataset.rule || "null");
+      function cur(r, k) { var el = cellOf(r, k); return el ? el.dataset.v : null; }
+      function byOutcomes(r) {
+        if (!spec) return false;
+        return [{ when: spec.when }].concat(spec.more || []).some(function (b) {
+          var gates = b.when.filter(function (c) { return c[0] !== "form" && c[0] !== "out"; });
+          var outs = b.when.filter(function (c) { return c[0] === "out"; });
+          return outs.length > 0 && !gates.length && outs.every(function (c) { return cur(r, c[1]) === c[3]; });
+        });
+      }
       var open = rows.filter(function (r) {
         var sel = r.querySelector('[data-cell="' + col + '"] [data-ap-oc]');
-        return sel && (!sel.value || sel.value === "Pending");
+        if (!sel || r.dataset.status !== "Submitted") return false;
+        if (sel.value === "Pending") return true;
+        if (sel.value) return false;
+        var unreached = scoped.length > 0 && scoped.every(function (g) { var v = cur(r, g); return v === null || v === "Not entered"; });
+        return !unreached || byOutcomes(r);
       }).length;
+      // A release withdrawn here waits on its owed emails like any other
+      // (Codex): the lock stays with the switch, not only its first state.
+      if (rel.checked && rel.dataset.apOwed) {
+        window.alert(rel.dataset.apOwed + ".");
+        rel.checked = false;
+        return;
+      }
       var warn = open ? open + (open === 1 ? " dossier is" : " dossiers are") + " still undecided or Pending here. " : "";
       var ok = window.confirm(rel.checked
         ? warn + "Release " + name + "? What a release does (to applicants, to reviewers, by email) is set with the Timeline. Nothing is sent from this mock-up."

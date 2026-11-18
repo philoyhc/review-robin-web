@@ -6,8 +6,10 @@ waiting on its emails (AD-21). Skips without a Chromium build, as
 
 from __future__ import annotations
 
+import pytest
 from playwright.sync_api import Dialog, Page
 
+from applydesk import workflow
 from applydesk.tests.test_form_browser import ORIGIN
 from applydesk.tests.test_form_browser import page as page  # the fixture, re-exported
 
@@ -73,3 +75,27 @@ def test_blind_review_is_fixed_once_a_gate_s_stage_is_published(page: Page) -> N
     blind = card.locator('[data-dt="blind"]')
     assert blind.is_disabled()
     assert "fixed: a stage holding a gate is published" in card.locator(".dt-check").inner_text()
+
+
+def test_a_withdrawn_release_waits_on_owed_emails(
+    page: Page, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex: Shortlisting, released, with its emails now owed, may be
+    withdrawn, but not released again until they are written."""
+    monkeypatch.setitem(workflow._WRITTEN, "wa9juxbc2t", frozenset())  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    page.goto(f"{MODEL}/dossiers")
+    page.locator("[data-ap-lock]").click()
+    shortlisting = page.locator('[data-ap-release="Shortlisting"]')
+    page.once("dialog", lambda d: d.accept())
+    shortlisting.click()  # withdrawn
+    assert not shortlisting.is_checked()
+    said: list[str] = []
+
+    def accept(d: Dialog) -> None:
+        said.append(d.message)
+        d.accept()
+
+    page.once("dialog", accept)
+    shortlisting.click()
+    assert said and said[0].startswith("Write its emails on Emails first:")
+    assert not shortlisting.is_checked()

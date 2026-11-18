@@ -8,7 +8,7 @@ from datetime import datetime
 
 import pytest
 
-from applydesk import locks, sample_data, stages, timeline
+from applydesk import locks, sample_data, stages, timeline, workflow
 
 RA = "wa9juxbc2t"  # stages 1–2 done, stage 3 under way
 DRAFT = "c4xh2ndv6s"  # nothing published, a gate with no evaluators
@@ -283,3 +283,15 @@ def test_a_release_waits_on_its_owed_emails() -> None:
         "Write its emails on Emails first: Interviews: Outcome - Applicants;"
         " Interviews: Outcome - Panel evaluators"
     )
+
+
+def test_a_released_outcome_carries_its_owed_emails(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex: withdrawn on the page and released again, an outcome waits
+    on its owed emails as any other."""
+    e, review = _e(RA), _stage(RA, 2)
+    o1 = review.columns[2]
+    assert isinstance(o1, stages.Outcome)
+    assert locks.release_lock(e, o1).owed == ""  # its emails are written
+    monkeypatch.setitem(workflow._WRITTEN, RA, frozenset())  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    lock = locks.release_lock(e, o1)
+    assert not lock.fixed and lock.owed.startswith("Write its emails on Emails first:")

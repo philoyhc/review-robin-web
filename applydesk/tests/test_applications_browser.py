@@ -115,8 +115,11 @@ def test_a_release_asks_first(page: Page) -> None:
     page.once("dialog", dismiss)
     switch.click()
     assert "Timeline" in answers[0] and not switch.is_checked()
-    # Its reached cells still undecided are named first (AD-21).
-    assert " still undecided or Pending here. Release Selection?" in answers[0]
+    # Its reached cells still undecided are named first (AD-21): the 55
+    # Pending, not the 45 Shortlisting stopped (Codex).
+    assert answers[0].startswith(
+        "55 dossiers are still undecided or Pending here. Release Selection?"
+    )
     page.once("dialog", lambda d: d.accept())
     switch.click()
     assert switch.is_checked()
