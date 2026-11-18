@@ -131,6 +131,8 @@ Taken 2026-11-18 at `d6c20bdf8`.
 
 **Reads:** one `diff-reviewer` item read (rungs 2–5, from `048acca9e`) found 14 findings, the real ones fixed in 3b and 5; one read of #3986 found 4, fixed there. Codex found 13 across the PRs, all fixed.
 
+**Spec:** `spec-writer` wrote `applydesk/spec/applications.md` at the close, following the code where the plan's intent moved (no Publish card; a gate's own window; Dossiers' cells fixed only once a session opens).
+
 **Owed:**
 - `Exercise.state` still decides *live* on Details, Evaluations and the form's state (AD3, with Closed and Archived).
 - `_exercise_span` reads the two exercise fields, and `expected_outcome` stays text (AD2).
