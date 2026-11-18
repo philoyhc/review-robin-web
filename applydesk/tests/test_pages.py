@@ -1230,7 +1230,7 @@ def test_a_gate_item_lists_its_results_and_what_review_robin_asks(client: TestCl
     # window in the exercise's timezone, the help contact, the tag.
     assert (
         "Review Robin receives <strong>Peer review</strong>: Every current RA scores every"
-        " applicant, never themselves, open 1 Oct to 6 Nov (Asia/Singapore); help contact"
+        " applicant, never themselves, open 1 Oct to 31 Oct (Asia/Singapore); help contact"
         " ra-recruitment@example.edu; tagged <code>applydesk</code>."
     ) in g1
     assert "Help contact <strong>ra-recruitment@example.edu</strong> · Timezone" in g1
