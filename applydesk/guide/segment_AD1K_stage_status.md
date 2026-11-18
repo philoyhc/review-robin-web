@@ -104,6 +104,13 @@ Taken 2026-11-18 at `d6c20bdf8`.
 - **Publish checks:** `sample_data.setup_missing` (`applydesk/sample_data.py:956`).
 - **Tests:** `applydesk/tests/test_pages.py`, `test_process*.py`, `test_form*.py`, `test_dossiers*.py`, `test_home_browser.py`.
 
+## Status
+
+- **Rung 2 built** (2026-11-18):
+  - **Typed dates.** A stage's dates are typed (`stages.StageDates`, `span`), each a date and a time. The pages print them as before through `Stage.dates`. The timeline's text parser is gone, and so is `workflow`'s split. Process's two template splits wait for its date-time inputs at rung 3.
+  - **Status.** `Stage.status` is Draft or Published on the sample, and `applydesk/locks.py` derives the rest: Overdue, Completed, the exercise's status, publish problems, each part's lock with its reason, and a revert's warnings.
+  - **Kept in `stages.py`.** `_exercise_span` still reads the two exercise fields, until those are typed at AD2.
+
 ## PR ladder
 
 1. **Plan** (this file), its roadmap row and README row.

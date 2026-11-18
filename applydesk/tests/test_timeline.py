@@ -10,7 +10,7 @@ from datetime import date
 import pytest
 from fastapi.testclient import TestClient
 
-from applydesk import sample_data, timeline
+from applydesk import sample_data, stages, timeline
 from applydesk.tests._host import host_with
 
 EX = "wa9juxbc2t"  # the RA recruitment, mid Stage 3
@@ -124,19 +124,18 @@ def test_a_draft_s_home_says_what_publishing_needs(client: TestClient) -> None:
     assert "<h2>Publish</h2>" not in published
 
 
-def test_dates_hold_to_what_a_stage_says() -> None:
-    """Cold read of rung 2: an impossible day or an end before its start
-    is no dates; a year rolls over from the stage before; a hyphen serves
-    as the dash; one date is a one-day stage."""
-    after = date(2026, 9, 1)
-    assert timeline._dates("31 Feb – 3 Mar", after) == (None, None)  # pyright: ignore[reportPrivateUsage]  -- the parser itself
-    assert timeline._dates("3 Oct 2026 – 1 Oct 2026", after) == (None, None)  # pyright: ignore[reportPrivateUsage]  -- as above
-    assert timeline._dates("5 Jan - 30 Jan", date(2026, 12, 20)) == (  # pyright: ignore[reportPrivateUsage]  -- as above
-        date(2027, 1, 5),
-        date(2027, 1, 30),
-    )
-    assert timeline._dates("30 Sep", after) == (date(2026, 9, 30), date(2026, 9, 30))  # pyright: ignore[reportPrivateUsage]  -- as above
-    assert timeline._dates("1 September 2026 – 3 Oct", after)[0] == date(2026, 9, 1)  # pyright: ignore[reportPrivateUsage]  -- as above
+def test_a_stage_s_dates_are_typed_and_printed_as_before() -> None:
+    """Segment AD1K (AD-56): a stage declares its start and end as
+    date-times, so nothing parses text; a bare day's end is its last
+    minute, and the pages print the days as before."""
+    when = stages.span(stages.day(2026, 9, 1), stages.day(2026, 9, 30))
+    assert when.end == stages.day(2026, 9, 30, 23, 59)
+    st = stages.Stage(1, "Applications", when, form=True)
+    assert st.dates == "1 Sep – 30 Sep"
+    assert stages.Stage(2, "", None).dates == "Dates not set"
+    # A year's turn needs no inference: the dates say it.
+    pcg = _of(PCG)
+    assert (pcg.stages[0].start, pcg.stages[0].end) == (date(2026, 11, 1), date(2027, 1, 31))
 
 
 def test_today_between_stages_is_said_and_marked() -> None:

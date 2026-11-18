@@ -210,17 +210,59 @@ class Outcome:
     rule: Rule | None = None
 
 
+def short_day(d: datetime | date) -> str:
+    """A day as the pages print it, e.g. "1 Sep"."""
+    return f"{d.day} {d.strftime('%b')}"
+
+
+@dataclass(frozen=True)
+class StageDates:
+    """A stage's start and end (segment AD1K, author 2026-11-18): each a
+    date and a time in the exercise's time zone, declared before the
+    stage can be published, its end what completes it."""
+
+    start: datetime
+    end: datetime
+
+
+def day(y: int, m: int, d: int, hh: int = 0, mm: int = 0) -> datetime:
+    return datetime(y, m, d, hh, mm)
+
+
+def span(start: datetime, end: datetime) -> StageDates:
+    """A stage running from ``start`` to ``end``, a bare day's end taken
+    as its last minute (23:59)."""
+    if end.hour == 0 and end.minute == 0:
+        end = end.replace(hour=23, minute=59)
+    return StageDates(start, end)
+
+
+#: A stage's declared status (ruling 35); Completed and Overdue follow
+#: from its end and its items (``stage_status``).
+STAGE_STATUSES = ("Draft", "Published")
+
+
 @dataclass(frozen=True)
 class Stage:
     """A step of the exercise's timeline (ruling 15): it holds the
     application form, or gates, and may hold an outcome; never the form
-    and a gate together. Named by the operator, "Stage N" until then."""
+    and a gate together. Named by the operator, "Stage N" until then.
+    ``when`` is its declared start and end, None until set; ``status``
+    the operator's Draft or Published (ruling 35)."""
 
     number: int
     name: str  # "" until the operator names it
-    dates: str
+    when: StageDates | None
     columns: tuple[Gate | Outcome, ...] = ()
     form: bool = False  # holds the application form (ruling 15)
+    status: str = "Draft"
+
+    @property
+    def dates(self) -> str:
+        """The dates as the pages print them, e.g. "1 Sep – 30 Sep"."""
+        if self.when is None:
+            return "Dates not set"
+        return f"{short_day(self.when.start)} – {short_day(self.when.end)}"
 
     @property
     def label(self) -> str:
@@ -372,11 +414,11 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
     # A draft still being set up (segment AD1F): its selection gate added
     # just in time, its panel not chosen yet.
     "c4xh2ndv6s": (
-        Stage(1, "", "Dates not set", form=True),
+        Stage(1, "", None, form=True),
         Stage(
             2,
             "Selection",
-            "Dates not set",
+            None,
             (
                 Gate(
                     "g1",
@@ -390,18 +432,42 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
     ),
     # The model exercise (author, 2026-11-13): its stages named.
     "wa9juxbc2t": (
-        Stage(1, "Applications", "1 Sep – 30 Sep", form=True),
-        Stage(2, "Review", "1 Oct – 6 Nov", (_G1, _G2, _O1)),
-        Stage(3, "Interviews", "9 Nov – 4 Dec", (_G3, _O2)),
+        Stage(
+            1,
+            "Applications",
+            span(day(2026, 9, 1), day(2026, 9, 30)),
+            form=True,
+            status="Published",
+        ),
+        Stage(
+            2,
+            "Review",
+            span(day(2026, 10, 1), day(2026, 11, 6)),
+            (_G1, _G2, _O1),
+            status="Published",
+        ),
+        Stage(
+            3,
+            "Interviews",
+            span(day(2026, 11, 9), day(2026, 12, 4)),
+            (_G3, _O2),
+            status="Published",
+        ),
     ),
     # A smaller exercise, read blind by one panel; its second stage not
     # yet named.
     "k7mfr3pq8z": (
-        Stage(1, "Call for applications", "1 Sep – 31 Oct", form=True),
+        Stage(
+            1,
+            "Call for applications",
+            span(day(2026, 9, 1), day(2026, 10, 31)),
+            form=True,
+            status="Published",
+        ),
         Stage(
             2,
             "",
-            "1 Nov – 30 Nov",
+            span(day(2026, 11, 1), day(2026, 11, 30)),
             (
                 Gate(
                     "g1",
@@ -421,6 +487,7 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
                     (("g1.r1", 1.0),),
                 ),
             ),
+            status="Published",
         ),
     ),
 }
@@ -507,6 +574,18 @@ def _small_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
     )
 
 
+def _exercise_span(e: sample_data.Exercise) -> StageDates | None:
+    """The one stage of an exercise with no stages laid out, from its
+    opening and its applications' close ("1 Nov 2026", "31 Jan 2027,
+    23:59"); None while either is "Not set"."""
+    try:
+        start = datetime.strptime(e.opens, "%d %b %Y")
+        end = datetime.strptime(e.application_stage_ends, "%d %b %Y, %H:%M")
+    except ValueError:
+        return None
+    return StageDates(start, end)
+
+
 def plan_of(exercise_id: str) -> Plan:
     """The stages and every application's cells for one exercise. An
     exercise not yet set up has one stage, holding the form, as a
@@ -514,12 +593,10 @@ def plan_of(exercise_id: str) -> Plan:
     apps = sample_data.applications_of(exercise_id)
     if exercise_id not in _STAGES:
         e = sample_data.exercise(exercise_id)
-        dates = (
-            "Dates not set"
-            if e is None or "Not set" in (e.opens, e.application_stage_ends)
-            else f"{e.opens} – {e.application_stage_ends}"
-        )
-        return Plan((Stage(1, "", dates, form=True),), tuple(Row(a, {}) for a in apps))
+        when = _exercise_span(e) if e else None
+        status = "Draft" if e is None or e.state == "Draft" else "Published"
+        only = Stage(1, "", when, form=True, status=status)
+        return Plan((only,), tuple(Row(a, {}) for a in apps))
     rows = _model_rows(apps) if exercise_id == "wa9juxbc2t" else _small_rows(apps)
     return Plan(_STAGES[exercise_id], rows)
 

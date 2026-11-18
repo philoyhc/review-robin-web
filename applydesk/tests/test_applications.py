@@ -147,16 +147,16 @@ def test_every_sample_s_stages_keep_ruling_15_s_shape() -> None:
 
 def test_a_stage_may_not_hold_the_application_and_a_gate() -> None:
     gate = stages.Gate("g1", 1, "Panel", "RRW")
-    both = (stages.Stage(1, "", "", (gate,), form=True),)
+    both = (stages.Stage(1, "", None, (gate,), form=True),)
     two = (
-        stages.Stage(1, "A", "", form=True),
-        stages.Stage(2, "", "", form=True),
+        stages.Stage(1, "A", None, form=True),
+        stages.Stage(2, "", None, form=True),
     )
-    late = (stages.Stage(1, "", "", (gate,)), stages.Stage(2, "", "", form=True))
+    late = (stages.Stage(1, "", None, (gate,)), stages.Stage(2, "", None, form=True))
     assert stages.problems(both) == ("Stage 1 holds both the form and a gate.",)
     assert "More than one stage holds the form." in stages.problems(two)
     assert stages.problems(late) == ()  # a gate may come first (author, 2026-11-13)
-    assert stages.problems((stages.Stage(1, "", "", (gate,)),)) == ()  # from elsewhere
+    assert stages.problems((stages.Stage(1, "", None, (gate,)),)) == ()  # from elsewhere
 
 
 # --- Rung 6: rules set on Setup (ruling 13) ---
@@ -312,7 +312,7 @@ def test_a_rule_reads_as_the_process_page_s_script_does_at_the_edges() -> None:
         "",
     )
     o = stages.Outcome("ox", 9, "X", (), "", "", rule=rule)
-    stub = stages.Stage(9, "", "", (blank, o))
+    stub = stages.Stage(9, "", None, (blank, o))
     with_blank = stages.Plan((*plan.stages, stub), plan.rows)
     assert stages.rule_text(with_blank, o) == (
         "Result at Untitled gate ≥ 3 and Entry at (removed) is Entered"
@@ -322,7 +322,7 @@ def test_a_rule_reads_as_the_process_page_s_script_does_at_the_edges() -> None:
 
 def test_a_stage_holds_one_outcome_at_most() -> None:
     o = stages.Outcome("o1", 1, "A", ("Yes",), "", "")
-    two = (stages.Stage(1, "", "", (o, o)),)
+    two = (stages.Stage(1, "", None, (o, o)),)
     assert stages.problems(two) == ("Stage 1 holds more than one outcome.",)
-    with_application = (stages.Stage(1, "Applications", "", (o,), form=True),)
+    with_application = (stages.Stage(1, "Applications", None, (o,), form=True),)
     assert stages.problems(with_application) == ()

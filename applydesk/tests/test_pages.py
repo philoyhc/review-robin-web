@@ -1002,9 +1002,10 @@ def test_an_application_stage_later_in_the_timeline_keeps_the_headers_aligned(
     group sits at its place, once, and the group spans match the columns."""
     model = stages._STAGES[EX]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
     review, interviews = model[1], model[2]
-    selection = stages.Stage(4, "Later", "", interviews.columns[1:])
-    interview = stages.Stage(3, "Interviews", "", interviews.columns[:1])
-    apply = stages.Stage(9, "Apply", "1 Sep – 15 Oct", selection.columns, form=True)
+    selection = stages.Stage(4, "Later", None, interviews.columns[1:])
+    interview = stages.Stage(3, "Interviews", None, interviews.columns[:1])
+    when = stages.span(stages.day(2026, 9, 1), stages.day(2026, 10, 15))
+    apply = stages.Stage(9, "Apply", when, selection.columns, form=True)
     monkeypatch.setitem(stages._STAGES, EX, (review, interview, apply))  # pyright: ignore[reportPrivateUsage]  -- as above
     text = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
     start = text.index('<tr class="ap-groups">')
