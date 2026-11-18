@@ -264,14 +264,23 @@ def test_the_csv_is_the_rows_in_view_named_for_the_exercise(page: Page) -> None:
     )
     with page.expect_download() as got:
         page.locator("[data-ap-csv-down]").click()
-    name = got.value.suggested_filename
-    assert name.endswith(".csv") and "_dossiers_" in name
+    assert got.value.suggested_filename == "ra_2027_dossiers_2026-11-17.csv"
     lines = got.value.path().read_text(encoding="utf-8").removeprefix("\ufeff").splitlines()
     assert len(lines) == 1 + page.locator("[data-row]:not([hidden])").count()
     page.locator("[data-ap-search]").fill("")
     with page.expect_download() as got:
         page.locator("[data-ap-csv-down]").click()
-    assert ",'=HYPERLINK(1)," in got.value.path().read_text(encoding="utf-8")
+    text = got.value.path().read_text(encoding="utf-8").removeprefix("\ufeff")
+    assert ",'=HYPERLINK(1)," in text
+    # Uploaded back, the guarded value and a guarded header read as written.
+    _unlock(page)
+    head = "Application ID,'-Staff interview"
+    page.locator("[data-ap-csv]").set_input_files(
+        files=[{"name": "x.csv", "mimeType": "text/csv", "buffer": (head + "\n").encode()}]
+    )
+    page.locator("[data-ap-proposal]").wait_for(state="visible")
+    skipped = page.locator("[data-ap-prop-skip]").inner_text()
+    assert "Column not on this page, ignored: -Staff interview." in skipped
 
 
 def test_apply_keeps_a_cell_changed_by_hand_since(page: Page) -> None:

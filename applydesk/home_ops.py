@@ -31,12 +31,10 @@ _GATE_TONE = {"Results in": "ok", "Sent": "info", "Ready": "info"}
 
 
 def _form(e: Exercise) -> Row:
-    apps = sample_data.applications_of(e.public_id)
-    submitted = sum(a.state == "Submitted" for a in apps)
-    drafts = sum(a.state == "Draft" for a in apps)
+    counted = workflow.counts_of(e.public_id)  # the one count (AD-41)
     state = workflow.form_state(e)
-    detail = f"{submitted:,} submitted" + (
-        f" · {drafts} {'draft' if drafts == 1 else 'drafts'}" if drafts else ""
+    detail = f"{counted.submitted:,} submitted" + (
+        f" · {workflow.plural(counted.drafts, 'draft')}" if counted.drafts else ""
     )
     return Row("Form", state, "warn" if state == "Draft" else "info", detail, "dossiers")
 

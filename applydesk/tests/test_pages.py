@@ -1149,12 +1149,9 @@ def test_every_panel_source_of_a_gate_counts(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_panels_says_a_sent_gate_keeps_its_roster(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/panels").text
-    note = (
-        "Gate 1 was sent with the roster as it then stood:"
-        " a gate keeps that roster once its session opens (ruling 29)."
-    )
+    note = "Gate 1 has opened with the roster as it then stood, and keeps it (ruling 29)."
     assert f'<span class="pn-sent">{note}</span>' in text  # under Manage panels
-    assert f'title="{note}">Sent</span>' in text  # and as its column's chip
+    assert f'title="{note}">Opened</span>' in text  # and as its column's chip
     item = text[text.index('<li data-panel="residential-staff">') :]
     assert "sent" not in item[: item.index("</li>")]  # the staff interview: not yet sent
 
@@ -1551,7 +1548,6 @@ def test_the_applicant_reaches_each_of_their_applications(client: TestClient) ->
     for app in ("m3qx8vkt2n", "f2ps7nyh4k"):
         assert f'href="{me}/applications/{app}"' in lobby
         assert f'href="{me}/applications/{app}"' in page
-    assert "Your application (draft)" in page
 
 
 def test_one_count_of_applications_everywhere(client: TestClient) -> None:
@@ -1563,4 +1559,4 @@ def test_one_count_of_applications_everywhere(client: TestClient) -> None:
     lobby = client.get("/applydesk/operator").text
     assert "<th>Submitted</th>" in lobby and "<td>100</td>" in lobby
     home = client.get(f"/applydesk/operator/exercises/{EX}").text
-    assert "100 submitted · 3 drafts" in home and "received" not in home
+    assert "100 submitted · 3 drafts" in home

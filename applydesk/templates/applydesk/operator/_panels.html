@@ -8,7 +8,7 @@
    page, which nothing saves until the database (AD2). #}
 {% set used = panels | selectattr("key", "in", uses) | list %}
 {% macro count(n) %}{{ n }} {{ "person" if n == 1 else "people" }}{% endmacro %}
-{% macro sent_note(p) %}{{ panels_sent[p.key] | join(", ") }} {{ "was" if panels_sent[p.key] | length == 1 else "were" }} sent with the roster as it then stood: a gate keeps that roster once its session opens (ruling 29).{% endmacro %}
+{% macro sent_note(p) %}{{ panels_sent[p.key] | join(", ") }} {{ "has" if panels_sent[p.key] | length == 1 else "have" }} opened with the roster as it then stood, and {{ "keeps" if panels_sent[p.key] | length == 1 else "keep" }} it (ruling 29).{% endmacro %}
 {# A row (ruling 22), as Review Robin's rosters: inert until its tick
    selects it; selected, its cells are edit boxes and its panel ticks
    live. Unselected, an email is text, red when the directory has no such
@@ -144,7 +144,7 @@
             <th scope="col" class="pn-col" id="panel-{{ p.key }}" data-panel="{{ p.key }}" data-used="{{ uses.get(p.key, ()) | join(' · ') }}" title="{% if uses.get(p.key) %}Used by {{ uses[p.key] | join(', ') }}{% else %}Not used yet{% endif %}">
               <span class="pn-h" data-pn-name>{{ p.name }}</span>
               <span class="pn-n" data-pn-count>{{ count(p.members | length) }}</span>
-              {% if panels_sent.get(p.key) %}<span class="chip chip-warn pn-sent-chip" title="{{ sent_note(p) }}">Sent</span>{% endif %}
+              {% if panels_sent.get(p.key) %}<span class="chip chip-warn pn-sent-chip" title="{{ sent_note(p) }}">Opened</span>{% endif %}
             </th>
             {% endfor %}
             <th scope="col" class="pn-x"><span class="visually-hidden">Save or remove</span></th>

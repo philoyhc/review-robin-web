@@ -277,3 +277,20 @@ def test_home_draws_the_operator_part_and_links_where_it_is_worked(client: TestC
     assert home.count("data-tl-op") == 3 and 'class="card tl tl-ops"' in home
     assert f'href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Gate 3</a>' in home
     assert f'href="/applydesk/operator/exercises/{EX}/dossiers">Dossiers</a>' in home
+
+
+def test_the_running_gate_is_the_one_being_worked(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AD-24, cold read: in a stage of several gates, the first whose
+    results are not in; all in, the last."""
+    from applydesk import workflow
+
+    e = sample_data.exercise(EX)
+    assert e is not None
+    tl = timeline.of(e, today=date(2026, 10, 20))  # inside stage 2: Gates 1 and 2
+    assert tl.now is not None and tl.now.number == 2
+    assert timeline.running_gate(e, tl) == 2  # both results in: the last
+    states = {"g1": ("Results in", ""), "g2": ("Sent", "3 of 100 reviewed")}
+    monkeypatch.setattr(workflow, "gate_state", lambda _e, k: states.get(k, ("Ready", "")))
+    assert timeline.running_gate(e, tl) == 2
+    states["g1"] = ("Sent", "")
+    assert timeline.running_gate(e, tl) == 1

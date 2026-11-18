@@ -704,7 +704,10 @@
   function fromCsv(name, text) {
     var table = parseCsv(text.replace(/^﻿/, ""));
     if (!table.length) { propose("Upload CSV: " + name, [], ["The file is empty."], csvOpen); return; }
-    var header = table[0].map(function (h) { return h.trim(); });
+    // Download CSV's guard undone, as Panels' unguard: a header or a cell
+    // that came back as "'=…" reads as it was written (AD-66).
+    function unguard(v) { return /^'[=+\-@\t\r]/.test(v) ? v.slice(1) : v; }
+    var header = table[0].map(function (h) { return unguard(h.trim()); });
     var idAt = header.map(function (h) { return h.toLowerCase(); }).indexOf("application id");
     if (idAt < 0) { propose("Upload CSV: " + name, [], ["No \"Application ID\" column: the first row names the columns."], csvOpen); return; }
     var keys = header.map(function (h, i) { return i === idAt ? null : columnFor(h); });
@@ -726,7 +729,7 @@
       if (!r) { unknown.push(id || "(blank, line " + (n + 2) + ")"); return; }
       keys.forEach(function (key, i) {
         if (!key) return;
-        var raw = (line[i] || "").trim().replace(/^'(?=[=+\-@])/, "");  // Download's guard undone
+        var raw = unguard((line[i] || "").trim());
         if (!raw) return;  // blank: leave the cell as it is
         var typed = raw;
         if (raw === "-" || raw === "–") raw = "—";  // no status yet, as a keyboard or a spreadsheet types it

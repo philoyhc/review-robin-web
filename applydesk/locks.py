@@ -212,7 +212,7 @@ def revert_warnings(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
             if workflow.gate_opened(state, line):
                 out.append(f"Gate {c.number}'s Review Robin session has opened: it stays fixed.")
     if st.form:
-        n = sum(a.state == "Submitted" for a in sample_data.applications_of(e.public_id))
+        n = workflow.counts_of(e.public_id).submitted  # the one count (AD-41)
         if n:
             stays = "application stays" if n == 1 else "applications stay"
             out.append(f"{n:,} submitted {stays} submitted.")
