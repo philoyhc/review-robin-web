@@ -678,7 +678,7 @@ def test_an_outcome_s_release_is_set_per_audience(page: Page) -> None:
     page.goto(PAGE)
     o1 = _item(page, "o1")
     groups = o1.locator(".pc-aud")
-    assert groups.locator(".pc-aud-h").all_inner_texts() == ["Applicants", "Panel evaluators"]
+    assert groups.locator(".pc-aud-h").all_inner_texts() == ["Applicants", "Evaluators"]
     assert _checks(o1) == [True, True, False, False]
     assert _checks(_item(page, "o2")) == [True, True, False, True]
     assert o1.locator("select[data-rel-template]").count() == 0

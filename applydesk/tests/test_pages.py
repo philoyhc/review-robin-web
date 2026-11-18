@@ -189,7 +189,7 @@ def test_an_open_dossier_names_the_applicant(client: TestClient) -> None:
 def test_a_dossier_shows_only_the_part_shown_to_reviewers(client: TestClient, dossier: str) -> None:
     exercise = EX if dossier == "p3bd7kq2wx" else BLIND
     page = client.get(f"/applydesk/me/exercises/{exercise}/dossiers/{dossier}").text
-    assert "Shown to reviewers" in page and "Not shown to reviewers" not in page
+    assert "Shown to evaluators" in page and "Not shown to evaluators" not in page
     app = next(a for a in sample_data.APPLICATIONS if a.dossier_id == dossier)
     found = sample_data.exercise(exercise)
     assert found is not None
@@ -464,7 +464,7 @@ def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> N
         "Applications: Reminder · Applicants",
         "Review: Outcome · Applicants",
         "Interviews: Outcome · Applicants",
-        "Interviews: Outcome · Panel evaluators",
+        "Interviews: Outcome · Evaluators",
     ]
     chips = re.findall(r'<span class="chip chip-\w+">(Written|Owed)</span>', text)
     assert chips == ["Written", "Written", "Written", "Owed", "Owed"]
@@ -716,7 +716,7 @@ def test_a_gate_s_page_is_only_a_gate_s(client: TestClient) -> None:
     draft = client.get(f"/applydesk/operator/exercises/{DRAFT}/evaluations/gate_1")
     assert draft.status_code == 404
     blind = client.get(f"/applydesk/operator/exercises/{BLIND}/evaluations/gate_1").text
-    assert 'data-sort-key="candidate">Dossier<' in blind and ">Candidate<a" not in blind
+    assert 'data-sort-key="candidate">Dossier<' in blind and ">Applicant<a" not in blind
 
 
 def test_a_dossier_with_no_evaluator_is_one_row() -> None:
@@ -906,9 +906,7 @@ def test_the_timeline_steps_follow_the_stages() -> None:
     )
     assert workflow.current_stage(e) == "Interviews"
     final = next(s for s in all_steps if s.title == "Selection")
-    assert (
-        final.blocked == "Not ready: its emails to applicants and panel evaluators are not written"
-    )
+    assert final.blocked == "Not ready: its emails to applicants and evaluators are not written"
 
 
 @pytest.mark.parametrize(
@@ -953,7 +951,7 @@ def test_the_breadcrumb_ends_at_the_page(client: TestClient) -> None:
     crumbs = text[text.index('<nav class="crumbs"') :]
     crumbs = crumbs[: crumbs.index("</nav>")]
     assert re.findall(r">([^<>/]+)</(?:a|span)>", crumbs) == [
-        "Exercises",
+        "Operator Lobby",
         "Recruitment and Selection of Residential Assistants",
         "Process",
     ]
@@ -1057,7 +1055,7 @@ def test_an_owed_email_holds_back_only_a_release_to_come() -> None:
     by_title = {s.title: s for s in workflow.steps(ex)}
     assert by_title["Shortlisting"].blocked == ""  # released
     assert by_title["Selection"].blocked == (
-        "Not ready: its emails to applicants and panel evaluators are not written"
+        "Not ready: its emails to applicants and evaluators are not written"
     )
 
 
@@ -1148,7 +1146,7 @@ def test_what_uses_each_panel_and_what_was_sent_with_it() -> None:
         "current-ras": ("Gate 1",),
         "office": ("Gate 2",),
     }
-    assert stages.panel_uses(OPEN) == {"pool": ("Form: Preferred reviewer",)}
+    assert stages.panel_uses(OPEN) == {"pool": ("Form: Preferred evaluator",)}
     assert workflow.panels_sent(DRAFT) == {}
 
 
@@ -1276,7 +1274,7 @@ def test_a_gate_item_lists_its_results_and_what_review_robin_asks(client: TestCl
     # Review Robin asks the response fields, a required one saying so.
     assert (
         "For Review Robin, each evaluator answers: <strong>Score</strong> (Integer 0 to 5,"
-        " step 1, required; help: “0 = Don&#39;t know enough about this candidate”);"
+        " step 1, required; help: “0 = Don&#39;t know enough about this applicant”);"
         " <strong>Comment</strong> (String, up to 2000 characters)."
     ) in g1
     # What will be sent (AD1G amendment): the instrument, its stage's
@@ -1445,9 +1443,9 @@ def test_a_gate_card_shows_no_progress_and_says_what_evaluators_read(
     text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
     assert "Progress:" not in text and "Panel sees" not in text
     fields = text[text.index("data-pc-fields") : text.index("data-pc-results")]
-    assert "Evaluators read the dossier's <em>Shown to reviewers</em> part." in fields
+    assert "Evaluators read the dossier's <em>Shown to evaluators</em> part." in fields
     blind = client.get(f"/applydesk/operator/exercises/{BLIND}/process").text
-    assert "<em>Shown to reviewers</em> part, redacted." in blind
+    assert "<em>Shown to evaluators</em> part, redacted." in blind
 
 
 def test_a_gate_lists_its_evaluator_sources(client: TestClient) -> None:

@@ -127,7 +127,7 @@
     if (c.required) lab.appendChild(el("span", "fb-pv-req", " (required)"));
     wrap.appendChild(lab);
     if (c.help) { var h = el("p", "fb-pv-help", c.help); h.id = id + "-h"; wrap.appendChild(h); }
-    if (c.shown) wrap.appendChild(el("p", "fb-pv-seen", "Reviewers see your answer."));
+    if (c.shown) wrap.appendChild(el("p", "fb-pv-seen", "Evaluators see your answer."));
     var input;
     if (t === "string") {
       var max = /^\d+$/.test(c.max) ? parseInt(c.max, 10) : 0;

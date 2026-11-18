@@ -53,7 +53,7 @@ operators under `/operator/exercises`, participants under `/me`.
   any other shape, or names nothing, is a 404 before anything is read.
 - **The dossier**, what a reviewer opens, one per application
   (`/me/exercises/<id>/dossiers/<dossier>`), is named by its own ID, never the
-  application's, and shows only the *Shown to reviewers* section. In a blind exercise it
+  application's, and shows only the *Shown to evaluators* section. In a blind exercise it
   redacts the applicant's name and identifiers. It and the applicant's own
   application page read the Form's questions (text blocks aside), grouped
   by visibility in the Form's order, with the answers Extract writes, *—*
@@ -132,7 +132,7 @@ shows the form's own card and one empty String card, open.
   keeps the question, help text, *Required* and visibility, and empties the
   new type's settings: a photo's ratio starts at 4:5, a list at *Choose
   one* and Select people at *Institution-wide*.
-- **Visibility** is per card: *Shown to reviewers* or *Not shown*; a new
+- **Visibility** is per card: *Shown to evaluators* or *Not shown*; a new
   card is *Not shown*, the side that hides.
 - **Collapsed**, a card shows its question and help text (a text card's
   title and description), the summary of its settings, and chips: *Required*
@@ -170,7 +170,7 @@ shows the form's own card and one empty String card, open.
   renderer. A string with a maximum of 200 characters or fewer previews as
   one line, longer or unbounded as a box; a number as a field with its
   bounds; a list as radio buttons (*Choose one*) or tick boxes; a photo as
-  a frame at its ratio; "Reviewers see your answer." appears under a shown
+  a frame at its ratio; "Evaluators see your answer." appears under a shown
   question. Select people previews as a box of pills, after Residential's
   Staff box: each comma-separated name or email found in its pool becomes a
   pill, one not found (or matching more than one person) stays in the box
@@ -339,7 +339,7 @@ pages, it can wait); `workflow.steps` still names the current stage.
   status").
   - **Gate**: *Name*; *Type* (a disabled menu, *Review Robin session*, kept
     for other kinds); *Description* (Review Robin's instrument description);
-    *Confidential* (per gate: Review Robin shows each candidate as *Name
+    *Confidential* (per gate: Review Robin shows each applicant as *Name
     redacted* with their key); the *Entry rule*. The exercise's *Help
     contact* and *Timezone* show read-only, linking to Home, where they are
     set: they are Review Robin's for every gate.
@@ -415,7 +415,7 @@ pages, it can wait); `workflow.steps` still names the current stage.
   percentages; weights that all sit at 0 are no combined result, flagged only when a rule reads one. Scope is the gates since the previous outcome (ruling 13); the
   weights follow as gates are added, removed or moved, a new gate takes what is
   left of 100, and the item says when the gates changed. *When released*, per
-  audience, *Applicants* and *Panel evaluators* each with *Update timeline*
+  audience, *Applicants* and *Evaluators* each with *Update timeline*
   (the timeline they see on signing in to their participant page) and *Send
   email*. Whether it is released is set on Dossiers.
 - **The rule editor** (*Add a rule* / *Edit the rule*, on a gate or an outcome).
@@ -654,7 +654,7 @@ keeps all of them.
   on one line and repeated below a table longer than a page; an
   offset is snapped to a page and one past the last clamps to the last, one
   that is not a whole number is the first page.
-- **Filter**, *Find a candidate or an evaluator*: the candidate's name, email,
+- **Filter**, *Find an applicant or an evaluator*: the candidate's name, email,
   application or dossier ID, or the pair's evaluator's name or email, any
   case (`stages.matching`). A blind exercise's candidate is found by the
   dossier ID alone, never by who they are. *Clear* drops the filter, not the
@@ -799,7 +799,7 @@ from AD2.
     all data*.
   - **Setup CSVs**, one per Setup page, in Setup's order, from `extract.setup`:
     `form.csv` (a row per card: order, kind, type, label, help, bounds,
-    options, choose, required, shown to reviewers, pool); `process.csv` (a
+    options, choose, required, shown to evaluators, pool); `process.csv` (a
     row per stage item, *form*, *gate* or *outcome*, with its evaluators,
     mode, results, values, due and rule in words, and under each gate a
     *field* row per response field and a *result* row per result, their

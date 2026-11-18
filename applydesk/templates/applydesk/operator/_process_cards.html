@@ -216,7 +216,7 @@
         <label class="fc-l">Type<select class="fc-in" data-pc="type" disabled title="Every gate runs in Review Robin for now">{% for k, label in gate_types %}<option value="{{ k }}"{% if k == (g.via or "RRW") %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
       </div>
       <label class="fc-l">Description<textarea class="fc-in" rows="1" data-fit-box data-pc="description" placeholder="What evaluators do at this gate, as Review Robin shows it"{{ sent_attr(sent) }}>{{ g.description }}</textarea></label>
-      <label class="gsw"><input type="checkbox" data-pc="confidential"{% if g.confidential %} checked{% endif %}{{ sent_attr(sent) }}> <span><strong>Confidential</strong> <span class="muted">· Review Robin shows each candidate as <em>Name redacted</em>, with their key</span></span></label>
+      <label class="gsw"><input type="checkbox" data-pc="confidential"{% if g.confidential %} checked{% endif %}{{ sent_attr(sent) }}> <span><strong>Confidential</strong> <span class="muted">· Review Robin shows each applicant as <em>Name redacted</em>, with their key</span></span></label>
       {# Review Robin's for every gate: the exercise's, set on Home. #}
       <p class="pc-line muted" data-pc-ex>Help contact <strong>{{ help_contact(exercise) }}</strong> · Timezone <strong>{{ timezone(exercise) }}</strong> · the exercise's, set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id) }}#details">Home</a></p>
       {{ rule_box(plan, g, rule_text, sec=False) }}
@@ -259,7 +259,7 @@
      type and bounds, whether it must be answered, and its help. #}
   <div class="pc-fields pi-sec" data-pc-fields>
     <span class="fc-l">Response fields</span>
-    <p class="pc-line muted pc-hint">What each evaluator answers in Review Robin, field by field. Evaluators read the dossier's <em>Shown to reviewers</em> part{% if exercise.blind %}, redacted{% endif %}.</p>
+    <p class="pc-line muted pc-hint">What each evaluator answers in Review Robin, field by field. Evaluators read the dossier's <em>Shown to evaluators</em> part{% if exercise.blind %}, redacted{% endif %}.</p>
     <div class="pr-list" data-rf-list>{% for f in fields_of(g) %}{{ field_row(f, sent) }}{% endfor %}</div>
     <p class="pc-line muted" data-rf-none{% if fields_of(g) %} hidden{% endif %}>No response fields yet: a result collates one.</p>
     <div class="pc-item-foot pr-foot"><button type="button" class="btn btn-secondary" data-rf-act="add"{% if sent %} data-sent disabled title="Its session has opened: the gate keeps its fields"{% endif %}>+ Field</button></div>
@@ -290,7 +290,7 @@
 {% endmacro %}
 
 {% macro outcome_item(plan, o, rule_text, open=False) %}
-{% set n = (1 if o.key and sends(o.key, 'Applicants') else 0) + (1 if o.key and sends(o.key, 'Panel evaluators') else 0) %}
+{% set n = (1 if o.key and sends(o.key, 'Applicants') else 0) + (1 if o.key and sends(o.key, 'Evaluators') else 0) %}
 <div class="pc-item" data-item="outcome" data-key="{{ o.key }}" data-rule="{{ rule_json(o) | tojson | forceescape }}"{% if open %} data-open{% endif %}>
   {% set chips %}<span class="chip chip-{{ 'ok' if o.released else 'mute' }}" data-pi-state>{{ "Released" if o.released else "Not released" }}</span>{{ emails_chip(n) }}{% endset %}
   {{ head("Outcome " ~ o.number, o.label or "Untitled outcome", chips, open) }}
@@ -326,10 +326,10 @@
       <label class="pc-check"><input type="checkbox" data-rel="applicants-timeline" checked> Update timeline</label>
       <label class="pc-check"><input type="checkbox" data-rel="applicants-email"{% if o.key and sends(o.key, 'Applicants') %} checked{% endif %}> Send email</label>
     </div>
-    <div class="pc-row pc-aud" role="group" aria-label="Panel evaluators, when released">
-      <span class="pc-aud-h">Panel evaluators</span>
+    <div class="pc-row pc-aud" role="group" aria-label="Evaluators, when released">
+      <span class="pc-aud-h">Evaluators</span>
       <label class="pc-check"><input type="checkbox" data-rel="evaluators-timeline"> Update timeline</label>
-      <label class="pc-check"><input type="checkbox" data-rel="evaluators-email"{% if o.key and sends(o.key, 'Panel evaluators') %} checked{% endif %}> Send email</label>
+      <label class="pc-check"><input type="checkbox" data-rel="evaluators-email"{% if o.key and sends(o.key, 'Evaluators') %} checked{% endif %}> Send email</label>
     </div>
   </div>
   <p class="pc-line muted">{{ ("Released " ~ o.released) if o.released else "Not released yet: its Released switch is on Dossiers." }}</p>

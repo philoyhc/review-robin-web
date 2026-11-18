@@ -261,7 +261,7 @@ def form_answers(
 ) -> tuple[tuple[tuple[str, str], ...], tuple[tuple[str, str], ...]]:
     """The application as its form asks it (AD-26), the same answers
     Extract writes: each question of the Form's cards, in order, "—" where
-    it has none; split into shown to reviewers and not shown. Text blocks
+    it has none; split into shown to evaluators and not shown. Text blocks
     and unlabeled questions are not questions; the title is the page's own."""
     known = sample_data.answers(e.public_id, a)
     shown: list[tuple[str, str]] = []

@@ -120,7 +120,7 @@ class GateResult:
     # the field in its place (``fields_of``'s fallback).
     source: str = ""
     # Ruling 30: a mean or median leaving out the 0s, for a scale whose 0
-    # means *no view* (*Don't know enough about this candidate*).
+    # means *no view* (*Don't know enough about this applicant*).
     ignore_zero: bool = False
 
 
@@ -355,7 +355,7 @@ _G1 = Gate(
     Total(29, 30),
     description="Every current RA scores every applicant, never themselves.",
     fields=(
-        ResponseField("score", "Score", _SCORE, True, "0 = Don't know enough about this candidate"),
+        ResponseField("score", "Score", _SCORE, True, "0 = Don't know enough about this applicant"),
         ResponseField("comment", "Comment", _COMMENT),
     ),
     when=span(day(2026, 10, 1), day(2026, 10, 31)),
@@ -987,7 +987,7 @@ def rule_json(column: Gate | Outcome) -> dict[str, object] | None:
 def panel_uses(exercise_id: str) -> dict[str, tuple[str, ...]]:
     """What uses each of the exercise's panels (ruling 19), by panel key,
     in page order: the form's Select people questions, then each gate in
-    timeline order, e.g. ("Form: Preferred reviewer", "Gate 1: Peer
+    timeline order, e.g. ("Form: Preferred evaluator", "Gate 1: Peer
     Review"). A panel nothing uses has no entry."""
     uses: dict[str, list[str]] = {}
     for c in sample_data.form_cards(exercise_id):

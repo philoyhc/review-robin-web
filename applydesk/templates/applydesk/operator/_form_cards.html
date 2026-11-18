@@ -31,7 +31,7 @@
       <span class="fc-chips">
         <span class="chip chip-mute" data-sum="type">{{ summary(c) }}</span>
         <span class="chip {{ 'chip-req' if c.required else 'chip-mute' }}" data-sum="required">{{ "Required" if c.required else "Optional" }}</span>
-        <span class="chip {{ 'chip-info' if c.shown else 'chip-mute' }}" data-sum="shown">{{ "Shown to reviewers" if c.shown else "Not shown" }}</span>
+        <span class="chip {{ 'chip-info' if c.shown else 'chip-mute' }}" data-sum="shown">{{ "Shown to evaluators" if c.shown else "Not shown" }}</span>
       </span>
     </div>
     <select class="fc-type" data-f="type" aria-label="Card type">
@@ -77,7 +77,7 @@
     <div class="fc-row fc-flags">
       <button type="button" class="btn btn-toggle g-req" data-f="required" aria-pressed="{{ 'true' if c.required else 'false' }}">Required</button>
       <span class="seg" role="group" aria-label="Who sees it">
-        <button type="button" data-f="shown" data-v="true" aria-pressed="{{ 'true' if c.shown else 'false' }}">Shown to reviewers</button>
+        <button type="button" data-f="shown" data-v="true" aria-pressed="{{ 'true' if c.shown else 'false' }}">Shown to evaluators</button>
         <button type="button" data-f="shown" data-v="false" aria-pressed="{{ 'false' if c.shown else 'true' }}">Not shown</button>
       </span>
     </div>

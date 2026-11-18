@@ -133,7 +133,7 @@
     r.textContent = req ? "Required" : "Optional";
     r.className = "chip " + (req ? "chip-req" : "chip-mute");
     var v = card.querySelector('[data-sum="shown"]');
-    v.textContent = shown ? "Shown to reviewers" : "Not shown";
+    v.textContent = shown ? "Shown to evaluators" : "Not shown";
     v.className = "chip " + (shown ? "chip-info" : "chip-mute");
     var k = kept(val(card, "ratio_w"), val(card, "ratio_h"));
     card.querySelector('[data-sum="kept"]').textContent = k

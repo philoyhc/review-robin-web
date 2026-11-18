@@ -27,7 +27,7 @@ def test_a_column_sorts_and_shift_adds_it_to_the_cascade(page: Page) -> None:
     page.get_by_role("link", name="Sort by Evaluator").click()
     assert page.url.endswith("?sort=evaluator#ev-table-card")
     assert _badges(page) == ["↕", "1↑", "↕", "↕"]
-    page.get_by_role("link", name="Sort by Candidate").click(modifiers=["Shift"])
+    page.get_by_role("link", name="Sort by Applicant").click(modifiers=["Shift"])
     assert "sort=evaluator%2Ccandidate" in page.url
     assert _badges(page) == ["2↑", "1↑", "↕", "↕"]
     rows = page.locator("tbody tr")

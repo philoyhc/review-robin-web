@@ -28,7 +28,7 @@ _GATES: dict[str, dict[str, tuple[str, str]]] = {
 }
 
 
-APPLICANTS, EVALUATORS = "Applicants", "Panel evaluators"
+APPLICANTS, EVALUATORS = "Applicants", "Evaluators"
 
 
 @dataclass(frozen=True)

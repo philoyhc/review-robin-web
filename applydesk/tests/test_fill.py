@@ -160,7 +160,7 @@ def test_a_nominee_comes_from_the_question_s_pool() -> None:
     ex = "r6tm4kq9wz"  # the conference grant's form asks for a preferred reviewer
     pool = {e for _, e in sample_data.people_pools(ex)["pool"]["members"]}
     apps = sample_data.applications_of(ex)
-    named = [sample_data.nominees(ex, a, "Preferred reviewer") for a in apps]
+    named = [sample_data.nominees(ex, a, "Preferred evaluator") for a in apps]
     assert all(len(n) <= 1 and set(n) <= pool for n in named)
     assert sample_data.nominees(ex, apps[0], "No such question") == ()
     # The RA recruitment asks for none (ruling 30).

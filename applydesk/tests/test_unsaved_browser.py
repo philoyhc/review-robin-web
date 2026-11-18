@@ -83,7 +83,9 @@ def test_what_is_not_a_change_leaves_no_mark(page: Page) -> None:
     page.locator("#fb-preview input[type=text], #fb-preview textarea").first.fill("an answer")
     page.locator("[data-fb-preview]").click()
     assert not mark.is_visible()
-    card = page.locator(".fc", has=page.locator('[data-sum="label"]:text-is("Preferred reviewer")'))
+    card = page.locator(
+        ".fc", has=page.locator('[data-sum="label"]:text-is("Preferred evaluator")')
+    )
     card.locator("[data-fc-toggle]").click()
     card.locator("select[data-panel-pick]").select_option("__new")
     card.get_by_role("button", name="Cancel").click()
