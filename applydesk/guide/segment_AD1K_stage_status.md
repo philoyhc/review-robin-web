@@ -59,6 +59,12 @@ Rejected:
   There is no *Mark completed*.
 - **Blind review** locks when the first stage holding a gate is published.
 - **A revert after a gate has opened** is allowed. The gate stays fixed (ruling 29), and the confirm says so.
+- **Every stage declares its dates and times** (author, 2026-11-18). Automatic completion assumes it:
+  - a stage cannot be published without a start and an end, each a date and a time in the exercise's time zone;
+  - when its end passes, it completes once all its items are;
+  - an item still open at its end keeps the stage Published, marked *Overdue* with what is outstanding.
+
+  This makes AD-56's typed dates part of this segment: a stage's start and end are typed date-times, not free text. Process's date fields become date-time inputs, and the three parsers go.
 
 ## Semantics
 
@@ -99,12 +105,14 @@ Taken 2026-11-18 at `d6c20bdf8`.
 
 1. **Plan** (this file), its roadmap row and README row.
 2. **The model:**
+   - Stage start and end as typed date-times on the sample (AD-56), read by one helper; the free-text parsers go.
    - `Stage.status` on the sample stages, and `stages.stage_status`.
    - The exercise's status derived from its stages.
    - `applydesk/locks.py`: what each part's lock is, and its reason.
    - Tests only, no page change.
 3. **Process:**
    - Each stage's status chip, with *Publish stage* and *Revert to draft* (with a reason), page-only, with confirms.
+   - The stage's dates as date-time inputs; Publish refuses a stage without both.
    - A published stage's parts locked, reasons shown (AD-01, AD-02).
    - Publish checks the stage's Outline (AD-20).
    - Chromium tests.
@@ -119,14 +127,15 @@ Taken 2026-11-18 at `d6c20bdf8`.
    - Statuses in the timeline's operator part and the lobby.
    - The exercise's derived status in the status row.
    - `diff-reviewer` reads rungs 2–5.
-6. **Close**, after the author's browser check. The register's rows AD-01 to AD-05, AD-20 and AD-21 are struck.
+6. **Close**, after the author's browser check. The register's rows AD-01 to AD-05, AD-20, AD-21 and AD-56 are struck.
 
 ## Definition of done
 
 - Every stage shows its status, and its transitions behave as Semantics says (tests, Chromium tests).
 - A published stage's form, gates, outcomes and dates refuse change, each with its reason, on every page that shows them (tests).
 - Publish names the stage's problems, and Release is gated (tests).
-- The register's rows AD-01 to AD-05, AD-20 and AD-21 are struck with this segment's PRs.
+- The register's rows AD-01 to AD-05, AD-20, AD-21 and AD-56 are struck with this segment's PRs.
+- Every stage's dates are typed date-times; Publish refuses a stage without them (tests).
 - The author has used the pages locally and approved them.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py AD1K` exits 0; any warning adjudicated
@@ -152,5 +161,5 @@ Taken 2026-11-18 at `d6c20bdf8`.
 
 - `applydesk/spec/applications.md` — a stage's status and transitions; what a published stage locks on each page; the per-stage Publish card; the release guard.
 - `applydesk/guide/todo_master.md` — the AD1K roadmap row (rung 1), deleted at close.
-- `applydesk/guide/findings_2026-11-18_assessment.md` — AD-01 to AD-05, AD-20 and AD-21 struck at close.
+- `applydesk/guide/findings_2026-11-18_assessment.md` — AD-01 to AD-05, AD-20, AD-21 and AD-56 struck at close.
 - `applydesk/README.md` — this plan's row (rung 1), moved to the archive's index at close.
