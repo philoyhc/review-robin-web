@@ -32,6 +32,11 @@
 </div>
 {% endmacro %}
 
+{# What a published stage holds, fixed (segment AD1K): one fieldset per
+   item, after its dates, which stay editable as an extension. An opened
+   gate's stays fixed through a revert (ruling 29), ``data-opened``. #}
+{% macro lock_open(lock) %}<fieldset class="pc-lock" data-pc-lock{% if lock.fixed %} disabled title="{{ lock.reason }}"{% endif %}{% if lock.reason.startswith("Its Review Robin session") %} data-opened="{{ lock.reason }}"{% endif %}>{% endmacro %}
+
 {% macro emails_chip(n) %}<span class="chip chip-mute" data-pi-emails>{{ "No email" if n == 0 else (n ~ (" email" if n == 1 else " emails")) }}</span>{% endmacro %}
 
 {% macro form_item(new=False, open=False, w=none) %}
@@ -41,6 +46,7 @@
   {{ head("Form", "Application form", chips, open) }}
   <div class="pi-body">
   {{ item_dates(w, "Opens", "Closes") }}
+  {{ lock_open(form_lock) }}
   <p class="pc-line">The application form opens and closes on these dates, or its stage's. Its questions are built on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>.</p>
   {# Which emails it sends (ruling 16); each one ticked is a template owed on Emails. #}
   <div class="pc-release pi-sec" data-pc-release>
@@ -53,6 +59,7 @@
     <p class="pc-line muted pc-hint">Each email ticked is a template owed on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}">Emails</a>.</p>
   </div>
   <div class="pc-item-foot"><button type="button" class="btn btn-secondary" data-pc-act="remove-form">Remove the form</button></div>
+  </fieldset>
   </div>
 </div>
 {% endmacro %}
@@ -196,13 +203,14 @@
      Evaluations' to show, not Process's. #}
   {% if sent %}<p class="pc-line muted pc-sent-note" data-pc-sent>Its Review Robin session has opened: its settings are fixed here.</p>
   {% elif state == "Sent" %}<p class="pc-line muted pc-sent-note" data-pc-sent>Sent to Review Robin: changes are re-sent until its session opens.</p>{% endif %}
+  {{ item_dates(g.when) }}
+  {{ lock_open(item_lock(g)) }}
   {# Ruling 28: a gate is one Review Robin run. Its own fields and who
      evaluates sit in two cards, shut until opened, each saying what it
      holds; then what evaluators answer, then the results. #}
   <details class="gsec" data-gsec="gate">
     <summary><span class="gsec-t">Gate</span><span class="gsec-s" data-gsec-sum>{{ gate_summary(plan, g) }}</span></summary>
     <div class="gsec-b">
-      {{ item_dates(g.when) }}
       <div class="pc-row">
         <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ g.label }}" placeholder="Untitled gate"></label>
         <label class="fc-l">Type<select class="fc-in" data-pc="type" disabled title="Every gate runs in Review Robin for now">{% for k, label in gate_types %}<option value="{{ k }}"{% if k == (g.via or "RRW") %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
@@ -276,6 +284,7 @@
   <p class="pc-line muted pr-rrw" data-pr-send data-tz="{{ timezone(exercise) }}" data-contact="{{ help_contact(exercise) }}"{% if sent %} data-fixed{% endif %}>Review Robin receives <strong>{{ g.label.strip() or "Untitled gate" }}</strong>{{ (": " ~ desc) if desc }}, open {{ window or "when its stage's dates are set" }} ({{ timezone(exercise) }}); help contact {{ help_contact(exercise) }}; tagged <code>applydesk</code>.</p>
   <p class="pc-line muted pr-rrw" data-pr-rrw{% if not fs %} hidden{% endif %}>For Review Robin, each evaluator answers: {% for f in fs %}<strong>{{ f.label or "Untitled field" }}</strong> ({{ field_text(f.field) }}{{ ", required" if f.required }}{{ ("; help: “" ~ f.help ~ "”") if f.help }}){{ "; " if not loop.last }}{% endfor %}.</p>
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-gate">Remove the gate</button></div>
+  </fieldset>
   </div>
 </div>
 {% endmacro %}
@@ -286,9 +295,13 @@
   {% set chips %}<span class="chip chip-{{ 'ok' if o.released else 'mute' }}" data-pi-state>{{ "Released" if o.released else "Not released" }}</span>{{ emails_chip(n) }}{% endset %}
   {{ head("Outcome " ~ o.number, o.label or "Untitled outcome", chips, open) }}
   <div class="pi-body">
+  <div class="pc-row pc-dates" data-pc-dates>
+    <label class="fc-l">Due<input class="fc-in" type="datetime-local" data-pc="due" value="{{ local_value(o.due_at) }}"></label>
+    <span class="pc-line muted pc-hint">Blank: the stage's end.</span>
+  </div>
+  {{ lock_open(item_lock(o)) }}
   <div class="pc-row">
     <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ o.label }}" placeholder="Untitled outcome"></label>
-    <label class="fc-l">Due<input class="fc-in" type="datetime-local" data-pc="due" value="{{ local_value(o.due_at) }}"></label>
   </div>
   <label class="fc-l">Values<input class="fc-in" data-pc="values" value="{{ o.values | join(', ') }}" placeholder="Comma-separated, e.g. Shortlisted, Not shortlisted"></label>
   {# Its combined result: weights over the gates in its scope, those since
@@ -321,6 +334,35 @@
   </div>
   <p class="pc-line muted">{{ ("Released " ~ o.released) if o.released else "Not released yet: its Released switch is on Dossiers." }}</p>
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-outcome">Remove the outcome</button></div>
+  </fieldset>
+  </div>
+</div>
+{% endmacro %}
+
+{# A stage's status (ruling 35, segment AD1K): Publish while Draft, its
+   problems listed; Revert to draft, with a reason, once published. The
+   page changes only: nothing is saved or audited until AD2. #}
+{% macro status_box(st, status) %}
+{% set problems = publish_problems(st) if st.number else () %}
+<div class="pc-status" data-pc-status-box>
+  <p class="pc-line muted" data-pc-locked-note{% if status == "Draft" %} hidden{% endif %}>{{ st.label }} is published: what it holds is fixed until it is reverted to draft. Its end, and its items' ends, stay editable, to extend it.</p>
+  {% if status == "Overdue" %}<p class="pc-line pc-overdue" data-pc-overdue>Overdue: {{ outstanding(st) | join("; ") }}. Move its end later to keep it open.</p>{% endif %}
+  <div data-pc-problems{% if status != "Draft" or not problems %} hidden{% endif %}>
+    <p class="pc-line">Before it can be published:</p>
+    <ul class="pc-issues">{% for p in problems %}<li{% if p.endswith(" is not published yet.") %} data-pc-prev{% endif %}>{{ p }}</li>{% endfor %}</ul>
+  </div>
+  <div class="btnrow">
+    <button type="button" class="btn btn-primary" data-pc-st="publish"{% if status != "Draft" %} hidden{% endif %}{% if not st.number %} data-pc-new disabled title="A new stage is checked for publishing once saved (AD2)"{% elif problems %} disabled title="Put right what is listed first"{% endif %}>Publish stage</button>
+    <button type="button" class="btn btn-alert" data-pc-st="revert" aria-expanded="false"{% if status == "Draft" %} hidden{% endif %}>Revert to draft</button>
+  </div>
+  <div class="pc-revert" data-pc-revert hidden>
+    <p class="pc-line">Reverting unlocks what this stage holds on Apply Desk.</p>
+    {% for w in revert_warnings(st) %}<p class="pc-line muted">{{ w }}</p>{% endfor %}
+    <label class="fc-l">Reason, recorded with the revert<textarea class="fc-in" rows="2" data-pc-reason></textarea></label>
+    <div class="btnrow">
+      <button type="button" class="btn btn-alert" data-pc-st="confirm" disabled>Revert to draft</button>
+      <button type="button" class="btn btn-secondary" data-pc-st="cancel">Cancel</button>
+    </div>
   </div>
 </div>
 {% endmacro %}
@@ -328,7 +370,9 @@
 {% macro stage(plan, st, rule_text, last, open=False) %}
 {% set gates = st.columns | selectattr("via", "defined") | list %}
 {% set outs = st.columns | rejectattr("via", "defined") | list %}
-<article class="fc pc" data-kind="stage" data-stage="{{ st.number }}"{% if open %} data-open{% endif %}>
+{% set status = stage_status(st) %}
+{% set lk = stage_lock(st) %}
+<article class="fc pc" data-kind="stage" data-stage="{{ st.number }}" data-status="{{ status }}"{% if lk.fixed %} data-locked="{{ lk.reason }}"{% endif %}{% if open %} data-open{% endif %}>
   <div class="fc-head">
     {{ grip() }}
     <button type="button" class="fc-toggle" data-fc-toggle aria-expanded="{{ 'true' if open else 'false' }}" aria-label="{{ 'Collapse' if open else 'Expand' }} {{ st.label }}"></button>
@@ -337,10 +381,11 @@
         <span class="fc-q" data-sum="name">{{ st.label }}</span>
         <span class="fc-h" data-sum="dates">{{ st.dates }}</span>
       </div>
-      <span class="fc-chips"><span class="chip chip-mute" data-sum="holds">{% if st.form %}Form{% elif gates %}{{ gates | length }} {{ "gate" if gates | length == 1 else "gates" }}{% else %}No gates{% endif %}{% if outs %} · Outcome: {{ outs[0].label }}{% endif %}</span></span>
+      <span class="fc-chips"><span class="chip chip-{{ STATUS_CHIP[status] }}" data-pc-status>{{ status }}</span><span class="chip chip-mute" data-sum="holds">{% if st.form %}Form{% elif gates %}{{ gates | length }} {{ "gate" if gates | length == 1 else "gates" }}{% else %}No gates{% endif %}{% if outs %} · Outcome: {{ outs[0].label }}{% endif %}</span></span>
     </div>
   </div>
   <div class="fc-body{% if not st.form and not st.columns %} pc-body-empty{% endif %}">
+    {{ status_box(st, status) }}
     <div class="pc-row">
       <label class="fc-l pc-wide">Stage name<input class="fc-in" data-pc="name" value="{{ st.name }}" placeholder="Stage {{ st.number }}"></label>
       <label class="fc-l">Starts<input class="fc-in" type="datetime-local" data-pc="from" value="{{ local_value(st.when.start if st.when else none) }}"></label>

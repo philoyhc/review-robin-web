@@ -34,6 +34,9 @@ class Lock:
 
 OPEN = Lock(False)
 
+#: Each status's chip on the pages.
+STATUS_CHIP = {"Draft": "mute", "Published": "info", "Overdue": "warn", "Completed": "ok"}
+
 
 def _item_open(e: Exercise, st: stages.Stage, item: stages.Gate | stages.Outcome | None) -> str:
     """What keeps an item from complete, in words; "" when it is complete.

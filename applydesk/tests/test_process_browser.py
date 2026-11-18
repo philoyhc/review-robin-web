@@ -199,10 +199,19 @@ def test_gates_and_an_outcome_are_added_and_removed(page: Page) -> None:
     add_out.click()
     assert review.locator('.pc-item[data-item="outcome"]').count() == 1
     assert _counts(page) == "4 stages · 4 gates · 3 outcomes"
-    # Removing every gate lets the stage take the form, were it free.
-    for _ in range(3):
-        review.locator('[data-pc-act="remove-gate"]').first.click()
-    assert review.locator('[data-pc-act="form"]').get_attribute("title") == (
+    # An opened gate keeps its place (AD-01, ruling 29); the new one goes.
+    removes = review.locator('[data-pc-act="remove-gate"]')
+    assert removes.nth(0).is_disabled() and removes.nth(1).is_disabled()
+    # Its fieldset carries the reason, which its controls' tooltips inherit.
+    why = removes.nth(0).evaluate("b => b.closest('[data-pc-lock]').title")
+    assert why.startswith("Its Review Robin session has opened")
+    removes.nth(2).click()
+    assert review.locator('.pc-item[data-item="gate"]').count() == 2
+    # Removing every gate lets a stage take the form, were it free.
+    interview = _cards(page).nth(2)
+    _open_all(interview)
+    interview.locator('[data-pc-act="remove-gate"]').click()
+    assert interview.locator('[data-pc-act="form"]').get_attribute("title") == (
         "Another stage holds the form"
     )
 
@@ -239,6 +248,14 @@ def _open_cards(item: Locator) -> None:
     cards = item.locator("details.gsec:not([open]) > summary")
     while cards.count():
         cards.first.click()
+
+
+def _revert(card: Locator) -> None:
+    """A published stage reverted to draft on the page, with a reason."""
+    _open(card)
+    card.locator('[data-pc-st="revert"]').click()
+    card.locator("[data-pc-reason]").fill("To fix a rule")
+    card.locator('[data-pc-st="confirm"]').click()
 
 
 def _open_all(card: Locator) -> None:
@@ -407,9 +424,8 @@ def test_an_outcome_s_weights_follow_the_gates_before_it(page: Page) -> None:
         "30",
         "70",
     ]
-    for _ in range(2):
-        review.locator('[data-pc-act="remove-gate"]').first.click()
-    assert not weights.is_visible()  # one gate: no average to weigh
+    review.locator('[data-pc-act="remove-gate"]').nth(2).click()
+    assert weights.locator("[data-w-name]").all_inner_texts() == names[:3]
 
 
 # --- Rung 5, after the item's cold read ---
@@ -719,8 +735,7 @@ def test_items_open_and_shut_their_heads_always_named(page: Page) -> None:
     assert g1.get_attribute("data-open") == ""
     assert toggle.get_attribute("aria-label") == "Collapse Gate 1"
     _open_cards(g1)
-    g1.locator('[data-pc="item-name"]').fill("Peer read")
-    assert g1.locator("[data-pi-name]").text_content() == "Peer read"
+    assert g1.locator('[data-pc="item-name"]').is_disabled()  # opened: fixed (AD-01)
     toggle.click()
     assert g1.get_attribute("data-open") is None
     # The outcome's email chip follows its boxes.
@@ -1383,6 +1398,7 @@ def test_the_model_exercise_s_branched_rules_draw_as_the_server_does(page: Page)
     # Weights all 0 are no combined result, which its rule does not read.
     assert not page.locator("[data-pc-issues]").is_visible()
     o1 = _item(page, "o1")
+    _revert(o1.locator("xpath=ancestor::article[@data-kind='stage']"))
     assert not o1.locator("[data-rule-warn]").is_visible()
     o1.locator('[data-pc-act="rule"]').click()
     assert o1.locator(".pc-branch").count() == 2
@@ -1404,6 +1420,9 @@ def test_the_model_exercise_s_review_is_fixed_and_its_interview_open(page: Page)
     g3 = _item(page, "g3")
     assert g3.locator("[data-pc-sent]").count() == 0
     assert g3.locator('[data-ps="mode"]').input_value() == "suggested"
+    # Not opened: fixed only by its published stage, and a revert frees it.
+    assert g3.locator('[data-ps="mode"]').is_disabled()
+    _revert(g3.locator("xpath=ancestor::article[@data-kind='stage']"))
     assert not g3.locator('[data-ps="mode"]').is_disabled()
 
 
@@ -1441,7 +1460,7 @@ def test_what_was_sent_stays_once_the_session_opens(page: Page) -> None:
     before = send.text_content()
     stage = gate.locator("xpath=ancestor::article[@data-kind='stage']")
     _open(stage)
-    stage.locator('[data-pc="from"]').fill("2026-10-02T00:00")
+    stage.locator('[data-pc="to"]').fill("2026-11-07T23:59")  # an extension
     assert send.text_content() == before and "open 1 Oct to 31 Oct" in (before or "")
 
 
@@ -1483,3 +1502,95 @@ def test_dates_are_date_times_and_an_item_s_window_follows(page: Page) -> None:
     stage.locator('[data-pc="to"]').fill("2026-12-11T23:59")
     assert "open 9 Nov to 11 Dec" in (send.text_content() or "")
     assert stage.locator('[data-sum="dates"]').inner_text() == "9 Nov – 11 Dec"
+
+
+# --- Segment AD1K rung 3b: a stage's status, publish, revert and locks ---
+
+
+def test_a_published_stage_says_its_status_and_fixes_what_it_holds(page: Page) -> None:
+    """Ruling 35: the model's stages are Completed, Completed, Published;
+    a published stage's name, start and items are fixed, saying why, and
+    its end stays editable, to extend it."""
+    page.goto(MODEL)
+    assert page.locator("[data-pc-status]").all_text_contents() == [
+        "Completed",
+        "Completed",
+        "Published",
+    ]
+    interviews = _cards(page).nth(2)
+    _open_all(interviews)
+    name = interviews.locator('[data-pc="name"]')
+    assert name.is_disabled()
+    assert name.get_attribute("title") == (
+        "Interviews is published: revert it to draft to change this"
+    )
+    assert interviews.locator('[data-pc="from"]').is_disabled()
+    assert interviews.locator('[data-pc="to"]').is_enabled()
+    assert interviews.locator('[data-fc-act="delete"]').is_disabled()
+    assert interviews.locator('.pc-adds [data-pc-act="gate"]').is_disabled()
+    o2 = interviews.locator('.pc-item[data-key="o2"]')
+    assert o2.locator('[data-pc="item-name"]').is_disabled()
+    assert o2.locator('[data-pc="due"]').is_enabled()  # its end too
+    assert interviews.locator("[data-pc-locked-note]").is_visible()
+    assert not interviews.locator('[data-pc-st="publish"]').is_visible()
+
+
+def test_a_revert_needs_a_reason_and_leaves_an_opened_gate_fixed(page: Page) -> None:
+    """Author, 2026-11-18: a revert is allowed after a gate has opened;
+    the gate stays fixed, and the confirm says so."""
+    page.goto(MODEL)
+    review = _cards(page).nth(1)
+    _open_all(review)
+    review.locator('[data-pc-st="revert"]').click()
+    panel = review.locator("[data-pc-revert]")
+    assert "Gate 1's Review Robin session has opened: it stays fixed." in panel.inner_text()
+    confirm = review.locator('[data-pc-st="confirm"]')
+    assert confirm.is_disabled()
+    review.locator("[data-pc-reason]").fill("Shortlisting rule was wrong")
+    confirm.click()
+    assert review.locator("[data-pc-status]").text_content() == "Draft"
+    assert review.locator('[data-pc="name"]').is_enabled()
+    assert review.locator('[data-pc-st="publish"]').is_visible()
+    g1 = review.locator('.pc-item[data-key="g1"]')
+    assert g1.locator('[data-pc="item-name"]').is_disabled()  # opened: stays fixed
+    o1 = review.locator('.pc-item[data-key="o1"]')
+    assert o1.locator('[data-pc="item-name"]').is_enabled()
+    assert "reverted to draft on this page only" in (
+        page.locator("[data-pc-live]").text_content() or ""
+    )
+
+
+def test_publishing_waits_on_the_stage_before_and_names_problems(page: Page) -> None:
+    """AD-20: Publish lists what a stage lacks; the stage before it being
+    published on the page lifts that line."""
+    page.goto(PAGE)
+    first, review = _cards(page).nth(0), _cards(page).nth(1)
+    _open(first)
+    _open(review)
+    publish = review.locator('[data-pc-st="publish"]')
+    assert publish.is_disabled()
+    assert (
+        review.locator("[data-pc-problems]")
+        .inner_text()
+        .endswith("Call for applications is not published yet.")
+    )
+    first.locator('[data-pc-st="publish"]').click()
+    assert first.locator("[data-pc-status]").text_content() == "Published"
+    assert first.locator('[data-pc="name"]').is_disabled()
+    assert publish.is_enabled()
+    assert not review.locator("[data-pc-problems]").is_visible()
+    publish.click()
+    assert review.locator("[data-pc-status]").text_content() == "Published"
+
+
+def test_a_copy_of_a_published_stage_is_a_draft(page: Page) -> None:
+    page.goto(MODEL)
+    interviews = _cards(page).nth(2)
+    _open(interviews)
+    interviews.locator('[data-fc-act="replicate"]').click()
+    copy = _cards(page).nth(3)
+    assert copy.locator("[data-pc-status]").text_content() == "Draft"
+    assert copy.locator('[data-pc="name"]').is_enabled()
+    assert copy.locator('[data-pc-st="publish"]').is_disabled()  # checked once saved
+    _open_all(copy)
+    assert copy.locator('.pc-item[data-item="outcome"] [data-pc="item-name"]').is_enabled()

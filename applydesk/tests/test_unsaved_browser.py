@@ -10,6 +10,9 @@ from playwright.sync_api import Page
 from applydesk.tests.test_form_browser import FORM
 from applydesk.tests.test_form_browser import page as page  # the fixture, re-exported
 from applydesk.tests.test_process_browser import MODEL as PROCESS
+from applydesk.tests.test_process_browser import ORIGIN
+
+DRAFT_PROCESS = f"{ORIGIN}/applydesk/operator/exercises/c4xh2ndv6s/process"
 
 LEAVES = (
     "() => { const e = new Event('beforeunload', {cancelable: true});"
@@ -56,7 +59,7 @@ def test_a_move_a_toggle_and_a_rule_button_are_changes(page: Page) -> None:
     card.locator("[data-fc-toggle]").click()
     card.locator('[data-f="required"]').click()
     assert mark.is_visible()
-    page.goto(PROCESS)
+    page.goto(DRAFT_PROCESS)  # a draft's stages move; a published one's are fixed
     page.locator("#pc-cards [data-fc-grip]").first.press("ArrowDown")
     assert mark.is_visible()
 

@@ -482,6 +482,11 @@
     .pc-intro { margin: 0 0 12px; }
     .pc-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
     .pc-row[hidden] { display: none; }
+    /* AD1K: a published stage's items, fixed in one fieldset each. */
+    fieldset.pc-lock { border: 0; margin: 0; padding: 0; min-width: 0; }
+    .pc-status { display: flex; flex-direction: column; gap: 6px; }
+    .pc-status [hidden] { display: none; }
+    .pc-overdue { color: var(--chip-warn-fg); }
     .pc-row > .fc-l { flex: 1 1 110px; }
     .pc-row > .pc-wide { flex: 3 1 220px; }
     .pc-row > .pc-narrow { flex: 0 1 120px; }
