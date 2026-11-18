@@ -251,5 +251,19 @@
     }
   });
   draw();
+  // Leaving the gate's pages with changes asks first (AD-07); its own
+  // pager, sort and filter keep them in the tab, so do not ask.
+  var staying = false;
+  document.addEventListener("click", function (e) {
+    var link = e.target.closest("a[href]");
+    staying = !!link && link.pathname === window.location.pathname;
+  }, true);
+  document.addEventListener("submit", function (e) {
+    staying = e.target.getAttribute("method") !== "post";
+  }, true);
+  window.addEventListener("beforeunload", function (e) {
+    if (dirty() && !staying) { e.preventDefault(); e.returnValue = ""; }
+    staying = false;
+  });
 })();
 </script>

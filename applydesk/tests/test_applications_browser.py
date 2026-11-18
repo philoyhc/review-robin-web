@@ -868,7 +868,9 @@ def test_the_table_is_locked_until_unlocked_and_undo_puts_it_back(page: Page) ->
     after = chip.inner_text()
     lock.click()
     assert chip.is_disabled() and chip.inner_text() == after
-    assert page.locator("[data-ap-said]").inner_text() == "1 change kept; the table is locked."
+    assert page.locator("[data-ap-said]").inner_text() == (
+        "1 change kept on this page; the table is locked."
+    )
 
 
 def test_the_lock_guards_rules_csv_and_open_proposals(page: Page) -> None:

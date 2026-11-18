@@ -200,7 +200,7 @@
   // kept, to count the changes and to undo them. ---
   var lockBtn = root.querySelector("[data-ap-lock]"), undoBtn = root.querySelector("[data-ap-undo]");
   var changesEl = root.querySelector("[data-ap-changes]"), said = root.querySelector("[data-ap-said]");
-  var unlocked = false, base = null;
+  var unlocked = false, base = null, keptN = 0;  // changes Lock kept since the page loaded
   function state() {
     var cells = [];
     rows.forEach(function (r) {
@@ -226,8 +226,11 @@
   }
   function showChanges() {
     var n = changes();
-    changesEl.textContent = n ? n + (n === 1 ? " change" : " changes") + " since unlocked" : "No changes yet";
-    changesEl.hidden = !unlocked;
+    // Locked, what Lock kept stays marked: on this page only (AD-07).
+    changesEl.textContent = unlocked
+      ? (n ? n + (n === 1 ? " change" : " changes") + " since unlocked" : "No changes yet")
+      : keptN + (keptN === 1 ? " change" : " changes") + " on this page, not saved until AD2";
+    changesEl.hidden = !unlocked && !keptN;
     undoBtn.hidden = !unlocked;
     undoBtn.disabled = !n;
   }
@@ -251,8 +254,9 @@
       root.querySelector("[data-ap-rule-open]").setAttribute("aria-expanded", "false");
     }
     base = null;
+    keptN += n;
     setLocked(true);
-    said.textContent = (n ? n + (n === 1 ? " change kept" : " changes kept") + "; the table is locked." : "Locked.") +
+    said.textContent = (n ? n + (n === 1 ? " change kept" : " changes kept") + " on this page; the table is locked." : "Locked.") +
       (dropped ? " The open proposal was not applied." : "");
     lockBtn.focus();
   });
@@ -276,7 +280,7 @@
   });
   // Leaving with changes pending asks first.
   window.addEventListener("beforeunload", function (e) {
-    if (unlocked && changes()) { e.preventDefault(); e.returnValue = ""; }
+    if ((unlocked && changes()) || keptN) { e.preventDefault(); e.returnValue = ""; }
   });
 
   root.addEventListener("click", function (e) {
