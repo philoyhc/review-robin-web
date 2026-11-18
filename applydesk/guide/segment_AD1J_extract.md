@@ -68,8 +68,8 @@ Taken 2026-11-18 at `31c2f7ff3`.
 
 ## Open questions
 
-- **Setup files' format**: CSV per page as Review Robin's, or one JSON; proposed CSV, the author's at rung 4.
-- **Interview scores recorded by hand** (the placeholder's *Record interview scores*): a gate run outside Review Robin is not modelled; proposed out (AD2 or later).
+- ~~Setup files' format~~: CSV, one per page (author, 2026-11-18).
+- ~~Interview scores recorded by hand~~: not on Extract data (author, 2026-11-18); the placeholder's *Record interview scores* goes, and how hand-entered scores come in is open in `applydesk/guide/todo_master.md`.
 - **`close_check.py` reads only RRW's `guide/`**: this close is checked by hand, as AD1G's to AD1I's.
 
 ## Out of scope
@@ -78,6 +78,7 @@ Taken 2026-11-18 at `31c2f7ff3`.
 - **Pulling results from Review Robin** (the handoff, AD5).
 - **The Data shaper** and saved shapes: Review Robin's; later if the canned files fall short.
 - **Importing setup files** into a new exercise: the export only.
+- **Hand-entered scores**: every gate's scores come from Review Robin (`Gate.via`); outcomes alone are set by hand, on Dossiers. Scores entered by hand need their own home (`applydesk/guide/todo_master.md`).
 
 ## Doc impact
 

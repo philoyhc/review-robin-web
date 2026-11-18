@@ -523,6 +523,7 @@ rulings after this list):
   saying which dossier is whose: the server checks the pair at AD2
   (AD1G rung 6b's cold read).
 - How Apply Desk's operators line up with Review Robin's.
+- Scores entered by hand (an interview held outside Review Robin): every gate's scores come from Review Robin today and only outcomes are set by hand, on Dossiers; not on Extract data (author, 2026-11-18, AD1J). Where they belong is open.
 - Ruling 9's and AD6's "tags decided at AD6": settled by 23F.
 
 **Order** (UI first): A done in AD1G (closed 2026-11-17),
