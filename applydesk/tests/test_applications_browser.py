@@ -177,6 +177,10 @@ def test_the_header_tick_ticks_the_rows_in_view(page: Page) -> None:
     assert page.locator("[data-row] [data-ap-tick]:checked").count() == 104
     every.click()
     assert page.locator("[data-row] [data-ap-tick]:checked").count() == 0
+    # Its box sits over the rows' boxes (author, 2026-11-18).
+    head_x = every.bounding_box()
+    row_x = page.locator("[data-row] [data-ap-tick]").first.bounding_box()
+    assert head_x and row_x and abs(head_x["x"] - row_x["x"]) < 1
 
 
 def test_an_application_advanced_by_hand_can_be_given_later_outcomes(page: Page) -> None:
