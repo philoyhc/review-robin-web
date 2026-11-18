@@ -433,6 +433,19 @@ _O2 = Outcome(
     ),
 )
 
+# The small exercise's outcome, due at its stage's end: its gate has no
+# window of its own, so it runs to that end too (Codex).
+_K_O1 = Outcome(
+    "o1",
+    1,
+    "Final results",
+    ("Awarded", "Not awarded"),
+    day(2026, 11, 30, 23, 59),
+    "",
+    (("g1.r1", 1.0),),
+)
+
+
 _STAGES: dict[str, tuple[Stage, ...]] = {
     # A draft still being set up (segment AD1F): its selection gate added
     # just in time, its panel not chosen yet.
@@ -500,15 +513,7 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
                     (GateResult("r1", "Score", _LIKERT, "mean"),),
                     panel="panel-a",
                 ),
-                Outcome(
-                    "o1",
-                    1,
-                    "Final results",
-                    ("Awarded", "Not awarded"),
-                    day(2026, 11, 30, 17),
-                    "",
-                    (("g1.r1", 1.0),),
-                ),
+                _K_O1,
             ),
             status="Published",
         ),
@@ -579,7 +584,7 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
         else:
             cells["g3"] = Cell("Not entered")
         if cells["o1"].value != "Not shortlisted":
-            cells["o2"] = Cell("Pending", "Due 4 Dec")
+            cells["o2"] = Cell("Pending", f"Due {_O2.due}")
         rows.append(Row(a, cells))
     return tuple(rows)
 
@@ -590,7 +595,7 @@ def _small_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
             a,
             {
                 "g1": Cell("Entered", "Score 4.1 · 2 of 2", 4.1),
-                "o1": Cell("Pending", "Due 15 Dec"),
+                "o1": Cell("Pending", f"Due {_K_O1.due}"),
             },
         )
         for a in apps

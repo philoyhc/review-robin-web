@@ -259,3 +259,12 @@ def test_an_outcome_reads_its_gates_wherever_they_sit(monkeypatch: pytest.Monkey
     alone = replace(interviews, columns=(early,))
     monkeypatch.setitem(stages._STAGES, RA, (model[0], gates_only, alone))  # pyright: ignore[reportPrivateUsage]  -- as above
     assert "Selection is due before Staff interview closes." in locks.publish_problems(e, alone)
+
+
+@pytest.mark.parametrize("public_id", [RA, "k7mfr3pq8z"])
+def test_every_published_sample_stage_passes_its_own_checks(public_id: str) -> None:
+    """Codex: a sample stage shown as published must be publishable."""
+    e = _e(public_id)
+    for st in stages.plan_of(public_id).stages:
+        if st.status == "Published":
+            assert locks.publish_problems(e, st) == (), st.label
