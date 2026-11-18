@@ -274,6 +274,7 @@ class Stage:
     columns: tuple[Gate | Outcome, ...] = ()
     form: bool = False  # holds the application form (ruling 15)
     status: str = "Draft"
+    shown: bool = True  # on the applicant's timeline (ruling 46); False hides it there
     # The form's open and close, inside the stage's dates (author,
     # 2026-11-18); None is the stage's (``window``).
     form_when: StageDates | None = None

@@ -46,7 +46,7 @@ def exercise(request: Request, exercise_id: str) -> Response:
         "applydesk/me/exercise.html",
         area=USER_LOBBY,
         exercise=found,
-        tl=timeline.of(found),
+        tl=timeline.of(found, applicant=True),
         short=timeline.short,
         mine=sample_data.my_applications(found.public_id),
         results=stages.released_results,

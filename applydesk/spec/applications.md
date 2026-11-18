@@ -250,7 +250,8 @@ include.
   shows Published and Closed exercises (ruling 41): a Closed one stays,
   read-only, its *Apply* saying it is closed; Draft and Archived do not.
   Closing and archiving themselves are not built (AD3).
-  A per-stage *Shown to applicants* is not modelled: every stage shows.
+  A stage left unticked in Process's *Shown to applicants* is not on it
+  (`Stage.shown`, ruling 46); the operator's Home shows every stage.
 
 ### Details
 
