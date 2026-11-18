@@ -226,3 +226,29 @@ def test_a_cell_never_runs_as_a_formula() -> None:
     assert extract.safe("- a list") == "'- a list"
     body = extract.csv_bytes((("a",), [["=1+1"]])).decode("utf-8-sig")
     assert body.splitlines()[1] == "'=1+1"
+
+
+def test_process_csv_keeps_each_gate_s_fields_and_results(client: TestClient) -> None:
+    """Codex: enough to rebuild a gate, its response fields and how each
+    result is derived, not only the results' names."""
+    z = zipfile.ZipFile(io.BytesIO(client.get(f"{BASE}/setup.zip").content))
+    rows = _rows(z.read("process.csv"))
+    assert rows[0][-1] == "detail"
+    score = next(r for r in rows if r[3] == "field" and r[4] == "1" and r[5] == "Score")
+    assert "type=integer; min=0; max=5" in score[-1] and "required=yes" in score[-1]
+    mean = next(r for r in rows if r[3] == "result" and r[5] == "Mean score")
+    assert "derive=mean; source=score" in mean[-1] and "ignore_zero=yes" in mean[-1]
+    interview = next(r for r in rows if r[3] == "result" and r[5] == "Interview score")
+    assert "at_least=2" in interview[-1]
+    selection = next(r for r in rows if r[3] == "outcome" and r[5] == "Selection")
+    assert selection[-1] == "weights=g3.r1 1"
+
+
+def test_zip_all_takes_extract_setup_s_pages(client: TestClient) -> None:
+    """Codex: Setup in Zip all carries the pages Extract setup's chips keep."""
+    body = client.get(f"{BASE}/all.zip?carries=setup&sparts=form,process").content
+    assert zipfile.ZipFile(io.BytesIO(body)).namelist() == [
+        "manifest.csv",
+        "setup/form.csv",
+        "setup/process.csv",
+    ]

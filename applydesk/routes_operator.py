@@ -176,13 +176,15 @@ def extract_file(
     applicants: str = "",
     carries: str = "",
     orows: str = "",
+    sparts: str = "",
 ) -> Response:
     """Extract data's downloads (segment AD1J, rung 3), shaped by the
     cards' chips: ``rows`` last|all, ``drafts`` 1, ``shape`` pair|application,
     ``applicants`` names|ids (else the file's default,
     ``extract.names_by_default``), ``carries`` a ZIP's files (Extract all data's,
     or Extract setup's pages), ``orows`` the
-    ZIP's outcomes rows (the Outcomes card's). Sample data;
+    ZIP's outcomes rows (the Outcomes card's), ``sparts`` its setup pages
+    (Extract setup's). Sample data;
     logged from AD2."""
     exercise = exercise_or_404(exercise_id)
     rows = _pick(rows, ("last", "all"))
@@ -217,6 +219,7 @@ def extract_file(
             drafts == "1",
             shape,
             _pick(orows, ("last", "all")),
+            (frozenset(sparts.split(",")) if sparts else extract.SETUP_PARTS) & extract.SETUP_PARTS,
         )
         return _zip(extract.zip_name(exercise, "extract"), body)
     if file == "setup.zip":

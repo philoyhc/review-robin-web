@@ -29,7 +29,7 @@
     <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("names", "Names"), ("ids", "Dossier IDs")), "Applicants as", "names" if all_names else "ids") }}</div>
     {% if not all_names %}<p class="muted xd-note">Dossier IDs to start with: {{ "blind review is on" if exercise.blind else "a gate is confidential" }}.</p>{% endif %}
     {# The files as the Carries chips say; the script hides what is off. #}
-    <p class="xd-cols" data-xd-files>{{ extract.zip_name }}: <span>manifest.csv</span> <span data-xd-part="applications">· applications.csv</span>{% for g in extract.gates if g.sent %} <span data-xd-part="gates">· {{ g.name }}</span>{% endfor %} <span data-xd-part="outcomes">· outcomes.csv</span>{% for f in setup_files %} <span data-xd-part="setup" hidden>· setup/{{ f }}</span>{% endfor %}</p>
+    <p class="xd-cols" data-xd-files>{{ extract.zip_name }}: <span>manifest.csv</span> <span data-xd-part="applications">· applications.csv</span>{% for g in extract.gates if g.sent %} <span data-xd-part="gates">· {{ g.name }}</span>{% endfor %} <span data-xd-part="outcomes">· outcomes.csv</span>{% for f in setup_files %} <span data-xd-part="setup" data-xd-page="{{ f[:-4] }}" hidden>· setup/{{ f }}</span>{% endfor %}</p>
     <div class="btnrow">{{ dl("all.zip", "Zip all") }}</div>
   </section>
   <section class="card" data-xd-card="applications">
@@ -107,16 +107,23 @@
   // Zip all carries every file as its own card is set (Codex): the
   // Applications card's rows and drafts, By gate's shape, Outcomes' rows.
   function borrowed(q) {
-    var apps = cardOf("applications"), gates = cardOf("gates"), outs = cardOf("outcomes");
+    var apps = cardOf("applications"), gates = cardOf("gates"), outs = cardOf("outcomes");  // and Extract setup's pages
     if (apps) state(apps).forEach(function (v, k) { q.set(k, v); });
     if (gates && state(gates).get("shape")) q.set("shape", state(gates).get("shape"));
     if (outs && state(outs).get("rows")) q.set("orows", state(outs).get("rows"));
+    var setup = cardOf("setup");
+    if (setup && state(setup).get("carries")) q.set("sparts", state(setup).get("carries"));
     return q;
   }
   function draw(card) {
     card.querySelectorAll("[data-xd-part]").forEach(function (span) {
       var t = card.querySelector('[data-xd-t="' + span.dataset.xdPart + '"]');
-      span.hidden = !(t && t.getAttribute("aria-pressed") === "true");
+      var on = t && t.getAttribute("aria-pressed") === "true";
+      if (on && span.dataset.xdPage) {  // a setup file: Extract setup's chip too
+        var page = cardOf("setup") && cardOf("setup").querySelector('[data-xd-t="' + span.dataset.xdPage + '"]');
+        on = !!page && page.getAttribute("aria-pressed") === "true";
+      }
+      span.hidden = !on;
     });
     var p = state(card);
     if (card.dataset.xdCard === "all") p = borrowed(p);

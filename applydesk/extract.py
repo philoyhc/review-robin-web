@@ -384,12 +384,13 @@ def all_zip(
     drafts: bool = False,
     shape: str = "pair",
     outcome_rows: str = "last",
+    setup_parts: frozenset[str] = SETUP_PARTS,
 ) -> bytes:
     """*Extract all data*: the files the cards make as each is set, the
     applicants named or not as the card says (the applications file is
     the applicants' own, so it always names them). ``rows`` and ``drafts``
     are the Applications card's, ``shape`` By gate's, ``outcome_rows``
-    the Outcomes card's (Codex)."""
+    the Outcomes card's, ``setup_parts`` Extract setup's (Codex)."""
     x = of(e)
     files: list[tuple[str, Table]] = []
     notes: list[tuple[str, str]] = []
@@ -405,7 +406,7 @@ def all_zip(
     if "outcomes" in carries:
         files.append(("outcomes.csv", outcomes(e, outcome_rows, names)))
     if "setup" in carries:
-        files += [(f"setup/{n}", t) for n, t in setup(e, SETUP_PARTS)]
+        files += [(f"setup/{n}", t) for n, t in setup(e, setup_parts)]
     return _zip(files, notes)
 
 
@@ -452,21 +453,32 @@ def _form(e: Exercise) -> Table:
     return header, body
 
 
+def _field(f: stages.Field) -> dict[str, str]:
+    return {"type": f.type, "min": f.min, "max": f.max, "step": f.step, "options": f.options}
+
+
+def _detail(**settings: str) -> str:
+    """Settings as ``name=value; …``, the empty ones left out."""
+    return "; ".join(f"{k}={v}" for k, v in settings.items() if v)
+
+
 def _process(e: Exercise) -> Table:
     """Each stage and what it holds, a row each: the form, each gate with
     its evaluators and results, each outcome with its values; the rules
-    in words, as Process reads them."""
+    in words, as Process reads them. Under each gate, a ``field`` row per
+    response field and a ``result`` row per result, their settings in
+    ``detail`` as ``name=value; …`` (Codex: enough to rebuild the gate)."""
     plan = stages.plan_of(e.public_id)
     pools = sample_data.panel_pools(e.public_id)
     header = (
         "stage", "stage_name", "dates", "kind", "number", "label",
-        "evaluators", "mode", "results", "values", "due", "rule",
+        "evaluators", "mode", "results", "values", "due", "rule", "detail",
     )  # fmt: skip
     body: list[list[str]] = []
     for st in plan.stages:
         head = [str(st.number), st.label, st.dates]
         if st.form:
-            body.append(head + ["form", "", "Application form", "", "", "", "", "", ""])
+            body.append(head + ["form", "", "Application form", "", "", "", "", "", "", ""])
         for c in st.columns:
             rule = stages.rule_text(plan, c)
             if isinstance(c, stages.Gate):
@@ -480,13 +492,45 @@ def _process(e: Exercise) -> Table:
                         stages.sources_summary(sources, total, pools),
                     ]
                     + [dict(stages.MODES).get(c.mode, c.mode), "; ".join(r.name for r in c.results)]
-                    + ["", "", rule]
+                    + [
+                        "",
+                        "",
+                        rule,
+                        _detail(confidential=_yes(c.confidential), about=c.description),
+                    ]
                 )
+                for f in stages.fields_of(c):
+                    body.append(
+                        head
+                        + ["field", str(c.number), f.label, "", "", "", "", "", "", ""]
+                        + [
+                            _detail(
+                                key=f.key, **_field(f.field), required=_yes(f.required), help=f.help
+                            )
+                        ]
+                    )
+                for r in c.results:
+                    body.append(
+                        head
+                        + ["result", str(c.number), r.name, "", "", "", "", "", "", ""]
+                        + [
+                            _detail(
+                                key=r.key,
+                                derive=r.derive,
+                                source=r.source,
+                                value=r.value,
+                                at_least=str(r.at_least),
+                                ignore_zero=_yes(r.ignore_zero),
+                                **_field(r.field),
+                            )
+                        ]
+                    )
             else:
                 body.append(
                     head
                     + ["outcome", str(c.number), c.label, "", "", ""]
                     + ["; ".join(c.values), c.due, rule]
+                    + [_detail(weights=", ".join(f"{k} {w:g}" for k, w in c.weights))]
                 )
     return header, body
 
