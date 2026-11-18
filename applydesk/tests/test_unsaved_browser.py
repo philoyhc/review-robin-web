@@ -204,3 +204,18 @@ def test_panels_does_not_mark_a_refused_rename(page: Page) -> None:
     name.press("Enter")
     assert "keeps its name" in page.locator("[data-pn-said]").inner_text()
     assert not page.locator("[data-pn-kept]").is_visible() and not page.evaluate(LEAVES)
+
+
+def test_panels_marks_a_row_a_new_panel_brought_kept_with_its_tick(page: Page) -> None:
+    """Codex on #3996: ✓ on a row a new panel brought keeps that person
+    apart from the panel, so the page is marked even with no edit."""
+    page.goto(f"{MODEL}/panels")
+    page.locator('[data-pn-act="manage"]').click()
+    page.locator("[data-pn-newname]").fill("Spare")
+    page.locator("[data-pn-members]").fill("mei.chen@example.edu")
+    page.locator('[data-pn-act="create"]').click()
+    mei = page.locator("[data-pn-row][data-new-with]").first
+    mei.locator("[data-pn-select]").check()
+    mei.locator('[data-pn-act="save"]').click()
+    assert page.locator("[data-pn-said]").inner_text().endswith("kept on this page.")
+    assert page.locator("[data-pn-kept]").is_visible()

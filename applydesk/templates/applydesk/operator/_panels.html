@@ -793,8 +793,9 @@
     var why = r.querySelector("[data-pn-why]").textContent;
     var who = val(r, "name") || val(r, "email") || "This row";
     if (why) { said.textContent = who + " is not saved: " + why.toLowerCase(); return; }
-    // Kept only when something changed: a new row, or one edited (cold read).
-    var changedRow = !!r.dataset.fresh || !r.pnSnap || !same(r, r.pnSnap);
+    // Kept only when something changed: a new row, one a panel brought
+    // (✓ keeps it apart from that panel, Codex), or one edited (cold read).
+    var changedRow = !!r.dataset.fresh || !!r.dataset.newWith || !r.pnSnap || !same(r, r.pnSnap);
     delete r.dataset.fresh;
     delete r.dataset.newWith;  // kept with its own ✓, it stays if its panel is taken back
     select(r, false, "save");
