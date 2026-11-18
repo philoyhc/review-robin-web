@@ -516,10 +516,6 @@ rulings after this list):
 - ~~Where the help contact comes from~~: the exercise's (author,
   2026-11-17); the description is the gate's.
 - What marks a gate concluded, for writing results.
-- Editing the exercise's help contact and timezone on Home: shown there
-  and on every gate since AD1G's carried rungs 8–9, each the operator
-  settings' default until set, but Home's details are not yet edited;
-  with Home's work (segment AD1I, rung 4).
 - Panels' *Sent* chip still marks a gate sent, not one whose session has
   opened (ruling 29); the spec says the same. Align when Panels is next
   touched.
@@ -542,8 +538,7 @@ Segments in order; each gets a plan in this folder when it starts.
 | **AD1 — Skeleton** | Package, `/applydesk` mount, health, CI lane, the URL map as placeholder pages | `applydesk/guide/segment_AD1_skeleton.md` |
 | **AD1C — Applications page** | The Applications tab as a working scaffold: rounds of gates and outcomes as columns, admittance and outcome chips, release switches, rules from Setup or a CSV applied as a proposal, all or last applications; the application file named; nothing saved | `applydesk/guide/segment_AD1C_applications.md` |
 | **AD1D — The exercise's chrome** | Home, the Setup row (Process, Form, Gates, Emails) and the Operations row (Applications, Evaluations, Extract data), as scaffolds; the status row; the Workflow card stepping through the timeline (ruling 14; removed 2026-11-15); nothing saved | `applydesk/guide/segment_AD1D_chrome.md` |
-| **AD1I — Exercise Home** | Home in two columns: a graphical timeline by stages, horizontal or vertical as each viewer flips it, shared with the applicant's page; Details unlocked to edit; the old fact cards folded into the status row and a Next step line; nothing saved | `applydesk/guide/segment_AD1I_home.md` |
-| AD1J onward — the other new pages | Emails and Extract data built out as working scaffolds, one segment each | After AD1I |
+| AD1J onward — the other new pages | Emails and Extract data built out as working scaffolds, one segment each | — |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
