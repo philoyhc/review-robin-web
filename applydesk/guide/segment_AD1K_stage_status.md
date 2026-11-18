@@ -72,9 +72,10 @@ Rejected:
 
 - **Transitions.**
   - Draft → Published: *Publish stage*, refused while that stage's checks name a problem.
-  - Published → Completed: by itself, once every item of the stage is completed (Decision amended).
+  - Published → Completed: by itself, once the stage's declared end has passed and every item is complete. Items done before the end leave it Published until then (Decision amended).
+  - Published → Overdue: the end has passed with an item still open. It completes once that item is done.
+  - Completed or Overdue → Published: an extension moves the end past now (Decision amended).
   - Published → Draft: *Revert to draft*, with a reason.
-  - Completed is final in the MVP.
   - A stage may not be published before the one before it.
 - **Revert while things are under way.** A reverted stage unlocks on Apply Desk's side only:
   - A gate whose Review Robin session has opened stays fixed (ruling 29).
