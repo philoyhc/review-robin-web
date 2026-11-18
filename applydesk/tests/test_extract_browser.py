@@ -59,7 +59,7 @@ def test_without_storage_the_chips_still_shape_the_links(page: Page) -> None:
     page.goto(PAGE)
     out = page.locator('[data-xd-card="outcomes"]')
     out.get_by_role("button", name="All applications").click()
-    assert _href(page, "outcomes", "outcomes.csv").endswith("?rows=all")
+    assert _href(page, "outcomes", "outcomes.csv").endswith("?rows=all&applicants=names")
 
 
 def test_setup_rides_in_zip_all_when_asked(page: Page) -> None:

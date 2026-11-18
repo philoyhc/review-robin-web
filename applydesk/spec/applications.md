@@ -240,7 +240,7 @@ include.
   link for a Draft); each outcome's Dossiers tally and *Released* /
   *Pending*, linking to Dossiers. It never appears on the applicant's page.
 - **The applicant's page** draws the same partial beside *Apply*, without the
-  operator's part or the Next step line, and shows only a Published exercise.
+  operator's part or the Next step line, for a Published or Closed exercise.
   *Apply* links each of the applicant's own applications there (*Your
   application*), as the User Lobby's *My applications* lists them all
   (`sample_data.my_applications` until AD2).
@@ -248,7 +248,9 @@ include.
   with the applicant's own value and when (`stages.released_results`; the
   application page lists them as *Your results*); AD7 sends them. `/me`
   shows Published and Closed exercises (ruling 41): a Closed one stays,
-  read-only, its *Apply* saying it is closed; Draft and Archived do not.
+  read-only, its *Apply* saying it is closed; Draft and Archived do not,
+  and their application and dossier pages answer 404 (author, 2026-11-18).
+  *Your results* is the applicant's own: another application's page shows none.
   Closing and archiving themselves are not built (AD3).
   A stage left unticked in Process's *Shown to applicants* is not on it
   (`Stage.shown`, ruling 46); the operator's Home shows every stage.
@@ -663,7 +665,7 @@ keeps all of them.
   that is not a whole number is the first page.
 - **Filter**, *Find an applicant or an evaluator*: the applicant's name, email,
   application or dossier ID, or the pair's evaluator's name or email, any
-  case (`stages.matching`). A blind exercise's applicant is found by the
+  case (`stages.matching`). A blind exercise's or a confidential gate's applicant is found by the
   dossier ID alone, never by who they are. *Clear* drops the filter, not the
   sort.
 - **Sort**, as Review Robin's tables (`spec/sort_by_reviewee.md`), on the
@@ -673,7 +675,7 @@ keeps all of them.
   and direction, `1↑`, `2↓`. An empty cell sorts last either way and numbers
   sort as numbers (*Short by 2* before *Short by 10*); the fill's order
   breaks ties. A new order starts at the first page; the pager, range menu
-  and filter keep it. A blind table sorts by dossier ID.
+  and filter keep it. A blind exercise's or a confidential gate's table sorts by dossier ID.
 - **States**, by mode (`stages.assignment_state`): *Short by n* when the
   Total's min is not met, *Short* when a source gives less than its own min,
   else *Filled* (Automatic), *Suggested* then *Approved* (Suggested), *Not
@@ -710,9 +712,10 @@ the browser (`_gate_ops_js.html`):
 - **Off** once the gate's session has opened (`workflow.gate_opened`: its
   pairs are Review Robin's to change), with the reason in each button's title;
   and off until the page's script has run.
-- **A blind gate's + Pair** cannot leave out the applicant themself: the
-  page's data names no applicant there. Open, for AD2, where the server checks
-  the pair.
+- **A blind or confidential gate's + Pair** still never offers an applicant
+  as their own evaluator: the page's data names no applicant, but gives each
+  dossier the one panel member it may not take, its applicant when they sit
+  on the gate's panels (author, 2026-11-18). AD2's server checks it again.
 
 The model exercise, *Recruitment and Selection of Residential Assistants*
 (`wa9juxbc2t`), has gates that pair a panel of 30 with every applicant, so

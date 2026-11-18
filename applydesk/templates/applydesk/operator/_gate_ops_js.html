@@ -15,8 +15,8 @@
   var card = document.getElementById("ev-table-card");
   var STORE = "applydesk-ev:" + DATA.key + ":" + DATA.mode;
   var said = card.querySelector("[data-ev-said]");
-  var names = {}, emailOf = {};
-  DATA.dossiers.forEach(function (d) { names[d[0]] = d[1]; emailOf[d[0]] = d[2]; });
+  var names = {}, emailOf = {}, selfOf = {};  // selfOf: the evaluator a dossier may never have
+  DATA.dossiers.forEach(function (d) { names[d[0]] = d[1]; emailOf[d[0]] = d[2]; selfOf[d[0]] = d[3] || ""; });
   var sources = {};
   DATA.panels.forEach(function (p) { p[1].forEach(function (m) { if (!(m[1] in sources)) sources[m[1]] = [m[0], p[0]]; }); });
   var bounds = {};  // a source's label: [min, max]
@@ -35,7 +35,7 @@
   ch = { removed: list(ch && ch.removed), added: list(ch && ch.added), approved: list(ch && ch.approved) };
   ch.removed = ch.removed.filter(function (k, i, a) { return sample[k] && a.indexOf(k) === i; });
   ch.added = ch.added.filter(function (a, i, all) {
-    return a && a.d in names && a.e in sources && !sample[id(a.d, a.e)] && a.e !== emailOf[a.d] &&
+    return a && a.d in names && a.e in sources && !sample[id(a.d, a.e)] && a.e !== selfOf[a.d] &&
       all.findIndex(function (b) { return b && b.d === a.d && b.e === a.e; }) === i;
   }).map(function (a) { return { d: a.d, e: a.e, n: sources[a.e][0], s: sources[a.e][1] }; });
   if (DATA.mode === "automatic") ch.removed = [], ch.added = [];
@@ -163,7 +163,7 @@
     var on = pairs().filter(function (p) { return p[0] === who; }).map(function (p) { return p[1]; });
     sel.textContent = "";
     Object.keys(sources).forEach(function (e) {
-      if (e === emailOf[who] || on.indexOf(e) >= 0) return;
+      if (e === selfOf[who] || on.indexOf(e) >= 0) return;
       var o = document.createElement("option");
       o.value = e; o.textContent = sources[e][0] + " · " + sources[e][1];
       sel.appendChild(o);

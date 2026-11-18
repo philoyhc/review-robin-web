@@ -58,6 +58,8 @@ def exercise(request: Request, exercise_id: str) -> Response:
 )
 def application(request: Request, exercise_id: str, application_id: str) -> Response:
     found = exercise_or_404(exercise_id)
+    if found.state not in ON_ME:  # closed with its exercise (author, 2026-11-18)
+        raise HTTPException(status_code=404)
     app = application_or_404(found, application_id)
     return render(
         request,
@@ -67,7 +69,10 @@ def application(request: Request, exercise_id: str, application_id: str) -> Resp
         application=app,
         answered=extract.form_answers(found, app),
         form_state=workflow.form_state(found),
-        results=stages.released_results(found.public_id, app.public_id),
+        # Only the applicant's own (cold read): another's page names none.
+        results=stages.released_results(found.public_id, app.public_id)
+        if app.public_id in sample_data.MINE
+        else (),
     )
 
 
@@ -77,6 +82,8 @@ def dossier(request: Request, exercise_id: str, dossier_id: str) -> Response:
     reviewers* section only; in a blind exercise the applicant's name and
     identifiers redacted. Named by its own ID, never the application's."""
     found = exercise_or_404(exercise_id)
+    if found.state not in ON_ME:  # closed with its exercise (author, 2026-11-18)
+        raise HTTPException(status_code=404)
     app = dossier_or_404(found, dossier_id)
     return render(
         request,

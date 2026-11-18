@@ -1651,3 +1651,61 @@ def test_blind_review_starts_outcomes_csv_with_dossier_ids() -> None:
     blind = dataclasses.replace(ex, blind=True)
     assert not extract.names_by_default(blind, "outcomes.csv")
     assert extract.names_by_default(blind, "applications.csv")
+
+
+def test_another_application_s_page_shows_no_results(client: TestClient) -> None:
+    """Cold read: Your results is the applicant's own, never another's."""
+    other = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/h6zr2tdw9p").text
+    assert "Your results" not in other
+
+
+def test_archived_closes_the_application_and_dossier_pages(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Author, 2026-11-18: an Archived exercise's application and dossier
+    pages close with it; a Closed one's stay."""
+    import dataclasses
+
+    ex = sample_data.exercise("wa9juxbc2t")
+    assert ex is not None
+    me = "/applydesk/me/exercises/wa9juxbc2t"
+    for state, code in (("Archived", 404), ("Draft", 404), ("Closed", 200)):
+        moved = dataclasses.replace(ex, state=state)
+        monkeypatch.setattr(sample_data, "exercise", lambda i, m=moved: m)
+        assert client.get(f"{me}/applications/m3qx8vkt2n").status_code == code, state
+        assert client.get(f"{me}/dossiers/p3bd7kq2wx").status_code == code, state
+
+
+def test_a_hidden_applicant_on_a_panel_is_never_their_own_evaluator() -> None:
+    """Author, 2026-11-18: a blind or confidential gate's data names no
+    applicant, but gives each dossier the panel member it may not take."""
+    plan = stages.plan_of(EX)
+    gate = next(c for c in plan.columns if isinstance(c, stages.Gate) and c.number == 1)
+    rows, _ = stages.assignments(EX, gate)
+    data = stages.page_data(EX, gate, rows, blind=True)
+    dossiers = cast(list[list[str]], data["dossiers"])
+    panel = {
+        e.lower()
+        for p in cast(list[list[Any]], data["panels"])
+        for _, e in cast(list[list[str]], p[1])
+    }
+    assert all(d[2] == "" for d in dossiers)  # no email for who they are
+    selfs = [d[3] for d in dossiers if d[3]]
+    assert selfs and all(s in panel for s in selfs)  # current RAs reapplying
+
+
+def test_the_outcomes_card_follows_its_file_under_blind_review(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Cold read: blind, the Outcomes card starts on Dossier IDs, says
+    why, lists no applicant columns, and lets the operator choose Names."""
+    import dataclasses
+
+    ex = sample_data.exercise(EX)
+    assert ex is not None
+    blind = dataclasses.replace(ex, blind=True)
+    monkeypatch.setattr(sample_data, "exercise", lambda i: blind)
+    page = client.get(f"/applydesk/operator/exercises/{EX}/extract").text
+    card = page[page.index('data-xd-card="outcomes"') : page.index('data-xd-card="alias"')]
+    assert "Dossier IDs to start with: blind review is on." in card
+    assert 'data-xd-v="ids" aria-pressed="true"' in card and "applicant, email" not in card

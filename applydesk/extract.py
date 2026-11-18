@@ -155,7 +155,7 @@ def of(e: Exercise) -> Extract:
         e.state == "Draft",
         APPLICATION_KEYS + _questions(e.public_id),
         gates,
-        _outcome_columns(plan),
+        _outcome_columns(plan, names_by_default(e, "outcomes.csv")),
     )
 
 

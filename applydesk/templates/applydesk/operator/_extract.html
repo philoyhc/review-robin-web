@@ -66,6 +66,10 @@
     <h2>Outcomes</h2>
     <p class="xd-help">One row per application: each gate's results as Dossiers collates them, then each outcome's value and when it was released.</p>
     <div class="xd-chips"><span class="xd-k">Rows</span>{{ seg("rows", (("last", "Last applications"), ("all", "All applications")), "Rows") }}</div>
+    {# Its Applicants as (AD-65): Dossier IDs to start with under blind review. #}
+    {% set out_names = "applicant" in extract.outcome_columns %}
+    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("names", "Names"), ("ids", "Dossier IDs")), "Applicants as", "names" if out_names else "ids") }}</div>
+    {% if not out_names %}<p class="muted xd-note">Dossier IDs to start with: blind review is on.</p>{% endif %}
     {{ columns(extract.outcome_columns) }}
     <div class="btnrow">{{ dl("outcomes.csv", "Download CSV") }}</div>
   </section>
