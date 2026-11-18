@@ -752,8 +752,10 @@ def date_problems(plan: Plan, st: Stage) -> tuple[str, ...]:
             what = "is due" if isinstance(item, Outcome) else "runs"
             out.append(f"{name} {what} outside the dates of {st.label}.")
         if isinstance(item, Outcome):
+            # A gate it reads may sit in an earlier stage (Codex).
             for g in scope(plan, item):
-                gw = window(st, g) if g in st.columns else None
+                home = next((s for s in plan.stages if g in s.columns), None)
+                gw = window(home, g) if home else None
                 if gw is not None and w.end < gw.end:
                     out.append(f"{name} is due before {g.label or 'its gate'} closes.")
     return tuple(out)

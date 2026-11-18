@@ -242,3 +242,20 @@ def test_the_form_s_dates_sit_inside_its_stage() -> None:
     assert first.when is not None
     wide = replace(first, form_when=stages.span(first.when.start, stages.day(2026, 10, 3)))
     assert locks.publish_problems(e, wide) == ("The form runs outside the dates of Applications.",)
+
+
+def test_an_outcome_reads_its_gates_wherever_they_sit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex: a gate in an earlier stage, read by an outcome in the next,
+    still closes before the outcome is due."""
+    e = _e(RA)
+    model = stages._STAGES[RA]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    review, interviews = model[1], model[2]
+    g1, g2, _o1 = review.columns
+    g3, o2 = interviews.columns
+    assert isinstance(g3, stages.Gate) and isinstance(o2, stages.Outcome)
+    late = replace(g3, when=stages.span(stages.day(2026, 11, 9), stages.day(2026, 12, 2)))
+    gates_only = replace(review, columns=(g1, g2, late))
+    early = replace(o2, due_at=stages.day(2026, 11, 20, 17))
+    alone = replace(interviews, columns=(early,))
+    monkeypatch.setitem(stages._STAGES, RA, (model[0], gates_only, alone))  # pyright: ignore[reportPrivateUsage]  -- as above
+    assert "Selection is due before Staff interview closes." in locks.publish_problems(e, alone)
