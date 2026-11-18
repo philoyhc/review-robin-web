@@ -15,7 +15,8 @@
   <dl class="facts">{% for label in not_shown %}<dt>{{ label }}</dt><dd class="muted">—</dd>{% endfor %}</dl>
 </div>
 <div class="btnrow">
-  {% if application.state == "Draft" %}<button class="btn btn-secondary" type="button" disabled>Save draft</button><button class="btn btn-primary" type="button" disabled>Submit</button>
+  {% if application.state == "Draft" and form_state == "Closed" %}<p class="muted">Applications closed on {{ exercise.application_stage_ends }}.</p>
+  {% elif application.state == "Draft" %}<button class="btn btn-secondary" type="button" disabled title="Applying opens with AD4">Save draft</button><button class="btn btn-primary" type="button" disabled title="Applying opens with AD4">Submit</button>
   {% else %}<button class="btn btn-destructive" type="button" disabled>Withdraw</button>{% endif %}
 </div>
 {% endblock %}

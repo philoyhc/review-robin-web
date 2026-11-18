@@ -74,7 +74,7 @@ def test_publishing_names_what_the_stage_lacks() -> None:
     blank = _e(BLANK)
     assert locks.publish_problems(blank, _stage(BLANK, 1)) == (
         "Stage 1 has no start and end.",
-        "Exercise Code is not set.",
+        "Exercise code is not set.",
         "Description is not set.",
         "Who may apply is not set.",
         "The application form has no questions.",
@@ -280,8 +280,8 @@ def test_a_release_waits_on_its_owed_emails() -> None:
     lock = locks.release_lock(e, o2)
     assert lock.fixed
     assert lock.reason == (
-        "Write its emails on Emails first: Interviews: Outcome - Applicants;"
-        " Interviews: Outcome - Panel evaluators"
+        "Write its emails on Emails first: Interviews: Outcome · Applicants;"
+        " Interviews: Outcome · Panel evaluators"
     )
 
 

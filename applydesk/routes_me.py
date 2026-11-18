@@ -7,7 +7,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
-from applydesk import sample_data, timeline
+from applydesk import sample_data, timeline, workflow
 from applydesk.gate import placeholders_only
 from applydesk.lookups import application_or_404, dossier_or_404, exercise_or_404
 from applydesk.web import USER_LOBBY, render
@@ -61,6 +61,7 @@ def application(request: Request, exercise_id: str, application_id: str) -> Resp
         application=app,
         shown=sample_data.form_of(found.public_id)[0],
         not_shown=sample_data.form_of(found.public_id)[1],
+        form_state=workflow.form_state(found),
     )
 
 

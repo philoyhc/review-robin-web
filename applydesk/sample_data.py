@@ -959,7 +959,7 @@ def setup_missing(e: Exercise) -> tuple[tuple[str, str], ...]:
     Process's, then the Form's."""
     missing: list[tuple[str, str]] = []
     if not e.code:
-        missing.append(("Exercise Code", ""))
+        missing.append(("Exercise code", ""))
     if not e.summary:
         missing.append(("Description", ""))
     if e.eligibility == "Not set":

@@ -125,7 +125,7 @@
     .field { margin: 0 0 12px; }
     .field label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 2px; }
     .field .field-help { display: block; font-size: 13px; color: var(--text-subtle); margin-bottom: 4px; }
-    .field input, .field textarea { width: 100%; font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card); color: var(--text-body); }
+    .field input, .field textarea { width: 100%; font: inherit; font-size: 14px; font-weight: 400; padding: 6px 8px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card); color: var(--text-body); }
     .card h3 { margin: 12px 0 6px; font-size: 15px; }
     .card h2 { margin: 0 0 8px; font-size: 17px; }
     /* Exercise Home (segment AD1I): the timeline two-thirds, Details
@@ -235,7 +235,7 @@
     .card .xd-cols { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--text-subtle); background: var(--surface-muted); border-radius: 6px; padding: 6px 8px; margin: 0 0 6px; overflow-wrap: anywhere; }
     .xd-gates { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 0 0 8px; }
     .xd-gates th, .xd-gates td { padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); text-align: left; }
-    .xd-csv { min-height: 30px; padding: 0 10px; font-size: 13px; }
+    .btn.xd-csv { min-height: 30px; padding: 0 10px; font-size: 13px; }
     .xd-empty { margin: 0 0 12px; }
     .card .xd-note { font-size: 13px; margin: -4px 0 10px; }
     .card .xd-shape { margin: 0 0 4px; }
@@ -318,7 +318,8 @@
     /* Destructive (outline red): what cannot be undone, as Withdraw. */
     .btn-destructive { background: transparent; color: var(--danger); border-color: var(--danger); }
     /* 0.5, as Review Robin's: a disabled control reads as disabled. */
-    .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+    .btn[disabled], .btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+    a.btn[aria-disabled="true"] { pointer-events: none; }
     .section { border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px 16px; }
     .section + .section, .facts + .section { margin-top: 12px; }
     .section h3 { margin: 0 0 4px; font-size: 15px; }

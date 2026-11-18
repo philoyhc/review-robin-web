@@ -1,1 +1,4 @@
-{% if section == "dossiers" %}<p class="placeholder"><strong>Placeholder.</strong> Sample data; the chips and menus work on screen, but nothing here is saved: a reload restores the sample (segment AD1C).</p>{% elif section == "form" %}<p class="placeholder"><strong>Placeholder.</strong> Sample data; the cards work on screen, but nothing here is saved: a reload restores the sample form (segment AD1B).</p>{% else %}<p class="placeholder"><strong>Placeholder.</strong> Sample data; nothing here is saved, and the controls do nothing yet (segment AD1).</p>{% endif %}
+{# One line for every Apply Desk page while it runs on sample data (AD-06):
+   what works, and that nothing is saved until AD2. Extract says its files
+   are built from the sample, not from edits made on other pages. #}
+<p class="placeholder"><strong>Placeholder.</strong> {% if section == "extract" %}Sample data: the files are built from the sample, not from edits made on other pages; nothing is saved until AD2.{% else %}Sample data: what you do here works on screen, but nothing is saved until AD2, and a reload restores the sample.{% endif %}</p>

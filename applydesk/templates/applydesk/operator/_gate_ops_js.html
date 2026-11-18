@@ -93,7 +93,10 @@
     tr.innerHTML = "<td></td><td><span></span> <span class=\"ev-added-mark\">Added</span></td><td><span class=\"ev-src\"></span></td><td><span data-ev-state></span></td>" +
       "<td class=\"ev-acts\"><button type=\"button\" class=\"btn btn-secondary\" data-ev-act=\"remove\"></button>" +
       (DATA.mode === "suggested" ? " <button type=\"button\" class=\"btn btn-secondary\" data-ev-act=\"approve\">Approve</button>" : "") + "</td>";
-    tr.cells[0].textContent = names[a.d];
+    // A blind dossier's ID in monospace, as on Dossiers (AD-87).
+    tr.cells[0].textContent = "";
+    if (DATA.blind) tr.cells[0].appendChild(document.createElement("code")).textContent = names[a.d];
+    else tr.cells[0].textContent = names[a.d];
     tr.cells[1].firstChild.textContent = a.n;
     tr.cells[1].firstChild.title = a.e;
     tr.cells[2].firstChild.textContent = a.s;
@@ -223,7 +226,7 @@
     } else if (act === "rerun") {
       ch = blank();
       draw();
-      said.textContent = "Re-run: every dossier filled as its sources give.";
+      said.textContent = "Nothing to re-run yet: the pairs are the fill's own until rosters feed it (AD5).";
     } else if (act === "add") {
       openAdd(box.hidden);
     } else if (act === "add-cancel") {

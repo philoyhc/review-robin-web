@@ -71,13 +71,13 @@
   </section>
   <section class="card" data-xd-card="alias">
     <h2>Alias key</h2>
-    <p class="xd-help">Dossier ID to applicant, the key Review Robin never sees. Keep it apart from the files above; every download is logged.</p>
+    <p class="xd-help">Dossier ID to applicant, the key Review Robin never sees. Keep it apart from the files above; downloads will be logged from AD2.</p>
     {{ columns(alias_columns) }}
     <div class="btnrow">{{ dl("alias_key.csv", "Download key", "btn-secondary") }}</div>
   </section>
   <section class="card" data-xd-card="setup">
     <h2>Extract setup</h2>
-    <p class="xd-help">The exercise's setup as files, to clone it into a new exercise: Form, Process (stages, gates, outcomes and rules), Panels and Emails.</p>
+    <p class="xd-help">The exercise's setup as files, for a later import into a new exercise (not built yet): Form, Process (stages, gates, outcomes and rules), Panels and Emails.</p>
     <div class="xd-chips" role="group" aria-label="The setup ZIP carries"><span class="xd-k" aria-hidden="true">Carries</span>{{ tog("form", "Form") }}{{ tog("process", "Process") }}{{ tog("panels", "Panels") }}{{ tog("emails", "Emails") }}</div>
     <p class="xd-cols">{{ setup_files | join(" · ") }}</p>
     <div class="btnrow">{{ dl("setup.zip", "Zip setup", "btn-secondary", always=True) }}</div>
@@ -128,8 +128,13 @@
     var p = state(card);
     if (card.dataset.xdCard === "all") p = borrowed(p);
     var q = p.toString();
+    // Zip all with nothing to carry is off (AD-17): its ZIP would hold
+    // only the manifest.
+    var empty = card.dataset.xdCard === "all" && p.get("carries") === "none";
     card.querySelectorAll("a[data-xd-dl]").forEach(function (a) {
       a.href = a.href.split("?")[0] + (q ? "?" + q : "");
+      if (empty) { a.setAttribute("aria-disabled", "true"); a.title = "Tick a file to carry first"; }
+      else { a.removeAttribute("aria-disabled"); a.removeAttribute("title"); }
     });
   }
   grid.querySelectorAll("[data-xd-card]").forEach(function (card) {

@@ -325,11 +325,11 @@
       }
       var warn = open ? open + (open === 1 ? " dossier is" : " dossiers are") + " still undecided or Pending here. " : "";
       var ok = window.confirm(rel.checked
-        ? warn + "Release " + name + "? What a release does (to applicants, to reviewers, by email) is set with the Timeline. Nothing is sent from this mock-up."
+        ? warn + "Release " + name + "? What a release does (to applicants, to reviewers, by email) is set on Process. Nothing is sent from this mock-up."
         : "Withdraw the release of " + name + "?");
       if (!ok) { rel.checked = !rel.checked; return; }
       var note = rel.closest("th").querySelector("[data-ap-relnote]");
-      note.textContent = rel.checked ? TODAY + " · as the Timeline sets" : "Not yet";
+      note.textContent = rel.checked ? TODAY + " · as Process sets" : "Not yet";
       note.classList.toggle("ap-relnote-on", rel.checked);
       showChanges();
     }

@@ -65,7 +65,7 @@ _G1 = Gate(
 _G2 = Gate(
     "g2",
     2,
-    "Faculty Panel Review",
+    "Faculty Panel review",
     "RRW",
     (
         GateResult("r1", "Score", _LIKERT, "mean"),

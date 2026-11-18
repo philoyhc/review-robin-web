@@ -13,5 +13,5 @@
   <h3>Shown to reviewers</h3>
   <dl class="facts">{% for label, help in shown %}<dt>{{ label }}</dt><dd>{{ application.title if loop.first else help }}</dd>{% endfor %}</dl>
 </div>
-<p class="muted">You can open this page because you are asked to review this application. Score it in Review Robin.</p>
+<p class="muted">Reviewers open this dossier because they are asked to review it, and score it in Review Robin; the exercise's operators open every dossier (ruling 9).</p>
 {% endblock %}

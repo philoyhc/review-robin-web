@@ -90,7 +90,7 @@ def test_the_totals_bounds() -> None:
 
 
 def test_a_sample_gate_reads_its_panel_as_its_source() -> None:
-    gate = Gate("g1", 1, "Panel Review", "RRW", panel="panel-a")
+    gate = Gate("g1", 1, "Panel review", "RRW", panel="panel-a")
     sources, total = stages.sources_of("k7mfr3pq8z", gate)
     assert len(sources) == 1 and sources[0].kind == "panel" and sources[0].ref == "panel-a"
     assert sources[0].min == sources[0].max == total.min == total.max > 0

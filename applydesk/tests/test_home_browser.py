@@ -88,7 +88,7 @@ def test_details_unlock_edit_and_lock(page: Page) -> None:
     assert not card.get_by_role("button", name="Unlock").is_visible()  # its place taken by Lock
     assert card.locator('[data-dt="name"]').evaluate("e => e === document.activeElement")
     # A published exercise's code and who may apply are fixed (G2).
-    assert card.get_by_label("Exercise Code").is_disabled()
+    assert card.get_by_label("Exercise code").is_disabled()
     assert card.get_by_label("Who may apply").is_disabled()
     card.get_by_label("Description").fill("Look after a house of residents.")
     card.get_by_label("Help contact").fill("")
@@ -159,12 +159,12 @@ def test_details_refuse_what_cannot_hold(page: Page) -> None:
     assert card.locator('[data-dt="name"]').evaluate("e => e === document.activeElement")
     card.locator('[data-dt="name"]').fill("Summer Internship Scheme 2027")
     # A draft's code may change, but never to another exercise's, any case.
-    card.get_by_label("Exercise Code").fill("ra-2027")
+    card.get_by_label("Exercise code").fill("ra-2027")
     card.get_by_role("button", name="Lock", exact=True).click()
     expect(why).to_have_text(
         "ra-2027 is already Recruitment and Selection of Residential Assistants's code."
     )
-    card.get_by_label("Exercise Code").fill("SIS-2028")
+    card.get_by_label("Exercise code").fill("SIS-2028")
     card.get_by_label("Help contact").fill("not an address")
     card.get_by_role("button", name="Lock", exact=True).click()
     expect(why).to_have_text("A help contact is an email address.")

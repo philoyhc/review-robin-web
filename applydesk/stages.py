@@ -508,7 +508,7 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
                 Gate(
                     "g1",
                     1,
-                    "Panel Review",
+                    "Panel review",
                     "RRW",
                     (GateResult("r1", "Score", _LIKERT, "mean"),),
                     panel="panel-a",

@@ -1,11 +1,11 @@
 {# Evaluations (ruling 14, segment AD1D): each gate's progress and its
-   results from Review Robin; Review folded in here. A placeholder until
-   its own segment. #}
+   results from Review Robin; Review folded in here. Sending and results
+   come with AD6. #}
 {% set gates = plan.columns | selectattr("via", "defined") | list %}
 {% if exercise.state == "Draft" %}
 <section class="card">
   <h2>Not yet</h2>
-  <p class="muted">Nothing to send: the exercise is a draft. Once it is published, each gate is sent to Review Robin from here when its stage opens.</p>
+  <p class="muted">Nothing to send: the exercise is a draft. Once it is published, each gate is sent to Review Robin from here once it is Ready, even before its stage's dates.</p>
 </section>
 {% elif not gates %}
 <section class="card">
@@ -25,12 +25,12 @@
         <td>Review Robin</td>
         <td><span class="chip chip-{{ 'ok' if st[0] == 'Results in' else ('info' if st[0] in ('Sent', 'Ready') else 'warn') }}">{{ st[0] }}</span></td>
         <td>{{ st[1] or "—" }}</td>
-        <td>{% if st[0] == "Sent" %}<button class="btn btn-secondary" type="button" disabled>Pull results</button>{% elif st[0] in ("Not ready", "Ready") %}<button class="btn btn-secondary" type="button" disabled>Send to Review Robin</button>{% endif %}</td></tr>
+        <td>{% if st[0] == "Sent" %}<button class="btn btn-secondary" type="button" disabled title="Pulling results comes with AD6">Pull results</button>{% elif st[0] in ("Not ready", "Ready") %}<button class="btn btn-secondary" type="button" disabled title="Sending comes with AD6">Send to Review Robin</button>{% endif %}</td></tr>
     {% endfor %}
     </tbody>
   </table>
   </div>
-  <p class="muted">Sending a gate creates a Review Robin session from the applications entered at it and its panel, each dossier as its <code>ProfileLink</code>{% if exercise.blind %}, and an alias key in place of each application ID{% endif %}. Results come back by application and fill the gate's column on Dossiers.</p>
+  <p class="muted">Sending a gate creates a Review Robin session from the dossiers entered at it and its pairs, each dossier as its <code>ProfileLink</code>{% if exercise.blind %}, and an alias key in place of each application ID{% endif %}. Results come back by dossier and fill the gate's column on Dossiers.</p>
 </section>
 {# Each gate's assignments (ruling 27): a short card per gate, its mode,
    counts and load, linking to the gate's own page (segment AD1H), where

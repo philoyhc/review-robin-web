@@ -75,3 +75,19 @@ def test_setup_rides_in_zip_all_when_asked(page: Page) -> None:
     assert "sparts=form%2Cprocess%2Cemails" in _href(page, "all", "all.zip")
     panels = every.locator('[data-xd-page="panels"]')
     assert panels.is_hidden() and every.locator('[data-xd-page="form"]').is_visible()
+
+
+def test_zip_all_carrying_nothing_is_off(page: Page) -> None:
+    """AD-17: with every Carries chip off, Zip all would hold only the
+    manifest, so it is off, saying why."""
+    page.goto(PAGE)
+    every = page.locator('[data-xd-card="all"]')
+    link = every.locator('a[data-xd-dl="all.zip"]')
+    assert link.get_attribute("aria-disabled") is None
+    pressed = every.locator('[data-xd-t][aria-pressed="true"]')
+    while pressed.count():
+        pressed.first.click()
+    assert link.get_attribute("aria-disabled") == "true"
+    assert link.get_attribute("title") == "Tick a file to carry first"
+    every.locator("[data-xd-t]").first.click()
+    assert link.get_attribute("aria-disabled") is None

@@ -266,10 +266,10 @@ def test_health_answers_with_no_identity(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_the_lobby_names_exercises_by_code_not_id(client: TestClient) -> None:
-    """Iteration rung 4 (author, 2026-11-12): an Exercise Code column, as
+    """Iteration rung 4 (author, 2026-11-12): an Exercise code column, as
     RRW's Session Code; the public ID is only in each row's link."""
     page = client.get("/applydesk/operator/exercises").text
-    assert "<th>Exercise Code</th>" in page and ">ID<" not in page
+    assert "<th>Exercise code</th>" in page and ">ID<" not in page
     for e in sample_data.EXERCISES:
         if e.code:  # a just-created exercise has none yet
             assert f"<code>{e.code}</code>" in page
@@ -434,11 +434,11 @@ def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> N
     text = client.get(f"/applydesk/operator/exercises/{EX}/emails").text
     names = re.findall(r'<section class="card" data-email="([^"]+)">', text)
     assert names == [
-        "Applications: Receipt - Applicants",
-        "Applications: Reminder - Applicants",
-        "Review: Outcome - Applicants",
-        "Interviews: Outcome - Applicants",
-        "Interviews: Outcome - Panel evaluators",
+        "Applications: Receipt · Applicants",
+        "Applications: Reminder · Applicants",
+        "Review: Outcome · Applicants",
+        "Interviews: Outcome · Applicants",
+        "Interviews: Outcome · Panel evaluators",
     ]
     chips = re.findall(r'<span class="chip chip-\w+">(Written|Owed)</span>', text)
     assert chips == ["Written", "Written", "Written", "Owed", "Owed"]
@@ -548,7 +548,7 @@ def test_a_blank_exercise_lists_what_is_still_to_set_up(client: TestClient) -> N
     missing = missing[: missing.index("</ul>")]
     base = "/applydesk/operator/exercises/n5wg8tjr3e"
     assert re.findall(r'<li><a href="([^"]+)">([^<]+)</a> not set</li>', missing) == [
-        (f"{base}#details", "Exercise Code"),
+        (f"{base}#details", "Exercise code"),
         (f"{base}#details", "Description"),
         (f"{base}#details", "Who may apply"),
         (f"{base}/process", "Dates"),
@@ -570,7 +570,7 @@ def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> Non
     assert cards.count('data-kind="field"') == 1 and 'placeholder="Untitled form"' in form
     assert "No applications yet." in client.get(f"{base}/dossiers").text
     # Ruling 16: a form's receipt is owed until Process says otherwise.
-    assert 'data-email="Stage 1: Receipt - Applicants"' in client.get(f"{base}/emails").text
+    assert 'data-email="Stage 1: Receipt · Applicants"' in client.get(f"{base}/emails").text
     xd = client.get(f"{base}/extract").text
     assert "No submitted applications yet. A draft exercise: only its setup can be extracted." in xd
     assert "No gates yet: Process adds them." in xd
@@ -755,7 +755,7 @@ def test_a_gate_s_page_sorts_every_page_on_the_server(client: TestClient) -> Non
 def test_a_blind_gate_sorts_by_the_dossier(client: TestClient) -> None:
     base = f"/applydesk/operator/exercises/{BLIND}/evaluations/gate_1"
     text = client.get(f"{base}?sort=candidate").text
-    shown = re.findall(r"<tr data-ev-row=\"\w+\"[^>]*>\s*<td>(\w+)</td>", text)
+    shown = re.findall(r"<tr data-ev-row=\"\w+\"[^>]*>\s*<td><code>(\w+)</code></td>", text)
     assert shown == sorted(shown) and shown
     # The sample's IDs and names fall in one order, so the rule itself:
     # by the ID when blind, by the name otherwise.
@@ -917,7 +917,7 @@ def test_an_unnamed_stage_names_its_owed_template(client: TestClient) -> None:
     blocked = [s.blocked for s in workflow.steps(blind) if s.blocked]
     assert blocked == ["Not ready: its email to applicants is not written"]
     emails = client.get(f"{base}/emails").text
-    assert 'data-email="Stage 2: Outcome - Applicants"' in emails
+    assert 'data-email="Stage 2: Outcome · Applicants"' in emails
 
 
 def test_the_breadcrumb_ends_at_the_page(client: TestClient) -> None:
@@ -1126,7 +1126,10 @@ def test_what_uses_each_panel_and_what_was_sent_with_it() -> None:
 
 def test_panels_says_a_sent_gate_keeps_its_roster(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/panels").text
-    note = "Gate 1 was sent with the roster as it then stood: changes apply from its next send."
+    note = (
+        "Gate 1 was sent with the roster as it then stood:"
+        " a gate keeps that roster once its session opens (ruling 29)."
+    )
     assert f'<span class="pn-sent">{note}</span>' in text  # under Manage panels
     assert f'title="{note}">Sent</span>' in text  # and as its column's chip
     item = text[text.index('<li data-panel="residential-staff">') :]
@@ -1465,3 +1468,25 @@ def test_a_stage_with_nothing_blocking_is_ready_to_publish(
     monkeypatch.setattr(sample_data, "setup_missing", lambda e: ())
     home = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
     assert home.count("Ready to publish.") == 2 and "Blocking publication" not in home
+
+
+def test_pages_say_what_works_and_what_is_not_built(client: TestClient) -> None:
+    """The register's copy rows (AD-06, 10-13, 19, 29): one banner, honest
+    copy, and a reason on every inert control."""
+    home = client.get("/applydesk/operator/exercises/wa9juxbc2t").text
+    assert "what you do here works on screen, but nothing is saved until AD2" in home
+    extract = client.get("/applydesk/operator/exercises/wa9juxbc2t/extract").text
+    assert "the files are built from the sample, not from edits made on other pages" in extract
+    assert (
+        "downloads will be logged from AD2" in extract and "every download is logged" not in extract
+    )
+    emails = client.get("/applydesk/operator/exercises/wa9juxbc2t/emails").text
+    assert "come from Apply Desk (AD7); Review Robin sends none" in emails
+    assert 'title="Previewing an email comes with AD7"' in emails
+    evaluations = client.get("/applydesk/operator/exercises/wa9juxbc2t/evaluations").text
+    assert "Results come back by dossier" in evaluations
+    lobby = client.get("/applydesk/operator/exercises").text
+    assert 'title="Exercises are created from AD3"' in lobby
+    # A draft on an exercise whose form has closed says so (AD-29).
+    draft = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/f2ps7nyh4k").text
+    assert "Applications closed on 30 Sep 2026, 23:59." in draft and ">Submit<" not in draft

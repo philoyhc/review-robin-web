@@ -8,7 +8,7 @@
    page, which nothing saves until the database (AD2). #}
 {% set used = panels | selectattr("key", "in", uses) | list %}
 {% macro count(n) %}{{ n }} {{ "person" if n == 1 else "people" }}{% endmacro %}
-{% macro sent_note(p) %}{{ panels_sent[p.key] | join(", ") }} {{ "was" if panels_sent[p.key] | length == 1 else "were" }} sent with the roster as it then stood: changes apply from {{ "its" if panels_sent[p.key] | length == 1 else "their" }} next send.{% endmacro %}
+{% macro sent_note(p) %}{{ panels_sent[p.key] | join(", ") }} {{ "was" if panels_sent[p.key] | length == 1 else "were" }} sent with the roster as it then stood: a gate keeps that roster once its session opens (ruling 29).{% endmacro %}
 {# A row (ruling 22), as Review Robin's rosters: inert until its tick
    selects it; selected, its cells are edit boxes and its panel ticks
    live. Unselected, an email is text, red when the directory has no such

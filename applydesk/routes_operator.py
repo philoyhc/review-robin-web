@@ -1,5 +1,5 @@
 """The operator's pages, `/operator/exercises/…` (segment AD1, item 2):
-placeholders on sample data, controls inert."""
+built on sample data, working on screen; nothing saved until AD2."""
 
 from __future__ import annotations
 
