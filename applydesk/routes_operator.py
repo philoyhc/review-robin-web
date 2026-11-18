@@ -9,7 +9,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
-from applydesk import extract, home_ops, paging, sample_data, stages, timeline, workflow
+from applydesk import extract, home_ops, locks, paging, sample_data, stages, timeline, workflow
 from applydesk.gate import placeholders_only
 from applydesk.lookups import exercise_or_404
 from applydesk.web import OPERATIONS_PAGES, OPERATOR_LOBBY, SETUP_PAGES, exercise_nav, render
@@ -280,6 +280,15 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         result_label=functools.partial(stages.result_label, stages.plan_of(exercise.public_id)),
         stage_problems=stages.problems,
         local_value=stages.local_value,
+        stage_status=functools.partial(locks.stage_status, exercise),
+        publish_problems=functools.partial(locks.publish_problems, exercise),
+        stage_lock=functools.partial(locks.stage_lock, exercise),
+        item_lock=functools.partial(locks.item_lock, exercise),
+        form_lock=locks.form_lock(exercise),
+        revert_warnings=functools.partial(locks.revert_warnings, exercise),
+        outstanding=functools.partial(locks.outstanding, exercise),
+        STATUS_CHIP=locks.STATUS_CHIP,
+        now_value=stages.local_value(locks.NOW),
         window=stages.window,
         window_text=stages.window_text,
         blank_stage=stages.Stage(0, "", None),

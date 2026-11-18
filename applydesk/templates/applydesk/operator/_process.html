@@ -11,7 +11,7 @@
 {% set issues = stage_problems(plan.stages) %}
 <script type="application/json" id="pc-pools">{{ people | tojson }}</script>
 <script type="application/json" id="pc-form-lists">{{ form_lists | tojson }}</script>
-<div class="fb-split" data-process data-unsaved-root>
+<div class="fb-split" data-process data-unsaved-root data-now="{{ now_value }}">
   <div class="fb-main">
     <p class="muted pc-intro">The exercise's timeline, stage by stage. A stage holds the application form, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Dossiers applies them.</p>
     <div class="fb-cards" id="pc-cards">
@@ -253,7 +253,147 @@
       del.disabled = all.length === 1;
       if (all.length === 1) del.title = "The last stage cannot be deleted"; else del.removeAttribute("title");
       card.querySelector(".fc-body").classList.toggle("pc-body-empty", !card.querySelector(".pc-item"));
+      locksOf(card);
     });
+    publishable(all);
+  }
+  // Publish waits on the stage before it (AD1K): that line follows the
+  // page; the rest are the server's checks, as the page was loaded.
+  function publishable(all) {
+    all.forEach(function (card, i) {
+      var box = card.querySelector("[data-pc-status-box]"), prev = box.querySelector("[data-pc-prev]");
+      if (prev) {
+        var before = all[i - 1];
+        prev.hidden = !before || before.dataset.status !== "Draft";
+        if (before) prev.textContent = labelOf(before) + " is not published yet.";
+      }
+      // A published stage's status follows its end, as an extension moves
+      // it (Codex): Published until it passes, then Overdue or Completed.
+      if (card.dataset.status !== "Draft") derive(card);
+      // Its dates, checked as they now stand (cold read): both, in order.
+      var dates = box.querySelector("[data-pc-dates-problem]"), a = field(card, "from"), b = field(card, "to");
+      dates.hidden = !!(a && b && a < b);
+      dates.textContent = !a || !b ? labelOf(card) + " has no start and end." : labelOf(card) + " ends before it starts.";
+      var open = Array.prototype.filter.call(box.querySelectorAll("[data-pc-problems] li"), function (li) { return !li.hidden; }).length;
+      box.querySelector("[data-pc-problems]").hidden = card.dataset.status !== "Draft" || !open;
+      // A revert goes from the last published stage back (cold read), so
+      // no draft is left before a published one.
+      var rv = box.querySelector('[data-pc-st="revert"]');
+      var later = all.slice(i + 1).filter(function (c) { return c.dataset.status !== "Draft"; })[0];
+      rv.disabled = !!later;
+      if (later) rv.title = "Revert " + labelOf(later) + " first: it comes after this stage"; else rv.removeAttribute("title");
+      // A revert panel already open shuts once a later stage is published
+      // again (Codex), so its confirm cannot leave a draft before it.
+      var panel = box.querySelector("[data-pc-revert]");
+      if (later && !panel.hidden) {
+        panel.hidden = true;
+        rv.setAttribute("aria-expanded", "false");
+        box.querySelector('[data-pc-st="confirm"]').disabled = true;
+        box.querySelector("[data-pc-reason]").value = "";
+      }
+      var pub = box.querySelector('[data-pc-st="publish"]');
+      if (pub.hasAttribute("data-pc-new")) return;
+      pub.disabled = open > 0;
+      if (open) pub.title = "Put right what is listed first"; else pub.removeAttribute("title");
+    });
+  }
+  // What a published stage fixes (segment AD1K): its name, start, order,
+  // adding to it and deleting it, and each item's settings; its end and
+  // its items' ends stay editable, to extend it. An opened gate stays
+  // fixed whatever its stage (ruling 29).
+  function locksOf(card) {
+    var why = card.dataset.locked || "";
+    ['[data-pc="name"]', '[data-pc="from"]', "[data-fc-grip]"].forEach(function (sel) {
+      var c = card.querySelector(sel);
+      c.disabled = !!why;
+      if (why) c.title = why; else c.removeAttribute("title");
+    });
+    if (why) {
+      card.querySelectorAll('.pc-adds [data-pc-act], [data-fc-act="delete"]').forEach(function (b) { b.disabled = true; b.title = why; });
+    }
+    // An item's start is fixed with its stage, an opened gate's always;
+    // its end stays editable, to extend it (Decision amended).
+    card.querySelectorAll('.pc-item [data-pc="item-from"]').forEach(function (i) {
+      var lock = i.closest(".pc-item").querySelector("[data-pc-lock]");
+      var r = (lock && lock.dataset.opened) || why;
+      i.disabled = !!r;
+      if (r) i.title = r; else i.removeAttribute("title");
+    });
+    card.querySelectorAll("[data-pc-lock]").forEach(function (f) {
+      var r = f.dataset.opened || why;
+      f.disabled = !!r;
+      if (r) f.title = r; else f.removeAttribute("title");
+    });
+  }
+  // The sample's now (locks.NOW), against which a published stage's end
+  // decides Published, Overdue or Completed.
+  var NOW = root.dataset.now;
+  var STATUS_CHIP = { Draft: "mute", Published: "info", Overdue: "warn", Completed: "ok" };
+  function derive(card) {
+    var end = field(card, "to"), od = card.querySelector("[data-pc-overdue]");
+    var waiting = od ? od.dataset.waiting : "";
+    var status = !end || NOW <= end ? "Published" : waiting ? "Overdue" : "Completed";
+    card.dataset.status = status;
+    var chip = card.querySelector("[data-pc-status]");
+    chip.textContent = status;
+    chip.className = "chip chip-" + STATUS_CHIP[status];
+    if (od) od.hidden = status !== "Overdue";
+  }
+  // A draft never goes before a published stage (AD1K cold read): the
+  // published ones keep their order and their numbers.
+  function lastLive() {
+    var all = cards(), at = -1;
+    all.forEach(function (c, i) { if (c.dataset.status !== "Draft") at = i; });
+    return at;
+  }
+  // Publish and revert, on this page only: nothing is saved until AD2.
+  function setStatus(card, status) {
+    card.dataset.status = status;
+    var chip = card.querySelector("[data-pc-status]");
+    chip.textContent = status;
+    chip.className = "chip chip-" + STATUS_CHIP[status];
+    var draft = status === "Draft", box = card.querySelector("[data-pc-status-box]");
+    if (draft) delete card.dataset.locked;
+    else card.dataset.locked = labelOf(card) + " is published: revert it to draft to change this";
+    box.querySelector("[data-pc-locked-note]").hidden = draft;
+    box.querySelector('[data-pc-st="publish"]').hidden = !draft;
+    var rv = box.querySelector('[data-pc-st="revert"]');
+    rv.hidden = draft;
+    rv.setAttribute("aria-expanded", "false");
+    box.querySelector("[data-pc-revert]").hidden = true;
+    if (draft) box.querySelector("[data-pc-overdue]").hidden = true;
+    guards();
+  }
+  function statusEvent(e) {
+    var b = e.target.closest("[data-pc-st]");
+    if (!b || b.disabled) return false;
+    var card = b.closest(".pc"), box = card.querySelector("[data-pc-status-box]"), what = b.dataset.pcSt;
+    var panel = box.querySelector("[data-pc-revert]"), reason = box.querySelector("[data-pc-reason]");
+    if (what === "publish") {
+      setStatus(card, "Published");
+      live.textContent = labelOf(card) + " published on this page only: nothing is saved until AD2.";
+      box.querySelector('[data-pc-st="revert"]').focus();
+    } else if (what === "revert") {
+      panel.hidden = !panel.hidden;
+      b.setAttribute("aria-expanded", panel.hidden ? "false" : "true");
+      if (!panel.hidden) reason.focus();
+    } else if (what === "cancel") {
+      panel.hidden = true;
+      reason.value = "";
+      box.querySelector('[data-pc-st="confirm"]').disabled = true;
+      var rv = box.querySelector('[data-pc-st="revert"]');
+      rv.setAttribute("aria-expanded", "false");
+      rv.focus();
+    } else if (what === "confirm") {
+      var all = cards();
+      if (all.slice(all.indexOf(card) + 1).some(function (c) { return c.dataset.status !== "Draft"; })) return true;
+      reason.value = "";
+      b.disabled = true;
+      setStatus(card, "Draft");
+      live.textContent = labelOf(card) + " reverted to draft on this page only: nothing is saved or audited until AD2.";
+      box.querySelector('[data-pc-st="publish"]').focus();
+    }
+    return true;
   }
   // An Outline click opens the stage's card and goes to it, or to the
   // item within it, as Form's Outline goes to a question.
@@ -824,6 +964,26 @@
       // One stage holds the form: a copy leaves it behind. Its gates and
       // outcome are new columns, with keys of their own.
       added.querySelectorAll('.pc-item[data-item="form"]').forEach(function (f) { f.remove(); });
+      // A copy is a new stage: a draft, nothing in it opened (AD1K).
+      added.querySelectorAll("[data-pc-lock]").forEach(function (f) { delete f.dataset.opened; });
+      var copyBox = added.querySelector("[data-pc-status-box]");
+      copyBox.querySelectorAll("[data-pc-revert] > p.muted").forEach(function (x) { x.remove(); });
+      var copyOd = copyBox.querySelector("[data-pc-overdue]");
+      copyOd.dataset.waiting = "";
+      copyOd.hidden = true;
+      var copyList = copyBox.querySelector("[data-pc-problems] ul");
+      copyList.textContent = "";
+      var copyDates = document.createElement("li");
+      copyDates.setAttribute("data-pc-dates-problem", "");
+      copyList.appendChild(copyDates);
+      var copyPrev = document.createElement("li");
+      copyPrev.setAttribute("data-pc-prev", "");
+      copyPrev.hidden = true;
+      copyList.appendChild(copyPrev);
+      var pub = copyBox.querySelector('[data-pc-st="publish"]');
+      pub.disabled = true;
+      pub.setAttribute("data-pc-new", "");
+      pub.title = "A new stage is checked for publishing once saved (AD2)";
       var renamed = {};
       added.querySelectorAll(".pc-item[data-key]").forEach(function (item) {
         var k = item.dataset.item[0] + "new" + (++keys);
@@ -880,7 +1040,9 @@
       return;
     }
     if (!added) return;
-    card.after(added);
+    var at = lastLive(), all = cards();
+    (all.indexOf(card) < at ? all[at] : card).after(added);
+    if (added.dataset.status !== "Draft") setStatus(added, "Draft");
     changed();
     added.querySelector('[data-pc="name"]').focus();
   }
@@ -888,7 +1050,7 @@
   var drag = null;
   list.addEventListener("pointerdown", function (e) {
     var grip = e.target.closest("[data-fc-grip]");
-    if (!grip || (e.pointerType === "mouse" && e.button !== 0)) return;
+    if (!grip || grip.disabled || (e.pointerType === "mouse" && e.button !== 0)) return;
     e.preventDefault();
     drag = grip.closest(".pc");
     drag.classList.add("fc-dragging");
@@ -903,8 +1065,12 @@
       return false;
     });
     if (!over) return;
-    var box = over.getBoundingClientRect();
-    if (e.clientY < box.top + box.height / 2) over.before(drag); else over.after(drag);
+    var box = over.getBoundingClientRect(), all = cards();
+    var before = e.clientY < box.top + box.height / 2;
+    // Not above a published stage, nor the last of them (cold read).
+    var to = all.indexOf(over) + (before ? 0 : 1);
+    if (to <= lastLive()) return;
+    if (before) over.before(drag); else over.after(drag);
   });
   function drop() {
     if (!drag) return;
@@ -919,6 +1085,8 @@
     if (!grip || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
     e.preventDefault();
     var card = grip.closest(".pc");
+    var above = card.previousElementSibling;
+    if (e.key === "ArrowUp" && above && above.dataset.status !== "Draft") return;  // published stages keep their place
     if (e.key === "ArrowUp" && card.previousElementSibling) card.previousElementSibling.before(card);
     else if (e.key === "ArrowDown" && card.nextElementSibling) card.nextElementSibling.after(card);
     grip.focus();
@@ -930,8 +1098,13 @@
     if (e.target.matches("input[data-rel]")) { heads(e.target.closest(".pc")); return; }
     ruleEvent(e);
   });
+  // A revert needs its reason (ruling 35).
+  list.addEventListener("input", function (e) {
+    if (!e.target.matches("[data-pc-reason]")) return;
+    e.target.closest("[data-pc-revert]").querySelector('[data-pc-st="confirm"]').disabled = !e.target.value.trim();
+  });
   list.addEventListener("click", function (e) {
-    if (ruleEvent(e) || sourceEvent(e)) return;
+    if (statusEvent(e) || ruleEvent(e) || sourceEvent(e)) return;
     var pt = e.target.closest("[data-pi-toggle]");
     if (pt) { var it = pt.closest(".pc-item"); itemOpen(it, !it.hasAttribute("data-open")); return; }
     var card = e.target.closest(".pc");

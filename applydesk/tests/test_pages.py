@@ -1426,3 +1426,16 @@ def test_a_new_source_is_a_panel_of_one(client: TestClient) -> None:
     assert '<option value="" selected>No panel yet</option>' in tpl
     assert re.findall(r'data-ps="(?:min|max)" value="(\d*)"', tpl) == ["1", "1"]
     assert "disabled title" not in tpl
+
+
+def test_process_names_what_keeps_each_stage_from_publishing(client: TestClient) -> None:
+    """Segment AD1K, AD-20: a draft stage lists its publish problems; a
+    published one its status, Revert, and the lock's reason."""
+    draft = client.get("/applydesk/operator/exercises/c4xh2ndv6s/process").text
+    assert "Before it can be published:" in draft
+    assert "<li>Gate 1 (Placement interview) has no evaluators.</li>" in draft
+    assert "<li data-pc-prev>Stage 1 is not published yet.</li>" in draft
+    model = client.get("/applydesk/operator/exercises/wa9juxbc2t/process").text
+    assert "data-pc-status>Published</span>" in model
+    assert 'data-locked="Interviews is published: revert it to draft to change this"' in model
+    assert "Interviews is published: what it holds is fixed until it is reverted to draft." in model

@@ -118,6 +118,7 @@ Taken 2026-11-18 at `d6c20bdf8`.
   - **Typed dates.** A stage's dates are typed (`stages.StageDates`, `span`), each a date and a time. The pages print them as before through `Stage.dates`. The timeline's text parser is gone, and so is `workflow`'s split. Process's two template splits wait for its date-time inputs at rung 3.
   - **Status.** `Stage.status` is Draft or Published on the sample, and `applydesk/locks.py` derives the rest: Overdue, Completed, the exercise's status, publish problems, each part's lock with its reason, and a revert's warnings.
   - **Rung 2a, item dates** (author, 2026-11-18): `Gate.when`, `Outcome.due_at` and `Stage.form_when`, each defaulting to the stage's through `stages.window`; `stages.date_problems` joins the publish checks.
+  - **Rung 3 split in two**, so each half is checked in a browser alone: 3a the date-time inputs, 3b the status, Publish, Revert and the locks. A published stage's items are fixed by one fieldset each, after their dates; an opened gate's fieldset stays fixed through a revert. Publish lists the server's checks as the page loaded; only the "stage before it" line follows the page.
   - **Kept in `stages.py`.** `_exercise_span` still reads the two exercise fields, until those are typed at AD2.
 
 ## PR ladder

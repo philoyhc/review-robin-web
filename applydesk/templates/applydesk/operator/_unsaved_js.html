@@ -22,6 +22,10 @@
     root.addEventListener("input", function (e) { if (counts(e.target)) changed(); });
     root.addEventListener("change", function (e) { if (counts(e.target)) changed(); });
     root.addEventListener("click", function (e) {
+      // Publishing a stage or confirming its revert (segment AD1K, Codex);
+      // opening or cancelling the revert panel is not a change.
+      var st = e.target.closest("[data-pc-st]");
+      if (st && !st.disabled && (st.dataset.pcSt === "publish" || st.dataset.pcSt === "confirm")) { changed(); return; }
       var a = e.target.closest("[data-fc-act], [data-pc-act], [data-pr-act], [data-ps-act]");
       if (!a || !counts(a)) return;
       var act = a.dataset.fcAct || a.dataset.pcAct || a.dataset.prAct || a.dataset.psAct;
