@@ -3,7 +3,7 @@
    template here, named for its stage, item and audience. Built out in
    AD1L. Each template stands alone, so each card has
    its own Save (ruling 23); the page has none. #}
-<p>Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk (AD7); Review Robin sends none. Ticks made on Process since the page loaded are not shown here until AD2.</p>
+<p>Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk (AD7); Review Robin sends none. This page reads the sample: ticks made on Process are not shown here until AD2.</p>
 {% for e in emails %}
 <section class="card" data-email="{{ e.name }}">
   <h2>{{ e.name }} <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}">{{ "Written" if e.ok else "Owed" }}</span></h2>

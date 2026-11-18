@@ -544,7 +544,7 @@ NOT_SHOWN_TO_REVIEWERS: tuple[str, ...] = (
 # form's own title and description, then its cards in order. A card is
 # a question or text block ("field"), a section's title ("section") or
 # a page break ("pagebreak"). The applicant pages still read the two
-# lists above until AD4 renders a stored form.
+# lists above until AD4 renders a stored form (AD-26).
 # ASCII digits only, as the page's /^\d+$/: str.isdecimal() takes others.
 _DIGITS = re.compile(r"[0-9]+")
 

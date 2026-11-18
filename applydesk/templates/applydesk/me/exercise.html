@@ -3,7 +3,7 @@
 {% block content %}
 <div class="ptitle"><h1>{{ exercise.name }}</h1></div>
 <p class="lede">{{ exercise.summary }}</p>
-{% include "applydesk/_placeholder.html" %}
+{% with read_only = true %}{% include "applydesk/_placeholder.html" %}{% endwith %}
 {# Segment AD1I, rung 5: the operator's Home timeline, as applicants see
    it, beside how to apply. #}
 <div class="hm-grid">

@@ -1,7 +1,7 @@
 {% extends "applydesk/base.html" %}
 {% block content %}
 <div class="ptitle"><h1>User Lobby</h1></div>
-{% include "applydesk/_placeholder.html" %}
+{% with read_only = true %}{% include "applydesk/_placeholder.html" %}{% endwith %}
 <section class="card">
   <h2>My applications</h2>
   {% for a in mine %}

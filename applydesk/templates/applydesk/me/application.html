@@ -3,7 +3,7 @@
 {% block content %}
 <div class="ptitle"><h1>{{ application.title }}</h1>{% with value = application.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</div>
 <p class="lede">{{ exercise.name }}</p>
-{% include "applydesk/_placeholder.html" %}
+{% with read_only = true %}{% include "applydesk/_placeholder.html" %}{% endwith %}
 <div class="section">
   <h3>Shown to reviewers</h3>
   <p class="muted">Assessors read this part.</p>

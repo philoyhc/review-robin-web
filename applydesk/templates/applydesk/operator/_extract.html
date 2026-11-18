@@ -128,13 +128,13 @@
     var p = state(card);
     if (card.dataset.xdCard === "all") p = borrowed(p);
     var q = p.toString();
-    // Zip all with nothing to carry is off (AD-17): its ZIP would hold
-    // only the manifest.
-    var empty = card.dataset.xdCard === "all" && p.get("carries") === "none";
+    // Zip all is off while its ZIP would hold only the manifest (AD-17):
+    // no file but the manifest is listed. Off for the keyboard too.
+    var empty = card.dataset.xdCard === "all" && !card.querySelector("[data-xd-part]:not([hidden])");
     card.querySelectorAll("a[data-xd-dl]").forEach(function (a) {
       a.href = a.href.split("?")[0] + (q ? "?" + q : "");
-      if (empty) { a.setAttribute("aria-disabled", "true"); a.title = "Tick a file to carry first"; }
-      else { a.removeAttribute("aria-disabled"); a.removeAttribute("title"); }
+      if (empty) { a.setAttribute("aria-disabled", "true"); a.tabIndex = -1; a.title = "Tick a file to carry first"; }
+      else { a.removeAttribute("aria-disabled"); a.removeAttribute("tabindex"); a.removeAttribute("title"); }
     });
   }
   grid.querySelectorAll("[data-xd-card]").forEach(function (card) {
@@ -148,6 +148,8 @@
       if (mine.carries) t.setAttribute("aria-pressed", mine.carries.indexOf(t.dataset.xdT) >= 0 ? "true" : "false");
     });
     card.addEventListener("click", function (e) {
+      var off = e.target.closest('a[aria-disabled="true"]');
+      if (off) { e.preventDefault(); return; }
       var b = e.target.closest("[data-xd-v], [data-xd-t]");
       if (!b || b.disabled) return;
       if (b.dataset.xdT !== undefined) {
