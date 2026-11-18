@@ -55,7 +55,7 @@
     <p class="pn-said" data-pn-said aria-live="polite"></p>
     <div class="pn-manage-panel" id="pn-manage" data-pn-manage hidden>
       <section class="card">
-        <h3>Panels</h3>
+        <h2>Panels</h2>
         <ul class="pn-list" data-pn-list>
           {% for p in panels %}
           <li data-panel="{{ p.key }}">
@@ -75,7 +75,7 @@
       {# A new panel, blank or from an existing one's people (author,
          2026-11-14: Copy folded into adding). #}
       <section class="card" aria-labelledby="pn-new-h">
-        <h3 id="pn-new-h">Add new panel</h3>
+        <h2 id="pn-new-h">Add new panel</h2>
         <div class="pn-newgrid">
           <label class="fc-l">Name<input class="fc-in" data-pn-newname placeholder="e.g. Panel C"></label>
           <label class="fc-l">People<select class="fc-in" data-pn-from>
@@ -95,7 +95,7 @@
         <div class="btnrow"><button type="button" class="btn btn-secondary" data-pn-act="create">Add panel</button></div>
       </section>
       <section class="card">
-        <h3>Upload</h3>
+        <h2>Upload</h2>
         <p class="muted pn-csv-note">A CSV has <code>Name</code>, <code>Email</code> and <code>Note</code>, and a column per panel by its name, marked for each member. People not found in the directory are left out and named.</p>
         <div class="btnrow">
           <label class="btn btn-secondary pn-file">Import CSV<input type="file" accept=".csv,text/csv" data-pn-import class="visually-hidden"></label>

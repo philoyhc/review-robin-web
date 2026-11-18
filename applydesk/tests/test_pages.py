@@ -626,7 +626,9 @@ def test_a_gate_s_page_shows_200_rows_at_a_time(client: TestClient) -> None:
     assert f'href="{base}?offset=200#ev-table-card" aria-label="Next page"' in first
     assert 'is-inactive" aria-disabled="true" aria-label="Previous page"' in first
     ranges = re.findall(r"<li>(?:<a [^>]*>|<span [^>]*>)([^<]+)<", first)
-    assert len(ranges) == 15 and ranges[0] == "1–200" and ranges[-1] == "2,801–2,980"
+    # The pager again below the table (AD-108): the same 15 ranges twice.
+    assert len(ranges) == 30 and ranges[:15] == ranges[15:]
+    assert ranges[0] == "1–200" and ranges[14] == "2,801–2,980"
     last = client.get(f"{base}?offset=99999").text
     assert last.count("data-ev-row=") == 180 and "2,801–2,980 of 2,980" in last
     assert "201–400 of 2,980" in client.get(f"{base}?offset=250").text  # snapped to its page

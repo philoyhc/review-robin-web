@@ -49,7 +49,7 @@
     :root[data-theme="dark"] {
       color-scheme: dark;
       --surface-page: #0f141b; --surface-card: #1a212e; --surface-muted: #232c3b;
-      --text-body: #e6eaf2; --text-subtle: #a9b4c6; --text-strong-subtle: #a9b4c6;
+      --text-body: #e6eaf2; --text-subtle: #a9b4c6; --text-strong-subtle: #c7d0de;
       --text-link: #60a5fa; --border-subtle: #2b3547; --border-default: #6f7b8e;
       --on-accent: #111827; --danger: #fca5a5; --amber: #fcd34d;
       --accent: #fb7185; --accent-tint: #4c0519; --accent-chip-fg: #fda4af;
@@ -264,6 +264,9 @@
     /* The exercise chrome (ruling 14, segment AD1D), after Review
        Robin's: Exercise Home spans both rows; each row's tabs share its
        width; the page showing is white with its row's underline. */
+    /* Keyboard focus shows on every control, inside clipping boxes too (AD-99). */
+    .xnav-tab:focus-visible, .xnav-home:focus-visible, .seg button:focus-visible, .tl-switch button:focus-visible,
+    .theme-toggle button:focus-visible, .pn-show:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
     .crumbs { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0 10px; margin-bottom: 25px; border-bottom: 1px solid var(--border-subtle); font-size: 15px; }
     .crumbs a { color: var(--text-link); text-decoration: none; }
     .crumbs [aria-current] { font-weight: 600; }
@@ -289,7 +292,7 @@
     .xproc th:last-child { width: 22%; }
     .xnav-status { margin: 0; padding: 10px 16px; border-top: 1px solid var(--border-subtle); font-size: 14px; color: var(--text-subtle); }
     .xnav-status .chip { margin: 2px 2px; }
-    @media (max-width: 720px) {
+    @media (max-width: 639px) {
       .xnav-grid { grid-template-columns: 1fr; }
       .xnav-home, .xnav-label, .xnav-row { grid-column: 1; grid-row: auto; }
       .xnav-home { border-right: 0; border-bottom: 1px solid var(--border-subtle); min-height: 44px; }
@@ -694,7 +697,7 @@
     /* A gate's or an outcome's main sections, each under a rule. */
     .pi-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
     .pi-sec > .fc-l:first-child, .pi-sec.pc-row > .fc-l { margin-top: 0; }
-    @media (max-width: 640px) { .ps-row { grid-template-columns: 24px 1fr 1fr; } .ps-headrow { display: none; } .ps-cap { display: block; } }
+    @media (max-width: 639px) { .ps-row { grid-template-columns: 24px 1fr 1fr; } .ps-headrow { display: none; } .ps-cap { display: block; } }
     /* Evaluations' assignments (ruling 27, segment AD1G): a card per gate,
        collapsed to its head; each evaluator a pill marked by its source. */
     .ev-h { margin: 24px 0 8px; }
@@ -704,11 +707,13 @@
     .ev-load { margin: 8px 0 0; }
     .ev-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
     .ev-open { margin-left: auto; }
-    .ev-back { margin: 0 0 8px; font-size: 14px; }
+    .ev-h { font-size: 17px; }
     .ev-find { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 12px 0; }
     .ev-find .fc-l { flex: 1 1 260px; margin: 0; }
     .ev-pager { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .ev-pager[data-ev-pager-foot] { margin: 8px 0 0; }
     .ev-pager > .muted { margin-right: auto; }
+    .ev-pager .btn-icon { flex: 0 0 auto; }
     .ev-step { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-link); text-decoration: none; }
     .ev-step.is-inactive { color: var(--text-subtle); }
     .ev-ranges { position: relative; }

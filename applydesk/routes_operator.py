@@ -118,6 +118,7 @@ def gate_evaluations(
         request,
         "applydesk/operator/gate_evaluations.html",
         area=OPERATOR_LOBBY,
+        crumb_child=f"Gate {found.number} · {found.label or 'Untitled gate'}",
         nav=exercise_nav(exercise.public_id, "evaluations"),
         status=workflow.status_row(exercise),
         exercise=exercise,

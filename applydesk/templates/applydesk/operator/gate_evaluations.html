@@ -13,11 +13,12 @@
 {% set off %}{% if sent %} disabled title="Its session has opened: its pairs are Review Robin's to change"{% else %} disabled data-ev-wait{% endif %}{% endset %}
 {% block title %}Gate {{ gate.number }} · {{ gate.label or "Untitled gate" }} · {{ exercise.name }}{% endblock %}
 {% block content %}
-<p class="ev-back"><a href="{{ url(base) }}">← Evaluations</a></p>
+{# The breadcrumb names this gate under Evaluations (AD-100). #}
 <div class="ptitle"><h1><span class="muted">Gate {{ gate.number }}</span> {{ gate.label or "Untitled gate" }}</h1>
   <span class="ev-head"><span class="chip chip-mute" data-ev-mode>{{ mode_label }}</span> <span class="muted" data-ev-counts>{{ assignment_counts(all_rows) }}</span></span></div>
 <p class="placeholder"><strong>Placeholder.</strong> Sample data: what you do here works on screen and is kept in this tab across its pages, but nothing is saved until AD2.</p>
-<section class="card" id="ev-table-card" data-ev-gate="{{ gate.key }}" data-mode="{{ gate.mode }}">
+<section class="card" id="ev-table-card" data-ev-gate="{{ gate.key }}" data-mode="{{ gate.mode }}" aria-labelledby="ev-pairs-h">
+  <h2 id="ev-pairs-h">Pairs</h2>
   {% for panel, members in spread %}<p class="muted ev-load" data-ev-load>{{ panel }}: {% for name, n in members %}{{ name }} {{ n }}{{ " · " if not loop.last }}{% endfor %}</p>{% endfor %}
   {% if not all_rows %}
   <p class="muted">No dossiers entered at this gate yet.</p>
@@ -52,6 +53,7 @@
   {# The query a link keeps: the filter and the sort (the page's own). #}
   {% set qs = (('q=' ~ (q | urlencode) ~ '&') if q else '') ~ (('sort=' ~ (order_text | urlencode) ~ '&') if order_text else '') %}
   {% set qf = ('q=' ~ (q | urlencode) ~ '&') if q else '' %}
+  {% set pager %}
   <div class="ev-pager" data-ev-pager>
     <span class="muted" data-ev-showing>{% if matched %}{{ "{:,}".format(where.offset + 1) }}–{{ "{:,}".format(where.end) }} of {{ "{:,}".format(matched) }}{% else %}None of {{ "{:,}".format(all_pairs | length) }}{% endif %}{% if q %} matching “{{ q }}”{% endif %}</span>
     {% if where.total > where.size %}
@@ -63,6 +65,8 @@
     {{ step("›", "Next page", where.following) }}{{ step("»", "Last page", where.last if where.offset != where.last else none) }}
     {% endif %}
   </div>
+  {% endset %}
+  {{ pager }}
   <div class="table-wrap">
   <table class="ev-table">
     {# Sorted as Review Robin's tables: a click on a column's ↕ sorts by
@@ -87,6 +91,8 @@
     </tbody>
   </table>
   </div>
+  {# The pager again below a long table (AD-108). #}
+  {% if where.total > where.size %}{{ pager | replace('data-ev-pager', 'data-ev-pager-foot') | replace(' data-ev-showing', '') }}{% endif %}
   {% endif %}
 </section>
 {% if ev_data %}<script type="application/json" id="ev-data">{{ ev_data | tojson }}</script>
