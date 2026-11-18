@@ -125,7 +125,7 @@ def test_required_and_visibility_toggle(page: Page) -> None:
     assert required.get_attribute("aria-pressed") == "false"
     assert card.locator('[data-sum="required"]').text_content() == "Optional"
     card.locator('[data-f="shown"][data-v="true"]').click()
-    assert card.locator('[data-sum="shown"]').text_content() == "Shown to reviewers"
+    assert card.locator('[data-sum="shown"]').text_content() == "Shown to evaluators"
     assert "Matriculation number" in page.locator("[data-fb-outline]").inner_text()
 
 
@@ -354,7 +354,7 @@ def _the_applicant_form(body: Locator) -> None:
     assert months.get_attribute("type") == "number" and months.get_attribute("max") == "6"
     assert body.get_by_role("radio", name="Engineering").count() == 1
     assert body.locator(".fb-pv-frame").count() == 1
-    assert "Reviewers see your answer." in body.inner_text()
+    assert "Evaluators see your answer." in body.inner_text()
 
 
 def test_preview_opens_a_tab_with_the_form_as_it_stands(page: Page) -> None:
@@ -488,7 +488,7 @@ def _people_box(page: Page, label: str) -> Locator:
 
 def test_select_people_turns_names_into_pills(page: Page) -> None:
     page.goto(FORM)
-    card = _card(page, "Preferred reviewer")
+    card = _card(page, "Preferred evaluator")
     card.locator("[data-fc-toggle]").click()
     # Open the question to anyone in the institution, up to three.
     card.locator('[data-f="max"][data-g="people"]').fill("3")
@@ -499,7 +499,7 @@ def test_select_people_turns_names_into_pills(page: Page) -> None:
     )
     page.locator("[data-fb-preview]").click()
     preview = page.locator("#fb-preview")
-    box = preview.get_by_role("textbox", name="Preferred reviewer")
+    box = preview.get_by_role("textbox", name="Preferred evaluator")
     box.press_sequentially("Daniel Koh, PRIYA.RAMAN@example.edu, Nobody Here,")
     tokens = preview.locator(".token")
     assert [t.split("×")[0].strip() for t in tokens.all_inner_texts()] == [
@@ -519,19 +519,19 @@ def test_select_people_turns_names_into_pills(page: Page) -> None:
 
 
 def test_select_people_keeps_to_its_pool(page: Page) -> None:
-    box = _people_box(page, "Preferred reviewer")
+    box = _people_box(page, "Preferred evaluator")
     preview = page.locator("#fb-preview")
-    assert "Choose 1 person from Reviewer pool." in preview.inner_text()
+    assert "Choose 1 person from Evaluator pool." in preview.inner_text()
     box.press_sequentially("Daniel Koh,")
     assert preview.locator(".token").count() == 0
-    assert "Not found in Reviewer pool: Daniel Koh." in preview.inner_text()
+    assert "Not found in Evaluator pool: Daniel Koh." in preview.inner_text()
     box.fill("")
     box.press_sequentially("Dr Omar Aziz,")
     assert preview.locator(".token").count() == 1 and not box.is_visible()
 
 
 def test_select_people_drops_names_past_the_most_and_says_so(page: Page) -> None:
-    box = _people_box(page, "Preferred reviewer")
+    box = _people_box(page, "Preferred evaluator")
     preview = page.locator("#fb-preview")
     box.focus()
     box.fill("Dr Omar Aziz, Dr Hana Ito,")  # pasted at once
@@ -544,18 +544,18 @@ def test_select_people_drops_names_past_the_most_and_says_so(page: Page) -> None
         "Remove Dr Omar Aziz"
     )
     # The group keeps the question's name once the box is full.
-    group = preview.get_by_role("group", name="Preferred reviewer")
+    group = preview.get_by_role("group", name="Preferred evaluator")
     assert group.count() == 1
 
 
 def test_select_people_says_already_chosen(page: Page) -> None:
     page.goto(FORM)
-    card = _card(page, "Preferred reviewer")
+    card = _card(page, "Preferred evaluator")
     card.locator("[data-fc-toggle]").click()
     card.locator('[data-f="max"][data-g="people"]').fill("")
     page.locator("[data-fb-preview]").click()
     preview = page.locator("#fb-preview")
-    box = preview.get_by_role("textbox", name="Preferred reviewer")
+    box = preview.get_by_role("textbox", name="Preferred evaluator")
     box.press_sequentially("Dr Ruth Kahn, ruth.kahn@example.edu,")
     assert preview.locator(".token").count() == 1
     assert "Already chosen: Dr Ruth Kahn." in preview.inner_text()
@@ -564,7 +564,7 @@ def test_select_people_says_already_chosen(page: Page) -> None:
 def test_a_full_box_keeps_no_unfound_text(page: Page) -> None:
     # Codex: an unfound name before the one that fills the box was left
     # in the hidden input.
-    box = _people_box(page, "Preferred reviewer")
+    box = _people_box(page, "Preferred evaluator")
     preview = page.locator("#fb-preview")
     box.focus()
     box.fill("Nobody Here, Dr Omar Aziz,")
@@ -600,7 +600,7 @@ def test_a_card_s_buttons_sit_flush_right_in_order(page: Page) -> None:
 # --- Segment AD1F rung 2: + New panel on a Select people card (ruling 19) ---
 def _new_panel(page: Page) -> tuple[Locator, Locator]:
     page.goto(FORM)
-    card = _card(page, "Preferred reviewer")
+    card = _card(page, "Preferred evaluator")
     card.locator("[data-fc-toggle]").click()
     card.locator('[data-f="pool"]').select_option("__new")
     return card, card.locator("[data-newpanel]")
@@ -611,7 +611,7 @@ def test_new_panel_opens_its_box_and_keeps_the_choice(page: Page) -> None:
     assert box.is_visible()
     assert card.locator('[data-f="pool"]').input_value() == "pool"
     summary = card.locator('[data-sum="type"]').text_content()
-    assert summary == "Select people · exactly 1 person · Reviewer pool"
+    assert summary == "Select people · exactly 1 person · Evaluator pool"
     box.get_by_role("button", name="Cancel").click()
     assert not box.is_visible()
     assert card.locator('[data-f="pool"]').input_value() == "pool"
@@ -679,7 +679,7 @@ def test_new_panel_is_made_chosen_and_offered_everywhere(page: Page) -> None:
     page.locator("[data-fb-preview]").click()
     preview = page.locator("#fb-preview")
     assert "Choose 1 person from Panel C." in preview.inner_text()
-    box = preview.get_by_role("textbox", name="Preferred reviewer")
+    box = preview.get_by_role("textbox", name="Preferred evaluator")
     box.press_sequentially("Daniel Koh,")
     assert preview.locator(".token").count() == 1
     # And the snapshot hands it to the preview tab.
@@ -714,7 +714,7 @@ def test_new_panel_goes_back_to_what_the_menu_shows(page: Page) -> None:
 
 def test_new_panel_by_keyboard_keeps_focus_on_the_menu(page: Page) -> None:
     page.goto(FORM)
-    card = _card(page, "Preferred reviewer")
+    card = _card(page, "Preferred evaluator")
     card.locator("[data-fc-toggle]").click()
     menu = card.locator('[data-f="pool"]')
     menu.focus()

@@ -51,10 +51,10 @@ _G1 = Gate(
     "panel-a",
     # Ruling 27's shape (segment AD1G): the candidate's preferred reviewer
     # first, Panel A topping up to two.
-    (Source("nominated", "Preferred reviewer", 0, 1), Source("panel", "panel-a", 1, 2)),
+    (Source("nominated", "Preferred evaluator", 0, 1), Source("panel", "panel-a", 1, 2)),
     Total(2, 2),
     description=(
-        "Two reviewers read each dossier's Shown to reviewers part and rate it,"
+        "Two evaluators read each dossier's Shown to evaluators part and rate it,"
         " one the applicant's preferred reviewer where they named one."
     ),
     fields=(

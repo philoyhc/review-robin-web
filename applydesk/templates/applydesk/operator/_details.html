@@ -24,7 +24,7 @@
     <p class="muted dt-note">Invitation only hides the exercise from everyone not on its list, direct links included.</p>
     <p class="dt-sec">Review</p>
     <p class="dt-val">Blind review: <strong data-dt-show="blind">{{ "On" if exercise.blind else "Off" }}</strong></p>
-    <p class="muted dt-note">On, assessors' dossiers redact the applicant's name and identifiers, and Review Robin receives an alias key in place of each application ID.</p>
+    <p class="muted dt-note">On, evaluators' dossiers redact the applicant's name and identifiers, and Review Robin receives each Dossier ID in place of its application ID (ruling 43).</p>
   </div>
   <form class="dt-form" data-dt-form hidden novalidate autocomplete="off">
     <label class="fc-l">Name <span class="dt-why">· the exercise's, everywhere</span><input class="fc-in" data-dt="name" value="{{ exercise.name }}" required></label>

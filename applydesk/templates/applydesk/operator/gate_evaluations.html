@@ -36,7 +36,7 @@
   {# + Pair: a dossier and an evaluator from its panel sources, within
      the Total's max; never the candidate themself. #}
   <div class="ev-add" id="ev-add" data-ev-add hidden>
-    <label class="fc-l">{{ "Dossier" if exercise.blind else "Candidate" }}<select class="fc-in" data-ev-add-who></select></label>
+    <label class="fc-l">{{ "Dossier" if exercise.blind else "Applicant" }}<select class="fc-in" data-ev-add-who></select></label>
     <label class="fc-l">Evaluator<select class="fc-in" data-ev-add-evaluator></select></label>
     <button type="button" class="btn btn-primary" data-ev-act="add-pair">Add the pair</button>
     <button type="button" class="btn btn-secondary" data-ev-act="add-cancel">Cancel</button>
@@ -45,7 +45,7 @@
   {% endif %}
   {% set order_text = sort_text(order) %}
   <form class="ev-find" method="get" action="{{ url(here) }}" role="search">
-    <label class="fc-l">Find a candidate or an evaluator<input class="fc-in" type="search" name="q" value="{{ q }}" data-ev-find></label>
+    <label class="fc-l">Find an applicant or an evaluator<input class="fc-in" type="search" name="q" value="{{ q }}" data-ev-find></label>
     {% if order_text %}<input type="hidden" name="sort" value="{{ order_text }}">{% endif %}
     <button class="btn btn-secondary" type="submit">Find</button>
     {% if q %}<a class="btn btn-secondary" href="{{ url(here ~ (('?sort=' ~ (order_text | urlencode)) if order_text else '')) }}">Clear</a>{% endif %}
@@ -77,7 +77,7 @@
        a new order starts at the first page. #}
     {% macro sorter(key, label) %}{% set p = sort_text(plain_click(order, key)) %}{% set s = sort_text(shift_click(order, key)) %}<th class="ev-sortable" data-sort-key="{{ key }}"{% if order and order[0][0] == key %} aria-sort="{{ 'descending' if order[0][1] else 'ascending' }}"{% endif %}>{{ label }}<a class="ev-sort-btn" href="{{ url(sorted_to(p)) }}#ev-table-card" data-shift-href="{{ url(sorted_to(s)) }}#ev-table-card" aria-label="Sort by {{ label }}"><span class="ev-sort-badge" aria-hidden="true">{{ sort_badge(order, key) }}</span></a></th>{% endmacro %}
     {% macro sorted_to(text) %}{% set tail = (qf ~ (('sort=' ~ (text | urlencode)) if text else '')).rstrip('&') %}{{ here ~ (('?' ~ tail) if tail else '') }}{% endmacro %}
-    <thead><tr>{{ sorter("candidate", "Dossier" if exercise.blind else "Candidate") }}{{ sorter("evaluator", "Evaluator") }}{{ sorter("source", "Source") }}{{ sorter("state", "State") }}{% if gate.mode != "automatic" %}<th></th>{% endif %}</tr></thead>
+    <thead><tr>{{ sorter("candidate", "Dossier" if exercise.blind else "Applicant") }}{{ sorter("evaluator", "Evaluator") }}{{ sorter("source", "Source") }}{{ sorter("state", "State") }}{% if gate.mode != "automatic" %}<th></th>{% endif %}</tr></thead>
     <tbody>
     {% for p in rows %}
       {% set a = p.of %}

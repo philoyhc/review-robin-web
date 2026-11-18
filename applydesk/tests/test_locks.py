@@ -281,7 +281,7 @@ def test_a_release_waits_on_its_owed_emails() -> None:
     assert lock.fixed
     assert lock.reason == (
         "Write its emails on Emails first: Interviews: Outcome · Applicants;"
-        " Interviews: Outcome · Panel evaluators"
+        " Interviews: Outcome · Evaluators"
     )
 
 

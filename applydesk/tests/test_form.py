@@ -69,7 +69,7 @@ def test_every_card_has_its_own_visibility(client: TestClient) -> None:
     assert text.count('aria-label="Who sees it"') == len(fields)
     shown = sum(c.shown for c in fields)
     assert (
-        text.count('<span class="chip chip-info" data-sum="shown">Shown to reviewers</span>')
+        text.count('<span class="chip chip-info" data-sum="shown">Shown to evaluators</span>')
         == shown
     )
 
@@ -115,7 +115,7 @@ SUMMARY_CASES: list[tuple[FormCard, str]] = [
     ),
     (
         FormCard("field", "people", min="1", max="1", pool="pool"),
-        "Select people · exactly 1 person · Reviewer pool",
+        "Select people · exactly 1 person · Evaluator pool",
     ),
     (
         FormCard("field", "people", min="2", pool="interviewers"),
@@ -151,7 +151,7 @@ def test_a_photo_is_kept_600_px_on_its_longer_side() -> None:
 
 def test_a_people_card_offers_the_exercise_s_pools(client: TestClient) -> None:
     text = client.get(FORM).text
-    for label in ("Institution-wide", "Panel A", "Panel B", "Reviewer pool", "Interviewers"):
+    for label in ("Institution-wide", "Panel A", "Panel B", "Evaluator pool", "Interviewers"):
         assert f">{label}</option>" in text
     pools = sample_data.people_pools(EX)
     assert list(pools) == ["institution", "panel-a", "panel-b", "pool", "interviewers"]
@@ -159,7 +159,7 @@ def test_a_people_card_offers_the_exercise_s_pools(client: TestClient) -> None:
         "Institution-wide",
         "Panel A",
         "Panel B",
-        "Reviewer pool",
+        "Evaluator pool",
         "Interviewers",
     ]
     assert ("Daniel Koh", "daniel.koh@example.edu") in pools["institution"]["members"]

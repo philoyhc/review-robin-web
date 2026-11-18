@@ -473,7 +473,7 @@ PANELS: tuple[Panel, ...] = (
     Panel(
         "r6tm4kq9wz",
         "pool",
-        "Reviewer pool",
+        "Evaluator pool",
         (
             Member("Dr Hana Ito", "hana.ito@example.edu", "Life Sciences"),
             Member("Dr Omar Aziz", "omar.aziz@example.edu", "Engineering"),
@@ -545,7 +545,7 @@ class FormCard:
     ratio_h: str = "5"
     pool: str = "institution"  # Select people: "institution" or a Panel key
     required: bool = False
-    shown: bool = False  # shown to reviewers; a new card is not
+    shown: bool = False  # shown to evaluators; a new card is not
 
 
 SAMPLE_FORM: tuple[FormCard, ...] = (
@@ -554,7 +554,7 @@ SAMPLE_FORM: tuple[FormCard, ...] = (
         "field",
         "text",
         "Your proposed project",
-        help=("Tell us what you will work on and how. Assessors read the questions marked shown."),
+        help=("Tell us what you will work on and how. Evaluators read the questions marked shown."),
         shown=True,
     ),
     FormCard("field", "string", "Project title", min="1", max="120", required=True, shown=True),
@@ -600,7 +600,7 @@ SAMPLE_FORM: tuple[FormCard, ...] = (
     FormCard(
         "field",
         "people",
-        "Preferred reviewer",
+        "Preferred evaluator",
         help="If you have a preference.",
         min="1",
         max="1",
@@ -631,7 +631,8 @@ _RA_FORM: tuple[FormCard, ...] = (
         "text",
         "Applying to be a Residential Assistant",
         help=(
-            "Your name and email come from your sign-in. Reviewers read the questions marked shown."
+            "Your name and email come from your sign-in."
+            " Evaluators read the questions marked shown."
         ),
         shown=True,
     ),

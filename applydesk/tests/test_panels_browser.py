@@ -100,19 +100,19 @@ def test_ticks_rows_and_their_checks(page: Page) -> None:
     assert not page.locator("[data-pn-issues]").is_visible()
     assert people.inner_text() == "9"
     # Removing the last member of a panel in use is named: the form's
-    # *Preferred reviewer* reads the pool.
+    # *Preferred evaluator* reads the pool.
     for email in ("hana.ito@example.edu", "omar.aziz@example.edu", "ruth.kahn@example.edu"):
         row = _row(page, email)
         row.locator("[data-pn-select]").check()
         row.locator('[data-pn-act="remove"]').click()
     issues = page.locator("[data-pn-issues]").inner_text()
-    assert "Reviewer pool is in use with nobody on it." in issues
+    assert "Evaluator pool is in use with nobody on it." in issues
 
 
 def test_panels_are_made_copied_and_retired_only_unused(page: Page) -> None:
     page.goto(PANELS)
     _manage(page)
-    # A panel in use may not be retired (the form's *Preferred reviewer*
+    # A panel in use may not be retired (the form's *Preferred evaluator*
     # reads the pool); one nothing uses may.
     assert page.locator('li[data-panel="pool"] [data-pn-act="retire"]').is_disabled()
     assert page.locator('li[data-panel="panel-a"] [data-pn-act="retire"]').is_enabled()
@@ -242,7 +242,7 @@ def test_a_csv_goes_out_and_comes_in(page: Page) -> None:
     page.goto(PANELS)
     csv = page.evaluate("window.applydeskPanelsCsv()")
     lines = csv.split("\r\n")
-    assert lines[0] == "Name,Email,Note,Panel A,Panel B,Reviewer pool,Interviewers"
+    assert lines[0] == "Name,Email,Note,Panel A,Panel B,Evaluator pool,Interviewers"
     assert lines[1] == "Zoe Tan,zoe.tan@example.edu,,x,,,"
     assert lines[4] == "Dr Hana Ito,hana.ito@example.edu,Life Sciences,,,x,"
     page.evaluate(
@@ -268,7 +268,9 @@ def test_a_csv_goes_out_and_comes_in(page: Page) -> None:
 
 def test_form_and_process_link_to_the_chosen_panel(page: Page) -> None:
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/r6tm4kq9wz/form")
-    card = page.locator(".fc", has=page.locator('[data-sum="label"]:text-is("Preferred reviewer")'))
+    card = page.locator(
+        ".fc", has=page.locator('[data-sum="label"]:text-is("Preferred evaluator")')
+    )
     card.locator("[data-fc-toggle]").click()
     link = card.locator("[data-pick-edit]")
     assert link.is_visible() and link.inner_text() == "Edit on Panels →"
@@ -286,7 +288,9 @@ def test_form_and_process_link_to_the_chosen_panel(page: Page) -> None:
 # --- 4d-4e cold read ---
 def test_a_form_type_change_hides_the_edit_link(page: Page) -> None:
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/r6tm4kq9wz/form")
-    card = page.locator(".fc", has=page.locator('[data-sum="label"]:text-is("Preferred reviewer")'))
+    card = page.locator(
+        ".fc", has=page.locator('[data-sum="label"]:text-is("Preferred evaluator")')
+    )
     card.locator("[data-fc-toggle]").click()
     link = card.locator("[data-pick-edit]")
     assert link.is_visible()
@@ -348,7 +352,9 @@ def test_a_panel_may_not_take_a_csv_column_s_name(page: Page) -> None:
     assert err == "email names a CSV column: choose another name."
     # Nor may one made in place, on Form.
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/r6tm4kq9wz/form")
-    card = page.locator(".fc", has=page.locator('[data-sum="label"]:text-is("Preferred reviewer")'))
+    card = page.locator(
+        ".fc", has=page.locator('[data-sum="label"]:text-is("Preferred evaluator")')
+    )
     card.locator("[data-fc-toggle]").click()
     card.locator('[data-f="pool"]').select_option("__new")
     box = card.locator("[data-newpanel]")

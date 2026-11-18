@@ -15,7 +15,7 @@
   {% endfor %}
 </section>
 <section class="card">
-  <h2>Applications I am asked to review</h2>
+  <h2>Dossiers I am asked to evaluate</h2>
   <p class="muted">Usually opened from Review Robin's <strong>View</strong> link.</p>
   {% for e, a in dossiers %}
     <p><a href="{{ url('/me/exercises/' ~ e.public_id ~ '/dossiers/' ~ a.dossier_id) }}">{{ "An application" if e.blind else a.title }}</a> <span class="muted">· {{ e.name }}</span></p>

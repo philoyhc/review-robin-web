@@ -134,10 +134,10 @@ def test_a_select_people_answer_is_exported(client: TestClient) -> None:
     rows = _rows(
         client.get(f"/applydesk/operator/exercises/{tea}/extract/applications.csv").content
     )
-    col = rows[0].index("Preferred reviewer")
+    col = rows[0].index("Preferred evaluator")
     margaret = next(r for r in rows[1:] if r[2] == "Margaret Liu")
     app = next(a for a in sample_data.applications_of(tea) if a.applicant == "Margaret Liu")
-    assert margaret[col] == "; ".join(sample_data.nominees(tea, app, "Preferred reviewer")) != ""
+    assert margaret[col] == "; ".join(sample_data.nominees(tea, app, "Preferred evaluator")) != ""
 
 
 def test_the_alias_key_joins_dossier_to_applicant(client: TestClient) -> None:
