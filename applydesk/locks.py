@@ -132,7 +132,8 @@ def _published(e: Exercise, st: stages.Stage) -> Lock:
 
 
 def stage_lock(e: Exercise, st: stages.Stage) -> Lock:
-    """A stage's start, name and deletion; its end is ``end_lock``'s."""
+    """A stage's start, name, whether applicants see it, its order and
+    deletion (author, 2026-11-18); its end is ``end_lock``'s."""
     return _published(e, st)
 
 
@@ -216,3 +217,28 @@ def revert_warnings(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
             stays = "application stays" if n == 1 else "applications stay"
             out.append(f"{n:,} submitted {stays} submitted.")
     return tuple(out)
+
+
+def stage_rows(
+    exercise: Exercise,
+) -> list[tuple[stages.Stage, str, tuple[str, ...], tuple[str, ...]]]:
+    """Each stage for Home's Publish card and timeline (segment AD1K): it,
+    its status, what keeps a draft from publishing, what an overdue one
+    still waits on."""
+    plan = stages.plan_of(exercise.public_id).stages
+    # The first stage's setup is listed with links to where each is set
+    # (``missing``); its problems leave out what that list says.
+    linked = {f"{label} is not set." for label, _ in sample_data.setup_missing(exercise)}
+    if any(label == "Dates" for label, _ in sample_data.setup_missing(exercise)) and plan:
+        linked.add(f"{plan[0].label} has no start and end.")
+    if any(label == "Application form" for label, _ in sample_data.setup_missing(exercise)):
+        linked.add("The application form has no questions.")
+    rows: list[tuple[stages.Stage, str, tuple[str, ...], tuple[str, ...]]] = []
+    for i, st in enumerate(plan):
+        status = stage_status(exercise, st)
+        problems = publish_problems(exercise, st) if status == "Draft" else ()
+        if i == 0:
+            problems = tuple(p for p in problems if p not in linked)
+        waiting = outstanding(exercise, st) if status == "Overdue" else ()
+        rows.append((st, status, problems, waiting))
+    return rows

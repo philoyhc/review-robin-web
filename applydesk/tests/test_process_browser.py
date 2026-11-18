@@ -1533,6 +1533,7 @@ def test_a_published_stage_says_its_status_and_fixes_what_it_holds(page: Page) -
         "Interviews is published: revert it to draft to change this"
     )
     assert interviews.locator('[data-pc="from"]').is_disabled()
+    assert interviews.locator('[data-pc="shown"]').is_disabled()  # author, 2026-11-18
     assert interviews.locator('[data-pc="to"]').is_enabled()
     assert interviews.locator('[data-fc-act="delete"]').is_disabled()
     assert interviews.locator('.pc-adds [data-pc-act="gate"]').is_disabled()

@@ -28,6 +28,7 @@ def exercises(request: Request) -> Response:
         "applydesk/operator/exercises.html",
         area=OPERATOR_LOBBY,
         exercises=sample_data.EXERCISES,
+        exercise_status=locks.exercise_status,
         applications=sample_data.applications_of,
         current_stage=workflow.current_stage,
     )
@@ -53,6 +54,8 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         timezones=sample_data.TIMEZONES,
         default_contact=sample_data.DEFAULT_HELP_CONTACT,
         blind_lock=locks.blind_lock(exercise),
+        stage_rows=locks.stage_rows(exercise),
+        STATUS_CHIP=locks.STATUS_CHIP,
         # Every other exercise's code and name, so Details refuses a
         # clashing code on the page (segment AD1I Semantics).
         other_codes=[

@@ -396,7 +396,7 @@
       <label class="fc-l pc-wide">Stage name<input class="fc-in" data-pc="name" value="{{ st.name }}" placeholder="Stage {{ st.number }}"></label>
       <label class="fc-l">Starts<input class="fc-in" type="datetime-local" data-pc="from" value="{{ local_value(st.when.start if st.when else none) }}"></label>
       <label class="fc-l">Ends<input class="fc-in" type="datetime-local" data-pc="to" value="{{ local_value(st.when.end if st.when else none) }}"></label>
-      <label class="pc-check"><input type="checkbox" checked> Shown to applicants</label>
+      <label class="pc-check"><input type="checkbox" data-pc="shown" checked> Shown to applicants</label>
     </div>
     {# An item alone in its stage opens; with others, each shows its head. #}
     {% set lone = ((1 if st.form else 0) + st.columns | length) == 1 %}
