@@ -132,7 +132,8 @@ def _published(e: Exercise, st: stages.Stage) -> Lock:
 
 
 def stage_lock(e: Exercise, st: stages.Stage) -> Lock:
-    """A stage's start, name and deletion; its end is ``end_lock``'s."""
+    """A stage's start, name, whether applicants see it, its order and
+    deletion (author, 2026-11-18); its end is ``end_lock``'s."""
     return _published(e, st)
 
 

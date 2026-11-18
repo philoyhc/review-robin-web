@@ -74,6 +74,8 @@ Rejected:
 
   Publishing refuses an item outside its stage, or the wrong way round. The stage still completes at its own end (Semantics).
 
+- **A published stage fixes its name and *Shown to applicants* too** (author, 2026-11-18, on the item read): only ends stay editable, one rule to say; applicants see both; a fix is a revert and a publish, audited at AD2.
+
   This makes AD-56's typed dates part of this segment: a stage's start and end are typed date-times, not free text. Process's date fields become date-time inputs, and the three parsers go.
 
 ## Semantics

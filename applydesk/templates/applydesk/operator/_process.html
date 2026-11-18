@@ -305,7 +305,8 @@
   // fixed whatever its stage (ruling 29).
   function locksOf(card) {
     var why = card.dataset.locked || "";
-    ['[data-pc="name"]', '[data-pc="from"]', "[data-fc-grip]"].forEach(function (sel) {
+    // Its name and whether applicants see it too (author, 2026-11-18).
+    ['[data-pc="name"]', '[data-pc="from"]', '[data-pc="shown"]', "[data-fc-grip]"].forEach(function (sel) {
       var c = card.querySelector(sel);
       c.disabled = !!why;
       if (why) c.title = why; else c.removeAttribute("title");
