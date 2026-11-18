@@ -649,8 +649,8 @@ Exercise / Evaluations / *Gate n · label*. The gate's head (its
 state chip, as Evaluations' Gates table, its mode and counts, and its
 disabled *Send to Review Robin* or *Pull results*, AD6), its load lines and a table with **a row per pair**,
 *Applicant*, *Evaluator*, *Source*, *State*; a dossier with no evaluator yet
-is one row, *None yet*. A blind exercise shows the dossier ID as the
-applicant. The pairs are `stages.assignments`, drawn as the gate's mode and
+is one row, *None yet*. A blind exercise, or a confidential gate (ruling 42),
+shows the dossier ID as the applicant, and is searched and sorted by it. The pairs are `stages.assignments`, drawn as the gate's mode and
 sources fill them. A gate can pair 30 evaluators with 100 dossiers, so the
 table is paged and queried in the URL (`offset`, `q`, `sort`), and a link
 keeps all of them.
@@ -766,7 +766,7 @@ from AD2.
   | `sparts` | comma-separated setup pages | `all.zip`'s `setup/` files |
 
   Without `applicants`, `extract.names_by_default` decides: a gate's files
-  by Dossier ID; outcomes by name; `all.zip` by name unless blind review is
+  by Dossier ID; outcomes by name unless blind review is on; `all.zip` by name unless blind review is
   on or any gate is confidential, when it starts on Dossier IDs and the card
   says why. The operator may still choose *Names*: the files are the
   operator's, and a dossier part's visibility governs only what applicants

@@ -1626,3 +1626,28 @@ def test_a_closed_exercise_stays_on_me_read_only(
     archived = dataclasses.replace(ex, state="Archived")
     monkeypatch.setattr(sample_data, "exercise", lambda i: archived)
     assert client.get("/applydesk/me/exercises/wa9juxbc2t").status_code == 404
+
+
+def test_a_confidential_gate_s_page_shows_dossier_ids(client: TestClient) -> None:
+    """Ruling 42, AD-65: a confidential gate's page shows Dossier IDs, not
+    names, as its files do; a gate that is not confidential names them."""
+    base = f"/applydesk/operator/exercises/{EX}/evaluations"
+    conf = client.get(f"{base}/gate_2").text
+    assert 'data-sort-key="candidate">Dossier<' in conf
+    assert "Aisha Bello" not in conf
+    assert re.search(r"<td><code>\w{10}</code></td>", conf)
+    named = client.get(f"{base}/gate_1").text
+    assert 'data-sort-key="candidate">Applicant<' in named
+
+
+def test_blind_review_starts_outcomes_csv_with_dossier_ids() -> None:
+    """AD-65: outcomes.csv names applicants by default only without blind
+    review; Extract all data follows sensitive()."""
+    import dataclasses
+
+    ex = sample_data.exercise(EX)
+    assert ex is not None
+    assert extract.names_by_default(ex, "outcomes.csv")
+    blind = dataclasses.replace(ex, blind=True)
+    assert not extract.names_by_default(blind, "outcomes.csv")
+    assert extract.names_by_default(blind, "applications.csv")

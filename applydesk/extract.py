@@ -129,12 +129,13 @@ def sensitive(e: Exercise) -> bool:
 
 def names_by_default(e: Exercise, file: str) -> bool:
     """*Applicants as*'s starting value for a file: a gate's by Dossier ID;
-    the outcomes by name; *Extract all data* by name unless ``sensitive``."""
+    *Extract all data* by name unless ``sensitive``; the outcomes by name
+    unless blind review is on (AD-65); the rest by name."""
     if file.startswith("gate"):
         return False
     if file == "all.zip":
         return not sensitive(e)
-    return True
+    return not (file == "outcomes.csv" and e.blind)
 
 
 def zip_name(e: Exercise, kind: str, on: date | None = None, ext: str = "zip") -> str:
