@@ -6,7 +6,7 @@ by CI) turns that skip into a failure."""
 
 from __future__ import annotations
 
-from playwright.sync_api import Dialog, Page, expect
+from playwright.sync_api import Dialog, Locator, Page, expect
 
 from applydesk.tests.test_form_browser import page as page
 
@@ -110,20 +110,31 @@ def test_details_unlock_edit_and_lock(page: Page) -> None:
 
 
 def test_details_lock_and_unlock_sit_at_the_card_s_foot_on_the_right(page: Page) -> None:
-    page.goto(HOME)
-    card = page.locator("[data-details]")
-    box = card.bounding_box()
-
-    def placed(name: str) -> None:
+    def placed(card: Locator, name: str) -> float:
+        box = card.bounding_box()
         b = card.get_by_role("button", name=name, exact=True).bounding_box()
         assert box and b
         assert box["x"] + box["width"] - (b["x"] + b["width"]) < 40  # on the right
         assert box["y"] + box["height"] - (b["y"] + b["height"]) < 40  # at the foot
+        return b["y"] if name == "Unlock" else b["x"]
 
-    placed("Unlock")
+    page.goto(HOME)
+    card = page.locator("[data-details]")
+    unlock = placed(card, "Unlock")
+    head = card.locator(".cardhead").bounding_box()
+    assert head and unlock > head["y"] + head["height"]  # no longer in the head
     card.get_by_role("button", name="Unlock").click()
-    box = card.bounding_box()
-    placed("Lock")
+    lock = placed(card, "Lock")
+    discard = card.get_by_role("button", name="Discard changes").bounding_box()
+    assert discard and discard["x"] < lock  # Discard changes, then Lock
+    # Stretched to a taller timeline's height, Unlock still at the foot.
+    page.reload()
+    page.evaluate(
+        "() => { const t = document.querySelector('[data-timeline]');"
+        " t.style.minHeight = (document.querySelector('[data-details]').offsetHeight + 120) + 'px';"
+        " document.querySelector('.hm-grid').classList.add('is-equal-height'); }"
+    )
+    placed(card, "Unlock")
 
 
 def test_details_refuse_what_cannot_hold(page: Page) -> None:
