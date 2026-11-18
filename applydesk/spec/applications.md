@@ -594,6 +594,111 @@ The model exercise, *Recruitment and Selection of Residential Assistants*
 (`wa9juxbc2t`), has gates that pair a panel of 30 with every applicant, so
 the paged table is exercised there.
 
+## Extract data
+
+At `/operator/exercises/<id>/extract`: Review Robin's Extract data, a
+workbench that cuts the exercise's data into files and **shows none of it**
+(Dossiers shows one application, a gate's page one gate). Files are built by
+`applydesk/extract.py` from the sample until AD2 (applications, setup), AD4
+(applicants' answers) and AD5 (Review Robin's answers); downloads are logged
+from AD2.
+
+- **Cards.** Six, two to a row and one column under 900px: *Extract all
+  data*, *Applications*, *By gate*, *Outcomes*, *Alias key*, *Extract
+  setup*. Each has a heading, a line on what its file answers, chips, the
+  file's columns in a line and its download at the foot. No card draws a
+  data table; *By gate* lists its gates with row counts.
+- **Chips** shape the download's link. Each viewer's are kept in
+  `localStorage` `applydesk-extract-<id>`; with storage blocked, or no script,
+  the defaults apply. *Zip all*'s link also takes the other cards' settings
+  (Applications' rows and drafts, By gate's shape, Outcomes' rows, Extract
+  setup's pages) so the ZIP carries each file as its card is set.
+
+| Card | Chips (default first) | Download |
+|---|---|---|
+| Extract all data | *Carries*: Applications, Gates, Outcomes on; Setup off. *Applicants as*: Names, Dossier IDs | *Zip all* |
+| Applications | *Rows*: Last applications, All applications. *Drafts*: Left out, Included | *Download CSV* |
+| By gate | *Shape*: A row per pair, A row per application. *Applicants as*: Dossier IDs, Names | a *CSV* per gate; *Zip gates* |
+| Outcomes | *Rows*: Last applications, All applications | *Download CSV* |
+| Alias key | none | *Download key* |
+| Extract setup | *Carries*: Form, Process, Panels, Emails, all on | *Zip setup* |
+
+- **The route** `GET /operator/exercises/<id>/extract/<file>`
+  (`routes_operator.extract_file`, `applydesk_extract_file`; 404 for an
+  unknown exercise or file). Files: `applications.csv`, `outcomes.csv`,
+  `alias_key.csv`, `gate_<n>.csv`, `gates.zip`, `all.zip`, `setup.zip`.
+  Query parameters, an unrecognized value reading as its default:
+
+  | Parameter | Values | Read by |
+  |---|---|---|
+  | `rows` | `last`, `all` | applications, outcomes, `all.zip` |
+  | `drafts` | `1` | applications, `all.zip` |
+  | `shape` | `pair`, `application` | gate files, `gates.zip`, `all.zip` |
+  | `applicants` | `names`, `ids` | gate files, outcomes, the ZIPs |
+  | `carries` | comma-separated | `all.zip`: `applications`, `gates`, `outcomes`, `setup`; `setup.zip`: `form`, `process`, `panels`, `emails` (`none` for none) |
+  | `orows` | `last`, `all` | `all.zip`'s outcomes |
+  | `sparts` | comma-separated setup pages | `all.zip`'s `setup/` files |
+
+  Without `applicants`, `extract.names_by_default` decides: a gate's files
+  by Dossier ID; outcomes by name; `all.zip` by name unless blind review is
+  on or any gate is confidential, when it starts on Dossier IDs and the card
+  says why. The operator may still choose *Names*: the files are the
+  operator's, and a dossier part's visibility governs only what applicants
+  and evaluators see.
+- **The files.** CSV with a header row, UTF-8 **with a byte-order mark**
+  (Apply Desk's choice, so Excel reads UTF-8; Review Robin's importers
+  tolerate it on read though its own extracts write none), CRLF line ends.
+  Every cell goes through `extract.safe`: one starting `=`, `+`, `-`, `@`, a
+  tab or a return gets a leading apostrophe, a plain number aside.
+  - **`applications.csv`**: a row per application, `application_id`,
+    `dossier_id`, `applicant`, `email`, `state`, `submitted`, then a column
+    per form question by its label, in the form's order (a section, page
+    break or text block no column). *Last applications* is each applicant's
+    last submitted one (Dossiers', ruling 13); *All applications* every
+    submitted one; *Drafts* adds drafts, never a withdrawn application. It
+    always names its applicants. A list answer is one cell, items joined by
+    `; ` (Select people: the nominees); a photo its file name. Where the
+    sample holds no answer, one is seeded per application and question, the
+    same every time.
+  - **`gate_<n>.csv`**, downloaded as `gate_<n>_<slug>.csv` (the gate's name
+    in lower case, other runs as `_`): *A row per pair* is `dossier_id`
+    (then `applicant`, `email` for *Names*), `evaluator`, `evaluator_email`,
+    then a column per response field by label; a dossier with no evaluator
+    yet has no row. Answers are seeded per pair until AD5. *A row per
+    application* is `dossier_id` (and names), then a column per result by
+    name, as Dossiers collates them. A gate **not sent** (its Review Robin
+    session has not opened, or the exercise is a Draft) has no file: its
+    download is absent on the card, which says *Not sent* in place of a row
+    count, and the route 404s.
+  - **`outcomes.csv`**: a row per submitted application (*Rows* as above, no
+    drafts): `dossier_id` (and names), then in the timeline's order each
+    gate's results (`<gate>: <result>`), then each outcome's value and
+    `<outcome> released`, the date once decided and released, else empty.
+  - **`alias_key.csv`**: `dossier_id`, `application_id`, `applicant`,
+    `email` for **every** application, drafts included. Never inside *Extract
+    all data*.
+  - **Setup CSVs**, one per Setup page, in Setup's order, from `extract.setup`:
+    `form.csv` (a row per card: order, kind, type, label, help, bounds,
+    options, choose, required, shown to reviewers, pool); `process.csv` (a
+    row per stage item, *form*, *gate* or *outcome*, with its evaluators,
+    mode, results, values, due and rule in words, and under each gate a
+    *field* row per response field and a *result* row per result, their
+    settings in `detail` as `name=value; …`, enough to rebuild the gate);
+    `panels.csv` (panel, name, email, note); `emails.csv` (each template
+    owed and whether it is written).
+- **The ZIPs.** Named `<code>_<kind>_<date>.zip` (the Exercise Code, or the
+  ID if none, as a file-name slug; today's date; kind `extract`, `gates` or
+  `setup`), each with `manifest.csv` first: a row per file with its row
+  count, then a row per gate left out with the note *Not sent*. *Zip all*
+  holds `applications.csv`, each sent gate's file, `outcomes.csv`, and with
+  *Setup* the pages Extract setup's chips leave on, under `setup/`. *Zip
+  gates* holds the sent gates' files.
+- **Empty and Draft.** With no submitted applications one line above the
+  cards says so (adding, for a Draft exercise, that only its setup can be
+  extracted), and every download but *Zip setup* is off; *Zip setup* works
+  for a Draft too, as it needs no applications. *Zip gates* is off while no
+  gate is sent. An exercise with no gates says so in *By gate*.
+
 ## The Emails page
 
 Every template the exercise owes (see Process, "Emails"). Each template card
