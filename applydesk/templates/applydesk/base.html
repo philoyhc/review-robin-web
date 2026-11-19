@@ -364,7 +364,15 @@
     .ap-table { border-collapse: separate; border-spacing: 0; font-size: 13.5px; width: 100%; }
     .ap-table th, .ap-table td { padding: 7px 7px; background: var(--surface-card); }
     .ap-table thead th { vertical-align: bottom; font-size: 12.5px; }
-    .ap-groups th { vertical-align: top; color: var(--text-strong-subtle); border-bottom: 2px solid var(--border-subtle); }
+    /* Ruling 52: the information row top-aligned, the names under it on
+       one line, each a sort button. */
+    .ap-table thead .ap-info th { vertical-align: top; padding-bottom: 2px; }
+    .ap-table thead .ap-heads th { vertical-align: bottom; white-space: nowrap; border-bottom: 2px solid var(--border-default); font-size: 13.5px; }
+    .ap-sort { font: inherit; font-weight: 600; color: var(--text-body); background: none; border: 0; padding: 2px 4px; margin: 0 -4px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+    .ap-sort:hover { background: var(--surface-muted); }
+    .ap-sort-h { font-size: 11px; color: var(--text-subtle); }
+    .ap-heads th[aria-sort="ascending"] .ap-sort-h, .ap-heads th[aria-sort="descending"] .ap-sort-h { color: var(--text-link); }
+    .ap-table thead .ap-groups th { vertical-align: top; color: var(--text-strong-subtle); border-bottom: 2px solid var(--border-subtle); }
     .ap-groups b { display: block; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; }
     .ap-when { display: block; font-weight: 400; font-size: 11.5px; color: var(--text-subtle); margin-top: 2px; }
     .ap-table .ap-r { border-left: 2px solid var(--border-subtle); }

@@ -1071,8 +1071,10 @@ def test_an_application_stage_later_in_the_timeline_keeps_the_headers_aligned(
     groups = re.findall(r"<th class=\"ap-(?:first|r)\"[^>]*><b>([^<]+)</b>", head)
     assert groups == ["Dossiers", "Review", "Interviews", "Apply"]
     spans = sum(int(n) for n in re.findall(r'colspan="(\d+)"', head))
-    second = head[head.index("</tr>") :]
-    assert spans == second.count("<th")
+    # The information row and the headers row (ruling 52) each match.
+    info = head[head.index('<tr class="ap-info">') : head.index('<tr class="ap-heads">')]
+    heads = head[head.index('<tr class="ap-heads">') :]
+    assert spans == info.count("<th") == heads.count("<th")
 
 
 def test_an_owed_email_holds_back_only_a_release_to_come() -> None:
@@ -1770,7 +1772,10 @@ def test_dossiers_rows_are_named_by_dossier_id(client: TestClient) -> None:
     to the dossier, its Application ID under it; the dossier page shows
     its ID."""
     page = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
-    assert 'aria-label="Tick every row in view"> Dossier</th>' in page
+    assert (
+        'aria-label="Tick every row in view"><button type="button" class="ap-sort" '
+        'data-ap-sort="dossier">Dossier<' in page
+    )
     assert (
         f'href="/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx"><code>p3bd7kq2wx</code></a>'
         '<span class="ap-app">Application <code>m3qx8vkt2n</code></span>'
