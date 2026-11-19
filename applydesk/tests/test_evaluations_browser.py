@@ -406,3 +406,89 @@ def test_approved_takes_back_though_a_pair_was_added_since(page: Page) -> None:
         page.locator("[data-ev-said]").inner_text()
         == "Evaluators no longer approved for Kenji Russo."
     )
+
+
+def test_ticked_rows_narrow_approve_and_discard_to_themselves(page: Page) -> None:
+    """Author, 2026-11-19: ticks choose pairs; Approve and Discard then
+    act on the ticked rows alone, their labels saying so. Approval stays
+    per dossier (ruling 34)."""
+    page.goto(GATE3)
+    approve = page.locator('[data-ev-act="approve-all"]')
+    discard = page.locator('[data-ev-act="discard"]')
+    assert approve.inner_text() == "Approve all"
+    _row(page, "Kenji Russo").locator("[data-ev-tick]").check()
+    _row(page, "Aisha Rahman").locator("[data-ev-tick]").check()
+    assert approve.inner_text() == "Approve ticked (2)"
+    head = page.locator("[data-ev-tick-all]")
+    assert head.evaluate("b => b.indeterminate") and not head.is_checked()
+    approve.click()
+    states = page.locator("tbody tr").locator("[data-ev-state]")
+    kenji = page.locator("tbody tr", has_text="Kenji Russo").locator("[data-ev-state]")
+    aisha = page.locator("tbody tr", has_text="Aisha Rahman").locator("[data-ev-state]")
+    assert set(kenji.all_text_contents()) == {"Approved"} == set(aisha.all_text_contents())
+    assert states.all_text_contents().count("Approved") == 4
+    assert (
+        page.locator("[data-ev-said]").inner_text() == "Evaluators approved for 2 ticked dossiers."
+    )
+    assert approve.inner_text() == "Approve all" and discard.inner_text() == "Discard changes"
+    # Discard the ticked pair alone: its dossier's approval goes back.
+    _row(page, "Kenji Russo").locator("[data-ev-tick]").check()
+    assert discard.inner_text() == "Discard ticked (1)"
+    discard.click()
+    assert set(kenji.all_text_contents()) == {"Suggested"}
+    assert set(aisha.all_text_contents()) == {"Approved"}
+    # A ticked row with nothing to discard leaves Discard off.
+    _row(page, "Kenji Russo").locator("[data-ev-tick]").check()
+    assert discard.is_disabled()
+    head.check()
+    assert (
+        approve.inner_text() == f"Approve ticked ({page.locator('tbody [data-ev-tick]').count()})"
+    )
+
+
+def test_a_row_s_buttons_sit_at_its_end(page: Page) -> None:
+    page.goto(GATE3)
+    cell = _row(page, "Kenji Russo").locator("td.ev-acts")
+    assert cell.evaluate("c => getComputedStyle(c).textAlign") == "right"
+    assert cell.evaluate("c => c === c.parentElement.lastElementChild")
+
+
+def test_ticked_discard_puts_a_removed_pair_back_and_ticks_follow_their_rows(
+    page: Page,
+) -> None:
+    page.goto(GATE3)
+    pair = _row(page, "Kenji Russo")
+    pair.get_by_role("button", name="Remove").click()
+    assert pair.locator("[data-ev-state]").text_content() == "Removed"
+    approve = page.locator('[data-ev-act="approve-all"]')
+    pair.locator("[data-ev-tick]").check()
+    assert approve.inner_text() == "Approve ticked (0)" and approve.is_disabled()
+    page.locator('[data-ev-act="discard"]').click()
+    assert pair.locator("[data-ev-state]").text_content() == "Suggested"
+    assert page.locator("[data-ev-said]").inner_text() == "Changes discarded for 1 ticked pair."
+    # Every row ticked: the header's tick reads checked.
+    head = page.locator("[data-ev-tick-all]")
+    head.check()
+    assert head.is_checked() and not head.evaluate("b => b.indeterminate")
+    head.uncheck()
+    # An added pair ticked, then removed, leaves no tick behind.
+    page.get_by_role("button", name="+ Pair").click()
+    page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
+    pair.get_by_role("button", name="Remove").click()
+    page.get_by_role("button", name="Add the pair").click()
+    added = page.locator("tbody tr[data-ev-added]")
+    added.locator("[data-ev-tick]").check()
+    added.get_by_role("button", name="Remove").click()
+    assert approve.inner_text() == "Approve all"
+
+
+def test_approve_ticked_asks_first_when_a_ticked_dossier_is_short(page: Page) -> None:
+    page.goto(GATE3)
+    rows = page.locator("tbody tr", has_text="Kenji Russo")
+    rows.nth(0).get_by_role("button", name="Remove").click()
+    rows.nth(1).locator("[data-ev-tick]").check()
+    asked: list[str] = []
+    page.once("dialog", lambda d: (asked.append(d.message), d.dismiss())[1])
+    page.locator('[data-ev-act="approve-all"]').click()
+    assert asked == ["Approve the ticked dossiers' pairs? 1 of them is still short of evaluators."]
+    assert "Approved" not in page.locator("tbody [data-ev-state]").all_text_contents()

@@ -8,8 +8,10 @@
    states, the head's counts and the load line follow every pair, not
    only the page's (#ev-data), a source's min and max as the Total's.
    Changes kept from an earlier visit are checked against the sample
-   and the mode first, so a stale one cannot count. Nothing is saved
-   until AD2. #}
+   and the mode first, so a stale one cannot count. Ticked rows narrow
+   Approve and Discard to themselves, their labels saying so (author,
+   2026-11-19); ticks are the page's own, gone on a reload. Nothing is
+   saved until AD2. #}
 <script>
 (function () {
   var DATA = JSON.parse(document.getElementById("ev-data").textContent);
@@ -53,6 +55,15 @@
   }
   function dirty() { return ch.removed.length + ch.added.length + ch.approved.length > 0; }
   function id(d, e) { return d + "|" + e; }
+  // The ticked pairs on this page, by key; dropped once acted on.
+  var ticked = {};
+  function tickedKeys() {
+    return Array.prototype.filter.call(card.querySelectorAll("tr[data-ev-pair]"), function (tr) {
+      return !tr.hidden && ticked[id(tr.dataset.evRow, tr.dataset.evPair)];
+    }).map(function (tr) { return id(tr.dataset.evRow, tr.dataset.evPair); });
+  }
+  function dossierOf(k) { return k.slice(0, k.indexOf("|")); }
+  function isShort(d) { var n = count(d); return n === 0 || n < DATA.min || unmet(d); }
 
   // Every pair as it now stands: the sample's less those removed, and
   // those added.
@@ -95,8 +106,11 @@
       (DATA.mode === "suggested" ? " <button type=\"button\" class=\"btn btn-secondary\" data-ev-act=\"approve\">Approve</button>" : "") + "</td>";
     // A blind dossier's ID in monospace, as on Dossiers (AD-87).
     tr.cells[0].textContent = "";
+    var tick = tr.cells[0].appendChild(document.createElement("input"));
+    tick.type = "checkbox"; tick.className = "ev-tick"; tick.dataset.evTick = "";
+    tick.setAttribute("aria-label", "Tick " + a.n + " for " + names[a.d]);
     if (DATA.blind) tr.cells[0].appendChild(document.createElement("code")).textContent = names[a.d];
-    else tr.cells[0].textContent = names[a.d];
+    else tr.cells[0].appendChild(document.createTextNode(names[a.d]));
     tr.cells[1].firstChild.textContent = a.n;
     tr.cells[1].firstChild.title = a.e;
     tr.cells[2].firstChild.textContent = a.s;
@@ -121,6 +135,8 @@
         tone(chip, stateOf(d, ""));
         return;
       }
+      var cb = tr.querySelector("[data-ev-tick]");
+      if (cb) cb.checked = !!ticked[id(d, e)];
       var gone = !tr.hasAttribute("data-ev-added") && ch.removed.indexOf(id(d, e)) >= 0;
       tr.classList.toggle("ev-removed", gone);
       tone(chip, gone ? "Removed" : stateOf(d, e));
@@ -139,7 +155,7 @@
       }
     });
     // The head's counts and the load line, over every pair.
-    var short = DATA.dossiers.filter(function (dd) { var n = count(dd[0]); return n === 0 || n < DATA.min || unmet(dd[0]); }).length;
+    var short = DATA.dossiers.filter(function (dd) { return isShort(dd[0]); }).length;
     var n = DATA.dossiers.length;
     card.closest("main, body").querySelector("[data-ev-counts]").textContent =
       n + (n === 1 ? " dossier" : " dossiers") + " · " + (n - short) + " filled" + (short ? " · " + short + " short" : "");
@@ -149,13 +165,50 @@
       var panel = DATA.panels[i];
       if (panel) line.textContent = panel[0] + ": " + panel[1].map(function (m) { return m[0] + " " + (load[m[1]] || 0); }).join(" · ");
     });
-    var all = card.querySelector('[data-ev-act="approve-all"]');
-    if (all) all.disabled = pairs().every(function (p) { return ch.approved.indexOf(id(p[0], p[1])) >= 0; });
     if (box && !box.hidden) fillEvaluators();  // the picker follows every change
     card.querySelector("[data-ev-unsaved]").hidden = !dirty();
-    card.querySelector('[data-ev-act="discard"]').hidden = !dirty();
+    labels();
     keep();
   }
+  // Approve and Discard, for every pair or the ticked ones alone.
+  function labels() {
+    var keys = tickedKeys(), n = keys.length;
+    var all = card.querySelector('[data-ev-act="approve-all"]'), dis = card.querySelector('[data-ev-act="discard"]');
+    if (all) {
+      var live = keys.filter(function (k) { return ch.removed.indexOf(k) < 0; });  // a removed row approves nothing
+      var mine = n ? pairs().filter(function (p) { return live.some(function (k) { return dossierOf(k) === p[0]; }); }) : pairs();
+      all.textContent = n ? "Approve ticked (" + live.length + ")" : "Approve all";
+      all.disabled = mine.every(function (p) { return ch.approved.indexOf(id(p[0], p[1])) >= 0; });
+    }
+    dis.textContent = n ? "Discard ticked (" + n + ")" : "Discard changes";
+    dis.hidden = !dirty();
+    dis.disabled = n > 0 && !keys.some(changed);
+    var head = card.querySelector("[data-ev-tick-all]"), boxes = card.querySelectorAll("tr:not([hidden]) [data-ev-tick]");
+    if (head) {
+      head.checked = boxes.length > 0 && n === boxes.length;
+      head.indeterminate = n > 0 && n < boxes.length;
+    }
+  }
+  // A pair the tab has changed: removed, added, or its dossier approved.
+  function changed(k) {
+    return ch.removed.indexOf(k) >= 0 || ch.approved.indexOf(k) >= 0 ||
+      ch.added.some(function (a) { return id(a.d, a.e) === k; });
+  }
+  card.addEventListener("change", function (e) {
+    var t = e.target;
+    if (t.matches("[data-ev-tick-all]")) {
+      card.querySelectorAll("tr:not([hidden]) [data-ev-tick]").forEach(function (cb) {
+        var tr = cb.closest("tr");
+        if (t.checked) ticked[id(tr.dataset.evRow, tr.dataset.evPair)] = true;
+        else delete ticked[id(tr.dataset.evRow, tr.dataset.evPair)];
+      });
+      draw();
+    } else if (t.matches("[data-ev-tick]")) {
+      var tr = t.closest("tr"), k = id(tr.dataset.evRow, tr.dataset.evPair);
+      if (t.checked) ticked[k] = true; else delete ticked[k];
+      labels();
+    }
+  });
 
   // + Pair: a dossier, then an evaluator from its panel sources who is
   // not the candidate, not already on it, while it is under the max.
@@ -190,7 +243,7 @@
     box.addEventListener("keydown", function (e) { if (e.key === "Escape") openAdd(false); });
   }
   // The page works now: its operations, rendered off until the script ran.
-  card.querySelectorAll("button[data-ev-wait]").forEach(function (b) { b.disabled = false; b.removeAttribute("data-ev-wait"); });
+  card.querySelectorAll("[data-ev-wait]").forEach(function (b) { b.disabled = false; b.removeAttribute("data-ev-wait"); });
 
   card.addEventListener("click", function (e) {
     var b = e.target.closest("[data-ev-act]");
@@ -199,7 +252,8 @@
     said.textContent = "";
     if (act === "remove") {
       var d = tr.dataset.evRow, em = tr.dataset.evPair, k = id(d, em);
-      if (tr.hasAttribute("data-ev-added")) {  // gone, its approval with it
+      if (tr.hasAttribute("data-ev-added")) {  // gone, its approval and its tick with it
+        delete ticked[k];
         ch.added = ch.added.filter(function (a) { return id(a.d, a.e) !== k; });
         ch.approved = ch.approved.filter(function (x) { return x !== k; });
       } else if (ch.removed.indexOf(k) >= 0) {  // Undo: as it was, approved or not
@@ -226,9 +280,21 @@
       draw();
       said.textContent = (was ? "Evaluators no longer approved for " : "Evaluators approved for ") + names[dd] + ".";
       tr.querySelector('[data-ev-act="remove"]').focus();
+    } else if (act === "approve-all" && tickedKeys().length) {
+      // The ticked rows' dossiers, each approved whole (ruling 34); a
+      // ticked row removed approves nothing.
+      var ds = tickedKeys().filter(function (k) { return ch.removed.indexOf(k) < 0; }).map(dossierOf).filter(function (x, i, a) { return a.indexOf(x) === i; });
+      var shortT = ds.filter(isShort).length;
+      if (shortT && !window.confirm("Approve the ticked dossiers' pairs? " + shortT + (shortT === 1 ? " of them is" : " of them are") + " still short of evaluators.")) return;
+      var adding = pairs().filter(function (p) { return ds.indexOf(p[0]) >= 0; }).map(function (p) { return id(p[0], p[1]); });
+      ch.approved = ch.approved.filter(function (k) { return adding.indexOf(k) < 0; }).concat(adding);
+      ticked = {};
+      draw();
+      said.textContent = "Evaluators approved for " + ds.length + (ds.length === 1 ? " ticked dossier." : " ticked dossiers.");
+      card.querySelector('[data-ev-act="add"]').focus();
     } else if (act === "approve-all") {
       // Approving a short dossier's pairs leaves it short: said first (AD-25).
-      var shortN = DATA.dossiers.filter(function (dd) { var n = count(dd[0]); return n === 0 || n < DATA.min || unmet(dd[0]); }).length;
+      var shortN = DATA.dossiers.filter(function (dd) { return isShort(dd[0]); }).length;
       if (shortN && !window.confirm("Approve every pair? " + shortN + (shortN === 1 ? " dossier is" : " dossiers are") + " still short of evaluators.")) return;
       var before = ch.approved.filter(function (k) { return !pairs().some(function (p) { return id(p[0], p[1]) === k; }); });
       var now = pairs().map(function (p) { return id(p[0], p[1]); });
@@ -252,6 +318,25 @@
       draw();
       fillEvaluators();
       said.textContent = sources[ev][0] + " added to " + names[who] + ".";
+    } else if (act === "discard" && tickedKeys().length) {
+      // The ticked pairs put back: removed or added undone, and their
+      // dossiers' approval taken back (approval is per dossier, ruling 34).
+      var tk = tickedKeys().filter(changed), tds = tk.map(dossierOf), kept = [];
+      // As Discard changes, more than a few are asked about first (AD-25).
+      if (tk.length > 3 && !window.confirm("Discard the changes to " + tk.length + " ticked pairs?")) return;
+      ch.added = ch.added.filter(function (a) { return tk.indexOf(id(a.d, a.e)) < 0; });
+      ch.approved = ch.approved.filter(function (k) { return tds.indexOf(dossierOf(k)) < 0; });
+      // A removed pair comes back only where its dossier has room, as Undo.
+      tk.filter(function (k) { return ch.removed.indexOf(k) >= 0; }).forEach(function (k) {
+        var p = DATA.pairs.filter(function (q) { return id(q[0], q[1]) === k; })[0];
+        if (full(p[0], p[1], p[3])) { kept.push(k); return; }
+        ch.removed.splice(ch.removed.indexOf(k), 1);
+      });
+      ticked = {};
+      draw();
+      said.textContent = "Changes discarded for " + (tk.length - kept.length) + (tk.length - kept.length === 1 ? " ticked pair." : " ticked pairs.") +
+        (kept.length ? " " + kept.length + " left removed: " + (kept.length === 1 ? "its dossier is" : "their dossiers are") + " full; discard the pair added in its place too." : "");
+      card.querySelector('[data-ev-act="add"]').focus();
     } else if (act === "discard") {
       // More than a few changes are asked about first (AD-25).
       var n = ch.removed.length + ch.added.length + ch.approved.length;

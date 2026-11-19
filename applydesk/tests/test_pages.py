@@ -740,7 +740,7 @@ def test_a_gate_s_page_is_only_a_gate_s(client: TestClient) -> None:
     draft = client.get(f"/applydesk/operator/exercises/{DRAFT}/evaluations/gate_1")
     assert draft.status_code == 404
     blind = client.get(f"/applydesk/operator/exercises/{BLIND}/evaluations/gate_1").text
-    assert 'data-sort-key="candidate">Dossier<' in blind and ">Applicant<a" not in blind
+    assert '>Dossier<a class="ev-sort-btn"' in blind and ">Applicant<a" not in blind
 
 
 def test_a_dossier_with_no_evaluator_is_one_row() -> None:
@@ -807,7 +807,9 @@ def test_a_gate_s_page_sorts_every_page_on_the_server(client: TestClient) -> Non
 def test_a_blind_gate_sorts_by_the_dossier(client: TestClient) -> None:
     base = f"/applydesk/operator/exercises/{BLIND}/evaluations/gate_1"
     text = client.get(f"{base}?sort=candidate").text
-    shown = re.findall(r"<tr data-ev-row=\"\w+\"[^>]*>\s*<td><code>(\w+)</code></td>", text)
+    shown = re.findall(
+        r"<tr data-ev-row=\"\w+\"[^>]*>\s*<td>(?:<input [^>]*>)?<code>(\w+)</code></td>", text
+    )
     assert shown == sorted(shown) and shown
     # The sample's IDs and names fall in one order, so the rule itself:
     # by the ID when blind, by the name otherwise.
@@ -1661,11 +1663,11 @@ def test_a_confidential_gate_s_page_shows_dossier_ids(client: TestClient) -> Non
     names, as its files do; a gate that is not confidential names them."""
     base = f"/applydesk/operator/exercises/{EX}/evaluations"
     conf = client.get(f"{base}/gate_2").text
-    assert 'data-sort-key="candidate">Dossier<' in conf
+    assert '>Dossier<a class="ev-sort-btn"' in conf
     assert "Aisha Bello" not in conf
-    assert re.search(r"<td><code>\w{10}</code></td>", conf)
+    assert re.search(r"<td>(?:<input [^>]*>)?<code>\w{10}</code></td>", conf)
     named = client.get(f"{base}/gate_1").text
-    assert 'data-sort-key="candidate">Applicant<' in named
+    assert '>Applicant<a class="ev-sort-btn"' in named
 
 
 def test_blind_review_starts_outcomes_csv_with_dossier_ids() -> None:
@@ -1776,3 +1778,19 @@ def test_dossiers_rows_are_named_by_dossier_id(client: TestClient) -> None:
     assert 'data-ap-app="m3qx8vkt2n"' in page and 'aria-label="Search dossiers"' in page
     dossier = client.get(f"/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx").text
     assert "<dt>Dossier ID</dt><dd><code>p3bd7kq2wx</code></dd>" in dossier
+
+
+def test_a_gate_page_s_pairs_take_ticks_off_until_the_script_runs(client: TestClient) -> None:
+    """Ruling 51: a tick per pair and one in the header, rendered off until
+    the page's script runs; on a gate whose session has opened, off and
+    saying why."""
+    base = f"/applydesk/operator/exercises/{EX}/evaluations"
+    g3 = client.get(f"{base}/gate_3").text
+    rows = g3.count("data-ev-pair=")
+    assert rows and g3.count("data-ev-tick ") == rows
+    assert 'data-ev-tick-all aria-label="Tick every pair on this page" disabled data-ev-wait' in g3
+    g1 = client.get(f"{base}/gate_1").text
+    assert (
+        'data-ev-tick-all aria-label="Tick every pair on this page" disabled '
+        'title="Its session has opened: its pairs are Review Robin\'s to change"' in g1
+    )

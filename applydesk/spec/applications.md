@@ -809,6 +809,15 @@ the browser (`_gate_ops_js.html`):
 | Suggested, then approved | the fill, each pair *Suggested* | *Approve* on any of a dossier's pairs approves them all, as ruling 34 has it (*Approved*, clicked again, takes them back; a pair added later waits for its own), *Approve all* (asking first while a dossier is short), *Remove* (then *Undo*), *+ Pair* |
 | Assigned by the operator | empty, every dossier *Not assigned* | *+ Pair*, *Remove* |
 
+- **Ticks** (ruling 51). Each pair's row has a tick, in its first cell,
+  and the header's ticks every pair on the page. With rows ticked,
+  *Approve all* becomes *Approve ticked (n)*: each ticked row's dossier
+  approved whole (ruling 34), asking first if any is short. *Discard
+  changes* becomes *Discard ticked (n)*, off when they hold none, asking
+  first past three changed pairs: a ticked pair removed comes back where
+  its dossier has room, one added goes, and its dossier's approval is
+  taken back. A ticked row removed approves nothing. Ticks are the page's
+  own and clear once acted on. A row's own buttons sit at its end.
 - **Kept in the tab.** Changes live in `sessionStorage` under
   `applydesk-ev:<exercise>:<gate>:<mode>`, so paging, sorting and searching
   keep them; *Changes in this tab, not saved until AD2* and *Discard
