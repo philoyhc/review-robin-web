@@ -481,7 +481,7 @@ def test_a_rule_naming_a_removed_gate_never_reads_another() -> None:
         assert kept.rule.when[0][1] == "removed.r2"
     finally:
         scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
-    for bad in ("NaN", "Infinity", "-inf", "33.3", "-5"):
+    for bad in ("NaN", "Infinity", "-inf", "33.3", "-5", ""):
         weighed = {**outcome, "weights": {"g2.r1": bad, "g2.r2": "50"}}
         sent = {"stages": [_stage("Review", gates=[_gate("g2", "Second")], outcome=weighed)]}
         refused = client.post(f"{LOBBY}/{made}/process", json=sent)

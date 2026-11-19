@@ -252,9 +252,11 @@ def _outcome(v: Any, number: int) -> Outcome:
         # Whole percents, as the page draws them back (stages.weight_rows):
         # a word, a decimal, NaN or Infinity cannot be kept as typed, so it
         # is refused, never read as 0 or rounded (Codex on #4026; cold read).
-        if text and not text.isdigit():
+        # Blank too: the page flags it, and 0 would read as weighed out
+        # on purpose (Codex on #4026).
+        if not text.isdigit():
             raise Refused(f"{what}'s weights are not all whole percents.")
-        share = int(text) / 100 if text else 0.0
+        share = int(text) / 100
         weights.append((k, share))
     if len(weights) > MAX_ITEMS:
         raise Refused(f"{what} has too many weights.")
