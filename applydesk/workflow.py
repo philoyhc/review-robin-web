@@ -14,15 +14,16 @@ from dataclasses import dataclass
 from applydesk import sample_data, stages
 from applydesk.sample_data import Exercise
 
-#: Each sample gate's state and its line (ruling 14: Not ready → Ready →
-#: Sent → Results in). A gate missing here is not ready.
+#: Each sample gate sent to Review Robin, its state and its line (ruling
+#: 14: Not ready → Ready → Sent → Results in). A gate missing here is not
+#: sent: whether it is Ready is derived (``gate_readiness``, AD-33).
 _GATES: dict[str, dict[str, tuple[str, str]]] = {
     "wa9juxbc2t": {
         "g1": ("Results in", "100 of 100 reviewed"),
         "g2": ("Results in", "100 of 100 reviewed"),
         # Mid Stage 3 (rulings 29, 30): the staff interview entered, its
-        # pairs being approved on Evaluations, not yet sent.
-        "g3": ("Ready", ""),
+        # pairs being approved on Evaluations, not yet sent: its state is
+        # derived (gate_readiness, AD-33).
     },
     "k7mfr3pq8z": {"g1": ("Sent", "3 of 5 reviewed")},
 }
@@ -112,9 +113,75 @@ def gate_opened(state: str, line: str) -> bool:
     return state == "Results in" or (state == "Sent" and bool(line))
 
 
+def gate_sent(exercise_id: str, key: str) -> tuple[str, str]:
+    """A gate's state as Review Robin reports it: *Sent* or *Results in*
+    with its line, else ("Not sent", ""). For the many callers that ask
+    only whether a gate is sent, opened or complete: no readiness is
+    worked out (the cold read on AD-33: deriving it for every row on
+    Dossiers nearly doubled the page's time)."""
+    known = _GATES.get(exercise_id, {}).get(key)
+    if known and known[0] in ("Sent", "Results in"):
+        return known
+    return ("Not sent", "")
+
+
 def gate_state(exercise_id: str, key: str) -> tuple[str, str]:
-    """A gate's state and its line, e.g. ("Sent", "18 of 27 interviewed")."""
-    return _GATES.get(exercise_id, {}).get(key, ("Not ready", ""))
+    """A gate's state and its line, e.g. ("Sent", "18 of 27 interviewed").
+    A gate not yet sent is *Ready* only as ``gate_readiness`` derives it
+    (AD-33): the sample records only what Review Robin would report."""
+    sent = gate_sent(exercise_id, key)
+    if sent[0] != "Not sent":
+        return sent
+    gate = next(
+        (
+            c
+            for c in stages.plan_of(exercise_id).columns
+            if isinstance(c, stages.Gate) and c.key == key
+        ),
+        None,
+    )
+    if gate is None:
+        return ("Not ready", "")
+    why = gate_readiness(exercise_id, gate)
+    return ("Not ready", why) if why else ("Ready", "")
+
+
+def gate_readiness(exercise_id: str, gate: stages.Gate) -> str:
+    """Why a gate not yet sent is not ready, else "" (rulings 24, 27, 34),
+    the first reason in this order: its stage published; a result; its
+    evaluators; every submitted row's entry decided, at least one entered;
+    every dossier entered assigned, none short; and, under *Suggested,
+    then approved*, every dossier's evaluators approved. Approvals made on
+    the gate page are the tab's until AD2, so the sample's Suggested pairs
+    count as not yet approved."""
+    plan = stages.plan_of(exercise_id)
+    stage = next((s for s in plan.stages if gate in s.columns), None)
+    if stage is None or stage.status != "Published":
+        return "Its stage is not published"
+    if not gate.results:
+        return "No result yet"
+    srcs, _ = stages.sources_of(exercise_id, gate)
+    if not srcs:
+        return "No evaluators yet"
+    undecided = sum(
+        1
+        for r in plan.rows
+        if r.application.state == "Submitted"
+        and r.cells.get(gate.key, stages.Cell("")).value not in ("Entered", "Not entered")
+    )
+    if undecided:
+        return f"{undecided} {'entry' if undecided == 1 else 'entries'} to decide"
+    rows, _ = stages.assignments(exercise_id, gate)
+    if not rows:
+        return "No dossiers entered yet"
+    if gate.mode == "assigned" and not any(a.evaluators for a in rows):
+        return f"{len(rows)} {'dossier' if len(rows) == 1 else 'dossiers'} to assign"
+    short = sum(1 for a in rows if a.short or a.unmet or not a.evaluators)
+    if short:
+        return f"{short} {'dossier' if short == 1 else 'dossiers'} short of evaluators"
+    if gate.mode == "suggested":
+        return f"{len(rows)} {'dossier' if len(rows) == 1 else 'dossiers'} to approve"
+    return ""
 
 
 def sends(exercise_id: str, item: str, audience: str) -> bool:
@@ -171,7 +238,7 @@ def closed_by(exercise_id: str) -> dict[str, str]:
     completed = [
         c
         for c in plan.columns
-        if isinstance(c, stages.Gate) and gate_state(exercise_id, c.key)[0] == "Results in"
+        if isinstance(c, stages.Gate) and gate_sent(exercise_id, c.key)[0] == "Results in"
     ]
     out: dict[str, str] = {}
     for r in plan.rows:
@@ -218,7 +285,7 @@ def status_row(exercise: Exercise) -> tuple[Pill, ...]:
 
     ex_status = locks.exercise_status(exercise)
     form = form_state(exercise)
-    done = sum(gate_state(exercise.public_id, g.key)[0] == "Results in" for g in gates)
+    done = sum(gate_sent(exercise.public_id, g.key)[0] == "Results in" for g in gates)
     released = sum(bool(o.released) for o in outcomes)
     mail = emails(exercise.public_id)
     kept = sum(e.ok for e in mail)
@@ -379,7 +446,7 @@ def panels_sent(exercise_id: str) -> dict[str, tuple[str, ...]]:
     {"panel-a": ("Gate 1",)}. Every panel source counts (AD-49)."""
     sent: dict[str, list[str]] = {}
     for c in stages.plan_of(exercise_id).columns:
-        if isinstance(c, stages.Gate) and gate_opened(*gate_state(exercise_id, c.key)):
+        if isinstance(c, stages.Gate) and gate_opened(*gate_sent(exercise_id, c.key)):
             for key in stages.gate_panels(exercise_id, c):
                 sent.setdefault(key, []).append(f"Gate {c.number}")
     return {k: tuple(v) for k, v in sent.items()}

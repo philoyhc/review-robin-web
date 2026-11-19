@@ -260,7 +260,8 @@ def test_home_s_operator_part_says_how_each_stage_stands() -> None:
     assert (g1.state, g1.target) == ("Results in", "1")
     assert "2,980 pairs · 100 of 100 reviewed" in g1.detail
     assert g3.detail == (
-        "Suggested, then approved · Residential staff 2 · Total 2 · 80 pairs · not sent"
+        "Suggested, then approved · Residential staff 2 · Total 2 · 80 pairs"
+        " · 40 dossiers to approve"
     )
     assert (o1.state, o1.detail) == (
         "Released",
@@ -290,7 +291,7 @@ def test_the_running_gate_is_the_one_being_worked(monkeypatch: pytest.MonkeyPatc
     assert tl.now is not None and tl.now.number == 2
     assert timeline.running_gate(e, tl) == 2  # both results in: the last
     states = {"g1": ("Results in", ""), "g2": ("Sent", "3 of 100 reviewed")}
-    monkeypatch.setattr(workflow, "gate_state", lambda _e, k: states.get(k, ("Ready", "")))
+    monkeypatch.setattr(workflow, "gate_sent", lambda _e, k: states.get(k, ("Ready", "")))
     assert timeline.running_gate(e, tl) == 2
     states["g1"] = ("Sent", "")
     assert timeline.running_gate(e, tl) == 1

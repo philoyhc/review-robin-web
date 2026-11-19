@@ -130,8 +130,7 @@ STAGES: tuple[Stage, ...] = (
 GATES = {
     "g1": ("Results in", "92 of 92 reviewed"),
     "g2": ("Results in", "92 of 92 reviewed"),
-    "g3": ("Ready", ""),
-}
+}  # g3 not sent: whether it is Ready is derived (AD-33)
 APPLICANTS, EVALUATORS = workflow.APPLICANTS, workflow.EVALUATORS
 SENDS = frozenset(
     {

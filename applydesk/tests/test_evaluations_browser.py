@@ -55,7 +55,8 @@ def _as(monkeypatch: pytest.MonkeyPatch, key: str, **changes: object) -> None:
         for st in model
     )
     monkeypatch.setitem(stages._STAGES, "wa9juxbc2t", staged)  # pyright: ignore[reportPrivateUsage]  -- as above
-    monkeypatch.setitem(workflow._GATES["wa9juxbc2t"], key, ("Ready", ""))  # pyright: ignore[reportPrivateUsage]  -- as above
+    # Not sent: whether it is Ready is derived (AD-33).
+    monkeypatch.delitem(workflow._GATES["wa9juxbc2t"], key, raising=False)  # pyright: ignore[reportPrivateUsage]  -- as above
 
 
 def _row(page: Page, who: str, evaluator: str = "") -> Locator:

@@ -162,5 +162,5 @@ def running_gate(e: Exercise, t: Timeline) -> int | None:
     gates = [c for c in st.columns if isinstance(c, stages.Gate)] if st else []
     if not gates:
         return None
-    working = (g for g in gates if workflow.gate_state(e.public_id, g.key)[0] != "Results in")
+    working = (g for g in gates if workflow.gate_sent(e.public_id, g.key)[0] != "Results in")
     return next(working, gates[-1]).number
