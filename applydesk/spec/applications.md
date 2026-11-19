@@ -786,7 +786,7 @@ sources fill them. A gate can pair 30 evaluators with 100 dossiers, so the
 table is paged and queried in the URL (`offset`, `q`, `sort`), and a link
 keeps all of them.
 
-- **The Review Robin card** (segment AD1M, scaffold; ruling 55): the
+- **The Review Robin card** (ruling 55): the
   session's name and code, derived as *exercise name — gate label* and
   *public ID*`-g`*n* (ruling 56); the link (*Not linked: nothing sent
   yet*, *Linked; sent, its session not yet open*, *Linked; its session is
@@ -824,7 +824,8 @@ keeps all of them.
   with the reason, before its session opens, once its results are in, or
   detached.
 - **Invite evaluators** (a gate sent, in the tab or the sample, with
-  evaluators paired, its session not closed)
+  evaluators paired, its session neither closed nor detached, its results
+  not in)
   and **Remind those not done** (an open session, someone not done) show
   the email first, under the buttons: whom it goes to, its subject and
   body, fixed until AD7 puts these templates on Emails, linking Review
@@ -917,7 +918,10 @@ the browser (`_gate_ops_js.html`):
 
 The model exercise, *Recruitment and Selection of Residential Assistants*
 (`wa9juxbc2t`), has gates that pair a panel of 30 with every applicant, so
-the paged table is exercised there.
+the paged table is exercised there. The second exercise (`k7mfr3pq8z`)
+shows the gate states the model lacks: *Panel review* *Sent* and under
+way, *Second reading* *Closed* in Review Robin and not yet pulled, and
+*Moderation* *Detached* (`workflow._GATES`); the last two count as opened.
 
 ## Extract data
 

@@ -1,6 +1,7 @@
 {# Evaluations (ruling 14, segment AD1D): each gate's progress and its
-   results from Review Robin; Review folded in here. Sending and results
-   come with AD6. #}
+   results from Review Robin; Review folded in here. Each gate's sending
+   and results are on its page's Review Robin card (segment AD1M),
+   simulated in the tab until AD6. #}
 {% set gates = plan.columns | selectattr("via", "defined") | list %}
 {% if exercise.state == "Draft" %}
 <section class="card">
