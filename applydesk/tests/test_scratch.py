@@ -483,7 +483,11 @@ def test_an_unfinished_result_saves_and_a_blank_count_is_refused() -> None:
     gate = _gate("g1", "Read", fields=[], results=[loose])
     reply = client.post(f"{LOBBY}/{made}/process", json={"stages": [_stage("R", gates=[gate])]})
     assert reply.status_code == 200, reply.text
-    assert "No field chosen" in client.get(f"{LOBBY}/{made}/process").text
+    process = client.get(f"{LOBBY}/{made}/process").text
+    # No field made up in place of the ones removed (Codex on #4026).
+    saved = process[process.index('data-key="g1"') :]
+    saved = saved[: saved.index("data-pr-list")]
+    assert "No field chosen" in process and "data-rf=" not in saved
     for sources, total in (
         ([{"kind": "panel", "ref": "", "min": None, "max": 2}], {"min": 1, "max": 2}),
         ([{"kind": "panel", "ref": "", "min": 1, "max": 2}], {"min": 1, "max": None}),

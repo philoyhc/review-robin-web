@@ -235,6 +235,7 @@ def _gate(v: Any, number: int, panels: frozenset[str]) -> Gate:
         confidential=_flag(got.get("confidential"), what),
         fields=fields,
         when=_span(got.get("from"), got.get("to"), what),
+        own_fields=True,
     )
 
 

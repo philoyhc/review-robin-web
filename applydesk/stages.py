@@ -193,6 +193,10 @@ class Gate:
     # Its review window, inside its stage's dates (author, 2026-11-18);
     # None runs it on the stage's (``window``).
     when: StageDates | None = None
+    # Its ``fields`` are its own, even none (a scratch exercise's, as
+    # Process saved them): no field is made up per result in their place,
+    # as for a sample gate listing none (``fields_of``; Codex on #4026).
+    own_fields: bool = False
 
     @property
     def measure(self) -> str:
@@ -1563,7 +1567,7 @@ def fields_of(gate: Gate) -> tuple[ResponseField, ...]:
     """A gate's response fields (ruling 28). A sample gate that lists none
     reads one per result, from the field the result carries, so nothing
     it shows changes until edited (as ``sources_of``)."""
-    if gate.fields:
+    if gate.fields or gate.own_fields:
         return gate.fields
     return tuple(ResponseField(f"f{i}", r.name, r.field) for i, r in enumerate(gate.results, 1))
 
@@ -1574,7 +1578,7 @@ def source_field(gate: Gate, result: GateResult) -> ResponseField | None:
     fields = fields_of(gate)
     if result.source:
         return next((f for f in fields if f.key == result.source), None)
-    if gate.fields:
+    if gate.fields or gate.own_fields:
         return None  # a gate listing its fields names them; none is assumed
     at = gate.results.index(result) if result in gate.results else -1
     return fields[at] if 0 <= at < len(fields) else None
