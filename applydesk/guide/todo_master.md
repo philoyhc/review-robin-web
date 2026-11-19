@@ -559,6 +559,12 @@ where a ruling below differs from it, the ruling wins.
     pull, so the operator marks it concluded on Apply Desk; its results
     are what was last pulled, or entered on Dossiers. Until then it holds
     its stage and the exercise open, as `locks` and `timeline` have it.
+59. **A scratch exercise is held in memory, per browser** (author,
+    2026-11-19): until AD2, *New exercise* makes a blank draft the
+    operator sets up page by page, each page's *Save* keeping it in the
+    server's memory for that browser (an opaque cookie), never on disk,
+    lost on a restart or deploy; every page reads it, so the setup flow
+    can be walked whole (segment AD1N).
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
@@ -655,6 +661,7 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
+| UI review — consistency and gaps | Before AD2 fixes what is stored (author, 2026-11-19): first a scratch exercise to set up end to end (`applydesk/guide/segment_AD1N_scratch_exercise.md`), then the review itself | Building |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
