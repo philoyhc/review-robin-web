@@ -365,5 +365,19 @@
   window.addEventListener("beforeunload", function (e) {
     if (dirty() && !staying) { e.preventDefault(); e.returnValue = ""; }
   });
+  // For the Review Robin card (segment AD1M): whether this tab has
+  // changed the pairs themselves, and whether it has approved every
+  // dossier, none short, which is all a Suggested gate owes before it
+  // is sent (the files are the pairs as saved, so approvals alone do
+  // not change them).
+  window.ApplyDeskEv = {
+    edited: function () { return ch.removed.length + ch.added.length > 0; },
+    allApproved: function () {
+      return DATA.dossiers.every(function (dd) {
+        var d = dd[0], mine = pairs().filter(function (p) { return p[0] === d; });
+        return mine.length > 0 && !isShort(d) && mine.every(function (p) { return ch.approved.indexOf(id(p[0], p[1])) >= 0; });
+      });
+    }
+  };
 })();
 </script>

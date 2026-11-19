@@ -279,6 +279,13 @@ def gate_readiness(exercise_id: str, gate: stages.Gate) -> str:
     return ""
 
 
+def awaits_approval(exercise_id: str, gate: stages.Gate) -> bool:
+    """Whether all a Suggested gate owes before it is *Ready* is its
+    approvals, which the gate page makes in the tab until AD2 (segment
+    AD1M: the card may then send it once the tab has approved them)."""
+    return gate.mode == "suggested" and gate_readiness(exercise_id, gate).endswith(" to approve")
+
+
 def sends(exercise_id: str, item: str, audience: str) -> bool:
     """Whether Process has the item ("receipt", "reminder" or an outcome's
     key) email the audience."""

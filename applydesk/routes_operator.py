@@ -124,6 +124,37 @@ def _bundle(request: Request, exercise: sample_data.Exercise, gate: stages.Gate)
     )
 
 
+def _rr_data(
+    exercise: sample_data.Exercise,
+    gate: stages.Gate,
+    state: tuple[str, str],
+    opened: bool,
+    sent_with: handoff.Bundle,
+) -> dict[str, object]:
+    """What the Review Robin card's script needs to send and re-send in
+    the tab (segment AD1M rung 4, ruling 55): the gate's state as the
+    sample has it, whether only approvals stand between it and *Ready*,
+    the bundle's name, code and digest, and the other gates' codes, which
+    a send may not take (ruling 56)."""
+    plan = stages.plan_of(exercise.public_id)
+    return {
+        "ex": exercise.public_id,
+        "key": gate.key,
+        "state": state[0],
+        "why": state[1] if state[0] == "Not ready" else "",
+        "opened": opened,
+        "approveOnly": workflow.awaits_approval(exercise.public_id, gate),
+        "name": sent_with.name,
+        "code": sent_with.code,
+        "digest": sent_with.digest(),
+        "others": [
+            [c.key, f"Gate {c.number}", handoff.session_code(exercise, c)]
+            for c in plan.columns
+            if isinstance(c, stages.Gate) and c.key != gate.key
+        ],
+    }
+
+
 @router.get(
     "/exercises/{exercise_id}/evaluations/{gate}/{kind}.csv", name="applydesk_gate_bundle_file"
 )
@@ -155,6 +186,7 @@ def gate_evaluations(
     or evaluator."""
     exercise = exercise_or_404(exercise_id)
     found = _gate_or_404(exercise, gate)
+    sent_with = _bundle(request, exercise, found)
     rows, spread = stages.assignments(exercise.public_id, found)
     pairs = stages.pairs_of(rows)
     state = workflow.gate_state(exercise.public_id, found.key)
@@ -201,7 +233,8 @@ def gate_evaluations(
         mode_label=dict(stages.MODES).get(found.mode, found.mode),
         assignment_state=stages.assignment_state,
         assignment_counts=stages.assignment_counts,
-        bundle=_bundle(request, exercise, found),
+        bundle=sent_with,
+        rr_data=_rr_data(exercise, found, state, sent, sent_with),
     )
 
 

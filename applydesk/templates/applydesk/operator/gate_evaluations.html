@@ -17,17 +17,19 @@
 <div class="ptitle"><h1><span class="muted">Gate {{ gate.number }}</span> {{ gate.label or "Untitled gate" }}</h1>
   <span class="ev-head">{% import "applydesk/operator/_gate_state.html" as gs %}{{ gs.chip(state) }}{% if state[0] == "Not ready" and state[1] %} <span class="muted" data-gate-why title="As saved: this tab's changes count once AD2 saves them">{{ state[1] }}</span>{% endif %} <span class="chip chip-mute" data-ev-mode>{{ mode_label }}</span> <span class="muted" data-ev-counts>{{ assignment_counts(all_rows) }}</span> <a class="btn btn-secondary" href="#ev-rr">Review Robin ↓</a></span></div>
 <p class="placeholder"><strong>Placeholder.</strong> Sample data: what you do here works on screen and is kept in this tab across its pages, but nothing is saved until AD2.</p>
-{# The gate's link to Review Robin (segment AD1M, scaffold): its session's
-   name and code (ruling 56), the link, the last send, what is sent, each
-   evaluator's progress, and its actions. Every control is inert here;
-   the later rungs wire them, simulated in the tab (ruling 55). #}
+{# The gate's link to Review Robin (segment AD1M): its session's name and
+   code (ruling 56), the link, the last send, what is sent, each
+   evaluator's progress, and its actions, simulated in the tab (ruling
+   55). Send and Re-send work (_rr_js.html); the rest come with rung 5.
+   Off until the script has run, so a page without it offers nothing. #}
 {% set rr_off = ' disabled title="Comes later in this segment (AD1M)"' %}
+{% set rr_wait = ' disabled data-rr-wait' %}
 {% set rr_people = all_pairs | selectattr("email") | groupby("email") %}
 <section class="card rr-card" id="ev-rr" data-rr-gate="{{ gate.key }}" aria-labelledby="ev-rr-h">
   <h2 id="ev-rr-h">Review Robin</h2>
   <div class="rr-names">
-    <label class="fc-l">Session name<input class="fc-in" type="text" maxlength="255" value="{{ bundle.name }}" data-rr-name{{ rr_off }}></label>
-    <label class="fc-l">Session code<input class="fc-in" type="text" maxlength="64" value="{{ bundle.code }}" data-rr-code{{ rr_off }}></label>
+    <label class="fc-l">Session name<input class="fc-in" type="text" maxlength="255" value="{{ bundle.name }}" data-rr-name{{ rr_wait }}></label>
+    <label class="fc-l">Session code<input class="fc-in" type="text" maxlength="64" value="{{ bundle.code }}" data-rr-code{{ rr_wait }}></label>
   </div>
   <dl class="facts">
     <dt>Link</dt><dd data-rr-link>{% if state[0] == "Results in" %}Linked; its results are in{% elif state[0] == "Closed" %}Linked; its session has closed, its results not yet pulled{% elif state[0] == "Detached" %}Detached: unlinked in Review Robin, so neither re-sent nor pulled{% elif sent %}Linked; its session is open{% elif state[0] == "Sent" %}Linked; sent, its session not yet open{% else %}Not linked: nothing sent yet{% endif %}</dd>
@@ -56,12 +58,14 @@
   {% else %}<p class="muted">No evaluators paired yet.</p>{% endif %}
   <p class="muted">Progress is read from Review Robin by <em>Pull results</em> once the session opens; once it closes, <em>Pull final results</em> brings the results back and the gate is done (ruling 57).</p>
   <div class="btnrow rr-acts">
-    <button class="btn btn-primary" type="button" data-rr-act="send"{{ rr_off }}>Send to Review Robin</button>
-    <button class="btn btn-secondary" type="button" data-rr-act="resend"{{ rr_off }}>Re-send</button>
+    <button class="btn btn-primary" type="button" data-rr-act="send"{{ rr_wait }}>Send to Review Robin</button>
+    <button class="btn btn-secondary" type="button" data-rr-act="resend"{{ rr_wait }}>Re-send</button>
     <button class="btn btn-secondary" type="button" data-rr-act="pull"{{ rr_off }}>Pull results</button>
     <button class="btn btn-secondary" type="button" data-rr-act="invite"{{ rr_off }}>Invite evaluators</button>
     <button class="btn btn-secondary" type="button" data-rr-act="remind"{{ rr_off }}>Remind those not done</button>
+    <span class="fb-unsaved" data-rr-changed hidden>Changed since sent</span>
   </div>
+  <p class="rr-said" data-rr-said role="status"></p>
   <p class="muted">Simulated: until AD2 and AD6 nothing reaches Review Robin, and no email is sent until AD7.</p>
 </section>
 <section class="card" id="ev-table-card" data-ev-gate="{{ gate.key }}" data-mode="{{ gate.mode }}" aria-labelledby="ev-pairs-h">
@@ -150,6 +154,8 @@
 </section>
 {% if ev_data %}<script type="application/json" id="ev-data">{{ ev_data | tojson }}</script>
 {% include "applydesk/operator/_gate_ops_js.html" %}{% endif %}
+<script type="application/json" id="rr-data">{{ rr_data | tojson }}</script>
+{% include "applydesk/operator/_rr_js.html" %}
 <script>
   // Shift-click on a column's sort adds it to the cascade (as Review
   // Robin's tables); a plain click follows the link.

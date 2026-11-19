@@ -1,0 +1,130 @@
+{# The Review Robin card's Send and Re-send (segment AD1M rung 4),
+   simulated in the tab (ruling 55): a send is kept in sessionStorage under
+   ``applydesk-rr:<exercise>``, by gate, with the session's name and code
+   (ruling 56), when it was sent, its transfer ID and the bundle's digest.
+   Nothing reaches Review Robin until AD2 and AD6. Refusals carry the codes
+   Review Robin answers with (`spec/handoffs.md`). #}
+<script>
+(function () {
+  var DATA = JSON.parse(document.getElementById("rr-data").textContent);
+  var card = document.getElementById("ev-rr");
+  if (!card) return;
+  var STORE = "applydesk-rr:" + DATA.ex;
+  var nameIn = card.querySelector("[data-rr-name]"), codeIn = card.querySelector("[data-rr-code]");
+  var sendBtn = card.querySelector('[data-rr-act="send"]'), resendBtn = card.querySelector('[data-rr-act="resend"]');
+  var said = card.querySelector("[data-rr-said]");
+
+  function load() {
+    var all;
+    try { all = JSON.parse(sessionStorage.getItem(STORE) || "null"); } catch (e) { all = null; }
+    return all && typeof all === "object" && !Array.isArray(all) ? all : {};
+  }
+  function save(all) {
+    try {
+      if (Object.keys(all).length) sessionStorage.setItem(STORE, JSON.stringify(all));
+      else sessionStorage.removeItem(STORE);
+    } catch (e) { /* storage off: the send lasts as long as the page */ }
+  }
+  // A kept send is used only if it is whole; anything else is dropped.
+  function record() {
+    var r = load()[DATA.key];
+    return r && typeof r.name === "string" && typeof r.code === "string" && typeof r.digest === "string" ? r : null;
+  }
+  var rec = record();
+  if (load()[DATA.key] && !rec) { var all0 = load(); delete all0[DATA.key]; save(all0); }
+  // A gate whose session has opened (or closed, or was detached) is
+  // Review Robin's: the tab neither sends nor re-sends it (ruling 29).
+  if (DATA.opened) rec = null;
+  if (rec) { nameIn.value = rec.name; codeIn.value = rec.code; }
+
+  function changed() {
+    return !!rec && (rec.digest !== DATA.digest || rec.name !== nameIn.value.trim() || rec.code !== codeIn.value.trim());
+  }
+  function at(iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? "" : d.toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  }
+  function draw() {
+    var head = document.querySelector(".ev-head [data-gate-state]"), why = document.querySelector(".ev-head [data-gate-why]");
+    var off = DATA.opened ? (DATA.state === "Detached" ? "Detached: unlinked in Review Robin" : "Opened in Review Robin: it is Review Robin's to change now") : "";
+    [nameIn, codeIn].forEach(function (el) {
+      el.disabled = !!off;
+      el.removeAttribute("data-rr-wait");
+      if (off) el.title = off; else el.removeAttribute("title");
+    });
+    sendBtn.removeAttribute("data-rr-wait");
+    resendBtn.removeAttribute("data-rr-wait");
+    if (off) {
+      sendBtn.disabled = resendBtn.disabled = true;
+      sendBtn.title = resendBtn.title = off;
+    } else if (rec) {
+      sendBtn.disabled = true;
+      sendBtn.title = "Sent: changes are re-sent until its session opens";
+      resendBtn.disabled = !changed();
+      if (resendBtn.disabled) resendBtn.title = "Nothing has changed since it was sent"; else resendBtn.removeAttribute("title");
+      card.querySelector("[data-rr-link]").textContent = "Linked; sent, its session not yet open";
+      card.querySelector("[data-rr-last]").textContent = "Sent " + at(rec.at) + " in this tab";
+      if (head) { head.textContent = "Sent"; head.className = "chip chip-info"; }
+      if (why) why.hidden = true;
+    } else {
+      sendBtn.disabled = false;
+      sendBtn.removeAttribute("title");
+      resendBtn.disabled = true;
+      resendBtn.title = "Not sent yet";
+    }
+    card.querySelector("[data-rr-changed]").hidden = !changed();
+  }
+
+  // Why this send would be refused, or "" (`spec/handoffs.md` §5).
+  function refusal(first) {
+    var name = nameIn.value.trim(), code = codeIn.value.trim();
+    if (!name || name.length > 255) return "Not sent (invalid_package): the session name must be 1 to 255 characters.";
+    if (!code || code.length > 64) return "Not sent (invalid_package): the session code must be 1 to 64 characters.";
+    var kept = load();
+    var clash = DATA.others.filter(function (o) {
+      var theirs = kept[o[0]] && typeof kept[o[0]].code === "string" ? kept[o[0]].code : o[2];
+      return theirs.toLowerCase() === code.toLowerCase();
+    })[0];
+    if (clash) return "Not sent (session_code_conflict): " + code + " is " + clash[1] + "'s session code. Choose another.";
+    if (!first) return "";
+    var ev = window.ApplyDeskEv;
+    if (ev && ev.edited()) return "Not sent (invalid_setup): this tab's changes to the pairs are not saved until AD2; discard them to send the pairs as saved.";
+    if (DATA.state === "Ready") return "";
+    if (DATA.approveOnly && ev && ev.allApproved()) return "";
+    return "Not sent (invalid_setup): " + (DATA.why || "the gate is not ready") + ".";
+  }
+  function uuid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      var r = Math.random() * 16 | 0;
+      return (c === "x" ? r : (r & 3 | 8)).toString(16);
+    });
+  }
+  function keep(transfer) {
+    var all = load();
+    rec = { name: nameIn.value.trim(), code: codeIn.value.trim(), digest: DATA.digest, at: new Date().toISOString(), transfer: transfer };
+    all[DATA.key] = rec;
+    save(all);
+  }
+
+  card.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-rr-act]");
+    if (!b || b.disabled) return;
+    if (b.dataset.rrAct === "send") {
+      var no = refusal(true);
+      if (no) { said.textContent = no; return; }
+      keep(uuid());
+      draw();
+      said.textContent = "Sent (simulated): Review Robin would now hold a draft session, " + rec.code + ", its Session Home opening in a new tab.";
+    } else if (b.dataset.rrAct === "resend") {
+      var why = refusal(false);
+      if (why) { said.textContent = why.replace("Not sent", "Not re-sent"); return; }
+      keep(rec.transfer);
+      draw();
+      said.textContent = "Re-sent (simulated): the draft " + rec.code + " now holds the files as they stand.";
+    }
+  });
+  [nameIn, codeIn].forEach(function (el) { el.addEventListener("input", draw); });
+  draw();
+})();
+</script>

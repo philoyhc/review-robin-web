@@ -795,7 +795,21 @@ keeps all of them.
   *Linked; its results are in*); the last send; *What is sent*;
   a progress row per paired evaluator; and *Send to Review Robin*,
   *Re-send*, *Pull results*, *Invite evaluators* and *Remind those not
-  done*, inert until the segment's later rungs.
+  done*. The last three are inert until the segment's next rung.
+- **Send and Re-send** (`_rr_js.html`), simulated in the tab (ruling 55):
+  a send is kept in `sessionStorage` under `applydesk-rr:<exercise>`, by
+  gate, with its name, code, time, transfer ID and the bundle's digest.
+  The head's chip and Evaluations' row then read *Sent* (*Sent in this
+  tab*), and *Send* is off. *Re-send* is on while the name, the code or
+  the files differ from what was sent, marked *Changed since sent*.
+  Refusals name Review Robin's code: `invalid_package` (a name of 1–255
+  characters, a code of 1–64), `session_code_conflict` (another of the
+  exercise's gates holds the code, any case), `invalid_setup` (the gate
+  not *Ready*, or this tab having added or removed pairs, since the files
+  are the pairs as saved). A Suggested gate whose only lack is its
+  approvals is sent once this tab has approved every dossier, none
+  short. A gate opened, closed or detached in Review Robin sends and
+  re-sends nothing, its name and code fixed, the reason in each title.
 - **What is sent** (`applydesk/handoff.py`, built from the gate's pairs
   and card as saved, not this tab's changes): **reviewers**, each paired
   evaluator once by name and email, no tags; **reviewees**, each dossier
