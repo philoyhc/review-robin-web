@@ -479,7 +479,7 @@ def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> N
     """Ruling 16: one template per item and audience Process ticks, named
     for its stage, in timeline order; written or owed."""
     text = client.get(f"/applydesk/operator/exercises/{EX}/emails").text
-    names = re.findall(r'<section class="card" data-email="([^"]+)"', text)
+    names = re.findall(r'<section class="card em-card" id="em-\d+" data-email="([^"]+)"', text)
     assert names == [
         "Applications: Receipt · Applicants",
         "Applications: Reminder · Applicants",
@@ -487,10 +487,25 @@ def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> N
         "Interviews: Outcome · Applicants",
         "Interviews: Outcome · Evaluators",
     ]
-    chips = re.findall(r'<span class="chip chip-\w+"[^>]*>(Written|Owed)</span>', text)
+    chips = re.findall(r'<span class="chip chip-\w+" data-em-chip>(Written|Owed)</span>', text)
     assert chips == ["Written", "Written", "Written", "Owed", "Owed"]
+    # The side card (author, 2026-11-19): an Outline linking each email,
+    # its chip beside it, and the counts; then the merge tags.
+    outline = re.findall(
+        r'<a class="fb-o-item" href="#(em-\d+)">([^<]+)</a> <span[^>]*>(\w+)</span>', text
+    )
+    assert [(a, b) for a, _, b in outline] == [
+        ("em-1", "Written"),
+        ("em-2", "Written"),
+        ("em-3", "Written"),
+        ("em-4", "Owed"),
+        ("em-5", "Owed"),
+    ]
+    assert [n for _, n, _ in outline] == names
+    assert "5 emails · 3 written · 2 owed" in text
+    assert re.findall(r'data-em-tag="(\w+)"', text) == list(workflow.TAG_HELP)
     # Ruling 23: a Save on each template card, none for the page.
-    cards = text.split('<section class="card" data-email=')[1:]
+    cards = text.split(" data-email=")[1:]
     assert all(c.split("</section>")[0].count(">Save</button>") == 1 for c in cards)
     assert text.count(">Save</button>") == len(cards)
     # Segment AD1L: a written sample template shows its kind's default; an

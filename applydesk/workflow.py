@@ -98,7 +98,17 @@ EMAIL_FIELDS: dict[str, tuple[str, ...]] = {
     ),
 }
 
-#: What each tag stands for, shown beside it in *Insert field*.
+#: Each kind's name, as the Emails side card lists a tag's kinds.
+KIND_LABELS: dict[str, str] = {
+    "receipt": "Receipt",
+    "reminder": "Reminder",
+    "outcome-applicants": "Outcome · Applicants",
+    "outcome-evaluators": "Outcome · Evaluators",
+}
+
+
+#: What each tag stands for, shown beside it in *Insert field* and on the
+#: Emails side card.
 TAG_HELP: dict[str, str] = {
     "applicant_name": "the applicant's name",
     "evaluator_name": "the evaluator's name",
@@ -333,6 +343,18 @@ def emails(exercise_id: str) -> tuple[Email, ...]:
                         when = f"When {c.label} is released"
                         out.append(Email(name, when, (c.key, who) in written, c.key, who))
     return tuple(out)
+
+
+def tag_rows(emails: tuple[Email, ...]) -> tuple[tuple[str, str, tuple[str, ...]], ...]:
+    """The Emails side card's merge tags (author, 2026-11-19): each tag some
+    email on the page can take, its description and the kinds that take
+    it, in ``TAG_HELP``'s order."""
+    kinds = [k for k in EMAIL_FIELDS if any(e.kind == k for e in emails)]
+    return tuple(
+        (tag, help, tuple(KIND_LABELS[k] for k in kinds if tag in EMAIL_FIELDS[k]))
+        for tag, help in TAG_HELP.items()
+        if any(tag in EMAIL_FIELDS[k] for k in kinds)
+    )
 
 
 def sample_values(exercise: Exercise, email: Email) -> dict[str, str]:
