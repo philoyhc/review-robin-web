@@ -506,6 +506,18 @@ where a ruling below differs from it, the ruling wins.
 47. **Pills pick many, a segmented control picks one** (author,
     2026-11-18; AD-68, AD-69): multi-select chips use the `.pn-show`
     pill, one-of choices the `.seg` control; no other variant.
+48. **A gate reverts to draft until it completes** (author, 2026-11-18):
+    as a Review Robin session, a gate may go back to draft while it is
+    not closed or completed (*Results in*): not advisable, but kept for
+    the extreme case. What is locked is an evaluator fill that is not
+    idempotent: once made, it is never regenerated, only edited by hand.
+49. **Withdrawal and Return to draft follow the gate** (author,
+    2026-11-18, amending ruling 45): an applicant may withdraw, and the
+    operator return an application to draft, until a gate holding its
+    dossier completes, not merely once it is sent.
+50. **Checkboxes stay for now; a UI consistency sweep comes later**
+    (author, 2026-11-18): the assessment's consistency rows (AD-69's
+    checkboxes, AD-70 to AD-86, AD-91 to AD-98) wait for that sweep.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
