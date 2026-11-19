@@ -345,6 +345,25 @@ def scratch_templates(exercise_id: str) -> dict[tuple[str, str], tuple[str, str]
     return cast(dict[tuple[str, str], tuple[str, str]], held) if isinstance(held, dict) else {}
 
 
+def rekey_templates(exercise_id: str, keys: dict[str, str]) -> None:
+    """A scratch exercise's templates after Process renumbers its outcomes
+    (``process_save.keys_of``): each outcome's follows it to its new key,
+    a removed outcome's is dropped, the form's stay (cold read: a
+    template must never land on another outcome)."""
+    from applydesk import scratch
+
+    own = scratch_templates(exercise_id)
+    if not own:
+        return
+    kept: dict[tuple[str, str], tuple[str, str]] = {}
+    for (item, audience), text in own.items():
+        if item in _FORM_MAIL:
+            kept[(item, audience)] = text
+        elif item in keys:
+            kept[(keys[item], audience)] = text
+    scratch.save_page(exercise_id, SCRATCH_PAGE, kept)
+
+
 def foreign_tags(kind: str, text: str) -> tuple[str, ...]:
     """The merge tags a template's text names that its kind does not take
     (another kind's): refused on Save, as the card's script refuses them.

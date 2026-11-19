@@ -47,7 +47,7 @@
               said.textContent = "Saved, but not the changes made since: save again.";
             }
           } else if (said) {
-            said.textContent = "Not saved: " + ((got[1] && got[1].error) || "the server refused it.");
+            said.textContent = (got[1] && got[1].detail) || ("Not saved: " + ((got[1] && got[1].error) || "the server refused it."));
           }
         })
         .catch(function () { btn.disabled = false; if (said) said.textContent = "Not saved: the server could not be reached."; });

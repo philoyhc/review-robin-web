@@ -675,6 +675,7 @@ def test_an_email_saves_into_the_scratch() -> None:
         json={
             "item": "receipt",
             "audience": "Applicants",
+            "name": "Stage 1: Receipt · Applicants",
             "subject": "Received: $exercise_name",
             "body": "Dear $applicant_name, thank you.",
         },
@@ -686,7 +687,13 @@ def test_an_email_saves_into_the_scratch() -> None:
     # A subject alone keeps it owed.
     reply = client.post(
         f"{LOBBY}/{made}/emails",
-        json={"item": "receipt", "audience": "Applicants", "subject": "Hi", "body": " "},
+        json={
+            "item": "receipt",
+            "audience": "Applicants",
+            "name": "Stage 1: Receipt · Applicants",
+            "subject": "Hi",
+            "body": " ",
+        },
     )
     assert reply.json() == {"saved": True, "written": False}
     assert ">Owed<" in client.get(f"{LOBBY}/{made}/emails").text
@@ -695,9 +702,16 @@ def test_an_email_saves_into_the_scratch() -> None:
 def test_email_save_is_checked() -> None:
     client = _client()
     made = _create(client)
-    good = {"item": "receipt", "audience": "Applicants", "subject": "S", "body": "B"}
+    good = {
+        "item": "receipt",
+        "audience": "Applicants",
+        "name": "Stage 1: Receipt · Applicants",
+        "subject": "S",
+        "body": "B",
+    }
     for bad, reason in (
         ({**good, "item": "o9"}, "not one Process owes"),
+        ({**good, "name": "Stage 2: Receipt · Applicants"}, "not one Process owes"),
         ({**good, "audience": "Evaluators"}, "not one Process owes"),
         ({**good, "subject": 3}, "not one Process owes"),
         ({**good, "body": "x" * 20001}, "at most"),
@@ -710,3 +724,98 @@ def test_email_save_is_checked() -> None:
         client.post(f"{LOBBY}/{made}/emails", json={**good, "body": "$nonsense"}).status_code == 200
     )
     assert client.post(f"{LOBBY}/wa9juxbc2t/emails", json=good).status_code == 404
+
+
+def test_templates_follow_their_outcome_when_process_renumbers() -> None:
+    """Cold read: removing an earlier outcome renumbers the later one; its
+    template goes with it, and the removed one's is dropped, never landing
+    on another outcome."""
+    client = _client()
+    made = _create(client)
+
+    def outcome(key: str, label: str) -> dict[str, object]:
+        return {
+            "key": key,
+            "label": label,
+            "due": "",
+            "values": ["Yes", "No"],
+            "weights": {},
+            "rule": None,
+            "applicants_email": True,
+            "evaluators_email": False,
+        }
+
+    both = {
+        "stages": [
+            _stage("Shortlist", outcome=outcome("onew1", "Shortlist")),
+            _stage("Award", outcome=outcome("onew2", "Award")),
+        ]
+    }
+    assert client.post(f"{LOBBY}/{made}/process", json=both).status_code == 200
+    for key, stage, text in (("o1", "Shortlist", "First"), ("o2", "Award", "Second")):
+        reply = client.post(
+            f"{LOBBY}/{made}/emails",
+            json={
+                "item": key,
+                "audience": "Applicants",
+                "name": f"{stage}: Outcome · Applicants",
+                "subject": text,
+                "body": text,
+            },
+        )
+        assert reply.status_code == 200, reply.text
+    # Shortlist's stage removed: Award's outcome is o1 now.
+    only = {"stages": [_stage("Award", outcome=outcome("o2", "Award"))]}
+    assert client.post(f"{LOBBY}/{made}/process", json=only).status_code == 200
+    page = client.get(f"{LOBBY}/{made}/emails").text
+    card = page[page.index('data-em-item="o1"') :][:3000]
+    assert 'value="Second"' in card and "First" not in page
+    # A tab still naming the old o2 card is refused, not saved onto o1.
+    stale = client.post(
+        f"{LOBBY}/{made}/emails",
+        json={
+            "item": "o1",
+            "audience": "Applicants",
+            "name": "Shortlist: Outcome · Applicants",
+            "subject": "x",
+            "body": "x",
+        },
+    )
+    assert stale.status_code == 400 and "reload Emails" in stale.json()["error"]
+
+
+def test_an_odd_cookie_beside_the_token_does_not_lose_it() -> None:
+    """Cold read: a co-hosted cookie with a space in it keeps the scratch
+    token readable (Starlette's parser, not SimpleCookie)."""
+    client = _client()
+    made = _create(client)
+    token = client.cookies[scratch.COOKIE]
+    odd = TestClient(host_with(("applydesk",))[0], follow_redirects=False)
+    reply = odd.get(
+        f"{LOBBY}/{made}", headers={"cookie": f'other=a b c; quoted="x; {scratch.COOKIE}={token}'}
+    )
+    assert reply.status_code == 200
+
+
+def test_too_large_a_post_says_so() -> None:
+    client = _client()
+    made = _create(client)
+    huge = {"title": "", "description": "", "cards": [], "pad": "x" * (scratch.MAX_BODY + 1)}
+    reply = client.post(f"{LOBBY}/{made}/form", json=huge)
+    assert reply.status_code == 413 and "256 KiB" in reply.json()["detail"]
+
+
+def test_a_details_refusal_names_its_field() -> None:
+    client = _client()
+    made = _create(client)
+    good = {
+        "name": "N",
+        "code": "",
+        "description": "",
+        "contact": "nope",
+        "timezone": "Europe/London",
+        "eligibility": "Invitation only",
+        "blind": False,
+    }
+    reply = client.post(f"{LOBBY}/{made}/details", json=good)
+    assert reply.status_code == 400 and reply.json()["field"] == "contact"

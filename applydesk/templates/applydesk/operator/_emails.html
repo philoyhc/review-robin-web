@@ -258,10 +258,10 @@
         var sentS = subj(c).value, sentB = body(c).value;
         b.disabled = true;
         fetch(SAVE, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
-          body: JSON.stringify({ item: c.dataset.emItem, audience: c.dataset.emAudience, subject: sentS, body: sentB }) })
+          body: JSON.stringify({ item: c.dataset.emItem, audience: c.dataset.emAudience, name: c.dataset.email, subject: sentS, body: sentB }) })
           .then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }, function () { return [false, null]; }); })
           .then(function (got) {
-            if (!got[0]) { draw(c); said.textContent = "Not saved: " + ((got[1] && got[1].error) || "the server refused it."); return; }
+            if (!got[0]) { draw(c); said.textContent = (got[1] && got[1].detail) || ("Not saved: " + ((got[1] && got[1].error) || "the server refused it.")); return; }
             c.savedS = sentS; c.savedB = sentB;
             draw(c);
             said.textContent = written(sentS, sentB) ? "Saved to this scratch exercise." : "Saved, still owed: it needs a subject and a body.";

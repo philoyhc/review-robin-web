@@ -183,7 +183,12 @@ answer only for a Published or Closed exercise.
   characters or a body over 20,000, or another kind's merge tag
   (`workflow.foreign_tags`, as the card refuses it). `workflow.emails`
   counts it written once it has a subject and a body, so the card's chip,
-  the status row and Home follow; the card opens as saved.
+  the status row and Home follow; the card opens as saved. A card names
+  its email too, so one opened before Process renumbered the outcomes is
+  refused (*reload Emails*), and Process's save carries each outcome's
+  templates to its new key, dropping a removed one's
+  (`workflow.rekey_templates`). Past `scratch.MAX_BODY` (256 KiB) a page's
+  save says so; a Details refusal points at the field it names.
 - **The User Lobby** (`applydesk/templates/applydesk/me/home.html`), three
   cards: *My applications*, each of the applicant's own with its state,
   linking its page, a draft included; *Open to me*, each Published or
