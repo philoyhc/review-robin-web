@@ -44,7 +44,7 @@
       {% if issues %}<ul class="pc-issues" data-pc-issues>{% for i in issues %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
       <p class="visually-hidden" data-pc-live aria-live="polite"></p>
       <div class="btnrow">
-        {% if scratch_page %}<button class="btn btn-primary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}" data-fb-snapshot="applydeskProcessSnapshot">Save</button>{% else %}<button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>{% endif %}
+        {% if scratch_page %}<button class="btn btn-primary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}" data-fb-snapshot="applydeskProcessSnapshot" data-revision="{{ process_revision }}">Save</button>{% else %}<button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>{% endif %}
         <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
       </div>
       {% if scratch_page %}<p class="muted fb-said" data-fb-said role="status"></p>{% endif %}
@@ -1459,6 +1459,9 @@
     return {
       // Panels made here with + New panel…, kept with the gates naming them.
       pools: window.applydeskMadePanels || {},
+      // The revision this page opened at: one opened before Process last
+      // saved is refused, its keys perhaps another column's (Codex on #4028).
+      revision: Number((root.querySelector("[data-fb-save]") || { dataset: {} }).dataset.revision || 0),
       stages: cards().map(function (card) {
         var form = items(card, "form")[0];
         var outcome = items(card, "outcome")[0];

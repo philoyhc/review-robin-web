@@ -19,6 +19,10 @@
     var root = btn.closest("[data-unsaved-root]") || document;
     var said = root.querySelector("[data-fb-said]");
     btn.addEventListener("click", function () {
+      if (btn.dataset.fbStale) {
+        if (said) said.textContent = "Reload the page before saving again: it was saved with new keys while you were editing.";
+        return;
+      }
       var snap = window[btn.dataset.fbSnapshot || "applydeskFormSnapshot"];
       if (typeof snap !== "function") return;
       var body = snap();
@@ -43,6 +47,12 @@
                 try { sessionStorage.setItem(NOTE, "Saved to this scratch exercise."); } catch (e) { /* said above */ }
                 location.reload();
               }
+            } else if (got[1] && got[1].strict) {
+              // Its keys changed under the edits made since (Process's
+              // renumbering): it cannot save again until reloaded, and says
+              // so rather than refusing later (Codex on #4028).
+              btn.dataset.fbStale = "1";
+              if (said) said.textContent = "Saved, but not the changes made since. Process renumbered on saving: copy what you changed since, reload, then save again.";
             } else if (said) {
               said.textContent = "Saved, but not the changes made since: save again.";
             }

@@ -306,6 +306,15 @@ async def exercise_process_save(request: Request, exercise_id: str) -> Response:
     stages, gates and outcomes, their rules, the emails each item ticks,
     and each stage's Draft or Published, kept for this browser."""
     exercise, sent = await _scratch_json(request, exercise_id)
+    # A page opened before Process last saved holds keys that may now name
+    # other columns, and the templates follow keys: refused before anything
+    # changes (Codex on #4028).
+    opened = cast(dict[str, Any], sent).get("revision") if isinstance(sent, dict) else None
+    if opened != workflow.process_revision(exercise.public_id):
+        return JSONResponse(
+            {"error": "Process was saved since this page opened: reload it to save."},
+            status_code=400,
+        )
     try:
         # A panel made with *+ New panel…* joins the exercise's panels
         # (rung 5), kept with the process or not at all.
@@ -326,7 +335,7 @@ async def exercise_process_save(request: Request, exercise_id: str) -> Response:
         return JSONResponse({"error": str(why)}, status_code=400)
     # Gates and outcomes are renumbered on every save, and a panel it
     # adopted keyed anew: the page reloads to hold the keys kept.
-    return JSONResponse({"saved": True, "reload": True})
+    return JSONResponse({"saved": True, "reload": True, "strict": True})
 
 
 @router.post("/exercises/{exercise_id}/panels", name="applydesk_exercise_panels_save")
