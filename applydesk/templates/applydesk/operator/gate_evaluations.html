@@ -15,8 +15,50 @@
 {% block content %}
 {# The breadcrumb names this gate under Evaluations (AD-100). #}
 <div class="ptitle"><h1><span class="muted">Gate {{ gate.number }}</span> {{ gate.label or "Untitled gate" }}</h1>
-  <span class="ev-head">{% import "applydesk/operator/_gate_state.html" as gs %}{{ gs.chip(state) }}{% if state[0] == "Not ready" and state[1] %} <span class="muted" data-gate-why title="As saved: this tab's changes count once AD2 saves them">{{ state[1] }}</span>{% endif %} <span class="chip chip-mute" data-ev-mode>{{ mode_label }}</span> <span class="muted" data-ev-counts>{{ assignment_counts(all_rows) }}</span> {{ gs.action(state) }}</span></div>
+  <span class="ev-head">{% import "applydesk/operator/_gate_state.html" as gs %}{{ gs.chip(state) }}{% if state[0] == "Not ready" and state[1] %} <span class="muted" data-gate-why title="As saved: this tab's changes count once AD2 saves them">{{ state[1] }}</span>{% endif %} <span class="chip chip-mute" data-ev-mode>{{ mode_label }}</span> <span class="muted" data-ev-counts>{{ assignment_counts(all_rows) }}</span> <a class="btn btn-secondary" href="#ev-rr">Review Robin ↓</a></span></div>
 <p class="placeholder"><strong>Placeholder.</strong> Sample data: what you do here works on screen and is kept in this tab across its pages, but nothing is saved until AD2.</p>
+{# The gate's link to Review Robin (segment AD1M, scaffold): its session's
+   name and code (ruling 56), the link, the last send, what is sent, each
+   evaluator's progress, and its actions. Every control is inert here;
+   the later rungs wire them, simulated in the tab (ruling 55). #}
+{% set rr_off = ' disabled title="Comes later in this segment (AD1M)"' %}
+{% set rr_people = all_pairs | selectattr("email") | groupby("email") %}
+<section class="card rr-card" id="ev-rr" data-rr-gate="{{ gate.key }}" aria-labelledby="ev-rr-h">
+  <h2 id="ev-rr-h">Review Robin</h2>
+  <div class="rr-names">
+    <label class="fc-l">Session name<input class="fc-in" type="text" maxlength="255" value="{{ exercise.name }} — {{ gate.label or 'Gate ' ~ gate.number }}" data-rr-name{{ rr_off }}></label>
+    <label class="fc-l">Session code<input class="fc-in" type="text" maxlength="64" value="{{ exercise.public_id }}-g{{ gate.number }}" data-rr-code{{ rr_off }}></label>
+  </div>
+  <dl class="facts">
+    <dt>Link</dt><dd data-rr-link>{% if state[0] == "Results in" %}Linked; its results are in{% elif sent %}Linked; its session is open{% elif state[0] == "Sent" %}Linked; sent, its session not yet open{% else %}Not linked: nothing sent yet{% endif %}</dd>
+    <dt>Last send</dt><dd data-rr-last>{% if state[0] in ("Sent", "Results in") %}Sent (sample){% else %}<span class="muted">—</span>{% endif %}</dd>
+  </dl>
+  <h3>What is sent</h3>
+  <ul class="rr-files" data-rr-files>
+    <li><strong>Reviewers</strong>: {{ rr_people | length }} {{ "evaluator" if rr_people | length == 1 else "evaluators" }}, by name and email <button class="btn btn-secondary" type="button"{{ rr_off }}>Download</button></li>
+    <li><strong>Reviewees</strong>: {{ all_rows | length }} {{ "dossier" if all_rows | length == 1 else "dossiers" }}{% if ids_only %}, each by its Dossier ID, the name redacted (ruling 43){% else %}, each with its <code>ProfileLink</code>{% endif %} <button class="btn btn-secondary" type="button"{{ rr_off }}>Download</button></li>
+    <li><strong>Relationships</strong>: {{ all_pairs | selectattr("email") | list | length }} pairs, each tagged with its source <button class="btn btn-secondary" type="button"{{ rr_off }}>Download</button></li>
+    <li><strong>Settings</strong>: the description, help contact, timezone, dates and one instrument with {{ gate.fields | length }} response {{ "field" if gate.fields | length == 1 else "fields" }} <button class="btn btn-secondary" type="button"{{ rr_off }}>Download</button></li>
+  </ul>
+  <h3>Progress</h3>
+  {% if rr_people %}
+  <div class="table-wrap">
+  <table class="rr-status" data-rr-status>
+    <thead><tr><th>Evaluator</th><th>Pairs</th><th>Done</th></tr></thead>
+    <tbody>{% for email, mine in rr_people %}<tr><td>{{ mine[0].name }}</td><td>{{ mine | length }}</td><td class="muted">—</td></tr>{% endfor %}</tbody>
+  </table>
+  </div>
+  {% else %}<p class="muted">No evaluators paired yet.</p>{% endif %}
+  <p class="muted">Progress is read from Review Robin by <em>Pull results</em> once the session opens; once it closes, <em>Pull final results</em> brings the results back and the gate is done (ruling 57).</p>
+  <div class="btnrow rr-acts">
+    <button class="btn btn-primary" type="button" data-rr-act="send"{{ rr_off }}>Send to Review Robin</button>
+    <button class="btn btn-secondary" type="button" data-rr-act="resend"{{ rr_off }}>Re-send</button>
+    <button class="btn btn-secondary" type="button" data-rr-act="pull"{{ rr_off }}>Pull results</button>
+    <button class="btn btn-secondary" type="button" data-rr-act="invite"{{ rr_off }}>Invite evaluators</button>
+    <button class="btn btn-secondary" type="button" data-rr-act="remind"{{ rr_off }}>Remind those not done</button>
+  </div>
+  <p class="muted">Simulated: until AD2 and AD6 nothing reaches Review Robin, and no email is sent until AD7.</p>
+</section>
 <section class="card" id="ev-table-card" data-ev-gate="{{ gate.key }}" data-mode="{{ gate.mode }}" aria-labelledby="ev-pairs-h">
   <h2 id="ev-pairs-h">Pairs</h2>
   {% for panel, members in spread %}<p class="muted ev-load" data-ev-load>{{ panel }}: {% for name, n in members %}{{ name }} {{ n }}{{ " · " if not loop.last }}{% endfor %}</p>{% endfor %}

@@ -26,7 +26,7 @@
         <td>Review Robin</td>
         <td>{{ gs.chip(st) }}</td>
         <td>{{ st[1] or "—" }}</td>
-        <td>{{ gs.action(st) }}</td></tr>
+        <td>{{ gs.action(st, url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ g.number)) }}</td></tr>
     {% endfor %}
     </tbody>
   </table>

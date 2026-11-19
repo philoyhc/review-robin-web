@@ -767,8 +767,8 @@ took (`stages.mean_note`).
 ## The Evaluations page
 
 At `/operator/exercises/<id>/evaluations`: the **Gates** table (gate, type,
-state, progress, and *Send to Review Robin* / *Pull results*, disabled until
-the later segment that sends), then **Assignments**, a short card per gate:
+state, progress, and a link to the gate's Review Robin card: *Send…* on a
+*Ready* gate, else *Review Robin…*), then **Assignments**, a short card per gate:
 its mode, its counts (*42 dossiers · 40 filled · 2 short*, over every pair),
 its load line per panel source (*Ana 6 · Ben 5 …*) and a link, *Assignments
 (n rows)*, to the gate's own page. A draft exercise shows neither. Nothing is
@@ -777,8 +777,8 @@ saved until AD2; a reload restores the sample.
 **The gate page**, `…/evaluations/gate_<n>` (`routes_operator.gate_evaluations`),
 404 for a gate the exercise lacks or a draft exercise. Its breadcrumb runs
 Exercise / Evaluations / *Gate n · label*. The gate's head (its
-state chip, as Evaluations' Gates table, its mode and counts, and its
-disabled *Send to Review Robin* or *Pull results*, AD6), its load lines and a table with **a row per pair**,
+state chip, as Evaluations' Gates table, its mode and counts, and *Review
+Robin ↓* to the card below), the **Review Robin card**, its load lines and a table with **a row per pair**,
 *Applicant*, *Evaluator*, *Source*, *State*; a dossier with no evaluator yet
 is one row, *None yet*. A blind exercise, or a confidential gate (ruling 42),
 shows the dossier ID as the applicant, and is searched and sorted by it. The pairs are `stages.assignments`, drawn as the gate's mode and
@@ -786,6 +786,16 @@ sources fill them. A gate can pair 30 evaluators with 100 dossiers, so the
 table is paged and queried in the URL (`offset`, `q`, `sort`), and a link
 keeps all of them.
 
+- **The Review Robin card** (segment AD1M, scaffold; ruling 55): the
+  session's name and code, derived as *exercise name — gate label* and
+  *public ID*`-g`*n* (ruling 56); the link (*Not linked: nothing sent
+  yet*, *Linked; sent, its session not yet open*, *Linked; its session is
+  open*, *Linked; its results are in*); the last send; *What is sent*,
+  the four files with their counts (reviewers, reviewees by Dossier ID on
+  a blind exercise or confidential gate, relationships, settings); a
+  progress row per paired evaluator; and *Send to Review Robin*,
+  *Re-send*, *Pull results*, *Invite evaluators* and *Remind those not
+  done*. Every control is inert until the segment's later rungs.
 - **Paging** (`applydesk/paging.py`): 200 rows a page, a pager as Review
   Robin's rosters, « ‹, a range menu of every page (*201–400*), › », kept
   on one line and repeated below a table longer than a page; an

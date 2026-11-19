@@ -509,7 +509,32 @@ def test_evaluations_lists_each_gate_s_progress(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/evaluations").text
     assert re.findall(r'<tr data-gate="(\w+)">', text) == ["g1", "g2", "g3"]
     # Mid-stage (ruling 29): the Interview gate is ready, not yet sent.
-    assert "Send to Review Robin</button>" in text and "100 of 100 reviewed" in text
+    assert "100 of 100 reviewed" in text
+    # Each row links to its gate's Review Robin card (segment AD1M); the
+    # Interview gate's pairs await approval, so it does not yet offer *Send…*.
+    assert re.findall(r'href="([^"]+)#ev-rr">([^<]+)</a>', text) == [
+        (f"/applydesk/operator/exercises/{EX}/evaluations/gate_{n}", "Review Robin…")
+        for n in (1, 2, 3)
+    ]
+
+
+def test_a_gate_page_s_review_robin_card_is_a_scaffold(client: TestClient) -> None:
+    """Segment AD1M rung 2: the card in its real layout, every control
+    inert, the session's name and code derived (ruling 56)."""
+    base = f"/applydesk/operator/exercises/{EX}/evaluations"
+    ready = client.get(f"{base}/gate_3").text
+    card = ready.split('id="ev-rr"')[1].split("</section>")[0]
+    assert f'value="{EX}-g3" data-rr-code disabled' in card
+    assert "data-rr-name disabled" in card
+    assert "Not linked: nothing sent yet" in card
+    for act in ("send", "resend", "pull", "invite", "remind"):
+        assert f'data-rr-act="{act}" disabled' in card
+    for kind in ("Reviewers", "Reviewees", "Relationships", "Settings"):
+        assert f"<strong>{kind}</strong>" in card
+    assert "<th>Evaluator</th><th>Pairs</th><th>Done</th>" in card
+    assert 'href="#ev-rr">Review Robin ↓</a>' in ready
+    done = client.get(f"{base}/gate_1").text.split('id="ev-rr"')[1].split("</section>")[0]
+    assert "Linked; its results are in" in done and "Sent (sample)" in done
 
 
 def test_extract_data_is_download_cards_and_shows_no_data(client: TestClient) -> None:
@@ -889,7 +914,7 @@ def test_a_blank_exercise_s_details_and_evaluations_say_not_yet(client: TestClie
     assert '<dd data-dt-show="contact">ra-recruitment@example.edu</dd>' in model
     review = client.get(f"{base}/evaluations").text
     assert "Nothing to send: the exercise is a draft." in review
-    assert "Send to Review Robin</button>" not in review
+    assert "#ev-rr" not in review
 
 
 def test_a_draft_with_nothing_missing_is_ready_to_publish(
@@ -1605,7 +1630,7 @@ def test_crumbs_and_headings_after_the_register(client: TestClient) -> None:
     assert "data-gate-state>Results in<" in head  # done: no action left
     g2 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text  # not sent
     head = g2[g2.index('class="ev-head"') : g2.index("</div>", g2.index('class="ev-head"'))]
-    assert "data-gate-state" in head and "comes with AD6" in head
+    assert "data-gate-state" in head and 'href="#ev-rr">Review Robin ↓</a>' in head
     # AD-33: why it is not ready, as saved, beside the chip.
     assert "data-gate-state>Not ready<" in head and ">40 dossiers to approve</span>" in head
 
