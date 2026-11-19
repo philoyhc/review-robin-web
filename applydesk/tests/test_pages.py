@@ -479,7 +479,7 @@ def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> N
     """Ruling 16: one template per item and audience Process ticks, named
     for its stage, in timeline order; written or owed."""
     text = client.get(f"/applydesk/operator/exercises/{EX}/emails").text
-    names = re.findall(r'<section class="card" data-email="([^"]+)">', text)
+    names = re.findall(r'<section class="card" data-email="([^"]+)"', text)
     assert names == [
         "Applications: Receipt · Applicants",
         "Applications: Reminder · Applicants",
@@ -487,12 +487,17 @@ def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> N
         "Interviews: Outcome · Applicants",
         "Interviews: Outcome · Evaluators",
     ]
-    chips = re.findall(r'<span class="chip chip-\w+">(Written|Owed)</span>', text)
+    chips = re.findall(r'<span class="chip chip-\w+"[^>]*>(Written|Owed)</span>', text)
     assert chips == ["Written", "Written", "Written", "Owed", "Owed"]
     # Ruling 23: a Save on each template card, none for the page.
     cards = text.split('<section class="card" data-email=')[1:]
     assert all(c.split("</section>")[0].count(">Save</button>") == 1 for c in cards)
     assert text.count(">Save</button>") == len(cards)
+    # Segment AD1L: a written sample template shows its kind's default; an
+    # owed one starts empty, offering the default.
+    subject = workflow.DEFAULT_TEMPLATES["receipt"][0]
+    assert f'data-em-subject value="{subject}"' in cards[0]
+    assert 'data-em-subject value=""' in cards[3] and ">Start from the default</button>" in cards[3]
 
 
 def test_evaluations_lists_each_gate_s_progress(client: TestClient) -> None:
@@ -1556,7 +1561,7 @@ def test_pages_say_what_works_and_what_is_not_built(client: TestClient) -> None:
     )
     emails = client.get("/applydesk/operator/exercises/wa9juxbc2t/emails").text
     assert "come from Apply Desk (AD7); Review Robin sends none" in emails
-    assert 'title="Previewing an email comes with AD7"' in emails
+    assert "and Dossiers' <em>Released</em> read the sample's templates" in emails
     evaluations = client.get("/applydesk/operator/exercises/wa9juxbc2t/evaluations").text
     assert "Results come back by dossier" in evaluations
     lobby = client.get("/applydesk/operator/exercises").text

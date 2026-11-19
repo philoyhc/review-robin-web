@@ -1,16 +1,20 @@
-{# Emails (rulings 14, 16): every template the exercise owes, kept in one
-   place. Process says which items email whom; each one ticked there is a
-   template here, named for its stage, item and audience. Built out in
-   AD1L. Each template stands alone, so each card has
-   its own Save (ruling 23); the page has none. #}
-<p>Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk (AD7); Review Robin sends none. This page reads the sample: ticks made on Process are not shown here until AD2.</p>
+{# Emails (rulings 14, 16; segment AD1L): every template the exercise
+   owes, kept in one place. Process says which items email whom; each one
+   ticked there is a template here, named for its stage, item and
+   audience. Each template stands alone, so each card has its own Save
+   (ruling 23); the page has none. A Save keeps the template in this tab
+   (sessionStorage) until AD2; nothing is sent until AD7. #}
+<p>Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk (AD7); Review Robin sends none. A template you save is kept in this tab: nothing is saved until AD2, and until then the status row's <em>Emails</em>, Home and Dossiers' <em>Released</em> read the sample's templates.</p>
+<div data-emails data-em-ex="{{ exercise.public_id }}">
 {% for e in emails %}
-<section class="card" data-email="{{ e.name }}">
-  <h2>{{ e.name }} <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}">{{ "Written" if e.ok else "Owed" }}</span></h2>
+{% set d = email_defaults[e.kind] %}
+<section class="card" data-email="{{ e.name }}" data-em-kind="{{ e.kind }}">
+  <h2>{{ e.name }} <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}" data-em-chip>{{ "Written" if e.ok else "Owed" }}</span></h2>
   <p class="muted">{{ e.when }}</p>
-  <div class="field"><label>Subject <input type="text" value="{{ exercise.name ~ ': ' ~ e.name if e.ok else '' }}" disabled></label></div>
-  <div class="field"><label>Body <textarea rows="3" data-fit-box disabled>{{ ("Dear [" ~ e.greeting ~ " name], …") if e.ok else "" }}</textarea></label></div>
-  <div class="btnrow"><button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button><button class="btn btn-secondary" type="button" disabled title="Previewing an email comes with AD7">Preview</button><button class="btn btn-secondary" type="button" disabled title="Default templates come with AD7">Reset to default</button></div>
+  {# A written sample template shows its kind's default; an owed one, empty. #}
+  <div class="field"><label>Subject <input type="text" class="fc-in" data-em-subject value="{{ d[0] if e.ok else '' }}"></label></div>
+  <div class="field"><label>Body <textarea class="fc-in" rows="8" data-fit-box data-em-body>{{ d[1] if e.ok else "" }}</textarea></label></div>
+  <div class="btnrow"><button class="btn btn-primary" type="button" data-em-act="save" disabled>Save</button><button class="btn btn-secondary" type="button" disabled title="Preview comes with AD1L's next rung">Preview</button><button class="btn btn-secondary" type="button" data-em-act="reset">{{ "Reset to default" if e.ok else "Start from the default" }}</button><span class="fb-unsaved" data-em-unsaved hidden>Unsaved changes</span><span class="muted" data-em-said role="status"></span></div>
 </section>
 {% else %}
 <section class="card">
@@ -18,3 +22,79 @@
   <p class="muted">Each email ticked on Process, the form's or an outcome's, is listed here as a template to write.</p>
 </section>
 {% endfor %}
+</div>
+{% if emails %}<script type="application/json" id="em-defaults">{{ email_defaults | tojson }}</script>
+<script>
+(function () {
+  // Segment AD1L: each card a template that stands alone. Save keeps it in
+  // this tab; Written once it has a subject and a body. Leaving with a
+  // card unsaved asks first.
+  var root = document.querySelector("[data-emails]");
+  var DEFAULTS = JSON.parse(document.getElementById("em-defaults").textContent);
+  var STORE = "applydesk-emails:" + root.dataset.emEx;
+  var kept = {};
+  try { kept = JSON.parse(sessionStorage.getItem(STORE) || "{}") || {}; } catch (e) { kept = {}; }
+  var cards = Array.prototype.slice.call(root.querySelectorAll("[data-email]"));
+  // Only what Process still makes owed: a stale entry is dropped.
+  var names = cards.map(function (c) { return c.dataset.email; });
+  function store() {
+    try { sessionStorage.setItem(STORE, JSON.stringify(kept)); } catch (e) { /* kept on the page only */ }
+  }
+  var stale = Object.keys(kept).filter(function (n) { return names.indexOf(n) < 0; });
+  stale.forEach(function (n) { delete kept[n]; });
+  if (stale.length) store();
+  function subj(c) { return c.querySelector("[data-em-subject]"); }
+  function body(c) { return c.querySelector("[data-em-body]"); }
+  function written(s, b) { return s.trim() !== "" && b.trim() !== ""; }
+  // A box filled without typing (restore, Reset) is fitted as base.html's
+  // fit-box script fits it on input.
+  function fit(t) { t.dispatchEvent(new Event("input", { bubbles: true })); }
+  cards.forEach(function (c) {
+    var k = kept[c.dataset.email];
+    if (k) { subj(c).value = k.s; body(c).value = k.b; }
+    c.savedS = subj(c).value; c.savedB = body(c).value;
+    if (k) fit(body(c));
+    draw(c);
+  });
+  function dirty(c) { return subj(c).value !== c.savedS || body(c).value !== c.savedB; }
+  function draw(c) {
+    var d = dirty(c), ok = written(c.savedS, c.savedB);
+    c.querySelector("[data-em-unsaved]").hidden = !d;
+    c.querySelector('[data-em-act="save"]').disabled = !d;
+    var chip = c.querySelector("[data-em-chip]");
+    chip.textContent = ok ? "Written" : "Owed";
+    chip.className = "chip chip-" + (ok ? "ok" : "warn");
+    c.querySelector('[data-em-act="reset"]').textContent = written(subj(c).value, body(c).value) ? "Reset to default" : "Start from the default";
+  }
+  root.addEventListener("input", function (e) {
+    var c = e.target.closest("[data-email]");
+    if (!c) return;
+    c.querySelector("[data-em-said]").textContent = "";
+    draw(c);
+  });
+  root.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-em-act]");
+    if (!b || b.disabled) return;
+    var c = b.closest("[data-email]"), said = c.querySelector("[data-em-said]");
+    if (b.dataset.emAct === "save") {
+      c.savedS = subj(c).value; c.savedB = body(c).value;
+      kept[c.dataset.email] = { s: c.savedS, b: c.savedB };
+      store();
+      draw(c);
+      said.textContent = written(c.savedS, c.savedB) ? "Saved in this tab: not saved until AD2." : "Saved in this tab, still owed: it needs a subject and a body.";
+    } else if (b.dataset.emAct === "reset") {
+      var d = DEFAULTS[c.dataset.emKind];
+      if (subj(c).value === d[0] && body(c).value === d[1]) { said.textContent = "This is the default already."; return; }
+      var has = subj(c).value.trim() !== "" || body(c).value.trim() !== "";
+      if (has && !window.confirm("Replace this template's subject and body with the default?")) return;
+      subj(c).value = d[0]; body(c).value = d[1];
+      fit(body(c));  // its input event redraws the card
+      said.textContent = dirty(c) ? "The default is in: Save to keep it." : "The default is in, as saved.";
+      subj(c).focus();
+    }
+  });
+  window.addEventListener("beforeunload", function (e) {
+    if (cards.some(dirty)) { e.preventDefault(); e.returnValue = ""; }
+  });
+})();
+</script>{% endif %}
