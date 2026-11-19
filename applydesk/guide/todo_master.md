@@ -518,6 +518,10 @@ where a ruling below differs from it, the ruling wins.
 50. **Checkboxes stay for now; a UI consistency sweep comes later**
     (author, 2026-11-18): the assessment's consistency rows (AD-69's
     checkboxes, AD-70 to AD-86, AD-91 to AD-98) wait for that sweep.
+51. **A gate page's pairs can be ticked** (author, 2026-11-19): ticked
+    rows narrow *Approve* and *Discard* to themselves, their labels
+    saying so (*Approve ticked (n)*, *Discard ticked (n)*); a row's own
+    buttons sit at its end, flush right.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
