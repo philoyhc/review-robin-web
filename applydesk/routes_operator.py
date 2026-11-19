@@ -339,6 +339,8 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         source_kinds=stages.SOURCE_KINDS,
         modes=stages.MODES,
         emails=workflow.emails(exercise.public_id),
+        email_defaults=workflow.DEFAULT_TEMPLATES,
+        email_fields=workflow.EMAIL_FIELDS,
         sends=functools.partial(workflow.sends, exercise.public_id),
         form_state=workflow.form_state(exercise),
     )

@@ -975,15 +975,27 @@ which items email whom, that evaluators' invitations and reminders for a
 linked gate come from Apply Desk (AD7), and that ticks made on Process show
 here only from AD2.
 
-- **A card**: the template's name with a *Written* or *Owed* chip; when it
-  goes (*When an application is submitted*, *To drafts, 7 days before the
-  form closes*, *When <outcome> is released*); then *Subject* and *Body*. A
-  written template shows the sample's (`<exercise>: <template>`, and a body
-  addressed to an applicant or an evaluator); an owed one, both empty. Both
-  are read-only until AD2.
-- **Buttons**, each card's own, all disabled: *Save* until AD2, *Preview*
-  and *Reset to default* until AD7, which brings previewing and default
-  templates. The page has no *Save* of its own.
+- **A card** (segment AD1L): the template's name with a *Written* or
+  *Owed* chip; when it goes (*When an application is submitted*, *To
+  drafts, 7 days before the form closes*, *When <outcome> is released*);
+  then *Subject* and *Body*, both editable. A template written in the
+  sample shows its kind's default; an owed one starts empty.
+- **Its kind** (`Email.kind`): *receipt*, *reminder*, an outcome to
+  applicants, or an outcome to evaluators. The kind sets the template's
+  default (`workflow.DEFAULT_TEMPLATES`).
+- **Save**, each card's own (ruling 23; the page has none): on while the
+  card differs from what it last saved, an *Unsaved changes* marker beside
+  it. It keeps the template in the tab (`sessionStorage`, by exercise); a
+  template is *Written* once saved with a subject and a body, else
+  *Owed*. A kept template shows only while Process still makes it owed.
+  Nothing is saved until AD2; until then the status row's *Emails*, Home
+  and Dossiers' *Released* read the sample's templates. Leaving with a
+  card unsaved asks first.
+- **Reset to default** puts the kind's default in the card, asking first
+  over other text; on an empty card it reads *Start from the default* and
+  asks nothing; on the default already it says so. The default waits for
+  *Save*.
+- ***Preview*** stays disabled until AD1L's next rung.
 - **Empty**: an exercise owing no template shows one card, *No emails yet*,
   saying each email ticked on Process is listed here as a template to
   write.

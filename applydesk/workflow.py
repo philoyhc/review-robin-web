@@ -50,6 +50,66 @@ class Email:
         """Whom its body addresses: "applicant" or "evaluator"."""
         return "applicant" if self.audience == APPLICANTS else "evaluator"
 
+    @property
+    def kind(self) -> str:
+        """Its kind, which sets its fields and its default (segment AD1L):
+        "receipt", "reminder", "outcome-applicants" or "outcome-evaluators"."""
+        if self.item in _FORM_MAIL:
+            return self.item
+        return "outcome-applicants" if self.audience == APPLICANTS else "outcome-evaluators"
+
+
+#: The merge fields each kind of template may name (segment AD1L): a
+#: bracketed name, filled when the email is sent (AD7). An evaluator's
+#: email has no applicant field, so a blind exercise's names no one.
+EMAIL_FIELDS: dict[str, tuple[str, ...]] = {
+    "receipt": ("Applicant name", "Exercise", "Application ID", "Link", "Help contact"),
+    "reminder": ("Applicant name", "Exercise", "Closes", "Link", "Help contact"),
+    "outcome-applicants": (
+        "Applicant name",
+        "Exercise",
+        "Stage",
+        "Outcome",
+        "Link",
+        "Help contact",
+    ),
+    "outcome-evaluators": (
+        "Evaluator name",
+        "Exercise",
+        "Stage",
+        "Outcome",
+        "Link",
+        "Help contact",
+    ),
+}
+
+#: Each kind's default subject and body, written with its own fields.
+DEFAULT_TEMPLATES: dict[str, tuple[str, str]] = {
+    "receipt": (
+        "[Exercise]: application received",
+        "Dear [Applicant name],\n\nThank you for applying to [Exercise]. Your application,"
+        " [Application ID], has been received.\n\nYou can see it, and how the exercise"
+        " stands, at [Link].\n\nQuestions: [Help contact].",
+    ),
+    "reminder": (
+        "[Exercise]: your application is still a draft",
+        "Dear [Applicant name],\n\nYour application to [Exercise] is saved as a draft and"
+        " has not been submitted. Applications close on [Closes].\n\nFinish and submit it"
+        " at [Link].\n\nQuestions: [Help contact].",
+    ),
+    "outcome-applicants": (
+        "[Exercise]: [Stage] outcome",
+        "Dear [Applicant name],\n\nThe outcome of [Stage] for your application to"
+        " [Exercise] is: [Outcome].\n\nMore at [Link].\n\nQuestions: [Help contact].",
+    ),
+    "outcome-evaluators": (
+        "[Exercise]: [Stage] outcome released",
+        "Dear [Evaluator name],\n\nThe outcome of [Stage] in [Exercise] has been released:"
+        " [Outcome].\n\nThank you for your evaluations. More at [Link].\n\nQuestions:"
+        " [Help contact].",
+    ),
+}
+
 
 #: The form's emails, each to applicants: what it is, and when it goes.
 _FORM_MAIL = {
