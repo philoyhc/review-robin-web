@@ -120,8 +120,8 @@
 
     {% endif %}
 
-    {# Ruling 45: Return to draft per row, and for the ticked rows, until a
-       gate holding the dossier is sent; with or without gates yet. #}
+    {# Ruling 49: Return to draft per row, and for the ticked rows, until a
+       gate holding the dossier completes; with or without gates yet. #}
     <button class="btn btn-alert" type="button" disabled title="Returning to draft comes with AD4">Return ticked to draft</button>
     {% if cols %}<button class="btn btn-secondary" type="button" data-ap-csv-down>Download CSV</button>{% endif %}
     {% if not cols %}<span class="muted">No gates or outcomes yet: stages, their gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</span>{% endif %}

@@ -162,23 +162,22 @@ class Counts:
 
 
 def closed_by(exercise_id: str) -> dict[str, str]:
-    """Ruling 45: a submitted application may be withdrawn, or returned to
-    draft by the operator, until a gate holding its dossier is sent
-    (*Sent* or *Results in*; ruling 29's not-yet-opened gate counts as
-    sent). By application: the first such gate's label, for every
-    submitted application it has closed."""
+    """Rulings 45 and 49: a submitted application may be withdrawn, or
+    returned to draft by the operator, until a gate holding its dossier
+    completes (*Results in*), as the gate itself may go back to draft until
+    then (ruling 48). By application: the first such gate's label, for
+    every submitted application it has closed."""
     plan = stages.plan_of(exercise_id)
-    sent = [
+    completed = [
         c
         for c in plan.columns
-        if isinstance(c, stages.Gate)
-        and gate_state(exercise_id, c.key)[0] in ("Sent", "Results in")
+        if isinstance(c, stages.Gate) and gate_state(exercise_id, c.key)[0] == "Results in"
     ]
     out: dict[str, str] = {}
     for r in plan.rows:
         if r.application.state != "Submitted":
             continue
-        for c in sent:
+        for c in completed:
             cell = r.cells.get(c.key)
             if cell and cell.value == "Entered":
                 out[r.application.public_id] = c.label or f"Gate {c.number}"

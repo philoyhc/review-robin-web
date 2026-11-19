@@ -1,6 +1,7 @@
 {# A gate page's operations (AD1G rung 6b, ruling 27), by the gate's mode:
    Suggested, then approved: Approve a pair, Approve all, Remove, + Pair;
-   Assigned by the operator: + Pair, Remove; Automatic: Re-run. The page
+   Assigned by the operator and Automatic: + Pair, Remove (an Automatic fill
+   is never re-made, only edited by hand, ruling 48). The page
    shows 200 of the gate's pairs and reloads to page or sort, so the
    changes are kept in this tab (sessionStorage, by exercise and gate)
    and drawn on every page; Discard changes puts the sample back. The
@@ -38,7 +39,6 @@
     return a && a.d in names && a.e in sources && !sample[id(a.d, a.e)] && a.e !== selfOf[a.d] &&
       all.findIndex(function (b) { return b && b.d === a.d && b.e === a.e; }) === i;
   }).map(function (a) { return { d: a.d, e: a.e, n: sources[a.e][0], s: sources[a.e][1] }; });
-  if (DATA.mode === "automatic") ch.removed = [], ch.added = [];
   var kept = ch.added;  // and only within the Total's and the sources' max
   ch.added = [];
   kept.forEach(function (a) { if (!full(a.d, a.e, a.s)) ch.added.push(a); });
@@ -223,10 +223,6 @@
       draw();
       said.textContent = "All " + now.length + " pairs approved.";
       card.querySelector('[data-ev-act="add"]').focus();
-    } else if (act === "rerun") {
-      ch = blank();
-      draw();
-      said.textContent = "Nothing to re-run yet: the pairs are the fill's own until rosters feed it (AD5).";
     } else if (act === "add") {
       openAdd(box.hidden);
     } else if (act === "add-cancel") {
@@ -247,7 +243,7 @@
       ch = blank();
       draw();
       said.textContent = "Changes discarded: the pairs are the sample's again.";
-      card.querySelector('[data-ev-act="add"], [data-ev-act="approve-all"], [data-ev-act="rerun"]').focus();
+      card.querySelector('[data-ev-act="add"], [data-ev-act="approve-all"]').focus();
     }
   });
   draw();
