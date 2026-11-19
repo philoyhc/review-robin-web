@@ -15,6 +15,7 @@ every rule and weight that names them, so a key never outlives a reload.
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import replace
 from datetime import datetime
@@ -45,6 +46,8 @@ MAX_ITEMS = 50  # fields, sources, conditions, values: per list
 _KEY = re.compile(r"[a-z][a-z0-9]{0,15}")
 _COND_KINDS = ("status", "last", "out", "res", "ent", "comb", "form", "top")
 _TEXT = 2000
+#: What a rule or a weight naming a removed column reads after a save.
+REMOVED = "removed"
 
 
 def _dict(v: Any, what: str) -> dict[str, Any]:
@@ -237,11 +240,15 @@ def _outcome(v: Any, number: int) -> Outcome:
     for k, pct in _dict(got.get("weights", {}), f"{what}'s weights").items():
         text = _text(pct, f"{what}'s weights", 20)
         try:
-            weights.append((k, float(text) / 100 if text else 0.0))
+            share = float(text) / 100 if text else 0.0
         except ValueError:
-            # Kept as a fraction, so a word typed as a weight cannot be
-            # kept as typed: refused, not read as 0.
-            raise Refused(f"{what}'s weights are not all numbers.") from None
+            share = math.nan
+        if not math.isfinite(share):
+            # Kept as a fraction, so a word typed as a weight (or NaN,
+            # Infinity, which float reads) cannot be kept as typed:
+            # refused, not read as 0 (Codex on #4026).
+            raise Refused(f"{what}'s weights are not all numbers.")
+        weights.append((k, share))
     if len(weights) > MAX_ITEMS:
         raise Refused(f"{what} has too many weights.")
     values = tuple(_text(x, f"{what}'s values") for x in _list(got.get("values"), what))
@@ -259,9 +266,13 @@ def _outcome(v: Any, number: int) -> Outcome:
 
 def _rekey(text: str, keys: dict[str, str]) -> str:
     """A rule's or a weight's key, "gnew1.r2" or "o1", with its column's
-    new key."""
+    new key. One naming no column on the page (a gate removed since) reads
+    ``removed``, which no column is ever keyed: kept as left, never read as
+    the column renumbered into its old key (Codex on #4026)."""
     head, dot, tail = text.partition(".")
-    return keys.get(head, head) + dot + tail
+    if not head:
+        return text
+    return keys.get(head, REMOVED) + dot + tail
 
 
 def _rekey_rule(rule: Rule | None, keys: dict[str, str]) -> Rule | None:

@@ -426,3 +426,39 @@ def test_process_save_is_checked() -> None:
             refused.text,
         )
     assert client.post(f"{LOBBY}/wa9juxbc2t/process", json=_process()).status_code == 404
+
+
+def test_a_rule_naming_a_removed_gate_never_reads_another() -> None:
+    """Codex on #4026: renumbering never lands a dangling rule on the gate
+    renumbered into the removed one's key; NaN and Infinity are refused."""
+    from applydesk import stages
+
+    client = _client()
+    made = _create(client)
+    outcome = {
+        "key": "o1",
+        "label": "Award",
+        "due": "",
+        "values": ["Yes", "No"],
+        "weights": {},
+        "rule": {"when": [["res", "g1.r1", "ge", "3"]], "then": "Yes", "otherwise": "No"},
+        "applicants_email": False,
+        "evaluators_email": False,
+    }
+    # Gate g1 removed on the page; g2 is all that is left, and the rule
+    # still names g1.
+    sent = {"stages": [_stage("Review", gates=[_gate("g2", "Second")], outcome=outcome)]}
+    assert client.post(f"{LOBBY}/{made}/process", json=sent).status_code == 200
+    reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- the request's context, outside one
+    try:
+        plan = stages.plan_of(made)
+        gate, kept = plan.columns[0], plan.columns[1]
+        assert gate.key == "g1" and isinstance(kept, stages.Outcome) and kept.rule
+        assert kept.rule.when[0][1] == "removed.r1"
+    finally:
+        scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
+    for bad in ("NaN", "Infinity", "-inf"):
+        weighed = {**outcome, "weights": {"g2.r1": bad, "g2.r2": "50"}}
+        sent = {"stages": [_stage("Review", gates=[_gate("g2", "Second")], outcome=weighed)]}
+        refused = client.post(f"{LOBBY}/{made}/process", json=sent)
+        assert refused.status_code == 400 and "not all numbers" in refused.json()["error"], bad
