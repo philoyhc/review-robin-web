@@ -25,20 +25,20 @@ def test_an_owed_template_is_written_saved_and_kept_in_the_tab(page: Page) -> No
     card = _card(page, OWED)
     save = card.locator('[data-em-act="save"]')
     assert card.locator("[data-em-chip]").text_content() == "Owed" and save.is_disabled()
-    card.locator("[data-em-subject]").fill("[Exercise]: your interview outcome")
+    card.locator("[data-em-subject]").fill("$exercise_name: your interview outcome")
     assert card.locator("[data-em-unsaved]").is_visible() and save.is_enabled()
     save.click()
     # A subject alone is not written.
     assert card.locator("[data-em-chip]").text_content() == "Owed"
     assert "still owed" in card.locator("[data-em-said]").inner_text()
-    card.locator("[data-em-body]").fill("Dear [Applicant name], …")
+    card.locator("[data-em-body]").fill("Dear $applicant_name, …")
     save.click()
     assert card.locator("[data-em-chip]").text_content() == "Written"
     assert card.locator("[data-em-unsaved]").is_hidden()
     page.reload()  # kept in the tab
     card = _card(page, OWED)
     assert card.locator("[data-em-chip]").text_content() == "Written"
-    assert card.locator("[data-em-body]").input_value() == "Dear [Applicant name], …"
+    assert card.locator("[data-em-body]").input_value() == "Dear $applicant_name, …"
 
 
 def test_start_from_the_default_and_reset_asks_over_text(page: Page) -> None:
@@ -105,33 +105,35 @@ def test_insert_field_puts_it_at_the_cursor_of_the_box_last_used(page: Page) -> 
     subject = card.locator("[data-em-subject]")
     subject.fill("Your outcome")
     subject.evaluate("s => s.setSelectionRange(0, 0)")
-    card.locator("[data-em-insert]").select_option("Exercise")
+    card.locator("[data-em-insert]").select_option("exercise_name")
     assert subject.input_value() == "Your outcome"  # choosing inserts nothing
     card.locator('[data-em-act="insert"]').click()
-    assert subject.input_value() == "[Exercise]Your outcome"
-    # The menu holds this kind's fields only.
-    options = card.locator("[data-em-insert] option").all_inner_texts()
-    assert options == list(workflow.EMAIL_FIELDS["outcome-applicants"])
+    assert subject.input_value() == "${exercise_name}Your outcome"  # braced before a letter
+    # The menu holds this kind's tags only, each with what it stands for.
+    values = card.locator("[data-em-insert] option").evaluate_all("os => os.map(o => o.value)")
+    assert values == list(workflow.EMAIL_FIELDS["outcome-applicants"])
+    label = card.locator("[data-em-insert] option").first.inner_text()
+    assert label == "$applicant_name — the applicant's name"
     # A body never used takes the field at its end.
     other = _card(page, "Interviews: Outcome · Evaluators")
     other.locator("[data-em-body]").evaluate("b => { b.value = 'Dear'; }")
-    other.locator("[data-em-insert]").select_option("Evaluator name")
+    other.locator("[data-em-insert]").select_option("evaluator_name")
     other.locator('[data-em-act="insert"]').click()
-    assert other.locator("[data-em-body]").input_value() == "Dear[Evaluator name]"
+    assert other.locator("[data-em-body]").input_value() == "Dear$evaluator_name"
 
 
 def test_save_refuses_another_kind_s_field_and_says_which(page: Page) -> None:
     page.goto(EMAILS)
-    card = _card(page, OWED)  # an outcome to applicants: no [Evaluator name]
+    card = _card(page, OWED)  # an outcome to applicants: no $evaluator_name
     card.locator("[data-em-subject]").fill("Outcome")
-    card.locator("[data-em-body]").fill("Dear [Evaluator name], [not a field] stays text.")
+    card.locator("[data-em-body]").fill("Dear $evaluator_name, $not_a_tag and $$5 stay text.")
     card.locator('[data-em-act="save"]').click()
     said = card.locator("[data-em-said]").inner_text()
-    assert said == "Not saved: [Evaluator name] is not a field of this email. Use Insert field."
+    assert said == "Not saved: $evaluator_name is not a tag of this email. Use Insert field."
     assert card.locator("[data-em-body]").get_attribute("aria-invalid") == "true"
     assert card.locator("[data-em-chip]").text_content() == "Owed"
-    card.locator("[data-em-body]").fill("Dear [applicant NAME], [not a field] stays text.")
-    card.locator('[data-em-act="save"]').click()  # case does not matter
+    card.locator("[data-em-body]").fill("Dear ${applicant_name}, $not_a_tag and $$5 stay text.")
+    card.locator('[data-em-act="save"]').click()  # ${tag} as $tag
     assert card.locator("[data-em-chip]").text_content() == "Written"
 
 
@@ -149,28 +151,33 @@ def test_preview_fills_each_field_from_the_sample_and_marks_a_foreign_one(page: 
     assert body.startswith("Dear Aisha Bello,") and "is: Pending." in body
     assert "/applydesk/me/exercises/wa9juxbc2t" in body
     # It follows the card as typed, a foreign field marked.
-    card.locator("[data-em-body]").fill("Dear [Evaluator name]")
-    assert preview.locator("mark").inner_text() == "[Evaluator name]"
+    card.locator("[data-em-body]").fill("Dear $evaluator_name")
+    assert preview.locator("mark").inner_text() == "$evaluator_name"
     button.click()
     assert preview.is_hidden() and button.inner_text() == "Preview"
 
 
 def test_preview_shows_text_as_text_and_a_field_with_no_sample_dimmed(page: Page) -> None:
-    """The cold read on AD1L: [constructor] is text, markup is text, and a
+    """The cold read on AD1L: $constructor is text, markup is text, and a
     draft's receipt (no application yet) shows its fields' names."""
     page.goto(EMAILS)
     card = _card(page, OWED)
-    card.locator("[data-em-body]").fill("[constructor] <b>bold</b> [Applicant name]")
+    card.locator("[data-em-body]").fill("$constructor <b>bold</b> $applicant_name, $$5")
     card.locator('[data-em-act="preview"]').click()
     body = card.locator("[data-em-preview-body]")
-    assert body.inner_text() == "[constructor] <b>bold</b> Aisha Bello"
+    assert body.inner_text() == "$constructor <b>bold</b> Aisha Bello, $5"
     assert body.locator("b").count() == 0
     page.goto(f"{ORIGIN}/applydesk/operator/exercises/c4xh2ndv6s/emails")
     draft = page.locator("[data-email]").first
+    # Its default drops each line whose tag is empty, as Review Robin's.
     draft.locator('[data-em-act="reset"]').click()
     draft.locator('[data-em-act="preview"]').click()
+    shown = draft.locator("[data-em-preview-body]").inner_text()
+    assert "Dear" not in shown and "Thank you" not in shown and "Questions?" in shown
+    # A body of one's own keeps the line, the empty tag dimmed.
+    draft.locator("[data-em-body]").fill("Dear $applicant_name,")
     none = draft.locator("[data-em-preview-body] .em-none")
-    assert none.first.inner_text() == "[Applicant name]"
+    assert none.first.inner_text() == "$applicant_name"
     assert none.first.get_attribute("title") == "No value in the sample"
 
 
@@ -182,9 +189,9 @@ def test_each_card_keeps_its_own_insertion_point(page: Page) -> None:
     a.locator("[data-em-subject]").fill("Outcome")
     a.locator("[data-em-subject]").evaluate("s => s.setSelectionRange(0, 0)")
     _card(page, WRITTEN).locator("[data-em-body]").click()
-    a.locator("[data-em-insert]").select_option("Exercise")
+    a.locator("[data-em-insert]").select_option("exercise_name")
     a.locator('[data-em-act="insert"]').click()
-    assert a.locator("[data-em-subject]").input_value() == "[Exercise]Outcome"
+    assert a.locator("[data-em-subject]").input_value() == "${exercise_name}Outcome"
 
 
 def test_preview_shows_paragraphs_with_a_small_gap(page: Page) -> None:
@@ -193,7 +200,7 @@ def test_preview_shows_paragraphs_with_a_small_gap(page: Page) -> None:
     page.goto(EMAILS)
     card = _card(page, OWED)
     # Blank lines with spaces on them, several or one, are one break.
-    body = "\n\nDear [Applicant name],\n  \n \nFirst line\nsecond line\n\n\nLast.\n  "
+    body = "\n\nDear $applicant_name,\n  \n \nFirst line\nsecond line\n\n\nLast.\n  "
     card.locator("[data-em-body]").fill(body)
     card.locator('[data-em-act="preview"]').click()
     paras = card.locator("[data-em-preview-body] p.em-para")
@@ -215,3 +222,21 @@ def test_the_body_grows_with_its_text_and_has_no_handle(page: Page) -> None:
     body.fill("\n\n".join(f"Paragraph {i}." for i in range(8)))
     after = body.evaluate("t => t.offsetHeight")
     assert after > before and body.evaluate("t => t.scrollHeight <= t.clientHeight + 2")
+
+
+def test_tags_are_case_as_written_and_a_braced_foreign_one_is_refused(page: Page) -> None:
+    """Ruling 54, as Review Robin's: $Applicant_name is not a tag; another
+    kind's tag is refused braced or not; Insert after a lone $ adds a space."""
+    page.goto(EMAILS)
+    card = _card(page, OWED)
+    card.locator("[data-em-subject]").fill("Outcome")
+    card.locator("[data-em-body]").fill("Hi ${evaluator_name}")
+    card.locator('[data-em-act="save"]').click()
+    assert "$evaluator_name is not a tag" in card.locator("[data-em-said]").inner_text()
+    card.locator("[data-em-body]").fill("Hi $Applicant_name")
+    card.locator('[data-em-act="preview"]').click()
+    assert card.locator("[data-em-preview-body]").inner_text() == "Hi $Applicant_name"
+    card.locator("[data-em-body]").fill("Fee: $")
+    card.locator("[data-em-insert]").select_option("outcome")
+    card.locator('[data-em-act="insert"]').click()
+    assert card.locator("[data-em-body]").input_value() == "Fee: $ $outcome"

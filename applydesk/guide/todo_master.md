@@ -535,6 +535,12 @@ where a ruling below differs from it, the ruling wins.
     The body holds paragraphs, separated by a blank line, each shown
     with a small gap (Preview now, the sent email at AD7); a single line
     break stays a line break.
+54. **Merge tags are Review Robin's** (author, 2026-11-19): `$tag` or
+    `${tag}`, `$$` a literal `$`, an unknown tag left as typed, and a
+    default body dropping a line whose tag comes out empty
+    (`spec/email_template_editor.md` §6). Apply Desk keeps its refusal of
+    another kind's tag (an evaluator's email must never name an
+    applicant) and a description beside each tag in *Insert field*.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
