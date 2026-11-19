@@ -696,14 +696,14 @@ the browser (`_gate_ops_js.html`):
 | Mode | Starts as | Operations |
 |---|---|---|
 | Automatic | every dossier filled as its sources give | *+ Pair*, *Remove* (then *Undo*): never re-run, only edited by hand (ruling 48) |
-| Suggested, then approved | the fill, each pair *Suggested* | *Approve* a pair, *Approve all*, *Remove* (then *Undo*), *+ Pair* |
+| Suggested, then approved | the fill, each pair *Suggested* | *Approve* on any of a dossier's pairs approves them all, as ruling 34 has it (*Approved*, clicked again, takes them back; a pair added later waits for its own), *Approve all* (asking first while a dossier is short), *Remove* (then *Undo*), *+ Pair* |
 | Assigned by the operator | empty, every dossier *Not assigned* | *+ Pair*, *Remove* |
 
 - **Kept in the tab.** Changes live in `sessionStorage` under
   `applydesk-ev:<exercise>:<gate>:<mode>`, so paging, sorting and searching
   keep them; *Changes in this tab, not saved until AD2* and *Discard
   changes* show while any exist,
-  and Discard puts the sample back. Leaving the gate's pages with any asks
+  and Discard puts the sample back, asking first past three changes. Leaving the gate's pages with any asks
   first, a reload included, since the browser cannot tell a reload from
   closing the tab, which loses them; its own pager, sort and filter do
   not. On load they are reconciled against the
