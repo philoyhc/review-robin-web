@@ -541,6 +541,19 @@ where a ruling below differs from it, the ruling wins.
     (`spec/email_template_editor.md` §6). Apply Desk keeps its refusal of
     another kind's tag (an evaluator's email must never name an
     applicant) and a description beside each tag in *Insert field*.
+55. **Layer B is simulated in the tab** (author, 2026-11-19): Send,
+    Re-send, Status, Results, link state, Invite and Remind work on sample
+    data and are kept in the tab; the bundle is built for real; nothing
+    reaches Review Robin until AD2 stores a transfer record and AD6 makes
+    the calls (segment AD1M).
+56. **A gate's session name and code are derived and editable**
+    (author, 2026-11-19): *exercise name — gate label* and *public
+    ID*`-g`*n*, editable until its session opens; a taken code is
+    refused as Review Robin's `session_code_conflict`.
+57. **A gate concludes when the operator pulls its final results**
+    (author, 2026-11-19): after Review Robin's session closes, *Pull
+    final results* writes the results and marks the gate *Results in*;
+    an earlier pull reads progress only.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
@@ -615,12 +628,11 @@ rulings after this list):
   revert-and-re-send or Unlink.
 - ~~A sent gate read-only (AD1F, AD1G) versus re-sending before it opens~~:
   re-sent until it opens (ruling 29).
-- Confidential identity: 23F's "Name redacted" plus the Dossier ID, or
-  ruling 10's per-handoff alias key.
-- Each gate's Review Robin session name and code (unique there).
+- ~~Confidential identity~~: the Dossier ID, name redacted (ruling 43).
+- ~~Each gate's Review Robin session name and code~~: ruling 56.
 - ~~Where the help contact comes from~~: the exercise's (author,
   2026-11-17); the description is the gate's.
-- What marks a gate concluded, for writing results.
+- ~~What marks a gate concluded~~: ruling 57.
 - Panels' *Sent* chip still marks a gate sent, not one whose session has
   opened (ruling 29); the spec says the same. Align when Panels is next
   touched.
@@ -641,7 +653,7 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
-| Layer B — Gates to Review Robin | Send, re-send, status, results, link state, invite and remind, on Evaluations > Gates (the "Order" above) | Next |
+| Layer B — Gates to Review Robin | Send, re-send, status, results, link state, invite and remind, on Evaluations > Gates (the "Order" above), simulated in the tab (`applydesk/guide/segment_AD1M_gates_to_rr.md`) | Building |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
