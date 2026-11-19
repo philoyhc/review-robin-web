@@ -172,3 +172,16 @@ def test_preview_shows_text_as_text_and_a_field_with_no_sample_dimmed(page: Page
     none = draft.locator("[data-em-preview-body] .em-none")
     assert none.first.inner_text() == "[Applicant name]"
     assert none.first.get_attribute("title") == "No value in the sample"
+
+
+def test_each_card_keeps_its_own_insertion_point(page: Page) -> None:
+    """Codex on #4012: a cursor left in one card's subject survives an
+    edit in another card."""
+    page.goto(EMAILS)
+    a = _card(page, OWED)
+    a.locator("[data-em-subject]").fill("Outcome")
+    a.locator("[data-em-subject]").evaluate("s => s.setSelectionRange(0, 0)")
+    _card(page, WRITTEN).locator("[data-em-body]").click()
+    a.locator("[data-em-insert]").select_option("Exercise")
+    a.locator('[data-em-act="insert"]').click()
+    assert a.locator("[data-em-subject]").input_value() == "[Exercise]Outcome"

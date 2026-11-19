@@ -55,7 +55,6 @@
     }
     return bad;
   }
-  var lastBox = null;
   var STORE = "applydesk-emails:" + root.dataset.emEx;
   var kept = {};
   try { kept = JSON.parse(sessionStorage.getItem(STORE) || "{}") || {}; } catch (e) { kept = {}; }
@@ -92,7 +91,9 @@
     c.querySelector('[data-em-act="reset"]').textContent = written(subj(c).value, body(c).value) ? "Reset to default" : "Start from the default";
   }
   root.addEventListener("focusin", function (e) {
-    if (e.target.matches("[data-em-subject], [data-em-body]")) lastBox = e.target;
+    // Each card remembers its own box (Codex on #4012): another card's
+    // edits never move this one's insertion point.
+    if (e.target.matches("[data-em-subject], [data-em-body]")) e.target.closest("[data-email]").lastBox = e.target;
   });
   root.addEventListener("input", function (e) {
     var c = e.target.closest("[data-email]");
@@ -106,7 +107,7 @@
   // box last used on this card at its cursor, else the end of its body.
   function insert(c) {
     var f = c.querySelector("[data-em-insert]").value, t = "[" + f + "]";
-    var used = lastBox && c.contains(lastBox), box = used ? lastBox : body(c);
+    var used = !!c.lastBox, box = used ? c.lastBox : body(c);
     var at = used ? box.selectionStart : box.value.length, to = used ? box.selectionEnd : at;
     box.value = box.value.slice(0, at) + t + box.value.slice(to);
     box.focus();
