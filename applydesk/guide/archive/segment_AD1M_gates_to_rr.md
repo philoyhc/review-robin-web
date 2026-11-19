@@ -72,6 +72,27 @@ Taken 2026-11-19 at `9b6006bea`.
 - Tests: `grep -rln "gate_state\|gate_sent\|gate_opened" applydesk/tests | wc -l` → 7 files; a new `test_handoff.py` and a browser test.
 - Specs: `applydesk/spec/applications.md` "The Evaluations page"; `spec/handoffs.md` cited, not changed.
 
+## Status
+
+**Closed 2026-11-19.** Built in six PRs after the plan (#4016): the scaffold (#4017), the bundle (#4018), sample states with Send and Re-send (rung 4), Pull, Invite and Remind (rung 5), and this close. Every Definition-of-done line holds.
+
+**What the ladder became:** as planned, plus two sample gates on `k7mfr3pq8z`, *Second reading* (*Closed*) and *Moderation* (*Detached*), added at the author's word with rung 4, so every link state can be tried in a browser (`workflow.SENT_STATES`).
+
+**Decisions confirmed at build:**
+- A Suggested gate whose only lack is approvals sends once the tab has approved every dossier; no sample gate is otherwise *Ready*.
+- A tab that has added or removed pairs neither sends nor re-sends: the files are the pairs as saved.
+- `session_opened` is not drawn: an opened gate's buttons are off with the reason. `session_has_responses` and `not_linked` cannot arise in the sample.
+- A sample gate sent but unopened reads as sent (*Re-send*, not *Send*).
+- *Invite* and *Remind* record when and how many, not who: the names are the card's Progress rows.
+- Response fields are `stages.fields_of`: a sample gate listing none sends one per result (Codex on #4018).
+- *Closed* and *Detached* count as opened; *Closed* shows as under way (info), *Detached* as a warning.
+
+**Reads:** one `diff-reviewer` item read (rungs 3–5, from `9b6006bea`) found 11 findings; the two defects (Re-send skipping the edited-pairs refusal; Process's *Closed* chip) and five smaller ones were fixed with rung 5, the rest are notes here or the open question below. Codex found one, the empty instrument, fixed in #4018.
+
+**Spec:** `spec-writer` checked "The Evaluations page" at the close: it named the k7 sample states, Invite's full condition, and dropped a scaffold note.
+
+**Owed:** the real calls and the transfer record (AD2, AD6), results into Dossiers (AD6), the invitation and reminder templates on Emails (AD7).
+
 ## PR ladder
 
 1. **This plan**, with rulings 55–57 in `todo_master.md`. Prose only.
@@ -96,9 +117,8 @@ Taken 2026-11-19 at `9b6006bea`.
 
 ## Open questions
 
-- **Sample gates for the later states**: answered (author, 2026-11-19): the second exercise (`k7mfr3pq8z`) gains *Second reading*, closed in Review Robin and not yet pulled (*Closed*), and *Moderation*, detached (*Detached*); both count as opened.
-
-- **How a detached gate concludes**: open (the cold read). `locks` and `timeline` count only *Results in* as complete, so a detached gate keeps its stage, and the exercise, from completing. The author decides; nothing is built for it here.
+- **Sample gates for the later states**: answered (author, 2026-11-19), the two `k7mfr3pq8z` gates above.
+- **How a detached gate concludes**: open, moved to `applydesk/guide/todo_master.md` "Open decisions".
 
 ## Out of scope
 

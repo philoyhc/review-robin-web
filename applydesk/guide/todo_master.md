@@ -628,11 +628,8 @@ rulings after this list):
   revert-and-re-send or Unlink.
 - ~~A sent gate read-only (AD1F, AD1G) versus re-sending before it opens~~:
   re-sent until it opens (ruling 29).
-- ~~Confidential identity~~: the Dossier ID, name redacted (ruling 43).
-- ~~Each gate's Review Robin session name and code~~: ruling 56.
 - ~~Where the help contact comes from~~: the exercise's (author,
   2026-11-17); the description is the gate's.
-- ~~What marks a gate concluded~~: ruling 57.
 - Panels' *Sent* chip still marks a gate sent, not one whose session has
   opened (ruling 29); the spec says the same. Align when Panels is next
   touched.
@@ -653,7 +650,6 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
-| Layer B — Gates to Review Robin | Send, re-send, status, results, link state, invite and remind, on Evaluations > Gates (the "Order" above), simulated in the tab (`applydesk/guide/segment_AD1M_gates_to_rr.md`) | Building |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
@@ -668,11 +664,16 @@ Segments in order; each gets a plan in this folder when it starts.
 - **AD5:** a list headline (Result 1) has no value on Dossiers (AD1F).
 - **AD5:** a panel used twice in one gate, or a max above its panel's
   size, is not flagged (AD1G).
-- **Layer B:** a gate's progress line is canned beside counted pairs
-  (AD1I; AD-32).
+- **AD6:** a gate's progress line, and each evaluator's share of it on
+  the Review Robin card, is canned beside counted pairs until Review
+  Robin's status read replaces it (AD1I; AD-32; AD1M).
 - **Form:** card drag has no Escape and no auto-scroll (AD1B).
 
 ## Open decisions
+
+- **How a detached gate concludes** (AD1M's cold read): `locks` and
+  `timeline` count only *Results in* as complete, so a gate unlinked in
+  Review Robin keeps its stage, and the exercise, from completing.
 
 - **Process's Preview** (AD1E): held until the builder is complete
   (author, 2026-11-13); what it shows is decided then.
