@@ -935,7 +935,22 @@ def setup_missing(e: Exercise) -> tuple[tuple[str, str], ...]:
 
 
 def exercise(public_id: str) -> Exercise | None:
+    """An exercise by ID: the browser's scratch exercise first (segment
+    AD1N, ruling 59), else the fixed sample's."""
+    from applydesk import scratch  # scratch builds on this module
+
+    held = scratch.get(public_id)
+    if held is not None:
+        return held.exercise
     return next((e for e in EXERCISES if e.public_id == public_id), None)
+
+
+def exercises() -> tuple[Exercise, ...]:
+    """Every exercise the operator sees: this browser's scratch exercises,
+    newest first, then the fixed sample's."""
+    from applydesk import scratch
+
+    return tuple(s.exercise for s in scratch.mine()) + EXERCISES
 
 
 #: The signed-in applicant's applications on the /me pages, a submitted one

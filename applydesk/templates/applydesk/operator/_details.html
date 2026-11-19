@@ -5,7 +5,7 @@
    Discard changes puts the last kept values back. A published exercise's
    code and who may apply are fixed (G2). Nothing is saved until AD2. #}
 {% set live = exercise.state != "Draft" %}
-<section class="card dt" id="details" data-details data-dt-codes="{{ other_codes | tojson | forceescape }}" data-dt-default-contact="{{ default_contact }}">
+<section class="card dt" id="details" data-details{% if scratch_page %} data-dt-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/details') }}"{% endif %} data-dt-codes="{{ other_codes | tojson | forceescape }}" data-dt-default-contact="{{ default_contact }}">
   <div class="cardhead"><h2>Details</h2>
     <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
   </div>
@@ -124,6 +124,19 @@
     var v = read(), no = refusal(v);
     if (no) { refuse(field(no[0]), no[1]); return; }
     form.querySelectorAll("[aria-invalid]").forEach(function (x) { x.removeAttribute("aria-invalid"); x.removeAttribute("aria-describedby"); });
+    // A scratch exercise's Lock keeps the details in the server's memory
+    // for this browser (segment AD1N); a sample's stays on the page.
+    if (card.dataset.dtSave) {
+      fetch(card.dataset.dtSave, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(v), credentials: "same-origin" })
+        .then(function (r) { return r.json().then(function (body) { return [r.ok, body]; }); })
+        .then(function (got) {
+          if (!got[0]) { refuse(field("name"), (got[1] && got[1].error) || "Not saved."); return; }
+          kept = v; loaded = v; show(v); open(false); draw();
+          said.textContent = "Saved to this scratch exercise.";
+        })
+        .catch(function () { refuse(field("name"), "Not saved: the server could not be reached."); });
+      return;
+    }
     kept = v; show(v); open(false); draw();
     said.textContent = same(v, loaded) ? "Locked." : "Locked: changed on this page; nothing is saved until AD2.";
   });

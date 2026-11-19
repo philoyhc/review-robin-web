@@ -1,6 +1,14 @@
 {% extends "applydesk/base.html" %}
 {% block content %}
-<div class="ptitle"><h1>Operator Lobby</h1><button class="btn btn-primary" type="button" disabled title="Exercises are created from AD3">New exercise</button></div>
+<div class="ptitle"><h1>Operator Lobby</h1><button class="btn btn-primary" type="button" data-nx-open aria-expanded="false" aria-controls="nx-form">New exercise</button></div>
+{# New exercise (segment AD1N, ruling 59): a name, then a blank draft held
+   in memory for this browser until AD2, at most {{ scratch_limit }}. #}
+<form class="card nx-form" id="nx-form" method="post" action="{{ url('/operator/exercises/new') }}" data-nx-form hidden>
+  <label class="fc-l">Name of the new exercise<input class="fc-in" name="name" maxlength="200" required data-nx-name></label>
+  <p class="muted">A scratch exercise: kept in this server's memory for this browser only, never saved, gone after a restart, a deploy or eight idle hours; at most {{ scratch_limit }} at once.</p>
+  <div class="btnrow"><button class="btn btn-primary" type="submit">Create</button><button class="btn btn-secondary" type="button" data-nx-cancel>Cancel</button></div>
+</form>
+{% if scratch_said %}<p class="nx-said" role="status" data-nx-said>{{ scratch_said }}</p>{% endif %}
 <p class="lede">Each call for applications is an exercise, named by its Exercise code.</p>
 {% include "applydesk/_placeholder.html" %}
 <div class="table-wrap">
@@ -9,7 +17,8 @@
   <tbody>
   {% for e in exercises %}
     <tr>
-      <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a></td>
+      <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a>{% if is_scratch(e.public_id) %} <span class="chip chip-mute" data-scratch-chip>Scratch</span>
+        <form class="nx-discard" method="post" action="{{ url('/operator/exercises/' ~ e.public_id ~ '/discard') }}" data-nx-discard data-name="{{ e.name }}"><button class="btn btn-destructive" type="submit">Discard</button></form>{% endif %}</td>
       <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
       <td>{% with value = exercise_status(e) %}{% include "applydesk/_state_chip.html" %}{% endwith %}</td>
       <td>{{ current_stage(e) }}</td>
@@ -20,4 +29,24 @@
   </tbody>
 </table>
 </div>
+<script>
+(function () {
+  var open = document.querySelector("[data-nx-open]"), form = document.querySelector("[data-nx-form]");
+  if (!open || !form) return;
+  function show(on) {
+    form.hidden = !on;
+    open.setAttribute("aria-expanded", on ? "true" : "false");
+    if (on) form.querySelector("[data-nx-name]").focus(); else open.focus();
+  }
+  open.addEventListener("click", function () { show(form.hidden); });
+  form.querySelector("[data-nx-cancel]").addEventListener("click", function () { show(false); });
+  form.addEventListener("keydown", function (e) { if (e.key === "Escape") show(false); });
+  // Discard asks first: a scratch exercise cannot be got back.
+  document.querySelectorAll("[data-nx-discard]").forEach(function (f) {
+    f.addEventListener("submit", function (e) {
+      if (!window.confirm("Discard " + f.dataset.name + "? Everything set up in it goes.")) e.preventDefault();
+    });
+  });
+})();
+</script>
 {% endblock %}

@@ -116,13 +116,31 @@ answer only for a Published or Closed exercise.
 ## The lobbies and the applicant's application
 
 - **The Operator Lobby** (`applydesk/templates/applydesk/operator/exercises.html`):
-  *New exercise* (Primary, disabled until AD3), then a row per exercise:
+  *New exercise* (Primary), then a row per exercise, this browser's
+  scratch exercises first, newest first:
   *Exercise* (its name, linking Home), *Exercise code* (*Not set* when
   none; the public ID shows only in the link), *State* (the exercise's
   status, from its stages: `locks.exercise_status`), *Stage* (the stage
   holding its next step, `workflow.current_stage`), *Submitted*
   (`workflow.counts_of`, the count every page uses) and *Applications
   close*.
+- **Scratch exercises** (segment AD1N, ruling 59; `applydesk/scratch.py`).
+  *New exercise* opens a form asking for a name; *Create* makes a blank
+  draft, as *Graduate Travel Grant 2027* (one stage holding the form,
+  nothing else), and lands on its Home. A refusal (no name, or a sixth)
+  returns to the Lobby saying why. A scratch exercise is held in the
+  server's memory for this browser only, keyed by an HttpOnly
+  `applydesk-scratch` cookie on the mount's path. It is never written
+  anywhere, and is gone after a restart, a deploy or eight idle hours; a
+  browser holds at most five. Another browser gets a 404 for it. Its row
+  carries a *Scratch* chip and *Discard* (Destructive), which asks first.
+  Every page renders it, since `sample_data.exercise` reads the scratch
+  first, and each of its pages says what a scratch exercise is in place of
+  the placeholder line. Details' *Lock* on one posts the fields to
+  `…/details` (JSON, same-site), checked as the card checks them and by the
+  server (a name of 1–200 characters, a code no other exercise holds, a
+  help contact that is an address, a timezone offered, who may apply one of
+  the choices), and says *Saved to this scratch exercise.* or why not.
 - **The User Lobby** (`applydesk/templates/applydesk/me/home.html`), three
   cards: *My applications*, each of the applicant's own with its state,
   linking its page, a draft included; *Open to me*, each Published or

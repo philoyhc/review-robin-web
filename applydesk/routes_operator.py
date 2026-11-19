@@ -4,11 +4,13 @@ built on sample data, working on screen; nothing saved until AD2."""
 from __future__ import annotations
 
 import functools
+import json
 import re
-from typing import cast
+from typing import Any, cast
+from urllib.parse import parse_qs, urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from applydesk import (
     extract,
@@ -17,6 +19,7 @@ from applydesk import (
     locks,
     paging,
     sample_data,
+    scratch,
     stages,
     timeline,
     workflow,
@@ -46,11 +49,137 @@ def exercises(request: Request) -> Response:
         request,
         "applydesk/operator/exercises.html",
         area=OPERATOR_LOBBY,
-        exercises=sample_data.EXERCISES,
+        exercises=sample_data.exercises(),
+        is_scratch=scratch.is_scratch,
+        scratch_limit=scratch.LIMIT,
+        scratch_said=request.query_params.get("said", ""),
         exercise_status=locks.exercise_status,
         counts=workflow.counts_of,
         current_stage=workflow.current_stage,
     )
+
+
+def _same_site(request: Request) -> None:
+    """A scratch exercise's posts come from Apply Desk's own pages: a
+    browser naming another site is refused (as Review Robin's handoffs)."""
+    site = request.headers.get("sec-fetch-site")
+    if site is not None and site not in ("same-origin", "none"):
+        raise HTTPException(status_code=403)
+
+
+def _to_lobby(request: Request, said: str = "") -> RedirectResponse:
+    path = "/operator/exercises" + (("?" + urlencode({"said": said})) if said else "")
+    return RedirectResponse(url_path(request, path), status_code=303)
+
+
+@router.post("/exercises/new", name="applydesk_exercise_new")
+async def exercise_new(request: Request) -> Response:
+    """*New exercise* (segment AD1N, ruling 59): a blank draft named by the
+    operator, held in memory for this browser, its Home next."""
+    _same_site(request)
+    body = await request.body()
+    if len(body) > scratch.MAX_BODY:
+        raise HTTPException(status_code=413)
+    name = parse_qs(body.decode("utf-8", "replace")).get("name", [""])[0]
+    browser = scratch.token() or scratch.new_token()
+    try:
+        made = scratch.create(browser, name)
+    except scratch.Refused as why:
+        return _to_lobby(request, str(why))
+    reply = RedirectResponse(
+        url_path(request, f"/operator/exercises/{made.exercise.public_id}"), status_code=303
+    )
+    reply.set_cookie(
+        scratch.COOKIE,
+        browser,
+        max_age=scratch.IDLE_SECONDS,
+        path=root_path(request) or "/",
+        secure=request.url.scheme == "https",
+        httponly=True,
+        samesite="lax",
+    )
+    return reply
+
+
+@router.post("/exercises/{exercise_id}/discard", name="applydesk_exercise_discard")
+def exercise_discard(request: Request, exercise_id: str) -> Response:
+    """*Discard* on the Lobby: a scratch exercise forgotten."""
+    _same_site(request)
+    exercise = exercise_or_404(exercise_id)
+    if not scratch.discard(scratch.token(), exercise.public_id):
+        raise HTTPException(status_code=404)
+    return _to_lobby(request, f"{exercise.name} discarded.")
+
+
+_ELIGIBILITY = ("Open to all signed in", "Invitation only", "Not set")
+_EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
+
+
+def _details(exercise: sample_data.Exercise, v: dict[str, Any]) -> dict[str, Any]:
+    """Details as Lock sends them, checked as the card checks them; the
+    reason for the first fault, else the fields for ``scratch.update``."""
+    text = {
+        k: v.get(k) for k in ("name", "code", "description", "contact", "timezone", "eligibility")
+    }
+    if not all(isinstance(x, str) for x in text.values()) or not isinstance(v.get("blind"), bool):
+        raise scratch.Refused("The details are malformed.")
+    name, code = str(text["name"]).strip(), str(text["code"]).strip()
+    if not name or len(name) > 200:
+        raise scratch.Refused("A name of 1 to 200 characters is needed.")
+    if len(code) > 40:
+        raise scratch.Refused("An exercise code is at most 40 characters.")
+    clash = next(
+        (
+            e
+            for e in sample_data.exercises()
+            if code and e.public_id != exercise.public_id and e.code.lower() == code.lower()
+        ),
+        None,
+    )
+    if clash:
+        raise scratch.Refused(f"{code} is already {clash.name}'s code.")
+    contact = str(text["contact"]).strip()
+    if contact and not _EMAIL.fullmatch(contact):
+        raise scratch.Refused("A help contact is an email address.")
+    zone = str(text["timezone"])
+    if zone not in sample_data.TIMEZONES:
+        raise scratch.Refused("That timezone is not offered.")
+    if text["eligibility"] not in _ELIGIBILITY:
+        raise scratch.Refused("Who may apply is not one of the choices.")
+    return {
+        "name": name,
+        "code": code,
+        "summary": str(text["description"]).strip()[:2000],
+        "help_contact": contact,
+        "timezone": "" if zone == sample_data.DEFAULT_TIMEZONE else zone,
+        "eligibility": text["eligibility"],
+        "blind": v["blind"],
+    }
+
+
+@router.post("/exercises/{exercise_id}/details", name="applydesk_exercise_details")
+async def exercise_details(request: Request, exercise_id: str) -> Response:
+    """Details' *Lock* on a scratch exercise (segment AD1N): the fields
+    kept in memory for this browser; a sample exercise has no such post."""
+    _same_site(request)
+    exercise = exercise_or_404(exercise_id)
+    if not scratch.is_scratch(exercise.public_id):
+        raise HTTPException(status_code=404)
+    if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
+        raise HTTPException(status_code=415)
+    body = await request.body()
+    if len(body) > scratch.MAX_BODY:
+        raise HTTPException(status_code=413)
+    try:
+        sent = json.loads(body)
+        if not isinstance(sent, dict):
+            raise scratch.Refused("The details are malformed.")
+        changes = _details(exercise, cast(dict[str, Any], sent))
+        scratch.update(exercise.public_id, **changes)
+    except (ValueError, scratch.Refused) as why:
+        reason = str(why) if isinstance(why, scratch.Refused) else "The details are malformed."
+        return JSONResponse({"error": reason}, status_code=400)
+    return JSONResponse({"saved": True})
 
 
 @router.get("/exercises/{exercise_id}", name="applydesk_exercise_home")
@@ -79,7 +208,7 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         # clashing code on the page (segment AD1I Semantics).
         other_codes=[
             [e.code, e.name]
-            for e in sample_data.EXERCISES
+            for e in sample_data.exercises()
             if e.code and e.public_id != exercise.public_id
         ],
     )
