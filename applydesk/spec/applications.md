@@ -1040,6 +1040,17 @@ which items email whom, that evaluators' invitations and reminders for a
 linked gate come from Apply Desk (AD7; Review Robin sends none), and that a
 saved template is kept in the tab only.
 
+- **Layout** (author, 2026-11-19), as Form's and Process's (`fb-split`):
+  the template cards in the main two columns, and on the right a card
+  that stays in view (scrolling within itself when taller than the
+  window) with the **Outline**, a link to each email beside its *Written*
+  or *Owed* chip, kept in step as cards are saved, and the counts (*5
+  emails · 3 written · 2 owed*); then the **Merge tags**, each with its
+  description and the kinds that take it, listing only the tags some
+  email on the page takes (`workflow.tag_rows`). Clicking a tag puts it in
+  the box last used, as *Insert field* does on that card; on
+  an email whose kind lacks it, it is refused and says so, and with no
+  box used yet it asks for one first.
 - **A card**: the template's name with a *Written* or
   *Owed* chip; when it goes (*When an application is submitted*, *To
   drafts, 7 days before the form closes*, *When <outcome> is released*);

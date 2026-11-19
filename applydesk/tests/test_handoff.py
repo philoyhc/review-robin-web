@@ -236,3 +236,13 @@ def test_process_shows_a_closed_gate_as_under_way(client: TestClient) -> None:
     page = client.get("/applydesk/operator/exercises/k7mfr3pq8z/process").text
     assert '<span class="chip chip-info" data-pi-state>Closed</span>' in page
     assert '<span class="chip chip-warn" data-pi-state>Detached</span>' in page
+
+
+def test_the_emails_side_card_lists_only_tags_an_email_takes() -> None:
+    """The cold read: a tag no email on the page can take is not offered."""
+    owed = workflow.emails("wa9juxbc2t")
+    receipt_only = tuple(e for e in owed if e.kind == "receipt")
+    rows = workflow.tag_rows(receipt_only)
+    assert [r[0] for r in rows] == list(workflow.EMAIL_FIELDS["receipt"])
+    assert all(r[2] == ("Receipt",) for r in rows)
+    assert {r[0] for r in workflow.tag_rows(owed)} == set(workflow.TAG_HELP)

@@ -240,3 +240,27 @@ def test_tags_are_case_as_written_and_a_braced_foreign_one_is_refused(page: Page
     card.locator("[data-em-insert]").select_option("outcome")
     card.locator('[data-em-act="insert"]').click()
     assert card.locator("[data-em-body]").input_value() == "Fee: $ $outcome"
+
+
+def test_the_side_card_s_outline_and_tags(page: Page) -> None:
+    """Laid out as Form and Process (author, 2026-11-19): the Outline
+    links every email and follows its chip; a tag clicked goes where the
+    operator was last typing, refused on an email whose kind lacks it."""
+    page.goto(EMAILS)
+    side = page.locator(".fb-side")
+    tag_said = side.locator("[data-em-tag-said]")
+    side.locator('[data-em-tag="applicant_name"]').click()
+    assert tag_said.inner_text() == "Click in an email's subject or body first."
+    card = _card(page, OWED)
+    card.locator("[data-em-body]").fill("Dear ")
+    side.locator('[data-em-tag="applicant_name"]').click()
+    assert card.locator("[data-em-body]").input_value() == "Dear $applicant_name"
+    side.locator('[data-em-tag="evaluator_name"]').click()
+    assert tag_said.inner_text() == f"$evaluator_name is not a tag of {OWED}."
+    card.locator("[data-em-subject]").fill("Your outcome")
+    card.locator('[data-em-act="save"]').click()
+    chip = side.locator(f'[data-em-o-chip="{OWED}"]')
+    assert chip.text_content() == "Written"  # CSS uppercases the chip
+    assert side.locator("[data-em-counts]").inner_text() == "5 emails · 4 written · 1 owed"
+    link = side.locator(".fb-o-item", has_text=OWED)
+    assert link.get_attribute("href") == f"#{card.get_attribute('id')}"

@@ -4,12 +4,16 @@
    audience. Each template stands alone, so each card has its own Save
    (ruling 23); the page has none. A Save keeps the template in this tab
    (sessionStorage) until AD2; nothing is sent until AD7. #}
+{# Laid out as Form and Process (author, 2026-11-19): the templates in the
+   main two columns, and a card on the right that stays in view, with an
+   Outline linking every email and the merge tags. #}
+<div class="fb-split" data-emails data-em-ex="{{ exercise.public_id }}">
+<div class="fb-main">
 <p>Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk (AD7); Review Robin sends none. A template you save is kept in this tab: nothing is saved until AD2, and until then the status row's <em>Emails</em>, Home and Dossiers' <em>Released</em> read the sample's templates.</p>
-<div data-emails data-em-ex="{{ exercise.public_id }}">
 {% for e in emails %}
 {% set d = email_defaults[e.kind] %}
 {% set sample = email_sample(e) %}
-<section class="card" data-email="{{ e.name }}" data-em-kind="{{ e.kind }}" data-em-sample="{{ sample | tojson | forceescape }}">
+<section class="card em-card" id="em-{{ loop.index }}" data-email="{{ e.name }}" data-em-kind="{{ e.kind }}" data-em-sample="{{ sample | tojson | forceescape }}">
   <h2>{{ e.name }} <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}" data-em-chip>{{ "Written" if e.ok else "Owed" }}</span></h2>
   <p class="muted">{{ e.when }}</p>
   {# A written sample template shows its kind's default; an owed one, empty. #}
@@ -26,6 +30,26 @@
   <p class="muted">Each email ticked on Process, the form's or an outcome's, is listed here as a template to write.</p>
 </section>
 {% endfor %}
+</div>
+<aside class="fb-side em-side">
+  <section class="card fb-outline" aria-labelledby="em-outline-h">
+    <h2 id="em-outline-h">Outline</h2>
+    {% if emails %}
+    <ul class="fb-o-list" data-em-outline>
+      {% for e in emails %}<li><a class="fb-o-item" href="#em-{{ loop.index }}">{{ e.name }}</a> <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}" data-em-o-chip="{{ e.name }}">{{ "Written" if e.ok else "Owed" }}</span></li>{% endfor %}
+    </ul>
+    {% set n_ok = emails | selectattr("ok") | list | length %}
+    <p class="muted fb-counts" data-em-counts>{{ emails | length }} {{ "email" if emails | length == 1 else "emails" }} · {{ n_ok }} written · {{ emails | length - n_ok }} owed</p>
+    {% else %}<p class="muted">No emails yet.</p>{% endif %}
+    <h2 class="em-tags-h">Merge tags</h2>
+    <p class="muted">Click a tag to put it in the box you last used. Each email takes its own kind's tags; <code>$$</code> writes a <code>$</code>.</p>
+    <ul class="fb-o-list em-tags" data-em-tags>
+      {% for f, help, kinds in tag_rows %}
+      <li><button type="button" class="fb-o-item" data-em-tag="{{ f }}" aria-describedby="em-tag-{{ f }}"><code>${{ f }}</code></button> <span class="muted" id="em-tag-{{ f }}">{{ help }} ({{ kinds | join(", ") }})</span></li>{% else %}<li class="muted">None: no email is owed yet.</li>{% endfor %}
+    </ul>
+    <p class="muted" data-em-tag-said role="status"></p>
+  </section>
+</aside>
 </div>
 {% if emails %}<script type="application/json" id="em-defaults">{{ email_defaults | tojson }}</script>
 <script type="application/json" id="em-fields">{{ email_fields | tojson }}</script>
@@ -61,6 +85,7 @@
   var kept = {};
   try { kept = JSON.parse(sessionStorage.getItem(STORE) || "{}") || {}; } catch (e) { kept = {}; }
   var cards = Array.prototype.slice.call(root.querySelectorAll("[data-email]"));
+  var lastCard = null;
   // Only what Process still makes owed: a stale entry is dropped.
   var names = cards.map(function (c) { return c.dataset.email; });
   function store() {
@@ -90,25 +115,37 @@
     var chip = c.querySelector("[data-em-chip]");
     chip.textContent = ok ? "Written" : "Owed";
     chip.className = "chip chip-" + (ok ? "ok" : "warn");
+    // The Outline's chip and counts follow (author, 2026-11-19).
+    var oChip = root.querySelector('[data-em-o-chip="' + CSS.escape(c.dataset.email) + '"]');
+    if (oChip) { oChip.textContent = chip.textContent; oChip.className = chip.className; }
+    var counts = root.querySelector("[data-em-counts]");
+    if (counts) {
+      var n = cards.filter(function (x) { return written(x.savedS || "", x.savedB || ""); }).length;
+      counts.textContent = cards.length + (cards.length === 1 ? " email" : " emails") + " · " + n + " written · " + (cards.length - n) + " owed";
+    }
     c.querySelector('[data-em-act="reset"]').textContent = written(subj(c).value, body(c).value) ? "Reset to default" : "Start from the default";
   }
   root.addEventListener("focusin", function (e) {
     // Each card remembers its own box (Codex on #4012): another card's
     // edits never move this one's insertion point.
-    if (e.target.matches("[data-em-subject], [data-em-body]")) e.target.closest("[data-email]").lastBox = e.target;
+    if (e.target.matches("[data-em-subject], [data-em-body]")) {
+      lastCard = e.target.closest("[data-email]");
+      lastCard.lastBox = e.target;
+    }
   });
   root.addEventListener("input", function (e) {
     var c = e.target.closest("[data-email]");
     if (!c || e.target.matches("[data-em-insert]")) return;
     c.querySelector("[data-em-said]").textContent = "";
+    tagSaid.textContent = "";
     [subj(c), body(c)].forEach(function (x) { x.removeAttribute("aria-invalid"); });
     draw(c);
     preview(c);
   });
   // Insert field (a button, as arrowing a closed menu fires change): the
   // box last used on this card at its cursor, else the end of its body.
-  function insert(c) {
-    var f = c.querySelector("[data-em-insert]").value;
+  function insert(c, tag) {
+    var f = tag || c.querySelector("[data-em-insert]").value;
     var used = !!c.lastBox, box = used ? c.lastBox : body(c);
     var at = used ? box.selectionStart : box.value.length, to = used ? box.selectionEnd : at;
     // Before a letter, digit or _ the tag is braced, so it ends where it
@@ -176,6 +213,18 @@
       into.appendChild(p);
     });
   }
+  // A tag in the side card goes where the operator was last typing, on
+  // whichever card that was; another kind's tag is refused there.
+  var tagSaid = root.querySelector("[data-em-tag-said]");
+  root.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-em-tag]");
+    if (!t || t.disabled) return;
+    var f = t.dataset.emTag;
+    if (!lastCard) { tagSaid.textContent = "Click in an email's subject or body first."; return; }
+    if (!own(lastCard)[f]) { tagSaid.textContent = "$" + f + " is not a tag of " + lastCard.dataset.email + "."; return; }
+    tagSaid.textContent = "";
+    insert(lastCard, f);
+  });
   root.addEventListener("click", function (e) {
     var b = e.target.closest("[data-em-act]");
     if (!b || b.disabled) return;
