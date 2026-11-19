@@ -1161,7 +1161,9 @@ def sources_of(exercise_id: str, gate: Gate) -> tuple[tuple[Source, ...], Total]
         lo, hi = total_bounds(gate.sources)
         return gate.sources, gate.total or Total(lo, hi)
     if not gate.panel:
-        return (), Total(0, 0)
+        # A saved gate with no source yet keeps the Total it was given
+        # (Codex on #4026); a sample one has none.
+        return (), gate.total or Total(0, 0)
     pool = sample_data.panel_pools(exercise_id).get(gate.panel)
     size = len(pool["members"]) if pool else 0
     return (Source("panel", gate.panel, size, size),), Total(size, size)

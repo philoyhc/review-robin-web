@@ -512,6 +512,13 @@ def test_an_unfinished_result_saves_and_a_blank_count_is_refused() -> None:
     saved = process[process.index('data-key="g1"') :]
     saved = saved[: saved.index("data-pr-list")]
     assert "No field chosen" in process and "data-rf=" not in saved
+    # A gate with no source yet keeps its Total (Codex on #4026).
+    bare = _gate("g1", "Read", sources=[], total={"min": 1, "max": 2})
+    reply = client.post(f"{LOBBY}/{made}/process", json={"stages": [_stage("R", gates=[bare])]})
+    assert reply.status_code == 200, reply.text
+    process = client.get(f"{LOBBY}/{made}/process").text
+    total = process[process.index('data-ps="total-min"') - 200 :][:600]
+    assert 'value="1"' in total and 'value="2"' in total, total
     for sources, total in (
         ([{"kind": "panel", "ref": "", "min": None, "max": 2}], {"min": 1, "max": 2}),
         ([{"kind": "panel", "ref": "", "min": 1, "max": 2}], {"min": 1, "max": None}),
