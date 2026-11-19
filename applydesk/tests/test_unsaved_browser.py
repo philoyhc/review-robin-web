@@ -167,7 +167,7 @@ def test_the_gate_page_asks_before_leaving_its_pages_with_changes(page: Page) ->
     pages; its own pager and sort do not."""
     page.goto(f"{MODEL}/evaluations/gate_3")
     assert not page.evaluate(LEAVES)
-    page.locator("tbody tr").first.get_by_role("button", name="Remove").click()
+    page.locator("#ev-table-card tbody tr").first.get_by_role("button", name="Remove").click()
     assert page.evaluate(LEAVES)
     page.evaluate(
         "() => { const a = document.querySelector('a.ev-sort-btn');"

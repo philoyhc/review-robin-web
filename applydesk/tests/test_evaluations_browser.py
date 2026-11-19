@@ -30,7 +30,7 @@ def test_a_column_sorts_and_shift_adds_it_to_the_cascade(page: Page) -> None:
     page.get_by_role("link", name="Sort by Applicant").click(modifiers=["Shift"])
     assert "sort=evaluator%2Ccandidate" in page.url
     assert _badges(page) == ["2↑", "1↑", "↕", "↕"]
-    rows = page.locator("tbody tr")
+    rows = page.locator("#ev-table-card tbody tr")
     first = [rows.nth(i).locator("td").nth(1).inner_text() for i in range(4)]
     assert first == sorted(first, key=str.casefold)
     page.get_by_role("link", name="Sort by Evaluator").click()  # alone, up: replaces
@@ -60,7 +60,7 @@ def _as(monkeypatch: pytest.MonkeyPatch, key: str, **changes: object) -> None:
 
 
 def _row(page: Page, who: str, evaluator: str = "") -> Locator:
-    rows = page.locator("tbody tr", has_text=who)
+    rows = page.locator("#ev-table-card tbody tr", has_text=who)
     return rows.filter(has_text=evaluator).first if evaluator else rows.first
 
 
@@ -71,7 +71,9 @@ def _counts(page: Page) -> str:
 def test_pairs_are_approved_by_dossier_or_all_and_kept_across_pages(page: Page) -> None:
     page.goto(GATE3)
     kenji = _row(page, "Kenji Russo")
-    kenjis = page.locator("tbody tr", has_text="Kenji Russo").locator("[data-ev-state]")
+    kenjis = page.locator("#ev-table-card tbody tr", has_text="Kenji Russo").locator(
+        "[data-ev-state]"
+    )
     assert kenji.locator("[data-ev-state]").text_content() == "Suggested"
     assert not page.locator("[data-ev-unsaved]").is_visible()
     kenji.get_by_role("button", name="Approve").click()
@@ -86,26 +88,36 @@ def test_pairs_are_approved_by_dossier_or_all_and_kept_across_pages(page: Page) 
     assert page.locator("[data-ev-unsaved]").is_visible()
     # Kept in the tab: a sort reloads the page, the approval stands.
     page.get_by_role("link", name="Sort by Evaluator").click()
-    first = page.locator("tbody tr", has_text="Kenji Russo").first
-    states = page.locator("tbody tr", has_text="Kenji Russo").locator("[data-ev-state]")
+    first = page.locator("#ev-table-card tbody tr", has_text="Kenji Russo").first
+    states = page.locator("#ev-table-card tbody tr", has_text="Kenji Russo").locator(
+        "[data-ev-state]"
+    )
     assert "Approved" in states.all_text_contents()
     assert first.is_visible()
     page.get_by_role("button", name="Approve all").click()
     assert page.locator("[data-ev-said]").inner_text() == "All 80 pairs approved."
-    assert set(page.locator("tbody [data-ev-state]").all_text_contents()) == {"Approved"}
+    assert set(page.locator("#ev-table-card tbody [data-ev-state]").all_text_contents()) == {
+        "Approved"
+    }
     assert page.get_by_role("button", name="Approve all").is_disabled()
     # AD-25: discarding more than a few changes asks first.
     asked: list[str] = []
     page.once("dialog", lambda d: (asked.append(d.message), d.dismiss())[1])
     page.get_by_role("button", name="Discard changes").click()
     assert asked and "Discard all 80 changes" in asked[0]
-    assert set(page.locator("tbody [data-ev-state]").all_text_contents()) == {"Approved"}
+    assert set(page.locator("#ev-table-card tbody [data-ev-state]").all_text_contents()) == {
+        "Approved"
+    }
     page.once("dialog", lambda d: d.accept())
     page.get_by_role("button", name="Discard changes").click()
-    assert set(page.locator("tbody [data-ev-state]").all_text_contents()) == {"Suggested"}
+    assert set(page.locator("#ev-table-card tbody [data-ev-state]").all_text_contents()) == {
+        "Suggested"
+    }
     assert not page.locator("[data-ev-unsaved]").is_visible()
     page.reload()
-    assert set(page.locator("tbody [data-ev-state]").all_text_contents()) == {"Suggested"}
+    assert set(page.locator("#ev-table-card tbody [data-ev-state]").all_text_contents()) == {
+        "Suggested"
+    }
     # AD-25: Approve all asks first while a dossier is short; declined,
     # nothing is approved.
     _row(page, "Kenji Russo").get_by_role("button", name="Remove").click()
@@ -113,7 +125,9 @@ def test_pairs_are_approved_by_dossier_or_all_and_kept_across_pages(page: Page) 
     page.once("dialog", lambda d: (asked.append(d.message), d.dismiss())[1])
     page.get_by_role("button", name="Approve all").click()
     assert asked == ["Approve every pair? 1 dossier is still short of evaluators."]
-    assert "Approved" not in page.locator("tbody [data-ev-state]").all_text_contents()
+    assert (
+        "Approved" not in page.locator("#ev-table-card tbody [data-ev-state]").all_text_contents()
+    )
 
 
 def test_a_pair_is_removed_and_added_within_the_total(page: Page) -> None:
@@ -130,7 +144,7 @@ def test_a_pair_is_removed_and_added_within_the_total(page: Page) -> None:
     evaluator = pair.locator("td").nth(1).inner_text()
     pair.get_by_role("button", name="Remove").click()
     assert pair.locator("[data-ev-state]").text_content() == "Removed"
-    other = page.locator("tbody tr", has_text="Kenji Russo").nth(1)
+    other = page.locator("#ev-table-card tbody tr", has_text="Kenji Russo").nth(1)
     assert other.locator("[data-ev-state]").text_content() == "Short by 1"
     assert _counts(page) == "40 dossiers · 39 filled · 1 short"
     assert page.locator("[data-ev-load]").inner_text() != load
@@ -144,7 +158,7 @@ def test_a_pair_is_removed_and_added_within_the_total(page: Page) -> None:
     back = next(o for o in offered if o.startswith(evaluator + " ·"))
     page.locator("[data-ev-add-evaluator]").select_option(label=back)
     page.get_by_role("button", name="Add the pair").click()
-    assert page.locator("tbody tr[data-ev-added]").count() == 0
+    assert page.locator("#ev-table-card tbody tr[data-ev-added]").count() == 0
     assert pair.locator("[data-ev-state]").text_content() == "Suggested"
     assert not page.locator("[data-ev-unsaved]").is_visible()
     pair.get_by_role("button", name="Remove").click()
@@ -153,7 +167,7 @@ def test_a_pair_is_removed_and_added_within_the_total(page: Page) -> None:
     fresh = next(o for o in offered if not o.startswith(evaluator + " ·"))
     page.locator("[data-ev-add-evaluator]").select_option(label=fresh)
     page.get_by_role("button", name="Add the pair").click()
-    added = page.locator("tbody tr[data-ev-added]")
+    added = page.locator("#ev-table-card tbody tr[data-ev-added]")
     assert added.count() == 1 and "Added" in (added.text_content() or "")
     assert _counts(page) == "40 dossiers · 40 filled"
     # At its max, two: no third.
@@ -174,18 +188,18 @@ def test_an_assigned_gate_starts_empty_and_takes_pairs(
     _as(monkeypatch, "g3", mode="assigned")
     page.goto(GATE3)
     assert _counts(page) == "40 dossiers · 0 filled · 40 short"
-    kenji = page.locator("tbody tr:not([data-ev-added])", has_text="Kenji Russo")
+    kenji = page.locator("#ev-table-card tbody tr:not([data-ev-added])", has_text="Kenji Russo")
     assert kenji.locator("[data-ev-state]").text_content() == "Not assigned"
     page.get_by_role("button", name="+ Pair").click()
     page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
     page.get_by_role("button", name="Add the pair").click()
-    first = page.locator("tbody tr[data-ev-added]")
+    first = page.locator("#ev-table-card tbody tr[data-ev-added]")
     assert first.locator("[data-ev-state]").text_content() == "Short by 1"
     assert not kenji.is_visible()  # its None yet row gives way
     page.get_by_role("button", name="Add the pair").click()
-    assert set(page.locator("tbody tr[data-ev-added] [data-ev-state]").all_text_contents()) == {
-        "Assigned"
-    }
+    assert set(
+        page.locator("#ev-table-card tbody tr[data-ev-added] [data-ev-state]").all_text_contents()
+    ) == {"Assigned"}
     assert _counts(page) == "40 dossiers · 1 filled · 39 short"
 
 
@@ -198,7 +212,7 @@ def test_an_automatic_gate_is_edited_by_hand_never_re_run(
     page.goto(GATE3)
     assert page.get_by_role("button", name="Re-run").count() == 0
     assert page.get_by_role("button", name="+ Pair").count() == 1
-    pair = page.locator("tbody tr").first
+    pair = page.locator("#ev-table-card tbody tr").first
     pair.get_by_role("button", name="Remove").click()
     assert pair.locator("[data-ev-state]").text_content() == "Removed"
     assert page.locator("[data-ev-unsaved]").is_visible()
@@ -224,11 +238,13 @@ def test_an_approval_stands_through_undo_and_goes_with_an_added_pair(page: Page)
     page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
     pair.get_by_role("button", name="Remove").click()
     page.get_by_role("button", name="Add the pair").click()
-    added = page.locator("tbody tr[data-ev-added]")
+    added = page.locator("#ev-table-card tbody tr[data-ev-added]")
     added.get_by_role("button", name="Approve").click()
     # The dossier's other pair is approved with it (ruling 34), and taken
     # back with it.
-    other = page.locator("tbody tr:not([data-ev-added])", has_text="Kenji Russo").nth(1)
+    other = page.locator(
+        "#ev-table-card tbody tr:not([data-ev-added])", has_text="Kenji Russo"
+    ).nth(1)
     assert other.locator("[data-ev-state]").text_content() == "Approved"
     added.get_by_role("button", name="Approved").click()
     assert other.locator("[data-ev-state]").text_content() == "Suggested"
@@ -258,7 +274,7 @@ def test_added_pairs_show_on_the_first_page_and_as_the_search_finds(
     )
     page.locator("[data-ev-add-evaluator]").select_option(label=fresh)
     page.get_by_role("button", name="Add the pair").click()
-    added = page.locator("tbody tr[data-ev-added]")
+    added = page.locator("#ev-table-card tbody tr[data-ev-added]")
     name = added.locator("td").nth(1).locator("span").first.inner_text()
     page.goto(f"{GATE3}?offset=40")
     assert added.count() == 0  # the first page's only
@@ -280,7 +296,7 @@ def test_a_stale_change_kept_in_the_tab_counts_for_nothing(page: Page) -> None:
     )
     page.reload()
     assert not page.locator("[data-ev-unsaved]").is_visible()
-    assert page.locator("tbody tr[data-ev-added]").count() == 0
+    assert page.locator("#ev-table-card tbody tr[data-ev-added]").count() == 0
     page.evaluate("""() => sessionStorage.setItem("applydesk-ev:wa9juxbc2t:g3:suggested", "{}")""")
     page.reload()
     assert not page.locator("[data-ev-unsaved]").is_visible()
@@ -298,15 +314,19 @@ def test_a_source_s_min_and_max_hold_as_the_total_s(
     _as(monkeypatch, "g3", sources=two, total=Total(2, 3))
     page.goto(GATE3)
     assert "short" not in _counts(page)
-    pair = page.locator("tbody tr", has_text="Kenji Russo").filter(has_text="Current RAs").first
+    pair = (
+        page.locator("#ev-table-card tbody tr", has_text="Kenji Russo")
+        .filter(has_text="Current RAs")
+        .first
+    )
     pair.get_by_role("button", name="Remove").click()
-    others = page.locator("tbody tr:not(.ev-removed)", has_text="Kenji Russo")
+    others = page.locator("#ev-table-card tbody tr:not(.ev-removed)", has_text="Kenji Russo")
     assert set(others.locator("[data-ev-state]").all_text_contents()) == {"Short"}
     assert _counts(page).endswith("· 1 short")
     pair.get_by_role("button", name="Undo", exact=False).click()
     # Under the Total's max of 3 once a staff member is off it, but at
     # Current RAs' max of 1.
-    page.locator("tbody tr", has_text="Kenji Russo").filter(
+    page.locator("#ev-table-card tbody tr", has_text="Kenji Russo").filter(
         has_text="Residential staff"
     ).first.get_by_role("button", name="Remove").click()
     page.get_by_role("button", name="+ Pair").click()
@@ -341,7 +361,7 @@ def test_undo_and_add_hold_the_limits_and_the_picker_follows(page: Page) -> None
     """Codex on #3961: Undo cannot take a dossier past its max, and the
     open + Pair picker follows an Undo, so no evaluator is added twice."""
     page.goto(GATE3)
-    rows = page.locator("tbody tr:not([data-ev-added])", has_text="Kenji Russo")
+    rows = page.locator("#ev-table-card tbody tr:not([data-ev-added])", has_text="Kenji Russo")
     first, second = rows.nth(0), rows.nth(1)
     gone = first.locator("td").nth(1).inner_text()
     first.get_by_role("button", name="Remove").click()
@@ -361,7 +381,9 @@ def test_undo_and_add_hold_the_limits_and_the_picker_follows(page: Page) -> None
         "Not undone: Kenji Russo already has the most evaluators, 2. Remove one first."
     )
     # The picker follows: both removed, the first chosen, then undone.
-    page.locator("tbody tr[data-ev-added]").get_by_role("button", name="Remove").click()
+    page.locator("#ev-table-card tbody tr[data-ev-added]").get_by_role(
+        "button", name="Remove"
+    ).click()
     second.get_by_role("button", name="Remove").click()
     page.locator("[data-ev-add-evaluator]").select_option(
         label=next(
@@ -376,7 +398,7 @@ def test_undo_and_add_hold_the_limits_and_the_picker_follows(page: Page) -> None
     page.get_by_role("button", name="Add the pair").click()
     assert _counts(page) == "40 dossiers · 40 filled"
     assert (
-        page.locator("tbody tr", has_text="Kenji Russo")
+        page.locator("#ev-table-card tbody tr", has_text="Kenji Russo")
         .locator("td:nth-child(2)", has_text=gone)
         .count()
         == 1
@@ -395,8 +417,10 @@ def test_approved_takes_back_though_a_pair_was_added_since(page: Page) -> None:
     page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
     pair.get_by_role("button", name="Remove").click()
     page.get_by_role("button", name="Add the pair").click()
-    kept = page.locator("tbody tr:not([data-ev-added])", has_text="Kenji Russo").nth(1)
-    added = page.locator("tbody tr[data-ev-added]")
+    kept = page.locator("#ev-table-card tbody tr:not([data-ev-added])", has_text="Kenji Russo").nth(
+        1
+    )
+    added = page.locator("#ev-table-card tbody tr[data-ev-added]")
     assert kept.locator("[data-ev-state]").text_content() == "Approved"
     assert added.locator("[data-ev-state]").text_content() != "Approved"
     kept.get_by_role("button", name="Approved").click()
@@ -422,9 +446,13 @@ def test_ticked_rows_narrow_approve_and_discard_to_themselves(page: Page) -> Non
     head = page.locator("[data-ev-tick-all]")
     assert head.evaluate("b => b.indeterminate") and not head.is_checked()
     approve.click()
-    states = page.locator("tbody tr").locator("[data-ev-state]")
-    kenji = page.locator("tbody tr", has_text="Kenji Russo").locator("[data-ev-state]")
-    aisha = page.locator("tbody tr", has_text="Aisha Rahman").locator("[data-ev-state]")
+    states = page.locator("#ev-table-card tbody tr").locator("[data-ev-state]")
+    kenji = page.locator("#ev-table-card tbody tr", has_text="Kenji Russo").locator(
+        "[data-ev-state]"
+    )
+    aisha = page.locator("#ev-table-card tbody tr", has_text="Aisha Rahman").locator(
+        "[data-ev-state]"
+    )
     assert set(kenji.all_text_contents()) == {"Approved"} == set(aisha.all_text_contents())
     assert states.all_text_contents().count("Approved") == 4
     assert (
@@ -476,7 +504,7 @@ def test_ticked_discard_puts_a_removed_pair_back_and_ticks_follow_their_rows(
     page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
     pair.get_by_role("button", name="Remove").click()
     page.get_by_role("button", name="Add the pair").click()
-    added = page.locator("tbody tr[data-ev-added]")
+    added = page.locator("#ev-table-card tbody tr[data-ev-added]")
     added.locator("[data-ev-tick]").check()
     added.get_by_role("button", name="Remove").click()
     assert approve.inner_text() == "Approve all"
@@ -484,11 +512,13 @@ def test_ticked_discard_puts_a_removed_pair_back_and_ticks_follow_their_rows(
 
 def test_approve_ticked_asks_first_when_a_ticked_dossier_is_short(page: Page) -> None:
     page.goto(GATE3)
-    rows = page.locator("tbody tr", has_text="Kenji Russo")
+    rows = page.locator("#ev-table-card tbody tr", has_text="Kenji Russo")
     rows.nth(0).get_by_role("button", name="Remove").click()
     rows.nth(1).locator("[data-ev-tick]").check()
     asked: list[str] = []
     page.once("dialog", lambda d: (asked.append(d.message), d.dismiss())[1])
     page.locator('[data-ev-act="approve-all"]').click()
     assert asked == ["Approve the ticked dossiers' pairs? 1 of them is still short of evaluators."]
-    assert "Approved" not in page.locator("tbody [data-ev-state]").all_text_contents()
+    assert (
+        "Approved" not in page.locator("#ev-table-card tbody [data-ev-state]").all_text_contents()
+    )
