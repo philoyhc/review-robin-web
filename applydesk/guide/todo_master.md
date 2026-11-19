@@ -529,6 +529,12 @@ where a ruling below differs from it, the ruling wins.
     chip then its headline result (highest first), an outcome by its
     values in Process's order then date; ties keep the page's order;
     the sort is kept in the tab.
+53. **One body per template; paragraphs with a small gap** (author,
+    2026-11-19, on AD1L's open question): a template has one subject
+    and one body, `[Outcome]` naming the value, never a body per value.
+    The body holds paragraphs, separated by a blank line, each shown
+    with a small gap (Preview now, the sent email at AD7); a single line
+    break stays a line break.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 

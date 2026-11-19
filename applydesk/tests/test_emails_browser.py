@@ -185,3 +185,33 @@ def test_each_card_keeps_its_own_insertion_point(page: Page) -> None:
     a.locator("[data-em-insert]").select_option("Exercise")
     a.locator('[data-em-act="insert"]').click()
     assert a.locator("[data-em-subject]").input_value() == "[Exercise]Outcome"
+
+
+def test_preview_shows_paragraphs_with_a_small_gap(page: Page) -> None:
+    """Ruling 53: a blank line separates paragraphs; a single line break
+    stays a line break."""
+    page.goto(EMAILS)
+    card = _card(page, OWED)
+    # Blank lines with spaces on them, several or one, are one break.
+    body = "\n\nDear [Applicant name],\n  \n \nFirst line\nsecond line\n\n\nLast.\n  "
+    card.locator("[data-em-body]").fill(body)
+    card.locator('[data-em-act="preview"]').click()
+    paras = card.locator("[data-em-preview-body] p.em-para")
+    assert paras.all_inner_texts() == ["Dear Aisha Bello,", "First line\nsecond line", "Last."]
+    # The gap is the rule's own 0.6em, under a line, and none after the last.
+    size = paras.first.evaluate("p => parseFloat(getComputedStyle(p).fontSize)")
+    gap = paras.first.evaluate("p => parseFloat(getComputedStyle(p).marginBottom)")
+    assert abs(gap - 0.6 * size) < 0.5 and gap < size
+    assert paras.last.evaluate("p => parseFloat(getComputedStyle(p).marginBottom)") == 0
+    card.locator("[data-em-body]").fill("\n \n\n")
+    assert card.locator("[data-em-preview-body] p").count() == 0
+
+
+def test_the_body_grows_with_its_text_and_has_no_handle(page: Page) -> None:
+    page.goto(EMAILS)
+    body = _card(page, OWED).locator("[data-em-body]")
+    assert body.evaluate("t => getComputedStyle(t).resize") == "none"
+    before = body.evaluate("t => t.offsetHeight")
+    body.fill("\n\n".join(f"Paragraph {i}." for i in range(8)))
+    after = body.evaluate("t => t.offsetHeight")
+    assert after > before and body.evaluate("t => t.scrollHeight <= t.clientHeight + 2")

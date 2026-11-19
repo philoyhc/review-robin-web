@@ -14,7 +14,7 @@
   <p class="muted">{{ e.when }}</p>
   {# A written sample template shows its kind's default; an owed one, empty. #}
   <div class="field"><label>Subject <input type="text" class="fc-in" data-em-subject value="{{ d[0] if e.ok else '' }}"></label></div>
-  <div class="field"><label>Body <textarea class="fc-in" rows="8" data-fit-box data-em-body>{{ d[1] if e.ok else "" }}</textarea></label></div>
+  <div class="field"><label>Body <textarea class="fc-in" rows="3" data-fit-box data-em-body>{{ d[1] if e.ok else "" }}</textarea></label></div>
   {# Its kind's fields, put at the cursor in whichever box last had it. #}
   <div class="field em-insert-row"><label>Insert field <select class="fc-in em-insert" data-em-insert>{% for f in email_fields[e.kind] %}<option>{{ f }}</option>{% endfor %}</select></label> <button class="btn btn-secondary" type="button" data-em-act="insert">Insert</button></div>
   <div class="btnrow"><button class="btn btn-primary" type="button" data-em-act="save" disabled>Save</button><button class="btn btn-secondary" type="button" data-em-act="preview" aria-expanded="false">Preview</button><button class="btn btn-secondary" type="button" data-em-act="reset">{{ "Reset to default" if e.ok else "Start from the default" }}</button><span class="fb-unsaved" data-em-unsaved hidden>Unsaved changes</span><span class="muted" data-em-said role="status"></span></div>
@@ -144,7 +144,18 @@
     var box = c.querySelector("[data-em-preview]");
     if (box.hidden) return;
     fill(c, subj(c).value, box.querySelector("[data-em-preview-subject]"));
-    fill(c, body(c).value, box.querySelector("[data-em-preview-body]"));
+    // Paragraphs, split on a blank line, each with a small gap (ruling
+    // 53); a single line break stays a line break.
+    var into = box.querySelector("[data-em-preview-body]");
+    into.textContent = "";
+    // Any run of blank lines, spaces on them or not, is one break.
+    body(c).value.split(/\n(?:[ \t]*\n)+/).forEach(function (para) {
+      if (!para.trim()) return;
+      var p = document.createElement("p");
+      p.className = "em-para";
+      fill(c, para.replace(/^(?:[ \t]*\n)+|(?:\n[ \t]*)+$/g, ""), p);
+      into.appendChild(p);
+    });
   }
   root.addEventListener("click", function (e) {
     var b = e.target.closest("[data-em-act]");

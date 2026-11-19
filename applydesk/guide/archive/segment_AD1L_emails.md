@@ -81,7 +81,7 @@ Taken 2026-11-19 at `cdded743c`.
 
 **Spec:** `spec-writer` checked "The Emails page" at the close and fixed Process's line that template text came later.
 
-**Owed:** saving (AD2), sending and a sent email's absolute link (AD7), a body per outcome value (the open question below).
+**Owed:** saving (AD2), sending and a sent email's absolute link (AD7).
 
 ## PR ladder
 
@@ -105,7 +105,7 @@ Taken 2026-11-19 at `cdded743c`.
 
 ## Open questions
 
-- **Conditional text by outcome value** (e.g. one body for *Interview*, another for *Not shortlisted*): open, the author's. Shipped: one body per template, `[Outcome]` naming the value.
+- **Conditional text by outcome value**: answered (ruling 53), one body per template, `[Outcome]` naming the value; paragraphs shown with a small gap.
 - **A face in a blind exercise's emails** (the photo field): not reached here; the photo field's own open question.
 
 ## Out of scope
