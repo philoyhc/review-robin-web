@@ -112,3 +112,80 @@ def test_an_opened_closed_or_detached_gate_sends_nothing(page: Page) -> None:
             el = card.locator(sel)
             assert el.is_disabled()
             assert (el.get_attribute("title") or "").startswith(why)
+
+
+K7 = f"{ORIGIN}/applydesk/operator/exercises/k7mfr3pq8z/evaluations"
+
+
+def test_pull_reads_progress_and_a_closed_session_s_final_pull_concludes(page: Page) -> None:
+    """Ruling 57: a pull while the session is open reads progress only;
+    once it has closed, *Pull final results* marks the gate *Results in*."""
+    page.goto(f"{K7}/gate_1")  # open, 3 of 5 reviewed
+    card = _card(page)
+    pull = card.locator('[data-rr-act="pull"]')
+    assert pull.inner_text() == "Pull results" and pull.is_enabled()
+    assert card.locator("[data-rr-done]").first.inner_text() == "—"
+    pull.click()
+    assert _said(page) == "Pulled (simulated): 3 of 5 reviewed; its session is still open."
+    assert " of " in card.locator("[data-rr-done]").first.inner_text()
+    assert page.locator(".ev-head [data-gate-state]").text_content() == "Sent"
+    page.goto(f"{K7}/gate_2")  # closed, not pulled
+    card = _card(page)
+    pull = card.locator('[data-rr-act="pull"]')
+    assert pull.inner_text() == "Pull final results"
+    assert card.locator('[data-rr-act="invite"]').get_attribute("title") == "Its session has closed"
+    pull.click()
+    assert _said(page).startswith("Results in (simulated): the gate is done (ruling 57).")
+    assert page.locator(".ev-head [data-gate-state]").text_content() == "Results in"
+    assert card.locator("[data-rr-link]").inner_text() == "Linked; its results are in"
+    assert pull.is_disabled() and pull.get_attribute("title") == "Its results are in"
+    done = card.locator("tr[data-rr-person]").first
+    assert (
+        done.locator("[data-rr-done]").inner_text()
+        == done.locator("td").nth(1).inner_text() + " of " + done.locator("td").nth(1).inner_text()
+    )
+    page.goto(K7)
+    assert page.locator('tr[data-gate="g2"] [data-gate-state]').text_content() == "Results in"
+    page.goto(f"{K7}/gate_3")  # detached
+    card = _card(page)
+    for act in ("pull", "invite", "remind"):
+        btn = card.locator(f'[data-rr-act="{act}"]')
+        assert (
+            btn.is_disabled() and btn.get_attribute("title") == "Detached: unlinked in Review Robin"
+        )
+
+
+def test_invite_and_remind_show_the_email_first(page: Page) -> None:
+    page.goto(f"{K7}/gate_1")
+    card = _card(page)
+    invite = card.locator('[data-rr-act="invite"]')
+    invite.click()
+    mail = card.locator("[data-rr-mail]")
+    assert mail.is_visible() and invite.get_attribute("aria-expanded") == "true"
+    assert (
+        card.locator("[data-rr-mail-what]").inner_text()
+        == "Invite 2 evaluators to review in Review Robin"
+    )
+    body = card.locator("[data-rr-mail-body]").inner_text()
+    assert "/reviewrobin/me" in body and "Sign in to Review Robin" in body
+    card.locator('[data-rr-act="mail-cancel"]').click()
+    assert mail.is_hidden() and card.locator("[data-rr-invited]").inner_text() == "—"
+    invite.click()
+    card.locator('[data-rr-act="mail-send"]').click()
+    assert _said(page) == "Invited 2 evaluators (simulated): no email is sent until AD7."
+    assert card.locator("[data-rr-invited]").inner_text().endswith("in this tab, 2 evaluators")
+    card.locator('[data-rr-act="remind"]').click()
+    assert "not yet done" in card.locator("[data-rr-mail-what]").inner_text()
+    assert "still to finish" in card.locator("[data-rr-mail-body]").inner_text()
+    page.keyboard.press("Escape")
+    assert card.locator("[data-rr-mail]").is_hidden()
+    # A gate sent in the tab invites; it cannot remind until it opens.
+    page.on("dialog", lambda d: d.accept())
+    page.goto(INTERVIEW)
+    card = _card(page)
+    assert card.locator('[data-rr-act="invite"]').get_attribute("title") == "Not sent yet"
+    _approve_all(page)
+    card.locator('[data-rr-act="send"]').click()
+    assert card.locator('[data-rr-act="invite"]').is_enabled()
+    remind = card.locator('[data-rr-act="remind"]')
+    assert remind.is_disabled() and remind.get_attribute("title") == "Its session has not opened"

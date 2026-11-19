@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import functools
 import re
+from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
@@ -28,6 +29,7 @@ from applydesk.web import (
     SETUP_PAGES,
     exercise_nav,
     render,
+    root_path,
     url_path,
 )
 
@@ -124,18 +126,43 @@ def _bundle(request: Request, exercise: sample_data.Exercise, gate: stages.Gate)
     )
 
 
+def _people(pairs: tuple[stages.Pair, ...]) -> tuple[tuple[str, str, int], ...]:
+    """Each paired evaluator once, in the pairs' order: name, email and
+    how many pairs they hold (the card's Progress rows)."""
+    seen: dict[str, list[object]] = {}
+    for p in pairs:
+        if p.email:
+            seen.setdefault(p.email.lower(), [p.name, p.email.lower(), 0])
+            got = seen[p.email.lower()]
+            got[2] = cast(int, got[2]) + 1
+    return tuple((str(n), str(e), cast(int, c)) for n, e, c in seen.values())
+
+
+def _rr_me(request: Request) -> str:
+    """Review Robin's ``/me``, where an invited evaluator signs in
+    (ruling 24): beside Apply Desk under the host's mounts (`/reviewrobin`,
+    segment 21D), as an absolute URL for an email."""
+    mount = root_path(request)
+    host = mount[: -len("/applydesk")] if mount.endswith("/applydesk") else ""
+    return f"{request.url.scheme}://{request.url.netloc}{host}/reviewrobin/me"
+
+
 def _rr_data(
     exercise: sample_data.Exercise,
     gate: stages.Gate,
     state: tuple[str, str],
     opened: bool,
     sent_with: handoff.Bundle,
+    people: tuple[tuple[str, str, int], ...],
+    rr_me: str,
 ) -> dict[str, object]:
     """What the Review Robin card's script needs to send and re-send in
     the tab (segment AD1M rung 4, ruling 55): the gate's state as the
     sample has it, whether only approvals stand between it and *Ready*,
     the bundle's name, code and digest, and the other gates' codes, which
-    a send may not take (ruling 56)."""
+    a send may not take (ruling 56); and for rung 5, each evaluator's
+    progress as a pull would read it, and what an invitation or a
+    reminder says, with Review Robin's ``/me`` as its link."""
     plan = stages.plan_of(exercise.public_id)
     return {
         "ex": exercise.public_id,
@@ -152,6 +179,14 @@ def _rr_data(
             for c in plan.columns
             if isinstance(c, stages.Gate) and c.key != gate.key
         ],
+        "line": state[1],
+        "progress": [
+            [email, n, done] for _, email, n, done in workflow.progress_of(*state, people)
+        ],
+        "exercise": exercise.name,
+        "gate": gate.label or f"Gate {gate.number}",
+        "help": sample_data.help_contact(exercise),
+        "rrMe": rr_me,
     }
 
 
@@ -189,6 +224,7 @@ def gate_evaluations(
     sent_with = _bundle(request, exercise, found)
     rows, spread = stages.assignments(exercise.public_id, found)
     pairs = stages.pairs_of(rows)
+    people = _people(pairs)
     state = workflow.gate_state(exercise.public_id, found.key)
     sent = workflow.gate_opened(*state)
     # Blind review, or a confidential gate (ruling 42): its page shows
@@ -234,7 +270,8 @@ def gate_evaluations(
         assignment_state=stages.assignment_state,
         assignment_counts=stages.assignment_counts,
         bundle=sent_with,
-        rr_data=_rr_data(exercise, found, state, sent, sent_with),
+        people=people,
+        rr_data=_rr_data(exercise, found, state, sent, sent_with, people, _rr_me(request)),
     )
 
 

@@ -186,3 +186,22 @@ def test_the_sample_shows_each_later_link_state(client: TestClient) -> None:
     # Both opened: their pairs are Review Robin's, as an open session's.
     assert workflow.gate_opened("Closed", "") and workflow.gate_opened("Detached", "")
     assert workflow.gate_sent("k7mfr3pq8z", "g2")[0] == "Closed"
+
+
+def test_progress_follows_the_gate_s_line() -> None:
+    people = (("Ann", "ann@x", 4), ("Ben", "ben@x", 2))
+    assert workflow.progress_of("Sent", "3 of 4 reviewed", people) == (
+        ("Ann", "ann@x", 4, 3),
+        ("Ben", "ben@x", 2, 2),
+    )
+    assert [p[3] for p in workflow.progress_of("Closed", "", people)] == [4, 2]
+    assert [p[3] for p in workflow.progress_of("Results in", "", people)] == [4, 2]
+    assert [p[3] for p in workflow.progress_of("Ready", "", people)] == [0, 0]
+    assert [p[3] for p in workflow.progress_of("Sent", "", people)] == [0, 0]
+
+
+def test_the_card_s_data_links_review_robin_s_me(client: TestClient) -> None:
+    page = client.get("/applydesk/operator/exercises/k7mfr3pq8z/evaluations/gate_1").text
+    data = page.split('<script type="application/json" id="rr-data">')[1].split("</script>")[0]
+    assert '"rrMe": "http://testserver/reviewrobin/me"' in data
+    assert '"opened": true' in data and '"state": "Sent"' in data

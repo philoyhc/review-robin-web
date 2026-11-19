@@ -1,9 +1,11 @@
-{# The Review Robin card's Send and Re-send (segment AD1M rung 4),
-   simulated in the tab (ruling 55): a send is kept in sessionStorage under
+{# The Review Robin card (segment AD1M rungs 4 and 5), simulated in the
+   tab (ruling 55). A send is kept in sessionStorage under
    ``applydesk-rr:<exercise>``, by gate, with the session's name and code
-   (ruling 56), when it was sent, its transfer ID and the bundle's digest.
-   Nothing reaches Review Robin until AD2 and AD6. Refusals carry the codes
-   Review Robin answers with (`spec/handoffs.md`). #}
+   (ruling 56), when it was sent, its transfer ID and the bundle's digest;
+   a pull, an invitation and a reminder under ``applydesk-rr-log:<exercise>``.
+   Nothing reaches Review Robin until AD2 and AD6, and no email is sent
+   until AD7. Refusals carry the codes Review Robin answers with
+   (`spec/handoffs.md`). #}
 <script>
 (function () {
   var DATA = JSON.parse(document.getElementById("rr-data").textContent);
@@ -13,6 +15,9 @@
   var nameIn = card.querySelector("[data-rr-name]"), codeIn = card.querySelector("[data-rr-code]");
   var sendBtn = card.querySelector('[data-rr-act="send"]'), resendBtn = card.querySelector('[data-rr-act="resend"]');
   var said = card.querySelector("[data-rr-said]");
+  var LOG = "applydesk-rr-log:" + DATA.ex;
+  var pullBtn = card.querySelector('[data-rr-act="pull"]'), inviteBtn = card.querySelector('[data-rr-act="invite"]'), remindBtn = card.querySelector('[data-rr-act="remind"]');
+  var mail = card.querySelector("[data-rr-mail]"), mailKind = "";
 
   function load() {
     var all;
@@ -36,6 +41,31 @@
   // Review Robin's: the tab neither sends nor re-sends it (ruling 29).
   if (DATA.opened) rec = null;
   if (rec) { nameIn.value = rec.name; codeIn.value = rec.code; }
+
+  // The gate's pulls, invitations and reminders in this tab.
+  function logs() {
+    var all;
+    try { all = JSON.parse(sessionStorage.getItem(LOG) || "null"); } catch (e) { all = null; }
+    return all && typeof all === "object" && !Array.isArray(all) ? all : {};
+  }
+  function log() { var l = logs()[DATA.key]; return l && typeof l === "object" ? l : {}; }
+  function note(field, value) {
+    var all = logs(), mine = log();
+    mine[field] = value;
+    all[DATA.key] = mine;
+    try { sessionStorage.setItem(LOG, JSON.stringify(all)); } catch (e) { /* kept for the page only */ }
+  }
+  var nameOf = {};
+  card.querySelectorAll("tr[data-rr-person]").forEach(function (tr) { nameOf[tr.dataset.rrPerson] = tr.cells[0].textContent; });
+  function notDone() { return DATA.progress.filter(function (p) { return p[2] < p[1]; }); }
+  // The gate's state with this tab's own steps on it: a send makes an
+  // unopened gate *Sent*; a final pull makes a closed one *Results in*.
+  function state() { return log().final ? "Results in" : DATA.state; }
+  function off(btn, why) {
+    btn.removeAttribute("data-rr-wait");
+    btn.disabled = !!why;
+    if (why) btn.title = why; else btn.removeAttribute("title");
+  }
 
   function changed() {
     return !!rec && (rec.digest !== DATA.digest || rec.name !== nameIn.value.trim() || rec.code !== codeIn.value.trim());
@@ -73,6 +103,85 @@
       resendBtn.title = "Not sent yet";
     }
     card.querySelector("[data-rr-changed]").hidden = !changed();
+    drawLater();
+  }
+
+  // Rung 5: Pull results, Pull final results (ruling 57), Invite, Remind.
+  function drawLater() {
+    var st = state(), l = log(), detached = "Detached: unlinked in Review Robin";
+    pullBtn.textContent = DATA.state === "Closed" ? "Pull final results" : "Pull results";
+    off(pullBtn,
+      st === "Results in" ? "Its results are in"
+      : st === "Detached" ? detached
+      : DATA.opened ? "" : "Its session has not opened");
+    off(inviteBtn,
+      st === "Results in" ? "Its results are in"
+      : st === "Detached" ? detached
+      : st === "Closed" ? "Its session has closed"
+      : rec || DATA.state === "Sent" ? "" : "Not sent yet");
+    off(remindBtn,
+      st === "Results in" ? "Its results are in"
+      : st === "Detached" ? detached
+      : st === "Closed" ? "Its session has closed"
+      : !DATA.opened ? "Its session has not opened"
+      : notDone().length ? "" : "Everyone is done");
+    var shown = l.pulled || l.final || st === "Results in";
+    DATA.progress.forEach(function (p) {
+      var cell = card.querySelector('tr[data-rr-person="' + p[0] + '"] [data-rr-done]');
+      if (!cell) return;
+      cell.textContent = shown ? (l.final || st === "Results in" ? p[1] : p[2]) + " of " + p[1] : "—";
+      cell.classList.toggle("muted", !shown);
+    });
+    if (l.final) {
+      card.querySelector("[data-rr-link]").textContent = "Linked; its results are in";
+      var head = document.querySelector(".ev-head [data-gate-state]");
+      if (head) { head.textContent = "Results in"; head.className = "chip chip-ok"; }
+    }
+    [["invited", "[data-rr-invited]"], ["reminded", "[data-rr-reminded]"]].forEach(function (f) {
+      var v = l[f[0]];
+      if (v && typeof v.at === "string") card.querySelector(f[1]).textContent = at(v.at) + " in this tab, " + v.n + (v.n === 1 ? " evaluator" : " evaluators");
+    });
+  }
+
+  // An invitation or a reminder, fixed text until AD7 (Emails).
+  function letter(kind, who) {
+    var first = who[0], name = nameOf[first[0]] || "evaluator";
+    if (kind === "invite") return {
+      what: "Invite " + who.length + (who.length === 1 ? " evaluator" : " evaluators") + " to review in Review Robin",
+      subject: DATA.exercise + ": your review in Review Robin",
+      body: ["Dear " + name + ",",
+        "You are asked to review " + first[1] + (first[1] === 1 ? " dossier" : " dossiers") + " for " + DATA.exercise + ", " + DATA.gate + ". Sign in to Review Robin at " + DATA.rrMe + " with this email address to start.",
+        "Questions? Contact " + DATA.help + "."]
+    };
+    return {
+      what: "Remind " + who.length + (who.length === 1 ? " evaluator" : " evaluators") + " not yet done",
+      subject: "Reminder: " + DATA.exercise + ", your review in Review Robin",
+      body: ["Dear " + name + ",",
+        "You have " + (first[1] - first[2]) + " of " + first[1] + " reviews still to finish for " + DATA.exercise + ", " + DATA.gate + ". Sign in to Review Robin at " + DATA.rrMe + " to finish them.",
+        "Questions? Contact " + DATA.help + "."]
+    };
+  }
+  function openMail(kind) {
+    var who = kind === "invite" ? DATA.progress : notDone();
+    var l = letter(kind, who);
+    mailKind = kind;
+    card.querySelector("[data-rr-mail-what]").textContent = l.what;
+    var names = who.map(function (p) { return nameOf[p[0]] || p[0]; });
+    card.querySelector("[data-rr-mail-to]").textContent = names.slice(0, 5).join(", ") + (names.length > 5 ? " and " + (names.length - 5) + " more" : "") + " (shown as " + names[0] + "'s; each gets their own)";
+    card.querySelector("[data-rr-mail-subject]").textContent = l.subject;
+    var body = card.querySelector("[data-rr-mail-body]");
+    body.textContent = "";
+    l.body.forEach(function (t) { var para = document.createElement("p"); para.className = "em-para"; para.textContent = t; body.appendChild(para); });
+    mail.hidden = false;
+    [inviteBtn, remindBtn].forEach(function (b) { b.setAttribute("aria-expanded", String(b.dataset.rrAct === kind)); });
+    card.querySelector('[data-rr-act="mail-send"]').focus();
+  }
+  function closeMail() {
+    mail.hidden = true;
+    var was = mailKind === "invite" ? inviteBtn : remindBtn;
+    mailKind = "";
+    [inviteBtn, remindBtn].forEach(function (b) { b.setAttribute("aria-expanded", "false"); });
+    if (was && !was.disabled) was.focus();
   }
 
   // Why this send would be refused, or "" (`spec/handoffs.md` §5).
@@ -122,8 +231,28 @@
       keep(rec.transfer);
       draw();
       said.textContent = "Re-sent (simulated): the draft " + rec.code + " now holds the files as they stand.";
+    } else if (b.dataset.rrAct === "pull") {
+      if (DATA.state === "Closed") {
+        note("final", new Date().toISOString());
+        said.textContent = "Results in (simulated): the gate is done (ruling 57). Its results fill the gate's column on Dossiers with AD6.";
+      } else {
+        note("pulled", new Date().toISOString());
+        said.textContent = "Pulled (simulated): " + (DATA.line || "no progress yet") + "; its session is still open.";
+      }
+      draw();
+    } else if (b.dataset.rrAct === "invite" || b.dataset.rrAct === "remind") {
+      openMail(b.dataset.rrAct);
+    } else if (b.dataset.rrAct === "mail-send") {
+      var n = (mailKind === "invite" ? DATA.progress : notDone()).length;
+      note(mailKind === "invite" ? "invited" : "reminded", { at: new Date().toISOString(), n: n });
+      said.textContent = (mailKind === "invite" ? "Invited " : "Reminded ") + n + (n === 1 ? " evaluator" : " evaluators") + " (simulated): no email is sent until AD7.";
+      closeMail();
+      draw();
+    } else if (b.dataset.rrAct === "mail-cancel") {
+      closeMail();
     }
   });
+  mail.addEventListener("keydown", function (e) { if (e.key === "Escape") closeMail(); });
   [nameIn, codeIn].forEach(function (el) { el.addEventListener("input", draw); });
   draw();
 })();

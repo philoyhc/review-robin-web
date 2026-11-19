@@ -9,6 +9,7 @@ exercise, the states are fixed per sample exercise; nothing is saved."""
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from applydesk import sample_data, stages
@@ -277,6 +278,24 @@ def gate_readiness(exercise_id: str, gate: stages.Gate) -> str:
     if gate.mode == "suggested":
         return f"{len(rows)} {'dossier' if len(rows) == 1 else 'dossiers'} to approve"
     return ""
+
+
+def progress_of(
+    state: str, line: str, people: tuple[tuple[str, str, int], ...]
+) -> tuple[tuple[str, str, int, int], ...]:
+    """Each paired evaluator's progress as *Pull results* would read it
+    from Review Robin (segment AD1M rung 5): (name, email, pairs, done).
+    The sample keeps only the gate's line, "3 of 5 reviewed", so each
+    evaluator is shown that share of their pairs; a closed session or
+    results in, all of them; a gate not opened, none."""
+    found = re.match(r"\s*(\d+) of (\d+)", line)
+    if state in ("Results in", "Closed"):
+        share = 1.0
+    elif state in ("Sent", "Detached") and found and int(found.group(2)):
+        share = int(found.group(1)) / int(found.group(2))
+    else:
+        share = 0.0
+    return tuple((name, email, n, round(n * share)) for name, email, n in people)
 
 
 def awaits_approval(exercise_id: str, gate: stages.Gate) -> bool:

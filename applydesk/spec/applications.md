@@ -795,7 +795,7 @@ keeps all of them.
   *Linked; its results are in*); the last send; *What is sent*;
   a progress row per paired evaluator; and *Send to Review Robin*,
   *Re-send*, *Pull results*, *Invite evaluators* and *Remind those not
-  done*. The last three are inert until the segment's next rung.
+  done*, all simulated in the tab (`_rr_js.html`).
 - **Send and Re-send** (`_rr_js.html`), simulated in the tab (ruling 55):
   a send is kept in `sessionStorage` under `applydesk-rr:<exercise>`, by
   gate, with its name, code, time, transfer ID and the bundle's digest.
@@ -810,6 +810,22 @@ keeps all of them.
   approvals is sent once this tab has approved every dossier, none
   short. A gate opened, closed or detached in Review Robin sends and
   re-sends nothing, its name and code fixed, the reason in each title.
+- **Pull results** (ruling 57), on a gate whose session has opened, fills
+  *Done* per evaluator (`workflow.progress_of`: the sample keeps only the
+  gate's line, so each evaluator shows that share of their pairs). On a
+  gate *Closed* in Review Robin it reads **Pull final results**, which
+  marks the gate *Results in* (head chip, link line, Evaluations' row,
+  *Results pulled in this tab*); the results fill Dossiers with AD6. Off,
+  with the reason, before its session opens, once its results are in, or
+  detached.
+- **Invite evaluators** (a gate sent, in the tab or the sample, and open)
+  and **Remind those not done** (an open session, someone not done) show
+  the email first, under the buttons: whom it goes to, its subject and
+  body, fixed until AD7 puts these templates on Emails, linking Review
+  Robin's `/me`, where an evaluator signs in. *Send (simulated)* records
+  when and how many in the card's *Invited* or *Reminded* line; *Cancel*
+  or Escape closes it. Pulls, invitations and reminders are kept under
+  `applydesk-rr-log:<exercise>`.
 - **What is sent** (`applydesk/handoff.py`, built from the gate's pairs
   and card as saved, not this tab's changes): **reviewers**, each paired
   evaluator once by name and email, no tags; **reviewees**, each dossier
