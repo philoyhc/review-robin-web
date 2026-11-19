@@ -100,6 +100,20 @@ def test_an_idle_browser_s_scratch_expires(monkeypatch: pytest.MonkeyPatch) -> N
     assert client.get(f"{LOBBY}/{made}").status_code == 404
 
 
+def test_the_cookie_is_renewed_while_the_store_lives() -> None:
+    """Codex on #4024: the cookie lasts one idle window from the last
+    request, as the store does, not from the exercise's creation."""
+    client = _client()
+    made = _create(client)
+    renewed = client.get(f"{LOBBY}/{made}").headers.get_list("set-cookie")
+    assert any(
+        c.startswith(f"{scratch.COOKIE}=") and f"Max-Age={scratch.IDLE_SECONDS}" in c
+        for c in renewed
+    ), renewed
+    # A browser with no store is not handed one.
+    assert not _client().get(LOBBY).headers.get_list("set-cookie")
+
+
 def test_details_save_into_the_scratch() -> None:
     client = _client()
     made = _create(client)
@@ -124,6 +138,7 @@ def test_details_save_into_the_scratch() -> None:
         ({**good, "contact": "not-an-address"}, "A help contact is an email address."),
         ({**good, "timezone": "Mars/Base"}, "That timezone is not offered."),
         ({**good, "blind": "yes"}, "The details are malformed."),
+        ({**good, "description": "x" * 2001}, "at most 2,000 characters"),
     ):
         refused = client.post(f"{LOBBY}/{made}/details", json=bad)
         assert refused.status_code == 400 and reason in refused.json()["error"], bad

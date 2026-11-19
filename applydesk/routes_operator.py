@@ -89,14 +89,8 @@ async def exercise_new(request: Request) -> Response:
     reply = RedirectResponse(
         url_path(request, f"/operator/exercises/{made.exercise.public_id}"), status_code=303
     )
-    reply.set_cookie(
-        scratch.COOKIE,
-        browser,
-        max_age=scratch.IDLE_SECONDS,
-        path=root_path(request) or "/",
-        secure=request.url.scheme == "https",
-        httponly=True,
-        samesite="lax",
+    reply.raw_headers.append(
+        scratch.cookie_header(browser, root_path(request), request.url.scheme == "https")
     )
     return reply
 
@@ -139,6 +133,8 @@ def _details(exercise: sample_data.Exercise, v: dict[str, Any]) -> dict[str, Any
     if clash:
         raise scratch.Refused(f"{code} is already {clash.name}'s code.")
     contact = str(text["contact"]).strip()
+    if len(str(text["description"]).strip()) > 2000:
+        raise scratch.Refused("A description is at most 2,000 characters.")
     if contact and not _EMAIL.fullmatch(contact):
         raise scratch.Refused("A help contact is an email address.")
     zone = str(text["timezone"])
@@ -149,7 +145,7 @@ def _details(exercise: sample_data.Exercise, v: dict[str, Any]) -> dict[str, Any
     return {
         "name": name,
         "code": code,
-        "summary": str(text["description"]).strip()[:2000],
+        "summary": str(text["description"]).strip(),
         "help_contact": contact,
         "timezone": "" if zone == sample_data.DEFAULT_TIMEZONE else zone,
         "eligibility": text["eligibility"],

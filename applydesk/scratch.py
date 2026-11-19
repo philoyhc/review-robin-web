@@ -21,6 +21,8 @@ from dataclasses import dataclass, field, replace
 from http.cookies import SimpleCookie
 from typing import Any
 
+from starlette.responses import Response
+
 from applydesk import sample_data
 from applydesk.ids import generate_public_id
 
@@ -157,6 +159,29 @@ def update(public_id: str, **changes: Any) -> sample_data.Exercise:
         return held.exercise
 
 
+def alive(browser_token: str) -> bool:
+    """Whether this browser still holds a store (its idle clock running)."""
+    with _LOCK:
+        return _browser(browser_token, time.monotonic()) is not None
+
+
+def cookie_header(browser_token: str, root: str, secure: bool) -> tuple[bytes, bytes]:
+    """The ``Set-Cookie`` header naming this browser, good for one idle
+    window from now: set on *New exercise*, renewed on each request while
+    the store lives, so the cookie and the store expire together."""
+    made = Response()
+    made.set_cookie(
+        COOKIE,
+        browser_token,
+        max_age=IDLE_SECONDS,
+        path=root or "/",
+        secure=secure,
+        httponly=True,
+        samesite="lax",
+    )
+    return made.raw_headers[-1]
+
+
 def clear() -> None:
     """Forget every scratch exercise (tests)."""
     with _LOCK:
@@ -170,7 +195,8 @@ Send = Callable[[MutableMapping[str, Any]], Awaitable[None]]
 
 class Middleware:
     """Puts the request's scratch token, from its cookie, in context, so
-    every lookup the request makes sees that browser's scratch exercises."""
+    every lookup the request makes sees that browser's scratch exercises;
+    and renews the cookie on the reply while that browser's store lives."""
 
     def __init__(self, app: Callable[[Scope, Receive, Send], Awaitable[None]]) -> None:
         self.app = app
@@ -190,7 +216,21 @@ class Middleware:
                 if COOKIE in jar:
                     found = jar[COOKIE].value
         reset = _token.set(found)
+        renew = found
+
+        async def send_renewed(message: MutableMapping[str, Any]) -> None:
+            if renew and message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                setting = COOKIE.encode() + b"="
+                if alive(renew) and not any(
+                    k == b"set-cookie" and v.startswith(setting) for k, v in headers
+                ):
+                    root = str(scope.get("root_path", "")).rstrip("/")
+                    headers.append(cookie_header(renew, root, scope.get("scheme") == "https"))
+                    message = {**message, "headers": headers}
+            await send(message)
+
         try:
-            await self.app(scope, receive, send)
+            await self.app(scope, receive, send_renewed)
         finally:
             _token.reset(reset)
