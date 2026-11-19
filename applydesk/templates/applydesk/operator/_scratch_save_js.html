@@ -2,7 +2,8 @@
    the button carrying `data-fb-save` posts what its page's snapshot
    function gives, as JSON, and says whether it was kept. The page names
    its snapshot in `data-fb-snapshot` (a global function's name), else
-   Form's `applydeskFormSnapshot`. The page counts as saved only if
+   Form's `applydeskFormSnapshot`; a snapshot of null is a page saying
+   itself why it cannot be saved yet. The page counts as saved only if
    nothing changed while the save was on its way. #}
 <script>
 (function () {
@@ -13,6 +14,7 @@
       var snap = window[btn.dataset.fbSnapshot || "applydeskFormSnapshot"];
       if (typeof snap !== "function") return;
       var body = snap();
+      if (body === null) return;  // the page said why it cannot be saved yet
       var sent = typeof body === "string" ? body : JSON.stringify(body);
       btn.disabled = true;
       fetch(btn.dataset.fbSave, { method: "POST", headers: { "Content-Type": "application/json" }, body: sent, credentials: "same-origin" })

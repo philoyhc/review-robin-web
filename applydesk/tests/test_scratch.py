@@ -528,3 +528,117 @@ def test_an_unfinished_result_saves_and_a_blank_count_is_refused() -> None:
             f"{LOBBY}/{made}/process", json={"stages": [_stage("R", gates=[blank])]}
         )
         assert refused.status_code == 400 and "whole numbers" in refused.json()["error"]
+
+
+def _panels(**over: object) -> dict[str, object]:
+    sent: dict[str, object] = {
+        "panels": [{"key": "made-1", "name": "Readers"}],
+        "people": [
+            {
+                "name": "Ada Reader",
+                "email": "ada@example.edu",
+                "note": "Chair",
+                "panels": ["made-1"],
+            },
+            {"name": "Ben Spare", "email": "ben@example.edu", "note": "", "panels": []},
+        ],
+    }
+    sent.update(over)
+    return sent
+
+
+def test_panels_save_into_the_scratch() -> None:
+    """Rung 5: Panels' panels and roster kept; Form and Process pick from
+    them; a saved panel keeps its key."""
+    client = _client()
+    made = _create(client)
+    page = client.get(f"{LOBBY}/{made}/panels").text
+    assert 'data-fb-snapshot="applydeskPanelsSnapshot"' in page
+    reply = client.post(f"{LOBBY}/{made}/panels", json=_panels())
+    assert reply.status_code == 200, reply.text
+    page = client.get(f"{LOBBY}/{made}/panels").text
+    assert 'data-panel="panel-1"' in page and "Readers" in page
+    # Someone on no panel stays on the roster.
+    assert "ben@example.edu" in page and "ada@example.edu" in page
+    assert "Readers" in client.get(f"{LOBBY}/{made}/process").text
+    # Saved again, the panel keeps its key; renamed, it keeps it too.
+    again = _panels(panels=[{"key": "panel-1", "name": "Peer readers"}])
+    again["people"] = [{**p, "panels": ["panel-1"] if p["panels"] else []} for p in again["people"]]  # pyright: ignore[reportGeneralTypeIssues, reportUnknownVariableType]  -- a test's dict
+    assert client.post(f"{LOBBY}/{made}/panels", json=again).status_code == 200
+    page = client.get(f"{LOBBY}/{made}/panels").text
+    assert 'data-panel="panel-1"' in page and "Peer readers" in page
+
+
+def test_panels_save_is_checked() -> None:
+    client = _client()
+    made = _create(client)
+    two = [{"key": "made-1", "name": "Readers"}, {"key": "made-2", "name": "readers"}]
+    for bad, reason in (
+        ({"panels": "x", "people": []}, "malformed"),
+        (_panels(panels=two), "Two panels are called"),
+        (_panels(panels=[{"key": "made-1", "name": "Email"}]), "CSV column"),
+        (_panels(panels=[{"key": "made-1", "name": ""}]), "needs a name"),
+        (
+            _panels(people=[{"name": "X", "email": "nobody", "note": "", "panels": []}]),
+            "no email address",
+        ),
+        (
+            _panels(
+                people=[
+                    {"name": "X", "email": "x@example.edu", "note": "", "panels": []},
+                    {"name": "Y", "email": "X@example.edu", "note": "", "panels": []},
+                ]
+            ),
+            "repeats",
+        ),
+        (
+            _panels(
+                people=[{"name": "X", "email": "x@example.edu", "note": "", "panels": ["made-9"]}]
+            ),
+            "not on the page",
+        ),
+    ):
+        refused = client.post(f"{LOBBY}/{made}/panels", json=bad)
+        assert refused.status_code == 400 and reason in refused.json()["error"], (bad, refused.text)
+    # A panel a question uses cannot be retired.
+    assert client.post(f"{LOBBY}/{made}/panels", json=_panels()).status_code == 200
+    form = {
+        "title": "",
+        "description": "",
+        "cards": [_field("Who?", type="people", pool="panel-1")],
+    }
+    assert client.post(f"{LOBBY}/{made}/form", json=form).status_code == 200
+    retired = client.post(f"{LOBBY}/{made}/panels", json=_panels(panels=[], people=[]))
+    assert retired.status_code == 400 and "in use" in retired.json()["error"]
+    assert client.post(f"{LOBBY}/wa9juxbc2t/panels", json=_panels()).status_code == 404
+
+
+def test_a_panel_made_on_form_or_process_joins_the_panels() -> None:
+    """Rung 5 lifts the refusal Form's and Process's saves had: a panel
+    made with + New panel… is kept with the page that names it."""
+    client = _client()
+    made = _create(client)
+    form = {
+        "title": "",
+        "description": "",
+        "cards": [_field("Your referee", type="people", pool="new-1")],
+        "pools": {"new-1": {"name": "Referees", "members": [["Cy Ref", "cy@example.edu"]]}},
+    }
+    reply = client.post(f"{LOBBY}/{made}/form", json=form)
+    assert reply.status_code == 200, reply.text
+    panels = client.get(f"{LOBBY}/{made}/panels").text
+    assert 'data-panel="panel-1"' in panels and "Referees" in panels and "cy@example.edu" in panels
+    assert 'value="panel-1" selected' in client.get(f"{LOBBY}/{made}/form").text
+    gate = _gate("gnew1", "Read", sources=[{"kind": "panel", "ref": "new-1", "min": 1, "max": 1}])
+    process = {
+        "pools": {"new-1": {"name": "Markers", "members": [["Di Mark", "di@example.edu"]]}},
+        "stages": [_stage("Review", gates=[gate])],
+    }
+    reply = client.post(f"{LOBBY}/{made}/process", json=process)
+    assert reply.status_code == 200, reply.text
+    panels = client.get(f"{LOBBY}/{made}/panels").text
+    assert 'data-panel="panel-2"' in panels and "Markers" in panels and "Referees" in panels
+    # A made panel the post does not carry is refused, not dropped.
+    lost = {**form, "pools": {}}
+    refused = client.post(f"{LOBBY}/{made}/form", json=lost)
+    assert refused.status_code == 400 and "panel made on this page" in refused.json()["error"]

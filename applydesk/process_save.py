@@ -158,7 +158,7 @@ def _field_def(got: dict[str, Any], what: str) -> Field:
     )
 
 
-def _gate(v: Any, number: int, panels: frozenset[str]) -> Gate:
+def _gate(v: Any, number: int, panels: frozenset[str], renamed: dict[str, str]) -> Gate:
     what = f"Gate {number}"
     got = _dict(v, what)
     fields = tuple(
@@ -207,12 +207,10 @@ def _gate(v: Any, number: int, panels: frozenset[str]) -> Gate:
         if kind not in dict(stages.SOURCE_KINDS):
             raise Refused(f"{what} has a source of no known kind.")
         ref = _text(src.get("ref", ""), f"{what}'s source")
-        if kind == "panel" and ref and ref not in panels:
-            # Made with *+ New panel…* on this page, kept once Panels saves.
-            raise Refused(
-                f"{what} is evaluated by a panel made on this page, which is not kept yet:"
-                " choose an existing panel."
-            )
+        if kind == "panel":
+            ref = renamed.get(ref, ref)
+            if ref and ref not in panels and ref not in renamed.values():
+                raise Refused(f"{what} is evaluated by no panel this exercise has.")
         sources.append(
             Source(
                 kind,
@@ -311,9 +309,33 @@ def _rekey_rule(rule: Rule | None, keys: dict[str, str], results: Results) -> Ru
     )
 
 
-def build(sent: Any, exercise_id: str) -> tuple[tuple[Stage, ...], frozenset[tuple[str, str]]]:
+def _items(v: Any, key: str) -> list[Any]:
+    """``v[key]`` when ``v`` is a dict holding a list there, else none."""
+    got = cast(dict[str, Any], v).get(key) if isinstance(v, dict) else None
+    return cast(list[Any], got) if isinstance(got, list) else []
+
+
+def made_panels(sent: Any, exercise_id: str) -> set[str]:
+    """The panels the snapshot's gates name that the page made with
+    *+ New panel…* (``new-1``), not yet the exercise's."""
+    known = sample_data.panel_pools(exercise_id)
+    found: set[str] = set()
+    for st in _items(sent, "stages"):
+        for g in _items(st, "gates"):
+            for src in _items(g, "sources"):
+                ref = cast(dict[str, Any], src).get("ref") if isinstance(src, dict) else None
+                if isinstance(ref, str) and ref.startswith("new-") and ref not in known:
+                    found.add(ref)
+    return found
+
+
+def build(
+    sent: Any, exercise_id: str, renamed: dict[str, str] | None = None
+) -> tuple[tuple[Stage, ...], frozenset[tuple[str, str]]]:
     """The stages the snapshot describes, and its (item, audience) emails;
-    a gate's panel is one the exercise has."""
+    a gate's panel is one the exercise has, or one the page made, by the
+    key ``renamed`` gives it (``scratch_panels.adopt``)."""
+    renamed = renamed or {}
     panels = frozenset(sample_data.panel_pools(exercise_id))
     got = _dict(sent, "The process")
     raw = _list(got.get("stages"), "The process's stages", MAX_STAGES)
@@ -328,7 +350,7 @@ def build(sent: Any, exercise_id: str) -> tuple[tuple[Stage, ...], frozenset[tup
         columns: list[Gate | Outcome] = []
         for g in _list(st.get("gates"), f"Stage {n}'s gates", MAX_GATES):
             gates_n += 1
-            gate = _gate(g, gates_n, panels)
+            gate = _gate(g, gates_n, panels, renamed)
             if gate.key in keys:
                 raise Refused("Two gates or outcomes share a key.")
             keys[gate.key] = f"g{gates_n}"

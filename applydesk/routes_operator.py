@@ -21,6 +21,7 @@ from applydesk import (
     process_save,
     sample_data,
     scratch,
+    scratch_panels,
     stages,
     timeline,
     workflow,
@@ -187,9 +188,25 @@ _CARD_TEXT = {
 }
 
 
-def _form(sent: Any, exercise_id: str) -> dict[str, Any]:
+def _made_pools(cards: Any, known: dict[str, Any]) -> set[str]:
+    """The panels a Form snapshot's questions name that the page made
+    with *+ New panel…* (``new-1``), not yet the exercise's."""
+    if not isinstance(cards, list):
+        return set()
+    return {
+        pool
+        for c in cast(list[Any], cards)
+        if isinstance(c, dict)
+        and isinstance(pool := cast(dict[str, Any], c).get("pool"), str)
+        and pool.startswith("new-")
+        and pool not in known
+    }
+
+
+def _form(sent: Any, exercise_id: str, renamed: dict[str, str]) -> dict[str, Any]:
     """The form as Form's *Save* sends it (``applydeskFormSnapshot``),
-    checked card by card and kept in ``FormCard``'s shape."""
+    checked card by card and kept in ``FormCard``'s shape; a panel the
+    page made is named by the key ``renamed`` gives it."""
     if not isinstance(sent, dict):
         raise scratch.Refused("The form is malformed.")
     got = cast(dict[str, Any], sent)
@@ -236,13 +253,11 @@ def _form(sent: Any, exercise_id: str) -> dict[str, Any]:
                 raise scratch.Refused(f"Card {n} is malformed.")
             out[key] = card[key]
         out["pool"] = out["pool"] or "institution"
-        if out["pool"] not in sample_data.people_pools(exercise_id):
-            # A panel made with *+ New panel…* on this page lives only on
-            # it until Panels saves (Codex): refused, not dropped.
-            raise scratch.Refused(
-                f"Card {n} chooses from a panel made on this page, which is not kept yet:"
-                " choose Institution-wide or an existing panel."
-            )
+        out["pool"] = renamed.get(out["pool"], out["pool"])
+        if out["pool"] not in sample_data.people_pools(exercise_id) and out["pool"] not in set(
+            renamed.values()
+        ):
+            raise scratch.Refused(f"Card {n} chooses from no panel this exercise has.")
         out["ratio_w"] = out["ratio_w"] or "4"
         out["ratio_h"] = out["ratio_h"] or "5"
         kept.append(out)
@@ -256,8 +271,15 @@ async def exercise_form_save(request: Request, exercise_id: str) -> Response:
     pages read them."""
     exercise, sent = await _scratch_json(request, exercise_id)
     try:
-        scratch.save_page(exercise.public_id, "form", _form(sent, exercise.public_id))
-    except scratch.Refused as why:
+        got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
+        wanted = _made_pools(got.get("cards"), sample_data.people_pools(exercise.public_id))
+        # A panel made with *+ New panel…* joins the exercise's panels
+        # (rung 5), kept with the form or not at all.
+        renamed, panels = scratch_panels.adopt(exercise.public_id, got.get("pools"), wanted)
+        form = _form(sent, exercise.public_id, renamed)
+        scratch_panels.keep(exercise.public_id, panels)
+        scratch.save_page(exercise.public_id, "form", form)
+    except (scratch.Refused, scratch_panels.Refused) as why:
         return JSONResponse({"error": str(why)}, status_code=400)
     return JSONResponse({"saved": True})
 
@@ -269,9 +291,30 @@ async def exercise_process_save(request: Request, exercise_id: str) -> Response:
     and each stage's Draft or Published, kept for this browser."""
     exercise, sent = await _scratch_json(request, exercise_id)
     try:
-        kept = process_save.build(sent, exercise.public_id)
+        # A panel made with *+ New panel…* joins the exercise's panels
+        # (rung 5), kept with the process or not at all.
+        wanted = process_save.made_panels(sent, exercise.public_id)
+        made = cast(dict[str, Any], sent).get("pools") if isinstance(sent, dict) else None
+        renamed, panels = scratch_panels.adopt(exercise.public_id, made, wanted)
+        kept = process_save.build(sent, exercise.public_id, renamed)
+        scratch_panels.keep(exercise.public_id, panels)
         scratch.save_page(exercise.public_id, "process", kept)
-    except (process_save.Refused, scratch.Refused) as why:
+    except (process_save.Refused, scratch.Refused, scratch_panels.Refused) as why:
+        return JSONResponse({"error": str(why)}, status_code=400)
+    return JSONResponse({"saved": True})
+
+
+@router.post("/exercises/{exercise_id}/panels", name="applydesk_exercise_panels_save")
+async def exercise_panels_save(request: Request, exercise_id: str) -> Response:
+    """Panels' *Save* on a scratch exercise (segment AD1N rung 5): its
+    panels and roster, kept for this browser, so Form's questions and
+    Process's gates pick from them."""
+    exercise, sent = await _scratch_json(request, exercise_id)
+    try:
+        in_use = frozenset(stages.panel_uses(exercise.public_id))
+        kept = scratch_panels.build(sent, exercise.public_id, in_use)
+        scratch.save_page(exercise.public_id, scratch_panels.PAGE, kept)
+    except (scratch_panels.Refused, scratch.Refused) as why:
         return JSONResponse({"error": str(why)}, status_code=400)
     return JSONResponse({"saved": True})
 

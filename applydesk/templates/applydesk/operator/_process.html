@@ -1457,6 +1457,8 @@
   }
   window.applydeskProcessSnapshot = function () {
     return {
+      // Panels made here with + New panel…, kept with the gates naming them.
+      pools: window.applydeskMadePanels || {},
       stages: cards().map(function (card) {
         var form = items(card, "form")[0];
         var outcome = items(card, "outcome")[0];
