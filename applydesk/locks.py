@@ -101,7 +101,7 @@ def publish_problems(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
         out += [
             f"{label} is not set." for label, page in sample_data.setup_missing(e) if page == ""
         ]
-    if st.form and e.public_id in sample_data.EMPTY_FORMS:
+    if st.form and sample_data.form_is_empty(e.public_id):
         out.append("The application form has no questions.")
     forms = sample_data.list_questions(e.public_id)
     pools = sample_data.panel_pools(e.public_id)

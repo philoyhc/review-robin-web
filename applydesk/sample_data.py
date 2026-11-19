@@ -698,9 +698,17 @@ _RA_FORM: tuple[FormCard, ...] = (
 _RA_DESCRIPTION = "Apply to be a Residential Assistant for 2027/28, or to return as one."
 
 
+def form_is_empty(exercise_id: str) -> bool:
+    """A form with no questions: the sample's empty draft, or a scratch
+    exercise's (segment AD1N) until Form saves into it."""
+    from applydesk import scratch
+
+    return exercise_id in EMPTY_FORMS or scratch.is_scratch(exercise_id)
+
+
 def form_cards(exercise_id: str) -> tuple[FormCard, ...]:
     """The Form page's cards: one empty question for a form with none."""
-    if exercise_id in EMPTY_FORMS:
+    if form_is_empty(exercise_id):
         return (FormCard("field"),)
     # A pool this exercise has no roster for reads as Institution-wide,
     # so the summary, the card's menu and Preview agree.
@@ -713,7 +721,7 @@ def form_cards(exercise_id: str) -> tuple[FormCard, ...]:
 
 def form_heading(exercise_id: str) -> tuple[str, str]:
     """The form's own title and description."""
-    if exercise_id in EMPTY_FORMS:
+    if form_is_empty(exercise_id):
         return "", ""
     return "Application form", (
         _RA_DESCRIPTION if exercise_id == "wa9juxbc2t" else FORM_DESCRIPTION
@@ -929,7 +937,7 @@ def setup_missing(e: Exercise) -> tuple[tuple[str, str], ...]:
         missing.append(("Who may apply", ""))
     if "Not set" in (e.opens, e.application_stage_ends):
         missing.append(("Dates", "process"))
-    if e.public_id in EMPTY_FORMS:
+    if form_is_empty(e.public_id):
         missing.append(("Application form", "form"))
     return tuple(missing)
 

@@ -52,6 +52,10 @@ def test_new_exercise_makes_a_blank_draft_and_lands_on_its_home() -> None:
     assert "data-scratch-chip>Scratch<" in row and "/discard" in row
     # Newest first, before the sample.
     assert lobby.index(made) < lobby.index("wa9juxbc2t")
+    # Its form is blank (Codex on #4024), and Home says so.
+    form = client.get(f"{LOBBY}/{made}/form").text
+    assert "Project title" not in form
+    assert "Application form" in home
     # Each Setup page renders it (the lookups read the scratch first).
     for section in ("process", "form", "panels", "emails", "dossiers", "evaluations"):
         assert client.get(f"{LOBBY}/{made}/{section}").status_code == 200, section
