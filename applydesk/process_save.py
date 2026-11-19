@@ -267,18 +267,25 @@ def _outcome(v: Any, number: int) -> Outcome:
     )
 
 
-def _rekey(text: str, keys: dict[str, str]) -> str:
+Results = dict[str, frozenset[str]]
+
+
+def _rekey(text: str, keys: dict[str, str], results: Results) -> str:
     """A rule's or a weight's key, "gnew1.r2" or "o1", with its column's
-    new key. One naming no column on the page (a gate removed since) reads
-    ``removed``, which no column is ever keyed: kept as left, never read as
-    the column renumbered into its old key (Codex on #4026)."""
+    new key. One naming no column on the page (a gate removed since), or a
+    result its gate no longer has, reads ``removed``, which no column is
+    ever keyed: kept as left, never read as the column renumbered into its
+    old key, nor as a result added later under the removed one's key
+    (Codex on #4026)."""
     head, dot, tail = text.partition(".")
     if not head:
         return text
-    return keys.get(head, REMOVED) + dot + tail
+    if head not in keys or (tail and head in results and tail not in results[head]):
+        return REMOVED + dot + tail
+    return keys[head] + dot + tail
 
 
-def _rekey_rule(rule: Rule | None, keys: dict[str, str]) -> Rule | None:
+def _rekey_rule(rule: Rule | None, keys: dict[str, str], results: Results) -> Rule | None:
     if rule is None:
         return None
 
@@ -286,7 +293,7 @@ def _rekey_rule(rule: Rule | None, keys: dict[str, str]) -> Rule | None:
         when: tuple[tuple[str, str, str, str], ...],
     ) -> tuple[tuple[str, str, str, str], ...]:
         return tuple(
-            (k, _rekey(key, keys) if k in ("out", "res", "ent", "top") else key, op, v)
+            (k, _rekey(key, keys, results) if k in ("out", "res", "ent", "top") else key, op, v)
             for k, key, op, v in when
         )
 
@@ -353,19 +360,25 @@ def build(sent: Any, exercise_id: str) -> tuple[tuple[Stage, ...], frozenset[tup
     shape = stages.problems(tuple(built))
     if shape:
         raise Refused(shape[0])
-    final = tuple(_rekeyed(st, keys) for st in built)
+    results = {
+        c.key: frozenset(r.key for r in c.results)
+        for st in built
+        for c in st.columns
+        if isinstance(c, Gate)
+    }
+    final = tuple(_rekeyed(st, keys, results) for st in built)
     return final, frozenset(sends)
 
 
-def _rekeyed(st: Stage, keys: dict[str, str]) -> Stage:
+def _rekeyed(st: Stage, keys: dict[str, str], results: Results) -> Stage:
     columns = tuple(
-        replace(c, key=keys[c.key], rule=_rekey_rule(c.rule, keys))
+        replace(c, key=keys[c.key], rule=_rekey_rule(c.rule, keys, results))
         if isinstance(c, Gate)
         else replace(
             c,
             key=keys[c.key],
-            rule=_rekey_rule(c.rule, keys),
-            weights=tuple((_rekey(k, keys), w) for k, w in c.weights),
+            rule=_rekey_rule(c.rule, keys, results),
+            weights=tuple((_rekey(k, keys, results), w) for k, w in c.weights),
         )
         for c in st.columns
     )

@@ -162,7 +162,8 @@ answer only for a Published or Closed exercise.
   numbers, is refused, as is a gate evaluated by a panel made on the page;
   a result whose field was removed is kept with none); it renumbers gates
   `g1`… and outcomes `o1`… in timeline order, in the rules and weights
-  that name them too. `stages.plan_of` and `workflow.sends` read it back,
+  that name them too, where one naming a gate or result no longer there
+  reads `removed`, never another's. `stages.plan_of` and `workflow.sends` read it back,
   so Dossiers, Evaluations and Emails follow.
 - **The User Lobby** (`applydesk/templates/applydesk/me/home.html`), three
   cards: *My applications*, each of the applicant's own with its state,

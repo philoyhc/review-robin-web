@@ -457,6 +457,21 @@ def test_a_rule_naming_a_removed_gate_never_reads_another() -> None:
         assert kept.rule.when[0][1] == "removed.r1"
     finally:
         scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
+    # A result removed from a gate still there: its rule reads removed too,
+    # so a result added later as r2 is not read in its place.
+    two = {
+        **outcome,
+        "rule": {"when": [["res", "g2.r2", "ge", "3"]], "then": "Yes", "otherwise": "No"},
+    }
+    sent = {"stages": [_stage("Review", gates=[_gate("g2", "Second")], outcome=two)]}
+    assert client.post(f"{LOBBY}/{made}/process", json=sent).status_code == 200
+    reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- as above
+    try:
+        kept = stages.plan_of(made).columns[1]
+        assert isinstance(kept, stages.Outcome) and kept.rule
+        assert kept.rule.when[0][1] == "removed.r2"
+    finally:
+        scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
     for bad in ("NaN", "Infinity", "-inf", "33.3", "-5"):
         weighed = {**outcome, "weights": {"g2.r1": bad, "g2.r2": "50"}}
         sent = {"stages": [_stage("Review", gates=[_gate("g2", "Second")], outcome=weighed)]}
