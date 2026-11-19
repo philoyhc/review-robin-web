@@ -281,7 +281,9 @@ async def exercise_form_save(request: Request, exercise_id: str) -> Response:
         scratch.save_page(exercise.public_id, "form", form)
     except (scratch.Refused, scratch_panels.Refused) as why:
         return JSONResponse({"error": str(why)}, status_code=400)
-    return JSONResponse({"saved": True})
+    # A panel it adopted has a key of its own now: the page reloads to
+    # name it so, or its next Save would offer it again (cold read).
+    return JSONResponse({"saved": True, "reload": bool(renamed)})
 
 
 @router.post("/exercises/{exercise_id}/process", name="applydesk_exercise_process_save")
@@ -301,7 +303,9 @@ async def exercise_process_save(request: Request, exercise_id: str) -> Response:
         scratch.save_page(exercise.public_id, "process", kept)
     except (process_save.Refused, scratch.Refused, scratch_panels.Refused) as why:
         return JSONResponse({"error": str(why)}, status_code=400)
-    return JSONResponse({"saved": True})
+    # Gates and outcomes are renumbered on every save, and a panel it
+    # adopted keyed anew: the page reloads to hold the keys kept.
+    return JSONResponse({"saved": True, "reload": True})
 
 
 @router.post("/exercises/{exercise_id}/panels", name="applydesk_exercise_panels_save")
@@ -316,7 +320,9 @@ async def exercise_panels_save(request: Request, exercise_id: str) -> Response:
         scratch.save_page(exercise.public_id, scratch_panels.PAGE, kept)
     except (scratch_panels.Refused, scratch.Refused) as why:
         return JSONResponse({"error": str(why)}, status_code=400)
-    return JSONResponse({"saved": True})
+    # A panel made on the page has its own key now: the page reloads to
+    # hold it, or its next Save would key it anew (cold read).
+    return JSONResponse({"saved": True, "reload": True})
 
 
 @router.post("/exercises/{exercise_id}/details", name="applydesk_exercise_details")

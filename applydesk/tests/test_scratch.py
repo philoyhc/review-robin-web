@@ -625,7 +625,7 @@ def test_a_panel_made_on_form_or_process_joins_the_panels() -> None:
         "pools": {"new-1": {"name": "Referees", "members": [["Cy Ref", "cy@example.edu"]]}},
     }
     reply = client.post(f"{LOBBY}/{made}/form", json=form)
-    assert reply.status_code == 200, reply.text
+    assert reply.status_code == 200 and reply.json()["reload"] is True, reply.text
     panels = client.get(f"{LOBBY}/{made}/panels").text
     assert 'data-panel="panel-1"' in panels and "Referees" in panels and "cy@example.edu" in panels
     assert 'value="panel-1" selected' in client.get(f"{LOBBY}/{made}/form").text

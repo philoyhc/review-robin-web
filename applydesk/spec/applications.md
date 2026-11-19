@@ -174,7 +174,9 @@ answer only for a Published or Closed exercise.
   and refuses retiring one a question or a gate uses.
   `sample_data.panels_of` and `roster` read it back. A panel made with
   *+ New panel…* on Form or Process joins the exercise's panels, members
-  and all, with the save that names it.
+  and all, with the save that names it. A save that keys something anew
+  (a panel, a renumbered gate or outcome) reloads the page, so it holds
+  the keys kept, and says it saved once back.
 - **The User Lobby** (`applydesk/templates/applydesk/me/home.html`), three
   cards: *My applications*, each of the applicant's own with its state,
   linking its page, a draft included; *Open to me*, each Published or
