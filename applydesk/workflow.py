@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import cast
 
 from applydesk import sample_data, stages
 from applydesk.sample_data import Exercise
@@ -318,7 +319,13 @@ def awaits_approval(exercise_id: str, gate: stages.Gate) -> bool:
 
 def sends(exercise_id: str, item: str, audience: str) -> bool:
     """Whether Process has the item ("receipt", "reminder" or an outcome's
-    key) email the audience."""
+    key) email the audience; a scratch exercise's as its Process last saved
+    them (segment AD1N)."""
+    from applydesk import scratch
+
+    saved = scratch.page(exercise_id, "process")
+    if isinstance(saved, tuple):
+        return (item, audience) in cast(tuple[object, frozenset[tuple[str, str]]], saved)[1]
     return (item, audience) in _SENDS.get(exercise_id, _DEFAULT_SENDS)
 
 

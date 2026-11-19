@@ -18,6 +18,7 @@ from applydesk import (
     home_ops,
     locks,
     paging,
+    process_save,
     sample_data,
     scratch,
     stages,
@@ -257,6 +258,20 @@ async def exercise_form_save(request: Request, exercise_id: str) -> Response:
     try:
         scratch.save_page(exercise.public_id, "form", _form(sent, exercise.public_id))
     except scratch.Refused as why:
+        return JSONResponse({"error": str(why)}, status_code=400)
+    return JSONResponse({"saved": True})
+
+
+@router.post("/exercises/{exercise_id}/process", name="applydesk_exercise_process_save")
+async def exercise_process_save(request: Request, exercise_id: str) -> Response:
+    """Process's *Save* on a scratch exercise (segment AD1N rung 4): its
+    stages, gates and outcomes, their rules, the emails each item ticks,
+    and each stage's Draft or Published, kept for this browser."""
+    exercise, sent = await _scratch_json(request, exercise_id)
+    try:
+        kept = process_save.build(sent, exercise.public_id)
+        scratch.save_page(exercise.public_id, "process", kept)
+    except (process_save.Refused, scratch.Refused) as why:
         return JSONResponse({"error": str(why)}, status_code=400)
     return JSONResponse({"saved": True})
 

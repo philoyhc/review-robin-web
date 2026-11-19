@@ -44,14 +44,16 @@
       {% if issues %}<ul class="pc-issues" data-pc-issues>{% for i in issues %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
       <p class="visually-hidden" data-pc-live aria-live="polite"></p>
       <div class="btnrow">
-        <button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>
+        {% if scratch_page %}<button class="btn btn-primary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}" data-fb-snapshot="applydeskProcessSnapshot">Save</button>{% else %}<button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>{% endif %}
         <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
       </div>
+      {% if scratch_page %}<p class="muted fb-said" data-fb-said role="status"></p>{% endif %}
     </section>
   </aside>
 </div>
 {% include "applydesk/operator/_panel_pick_js.html" %}
 {% include "applydesk/operator/_unsaved_js.html" %}
+{% if scratch_page %}{% include "applydesk/operator/_scratch_save_js.html" %}{% endif %}
 <script>
 // Segment AD1E rung 3: the stage card moves, in the browser only; a reload
 // restores the sample. Collapse and expand; the name and dates feeding the
@@ -1424,6 +1426,52 @@
   list.addEventListener("change", resultEvent, true);
   Array.prototype.forEach.call(list.querySelectorAll('.pc-item[data-item="gate"]'), drawFields);
 
+  // --- A scratch exercise's Save (segment AD1N): the page's whole state,
+  // as routes_operator._process reads it and stages builds it back.
+  function checked(item, rel) { var i = item.querySelector('[data-rel="' + rel + '"]'); return !!(i && i.checked); }
+  function gateOf(item) {
+    return {
+      key: item.dataset.key, label: field(item, "item-name"),
+      from: field(item, "item-from"), to: field(item, "item-to"),
+      description: field(item, "description"),
+      confidential: !!(item.querySelector('[data-pc="confidential"]') || {}).checked,
+      rule: ruleOf(item), mode: item.querySelector('[data-ps="mode"]').value,
+      sources: sourcesOf(item), total: totalOf(item),
+      fields: fieldRows(item).map(readField),
+      results: Array.prototype.slice.call(item.querySelectorAll("[data-result]")).map(function (row) {
+        var r = readResult(row);
+        return { key: row.dataset.result, name: r.name, source: rv(row, "source"), derive: r.derive,
+                 value: r.derive === "share" ? r.value : "", at_least: r.atLeast, ignore_zero: r.ignoreZero };
+      })
+    };
+  }
+  function outcomeOf(item) {
+    var w = {};
+    var box = item.querySelector("[data-pc-weights]");
+    if (box && !box.hidden) box.querySelectorAll("[data-w-key]").forEach(function (i) { w[i.dataset.wKey] = i.value.trim(); });
+    return {
+      key: item.dataset.key, label: field(item, "item-name"), due: field(item, "due"),
+      values: valuesOf(item), weights: w, rule: ruleOf(item),
+      applicants_email: checked(item, "applicants-email"), evaluators_email: checked(item, "evaluators-email")
+    };
+  }
+  window.applydeskProcessSnapshot = function () {
+    return {
+      stages: cards().map(function (card) {
+        var form = items(card, "form")[0];
+        var outcome = items(card, "outcome")[0];
+        return {
+          name: field(card, "name"), from: field(card, "from"), to: field(card, "to"),
+          shown: !!(card.querySelector('[data-pc="shown"]') || {}).checked,
+          published: card.dataset.status !== "Draft",
+          form: form ? { from: field(form, "item-from"), to: field(form, "item-to"),
+                         receipt: checked(form, "receipt"), reminder: checked(form, "reminder") } : null,
+          gates: items(card, "gate").map(gateOf),
+          outcome: outcome ? outcomeOf(outcome) : null
+        };
+      })
+    };
+  };
   list.querySelectorAll('.pc-item[data-item="gate"]').forEach(drawSources);
   changed();
 })();

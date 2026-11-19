@@ -14,6 +14,7 @@ import random
 import re
 from dataclasses import dataclass, replace
 from datetime import date, datetime
+from typing import cast
 
 from applydesk import sample_data
 from applydesk.sample_data import Application
@@ -638,11 +639,23 @@ def _exercise_span(e: sample_data.Exercise) -> StageDates | None:
     return StageDates(start, end)
 
 
+def _scratch_stages(exercise_id: str) -> tuple[Stage, ...] | None:
+    """A scratch exercise's stages as Process last saved them (segment
+    AD1N), else None."""
+    from applydesk import scratch  # scratch builds on sample_data, as this does
+
+    saved = scratch.page(exercise_id, "process")
+    return cast(tuple[Stage, ...], saved[0]) if isinstance(saved, tuple) else None
+
+
 def plan_of(exercise_id: str) -> Plan:
     """The stages and every application's cells for one exercise. An
     exercise not yet set up has one stage, holding the form, as a
     new exercise starts (ruling 15)."""
     apps = sample_data.applications_of(exercise_id)
+    saved = _scratch_stages(exercise_id)
+    if saved is not None:
+        return Plan(saved, tuple(Row(a, {}) for a in apps))
     if exercise_id not in _STAGES:
         e = sample_data.exercise(exercise_id)
         when = _exercise_span(e) if e else None
