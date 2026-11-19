@@ -125,6 +125,21 @@ def test_form_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> Non
     page.locator("[data-fb-save]").click()
     page.locator("[data-fb-said]").filter(has_text="Saved to this scratch exercise.").wait_for()
     assert page.locator("[data-unsaved]").is_hidden()
+    # An edit made while a save is on its way keeps the page unsaved (Codex).
+    page.route(
+        "**/form",
+        lambda route: (
+            page.locator('#fb-cards > .fc[data-kind="field"] [data-f="label"]').fill(
+                "What do you study, and where?"
+            ),
+            route.fallback(),
+        ),
+    )
+    page.locator("[data-fb-save]").click()
+    page.locator("[data-fb-said]").filter(has_text="not the changes made since").wait_for()
+    assert page.locator("[data-unsaved]").is_visible()
+    page.unroute("**/form")
+    page.once("dialog", lambda d: d.accept())
     page.reload()
     assert (
         page.locator('#fb-cards > .fc[data-kind="field"] [data-f="label"]').input_value()

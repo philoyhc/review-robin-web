@@ -233,6 +233,12 @@ def test_form_save_is_checked() -> None:
         ),
         ({"title": "", "description": "", "cards": [_field("Q", required="yes")]}, "malformed"),
         ({"title": "", "description": "", "cards": [_field("x" * 501)]}, "too long"),
+        (
+            {"title": "", "description": "", "cards": [{"kind": "section", "label": "x" * 501}]},
+            "too long",
+        ),
+        ({"title": "x" * 201, "description": "", "cards": []}, "at most 200 characters"),
+        ({"title": "", "description": "x" * 4001, "cards": []}, "at most 4,000 characters"),
     ):
         refused = client.post(f"{LOBBY}/{made}/form", json=bad)
         assert refused.status_code == 400 and reason in refused.json()["error"], bad

@@ -199,6 +199,10 @@ def _form(sent: Any) -> dict[str, Any]:
         or not isinstance(cards, list)
     ):
         raise scratch.Refused("The form is malformed.")
+    if len(title.strip()) > 200:
+        raise scratch.Refused("The form's title is at most 200 characters.")
+    if len(description.strip()) > 4000:
+        raise scratch.Refused("The form's description is at most 4,000 characters.")
     if len(cast(list[Any], cards)) > 200:
         raise scratch.Refused("A form holds at most 200 cards.")
     types = {k for k, _ in sample_data.CARD_TYPES}
@@ -214,7 +218,9 @@ def _form(sent: Any) -> dict[str, Any]:
             label = card.get("label", "")
             if not isinstance(label, str):
                 raise scratch.Refused(f"Card {n} is malformed.")
-            kept.append({"kind": kind, "label": label[:500]})
+            if len(label) > _CARD_TEXT["label"]:
+                raise scratch.Refused(f"Card {n}'s label is too long.")
+            kept.append({"kind": kind, "label": label})
             continue
         if card.get("type") not in types:
             raise scratch.Refused(f"Card {n}'s type is not one of the choices.")
@@ -232,7 +238,7 @@ def _form(sent: Any) -> dict[str, Any]:
         out["ratio_w"] = out["ratio_w"] or "4"
         out["ratio_h"] = out["ratio_h"] or "5"
         kept.append(out)
-    return {"title": title.strip()[:200], "description": description.strip()[:4000], "cards": kept}
+    return {"title": title.strip(), "description": description.strip(), "cards": kept}
 
 
 @router.post("/exercises/{exercise_id}/form", name="applydesk_exercise_form_save")

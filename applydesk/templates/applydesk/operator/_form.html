@@ -14,8 +14,8 @@
         <div class="fc-sum"><div class="fc-texts"><span class="fc-kicker">Form</span><span class="fc-q fb-title-q" data-sum="title">{{ form_heading[0] or "Untitled form" }}</span><span class="fc-h" data-sum="description">{{ form_heading[1] }}</span></div></div>
       </div>
       <div class="fc-body">
-        <label class="fc-l">Form title<input class="fc-in fb-title-in" data-fb="title" value="{{ form_heading[0] }}" placeholder="Untitled form"></label>
-        <label class="fc-l">Description<textarea class="fc-in" data-fb="description" data-fit-box rows="1" placeholder="Optional">{{ form_heading[1] }}</textarea></label>
+        <label class="fc-l">Form title<input class="fc-in fb-title-in" data-fb="title" value="{{ form_heading[0] }}" placeholder="Untitled form" maxlength="200"></label>
+        <label class="fc-l">Description<textarea class="fc-in" data-fb="description" maxlength="4000" data-fit-box rows="1" placeholder="Optional">{{ form_heading[1] }}</textarea></label>
       </div>
     </section>
     <div class="fb-cards" id="fb-cards">
