@@ -173,12 +173,13 @@ def test_process_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> 
     outcome.locator('[data-pc="item-name"]').fill("Award")
     outcome.locator('[data-pc="values"]').fill("Awarded, Not awarded")
     outcome.locator('[data-rel="applicants-email"]').check()
-    page.locator("[data-fb-save]").click()
+    # Gates are renumbered on saving, so the page reloads to hold the keys.
+    with page.expect_navigation():
+        page.locator("[data-fb-save]").click()
     said = page.locator("[data-fb-said]")
     said.filter(has_text="Saved").wait_for()
     assert said.inner_text() == "Saved to this scratch exercise.", said.inner_text()
     assert page.locator("[data-unsaved]").is_hidden()
-    page.reload()
     names = page.locator('#pc-cards > .fc [data-pc="name"]')
     assert [names.nth(i).input_value() for i in range(names.count())] == [
         "Applications",
@@ -193,3 +194,42 @@ def test_process_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> 
     assert outcome.locator('[data-rel="applicants-email"]').is_checked()
     page.goto(home + "/emails")
     assert "Award" in page.locator("main").inner_text()
+
+
+def test_panels_saved_into_a_scratch_exercise_survive_a_reload(page: Page) -> None:
+    """Rung 5: a panel made in Manage panels, with a member from the
+    directory, saved, read back, and offered to a gate on Process."""
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("Panels Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    home = page.url
+    page.goto(home + "/panels")
+    who = page.evaluate("JSON.parse(document.getElementById('pn-people').textContent)[0]")
+    page.locator('[data-pn-act="manage"]').click()
+    page.locator("[data-pn-newname]").fill("Readers")
+    page.locator("[data-pn-members]").fill(who[1])
+    page.locator("[data-pn-members]").press("Enter")
+    page.locator('[data-pn-act="create"]').click()
+    # Still open in Manage panels: Save is refused, saying why.
+    page.locator("[data-fb-save]").click()
+    assert "Keep or undo" in page.locator("[data-pn-said]").inner_text()
+    page.locator('[data-pn-act="save-names"]').click()
+    # The save keys the panel anew, so the page reloads to hold its key,
+    # and says it saved once back (cold read).
+    with page.expect_navigation():
+        page.locator("[data-fb-save]").click()
+    page.locator("[data-fb-said]").filter(has_text="Saved to this scratch exercise.").wait_for()
+    assert page.locator("[data-pn-kept]").is_hidden()
+    assert page.locator('th[data-panel="panel-1"]').inner_text().startswith("Readers")
+    # Saved again, it keeps its key.
+    with page.expect_navigation():
+        page.locator("[data-fb-save]").click()
+    page.locator("[data-fb-said]").filter(has_text="Saved to this scratch exercise.").wait_for()
+    assert page.locator('th[data-panel="panel-1"]').inner_text().startswith("Readers")
+    assert page.locator("[data-pn-row]").count() == 1
+    assert who[1] in page.locator("[data-pn-row]").first.inner_text()
+    page.goto(home + "/process")
+    pools = page.evaluate("JSON.parse(document.getElementById('pc-pools').textContent)")
+    assert pools["panel-1"]["name"] == "Readers", pools

@@ -146,8 +146,8 @@ answer only for a Published or Closed exercise.
   page's own snapshot (`applydeskFormSnapshot`) to `…/form`; the server
   keeps each card in `FormCard`'s shape, refusing more than 200 cards, a
   kind or type not offered, a toggle that is not true or false, or a text
-  past its length, or a question choosing from a panel made on the page
-  with *+ New panel…* (not kept until Panels saves), with the card's number. `sample_data.form_cards` and
+  past its length, or a question choosing from no panel the exercise has,
+  with the card's number. `sample_data.form_cards` and
   `form_heading` read it back, so Form, Preview, the applicant pages and
   Process's form-answer rules all see the saved questions. A saved page's
   *Unsaved changes* marker clears. Process's *Save* (rung 4) posts
@@ -158,14 +158,25 @@ answer only for a Published or Closed exercise.
   values, weights, rule, emails). `applydesk/process_save.py` checks the
   shapes and ruling 15's (`stages.problems`), not what the page itself
   flags, which is kept as left and flagged again (but a weight that is
-  blank or not a whole percent, or an evaluator count not a whole number, kept as
-  numbers, or a date range with one end alone, is refused, as is a gate
-  evaluated by a panel made on the page; a result whose field was removed
-  is kept with none); it renumbers gates
+  blank or not a whole percent, or an evaluator count not a whole number,
+  kept as numbers, or a date range with one end alone, is refused; a
+  result whose field was removed is kept with none); it renumbers gates
   `g1`… and outcomes `o1`… in timeline order, in the rules and weights
   that name them too, where one naming a gate or result no longer there
   reads `removed`, never another's. `stages.plan_of` and `workflow.sends` read it back,
   so Dossiers, Evaluations and Emails follow.
+  Panels' *Save* (rung 5) posts `applydeskPanelsSnapshot` to `…/panels`,
+  refused on the page while a row or a *Manage panels* change is still
+  open: the panels (distinct names, none a CSV column's) and every row
+  (an address each, distinct; ticks naming the page's panels), someone on
+  no panel kept on the roster. `applydesk/scratch_panels.py` keys a panel
+  the page made `panel-1`… on its first save, a saved one keeping its key,
+  and refuses retiring one a question or a gate uses.
+  `sample_data.panels_of` and `roster` read it back. A panel made with
+  *+ New panel…* on Form or Process joins the exercise's panels, members
+  and all, with the save that names it. A save that keys something anew
+  (a panel, a renumbered gate or outcome) reloads the page, so it holds
+  the keys kept, and says it saved once back.
 - **The User Lobby** (`applydesk/templates/applydesk/me/home.html`), three
   cards: *My applications*, each of the applicant's own with its state,
   linking its page, a draft included; *Open to me*, each Published or

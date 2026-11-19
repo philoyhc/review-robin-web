@@ -2,17 +2,27 @@
    the button carrying `data-fb-save` posts what its page's snapshot
    function gives, as JSON, and says whether it was kept. The page names
    its snapshot in `data-fb-snapshot` (a global function's name), else
-   Form's `applydeskFormSnapshot`. The page counts as saved only if
+   Form's `applydeskFormSnapshot`; a snapshot of null is a page saying
+   itself why it cannot be saved yet. A reply asking to reload (new keys
+   kept) reloads the page, which says it saved once back. The page counts as saved only if
    nothing changed while the save was on its way. #}
 <script>
 (function () {
+  var NOTE = "applydesk-scratch-saved";
+  var note = null;
+  try { note = sessionStorage.getItem(NOTE); sessionStorage.removeItem(NOTE); } catch (e) { note = null; }
   document.querySelectorAll("[data-fb-save]").forEach(function (btn) {
+    if (note) {
+      var box = (btn.closest("[data-unsaved-root]") || document).querySelector("[data-fb-said]");
+      if (box) box.textContent = note;
+    }
     var root = btn.closest("[data-unsaved-root]") || document;
     var said = root.querySelector("[data-fb-said]");
     btn.addEventListener("click", function () {
       var snap = window[btn.dataset.fbSnapshot || "applydeskFormSnapshot"];
       if (typeof snap !== "function") return;
       var body = snap();
+      if (body === null) return;  // the page said why it cannot be saved yet
       var sent = typeof body === "string" ? body : JSON.stringify(body);
       btn.disabled = true;
       fetch(btn.dataset.fbSave, { method: "POST", headers: { "Content-Type": "application/json" }, body: sent, credentials: "same-origin" })
@@ -26,6 +36,13 @@
             if ((typeof now === "string" ? now : JSON.stringify(now)) === sent) {
               if (said) said.textContent = "Saved to this scratch exercise.";
               root.dispatchEvent(new Event("applydesk:saved"));
+              // A save that keyed something anew (a panel, a renumbered
+              // gate) reloads, so the page holds the keys kept; it says so
+              // once it is back.
+              if (got[1] && got[1].reload) {
+                try { sessionStorage.setItem(NOTE, "Saved to this scratch exercise."); } catch (e) { /* said above */ }
+                location.reload();
+              }
             } else if (said) {
               said.textContent = "Saved, but not the changes made since: save again.";
             }
