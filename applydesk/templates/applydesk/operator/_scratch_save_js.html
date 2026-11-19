@@ -1,0 +1,40 @@
+{# A scratch exercise's Save on a Setup page (segment AD1N, ruling 59):
+   the button carrying `data-fb-save` posts what its page's snapshot
+   function gives, as JSON, and says whether it was kept. The page names
+   its snapshot in `data-fb-snapshot` (a global function's name), else
+   Form's `applydeskFormSnapshot`. The page counts as saved only if
+   nothing changed while the save was on its way. #}
+<script>
+(function () {
+  document.querySelectorAll("[data-fb-save]").forEach(function (btn) {
+    var root = btn.closest("[data-unsaved-root]") || document;
+    var said = root.querySelector("[data-fb-said]");
+    btn.addEventListener("click", function () {
+      var snap = window[btn.dataset.fbSnapshot || "applydeskFormSnapshot"];
+      if (typeof snap !== "function") return;
+      var body = snap();
+      var sent = typeof body === "string" ? body : JSON.stringify(body);
+      btn.disabled = true;
+      fetch(btn.dataset.fbSave, { method: "POST", headers: { "Content-Type": "application/json" }, body: sent, credentials: "same-origin" })
+        .then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }, function () { return [false, null]; }); })
+        .then(function (got) {
+          btn.disabled = false;
+          if (got[0]) {
+            // Edits made while the save was on its way are not in it (Codex):
+            // the page stays unsaved until a later Save carries them.
+            var now = snap();
+            if ((typeof now === "string" ? now : JSON.stringify(now)) === sent) {
+              if (said) said.textContent = "Saved to this scratch exercise.";
+              root.dispatchEvent(new Event("applydesk:saved"));
+            } else if (said) {
+              said.textContent = "Saved, but not the changes made since: save again.";
+            }
+          } else if (said) {
+            said.textContent = "Not saved: " + ((got[1] && got[1].error) || "the server refused it.");
+          }
+        })
+        .catch(function () { btn.disabled = false; if (said) said.textContent = "Not saved: the server could not be reached."; });
+    });
+  });
+})();
+</script>

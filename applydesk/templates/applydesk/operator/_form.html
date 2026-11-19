@@ -14,8 +14,8 @@
         <div class="fc-sum"><div class="fc-texts"><span class="fc-kicker">Form</span><span class="fc-q fb-title-q" data-sum="title">{{ form_heading[0] or "Untitled form" }}</span><span class="fc-h" data-sum="description">{{ form_heading[1] }}</span></div></div>
       </div>
       <div class="fc-body">
-        <label class="fc-l">Form title<input class="fc-in fb-title-in" data-fb="title" value="{{ form_heading[0] }}" placeholder="Untitled form"></label>
-        <label class="fc-l">Description<textarea class="fc-in" data-fb="description" data-fit-box rows="1" placeholder="Optional">{{ form_heading[1] }}</textarea></label>
+        <label class="fc-l">Form title<input class="fc-in fb-title-in" data-fb="title" value="{{ form_heading[0] }}" placeholder="Untitled form" maxlength="200"></label>
+        <label class="fc-l">Description<textarea class="fc-in" data-fb="description" maxlength="4000" data-fit-box rows="1" placeholder="Optional">{{ form_heading[1] }}</textarea></label>
       </div>
     </section>
     <div class="fb-cards" id="fb-cards">
@@ -43,9 +43,10 @@
       <p class="visually-hidden" data-fb-live aria-live="polite"></p>
       <div class="btnrow">
         <button type="button" class="btn btn-secondary" data-fb-preview>Preview</button>
-        <button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>
+        {% if scratch_page %}<button class="btn btn-primary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Save</button>{% else %}<button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>{% endif %}
         <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
       </div>
+      {% if scratch_page %}<p class="muted fb-said" data-fb-said role="status"></p>{% endif %}
       <p class="muted fb-pv-note"><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form/preview') }}" target="applydesk-preview-{{ exercise.public_id }}" rel="opener" data-fb-preview-tab>Open the preview in a new tab</a></p>
     </section>
   </aside>
@@ -53,6 +54,7 @@
 {% include "applydesk/operator/_form_draw.html" %}
 {% include "applydesk/operator/_panel_pick_js.html" %}
 {% include "applydesk/operator/_unsaved_js.html" %}
+{% if scratch_page %}{% include "applydesk/operator/_scratch_save_js.html" %}{% endif %}
 <script>
 // Segment AD1B: the Form page's moves, in the browser only; a reload
 // restores the sample form. Collapse and expand, the type menu, the

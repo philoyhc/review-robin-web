@@ -163,3 +163,87 @@ def test_a_post_from_another_site_is_refused() -> None:
         ).status_code
         == 415
     )
+
+
+def _field(label: str, **over: object) -> dict[str, object]:
+    card: dict[str, object] = {
+        "kind": "field",
+        "type": "string",
+        "label": label,
+        "help": "",
+        "min": "",
+        "max": "",
+        "step": "",
+        "options": "",
+        "exclusive": True,
+        "required": False,
+        "shown": False,
+        "pool": "institution",
+        "ratio_w": "4",
+        "ratio_h": "5",
+    }
+    card.update(over)
+    return card
+
+
+def test_a_blank_scratch_form_starts_empty_and_form_saves_into_it() -> None:
+    """Rung 3: Form's Save keeps the cards; the page, Preview and Process's
+    form-answer rules read them back."""
+    client = _client()
+    made = _create(client)
+    form = client.get(f"{LOBBY}/{made}/form").text
+    assert "Project title" not in form  # not the sample's form
+    assert "data-fb-save=" in form
+    sent = {
+        "title": "Bursary application",
+        "description": "Tell us about yourself.",
+        "cards": [
+            {"kind": "section", "label": "About you"},
+            _field(
+                "Your faculty", type="list", options="Arts, Science, Engineering", required=True
+            ),
+            _field("Why you", help="A paragraph."),
+            {"kind": "pagebreak", "label": ""},
+        ],
+    }
+    reply = client.post(f"{LOBBY}/{made}/form", json=sent)
+    assert reply.status_code == 200, reply.text
+    form = client.get(f"{LOBBY}/{made}/form").text
+    assert "Your faculty" in form and "Why you" in form and "Bursary application" in form
+    process = client.get(f"{LOBBY}/{made}/process").text
+    lists = process.split('id="pc-form-lists">')[1].split("</script>")[0]
+    assert '"Your faculty": ["Arts", "Science", "Engineering"]' in lists
+    assert "Application form" not in client.get(f"{LOBBY}/{made}").text  # no longer missing
+    preview = client.get(f"{LOBBY}/{made}/form/preview").text
+    assert "Your faculty" in preview
+    # Another scratch exercise's form is its own.
+    other = _create(client, "Second")
+    assert "Your faculty" not in client.get(f"{LOBBY}/{other}/form").text
+
+
+def test_form_save_is_checked() -> None:
+    client = _client()
+    made = _create(client)
+    for bad, reason in (
+        ({"title": "", "description": "", "cards": "x"}, "malformed"),
+        ({"title": "", "description": "", "cards": [{"kind": "poster"}]}, "no known kind"),
+        (
+            {"title": "", "description": "", "cards": [_field("Q", type="essay")]},
+            "not one of the choices",
+        ),
+        ({"title": "", "description": "", "cards": [_field("Q", required="yes")]}, "malformed"),
+        ({"title": "", "description": "", "cards": [_field("x" * 501)]}, "too long"),
+        (
+            {"title": "", "description": "", "cards": [{"kind": "section", "label": "x" * 501}]},
+            "too long",
+        ),
+        ({"title": "x" * 201, "description": "", "cards": []}, "at most 200 characters"),
+        (
+            {"title": "", "description": "", "cards": [_field("Q", type="people", pool="new-1")]},
+            "panel made on this page",
+        ),
+        ({"title": "", "description": "x" * 4001, "cards": []}, "at most 4,000 characters"),
+    ):
+        refused = client.post(f"{LOBBY}/{made}/form", json=bad)
+        assert refused.status_code == 400 and reason in refused.json()["error"], bad
+    assert client.post(f"{LOBBY}/wa9juxbc2t/form", json={"cards": []}).status_code == 404
