@@ -7,18 +7,19 @@
 {# Laid out as Form and Process (author, 2026-11-19): the templates in the
    main two columns, and a card on the right that stays in view, with an
    Outline linking every email and the merge tags. #}
-<div class="fb-split" data-emails data-em-ex="{{ exercise.public_id }}">
+<div class="fb-split" data-emails data-em-ex="{{ exercise.public_id }}"{% if scratch_page %} data-em-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}"{% endif %}>
 <div class="fb-main">
-<p>Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk (AD7); Review Robin sends none. A template you save is kept in this tab: nothing is saved until AD2, and until then the status row's <em>Emails</em>, Home and Dossiers' <em>Released</em> read the sample's templates.</p>
+<p>Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk (AD7); Review Robin sends none.{% if scratch_page %} A template you save is kept in this scratch exercise, and the status row's <em>Emails</em> and Home follow it.{% else %} A template you save is kept in this tab: nothing is saved until AD2, and until then the status row's <em>Emails</em>, Home and Dossiers' <em>Released</em> read the sample's templates.{% endif %}</p>
 {% for e in emails %}
-{% set d = email_defaults[e.kind] %}
 {% set sample = email_sample(e) %}
-<section class="card em-card" id="em-{{ loop.index }}" data-email="{{ e.name }}" data-em-kind="{{ e.kind }}" data-em-sample="{{ sample | tojson | forceescape }}">
+{% set t = email_text(e) %}
+<section class="card em-card" id="em-{{ loop.index }}" data-email="{{ e.name }}" data-em-item="{{ e.item }}" data-em-audience="{{ e.audience }}" data-em-kind="{{ e.kind }}" data-em-sample="{{ sample | tojson | forceescape }}">
   <h2>{{ e.name }} <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}" data-em-chip>{{ "Written" if e.ok else "Owed" }}</span></h2>
   <p class="muted">{{ e.when }}</p>
-  {# A written sample template shows its kind's default; an owed one, empty. #}
-  <div class="field"><label>Subject <input type="text" class="fc-in" data-em-subject value="{{ d[0] if e.ok else '' }}"></label></div>
-  <div class="field"><label>Body <textarea class="fc-in" rows="3" data-fit-box data-em-body>{{ d[1] if e.ok else "" }}</textarea></label></div>
+  {# A written sample template shows its kind's default; an owed one,
+     empty; a scratch exercise's, as its card last saved it. #}
+  <div class="field"><label>Subject <input type="text" class="fc-in" data-em-subject value="{{ t[0] }}" maxlength="300"></label></div>
+  <div class="field"><label>Body <textarea class="fc-in" rows="3" data-fit-box data-em-body maxlength="20000">{{ t[1] }}</textarea></label></div>
   {# Its kind's fields, put at the cursor in whichever box last had it. #}
   <div class="field em-insert-row"><label>Insert field <select class="fc-in em-insert" data-em-insert>{% for f in email_fields[e.kind] %}<option value="{{ f }}">${{ f }} — {{ tag_help[f] }}</option>{% endfor %}</select></label> <button class="btn btn-secondary" type="button" data-em-act="insert">Insert</button></div>
   <div class="btnrow"><button class="btn btn-primary" type="button" data-em-act="save" disabled>Save</button><button class="btn btn-secondary" type="button" data-em-act="preview" aria-expanded="false">Preview</button><button class="btn btn-secondary" type="button" data-em-act="reset">{{ "Reset to default" if e.ok else "Start from the default" }}</button><span class="fb-unsaved" data-em-unsaved hidden>Unsaved changes</span><span class="muted" data-em-said role="status"></span></div>
@@ -82,13 +83,17 @@
     return bad;
   }
   var STORE = "applydesk-emails:" + root.dataset.emEx;
+  // A scratch exercise's Save posts to the server (segment AD1N rung 6),
+  // which the page then opens with: the tab keeps nothing of its own.
+  var SAVE = root.dataset.emSave || "";
   var kept = {};
-  try { kept = JSON.parse(sessionStorage.getItem(STORE) || "{}") || {}; } catch (e) { kept = {}; }
+  if (!SAVE) { try { kept = JSON.parse(sessionStorage.getItem(STORE) || "{}") || {}; } catch (e) { kept = {}; } }
   var cards = Array.prototype.slice.call(root.querySelectorAll("[data-email]"));
   var lastCard = null;
   // Only what Process still makes owed: a stale entry is dropped.
   var names = cards.map(function (c) { return c.dataset.email; });
   function store() {
+    if (SAVE) return;
     try { sessionStorage.setItem(STORE, JSON.stringify(kept)); } catch (e) { /* kept on the page only */ }
   }
   var stale = Object.keys(kept).filter(function (n) { return names.indexOf(n) < 0; });
@@ -246,6 +251,22 @@
         if (badB.length) body(c).setAttribute("aria-invalid", "true");
         said.textContent = "Not saved: " + bad.map(function (f) { return "$" + f; }).join(", ") + (bad.length === 1 ? " is not a tag" : " are not tags") + " of this email. Use Insert field.";
         (badS.length ? subj(c) : body(c)).focus();
+        return;
+      }
+      if (SAVE) {
+        // What is sent is what is kept: an edit made meanwhile stays unsaved.
+        var sentS = subj(c).value, sentB = body(c).value;
+        b.disabled = true;
+        fetch(SAVE, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
+          body: JSON.stringify({ item: c.dataset.emItem, audience: c.dataset.emAudience, subject: sentS, body: sentB }) })
+          .then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }, function () { return [false, null]; }); })
+          .then(function (got) {
+            if (!got[0]) { draw(c); said.textContent = "Not saved: " + ((got[1] && got[1].error) || "the server refused it."); return; }
+            c.savedS = sentS; c.savedB = sentB;
+            draw(c);
+            said.textContent = written(sentS, sentB) ? "Saved to this scratch exercise." : "Saved, still owed: it needs a subject and a body.";
+          })
+          .catch(function () { draw(c); said.textContent = "Not saved: the server could not be reached."; });
         return;
       }
       c.savedS = subj(c).value; c.savedB = body(c).value;

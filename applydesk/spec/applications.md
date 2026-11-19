@@ -177,6 +177,13 @@ answer only for a Published or Closed exercise.
   and all, with the save that names it. A save that keys something anew
   (a panel, a renumbered gate or outcome) reloads the page, so it holds
   the keys kept, and says it saved once back.
+  An Emails card's *Save* (rung 6) posts its subject and body to
+  `…/emails` by the item and audience Process owes it for, not to the tab:
+  refused for an email Process does not owe, a subject over 300
+  characters or a body over 20,000, or another kind's merge tag
+  (`workflow.foreign_tags`, as the card refuses it). `workflow.emails`
+  counts it written once it has a subject and a body, so the card's chip,
+  the status row and Home follow; the card opens as saved.
 - **The User Lobby** (`applydesk/templates/applydesk/me/home.html`), three
   cards: *My applications*, each of the applicant's own with its state,
   linking its page, a draft included; *Open to me*, each Published or

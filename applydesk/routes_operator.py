@@ -325,6 +325,42 @@ async def exercise_panels_save(request: Request, exercise_id: str) -> Response:
     return JSONResponse({"saved": True, "reload": True})
 
 
+@router.post("/exercises/{exercise_id}/emails", name="applydesk_exercise_email_save")
+async def exercise_email_save(request: Request, exercise_id: str) -> Response:
+    """An Emails card's *Save* on a scratch exercise (segment AD1N rung 6):
+    one template, by the item and audience Process owes it for, kept for
+    this browser, so the card, the status row and Home read it."""
+    exercise, sent = await _scratch_json(request, exercise_id)
+    got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
+    item, audience = got.get("item"), got.get("audience")
+    subject, body = got.get("subject"), got.get("body")
+    owed = next(
+        (
+            e
+            for e in workflow.emails(exercise.public_id)
+            if (e.item, e.audience) == (item, audience)
+        ),
+        None,
+    )
+    if owed is None or not isinstance(subject, str) or not isinstance(body, str):
+        return JSONResponse({"error": "That email is not one Process owes."}, status_code=400)
+    if len(subject) > 300 or len(body) > 20000:
+        return JSONResponse(
+            {"error": "A subject is at most 300 characters, a body 20,000."}, status_code=400
+        )
+    bad = workflow.foreign_tags(owed.kind, subject + "\n" + body)
+    if bad:
+        tags = ", ".join(f"${t}" for t in bad)
+        return JSONResponse({"error": f"{tags} is not a tag of this email."}, status_code=400)
+    try:
+        kept = dict(workflow.scratch_templates(exercise.public_id) or {})
+        kept[(owed.item, owed.audience)] = (subject, body)
+        scratch.save_page(exercise.public_id, workflow.SCRATCH_PAGE, kept)
+    except scratch.Refused as why:
+        return JSONResponse({"error": str(why)}, status_code=400)
+    return JSONResponse({"saved": True, "written": bool(subject.strip() and body.strip())})
+
+
 @router.post("/exercises/{exercise_id}/details", name="applydesk_exercise_details")
 async def exercise_details(request: Request, exercise_id: str) -> Response:
     """Details' *Lock* on a scratch exercise (segment AD1N): the fields
@@ -774,6 +810,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         emails=(owed := workflow.emails(exercise.public_id)),
         tag_rows=workflow.tag_rows(owed),
         email_defaults=workflow.DEFAULT_TEMPLATES,
+        email_text=functools.partial(workflow.template_text, exercise.public_id),
         email_fields=workflow.EMAIL_FIELDS,
         tag_help=workflow.TAG_HELP,
         email_sample=functools.partial(_email_sample, request, exercise),

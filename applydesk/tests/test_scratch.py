@@ -660,3 +660,53 @@ def test_a_panel_made_on_form_or_process_joins_the_panels() -> None:
     lost = {**form, "pools": {}}
     refused = client.post(f"{LOBBY}/{made}/form", json=lost)
     assert refused.status_code == 400 and "panel made on this page" in refused.json()["error"]
+
+
+def test_an_email_saves_into_the_scratch() -> None:
+    """Rung 6: an Emails card's template kept by its item and audience;
+    written once it has a subject and a body, which the status row follows."""
+    client = _client()
+    made = _create(client)
+    page = client.get(f"{LOBBY}/{made}/emails").text
+    assert 'data-em-item="receipt"' in page and "data-em-save=" in page
+    assert ">Owed<" in page
+    reply = client.post(
+        f"{LOBBY}/{made}/emails",
+        json={
+            "item": "receipt",
+            "audience": "Applicants",
+            "subject": "Received: $exercise_name",
+            "body": "Dear $applicant_name, thank you.",
+        },
+    )
+    assert reply.status_code == 200 and reply.json() == {"saved": True, "written": True}, reply.text
+    page = client.get(f"{LOBBY}/{made}/emails").text
+    assert 'value="Received: $exercise_name"' in page and "Dear $applicant_name, thank you." in page
+    assert ">Written<" in page and ">Owed<" not in page
+    # A subject alone keeps it owed.
+    reply = client.post(
+        f"{LOBBY}/{made}/emails",
+        json={"item": "receipt", "audience": "Applicants", "subject": "Hi", "body": " "},
+    )
+    assert reply.json() == {"saved": True, "written": False}
+    assert ">Owed<" in client.get(f"{LOBBY}/{made}/emails").text
+
+
+def test_email_save_is_checked() -> None:
+    client = _client()
+    made = _create(client)
+    good = {"item": "receipt", "audience": "Applicants", "subject": "S", "body": "B"}
+    for bad, reason in (
+        ({**good, "item": "o9"}, "not one Process owes"),
+        ({**good, "audience": "Evaluators"}, "not one Process owes"),
+        ({**good, "subject": 3}, "not one Process owes"),
+        ({**good, "body": "x" * 20001}, "at most"),
+        ({**good, "body": "Your outcome: $outcome"}, "$outcome is not a tag"),
+    ):
+        refused = client.post(f"{LOBBY}/{made}/emails", json=bad)
+        assert refused.status_code == 400 and reason in refused.json()["error"], (bad, refused.text)
+    # An unknown tag stays as typed.
+    assert (
+        client.post(f"{LOBBY}/{made}/emails", json={**good, "body": "$nonsense"}).status_code == 200
+    )
+    assert client.post(f"{LOBBY}/wa9juxbc2t/emails", json=good).status_code == 404
