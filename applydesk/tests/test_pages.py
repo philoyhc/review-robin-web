@@ -423,10 +423,10 @@ def test_dossiers_returns_to_draft_by_row_and_ticked(
     text = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
     assert "Generate dossiers" not in text and ">Return ticked to draft</button>" in text
     # wa9's Gate 1 has results in: every entered dossier is past returning.
-    assert 'aria-label="Return m3qx8vkt2n to draft"' not in text
+    assert 'aria-label="Return p3bd7kq2wx to draft"' not in text
     monkeypatch.setattr(workflow, "gate_sent", lambda _e, _k: ("Ready", ""))
     open_ = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
-    assert 'aria-label="Return m3qx8vkt2n to draft">Return to draft</button>' in open_
+    assert 'aria-label="Return p3bd7kq2wx to draft">Return to draft</button>' in open_
     assert 'aria-label="Return f2ps7nyh4k to draft"' not in open_  # a draft
     # Ruling 49: a sent gate, opened or not, keeps it open until it completes.
     for sent in (("Sent", ""), ("Sent", "3 of 5 reviewed")):
@@ -1761,3 +1761,18 @@ def test_extract_s_many_of_chips_are_pills(client: TestClient) -> None:
     page = client.get(f"/applydesk/operator/exercises/{EX}/extract").text
     chips = re.findall(r'<button type="button" class="([^"]+)" data-xd-t=', page)
     assert chips and set(chips) == {"pn-show"}
+
+
+def test_dossiers_rows_are_named_by_dossier_id(client: TestClient) -> None:
+    """AD-89, ruling 25: a Dossiers row is named by its Dossier ID, linking
+    to the dossier, its Application ID under it; the dossier page shows
+    its ID."""
+    page = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
+    assert 'aria-label="Tick every row in view"> Dossier</th>' in page
+    assert (
+        f'href="/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx"><code>p3bd7kq2wx</code></a>'
+        '<span class="ap-app">Application <code>m3qx8vkt2n</code></span>'
+    ) in page
+    assert 'data-ap-app="m3qx8vkt2n"' in page and 'aria-label="Search dossiers"' in page
+    dossier = client.get(f"/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx").text
+    assert "<dt>Dossier ID</dt><dd><code>p3bd7kq2wx</code></dd>" in dossier
