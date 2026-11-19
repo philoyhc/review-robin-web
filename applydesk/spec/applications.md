@@ -158,8 +158,9 @@ answer only for a Published or Closed exercise.
   values, weights, rule, emails). `applydesk/process_save.py` checks the
   shapes and ruling 15's (`stages.problems`), not what the page itself
   flags, which is kept as left and flagged again (but a weight that is
-  not a whole percent, kept as a number, is refused, as is a gate evaluated by a
-  panel made on the page); it renumbers gates
+  not a whole percent, or an evaluator count not a whole number, kept as
+  numbers, is refused, as is a gate evaluated by a panel made on the page;
+  a result whose field was removed is kept with none); it renumbers gates
   `g1`… and outcomes `o1`… in timeline order, in the rules and weights
   that name them too. `stages.plan_of` and `workflow.sends` read it back,
   so Dossiers, Evaluations and Emails follow.

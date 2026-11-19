@@ -79,9 +79,10 @@ def _flag(v: Any, what: str) -> bool:
 
 
 def _whole(v: Any, what: str) -> int:
-    """A count the page read as a whole number, or null for blank (0)."""
+    """A count the page read as a whole number. Blank or not whole, the
+    page sends null: refused, never kept as 0 (Codex on #4026)."""
     if v is None:
-        return 0
+        raise Refused(f"{what} needs whole numbers for its evaluator counts.")
     if not isinstance(v, int) or isinstance(v, bool) or not 0 <= v <= 10_000:
         raise Refused(f"{what} is malformed.")
     return v
@@ -176,7 +177,12 @@ def _gate(v: Any, number: int, panels: frozenset[str]) -> Gate:
         if source and source not in by_key:
             raise Refused(f"{what} has a result reading no field of its own.")
         derive = _text(r.get("derive"), f"{what}'s result", 20)
-        if derive not in dict(stages.DERIVATIONS):
+        # A result whose field was removed has none, and no derivation,
+        # until one is chosen: kept so, as the page shows it ("No field
+        # chosen"), not refused with the rest of the page (Codex on #4026).
+        if derive and not source:
+            derive = ""
+        if (source or derive) and derive not in dict(stages.DERIVATIONS):
             raise Refused(f"{what} has a result derived in no known way.")
         results.append(
             GateResult(

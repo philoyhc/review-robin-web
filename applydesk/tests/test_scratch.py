@@ -464,3 +464,32 @@ def test_a_rule_naming_a_removed_gate_never_reads_another() -> None:
         assert refused.status_code == 400 and "not all whole percents" in refused.json()["error"], (
             bad
         )
+
+
+def test_an_unfinished_result_saves_and_a_blank_count_is_refused() -> None:
+    """Codex on #4026: a result whose field was removed saves as it stands;
+    a blank evaluator count is refused, not kept as 0."""
+    client = _client()
+    made = _create(client)
+    loose = {
+        "key": "r1",
+        "name": "Mean rating",
+        "source": "",
+        "derive": "",
+        "value": "",
+        "at_least": 1,
+        "ignore_zero": False,
+    }
+    gate = _gate("g1", "Read", fields=[], results=[loose])
+    reply = client.post(f"{LOBBY}/{made}/process", json={"stages": [_stage("R", gates=[gate])]})
+    assert reply.status_code == 200, reply.text
+    assert "No field chosen" in client.get(f"{LOBBY}/{made}/process").text
+    for sources, total in (
+        ([{"kind": "panel", "ref": "", "min": None, "max": 2}], {"min": 1, "max": 2}),
+        ([{"kind": "panel", "ref": "", "min": 1, "max": 2}], {"min": 1, "max": None}),
+    ):
+        blank = _gate("g1", "Read", sources=sources, total=total)
+        refused = client.post(
+            f"{LOBBY}/{made}/process", json={"stages": [_stage("R", gates=[blank])]}
+        )
+        assert refused.status_code == 400 and "whole numbers" in refused.json()["error"]
