@@ -626,6 +626,11 @@ def test_a_panel_made_on_form_or_process_joins_the_panels() -> None:
     }
     reply = client.post(f"{LOBBY}/{made}/form", json=form)
     assert reply.status_code == 200 and reply.json()["reload"] is True, reply.text
+    # Offered again by a page that missed its reload (Codex on #4027): the
+    # panel kept the first time, not a refusal or a second panel.
+    again = client.post(f"{LOBBY}/{made}/form", json=form)
+    assert again.status_code == 200, again.text
+    assert 'data-panel="panel-2"' not in client.get(f"{LOBBY}/{made}/panels").text
     panels = client.get(f"{LOBBY}/{made}/panels").text
     assert 'data-panel="panel-1"' in panels and "Referees" in panels and "cy@example.edu" in panels
     assert 'value="panel-1" selected' in client.get(f"{LOBBY}/{made}/form").text

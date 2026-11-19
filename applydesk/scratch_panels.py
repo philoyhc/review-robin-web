@@ -165,23 +165,34 @@ def adopt(exercise_id: str, made: Any, wanted: set[str]) -> tuple[dict[str, str]
     names = {n.lower() for _, n in panels}
     by_email = {m.email.lower(): i for i, (m, _) in enumerate(people)}
     keys: dict[str, str] = {}
+    by_name = {n.lower(): k for k, n in panels}
     for old in sorted(wanted):
         pool = pools.get(old)
         if not isinstance(pool, dict):
             raise Refused("A panel made on this page is malformed.")
         got = cast(dict[str, Any], pool)
-        name = _name(got.get("name"), names)
+        typed = _text(got.get("name"), "A panel's name", 80)
         members = got.get("members")
         if not isinstance(members, list):
-            raise Refused(f"{name} is malformed.")
-        new = _fresh(taken)
+            raise Refused(f"{typed or 'A panel'} is malformed.")
+        # Offered again by a page that has not reloaded since a save
+        # adopted it (an edit made while that save was on its way keeps
+        # the page from reloading): the panel kept then, by its name, not a
+        # second one refused as a duplicate (Codex on #4027).
+        again = by_name.get(typed.lower())
+        if again is not None:
+            new = again
+        else:
+            name = _name(typed, names)
+            new = _fresh(taken)
+            panels.append((new, name))
+            by_name[name.lower()] = new
         keys[old] = new
-        panels.append((new, name))
         for raw in cast(list[Any], members):
             if not isinstance(raw, list) or len(cast(list[Any], raw)) != 2:
-                raise Refused(f"{name} is malformed.")
+                raise Refused(f"{typed} is malformed.")
             pair = cast(list[Any], raw)
-            member = _member({"name": pair[0], "email": pair[1]}, name)
+            member = _member({"name": pair[0], "email": pair[1]}, typed)
             at = by_email.get(member.email.lower())
             if at is None:
                 by_email[member.email.lower()] = len(people)
