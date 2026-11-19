@@ -159,8 +159,9 @@ answer only for a Published or Closed exercise.
   shapes and ruling 15's (`stages.problems`), not what the page itself
   flags, which is kept as left and flagged again (but a weight that is
   not a whole percent, or an evaluator count not a whole number, kept as
-  numbers, is refused, as is a gate evaluated by a panel made on the page;
-  a result whose field was removed is kept with none); it renumbers gates
+  numbers, or a date range with one end alone, is refused, as is a gate
+  evaluated by a panel made on the page; a result whose field was removed
+  is kept with none); it renumbers gates
   `g1`… and outcomes `o1`… in timeline order, in the rules and weights
   that name them too, where one naming a gate or result no longer there
   reads `removed`, never another's. `stages.plan_of` and `workflow.sends` read it back,

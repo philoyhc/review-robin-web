@@ -100,8 +100,12 @@ def _when(v: Any, what: str) -> datetime | None:
 
 
 def _span(a: Any, b: Any, what: str) -> StageDates | None:
-    """Both ends, or none: one end alone is no dates (as ``stages.window``)."""
+    """Both ends, or none. One end alone has nowhere to be kept (a range
+    is both or no dates, as ``stages.window``), so it is refused rather
+    than dropped (Codex on #4026)."""
     start, end = _when(a, f"{what}'s start"), _when(b, f"{what}'s end")
+    if (start is None) != (end is None):
+        raise Refused(f"{what} needs both a start and an end, or neither.")
     return StageDates(start, end) if start and end else None
 
 

@@ -386,6 +386,15 @@ def test_process_save_is_checked() -> None:
             "share a key",
         ),
         ({"stages": [_stage(**{"from": "soon", "to": ""})]}, "not a date"),
+        ({"stages": [_stage(**{"from": "2027-02-01T09:00", "to": ""})]}, "both a start and an end"),
+        (
+            {
+                "stages": [
+                    _stage(gates=[_gate("g1", "A", **{"from": "", "to": "2027-02-01T09:00"})])
+                ]
+            },
+            "both a start and an end",
+        ),
         (
             {
                 "stages": [
