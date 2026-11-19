@@ -8,13 +8,17 @@
 <div data-emails data-em-ex="{{ exercise.public_id }}">
 {% for e in emails %}
 {% set d = email_defaults[e.kind] %}
-<section class="card" data-email="{{ e.name }}" data-em-kind="{{ e.kind }}">
+{% set sample = email_sample(e) %}
+<section class="card" data-email="{{ e.name }}" data-em-kind="{{ e.kind }}" data-em-sample="{{ sample | tojson | forceescape }}">
   <h2>{{ e.name }} <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}" data-em-chip>{{ "Written" if e.ok else "Owed" }}</span></h2>
   <p class="muted">{{ e.when }}</p>
   {# A written sample template shows its kind's default; an owed one, empty. #}
   <div class="field"><label>Subject <input type="text" class="fc-in" data-em-subject value="{{ d[0] if e.ok else '' }}"></label></div>
   <div class="field"><label>Body <textarea class="fc-in" rows="8" data-fit-box data-em-body>{{ d[1] if e.ok else "" }}</textarea></label></div>
-  <div class="btnrow"><button class="btn btn-primary" type="button" data-em-act="save" disabled>Save</button><button class="btn btn-secondary" type="button" disabled title="Preview comes with AD1L's next rung">Preview</button><button class="btn btn-secondary" type="button" data-em-act="reset">{{ "Reset to default" if e.ok else "Start from the default" }}</button><span class="fb-unsaved" data-em-unsaved hidden>Unsaved changes</span><span class="muted" data-em-said role="status"></span></div>
+  {# Its kind's fields, put at the cursor in whichever box last had it. #}
+  <div class="field em-insert-row"><label>Insert field <select class="fc-in em-insert" data-em-insert>{% for f in email_fields[e.kind] %}<option>{{ f }}</option>{% endfor %}</select></label> <button class="btn btn-secondary" type="button" data-em-act="insert">Insert</button></div>
+  <div class="btnrow"><button class="btn btn-primary" type="button" data-em-act="save" disabled>Save</button><button class="btn btn-secondary" type="button" data-em-act="preview" aria-expanded="false">Preview</button><button class="btn btn-secondary" type="button" data-em-act="reset">{{ "Reset to default" if e.ok else "Start from the default" }}</button><span class="fb-unsaved" data-em-unsaved hidden>Unsaved changes</span><span class="muted" data-em-said role="status"></span></div>
+  <div class="em-preview" data-em-preview hidden><p class="em-preview-k">Preview, filled from the sample</p><p class="em-preview-s" data-em-preview-subject></p><div class="em-preview-b" data-em-preview-body></div></div>
 </section>
 {% else %}
 <section class="card">
@@ -24,6 +28,7 @@
 {% endfor %}
 </div>
 {% if emails %}<script type="application/json" id="em-defaults">{{ email_defaults | tojson }}</script>
+<script type="application/json" id="em-fields">{{ email_fields | tojson }}</script>
 <script>
 (function () {
   // Segment AD1L: each card a template that stands alone. Save keeps it in
@@ -31,6 +36,25 @@
   // card unsaved asks first.
   var root = document.querySelector("[data-emails]");
   var DEFAULTS = JSON.parse(document.getElementById("em-defaults").textContent);
+  var FIELDS = JSON.parse(document.getElementById("em-fields").textContent);
+  // Every field any kind has, lower case: a bracketed name of another
+  // kind's is refused; anything else in brackets is text.
+  var ANY = Object.create(null);  // no inherited names: [constructor] is text
+  Object.keys(FIELDS).forEach(function (k) { FIELDS[k].forEach(function (f) { ANY[f.toLowerCase()] = f; }); });
+  function own(c) {
+    var out = Object.create(null);
+    FIELDS[c.dataset.emKind].forEach(function (f) { out[f.toLowerCase()] = f; });
+    return out;
+  }
+  // The fields a text names that its kind does not have.
+  function foreign(c, text) {
+    var mine = own(c), bad = [], m, re = /\[([^\[\]]+)\]/g;
+    while ((m = re.exec(text))) {
+      var k = m[1].trim().toLowerCase();
+      if (ANY[k] && !mine[k] && bad.indexOf(ANY[k]) < 0) bad.push(ANY[k]);
+    }
+    return bad;
+  }
   var STORE = "applydesk-emails:" + root.dataset.emEx;
   var kept = {};
   try { kept = JSON.parse(sessionStorage.getItem(STORE) || "{}") || {}; } catch (e) { kept = {}; }
@@ -66,17 +90,85 @@
     chip.className = "chip chip-" + (ok ? "ok" : "warn");
     c.querySelector('[data-em-act="reset"]').textContent = written(subj(c).value, body(c).value) ? "Reset to default" : "Start from the default";
   }
+  root.addEventListener("focusin", function (e) {
+    // Each card remembers its own box (Codex on #4012): another card's
+    // edits never move this one's insertion point.
+    if (e.target.matches("[data-em-subject], [data-em-body]")) e.target.closest("[data-email]").lastBox = e.target;
+  });
   root.addEventListener("input", function (e) {
     var c = e.target.closest("[data-email]");
-    if (!c) return;
+    if (!c || e.target.matches("[data-em-insert]")) return;
     c.querySelector("[data-em-said]").textContent = "";
+    [subj(c), body(c)].forEach(function (x) { x.removeAttribute("aria-invalid"); });
     draw(c);
+    preview(c);
   });
+  // Insert field (a button, as arrowing a closed menu fires change): the
+  // box last used on this card at its cursor, else the end of its body.
+  function insert(c) {
+    var f = c.querySelector("[data-em-insert]").value, t = "[" + f + "]";
+    var used = !!c.lastBox, box = used ? c.lastBox : body(c);
+    var at = used ? box.selectionStart : box.value.length, to = used ? box.selectionEnd : at;
+    box.value = box.value.slice(0, at) + t + box.value.slice(to);
+    box.focus();
+    box.setSelectionRange(at + t.length, at + t.length);
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  // Preview: the card as it stands, each field filled from the sample;
+  // another kind's field marked, as Save would refuse it.
+  function fill(c, text, into) {
+    var sample = JSON.parse(c.dataset.emSample), mine = own(c), re = /\[([^\[\]]+)\]/g, from = 0, m;
+    into.textContent = "";
+    while ((m = re.exec(text))) {
+      into.appendChild(document.createTextNode(text.slice(from, m.index)));
+      var k = m[1].trim().toLowerCase();
+      if (mine[k]) {
+        // No value in the sample (a draft has no application): the name, dimmed.
+        var v = document.createElement("span"), val = sample[mine[k]];
+        v.className = val ? "em-filled" : "em-none";
+        v.textContent = val || m[0];
+        if (!val) v.title = "No value in the sample";
+        into.appendChild(v);
+      } else if (ANY[k]) {
+        var bad = document.createElement("mark");
+        bad.title = "Not a field of this email"; bad.textContent = m[0];
+        into.appendChild(bad);
+      } else {
+        into.appendChild(document.createTextNode(m[0]));
+      }
+      from = m.index + m[0].length;
+    }
+    into.appendChild(document.createTextNode(text.slice(from)));
+  }
+  function preview(c) {
+    var box = c.querySelector("[data-em-preview]");
+    if (box.hidden) return;
+    fill(c, subj(c).value, box.querySelector("[data-em-preview-subject]"));
+    fill(c, body(c).value, box.querySelector("[data-em-preview-body]"));
+  }
   root.addEventListener("click", function (e) {
     var b = e.target.closest("[data-em-act]");
     if (!b || b.disabled) return;
     var c = b.closest("[data-email]"), said = c.querySelector("[data-em-said]");
+    if (b.dataset.emAct === "insert") { insert(c); return; }
+    if (b.dataset.emAct === "preview") {
+      var pv = c.querySelector("[data-em-preview]");
+      pv.hidden = !pv.hidden;
+      b.setAttribute("aria-expanded", pv.hidden ? "false" : "true");
+      b.textContent = pv.hidden ? "Preview" : "Hide preview";
+      preview(c);
+      return;
+    }
     if (b.dataset.emAct === "save") {
+      // A field another kind has, named here, is refused (segment AD1L).
+      var badS = foreign(c, subj(c).value), badB = foreign(c, body(c).value), bad = badS.concat(badB.filter(function (f) { return badS.indexOf(f) < 0; }));
+      if (bad.length) {
+        if (badS.length) subj(c).setAttribute("aria-invalid", "true");
+        if (badB.length) body(c).setAttribute("aria-invalid", "true");
+        said.textContent = "Not saved: " + bad.map(function (f) { return "[" + f + "]"; }).join(", ") + (bad.length === 1 ? " is not a field" : " are not fields") + " of this email. Use Insert field.";
+        (badS.length ? subj(c) : body(c)).focus();
+        return;
+      }
       c.savedS = subj(c).value; c.savedB = body(c).value;
       kept[c.dataset.email] = { s: c.savedS, b: c.savedB };
       store();
@@ -88,7 +180,7 @@
       var has = subj(c).value.trim() !== "" || body(c).value.trim() !== "";
       if (has && !window.confirm("Replace this template's subject and body with the default?")) return;
       subj(c).value = d[0]; body(c).value = d[1];
-      fit(body(c));  // its input event redraws the card
+      fit(body(c));  // its input event redraws the card and its preview
       said.textContent = dirty(c) ? "The default is in: Save to keep it." : "The default is in, as saved.";
       subj(c).focus();
     }

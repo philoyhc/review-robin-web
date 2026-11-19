@@ -364,6 +364,16 @@
     .ap-table { border-collapse: separate; border-spacing: 0; font-size: 13.5px; width: 100%; }
     .ap-table th, .ap-table td { padding: 7px 7px; background: var(--surface-card); }
     .ap-table thead th { vertical-align: bottom; font-size: 12.5px; }
+    /* Emails (segment AD1L): a template's preview under its card. */
+    .em-insert { max-width: 260px; }
+    .em-insert-row { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+    .em-none { color: var(--text-subtle); font-style: italic; }
+    .em-preview { margin-top: 12px; padding: 12px 14px; border: 1px dashed var(--border-default); border-radius: 6px; background: var(--surface-muted); }
+    .em-preview[hidden] { display: none; }
+    .em-preview-k { margin: 0 0 6px; font-size: 12px; color: var(--text-subtle); }
+    .em-preview-s { margin: 0 0 8px; font-weight: 600; }
+    .em-preview-b { white-space: pre-wrap; }
+    .em-preview mark { background: var(--chip-warn-bg); color: var(--chip-warn-fg); }
     /* Ruling 52: the information row top-aligned, the names under it on
        one line, each a sort button. */
     .ap-table thead .ap-info th { vertical-align: top; padding-bottom: 2px; }

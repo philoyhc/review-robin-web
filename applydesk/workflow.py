@@ -273,6 +273,45 @@ def emails(exercise_id: str) -> tuple[Email, ...]:
     return tuple(out)
 
 
+def sample_values(exercise: Exercise, email: Email) -> dict[str, str]:
+    """What Preview fills a template's fields with (segment AD1L): the
+    exercise's first submitted application, the outcome's value in its row
+    (to an applicant) or its tally (to an evaluator), and the evaluator
+    the first member of the first panel evaluating at that stage's gates.
+    ``Link`` is the participant page's app path; the page adds the mount.
+    Only the email's kind's fields."""
+    plan = stages.plan_of(exercise.public_id)
+    row = next((r for r in plan.rows if r.application.state == "Submitted"), None)
+    stage = next((st for st in plan.stages if any(c.key == email.item for c in st.columns)), None)
+    outcome = next((c for c in plan.columns if c.key == email.item), None)
+    panels = {p.key: p for p in sample_data.panels_of(exercise.public_id)}
+    refs = [
+        s.ref
+        for c in (stage.columns if stage else ())
+        if isinstance(c, stages.Gate)
+        for s in stages.sources_of(exercise.public_id, c)[0]
+        if s.kind == "panel" and s.ref in panels and panels[s.ref].members
+    ]
+    member = panels[refs[0]].members[0] if refs else None
+    value = row.cells[email.item].value if row and email.item in row.cells else ""
+    every = {
+        "Applicant name": row.application.applicant if row else "",
+        "Exercise": exercise.name,
+        "Application ID": row.application.public_id if row else "",
+        "Closes": exercise.application_stage_ends,
+        "Stage": stage.label if stage else "",
+        "Outcome": (
+            stages.counts(plan, outcome)
+            if outcome and email.audience == EVALUATORS
+            else value or "Pending"
+        ),
+        "Evaluator name": member.name if member else "",
+        "Link": f"/me/exercises/{exercise.public_id}",
+        "Help contact": sample_data.help_contact(exercise),
+    }
+    return {f: every[f] for f in EMAIL_FIELDS[email.kind]}
+
+
 def outcome_emails(exercise_id: str, outcome_key: str) -> tuple[Email, ...]:
     """The emails an outcome's release sends, as Process sets them."""
     return tuple(e for e in emails(exercise_id) if e.item == outcome_key)

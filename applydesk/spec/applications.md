@@ -995,7 +995,26 @@ here only from AD2.
   over other text; on an empty card it reads *Start from the default* and
   asks nothing; on the default already it says so. The default waits for
   *Save*.
-- ***Preview*** stays disabled until AD1L's next rung.
+- **Fields** (`workflow.EMAIL_FIELDS`): a template names its merge fields
+  in brackets, from its kind's list. *Receipt*: Applicant name, Exercise,
+  Application ID, Link, Help contact. *Reminder*: Applicant name,
+  Exercise, Closes, Link, Help contact. *An outcome to applicants*:
+  Applicant name, Exercise, Stage, Outcome, Link, Help contact. *An
+  outcome to evaluators*: Evaluator name, Exercise, Stage, Outcome, Link,
+  Help contact; no applicant field, so a blind exercise's names no one.
+  Fields match in any case. *Insert field*, on each card, is a menu of the
+  kind's fields and an *Insert* button, which puts the chosen field at the
+  cursor in the box last used, else at the end of the body. *Save* refuses a template
+  naming another kind's field, saying which; other bracketed text is text.
+- ***Preview*** (*Hide preview* while open) shows the card as it stands,
+  saved or not, under it: the subject and the body with each field filled
+  from the sample (`workflow.sample_values`): the first submitted
+  application, the outcome's value in its row (*Pending* when undecided)
+  or, to evaluators, the outcome's tally; the evaluator is the first
+  member of the first panel at that stage's gates; *Link*, the
+  participant page. A field with no value in the sample (a draft has no
+  application) shows its name, dimmed; another kind's field shows marked.
+  It follows the card as it is typed.
 - **Empty**: an exercise owing no template shows one card, *No emails yet*,
   saying each email ticked on Process is listed here as a template to
   write.
