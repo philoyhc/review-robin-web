@@ -7,7 +7,7 @@
 {# Laid out as Form and Process (author, 2026-11-19): the templates in the
    main two columns, and a card on the right that stays in view, with an
    Outline linking every email and the merge tags. #}
-<div class="fb-split" data-emails data-em-ex="{{ exercise.public_id }}"{% if scratch_page %} data-em-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}"{% endif %}>
+<div class="fb-split" data-emails data-em-ex="{{ exercise.public_id }}"{% if scratch_page %} data-em-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}" data-em-revision="{{ process_revision }}"{% endif %}>
 <div class="fb-main">
 <p>Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk (AD7); Review Robin sends none.{% if scratch_page %} A template you save is kept in this scratch exercise, and the status row's <em>Emails</em> and Home follow it.{% else %} A template you save is kept in this tab: nothing is saved until AD2, and until then the status row's <em>Emails</em>, Home and Dossiers' <em>Released</em> read the sample's templates.{% endif %}</p>
 {% for e in emails %}
@@ -258,7 +258,7 @@
         var sentS = subj(c).value, sentB = body(c).value;
         b.disabled = true;
         fetch(SAVE, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
-          body: JSON.stringify({ item: c.dataset.emItem, audience: c.dataset.emAudience, name: c.dataset.email, subject: sentS, body: sentB }) })
+          body: JSON.stringify({ item: c.dataset.emItem, audience: c.dataset.emAudience, name: c.dataset.email, revision: Number(root.dataset.emRevision), subject: sentS, body: sentB }) })
           .then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }, function () { return [false, null]; }); })
           .then(function (got) {
             if (!got[0]) { draw(c); said.textContent = (got[1] && got[1].detail) || ("Not saved: " + ((got[1] && got[1].error) || "the server refused it.")); return; }

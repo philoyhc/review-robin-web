@@ -676,6 +676,7 @@ def test_an_email_saves_into_the_scratch() -> None:
             "item": "receipt",
             "audience": "Applicants",
             "name": "Stage 1: Receipt · Applicants",
+            "revision": 0,
             "subject": "Received: $exercise_name",
             "body": "Dear $applicant_name, thank you.",
         },
@@ -691,6 +692,7 @@ def test_an_email_saves_into_the_scratch() -> None:
             "item": "receipt",
             "audience": "Applicants",
             "name": "Stage 1: Receipt · Applicants",
+            "revision": 0,
             "subject": "Hi",
             "body": " ",
         },
@@ -706,12 +708,14 @@ def test_email_save_is_checked() -> None:
         "item": "receipt",
         "audience": "Applicants",
         "name": "Stage 1: Receipt · Applicants",
+        "revision": 0,
         "subject": "S",
         "body": "B",
     }
     for bad, reason in (
         ({**good, "item": "o9"}, "not one Process owes"),
         ({**good, "name": "Stage 2: Receipt · Applicants"}, "not one Process owes"),
+        ({**good, "revision": 1}, "not one Process owes"),
         ({**good, "audience": "Evaluators"}, "not one Process owes"),
         ({**good, "subject": 3}, "not one Process owes"),
         ({**good, "body": "x" * 20001}, "at most"),
@@ -759,6 +763,7 @@ def test_templates_follow_their_outcome_when_process_renumbers() -> None:
                 "item": key,
                 "audience": "Applicants",
                 "name": f"{stage}: Outcome · Applicants",
+                "revision": 1,
                 "subject": text,
                 "body": text,
             },
@@ -777,6 +782,7 @@ def test_templates_follow_their_outcome_when_process_renumbers() -> None:
             "item": "o1",
             "audience": "Applicants",
             "name": "Shortlist: Outcome · Applicants",
+            "revision": 2,
             "subject": "x",
             "body": "x",
         },
@@ -819,3 +825,47 @@ def test_a_details_refusal_names_its_field() -> None:
     }
     reply = client.post(f"{LOBBY}/{made}/details", json=good)
     assert reply.status_code == 400 and reply.json()["field"] == "contact"
+
+
+def test_an_emails_page_older_than_process_s_last_save_is_refused() -> None:
+    """Codex on #4028: two stages may share a name, so a card opened before
+    Process last saved is refused by revision, not judged by its name."""
+    client = _client()
+    made = _create(client)
+
+    def outcome(key: str) -> dict[str, object]:
+        return {
+            "key": key,
+            "label": "Result",
+            "due": "",
+            "values": ["Yes", "No"],
+            "weights": {},
+            "rule": None,
+            "applicants_email": True,
+            "evaluators_email": False,
+        }
+
+    twins = {
+        "stages": [
+            _stage("Review", outcome=outcome("onew1")),
+            _stage("Review", outcome=outcome("onew2")),
+        ]
+    }
+    assert client.post(f"{LOBBY}/{made}/process", json=twins).status_code == 200
+    assert 'data-em-revision="1"' in client.get(f"{LOBBY}/{made}/emails").text
+    only = {"stages": [_stage("Review", outcome=outcome("o2"))]}
+    assert client.post(f"{LOBBY}/{made}/process", json=only).status_code == 200
+    # The first stage's card, opened at revision 1: same item and name as the
+    # survivor now has, refused all the same.
+    stale = {
+        "item": "o1",
+        "audience": "Applicants",
+        "name": "Review: Outcome · Applicants",
+        "revision": 1,
+        "subject": "x",
+        "body": "x",
+    }
+    refused = client.post(f"{LOBBY}/{made}/emails", json=stale)
+    assert refused.status_code == 400 and "reload Emails" in refused.json()["error"]
+    fresh = {**stale, "revision": 2}
+    assert client.post(f"{LOBBY}/{made}/emails", json=fresh).status_code == 200

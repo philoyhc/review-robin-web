@@ -345,6 +345,20 @@ def scratch_templates(exercise_id: str) -> dict[tuple[str, str], tuple[str, str]
     return cast(dict[tuple[str, str], tuple[str, str]], held) if isinstance(held, dict) else {}
 
 
+#: Each Process save's number on a scratch exercise: an Emails page
+#: opened before the latest one names its outcomes by keys that may now be
+#: another outcome's, so its saves are refused (Codex on #4028).
+REVISION_PAGE = "process_revision"
+
+
+def process_revision(exercise_id: str) -> int:
+    """How many times Process has saved into a scratch exercise."""
+    from applydesk import scratch
+
+    held = scratch.page(exercise_id, REVISION_PAGE)
+    return held if isinstance(held, int) else 0
+
+
 def rekey_templates(exercise_id: str, keys: dict[str, str]) -> None:
     """A scratch exercise's templates after Process renumbers its outcomes
     (``process_save.keys_of``): each outcome's follows it to its new key,

@@ -317,6 +317,11 @@ async def exercise_process_save(request: Request, exercise_id: str) -> Response:
         scratch.save_page(exercise.public_id, "process", kept)
         # Emails keeps templates by outcome key: they follow the renumbering.
         workflow.rekey_templates(exercise.public_id, process_save.keys_of(sent))
+        scratch.save_page(
+            exercise.public_id,
+            workflow.REVISION_PAGE,
+            workflow.process_revision(exercise.public_id) + 1,
+        )
     except (process_save.Refused, scratch.Refused, scratch_panels.Refused) as why:
         return JSONResponse({"error": str(why)}, status_code=400)
     # Gates and outcomes are renumbered on every save, and a panel it
@@ -354,13 +359,15 @@ async def exercise_email_save(request: Request, exercise_id: str) -> Response:
         (
             e
             for e in workflow.emails(exercise.public_id)
-            # By its name too: a tab opened before Process renumbered its
-            # outcomes names an item now another outcome's (cold read).
             if (e.item, e.audience, e.name) == (item, audience, got.get("name"))
         ),
         None,
     )
-    if owed is None or not isinstance(subject, str) or not isinstance(body, str):
+    # A page opened before Process last saved names outcomes by keys that
+    # may now be another's, even under the same name (two stages can share
+    # one): refused by the revision it was opened at (Codex on #4028).
+    stale = got.get("revision") != workflow.process_revision(exercise.public_id)
+    if stale or owed is None or not isinstance(subject, str) or not isinstance(body, str):
         return JSONResponse(
             {"error": "That email is not one Process owes now: reload Emails."},
             status_code=400,
@@ -833,6 +840,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         tag_rows=workflow.tag_rows(owed),
         email_defaults=workflow.DEFAULT_TEMPLATES,
         email_text=functools.partial(workflow.template_text, exercise.public_id),
+        process_revision=workflow.process_revision(exercise.public_id),
         email_fields=workflow.EMAIL_FIELDS,
         tag_help=workflow.TAG_HELP,
         email_sample=functools.partial(_email_sample, request, exercise),
