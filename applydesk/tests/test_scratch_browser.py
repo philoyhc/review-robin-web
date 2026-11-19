@@ -109,3 +109,24 @@ def test_new_exercise_to_its_home_then_details_saved_and_discarded(page: Page) -
     page.wait_for_url(f"{LOBBY}?said=*")
     assert "Browser Bursary 2027 discarded." in page.locator("[data-nx-said]").inner_text()
     assert page.locator("tr", has_text="Browser Bursary 2027").count() == 0
+
+
+def test_form_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> None:
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("Form Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    page.goto(page.url + "/form")
+    # A blank form's one question opens by itself.
+    card = page.locator('#fb-cards > .fc[data-kind="field"]')
+    card.locator('[data-f="label"]').fill("What do you study?")
+    assert page.locator("[data-unsaved]").is_visible()
+    page.locator("[data-fb-save]").click()
+    page.locator("[data-fb-said]").filter(has_text="Saved to this scratch exercise.").wait_for()
+    assert page.locator("[data-unsaved]").is_hidden()
+    page.reload()
+    assert (
+        page.locator('#fb-cards > .fc[data-kind="field"] [data-f="label"]').input_value()
+        == "What do you study?"
+    )

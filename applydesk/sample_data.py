@@ -9,7 +9,7 @@ import math
 import random
 import re
 from dataclasses import asdict, dataclass, replace
-from typing import TypedDict
+from typing import Any, TypedDict, cast
 
 
 @dataclass(frozen=True)
@@ -698,17 +698,35 @@ _RA_FORM: tuple[FormCard, ...] = (
 _RA_DESCRIPTION = "Apply to be a Residential Assistant for 2027/28, or to return as one."
 
 
-def form_is_empty(exercise_id: str) -> bool:
-    """A form with no questions: the sample's empty draft, or a scratch
-    exercise's (segment AD1N) until Form saves into it."""
+def _scratch_form(exercise_id: str) -> dict[str, Any] | None:
+    """A scratch exercise's form (segment AD1N): as Form last saved it,
+    else empty; None for an exercise that is not a scratch one."""
     from applydesk import scratch
 
-    return exercise_id in EMPTY_FORMS or scratch.is_scratch(exercise_id)
+    if not scratch.is_scratch(exercise_id):
+        return None
+    saved = scratch.page(exercise_id, "form")
+    if isinstance(saved, dict):
+        return cast(dict[str, Any], saved)
+    return {"title": "", "description": "", "cards": []}
+
+
+def form_is_empty(exercise_id: str) -> bool:
+    """A form with no questions: the sample's empty draft, or a scratch
+    exercise's until Form saves a question into it (segment AD1N)."""
+    own = _scratch_form(exercise_id)
+    if own is not None:
+        return not any(c.get("kind") == "field" for c in own["cards"])
+    return exercise_id in EMPTY_FORMS
 
 
 def form_cards(exercise_id: str) -> tuple[FormCard, ...]:
     """The Form page's cards: one empty question for a form with none."""
-    if form_is_empty(exercise_id):
+    own = _scratch_form(exercise_id)
+    if own is not None:
+        cards = tuple(FormCard(**c) for c in own["cards"])
+        return cards or (FormCard("field"),)
+    if exercise_id in EMPTY_FORMS:
         return (FormCard("field"),)
     # A pool this exercise has no roster for reads as Institution-wide,
     # so the summary, the card's menu and Preview agree.
@@ -721,7 +739,10 @@ def form_cards(exercise_id: str) -> tuple[FormCard, ...]:
 
 def form_heading(exercise_id: str) -> tuple[str, str]:
     """The form's own title and description."""
-    if form_is_empty(exercise_id):
+    own = _scratch_form(exercise_id)
+    if own is not None:
+        return str(own["title"]), str(own["description"])
+    if exercise_id in EMPTY_FORMS:
         return "", ""
     return "Application form", (
         _RA_DESCRIPTION if exercise_id == "wa9juxbc2t" else FORM_DESCRIPTION

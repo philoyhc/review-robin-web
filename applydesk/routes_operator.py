@@ -153,6 +153,101 @@ def _details(exercise: sample_data.Exercise, v: dict[str, Any]) -> dict[str, Any
     }
 
 
+async def _scratch_json(request: Request, exercise_id: str) -> tuple[sample_data.Exercise, Any]:
+    """A Setup page's post into a scratch exercise (segment AD1N): from
+    Apply Desk's own page, JSON, at most ``scratch.MAX_BODY``; 404 for an
+    exercise that is not this browser's scratch one."""
+    _same_site(request)
+    exercise = exercise_or_404(exercise_id)
+    if not scratch.is_scratch(exercise.public_id):
+        raise HTTPException(status_code=404)
+    if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
+        raise HTTPException(status_code=415)
+    body = await request.body()
+    if len(body) > scratch.MAX_BODY:
+        raise HTTPException(status_code=413)
+    try:
+        return exercise, json.loads(body)
+    except ValueError:
+        raise HTTPException(status_code=400) from None
+
+
+_CARD_KINDS = ("field", "section", "pagebreak")
+_CARD_TEXT = {
+    "label": 500,
+    "help": 2000,
+    "min": 40,
+    "max": 40,
+    "step": 40,
+    "options": 2000,
+    "ratio_w": 6,
+    "ratio_h": 6,
+    "pool": 80,
+}
+
+
+def _form(sent: Any) -> dict[str, Any]:
+    """The form as Form's *Save* sends it (``applydeskFormSnapshot``),
+    checked card by card and kept in ``FormCard``'s shape."""
+    if not isinstance(sent, dict):
+        raise scratch.Refused("The form is malformed.")
+    got = cast(dict[str, Any], sent)
+    title, description, cards = got.get("title", ""), got.get("description", ""), got.get("cards")
+    if (
+        not isinstance(title, str)
+        or not isinstance(description, str)
+        or not isinstance(cards, list)
+    ):
+        raise scratch.Refused("The form is malformed.")
+    if len(cast(list[Any], cards)) > 200:
+        raise scratch.Refused("A form holds at most 200 cards.")
+    types = {k for k, _ in sample_data.CARD_TYPES}
+    kept: list[dict[str, Any]] = []
+    for n, raw in enumerate(cast(list[Any], cards), start=1):
+        if not isinstance(raw, dict):
+            raise scratch.Refused(f"Card {n} is malformed.")
+        card = cast(dict[str, Any], raw)
+        kind = card.get("kind")
+        if kind not in _CARD_KINDS:
+            raise scratch.Refused(f"Card {n} is of no known kind.")
+        if kind != "field":
+            label = card.get("label", "")
+            if not isinstance(label, str):
+                raise scratch.Refused(f"Card {n} is malformed.")
+            kept.append({"kind": kind, "label": label[:500]})
+            continue
+        if card.get("type") not in types:
+            raise scratch.Refused(f"Card {n}'s type is not one of the choices.")
+        out: dict[str, Any] = {"kind": "field", "type": card["type"]}
+        for key, cap in _CARD_TEXT.items():
+            value = card.get(key, "")
+            if not isinstance(value, str) or len(value) > cap:
+                raise scratch.Refused(f"Card {n}'s {key} is malformed or too long.")
+            out[key] = value
+        for key in ("exclusive", "required", "shown"):
+            if not isinstance(card.get(key), bool):
+                raise scratch.Refused(f"Card {n} is malformed.")
+            out[key] = card[key]
+        out["pool"] = out["pool"] or "institution"
+        out["ratio_w"] = out["ratio_w"] or "4"
+        out["ratio_h"] = out["ratio_h"] or "5"
+        kept.append(out)
+    return {"title": title.strip()[:200], "description": description.strip()[:4000], "cards": kept}
+
+
+@router.post("/exercises/{exercise_id}/form", name="applydesk_exercise_form_save")
+async def exercise_form_save(request: Request, exercise_id: str) -> Response:
+    """Form's *Save* on a scratch exercise (segment AD1N rung 3): the cards
+    kept in memory for this browser, so Process, Preview and the applicant
+    pages read them."""
+    exercise, sent = await _scratch_json(request, exercise_id)
+    try:
+        scratch.save_page(exercise.public_id, "form", _form(sent))
+    except scratch.Refused as why:
+        return JSONResponse({"error": str(why)}, status_code=400)
+    return JSONResponse({"saved": True})
+
+
 @router.post("/exercises/{exercise_id}/details", name="applydesk_exercise_details")
 async def exercise_details(request: Request, exercise_id: str) -> Response:
     """Details' *Lock* on a scratch exercise (segment AD1N): the fields

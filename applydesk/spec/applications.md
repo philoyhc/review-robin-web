@@ -141,6 +141,15 @@ answer only for a Published or Closed exercise.
   server (a name of 1–200 characters, a code no other exercise holds, a
   help contact that is an address, a timezone offered, who may apply one of
   the choices), and says *Saved to this scratch exercise.* or why not.
+  A scratch exercise's form starts empty (one blank question, as a new
+  form's), not the sample's. Form's *Save* on one (rung 3) posts the
+  page's own snapshot (`applydeskFormSnapshot`) to `…/form`; the server
+  keeps each card in `FormCard`'s shape, refusing more than 200 cards, a
+  kind or type not offered, a toggle that is not true or false, or a text
+  past its length, with the card's number. `sample_data.form_cards` and
+  `form_heading` read it back, so Form, Preview, the applicant pages and
+  Process's form-answer rules all see the saved questions. A saved page's
+  *Unsaved changes* marker clears.
 - **The User Lobby** (`applydesk/templates/applydesk/me/home.html`), three
   cards: *My applications*, each of the applicant's own with its state,
   linking its page, a draft included; *Open to me*, each Published or
