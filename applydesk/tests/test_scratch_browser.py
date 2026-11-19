@@ -145,3 +145,51 @@ def test_form_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> Non
         page.locator('#fb-cards > .fc[data-kind="field"] [data-f="label"]').input_value()
         == "What do you study?"
     )
+
+
+def test_process_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> None:
+    """Rung 4: a stage, a gate and an outcome added on Process, saved,
+    and read back; the outcome's ticked email is owed on Emails."""
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("Process Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    home = page.url
+    page.goto(home + "/process")
+    first = page.locator("#pc-cards > .fc").first
+    if first.locator("[data-fc-toggle]").get_attribute("aria-expanded") == "false":
+        first.locator("[data-fc-toggle]").click()
+    first.locator('[data-pc="name"]').fill("Applications")
+    first.locator('[data-fc-act="new"]').click()
+    second = page.locator("#pc-cards > .fc").nth(1)
+    if second.locator("[data-fc-toggle]").get_attribute("aria-expanded") == "false":
+        second.locator("[data-fc-toggle]").click()
+    second.locator('[data-pc="name"]').fill("Review")
+    second.locator('[data-pc-act="gate"]').click()
+    second.locator('.pc-item[data-item="gate"] [data-pc="item-name"]').fill("Panel read")
+    second.locator('[data-pc-act="outcome"]').click()
+    outcome = second.locator('.pc-item[data-item="outcome"]')
+    outcome.locator('[data-pc="item-name"]').fill("Award")
+    outcome.locator('[data-pc="values"]').fill("Awarded, Not awarded")
+    outcome.locator('[data-rel="applicants-email"]').check()
+    page.locator("[data-fb-save]").click()
+    said = page.locator("[data-fb-said]")
+    said.filter(has_text="Saved").wait_for()
+    assert said.inner_text() == "Saved to this scratch exercise.", said.inner_text()
+    assert page.locator("[data-unsaved]").is_hidden()
+    page.reload()
+    names = page.locator('#pc-cards > .fc [data-pc="name"]')
+    assert [names.nth(i).input_value() for i in range(names.count())] == [
+        "Applications",
+        "Review",
+    ]
+    gate = page.locator('.pc-item[data-item="gate"]')
+    assert gate.get_attribute("data-key") == "g1"
+    assert gate.locator('[data-pc="item-name"]').input_value() == "Panel read"
+    outcome = page.locator('.pc-item[data-item="outcome"]')
+    assert outcome.get_attribute("data-key") == "o1"
+    assert outcome.locator('[data-pc="values"]').input_value() == "Awarded, Not awarded"
+    assert outcome.locator('[data-rel="applicants-email"]').is_checked()
+    page.goto(home + "/emails")
+    assert "Award" in page.locator("main").inner_text()

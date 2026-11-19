@@ -150,7 +150,22 @@ answer only for a Published or Closed exercise.
   with *+ New panel…* (not kept until Panels saves), with the card's number. `sample_data.form_cards` and
   `form_heading` read it back, so Form, Preview, the applicant pages and
   Process's form-answer rules all see the saved questions. A saved page's
-  *Unsaved changes* marker clears.
+  *Unsaved changes* marker clears. Process's *Save* (rung 4) posts
+  `applydeskProcessSnapshot` to `…/process`: every stage (name, dates,
+  shown, Draft or Published), the form's dates and emails, each gate
+  (name, dates, description, confidential, rule, sources, Total, mode,
+  response fields, up to three results) and each outcome (name, due,
+  values, weights, rule, emails). `applydesk/process_save.py` checks the
+  shapes and ruling 15's (`stages.problems`), not what the page itself
+  flags, which is kept as left and flagged again (but a weight that is
+  blank or not a whole percent, or an evaluator count not a whole number, kept as
+  numbers, or a date range with one end alone, is refused, as is a gate
+  evaluated by a panel made on the page; a result whose field was removed
+  is kept with none); it renumbers gates
+  `g1`… and outcomes `o1`… in timeline order, in the rules and weights
+  that name them too, where one naming a gate or result no longer there
+  reads `removed`, never another's. `stages.plan_of` and `workflow.sends` read it back,
+  so Dossiers, Evaluations and Emails follow.
 - **The User Lobby** (`applydesk/templates/applydesk/me/home.html`), three
   cards: *My applications*, each of the applicant's own with its state,
   linking its page, a draft included; *Open to me*, each Published or

@@ -247,3 +247,284 @@ def test_form_save_is_checked() -> None:
         refused = client.post(f"{LOBBY}/{made}/form", json=bad)
         assert refused.status_code == 400 and reason in refused.json()["error"], bad
     assert client.post(f"{LOBBY}/wa9juxbc2t/form", json={"cards": []}).status_code == 404
+
+
+def _stage(name: str = "", **over: object) -> dict[str, object]:
+    st: dict[str, object] = {
+        "name": name,
+        "from": "",
+        "to": "",
+        "shown": True,
+        "published": False,
+        "form": None,
+        "gates": [],
+        "outcome": None,
+    }
+    st.update(over)
+    return st
+
+
+def _gate(key: str, label: str, **over: object) -> dict[str, object]:
+    g: dict[str, object] = {
+        "key": key,
+        "label": label,
+        "from": "",
+        "to": "",
+        "description": "",
+        "confidential": False,
+        "rule": None,
+        "mode": "automatic",
+        "sources": [{"kind": "panel", "ref": "", "min": 1, "max": 2}],
+        "total": {"min": 1, "max": 2},
+        "fields": [
+            {
+                "key": "f1",
+                "label": "Rating",
+                "type": "integer",
+                "min": "1",
+                "max": "5",
+                "step": "1",
+                "options": "",
+                "required": True,
+                "help": "",
+            }
+        ],
+        "results": [
+            {
+                "key": "r1",
+                "name": "Mean rating",
+                "source": "f1",
+                "derive": "mean",
+                "value": "",
+                "at_least": 1,
+                "ignore_zero": False,
+            }
+        ],
+    }
+    g.update(over)
+    return g
+
+
+def _process() -> dict[str, object]:
+    form = {"from": "", "to": "", "receipt": True, "reminder": False}
+    outcome = {
+        "key": "onew2",
+        "label": "Award",
+        "due": "2027-03-01T17:00",
+        "values": ["Awarded", "Not awarded"],
+        "weights": {},
+        "rule": {
+            "when": [["res", "gnew1.r1", "ge", "3.5"]],
+            "then": "Awarded",
+            "otherwise": "Not awarded",
+        },
+        "applicants_email": True,
+        "evaluators_email": False,
+    }
+    return {
+        "stages": [
+            _stage("Applications", form=form, published=True),
+            _stage(
+                "Review",
+                **{"from": "2027-02-01T09:00", "to": "2027-02-28T17:00"},
+                gates=[_gate("gnew1", "Panel read")],
+                outcome=outcome,
+            ),
+        ]
+    }
+
+
+def test_process_saves_into_the_scratch() -> None:
+    """Rung 4: Process's stages, gates, outcomes and ticks kept and read
+    back; new keys renumbered, in the rules that name them too."""
+    from applydesk import stages, workflow
+
+    client = _client()
+    made = _create(client)
+    assert (
+        'data-fb-snapshot="applydeskProcessSnapshot"' in client.get(f"{LOBBY}/{made}/process").text
+    )
+    reply = client.post(f"{LOBBY}/{made}/process", json=_process())
+    assert reply.status_code == 200, reply.text
+    process = client.get(f"{LOBBY}/{made}/process").text
+    assert 'value="Panel read"' in process and 'data-key="g1"' in process
+    assert 'data-key="o1"' in process and "gnew1" not in process and "onew2" not in process
+    # The rule follows the gate's new key.
+    assert "&#34;g1.r1&#34;" in process or '"g1.r1"' in process
+    # Read back in a request of this browser: the saved plan and its ticks.
+    scratch_token = client.cookies[scratch.COOKIE]
+    reset = scratch._token.set(scratch_token)  # pyright: ignore[reportPrivateUsage]  -- the request's context, outside one
+    try:
+        plan = stages.plan_of(made)
+        assert [st.label for st in plan.stages] == ["Applications", "Review"]
+        assert plan.stages[0].status == "Published" and plan.stages[0].form
+        assert workflow.sends(made, "receipt", workflow.APPLICANTS)
+        assert not workflow.sends(made, "reminder", workflow.APPLICANTS)
+        assert workflow.sends(made, "o1", workflow.APPLICANTS)
+        assert not workflow.sends(made, "o1", workflow.EVALUATORS)
+    finally:
+        scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
+    # The outcome's email is owed on Emails.
+    assert "Award" in client.get(f"{LOBBY}/{made}/emails").text
+
+
+def test_process_save_is_checked() -> None:
+    client = _client()
+    made = _create(client)
+    two_forms = _process()
+    stages_ = two_forms["stages"]
+    assert isinstance(stages_, list)
+    stages_[1]["form"] = {"from": "", "to": "", "receipt": False, "reminder": False}  # pyright: ignore[reportIndexIssue]  -- a test's dict
+    for bad, reason in (
+        ({"stages": []}, "at least one stage"),
+        ({"stages": "x"}, "malformed"),
+        (two_forms, "More than one stage holds the form."),
+        ({"stages": [_stage(gates=[_gate("g1", "A", mode="lottery")])]}, "assignment"),
+        ({"stages": [_stage(gates=[_gate("G 1", "A")])]}, "key is malformed"),
+        (
+            {"stages": [_stage(gates=[_gate("g1", "A"), _gate("g1", "B")])]},
+            "share a key",
+        ),
+        ({"stages": [_stage(**{"from": "soon", "to": ""})]}, "not a date"),
+        ({"stages": [_stage(**{"from": "2027-02-01T09:00", "to": ""})]}, "both a start and an end"),
+        (
+            {
+                "stages": [
+                    _stage(gates=[_gate("g1", "A", **{"from": "", "to": "2027-02-01T09:00"})])
+                ]
+            },
+            "both a start and an end",
+        ),
+        (
+            {
+                "stages": [
+                    _stage(
+                        gates=[
+                            _gate(
+                                "g1",
+                                "A",
+                                sources=[{"kind": "panel", "ref": "new-1", "min": 1, "max": 1}],
+                            )
+                        ]
+                    )
+                ]
+            },
+            "panel made on this page",
+        ),
+        (
+            {
+                "stages": [
+                    _stage(
+                        outcome={
+                            **_process()["stages"][1]["outcome"],  # pyright: ignore[reportIndexIssue]  -- a test's dict
+                            "weights": {"g1.r1": "half"},
+                        }
+                    )
+                ]
+            },
+            "not all whole percents",
+        ),
+        (
+            {"stages": [_stage(gates=[_gate("g1", "A", results=[{"key": "r1"}] * 4)])]},
+            "more than 3",
+        ),
+    ):
+        refused = client.post(f"{LOBBY}/{made}/process", json=bad)
+        assert refused.status_code == 400 and reason in refused.json()["error"], (
+            bad,
+            refused.text,
+        )
+    assert client.post(f"{LOBBY}/wa9juxbc2t/process", json=_process()).status_code == 404
+
+
+def test_a_rule_naming_a_removed_gate_never_reads_another() -> None:
+    """Codex on #4026: renumbering never lands a dangling rule on the gate
+    renumbered into the removed one's key; NaN and Infinity are refused."""
+    from applydesk import stages
+
+    client = _client()
+    made = _create(client)
+    outcome = {
+        "key": "o1",
+        "label": "Award",
+        "due": "",
+        "values": ["Yes", "No"],
+        "weights": {},
+        "rule": {"when": [["res", "g1.r1", "ge", "3"]], "then": "Yes", "otherwise": "No"},
+        "applicants_email": False,
+        "evaluators_email": False,
+    }
+    # Gate g1 removed on the page; g2 is all that is left, and the rule
+    # still names g1.
+    sent = {"stages": [_stage("Review", gates=[_gate("g2", "Second")], outcome=outcome)]}
+    assert client.post(f"{LOBBY}/{made}/process", json=sent).status_code == 200
+    reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- the request's context, outside one
+    try:
+        plan = stages.plan_of(made)
+        gate, kept = plan.columns[0], plan.columns[1]
+        assert gate.key == "g1" and isinstance(kept, stages.Outcome) and kept.rule
+        assert kept.rule.when[0][1] == "removed.r1"
+    finally:
+        scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
+    # A result removed from a gate still there: its rule reads removed too,
+    # so a result added later as r2 is not read in its place.
+    two = {
+        **outcome,
+        "rule": {"when": [["res", "g2.r2", "ge", "3"]], "then": "Yes", "otherwise": "No"},
+    }
+    sent = {"stages": [_stage("Review", gates=[_gate("g2", "Second")], outcome=two)]}
+    assert client.post(f"{LOBBY}/{made}/process", json=sent).status_code == 200
+    reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- as above
+    try:
+        kept = stages.plan_of(made).columns[1]
+        assert isinstance(kept, stages.Outcome) and kept.rule
+        assert kept.rule.when[0][1] == "removed.r2"
+    finally:
+        scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
+    for bad in ("NaN", "Infinity", "-inf", "33.3", "-5", ""):
+        weighed = {**outcome, "weights": {"g2.r1": bad, "g2.r2": "50"}}
+        sent = {"stages": [_stage("Review", gates=[_gate("g2", "Second")], outcome=weighed)]}
+        refused = client.post(f"{LOBBY}/{made}/process", json=sent)
+        assert refused.status_code == 400 and "not all whole percents" in refused.json()["error"], (
+            bad
+        )
+
+
+def test_an_unfinished_result_saves_and_a_blank_count_is_refused() -> None:
+    """Codex on #4026: a result whose field was removed saves as it stands;
+    a blank evaluator count is refused, not kept as 0."""
+    client = _client()
+    made = _create(client)
+    loose = {
+        "key": "r1",
+        "name": "Mean rating",
+        "source": "",
+        "derive": "",
+        "value": "",
+        "at_least": 1,
+        "ignore_zero": False,
+    }
+    gate = _gate("g1", "Read", fields=[], results=[loose])
+    reply = client.post(f"{LOBBY}/{made}/process", json={"stages": [_stage("R", gates=[gate])]})
+    assert reply.status_code == 200, reply.text
+    process = client.get(f"{LOBBY}/{made}/process").text
+    # No field made up in place of the ones removed (Codex on #4026).
+    saved = process[process.index('data-key="g1"') :]
+    saved = saved[: saved.index("data-pr-list")]
+    assert "No field chosen" in process and "data-rf=" not in saved
+    # A gate with no source yet keeps its Total (Codex on #4026).
+    bare = _gate("g1", "Read", sources=[], total={"min": 1, "max": 2})
+    reply = client.post(f"{LOBBY}/{made}/process", json={"stages": [_stage("R", gates=[bare])]})
+    assert reply.status_code == 200, reply.text
+    process = client.get(f"{LOBBY}/{made}/process").text
+    total = process[process.index('data-ps="total-min"') - 200 :][:600]
+    assert 'value="1"' in total and 'value="2"' in total, total
+    for sources, total in (
+        ([{"kind": "panel", "ref": "", "min": None, "max": 2}], {"min": 1, "max": 2}),
+        ([{"kind": "panel", "ref": "", "min": 1, "max": 2}], {"min": 1, "max": None}),
+    ):
+        blank = _gate("g1", "Read", sources=sources, total=total)
+        refused = client.post(
+            f"{LOBBY}/{made}/process", json={"stages": [_stage("R", gates=[blank])]}
+        )
+        assert refused.status_code == 400 and "whole numbers" in refused.json()["error"]

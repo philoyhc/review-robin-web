@@ -14,6 +14,7 @@ import random
 import re
 from dataclasses import dataclass, replace
 from datetime import date, datetime
+from typing import cast
 
 from applydesk import sample_data
 from applydesk.sample_data import Application
@@ -192,6 +193,10 @@ class Gate:
     # Its review window, inside its stage's dates (author, 2026-11-18);
     # None runs it on the stage's (``window``).
     when: StageDates | None = None
+    # Its ``fields`` are its own, even none (a scratch exercise's, as
+    # Process saved them): no field is made up per result in their place,
+    # as for a sample gate listing none (``fields_of``; Codex on #4026).
+    own_fields: bool = False
 
     @property
     def measure(self) -> str:
@@ -638,11 +643,23 @@ def _exercise_span(e: sample_data.Exercise) -> StageDates | None:
     return StageDates(start, end)
 
 
+def _scratch_stages(exercise_id: str) -> tuple[Stage, ...] | None:
+    """A scratch exercise's stages as Process last saved them (segment
+    AD1N), else None."""
+    from applydesk import scratch  # scratch builds on sample_data, as this does
+
+    saved = scratch.page(exercise_id, "process")
+    return cast(tuple[Stage, ...], saved[0]) if isinstance(saved, tuple) else None
+
+
 def plan_of(exercise_id: str) -> Plan:
     """The stages and every application's cells for one exercise. An
     exercise not yet set up has one stage, holding the form, as a
     new exercise starts (ruling 15)."""
     apps = sample_data.applications_of(exercise_id)
+    saved = _scratch_stages(exercise_id)
+    if saved is not None:
+        return Plan(saved, tuple(Row(a, {}) for a in apps))
     if exercise_id not in _STAGES:
         e = sample_data.exercise(exercise_id)
         when = _exercise_span(e) if e else None
@@ -1144,7 +1161,9 @@ def sources_of(exercise_id: str, gate: Gate) -> tuple[tuple[Source, ...], Total]
         lo, hi = total_bounds(gate.sources)
         return gate.sources, gate.total or Total(lo, hi)
     if not gate.panel:
-        return (), Total(0, 0)
+        # A saved gate with no source yet keeps the Total it was given
+        # (Codex on #4026); a sample one has none.
+        return (), gate.total or Total(0, 0)
     pool = sample_data.panel_pools(exercise_id).get(gate.panel)
     size = len(pool["members"]) if pool else 0
     return (Source("panel", gate.panel, size, size),), Total(size, size)
@@ -1550,7 +1569,7 @@ def fields_of(gate: Gate) -> tuple[ResponseField, ...]:
     """A gate's response fields (ruling 28). A sample gate that lists none
     reads one per result, from the field the result carries, so nothing
     it shows changes until edited (as ``sources_of``)."""
-    if gate.fields:
+    if gate.fields or gate.own_fields:
         return gate.fields
     return tuple(ResponseField(f"f{i}", r.name, r.field) for i, r in enumerate(gate.results, 1))
 
@@ -1561,7 +1580,7 @@ def source_field(gate: Gate, result: GateResult) -> ResponseField | None:
     fields = fields_of(gate)
     if result.source:
         return next((f for f in fields if f.key == result.source), None)
-    if gate.fields:
+    if gate.fields or gate.own_fields:
         return None  # a gate listing its fields names them; none is assumed
     at = gate.results.index(result) if result in gate.results else -1
     return fields[at] if 0 <= at < len(fields) else None
