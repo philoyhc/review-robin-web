@@ -247,8 +247,8 @@ def _email_sample(
     """Preview's sample for an email (segment AD1L), its link under the
     mount (a view's shaping, kept out of the template)."""
     values = workflow.sample_values(exercise, email)
-    if "Link" in values:
-        values["Link"] = url_path(request, values["Link"])
+    if "exercise_url" in values:
+        values["exercise_url"] = url_path(request, values["exercise_url"])
     return values
 
 
@@ -359,6 +359,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         emails=workflow.emails(exercise.public_id),
         email_defaults=workflow.DEFAULT_TEMPLATES,
         email_fields=workflow.EMAIL_FIELDS,
+        tag_help=workflow.TAG_HELP,
         email_sample=functools.partial(_email_sample, request, exercise),
         sends=functools.partial(workflow.sends, exercise.public_id),
         form_state=workflow.form_state(exercise),

@@ -995,31 +995,41 @@ saved template is kept in the tab only.
   over other text; on the default already it says so. The button reads
   *Start from the default* while the subject or the body is empty, but asks
   whenever either holds text. The default waits for *Save*.
-- **Fields** (`workflow.EMAIL_FIELDS`): a template names its merge fields
-  in brackets, from its kind's list. *Receipt*: Applicant name, Exercise,
-  Application ID, Link, Help contact. *Reminder*: Applicant name,
-  Exercise, Closes, Link, Help contact. *An outcome to applicants*:
-  Applicant name, Exercise, Stage, Outcome, Link, Help contact. *An
-  outcome to evaluators*: Evaluator name, Exercise, Stage, Outcome, Link,
-  Help contact; no applicant field, so a blind exercise's names no one.
-  Fields match in any case. *Insert field*, on each card, is a menu of the
-  kind's fields and an *Insert* button, which puts the chosen field at the
-  cursor in the box last used on that card, else at the end of the body.
-  *Save* refuses a template naming another kind's field, saying which; other bracketed text is text.
+- **Merge tags** (`workflow.EMAIL_FIELDS`, ruling 54): Review Robin's
+  syntax (`spec/email_template_editor.md` §6), `$tag` or `${tag}`, case as
+  written, `$$` a literal `$`. *Receipt*: `$applicant_name`,
+  `$exercise_name`, `$application_id`, `$exercise_url`, `$help_contact`.
+  *Reminder*: `$applicant_name`, `$exercise_name`, `$closes`,
+  `$exercise_url`, `$help_contact`. *An outcome to applicants*:
+  `$applicant_name`, `$exercise_name`, `$stage_name`, `$outcome`,
+  `$exercise_url`, `$help_contact`. *An outcome to evaluators*:
+  `$evaluator_name` in place of `$applicant_name`, and `$outcome` the
+  outcome's tally; no applicant tag, so a blind exercise's names no one.
+  *Insert field*, on each card, is a menu of the kind's tags, each with
+  what it stands for (`workflow.TAG_HELP`), and an *Insert* button, which
+  puts the chosen tag at the cursor in the box last used on that card,
+  else at the end of the body, braced (`${tag}`) before a letter, digit
+  or `_`. *Save* refuses a template naming another kind's tag, saying
+  which; an unknown tag stays as typed, as Review Robin's.
 - **Paragraphs** (ruling 53): one body per template, never one per
   outcome value. The body box grows with its text, as the page's other
   boxes do, with no resize handle. A blank line in it separates
   paragraphs; Preview shows each with a small gap, and a single line
   break stays a line break.
 - ***Preview*** (*Hide preview* while open) shows the card as it stands,
-  saved or not, under it: the subject and the body with each field filled
-  from the sample (`workflow.sample_values`; the page adds the mount to
-  *Link*): the first submitted application, *Closes* the form's close date,
-  *Help contact* the exercise's, the outcome's value in its row (*Pending* when undecided)
-  or, to evaluators, the outcome's tally; the evaluator is the first
-  member of the first panel at that stage's gates; *Link*, the
-  participant page. A field with no value in the sample (a draft has no
-  application) shows its name, dimmed; another kind's field shows marked.
+  saved or not, under it: the subject and the body with each tag filled
+  from the sample (`workflow.sample_values`): the first submitted
+  application's applicant and ID; `$closes` the form's close date;
+  `$help_contact` the exercise's; `$outcome` the outcome's value in that
+  row (*Pending* when undecided) or, to evaluators, its tally;
+  `$evaluator_name` the first member of the first panel at that stage's
+  gates; `$exercise_url` the participant page, under the mount (the route
+  adds it, `_email_sample`). As Review Robin's, a default body drops each
+  line whose tag comes out empty; here a body is a default when it equals
+  its kind's default, saved in the tab or not, since nothing is saved
+  until AD2. Elsewhere, in a subject or a body of one's own, a tag with no
+  value in the sample (a draft has no application) shows dimmed. Another
+  kind's tag shows marked.
   It follows the card as it is typed.
 - **Empty**: an exercise owing no template shows one card, *No emails yet*,
   saying each email ticked on Process is listed here as a template to

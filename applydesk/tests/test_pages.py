@@ -500,8 +500,8 @@ def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> N
     assert 'data-em-subject value=""' in cards[3] and ">Start from the default</button>" in cards[3]
     # Preview's sample: an evaluator's email has no applicant field.
     assert (
-        "Evaluator name" in cards[4]
-        and "Applicant name" not in cards[4].split("data-em-sample")[1][:400]
+        "evaluator_name&#34;" in cards[4].split("data-em-sample")[1][:400]
+        and "applicant_name" not in cards[4].split("data-em-sample")[1][:400]
     )
 
 
@@ -1820,14 +1820,24 @@ def test_preview_s_sample_values_follow_each_kind() -> None:
     mails = {m.name: m for m in workflow.emails(EX)}
     receipt = workflow.sample_values(e, mails["Applications: Receipt · Applicants"])
     assert receipt == {
-        "Applicant name": "Aisha Bello",
-        "Exercise": e.name,
-        "Application ID": "m3qx8vkt2n",
-        "Link": f"/me/exercises/{EX}",
-        "Help contact": sample_data.help_contact(e),
+        "applicant_name": "Aisha Bello",
+        "exercise_name": e.name,
+        "application_id": "m3qx8vkt2n",
+        "exercise_url": f"/me/exercises/{EX}",
+        "help_contact": sample_data.help_contact(e),
     }
     review = workflow.sample_values(e, mails["Review: Outcome · Applicants"])
-    assert (review["Stage"], review["Outcome"]) == ("Review", "Re-appointment")
+    assert (review["stage_name"], review["outcome"]) == ("Review", "Re-appointment")
     panel = workflow.sample_values(e, mails["Interviews: Outcome · Evaluators"])
-    assert (panel["Evaluator name"], panel["Outcome"]) == ("Dr Hana Ito", "55 pending")
-    assert "Applicant name" not in panel
+    assert (panel["evaluator_name"], panel["outcome"]) == ("Dr Hana Ito", "55 pending")
+    assert "applicant_name" not in panel
+
+
+def test_every_merge_tag_has_its_description_and_every_default_its_own_tags() -> None:
+    """Ruling 54: each kind's tags each carry a description, and each
+    default names only its own kind's tags."""
+    tags = {t for fields in workflow.EMAIL_FIELDS.values() for t in fields}
+    assert tags == set(workflow.TAG_HELP)
+    for kind, (subject, body) in workflow.DEFAULT_TEMPLATES.items():
+        named = set(re.findall(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)", subject + body))
+        assert named <= set(workflow.EMAIL_FIELDS[kind]), kind

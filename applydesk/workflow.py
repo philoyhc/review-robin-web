@@ -59,54 +59,76 @@ class Email:
         return "outcome-applicants" if self.audience == APPLICANTS else "outcome-evaluators"
 
 
-#: The merge fields each kind of template may name (segment AD1L): a
-#: bracketed name, filled when the email is sent (AD7). An evaluator's
-#: email has no applicant field, so a blind exercise's names no one.
+#: The merge tags each kind of template may name (segment AD1L; ruling
+#: 54): Review Robin's ``$tag`` syntax (``app/services/email_templates.py``),
+#: filled when the email is sent (AD7). An evaluator's email has no
+#: applicant tag, so a blind exercise's names no one.
 EMAIL_FIELDS: dict[str, tuple[str, ...]] = {
-    "receipt": ("Applicant name", "Exercise", "Application ID", "Link", "Help contact"),
-    "reminder": ("Applicant name", "Exercise", "Closes", "Link", "Help contact"),
+    "receipt": (
+        "applicant_name",
+        "exercise_name",
+        "application_id",
+        "exercise_url",
+        "help_contact",
+    ),
+    "reminder": ("applicant_name", "exercise_name", "closes", "exercise_url", "help_contact"),
     "outcome-applicants": (
-        "Applicant name",
-        "Exercise",
-        "Stage",
-        "Outcome",
-        "Link",
-        "Help contact",
+        "applicant_name",
+        "exercise_name",
+        "stage_name",
+        "outcome",
+        "exercise_url",
+        "help_contact",
     ),
     "outcome-evaluators": (
-        "Evaluator name",
-        "Exercise",
-        "Stage",
-        "Outcome",
-        "Link",
-        "Help contact",
+        "evaluator_name",
+        "exercise_name",
+        "stage_name",
+        "outcome",
+        "exercise_url",
+        "help_contact",
     ),
 }
 
-#: Each kind's default subject and body, written with its own fields.
+#: What each tag stands for, shown beside it in *Insert field*.
+TAG_HELP: dict[str, str] = {
+    "applicant_name": "the applicant's name",
+    "evaluator_name": "the evaluator's name",
+    "exercise_name": "the exercise's name",
+    "application_id": "the application's ID",
+    "closes": "when the form closes",
+    "stage_name": "the stage's name",
+    "outcome": "the outcome (to evaluators, its tally)",
+    "exercise_url": "the link to the exercise's page",
+    "help_contact": "the exercise's help contact",
+}
+
+#: Each kind's default subject and body, written with its own tags. As
+#: Review Robin's, a default body drops a line whose tag comes out empty.
 DEFAULT_TEMPLATES: dict[str, tuple[str, str]] = {
     "receipt": (
-        "[Exercise]: application received",
-        "Dear [Applicant name],\n\nThank you for applying to [Exercise]. Your application,"
-        " [Application ID], has been received.\n\nYou can see it, and how the exercise"
-        " stands, at [Link].\n\nQuestions: [Help contact].",
+        "$exercise_name: application received",
+        "Dear $applicant_name,\n\nThank you for applying to $exercise_name. Your application,"
+        " $application_id, has been received.\n\nYou can see it, and how the exercise"
+        " stands, at $exercise_url\n\nQuestions? Contact $help_contact.",
     ),
     "reminder": (
-        "[Exercise]: your application is still a draft",
-        "Dear [Applicant name],\n\nYour application to [Exercise] is saved as a draft and"
-        " has not been submitted. Applications close on [Closes].\n\nFinish and submit it"
-        " at [Link].\n\nQuestions: [Help contact].",
+        "$exercise_name: your application is still a draft",
+        "Dear $applicant_name,\n\nYour application to $exercise_name is saved as a draft and"
+        " has not been submitted. Applications close on $closes.\n\nFinish and submit it"
+        " at $exercise_url\n\nQuestions? Contact $help_contact.",
     ),
     "outcome-applicants": (
-        "[Exercise]: [Stage] outcome",
-        "Dear [Applicant name],\n\nThe outcome of [Stage] for your application to"
-        " [Exercise] is: [Outcome].\n\nMore at [Link].\n\nQuestions: [Help contact].",
+        "$exercise_name: $stage_name outcome",
+        "Dear $applicant_name,\n\nThe outcome of $stage_name for your application to"
+        " $exercise_name is: $outcome.\n\nMore at $exercise_url\n\nQuestions? Contact"
+        " $help_contact.",
     ),
     "outcome-evaluators": (
-        "[Exercise]: [Stage] outcome released",
-        "Dear [Evaluator name],\n\nThe outcome of [Stage] in [Exercise] has been released:"
-        " [Outcome].\n\nThank you for your evaluations. More at [Link].\n\nQuestions:"
-        " [Help contact].",
+        "$exercise_name: $stage_name outcome released",
+        "Dear $evaluator_name,\n\nThe outcome of $stage_name in $exercise_name has been"
+        " released: $outcome.\n\nThank you for your evaluations. More at"
+        " $exercise_url\n\nQuestions? Contact $help_contact.",
     ),
 }
 
@@ -278,7 +300,8 @@ def sample_values(exercise: Exercise, email: Email) -> dict[str, str]:
     exercise's first submitted application, the outcome's value in its row
     (to an applicant) or its tally (to an evaluator), and the evaluator
     the first member of the first panel evaluating at that stage's gates.
-    ``Link`` is the participant page's app path; the page adds the mount.
+    ``exercise_url`` is the participant page's app path; the route adds
+    the mount.
     Only the email's kind's fields."""
     plan = stages.plan_of(exercise.public_id)
     row = next((r for r in plan.rows if r.application.state == "Submitted"), None)
@@ -295,19 +318,19 @@ def sample_values(exercise: Exercise, email: Email) -> dict[str, str]:
     member = panels[refs[0]].members[0] if refs else None
     value = row.cells[email.item].value if row and email.item in row.cells else ""
     every = {
-        "Applicant name": row.application.applicant if row else "",
-        "Exercise": exercise.name,
-        "Application ID": row.application.public_id if row else "",
-        "Closes": exercise.application_stage_ends,
-        "Stage": stage.label if stage else "",
-        "Outcome": (
+        "applicant_name": row.application.applicant if row else "",
+        "exercise_name": exercise.name,
+        "application_id": row.application.public_id if row else "",
+        "closes": exercise.application_stage_ends,
+        "stage_name": stage.label if stage else "",
+        "outcome": (
             stages.counts(plan, outcome)
             if outcome and email.audience == EVALUATORS
             else value or "Pending"
         ),
-        "Evaluator name": member.name if member else "",
-        "Link": f"/me/exercises/{exercise.public_id}",
-        "Help contact": sample_data.help_contact(exercise),
+        "evaluator_name": member.name if member else "",
+        "exercise_url": f"/me/exercises/{exercise.public_id}",
+        "help_contact": sample_data.help_contact(exercise),
     }
     return {f: every[f] for f in EMAIL_FIELDS[email.kind]}
 
