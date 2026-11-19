@@ -1,6 +1,6 @@
 # Segment AD1E — ApplyDesk: the Process page, a stack of stage cards
 
-**Opened:** 2026-11-13 · **Theme:** Process built as Form is: the exercise's timeline as a stack of stage cards, each holding the form, or gates, and perhaps an outcome, with their dates, rules and emails; every move working in the browser, nothing saved; the builder first, Preview after · **Related:** `applydesk/guide/todo_master.md` (rulings 13–15), `applydesk/guide/archive/segment_AD1B_form_builder.md` (the Form page this repeats), `applydesk/guide/segment_AD1D_chrome.md` (the placeholder this replaces), `applydesk/spec/applications.md` ("The Form page")
+**Opened:** 2026-11-13 · **Theme:** Process built as Form is: the exercise's timeline as a stack of stage cards, each holding the form, or gates, and perhaps an outcome, with their dates, rules and emails; every move working in the browser, nothing saved; the builder first, Preview after · **Related:** `applydesk/guide/todo_master.md` (rulings 13–15), `applydesk/guide/archive/segment_AD1B_form_builder.md` (the Form page this repeats), `applydesk/guide/archive/segment_AD1D_chrome.md` (the placeholder this replaces), `applydesk/spec/applications.md` ("The Form page")
 
 ## Opportunity
 

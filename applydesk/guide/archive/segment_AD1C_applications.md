@@ -56,15 +56,12 @@ Taken 2026-11-13 at `34f3d4b`.
 
 ## Status
 
-Building. Base `34f3d4b` for the cumulative read.
-- Rung 2: the table. The rounds and each row's cells in `applydesk/stages.py` (then `rounds.py`); 98 generated applications join the model exercise's three in `sample_data` (101). The model exercise moves to mid-review (author, 2026-11-13: applications 1 Sep – 15 Oct, Round 2 under way), so a new sample exercise, *Postgraduate Conference Grant 2027* (`r6tm4kq9wz`), is the one open for applications. *Set ticked rows* sits under the table beside *All / Last applications*, keeping the toolbar on one line. *Fill by rule…* and *Upload CSV* render, inert until rung 3.
-- Rung 3: *Fill by rule…* (Set a column to a value where an earlier gate's Rating or Score is ≥ or < a threshold, otherwise a value or as is; Pending cells only unless unticked) and *Upload CSV* (`Application ID`, then columns named as their headers, with or without "Gate 1:") share one proposal panel: what would change, what was left and why; *Apply* or *Cancel*. A gate cell carries its finished result (`Cell.result`) for the rule; an unfinished one is named, not guessed. *Download CSV* gives the table in the shape an upload reads.
-- The cumulative read (rungs 1–3): 10 findings. Fixed: withdrawn rows keep only what they had; *Apply* keeps a cell changed by hand since the proposal; a downloaded CSV uploads back cleanly and IDs match in any case; a rule reads only an earlier gate, and only where it was Selected; focus returns after a proposal; each *Released* switch names its outcome. Left, for the author: Review, Reports and Panels still show the model exercise as not yet sent to Review Robin (the Review-tab open question).
-- Rung 4: the application file. Labels, the page title and the route (`/me/exercises/<id>/files/<file>`; the old `/profiles/` is a 404), `file_id`, `by_file`, `file_or_404`, `me/file.html`; the rulings, the spec's URL map and AD1's. Review Robin's `ProfileLink` keeps its name: it is the handoff's field. A test holds "profile" out of every page a reader sees.
+Closed 2026-11-19. Rungs 1–6 shipped. The page is Dossiers since ruling 25 and later segments reworked it; its contract is `applydesk/spec/applications.md`, "The Dossiers page".
 
-- Rung 5 (author, 2026-11-13): gate chips cycle *—* (no status yet), *Entered*, *Not entered*, since a gate is whether an application is sent through it; outcomes keep their own values with *Pending*, from Setup, in a menu shaped and toned as a pill. Kept apart because a gate's three states suit a cycle and an outcome's open-ended values a one-pick menu (author, after asking). A rule's "undecided only" covers both *—* and *Pending*; a CSV takes `-` for *—*.
-
-- Rung 6, an iteration rung under ladder step 5 (author, 2026-11-13): rules belong to Setup; this page applies them. *Fill by rule…* becomes *Apply rules…*: every column's rule (`Rule` in `applydesk/stages.py` (then `rounds.py`), sample values until Setup holds them), in column order, so a rule reading an earlier outcome sees this run's value; undecided cells only unless unticked; a cell set by hand (marked "Set by hand") is kept unless asked; a condition not yet judgeable leaves the cell, named; an outcome none of whose gates the application entered is left; withdrawn and draft rows are never touched; a rule proposal is dropped if the table changes before *Apply*. "Last submitted" goes by submission date. Each header shows its rule, or "Decided by hand". An outcome's **combined result** is the weighted average of its scope's gate results (`rounds.combined`; the sample's Shortlist is Peer Review 30%, Faculty Panel Review 70%, at ≥ 4.2). The sample now follows its rules (a test applies every rule to every cell and changes only what is still to decide): every last-submitted application enters Gates 1 and 2, a second application from one applicant shows the "last submitted" rule (102 applications), Final results are decided by hand. Supersedes "Rules beyond one threshold" in Out of scope.
+- **Diverging from the Decision**: gate chips cycle *—*, *Entered*, *Not entered*, not *Pending / Selected* (rung 5); *Fill by rule…* became *Apply rules…*, each column's rule applied in column order (rung 6), the rules now set on Process (AD1E); *Save* left the toolbar for *Unlock* / *Lock* (ruling 23); rounds became stages (ruling 15); the application file became the dossier, named by its own ID (ruling 25).
+- **Decisions confirmed at build**: rendered on the server, moves in one inline script; `wa9juxbc2t` is the model exercise, about 100 applications generated from a fixed seed; a CSV takes `-` for *—*, and a downloaded CSV uploads back unchanged.
+- **Reads**: one `diff-reviewer` read of rungs 1–3 (`34f3d4b..`), 10 findings, all fixed except one left for the author (Review, Reports and Panels showing the model exercise not yet sent), which ruling 14 settled.
+- **Close**: checked by hand; `spec-writer` not run. The Semantics were written into the spec at this close (finding AD-113).
 
 ## PR ladder
 
@@ -89,9 +86,9 @@ Building. Base `34f3d4b` for the cumulative read.
 
 ## Open questions
 
-- **Where Setup holds rounds, gates and outcomes**, and how the Timeline sets what a release does: a later segment builds Setup's side; this page reads `sample_data` until then (author).
-- **The Review tab**: answered by ruling 14 — it becomes Evaluations, each gate's progress and results (segment AD1D).
-- **`close_check.py` reads only RRW's `guide/`**: this close is checked by hand, as AD1B's was.
+- ~~**Where Setup holds rounds, gates and outcomes**~~: on Process (AD1E).
+- ~~**The Review tab**~~: Evaluations (ruling 14, AD1D).
+- ~~**`close_check.py` reads only RRW's `guide/`**~~: checked by hand (Status).
 
 ## Out of scope
 
@@ -103,5 +100,5 @@ Building. Base `34f3d4b` for the cumulative read.
 
 - `applydesk/spec/applications.md` — "The Applications page" section (at close); the URL map's file route (rung 4).
 - `applydesk/guide/todo_master.md` — ruling 13 and the AD1C roadmap row (rung 1); the row deleted at close.
-- `applydesk/guide/segment_AD1_skeleton.md` — the URL map's profile row renamed to the application file (rung 4).
+- `applydesk/guide/archive/segment_AD1_skeleton.md` — the URL map's profile row renamed to the application file (rung 4).
 - `applydesk/README.md` — this plan's row (rung 1), moved to the archive's index at close.
