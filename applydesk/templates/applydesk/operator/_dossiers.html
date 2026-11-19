@@ -10,7 +10,7 @@
 {% set last = last_submitted(plan.rows) %}
 {% set rank = submitted_rank(plan.rows) %}
 {% set cols = plan.columns %}
-<div class="ap" data-applications data-ap-csv-name="{{ dossiers_csv }}">
+<div class="ap" data-applications data-ap-ex="{{ exercise.public_id }}" data-ap-csv-name="{{ dossiers_csv }}">
   <div class="ap-tool">
     <input type="search" class="ap-search" data-ap-search placeholder="Search ID, name or email" aria-label="Search dossiers">
     <select class="ap-sel" data-ap-status aria-label="Status">
@@ -59,15 +59,18 @@
         <th class="ap-first" colspan="{{ 3 + (ast.columns | length if ast else 0) }}"><b>{{ ast.label if ast else "Dossiers" }}</b>{% if ast %}<span class="ap-when">{{ ast.dates }}</span>{% elif not plan.form_stage %}<span class="ap-when">From elsewhere</span>{% endif %}</th>
         {% for r in plan.stages if r.columns and r is not sameas ast %}<th class="ap-r" colspan="{{ r.columns | length }}"><b>{{ r.label }}</b><span class="ap-when">{{ r.dates }}</span></th>{% endfor %}
       </tr>
-      <tr>
-        <th class="ap-first ap-id"><input type="checkbox" data-ap-tick-all aria-label="Tick every row in view"> Dossier</th>
-        <th>Applicant</th>
-        <th>Status<span class="ap-count" data-ap-count="status"></span></th>
+      {# Ruling 52: under the stages, an information row (kind, counts,
+         rule, lock, Released), then the column headers on one line, each
+         with a sort handle. #}
+      <tr class="ap-info">
+        <th class="ap-first"></th>
+        <th></th>
+        <th><span class="ap-count" data-ap-count="status"></span></th>
         {% for r in plan.stages %}{% for c in r.columns %}
           {% if c.via is defined %}{% set cl = cells_lock(c) %}
-          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate"{% if cl.fixed %} data-ap-fixed="{{ cl.reason }}"{% endif %} data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>{% if cl.fixed %}<span class="ap-rule-line ap-fixed">Fixed: its Review Robin session has opened</span>{% endif %}</th>
+          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate"{% if cl.fixed %} data-ap-fixed="{{ cl.reason }}"{% endif %} data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span><span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>{% if cl.fixed %}<span class="ap-rule-line ap-fixed">Fixed: its Review Robin session has opened</span>{% endif %}</th>
           {% else %}
-          <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-scope="{{ scope(plan, c) | map(attribute='key') | join('|') }}" data-weights="{% for k, w in c.weights %}{{ k }}:{{ w }}{{ '|' if not loop.last }}{% endfor %}" data-number="Outcome {{ c.number }}" data-first="{{ c.values[0] }}" data-on="{{ going_on(c) | join('|') }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span>{{ c.label }}<span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
+          <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-scope="{{ scope(plan, c) | map(attribute='key') | join('|') }}" data-weights="{% for k, w in c.weights %}{{ k }}:{{ w }}{{ '|' if not loop.last }}{% endfor %}" data-number="Outcome {{ c.number }}" data-first="{{ c.values[0] }}" data-on="{{ going_on(c) | join('|') }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span><span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
             {% if c.weights %}<span class="ap-weights">{% for k, w in c.weights if w %}{{ result_label(k) }} {{ (w * 100) | round | int }}%{{ " · " if not loop.last }}{% endfor %}</span>{% endif %}
             {% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>
             {% set rl = release_lock(c) %}
@@ -77,13 +80,22 @@
           {% endif %}
         {% endfor %}{% endfor %}
       </tr>
+      {% macro sorter(key, label) %}<button type="button" class="ap-sort" data-ap-sort="{{ key }}">{{ label }}<span class="ap-sort-h" aria-hidden="true">↕</span></button>{% endmacro %}
+      <tr class="ap-heads">
+        <th class="ap-first ap-id" aria-sort="none"><input type="checkbox" data-ap-tick-all aria-label="Tick every row in view">{{ sorter("dossier", "Dossier") }}</th>
+        <th aria-sort="none">{{ sorter("applicant", "Applicant") }}</th>
+        <th aria-sort="none">{{ sorter("status", "Status") }}</th>
+        {% for r in plan.stages %}{% for c in r.columns %}
+          <th class="{{ 'ap-out' if c.via is not defined }} {{ 'ap-r' if loop.first }}" aria-sort="none">{{ sorter(c.key, c.label) }}</th>
+        {% endfor %}{% endfor %}
+      </tr>
     </thead>
     <tbody>
     {% for row in plan.rows %}{% set a = row.application %}
       {# A draft has no dossier yet (ruling 32: minted at submit): it is
          named by its Application ID. #}
       {% set rid = a.public_id if a.state == "Draft" else a.dossier_id %}
-      <tr data-row data-ap-app="{{ a.public_id }}" data-ap-name="{{ rid }}" data-status="{{ a.state }}" data-search="{{ (('' if a.state == 'Draft' else a.dossier_id ~ ' ') ~ a.public_id ~ ' ' ~ a.applicant ~ ' ' ~ a.email) | lower }}"{% if a.public_id in last %} data-last{% endif %}{% if a.public_id in rank %} data-rank="{{ rank[a.public_id] }}"{% endif %} data-answers="{{ answers(a) | tojson | forceescape }}">
+      <tr data-row data-ap-i="{{ loop.index0 }}" data-ap-app="{{ a.public_id }}" data-ap-name="{{ rid }}" data-status="{{ a.state }}" data-search="{{ (('' if a.state == 'Draft' else a.dossier_id ~ ' ') ~ a.public_id ~ ' ' ~ a.applicant ~ ' ' ~ a.email) | lower }}"{% if a.public_id in last %} data-last{% endif %}{% if a.public_id in rank %} data-rank="{{ rank[a.public_id] }}"{% endif %} data-answers="{{ answers(a) | tojson | forceescape }}">
         {# A row per dossier, named by its Dossier ID, its application's ID
            under it (ruling 25; AD-89): the CSV still keys rows by
            Application ID. #}
@@ -207,9 +219,12 @@
   var lockBtn = root.querySelector("[data-ap-lock]"), undoBtn = root.querySelector("[data-ap-undo]");
   var changesEl = root.querySelector("[data-ap-changes]"), said = root.querySelector("[data-ap-said]");
   var unlocked = false, base = null, keptN = 0, loaded = null;  // keptN: what differs from the page as loaded, at the last Lock
+  // The rows in the page's own order: what a sort moves, a snapshot and
+  // the proposal's check must not see (ruling 52; the cold read).
+  function ownOrder() { return rows.slice().sort(function (a, b) { return a.dataset.apI - b.dataset.apI; }); }
   function state() {
     var cells = [];
-    rows.forEach(function (r) {
+    ownOrder().forEach(function (r) {
       r.querySelectorAll("[data-cell]").forEach(function (td) {
         var el = td.querySelector("[data-v]"), date = td.querySelector("[data-ap-date]");
         cells.push({ td: td, v: el ? el.dataset.v : null, hand: td.hasAttribute("data-hand"), date: date ? date.textContent : null });
@@ -362,6 +377,57 @@
   }
   [search, status, which].forEach(function (el) { el.addEventListener("input", filter); });
 
+  // Ruling 52: a column's name sorts the rows by it: ascending, then
+  // descending, then the page's own order. Ties keep the page's order;
+  // the sort is kept in the tab. It moves rows only, never a cell.
+  var MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ");
+  function when(t) {  // "6 Nov" or "10 Sep 2026" to a number; none sorts last
+    var m = /(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(?: (\d{4}))?/.exec(t || "");
+    return m ? (+(m[3] || 0)) * 10000 + MONTHS.indexOf(m[2]) * 100 + +m[1] : Infinity;
+  }
+  var STATES = { Submitted: 0, Draft: 1, Withdrawn: 2 }, ADMIT = { "Entered": 0, "Not entered": 1 };
+  function keyOf(r, col) {
+    if (col === "dossier") return [r.dataset.status === "Draft" ? 1 : 0, r.dataset.apName];
+    if (col === "applicant") return [r.querySelector(".ap-who strong").textContent.toLowerCase()];
+    if (col === "status") return [STATES[r.dataset.status], when(r.querySelector(".ap-stat .ap-note").textContent)];
+    var el = cellOf(r, col), h = head[col];
+    if (!el) return [9, 0];
+    var v = el.dataset.v || "";
+    if (h.dataset.kind === "gate") {  // its chip, then its headline result, highest first
+      var res = el.dataset.result;
+      return [v in ADMIT ? ADMIT[v] : 2, res === undefined ? Infinity : -parseFloat(res)];
+    }
+    var values = (h.dataset.values || "").split("|"), i = values.indexOf(v);
+    var date = el.closest("td").querySelector("[data-ap-date]");
+    return [i >= 0 ? i : v === "Pending" ? values.length : values.length + 1, when(date && date.textContent)];
+  }
+  function cmp(a, b) { for (var i = 0; i < a.length; i++) { if (a[i] < b[i]) return -1; if (a[i] > b[i]) return 1; } return 0; }
+  var SORT = "applydesk-ap-sort:" + root.dataset.apEx, sort = null;
+  try { sort = JSON.parse(sessionStorage.getItem(SORT) || "null"); } catch (e) { sort = null; }
+  function sortRows() {
+    var body = root.querySelector(".ap-table tbody");
+    root.querySelectorAll("[data-ap-sort]").forEach(function (b) {
+      var on = sort && sort.col === b.dataset.apSort;
+      b.closest("th").setAttribute("aria-sort", on ? (sort.desc ? "descending" : "ascending") : "none");
+      b.querySelector(".ap-sort-h").textContent = on ? (sort.desc ? "▼" : "▲") : "↕";
+    });
+    rows.sort(function (a, b) {
+      var c = sort ? cmp(keyOf(a, sort.col), keyOf(b, sort.col)) : 0;
+      return (sort && sort.desc ? -c : c) || a.dataset.apI - b.dataset.apI;
+    });
+    rows.forEach(function (r) { body.appendChild(r); });
+  }
+  root.querySelectorAll("[data-ap-sort]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var col = b.dataset.apSort;
+      sort = !sort || sort.col !== col ? { col: col, desc: false } : !sort.desc ? { col: col, desc: true } : null;
+      try { if (sort) sessionStorage.setItem(SORT, JSON.stringify(sort)); else sessionStorage.removeItem(SORT); } catch (e) { /* kept on the page only */ }
+      sortRows();
+    });
+  });
+  if (sort && !root.querySelector('[data-ap-sort="' + sort.col + '"]')) sort = null;  // a column since gone
+  sortRows();
+
   // Set the ticked rows: one value for one column. The header's tick
   // ticks every row in view, or clears them (AD-22).
   var tickAll = root.querySelector("[data-ap-tick-all]");
@@ -425,7 +491,7 @@
   // Every cell's value and hand mark, to tell whether the table moved
   // after a rule proposal, whose later columns read earlier ones.
   function tableState() {
-    return rows.map(function (r) {
+    return ownOrder().map(function (r) {
       return Array.prototype.map.call(r.querySelectorAll("[data-cell]"), function (td) {
         var el = td.querySelector("[data-v]");
         return (el ? el.dataset.v : "") + (td.hasAttribute("data-hand") ? "*" : "");
@@ -578,7 +644,7 @@
       var replaceHand = rule.querySelector("[data-ap-rule-hand]").checked;
       var shadow = new Map(), changes = [], skipped = [];
       function val(r, key) {
-        var k = r.rowIndex + "|" + key;
+        var k = r.dataset.apApp + "|" + key;  /* the row's own, kept through a sort */
         if (shadow.has(k)) return shadow.get(k);
         var el = cellOf(r, key);
         return el ? el.dataset.v : null;
@@ -673,7 +739,7 @@
           var to = verdicts.get(r);
           if (to === null) { unjudged.push(nameOf(r)); return; }
           if (to === el.dataset.v) return;
-          shadow.set(r.rowIndex + "|" + key, to);
+          shadow.set(r.dataset.apApp + "|" + key, to);
           changes.push({ row: r, key: key, from: el.dataset.v, to: to, byRule: true });
         });
         if (unjudged.length) {

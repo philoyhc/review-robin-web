@@ -926,3 +926,89 @@ def test_a_date_alone_changed_is_still_a_change(page: Page) -> None:
         "() => { const e = new Event('beforeunload', {cancelable: true});"
         " window.dispatchEvent(e); return e.defaultPrevented; }"
     )
+
+
+def _order(page: Page) -> list[str]:
+    return page.locator("[data-row]").evaluate_all("rs => rs.map(r => r.dataset.apName)")
+
+
+def test_a_column_s_name_sorts_the_rows_and_the_tab_keeps_it(page: Page) -> None:
+    """Ruling 52: each column's name sorts the rows by it: ascending, then
+    descending, then the page's own order; the sort is kept in the tab."""
+    page.goto(PAGE)
+    own = _order(page)
+    name = page.locator('[data-ap-sort="applicant"]')
+    name.click()
+    who = page.locator("[data-row] .ap-who strong").all_inner_texts()
+    assert who == sorted(who, key=str.lower)
+    assert name.locator("xpath=..").get_attribute("aria-sort") == "ascending"
+    name.click()
+    assert page.locator("[data-row] .ap-who strong").all_inner_texts() == sorted(
+        who, key=str.lower, reverse=True
+    )
+    page.reload()  # kept in the tab
+    assert name.locator("xpath=..").get_attribute("aria-sort") == "descending"
+    name.click()
+    assert _order(page) == own
+    # Status: Submitted, Draft, Withdrawn.
+    page.locator('[data-ap-sort="status"]').click()
+    states = page.locator("[data-row]").evaluate_all("rs => rs.map(r => r.dataset.status)")
+    rank = {"Submitted": 0, "Draft": 1, "Withdrawn": 2}
+    assert [rank[s] for s in states] == sorted(rank[s] for s in states)
+
+
+def test_a_gate_sorts_by_its_chip_then_its_result_and_an_outcome_by_its_values(
+    page: Page,
+) -> None:
+    page.goto(PAGE)
+    page.locator('[data-ap-sort="g3"]').click()
+    chips = page.locator('[data-row] [data-cell="g3"]').evaluate_all(
+        "cs => cs.map(c => (c.querySelector('[data-v]') || {dataset: {v: ''}}).dataset.v)"
+    )
+    order = {"Entered": 0, "Not entered": 1, "": 2}
+    assert [order[c] for c in chips] == sorted(order[c] for c in chips)
+    page.locator('[data-ap-sort="g1"]').click()
+    results = page.locator('[data-row] [data-cell="g1"] [data-v]').evaluate_all(
+        "bs => bs.filter(b => b.dataset.v === 'Entered' && b.dataset.result)"
+        ".map(b => parseFloat(b.dataset.result))"
+    )
+    assert results and results == sorted(results, reverse=True)
+    page.locator('[data-ap-sort="o1"]').click()
+    values = page.locator('[data-row] [data-cell="o1"] [data-v]').evaluate_all(
+        "ss => ss.map(s => s.dataset.v)"
+    )
+    known = page.locator('th[data-col="o1"]').get_attribute("data-values") or ""
+    rank = {v: i for i, v in enumerate(known.split("|"))}
+    ranked = [rank.get(v, len(rank) + (0 if v == "Pending" else 1)) for v in values]
+    assert ranked == sorted(ranked)
+
+
+def test_a_sort_moves_rows_only_so_the_table_s_work_is_unchanged(page: Page) -> None:
+    """The cold read on ruling 52: a sort counts as no change, before or
+    after Unlock, and leaves an open proposal good to apply."""
+    page.goto(PAGE)
+    page.locator('[data-ap-sort="applicant"]').click()
+    _unlock(page)
+    changes = page.locator("[data-ap-changes]")
+    assert changes.inner_text() == "No changes yet"
+    page.locator('[data-ap-sort="status"]').click()
+    assert changes.inner_text() == "No changes yet"
+    page.locator("[data-ap-lock]").click()
+    assert changes.is_hidden()
+    _unlock(page)
+    prop = _apply_rules(page, only_undecided=False)
+    page.locator('[data-ap-sort="dossier"]').click()
+    dialogs: list[str] = []
+    page.on("dialog", lambda d: (dialogs.append(d.message), d.dismiss())[1])
+    if prop.locator("[data-ap-prop-apply]").is_enabled():
+        prop.locator("[data-ap-prop-apply]").click()
+    assert not dialogs
+
+
+def test_dossier_sorts_by_id_drafts_last(page: Page) -> None:
+    page.goto(PAGE)
+    page.locator('[data-ap-sort="dossier"]').click()
+    rows = page.locator("[data-row]").evaluate_all(
+        "rs => rs.map(r => [r.dataset.status === 'Draft' ? 1 : 0, r.dataset.apName])"
+    )
+    assert rows == sorted(rows) and rows[-1][0] == 1

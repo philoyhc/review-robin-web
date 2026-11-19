@@ -700,6 +700,17 @@ CSV* reads, a cell a spreadsheet would run as a formula guarded with `'` (a
 lone `-`, no status, is not), named `<code>_dossiers_<date>.csv`; *Upload
 CSV* undoes the guard. The page has no *Save*; nothing is kept until AD2.
 
+- **The header** (ruling 52). Under the stages, an information row holds
+  each column's kind, counts, rule, lock and *Released*, top-aligned; under
+  it the column headers stand on one line, each name a sort button.
+- **Sorting** (ruling 52). A column's name sorts the rows by it:
+  ascending, then descending, then the page's own order. *Dossier* by ID,
+  drafts last; *Applicant* by name; *Status* as Submitted, Draft,
+  Withdrawn, then date; a gate by its chip (Entered, Not entered, —), then
+  its headline result, highest first; an outcome by its values in
+  Process's order, then *Pending*, then —, then date; descending
+  reverses the whole order. Ties keep the page's order. It moves rows, never a cell, so it works while the table
+  is locked; the CSV follows it; the tab keeps it (`sessionStorage`).
 - **Finding rows.** Search (*Search ID, name or email*) matches, in any
   case, a row's Dossier ID (a draft has none), Application ID, applicant's
   name and email. The status filter is *All statuses*, *Submitted*, *Draft*

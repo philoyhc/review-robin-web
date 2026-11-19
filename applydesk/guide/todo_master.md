@@ -522,6 +522,13 @@ where a ruling below differs from it, the ruling wins.
     rows narrow *Approve* and *Discard* to themselves, their labels
     saying so (*Approve ticked (n)*, *Discard ticked (n)*); a row's own
     buttons sit at its end, flush right.
+52. **Dossiers' columns sort** (author, 2026-11-19): under the stages,
+    an information row (kind, counts, rule, lock, *Released*) and then
+    the column headers on one line, each with a sort handle. Dossier by
+    ID, Applicant by name, Status in its order then date, a gate by its
+    chip then its headline result (highest first), an outcome by its
+    values in Process's order then date; ties keep the page's order;
+    the sort is kept in the tab.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
