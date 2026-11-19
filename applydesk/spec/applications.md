@@ -1,13 +1,13 @@
 # Apply Desk as the host sees it
 
-> **Built so far:** segment AD1 built "The registry entry", "Health",
-> "Running alone" (item 1) and "The URL map" as placeholders on sample
-> data (item 2), pending the author's approval in a browser. Segment AD1B
-> built "The Form page" as a working scaffold: every move works on screen,
-> nothing is saved. Segment AD1E built "The Process page" the same way,
-> with Emails listing the templates it makes owed (ruling 16). Segment AD1K
-> gave each stage a status and made a published stage's contents fixed on every
-> page that shows them (ruling 35), the same way: on the sample, nothing saved.
+> **Built so far:** segments AD1 to AD1K built every page below as a
+> working scaffold on sample data: the package, health and the URL map
+> (AD1), Form (AD1B), Dossiers (AD1C), the exercise's chrome (AD1D),
+> Process (AD1E), Panels and gates' results (AD1F), evaluators and
+> Evaluations (AD1G), the RA model exercise and a page per gate (AD1H),
+> Exercise Home and its timeline (AD1I), Extract data (AD1J), and a
+> status per stage with what it locks (AD1K). Every move works on screen;
+> nothing is saved until AD2 or sent to Review Robin until AD6.
 
 Apply Desk's contract with the Cordware host. The host's side is
 `cordware/spec/host.md`; this file states only what Apply Desk adds. The
@@ -45,8 +45,35 @@ mounts it beside every other application. Its records are stamped
 
 ## The URL map
 
-The table is `applydesk/guide/segment_AD1_skeleton.md`, "The URL map":
-operators under `/operator/exercises`, participants under `/me`.
+Paths are under `/applydesk`: operators under `/operator/exercises`,
+participants under `/me`. `<id>` is an exercise's public ID, `<app>` an
+application's, `<dossier>` a dossier's and `<n>` a gate's number. Every
+page is a `GET`; the operator's are `applydesk/routes_operator.py`, the
+participant's `applydesk/routes_me.py`.
+
+| Path | Page |
+|---|---|
+| `/health` | Health (above) |
+| `/`, `/operator` | No page: they land by role (below) |
+| `/operator/exercises` | The Operator Lobby: every exercise |
+| `/operator/exercises/<id>` | Exercise Home: the timeline and Details |
+| `…/<id>/process` | Process: stages, gates, outcomes, their rules, and which items email whom |
+| `…/<id>/form` | Form: the application form builder |
+| `…/<id>/form/preview` | The form as an applicant sees it, in its own tab |
+| `…/<id>/panels` | Panels: the exercise's rosters in one table |
+| `…/<id>/emails` | Emails: every template the exercise owes |
+| `…/<id>/dossiers` | Dossiers: a row per dossier, the exercise's control surface |
+| `…/<id>/evaluations` | Evaluations: each gate's state, progress and assignments |
+| `…/<id>/evaluations/gate_<n>` | A gate's pairs, a row each; 404 for a Draft exercise or no such gate |
+| `…/<id>/extract` | Extract data: the download cards |
+| `…/<id>/extract/<file>` | One download (see Extract data, "The route") |
+| `/me` | The User Lobby |
+| `/me/exercises/<id>` | An exercise as an applicant sees it: its timeline and *Apply* |
+| `/me/exercises/<id>/applications/<app>` | The applicant's application |
+| `/me/exercises/<id>/dossiers/<dossier>` | The dossier an evaluator opens |
+
+Any other page under an exercise is a 404. The `/me/exercises/<id>` pages
+answer only for a Published or Closed exercise.
 
 - **Public IDs** (`applydesk/ids.py`): 10 symbols from RRW's alphabet,
   `23456789abcdefghjkmnpqrstuvwxyz`, drawn at random. A path whose ID has
@@ -85,6 +112,36 @@ operators under `/operator/exercises`, participants under `/me`.
 - **The gate** (`applydesk/gate.py`): every route but `/health` answers
   anyone on a local run and, deployed, only the platform super-admin,
   with a 404 for everyone else, until the segments that wire them.
+
+## The lobbies and the applicant's application
+
+- **The Operator Lobby** (`applydesk/templates/applydesk/operator/exercises.html`):
+  *New exercise* (Primary, disabled until AD3), then a row per exercise:
+  *Exercise* (its name, linking Home), *Exercise code* (*Not set* when
+  none; the public ID shows only in the link), *State* (the exercise's
+  status, from its stages: `locks.exercise_status`), *Stage* (the stage
+  holding its next step, `workflow.current_stage`), *Submitted*
+  (`workflow.counts_of`, the count every page uses) and *Applications
+  close*.
+- **The User Lobby** (`applydesk/templates/applydesk/me/home.html`), three
+  cards: *My applications*, each of the applicant's own with its state,
+  linking its page, a draft included; *Open to me*, each Published or
+  Closed exercise, saying *Applications open*, *Applications closed* or
+  *Closed: its released results stay here*, and *You are invited* for an
+  invitation-only one; *Dossiers I am asked to evaluate*, each linking its
+  dossier, *An application* in place of the title in a blind exercise.
+- **The applicant's application**
+  (`applydesk/templates/applydesk/me/application.html`): the crumb *User
+  Lobby / exercise / Your application*; the title with its state; *Shown to
+  evaluators* and *Not shown to evaluators*, each the Form's questions with
+  the answers (`extract.form_answers`), *—* where there is none; *Your
+  results*, on the applicant's own application only, once an outcome is
+  released to applicants. Then a draft's *Save draft* and *Submit*
+  (disabled until AD4), or *Applications closed on <date>* once the form
+  has closed; a submitted application's *Withdraw* (Outline-amber, disabled
+  until AD4) until a gate holding its dossier completes, then *You can no
+  longer withdraw: your application has gone to <gate>*
+  (`workflow.withdrawal_closed_by`).
 
 ## The Form page
 
@@ -292,7 +349,21 @@ reload restores the sample. A blank exercise shows one open card, *Stage 1*,
 holding the form. The cards are drawn from `stages.plan_of`, so Process,
 Dossiers and the status row agree on load. There is no Workflow card:
 ruling 14's was removed (author, 2026-11-15: derivative of the other
-pages, it can wait); `workflow.steps` still names the current stage.
+pages, it can wait). Its steps stay as a contract, which no page draws
+but the lobby's *Stage* column reads:
+
+- `workflow.steps` is the timeline a step at a time: each stage's
+  *Application form*, gates and outcomes in their set order, then *Close
+  and archive*. A step carries its stage, state, dates, a line (the form's
+  submitted count or *Not open yet*; a gate's progress or why it is not
+  ready; the close's *Extract data first*), the action it would take
+  (*Open form…* or *Close form…*, *Send…* for a gate not sent, *Release…*,
+  *Close…*; none once done, and a sent gate links to Evaluations instead)
+  and whether it is done. An outcome not yet released whose emails are
+  owed is blocked: *Not ready: its email to applicants is not written*, or
+  *its emails to applicants and evaluators are not written*.
+- `workflow.next_step` is the earliest step not done;
+  `workflow.current_stage` is the stage holding it, else the last stage.
 
 - **Layout.** The cards in timeline order, the Outline beside them (as
   Form's), *Save* at its foot, disabled until AD2.
@@ -621,13 +692,40 @@ a count of the changes shows. Locked, what differs from the page as loaded
 stays marked (*N changes on this page, not saved until AD2*), and leaving the page with any pending or
 kept asks first. *Return to draft* is a submitted row's own (Outline-amber)
 until a gate holding its dossier completes, as withdrawal is, and *Return
-ticked to draft* the ticked rows', gates or none (rulings 45, 49; both AD4). Ticks
+ticked to draft* the ticked rows', gates or none (rulings 45, 49; both disabled until AD4). Ticks
 only choose rows; the *Dossier* header's tick ticks every
 row in view, or clears them, and *Set ticked rows* with none ticked says *No
 rows ticked*. *Download CSV* writes the rows in view in the shape *Upload
 CSV* reads, a cell a spreadsheet would run as a formula guarded with `'` (a
 lone `-`, no status, is not), named `<code>_dossiers_<date>.csv`; *Upload
 CSV* undoes the guard. The page has no *Save*; nothing is kept until AD2.
+
+- **Finding rows.** Search (*Search ID, name or email*) matches, in any
+  case, a row's Dossier ID (a draft has none), Application ID, applicant's
+  name and email. The status filter is *All statuses*, *Submitted*, *Draft*
+  or *Withdrawn*. Under the table, *All dossiers* or *Last applications*:
+  per applicant, by email, the latest submitted, else the latest of any
+  status (`stages.last_submitted`). The three combine, and *Showing N of M*
+  counts the rows in view.
+- **The CSV.** *Download CSV* writes `Application ID`, `Applicant`, `Email`,
+  `Status`, then a column per gate and outcome headed by its label, UTF-8
+  with a byte-order mark; no status yet (*—*) is written `-`. *Upload CSV*
+  needs an `Application ID` column, matched in any case; any other column
+  is matched to a gate or outcome by its label, `Gate N: label` or
+  `Gate N`, and `Applicant`, `Email` and `Status` are read past. A cell `-`
+  reads as *—*, a blank cell leaves it as it is, and a value must be one of
+  the column's, in any case. The upload is a proposal, as *Apply rules…*'s:
+  it lists what would change and, left alone, unknown IDs, columns not on
+  the page, values not the column's, cells that cannot be set (a draft's,
+  one never admitted, a fixed one) and a cell given two values; nothing
+  changes until *Apply*. A file downloaded and uploaded back changes
+  nothing.
+- **Released** asks first. Turning it on names how many dossiers it reaches
+  are still undecided or *Pending*, then asks *Release <outcome>?*, saying
+  Process sets what a release does and nothing is sent; turning it off asks
+  *Withdraw the release of <outcome>?*. Cancelled, the switch goes back;
+  confirmed, the note under it reads today's date *· as Process sets*, or
+  *Not yet*.
 
 *Apply rules…* proposes each outcome and gate cell from the rule Process
 holds (branches in order, a form answer from the application's answers, the
@@ -851,5 +949,21 @@ from AD2.
 
 ## The Emails page
 
-Every template the exercise owes (see Process, "Emails"). Each template card
-stands alone and has its own *Save*, disabled until AD2; the page has none.
+Every template the exercise owes (see Process, "Emails"), a card each in
+timeline order (`workflow.emails`). A line above them says Process ticks
+which items email whom, that evaluators' invitations and reminders for a
+linked gate come from Apply Desk (AD7), and that ticks made on Process show
+here only from AD2.
+
+- **A card**: the template's name with a *Written* or *Owed* chip; when it
+  goes (*When an application is submitted*, *To drafts, 7 days before the
+  form closes*, *When <outcome> is released*); then *Subject* and *Body*. A
+  written template shows the sample's (`<exercise>: <template>`, and a body
+  addressed to an applicant or an evaluator); an owed one, both empty. Both
+  are read-only until AD2.
+- **Buttons**, each card's own, all disabled: *Save* until AD2, *Preview*
+  and *Reset to default* until AD7, which brings previewing and default
+  templates. The page has no *Save* of its own.
+- **Empty**: an exercise owing no template shows one card, *No emails yet*,
+  saying each email ticked on Process is listed here as a template to
+  write.

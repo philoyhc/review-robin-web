@@ -1,6 +1,6 @@
 # Segment AD1D — ApplyDesk: the exercise's chrome and Workflow card
 
-**Opened:** 2026-11-13 · **Theme:** an exercise's pages laid out as the operator's workflow: Home, a Setup row, an Operations row, and a Workflow card that steps through the timeline one item at a time; the pages as scaffolds, nothing saved · **Related:** `applydesk/guide/todo_master.md` (rulings 13, 14), `applydesk/guide/segment_AD1C_applications.md` (the Applications page), `spec/operator_ui_concept.md` (Review Robin's chrome, which this follows)
+**Opened:** 2026-11-13 · **Theme:** an exercise's pages laid out as the operator's workflow: Home, a Setup row, an Operations row, and a Workflow card that steps through the timeline one item at a time; the pages as scaffolds, nothing saved · **Related:** `applydesk/guide/todo_master.md` (rulings 13, 14), `applydesk/guide/archive/segment_AD1C_applications.md` (the Applications page), `spec/operator_ui_concept.md` (Review Robin's chrome, which this follows)
 
 ## Opportunity
 
@@ -59,14 +59,12 @@ Taken 2026-11-13 at `bf44ce575`.
 
 ## Status
 
-Building. Base `bf44ce575` for the cumulative read.
-- **The Workflow card removed** (author, 2026-11-15: derivative of the other pages, it can wait): Home and the Operations pages no longer draw it; `workflow.steps` stays, naming the current stage. Its Decision and Done-when lines below describe what was built, not what stands.
-- Rung 2: the chrome in Review Robin's styling (`applydesk/templates/applydesk/_exercise_nav.html`), its status row from `applydesk/workflow.py` (each item's state, sample values per exercise), and the pages: Process (the rounds with every rule and which step sends an email, then the timeline), Gates (a card per gate with its panel: the assessment panels on Gate 1, the interviewers on the Interview gate; the reviewer pool), Emails (each template, set up or not), Evaluations (each gate's state and progress), Extract data (Reports' content). Setup's details moved to Home; a draft's missing items link to Home's details, Process or Form. The `h1` is the page's name, the exercise's in the breadcrumb.
-- Rung 3: the Workflow card (`applydesk/templates/applydesk/operator/_workflow.html`, `workflow.steps`) on Home under the summary and on Applications, Evaluations and Extract data: a column per step grouped by round, the earliest not done marked as Next; a sent gate opens Evaluations; an outcome whose email is not set up says so; every other action inert (author).
-- The cumulative read (rungs 1–3): 13 findings, none blocking. Fixed: an outcome's email linked to the outcome, not matched by name (the second exercise disagreed across pages); the breadcrumb ends at the page, the exercise linking Home; the `h1` recorded as a deliberate difference; ruling 11 marked superseded; a sent gate always opens Evaluations, never offering Send (and not from Evaluations itself); an exercise's interviewers kept on Gates when no gate is an interview; the Workflow card's Next found by identity; the close step shows *Closed*; comments and the AD1 URL map's Home row. Rung 2 touched Applications' body only to point its Setup links at Process. Left for Process's segment: the *Decided* and *Ready* states, a not-ready gate's reason, and an action held until the steps it reads are done (every action is inert meanwhile).
-- Rung 4 (author, 2026-11-13; ruling 15): stage and round become one word, the stage. `applydesk/rounds.py` is `applydesk/stages.py`; `Round` is `Stage`, named by the operator or *Stage N*, and the stage holding the application joins the list (`Plan.application_stage`); `stages.problems` holds ruling 15's shape. The sample's stages: Applications, Review, Interview, Decision; the second exercise's second stage is left unnamed (*Stage 2*). The exercise's stored `stage` becomes `form_open`, and its current stage is worked out (`workflow.current_stage`) for the lobby. The old four-step stages list leaves Home and Process: the Workflow card is the timeline. Process's stack of stage cards is its own segment's. Its read: 8 findings, none blocking; fixed the close step's date (it read *After Dates not set*), one outcome per stage checked, the application stage's outcome drawn once in the Applications header, Home's duplicate close button, ruling 13's reversed bullet struck, and the plan's round wording.
-- Rung 5 (author, 2026-11-13): an outcome is optional, noting a result that updates the timeline; the stage holding the application may sit anywhere (a gate stage first, its outcome deciding who may apply). `stages.problems` drops the first-stage check; the Workflow card puts the form where its stage sits; the Applications table's identity columns take the application stage's name only when it is first. Its read: 6 findings, none blocking; fixed a test that could not tell the new header logic from the old (now an application stage later in the timeline, holding an outcome, with its spans counted), the gate-first current stage tested, the Process copy and docstrings that still made an outcome required, a stale plan line; the pre-application gate's rows left as an open question. Also fixed: the CSV browser tests read the proposal before the page had read the file (a race, seen once under the full run).
-- Rung 6 (author, 2026-11-13): what a stage holds is *the form*, so *application* means only the record; the page keeps its name, *Applications*. `Stage.application` is `Stage.form`, `Plan.application_stage` is `Plan.form_stage`; the sample's first stage is *Call for applications*.
+Closed 2026-11-19. Rungs 1–6 shipped. The Workflow card (rung 3) was removed on 2026-11-15 (author: derivative of the other pages, it can wait), so Decision item 6 and its Definition of done line record what was built, not what stands.
+
+- **Diverging from the Decision**: Gates folded into Process and Panels came back in its slot (ruling 20), so the Setup row is Process, Form, Panels, Emails; Applications became Dossiers (ruling 25); rounds became stages (ruling 15), the form's stage `Stage.form`. The Workflow card's steps stay as `workflow.steps`, a contract the spec records under "The Process page"; the lobby's *Stage* column reads `workflow.current_stage`.
+- **Decisions confirmed at build**: the status row replaces the heading's chips; the `h1` is the page's name and the exercise's name moves to the breadcrumb, keeping an `h1` where Review Robin has none (a deliberate difference); an outcome is optional and the form's stage may sit anywhere (rung 5).
+- **Reads**: rungs 1–3 cumulative (`bf44ce575..`), 13 findings, none blocking; rung 4, 8 findings; rung 5, 6 findings; all fixed.
+- **Close**: checked by hand; `spec-writer` not run.
 
 ## PR ladder
 
@@ -90,10 +88,10 @@ Building. Base `bf44ce575` for the cumulative read.
 
 ## Open questions
 
-- **What each Workflow step's action does** before AD2: inert (author, 2026-11-13).
-- **Outcome emails**: the templates live on Emails, the one place they are kept; Process sets which steps send one and when (author, 2026-11-13).
-- **What a gate before the application evaluates** (ruling 15 allows one first, its outcome deciding who may apply): its rows are not yet applications; presumably a roster loaded from elsewhere (Process's segment, author).
-- **`close_check.py` reads only RRW's `guide/`**: this close is checked by hand, as AD1B's and AD1C's are.
+- ~~**What each Workflow step's action does**~~: inert, then the card was removed.
+- ~~**Outcome emails**~~: kept on Emails, Process setting which steps send one (ruling 16).
+- **What a gate before the form evaluates**: open, in `applydesk/guide/todo_master.md` "Open decisions".
+- ~~**`close_check.py` reads only RRW's `guide/`**~~: checked by hand (Status).
 
 ## Out of scope
 
@@ -104,6 +102,6 @@ Building. Base `bf44ce575` for the cumulative read.
 ## Doc impact
 
 - `applydesk/spec/applications.md` — "The URL map": the operator pages renamed and regrouped (rung 2).
-- `applydesk/guide/segment_AD1_skeleton.md` — its URL map's operator rows follow (rung 2).
+- `applydesk/guide/archive/segment_AD1_skeleton.md` — its URL map's operator rows follow (rung 2).
 - `applydesk/guide/todo_master.md` — ruling 14 and the roadmap rows (rung 1); this row deleted at close. Ruling 15 and the AD1E roadmap row (rung 4).
 - `applydesk/README.md` — this plan's and the mock-ups' rows (rung 1), moved to the archive's index at close.

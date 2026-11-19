@@ -19,6 +19,8 @@
 
 ## The URL map
 
+As at AD1D (2026-11-13), kept as the record; the current map is `applydesk/spec/applications.md`, "The URL map".
+
 Paths are under `/applydesk`. Path parameters: `<id>` is an exercise's public ID, `<app>` an application's, `<dossier>` a dossier's (ruling 25; an application file's until 2026-11-15, a profile page's until AD1C). Item 2 builds every row as a placeholder.
 
 | Path | Page | Who reaches it (when wired) |
@@ -76,13 +78,12 @@ Taken 2026-11-12 at `9bf80d5`.
 
 ## Status
 
-Building. Base `573ffa3` (`main` before rung 2) for the cumulative read.
-- Rung 2 (#3818): item 1 as planned; the favicon is the author's ApplyDesk icon (2026-11-02, kept in Cordware's favicon sources), a white sheet with a tick on rose `#be123c`.
-- Rung 3: the gate admits the platform super-admin only when deployed, not a preview list as Residential's: ApplyDesk is not shipped, so it needs none yet. One template serves the seven operator sections, each a partial.
-- **Read:** one `diff-reviewer` read of `573ffa3..` at rung 3. Fixed: the application and profile IDs were looked up before their shape was checked (now `applydesk/lookups.py`, shape first, and the route modules no longer import each other); Return to draft and Withdraw take Outline-amber; disabled buttons at 0.85 opacity, as Residential's; the tests now render the blind and draft exercises' pages, hold links to `url()` by mounting under another prefix, and call health with no identity; `/me` marks an invitation-only exercise; `docs/header_chrome.md` and the doc impact caught up. Sound as read: the gate, the blind profile, the registry and packaging.
-- **Iteration rung 4** (author's browser check on Azure, 2026-11-12): the lobby shows an *Exercise Code* column, the operator's short code as an RRW session's, not the public ID; Home and Settings show the code too. Withdraw is Destructive (outline red): an applicant cannot undo it.
-- **Iteration rung 5** (author, 2026-11-12): the operator's tabs are Home, Setup, Form, Applications, Panels and Reports, with Review kept as a seventh tab, between Panels and Reports (the author's chosen order). Home shows the timeline, the current stage marked; Setup holds the timeline's setup (milestones, announcements); Form adds a preview; Applications generates applicant profiles and imports outcomes; Panels holds three rosters, assessment panels, the reviewer pool applicants choose from, and interviewers; Reports collates every evaluation response, Review Robin's included, beside the data export. Settings, Assessors, Timeline and Export are gone; their paths are `404`. Its read, then the author: operators open every profile (author), so the list links it; profiles are made by *Generate*, not on submission; the form carries the pool's question; finished stages say *Done*; unset dates read *not set*; ruling 11 records the tabs and Panels.
-- **Iteration rung 6** (author, 2026-11-12): a fourth sample exercise, *Graduate Travel Grant 2027* (`n5wg8tjr3e`), as just created: a name and nothing else. Home's Next step lists what a draft still lacks (Exercise Code, Summary, Dates, Who may apply, Application form), each linking to the tab that sets it, and a draft with nothing missing reads *Ready to publish*; the lobby, Home, Setup, Form and Review show empty or not-yet states. Its read: the applicant pages still read the global form constants, unreachable for a draft (they list and open only published exercises); switching them to `form_of` waits for its own slice.
+Closed 2026-11-19. Both items shipped (#3818 and rung 3), then iteration rungs 4–6 at the author's browser checks. Every page has since been rebuilt by its own segment (AD1B to AD1K), so the URL map above is AD1's, not today's.
+
+- **Diverging from the Decision**: the gate admits the platform super-admin when deployed, not a preview list, as Apply Desk is not shipped; `/` and `/operator` land by role (ruling 18) rather than drawing a landing page; the operator's tabs were regrouped by AD1D and later rulings (Setup became Process, Applications became Dossiers, Gates folded into Process, Panels came back, Reports became Extract data).
+- **Decisions confirmed at build**: an ID's shape is checked before any lookup (`applydesk/lookups.py`), and the route modules never import each other; the lobby shows the Exercise code, never the public ID; one template serves the operator's sections, each a partial.
+- **Reads**: one `diff-reviewer` read of `573ffa3..` at rung 3; its findings fixed in that rung.
+- **Close**: checked by hand, as `close_check.py` reads only RRW's `guide/`; `spec-writer` not run. The spec's URL map and headers were rewritten from the code at this close (findings AD-111, AD-112).
 
 ## PR ladder
 
@@ -106,7 +107,7 @@ Building. Base `573ffa3` (`main` before rung 2) for the cumulative read.
 
 ## Open questions
 
-- **`close_check.py` reads only RRW's `guide/`**, as Residential found at 1A. Check AD1's close by hand, as 1A was, unless the tool has learned the other folders by then (author).
+- ~~**`close_check.py` reads only RRW's `guide/`**~~: checked by hand (Status).
 
 ## Out of scope
 

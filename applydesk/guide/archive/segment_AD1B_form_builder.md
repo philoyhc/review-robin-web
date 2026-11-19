@@ -1,6 +1,6 @@
 # Segment AD1B — ApplyDesk: the Form page, a working scaffold
 
-**Opened:** 2026-11-12 · **Theme:** the application form builder on the operator's Form tab, every on-screen move working in the browser, nothing saved · **Related:** `applydesk/guide/segment_AD1_skeleton.md` (the placeholder this replaces), `applydesk/guide/todo_master.md` (rulings 3, 11; AD4 wires the form), `residentialapps/spec/residentialops_ui.md` (the columns), RRW's instrument designer (`app/web/templates/operator/instruments_index.html`: data types, bounds, Replicate)
+**Opened:** 2026-11-12 · **Theme:** the application form builder on the operator's Form tab, every on-screen move working in the browser, nothing saved · **Related:** `applydesk/guide/archive/segment_AD1_skeleton.md` (the placeholder this replaces), `applydesk/guide/todo_master.md` (rulings 3, 11; AD4 wires the form), `residentialapps/spec/residentialops_ui.md` (the columns), RRW's instrument designer (`app/web/templates/operator/instruments_index.html`: data types, bounds, Replicate)
 
 ## Opportunity
 
@@ -111,6 +111,6 @@ Taken 2026-11-12 at `666cf88`.
 ## Doc impact
 
 - `applydesk/spec/applications.md` — the Form tab's page: cards, types, visibility, moves, nothing saved (rungs 2–3).
-- `applydesk/guide/segment_AD1_skeleton.md` — the Form row of the URL map points here (rung 2).
+- `applydesk/guide/archive/segment_AD1_skeleton.md` — the Form row of the URL map points here (rung 2).
 - `applydesk/guide/todo_master.md` — ruling 12: the photo type is in the MVP, an exception to ruling 3; the AD1B roadmap row, deleted at close (rung 1); conditional questions deferred and visibility states left open (close).
 - `applydesk/README.md` — this plan's row (rung 1), moved to the archive's index at close.
