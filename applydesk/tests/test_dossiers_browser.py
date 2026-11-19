@@ -1,4 +1,4 @@
-"""The Applications page in a real Chromium (segment AD1C): a gate's chip
+"""The Dossiers page in a real Chromium (segment AD1C, ruling 25): a gate's chip
 cycles, an outcome is picked and dated, the counts follow, a release asks
 to confirm, rows filter and are set in bulk. Without a Chromium build the
 test skips, saying why; ``RRW_REQUIRE_BROWSER=1`` (set by CI) turns that

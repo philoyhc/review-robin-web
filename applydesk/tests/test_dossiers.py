@@ -1,6 +1,7 @@
-"""The Applications page (segment AD1C, ruling 13): the model exercise's
-stages of gates and outcomes as columns, every application a row; the
-sample's logic (`applydesk/stages.py`)."""
+"""The Dossiers page (the Applications page until ruling 25; segment
+AD1C, ruling 13): the model exercise's stages of gates and outcomes as
+columns, every application a row; the sample's logic
+(`applydesk/stages.py`)."""
 
 from __future__ import annotations
 
