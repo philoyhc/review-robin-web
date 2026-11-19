@@ -398,6 +398,27 @@ def build(
     return final, frozenset(sends)
 
 
+def keys_of(sent: Any) -> dict[str, str]:
+    """Each gate's and outcome's key as the page sent it, to the key
+    ``build`` gives it (timeline order: ``g1``…, ``o1``…), for what else
+    names a column by key: the templates Emails keeps by outcome."""
+    keys: dict[str, str] = {}
+    gates = outcomes = 0
+    for st in _items(sent, "stages"):
+        for g in _items(st, "gates"):
+            gates += 1
+            key = cast(dict[str, Any], g).get("key") if isinstance(g, dict) else None
+            if isinstance(key, str):
+                keys[key] = f"g{gates}"
+        o = cast(dict[str, Any], st).get("outcome") if isinstance(st, dict) else None
+        if isinstance(o, dict):
+            outcomes += 1
+            key = cast(dict[str, Any], o).get("key")
+            if isinstance(key, str):
+                keys[key] = f"o{outcomes}"
+    return keys
+
+
 def _rekeyed(st: Stage, keys: dict[str, str], results: Results) -> Stage:
     columns = tuple(
         replace(c, key=keys[c.key], rule=_rekey_rule(c.rule, keys, results))

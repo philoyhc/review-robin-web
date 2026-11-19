@@ -18,9 +18,9 @@ import time
 from collections.abc import Awaitable, Callable, MutableMapping
 from contextvars import ContextVar
 from dataclasses import dataclass, field, replace
-from http.cookies import SimpleCookie
 from typing import Any
 
+from starlette.requests import cookie_parser
 from starlette.responses import Response
 
 from applydesk import sample_data
@@ -223,15 +223,15 @@ class Middleware:
             await self.app(scope, receive, send)
             return
         found: str | None = None
-        for name, value in scope.get("headers", []):
+        headers: list[tuple[bytes, bytes]] = scope.get("headers", [])
+        for name, value in headers:
             if name == b"cookie":
-                jar: SimpleCookie = SimpleCookie()
-                try:
-                    jar.load(value.decode("latin-1"))
-                except Exception:  # a malformed header is no token
-                    continue
+                # Starlette's lenient parser, as Request.cookies: SimpleCookie
+                # drops the whole header for one odd cookie beside ours (a
+                # space, bare quotes), losing the token (cold read).
+                jar: dict[str, str] = cookie_parser(value.decode("latin-1"))
                 if COOKIE in jar:
-                    found = jar[COOKIE].value
+                    found = jar[COOKIE]
         reset = _token.set(found)
         renew = found
 

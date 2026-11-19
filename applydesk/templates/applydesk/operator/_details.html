@@ -128,9 +128,10 @@
     // for this browser (segment AD1N); a sample's stays on the page.
     if (card.dataset.dtSave) {
       fetch(card.dataset.dtSave, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(v), credentials: "same-origin" })
-        .then(function (r) { return r.json().then(function (body) { return [r.ok, body]; }); })
+        .then(function (r) { return r.json().then(function (body) { return [r.ok, body]; }, function () { return [false, null]; }); })
         .then(function (got) {
-          if (!got[0]) { refuse(field("name"), (got[1] && got[1].error) || "Not saved."); return; }
+          // The field a refusal names, else Name (cold read).
+          if (!got[0]) { refuse(field((got[1] && got[1].field) || "name"), (got[1] && (got[1].error || got[1].detail)) || "Not saved."); return; }
           kept = v; loaded = v; show(v); open(false); draw();
           said.textContent = "Saved to this scratch exercise.";
         })

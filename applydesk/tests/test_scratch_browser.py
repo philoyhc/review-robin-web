@@ -233,3 +233,26 @@ def test_panels_saved_into_a_scratch_exercise_survive_a_reload(page: Page) -> No
     page.goto(home + "/process")
     pools = page.evaluate("JSON.parse(document.getElementById('pc-pools').textContent)")
     assert pools["panel-1"]["name"] == "Readers", pools
+
+
+def test_an_email_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> None:
+    """Rung 6: the receipt a new exercise owes, started from the default,
+    saved, written after a reload; a tag of another kind refused."""
+    page.goto(LOBBY)
+    page.get_by_role("button", name="New exercise").click()
+    page.locator("[data-nx-name]").fill("Emails Walkthrough")
+    page.get_by_role("button", name="Create").click()
+    page.wait_for_url(f"{LOBBY}/*")
+    home = page.url
+    page.goto(home + "/emails")
+    card = page.locator('[data-em-item="receipt"]')
+    assert card.locator("[data-em-chip]").text_content() == "Owed"
+    card.locator('[data-em-act="reset"]').click()
+    card.locator('[data-em-act="save"]').click()
+    card.locator("[data-em-said]").filter(has_text="Saved to this scratch exercise.").wait_for()
+    assert card.locator("[data-em-chip]").text_content() == "Written"
+    page.reload()
+    card = page.locator('[data-em-item="receipt"]')
+    assert card.locator("[data-em-chip]").text_content() == "Written"
+    assert card.locator("[data-em-subject]").input_value().startswith("$exercise_name")
+    assert card.locator('[data-em-act="save"]').is_disabled()

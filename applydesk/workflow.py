@@ -329,11 +329,91 @@ def sends(exercise_id: str, item: str, audience: str) -> bool:
     return (item, audience) in _SENDS.get(exercise_id, _DEFAULT_SENDS)
 
 
+#: A scratch exercise's templates, by (item, audience): (subject, body),
+#: as each Emails card last saved it (segment AD1N rung 6).
+SCRATCH_PAGE = "emails"
+_TAG = re.compile(r"\$\$|\$(?:([A-Za-z_][A-Za-z0-9_]*)|\{([A-Za-z_][A-Za-z0-9_]*)\})")
+
+
+def scratch_templates(exercise_id: str) -> dict[tuple[str, str], tuple[str, str]] | None:
+    """A scratch exercise's saved templates, else None (not a scratch one)."""
+    from applydesk import scratch
+
+    if not scratch.is_scratch(exercise_id):
+        return None
+    held = scratch.page(exercise_id, SCRATCH_PAGE)
+    return cast(dict[tuple[str, str], tuple[str, str]], held) if isinstance(held, dict) else {}
+
+
+#: Each Process save's number on a scratch exercise: an Emails page
+#: opened before the latest one names its outcomes by keys that may now be
+#: another outcome's, so its saves are refused (Codex on #4028).
+REVISION_PAGE = "process_revision"
+
+
+def process_revision(exercise_id: str) -> int:
+    """How many times Process has saved into a scratch exercise."""
+    from applydesk import scratch
+
+    held = scratch.page(exercise_id, REVISION_PAGE)
+    return held if isinstance(held, int) else 0
+
+
+def rekey_templates(exercise_id: str, keys: dict[str, str]) -> None:
+    """A scratch exercise's templates after Process renumbers its outcomes
+    (``process_save.keys_of``): each outcome's follows it to its new key,
+    a removed outcome's is dropped, the form's stay (cold read: a
+    template must never land on another outcome)."""
+    from applydesk import scratch
+
+    own = scratch_templates(exercise_id)
+    if not own:
+        return
+    kept: dict[tuple[str, str], tuple[str, str]] = {}
+    for (item, audience), text in own.items():
+        if item in _FORM_MAIL:
+            kept[(item, audience)] = text
+        elif item in keys:
+            kept[(keys[item], audience)] = text
+    scratch.save_page(exercise_id, SCRATCH_PAGE, kept)
+
+
+def foreign_tags(kind: str, text: str) -> tuple[str, ...]:
+    """The merge tags a template's text names that its kind does not take
+    (another kind's): refused on Save, as the card's script refuses them.
+    An unknown tag stays as typed."""
+    every = {f for fields in EMAIL_FIELDS.values() for f in fields}
+    mine = set(EMAIL_FIELDS[kind])
+    out: list[str] = []
+    for m in _TAG.finditer(text):
+        tag = m.group(1) or m.group(2)
+        if tag and tag in every and tag not in mine and tag not in out:
+            out.append(tag)
+    return tuple(out)
+
+
+def template_text(exercise_id: str, email: Email) -> tuple[str, str]:
+    """A card's subject and body as the page opens it: a scratch
+    exercise's as saved (empty if never); a sample's written one its
+    kind's default, an owed one empty."""
+    own = scratch_templates(exercise_id)
+    if own is not None:
+        return own.get((email.item, email.audience), ("", ""))
+    return DEFAULT_TEMPLATES[email.kind] if email.ok else ("", "")
+
+
 def emails(exercise_id: str) -> tuple[Email, ...]:
     """Every template the exercise's Process makes owed, in timeline
-    order: the form's, then each outcome's per audience (ruling 16)."""
+    order: the form's, then each outcome's per audience (ruling 16). A
+    scratch exercise's is written once its card saved a subject and a
+    body."""
     plan = stages.plan_of(exercise_id)
-    written = _WRITTEN.get(exercise_id, frozenset())
+    own = scratch_templates(exercise_id)
+    written = (
+        frozenset(k for k, (subject, body) in own.items() if subject.strip() and body.strip())
+        if own is not None
+        else _WRITTEN.get(exercise_id, frozenset())
+    )
     out: list[Email] = []
     for st in plan.stages:
         if st.form:

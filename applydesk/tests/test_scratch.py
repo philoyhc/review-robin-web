@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterator
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -163,6 +164,16 @@ def test_a_post_from_another_site_is_refused() -> None:
         ).status_code
         == 415
     )
+
+
+def _post_process(client: TestClient, made: str, body: object) -> Any:
+    """Process's Save as the page sends it: with the revision the page
+    opened at, read off the page, unless the test gives one."""
+    if isinstance(body, dict) and "revision" not in body:
+        page = client.get(f"{LOBBY}/{made}/process").text
+        found = re.search(r'data-revision="(\d+)"', page)
+        body = {**body, "revision": int(found.group(1)) if found else 0}  # pyright: ignore[reportUnknownVariableType]  -- a test's dict
+    return client.post(f"{LOBBY}/{made}/process", json=body)
 
 
 def _field(label: str, **over: object) -> dict[str, object]:
@@ -344,7 +355,7 @@ def test_process_saves_into_the_scratch() -> None:
     assert (
         'data-fb-snapshot="applydeskProcessSnapshot"' in client.get(f"{LOBBY}/{made}/process").text
     )
-    reply = client.post(f"{LOBBY}/{made}/process", json=_process())
+    reply = _post_process(client, made, _process())
     assert reply.status_code == 200, reply.text
     process = client.get(f"{LOBBY}/{made}/process").text
     assert 'value="Panel read"' in process and 'data-key="g1"' in process
@@ -429,7 +440,7 @@ def test_process_save_is_checked() -> None:
             "more than 3",
         ),
     ):
-        refused = client.post(f"{LOBBY}/{made}/process", json=bad)
+        refused = _post_process(client, made, bad)
         assert refused.status_code == 400 and reason in refused.json()["error"], (
             bad,
             refused.text,
@@ -457,7 +468,7 @@ def test_a_rule_naming_a_removed_gate_never_reads_another() -> None:
     # Gate g1 removed on the page; g2 is all that is left, and the rule
     # still names g1.
     sent = {"stages": [_stage("Review", gates=[_gate("g2", "Second")], outcome=outcome)]}
-    assert client.post(f"{LOBBY}/{made}/process", json=sent).status_code == 200
+    assert _post_process(client, made, sent).status_code == 200
     reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- the request's context, outside one
     try:
         plan = stages.plan_of(made)
@@ -473,7 +484,7 @@ def test_a_rule_naming_a_removed_gate_never_reads_another() -> None:
         "rule": {"when": [["res", "g2.r2", "ge", "3"]], "then": "Yes", "otherwise": "No"},
     }
     sent = {"stages": [_stage("Review", gates=[_gate("g2", "Second")], outcome=two)]}
-    assert client.post(f"{LOBBY}/{made}/process", json=sent).status_code == 200
+    assert _post_process(client, made, sent).status_code == 200
     reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- as above
     try:
         kept = stages.plan_of(made).columns[1]
@@ -484,7 +495,7 @@ def test_a_rule_naming_a_removed_gate_never_reads_another() -> None:
     for bad in ("NaN", "Infinity", "-inf", "33.3", "-5", ""):
         weighed = {**outcome, "weights": {"g2.r1": bad, "g2.r2": "50"}}
         sent = {"stages": [_stage("Review", gates=[_gate("g2", "Second")], outcome=weighed)]}
-        refused = client.post(f"{LOBBY}/{made}/process", json=sent)
+        refused = _post_process(client, made, sent)
         assert refused.status_code == 400 and "not all whole percents" in refused.json()["error"], (
             bad
         )
@@ -505,7 +516,7 @@ def test_an_unfinished_result_saves_and_a_blank_count_is_refused() -> None:
         "ignore_zero": False,
     }
     gate = _gate("g1", "Read", fields=[], results=[loose])
-    reply = client.post(f"{LOBBY}/{made}/process", json={"stages": [_stage("R", gates=[gate])]})
+    reply = _post_process(client, made, {"stages": [_stage("R", gates=[gate])]})
     assert reply.status_code == 200, reply.text
     process = client.get(f"{LOBBY}/{made}/process").text
     # No field made up in place of the ones removed (Codex on #4026).
@@ -514,7 +525,7 @@ def test_an_unfinished_result_saves_and_a_blank_count_is_refused() -> None:
     assert "No field chosen" in process and "data-rf=" not in saved
     # A gate with no source yet keeps its Total (Codex on #4026).
     bare = _gate("g1", "Read", sources=[], total={"min": 1, "max": 2})
-    reply = client.post(f"{LOBBY}/{made}/process", json={"stages": [_stage("R", gates=[bare])]})
+    reply = _post_process(client, made, {"stages": [_stage("R", gates=[bare])]})
     assert reply.status_code == 200, reply.text
     process = client.get(f"{LOBBY}/{made}/process").text
     total = process[process.index('data-ps="total-min"') - 200 :][:600]
@@ -524,9 +535,7 @@ def test_an_unfinished_result_saves_and_a_blank_count_is_refused() -> None:
         ([{"kind": "panel", "ref": "", "min": 1, "max": 2}], {"min": 1, "max": None}),
     ):
         blank = _gate("g1", "Read", sources=sources, total=total)
-        refused = client.post(
-            f"{LOBBY}/{made}/process", json={"stages": [_stage("R", gates=[blank])]}
-        )
+        refused = _post_process(client, made, {"stages": [_stage("R", gates=[blank])]})
         assert refused.status_code == 400 and "whole numbers" in refused.json()["error"]
 
 
@@ -652,7 +661,7 @@ def test_a_panel_made_on_form_or_process_joins_the_panels() -> None:
         "pools": {"new-1": {"name": "Markers", "members": [["Di Mark", "di@example.edu"]]}},
         "stages": [_stage("Review", gates=[gate])],
     }
-    reply = client.post(f"{LOBBY}/{made}/process", json=process)
+    reply = _post_process(client, made, process)
     assert reply.status_code == 200, reply.text
     panels = client.get(f"{LOBBY}/{made}/panels").text
     assert 'data-panel="panel-2"' in panels and "Markers" in panels and "Referees" in panels
@@ -660,3 +669,224 @@ def test_a_panel_made_on_form_or_process_joins_the_panels() -> None:
     lost = {**form, "pools": {}}
     refused = client.post(f"{LOBBY}/{made}/form", json=lost)
     assert refused.status_code == 400 and "panel made on this page" in refused.json()["error"]
+
+
+def test_an_email_saves_into_the_scratch() -> None:
+    """Rung 6: an Emails card's template kept by its item and audience;
+    written once it has a subject and a body, which the status row follows."""
+    client = _client()
+    made = _create(client)
+    page = client.get(f"{LOBBY}/{made}/emails").text
+    assert 'data-em-item="receipt"' in page and "data-em-save=" in page
+    assert ">Owed<" in page
+    reply = client.post(
+        f"{LOBBY}/{made}/emails",
+        json={
+            "item": "receipt",
+            "audience": "Applicants",
+            "name": "Stage 1: Receipt · Applicants",
+            "revision": 0,
+            "subject": "Received: $exercise_name",
+            "body": "Dear $applicant_name, thank you.",
+        },
+    )
+    assert reply.status_code == 200 and reply.json() == {"saved": True, "written": True}, reply.text
+    page = client.get(f"{LOBBY}/{made}/emails").text
+    assert 'value="Received: $exercise_name"' in page and "Dear $applicant_name, thank you." in page
+    assert ">Written<" in page and ">Owed<" not in page
+    # A subject alone keeps it owed.
+    reply = client.post(
+        f"{LOBBY}/{made}/emails",
+        json={
+            "item": "receipt",
+            "audience": "Applicants",
+            "name": "Stage 1: Receipt · Applicants",
+            "revision": 0,
+            "subject": "Hi",
+            "body": " ",
+        },
+    )
+    assert reply.json() == {"saved": True, "written": False}
+    assert ">Owed<" in client.get(f"{LOBBY}/{made}/emails").text
+
+
+def test_email_save_is_checked() -> None:
+    client = _client()
+    made = _create(client)
+    good = {
+        "item": "receipt",
+        "audience": "Applicants",
+        "name": "Stage 1: Receipt · Applicants",
+        "revision": 0,
+        "subject": "S",
+        "body": "B",
+    }
+    for bad, reason in (
+        ({**good, "item": "o9"}, "not one Process owes"),
+        ({**good, "name": "Stage 2: Receipt · Applicants"}, "not one Process owes"),
+        ({**good, "revision": 1}, "not one Process owes"),
+        ({**good, "audience": "Evaluators"}, "not one Process owes"),
+        ({**good, "subject": 3}, "not one Process owes"),
+        ({**good, "body": "x" * 20001}, "at most"),
+        ({**good, "body": "Your outcome: $outcome"}, "$outcome is not a tag"),
+    ):
+        refused = client.post(f"{LOBBY}/{made}/emails", json=bad)
+        assert refused.status_code == 400 and reason in refused.json()["error"], (bad, refused.text)
+    # An unknown tag stays as typed.
+    assert (
+        client.post(f"{LOBBY}/{made}/emails", json={**good, "body": "$nonsense"}).status_code == 200
+    )
+    assert client.post(f"{LOBBY}/wa9juxbc2t/emails", json=good).status_code == 404
+
+
+def test_templates_follow_their_outcome_when_process_renumbers() -> None:
+    """Cold read: removing an earlier outcome renumbers the later one; its
+    template goes with it, and the removed one's is dropped, never landing
+    on another outcome."""
+    client = _client()
+    made = _create(client)
+
+    def outcome(key: str, label: str) -> dict[str, object]:
+        return {
+            "key": key,
+            "label": label,
+            "due": "",
+            "values": ["Yes", "No"],
+            "weights": {},
+            "rule": None,
+            "applicants_email": True,
+            "evaluators_email": False,
+        }
+
+    both = {
+        "stages": [
+            _stage("Shortlist", outcome=outcome("onew1", "Shortlist")),
+            _stage("Award", outcome=outcome("onew2", "Award")),
+        ]
+    }
+    assert _post_process(client, made, both).status_code == 200
+    for key, stage, text in (("o1", "Shortlist", "First"), ("o2", "Award", "Second")):
+        reply = client.post(
+            f"{LOBBY}/{made}/emails",
+            json={
+                "item": key,
+                "audience": "Applicants",
+                "name": f"{stage}: Outcome · Applicants",
+                "revision": 1,
+                "subject": text,
+                "body": text,
+            },
+        )
+        assert reply.status_code == 200, reply.text
+    # Shortlist's stage removed: Award's outcome is o1 now.
+    only = {"stages": [_stage("Award", outcome=outcome("o2", "Award"))]}
+    assert _post_process(client, made, only).status_code == 200
+    page = client.get(f"{LOBBY}/{made}/emails").text
+    card = page[page.index('data-em-item="o1"') :][:3000]
+    assert 'value="Second"' in card and "First" not in page
+    # A tab still naming the old o2 card is refused, not saved onto o1.
+    stale = client.post(
+        f"{LOBBY}/{made}/emails",
+        json={
+            "item": "o1",
+            "audience": "Applicants",
+            "name": "Shortlist: Outcome · Applicants",
+            "revision": 2,
+            "subject": "x",
+            "body": "x",
+        },
+    )
+    assert stale.status_code == 400 and "reload Emails" in stale.json()["error"]
+
+
+def test_an_odd_cookie_beside_the_token_does_not_lose_it() -> None:
+    """Cold read: a co-hosted cookie with a space in it keeps the scratch
+    token readable (Starlette's parser, not SimpleCookie)."""
+    client = _client()
+    made = _create(client)
+    token = client.cookies[scratch.COOKIE]
+    odd = TestClient(host_with(("applydesk",))[0], follow_redirects=False)
+    reply = odd.get(
+        f"{LOBBY}/{made}", headers={"cookie": f'other=a b c; quoted="x; {scratch.COOKIE}={token}'}
+    )
+    assert reply.status_code == 200
+
+
+def test_too_large_a_post_says_so() -> None:
+    client = _client()
+    made = _create(client)
+    huge = {"title": "", "description": "", "cards": [], "pad": "x" * (scratch.MAX_BODY + 1)}
+    reply = client.post(f"{LOBBY}/{made}/form", json=huge)
+    assert reply.status_code == 413 and "256 KiB" in reply.json()["detail"]
+
+
+def test_a_details_refusal_names_its_field() -> None:
+    client = _client()
+    made = _create(client)
+    good = {
+        "name": "N",
+        "code": "",
+        "description": "",
+        "contact": "nope",
+        "timezone": "Europe/London",
+        "eligibility": "Invitation only",
+        "blind": False,
+    }
+    reply = client.post(f"{LOBBY}/{made}/details", json=good)
+    assert reply.status_code == 400 and reply.json()["field"] == "contact"
+
+
+def test_an_emails_page_older_than_process_s_last_save_is_refused() -> None:
+    """Codex on #4028: two stages may share a name, so a card opened before
+    Process last saved is refused by revision, not judged by its name."""
+    client = _client()
+    made = _create(client)
+
+    def outcome(key: str) -> dict[str, object]:
+        return {
+            "key": key,
+            "label": "Result",
+            "due": "",
+            "values": ["Yes", "No"],
+            "weights": {},
+            "rule": None,
+            "applicants_email": True,
+            "evaluators_email": False,
+        }
+
+    twins = {
+        "stages": [
+            _stage("Review", outcome=outcome("onew1")),
+            _stage("Review", outcome=outcome("onew2")),
+        ]
+    }
+    assert _post_process(client, made, twins).status_code == 200
+    assert 'data-em-revision="1"' in client.get(f"{LOBBY}/{made}/emails").text
+    only = {"stages": [_stage("Review", outcome=outcome("o2"))]}
+    assert _post_process(client, made, only).status_code == 200
+    # The first stage's card, opened at revision 1: same item and name as the
+    # survivor now has, refused all the same.
+    stale = {
+        "item": "o1",
+        "audience": "Applicants",
+        "name": "Review: Outcome · Applicants",
+        "revision": 1,
+        "subject": "x",
+        "body": "x",
+    }
+    refused = client.post(f"{LOBBY}/{made}/emails", json=stale)
+    assert refused.status_code == 400 and "reload Emails" in refused.json()["error"]
+    fresh = {**stale, "revision": 2}
+    assert client.post(f"{LOBBY}/{made}/emails", json=fresh).status_code == 200
+
+
+def test_a_process_page_older_than_the_last_save_is_refused() -> None:
+    """Codex on #4028: a second tab's older snapshot is refused before it
+    renumbers anything, so no template moves onto another outcome."""
+    client = _client()
+    made = _create(client)
+    first = {"stages": [_stage("One")], "revision": 0}
+    assert client.post(f"{LOBBY}/{made}/process", json=first).status_code == 200
+    stale = client.post(f"{LOBBY}/{made}/process", json={**first, "revision": 0})
+    assert stale.status_code == 400 and "reload" in stale.json()["error"]
+    assert client.post(f"{LOBBY}/{made}/process", json={**first, "revision": 1}).status_code == 200

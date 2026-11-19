@@ -111,6 +111,15 @@ _ELIGIBILITY = ("Open to all signed in", "Invitation only", "Not set")
 _EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 
 
+class _Refusal(scratch.Refused):
+    """A Details refusal naming the field it is about, so the card points
+    there rather than at Name (cold read)."""
+
+    def __init__(self, field: str, message: str) -> None:
+        super().__init__(message)
+        self.field = field
+
+
 def _details(exercise: sample_data.Exercise, v: dict[str, Any]) -> dict[str, Any]:
     """Details as Lock sends them, checked as the card checks them; the
     reason for the first fault, else the fields for ``scratch.update``."""
@@ -121,9 +130,9 @@ def _details(exercise: sample_data.Exercise, v: dict[str, Any]) -> dict[str, Any
         raise scratch.Refused("The details are malformed.")
     name, code = str(text["name"]).strip(), str(text["code"]).strip()
     if not name or len(name) > 200:
-        raise scratch.Refused("A name of 1 to 200 characters is needed.")
+        raise _Refusal("name", "A name of 1 to 200 characters is needed.")
     if len(code) > 40:
-        raise scratch.Refused("An exercise code is at most 40 characters.")
+        raise _Refusal("code", "An exercise code is at most 40 characters.")
     clash = next(
         (
             e
@@ -133,17 +142,17 @@ def _details(exercise: sample_data.Exercise, v: dict[str, Any]) -> dict[str, Any
         None,
     )
     if clash:
-        raise scratch.Refused(f"{code} is already {clash.name}'s code.")
+        raise _Refusal("code", f"{code} is already {clash.name}'s code.")
     contact = str(text["contact"]).strip()
     if len(str(text["description"]).strip()) > 2000:
-        raise scratch.Refused("A description is at most 2,000 characters.")
+        raise _Refusal("description", "A description is at most 2,000 characters.")
     if contact and not _EMAIL.fullmatch(contact):
-        raise scratch.Refused("A help contact is an email address.")
+        raise _Refusal("contact", "A help contact is an email address.")
     zone = str(text["timezone"])
     if zone not in sample_data.TIMEZONES:
-        raise scratch.Refused("That timezone is not offered.")
+        raise _Refusal("timezone", "That timezone is not offered.")
     if text["eligibility"] not in _ELIGIBILITY:
-        raise scratch.Refused("Who may apply is not one of the choices.")
+        raise _Refusal("eligibility", "Who may apply is not one of the choices.")
     return {
         "name": name,
         "code": code,
@@ -155,6 +164,11 @@ def _details(exercise: sample_data.Exercise, v: dict[str, Any]) -> dict[str, Any
     }
 
 
+#: What a scratch post past ``scratch.MAX_BODY`` is told (cold read: the
+#: plan's "past a limit the page says so").
+_TOO_LARGE = "Not saved: a page posts at most 256 KiB to a scratch exercise."
+
+
 async def _scratch_json(request: Request, exercise_id: str) -> tuple[sample_data.Exercise, Any]:
     """A Setup page's post into a scratch exercise (segment AD1N): from
     Apply Desk's own page, JSON, at most ``scratch.MAX_BODY``; 404 for an
@@ -164,10 +178,10 @@ async def _scratch_json(request: Request, exercise_id: str) -> tuple[sample_data
     if not scratch.is_scratch(exercise.public_id):
         raise HTTPException(status_code=404)
     if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
-        raise HTTPException(status_code=415)
+        raise HTTPException(status_code=415, detail="Not saved: the page sent no JSON.")
     body = await request.body()
     if len(body) > scratch.MAX_BODY:
-        raise HTTPException(status_code=413)
+        raise HTTPException(status_code=413, detail=_TOO_LARGE)
     try:
         return exercise, json.loads(body)
     except ValueError:
@@ -292,6 +306,15 @@ async def exercise_process_save(request: Request, exercise_id: str) -> Response:
     stages, gates and outcomes, their rules, the emails each item ticks,
     and each stage's Draft or Published, kept for this browser."""
     exercise, sent = await _scratch_json(request, exercise_id)
+    # A page opened before Process last saved holds keys that may now name
+    # other columns, and the templates follow keys: refused before anything
+    # changes (Codex on #4028).
+    opened = cast(dict[str, Any], sent).get("revision") if isinstance(sent, dict) else None
+    if opened != workflow.process_revision(exercise.public_id):
+        return JSONResponse(
+            {"error": "Process was saved since this page opened: reload it to save."},
+            status_code=400,
+        )
     try:
         # A panel made with *+ New panel…* joins the exercise's panels
         # (rung 5), kept with the process or not at all.
@@ -301,11 +324,18 @@ async def exercise_process_save(request: Request, exercise_id: str) -> Response:
         kept = process_save.build(sent, exercise.public_id, renamed)
         scratch_panels.keep(exercise.public_id, panels)
         scratch.save_page(exercise.public_id, "process", kept)
+        # Emails keeps templates by outcome key: they follow the renumbering.
+        workflow.rekey_templates(exercise.public_id, process_save.keys_of(sent))
+        scratch.save_page(
+            exercise.public_id,
+            workflow.REVISION_PAGE,
+            workflow.process_revision(exercise.public_id) + 1,
+        )
     except (process_save.Refused, scratch.Refused, scratch_panels.Refused) as why:
         return JSONResponse({"error": str(why)}, status_code=400)
     # Gates and outcomes are renumbered on every save, and a panel it
     # adopted keyed anew: the page reloads to hold the keys kept.
-    return JSONResponse({"saved": True, "reload": True})
+    return JSONResponse({"saved": True, "reload": True, "strict": True})
 
 
 @router.post("/exercises/{exercise_id}/panels", name="applydesk_exercise_panels_save")
@@ -325,6 +355,49 @@ async def exercise_panels_save(request: Request, exercise_id: str) -> Response:
     return JSONResponse({"saved": True, "reload": True})
 
 
+@router.post("/exercises/{exercise_id}/emails", name="applydesk_exercise_email_save")
+async def exercise_email_save(request: Request, exercise_id: str) -> Response:
+    """An Emails card's *Save* on a scratch exercise (segment AD1N rung 6):
+    one template, by the item and audience Process owes it for, kept for
+    this browser, so the card, the status row and Home read it."""
+    exercise, sent = await _scratch_json(request, exercise_id)
+    got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
+    item, audience = got.get("item"), got.get("audience")
+    subject, body = got.get("subject"), got.get("body")
+    owed = next(
+        (
+            e
+            for e in workflow.emails(exercise.public_id)
+            if (e.item, e.audience, e.name) == (item, audience, got.get("name"))
+        ),
+        None,
+    )
+    # A page opened before Process last saved names outcomes by keys that
+    # may now be another's, even under the same name (two stages can share
+    # one): refused by the revision it was opened at (Codex on #4028).
+    stale = got.get("revision") != workflow.process_revision(exercise.public_id)
+    if stale or owed is None or not isinstance(subject, str) or not isinstance(body, str):
+        return JSONResponse(
+            {"error": "That email is not one Process owes now: reload Emails."},
+            status_code=400,
+        )
+    if len(subject) > 300 or len(body) > 20000:
+        return JSONResponse(
+            {"error": "A subject is at most 300 characters, a body 20,000."}, status_code=400
+        )
+    bad = workflow.foreign_tags(owed.kind, subject + "\n" + body)
+    if bad:
+        tags = ", ".join(f"${t}" for t in bad)
+        return JSONResponse({"error": f"{tags} is not a tag of this email."}, status_code=400)
+    try:
+        kept = dict(workflow.scratch_templates(exercise.public_id) or {})
+        kept[(owed.item, owed.audience)] = (subject, body)
+        scratch.save_page(exercise.public_id, workflow.SCRATCH_PAGE, kept)
+    except scratch.Refused as why:
+        return JSONResponse({"error": str(why)}, status_code=400)
+    return JSONResponse({"saved": True, "written": bool(subject.strip() and body.strip())})
+
+
 @router.post("/exercises/{exercise_id}/details", name="applydesk_exercise_details")
 async def exercise_details(request: Request, exercise_id: str) -> Response:
     """Details' *Lock* on a scratch exercise (segment AD1N): the fields
@@ -334,10 +407,10 @@ async def exercise_details(request: Request, exercise_id: str) -> Response:
     if not scratch.is_scratch(exercise.public_id):
         raise HTTPException(status_code=404)
     if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
-        raise HTTPException(status_code=415)
+        raise HTTPException(status_code=415, detail="Not saved: the page sent no JSON.")
     body = await request.body()
     if len(body) > scratch.MAX_BODY:
-        raise HTTPException(status_code=413)
+        raise HTTPException(status_code=413, detail=_TOO_LARGE)
     try:
         sent = json.loads(body)
         if not isinstance(sent, dict):
@@ -346,7 +419,8 @@ async def exercise_details(request: Request, exercise_id: str) -> Response:
         scratch.update(exercise.public_id, **changes)
     except (ValueError, scratch.Refused) as why:
         reason = str(why) if isinstance(why, scratch.Refused) else "The details are malformed."
-        return JSONResponse({"error": reason}, status_code=400)
+        field = why.field if isinstance(why, _Refusal) else "name"
+        return JSONResponse({"error": reason, "field": field}, status_code=400)
     return JSONResponse({"saved": True})
 
 
@@ -774,6 +848,8 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         emails=(owed := workflow.emails(exercise.public_id)),
         tag_rows=workflow.tag_rows(owed),
         email_defaults=workflow.DEFAULT_TEMPLATES,
+        email_text=functools.partial(workflow.template_text, exercise.public_id),
+        process_revision=workflow.process_revision(exercise.public_id),
         email_fields=workflow.EMAIL_FIELDS,
         tag_help=workflow.TAG_HELP,
         email_sample=functools.partial(_email_sample, request, exercise),
