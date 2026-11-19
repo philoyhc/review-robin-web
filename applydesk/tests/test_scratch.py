@@ -567,6 +567,19 @@ def test_panels_save_into_the_scratch() -> None:
     assert client.post(f"{LOBBY}/{made}/panels", json=again).status_code == 200
     page = client.get(f"{LOBBY}/{made}/panels").text
     assert 'data-panel="panel-1"' in page and "Peer readers" in page
+    # A page that missed its reload sends made-1 again: it is panel-1, not a
+    # new key, even once a question uses panel-1 (Codex on #4027).
+    form = {
+        "title": "",
+        "description": "",
+        "cards": [_field("Who?", type="people", pool="panel-1")],
+    }
+    assert client.post(f"{LOBBY}/{made}/form", json=form).status_code == 200
+    stale = _panels(panels=[{"key": "made-1", "name": "Peer readers"}])
+    reply = client.post(f"{LOBBY}/{made}/panels", json=stale)
+    assert reply.status_code == 200, reply.text
+    page = client.get(f"{LOBBY}/{made}/panels").text
+    assert 'data-panel="panel-1"' in page and 'data-panel="panel-2"' not in page
 
 
 def test_panels_save_is_checked() -> None:

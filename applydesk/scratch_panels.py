@@ -115,6 +115,15 @@ def build(sent: Any, exercise_id: str, in_use: frozenset[str]) -> State:
     keys: dict[str, str] = {}
     panels: list[tuple[str, str]] = []
     names: set[str] = set()
+    # A page that missed its reload after a save keyed its panels still
+    # names them ``made-1``…: by name, the saved panel it became, unless
+    # the post carries that panel under its own key too (Codex on #4027).
+    sent_keys = {
+        cast(dict[str, Any], p).get("key")
+        for p in cast(list[Any], raw_panels)
+        if isinstance(p, dict)
+    }
+    by_name = {p.name.lower(): p.key for p in before[0] if p.key not in sent_keys} if before else {}
     for raw in cast(list[Any], raw_panels):
         if not isinstance(raw, dict):
             raise Refused("A panel is malformed.")
@@ -123,7 +132,7 @@ def build(sent: Any, exercise_id: str, in_use: frozenset[str]) -> State:
         if not _KEY.fullmatch(key) or key in keys:
             raise Refused("A panel's key is malformed.")
         name = _name(panel.get("name"), names)
-        keys[key] = key if key in known else _fresh(taken)
+        keys[key] = key if key in known else by_name.pop(name.lower(), None) or _fresh(taken)
         panels.append((keys[key], name))
     retired = in_use - set(keys.values())
     if retired:
