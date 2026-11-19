@@ -12,7 +12,14 @@ from starlette.responses import Response
 from applydesk import extract, home_ops, locks, paging, sample_data, stages, timeline, workflow
 from applydesk.gate import placeholders_only
 from applydesk.lookups import exercise_or_404
-from applydesk.web import OPERATIONS_PAGES, OPERATOR_LOBBY, SETUP_PAGES, exercise_nav, render
+from applydesk.web import (
+    OPERATIONS_PAGES,
+    OPERATOR_LOBBY,
+    SETUP_PAGES,
+    exercise_nav,
+    render,
+    url_path,
+)
 
 router = APIRouter(prefix="/operator", dependencies=[Depends(placeholders_only)])
 
@@ -234,6 +241,17 @@ def extract_file(
     raise HTTPException(status_code=404)
 
 
+def _email_sample(
+    request: Request, exercise: sample_data.Exercise, email: workflow.Email
+) -> dict[str, str]:
+    """Preview's sample for an email (segment AD1L), its link under the
+    mount (a view's shaping, kept out of the template)."""
+    values = workflow.sample_values(exercise, email)
+    if "Link" in values:
+        values["Link"] = url_path(request, values["Link"])
+    return values
+
+
 @router.get("/exercises/{exercise_id}/{section}", name="applydesk_exercise_section")
 def exercise_section(request: Request, exercise_id: str, section: str) -> Response:
     exercise = exercise_or_404(exercise_id)
@@ -341,6 +359,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         emails=workflow.emails(exercise.public_id),
         email_defaults=workflow.DEFAULT_TEMPLATES,
         email_fields=workflow.EMAIL_FIELDS,
+        email_sample=functools.partial(_email_sample, request, exercise),
         sends=functools.partial(workflow.sends, exercise.public_id),
         form_state=workflow.form_state(exercise),
     )

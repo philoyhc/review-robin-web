@@ -498,6 +498,11 @@ def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> N
     subject = workflow.DEFAULT_TEMPLATES["receipt"][0]
     assert f'data-em-subject value="{subject}"' in cards[0]
     assert 'data-em-subject value=""' in cards[3] and ">Start from the default</button>" in cards[3]
+    # Preview's sample: an evaluator's email has no applicant field.
+    assert (
+        "Evaluator name" in cards[4]
+        and "Applicant name" not in cards[4].split("data-em-sample")[1][:400]
+    )
 
 
 def test_evaluations_lists_each_gate_s_progress(client: TestClient) -> None:
@@ -1804,3 +1809,25 @@ def test_a_gate_page_s_pairs_take_ticks_off_until_the_script_runs(client: TestCl
         'data-ev-tick-all aria-label="Tick every pair on this page" disabled '
         'title="Its session has opened: its pairs are Review Robin\'s to change"' in g1
     )
+
+
+def test_preview_s_sample_values_follow_each_kind() -> None:
+    """Segment AD1L: the first submitted application fills an applicant's
+    fields, the outcome's value in its row (or its tally, to evaluators),
+    and the evaluator is the first member of that stage's gate panel."""
+    e = sample_data.exercise(EX)
+    assert e is not None
+    mails = {m.name: m for m in workflow.emails(EX)}
+    receipt = workflow.sample_values(e, mails["Applications: Receipt · Applicants"])
+    assert receipt == {
+        "Applicant name": "Aisha Bello",
+        "Exercise": e.name,
+        "Application ID": "m3qx8vkt2n",
+        "Link": f"/me/exercises/{EX}",
+        "Help contact": sample_data.help_contact(e),
+    }
+    review = workflow.sample_values(e, mails["Review: Outcome · Applicants"])
+    assert (review["Stage"], review["Outcome"]) == ("Review", "Re-appointment")
+    panel = workflow.sample_values(e, mails["Interviews: Outcome · Evaluators"])
+    assert (panel["Evaluator name"], panel["Outcome"]) == ("Dr Hana Ito", "55 pending")
+    assert "Applicant name" not in panel
