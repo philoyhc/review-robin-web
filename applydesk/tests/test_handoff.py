@@ -7,11 +7,12 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 
 import pytest
 from fastapi.testclient import TestClient
 
-from applydesk import handoff, sample_data, stages
+from applydesk import handoff, sample_data, stages, workflow
 from applydesk.tests._host import host_with
 
 EX = "wa9juxbc2t"
@@ -166,3 +167,22 @@ def test_the_card_counts_and_offers_each_file(client: TestClient) -> None:
     assert f"{sent.rows('relationships')} pairs, each tagged" in card
     for kind in handoff.KINDS:
         assert f'href="{BASE}/gate_3/{kind}.csv" download data-rr-file="{kind}"' in card
+
+
+def test_the_sample_shows_each_later_link_state(client: TestClient) -> None:
+    """The second exercise's gates (author, 2026-11-19): one under way,
+    one closed in Review Robin but not pulled (ruling 57), one detached."""
+    base = "/applydesk/operator/exercises/k7mfr3pq8z/evaluations"
+    table = client.get(base).text
+    states = re.findall(r"data-gate-state>([^<]+)<", table)
+    assert states == ["Sent", "Closed", "Detached"]
+    lines = {
+        2: "Linked; its session has closed, its results not yet pulled",
+        3: "Detached: unlinked in Review Robin, so neither re-sent nor pulled",
+    }
+    for n, line in lines.items():
+        card = client.get(f"{base}/gate_{n}").text.split('id="ev-rr"')[1]
+        assert f"<dd data-rr-link>{line}</dd>" in card
+    # Both opened: their pairs are Review Robin's, as an open session's.
+    assert workflow.gate_opened("Closed", "") and workflow.gate_opened("Detached", "")
+    assert workflow.gate_sent("k7mfr3pq8z", "g2")[0] == "Closed"

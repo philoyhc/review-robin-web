@@ -94,8 +94,7 @@ Taken 2026-11-19 at `9b6006bea`.
 
 ## Open questions
 
-- **A sample gate closed in Review Robin but not yet pulled**, so *Pull final results* can be tried in a browser: add one to the second exercise (`k7mfr3pq8z`), or leave it to tests. The author decides at the scaffold.
-- **A detached sample gate**, for the same reason. Decided with the one above.
+- **Sample gates for the later states**: answered (author, 2026-11-19): the second exercise (`k7mfr3pq8z`) gains *Second reading*, closed in Review Robin and not yet pulled (*Closed*), and *Moderation*, detached (*Detached*); both count as opened.
 
 ## Out of scope
 

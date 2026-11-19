@@ -30,8 +30,8 @@
     <label class="fc-l">Session code<input class="fc-in" type="text" maxlength="64" value="{{ bundle.code }}" data-rr-code{{ rr_off }}></label>
   </div>
   <dl class="facts">
-    <dt>Link</dt><dd data-rr-link>{% if state[0] == "Results in" %}Linked; its results are in{% elif sent %}Linked; its session is open{% elif state[0] == "Sent" %}Linked; sent, its session not yet open{% else %}Not linked: nothing sent yet{% endif %}</dd>
-    <dt>Last send</dt><dd data-rr-last>{% if state[0] in ("Sent", "Results in") %}Sent (sample){% else %}<span class="muted">—</span>{% endif %}</dd>
+    <dt>Link</dt><dd data-rr-link>{% if state[0] == "Results in" %}Linked; its results are in{% elif state[0] == "Closed" %}Linked; its session has closed, its results not yet pulled{% elif state[0] == "Detached" %}Detached: unlinked in Review Robin, so neither re-sent nor pulled{% elif sent %}Linked; its session is open{% elif state[0] == "Sent" %}Linked; sent, its session not yet open{% else %}Not linked: nothing sent yet{% endif %}</dd>
+    <dt>Last send</dt><dd data-rr-last>{% if state[0] not in ("Not ready", "Ready") %}Sent (sample){% else %}<span class="muted">—</span>{% endif %}</dd>
   </dl>
   <h3>What is sent</h3>
   {# The four files, built from the gate's pairs and card as saved

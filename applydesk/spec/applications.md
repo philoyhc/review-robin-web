@@ -416,8 +416,8 @@ but the lobby's *Stage* column reads:
   `evaluators_summary`); a new gate, and an Outline jump to one, open the
   *Gate* card for its name. Its window is its own dates, else the stage's.
   The gate is *fixed* once its Review Robin session has opened
-  (`workflow.gate_opened`: *Results in*, or *Sent* with its session under
-  way): every control in it is disabled and a line says so, a revert of its
+  (`workflow.gate_opened`: *Results in*, *Closed* in Review Robin and not
+  yet pulled, *Detached* there, or *Sent* with its session under way): every control in it is disabled and a line says so, a revert of its
   stage leaving it so (ruling 29). Sent but unopened, it is still changed
   here, each change re-sent, unless its stage is published ("Stage
   status"). Before it is sent a gate is *Ready* only when its stage is
@@ -790,7 +790,9 @@ keeps all of them.
   session's name and code, derived as *exercise name — gate label* and
   *public ID*`-g`*n* (ruling 56); the link (*Not linked: nothing sent
   yet*, *Linked; sent, its session not yet open*, *Linked; its session is
-  open*, *Linked; its results are in*); the last send; *What is sent*;
+  open*, *Linked; its session has closed, its results not yet pulled*,
+  *Detached: unlinked in Review Robin, so neither re-sent nor pulled*,
+  *Linked; its results are in*); the last send; *What is sent*;
   a progress row per paired evaluator; and *Send to Review Robin*,
   *Re-send*, *Pull results*, *Invite evaluators* and *Remind those not
   done*, inert until the segment's later rungs.

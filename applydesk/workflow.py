@@ -25,7 +25,14 @@ _GATES: dict[str, dict[str, tuple[str, str]]] = {
         # pairs being approved on Evaluations, not yet sent: its state is
         # derived (gate_readiness, AD-33).
     },
-    "k7mfr3pq8z": {"g1": ("Sent", "3 of 5 reviewed")},
+    # Ruling 57's states (segment AD1M): the second reading's session
+    # closed in Review Robin, its results waiting for *Pull final
+    # results*; the moderation unlinked there, so detached here.
+    "k7mfr3pq8z": {
+        "g1": ("Sent", "3 of 5 reviewed"),
+        "g2": ("Closed", "4 of 4 reviewed"),
+        "g3": ("Detached", "2 of 4 reviewed when unlinked"),
+    },
 }
 
 
@@ -188,21 +195,27 @@ def form_state(exercise: Exercise) -> str:
     return "Open" if exercise.form_open else "Closed"
 
 
+#: A gate's states once sent (segment AD1M): *Closed* is a session
+#: Review Robin has closed whose results are not yet pulled (ruling 57);
+#: *Detached* one unlinked there, re-sent and pulled no more.
+SENT_STATES = ("Sent", "Closed", "Detached", "Results in")
+
+
 def gate_opened(state: str, line: str) -> bool:
     """Whether a gate's Review Robin session has opened (ruling 29): its
     results are in, or it is sent and under way. A sent gate whose session
     has not opened is still changed on Process, each change re-sent."""
-    return state == "Results in" or (state == "Sent" and bool(line))
+    return state in ("Results in", "Closed", "Detached") or (state == "Sent" and bool(line))
 
 
 def gate_sent(exercise_id: str, key: str) -> tuple[str, str]:
-    """A gate's state as Review Robin reports it: *Sent* or *Results in*
+    """A gate's state as Review Robin reports it, one of ``SENT_STATES``
     with its line, else ("Not sent", ""). For the many callers that ask
     only whether a gate is sent, opened or complete: no readiness is
     worked out (the cold read on AD-33: deriving it for every row on
     Dossiers nearly doubled the page's time)."""
     known = _GATES.get(exercise_id, {}).get(key)
-    if known and known[0] in ("Sent", "Results in"):
+    if known and known[0] in SENT_STATES:
         return known
     return ("Not sent", "")
 
@@ -493,9 +506,9 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
                         state,
                         r.dates,
                         line,
-                        "" if state in ("Sent", "Results in") else "Send…",
+                        "" if state in SENT_STATES else "Send…",
                         state == "Results in",
-                        link="evaluations" if state == "Sent" else "",
+                        link="evaluations" if state in SENT_STATES[:3] else "",
                     )
                 )
             else:
