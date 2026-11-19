@@ -137,6 +137,13 @@ def initials(label: str) -> str:
     return "".join(p[0] for p in parts[:2]).upper() or "?"
 
 
+def _scratch_page(exercise: object) -> bool:
+    from applydesk import scratch  # scratch reads sample_data, as this does
+
+    public_id = getattr(exercise, "public_id", None)
+    return isinstance(public_id, str) and scratch.is_scratch(public_id)
+
+
 def render(
     request: Request,
     template: str,
@@ -163,6 +170,8 @@ def render(
             "top_line": institution_name(),
             "viewer": viewer,
             "initials": initials(viewer.display_label) if viewer else "?",
+            # A scratch exercise's pages say so (segment AD1N, ruling 59).
+            "scratch_page": _scratch_page(context.get("exercise")),
             **context,
         },
         status_code=status_code,

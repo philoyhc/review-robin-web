@@ -1612,7 +1612,10 @@ def test_pages_say_what_works_and_what_is_not_built(client: TestClient) -> None:
     evaluations = client.get("/applydesk/operator/exercises/wa9juxbc2t/evaluations").text
     assert "Results come back by dossier" in evaluations
     lobby = client.get("/applydesk/operator/exercises").text
-    assert 'title="Exercises are created from AD3"' in lobby
+    # New exercise works (segment AD1N): a scratch exercise, its form hidden
+    # until asked for, saying what a scratch exercise is.
+    assert 'data-nx-open aria-expanded="false" aria-controls="nx-form">New exercise<' in lobby
+    assert "never saved, gone after a restart" in lobby
     # A draft on an exercise whose form has closed says so (AD-29).
     draft = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/f2ps7nyh4k").text
     assert "Applications closed on 30 Sep 2026, 23:59." in draft and ">Submit<" not in draft
