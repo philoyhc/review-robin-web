@@ -205,3 +205,34 @@ def test_the_card_s_data_links_review_robin_s_me(client: TestClient) -> None:
     data = page.split('<script type="application/json" id="rr-data">')[1].split("</script>")[0]
     assert '"rrMe": "http://testserver/reviewrobin/me"' in data
     assert '"opened": true' in data and '"state": "Sent"' in data
+
+
+def test_every_gate_page_has_its_card(client: TestClient) -> None:
+    """The plan's Definition of done: the card on every gate page."""
+    for exercise in sample_data.EXERCISES:
+        if exercise.state == "Draft":
+            continue
+        for gate in stages.plan_of(exercise.public_id).columns:
+            if not isinstance(gate, stages.Gate):
+                continue
+            path = (
+                f"/applydesk/operator/exercises/{exercise.public_id}/evaluations/gate_{gate.number}"
+            )
+            page = client.get(path).text
+            card = page.split('id="ev-rr"')[1].split("</section>")[0]
+            for part in (
+                "data-rr-name",
+                "data-rr-code",
+                "data-rr-link",
+                "data-rr-last",
+                "data-rr-files",
+            ):
+                assert part in card, (path, part)
+            for act in ("send", "resend", "pull", "invite", "remind"):
+                assert f'data-rr-act="{act}"' in card, (path, act)
+
+
+def test_process_shows_a_closed_gate_as_under_way(client: TestClient) -> None:
+    page = client.get("/applydesk/operator/exercises/k7mfr3pq8z/process").text
+    assert '<span class="chip chip-info" data-pi-state>Closed</span>' in page
+    assert '<span class="chip chip-warn" data-pi-state>Detached</span>' in page

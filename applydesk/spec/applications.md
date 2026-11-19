@@ -806,19 +806,25 @@ keeps all of them.
   characters, a code of 1–64), `session_code_conflict` (another of the
   exercise's gates holds the code, any case), `invalid_setup` (the gate
   not *Ready*, or this tab having added or removed pairs, since the files
-  are the pairs as saved). A Suggested gate whose only lack is its
+  are the pairs as saved; a re-send is refused the same). Review Robin's
+  `session_opened` is not drawn: an opened gate's buttons are off with
+  the reason instead; `session_has_responses` and `not_linked` cannot
+  arise in the sample. A gate the sample has sent whose session has not
+  opened reads as sent: *Re-send*, not *Send*. A Suggested gate whose only lack is its
   approvals is sent once this tab has approved every dossier, none
   short. A gate opened, closed or detached in Review Robin sends and
   re-sends nothing, its name and code fixed, the reason in each title.
 - **Pull results** (ruling 57), on a gate whose session has opened, fills
   *Done* per evaluator (`workflow.progress_of`: the sample keeps only the
-  gate's line, so each evaluator shows that share of their pairs). On a
+  gate's line, so each evaluator shows that share of their pairs). A
+  detached gate shows what Review Robin last reported. On a
   gate *Closed* in Review Robin it reads **Pull final results**, which
   marks the gate *Results in* (head chip, link line, Evaluations' row,
   *Results pulled in this tab*); the results fill Dossiers with AD6. Off,
   with the reason, before its session opens, once its results are in, or
   detached.
-- **Invite evaluators** (a gate sent, in the tab or the sample, and open)
+- **Invite evaluators** (a gate sent, in the tab or the sample, with
+  evaluators paired, its session not closed)
   and **Remind those not done** (an open session, someone not done) show
   the email first, under the buttons: whom it goes to, its subject and
   body, fixed until AD7 puts these templates on Emails, linking Review

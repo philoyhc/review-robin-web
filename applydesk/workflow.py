@@ -204,8 +204,9 @@ SENT_STATES = ("Sent", "Closed", "Detached", "Results in")
 
 def gate_opened(state: str, line: str) -> bool:
     """Whether a gate's Review Robin session has opened (ruling 29): its
-    results are in, or it is sent and under way. A sent gate whose session
-    has not opened is still changed on Process, each change re-sent."""
+    results are in, its session closed or detached there (segment AD1M),
+    or it is sent and under way. A sent gate whose session has not opened
+    is still changed on Process, each change re-sent."""
     return state in ("Results in", "Closed", "Detached") or (state == "Sent" and bool(line))
 
 
@@ -534,7 +535,7 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
                         line,
                         "" if state in SENT_STATES else "Send…",
                         state == "Results in",
-                        link="evaluations" if state in SENT_STATES[:3] else "",
+                        link="evaluations" if state in ("Sent", "Closed", "Detached") else "",
                     )
                 )
             else:

@@ -40,6 +40,9 @@
   // A gate whose session has opened (or closed, or was detached) is
   // Review Robin's: the tab neither sends nor re-sends it (ruling 29).
   if (DATA.opened) rec = null;
+  // A gate the sample has sent whose session has not opened (ruling 29)
+  // is sent as it stands: re-sent, never sent again.
+  else if (!rec && DATA.state === "Sent") rec = { name: DATA.name, code: DATA.code, digest: DATA.digest, at: "", transfer: "" };
   if (rec) { nameIn.value = rec.name; codeIn.value = rec.code; }
 
   // The gate's pulls, invitations and reminders in this tab.
@@ -60,7 +63,7 @@
   function notDone() { return DATA.progress.filter(function (p) { return p[2] < p[1]; }); }
   // The gate's state with this tab's own steps on it: a send makes an
   // unopened gate *Sent*; a final pull makes a closed one *Results in*.
-  function state() { return log().final ? "Results in" : DATA.state; }
+  function state() { return log().final && DATA.state === "Closed" ? "Results in" : DATA.state; }
   function off(btn, why) {
     btn.removeAttribute("data-rr-wait");
     btn.disabled = !!why;
@@ -76,24 +79,24 @@
   }
   function draw() {
     var head = document.querySelector(".ev-head [data-gate-state]"), why = document.querySelector(".ev-head [data-gate-why]");
-    var off = DATA.opened ? (DATA.state === "Detached" ? "Detached: unlinked in Review Robin" : "Opened in Review Robin: it is Review Robin's to change now") : "";
+    var fixed = DATA.opened ? (DATA.state === "Detached" ? "Detached: unlinked in Review Robin" : "Opened in Review Robin: it is Review Robin's to change now") : "";
     [nameIn, codeIn].forEach(function (el) {
-      el.disabled = !!off;
+      el.disabled = !!fixed;
       el.removeAttribute("data-rr-wait");
-      if (off) el.title = off; else el.removeAttribute("title");
+      if (fixed) el.title = fixed; else el.removeAttribute("title");
     });
     sendBtn.removeAttribute("data-rr-wait");
     resendBtn.removeAttribute("data-rr-wait");
-    if (off) {
+    if (fixed) {
       sendBtn.disabled = resendBtn.disabled = true;
-      sendBtn.title = resendBtn.title = off;
+      sendBtn.title = resendBtn.title = fixed;
     } else if (rec) {
       sendBtn.disabled = true;
       sendBtn.title = "Sent: changes are re-sent until its session opens";
       resendBtn.disabled = !changed();
       if (resendBtn.disabled) resendBtn.title = "Nothing has changed since it was sent"; else resendBtn.removeAttribute("title");
       card.querySelector("[data-rr-link]").textContent = "Linked; sent, its session not yet open";
-      card.querySelector("[data-rr-last]").textContent = "Sent " + at(rec.at) + " in this tab";
+      card.querySelector("[data-rr-last]").textContent = rec.at ? "Sent " + at(rec.at) + " in this tab" : "Sent (sample)";
       if (head) { head.textContent = "Sent"; head.className = "chip chip-info"; }
       if (why) why.hidden = true;
     } else {
@@ -118,21 +121,23 @@
       st === "Results in" ? "Its results are in"
       : st === "Detached" ? detached
       : st === "Closed" ? "Its session has closed"
-      : rec || DATA.state === "Sent" ? "" : "Not sent yet");
+      : !(rec || DATA.state === "Sent") ? "Not sent yet"
+      : DATA.progress.length ? "" : "No evaluators paired");
     off(remindBtn,
       st === "Results in" ? "Its results are in"
       : st === "Detached" ? detached
       : st === "Closed" ? "Its session has closed"
       : !DATA.opened ? "Its session has not opened"
       : notDone().length ? "" : "Everyone is done");
-    var shown = l.pulled || l.final || st === "Results in";
+    // A detached gate keeps what Review Robin last reported (its line).
+    var shown = l.pulled || st === "Results in" || st === "Detached";
     DATA.progress.forEach(function (p) {
       var cell = card.querySelector('tr[data-rr-person="' + p[0] + '"] [data-rr-done]');
       if (!cell) return;
-      cell.textContent = shown ? (l.final || st === "Results in" ? p[1] : p[2]) + " of " + p[1] : "—";
+      cell.textContent = shown ? (st === "Results in" ? p[1] : p[2]) + " of " + p[1] : "—";
       cell.classList.toggle("muted", !shown);
     });
-    if (l.final) {
+    if (st === "Results in" && DATA.state === "Closed") {
       card.querySelector("[data-rr-link]").textContent = "Linked; its results are in";
       var head = document.querySelector(".ev-head [data-gate-state]");
       if (head) { head.textContent = "Results in"; head.className = "chip chip-ok"; }
@@ -195,10 +200,9 @@
       return theirs.toLowerCase() === code.toLowerCase();
     })[0];
     if (clash) return "Not sent (session_code_conflict): " + code + " is " + clash[1] + "'s session code. Choose another.";
-    if (!first) return "";
     var ev = window.ApplyDeskEv;
     if (ev && ev.edited()) return "Not sent (invalid_setup): this tab's changes to the pairs are not saved until AD2; discard them to send the pairs as saved.";
-    if (DATA.state === "Ready") return "";
+    if (!first || DATA.state === "Ready") return "";
     if (DATA.approveOnly && ev && ev.allApproved()) return "";
     return "Not sent (invalid_setup): " + (DATA.why || "the gate is not ready") + ".";
   }

@@ -189,3 +189,25 @@ def test_invite_and_remind_show_the_email_first(page: Page) -> None:
     assert card.locator('[data-rr-act="invite"]').is_enabled()
     remind = card.locator('[data-rr-act="remind"]')
     assert remind.is_disabled() and remind.get_attribute("title") == "Its session has not opened"
+
+
+def test_re_send_is_refused_too_after_the_pairs_change_in_the_tab(page: Page) -> None:
+    """The cold read: the files are the pairs as saved, for a re-send as
+    for a send."""
+    page.on("dialog", lambda d: d.accept())
+    page.goto(INTERVIEW)
+    _approve_all(page)
+    card = _card(page)
+    card.locator('[data-rr-act="send"]').click()
+    page.locator("#ev-table-card tbody tr").first.get_by_role("button", name="Remove").click()
+    card.locator("[data-rr-name]").fill("Renamed")
+    card.locator('[data-rr-act="resend"]').click()
+    assert _said(page).startswith(
+        "Not re-sent (invalid_setup): this tab's changes to the pairs are not saved until AD2"
+    )
+
+
+def test_a_detached_gate_keeps_what_was_last_reported(page: Page) -> None:
+    page.goto(f"{K7}/gate_3")
+    done = _card(page).locator("[data-rr-done]")
+    assert done.count() and all(" of " in t for t in done.all_inner_texts())

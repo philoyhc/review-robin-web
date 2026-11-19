@@ -98,6 +98,8 @@ Taken 2026-11-19 at `9b6006bea`.
 
 - **Sample gates for the later states**: answered (author, 2026-11-19): the second exercise (`k7mfr3pq8z`) gains *Second reading*, closed in Review Robin and not yet pulled (*Closed*), and *Moderation*, detached (*Detached*); both count as opened.
 
+- **How a detached gate concludes**: open (the cold read). `locks` and `timeline` count only *Results in* as complete, so a detached gate keeps its stage, and the exercise, from completing. The author decides; nothing is built for it here.
+
 ## Out of scope
 
 - Real calls, the transfer record, retry and replay: AD2 and AD6.
