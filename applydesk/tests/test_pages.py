@@ -417,8 +417,8 @@ def test_a_blank_exercise_s_process_is_one_stage_holding_the_form(client: TestCl
 def test_dossiers_returns_to_draft_by_row_and_ticked(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Ruling 45: no Generate dossiers; Return to draft on a submitted row
-    until a gate holding its dossier is sent, and for the ticked rows,
+    """Rulings 45, 49: no Generate dossiers; Return to draft on a submitted
+    row until a gate holding its dossier completes, and for the ticked rows,
     gates or none."""
     text = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
     assert "Generate dossiers" not in text and ">Return ticked to draft</button>" in text
@@ -1735,20 +1735,20 @@ def test_the_outcomes_card_follows_its_file_under_blind_review(
     assert 'data-xd-v="ids" aria-pressed="true"' in card and "applicant, email" not in card
 
 
-def test_withdrawal_closes_once_a_gate_holding_the_dossier_is_sent(
+def test_withdrawal_closes_once_a_gate_holding_the_dossier_completes(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Ruling 45: an applicant may withdraw (Outline-amber, AD4) until a
-    gate holding their dossier is sent; then the page says which."""
+    """Rulings 45, 49: an applicant may withdraw (Outline-amber, AD4) until
+    a gate holding their dossier completes, Sent included; then the page
+    says which."""
     page = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
     assert workflow.withdrawal_closed_by("wa9juxbc2t", "m3qx8vkt2n") == "Peer review"
     assert "your application has gone to Peer review" in page and ">Withdraw</button>" not in page
-    monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Ready", ""))
-    open_page = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
-    assert (
-        'class="btn btn-alert" type="button" disabled title="Withdrawing comes with AD4">Withdraw'
-        in open_page
-    )
+    for state in ("Ready", "Sent"):
+        monkeypatch.setattr(workflow, "gate_state", lambda _e, _k, s=state: (s, ""))
+        open_page = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
+        withdraw = 'disabled title="Withdrawing comes with AD4">Withdraw'
+        assert f'class="btn btn-alert" type="button" {withdraw}' in open_page, state
 
 
 def test_extract_s_many_of_chips_are_pills(client: TestClient) -> None:

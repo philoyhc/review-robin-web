@@ -168,7 +168,7 @@ def closed_by(exercise_id: str) -> dict[str, str]:
     then (ruling 48). By application: the first such gate's label, for
     every submitted application it has closed."""
     plan = stages.plan_of(exercise_id)
-    sent = [
+    completed = [
         c
         for c in plan.columns
         if isinstance(c, stages.Gate) and gate_state(exercise_id, c.key)[0] == "Results in"
@@ -177,7 +177,7 @@ def closed_by(exercise_id: str) -> dict[str, str]:
     for r in plan.rows:
         if r.application.state != "Submitted":
             continue
-        for c in sent:
+        for c in completed:
             cell = r.cells.get(c.key)
             if cell and cell.value == "Entered":
                 out[r.application.public_id] = c.label or f"Gate {c.number}"

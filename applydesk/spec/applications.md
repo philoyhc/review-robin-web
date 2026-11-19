@@ -254,7 +254,7 @@ include.
   A submitted application may be withdrawn (*Withdraw*, Outline-amber, with a
   confirm, AD4) until a gate holding its dossier completes (ruling 49); then the
   page names the
-  gate it has gone to (`workflow.closed_by`, ruling 45).
+  gate it has gone to (`workflow.closed_by`, rulings 45, 49).
   Closing and archiving themselves are not built (AD3).
   A stage left unticked in Process's *Shown to applicants* is not on it
   (`Stage.shown`, ruling 46); the operator's Home shows every stage.
@@ -609,7 +609,7 @@ a count of the changes shows. Locked, what differs from the page as loaded
 stays marked (*N changes on this page, not saved until AD2*), and leaving the page with any pending or
 kept asks first. *Return to draft* is a submitted row's own (Outline-amber)
 until a gate holding its dossier completes, as withdrawal is, and *Return
-ticked to draft* the ticked rows', gates or none (ruling 45; both AD4). Ticks
+ticked to draft* the ticked rows', gates or none (rulings 45, 49; both AD4). Ticks
 only choose rows; the *Application* header's tick ticks every
 row in view, or clears them, and *Set ticked rows* with none ticked says *No
 rows ticked*. *Download CSV* writes the rows in view in the shape *Upload
@@ -695,7 +695,7 @@ the browser (`_gate_ops_js.html`):
 
 | Mode | Starts as | Operations |
 |---|---|---|
-| Automatic | every dossier filled as its sources give | + Pair, Remove: never re-run, only edited by hand (ruling 48) |
+| Automatic | every dossier filled as its sources give | *+ Pair*, *Remove* (then *Undo*): never re-run, only edited by hand (ruling 48) |
 | Suggested, then approved | the fill, each pair *Suggested* | *Approve* a pair, *Approve all*, *Remove* (then *Undo*), *+ Pair* |
 | Assigned by the operator | empty, every dossier *Not assigned* | *+ Pair*, *Remove* |
 

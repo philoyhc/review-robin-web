@@ -179,6 +179,11 @@ def test_an_automatic_gate_is_edited_by_hand_never_re_run(
     pair.get_by_role("button", name="Remove").click()
     assert pair.locator("[data-ev-state]").text_content() == "Removed"
     assert page.locator("[data-ev-unsaved]").is_visible()
+    # The edit is kept through a reload, as in the other modes.
+    page.reload()
+    assert pair.locator("[data-ev-state]").text_content() == "Removed"
+    pair.get_by_role("button", name="Undo", exact=False).click()
+    assert pair.locator("[data-ev-state]").text_content() != "Removed"
 
 
 def test_an_approval_stands_through_undo_and_goes_with_an_added_pair(page: Page) -> None:
