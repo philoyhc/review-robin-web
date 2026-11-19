@@ -15,7 +15,6 @@ every rule and weight that names them, so a key never outlives a reload.
 
 from __future__ import annotations
 
-import math
 import re
 from dataclasses import replace
 from datetime import datetime
@@ -239,15 +238,12 @@ def _outcome(v: Any, number: int) -> Outcome:
     weights: list[tuple[str, float]] = []
     for k, pct in _dict(got.get("weights", {}), f"{what}'s weights").items():
         text = _text(pct, f"{what}'s weights", 20)
-        try:
-            share = float(text) / 100 if text else 0.0
-        except ValueError:
-            share = math.nan
-        if not math.isfinite(share):
-            # Kept as a fraction, so a word typed as a weight (or NaN,
-            # Infinity, which float reads) cannot be kept as typed:
-            # refused, not read as 0 (Codex on #4026).
-            raise Refused(f"{what}'s weights are not all numbers.")
+        # Whole percents, as the page draws them back (stages.weight_rows):
+        # a word, a decimal, NaN or Infinity cannot be kept as typed, so it
+        # is refused, never read as 0 or rounded (Codex on #4026; cold read).
+        if text and not text.isdigit():
+            raise Refused(f"{what}'s weights are not all whole percents.")
+        share = int(text) / 100 if text else 0.0
         weights.append((k, share))
     if len(weights) > MAX_ITEMS:
         raise Refused(f"{what} has too many weights.")
