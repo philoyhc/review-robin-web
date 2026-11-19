@@ -35,7 +35,7 @@ So an operator cannot try the one thing the page is for, writing the emails. An 
 
 ## Semantics
 
-- **Kinds and their fields** (`workflow.email_fields`):
+- **Kinds and their fields** (`workflow.EMAIL_FIELDS`):
 
   | Kind | Fields |
   |---|---|
@@ -61,13 +61,27 @@ So an operator cannot try the one thing the page is for, writing the emails. An 
 Taken 2026-11-19 at `cdded743c`.
 
 - Templates: `operator/_emails.html` (20 lines), the only page; `base.html` for any new class.
-- Python: `workflow.py` (`Email`, `emails`, `_WRITTEN`, new `email_fields`, `default_template`, `sample_values`); `routes_operator.py:341` passes `emails`; `locks.py:187` and `extract.py:568` read `emails` and are unchanged.
+- Python: `workflow.py` (`Email`, `emails`, `_WRITTEN`, new `EMAIL_FIELDS`, `DEFAULT_TEMPLATES`, `sample_values`); `routes_operator.py:341` passes `emails`; `locks.py:187` and `extract.py:568` read `emails` and are unchanged.
 - Tests: `grep -rn "/emails" applydesk/tests/*.py | wc -l` → 7, all in `test_pages.py`; no browser test of Emails yet.
 - Specs: `applydesk/spec/applications.md` "The Emails page" (one section).
 
 ## Status
 
-Planning (2026-11-19). Build to follow on the author's go, given with this plan.
+**Closed 2026-11-19.** Built in three PRs after the plan (#4010): rung 2 (#4011), rung 3 (#4012), and this close. Every Definition-of-done line holds.
+
+**What the ladder became:** as planned. *Insert field* became a menu and an *Insert* button: arrowing a closed menu fires its change, which inserted a field on every key (the item read).
+
+**Decisions confirmed at build:**
+- A written sample template shows its kind's default; an owed one starts empty and offers *Start from the default*.
+- Until AD2 the status row's *Emails*, Home and Dossiers' *Released* read the sample's templates, said on the page (the item read).
+- Preview shows a field with no sample value by its name, dimmed (a draft has no application), and everything as text.
+- The evaluator in Preview is the first member of the first panel at that stage's gates; *Link* is built in the route, under the mount.
+
+**Reads:** one `diff-reviewer` item read (rungs 2–3, from `1109dc203`) found 12 findings, the real ones fixed in #4011 and #4012. Codex found none.
+
+**Spec:** `spec-writer` checked "The Emails page" at the close and fixed Process's line that template text came later.
+
+**Owed:** saving (AD2), sending and a sent email's absolute link (AD7), a body per outcome value (the open question below).
 
 ## PR ladder
 
@@ -91,7 +105,7 @@ Planning (2026-11-19). Build to follow on the author's go, given with this plan.
 
 ## Open questions
 
-- **Conditional text by outcome value** (e.g. one body for *Interview*, another for *Not shortlisted*): the author's. Default here: one body per template, with `[Outcome]` naming the value; a body per value can follow in AD7.
+- **Conditional text by outcome value** (e.g. one body for *Interview*, another for *Not shortlisted*): open, the author's. Shipped: one body per template, `[Outcome]` naming the value.
 - **A face in a blind exercise's emails** (the photo field): not reached here; the photo field's own open question.
 
 ## Out of scope

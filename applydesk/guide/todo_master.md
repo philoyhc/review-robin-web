@@ -629,8 +629,7 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
-| AD1L — Emails | Emails built out as a working scaffold (`applydesk/guide/segment_AD1L_emails.md`) | Building |
-| Layer B — Gates to Review Robin | Send, re-send, status, results, link state, invite and remind, on Evaluations > Gates (the "Order" above) | After AD1L |
+| Layer B — Gates to Review Robin | Send, re-send, status, results, link state, invite and remind, on Evaluations > Gates (the "Order" above) | Next |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |

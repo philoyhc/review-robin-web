@@ -605,8 +605,8 @@ but the lobby's *Stage* column reads:
   outcome with an owed email is not ready to release. `workflow.steps`
   records which audiences' emails are not written, but no page shows it
   until a Workflow card returns; meanwhile the *Owed* chips and the status
-  row's Emails pill do. Template text and sending come later (Emails' own
-  segment; AD6, AD7).
+  row's Emails pill do. Template text is written on Emails (saved in the tab
+  until AD2); sending comes later (AD6, AD7).
 - **Preview** of the timeline the cards describe is not built.
 
 ## The Panels page
@@ -972,10 +972,10 @@ from AD2.
 Every template the exercise owes (see Process, "Emails"), a card each in
 timeline order (`workflow.emails`). A line above them says Process ticks
 which items email whom, that evaluators' invitations and reminders for a
-linked gate come from Apply Desk (AD7), and that ticks made on Process show
-here only from AD2.
+linked gate come from Apply Desk (AD7; Review Robin sends none), and that a
+saved template is kept in the tab only.
 
-- **A card** (segment AD1L): the template's name with a *Written* or
+- **A card**: the template's name with a *Written* or
   *Owed* chip; when it goes (*When an application is submitted*, *To
   drafts, 7 days before the form closes*, *When <outcome> is released*);
   then *Subject* and *Body*, both editable. A template written in the
@@ -992,9 +992,9 @@ here only from AD2.
   and Dossiers' *Released* read the sample's templates. Leaving with a
   card unsaved asks first.
 - **Reset to default** puts the kind's default in the card, asking first
-  over other text; on an empty card it reads *Start from the default* and
-  asks nothing; on the default already it says so. The default waits for
-  *Save*.
+  over other text; on the default already it says so. The button reads
+  *Start from the default* while the subject or the body is empty, but asks
+  whenever either holds text. The default waits for *Save*.
 - **Fields** (`workflow.EMAIL_FIELDS`): a template names its merge fields
   in brackets, from its kind's list. *Receipt*: Applicant name, Exercise,
   Application ID, Link, Help contact. *Reminder*: Applicant name,
@@ -1004,12 +1004,13 @@ here only from AD2.
   Help contact; no applicant field, so a blind exercise's names no one.
   Fields match in any case. *Insert field*, on each card, is a menu of the
   kind's fields and an *Insert* button, which puts the chosen field at the
-  cursor in the box last used, else at the end of the body. *Save* refuses a template
-  naming another kind's field, saying which; other bracketed text is text.
+  cursor in the box last used on that card, else at the end of the body.
+  *Save* refuses a template naming another kind's field, saying which; other bracketed text is text.
 - ***Preview*** (*Hide preview* while open) shows the card as it stands,
   saved or not, under it: the subject and the body with each field filled
-  from the sample (`workflow.sample_values`): the first submitted
-  application, the outcome's value in its row (*Pending* when undecided)
+  from the sample (`workflow.sample_values`; the page adds the mount to
+  *Link*): the first submitted application, *Closes* the form's close date,
+  *Help contact* the exercise's, the outcome's value in its row (*Pending* when undecided)
   or, to evaluators, the outcome's tally; the evaluator is the first
   member of the first panel at that stage's gates; *Link*, the
   participant page. A field with no value in the sample (a draft has no
