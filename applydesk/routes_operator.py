@@ -186,7 +186,7 @@ _CARD_TEXT = {
 }
 
 
-def _form(sent: Any) -> dict[str, Any]:
+def _form(sent: Any, exercise_id: str) -> dict[str, Any]:
     """The form as Form's *Save* sends it (``applydeskFormSnapshot``),
     checked card by card and kept in ``FormCard``'s shape."""
     if not isinstance(sent, dict):
@@ -235,6 +235,13 @@ def _form(sent: Any) -> dict[str, Any]:
                 raise scratch.Refused(f"Card {n} is malformed.")
             out[key] = card[key]
         out["pool"] = out["pool"] or "institution"
+        if out["pool"] not in sample_data.people_pools(exercise_id):
+            # A panel made with *+ New panel…* on this page lives only on
+            # it until Panels saves (Codex): refused, not dropped.
+            raise scratch.Refused(
+                f"Card {n} chooses from a panel made on this page, which is not kept yet:"
+                " choose Institution-wide or an existing panel."
+            )
         out["ratio_w"] = out["ratio_w"] or "4"
         out["ratio_h"] = out["ratio_h"] or "5"
         kept.append(out)
@@ -248,7 +255,7 @@ async def exercise_form_save(request: Request, exercise_id: str) -> Response:
     pages read them."""
     exercise, sent = await _scratch_json(request, exercise_id)
     try:
-        scratch.save_page(exercise.public_id, "form", _form(sent))
+        scratch.save_page(exercise.public_id, "form", _form(sent, exercise.public_id))
     except scratch.Refused as why:
         return JSONResponse({"error": str(why)}, status_code=400)
     return JSONResponse({"saved": True})

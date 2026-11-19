@@ -238,6 +238,10 @@ def test_form_save_is_checked() -> None:
             "too long",
         ),
         ({"title": "x" * 201, "description": "", "cards": []}, "at most 200 characters"),
+        (
+            {"title": "", "description": "", "cards": [_field("Q", type="people", pool="new-1")]},
+            "panel made on this page",
+        ),
         ({"title": "", "description": "x" * 4001, "cards": []}, "at most 4,000 characters"),
     ):
         refused = client.post(f"{LOBBY}/{made}/form", json=bad)

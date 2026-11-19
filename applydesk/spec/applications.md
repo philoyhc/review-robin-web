@@ -146,7 +146,8 @@ answer only for a Published or Closed exercise.
   page's own snapshot (`applydeskFormSnapshot`) to `…/form`; the server
   keeps each card in `FormCard`'s shape, refusing more than 200 cards, a
   kind or type not offered, a toggle that is not true or false, or a text
-  past its length, with the card's number. `sample_data.form_cards` and
+  past its length, or a question choosing from a panel made on the page
+  with *+ New panel…* (not kept until Panels saves), with the card's number. `sample_data.form_cards` and
   `form_heading` read it back, so Form, Preview, the applicant pages and
   Process's form-answer rules all see the saved questions. A saved page's
   *Unsaved changes* marker clears.
