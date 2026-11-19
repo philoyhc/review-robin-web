@@ -4,11 +4,13 @@
 {% block content %}
 <nav class="crumbs" aria-label="Breadcrumb"><span class="crumb"><a href="{{ url('/me') }}">User Lobby</a><span aria-hidden="true">/</span></span><span class="crumb"><a href="{{ url('/me/exercises/' ~ exercise.public_id) }}">{{ exercise.name }}</a><span aria-hidden="true">/</span></span><span aria-current="page">Dossier</span></nav>
 {# The dossier (rulings 5, 6, 9, 13 and 25): the part shown to
-   reviewers only; in a blind exercise, no name or identifier. #}
+   reviewers only; in a blind exercise, no name, only its Dossier ID
+   (rulings 13, 43; AD-89). #}
 <div class="ptitle"><h1>{% if exercise.blind %}An application{% else %}{{ application.title }}{% endif %}</h1>{% if exercise.blind %}<span class="chip chip-mute">Blind review</span>{% endif %}</div>
 <p class="lede">{{ exercise.name }}</p>
 {% with read_only = true %}{% include "applydesk/_placeholder.html" %}{% endwith %}
 <dl class="facts">
+  <dt>Dossier ID</dt><dd><code>{{ application.dossier_id }}</code></dd>
   <dt>Applicant</dt><dd>{% if exercise.blind %}<span class="redacted">Redacted</span>{% else %}{{ application.applicant }}{% endif %}</dd>
 </dl>
 <div class="section">

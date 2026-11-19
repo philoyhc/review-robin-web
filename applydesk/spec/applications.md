@@ -606,7 +606,12 @@ A panel made on Form or Process appears here only once saved (AD2).
 At `/operator/exercises/<id>/dossiers` (the Applications page until ruling
 25): a row per dossier, an application's where it has one; until dossiers
 are made (*Create dossiers*, ruling 26), the rows are the sample's
-applications.
+applications. A row is named by its *Dossier* ID, linking a submitted one
+to its dossier page, with its *Application* ID under it; a draft has no
+dossier yet (ruling 32) and says so. Search reads both IDs, the cells,
+proposals and messages name the row as it shows, and the CSV keys rows
+by Application ID. The dossier page shows its
+Dossier ID, as Review Robin does for a confidential gate.
 A control surface (ruling 23), worked down its columns. The whole table is
 locked until *Unlock*; then every cell, *Set ticked rows*, *Apply rules…*,
 *Upload CSV* and each outcome's *Released* are live, but for the fixed ones
@@ -617,7 +622,7 @@ stays marked (*N changes on this page, not saved until AD2*), and leaving the pa
 kept asks first. *Return to draft* is a submitted row's own (Outline-amber)
 until a gate holding its dossier completes, as withdrawal is, and *Return
 ticked to draft* the ticked rows', gates or none (rulings 45, 49; both AD4). Ticks
-only choose rows; the *Application* header's tick ticks every
+only choose rows; the *Dossier* header's tick ticks every
 row in view, or clears them, and *Set ticked rows* with none ticked says *No
 rows ticked*. *Download CSV* writes the rows in view in the shape *Upload
 CSV* reads, a cell a spreadsheet would run as a formula guarded with `'` (a

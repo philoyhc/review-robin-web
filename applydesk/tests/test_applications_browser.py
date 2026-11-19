@@ -333,7 +333,7 @@ def test_a_csv_giving_one_cell_two_values_leaves_it(page: Page) -> None:
         prop.inner_text()
     )
     rows = prop.locator("[data-ap-prop-rows] tr")
-    assert rows.count() == 1 and "m3qx8vkt2n" in rows.inner_text()
+    assert rows.count() == 1 and "p3bd7kq2wx" in rows.inner_text()  # the row as shown
     prop.locator("[data-ap-prop-apply]").click()
     assert (
         _row(page, "aisha.bello").locator('[data-cell="g3"] [data-ap-adm]').inner_text()
@@ -392,10 +392,10 @@ def test_apply_rules_proposes_in_column_order_and_waits_on_the_undecided(page: P
     _unlock(page)
     prop = _apply_rules(page)
     text = prop.inner_text()
-    assert "Selection: 40 applications cannot be judged yet" in text
+    assert "Selection: 40 dossiers cannot be judged yet" in text
     rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
     assert len(rows) == 15 and all("\tSelection\tPending\tSelected" in r for r in rows)
-    assert any(r.startswith("m3qx8vkt2n\tAisha Bello") for r in rows)
+    assert any(r.startswith("p3bd7kq2wx\tAisha Bello") for r in rows)  # named as shown
     prop.locator("[data-ap-prop-apply]").click()
     assert _count(page, "o2").startswith("15 selected · 40 pending")
 
@@ -475,7 +475,7 @@ def test_the_best_n_waits_while_one_it_could_rank_is_not_in(page: Page) -> None:
     # One of them still waiting on its peer reviews: no result yet.
     page.evaluate(
         "i => { delete [...document.querySelectorAll('[data-row]')].find("
-        "r => r.querySelector('.ap-id code').textContent === i)"
+        "r => r.dataset.apApp === i)"
         ".querySelector('[data-cell=\"g1\"] [data-v]').dataset.result; }",
         rows[0].application.public_id,
     )
@@ -490,13 +490,13 @@ def test_the_best_n_waits_while_one_it_could_rank_is_not_in(page: Page) -> None:
     )
     prop = _apply_rules(page, only_undecided=False, replace_hand=True)
     text = prop.inner_text()
-    assert f"Shortlisting: {len(rows)} applications cannot be judged yet" in text
+    assert f"Shortlisting: {len(rows)} dossiers cannot be judged yet" in text
     proposed = [
         p
         for p in prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
         if "\tShortlisting\t" in p
     ]
-    ids = {r.application.public_id for r in rows}
+    ids = {r.application.dossier_id for r in rows}  # proposals name rows as shown
     assert not [p for p in proposed if any(i in p for i in ids)]
     # Elsewhere the rule decides: every other faculty's shortlisted turn Not.
     assert proposed and all(p.endswith("Not shortlisted") for p in proposed)
@@ -556,11 +556,12 @@ def test_one_a_ranking_cannot_take_falls_through_though_another_condition_waits(
     """Codex on #3955: a dossier not entered at the ranking's gate cannot
     join the branch, so it goes on to the next even while the branch's
     other condition waits on its result."""
-    x = next(
-        r.application.public_id
+    xa = next(
+        r.application
         for r in stages.plan_of("wa9juxbc2t").rows
         if r.cells["o1"].value == "Interview" and not r.cells["o1"].by_hand
     )
+    x, x_shown = xa.public_id, xa.dossier_id
     page.goto(PAGE)
     _unlock(page)
     _cell(page, x, "g1").evaluate("e => { e.dataset.v = 'Not entered'; }")
@@ -581,7 +582,9 @@ def test_one_a_ranking_cannot_take_falls_through_though_another_condition_waits(
     prop = _apply_rules(page, only_undecided=False, replace_hand=True)
     notes = prop.locator("[data-ap-prop-skip] li").all_inner_texts()
     assert not [n for n in notes if n.startswith("Shortlisting") and "judged" in n]
-    got = [r for r in prop.locator("[data-ap-prop-rows] tr").all_inner_texts() if r.startswith(x)]
+    got = [
+        r for r in prop.locator("[data-ap-prop-rows] tr").all_inner_texts() if r.startswith(x_shown)
+    ]
     assert got and got[0].endswith("\tShortlisting\tInterview\tNot shortlisted"), got
 
 
@@ -591,7 +594,8 @@ def test_a_dossier_waiting_elsewhere_holds_back_only_a_ranking_it_could_join(
     """Codex on #3955: one an earlier branch left waiting held back every
     later best N, even one whose other conditions rule it out."""
     groups = _by_answer("Faculty")
-    eng = groups["Engineering"][0].application.public_id
+    eng_app = groups["Engineering"][0].application
+    eng, eng_dossier = eng_app.public_id, eng_app.dossier_id
     page.goto(PAGE)
     _unlock(page)
     _cell(page, eng, "g2").evaluate("e => { delete e.dataset.result; }")  # its checks coming
@@ -612,9 +616,9 @@ def test_a_dossier_waiting_elsewhere_holds_back_only_a_ranking_it_could_join(
     )
     prop = _apply_rules(page, only_undecided=False)
     text = prop.inner_text()
-    assert "Shortlisting: 1 application cannot be judged yet" in text and eng in text
+    assert "Shortlisting: 1 dossier cannot be judged yet" in text and eng_dossier in text
     proposed = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
-    law = {r.application.public_id for r in groups["Law"]}
+    law = {r.application.dossier_id for r in groups["Law"]}  # rows named as shown
     ranked = [p for p in proposed if p.split("\t")[0] in law and p.endswith("Not shortlisted")]
     assert 1 <= len(ranked) <= 3 + 2  # the best 3 not already so, or more tied at the cut
 
@@ -641,7 +645,7 @@ def test_the_best_n_waits_on_another_condition_not_yet_judged(page: Page) -> Non
         },
     )
     prop = _apply_rules(page, only_undecided=False, replace_hand=True)
-    assert f"Shortlisting: {len(rows)} applications cannot be judged yet" in prop.inner_text()
+    assert f"Shortlisting: {len(rows)} dossiers cannot be judged yet" in prop.inner_text()
 
 
 def test_a_later_column_reads_what_an_earlier_one_proposes(page: Page) -> None:
@@ -650,7 +654,7 @@ def test_a_later_column_reads_what_an_earlier_one_proposes(page: Page) -> None:
     page.goto(PAGE)
     _unlock(page)
     hand = page.locator('[data-row]:has(td[data-cell="o1"][data-hand])')
-    who = hand.locator(".ap-id code").inner_text()
+    who = hand.get_attribute("data-ap-name") or ""  # as proposals name it
     # An interviewee's Shortlisting back to Pending, its peer reviews still
     # coming: the Shortlisting cannot decide it, so its entry waits.
     kenji = _row(page, "kenji.russo")
@@ -668,7 +672,7 @@ def test_a_later_column_reads_what_an_earlier_one_proposes(page: Page) -> None:
         for r in rows
         if r.startswith(who) and r.endswith("\tStaff interview\tEntered\tNot entered")
     ]
-    assert "Staff interview: 1 application cannot be judged yet" in prop.inner_text()
+    assert "Staff interview: 1 dossier cannot be judged yet" in prop.inner_text()
 
 
 def test_selection_reaches_one_sent_on_by_shortlisting_alone(page: Page) -> None:
@@ -697,9 +701,9 @@ def test_selection_reaches_one_sent_on_by_shortlisting_alone(page: Page) -> None
     prop = _apply_rules(page, only_undecided=False)  # its decided Shortlisting too
     rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
     for r in (low, major):
-        i = r.application.public_id
+        i = r.application.dossier_id  # proposals name rows as shown
         assert [p for p in rows if p.startswith(i) and p.endswith("\tSelection\t\tSelected")], i
-    assert not [p for p in rows if p.startswith("nzhhny6gaa") and "\tSelection\t" in p]
+    assert not [p for p in rows if p.startswith("napy2evdjp") and "\tSelection\t" in p]
 
 
 def test_the_page_combines_results_as_the_server_does(page: Page) -> None:
@@ -727,7 +731,7 @@ def test_the_page_combines_results_as_the_server_does(page: Page) -> None:
     shown = dict(
         page.evaluate(
             """() => Array.from(document.querySelectorAll('[data-row]')).map(r => [
-            r.querySelector('.ap-id code').textContent,
+            r.dataset.apApp,
             (r.querySelector('[data-cell="o1"] [data-ap-comb]') || {}).textContent || ""])"""
         )
     )
@@ -752,7 +756,7 @@ def test_a_cell_set_by_hand_is_marked_and_kept(page: Page) -> None:
     _unlock(page)
     hand = page.locator('[data-row] td[data-cell="o1"][data-hand]')
     assert hand.count() == 1 and "Set by hand: panel request" in hand.inner_text()
-    who = hand.locator("xpath=ancestor::tr").locator(".ap-id code").inner_text()
+    who = hand.locator("xpath=ancestor::tr").get_attribute("data-ap-name") or ""
     prop = _apply_rules(page, only_undecided=False)
     rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
     assert not [r for r in rows if who in r and "\tShortlisting\t" in r]
@@ -813,7 +817,9 @@ def test_the_sample_follows_its_rules(page: Page) -> None:
     assert rows
     for r in rows:
         assert r.split("\t")[3] in ("Pending", "—", ""), r
-    withdrawn = page.locator('[data-row][data-status="Withdrawn"] .ap-id code').all_inner_texts()
+    withdrawn = page.locator('[data-row][data-status="Withdrawn"]').evaluate_all(
+        "rs => rs.map(r => r.dataset.apName)"
+    )
     assert withdrawn and not [r for r in rows if r.split("\t")[0] in withdrawn]
 
 

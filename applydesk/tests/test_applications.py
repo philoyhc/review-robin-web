@@ -44,10 +44,15 @@ def test_every_application_is_a_row(client: TestClient) -> None:
     apps = sample_data.applications_of(EX)
     assert len(apps) == 104  # 100 submitted, two drafts and one withdrawn, and Wen's draft
     assert text.count("data-row ") == len(apps)
-    # A submitted application's ID links to its dossier; a draft's does not.
-    assert f'/dossiers/{apps[0].dossier_id}"><code>{apps[0].public_id}</code></a>' in text
+    # A submitted row's Dossier ID links to its dossier; a draft has none
+    # yet (ruling 32), named by its Application ID.
+    assert f'/dossiers/{apps[0].dossier_id}"><code>{apps[0].dossier_id}</code></a>' in text
     draft = next(a for a in apps if a.state == "Draft")
-    assert f"<code>{draft.public_id}</code></td>" in text
+    assert draft.dossier_id not in text
+    assert (
+        f'<span class="muted">No dossier yet</span><span class="ap-app">Application '
+        f"<code>{draft.public_id}</code></span>"
+    ) in text and f'aria-label="Tick {draft.public_id}"' in text
 
 
 def test_the_model_exercise_reads_as_partway_through() -> None:
