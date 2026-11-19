@@ -1006,6 +1006,11 @@ saved template is kept in the tab only.
   kind's fields and an *Insert* button, which puts the chosen field at the
   cursor in the box last used on that card, else at the end of the body.
   *Save* refuses a template naming another kind's field, saying which; other bracketed text is text.
+- **Paragraphs** (ruling 53): one body per template, never one per
+  outcome value. The body box grows with its text, as the page's other
+  boxes do, with no resize handle. A blank line in it separates
+  paragraphs; Preview shows each with a small gap, and a single line
+  break stays a line break.
 - ***Preview*** (*Hide preview* while open) shows the card as it stands,
   saved or not, under it: the subject and the body with each field filled
   from the sample (`workflow.sample_values`; the page adds the mount to
