@@ -349,7 +349,14 @@ pages, it can wait); `workflow.steps` still names the current stage.
   way): every control in it is disabled and a line says so, a revert of its
   stage leaving it so (ruling 29). Sent but unopened, it is still changed
   here, each change re-sent, unless its stage is published ("Stage
-  status").
+  status"). Before it is sent a gate is *Ready* only when its stage is
+  published, it has a result and evaluators, every submitted row's entry
+  is decided with at least one entered, every dossier entered is assigned
+  with none short, and, under *Suggested, then approved*, every dossier's
+  evaluators are approved; else it is *Not ready*, with the first reason
+  missing (`workflow.gate_readiness`, rulings 24, 27, 34), shown beside
+  the chip on Home, Evaluations and the gate page. They read what is
+  saved: approvals made on the gate page stay the tab's until AD2.
   - **Gate**: *Name*; *Type* (a disabled menu, *Review Robin session*, kept
     for other kinds); *Description* (Review Robin's instrument description);
     *Confidential* (per gate: Review Robin shows each applicant as *Name

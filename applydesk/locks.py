@@ -49,7 +49,7 @@ def _item_open(e: Exercise, st: stages.Stage, item: stages.Gate | stages.Outcome
     if item is None:
         return "" if workflow.form_state(e) == "Closed" else "the form is still open"
     if isinstance(item, stages.Gate):
-        state, _ = workflow.gate_state(e.public_id, item.key)
+        state, _ = workflow.gate_sent(e.public_id, item.key)
         return "" if state == "Results in" else f"{item.label or 'a gate'}'s results are not in"
     return "" if item.released else f"{item.label or 'the outcome'} is not released"
 
@@ -161,7 +161,7 @@ def item_lock(e: Exercise, item: stages.Gate | stages.Outcome) -> Lock:
     stage is published; a gate whose Review Robin session has opened
     stays fixed even after a revert (ruling 29)."""
     if isinstance(item, stages.Gate):
-        state, line = workflow.gate_state(e.public_id, item.key)
+        state, line = workflow.gate_sent(e.public_id, item.key)
         if workflow.gate_opened(state, line):
             return Lock(
                 True,
@@ -175,7 +175,7 @@ def item_lock(e: Exercise, item: stages.Gate | stages.Outcome) -> Lock:
 def cells_lock(e: Exercise, gate: stages.Gate) -> Lock:
     """A gate's entries on Dossiers: fixed once its session has opened,
     as Process says (AD-04)."""
-    state, line = workflow.gate_state(e.public_id, gate.key)
+    state, line = workflow.gate_sent(e.public_id, gate.key)
     if workflow.gate_opened(state, line):
         return Lock(True, "Its Review Robin session has opened: who it entered is fixed")
     return OPEN
@@ -208,7 +208,7 @@ def revert_warnings(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
     out: list[str] = []
     for c in st.columns:
         if isinstance(c, stages.Gate):
-            state, line = workflow.gate_state(e.public_id, c.key)
+            state, line = workflow.gate_sent(e.public_id, c.key)
             if workflow.gate_opened(state, line):
                 out.append(f"Gate {c.number}'s Review Robin session has opened: it stays fixed.")
     if st.form:

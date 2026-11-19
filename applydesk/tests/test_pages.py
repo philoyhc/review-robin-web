@@ -307,7 +307,7 @@ def test_the_lobby_names_exercises_by_code_not_id(client: TestClient) -> None:
 def test_withdraw_is_outline_amber(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """Ruling 45 (2026-11-18, over the 2026-11-12 Destructive): Withdraw is
     Outline-amber, with a confirm once AD4 builds it."""
-    monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Ready", ""))
+    monkeypatch.setattr(workflow, "gate_sent", lambda _e, _k: ("Ready", ""))
     page = client.get(f"/applydesk/me/exercises/{EX}/applications/h6zr2tdw9p").text
     assert 'class="btn btn-destructive"' not in page and 'class="btn btn-alert"' in page
 
@@ -424,15 +424,15 @@ def test_dossiers_returns_to_draft_by_row_and_ticked(
     assert "Generate dossiers" not in text and ">Return ticked to draft</button>" in text
     # wa9's Gate 1 has results in: every entered dossier is past returning.
     assert 'aria-label="Return m3qx8vkt2n to draft"' not in text
-    monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Ready", ""))
+    monkeypatch.setattr(workflow, "gate_sent", lambda _e, _k: ("Ready", ""))
     open_ = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
     assert 'aria-label="Return m3qx8vkt2n to draft">Return to draft</button>' in open_
     assert 'aria-label="Return f2ps7nyh4k to draft"' not in open_  # a draft
     # Ruling 49: a sent gate, opened or not, keeps it open until it completes.
     for sent in (("Sent", ""), ("Sent", "3 of 5 reviewed")):
-        monkeypatch.setattr(workflow, "gate_state", lambda _e, _k, s=sent: s)
+        monkeypatch.setattr(workflow, "gate_sent", lambda _e, _k, s=sent: s)
         assert workflow.withdrawal_closed_by(EX, "m3qx8vkt2n") == ""
-    monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Results in", "done"))
+    monkeypatch.setattr(workflow, "gate_sent", lambda _e, _k: ("Results in", "done"))
     assert workflow.withdrawal_closed_by(EX, "m3qx8vkt2n") == "Peer review"
     nogates = client.get("/applydesk/operator/exercises/r6tm4kq9wz/dossiers").text
     assert ">Return ticked to draft</button>" in nogates
@@ -658,7 +658,7 @@ def test_evaluations_shows_each_gate_s_assignments(client: TestClient) -> None:
     assert 'data-ev-act="rerun"' not in page
     assert "1–200 of 2,980" in page
     g3 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text
-    # Ready, not sent (ruling 29): its pairs suggested, still the operator's.
+    # Not sent (ruling 29): its pairs suggested, still the operator's.
     assert g3.count("data-ev-row=") == 80 and g3.count(">Suggested<") == 80
     assert (
         'data-ev-act="approve-all" disabled data-ev-wait>Approve all' in g3
@@ -921,11 +921,13 @@ def test_the_timeline_steps_follow_the_stages() -> None:
         "Selection",
         "Close and archive",
     ]
-    # Next is the earliest step not done: Gate 3, ready to send (ruling 29).
+    # Next is the earliest step not done: Gate 3, its pairs still to be
+    # approved, so derived Not ready (ruling 29; AD-33).
     now = workflow.next_step(all_steps)
-    assert now is not None and (now.title, now.state, now.action) == (
+    assert now is not None and (now.title, now.state, now.line, now.action) == (
         "Staff interview",
-        "Ready",
+        "Not ready",
+        "40 dossiers to approve",
         "Send…",
     )
     assert workflow.current_stage(e) == "Interviews"
@@ -1191,7 +1193,7 @@ def test_every_panel_source_of_a_gate_counts(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr(stages, "plan_of", lambda _id: dataclasses.replace(plan, stages=sts))
     assert stages.panel_uses(EX)["office"] == ("Gate 1: Peer review", "Gate 2: Office checks")
     assert workflow.panels_sent(EX)["office"] == ("Gate 1", "Gate 2")
-    monkeypatch.setattr(workflow, "gate_state", lambda _e, _k: ("Sent", ""))  # not yet opened
+    monkeypatch.setattr(workflow, "gate_sent", lambda _e, _k: ("Sent", ""))  # not yet opened
     assert workflow.panels_sent(EX) == {}
 
 
@@ -1587,9 +1589,11 @@ def test_crumbs_and_headings_after_the_register(client: TestClient) -> None:
     # The gate's state and its Review Robin action in its head (AD-23).
     head = gate[gate.index('class="ev-head"') : gate.index("</div>", gate.index('class="ev-head"'))]
     assert "data-gate-state>Results in<" in head  # done: no action left
-    g2 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text  # Ready
+    g2 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text  # not sent
     head = g2[g2.index('class="ev-head"') : g2.index("</div>", g2.index('class="ev-head"'))]
     assert "data-gate-state" in head and "comes with AD6" in head
+    # AD-33: why it is not ready, as saved, beside the chip.
+    assert "data-gate-state>Not ready<" in head and ">40 dossiers to approve</span>" in head
 
 
 def test_the_applicant_reaches_each_of_their_applications(client: TestClient) -> None:
@@ -1745,7 +1749,7 @@ def test_withdrawal_closes_once_a_gate_holding_the_dossier_completes(
     assert workflow.withdrawal_closed_by("wa9juxbc2t", "m3qx8vkt2n") == "Peer review"
     assert "your application has gone to Peer review" in page and ">Withdraw</button>" not in page
     for state in ("Ready", "Sent"):
-        monkeypatch.setattr(workflow, "gate_state", lambda _e, _k, s=state: (s, ""))
+        monkeypatch.setattr(workflow, "gate_sent", lambda _e, _k, s=state: (s, ""))
         open_page = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
         withdraw = 'disabled title="Withdrawing comes with AD4">Withdraw'
         assert f'class="btn btn-alert" type="button" {withdraw}' in open_page, state

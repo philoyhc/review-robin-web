@@ -4,12 +4,15 @@ never their own, and the work spread across a panel."""
 
 from __future__ import annotations
 
+import pytest
+
 from applydesk import sample_data, stages
 from applydesk.stages import Gate, Source, Total, fill, total_problem
 
 NOMINATED = Source("nominated", "q-referees", 0, 2)
 PANEL_A = Source("panel", "panel-a", 1, 3)
 TOTAL = Total(3, 3)
+RA = "wa9juxbc2t"
 PANEL = ("p1@x.edu", "p2@x.edu", "p3@x.edu", "p4@x.edu")
 
 
@@ -179,3 +182,62 @@ def test_a_result_reads_its_chosen_field() -> None:
     unnamed = stages.GateResult("r2", "Other", likert, "mean")
     g2 = Gate("g9", 9, "x", "RRW", (unnamed,), fields=g.fields)
     assert stages.source_field(g2, unnamed) is None
+
+
+def _g3(monkeypatch: pytest.MonkeyPatch, *, stage: object = None, **changes: object) -> None:
+    """The model exercise's Gate 3, not sent, changed for one test."""
+    from dataclasses import replace
+
+    model = stages._STAGES[RA]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    staged = tuple(
+        replace(
+            st,
+            columns=tuple(replace(c, **changes) if c.key == "g3" else c for c in st.columns),
+            **({"status": stage} if stage and any(c.key == "g3" for c in st.columns) else {}),
+        )
+        for st in model
+    )
+    monkeypatch.setitem(stages._STAGES, RA, staged)  # pyright: ignore[reportPrivateUsage]  -- as above
+
+
+@pytest.mark.parametrize(
+    ("changes", "why"),
+    [
+        ({}, "40 dossiers to approve"),  # Suggested, nothing saved approved
+        ({"mode": "automatic"}, ""),  # filled, every dossier: Ready
+        ({"mode": "assigned"}, "40 dossiers to assign"),
+        ({"results": ()}, "No result yet"),
+        ({"stage": "Draft"}, "Its stage is not published"),
+    ],
+)
+def test_a_gate_is_ready_only_as_rulings_24_and_27_say(
+    monkeypatch: pytest.MonkeyPatch, changes: dict[str, object], why: str
+) -> None:
+    """AD-33: a gate not sent is Ready only once its stage is published,
+    it has a result and evaluators, its entry is decided and every dossier
+    entered is filled, and, Suggested, approved (ruling 34)."""
+    from applydesk import workflow
+
+    _g3(monkeypatch, **changes)
+    assert workflow.gate_state(RA, "g3") == (("Not ready", why) if why else ("Ready", ""))
+
+
+def test_a_gate_with_no_evaluators_or_undecided_entry_is_not_ready(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from dataclasses import replace
+
+    from applydesk import workflow
+
+    _g3(monkeypatch, mode="automatic")
+    plan = stages.plan_of(RA)
+    first = next(r for r in plan.rows if r.application.state == "Submitted")
+    undecided = replace(first, cells={**first.cells, "g3": stages.Cell("—")})
+    rows = tuple(undecided if r is first else r for r in plan.rows)
+    monkeypatch.setattr(stages, "plan_of", lambda _id: replace(plan, rows=rows))
+    assert workflow.gate_state(RA, "g3") == ("Not ready", "1 entry to decide")
+    monkeypatch.setattr(stages, "sources_of", lambda _e, _g: ((), Total(0, 0)))
+    assert workflow.gate_state(RA, "g3") == ("Not ready", "No evaluators yet")
+    # Sent or complete, the state is Review Robin's, never derived.
+    assert workflow.gate_sent(RA, "g1") == ("Results in", "100 of 100 reviewed")
+    assert workflow.gate_sent(RA, "g3") == ("Not sent", "")
