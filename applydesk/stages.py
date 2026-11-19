@@ -515,6 +515,26 @@ _STAGES: dict[str, tuple[Stage, ...]] = {
                     (GateResult("r1", "Score", _LIKERT, "mean"),),
                     panel="panel-a",
                 ),
+                # Two more readings, there to show a gate's later link
+                # states (author, 2026-11-19; segment AD1M): the second
+                # closed in Review Robin, its results not yet pulled;
+                # the third unlinked there, so detached here.
+                Gate(
+                    "g2",
+                    2,
+                    "Second reading",
+                    "RRW",
+                    (GateResult("r1", "Score", _LIKERT, "mean"),),
+                    panel="panel-a",
+                ),
+                Gate(
+                    "g3",
+                    3,
+                    "Moderation",
+                    "RRW",
+                    (GateResult("r1", "Score", _LIKERT, "mean"),),
+                    panel="panel-a",
+                ),
                 _K_O1,
             ),
             status="Published",
@@ -597,6 +617,8 @@ def _small_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
             a,
             {
                 "g1": Cell("Entered", "Score 4.1 · 2 of 2", 4.1),
+                "g2": Cell("Entered", "Its session closed; results not pulled"),
+                "g3": Cell("Entered", "Detached in Review Robin"),
                 "o1": Cell("Pending", f"Due {_K_O1.due}"),
             },
         )

@@ -57,6 +57,8 @@ What is missing is the operator's half. The bundle Apply Desk would post has nev
 - The card sits on the gate page, not Evaluations: Evaluations stays a table of every gate, each linking to its page.
 - *Status* is part of the card, not a separate button: reading progress is what *Pull results* does while the session is open.
 - Invite and remind text is fixed here: templates for them are an Emails change, AD7's.
+- A Suggested gate whose only lack is approvals sends once the tab has approved every dossier (2026-11-19): approvals live in the tab until AD2 and change no file, and no sample gate is otherwise *Ready*.
+- A tab that has added or removed pairs cannot send (2026-11-19): the files are the pairs as saved, so sending would misstate them.
 
 ## Blast radius (measured)
 
@@ -94,8 +96,9 @@ Taken 2026-11-19 at `9b6006bea`.
 
 ## Open questions
 
-- **A sample gate closed in Review Robin but not yet pulled**, so *Pull final results* can be tried in a browser: add one to the second exercise (`k7mfr3pq8z`), or leave it to tests. The author decides at the scaffold.
-- **A detached sample gate**, for the same reason. Decided with the one above.
+- **Sample gates for the later states**: answered (author, 2026-11-19): the second exercise (`k7mfr3pq8z`) gains *Second reading*, closed in Review Robin and not yet pulled (*Closed*), and *Moderation*, detached (*Detached*); both count as opened.
+
+- **How a detached gate concludes**: open (the cold read). `locks` and `timeline` count only *Results in* as complete, so a detached gate keeps its stage, and the exercise, from completing. The author decides; nothing is built for it here.
 
 ## Out of scope
 

@@ -27,7 +27,7 @@ class Row:
     target: str
 
 
-_GATE_TONE = {"Results in": "ok", "Sent": "info", "Ready": "info"}
+_GATE_TONE = {"Results in": "ok", "Sent": "info", "Closed": "info", "Ready": "info"}
 
 
 def _form(e: Exercise) -> Row:

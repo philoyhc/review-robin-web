@@ -33,6 +33,35 @@
   </div>
   <p class="muted">Sending a gate creates a Review Robin session from the dossiers entered at it and its pairs, each dossier as its <code>ProfileLink</code>{% if exercise.blind %}, and its Dossier ID in place of its application ID (ruling 43){% endif %}. Results come back by dossier and fill the gate's column on Dossiers.</p>
 </section>
+{# A gate sent in this tab (segment AD1M, ruling 55) reads *Sent* here
+   too, and one whose final results were pulled *Results in*; the card on
+   its page keeps both (_rr_js.html). #}
+<script>
+(function () {
+  function read(key) {
+    var v;
+    try { v = JSON.parse(sessionStorage.getItem(key) || "null"); } catch (e) { v = null; }
+    return v && typeof v === "object" && !Array.isArray(v) ? v : {};
+  }
+  var kept = read({{ ("applydesk-rr:" ~ exercise.public_id) | tojson }});
+  var logs = read({{ ("applydesk-rr-log:" ~ exercise.public_id) | tojson }});
+  document.querySelectorAll("tr[data-gate]").forEach(function (tr) {
+    var chip = tr.querySelector("[data-gate-state]"), r = kept[tr.dataset.gate], l = logs[tr.dataset.gate];
+    if (!chip) return;
+    var go = tr.querySelector("a[href$='#ev-rr']");
+    if (r && typeof r.code === "string" && ["Not ready", "Ready"].indexOf(chip.textContent) >= 0) {
+      chip.textContent = "Sent";
+      chip.className = "chip chip-info";
+      tr.children[3].textContent = "Sent in this tab";
+      if (go) go.textContent = "Review Robin…";
+    } else if (l && l.final && chip.textContent === "Closed") {
+      chip.textContent = "Results in";
+      chip.className = "chip chip-ok";
+      tr.children[3].textContent = "Results pulled in this tab";
+    }
+  });
+})();
+</script>
 {# Each gate's assignments (ruling 27): a short card per gate, its mode,
    counts and load, linking to the gate's own page (segment AD1H), where
    its rows show 200 at a time. #}

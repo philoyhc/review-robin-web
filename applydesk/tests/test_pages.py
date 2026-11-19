@@ -519,16 +519,18 @@ def test_evaluations_lists_each_gate_s_progress(client: TestClient) -> None:
 
 
 def test_a_gate_page_s_review_robin_card_is_a_scaffold(client: TestClient) -> None:
-    """Segment AD1M rung 2: the card in its real layout, every control
-    inert, the session's name and code derived (ruling 56)."""
+    """Segment AD1M rung 2: the card in its real layout, the session's
+    name and code derived (ruling 56), every control off until its
+    script has run."""
     base = f"/applydesk/operator/exercises/{EX}/evaluations"
     ready = client.get(f"{base}/gate_3").text
     card = ready.split('id="ev-rr"')[1].split("</section>")[0]
     assert f'value="{EX}-g3" data-rr-code disabled' in card
     assert "data-rr-name disabled" in card
     assert "Not linked: nothing sent yet" in card
+    # Off until the card's script has run (segment AD1M rungs 4 and 5).
     for act in ("send", "resend", "pull", "invite", "remind"):
-        assert f'data-rr-act="{act}" disabled' in card
+        assert re.search(f'data-rr-act="{act}"[^>]* disabled data-rr-wait', card)
     for kind in ("Reviewers", "Reviewees", "Relationships", "Settings"):
         assert f"<strong>{kind}</strong>" in card
     assert "<th>Evaluator</th><th>Pairs</th><th>Done</th>" in card

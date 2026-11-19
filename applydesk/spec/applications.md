@@ -416,8 +416,8 @@ but the lobby's *Stage* column reads:
   `evaluators_summary`); a new gate, and an Outline jump to one, open the
   *Gate* card for its name. Its window is its own dates, else the stage's.
   The gate is *fixed* once its Review Robin session has opened
-  (`workflow.gate_opened`: *Results in*, or *Sent* with its session under
-  way): every control in it is disabled and a line says so, a revert of its
+  (`workflow.gate_opened`: *Results in*, *Closed* in Review Robin and not
+  yet pulled, *Detached* there, or *Sent* with its session under way): every control in it is disabled and a line says so, a revert of its
   stage leaving it so (ruling 29). Sent but unopened, it is still changed
   here, each change re-sent, unless its stage is published ("Stage
   status"). Before it is sent a gate is *Ready* only when its stage is
@@ -790,10 +790,48 @@ keeps all of them.
   session's name and code, derived as *exercise name — gate label* and
   *public ID*`-g`*n* (ruling 56); the link (*Not linked: nothing sent
   yet*, *Linked; sent, its session not yet open*, *Linked; its session is
-  open*, *Linked; its results are in*); the last send; *What is sent*;
+  open*, *Linked; its session has closed, its results not yet pulled*,
+  *Detached: unlinked in Review Robin, so neither re-sent nor pulled*,
+  *Linked; its results are in*); the last send; *What is sent*;
   a progress row per paired evaluator; and *Send to Review Robin*,
   *Re-send*, *Pull results*, *Invite evaluators* and *Remind those not
-  done*, inert until the segment's later rungs.
+  done*, all simulated in the tab (`_rr_js.html`).
+- **Send and Re-send** (`_rr_js.html`), simulated in the tab (ruling 55):
+  a send is kept in `sessionStorage` under `applydesk-rr:<exercise>`, by
+  gate, with its name, code, time, transfer ID and the bundle's digest.
+  The head's chip and Evaluations' row then read *Sent* (*Sent in this
+  tab*), and *Send* is off. *Re-send* is on while the name, the code or
+  the files differ from what was sent, marked *Changed since sent*.
+  Refusals name Review Robin's code: `invalid_package` (a name of 1–255
+  characters, a code of 1–64), `session_code_conflict` (another of the
+  exercise's gates holds the code, any case), `invalid_setup` (the gate
+  not *Ready*, or this tab having added or removed pairs, since the files
+  are the pairs as saved; a re-send is refused the same). Review Robin's
+  `session_opened` is not drawn: an opened gate's buttons are off with
+  the reason instead; `session_has_responses` and `not_linked` cannot
+  arise in the sample. A gate the sample has sent whose session has not
+  opened reads as sent: *Re-send*, not *Send*. A Suggested gate whose only lack is its
+  approvals is sent once this tab has approved every dossier, none
+  short. A gate opened, closed or detached in Review Robin sends and
+  re-sends nothing, its name and code fixed, the reason in each title.
+- **Pull results** (ruling 57), on a gate whose session has opened, fills
+  *Done* per evaluator (`workflow.progress_of`: the sample keeps only the
+  gate's line, so each evaluator shows that share of their pairs). A
+  detached gate shows what Review Robin last reported. On a
+  gate *Closed* in Review Robin it reads **Pull final results**, which
+  marks the gate *Results in* (head chip, link line, Evaluations' row,
+  *Results pulled in this tab*); the results fill Dossiers with AD6. Off,
+  with the reason, before its session opens, once its results are in, or
+  detached.
+- **Invite evaluators** (a gate sent, in the tab or the sample, with
+  evaluators paired, its session not closed)
+  and **Remind those not done** (an open session, someone not done) show
+  the email first, under the buttons: whom it goes to, its subject and
+  body, fixed until AD7 puts these templates on Emails, linking Review
+  Robin's `/me`, where an evaluator signs in. *Send (simulated)* records
+  when and how many in the card's *Invited* or *Reminded* line; *Cancel*
+  or Escape closes it. Pulls, invitations and reminders are kept under
+  `applydesk-rr-log:<exercise>`.
 - **What is sent** (`applydesk/handoff.py`, built from the gate's pairs
   and card as saved, not this tab's changes): **reviewers**, each paired
   evaluator once by name and email, no tags; **reviewees**, each dossier

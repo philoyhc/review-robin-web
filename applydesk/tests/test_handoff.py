@@ -7,11 +7,12 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 
 import pytest
 from fastapi.testclient import TestClient
 
-from applydesk import handoff, sample_data, stages
+from applydesk import handoff, sample_data, stages, workflow
 from applydesk.tests._host import host_with
 
 EX = "wa9juxbc2t"
@@ -166,3 +167,72 @@ def test_the_card_counts_and_offers_each_file(client: TestClient) -> None:
     assert f"{sent.rows('relationships')} pairs, each tagged" in card
     for kind in handoff.KINDS:
         assert f'href="{BASE}/gate_3/{kind}.csv" download data-rr-file="{kind}"' in card
+
+
+def test_the_sample_shows_each_later_link_state(client: TestClient) -> None:
+    """The second exercise's gates (author, 2026-11-19): one under way,
+    one closed in Review Robin but not pulled (ruling 57), one detached."""
+    base = "/applydesk/operator/exercises/k7mfr3pq8z/evaluations"
+    table = client.get(base).text
+    states = re.findall(r"data-gate-state>([^<]+)<", table)
+    assert states == ["Sent", "Closed", "Detached"]
+    lines = {
+        2: "Linked; its session has closed, its results not yet pulled",
+        3: "Detached: unlinked in Review Robin, so neither re-sent nor pulled",
+    }
+    for n, line in lines.items():
+        card = client.get(f"{base}/gate_{n}").text.split('id="ev-rr"')[1]
+        assert f"<dd data-rr-link>{line}</dd>" in card
+    # Both opened: their pairs are Review Robin's, as an open session's.
+    assert workflow.gate_opened("Closed", "") and workflow.gate_opened("Detached", "")
+    assert workflow.gate_sent("k7mfr3pq8z", "g2")[0] == "Closed"
+
+
+def test_progress_follows_the_gate_s_line() -> None:
+    people = (("Ann", "ann@x", 4), ("Ben", "ben@x", 2))
+    assert workflow.progress_of("Sent", "3 of 4 reviewed", people) == (
+        ("Ann", "ann@x", 4, 3),
+        ("Ben", "ben@x", 2, 2),
+    )
+    assert [p[3] for p in workflow.progress_of("Closed", "", people)] == [4, 2]
+    assert [p[3] for p in workflow.progress_of("Results in", "", people)] == [4, 2]
+    assert [p[3] for p in workflow.progress_of("Ready", "", people)] == [0, 0]
+    assert [p[3] for p in workflow.progress_of("Sent", "", people)] == [0, 0]
+
+
+def test_the_card_s_data_links_review_robin_s_me(client: TestClient) -> None:
+    page = client.get("/applydesk/operator/exercises/k7mfr3pq8z/evaluations/gate_1").text
+    data = page.split('<script type="application/json" id="rr-data">')[1].split("</script>")[0]
+    assert '"rrMe": "http://testserver/reviewrobin/me"' in data
+    assert '"opened": true' in data and '"state": "Sent"' in data
+
+
+def test_every_gate_page_has_its_card(client: TestClient) -> None:
+    """The plan's Definition of done: the card on every gate page."""
+    for exercise in sample_data.EXERCISES:
+        if exercise.state == "Draft":
+            continue
+        for gate in stages.plan_of(exercise.public_id).columns:
+            if not isinstance(gate, stages.Gate):
+                continue
+            path = (
+                f"/applydesk/operator/exercises/{exercise.public_id}/evaluations/gate_{gate.number}"
+            )
+            page = client.get(path).text
+            card = page.split('id="ev-rr"')[1].split("</section>")[0]
+            for part in (
+                "data-rr-name",
+                "data-rr-code",
+                "data-rr-link",
+                "data-rr-last",
+                "data-rr-files",
+            ):
+                assert part in card, (path, part)
+            for act in ("send", "resend", "pull", "invite", "remind"):
+                assert f'data-rr-act="{act}"' in card, (path, act)
+
+
+def test_process_shows_a_closed_gate_as_under_way(client: TestClient) -> None:
+    page = client.get("/applydesk/operator/exercises/k7mfr3pq8z/process").text
+    assert '<span class="chip chip-info" data-pi-state>Closed</span>' in page
+    assert '<span class="chip chip-warn" data-pi-state>Detached</span>' in page
