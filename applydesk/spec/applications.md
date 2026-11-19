@@ -790,12 +790,25 @@ keeps all of them.
   session's name and code, derived as *exercise name — gate label* and
   *public ID*`-g`*n* (ruling 56); the link (*Not linked: nothing sent
   yet*, *Linked; sent, its session not yet open*, *Linked; its session is
-  open*, *Linked; its results are in*); the last send; *What is sent*,
-  the four files with their counts (reviewers, reviewees by Dossier ID on
-  a blind exercise or confidential gate, relationships, settings); a
-  progress row per paired evaluator; and *Send to Review Robin*,
+  open*, *Linked; its results are in*); the last send; *What is sent*;
+  a progress row per paired evaluator; and *Send to Review Robin*,
   *Re-send*, *Pull results*, *Invite evaluators* and *Remind those not
-  done*. Every control is inert until the segment's later rungs.
+  done*, inert until the segment's later rungs.
+- **What is sent** (`applydesk/handoff.py`, built from the gate's pairs
+  and card as saved, not this tab's changes): **reviewers**, each paired
+  evaluator once by name and email, no tags; **reviewees**, each dossier
+  entered, keyed by its application ID with its dossier page as an
+  absolute `ProfileLink`, or on a blind exercise or confidential gate by
+  its Dossier ID with the name *Name redacted* (ruling 43);
+  **relationships**, each pair tagged `PairContextTag1.Apply-Desk-Link`
+  with its evaluator's source, commas dropped; **settings**, the gate's
+  description, the exercise's help contact and timezone, the gate's
+  window with its offset, the tag `applydesk`, and one instrument named
+  for the gate holding its response fields. Never observers, release,
+  rules or layouts. Each file downloads from
+  `…/evaluations/gate_<n>/<kind>.csv` as `<code>_<kind>.csv`; Review
+  Robin's handoff route takes them as they are
+  (`tests/integration/test_handoffs.py`).
 - **Paging** (`applydesk/paging.py`): 200 rows a page, a pager as Review
   Robin's rosters, « ‹, a range menu of every page (*201–400*), › », kept
   on one line and repeated below a table longer than a page; an
