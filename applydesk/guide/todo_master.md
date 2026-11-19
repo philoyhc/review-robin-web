@@ -554,6 +554,11 @@ where a ruling below differs from it, the ruling wins.
     (author, 2026-11-19): after Review Robin's session closes, *Pull
     final results* writes the results and marks the gate *Results in*;
     an earlier pull reads progress only.
+58. **A detached gate is concluded by hand** (author, 2026-11-19): a gate
+    unlinked in Review Robin (*Detached*) never reaches *Results in* by a
+    pull, so the operator marks it concluded on Apply Desk; its results
+    are what was last pulled, or entered on Dossiers. Until then it holds
+    its stage and the exercise open, as `locks` and `timeline` have it.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
@@ -664,6 +669,8 @@ Segments in order; each gets a plan in this folder when it starts.
 - **AD5:** a list headline (Result 1) has no value on Dossiers (AD1F).
 - **AD5:** a panel used twice in one gate, or a max above its panel's
   size, is not flagged (AD1G).
+- **AD6:** *Mark concluded* on a detached gate (ruling 58), its results
+  what was last pulled or entered on Dossiers.
 - **AD6:** a gate's progress line, and each evaluator's share of it on
   the Review Robin card, is canned beside counted pairs until Review
   Robin's status read replaces it (AD1I; AD-32; AD1M).
@@ -671,9 +678,6 @@ Segments in order; each gets a plan in this folder when it starts.
 
 ## Open decisions
 
-- **How a detached gate concludes** (AD1M's cold read): `locks` and
-  `timeline` count only *Results in* as complete, so a gate unlinked in
-  Review Robin keeps its stage, and the exercise, from completing.
 
 - **Process's Preview** (AD1E): held until the builder is complete
   (author, 2026-11-13); what it shows is decided then.
