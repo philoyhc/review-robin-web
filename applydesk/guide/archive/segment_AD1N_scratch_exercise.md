@@ -37,6 +37,10 @@ The author wants to know how an operator will work through Apply Desk to set up 
 - Cookie plus memory, not a file or SQLite: anything on disk would be the database AD2 decides.
 - Cap and idle expiry so a deployed host can't be filled.
 - The *Scratch* chip and a line on every scratch page name the limits.
+- Shapes are checked, the plan is not (2026-11-19): what a page flags itself (dates out of order, weights not adding up, a result with no field) is kept as left and flagged again; only what has no shape to be kept in is refused (a half date range, a blank or decimal weight, a blank count).
+- Gates, outcomes and page-made panels are keyed by the server on save (`g1`…, `o1`…, `panel-1`…), and the page reloads after a save that keyed anything anew (2026-11-19): stable keys without the page minting them.
+- A reference to a removed gate or result reads `removed` (2026-11-19), never the column renumbered into its key.
+- Scratch IDs are drawn from `ids.generate_public_id` and checked against the sample's and every live scratch ID, not marked (2026-11-19): the same guarantee without a marker.
 
 ## Blast radius (measured)
 
@@ -51,6 +55,41 @@ Taken 2026-11-19 at `a4b87fd4c`.
   - `operator/_details.html`, `_form.html` (391 lines with `_form_cards`/`_form_draw`), `_process.html` (1,430), `_panels.html` (935), `_emails.html`.
   - `operator/exercises.html` for *New exercise*.
 - New: `applydesk/scratch.py` and its routes; tests.
+
+## Status
+
+**Closed 2026-11-19.** Rungs 2–6 as laddered:
+- #4024 store, *New exercise*, Details;
+- #4025 Form;
+- #4026 Process;
+- #4027 Panels, which also adopts a panel made with *+ New panel…* on Form or Process;
+- rung 6, Emails.
+
+Rungs 3 and 4 first refused a page-made panel; rung 5 lifted that.
+
+**Reads.** One cumulative `diff-reviewer` read at rung 6 (base `53be3ea32`). It found, each fixed in the rung that introduced it:
+- templates landing on the wrong outcome after a renumber;
+- a second Save refused after *+ New panel…* (fixed by the reload);
+- a rule rebound to another gate;
+- NaN and decimal weights;
+- a cookie lost beside an odd one;
+- unreadable 413s;
+- Details refusals pointed at Name.
+
+**Codex** found 15 more edges across #4024–#4026, most of them silent data loss, all real and fixed. Among them:
+- silent truncation;
+- edits made during a save;
+- removed results;
+- empty field lists;
+- blank counts and weights;
+- half date ranges;
+- a Total reset.
+
+**Not done, recorded:**
+- The server does not enforce the publish locks on a scratch save; only the page does.
+- Details' G2 never applies to a scratch exercise, whose state stays Draft.
+- The store lives in one process's memory, which is fine while Cordware runs one worker. More workers would lose scratch exercises at random.
+- Open questions moved to `applydesk/guide/todo_master.md`.
 
 ## PR ladder
 
@@ -76,8 +115,7 @@ Taken 2026-11-19 at `a4b87fd4c`.
 
 ## Open questions
 
-- **Test applications for a scratch exercise**, so Dossiers and Evaluations can be walked too (*Add sample applicants*?): the author decides once rung 2 is on screen.
-- **Saving a sample exercise as a scratch copy**, to edit the model exercise without starting blank: the author decides.
+Moved, unanswered, to `applydesk/guide/todo_master.md`, Open decisions: test applications for a scratch exercise; a sample exercise copied into a scratch one.
 
 ## Out of scope
 
