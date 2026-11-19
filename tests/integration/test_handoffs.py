@@ -26,6 +26,7 @@ from app.db.models import (
     Instrument,
     InstrumentResponseField,
     Invitation,
+    Relationship,
     Response,
     Reviewee,
     Reviewer,
@@ -223,6 +224,46 @@ def test_the_utilities_mock_bundle_arrives_set_up(client: TestClient, db: Sessio
     status = _status(client, bundle["transfer_id"]).json()
     assert status["status_row"]["instruments_set_up"] == 1
     assert status["schedule"]["responses_release_at"] is None  # releases nothing
+
+
+@pytest.mark.parametrize(
+    ("exercise_id", "number"),
+    [("wa9juxbc2t", 3), ("wa9juxbc2t", 2), ("k7mfr3pq8z", 1)],
+    ids=["interview", "confidential-gate", "blind-exercise"],
+)
+def test_an_apply_desk_gate_s_bundle_arrives_set_up(
+    client: TestClient, db: Session, exercise_id: str, number: int
+) -> None:
+    """Apply Desk's own builders (segment AD1M, `applydesk/handoff.py`):
+    a gate's four files, as its card offers them, create a draft whose
+    rosters, pairs and instrument are the gate's. A confidential gate
+    and a blind exercise send no applicant's name or application ID."""
+    from applydesk import handoff, sample_data, stages
+
+    exercise = next(e for e in sample_data.EXERCISES if e.public_id == exercise_id)
+    gate = stages.gate_numbered(stages.plan_of(exercise_id), number)
+    assert gate is not None
+    sent = handoff.bundle(exercise, gate, lambda app: f"https://applydesk.invalid/{app.dossier_id}")
+    reply = _post(client, {**sent.envelope(), "transfer_id": str(uuid.uuid4())})
+    assert reply.status_code == 201, reply.text
+    review_session = db.scalars(select(ReviewSession)).one()
+    assert (review_session.name, review_session.code) == (sent.name, sent.code)
+    assert _count(db, Reviewer) == sent.rows("reviewers")
+    assert _count(db, Reviewee) == sent.rows("reviewees")
+    assert _count(db, Relationship) == sent.rows("relationships")
+    instrument = db.scalars(select(Instrument)).one()
+    assert sorted(f.field_key for f in instrument.response_fields) == sorted(
+        f.key for f in gate.fields
+    )
+    rows, _ = stages.assignments(exercise_id, gate)
+    names = {r.name for r in db.scalars(select(Reviewee))}
+    keys = {r.email_or_identifier for r in db.scalars(select(Reviewee))}
+    if handoff.confidential(exercise, gate):
+        assert names == {handoff.REDACTED}
+        assert keys == {a.application.dossier_id for a in rows}
+    else:
+        assert names == {a.application.applicant for a in rows}
+        assert keys == {a.application.public_id for a in rows}
 
 
 def test_a_refused_settings_file_leaves_no_session_and_says_why(

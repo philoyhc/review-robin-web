@@ -9,7 +9,17 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
-from applydesk import extract, home_ops, locks, paging, sample_data, stages, timeline, workflow
+from applydesk import (
+    extract,
+    handoff,
+    home_ops,
+    locks,
+    paging,
+    sample_data,
+    stages,
+    timeline,
+    workflow,
+)
 from applydesk.gate import placeholders_only
 from applydesk.lookups import exercise_or_404
 from applydesk.web import (
@@ -89,6 +99,47 @@ def form_preview(request: Request, exercise_id: str) -> Response:
     )
 
 
+def _gate_or_404(exercise: sample_data.Exercise, gate: str) -> stages.Gate:
+    """The gate a ``gate_<n>`` path names, 404 for one the exercise lacks
+    or a draft exercise."""
+    number = re.fullmatch(r"gate_([1-9][0-9]*)", gate)
+    plan = stages.plan_of(exercise.public_id)
+    found = stages.gate_numbered(plan, int(number.group(1))) if number else None
+    if found is None or exercise.state == "Draft":
+        raise HTTPException(status_code=404)
+    return found
+
+
+def _bundle(request: Request, exercise: sample_data.Exercise, gate: stages.Gate) -> handoff.Bundle:
+    """The gate's bundle, each ``ProfileLink`` the dossier's page as an
+    absolute URL under the mount (segment AD1M)."""
+    origin = f"{request.url.scheme}://{request.url.netloc}"
+    return handoff.bundle(
+        exercise,
+        gate,
+        lambda app: (
+            origin
+            + url_path(request, f"/me/exercises/{exercise.public_id}/dossiers/{app.dossier_id}")
+        ),
+    )
+
+
+@router.get(
+    "/exercises/{exercise_id}/evaluations/{gate}/{kind}.csv", name="applydesk_gate_bundle_file"
+)
+def gate_bundle_file(request: Request, exercise_id: str, gate: str, kind: str) -> Response:
+    """One of the four files a gate would be sent with (segment AD1M),
+    named as Review Robin names its own: ``<code>_<kind>.csv``."""
+    exercise = exercise_or_404(exercise_id)
+    found = _gate_or_404(exercise, gate)
+    if kind not in handoff.KINDS:
+        raise HTTPException(status_code=404)
+    sent = _bundle(request, exercise, found)
+    return _download(
+        f"{sent.code}_{kind}.csv", sent.files[kind].encode(), "text/csv; charset=utf-8"
+    )
+
+
 @router.get("/exercises/{exercise_id}/evaluations/{gate}", name="applydesk_gate_evaluations")
 def gate_evaluations(
     request: Request,
@@ -103,11 +154,7 @@ def gate_evaluations(
     row each (author, 2026-11-17), 200 at a time, filtered by candidate
     or evaluator."""
     exercise = exercise_or_404(exercise_id)
-    number = re.fullmatch(r"gate_([1-9][0-9]*)", gate)
-    plan = stages.plan_of(exercise.public_id)
-    found = stages.gate_numbered(plan, int(number.group(1))) if number else None
-    if found is None or exercise.state == "Draft":
-        raise HTTPException(status_code=404)
+    found = _gate_or_404(exercise, gate)
     rows, spread = stages.assignments(exercise.public_id, found)
     pairs = stages.pairs_of(rows)
     state = workflow.gate_state(exercise.public_id, found.key)
@@ -154,6 +201,7 @@ def gate_evaluations(
         mode_label=dict(stages.MODES).get(found.mode, found.mode),
         assignment_state=stages.assignment_state,
         assignment_counts=stages.assignment_counts,
+        bundle=_bundle(request, exercise, found),
     )
 
 
