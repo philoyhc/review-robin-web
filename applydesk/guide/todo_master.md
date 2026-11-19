@@ -661,7 +661,7 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
-| UI review — consistency and gaps | Before AD2 fixes what is stored (author, 2026-11-19): first a scratch exercise to set up end to end (`applydesk/guide/segment_AD1N_scratch_exercise.md`), then the review itself | Building |
+| UI review — consistency and gaps | Before AD2 fixes what is stored (author, 2026-11-19): a scratch exercise to set up end to end, done (`applydesk/guide/archive/segment_AD1N_scratch_exercise.md`); next the review itself | Building |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
@@ -685,6 +685,11 @@ Segments in order; each gets a plan in this folder when it starts.
 
 ## Open decisions
 
+- **Scratch exercises (AD1N): test applications**, so Dossiers and
+  Evaluations can be walked on one too (*Add sample applicants*?), and
+  the applicant's side with them; and **a sample exercise copied into
+  a scratch one**, to edit the model exercise rather than start blank.
+  The author decides.
 
 - **Process's Preview** (AD1E): held until the builder is complete
   (author, 2026-11-13); what it shows is decided then.

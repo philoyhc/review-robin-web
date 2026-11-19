@@ -124,71 +124,96 @@ answer only for a Published or Closed exercise.
   holding its next step, `workflow.current_stage`), *Submitted*
   (`workflow.counts_of`, the count every page uses) and *Applications
   close*.
-- **Scratch exercises** (segment AD1N, ruling 59; `applydesk/scratch.py`).
-  *New exercise* opens a form asking for a name; *Create* makes a blank
-  draft, as *Graduate Travel Grant 2027* (one stage holding the form,
-  nothing else), and lands on its Home. A refusal (no name, or a sixth)
-  returns to the Lobby saying why. A scratch exercise is held in the
-  server's memory for this browser only, keyed by an HttpOnly
-  `applydesk-scratch` cookie on the mount's path. It is never written
-  anywhere, and is gone after a restart, a deploy or eight idle hours; a
-  browser holds at most five. Another browser gets a 404 for it. Its row
-  carries a *Scratch* chip and *Discard* (Destructive), which asks first.
-  Every page renders it, since `sample_data.exercise` reads the scratch
-  first, and each of its pages says what a scratch exercise is in place of
-  the placeholder line. Details' *Lock* on one posts the fields to
-  `…/details` (JSON, same-site), checked as the card checks them and by the
-  server (a name of 1–200 characters, a code no other exercise holds, a
-  help contact that is an address, a timezone offered, who may apply one of
-  the choices), and says *Saved to this scratch exercise.* or why not.
-  A scratch exercise's form starts empty (one blank question, as a new
-  form's), not the sample's. Form's *Save* on one (rung 3) posts the
-  page's own snapshot (`applydeskFormSnapshot`) to `…/form`; the server
-  keeps each card in `FormCard`'s shape, refusing more than 200 cards, a
-  kind or type not offered, a toggle that is not true or false, or a text
-  past its length, or a question choosing from no panel the exercise has,
-  with the card's number. `sample_data.form_cards` and
-  `form_heading` read it back, so Form, Preview, the applicant pages and
-  Process's form-answer rules all see the saved questions. A saved page's
-  *Unsaved changes* marker clears. Process's *Save* (rung 4) posts
-  `applydeskProcessSnapshot` to `…/process`: every stage (name, dates,
-  shown, Draft or Published), the form's dates and emails, each gate
-  (name, dates, description, confidential, rule, sources, Total, mode,
-  response fields, up to three results) and each outcome (name, due,
-  values, weights, rule, emails). `applydesk/process_save.py` checks the
-  shapes and ruling 15's (`stages.problems`), not what the page itself
-  flags, which is kept as left and flagged again (but a weight that is
-  blank or not a whole percent, or an evaluator count not a whole number,
-  kept as numbers, or a date range with one end alone, is refused; a
-  result whose field was removed is kept with none); it renumbers gates
-  `g1`… and outcomes `o1`… in timeline order, in the rules and weights
-  that name them too, where one naming a gate or result no longer there
-  reads `removed`, never another's. `stages.plan_of` and `workflow.sends` read it back,
-  so Dossiers, Evaluations and Emails follow.
-  Panels' *Save* (rung 5) posts `applydeskPanelsSnapshot` to `…/panels`,
-  refused on the page while a row or a *Manage panels* change is still
-  open: the panels (distinct names, none a CSV column's) and every row
-  (an address each, distinct; ticks naming the page's panels), someone on
-  no panel kept on the roster. `applydesk/scratch_panels.py` keys a panel
-  the page made `panel-1`… on its first save, a saved one keeping its key,
-  and refuses retiring one a question or a gate uses.
-  `sample_data.panels_of` and `roster` read it back. A panel made with
-  *+ New panel…* on Form or Process joins the exercise's panels, members
-  and all, with the save that names it. A save that keys something anew
-  (a panel, a renumbered gate or outcome) reloads the page, so it holds
-  the keys kept, and says it saved once back.
-  An Emails card's *Save* (rung 6) posts its subject and body to
-  `…/emails` by the item and audience Process owes it for, not to the tab:
-  refused for an email Process does not owe, a subject over 300
-  characters or a body over 20,000, or another kind's merge tag
-  (`workflow.foreign_tags`, as the card refuses it). `workflow.emails`
-  counts it written once it has a subject and a body, so the card's chip,
-  the status row and Home follow; the card opens as saved. A card names
-  its email too, so one opened before Process renumbered the outcomes is
-  refused (*reload Emails*), and Process's save carries each outcome's
-  templates to its new key, dropping a removed one's
-  (`workflow.rekey_templates`). Past `scratch.MAX_BODY` (256 KiB) a page's
-  save says so; a Details refusal points at the field it names.
+- **Scratch exercises** (`applydesk/scratch.py`). Until AD2 stores
+  anything, an operator sets an exercise up end to end in one that is held
+  in the server's memory and never written anywhere.
+  - **Making and keeping.** *New exercise* opens a form asking for a name
+    (1–200 characters); *Create* makes a blank draft, as *Graduate Travel
+    Grant 2027* (one stage holding the form, nothing else), and lands on its
+    Home. A refusal (no name, or a sixth) returns to the Lobby saying why.
+    Its row carries a *Scratch* chip and *Discard* (Destructive), which asks
+    first; a scratch exercise cannot be got back. Every page of one says
+    what it is in place of the placeholder line.
+  - **Whose and for how long.** One browser's, keyed by an opaque HttpOnly
+    `applydesk-scratch` cookie on the mount's path (SameSite Lax, Secure
+    over https), renewed on each request while the store lives. At most five
+    per browser; gone after a restart, a deploy or eight idle hours. Another
+    browser's request naming its ID gets a 404, as does *Discard* or a save
+    on a sample exercise. Its ID is drawn as any exercise's and never
+    equals a sample's or another live scratch exercise's.
+  - **What every page reads.** `sample_data` and `stages` consult the store
+    before the fixed sample, so Home, Process, Dossiers, Evaluations,
+    Emails, Preview and the applicant pages see what the Setup pages saved,
+    with no route of their own. It holds no applications, so Dossiers and
+    Evaluations show their empty states.
+  - **A save** is a same-site JSON post (403 for another site, 415 for
+    non-JSON, 400 for malformed JSON) of at most `scratch.MAX_BODY`
+    (256 KiB; 413 past it). The page says *Saved to this scratch
+    exercise.* or the reason it was refused, and a saved page's *Unsaved
+    changes* marker clears. A page edited while its save was on the way
+    stays unsaved. Shapes are checked, not the plan: what a page flags
+    itself (dates out of order, weights not adding up, a rule pointing at a
+    removed gate) is kept as left and flagged again; only what has no shape
+    to be kept in is refused.
+  - **Details** (*Lock*, to `…/details`): a name of 1–200 characters, a code
+    of at most 40 that no other exercise holds (case-insensitively), a
+    description of at most 2,000, a help contact that is an address (or
+    none), a timezone offered, who may apply one of the choices, *Blind* a
+    flag. A refusal points at the field it names.
+  - **Form** (to `…/form`, `applydeskFormSnapshot`): at most 200 cards, a
+    title of at most 200 characters, a description of at most 4,000; each
+    card of a known kind, a field of a type offered, its text within its
+    length, its toggles true or false, and a question choosing from a panel
+    the exercise has (blank reads *Institution-wide*); a refusal names the
+    card's number. A new form is empty (one blank question), not the
+    sample's. `sample_data.form_cards` and `form_heading` read it back.
+  - **Process** (to `…/process`, `applydeskProcessSnapshot`,
+    `applydesk/process_save.py`): every stage (name, dates, shown, Draft or
+    Published, so *Publish* and the reverts work), the form's dates and the
+    receipt and reminder it ticks, each gate (name, dates, description,
+    confidential, rule, sources, Total, assignment, response fields, up to
+    three results) and each outcome (name, due, values, weights, rule, the
+    emails it ticks). Limits: 20 stages, 10 gates a stage, 50 in any list,
+    at least one stage, ruling 15's shape (`stages.problems`). Refused as
+    having no shape to be kept in: a date range with one end alone, a
+    weight that is blank or not a whole percent, an evaluator count that is
+    not a whole number, a result reading a field its gate lacks, a panel
+    source the exercise lacks. A result whose field was removed is kept with
+    none. Gates are keyed `g1`… and outcomes `o1`… in timeline order, in the
+    rules and weights that name them too; one naming a gate or result no
+    longer there reads `removed`, never another column's. `stages.plan_of`
+    and `workflow.sends` read it back.
+  - **Panels** (to `…/panels`, `applydeskPanelsSnapshot`,
+    `applydesk/scratch_panels.py`): refused on the page while a row or a
+    *Manage panels* change is still open. At most 50 panels (distinct names
+    of at most 80 characters, none a CSV column's) and 2,000 people (an
+    address each, distinct; ticks naming the page's panels); someone on no
+    panel stays on the roster. Retiring a panel a question or a gate uses is
+    refused. A panel the page made is keyed `panel-1`… on its first save, a
+    saved one keeping its key; one named as a saved panel the post does not
+    otherwise carry (a page that missed its reload) is that panel. `sample_data.panels_of` and `roster` read it
+    back. A panel made with *+ New panel…* on Form or Process joins the
+    exercise's panels, members and all, with the save that names it; one
+    offered again under a saved panel's name (a page that missed its
+    reload) is that panel, not a second.
+  - **Revision.** Each Process save bumps the exercise's revision; Process
+    and Emails send the revision their page opened at, and a save from a
+    page older than the last Process save is refused (*reload*), so no stale
+    key lands on another column or outcome. A Process save that succeeded
+    while the page was edited leaves *Save* saying to reload first.
+  - **Reload.** A save that keys something anew (a panel; every Process
+    save, which renumbers) reloads the page so it holds the keys kept, and
+    says it saved once back.
+  - **Emails** (a card's *Save*, to `…/emails`): by the item, audience and
+    name Process owes it for, not the tab. Refused for an email Process does
+    not owe, including a card on a page opened before Process last saved
+    (its revision; *reload Emails*), a subject over 300 characters or a body over 20,000, or
+    another kind's merge tag (`workflow.foreign_tags`). `workflow.emails`
+    counts it written once it has a subject and a body, else the card says
+    it is still owed; the chip, the status row and Home follow.
+    `workflow.template_text` opens a card as saved, empty if never.
+    Process's save carries each outcome's templates to its new key and
+    drops a removed outcome's (`workflow.rekey_templates`).
 - **The User Lobby** (`applydesk/templates/applydesk/me/home.html`), three
   cards: *My applications*, each of the applicant's own with its state,
   linking its page, a draft included; *Open to me*, each Published or
