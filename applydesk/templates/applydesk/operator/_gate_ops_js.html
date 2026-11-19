@@ -218,7 +218,9 @@
       // back together; a pair added later waits for its own approval.
       var dd = tr.dataset.evRow;
       var keys = pairs().filter(function (p) { return p[0] === dd; }).map(function (p) { return id(p[0], p[1]); });
-      var was = keys.every(function (k) { return ch.approved.indexOf(k) >= 0; });
+      // The clicked pair's own state decides (Codex): Approved takes the
+      // dossier's back, never approving a pair added since.
+      var was = ch.approved.indexOf(id(dd, tr.dataset.evPair)) >= 0;
       ch.approved = ch.approved.filter(function (k) { return keys.indexOf(k) < 0; });
       if (!was) ch.approved = ch.approved.concat(keys);
       draw();

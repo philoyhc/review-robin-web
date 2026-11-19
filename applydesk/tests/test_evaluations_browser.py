@@ -380,3 +380,28 @@ def test_undo_and_add_hold_the_limits_and_the_picker_follows(page: Page) -> None
         .count()
         == 1
     )
+
+
+def test_approved_takes_back_though_a_pair_was_added_since(page: Page) -> None:
+    """Codex on #4003: a dossier approved, one evaluator swapped; Approved on
+    the remaining pair takes the dossier's approval back, never approving
+    the newcomer."""
+    page.goto(GATE3)
+    pair = _row(page, "Kenji Russo")
+    pair.get_by_role("button", name="Approve").click()
+    # The box filled before the swap, so its evaluator is a newcomer.
+    page.get_by_role("button", name="+ Pair").click()
+    page.locator("[data-ev-add-who]").select_option(label="Kenji Russo")
+    pair.get_by_role("button", name="Remove").click()
+    page.get_by_role("button", name="Add the pair").click()
+    kept = page.locator("tbody tr:not([data-ev-added])", has_text="Kenji Russo").nth(1)
+    added = page.locator("tbody tr[data-ev-added]")
+    assert kept.locator("[data-ev-state]").text_content() == "Approved"
+    assert added.locator("[data-ev-state]").text_content() != "Approved"
+    kept.get_by_role("button", name="Approved").click()
+    assert kept.locator("[data-ev-state]").text_content() != "Approved"
+    assert added.locator("[data-ev-state]").text_content() != "Approved"
+    assert (
+        page.locator("[data-ev-said]").inner_text()
+        == "Evaluators no longer approved for Kenji Russo."
+    )
