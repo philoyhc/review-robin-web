@@ -12,7 +12,8 @@ functions over the sample; AD6 posts these same files.
   (``PairContextTag1.Apply-Desk-Link``), never holding a comma.
 - **Settings**: the gate's description, the exercise's help contact and
   timezone, the gate's window, the ``applydesk`` tag, and one instrument
-  holding the gate's response fields. Never observers, release,
+  holding the gate's response fields (``stages.fields_of``: a sample gate
+  listing none reads one per result, as Process shows it). Never observers, release,
   branching, rules or layouts.
 """
 
@@ -52,6 +53,8 @@ class Bundle:
     name: str
     code: str
     files: dict[str, str]
+    #: How many response fields its instrument holds (``stages.fields_of``).
+    fields: int = 0
 
     def digest(self) -> str:
         """What *Changed since sent* compares: the files and the names."""
@@ -176,7 +179,7 @@ def settings_csv(exercise: sample_data.Exercise, gate: stages.Gate) -> str:
         ["instruments[1].name", gate.label or f"Gate {gate.number}", "string"],
         ["instruments[1].description", gate.description, "string"],
     ]
-    for m, f in enumerate(gate.fields, start=1):
+    for m, f in enumerate(stages.fields_of(gate), start=1):
         at = f"instruments[1].response_fields[{m}]"
         rows += [
             [f"{at}.field_key", f.key, "string"],
@@ -217,4 +220,5 @@ def bundle(
             "relationships": relationships_csv(pairs, hidden),
             "settings": settings_csv(exercise, gate),
         },
+        fields=len(stages.fields_of(gate)),
     )

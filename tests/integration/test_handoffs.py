@@ -252,9 +252,11 @@ def test_an_apply_desk_gate_s_bundle_arrives_set_up(
     assert _count(db, Reviewee) == sent.rows("reviewees")
     assert _count(db, Relationship) == sent.rows("relationships")
     instrument = db.scalars(select(Instrument)).one()
-    assert sorted(f.field_key for f in instrument.response_fields) == sorted(
-        f.key for f in gate.fields
-    )
+    # The fields Process shows (`stages.fields_of`), a sample gate listing
+    # none reading one per result (Codex on #4018): never an empty form.
+    shown = stages.fields_of(gate)
+    assert shown
+    assert sorted(f.field_key for f in instrument.response_fields) == sorted(f.key for f in shown)
     rows, _ = stages.assignments(exercise_id, gate)
     names = {r.name for r in db.scalars(select(Reviewee))}
     keys = {r.email_or_identifier for r in db.scalars(select(Reviewee))}

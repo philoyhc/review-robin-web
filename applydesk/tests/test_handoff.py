@@ -104,7 +104,7 @@ def test_the_settings_carry_the_gate_s_card() -> None:
     assert settings["session.deadline"].endswith("+08:00")
     assert settings["session_tags[1].tag"] == "applydesk"
     assert settings["instruments[1].name"] == gate.label
-    for m, f in enumerate(gate.fields, start=1):
+    for m, f in enumerate(stages.fields_of(gate), start=1):
         at = f"instruments[1].response_fields[{m}]"
         assert settings[f"{at}.field_key"] == f.key
         assert settings[f"{at}.required"] == ("true" if f.required else "false")
@@ -112,6 +112,23 @@ def test_the_settings_carry_the_gate_s_card() -> None:
     assert not any(
         k.startswith(("observers", "rule_sets", "session.responses_release")) for k in settings
     )
+
+
+def test_a_gate_listing_no_fields_sends_one_per_result() -> None:
+    """Codex on #4018: the blind exercise's Gate 1 lists no response
+    fields and reads one per result, as Process shows; its instrument
+    must carry that Score field, not none."""
+    _, gate = _gate("k7mfr3pq8z", 1)
+    assert not gate.fields
+    sent = _bundle("k7mfr3pq8z", 1)
+    settings = {r["field"]: r["value"] for r in _rows(sent.files["settings"])}
+    assert settings["instruments[1].response_fields[1].label"] == "Score"
+    assert settings["instruments[1].response_fields[1].data_type"] == "Integer"
+    assert (
+        settings["instruments[1].response_fields[1].min"],
+        settings["instruments[1].response_fields[1].max"],
+    ) == ("1", "5")
+    assert sent.fields == 1
 
 
 def test_a_tag_never_holds_a_comma() -> None:
