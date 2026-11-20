@@ -1251,9 +1251,10 @@ def observe_deadline(
     """Lazy close at the review's end. Idempotent.
 
     The end is End, or with no End, Release from (:func:`review_end`;
-    segment 14E). Past it, this closes the instruments and the session
-    (``ready → expired``, :func:`_expire_at_end`), once per crossing, also
-    for a session whose instruments an earlier request already shut.
+    segment 14E). Past it, this closes a ``ready`` session's instruments
+    and the session (``ready → expired``, :func:`_expire_at_end`), once
+    per crossing, also for a session whose instruments an earlier request
+    already shut. Any other state closes nothing.
 
     Closes any instruments still ``accepting_responses`` once the review's
     end has passed and stamps ``deadline_closed_at``. Emits one
@@ -1278,10 +1279,12 @@ def observe_deadline(
     if not deadline_has_passed(review_session, now=current):
         _reopen_while_live(db, review_session, correlation_id=correlation_id)
         return 0
-    # A session still in setup has no review to end: closing its
+    # Only a ``ready`` session has a review to end. Closing another's
     # instruments would record a deadline with no ``ready → expired``
-    # (findings 2026-11-20 corpus B2).
-    if is_editable(review_session):
+    # (findings 2026-11-20 corpus B2): one in setup has not opened, and an
+    # expired or archived one was closed already. The clock's pass guards
+    # the same way.
+    if not is_ready(review_session):
         return 0
 
     def _open(*, fresh: bool = False) -> list[Instrument]:
@@ -1320,7 +1323,7 @@ def observe_deadline(
     # the threadpool (their gate and their error re-render), so the wait
     # for a held lock stalls only this request.
     session_guard.lock_session(db, review_session)
-    if not deadline_has_passed(review_session, now=current) or is_editable(review_session):
+    if not deadline_has_passed(review_session, now=current) or not is_ready(review_session):
         db.commit()  # Release the lock (findings N5).
         return 0
     instruments = _open(fresh=True)
