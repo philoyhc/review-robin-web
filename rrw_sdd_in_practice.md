@@ -67,6 +67,7 @@ Three features of the model carry more weight than they look:
 
 - **Archives are records, not contracts.** Everything under an `archive/` is exempt from the prose gates (Section 6.3): its paths, pointers and labels are not checked. Two things there still are: the indexes that list archived documents, and the archived plans the index-currency checks read, including the `Blast radius` anchor on plans from Segment 19S on. It is kept for its reasoning, not for behavior. Specs can therefore be consolidated and retired freely without losing the reasoning behind them, and without a retired spec ever being mistaken for a live one. An archived spec's header names the spec that supersedes it.
 - **The functional spec is an entry point, not a monolith.** Its §19 "Reading guide" maps each subject to the per-page or per-subsystem spec that carries the implementation-level contract (Section 6.2).
+- **Author rulings can stand as a layer of their own during major building.** A ruling settles a decision across segments, and while a phase of major building runs, rulings may stand numbered in the package's `todo_master` or beside it, above the plans that cite them. They are not a fourth authority for good: they fold into the spec at a major juncture (Section 6.1).
 - **What is decided but not scheduled has one home.** `guide/deferred_consolidated.md` holds every scoped-but-unscheduled item, each with the trigger that would lift it back into a plan. What is *found* but not yet acted on has another: a findings register beside the assessment that found it (Section 6.5). Either way a finding is not left in a closed plan's margins, where compaction would lose it.
 
 ---
@@ -122,6 +123,12 @@ The exit has since been made *checkable*, in two halves:
 - **Undeclared surfaces are gated.** `tests/unit/test_spec_coverage.py` fails when a routing module has no governing spec at all.
 
 Neither half makes the exit *mechanical*, and the distinction matters. The close check is not a CI gate, because a per-PR spec-sync gate would contradict this very rule. It asks only whether an edit happened, never whether it was right, and only for the files the plan named; that stays `spec-writer`'s job at the close, and the author's. So the rule is held by visibility on the way in and by convention *with a tool* on the way out. What neither covers is drift that goes unnoticed at the close (Section 6.5), a spec the plan did not name, or a spec that exists but says too little.
+
+**Rulings fold at a juncture, not at a close (ruled 2026-11-20).** Apply Desk built its first phase, AD1 to AD1Q, on three sources: a destination functional spec (`applydesk/docs/applydesk_functional_spec_v0.6b_agent_handoff.md`), numbered author rulings in `applydesk/guide/todo_master.md` (64 by 2026-11-20, the first dropping the destination spec's native assessment engine), and the contract spec `applydesk/spec/applications.md`. A ruling outlives the segment that prompted it, so folding each one at a segment's close would rewrite the spec on every close while the design was still moving. The author ruled instead:
+- **While a phase of major building runs,** rulings stand in their own layer and win over the destination spec where they differ. A segment close still writes what it shipped into the spec and cites the rulings it relied on, but does not move them.
+- **At a major juncture** (for Apply Desk, the end of UI prototyping, AD1 to AD2, when pages start to persist), each ruling goes into the spec it governs or is recorded as retired, and the standing list empties. The destination spec is archived then, with a header naming the spec and the rulings that supersede it, as RRW's own was (Section 3).
+
+So the phase rule gains a longer phase above it: the plan leads a segment, the spec settles at its close, and the rulings settle at the juncture.
 
 ### 6.2 Two altitudes of spec
 

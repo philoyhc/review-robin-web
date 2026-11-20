@@ -248,6 +248,10 @@ plan moved here from Cordware.
   `CLAUDE.md`, §6.4, constitution III and the skill's close step.
   `new_project_practices_setup.md` and §6.4's table follow. Prose; no
   read.
+- **Rung 8 (2026-11-20).** The rulings layer is written down: §4's
+  bullet, §6.1's juncture rule, constitution I's annotation, and a
+  paragraph under Apply Desk's Rulings heading naming AD1 → AD2. The
+  fold and v0.6b's archiving stay with that juncture. Prose; no read.
 
 ## PR ladder
 
