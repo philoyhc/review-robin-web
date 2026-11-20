@@ -226,14 +226,9 @@ reject it.
   present so `tests/integration/test_inline_scripts_parse.py` runs
   rather than skips — a silent tool-gated skip, so read the skip list,
   not just the exit code. The other tool-gated tests are
-  `tests/browser/` and Residential's
-  `residentialapps/tests/test_sort_persistence_browser.py`,
-  `residentialapps/tests/test_touch_targets_browser.py`,
-  `residentialapps/tests/test_columns_browser.py`,
-  `residentialapps/tests/test_supportlogs_log_browser.py`,
-  `residentialapps/tests/test_leave_dates_browser.py`, and Utilities'
-  `utilityapps/tests/test_photo_poc_browser.py` and
-  `utilityapps/tests/test_interop_poc_browser.py`, which need a
+  `tests/browser/` and every `*_browser.py` in a package's `tests/`
+  (`git ls-files '*_browser.py'`; `tests/unit/test_browser_gated_names.py`
+  holds every test that imports Playwright to that naming), which need a
   Chromium build (preinstalled in the web sandbox) and skip with a reason
   without one; CI sets
   `RRW_REQUIRE_BROWSER=1` so a missing browser fails there. They also run in

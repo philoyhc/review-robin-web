@@ -145,7 +145,10 @@ checking itself.
   (2026-11-20, rung 4)
 - F8's list becomes derived: a test reads the tree's `*_browser.py`
   files and `CLAUDE.md`'s list, rather than relying on someone
-  remembering. (2026-11-20)
+  remembering. (2026-11-20) *(Amended at rung 9: `CLAUDE.md` states
+  the naming rule instead of listing 20 files, which would have grown it
+  by 13 lines; the test holds every test importing Playwright to that
+  rule.)*
 
 ## Blast radius (measured)
 
@@ -252,6 +255,11 @@ plan moved here from Cordware.
   bullet, §6.1's juncture rule, constitution I's annotation, and a
   paragraph under Apply Desk's Rulings heading naming AD1 → AD2. The
   fold and v0.6b's archiving stay with that juncture. Prose; no read.
+- **Rung 9 (2026-11-20).** `CLAUDE.md` names the browser-gated tests
+  by rule, `tests/browser/` and every `*_browser.py`, and
+  `tests/unit/test_browser_gated_names.py` fails on a Playwright test
+  outside it, or on the rule's removal (both mutations caught).
+  `CLAUDE.md` is 344 lines; §6.7 records it.
 
 ## PR ladder
 
