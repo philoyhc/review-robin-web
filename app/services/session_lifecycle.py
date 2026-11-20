@@ -775,16 +775,16 @@ def release_responses_now(
     session_guard.require_state(
         db,
         review_session,
-        is_expired,
-        code="not_expired",
-        message="Responses can be released only once the session is closed.",
+        lambda locked: not linked_apps.locks(locked, linked_apps.Lock.RELEASE),
+        code="linked",
+        message=linked_apps.off_message(review_session, "Release"),
     )
     session_guard.require_state(
         db,
         review_session,
-        lambda locked: not linked_apps.locks(locked, linked_apps.Lock.RELEASE),
-        code="linked",
-        message=linked_apps.off_message(review_session, "Release"),
+        is_expired,
+        code="not_expired",
+        message="Responses can be released only once the session is closed.",
     )
     now = datetime.now(UTC)
     cleared_until = review_session.responses_release_until is not None
@@ -842,16 +842,16 @@ def stop_responses_release(
     session_guard.require_state(
         db,
         review_session,
-        is_expired,
-        code="not_expired",
-        message="A release can be stopped only once the session is closed.",
+        lambda locked: not linked_apps.locks(locked, linked_apps.Lock.RELEASE),
+        code="linked",
+        message=linked_apps.off_message(review_session, "Release"),
     )
     session_guard.require_state(
         db,
         review_session,
-        lambda locked: not linked_apps.locks(locked, linked_apps.Lock.RELEASE),
-        code="linked",
-        message=linked_apps.off_message(review_session, "Release"),
+        is_expired,
+        code="not_expired",
+        message="A release can be stopped only once the session is closed.",
     )
     now = datetime.now(UTC)
     review_session.responses_release_until = now
