@@ -790,10 +790,11 @@ A panel made on Form or Process appears here only once saved (AD2).
     first, as it does while a ticked row holds changes ✓ has not kept. ×
     on a member of a panel an opened gate keeps (as kept, not as ticked
     while editing) asks before removing them.
-- **The table.** *Filter* (matches name, email, note and the names of the
-  panels a row is on; a row being edited stays in view) and *Add new*, which
-  opens a blank row at the top (an imported row joins the end). *Show
-  columns:* has a chip per panel, pressed while its column shows. Columns:
+- **The table.** Above it, in two columns (ruling 65): on the left, *Show
+  columns:*, a chip per panel, pressed while its column shows; on the
+  right, *Filter* (matches name, email, note and the names of the panels a
+  row is on; a row being edited stays in view) with *Add new* under it,
+  which opens a blank row at the top (an imported row joins the end). Columns:
   a select box, *Name*, *Email*, *Note*, one per panel and a ✓ and × column;
   *Name*, *Email* and *Note* sort with ↕. A panel's heading carries its count
   and a *Sent* chip when sent; its tooltip says *Used by* or *Not used yet*.
@@ -919,7 +920,7 @@ took (`stages.mean_note`).
 
 At `/operator/exercises/<id>/evaluations`: the **Gates** table (gate, type,
 state, progress, and a link to the gate's Review Robin card, *Review Robin card
-→*, ruling 64), then **Assignments**, one card with a row per gate:
+→*, ruling 64, flush right, ruling 65), then **Assignments**, one card with a row per gate:
 its mode, its counts (*42 dossiers · 40 filled · 2 short*, over every pair),
 its load line per panel source (*Ana 6 · Ben 5 …*) and a link, *Pairs (n)
 →*, to the gate's own page. A draft exercise shows neither. Nothing is
@@ -937,16 +938,19 @@ sources fill them. A gate can pair 30 evaluators with 100 dossiers, so the
 table is paged and queried in the URL (`offset`, `q`, `sort`), and a link
 keeps all of them.
 
-- **The Review Robin card** (ruling 55): the
-  session's name and code, derived as *exercise name — gate label* and
-  *public ID*`-g`*n* (ruling 56); the link (*Not linked: nothing sent
-  yet*, *Linked; sent, its session not yet open*, *Linked; its session is
-  open*, *Linked; its session has closed, its results not yet pulled*,
-  *Detached: unlinked in Review Robin, so neither re-sent nor pulled*,
-  *Linked; its results are in*); the last send; *What is sent*;
-  a progress row per paired evaluator; and *Send to Review Robin*,
-  *Re-send*, *Pull results*, *Invite evaluators* and *Remind those not
-  done*, all simulated in the tab (`_rr_js.html`).
+- **The Review Robin card** (ruling 55), laid out as ruling 65: at the
+  top, two columns. On the left are the session's name and code, derived
+  as *exercise name — gate label* and *public ID*`-g`*n* (ruling 56). On
+  the right are the link (*Not linked: nothing sent yet*, *Linked; sent,
+  its session not yet open*, *Linked; its session is open*, *Linked; its
+  session has closed, its results not yet pulled*, *Detached: unlinked in
+  Review Robin, so neither re-sent nor pulled*, *Linked; its results are
+  in*), the last send, *Invited* and *Reminded*. Then *What is sent*, four
+  tiles 2 × 2, each a title, a line and *Download*. Then *Progress*, a
+  full-width panel: its line, then *Send to Review Robin*, *Re-send*,
+  *Pull results*, *Invite evaluators* and *Remind those not done*, then
+  a progress row per paired evaluator. All are simulated in the tab
+  (`_rr_js.html`). At a phone's width each pair of columns stacks.
 - **Send and Re-send** (`_rr_js.html`), simulated in the tab (ruling 55):
   a send is kept in `sessionStorage` under `applydesk-rr:<exercise>`, by
   gate, with its name, code, time, transfer ID and the bundle's digest.
@@ -1234,7 +1238,8 @@ saved template is kept in the tab only.
   `$evaluator_name` in place of `$applicant_name`, and `$outcome` the
   outcome's tally; no applicant tag, so a blind exercise's names no one.
   *Insert field*, on each card, is a menu of the kind's tags, each with
-  what it stands for (`workflow.TAG_HELP`), and an *Insert* button, which
+  what it stands for (`workflow.TAG_HELP`), and an *Insert* button, as tall
+  as the menu and in line with it, which
   puts the chosen tag at the cursor in the box last used on that card,
   else at the end of the body, braced (`${tag}`) before a letter, digit
   or `_`. *Save* refuses a template naming another kind's tag, saying

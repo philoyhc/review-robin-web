@@ -549,7 +549,7 @@ def test_a_gate_page_s_review_robin_card_is_a_scaffold(client: TestClient) -> No
     for act in ("send", "resend", "pull", "invite", "remind"):
         assert re.search(f'data-rr-act="{act}"[^>]* disabled data-rr-wait', card)
     for kind in ("Reviewers", "Reviewees", "Relationships", "Settings"):
-        assert f"<strong>{kind}</strong>" in card
+        assert f'<div class="rr-file"><h4>{kind}</h4>' in card  # a tile each (ruling 65)
     assert "<th>Evaluator</th><th>Pairs</th><th>Done</th>" in card
     assert 'href="#ev-rr">Review Robin ↓</a>' in ready
     done = client.get(f"{base}/gate_1").text.split('id="ev-rr"')[1].split("</section>")[0]

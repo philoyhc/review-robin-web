@@ -129,14 +129,17 @@
 
   {# The table card, full width: Review Robin's toolbar, then the table. #}
   <section class="card pn-tablecard" aria-label="People on panels">
-    <div class="pn-toolbar">
-      <label class="pn-search">Filter<input class="fc-in" type="search" data-pn-search placeholder="Name, email, note or panel"></label>
-      <button class="btn btn-secondary" type="button" data-pn-act="add">Add new</button>
-    </div>
+    {# Two columns (ruling 65): Show columns left; Filter right, Add new under it. #}
+    <div class="pn-top">
     {# A chip per panel, after Review Robin's rosters' Show columns: pressed,
        its column shows (author, 2026-11-14). Not remembered across a
        reload, as nothing on this page is until AD2. #}
     <p class="pn-showcols" data-pn-showcols{% if not panels %} hidden{% endif %}><span>Show columns:</span>{% for p in panels %}<button type="button" class="pn-show" data-panel="{{ p.key }}" data-pn-show aria-pressed="true"><span data-pn-name>{{ p.name }}</span></button>{% endfor %}</p>
+    <div class="pn-toolbar">
+      <label class="pn-search">Filter<input class="fc-in" type="search" data-pn-search placeholder="Name, email, note or panel"></label>
+      <button class="btn btn-secondary" type="button" data-pn-act="add">Add new</button>
+    </div>
+    </div>
     <div class="table-wrap pn-wrap">
       {# Fixed widths (author, 2026-11-14): a row turned to edit boxes
          changes how it looks, never where the columns fall. #}
