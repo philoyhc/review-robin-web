@@ -36,8 +36,8 @@
             <ul class="tl-op-list" data-tl-blocking>{% for label, tab in sr.setup %}<li><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ ('/' ~ tab if tab else '')) }}{{ '' if tab else '#details' }}">{{ label }}</a> not set</li>{% endfor %}{% for p in sr.blocking %}<li>{{ p }}</li>{% endfor %}</ul>
             {% else %}<span>Ready to publish.</span>{% endif %}
           {% elif sr.waiting %}<span>Waiting on: {{ sr.waiting | join("; ") }}.</span>{% endif %}
-          <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a></div>{% endif %}
-        {% for r in ops[loop.index0] %}<div class="tl-op-row"><b>{{ r.label }} <span class="chip chip-{{ r.tone }}">{{ r.state }}</span></b><span>{{ r.detail }}</span>{% if r.target == "dossiers" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers') }}">Dossiers</a>{% elif r.target %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ r.target) }}">Gate {{ r.target }}</a>{% endif %}</div>{% endfor %}
+          <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Set on Process →</a></div>{% endif %}
+        {% for r in ops[loop.index0] %}<div class="tl-op-row"><b>{{ r.label }} <span class="chip chip-{{ r.tone }}">{{ r.state }}</span></b><span>{{ r.detail }}</span>{% if r.target == "dossiers" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers') }}">Open Dossiers →</a>{% elif r.target %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ r.target) }}">Open Gate {{ r.target }} →</a>{% endif %}</div>{% endfor %}
       </div>{% endif %}
     </li>
     {% endfor %}

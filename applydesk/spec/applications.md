@@ -259,7 +259,8 @@ shows the form's own card and one empty String card, open.
   | Select people | Min and Max people, *Chosen from* | `Select people · 1 to 3 people · Panel A` |
   | Title and Description | *Title* and *Description* in place of *Question* and *Help text*; nothing else | `Title and Description · display only` |
 
-  Every type but Title and Description also has *Required*. An empty bound
+  Every type but Title and Description also has *Required*, a checkbox
+  (ruling 64). An empty bound
   is left out of the summary (`Integer · up to 6`); both bounds equal read
   `exactly N`; a list with no options reads `no options yet`; a photo with
   no valid ratio reads `Photo · ratio not set`.
@@ -340,7 +341,7 @@ Home, `/operator/exercises/<id>`, is two columns: the **Timeline** card
 Details below. The status row (`workflow.status_row`) opens with the exercise's status,
 derived from its stages ("Stage status"), and carries *Applications: N
 submitted · M drafts*. Under the timeline a *Next step* line says where
-today falls (`timeline.next_step`), with *Go to Gate N*, its page under Evaluations, while a gate runs
+today falls (`timeline.next_step`), with *Open Gate N →*, its page under Evaluations, while a gate runs
 (`timeline.running_gate`). Home has no Publish card: publishing is per stage,
 on Process, and the timeline's operator part says what blocks each stage.
 Cards side by
@@ -741,8 +742,8 @@ A panel made on Form or Process appears here only once saved (AD2).
   - *Add new panel*: *Name*, then *People* (*None: a blank panel* or *Copy
     from* a panel). A blank panel takes *Members* in the token box Form's
     *+ New panel…* has; a row is added for anyone not yet in the table.
-    *Add panel* is an outline button.
-  - *Upload*: *Import CSV* and *Export CSV*. The CSV has `Name`, `Email` and
+    *+ Panel* is an outline button.
+  - *Upload*: *Upload CSV* and *Download CSV*. The CSV has `Name`, `Email` and
     `Note` and a column per panel by name, marked for each member; people not
     found in the directory are left out and named.
   - *Cancel*, *Save* and *Close* at the card's bottom right. A rename, a
@@ -841,7 +842,7 @@ CSV* undoes the guard. The page has no *Save*; nothing is kept until AD2.
 - **Released** asks first. Turning it on names how many dossiers it reaches
   are still undecided or *Pending*, then asks *Release <outcome>?*, saying
   Process sets what a release does and nothing is sent; turning it off asks
-  *Withdraw the release of <outcome>?*. Cancelled, the switch goes back;
+  *Withdraw the release of <outcome>?*. Cancelled, the checkbox goes back;
   confirmed, the note under it reads today's date *· as Process sets*, or
   *Not yet*.
 
@@ -864,7 +865,7 @@ took (`stages.mean_note`).
   *Set ticked rows*, *Apply rules…* and *Upload CSV* skip them, naming what
   they skipped. A gate whose stage is published but not yet opened keeps live
   cells: entering applications is that stage's work while it runs.
-- **Released waits on its emails** (`locks.release_lock`): the switch is off,
+- **Released waits on its emails** (`locks.release_lock`): the checkbox is off,
   with the reason, while an email the release sends is owed on Emails, and a
   release withdrawn waits on them to be made again. Before a release, the
   dossiers it reaches that are still undecided or *Pending* are counted; a
@@ -874,8 +875,8 @@ took (`stages.mean_note`).
 ## The Evaluations page
 
 At `/operator/exercises/<id>/evaluations`: the **Gates** table (gate, type,
-state, progress, and a link to the gate's Review Robin card: *Send…* on a
-*Ready* gate, else *Review Robin…*), then **Assignments**, a short card per gate:
+state, progress, and a link to the gate's Review Robin card, *Review Robin card
+→*, ruling 64), then **Assignments**, a short card per gate:
 its mode, its counts (*42 dossiers · 40 filled · 2 short*, over every pair),
 its load line per panel source (*Ana 6 · Ben 5 …*) and a link, *Assignments
 (n rows)*, to the gate's own page. A draft exercise shows neither. Nothing is

@@ -58,7 +58,7 @@
     </div>
     <p class="pc-line muted pc-hint">Each email ticked is a template owed on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}">Emails</a>.</p>
   </div>
-  <div class="pc-item-foot"><button type="button" class="btn btn-secondary" data-pc-act="remove-form">Remove the form</button></div>
+  <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-form">Remove the form</button></div>
   </fieldset>
   </div>
 </div>
@@ -204,7 +204,7 @@
   <div class="pi-body">
   {# A sent gate says so once, for all of it (ruling 29). Its progress is
      Evaluations' to show, not Process's. #}
-  {% if sent %}<p class="pc-line muted pc-sent-note" data-pc-sent>Its Review Robin session has opened: its settings are fixed here.</p>
+  {% if sent %}<p class="pc-line lock-note pc-sent-note" data-pc-sent>Its Review Robin session has opened: its settings are fixed here.</p>
   {% elif state == "Sent" %}<p class="pc-line muted pc-sent-note" data-pc-sent>Sent to Review Robin: changes are re-sent until its session opens.</p>{% endif %}
   {{ item_dates(g.when) }}
   {{ lock_open(item_lock(g)) }}
@@ -355,7 +355,7 @@
 {% macro status_box(st, status) %}
 {% set problems = publish_problems(st) if st.number else () %}
 <div class="pc-status" data-pc-status-box>
-  <p class="pc-line muted" data-pc-locked-note{% if status == "Draft" %} hidden{% endif %}>{{ st.label }} is published: what it holds is fixed until it is reverted to draft. Its end, and its items' ends, stay editable, to extend it.</p>
+  <p class="pc-line lock-note" data-pc-locked-note{% if status == "Draft" %} hidden{% endif %}>{{ st.label }} is published: what it holds is fixed until it is reverted to draft. Its end, and its items' ends, stay editable, to extend it.</p>
   {# What it still waits on: the page derives Overdue or Completed from
      its end as an extension moves it (Codex). #}
   {% set waiting = outstanding(st) if st.number else () %}

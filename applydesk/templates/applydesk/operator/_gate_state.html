@@ -4,4 +4,4 @@
 {% macro chip(st) %}<span class="chip chip-{{ tone(st[0], 'warn') }}" data-gate-state>{{ st[0] }}</span>{% endmacro %}
 {# Evaluations' row action: the gate's Review Robin card, on its page,
    where it is sent, re-sent and its results pulled (segment AD1M). #}
-{% macro action(st, href) %}<a class="btn btn-secondary" href="{{ href }}#ev-rr">{{ "Send…" if st[0] == "Ready" else "Review Robin…" }}</a>{% endmacro %}
+{% macro action(st, href) %}<a class="btn btn-secondary" href="{{ href }}#ev-rr">Review Robin card →</a>{% endmacro %}
