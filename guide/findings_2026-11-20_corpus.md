@@ -136,21 +136,21 @@ are at `6003c8084`.
 - ~~**B20**~~ — **Done in #4087**: the segment, rung and dated-ruling provenance is gone from the linked-session text, the two rulings' reasons kept. Segment, rung and dated-ruling provenance in the new linked-session text of `spec/instruments.md`, `spec/operations_pages.md`, `spec/workflow_card.md`, `spec/lifecycle.md:954`, `spec/session_home.md` and `spec/setup_pages.md`. Grep `tests/` before cutting. Trim.
 
 **D** — data in and out:
-- ~~**D1**~~ — **Done in #PENDING**: `instruments[n].order` is parsed, a non-integer refused in phase 1, its value ignored. `spec/csv_contracts.md:993-994`: the `instruments[n].order` cell is parsed, so a non-integer is a phase-1 error (`_apply_instrument.py:272-273`); only the stored value is ignored. Spec.
-- ~~**D2**~~ — **Done in #PENDING**: the cited lines state the rule without segment, rung or dated-ruling tags. Provenance in `spec/csv_contracts.md:388`, `:396`, `:706`, `:712`; `spec/handoffs.md:3-5`, `:109`, `:119-134`, `:173`, `:194`; `spec/rehydrate.md:406`; and the `spec/README.md` handoffs row. Trim.
+- ~~**D1**~~ — **Done in #4088**: `instruments[n].order` is parsed, a non-integer refused in phase 1, its value ignored. `spec/csv_contracts.md:993-994`: the `instruments[n].order` cell is parsed, so a non-integer is a phase-1 error (`_apply_instrument.py:272-273`); only the stored value is ignored. Spec.
+- ~~**D2**~~ — **Done in #4088**: the cited lines state the rule without segment, rung or dated-ruling tags. Provenance in `spec/csv_contracts.md:388`, `:396`, `:706`, `:712`; `spec/handoffs.md:3-5`, `:109`, `:119-134`, `:173`, `:194`; `spec/rehydrate.md:406`; and the `spec/README.md` handoffs row. Trim.
 
 **E** — UI and visual style:
-- ~~**E4**~~ — **Done in #PENDING**: the strip drops the Email Template pill under the `email` lock and ends with *Linked: {name}*. `spec/visual_style_rrw.md:210-213`: the status strip hides the Email Template pill under the linked `email` lock, and adds a *Linked: {name}* pill. Spec.
-- ~~**E5**~~ — **Done in #PENDING**: both H1 lines read `Operator Lobby`. `spec/visual_style_rrw.md:271`, `:391`: the lobby H1 is `Operator Lobby`, as `spec/sessions_overview.md` says. Spec.
-- ~~**E6**~~ — **Done in #PENDING**: the User Lobby is the six-column table, pointing at `spec/reviewer-surface.md`. `spec/visual_style_rrw.md:441-445`: the review list is the six-column table, not "cards". Point at `spec/reviewer-surface.md`. Spec.
+- ~~**E4**~~ — **Done in #4088**: the strip drops the Email Template pill under the `email` lock and ends with *Linked: {name}*. `spec/visual_style_rrw.md:210-213`: the status strip hides the Email Template pill under the linked `email` lock, and adds a *Linked: {name}* pill. Spec.
+- ~~**E5**~~ — **Done in #4088**: both H1 lines read `Operator Lobby`. `spec/visual_style_rrw.md:271`, `:391`: the lobby H1 is `Operator Lobby`, as `spec/sessions_overview.md` says. Spec.
+- ~~**E6**~~ — **Done in #4088**: the User Lobby is the six-column table, pointing at `spec/reviewer-surface.md`. `spec/visual_style_rrw.md:441-445`: the review list is the six-column table, not "cards". Point at `spec/reviewer-surface.md`. Spec.
 - ~~**E7**~~ — **Done in #4066.** `spec/visual_style_rrw.md:477`: "Dirty-state" names no heading; the heading is "Save button state". Spec.
-- ~~**E8**~~ — **Done in #PENDING**: the examples quote the invite 404 and `pre_open.html`'s "This review is not currently open". `spec/visual_style_rrw.md:504-521`: the error wording has drifted from `pre_open.html` and the invite 404. Spec.
-- ~~**E9**~~ — **Done in #PENDING**: the cited lines drop their segment and rung tags. Provenance in `spec/ui_elements.md:881`, `spec/visibility_policy.md:201`, `spec/audience_and_identity_model.md:362`, `:506` and `spec/email_infra_options.md:193`, `:393`. Trim.
+- ~~**E8**~~ — **Done in #4088**: the examples quote the invite 404 and `pre_open.html`'s "This review is not currently open". `spec/visual_style_rrw.md:504-521`: the error wording has drifted from `pre_open.html` and the invite 404. Spec.
+- ~~**E9**~~ — **Done in #4088**: the cited lines drop their segment and rung tags. Provenance in `spec/ui_elements.md:881`, `spec/visibility_policy.md:201`, `spec/audience_and_identity_model.md:362`, `:506` and `spec/email_infra_options.md:193`, `:393`. Trim.
 
 **F** — architecture, permissions, identity, the functional spec and the Cordware specs:
-- ~~**F3**~~ — **Done in #PENDING**: the `counts` list names `session.handoff_updated`. `spec/architecture.md:1025-1032`: the `counts` envelope list omits `session.handoff_updated` (`app/services/audit.py:443`). Spec.
-- ~~**F4**~~ — **Done in #PENDING**: the cited lines drop their findings and segment tags. Provenance in `spec/architecture.md:947` and `spec/rrw_functional_spec.md:979`. Trim.
-- ~~**F5**~~ — **Done in #PENDING**: all three packages' `tests/` folders are exempt from the `cordware.main` check. `cordware/spec/host.md:306-307`: the import check exempts the `tests/` folders of all three packages (`cordware/tests/test_import_boundary.py:113-123`), not only Residential's. Spec.
+- ~~**F3**~~ — **Done in #4088**: the `counts` list names `session.handoff_updated`. `spec/architecture.md:1025-1032`: the `counts` envelope list omits `session.handoff_updated` (`app/services/audit.py:443`). Spec.
+- ~~**F4**~~ — **Done in #4088**: the cited lines drop their findings and segment tags. Provenance in `spec/architecture.md:947` and `spec/rrw_functional_spec.md:979`. Trim.
+- ~~**F5**~~ — **Done in #4088**: all three packages' `tests/` folders are exempt from the `cordware.main` check. `cordware/spec/host.md:306-307`: the import check exempts the `tests/` folders of all three packages (`cordware/tests/test_import_boundary.py:113-123`), not only Residential's. Spec.
 
 **H** — `docs/` and the root documents:
 - ~~**H4**~~ — **Done in #4085**: the host's shape names Apply Desk among the applications it mounts. `docs/deployment.md:14-16`: the host mounts Apply Desk too (`cordware/main.py:74-100`). Doc.
