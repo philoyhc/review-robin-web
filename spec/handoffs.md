@@ -33,7 +33,7 @@ no mail (interop spec §3 invariant 4): the draft waits for its operator.
 |---|---|---|
 | `GET /operator/handoffs/new` | the package gate `require_operator` | The holding page: says a draft is being set up and that nothing is sent, links the Sessions lobby, and offers nothing else to do. `no-store`. |
 | `POST /operator/handoffs/sessions` | the package gate `require_operator` | The create (§3–§6). Every answer is JSON and `no-store`. |
-| `POST /operator/handoffs/{transfer_id}/update` | the package gate `require_operator` | The re-send to the draft that transfer created (§6a, segment 23F). JSON, `no-store`, the §3 request checks. |
+| `POST /operator/handoffs/{transfer_id}/update` | the package gate `require_operator` | The re-send to the draft that transfer created (§6a). JSON, `no-store`, the §3 request checks. |
 
 A non-operator gets the package gate's usual `303` to `/me`, as does an
 operator the owner-eligibility lock refuses (`OperatorAllowlistDenied`,
@@ -296,7 +296,7 @@ Refusals are §7's JSON. Every answer is `no-store`, under the package gate.
 **Status** (`status_schema_version` 3): Review Robin's own
 readings of the session, each from the function its pages read, so a
 number the sender sees is the one Review Robin shows. It is assembled by
-a view adapter (`app/web/views/_handoffs.py`). Identity: `session_ref`, `linked_app` (segment 23E: the application the session is linked to, or null),
+a view adapter (`app/web/views/_handoffs.py`). Identity: `session_ref`, `linked_app` (the application the session is linked to, or null),
 `session_code`, `name`, the lifecycle `state` (the enum) and `state_label`
 (as Review Robin shows it), `session_home_url` and `as_of`. Then:
 

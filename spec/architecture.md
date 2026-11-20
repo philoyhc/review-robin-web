@@ -1028,10 +1028,9 @@ For bulk operations — `assignments.generated`,
 `reviewers.imported`, `reviewees.imported`,
 `responses.deleted_all`, `responses.cleared`, and the handoff
 create's `session.handoff_created` (`files`) and
-`session.handoff_completed` (`reviewers`, `reviewees`), and the
-re-send's `session.handoff_updated` (`reviewers`, `reviewees`), whose
-`context` carries `transfer_id` and `source_app`, and the sender's
-fetch, `session.handoff_results_exported` (`rows`; `context`
+`session.handoff_completed` (`reviewers`, `reviewees`); the re-send's
+`session.handoff_updated` (`reviewers`, `reviewees`; its `context`
+carries `transfer_id` and `source_app`); and the sender's fetch, `session.handoff_results_exported` (`rows`; `context`
 `transfer_id`, `file`, `etag`) (`spec/handoffs.md` §8). All values are non-negative integers.
 
 **Cascade slots.** A roster replace, delete-all or bulk delete
