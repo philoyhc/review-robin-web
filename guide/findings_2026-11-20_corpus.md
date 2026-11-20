@@ -60,14 +60,14 @@ are at `6003c8084`.
 - ~~**B3**~~ — **Done in #4065**: the captions and Activate's warning show nothing under the email lock. (low, code; latent while `RRW_SCHEDULED_SEND` is off) — **the auto-send captions ignore the linked email lock.**
   - `build_auto_send_invites_caption`, `build_auto_send_reminders_caption` and `build_manual_activate_cancellation` (`app/web/views/_workflow_card.py:551-770`) never check `Lock.EMAIL`.
   - A linked session would read "System will dispatch automatically" while the trigger skips every entry. `spec/workflow_card.md:950-1010` needs the linked row too.
-- **E1** (medium, author) — **Session Home's Email Template pill never reads *Set up*.**
+- **E1** — **Ruled 2026-11-20: a neutral pill, *Default* until an override is saved, *Customized* after; nothing amber.** To build. (medium, author) — **Session Home's Email Template pill never reads *Set up*.**
   - `app/web/views/_setup.py:247` hard-codes `email_invites_set_up=False` under a stale "editor lands in Segment 15" comment. `session_setup_status_row.html:89` therefore always shows amber *Not set up*, however the template stands.
   - `spec/visual_style_rrw.md:210` promises both states.
   - Fix the predicate, or retire the pill.
 
 ## 2. For the author
 
-- **B4** (medium) — **"Every transition is idempotent" holds for two of seven.**
+- ~~**B4**~~ — **Ruled 2026-11-20: narrow the spec. Done in this PR**: `spec/lifecycle.md` §7 names the two idempotent transitions and the errors the rest raise. (medium) — **"Every transition is idempotent" holds for two of seven.**
   - `spec/lifecycle.md:794-796` says every state-machine function no-ops when the target state is current.
   - Only `mark_validated` (`app/services/session_lifecycle.py:351`) and `invalidate_session` (`:462`) do. `activate_session`, `expire_session`, `revert_session_to_draft`, `archive_session` and `unarchive_session` raise, and the Workflow routes guard them.
   - Narrow the principle to the two, or make the five idempotent.
@@ -76,13 +76,13 @@ are at `6003c8084`.
   - With no End, Release-from is then the review's end, and the next observation closes the session.
   - The service docstring (`:361-366`) admits it, and `spec/lifecycle.md:841` overclaims.
   - Gate on `expired`, or say so.
-- **B6** (low) — **the Responses drill-in promises a per-reviewer breakdown it does not show.**
+- **B6** — **Ruled 2026-11-20: retire the promise.** The spec half is done in this PR (`spec/operations_pages.md` describes the aggregate page); the page's "future segment" help line goes with E1. (low) — **the Responses drill-in promises a per-reviewer breakdown it does not show.**
   - The promise is `spec/operations_pages.md:645`. The page shows aggregate coverage, and its help line says the breakdown "will land in a future segment" (`session_responses_reviewee_detail.html:36-47`).
   - Build it, or retire the promise.
-- **E2** (medium) — **an operator who is also a reviewer sees operator links on reviewer pages.**
+- ~~**E2**~~ — **Ruled 2026-11-20: the roles rule stands. Done in this PR**: `spec/visual_style_rrw.md` drops the forbidding line; no code change. (medium) — **an operator who is also a reviewer sees operator links on reviewer pages.**
   - `spec/visual_style_rrw.md:523` forbids it, but `:341`, `:362` and `:535` say the bar's entries follow roles. `_partials/top_bar.html` keys on `_operator`, so `/me/sessions/...` shows Operator Lobby, Settings and Admin.
   - Choose which rule stands.
-- **E3** (medium) — **"one page per instrument" is no longer the reviewer surface's principle.**
+- ~~**E3**~~ — **Ruled 2026-11-20: rewrite to the shipped model. Done in this PR**: operator-defined pages, Prev and Next, the short label on the H2 and the page pill. (medium) — **"one page per instrument" is no longer the reviewer surface's principle.**
   - `spec/visual_style_rrw.md:476`, `:545-547`, `:562` and `:678-686` speak of page buttons, tabs and one instrument per page.
   - Pages are operator-defined (`starts_new_page`, `_pages_for_session`) and navigate by Prev, Next and `Page N of M`, as the same file says at `:459` and `:470`.
   - Rewrite the principle.
@@ -143,7 +143,7 @@ are at `6003c8084`.
 - **E4** `spec/visual_style_rrw.md:210-213`: the status strip hides the Email Template pill under the linked `email` lock, and adds a *Linked: {name}* pill. Spec.
 - **E5** `spec/visual_style_rrw.md:271`, `:391`: the lobby H1 is `Operator Lobby`, as `spec/sessions_overview.md` says. Spec.
 - **E6** `spec/visual_style_rrw.md:441-445`: the review list is the six-column table, not "cards". Point at `spec/reviewer-surface.md`. Spec.
-- **E7** `spec/visual_style_rrw.md:477`: "Dirty-state" names no heading; the heading is "Save button state". Spec.
+- ~~**E7**~~ — **Done in this PR.** `spec/visual_style_rrw.md:477`: "Dirty-state" names no heading; the heading is "Save button state". Spec.
 - **E8** `spec/visual_style_rrw.md:504-521`: the error wording has drifted from `pre_open.html` and the invite 404. Spec.
 - **E9**: provenance in `spec/ui_elements.md:881`, `spec/visibility_policy.md:201`, `spec/audience_and_identity_model.md:362`, `:506` and `spec/email_infra_options.md:193`, `:393`. Trim.
 

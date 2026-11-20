@@ -642,7 +642,9 @@ coverage — except a hidden field a require-mode branch governs, which
 
 The reviewee name is a link to a per-reviewee detail page
 (`/operator/sessions/{session_id}/responses/{reviewee_id}/detail`)
-showing the per-reviewer response status for this reviewee.
+showing this reviewee's coverage in aggregate: their status, the
+`D/T` count and the last response. A per-reviewer breakdown is not
+part of the contract.
 
 ### No per-row action buttons
 

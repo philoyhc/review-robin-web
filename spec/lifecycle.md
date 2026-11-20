@@ -791,9 +791,14 @@ canonical envelope contract these events follow.
    each mutating service via `invalidate_if_validated`. A future caller
    that bypasses the route layer still gets both.
 
-2. **Idempotent transitions.** Every state-machine function
-   no-ops when the target state is already current. Callers
-   don't need to guard with `if not is_X`.
+2. **Two idempotent transitions; the rest refuse.** `mark_validated`
+   and `invalidate_session` no-op when the target state is already
+   current. The others refuse a session already there, or in any state
+   they do not start from, with a named error the caller handles:
+   `activate_session` (`not_validated`), `expire_session` and
+   `revert_session_to_draft` (`not_ready`), `archive_session`
+   (`already_archived`), `unarchive_session` (`not_archived`). The
+   Workflow routes check the state first.
 
 3. **Atomic commits.** Each transition commits its status flip,
    any side effects (per-instrument flag changes), and its audit

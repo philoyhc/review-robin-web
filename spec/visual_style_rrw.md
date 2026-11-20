@@ -456,14 +456,14 @@ The main task surface, where the reviewer completes their evaluations.
 
 - The shared top bar.
 - **Page header** with session context: the session name as H1, the deadline, the session description and the participant row. `spec/reviewer-surface.md` § *Page anatomy* (part 3) owns its contract. An institution name near the session name is **deferred**, not built (`spec/audience_and_identity_model.md` "Operator customization boundary").
-- **Page navigation** (only when the session has more than one instrument; see "Multi-instrument navigation" below).
+- **Page navigation** (only when the session runs to more than one page; see "Multi-instrument navigation" below).
 - **Form body.**
 
 ##### Multi-instrument navigation
 
 A session may have multiple instruments for a reviewer to complete across their assigned reviewees. This requires more than one page facing the reviewer, and some navigation chrome.
 
-(Underlying rationale: see "Response form layout and instrument pacing" below — one page per instrument is the canonical principle.)
+(Underlying rationale: see "Response form layout and instrument pacing" below — the operator paces the work by where instruments start a new page.)
 
 **Pattern: one action row, with page navigation at its right.** The surface's main action row carries `Save` / `Cancel` / `Submit`, and — only when the session runs to more than one page — a vertical divider followed by the navigation cluster: `< Previous page`, a `Page {N} of {M}` counter, and `Next page >`. The row is repeated at the top and bottom of the form so the reviewer can act without scrolling.
 
@@ -474,7 +474,7 @@ Detailed layout contract — control order within the row, the navigation cluste
 Three persistent guarantees the chrome makes regardless of layout details:
 
 - **Tab order** matches whatever order the operator configured in the Instruments Setup page. Reviewers can't reorder; the order is the session's.
-- **Free movement between pages.** The reviewer can switch pages at any time, in any order. **Unsaved typing does not survive the move** — a page change is a server round-trip, there is no dirty-tracking and no `beforeunload` guard, so `Save` before navigating is the reviewer's responsibility (`spec/reviewer-surface.md`, Prev / Next row and "Dirty-state"). Restoring typed-but-unsaved values across a page change is a real improvement and is not built.
+- **Free movement between pages.** The reviewer can switch pages at any time, in any order. **Unsaved typing does not survive the move** — a page change is a server round-trip, there is no dirty-tracking and no `beforeunload` guard, so `Save` before navigating is the reviewer's responsibility (`spec/reviewer-surface.md`, Prev / Next row and "Save button state"). Restoring typed-but-unsaved values across a page change is a real improvement and is not built.
 - **No page is "locked" by another page's completion.** The reviewer can fill instruments in any order.
 
 **When the session runs to a single page**, the navigation cluster doesn't render — the action row carries only Save / Cancel / Submit. The per-page status pill on the header's participant row is then the only signal that pages exist as a concept. (The pill's label is `#{N} {short_label}`, or bare `#{N}` — note it uses a space where the per-instrument H2 uses `#{N}: {short_label}`.)
@@ -520,7 +520,7 @@ Worth being explicit, since the temptation when sharing components with the oper
 
 - **No lifecycle state mention.** The reviewer doesn't care whether the session is "Activated"; they just need the form. If the session is not Activated, the page renders a generic "This review is not currently available" state, not "Session is in Draft."
 - **No setup-state badges, readiness summaries, or operator-side status.**
-- **No links to operator pages**, even if the reviewer happens to also be an operator on another session in the same app. The two surfaces remain distinct; an operator-reviewer who needs to switch contexts does so by navigating the URL or signing out and back in via a different entry point.
+- **No operator content in the page body.** The top bar follows the signed-in person's roles on every page ("Top bar" above), so an operator who is also a reviewer keeps their Operator Lobby, Settings and Admin entries there; the reviewer page itself carries nothing of the operator surface.
 - **No mention of other reviewers, assignment structure, or cross-reviewer state.**
 - **No operator-uploaded visual content** (banners, logos, custom imagery). Per the audience and identity model, visual customization is not permitted; operator presence is expressed through content (session name, instructions, institution name) within stable chrome.
 
@@ -542,9 +542,11 @@ The discipline: components and visual language are uniform; chrome and navigatio
 
 ### Core principle
 
-**One page per instrument.** Each instrument the reviewer is
-assigned renders as one page, with the instrument's tabular form
-as the page's main content and reviewees as rows.
+**One tabular pattern, paged by the operator.** Each instrument the
+reviewer is assigned renders as a table, with reviewees as rows. The
+operator decides where a new page starts, so a page holds one
+instrument or several, stacked; the reviewer moves between pages with
+Prev and Next (`spec/reviewer-surface.md`).
 
 This pattern is canonical and uniform: it applies to sessions of 5
 reviewees and sessions of 100 reviewees, to numeric scoring
@@ -558,8 +560,8 @@ reviewer should encounter the work in smaller chunks — because the
 cohort is large, because different reviewees should be evaluated in
 different contexts, or because the operator wants to break a long
 task into parts — the operator designs that pacing into the
-instruments themselves. Smaller instruments give smaller pages;
-more instruments give more tabs. The reviewer-side layout does not
+instruments and where their pages break. Smaller instruments give
+smaller tables; more page breaks give more pages. The reviewer-side layout does not
 vary by scale; the operator-side instrument design carries the
 burden of pacing.
 
@@ -675,14 +677,14 @@ page.
 Most of these are already covered above in "Multi-instrument
 navigation"; restating in this principle's context:
 
-- **Page buttons are the reviewer's pacing UI.** Each button is
-  one instrument, one page. Operators choose page order; reviewers
-  move freely between pages.
+- **Prev and Next are the reviewer's pacing UI.** Operators choose
+  the instruments' order and where pages break; reviewers move freely
+  between pages.
 - **Two operator-authored strings per instrument.** The schema
   exposes:
   - **`Instrument.short_label`** (`String(32) | None`) — the
-    operator's reviewer-facing framing. Lands on Page button
-    labels and as the per-instrument H2 title above each table.
+    operator's reviewer-facing framing. Lands as the per-instrument
+    H2 title above each table and on the per-page status pill.
     Capped at 32 characters at the schema layer.
   - **`Instrument.description`** (`String(2000) | None`) — the
     longer per-instrument blurb. Lands as the subtitle next to the
