@@ -137,8 +137,10 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   replay lookup so a transfer completed before the link still answers
   `already_created` (`422 invalid_setup`, `slot` `observers`, `reason`
   `observers_off`), and a settings file naming a
-  release date or turning observers on is refused as the Settings import
-  refuses it (`spec/csv_contracts.md` §3.3). On a linked session the
+  release date, turning observers on or, where the application takes the
+  `email` lock, carrying invite or reminder offsets is refused as the
+  Settings import refuses it (`spec/csv_contracts.md` §3.3); a blank row
+  passes. On a linked session the
   release window never opens, observers stay off, and the visibility
   card's after-the-window cells name the application
   (`spec/visibility_policy.md` §3.4).

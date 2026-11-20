@@ -708,6 +708,9 @@ the round-trip notes below.
    `session.responses_release_until` naming a value, and a
    `session.observers_enabled` of true, are errors naming the link; a
    blank release row passes, so the session's own export imports back.
+   Where the application sends its own email (`linked_apps.Lock.EMAIL`),
+   a `session.invite_offsets` or `session.reminder_offsets` naming an
+   offset is an error naming the link too; a blank row passes.
    On a linked session whose application takes
    `linked_apps.Lock.SETTINGS_IMPORT` (segment 23F) the Settings import
    is refused (`409`).

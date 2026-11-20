@@ -231,6 +231,9 @@ READERS: dict[Lock, dict[str, str]] = {
         "app/services/scheduled_events/_invites.py": (
             _SCHEDULE + "test_the_schedule_sends_no_email_for_apply_desk"
         ),
+        "app/services/session_config_io/_apply_parse.py": (
+            _LINKED + "test_a_linked_handoffs_settings_may_not_schedule_email"
+        ),
         "app/services/scheduled_events/_reminders.py": (
             _SCHEDULE + "test_the_schedule_sends_no_email_for_apply_desk"
         ),

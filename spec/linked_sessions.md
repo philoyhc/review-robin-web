@@ -157,6 +157,10 @@ signing in at `/me`, matched by email.
 - **Refuses (`409`):** the Email Template page (view, save, send test,
   reset; `spec/email_template_editor.md`), `invitations/send-all`,
   `invitations/remind-incomplete` and the per-row Send reminder.
+- **Refuses (`422`):** invite or reminder offsets in the handoff's
+  Settings file (`spec/csv_contracts.md` §3.3), since nothing would send or
+  prompt on them; a re-send refuses them as rows the application does not
+  own (`spec/handoffs.md`).
 - **Skips, not refused:** scheduled invites and reminders record
   `linked_app_email_off` (`spec/lifecycle.md` §8.2, `spec/architecture.md`
   audit table); the submit acknowledgement is not queued

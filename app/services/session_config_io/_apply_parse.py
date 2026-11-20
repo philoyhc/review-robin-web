@@ -423,8 +423,10 @@ def session_offset_errors(plan: _ParsedConfig, review_session: ReviewSession) ->
 
 def session_linked_errors(plan: _ParsedConfig, review_session: ReviewSession) -> list[ApplyError]:
     """Refuse what a linked session's profile turns off (segment 23E): a
-    release-window row naming a value, and observers turned on. Blank
-    release rows pass, so the session's own export imports back."""
+    release-window row naming a value, observers turned on, and invite or
+    reminder offsets where the application sends its own email (ruled
+    2026-11-20: they would sit on the session doing nothing). Blank rows
+    pass, so the session's own export imports back."""
     from app.services import linked_apps
 
     overrides = plan.session_overrides
@@ -449,6 +451,16 @@ def session_linked_errors(plan: _ParsedConfig, review_session: ReviewSession) ->
                 message=linked_apps.off_message(review_session, "Observers"),
             )
         )
+    if linked_apps.locks(review_session, linked_apps.Lock.EMAIL):
+        for key in ("invite_offsets", "reminder_offsets"):
+            if overrides.get(key):
+                errors.append(
+                    ApplyError(
+                        row_number=0,
+                        field=f"session.{key}",
+                        message=linked_apps.off_message(review_session, "Scheduled email"),
+                    )
+                )
     return errors
 
 

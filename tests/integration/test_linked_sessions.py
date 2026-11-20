@@ -263,6 +263,26 @@ def test_a_linked_handoffs_settings_may_not_release(client: TestClient, db: Sess
     assert db.scalars(select(ReviewSession)).first() is None
 
 
+@pytest.mark.parametrize("key", ["invite_offsets", "reminder_offsets"])
+def test_a_linked_handoffs_settings_may_not_schedule_email(
+    client: TestClient, db: Session, key: str
+) -> None:
+    """Ruled 2026-11-20 (findings D1): the application sends its own email,
+    so offsets would sit on the session doing nothing; the create refuses
+    them as it does release rows. A blank row, as an export carries, passes.
+    The re-send refuses them as not owned
+    (`tests/integration/test_handoff_update.py`)."""
+    row = f"session.{key},-P1D,string\r\n"
+    files = {"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": SETTINGS + row}
+    reply = _post(client, _bundle(files=files))
+    assert reply.status_code == 422 and reply.json()["slot"] == "settings"
+    assert f"session.{key}" in json.dumps(reply.json())
+    assert db.scalars(select(ReviewSession)).first() is None
+    blank = f"session.{key},,string\r\n"
+    files = {"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": SETTINGS + blank}
+    assert _post(client, _bundle(files=files)).status_code == 201
+
+
 def test_the_visibility_card_names_the_application(client: TestClient, db: Session) -> None:
     review_session, _ = _created(client, db, files=_with_settings())
     instruments = list(db.scalars(select(Instrument)))
