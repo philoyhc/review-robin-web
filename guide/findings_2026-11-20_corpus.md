@@ -52,7 +52,7 @@ are at `6003c8084`.
   - `build_due_lines` honours the lock (`app/web/views/_workflow_card.py:252-256`). `due_actions` and `sessions_with_something_due` do not (`app/services/due_actions.py:84-114`, `:192-199`), so `lobby_due_session_ids` (`app/web/views/_sessions_table.py:193-199`) still lights the pill.
   - A handoff's create-time Settings file may carry `session.scheduled_activate_at` and the offsets. The operator cannot clear the pill: details 409, a re-send 422 `not_owned`.
   - Reproduced by the assessment's defect read: the same defect is its **D1**.
-- ~~**B2**~~ — **Fixed in this PR**: `observe_deadline` closes nothing on a session in setup. (low, code) — **a draft or validated session past End can be "closed" without expiring.**
+- ~~**B2**~~ — **Fixed in #4076**: `observe_deadline` closes nothing on a session in setup. (low, code) — **a draft or validated session past End can be "closed" without expiring.**
   - The orchestrator guards on `is_ready` (`app/services/scheduled_events/__init__.py:342`). `observe_deadline`'s main branch does not (`app/services/session_lifecycle.py:1282`; `_expire_at_end` skips at `:1132`).
   - It is reached by the reviewer GET (`app/web/routes_reviewer/_surface/_context.py:153`) and the operator Instruments GET (`app/web/routes_operator/_instruments.py:76`). A settings import can leave an instrument `accepting_responses` on an editable session (`app/services/session_config_io/_apply_instrument.py:274`).
   - The result is `instrument.closed` and `session.deadline_reached` with no `session.expired`, against `spec/lifecycle.md:505-526`, `:975-979`.
