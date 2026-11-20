@@ -74,6 +74,10 @@ checking itself.
 - **Guide indexes (F2b).** A package `guide/` needs a `README.md` row
   per document, as RRW's does. Today only `applydesk/guide/archive/`
   has a README; three packages have no `guide/README.md`.
+  *(Amended at rung 4: each package's top-level `README.md` already
+  indexes its `guide/` with `guide/<file>.md` rows, so it is the index,
+  and a package `guide/archive/README.md`, where one exists, indexes the
+  archive. See Judgment calls.)*
 - **Spec coverage (F2c).** A package route module maps to a spec in its
   own `spec/` folder.
   - A module not yet mapped goes into a declared-debt baseline, as
@@ -133,6 +137,12 @@ checking itself.
   the line "`close_check.py` reads only RRW's `guide/`" (the re-take
   found 17, not the 3 Cordware's review counted), and the index is where
   a reader of those plans starts. (2026-11-20)
+- A package's `guide/` is indexed by its top-level `README.md`, not by a
+  new `guide/README.md`: the package READMEs already carry those rows,
+  and a second index would say it twice. (2026-11-20, rung 4)
+- One helper, `tests/unit/_packages.py`, reads `APP_DIRS` for every unit
+  gate. It ships in the practice kit beside the gates that import it.
+  (2026-11-20, rung 4)
 - F8's list becomes derived: a test reads the tree's `*_browser.py`
   files and `CLAUDE.md`'s list, rather than relying on someone
   remembering. (2026-11-20)
@@ -203,6 +213,21 @@ plan moved here from Cordware.
       newly sees.
   - **Conventions:** recorded as `docs/unenforced_conventions.md` §1.13.
   - **Mutation:** a broken `applydesk/` path fails the gate.
+- **Rung 4 (2026-11-20).** `test_guide_indexes.py` checks each package's
+  `guide/` against its README, and its archive against
+  `guide/archive/README.md` where one exists.
+  - **What it caught:** three unindexed documents, now given rows:
+    Residential's `segment_1D_support_logs.md` and `1D_unit_scoping.md`,
+    and Utilities' archived `segment_U2_check_progress.md`.
+  - **G5 over package plans:** `test_index_currency.py` holds every
+    package plan's Blast radius to an anchor. All 24 already carried one.
+    G4 does not apply, since no package `todo_master` uses `**Plan:**`
+    pointers.
+  - **One loader:** the three gates take `APP_DIRS` from
+    `tests/unit/_packages.py`, added to the practice kit and
+    `new_project_practices_setup.md`.
+  - **Mutations:** an unanchored package Blast radius fails G5, and a
+    package with a `guide/` that the gate skipped fails its guard.
 
 ## PR ladder
 
@@ -354,4 +379,5 @@ rung 2, recorded in rung 2's PR.
 - `docs/unenforced_conventions.md` — the `cordware:` prefix and package-relative resolution recorded (rung 3).
 - `applydesk/guide/archive/README.md` — one dated correction: `close_check` has read Apply Desk's plans since 2026-11-02, with each failing close's result (rung 1).
 - `applydesk/guide/todo_master.md` — its Rulings heading names the first folding juncture, AD1 → AD2 (rung 8).
+- `new_project_practices_setup.md` — the kit table gains `tests/unit/_packages.py` (rung 4).
 - `guide/todo_master.md` — delete the 23H entry (at close).

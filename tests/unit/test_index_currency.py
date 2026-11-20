@@ -551,3 +551,44 @@ def test_g5_fails_when_an_in_scope_section_loses_its_anchor() -> None:
     assert offenders[0][0] == name
     # The unmutated text still passes, so the mutation is what failed it.
     assert unanchored_sections([(name, original)]) == []
+
+
+# --- package plans (segment 23H, rung 4) ---
+
+
+def _package_plan_texts() -> list[tuple[str, str]]:
+    """``(repo-relative path, text)`` per application package plan, live
+    and archived. Every package plan postdates 19S, so all are in G5's
+    scope; their ids (``AD1G``, ``1B``, ``U4``) are the package's own
+    numbering and do not sort against RRW's."""
+    from ._packages import app_dirs
+
+    return [
+        (str(p.relative_to(REPO)), p.read_text())
+        for app in app_dirs()
+        for directory in (REPO / app / "guide", REPO / app / "guide" / "archive")
+        for p in sorted(directory.glob("segment_*.md"))
+    ]
+
+
+def test_g5_every_package_blast_radius_states_its_anchor() -> None:
+    offenders = [
+        f"{name}:{index + 1}"
+        for name, text in _package_plan_texts()
+        for index, body in blast_radius_sections(text)
+        if not section_is_anchored(body)
+    ]
+    assert not offenders, (
+        "package `Blast radius` section with no commit or date to measure against: "
+        + ", ".join(offenders)
+    )
+
+
+def test_g5_reads_the_package_plans() -> None:
+    """Guards the guard: package plans are read, and each carries a
+    section. Measured 2026-11-20: 24 plans across three packages."""
+    texts = _package_plan_texts()
+    if not texts:
+        pytest.skip("no application package plans in this repository")
+    sections = [s for _, text in texts for s in blast_radius_sections(text)]
+    assert len(sections) >= len(texts)
