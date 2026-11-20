@@ -59,7 +59,9 @@ distorts the prose to satisfy the checker.
 ### The window
 
 From the commit that **added** the `Doc impact` heading to `HEAD` — or, for an
-archived plan, to the commit that archived it. The moment the commitment was
+archived plan, to the first-parent merge that carried the archive commit into
+`main` (`carrying_merge`), so a close PR that archives the plan before landing
+its spec edits still has them in window (segment 23H). The moment the commitment was
 made, not the plan file's first commit, which is often months earlier.
 
 **A renamed plan keeps its window.** A segment renumbered (`01` → `01a`)
@@ -272,6 +274,19 @@ free text in the squash body but are not parsed. All read `None`, the report
 says how many PRs were squash-merged, and the turn / iteration /
 push-to-merge split is printed over the merge-committed PRs only. Its cycle
 and size are measured like any other's (findings 2026-11-06 N9).
+
+**A stacked slice has no turn or iteration.** On one long-lived branch the
+next rung is often committed before the last one merges; its first commit
+then predates the previous merge, and its turn would read negative and its
+iteration would include the wait. Both read `None`, the report says how
+many slices were stacked, and the turn / iteration / push-to-merge split
+is printed over the merge-committed, unstacked slices only, so it sums.
+
+**Package paths count by their folder.** Under `applydesk/`,
+`residentialapps/`, `utilityapps/` and `cordware/` (`PACKAGES`), a
+package's `spec/`, `docs/`, `guide/` and top-level `.md` read as prose,
+its `tests/` as tests, its templates as templates and anything else as
+code, as at the root (segment 23H).
 
 **A gap over three hours is dropped**, so the author's scheduling does
 not enter; what remains is the loop between one merge and the next.

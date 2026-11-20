@@ -15,6 +15,7 @@ import datetime as dt
 import importlib.util
 import os
 import pathlib
+import re
 import subprocess
 
 import pytest
@@ -281,7 +282,7 @@ def test_report_names_the_squashed_share_and_times_only_merges(
     pa.report("t", _rows(repo))
     out = capsys.readouterr().out
     assert "1 of 3 squash-merged" in out
-    assert "merge-committed (n=1)" in out
+    assert "merge-committed, not stacked (n=1)" in out
 
 
 def test_a_pipe_in_a_squash_subject_keeps_its_pr_number(repo: Repo) -> None:
@@ -337,7 +338,7 @@ def test_a_slice_committed_before_the_previous_merge_has_no_turn(repo: Repo) -> 
     second = _rows(repo)[-1]
     assert second["stacked"] is True
     assert second["turn"] is None
-    assert second["iter"] == pytest.approx(0.0)
+    assert second["iter"] is None
 
 
 def test_report_names_the_stacked_share(repo: Repo, capsys: pytest.CaptureFixture) -> None:
@@ -347,3 +348,22 @@ def test_report_names_the_stacked_share(repo: Repo, capsys: pytest.CaptureFixtur
     pa.report("T", _rows(repo))
     out = capsys.readouterr().out
     assert "1 of 3 committed before the previous PR merged" in out
+
+
+def test_the_cycle_decomposition_adds_up_with_stacked_slices(
+    repo: Repo, capsys: pytest.CaptureFixture
+) -> None:
+    """Codex on #4054: turn averaged over fewer slices than cycle printed
+    ``cycle 10.0 = turn 5.0 + iter 0.0 + push2merge 12.5``. The split is
+    taken over the slices whose turn is known, so it sums."""
+    repo.slice([("first", 5)], merge_minute=30)
+    repo.slice([("stacked", 20)], merge_minute=40)
+    repo.slice([("after", 45)], merge_minute=50)
+    pa.report("T", _rows(repo))
+    line = next(x for x in capsys.readouterr().out.splitlines() if "cycle mean" in x)
+    found = re.search(r"cycle mean\s+([\d.]+) = (.*)", line)
+    assert found, line
+    cycle, parts = found.groups()
+    terms = [float(v) for v in re.findall(r"[a-z2]+\s+([\d.]+)", parts)]
+    assert "n=1" in line
+    assert float(cycle) == pytest.approx(sum(terms))
