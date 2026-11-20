@@ -68,6 +68,19 @@ def test_a_gate_not_sent_or_missing_has_no_file(client: TestClient) -> None:
     assert client.get(f"{BASE}/nothing.csv").status_code == 404
 
 
+def test_a_number_past_any_gate_or_page_is_not_a_500(client: TestClient) -> None:
+    """Past Python's 4,300-digit integer-string limit, ``int`` raises; a
+    path or offset that long is a 404 or page one (findings 2026-11-20
+    S8)."""
+    huge = "9" * 5000
+    evaluations = f"/applydesk/operator/exercises/{EX}/evaluations"
+    assert client.get(f"{BASE}/gate_{huge}.csv").status_code == 404
+    assert client.get(f"{evaluations}/gate_{huge}").status_code == 404
+    assert client.get(f"{evaluations}/gate_{huge}/reviewers.csv").status_code == 404
+    page = client.get(f"{evaluations}/gate_1?offset={huge}")
+    assert page.status_code == 200
+
+
 def test_outcomes_csv(client: TestClient) -> None:
     rows = _rows(client.get(f"{BASE}/outcomes.csv").content)
     head = dict(zip(rows[0], rows[1], strict=True))

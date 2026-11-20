@@ -244,7 +244,9 @@ def _form(sent: Any, exercise_id: str, renamed: dict[str, str]) -> dict[str, Any
             raise scratch.Refused(f"Card {n} is malformed.")
         card = cast(dict[str, Any], raw)
         kind = card.get("kind")
-        if kind not in _CARD_KINDS:
+        # A string first: a list or object would fail ``in`` on a set
+        # unhashable, a 500 (findings 2026-11-20 S9).
+        if not isinstance(kind, str) or kind not in _CARD_KINDS:
             raise scratch.Refused(f"Card {n} is of no known kind.")
         if kind != "field":
             label = card.get("label", "")
@@ -254,7 +256,7 @@ def _form(sent: Any, exercise_id: str, renamed: dict[str, str]) -> dict[str, Any
                 raise scratch.Refused(f"Card {n}'s label is too long.")
             kept.append({"kind": kind, "label": label})
             continue
-        if card.get("type") not in types:
+        if not isinstance(card.get("type"), str) or card.get("type") not in types:
             raise scratch.Refused(f"Card {n}'s type is not one of the choices.")
         out: dict[str, Any] = {"kind": "field", "type": card["type"]}
         for key, cap in _CARD_TEXT.items():
@@ -474,8 +476,10 @@ def form_preview(request: Request, exercise_id: str) -> Response:
 
 def _gate_or_404(exercise: sample_data.Exercise, gate: str) -> stages.Gate:
     """The gate a ``gate_<n>`` path names, 404 for one the exercise lacks
-    or a draft exercise."""
-    number = re.fullmatch(r"gate_([1-9][0-9]*)", gate)
+    or a draft exercise. The digits are bounded, so a number past
+    Python's integer-string limit is a 404, not a 500 (findings
+    2026-11-20 S8)."""
+    number = re.fullmatch(r"gate_([1-9][0-9]{0,8})", gate)
     plan = stages.plan_of(exercise.public_id)
     found = stages.gate_numbered(plan, int(number.group(1))) if number else None
     if found is None or exercise.state == "Draft":
@@ -605,8 +609,9 @@ def gate_evaluations(
     # Review Robin's tables; a page shows 200 of up to 2,980).
     order = paging.parse_sort(sort)
     shown = stages.sorted_pairs(stages.matching(pairs, q, ids_only), order, found, sent, ids_only)
-    # An offset that is not a whole number reads as the first page.
-    start = int(offset) if re.fullmatch(r"-?[0-9]+", offset) else 0
+    # An offset that is not a whole number reads as the first page, as
+    # does one of more digits than a page could need (findings S8).
+    start = int(offset) if re.fullmatch(r"-?[0-9]{1,9}", offset) else 0
     where = paging.page(len(shown), start, paging.PAGE_SIZE)
     return render(
         request,
@@ -730,7 +735,7 @@ def extract_file(
         return _csv(file, extract.outcomes(exercise, rows, names))
     if file == "alias_key.csv":
         return _csv(file, extract.alias_key(exercise))
-    gate = re.fullmatch(r"gate_([1-9][0-9]*)\.csv", file)
+    gate = re.fullmatch(r"gate_([1-9][0-9]{0,8})\.csv", file)
     if gate:
         found = extract.gate_file(exercise, int(gate.group(1)), shape, names)
         if found is None:

@@ -238,6 +238,13 @@ def test_form_save_is_checked() -> None:
     for bad, reason in (
         ({"title": "", "description": "", "cards": "x"}, "malformed"),
         ({"title": "", "description": "", "cards": [{"kind": "poster"}]}, "no known kind"),
+        # A list or object where a string belongs is a 400, not an
+        # unhashable 500 (findings 2026-11-20 S9).
+        ({"title": "", "description": "", "cards": [{"kind": ["field"]}]}, "no known kind"),
+        (
+            {"title": "", "description": "", "cards": [_field("Q", type={"a": 1})]},
+            "not one of the choices",
+        ),
         (
             {"title": "", "description": "", "cards": [_field("Q", type="essay")]},
             "not one of the choices",
@@ -597,6 +604,8 @@ def test_panels_save_is_checked() -> None:
     two = [{"key": "made-1", "name": "Readers"}, {"key": "made-2", "name": "readers"}]
     for bad, reason in (
         ({"panels": "x", "people": []}, "malformed"),
+        # A list where a key belongs (findings 2026-11-20 S9).
+        (_panels(panels=[{"key": ["made-1"], "name": "Readers"}]), "key"),
         (_panels(panels=two), "Two panels are called"),
         (_panels(panels=[{"key": "made-1", "name": "Email"}]), "CSV column"),
         (_panels(panels=[{"key": "made-1", "name": ""}]), "needs a name"),
