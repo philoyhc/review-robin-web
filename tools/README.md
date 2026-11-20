@@ -284,7 +284,7 @@ is printed over the merge-committed, unstacked slices only, so it sums.
 
 **Package paths count by their folder.** Under `applydesk/`,
 `residentialapps/`, `utilityapps/` and `cordware/` (`PACKAGES`), a
-package's `spec/`, `docs/`, `guide/` and top-level `.md` read as prose,
+package's `spec/`, `docs/`, `guide/` and any `.md` read as prose,
 its `tests/` as tests, its templates as templates and anything else as
 code, as at the root (segment 23H).
 

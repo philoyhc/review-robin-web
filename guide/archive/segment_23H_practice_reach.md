@@ -175,103 +175,54 @@ plan moved here from Cordware.
 
 ## Status
 
-- **Rung 1 (2026-11-20).** Of the four failures, three are one tool
-  artifact:
-  - **AD1G, AD1H and AD1K (C3).** Each close PR archived the plan first
-    and landed its spec edits after it (AD1G: archive `d399da1f0`, spec
-    `ccce9f902`–`ed6bf0b6f`, 13:14–13:45 on 2026-11-17). C3's window
-    ends at the archive commit, so it never sees the edits. The fix is
-    to end the window at the merge that carried the archive into
-    `main`; it moves to rung 2, as the plan foresaw.
-  - **1B (C2).** Not a close: Residential's 1B is live and paused, and
-    its `residentialapps/spec/organization_and_rosters.md` is a new spec
-    promised "as items 4 and 5 ship". The Definition of done now counts
-    closed plans only.
-  - **The correction** is one dated note in
-    `applydesk/guide/archive/README.md` (Judgment calls).
-- **Rung 2 (2026-11-20).**
-  - **`close_check`:** an archived plan's window now ends at the merge
-    that carried the archive into `main` (`carrying_merge`). AD1G, AD1H
-    and AD1K pass, all seventeen closed Apply Desk plans pass, and
-    `--archived` moves from 985/993 to 988/993 honoured, with no other
-    plan changed.
-  - **`pace_audit`:** package code, templates and tests count as product
-    (`PACKAGES`; product PRs since #3820: 25 → 167). A slice committed
-    before the previous merge has an unknown turn, not a negative one:
-    121 of 232, which the report now names.
-  - **`guide/assessment.json`:** an `applydesk` area.
-  - **Mutations:** each change, reverted, fails its new tests.
-  - **Item read base:** `abdee8b3b`, `main` before this rung.
-- **Rung 3 (2026-11-20).** The path gate reads each package's `spec/`,
-  `docs/` and `guide/`, with `APP_DIRS` taken from `close_check`.
-  - **Exemptions:** `DATED_DOC` widened to `findings_` registers and
-    `_vN.N` handovers. Of the 16 dangling references the Blast radius
-    counted, that exempts 10 (Apply Desk's register, Utilities' two
-    handovers); one more sits in Residential's 1B plan, a `segment_`
-    file already exempt.
-  - **What it caught:** six references.
-    - Four of Residential's, on three lines, name Cordware's private
-      records and now read `cordware:docs/…` and `cordware:guide/…`.
-    - Two forward references to specs still to be written take the
-      inline marker: one in Residential's `todo_master`, and one in RRW's
-      own `guide/interoperability.md` that `PATH_REF`'s package prefix
-      newly sees.
-  - **Conventions:** recorded as `docs/unenforced_conventions.md` §1.13.
-  - **Mutation:** a broken `applydesk/` path fails the gate.
-- **Rung 4 (2026-11-20).** `test_guide_indexes.py` checks each package's
-  `guide/` against its README, and its archive against
-  `guide/archive/README.md` where one exists.
-  - **What it caught:** three unindexed documents, now given rows:
-    Residential's `segment_1D_support_logs.md` and `1D_unit_scoping.md`,
-    and Utilities' archived `segment_U2_check_progress.md`.
-  - **G5 over package plans:** `test_index_currency.py` holds every
-    package plan's Blast radius to an anchor. All 24 already carried one.
-    G4 does not apply, since no package `todo_master` uses `**Plan:**`
-    pointers.
-  - **One loader:** the three gates take `APP_DIRS` from
-    `tests/unit/_packages.py`, added to the practice kit and
-    `new_project_practices_setup.md`.
-  - **Mutations:** an unanchored package Blast radius fails G5, and a
-    package with a `guide/` that the gate skipped fails its guard.
-- **Rung 5 (2026-11-20).** Each package keeps a `spec_registry.py`
-  mapping its routing modules to its own specs, with health routes as
-  infrastructure. `tests/unit/test_package_spec_coverage.py` walks the
-  Cordware host's route table against all three registries, in both
-  directions, with a guard that every package is seen.
-  - **Coverage:** all 26 modules mapped; no declared debt.
-    - Apply Desk's three page modules go to `applydesk/spec/applications.md`.
-    - Residential's go to `residentialops_ui.md` or `supportlogs_ui.md`.
-    - Utilities' go to `email_check.md` or `utilities.md`, which has a
-      section per proof of concept.
-  - **Mutations:** an unregistered module fails, and so does a mapping
-    to a missing spec.
-- **Rung 6 (2026-11-20).** `spec-writer`'s charter writes a package's
-  `spec/` at that package's closes; the skill and `CLAUDE.md` say a
-  package plan closes like a root one, both tools run. Prose; no read.
-- **Rung 7 (2026-11-20).** The cadence ruling is written down: per
-  closing unit, with the cap and the iteration exemption, in
-  `CLAUDE.md`, §6.4, constitution III and the skill's close step.
-  `new_project_practices_setup.md` and §6.4's table follow. Prose; no
-  read.
-- **Rung 8 (2026-11-20).** The rulings layer is written down: §4's
-  bullet, §6.1's juncture rule, constitution I's annotation, and a
-  paragraph under Apply Desk's Rulings heading naming AD1 → AD2. The
-  fold and v0.6b's archiving stay with that juncture. Prose; no read.
-- **Rung 9 (2026-11-20).** `CLAUDE.md` names the browser-gated tests
-  by rule, `tests/browser/` and every `*_browser.py`, and
-  `tests/unit/test_browser_gated_names.py` fails on a Playwright test
-  outside it, or on the rule's removal (both mutations caught).
-  `CLAUDE.md` is 345 lines; §6.7 records 341 before and 345 after.
-  - **Cold read** (cumulative, `abdee8b3b..fd59d208e`, 938 lines): nine
-    findings, none failing a gate. Fixed on rung 2: the stacked slice's
-    iteration (with Codex's sum), `tools/README.md` and the docstring.
-    Fixed here: `PATH_REF`'s package list now built from `APP_DIRS`;
-    `findings_` and versioned specs dated only in packages; the ruling
-    count (65); this Status, the Definition of done and the `cordware:`
-    Semantics line; `CLAUDE.md`'s gate descriptions; the skill's index
-    row for a package with no archive README. Noted: `pace_audit` counts
-    `cordware/` as product though it is not an `APP_DIRS` package, since
-    it is code the host ships.
+**Closed 2026-11-20.** Ten rungs as planned, PRs **#4052** (plan) and
+**#4053 → #4061**, then the close. Everything F1–F6 and F8 asked for
+shipped; F7 follows as its own work (Decision).
+
+**What the ladder became:**
+- **Rung 1** found the premise wrong. All 17 closed AD plans, not 3,
+  carried "reads only RRW's `guide/`", and three of the four failures
+  were one tool artifact: AD1G, AD1H and AD1K archived the plan before
+  landing their spec edits, and C3's window ended at the archive commit.
+  The correction became one dated note in
+  `applydesk/guide/archive/README.md`, and the fix moved to rung 2. 1B's
+  C2 is a live paused plan's future spec, so the Definition of done
+  counts closed plans only.
+- **Rung 2:** `close_check` ends an archived plan's window at the merge
+  that carried it (`carrying_merge`); all 17 AD closes pass and
+  `--archived` went 985 → 988 of 993, no other plan changed.
+  `pace_audit` counts package code as product (product PRs since #3820:
+  25 → 167) and gives a stacked slice no turn or iteration (121 of 232);
+  its cycle split is taken over unstacked slices so it sums (Codex).
+- **Rung 3:** the path gate reads package prose, resolving repo-first
+  then package. It caught six references: four to Cordware's private
+  records, now `cordware:…`, and two forward references, marked.
+- **Rung 4:** a package's top-level `README.md` is its guide index
+  (Judgment calls). Three unindexed documents gained rows; all 24
+  package plans already carried a Blast-radius anchor. Codex found the
+  guard failing in a practice-kit export; it now skips there.
+- **Rung 5:** one `spec_registry.py` per package, 26 modules mapped, no
+  debt. Codex found the walk following `CORDWARE_APPS`; it now mounts
+  every registered application.
+- **Rungs 6–8:** prose, as planned.
+- **Rung 9:** `CLAUDE.md` names the browser-gated tests by rule and a
+  test holds the rule, rather than listing 20 files (Judgment calls).
+  `CLAUDE.md` went 341 → 345 lines (§6.7).
+
+**Reads.** One cumulative `diff-reviewer` read, at rung 9, over
+`abdee8b3b..fd59d208e` (938 lines): nine findings, none failing a gate,
+all fixed in rungs 2 and 9. The worst was a second package list in
+`PATH_REF` that nothing held to `APP_DIRS`; the others were prose that
+had drifted from the code, a too-wide `DATED_DOC`, and a rulings count
+(65, not 64). Codex found three more, one each on rungs 2, 4 and 5, each
+reproduced, fixed with a test, and re-reviewed clean.
+
+**Close.** `close_check 23H` passes. `spec-writer` found every Doc impact
+claim true of the code except `tools/README.md` calling package prose
+"top-level `.md`" (fixed), and noted `spec/architecture.md`'s "Spec
+registration" naming only RRW's registry (a sentence added).
+Unverified: the review's historical figures quoted in `pace_audit.py`
+comments (−5.6 minutes, 183 of 219), measured on the old code.
 
 ## PR ladder
 
@@ -421,6 +372,8 @@ rung 2, recorded in rung 2's PR.
 - `.claude/agents/spec-writer.md` — write scope includes `<pkg>/spec/` (rung 6).
 - `.claude/skills/segment-plan/SKILL.md` — close steps for package plans (rung 6); a closing unit's `Status` records its reads (rung 7).
 - `tools/pace_audit.py` — package code as product; turn for stacked slices (rung 2).
+- `tools/README.md` — the window ends at the carrying merge; stacked slices and package paths in `pace_audit` (rung 2; added at the cold read).
+- `spec/architecture.md` — "Spec registration" names the package registries and their test (close; `spec-writer`).
 - `guide/assessment.json` — an `applydesk` area (rung 2).
 - `docs/unenforced_conventions.md` — the `cordware:` prefix and package-relative resolution recorded (rung 3).
 - `applydesk/guide/archive/README.md` — one dated correction: `close_check` has read Apply Desk's plans since 2026-11-02, with each failing close's result (rung 1).
