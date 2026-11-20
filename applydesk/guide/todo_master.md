@@ -583,6 +583,12 @@ where a ruling below differs from it, the ruling wins.
     gives as many as it has, up to its max (the author's choice of three,
     2026-11-20); the Total is then the sources' bounds, disabled, never
     retyped or flagged.
+63. **Every toggle has one shape** (author, 2026-11-20, opening the UI
+    review): a toggle follows the same rounded sides and height as the
+    others, pills (`.pn-show`), segmented choices (`.seg`) and switches
+    (`.tl-switch`, `.theme-toggle`) alike, at `--tog-h`; unless it is an
+    on/off toggle among a row of buttons, as *All* among a source's
+    controls, which keeps the Toggle button's shape (`.btn-toggle`).
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
