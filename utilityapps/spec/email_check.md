@@ -200,7 +200,9 @@ caveat. The warning depends on why:
 - **`forbidden`:** the directory refused the sign-in; sign out and in
   again, then check again.
 - **`timeout`:** try later, or in smaller parts.
-- **Anything else:** try later. The CSV is the page's download: a `data:` link holding it as
+- **Anything else:** try later.
+
+The CSV is the page's download: a `data:` link holding it as
 UTF-8 with a BOM, named `email-check-results-YYYYMMDD.csv`. The server
 keeps no copy.
 

@@ -1,15 +1,11 @@
 # Residential applications
 
-> **Built so far:** segment 1A built "Two applications, one package",
-> "Health", "Running alone" and the per-application half of "Logging and
-> lifespan". Segment 1B item 1 is building the screens as placeholders
-> with sample data: the chrome, Rosters and setup (`/rosters/`, both
-> rosters and person detail), Sys admin (`/sys-admin/`) and a preview of
-> the not-registered page (`/not-registered`), and "URLs"; segments 1C
-> and 1D item 1 build RA Leave's and Support Logs' screens the same way.
-> The rest of "Pages" and the shared-code log
-> stamps (Residential's own `get_logger`) are the contract for 1B and
-> later.
+> **Built:** "Two applications, one package", "Health", "Running
+> alone", "URLs", the per-application half of "Logging and lifespan", and
+> the screens of "Pages" as placeholders on sample data (Rosters and
+> setup, Sys admin, the not-registered preview, RA Leave and Support
+> Logs). RA Events' pages and the shared-code log stamps (Residential's
+> own `get_logger`) are contract, not yet built.
 
 The contract of the two Residential applications as the Cordware host
 sees them: how each is built, where it mounts, what it answers before it
@@ -60,9 +56,11 @@ role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md
 **Residential Operations page map** (author, 2026-10-26). Each page, what
 staff and RAs do on it, and its device class (`cordware/docs/cordware_mobile_to_desktop.md` §3:
 *mobile-critical*, *responsive*, *desktop-oriented*); `—` is a page that side
-never reaches. Section numbers are the RA Leave spec's
-(`residentialapps/docs/ra_leave_management_functional_spec_v0.4.md`). RA
-Events has no spec yet, so its rows are provisional.
+never reaches. Section numbers (§N) are the RA Leave functional spec's
+(`residentialapps/docs/ra_leave_management_functional_spec_v0.4.md`), a
+frozen baseline, superseded by this page map: no live spec carries RA
+Leave's functional contract beyond it, and where the two differ the map
+holds. RA Events has no spec yet, so its rows are provisional.
 
 | Page | Path | Staff | RA |
 |---|---|---|---|
@@ -97,6 +95,13 @@ Events has no spec yet, so its rows are provisional.
 | Home, Assignments, Terms, Staff roster, RA roster | `/rosters/`, `/rosters/assignments`, `/rosters/assignments/terms`, `/rosters/staff`, `/rosters/ras` | Sys admins; Assignments also sets, per term, who is in every slot, by Unit-level appointment or by name, and so oversees every RA (author, 2026-10-29) · desktop-oriented | — |
 | Sys admin | `/sys-admin/` | Audit log; sys admin grants (super-admin) · desktop-oriented | — |
 
+- **Two routes are not pages.** `/ra-leave/check-dates` answers Apply's
+  and Request extra leave's live check of the dates keyed in, as JSON:
+  the days they count, what is wrong, whether the form may be sent, and
+  who is away on them, for the cover list to leave out.
+  `/ra-leave/admin/policy/preview-appeals` (`?mode=`) previews every RA
+  Leave page in an appeals mode, in this browser, by a cookie, and
+  redirects to Leave policy; the policy's own mode clears it.
 - **RA Leave by audience** (author, 2026-10-28): RAs' pages under
   `/ra-leave/`, staff's under `/ra-leave/staff/`, sys admins' under
   `/ra-leave/admin/`, each with its own home and tabs; RA Events follows the

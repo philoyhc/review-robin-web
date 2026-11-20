@@ -5,7 +5,9 @@ The Email Address Checker's contract is `utilityapps/spec/email_check.md`.
 The contract of the Utilities application as the Cordware host sees it.
 The host's side is `cordware/spec/host.md`; this file states only what
 Utilities adds. The design it follows is
-`utilityapps/docs/email_address_checker_functional_spec_v0.1.md` §1 and §9.
+`utilityapps/docs/email_address_checker_functional_spec_v0.1.md` §1 and §9,
+a frozen baseline, superseded by `utilityapps/spec/email_check.md` where
+the two differ.
 
 ## One application, one mount
 
@@ -214,7 +216,8 @@ Utilities' own database, with no Blob storage.
   own script sends: a cross-site form cannot set it, and a cross-site
   script would need a preflight the host never answers. Without it, `403`.
 - **Every route**, the image included, is the platform super-admin's
-  alone: anyone else `403`, nobody signed in `401`.- **Retention.** A proof of concept on the author's own test photos:
+  alone: anyone else `403`, nobody signed in `401`.
+- **Retention.** A proof of concept on the author's own test photos:
   each can be deleted. Real participant photos need a retention rule
   first (PDPA).
 

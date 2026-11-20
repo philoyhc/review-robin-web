@@ -1,10 +1,9 @@
 # Support Logs UI
 
-> **Built so far:** segment 1D item 1 built every Support Logs screen on
-> sample data (`residentialapps/guide/segment_1D_support_logs.md`, rungs
-> 1–9). Items 2–5 wire them. This file settles the draft UI spec,
-> `residentialapps/docs/support_logs_ui_spec_v0.1.md`, which is history
-> from here; its open questions are answered in §8 or carried there.
+> **Built:** every Support Logs screen, on sample data, not yet wired.
+> This file supersedes the draft UI spec,
+> `residentialapps/docs/support_logs_ui_spec_v0.1.md`, a frozen baseline;
+> its open questions are answered in §8 or carried there.
 
 The conventions every Support Logs screen follows. What it shares with
 Residential Operations it cites rather than restates:
@@ -12,7 +11,9 @@ Residential Operations it cites rather than restates:
 button roles and touch targets (§4), sortable tables and column chips
 (§6), cards, notices and phone lists (§8), and accessibility (§10). Where
 both are silent, RRW's design system applies. The page map, with each
-page's grant, is `residentialapps/spec/applications.md` ("Support Logs");
+page's path and grant, is `residentialapps/spec/applications.md`
+("Support Logs"): this file governs the routes with it, and the
+path-and-grant contract is there;
 the styles are `residentialapps/web/templates/residential/base.html`,
 Support Logs' own under `data-app="supportlogs"`.
 
