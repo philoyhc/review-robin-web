@@ -456,7 +456,7 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   or pointer and a lock glyph. On a linked session (below) the
   Observers chip is an inert, off `.tag-chip.is-locked` span in both
   modes (`data-observers-off`), titled with the link.
-- **Session is linked with** (`#config-linked-app`, segment 23E), only on
+- **Session is linked with** (`#config-linked-app`), only on
   a session another application created through the handoff
   (`linked_app`, `spec/handoffs.md` §5): one chip naming the application,
   on, shown only. The optional-tabs and linked groups share the left
@@ -464,15 +464,15 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   right. On a linked session (the card never unlocks there) **Release
   responses from / until** are not shown where the application takes the
   release lock, and **Prompt to send invites / reminders** where it takes
-  the email lock (author, 2026-11-16); and
+  the email lock, since Review Robin sends that session no mail; and
   the status row adds a `Linked: {application}` pill.
 - **On a linked session whose application takes the details lock**
-  (`linked_apps.Lock.SESSION_DETAILS`, segment 23F) the card never
+  (`linked_apps.Lock.SESSION_DETAILS`) the card never
   unlocks: `?editing=1` renders display mode, *Unlock* is inert, titled
   "Set by {application}. Unlink the session to edit its details here.",
   and `POST /config` is `409`. The application re-sends these fields
   (`spec/handoffs.md` §6a).
-- **The Linked application card** (`#linked-app-card`, segment 23F),
+- **The Linked application card** (`#linked-app-card`),
   half width at the top of the bottom-left column on a linked session:
   what the link means, and **Unlink** (`window.confirm`, then `POST
   /unlink`, `session.unlinked`), which makes the session native. Where

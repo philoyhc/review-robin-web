@@ -53,7 +53,10 @@ it, and any value outside the list, resolves to
 (`_REVERT_RETURN_TO | {"home"}`, in
 `app/web/routes_operator/_workflow.py`) governs which `return_to`
 the Activate warnings-detour URL carries through to Validate, so
-`home` survives that hop.
+`home` survives that hop. The handoff status builder
+(`app/web/views/_handoffs.py`) also calls the card's builder, with
+`return_to="handoff"`, in neither list; it renders no card and reads only
+the setup checklist, so no POST carries that value.
 
 ## Inputs the card reads
 
@@ -764,8 +767,7 @@ sub-module (`app/web/routes_operator/_workflow.py`):
   `responses_release_until = now()` (the release window closes
   immediately). Emits `session.responses_release_stopped`.
 - **Neither Send invites nor Send reminders on a linked session** whose
-  application takes the email lock (`linked_apps.Lock.EMAIL`, segment
-  23F): both visibility flags are false, no due prompt is listed, and
+  application takes the email lock (`linked_apps.Lock.EMAIL`): both visibility flags are false, no due prompt is listed, and
   `invitations/send-all` and `invitations/remind-incomplete` are `409`.
   The application sends its own email.
 - **Neither Release nor Stop release on a linked session**

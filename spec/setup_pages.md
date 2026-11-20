@@ -295,7 +295,7 @@ below describe what that panel holds.
 ## A linked application's rosters
 
 On a session whose linked application takes the rosters lock
-(`linked_apps.Lock.ROSTERS`, segment 23F) the Reviewers, Reviewees and
+(`linked_apps.Lock.ROSTERS`) the Reviewers, Reviewees and
 Relationships pages render as a locked page does (`is_editable` false,
 `rosters_editable`): the lock card says the rosters come from the
 application and links Session Home's Linked application card, with no
@@ -305,8 +305,7 @@ the directory recheck (`require_rosters_open_session` and its two
 siblings in `_shared.py`). The application re-sends them
 (`spec/handoffs.md` §6a). Editor URLs (`?add=1`, `?edit_id=`) open no editor
 there. The **What reviewers / reviewees see of their own entry** cards
-are not offered (author, 2026-11-16: a linked session's roster tags are
-unused), and their `/self-fields` saves are `409` with the rosters.
+are not offered, since a linked session's roster tags are unused, and their `/self-fields` saves are `409` with the rosters.
 
 ## The roster card and the Unlock panel
 
