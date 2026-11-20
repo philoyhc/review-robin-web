@@ -119,9 +119,9 @@ def build(sent: Any, exercise_id: str, in_use: frozenset[str]) -> State:
     # names them ``made-1``…: by name, the saved panel it became, unless
     # the post carries that panel under its own key too (Codex on #4027).
     sent_keys = {
-        cast(dict[str, Any], p).get("key")
+        key
         for p in cast(list[Any], raw_panels)
-        if isinstance(p, dict)
+        if isinstance(p, dict) and isinstance(key := cast(dict[str, Any], p).get("key"), str)
     }
     by_name = {p.name.lower(): p.key for p in before[0] if p.key not in sent_keys} if before else {}
     for raw in cast(list[Any], raw_panels):
