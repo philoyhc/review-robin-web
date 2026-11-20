@@ -84,6 +84,15 @@ third. The measurement, and its first re-take under the new cadence,
 are in `rrw_sdd_in_practice.md` §6.4 (2026-09-19); `tools/pace_audit.py`
 reproduces both.*)
 
+*(Annotated 2026-11-20.* "Per item" had no unit in a segment without
+items, and Apply Desk's segments have none, so its reads drifted back to
+one per code iteration. The read now attaches to the **closing unit**: a
+segment with no items, or each item of one whose items close on their
+own. A size cap starts a new base past about 1,500 changed lines, and a
+rung that only adjusts layout or copy after the author's browser check
+takes no read. The principle is again untouched; `rrw_sdd_in_practice.md`
+§6.4 has the reasons and `CLAUDE.md` "Where work runs" the rules.*)
+
 ## IV. The human is the verifier of last resort, and nothing runs unattended
 
 Anything the suite and the reader cannot see — layout, rendering,
