@@ -2,7 +2,7 @@
 
 **Found by:** the defect read and the package read of
 `guide/codebase_assessment_20nov.md` · **Read at:** `6003c8084` (#4063) ·
-**Open:** N1, N2.
+**Open:** N1.
 
 RRW's defects and notes from the assessment's reads; the fix checklist, struck
 by the PR that fixes each row, or marked declined with the reason. Spec drift is
@@ -39,7 +39,7 @@ one. Line numbers are at `6003c8084`.
 - **N1** — the lobby runs `due_actions` once per listed session, and that runs
   `monitoring.per_reviewer_progress` when an entry is due: N+1 work, a
   performance note only.
-- **N2** — a re-send that moves Start or End does not recheck existing invite or
+- ~~**N2**~~ — **Done in #4070**: a re-send that carries Start or End rechecks the stored offsets as the Settings import does. A re-send that moves Start or End does not recheck existing invite or
   reminder offsets against the new anchor.
 - ~~**N3**~~ — **Done in #4069**: a `test (packages)` shard, and the Postgres cut moved to `test_re[a-l]`. CI's `test (unit)` shard carries every package suite and now takes
   2m24 (43 s on 2026-11-06); the Postgres shards are uneven again, integration-a

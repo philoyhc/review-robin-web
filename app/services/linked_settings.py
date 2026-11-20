@@ -16,6 +16,7 @@ import csv
 import dataclasses
 import io
 import re
+from collections.abc import Callable
 from datetime import datetime
 from typing import cast
 
@@ -23,6 +24,7 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
+from app.json_shapes import json_list
 from app.services import (
     linked_instruments,
     operator_settings,
@@ -112,7 +114,8 @@ def prepare(
     :class:`SettingsRefused` for a malformed row, what the import's row
     checks refuse, a name
     or code ``SessionCreate`` refuses, an unknown timezone, or a schedule
-    out of order on the values the session would hold;
+    out of order on the values the session would hold, or stored offsets
+    the card refuses against a Start or End the file carries;
     ``sessions.SessionCodeTakenError`` for a code another session holds."""
     rows = read_rows(content)
     foreign = sorted({row.field for row in rows if not is_owned(profile, row.field)})
@@ -150,19 +153,63 @@ def prepare(
 
 
 def check_schedule(review_session: ReviewSession, overrides: dict[str, object]) -> None:
-    """The schedule's order on the values the session will hold: a re-send
-    writes End, where the import would only fill it when blank.
-    :class:`SettingsRefused` when out of order."""
+    """The schedule on the values the session will hold: a re-send writes
+    End, where the import would only fill it when blank. Its order, and
+    the stored invite and reminder offsets against an anchor the file
+    carries, as the Settings import checks the stored list when its file
+    carries the anchor (``session_offset_errors``: the card's rules, the
+    lead-time floor waived). :class:`SettingsRefused` when either fails.
+
+    The import's fired-entry rule (``session_fired_offset_errors``) is not
+    run: it refuses a list that differs from an entry recorded at that
+    position, and a linked session's list cannot change, its details,
+    import and offset rows being the application's or locked."""
+    start = _when(overrides.get("scheduled_activate_at", review_session.scheduled_activate_at))
+    end = _when(overrides.get("deadline", review_session.deadline))
     try:
         scheduled_events.validate_schedule_ordering(
-            scheduled_activate_at=_when(
-                overrides.get("scheduled_activate_at", review_session.scheduled_activate_at)
-            ),
-            deadline=_when(overrides.get("deadline", review_session.deadline)),
+            scheduled_activate_at=start,
+            deadline=end,
             responses_release_at=review_session.responses_release_at,
         )
     except scheduled_events.ScheduledActivateError as exc:
         raise SettingsRefused([str(exc)]) from exc
+    problems: list[str] = []
+    if "scheduled_activate_at" in overrides:
+        problems += _offset_problems(
+            review_session.invite_offsets,
+            "invite_offsets",
+            lambda raw, exempt: scheduled_events.parse_and_validate_invite_offsets(
+                raw, scheduled_activate_at=start, aged_exempt=exempt
+            ),
+        )
+    if "deadline" in overrides:
+        problems += _offset_problems(
+            review_session.reminder_offsets,
+            "reminder_offsets",
+            lambda raw, exempt: scheduled_events.parse_and_validate_reminder_offsets(
+                raw, deadline=end, aged_exempt=exempt
+            ),
+        )
+    if problems:
+        raise SettingsRefused(problems)
+
+
+def _offset_problems(
+    stored: object,
+    column: str,
+    validate: Callable[[str, list[frozenset[str]]], object],
+) -> list[str]:
+    """The stored ``column``'s entries checked against the moved anchor,
+    as ``session.<column>: <reason>``; none when the list is empty."""
+    entries = [entry for entry in json_list(stored) or [] if isinstance(entry, str)]
+    if not entries:
+        return []
+    try:
+        validate(",".join(entries), [frozenset({entry}) for entry in entries])
+    except scheduled_events.ScheduledActivateError as exc:
+        return [f"session.{column}: {exc}"]
+    return []
 
 
 def apply(
@@ -175,11 +222,11 @@ def apply(
 ) -> None:
     """Write checked settings through the services that own each field,
     each audited as an operator's edit would be. Inside a caller's unit
-    (the re-send's save) these only flush. The code and the schedule's
-    order are checked again here, under that unit's session lock, against
-    the values an overlapping re-send may have committed since
-    :func:`prepare` (Codex on #3920): :class:`SettingsRefused` when the
-    order no longer holds."""
+    (the re-send's save) these only flush. The code and the schedule
+    (:func:`check_schedule`) are checked again here, under that unit's
+    session lock, against the values an overlapping re-send may have
+    committed since :func:`prepare` (Codex on #3920):
+    :class:`SettingsRefused` when the schedule no longer holds."""
     overrides = settings.overrides
     if "scheduled_activate_at" in overrides or "deadline" in overrides:
         check_schedule(review_session, overrides)

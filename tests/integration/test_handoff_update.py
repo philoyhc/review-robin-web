@@ -399,6 +399,36 @@ def test_a_schedule_moved_past_the_old_end_is_accepted(client: TestClient, db: S
     assert review_session.deadline is not None and review_session.deadline.month == 4
 
 
+@pytest.mark.parametrize(
+    ("column", "row"),
+    [
+        ("invite_offsets", "session.scheduled_activate_at,2030-03-01T09:00:00+00:00,datetime"),
+        ("reminder_offsets", "session.deadline,2030-03-08T17:00:00+00:00,datetime"),
+    ],
+)
+def test_a_moved_anchor_rechecks_the_stored_offsets(
+    client: TestClient, db: Session, column: str, row: str
+) -> None:
+    """Offsets stored while their anchor was unset were only parsed; a
+    re-send that sets the anchor checks them as the card would, the
+    Settings import's rule (findings 2026-11-20 assessment N2). A valid
+    list passes, its lead time waived."""
+    review_session, created = _created(client, db)
+    setattr(review_session, column, ["P1D"])  # after the anchor: inert while it is unset
+    db.commit()
+    settings = f"field,value,data_type\r\n{row}\r\n"
+    reply = _resend(client, created, _update_bundle(files=_with(settings)))
+    assert reply.status_code == 422 and reply.json()["slot"] == "settings", reply.text
+    assert f"session.{column}" in reply.text
+    db.expire_all()
+    assert (review_session.scheduled_activate_at, review_session.deadline) == (None, None)
+
+    setattr(review_session, column, ["-P2D"])
+    db.commit()
+    reply = _resend(client, created, _update_bundle(files=_with(settings)))
+    assert reply.status_code == 200, reply.text
+
+
 def test_the_schedule_is_rechecked_under_the_lock(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:

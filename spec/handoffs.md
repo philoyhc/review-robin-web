@@ -208,7 +208,10 @@ re-sends them rather than Review Robin editing them (Apply Desk's ruling
   A row of fewer than three
   cells is refused, as the Settings import refuses it. The rows are
   checked as the import's row checks check them, plus the schedule's order on the values
-  the session will hold, a timezone the app knows and a name and code
+  the session will hold, the stored invite or reminder offsets against
+  a Start or End the file carries (the card's rules, lead time waived, as
+  `spec/csv_contracts.md` §3.3 checks the stored list when the file moves
+  its anchor), a timezone the app knows and a name and code
   New session would accept (`422 invalid_setup`, `slot` `settings`); a
   code another session holds is `409 session_code_conflict`. They are
   written directly (`app/services/linked_settings.py`) through the
