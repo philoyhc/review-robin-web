@@ -78,7 +78,10 @@ def client_404(client: TestClient, path: str) -> bool:
 def test_a_name_is_needed_and_five_at_most() -> None:
     client = _client()
     refused = client.post(f"{LOBBY}/new", data={"name": "  "})
-    assert refused.status_code == 303 and "said=" in refused.headers["location"]
+    assert refused.status_code == 303 and refused.headers["location"].endswith("?said=name_needed")
+    long = client.post(f"{LOBBY}/new", data={"name": "x" * 201})
+    assert long.headers["location"].endswith("?said=name_long")
+    assert "at most 200 characters" in client.get(f"{LOBBY}?said=name_long").text
     assert (
         "A name is needed."
         in client.get(refused.headers["location"].removeprefix("http://testserver")).text

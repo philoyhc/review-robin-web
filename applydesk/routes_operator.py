@@ -73,9 +73,7 @@ def _same_site(request: Request) -> None:
 #: shows only these, so a link cannot put words on it (findings
 #: 2026-11-20 S11, ruled: a message key, not the text).
 SAID: dict[str, str] = {
-    "name_needed": "A name is needed.",
-    "name_long": "A name is at most 200 characters.",
-    "full": f"At most {scratch.LIMIT} scratch exercises at once: discard one first.",
+    **scratch.CREATE_REFUSALS,
     "not_made": "The scratch exercise could not be made.",
     "discarded": "The scratch exercise was discarded.",
 }
@@ -100,8 +98,7 @@ async def exercise_new(request: Request) -> Response:
     try:
         made = scratch.create(browser, name)
     except scratch.Refused as why:
-        said = next((key for key, text in SAID.items() if text == str(why)), "not_made")
-        return _to_lobby(request, said)
+        return _to_lobby(request, why.key if why.key in SAID else "not_made")
     reply = RedirectResponse(
         url_path(request, f"/operator/exercises/{made.exercise.public_id}"), status_code=303
     )
