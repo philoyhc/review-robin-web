@@ -46,13 +46,13 @@
     <h2>By gate</h2>
     <p class="xd-help">One file per gate, one row per pair: the application, the evaluator, then a column per response field, as Review Robin returned it.</p>
     <div class="xd-chips"><span class="xd-k">Shape</span>{{ seg("shape", (("pair", "A row per pair"), ("application", "A row per application")), "Shape") }}</div>
-    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("ids", "Dossier IDs"), ("names", "Names")), "Applicants as") }}</div>
+    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("names", "Names"), ("ids", "Dossier IDs")), "Applicants as", "ids") }}</div>
     {% if extract.gates %}
     <table class="xd-gates">
       <thead><tr><th>Gate</th><th>Rows</th><th><span class="visually-hidden">File</span></th></tr></thead>
       <tbody>
       {% for g in extract.gates %}
-        <tr data-xd-gate="{{ g.number }}"><td>{{ g.number }} · {{ g.label }}{% if g.confidential %} <span class="chip chip-mute">Confidential</span>{% endif %}</td>
+        <tr data-xd-gate="{{ g.number }}"><td>Gate {{ g.number }} · {{ g.label }}{% if g.confidential %} <span class="chip chip-mute">Confidential</span>{% endif %}</td>
           <td>{% if g.sent %}{{ "{:,}".format(g.pairs) }} {{ "pair" if g.pairs == 1 else "pairs" }}{% else %}<span class="muted">Not sent</span>{% endif %}</td>
           <td>{% if g.sent %}{{ dl("gate_" ~ g.number ~ ".csv", "CSV", "btn-secondary btn-short", name="Gate " ~ g.number ~ " CSV") }}{% else %}<span class="muted">—</span>{% endif %}</td></tr>
       {% endfor %}
