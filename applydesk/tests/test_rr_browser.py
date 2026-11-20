@@ -15,7 +15,10 @@ INTERVIEW = f"{EVALUATIONS}/gate_3"  # Suggested, its pairs awaiting approval
 
 
 def _card(page: Page) -> Locator:
-    return page.locator("#ev-rr")
+    """The card, opened: it folds, shut on load (author, 2026-11-20)."""
+    card = page.locator("#ev-rr")
+    card.evaluate("c => { c.querySelector('[data-rr-fold]').open = true; }")
+    return card
 
 
 def _said(page: Page) -> str:

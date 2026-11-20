@@ -948,7 +948,11 @@ sources fill them. A gate can pair 30 evaluators with 100 dossiers, so the
 table is paged and queried in the URL (`offset`, `q`, `sort`), and a link
 keeps all of them.
 
-- **The Review Robin card** (ruling 55), laid out as ruling 65: at the
+- **The Review Robin card** (ruling 55), laid out as ruling 65. The whole
+  card folds, shut as the page loads (author, 2026-11-20), its heading line
+  keeping the counts of evaluators, dossiers and pairs; a link to it (the
+  head's *Review Robin ↓*, Evaluations' *Review Robin card →*) opens it.
+  Open: at the
   top, two columns. On the left are the session's name and code, derived
   as *exercise name — gate label* and *public ID*`-g`*n* (ruling 56). On
   the right are the link (*Not linked: nothing sent yet*, *Linked; sent,

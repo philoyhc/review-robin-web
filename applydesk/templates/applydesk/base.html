@@ -809,6 +809,13 @@
     .ev-find .fc-l { flex: 1 1 260px; margin: 0; }
     .rr-names { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 12px; }
     .rr-names .fc-l { flex: 1 1 260px; margin: 0; }
+    .rr-fold > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; cursor: pointer; list-style: none; }
+    .rr-fold > summary::-webkit-details-marker { display: none; }
+    .rr-fold > summary::before { content: "▸"; color: var(--text-subtle); }
+    .rr-fold[open] > summary::before { content: "▾"; }
+    .rr-fold > summary h2 { margin: 0; }
+    .rr-fold[open] > summary { margin-bottom: 12px; }
+    .rr-fold[open] .rr-fold-s { display: none; }
     .rr-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 24px; align-items: start; margin-bottom: 16px; }
     .rr-top .rr-names { flex-direction: column; margin: 0; }
     .rr-top .rr-names .fc-l { flex: none; }

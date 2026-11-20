@@ -11,6 +11,15 @@
   var DATA = JSON.parse(document.getElementById("rr-data").textContent);
   var card = document.getElementById("ev-rr");
   if (!card) return;
+  // The card folds, shut on load (author, 2026-11-20): a link to it, the
+  // head's Review Robin ↓ or a #ev-rr arrival, opens it.
+  var fold = card.querySelector("[data-rr-fold]");
+  document.addEventListener("click", function (e) {
+    if (fold && e.target.closest('a[href="#ev-rr"]')) fold.open = true;
+  });
+  function unfold() { if (fold && location.hash === "#ev-rr") fold.open = true; }
+  window.addEventListener("hashchange", unfold);
+  unfold();  // arriving from Evaluations' Review Robin card →
   var STORE = "applydesk-rr:" + DATA.ex;
   var nameIn = card.querySelector("[data-rr-name]"), codeIn = card.querySelector("[data-rr-code]");
   var sendBtn = card.querySelector('[data-rr-act="send"]'), resendBtn = card.querySelector('[data-rr-act="resend"]');
