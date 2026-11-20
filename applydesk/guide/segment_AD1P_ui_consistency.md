@@ -37,7 +37,7 @@ Recorded 2026-11-20. **U** rows are ruled (ruling 64); **F** rows are plain fixe
 | U17 | Search, filters, bulk actions placed apart | Filters together at the top, visible labels; bulk actions at the top | 5 |
 | U18 | Dates with and without a year | Operator pages RRW's `YYYY-MM-DD HH:MM`; applicant pages keep friendly dates | 5 |
 | U19 | Dossiers' header block ~230px | Rule text two lines and *more* | 5 |
-| U20 | An operator's dossier link lands in the applicant area | An operator dossier page with a Dossiers breadcrumb, and *View as applicant* in a new tab | 6 |
+| U20 | An operator's dossier link lands in the applicant area | An operator dossier page with a Dossiers breadcrumb, and *View as applicant* in a new tab | 6a, 6b |
 | U21 | Lobby and Panels tables differ | As U12 | 5 |
 | U22 | Small uppercase section labels (`.xd-k`, `.mg-h`, `.dt-sec`, ...) | Sentence case: an h3 or a field label | 2 |
 | U23 | Cards 16px apart | 20px, as RRW | 2 |
@@ -60,7 +60,7 @@ Recorded 2026-11-20. **U** rows are ruled (ruling 64); **F** rows are plain fixe
 | F15 | Pairs named and counted four ways | "pairs", `{:,}`, one count pattern | 5 |
 | F16 | `RRW` on Dossiers | `Review Robin` (stored value kept) | 5 |
 | F17 | *Applicants as* options swap order | One order | 5 |
-| F18 | /me pages: two containers, misaligned facts, no empty states | `.card`, one `dl`, empty lines, full-width empty row | 6 |
+| F18 | /me pages: two containers, misaligned facts, no empty states | `.card`, one `dl`, empty lines, full-width empty row | 6b |
 | F19 | Process and Form card bodies unseen by the audit | Look again once open, fold findings in | 3 |
 
 ## Semantics
@@ -90,7 +90,8 @@ Taken 2026-11-20 at `54c74d967`.
 3. **Setup pages:** F1–F4, F7–F11, U11 (Form title), F19.
 4. **Roles and labels:** U5–U10, U13, U16 (cards), F6.
 5. **Operations pages:** U2, U4, U12, U15–U19, U21, F12–F17.
-6. **Applicant pages and the operator dossier:** U20, F18. The last build rung: the cumulative cold read runs here.
+6a. **The operator dossier page, scaffold** (U20): the page, its breadcrumb and its cards as static placeholders with real copy, *View as applicant* inert; Dossiers' ID links still go where they do. A new page lands scaffold-first (`AGENTS.md`, Working approach).
+6b. **The operator dossier page, wired, and the applicant pages** (U20, F18): the cards filled, Dossiers' links pointed at it, *View as applicant* live. The last build rung: the cumulative cold read runs here.
 7. **Close.**
 
 ## Definition of done
