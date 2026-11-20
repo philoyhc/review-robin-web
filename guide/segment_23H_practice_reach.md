@@ -228,6 +228,18 @@ plan moved here from Cordware.
     `new_project_practices_setup.md`.
   - **Mutations:** an unanchored package Blast radius fails G5, and a
     package with a `guide/` that the gate skipped fails its guard.
+- **Rung 5 (2026-11-20).** Each package keeps a `spec_registry.py`
+  mapping its routing modules to its own specs, with health routes as
+  infrastructure. `tests/unit/test_package_spec_coverage.py` walks the
+  Cordware host's route table against all three registries, in both
+  directions, with a guard that every package is seen.
+  - **Coverage:** all 26 modules mapped; no declared debt.
+    - Apply Desk's three page modules go to `applydesk/spec/applications.md`.
+    - Residential's go to `residentialops_ui.md` or `supportlogs_ui.md`.
+    - Utilities' go to `email_check.md` or `utilities.md`, which has a
+      section per proof of concept.
+  - **Mutations:** an unregistered module fails, and so does a mapping
+    to a missing spec.
 
 ## PR ladder
 
@@ -351,9 +363,9 @@ rung 2, recorded in rung 2's PR.
 2. ~~Rulings~~: standing while major building runs, folded into the
    spec at a major juncture; v0.6b archived eventually, with no hurry
    (author, 2026-11-20; Semantics).
-3. **Spec coverage shape:** one widened `spec_registry.py`, or a
-   registry per package? Decides: the rung 5 builder, from which keeps
-   the package independent of `app/`.
+3. ~~Spec coverage shape~~: a registry per package
+   (`<pkg>/spec_registry.py`), so no package depends on `app/`; one test
+   reads them all (rung 5 builder, 2026-11-20).
 4. ~~When to start~~: at a gap between Apply Desk segments, all rungs
    in one run, on the author's explicit word (author, 2026-11-20).
 
