@@ -631,18 +631,18 @@ inputs — the rosters, the relationships, the pinned rule's definition, the
 instrument's pin and the self-review setting — and recompute only on a
 mismatch at read.
 
-**Where.** `assignments.staleness_by_instrument`. The shape to copy is
-already in the codebase and already solves the part that looks hard:
-`instruments.cached_group_pair_count` / `cached_group_pair_stamp` cache a
-pair count against exactly such a hash, so nothing has to remember to
-invalidate on a roster edit, a rule edit or a re-pin.
+**Where.** `assignments.staleness_by_instrument`. When this was written it
+named `instruments.cached_group_pair_count` / `cached_group_pair_stamp` as
+the shape to copy: a count stamped against exactly such a hash, so nothing
+has to remember to invalidate on a roster edit, a rule edit or a re-pin.
+Those columns have no reader or writer (`docs/database.md`); the verdict
+shipped as `instruments.cached_reconcile_stamp` and the columns beside it.
 
 A trap noted at the time (still true of the ledger's text): *18J Rec C*'s wire-up note in
 `guide/deferred_consolidated.md` offers to mirror "the existing
 `cached_eligibility_stamp` pattern". Those columns do not exist — Wave 5
 PR 5.2 dropped them with the library tier, as
-`app/db/models/session_rule_set.py` records. The group-pair cache is the
-surviving precedent.
+`app/db/models/session_rule_set.py` records.
 
 **Worth.** Validate 26.5 s → 1.8 s, Assignments 23.2 s → 1.7 s, Session
 Home 14.1 s → 3.7 s. Nothing else in this document comes close.

@@ -485,8 +485,8 @@ first things a new project reaches for:
   storage key (`rrw-theme`, in both scripts). Then regenerate the
   customizer page and commit it — `python3 tools/theme_customizer.gen.py`
   — because `tests/unit/test_generated_tools_are_current.py` compares the
-  committed page to a fresh run. Of the group's sixteen tests (fourteen
-  in the contrast audit, two on the generated page), fifteen pass as
+  committed page to a fresh run. Of the group's seventeen tests (fifteen
+  in the contrast audit, two on the generated page), sixteen pass as
   exported; the one that does not,
   `test_the_muted_token_absorbed_the_retired_one`, counts a token's uses
   across this project's templates and asserts this project's numbers —

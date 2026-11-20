@@ -510,10 +510,10 @@ decision not to.
 
 ## What this file is not
 
-**Not a backlog.** §2 is three entries and should stay small; if it
+**Not a backlog.** §2 is four entries and should stay small; if it
 grows, that is a signal the practice is accumulating rules faster than
-checks. (It said *two* until 2026-09-22, having missed §2.3's arrival —
-the growth its own sentence calls a signal went unrecorded, which is the
+checks. (This count has lagged twice, missing §2.3's arrival and then
+§2.4's — the growth its own sentence calls a signal went unrecorded, which is the
 class `guide/archive/segment_19S_post_assessment.md` Item 2 gates for two
 hand-maintained indexes and §1.5 leaves to a habit for the rest.)
 
