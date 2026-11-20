@@ -2,7 +2,7 @@
 
 **Found by:** the defect read and the package read of
 `guide/codebase_assessment_20nov.md` · **Read at:** `6003c8084` (#4063) ·
-**Open:** D1's ruling to build (refuse offsets on an email-locked handoff), N1–N3.
+**Open:** N1–N3.
 
 RRW's defects and notes from the assessment's reads; the fix checklist, struck
 by the PR that fixes each row, or marked declined with the reason. Spec drift is
@@ -16,7 +16,7 @@ one. Line numbers are at `6003c8084`.
 
 ## Defects
 
-- ~~**D1**~~ — **Done in #4065**: `due_actions` answers nothing due under the email lock, for the card, the pill and *Mark as done*; `tests/integration/test_linked_lock_signals.py` holds every lock's readers. The author question below stays open. (medium, code, CONFIRMED) — **the lobby's Due pill lights on a linked
+- ~~**D1**~~ — **Done in #4065**: `due_actions` answers nothing due under the email lock, for the card, the pill and *Mark as done*; `tests/integration/test_linked_lock_signals.py` holds every lock's readers. The author's ruling below is built in #4068. (medium, code, CONFIRMED) — **the lobby's Due pill lights on a linked
   session whose card shows nothing due.**
   - `sessions_with_something_due` (`app/services/due_actions.py:192-199`) and
     `due_actions` (`:84-114`) do not check `Lock.EMAIL`; `build_due_lines`
@@ -29,7 +29,7 @@ one. Line numbers are at `6003c8084`.
   - Scratch test: card due lines `[]`, lobby due ids `{1}`. Introduced by 14F's
     due prompts (#3668) with 23F's email lock (#3925, #3934). Contradicts
     `spec/linked_sessions.md` §`email`. Same defect as the corpus register's B1.
-  - Fix: skip `Lock.EMAIL` sessions in `due_actions`. **Ruled 2026-11-20: refuse them** (422, naming the offset rows, on create and re-send, as release and observer rows are); to build. The question was: may a
+  - Fix: skip `Lock.EMAIL` sessions in `due_actions`. **Ruled 2026-11-20: refuse them** (422, naming the offset rows, on create and re-send, as release and observer rows are). **Done in #4068.** The question was: may a
     linked create carry offsets at all?
 - **B2, B3** (low): in the corpus register, found by the sweep's narrative read
   of `spec/lifecycle.md` and `spec/workflow_card.md`; listed there.
