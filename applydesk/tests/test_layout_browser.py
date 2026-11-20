@@ -23,6 +23,13 @@ def test_the_review_robin_card_is_two_columns_tiles_and_a_progress_panel(page: P
     page.set_viewport_size({"width": 1300, "height": 900})
     page.goto(f"{EX}/evaluations/gate_1")
     card = page.locator("#ev-rr")
+    # The whole card folds, shut on load (author, 2026-11-20); shut, its
+    # line keeps the counts; the head's Review Robin ↓ opens it.
+    fold = card.locator("[data-rr-fold]")
+    assert fold.get_attribute("open") is None and not card.locator(".rr-files").is_visible()
+    assert "evaluators" in card.locator(".rr-fold-s").inner_text()
+    page.locator('.ev-head a[href="#ev-rr"]').click()
+    assert fold.get_attribute("open") is not None and card.locator(".rr-files").is_visible()
     names, facts = _box(card.locator(".rr-names")), _box(card.locator(".rr-top > .facts"))
     assert facts["x"] > names["x"] + names["width"] - 1  # side by side
     tiles = [_box(t) for t in card.locator(".rr-file").all()]
@@ -42,6 +49,14 @@ def test_the_review_robin_card_is_two_columns_tiles_and_a_progress_panel(page: P
     page.set_viewport_size({"width": 390, "height": 900})
     tiles = [_box(t) for t in card.locator(".rr-file").all()]
     assert tiles[1]["y"] > tiles[0]["y"]
+
+
+def test_a_link_to_the_review_robin_card_opens_it(page: Page) -> None:
+    """Evaluations' Review Robin card → lands on #ev-rr: the card opens."""
+    page.goto(f"{EX}/evaluations")
+    page.locator('tr[data-gate] a[href$="#ev-rr"]').first.click()
+    expect(page.locator("#ev-rr [data-rr-fold]")).to_have_attribute("open", "")
+    expect(page.locator("#ev-rr .rr-files")).to_be_visible()
 
 
 def test_a_button_beside_a_field_is_its_height(page: Page) -> None:
