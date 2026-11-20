@@ -86,7 +86,18 @@ def test_a_name_is_needed_and_five_at_most() -> None:
     for n in range(scratch.LIMIT):
         _create(client, f"Exercise {n}")
     sixth = client.post(f"{LOBBY}/new", data={"name": "One too many"})
-    assert "discard+one+first" in sixth.headers["location"]
+    assert sixth.headers["location"].endswith("?said=full")
+    full = client.get(sixth.headers["location"].removeprefix("http://testserver")).text
+    assert "discard one first" in full
+
+
+def test_the_lobby_status_line_shows_only_its_own_messages() -> None:
+    """A key, not text: a crafted link puts no words on the Lobby
+    (findings 2026-11-20 S11)."""
+    client = _client()
+    spoofed = client.get(f"{LOBBY}?said=Your+account+is+locked").text
+    assert "data-nx-said" not in spoofed and "account is locked" not in spoofed
+    assert "A name is needed." in client.get(f"{LOBBY}?said=name_needed").text
 
 
 def test_discard_forgets_it() -> None:
