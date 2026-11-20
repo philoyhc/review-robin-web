@@ -224,4 +224,8 @@ def test_every_package_with_a_guide_is_checked() -> None:
     if not ALL_APP_DIRS:
         pytest.skip("no close check, so no package list")
     with_guides = [app for app in ALL_APP_DIRS if (REPO / app / "guide").is_dir()]
-    assert with_guides and sorted(with_guides) == sorted(APP_GUIDES)
+    if not with_guides:
+        # A practice-kit export carries close_check's APP_DIRS verbatim
+        # but none of the packages it names (Codex on #4056).
+        pytest.skip("no listed package has a guide/ in this repository")
+    assert sorted(with_guides) == sorted(APP_GUIDES)
