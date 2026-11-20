@@ -542,7 +542,8 @@ but the lobby's *Stage* column reads:
       disabled while it is on, and `stages.sources_of` reads them as the
       panel's size when the gate is read, so the bounds, the filling and the
       handoff follow the panel as members join or leave. A sample gate
-      naming only a panel reads as one such source.
+      naming only a panel reads as one such source. A *Nominated* source has
+      no *All*. Source rows stack below a 640px card width.
 
     Then the **Total**: its *Min* and *Max*, with the bounds the sources allow
     (their mins together, their maxes together) beside it. A Total outside
