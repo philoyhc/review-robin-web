@@ -124,7 +124,12 @@ Top-to-bottom, the page renders:
    `request.state.guide_hidden` hide flag, read fail-open) and is absent
    for one who resolves none.
 2. **Preview banner** — `body.ui-v2` only (operator preview mode
-   reuses this template); rendered as `.banner.banner-info`.
+   reuses this template); rendered as `.banner.banner-info`. Under it,
+   on the reviewer's surface and the preview alike, the
+   **dropped-fields notice** (also `.banner.banner-info`): "Some saved
+   responses are no longer collected: …", naming each field the
+   reviewer holds an answer on that is no longer `visible`, with its
+   instrument (§ "Operator preview mode").
 3. **Page header** — the title row, the session description and the
    participant row, in that order, with no card.
    - The **title row** (`.rs-page-header`, a flex row) holds, in order:
@@ -211,9 +216,12 @@ Top-to-bottom, the page renders:
    page: several instruments can share one. Submit is a **hard gate**
    (no acknowledge-and-submit-anyway path); the reviewer fills the gaps
    and resubmits.
-   `data-rs-errors-card` (same chrome) surfaces server-side numeric
-   validation rejections, with the typed value preserved in the
-   originating input so the reviewer can correct in place.
+   `data-rs-errors-card` (same chrome) surfaces server-side validation
+   rejections (a number out of bounds or off its step, a String over its
+   length cap, a List value not among its options, and the governed
+   answer held back as "Kept until {parent} is fixed."), with the typed
+   value preserved in the originating input so the reviewer can correct
+   in place.
 8. **Action row (bottom)** — `.rs-action-row`, flush right. Mirrors
    the top action row's buttons, order, and divider exactly; it is
    flush right rather than left-aligned (§5) so it reads as a
@@ -267,10 +275,10 @@ intentional-nav escape prompts on the app's own controls.
 
 | Button | Scope | HTTP | Behavior |
 |---|---|---|---|
-| **Save** | Page | POST `…/{page_n}/save` | Submit the page `<form>` to persist the **current page's** inputs to the database. Always enabled (no dirty-tracking gate). On success: 303 → `…/{page_n}` (no flash; the page-status pill on the participant row is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
+| **Save** | Page | POST `…/{page_n}/save` | Submit the page `<form>` to persist the **current page's** inputs to the database. Always enabled (no dirty-tracking gate). On success: 303 → `…/{page_n}` (no flash; the page-status pill on the participant row is the canonical save indicator). On an invalid value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
 | **Cancel** | Page | GET `…/{page_n}` | An `<a href>` back to the current page URL — a plain server reload. Unsaved typing lives only in the current page's DOM, so the reload re-renders from the last-saved server values, dropping the edits. No JS, no separate write, no audit. Other pages' saved state is untouched. |
 | **Prev / Next** | Page | GET `…/{N}` | `<a href>` links to the adjacent page — plain HTTP navigation. Server-side render returns that page's instruments. At a page boundary the link renders as a disabled `<button>`. There is no per-instrument page button and no client-side swap. Unsaved typing on the current page is lost on navigation (no `beforeunload` guard). |
-| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the current page's inputs (the form posts only this page; other pages contribute what their own Save stored), then validate required fields across every instrument and stamp `submitted_at` on every saved `Response` row of the reviewer's assignments in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the page Submit was pressed on (`?page={page_n}`) with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → the bare session URL (which 303s on to `/1`), or to the summary page once every assignment is submitted (no flash; the per-page pill of every instrument with a saved answer flips to `submitted` and the status column shows the complete icon on every row whose required fields are filled). |
+| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the current page's inputs (the form posts only this page; other pages contribute what their own Save stored), then validate required fields across every instrument and stamp `submitted_at` on every saved `Response` row of the reviewer's assignments in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the page Submit was pressed on (`?page={page_n}`) with the full-width `.rs-missing-card` enumerating gaps. On an invalid value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → the bare session URL (which 303s on to `/1`), or to the summary page once every assignment is submitted (no flash; the per-page pill of every instrument with a saved answer flips to `submitted` and the status column shows the complete icon on every row whose required fields are filled). |
 | **Clear all** | Review-session | POST `/me/sessions/{id}/clear` | Wipe every response across every instrument (confirmation checkbox required). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
 
 ### Why Submit is session-wide
@@ -527,8 +535,9 @@ class InstrumentHeading:
     subtitle: str | None   # rendered as a body-weight muted span; absent when None
 ```
 
-The template renders the H2 heading card only when `heading.title`
-is truthy. The instrument card (`.rs-instrument-card`) hosts the
+The template renders the heading card when `heading.title` is truthy,
+or when Layout 1 carries help rows ("Intro and help cards" below); the H2
+itself renders only with a title. The instrument card (`.rs-instrument-card`) hosts the
 heading + description **only**; the progress pills sit outside it, in
 the right-flushed row described next.
 
@@ -693,7 +702,9 @@ In rendered order:
    `group.show_status_col` is true (i.e. when at least one row has
    `submitted_at` set, or `show_incomplete_marks` is true after a
    missing-required Submit attempt). There is no `show_acknowledge`
-   flag — the same absence §"no checkbox" states below. Cell content is icon-only:
+   flag — the same absence §"no checkbox" states below. Cell content is
+   icon-only, and a row shows its icon only when it has `submitted_at`
+   set or `show_incomplete_marks` is true; otherwise its cell is empty:
    - `<span class="status-icon-complete" title="Complete">✓</span>`
      when the row's required fields (open ones only — see "Branching
      between response fields" below) are all filled.
@@ -909,13 +920,14 @@ sits behind a closed branch is complete and is not reminded.
 ### View shape
 
 The route builds the table data in `_surface_context` as
-`instrument_groups: list[InstrumentGroup]` where each group has:
+`instrument_groups`, a list of plain dicts, one per instrument:
 
 ```python
 {
   "instrument": Instrument,
   "is_group": bool,
   "heading": InstrumentHeading,
+  "intro_layout": str,
   "position": int,
   "rows": [
     {
@@ -940,7 +952,16 @@ The route builds the table data in `_surface_context` as
   "identity_width_px": int | None,
   "response_field_width_by_id": {response_field_id: int},
   "has_custom_widths": bool,
-  "constraints": [{"label": str, "summary": str}, …],
+  "constraints": [{"label": str, "summary": str}, …],  # empty when stacked
+  "response_layout": str,
+  "display_layout": str,
+  "constraint_by_field_id": {response_field_id: str},
+  # stacked layout only, else None (or an empty set):
+  "stack_compact_ch": int | None,
+  "stack_label_px": int | None,
+  "stack_input_px": int | None,
+  "stack_col_px": int | None,
+  "stack_compact_ids": {response_field_id, …},
   "show_status_col": bool,
   "completion": GroupCompletion,
   "visibility_rows": […],
@@ -1135,8 +1156,9 @@ GET requests behave differently depending on which gate fails:
 
 - **Session `ready`, response window closed**
   (`accepting_responses=false` on every instrument, because the
-  review's end passed; the operator preview, which never runs the close,
-  shows this state). The editing surface degrades to read-only:
+  review's end passed; the operator preview never shows this state,
+  since it forces `accepting` on, § "Operator preview mode"). The editing
+  surface degrades to read-only:
 
   - Every input renders `disabled`.
   - In both action rows: Save / Cancel / Submit hide, plus the
@@ -1546,14 +1568,16 @@ dashboard's Session column once Reviewer Status is
   Each section's `<h2>` is the instrument heading title the surface
   uses (`instrument_heading`, "Above the table" above), falling back
   to the operator label `Instrument_{session_seq}` when that title is empty —
-  never `Instrument.name`; the body is a `<table>` whose
-  header is `Reviewee` + one column per response field
+  never `Instrument.name`; the body is a `<table>` in the surface's
+  column order: `Reviewee` (`Group` on a group-scoped instrument),
+  then one column per display field, then one per response field
   (carrying the field's operator-given label, in the
-  instrument's authored field order). Cells render the
-  response value or `<span class="muted">—</span>` when blank.
-  Group-scoped instruments collapse to one row per group with
-  the composed group identity in the Reviewee column,
-  mirroring the surface's existing collapse logic.
+  instrument's authored field order, required ones marked `*`). Response
+  cells render the value or `<span class="muted">—</span>` when blank.
+  Group-scoped instruments collapse to one row per group, its `Group`
+  cell the tag line in bold over the muted member names (`+N more`
+  past the cap), or the fallback label when it has neither, mirroring
+  the surface's collapse logic.
 - **CSV download** — `/me/sessions/{id}/summary.csv` (same gate:
   404 once archived, else a redirect to `/me?notice=summary` until
   submitted)
@@ -2052,8 +2076,10 @@ compatible either way:
   above). The action row is ordered Save / Cancel / Submit / divider /
   page navigation.
 - **Keyboard navigation.** Tab walks cells across a row, which the
-  browser gives for free, and that is all that ships: the surface
-  binds no `keydown` handler. Column-wise Enter / Shift+Enter movement
+  browser gives for free, and that is all that ships. The one `keydown`
+  handler the surface takes is `base.html`'s fit script, which keeps
+  Enter out of a one-line box (above); nothing moves focus. Column-wise
+  Enter / Shift+Enter movement
   is listed below as unbuilt; the two obligations it would carry are
   recorded there so they are not rediscovered.
 - **What lands later.** Column-wise keyboard movement — Enter down a

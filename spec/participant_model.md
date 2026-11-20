@@ -69,7 +69,7 @@ The Setup-Observers page is documented in `spec/setup_pages.md` (Observers secti
 
 ## 4. Participant-facing surfaces at `/me`
 
-In every `/me/sessions/{id}/…` URL below, `{id}` is the session's `public_id` (`spec/architecture.md`), and an integer answers 404 like any unknown session. Three surfaces are participant-role-specific. All three render the reviewer-surface chrome (`body.ui-v2 reviewer` + `reviewer/_top_bar.html`) and carry the role-navigator chip strip below the page header (see §6).
+In every `/me/sessions/{id}/…` URL below, `{id}` is the session's `public_id` (`spec/architecture.md`), and an integer answers 404 like any unknown session. Three surfaces are participant-role-specific. All three render the reviewer-surface chrome (`body.ui-v2 reviewer` + `app/web/templates/_partials/top_bar.html` with `participant_bar`) and carry the role-navigator chip strip below the page header (see §6).
 
 | Surface | URL | Gate | Renders |
 |---|---|---|---|
