@@ -203,6 +203,42 @@ def test_mark_as_done_on_an_entry_not_due_changes_nothing(
     )
 
 
+def test_nothing_due_reads_nothing(client: TestClient, db: Session, send_off: None) -> None:
+    """The lobby asks every session it lists (findings 2026-11-20
+    assessment N1): one with offsets still ahead, or in a state its kind
+    cannot act in, answers from its own row, with no query; one with an
+    entry due still reads the audit and the count."""
+    from sqlalchemy import event
+
+    statements: list[str] = []
+
+    def count(*args: object) -> None:
+        statements.append(str(args[2]))
+
+    ahead = _ready_session(client, db, code="due-ahead")
+    ahead.scheduled_activate_at = datetime.now(UTC) + timedelta(days=5)
+    ahead.invite_offsets = ["-P1D"]
+    draft = _client_session(client, db, "due-draft")
+    draft.scheduled_activate_at = datetime.now(UTC) + timedelta(hours=1)
+    draft.invite_offsets = ["-P1D"]  # passed, but a draft sends no invites
+    due = _ready_session(client, db, code="due-now")
+    _invite_due(db, due)
+    db.commit()
+    for rs in (ahead, draft, due):
+        db.refresh(rs)
+
+    engine = db.get_bind()
+    event.listen(engine, "before_cursor_execute", count)
+    try:
+        assert due_actions.due_actions(db, ahead) == []
+        assert due_actions.due_actions(db, draft) == []
+        assert statements == []
+        assert due_actions.due_actions(db, due)
+        assert statements
+    finally:
+        event.remove(engine, "before_cursor_execute", count)
+
+
 def test_the_lobby_renders_a_due_pill_for_a_named_session(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
