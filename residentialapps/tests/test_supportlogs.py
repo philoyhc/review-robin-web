@@ -358,11 +358,25 @@ def test_the_working_unit_switcher(client: TestClient) -> None:
     # The switcher's accessible name carries the working Unit.
     assert ', Unit: Example Hall">' in after
     # A return path off the application goes Home.
-    for back in ("%2F%2Fevil.example", "https%3A%2F%2Fevil.example", "javascript%3Aalert(1)", ""):
+    for back in (
+        "%2F%2Fevil.example",
+        "https%3A%2F%2Fevil.example",
+        "javascript%3Aalert(1)",
+        "",
+        # Easy Auth's paths are the host's (findings 2026-11-20 S11).
+        "%2F.auth%2Flogout",
+        "%2F.auth%2Flogin%2Faad%3Fpost_login_redirect_uri%3Dhttps%3A%2F%2Fevil.example",
+        # Dot segments a browser resolves off the mount (the cold read).
+        "%2F..%2F.auth%2Flogout",
+        "%2F.%2F..%2F.auth%2Flogin%2Faad%3Fpost_login_redirect_uri%3Dhttps%3A%2F%2Fevil.example",
+        "%2F%252e%252e%2F.auth%2Flogout",
+        "%2F%252E%252E%2F.auth%2Flogout",
+    ):
         location = chose.get(f"/unit?name=Nowhere&back={back}", follow_redirects=False).headers[
             "location"
         ]
         assert location.endswith("/") and "evil" not in location, (back, location)
+        assert ".auth" not in location, (back, location)
     absent = chose.get("/unit?name=Nowhere", follow_redirects=False).headers["location"]
     assert absent.endswith("/")
     slash = chose.get("/unit?name=Nowhere&back=%2F%5Cevil.example", follow_redirects=False)

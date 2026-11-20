@@ -74,6 +74,17 @@ def not_registered(request: Request) -> Response:
     )
 
 
+def _own_path(back: str) -> bool:
+    """Whether ``back`` is a path under the application: one leading
+    slash, not Easy Auth's ``/.auth/…`` (the host's, which signs a person
+    out or in), and no ``.`` or ``..`` segment, plain or as ``%2e``, which
+    a browser resolves off the mount (findings 2026-11-20 S11)."""
+    if not back.startswith("/") or back.startswith(("//", "/.auth/")):
+        return False
+    path = back.split("?", 1)[0].split("#", 1)[0]
+    return all(seg.lower().replace("%2e", ".") not in (".", "..") for seg in path.split("/"))
+
+
 @router.get("/unit", name="supportlogs_unit")
 def choose_unit(request: Request) -> Response:
     """Set this browser's working Unit and return to the page it was chosen
@@ -81,7 +92,7 @@ def choose_unit(request: Request) -> Response:
     the choice; a return path that is not the application's own goes Home."""
     name = request.query_params.get("name", "")
     back = request.query_params.get("back", "/")
-    if not back.startswith("/") or back.startswith("//"):
+    if not _own_path(back):
         back = "/"
     response = RedirectResponse(url_path(request, back), status_code=303)
     if name in sample.UNITS:
