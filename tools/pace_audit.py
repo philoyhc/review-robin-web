@@ -75,7 +75,25 @@ def git(*args: str) -> str:
     return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout
 
 
+#: The application packages beside RRW, plus the Cordware host. Their
+#: code, templates and tests are product as RRW's are; without this every
+#: Apply Desk PR read as prose or "other", and 183 of 219 PRs in its first
+#: nine days counted as docs-only (segment 23H, rung 2). `APP_DIRS` in
+#: `tools/close_check/_manifest.py` names the first three too, and
+#: `tests/unit/test_pace_audit.py` holds the two lists together.
+PACKAGES = ("applydesk", "residentialapps", "utilityapps", "cordware")
+
+
 def category(path: str) -> str:
+    package, _, rest = path.partition("/")
+    if package in PACKAGES and rest:
+        if rest.endswith(".md") or rest.startswith(("spec/", "docs/", "guide/")):
+            return "prose"
+        if rest.startswith("tests/") or "/tests/" in rest:
+            return "tests"
+        if rest.startswith("templates/") or "/templates/" in rest:
+            return "tpl"
+        return "code"
     if path.startswith("app/web/templates"):
         return "tpl"
     if path.startswith(("app/", "alembic/")):
@@ -199,7 +217,12 @@ def load(since: str, ref: str = MAIN_REF) -> list[dict]:
             r["turn"] = r["iter"] = r["push2merge"] = None
             prev = r["merge"]
             continue
-        r["turn"] = (r["first"] - prev) / 60 if prev else None
+        # A slice committed before the previous PR merged (the next rung
+        # built while the last one waits, on one long-lived branch) has no
+        # turn: unknown, not negative. Apply Desk's nine days read a mean
+        # turn of -5.6 minutes before this (segment 23H, rung 2).
+        r["stacked"] = bool(prev) and r["first"] < prev
+        r["turn"] = None if not prev or r["stacked"] else (r["first"] - prev) / 60
         r["iter"] = (r["last"] - r["first"]) / 60
         r["push2merge"] = (r["merge"] - r["last"]) / 60
         if prev and r["received"] and prev <= r["received"] <= r["first"]:
@@ -281,6 +304,12 @@ def report(label: str, rows: list[dict]) -> None:
             "rest on the rest"
         )
     merged = [r for r in within if not r["squash"]]
+    stacked = sum(1 for r in rows if r.get("stacked"))
+    if stacked:
+        print(
+            f"  {stacked} of {len(rows)} committed before the previous PR merged: "
+            "their turn is unknown, and turn figures rest on the rest"
+        )
     print(
         f"  cycle med {median(r['cycle'] for r in within):5.1f}  "
         f"mean {mean(r['cycle'] for r in within):5.1f}"

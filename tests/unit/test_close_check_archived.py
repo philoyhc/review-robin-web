@@ -268,3 +268,106 @@ def test_the_cache_still_answers_correctly_across_levels(archive_repo) -> None:
     second = _sweep(archive_repo)
     assert "2/3" in first and "1 unhonoured" in first
     assert second == first
+
+
+# --------------------------------------------------------------------
+# the window's end: the merge that carried the archive in (23H, rung 2)
+
+
+@pytest.fixture
+def close_pr_repo(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch):
+    """A plan whose close PR archives it, *then* lands the spec edit it
+    committed to: Apply Desk's AD1G, AD1H and AD1K shape. A later PR
+    edits a second committed path after the close has merged."""
+    root = tmp_path / "repo"
+    (root / "guide" / "archive").mkdir(parents=True)
+    (root / "spec").mkdir()
+
+    def run(*args: str) -> str:
+        return subprocess.run(
+            ["git", "-C", str(root), *args], check=True, capture_output=True, text=True
+        ).stdout
+
+    subprocess.run(["git", "init", "-q", "-b", "main", str(root)], check=True)
+    run("config", "user.email", "t@example.com")
+    run("config", "user.name", "T")
+    (root / "spec" / "a.md").write_text("a\n")
+    (root / "spec" / "b.md").write_text("b\n")
+    run("add", "-A")
+    run("commit", "-qm", "the specs, before the plan")
+    (root / "guide" / "segment_ZY_demo.md").write_text(
+        "# Segment ZY\n\n## Doc impact\n\n- `spec/a.md` — x.\n- `spec/b.md` — y.\n"
+    )
+    run("add", "-A")
+    run("commit", "-qm", "open Segment ZY")
+
+    run("checkout", "-qb", "close")
+    run("mv", "guide/segment_ZY_demo.md", "guide/archive/segment_ZY_demo.md")
+    run("commit", "-qm", "close: the plan archived")
+    (root / "spec" / "a.md").write_text("a, as shipped\n")
+    run("add", "-A")
+    run("commit", "-qm", "close: the spec")
+    run("checkout", "-q", "main")
+    run("merge", "-q", "--no-ff", "close", "-m", "Merge pull request #2 from x/close")
+    merge = run("rev-parse", "HEAD").strip()
+
+    (root / "spec" / "b.md").write_text("b, a later PR\n")
+    run("add", "-A")
+    run("commit", "-qm", "a later PR (#3)")
+
+    monkeypatch.setattr(cc._shared, "REPO", root)
+    for cache in (cc._ITEM_START_CACHE, cc._COMMIT_CACHE, cc._PRIOR_PATHS_CACHE):
+        cache.clear()
+    yield root, merge
+    for cache in (cc._ITEM_START_CACHE, cc._COMMIT_CACHE, cc._PRIOR_PATHS_CACHE):
+        cache.clear()
+
+
+def test_an_archived_window_ends_at_the_merge_that_carried_the_archive(close_pr_repo) -> None:
+    root, merge = close_pr_repo
+    plan = root / "guide" / "archive" / "segment_ZY_demo.md"
+    start, end, _, _ = cc.window(plan, 2)
+    assert start is not None
+    assert end == merge
+
+
+def test_a_spec_edit_after_the_archive_in_the_same_pr_is_honoured(close_pr_repo) -> None:
+    """The defect: the window ended at the archive commit, so the close
+    PR's own spec edit, one commit later, read as unhonoured."""
+    root, _ = close_pr_repo
+    start, end, _, _ = cc.window(root / "guide" / "archive" / "segment_ZY_demo.md", 2)
+    assert start is not None
+    assert cc.honoured("spec/a.md", start, end) is not None
+
+
+def test_an_edit_in_a_later_pr_is_still_outside_the_window(close_pr_repo) -> None:
+    root, _ = close_pr_repo
+    start, end, _, _ = cc.window(root / "guide" / "archive" / "segment_ZY_demo.md", 2)
+    assert start is not None
+    assert cc.honoured("spec/b.md", start, end) is None
+
+
+def test_an_archive_committed_on_the_main_line_is_its_own_carrier(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A squash merge or a direct commit: no merge to look for."""
+    root = tmp_path / "repo"
+    root.mkdir()
+
+    def run(*a: str) -> str:
+        return subprocess.run(
+            ["git", "-C", str(root), *a], check=True, capture_output=True, text=True
+        ).stdout
+
+    subprocess.run(["git", "init", "-q", "-b", "main", str(root)], check=True)
+    run("config", "user.email", "t@example.com")
+    run("config", "user.name", "T")
+    (root / "a.txt").write_text("a\n")
+    run("add", "-A")
+    run("commit", "-qm", "one")
+    first = run("rev-parse", "HEAD").strip()
+    (root / "b.txt").write_text("b\n")
+    run("add", "-A")
+    run("commit", "-qm", "two (#2)")
+    monkeypatch.setattr(cc._shared, "REPO", root)
+    assert cc.carrying_merge(first) == first

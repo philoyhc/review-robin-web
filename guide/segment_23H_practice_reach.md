@@ -174,6 +174,19 @@ plan moved here from Cordware.
     closed plans only.
   - **The correction** is one dated note in
     `applydesk/guide/archive/README.md` (Judgment calls).
+- **Rung 2 (2026-11-20).**
+  - **`close_check`:** an archived plan's window now ends at the merge
+    that carried the archive into `main` (`carrying_merge`). AD1G, AD1H
+    and AD1K pass, all seventeen closed Apply Desk plans pass, and
+    `--archived` moves from 985/993 to 988/993 honoured, with no other
+    plan changed.
+  - **`pace_audit`:** package code, templates and tests count as product
+    (`PACKAGES`; product PRs since #3820: 25 → 167). A slice committed
+    before the previous merge has an unknown turn, not a negative one:
+    121 of 232, which the report now names.
+  - **`guide/assessment.json`:** an `applydesk` area.
+  - **Mutations:** each change, reverted, fails its new tests.
+  - **Item read base:** `abdee8b3b`, `main` before this rung.
 
 ## PR ladder
 

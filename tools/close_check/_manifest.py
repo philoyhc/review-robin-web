@@ -619,11 +619,41 @@ def window(
                 if row.strip()
             ]
         adds = _COMMIT_CACHE[key]
-        end = adds[0] if adds else "HEAD"
+        end = carrying_merge(adds[0]) if adds else "HEAD"
     else:
         end = "HEAD"
 
     return (start[0] if start else None, end, start[1] if start else None, provisional)
+
+
+def carrying_merge(commit: str) -> str:
+    """The commit on HEAD's first-parent line that brought ``commit`` in.
+
+    An archived plan's window ends where it was archived, but a close PR
+    can archive the plan and land the spec edits it committed to in later
+    commits of the same branch: Apply Desk's AD1G, AD1H and AD1K were
+    archived 1 to 31 minutes before their spec edits, and C3 read every
+    one as unhonoured (segment 23H, rung 2). Ending at the merge that
+    carried the archive into `main` counts the whole close PR and nothing
+    after it. A commit already on the first-parent line, a squash merge
+    or a direct commit, is its own carrier.
+    """
+    descendants = {
+        row for row in _git("rev-list", "--ancestry-path", f"{commit}..HEAD").split() if row
+    }
+    carrier = commit
+    # `--first-parent --ancestry-path` returns nothing for a commit off the
+    # first-parent line (git 2.43), so walk the line itself: newest first,
+    # every commit that descends from `commit`, and the last of them is
+    # the merge that carried it in. Reaching `commit` itself means it was
+    # on the line all along.
+    for row in _git("rev-list", "--first-parent", "HEAD").split():
+        if row == commit or row.startswith(commit):
+            return row
+        if row not in descendants:
+            break
+        carrier = row
+    return carrier
 
 
 def honoured(path: str, start: str, end: str) -> str | None:
