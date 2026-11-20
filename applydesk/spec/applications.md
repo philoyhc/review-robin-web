@@ -114,6 +114,30 @@ answer only for a Published or Closed exercise.
   anyone on a local run and, deployed, only the platform super-admin,
   with a 404 for everyone else, until the segments that wire them.
 
+## One look across pages
+
+Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.md`).
+
+- **One state-to-tone map** (`applydesk/tones.py`) colors every chip, so no
+  page names a state in another color. Amber: Draft, Not ready, Withdrawn,
+  Pending. Info: Published, Open, Ready, Sent. Green: Completed, Results in,
+  Submitted, Entered, Done. Red: Overdue, Closed. Grey: Archived, Detached,
+  Next, Not entered. Chips are uppercase, an outline marking a clickable one.
+- **A gate** is named `Gate N · label` wherever it is listed or chosen,
+  an outcome `Outcome N · label`.
+- **Controls.** *Required* and *Released* are checkboxes, not pills. An add
+  button reads `+ Noun` in a builder (*+ Panel*, *+ Gate*), *Add new* in a
+  table's toolbar. CSV files are *Upload CSV* and *Download CSV*, both
+  Secondary. A cross-page link reads `Verb on Page →` (*Open Gate 2 →*,
+  *Review Robin card →*, *Pairs (n) →*); `↓` jumps within a page.
+- **Locks.** One pattern on Details, Dossiers and the gate page: *Discard
+  changes*, then *Lock*, with one unsaved note. Where a whole page or card is locked the reason shows as a
+  line; one blocked control is disabled with the reason in its title.
+- **Tables** (Dossiers, Evaluations' pairs, the lobby, Panels) sort by a
+  header band with `↕` badges, `1↑` / `1↓` once a column sorts; no sticky header.
+- **Dates**: applicant pages keep friendly dates; operator pages in sample data
+  are preformatted strings until AD2.
+
 ## The lobbies and the applicant's application
 
 - **The Operator Lobby** (`applydesk/templates/applydesk/operator/exercises.html`):
@@ -221,13 +245,16 @@ answer only for a Published or Closed exercise.
   Closed exercise, saying *Applications open*, *Applications closed* or
   *Closed: its released results stay here*, and *You are invited* for an
   invitation-only one; *Dossiers I am asked to evaluate*, each linking its
-  dossier, *An application* in place of the title in a blind exercise.
+  dossier, *An application* in place of the title in a blind exercise. An
+  empty card says so (*No applications yet.*, *No exercise is open to you
+  yet.*, *None to evaluate yet.*).
 - **The applicant's application**
   (`applydesk/templates/applydesk/me/application.html`): the crumb *User
   Lobby / exercise / Your application*; the title with its state; *Shown to
-  evaluators* and *Not shown to evaluators*, each the Form's questions with
-  the answers (`extract.form_answers`), *—* where there is none; *Your
-  results*, on the applicant's own application only, once an outcome is
+  evaluators* and *Not shown to evaluators*, each a card of the Form's
+  questions with the answers (`extract.form_answers`) as one fact list, *—*
+  where there is none and *None* for a card with no question; *Your
+  results*, a card likewise, on the applicant's own application only, once an outcome is
   released to applicants. Then a draft's *Save draft* and *Submit*
   (disabled until AD4), or *Applications closed on <date>* once the form
   has closed; a submitted application's *Withdraw* (Outline-amber, disabled
@@ -356,7 +383,9 @@ adapter) through the partial `applydesk/templates/applydesk/_timeline.html`,
 which Home and the applicant's exercise page (`/me/exercises/<id>`) both
 include.
 
-- **Stage**: name, dates and a state. *Done* when its last date has passed
+- **Stage**: name, dates and a state. On Home the chip is the stage's status
+  (Draft, Published, Overdue, Completed: "Stage status"); the applicant's page
+  says where it stands: *Done* when its last date has passed
   (*Closed* for the stage holding the form), *Now* when today falls within it,
   *Next* otherwise (the calendar's, apart from the stage's status); a stage with no (or impossible) dates is *Next* and reads
   *Dates not set*. Today is the sample's until AD2, marked on the current
@@ -418,7 +447,8 @@ contact or Timezone left unset reads the operator settings' default
 (`help_contact(e)` / `timezone(e)`, template globals in `applydesk/web.py`).
 Unlocked, each is a field with a line saying where it is used.
 
-- *Lock* keeps the changes on the page; *Discard changes*, or Esc, restores
+- *Discard changes* then *Lock*, as Review Robin orders them: *Lock* keeps
+  the changes on the page; *Discard changes*, or Esc, restores
   the last kept values, saying *Changes discarded.* only when something
   changed. *Unsaved changes* shows, and the browser warns on leaving, from
   any change since load.
@@ -743,7 +773,7 @@ A panel made on Form or Process appears here only once saved (AD2).
   - *Add new panel*: *Name*, then *People* (*None: a blank panel* or *Copy
     from* a panel). A blank panel takes *Members* in the token box Form's
     *+ New panel…* has; a row is added for anyone not yet in the table.
-    *+ Panel* is an outline button.
+    *+ Panel* is Secondary.
   - *Upload*: *Upload CSV* and *Download CSV*. The CSV has `Name`, `Email` and
     `Note` and a column per panel by name, marked for each member; people not
     found in the directory are left out and named.
@@ -804,9 +834,8 @@ as Review Robin's *Open reviewer surface*. A draft has no dossier (ruling
 A control surface (ruling 23), worked down its columns. The whole table is
 locked until *Unlock*; then every cell, *Set ticked rows*, *Apply rules…*,
 *Upload CSV* and each outcome's *Released* are live, but for the fixed ones
-below. *Lock* keeps what
-changed; *Discard changes* puts the table back as it was when unlocked; meanwhile
-a count of the changes shows. Locked, what differs from the page as loaded
+below. *Discard changes* puts the table back as it was when unlocked, then
+*Lock* keeps what changed; meanwhile a count of the changes shows. Locked, what differs from the page as loaded
 stays marked (*N changes on this page, not saved until AD2*), and leaving the page with any pending or
 kept asks first. *Return to draft* is a submitted row's own (Outline-amber)
 until a gate holding its dossier completes, as withdrawal is, and *Return
@@ -820,7 +849,9 @@ CSV* undoes the guard. The page has no *Save*; nothing is kept until AD2.
 
 - **The header** (ruling 52). Under the stages, an information row holds
   each column's kind, counts, rule, lock and *Released*, top-aligned; under
-  it the column headers stand on one line, each name a sort button.
+  it the column headers stand on one line, each name a sort button with a
+  `↕` badge (`1↑` / `1↓` once sorted). A rule's text clamps to two lines, in
+  full on focus and in its title.
 - **Sorting** (ruling 52). A column's name sorts the rows by it:
   ascending, then descending, then the page's own order. *Dossier* by ID,
   drafts last; *Applicant* by name; *Status* as Submitted, Draft,
