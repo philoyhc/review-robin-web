@@ -44,7 +44,7 @@ from sqlalchemy.orm import Session as SASession
 
 from app.db.models import AuditEvent, ReviewSession, User
 from app.services import session_tags
-from app.web.routes_operator import _quick_setup
+from app.web import quick_setup_pipeline
 
 
 def _card(body: str) -> str:
@@ -352,7 +352,7 @@ def test_the_settings_slot_commits_its_own_work(
 ) -> None:
     """A Settings upload commits, whatever the Tags box.
 
-    Asserted on ``_run_quick_setup``, the pipeline every Quick Setup
+    Asserted on ``quick_setup_pipeline.run``, the pipeline every Quick Setup
     upload runs through since ``guide/quick_setup_update.md`` Item 1
     (rung 3); it was ``_run_quick_setup_settings`` when this was found.
 
@@ -404,7 +404,7 @@ def test_the_settings_slot_commits_its_own_work(
     owner = db.get(User, review_session.created_by_user_id)
     assert owner is not None
     failure = asyncio.run(
-        _quick_setup._run_quick_setup(
+        quick_setup_pipeline.run(
             uploads={
                 "settings": UploadFile(
                     filename="s.csv",

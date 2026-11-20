@@ -81,7 +81,7 @@ async def read_upload(
     """Read a Setup upload card's file, falling back to the held one.
 
     A newly chosen file wins over the hold, even an empty one: a file
-    is chosen when it has a filename, as Quick Setup's ``_attached``
+    is chosen when it has a filename, as Quick Setup's ``quick_setup_pipeline.attached``
     reads it, since an untouched input posts an empty-named part. An
     empty chosen file is then refused as a fresh empty upload is
     (findings S2). The held

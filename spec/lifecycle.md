@@ -271,7 +271,7 @@ generate, etc.) call this **first**.
 Six exceptions to that list, all easy to mis-read:
 
 - **Quick Setup and the settings import do not call this helper.**
-  Their handlers in `app/web/routes_operator/_quick_setup.py` test
+  Their pipeline, `app/web/quick_setup_pipeline.py`, tests
   `lifecycle.is_editable` inline — the same predicate — and on failure
   return the `lifecycle` reason token, which the route turns into
   Session Home rendered again at 422 with the slot's lifecycle banner

@@ -40,8 +40,9 @@ A non-operator gets the package gate's usual `303` to `/me`, as does an
 operator the owner-eligibility lock refuses (`OperatorAllowlistDenied`,
 §5); a sender posting with `redirect: "manual"` reads either as
 `not_authorized`. The
-create route lives in `app/web/routes_operator/_quick_setup.py`, whose
-pipeline it runs; its rules are `app/services/handoffs.py`.
+create route lives in `app/web/routes_operator/_quick_setup.py` and runs
+Quick Setup's pipeline, `app/web/quick_setup_pipeline.py`; its rules are
+`app/services/handoffs.py`.
 
 ## 3. Request checks
 
@@ -81,7 +82,7 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   `422 invalid_package`; an operator the owner-eligibility lock refuses
   gets the `303` of §2.
 - **The rosters** go through Quick Setup's pipeline
-  (`_run_quick_setup_contents`), every slot saved in one unit, with the
+  (`quick_setup_pipeline.run_contents`), every slot saved in one unit, with the
   session's directory (`spec/quick_setup_card_spec.md`). **A settings
   file** goes through it too, after the rosters (`SLOT_ORDER`), with the
   Settings import's own checks and two-phase apply. Its `session.name`
@@ -221,7 +222,7 @@ re-sends them rather than Review Robin editing them (Apply Desk's ruling
   rebuilt. A field the file leaves out keeps the draft's value; tag rows,
   when present, replace the session's tags.
 - **All or nothing**, through the create's pipeline
-  (`_run_quick_setup_contents`, replacing); a refused file leaves the draft
+  (`quick_setup_pipeline.run_contents`, replacing); a refused file leaves the draft
   as it was (`422 invalid_setup` with `slot`), and a validated draft
   returns to draft as any roster replace makes it.
 - **Refused:** a creating transfer unknown or incomplete, or whose session

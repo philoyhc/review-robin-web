@@ -100,6 +100,26 @@ Taken 2026-11-20 at `2b3b1aed4`.
 After the split, about 880 lines stay in `_quick_setup.py`, the pipeline
 holds about 700, and `_handoffs.py` grows to about 425.
 
+## Status
+
+- **2026-11-20, rung 1.** `_read_settings_csv` moved with the pipeline:
+  only the pipeline calls it. `spec/quick_setup_card_spec.md` named the
+  pipeline too and joins Doc impact. Base for the cumulative read:
+  `c416ab377`, `main` before rung 1.
+- **2026-11-20, rung 1 CI.** Outside `routes_operator/`, the pipeline
+  became a reader `test_linked_lock_signals.py` must name, for the
+  observers lock. No test pinned its refusal: Quick Setup is off on a
+  linked session and the handoff refuses observers first, so it is
+  defense in depth. `test_the_pipeline_refuses_an_observers_file_on_a_linked_session`
+  calls the pipeline directly; it fails with the check disabled.
+- **2026-11-20, cumulative read** (one, at rung 2's head): the moves are
+  verbatim, the import order and the patch targets hold. It found stale
+  locations in `spec/architecture.md` (the `cordware.graph` import),
+  `spec/lifecycle.md` §7, `spec/csv_contracts.md` (the Relationships
+  callers) and the package `__init__` comment, all fixed in their rung.
+  `cordware/docs/cordware_interoperability_agent_handoff_v0.3.md` is a
+  versioned handoff, left as written.
+
 ## PR ladder
 
 Cumulative read: `diff-reviewer` reads the diff from rung 1's base to
@@ -166,4 +186,6 @@ None.
 - `spec/architecture.md` — the operator routes package paragraph names `app/web/quick_setup_pipeline.py` beside `roster_import.py`, on the same import terms (PR 1).
 - `spec/handoffs.md` — the pipeline's new names at the create and re-send steps (PR 1); the create and re-send routes live in `_handoffs.py` (PR 2).
 - `spec/csv_contracts.md` — the pipeline's name in the commit-ownership note (PR 1).
+- `spec/quick_setup_card_spec.md` — the pipeline's name at Per-slot dispatch and Submission semantics (PR 1; found at build).
+- `spec/lifecycle.md` — §7's Quick Setup exception names the pipeline as where `is_editable` is tested (PR 1; found by the cumulative read).
 - `guide/todo_master.md` — the queue entry added at open, deleted at close.

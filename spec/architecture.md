@@ -100,10 +100,13 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    `_extract_data.py`, `_rehydrate.py`, `_workflow.py`,
    `_sys_admin.py`, …, with shared plumbing in `_shared.py`). The Setup
    cards' upload handling, the roster import every card posts to and the
-   upload holds, is `app/web/roster_import.py`, outside the package. The
-   slices import it, and it reads the package's guards and templates from
+   upload holds, is `app/web/roster_import.py`, outside the package; Quick
+   Setup's pipeline, which checks every attached file and saves them all
+   in one unit for Quick Setup, New session and the handoffs, is
+   `app/web/quick_setup_pipeline.py` beside it (segment 23I). The slices
+   import both, and each reads the package's guards and templates from
    `_shared.py` inside the functions that need them, never at its top, so
-   the two never import each other at load
+   neither imports the package at load
    (`tests/unit/test_import_order.py`). Reviewers, Reviewees and
    Observers all post their imports to its `_handle_import`. The bodies
    the roster slices would otherwise repeat (bulk inactivate, reactivate
@@ -295,7 +298,7 @@ permissions.
   `cordware/spec/identity.md` "Graph"). RRW imports it directly in
   `app/services/directory_accounts.py` (the lookup and its outcomes, for
   roster upload), `app/web/routes_operator/_shared.py` and
-  `app/web/routes_operator/_quick_setup.py` (the operator's `Directory`,
+  `app/web/quick_setup_pipeline.py` (the operator's `Directory`,
   from `directory_for`; none without a delegated token). Services receive
   a `Directory` (or `None`) and never read a request. Roster matching by
   directory account is `spec/audience_and_identity_model.md` "Identity
