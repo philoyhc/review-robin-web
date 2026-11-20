@@ -609,9 +609,11 @@ def gate_evaluations(
     # Review Robin's tables; a page shows 200 of up to 2,980).
     order = paging.parse_sort(sort)
     shown = stages.sorted_pairs(stages.matching(pairs, q, ids_only), order, found, sent, ids_only)
-    # An offset that is not a whole number reads as the first page, as
-    # does one of more digits than a page could need (findings S8).
-    start = int(offset) if re.fullmatch(r"-?[0-9]{1,9}", offset) else 0
+    # An offset that is not a whole number reads as the first page. Only
+    # its first 12 characters are read, which keeps its sign and leaves a
+    # long one past the last page, where it clamps: past Python's 4,300
+    # digits ``int`` would raise (findings 2026-11-20 S8).
+    start = int(offset[:12]) if re.fullmatch(r"-?[0-9]+", offset) else 0
     where = paging.page(len(shown), start, paging.PAGE_SIZE)
     return render(
         request,

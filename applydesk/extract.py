@@ -168,16 +168,6 @@ _FORMULA = re.compile(r"[=+\-@\t\r]")
 _NUMBER = re.compile(r"-?[0-9]+(\.[0-9]+)?")
 
 
-def _bound(text: str, default: int) -> int:
-    """A card's min or max as a whole number, or ``default`` for one that
-    is not a number or has more digits than a bound could need: a long
-    one overflows ``float`` to infinity, which ``int`` refuses (findings
-    2026-11-20 S8)."""
-    if not _NUMBER.fullmatch(text) or len(text) > 15:
-        return default
-    return int(float(text))
-
-
 def safe(cell: str) -> str:
     """A cell a spreadsheet will not run as a formula: one starting with
     =, +, -, @, a tab or a return gets a leading apostrophe, a number
@@ -253,8 +243,8 @@ def _form_answer(e: Exercise, a: sample_data.Application, c: sample_data.FormCar
         picked = [o for i, o in enumerate(options) if (n >> i) & 1] or options[:1]
         return options[n % len(options)] if c.exclusive else "; ".join(picked)
     if c.type in ("integer", "decimal"):
-        lo = _bound(c.min, 0)
-        hi = _bound(c.max, lo + 10)
+        lo = int(float(c.min)) if _NUMBER.fullmatch(c.min) else 0
+        hi = int(float(c.max)) if _NUMBER.fullmatch(c.max) else lo + 10
         return str(lo + n % (max(hi - lo, 0) + 1))
     if c.type == "photo":
         return f"{a.dossier_id}.jpg"

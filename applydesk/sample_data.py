@@ -517,8 +517,7 @@ def _roster(exercise_id: str, key: str) -> tuple[Evaluator, ...]:
 # a page break ("pagebreak"). The applicant and dossier pages read these
 # cards with Extract's answers (``extract.form_answers``, AD-26).
 # ASCII digits only, as the page's /^\d+$/: str.isdecimal() takes others.
-#: A ratio side: whole, and short enough for ``int`` (findings 2026-11-20 S8).
-_DIGITS = re.compile(r"[0-9]{1,6}")
+_DIGITS = re.compile(r"[0-9]+")
 
 CARD_TYPES: tuple[tuple[str, str], ...] = (
     ("string", "String"),
