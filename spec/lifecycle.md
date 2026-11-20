@@ -84,7 +84,8 @@ Save), and is rolled back with it when that Save is refused
 Called only by `POST /operator/sessions/{id}/workflow/prepare` — the
 Workflow card's Prepare button runs Generate + Validate + Invite and flips
 `draft → validated` on a clean report. Idempotent (no-op when
-already `validated`). Raises `LifecycleError(code="has_errors")`
+already `validated`). Raises `LifecycleError(code="not_draft")` from
+any other status, and `LifecycleError(code="has_errors")`
 when the readiness report carries blocking errors.
 
 - Warnings are implicitly acknowledged at the moment of
@@ -311,6 +312,12 @@ Six exceptions to that list, all easy to mis-read:
   `is_expired`); archived sessions go through the archived page.
 
 Detail message: `"Session is <status>; revert to draft to edit"`.
+
+**The roster writes take a second gate.** Reviewers, Reviewees and
+Relationships writes also take `require_rosters_open_session` or one of
+its two siblings (`_shared.py`), which 409 whatever the state while the
+session's linked application takes the rosters lock
+(`spec/setup_pages.md`, "A linked application's rosters").
 
 **The route helper is an early refusal; the service decides.** Every
 service that writes a session's roster, relationships, assignments,
@@ -568,7 +575,8 @@ GET-side rendering rules.
 
 **On three of the four roster Setup pages** (Reviewers / Reviewees /
 Relationships) whenever the session is **not editable** — i.e. not
-`draft` and not `validated`: the mutating cards (Upload, Danger Zone)
+`draft` and not `validated` — or its linked application takes the
+rosters lock (`views.rosters_editable`): the mutating cards (Upload, Danger Zone)
 are hidden and a **yellow lock card** renders in its place, explaining
 that setup is locked and offering the way out that state has.
 **Observers is a stated exception**, below.
@@ -600,15 +608,20 @@ live roster beneath it.
 
 **§3.1's rule gets its mirror here.** Nothing may use a predicate
 *narrower* than the lifecycle's, and nothing may use a **wider** one
-either without saying why in this section. Observers is the only entry;
+either without saying why in this section. The linked rosters lock is
+not a narrower lifecycle predicate but a second gate beside it, held by
+the application rather than the state. Observers is the only entry;
 a second page claiming the exception without a reason stated here is a
 defect, not a precedent. (Session Home's Danger Zone is not a Setup page
 and carries its own wider gate, with its reason, in §3.1.)
 
 All four render one partial,
 `operator/partials/_roster_lock_card.html`, parameterized on the
-sentence subject and the page's `return_to` slug. It branches
-three ways, matching Instruments:
+sentence subject and the page's `return_to` slug. On a linked
+application's rosters it says they come from that application and links
+Session Home's Linked application card, with no control
+(`spec/setup_pages.md`, "A linked application's rosters"). Otherwise it
+branches three ways, matching Instruments:
 
 | State | Copy | Control |
 |---|---|---|
@@ -847,7 +860,7 @@ durations.
 |---|---|---|---|
 | **Start** (auto-activate) | `scheduled_activate_at` | operator-set | live |
 | **End** (deadline) | `deadline` | operator-set | live |
-| **Release-from** (Participants platform — reviewees / observers can view responses) | `responses_release_at` | operator-set | Live, with **no lead-time floor** — the operator may backdate it. The reviewee and observer surfaces consume it inside their per-instrument window gates. The two halves refuse differently, deliberately: `/results` is gated at the route by `require_reviewee_with_current_grant`, which answers a bare 404 when no instrument grants that reviewee anything under a window open now, so a reviewee never sees an empty results page; `/collation` has **no** route-level window gate, so an observer's instrument cards fall through to the empty state. **The window also requires the session to be `expired`**, not merely the anchor reached — otherwise an anchor set by any other path (a backdated one on the config card or Quick Setup, or one left behind by `revert_session_to_draft`) would open it. The Workflow card's **Release responses** button is offered only on an expired session, the predicate enforces the same rule so the two cannot disagree, and the service refuses any other state (`not_expired`), so a direct POST cannot stamp it either. |
+| **Release-from** (Participants platform — reviewees / observers can view responses) | `responses_release_at` | operator-set | Live, with **no lead-time floor** — the operator may backdate it. The reviewee and observer surfaces consume it inside their per-instrument window gates. The two halves refuse differently, deliberately: `/results` is gated at the route by `require_reviewee_with_current_grant`, which answers a bare 404 when no instrument grants that reviewee anything under a window open now, so a reviewee never sees an empty results page; `/collation` has **no** route-level window gate, so an observer's instrument cards fall through to the empty state. **The window also requires the session to be `expired`**, not merely the anchor reached — otherwise an anchor set by any other path (a backdated one on the config card or Quick Setup, or one left behind by `revert_session_to_draft`) would open it. The Workflow card's **Release responses** button is offered only on an expired session, the predicate enforces the same rule so the two cannot disagree, and the service refuses any other state (`not_expired`), so a direct POST cannot stamp it either; it refuses an archived session first (`archived`), and a session whose linked application takes the release lock (`linked`). |
 
 Two existing system-stamped datetimes (`activated_at` and the
 in-memory archive timestamp) also serve as anchors for offsets:
@@ -866,7 +879,7 @@ in-memory archive timestamp) also serve as anchors for offsets:
 | Auto-send invites | `invite_offsets` | `scheduled_activate_at` | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | empty (no auto-send) | with `RRW_SCHEDULED_SEND` on, the observers send (`app/services/scheduled_events/_invites.py`); off, the entries time due prompts (below) |
 | Auto-send reminders | `reminder_offsets` | `deadline` | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | empty (no auto-send) | with `RRW_SCHEDULED_SEND` on, the observers send (`app/services/scheduled_events/_reminders.py`); off, the entries time due prompts (below) |
 | Auto-archive | `archive_offset` | `deadline` | single ISO 8601 duration, e.g. `"P30D"` | intended **`P30D`** once auto-archive is wired (gives the operator time to download data post-deadline before the session leaves the active lobby); the column has no default today, so it stays NULL unless a Settings CSV import sets it | deferred — column only (`guide/deferred_consolidated.md`) |
-| Release-until | `responses_release_until` — an absolute datetime, not an offset | n/a — column carries the absolute close time | DateTime(tz) | unset | Live. The form input is a date-time field (`spec/ui_elements.md` §8); the save-time validator enforces ordering (must close after `responses_release_at`) + a 365-day magnitude check. The Workflow card's **Stop releasing** button writes the same column (`= now()`). The reviewee and observer surfaces consume it inside their per-instrument window gates; there is no route-level gate on it. |
+| Release-until | `responses_release_until` — an absolute datetime, not an offset | n/a — column carries the absolute close time | DateTime(tz) | unset | Live. The form input is a date-time field (`spec/ui_elements.md` §8); the save-time validator enforces ordering (must close after `responses_release_at`) + a 365-day magnitude check. The Workflow card's **Stop releasing** button writes the same column (`= now()`); `stop_responses_release` refuses as Release responses does (`archived`, `linked`, `not_expired`). The reviewee and observer surfaces consume it inside their per-instrument window gates; there is no route-level gate on it. |
 | Auto-delete after archive | `retention_overrides.delete_after_archive` (JSON key inside `retention_overrides`) | archive timestamp | single ISO 8601 duration | unset (use deployment env-var default) | deferred — column only (`guide/deferred_consolidated.md`) |
 
 **Auto-send is off by default.** `RRW_SCHEDULED_SEND` (`scheduled_send`
@@ -898,9 +911,9 @@ The "End" anchor (`deadline`) is also the anchor for the close at the
 review's end (§4), which is live, and with no End the review's end is
 Release-from (`session_lifecycle.review_end`).
 
-A session whose linked application takes the release lock (segment 23E,
-`linked_apps.locks(session, Lock.RELEASE)`) has no release window: the details card shows
-Release from / until as *Off*, its Save and the Settings import refuse a
+A session whose linked application takes the release lock
+(`linked_apps.locks(session, Lock.RELEASE)`) has no release window: the details card does not
+show Release from / until, its Save and the Settings import refuse a
 value, the Workflow card offers neither Release nor Stop release, and
 `is_response_release_window_open` is False. Unlink restores them.
 
@@ -962,7 +975,7 @@ current anchor as done. Per-event preconditions:
 | Event | Precondition at fire time | Skip reason |
 |---|---|---|
 | Scheduled activation | `session.status == "validated"` **and** a fresh readiness report has no errors; warnings are acknowledged by the trigger itself (§2.4) | `not_validated` / `has_errors` (`needs_acknowledge` is mapped to a skip too, but cannot arise) |
-| Auto-send invites | `session.status in {"validated", "ready"}` (Prepared) **and** invitations already created (Prepare creates them) | `linked_app_email_off` (segment 23F: a linked application takes the email lock) / `not_prepared` / `invitations_not_created` |
+| Auto-send invites | `session.status in {"validated", "ready"}` (Prepared) **and** invitations already created (Prepare creates them) | `linked_app_email_off` (a linked application takes the email lock) / `not_prepared` / `invitations_not_created` |
 | Auto-send reminders | `session.status == "ready"` (subsumes Prepared) **and** invitations exist **and** within accepting-responses window | `linked_app_email_off` / `not_ready` / `no_invitations` / `outside_response_window` |
 
 Release-from and Release-until are not fired events. The release

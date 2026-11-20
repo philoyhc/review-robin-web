@@ -411,10 +411,12 @@ they are what keeps the exclusion out of the desugar stage.
    row into a schema — the row's `exclude_self_reviews` column is
    ignored, and this hardcode is what makes the engine ignore it.
    The column itself is operator-settable (config import and
-   the Link 3 chip) and is not reset
-   on a Band-1 save, so a `True` can persist in the row and in
-   the by-instrument extract's *Self-review excluded* cell while
-   the engine still ignores it.
+   the Link 3 chip). A Band-1 save resets it only when a Link
+   goes to `Not set` or Link 3 moves individual → group
+   (`resolve_exclude_self_reviews`, `spec/instruments.md`), so a
+   `True` can persist in the row and in the by-instrument
+   extract's *Self-review excluded* cell while the engine still
+   ignores it.
 3. `instruments._preview.find_sample_in_scope_reviewee` (the
    `/preview-sample` workhorse) constructs its schema with
    `excludeSelfReviews=False`. It honors the instrument's own
@@ -621,7 +623,8 @@ that share the same boundary key (with the same reviewer) are
 in the same group.
 
 The sentinel `"both"` (group instrument with no boundary tag)
-means "all active reviewees form one global group per reviewer."
+means "every pair of the reviewer's forms one global group": each
+row takes the empty key `()`, inactive reviewees included.
 
 ### Storage shape
 
@@ -803,9 +806,11 @@ Steps:
      Self review column and its toggle count and flip only rows with
      both sides active: an inactive side's row stays excluded by
      status, not by the toggle. Likewise the Assignments page's
-     **Activate** skips a row with an inactive side (counted in the
-     audit event's `skipped_inactive`), so no manual include puts an
-     inactive person into a live review; Inactivate is unrestricted.
+     **Activate** skips a row with an inactive side, so no manual
+     include puts an inactive person into a live review; the audit
+     event's `skipped_inactive` counts only the skipped rows that are
+     currently excluded, and one already included is left as it is.
+     Inactivate is unrestricted.
 
 The engine is pure (no DB writes); the materialise step is the
 caller's responsibility. `app/services/assignments/` is the
@@ -906,8 +911,8 @@ Columns (left → right):
 Below the table, a `banner banner-error` names each instrument whose
 stored rule set the engine can't load, with the reason, and points at
 its Instruments card: change or remove that rule there and save. Its
-row reads as it would before Generate; the page answers 200 rather than
-500 (findings E4, 2026-10-22; "Staleness").
+row keeps the Generated and Included counts of its stored rows, with no
+`stale` pill; the page answers 200 rather than 500 ("Staleness").
 
 **There is no Rule column**, and re-adding one buys nothing: the
 rule lives on Band 1, and with Full Matrix storing no rule a
@@ -1043,8 +1048,9 @@ matches under `reviewer` *and* under `reviewee`.
 it in Python over a loaded list
 (`app/web/views/_filters.py::_matches_row`); this page runs it in
 SQL, because `count_pairs` and the `PAIR_PREVIEW_LIMIT` cap both run
-in the query and the preview-count line keeps its meaning — `N` is
-the pairs matching the term, `M` every pair in the session.
+in the query, and the preview-count line reads both: under a filter
+it says how many matching pairs the table shows, of how many match
+(`views.preview_count_line`). It never shows the session's total.
 `tests/integration/test_assignments_search_tags.py` holds one table
 of cases against both paths so they cannot drift apart silently.
 Its known limit: Python `str.casefold` and SQL `lower` agree on
@@ -1102,8 +1108,8 @@ for.
 Options come from `views.ASSIGNMENTS_STATUS_OPTIONS`; the select is
 the roster pages' shape (`spec/setup_pages.md`).
 
-**It composes with the search into the preview-count line** — `N` is
-the pairs matching *both* filters, `M` every pair in the session.
+**It composes with the search into the preview-count line**, which
+counts the pairs matching *both* filters and never the session's total.
 That is the roster pages' own reading of the same sentence
 (`views/_filters.py`: *"Filters compose: status + search"*).
 
@@ -1470,9 +1476,10 @@ parameter**, not on every render.
 Registered rules in `app/services/validation/_registry.py:REGISTERED_RULES`
 that fire on this page's domain:
 
-- **`assignments.no_included_pairs`** (warning) — every row on
-  every instrument has `include=False`. The reviewer page would
-  show nothing.
+- **`assignments.no_included_pairs`** (warning) — no instrument
+  has an `include=True` row: every row is excluded, there are no
+  rows, or Generate has not run. The reviewer page would show
+  nothing.
 - **`assignments.reviewer_missing`** (warning) — an **active**
   reviewer has no `include=True` row on an active reviewee. They'd
   see an empty surface and get no invitation. An inactive reviewer is

@@ -529,7 +529,7 @@ region, never its scroller. A rule's tag select shrinks from half its
 row to make room for a wider operator, so "IS DIFFERENT FROM" never
 spills either.
 
-**A linked instrument** (segment 23F rung 7a): when a linked
+**A linked instrument**: when a linked
 application's profile takes the instrument lock, its draft holds one
 instrument, and the create fixes its rule — Link 1 *All*, Link 2
 `pair_context.tag1 IS FILLED` (assign where a relationship exists),
@@ -537,22 +537,22 @@ Link 3 *Individual*, every link marked set — and starts its display
 fields at the fixed pair and the dossier link (`ProfileLink`), through
 `app/services/linked_instruments.py`. A re-send writes its name (the
 short label following it), description and response fields, matched by
-`field_key` (rung 7b, `spec/handoffs.md`). Its short label follows the
+`field_key` (`spec/handoffs.md`). Its short label follows the
 name from the create on, and the page's display-field repair adds none
 back: it keeps the locked pair but skips the reviewee and relationship
-seeds, so the relationship's tag is never a display field (rung 7e). On
+seeds, so the relationship's tag is never a display field. On
 the Instruments page
-(rung 7c) the card shows no Replicate, Delete, +Instrument or +Page break;
+the card shows no Replicate, Delete, +Instrument or +Page break;
 the rule, the response-field table, the short label and the description
 render fixed (`data-linked-fixed`, inert even when the card is unlocked),
 with a line naming the application; inside them every chip is a fixed
-chip with the lock glyph and every other control takes the inactive look
-(rung 7h). Whether each field is required is the application's too. The
+chip with the lock glyph and every other control takes the inactive look.
+Whether each field is required is the application's too. The
 dossier link's display field is held as it stands (its chip locked, as the
 fixed pair's: both Band 2 saves keep it, `linked_instruments.hold_profile`,
 and the per-field display routes refuse it, `409`). The relationship's tags
 are never display fields there: Prepare seeds none, and an existing row is
-held off the same way (rung 7k). The card's Save writes the
+held off the same way. The card's Save writes the
 rest (the other display fields, layouts, widths, sort, visibility) and
 leaves the owned parts as they are; the routes that change only owned parts (add, replicate,
 delete, page break, the field rows, identity) are `409`.
@@ -1008,8 +1008,7 @@ Top-of-band intro card carrying:
   `<summary>` above (`Setup → Instruments` card), not from this
   preview surface.
 - **Description** — a lock-driven view/edit swap (on a linked instrument
-  the paragraph only, locked or not: the application's text, segment 23F
-  rung 7k): a read-only
+  the paragraph only, locked or not: the application's text): a read-only
   paragraph when the card is locked (`data-intro-description-view`),
   the reviewer's subtitle spaced as the surface spaces it and hidden
   when the heading has none, so no blank line;

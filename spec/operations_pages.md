@@ -182,6 +182,8 @@ or `failed`, and the sent and reminded counters count a send. The note
 states that and where bulk sending stands, and
 `tests/integration/test_page_guidance.py` asserts it, above the
 counters; the page must not claim a bulk send it does not offer.
+The note is omitted where the linked application takes the
+`invitation_send` lock, since every row reads "Shared by …" there.
 
 This is deliberately *not* a `.page-guidance` card. Those are a Setup
 page affordance for explaining a page's whole purpose; one sentence
@@ -331,8 +333,8 @@ excluded nothing is worth saying.
 | 4 | Tag3 | ✓ | `tag_3` | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
 | 5 | Email Status | — | `email_status` | Pill: the latest invitation outbox row's status, or the literal `not sent` when there is none or the invitation is back at `pending` (a regenerate rotated its token), the same gate as the Invitation card's delivery pill. **Rendered, not enumerated**, so the model's `EMAIL_OUTBOX_STATUSES` can widen without a template edit; `sent` takes `pill-count`, everything else `pill-empty` |
 | 6 | Sent | — | `email_sent_at` | Timestamp pill from `Invitation.sent_at`, or `—`; the *Invitations sent* counter counts these |
-| 7 | Progress | — | `review_progress` | Pill: `<state> (D/T)`, where state is the reviewer's `not started` / `in progress` / `submitted`, the rule the reviewer's own pills follow (`spec/reviewer-surface.md` "Reviewer-status pill vocabulary"), so a new or changed answer after Submit reads `in progress` here too |
-| 8 | Required<br>Fields | — | `required_fields` | Pill: `(D/T)` |
+| 7 | Progress | — | `review_progress` | Pill: `<state> (D/T)`, where state is the reviewer's `not started` / `in progress` / `submitted`, the rule the reviewer's own pills follow (`spec/reviewer-surface.md` "Reviewer-status pill vocabulary"), so a new or changed answer after Submit reads `in progress` here too; `—` (`pill-empty`) at a zero total |
+| 8 | Required<br>Fields | — | `required_fields` | Pill: `(D/T)`, `pill-count` when complete and `pill-empty` otherwise; `—` (`pill-empty`) at a zero total |
 | 9 | Reminder | — | `last_reminder_at` | Timestamp pill, or `—`; a Regenerate clears it with the send, since a reminder on the old token reminded no one of the new one |
 | 10 | (actions) | — | — | Per-row buttons — see below |
 
@@ -373,7 +375,7 @@ where those rows land.
 ### On a linked session
 
 Where the linked application takes the invitation-send lock
-(`linked_apps.Lock.INVITATION_SEND`, segment 23F) each row's actions read
+(`linked_apps.Lock.INVITATION_SEND`) each row's actions read
 *Shared by {application}* and the per-row Send and Regenerate, and
 Regenerate all, are `409`; where it takes the email lock, per-row Send
 reminder is `409` too. The application shares the session link, and a
@@ -545,7 +547,7 @@ region rather than the top of the page. Each tab uses the same renderer as
 its eventual send path, with a placeholder invitation URL where previewing
 must not mint or rotate a real token. On a session whose linked application
 takes the email lock the region is not rendered: Review Robin sends that
-session no email (segment 23F rung 7j).
+session no email.
 
 ### Empty-state copy
 
