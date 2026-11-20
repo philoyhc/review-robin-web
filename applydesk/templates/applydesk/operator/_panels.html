@@ -655,7 +655,7 @@
   // A cell a spreadsheet would read as a formula starts with a quote mark.
   function csvCell(v) {
     if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
-    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+    return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
   }
   // Undoes csvCell's guard, so a file this page wrote reads back the same.
   function unguard(v) { return /^'[=+\-@\t\r]/.test(v) ? v.slice(1) : v; }

@@ -175,6 +175,17 @@ def safe(cell: str) -> str:
     return "'" + cell if _FORMULA.match(cell) and not _NUMBER.fullmatch(cell) else cell
 
 
+def guarded(text: str) -> str:
+    """A CSV's text with each cell :func:`safe`, as written for a person to
+    open: a gate's bundle file on its download, while the handoff to Review
+    Robin keeps the bytes Review Robin's import reads (findings 2026-11-20
+    S12, ruled 2026-11-20)."""
+    out = io.StringIO()
+    writer = csv.writer(out, lineterminator="\r\n")
+    writer.writerows([safe(cell) for cell in row] for row in csv.reader(io.StringIO(text)))
+    return out.getvalue()
+
+
 def csv_bytes(table: Table) -> bytes:
     """A table as CSV: a header row, each cell ``safe``, UTF-8 with a BOM
     so Excel reads it as UTF-8 (Apply Desk's choice; module docstring)."""
