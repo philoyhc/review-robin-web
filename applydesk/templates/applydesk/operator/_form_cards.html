@@ -75,7 +75,7 @@
       <p class="muted fc-note" data-sum="kept">{% if size %}Kept as a {{ size[0] }} × {{ size[1] }} JPEG: 600 px on its longer side.{% else %}Enter the ratio as two whole numbers.{% endif %}</p>
     </div>
     <div class="fc-row fc-flags">
-      <button type="button" class="btn btn-toggle g-req" data-f="required" aria-pressed="{{ 'true' if c.required else 'false' }}">Required</button>
+      <button type="button" class="pn-show g-req" data-f="required" aria-pressed="{{ 'true' if c.required else 'false' }}">Required</button>
       <span class="seg" role="group" aria-label="Who sees it">
         <button type="button" data-f="shown" data-v="true" aria-pressed="{{ 'true' if c.shown else 'false' }}">Shown to evaluators</button>
         <button type="button" data-f="shown" data-v="false" aria-pressed="{{ 'false' if c.shown else 'true' }}">Not shown</button>

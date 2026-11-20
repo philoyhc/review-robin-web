@@ -232,6 +232,7 @@
     .xd-grid > .card > .btnrow { margin-top: auto; padding-top: 10px; }
     .card .xd-help { font-size: 14px; color: var(--text-subtle); margin: 0 0 10px; }
     .xd-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px; }
+    .xd-chips .seg, .fc-flags .seg { margin-top: 0; }
     .xd-k { font-weight: 700; color: var(--text-subtle); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; min-width: 7.5em; }
     .card .xd-cols { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--text-subtle); background: var(--surface-muted); border-radius: 6px; padding: 6px 8px; margin: 0 0 6px; overflow-wrap: anywhere; }
     .xd-gates { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 0 0 8px; }
@@ -271,6 +272,12 @@
     /* On an accent fill the ring sits outside it, or it would not show
        (cold read). */
     .btn-primary:focus-visible, [aria-pressed="true"]:focus-visible { outline-offset: 2px; }
+    /* Inside a rounded group (ruling 63) the ring stays in, following each
+       end's curve, and turns light on the chosen option's fill. */
+    .seg button:first-child, .tl-switch button:first-child, .theme-toggle button:first-child { border-radius: 9999px 0 0 9999px; }
+    .seg button:last-child, .tl-switch button:last-child, .theme-toggle button:last-child { border-radius: 0 9999px 9999px 0; }
+    .seg button[aria-pressed="true"]:focus-visible, .tl-switch button[aria-pressed="true"]:focus-visible,
+    .theme-toggle button[aria-pressed="true"]:focus-visible { outline-color: var(--on-accent); outline-offset: -4px; }
     .crumbs { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0 10px; margin-bottom: 25px; border-bottom: 1px solid var(--border-subtle); font-size: 15px; }
     .crumbs a { color: var(--text-link); text-decoration: none; }
     .crumbs [aria-current] { font-weight: 600; }
@@ -622,7 +629,7 @@
        heading and its chip struck through. */
     .pn-showcols { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 14px; }
     .pn-showcols[hidden] { display: none; }
-    .pn-show { display: inline-flex; align-items: center; box-sizing: border-box; height: var(--tog-h); font: inherit; font-size: 12px; font-weight: 600; line-height: 1; padding: 0 12px; border-radius: 9999px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+    .pn-show { display: inline-flex; align-items: center; box-sizing: border-box; min-height: var(--tog-h); font: inherit; font-size: 12px; font-weight: 600; line-height: 1; padding: 0 12px; border-radius: 9999px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
     .pn-show[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
     .pn-table .pn-off { display: none; }
     .pn-table th.pn-retiring .pn-h, .pn-show.pn-retiring { text-decoration: line-through; }

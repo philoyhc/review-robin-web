@@ -121,6 +121,10 @@ def test_required_and_visibility_toggle(page: Page) -> None:
     card.locator("[data-fc-toggle]").click()
     required = card.locator('[data-f="required"]')
     assert required.get_attribute("aria-pressed") == "true"
+    # Not among buttons, so a pill at the segmented choice's height (ruling 63).
+    seg = card.locator(".fc-flags .seg")
+    heights = [round((b.bounding_box() or {"height": 0})["height"]) for b in (required, seg)]
+    assert heights[0] == heights[1], heights
     required.click()
     assert required.get_attribute("aria-pressed") == "false"
     assert card.locator('[data-sum="required"]').text_content() == "Optional"
