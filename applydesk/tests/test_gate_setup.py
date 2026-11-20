@@ -19,8 +19,10 @@ def _client() -> TestClient:
 
 def test_a_saved_gate_links_to_its_review_robin_card() -> None:
     page = _client().get(f"{LOBBY}/wa9juxbc2t/process").text
-    links = re.findall(r'data-pc-rr="[^"]*"><a href="([^"]+)"', page)
-    assert links and links[0] == f"{LOBBY}/wa9juxbc2t/evaluations/gate_1#ev-rr", links
+    # Ruling 65: first in the gate's body, Open Gate N →, to its page.
+    links = re.findall(r'data-pc-rr="[^"]*">[^<]*<a href="([^"]+)">Open Gate (\d+) →</a>', page)
+    assert links and links[0] == (f"{LOBBY}/wa9juxbc2t/evaluations/gate_1", "1"), links
+    links = [href for href, _ in links]
     # Each one opens: the card is there.
     client = _client()
     for href in links:
@@ -222,3 +224,33 @@ def test_process_save_keeps_all() -> None:
     refused = client.post(f"{LOBBY}/{made}/process", json={"stages": [stage_bad], "revision": 1})
     assert refused.status_code == 400 and "malformed" in refused.json()["error"]
     scratch.clear()
+
+
+def test_each_link_between_process_a_gate_and_its_emails_lands() -> None:
+    """Ruling 65: a gate page links back to its card on Process; each email
+    ticked on Process links its template on Emails, and each template
+    links back to what ticks it. Every href names something on its page."""
+    client = _client()
+    base = f"{LOBBY}/wa9juxbc2t"
+    process = client.get(f"{base}/process").text
+    emails = client.get(f"{base}/emails").text
+    # A gate page: Set on Process → its card.
+    gate = client.get(f"{base}/evaluations/gate_1").text
+    back = re.findall(r'<a href="([^"]+)">Set on Process →</a>', gate)
+    assert back and back[0].startswith(f"{base}/process#gate-"), back
+    assert f'data-item="gate" data-key="{back[0].split("#gate-")[1]}"' in process
+    # Process: Template → for each email Emails lists, each landing.
+    to_emails = re.findall(r'class="pc-tpl" href="([^"]+)">Template →</a>', process)
+    ids = re.findall(r'<section class="card em-card" id="([^"]+)"', emails)
+    assert to_emails and sorted(h.split("#")[1] for h in to_emails) == sorted(ids)
+    assert all(h.startswith(f"{base}/emails#") for h in to_emails)
+    # Emails: Set on Process → the form's card or the outcome's.
+    to_process = re.findall(r'<a href="([^"]+)" data-em-process>Set on Process →</a>', emails)
+    assert len(to_process) == len(ids)
+    for href in to_process:
+        target = href.split("#")[1]
+        if target == "form":
+            assert 'data-item="form"' in process
+        else:
+            assert target.startswith("outcome-")
+            assert f'data-item="outcome" data-key="{target[len("outcome-") :]}"' in process, href

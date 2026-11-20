@@ -122,6 +122,9 @@ def test_stages_are_added_replicated_and_deleted(page: Page) -> None:
     copied = _cards(page).nth(3).locator("[data-pc-rr]").first
     assert copied.locator("a").count() == 0
     assert "once this gate is saved" in (copied.text_content() or "")
+    # Nor Template → links: the copy's ticks are not saved (ruling 65).
+    assert review.locator(".pc-tpl").count() > 0
+    assert _cards(page).nth(3).locator(".pc-tpl").count() == 0
     # Deleting, down to the last stage, which stays.
     while _cards(page).count() > 1:
         card = _cards(page).nth(0)
