@@ -8,15 +8,15 @@ Residential Apps: one package, mounted under Cordware as two applications, **Res
 | `supportlogs/` | Support Logs: its factory and routes |
 | `tests/` | Residential's tests, including the mounted ones through its own host harness (`tests/_host.py`) |
 | `docs/graph_learnings.md` | Microsoft Graph as RRW and Utilities found it on the institutional host: reuse the host's client, sign-in name vs mail and aliases, token renewal, who can send email, and the limits to design around (learning notes, 2026-11-01) |
-| `docs/ra_leave_management_functional_spec_v0.4.md` | RA Leave functional spec (Residential Operations) |
-| `docs/resident_support_log_functional_spec_v0.3.md` | Support Logs functional spec |
+| `docs/ra_leave_management_functional_spec_v0.4.md` | RA Leave functional spec (Residential Operations): a frozen baseline, superseded by `spec/applications.md`'s page map |
+| `docs/resident_support_log_functional_spec_v0.3.md` | Support Logs functional spec: a frozen baseline, superseded by `spec/applications.md` ("Support Logs") and `spec/supportlogs_ui.md` where they differ |
 | `docs/residentialapps_email_identity_matching.md` | Email aliases and institutional identity matching: the email is a provisional hint, the Entra tenant/object ID the account key; exact trusted UPN and primary-email matching only, administrator correction otherwise (design note, 2026-10-30) |
 | `docs/residentialapps_identity.md` | Identity and roster linking: permanent `person_id`, Entra binding at first matching sign-in, the not-registered response (adopted 2026-10-26) |
 | `docs/residentialapps_roles.md` | Roles in both applications, read across from RRW's super-admin, admin and operator (ruled) |
 | `docs/archive/residentialapps_roster_structure.md` | **Retired 2026-11-20, superseded by the 2026-10-27 units ruling**: rosters, appointments and residential geography in the vocabulary before Unit-defined levels and slots. Design history; the contract is `spec/applications.md`. |
 | `docs/sample_data/README.md` | Mock data for browser tests: Example College's 30 Neighborhoods (the author's breakdown), its terms, Staff and RA rosters and Assignments CSVs (clean and error cases), and fake sign-in scenarios, each with its expected outcome |
 | `docs/support_logs_confidentiality.md` | Support Logs' confidentiality model for the staff who use it: own records, sharing, teams, handovers, what senior and other staff see, the audit (agreed 2026-11-07) |
-| `docs/support_logs_ui_spec_v0.1.md` | Support Logs UI spec (draft): RF / RSLM phone screens on RRW's design system |
+| `docs/support_logs_ui_spec_v0.1.md` | Support Logs UI spec (draft): RF / RSLM phone screens on RRW's design system; a frozen baseline, superseded by `spec/supportlogs_ui.md` |
 | `spec/applications.md` | The two applications as the host sees them: registry entries, factories, health, running alone, logging and lifespan |
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and the `residential` CI lane |
 | `spec/residentialops_ui.md` | Residential Operations' UI conventions: widths, chrome, color, buttons, row builders, roster tables, placeholders, accessibility |

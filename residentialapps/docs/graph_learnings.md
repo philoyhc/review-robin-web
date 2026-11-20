@@ -95,9 +95,11 @@ in Cordware's private records.
 - **SMTP is out.** Institutional tenants typically block basic SMTP
   AUTH under MFA. RRW is retiring its per-operator SMTP settings
   (`guide/email_and_scheduling.md`, "Narrowed").
-- **RRW sends no mail itself yet.** Its Graph transport is still a stub,
-  so Residential should not assume a shared email service exists to
-  call.
+- **The host sends mail as the signed-in user.** `cordware/graph.py`'s
+  `GraphMailer` posts `/me/sendMail` with their delegated token, and
+  RRW's `GraphEmailTransport` (`app/services/email_send.py`) sends
+  through it. Residential should take the host's mailer (`mailer_for`)
+  rather than write its own.
 
 ## 5. Limits worth designing around
 

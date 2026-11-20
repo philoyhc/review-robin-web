@@ -1,9 +1,9 @@
 # Residential architecture
 
-> **Built so far:** segment 1A built the `residentialops/` (`ops/` until
-> 2026-10-27), `supportlogs/` and `tests/` packages, the boundary rules marked below, packaging and the
-> `residential` lane; segment 1B item 1 built `web/`. Every package and rule marked for a later segment
-> is the contract for it, not yet built.
+> **Built:** the `residentialops/`, `supportlogs/`, `web/` and `tests/`
+> packages, the boundary rules marked below, packaging and the
+> `residential` lane. Every package and rule marked for a later segment
+> is contract, not yet built.
 
 How `residentialapps/` is laid out, what each part may import, and how
 its tests run. The two applications' contract with the host is

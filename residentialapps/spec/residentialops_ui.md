@@ -1,17 +1,18 @@
 # Residential Operations UI
 
-> **Built so far:** segment 1B item 1 built the chrome, the placeholder
-> screens of Rosters and setup and Sys admin, the row builders on the
-> Assignments page, the roster tables, the slots and the Terms page, on sample data. Segment 1C item 1 adds RA Leave's
-> screens and extends this file from them.
+> **Built:** the chrome, the placeholder screens of Rosters and setup,
+> Sys admin and RA Leave, the row builders on the Assignments page, the
+> roster tables, the slots and the Terms page, on sample data.
 
 The conventions every Residential Operations screen follows. Where this
 file is silent, RRW's design system applies: `spec/ui_elements.md` for
 components and `spec/visual_style_general.md` for type, color and spacing.
 Support Logs' screens follow their own UI spec,
 `residentialapps/spec/supportlogs_ui.md`, which takes this file's chrome
-and cites it for what the two share. The page map, with each page's device
-class, is `residentialapps/spec/applications.md` ("Pages"); the styles are
+and cites it for what the two share. The page map, with each page's path,
+who reaches it and its device class, is
+`residentialapps/spec/applications.md` ("Pages"): this file governs the
+routes with it, and the path-and-grant contract is there. The styles are
 in `residentialapps/web/templates/residential/base.html`.
 
 ## 1. Devices and widths
@@ -103,9 +104,9 @@ with the page.
 - **Fuchsia is Residential Operations' accent** (`#a21caf`, dark
   `#e879f9`), for primary actions, selection, focus, links and the current
   navigation item. The accent follows the application, not the viewer, and
-  never takes a status hue; the figures and the shared tokens are
-  `residentialapps/docs/support_logs_ui_spec_v0.1.md` §6, Support Logs'
-  draft, kept as history.
+  never takes a status hue; the shared tokens are the `:root` custom
+  properties of
+  `residentialapps/web/templates/residential/base.html`.
 - **Dark** takes RRW's dark neutrals and the accent's dark-surface tone.
 - **Status is a chip with words**, never color alone: info, warning, OK,
   muted, each on the shared status tokens.
