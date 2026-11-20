@@ -13,7 +13,7 @@ import re
 from dataclasses import dataclass
 from typing import cast
 
-from applydesk import sample_data, stages
+from applydesk import sample_data, stages, tones
 from applydesk.sample_data import Exercise
 
 #: Each sample gate sent to Review Robin, its state and its line (ruling
@@ -562,10 +562,8 @@ def status_row(exercise: Exercise) -> tuple[Pill, ...]:
     kept = sum(e.ok for e in mail)
     return (
         # As each stage's chip on Process and Home (locks.STATUS_CHIP).
-        Pill(
-            "Exercise", ex_status, {"Published": "info", "Completed": "ok"}.get(ex_status, "warn")
-        ),
-        Pill("Form", form, "warn" if form == "Draft" else "info"),
+        Pill("Exercise", ex_status, tones.tone(ex_status)),
+        Pill("Form", form, tones.tone(form)),
         Pill(
             "Gates",
             f"{done} of {len(gates)} done" if gates else "none",

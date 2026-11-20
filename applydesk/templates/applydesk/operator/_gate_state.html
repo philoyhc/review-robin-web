@@ -1,7 +1,7 @@
 {# A gate's state chip, as Evaluations' Gates table and the gate page's
    head both show it (AD-23), and Evaluations' row action; ``st`` is
    workflow.gate_state's (state, progress). #}
-{% macro chip(st) %}<span class="chip chip-{{ 'ok' if st[0] == 'Results in' else ('info' if st[0] in ('Sent', 'Closed', 'Ready') else 'warn') }}" data-gate-state>{{ st[0] }}</span>{% endmacro %}
+{% macro chip(st) %}<span class="chip chip-{{ tone(st[0], 'warn') }}" data-gate-state>{{ st[0] }}</span>{% endmacro %}
 {# Evaluations' row action: the gate's Review Robin card, on its page,
    where it is sent, re-sent and its results pulled (segment AD1M). #}
 {% macro action(st, href) %}<a class="btn btn-secondary" href="{{ href }}#ev-rr">{{ "Send…" if st[0] == "Ready" else "Review Robin…" }}</a>{% endmacro %}

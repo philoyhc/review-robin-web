@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from applydesk import sample_data, stages, workflow
+from applydesk import sample_data, stages, tones, workflow
 from applydesk.sample_data import Exercise
 
 
@@ -22,12 +22,9 @@ class Row:
 
     label: str
     state: str
-    tone: str  # ok, info, warn, mute: the chip's
+    tone: str  # the chip's, from tones.tone
     detail: str
     target: str
-
-
-_GATE_TONE = {"Results in": "ok", "Sent": "info", "Closed": "info", "Ready": "info"}
 
 
 def _form(e: Exercise) -> Row:
@@ -36,7 +33,7 @@ def _form(e: Exercise) -> Row:
     detail = f"{counted.submitted:,} submitted" + (
         f" · {workflow.plural(counted.drafts, 'draft')}" if counted.drafts else ""
     )
-    return Row("Form", state, "warn" if state == "Draft" else "info", detail, "dossiers")
+    return Row("Form", state, tones.tone(state), detail, "dossiers")
 
 
 def _gate(e: Exercise, g: stages.Gate) -> Row:
@@ -53,7 +50,7 @@ def _gate(e: Exercise, g: stages.Gate) -> Row:
     return Row(
         g.label or "Untitled gate",
         state,
-        _GATE_TONE.get(state, "warn"),
+        tones.tone(state, "warn"),
         " · ".join(p for p in parts if p),
         "" if e.state == "Draft" else str(g.number),
     )

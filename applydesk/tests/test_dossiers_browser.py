@@ -77,16 +77,16 @@ def test_a_gate_chip_cycles_and_the_count_follows(page: Page) -> None:
     _unlock(page)
     before = _count(page, "g1")
     chip = _row(page, "kenji.russo").locator('[data-cell="g1"] [data-ap-adm]')
-    assert chip.inner_text() == "Entered"
+    assert chip.text_content() == "Entered"
     chip.click()
-    assert chip.inner_text() == "Not entered"
+    assert chip.text_content() == "Not entered"
     chip.click()
-    assert chip.inner_text() == "—"
+    assert chip.text_content() == "—"
     assert (chip.get_attribute("aria-label") or "").endswith(": no status yet")
     n = int(before.split()[0])
     assert _count(page, "g1").startswith(f"{n - 1} entered · 1 to decide")
     chip.click()
-    assert chip.inner_text() == "Entered" and _count(page, "g1") == before
+    assert chip.text_content() == "Entered" and _count(page, "g1") == before
 
 
 def test_an_outcome_is_picked_and_dated(page: Page) -> None:
@@ -152,7 +152,7 @@ def test_ticked_rows_are_set_together(page: Page) -> None:
     page.locator("[data-ap-set-val]").select_option("Entered")
     page.locator("[data-ap-set]").click()
     for who in ("aisha.bello", "kenji.russo"):
-        assert _row(page, who).locator('[data-cell="g3"] [data-ap-adm]').inner_text() == "Entered"
+        assert _row(page, who).locator('[data-cell="g3"] [data-ap-adm]').text_content() == "Entered"
     # A draft has entered nothing: it is left alone.
     assert _row(page, "wen.novak").locator('[data-cell="g3"] [data-ap-adm]').count() == 0
 
@@ -226,7 +226,7 @@ def test_a_csv_proposes_then_applies(page: Page) -> None:
     assert prop.locator("[data-ap-prop-rows] tr").count() == 2
     prop.locator("[data-ap-prop-apply]").click()
     assert (
-        _row(page, "ben.sato").locator('[data-cell="g3"] [data-ap-adm]').inner_text() == "Entered"
+        _row(page, "ben.sato").locator('[data-cell="g3"] [data-ap-adm]').text_content() == "Entered"
     )
     assert _row(page, "kenji.russo").locator('[data-cell="o2"] select').input_value() == "Selected"
 
@@ -307,7 +307,7 @@ def test_apply_keeps_a_cell_changed_by_hand_since(page: Page) -> None:
     chip.click()  # Not entered -> no status, by hand
     page.once("dialog", lambda d: d.accept())
     prop.locator("[data-ap-prop-apply]").click()
-    assert chip.inner_text() == "—"
+    assert chip.text_content() == "—"
     # Focus returns to what opened the proposal.
     assert page.evaluate("document.activeElement.hasAttribute('data-ap-csv-open')")
 
@@ -336,10 +336,10 @@ def test_a_csv_giving_one_cell_two_values_leaves_it(page: Page) -> None:
     assert rows.count() == 1 and "p3bd7kq2wx" in rows.inner_text()  # the row as shown
     prop.locator("[data-ap-prop-apply]").click()
     assert (
-        _row(page, "aisha.bello").locator('[data-cell="g3"] [data-ap-adm]').inner_text()
+        _row(page, "aisha.bello").locator('[data-cell="g3"] [data-ap-adm]').text_content()
         == "Entered"
     )
-    assert _row(page, "ben.sato").locator('[data-cell="g3"] [data-ap-adm]').inner_text() == (
+    assert _row(page, "ben.sato").locator('[data-cell="g3"] [data-ap-adm]').text_content() == (
         "Not entered"
     )
 
@@ -744,7 +744,7 @@ def test_the_page_combines_results_as_the_server_does(page: Page) -> None:
     kenji = next(r for r in plan.rows if r.application.public_id == "h6zr2tdw9p")
     row = _row(page, "kenji.russo")
     g2 = row.locator('[data-cell="g2"] [data-ap-adm]')
-    while g2.inner_text() != "Not entered":
+    while g2.text_content() != "Not entered":
         g2.click()
     assert row.locator('[data-cell="o1"] [data-ap-comb]').inner_text() == (
         f"Combined {kenji.cells['g1'].result:.2f}"
@@ -802,7 +802,7 @@ def test_the_page_shows_each_outcome_s_combined_result_and_weights(page: Page) -
     assert kenji.locator('[data-cell="o2"] [data-ap-comb]').inner_text() == "Combined 4.50"
     # Not entered at the interview, it has nothing to combine.
     chip = kenji.locator('[data-cell="g3"] [data-ap-adm]')
-    while chip.inner_text() != "Not entered":
+    while chip.text_content() != "Not entered":
         chip.click()
     assert kenji.locator('[data-cell="o2"] [data-ap-comb]').inner_text() == ""
 
@@ -859,7 +859,7 @@ def test_the_table_is_locked_until_unlocked_and_undo_puts_it_back(page: Page) ->
     lock.click()
     assert lock.inner_text() == "Lock"
     assert page.locator("[data-ap-changes]").inner_text() == "No changes yet"
-    before = chip.inner_text()
+    before = chip.text_content()
     chip.click()
     assert page.locator("[data-ap-changes]").inner_text() == "1 change since unlocked"
     # Leaving with a change pending asks first.
@@ -868,12 +868,12 @@ def test_the_table_is_locked_until_unlocked_and_undo_puts_it_back(page: Page) ->
         " window.dispatchEvent(e); return e.defaultPrevented; }"
     )
     page.locator("[data-ap-undo]").click()
-    assert chip.inner_text() == before
+    assert chip.text_content() == before
     assert page.locator("[data-ap-changes]").inner_text() == "No changes yet"
     chip.click()
-    after = chip.inner_text()
+    after = chip.text_content()
     lock.click()
-    assert chip.is_disabled() and chip.inner_text() == after
+    assert chip.is_disabled() and chip.text_content() == after
     assert page.locator("[data-ap-said]").inner_text() == (
         "1 change kept on this page; the table is locked."
     )

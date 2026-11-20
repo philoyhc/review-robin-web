@@ -54,7 +54,7 @@
       {% for g in extract.gates %}
         <tr data-xd-gate="{{ g.number }}"><td>{{ g.number }} · {{ g.label }}{% if g.confidential %} <span class="chip chip-mute">Confidential</span>{% endif %}</td>
           <td>{% if g.sent %}{{ "{:,}".format(g.pairs) }} {{ "pair" if g.pairs == 1 else "pairs" }}{% else %}<span class="muted">Not sent</span>{% endif %}</td>
-          <td>{% if g.sent %}{{ dl("gate_" ~ g.number ~ ".csv", "CSV", "btn-secondary xd-csv", name="Gate " ~ g.number ~ " CSV") }}{% else %}<span class="muted">—</span>{% endif %}</td></tr>
+          <td>{% if g.sent %}{{ dl("gate_" ~ g.number ~ ".csv", "CSV", "btn-secondary btn-short", name="Gate " ~ g.number ~ " CSV") }}{% else %}<span class="muted">—</span>{% endif %}</td></tr>
       {% endfor %}
       </tbody>
     </table>

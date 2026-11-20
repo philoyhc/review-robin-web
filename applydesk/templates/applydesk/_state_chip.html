@@ -1,2 +1,1 @@
-{%- set _c = {"Published": "chip-info", "Completed": "chip-ok", "Draft": "chip-mute", "Closed": "chip-warn", "Archived": "chip-mute", "Submitted": "chip-ok", "Withdrawn": "chip-warn"} -%}
-<span class="chip {{ _c.get(value, 'chip-info') }}">{{ value }}</span>
+<span class="chip chip-{{ tone(value) }}">{{ value }}</span>
