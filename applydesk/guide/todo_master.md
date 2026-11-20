@@ -565,6 +565,18 @@ where a ruling below differs from it, the ruling wins.
     server's memory for that browser (an opaque cookie), never on disk,
     lost on a restart or deploy; every page reads it, so the setup flow
     can be walked whole (segment AD1N).
+60. **Evaluations is open once a gate is saved** (author, 2026-11-20):
+    once AD2 stores exercises, the Evaluations page and a gate's page show
+    a gate's evaluators and pairs as soon as the gate is saved on Process,
+    not only once the exercise is published. Today they wait for a
+    published exercise (`routes_operator._gate_or_404`); AD2/AD3 lift that.
+61. **A gate reaches its Review Robin card from Process** (author,
+    2026-11-20): the gate's *Gate* card on Process links to its Review
+    Robin card on its Evaluations page (segment AD1O).
+62. **A panel source may take the whole panel** (author, 2026-11-20): an
+    *All* toggle after a panel source's Min and Max gives each dossier
+    every member of the panel, the two boxes disabled while it is on, its
+    count following the panel as members join or leave (segment AD1O).
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
@@ -661,7 +673,7 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
-| UI review — consistency and gaps | Before AD2 fixes what is stored (author, 2026-11-19): a scratch exercise to set up end to end, done (`applydesk/guide/archive/segment_AD1N_scratch_exercise.md`); next the review itself | Building |
+| UI review — consistency and gaps | Before AD2 fixes what is stored (author, 2026-11-19): a scratch exercise to set up end to end, done (`applydesk/guide/archive/segment_AD1N_scratch_exercise.md`); gate setup touch-ups (`applydesk/guide/segment_AD1O_gate_setup.md`); next the review itself | Building |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
