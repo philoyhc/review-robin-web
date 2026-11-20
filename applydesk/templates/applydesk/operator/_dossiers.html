@@ -6,7 +6,7 @@
    Every move works on screen; nothing is saved until AD2. A control
    surface (ruling 23): the table is locked until *Unlock*, then every
    cell, the rules, the CSV and the releases are live; *Lock* keeps what
-   changed and *Undo changes* puts it back. Ticks only choose rows. #}
+   changed and *Discard changes* puts it back. Ticks only choose rows. #}
 {% set last = last_submitted(plan.rows) %}
 {% set rank = submitted_rank(plan.rows) %}
 {% set cols = plan.columns %}
@@ -23,7 +23,7 @@
     <input type="file" accept=".csv,text/csv" data-ap-csv hidden aria-label="CSV file">
     {% endif %}
     <span class="ap-changes" data-ap-changes hidden></span>
-    <button class="btn btn-secondary" type="button" data-ap-undo hidden>Undo changes</button>
+    <button class="btn btn-secondary" type="button" data-ap-undo hidden>Discard changes</button>
     <button class="btn btn-secondary" type="button" data-ap-lock title="Unlock the table to change it">Unlock</button>
   </div>
   <p class="ap-said" data-ap-said aria-live="polite"></p>
@@ -68,7 +68,7 @@
         <th><span class="ap-count" data-ap-count="status"></span></th>
         {% for r in plan.stages %}{% for c in r.columns %}
           {% if c.via is defined %}{% set cl = cells_lock(c) %}
-          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate"{% if cl.fixed %} data-ap-fixed="{{ cl.reason }}"{% endif %} data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}"><span class="ap-kind">Gate {{ c.number }} · {{ c.via }}</span><span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>{% if cl.fixed %}<span class="ap-rule-line ap-fixed">Fixed: its Review Robin session has opened</span>{% endif %}</th>
+          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate"{% if cl.fixed %} data-ap-fixed="{{ cl.reason }}"{% endif %} data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}"><span class="ap-kind">Gate {{ c.number }} · Review Robin</span><span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>{% if cl.fixed %}<span class="ap-rule-line ap-fixed">Fixed: its Review Robin session has opened</span>{% endif %}</th>
           {% else %}
           <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-scope="{{ scope(plan, c) | map(attribute='key') | join('|') }}" data-weights="{% for k, w in c.weights %}{{ k }}:{{ w }}{{ '|' if not loop.last }}{% endfor %}" data-number="Outcome {{ c.number }}" data-first="{{ c.values[0] }}" data-on="{{ going_on(c) | join('|') }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span><span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
             {% if c.weights %}<span class="ap-weights">{% for k, w in c.weights if w %}{{ result_label(k) }} {{ (w * 100) | round | int }}%{{ " · " if not loop.last }}{% endfor %}</span>{% endif %}
@@ -130,7 +130,7 @@
       {% if cols %}
     <span class="ap-set" role="group" aria-label="Set the ticked rows">
       <select class="ap-sel" data-ap-set-col aria-label="Column to set">
-        {% for c in cols %}<option value="{{ c.key }}">{{ "Gate " ~ c.number if c.via is defined else "Outcome " ~ c.number }}: {{ c.label }}</option>{% endfor %}
+        {% for c in cols %}<option value="{{ c.key }}">{{ "Gate " ~ c.number if c.via is defined else "Outcome " ~ c.number }} · {{ c.label }}</option>{% endfor %}
       </select>
       <select class="ap-sel" data-ap-set-val aria-label="Value to set"></select>
       <button class="btn btn-secondary" type="button" data-ap-set data-ap-locks disabled>Set ticked rows</button>
@@ -263,6 +263,8 @@
     root.querySelectorAll("[data-ap-locks]").forEach(function (el) { el.disabled = lock || el.hasAttribute("data-ap-fixed"); });
     if (lock) root.removeAttribute("data-unlocked"); else root.setAttribute("data-unlocked", "");
     lockBtn.textContent = lock ? "Unlock" : "Lock";
+    // Lock is the page's one affirmative act once unlocked (ruling 64, F13).
+    lockBtn.className = "btn " + (lock ? "btn-secondary" : "btn-primary");
     lockBtn.title = lock ? "Unlock the table to change it" : "Keep the changes and lock the table";
     showChanges();
   }

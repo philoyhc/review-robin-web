@@ -103,7 +103,7 @@
     tr.dataset.evRow = a.d; tr.dataset.evPair = a.e; tr.dataset.evAdded = "";
     tr.innerHTML = "<td></td><td><span></span> <span class=\"ev-added-mark\">Added</span></td><td><span class=\"ev-src\"></span></td><td><span data-ev-state></span></td>" +
       "<td class=\"ev-acts\"><button type=\"button\" class=\"btn btn-secondary\" data-ev-act=\"remove\"></button>" +
-      (DATA.mode === "suggested" ? " <button type=\"button\" class=\"btn btn-secondary\" data-ev-act=\"approve\">Approve</button>" : "") + "</td>";
+      (DATA.mode === "suggested" ? " <button type=\"button\" class=\"btn btn-toggle\" data-ev-act=\"approve\" aria-pressed=\"false\">Approve</button>" : "") + "</td>";
     // A blind dossier's ID in monospace, as on Dossiers (AD-87).
     tr.cells[0].textContent = "";
     var tick = tr.cells[0].appendChild(document.createElement("input"));
@@ -151,6 +151,7 @@
         // A dossier's evaluators are approved together (ruling 34); a
         // second click on Approved takes the approval back (AD-25).
         ok.textContent = done ? "Approved" : "Approve";
+        ok.setAttribute("aria-pressed", done ? "true" : "false");  // a Toggle (ruling 64, F12)
         ok.title = done ? "Click to take back the approval of " + names[d] + "'s evaluators" : "Approve " + names[d] + "'s evaluators together";
       }
     });

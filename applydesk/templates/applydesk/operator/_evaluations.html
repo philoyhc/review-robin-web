@@ -23,7 +23,7 @@
     <tbody>
     {% for g in gates %}
       {% set st = gate_state(exercise.public_id, g.key) %}
-      <tr data-gate="{{ g.key }}"><td><span class="muted">Gate {{ g.number }}</span><br><strong>{{ g.label }}</strong></td>
+      <tr data-gate="{{ g.key }}"><td>Gate {{ g.number }} · <strong>{{ g.label }}</strong></td>
         <td>Review Robin</td>
         <td>{{ gs.chip(st) }}</td>
         <td>{{ st[1] or "—" }}</td>
@@ -72,10 +72,10 @@
 {% set mode_label = (modes | selectattr(0, "equalto", g.mode) | first)[1] %}
 <section class="card ev-gate" data-ev-gate="{{ g.key }}" data-mode="{{ g.mode }}">
   <div class="ev-head">
-    <span><span class="muted">Gate {{ g.number }}</span> <strong>{{ g.label }}</strong></span>
+    <span>Gate {{ g.number }} · <strong>{{ g.label }}</strong></span>
     <span class="chip chip-mute" data-ev-mode>{{ mode_label }}</span>
     <span class="muted" data-ev-counts>{{ assignment_counts(got[0]) }}</span>
-    <a class="btn btn-secondary ev-open" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ g.number) }}">Assignments ({{ "{:,}".format(pairs_of(got[0]) | length) }} rows)</a>
+    <a class="btn btn-secondary ev-open" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ g.number) }}">Pairs ({{ "{:,}".format(pairs_of(got[0]) | length) }})</a>
   </div>
   {% for panel, members in got[1] %}<p class="muted ev-load" data-ev-load>{{ panel }}: {% for name, n in members %}{{ name }} {{ n }}{{ " · " if not loop.last }}{% endfor %}</p>{% endfor %}
 </section>

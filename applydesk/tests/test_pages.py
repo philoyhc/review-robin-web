@@ -697,7 +697,7 @@ def test_evaluations_shows_each_gate_s_assignments(client: TestClient) -> None:
     g1 = text[text.index('data-ev-gate="g1"') : text.index('data-ev-gate="g2"')]
     assert "100 dossiers · 100 filled" in g1
     assert re.search(r"Current RAs: Aisha Bello \d+ · ", g1)
-    link = f'href="/applydesk/operator/exercises/{EX}/evaluations/gate_1">Assignments (2,980 rows)'
+    link = f'href="/applydesk/operator/exercises/{EX}/evaluations/gate_1">Pairs (2,980)'
     assert link in g1
     assert "data-ev-row" not in text  # the rows are the gate's page's
     page = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_1").text

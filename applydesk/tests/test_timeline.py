@@ -217,12 +217,25 @@ def test_the_applicant_s_page_shows_the_same_timeline_and_nothing_operator_only(
             )
         ]
 
-    # The participants' part alike; Home adds only its operator part.
+    # The participants' part alike; Home adds only its operator part, and
+    # names each stage by its status where applicants read where it
+    # stands (ruling 64, U2).
     home_part = re.sub(
         r'\s*<div class="tl-op" data-tl-op>.*?\n      </div>', "", stages_of(home), flags=re.S
     )
     assert "data-tl-op" in home and "data-tl-op" not in mine
-    assert re.sub(r"\s+", " ", home_part) == re.sub(r"\s+", " ", stages_of(mine))
+
+    def heads(part: str) -> str:
+        return re.sub(
+            r'(<h3 class="tl-name">[^<]*)<span class="chip[^"]*">[^<]*</span>', r"\1", part
+        )
+
+    assert re.sub(r"\s+", " ", heads(home_part)) == re.sub(r"\s+", " ", heads(stages_of(mine)))
+    assert re.findall(r'class="tl-name">[^<]*<span class="chip[^"]*">([^<]*)', home) == [
+        "Completed",
+        "Completed",
+        "Published",
+    ]
     assert "Today, 17 Nov, is in Interviews." in mine
     assert "Results expected December 2026 (an estimate)." in mine
     timeline_card = mine[

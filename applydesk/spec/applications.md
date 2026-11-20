@@ -795,7 +795,7 @@ A control surface (ruling 23), worked down its columns. The whole table is
 locked until *Unlock*; then every cell, *Set ticked rows*, *Apply rules…*,
 *Upload CSV* and each outcome's *Released* are live, but for the fixed ones
 below. *Lock* keeps what
-changed; *Undo changes* puts the table back as it was when unlocked; meanwhile
+changed; *Discard changes* puts the table back as it was when unlocked; meanwhile
 a count of the changes shows. Locked, what differs from the page as loaded
 stays marked (*N changes on this page, not saved until AD2*), and leaving the page with any pending or
 kept asks first. *Return to draft* is a submitted row's own (Outline-amber)

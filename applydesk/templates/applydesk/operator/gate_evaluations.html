@@ -14,7 +14,7 @@
 {% block title %}Gate {{ gate.number }} · {{ gate.label or "Untitled gate" }} · {{ exercise.name }}{% endblock %}
 {% block content %}
 {# The breadcrumb names this gate under Evaluations (AD-100). #}
-<div class="ptitle"><h1><span class="muted">Gate {{ gate.number }}</span> {{ gate.label or "Untitled gate" }}</h1>
+<div class="ptitle"><h1>Gate {{ gate.number }} · {{ gate.label or "Untitled gate" }}</h1>
   <span class="ev-head">{% import "applydesk/operator/_gate_state.html" as gs %}{{ gs.chip(state) }}{% if state[0] == "Not ready" and state[1] %} <span class="muted" data-gate-why title="As saved: this tab's changes count once AD2 saves them">{{ state[1] }}</span>{% endif %} <span class="chip chip-mute" data-ev-mode>{{ mode_label }}</span> <span class="muted" data-ev-counts>{{ assignment_counts(all_rows) }}</span> <a class="btn btn-secondary" href="#ev-rr">Review Robin ↓</a></span></div>
 <p class="placeholder"><strong>Placeholder.</strong> Sample data: what you do here works on screen and is kept in this tab across its pages, but nothing is saved until AD2.</p>
 {# The gate's link to Review Robin (segment AD1M): its session's name and
@@ -43,7 +43,7 @@
   <ul class="rr-files" data-rr-files>
     <li><strong>Reviewers</strong>: {{ n_people }} {{ "evaluator" if n_people == 1 else "evaluators" }}, by name and email {{ dl("reviewers") }}</li>
     <li><strong>Reviewees</strong>: {{ n_dossiers }} {{ "dossier" if n_dossiers == 1 else "dossiers" }}{% if ids_only %}, each by its Dossier ID, the name redacted (ruling 43){% else %}, each with its <code>ProfileLink</code>{% endif %} {{ dl("reviewees") }}</li>
-    <li><strong>Relationships</strong>: {{ n_pairs }} {{ "pair" if n_pairs == 1 else "pairs" }}, each tagged with its source {{ dl("relationships") }}</li>
+    <li><strong>Relationships</strong>: {{ "{:,}".format(n_pairs) }} {{ "pair" if n_pairs == 1 else "pairs" }}, each tagged with its source {{ dl("relationships") }}</li>
     <li><strong>Settings</strong>: the description, help contact, timezone, dates and one instrument with {{ bundle.fields }} response {{ "field" if bundle.fields == 1 else "fields" }} {{ dl("settings") }}</li>
   </ul>
   <p class="muted">As saved: this tab's changes to the pairs are not in the files until AD2 saves them.</p>

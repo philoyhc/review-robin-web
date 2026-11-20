@@ -20,7 +20,10 @@
     <li class="tl-stage tl-{{ s.state | lower }}" data-tl-stage="{{ s.number }}"{% if s.state == "Now" %} data-tl-p="{{ '%.1f' % (s.progress * 100) }}"{% endif %}>
       <div class="tl-bar" aria-hidden="true">{% if s.state == "Now" %}<span class="tl-today"><span>Today · {{ short(tl.today) }}</span></span>{% endif %}</div>
       <span class="tl-dot" aria-hidden="true">{{ "✓" if s.state in ("Done", "Closed") else s.number }}</span>
-      <h3 class="tl-name">{{ s.name }} <span class="chip chip-{{ tone(s.state) }}">{{ s.state }}</span></h3>
+      {# Operator pages name a stage by its status (ruling 64, U2); the
+         applicant's page, by where it stands (Done, Now, Next, Closed). #}
+      {% set op_status = stage_rows[loop.index0].status if ops and stage_rows and loop.index0 < stage_rows | length else "" %}
+      <h3 class="tl-name">{{ s.name }} <span class="chip chip-{{ tone(op_status or s.state) }}">{{ op_status or s.state }}</span></h3>
       <p class="tl-when">{{ s.when }}</p>
       <ul class="tl-items">{% for i in s.items %}<li class="tl-i-{{ i.kind }}"><b>{{ i.kicker }}</b>{{ i.text }}</li>{% endfor %}</ul>
       {# The operator's part (Decision amended again), only where the page
