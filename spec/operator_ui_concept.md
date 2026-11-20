@@ -390,7 +390,7 @@ Pattern: a list-with-bulk-actions table of reviewers, with status filtering, sel
 
 Operations row tab. **Detailed spec: `spec/operations_pages.md` "Responses page".** Reviewee-centric coverage view — surfaces under-served reviewees that the reviewer-centric Invitations view doesn't make visible.
 
-Pattern: list-with-bulk-actions table of reviewees, with per-reviewee coverage status (`Complete` / `Adequate` / `At risk` / `No responses`), bulk reminder dispatch to non-responding reviewers for selected reviewees, and per-row drill-in into per-reviewer response status for that reviewee.
+Pattern: list-with-bulk-actions table of reviewees, with per-reviewee coverage status (`Complete` / `Adequate` / `At risk` / `No responses`), bulk reminder dispatch to non-responding reviewers for selected reviewees, and a per-row drill-in to that reviewee's coverage in aggregate.
 
 The reminder send-path is **shared** with the Invitations page; only the selection logic differs.
 

@@ -2,7 +2,7 @@
 
 **Found by:** the defect read and the package read of
 `guide/codebase_assessment_20nov.md` · **Read at:** `6003c8084` (#4063) ·
-**Open:** D1's author question (may a linked create carry offsets?), N1–N3.
+**Open:** D1's ruling to build (refuse offsets on an email-locked handoff), N1–N3.
 
 RRW's defects and notes from the assessment's reads; the fix checklist, struck
 by the PR that fixes each row, or marked declined with the reason. Spec drift is
@@ -29,7 +29,7 @@ one. Line numbers are at `6003c8084`.
   - Scratch test: card due lines `[]`, lobby due ids `{1}`. Introduced by 14F's
     due prompts (#3668) with 23F's email lock (#3925, #3934). Contradicts
     `spec/linked_sessions.md` §`email`. Same defect as the corpus register's B1.
-  - Fix: skip `Lock.EMAIL` sessions in `due_actions`. **For the author:** may a
+  - Fix: skip `Lock.EMAIL` sessions in `due_actions`. **Ruled 2026-11-20: refuse them** (422, naming the offset rows, on create and re-send, as release and observer rows are); to build. The question was: may a
     linked create carry offsets at all?
 - **B2, B3** (low): in the corpus register, found by the sweep's narrative read
   of `spec/lifecycle.md` and `spec/workflow_card.md`; listed there.
