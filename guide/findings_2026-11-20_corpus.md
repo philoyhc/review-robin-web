@@ -60,7 +60,7 @@ are at `6003c8084`.
 - ~~**B3**~~ — **Done in #4065**: the captions and Activate's warning show nothing under the email lock. (low, code; latent while `RRW_SCHEDULED_SEND` is off) — **the auto-send captions ignore the linked email lock.**
   - `build_auto_send_invites_caption`, `build_auto_send_reminders_caption` and `build_manual_activate_cancellation` (`app/web/views/_workflow_card.py:551-770`) never check `Lock.EMAIL`.
   - A linked session would read "System will dispatch automatically" while the trigger skips every entry. `spec/workflow_card.md:950-1010` needs the linked row too.
-- **E1** — **Ruled 2026-11-20: a neutral pill, *Default* until an override is saved, *Customized* after; nothing amber.** To build. (medium, author) — **Session Home's Email Template pill never reads *Set up*.**
+- ~~**E1**~~ — **Ruled 2026-11-20: a neutral pill, *Default* until an override is saved, *Customized* after; nothing amber. Done in #4067**, with Validate's coverage row reading the same `email_templates.is_customized`. (medium, author) — **Session Home's Email Template pill never reads *Set up*.**
   - `app/web/views/_setup.py:247` hard-codes `email_invites_set_up=False` under a stale "editor lands in Segment 15" comment. `session_setup_status_row.html:89` therefore always shows amber *Not set up*, however the template stands.
   - `spec/visual_style_rrw.md:210` promises both states.
   - Fix the predicate, or retire the pill.
@@ -76,7 +76,7 @@ are at `6003c8084`.
   - With no End, Release-from is then the review's end, and the next observation closes the session.
   - The service docstring (`:361-366`) admits it, and `spec/lifecycle.md:841` overclaims.
   - Gate on `expired`, or say so.
-- **B6** — **Ruled 2026-11-20: retire the promise.** The spec half is done in #4066 (`spec/operations_pages.md` describes the aggregate page); the page's "future segment" help line goes with E1. (low) — **the Responses drill-in promises a per-reviewer breakdown it does not show.**
+- ~~**B6**~~ — **Ruled 2026-11-20: retire the promise.** The spec half is done in #4066 (`spec/operations_pages.md` describes the aggregate page); the page's "future segment" help line went in #4067. (low) — **the Responses drill-in promises a per-reviewer breakdown it does not show.**
   - The promise is `spec/operations_pages.md:645`. The page shows aggregate coverage, and its help line says the breakdown "will land in a future segment" (`session_responses_reviewee_detail.html:36-47`).
   - Build it, or retire the promise.
 - ~~**E2**~~ — **Ruled 2026-11-20: the roles rule stands. Done in #4066**: `spec/visual_style_rrw.md` drops the forbidding line; no code change. (medium) — **an operator who is also a reviewer sees operator links on reviewer pages.**
