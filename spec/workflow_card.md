@@ -893,7 +893,9 @@ card (`#share-session-link`).
 (`due_actions.mark_done`). The four name the entry the line was drawn
 from, so a form from a page drawn before another tab changed the offset
 or moved Start or End is refused rather than marking whatever entry now
-holds that position; an entry no longer due just redirects. It writes
+holds that position; an entry no longer due just redirects, as does any
+entry on a session whose linked application takes the `email` lock, where
+nothing is due. It writes
 `session.scheduled_invites_handled` / `session.scheduled_reminders_handled`,
 which count as fired for dedup (`spec/lifecycle.md` §8.2.6). Any session
 operator may press it, in any state.

@@ -132,7 +132,8 @@ def _same_instant(anchor: datetime, posted: str) -> bool:
 
 class NotDue(Exception):
     """*Mark as done* on an entry that is not due: already handled, its
-    offset or anchor changed since the page was drawn, or sending is on."""
+    offset or anchor changed since the page was drawn, sending is on, or a
+    linked application takes the email lock."""
 
 
 def mark_done(
