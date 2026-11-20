@@ -478,12 +478,12 @@ def test_the_page_reads_as_review_robin_s_roster(page: Page) -> None:
     assert names == sorted(names, key=str.lower, reverse=True)
     name_th = page.locator("th", has=page.locator('[data-pn-sort="name"]'))
     assert name_th.get_attribute("aria-sort") == "descending"
-    assert page.locator('[data-pn-sort="name"] span').inner_text() == "↓"
+    assert page.locator('[data-pn-sort="name"] span').inner_text() == "1↓"  # RRW's badge
     # Another column starts ascending; the first goes back to ↕.
     page.locator('[data-pn-sort="note"]').click()
     assert name_th.get_attribute("aria-sort") is None
     assert page.locator('[data-pn-sort="name"] span').inner_text() == "↕"
-    assert page.locator('[data-pn-sort="note"] span').inner_text() == "↑"
+    assert page.locator('[data-pn-sort="note"] span').inner_text() == "1↑"
 
 
 def test_search_select_all_and_remove_keep_to_the_rows_in_view(page: Page) -> None:

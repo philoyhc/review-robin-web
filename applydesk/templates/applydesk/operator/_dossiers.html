@@ -12,10 +12,15 @@
 {% set cols = plan.columns %}
 <div class="ap" data-applications data-ap-ex="{{ exercise.public_id }}" data-ap-csv-name="{{ dossiers_csv }}">
   <div class="ap-tool">
-    <input type="search" class="ap-search" data-ap-search placeholder="Search ID, name or email" aria-label="Search dossiers">
-    <select class="ap-sel" data-ap-status aria-label="Status">
+    {# Filters together, each labelled, as Review Robin's (ruling 64, U17). #}
+    <label class="ap-f">Search<input type="search" class="ap-search" data-ap-search placeholder="ID, name or email"></label>
+    <label class="ap-f">Status<select class="ap-sel" data-ap-status>
       <option value="">All statuses</option><option>Submitted</option><option>Draft</option><option>Withdrawn</option>
-    </select>
+    </select></label>
+    <label class="ap-f">Rows<select class="ap-sel" data-ap-which>
+      <option value="all">All dossiers</option><option value="last" title="Each applicant's last submitted application">Last applications</option>
+    </select></label>
+    <span class="muted ap-shown" data-ap-shown></span>
     <span class="ap-gap"></span>
     {% if cols %}
     <button class="btn btn-secondary" type="button" data-ap-rule-open data-ap-locks disabled aria-expanded="false" aria-controls="ap-rule">Apply rules…</button>
@@ -25,6 +30,22 @@
     <span class="ap-changes" data-ap-changes hidden></span>
     <button class="btn btn-secondary" type="button" data-ap-undo hidden>Discard changes</button>
     <button class="btn btn-secondary" type="button" data-ap-lock title="Unlock the table to change it">Unlock</button>
+  </div>
+  {# The ticked rows' actions and the file, above the table (U17). #}
+  <div class="ap-bulk">
+    {% if cols %}
+    <span class="ap-set" role="group" aria-label="Set the ticked rows">
+      <select class="ap-sel" data-ap-set-col aria-label="Column to set">
+        {% for c in cols %}<option value="{{ c.key }}">{{ "Gate " ~ c.number if c.via is defined else "Outcome " ~ c.number }} · {{ c.label }}</option>{% endfor %}
+      </select>
+      <select class="ap-sel" data-ap-set-val aria-label="Value to set"></select>
+      <button class="btn btn-secondary" type="button" data-ap-set data-ap-locks disabled>Set ticked rows</button>
+    </span>
+    {% endif %}
+    {# Ruling 49: Return to draft per row, and for the ticked rows, until a
+       gate holding the dossier completes; with or without gates yet. #}
+    <button class="btn btn-alert" type="button" disabled title="Returning to draft comes with AD4">Return ticked to draft</button>
+    {% if cols %}<button class="btn btn-secondary" type="button" data-ap-csv-down>Download CSV</button>{% endif %}
   </div>
   <p class="ap-said" data-ap-said aria-live="polite"></p>
   {% if cols %}
@@ -68,11 +89,11 @@
         <th><span class="ap-count" data-ap-count="status"></span></th>
         {% for r in plan.stages %}{% for c in r.columns %}
           {% if c.via is defined %}{% set cl = cells_lock(c) %}
-          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate"{% if cl.fixed %} data-ap-fixed="{{ cl.reason }}"{% endif %} data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}"><span class="ap-kind">Gate {{ c.number }} · Review Robin</span><span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>{% if cl.fixed %}<span class="ap-rule-line ap-fixed">Fixed: its Review Robin session has opened</span>{% endif %}</th>
+          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate"{% if cl.fixed %} data-ap-fixed="{{ cl.reason }}"{% endif %} data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}"><span class="ap-kind">Gate {{ c.number }} · Review Robin</span><span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line" title="{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>{% if cl.fixed %}<span class="ap-rule-line ap-fixed">Fixed: its Review Robin session has opened</span>{% endif %}</th>
           {% else %}
           <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-scope="{{ scope(plan, c) | map(attribute='key') | join('|') }}" data-weights="{% for k, w in c.weights %}{{ k }}:{{ w }}{{ '|' if not loop.last }}{% endfor %}" data-number="Outcome {{ c.number }}" data-first="{{ c.values[0] }}" data-on="{{ going_on(c) | join('|') }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span><span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
             {% if c.weights %}<span class="ap-weights">{% for k, w in c.weights if w %}{{ result_label(k) }} {{ (w * 100) | round | int }}%{{ " · " if not loop.last }}{% endfor %}</span>{% endif %}
-            {% set rt = rule_text(plan, c) %}<span class="ap-rule-line">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>
+            {% set rt = rule_text(plan, c) %}<span class="ap-rule-line" title="{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>
             {% set rl = release_lock(c) %}
             <label class="ap-rel"{% if rl.fixed %} title="{{ rl.reason }}"{% endif %}><input type="checkbox" data-ap-release="{{ c.label }}" data-ap-locks disabled{% if rl.fixed %} data-ap-fixed="{{ rl.reason }}"{% endif %}{% if rl.owed %} data-ap-owed="{{ rl.owed }}"{% endif %} aria-label="Released: {{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
             <span class="ap-relnote{{ ' ap-relnote-on' if c.released }}" data-ap-relnote>{{ c.released or "Not yet" }}</span>
@@ -124,24 +145,6 @@
   </table>
   </div>
   <div class="ap-foot">
-    <span><select class="ap-sel" data-ap-which aria-label="Which rows">
-      <option value="all">All dossiers</option><option value="last">Last applications (each applicant's last submitted)</option>
-    </select> <span class="muted" data-ap-shown></span></span>
-      {% if cols %}
-    <span class="ap-set" role="group" aria-label="Set the ticked rows">
-      <select class="ap-sel" data-ap-set-col aria-label="Column to set">
-        {% for c in cols %}<option value="{{ c.key }}">{{ "Gate " ~ c.number if c.via is defined else "Outcome " ~ c.number }} · {{ c.label }}</option>{% endfor %}
-      </select>
-      <select class="ap-sel" data-ap-set-val aria-label="Value to set"></select>
-      <button class="btn btn-secondary" type="button" data-ap-set data-ap-locks disabled>Set ticked rows</button>
-    </span>
-
-    {% endif %}
-
-    {# Ruling 49: Return to draft per row, and for the ticked rows, until a
-       gate holding the dossier completes; with or without gates yet. #}
-    <button class="btn btn-alert" type="button" disabled title="Returning to draft comes with AD4">Return ticked to draft</button>
-    {% if cols %}<button class="btn btn-secondary" type="button" data-ap-csv-down>Download CSV</button>{% endif %}
     {% if not cols %}<span class="muted">No gates or outcomes yet: stages, their gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</span>{% endif %}
   </div>
   <p class="muted ap-help">A gate's chip says whether the dossier is sent through it, cycling <em>—</em> (no status yet), <em>Entered</em>, <em>Not entered</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> switch does what Process sets. Stages, gates, outcomes, dates and rules come from Process.</p>
@@ -411,7 +414,7 @@
     root.querySelectorAll("[data-ap-sort]").forEach(function (b) {
       var on = sort && sort.col === b.dataset.apSort;
       b.closest("th").setAttribute("aria-sort", on ? (sort.desc ? "descending" : "ascending") : "none");
-      b.querySelector(".ap-sort-h").textContent = on ? (sort.desc ? "▼" : "▲") : "↕";
+      b.querySelector(".ap-sort-h").textContent = on ? (sort.desc ? "1↓" : "1↑") : "↕";  // as Review Robin's badge
     });
     rows.sort(function (a, b) {
       var c = sort ? cmp(keyOf(a, sort.col), keyOf(b, sort.col)) : 0;
