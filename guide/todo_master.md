@@ -35,6 +35,13 @@ is the author's call.
 
 **Order (author, 2026-11-12):** 14G when IT answers.
 
+3. **23H — The practice's reach over the packages** (author,
+   2026-11-20: build it). Makes `close_check`, the prose gates,
+   `spec-writer` and the measurement tools reach `applydesk/`,
+   `residentialapps/` and `utilityapps/`, and writes down the read
+   cadence per closing unit and the rulings layer. **Plan:**
+   `guide/segment_23H_practice_reach.md`.
+
 2. **23G — A linked instrument Review Robin may extend** (author,
    2026-11-18; Apply Desk ruling 36). A second linked-gate type,
    *Review Robin (advanced)*: the gate's response fields held, Review
