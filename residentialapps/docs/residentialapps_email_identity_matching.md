@@ -3,7 +3,7 @@
 **Status:** Design note for incorporation into the Residential Apps shared-core identity specification  
 **Date:** 30 October 2026  
 **Suggested repository location:** `residentialapps/docs/residentialapps_email_identity_matching.md` in the public RRW repository  
-**Related documents:** `residentialapps_identity.md` (identity specification), `residentialapps/docs/residentialapps_roles.md` (authoritative roles), and Cordware's private `docs/cordware_azure_progress_runner_2026-10-29.md`.
+**Related documents:** `residentialapps_identity.md` (identity specification), `residentialapps/docs/residentialapps_roles.md` (authoritative roles), and Cordware's private `cordware:docs/cordware_azure_progress_runner_2026-10-29.md`.
 
 ## 1. Problem
 
@@ -102,7 +102,7 @@ According to Cordware's 29 October Azure progress report:
 - **Final Web App-side managed-identity/FIC assertion wiring and live token acquisition/refresh and Graph-call testing remain to be completed.** Do not describe Graph lookups as already production-validated. *Superseded 31 October 2026 (update below): the wiring is done, and lookups are production-validated for staff and students; token refresh is not yet exercised.*
 - A separate institutional firewall issue remains for GitHub Actions artifact/blob egress; it is not an email-alias identity rule.
 
-**Update, 30 October 2026** (Cordware's private records (`docs/cordware_azure_progress_runner_2026-10-29.md` §2 and `guide/temp_todo.md`, in `philoyhc/cordware`)). The fourth bullet above is now partly out of date:
+**Update, 30 October 2026** (Cordware's private records (`cordware:docs/cordware_azure_progress_runner_2026-10-29.md` §2 and `cordware:guide/temp_todo.md`, in `philoyhc/cordware`)). The fourth bullet above is now partly out of date:
 
 - Easy Auth sign-in works end to end through the institutional host name, the managed-identity credential works, tokens are issued at sign-in, and `/.auth/me` returns a Graph access token.
 - With an ordinary user's delegated token, called from Cloud Shell: `GET /me` works; `GET /users/{userPrincipalName}` works, but `GET /users/{mail address}` is not found, so a lookup by mail uses `$filter=mail eq '…'`; `POST /me/sendMail` is accepted and delivered.
@@ -141,7 +141,7 @@ The initial design does not require additional Graph permissions, direct Teams m
 
 ## References
 
-- Cordware private progress report: `docs/cordware_azure_progress_runner_2026-10-29.md`
+- Cordware private progress report: `cordware:docs/cordware_azure_progress_runner_2026-10-29.md`
 - RRW roles: `residentialapps/docs/residentialapps_roles.md`
 - [Microsoft Entra ID token claims](https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference)
 - [Microsoft Graph permissions — User.ReadBasic.All](https://learn.microsoft.com/en-us/graph/permissions-reference)

@@ -412,6 +412,26 @@ the joke it sounds like.
   run. 19S Item 9's definition of
   done requires it for its own cards; nothing requires it anywhere else.
 
+### 1.13 A path in another repository names its repository
+
+- **Written down at** `tests/unit/test_doc_references.py`
+  (`_resolves`, `PATH_REF`), segment 23H rung 3, 2026-11-20.
+- **The rule.** A backticked path to a file in Cordware's private
+  repository is written with its name as a prefix,
+  `cordware:docs/backup_restore.md`, and the path gate does not read
+  it. A package's own prose may write its paths package-relative
+  (a `spec/` path in `applydesk/`'s prose names `applydesk/spec/`); the gate resolves those
+  repo-first, then from the package, so that half *is* enforced.
+- **The instance.** When the gate first read package prose, four of
+  Residential's references named Cordware's private records as bare
+  `docs/…` and `guide/…` paths. They read as dangling RRW paths, and
+  one would have resolved by accident had RRW held a file of that name.
+- **Why not.** The other repository is not checked out here and is
+  private, so nothing in this one can tell whether its file exists.
+- **What covers it instead.** The prefix makes the reference
+  unmistakable to a reader, and a Cordware session that renames the file
+  meets the reference when it greps.
+
 ## 2. Enforceable but not enforced — the revisit queue
 
 None of these needs an allowlist, and each would pass on the current

@@ -187,6 +187,22 @@ plan moved here from Cordware.
   - **`guide/assessment.json`:** an `applydesk` area.
   - **Mutations:** each change, reverted, fails its new tests.
   - **Item read base:** `abdee8b3b`, `main` before this rung.
+- **Rung 3 (2026-11-20).** The path gate reads each package's `spec/`,
+  `docs/` and `guide/`, with `APP_DIRS` taken from `close_check`.
+  - **Exemptions:** `DATED_DOC` widened to `findings_` registers and
+    `_vN.N` handovers. Of the 16 dangling references the Blast radius
+    counted, that exempts 10 (Apply Desk's register, Utilities' two
+    handovers); one more sits in Residential's 1B plan, a `segment_`
+    file already exempt.
+  - **What it caught:** six references.
+    - Four of Residential's, on three lines, name Cordware's private
+      records and now read `cordware:docs/…` and `cordware:guide/…`.
+    - Two forward references to specs still to be written take the
+      inline marker: one in Residential's `todo_master`, and one in RRW's
+      own `guide/interoperability.md` that `PATH_REF`'s package prefix
+      newly sees.
+  - **Conventions:** recorded as `docs/unenforced_conventions.md` §1.13.
+  - **Mutation:** a broken `applydesk/` path fails the gate.
 
 ## PR ladder
 

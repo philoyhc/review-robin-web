@@ -19,12 +19,30 @@ only way to satisfy them on day one would be to author broken prose.
 
 from __future__ import annotations
 
+import importlib.util
 import re
 from pathlib import Path
 
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
+
+
+def _app_dirs() -> tuple[str, ...]:
+    """The application packages, from ``tools/close_check``'s one list
+    (segment 23H): a new package is added there once, and every gate
+    that reads package prose follows."""
+    path = REPO / "tools" / "close_check.py"
+    if not path.exists():  # an exported kit without the close check
+        return ()
+    spec = importlib.util.spec_from_file_location("close_check_for_doc_references", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return tuple(module.APP_DIRS)
+
+
+APP_DIRS = _app_dirs()
 
 
 def test_agent_instruction_twins_are_identical() -> None:
@@ -74,23 +92,63 @@ def test_agent_instruction_twins_are_identical() -> None:
 #: would silently exempt a live document that happened to carry the word,
 #: and a new lineage needs a `guide/README.md` row anyway, so one line
 #: here is the same edit.
-DATED_DOC = re.compile(r"(codebase_assessment_|codex_assessment_|sweep_|practice-audit-|segment_)")
+#:
+#: A package's findings registers (`findings_`) and its versioned
+#: handovers and baselines (`_v0.6b`, `_v0.2`) are dated the same way
+#: (segment 23H): a register names what was wrong on its date, and a
+#: versioned handover is a snapshot of a design another document has
+#: since superseded.
+DATED_DOC = re.compile(
+    r"(codebase_assessment_|codex_assessment_|sweep_|practice-audit-|segment_|findings_|_v\d+\.\d)"
+)
 
-#: Live prose: top-level `.md` in the three doc folders plus the root.
-#: `archive/` is excluded by not recursing; there are no other nested
-#: documentation directories (checked 2026-09-08).
+#: Live prose: top-level `.md` in the three doc folders plus the root,
+#: and since segment 23H the same three folders in each application
+#: package (`APP_DIRS`). `archive/` is excluded by not recursing.
 LIVE_PROSE = sorted(
     p
-    for d in (REPO, REPO / "spec", REPO / "docs", REPO / "guide")
+    for d in (
+        REPO,
+        REPO / "spec",
+        REPO / "docs",
+        REPO / "guide",
+        *(REPO / app / sub for app in APP_DIRS for sub in ("spec", "docs", "guide")),
+    )
     for p in d.glob("*.md")
     if not DATED_DOC.search(p.name)
 )
+
+
+def _package_of(doc: Path) -> Path | None:
+    """The package a document lives in, if any."""
+    rel = doc.relative_to(REPO).parts
+    return REPO / rel[0] if rel and rel[0] in APP_DIRS else None
+
+
+def _resolves(doc: Path, target: str) -> bool:
+    """Repo-relative first; then, for package prose, package-relative.
+
+    Package prose writes both: `applydesk/spec/applications.md` and, by
+    the convention its register states, `spec/applications.md` meaning
+    the package's own (segment 23H Semantics). Only a path that is
+    neither fails. A path in another repository is written with its
+    name as a prefix (`cordware:docs/…`), which this pattern does not
+    match.
+    """
+    if (REPO / target).exists():
+        return True
+    package = _package_of(doc)
+    return package is not None and (package / target).exists()
+
 
 #: A backticked repo-relative path. Anchored on a known top-level
 #: directory: a bare `` `architecture.md` `` is shorthand whose directory
 #: the reader supplies, and resolving those would need a guess per hit —
 #: the kind of growing ambiguity Article VI says not to mechanise.
-PATH_REF = re.compile(r"`((?:spec|docs|guide|app|tests|tools)/[A-Za-z0-9_./-]+)`")
+PATH_REF = re.compile(
+    r"`((?:(?:applydesk|residentialapps|utilityapps|cordware)/)?"
+    r"(?:spec|docs|guide|app|tests|tools)/[A-Za-z0-9_./-]+)`"
+)
 
 #: One line's reference is deliberate: a forward reference to something
 #: planned, or a historical statement ("retired X", "formerly X").
@@ -138,7 +196,7 @@ def _unresolved_path_refs() -> list[tuple[str, int, str, str]]:
         for number, line in enumerate(lines, 1):
             for match in PATH_REF.finditer(line):
                 target = match.group(1)
-                if (REPO / target).exists():
+                if _resolves(doc, target):
                     continue
                 cover = "inline" if PATH_ESCAPE in line else "section" if number in opted else ""
                 found.append((rel, number, target, cover))
@@ -674,3 +732,38 @@ def test_archived_prose_is_exempt_from_the_node_id_check() -> None:
     assert not (live & {str(p.relative_to(REPO)) for p in archived}), (
         "LIVE_PROSE has started including guide/archive/, which would put the suite red on history"
     )
+
+
+# --- Package prose (segment 23H, rung 3) ---
+
+
+def test_package_prose_is_live_prose() -> None:
+    """Each package's spec, docs and guide folders are read: before 23H
+    none of the 34 package documents was, and 16 paths dangled unseen."""
+    if not APP_DIRS:
+        pytest.skip("no application packages in this repository")
+    read = {doc.relative_to(REPO).parts[0] for doc in LIVE_PROSE}
+    present = {app for app in APP_DIRS if any((REPO / app).glob("*/*.md"))}
+    assert present <= read
+
+
+def test_a_package_relative_path_resolves_in_its_own_package_only() -> None:
+    """`spec/x.md` in a package's prose names the package's own spec; in
+    RRW's root prose it does not."""
+    names = [
+        (app, doc.name)
+        for app in APP_DIRS
+        for doc in sorted((REPO / app / "spec").glob("*.md"))
+        if not (REPO / "spec" / doc.name).exists()
+    ]
+    if not names:
+        pytest.skip("no package spec whose name RRW's spec/ lacks")
+    app, name = names[0]
+    assert _resolves(REPO / app / "guide" / "any.md", f"spec/{name}")
+    assert not _resolves(REPO / "guide" / "any.md", f"spec/{name}")
+
+
+def test_a_path_in_another_repository_is_not_read_as_ours() -> None:
+    """`cordware:docs/x.md` names a file in the private repository."""
+    assert not PATH_REF.search("`cordware:docs/cordware_azure_progress.md`")
+    assert PATH_REF.search("`applydesk/spec/applications.md`")
