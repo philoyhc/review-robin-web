@@ -592,7 +592,7 @@ where a ruling below differs from it, the ruling wins.
 64. **The UI review's rulings, checked against Review Robin** (author,
     2026-11-20): Apply Desk need not match Review Robin exactly, but both
     are recognizably one family. The register in
-    `applydesk/guide/segment_AD1P_ui_consistency.md` (rows U1–U25) holds
+    `applydesk/guide/archive/segment_AD1P_ui_consistency.md` (rows U1–U25) holds
     each ruling; among them RRW's state palette and uppercase pills, a
     native checkbox for a lone setting in a form, Primary first and
     sparingly, RRW's table headers and sort badges, Upload / Download,
@@ -693,7 +693,6 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
-| UI review — consistency and gaps | Before AD2 fixes what is stored (author, 2026-11-19): a scratch exercise to set up end to end, done (`applydesk/guide/archive/segment_AD1N_scratch_exercise.md`); gate setup touch-ups, done (`applydesk/guide/archive/segment_AD1O_gate_setup.md`); the review itself (`applydesk/guide/segment_AD1P_ui_consistency.md`) | Building |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
@@ -713,10 +712,15 @@ Segments in order; each gets a plan in this folder when it starts.
 - **AD6:** a gate's progress line, and each evaluator's share of it on
   the Review Robin card, is canned beside counted pairs until Review
   Robin's status read replaces it (AD1I; AD-32; AD1M).
+- **AD2:** operator pages' dates as Review Robin's `YYYY-MM-DD HH:MM`
+  through one helper, once dates are stored (U18; AD1P).
 - **Form:** card drag has no Escape and no auto-scroll (AD1B).
 
 ## Open decisions
 
+- **Back to Review Robin (AD1P):** should RRW adopt anything Apply Desk
+  settled in its UI sweep, such as U10's link rules or `+ Noun` labels?
+  The author.
 - **Scratch exercises (AD1N): test applications**, so Dossiers and
   Evaluations can be walked on one too (*Add sample applicants*?), and
   the applicant's side with them; and **a sample exercise copied into

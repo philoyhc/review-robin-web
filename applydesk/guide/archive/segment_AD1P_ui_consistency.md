@@ -83,6 +83,21 @@ Taken 2026-11-20 at `54c74d967`.
 - Uppercase section labels: `grep -rn "mg-h\|dt-sec\|xd-k\|xnav-label" applydesk/templates | wc -l` → 16.
 - Date formatters: `stages.py:235`, `stages.py:770`, `timeline.py:75`.
 
+## Status — closed 2026-11-20
+
+**Intended vs done.** Every register row landed except two. **U18** was deferred to AD2: operator dates are preformatted strings in the sample data, so one ISO helper waits for stored datetimes. **U7** was struck: a single disabled Save with a `title` already satisfies the lone-control rule, so the lock card stays for whole pages. The ladder ran 1 (#4037), 2 (#4038), 3 (#4039), 4 (#4040), 5 (#4041), 5b (#4042, split off rung 5 to keep it reviewable: tables and toolbars), 6a (#4043), 6b (#4044), then this close.
+
+**Decisions confirmed at build:**
+- Manage panels' *Save* stays Primary: the author's 2026-11-14 ruling outranks U6.
+- *Discard changes* then *Lock*, RRW's order (F13).
+- U20's link reads *View as evaluators see it ↗*, since the `/me` dossier page is the one evaluators open, and a draft has no dossier (ruling 32), so its operator page is a 404.
+- U19's *more* became the clamp opening whole on focus or tap, its full text in `title`: no extra control.
+- Chip text is checked with `text_content()` in browser tests: CSS uppercase (U3) changes `inner_text()`.
+
+**Close.** `spec-writer` over `applydesk/spec/applications.md` added *One look across pages* (the tone map, gate names, controls, locks, tables, dates) and brought the timeline, Panels, Details, Dossiers' header and the `/me` pages current; its flags were adjudicated as above.
+
+**Reads.** One cumulative `diff-reviewer` read over rungs 2–6b (from `a72f359bd`) found 20 items. All were fixed: F12 in rung 5, the rest in 6b's second commit. Codex raised two: rung 6 should be split into 6a/6b (#4037), and the server-drawn *Approve* must be a Toggle (#4041). Both were fixed.
+
 ## PR ladder
 
 1. **This plan**, with ruling 64. Prose only.
