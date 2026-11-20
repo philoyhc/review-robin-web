@@ -306,7 +306,8 @@ someone's behalf), **acknowledge** for having seen information sent on
    receiver agrees to it**: an owner shares past records, or one
    encounter as they log it; two or more staff form a team for a
    student, which a senior may start; or a handover tags records to
-   the receiver, agreed to by them and a senior. The model is
+   the receiver, agreed to by three people: the receiver, the previous
+   owner and a senior, whoever started it having agreed already. The model is
    `residentialapps/guide/1D_sharing_model.md` (author, 2026-11-07).
    **Share past records**, on a student's page, offers all or ticked
    records to one colleague; Shared with lists each as Pending or

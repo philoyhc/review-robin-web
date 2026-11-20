@@ -1,6 +1,6 @@
 # Segment 1B — Residential Operations: rosters and organization
 
-**Opened:** 2026-10-26 · **Theme:** the shared core's admin screens, settled on placeholders first, then wired to its databases, identity, organization tree and rosters · **Related:** `residentialapps/guide/archive/segment_1A_package_and_mounts.md` (the package and mounts this builds on; closed 2026-10-26), `residentialapps/guide/todo_master.md`, `residentialapps/docs/residentialapps_identity.md`, `residentialapps/docs/residentialapps_roster_structure.md`, `residentialapps/docs/residentialapps_roles.md`
+**Opened:** 2026-10-26 · **Theme:** the shared core's admin screens, settled on placeholders first, then wired to its databases, identity, organization tree and rosters · **Related:** `residentialapps/guide/archive/segment_1A_package_and_mounts.md` (the package and mounts this builds on; closed 2026-10-26), `residentialapps/guide/todo_master.md`, `residentialapps/docs/residentialapps_identity.md`, `residentialapps/docs/archive/residentialapps_roster_structure.md`, `residentialapps/docs/residentialapps_roles.md`
 
 ## Opportunity
 
@@ -136,7 +136,7 @@ Where Residential's specs live was ruled with 1A's drafts: `residentialapps/spec
 
 - `cordware/spec/identity.md` — tenant ID, UPN and mail on the identity, as separate fields (done — Item 3, carved out ahead of it 2026-10-30).
 - `residentialapps/docs/residentialapps_identity.md` — revised to what shipped (Item 3).
-- `residentialapps/docs/residentialapps_roster_structure.md` — revised to rosters, terms and assignments: levels, slots by term and their assignments (Item 4).
+- ~~The roster-structure doc — revised to rosters, terms and assignments: levels, slots by term and their assignments (Item 4).~~ (retired 2026-11-20: superseded by the units ruling and archived; findings 2026-11-20 S2)
 - `residentialapps/spec/organization_and_rosters.md` — new: the whole contract for the terms, levels, slots, rosters and assignments, their inter-table rules, upload modes and blank cells, written as items 4 and 5 ship (author, 2026-10-27; revised 2026-10-28).
 - `residentialapps/spec/residentialops_ui.md` — §2's top line: the top-level Unit, else the workspace default; the role in the account menu (Items 3–4, added 2026-11-02).
 - `residentialapps/guide/todo_master.md` — the entries this segment finishes, deleted at close.

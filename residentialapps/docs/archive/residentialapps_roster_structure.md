@@ -1,5 +1,11 @@
 # Residential Apps — Roster, Appointments, and Residential Geography
 
+> **Retired 2026-11-20, superseded by the units ruling of 2026-10-27.**
+> Its vocabulary (RF Zone, Tower) predates Unit-defined levels and slots.
+> The contract is `residentialapps/spec/applications.md` and the code's
+> `sample_data.LEVEL_LABELS` and `MAX_LEVELS`. Kept as the design history
+> the plans cite.
+
 **Status:** Working functional design; proposed terminology and data relationships for implementation  
 **Date:** 26 October 2026  
 **Proposed repository location:** `residentialapps/docs/residentialapps_roster_structure.md` in `philoyhc/review-robin-web`  

@@ -2,7 +2,6 @@
 
 **Status:** Adopted design decisions for the Residential Apps shared core  
 **Date:** 26 October 2026  
-**Proposed repository location:** `residentialapps/docs/residentialapps_identity.md` in `philoyhc/review-robin-web`  
 **Implementation location:** Shared core administered through Residential Operations (`/residentialops`)
 
 ## 1. Purpose and scope
