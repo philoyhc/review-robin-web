@@ -473,7 +473,7 @@ Detailed layout contract — control order within the row, the navigation cluste
 
 Three persistent guarantees the chrome makes regardless of layout details:
 
-- **Tab order** matches whatever order the operator configured in the Instruments Setup page. Reviewers can't reorder; the order is the session's.
+- **Instrument order** matches whatever order the operator configured in the Instruments Setup page. Reviewers can't reorder; the order is the session's.
 - **Free movement between pages.** The reviewer can switch pages at any time, in any order. **Unsaved typing does not survive the move** — a page change is a server round-trip, there is no dirty-tracking and no `beforeunload` guard, so `Save` before navigating is the reviewer's responsibility (`spec/reviewer-surface.md`, Prev / Next row and "Save button state"). Restoring typed-but-unsaved values across a page change is a real improvement and is not built.
 - **No page is "locked" by another page's completion.** The reviewer can fill instruments in any order.
 

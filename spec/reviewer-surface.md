@@ -18,8 +18,8 @@ sessions are a degenerate case of the same model, not a second shape.
 Cross-references:
 
 - `spec/visual_style_rrw.md` "Response form layout and instrument
-  pacing" — the underlying principle (one page per instrument,
-  tabular form, pacing via operator instrument design). This spec
+  pacing" — the underlying principle (tabular form, paged where the
+  operator starts a new page, pacing via operator instrument design). This spec
   is the implementation contract for that principle on the live
   surface.
 - `spec/visual_style_rrw.md` — top-bar / chrome conventions, banner
@@ -1939,9 +1939,9 @@ audit summaries, like operator pages, use the short label.
 
 The 32-char ceiling on `short_label` is a **Setup-side concern** —
 this surface trusts the value it's given, and the Instruments Setup
-page enforces the cap at create / edit time. Page buttons carry no
-truncation rule of their own — a label that slipped past the cap
-renders at its full width.
+page enforces the cap at create / edit time. The H2 and the page
+pill carry no truncation rule of their own — a label that slipped
+past the cap renders at its full width.
 
 ---
 
