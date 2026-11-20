@@ -922,7 +922,7 @@
         o.querySelector("span").textContent = "↕";
       });
       b.dataset.dir = down ? "desc" : "asc";
-      b.querySelector("span").textContent = down ? "↓" : "↑";  // as Review Robin's badge
+      b.querySelector("span").textContent = down ? "1↓" : "1↑";  // as Review Robin's badge
       b.closest("th").setAttribute("aria-sort", down ? "descending" : "ascending");
       rows().sort(function (x, y) {
         var c = val(x, f).localeCompare(val(y, f), undefined, { sensitivity: "base" });

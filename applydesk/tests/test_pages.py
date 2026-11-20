@@ -1837,7 +1837,8 @@ def test_dossiers_rows_are_named_by_dossier_id(client: TestClient) -> None:
         f'href="/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx"><code>p3bd7kq2wx</code></a>'
         '<span class="ap-app">Application <code>m3qx8vkt2n</code></span>'
     ) in page
-    assert 'data-ap-app="m3qx8vkt2n"' in page and 'aria-label="Search dossiers"' in page
+    # The search box is labelled where it stands (ruling 64, U17).
+    assert 'data-ap-app="m3qx8vkt2n"' in page and '<label class="ap-f">Search<input' in page
     dossier = client.get(f"/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx").text
     assert "<dt>Dossier ID</dt><dd><code>p3bd7kq2wx</code></dd>" in dossier
 
