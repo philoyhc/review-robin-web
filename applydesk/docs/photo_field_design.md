@@ -1,14 +1,12 @@
 # ApplyDesk — the applicant photo field (design)
 
-> **Superseded in part (2026-11-18):** ruling 12 put the photo in the MVP,
-> its aspect ratio set per question, and Form builds it. The fixed 4:5 /
-> 480×600 below, and "not scheduled", are this design's, kept as written.
-
 **Saved:** 2026-11-12, by the author's ruling: "Save the spec for Apply
-Desk's use later." A design, not a contract, and not scheduled. Ruling 3
-in `applydesk/guide/todo_master.md` keeps uploads out of the MVP; this
-field is the one upload that needs no Blob storage, so when, and whether,
-it enters is the author's call (an open decision there).
+Desk's use later." A design, not a contract. The photo is in the MVP
+(ruling 12 in `applydesk/guide/todo_master.md`): the one upload ruling 3
+allows, since it needs no Blob storage. Form builds it as a question type
+with its aspect ratio set per question, kept 600 px on its longer side
+(`applydesk/spec/applications.md`, "The Form page"); the fixed 4:5 and
+480 × 600 below are this design's.
 
 **Source:** Utilities' photo proof of concept, segment U4
 (`utilityapps/guide/archive/segment_U4_photo_poc.md`, `utilityapps/spec/utilities.md`
@@ -77,11 +75,10 @@ As U4's tool, which is where to read the code:
 
 ## Open questions
 
-- **Into the MVP?** Ruling 3 says no uploads; this needs no Blob (author).
 - **Blind exercises.** Ruling 6 redacts name and identifiers on the
   dossier; a face is an identifier. Hide the photo there, or keep
-  the field under *Not shown to reviewers* in a blind exercise (author,
-  at AD4/AD5).
+  the field in a dossier part evaluators do not see (ruling 33) in a
+  blind exercise (author, at AD4/AD5).
 - **Required or optional**, per exercise (AD4's form builder).
 - **Retention.** Real applicants' photos need a retention rule under PDPA
   before any is kept (U4's plan, Semantics).

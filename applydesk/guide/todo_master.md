@@ -688,9 +688,9 @@ rulings after this list):
   re-sent until it opens (ruling 29).
 - ~~Where the help contact comes from~~: the exercise's (author,
   2026-11-17); the description is the gate's.
-- Panels' *Sent* chip still marks a gate sent, not one whose session has
-  opened (ruling 29); the spec says the same. Align when Panels is next
-  touched.
+- ~~Panels' *Sent* chip marking a gate sent, not opened~~: the chip reads
+  *Opened* for a gate whose session has opened (ruling 29), and the spec
+  says so.
 - + Pair on a blind gate cannot leave out the candidate themself without
   saying which dossier is whose: the server checks the pair at AD2
   (AD1G rung 6b's cold read).

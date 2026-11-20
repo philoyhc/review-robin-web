@@ -1,8 +1,6 @@
 # Apply Desk architecture
 
-> **Built so far:** everything below. Segment AD1 built the package, its
-> health path and packaging; AD1B to AD1K added the modules behind each
-> page, all on sample data until AD2's database.
+> **Built:** everything below, on sample data until AD2's database.
 
 How `applydesk/` is laid out, what it may import, and how its tests run.
 Its contract with the host is `applydesk/spec/applications.md`.
@@ -25,6 +23,11 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/timeline.py` | The timeline Home and the applicant's page share: nothing operator-only |
 | `applydesk/home_ops.py` | The operator's part of Home's timeline |
 | `applydesk/extract.py` | Extract data's files: names, columns and rows |
+| `applydesk/handoff.py` | The bundle a gate is sent to Review Robin with: the reviewers, reviewees, relationships and settings CSVs |
+| `applydesk/scratch.py` | Scratch exercises: the per-browser in-memory store, its cookie and limits, and each page's saved state |
+| `applydesk/process_save.py` | Process's *Save* on a scratch exercise: the snapshot checked and built back into stages |
+| `applydesk/scratch_panels.py` | Panels' *Save* on a scratch exercise, and the panels Form and Process make |
+| `applydesk/tones.py` | Each state's chip tone, one map for every page |
 | `applydesk/paging.py` | A long table's pages, 200 rows each, and its sort read from the query |
 | `applydesk/templates/applydesk/` | Its templates; `base.html` carries the favicon and the bar |
 | `applydesk/tests/` | Apply Desk's tests, a package with its own `__init__.py`; `_host.py` builds the Cordware host with the real registry |

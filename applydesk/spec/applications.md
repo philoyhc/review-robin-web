@@ -1,13 +1,9 @@
 # Apply Desk as the host sees it
 
-> **Built so far:** segments AD1 to AD1K built every page below as a
-> working scaffold on sample data: the package, health and the URL map
-> (AD1), Form (AD1B), Dossiers (AD1C), the exercise's chrome (AD1D),
-> Process (AD1E), Panels and gates' results (AD1F), evaluators and
-> Evaluations (AD1G), the RA model exercise and a page per gate (AD1H),
-> Exercise Home and its timeline (AD1I), Extract data (AD1J), and a
-> status per stage with what it locks (AD1K). Every move works on screen;
-> nothing is saved until AD2 or sent to Review Robin until AD6.
+> **Built:** every page below, as a working scaffold on sample data.
+> Every move works on screen; a sample exercise saves nothing until AD2, a
+> scratch exercise is held in the server's memory ("Scratch exercises"),
+> and nothing is sent to Review Robin until AD6.
 
 Apply Desk's contract with the Cordware host. The host's side is
 `cordware/spec/host.md`; this file states only what Apply Desk adds. The
@@ -268,8 +264,9 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
 ## The Form page
 
 The application form builder on the Form tab,
-`/operator/exercises/<id>/form`. Every move works in the browser; nothing
-is saved until AD2, and a reload restores the sample form. A blank exercise
+`/operator/exercises/<id>/form`. Every move works in the browser. On a
+sample exercise nothing is saved until AD2, and a reload restores the
+sample form; a scratch exercise saves ("Scratch exercises"). A blank exercise
 shows the form's own card and one empty String card, open.
 
 - **Layout.** The form's own *Form title* and *Description* at the top: it
@@ -314,6 +311,9 @@ shows the form's own card and one empty String card, open.
   one* and Select people at *Institution-wide*.
 - **Visibility** is per card: *Shown to evaluators* or *Not shown*; a new
   card is *Not shown*, the side that hides.
+  *Ruled, not built (2026-11-18, ruling 33):* what a reader sees is to be
+  set per dossier part, each part with its audiences; the per-card and
+  per-section *Shown* / *Not shown* go.
 - **Collapsed**, a card shows its question and help text (a text card's
   title and description), the summary of its settings, and chips: *Required*
   or *Optional* (a text card has none) and its visibility. Expanded, it
@@ -337,7 +337,7 @@ shows the form's own card and one empty String card, open.
   (leaving Preview if it is showing). Nothing in it is numbered. It follows
   every change.
 - **Keeping an edit** (ruling 23). One *Save*, in the Outline, disabled
-  until AD2; an *Unsaved changes* marker beside it once anything is edited
+  on a sample exercise until AD2; an *Unsaved changes* marker beside it once anything is edited
   (a move, a toggle, an added, replicated or removed card; opening a card or
   the preview is no edit), and a warning on leaving the page with it showing.
 - **Preview**, at the foot of the Outline with *Save* beside it, shows the form in place of the cards, as an applicant sees it,
@@ -462,7 +462,8 @@ Unlocked, each is a field with a line saying where it is used.
   so; changing them waits for re-publishing (G2).
 - **Blind review** is fixed, with its reason, once the first stage holding a
   gate is published (`locks.blind_lock`).
-- Nothing is saved until AD2: a reload restores the sample. Process shows
+- On a sample exercise nothing is saved until AD2: a reload restores the
+  sample. A scratch exercise's *Lock* saves. Process shows
   Help contact and Timezone read-only.
 
 ## The Process page
@@ -470,8 +471,9 @@ Unlocked, each is a field with a line saying where it is used.
 The exercise's timeline as a stack of stage cards, on the Process tab,
 `/operator/exercises/<id>/process` (rulings 13–16). Process sets up the whole
 flow and every rule Dossiers applies; Form, Panels and Emails flesh out its
-nodes. Every move works in the browser; nothing is saved until AD2, and a
-reload restores the sample. A blank exercise shows one open card, *Stage 1*,
+nodes. Every move works in the browser. On a sample exercise nothing is
+saved until AD2, and a reload restores the sample; a scratch exercise
+saves. A blank exercise shows one open card, *Stage 1*,
 holding the form. The cards are drawn from `stages.plan_of`, so Process,
 Dossiers and the status row agree on load. There is no Workflow card:
 ruling 14's was removed (author, 2026-11-15: derivative of the other
@@ -492,7 +494,7 @@ but the lobby's *Stage* column reads:
   `workflow.current_stage` is the stage holding it, else the last stage.
 
 - **Layout.** The cards in timeline order, the Outline beside them (as
-  Form's), *Save* at its foot, disabled until AD2.
+  Form's), *Save* at its foot, disabled on a sample exercise until AD2.
 - **A stage card.** *Stage name* (an empty name reads *Stage N*, by position),
   *Starts* and *Ends*, and *Shown to applicants*. Collapsed, it shows its
   name, dates, status chip and a summary (`Form · Outcome: Shortlist`,
@@ -565,7 +567,9 @@ but the lobby's *Stage* column reads:
     that the page is there once the exercise is published, and a new gate
     otherwise that it is there once the gate is saved.
   - **Gate**: *Name*; *Type* (a disabled menu, *Review Robin session*, kept
-    for other kinds); *Description* (Review Robin's instrument description);
+    for other kinds; *Ruled, not built (2026-11-18, ruling 36):* a second
+    type, *Review Robin (advanced)*, whose instrument Review Robin may
+    extend around the gate's response fields); *Description* (Review Robin's instrument description);
     *Confidential* (per gate: Review Robin shows each applicant as *Name
     redacted* with their Dossier ID); the *Entry rule*. The exercise's *Help
     contact* and *Timezone* show read-only, linking to Home, where they are
@@ -743,8 +747,8 @@ but the lobby's *Stage* column reads:
   the counts (stages, gates, outcomes) and every problem, among them a gate
   with no evaluators. A stage or item is a button: it opens its card and goes to
   it. *Save* and the *Unsaved changes* marker sit at its foot, kept as Form's
-  are (ruling 23): *Save* disabled until AD2, a warning on leaving with
-  changes pending. Nothing in it is saved.
+  are (ruling 23): *Save* disabled on a sample exercise until AD2, a
+  warning on leaving with changes pending.
 - **Emails** (ruling 16). Process picks no template. Each email ticked, the
   form's receipt and reminder or an outcome's *Send email* per audience, is a
   template owed on the Emails page, named for its stage (*Review: Outcome ·
@@ -764,10 +768,14 @@ but the lobby's *Stage* column reads:
 The Setup tab for everyone on the exercise's panels (rulings 19, 20, 22, 23),
 `/operator/exercises/<id>/panels`. A **panel** (`sample_data.Panel`: key,
 name, members) is a named roster Apply Desk keeps: an assessment panel, the
-evaluator pool, the interviewers. Form and Process hold a panel's *key*, not
-its name, so a rename follows everywhere. Panels laid out as Review Robin's
+evaluator pool, the interviewers. Every panel is generic (ruling 39): what
+it does comes from where it is used (a Select people question, a gate's
+evaluator source), never from its key. Form and Process hold a panel's
+*key*, not its name, so a rename follows everywhere. Panels laid out as Review Robin's
 roster pages: a roster card, then one full-width table. Every move works in
-the browser; nothing is saved until AD2, and a reload restores the sample.
+the browser. On a sample exercise nothing is saved until AD2, and a reload
+restores the sample; a scratch exercise has a page *Save* ("Scratch
+exercises").
 A panel made on Form or Process appears here only once saved (AD2).
 
 - **The roster card.** *People* (the count of rows), a pill per panel with its
@@ -797,7 +805,8 @@ A panel made on Form or Process appears here only once saved (AD2).
     *Close* asks first while any waits. *Copy emails* and the CSV act at once.
   - Whatever ✓, ×, *Save* or an import changes is on the page only: ✓ says
     *kept on this page* (*nothing changed* on an untouched row), the page
-    shows *Changes on this page, not saved until AD2*, and leaving asks
+    shows *Changes on this page, not saved until AD2* (on a scratch
+    exercise, *Unsaved changes* beside *Save*), and leaving asks
     first, as it does while a ticked row holds changes ✓ has not kept. ×
     on a member of a panel an opened gate keeps (as kept, not as ticked
     while editing) asks before removing them.
@@ -808,7 +817,9 @@ A panel made on Form or Process appears here only once saved (AD2).
   which opens a blank row at the top (an imported row joins the end). Columns:
   a select box, *Name*, *Email*, *Note*, one per panel and a ✓ and × column;
   *Name*, *Email* and *Note* sort with ↕. A panel's heading carries its count
-  and a *Sent* chip when sent; its tooltip says *Used by* or *Not used yet*.
+  and an *Opened* chip once a gate it feeds has opened (`workflow.panels_sent`),
+  the chip's tooltip naming those gates; the heading's tooltip says *Used by*
+  or *Not used yet*.
   Widths are fixed, so selecting a row moves nothing.
 - **Editing a row** (ruling 22; how Panels keeps an edit, ruling 23). A row
   is inert until its box is ticked: then its cells are edit boxes and its
@@ -816,7 +827,8 @@ A panel made on Form or Process appears here only once saved (AD2).
   (Enter too) keeps its changes on the page; unticking without ✓ puts the row
   back, and a new row never kept goes. A verified email, found in the
   directory, is a pill, clicked to change it; unticked it reads as text, red
-  when the directory has no such person. There is no page *Save*.
+  when the directory has no such person. A sample exercise has no page
+  *Save*.
 - **Checks.** An email is required, found in the directory and listed once.
 - **An opened gate** (`workflow.gate_opened`: its Review Robin session has
   opened, ruling 29) keeps the roster it opened with: its panel says so here,
@@ -899,7 +911,11 @@ CSV* undoes the guard. The page has no *Save*; nothing is kept until AD2.
   Process sets what a release does and nothing is sent; turning it off asks
   *Withdraw the release of <outcome>?*. Cancelled, the checkbox goes back;
   confirmed, the note under it reads today's date *· as Process sets*, or
-  *Not yet*.
+  *Not yet*. *Ruled, not built (2026-11-18, ruling 38):* release is to be
+  recorded per audience (applicants, evaluators), each with its own time,
+  and an outcome's *Decided* derived from every reached cell having a
+  value, never stored; today one checkbox releases to every audience
+  Process sets.
 
 *Apply rules…* proposes each outcome and gate cell from the rule Process
 holds (branches in order, a form answer from the application's answers, the
@@ -1245,8 +1261,10 @@ saved template is kept in the tab only.
   it. It keeps the template in the tab (`sessionStorage`, by exercise); a
   template is *Written* once saved with a subject and a body, else
   *Owed*. A kept template shows only while Process still makes it owed.
-  Nothing is saved until AD2; until then the status row's *Emails*, Home
-  and Dossiers' *Released* read the sample's templates. Leaving with a
+  On a sample exercise nothing is saved until AD2; until then the status
+  row's *Emails*, Home and Dossiers' *Released* read the sample's
+  templates. A scratch exercise's *Save* keeps the template in the
+  exercise, not the tab, and the status row and Home follow it. Leaving with a
   card unsaved asks first.
 - **Reset to default** puts the kind's default in the card, asking first
   over other text; on the default already it says so. The button reads
