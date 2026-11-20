@@ -23,9 +23,13 @@ Definitions, all in minutes:
                  and is dropped.
 * ``turn``       previous merge -> first commit of the PR. Includes the
                  time the instruction took to write, so read it as a
-                 ceiling on build time.
+                 ceiling on build time. Unknown (None) for a *stacked*
+                 slice, one whose first commit predates the previous
+                 merge: the next rung built while the last one waited.
 * ``iter``       first -> last commit inside the PR: the fix-and-re-push
-                 loop a reader or CI adds.
+                 loop a reader or CI adds. Unknown for a stacked slice
+                 too, since its span includes the wait for the previous
+                 merge.
 * ``push2merge`` last commit -> merge.
 * ``review``     the PR carries a commit whose subject names a cold read,
                  a second reader or acting on one.
@@ -75,7 +79,25 @@ def git(*args: str) -> str:
     return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout
 
 
+#: The application packages beside RRW, plus the Cordware host. Their
+#: code, templates and tests are product as RRW's are; without this every
+#: Apply Desk PR read as prose or "other", and 183 of 219 PRs in its first
+#: nine days counted as docs-only (segment 23H, rung 2). `APP_DIRS` in
+#: `tools/close_check/_manifest.py` names the first three too, and
+#: `tests/unit/test_pace_audit.py` holds the two lists together.
+PACKAGES = ("applydesk", "residentialapps", "utilityapps", "cordware")
+
+
 def category(path: str) -> str:
+    package, _, rest = path.partition("/")
+    if package in PACKAGES and rest:
+        if rest.endswith(".md") or rest.startswith(("spec/", "docs/", "guide/")):
+            return "prose"
+        if rest.startswith("tests/") or "/tests/" in rest:
+            return "tests"
+        if rest.startswith("templates/") or "/templates/" in rest:
+            return "tpl"
+        return "code"
     if path.startswith("app/web/templates"):
         return "tpl"
     if path.startswith(("app/", "alembic/")):
@@ -199,8 +221,13 @@ def load(since: str, ref: str = MAIN_REF) -> list[dict]:
             r["turn"] = r["iter"] = r["push2merge"] = None
             prev = r["merge"]
             continue
-        r["turn"] = (r["first"] - prev) / 60 if prev else None
-        r["iter"] = (r["last"] - r["first"]) / 60
+        # A slice committed before the previous PR merged (the next rung
+        # built while the last one waits, on one long-lived branch) has no
+        # turn or iteration: unknown, not negative. Apply Desk's nine days read a mean
+        # turn of -5.6 minutes before this (segment 23H, rung 2).
+        r["stacked"] = bool(prev) and r["first"] < prev
+        r["turn"] = None if not prev or r["stacked"] else (r["first"] - prev) / 60
+        r["iter"] = None if r["stacked"] else (r["last"] - r["first"]) / 60
         r["push2merge"] = (r["merge"] - r["last"]) / 60
         if prev and r["received"] and prev <= r["received"] <= r["first"]:
             r["wait"] = (r["received"] - prev) / 60
@@ -281,16 +308,26 @@ def report(label: str, rows: list[dict]) -> None:
             "rest on the rest"
         )
     merged = [r for r in within if not r["squash"]]
+    stacked = sum(1 for r in rows if r.get("stacked"))
+    if stacked:
+        print(
+            f"  {stacked} of {len(rows)} committed before the previous PR merged: "
+            "their turn and iteration are unknown, and those figures rest on the rest"
+        )
     print(
         f"  cycle med {median(r['cycle'] for r in within):5.1f}  "
         f"mean {mean(r['cycle'] for r in within):5.1f}"
     )
+    # The decomposition holds only over slices whose turn is known: a
+    # stacked slice's cycle has no turn to split off, so averaging its
+    # cycle with the others' turn would print a sum that does not add up.
+    split = [r for r in merged if not r.get("stacked")]
     print(
-        f"  merge-committed (n={len(merged)}): "
-        f"cycle mean {mean(r['cycle'] for r in merged):5.1f} = "
-        f"turn {mean(r['turn'] for r in merged):4.1f} + "
-        f"iter {mean(r['iter'] for r in merged):4.1f} + "
-        f"push2merge {mean(r['push2merge'] for r in merged):4.1f}"
+        f"  merge-committed, not stacked (n={len(split)}): "
+        f"cycle mean {mean(r['cycle'] for r in split):5.1f} = "
+        f"turn {mean(r['turn'] for r in split):4.1f} + "
+        f"iter {mean(r['iter'] for r in split):4.1f} + "
+        f"push2merge {mean(r['push2merge'] for r in split):4.1f}"
     )
     multi = mean(None if r["n"] is None else r["n"] > 1 for r in rows)
     print(
