@@ -19,7 +19,7 @@ def _client() -> TestClient:
 
 def test_a_saved_gate_links_to_its_review_robin_card() -> None:
     page = _client().get(f"{LOBBY}/wa9juxbc2t/process").text
-    links = re.findall(r'data-pc-rr><a href="([^"]+)"', page)
+    links = re.findall(r'data-pc-rr="[^"]*"><a href="([^"]+)"', page)
     assert links and links[0] == f"{LOBBY}/wa9juxbc2t/evaluations/gate_1#ev-rr", links
     # Each one opens: the card is there.
     client = _client()
@@ -66,4 +66,7 @@ def test_a_draft_s_gate_says_why_it_has_no_link() -> None:
     saved = page[page.index('data-key="g1"') :]
     saved = saved[: saved.index("data-pr-list")]
     assert "once the exercise is published" in saved and "/evaluations/gate_" not in saved
+    # A new gate in a draft is held back by the draft, not by saving.
+    template = page[page.index('id="pc-new-gate"') :]
+    assert "once the exercise is published" in template[: template.index("</template>")]
     scratch.clear()

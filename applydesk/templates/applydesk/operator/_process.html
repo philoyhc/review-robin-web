@@ -993,7 +993,7 @@
       // Its gates are new: none has a Review Robin card yet (ruling 61).
       added.querySelectorAll("[data-pc-rr]").forEach(function (line) {
         line.className = "pc-line muted pc-rr";
-        line.textContent = "Its Review Robin card is on Evaluations once this gate is saved.";
+        line.textContent = line.dataset.pcRr;
       });
       added.querySelectorAll(".pc-item[data-key]").forEach(function (item) {
         var k = item.dataset.item[0] + "new" + (++keys);

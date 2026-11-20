@@ -223,8 +223,9 @@
       {# Its Review Robin card, on its Evaluations page (ruling 61): there
          once the gate is saved and the exercise published (ruling 60
          opens it on saving, with AD2); until then the line says why. #}
-      {% if g.number and g.key and exercise.state != "Draft" %}<p class="pc-line pc-rr" data-pc-rr><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ g.number) }}#ev-rr">Review Robin card →</a></p>
-      {% else %}<p class="pc-line muted pc-rr" data-pc-rr>{{ "Its Review Robin card is on Evaluations once the exercise is published." if g.number and g.key else "Its Review Robin card is on Evaluations once this gate is saved." }}</p>{% endif %}
+      {% set rr_new = "Its Review Robin card is on Evaluations once the exercise is published." if exercise.state == "Draft" else "Its Review Robin card is on Evaluations once this gate is saved." %}
+      {% if g.number and g.key and exercise.state != "Draft" %}<p class="pc-line pc-rr" data-pc-rr="{{ rr_new }}"><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ g.number) }}#ev-rr">Review Robin card →</a></p>
+      {% else %}<p class="pc-line muted pc-rr" data-pc-rr="{{ rr_new }}">{{ rr_new }}</p>{% endif %}
     </div>
   </details>
   {# Who evaluates (ruling 27, segment AD1G): ranked sources, each giving

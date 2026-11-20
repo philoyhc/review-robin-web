@@ -526,8 +526,9 @@ but the lobby's *Stage* column reads:
     contact* and *Timezone* show read-only, linking to Home, where they are
     set: they are Review Robin's for every gate. It ends *Review Robin card
     →*, to the gate's card on its Evaluations page (`…/evaluations/gate_<n>#ev-rr`,
-    ruling 61); a new gate, or one in a draft exercise, says instead that
-    its card is there once it is saved, or once the exercise is published.
+    ruling 61); in a draft exercise it says instead that the card is there
+    once the exercise is published, and a new gate otherwise that it is
+    there once the gate is saved.
   - **Evaluators** (ruling 27): a row per ranked **source**, in order
     (▲ ▼; a row's **+** adds the next, × removes; *+ Source* shows only
     when there is none), each a *Kind*, its *Min* and *Max* per dossier:
