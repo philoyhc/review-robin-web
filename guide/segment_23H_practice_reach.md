@@ -158,6 +158,23 @@ plan moved here from Cordware.
 | Sweep trigger | 670 merges of 500, last 2026-10-22 | `python3 tools/close_check.py --stale` |
 | Rulings | 65 in `applydesk/guide/todo_master.md` (772 lines) | numbered entries in its Rulings section |
 
+## Status
+
+- **Rung 1 (2026-11-20).** Of the four failures, three are one tool
+  artifact:
+  - **AD1G, AD1H and AD1K (C3).** Each close PR archived the plan first
+    and landed its spec edits after it (AD1G: archive `d399da1f0`, spec
+    `ccce9f902`–`ed6bf0b6f`, 13:14–13:45 on 2026-11-17). C3's window
+    ends at the archive commit, so it never sees the edits. The fix is
+    to end the window at the merge that carried the archive into
+    `main`; it moves to rung 2, as the plan foresaw.
+  - **1B (C2).** Not a close: Residential's 1B is live and paused, and
+    its `residentialapps/spec/organization_and_rosters.md` is a new spec
+    promised "as items 4 and 5 ship". The Definition of done now counts
+    closed plans only.
+  - **The correction** is one dated note in
+    `applydesk/guide/archive/README.md` (Judgment calls).
+
 ## PR ladder
 
 Prose rungs take no read. Code rungs (2, 3, 4, 5, 9) are one item for
@@ -252,7 +269,8 @@ rung 2, recorded in rung 2's PR.
 ## Definition of done
 
 - `python3 tools/close_check.py <id>` passes, or waives with a reason,
-  for every package plan (24 at the re-take).
+  for every closed package plan (19 at the re-take). An open plan's
+  commitments to files not yet written are not failures (Status, rung 1).
 - `tests/unit/test_doc_references.py`, `test_guide_indexes.py`,
   `test_index_currency.py` and `test_spec_coverage.py` read every
   `APP_DIRS` package, each with a recorded mutation that fails it.
