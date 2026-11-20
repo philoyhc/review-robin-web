@@ -35,7 +35,7 @@
         <li><button type="button" class="pc-o-stage">{{ st.label }}</button> <span class="muted">{{ st.dates }}</span>
           <ul class="fb-o-list">
             {% if st.form %}<li><button type="button" class="fb-o-item">Form</button></li>{% endif %}
-            {% for c in st.columns %}<li><button type="button" class="fb-o-item">{{ ("Gate " ~ c.number) if c.via is defined else ("Outcome " ~ c.number) }}: {{ c.label }}</button></li>{% endfor %}
+            {% for c in st.columns %}<li><button type="button" class="fb-o-item">{{ ("Gate " ~ c.number) if c.via is defined else ("Outcome " ~ c.number) }} · {{ c.label }}</button></li>{% endfor %}
           </ul>
         </li>
         {% endfor %}
@@ -498,7 +498,7 @@
         if (kind !== "form") {
           var label = kind === "gate" ? "Gate " + (++g) : "Outcome " + (++o);
           item.querySelector("[data-pc-kicker]").textContent = label;
-          text = label + ": " + itemName(item, kind === "gate" ? "Untitled gate" : "Untitled outcome");
+          text = label + " · " + itemName(item, kind === "gate" ? "Untitled gate" : "Untitled outcome");
         }
         var row = el("li"), b = el("button", "fb-o-item", text);
         b.type = "button";
@@ -755,7 +755,7 @@
       if (!ed.id) ed.id = "pc-rule-ed-" + (++edits);
       btn.setAttribute("aria-controls", ed.id);
       if (btn.getAttribute("aria-expanded") !== "true") btn.textContent = rule ? "Edit the rule" : "Add a rule";
-      var who = item.querySelector("[data-pc-kicker]").textContent + " (" + nameOf(item) + ") ";
+      var who = item.querySelector("[data-pc-kicker]").textContent + " · " + nameOf(item) + " ";
       found.forEach(function (f) { all.push(who + f + "."); });
       if (item.dataset.item === "gate") {
         sourceProblems(item).forEach(function (f) { all.push(who + f + "."); });

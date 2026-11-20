@@ -312,7 +312,7 @@ shows the form's own card and one empty String card, open.
   the preview is no edit), and a warning on leaving the page with it showing.
 - **Preview**, at the foot of the Outline with *Save* beside it, shows the form in place of the cards, as an applicant sees it,
   page by page, built from the cards on screen; the button reads *Back to
-  edit* meanwhile. *Open the preview in a new tab*, under them, shows the
+  edit* meanwhile. *Open the preview in a new tab →*, under them, shows the
   same at `/operator/exercises/<id>/form/preview`, with *Submit* disabled.
   The tab reads the builder that opened it, so a reload picks up later
   edits; opened on its own, or once the Form page has gone to another
@@ -797,9 +797,10 @@ Dossier ID, as Review Robin does for a confidential gate.
 Dossiers, its breadcrumb back there, as Review Robin's drill-ins. Read
 only: its *Application* (applicant, email, status, Application ID), its
 row's *Gates and outcomes* (each column's chip and note, as Dossiers
-holds them) and what is *Shown to evaluators*. *View as applicant ↗*
-opens the dossier's `/me` page in a new tab, as Review Robin's *Open
-reviewer surface*.
+holds them) and what is *Shown to evaluators*. *View as evaluators see it
+↗* opens the dossier's `/me` page, the one evaluators open, in a new tab,
+as Review Robin's *Open reviewer surface*. A draft has no dossier (ruling
+32): its page is a 404; a withdrawn application's still answers.
 A control surface (ruling 23), worked down its columns. The whole table is
 locked until *Unlock*; then every cell, *Set ticked rows*, *Apply rules…*,
 *Upload CSV* and each outcome's *Released* are live, but for the fixed ones
@@ -828,13 +829,15 @@ CSV* undoes the guard. The page has no *Save*; nothing is kept until AD2.
   Process's order, then *Pending*, then —, then date; descending
   reverses the whole order. Ties keep the page's order. It moves rows, never a cell, so it works while the table
   is locked; the CSV follows it; the tab keeps it (`sessionStorage`).
-- **Finding rows.** Search (*Search ID, name or email*) matches, in any
-  case, a row's Dossier ID (a draft has none), Application ID, applicant's
-  name and email. The status filter is *All statuses*, *Submitted*, *Draft*
-  or *Withdrawn*. Under the table, *All dossiers* or *Last applications*:
-  per applicant, by email, the latest submitted, else the latest of any
-  status (`stages.last_submitted`). The three combine, and *Showing N of M*
-  counts the rows in view.
+- **Finding rows.** The filters stand together at the top, each labelled
+  (ruling 64): *Search* matches, in any case, a row's Dossier ID (a draft
+  has none), Application ID, applicant's name and email; *Status* is *All
+  statuses*, *Submitted*, *Draft* or *Withdrawn*; *Rows* is *All dossiers*
+  or *Last applications*: per applicant, by email, the latest submitted,
+  else the latest of any status (`stages.last_submitted`). The three
+  combine, and *Showing N of M* beside them counts the rows in view. The
+  ticked rows' actions (*Set ticked rows*, *Return ticked to draft*) and
+  *Download CSV* stand in a row above the table.
 - **The CSV.** *Download CSV* writes `Application ID`, `Applicant`, `Email`,
   `Status`, then a column per gate and outcome headed by its label, UTF-8
   with a byte-order mark; no status yet (*—*) is written `-`. *Upload CSV*
@@ -885,10 +888,10 @@ took (`stages.mean_note`).
 
 At `/operator/exercises/<id>/evaluations`: the **Gates** table (gate, type,
 state, progress, and a link to the gate's Review Robin card, *Review Robin card
-→*, ruling 64), then **Assignments**, a short card per gate:
+→*, ruling 64), then **Assignments**, one card with a row per gate:
 its mode, its counts (*42 dossiers · 40 filled · 2 short*, over every pair),
-its load line per panel source (*Ana 6 · Ben 5 …*) and a link, *Assignments
-(n rows)*, to the gate's own page. A draft exercise shows neither. Nothing is
+its load line per panel source (*Ana 6 · Ben 5 …*) and a link, *Pairs (n)
+→*, to the gate's own page. A draft exercise shows neither. Nothing is
 saved until AD2; a reload restores the sample.
 
 **The gate page**, `…/evaluations/gate_<n>` (`routes_operator.gate_evaluations`),
@@ -1069,7 +1072,7 @@ from AD2.
 |---|---|---|
 | Extract all data | *Carries*: Applications, Gates, Outcomes on; Setup off. *Applicants as*: Names, Dossier IDs | *Zip all* |
 | Applications | *Rows*: Last applications, All applications. *Drafts*: Left out, Included | *Download CSV* |
-| By gate | *Shape*: A row per pair, A row per application. *Applicants as*: Dossier IDs, Names | a *CSV* per gate; *Zip gates* |
+| By gate | *Shape*: A row per pair, A row per application. *Applicants as*: Names, Dossier IDs (Dossier IDs pressed) | a *CSV* per gate; *Zip gates* |
 | Outcomes | *Rows*: Last applications, All applications | *Download CSV* |
 | Alias key | none | *Download key* |
 | Extract setup | *Carries*: Form, Process, Panels, Emails, all on | *Zip setup* |

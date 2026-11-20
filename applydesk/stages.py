@@ -797,7 +797,7 @@ def date_problems(plan: Plan, st: Stage) -> tuple[str, ...]:
     bounds = st.when
     named: list[tuple[str, Gate | Outcome | None]] = [("The form", None)] if st.form else []
     named += [
-        (f"Gate {c.number} ({c.label or 'untitled'})", c)
+        (f"Gate {c.number} · {c.label or 'untitled'}", c)
         if isinstance(c, Gate)
         else (c.label or "The outcome", c)
         for c in st.columns
@@ -1040,7 +1040,7 @@ def panel_uses(exercise_id: str) -> dict[str, tuple[str, ...]]:
     for column in plan_of(exercise_id).columns:
         if isinstance(column, Gate):
             for key in gate_panels(exercise_id, column):
-                uses.setdefault(key, []).append(f"Gate {column.number}: {column.label}")
+                uses.setdefault(key, []).append(f"Gate {column.number} · {column.label}")
     return {k: tuple(v) for k, v in uses.items()}
 
 

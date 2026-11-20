@@ -234,8 +234,8 @@ def test_every_gate_page_has_its_card(client: TestClient) -> None:
 
 def test_process_shows_a_closed_gate_as_under_way(client: TestClient) -> None:
     page = client.get("/applydesk/operator/exercises/k7mfr3pq8z/process").text
-    assert '<span class="chip chip-info" data-pi-state>Closed</span>' in page
-    assert '<span class="chip chip-warn" data-pi-state>Detached</span>' in page
+    assert '<span class="chip chip-bad" data-pi-state>Closed</span>' in page
+    assert '<span class="chip chip-mute" data-pi-state>Detached</span>' in page
 
 
 def test_the_emails_side_card_lists_only_tags_an_email_takes() -> None:

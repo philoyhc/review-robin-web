@@ -671,10 +671,13 @@ def _pick(value: str, allowed: tuple[str, ...]) -> str:
 def operator_dossier(request: Request, exercise_id: str, dossier_id: str) -> Response:
     """A dossier as the operator sees it (ruling 64, U20; segment AD1P):
     under Dossiers, its application, its row's gates and outcomes, and what
-    evaluators read; *View as applicant* opens the applicant's page in a
-    new tab, as Review Robin's *Open reviewer surface*."""
+    evaluators read; *View as evaluators see it* opens the dossier's `/me`
+    page, the one evaluators open, in a new tab, as Review Robin's *Open
+    reviewer surface*. A draft has no dossier (ruling 32): a 404."""
     exercise = exercise_or_404(exercise_id)
     app = dossier_or_404(exercise, dossier_id)
+    if app.state == "Draft":  # no dossier until it is submitted (ruling 32)
+        raise HTTPException(status_code=404)
     plan = stages.plan_of(exercise.public_id)
     row = next((r for r in plan.rows if r.application.public_id == app.public_id), None)
     return render(
@@ -688,6 +691,7 @@ def operator_dossier(request: Request, exercise_id: str, dossier_id: str) -> Res
         application=app,
         columns=plan.columns,
         cells=row.cells if row else {},
+        going_on=stages.going_on,
         shown=extract.form_answers(exercise, app)[0],
     )
 

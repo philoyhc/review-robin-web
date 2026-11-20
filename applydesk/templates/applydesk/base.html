@@ -457,7 +457,8 @@
     .ap-rule-line { display: block; font-weight: 400; font-size: 11px; color: var(--text-subtle); font-style: italic; max-width: 150px; }
     /* A rule reads two lines, its whole text on hover, so the header stays
        short (ruling 64, U19); a Fixed line is never cut. */
-    .ap-rule-line:not(.ap-fixed) { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .ap-rule-line:not(.ap-fixed) { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+    .ap-rule-line:not(.ap-fixed):focus { display: block; overflow: visible; outline: 2px solid var(--accent); outline-offset: 2px; }
     .ap-hand { display: none; font-size: 11px; font-weight: 600; color: var(--amber); margin-top: 3px; }
     .ap-table td[data-hand] .ap-hand { display: block; }
     .ap-check { font-size: 13px; }
@@ -673,7 +674,7 @@
     .pn-table td { overflow: hidden; text-overflow: ellipsis; }
     .pn-table td .pn-view { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
     .pn-table th, .pn-table td { padding: 9px 10px; border-bottom: 1px solid var(--border-subtle); text-align: left; vertical-align: middle; }
-    .pn-table thead th { position: sticky; top: 0; background: var(--surface-muted); vertical-align: bottom; font-size: 14px; font-weight: 500; color: var(--text-subtle); }
+    .pn-table thead th { background: var(--surface-muted); vertical-align: bottom; font-size: 14px; font-weight: 500; color: var(--text-subtle); }
     .pn-sort { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
     .pn-sort span { margin-left: 4px; color: var(--text-subtle); font-size: 12px; }
     .pn-table .pn-in { margin-top: 0; padding: 3px 8px; width: 100%; box-sizing: border-box; font-size: 14px; }
@@ -786,7 +787,6 @@
     @container (max-width: 639px) { .ps-row { grid-template-columns: 24px repeat(3, minmax(0, 1fr)); } .ps-ref, .ps-bounds { grid-column: span 2; } .ps-min { grid-column: 2; } .ps-headrow { display: none; } .ps-cap { display: block; } .ps-acts { grid-column: 2 / -1; } .ps-total .ps-all, .ps-total .ps-acts { display: none; } .ps-all:has(> .btn[hidden]) .ps-cap { visibility: hidden; } }
     /* Evaluations' assignments (ruling 27, segment AD1G): a card per gate,
        collapsed to its head; each evaluator a pill marked by its source. */
-    .ev-h { margin: 24px 0 8px; font-size: 17px; }
     .ev-assign { margin-top: 20px; }
     .ev-assign .ev-gate { padding: 12px 0; border-top: 1px solid var(--border-subtle); }
     .ev-ops { justify-content: flex-start; align-items: center; margin-bottom: 8px; }

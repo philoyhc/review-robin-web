@@ -42,7 +42,7 @@
 {% macro form_item(new=False, open=False, w=none) %}
 {% set n = 1 if new else ((1 if sends('receipt', 'Applicants') else 0) + (1 if sends('reminder', 'Applicants') else 0)) %}
 <div class="pc-item" data-item="form"{% if open %} data-open{% endif %}>
-  {% set chips %}<span class="chip chip-{{ 'info' if form_state == 'Open' else ('mute' if form_state == 'Closed' else 'warn') }}">{{ form_state }}</span>{{ emails_chip(n) }}{% endset %}
+  {% set chips %}<span class="chip chip-{{ tone(form_state) }}">{{ form_state }}</span>{{ emails_chip(n) }}{% endset %}
   {{ head("Form", "Application form", chips, open) }}
   <div class="pi-body">
   {{ item_dates(w, "Opens", "Closes") }}
@@ -199,7 +199,7 @@
 {% set ev = sources_of(g) %}
 {% set ev_problem = sources_warn(ev[0], ev[1], panel_pools) %}
 <div class="pc-item" data-item="gate" data-key="{{ g.key }}" data-rule="{{ rule_json(g) | tojson | forceescape }}"{% if open %} data-open{% endif %}>
-  {% set chips %}<span class="chip chip-{{ 'ok' if state == 'Results in' else ('info' if state in ('Sent', 'Closed', 'Ready') else 'warn') }}" data-pi-state>{{ state }}</span><span class="chip chip-mute" data-pi-results>{{ g.results | length }} {{ "result" if g.results | length == 1 else "results" }}</span><span class="chip {{ 'chip-warn' if ev_problem else 'chip-mute' }}" data-pi-panel>{{ sources_summary(ev[0], ev[1], panel_pools) }}</span>{% endset %}
+  {% set chips %}<span class="chip chip-{{ tone(state, 'warn') }}" data-pi-state>{{ state }}</span><span class="chip chip-mute" data-pi-results>{{ g.results | length }} {{ "result" if g.results | length == 1 else "results" }}</span><span class="chip {{ 'chip-warn' if ev_problem else 'chip-mute' }}" data-pi-panel>{{ sources_summary(ev[0], ev[1], panel_pools) }}</span>{% endset %}
   {{ head("Gate " ~ g.number, g.label or "Untitled gate", chips, open) }}
   <div class="pi-body">
   {# A sent gate says so once, for all of it (ruling 29). Its progress is
@@ -342,7 +342,7 @@
       <label class="pc-check"><input type="checkbox" data-rel="evaluators-email"{% if o.key and sends(o.key, 'Evaluators') %} checked{% endif %}> Send email</label>
     </div>
   </div>
-  <p class="pc-line muted">{{ ("Released " ~ o.released) if o.released else "Not released yet: its Released switch is on Dossiers." }}</p>
+  <p class="pc-line muted">{{ ("Released " ~ o.released) if o.released else "Not released yet: its Released checkbox is on Dossiers." }}</p>
   <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-outcome">Remove the outcome</button></div>
   </fieldset>
   </div>

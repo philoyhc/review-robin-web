@@ -2,13 +2,14 @@
 {# A dossier as the operator sees it (ruling 64, U20; segment AD1P): a
    page under Dossiers, its breadcrumb back there, as Review Robin's
    drill-ins. Its application, its row's gates and outcomes as Dossiers
-   holds them, and what evaluators read; *View as applicant* opens the
-   applicant's page in a new tab, as Review Robin's *Open reviewer
-   surface*. Read only: Dossiers is where a cell changes. #}
+   holds them, and what evaluators read; *View as evaluators see it*
+   opens the dossier's /me page, the one evaluators open, in a new tab,
+   as Review Robin's *Open reviewer surface*. Read only: Dossiers is
+   where a cell changes. #}
 {% block title %}Dossier {{ application.dossier_id }} · {{ exercise.name }}{% endblock %}
 {% block content %}
 <div class="ptitle"><h1>Dossier {{ application.dossier_id }}</h1>
-  <span class="ev-head"><a class="btn btn-secondary" href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ application.dossier_id) }}" target="_blank" rel="noopener" data-od-as-applicant>View as applicant ↗</a></span></div>
+  <span class="ev-head"><a class="btn btn-secondary" href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ application.dossier_id) }}" target="_blank" rel="noopener" data-od-as-evaluators>View as evaluators see it ↗<span class="visually-hidden"> (opens in a new tab)</span></a></span></div>
 {% with read_only = true %}{% include "applydesk/_placeholder.html" %}{% endwith %}
 <p class="muted pc-intro">One dossier, as Dossiers holds it: its application, where it stands at each gate and outcome, and what evaluators read. Its cells change on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers') }}">Dossiers</a>.</p>
 <section class="card" data-od-card="application">
@@ -26,7 +27,11 @@
   <dl class="facts">
     {% for c in columns %}{% set cell = cells.get(c.key) %}
     <dt>{{ "Gate " ~ c.number if c.via is defined else "Outcome " ~ c.number }} · {{ c.label }}</dt>
-    <dd>{% if cell and cell.value %}<span class="chip chip-{{ tone(cell.value, 'info') }}">{{ cell.value }}</span>{% else %}<span class="muted">—</span>{% endif %}{% if cell and cell.note %} <span class="muted">· {{ cell.note }}</span>{% endif %}{% if cell and cell.by_hand %} <span class="muted">· set by hand</span>{% endif %}</dd>
+    {# Toned as Dossiers' cells: a gate by its admittance, an outcome green
+       when it takes the dossier on, else grey. #}
+    {% set v = cell.value if cell and cell.value not in ("", "—") else "" %}
+    {% set t = tone(v, 'mute') if c.via is defined else ('ok' if v in going_on(c) else 'mute') %}
+    <dd>{% if v %}<span class="chip chip-{{ t }}">{{ v }}</span>{% else %}<span class="muted">—</span>{% endif %}{% if cell and cell.note %} <span class="muted">· {{ cell.note }}</span>{% endif %}{% if cell and cell.by_hand and not cell.note.startswith("Set by hand") %} <span class="muted">· set by hand</span>{% endif %}</dd>
     {% endfor %}
   </dl>
   {% else %}<p class="muted">No gates or outcomes yet: they are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</p>{% endif %}
