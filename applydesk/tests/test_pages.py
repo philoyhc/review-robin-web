@@ -1495,6 +1495,7 @@ def test_a_gate_card_follows_ruling_28(client: TestClient) -> None:
         "Source",
         "Min",
         "Max",
+        "All",
         "",
     ]
 

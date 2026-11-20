@@ -687,13 +687,16 @@
     /* A gate item's panel and its members (segment AD1F, ruling 20). */
     /* A gate's evaluator sources (ruling 27, segment AD1G): rank, kind,
        which, min, max, actions; the Total row the same columns. */
-    .ps-row { display: grid; grid-template-columns: 44px 120px minmax(0, 1fr) 64px 64px 150px; gap: 8px; align-items: start; margin-top: 8px; }
+    .ps-row { display: grid; grid-template-columns: 44px 120px minmax(0, 1fr) 64px 64px 52px 150px; gap: 8px; align-items: start; margin-top: 8px; }
     .ps-headrow { margin-top: 4px; font-size: 12px; color: var(--text-subtle); }
     .ps-headrow[hidden], [data-ps-empty][hidden] { display: none; }
     /* Each bound's own caption, shown only where the header row cannot
        name it: on a narrow screen, and the Total's when there are no
        sources (Codex on rung 4a). */
     .ps-n { display: flex; flex-direction: column; }
+    .ps-all { display: flex; flex-direction: column; }
+    .ps-all .btn { height: var(--ps-h); min-height: 0; margin: 0; padding: 0 8px; }
+    .ps-all .btn[hidden] { display: none; }
     .ps-cap { display: none; font-size: 12px; color: var(--text-subtle); }
     .ps-headrow[hidden] ~ .ps-total .ps-cap { display: block; }
     /* One height for every control in a row, menus, bounds and buttons
@@ -733,7 +736,10 @@
     /* A gate's or an outcome's main sections, each under a rule. */
     .pi-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
     .pi-sec > .fc-l:first-child, .pi-sec.pc-row > .fc-l { margin-top: 0; }
-    @media (max-width: 639px) { .ps-row { grid-template-columns: 24px 1fr 1fr; } .ps-headrow { display: none; } .ps-cap { display: block; } }
+    /* Stacked by the card's width, not the window's: a card beside a side
+       column is narrow on a wide screen (AD1O cold read). */
+    .pc-sources { container-type: inline-size; }
+    @container (max-width: 639px) { .ps-row { grid-template-columns: 24px repeat(3, minmax(0, 1fr)); } .ps-ref, .ps-bounds { grid-column: span 2; } .ps-min { grid-column: 2; } .ps-headrow { display: none; } .ps-cap { display: block; } .ps-acts { grid-column: 2 / -1; } .ps-total .ps-all, .ps-total .ps-acts { display: none; } .ps-all:has(> .btn[hidden]) .ps-cap { visibility: hidden; } }
     /* Evaluations' assignments (ruling 27, segment AD1G): a card per gate,
        collapsed to its head; each evaluator a pill marked by its source. */
     .ev-h { margin: 24px 0 8px; font-size: 17px; }

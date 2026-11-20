@@ -180,8 +180,11 @@
   <div class="ps-ref" data-ps-for="nominated"{% if s.kind != "nominated" %} hidden{% endif %}>
     <select class="fc-in" data-ps="question" aria-label="Source {{ n }}: question"{{ sent_attr(sent) }}>{% for q in nominee_questions %}<option{% if s.kind == "nominated" and q == s.ref %} selected{% endif %}>{{ q }}</option>{% endfor %}</select>
   </div>
-  <label class="ps-n"><span class="ps-cap">Min</span><input class="fc-in" data-ps="min" value="{{ s.min }}" inputmode="numeric" aria-label="Source {{ n }}: min"{{ sent_attr(sent) }}></label>
+  <label class="ps-n ps-min"><span class="ps-cap">Min</span><input class="fc-in" data-ps="min" value="{{ s.min }}" inputmode="numeric" aria-label="Source {{ n }}: min"{{ sent_attr(sent) }}></label>
   <label class="ps-n"><span class="ps-cap">Max</span><input class="fc-in" data-ps="max" value="{{ s.max }}" inputmode="numeric" aria-label="Source {{ n }}: max"{{ sent_attr(sent) }}></label>
+  {# Ruling 62: the whole panel, its Min and Max the panel's size, kept
+     in step by the page's script as the panel changes. #}
+  <span class="ps-all"><span class="ps-cap">All</span><button type="button" class="btn btn-toggle" data-ps="all" aria-pressed="{{ 'true' if s.all_members else 'false' }}" aria-label="Source {{ n }}: all of its panel"{% if s.kind != "panel" %} hidden{% endif %}{{ sent_attr(sent) }}>All</button></span>
   {{ pick.new_box() }}
   <span class="ps-acts"><button type="button" class="btn btn-secondary" data-ps-act="up" aria-label="Move source {{ n }} up"{{ sent_attr(sent) }}>▲</button><button type="button" class="btn btn-secondary" data-ps-act="down" aria-label="Move source {{ n }} down"{{ sent_attr(sent) }}>▼</button><button type="button" class="btn btn-secondary" data-ps-act="insert" aria-label="Add a source after source {{ n }}"{{ sent_attr(sent) }}>+</button><button type="button" class="btn btn-destructive" data-ps-act="remove" aria-label="Remove source {{ n }}"{{ sent_attr(sent) }}>×</button></span>
 </div>
@@ -239,14 +242,15 @@
   <div class="pc-sources" data-pc-sources{% if sent %} data-sent{% endif %}>
     <div class="ps-list" data-ps-list>
       {# The columns' names, once, so every row's controls line up. #}
-      <div class="ps-row ps-headrow" aria-hidden="true"{% if not ev[0] %} hidden{% endif %} data-ps-headrow><span>Order</span><span>Kind</span><span>Source</span><span>Min</span><span>Max</span><span></span></div>
+      <div class="ps-row ps-headrow" aria-hidden="true"{% if not ev[0] %} hidden{% endif %} data-ps-headrow><span>Order</span><span>Kind</span><span>Source</span><span>Min</span><span>Max</span><span>All</span><span></span></div>
     {% for s in ev[0] %}{{ source_row(s, loop.index, sent) }}{% endfor %}
       <div class="ps-row ps-total" data-ps-total>
         <span class="ps-rank"></span>
         <strong class="ps-kind">Total</strong>
         <span class="ps-bounds muted" data-ps-bounds>{% if ev[0] %}within {{ bounds[0] }}–{{ bounds[1] }}{% else %}No sources{% endif %}</span>
-        <label class="ps-n"><span class="ps-cap">Min</span><input class="fc-in" data-ps="total-min" value="{{ ev[1].min }}" inputmode="numeric" aria-label="Total: min"{{ sent_attr(sent) }}></label>
+        <label class="ps-n ps-min"><span class="ps-cap">Min</span><input class="fc-in" data-ps="total-min" value="{{ ev[1].min }}" inputmode="numeric" aria-label="Total: min"{{ sent_attr(sent) }}></label>
         <label class="ps-n"><span class="ps-cap">Max</span><input class="fc-in" data-ps="total-max" value="{{ ev[1].max }}" inputmode="numeric" aria-label="Total: max"{{ sent_attr(sent) }}></label>
+        <span class="ps-all"></span>
         <span class="ps-acts"></span>
       </div>
     </div>

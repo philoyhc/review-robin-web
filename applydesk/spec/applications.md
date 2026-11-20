@@ -537,11 +537,19 @@ but the lobby's *Stage* column reads:
       one; or
     - *Panel*, by the shared menu and *+ New panel…* box Form uses (above)
       with *Edit on Panels →*; a panel's members are on Panels, not listed.
+      After its *Min* and *Max*, **All** (a Toggle, ruling 62) gives each
+      dossier the whole panel: *Min* and *Max* show the panel's size and are
+      disabled while it is on, and `stages.sources_of` reads them as the
+      panel's size when the gate is read, so the bounds, the filling and the
+      handoff follow the panel as members join or leave. A sample gate
+      naming only a panel reads as one such source.
 
     Then the **Total**: its *Min* and *Max*, with the bounds the sources allow
     (their mins together, their maxes together) beside it. A Total outside
     them is a problem on the Outline, never silently clamped
-    (`stages.total_problem`). The Outline also names a gate with no source,
+    (`stages.total_problem`). When every source takes *All*, the Total is
+    theirs too: it shows their sizes together, disabled, and is read so, so
+    a panel's change leaves nothing to retype. The Outline also names a gate with no source,
     a source with no panel or question, a min above its max and a missing
     number. **Assignment** is a menu: *Automatic*, *Suggested, then
     approved*, *Assigned by the operator* (what each does is "The
