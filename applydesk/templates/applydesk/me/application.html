@@ -2,7 +2,7 @@
 {% set crumbed = true %}{# the crumb just under the bar, as an exercise's (cold read) #}
 {% block title %}{{ application.title }}{% endblock %}
 {% block content %}
-<nav class="crumbs" aria-label="Breadcrumb"><span class="crumb"><a href="{{ url('/me') }}">User Lobby</a><span aria-hidden="true">/</span></span><span class="crumb"><a href="{{ url('/me/exercises/' ~ exercise.public_id) }}">{{ exercise.name }}</a><span aria-hidden="true">/</span></span><span aria-current="page">Your application</span></nav>
+<nav class="crumbs" aria-label="Breadcrumb"><span class="crumb"><a href="{{ url('/me') }}">User Lobby</a></span><span class="crumb"><a href="{{ url('/me/exercises/' ~ exercise.public_id) }}">{{ exercise.name }}</a></span><span aria-current="page">Your application</span></nav>
 <div class="ptitle"><h1>{{ application.title }}</h1>{% with value = application.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</div>
 <p class="lede">{{ exercise.name }}</p>
 {% with read_only = true %}{% include "applydesk/_placeholder.html" %}{% endwith %}
