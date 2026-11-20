@@ -19,9 +19,9 @@ package's `spec/` and `docs/` were read against the code they describe.
   `guide/findings_2026-11-20_assessment.md`. Two rows here and there
   are the same defect, seen from each side, and say so.
 - **The packages' findings** are in each package's own guide folder:
-  `applydesk/guide/findings_2026-11-20_sweep.md` (7),
-  `residentialapps/guide/findings_2026-11-20_sweep.md` (10) and
-  `utilityapps/guide/findings_2026-11-20_sweep.md` (3).
+  `applydesk/guide/findings_2026-11-20.md` (7),
+  `residentialapps/guide/findings_2026-11-20.md` (10) and
+  `utilityapps/guide/findings_2026-11-20.md` (3).
 
 **Ids** carry the area of the read, and restart at 1 in this file:
 

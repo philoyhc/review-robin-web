@@ -3,7 +3,7 @@
 **Swept:** 2026-11-20 at `6003c8084` (#4063) · **Scope:** `spec/`, `docs/`, the root
 practice docs, `cordware/spec/`, and, for the first time, each application
 package's `spec/` and `docs/` (83 files) · **Previous sweep:**
-`guide/sweep_2026-11-06_window.md` (partial); last corpus sweep
+`guide/archive/sweep_2026-11-06_window.md` (partial); last corpus sweep
 `guide/archive/sweep_2026-10-22_corpus.md` · **Trigger:** due by the cadence, 681
 merges of 500 since 2026-10-22 (29 of 56 days).
 
@@ -27,7 +27,7 @@ prose in full, so three more reads finished the prose a corpus marker needs:
   §3.3 and the two visual-style specs.
 
 Every divergence is a row of `guide/findings_2026-11-20_corpus.md` (64 rows), or,
-for a package, of that package's own `guide/findings_2026-11-20_sweep.md` (Apply
+for a package, of that package's own `guide/findings_2026-11-20.md` (Apply
 Desk 7, Residential 10, Utilities 3). The codebase assessment ran beside it at the
 same commit, `guide/codebase_assessment_20nov.md`; its defect read reproduced B1.
 

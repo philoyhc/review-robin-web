@@ -34,6 +34,6 @@ Residential Apps: one package, mounted under Cordware as two applications, **Res
 | `guide/1D_refinements.md` | Segment 1D item 1's rungs 11–12, from the author's browser check of 2026-11-06: the sample viewers cut to the roles in practice, Home's Log encounter button gone, Log's favorites, durations and types |
 | `guide/fake_ids.md` | Every command the browser walkthroughs need: copy-and-paste PowerShell blocks that run Residential Apps locally as each sample viewer, the sample-viewer tables, and the browser settings |
 | `guide/todo_master.md` | Rulings, dependencies, open decisions and pending revisions |
-| `guide/findings_2026-11-20_sweep.md` | Residential's findings from RRW's corpus sweep of 2026-11-20 (the first to read the packages' prose): 10 rows, the page map, frozen drafts still leaned on, and docs that predate the units ruling |
+| `guide/findings_2026-11-20.md` | Residential's findings from RRW's corpus sweep and codebase assessment of 2026-11-20 (the first to read the packages' prose): 10 rows, the page map, frozen drafts still leaned on, and docs that predate the units ruling |
 
 Shared UX guidance for every Cordware application is `cordware/docs/cordware_mobile_to_desktop.md`.
