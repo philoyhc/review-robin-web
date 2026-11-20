@@ -45,17 +45,20 @@ jobs:
     # pinned Playwright (1.56) installs no Chromium there. Unpin with a
     # Playwright that supports it.
     runs-on: ubuntu-24.04
-    # Three shards in parallel, by folder (segment 22H Item 2), sized on
-    # 4 cores: unit with lint, format and type check about 1.5 min,
-    # integration about 1.7 min, browser about 1.2 min. Together they run
-    # every testpaths root in pyproject.toml exactly once, which
+    # Four shards in parallel, by folder (segment 22H Item 2): unit with
+    # lint, format and type check; integration; browser; and the
+    # application packages, which outgrew the unit shard (2m24 of tests
+    # there on 2026-11-20, findings_2026-11-20_assessment N3). Together
+    # they run every testpaths root in pyproject.toml exactly once, which
     # tests/unit/test_ci_shards.py checks.
     strategy:
       fail-fast: false
       matrix:
         shard:
           - name: unit
-            pytest_args: "tests cordware/tests applydesk/tests residentialapps/tests utilityapps/tests --ignore=tests/integration --ignore=tests/browser"
+            pytest_args: "tests --ignore=tests/integration --ignore=tests/browser"
+          - name: packages
+            pytest_args: "cordware/tests applydesk/tests residentialapps/tests utilityapps/tests"
           - name: integration
             pytest_args: "tests/integration"
           - name: browser
@@ -76,7 +79,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[dev]
 
-      # The unit shard needs it too: Residential's and Utilities' own
+      # The packages shard needs it too: Residential's and Utilities' own
       # browser tests run there. The browser comes from Playwright's own
       # download host; its system packages (mostly fonts) come from
       # Ubuntu's mirror, which a runner sometimes cannot reach. That
@@ -86,11 +89,11 @@ jobs:
       # libraries Chromium needs, and a browser test that truly cannot
       # run still fails (RRW_REQUIRE_BROWSER below).
       - name: Install Chromium for the browser tests
-        if: matrix.shard.name != 'integration'
+        if: matrix.shard.name == 'browser' || matrix.shard.name == 'packages'
         run: python -m playwright install chromium
 
       - name: Install Chromium's system packages
-        if: matrix.shard.name != 'integration'
+        if: matrix.shard.name == 'browser' || matrix.shard.name == 'packages'
         run: |
           for attempt in 1 2; do
             if timeout 240 python -m playwright install-deps chromium; then
