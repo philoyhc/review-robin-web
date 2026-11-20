@@ -243,6 +243,11 @@ plan moved here from Cordware.
 - **Rung 6 (2026-11-20).** `spec-writer`'s charter writes a package's
   `spec/` at that package's closes; the skill and `CLAUDE.md` say a
   package plan closes like a root one, both tools run. Prose; no read.
+- **Rung 7 (2026-11-20).** The cadence ruling is written down: per
+  closing unit, with the cap and the iteration exemption, in
+  `CLAUDE.md`, §6.4, constitution III and the skill's close step.
+  `new_project_practices_setup.md` and §6.4's table follow. Prose; no
+  read.
 
 ## PR ladder
 

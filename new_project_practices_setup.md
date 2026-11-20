@@ -456,8 +456,8 @@ first things a new project reaches for:
 - **Write the merge policy before it becomes a habit** (step 3,
   `CONTRIBUTING.md`). Do not add branch protection until you have
   measured the policy being broken.
-- **The diff reviewer reads from the first PR**, once per item under the
-  cadence in `CLAUDE.md`; retrofitting it later means its first read is
+- **The diff reviewer reads from the first PR**, once per closing unit
+  under the cadence in `CLAUDE.md`; retrofitting it later means its first read is
   against a surface it has no history with.
 - **The first time a code constant is described in prose, derive a test
   from the constant** — the template is the source's
