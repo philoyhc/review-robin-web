@@ -100,10 +100,13 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    `_extract_data.py`, `_rehydrate.py`, `_workflow.py`,
    `_sys_admin.py`, …, with shared plumbing in `_shared.py`). The Setup
    cards' upload handling, the roster import every card posts to and the
-   upload holds, is `app/web/roster_import.py`, outside the package. The
-   slices import it, and it reads the package's guards and templates from
+   upload holds, is `app/web/roster_import.py`, outside the package; Quick
+   Setup's pipeline, which checks every attached file and saves them all
+   in one unit for Quick Setup, New session and the handoffs, is
+   `app/web/quick_setup_pipeline.py` beside it (segment 23I). The slices
+   import both, and each reads the package's guards and templates from
    `_shared.py` inside the functions that need them, never at its top, so
-   the two never import each other at load
+   neither imports the package at load
    (`tests/unit/test_import_order.py`). Reviewers, Reviewees and
    Observers all post their imports to its `_handle_import`. The bodies
    the roster slices would otherwise repeat (bulk inactivate, reactivate

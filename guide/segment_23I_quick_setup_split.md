@@ -100,6 +100,13 @@ Taken 2026-11-20 at `2b3b1aed4`.
 After the split, about 880 lines stay in `_quick_setup.py`, the pipeline
 holds about 700, and `_handoffs.py` grows to about 425.
 
+## Status
+
+- **2026-11-20, rung 1.** `_read_settings_csv` moved with the pipeline:
+  only the pipeline calls it. `spec/quick_setup_card_spec.md` named the
+  pipeline too and joins Doc impact. Base for the cumulative read:
+  `c416ab377`, `main` before rung 1.
+
 ## PR ladder
 
 Cumulative read: `diff-reviewer` reads the diff from rung 1's base to
@@ -166,4 +173,5 @@ None.
 - `spec/architecture.md` — the operator routes package paragraph names `app/web/quick_setup_pipeline.py` beside `roster_import.py`, on the same import terms (PR 1).
 - `spec/handoffs.md` — the pipeline's new names at the create and re-send steps (PR 1); the create and re-send routes live in `_handoffs.py` (PR 2).
 - `spec/csv_contracts.md` — the pipeline's name in the commit-ownership note (PR 1).
+- `spec/quick_setup_card_spec.md` — the pipeline's name at Per-slot dispatch and Submission semantics (PR 1; found at build).
 - `guide/todo_master.md` — the queue entry added at open, deleted at close.

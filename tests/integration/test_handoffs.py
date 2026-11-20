@@ -35,8 +35,7 @@ from app.db.models import (
 )
 from app.services import handoffs
 from app.services.instruments import GROUP_KIND_SENTINEL
-from app.web import views
-from app.web.routes_operator import _quick_setup
+from app.web import quick_setup_pipeline, views
 
 URL = "/operator/handoffs/sessions"
 REVIEWERS = (
@@ -410,7 +409,7 @@ def test_an_error_after_the_create_leaves_no_draft(
     async def broken(**_: Any) -> None:
         raise RuntimeError("lock wait")
 
-    monkeypatch.setattr(_quick_setup, "_run_quick_setup_contents", broken)
+    monkeypatch.setattr(quick_setup_pipeline, "run_contents", broken)
     with pytest.raises(RuntimeError):
         _post(client, _bundle())
     assert _count(db, ReviewSession) == 0
@@ -421,12 +420,11 @@ def test_a_lapsed_directory_sign_in_is_named_not_blamed_on_a_file(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     async def stopped(**_: Any) -> Any:
-        return _quick_setup._SlotRefusal(  # pyright: ignore[reportPrivateUsage]  -- the refusal under test
-            "reviewers",
-            _quick_setup._SlotFailure(views.DIRECTORY_SIGN_IN),  # pyright: ignore[reportPrivateUsage]  -- as above
+        return quick_setup_pipeline.SlotRefusal(
+            "reviewers", quick_setup_pipeline.SlotFailure(views.DIRECTORY_SIGN_IN)
         )
 
-    monkeypatch.setattr(_quick_setup, "_run_quick_setup_contents", stopped)
+    monkeypatch.setattr(quick_setup_pipeline, "run_contents", stopped)
     reply = _post(client, _bundle())
     assert reply.status_code == 409 and reply.json()["error"] == "directory_sign_in"
     assert "slot" not in reply.json()
@@ -519,7 +517,7 @@ def test_a_replay_of_a_transfer_cut_off_before_its_rosters_deletes_nothing(
     async def cut_off(**_: Any) -> None:
         raise CutOff
 
-    monkeypatch.setattr(_quick_setup, "_run_quick_setup_contents", cut_off)
+    monkeypatch.setattr(quick_setup_pipeline, "run_contents", cut_off)
     with pytest.raises(BaseException):  # noqa: B017 -- the test client's wrapping varies
         _post(client, bundle)
     monkeypatch.undo()
@@ -555,7 +553,7 @@ def test_a_replay_while_the_first_try_may_still_run_keeps_its_transfer(
     async def cut_off(**_: Any) -> None:
         raise CutOff
 
-    monkeypatch.setattr(_quick_setup, "_run_quick_setup_contents", cut_off)
+    monkeypatch.setattr(quick_setup_pipeline, "run_contents", cut_off)
     with pytest.raises(BaseException):  # noqa: B017 -- the test client's wrapping varies
         _post(client, bundle)
     monkeypatch.undo()
@@ -833,7 +831,7 @@ def test_status_of_an_unfinished_transfer_says_so(
     async def cut_off(**_: Any) -> None:
         raise CutOff
 
-    monkeypatch.setattr(_quick_setup, "_run_quick_setup_contents", cut_off)
+    monkeypatch.setattr(quick_setup_pipeline, "run_contents", cut_off)
     with pytest.raises(BaseException):  # noqa: B017 -- the test client's wrapping varies
         _post(client, bundle)
     monkeypatch.undo()
@@ -1062,7 +1060,7 @@ def test_the_csvs_need_the_session_now_and_a_finished_transfer(
     async def cut_off(**_: Any) -> None:
         raise CutOff
 
-    monkeypatch.setattr(_quick_setup, "_run_quick_setup_contents", cut_off)
+    monkeypatch.setattr(quick_setup_pipeline, "run_contents", cut_off)
     with pytest.raises(BaseException):  # noqa: B017 -- the test client's wrapping varies
         _post(client, unfinished)
     monkeypatch.undo()

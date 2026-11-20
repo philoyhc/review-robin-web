@@ -260,7 +260,7 @@ def test_an_empty_file_chosen_is_read_not_swapped_for_the_held_one(
     """Findings S2: a file chosen with nothing in it is the operator's
     upload, refused as an empty one is, not a cue to send the held file.
     A filename is what marks a file chosen, as Quick Setup's
-    ``_attached`` reads it; an untouched input posts an empty name."""
+    ``quick_setup_pipeline.attached`` reads it; an untouched input posts an empty name."""
     model, first, held = _EMPTY_FILE_CARDS[page]
     if first is None:
         s = _seed(db, client, f"held-empty-{page}")

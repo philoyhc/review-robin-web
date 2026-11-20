@@ -232,7 +232,6 @@ def test_a_toggle_turned_on_by_another_request_is_not_logged_again(
     from sqlalchemy import update
 
     from app.services import session_guard
-    from app.web.routes_operator import _quick_setup
 
     rs = _session(client, db, "tabs-race", observers_enabled=False)
     real_lock = session_guard.lock_session
@@ -246,7 +245,7 @@ def test_a_toggle_turned_on_by_another_request_is_not_logged_again(
         )
         return real_lock(db_, session_)
 
-    monkeypatch.setattr(_quick_setup.session_guard, "lock_session", racer_commits_first)
+    monkeypatch.setattr(session_guard, "lock_session", racer_commits_first)
 
     _submit_all(client, rs, observers=OBSERVERS)
 
