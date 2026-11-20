@@ -597,6 +597,14 @@ where a ruling below differs from it, the ruling wins.
     native checkbox for a lone setting in a form, Primary first and
     sparingly, RRW's table headers and sort badges, Upload / Download,
     RRW's ISO dates on operator pages, and an operator dossier page.
+65. **Links between Process, a gate and its emails, and the gate page's
+    layout** (author, 2026-11-20, from mockups): a gate card on Process
+    opens its gate page (*Open Gate N →*) and the gate page links back
+    (*Set on Process →*); each email ticked on Process links its template
+    (*Template →*) and each template links back. The gate page's Review
+    Robin card is laid out in two columns, its four files as 2 × 2 tiles
+    and its progress, actions first, as a full-width panel
+    (`applydesk/guide/segment_AD1Q_gate_links.md`).
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
@@ -693,6 +701,7 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
+| AD1Q — Gate links and layout | Ruling 65 (`applydesk/guide/segment_AD1Q_gate_links.md`) | Building |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
