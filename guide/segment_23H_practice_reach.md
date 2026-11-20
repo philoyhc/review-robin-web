@@ -240,6 +240,9 @@ plan moved here from Cordware.
       section per proof of concept.
   - **Mutations:** an unregistered module fails, and so does a mapping
     to a missing spec.
+- **Rung 6 (2026-11-20).** `spec-writer`'s charter writes a package's
+  `spec/` at that package's closes; the skill and `CLAUDE.md` say a
+  package plan closes like a root one, both tools run. Prose; no read.
 
 ## PR ladder
 
