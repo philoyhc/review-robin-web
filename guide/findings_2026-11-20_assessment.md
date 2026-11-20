@@ -2,7 +2,7 @@
 
 **Found by:** the defect read and the package read of
 `guide/codebase_assessment_20nov.md` · **Read at:** `6003c8084` (#4063) ·
-**Open:** N1.
+**Open:** none.
 
 RRW's defects and notes from the assessment's reads; the fix checklist, struck
 by the PR that fixes each row, or marked declined with the reason. Spec drift is
@@ -36,7 +36,7 @@ one. Line numbers are at `6003c8084`.
 
 ## Notes, not defects
 
-- **N1** — the lobby runs `due_actions` once per listed session, and that runs
+- ~~**N1**~~ — **Narrowed in #4071**: a session with nothing due now answers with no query; one with an entry due still costs its audit read and count, which is the session the Due pill is for. The lobby runs `due_actions` once per listed session, and that runs
   `monitoring.per_reviewer_progress` when an entry is due: N+1 work, a
   performance note only.
 - ~~**N2**~~ — **Done in #4070**: a re-send that carries Start or End rechecks the stored offsets as the Settings import does. A re-send that moves Start or End does not recheck existing invite or

@@ -65,17 +65,23 @@ def _aware(value: datetime) -> datetime:
     return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
 
 
+def _can_act_on(review_session: ReviewSession, kind: str) -> bool:
+    """Whether ``kind`` can have anything left in the session's state:
+    invites while prepared, reminders while activated."""
+    if kind == "invite":
+        return lifecycle.is_validated(review_session) or lifecycle.is_ready(review_session)
+    return lifecycle.is_ready(review_session)
+
+
 def _left_to_act_on(db: Session, review_session: ReviewSession, kind: str) -> int:
     """Invitations still to send (prepared), or reviewers with an
     invitation still incomplete (activated) — the set Remind incomplete
     reminds, whether or not that invitation was ever sent, since the
     operator may have shared the link instead; 0 outside those states."""
-    if kind == "invite":
-        if not (lifecycle.is_validated(review_session) or lifecycle.is_ready(review_session)):
-            return 0
-        return len(invitations.list_sendable_invitations(db, review_session.id))
-    if not lifecycle.is_ready(review_session):
+    if not _can_act_on(review_session, kind):
         return 0
+    if kind == "invite":
+        return len(invitations.list_sendable_invitations(db, review_session.id))
     from app.services import monitoring  # local, as invitations does: a circular import
 
     return sum(
@@ -90,7 +96,13 @@ def due_actions(
 ) -> list[DueAction]:
     """The entries due on ``review_session`` now, earliest first; none
     while scheduled email is on, and none where a linked application
-    takes the email lock."""
+    takes the email lock.
+
+    The lobby asks this of every session it lists (findings 2026-11-20
+    assessment N1), so what needs no query is asked first: an anchor and
+    offsets, a state the kind can act in, an entry whose moment has
+    passed. The audit read of handled entries, then the count of what is
+    left, run only for a session that still has one due."""
     if scheduled_events.scheduled_send_enabled():
         return []
     if linked_apps.locks(review_session, linked_apps.Lock.EMAIL):
@@ -100,20 +112,23 @@ def due_actions(
     for kind, (column, anchor_column, _event) in _KINDS.items():
         anchor = getattr(review_session, anchor_column)
         offsets = json_list(getattr(review_session, column) or []) or []
-        if anchor is None or not offsets:
+        if anchor is None or not offsets or not _can_act_on(review_session, kind):
             continue
         anchor = _aware(anchor)
-        consumed = scheduled_events.fired_offsets(db, review_session, kind, anchor)
-        entries: list[tuple[int, str, datetime]] = []
+        passed: list[tuple[int, str, datetime]] = []
         for index, raw in enumerate(offsets):
-            if not isinstance(raw, str) or index in consumed:
+            if not isinstance(raw, str):
                 continue
             try:
                 at = anchor + scheduled_events.parse_iso_duration(raw)
             except ValueError:
                 continue
             if at <= moment:
-                entries.append((index, raw, at))
+                passed.append((index, raw, at))
+        if not passed:
+            continue
+        consumed = scheduled_events.fired_offsets(db, review_session, kind, anchor)
+        entries = [entry for entry in passed if entry[0] not in consumed]
         if not entries:
             continue
         count = _left_to_act_on(db, review_session, kind)
