@@ -3,6 +3,17 @@
 Plans whose segments have closed, kept as the record of intended versus
 done. Open work is in `applydesk/guide/todo_master.md`.
 
+> **Corrected 2026-11-20 (RRW segment 23H, rung 1).** Every plan below
+> says `tools/close_check.py` "reads only RRW's `guide/`", so each was
+> closed by hand. That was never so: the tool has read Apply Desk's plans
+> since 2026-11-02 (`APP_DIRS` in `tools/close_check/_manifest.py`), ten
+> days before AD1 opened. Run over all seventeen on 2026-11-20, fourteen
+> pass. AD1G, AD1H and AD1K fail C3 on `applydesk/spec/applications.md`
+> only because their close PRs archived the plan before landing its spec
+> edits, and the tool's window then ended at the archive commit. 23H's
+> rung 2 moves that end to the merge, after which all seventeen pass.
+> The plans themselves are left as written (constitution V).
+
 | Plan | Segment |
 |---|---|
 | `segment_AD1_skeleton.md` | AD1: the package, its mount, health and packaging, then the URL map as placeholder pages on sample data; every page since rebuilt by its own segment (closed 2026-11-19) |
