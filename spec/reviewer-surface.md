@@ -124,8 +124,9 @@ Top-to-bottom, the page renders:
    `request.state.guide_hidden` hide flag, read fail-open) and is absent
    for one who resolves none.
 2. **Preview banner** — `body.ui-v2` only (operator preview mode
-   reuses this template); rendered as `.banner.banner-info`. Under it,
-   on the reviewer's surface and the preview alike, the
+   reuses this template); rendered as `.banner.banner-info`. Next, under
+   the preview banner when there is one, on the reviewer's surface and
+   the preview alike, the
    **dropped-fields notice** (also `.banner.banner-info`): "Some saved
    responses are no longer collected: …", naming each field the
    reviewer holds an answer on that is no longer `visible`, with its
@@ -2076,9 +2077,10 @@ compatible either way:
   above). The action row is ordered Save / Cancel / Submit / divider /
   page navigation.
 - **Keyboard navigation.** Tab walks cells across a row, which the
-  browser gives for free, and that is all that ships. The one `keydown`
-  handler the surface takes is `base.html`'s fit script, which keeps
-  Enter out of a one-line box (above); nothing moves focus. Column-wise
+  browser gives for free, and that is all that ships. The surface binds
+  no `keydown` handler of its own; the only one that touches the
+  response boxes is `base.html`'s fit script, which keeps Enter out of a
+  one-line box (above), and nothing moves focus. Column-wise
   Enter / Shift+Enter movement
   is listed below as unbuilt; the two obligations it would carry are
   recorded there so they are not rediscovered.

@@ -348,7 +348,8 @@ sees:
 - Email template content (invitation, reminder, confirmation
   copy).
 - Optional welcome message / instructions, shown above the form.
-  Plain text, autoescaped, its line breaks kept (`pre-line`); no
+  Built as the session description: plain text, autoescaped, its line
+  breaks kept (`pre-line`); no
   markdown, no embedded HTML.
 - Optional institution name (small, supplementary, displayed near
   the session name in the page header).
