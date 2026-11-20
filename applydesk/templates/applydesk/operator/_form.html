@@ -5,6 +5,7 @@
 {% set single = (cards | selectattr("kind", "equalto", "field") | list | length) == 1 %}
 <div class="fb-split" data-form-builder data-unsaved-root data-exercise="{{ exercise.public_id }}"{% if form_lock.fixed %} data-fb-fixed="{{ form_lock.reason }}"{% endif %}>
   <div class="fb-main">
+    <p class="muted pc-intro">The application form, as applicants fill it in: its sections, questions and page breaks, in order. Preview shows it as they see it; Process says when it opens.</p>
     {% if form_lock.fixed %}<p class="pc-line muted fb-fixed-note" data-fb-fixed-note>{{ form_lock.reason }}. The form reads as applicants see it; its cards open and shut.</p>{% endif %}
     {# The form's own title and description: collapsible, never moved or
        deleted. #}
@@ -129,7 +130,9 @@
     var text = card.dataset.type === "text";
     card.querySelector('[data-sum="label"]').textContent = val(card, "label") || (text ? "Untitled text" : "Untitled question");
     card.querySelector('[data-sum="help"]').textContent = val(card, "help");
-    card.querySelector('[data-sum="type"]').textContent = summary(card);
+    var sumChip = card.querySelector('[data-sum="type"]');
+    sumChip.textContent = summary(card);
+    sumChip.title = sumChip.textContent;
     var req = pressed(card, "required"), shown = pressed(card, "shown");
     var r = card.querySelector('[data-sum="required"]');
     r.textContent = req ? "Required" : "Optional";

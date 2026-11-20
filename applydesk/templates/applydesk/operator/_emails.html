@@ -9,13 +9,13 @@
    Outline linking every email and the merge tags. #}
 <div class="fb-split" data-emails data-em-ex="{{ exercise.public_id }}"{% if scratch_page %} data-em-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}" data-em-revision="{{ process_revision }}"{% endif %}>
 <div class="fb-main">
-<p>Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk (AD7); Review Robin sends none.{% if scratch_page %} A template you save is kept in this scratch exercise, and the status row's <em>Emails</em> and Home follow it.{% else %} A template you save is kept in this tab: nothing is saved until AD2, and until then the status row's <em>Emails</em>, Home and Dossiers' <em>Released</em> read the sample's templates.{% endif %}</p>
+<p class="muted pc-intro">Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk (AD7); Review Robin sends none.{% if scratch_page %} A template you save is kept in this scratch exercise, and the status row's <em>Emails</em> and Home follow it.{% else %} A template you save is kept in this tab: nothing is saved until AD2, and until then the status row's <em>Emails</em>, Home and Dossiers' <em>Released</em> read the sample's templates.{% endif %}</p>
 {% for e in emails %}
 {% set sample = email_sample(e) %}
 {% set t = email_text(e) %}
 <section class="card em-card" id="em-{{ loop.index }}" data-email="{{ e.name }}" data-em-item="{{ e.item }}" data-em-audience="{{ e.audience }}" data-em-kind="{{ e.kind }}" data-em-sample="{{ sample | tojson | forceescape }}">
   <h2>{{ e.name }} <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}" data-em-chip>{{ "Written" if e.ok else "Owed" }}</span></h2>
-  <p class="muted">{{ e.when }}</p>
+  <p class="muted em-help">{{ e.when }}</p>
   {# A written sample template shows its kind's default; an owed one,
      empty; a scratch exercise's, as its card last saved it. #}
   <div class="field"><label>Subject <input type="text" class="fc-in" data-em-subject value="{{ t[0] }}" maxlength="300"></label></div>
@@ -43,7 +43,7 @@
     <p class="muted fb-counts" data-em-counts>{{ emails | length }} {{ "email" if emails | length == 1 else "emails" }} · {{ n_ok }} written · {{ emails | length - n_ok }} owed</p>
     {% else %}<p class="muted">No emails yet.</p>{% endif %}
     <h2 class="em-tags-h">Merge tags</h2>
-    <p class="muted">Click a tag to put it in the box you last used. Each email takes its own kind's tags; <code>$$</code> writes a <code>$</code>.</p>
+    <p class="muted em-help">Click a tag to put it in the box you last used. Each email takes its own kind's tags; <code>$$</code> writes a <code>$</code>.</p>
     <ul class="fb-o-list em-tags" data-em-tags>
       {% for f, help, kinds in tag_rows %}
       <li><button type="button" class="fb-o-item" data-em-tag="{{ f }}" aria-describedby="em-tag-{{ f }}"><code>${{ f }}</code></button> <span class="muted" id="em-tag-{{ f }}">{{ help }} ({{ kinds | join(", ") }})</span></li>{% else %}<li class="muted">None: no email is owed yet.</li>{% endfor %}

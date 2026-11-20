@@ -44,7 +44,7 @@
   <section class="card pn-roster" aria-label="Panels roster">
     <div class="pn-readout">
       <span class="pn-rl">People:</span> <span class="chip chip-info" data-pn-people>{{ roster | length }}</span>
-      <span class="pn-rsep" aria-hidden="true">|</span>
+      <span class="pn-rsep" aria-hidden="true">·</span>
       <span class="pn-rl">Panels:</span>
       <span class="pn-chips" data-pn-chips>{% for p in panels %}<span class="chip chip-info" data-panel="{{ p.key }}"><span data-pn-name>{{ p.name }}</span>&nbsp;(<span data-pn-num>{{ p.members | length }}</span>)</span>{% endfor %}</span>
       <span class="pn-rl" data-pn-inuse>· {{ used | length }} in use</span>

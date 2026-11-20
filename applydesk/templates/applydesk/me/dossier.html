@@ -2,7 +2,7 @@
 {% set crumbed = true %}{# the crumb just under the bar, as an exercise's (cold read) #}
 {% block title %}{{ "Application" if exercise.blind else application.title }}{% endblock %}
 {% block content %}
-<nav class="crumbs" aria-label="Breadcrumb"><span class="crumb"><a href="{{ url('/me') }}">User Lobby</a><span aria-hidden="true">/</span></span><span class="crumb"><a href="{{ url('/me/exercises/' ~ exercise.public_id) }}">{{ exercise.name }}</a><span aria-hidden="true">/</span></span><span aria-current="page">Dossier</span></nav>
+<nav class="crumbs" aria-label="Breadcrumb"><span class="crumb"><a href="{{ url('/me') }}">User Lobby</a></span><span class="crumb"><a href="{{ url('/me/exercises/' ~ exercise.public_id) }}">{{ exercise.name }}</a></span><span aria-current="page">Dossier</span></nav>
 {# The dossier (rulings 5, 6, 9, 13 and 25): the part shown to
    reviewers only; in a blind exercise, no name, only its Dossier ID
    (rulings 13, 43; AD-89). #}

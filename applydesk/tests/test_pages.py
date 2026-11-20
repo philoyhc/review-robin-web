@@ -1630,9 +1630,10 @@ def test_crumbs_and_headings_after_the_register(client: TestClient) -> None:
         page = client.get(path).text
         assert 'class="crumbs" aria-label="Breadcrumb"' in page and 'class=" crumbed"' in page
         assert '<a href="/applydesk/me">User Lobby</a>' in page
-        # Each crumb keeps its separator (AD-102).
-        root = '<a href="/applydesk/me">User Lobby</a><span aria-hidden="true">/</span>'
-        assert f'<span class="crumb">{root}</span>' in page
+        # The separator is drawn before each later crumb, so a wrapped
+        # name strands none (AD-102; ruling 64, F11): no "/" in the markup.
+        assert '<span class="crumb"><a href="/applydesk/me">User Lobby</a></span>' in page
+        assert 'aria-hidden="true">/</span>' not in page
         assert f'aria-current="page">{current}' in page
     app = client.get(f"{me}/applications/f2ps7nyh4k").text
     assert "<h3" not in app.split('class="page"', 1)[-1].split("<footer", 1)[0]

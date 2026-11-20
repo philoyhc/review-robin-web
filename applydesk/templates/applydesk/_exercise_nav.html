@@ -3,7 +3,7 @@
    breadcrumb, then a card holding Exercise Home double-height on the
    left, the Setup and Operations rows, and the status row. #}
 {% set here_tab = (nav.setup + nav.operations) | selectattr("on") | first %}
-<nav class="crumbs" aria-label="Breadcrumb"><span class="crumb"><a href="{{ url('/operator/exercises') }}">Operator Lobby</a><span aria-hidden="true">/</span></span>{% if here_tab and crumb_child is defined %}<span class="crumb"><a href="{{ url(nav.home.path) }}">{{ exercise.name }}</a><span aria-hidden="true">/</span></span><span class="crumb"><a href="{{ url(here_tab.path) }}">{{ here_tab.label }}</a><span aria-hidden="true">/</span></span><span aria-current="page">{{ crumb_child }}</span>{% elif here_tab %}<span class="crumb"><a href="{{ url(nav.home.path) }}">{{ exercise.name }}</a><span aria-hidden="true">/</span></span><span aria-current="page">{{ here_tab.label }}</span>{% else %}<span aria-current="page">{{ exercise.name }}</span>{% endif %}</nav>
+<nav class="crumbs" aria-label="Breadcrumb"><span class="crumb"><a href="{{ url('/operator/exercises') }}">Operator Lobby</a></span>{% if here_tab and crumb_child is defined %}<span class="crumb"><a href="{{ url(nav.home.path) }}">{{ exercise.name }}</a></span><span class="crumb"><a href="{{ url(here_tab.path) }}">{{ here_tab.label }}</a></span><span aria-current="page">{{ crumb_child }}</span>{% elif here_tab %}<span class="crumb"><a href="{{ url(nav.home.path) }}">{{ exercise.name }}</a></span><span aria-current="page">{{ here_tab.label }}</span>{% else %}<span aria-current="page">{{ exercise.name }}</span>{% endif %}</nav>
 <div class="xnav">
   <nav class="xnav-grid" aria-label="{{ exercise.name }}">
     <a class="xnav-home{% if nav.home.on %} on{% endif %}" href="{{ url(nav.home.path) }}"{% if nav.home.on %} aria-current="page"{% endif %}>{{ nav.home.label }}</a>
@@ -16,5 +16,5 @@
       {% for t in nav.operations %}<a class="xnav-tab{% if t.on %} on{% endif %}" href="{{ url(t.path) }}"{% if t.on %} aria-current="page"{% endif %}>{{ t.label }}</a>{% endfor %}
     </div>
   </nav>
-  <p class="xnav-status" data-status>{% for p in status %}{{ " · " if not loop.first }}{{ p.label }}: <span class="chip chip-{{ p.tone }}">{{ p.text }}</span>{% endfor %}</p>
+  <p class="xnav-status" data-status>{% for p in status %}<span class="xs-i">{{ "· " if not loop.first }}{{ p.label }}: <span class="chip chip-{{ p.tone }}">{{ p.text }}</span></span>{{ " " if not loop.last }}{% endfor %}</p>
 </div>
