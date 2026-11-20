@@ -871,7 +871,7 @@ def apply_batch(
     return len(targets)
 
 
-#: The longest Unit the bar's top line takes (docs/header_chrome.md §6).
+#: The longest Unit the bar's top line takes (cordware/spec/header_chrome.md §6).
 UNIT_MAX_LENGTH = 80
 
 
@@ -892,7 +892,7 @@ def set_unit(
 ) -> int:
     """Set (or, given an empty value, clear) the Unit of the selected
     operators and admins, all or nothing (segment 20D,
-    `docs/header_chrome.md` §6). The caller is a system admin
+    `cordware/spec/header_chrome.md` §6). The caller is a system admin
     (``require_sys_admin``); a row with no role is refused, as it shows
     no top line of its own. Each row whose Unit changes is audited
     ``workspace.user_unit_set``; one already holding the value is left

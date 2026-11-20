@@ -1,4 +1,4 @@
-"""An operator's Unit (segment 20D rung 5, `docs/header_chrome.md` §6):
+"""An operator's Unit (segment 20D rung 5, `cordware/spec/header_chrome.md` §6):
 set only by a system admin, audited, and shown as the top line by the
 "Which name a page shows" table."""
 

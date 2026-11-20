@@ -78,7 +78,7 @@ class User(Base, TimestampMixin):
     preferences: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Segment 20D: the operator's Unit, the top line of the bar on the
-    # sessions they create (docs/header_chrome.md §6). Set only by a
+    # sessions they create (cordware/spec/header_chrome.md §6). Set only by a
     # system admin (``users.set_unit``); NULL means the workspace
     # default, ``CORDWARE_INSTITUTION_NAME``.
     unit: Mapped[str | None] = mapped_column(String(80), nullable=True)

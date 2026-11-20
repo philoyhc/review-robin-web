@@ -105,7 +105,7 @@ def is_local(settings: IdentitySettings | None = None) -> bool:
 
 def institution_name(settings: IdentitySettings | None = None) -> str:
     """`CORDWARE_INSTITUTION_NAME`, trimmed: the workspace default for
-    the top bar's top line (`docs/header_chrome.md` §6). Empty means no
+    the top bar's top line (`cordware/spec/header_chrome.md` §6). Empty means no
     top line."""
     return _settings(settings).institution_name.strip()
 

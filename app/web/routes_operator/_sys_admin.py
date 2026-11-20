@@ -709,7 +709,7 @@ def bulk_set_unit(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     """Set the selected operators' Unit, or clear it back to the
-    workspace default when empty (segment 20D, `docs/header_chrome.md`
+    workspace default when empty (segment 20D, `cordware/spec/header_chrome.md`
     §6), all or nothing (``users.set_unit``). Registered before
     ``bulk-{action}``, which would otherwise take the path."""
     try:

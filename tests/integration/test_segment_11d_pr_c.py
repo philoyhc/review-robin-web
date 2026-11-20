@@ -142,7 +142,7 @@ def test_the_dashboard_does_not_link_to_itself(
     response = make_client(rae).get("/me")
     assert response.status_code == 200
     # Since 20D the switcher lists it, marked current rather than
-    # linked as a way back (`docs/header_chrome.md` §3).
+    # linked as a way back (`cordware/spec/header_chrome.md` §3).
     assert 'data-your-reviews aria-current="page">User Lobby' in response.text
 
 

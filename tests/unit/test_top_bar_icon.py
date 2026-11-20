@@ -1,4 +1,4 @@
-"""The top bar's icon is the tab's favicon (`docs/header_chrome.md` §2):
+"""The top bar's icon is the tab's favicon (`cordware/spec/header_chrome.md` §2):
 one SVG serves both, so the two copies must not drift apart."""
 
 from __future__ import annotations

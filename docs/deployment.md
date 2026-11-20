@@ -63,7 +63,7 @@ while the app was down fires on the next pass or request (a release-window stamp
 | `RRW_DATABASE_URL` | local SQLite file | RRW's database. `DATABASE_URL` is the older name; the environment is read before `.env`, so an exported `DATABASE_URL` beats an `RRW_DATABASE_URL` in `.env` (`spec/settings_inventory.md`). |
 | `CORDWARE_APPS` | every registered app | Which applications the host mounts, comma-separated; empty runs the host alone. |
 | `CORDWARE_PUBLIC_ORIGIN` | unset | The address users reach the host at, when a gateway sends the App Service's own host name (`cordware/spec/host.md`). |
-| `CORDWARE_INSTITUTION_NAME` | unset | The top bar's top line (`docs/header_chrome.md` §6); unset shows none. |
+| `CORDWARE_INSTITUTION_NAME` | unset | The top bar's top line (`cordware/spec/header_chrome.md` §6); unset shows none. |
 | `OPERATOR_EMAILS` / `SYS_ADMIN_EMAILS` | empty | First-sign-in seeds for the operator and admin flags. Outside `local`, at least one must be set or RRW refuses to start (`docs/operations_runbook.md`). |
 | `SUPER_ADMIN_EMAILS` | empty | The protected top tier, derived on every request, never stored. |
 | `PARTICIPANT_TOKEN_SALT` | built-in default | The per-deployment salt in every participant token; a deployment should set its own (`spec/settings_inventory.md`). |

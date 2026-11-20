@@ -1314,7 +1314,7 @@ def test_chrome_shows_super_admin_suffix(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The account menu labels a super-admin "super admin", not "sys
-    admin" (20D, `docs/header_chrome.md` §4)."""
+    admin" (20D, `cordware/spec/header_chrome.md` §4)."""
     _bootstrap_super_admin(monkeypatch, email="alice@example.edu")
     body = client.get("/operator/sys-admin/users").text
     assert "<span>super admin</span>" in body

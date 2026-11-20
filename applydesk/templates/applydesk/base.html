@@ -71,7 +71,7 @@
     a { color: var(--text-link); }
     .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-    /* The bar (docs/header_chrome.md §2-§4), to Residential's measures. */
+    /* The bar (cordware/spec/header_chrome.md §2-§4), to Residential's measures. */
     .topbar { border-bottom: 1px solid var(--border-subtle); background: var(--surface-page); }
     .tb-in { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 1232px; margin: 0 auto; padding: 16px 16px 8px; }
     .switch, .acct-menu { position: relative; }
@@ -1011,7 +1011,7 @@
     })();
   </script>
   <script>
-    // The bar's two menus (docs/header_chrome.md §7): one open at a time;
+    // The bar's two menus (cordware/spec/header_chrome.md §7): one open at a time;
     // Escape closes the open one and returns focus to its summary; a click
     // outside closes it. Without this they still open and close.
     (function () {

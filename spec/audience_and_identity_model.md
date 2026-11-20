@@ -359,7 +359,7 @@ every visit (plain text, not only the first visit). The contact line is
 `help_contact`, shown as "Questions? Contact …" on the reviewer surface
 and in the default invitation, reminder and responses-received emails;
 each drops the line when it is unset. The institution name shows as the
-top bar's top line since segment 20D (`docs/header_chrome.md` §6); beside
+top bar's top line since segment 20D (`cordware/spec/header_chrome.md` §6); beside
 the session name in the header it is deferred
 (`guide/deferred_consolidated.md`, "Institution name beside the session
 name").

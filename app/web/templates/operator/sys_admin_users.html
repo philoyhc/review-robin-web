@@ -448,7 +448,7 @@
             <td>{{ account_address(row.verified, row.email) }}</td>
             <td>{{ account_name(row.verified, row.display_name) }}</td>
             {# 20D: an operator's Unit, the top line on the sessions they
-               create (`docs/header_chrome.md` §6); unset, the workspace
+               create (`cordware/spec/header_chrome.md` §6); unset, the workspace
                default as a display pill. #}
             <td data-unit-cell>
               {#- Blank for an account with no role: it shows no top line
@@ -594,7 +594,7 @@
               if (!sel.some(hasHistory)) danger.push(["Delete", "destructive"]);
             }
             if (canManageAdmins && allOperators) admin.push(["Promote", "secondary"]);
-            // 20D: an operator's or admin's Unit (docs/header_chrome.md
+            // 20D: an operator's or admin's Unit (cordware/spec/header_chrome.md
             // §6); an empty value clears it back to the default.
             var unit = every(sel, function (r) {
               return category(r) === "operators" || category(r) === "admins";

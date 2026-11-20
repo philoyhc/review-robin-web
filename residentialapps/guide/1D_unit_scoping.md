@@ -145,7 +145,7 @@ Taken 2026-11-08 at `c053b46b1`.
 
 - **As planned:** the specs (functional spec §3.5, §3.7 and §13, roles
   rule 10, the roster doc §5 and §10, `supportlogs_ui.md` §2,
-  `applications.md`, `docs/header_chrome.md` §3 and §6); the switcher;
+  `applications.md`, `cordware/spec/header_chrome.md` §3 and §6); the switcher;
   every page scoped.
 - **Diverged:**
   - **Rung 3:** the Unit group sits after the app's areas, Sys admin
@@ -251,5 +251,5 @@ All answered by the author, 2026-11-08:
 - `residentialapps/spec/supportlogs_ui.md` — the working Unit and the switcher; per-Unit reads, shares, teams, flags, checks, workload and audit (rungs 2–4).
 - `residentialapps/spec/applications.md` — the switcher's place in the area menu (rungs 3–4).
 - `residentialapps/guide/todo_master.md` — strike "multi-Unit authorization" for Support Logs (rung 2).
-- `docs/header_chrome.md` — §3 the switcher's Unit group; §6 Support Logs' top line is the working Unit (rung 3).
+- `cordware/spec/header_chrome.md` — §3 the switcher's Unit group; §6 Support Logs' top line is the working Unit (rung 3).
 - `residentialapps/guide/segment_1D_support_logs.md` — Status line for this plan (each rung).

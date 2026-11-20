@@ -89,7 +89,7 @@ APP_NAME = "Apply Desk"
 
 OPERATOR_LOBBY, USER_LOBBY = "Operator Lobby", "User Lobby"
 
-#: The switcher's places (`docs/header_chrome.md` §3), named as Review
+#: The switcher's places (`cordware/spec/header_chrome.md` §3), named as Review
 #: Robin's are (author, 2026-11-13): the Operator Lobby for an operator
 #: (`gate.is_operator`), the User Lobby for everyone.
 PLACES: tuple[Mapping[str, Any], ...] = (
@@ -156,7 +156,7 @@ def render(
     status_code: int = 200,
     **context: Any,
 ) -> Response:
-    """A page in the shared bar (`docs/header_chrome.md`): the app icon,
+    """A page in the shared bar (`cordware/spec/header_chrome.md`): the app icon,
     the workspace's top line over ``area``, the switcher and the account
     menu; on an exercise's pages, ``nav``, its chrome (ruling 14)."""
     viewer = current_identity(request)

@@ -1,35 +1,27 @@
 # Header chrome: one top bar across Cordware's applications
 
-**Functional spec, built** (author, 2026-11-02). It sets what the top bar
-does in Review Robin, Residential Operations, Support Logs and the
-envisioned ApplyDesk. Built the same day: Review Robin in segment 20D
-(#3505–#3510), Residential Operations and Support Logs in #3511. The
-settled parts are also stated in `spec/visual_style_rrw.md` ("Top bar")
-and `residentialapps/spec/residentialops_ui.md` §2; this file stays the
-shared contract, ApplyDesk's included. §1 describes the chrome it
-replaced.
+**The shared contract for the top bar**, built (author, 2026-11-02). It
+sets what the bar does in Review Robin, Residential Operations, Support
+Logs and Apply Desk: Review Robin in segment 20D (#3505–#3510),
+Residential Operations and Support Logs in #3511, Apply Desk in its AD1
+skeleton. Each application's own spec states its share and points here:
+`spec/visual_style_rrw.md` ("Top bar"),
+`residentialapps/spec/residentialops_ui.md` §2 and
+`applydesk/spec/applications.md`. Moved from `docs/` into Cordware's spec
+on 2026-11-20 (findings 2026-11-20 corpus H1): the bar belongs to no one
+application.
 
 ## 1. Why
 
-Today the applications look like two products:
+The applications looked like two products: Residential had one slim bar
+with a switcher and the viewer's initials, Review Robin a text block with
+its version, a breadcrumb and a row of text links. The direction taken was
+Residential's: one bar, the same in every application, with each
+application's own icon, accent and menu entries.
 
-- **Residential** has one slim bar: a colored square, the Unit's name
-  over the area's, a switcher menu, the Light/Dark toggle, the viewer's
-  name and initials (`residentialapps/spec/residentialops_ui.md` §2).
-- **Review Robin** has a text block: "Review Robin Web App (version …)",
-  the toggle, a breadcrumb under it, and on the right "Signed in as …",
-  up to four text links and a Sign out button
-  (`spec/visual_style_rrw.md`, "Non-session and reviewer chrome").
-  Participants get a lighter variant
-  (`app/web/templates/reviewer/_top_bar.html`). <!-- path-ref-ok -->
-
-The direction is Residential's. One bar, the same in every application,
-with each application's own icon, accent and menu entries.
-
-**In Review Robin, only the header changes** (author, 2026-11-02): what
-sits above its first horizontal line today, the `.chrome` block. Nothing
-below that line changes: not the session nav card, the status strip, page
-headings or any page body.
+**In Review Robin, only the header changed** (author, 2026-11-02): what
+sits above its first horizontal line, the `.chrome` block. The session nav
+card, the status strip, page headings and page bodies did not.
 
 ## 2. The bar
 

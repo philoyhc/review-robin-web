@@ -87,7 +87,7 @@ answer only for a Published or Closed exercise.
   by visibility in the Form's order, with the answers Extract writes, *—*
   where there is none (`extract.form_answers`); the title is the page's
   heading alone.
-- **The chrome** is the shared bar (`docs/header_chrome.md`): the app
+- **The chrome** is the shared bar (`cordware/spec/header_chrome.md`): the app
   icon, the workspace's top line over *Apply Desk* (the app's name, as
   Review Robin's bar names Review Robin; author, 2026-11-13), a switcher of the
   *Operator Lobby* (`/operator/exercises`, operators only) and the *User

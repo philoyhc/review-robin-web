@@ -65,7 +65,7 @@ with the page.
 - **On the left, the switcher**: the application's icon (its favicon),
   then the top line above the current area's name: the Unit's name, else
   the workspace default `CORDWARE_INSTITUTION_NAME`, else none
-  (`docs/header_chrome.md` §6). The static switcher, on a page with no
+  (`cordware/spec/header_chrome.md` §6). The static switcher, on a page with no
   areas (not registered), shows the icon and the area alone. Its menu lists the areas the viewer reaches (Home, RA Leave, RA
   Events; RA Leave admin and Rosters and setup for sys admins),
   RA Leave at the viewer's own side, RA's or staff's, then one link,
@@ -83,7 +83,7 @@ with the page.
   Robin's Settings and Admin are; omitted on its own area; author,
   2026-11-02), in Support Logs then **Who can see what** (its staff
   explainer, 2026-11-07), then **Sign out** (`/.auth/logout`). One menu open at a time; Escape or a
-  click outside closes it (`docs/header_chrome.md` §4, §7).
+  click outside closes it (`cordware/spec/header_chrome.md` §4, §7).
 - **Under the bar, the area's page tabs**, with short labels, scrolling
   sideways on a phone. Rosters and setup's are Home, Assignments, Staff
   roster and RA roster (§7); RA Leave's split by audience (`residentialapps/spec/applications.md`):

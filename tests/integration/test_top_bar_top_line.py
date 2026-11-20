@@ -1,5 +1,5 @@
 """The top bar's top line: the workspace's institution name, or none
-(segment 20D rung 3, `docs/header_chrome.md` §2, §6)."""
+(segment 20D rung 3, `cordware/spec/header_chrome.md` §2, §6)."""
 
 from __future__ import annotations
 

@@ -43,7 +43,7 @@ class IdentitySettings(BaseSettings):
     fake_auth_super_admin: bool = True
 
     # The hosting institution's name, the top line of every
-    # application's top bar (`docs/header_chrome.md` §6). Set only by the
+    # application's top bar (`cordware/spec/header_chrome.md` §6). Set only by the
     # deployer; empty means no top line. Its real value lives in the
     # private deployment, never in this repository.
     institution_name: str = Field(default="", validation_alias="CORDWARE_INSTITUTION_NAME")

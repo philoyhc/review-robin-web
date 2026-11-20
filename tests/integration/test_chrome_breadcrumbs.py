@@ -21,7 +21,7 @@ def _create_session(client: TestClient, db: Session, *, code: str = "spring-2026
 def test_operator_chrome_renders_the_shared_bar_and_account_menu(
     client: TestClient,
 ) -> None:
-    """Segment 20D: the shared top bar (`docs/header_chrome.md` §2, §4).
+    """Segment 20D: the shared top bar (`cordware/spec/header_chrome.md` §2, §4).
     No version text, "Signed in as" or Sign out button in the bar; the
     account menu holds them, About carrying ?return_to= and the version
     beside it for an operator."""
@@ -52,7 +52,7 @@ def test_the_account_menu_names_a_sys_admins_tier(
     monkeypatch,
 ) -> None:
     """A sys admin's account menu says so under their name, as the
-    "(sys admin)" suffix on "Signed in as" did (`docs/header_chrome.md`
+    "(sys admin)" suffix on "Signed in as" did (`cordware/spec/header_chrome.md`
     §4)."""
     from app.config import settings
 
@@ -66,7 +66,7 @@ def test_participant_pages_render_the_same_bar_with_no_breadcrumb(
     client: TestClient,
 ) -> None:
     """Reviewer pages render the same bar (20D), with no breadcrumb row
-    (`docs/header_chrome.md` §5). The account menu and Sign out remain."""
+    (`cordware/spec/header_chrome.md` §5). The account menu and Sign out remain."""
     response = client.get("/me")
     assert response.status_code == 200
     body = response.text
