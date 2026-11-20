@@ -1019,9 +1019,10 @@ keeps all of them.
   window with its offset, the tag `applydesk`, and one instrument named
   for the gate holding its response fields. Never observers, release,
   rules or layouts. Each file downloads from
-  `…/evaluations/gate_<n>/<kind>.csv` as `<code>_<kind>.csv`; Review
-  Robin's handoff route takes them as they are
-  (`tests/integration/test_handoffs.py`).
+  `…/evaluations/gate_<n>/<kind>.csv` as `<code>_<kind>.csv`, each cell a
+  spreadsheet would run as a formula guarded with `'` (`extract.guarded`);
+  the handoff sends Review Robin the files unguarded, as its handoff route
+  takes them (`tests/integration/test_handoffs.py`).
 - **Paging** (`applydesk/paging.py`): 200 rows a page, a pager as Review
   Robin's rosters, « ‹, a range menu of every page (*201–400*), › », kept
   on one line and repeated below a table longer than a page; an

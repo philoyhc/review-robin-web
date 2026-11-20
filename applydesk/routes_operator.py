@@ -581,14 +581,18 @@ def _rr_data(
 )
 def gate_bundle_file(request: Request, exercise_id: str, gate: str, kind: str) -> Response:
     """One of the four files a gate would be sent with (segment AD1M),
-    named as Review Robin names its own: ``<code>_<kind>.csv``."""
+    named as Review Robin names its own: ``<code>_<kind>.csv``. Guarded
+    against formulas here, for the person who opens it; the handoff sends
+    the bytes unguarded (findings 2026-11-20 S12)."""
     exercise = exercise_or_404(exercise_id)
     found = _gate_or_404(exercise, gate)
     if kind not in handoff.KINDS:
         raise HTTPException(status_code=404)
     sent = _bundle(request, exercise, found)
     return _download(
-        f"{sent.code}_{kind}.csv", sent.files[kind].encode(), "text/csv; charset=utf-8"
+        f"{sent.code}_{kind}.csv",
+        extract.guarded(sent.files[kind]).encode(),
+        "text/csv; charset=utf-8",
     )
 
 

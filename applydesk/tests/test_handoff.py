@@ -6,6 +6,7 @@ these files in `tests/integration/test_handoffs.py`
 from __future__ import annotations
 
 import csv
+import dataclasses
 import io
 import re
 
@@ -156,6 +157,45 @@ def test_each_file_downloads_under_its_code(client: TestClient) -> None:
     assert reviewees[0]["ProfileLink"].startswith("http://testserver/applydesk/me/exercises/")
     assert client.get(f"{BASE}/gate_3/observers.csv").status_code == 404
     assert client.get(f"{BASE}/gate_9/reviewers.csv").status_code == 404
+
+
+def test_a_download_is_guarded_and_the_handoff_is_not(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A cell a spreadsheet would run gets an apostrophe in the file a
+    person downloads; the bundle sent to Review Robin keeps its bytes, the
+    import contract (findings 2026-11-20 S12, ruled 2026-11-20)."""
+    from starlette.requests import Request
+
+    from applydesk import routes_operator
+
+    real = routes_operator._bundle  # pyright: ignore[reportPrivateUsage]  -- wrapped, not replaced
+
+    def tainted(
+        request: Request, exercise: sample_data.Exercise, gate: stages.Gate
+    ) -> handoff.Bundle:
+        sent = real(request, exercise, gate)
+        files = dict(sent.files)
+        files["reviewers"] = files["reviewers"].replace("\r\n", '\r\n=HYPERLINK("x"),', 1)
+        return dataclasses.replace(sent, files=files)
+
+    monkeypatch.setattr(routes_operator, "_bundle", tainted)
+    down = client.get(f"{BASE}/gate_3/reviewers.csv").text
+    assert "'=HYPERLINK" in down and "\n=HYPERLINK" not in down
+    sent = handoff.bundle(*_gate(EX, 3), lambda app: "https://ad.invalid/")
+    assert not any(
+        cell.startswith("'")
+        for row in csv.reader(io.StringIO(sent.files["reviewers"]))
+        for cell in row
+    )
+
+
+def test_guarded_marks_a_formula_and_leaves_a_number() -> None:
+    from applydesk import extract
+
+    assert extract.guarded('a,b\r\n=1+1,-5\r\n@x,"q,r"\r\n') == (
+        "a,b\r\n'=1+1,-5\r\n'@x,\"q,r\"\r\n"
+    )
 
 
 def test_the_card_counts_and_offers_each_file(client: TestClient) -> None:

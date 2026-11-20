@@ -851,7 +851,7 @@
     root.querySelector("[data-ap-csv-down]").addEventListener("click", function () {
       function q(v) {
         if (v !== "-" && /^[=+\-@\t\r]/.test(v)) v = "'" + v;
-        return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+        return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
       }
       var lines = [["Application ID", "Applicant", "Email", "Status"].concat(heads.map(function (h) { return h.dataset.label; })).map(q).join(",")];
       rows.forEach(function (r) {
