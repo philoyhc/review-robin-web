@@ -220,6 +220,11 @@
       {# Review Robin's for every gate: the exercise's, set on Home. #}
       <p class="pc-line muted" data-pc-ex>Help contact <strong>{{ help_contact(exercise) }}</strong> · Timezone <strong>{{ timezone(exercise) }}</strong> · the exercise's, set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id) }}#details">Home</a></p>
       {{ rule_box(plan, g, rule_text, sec=False) }}
+      {# Its Review Robin card, on its Evaluations page (ruling 61): there
+         once the gate is saved and the exercise published (ruling 60
+         opens it on saving, with AD2); until then the line says why. #}
+      {% if g.number and g.key and exercise.state != "Draft" %}<p class="pc-line pc-rr" data-pc-rr><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ g.number) }}#ev-rr">Review Robin card →</a></p>
+      {% else %}<p class="pc-line muted pc-rr" data-pc-rr>{{ "Its Review Robin card is on Evaluations once the exercise is published." if g.number and g.key else "Its Review Robin card is on Evaluations once this gate is saved." }}</p>{% endif %}
     </div>
   </details>
   {# Who evaluates (ruling 27, segment AD1G): ranked sources, each giving

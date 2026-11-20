@@ -524,7 +524,10 @@ but the lobby's *Stage* column reads:
     *Confidential* (per gate: Review Robin shows each applicant as *Name
     redacted* with their Dossier ID); the *Entry rule*. The exercise's *Help
     contact* and *Timezone* show read-only, linking to Home, where they are
-    set: they are Review Robin's for every gate.
+    set: they are Review Robin's for every gate. It ends *Review Robin card
+    →*, to the gate's card on its Evaluations page (`…/evaluations/gate_<n>#ev-rr`,
+    ruling 61); a new gate, or one in a draft exercise, says instead that
+    its card is there once it is saved, or once the exercise is published.
   - **Evaluators** (ruling 27): a row per ranked **source**, in order
     (▲ ▼; a row's **+** adds the next, × removes; *+ Source* shows only
     when there is none), each a *Kind*, its *Min* and *Max* per dossier:
