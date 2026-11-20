@@ -1278,6 +1278,11 @@ def observe_deadline(
     if not deadline_has_passed(review_session, now=current):
         _reopen_while_live(db, review_session, correlation_id=correlation_id)
         return 0
+    # A session still in setup has no review to end: closing its
+    # instruments would record a deadline with no ``ready → expired``
+    # (findings 2026-11-20 corpus B2).
+    if is_editable(review_session):
+        return 0
 
     def _open(*, fresh: bool = False) -> list[Instrument]:
         query = select(Instrument).where(
@@ -1315,7 +1320,7 @@ def observe_deadline(
     # the threadpool (their gate and their error re-render), so the wait
     # for a held lock stalls only this request.
     session_guard.lock_session(db, review_session)
-    if not deadline_has_passed(review_session, now=current):
+    if not deadline_has_passed(review_session, now=current) or is_editable(review_session):
         db.commit()  # Release the lock (findings N5).
         return 0
     instruments = _open(fresh=True)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -406,6 +407,38 @@ def test_the_heal_leaves_a_session_past_its_deadline_closed(
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalar_one()
     assert instrument.accepting_responses is False
+
+
+@pytest.mark.parametrize("status", ["draft", "validated"])
+def test_a_session_in_setup_past_its_end_closes_nothing(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+    status: str,
+) -> None:
+    """End closes a ``ready`` session; one still in setup has no review to
+    end, so a page view past End records no close and no deadline
+    without ``session.expired`` (findings 2026-11-20 corpus B2)."""
+    operator = make_client(alice)
+    session = _build_ready_session(operator, db, code=f"setup-past-{status}")
+    session.status = status
+    session.deadline = datetime.now(UTC) - timedelta(minutes=1)
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalar_one()
+    instrument.accepting_responses = True
+    db.commit()
+
+    assert lifecycle.observe_deadline(db, session) == 0
+    db.refresh(session)
+    db.refresh(instrument)
+    assert session.status == status
+    assert instrument.accepting_responses is True
+    assert instrument.deadline_closed_at is None
+    written = set(
+        db.scalars(select(AuditEvent.event_type).where(AuditEvent.session_id == session.id))
+    )
+    assert not written & {"instrument.closed", "session.deadline_reached", "session.expired"}
 
 
 def test_reviewer_save_403_when_deadline_passed(

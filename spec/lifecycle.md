@@ -523,7 +523,10 @@ What a reviewer reads back after close is the visibility policy's call
   closed them before the session closed, or the retired per-instrument
   Close), once, and with a real End writes `session.deadline_reached`
   then too (findings L4). A release window set
-  beforehand therefore opens unattended (§8.2.3).
+  beforehand therefore opens unattended (§8.2.3). A session still in
+  setup (`draft` or `validated`) closes nothing past its end: there is no
+  review to end, so no `instrument.closed`, no
+  `session.deadline_reached` and no `session.expired`.
 
 ### 4.1 The reviewer write-path predicate
 
