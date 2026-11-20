@@ -189,8 +189,8 @@ Graph transport is built per request from the request's mailer
 Today's configuration is **per-operator**, not per-deployment —
 a "send-as-me" identity model, with credentials on the `users`
 table (encrypted at rest via Fernet, key from the
-`SMTP_ENCRYPTION_KEY` env var). No page edits them: the
-`/operator/settings` SMTP cards retired in segment 14C Item 1, once
+`SMTP_ENCRYPTION_KEY` env var). No page edits them:
+`/operator/settings` carries no SMTP cards, since
 the choice of sender narrowed to Microsoft Graph (as the operator or a
 dedicated mailbox, `guide/email_and_scheduling.md`). The columns and
 the transport stay for a deployment with an SMTP relay.
@@ -389,8 +389,7 @@ STARTTLS (usual on 587) or implicit SSL (usual on 465) through the
 
 **Required configuration.**
 
-Today (per-operator on `users` table; no page populates them since
-segment 14C Item 1):
+Today (per-operator on `users` table; no page populates them):
 
 - `smtp_host`, `smtp_port`, `smtp_username`,
   `smtp_password_encrypted`, `smtp_encryption`,

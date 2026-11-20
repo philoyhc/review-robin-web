@@ -198,7 +198,7 @@ When `sessions.status = "archived"`, the resolver treats every per-window pair a
 
 ### 3.4 Linked sessions
 
-A session linked to another application (segment 23E, `ReviewSession.linked_app`, `app/services/linked_apps.py`) leaves results to that application: its profile turns the release window off. `is_response_release_window_open` is False on it whatever the anchors say, so no `after_release` grant resolves for any audience and the reviewee `/results` gate never passes; observers are off (`require_observer_in_session` 404s). The visibility card reads **See in {application}** in the *Responses released* column for the reviewer and reviewee rows, in the operator's editor (fixed, not cycled) and on the reviewer's card alike, and drops the observers row; *Session ongoing* is unchanged. Stored modes are kept, unread, so Unlink restores them.
+A session linked to another application (`ReviewSession.linked_app`, `app/services/linked_apps.py`) leaves results to that application: its profile turns the release window off. `is_response_release_window_open` is False on it whatever the anchors say, so no `after_release` grant resolves for any audience and the reviewee `/results` gate never passes; observers are off (`require_observer_in_session` 404s). The visibility card reads **See in {application}** in the *Responses released* column for the reviewer and reviewee rows, in the operator's editor (fixed, not cycled) and on the reviewer's card alike, and drops the observers row; *Session ongoing* is unchanged. Stored modes are kept, unread, so Unlink restores them.
 
 ---
 

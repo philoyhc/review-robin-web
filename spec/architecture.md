@@ -948,8 +948,7 @@ gate holds the shape — strict mode (flipped on in tests) raises
 `AuditDetailValidationError` on any registered-but-malformed
 event; production mode logs and writes through: a `WARNING` record
 under `app.services.audit` carrying `event` `audit.detail_schema_violation`
-and the `event_type`, which the host's JSON log keeps (findings F2,
-2026-10-22).
+and the `event_type`, which the host's JSON log keeps.
 
 ### Identity slots (top-level, almost always present)
 
@@ -1029,9 +1028,9 @@ For bulk operations — `assignments.generated`,
 `reviewers.imported`, `reviewees.imported`,
 `responses.deleted_all`, `responses.cleared`, and the handoff
 create's `session.handoff_created` (`files`) and
-`session.handoff_completed` (`reviewers`, `reviewees`), whose
-`context` carries `transfer_id` and `source_app`, and the sender's
-fetch, `session.handoff_results_exported` (`rows`; `context`
+`session.handoff_completed` (`reviewers`, `reviewees`); the re-send's
+`session.handoff_updated` (`reviewers`, `reviewees`; its `context`
+carries `transfer_id` and `source_app`); and the sender's fetch, `session.handoff_results_exported` (`rows`; `context`
 `transfer_id`, `file`, `etag`) (`spec/handoffs.md` §8). All values are non-negative integers.
 
 **Cascade slots.** A roster replace, delete-all or bulk delete
