@@ -5,7 +5,7 @@ failure."""
 
 from __future__ import annotations
 
-from playwright.sync_api import FloatRect, Locator, Page
+from playwright.sync_api import FloatRect, Locator, Page, expect
 
 from applydesk.tests.test_form_browser import page as page
 
@@ -62,3 +62,36 @@ def test_panels_toolbar_is_two_columns(page: Page) -> None:
     assert search["x"] > chips["x"] + chips["width"]  # Filter right of the chips
     assert add["y"] >= search["y"] + search["height"] - 1  # Add new under Filter
     assert abs((add["x"] + add["width"]) - (search["x"] + search["width"])) < 1  # right edges
+
+
+def test_process_opens_the_card_a_link_names(page: Page) -> None:
+    """Ruling 65: #gate-<key> (the gate page's Set on Process →) and
+    #outcome-<key> (an email's) open a card shut on a plain load, its stage
+    with it, and bring it into view; an unknown name opens the page as
+    usual. (#form is the first card, open already.)"""
+    page.set_viewport_size({"width": 1300, "height": 900})
+    page.goto(f"{EX}/process")
+
+    def last(kind: str) -> str:
+        keys = page.locator(f'.pc-item[data-item="{kind}"]').evaluate_all(
+            "els => els.map(e => e.dataset.key)"
+        )
+        return keys[-1]
+
+    for kind in ("gate", "outcome"):
+        key = last(kind)
+        item = page.locator(f'.pc-item[data-key="{key}"]')
+        page.goto(f"{EX}/panels")
+        page.goto(f"{EX}/process")
+        assert item.get_attribute("data-open") is None, kind  # shut on a plain load
+        page.goto(f"{EX}/panels")
+        page.goto(f"{EX}/process#{kind}-{key}")  # as the gate page's and Emails' links
+        expect(item).to_have_attribute("data-open", "")
+        expect(item).to_be_in_viewport()
+    # A name Process does not know opens the page as usual, nothing opened.
+    page.goto(f"{EX}/panels")
+    page.goto(f"{EX}/process")
+    plain = page.locator(".pc-item[data-open]").count()
+    page.goto(f"{EX}/panels")
+    page.goto(f"{EX}/process#gate-nosuch")
+    expect(page.locator(".pc-item[data-open]")).to_have_count(plain)

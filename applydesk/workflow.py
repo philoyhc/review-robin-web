@@ -41,6 +41,13 @@ _GATES: dict[str, dict[str, tuple[str, str]]] = {
 APPLICANTS, EVALUATORS = "Applicants", "Evaluators"
 
 
+def email_anchor(item: str, audience: str) -> str:
+    """The id of an email's card on Emails (ruling 65): ``em-<item>-<audience>``,
+    naming the email rather than its place, so Process's *Template →* links
+    reach it whatever comes before it."""
+    return f"em-{item}-{audience}"
+
+
 @dataclass(frozen=True)
 class Email:
     """A template owed (ruling 16): Process says which items email whom,
@@ -53,6 +60,17 @@ class Email:
     ok: bool
     item: str
     audience: str
+
+    @property
+    def anchor(self) -> str:
+        """Its card's id on Emails (ruling 65), as Process links to it."""
+        return email_anchor(self.item, self.audience)
+
+    @property
+    def process_anchor(self) -> str:
+        """The id Process opens for what ticks it (ruling 65): the form's
+        card, or its outcome's."""
+        return "form" if self.item in _FORM_MAIL else f"outcome-{self.item}"
 
     @property
     def greeting(self) -> str:

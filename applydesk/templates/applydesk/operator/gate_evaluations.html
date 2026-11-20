@@ -17,6 +17,8 @@
 <div class="ptitle"><h1>Gate {{ gate.number }} · {{ gate.label or "Untitled gate" }}</h1>
   <span class="ev-head">{% import "applydesk/operator/_gate_state.html" as gs %}{{ gs.chip(state) }}{% if state[0] == "Not ready" and state[1] %} <span class="muted" data-gate-why title="As saved: this tab's changes count once AD2 saves them">{{ state[1] }}</span>{% endif %} <span class="chip chip-mute" data-ev-mode>{{ mode_label }}</span> <span class="muted" data-ev-counts>{{ assignment_counts(all_rows) }}</span> <a class="btn btn-secondary" href="#ev-rr">Review Robin ↓</a></span></div>
 <p class="placeholder"><strong>Placeholder.</strong> Sample data: what you do here works on screen and is kept in this tab across its pages, but nothing is saved until AD2.</p>
+{# Back to its card on Process (ruling 65), which opens on the hash. #}
+<p class="muted pc-intro" data-ev-process>Its name, dates, evaluators and rules are set on its card on Process. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}#gate-{{ gate.key }}">Set on Process →</a></p>
 {# The gate's link to Review Robin (segment AD1M): its session's name and
    code (ruling 56), the link, the last send, what is sent, each
    evaluator's progress, and its actions, simulated in the tab (ruling

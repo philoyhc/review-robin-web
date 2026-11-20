@@ -1014,6 +1014,8 @@
       pub.title = "A new stage is checked for publishing once saved (AD2)";
       var renamed = {};
       // Its gates are new: none has a Review Robin card yet (ruling 61).
+      // A copy's ticks are not saved: no Template → until Emails lists them (ruling 65).
+      added.querySelectorAll(".pc-tpl").forEach(function (a) { a.remove(); });
       added.querySelectorAll("[data-pc-rr]").forEach(function (line) {
         line.className = "pc-line muted pc-rr";
         line.textContent = line.dataset.pcRr;
@@ -1513,6 +1515,22 @@
     };
   };
   list.querySelectorAll('.pc-item[data-item="gate"]').forEach(drawSources);
+  // A link from another page names a card by its hash (ruling 65): #form,
+  // #gate-<key> or #outcome-<key>. Process opens it and scrolls to it; a
+  // name it does not know (a removed gate, an old link) opens the page as usual.
+  function fromHash() {
+    var m = /^(form)$|^(gate|outcome)-(.+)$/.exec(decodeURIComponent(location.hash.slice(1)));
+    if (!m) return;
+    var item = Array.prototype.find.call(list.querySelectorAll(".pc-item"), function (i) {
+      return m[1] ? i.dataset.item === "form" : i.dataset.item === m[2] && i.dataset.key === m[3];
+    });
+    var card = item && cards().find(function (c) { return c.contains(item); });
+    if (card) goTo(card, item);
+  }
+  // Once the page's own layout settles, so the scroll is not undone; and
+  // again when the hash changes on the page.
+  window.addEventListener("load", fromHash);
+  window.addEventListener("hashchange", fromHash);
   changed();
 })();
 </script>

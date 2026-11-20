@@ -6,16 +6,18 @@
    (sessionStorage) until AD2; nothing is sent until AD7. #}
 {# Laid out as Form and Process (author, 2026-11-19): the templates in the
    main two columns, and a card on the right that stays in view, with an
-   Outline linking every email and the merge tags. #}
+   Outline linking every email and the merge tags. Each card's id names
+   its email, em-<item>-<audience>, so Process links reach it (ruling 65). #}
 <div class="fb-split" data-emails data-em-ex="{{ exercise.public_id }}"{% if scratch_page %} data-em-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}" data-em-revision="{{ process_revision }}"{% endif %}>
 <div class="fb-main">
 <p class="muted pc-intro">Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk (AD7); Review Robin sends none.{% if scratch_page %} A template you save is kept in this scratch exercise, and the status row's <em>Emails</em> and Home follow it.{% else %} A template you save is kept in this tab: nothing is saved until AD2, and until then the status row's <em>Emails</em>, Home and Dossiers' <em>Released</em> read the sample's templates.{% endif %}</p>
 {% for e in emails %}
 {% set sample = email_sample(e) %}
 {% set t = email_text(e) %}
-<section class="card em-card" id="em-{{ loop.index }}" data-email="{{ e.name }}" data-em-item="{{ e.item }}" data-em-audience="{{ e.audience }}" data-em-kind="{{ e.kind }}" data-em-sample="{{ sample | tojson | forceescape }}">
+<section class="card em-card" id="{{ e.anchor }}" data-email="{{ e.name }}" data-em-item="{{ e.item }}" data-em-audience="{{ e.audience }}" data-em-kind="{{ e.kind }}" data-em-sample="{{ sample | tojson | forceescape }}">
   <h2>{{ e.name }} <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}" data-em-chip>{{ "Written" if e.ok else "Owed" }}</span></h2>
-  <p class="muted em-help">{{ e.when }}</p>
+  {# Back to what ticks it on Process (ruling 65): the form's card or the outcome's. #}
+  <p class="muted em-help">{{ e.when }} · <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}#{{ e.process_anchor }}" data-em-process>Set on Process →</a></p>
   {# A written sample template shows its kind's default; an owed one,
      empty; a scratch exercise's, as its card last saved it. #}
   <div class="field"><label>Subject <input type="text" class="fc-in" data-em-subject value="{{ t[0] }}" maxlength="300"></label></div>
@@ -37,7 +39,7 @@
     <h2 id="em-outline-h">Outline</h2>
     {% if emails %}
     <ul class="fb-o-list" data-em-outline>
-      {% for e in emails %}<li><a class="fb-o-item" href="#em-{{ loop.index }}">{{ e.name }}</a> <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}" data-em-o-chip="{{ e.name }}">{{ "Written" if e.ok else "Owed" }}</span></li>{% endfor %}
+      {% for e in emails %}<li><a class="fb-o-item" href="#{{ e.anchor }}">{{ e.name }}</a> <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}" data-em-o-chip="{{ e.name }}">{{ "Written" if e.ok else "Owed" }}</span></li>{% endfor %}
     </ul>
     {% set n_ok = emails | selectattr("ok") | list | length %}
     <p class="muted fb-counts" data-em-counts>{{ emails | length }} {{ "email" if emails | length == 1 else "emails" }} · {{ n_ok }} written · {{ emails | length - n_ok }} owed</p>

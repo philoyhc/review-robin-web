@@ -551,16 +551,18 @@ but the lobby's *Stage* column reads:
   missing (`workflow.gate_readiness`, rulings 24, 27, 34), shown beside
   the chip on Home, Evaluations and the gate page. They read what is
   saved: approvals made on the gate page stay the tab's until AD2.
+  - **Its page** (rulings 61, 65): the gate's body opens, shut card or
+    open, with a line saying its pairs, Review Robin session and progress
+    are on its page under Evaluations, and *Open Gate n →*
+    (`…/evaluations/gate_<n>`). In a draft exercise the line says instead
+    that the page is there once the exercise is published, and a new gate
+    otherwise that it is there once the gate is saved.
   - **Gate**: *Name*; *Type* (a disabled menu, *Review Robin session*, kept
     for other kinds); *Description* (Review Robin's instrument description);
     *Confidential* (per gate: Review Robin shows each applicant as *Name
     redacted* with their Dossier ID); the *Entry rule*. The exercise's *Help
     contact* and *Timezone* show read-only, linking to Home, where they are
-    set: they are Review Robin's for every gate. It ends *Review Robin card
-    →*, to the gate's card on its Evaluations page (`…/evaluations/gate_<n>#ev-rr`,
-    ruling 61); in a draft exercise it says instead that the card is there
-    once the exercise is published, and a new gate otherwise that it is
-    there once the gate is saved.
+    set: they are Review Robin's for every gate.
   - **Evaluators** (ruling 27): a row per ranked **source**, in order
     (▲ ▼; a row's **+** adds the next, × removes; *+ Source* shows only
     when there is none), each a *Kind*, its *Min* and *Max* per dossier:
@@ -740,7 +742,9 @@ but the lobby's *Stage* column reads:
   form's receipt and reminder or an outcome's *Send email* per audience, is a
   template owed on the Emails page, named for its stage (*Review: Outcome ·
   Applicants*, *Call for applications: Receipt · Applicants*), one section each
-  in timeline order with a *Written* or *Owed* chip (`workflow.emails`). An
+  in timeline order with a *Written* or *Owed* chip (`workflow.emails`). Each
+  saved tick is followed by *Template →*, to its card on Emails (ruling
+  65); a tick not yet saved has none until Emails lists it. An
   outcome with an owed email is not ready to release. `workflow.steps`
   records which audiences' emails are not written, but no page shows it
   until a Workflow card returns; meanwhile the *Owed* chips and the status
@@ -928,7 +932,9 @@ saved until AD2; a reload restores the sample.
 
 **The gate page**, `…/evaluations/gate_<n>` (`routes_operator.gate_evaluations`),
 404 for a gate the exercise lacks or a draft exercise. Its breadcrumb runs
-Exercise / Evaluations / *Gate n · label*. The gate's head (its
+Exercise / Evaluations / *Gate n · label*. Under its banner, a line says its name,
+dates, evaluators and rules are set on Process, and *Set on Process →* opens
+its card there (`…/process#gate-<key>`, ruling 65). The gate's head (its
 state chip, as Evaluations' Gates table, its mode and counts, and *Review
 Robin ↓* to the card below), the **Review Robin card**, its load lines and a table with **a row per pair**,
 *Applicant*, *Evaluator*, *Source*, *State*; a dossier with no evaluator yet
@@ -1196,6 +1202,11 @@ which items email whom, that evaluators' invitations and reminders for a
 linked gate come from Apply Desk (AD7; Review Robin sends none), and that a
 saved template is kept in the tab only.
 
+- **Each card** is named for its email, `em-<item>-<audience>`
+  (`workflow.email_anchor`), so a link reaches it wherever it falls; its
+  *when* line ends *Set on Process →*, to the form's card (`#form`) or the
+  outcome's (`#outcome-<key>`), which Process opens and scrolls to (ruling
+  65). A name Process does not know opens the page as usual.
 - **Layout** (author, 2026-11-19), as Form's and Process's (`fb-split`):
   the template cards in the main two columns, and on the right a card
   that stays in view (scrolling within itself when taller than the

@@ -22,7 +22,7 @@ from jinja2.runtime import Context
 from starlette.requests import HTTPConnection
 from starlette.responses import Response
 
-from applydesk import sample_data, tones
+from applydesk import sample_data, tones, workflow
 from applydesk.gate import is_operator
 from cordware.identity import current_identity, institution_name
 
@@ -83,6 +83,7 @@ _add_globals(templates.env, url=_url, is_here=_is_here, host_url=_host_url)
 _add_globals(templates.env, help_contact=sample_data.help_contact, timezone=sample_data.timezone)
 # Each state's chip tone, one map for every page (ruling 64, U1).
 _add_globals(templates.env, tone=tones.tone)
+_add_globals(templates.env, email_anchor=workflow.email_anchor)
 
 APP_NAME = "Apply Desk"
 

@@ -481,7 +481,7 @@ def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> N
     """Ruling 16: one template per item and audience Process ticks, named
     for its stage, in timeline order; written or owed."""
     text = client.get(f"/applydesk/operator/exercises/{EX}/emails").text
-    names = re.findall(r'<section class="card em-card" id="em-\d+" data-email="([^"]+)"', text)
+    names = re.findall(r'<section class="card em-card" id="em-[\w-]+" data-email="([^"]+)"', text)
     assert names == [
         "Applications: Receipt · Applicants",
         "Applications: Reminder · Applicants",
@@ -494,15 +494,15 @@ def test_emails_lists_every_template_process_makes_owed(client: TestClient) -> N
     # The side card (author, 2026-11-19): an Outline linking each email,
     # its chip beside it, and the counts; then the merge tags.
     outline = re.findall(
-        r'<a class="fb-o-item" href="#(em-\d+)">([^<]+)</a> <span[^>]*>(\w+)</span>', text
+        r'<a class="fb-o-item" href="#(em-[\w-]+)">([^<]+)</a> <span[^>]*>(\w+)</span>', text
     )
+    # Each id names its email (ruling 65), as Process's Template → links do.
+    emails = workflow.emails(EX)
     assert [(a, b) for a, _, b in outline] == [
-        ("em-1", "Written"),
-        ("em-2", "Written"),
-        ("em-3", "Written"),
-        ("em-4", "Owed"),
-        ("em-5", "Owed"),
+        (e.anchor, "Written" if e.ok else "Owed") for e in emails
     ]
+    assert [b for _, _, b in outline] == ["Written", "Written", "Written", "Owed", "Owed"]
+    assert all(f'id="{e.anchor}"' in text for e in emails)
     assert [n for _, n, _ in outline] == names
     assert "5 emails · 3 written · 2 owed" in text
     assert re.findall(r'data-em-tag="(\w+)"', text) == list(workflow.TAG_HELP)
