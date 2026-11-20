@@ -526,9 +526,9 @@ def test_evaluations_lists_each_gate_s_progress(client: TestClient) -> None:
     # Mid-stage (ruling 29): the Interview gate is ready, not yet sent.
     assert "100 of 100 reviewed" in text
     # Each row links to its gate's Review Robin card (segment AD1M); the
-    # Interview gate's pairs await approval, so it does not yet offer *Send…*.
+    # link reads the same whatever the gate's state (ruling 64, U10).
     assert re.findall(r'href="([^"]+)#ev-rr">([^<]+)</a>', text) == [
-        (f"/applydesk/operator/exercises/{EX}/evaluations/gate_{n}", "Review Robin…")
+        (f"/applydesk/operator/exercises/{EX}/evaluations/gate_{n}", "Review Robin card →")
         for n in (1, 2, 3)
     ]
 

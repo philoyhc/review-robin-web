@@ -6,7 +6,7 @@
 <div class="fb-split" data-form-builder data-unsaved-root data-exercise="{{ exercise.public_id }}"{% if form_lock.fixed %} data-fb-fixed="{{ form_lock.reason }}"{% endif %}>
   <div class="fb-main">
     <p class="muted pc-intro">The application form, as applicants fill it in: its sections, questions and page breaks, in order. Preview shows it as they see it; Process says when it opens.</p>
-    {% if form_lock.fixed %}<p class="pc-line muted fb-fixed-note" data-fb-fixed-note>{{ form_lock.reason }}. The form reads as applicants see it; its cards open and shut.</p>{% endif %}
+    {% if form_lock.fixed %}<p class="pc-line lock-note fb-fixed-note" data-fb-fixed-note>{{ form_lock.reason }}. The form reads as applicants see it; its cards open and shut.</p>{% endif %}
     {# The form's own title and description: collapsible, never moved or
        deleted. #}
     <section class="fc fb-title" data-kind="title" aria-label="The form's title and description"{% if single %} data-open{% endif %}>
@@ -44,11 +44,11 @@
       <p class="visually-hidden" data-fb-live aria-live="polite"></p>
       <div class="btnrow">
         <button type="button" class="btn btn-secondary" data-fb-preview>Preview</button>
-        {% if scratch_page %}<button class="btn btn-primary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Save</button>{% else %}<button class="btn btn-primary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>{% endif %}
+        {% if scratch_page %}<button class="btn btn-secondary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Save</button>{% else %}<button class="btn btn-secondary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>{% endif %}
         <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
       </div>
       {% if scratch_page %}<p class="muted fb-said" data-fb-said role="status"></p>{% endif %}
-      <p class="muted fb-pv-note"><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form/preview') }}" target="applydesk-preview-{{ exercise.public_id }}" rel="opener" data-fb-preview-tab>Open the preview in a new tab</a></p>
+      <p class="muted fb-pv-note"><a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form/preview') }}" target="applydesk-preview-{{ exercise.public_id }}" rel="opener" data-fb-preview-tab>Open the preview in a new tab →</a></p>
     </section>
   </aside>
 </div>
@@ -80,6 +80,8 @@
     return t === "string" ? "string" : (t === "integer" || t === "decimal") ? "number" : t === "people" ? "people" : "";
   }
   function pressed(card, f) {
+    var box = card.querySelector('input[type="checkbox"][data-f="' + f + '"]');
+    if (box) return box.checked;
     var on = card.querySelector('[data-f="' + f + '"][aria-pressed="true"]');
     return on ? (on.dataset.v ? on.dataset.v === "true" : true) : false;
   }
@@ -319,6 +321,7 @@
   // A new type shows its own fields empty; the question, help text,
   // visibility and Required are kept.
   list.addEventListener("change", function (e) {
+    if (e.target.matches('input[type="checkbox"][data-f]')) { refresh(e.target.closest(".fc")); drawOutline(); return; }
     if (!e.target.matches('[data-f="type"]')) return;
     var card = e.target.closest(".fc");
     card.dataset.type = e.target.value;

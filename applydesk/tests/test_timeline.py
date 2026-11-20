@@ -114,7 +114,7 @@ def test_home_is_the_timeline_beside_details(client: TestClient) -> None:
     # The line under the timeline points to where the stage is worked.
     # Its gate's own page, where the pairs are (AD-24).
     assert (
-        f'<a href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Go to Gate 3</a>' in home
+        f'<a href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Open Gate 3 →</a>' in home
     )
 
 
@@ -276,8 +276,8 @@ def test_home_s_operator_part_says_how_each_stage_stands() -> None:
 def test_home_draws_the_operator_part_and_links_where_it_is_worked(client: TestClient) -> None:
     home = client.get(f"/applydesk/operator/exercises/{EX}").text
     assert home.count("data-tl-op") == 3 and 'class="card tl tl-ops"' in home
-    assert f'href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Gate 3</a>' in home
-    assert f'href="/applydesk/operator/exercises/{EX}/dossiers">Dossiers</a>' in home
+    assert f'href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Open Gate 3 →</a>' in home
+    assert f'href="/applydesk/operator/exercises/{EX}/dossiers">Open Dossiers →</a>' in home
 
 
 def test_the_running_gate_is_the_one_being_worked(monkeypatch: pytest.MonkeyPatch) -> None:

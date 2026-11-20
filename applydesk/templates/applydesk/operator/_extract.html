@@ -16,7 +16,7 @@
 {%- endmacro %}
 {% set nothing = extract.submitted == 0 %}
 {% set base = '/operator/exercises/' ~ exercise.public_id ~ '/extract/' %}
-{% macro dl(file, label, cls="btn-primary", always=False, name="") -%}
+{% macro dl(file, label, cls="btn-secondary", always=False, name="") -%}
 {% if nothing and not always %}<button class="btn {{ cls }}" type="button" disabled>{{ label }}</button>{% else %}<a class="btn {{ cls }}" data-xd-dl="{{ file }}" href="{{ url(base ~ file) }}"{% if name %} aria-label="{{ name }}"{% endif %} download>{{ label }}</a>{% endif %}
 {%- endmacro %}
 {% macro columns(cols) -%}
@@ -62,7 +62,7 @@
     {% else %}
     <p class="muted">No gates yet: Process adds them.</p>
     {% endif %}
-    <div class="btnrow">{% if extract.gates | selectattr("sent") | list %}{{ dl("gates.zip", "Zip gates") }}{% else %}<button class="btn btn-primary" type="button" disabled>Zip gates</button>{% endif %}</div>
+    <div class="btnrow">{% if extract.gates | selectattr("sent") | list %}{{ dl("gates.zip", "Zip gates") }}{% else %}<button class="btn btn-secondary" type="button" disabled>Zip gates</button>{% endif %}</div>
   </section>
   <section class="card" data-xd-card="outcomes">
     <h2>Outcomes</h2>

@@ -58,7 +58,7 @@
        import and Manage panels' Save kept on the page, kept for this
        browser. #}
     <div class="btnrow pn-save-row">
-      <button class="btn btn-primary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/panels') }}" data-fb-snapshot="applydeskPanelsSnapshot">Save</button>
+      <button class="btn btn-secondary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/panels') }}" data-fb-snapshot="applydeskPanelsSnapshot">Save</button>
       <span class="fb-unsaved" data-pn-kept hidden>Unsaved changes</span>
     </div>
     <p class="muted fb-said" data-fb-said role="status"></p>
@@ -104,14 +104,14 @@
           </div>
         </div>
         <p class="np-err" data-pn-newerr aria-live="polite"></p>
-        <div class="btnrow"><button type="button" class="btn btn-secondary" data-pn-act="create">Add panel</button></div>
+        <div class="btnrow"><button type="button" class="btn btn-secondary" data-pn-act="create">+ Panel</button></div>
       </section>
       <section class="card">
         <h2>Upload</h2>
         <p class="muted pn-csv-note">A CSV has <code>Name</code>, <code>Email</code> and <code>Note</code>, and a column per panel by its name, marked for each member. People not found in the directory are left out and named.</p>
         <div class="btnrow">
-          <label class="btn btn-secondary pn-file">Import CSV<input type="file" accept=".csv,text/csv" data-pn-import class="visually-hidden"></label>
-          <button class="btn btn-secondary" type="button" data-pn-act="export">Export CSV</button>
+          <label class="btn btn-secondary pn-file">Upload CSV<input type="file" accept=".csv,text/csv" data-pn-import class="visually-hidden"></label>
+          <button class="btn btn-secondary" type="button" data-pn-act="export">Download CSV</button>
         </div>
       </section>
       </div>
@@ -120,8 +120,8 @@
          panel added or retired), neither closing it;
          Close. #}
       <span class="pn-manage-acts" data-pn-manage-acts hidden>
-        <button class="btn btn-secondary" type="button" data-pn-act="cancel-names">Cancel</button>
         <button class="btn btn-primary" type="button" data-pn-act="save-names" disabled>Save</button>
+        <button class="btn btn-secondary" type="button" data-pn-act="cancel-names">Cancel</button>
         <button class="btn btn-secondary" type="button" data-pn-act="close">Close</button>
       </span>
     </div>
