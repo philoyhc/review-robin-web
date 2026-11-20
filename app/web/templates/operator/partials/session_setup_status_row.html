@@ -86,10 +86,12 @@
     {% if not session | linked_locks("email") %}
     &middot;
     Email Template:
-    {% if status_pills.email_invites_set_up %}
-      <span class="pill pill-info">Set up</span>
+    {# Neutral either way: the defaults are usable email, so nothing is
+       missing. #}
+    {% if status_pills.email_template_customized %}
+      <span class="pill pill-info" data-email-template-pill="customized">Customized</span>
     {% else %}
-      <span class="pill pill-warning">Not set up</span>
+      <span class="pill pill-info" data-email-template-pill="default">Default</span>
     {% endif %}
     {% endif %}
     &middot;

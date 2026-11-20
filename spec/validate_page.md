@@ -146,7 +146,8 @@ order it emits them:
 6. **Instruments** — count, or `—`.
 7. **Assignments** — `{count} · {mode}`, or the count, or `—`.
 8. **Email template** — *Custom overrides* / *Default (no
-   overrides)*. No counts.
+   overrides)*, by `email_templates.is_customized`
+   (`spec/email_template_editor.md` §9). No counts.
 9. **Help contact** — *Set* / `—`. No source, so it never
    badges and never links.
 
