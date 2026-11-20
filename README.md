@@ -134,10 +134,11 @@ Open `http://127.0.0.1:8000/reviewrobin/health` and expect:
 {"status":"ok"}
 ```
 
-RRW is served under `/reviewrobin/`, beside the two Residential
-applications at `/residentialops/` and `/supportlogs/` (each only a
-`/health` so far); `http://127.0.0.1:8000/` lists all three, or redirects
-to RRW with `CORDWARE_APPS=reviewrobin`. `/health` is the Cordware host's
+RRW is served under `/reviewrobin/`, beside Apply Desk at `/applydesk/`,
+the two Residential applications at `/residentialops/` and
+`/supportlogs/`, and Cordware Utilities at `/utilities/`;
+`http://127.0.0.1:8000/` lists all five, or only RRW with
+`CORDWARE_APPS=reviewrobin`. `/health` is the Cordware host's
 own probe.
 
 The Cordware host gzips every response it serves, which is why
@@ -174,7 +175,7 @@ engine is per-process and tests roll back per-test, so the
 workers stay isolated. The SQLite CI job runs `pytest -n auto`.
 
 `pyright` is a dev dependency pinned exactly (`pyright==1.1.414`), and
-it checks application code and the four test trees (segments 22C,
+it checks application code and the five test trees (segments 22C,
 22D) in strict mode (22E), with the private-name rule off and the test
 trees relaxing the strict rules they fail (`pyproject.toml`); CI's `test`
 and `residential` jobs run it after lint. Run it with the venv active: it resolves imports from the
@@ -194,10 +195,8 @@ Chromium build the web sandbox ships. They skip, saying why, when no
 Chromium is installed; run `python -m playwright install chromium`
 once to enable them locally. The SQLite CI job and the residential lane
 install Chromium and set `RRW_REQUIRE_BROWSER=1`, which turns that skip
-into a failure; the residential lane's is for
-`residentialapps/tests/test_sort_persistence_browser.py`,
-`residentialapps/tests/test_touch_targets_browser.py` and
-`residentialapps/tests/test_columns_browser.py`.
+into a failure; the residential lane's is for Residential's own browser
+tests, every `*_browser.py` in `residentialapps/tests/`.
 `tests/integration/test_inline_scripts_parse.py` needs `node` on PATH
 and skips without it. CI's `ubuntu-latest` runners have `node`, but no
 switch turns that skip into a failure, so read the skip list rather than

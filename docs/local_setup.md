@@ -91,8 +91,7 @@ The repo intentionally does not commit machine-specific files. You'll need:
 ### `.env` (required)
 
 Without fake auth every RRW page but `/health`, `/reviewrobin/health` and
-`/reviewrobin/docs` returns 401 (the Residential applications serve only
-their health paths so far), so copy
+`/reviewrobin/docs` returns 401, so copy
 the template and turn fake auth on:
 
 ```bash
@@ -175,8 +174,9 @@ Open `http://127.0.0.1:8000/reviewrobin/health` — expect `{"status": "ok"}`.
 the only way RRW is served (segments 21A and 21D;
 `docs/archive/cordware_repository_strategy_v0.8.md` §3). `app.main` only
 defines RRW's `create_app()`. The host's `CORDWARE_APPS` setting chooses
-what it mounts. Unset, it mounts RRW and the two Residential applications
-(`/residentialops`, `/supportlogs`), and `/` lists all three; set
+what it mounts. Unset, it mounts all five registered applications (RRW,
+`/applydesk`, `/residentialops`, `/supportlogs`, `/utilities`), and `/`
+lists them all; set
 `CORDWARE_APPS=reviewrobin` to mount RRW alone, when `/` lists it alone,
 linking to `/reviewrobin/`; set it empty
 (`CORDWARE_APPS=`) to run the host alone, which serves its landing page

@@ -61,8 +61,10 @@ is created, so someone listed after signing in is not promoted by the
 list. Use Accounts Management; failing that, `UPDATE users SET
 is_sys_admin = true WHERE email = '<mail address>'` (or `is_operator`),
 which leaves no audit row. Never `DELETE` a user row: the foreign keys
-that reference `users.id` have no `ON DELETE`, so it fails for anyone who
-owns or created a session or has an audit row.
+from sessions, session operators and audit events to `users.id` have no
+`ON DELETE`, so it fails for anyone who owns or created a session or has
+an audit row. The rest cascade (a user's held uploads, rehydrate stashes
+and directory lookups) or set null (a saved data shape's creator).
 
 ## Secrets the app reads
 

@@ -12,7 +12,8 @@ notes are archived there.
 
 RRW is one server-rendered FastAPI application, mounted at
 `/reviewrobin` by the **Cordware host** (`cordware/main.py`), which also
-mounts Residential Operations, Support Logs and Cordware Utilities. The
+mounts Apply Desk, Residential Operations, Support Logs and Cordware
+Utilities. The
 host runs as one Azure App Service (Linux, Python 3.12) behind
 institutional Microsoft Entra ID sign-in, with one managed PostgreSQL
 server holding each application's database.

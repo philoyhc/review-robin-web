@@ -149,7 +149,7 @@ So the phase rule gains a longer phase above it: the plan leads a segment, the s
   - The `EVENT_SCHEMAS` audit-envelope allowlist: strict in tests, log-and-write-through in production. It registered 173 event types at `c912ae53`.
   - `tests/unit/test_doc_conventions.py`, nine checks, most of them against code constants. Examples: every lifecycle table in a live spec agrees with `DISPLAY_LABELS`, and the retired button vocabulary is not prescribed in live prose.
   - `tests/unit/test_practice_kit.py`: the practice kit's manifest, the tree and the setup document agree.
-- **The route table.** `tests/unit/test_spec_coverage.py` maps each of the 30 feature routing modules to the specs that govern them (`app/web/spec_registry.py`; three infrastructure modules are exempt) and fails on one that has none.
+- **The route table.** `tests/unit/test_spec_coverage.py` maps each feature routing module to the specs that govern it, 31 of them at `ff05c7a02` (`app/web/spec_registry.py`; three infrastructure modules are exempt) and fails on one that has none.
 - **The file tree and the documents' own structure.**
   - `tests/unit/test_doc_references.py` checks that `CLAUDE.md` and `AGENTS.md` are byte-identical, and that every anchored path, every `§N` pointer and every cited pytest node id in live prose resolves.
   - `tests/unit/test_guide_indexes.py` requires a README row for every `guide/` document, live or archived.
