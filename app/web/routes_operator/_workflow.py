@@ -567,6 +567,21 @@ def workflow_release_responses(
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
+    if not lifecycle.is_expired(review_session):
+        # Only a closed session's window opens (findings 2026-11-20
+        # corpus B5); the card offers the button only then.
+        return urls.redirect(
+            request,
+            url=_redirect_url(
+                review_session.public_id,
+                return_to,
+                super_status="failed",
+                super_button="release_responses",
+                super_step="precondition",
+                super_error="open_release",
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
     if linked_apps.locks(review_session, linked_apps.Lock.RELEASE):
         # The linked application shows results in Review Robin's place
         # (segment 23E); the card does not offer the button.
@@ -589,8 +604,9 @@ def workflow_release_responses(
             user=user,
             correlation_id=correlation_id,
         )
-    except lifecycle.SessionStateConflict:
-        # Archived since the check above (findings Bc4): the same answer.
+    except lifecycle.SessionStateConflict as exc:
+        # Archived, or reopened, since the check above (findings Bc4):
+        # the same answers.
         return urls.redirect(
             request,
             url=_redirect_url(
@@ -599,7 +615,7 @@ def workflow_release_responses(
                 super_status="failed",
                 super_button="release_responses",
                 super_step="precondition",
-                super_error="archived_release",
+                super_error=("archived_release" if exc.code == "archived" else "open_release"),
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -637,6 +653,21 @@ def workflow_stop_release(
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
+    if not lifecycle.is_expired(review_session):
+        # Only a closed session's window opens (findings 2026-11-20
+        # corpus B5); the card offers the button only then.
+        return urls.redirect(
+            request,
+            url=_redirect_url(
+                review_session.public_id,
+                return_to,
+                super_status="failed",
+                super_button="stop_release",
+                super_step="precondition",
+                super_error="open_stop_release",
+            ),
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
     if linked_apps.locks(review_session, linked_apps.Lock.RELEASE):
         # No window to stop on a linked session (segment 23E); the card
         # does not offer the button, and a stamp would outlive Unlink.
@@ -659,8 +690,9 @@ def workflow_stop_release(
             user=user,
             correlation_id=correlation_id,
         )
-    except lifecycle.SessionStateConflict:
-        # Archived since the check above (findings Bc4): the same answer.
+    except lifecycle.SessionStateConflict as exc:
+        # Archived, or reopened, since the check above (findings Bc4):
+        # the same answers.
         return urls.redirect(
             request,
             url=_redirect_url(
@@ -669,7 +701,9 @@ def workflow_stop_release(
                 super_status="failed",
                 super_button="stop_release",
                 super_step="precondition",
-                super_error="archived_stop_release",
+                super_error=(
+                    "archived_stop_release" if exc.code == "archived" else "open_stop_release"
+                ),
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )

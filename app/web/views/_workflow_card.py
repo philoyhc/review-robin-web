@@ -387,6 +387,8 @@ SUPER_ERROR_MESSAGES: dict[str, str] = {
     "not_ready": "Session must be activated before it can be closed.",
     "archived_release": "Archived sessions can't have responses released.",
     "archived_stop_release": "Archived sessions can't have releases stopped.",
+    "open_release": "Responses can be released only once the session is closed.",
+    "open_stop_release": "A release can be stopped only once the session is closed.",
     "linked_release": "Release is off: the session is linked to another application.",
 }
 """The failure banner's second line, by the ``super_error`` code the

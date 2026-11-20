@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -33,15 +34,8 @@ def _draft_session(db: Session, code: str) -> tuple[ReviewSession, User]:
 
 
 def test_release_responses_now_stamps_release_at(db: Session) -> None:
-    """Closed session, because that is the only state the button is
-    offered in — the Workflow card gates Release and Stop-release on
-    ``is_expired``, and since 19F PR 2a the predicate agrees.
-
-    The service itself is still permissive: called on a ``draft``
-    session it stamps the anchor and the window stays shut, so the call
-    is inert rather than refused. Left that way deliberately — the
-    import / apply-config paths also write these columns, and the
-    predicate is now the single place the rule lives."""
+    """Closed session, the only state the button is offered in and the
+    only one the service takes (findings 2026-11-20 corpus B5)."""
     review_session, op = _draft_session(db, "rel-stamp")
     review_session.status = "expired"
     db.commit()
@@ -51,23 +45,32 @@ def test_release_responses_now_stamps_release_at(db: Session) -> None:
     assert lifecycle.is_response_release_window_open(review_session)
 
 
-def test_release_responses_now_is_inert_on_an_unclosed_session(
-    db: Session,
+@pytest.mark.parametrize("status", ["draft", "validated", "ready"])
+@pytest.mark.parametrize("action", ["release", "stop"])
+def test_release_and_stop_refuse_a_session_not_closed(
+    db: Session, status: str, action: str
 ) -> None:
-    """The permissiveness above, pinned: the anchor lands, the window
-    does not open, and closing the session later opens it on the
-    schedule that was written."""
-    review_session, op = _draft_session(db, "rel-inert")
-    lifecycle.release_responses_now(db, review_session=review_session, user=op)
-    assert review_session.responses_release_at is not None
-    assert not lifecycle.is_response_release_window_open(review_session)
-
-    review_session.status = "expired"
-    assert lifecycle.is_response_release_window_open(review_session)
+    """Not inert, as this once pinned: with no End, a ready session's
+    stamped Release-from is the review's end, and the next observation
+    closes the session (findings 2026-11-20 corpus B5). Both refuse with
+    ``not_expired`` and write nothing."""
+    review_session, op = _draft_session(db, f"rel-{action}-{status}")
+    review_session.status = status
+    db.commit()
+    call = (
+        lifecycle.release_responses_now if action == "release" else lifecycle.stop_responses_release
+    )
+    with pytest.raises(lifecycle.SessionStateConflict) as refused:
+        call(db, review_session=review_session, user=op)
+    assert refused.value.code == "not_expired"
+    db.refresh(review_session)
+    assert review_session.responses_release_at is None
+    assert review_session.responses_release_until is None
 
 
 def test_release_responses_now_clears_prior_until(db: Session) -> None:
     review_session, op = _draft_session(db, "rel-clear")
+    review_session.status = "expired"
     review_session.responses_release_until = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
     lifecycle.release_responses_now(db, review_session=review_session, user=op)
@@ -76,6 +79,7 @@ def test_release_responses_now_clears_prior_until(db: Session) -> None:
 
 def test_release_responses_now_emits_audit_event(db: Session) -> None:
     review_session, op = _draft_session(db, "rel-audit")
+    review_session.status = "expired"
     review_session.responses_release_until = datetime.now(UTC) - timedelta(hours=1)
     db.commit()
     lifecycle.release_responses_now(db, review_session=review_session, user=op)
@@ -109,6 +113,8 @@ def test_stop_responses_release_stamps_until(db: Session) -> None:
 
 def test_stop_responses_release_emits_audit_event(db: Session) -> None:
     review_session, op = _draft_session(db, "stop-audit")
+    review_session.status = "expired"
+    db.commit()
     lifecycle.stop_responses_release(db, review_session=review_session, user=op)
     event = db.execute(
         select(AuditEvent).where(
@@ -135,11 +141,24 @@ def test_workflow_release_responses_route_stamps_and_redirects(
         select(ReviewSession).where(ReviewSession.code == "rel-route")
     ).scalar_one()
 
+    # A draft is refused, with the banner's reason, and nothing stamped.
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/workflow/release-responses",
         follow_redirects=False,
     )
     assert response.status_code == 303
+    assert "super_error=open_release" in response.headers["location"]
+    db.refresh(review_session)
+    assert review_session.responses_release_at is None
+
+    review_session.status = "expired"
+    db.commit()
+    response = client.post(
+        f"/operator/sessions/{review_session.public_id}/workflow/release-responses",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert "super_error" not in response.headers["location"]
     db.refresh(review_session)
     assert review_session.responses_release_at is not None
 
@@ -155,11 +174,24 @@ def test_workflow_stop_release_route_stamps_and_redirects(client: TestClient, db
         select(ReviewSession).where(ReviewSession.code == "stop-route")
     ).scalar_one()
 
+    # A draft is refused, with the banner's reason, and nothing stamped.
     response = client.post(
         f"/operator/sessions/{review_session.public_id}/workflow/stop-release",
         follow_redirects=False,
     )
     assert response.status_code == 303
+    assert "super_error=open_stop_release" in response.headers["location"]
+    db.refresh(review_session)
+    assert review_session.responses_release_until is None
+
+    review_session.status = "expired"
+    db.commit()
+    response = client.post(
+        f"/operator/sessions/{review_session.public_id}/workflow/stop-release",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert "super_error" not in response.headers["location"]
     db.refresh(review_session)
     assert review_session.responses_release_until is not None
 
