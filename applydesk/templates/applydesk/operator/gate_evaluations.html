@@ -153,7 +153,7 @@
         <td>{% if p.email %}<span title="{{ p.email }}">{{ p.name }}</span>{% else %}<span class="muted">None yet</span>{% endif %}</td>
         <td><span class="ev-src" data-ev-source="{{ p.source }}">{{ p.source or "—" }}</span></td>
         <td><span class="chip chip-{{ 'warn' if st.startswith('Short') or st == 'Not assigned' else ('info' if st == 'Suggested' else 'ok') }}" data-ev-state>{{ st }}</span></td>
-        <td class="ev-acts">{% if p.email %}<button type="button" class="btn btn-secondary" data-ev-act="remove" aria-label="Remove {{ p.name }} from {{ a.application.dossier_id if ids_only else a.application.applicant }}"{{ off }}>Remove</button>{% endif %}{% if gate.mode == "suggested" and p.email %} <button type="button" class="btn btn-secondary" data-ev-act="approve"{{ off }}>Approve</button>{% endif %}</td>
+        <td class="ev-acts">{% if p.email %}<button type="button" class="btn btn-secondary" data-ev-act="remove" aria-label="Remove {{ p.name }} from {{ a.application.dossier_id if ids_only else a.application.applicant }}"{{ off }}>Remove</button>{% endif %}{% if gate.mode == "suggested" and p.email %} <button type="button" class="btn btn-toggle" data-ev-act="approve" aria-pressed="false"{{ off }}>Approve</button>{% endif %}</td>
       </tr>
     {% endfor %}
     </tbody>
