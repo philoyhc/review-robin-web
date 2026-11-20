@@ -372,7 +372,7 @@ the rulings it relied on but does not move them.
       rosters: the instrument (a field per result, its key prescribed),
       visibility releasing nothing after the window, and the schedule
       from the window of the stage holding the gate (a gate has no dates of
-      its own: author, 2026-11-15) as its start and end. Review Robin's
+      its own: author, 2026-11-15; *amended by ruling 66*) as its start and end. Review Robin's
       handoff takes them since its segment 23D; its 23E (planned) marks
       the session as Apply Desk's, turning off Review Robin's release.
 27. **A gate's evaluators come from ranked sources; Apply Desk makes the
@@ -427,7 +427,8 @@ the rulings it relied on but does not move them.
     - **A result names the response field it collates** and its
       derivation, which still sets its type (ruling 21); fields and
       results are no longer one row.
-    - **Start and End are the stage's**, not the gate's.
+    - **Start and End are the stage's**, not the gate's. *Amended by
+      ruling 66: a gate may carry its own, defaulting to the stage's.*
 29. **A sent gate can be changed and re-sent until its session opens**
     (author, 2026-11-17), settling the open question below: its card
     stays editable while sent and unopened, each change re-sent; once the
@@ -612,6 +613,12 @@ the rulings it relied on but does not move them.
     Robin card is laid out in two columns, its four files as 2 × 2 tiles
     and its progress, actions first, as a full-width panel
     (`applydesk/guide/archive/segment_AD1Q_gate_links.md`).
+66. **A gate may carry its own dates** (author, 2026-11-20, settling the
+    corpus sweep's finding S1), amending rulings 26 and 28: a gate's
+    *From* and *To* are optional, and an empty pair takes its stage's
+    window. What Review Robin receives as Start and End is the gate's
+    window, else the stage's (`stages.window`). The spec and the code
+    already did this; the ruling records it.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
