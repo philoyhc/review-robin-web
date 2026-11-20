@@ -548,9 +548,12 @@ but the lobby's *Stage* column reads:
     Then the **Total**: its *Min* and *Max*, with the bounds the sources allow
     (their mins together, their maxes together) beside it. A Total outside
     them is a problem on the Outline, never silently clamped
-    (`stages.total_problem`). When every source takes *All*, the Total is
-    theirs too: it shows their sizes together, disabled, and is read so, so
-    a panel's change leaves nothing to retype. The Outline also names a gate with no source,
+    (`stages.total_problem`). When any source takes *All*, the gate takes
+    that whole panel whatever its size, and every other source gives as
+    many as it has, up to its max (`stages.fill`): the Total is the
+    sources' bounds, shown disabled and never flagged, so a member joining
+    or leaving changes nothing to retype (ruling 62, amended). A candidate
+    on their own *All* panel is not counted short. The Outline also names a gate with no source,
     a source with no panel or question, a min above its max and a missing
     number. **Assignment** is a menu: *Automatic*, *Suggested, then
     approved*, *Assigned by the operator* (what each does is "The

@@ -1164,9 +1164,11 @@ def sources_of(exercise_id: str, gate: Gate) -> tuple[tuple[Source, ...], Total]
     if gate.sources:
         sources = tuple(_whole_panel(exercise_id, src) for src in gate.sources)
         lo, hi = total_bounds(sources)
-        # Every source taking *All*: the Total is theirs too, so a panel
-        # that grows or shrinks never leaves it to retype (ruling 62).
-        if all(s.all_members and s.kind == "panel" for s in gate.sources):
+        # A source taking *All* gives the gate its whole panel, whatever
+        # its size (ruling 62, amended 2026-11-20): the Total is then the
+        # sources' bounds, so a member joining or leaving changes nothing
+        # the operator must retype and nothing the Outline flags.
+        if any(s.all_members and s.kind == "panel" for s in gate.sources):
             return sources, Total(lo, hi)
         return sources, gate.total or Total(lo, hi)
     if not gate.panel:
@@ -1200,6 +1202,8 @@ def total_problem(sources: tuple[Source, ...], total: Total) -> str:
     silently clamped)."""
     if not sources:
         return "no evaluators"
+    if any(s.all_members and s.kind == "panel" for s in sources):
+        return ""  # the Total is the sources' own (ruling 62): a source's problem says it
     lo, hi = total_bounds(sources)
     if total.min > total.max:
         return "the Total's min is above its max"
@@ -1301,7 +1305,8 @@ def fill(
     taken in rank order: the first gives as many as it has, up to its max;
     each lower one gives what the Total's min still needs, never fewer
     than its own min; nothing passes the Total's max, and room is kept for
-    the lower sources' mins. Evaluators are distinct by email (any case),
+    the lower sources' mins. A gate with an *All* source (ruling 62) has
+    every source give as many as it has, up to its max. Evaluators are distinct by email (any case),
     a person in two sources counted for the higher-ranked, and the
     candidate never their own. A panel gives its least-loaded members
     first; ``load`` counts each evaluator's dossiers across calls, from
@@ -1309,6 +1314,12 @@ def fill(
     chosen: list[tuple[str, int]] = []
     seen = {candidate.casefold()} if candidate else set[str]()
     unmet: list[int] = []
+    # A gate taking *All* of a panel (ruling 62, amended 2026-11-20) has
+    # no Total of the operator's: every source gives as many as it has, up
+    # to its max, and an All source is met by every member it can give
+    # (the candidate on their own panel is not a shortfall).
+    whole = any(s.all_members and s.kind == "panel" for s in sources)
+    needed = 0
     for rank, (source, people) in enumerate(zip(sources, offers, strict=True)):
         available: list[str] = []
         for person in people:
@@ -1320,16 +1331,19 @@ def fill(
             available.sort(key=lambda p: load.get(p.casefold(), 0))
         reserved = sum(s.min for s in sources[rank + 1 :])
         room = max(0, total.max - len(chosen) - reserved)
-        want = source.max if rank == 0 else max(source.min, total.min - len(chosen))
+        want = source.max if rank == 0 or whole else max(source.min, total.min - len(chosen))
         given = available[: max(0, min(len(available), source.max, want, room))]
         for person in given:
             seen.add(person.casefold())
             chosen.append((person, rank))
             if load is not None:  # every dossier counts, a nominated one too (Codex)
                 load[person.casefold()] = load.get(person.casefold(), 0) + 1
-        if len(given) < source.min:
+        floor = min(source.min, len(available)) if source.all_members else source.min
+        needed += floor
+        if len(given) < floor:
             unmet.append(rank)
-    return Filling(tuple(chosen), max(0, total.min - len(chosen)), tuple(unmet))
+    short = max(0, (needed if whole else total.min) - len(chosen))
+    return Filling(tuple(chosen), short, tuple(unmet))
 
 
 @dataclass(frozen=True)

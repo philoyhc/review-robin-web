@@ -1008,18 +1008,14 @@ def test_all_takes_the_whole_panel(page: Page) -> None:
     assert lo.input_value() == hi.input_value() == str(size)
     summary = gate.locator('[data-gsec="evaluators"] [data-gsec-sum]').text_content() or ""
     assert f"Panel A {size}" in summary, summary
-    # Beside the Nominated source, the Total stays the operator's.
-    tlo = gate.locator('[data-ps="total-min"]')
-    assert not tlo.is_disabled()
+    # Beside the Nominated source (0–1), the Total is the sources' bounds,
+    # disabled (ruling 62, amended): the whole panel plus up to one.
+    tlo, thi = gate.locator('[data-ps="total-min"]'), gate.locator('[data-ps="total-max"]')
+    assert tlo.is_disabled() and thi.is_disabled()
+    assert (tlo.input_value(), thi.input_value()) == (str(size), str(size + 1))
     whole.click()
     assert not lo.is_disabled() and not hi.is_disabled()
-    # With every source taking All, the Total follows them, disabled.
-    nominated.locator('[data-ps-act="remove"]').click()
-    whole = rows.nth(0).locator('[data-ps="all"]')
-    whole.click()
-    assert tlo.is_disabled() and tlo.input_value() == str(size)
-    whole.click()
-    assert not tlo.is_disabled()
+    assert not tlo.is_disabled() and not thi.is_disabled()
 
 
 def test_a_nominated_source_shuts_the_new_panel_box(page: Page) -> None:

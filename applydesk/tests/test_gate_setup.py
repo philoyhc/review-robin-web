@@ -96,13 +96,29 @@ def test_all_takes_the_panel_s_size_as_it_stands() -> None:
     # The filling gives a dossier the whole panel.
     members = tuple(e for _, e in sample_data.panel_pools("wa9juxbc2t")["current-ras"]["members"])
     assert len(stages.fill(sources, total, (members,)).evaluators) == size
-    # Beside a source without All, the Total stays the operator's.
+    # Beside a source without All, the Total is still the sources' bounds
+    # (ruling 62, amended): the panel's members all, plus the other's own.
     mixed = stages.replace(
         gate,
         sources=(*gate.sources, stages.Source("nominated", "Q", 0, 1)),
         total=stages.Total(1, 1),
     )
-    assert stages.sources_of("wa9juxbc2t", mixed)[1] == stages.Total(1, 1)
+    msources, mtotal = stages.sources_of("wa9juxbc2t", mixed)
+    assert mtotal == stages.Total(size, size + 1)
+    assert not stages.total_problem(msources, mtotal)
+    # ... and the other source gives up to its max: the nominee is added,
+    # and a dossier with none is not short (the author's choice).
+    with_nominee = stages.fill(msources, mtotal, (members, ("nominee@example.edu",)))
+    assert len(with_nominee.evaluators) == size + 1 and not with_nominee.short
+    without = stages.fill(msources, mtotal, (members, ()))
+    assert len(without.evaluators) == size and not without.short and not without.unmet
+    # A candidate on their own All panel is not a shortfall.
+    own = stages.fill(msources, mtotal, (members, ()), candidate=members[0])
+    assert len(own.evaluators) == size - 1 and not own.short and not own.unmet
+    # A lower source's min above its max is that source's problem, not
+    # the (disabled) Total's.
+    bad = stages.replace(mixed, sources=(*gate.sources, stages.Source("nominated", "Q", 2, 1)))
+    assert not stages.total_problem(*stages.sources_of("wa9juxbc2t", bad))
     # A Nominated source has no All: its numbers stand.
     nominated = stages.replace(
         gate, sources=(stages.Source("nominated", "Q", 0, 1, all_members=True),)
@@ -168,6 +184,37 @@ def test_process_save_keeps_all() -> None:
         assert isinstance(saved, stages.Gate)
         sources, _ = stages.sources_of(made, saved)
         assert sources[0].all_members and (sources[0].min, sources[0].max) == (2, 2)
+    finally:
+        scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
+    # A member joins the panel: the gate takes them too, nothing to retype.
+    grown = {
+        "panels": [{"key": "panel-1", "name": "Readers"}],
+        "people": [
+            {"name": "A", "email": "a@example.edu", "note": "", "panels": ["panel-1"]},
+            {"name": "B", "email": "b@example.edu", "note": "", "panels": ["panel-1"]},
+            {"name": "C", "email": "c@example.edu", "note": "", "panels": ["panel-1"]},
+        ],
+    }
+    assert client.post(f"{LOBBY}/{made}/panels", json=grown).status_code == 200
+    reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- as above
+    try:
+        saved = stages.plan_of(made).columns[0]
+        assert isinstance(saved, stages.Gate)
+        sources, total = stages.sources_of(made, saved)
+        assert (sources[0].max, total.min, total.max) == (3, 3, 3)
+        assert not stages.total_problem(sources, total)
+    finally:
+        scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
+    # And one leaves: the gate takes the rest, still nothing to retype.
+    shrunk = {**grown, "people": grown["people"][:1]}
+    assert client.post(f"{LOBBY}/{made}/panels", json=shrunk).status_code == 200
+    reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- as above
+    try:
+        saved = stages.plan_of(made).columns[0]
+        assert isinstance(saved, stages.Gate)
+        sources, total = stages.sources_of(made, saved)
+        assert (sources[0].max, total.min, total.max) == (1, 1, 1)
+        assert not stages.total_problem(sources, total)
     finally:
         scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
     bad = {**gate, "sources": [{**gate["sources"][0], "all_members": "yes"}]}  # pyright: ignore[reportIndexIssue]  -- a test's dict

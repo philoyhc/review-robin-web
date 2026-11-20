@@ -577,6 +577,12 @@ where a ruling below differs from it, the ruling wins.
     *All* toggle after a panel source's Min and Max gives each dossier
     every member of the panel, the two boxes disabled while it is on, its
     count following the panel as members join or leave (segment AD1O).
+    **Amended** (author, 2026-11-20): "adding or removing panel members
+    won't make a difference — that gate will simply take all panel
+    members as evaluators." Beside an *All* source, each other source
+    gives as many as it has, up to its max (the author's choice of three,
+    2026-11-20); the Total is then the sources' bounds, disabled, never
+    retyped or flagged.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
