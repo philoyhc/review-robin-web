@@ -102,27 +102,28 @@ holds about 700, and `_handoffs.py` grows to about 425.
 
 ## Status
 
-- **2026-11-20, rung 1.** `_read_settings_csv` moved with the pipeline:
-  only the pipeline calls it. `spec/quick_setup_card_spec.md` named the
-  pipeline too and joins Doc impact. Base for the cumulative read:
-  `c416ab377`, `main` before rung 1.
-- **2026-11-20, rung 1 CI.** Outside `routes_operator/`, the pipeline
-  became a reader `test_linked_lock_signals.py` must name, for the
-  observers lock. No test pinned its refusal: Quick Setup is off on a
-  linked session and the handoff refuses observers first, so it is
-  defense in depth. `test_the_pipeline_refuses_an_observers_file_on_a_linked_session`
-  calls the pipeline directly; it fails with the check disabled.
-- **2026-11-20, rung 2.** The handoff block moved verbatim (`diff` of
-  `_HANDOFF_HEADERS` onward, empty). `_handoffs.py` keeps its own
-  `_refused` beside the moved `_handoff_refused`; folding them is a
-  behavior question, left out of a move.
-- **2026-11-20, cumulative read** (one, at rung 2's head): the moves are
-  verbatim, the import order and the patch targets hold. It found stale
-  locations in `spec/architecture.md` (the `cordware.graph` import),
-  `spec/lifecycle.md` §7, `spec/csv_contracts.md` (the Relationships
-  callers) and the package `__init__` comment, all fixed in their rung.
-  `cordware/docs/cordware_interoperability_agent_handoff_v0.3.md` is a
-  versioned handoff, left as written.
+**Closed 2026-11-20.** Opened in #4072; the ladder held as planned:
+rung 1 #4073, rung 2 #4074, this close. `_quick_setup.py` went from
+1,867 lines to 779; `app/web/quick_setup_pipeline.py` holds 810 and
+`_handoffs.py` 458. Both moves are verbatim apart from the renames and
+the deferred `_shared` imports, each shown by a `diff`.
+
+- **Moved with the pipeline:** `_read_settings_csv`, its only caller.
+- **Found by CI at rung 1:** outside `routes_operator/`, the pipeline is
+  a reader `test_linked_lock_signals.py` must name, and nothing pinned
+  its observers refusal (Quick Setup is off on a linked session and the
+  handoff refuses observers first). A test now calls the pipeline
+  directly and fails with the check disabled.
+- **Left as found:** `_handoffs.py` keeps `_refused` beside the moved
+  `_handoff_refused` (folding them changes behavior); the versioned
+  `cordware/docs/cordware_interoperability_agent_handoff_v0.3.md`.
+- **Reads:** one cumulative `diff-reviewer` read at rung 2's head
+  (base `c416ab377`) confirmed the moves and found stale locations in
+  four specs and a package comment, fixed in their rung;
+  `spec/quick_setup_card_spec.md` and `spec/lifecycle.md` joined Doc
+  impact. One `spec-writer` verify over the doc-impact specs at that
+  head found them matching the code, and stands as the close pass: no
+  doc-impact file changed after it.
 
 ## PR ladder
 
