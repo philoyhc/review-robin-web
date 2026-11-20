@@ -74,7 +74,7 @@ router.include_router(_instruments_pagination.router)
 router.include_router(_extract_data.router)
 router.include_router(_extracts.router)
 router.include_router(_sys_admin.router)
-# Segment 23A: the interop proof of concept's holding page; its create
-# route is in ``_quick_setup``.
+# Segments 23A, 23F: every handoff route, the holding page, the create,
+# the re-send and the status and results reads.
 router.include_router(_handoffs.router)
 router.include_router(_workflow.router)

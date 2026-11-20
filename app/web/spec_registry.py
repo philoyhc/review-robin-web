@@ -79,10 +79,7 @@ SPEC_COVERAGE: dict[str, tuple[str, ...]] = {
         "spec/permissions.md",  # owners/add, owners/{id}/remove
         "spec/session_owners.md",  # the Owners card's routes (findings B7)
     ),
-    "app.web.routes_operator._quick_setup": (
-        "spec/quick_setup_card_spec.md",
-        "spec/handoffs.md",  # the handoff create, which runs this pipeline
-    ),
+    "app.web.routes_operator._quick_setup": ("spec/quick_setup_card_spec.md",),
     "app.web.routes_operator._handoffs": ("spec/handoffs.md",),
     "app.web.routes_operator._setup_reviewers": ("spec/setup_pages.md",),
     "app.web.routes_operator._setup_reviewees": ("spec/setup_pages.md",),

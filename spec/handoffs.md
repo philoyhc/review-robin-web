@@ -40,9 +40,9 @@ A non-operator gets the package gate's usual `303` to `/me`, as does an
 operator the owner-eligibility lock refuses (`OperatorAllowlistDenied`,
 §5); a sender posting with `redirect: "manual"` reads either as
 `not_authorized`. The
-create route lives in `app/web/routes_operator/_quick_setup.py` and runs
-Quick Setup's pipeline, `app/web/quick_setup_pipeline.py`; its rules are
-`app/services/handoffs.py`.
+create and re-send routes live in `app/web/routes_operator/_handoffs.py`
+and run Quick Setup's pipeline, `app/web/quick_setup_pipeline.py`; their
+rules are `app/services/handoffs.py`.
 
 ## 3. Request checks
 

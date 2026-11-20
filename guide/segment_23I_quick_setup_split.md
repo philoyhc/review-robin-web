@@ -112,6 +112,10 @@ holds about 700, and `_handoffs.py` grows to about 425.
   linked session and the handoff refuses observers first, so it is
   defense in depth. `test_the_pipeline_refuses_an_observers_file_on_a_linked_session`
   calls the pipeline directly; it fails with the check disabled.
+- **2026-11-20, rung 2.** The handoff block moved verbatim (`diff` of
+  `_HANDOFF_HEADERS` onward, empty). `_handoffs.py` keeps its own
+  `_refused` beside the moved `_handoff_refused`; folding them is a
+  behavior question, left out of a move.
 - **2026-11-20, cumulative read** (one, at rung 2's head): the moves are
   verbatim, the import order and the patch targets hold. It found stale
   locations in `spec/architecture.md` (the `cordware.graph` import),

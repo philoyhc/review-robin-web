@@ -326,7 +326,7 @@ def _signed_in_to_the_directory(monkeypatch: pytest.MonkeyPatch) -> None:
     operator does, through `cordware.graph.FakeDirectory`, so an upload's
     addresses are checked. A test that wants no token, or a failing
     directory, patches the route module's own `directory_or_none` (the
-    routes import the name: `_shared`, `_quick_setup`,
+    routes import the name: `_shared`, `_quick_setup`, `_handoffs`,
     `_rehydrate`), or makes `_shared.directory_for`
     raise `GraphError("no_token")` to reach every caller at once."""
     from app.web.routes_operator import _shared
