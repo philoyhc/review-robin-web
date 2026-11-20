@@ -52,8 +52,7 @@ point.
 - An unset `CORDWARE_APPS` mounts all five, so a deployment that does not
   carry `residentialapps/`, `applydesk/` or `utilityapps/` names its applications: the host fails to start
   on a factory it cannot import. What production mounts is the private
-  Cordware repository's record, not this one's (findings 2026-11-20
-  corpus H3).
+  Cordware repository's record, not this one's.
 - The mount path is a constant here, not a setting, so no configuration can
   move an application off its path.
 - The host imports an application only by loading its `factory` string at

@@ -685,7 +685,7 @@ own users by a **handoff**: it posts the rosters, the pairs and the
 settings in one request, and the session it makes is **linked** to that
 application. The application keeps what it owns: it may send the files
 again while the session is an unopened draft, and while the link holds
-Review Robin turns off what the application does in its place (its own
+Review Robin turns off what the application does in its place (among them its own
 email, release of results, observers, the instrument's structure, and
 the details the application sets), each refused at the surface that
 would offer it. The operator still runs the review itself: validate,

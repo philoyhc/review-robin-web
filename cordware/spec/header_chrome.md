@@ -1,15 +1,11 @@
 # Header chrome: one top bar across Cordware's applications
 
-**The shared contract for the top bar**, built (author, 2026-11-02). It
-sets what the bar does in Review Robin, Residential Operations, Support
-Logs and Apply Desk: Review Robin in segment 20D (#3505–#3510),
-Residential Operations and Support Logs in #3511, Apply Desk in its AD1
-skeleton. Each application's own spec states its share and points here:
-`spec/visual_style_rrw.md` ("Top bar"),
+**The shared contract for the top bar** in Review Robin, Residential
+Operations, Support Logs and Apply Desk. It is Cordware's because the bar
+belongs to no one application. Each application's own spec states its
+share and points here: `spec/visual_style_rrw.md` ("Top bar"),
 `residentialapps/spec/residentialops_ui.md` §2 and
-`applydesk/spec/applications.md`. Moved from `docs/` into Cordware's spec
-on 2026-11-20 (findings 2026-11-20 corpus H1): the bar belongs to no one
-application.
+`applydesk/spec/applications.md`.
 
 ## 1. Why
 
@@ -66,8 +62,8 @@ needed to open it.
 |---|---|
 | Review Robin, operator or sys admin | Operator Lobby; User Lobby |
 | Review Robin, participant | User Lobby |
-| Residential Operations | Its areas, as today |
-| Support Logs | Its areas, as today |
+| Residential Operations | Its areas |
+| Support Logs | Its areas |
 | Apply Desk | Operator Lobby (operators); User Lobby |
 
 A viewer with only one place and no other application still gets the
@@ -76,9 +72,7 @@ switcher static, without the ▾, as Residential's does.
 
 ## 4. The account menu
 
-The avatar opens it. It replaces Review Robin's "Signed in as …", its
-text links and its Sign out button, and gives Residential the Sign out it
-lacks.
+The avatar opens it, in every application; it holds Sign out.
 
 1. **Who**: the display name in bold; under it the email and the tier,
    "super admin" or "sys admin" when held. Lets a viewer on a shared
@@ -86,17 +80,17 @@ lacks.
 2. **Application entries**, each only for a viewer who may use it:
    - Review Robin: **Settings** (operators and sys admins), **Admin**
      (sys admins), **Guide** (a viewer who resolves a Guide audience, the
-     same fail-open `guide_hidden` flag as today), **About**, with the
+     fail-open `guide_hidden` flag), **About**, with the
      version beside it for operators and sys admins.
-   - Residential: Sys admin, where it is a menu entry today; in Support
+   - Residential: **Sys admin**, for a viewer who holds it; in Support
      Logs, **Who can see what**, its staff explainer (2026-11-07); Guide
      and About when they exist.
 3. **Under 640 px**: the Light/Dark toggle and the viewer's name.
 4. **Sign out**, last, its own group: `/.auth/logout`.
 
 - **Return to origin is kept.** Settings, Admin, Guide and About still
-  carry `?return_to=` the current page, as their links do today.
-- **An entry is omitted on its own page**, as today: no Settings on
+  carry `?return_to=` the current page.
+- **An entry is omitted on its own page**: no Settings on
   Settings, no About on About, and none of them on Sign-in details.
 - **Guide sits here, not in the switcher** (author, 2026-11-02): it is
   help, not a place.
@@ -108,15 +102,15 @@ At most one thin row, the application's to fill:
 - **Residential and Support Logs**: the area's page tabs, unchanged.
 - **Review Robin**: the **breadcrumb**
   (`app/web/templates/_partials/breadcrumb.html`), on its own row inside
-  the header, under the bar and above the header's one bottom line, where
-  it sits today under the app identity. No line between the bar and the
+  the header, under the bar and above the header's one bottom line. No
+  line between the bar and the
   breadcrumb. Rendered only where a page has one. Under 640 px the middle
   crumbs collapse to "…". Below the header's line nothing changes (§1).
 - **Participants**: no row.
 
 ## 6. The top line: institution, or the operator's unit
 
-**One name per workspace, set by Cordware; in Review Robin and ApplyDesk
+**One name per workspace, set by Cordware; in Review Robin and Apply Desk
 an operator's unit replaces it** (author, 2026-11-02). One deployment may
 host a department next door that has no deployment of its own; its people
 should see their own name, not the host's. A courtesy, kept simple.
@@ -125,20 +119,20 @@ should see their own name, not the host's. A courtesy, kept simple.
 
 | Layer | Set by | Holds |
 |---|---|---|
-| **Workspace default** | The deployer: a Cordware platform setting, `CORDWARE_INSTITUTION_NAME`, read by every application through Cordware's settings as `APP_ENV` is today | The hosting institution, e.g. "Example University". Empty means no top line |
-| **Review Robin, the operator's Unit** | A sys admin, on the account's row in Accounts Management | A new field on the operator's account, e.g. "Department of Example". Empty means the default |
-| **ApplyDesk, the operator's Unit** | As Review Robin | As Review Robin |
+| **Workspace default** | The deployer: a Cordware platform setting, `CORDWARE_INSTITUTION_NAME`, read by every application through Cordware's settings | The hosting institution, e.g. "Example University". Empty means no top line |
+| **Review Robin, the operator's Unit** | A sys admin, on the account's row in Accounts Management | The account's `users.unit`, e.g. "Department of Example". Empty means the default |
+| **Apply Desk, the operator's Unit** | As Review Robin, once its operators have Units; until then the default | As Review Robin |
 | **Residential** | Its own setup, where the top-level Unit is named | The top-level Unit's name |
 
 - **Only a sys admin edits Unit.** An operator sees theirs, read-only, on
   Settings, and cannot change it; nor is it set per session.
-- **Every change is audited**: a `changes` envelope on the user, under a
-  new event type registered in `EVENT_SCHEMAS`.
+- **Every change is audited**: `workspace.user_unit_set`, a `changes`
+  envelope on the user.
 - **Length**: at most 80 characters, trimmed; the bar truncates it.
 
 ### Which name a page shows
 
-Review Robin and ApplyDesk:
+Review Robin and Apply Desk:
 
 | Page | Name shown |
 |---|---|
@@ -151,8 +145,8 @@ The creator's Unit is read when the page renders, so a sys admin's change
 shows on that operator's existing sessions at once.
 
 **Residential**: the top-level Unit's name when it is set and differs
-from the default; otherwise the default. In practice that is the college,
-as today. In Support Logs it is the viewer's working Unit (2026-11-08),
+from the default; otherwise the default: in practice, the college. In
+Support Logs it is the viewer's working Unit (2026-11-08),
 which the summary's accessible name also carries when the viewer has
 more than one.
 
@@ -171,28 +165,26 @@ more than one.
 - **URLs** are emitted through `url()`, `here()` and `host_url()`, never
   written root-relative.
 - **One template per family**: Review Robin's operator and participant
-  bars become one partial with different entries, retiring the separate
-  reviewer bar; Residential keeps its own partial to the same contract.
+  bars are one partial, `_partials/top_bar.html`, with different
+  entries; Residential and Apply Desk each have their own partial to the
+  same contract.
 
-## 8. Residential and ApplyDesk
+## 8. Each application's share
 
-**This file is the contract for all three.** The build is per application:
+**This file is the contract for all three**; each application builds its
+own bar to it.
 
-- **Review Robin**: built, `guide/archive/segment_20D_header_chrome.md`, header only (§1).
-- **Residential**: built ahead of its plans, in #3511 (the plans record it): the bar in
-  `residentialapps/guide/segment_1C_ra_leave.md`, Support Logs' entries in
-  `residentialapps/guide/segment_1D_support_logs.md`, the role and the top
-  line in `residentialapps/guide/segment_1B_rosters_and_organization.md`.
-  Its share: the icon in place of the square (§2), Sign out and
-  the account menu (§4), the top line's fallback to the workspace default
+- **Review Robin**: every surface, operator and participant (§1).
+- **Residential**: the icon in place of the square (§2), Sign out and the
+  account menu (§4), the top line's fallback to the workspace default
   (§6), and the toggle moving into the menu under 640 px. Sys admin is an
-  account-menu entry, as Review Robin's Settings and Admin are (author,
-  2026-11-02). Its switcher's places and tabs stay as they are.
-- **ApplyDesk**: the bar of §2–§4 built with its placeholders, in its own
-  `applydesk/templates/applydesk/base.html` (segment AD1, 2026-11-12);
-  the top line is the workspace default until its operators have Units.
+  account-menu entry, as Review Robin's Settings and Admin are. Its
+  switcher's places and tabs are its own.
+- **Apply Desk**: the bar of §2–§4 in
+  `applydesk/templates/applydesk/base.html`; its top line is the
+  workspace default until its operators have Units.
 
-## 9. Done when
+## 9. What holds
 
 - Every page of the three applications renders the bar of §2, with its
   own icon.
@@ -202,7 +194,5 @@ more than one.
   top line in Review Robin; set, every page does. An operator given a
   Unit sees it on the sessions they created, and so do those sessions'
   participants and co-owners; operators cannot edit it.
-- In Review Robin, a page compared before and after differs only above
-  the header's bottom line.
-- The browser checks: both menus by keyboard, light and dark, at 390 px
-  and at desktop width.
+- Both menus work by keyboard, in light and dark, at 390 px and at
+  desktop width.
