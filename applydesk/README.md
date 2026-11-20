@@ -24,4 +24,5 @@ roadmap are in `guide/todo_master.md`.
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and CI |
 | `guide/todo_master.md` | Rulings, the MVP roadmap and open decisions |
 | `guide/findings_2026-11-18_assessment.md` | Findings register from the 2026-11-18 assessment of every Apply Desk screen: UI consistency, intended actions, data model and spec gaps, 125 rows (AD-01 to AD-125) to clear, with the rulings it needs |
+| `guide/findings_2026-11-20_sweep.md` | Apply Desk's findings from RRW's corpus sweep of 2026-11-20 (the first to read the packages' prose): 7 rows, the spec against rulings 26, 28, 33, 36, 38, 39 and 59, and the layout table |
 | `guide/archive/README.md` | Closed segment plans: AD1 (the package and URL map), AD1B (the Form page), AD1C (Dossiers), AD1D (the exercise's chrome), AD1E (Process), AD1F (Gates and Panels), AD1G (Evaluators and Evaluations), AD1H (the RA model exercise), AD1I (Exercise Home), AD1J (Extract data), AD1K (a status per stage, and what locks) |
