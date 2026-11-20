@@ -124,8 +124,12 @@ def test_pull_reads_progress_and_a_closed_session_s_final_pull_concludes(page: P
     card = _card(page)
     pull = card.locator('[data-rr-act="pull"]')
     assert pull.inner_text() == "Pull results" and pull.is_enabled()
-    assert card.locator("[data-rr-done]").first.inner_text() == "—"
+    # The table starts shut, the actions above it in view (author, 2026-11-20).
+    people = card.locator("[data-rr-people]")
+    assert people.get_attribute("open") is None and pull.is_visible()
+    assert card.locator("[data-rr-done]").first.text_content() == "—"
     pull.click()
+    assert people.get_attribute("open") is not None  # a pull opens what it filled
     assert _said(page) == "Pulled (simulated): 3 of 5 reviewed; its session is still open."
     assert " of " in card.locator("[data-rr-done]").first.inner_text()
     assert page.locator(".ev-head [data-gate-state]").text_content() == "Sent"
@@ -210,4 +214,4 @@ def test_re_send_is_refused_too_after_the_pairs_change_in_the_tab(page: Page) ->
 def test_a_detached_gate_keeps_what_was_last_reported(page: Page) -> None:
     page.goto(f"{K7}/gate_3")
     done = _card(page).locator("[data-rr-done]")
-    assert done.count() and all(" of " in t for t in done.all_inner_texts())
+    assert done.count() and all(" of " in t for t in done.all_text_contents())

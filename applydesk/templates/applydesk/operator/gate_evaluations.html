@@ -78,12 +78,20 @@
     </div>
   </div>
   {% if people %}
+  {# Shut by default, so a gate's 30 rows do not push the page down; the
+     actions above stay in view, and a pull opens it (author, 2026-11-20). #}
+  {% set n_eval = people | length %}
+  <details class="gsec" data-rr-people>
+    <summary><span class="gsec-t">Evaluators</span><span class="gsec-s">{{ n_eval }} {{ "evaluator" if n_eval == 1 else "evaluators" }}, each one's pairs and how many are done</span></summary>
+    <div class="gsec-b">
   <div class="table-wrap">
   <table class="rr-status" data-rr-status>
     <thead><tr><th>Evaluator</th><th>Pairs</th><th>Done</th></tr></thead>
     <tbody>{% for name, email, n in people %}<tr data-rr-person="{{ email }}"><td>{{ name }}</td><td>{{ n }}</td><td class="muted" data-rr-done>—</td></tr>{% endfor %}</tbody>
   </table>
   </div>
+    </div>
+  </details>
   {% else %}<p class="muted">No evaluators paired yet.</p>{% endif %}
   <p class="muted">Simulated: until AD2 and AD6 nothing reaches Review Robin, and no email is sent until AD7.</p>
   </div>

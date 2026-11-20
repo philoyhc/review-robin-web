@@ -31,8 +31,13 @@ def test_the_review_robin_card_is_two_columns_tiles_and_a_progress_panel(page: P
     assert round(tiles[0]["x"]) == round(tiles[2]["x"])  # 2 x 2
     panel = card.locator(".rr-progress")
     assert _box(panel)["y"] > tiles[3]["y"]
-    acts, table = _box(panel.locator(".rr-acts").first), _box(panel.locator("[data-rr-status]"))
+    people = panel.locator("[data-rr-people]")
+    acts, table = _box(panel.locator(".rr-acts").first), _box(people)
     assert acts["y"] < table["y"]  # the actions above the table
+    # The table shut, its summary in view; opened, its rows show.
+    assert not panel.locator("[data-rr-status]").is_visible()
+    people.locator("summary").click()
+    assert panel.locator("[data-rr-status]").is_visible()
     # A phone: one column each.
     page.set_viewport_size({"width": 390, "height": 900})
     tiles = [_box(t) for t in card.locator(".rr-file").all()]

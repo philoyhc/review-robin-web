@@ -959,7 +959,9 @@ keeps all of them.
   tiles 2 × 2, each a title, a line and *Download*. Then *Progress*, a
   full-width panel: its line, then *Send to Review Robin*, *Re-send*,
   *Pull results*, *Invite evaluators* and *Remind those not done*, then
-  a progress row per paired evaluator. All are simulated in the tab
+  a progress row per paired evaluator, in an *Evaluators* section shut
+  until opened (author, 2026-11-20): the actions stay in view, and a pull
+  opens it. All are simulated in the tab
   (`_rr_js.html`). At a phone's width each pair of columns stacks.
 - **Send and Re-send** (`_rr_js.html`), simulated in the tab (ruling 55):
   a send is kept in `sessionStorage` under `applydesk-rr:<exercise>`, by

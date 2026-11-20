@@ -244,6 +244,9 @@
         said.textContent = "Pulled (simulated): " + (DATA.line || "no progress yet") + "; its session is still open.";
       }
       draw();
+      // A pull opens the table it just filled (author, 2026-11-20).
+      var people = card.querySelector("[data-rr-people]");
+      if (people) people.open = true;
     } else if (b.dataset.rrAct === "invite" || b.dataset.rrAct === "remind") {
       openMail(b.dataset.rrAct);
     } else if (b.dataset.rrAct === "mail-send") {
