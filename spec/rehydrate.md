@@ -403,7 +403,7 @@ instrument uses imports as stored.
    event records its `directory_*` counts. Without this the rebuilt
    session would match everyone by mail alone. `None` (no delegated
    token) checks nothing, and every row matches by mail. **An expired
-   token** (Graph's `unauthorized`; segment 20G) raises
+   token** (Graph's `unauthorized`) raises
    `RehydrateSignInStopped`: nothing is created, as for any
    failure ([§7](#7-atomicity-and-audit)), but the page keeps the stash
    and its token and asks to renew the sign-in and rehydrate again

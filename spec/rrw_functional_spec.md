@@ -992,7 +992,7 @@ Distinct from per-session settings, each operator owns:
   created.
 
 Per-operator SMTP credentials are still stored (columns, encrypted
-password) but no page edits them since segment 14C Item 1; they may
+password) but no page edits them; they may
 serve a deployment with an SMTP relay (`spec/settings_inventory.md`
 §1).
 

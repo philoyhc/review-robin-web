@@ -878,7 +878,7 @@ instrument the fields a group row can't show (`spec/instruments.md`
 hidden ("Response fields"). Every chip inside a linked instrument's
 fixed region (`[data-linked-fixed]`: Band 1's rule chips, the
 response-field chips) is fixed too, read off the region, beside the
-region's other controls taking the inactive look (segment 23F rung 7h). It is per item: a card's locked view stays
+region's other controls taking the inactive look. It is per item: a card's locked view stays
 `is-locked`, or on a locked Instruments card the plain pill (above). Its other use is the Instruments
 Visibility card's cells whose mode isn't the operator's to choose
 (`spec/instruments.md` "Visibility card"), and the Assignments page's

@@ -1,8 +1,7 @@
 # Handoffs from another Cordware application
 
-**Status:** shipped in segment 23A (`guide/archive/segment_23A_interop_poc.md`),
-as the interoperability proof of concept; the reads back to the sender
-(§10) in segment 23B (`guide/archive/segment_23B_interop_return.md`). The design it tries out is
+**Status:** shipped, as the interoperability proof of concept, with the
+reads back to the sender (§10). The design it tries out is
 `cordware/docs/cordware_interoperability_consolidated_spec_v0.3.md`
 ("the interop spec"); this file is the contract Review Robin actually
 offers. The only sender today is Utilities' *Interop proof of concept*
@@ -107,7 +106,7 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   own browser (one operator in both apps, `guide/interoperability.md`),
   so these are the operator's settings; a sender sends only what its
   session needs.
-- **Refused, the draft goes with it** (author, 2026-11-11): the route
+- **Refused, the draft goes with it:** the route
   rolls back and deletes the session, its audit events included. A
   refused roster is `422 invalid_setup` with `slot`, `reason` and the
   importer's own `details`; a lapsed directory sign-in is
@@ -117,22 +116,22 @@ parsers and caps (`spec/csv_contracts.md`); nothing parses them twice.
   leaves the draft with its rosters, which a replay completes (§6).
   New session's own behavior is unchanged: it still keeps the draft when a
   file is refused.
-- **The link** (segment 23E, `guide/archive/segment_23E_linked_sessions.md`): a
+- **The link:** a
   `source_app` with a profile in `app/services/linked_apps.py`
   (`applydesk`; `utilities`, the proof of concept) sets the draft's
   `linked_app` with its transfer record; any other links nothing. Session
   Home shows the link, and **Unlink** clears it (`session.unlinked`).
   A linked draft starts with the Relationships tab on
-  (`relationships_enabled`, segment 23F): its application sends the pairs.
+  (`relationships_enabled`): its application sends the pairs.
   A profile is a set of named locks (`linked_apps.Lock`) and the settings
-  fields it owns (segment 23F rung 2a), by lock in `spec/linked_sessions.md`.
+  fields it owns, by lock in `spec/linked_sessions.md`.
   Profiles are code, never data a bundle can set.
   Under the instrument lock the create's files must make one instrument
   (else `422 invalid_setup`, `slot` `settings`, `reason` `one_instrument`);
   Review Robin then fixes its assignment rule (All /
   `pair_context.tag1 IS FILLED` / Individual: assign where a relationship
   exists) and starts its display fields at the fixed pair and the dossier
-  link (`app/services/linked_instruments.py`, segment 23F rung 7a).
+  link (`app/services/linked_instruments.py`).
   The mark is set before the files apply, so the profile holds for them:
   an `observers` file is refused before the draft is made, after the
   replay lookup so a transfer completed before the link still answers
@@ -173,10 +172,8 @@ accepted for a proof of concept, whose sender disables its button.
 
 ## 6a. The re-send — a linked, unopened draft kept current
 
-Segment 23F (`guide/archive/segment_23F_linked_drafts.md`): while a linked
-session is unopened, its rosters are the linked application's, which
-re-sends them rather than Review Robin editing them (Apply Desk's ruling
-24).
+While a linked session is unopened, its rosters are the linked
+application's, which re-sends them rather than Review Robin editing them.
 
 - **Naming the draft:** the path's `transfer_id` is the transfer that
   created it, as §10's reads name theirs; a sender never names a free
@@ -194,7 +191,7 @@ re-sends them rather than Review Robin editing them (Apply Desk's ruling
   switch, and the session tags (`session_tags[N].tag`). Any other row is
   `422 invalid_setup`, `slot` `settings`, `reason` `not_owned`, naming the
   fields. A profile taking the instrument lock also owns its one
-  instrument's rows (segment 23F rung 7b): `instruments[1].name` (the
+  instrument's rows: `instruments[1].name` (the
   short label follows it, cut to 32 characters), `.description`, and each
   `response_fields[m]`'s definition (key, label, response type, data
   type, bounds, list, required, help text and its visibility, visible;

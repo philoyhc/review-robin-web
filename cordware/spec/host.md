@@ -303,8 +303,9 @@ top-level packages it may not import; a second check adds one module:
   `cordware.main`, which builds the host when imported. A separate check in
   the same file reads every module an application imports, `from cordware
   import main` and dynamic imports included.
-- `residentialapps/tests/` is exempt from the `cordware.main` check only
-  (never from `app`): Residential's mounted tests build the host there.
+- The `tests/` folders of `applydesk`, `residentialapps` and `utilityapps`
+  are exempt from the `cordware.main` check only (never from `app`): each
+  package's mounted tests build the host there.
 - Inside `residentialapps`, neither application package imports the other
   (`residentialapps.residentialops`, `residentialapps.supportlogs`), relative imports
   resolved; `residentialapps/spec/architecture.md` has the full table.

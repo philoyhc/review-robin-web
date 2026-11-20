@@ -212,6 +212,8 @@ Session: [LIFECYCLE_BADGE]  ·  Reviewers: [count]  ·  Reviewees: [count]  ·  
 
 Lifecycle badge first, then the Setup entities in canonical order (Reviewers, Reviewees, Relationships, Observers, Instruments, Email Template — Relationships and Observers report only when their optional Setup tab is enabled), then the two operations indicators (Invitations, Responses) at the right. Counts use the standard count-badge styling; missing/empty states use the amber empty-indicator badge. Email Template is never amber: *Default* and *Customized* both take the count-badge styling (`pill pill-info`), since the defaults are usable email and neither state is missing anything.
 
+On a session linked to another application (`spec/linked_sessions.md`), the strip omits the Email Template pill where that application takes the `email` lock, since it sends its own email, and ends with a *Linked: {name}* pill (`pill pill-info`) after Responses.
+
 The strip is a setup + ops at-a-glance summary, not a running-session dashboard. Detailed operations state (per-reviewer invitation status, per-instrument response counts) lives on the Operations pages themselves.
 
 **Instruments state values.** The Instruments pill reports **two** numbers, not one, computed by `app.web.views.session_status_pills` from `instruments.configured_counts`. One number cannot distinguish an instrument a reviewer would meet as an empty page from a finished one, so a count alone lets the strip read *done* for a session that cannot be answered:
@@ -268,7 +270,7 @@ The gate is deliberately data-driven, not lifecycle-driven: the numbers appear a
 Page-level identity is established by the breadcrumb and the active chrome tab in combination. Most pages do not need a redundant H1 echoing the active tab name.
 
 Exceptions:
-- **Operator's Overview** (sessions list) — H1 is "Sessions" or similar, since this page sits outside session-scoped chrome.
+- **Operator's Overview** (sessions list) — H1 is "Operator Lobby", since this page sits outside session-scoped chrome.
 - **Preview pages** that are children of a Setup tab — H1 is the preview's name ("Reviewer surface preview"), not the parent tab's name.
 
 For all other session-scoped pages (the Setup pages, the Operations pages), no H1 is needed. The chrome tab and breadcrumb together establish identity.
@@ -388,7 +390,7 @@ The breadcrumb is at most two deep: `Sessions` on the lobby (and on Settings), `
 
 This page is the operator's "lobby" and is the natural landing page when signing in or returning from a session. It deserves slightly more care than other non-session pages, but uses the same chrome.
 
-- **H1:** "Sessions" or "My Sessions".
+- **H1:** "Operator Lobby" (`spec/sessions_overview.md`).
 - **Body:** A table inside a single `.card`. Its columns, their order and how each renders are specified in `spec/sessions_overview.md` § *Columns*. The Session Name links to that session's Home and is the row's primary affordance; there's no separate Access button. The trailing select-row checkbox column carries **no per-row Delete**: deletion from the lobby is an action over the checkbox selection, in the row expander, so a per-row affordance here would be a second route to the same thing.
 - **Create Session affordance:** a single Primary button labeled "Add new session", in the Filter card, present in every lobby state. **It is the page's only route to `/operator/sessions/new`** — the empty state's first-run card names this button rather than carrying a second one, because two buttons to one route is two affordances for one action (`spec/sessions_overview.md`).
 
@@ -439,11 +441,7 @@ The reviewer's "home" after sign-in. A simple list of pending and recent reviews
 **Body:**
 
 - **H1:** "User Lobby".
-- A list of review cards, each showing:
-  - Session name (linked to that session's response surface for this reviewer).
-  - Deadline.
-  - Completion status (e.g., "Not started," "In progress: 2 of 5 reviewees," "Completed").
-  - Optional: institution name if relevant for cross-institution reviewers.
+- A single `.card` holding a table, one row per session, in six columns: Session (its name linked to the viewer's first reachable role, with the role pills below it), Start, End, Timezone, Session status and Reviewer status. The columns and their rendering are `spec/reviewer-surface.md` "Dashboard (`/me`)".
 - Empty state when the viewer has nothing to show: the signed-in address, "there's nothing here for you right now", who to contact, and an About link (wording in `spec/reviewer-surface.md`). Not an error; just informational.
 
 **Deep-linking behavior:** when a reviewer signs in via a session-specific invitation link and has only one pending review, the sign-in flow can deep-link them past the review list to the response surface directly. The list exists for the cases where it's useful (multiple reviews, returning to find a specific one); it's not a forced waypoint for every visit.
@@ -501,7 +499,7 @@ Tone: calm and brief. The reviewer is finished; the page should confirm what was
 
 #### Error / expired states
 
-Shown when a sign-in link is invalid, the session is not in Activated state, or the deadline has passed.
+Shown when an invitation link is invalid, the session has not opened, or the deadline has passed.
 
 **Chrome:** the shared top bar (static, with no account menu, when no user is signed in) + page body.
 
@@ -509,8 +507,8 @@ Shown when a sign-in link is invalid, the session is not in Activated state, or 
 
 - Brief explanation in plain language. Examples:
   - "This review closed at its deadline, [date and zone], so [what was refused]." (the shipped copy; `spec/reviewer-surface.md` owns the write refusals)
-  - "This sign-in link is no longer valid. Request a new one from the session organizer."
-  - "This review is not currently available. Try again later or contact the session organizer."
+  - "This invitation link has been replaced by a newer one or is no longer valid. Use the link in your most recent email, or go to your reviews." (the 404 for an unknown invitation token)
+  - "This review is not currently open." (a draft or validated session; the page adds when a prepared session is scheduled to open, the deadline and the help contact)
 - Avoid technical detail (no "Session is in Draft state" — that's operator vocabulary). The reviewer doesn't need or want the internal model.
 - Where appropriate, surface the operator-configured contact information ("Questions? Contact [operator email]").
 
@@ -518,7 +516,7 @@ Shown when a sign-in link is invalid, the session is not in Activated state, or 
 
 Worth being explicit, since the temptation when sharing components with the operator surface is to leak operator-context affordances:
 
-- **No lifecycle state mention.** The reviewer doesn't care whether the session is "Activated"; they just need the form. If the session is not Activated, the page renders a generic "This review is not currently available" state, not "Session is in Draft."
+- **No lifecycle state mention.** The reviewer doesn't care whether the session is "Activated"; they just need the form. If the session has not opened, the page renders a generic "This review is not currently open" state, not "Session is in Draft."
 - **No setup-state badges, readiness summaries, or operator-side status.**
 - **No operator content in the page body.** The top bar follows the signed-in person's roles on every page ("Top bar" above), so an operator who is also a reviewer keeps their Operator Lobby, Settings and Admin entries there; the reviewer page itself carries nothing of the operator surface.
 - **No mention of other reviewers, assignment structure, or cross-reviewer state.**

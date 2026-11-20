@@ -385,7 +385,7 @@ token (`cordware.graph.look_up_all`, `cordware/spec/identity.md`
   that account. An answered `NOT_FOUND` or `AMBIGUOUS` stores none. The
   address column is never rewritten. Matching
   is `spec/audience_and_identity_model.md` "Identity match".
-- **An expired token saves nothing** (segment 20G). When Graph refuses
+- **An expired token saves nothing.** When Graph refuses
   the operator's token as expired (`unauthorized`;
   `DirectoryCheck.stopped`), the import writes nothing: renewing the
   sign-in cures it. It holds the file and asks the operator to renew and
@@ -393,7 +393,7 @@ token (`cordware.graph.look_up_all`, `cordware/spec/identity.md`
   Quick Setup's submit-all holds every file of the submit and asks the
   same way, and rehydrate keeps its stashed set and asks to renew and
   rehydrate.
-- **Every other failure saves** (author, 2026-11-03), since renewing
+- **Every other failure saves**, since renewing
   cures none of them: no delegated token (the token store off, or a
   sign-in that did not ask for Graph), `forbidden` (consent or scope),
   throttling, an outage, the budget. The rows save as above, and the
@@ -703,8 +703,7 @@ the round-trip notes below.
    card checks the stored list again on every Save. The card's lead-time
    floor, which measures from now, is the one rule waived, so an
    exported schedule whose moments have since passed still imports.
-   On a session linked to another application (segment 23E,
-   `linked_apps`), a `session.responses_release_at` or
+   On a session linked to another application (`linked_apps`), a `session.responses_release_at` or
    `session.responses_release_until` naming a value, and a
    `session.observers_enabled` of true, are errors naming the link; a
    blank release row passes, so the session's own export imports back.
@@ -712,7 +711,7 @@ the round-trip notes below.
    a `session.invite_offsets` or `session.reminder_offsets` naming an
    offset is an error naming the link too; a blank row passes.
    On a linked session whose application takes
-   `linked_apps.Lock.SETTINGS_IMPORT` (segment 23F) the Settings import
+   `linked_apps.Lock.SETTINGS_IMPORT` the Settings import
    is refused (`409`).
    A handoff re-send (`spec/handoffs.md` §6a) checks a file of the
    session rows the linked application owns with these same checks, and
@@ -993,8 +992,9 @@ import leaves as stored, on an unchanged anchor, is not checked.
   row, or with a blank cell, leaves the instrument at the default
   `across`. The export writes a stored value outside `DISPLAY_LAYOUTS` as
   `across`.
-- **`instruments[n].order` is informational.** Apply ignores the `order`
-  cell — **the `[n]` number is authoritative**, not the rows' place in
+- **`instruments[n].order` is informational.** Apply parses the `order`
+  cell, so a non-integer is refused in phase 1, but ignores its value —
+  **the `[n]` number is authoritative**, not the rows' place in
   the file. Each instrument is stored at its 0-based rank among the
   file's numbers (`[1]`, `[2]` → 0, 1; `[0]`, `[3]` → 0, 1), as the app
   numbers its own. The export writes the block's 0-based position

@@ -362,7 +362,7 @@ every visit (plain text, not only the first visit). The contact line is
 `help_contact`, shown as "Questions? Contact …" on the reviewer surface
 and in the default invitation, reminder and responses-received emails;
 each drops the line when it is unset. The institution name shows as the
-top bar's top line since segment 20D (`cordware/spec/header_chrome.md` §6); beside
+top bar's top line (`cordware/spec/header_chrome.md` §6); beside
 the session name in the header it is deferred
 (`guide/deferred_consolidated.md`, "Institution name beside the session
 name").
@@ -506,7 +506,7 @@ than moving the reader somewhere useful; `/about` has carried the
 cosmetic and fails **open** — a page that does not stamp the flag still
 renders the link, and following it lands on `/about` anyway. The
 participant pages render the same top bar
-(`app/web/templates/_partials/top_bar.html`, segment 20D), so the hiding
+(`app/web/templates/_partials/top_bar.html`), so the hiding
 applies there too.
 
 **This filter is not access control.** Nothing on `/guide` is
