@@ -105,19 +105,19 @@ are at `6003c8084`.
 ## 3. Per-file findings
 
 **A** — the reviewer and participant surfaces:
-- **A1** `spec/reviewer-surface.md:909-950`: the view-shape dict omits `intro_layout`, `response_layout`, `display_layout`, `constraint_by_field_id` and the `stack_*` keys (`app/web/routes_reviewer/_surface/_context.py:597-643`), and names `InstrumentGroup` and `GroupCompletion` where the code passes dicts. Spec.
-- **A2** `spec/reviewer-surface.md:1136-1139`: the preview "shows" the closed state; `:1281-1283` and `_context.py:216-229` force `accepting` on. Spec.
-- **A3** `spec/reviewer-surface.md:214-215`, `:270`: the Errors card is not only "numeric". It also takes String over `max_length`, List non-members, and the held-back "Kept until {parent} is fixed." rows. Spec.
-- **A4** `spec/reviewer-surface.md:530`: the heading card renders on `heading.title or _help_in_heading`, as `:608-611` says. Spec.
-- **A5** `spec/reviewer-surface.md:690-702`: the status icon shows only when `row.submitted_at or show_incomplete_marks` (`review_surface.html:549`). Spec.
-- **A6** `spec/reviewer-surface.md:1337-1342`: the dropped-fields notice renders on the real surface too (`review_surface.html:56-72`), and Page anatomy does not list it. Write.
-- **A7** `spec/reviewer-surface.md:2054-2057`: "no keydown handler" is false. `base.html` blocks Enter in one-line fit boxes, as `:813-815` says. Spec.
-- **A8** `spec/reviewer-surface.md:1549-1556`: the Summary page uses a `Group` header, display-field columns, and tag-then-members order (`summary.html`). Spec.
-- **A9** `spec/participant_model.md:72`: it cites `reviewer/_top_bar.html`, which no longer exists. The bar is `_partials/top_bar.html`; the path escaped the guard because it is unanchored. Spec.
-- **A10** `spec/README.md:68`: the `/me` dashboard is six columns, not eight. Trim.
-- **A11** `spec/audience_and_identity_model.md:349-350`: the welcome message is plain, autoescaped `pre-line` text, not "limited markdown"; `:356-358` already says so. Spec.
-- **A12** `spec/audience_and_identity_model.md:520-521`: there is no tab strip; progress is the per-page pills. Spec.
-- **A13** `spec/audience_and_identity_model.md:124`: the super-admin self-heal runs on every authenticated request (`deps._reassert_super_admin`), not just on sign-in. Spec, optional.
+- ~~**A1**~~ — **Done in #4086**: the view shape is a list of plain dicts and lists `intro_layout`, `response_layout`, `display_layout`, `constraint_by_field_id` and the `stack_*` keys (`completion` stays `GroupCompletion`, a real dataclass in `_status.py`). `spec/reviewer-surface.md:909-950`: the view-shape dict omits `intro_layout`, `response_layout`, `display_layout`, `constraint_by_field_id` and the `stack_*` keys (`app/web/routes_reviewer/_surface/_context.py:597-643`), and names `InstrumentGroup` and `GroupCompletion` where the code passes dicts. Spec.
+- ~~**A2**~~ — **Done in #4086**: the closed-window bullet says the preview never shows that state, since it forces `accepting` on. `spec/reviewer-surface.md:1136-1139`: the preview "shows" the closed state; `:1281-1283` and `_context.py:216-229` force `accepting` on. Spec.
+- ~~**A3**~~ — **Done in #4086**: the Errors card and the Save / Submit rows name every rejection: number bounds and step, String length, List membership and the held-back governed answer. `spec/reviewer-surface.md:214-215`, `:270`: the Errors card is not only "numeric". It also takes String over `max_length`, List non-members, and the held-back "Kept until {parent} is fixed." rows. Spec.
+- ~~**A4**~~ — **Done in #4086**: the heading card renders on a title or on Layout 1 help rows; the H2 only with a title. `spec/reviewer-surface.md:530`: the heading card renders on `heading.title or _help_in_heading`, as `:608-611` says. Spec.
+- ~~**A5**~~ — **Done in #4086**: a row shows its status icon only with `submitted_at` set or `show_incomplete_marks` on. `spec/reviewer-surface.md:690-702`: the status icon shows only when `row.submitted_at or show_incomplete_marks` (`review_surface.html:549`). Spec.
+- ~~**A6**~~ — **Done in #4086**: Page anatomy item 2 lists the dropped-fields notice, on the reviewer surface and the preview alike. `spec/reviewer-surface.md:1337-1342`: the dropped-fields notice renders on the real surface too (`review_surface.html:56-72`), and Page anatomy does not list it. Write.
+- ~~**A7**~~ — **Done in #4086**: Keyboard navigation names the fit script's Enter block as the one `keydown` handler. `spec/reviewer-surface.md:2054-2057`: "no keydown handler" is false. `base.html` blocks Enter in one-line fit boxes, as `:813-815` says. Spec.
+- ~~**A8**~~ — **Done in #4086**: Summary sections take the surface's column order (`Group` header, display fields, required marks) and the tag-then-members group cell. `spec/reviewer-surface.md:1549-1556`: the Summary page uses a `Group` header, display-field columns, and tag-then-members order (`summary.html`). Spec.
+- ~~**A9**~~ — **Done in #4086**: §4 cites `app/web/templates/_partials/top_bar.html` with `participant_bar`, anchored. `spec/participant_model.md:72`: it cites `reviewer/_top_bar.html`, which no longer exists. The bar is `_partials/top_bar.html`; the path escaped the guard because it is unanchored. Spec.
+- ~~**A10**~~ — **Done in #4086**: the README row says 6-column. `spec/README.md:68`: the `/me` dashboard is six columns, not eight. Trim.
+- ~~**A11**~~ — **Done in #4086**: the welcome message is plain autoescaped `pre-line` text, no markdown. `spec/audience_and_identity_model.md:349-350`: the welcome message is plain, autoescaped `pre-line` text, not "limited markdown"; `:356-358` already says so. Spec.
+- ~~**A12**~~ — **Done in #4086**: the chrome example names the per-instrument status pills, not a tab strip. `spec/audience_and_identity_model.md:520-521`: there is no tab strip; progress is the per-page pills. Spec.
+- ~~**A13**~~ — **Done in #4086**: the self-heal runs on every authenticated request that resolves its user row. `spec/audience_and_identity_model.md:124`: the super-admin self-heal runs on every authenticated request (`deps._reassert_super_admin`), not just on sign-in. Spec, optional.
 
 **B** — lifecycle, the Workflow card, assignments, Operations:
 - **B7** `spec/lifecycle.md:890-894`: on a linked session Release from and until are not shown, rather than shown as *Off* (`session_detail.html:362-367`, `:430-433`). `spec/session_home.md` is right. Spec.

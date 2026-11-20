@@ -121,8 +121,9 @@ The admin surface is a **strict three-tier hierarchy** with
 an admin can do; everything an admin can do a super-admin can do, i.e.
 **super-admin ⊇ admin ⊇ operator**. Every gate treats sys-admin
 as implying operator (`is_operator OR is_sys_admin`); a super-admin
-**self-heals** to `is_sys_admin = is_operator = True` on **every** sign-in
-(`app/web/deps.py::_reassert_super_admin`, narrow — super-admin emails
+**self-heals** to `is_sys_admin = is_operator = True` on **every**
+authenticated request that resolves its user row (`get_or_create_user`
+calls `app/web/deps.py::_reassert_super_admin`, narrow — super-admin emails
 only), so every admin/operator gate passes for a super-admin with no
 special-casing, and a demotion applied outside the app cannot
 strand a protected account.
@@ -346,8 +347,10 @@ sees:
   of the review).
 - Email template content (invitation, reminder, confirmation
   copy).
-- Optional welcome message / instructions, shown above the form
-  on first visit. Plain text or limited markdown; no embedded HTML.
+- Optional welcome message / instructions, shown above the form.
+  Built as the session description: plain text, autoescaped, its line
+  breaks kept (`pre-line`); no
+  markdown, no embedded HTML.
 - Optional institution name (small, supplementary, displayed near
   the session name in the page header).
 - Optional contact information for questions (operator email or
@@ -517,8 +520,9 @@ in the app targets a section its page's readers can see.
 
 The discipline: **components are universal, chrome is audience-
 local.** A submit button looks the same to operators and reviewers.
-A page header containing a lifecycle badge is operator-only. A tab
-strip showing instrument completion progress is reviewer-only.
+A page header containing a lifecycle badge is operator-only. The
+per-instrument status pills showing completion progress are
+reviewer-only.
 The visual style spec (especially Part 1) defines the universal
 component vocabulary; Parts 2 and 3 define each surface's chrome
 conventions.
