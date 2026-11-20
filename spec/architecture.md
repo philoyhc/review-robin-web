@@ -479,7 +479,10 @@ a spec-less page past the check; that is what the pending path is for. A
 mapped path must be a live file under `spec/` or `docs/`, never one
 moved to an `archive/`. `tests/unit/test_spec_coverage.py` enumerates
 the route table at runtime and fails on any module the registry does not
-name, so a surface cannot ship with no spec at all.
+name, so a surface cannot ship with no spec at all. An application
+package maps its own routing modules to its own `spec/` in
+`<pkg>/spec_registry.py`, and `tests/unit/test_package_spec_coverage.py`
+holds the host's route table to those registries the same way.
 
 ## Conceptual hierarchy
 
