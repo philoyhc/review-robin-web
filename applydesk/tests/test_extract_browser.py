@@ -108,3 +108,18 @@ def test_zip_all_carrying_only_setup_with_no_setup_page_is_off(page: Page) -> No
     while pages.count():
         pages.first.click()
     assert link.get_attribute("aria-disabled") == "true"
+
+
+def test_every_toggle_has_one_shape(page: Page) -> None:
+    """Ruling 63: a pill, a segmented choice and a switch share rounded
+    sides and one height; only a Toggle among buttons takes .btn's."""
+    page.goto(PAGE)
+    boxes = page.evaluate(
+        """() => ['.pn-show', '.seg', '.theme-toggle'].map(sel => {
+            const el = document.querySelector(sel), cs = getComputedStyle(el);
+            return [sel, el.getBoundingClientRect().height, parseFloat(cs.borderTopLeftRadius)];
+        })"""
+    )
+    heights = {round(h) for _, h, _ in boxes}
+    assert len(heights) == 1, boxes
+    assert all(r >= h / 2 for _, h, r in boxes), boxes
