@@ -34,6 +34,34 @@ Taken 2026-11-20 at `a5597a84b`.
 - Templates: `operator/_process_cards.html` (the *Gate* card, `source_row`) and `operator/_process.html` (`sourcesOf`, `srcBounds`, `drawSources`).
 - Tests constructing `Source(`: `test_locks.py`, `test_fill.py`, `test_evaluations_browser.py`, `_fellowship.py`, `test_pages.py`.
 
+## Status — closed 2026-11-20
+
+Intended vs done: rungs 1–3 shipped as #4030, #4031 and #4032. Two
+helpers the Decision and ladder name were not added:
+- `stages.source_bounds`: *All* resolves inside `sources_of` (a private
+  `_whole_panel`), which every reader already goes through, so no caller
+  changed.
+- `gate_page_url`: the link is written in the template, as Evaluations'
+  own gate links are.
+
+Decisions confirmed at build:
+- **When every source takes *All*, the Total is theirs too** (their
+  sizes together, disabled on the page, read so by `sources_of`). A
+  mixed gate keeps its typed Total. Otherwise a panel's growth flagged
+  the Total and blocked publishing until retyped, against ruling 62.
+- Source rows stack by the card's width (a container query, below
+  640px), not the window's: the *All* column left the Source menu ~20px
+  wide in a card beside a side column.
+- A draft exercise's gates, new ones included, give the draft as the
+  reason there is no link.
+
+Reads: one cumulative `diff-reviewer` read over rungs 2–3 (from
+`501e53e63`). It found the Total not following the panel, the narrow
+grid pushing the actions into the 24px column, a stray *All* caption on
+Nominated rows, the draft wording, a hand-rolled bool check beside
+`_flag`, no fill test, and this plan's drift from the build. All were
+fixed in #4031 and #4032, and the drift is recorded above.
+
 ## PR ladder
 
 1. **This plan**, with rulings 60–62. Prose only.
@@ -63,5 +91,5 @@ Taken 2026-11-20 at `a5597a84b`.
 ## Doc impact
 
 - `applydesk/spec/applications.md` — Process's *Gate* card link (item 1); a panel source's *All* (item 2).
-- `applydesk/guide/todo_master.md` — rulings 60–62 (rung 1).
+- `applydesk/guide/todo_master.md` — rulings 60–62 (rung 1); the UI review roadmap row points at the archived plan (at close).
 - `applydesk/guide/archive/README.md` — the plan's index row (at close).

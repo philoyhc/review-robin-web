@@ -673,7 +673,7 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
-| UI review — consistency and gaps | Before AD2 fixes what is stored (author, 2026-11-19): a scratch exercise to set up end to end, done (`applydesk/guide/archive/segment_AD1N_scratch_exercise.md`); gate setup touch-ups (`applydesk/guide/segment_AD1O_gate_setup.md`); next the review itself | Building |
+| UI review — consistency and gaps | Before AD2 fixes what is stored (author, 2026-11-19): a scratch exercise to set up end to end, done (`applydesk/guide/archive/segment_AD1N_scratch_exercise.md`); gate setup touch-ups, done (`applydesk/guide/archive/segment_AD1O_gate_setup.md`); next the review itself | Building |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
