@@ -517,9 +517,13 @@ but the lobby's *Stage* column reads:
   *Delete*. Each insert lands after the card and opens. *Delete* has no
   confirmation and is disabled on the last stage. A replica leaves the form
   behind; its gates and outcome take keys of their own, and its rules and
-  weights read them. Inside the card: *+ Gate* (after the last gate, before the
+  weights read them. Its gates' lines say their pages wait for the save (ruling 61), and its
+  ticked emails have no *Template →* until saved. Inside the card: *+ Gate* (after the last gate, before the
   outcome), *+ Outcome*, *+ Form*; each item has *Remove the form* / *the gate*
   / *the outcome*.
+- **Links in** (ruling 65). A hash names a card: `#form`, `#gate-<key>` or
+  `#outcome-<key>`. Process opens and scrolls to it, on load and on a hash
+  change; a name it does not know opens the page as usual.
 - **Reordering** by the card's handle, dragged or with ↑ ↓ (announcing the new
   position). Gates and outcomes are numbered by the timeline and renumber as
   cards move; the Outline and Dossiers' headers follow.

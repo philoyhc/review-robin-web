@@ -55,6 +55,24 @@ Taken 2026-11-20 at `e13c495b0`.
   - `grep -rln "pn-toolbar\|em-insert\|#em-" applydesk/tests --include=*.py` → `test_pages.py`, `test_emails_browser.py`.
   - `grep -rln "data-pc-rr" applydesk/tests --include=*.py` → `test_gate_setup.py`, `test_process_browser.py`.
 
+## Status — closed 2026-11-20
+
+**Intended vs done.** All six Decision items shipped as planned. The ladder ran: 1 (#4046), 2 (#4047), 3 (#4048), then this close. Decision 3 says Panels' *Add new* sits "beside Filter"; it went under Filter, as Decision 4 and the mockups have it.
+
+**Decisions confirmed at build:**
+- A field and its button take one fixed 40px height. CI's Chromium drew the *Insert* menu at 37px, so a minimum height on the button alone left them 3px apart (#4047).
+- Process opens a card from its hash both on load and on a hash change. The handler waits for `load`, so the page's own layout does not undo the scroll.
+- The email anchors come from one helper, `workflow.email_anchor`, which both Emails and Process's *Template →* links call.
+
+**Reads.** One cumulative `diff-reviewer` read over `e13c495b0..05d73e1ac` found three items, all fixed in rung 3:
+- A copied stage kept stale *Template →* links.
+- The hash test never followed `#gate-<key>`.
+- The gate's link line was not first in its body.
+
+Codex found nothing on the plan (#4046) or on rung 2 (#4047).
+
+**Close.** `spec-writer` added two lines to `applydesk/spec/applications.md`: a replica's gate line and *Template →*, and Process opening the card a hash names. It found the rest current.
+
 ## PR ladder
 
 1. **This plan**, with ruling 65. Prose only.
