@@ -256,6 +256,8 @@ READERS: dict[Lock, dict[str, str]] = {
             _LINKED + "test_a_settings_import_refuses_release_values_and_observers"
         ),
         "app/services/sessions.py": "signal: a roster upload turning Observers on",
+        "app/web/quick_setup_pipeline.py": _LINKED
+        + "test_quick_setup_offers_and_takes_no_observers",
         "app/web/views/_quick_setup.py": _LINKED + "test_quick_setup_offers_and_takes_no_observers",
     },
     Lock.INSTRUMENT_STRUCTURE: {

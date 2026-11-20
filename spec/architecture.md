@@ -298,7 +298,7 @@ permissions.
   `cordware/spec/identity.md` "Graph"). RRW imports it directly in
   `app/services/directory_accounts.py` (the lookup and its outcomes, for
   roster upload), `app/web/routes_operator/_shared.py` and
-  `app/web/routes_operator/_quick_setup.py` (the operator's `Directory`,
+  `app/web/quick_setup_pipeline.py` (the operator's `Directory`,
   from `directory_for`; none without a delegated token). Services receive
   a `Directory` (or `None`) and never read a request. Roster matching by
   directory account is `spec/audience_and_identity_model.md` "Identity

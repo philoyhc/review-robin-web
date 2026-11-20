@@ -32,6 +32,7 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
     SessionTag,
+    User,
 )
 from app.services import (
     field_labels,
@@ -379,6 +380,36 @@ def test_quick_setup_offers_and_takes_no_observers(client: TestClient, db: Sessi
     )
     db.refresh(review_session)
     assert not review_session.observers_enabled
+    assert db.scalars(select(Observer)).first() is None
+
+
+def test_the_pipeline_refuses_an_observers_file_on_a_linked_session(
+    client: TestClient, db: Session
+) -> None:
+    """The pipeline's own refusal (``quick_setup_pipeline.run_contents``),
+    beneath the routes': Quick Setup is off on a linked session and the
+    handoff refuses an observers file first, so it is called directly."""
+    import asyncio
+
+    from app.web import quick_setup_pipeline
+
+    review_session, _ = _created(client, db)
+    user = db.get(User, review_session.created_by_user_id)
+    assert user is not None
+    refusal = asyncio.run(
+        quick_setup_pipeline.run_contents(
+            contents={"observers": b"ObserverName,ObserverEmail\nOren,oren@example.edu\n"},
+            filenames={"observers": "obs.csv"},
+            review_session=review_session,
+            user=user,
+            db=db,
+            confirm_replace="true",
+            acknowledge_response_loss=None,
+            replacing=True,
+        )
+    )
+    assert refusal is not None
+    assert (refusal.kind, refusal.failure.reason) == ("observers", "observers_off")
     assert db.scalars(select(Observer)).first() is None
 
 

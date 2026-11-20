@@ -556,7 +556,7 @@ error is *attached*; it does not mean valid rows import while bad ones
 are skipped. Every issue the parser raises is `Severity.error`, so
 `ParseResult.is_blocked` is true if any row failed, and **all three
 callers refuse the whole file** — the Relationships card
-(`_setup_relationships.py`), Quick Setup's slot (`_quick_setup.py`) and
+(`_setup_relationships.py`), Quick Setup's slot (`quick_setup_pipeline.py`) and
 the rehydrate path (`session_rehydrate.py`, which raises rather than
 redirecting). A file with one bad row saves nothing, so `ParseResult`
 carrying both rows and issues is a report, not a partial import.
