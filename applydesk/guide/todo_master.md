@@ -589,6 +589,14 @@ where a ruling below differs from it, the ruling wins.
     (`.tl-switch`, `.theme-toggle`) alike, at `--tog-h`; unless it is an
     on/off toggle among a row of buttons, as *All* among a source's
     controls, which keeps the Toggle button's shape (`.btn-toggle`).
+64. **The UI review's rulings, checked against Review Robin** (author,
+    2026-11-20): Apply Desk need not match Review Robin exactly, but both
+    are recognizably one family. The register in
+    `applydesk/guide/segment_AD1P_ui_consistency.md` (rows U1–U25) holds
+    each ruling; among them RRW's state palette and uppercase pills, a
+    native checkbox for a lone setting in a form, Primary first and
+    sparingly, RRW's table headers and sort badges, Upload / Download,
+    RRW's ISO dates on operator pages, and an operator dossier page.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
@@ -685,7 +693,7 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
-| UI review — consistency and gaps | Before AD2 fixes what is stored (author, 2026-11-19): a scratch exercise to set up end to end, done (`applydesk/guide/archive/segment_AD1N_scratch_exercise.md`); gate setup touch-ups, done (`applydesk/guide/archive/segment_AD1O_gate_setup.md`); next the review itself | Building |
+| UI review — consistency and gaps | Before AD2 fixes what is stored (author, 2026-11-19): a scratch exercise to set up end to end, done (`applydesk/guide/archive/segment_AD1N_scratch_exercise.md`); gate setup touch-ups, done (`applydesk/guide/archive/segment_AD1O_gate_setup.md`); the review itself (`applydesk/guide/segment_AD1P_ui_consistency.md`) | Building |
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
