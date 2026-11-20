@@ -19,30 +19,17 @@ only way to satisfy them on day one would be to author broken prose.
 
 from __future__ import annotations
 
-import importlib.util
 import re
 from pathlib import Path
 
 import pytest
 
+from ._packages import app_dirs
+
 REPO = Path(__file__).resolve().parents[2]
 
 
-def _app_dirs() -> tuple[str, ...]:
-    """The application packages, from ``tools/close_check``'s one list
-    (segment 23H): a new package is added there once, and every gate
-    that reads package prose follows."""
-    path = REPO / "tools" / "close_check.py"
-    if not path.exists():  # an exported kit without the close check
-        return ()
-    spec = importlib.util.spec_from_file_location("close_check_for_doc_references", path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return tuple(module.APP_DIRS)
-
-
-APP_DIRS = _app_dirs()
+APP_DIRS = app_dirs()
 
 
 def test_agent_instruction_twins_are_identical() -> None:

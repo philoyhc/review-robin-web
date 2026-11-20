@@ -147,6 +147,12 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
         "the guide-index gate; reads the skeleton READMEs",
     ),
     (
+        "tests/unit/_packages.py",
+        "verbatim",
+        "",
+        "the package list the prose gates read, from the close check; none without one",
+    ),
+    (
         "tests/unit/__init__.py",
         "skeleton",
         "",

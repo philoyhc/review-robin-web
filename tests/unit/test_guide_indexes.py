@@ -37,6 +37,8 @@ from pathlib import Path
 
 import pytest
 
+from ._packages import app_dirs
+
 REPO = Path(__file__).resolve().parents[2]
 GUIDE = REPO / "guide"
 ARCHIVE = GUIDE / "archive"
@@ -161,3 +163,69 @@ def test_no_documented_shape_is_a_catch_all(folder: Path) -> None:
         "wildcard, so they name no family and cover files no one indexed. "
         "Write the prefix the family actually shares."
     )
+
+
+# --- Package guides (segment 23H, rung 4) ---
+#
+# An application package indexes its `guide/` in its own top-level
+# `README.md`, whose rows name `guide/<file>.md` beside its `spec/` and
+# `docs/` rows: one index per package, not a second one inside `guide/`
+# repeating it. A package whose `guide/archive/` keeps its own README
+# (Apply Desk's) is indexed there instead, by bare name, as RRW's is.
+
+
+ALL_APP_DIRS = app_dirs()
+APP_GUIDES = tuple(app for app in ALL_APP_DIRS if (REPO / app / "guide").is_dir())
+
+
+def _package_index(app: str, folder: str) -> tuple[Path, str]:
+    """The README indexing ``<app>/<folder>``, and the prefix its rows carry."""
+    own = REPO / app / folder / "README.md"
+    if folder == "guide/archive" and own.exists():
+        return own, ""
+    return REPO / app / "README.md", folder + "/"
+
+
+def _package_unindexed(app: str, folder: str) -> list[str]:
+    readme, prefix = _package_index(app, folder)
+    assert readme.exists(), f"{app}: no index for {folder}/ (expected {readme.relative_to(REPO)})"
+    literals, patterns = _indexed_names(readme)
+    names = {cell[len(prefix) :] for cell in literals if cell.startswith(prefix)}
+    shapes = [pat[len(prefix) :] for pat in patterns if pat.startswith(prefix)]
+    return [
+        doc.name
+        for doc in _documents(REPO / app / folder)
+        if doc.name not in names and not any(fnmatch.fnmatch(doc.name, pat) for pat in shapes)
+    ]
+
+
+@pytest.mark.parametrize("app", APP_GUIDES)
+def test_a_package_index_names_every_live_guide_document(app: str) -> None:
+    missing = _package_unindexed(app, "guide")
+    assert not missing, (
+        f"live in {app}/guide/ with no row in {app}/README.md: {missing}. "
+        "Add a `guide/<file>.md` row describing it."
+    )
+
+
+@pytest.mark.parametrize(
+    "app", [app for app in APP_GUIDES if (REPO / app / "guide" / "archive").is_dir()]
+)
+def test_a_package_index_names_every_archived_guide_document(app: str) -> None:
+    missing = _package_unindexed(app, "guide/archive")
+    readme, _ = _package_index(app, "guide/archive")
+    assert not missing, (
+        f"archived in {app}/guide/archive/ with no row in {readme.relative_to(REPO)}: {missing}."
+    )
+
+
+def test_every_package_with_a_guide_is_checked() -> None:
+    """Guards the guard: a package with a `guide/` is never skipped."""
+    if not ALL_APP_DIRS:
+        pytest.skip("no close check, so no package list")
+    with_guides = [app for app in ALL_APP_DIRS if (REPO / app / "guide").is_dir()]
+    if not with_guides:
+        # A practice-kit export carries close_check's APP_DIRS verbatim
+        # but none of the packages it names (Codex on #4056).
+        pytest.skip("no listed package has a guide/ in this repository")
+    assert sorted(with_guides) == sorted(APP_GUIDES)
