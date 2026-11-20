@@ -6,6 +6,13 @@ where a ruling below differs from it, the ruling wins.
 
 ## Rulings (author, 2026-11-12)
 
+These stand while Apply Desk's major building runs, and a plan cites
+them by number. They fold into the spec they govern, or are recorded as
+retired, at the first major juncture: the end of the UI prototyping
+phase, AD1 to AD2, when pages start to persist (RRW
+`rrw_sdd_in_practice.md` §6.1, ruled 2026-11-20). A segment close cites
+the rulings it relied on but does not move them.
+
 1. **No native assessment engine in the MVP.** Assessment runs in Review
    Robin: ApplyDesk pushes rosters to it and pulls results back, on the
    handoff that segments 23A and 23B proved (`spec/handoffs.md`). The

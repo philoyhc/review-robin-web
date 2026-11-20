@@ -27,6 +27,13 @@ design — and an exit held by convention, not mechanism. A missing plan is
 self-revealing (there is nothing to build from); a missing spec edit is
 silent. Drift not noticed at the close survives it.
 
+*(Annotated 2026-11-20.* During a phase of major building, numbered
+author rulings may stand above the plans, in their own layer, and win
+over a destination spec where they differ. They are folded into the spec
+at a major juncture (Apply Desk's first is AD1 to AD2), not at each
+segment's close; a close still writes what it shipped. The reasons are
+in `rrw_sdd_in_practice.md` §6.1.*)
+
 ## II. A convention becomes a failing test only where the repository states something to derive it from
 
 Where a rule can be read from something the repository itself states,
