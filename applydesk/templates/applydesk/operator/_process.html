@@ -131,6 +131,9 @@
       if (s.min === null || s.max === null) out.push("needs a whole-number min and max for source " + n);
       else if (s.min > s.max) out.push("has source " + n + "'s min above its max");
     });
+    // An All gate's Total is the sources' own (ruling 62): nothing to say
+    // of it that a source's line does not.
+    if (srcs.some(function (s) { return s.all_members; })) return out;
     if (t.min === null || t.max === null) { out.push("needs a whole-number min and max for its Total"); return out; }
     var b = srcBounds(srcs);
     if (t.min > t.max) out.push("has its Total's min above its max");
@@ -173,9 +176,10 @@
       });
     });
     var b = srcBounds(sourcesOf(item));
-    // Every source taking All: the Total is theirs too, kept in step and
-    // disabled, so a panel's change never leaves it to retype.
-    var allTotal = rows.length > 0 && rows.every(function (row) { return row.querySelector('[data-ps="all"]').getAttribute("aria-pressed") === "true"; });
+    // A source taking All (ruling 62, amended): the Total is the sources'
+    // bounds, kept in step and disabled, so a panel's change never
+    // leaves it to retype.
+    var allTotal = rows.some(function (row) { return row.querySelector('[data-ps="all"]').getAttribute("aria-pressed") === "true"; });
     var tlo = item.querySelector('[data-ps="total-min"]'), thi = item.querySelector('[data-ps="total-max"]');
     if (allTotal) { tlo.value = String(b[0]); thi.value = String(b[1]); }
     if (!sent) { tlo.disabled = allTotal; thi.disabled = allTotal; }
