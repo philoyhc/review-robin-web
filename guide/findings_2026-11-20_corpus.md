@@ -86,19 +86,19 @@ are at `6003c8084`.
   - `spec/visual_style_rrw.md:476`, `:545-547`, `:562` and `:678-686` speak of page buttons, tabs and one instrument per page.
   - Pages are operator-defined (`starts_new_page`, `_pages_for_session`) and navigate by Prev, Next and `Page N of M`, as the same file says at `:459` and `:470`.
   - Rewrite the principle.
-- **F1** (low) — **the functional spec does not mention linked sessions, handoffs, Unlink or owner report emails.**
+- **F1** (low) — **Ruled 2026-11-20: a short section at intent altitude in the functional spec (what a linked session is, what the application takes, Unlink, owner report emails), pointing at `spec/linked_sessions.md` and `spec/handoffs.md`.** **the functional spec does not mention linked sessions, handoffs, Unlink or owner report emails.**
   - All are user-visible capabilities.
   - A short section at intent altitude, or a deliberate omission.
 - **F2** (low) — **§9.13 Settings misdescribes the page.**
   - `spec/rrw_functional_spec.md:1202-1207` describes "three per-operator toggles". The Email settings card also holds three report-email toggles (`app/services/operator_settings.py:335-340`), and a read-only Unit card follows (`operator_settings.html:134`).
-- **H1** (low) — **`docs/header_chrome.md` is a built contract still in `docs/`.**
+- **H1** (low) — **Ruled 2026-11-20: fold what still holds into `spec/visual_style_rrw.md` "Top bar", archive the doc, fix the index row.** **`docs/header_chrome.md` is a built contract still in `docs/`.**
   - `docs/README.md:26` calls it "proposed, not built". The file itself says built and "retires into `spec/`".
   - Its §1 describes the replaced chrome in the present tense, `:24` cites the removed `reviewer/_top_bar.html`, and `:4` says "envisioned ApplyDesk".
   - Move it into `spec/visual_style_rrw.md` "Top bar", or retire it, and fix the index row.
-- **H2** (low) — **`rrw_design_rationale.md:171`, `:197` read as if the institutional cutover were still ahead.**
+- **H2** (low) — **Ruled 2026-11-20: keep the rationale as written with one dated line that production has served from the institutional host since 2026-10-31; the dev-slot rows in `docs/security_posture.md` move under a before-the-cutover heading.** **`rrw_design_rationale.md:171`, `:197` read as if the institutional cutover were still ahead.**
   - The sentences are dated 2026-10-16, but nothing says production has served since 2026-10-31.
   - `docs/security_posture.md:556-567` keeps dev-slot rows in a current-looking table.
-- **H3** (low) — **`cordware/spec/host.md:53-55` makes a claim this repository cannot check.**
+- **H3** (low) — **Ruled 2026-11-20: drop the claim; what production mounts is the private Cordware repository's record, which `cordware/spec/host.md` points to.** **`cordware/spec/host.md:53-55` makes a claim this repository cannot check.**
   - It says production "carries no `residentialapps/` for now (2026-10-30)".
   - That is about the private deployment, so confirm it or retire it.
 
