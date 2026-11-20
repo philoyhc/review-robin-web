@@ -80,14 +80,15 @@ def test_agent_instruction_twins_are_identical() -> None:
 #: and a new lineage needs a `guide/README.md` row anyway, so one line
 #: here is the same edit.
 #:
-#: A package's findings registers (`findings_`) and its versioned
-#: handovers and baselines (`_v0.6b`, `_v0.2`) are dated the same way
-#: (segment 23H): a register names what was wrong on its date, and a
-#: versioned handover is a snapshot of a design another document has
-#: since superseded.
-DATED_DOC = re.compile(
-    r"(codebase_assessment_|codex_assessment_|sweep_|practice-audit-|segment_|findings_|_v\d+\.\d)"
-)
+DATED_DOC = re.compile(r"(codebase_assessment_|codex_assessment_|sweep_|practice-audit-|segment_)")
+
+#: In a package only, two more kinds are dated (segment 23H): a findings
+#: register (`findings_`) names what was wrong on its date, and a
+#: versioned functional spec or handover (`_v0.6b`, `_v0.2`) is frozen at
+#: its version, amended from outside it (a later version, author rulings,
+#: the contract spec) rather than edited path by path. RRW's own live
+#: `guide/findings_*` registers stay checked, as before.
+PACKAGE_DATED_DOC = re.compile(r"(findings_|_v\d+\.\d)")
 
 #: Live prose: top-level `.md` in the three doc folders plus the root,
 #: and since segment 23H the same three folders in each application
@@ -103,6 +104,7 @@ LIVE_PROSE = sorted(
     )
     for p in d.glob("*.md")
     if not DATED_DOC.search(p.name)
+    and not (d.parent.name in APP_DIRS and PACKAGE_DATED_DOC.search(p.name))
 )
 
 
@@ -132,8 +134,11 @@ def _resolves(doc: Path, target: str) -> bool:
 #: directory: a bare `` `architecture.md` `` is shorthand whose directory
 #: the reader supplies, and resolving those would need a guess per hit —
 #: the kind of growing ambiguity Article VI says not to mechanise.
+#: The package prefix is built from `APP_DIRS`, plus the Cordware host
+#: package (which has no doc folders of its own to read), so a package
+#: added there is anchored here too.
 PATH_REF = re.compile(
-    r"`((?:(?:applydesk|residentialapps|utilityapps|cordware)/)?"
+    r"`((?:(?:" + "|".join(map(re.escape, (*APP_DIRS, "cordware"))) + r")/)?"
     r"(?:spec|docs|guide|app|tests|tools)/[A-Za-z0-9_./-]+)`"
 )
 
@@ -754,3 +759,16 @@ def test_a_path_in_another_repository_is_not_read_as_ours() -> None:
     """`cordware:docs/x.md` names a file in the private repository."""
     assert not PATH_REF.search("`cordware:docs/cordware_azure_progress.md`")
     assert PATH_REF.search("`applydesk/spec/applications.md`")
+
+
+def test_every_package_prefix_is_anchored() -> None:
+    """`PATH_REF` takes its package prefixes from `APP_DIRS`, so a package
+    added there has its prefixed paths checked too, not skipped unseen."""
+    for app in APP_DIRS:
+        assert PATH_REF.search(f"`{app}/spec/x.md`"), app
+
+
+def test_rrw_findings_registers_stay_checked() -> None:
+    """Only a package's registers are dated; RRW's live ones are read."""
+    assert not DATED_DOC.search("findings_2026-11-20_assessment.md")
+    assert PACKAGE_DATED_DOC.search("findings_2026-11-18_assessment.md")

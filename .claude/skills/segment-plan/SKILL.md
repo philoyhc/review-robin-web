@@ -30,7 +30,7 @@ One shape per file; do not mix them. `tools/close_check.py 19C` reads the segmen
 
 Prefer adding an item to a live segment over opening a new one when the work shares the theme.
 
-**A package's plans close the same way.** An application package (`applydesk/`, `residentialapps/`, `utilityapps/`; `APP_DIRS` in `tools/close_check/_manifest.py`) keeps its plans in `<pkg>/guide/`, and every rule here applies to them with the package's folders in place of the root's: `close_check.py <id>` reads them, `spec-writer` runs over their doc-impact files including `<pkg>/spec/`, and the close deletes from `<pkg>/guide/todo_master.md` and moves the plan to `<pkg>/guide/archive/`. Neither tool is skipped for a package plan.
+**A package's plans close the same way.** An application package (`applydesk/`, `residentialapps/`, `utilityapps/`; `APP_DIRS` in `tools/close_check/_manifest.py`) keeps its plans in `<pkg>/guide/`, and every rule here applies to them with the package's folders in place of the root's: `close_check.py <id>` reads them, `spec-writer` runs over their doc-impact files including `<pkg>/spec/`, and the close deletes from `<pkg>/guide/todo_master.md` and moves the plan to `<pkg>/guide/archive/`, with its row in `<pkg>/guide/archive/README.md` or, where the package has none, in the package's top-level `README.md`, which indexes its `guide/`. Neither tool is skipped for a package plan.
 
 ## The shape
 

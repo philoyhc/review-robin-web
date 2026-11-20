@@ -226,14 +226,9 @@ reject it.
   present so `tests/integration/test_inline_scripts_parse.py` runs
   rather than skips — a silent tool-gated skip, so read the skip list,
   not just the exit code. The other tool-gated tests are
-  `tests/browser/` and Residential's
-  `residentialapps/tests/test_sort_persistence_browser.py`,
-  `residentialapps/tests/test_touch_targets_browser.py`,
-  `residentialapps/tests/test_columns_browser.py`,
-  `residentialapps/tests/test_supportlogs_log_browser.py`,
-  `residentialapps/tests/test_leave_dates_browser.py`, and Utilities'
-  `utilityapps/tests/test_photo_poc_browser.py` and
-  `utilityapps/tests/test_interop_poc_browser.py`, which need a
+  `tests/browser/` and every `*_browser.py` in a package's `tests/`
+  (`git ls-files '*_browser.py'`; `tests/unit/test_browser_gated_names.py`
+  holds every test that imports Playwright to that naming), which need a
   Chromium build (preinstalled in the web sandbox) and skip with a reason
   without one; CI sets
   `RRW_REQUIRE_BROWSER=1` so a missing browser fails there. They also run in
@@ -258,7 +253,7 @@ reject it.
   no Python and only `pytest` runs it: `tests/unit/test_doc_references.py`
   (the twins, every anchored backticked repo path in live prose —
   top-level `.md` in `spec/`, `docs/`, `guide/` **and the root**, this
-  file included — every `§N` pointer, and every cited pytest node id),
+  file included, and each package's `spec/`, `docs/` and `guide/` — every `§N` pointer, and every cited pytest node id),
   `tests/unit/test_doc_conventions.py`
   (the checks derived from `app` constants), `tests/unit/test_guide_indexes.py` (a
   README row per `guide/` document),
@@ -273,7 +268,8 @@ reject it.
   not the later rung that owns the spec sweep: an anchored backticked
   path in live prose dangles immediately, so plan that bullet forward
   in the manifest. Deleting a whole routing module trips
-  `tests/unit/test_spec_coverage.py` the same way; deleting a single
+  `tests/unit/test_spec_coverage.py` the same way (a package's,
+  `tests/unit/test_package_spec_coverage.py`); deleting a single
   handler trips nothing.
 - **If the suite could not run at all, say so in the PR body** and name
   what did. A disclosed gap beats an implied gate.
