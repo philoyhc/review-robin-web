@@ -142,5 +142,5 @@ Taken 2026-10-29 at `de0bf729`.
 - `residentialapps/spec/architecture.md` — what `residentialapps/web/` holds for both applications (Item 1); the `supportlogs` models and their database (Item 2).
 - `residentialapps/docs/support_logs_ui_spec_v0.1.md` — a banner pointing to the settled spec (Item 1).
 - `residentialapps/docs/resident_support_log_functional_spec_v0.3.md` — revised to what shipped, with the revisions already queued (at close).
-- `residentialapps/docs/residentialapps_roster_structure.md` — §6's "effective system roles" indicators, stale against roles rule 9 (Item 1).
+- ~~The roster-structure doc — §6's "effective system roles" indicators, stale against roles rule 9 (Item 1).~~ (retired 2026-11-20: the doc is superseded by the units ruling and archived; findings 2026-11-20 S2)
 - `residentialapps/guide/todo_master.md` — ruling 14 now; the entries this segment finishes, deleted at close.

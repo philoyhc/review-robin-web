@@ -13,7 +13,7 @@ Residential Apps: one package, mounted under Cordware as two applications, **Res
 | `docs/residentialapps_email_identity_matching.md` | Email aliases and institutional identity matching: the email is a provisional hint, the Entra tenant/object ID the account key; exact trusted UPN and primary-email matching only, administrator correction otherwise (design note, 2026-10-30) |
 | `docs/residentialapps_identity.md` | Identity and roster linking: permanent `person_id`, Entra binding at first matching sign-in, the not-registered response (adopted 2026-10-26) |
 | `docs/residentialapps_roles.md` | Roles in both applications, read across from RRW's super-admin, admin and operator (ruled) |
-| `docs/residentialapps_roster_structure.md` | Rosters, appointments and residential geography: Unit, Wing, Tower, RF Zone, RA Neighborhood, coverage and reporting (working design; §10 open) |
+| `docs/archive/residentialapps_roster_structure.md` | **Retired 2026-11-20, superseded by the 2026-10-27 units ruling**: rosters, appointments and residential geography in the vocabulary before Unit-defined levels and slots. Design history; the contract is `spec/applications.md`. |
 | `docs/sample_data/README.md` | Mock data for browser tests: Example College's 30 Neighborhoods (the author's breakdown), its terms, Staff and RA rosters and Assignments CSVs (clean and error cases), and fake sign-in scenarios, each with its expected outcome |
 | `docs/support_logs_confidentiality.md` | Support Logs' confidentiality model for the staff who use it: own records, sharing, teams, handovers, what senior and other staff see, the audit (agreed 2026-11-07) |
 | `docs/support_logs_ui_spec_v0.1.md` | Support Logs UI spec (draft): RF / RSLM phone screens on RRW's design system |

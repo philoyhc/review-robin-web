@@ -8,7 +8,7 @@ Support Logs does the same, before its database exists. Read against RRW
 
 ## Opportunity
 
-`residentialapps/docs/residentialapps_roster_structure.md` §4.1 requires
+`residentialapps/docs/archive/residentialapps_roster_structure.md` §4.1 requires
 every roster, appointment and unit-specific record to name its
 Residential Unit (`residential_unit_id`). This is what lets more than one
 Unit use Residential Operations with separate permissions. Support Logs
@@ -247,7 +247,7 @@ All answered by the author, 2026-11-08:
 
 - `residentialapps/docs/resident_support_log_functional_spec_v0.3.md` — §3.5 eligibility read from the grant's Unit's Staff roster (roster membership alone, roles rule 9); §13 `residential_unit_id` on `SupportAuthorization` and every record entity, per-Unit cluster membership (rung 2).
 - `residentialapps/docs/residentialapps_roles.md` — Support Logs Sys admin per Unit, several per Unit, one account in at most one Unit; no cross-Unit view for anyone (rung 2).
-- `residentialapps/docs/residentialapps_roster_structure.md` — §5 and §10: the multi-Unit authorization item closed for Support Logs (rung 2).
+- `residentialapps/docs/archive/residentialapps_roster_structure.md` — §5 and §10: the multi-Unit authorization item closed for Support Logs (rung 2).
 - `residentialapps/spec/supportlogs_ui.md` — the working Unit and the switcher; per-Unit reads, shares, teams, flags, checks, workload and audit (rungs 2–4).
 - `residentialapps/spec/applications.md` — the switcher's place in the area menu (rungs 3–4).
 - `residentialapps/guide/todo_master.md` — strike "multi-Unit authorization" for Support Logs (rung 2).
