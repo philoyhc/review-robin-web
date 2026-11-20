@@ -41,6 +41,6 @@ one. Line numbers are at `6003c8084`.
   performance note only.
 - **N2** — a re-send that moves Start or End does not recheck existing invite or
   reminder offsets against the new anchor.
-- ~~**N3**~~ — **Done in #4069**: a `test (packages)` shard, and the Postgres cut moved back to `test_re[a-f]`. CI's `test (unit)` shard carries every package suite and now takes
+- ~~**N3**~~ — **Done in #4069**: a `test (packages)` shard, and the Postgres cut moved to `test_re[a-l]`. CI's `test (unit)` shard carries every package suite and now takes
   2m24 (43 s on 2026-11-06); the Postgres shards are uneven again, integration-a
   3m11 against integration-b 1m57.
