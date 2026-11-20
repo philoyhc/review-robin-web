@@ -114,7 +114,8 @@ def prepare(
     :class:`SettingsRefused` for a malformed row, what the import's row
     checks refuse, a name
     or code ``SessionCreate`` refuses, an unknown timezone, or a schedule
-    out of order on the values the session would hold;
+    out of order on the values the session would hold, or stored offsets
+    the card refuses against a Start or End the file carries;
     ``sessions.SessionCodeTakenError`` for a code another session holds."""
     rows = read_rows(content)
     foreign = sorted({row.field for row in rows if not is_owned(profile, row.field)})
@@ -154,10 +155,15 @@ def prepare(
 def check_schedule(review_session: ReviewSession, overrides: dict[str, object]) -> None:
     """The schedule on the values the session will hold: a re-send writes
     End, where the import would only fill it when blank. Its order, and
-    the stored invite and reminder offsets against an anchor the re-send
-    moves, as the Settings import checks the stored list when its file
-    moves the anchor (``session_offset_errors``: the card's rules, the
-    lead-time floor waived). :class:`SettingsRefused` when either fails."""
+    the stored invite and reminder offsets against an anchor the file
+    carries, as the Settings import checks the stored list when its file
+    carries the anchor (``session_offset_errors``: the card's rules, the
+    lead-time floor waived). :class:`SettingsRefused` when either fails.
+
+    The import's fired-entry rule (``session_fired_offset_errors``) is not
+    run: it refuses a list that differs from an entry recorded at that
+    position, and a linked session's list cannot change, its details,
+    import and offset rows being the application's or locked."""
     start = _when(overrides.get("scheduled_activate_at", review_session.scheduled_activate_at))
     end = _when(overrides.get("deadline", review_session.deadline))
     try:
@@ -216,11 +222,11 @@ def apply(
 ) -> None:
     """Write checked settings through the services that own each field,
     each audited as an operator's edit would be. Inside a caller's unit
-    (the re-send's save) these only flush. The code and the schedule's
-    order are checked again here, under that unit's session lock, against
-    the values an overlapping re-send may have committed since
-    :func:`prepare` (Codex on #3920): :class:`SettingsRefused` when the
-    order no longer holds."""
+    (the re-send's save) these only flush. The code and the schedule
+    (:func:`check_schedule`) are checked again here, under that unit's
+    session lock, against the values an overlapping re-send may have
+    committed since :func:`prepare` (Codex on #3920):
+    :class:`SettingsRefused` when the schedule no longer holds."""
     overrides = settings.overrides
     if "scheduled_activate_at" in overrides or "deadline" in overrides:
         check_schedule(review_session, overrides)
