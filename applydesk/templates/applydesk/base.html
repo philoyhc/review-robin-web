@@ -396,6 +396,10 @@
     /* Emails (segment AD1L): a template's preview under its card. */
     .em-insert { max-width: 260px; }
     .em-insert-row { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+    .em-insert-row > label { margin: 0; }
+    /* A button beside a field takes the field's height, top and bottom in line (ruling 65). */
+    .em-insert-row .btn, .pn-toolbar .btn, .em-insert-row select, .pn-toolbar .fc-in { box-sizing: border-box; height: 40px; min-height: 40px; }
+    td.ev-go { text-align: right; white-space: nowrap; }
     .em-none { color: var(--text-subtle); font-style: italic; }
     .em-preview { margin-top: 12px; padding: 12px 14px; border: 1px dashed var(--border-default); border-radius: 6px; background: var(--surface-muted); }
     .em-preview[hidden] { display: none; }
@@ -662,6 +666,9 @@
        heading and its chip struck through. */
     .pn-showcols { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 14px; }
     .pn-showcols[hidden] { display: none; }
+    .pn-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px 24px; margin-bottom: 14px; }
+    .pn-top .pn-showcols, .pn-top .pn-toolbar { margin: 0; }
+    .pn-top .pn-toolbar { margin-left: auto; flex-direction: column; align-items: flex-end; }
     .pn-show { display: inline-flex; align-items: center; box-sizing: border-box; min-height: var(--tog-h); font: inherit; font-size: 12px; font-weight: 600; line-height: 1; padding: 0 12px; border-radius: 9999px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
     .pn-show[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
     .pn-table .pn-off { display: none; }
@@ -801,8 +808,17 @@
     .ev-find .fc-l { flex: 1 1 260px; margin: 0; }
     .rr-names { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 12px; }
     .rr-names .fc-l { flex: 1 1 260px; margin: 0; }
-    .rr-files { margin: 0 0 8px; padding-left: 20px; }
-    .rr-files li { margin: 4px 0; }
+    .rr-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 24px; align-items: start; margin-bottom: 16px; }
+    .rr-top .rr-names { flex-direction: column; margin: 0; }
+    .rr-top .rr-names .fc-l { flex: none; }
+    .rr-top .facts { margin: 0; align-self: center; }
+    .rr-files { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 8px; }
+    .rr-file { border: 1px solid var(--border-default); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+    .rr-file h4 { margin: 0; font-size: 15px; font-weight: 600; }
+    .rr-file p { margin: 0; font-size: 14px; color: var(--text-subtle); flex: 1; }
+    .rr-progress { border: 1px solid var(--border-default); border-radius: 8px; padding: 14px; margin-top: 16px; }
+    .rr-progress h3 { margin-top: 0; }
+    @media (max-width: 700px) { .rr-top, .rr-files { grid-template-columns: minmax(0, 1fr); } }
     .rr-acts { justify-content: flex-start; margin-top: 12px; }
     .rr-said { margin: 8px 0 0; min-height: 1.2em; }
     .nx-form { margin-bottom: 16px; max-width: 560px; }

@@ -25,6 +25,8 @@
 {% set rr_wait = ' disabled data-rr-wait' %}
 <section class="card rr-card" id="ev-rr" data-rr-gate="{{ gate.key }}" aria-labelledby="ev-rr-h">
   <h2 id="ev-rr-h">Review Robin</h2>
+  {# Two columns (ruling 65): the session's names left, the link's facts right. #}
+  <div class="rr-top">
   <div class="rr-names">
     <label class="fc-l">Session name<input class="fc-in" type="text" maxlength="255" value="{{ bundle.name }}" data-rr-name{{ rr_wait }}></label>
     <label class="fc-l">Session code<input class="fc-in" type="text" maxlength="64" value="{{ bundle.code }}" data-rr-code{{ rr_wait }}></label>
@@ -35,27 +37,23 @@
     <dt>Invited</dt><dd data-rr-invited><span class="muted">—</span></dd>
     <dt>Reminded</dt><dd data-rr-reminded><span class="muted">—</span></dd>
   </dl>
+  </div>
   <h3>What is sent</h3>
   {# The four files, built from the gate's pairs and card as saved
      (handoff.bundle); each downloads as Review Robin would receive it. #}
   {% macro dl(kind) %}<a class="btn btn-secondary" href="{{ url(here ~ '/' ~ kind ~ '.csv') }}" download data-rr-file="{{ kind }}">Download</a>{% endmacro %}
   {% set n_people = bundle.rows("reviewers") %}{% set n_dossiers = bundle.rows("reviewees") %}{% set n_pairs = bundle.rows("relationships") %}
-  <ul class="rr-files" data-rr-files>
-    <li><strong>Reviewers</strong>: {{ n_people }} {{ "evaluator" if n_people == 1 else "evaluators" }}, by name and email {{ dl("reviewers") }}</li>
-    <li><strong>Reviewees</strong>: {{ n_dossiers }} {{ "dossier" if n_dossiers == 1 else "dossiers" }}{% if ids_only %}, each by its Dossier ID, the name redacted (ruling 43){% else %}, each with its <code>ProfileLink</code>{% endif %} {{ dl("reviewees") }}</li>
-    <li><strong>Relationships</strong>: {{ "{:,}".format(n_pairs) }} {{ "pair" if n_pairs == 1 else "pairs" }}, each tagged with its source {{ dl("relationships") }}</li>
-    <li><strong>Settings</strong>: the description, help contact, timezone, dates and one instrument with {{ bundle.fields }} response {{ "field" if bundle.fields == 1 else "fields" }} {{ dl("settings") }}</li>
-  </ul>
-  <p class="muted">As saved: this tab's changes to the pairs are not in the files until AD2 saves them.</p>
-  <h3>Progress</h3>
-  {% if people %}
-  <div class="table-wrap">
-  <table class="rr-status" data-rr-status>
-    <thead><tr><th>Evaluator</th><th>Pairs</th><th>Done</th></tr></thead>
-    <tbody>{% for name, email, n in people %}<tr data-rr-person="{{ email }}"><td>{{ name }}</td><td>{{ n }}</td><td class="muted" data-rr-done>—</td></tr>{% endfor %}</tbody>
-  </table>
+  <div class="rr-files" data-rr-files>
+    <div class="rr-file"><h4>Reviewers</h4><p>{{ n_people }} {{ "evaluator" if n_people == 1 else "evaluators" }}, by name and email</p>{{ dl("reviewers") }}</div>
+    <div class="rr-file"><h4>Reviewees</h4><p>{{ n_dossiers }} {{ "dossier" if n_dossiers == 1 else "dossiers" }}{% if ids_only %}, each by its Dossier ID, the name redacted (ruling 43){% else %}, each with its <code>ProfileLink</code>{% endif %}</p>{{ dl("reviewees") }}</div>
+    <div class="rr-file"><h4>Relationships</h4><p>{{ "{:,}".format(n_pairs) }} {{ "pair" if n_pairs == 1 else "pairs" }}, each tagged with its source</p>{{ dl("relationships") }}</div>
+    <div class="rr-file"><h4>Settings</h4><p>The description, help contact, timezone, dates and one instrument with {{ bundle.fields }} response {{ "field" if bundle.fields == 1 else "fields" }}</p>{{ dl("settings") }}</div>
   </div>
-  {% else %}<p class="muted">No evaluators paired yet.</p>{% endif %}
+  <p class="muted">As saved: this tab's changes to the pairs are not in the files until AD2 saves them.</p>
+  {# Progress, a panel of its own (ruling 65): the actions above the table,
+     so they are not under 30 rows. Inside the card, which _rr_js.html reads. #}
+  <div class="rr-progress">
+  <h3>Progress</h3>
   <p class="muted">Progress is read from Review Robin by <em>Pull results</em> once the session opens; once it closes, <em>Pull final results</em> brings the results back and the gate is done (ruling 57).</p>
   <div class="btnrow rr-acts">
     <button class="btn btn-primary" type="button" data-rr-act="send"{{ rr_wait }}>Send to Review Robin</button>
@@ -77,7 +75,16 @@
       <button class="btn btn-secondary" type="button" data-rr-act="mail-cancel">Cancel</button>
     </div>
   </div>
+  {% if people %}
+  <div class="table-wrap">
+  <table class="rr-status" data-rr-status>
+    <thead><tr><th>Evaluator</th><th>Pairs</th><th>Done</th></tr></thead>
+    <tbody>{% for name, email, n in people %}<tr data-rr-person="{{ email }}"><td>{{ name }}</td><td>{{ n }}</td><td class="muted" data-rr-done>—</td></tr>{% endfor %}</tbody>
+  </table>
+  </div>
+  {% else %}<p class="muted">No evaluators paired yet.</p>{% endif %}
   <p class="muted">Simulated: until AD2 and AD6 nothing reaches Review Robin, and no email is sent until AD7.</p>
+  </div>
 </section>
 <section class="card" id="ev-table-card" data-ev-gate="{{ gate.key }}" data-mode="{{ gate.mode }}" aria-labelledby="ev-pairs-h">
   <h2 id="ev-pairs-h">Pairs</h2>
