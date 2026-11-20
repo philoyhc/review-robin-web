@@ -147,8 +147,11 @@ The application sends its own email; reviewers reach the session by
 signing in at `/me`, matched by email.
 
 - **Hides:** the Email Template tab and its status pill; the Workflow
-  card's *Send invites* and *Send reminders* and its due prompts
-  (`spec/workflow_card.md`); Session details' invite and reminder
+  card's *Send invites* and *Send reminders*, its due prompts, its
+  auto-send captions and Activate's auto-send cancellation warning
+  (`spec/workflow_card.md`); the lobby's Due pill for a due prompt, since
+  none is due (`due_actions.due_actions`, `spec/sessions_overview.md`);
+  Session details' invite and reminder
   prompts; the email-preview card on the Invitations reviewer page
   (`spec/operations_pages.md`).
 - **Refuses (`409`):** the Email Template page (view, save, send test,
