@@ -352,21 +352,29 @@ def test_the_results_page_is_closed_until_unlink(client: TestClient, db: Session
     assert client.get(url).status_code == 200
 
 
-def test_stop_release_is_refused_by_route_and_service(client: TestClient, db: Session) -> None:
+@pytest.mark.parametrize("status", ["expired", "ready"])
+def test_stop_release_is_refused_by_route_and_service(
+    client: TestClient, db: Session, status: str
+) -> None:
+    """Refused as linked whether or not the session has closed: the link
+    is the reason, ahead of the state (findings 2026-11-20 corpus B5)."""
     review_session, _ = _created(client, db)
-    review_session.status = "expired"
+    review_session.status = status
     db.commit()
-    reply = client.post(
-        f"/operator/sessions/{review_session.public_id}/workflow/stop-release",
-        follow_redirects=False,
-    )
-    assert "super_error=linked_release" in reply.headers["location"]
+    for path in ("stop-release", "release-responses"):
+        reply = client.post(
+            f"/operator/sessions/{review_session.public_id}/workflow/{path}",
+            follow_redirects=False,
+        )
+        assert "super_error=linked_release" in reply.headers["location"], path
     db.refresh(review_session)
     assert review_session.responses_release_until is None
+    assert review_session.responses_release_at is None
     user = review_session.created_by_user
     for service in (lifecycle.release_responses_now, lifecycle.stop_responses_release):
-        with pytest.raises(lifecycle.SessionStateConflict):
+        with pytest.raises(lifecycle.SessionStateConflict) as refused:
             service(db, review_session=review_session, user=user)
+        assert refused.value.code == "linked"
 
 
 def test_quick_setup_offers_and_takes_no_observers(client: TestClient, db: Session) -> None:

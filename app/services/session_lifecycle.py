@@ -759,10 +759,11 @@ def release_responses_now(
 
     **They are no longer orthogonal, though** (19F PR 2a): the
     window this stamps only *opens* while the session is
-    ``expired``, so stamping an anchor on a ``ready`` session
-    grants nobody anything. The Workflow card only offers the
-    button on an expired session, which is why the anchor and the
-    state agreed before the predicate enforced it.
+    ``expired``, so it refuses any other state (``not_expired``):
+    on a ``ready`` session with no End, a stamped Release-from would
+    become the review's end and close the session at the next
+    observation (findings 2026-11-20 corpus B5). The Workflow card
+    offers the button only on an expired session.
     """
     session_guard.require_state(
         db,
@@ -777,6 +778,13 @@ def release_responses_now(
         lambda locked: not linked_apps.locks(locked, linked_apps.Lock.RELEASE),
         code="linked",
         message=linked_apps.off_message(review_session, "Release"),
+    )
+    session_guard.require_state(
+        db,
+        review_session,
+        is_expired,
+        code="not_expired",
+        message="Responses can be released only once the session is closed.",
     )
     now = datetime.now(UTC)
     cleared_until = review_session.responses_release_until is not None
@@ -820,7 +828,9 @@ def stop_responses_release(
     column but the audit log records each press.
 
     Emits ``session.responses_release_stopped`` with the new
-    close-stamp.
+    close-stamp. Only on an ``expired`` session (``not_expired``
+    otherwise), as :func:`release_responses_now`: a stamp before the
+    close would block a release scheduled for later.
     """
     session_guard.require_state(
         db,
@@ -835,6 +845,13 @@ def stop_responses_release(
         lambda locked: not linked_apps.locks(locked, linked_apps.Lock.RELEASE),
         code="linked",
         message=linked_apps.off_message(review_session, "Release"),
+    )
+    session_guard.require_state(
+        db,
+        review_session,
+        is_expired,
+        code="not_expired",
+        message="A release can be stopped only once the session is closed.",
     )
     now = datetime.now(UTC)
     review_session.responses_release_until = now

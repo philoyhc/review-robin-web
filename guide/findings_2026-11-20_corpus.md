@@ -71,7 +71,7 @@ are at `6003c8084`.
   - `spec/lifecycle.md:794-796` says every state-machine function no-ops when the target state is current.
   - Only `mark_validated` (`app/services/session_lifecycle.py:351`) and `invalidate_session` (`:462`) do. `activate_session`, `expire_session`, `revert_session_to_draft`, `archive_session` and `unarchive_session` raise, and the Workflow routes guard them.
   - Narrow the principle to the two, or make the five idempotent.
-- **B5** (low) — **Release can be stamped on a `ready` session by a direct POST.**
+- ~~**B5**~~ — **Fixed in #4077**: Release and Stop releasing refuse a session that is not `expired`. (low) — **Release can be stamped on a `ready` session by a direct POST.**
   - The predicate requires `expired`. `release_responses_now` and `stop_responses_release` (`app/services/session_lifecycle.py:339-454`) and their routes refuse only archived and linked sessions.
   - With no End, Release-from is then the review's end, and the next observation closes the session.
   - The service docstring (`:361-366`) admits it, and `spec/lifecycle.md:841` overclaims.

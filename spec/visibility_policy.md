@@ -188,7 +188,7 @@ A policy whose `after_release` pair is set while `responses_release_at` is NULL 
 
 The anchor is deliberately **left in place** across a revert rather than cleared. It simply goes inert, so re-closing the session re-opens the window on the schedule the operator originally set — which is what "release at time T" should mean.
 
-**Where the rule lives.** In `session_lifecycle.is_response_release_window_open`, and only there. `release_responses_now` stays permissive — called on an unclosed session it stamps the anchor and the window stays shut — because the import and apply-config paths also write these columns, and one predicate is easier to keep true than four call-site guards.
+**Where the rule lives.** In `session_lifecycle.is_response_release_window_open`. The import and apply-config paths also write these columns and are not guarded: on a session in setup the anchor they write stays inert until the session closes. The Workflow card's two actions are the exception: `release_responses_now` and `stop_responses_release` refuse any session that is not `expired` (`not_expired`), since on a `ready` session with no End a Release-from stamped now would be the review's end and close it (`spec/lifecycle.md` §4), and a Release-until stamped early would shut a window scheduled for later.
 
 ### 3.3 Archive overrides
 
