@@ -66,7 +66,9 @@ checking itself.
   files (`docs/cordware_azure_progress_runner_2026-10-29.md`,
   `spec/importer.md`).
   - **Rule:** a reference written `cordware:docs/…` is exempt, and the
-    gate counts and reports it.
+    gate counts and reports it. *(Amended at rung 9: exempt only, by
+    `PATH_REF` not matching it; a count nothing reads would be a report
+    nobody acts on.)*
   - **Rejected:** an allowlist, since it grows (constitution VI).
 - **Dated documents stay exempt.** Package findings registers and
   handover documents (`*_v0.N*.md`, `findings_*`) join `DATED_DOC`, as
@@ -259,7 +261,17 @@ plan moved here from Cordware.
   by rule, `tests/browser/` and every `*_browser.py`, and
   `tests/unit/test_browser_gated_names.py` fails on a Playwright test
   outside it, or on the rule's removal (both mutations caught).
-  `CLAUDE.md` is 344 lines; §6.7 records it.
+  `CLAUDE.md` is 345 lines; §6.7 records 341 before and 345 after.
+  - **Cold read** (cumulative, `abdee8b3b..fd59d208e`, 938 lines): nine
+    findings, none failing a gate. Fixed on rung 2: the stacked slice's
+    iteration (with Codex's sum), `tools/README.md` and the docstring.
+    Fixed here: `PATH_REF`'s package list now built from `APP_DIRS`;
+    `findings_` and versioned specs dated only in packages; the ruling
+    count (65); this Status, the Definition of done and the `cordware:`
+    Semantics line; `CLAUDE.md`'s gate descriptions; the skill's index
+    row for a package with no archive README. Noted: `pace_audit` counts
+    `cordware/` as product though it is not an `APP_DIRS` package, since
+    it is code the host ships.
 
 ## PR ladder
 
@@ -358,12 +370,14 @@ rung 2, recorded in rung 2's PR.
   for every closed package plan (19 at the re-take). An open plan's
   commitments to files not yet written are not failures (Status, rung 1).
 - `tests/unit/test_doc_references.py`, `test_guide_indexes.py`,
-  `test_index_currency.py` and `test_spec_coverage.py` read every
+  `test_index_currency.py` and, for routes,
+  `tests/unit/test_package_spec_coverage.py` (rung 5) read every
   `APP_DIRS` package, each with a recorded mutation that fails it.
 - `.claude/agents/spec-writer.md` names `<pkg>/spec/` in scope, and the
   segment-plan skill's close names both tools for package plans.
-- `CLAUDE.md` records the per-closing-unit read cadence (cap and iteration exemption included), and its browser-only list
-  is derived-tested (20 files at the re-take).
+- `CLAUDE.md` records the per-closing-unit read cadence (cap and iteration exemption included), and it names the
+  browser-gated tests by a rule a test holds (rung 9; 20 files at the
+  re-take).
 - `rrw_sdd_in_practice.md` §4/§6.1 and constitution I describe rulings
   as the author ruled (standing while building, folded at a major
   juncture), and Apply Desk's Rulings heading names its first juncture.

@@ -253,7 +253,7 @@ reject it.
   no Python and only `pytest` runs it: `tests/unit/test_doc_references.py`
   (the twins, every anchored backticked repo path in live prose —
   top-level `.md` in `spec/`, `docs/`, `guide/` **and the root**, this
-  file included — every `§N` pointer, and every cited pytest node id),
+  file included, and each package's `spec/`, `docs/` and `guide/` — every `§N` pointer, and every cited pytest node id),
   `tests/unit/test_doc_conventions.py`
   (the checks derived from `app` constants), `tests/unit/test_guide_indexes.py` (a
   README row per `guide/` document),
@@ -268,7 +268,8 @@ reject it.
   not the later rung that owns the spec sweep: an anchored backticked
   path in live prose dangles immediately, so plan that bullet forward
   in the manifest. Deleting a whole routing module trips
-  `tests/unit/test_spec_coverage.py` the same way; deleting a single
+  `tests/unit/test_spec_coverage.py` the same way (a package's,
+  `tests/unit/test_package_spec_coverage.py`); deleting a single
   handler trips nothing.
 - **If the suite could not run at all, say so in the PR body** and name
   what did. A disclosed gap beats an implied gate.
