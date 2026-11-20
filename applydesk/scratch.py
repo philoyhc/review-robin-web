@@ -36,7 +36,22 @@ MAX_BODY = 256 * 1024
 
 
 class Refused(Exception):
-    """A request the store will not carry out, said to the operator."""
+    """A request the store will not carry out, said to the operator. A
+    refusal the Lobby reports carries its ``key`` of :data:`CREATE_REFUSALS`,
+    so the redirect names the key, never the text (findings 2026-11-20
+    S11)."""
+
+    def __init__(self, message: str, *, key: str = "") -> None:
+        super().__init__(message)
+        self.key = key
+
+
+#: Why *New exercise* was refused, by the key the Lobby's redirect carries.
+CREATE_REFUSALS: dict[str, str] = {
+    "name_needed": "A name is needed.",
+    "name_long": "A name is at most 200 characters.",
+    "full": f"At most {LIMIT} scratch exercises at once: discard one first.",
+}
 
 
 @dataclass
@@ -122,14 +137,14 @@ def create(browser_token: str, name: str) -> Scratch:
     """A new scratch exercise named ``name`` for this browser."""
     name = name.strip()
     if not name:
-        raise Refused("A name is needed.")
+        raise Refused(CREATE_REFUSALS["name_needed"], key="name_needed")
     if len(name) > 200:
-        raise Refused("A name is at most 200 characters.")
+        raise Refused(CREATE_REFUSALS["name_long"], key="name_long")
     with _LOCK:
         now = time.monotonic()
         found = _browser(browser_token, now) or _BOX.setdefault(browser_token, _Browser(now))
         if len(found.exercises) >= LIMIT:
-            raise Refused(f"At most {LIMIT} scratch exercises at once: discard one first.")
+            raise Refused(CREATE_REFUSALS["full"], key="full")
         taken = {e.public_id for e in sample_data.EXERCISES} | {
             k for b in _BOX.values() for k in b.exercises
         }

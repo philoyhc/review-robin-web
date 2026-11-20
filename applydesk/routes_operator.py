@@ -54,7 +54,7 @@ def exercises(request: Request) -> Response:
         exercises=sample_data.exercises(),
         is_scratch=scratch.is_scratch,
         scratch_limit=scratch.LIMIT,
-        scratch_said=request.query_params.get("said", ""),
+        scratch_said=SAID.get(request.query_params.get("said", ""), ""),
         exercise_status=locks.exercise_status,
         counts=workflow.counts_of,
         current_stage=workflow.current_stage,
@@ -69,7 +69,18 @@ def _same_site(request: Request) -> None:
         raise HTTPException(status_code=403)
 
 
+#: The Lobby's status line, by the key its redirect carries: the page
+#: shows only these, so a link cannot put words on it (findings
+#: 2026-11-20 S11, ruled: a message key, not the text).
+SAID: dict[str, str] = {
+    **scratch.CREATE_REFUSALS,
+    "not_made": "The scratch exercise could not be made.",
+    "discarded": "The scratch exercise was discarded.",
+}
+
+
 def _to_lobby(request: Request, said: str = "") -> RedirectResponse:
+    """The Lobby, with ``said`` a key of :data:`SAID`."""
     path = "/operator/exercises" + (("?" + urlencode({"said": said})) if said else "")
     return RedirectResponse(url_path(request, path), status_code=303)
 
@@ -87,7 +98,7 @@ async def exercise_new(request: Request) -> Response:
     try:
         made = scratch.create(browser, name)
     except scratch.Refused as why:
-        return _to_lobby(request, str(why))
+        return _to_lobby(request, why.key if why.key in SAID else "not_made")
     reply = RedirectResponse(
         url_path(request, f"/operator/exercises/{made.exercise.public_id}"), status_code=303
     )
@@ -104,7 +115,7 @@ def exercise_discard(request: Request, exercise_id: str) -> Response:
     exercise = exercise_or_404(exercise_id)
     if not scratch.discard(scratch.token(), exercise.public_id):
         raise HTTPException(status_code=404)
-    return _to_lobby(request, f"{exercise.name} discarded.")
+    return _to_lobby(request, "discarded")
 
 
 _ELIGIBILITY = ("Open to all signed in", "Invitation only", "Not set")

@@ -157,7 +157,10 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     Grant 2027* (one stage holding the form, nothing else), and lands on its
     Home. A refusal (no name, or a sixth) returns to the Lobby saying why.
     Its row carries a *Scratch* chip and *Discard* (Destructive), which asks
-    first; a scratch exercise cannot be got back. Every page of one says
+    first; a scratch exercise cannot be got back. The Lobby's status line
+    shows only its own messages: the redirect carries a key
+    (`routes_operator.SAID`), never the text, so a link cannot put words
+    on the page. Every page of one says
     what it is in place of the placeholder line.
   - **Whose and for how long.** One browser's, keyed by an opaque HttpOnly
     `applydesk-scratch` cookie on the mount's path (SameSite Lax, Secure

@@ -729,6 +729,10 @@ Segments in order; each gets a plan in this folder when it starts.
   Robin's status read replaces it (AD1I; AD-32; AD1M).
 - **AD2:** operator pages' dates as Review Robin's `YYYY-MM-DD HH:MM`
   through one helper, once dates are stored (U18; AD1P).
+- **AD2:** the store that replaces the scratch store caps what one
+  client can make, checks a body's size before reading it, and prunes off
+  the request path. Until then the scratch store does not ship to
+  production (findings 2026-11-20 S10, ruled 2026-11-20).
 - **Form:** card drag has no Escape and no auto-scroll (AD1B).
 
 ## Open decisions

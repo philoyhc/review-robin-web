@@ -107,7 +107,7 @@ def test_new_exercise_to_its_home_then_details_saved_and_discarded(page: Page) -
     page.once("dialog", lambda d: d.accept())
     row.get_by_role("button", name="Discard").click()
     page.wait_for_url(f"{LOBBY}?said=*")
-    assert "Browser Bursary 2027 discarded." in page.locator("[data-nx-said]").inner_text()
+    assert "was discarded." in page.locator("[data-nx-said]").inner_text()
     assert page.locator("tr", has_text="Browser Bursary 2027").count() == 0
 
 
