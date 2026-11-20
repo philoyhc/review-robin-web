@@ -398,7 +398,7 @@
     .em-insert-row { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
     .em-insert-row > label { margin: 0; }
     /* A button beside a field takes the field's height, top and bottom in line (ruling 65). */
-    .em-insert-row .btn, .pn-toolbar .btn { min-height: 40px; }
+    .em-insert-row .btn, .pn-toolbar .btn, .em-insert-row select, .pn-toolbar .fc-in { box-sizing: border-box; height: 40px; min-height: 40px; }
     td.ev-go { text-align: right; white-space: nowrap; }
     .em-none { color: var(--text-subtle); font-style: italic; }
     .em-preview { margin-top: 12px; padding: 12px 14px; border: 1px dashed var(--border-default); border-radius: 6px; background: var(--surface-muted); }
