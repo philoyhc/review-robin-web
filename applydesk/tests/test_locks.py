@@ -69,7 +69,7 @@ def test_publishing_names_what_the_stage_lacks() -> None:
     assert locks.publish_problems(e, second) == (
         "Selection has no start and end.",
         "Stage 1 is not published yet.",
-        "Gate 1 (Placement interview) has no evaluators.",
+        "Gate 1 · Placement interview has no evaluators.",
     )
     blank = _e(BLANK)
     assert locks.publish_problems(blank, _stage(BLANK, 1)) == (
@@ -138,7 +138,7 @@ def test_publishing_reads_the_outline_s_checks(monkeypatch: pytest.MonkeyPatch) 
     broken = replace(interviews, columns=(bad_gate, replace(o2, rule=bad_rule)))
     monkeypatch.setitem(stages._STAGES, RA, (*model[:2], broken))  # pyright: ignore[reportPrivateUsage]  -- as above
     problems = locks.publish_problems(e, broken)
-    assert any(p.startswith("Gate 3 (Staff interview): the Total's") for p in problems)
+    assert any(p.startswith("Gate 3 · Staff interview: the Total's") for p in problems)
     assert "Selection's rule reads an outcome no longer in the process." in problems
     assert "Selection's rule decides \u201cHired\u201d, not among its values." in problems
 
@@ -157,7 +157,7 @@ def test_publishing_reads_each_source(monkeypatch: pytest.MonkeyPatch) -> None:
     broken = replace(interviews, columns=(gone, o2))
     monkeypatch.setitem(stages._STAGES, RA, (*model[:2], broken))  # pyright: ignore[reportPrivateUsage]  -- as above
     assert locks.publish_problems(e, broken) == (
-        "Gate 3 (Staff interview): source 1's panel is gone.",
+        "Gate 3 · Staff interview: source 1's panel is gone.",
     )
 
 
@@ -222,7 +222,7 @@ def test_items_fall_inside_their_stage(monkeypatch: pytest.MonkeyPatch) -> None:
     broken = replace(interviews, columns=(late, early))
     monkeypatch.setitem(stages._STAGES, RA, (*model[:2], broken))  # pyright: ignore[reportPrivateUsage]  -- as above
     assert locks.publish_problems(e, broken) == (
-        "Gate 3 (Staff interview) runs outside the dates of Interviews.",
+        "Gate 3 · Staff interview runs outside the dates of Interviews.",
         "Selection is due before Staff interview closes.",
     )
     after = replace(o2, due_at=stages.day(2026, 12, 10))
@@ -232,7 +232,7 @@ def test_items_fall_inside_their_stage(monkeypatch: pytest.MonkeyPatch) -> None:
     broken = replace(interviews, columns=(backwards, after))
     monkeypatch.setitem(stages._STAGES, RA, (*model[:2], broken))  # pyright: ignore[reportPrivateUsage]  -- as above
     assert locks.publish_problems(e, broken) == (
-        "Gate 3 (Staff interview) ends before it starts.",
+        "Gate 3 · Staff interview ends before it starts.",
         "Selection is due outside the dates of Interviews.",
     )
 

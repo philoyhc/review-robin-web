@@ -6,12 +6,14 @@
   <h2>My applications</h2>
   {% for a in mine %}
     <p><a href="{{ url('/me/exercises/' ~ a.exercise_id ~ '/applications/' ~ a.public_id) }}">{{ a.title }}</a> {% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}</p>
+  {% else %}<p class="muted">No applications yet.</p>
   {% endfor %}
 </section>
 <section class="card">
   <h2>Open to me</h2>
   {% for e in exercises %}
     <p><a href="{{ url('/me/exercises/' ~ e.public_id) }}">{{ e.name }}</a> <span class="muted">· {{ "Closed: its released results stay here" if e.state == "Closed" else ("Applications open" if e.form_open else "Applications closed") }}</span>{% if e.eligibility == "Invitation only" %} <span class="chip chip-info">You are invited</span>{% endif %}</p>
+  {% else %}<p class="muted">No exercise is open to you yet.</p>
   {% endfor %}
 </section>
 <section class="card">
@@ -19,6 +21,7 @@
   <p class="muted">Usually opened from Review Robin's <strong>View</strong> link.</p>
   {% for e, a in dossiers %}
     <p><a href="{{ url('/me/exercises/' ~ e.public_id ~ '/dossiers/' ~ a.dossier_id) }}">{{ "An application" if e.blind else a.title }}</a> <span class="muted">· {{ e.name }}</span></p>
+  {% else %}<p class="muted">None to evaluate yet.</p>
   {% endfor %}
 </section>
 {% endblock %}

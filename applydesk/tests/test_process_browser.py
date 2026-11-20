@@ -145,7 +145,7 @@ def test_moving_a_stage_renumbers_its_gates_and_outcome(page: Page) -> None:
     _open(moved)
     kickers = moved.locator("[data-pc-kicker]").all_inner_texts()
     assert [k.upper() for k in kickers] == ["GATE 1", "OUTCOME 1"]
-    assert "Gate 1: Interview" in page.locator("[data-pc-outline]").inner_text()
+    assert "Gate 1 · Interview" in page.locator("[data-pc-outline]").inner_text()
     assert "Moved Interview to 2 of 4." in page.locator("[data-pc-live]").inner_text()
 
 
@@ -195,7 +195,7 @@ def test_gates_and_an_outcome_are_added_and_removed(page: Page) -> None:
     new.locator('[data-pc="item-name"]').fill("Community panel")
     assert new.locator("[data-pc-kicker]").text_content() == "Gate 3"
     outline = page.locator("[data-pc-outline]").inner_text()
-    assert "Gate 3: Community panel" in outline and "Gate 4: Interview" in outline
+    assert "Gate 3 · Community panel" in outline and "Gate 4 · Interview" in outline
     assert _counts(page) == "4 stages · 4 gates · 3 outcomes"
     # One outcome per stage: its button refuses until it is removed.
     add_out = review.locator('[data-pc-act="outcome"]')
@@ -403,7 +403,7 @@ def test_a_rule_left_reading_a_later_outcome_is_named(page: Page) -> None:
     assert warn.is_visible()
     assert warn.inner_text() == "This rule reads Shortlist for interview, which comes later."
     issues = page.locator("[data-pc-issues]").inner_text()
-    assert "(Interview) reads Shortlist for interview, which comes later." in issues
+    assert "· Interview reads Shortlist for interview, which comes later." in issues
     _cards(page).nth(1).locator("[data-fc-grip]").focus()
     page.keyboard.press("ArrowDown")
     assert not warn.is_visible() and not page.locator("[data-pc-issues]").is_visible()
@@ -564,7 +564,7 @@ def test_weights_say_when_their_gates_change_and_check_the_total(page: Page) -> 
     assert o1.locator("[data-rule-warn]").inner_text() == (
         "This outcome has weights adding up to 90, not 100."
     )
-    assert "(Shortlist for interview) has weights adding up to 90, not 100." in (
+    assert "· Shortlist for interview has weights adding up to 90, not 100." in (
         page.locator("[data-pc-issues]").inner_text()
     )
 
@@ -767,7 +767,7 @@ def test_a_lone_or_new_item_opens_and_the_outline_opens_an_item(page: Page) -> N
     _open(review)
     review.locator('[data-pc-act="gate"]').click()
     assert review.locator('.pc-item[data-item="gate"]').nth(2).get_attribute("data-open") == ""
-    page.locator("[data-pc-outline] .fb-o-item", has_text="Gate 4: Interview").click()
+    page.locator("[data-pc-outline] .fb-o-item", has_text="Gate 4 · Interview").click()
     g3 = page.locator('.pc-item[data-key="g3"]')
     assert g3.get_attribute("data-open") == ""
     assert g3.locator('[data-pc="item-name"]').evaluate("e => e === document.activeElement")
@@ -785,12 +785,12 @@ def test_a_gate_item_makes_and_picks_its_panel(page: Page) -> None:
     assert gate.get_attribute("data-open") == ""  # alone in its stage
     _open_cards(gate)
     issues = page.locator("[data-pc-issues]")
-    assert "Gate 1 (Placement interview) has no evaluators." in issues.inner_text()
+    assert "Gate 1 · Placement interview has no evaluators." in issues.inner_text()
     assert page.locator("[data-o-panel]").text_content() == "No evaluators"
     assert not page.locator("[data-unsaved]").is_visible()
     gate.locator('[data-ps-act="add"]').click()
     assert page.locator("[data-unsaved]").is_visible()  # a source's buttons are changes
-    assert "Gate 1 (Placement interview) has no panel chosen for source 1." in issues.inner_text()
+    assert "Gate 1 · Placement interview has no panel chosen for source 1." in issues.inner_text()
     gate.locator('[data-ps="total-min"]').fill("1")
     gate.locator('[data-ps="total-max"]').fill("1")
     menu = gate.locator("[data-pc-panel]")
@@ -811,7 +811,7 @@ def test_a_gate_item_makes_and_picks_its_panel(page: Page) -> None:
     # Back to none: the head and the Outline say so again.
     menu.select_option("")
     assert gate.locator("[data-pi-panel]").text_content() == "No panel 1 · Total 1"
-    assert "Gate 1 (Placement interview) has no panel chosen for source 1." in issues.inner_text()
+    assert "Gate 1 · Placement interview has no panel chosen for source 1." in issues.inner_text()
 
 
 def test_a_sent_gate_keeps_its_panel(page: Page) -> None:
@@ -1305,7 +1305,7 @@ def test_a_new_gate_and_an_outline_jump_open_the_gate_card(page: Page) -> None:
     new = review.locator('.pc-item[data-item="gate"]').nth(2)
     assert new.locator('[data-gsec="gate"]').evaluate("e => e.open")
     assert new.locator('[data-pc="item-name"]').evaluate("e => e === document.activeElement")
-    page.locator("[data-pc-outline] .fb-o-item", has_text="Gate 4: Interview").click()
+    page.locator("[data-pc-outline] .fb-o-item", has_text="Gate 4 · Interview").click()
     g3 = page.locator('.pc-item[data-key="g3"]')
     assert g3.locator('[data-gsec="gate"]').evaluate("e => e.open")
     assert g3.locator('[data-pc="item-name"]').evaluate("e => e === document.activeElement")
@@ -1351,7 +1351,7 @@ def test_response_fields_are_added_edited_and_removed(page: Page) -> None:
     # With no field, nothing to derive and no type a rule could read.
     assert row.locator('[data-r="derive"] option').count() == 0
     assert row.locator("[data-pr-type]").text_content() == "None until a field is chosen"
-    assert "Gate 1 (Placement interview) has result 1 with no field chosen." in (
+    assert "Gate 1 · Placement interview has result 1 with no field chosen." in (
         page.locator("[data-pc-issues]").inner_text()
     )
     assert gate.locator('[data-rf-act="add"]').evaluate("e => e === document.activeElement")

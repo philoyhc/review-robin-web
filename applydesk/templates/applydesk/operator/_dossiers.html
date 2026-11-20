@@ -18,7 +18,7 @@
       <option value="">All statuses</option><option>Submitted</option><option>Draft</option><option>Withdrawn</option>
     </select></label>
     <label class="ap-f">Rows<select class="ap-sel" data-ap-which>
-      <option value="all">All dossiers</option><option value="last" title="Each applicant's last submitted application">Last applications</option>
+      <option value="all">All dossiers</option><option value="last">Last applications</option>
     </select></label>
     <span class="muted ap-shown" data-ap-shown></span>
     <span class="ap-gap"></span>
@@ -89,11 +89,11 @@
         <th><span class="ap-count" data-ap-count="status"></span></th>
         {% for r in plan.stages %}{% for c in r.columns %}
           {% if c.via is defined %}{% set cl = cells_lock(c) %}
-          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate"{% if cl.fixed %} data-ap-fixed="{{ cl.reason }}"{% endif %} data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}"><span class="ap-kind">Gate {{ c.number }} · Review Robin</span><span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line" title="{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>{% if cl.fixed %}<span class="ap-rule-line ap-fixed">Fixed: its Review Robin session has opened</span>{% endif %}</th>
+          <th class="{{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="gate"{% if cl.fixed %} data-ap-fixed="{{ cl.reason }}"{% endif %} data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-number="Gate {{ c.number }}"><span class="ap-kind">Gate {{ c.number }} · Review Robin</span><span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>{% set rt = rule_text(plan, c) %}<span class="ap-rule-line" tabindex="0" title="{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>{% if cl.fixed %}<span class="ap-rule-line ap-fixed">Fixed: its Review Robin session has opened</span>{% endif %}</th>
           {% else %}
           <th class="ap-out {{ 'ap-r' if loop.first }}" data-col="{{ c.key }}" data-kind="outcome" data-rule="{{ rule_json(c) | tojson | forceescape }}" data-label="{{ c.label }}" data-scope="{{ scope(plan, c) | map(attribute='key') | join('|') }}" data-weights="{% for k, w in c.weights %}{{ k }}:{{ w }}{{ '|' if not loop.last }}{% endfor %}" data-number="Outcome {{ c.number }}" data-first="{{ c.values[0] }}" data-on="{{ going_on(c) | join('|') }}" data-values="{{ c.values | join('|') }}"><span class="ap-kind ap-kind-o">Outcome {{ c.number }}</span><span class="ap-count" data-ap-count="{{ c.key }}">{{ counts(plan, c) }}</span>
             {% if c.weights %}<span class="ap-weights">{% for k, w in c.weights if w %}{{ result_label(k) }} {{ (w * 100) | round | int }}%{{ " · " if not loop.last }}{% endfor %}</span>{% endif %}
-            {% set rt = rule_text(plan, c) %}<span class="ap-rule-line" title="{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>
+            {% set rt = rule_text(plan, c) %}<span class="ap-rule-line" tabindex="0" title="{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}">{{ ("Rule: " ~ rt) if rt else "Decided by hand" }}</span>
             {% set rl = release_lock(c) %}
             <label class="ap-rel"{% if rl.fixed %} title="{{ rl.reason }}"{% endif %}><input type="checkbox" data-ap-release="{{ c.label }}" data-ap-locks disabled{% if rl.fixed %} data-ap-fixed="{{ rl.reason }}"{% endif %}{% if rl.owed %} data-ap-owed="{{ rl.owed }}"{% endif %} aria-label="Released: {{ c.label }}"{% if c.released %} checked{% endif %}> Released</label>
             <span class="ap-relnote{{ ' ap-relnote-on' if c.released }}" data-ap-relnote>{{ c.released or "Not yet" }}</span>
@@ -121,7 +121,7 @@
            under it (ruling 25; AD-89): the CSV still keys rows by
            Application ID. #}
         <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ rid }}">
-          {% if a.state == "Submitted" %}<a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ a.dossier_id) }}"><code>{{ a.dossier_id }}</code></a>{% elif a.state == "Draft" %}<span class="muted">No dossier yet</span>{% else %}<code>{{ a.dossier_id }}</code>{% endif %}<span class="ap-app">Application <code>{{ a.public_id }}</code></span></td>
+          {% if a.state == "Submitted" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ a.dossier_id) }}"><code>{{ a.dossier_id }}</code></a>{% elif a.state == "Draft" %}<span class="muted">No dossier yet</span>{% else %}<code>{{ a.dossier_id }}</code>{% endif %}<span class="ap-app">Application <code>{{ a.public_id }}</code></span></td>
         <td class="ap-who"><strong>{{ a.applicant }}</strong><span class="ap-mail">{{ a.email }}</span></td>
         <td class="ap-stat">{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}<span class="ap-note">{{ a.submitted }}</span>{% if a.state == "Submitted" and a.public_id not in redraft_closed %}<button class="btn btn-alert ap-redraft" type="button" disabled title="Returning to draft comes with AD4" aria-label="Return {{ rid }} to draft">Return to draft</button>{% endif %}</td>
         {% for r in plan.stages %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}
@@ -139,15 +139,13 @@
         {% endfor %}{% endfor %}
       </tr>
     {% else %}
-      <tr><td colspan="3" class="muted">No applications yet.</td></tr>
+      <tr><td colspan="{{ 3 + plan.columns | length }}" class="muted">No applications yet.</td></tr>
     {% endfor %}
     </tbody>
   </table>
   </div>
-  <div class="ap-foot">
-    {% if not cols %}<span class="muted">No gates or outcomes yet: stages, their gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</span>{% endif %}
-  </div>
-  <p class="muted ap-help">A gate's chip says whether the dossier is sent through it, cycling <em>—</em> (no status yet), <em>Entered</em>, <em>Not entered</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> switch does what Process sets. Stages, gates, outcomes, dates and rules come from Process.</p>
+  {% if not cols %}<div class="ap-foot"><span class="muted">No gates or outcomes yet: stages, their gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</span></div>{% endif %}
+  <p class="muted ap-help"><em>Rows</em>: <em>Last applications</em> keeps each applicant's last submitted application. A gate's chip says whether the dossier is sent through it, cycling <em>—</em> (no status yet), <em>Entered</em>, <em>Not entered</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> checkbox does what Process sets. Stages, gates, outcomes, dates and rules come from Process.</p>
 </div>
 <script>
 // Segment AD1C: the Dossiers page's moves, on screen only; a reload
@@ -781,7 +779,7 @@
   function columnFor(name) {
     var n = name.trim().toLowerCase();
     var hit = heads.filter(function (h) {
-      return h.dataset.label.toLowerCase() === n || (h.dataset.number + ": " + h.dataset.label).toLowerCase() === n || h.dataset.number.toLowerCase() === n;
+      return h.dataset.label.toLowerCase() === n || (h.dataset.number + ": " + h.dataset.label).toLowerCase() === n || (h.dataset.number + " · " + h.dataset.label).toLowerCase() === n || h.dataset.number.toLowerCase() === n;
     });
     return hit.length ? hit[0].dataset.col : null;
   }

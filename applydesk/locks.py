@@ -107,7 +107,7 @@ def publish_problems(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
     pools = sample_data.panel_pools(e.public_id)
     for c in st.columns:
         if isinstance(c, stages.Gate):
-            name = f"Gate {c.number} ({c.label or 'untitled'})"
+            name = f"Gate {c.number} · {c.label or 'untitled'}"
             sources, total = stages.sources_of(e.public_id, c)
             why = stages.total_problem(sources, total)
             if why == "no evaluators":

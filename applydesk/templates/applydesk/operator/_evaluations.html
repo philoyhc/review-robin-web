@@ -54,7 +54,7 @@
       chip.textContent = "Sent";
       chip.className = "chip chip-info";
       tr.children[3].textContent = "Sent in this tab";
-      if (go) go.textContent = "Review Robin…";
+      if (go) go.textContent = "Review Robin card →";
     } else if (l && l.final && chip.textContent === "Closed") {
       chip.textContent = "Results in";
       chip.className = "chip chip-ok";
@@ -77,7 +77,7 @@
     <span>Gate {{ g.number }} · <strong>{{ g.label }}</strong></span>
     <span class="chip chip-mute" data-ev-mode>{{ mode_label }}</span>
     <span class="muted" data-ev-counts>{{ assignment_counts(got[0]) }}</span>
-    <a class="btn btn-secondary ev-open" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ g.number) }}">Pairs ({{ "{:,}".format(pairs_of(got[0]) | length) }})</a>
+    <a class="btn btn-secondary ev-open" href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ g.number) }}">Pairs ({{ "{:,}".format(pairs_of(got[0]) | length) }}) →</a>
   </div>
   {% for panel, members in got[1] %}<p class="muted ev-load" data-ev-load>{{ panel }}: {% for name, n in members %}{{ name }} {{ n }}{{ " · " if not loop.last }}{% endfor %}</p>{% endfor %}
 </div>

@@ -1,28 +1,44 @@
 {% extends "applydesk/base.html" %}
-{# A dossier as the operator sees it (ruling 64, U20; segment AD1P rung
-   6a): a page under Dossiers, its breadcrumb back there, as Review
-   Robin's drill-ins. A scaffold: each card's copy and layout are real,
-   its contents placeholders until rung 6b; *View as applicant* is inert
-   and Dossiers' ID links still open the applicant's page. #}
+{# A dossier as the operator sees it (ruling 64, U20; segment AD1P): a
+   page under Dossiers, its breadcrumb back there, as Review Robin's
+   drill-ins. Its application, its row's gates and outcomes as Dossiers
+   holds them, and what evaluators read; *View as evaluators see it*
+   opens the dossier's /me page, the one evaluators open, in a new tab,
+   as Review Robin's *Open reviewer surface*. Read only: Dossiers is
+   where a cell changes. #}
 {% block title %}Dossier {{ application.dossier_id }} · {{ exercise.name }}{% endblock %}
 {% block content %}
 <div class="ptitle"><h1>Dossier {{ application.dossier_id }}</h1>
-  <span class="ev-head"><button class="btn btn-secondary" type="button" disabled title="Opens the applicant's view in a new tab (segment AD1P rung 6b)" data-od-as-applicant>View as applicant</button></span></div>
-<p class="placeholder"><strong>Placeholder.</strong> A scaffold: this page's cards fill in a later slice; Dossiers' links still open the applicant's view.</p>
-<p class="muted pc-intro">One dossier, as Dossiers holds it: its application, where it stands at each gate and outcome, and what evaluators read.</p>
+  <span class="ev-head"><a class="btn btn-secondary" href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ application.dossier_id) }}" target="_blank" rel="noopener" data-od-as-evaluators>View as evaluators see it ↗<span class="visually-hidden"> (opens in a new tab)</span></a></span></div>
+{% with read_only = true %}{% include "applydesk/_placeholder.html" %}{% endwith %}
+<p class="muted pc-intro">One dossier, as Dossiers holds it: its application, where it stands at each gate and outcome, and what evaluators read. Its cells change on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers') }}">Dossiers</a>.</p>
 <section class="card" data-od-card="application">
   <h2>Application</h2>
-  <p class="muted em-help">The application this dossier carries: its applicant, status and when it was submitted.</p>
-  <p class="muted">Filled in a later slice.</p>
+  <dl class="facts">
+    <dt>Applicant</dt><dd>{{ application.applicant }}{% if exercise.blind %} <span class="chip chip-mute">Redacted to evaluators</span>{% endif %}</dd>
+    <dt>Email</dt><dd>{{ application.email }}</dd>
+    <dt>Status</dt><dd>{% with value = application.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}{% if application.submitted %} <span class="muted">· {{ application.submitted }}</span>{% endif %}</dd>
+    <dt>Application ID</dt><dd><code>{{ application.public_id }}</code></dd>
+  </dl>
 </section>
 <section class="card" data-od-card="progress">
   <h2>Gates and outcomes</h2>
-  <p class="muted em-help">Each gate's chip and result, each outcome's value, as on Dossiers' row.</p>
-  <p class="muted">Filled in a later slice.</p>
+  {% if columns %}
+  <dl class="facts">
+    {% for c in columns %}{% set cell = cells.get(c.key) %}
+    <dt>{{ "Gate " ~ c.number if c.via is defined else "Outcome " ~ c.number }} · {{ c.label }}</dt>
+    {# Toned as Dossiers' cells: a gate by its admittance, an outcome green
+       when it takes the dossier on, else grey. #}
+    {% set v = cell.value if cell and cell.value not in ("", "—") else "" %}
+    {% set t = tone(v, 'mute') if c.via is defined else ('ok' if v in going_on(c) else 'mute') %}
+    <dd>{% if v %}<span class="chip chip-{{ t }}">{{ v }}</span>{% else %}<span class="muted">—</span>{% endif %}{% if cell and cell.note %} <span class="muted">· {{ cell.note }}</span>{% endif %}{% if cell and cell.by_hand and not cell.note.startswith("Set by hand") %} <span class="muted">· set by hand</span>{% endif %}</dd>
+    {% endfor %}
+  </dl>
+  {% else %}<p class="muted">No gates or outcomes yet: they are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</p>{% endif %}
 </section>
 <section class="card" data-od-card="shown">
   <h2>Shown to evaluators</h2>
-  <p class="muted em-help">The answers evaluators read, redacted as they read them.</p>
-  <p class="muted">Filled in a later slice.</p>
+  <p class="muted em-help">The answers evaluators read{% if exercise.blind %}, the applicant's name redacted{% endif %}.</p>
+  <dl class="facts">{% for label, value in shown %}<dt>{{ label }}</dt><dd{% if value == "—" %} class="muted"{% endif %}>{{ value }}</dd>{% else %}<dt class="muted">None</dt>{% endfor %}</dl>
 </section>
 {% endblock %}

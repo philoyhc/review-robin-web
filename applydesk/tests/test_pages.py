@@ -437,8 +437,9 @@ def test_dossiers_returns_to_draft_by_row_and_ticked(
     assert workflow.withdrawal_closed_by(EX, "m3qx8vkt2n") == "Peer review"
     nogates = client.get("/applydesk/operator/exercises/r6tm4kq9wz/dossiers").text
     assert ">Return ticked to draft</button>" in nogates
-    # Operators open every dossier (author, 2026-11-12).
-    assert "/applydesk/me/exercises/wa9juxbc2t/dossiers/p3bd7kq2wx" in text
+    # Operators open every dossier (author, 2026-11-12), on their own page
+    # under Dossiers (ruling 64, U20).
+    assert "/applydesk/operator/exercises/wa9juxbc2t/dossiers/p3bd7kq2wx" in text
 
 
 def test_a_gate_item_carries_its_evaluators(client: TestClient) -> None:
@@ -1179,7 +1180,7 @@ def test_panels_is_one_table_a_column_per_panel(client: TestClient) -> None:
     ticks = re.findall(r'data-pn-panel="([\w-]+)"( checked)?', row)
     assert [k for k, on in ticks if on] == ["current-ras"]
     # Used by, worked out from the gates.
-    assert "Gate 1: Peer review" in text and "Gate 3: Staff interview" in text
+    assert "Gate 1 · Peer review" in text and "Gate 3 · Staff interview" in text
     assert "data-pn-people>48<" in text and "data-pn-inuse>· 3 in use<" in text
 
 
@@ -1221,9 +1222,9 @@ def test_the_roster_lists_each_person_once_taking_a_later_name_and_note(
 
 def test_what_uses_each_panel_and_what_was_sent_with_it() -> None:
     assert stages.panel_uses(EX) == {
-        "current-ras": ("Gate 1: Peer review",),
-        "office": ("Gate 2: Office checks",),
-        "residential-staff": ("Gate 3: Staff interview",),
+        "current-ras": ("Gate 1 · Peer review",),
+        "office": ("Gate 2 · Office checks",),
+        "residential-staff": ("Gate 3 · Staff interview",),
     }
     assert workflow.panels_sent(EX) == {  # the staff interview not yet sent
         "current-ras": ("Gate 1",),
@@ -1248,7 +1249,7 @@ def test_every_panel_source_of_a_gate_counts(monkeypatch: pytest.MonkeyPatch) ->
         for st in plan.stages
     )
     monkeypatch.setattr(stages, "plan_of", lambda _id: dataclasses.replace(plan, stages=sts))
-    assert stages.panel_uses(EX)["office"] == ("Gate 1: Peer review", "Gate 2: Office checks")
+    assert stages.panel_uses(EX)["office"] == ("Gate 1 · Peer review", "Gate 2 · Office checks")
     assert workflow.panels_sent(EX)["office"] == ("Gate 1", "Gate 2")
     monkeypatch.setattr(workflow, "gate_sent", lambda _e, _k: ("Sent", ""))  # not yet opened
     assert workflow.panels_sent(EX) == {}
@@ -1568,7 +1569,7 @@ def test_process_names_what_keeps_each_stage_from_publishing(client: TestClient)
     published one its status, Revert, and the lock's reason."""
     draft = client.get("/applydesk/operator/exercises/c4xh2ndv6s/process").text
     assert "Before it can be published:" in draft
-    assert "<li>Gate 1 (Placement interview) has no evaluators.</li>" in draft
+    assert "<li>Gate 1 · Placement interview has no evaluators.</li>" in draft
     assert "<li data-pc-prev>Stage 1 is not published yet.</li>" in draft
     model = client.get("/applydesk/operator/exercises/wa9juxbc2t/process").text
     assert "data-pc-status>Published</span>" in model
@@ -1835,7 +1836,7 @@ def test_dossiers_rows_are_named_by_dossier_id(client: TestClient) -> None:
         'data-ap-sort="dossier">Dossier<' in page
     )
     assert (
-        f'href="/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx"><code>p3bd7kq2wx</code></a>'
+        f'href="/applydesk/operator/exercises/{EX}/dossiers/p3bd7kq2wx"><code>p3bd7kq2wx</code></a>'
         '<span class="ap-app">Application <code>m3qx8vkt2n</code></span>'
     ) in page
     # The search box is labelled where it stands (ruling 64, U17).
@@ -1913,16 +1914,22 @@ def test_a_state_has_one_tone_everywhere() -> None:
 
 
 def test_a_dossier_has_an_operator_page_under_dossiers(client: TestClient) -> None:
-    """Ruling 64, U20 (segment AD1P rung 6a, scaffold): the page sits under
-    Dossiers, its breadcrumb back there; its cards are placeholders, View as
-    applicant inert, and Dossiers' links still open the applicant's page."""
+    """Ruling 64, U20: the page sits under Dossiers, its breadcrumb back
+    there; it shows the application, the row's gates and outcomes and what
+    evaluators read; View as applicant opens the applicant's page in a new
+    tab; Dossiers' ID links come here."""
     page = client.get(f"/applydesk/operator/exercises/{EX}/dossiers/p3bd7kq2wx").text
     crumb = page[page.index('class="crumbs"') : page.index("</nav>", page.index('class="crumbs"'))]
     assert f'href="/applydesk/operator/exercises/{EX}/dossiers">Dossiers</a>' in crumb
     assert 'aria-current="page">Dossier p3bd7kq2wx' in crumb
     for card in ("application", "progress", "shown"):
         assert f'data-od-card="{card}"' in page
-    assert re.search(r"<button[^>]*disabled[^>]*data-od-as-applicant>View as applicant", page)
+    assert "Aisha Bello" in page and "<code>m3qx8vkt2n</code>" in page
+    assert "Gate 1 · Peer review" in page and ">Entered</span>" in page
+    evaluators = f'href="/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx" target="_blank"'
+    assert evaluators in page and "data-od-as-evaluators>View as evaluators see it" in page
     dossiers = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
-    assert f'href="/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx"' in dossiers
+    assert f'href="/applydesk/operator/exercises/{EX}/dossiers/p3bd7kq2wx"' in dossiers
     assert client.get(f"/applydesk/operator/exercises/{EX}/dossiers/nope").status_code == 404
+    # A draft has no dossier yet (ruling 32), so no page.
+    assert client.get(f"/applydesk/operator/exercises/{EX}/dossiers/w5jh8ntq3d").status_code == 404
