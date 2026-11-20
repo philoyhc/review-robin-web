@@ -70,3 +70,95 @@ def test_a_draft_s_gate_says_why_it_has_no_link() -> None:
     template = page[page.index('id="pc-new-gate"') :]
     assert "once the exercise is published" in template[: template.index("</template>")]
     scratch.clear()
+
+
+def test_all_takes_the_panel_s_size_as_it_stands() -> None:
+    """Ruling 62: an All source's min and max are its panel's size, read
+    when the gate is, so the bounds, the summary and the filling follow
+    the panel; its typed numbers are kept but unused."""
+    from applydesk import sample_data, stages
+
+    gate = stages.Gate(
+        "g1",
+        1,
+        "Read",
+        "RRW",
+        sources=(stages.Source("panel", "current-ras", 1, 1, all_members=True),),
+        total=stages.Total(1, 1),
+    )
+    size = len(sample_data.panel_pools("wa9juxbc2t")["current-ras"]["members"])
+    sources, _ = stages.sources_of("wa9juxbc2t", gate)
+    assert (sources[0].min, sources[0].max) == (size, size) and sources[0].all_members
+    assert stages.total_bounds(sources) == (size, size)
+    # A Nominated source has no All: its numbers stand.
+    nominated = stages.replace(
+        gate, sources=(stages.Source("nominated", "Q", 0, 1, all_members=True),)
+    )
+    assert stages.sources_of("wa9juxbc2t", nominated)[0][0].max == 1
+    # An empty or missing panel gives 0.
+    gone = stages.replace(gate, sources=(stages.Source("panel", "nope", 2, 2, all_members=True),))
+    assert stages.sources_of("wa9juxbc2t", gone)[0][0].max == 0
+
+
+def test_a_sample_gate_naming_a_panel_reads_as_all() -> None:
+    page = _client().get(f"{LOBBY}/k7mfr3pq8z/process").text
+    assert 'data-ps="all" aria-pressed="true"' in page
+    # The header and the Total row carry the column.
+    assert "<span>All</span>" in page and '<span class="ps-all"></span>' in page
+
+
+def test_process_save_keeps_all() -> None:
+    from applydesk import stages
+
+    scratch.clear()
+    client = _client()
+    made = (
+        client.post(f"{LOBBY}/new", data={"name": "Wholes"}).headers["location"].rsplit("/", 1)[-1]
+    )
+    panels = {
+        "panels": [{"key": "made-1", "name": "Readers"}],
+        "people": [
+            {"name": "A", "email": "a@example.edu", "note": "", "panels": ["made-1"]},
+            {"name": "B", "email": "b@example.edu", "note": "", "panels": ["made-1"]},
+        ],
+    }
+    assert client.post(f"{LOBBY}/{made}/panels", json=panels).status_code == 200
+    gate = {
+        "key": "gnew1",
+        "label": "Read",
+        "from": "",
+        "to": "",
+        "description": "",
+        "confidential": False,
+        "rule": None,
+        "mode": "automatic",
+        "sources": [{"kind": "panel", "ref": "panel-1", "min": 1, "max": 1, "all_members": True}],
+        "total": {"min": 2, "max": 2},
+        "fields": [],
+        "results": [],
+    }
+    stage = {
+        "name": "R",
+        "from": "",
+        "to": "",
+        "shown": True,
+        "published": False,
+        "form": None,
+        "gates": [gate],
+        "outcome": None,
+    }
+    reply = client.post(f"{LOBBY}/{made}/process", json={"stages": [stage], "revision": 0})
+    assert reply.status_code == 200, reply.text
+    reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- the request's context, outside one
+    try:
+        saved = stages.plan_of(made).columns[0]
+        assert isinstance(saved, stages.Gate)
+        sources, _ = stages.sources_of(made, saved)
+        assert sources[0].all_members and (sources[0].min, sources[0].max) == (2, 2)
+    finally:
+        scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
+    bad = {**gate, "sources": [{**gate["sources"][0], "all_members": "yes"}]}  # pyright: ignore[reportIndexIssue]  -- a test's dict
+    stage_bad = {**stage, "gates": [bad]}
+    refused = client.post(f"{LOBBY}/{made}/process", json={"stages": [stage_bad], "revision": 1})
+    assert refused.status_code == 400 and "malformed" in refused.json()["error"]
+    scratch.clear()

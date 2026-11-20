@@ -537,6 +537,12 @@ but the lobby's *Stage* column reads:
       one; or
     - *Panel*, by the shared menu and *+ New panel…* box Form uses (above)
       with *Edit on Panels →*; a panel's members are on Panels, not listed.
+      After its *Min* and *Max*, **All** (a Toggle, ruling 62) gives each
+      dossier the whole panel: *Min* and *Max* show the panel's size and are
+      disabled while it is on, and `stages.sources_of` reads them as the
+      panel's size when the gate is read, so the bounds, the filling and the
+      handoff follow the panel as members join or leave. A sample gate
+      naming only a panel reads as one such source.
 
     Then the **Total**: its *Min* and *Max*, with the bounds the sources allow
     (their mins together, their maxes together) beside it. A Total outside

@@ -987,6 +987,31 @@ def test_the_assignment_mode_is_one_of_three(page: Page) -> None:
     )
 
 
+def test_all_takes_the_whole_panel(page: Page) -> None:
+    """Ruling 62: All on a panel source sets Min and Max to the panel's
+    size and disables them; off, they are editable again; a Nominated
+    source has no All."""
+    gate = _peer_copy(page)
+    rows = gate.locator("[data-ps-row]")
+    nominated, panel = rows.nth(0), rows.nth(1)
+    assert nominated.locator('[data-ps="all"]').is_hidden()
+    whole = panel.locator('[data-ps="all"]')
+    assert whole.get_attribute("aria-pressed") == "false"
+    size = page.evaluate(
+        "ref => window.applydeskPools[ref].members.length",
+        panel.locator("[data-pc-panel]").input_value(),
+    )
+    whole.click()
+    assert whole.get_attribute("aria-pressed") == "true"
+    lo, hi = panel.locator('[data-ps="min"]'), panel.locator('[data-ps="max"]')
+    assert lo.is_disabled() and hi.is_disabled()
+    assert lo.input_value() == hi.input_value() == str(size)
+    summary = gate.locator('[data-gsec="evaluators"] [data-gsec-sum]').text_content() or ""
+    assert f"Panel A {size}" in summary, summary
+    whole.click()
+    assert not lo.is_disabled() and not hi.is_disabled()
+
+
 def test_a_nominated_source_shuts_the_new_panel_box(page: Page) -> None:
     """The cold read on rungs 2-4: the + New panel box is the panel
     menu's, so turning the source Nominated shuts it."""

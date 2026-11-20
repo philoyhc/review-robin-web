@@ -160,6 +160,10 @@ class Source:
     ref: str
     min: int
     max: int
+    # Ruling 62: a panel source giving each dossier its whole panel, its
+    # min and max the panel's size as it stands (``sources_of`` reads them
+    # so, the typed ones kept but unused).
+    all_members: bool = False
 
 
 @dataclass(frozen=True)
@@ -1158,15 +1162,27 @@ def sources_of(exercise_id: str, gate: Gate) -> tuple[tuple[Source, ...], Total]
     panel reads as that panel, min = max = its size, so nothing it shows
     changes until edited (AD1G judgment call)."""
     if gate.sources:
-        lo, hi = total_bounds(gate.sources)
-        return gate.sources, gate.total or Total(lo, hi)
+        sources = tuple(_whole_panel(exercise_id, src) for src in gate.sources)
+        lo, hi = total_bounds(sources)
+        return sources, gate.total or Total(lo, hi)
     if not gate.panel:
         # A saved gate with no source yet keeps the Total it was given
         # (Codex on #4026); a sample one has none.
         return (), gate.total or Total(0, 0)
     pool = sample_data.panel_pools(exercise_id).get(gate.panel)
     size = len(pool["members"]) if pool else 0
-    return (Source("panel", gate.panel, size, size),), Total(size, size)
+    return (Source("panel", gate.panel, size, size, all_members=True),), Total(size, size)
+
+
+def _whole_panel(exercise_id: str, source: Source) -> Source:
+    """A source as it gives evaluators: one taking *All* of its panel
+    (ruling 62) reads min = max = the panel's size now, so the bounds, the
+    filling, the summaries and the handoff all follow the panel."""
+    if not (source.all_members and source.kind == "panel"):
+        return source
+    pool = sample_data.panel_pools(exercise_id).get(source.ref)
+    size = len(pool["members"]) if pool else 0
+    return replace(source, min=size, max=size)
 
 
 def total_bounds(sources: tuple[Source, ...]) -> tuple[int, int]:

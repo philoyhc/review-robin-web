@@ -103,7 +103,8 @@
         kind: kind,
         ref: row.querySelector(kind === "panel" ? '[data-ps="panel"]' : '[data-ps="question"]').value,
         min: whole(row.querySelector('[data-ps="min"]')),
-        max: whole(row.querySelector('[data-ps="max"]'))
+        max: whole(row.querySelector('[data-ps="max"]')),
+        all_members: kind === "panel" && row.querySelector('[data-ps="all"]').getAttribute("aria-pressed") === "true"
       };
     });
   }
@@ -153,6 +154,18 @@
       row.querySelector('[data-ps="question"]').setAttribute("aria-label", "Source " + n + ": question");
       row.querySelector('[data-ps="min"]').setAttribute("aria-label", "Source " + n + ": min");
       row.querySelector('[data-ps="max"]').setAttribute("aria-label", "Source " + n + ": max");
+      // All (ruling 62): a panel's whole membership, Min and Max its size,
+      // disabled while on; a Nominated source has no All.
+      var all = row.querySelector('[data-ps="all"]'), lo = row.querySelector('[data-ps="min"]'), hi = row.querySelector('[data-ps="max"]');
+      all.hidden = kind !== "panel";
+      if (kind !== "panel") all.setAttribute("aria-pressed", "false");
+      all.setAttribute("aria-label", "Source " + n + ": all of its panel");
+      var takesAll = all.getAttribute("aria-pressed") === "true";
+      if (takesAll) {
+        var pool = POOLS[row.querySelector('[data-ps="panel"]').value];
+        lo.value = hi.value = String(pool ? pool.members.length : 0);
+      }
+      if (!sent) { lo.disabled = takesAll; hi.disabled = takesAll; }
       [["up", "Move source " + n + " up", i === 0], ["down", "Move source " + n + " down", i === rows.length - 1], ["insert", "Add a source after source " + n, false], ["remove", "Remove source " + n, false]].forEach(function (a) {
         var b = row.querySelector('[data-ps-act="' + a[0] + '"]');
         b.setAttribute("aria-label", a[1]);
@@ -1115,6 +1128,13 @@
   });
   list.addEventListener("click", function (e) {
     if (statusEvent(e) || ruleEvent(e) || sourceEvent(e)) return;
+    var allBtn = e.target.closest('[data-ps="all"]');
+    if (allBtn && !allBtn.disabled) {
+      allBtn.setAttribute("aria-pressed", allBtn.getAttribute("aria-pressed") === "true" ? "false" : "true");
+      drawSources(allBtn.closest(".pc-item"));
+      changed();
+      return;
+    }
     var pt = e.target.closest("[data-pi-toggle]");
     if (pt) { var it = pt.closest(".pc-item"); itemOpen(it, !it.hasAttribute("data-open")); return; }
     var card = e.target.closest(".pc");

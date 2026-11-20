@@ -211,12 +211,18 @@ def _gate(v: Any, number: int, panels: frozenset[str], renamed: dict[str, str]) 
             ref = renamed.get(ref, ref)
             if ref and ref not in panels and ref not in renamed.values():
                 raise Refused(f"{what} is evaluated by no panel this exercise has.")
+        # Ruling 62: a panel's whole membership, its typed Min and Max kept
+        # but unused (the panel's size is read when the gate is).
+        whole = src.get("all_members", False)
+        if not isinstance(whole, bool):
+            raise Refused(f"{what}'s source is malformed.")
         sources.append(
             Source(
                 kind,
                 ref,
                 _whole(src.get("min"), f"{what}'s source"),
                 _whole(src.get("max"), f"{what}'s source"),
+                whole and kind == "panel",
             )
         )
     total = _dict(got.get("total"), f"{what}'s Total")
