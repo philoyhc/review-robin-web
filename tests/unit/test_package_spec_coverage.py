@@ -19,7 +19,7 @@ from typing import Any, cast
 import pytest
 
 from app.web.spec_registry import _iter_endpoint_routes
-from cordware.main import create_app
+from cordware.main import REGISTRY, create_app
 
 from ._packages import REPO, app_dirs
 
@@ -28,7 +28,10 @@ APP_DIRS = app_dirs()
 
 def _package_routing_modules() -> dict[str, set[str]]:
     by_package: dict[str, set[str]] = defaultdict(set)
-    for route in _iter_endpoint_routes(create_app().routes):
+    # Every registered application, not `CORDWARE_APPS`: a developer who
+    # runs only Review Robin locally must not see every package go stale
+    # (Codex on #4057).
+    for route in _iter_endpoint_routes(create_app(apps=list(REGISTRY)).routes):
         module = cast(Any, route).endpoint.__module__
         package = module.split(".", 1)[0]
         if package in APP_DIRS:
