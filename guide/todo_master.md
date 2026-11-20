@@ -41,12 +41,6 @@ is the author's call.
    Robin free to reorder them, set required, add fields and branch
    between them. **Plan:** `guide/segment_23G_linked_advanced_instrument.md`.
 
-3. **23I — Split `_quick_setup.py`** (2026-11-20, the assessment's §9).
-   The upload pipeline moves out of the slice to
-   a new `app/web/` module, `quick_setup_pipeline`, then the handoff routes into
-   `_handoffs.py`; no behavior change. **Plan:**
-   `guide/segment_23I_quick_setup_split.md`.
-
 1. **14G — Scheduled email** (gated on IT: offline sending as the
    operator, else a dedicated mailbox). Sends due invitations, reminders
    and confirmations from 14E's clock, turning the offset fields from
