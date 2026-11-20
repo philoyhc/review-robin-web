@@ -331,7 +331,9 @@ reject it.
   touches a path its plan's `Doc impact` names, or is the closing slice.
   Outside a close `spec-writer` may not re-align a spec to the code, so
   a deferred slice loses a report, not an alignment — and a later slice
-  can falsify what an earlier pass verified.
+  can falsify what an earlier pass verified. A package's plan
+  (`<pkg>/guide/`) closes the same way: `close_check` reads it and
+  `spec-writer` writes `<pkg>/spec/`.
 - End-to-end verification is the author's, in a browser, not the
   agent's sandbox: layout, in-browser behavior and redirects on a local
   run; real Easy Auth, the deployed configuration and the network only

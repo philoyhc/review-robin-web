@@ -20,8 +20,12 @@ decides your behaviour:
 - **`guide/` — "What are we building next, and how?"** Authority: the plan. Read for
   context.
 
-Only ever write under `spec/`. If a change belongs in `docs/` or `guide/`, say so in your
-report and leave it.
+Only ever write under `spec/`, or, at the close of an application package's plan, under
+that package's own `spec/` (`applydesk/spec/`, `residentialapps/spec/`,
+`utilityapps/spec/`; the list is `APP_DIRS` in `tools/close_check/_manifest.py`). A
+package's spec is a contract with the same authority as RRW's, indexed in the package's
+top-level `README.md`. If a change belongs in `docs/` or `guide/`, say so in your report
+and leave it.
 
 ## Which mode you are in — decide this first
 
