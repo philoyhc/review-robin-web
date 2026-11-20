@@ -173,6 +173,12 @@
       });
     });
     var b = srcBounds(sourcesOf(item));
+    // Every source taking All: the Total is theirs too, kept in step and
+    // disabled, so a panel's change never leaves it to retype.
+    var allTotal = rows.length > 0 && rows.every(function (row) { return row.querySelector('[data-ps="all"]').getAttribute("aria-pressed") === "true"; });
+    var tlo = item.querySelector('[data-ps="total-min"]'), thi = item.querySelector('[data-ps="total-max"]');
+    if (allTotal) { tlo.value = String(b[0]); thi.value = String(b[1]); }
+    if (!sent) { tlo.disabled = allTotal; thi.disabled = allTotal; }
     item.querySelector("[data-ps-bounds]").textContent = rows.length ? "within " + b[0] + "–" + b[1] : "No sources";
     // The columns' names show over rows; with none, + Source stands alone.
     item.querySelector("[data-ps-headrow]").hidden = !rows.length;

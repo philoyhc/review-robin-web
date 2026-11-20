@@ -213,9 +213,7 @@ def _gate(v: Any, number: int, panels: frozenset[str], renamed: dict[str, str]) 
                 raise Refused(f"{what} is evaluated by no panel this exercise has.")
         # Ruling 62: a panel's whole membership, its typed Min and Max kept
         # but unused (the panel's size is read when the gate is).
-        whole = src.get("all_members", False)
-        if not isinstance(whole, bool):
-            raise Refused(f"{what}'s source is malformed.")
+        whole = _flag(src.get("all_members", False), f"{what}'s source")
         sources.append(
             Source(
                 kind,

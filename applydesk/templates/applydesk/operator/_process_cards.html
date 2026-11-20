@@ -180,7 +180,7 @@
   <div class="ps-ref" data-ps-for="nominated"{% if s.kind != "nominated" %} hidden{% endif %}>
     <select class="fc-in" data-ps="question" aria-label="Source {{ n }}: question"{{ sent_attr(sent) }}>{% for q in nominee_questions %}<option{% if s.kind == "nominated" and q == s.ref %} selected{% endif %}>{{ q }}</option>{% endfor %}</select>
   </div>
-  <label class="ps-n"><span class="ps-cap">Min</span><input class="fc-in" data-ps="min" value="{{ s.min }}" inputmode="numeric" aria-label="Source {{ n }}: min"{{ sent_attr(sent) }}></label>
+  <label class="ps-n ps-min"><span class="ps-cap">Min</span><input class="fc-in" data-ps="min" value="{{ s.min }}" inputmode="numeric" aria-label="Source {{ n }}: min"{{ sent_attr(sent) }}></label>
   <label class="ps-n"><span class="ps-cap">Max</span><input class="fc-in" data-ps="max" value="{{ s.max }}" inputmode="numeric" aria-label="Source {{ n }}: max"{{ sent_attr(sent) }}></label>
   {# Ruling 62: the whole panel, its Min and Max the panel's size, kept
      in step by the page's script as the panel changes. #}
@@ -248,7 +248,7 @@
         <span class="ps-rank"></span>
         <strong class="ps-kind">Total</strong>
         <span class="ps-bounds muted" data-ps-bounds>{% if ev[0] %}within {{ bounds[0] }}–{{ bounds[1] }}{% else %}No sources{% endif %}</span>
-        <label class="ps-n"><span class="ps-cap">Min</span><input class="fc-in" data-ps="total-min" value="{{ ev[1].min }}" inputmode="numeric" aria-label="Total: min"{{ sent_attr(sent) }}></label>
+        <label class="ps-n ps-min"><span class="ps-cap">Min</span><input class="fc-in" data-ps="total-min" value="{{ ev[1].min }}" inputmode="numeric" aria-label="Total: min"{{ sent_attr(sent) }}></label>
         <label class="ps-n"><span class="ps-cap">Max</span><input class="fc-in" data-ps="total-max" value="{{ ev[1].max }}" inputmode="numeric" aria-label="Total: max"{{ sent_attr(sent) }}></label>
         <span class="ps-all"></span>
         <span class="ps-acts"></span>

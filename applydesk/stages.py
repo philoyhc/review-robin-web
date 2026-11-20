@@ -1164,6 +1164,10 @@ def sources_of(exercise_id: str, gate: Gate) -> tuple[tuple[Source, ...], Total]
     if gate.sources:
         sources = tuple(_whole_panel(exercise_id, src) for src in gate.sources)
         lo, hi = total_bounds(sources)
+        # Every source taking *All*: the Total is theirs too, so a panel
+        # that grows or shrinks never leaves it to retype (ruling 62).
+        if all(s.all_members and s.kind == "panel" for s in gate.sources):
+            return sources, Total(lo, hi)
         return sources, gate.total or Total(lo, hi)
     if not gate.panel:
         # A saved gate with no source yet keeps the Total it was given

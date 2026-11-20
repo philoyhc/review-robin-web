@@ -736,7 +736,10 @@
     /* A gate's or an outcome's main sections, each under a rule. */
     .pi-sec { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
     .pi-sec > .fc-l:first-child, .pi-sec.pc-row > .fc-l { margin-top: 0; }
-    @media (max-width: 639px) { .ps-row { grid-template-columns: 24px 1fr 1fr; } .ps-headrow { display: none; } .ps-cap { display: block; } }
+    /* Stacked by the card's width, not the window's: a card beside a side
+       column is narrow on a wide screen (AD1O cold read). */
+    .pc-sources { container-type: inline-size; }
+    @container (max-width: 639px) { .ps-row { grid-template-columns: 24px repeat(3, minmax(0, 1fr)); } .ps-ref, .ps-bounds { grid-column: span 2; } .ps-min { grid-column: 2; } .ps-headrow { display: none; } .ps-cap { display: block; } .ps-acts { grid-column: 2 / -1; } .ps-total .ps-all, .ps-total .ps-acts { display: none; } .ps-all:has(> .btn[hidden]) .ps-cap { visibility: hidden; } }
     /* Evaluations' assignments (ruling 27, segment AD1G): a card per gate,
        collapsed to its head; each evaluator a pill marked by its source. */
     .ev-h { margin: 24px 0 8px; font-size: 17px; }

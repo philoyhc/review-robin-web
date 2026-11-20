@@ -87,9 +87,22 @@ def test_all_takes_the_panel_s_size_as_it_stands() -> None:
         total=stages.Total(1, 1),
     )
     size = len(sample_data.panel_pools("wa9juxbc2t")["current-ras"]["members"])
-    sources, _ = stages.sources_of("wa9juxbc2t", gate)
+    sources, total = stages.sources_of("wa9juxbc2t", gate)
     assert (sources[0].min, sources[0].max) == (size, size) and sources[0].all_members
     assert stages.total_bounds(sources) == (size, size)
+    # Every source taking All: the Total follows too, its typed 1–1 unused,
+    # so nothing is left to retype (and nothing to flag).
+    assert (total.min, total.max) == (size, size) and not stages.total_problem(sources, total)
+    # The filling gives a dossier the whole panel.
+    members = tuple(e for _, e in sample_data.panel_pools("wa9juxbc2t")["current-ras"]["members"])
+    assert len(stages.fill(sources, total, (members,)).evaluators) == size
+    # Beside a source without All, the Total stays the operator's.
+    mixed = stages.replace(
+        gate,
+        sources=(*gate.sources, stages.Source("nominated", "Q", 0, 1)),
+        total=stages.Total(1, 1),
+    )
+    assert stages.sources_of("wa9juxbc2t", mixed)[1] == stages.Total(1, 1)
     # A Nominated source has no All: its numbers stand.
     nominated = stages.replace(
         gate, sources=(stages.Source("nominated", "Q", 0, 1, all_members=True),)
