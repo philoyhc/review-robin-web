@@ -47,7 +47,8 @@
   </div>
   <h3>What is sent</h3>
   {# The four files, built from the gate's pairs and card as saved
-     (handoff.bundle); each downloads as Review Robin would receive it. #}
+     (handoff.bundle). Each downloads guarded against formulas for the
+     person who opens it; Review Robin is sent them unguarded (S12). #}
   {% macro dl(kind) %}<a class="btn btn-secondary" href="{{ url(here ~ '/' ~ kind ~ '.csv') }}" download data-rr-file="{{ kind }}">Download</a>{% endmacro %}
   <div class="rr-files" data-rr-files>
     <div class="rr-file"><h4>Reviewers</h4><p>{{ n_people }} {{ "evaluator" if n_people == 1 else "evaluators" }}, by name and email</p>{{ dl("reviewers") }}</div>

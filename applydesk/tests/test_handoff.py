@@ -182,12 +182,18 @@ def test_a_download_is_guarded_and_the_handoff_is_not(
     monkeypatch.setattr(routes_operator, "_bundle", tainted)
     down = client.get(f"{BASE}/gate_3/reviewers.csv").text
     assert "'=HYPERLINK" in down and "\n=HYPERLINK" not in down
-    sent = handoff.bundle(*_gate(EX, 3), lambda app: "https://ad.invalid/")
-    assert not any(
-        cell.startswith("'")
-        for row in csv.reader(io.StringIO(sent.files["reviewers"]))
-        for cell in row
-    )
+    # What Review Robin is sent stays unguarded: the page's digest, which
+    # *Changed since sent* compares, is the raw files'.
+    raw: list[handoff.Bundle] = []
+
+    def keep(request: Request, exercise: sample_data.Exercise, gate: stages.Gate) -> handoff.Bundle:
+        raw.append(tainted(request, exercise, gate))
+        return raw[-1]
+
+    monkeypatch.setattr(routes_operator, "_bundle", keep)
+    page = client.get(f"{BASE}/gate_3").text
+    assert "=HYPERLINK" in raw[-1].files["reviewers"]
+    assert raw[-1].digest() in page
 
 
 def test_guarded_marks_a_formula_and_leaves_a_number() -> None:
