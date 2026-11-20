@@ -81,7 +81,9 @@ def choose_unit(request: Request) -> Response:
     the choice; a return path that is not the application's own goes Home."""
     name = request.query_params.get("name", "")
     back = request.query_params.get("back", "/")
-    if not back.startswith("/") or back.startswith("//"):
+    # Easy Auth's ``/.auth/…`` is the host's, not the application's: it
+    # would sign the person out or in (findings 2026-11-20 S11).
+    if not back.startswith("/") or back.startswith(("//", "/.auth/")):
         back = "/"
     response = RedirectResponse(url_path(request, back), status_code=303)
     if name in sample.UNITS:
