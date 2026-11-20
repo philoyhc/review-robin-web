@@ -18,7 +18,11 @@ is consumed on its anchor exactly as a sent one is: 14G's observers,
 once sending is on, never send it again, and a save may not put a
 different entry on its position.
 
-With scheduled email on, nothing is due here: the observers send.
+With scheduled email on, nothing is due here: the observers send. Nor is
+anything due on a session whose linked application takes the email lock
+(segment 23F): that application sends its own mail, so Review Robin has
+nothing to prompt. Every reader of a due entry, the Workflow card and the
+lobby's Due pill alike, gets that from here (findings 2026-11-20, D1).
 """
 
 from __future__ import annotations
@@ -32,7 +36,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, ReviewSession, User
 from app.json_shapes import json_list
-from app.services import audit, invitations, scheduled_events
+from app.services import audit, invitations, linked_apps, scheduled_events
 from app.services import session_lifecycle as lifecycle
 
 #: Per kind: the offsets column, the anchor column, the event *Mark as
@@ -85,8 +89,11 @@ def due_actions(
     db: Session, review_session: ReviewSession, *, now: datetime | None = None
 ) -> list[DueAction]:
     """The entries due on ``review_session`` now, earliest first; none
-    while scheduled email is on."""
+    while scheduled email is on, and none where a linked application
+    takes the email lock."""
     if scheduled_events.scheduled_send_enabled():
+        return []
+    if linked_apps.locks(review_session, linked_apps.Lock.EMAIL):
         return []
     moment = _aware(now or datetime.now(UTC))
     due: list[DueAction] = []
@@ -125,7 +132,8 @@ def _same_instant(anchor: datetime, posted: str) -> bool:
 
 class NotDue(Exception):
     """*Mark as done* on an entry that is not due: already handled, its
-    offset or anchor changed since the page was drawn, or sending is on."""
+    offset or anchor changed since the page was drawn, sending is on, or a
+    linked application takes the email lock."""
 
 
 def mark_done(

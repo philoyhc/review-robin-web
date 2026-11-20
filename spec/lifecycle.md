@@ -877,7 +877,9 @@ the clock. While it is off:
   **due prompt** on the Workflow card (`spec/workflow_card.md`) and raises
   the lobby's **Due** pill (`spec/sessions_overview.md`); the operator
   acts by hand or marks it done (§8.2.6). With the flag on nothing is due
-  here: the observers send;
+  here: the observers send. Nor is anything due on a session whose linked
+  application takes the `email` lock, which sends its own mail
+  (`spec/linked_sessions.md`);
 - the Workflow card's auto-send captions, the schedule timeline's
   auto-send rows and the manual-activate confirm that warns of cancelling
   scheduled sends are not shown, and the Guide says so;

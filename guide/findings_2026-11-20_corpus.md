@@ -47,7 +47,7 @@ are at `6003c8084`.
 
 ## 1. Code defects
 
-- **B1** (medium, code) — **the lobby's Due pill lights on a linked session whose card shows nothing due.**
+- ~~**B1**~~ — **Done in #4065** (assessment D1). (medium, code) — **the lobby's Due pill lights on a linked session whose card shows nothing due.**
   - `spec/workflow_card.md:766-769` and `spec/linked_sessions.md` hide the due prompts when the linked application takes `email`.
   - `build_due_lines` honours the lock (`app/web/views/_workflow_card.py:252-256`). `due_actions` and `sessions_with_something_due` do not (`app/services/due_actions.py:84-114`, `:192-199`), so `lobby_due_session_ids` (`app/web/views/_sessions_table.py:193-199`) still lights the pill.
   - A handoff's create-time Settings file may carry `session.scheduled_activate_at` and the offsets. The operator cannot clear the pill: details 409, a re-send 422 `not_owned`.
@@ -57,7 +57,7 @@ are at `6003c8084`.
   - It is reached by the reviewer GET (`app/web/routes_reviewer/_surface/_context.py:153`) and the operator Instruments GET (`app/web/routes_operator/_instruments.py:76`). A settings import can leave an instrument `accepting_responses` on an editable session (`app/services/session_config_io/_apply_instrument.py:274`).
   - The result is `instrument.closed` and `session.deadline_reached` with no `session.expired`, against `spec/lifecycle.md:505-526`, `:975-979`.
   - Read, not run.
-- **B3** (low, code; latent while `RRW_SCHEDULED_SEND` is off) — **the auto-send captions ignore the linked email lock.**
+- ~~**B3**~~ — **Done in #4065**: the captions and Activate's warning show nothing under the email lock. (low, code; latent while `RRW_SCHEDULED_SEND` is off) — **the auto-send captions ignore the linked email lock.**
   - `build_auto_send_invites_caption`, `build_auto_send_reminders_caption` and `build_manual_activate_cancellation` (`app/web/views/_workflow_card.py:551-770`) never check `Lock.EMAIL`.
   - A linked session would read "System will dispatch automatically" while the trigger skips every entry. `spec/workflow_card.md:950-1010` needs the linked row too.
 - **E1** (medium, author) — **Session Home's Email Template pill never reads *Set up*.**

@@ -893,7 +893,9 @@ card (`#share-session-link`).
 (`due_actions.mark_done`). The four name the entry the line was drawn
 from, so a form from a page drawn before another tab changed the offset
 or moved Start or End is refused rather than marking whatever entry now
-holds that position; an entry no longer due just redirects. It writes
+holds that position; an entry no longer due just redirects, as does any
+entry on a session whose linked application takes the `email` lock, where
+nothing is due. It writes
 `session.scheduled_invites_handled` / `session.scheduled_reminders_handled`,
 which count as fired for dedup (`spec/lifecycle.md` §8.2.6). Any session
 operator may press it, in any state.
@@ -964,6 +966,10 @@ gate the trigger:
 - **Invitations created** — at least one `Invitation` row exists
   for the session. The skip reason is `invitations_not_created`.
 
+On a session whose linked application takes the `email` lock there is
+no caption: the trigger skips every entry (`linked_app_email_off`,
+`spec/linked_sessions.md`).
+
 | `invite_offsets` | `scheduled_activate_at` | Prepared? | Invitations created? | Signal |
 | --- | --- | --- | --- | --- |
 | empty / null | (any) | (any) | (any) | (none) |
@@ -1001,6 +1007,9 @@ the trigger:
   **created**, not necessarily sent. The skip reason is
   `no_invitations`.
 
+As for invites, a session whose linked application takes the `email`
+lock has no caption.
+
 | `reminder_offsets` | `deadline` | Session `ready`? | Invitations created? | Signal |
 | --- | --- | --- | --- | --- |
 | empty / null | (any) | (any) | (any) | (none) |
@@ -1017,7 +1026,9 @@ key is populated when a manual Activate click would cancel
 pending auto-sends — i.e. when the session is `validated`,
 `scheduled_activate_at` is set (the builder does not test that it
 is in the future) **and** `invite_offsets` has at least one entry **and** scheduled
-send is on (`RRW_SCHEDULED_SEND`; off, there is nothing to cancel).
+send is on (`RRW_SCHEDULED_SEND`; off, there is nothing to cancel)
+**and** no linked application takes the `email` lock (its entries are
+skipped, so activating cancels nothing).
 Payload: `pending_count`, the length of the whole `invite_offsets`
 list rather than the future-only subset, and `message`, which the
 Activate form carries as `data-manual-activate-confirm` ("N

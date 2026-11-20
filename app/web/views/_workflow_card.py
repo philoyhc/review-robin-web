@@ -250,10 +250,8 @@ def build_due_lines(db: Session, review_session: ReviewSession) -> list[dict[str
     Each carries what *Mark as done* posts back."""
     session_tz = sessions_service.resolve_session_timezone(review_session)
     lines: list[dict[str, Any]] = []
-    # Nothing is due from Review Robin where the linked application sends
-    # the email (segment 23F).
-    if linked_apps.locks(review_session, linked_apps.Lock.EMAIL):
-        return lines
+    # Nothing is due where a linked application sends the email (23F):
+    # ``due_actions`` answers that, for the lobby's Due pill as for this.
     for action in due_actions.due_actions(db, review_session):
         when = date_formatting.format_datetime(action.due_at, session_tz)
         n = action.count
@@ -584,6 +582,10 @@ def build_auto_send_invites_caption(
     # Auto-send off (14E rung 0): no caption promises a send.
     if not scheduled_events.scheduled_send_enabled():
         return None
+    # A linked application that takes the email lock sends its own mail,
+    # and the trigger skips every entry (``linked_app_email_off``).
+    if linked_apps.locks(review_session, linked_apps.Lock.EMAIL):
+        return None
     offsets = json_list(review_session.invite_offsets or [])
     if not offsets:
         return None
@@ -700,6 +702,10 @@ def build_auto_send_reminders_caption(
     # Auto-send off (14E rung 0): no caption promises a send.
     if not scheduled_events.scheduled_send_enabled():
         return None
+    # A linked application that takes the email lock sends its own mail,
+    # and the trigger skips every entry (``linked_app_email_off``).
+    if linked_apps.locks(review_session, linked_apps.Lock.EMAIL):
+        return None
     offsets = json_list(review_session.reminder_offsets or [])
     if not offsets:
         return None
@@ -806,6 +812,10 @@ def build_manual_activate_cancellation(
         return None
     # Auto-send off (14E rung 0): there is nothing to cancel.
     if not scheduled_events.scheduled_send_enabled():
+        return None
+    # Nor where a linked application takes the email lock: the trigger
+    # would have skipped every entry, so activating cancels nothing.
+    if linked_apps.locks(review_session, linked_apps.Lock.EMAIL):
         return None
     offsets = json_list(review_session.invite_offsets or [])
     if not offsets:

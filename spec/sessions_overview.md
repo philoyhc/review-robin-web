@@ -253,7 +253,9 @@ It appears when either:
 - an invite or reminder offset is due while `RRW_SCHEDULED_SEND` is off,
   with someone left to act on and the entry not yet sent, skipped or
   handled (`spec/lifecycle.md` §8.1; the Workflow card's due prompt,
-  `spec/workflow_card.md`); or
+  `spec/workflow_card.md`). None is due on a session whose linked
+  application takes the `email` lock, so the pill and the card agree
+  (`spec/linked_sessions.md`); or
 - a scheduled activation gave up and nothing has happened on the session
   since: the session's most recent audit event is still
   `session.scheduled_activation_failed_persistent`. With the clock the
