@@ -366,6 +366,11 @@ def test_the_working_unit_switcher(client: TestClient) -> None:
         # Easy Auth's paths are the host's (findings 2026-11-20 S11).
         "%2F.auth%2Flogout",
         "%2F.auth%2Flogin%2Faad%3Fpost_login_redirect_uri%3Dhttps%3A%2F%2Fevil.example",
+        # Dot segments a browser resolves off the mount (the cold read).
+        "%2F..%2F.auth%2Flogout",
+        "%2F.%2F..%2F.auth%2Flogin%2Faad%3Fpost_login_redirect_uri%3Dhttps%3A%2F%2Fevil.example",
+        "%2F%252e%252e%2F.auth%2Flogout",
+        "%2F%252E%252E%2F.auth%2Flogout",
     ):
         location = chose.get(f"/unit?name=Nowhere&back={back}", follow_redirects=False).headers[
             "location"
