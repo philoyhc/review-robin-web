@@ -353,7 +353,7 @@ def _the_applicant_form(body: Locator) -> None:
     its bounds, a list as radios, a photo frame, the reviewers' note."""
     assert body.locator("h2.fb-pv-form").inner_text() == "Application form"
     assert body.locator("h3.fb-pv-section").all_inner_texts() == ["About the project", "About you"]
-    assert body.locator(".fb-pv-page").all_inner_texts() == ["PAGE 1", "PAGE 2"]
+    assert body.locator(".fb-pv-page").all_inner_texts() == ["Page 1", "Page 2"]
     months = body.get_by_label("Months the project will run")
     assert months.get_attribute("type") == "number" and months.get_attribute("max") == "6"
     assert body.get_by_role("radio", name="Engineering").count() == 1

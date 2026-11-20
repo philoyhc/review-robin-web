@@ -356,7 +356,7 @@
   // The sample's now (locks.NOW), against which a published stage's end
   // decides Published, Overdue or Completed.
   var NOW = root.dataset.now;
-  var STATUS_CHIP = { Draft: "mute", Published: "info", Overdue: "warn", Completed: "ok" };
+  var STATUS_CHIP = {{ STATUS_CHIP | tojson }};
   function derive(card) {
     var end = field(card, "to"), od = card.querySelector("[data-pc-overdue]");
     var waiting = od ? od.dataset.waiting : "";

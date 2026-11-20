@@ -16,7 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, time
 
-from applydesk import sample_data, stages, timeline, workflow
+from applydesk import sample_data, stages, timeline, tones, workflow
 from applydesk.sample_data import Exercise
 
 #: The sample's now: midday of its today (the model exercise is mid
@@ -39,8 +39,8 @@ class Lock:
 
 OPEN = Lock(False)
 
-#: Each status's chip on the pages.
-STATUS_CHIP = {"Draft": "mute", "Published": "info", "Overdue": "warn", "Completed": "ok"}
+#: Each status's chip on the pages, from the one map (ruling 64, U1).
+STATUS_CHIP = {s: tones.tone(s) for s in ("Draft", "Published", "Overdue", "Completed")}
 
 
 def _item_open(e: Exercise, st: stages.Stage, item: stages.Gate | stages.Outcome | None) -> str:

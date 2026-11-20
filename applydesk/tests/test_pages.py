@@ -1582,7 +1582,7 @@ def test_home_and_the_lobby_say_each_stage_s_status(client: TestClient) -> None:
     rows = re.findall(r'data-tl-status><b>Stage <span class="chip chip-\w+">(\w+)</span>', home)
     assert rows == ["Completed", "Completed", "Published"]
     lobby = client.get("/applydesk/operator/exercises").text
-    assert '<span class="chip chip-mute">Draft</span>' in lobby
+    assert '<span class="chip chip-warn">Draft</span>' in lobby
     assert '<span class="chip chip-info">Published</span>' in lobby  # as a stage's
 
 
@@ -1887,3 +1887,23 @@ def test_every_merge_tag_has_its_description_and_every_default_its_own_tags() ->
     for kind, (subject, body) in workflow.DEFAULT_TEMPLATES.items():
         named = set(re.findall(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)", subject + body))
         assert named <= set(workflow.EMAIL_FIELDS[kind]), kind
+
+
+def test_a_state_has_one_tone_everywhere() -> None:
+    """Ruling 64, U1: one map, RRW's palette: Draft amber, Closed red,
+    Completed green; the stage chip, the status row and Home's rows agree."""
+    from applydesk import locks, tones
+
+    assert (tones.tone("Draft"), tones.tone("Closed"), tones.tone("Completed")) == (
+        "warn",
+        "bad",
+        "ok",
+    )
+    assert locks.STATUS_CHIP == {s: tones.tone(s) for s in locks.STATUS_CHIP}
+    page = (
+        TestClient(host_with(("applydesk",))[0])
+        .get("/applydesk/operator/exercises/n5wg8tjr3e")
+        .text
+    )
+    # The draft's status row and its stage chip: both amber.
+    assert 'chip-mute">Draft' not in page and 'chip-warn">Draft' in page
