@@ -58,7 +58,19 @@ is the author's call.
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
-the PR body unless it says otherwise. None open.
+the PR body unless it says otherwise.
+
+- **A linked re-send may leave an instrument's name out** (Codex on
+  cordware#213, 2026-11-19; held for Apply Desk's AD6 by the author,
+  2026-11-20). `app/services/linked_settings.py` checks a re-send's
+  settings as if they were new: every instrument it mentions needs a
+  name, so a re-send changing only a description or the response fields
+  is refused whole (`422 invalid_setup`), its roster changes with it,
+  though `linked_instruments.apply_owned()` keeps what a re-send omits.
+  No sender reaches it today: Apply Desk's handoff and the Utilities
+  proof of concept send the name every time. Make the check
+  update-aware (a missing name read from the stored instrument) when
+  AD6 builds the real re-send, or close this if AD6 always sends it.
 
 ### Sequencing notes
 
