@@ -437,8 +437,9 @@ def test_dossiers_returns_to_draft_by_row_and_ticked(
     assert workflow.withdrawal_closed_by(EX, "m3qx8vkt2n") == "Peer review"
     nogates = client.get("/applydesk/operator/exercises/r6tm4kq9wz/dossiers").text
     assert ">Return ticked to draft</button>" in nogates
-    # Operators open every dossier (author, 2026-11-12).
-    assert "/applydesk/me/exercises/wa9juxbc2t/dossiers/p3bd7kq2wx" in text
+    # Operators open every dossier (author, 2026-11-12), on their own page
+    # under Dossiers (ruling 64, U20).
+    assert "/applydesk/operator/exercises/wa9juxbc2t/dossiers/p3bd7kq2wx" in text
 
 
 def test_a_gate_item_carries_its_evaluators(client: TestClient) -> None:
@@ -1835,7 +1836,7 @@ def test_dossiers_rows_are_named_by_dossier_id(client: TestClient) -> None:
         'data-ap-sort="dossier">Dossier<' in page
     )
     assert (
-        f'href="/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx"><code>p3bd7kq2wx</code></a>'
+        f'href="/applydesk/operator/exercises/{EX}/dossiers/p3bd7kq2wx"><code>p3bd7kq2wx</code></a>'
         '<span class="ap-app">Application <code>m3qx8vkt2n</code></span>'
     ) in page
     # The search box is labelled where it stands (ruling 64, U17).
@@ -1913,16 +1914,20 @@ def test_a_state_has_one_tone_everywhere() -> None:
 
 
 def test_a_dossier_has_an_operator_page_under_dossiers(client: TestClient) -> None:
-    """Ruling 64, U20 (segment AD1P rung 6a, scaffold): the page sits under
-    Dossiers, its breadcrumb back there; its cards are placeholders, View as
-    applicant inert, and Dossiers' links still open the applicant's page."""
+    """Ruling 64, U20: the page sits under Dossiers, its breadcrumb back
+    there; it shows the application, the row's gates and outcomes and what
+    evaluators read; View as applicant opens the applicant's page in a new
+    tab; Dossiers' ID links come here."""
     page = client.get(f"/applydesk/operator/exercises/{EX}/dossiers/p3bd7kq2wx").text
     crumb = page[page.index('class="crumbs"') : page.index("</nav>", page.index('class="crumbs"'))]
     assert f'href="/applydesk/operator/exercises/{EX}/dossiers">Dossiers</a>' in crumb
     assert 'aria-current="page">Dossier p3bd7kq2wx' in crumb
     for card in ("application", "progress", "shown"):
         assert f'data-od-card="{card}"' in page
-    assert re.search(r"<button[^>]*disabled[^>]*data-od-as-applicant>View as applicant", page)
+    assert "Aisha Bello" in page and "<code>m3qx8vkt2n</code>" in page
+    assert "Gate 1 · Peer review" in page and ">Entered</span>" in page
+    applicant = f'href="/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx" target="_blank"'
+    assert applicant in page and "data-od-as-applicant>View as applicant" in page
     dossiers = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
-    assert f'href="/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx"' in dossiers
+    assert f'href="/applydesk/operator/exercises/{EX}/dossiers/p3bd7kq2wx"' in dossiers
     assert client.get(f"/applydesk/operator/exercises/{EX}/dossiers/nope").status_code == 404

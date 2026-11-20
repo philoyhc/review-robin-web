@@ -263,7 +263,10 @@
     .card .dt-said { margin: 10px 0 0; font-size: 13px; color: var(--text-subtle); }
     .card p { margin: 0 0 8px; }
     .muted { color: var(--text-subtle); }
-    dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }
+    /* One label column for every list of facts on a page, so two lists line
+       up (ruling 64, F18); a phone stacks them. */
+    dl.facts { display: grid; grid-template-columns: 14em minmax(0, 1fr); gap: 6px 16px; margin: 0; font-size: 14px; }
+    @media (max-width: 639px) { dl.facts { grid-template-columns: minmax(0, 1fr); gap: 2px 0; } dl.facts dd { margin-bottom: 6px; } }
     dl.facts dt { color: var(--text-subtle); }
     dl.facts dd { margin: 0; }
     /* The exercise chrome (ruling 14, segment AD1D), after Review

@@ -669,11 +669,14 @@ def _pick(value: str, allowed: tuple[str, ...]) -> str:
 
 @router.get("/exercises/{exercise_id}/dossiers/{dossier_id}", name="applydesk_operator_dossier")
 def operator_dossier(request: Request, exercise_id: str, dossier_id: str) -> Response:
-    """A dossier as the operator sees it (ruling 64, U20; segment AD1P rung
-    6a, scaffold): under Dossiers, its cards static until rung 6b wires
-    them, and *View as applicant* inert. Dossiers' links are unchanged."""
+    """A dossier as the operator sees it (ruling 64, U20; segment AD1P):
+    under Dossiers, its application, its row's gates and outcomes, and what
+    evaluators read; *View as applicant* opens the applicant's page in a
+    new tab, as Review Robin's *Open reviewer surface*."""
     exercise = exercise_or_404(exercise_id)
     app = dossier_or_404(exercise, dossier_id)
+    plan = stages.plan_of(exercise.public_id)
+    row = next((r for r in plan.rows if r.application.public_id == app.public_id), None)
     return render(
         request,
         "applydesk/operator/dossier.html",
@@ -683,6 +686,9 @@ def operator_dossier(request: Request, exercise_id: str, dossier_id: str) -> Res
         status=workflow.status_row(exercise),
         exercise=exercise,
         application=app,
+        columns=plan.columns,
+        cells=row.cells if row else {},
+        shown=extract.form_answers(exercise, app)[0],
     )
 
 

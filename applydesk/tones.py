@@ -24,8 +24,11 @@ TONE: dict[str, str] = {
     "Sent": "info",
     "Detached": "mute",
     "Results in": "ok",
-    # An application.
+    # An application, and a dossier at a gate (as Dossiers' cells).
     "Submitted": "ok",
+    "Entered": "ok",
+    "Not entered": "mute",
+    "Pending": "warn",
     "Withdrawn": "warn",
     # A stage on the timeline.
     "Done": "ok",

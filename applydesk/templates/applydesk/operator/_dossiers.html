@@ -121,7 +121,7 @@
            under it (ruling 25; AD-89): the CSV still keys rows by
            Application ID. #}
         <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ rid }}">
-          {% if a.state == "Submitted" %}<a href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ a.dossier_id) }}"><code>{{ a.dossier_id }}</code></a>{% elif a.state == "Draft" %}<span class="muted">No dossier yet</span>{% else %}<code>{{ a.dossier_id }}</code>{% endif %}<span class="ap-app">Application <code>{{ a.public_id }}</code></span></td>
+          {% if a.state == "Submitted" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ a.dossier_id) }}"><code>{{ a.dossier_id }}</code></a>{% elif a.state == "Draft" %}<span class="muted">No dossier yet</span>{% else %}<code>{{ a.dossier_id }}</code>{% endif %}<span class="ap-app">Application <code>{{ a.public_id }}</code></span></td>
         <td class="ap-who"><strong>{{ a.applicant }}</strong><span class="ap-mail">{{ a.email }}</span></td>
         <td class="ap-stat">{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}<span class="ap-note">{{ a.submitted }}</span>{% if a.state == "Submitted" and a.public_id not in redraft_closed %}<button class="btn btn-alert ap-redraft" type="button" disabled title="Returning to draft comes with AD4" aria-label="Return {{ rid }} to draft">Return to draft</button>{% endif %}</td>
         {% for r in plan.stages %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}
@@ -139,7 +139,7 @@
         {% endfor %}{% endfor %}
       </tr>
     {% else %}
-      <tr><td colspan="3" class="muted">No applications yet.</td></tr>
+      <tr><td colspan="{{ 3 + plan.columns | length }}" class="muted">No applications yet.</td></tr>
     {% endfor %}
     </tbody>
   </table>

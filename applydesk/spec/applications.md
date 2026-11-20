@@ -63,6 +63,7 @@ participant's `applydesk/routes_me.py`.
 | `…/<id>/panels` | Panels: the exercise's rosters in one table |
 | `…/<id>/emails` | Emails: every template the exercise owes |
 | `…/<id>/dossiers` | Dossiers: a row per dossier, the exercise's control surface |
+| `…/<id>/dossiers/<dossier>` | A dossier as the operator sees it; 404 for no such dossier |
 | `…/<id>/evaluations` | Evaluations: each gate's state, progress and assignments |
 | `…/<id>/evaluations/gate_<n>` | A gate's pairs, a row each; 404 for a Draft exercise or no such gate |
 | `…/<id>/extract` | Extract data: the download cards |
@@ -786,11 +787,19 @@ At `/operator/exercises/<id>/dossiers` (the Applications page until ruling
 25): a row per dossier, an application's where it has one; until dossiers
 are made (*Create dossiers*, ruling 26), the rows are the sample's
 applications. A row is named by its *Dossier* ID, linking a submitted one
-to its dossier page, with its *Application* ID under it; a draft has no
+to its operator page (below), with its *Application* ID under it; a draft has no
 dossier yet (ruling 32) and says so. Search reads both IDs, the cells,
 proposals and messages name the row as it shows, and the CSV keys rows
 by Application ID. The dossier page shows its
 Dossier ID, as Review Robin does for a confidential gate.
+
+**A dossier's operator page** (`…/dossiers/<dossier>`, ruling 64): under
+Dossiers, its breadcrumb back there, as Review Robin's drill-ins. Read
+only: its *Application* (applicant, email, status, Application ID), its
+row's *Gates and outcomes* (each column's chip and note, as Dossiers
+holds them) and what is *Shown to evaluators*. *View as applicant ↗*
+opens the dossier's `/me` page in a new tab, as Review Robin's *Open
+reviewer surface*.
 A control surface (ruling 23), worked down its columns. The whole table is
 locked until *Unlock*; then every cell, *Set ticked rows*, *Apply rules…*,
 *Upload CSV* and each outcome's *Released* are live, but for the fixed ones
