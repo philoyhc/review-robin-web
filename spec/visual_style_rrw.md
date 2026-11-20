@@ -336,9 +336,9 @@ The two-row session chrome (Setup row, Operations row) **does not appear** on th
 
 #### Top bar
 
-**One shared bar** for every Review Robin page, operator or participant (`_partials/top_bar.html`; the cross-application contract is `docs/header_chrome.md`). It is the `.chrome` block, one row that scrolls away with the page, and its bottom line is the header's: nothing below it belongs to the bar.
+**One shared bar** for every Review Robin page, operator or participant (`_partials/top_bar.html`; the cross-application contract is `cordware/spec/header_chrome.md`). It is the `.chrome` block, one row that scrolls away with the page, and its bottom line is the header's: nothing below it belongs to the bar.
 
-- **Left:** the Review Robin icon (28 px, decorative) and two lines: the **top line** (12 px, `--text-subtle`; the viewer's Unit or the workspace institution name, omitted when empty; which one is `docs/header_chrome.md` §6) over "Review Robin ▾" (16 px, bold). The group is the **switcher**, a `details`/`summary` disclosure: first group "Review Robin", with **Operator Lobby** (operators and sys admins) and **User Lobby**, the current one marked (✓ and `aria-current`); last group "Cordware", with **All applications**, the host's landing page, emitted through `host_url()`. With no signed-in viewer the group is static, without the ▾.
+- **Left:** the Review Robin icon (28 px, decorative) and two lines: the **top line** (12 px, `--text-subtle`; the viewer's Unit or the workspace institution name, omitted when empty; which one is `cordware/spec/header_chrome.md` §6) over "Review Robin ▾" (16 px, bold). The group is the **switcher**, a `details`/`summary` disclosure: first group "Review Robin", with **Operator Lobby** (operators and sys admins) and **User Lobby**, the current one marked (✓ and `aria-current`); last group "Cordware", with **All applications**, the host's landing page, emitted through `host_url()`. With no signed-in viewer the group is static, without the ▾.
 - **Right:** the Light/Dark toggle, the viewer's name (from 960 px) and the **avatar** (initials), which opens the **account menu**, in order:
   - The display name in bold, the email, and the tier ("super admin" or "sys admin") for a viewer holding one. Informational, not links; it lets a viewer on a shared computer confirm who is signed in.
   - Under 640 px, the Light/Dark toggle (it leaves the bar at that width).
@@ -426,7 +426,7 @@ page, which does not extend `base.html`, reads `404 — Not found · Review Robi
 
 #### Top bar
 
-Reviewer-facing pages carry the shared bar (see "Top bar" under the non-session operator pages), without the breadcrumb row. The viewer's roles decide the entries: a participant's switcher offers User Lobby and All applications, and their account menu offers Guide, About and Sign out. **User Lobby** is reachable from every participant page, whatever the number of sessions, so a one-session reviewer, a reviewee and an observer always have a way back ("User Lobby" is the dashboard's one name). The top line follows the sessions' Units ("Top bar" above; `docs/header_chrome.md` §6). The bar is the same on all reviewer pages; its presence is what makes the surface recognizable as Review Robin across sessions.
+Reviewer-facing pages carry the shared bar (see "Top bar" under the non-session operator pages), without the breadcrumb row. The viewer's roles decide the entries: a participant's switcher offers User Lobby and All applications, and their account menu offers Guide, About and Sign out. **User Lobby** is reachable from every participant page, whatever the number of sessions, so a one-session reviewer, a reviewee and an observer always have a way back ("User Lobby" is the dashboard's one name). The top line follows the sessions' Units ("Top bar" above; `cordware/spec/header_chrome.md` §6). The bar is the same on all reviewer pages; its presence is what makes the surface recognizable as Review Robin across sessions.
 
 Sign-in has no page of its own: it is Azure Easy Auth's (`spec/audience_and_identity_model.md` "Auth posture").
 

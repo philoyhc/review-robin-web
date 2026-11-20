@@ -556,7 +556,7 @@ perspective:
   shows as its top line on the sessions that operator created, in place of
   the workspace's `CORDWARE_INSTITUTION_NAME`. Only a sys admin sets it
   (`users.set_unit`), and the session's pages read the creator's value
-  when they render (`docs/header_chrome.md` §6; Alembic `c3e9a1f7d2b4`).
+  when they render (`cordware/spec/header_chrome.md` §6; Alembic `c3e9a1f7d2b4`).
 
 ### Tabular response artifacts
 

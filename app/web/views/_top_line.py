@@ -1,5 +1,5 @@
 """Which name the top bar's top line shows (segment 20D,
-`docs/header_chrome.md` §6, "Which name a page shows").
+`cordware/spec/header_chrome.md` §6, "Which name a page shows").
 
 Read from the page's template context, so no route has to pass it:
 

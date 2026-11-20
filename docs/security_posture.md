@@ -557,9 +557,9 @@ is the one Easy Auth parser, and `app/auth/identity.py` re-exports it
 
 The following are out of scope for the Segment 14A in-app
 hardening ladder — they need the Azure portal or a later segment.
-Tracked in `guide/deferred_consolidated.md`. The infrastructure rows
-describe the dormant dev slot, whose notes are archived with the
-deployment. The institutional
+Tracked in `guide/deferred_consolidated.md`. The infrastructure rows,
+in the second table, describe the dormant dev slot, whose notes are
+archived with the deployment. The institutional
 environment already has private endpoints for the Web App and Key Vault,
 a privately provisioned Postgres (no public access), VNet integration,
 an in-VNet runner, an Application Insights resource, and its database
@@ -568,9 +568,16 @@ yet (recorded privately with the deployment).
 
 | Item | Status |
 |---|---|
-| Key Vault references for App Settings secrets | Deferred — secrets live as plain App Settings / GitHub secrets today |
-| VNet integration / private endpoints for Postgres | Deferred — public access + firewall allow-list today |
 | Staging slot + manual-approval production deploy gate | Not a slot: production is released privately, with its own approval gate (`docs/deployment.md`) |
-| Application Insights resource | Deferred — logs are already structured/JSON and ingestible once it exists (PR 1) |
 | Postgres-specific column types / `ENUM` / `JSONB` GIN indexes | Deferred infrastructure (`guide/deferred_consolidated.md`) |
 | CSV formula injection | Deferred — extracts write cells verbatim, participant answers included, so a spreadsheet evaluates a leading `=` / `+` / `-` / `@` (`spec/csv_contracts.md` §2) |
+
+**Before the cutover: the dormant dev slot.** Production has served from
+the institutional environment since 2026-10-31. These rows describe the
+dev slot that served until then, kept as it stood:
+
+| Item | Status on the dev slot |
+|---|---|
+| Key Vault references for App Settings secrets | Deferred — secrets lived as plain App Settings / GitHub secrets |
+| VNet integration / private endpoints for Postgres | Deferred — public access + firewall allow-list |
+| Application Insights resource | Deferred — logs are already structured/JSON and ingestible once it exists (PR 1) |

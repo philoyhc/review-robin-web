@@ -481,7 +481,7 @@
       }
       a { color: var(--text-link); }
       /* Segment 20D: the header, Cordware's shared top bar
-         (`docs/header_chrome.md`; `_partials/top_bar.html`). `.chrome`
+         (`cordware/spec/header_chrome.md`; `_partials/top_bar.html`). `.chrome`
          keeps the header's one bottom line and the space under it, so
          nothing below the line moves. */
       .chrome {
@@ -586,7 +586,7 @@
       .tb-who { display: flex; flex-direction: column; gap: 2px; padding: 8px 14px; font-size: 13px; color: var(--text-subtle); }
       .tb-who strong { font-size: 15px; color: var(--text-body); }
       /* Under 640 px the toggle moves into the account menu and the
-         breadcrumb's middle collapses to "…" (20D, docs/header_chrome.md
+         breadcrumb's middle collapses to "…" (20D, cordware/spec/header_chrome.md
          §2, §5). */
       .tb-narrow { display: none; padding: 8px 14px; }
       .bc-ellipsis { display: none; }
@@ -4656,7 +4656,7 @@
       }
       .theme-toggle-opt:hover:not([aria-pressed="true"]) { color: var(--text-body); }
       /* As Residential's: a 44 px target on a phone or a touch screen
-         (docs/header_chrome.md §7). */
+         (cordware/spec/header_chrome.md §7). */
       @media (max-width: 639px), (pointer: coarse) {
         .theme-toggle-opt { min-height: 44px; }
       }
@@ -5656,7 +5656,7 @@
        populated in the same tick is not reliably announced. #}
     <div class="rrw-busy" data-rrw-busy-bar hidden><div class="rrw-busy-fill"></div></div>
     <span class="visually-hidden" role="status" data-rrw-busy-status></span>
-    {# Segment 20D: the shared top bar (`docs/header_chrome.md`). The
+    {# Segment 20D: the shared top bar (`cordware/spec/header_chrome.md`). The
        participant pages override this block to include the same partial
        with `participant_bar=true`. #}
     {% block top_bar %}
@@ -6588,7 +6588,7 @@
         sync();
       })();
     </script>
-    {# Top bar menus (segment 20D, docs/header_chrome.md §7): one open
+    {# Top bar menus (segment 20D, cordware/spec/header_chrome.md §7): one open
        at a time; Escape closes the open one and returns focus to its
        summary; a click outside closes it. Without this the disclosures
        still open and close on their own toggle. #}

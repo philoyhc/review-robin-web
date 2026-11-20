@@ -938,7 +938,7 @@ def test_a_page_without_the_card_keeps_the_chip_unlinked(both: TestClient) -> No
 def test_the_bar_is_the_shared_header(
     host_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`docs/header_chrome.md` §2, §4 and §6, Residential's share, landed
+    """`cordware/spec/header_chrome.md` §2, §4 and §6, Residential's share, landed
     with RRW segment 20D: the app icon in place of the square, an account
     menu with Sign out, and the top line from the Unit, else the default."""
     from cordware.settings import identity_settings

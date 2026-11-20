@@ -9,7 +9,7 @@
        for Residential Operations, a ruled log sheet for Support Logs
        (author, 2026-11-01; sources kept in Cordware's private records). #}
     {# One source per application for the tab and the bar's icon
-       (`docs/header_chrome.md` §2, RRW segment 20D). #}
+       (`cordware/spec/header_chrome.md` §2, RRW segment 20D). #}
     {% if app_key == "supportlogs" %}{% set app_icon = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><clipPath id='t'><rect width='32' height='32' rx='7'/></clipPath></defs><g clip-path='url(%23t)'><rect width='32' height='32' fill='%230f766e'/><rect x='7' y='5.5' width='34' height='38' rx='3.5' fill='%23fff'/><rect x='11.5' y='12' width='24' height='2.8' rx='1.4' fill='%230f766e'/><rect x='11.5' y='18' width='24' height='2.8' rx='1.4' fill='%230f766e'/><rect x='11.5' y='24' width='14' height='2.8' rx='1.4' fill='%230f766e'/></g></svg>" %}
     {% elif app_key == "residentialops" %}{% set app_icon = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><clipPath id='t'><rect width='32' height='32' rx='7'/></clipPath></defs><g clip-path='url(%23t)'><rect width='32' height='32' fill='%23a21caf'/><path d='M15.5 6.5 L37 25 L33 25 L33 40 L7 40 L7 21.5 L3.5 21.5 Z' fill='%23fff' stroke='%23fff' stroke-width='1.6' stroke-linejoin='round'/><rect x='14' y='27' width='6.5' height='12' rx='1.5' fill='%23a21caf'/></g></svg>" %}
     {% else %}{% set app_icon = "" %}{% endif %}
@@ -127,7 +127,7 @@
       .switch.static { display: flex; align-items: center; gap: 10px; min-height: 44px; }
       .switch > summary::-webkit-details-marker { display: none; }
       .switch > summary:hover, .switch[open] > summary { background: var(--accent-tint); }
-      /* The app icon, the favicon itself (docs/header_chrome.md §2), as a
+      /* The app icon, the favicon itself (cordware/spec/header_chrome.md §2), as a
          background so the image is not a second link the crawl reads. */
       .tb-icon { flex: none; width: 28px; height: 28px; display: block; background: center / contain no-repeat; }
       {% if app_icon %}.tb-icon { background-image: url("{{ app_icon | safe }}"); }{% endif %}
@@ -163,7 +163,7 @@
         display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px;
         border-radius: 9999px; background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 700;
       }
-      /* The account menu (docs/header_chrome.md §4, RRW segment 20D): the
+      /* The account menu (cordware/spec/header_chrome.md §4, RRW segment 20D): the
          avatar opens it; who is signed in, then Sign out. */
       .acct-menu { position: relative; }
       .acct-menu > summary {
@@ -842,7 +842,7 @@
       })();
     </script>
     <script>
-      // The bar's two menus (docs/header_chrome.md §7): one open at a time;
+      // The bar's two menus (cordware/spec/header_chrome.md §7): one open at a time;
       // Escape closes the open one and returns focus to its summary; a
       // click outside closes it. Without this they still open and close.
       (function () {

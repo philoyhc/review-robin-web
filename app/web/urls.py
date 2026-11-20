@@ -137,7 +137,7 @@ def install(templates: Jinja2Templates) -> Jinja2Templates:
     """Add the URL globals to a ``Jinja2Templates`` environment, and the
     two the shared top bar reads on every page: the workspace's
     institution name and the page's resolved top line (segment 20D,
-    `docs/header_chrome.md` §6). This is the one hook every RRW
+    `cordware/spec/header_chrome.md` §6). This is the one hook every RRW
     environment passes through, so the bar cannot miss them."""
     add_globals(templates, **TEMPLATE_GLOBALS)
     add_globals(templates, institution_name=institution_name, top_line=top_line)

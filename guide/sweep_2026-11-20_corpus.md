@@ -95,7 +95,7 @@ Ids are in the register; a **bold** count includes a medium finding.
 
 ## 3. Consolidate
 
-- `docs/header_chrome.md` into `spec/visual_style_rrw.md` "Top bar", or retire it (author H1).
+- The header chrome doc, then in `docs/`, into `spec/visual_style_rrw.md` "Top bar", or retire it (author H1; it moved to `cordware/spec/header_chrome.md`).
 
 ## 4. Retire
 
@@ -104,7 +104,7 @@ Ids are in the register; a **bold** count includes a medium finding.
 
 ## 5. Move
 
-- `docs/header_chrome.md`, as §3.
+- The header chrome doc, as §3.
 
 ## 6. Read, no action
 

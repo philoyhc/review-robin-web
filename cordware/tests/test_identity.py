@@ -712,7 +712,7 @@ def test_a_blank_fake_tenant_is_no_tenant() -> None:
 
 def test_the_institution_name_reads_cordwares_own_variable(monkeypatch) -> None:
     """`CORDWARE_INSTITUTION_NAME`, trimmed; unset is empty, meaning no top
-    line (`docs/header_chrome.md` §6)."""
+    line (`cordware/spec/header_chrome.md` §6)."""
     monkeypatch.delenv("CORDWARE_INSTITUTION_NAME", raising=False)
     assert identity_module.institution_name(IdentitySettings(_env_file=None)) == ""  # pyright: ignore[reportCallIssue]  -- a pydantic-settings init option
     monkeypatch.setenv("CORDWARE_INSTITUTION_NAME", "  Example University ")

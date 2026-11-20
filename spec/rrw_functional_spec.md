@@ -678,6 +678,22 @@ The tags also round-trip through Settings.csv and are copied by a
 clone; neither of those paths writes a tag event. `spec/sessions_overview.md` owns the
 lobby's filter.
 
+### 5.19 Linked sessions
+
+Another Cordware application can create a Review Robin session for its
+own users by a **handoff**: it posts the rosters, the pairs and the
+settings in one request, and the session it makes is **linked** to that
+application. The application keeps what it owns: it may send the files
+again while the session is an unopened draft, and while the link holds
+Review Robin turns off what the application does in its place (among them its own
+email, release of results, observers, the instrument's structure, and
+the details the application sets), each refused at the surface that
+would offer it. The operator still runs the review itself: validate,
+activate, monitor and close. **Unlink**, on Session Home, makes the
+session native at once and lifts every lock; the application can no
+longer send to it. `spec/linked_sessions.md` owns the locks and
+`spec/handoffs.md` the protocol.
+
 ---
 
 ## 6. Session lifecycle
@@ -1200,12 +1216,18 @@ Setup card" the setup card, and [§12](#12-data-export) the files.
 ### 9.13 Operator settings
 
 The operator's Settings page (`/operator/settings`) carries a
-**Date & time** card for their default display timezone and an **Email
-settings** card of three per-operator toggles, each off by default:
-keep a copy of what they send in their Sent Items, send a copy to
-themselves, and have replies go to the session's Help contact. Mail the
-operator sends goes from their own mailbox, so no sender credentials are
-configured.
+**Date & time** card for their default display timezone, an **Email
+settings** card and a read-only **Unit** card. Email settings holds six
+per-operator toggles, each off by default. Three shape the mail the
+operator sends: keep a copy in their Sent Items, send a copy to
+themselves, and have replies go to the session's Help contact. Three are
+**owner report emails**: which other owners' actions on a session the
+operator owns are mailed to them (lifecycle changes, destructive
+deletions, and owner and release changes). Further report rows show as
+inactive until bulk sending and scheduled email exist. Mail the operator
+sends goes from their own mailbox, so no sender credentials are
+configured. The Unit card shows the operator's unit, which a system
+admin sets.
 
 `spec/settings_inventory.md` §1 owns the stored fields, the kept
 `smtp_*` columns among them.

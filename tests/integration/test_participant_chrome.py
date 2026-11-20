@@ -2,7 +2,7 @@
 Sign-in details): participant audit M8,
 `guide/archive/participant_surface_check.md`. Since segment 20D every page
 renders the one shared top bar, and its entries follow the viewer's roles
-(`docs/header_chrome.md` §3–§4)."""
+(`cordware/spec/header_chrome.md` §3–§4)."""
 
 from __future__ import annotations
 
@@ -92,7 +92,7 @@ def test_shared_pages_keep_the_operator_top_bar_for_an_operator(
     body = client.get(path).text
     assert 'href="/operator/sessions"' in body
     # About and Sign-in details omit the About entry, and the version
-    # beside it with it (`docs/header_chrome.md` §4).
+    # beside it with it (`cordware/spec/header_chrome.md` §4).
     if path == "/guide":
         assert _VERSION in body
 
@@ -115,7 +115,7 @@ def test_about_names_the_dashboard_the_user_lobby(client: TestClient) -> None:
 def test_sign_in_details_offers_none_of_the_account_entries(
     client: TestClient, monkeypatch
 ) -> None:
-    """`docs/header_chrome.md` §4: no Settings, Admin, Guide or About on
+    """`cordware/spec/header_chrome.md` §4: no Settings, Admin, Guide or About on
     Sign-in details, for an operator and a sys admin too (20D close)."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     client.get("/about")

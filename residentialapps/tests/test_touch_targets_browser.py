@@ -75,7 +75,7 @@ def test_a_token_s_remove_button_is_a_thumb_s_width(page: Page) -> None:  # noqa
 
 
 def test_the_account_menu_holds_the_toggle_on_a_phone_and_closes_on_escape(page: Page) -> None:  # noqa: F811
-    """`docs/header_chrome.md` §2, §7 (RRW segment 20D): under 640 px the
+    """`cordware/spec/header_chrome.md` §2, §7 (RRW segment 20D): under 640 px the
     toggle leaves the bar for the account menu; Escape closes the menu."""
     page.set_viewport_size({"width": 390, "height": 844})
     page.set_extra_http_headers(SIGNED_IN)

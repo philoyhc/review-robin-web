@@ -1,5 +1,5 @@
 """The shared top bar's two menus, driven by keyboard, and its narrow
-layout (segment 20D, `docs/header_chrome.md` §2, §5, §7)."""
+layout (segment 20D, `cordware/spec/header_chrome.md` §2, §5, §7)."""
 
 from __future__ import annotations
 

@@ -2,7 +2,7 @@
 
 Segment 20D rung 5 (``guide/segment_20D_header_chrome.md``): an
 operator's Unit, the top line of the bar on the sessions they create
-(``docs/header_chrome.md`` §6). Nullable, at most 80 characters; NULL
+(``cordware/spec/header_chrome.md`` §6). Nullable, at most 80 characters; NULL
 means the workspace default. Only a system admin sets it.
 
 Revision ID: c3e9a1f7d2b4
