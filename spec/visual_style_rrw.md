@@ -207,10 +207,10 @@ Specifics:
 The status strip sits inside the session nav card, below the two tab rows, on all session-scoped pages. Composition, left to right:
 
 ```
-Session: [LIFECYCLE_BADGE]  ·  Reviewers: [count]  ·  Reviewees: [count]  ·  Relationships: [count]  ·  Observers: [count]  ·  Instruments: [configured / total]  ·  Email Template: [Set up / Not set up]  ·  Invitations: [state]  ·  Responses: [state]
+Session: [LIFECYCLE_BADGE]  ·  Reviewers: [count]  ·  Reviewees: [count]  ·  Relationships: [count]  ·  Observers: [count]  ·  Instruments: [configured / total]  ·  Email Template: [Default / Customized]  ·  Invitations: [state]  ·  Responses: [state]
 ```
 
-Lifecycle badge first, then the Setup entities in canonical order (Reviewers, Reviewees, Relationships, Observers, Instruments, Email Template — Relationships and Observers report only when their optional Setup tab is enabled), then the two operations indicators (Invitations, Responses) at the right. Counts use the standard count-badge styling; missing/empty states use the amber empty-indicator badge.
+Lifecycle badge first, then the Setup entities in canonical order (Reviewers, Reviewees, Relationships, Observers, Instruments, Email Template — Relationships and Observers report only when their optional Setup tab is enabled), then the two operations indicators (Invitations, Responses) at the right. Counts use the standard count-badge styling; missing/empty states use the amber empty-indicator badge. Email Template is never amber: *Default* and *Customized* both take the count-badge styling (`pill pill-info`), since the defaults are usable email and neither state is missing anything.
 
 The strip is a setup + ops at-a-glance summary, not a running-session dashboard. Detailed operations state (per-reviewer invitation status, per-instrument response counts) lives on the Operations pages themselves.
 

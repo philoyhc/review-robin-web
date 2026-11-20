@@ -328,7 +328,10 @@ sits in the Validate page's *setup* group; being info-level it never
 blocks activation and does not trigger the warnings acknowledgement
 (`spec/validate_page.md`). The Validate page's setup-coverage grid
 shows the page's state as "Custom overrides" or "Default (no
-overrides)".
+overrides)", and Session Home's status strip as *Customized* or
+*Default*. Both read `email_templates.is_customized`: a non-blank
+string under one of `OVERRIDE_KEYS`, so a blank string and the
+`responses_received_enabled` toggle leave the state at default.
 
 ---
 

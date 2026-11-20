@@ -268,7 +268,7 @@ def test_responses_label_composition() -> None:
             assignment_count=0,
             instrument_count=0,
             instruments_configured=0,
-            email_invites_set_up=False,
+            email_template_customized=False,
             invitations_state="not_created",
             responses_reportable=(drafts + submitted) > 0,
             responses_drafts=drafts,

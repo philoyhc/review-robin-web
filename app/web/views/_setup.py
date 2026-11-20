@@ -33,7 +33,7 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
-from app.services import assignments, csv_imports
+from app.services import assignments, csv_imports, email_templates
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
 from app.services import relationships as relationships_service
@@ -120,7 +120,10 @@ class SessionStatusPills:
     an instrument that exists but cannot yet be answered stops reading
     as done (2026-09-07). Always ``<= instrument_count``."""
 
-    email_invites_set_up: bool
+    email_template_customized: bool
+    """Whether any email template override is saved (``email_templates.
+    is_customized``): the Email Template pill reads *Customized* or
+    *Default*."""
     invitations_state: str
     """One of ``"not_created"`` / ``"not_sent"`` / ``"partial_sent"`` /
     ``"all_sent"``. Distinguishes the two flavours of pre-send (no
@@ -241,10 +244,7 @@ def session_status_pills(db: Session, review_session: ReviewSession) -> SessionS
         assignment_count=assignments.existing_count(db, sid),
         instrument_count=instrument_total,
         instruments_configured=instruments_configured,
-        # The Email Invites editor lands in Segment 15 — for now no
-        # session is "set up" yet. When the editor ships, swap this
-        # for a real check (e.g. a non-empty email template row).
-        email_invites_set_up=False,
+        email_template_customized=email_templates.is_customized(review_session),
         invitations_state=_invitations_state(db, sid),
         responses_reportable=responses_reportable,
         responses_drafts=responses_drafts,

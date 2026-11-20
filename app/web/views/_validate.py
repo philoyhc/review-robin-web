@@ -22,7 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, ReviewSession
-from app.services import assignments, csv_imports
+from app.services import assignments, csv_imports, email_templates
 
 # --------------------------------------------------------------------------- #
 # Setup gate vs. Operations gate (Segment 15E PR 2)
@@ -190,7 +190,7 @@ def _setup_coverage_rows(
     instrument_count = len(
         list(db.execute(select(Instrument).where(Instrument.session_id == sid)).scalars())
     )
-    has_email_overrides = bool(review_session.email_template_overrides)
+    has_email_overrides = email_templates.is_customized(review_session)
     help_contact_set = bool((review_session.help_contact or "").strip())
     assignment_mode = review_session.assignment_mode
 

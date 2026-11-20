@@ -414,6 +414,19 @@ TEMPLATE_FIELDS: dict[str, list[dict[str, str]]] = {
 }
 
 
+def is_customized(review_session: ReviewSession) -> bool:
+    """Whether any of the session's email templates carries an override.
+
+    An override is a non-blank string under one of ``OVERRIDE_KEYS``, the
+    same test ``_resolve`` applies; ``responses_received_enabled`` is a
+    toggle, not template text, so it does not count. Session Home's Email
+    Template pill reads *Customized* or *Default* from this, and the
+    Validate page's coverage row reads *Custom overrides* or *Default (no
+    overrides)*: a session always has usable email, from the defaults, so
+    neither state is missing anything."""
+    return any((get_override(review_session, key) or "").strip() for key in OVERRIDE_KEYS)
+
+
 def get_override(review_session: ReviewSession, key: str) -> str | None:
     """Returns the operator-supplied override for ``key``, or ``None``
     if no override is set. Distinct from ``_resolve`` which falls back
