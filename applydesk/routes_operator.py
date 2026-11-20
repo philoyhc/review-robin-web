@@ -27,7 +27,7 @@ from applydesk import (
     workflow,
 )
 from applydesk.gate import placeholders_only
-from applydesk.lookups import exercise_or_404
+from applydesk.lookups import dossier_or_404, exercise_or_404
 from applydesk.web import (
     OPERATIONS_PAGES,
     OPERATOR_LOBBY,
@@ -665,6 +665,25 @@ def _zip(name: str, body: bytes) -> Response:
 def _pick(value: str, allowed: tuple[str, ...]) -> str:
     """A chip's value from the query, else its default (the first)."""
     return value if value in allowed else allowed[0]
+
+
+@router.get("/exercises/{exercise_id}/dossiers/{dossier_id}", name="applydesk_operator_dossier")
+def operator_dossier(request: Request, exercise_id: str, dossier_id: str) -> Response:
+    """A dossier as the operator sees it (ruling 64, U20; segment AD1P rung
+    6a, scaffold): under Dossiers, its cards static until rung 6b wires
+    them, and *View as applicant* inert. Dossiers' links are unchanged."""
+    exercise = exercise_or_404(exercise_id)
+    app = dossier_or_404(exercise, dossier_id)
+    return render(
+        request,
+        "applydesk/operator/dossier.html",
+        area=OPERATOR_LOBBY,
+        crumb_child=f"Dossier {dossier_id}",
+        nav=exercise_nav(exercise.public_id, "dossiers"),
+        status=workflow.status_row(exercise),
+        exercise=exercise,
+        application=app,
+    )
 
 
 @router.get("/exercises/{exercise_id}/extract/{file}", name="applydesk_extract_file")

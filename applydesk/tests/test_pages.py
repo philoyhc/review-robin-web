@@ -43,6 +43,7 @@ PAGES = (
     ),
     f"/applydesk/operator/exercises/{EX}/form/preview",
     f"/applydesk/operator/exercises/{EX}/evaluations/gate_1",  # a gate's own page (AD1H)
+    f"/applydesk/operator/exercises/{EX}/dossiers/p3bd7kq2wx",  # a dossier, the operator's (AD1P)
     f"/applydesk/operator/exercises/{EX}/evaluations/gate_2?q=lim&offset=200",
     f"/applydesk/operator/exercises/{OPEN}",  # open for applications
     f"/applydesk/operator/exercises/{OPEN}/dossiers",  # only its first stage
@@ -1909,3 +1910,19 @@ def test_a_state_has_one_tone_everywhere() -> None:
     )
     # The draft's status row and its stage chip: both amber.
     assert 'chip-mute">Draft' not in page and 'chip-warn">Draft' in page
+
+
+def test_a_dossier_has_an_operator_page_under_dossiers(client: TestClient) -> None:
+    """Ruling 64, U20 (segment AD1P rung 6a, scaffold): the page sits under
+    Dossiers, its breadcrumb back there; its cards are placeholders, View as
+    applicant inert, and Dossiers' links still open the applicant's page."""
+    page = client.get(f"/applydesk/operator/exercises/{EX}/dossiers/p3bd7kq2wx").text
+    crumb = page[page.index('class="crumbs"') : page.index("</nav>", page.index('class="crumbs"'))]
+    assert f'href="/applydesk/operator/exercises/{EX}/dossiers">Dossiers</a>' in crumb
+    assert 'aria-current="page">Dossier p3bd7kq2wx' in crumb
+    for card in ("application", "progress", "shown"):
+        assert f'data-od-card="{card}"' in page
+    assert re.search(r"<button[^>]*disabled[^>]*data-od-as-applicant>View as applicant", page)
+    dossiers = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
+    assert f'href="/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx"' in dossiers
+    assert client.get(f"/applydesk/operator/exercises/{EX}/dossiers/nope").status_code == 404
