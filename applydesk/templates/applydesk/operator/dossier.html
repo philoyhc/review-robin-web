@@ -1,0 +1,28 @@
+{% extends "applydesk/base.html" %}
+{# A dossier as the operator sees it (ruling 64, U20; segment AD1P rung
+   6a): a page under Dossiers, its breadcrumb back there, as Review
+   Robin's drill-ins. A scaffold: each card's copy and layout are real,
+   its contents placeholders until rung 6b; *View as applicant* is inert
+   and Dossiers' ID links still open the applicant's page. #}
+{% block title %}Dossier {{ application.dossier_id }} · {{ exercise.name }}{% endblock %}
+{% block content %}
+<div class="ptitle"><h1>Dossier {{ application.dossier_id }}</h1>
+  <span class="ev-head"><button class="btn btn-secondary" type="button" disabled title="Opens the applicant's view in a new tab (segment AD1P rung 6b)" data-od-as-applicant>View as applicant</button></span></div>
+<p class="placeholder"><strong>Placeholder.</strong> A scaffold: this page's cards fill in a later slice; Dossiers' links still open the applicant's view.</p>
+<p class="muted pc-intro">One dossier, as Dossiers holds it: its application, where it stands at each gate and outcome, and what evaluators read.</p>
+<section class="card" data-od-card="application">
+  <h2>Application</h2>
+  <p class="muted em-help">The application this dossier carries: its applicant, status and when it was submitted.</p>
+  <p class="muted">Filled in a later slice.</p>
+</section>
+<section class="card" data-od-card="progress">
+  <h2>Gates and outcomes</h2>
+  <p class="muted em-help">Each gate's chip and result, each outcome's value, as on Dossiers' row.</p>
+  <p class="muted">Filled in a later slice.</p>
+</section>
+<section class="card" data-od-card="shown">
+  <h2>Shown to evaluators</h2>
+  <p class="muted em-help">The answers evaluators read, redacted as they read them.</p>
+  <p class="muted">Filled in a later slice.</p>
+</section>
+{% endblock %}
