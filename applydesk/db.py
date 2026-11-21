@@ -18,6 +18,7 @@ from typing import Any
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import Connection, Engine, create_engine, event
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 
@@ -63,6 +64,14 @@ def _real_sqlite_transactions(made: Engine) -> None:
     @event.listens_for(made, "begin")
     def _begin(conn: Connection) -> None:  # pyright: ignore[reportUnusedFunction]  -- an event hook
         conn.exec_driver_sql("BEGIN")
+
+
+def is_busy(error: OperationalError) -> bool:
+    """Whether `error` is SQLite's "database is locked": two requests that
+    both read, then write, on a local run. The routes report it as a
+    concurrent change, as Postgres's row locks would have queued it (bug
+    sweep at the AD2A close)."""
+    return "database is locked" in str(error.orig)
 
 
 @cache

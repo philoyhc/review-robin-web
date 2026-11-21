@@ -152,3 +152,31 @@ def test_every_refusal_key_has_a_status_line() -> None:
     card = keys["team.py"] | (keys["operators.py"] - {"already_listed", "not_super_admin"})
     assert admin <= routes_admin.SAID.keys(), admin - routes_admin.SAID.keys()
     assert card <= routes_operator.OPS_SAID.keys(), card - routes_operator.OPS_SAID.keys()
+
+
+def test_sqlite_busy_is_reported_as_a_concurrent_change(
+    owner: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """On SQLite two requests that both read, then write, meet as
+    "database is locked": reported as a concurrent change, not a 500
+    (bug sweep at the AD2A close). Any other operational error is not
+    swallowed."""
+    from sqlalchemy.exc import OperationalError
+
+    from applydesk import team
+
+    ben = _colleague()
+
+    def busy(*_args: object) -> None:
+        raise OperationalError("UPDATE", {}, Exception("database is locked"))
+
+    monkeypatch.setattr(team, "remove", busy)
+    answer = owner.post(f"{HOME}/operators/{ben}/remove", follow_redirects=False)
+    assert answer.headers["location"].endswith("ops_said=changed#operators")
+
+    def broken(*_args: object) -> None:
+        raise OperationalError("UPDATE", {}, Exception("disk I/O error"))
+
+    monkeypatch.setattr(team, "remove", broken)
+    with pytest.raises(OperationalError):
+        owner.post(f"{HOME}/operators/{ben}/remove", follow_redirects=False)

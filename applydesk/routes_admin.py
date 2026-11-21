@@ -12,6 +12,7 @@ from typing import Annotated
 from urllib.parse import parse_qs, urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Request
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 from starlette.responses import RedirectResponse, Response
@@ -41,6 +42,7 @@ SAID: dict[str, str] = {
     "directory": "The directory did not answer; try again.",
     "no_tenant": "Your sign-in names no tenant, so no one can be added from the directory.",
     "not_super_admin": "Only the platform super-admin keeps the operator list.",
+    "changed": "Someone else changed the list at the same time; check it and try again.",
 }
 
 
@@ -189,6 +191,11 @@ def _admit(request: Request, form: dict[str, str]) -> Response:
     except GraphError:
         session.rollback()
         return _back(request, "directory", back)
+    except (IntegrityError, OperationalError) as error:  # a concurrent change won
+        session.rollback()
+        if isinstance(error, OperationalError) and not db.is_busy(error):
+            raise
+        return _back(request, "changed", back)
     finally:
         session.close()
     return _back(request, "admitted", back)
@@ -202,6 +209,11 @@ def _revoke(request: Request, person_id: int, back: str) -> Response:
     except operators.Refused as why:
         session.rollback()
         return _back(request, why.key if why.key in SAID else "gone", back)
+    except OperationalError as error:
+        session.rollback()
+        if not db.is_busy(error):
+            raise
+        return _back(request, "changed", back)
     finally:
         session.close()
     return _back(request, "revoked", back)

@@ -11,7 +11,7 @@ from typing import Annotated, Any, cast
 from urllib.parse import parse_qs, urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Request
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 from starlette.responses import JSONResponse, RedirectResponse, Response
@@ -503,6 +503,11 @@ def _ops_change(
         return _ops_back(request, exercise_id, why.key if why.key in OPS_SAID else "changed")
     except IntegrityError:  # a concurrent change won (the one-Owner index)
         session.rollback()
+        return _ops_back(request, exercise_id, "changed")
+    except OperationalError as error:  # SQLite: another change holds the file
+        session.rollback()
+        if not db.is_busy(error):
+            raise
         return _ops_back(request, exercise_id, "changed")
     finally:
         session.close()

@@ -56,11 +56,13 @@ def candidates(session: Session, public_id: str, query: str) -> list[Person]:
     """People on the operator list matching `query`, less the exercise's
     current operators: whom the Owner may add."""
     exercise = _exercise(session, public_id)
-    current: set[int] = (
-        {p.id for p, _ in operators.current_operators(session, exercise)} if exercise else set()
-    )
-    found = directory.search(session, query, None, allowlist_only=True)
-    return [p for p in found.on_record if p.id not in current]
+    current: frozenset[int] = frozenset()
+    if exercise is not None:
+        current = frozenset(p.id for p, _ in operators.current_operators(session, exercise))
+    # Left out in the search, before its limit: filtering after it could
+    # leave nobody to add (bug sweep at the AD2A close).
+    found = directory.search(session, query, None, allowlist_only=True, exclude=current)
+    return list(found.on_record)
 
 
 def _target(session: Session, public_id: str, person_id: int) -> tuple[Exercise, Person]:
