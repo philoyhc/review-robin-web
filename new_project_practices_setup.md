@@ -163,7 +163,7 @@ commit.
 | `tools/theme_customizer.gen.py` | deferred | theme | regenerate tools/theme_customizer.html after export and commit it |
 | `tests/unit/_base_css.py` | deferred | theme | parsing helpers the contrast audit imports |
 | `tests/unit/test_generated_tools_are_current.py` | deferred | theme | fails until the page is regenerated and committed |
-| `tests/unit/test_contrast_audit.py` | deferred | theme | 13 of its 14 pass on the inherited stylesheet; test_the_muted_token_absorbed_the_retired_one asserts this project's template counts |
+| `tests/unit/test_contrast_audit.py` | deferred | theme | 14 of its 15 pass on the inherited stylesheet; test_the_muted_token_absorbed_the_retired_one asserts this project's template counts |
 | `spec/color_tokens.md` | deferred | theme | the inherited palette's catalogue; it cites specs, an archived plan and a test that stay in the source, so the path gate goes red again on export |
 | `tools/close_check.py` | verbatim | — | close check entry point |
 | `tools/close_check/__init__.py` | verbatim | — | close check package |
