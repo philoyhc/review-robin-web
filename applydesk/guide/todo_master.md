@@ -639,6 +639,15 @@ the rulings it relied on but does not move them.
     Form, a gate's results and an outcome's on Process. Recorded now; built
     with the store (AD4 for the form, AD5 for dossiers), and Form's per-card
     *Shown* control (AD-69, AD-93) goes when it is.
+69. **The data lives in three places** (author, 2026-11-21): the store,
+    the database tables, is the one source of truth and holds everything
+    collected (the form, evaluators' responses through Review Robin,
+    operator entries) and derived (results, outcomes); the dossier holds
+    what must be read on screen, each item with its grants (ruling 68);
+    extraction, for operators, follows the dossier by default and may
+    carry more from the store. The rulings are gathered in
+    `applydesk/docs/data_and_visibility_model.md`, the draft of an
+    eventual spec.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
