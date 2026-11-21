@@ -214,6 +214,38 @@ def search(
     return directory.search(session, query, reached)
 
 
+def suggestions(found: directory.SearchResult, listed: set[int]) -> dict[str, object]:
+    """The *Add an operator* box's offers (segment AD2W, after Review
+    Robin's invite picker): people on record not already on the list, then
+    the directory's, each with what a pick posts and the label it shows
+    ("Name <address>"). `available` is false when the directory did not
+    answer, `reason` then saying why; people on record still come."""
+
+    def label(name: str | None, address: str | None) -> str:
+        return f"{name} <{address}>" if name and address else (address or name or "")
+
+    offers: list[dict[str, object]] = []
+    for p in found.on_record:
+        if p.id not in listed:
+            offers.append(
+                {"label": label(p.display_name, p.email), "person_id": p.id, "where": "On record"}
+            )
+    for u in found.in_directory:
+        address = u.mail or u.user_principal_name
+        offers.append(
+            {
+                "label": label(u.display_name, address),
+                "object_id": u.id,
+                "address": address,
+                "where": "Directory",
+            }
+        )
+    answer: dict[str, object] = {"available": found.directory_failed is None, "people": offers}
+    if found.directory_failed:
+        answer["reason"] = found.directory_failed
+    return answer
+
+
 def actor_for(session: Session, identity: Identity) -> operators.Actor:
     """The super-admin acting, with their person row where they can be
     bound (their admissions then name them)."""
