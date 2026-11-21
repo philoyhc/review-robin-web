@@ -33,6 +33,7 @@ done. Open work is in `applydesk/guide/todo_master.md`.
 | `segment_AD1O_gate_setup.md` | AD1O: gate setup touch-ups: a gate's *Gate* card on Process links to its Review Robin card (ruling 61), and a panel source takes *All* of its panel, its Min, Max and, when every source does, the Total following the panel's size (ruling 62) (closed 2026-11-20) |
 | `segment_AD1P_ui_consistency.md` | AD1P: the UI consistency sweep: one look and vocabulary across Apply Desk's pages, recognizably Review Robin's family (ruling 64): one tone map, `Gate N · label`, RRW's roles, tables and headings, and an operator dossier page; ISO operator dates deferred to AD2 (closed 2026-11-20) |
 | `segment_AD1Q_gate_links.md` | AD1Q: the gate page's Review Robin card in two columns, its files as 2 × 2 tiles and Progress as a panel; Evaluations, Emails and Panels rows in line; links from a gate card on Process to its page and back, and from an email ticked on Process to its template and back (ruling 65) (closed 2026-11-20) |
+| `segment_AD1R_ui_rows.md` | AD1R: the 2026-11-18 assessment's last 14 UI rows after AD1P: one unsaved marker, table hover and button hovers, labels and counts, intros, one empty-state block, Panels' three-state sort (closed 2026-11-21; the author's browser check is a follow-up in `applydesk/guide/todo_master.md`) |
 
 ## Findings registers
 
@@ -41,3 +42,4 @@ Registers worked to empty, kept as the record of what was found and what fixed i
 | Register | What it held |
 |---|---|
 | `findings_2026-11-20.md` | Apply Desk's 12 rows from RRW's corpus sweep and codebase assessment of 2026-11-20 (the first to read the packages' prose): the spec against the rulings, the layout table, a 500 on long digits and non-string JSON, the scratch store, the gate download's formula guard. Archived 2026-11-21 (#4078, #4081, #4082, #4089); S1 became ruling 66. |
+| `findings_2026-11-18_assessment.md` | The 2026-11-18 assessment of every Apply Desk screen, 125 rows (AD-01 to AD-125). Worked through AD1K, AD1L, AD1P and AD1R; reconciled 2026-11-21, its AD2 rows moved to `applydesk/guide/ad2_deferred_findings.md` and its later-stage rows to `applydesk/guide/ad3_plus_deferred_findings.md`. Archived 2026-11-21. |

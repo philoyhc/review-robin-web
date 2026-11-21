@@ -37,7 +37,7 @@ Conventions: `.py` paths are relative to `applydesk/`, `.html` paths to `applyde
 
 ## Register
 
-On 2026-11-21 the rows deferred to AD2 moved to `applydesk/guide/ad2_deferred_findings.md`, and the UI-sweep rows were reconciled against segment AD1P (`guide/archive/segment_AD1P_ui_consistency.md`). The rows waiting on later stages moved to `applydesk/guide/ad3_plus_deferred_findings.md` the same day (ruling 67), and segment AD1R (`applydesk/guide/segment_AD1R_ui_rows.md`) builds the 14 UI rows still open.
+On 2026-11-21 the rows deferred to AD2 moved to `applydesk/guide/ad2_deferred_findings.md`, and the UI-sweep rows were reconciled against segment AD1P (`guide/archive/segment_AD1P_ui_consistency.md`). The rows waiting on later stages moved to `applydesk/guide/ad3_plus_deferred_findings.md` the same day (ruling 67), and segment AD1R (`applydesk/guide/archive/segment_AD1R_ui_rows.md`) builds the 14 UI rows still open.
 
 ### 1. Locking once live
 

@@ -734,6 +734,11 @@ Segments in order; each gets a plan in this folder when it starts.
 
 ## Follow-ups from closed plans (AD-124)
 
+- **AD1R:** the author's browser check of #4096, #4097 and #4098 (every
+  operator page's hovers and tables; the blank draft's empty states;
+  Extract, Dossiers, Panels, Form, Home and the gate page at 1300px and
+  390px, light and dark), deferred by the author on 2026-11-21. Tweaks it
+  finds land as their own PRs.
 - **AD5:** a list headline (Result 1) has no value on Dossiers (AD1F).
 - **AD5:** a panel used twice in one gate, or a max above its panel's
   size, is not flagged (AD1G).

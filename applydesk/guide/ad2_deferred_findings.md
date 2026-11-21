@@ -1,6 +1,6 @@
 # Apply Desk — findings deferred to AD2
 
-The rows of the 2026-11-18 assessment (`applydesk/guide/findings_2026-11-18_assessment.md`) that wait on AD2's persistence and identity, moved here on 2026-11-21 and kept verbatim under the source's theme headings. AD2's plan takes each row: it absorbs, rules or drops it, and strikes its ID here (~~AD-nn~~) with the PR that clears it.
+The rows of the 2026-11-18 assessment (`applydesk/guide/archive/findings_2026-11-18_assessment.md`) that wait on AD2's persistence and identity, moved here on 2026-11-21 and kept verbatim under the source's theme headings. AD2's plan takes each row: it absorbs, rules or drops it, and strikes its ID here (~~AD-nn~~) with the PR that clears it.
 
 Conventions, as the source's: `.py` paths are relative to `applydesk/`, `.html` paths to `applydesk/templates/applydesk/`, and `spec/` / `guide/` / `docs/` to `applydesk/`. **R*n*** is ruling *n* in `guide/todo_master.md`; **FS** is `docs/applydesk_functional_spec_v0.6b_agent_handoff.md`. Severity and the *Was* column are as the source defines them.
 
