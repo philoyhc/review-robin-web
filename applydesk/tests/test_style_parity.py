@@ -33,6 +33,9 @@ TOKENS: tuple[tuple[str, str], ...] = (
     ("btn-secondary-fg", "btn-secondary-fg"),
     ("btn-secondary-border", "btn-secondary-border"),
     ("btn-secondary-bg-hover", "btn-secondary-bg-hover"),
+    # Outline hovers (AD-81); Primary's follows the accent, so is its own.
+    ("btn-destructive-bg-hover", "btn-destructive-bg-hover"),
+    ("btn-amber-bg-hover", "btn-alert-bg-hover"),
 )
 
 #: Review Robin's rule, ApplyDesk's rule, and the properties that resolve
@@ -49,6 +52,18 @@ RULES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     # The off Toggle is Secondary (spec/ui_elements.md §6, ruling 47).
     ("body.ui-v2 .btn.secondary", ".btn-toggle", ("background", "color", "border-color")),
     ('body.ui-v2 .btn[aria-disabled="true"]', ".btn[disabled]", ("opacity", "cursor")),
+    # A hover per role (AD-81).
+    (
+        "body.ui-v2 .btn.destructive:hover",
+        ".btn-destructive:not([disabled]):hover",
+        ("background",),
+    ),
+    ("body.ui-v2 .btn.alert:hover", ".btn-alert:not([disabled]):hover", ("background",)),
+    # Tables as spec/ui_elements.md §7 (AD-77): row-only borders in
+    # --border-default, a muted header band at weight 500, a muted hover.
+    ("body.ui-v2 th", "th", ("border-bottom", "background", "color", "font-weight")),
+    ("body.ui-v2 td", "td", ("border-bottom",)),
+    ("body.ui-v2 tbody tr:hover", "tbody tr:hover", ("background",)),
 )
 
 
@@ -117,3 +132,38 @@ def test_shared_elements_resolve_alike(
         want = _resolve(rrw_rule[prop], rrw_tokens)
         got = _resolve(ad_rule[prop], ad_tokens)
         assert got.lower() == want.lower(), (ours, prop, got, want)
+
+
+def test_primary_has_a_hover_of_its_own() -> None:
+    """AD-81: Primary lightens on hover, as Review Robin's; the shade is the
+    accent's, so it is checked to exist and to differ, in both themes."""
+    css = _style(AD)
+    rule = _blocks(css, ".btn-primary:not([disabled]):hover")
+    base = _blocks(css, ".btn-primary")
+    for dark in (False, True):
+        tokens = _tokens(css, dark)
+        assert _resolve(rule["background"], tokens) != _resolve(base["background"], tokens)
+
+
+#: The contexts allowed to size a .btn, each for a reason: a field and its
+#: button one fixed height (ruling 65, AD1Q); Process's source rows' glyph
+#: buttons, trimmed at the sides only (author, 2026-11-17).
+SIZED_BTN_CONTEXTS = frozenset(
+    {".em-insert-row .btn", ".pn-toolbar .btn", ".ps-acts .btn", ".ps-all .btn"}
+)
+SIZE_PROPS = frozenset({"height", "min-height", "min-width", "padding", "font-size", "line-height"})
+
+
+def test_no_page_context_reshapes_a_button() -> None:
+    """AD-81: a context that sizes a button uses .btn-short (U25); none
+    restyles .btn on its own, beyond the reasoned exceptions above."""
+    css = re.sub(r"/\*.*?\*/", "", _style(AD), flags=re.S)
+    offenders = []
+    for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
+        props = {d.split(":", 1)[0].strip() for d in m.group(2).split(";") if ":" in d}
+        if not props & SIZE_PROPS:
+            continue
+        for sel in (x.strip() for x in m.group(1).split(",")):
+            if re.search(r"\s\.btn(\[[^\]]*\])?$", sel) and sel not in SIZED_BTN_CONTEXTS:
+                offenders.append(sel)
+    assert offenders == []

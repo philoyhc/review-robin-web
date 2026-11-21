@@ -1012,3 +1012,24 @@ def test_dossier_sorts_by_id_drafts_last(page: Page) -> None:
         "rs => rs.map(r => [r.dataset.status === 'Draft' ? 1 : 0, r.dataset.apName])"
     )
     assert rows == sorted(rows) and rows[-1][0] == 1
+
+
+def test_a_row_takes_the_muted_hover_its_sticky_cell_too(page: Page) -> None:
+    """AD-77: Review Robin's row hover (spec/ui_elements.md §7). Dossiers'
+    cells are filled, the first one sticky, so the hover fills each cell."""
+    page.goto(PAGE)
+    row = page.locator("[data-row]").first
+    first = row.locator("td").first
+    muted = page.evaluate(
+        "() => { const d = document.createElement('div');"
+        " d.style.background = 'var(--surface-muted)'; document.body.appendChild(d);"
+        " const c = getComputedStyle(d).backgroundColor; d.remove(); return c; }"
+    )
+    assert first.evaluate("e => getComputedStyle(e).backgroundColor") != muted
+    row.hover()
+    assert first.evaluate("e => getComputedStyle(e).backgroundColor") == muted
+    assert first.evaluate("e => getComputedStyle(e).borderBottomColor") == page.evaluate(
+        "() => { const d = document.createElement('div');"
+        " d.style.color = 'var(--border-default)'; document.body.appendChild(d);"
+        " const c = getComputedStyle(d).color; d.remove(); return c; }"
+    )

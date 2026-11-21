@@ -29,7 +29,7 @@
         <span class="fc-h" data-sum="help">{{ c.help }}</span>
       </div>
       <span class="fc-chips">
-        <span class="chip chip-mute" data-sum="type" title="{{ summary(c) }}">{{ summary(c) }}</span>
+        <span class="fc-tsum" data-sum="type" title="{{ summary(c) }}">{{ summary(c) }}</span>
         <span class="chip {{ 'chip-req' if c.required else 'chip-mute' }}" data-sum="required">{{ "Required" if c.required else "Optional" }}</span>
         <span class="chip {{ 'chip-info' if c.shown else 'chip-mute' }}" data-sum="shown">{{ "Shown to evaluators" if c.shown else "Not shown" }}</span>
       </span>
@@ -104,6 +104,6 @@
 {% macro pagebreak() %}
 <div class="fc-break" data-kind="pagebreak">
   {{ grip() }}<span class="fc-break-l">Page break</span>
-  <button type="button" class="btn btn-destructive" data-fc-act="delete">Remove</button>
+  <button type="button" class="btn btn-destructive btn-short" data-fc-act="delete">Remove</button>
 </div>
 {% endmacro %}

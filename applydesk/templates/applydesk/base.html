@@ -41,6 +41,10 @@
       --chip-bad-bg: #fee2e2; --chip-bad-fg: #991b1b;
       --btn-secondary-bg: #ffffff; --btn-secondary-fg: #111827;
       --btn-secondary-border: #616874; --btn-secondary-bg-hover: #f5f5f7;
+      /* Hovers, as Review Robin's (AD-81): a filled button lightens, an
+         outline one takes a tint. Primary's is the accent's lighter rose. */
+      --btn-primary-bg-hover: #e11d48;
+      --btn-destructive-bg-hover: #fee2e2; --btn-alert-bg-hover: #fde68a;
       --chip-mute-bg: #f3f4f6; --chip-mute-fg: #3a465c;
       /* The exercise chrome's rows, laid out as Review Robin's (ruling
          14) in Apply Desk's rose (author, 2026-11-13). */
@@ -61,6 +65,8 @@
       --chip-bad-bg: #3d1a1a; --chip-bad-fg: #f87171;
       --btn-secondary-bg: #0f141b; --btn-secondary-fg: #e6eaf2;
       --btn-secondary-border: #a9b4c6; --btn-secondary-bg-hover: #232c3b;
+      --btn-primary-bg-hover: #fda4af;
+      --btn-destructive-bg-hover: #3d1a1a; --btn-alert-bg-hover: #4a3a10;
       --chip-mute-bg: #232c3b; --chip-mute-fg: #a9b4c6;
       --nav-home-bg: #232c3b; --nav-tab-on-bg: #0f141b;
       --nav-setup-bg: #4c0519; --nav-ops-bg: #2a0a12;
@@ -238,7 +244,7 @@
     .xd-k { font-weight: 600; color: var(--text-subtle); font-size: 12px; min-width: 7.5em; }
     .card .xd-cols { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--text-subtle); background: var(--surface-muted); border-radius: 6px; padding: 6px 8px; margin: 0 0 6px; overflow-wrap: anywhere; }
     .xd-gates { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 0 0 8px; }
-    .xd-gates th, .xd-gates td { padding: 6px 8px; border-bottom: 1px solid var(--border-subtle); text-align: left; }
+    .xd-gates th, .xd-gates td { padding: 6px 8px; }
     /* A short button for a compact table row, as RRW's (ruling 64, U25). */
     .btn.btn-short { min-height: 0; padding: 2px 8px; font-size: 13px; line-height: 1.5; vertical-align: middle; }
     .xd-empty { margin: 0 0 12px; }
@@ -330,26 +336,29 @@
     .chip-mute { background: var(--chip-mute-bg); color: var(--chip-mute-fg); }
     .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; }
-    th { font-size: 13px; color: var(--text-subtle); font-weight: 600; }
-    /* A table's header row, as Review Robin's (ruling 64, U12): a muted band,
-       14px, weight 500, its sort badge ↕ or 1↑. */
-    thead th { background: var(--surface-muted); font-size: 14px; font-weight: 500; color: var(--text-subtle); }
+    /* Tables as Review Robin's (spec/ui_elements.md §7; ruling 64, U12;
+       AD-77): row-only borders in --border-default, a muted header band at
+       14px and weight 500 with its sort badge ↕ or 1↑, a muted row hover. */
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-default); vertical-align: top; }
+    th { background: var(--surface-muted); font-size: 14px; font-weight: 500; color: var(--text-subtle); }
+    tbody tr:hover { background: var(--surface-muted); }
     /* Buttons: RRW's roles (spec/ui_elements.md §6). Inert on placeholders. */
     .btnrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 14px; border-radius: 6px; font: inherit; font-size: 14px; font-weight: 500; text-decoration: none; cursor: pointer; border: 1px solid var(--accent); }
     /* A field and a button side by side meet at one height, 38px (ruling 64, F5). */
-    .btn { min-height: 38px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 14px; border-radius: 6px; font: inherit; font-size: 14px; font-weight: 500; text-decoration: none; cursor: pointer; border: 1px solid var(--accent); }
     .fc-in, .field input, .ap-search, .ap-sel { line-height: 1.25; }
     .btn-primary { background: var(--accent); color: var(--on-accent); }
+    .btn-primary:not([disabled]):hover { background: var(--btn-primary-bg-hover); border-color: var(--btn-primary-bg-hover); }
     /* Secondary: neutral, as Review Robin's; the accent stays Primary's. */
     .btn-secondary { background: var(--btn-secondary-bg); color: var(--btn-secondary-fg); border-color: var(--btn-secondary-border); }
     .btn-secondary:not([disabled]):hover { background: var(--btn-secondary-bg-hover); }
     /* Outline-amber: serious but recoverable, as Return to draft. */
     .btn-alert { background: transparent; color: var(--amber); border-color: var(--amber); }
-    .ap-redraft { display: block; min-height: 28px; margin-top: 4px; padding: 0 8px; font-size: 12.5px; }
+    .btn-alert:not([disabled]):hover { background: var(--btn-alert-bg-hover); }
+    .ap-redraft { display: block; margin-top: 4px; }
     /* Destructive (outline red): what cannot be undone, as deleting a card. */
     .btn-destructive { background: transparent; color: var(--danger); border-color: var(--danger); }
+    .btn-destructive:not([disabled]):hover { background: var(--btn-destructive-bg-hover); }
     /* 0.5, as Review Robin's: a disabled control reads as disabled. */
     .btn[disabled], .btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
     a.btn[aria-disabled="true"] { pointer-events: none; }
@@ -372,7 +381,6 @@
     /* The toolbar stays in view: Unlock, Lock and the change count are
        always in reach on a long table (ruling 23). */
     .ap-tool { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; position: sticky; top: 0; z-index: 3; background: var(--surface-page); padding: 8px 0; }
-    .ap-changes { font-size: 13px; color: var(--amber); }
     .ap-tool [hidden] { display: none; }
     .ap-said { margin: 0 0 8px; font-size: 13px; min-height: 0; }
     /* Locked, a cell reads as its chip, not as a control. */
@@ -392,6 +400,8 @@
     .ap-wrap { overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: 8px; }
     .ap-table { border-collapse: separate; border-spacing: 0; font-size: 13.5px; width: 100%; }
     .ap-table th, .ap-table td { padding: 7px 7px; background: var(--surface-card); }
+    /* Its cells are filled (the first column is sticky): the hover fills them. */
+    .ap-table tbody tr:hover > td { background: var(--surface-muted); }
     .ap-table thead th { vertical-align: bottom; font-size: 12.5px; }
     /* Emails (segment AD1L): a template's preview under its card. */
     .em-insert { max-width: 260px; }
@@ -506,6 +516,9 @@
     .fc-kicker { display: block; font-size: 12px; font-weight: 600; color: var(--text-subtle); }
     .fc-chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
     .fc-chips .chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
+    /* A card's type summary is muted text, not a chip (AD-76): one line,
+       its whole text in its title. */
+    .fc-tsum { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--text-subtle); align-self: center; }
     .chip-req { background: var(--accent-tint); color: var(--accent-chip-fg); }
     .fc-type { display: none; margin-left: auto; font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card); color: var(--text-body); }
     .fc[data-open] .fc-type { display: block; }
@@ -550,7 +563,7 @@
     .fc-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border-subtle); margin-top: 14px; padding-top: 12px; }
     .fc-break { display: flex; align-items: center; gap: 10px; color: var(--text-subtle); font-size: 13px; font-weight: 600; margin: 6px 0; }
     .fc-break::after { content: ""; flex: 1; border-top: 2px dashed var(--border-default); order: 1; }
-    .fc-break .btn { order: 2; min-height: 28px; }
+    .fc-break .btn { order: 2; }
     .fb-outline h2 { margin-bottom: 6px; }
     .em-card { scroll-margin-top: 16px; }
     @media (min-width: 736px) { .em-side { max-height: calc(100vh - 32px); overflow-y: auto; } }
@@ -622,7 +635,9 @@
     .pc-o { margin: 0; padding-left: 18px; font-size: 14px; }
     .pc-o > li { margin: 6px 0; }
     .pc-o-stage { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: var(--text-link); cursor: pointer; text-align: left; }
-    /* Ruling 23: a builder's one Save says when there is something to save. */
+    /* Ruling 23: a builder's one Save says when there is something to save.
+       The one unsaved marker (AD-70): Dossiers' change count and Panels'
+       per-panel notes are its text too. */
     .fb-unsaved { align-self: center; font-size: 13px; font-weight: 600; color: var(--amber); }
     .fb-unsaved[hidden] { display: none; }
     .pc-issues { margin: 8px 0 0; padding-left: 18px; color: var(--amber); font-size: 13px; }
@@ -635,7 +650,7 @@
     .pn-rl { color: var(--text-subtle); font-size: 14px; }
     .pn-rsep { color: var(--border-default); }
     .pn-chips { display: contents; }
-    .pn-chips .chip, .pn-readout .chip { display: inline-block; text-transform: none; font-size: 12px; }
+    .pn-chips .chip, .pn-readout .chip { display: inline-block; }
     .pn-nomatch { margin: 10px 0 0; }
     .pn-nomatch[hidden] { display: none; }
     .pn-manage { margin-left: auto; }
@@ -651,12 +666,11 @@
     .pn-manage-acts { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
     .pn-manage-acts[hidden], .pn-manage[hidden] { display: none; }
     .pn-members { margin-top: 10px; }
-    .pn-unsaved { grid-column: 1; font-size: 12px; font-weight: 600; color: var(--amber); }
+    .pn-unsaved { grid-column: 1; }
     .pn-members[hidden] { display: none; }
     .pn-newgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
     .pn-newgrid .fc-in { width: 100%; box-sizing: border-box; }
     .pn-list-act { grid-column: 2; grid-row: 1 / span 3; display: flex; gap: 6px; align-items: start; }
-    .pn-list-act .btn { padding: 4px 10px; font-size: 13px; }
     .pn-list-used { grid-column: 1; font-size: 12.5px; color: var(--text-subtle); }
     .pn-sent { grid-column: 1; font-size: 12px; color: var(--amber); }
     .pn-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: flex-end; gap: 10px; margin-bottom: 14px; }
@@ -681,8 +695,8 @@
     .pn-w-panel { width: 96px; } .pn-w-x { width: 72px; }
     .pn-table td { overflow: hidden; text-overflow: ellipsis; }
     .pn-table td .pn-view { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-    .pn-table th, .pn-table td { padding: 9px 10px; border-bottom: 1px solid var(--border-subtle); text-align: left; vertical-align: middle; }
-    .pn-table thead th { background: var(--surface-muted); vertical-align: bottom; font-size: 14px; font-weight: 500; color: var(--text-subtle); }
+    .pn-table th, .pn-table td { padding: 9px 10px; vertical-align: middle; }
+    .pn-table thead th { vertical-align: bottom; }
     .pn-sort { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
     .pn-sort span { margin-left: 4px; color: var(--text-subtle); font-size: 12px; }
     .pn-table .pn-in { margin-top: 0; padding: 3px 8px; width: 100%; box-sizing: border-box; font-size: 14px; }
@@ -748,15 +762,14 @@
        sources (Codex on rung 4a). */
     .ps-n { display: flex; flex-direction: column; }
     .ps-all { display: flex; flex-direction: column; }
-    .ps-all .btn { height: var(--ps-h); min-height: 0; margin: 0; padding: 0 8px; }
+    .ps-all .btn { margin: 0; }
     .ps-all .btn[hidden] { display: none; }
     .ps-cap { display: none; font-size: 12px; color: var(--text-subtle); }
     .ps-headrow[hidden] ~ .ps-total .ps-cap { display: block; }
     /* One height for every control in a row, menus, bounds and buttons
        alike, so they sit on one line (author, 2026-11-17). */
     .ps-row { --ps-h: 38px; }
-    .ps-row select.fc-in, .ps-row input.fc-in, .ps-acts .btn { height: var(--ps-h); min-height: 0; box-sizing: border-box; margin: 0; }
-    .ps-acts .btn { display: inline-flex; align-items: center; justify-content: center; padding-top: 0; padding-bottom: 0; }
+    .ps-row select.fc-in, .ps-row input.fc-in { height: var(--ps-h); min-height: 0; box-sizing: border-box; margin: 0; }
     .ps-rank { align-self: start; line-height: var(--ps-h); font-weight: 600; text-align: center; }
     .ps-headrow > :first-child { text-align: center; }
     /* Room under every menu for its *Edit on Panels* link, shown or not,
@@ -766,7 +779,9 @@
     .ps-acts { display: inline-flex; gap: 4px; }
     .ps-total { padding-top: 4px; }
     .ps-total .ps-kind, .ps-total .ps-bounds { line-height: var(--ps-h); }
-    .ps-acts .btn { min-width: 34px; padding: 0 8px; }
+    /* One-glyph buttons (▲ ▼ + × All) keep .btn's 38px, which is --ps-h,
+       and trim only their sides to fit the column (AD-81). */
+    .ps-acts .btn, .ps-all .btn { padding: 0 8px; }
     .ps-row > .np { grid-column: 1 / -1; order: 1; }
     .ps-mode { margin-top: 4px; }
     .ps-mode > .fc-l { flex: 0 1 280px; }
@@ -832,7 +847,6 @@
     .nx-form { margin-bottom: 16px; max-width: 560px; }
     .nx-said { margin: 0 0 12px; }
     .nx-discard { display: inline; margin-left: 8px; }
-    .nx-discard .btn { padding: 2px 10px; font-size: 13px; }
     .rr-mail { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
     .rr-mail .facts { margin-bottom: 8px; }
     .ev-pager { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }

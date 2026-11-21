@@ -562,7 +562,8 @@ def test_panels_are_renamed_where_listed_and_their_emails_copied(page: Page) -> 
     box.fill("Peer panel")
     box.press("Enter")
     assert page.locator('th[data-panel="panel-a"] [data-pn-name]').inner_text() == "Peer panel"
-    assert page.locator('[data-pn-chips] [data-panel="panel-a"] [data-pn-name]').inner_text() == (
+    # text_content: the chip is uppercase, as every display chip (AD-76).
+    assert page.locator('[data-pn-chips] [data-panel="panel-a"] [data-pn-name]').text_content() == (
         "Peer panel"
     )
     assert (
@@ -865,3 +866,29 @@ def test_rows_a_panel_brought_follow_it(page: Page) -> None:
         )
         is True  # Mei's row, kept with ✓, is on this page only (AD-07)
     )
+
+
+def test_panel_chips_are_display_chips_and_their_row_buttons_short(page: Page) -> None:
+    """AD-76: the roster's panel chips are uppercase, as every display chip
+    (U3). AD-81: a panel's Copy emails and Retire are short buttons, not a
+    context restyling of .btn; a table row takes the muted hover (AD-77)."""
+    page.goto(BLIND)
+    chip = page.locator("[data-pn-chips] [data-panel]").first
+    assert chip.evaluate("e => getComputedStyle(e).textTransform") == "uppercase"
+    _manage(page)
+    # A panel made here carries the same classes as one drawn by the server.
+    page.locator("[data-pn-newname]").fill("Reserve")
+    page.locator('[data-pn-act="create"]').click()
+    for li in (page.locator(".pn-list li").first, page.locator('li[data-panel="made-1"]')):
+        for act in ("emails", "retire"):
+            button = li.locator(f'[data-pn-act="{act}"]')
+            assert "btn-short" in (button.get_attribute("class") or "").split()
+    # Its note is the one unsaved marker (AD-70).
+    note = page.locator('li[data-panel="made-1"] [data-pn-unsaved]')
+    assert "fb-unsaved" in (note.get_attribute("class") or "").split()
+    row = page.locator("[data-pn-row]").first
+    td = row.locator("td").nth(1)
+    before = td.evaluate("e => getComputedStyle(e.parentElement).backgroundColor")
+    row.hover()
+    after = td.evaluate("e => getComputedStyle(e.parentElement).backgroundColor")
+    assert before != after
