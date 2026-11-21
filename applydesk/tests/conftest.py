@@ -21,10 +21,12 @@ def _fake_super_admin(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(identity_settings, "super_admin_emails", [])
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def applydesk_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """Apply Desk's database as a fresh SQLite file, its tables made from
-    the models (the migration is round-tripped in `test_applydesk_db.py`)."""
+    """Apply Desk's database as a fresh SQLite file for every test, its
+    tables made from the models (the migration is round-tripped in
+    `test_applydesk_db.py`): the gate reads it (segment AD2A), so no test
+    may reach a developer's `./applydesk.db`."""
     from applydesk import db, models
 
     monkeypatch.setenv("APPLYDESK_DATABASE_URL", f"sqlite:///{tmp_path / 'applydesk.db'}")

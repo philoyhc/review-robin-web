@@ -49,6 +49,9 @@ Apply Desk has no database. Every page reads `applydesk/sample_data.py` or the p
 - The allowlist is a flag on `person`, as Review Robin's `is_operator` on `users`, not a table of its own: one row per person either way.
 - The audit table copies RRW's envelope rather than inventing a lighter one (ruling 74): the shape is known and its strict check is cheap.
 - The Operators card sits on Home, not on a page of its own: it is one short list per exercise.
+- 2026-11-21 (rung 4): `is_operator` is "the super-admin, or on the allowlist", not "operates any exercise": an allowlisted person with no exercise yet must reach the Lobby to make one.
+- 2026-11-21 (rung 4): the super-admin may make an exercise without being allowlisted, and is its Owner; the person row is made at that point.
+- 2026-11-21 (rung 4): the participant's pages and the landing keep `placeholders_only`; only the operator router takes the check. A discarded scratch exercise keeps its row and grant (soft delete only, ruling 74).
 
 ## Blast radius (measured)
 

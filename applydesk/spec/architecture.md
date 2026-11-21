@@ -13,7 +13,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/routes_health.py` | `/health` |
 | `applydesk/routes_home.py`, `routes_operator.py`, `routes_me.py` | The entry points (landing by role), the operator's pages and the participant's |
 | `applydesk/lookups.py` | Path lookups the routes share: an ID's shape checked, then a 404 or the record |
-| `applydesk/gate.py` | Who reaches the pages until AD2 (`placeholders_only`, `is_operator`) |
+| `applydesk/gate.py` | Who reaches the pages: `require_exercise_operator` on the operator's (the super-admin, or the allowlisted with a current grant; 404 otherwise), `placeholders_only` on the participant's until a later AD2 segment; `is_operator` for the switcher; a new scratch exercise's row and Owner (segment AD2A) |
 | `applydesk/db.py` | Apply Desk's own database, `applydesk`: `APPLYDESK_DATABASE_URL` (locally `sqlite:///./applydesk.db`), the engine made on first use, a request's session |
 | `applydesk/models.py` | Its tables (segment AD2A): `person` (bound by tenant and object ID, or pending by casefolded email; the operator allowlist), `exercise` (its key and public ID), `exercise_operator` (a grant, its Owner marked), `audit_event` |
 | `applydesk/alembic.ini`, `applydesk/alembic/` | Its migration history, version table `applydesk_alembic_version`, comparing only its own tables |
