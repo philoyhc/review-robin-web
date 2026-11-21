@@ -1,6 +1,6 @@
 # Apply Desk — findings deferred past AD2
 
-The rows of the 2026-11-18 assessment (`applydesk/guide/findings_2026-11-18_assessment.md`) that wait on a stage after AD2, moved here on 2026-11-21 and kept verbatim under the source's theme headings: Layer B (AD-31), AD3's exercise lifecycle (AD-37), AD4's dossier parts (AD-64, and AD-69's and AD-93's Shown controls, which ruling 67 leaves for the parts work) and AD7's emails and release (AD-09). The rows waiting on AD2 itself are in `applydesk/guide/ad2_deferred_findings.md`.
+The rows of the 2026-11-18 assessment (`applydesk/guide/archive/findings_2026-11-18_assessment.md`) that wait on a stage after AD2, moved here on 2026-11-21 and kept verbatim under the source's theme headings: Layer B (AD-31), AD3's exercise lifecycle (AD-37), AD4's dossier parts (AD-64, and AD-69's and AD-93's Shown controls, which ruling 67 leaves for the parts work) and AD7's emails and release (AD-09). The rows waiting on AD2 itself are in `applydesk/guide/ad2_deferred_findings.md`.
 
 Whichever plan opens that stage takes its rows: it absorbs, rules or drops each, and strikes it here with the PR. Conventions are the source's: `.py` paths are relative to `applydesk/`, `.html` paths to `applydesk/templates/applydesk/`, and `spec/` / `guide/` / `docs/` to `applydesk/`; **R*n*** is ruling *n* in `guide/todo_master.md`.
 

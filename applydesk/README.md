@@ -23,8 +23,6 @@ roadmap are in `guide/todo_master.md`.
 | `spec/applications.md` | Apply Desk as the host sees it: registry entry, health, running alone, the URL map, and each page's contract |
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and CI |
 | `guide/todo_master.md` | Rulings, the MVP roadmap and open decisions |
-| `guide/findings_2026-11-18_assessment.md` | Findings register from the 2026-11-18 assessment of every Apply Desk screen: UI consistency, intended actions, data model and spec gaps, 125 rows (AD-01 to AD-125) to clear, with the rulings it needs |
 | `guide/ad2_deferred_findings.md` | The 2026-11-18 assessment's rows that wait on AD2's persistence and identity (28 rows, moved 2026-11-21); AD2's plan absorbs, rules or drops each |
 | `guide/ad3_plus_deferred_findings.md` | The 2026-11-18 assessment's rows that wait on a stage after AD2: Layer B, AD3's lifecycle, AD4's dossier parts and AD7 (6 rows, moved 2026-11-21) |
-| `guide/segment_AD1R_ui_rows.md` | Segment AD1R: the 2026-11-18 assessment's 14 UI rows AD1P left open, built for the author's browser check |
-| `guide/archive/README.md` | Closed segment plans and worked findings registers: AD1 (the package and URL map), AD1B (the Form page), AD1C (Dossiers), AD1D (the exercise's chrome), AD1E (Process), AD1F (Gates and Panels), AD1G (Evaluators and Evaluations), AD1H (the RA model exercise), AD1I (Exercise Home), AD1J (Extract data), AD1K (a status per stage, and what locks) |
+| `guide/archive/README.md` | Closed segment plans (AD1R the latest) and worked findings registers (the 2026-11-18 assessment's among them): AD1 (the package and URL map), AD1B (the Form page), AD1C (Dossiers), AD1D (the exercise's chrome), AD1E (Process), AD1F (Gates and Panels), AD1G (Evaluators and Evaluations), AD1H (the RA model exercise), AD1I (Exercise Home), AD1J (Extract data), AD1K (a status per stage, and what locks) |

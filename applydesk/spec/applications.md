@@ -115,24 +115,46 @@ answer only for a Published or Closed exercise.
 Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.md`).
 
 - **One state-to-tone map** (`applydesk/tones.py`) colors every chip, so no
-  page names a state in another color. Amber: Draft, Not ready, Withdrawn,
+  page names a state in another color, Home's outcome rows included. Amber: Draft, Not ready, Withdrawn,
   Pending. Info: Published, Open, Ready, Sent. Green: Completed, Results in,
-  Submitted, Entered, Done. Red: Overdue, Closed. Grey: Archived, Detached,
-  Next, Not entered. Chips are uppercase, an outline marking a clickable one.
-- **A gate** is named `Gate N · label` wherever it is listed or chosen,
-  an outcome `Outcome N · label`.
+  Submitted, Entered, Released, Done. Red: Overdue, Closed. Grey: Archived,
+  Detached, Next, Not entered. Chips are uppercase, an outline marking a
+  clickable one; a panel's name chip is no exception. A field's type summary
+  is muted text, not a chip.
+- **A gate** is named `Gate N · label` wherever it is listed or chosen (Home's
+  timeline rows too), an outcome `Outcome N · label`.
 - **Controls.** *Required* and *Released* are checkboxes, not pills. An add
-  button reads `+ Noun` in a builder (*+ Panel*, *+ Gate*), *Add new* in a
-  table's toolbar. CSV files are *Upload CSV* and *Download CSV*, both
+  button reads `+ Noun` in a builder (*+ Panel*, *+ Gate*, *+ Question*),
+  *Add new* in a table's toolbar. Creating a panel is *+ Panel*, Secondary,
+  wherever it is made. CSV files are *Upload CSV* and *Download CSV*, both
   Secondary. A cross-page link reads `Verb on Page →` (*Open Gate 2 →*,
   *Review Robin card →*, *Pairs (n) →*); `↓` jumps within a page.
+- **Buttons** take Review Robin's roles and hovers (`spec/ui_elements.md` §6):
+  each of Primary, Secondary, Outline-amber and Destructive has its own hover,
+  none while disabled. A page context never reshapes `.btn`. A small button is
+  `.btn-short` (`spec/ui_elements.md`); the two exceptions are a field and its
+  button side by side, which meet at 40px, and Process's one-glyph source
+  buttons (▲ ▼ + × All), which keep `.btn`'s 38px and trim only their sides.
+- **Counts** read `Showing N of M <noun>` (*dossiers*, *pairs*), as Review
+  Robin's, a page's range as `Showing a–b of M pairs`.
+- **An intro** (`pc-intro`, muted) sits under the h1 of every operator section
+  page and says what the page is.
+- **Empty states.** An operator page with nothing to show draws one block
+  (`_empty.html`): a title, one line saying why and a link to the page that
+  fixes it. A control over nothing is disabled with the reason in its title,
+  and keeps its place, so the page does not reflow when data arrives.
 - **Locks.** One pattern on Details, Dossiers and the gate page: *Discard
   changes*, then *Lock*, with one unsaved note. Where a whole page or card is locked the reason shows as a
   line; one blocked control is disabled with the reason in its title.
-- **Tables** (Dossiers, Evaluations' pairs, the lobby, Panels) sort by a
-  header band with `↕` badges: a click cycles a column up, down and off, and
-  shift-click adds it to a cascade (`1↑`, `2↓`), as Review Robin's; no sticky
-  header.
+- **The unsaved marker** is one class, `.fb-unsaved` (amber, 13px, weight 600),
+  on every page: its text is *Unsaved changes*, or Dossiers' change count, or
+  Panels' per-panel *not saved yet* notes.
+- **Tables** (Dossiers, Evaluations' pairs, the lobby, Panels) take Review
+  Robin's (`spec/ui_elements.md` §7): row borders in `--border-default`, a muted
+  header band with `↕` badges, a muted row hover (a table of filled cells, as
+  Dossiers', hovers its cells); no sticky header. A click on a header cycles
+  its column up, down and off, and shift-click adds it to a cascade (`1↑`,
+  `2↓`), as Review Robin's.
 - **Dates**: applicant pages keep friendly dates; operator pages in sample data
   are preformatted strings until AD2.
 
@@ -1212,7 +1234,7 @@ from AD2.
     mode, results, values, due and rule in words, and under each gate a
     *field* row per response field and a *result* row per result, their
     settings in `detail` as `name=value; …`, enough to rebuild the gate);
-    `panels.csv` (panel, name, email, note); `emails.csv` (each template
+    `panels.csv` (long, a row per member: panel, name, email, note; Panels' own CSV is wide, a column per panel, and Extract's card says so); `emails.csv` (each template
     owed and whether it is written).
 - **The ZIPs.** Named `<code>_<kind>_<date>.zip` (the Exercise code, or the
   ID if none, as a file-name slug; today's date; kind `extract`, `gates` or

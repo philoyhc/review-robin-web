@@ -1,6 +1,6 @@
 # Segment AD1R — Apply Desk: the assessment's last UI rows
 
-**Opened:** 2026-11-21 · **Theme:** close the 2026-11-18 assessment's UI rows AD1P left open, for the author's browser check · **Related:** `applydesk/guide/findings_2026-11-18_assessment.md` (the rows), `applydesk/guide/archive/segment_AD1P_ui_consistency.md` (the sweep they follow), `applydesk/guide/todo_master.md` (rulings 47, 63, 64, 67), `spec/ui_elements.md` (RRW's roles and primitives)
+**Opened:** 2026-11-21 · **Theme:** close the 2026-11-18 assessment's UI rows AD1P left open, for the author's browser check · **Related:** `applydesk/guide/archive/findings_2026-11-18_assessment.md` (the rows), `applydesk/guide/archive/segment_AD1P_ui_consistency.md` (the sweep they follow), `applydesk/guide/todo_master.md` (rulings 47, 63, 64, 67), `spec/ui_elements.md` (RRW's roles and primitives)
 
 ## Opportunity
 
@@ -56,6 +56,29 @@ Taken 2026-11-21 at `526e94f6f`.
 - Add labels: `grep -rn "Create panel\|+ Panel\|+ New" applydesk/templates | wc -l` → 17.
 - Tests naming these surfaces: 8 files, including `test_extract.py`, and the `_browser.py` suites for Extract, Panels, Form, unsaved, Process, Evaluations and Dossiers.
 
+## Status — closed 2026-11-21
+
+**Intended vs done.** All 14 rows landed: rung 3 in #4096, rung 2 in #4097 and rung 4 in #4098. Rung 3 was ready first and merged before rung 2; the two touch different files. The author's browser check of the three build rungs is still to come, by the author's choice: it is a follow-up in `applydesk/guide/todo_master.md`, and any tweaks it turns up land as their own PRs. With every row struck or moved, `applydesk/guide/archive/findings_2026-11-18_assessment.md` moves to `applydesk/guide/archive/`.
+
+**Decisions confirmed at build:**
+- AD-81: buttons that a context only resized take `.btn-short`, where they are small by design (Dossiers' *Return to draft*, Form's page-break *Remove*, Panels' *Copy emails* and *Retire*, the lobby's *Discard*). Others lose their override and take `.btn`'s full height. Two exceptions are named: the 40px field-and-button pair (ruling 65), and Process's one-glyph source buttons.
+- AD-81: Primary's hover is a lighter rose (#e11d48, or #fda4af in dark mode). Destructive's and Outline-amber's hovers take Review Robin's values.
+- AD-80: Review Robin's count form, "Showing N of M <noun>". The gate page reads "Showing a–b of M pairs".
+- AD-85: Dossiers' bottom key stays a key; only its "come from Process" sentence moved up into the new intro.
+- AD-83: the gate page sorts on the server, so Panels' script copies `paging.py`'s click rules rather than sharing code.
+- AD-79: Dossiers' search and filters stay live over no rows (the row named only *Unlock*). Panels' empty card links to Process, where a panel can also be made.
+
+**Reads.**
+- **diff-reviewer:** one cumulative read over rungs 2–4, from `a6c7adcf8`, found one regression, a set of spec drifts and two loose ends.
+  - The regression: *Add new* on an empty roster lost focus.
+  - The spec drift: four lines of `applydesk/spec/applications.md`.
+  - The loose ends: Dossiers' doubled empty message; unfilled PR numbers in the register.
+  - All four were fixed in #4098. The two Dossiers and Panels calls above were left as they are.
+- **Codex:** clean on each PR.
+- **Process:** parallel build agents shared one `git stash` across worktrees and swapped changes once. They recovered before committing, and each rung's commit was checked to hold only its own rows. Future briefs say "no `git stash`".
+
+**Close.** `spec-writer` rewrote `applydesk/spec/applications.md`'s "One look across pages" for the build: tones, buttons and `.btn-short`, counts, intros, empty states, the unsaved marker and tables. It also added Extract setup's `panels.csv` line. Its two flags needed no change: the plan's AD-81 wording, which this Status now states, and `ProfileLink` kept where it names the handoff's file field.
+
 ## PR ladder
 
 1. **This plan**, ruling 67, and the later-stage rows moved out. Prose only.
@@ -66,7 +89,7 @@ Taken 2026-11-21 at `526e94f6f`.
 
 ## Definition of done
 
-- Every register row landed and struck in `applydesk/guide/findings_2026-11-18_assessment.md`, or struck with its reason.
+- Every register row landed and struck in `applydesk/guide/archive/findings_2026-11-18_assessment.md`, or struck with its reason.
 - With every row struck or moved, that register moves to `applydesk/guide/archive/` with its index row.
 - The author's browser check of each rung's pages at 1300px and 390px.
 - `## Doc impact` section present and current
@@ -88,6 +111,6 @@ Taken 2026-11-21 at `526e94f6f`.
 ## Doc impact
 
 - `applydesk/spec/applications.md` — "One look across pages": the unsaved marker, table hover, button hovers, counts, empty states and Panels' sort (rungs 2–4).
-- `applydesk/guide/findings_2026-11-18_assessment.md` — each row struck with its PR (rungs 2–4); the register archived (close).
+- `applydesk/guide/archive/findings_2026-11-18_assessment.md` — each row struck with its PR (rungs 2–4); the register archived (close).
 - `applydesk/guide/todo_master.md` — ruling 67 (rung 1).
 - `applydesk/README.md` — the plan's row, and the deferred file's (rung 1); the archive rows (close).
