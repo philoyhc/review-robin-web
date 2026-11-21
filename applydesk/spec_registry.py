@@ -10,6 +10,7 @@ no live file. Adding a routing module? Add it here too.
 from __future__ import annotations
 
 SPEC_COVERAGE: dict[str, tuple[str, ...]] = {
+    "applydesk.routes_admin": ("applydesk/spec/architecture.md",),
     "applydesk.routes_home": ("applydesk/spec/applications.md",),
     "applydesk.routes_me": ("applydesk/spec/applications.md",),
     "applydesk.routes_operator": ("applydesk/spec/applications.md",),

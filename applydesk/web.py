@@ -24,6 +24,7 @@ from starlette.responses import Response
 
 from applydesk import sample_data, tones, workflow
 from applydesk.gate import is_operator
+from applydesk.gate import viewer as gate_viewer
 from cordware.identity import current_identity, institution_name
 
 
@@ -88,6 +89,8 @@ _add_globals(templates.env, email_anchor=workflow.email_anchor)
 APP_NAME = "Apply Desk"
 
 OPERATOR_LOBBY, USER_LOBBY = "Operator Lobby", "User Lobby"
+#: The super-admin's page of who may operate (ruling 75).
+OPERATOR_LIST = "Operator list"
 
 #: The switcher's places (`cordware/spec/header_chrome.md` §3), named as Review
 #: Robin's are (author, 2026-11-13): the Operator Lobby for an operator
@@ -95,6 +98,8 @@ OPERATOR_LOBBY, USER_LOBBY = "Operator Lobby", "User Lobby"
 PLACES: tuple[Mapping[str, Any], ...] = (
     {"label": OPERATOR_LOBBY, "path": "/operator/exercises", "operators": True},
     {"label": USER_LOBBY, "path": "/me", "operators": False},
+    # The platform super-admin's alone (segment AD2A, ruling 75).
+    {"label": OPERATOR_LIST, "path": "/admin/operators", "operators": True, "admin": True},
 )
 
 
@@ -147,6 +152,10 @@ def _scratch_page(exercise: object) -> bool:
     return isinstance(public_id, str) and scratch.is_scratch(public_id)
 
 
+def viewer_is_super_admin(request: Request) -> bool:
+    return gate_viewer(request).is_super_admin
+
+
 def render(
     request: Request,
     template: str,
@@ -161,6 +170,7 @@ def render(
     menu; on an exercise's pages, ``nav``, its chrome (ruling 14)."""
     viewer = current_identity(request)
     operator = is_operator(request)
+    super_admin = viewer_is_super_admin(request)
     return templates.TemplateResponse(
         request,
         template,
@@ -168,7 +178,11 @@ def render(
             "app_name": APP_NAME,
             "operator_page": app_path(request).startswith("/operator"),
             "area": area,
-            "places": [p for p in PLACES if operator or not p["operators"]],
+            "places": [
+                p
+                for p in PLACES
+                if (operator or not p["operators"]) and (super_admin or not p.get("admin"))
+            ],
             "nav": nav,
             "top_line": institution_name(),
             "viewer": viewer,

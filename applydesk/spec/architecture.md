@@ -12,6 +12,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/main.py` | The factory, `create_app` |
 | `applydesk/routes_health.py` | `/health` |
 | `applydesk/routes_home.py`, `routes_operator.py`, `routes_me.py` | The entry points (landing by role), the operator's pages and the participant's |
+| `applydesk/routes_admin.py` | The platform super-admin's pages, `/admin/…`: the operator list (segment AD2A, ruling 75), behind `gate.require_super_admin`; in the switcher for the super-admin only |
 | `applydesk/lookups.py` | Path lookups the routes share: an ID's shape checked, then a 404 or the record |
 | `applydesk/gate.py` | Who reaches the pages: `require_exercise_operator` on the operator's (the super-admin, or the allowlisted with a current grant; 404 otherwise), `placeholders_only` on the participant's until a later AD2 segment; `is_operator` for the switcher; a new scratch exercise's row and Owner (segment AD2A) |
 | `applydesk/db.py` | Apply Desk's own database, `applydesk`: `APPLYDESK_DATABASE_URL` (locally `sqlite:///./applydesk.db`), the engine made on first use, a request's session |

@@ -29,6 +29,7 @@ BLANK = "n5wg8tjr3e"  # just created: a name, nothing else
 PAGES = (
     "/applydesk/",
     "/applydesk/operator/exercises",
+    "/applydesk/admin/operators",  # the super-admin's (segment AD2A)
     f"/applydesk/operator/exercises/{EX}",
     *(
         f"/applydesk/operator/exercises/{EX}/{section}"
@@ -266,6 +267,8 @@ def test_every_route_but_health_carries_the_gate() -> None:
         and (
             gate.require_exercise_operator
             if r.path.startswith("/operator/exercises")
+            else gate.require_super_admin
+            if r.path.startswith("/admin/")
             else gate.placeholders_only
         )
         not in calls
