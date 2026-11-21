@@ -175,24 +175,36 @@ def test_the_super_admin_s_scratch_exercise_is_owned_by_them(
 
 
 def test_only_the_super_admin_reaches_the_operator_list(client: TestClient) -> None:
-    """Ruling 75: an operator, even an Owner of every sample, gets 404."""
+    """Ruling 75: an operator, even an Owner of every sample, gets 404, and
+    the account menu offers them no Admin."""
     session = db.new_session()
     seed.seed(session)
     session.close()
     assert client.get("/applydesk/admin/operators").status_code == 404
     lobby = client.get("/applydesk/operator/exercises").text
-    assert "/applydesk/admin/operators" not in lobby  # not in the switcher either
+    assert "data-admin-entry" not in lobby
 
 
-def test_the_super_admin_finds_it_in_the_switcher() -> None:
+def test_the_super_admin_reaches_admin_from_the_account_menu() -> None:
+    """As Review Robin's Admin (`cordware/spec/header_chrome.md` §4): an
+    account-menu entry carrying the page to come back to, not in the
+    switcher, and not on the Admin page itself."""
     client = TestClient(host_with(("applydesk",))[0])  # the conftest's super-admin
-    page = client.get("/applydesk/admin/operators")
+    lobby = client.get("/applydesk/operator/exercises").text
+    entry = 'href="/applydesk/admin/operators?return_to=/operator/exercises" data-admin-entry'
+    assert entry in lobby
+    switcher = lobby[lobby.index('class="switch"') :]
+    switcher = switcher[: switcher.index("</details>")]
+    assert "/admin/operators" not in switcher
+    page = client.get(f"/applydesk/admin/operators?return_to=/operator/exercises/{EX}")
     assert page.status_code == 200
-    assert "<h1>Operator list</h1>" in page.text and "data-op-add" in page.text
-    assert 'href="/applydesk/admin/operators"' in client.get("/applydesk/operator/exercises").text
+    assert "<h1>Admin</h1>" in page.text and "data-admin-entry" not in page.text
+    assert f'href="/applydesk/operator/exercises/{EX}" data-admin-back' in page.text
+    away = client.get("/applydesk/admin/operators?return_to=//evil.example").text
+    assert 'href="/applydesk/operator/exercises" data-admin-back' in away  # only Apply Desk paths
 
 
-# --- Rung 7: the Operators card on Home, scaffold ---
+# --- Rung 7: the Operators card on Home (wired at rung 8: test_operators_card.py) ---
 
 
 def test_home_shows_the_operators_card_under_details() -> None:
@@ -200,7 +212,53 @@ def test_home_shows_the_operators_card_under_details() -> None:
     page = client.get(f"/applydesk/operator/exercises/{EX}").text
     side = page[page.index('class="hm-side"') :]
     assert side.index("data-details") < side.index("data-operators")
-    card = page[page.index("data-operators") :]
-    card = card[: card.index("</section>")]
-    assert "Add operator" in card and "Make owner" in card and "Remove" in card
-    assert card.count(" disabled") == 3  # inert until rung 8
+
+
+def test_every_exercise_route_names_its_parameter_exercise_id() -> None:
+    """Cold read: the check reads `exercise_id` from the path, so a route
+    under /operator/exercises/{…} naming it otherwise would pass with the
+    allowlist check alone."""
+    from applydesk import routes_operator
+
+    for route in routes_operator.router.routes:
+        assert isinstance(route, APIRoute)
+        if route.path.startswith("/operator/exercises/{"):
+            assert route.path.startswith("/operator/exercises/{exercise_id}"), route.path
+
+
+def test_the_audit_warning_carries_its_event_fields(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Outside strict mode a bad detail writes through and is logged with
+    Review Robin's structured fields (cold read)."""
+    import logging
+
+    from applydesk import audit
+
+    monkeypatch.setattr(audit, "_strict", lambda: False)
+    session = db.new_session()
+    with caplog.at_level(logging.WARNING, logger="applydesk.audit"):
+        audit.write_event(session, event_type="no.such.type", actor=None)
+    session.close()
+    record = next(r for r in caplog.records if r.name == "applydesk.audit")
+    assert getattr(record, "event", None) == "audit.detail_schema_violation"
+    assert getattr(record, "event_type", None) == "no.such.type"
+
+
+def test_a_deployed_operator_lands_on_the_lobby(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Spec-writer at the close: deployed, an allowlisted operator who is not
+    the super-admin lands on the Operator Lobby from `/`, not a 404; a
+    stranger still gets 404 there."""
+    from applydesk import gate
+
+    session = db.new_session()
+    seed.seed(session)
+    session.close()
+    monkeypatch.setattr(gate, "is_local", lambda: False)
+    landed = client.get("/applydesk/", follow_redirects=False)
+    assert landed.status_code == 302 and landed.headers["location"].endswith("/operator/exercises")
+    assert client.get("/applydesk/operator", follow_redirects=False).status_code == 302
+    monkeypatch.setattr(identity_settings, "fake_auth_principal_id", "someone-else")
+    assert client.get("/applydesk/", follow_redirects=False).status_code == 404

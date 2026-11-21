@@ -54,7 +54,7 @@ def test_the_search_shows_the_directory_and_admit_stores_them_bound(client: Test
     assert f'data-op-entry="{jane.id}"' in listed and "Added to the list." not in listed
     assert "person.admitted" in _events()
     again = client.get("/applydesk/admin/operators", params={"q": "jane"}).text
-    assert 'data-op-hit="record"' in again and "On the list" in again  # now on record
+    assert 'data-op-hit="record"' in again and 'chip-ok">Operator<' in again  # now on record
 
 
 def test_admit_on_record_then_revoke(client: TestClient) -> None:
@@ -75,7 +75,7 @@ def test_admit_on_record_then_revoke(client: TestClient) -> None:
     again = client.post(
         "/applydesk/admin/operators/admit", data={"person_id": str(ed_id)}, follow_redirects=False
     )
-    assert again.headers["location"].endswith("said=already")
+    assert again.headers["location"].endswith("said=already_listed")
     gone = client.post(f"/applydesk/admin/operators/{ed_id}/revoke", follow_redirects=False)
     assert gone.headers["location"].endswith("said=revoked")
     session = db.new_session()
@@ -158,3 +158,27 @@ def test_the_directory_is_asked_off_the_event_loop(
         data={"object_id": JANE, "address": "jane.tan@example.edu"},
     )
     assert seen == [False]
+
+
+def test_back_keeps_where_admin_was_opened_from(client: TestClient) -> None:
+    """Codex on #4115: searching, admitting and revoking keep the page Admin
+    was opened from, so Back still goes there."""
+    home = "/operator/exercises/wa9juxbc2t"
+    back = f'href="/applydesk{home}" data-admin-back'
+    page = client.get("/applydesk/admin/operators", params={"return_to": home}).text
+    assert page.count(f'name="return_to" value="{home}"') >= 2  # both searches
+    found = client.get("/applydesk/admin/operators", params={"q": "jane", "return_to": home})
+    assert back in found.text and f'name="return_to" value="{home}"' in found.text  # Admit too
+    admitted = client.post(
+        "/applydesk/admin/operators/admit",
+        data={"object_id": JANE, "address": "jane.tan@example.edu", "return_to": home},
+    )
+    assert back in admitted.text and "Added to the list." in admitted.text
+    jane = _person(JANE)
+    assert jane is not None
+    revoked = client.post(f"/applydesk/admin/operators/{jane.id}/revoke", data={"return_to": home})
+    assert back in revoked.text
+    away = client.post(
+        f"/applydesk/admin/operators/{jane.id}/revoke", data={"return_to": "//evil.example"}
+    )
+    assert 'href="/applydesk/operator/exercises" data-admin-back' in away.text

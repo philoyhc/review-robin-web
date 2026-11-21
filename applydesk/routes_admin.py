@@ -12,7 +12,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.responses import RedirectResponse, Response
 
 from applydesk import allowlist, db, directory, gate, operators
-from applydesk.web import OPERATOR_LIST, render, url_path
+from applydesk.web import ADMIN, render, url_path
 from cordware.graph import GraphError, directory_for
 from cordware.identity import Identity, current_identity
 
@@ -27,17 +27,12 @@ _MAX_BODY = 4096
 SAID: dict[str, str] = {
     "admitted": "Added to the list.",
     "revoked": "Taken off the list. Their exercises are kept for if they are put back.",
-    "already": "Already on the list.",
+    "already_listed": "Already on the list.",
     "not_listed": "Not on the list.",
     "gone": "That person or account is no longer there; search again.",
     "directory": "The directory did not answer; try again.",
     "no_tenant": "Your sign-in names no tenant, so no one can be added from the directory.",
-}
-_REFUSALS: dict[str, str] = {
-    "Already allowed to operate.": "already",
-    "Not on the operator list.": "not_listed",
-    "That person is no longer on record.": "gone",
-    "The directory no longer has that account; search again.": "gone",
+    "not_super_admin": "Only the platform super-admin keeps the operator list.",
 }
 
 
@@ -56,8 +51,11 @@ async def _form(request: Request) -> dict[str, str]:
     return {k: v[0] for k, v in parse_qs(body.decode("utf-8", "replace")).items() if v}
 
 
-def _back(request: Request, said: str) -> RedirectResponse:
-    return RedirectResponse(url_path(request, f"{_PAGE}?{urlencode({'said': said})}"), 303)
+def _back(request: Request, said: str, return_to: str = "") -> RedirectResponse:
+    """The page again with its status line, keeping where Back goes (only
+    an Apply Desk path, checked again; Codex on #4115)."""
+    query = {"return_to": _back_link(return_to)[0], "said": said}
+    return RedirectResponse(url_path(request, f"{_PAGE}?{urlencode(query)}"), 303)
 
 
 def _identity(request: Request) -> Identity:
@@ -67,30 +65,42 @@ def _identity(request: Request) -> Identity:
     return identity
 
 
+#: Where the Back link goes, by the page the Admin entry was opened from
+#: (`?return_to=`, as Review Robin's Admin): only an Apply Desk path.
+def _back_link(return_to: str) -> tuple[str, str]:
+    path = return_to if return_to.startswith("/") and not return_to.startswith("//") else ""
+    if path.startswith("/operator/exercises/"):
+        return path, "Back to the exercise"
+    if path.startswith("/me"):
+        return path, "Back to User Lobby"
+    return "/operator/exercises", "Back to Operator Lobby"
+
+
 @router.get("/operators", name="applydesk_admin_operators")
 def operators_page(
-    request: Request, q: str = "", session: Session = Depends(db.get_session)
+    request: Request,
+    q: str = "",
+    list_q: str = "",
+    return_to: str = "",
+    session: Session = Depends(db.get_session),
 ) -> Response:
-    found = None
-    if q.strip():
-        try:
-            people_directory = directory_for(request)
-        except GraphError as error:
-            found = directory.search(session, q, None)
-            found = directory.SearchResult(found.on_record, (), directory_failed=error.kind)
-        else:
-            found = directory.search(session, q, people_directory)
-    entries = allowlist.listing(session)
+    found = allowlist.search(session, q, lambda: directory_for(request)) if q.strip() else None
+    entries = allowlist.listing(session, list_q)
+    back_path, back_label = _back_link(return_to)
     return render(
         request,
         "applydesk/admin/operators.html",
-        area=OPERATOR_LIST,
+        area=ADMIN,
         q=q,
+        list_q=list_q,
         found=found,
         min_query=directory.MIN_QUERY,
         entries=entries,
-        listed={e.person.id for e in entries},
+        overview=allowlist.overview(session),
+        listed={p.id for p in allowlist.listed_ids(session)},
         said=SAID.get(request.query_params.get("said", ""), ""),
+        back_path=back_path,
+        back_label=back_label,
     )
 
 
@@ -98,6 +108,7 @@ def _admit(request: Request, form: dict[str, str]) -> Response:
     """The admission itself, off the event loop: a directory pick asks
     Graph again, by blocking calls (Codex on #4113)."""
     identity = _identity(request)
+    back = form.get("return_to", "")
     session = db.new_session()
     try:
         actor = allowlist.actor_for(session, identity)
@@ -106,7 +117,7 @@ def _admit(request: Request, form: dict[str, str]) -> Response:
         elif form.get("object_id") and form.get("address"):
             tenant = (identity.tenant_id or "").strip()
             if not tenant:
-                return _back(request, "no_tenant")
+                return _back(request, "no_tenant", back)
             allowlist.admit_from_directory(
                 session,
                 actor,
@@ -120,26 +131,26 @@ def _admit(request: Request, form: dict[str, str]) -> Response:
         session.commit()
     except operators.Refused as why:
         session.rollback()
-        return _back(request, _REFUSALS.get(str(why), "gone"))
+        return _back(request, why.key if why.key in SAID else "gone", back)
     except GraphError:
         session.rollback()
-        return _back(request, "directory")
+        return _back(request, "directory", back)
     finally:
         session.close()
-    return _back(request, "admitted")
+    return _back(request, "admitted", back)
 
 
-def _revoke(request: Request, person_id: int) -> Response:
+def _revoke(request: Request, person_id: int, back: str) -> Response:
     session = db.new_session()
     try:
         allowlist.revoke(session, allowlist.actor_for(session, _identity(request)), person_id)
         session.commit()
     except operators.Refused as why:
         session.rollback()
-        return _back(request, _REFUSALS.get(str(why), "gone"))
+        return _back(request, why.key if why.key in SAID else "gone", back)
     finally:
         session.close()
-    return _back(request, "revoked")
+    return _back(request, "revoked", back)
 
 
 @router.post("/operators/admit", name="applydesk_admin_admit")
@@ -150,5 +161,5 @@ async def admit(request: Request) -> Response:
 
 @router.post("/operators/{person_id}/revoke", name="applydesk_admin_revoke")
 async def revoke(request: Request, person_id: int) -> Response:
-    await _form(request)
-    return await run_in_threadpool(_revoke, request, person_id)
+    form = await _form(request)
+    return await run_in_threadpool(_revoke, request, person_id, form.get("return_to", ""))

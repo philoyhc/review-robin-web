@@ -134,3 +134,21 @@ def test_the_seed_is_refused_outside_local(
     session = db.new_session()
     assert session.scalar(select(func.count()).select_from(Exercise)) == 0
     session.close()
+
+
+def test_the_seed_is_audited_and_binds_as_a_sign_in_would() -> None:
+    """Cold read: the seed goes through `people` and `operators`, so its
+    rows are audited and a pending Owner named by `--owner` is bound by the
+    fake identity's later run, not duplicated."""
+    from applydesk.models import AuditEvent
+
+    session = db.new_session()
+    seed(session, owner_email="Admin@Example.edu ")
+    seed(session)  # the fake identity (admin@example.edu) signs in: bound, not a second person
+    people = list(session.scalars(select(Person)))
+    assert len(people) == 1 and people[0].bound and people[0].may_operate
+    kinds = [e.event_type for e in session.scalars(select(AuditEvent).order_by(AuditEvent.id))]
+    session.close()
+    assert kinds[:2] == ["person.created", "person.admitted"]
+    assert kinds.count("exercise.created") == len(sample_data.exercises())
+    assert "person.bound" in kinds

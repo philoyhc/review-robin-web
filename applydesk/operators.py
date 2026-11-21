@@ -33,9 +33,15 @@ from applydesk.models import Exercise, ExerciseOperator, Person
 
 
 class Refused(Exception):
-    """A change the rules do not allow; the message says which. The caller
-    rolls the session back: a refusal raised part-way leaves nothing it
-    should keep."""
+    """A change the rules do not allow; the message says which, and `key`
+    names the rule for a page's status line (as `scratch.Refused`'s), so
+    rewording a message cannot change what a page shows. The caller rolls
+    the session back: a refusal raised part-way leaves nothing it should
+    keep."""
+
+    def __init__(self, message: str, *, key: str) -> None:
+        super().__init__(message)
+        self.key = key
 
 
 def _changed(session: Session, statement: Update) -> bool:
@@ -151,6 +157,12 @@ def operated_exercises(session: Session, actor: Actor) -> list[Exercise]:
     )
 
 
+def is_owner(session: Session, exercise: Exercise, actor: Actor) -> bool:
+    """Whether `actor` may change `exercise`'s operators: its current,
+    allowlisted Owner, or the platform super-admin (read fresh)."""
+    return _is_owner(session, exercise, actor)
+
+
 def _is_owner(session: Session, exercise: Exercise, actor: Actor) -> bool:
     if actor.is_super_admin:
         return True
@@ -171,9 +183,11 @@ def _is_owner(session: Session, exercise: Exercise, actor: Actor) -> bool:
 def admit(session: Session, actor: Actor, person: Person) -> None:
     """Put `person` on the allowlist (ruling 75)."""
     if not actor.is_super_admin:
-        raise Refused("Only the platform super-admin keeps the operator list.")
+        raise Refused(
+            "Only the platform super-admin keeps the operator list.", key="not_super_admin"
+        )
     if _allowed(session, person):
-        raise Refused("Already allowed to operate.")
+        raise Refused("Already allowed to operate.", key="already_listed")
     person.may_operate = True
     person.admitted_by_id = actor.person.id if actor.person is not None else None
     person.admitted_at = _now()
@@ -188,9 +202,11 @@ def revoke(session: Session, actor: Actor, person: Person, reason: str | None = 
     """Take `person` off the allowlist: their access ends, their grants are
     kept (re-admitting restores them)."""
     if not actor.is_super_admin:
-        raise Refused("Only the platform super-admin keeps the operator list.")
+        raise Refused(
+            "Only the platform super-admin keeps the operator list.", key="not_super_admin"
+        )
     if not _allowed(session, person):
-        raise Refused("Not on the operator list.")
+        raise Refused("Not on the operator list.", key="not_listed")
     person.may_operate = False
     person.revoked_at = _now()
     session.flush()
@@ -213,7 +229,7 @@ def create_exercise(session: Session, actor: Actor, public_id: str) -> Exercise:
     The actor needs a person row and must be allowlisted, or be the
     platform super-admin, who needs no allowlisting (ruling 75)."""
     if actor.person is None or not (actor.is_super_admin or _allowed(session, actor.person)):
-        raise Refused("Only someone on the operator list may make an exercise.")
+        raise Refused("Only someone on the operator list may make an exercise.", key="not_listed")
     exercise = Exercise(public_id=public_id)
     session.add(exercise)
     session.flush()
@@ -233,12 +249,12 @@ def add_operator(session: Session, exercise: Exercise, actor: Actor, person: Per
     """Add `person` as an operator; only the Owner (or the super-admin)."""
     _lock(session, exercise)
     if not _is_owner(session, exercise, actor):
-        raise Refused("Only the exercise's Owner adds operators.")
+        raise Refused("Only the exercise's Owner adds operators.", key="not_owner")
     if not _allowed(session, person):
-        raise Refused("Only someone on the operator list can be added.")
+        raise Refused("Only someone on the operator list can be added.", key="not_listed")
     grant = _grant(session, exercise, person)
     if grant is not None and grant.removed_at is None:
-        raise Refused("Already an operator.")
+        raise Refused("Already an operator.", key="already_operator")
     readded = grant is not None
     if grant is None:
         grant = ExerciseOperator(exercise_id=exercise.id, person_id=person.id)
@@ -263,12 +279,12 @@ def remove_operator(session: Session, exercise: Exercise, actor: Actor, person: 
     Owner themself."""
     _lock(session, exercise)
     if not _is_owner(session, exercise, actor):
-        raise Refused("Only the exercise's Owner removes operators.")
+        raise Refused("Only the exercise's Owner removes operators.", key="not_owner")
     grant = _grant(session, exercise, person)
     if grant is None or grant.removed_at is not None:
-        raise Refused("Not an operator of this exercise.")
+        raise Refused("Not an operator of this exercise.", key="not_operator")
     if grant.is_owner:
-        raise Refused("The Owner cannot be removed; hand ownership over first.")
+        raise Refused("The Owner cannot be removed; hand ownership over first.", key="is_owner")
     removed = _changed(
         session,
         update(ExerciseOperator)
@@ -282,7 +298,9 @@ def remove_operator(session: Session, exercise: Exercise, actor: Actor, person: 
     )
     session.expire(grant)
     if not removed:  # made the Owner, or removed, meanwhile
-        raise Refused("They have just become the Owner or been removed; reload and try again.")
+        raise Refused(
+            "They have just become the Owner or been removed; reload and try again.", key="changed"
+        )
     audit.write_event(
         session,
         event_type="exercise.operator_removed",
@@ -297,14 +315,14 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
     Owner stays an operator. Only the Owner (or the super-admin)."""
     _lock(session, exercise)
     if not _is_owner(session, exercise, actor):
-        raise Refused("Only the exercise's Owner hands ownership over.")
+        raise Refused("Only the exercise's Owner hands ownership over.", key="not_owner")
     if not _allowed(session, person):
-        raise Refused("Only someone on the operator list can own an exercise.")
+        raise Refused("Only someone on the operator list can own an exercise.", key="not_listed")
     grant = _grant(session, exercise, person)
     if grant is None or grant.removed_at is not None:
-        raise Refused("Add them as an operator first.")
+        raise Refused("Add them as an operator first.", key="not_operator")
     if grant.is_owner:
-        raise Refused("Already the Owner.")
+        raise Refused("Already the Owner.", key="already_owner")
     former = session.scalar(
         select(ExerciseOperator)
         .where(
@@ -334,7 +352,7 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
         .values(is_owner=False)
         .execution_options(synchronize_session=False),
     ):
-        raise Refused("Ownership has just changed; reload and try again.")
+        raise Refused("Ownership has just changed; reload and try again.", key="changed")
     if not _changed(
         session,
         update(ExerciseOperator)
@@ -342,7 +360,7 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
         .values(is_owner=True)
         .execution_options(synchronize_session=False),
     ):
-        raise Refused("They have just been removed; reload and try again.")
+        raise Refused("They have just been removed; reload and try again.", key="changed")
     former_person_id = former.person_id if former is not None else None
     for row in (grant, former):
         if row is not None:

@@ -7,7 +7,7 @@ The roadmap's AD2 row ("Database and identity") is a series of segments, each it
 ## What every AD2 segment holds to
 
 - **Its own database**, `applydesk`, at `APPLYDESK_DATABASE_URL`, with its own Alembic history (`applydesk/alembic.ini`, version table `applydesk_alembic_version`), as Utilities' (`utilityapps/db.py`). Models use SQLAlchemy 2.x with no Postgres-only types. Migrations survive SQLite and Postgres 16 in both directions; `ci-postgres.yml` round-trips the history.
-- **Checkable on localhost** (author, 2026-11-21), as RRW is. The URL defaults to `sqlite:///./applydesk.db`, `alembic -c applydesk/alembic.ini upgrade head` builds it, and `python -m applydesk.seed` loads the sample exercises. A fresh checkout reaches every page under Cordware's fake auth. Tests build the schema from the models on in-memory SQLite.
+- **Checkable on localhost** (author, 2026-11-21), as RRW is. The URL defaults to `sqlite:///./applydesk.db`, `alembic -c applydesk/alembic.ini upgrade head` builds it, and `python -m applydesk.seed` loads the sample exercises. A fresh checkout reaches every page under Cordware's fake auth. Tests build the schema from the models on a fresh SQLite file per test, so two sessions can race in them; the Postgres job round-trips the history.
 - **RRW's layering** (`spec/architecture.md`, "Three-layer split"): thin routes, services holding the rules, models with no logic.
 - **People by tenant and object ID** (ruling 73), never by email after binding.
 - **Every addition of a person searches** by name or email, people on record first, then the institution's directory through Graph (ruling 75, `cordware/graph.py`); a local run searches Cordware's fake directory.

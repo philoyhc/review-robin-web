@@ -626,3 +626,20 @@ def test_bound_people_may_still_share_an_address(session: Session) -> None:
     b = people.resolve(session, _identity("o2", "shared@example.edu"))
     session.commit()
     assert a is not None and b is not None and a.id != b.id
+
+
+def test_two_pending_people_matching_one_sign_in_bind_neither(session: Session) -> None:
+    """Cold read, after Residential's §6: the UPN matches one pending person
+    and the mail another; neither is bound (fail closed), and the account
+    gets a person of its own, with neither's access."""
+    by_upn = people.pending(session, "a0001@u.example.edu", actor=None)
+    by_mail = people.pending(session, "ana@example.edu", actor=None)
+    operators.admit(session, SUPER, by_mail)
+    session.commit()
+    ana = people.resolve(session, _identity("o1", "ana@example.edu", upn="a0001@u.example.edu"))
+    session.commit()
+    assert ana is not None and ana.id not in (by_upn.id, by_mail.id)
+    assert not operators.may_operate(ana)
+    session.refresh(by_upn)
+    session.refresh(by_mail)
+    assert not by_upn.bound and not by_mail.bound
