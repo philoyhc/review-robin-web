@@ -240,6 +240,16 @@ def suggestions(found: directory.SearchResult, listed: set[int]) -> dict[str, ob
                 "where": "Directory",
             }
         )
+    # Each label names one pick: the box finds a pick by its label, so two
+    # people with one name and address would otherwise share a pick, and
+    # choosing the first would admit the second (Codex on #4122). Repeats
+    # are numbered in the order offered.
+    seen: dict[str, int] = {}
+    for offer in offers:
+        text = str(offer["label"])
+        seen[text] = seen.get(text, 0) + 1
+        if seen[text] > 1:
+            offer["label"] = f"{text} ({str(offer['where']).lower()} {seen[text]})"
     answer: dict[str, object] = {"available": found.directory_failed is None, "people": offers}
     if found.directory_failed:
         answer["reason"] = found.directory_failed

@@ -336,3 +336,23 @@ def test_add_offers_records_first_and_takes_only_a_pick(client: TestClient) -> N
     )
     assert typed.headers["location"].endswith("said=pick")
     assert _suggest(client, "j")["people"] == []  # under the shortest query
+
+
+def test_two_people_with_one_label_stay_two_picks() -> None:
+    """Codex on #4122: the box finds a pick by its label, so two accounts
+    sharing a name and address must not share a label."""
+    from applydesk import allowlist
+    from applydesk.directory import SearchResult
+    from cordware.graph import DirectoryUser
+
+    twins = tuple(
+        DirectoryUser(
+            id=oid, display_name="Sam Lee", mail="sam@example.edu", user_principal_name="sam@x"
+        )
+        for oid in ("o-1", "o-2")
+    )
+    offers = allowlist.suggestions(SearchResult((), twins), set())["people"]
+    assert isinstance(offers, list)
+    labels = [o["label"] for o in offers]
+    assert labels == ["Sam Lee <sam@example.edu>", "Sam Lee <sam@example.edu> (directory 2)"]
+    assert [o["object_id"] for o in offers] == ["o-1", "o-2"]
