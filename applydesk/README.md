@@ -25,4 +25,5 @@ roadmap are in `guide/todo_master.md`.
 | `guide/todo_master.md` | Rulings, the MVP roadmap and open decisions |
 | `guide/ad2_deferred_findings.md` | The 2026-11-18 assessment's rows that wait on AD2's persistence and identity (28 rows, moved 2026-11-21); AD2's plan absorbs, rules or drops each |
 | `guide/ad3_plus_deferred_findings.md` | The 2026-11-18 assessment's rows that wait on a stage after AD2: Layer B, AD3's lifecycle, AD4's dossier parts and AD7 (6 rows, moved 2026-11-21) |
+| `guide/segment_AD1S_home_and_copy.md` | Segment AD1S: Home's timeline for every participant (*Now* on the timeline, one *Operator only*) and a sweep of spec-derived explanations from the pages; ruling 68 recorded |
 | `guide/archive/README.md` | Closed segment plans (AD1R the latest) and worked findings registers (the 2026-11-18 assessment's among them): AD1 (the package and URL map), AD1B (the Form page), AD1C (Dossiers), AD1D (the exercise's chrome), AD1E (Process), AD1F (Gates and Panels), AD1G (Evaluators and Evaluations), AD1H (the RA model exercise), AD1I (Exercise Home), AD1J (Extract data), AD1K (a status per stage, and what locks) |

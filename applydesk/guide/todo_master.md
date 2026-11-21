@@ -627,6 +627,18 @@ the rulings it relied on but does not move them.
     rather than being reworked first (AD-69, AD-93); Extract's setup card
     says how its `panels.csv` differs from the Panels export rather than
     the two being made one shape (AD-84).
+68. **Who sees each dossier item** (author, 2026-11-21), refining
+    rulings 26 and 33: a candidate's dossier holds every section of the
+    submitted form (when there is one), every gate's results and every
+    outcome. Each of those items is shown only to the grants set on it:
+    *Applicant*; *Assigned evaluators*, from named panels or from all;
+    *Evaluators*, from named panels or from all. Each grant opens from a
+    stage, as ruling 26's parts did; an item opening to two audiences at
+    different times carries two grants. Operators see every item, whatever
+    its grants. Grants are set on the item itself: a form section's on
+    Form, a gate's results and an outcome's on Process. Recorded now; built
+    with the store (AD4 for the form, AD5 for dossiers), and Form's per-card
+    *Shown* control (AD-69, AD-93) goes when it is.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
@@ -725,7 +737,7 @@ Segments in order; each gets a plan in this folder when it starts.
 |---|---|---|
 | AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
-| AD4 — Applicant forms and portal | The applicant form with *Shown* / *Not shown to reviewers* sections, versioned; drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
+| AD4 — Applicant forms and portal | The applicant form, versioned, each section carrying its visibility grants (ruling 68); drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
 | AD5 — Panels and dossiers | The rosters on Panels (rulings 19, 22), each gate's evaluators from its ranked sources (ruling 27); dossiers made from the form or by *Create dossiers* (rulings 25, 26), the dossier with its access check, audit and blind redaction | — |
 | AD6 — Assessment in Review Robin | Rosters from dossiers (rulings 25, 26), the pairs as `relationships.csv` (ruling 27, 23F), `ProfileLink` to the dossier, the blind alias key (ruling 10), results back into ApplyDesk | The open items below |
 | AD7 — Timeline and outcomes | Milestones, announcements, outcome import, embargo on read, release, correction | G5 (sender), G7 (publication) |
@@ -786,9 +798,6 @@ Segments in order; each gets a plan in this folder when it starts.
   concept, which needs no Blob storage. It is in the MVP (ruling 12); how
   a blind exercise treats a face is still the author's (its Open
   questions).
-- **Card visibility beyond *Shown to reviewers* / *Not shown*** (author,
-  AD1B: "there should be more states in the spec"): which states, and
-  when; AD4 stores the form.
 - **Conditional questions: deferred** (author, 2026-11-12). A typical
   application form is linear; optional questions with help text cover
   the rest, and branching would reach Required, server checks, form
