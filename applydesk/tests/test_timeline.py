@@ -116,20 +116,19 @@ def test_home_is_the_timeline_beside_details(client: TestClient) -> None:
     assert "<dt>Description</dt>" in details and "Summary" not in details
     assert 'data-dt-lock title="Unlock the details to change them">Unlock' in details
     # The Now stage's operator part points to where the stage is worked:
-    # its gate's own page, where the pairs are (AD-24, AD1S).
+    # its gate's row links that gate's page (AD-24); no second row repeats
+    # the link once the line under the timeline is gone (AD1S).
     now = home[home.index('data-tl-stage="3"') :]
-    assert (
-        '<div class="tl-op-row" data-tl-running><b>Under way</b><span>Gate 3 · Staff interview'
-        f'</span><a href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Open Gate 3 →</a>'
-    ) in now
-    assert home.count("data-tl-running") == 1
+    now = now[: now.index("</ol>")]  # the last stage: up to the list's end
+    link = f'<a href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Open Gate 3 →</a>'
+    assert now.count(link) == 1
+    assert "data-tl-next" not in home
 
 
 def test_a_draft_s_home_says_what_publishing_needs(client: TestClient) -> None:
     home = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
     assert home.count("Dates not set") == 2 and 'class="tl-today"' not in home
     assert "A draft: the timeline is what participants will see once it is published." in home
-    assert "data-tl-running" not in home
     # What blocks each stage, in the operator part (AD1K, at the author's
     # check: no Publish card); a published exercise has none to show.
     assert home.count("Blocking publication") == 2
@@ -305,23 +304,6 @@ def test_home_draws_the_operator_part_and_links_where_it_is_worked(client: TestC
     assert f'href="/applydesk/operator/exercises/{EX}/dossiers">Open Dossiers →</a>' in home
 
 
-def test_the_running_gate_is_the_one_being_worked(monkeypatch: pytest.MonkeyPatch) -> None:
-    """AD-24, cold read: in a stage of several gates, the first whose
-    results are not in; all in, the last."""
-    from applydesk import workflow
-
-    e = sample_data.exercise(EX)
-    assert e is not None
-    tl = timeline.of(e, today=date(2026, 10, 20))  # inside stage 2: Gates 1 and 2
-    assert tl.now is not None and tl.now.number == 2
-    assert timeline.running_gate(e, tl) == 2  # both results in: the last
-    states = {"g1": ("Results in", ""), "g2": ("Sent", "3 of 100 reviewed")}
-    monkeypatch.setattr(workflow, "gate_sent", lambda _e, k: states.get(k, ("Ready", "")))
-    assert timeline.running_gate(e, tl) == 2
-    states["g1"] = ("Sent", "")
-    assert timeline.running_gate(e, tl) == 1
-
-
 def test_a_stage_not_shown_to_applicants_is_not_on_theirs(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -368,5 +350,5 @@ def test_the_applicant_s_timeline_carries_now_but_no_operator_row(client: TestCl
     assert "<span>Now · until 4 Dec</span>" in mine
     assert "<b>Next: Outcome · expected December 2026</b>Selection." in mine
     assert "<b>Applicants</b>Apply online" in mine and "<b>You</b>" not in mine
-    for operator in ("data-tl-running", "Operator only", "tl-op", "Open Gate"):
+    for operator in ("Operator only", "tl-op", "Open Gate"):
         assert operator not in mine, operator

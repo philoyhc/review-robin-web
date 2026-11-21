@@ -44,9 +44,6 @@
             {% else %}<span>Ready to publish.</span>{% endif %}
           {% elif sr.waiting %}<span>Waiting on: {{ sr.waiting | join("; ") }}.</span>{% endif %}
           <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Set on Process →</a></div>{% endif %}
-        {# The stage under way's running gate (AD-24), where the line
-           under the timeline used to point (AD1S). #}
-        {% if s.state == "Now" and next_link %}{% set run = ops[loop.index0] | selectattr("target", "equalto", running_gate | string) | first %}<div class="tl-op-row" data-tl-running><b>Under way</b>{% if run %}<span>{{ run.label }}</span>{% endif %}<a href="{{ next_link }}">{{ next_label }}</a></div>{% endif %}
         {% for r in ops[loop.index0] %}<div class="tl-op-row"><b>{{ r.label }} <span class="chip chip-{{ r.tone }}">{{ r.state }}</span></b><span>{{ r.detail }}</span>{% if r.target == "dossiers" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers') }}">Open Dossiers →</a>{% elif r.target %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ r.target) }}">Open Gate {{ r.target }} →</a>{% endif %}</div>{% endfor %}
         </div>
       </div>{% endif %}
