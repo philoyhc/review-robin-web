@@ -89,6 +89,7 @@ def operators_page(
 ) -> Response:
     found = allowlist.search(session, q, lambda: directory_for(request)) if q.strip() else None
     entries = allowlist.listing(session, list_q)
+    me = allowlist.me(session, _identity(request))
     back_path, back_label = _back_link(return_to)
     return render(
         request,
@@ -101,6 +102,8 @@ def operators_page(
         entries=entries,
         overview=allowlist.overview(session),
         listed={p.id for p in allowlist.listed_ids(session)},
+        me=me,
+        me_row=me.matches(list_q) and all(e.person.id != me.person_id for e in entries),
         said=SAID.get(request.query_params.get("said", ""), ""),
         back_path=back_path,
         back_label=back_label,

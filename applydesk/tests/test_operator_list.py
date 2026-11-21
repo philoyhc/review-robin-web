@@ -182,3 +182,23 @@ def test_back_keeps_where_admin_was_opened_from(client: TestClient) -> None:
         f"/applydesk/admin/operators/{jane.id}/revoke", data={"return_to": "//evil.example"}
     )
     assert 'href="/applydesk/operator/exercises" data-admin-back' in away.text
+
+
+def test_the_super_admin_is_listed_as_self() -> None:
+    """The author's ask (2026-11-21), as Review Robin's Accounts
+    Management: the signed-in super-admin is on the list as (self), though
+    they reach every page by their identity; once on the list themselves,
+    their own row says so rather than a second one."""
+    from applydesk import seed
+
+    admin = TestClient(host_with(("applydesk",))[0])
+    page = admin.get("/applydesk/admin/operators").text
+    assert page.count("data-op-self") == 1 and "Super-admin" in page and "Nobody yet" not in page
+    assert "data-op-self" not in admin.get("/applydesk/admin/operators?list_q=zzz").text
+    session = db.new_session()
+    seed.seed(session)  # puts the fake identity on the list
+    me = _person("local-dev")
+    session.close()
+    assert me is not None
+    page = admin.get("/applydesk/admin/operators").text
+    assert page.count("data-op-self") == 1 and f'data-op-entry="{me.id}" data-op-self' in page
