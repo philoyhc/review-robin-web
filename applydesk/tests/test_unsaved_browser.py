@@ -112,6 +112,9 @@ def test_dossiers_marks_what_lock_kept_and_asks_before_leaving(page: Page) -> No
     page.locator("[data-ap-lock]").click()
     marker = page.locator("[data-ap-changes]")
     assert marker.is_visible()
+    # The one unsaved marker, as Form's and Process's (AD-70).
+    assert marker.get_attribute("class") == "fb-unsaved"
+    assert marker.evaluate("e => getComputedStyle(e).fontWeight") == "600"
     assert marker.inner_text() == "1 change on this page, not saved until AD2"
     assert "kept on this page" in page.locator("[data-ap-said]").inner_text()
     assert page.evaluate(LEAVES)

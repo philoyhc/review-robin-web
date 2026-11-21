@@ -132,9 +132,9 @@
     var text = card.dataset.type === "text";
     card.querySelector('[data-sum="label"]').textContent = val(card, "label") || (text ? "Untitled text" : "Untitled question");
     card.querySelector('[data-sum="help"]').textContent = val(card, "help");
-    var sumChip = card.querySelector('[data-sum="type"]');
-    sumChip.textContent = summary(card);
-    sumChip.title = sumChip.textContent;
+    var sum = card.querySelector('[data-sum="type"]');
+    sum.textContent = summary(card);
+    sum.title = sum.textContent;
     var req = pressed(card, "required"), shown = pressed(card, "shown");
     var r = card.querySelector('[data-sum="required"]');
     r.textContent = req ? "Required" : "Optional";

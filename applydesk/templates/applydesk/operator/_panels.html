@@ -73,8 +73,8 @@
           <li data-panel="{{ p.key }}">
             <input class="fc-in pn-list-h" data-pn-rename value="{{ p.name }}" aria-label="Name of {{ p.name }}">
             <span class="pn-list-act">
-              <button type="button" class="btn btn-secondary" data-pn-act="emails">Copy emails</button>
-              <button type="button" class="btn btn-destructive" data-pn-act="retire"{% if uses.get(p.key) %} disabled title="In use: it can be retired once nothing uses it"{% endif %}>Retire</button>
+              <button type="button" class="btn btn-secondary btn-short" data-pn-act="emails">Copy emails</button>
+              <button type="button" class="btn btn-destructive btn-short" data-pn-act="retire"{% if uses.get(p.key) %} disabled title="In use: it can be retired once nothing uses it"{% endif %}>Retire</button>
             </span>
             <span class="pn-list-used"><span data-pn-count>{{ count(p.members | length) }}</span> · {% if uses.get(p.key) %}Used by {{ uses[p.key] | join(", ") }}{% else %}Not used yet{% endif %}</span>
             {% if panels_sent.get(p.key) %}<span class="pn-sent">{{ sent_note(p) }}</span>{% endif %}
@@ -470,7 +470,7 @@
     var lw = el("input", "fc-in pn-list-h");
     lw.value = name; lw.setAttribute("data-pn-rename", ""); lw.setAttribute("aria-label", "Name of " + name);
     var act = el("span", "pn-list-act");
-    [["emails", "Copy emails", "btn-secondary"], ["retire", "Retire", "btn-destructive"]].forEach(function (a) {
+    [["emails", "Copy emails", "btn-secondary btn-short"], ["retire", "Retire", "btn-destructive btn-short"]].forEach(function (a) {
       var b = el("button", "btn " + a[2], a[1]); b.type = "button"; b.setAttribute("data-pn-act", a[0]); act.appendChild(b);
     });
     var lu = el("span", "pn-list-used"), lc = el("span"); lc.setAttribute("data-pn-count", "");
@@ -627,7 +627,7 @@
     } else {
       retiring.push(key);
       li.querySelector('[data-pn-act="retire"]').disabled = true;
-      var mark = el("span", "pn-unsaved", "Retired: not saved yet"); mark.setAttribute("data-pn-unsaved", "");
+      var mark = el("span", "fb-unsaved pn-unsaved", "Retired: not saved yet"); mark.setAttribute("data-pn-unsaved", "");
       li.appendChild(mark);
       head.querySelector('th[data-panel="' + key + '"]').classList.add("pn-retiring");
       showRow.querySelector('[data-panel="' + key + '"]').classList.add("pn-retiring");
@@ -878,7 +878,7 @@
       mIn.value = ""; newName.value = ""; fromSel.value = ""; mWrap.hidden = false;
       // Not kept until Save; Cancel takes it back.
       added.push(key);
-      var mark = el("span", "pn-unsaved", "Added: not saved yet"); mark.setAttribute("data-pn-unsaved", "");
+      var mark = el("span", "fb-unsaved pn-unsaved", "Added: not saved yet"); mark.setAttribute("data-pn-unsaved", "");
       list.querySelector('li[data-panel="' + key + '"]').appendChild(mark);
       check(); filter(); namesPending();
       said.textContent = (from ? name + " added, with the people of " + nameOf(from) + "."
