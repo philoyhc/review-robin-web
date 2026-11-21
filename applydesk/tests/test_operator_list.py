@@ -83,7 +83,9 @@ def test_admit_on_record_then_revoke(client: TestClient) -> None:
     assert kept is not None and not operators.may_operate(kept)
     session.close()
     assert _events()[-2:] == ["person.admitted", "person.revoked"]
-    assert client.get("/applydesk/admin/operators?said=revoked").text.count("data-op-entry") == 0
+    # Still on record, so still a Workspace user (AD2W), no longer an operator.
+    page = client.get("/applydesk/admin/operators?said=revoked").text
+    assert f'data-op-entry="{kept.id}"' in page and "data-op-revoke data-name" not in page
 
 
 def test_a_forged_directory_pick_is_refused(client: TestClient) -> None:
@@ -209,3 +211,25 @@ def test_the_super_admin_is_listed_as_self() -> None:
     assert refused.headers["location"].endswith("said=self")
     after = _person("local-dev")
     assert after is not None and after.may_operate
+
+
+def test_workspace_users_scaffold() -> None:
+    """AD2W rung 2: everyone on record in Review Robin's columns, the two
+    panes over the table, the chips, the exercise role and the bulk bar
+    inert until built; a pending person is listed, not yet signed in."""
+    session = db.new_session()
+    pending = people.pending(session, "pat@example.edu", None)
+    session.commit()
+    pid = pending.id
+    session.close()
+    admin = TestClient(host_with(("applydesk",))[0])
+    page = admin.get("/applydesk/admin/operators").text
+    table = page[page.index("data-op-list") :]
+    for heading in ("Email", "Name", "Unit", "First sign-in", "Operator", "Admin"):
+        assert f"<th>{heading}</th>" in table
+    assert '<h2 id="op-list-h">Workspace users</h2>' in page
+    assert page.count("data-account-chip=") == 4 and "data-account-role" in page
+    assert "Acting on ticked rows is not built yet" in page
+    row = table[table.index(f'data-op-entry="{pid}"') :]
+    row = row[: row.index("</tr>")]
+    assert "pat@example.edu" in row and "Not yet signed in" in row and "data-op-revoke" not in row
