@@ -830,7 +830,7 @@ A panel made on Form or Process appears here only once saved (AD2).
     *Close* asks first while any waits. *Copy emails* and the CSV act at once.
   - Whatever ✓, ×, *Save* or an import changes is on the page only: ✓ says
     *kept on this page* (*nothing changed* on an untouched row), the page
-    shows *Changes on this page, not saved until AD2* (on a scratch
+    shows *Changes on this page, not saved* (on a scratch
     exercise, *Unsaved changes* beside *Save*), and leaving asks
     first, as it does while a ticked row holds changes ✓ has not kept. ×
     on a member of a panel an opened gate keeps (as kept, not as ticked
@@ -886,7 +886,7 @@ locked until *Unlock*; then every cell, *Set ticked rows*, *Apply rules…*,
 *Upload CSV* and each outcome's *Released* are live, but for the fixed ones
 below. *Discard changes* puts the table back as it was when unlocked, then
 *Lock* keeps what changed; meanwhile a count of the changes shows. Locked, what differs from the page as loaded
-stays marked (*N changes on this page, not saved until AD2*), and leaving the page with any pending or
+stays marked (*N changes on this page, not saved*), and leaving the page with any pending or
 kept asks first. *Return to draft* is a submitted row's own (Outline-amber)
 until a gate holding its dossier completes, as withdrawal is, and *Return
 ticked to draft* the ticked rows', gates or none (rulings 45, 49; both disabled until AD4). Ticks
@@ -1110,7 +1110,7 @@ the browser (`_gate_ops_js.html`):
   own and clear once acted on. A row's own buttons sit at its end.
 - **Kept in the tab.** Changes live in `sessionStorage` under
   `applydesk-ev:<exercise>:<gate>:<mode>`, so paging, sorting and searching
-  keep them; *Changes in this tab, not saved until AD2* and *Discard
+  keep them; *Changes in this tab, not saved* and *Discard
   changes* show while any exist,
   and Discard puts the sample back, asking first past three changes. Leaving the gate's pages with any asks
   first, a reload included, since the browser cannot tell a reload from
