@@ -12,24 +12,24 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/main.py` | The factory, `create_app` |
 | `applydesk/routes_health.py` | `/health` |
 | `applydesk/routes_home.py`, `routes_operator.py`, `routes_me.py` | The entry points (landing by role), the operator's pages and the participant's |
-| `applydesk/routes_admin.py`, `allowlist.py` | The platform super-admin's pages, `/admin/…`, behind `gate.require_super_admin`: Admin → Accounts Management, the operator list. `routes_admin.py` is the thin route; `allowlist.py` is the page's adapter: the list and its counts, the people search (people on record, then the directory), and *Admit* (a directory pick is found again by address and matched on its object ID, nothing taken from the form) and *Revoke*, through `operators.py` |
+| `applydesk/routes_admin.py`, `allowlist.py` | The platform super-admin's pages, `/admin/…`, behind `gate.require_super_admin`: Admin → Accounts Management, the operator list. `routes_admin.py` is the thin route, also for the Exercises Diagnostics and System Status scaffolds, whose tabs share `admin/_tabs.html`; `allowlist.py` is the page's adapter: the list and its counts, `Me` / `me()` (the signed-in super-admin's read-only *(self)* row), the people search (people on record, then the directory), and *Admit* (a directory pick is found again by address and matched on its object ID, nothing taken from the form) and *Revoke*, through `operators.py` |
 | `applydesk/team.py` | An exercise's Operators card on Home, the adapter between `routes_operator.py` and `operators.py`: the card (current operators, the Owner first, whether the viewer may change them, whether the exercise has a row), the add search (the operator list only, current operators left out) and add, remove and hand over |
 | `applydesk/lookups.py` | Path lookups the routes share: an ID's shape checked, then a 404 or the record |
-| `applydesk/gate.py` | Who reaches the pages. `require_exercise_operator` on the operator router: 404 unless the viewer is the super-admin or on the allowlist and, on a path with an `exercise_id`, operates that exercise. `require_super_admin` on the admin router. `landing` on `/` and `/operator`: any operator, else the placeholders' gate. `placeholders_only` on the participant's pages until a later AD2 segment. `viewer` resolves the viewer once per request, binding them (`people.resolve`), and keeps the answer on `request.state`; `is_operator` and `operates` read it. `own_new_exercise` makes a new scratch exercise's row and Owner |
-| `applydesk/db.py` | Apply Desk's own database, `applydesk` ("The database") |
+| `applydesk/gate.py` | Who reaches the pages. `require_exercise_operator` on the operator router: 404 unless the viewer is the super-admin or on the allowlist and, on a path with an `exercise_id`, operates that exercise. `require_super_admin` on the admin router. `landing` on `/` and `/operator`: any operator, else the placeholders' gate. `placeholders_only` on the participant's pages until a later AD2 segment, on `reaches_placeholders`: anyone on a local run, deployed only the super-admin; `web.render` offers a link to those pages (`participant_pages`) only where it holds. `viewer` resolves the viewer once per request, binding them (`people.resolve`), and keeps the answer on `request.state`; `is_operator` and `operates` read it. `own_new_exercise` makes a new scratch exercise's row and Owner |
+| `applydesk/db.py` | Apply Desk's own database, `applydesk` ("The database"); `is_busy` and `lost_a_race` tell a concurrent change (SQLite busy, or a unique clash) from a bug |
 | `applydesk/models.py` | Its tables, on Apply Desk's own `Base`: `person`, `exercise`, `exercise_operator`, `audit_event` ("The database") |
 | `applydesk/alembic.ini`, `applydesk/alembic/` | Its migration history ("The database") |
 | `applydesk/people.py` | People and their binding: `resolve` at sign-in, `from_directory` for a directory find, `pending` for an address the directory did not find ("Binding") |
 | `applydesk/directory.py` | The people search every place that adds people uses: people on record first, then the directory through `cordware/graph.py`; a failed directory search is reported, never read as nobody there |
-| `applydesk/operators.py` | The rules of who may operate and who operates each exercise: the allowlist (`admit`, `revoke`) and an exercise's Owner and operators (`create_exercise`, `add_operator`, `remove_operator`, `hand_over`, `can_operate`, `is_owner`), refusing with `Refused` and its `key` ("Operators") |
+| `applydesk/operators.py` | The rules of who may operate and who operates each exercise: the allowlist (`admit`, `revoke`) and an exercise's Owner and operators (`create_exercise`, `add_operator`, `remove_operator`, `hand_over`, `can_operate`, `is_owner`), refusing with `Refused` and its `key` ("Operators"); `_allowed` re-reads the allowlist row, under `FOR SHARE` where a change rests on it |
 | `applydesk/audit.py` | `write_event` in Review Robin's envelope, copied, and `EVENT_SCHEMAS` ("Audit") |
 | `applydesk/seed.py` | `python -m applydesk.seed`: the sample exercises' rows and their Owner; refused unless `APP_ENV=local` |
-| `applydesk/ids.py` | Public IDs: generation and the shape check |
+| `applydesk/ids.py` | Public IDs: generation and the shape check; `row_id` and `RowId` for a database row ID in a form or path |
 | `applydesk/web.py` | Templates, mount-aware URLs (`url()`, `is_here()`, `host_url()`) and the page chrome |
 | `applydesk/sample_data.py` | The sample exercises, applications, form cards and panels (`Panel`: key, name, members; ruling 19) |
 | `applydesk/stages.py` | Stages, gates, outcomes and their rules; each row's cells; evaluators, assignments and pairs |
 | `applydesk/workflow.py` | Each item's state, the status row, the emails owed, the counts and the steps |
-| `applydesk/locks.py` | A stage's status and what a published stage fixes (ruling 35) |
+| `applydesk/locks.py` | A stage's status and what a published stage fixes (ruling 35); `status_tally`, the exercises counted by status |
 | `applydesk/timeline.py` | The timeline Home and the applicant's page share: nothing operator-only |
 | `applydesk/home_ops.py` | The operator's part of Home's timeline |
 | `applydesk/extract.py` | Extract data's files: names, columns and rows |
@@ -126,11 +126,18 @@ tenant or object ID cannot be bound and has no person.
   super-admin needs no allowlisting but needs a person row, so one whose
   sign-in cannot be bound cannot make an exercise.
 - Every check re-reads the allowlist row, so a revoke another request
-  committed counts. Revoking ends access at once and keeps the grants.
+  committed counts. A check a change rests on (an add, a handover, making an
+  exercise) reads it `FOR SHARE`, so a revoke committing meanwhile waits for
+  the change. Revoking ends access at once and keeps the grants. Admit and
+  revoke are conditional updates: of two at once, one changes the row and is
+  audited, the other is refused.
 - Each change to an exercise's operators takes the exercise's row lock,
   checks fresh rows, and restates its rule in a conditional update; the loser
   of two concurrent changes is refused. A change and its audit event share
-  one transaction.
+  one transaction. A route binds the actor (`people.resolve`) and commits
+  before taking the lock, so no person row is held while it waits.
+- A route reports a lost race (`db.lost_a_race`) as a concurrent change, not
+  an error; any other integrity or operational error propagates.
 - Making an exercise makes its Owner's grant in the same transaction. An
   exercise always has exactly one current Owner; a handover clears the former
   Owner's flag before setting the new one's.

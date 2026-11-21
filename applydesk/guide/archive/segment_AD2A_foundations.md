@@ -143,7 +143,7 @@ Closed 2026-11-21. Intended versus done:
 ## Doc impact
 
 - `applydesk/spec/architecture.md` — the database, its history and settings, the new modules, the layering now in force (rungs 2–4).
-- `applydesk/spec/applications.md` — who reaches the pages (the check, the lobby's list), the admin page, the Operators card, the people search (rungs 4–8).
+- `applydesk/spec/applications.md` — who reaches the pages (the check, the lobby's list), Admin's three tabs, the Operators card, the people search (rungs 4–8).
 - `applydesk/README.md` — building the database locally and the seed (rung 2).
 - `applydesk/guide/ad2_deferred_findings.md` — AD-43 and AD-53 struck (at close).
 - `applydesk/guide/todo_master.md` — rulings 72–74; the AD2 roadmap row points to the series (rung 1).

@@ -66,7 +66,9 @@ participant's `applydesk/routes_me.py`, the super-admin's
 | `…/<id>/evaluations/gate_<n>` | A gate's pairs, a row each; 404 for a Draft exercise or no such gate |
 | `…/<id>/extract` | Extract data: the download cards |
 | `…/<id>/extract/<file>` | One download (see Extract data, "The route") |
+| `/admin/exercises` | Admin → Exercises Diagnostics: the exercises, a scaffold (the super-admin's alone) |
 | `/admin/operators` | Admin → Accounts Management: the operator list (the super-admin's alone) |
+| `/admin/system` | Admin → System Status: a scaffold (the super-admin's alone) |
 | `/me` | The User Lobby |
 | `/me/exercises/<id>` | An exercise as an applicant sees it: its timeline and *Apply* |
 | `/me/exercises/<id>/applications/<app>` | The applicant's application |
@@ -77,7 +79,10 @@ answer only for a Published or Closed exercise.
 
 - **Public IDs** (`applydesk/ids.py`): 10 symbols from RRW's alphabet,
   `23456789abcdefghjkmnpqrstuvwxyz`, drawn at random. A path whose ID has
-  any other shape, or names nothing, is a 404 before anything is read.
+  any other shape, or names nothing, is a 404 before anything is read. A
+  person's row ID (`ids.row_id`) is a whole number from 1 to 2³¹−1: out of
+  range in a path it is a 422; a form's malformed one is never looked up
+  (the post is refused, 400, unless it names a directory pick instead).
 - **The dossier**, what an evaluator opens, one per application
   (`/me/exercises/<id>/dossiers/<dossier>`), is named by its own ID, never the
   application's, and shows only the *Shown to evaluators* section. In a blind exercise it
@@ -119,7 +124,12 @@ answer only for a Published or Closed exercise.
   | An exercise's pages, `/operator/exercises/<id>/…` | The super-admin, or an operator list member with a current grant on that exercise |
   | `/admin/…` | The super-admin alone; an operator is not enough |
   | The landing, `/` and `/operator` | Any operator (so a deployed operator lands on the Lobby); anyone else the placeholders' gate |
-  | `/me/…` | The placeholders' gate: anyone on a local run, deployed only the super-admin, until a later AD2 segment |
+  | `/me/…` | The placeholders' gate (`gate.placeholders_only`): anyone on a local run, deployed only the super-admin, until a later AD2 segment |
+
+  A link to `/me/…` (the switcher's *User Lobby*, a dossier's *View as
+  evaluators see it*) is offered only where that gate admits the viewer
+  (`gate.reaches_placeholders`, `participant_pages` in the page context), so
+  none leads to a 404.
 
   Taking someone off the operator list ends their access at once and keeps
   their grants. The super-admin acts as Owner of every exercise.
@@ -138,14 +148,23 @@ answer only for a Published or Closed exercise.
   - A sign-in with no tenant or object ID cannot be bound and has no access
     (the super-admin excepted, who reaches everything but can make an
     exercise only once bound).
-- **Admin → Accounts Management** (`/admin/operators`): the super-admin's
-  list of who may operate, laid out as Review Robin's Admin → Accounts
-  Management and reached, as it is, from the account menu's *Admin*, not the
-  switcher. Only someone on the list may make an exercise, be added as an
+- **Admin** (`/admin/…`): the super-admin's pages, laid out as Review Robin's
+  Admin and reached, as it is, from the account menu's *Admin* (which opens
+  *Accounts Management*), not the switcher. Every page has *← Back*, the
+  *Admin* heading and one tab strip (`admin/_tabs.html`): *Exercises
+  Diagnostics*, *Accounts Management*, *System Status*. *Back* returns to the
+  page *Admin* was opened from (`return_to`, which every tab and redirect
+  carries): a page path alone, never a query, fragment or dot segment, and an
+  Apply Desk page; else *Back to Operator Lobby*.
+  - **Exercises Diagnostics** and **System Status** are scaffolds: static
+    copy and layout, no data wired. Exercises Diagnostics lists the sample
+    exercises (columns *Exercise*, *Exercise code*, *Owner*, *Opens*,
+    *Applications close*, *Timezone*, *State*), with *Manage*, which opens the
+    exercise's Home, and *Outbox* and *Audit log*, disabled with a title
+    saying each is not built yet.
+- **Admin → Accounts Management** (`/admin/operators`): the list of who may
+  operate. Only someone on the list may make an exercise, be added as an
   exercise's operator or take its ownership. The page has:
-  - *← Back*, which returns to the page *Admin* was opened from (`?return_to=`,
-    an Apply Desk path only; else *Back to Operator Lobby*), the *Admin*
-    heading and a tab strip holding *Accounts Management*.
   - Side by side, an *Add an operator* card and an *Accounts Overview* card
     (counts: operators, not yet signed in, revoked).
   - *Add an operator*: *Name or email* search of at least 2 characters
@@ -165,6 +184,11 @@ answer only for a Published or Closed exercise.
     *Email*, *Name*, *Admitted*, *By* and *Revoke* (Secondary, asking first). A
     pending person carries a *Not yet signed in* chip. Empty, it says nobody
     is listed.
+  - The signed-in super-admin is listed *(self)*, first when they match the
+    search, with no *Revoke*; the server refuses revoking one's own row
+    (`said=self`).
+  - A change that loses a race with another (a unique clash, or a busy
+    SQLite file on a local run) says the list changed and to check it.
   - Each outcome is a status line chosen by a key, never by text from the URL.
 - **An exercise's Operators card**, on Home under Details: each current
   operator, the Owner first and marked *Owner*, the rest *Operator*; a pending
