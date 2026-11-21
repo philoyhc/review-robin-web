@@ -746,6 +746,10 @@ Segments in order; each gets a plan in this folder when it starts.
 
 ## Follow-ups from closed plans (AD-124)
 
+- **AD1S:** the author's browser check of #4101 (Home's timeline, both
+  layouts, at 1300px and 390px, and the applicant's `/me` page) and #4102
+  (the copy sweep: restore any cut line still needed), deferred on
+  2026-11-21.
 - **AD1R:** the author's browser check of #4096, #4097 and #4098 (every
   operator page's hovers and tables; the blank draft's empty states;
   Extract, Dossiers, Panels, Form, Home and the gate page at 1300px and

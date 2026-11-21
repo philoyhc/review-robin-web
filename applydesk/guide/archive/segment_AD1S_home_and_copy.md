@@ -51,6 +51,31 @@ Taken 2026-11-21 at `6270d1540`.
 - Copy that may cite rulings: `grep -rniE 'ruling [0-9]+|\(R[0-9]+\)|segment AD|AD-[0-9]+' applydesk/templates --include=*.html | grep -v '{#' | wc -l` → 166 lines. Most are in comments; four are visible text (`grep -rnE '>[^<{]*ruling [0-9]+' applydesk/templates | wc -l`).
 - Muted help lines: `grep -rn 'class="muted[^"]*"' applydesk/templates | wc -l` → 94.
 
+## Status — closed 2026-11-21
+
+**Intended vs done.** Both build rungs landed as planned: Home's timeline in #4101 and the copy sweep in #4102, after the plan and ruling 68 in #4100. The author's browser check of #4101 and #4102 comes later, by the author's choice. It is a follow-up in `applydesk/guide/todo_master.md`, and any line the sweep cut can come back from it.
+
+**Decisions confirmed at build:**
+- The Now marker reads `Now · until <end>`. Today's date stays in the line under the card title, not in the marker.
+- The stage's first outcome due becomes its *Next:* item where it stands, rather than a copy beside it.
+- No separate gate-link row: each gate's operator row already links its page. A duplicate "Under way" row and the running-gate plumbing were dropped at build.
+- One *Operator only* in horizontal is the first stage's label on a shared grid row, the others clipped. CSS grid cannot span an unknown column count. Screen readers still read each stage's label.
+- The sweep also cut bare segment numbers (AD2, AD4, AD6, AD7) and "(G2)". Unbuilt controls say "… is not built yet".
+
+**Reads.** One cumulative `diff-reviewer` read over rungs 2–3 found:
+- a spec sentence describing the dropped row, fixed in #4101;
+- three stale spec quotes of the unsaved notes, fixed in #4102;
+- Details' two removed lines, flagged as consequences an operator cannot see elsewhere. They stay removed, since the author named them.
+
+The read also noted gaps for the future in the citation test: bare `G2`/`U4` tokens and `data-*` text. None exists on a page today. Codex was clean on every PR. The build agents were told not to use `git stash`, and there was no repeat of AD1R's stash crossing.
+
+**Close.** `spec-writer` brought `applydesk/spec/applications.md` up to the build:
+- the Now marker, the *Next:* item, participant wording, and the one *Operator only*;
+- "No citations on a page";
+- ruling 33's "ruled, not built" note, now pointing at ruling 68.
+
+Its flags needed no change: the spec's own "until AD2" prose is not a UI quote.
+
 ## PR ladder
 
 1. **This plan and ruling 68.** AD4's roadmap row reads ruling 68, its open decision on card visibility closes, and AD-64 is struck. Prose only.
