@@ -220,19 +220,34 @@ def test_enter_on_blind_review_does_not_lock(page: Page) -> None:
 
 
 def test_cards_share_a_height_only_when_theirs_are_close(page: Page) -> None:
-    page.goto(HOME)  # three stages and their operator rows: far taller than Details
-    grid = page.locator(".hm-grid")
-    assert "is-equal-height" not in (grid.get_attribute("class") or "")
-    page.goto(f"{ORIGIN}/applydesk/operator/exercises/r6tm4kq9wz")  # one stage: close
-    assert "is-equal-height" in (grid.get_attribute("class") or "")
-    heights = page.locator(".hm-grid > .card").evaluate_all(
-        "els => els.map(e => Math.round(e.getBoundingClientRect().height))"
-    )
-    assert len(set(heights)) == 1, heights
+    """The timeline and the side column (Details, then Operators: segment
+    AD2A) share a height only when theirs are within a fifth of the
+    taller; otherwise each keeps its own."""
+    columns = ".hm-grid > .card, .hm-grid > .hm-side"
+    seen: set[bool] = set()
+    for exercise in ("wa9juxbc2t", "r6tm4kq9wz", "c4xh2ndv6s"):
+        page.goto(f"{ORIGIN}/applydesk/operator/exercises/{exercise}")
+        grid = page.locator(".hm-grid")
+        equal = "is-equal-height" in (grid.get_attribute("class") or "")
+        grid.evaluate("g => g.classList.remove('is-equal-height')")  # their own heights
+        heights = page.locator(columns).evaluate_all(
+            "els => els.map(e => e.getBoundingClientRect().height)"
+        )
+        assert len(heights) == 2, heights
+        hi, lo = max(heights), min(heights)
+        assert equal == (hi - lo <= hi / 5), (exercise, heights, equal)
+        seen.add(equal)
+        if equal:
+            grid.evaluate("g => g.classList.add('is-equal-height')")
+            shared = page.locator(columns).evaluate_all(
+                "els => els.map(e => Math.round(e.getBoundingClientRect().height))"
+            )
+            assert len(set(shared)) == 1, shared
+    assert seen == {True, False}, seen  # both sides of the rule shown
     # Stacked on a phone, each keeps its own height.
     page.set_viewport_size({"width": 390, "height": 844})
     page.reload()
-    assert "is-equal-height" not in (grid.get_attribute("class") or "")
+    assert "is-equal-height" not in (page.locator(".hm-grid").get_attribute("class") or "")
 
 
 def test_the_operator_part_lines_up_across_stages(page: Page) -> None:

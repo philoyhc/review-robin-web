@@ -7,7 +7,11 @@
    fact cards fold into the status row and the line under the timeline. #}
 <div class="hm-grid">
   {% include "applydesk/_timeline.html" %}
-  {% include "applydesk/operator/_details.html" %}
+  {# Details, then Operators under it (segment AD2A), in the third column. #}
+  <div class="hm-side">
+    {% include "applydesk/operator/_details.html" %}
+    {% include "applydesk/operator/_operators.html" %}
+  </div>
 </div>
 {# Side by side, the two cards share a height only when theirs are
    close (author, at the rung 5 check): within a fifth of the taller. #}
@@ -17,7 +21,7 @@
   if (!grid) return;
   function fit() {
     grid.classList.remove("is-equal-height");
-    var cards = Array.prototype.slice.call(grid.querySelectorAll(":scope > .card"));  // not the partial's script
+    var cards = Array.prototype.slice.call(grid.querySelectorAll(":scope > .card, :scope > .hm-side"));  // not the partial's script
     var tops = cards.map(function (c) { return c.getBoundingClientRect().top; });
     if (cards.length < 2 || Math.abs(tops[0] - tops[1]) > 1) return;  // stacked
     var hs = cards.map(function (c) { return c.getBoundingClientRect().height; });

@@ -1,0 +1,24 @@
+{# The exercise's operators, on Home (segment AD2A, ruling 73): the Owner,
+   marked, and the other operators. The Owner (or the platform
+   super-admin) adds operators from the operator list, removes them and
+   hands ownership over; the rest see it read-only. The Owner is never
+   removed, only replaced by a handover. Scaffold (rung 7): copy and
+   layout, controls inert; rung 8 wires them. #}
+<section class="card" id="operators" aria-labelledby="ops-h" data-operators>
+  <div class="cardhead"><h2 id="ops-h">Operators</h2>
+    <button class="btn btn-secondary btn-short" type="button" disabled title="Wired next" data-ops-add>Add operator</button>
+  </div>
+  <p class="muted">Everyone here runs this exercise. Only the Owner adds and removes operators, from the operator list, and hands ownership to another operator.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Name</th><th>Role</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+    <tbody>
+      <tr class="muted" data-ops-sample>
+        <td>The exercise's operators are listed here</td>
+        <td><span class="chip chip-ok">Owner</span></td>
+        <td><button class="btn btn-secondary btn-short" type="button" disabled title="Wired next">Make owner</button> <button class="btn btn-destructive btn-short" type="button" disabled title="Wired next">Remove</button></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>

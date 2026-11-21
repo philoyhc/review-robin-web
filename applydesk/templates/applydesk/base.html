@@ -141,6 +141,8 @@
        one-third; one column on a phone. */
     .hm-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
     .hm-grid > .card + .card { margin-top: 0; }
+    .hm-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    .hm-side > .card { margin-top: 0; }
     @media (max-width: 899px) { .hm-grid { grid-template-columns: minmax(0, 1fr); } }
     .cardhead { display: flex; align-items: center; min-height: var(--tog-h); justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
     .cardhead h2 { margin: 0; }
