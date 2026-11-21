@@ -8,6 +8,7 @@ new project runs the export (constitution II).
 
 from __future__ import annotations
 
+import difflib
 import importlib.util
 import os
 import pathlib
@@ -129,8 +130,16 @@ def test_the_setup_document_table_matches_the_manifest() -> None:
     )
 
 
+#: The path gate's inline escape (``tests/unit/test_doc_references.py``).
+#: Step 3 of the setup document has an exported project mark this table's
+#: deferred rows with it, in the Note cell, and ``render_table()`` never
+#: emits it, so the comparison below reads past it.
+_PATH_ESCAPE = "<!-- path-ref-ok -->"
+
+
 def _document_table() -> list[str]:
-    """The setup document's kit table, header to last row, as written."""
+    """The setup document's kit table, header to last row, path-gate
+    markers removed."""
     lines = (REPO_ROOT / "new_project_practices_setup.md").read_text().splitlines()
     header = pk.render_table().splitlines()[0]
     assert lines.count(header) == 1, "the setup document has no single kit table"
@@ -138,25 +147,24 @@ def _document_table() -> list[str]:
     end = start
     while end < len(lines) and lines[end].startswith("|"):
         end += 1
-    return lines[start:end]
+    return [
+        line.replace(f" {_PATH_ESCAPE}", "").replace(_PATH_ESCAPE, "") for line in lines[start:end]
+    ]
 
 
 def test_the_setup_document_table_is_the_rendered_manifest() -> None:
     """Row for row and word for word, notes included: the table is
     ``render_table()``'s output, so a note edited on one side only fails
-    here. Paths, tiers and needs alone are checked above, with a diagnosis."""
+    here. Paths, tiers and needs alone are checked above, with a diagnosis.
+    A `path-ref-ok` marker in a Note cell is not drift (setup step 3)."""
     expected = pk.render_table().splitlines()
     actual = _document_table()
-    drifted = [
-        f"line {n}:\n  document: {a}\n  manifest: {e}"
-        for n, (a, e) in enumerate(zip(actual, expected), start=1)
-        if a != e
-    ]
+    diff = difflib.unified_diff(actual, expected, "document", "manifest", lineterm="", n=0)
     assert actual == expected, (
         "new_project_practices_setup.md's kit table differs from "
         "tools/practice_kit.py MANIFEST; paste the output of "
-        "`python3 tools/practice_kit.py --list` over it.\n"
-        f"rows: document {len(actual)}, manifest {len(expected)}\n" + "\n".join(drifted)
+        "`python3 tools/practice_kit.py --list` over it, then re-add any "
+        "path-ref-ok markers.\n" + "\n".join(diff)
     )
 
 
