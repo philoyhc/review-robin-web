@@ -47,7 +47,7 @@
     {% endif %}
     {# Ruling 49: Return to draft per row, and for the ticked rows, until a
        gate holding the dossier completes; with or without gates yet. #}
-    <button class="btn btn-alert" type="button" disabled title="Returning to draft comes with AD4">Return ticked to draft</button>
+    <button class="btn btn-alert" type="button" disabled title="Returning to draft is not built yet">Return ticked to draft</button>
     {% if cols %}<button class="btn btn-secondary" type="button" data-ap-csv-down>Download CSV</button>{% endif %}
   </div>
   <p class="ap-said" data-ap-said aria-live="polite"></p>
@@ -132,7 +132,7 @@
         <td class="ap-first ap-id"><input type="checkbox" data-ap-tick aria-label="Tick {{ rid }}">
           {% if a.state == "Submitted" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ a.dossier_id) }}"><code>{{ a.dossier_id }}</code></a>{% elif a.state == "Draft" %}<span class="muted">No dossier yet</span>{% else %}<code>{{ a.dossier_id }}</code>{% endif %}<span class="ap-app">Application <code>{{ a.public_id }}</code></span></td>
         <td class="ap-who"><strong>{{ a.applicant }}</strong><span class="ap-mail">{{ a.email }}</span></td>
-        <td class="ap-stat">{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}<span class="ap-note">{{ a.submitted }}</span>{% if a.state == "Submitted" and a.public_id not in redraft_closed %}<button class="btn btn-alert btn-short ap-redraft" type="button" disabled title="Returning to draft comes with AD4" aria-label="Return {{ rid }} to draft">Return to draft</button>{% endif %}</td>
+        <td class="ap-stat">{% with value = a.state %}{% include "applydesk/_state_chip.html" %}{% endwith %}<span class="ap-note">{{ a.submitted }}</span>{% if a.state == "Submitted" and a.public_id not in redraft_closed %}<button class="btn btn-alert btn-short ap-redraft" type="button" disabled title="Returning to draft is not built yet" aria-label="Return {{ rid }} to draft">Return to draft</button>{% endif %}</td>
         {% for r in plan.stages %}{% for c in r.columns %}{% set cell = row.cells[c.key] %}
           <td class="{{ 'ap-out' if c.via is not defined }} {{ 'ap-r' if loop.first }}" data-cell="{{ c.key }}"{% if cell.by_hand %} data-hand{% endif %}>
           {# A submitted application's outcomes are always settable, "—"
@@ -259,7 +259,7 @@
     // Locked, what Lock kept stays marked: on this page only (AD-07).
     changesEl.textContent = unlocked
       ? (n ? n + (n === 1 ? " change" : " changes") + " since unlocked" : "No changes yet")
-      : keptN + (keptN === 1 ? " change" : " changes") + " on this page, not saved until AD2";
+      : keptN + (keptN === 1 ? " change" : " changes") + " on this page, not saved";
     changesEl.hidden = !unlocked && !keptN;
     undoBtn.hidden = !unlocked;
     undoBtn.disabled = !n;

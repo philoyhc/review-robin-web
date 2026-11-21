@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Iterator
+from html.parser import HTMLParser
 from types import SimpleNamespace
 from typing import Any, cast
 
@@ -1319,7 +1320,7 @@ def test_every_panel_source_of_a_gate_counts(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_panels_says_a_sent_gate_keeps_its_roster(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/panels").text
-    note = "Gate 1 has opened with the roster as it then stood, and keeps it (ruling 29)."
+    note = "Gate 1 has opened with the roster as it then stood, and keeps it."
     assert f'<span class="pn-sent">{note}</span>' in text  # under Manage panels
     assert f'title="{note}">Opened</span>' in text  # and as its column's chip
     item = text[text.index('<li data-panel="residential-staff">') :]
@@ -1665,15 +1666,13 @@ def test_pages_say_what_works_and_what_is_not_built(client: TestClient) -> None:
     """The register's copy rows (AD-06, 10-13, 19, 29): one banner, honest
     copy, and a reason on every inert control."""
     home = client.get("/applydesk/operator/exercises/wa9juxbc2t").text
-    assert "what you do here works on screen, but nothing is saved until AD2" in home
+    assert "what you do here works on screen, but nothing is saved, and a reload" in home
     extract = client.get("/applydesk/operator/exercises/wa9juxbc2t/extract").text
     assert "the files are built from the sample, not from edits made on other pages" in extract
-    assert (
-        "downloads will be logged from AD2" in extract and "every download is logged" not in extract
-    )
+    assert "Keep it apart from the files above." in extract and "logged" not in extract
     emails = client.get("/applydesk/operator/exercises/wa9juxbc2t/emails").text
-    assert "come from Apply Desk (AD7); Review Robin sends none" in emails
-    assert "and Dossiers' <em>Released</em> read the sample's templates" in emails
+    assert "come from Apply Desk; Review Robin sends none" in emails
+    assert "and Dossiers' <em>Released</em> still read the sample's templates" in emails
     evaluations = client.get("/applydesk/operator/exercises/wa9juxbc2t/evaluations").text
     assert "Results come back by dossier" in evaluations
     lobby = client.get("/applydesk/operator/exercises").text
@@ -1876,7 +1875,7 @@ def test_withdrawal_closes_once_a_gate_holding_the_dossier_completes(
     for state in ("Ready", "Sent"):
         monkeypatch.setattr(workflow, "gate_sent", lambda _e, _k, s=state: (s, ""))
         open_page = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
-        withdraw = 'disabled title="Withdrawing comes with AD4">Withdraw'
+        withdraw = 'disabled title="Withdrawing is not built yet">Withdraw'
         assert f'class="btn btn-alert" type="button" {withdraw}' in open_page, state
 
 
@@ -2034,3 +2033,88 @@ def test_one_label_and_role_creates_a_panel(client: TestClient) -> None:
         assert "Create panel" not in text, section
     form = client.get(f"/applydesk/operator/exercises/{EX}/form").text
     assert 'data-fc-act="new">+ Question</button>' in form and ">+ New</button>" not in form
+
+
+# --- Segment AD1S rung 3: the copy sweep ---
+CITATION = re.compile(r"ruling \d+|\(R\d+\)|segment AD|\bAD-?\d+|\(G\d+\)", re.IGNORECASE)
+
+
+_JS_TOKEN = re.compile(
+    r"""//[^\n]*|/\*.*?\*/|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`""", re.DOTALL
+)
+
+
+def _js_strings(code: str) -> list[str]:
+    """A script's string literals, its comments skipped: what it may write
+    on screen. A regex literal holding a quote would throw it; none does."""
+    return [t[1:-1] for t in _JS_TOKEN.findall(code) if t[0] in "\"'`"]
+
+
+class _Visible(HTMLParser):
+    """A page's visible text, its tooltips and placeholders included; its
+    scripts' string literals apart, since a script puts them on screen."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.text: list[str] = []
+        self.said: list[str] = []
+        self._in: str = ""
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in ("script", "style"):
+            self._in = tag
+        self.text += [v for k, v in attrs if k in ("title", "placeholder", "aria-label") and v]
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == self._in:
+            self._in = ""
+
+    def handle_data(self, data: str) -> None:
+        if self._in == "script":
+            self.said += _js_strings(data)
+        elif not self._in:
+            self.text.append(data)
+
+
+def _swept_pages(client: TestClient) -> list[str]:
+    """Every operator page and /me page of every sample exercise: Home,
+    each section, the preview, each gate's page and a dossier's."""
+    pages = list(PAGES)
+    for e in sample_data.EXERCISES:
+        base = f"/applydesk/operator/exercises/{e.public_id}"
+        sections = ("process", "form", "panels", "emails", "dossiers", "evaluations", "extract")
+        pages += [base, f"{base}/form/preview", *(f"{base}/{s}" for s in sections)]
+        pages += sorted(
+            set(re.findall(rf"{base}/evaluations/gate_\d+", client.get(f"{base}/evaluations").text))
+        )
+        pages += re.findall(
+            rf"{base}/dossiers/[a-z0-9]{{10}}", client.get(f"{base}/dossiers").text
+        )[:1]
+    me = client.get("/applydesk/me").text
+    pages += sorted(set(re.findall(r"/applydesk/me/exercises/[a-z0-9/]+", me)))
+    return list(dict.fromkeys(pages))
+
+
+def test_no_page_cites_a_ruling_a_segment_or_an_ad_number(client: TestClient) -> None:
+    """AD1S's copy sweep: no visible text, tooltip or scripted message on
+    an operator or /me page cites a ruling, a segment or an AD number.
+    Template comments are not copy, and stay."""
+    pages = _swept_pages(client)
+    assert len(pages) > len(PAGES)
+    for path in pages:
+        response = client.get(path)
+        assert response.status_code == 200, path
+        seen = _Visible()
+        seen.feed(response.text)
+        for line in seen.text + seen.said:
+            assert not CITATION.search(line), (path, " ".join(line.split()))
+
+
+def test_details_says_only_what_the_operator_needs(client: TestClient) -> None:
+    """AD1S: Details no longer explains Invitation only or Blind review in
+    the words of the spec; the fields say what each does."""
+    for e in (EX, BLIND, DRAFT, BLANK):
+        home = client.get(f"/applydesk/operator/exercises/{e}").text
+        assert "Invitation only hides the exercise" not in home, e
+        assert "On, evaluators' dossiers redact" not in home, e
+        assert "Blind review" in home, e

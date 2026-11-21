@@ -99,7 +99,7 @@ def test_a_taken_code_and_an_edited_pair_are_refused(page: Page) -> None:
     card.locator("[data-rr-code]").fill(f"{EX}-g3")
     page.locator("#ev-table-card tbody tr").first.get_by_role("button", name="Remove").click()
     card.locator('[data-rr-act="send"]').click()
-    assert "this tab's changes to the pairs are not saved until AD2" in _said(page)
+    assert "this tab's changes to the pairs are not saved; discard them" in _said(page)
 
 
 def test_an_opened_closed_or_detached_gate_sends_nothing(page: Page) -> None:
@@ -142,7 +142,7 @@ def test_pull_reads_progress_and_a_closed_session_s_final_pull_concludes(page: P
     assert pull.inner_text() == "Pull final results"
     assert card.locator('[data-rr-act="invite"]').get_attribute("title") == "Its session has closed"
     pull.click()
-    assert _said(page).startswith("Results in (simulated): the gate is done (ruling 57).")
+    assert _said(page).startswith("Results in (simulated): the gate is done.")
     assert page.locator(".ev-head [data-gate-state]").text_content() == "Results in"
     assert card.locator("[data-rr-link]").inner_text() == "Linked; its results are in"
     assert pull.is_disabled() and pull.get_attribute("title") == "Its results are in"
@@ -179,7 +179,7 @@ def test_invite_and_remind_show_the_email_first(page: Page) -> None:
     assert mail.is_hidden() and card.locator("[data-rr-invited]").inner_text() == "—"
     invite.click()
     card.locator('[data-rr-act="mail-send"]').click()
-    assert _said(page) == "Invited 2 evaluators (simulated): no email is sent until AD7."
+    assert _said(page) == "Invited 2 evaluators (simulated): no email is sent."
     assert card.locator("[data-rr-invited]").inner_text().endswith("in this tab, 2 evaluators")
     card.locator('[data-rr-act="remind"]').click()
     assert "not yet done" in card.locator("[data-rr-mail-what]").inner_text()
@@ -210,7 +210,7 @@ def test_re_send_is_refused_too_after_the_pairs_change_in_the_tab(page: Page) ->
     card.locator("[data-rr-name]").fill("Renamed")
     card.locator('[data-rr-act="resend"]').click()
     assert _said(page).startswith(
-        "Not re-sent (invalid_setup): this tab's changes to the pairs are not saved until AD2"
+        "Not re-sent (invalid_setup): this tab's changes to the pairs are not saved;"
     )
 
 

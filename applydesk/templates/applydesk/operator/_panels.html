@@ -8,7 +8,7 @@
    page, which nothing saves until the database (AD2). #}
 {% set used = panels | selectattr("key", "in", uses) | list %}
 {% macro count(n) %}{{ n }} {{ "person" if n == 1 else "people" }}{% endmacro %}
-{% macro sent_note(p) %}{{ panels_sent[p.key] | join(", ") }} {{ "has" if panels_sent[p.key] | length == 1 else "have" }} opened with the roster as it then stood, and {{ "keeps" if panels_sent[p.key] | length == 1 else "keep" }} it (ruling 29).{% endmacro %}
+{% macro sent_note(p) %}{{ panels_sent[p.key] | join(", ") }} {{ "has" if panels_sent[p.key] | length == 1 else "have" }} opened with the roster as it then stood, and {{ "keeps" if panels_sent[p.key] | length == 1 else "keep" }} it.{% endmacro %}
 {# A row (ruling 22), as Review Robin's rosters: inert until its tick
    selects it; selected, its cells are edit boxes and its panel ticks
    live. Unselected, an email is text, red when the directory has no such
@@ -37,7 +37,7 @@
 {% set directory = people.institution.members | map(attribute=1) | map("lower") | list %}
 {% macro sort(field, label) %}<button type="button" class="pn-sort" data-pn-sort="{{ field }}" aria-label="Sort by {{ label }}">{{ label }}<span aria-hidden="true">↕</span></button>{% endmacro %}
 <div class="pn" data-panels{% if scratch_page %} data-unsaved-root{% endif %} data-exercise="{{ exercise.public_id }}" data-pn-opened="{{ panels_sent | list | tojson | forceescape }}">
-  <p class="muted pc-intro">Everyone on this exercise's panels, a column for each panel. Tick a row, or several, to edit them; ✓ keeps a row's changes, and unticking it without ✓ puts the row back as it was. A panel is picked where it is needed: a <em>Select people</em> question on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>, a gate's evaluators on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>. Apply Desk keeps every panel and what each person may view; to Review Robin they are ordinary reviewers.</p>
+  <p class="muted pc-intro">Everyone on this exercise's panels, a column for each panel. Tick a row, or several, to edit them; ✓ keeps a row's changes, and unticking it without ✓ puts the row back as it was. A panel is picked where it is needed: a <em>Select people</em> question on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>, a gate's evaluators on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</p>
 
   {# The roster card, as Review Robin's: the roster's size and a pill per
      panel, readable always; Manage panels opens the panels' controls. #}
@@ -62,7 +62,7 @@
     </div>
     <p class="muted fb-said" data-fb-said role="status"></p>
     {% else %}
-    <p class="fb-unsaved" data-pn-kept hidden>Changes on this page, not saved until AD2</p>
+    <p class="fb-unsaved" data-pn-kept hidden>Changes on this page, not saved</p>
     {% endif %}
     <div class="pn-manage-panel" id="pn-manage" data-pn-manage hidden>
       <section class="card">

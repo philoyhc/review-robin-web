@@ -26,7 +26,7 @@
 {% macro columns(cols) -%}
 <p class="xd-cols"><span class="visually-hidden">Columns: </span>{{ cols | join(", ") }}</p>
 {%- endmacro %}
-<p class="muted pc-intro">The exercise's data cut into files for offline selection, a card per file; Dossiers and each gate's page show the data itself. Each card's chips shape its download and are kept in this browser.</p>
+<p class="muted pc-intro">The exercise's data cut into files for offline selection, a card per file. Each card's chips shape its download and are kept in this browser.</p>
 {% if nothing %}{% from "applydesk/_empty.html" import empty %}
 {% if extract.draft %}{% call empty("No submitted applications yet", url('/operator/exercises/' ~ exercise.public_id), "Home", "data-xd-empty") %}A draft exercise: only its setup can be extracted until it is published and applications are submitted.{% endcall %}
 {% else %}{% call empty("No submitted applications yet", url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers'), "Dossiers", "data-xd-empty") %}Only the setup can be extracted until an application is submitted; Dossiers lists each one as it comes in.{% endcall %}{% endif %}
@@ -85,7 +85,7 @@
   </section>
   <section class="card" data-xd-card="alias">
     <h2>Alias key</h2>
-    <p class="xd-help">Dossier ID to applicant, the key Review Robin never sees. Keep it apart from the files above; downloads will be logged from AD2.</p>
+    <p class="xd-help">Dossier ID to applicant, the key Review Robin never sees. Keep it apart from the files above.</p>
     {{ columns(alias_columns) }}
     <div class="btnrow">{{ dl("alias_key.csv", "Download key (CSV)", "btn-secondary") }}</div>
   </section>

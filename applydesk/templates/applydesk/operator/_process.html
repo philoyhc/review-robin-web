@@ -44,7 +44,7 @@
       {% if issues %}<ul class="pc-issues" data-pc-issues>{% for i in issues %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
       <p class="visually-hidden" data-pc-live aria-live="polite"></p>
       <div class="btnrow">
-        {% if scratch_page %}<button class="btn btn-secondary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}" data-fb-snapshot="applydeskProcessSnapshot" data-revision="{{ process_revision }}">Save</button>{% else %}<button class="btn btn-secondary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>{% endif %}
+        {% if scratch_page %}<button class="btn btn-secondary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}" data-fb-snapshot="applydeskProcessSnapshot" data-revision="{{ process_revision }}">Save</button>{% else %}<button class="btn btn-secondary" type="button" disabled title="Saving comes with the database">Save</button>{% endif %}
         <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
       </div>
       {% if scratch_page %}<p class="muted fb-said" data-fb-said role="status"></p>{% endif %}
@@ -399,7 +399,7 @@
     var panel = box.querySelector("[data-pc-revert]"), reason = box.querySelector("[data-pc-reason]");
     if (what === "publish") {
       setStatus(card, "Published");
-      live.textContent = labelOf(card) + " published on this page only: nothing is saved until AD2.";
+      live.textContent = labelOf(card) + " published on this page only: nothing is saved.";
       box.querySelector('[data-pc-st="revert"]').focus();
     } else if (what === "revert") {
       panel.hidden = !panel.hidden;
@@ -418,7 +418,7 @@
       reason.value = "";
       b.disabled = true;
       setStatus(card, "Draft");
-      live.textContent = labelOf(card) + " reverted to draft on this page only: nothing is saved or audited until AD2.";
+      live.textContent = labelOf(card) + " reverted to draft on this page only: nothing is saved or audited.";
       box.querySelector('[data-pc-st="publish"]').focus();
     }
     return true;
@@ -1011,7 +1011,7 @@
       var pub = copyBox.querySelector('[data-pc-st="publish"]');
       pub.disabled = true;
       pub.setAttribute("data-pc-new", "");
-      pub.title = "A new stage is checked for publishing once saved (AD2)";
+      pub.title = "A new stage is checked for publishing once saved";
       var renamed = {};
       // Its gates are new: none has a Review Robin card yet (ruling 61).
       // A copy's ticks are not saved: no Template → until Emails lists them (ruling 65).

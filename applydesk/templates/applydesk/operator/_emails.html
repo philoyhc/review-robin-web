@@ -11,7 +11,7 @@
 {% from "applydesk/_empty.html" import empty %}
 <div class="fb-split" data-emails data-em-ex="{{ exercise.public_id }}"{% if scratch_page %} data-em-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}" data-em-revision="{{ process_revision }}"{% endif %}>
 <div class="fb-main">
-<p class="muted pc-intro">Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk (AD7); Review Robin sends none.{% if scratch_page %} A template you save is kept in this scratch exercise, and the status row's <em>Emails</em> and Home follow it.{% else %} A template you save is kept in this tab: nothing is saved until AD2, and until then the status row's <em>Emails</em>, Home and Dossiers' <em>Released</em> read the sample's templates.{% endif %}</p>
+<p class="muted pc-intro">Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk; Review Robin sends none.{% if scratch_page %} A template you save is kept in this scratch exercise, and the status row's <em>Emails</em> and Home follow it.{% else %} A template you save is kept in this tab only: the status row's <em>Emails</em>, Home and Dossiers' <em>Released</em> still read the sample's templates.{% endif %}</p>
 {% for e in emails %}
 {% set sample = email_sample(e) %}
 {% set t = email_text(e) %}
@@ -273,7 +273,7 @@
       kept[c.dataset.email] = { s: c.savedS, b: c.savedB };
       store();
       draw(c);
-      said.textContent = written(c.savedS, c.savedB) ? "Saved in this tab: not saved until AD2." : "Saved in this tab, still owed: it needs a subject and a body.";
+      said.textContent = written(c.savedS, c.savedB) ? "Saved in this tab only." : "Saved in this tab, still owed: it needs a subject and a body.";
     } else if (b.dataset.emAct === "reset") {
       var d = DEFAULTS[c.dataset.emKind];
       if (subj(c).value === d[0] && body(c).value === d[1]) { said.textContent = "This is the default already."; return; }

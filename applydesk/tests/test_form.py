@@ -76,7 +76,7 @@ def test_every_card_has_its_own_visibility(client: TestClient) -> None:
 
 def test_nothing_is_saved(client: TestClient) -> None:
     text = client.get(FORM).text
-    assert 'disabled title="Saving comes with the database (segment AD2)">Save</button>' in text
+    assert 'disabled title="Saving comes with the database">Save</button>' in text
     assert "<form" not in text.split("<main", 1)[1]
 
 

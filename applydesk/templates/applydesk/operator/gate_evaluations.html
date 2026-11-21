@@ -15,8 +15,8 @@
 {% block content %}
 {# The breadcrumb names this gate under Evaluations (AD-100). #}
 <div class="ptitle"><h1>Gate {{ gate.number }} · {{ gate.label or "Untitled gate" }}</h1>
-  <span class="ev-head">{% import "applydesk/operator/_gate_state.html" as gs %}{{ gs.chip(state) }}{% if state[0] == "Not ready" and state[1] %} <span class="muted" data-gate-why title="As saved: this tab's changes count once AD2 saves them">{{ state[1] }}</span>{% endif %} <span class="chip chip-mute" data-ev-mode>{{ mode_label }}</span> <span class="muted" data-ev-counts>{{ assignment_counts(all_rows) }}</span> <a class="btn btn-secondary" href="#ev-rr">Review Robin ↓</a></span></div>
-<p class="placeholder"><strong>Placeholder.</strong> Sample data: what you do here works on screen and is kept in this tab across its pages, but nothing is saved until AD2.</p>
+  <span class="ev-head">{% import "applydesk/operator/_gate_state.html" as gs %}{{ gs.chip(state) }}{% if state[0] == "Not ready" and state[1] %} <span class="muted" data-gate-why title="As saved: this tab's changes do not count here">{{ state[1] }}</span>{% endif %} <span class="chip chip-mute" data-ev-mode>{{ mode_label }}</span> <span class="muted" data-ev-counts>{{ assignment_counts(all_rows) }}</span> <a class="btn btn-secondary" href="#ev-rr">Review Robin ↓</a></span></div>
+<p class="placeholder"><strong>Placeholder.</strong> Sample data: what you do here works on screen and is kept in this tab across its pages, but nothing is saved.</p>
 {# Back to its card on Process (ruling 65), which opens on the hash. #}
 <p class="muted pc-intro" data-ev-process>Its name, dates, evaluators and rules are set on its card on Process. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}#gate-{{ gate.key }}">Set on Process →</a></p>
 {# The gate's link to Review Robin (segment AD1M): its session's name and
@@ -52,16 +52,16 @@
   {% macro dl(kind) %}<a class="btn btn-secondary" href="{{ url(here ~ '/' ~ kind ~ '.csv') }}" download data-rr-file="{{ kind }}">Download</a>{% endmacro %}
   <div class="rr-files" data-rr-files>
     <div class="rr-file"><h4>Reviewers</h4><p>{{ n_people }} {{ "evaluator" if n_people == 1 else "evaluators" }}, by name and email</p>{{ dl("reviewers") }}</div>
-    <div class="rr-file"><h4>Reviewees</h4><p>{{ n_dossiers }} {{ "dossier" if n_dossiers == 1 else "dossiers" }}{% if ids_only %}, each by its Dossier ID, the name redacted (ruling 43){% else %}, each with its <code>ProfileLink</code>{% endif %}</p>{{ dl("reviewees") }}</div>
+    <div class="rr-file"><h4>Reviewees</h4><p>{{ n_dossiers }} {{ "dossier" if n_dossiers == 1 else "dossiers" }}{% if ids_only %}, each by its Dossier ID, the name redacted{% else %}, each with its <code>ProfileLink</code>{% endif %}</p>{{ dl("reviewees") }}</div>
     <div class="rr-file"><h4>Relationships</h4><p>{{ "{:,}".format(n_pairs) }} {{ "pair" if n_pairs == 1 else "pairs" }}, each tagged with its source</p>{{ dl("relationships") }}</div>
     <div class="rr-file"><h4>Settings</h4><p>The description, help contact, timezone, dates and one instrument with {{ bundle.fields }} response {{ "field" if bundle.fields == 1 else "fields" }}</p>{{ dl("settings") }}</div>
   </div>
-  <p class="muted">As saved: this tab's changes to the pairs are not in the files until AD2 saves them.</p>
+  <p class="muted">As saved: this tab's changes to the pairs are not in the files.</p>
   {# Progress, a panel of its own (ruling 65): the actions above the table,
      so they are not under 30 rows. Inside the card, which _rr_js.html reads. #}
   <div class="rr-progress">
   <h3>Progress</h3>
-  <p class="muted">Progress is read from Review Robin by <em>Pull results</em> once the session opens; once it closes, <em>Pull final results</em> brings the results back and the gate is done (ruling 57).</p>
+  <p class="muted">Progress is read from Review Robin by <em>Pull results</em> once the session opens; once it closes, <em>Pull final results</em> brings the results back and the gate is done.</p>
   <div class="btnrow rr-acts">
     <button class="btn btn-primary" type="button" data-rr-act="send"{{ rr_wait }}>Send to Review Robin</button>
     <button class="btn btn-secondary" type="button" data-rr-act="resend"{{ rr_wait }}>Re-send</button>
@@ -98,7 +98,7 @@
     </div>
   </details>
   {% else %}<p class="muted">No evaluators paired yet.</p>{% endif %}
-  <p class="muted">Simulated: until AD2 and AD6 nothing reaches Review Robin, and no email is sent until AD7.</p>
+  <p class="muted">Simulated: nothing reaches Review Robin, and no email is sent.</p>
   </div>
   </details>
 </section>
@@ -114,7 +114,7 @@
     {% if gate.mode == "suggested" %}<button type="button" class="btn btn-primary" data-ev-act="approve-all"{{ off }}>Approve all</button>{% endif %}
     <button type="button" class="btn btn-secondary" data-ev-act="add" {% if ev_data %} aria-expanded="false" aria-controls="ev-add"{% endif %}{{ off }}>+ Pair</button>
     {% if sent %}<span class="muted">Its session has opened: its pairs are Review Robin's to change.</span>
-    {% else %}<span class="fb-unsaved" data-ev-unsaved hidden>Changes in this tab, not saved until AD2</span>
+    {% else %}<span class="fb-unsaved" data-ev-unsaved hidden>Changes in this tab, not saved</span>
     <button type="button" class="btn btn-secondary" data-ev-act="discard" hidden>Discard changes</button>{% endif %}
     <span class="muted" data-ev-said role="status"></span>
   </div>

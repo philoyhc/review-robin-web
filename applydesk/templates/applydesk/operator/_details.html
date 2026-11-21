@@ -21,18 +21,16 @@
     </dl>
     <p class="dt-sec">Who may apply</p>
     <p class="dt-val" data-dt-show="eligibility">{% if exercise.eligibility == "Not set" %}<span class="muted">Not set</span>{% else %}{{ exercise.eligibility }}{% endif %}</p>
-    <p class="muted dt-note">Invitation only hides the exercise from everyone not on its list, direct links included.</p>
     <p class="dt-sec">Review</p>
     <p class="dt-val">Blind review: <strong data-dt-show="blind">{{ "On" if exercise.blind else "Off" }}</strong></p>
-    <p class="muted dt-note">On, evaluators' dossiers redact the applicant's name and identifiers, and Review Robin receives each Dossier ID in place of its application ID (ruling 43).</p>
   </div>
   <form class="dt-form" data-dt-form hidden novalidate autocomplete="off">
     <label class="fc-l">Name <span class="dt-why">· the exercise's, everywhere</span><input class="fc-in" data-dt="name" value="{{ exercise.name }}" required></label>
-    <label class="fc-l">Exercise code <span class="dt-why">· {{ "fixed once published" if live else "unique, as a Review Robin session's code" }}</span><input class="fc-in" data-dt="code" value="{{ exercise.code }}"{% if live %} disabled title="Fixed once published: a change waits for re-publishing (G2)"{% endif %}></label>
+    <label class="fc-l">Exercise code <span class="dt-why">· {{ "fixed once published" if live else "unique, as a Review Robin session's code" }}</span><input class="fc-in" data-dt="code" value="{{ exercise.code }}"{% if live %} disabled title="Fixed once published: a change waits for re-publishing"{% endif %}></label>
     <label class="fc-l">Description <span class="dt-why">· shown to applicants</span><textarea class="fc-in" rows="3" maxlength="2000" data-dt="description">{{ exercise.summary }}</textarea></label>
     <label class="fc-l">Help contact <span class="dt-why">· on every gate in Review Robin; empty, the default</span><input class="fc-in" type="email" data-dt="contact" value="{{ exercise.help_contact }}" placeholder="{{ default_contact }}"></label>
     <label class="fc-l">Timezone <span class="dt-why">· the timeline's and every gate's</span><select class="fc-in" data-dt="timezone">{% for z in timezones %}<option value="{{ z }}"{% if z == timezone(exercise) %} selected{% endif %}>{{ z }}{{ " (the default)" if loop.first }}</option>{% endfor %}{% if timezone(exercise) not in timezones %}<option value="{{ timezone(exercise) }}" selected>{{ timezone(exercise) }}</option>{% endif %}</select></label>
-    <label class="fc-l">Who may apply{% if live %} <span class="dt-why">· fixed once published</span>{% endif %}<select class="fc-in" data-dt="eligibility"{% if live %} disabled title="Fixed once published: a change waits for re-publishing (G2)"{% endif %}>{% for v in ("Open to all signed in", "Invitation only") %}<option{% if v == exercise.eligibility %} selected{% endif %}>{{ v }}</option>{% endfor %}{% if exercise.eligibility == "Not set" %}<option value="Not set" selected>Not set</option>{% endif %}</select></label>
+    <label class="fc-l">Who may apply{% if live %} <span class="dt-why">· fixed once published</span>{% endif %}<select class="fc-in" data-dt="eligibility"{% if live %} disabled title="Fixed once published: a change waits for re-publishing"{% endif %}>{% for v in ("Open to all signed in", "Invitation only") %}<option{% if v == exercise.eligibility %} selected{% endif %}>{{ v }}</option>{% endfor %}{% if exercise.eligibility == "Not set" %}<option value="Not set" selected>Not set</option>{% endif %}</select></label>
     <label class="dt-check"{% if blind_lock.fixed %} title="{{ blind_lock.reason }}"{% endif %}><input type="checkbox" data-dt="blind"{% if exercise.blind %} checked{% endif %}{% if blind_lock.fixed %} disabled{% endif %}> <span><strong>Blind review</strong> <span class="dt-why">· {{ "fixed: a stage holding a gate is published" if blind_lock.fixed else "dossiers redact the applicant" }}</span></span></label>
     <p class="dt-why" id="dt-why" data-dt-why role="alert"></p>
     <div class="btnrow dt-foot"><button class="btn btn-secondary" type="button" data-dt-act="discard">Discard changes</button><button class="btn btn-primary" type="button" data-dt-act="lock">Lock</button></div>
@@ -139,7 +137,7 @@
       return;
     }
     kept = v; show(v); open(false); draw();
-    said.textContent = same(v, loaded) ? "Locked." : "Locked: changed on this page; nothing is saved until AD2.";
+    said.textContent = same(v, loaded) ? "Locked." : "Locked: changed on this page only; nothing is saved.";
   });
   form.addEventListener("keydown", function (e) {
     // Esc discards, as Panels' and + Pair's close (AD-104).

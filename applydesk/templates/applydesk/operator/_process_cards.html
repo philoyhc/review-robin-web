@@ -369,7 +369,7 @@
     <ul class="pc-issues"><li data-pc-dates-problem hidden></li>{% for p in problems if not p.startswith(st.label ~ " has no start and end") and not p.startswith(st.label ~ " ends before it starts") %}{% set prev = p.endswith(" is not published yet.") %}{% if prev %}{% set ns.prev = true %}{% endif %}<li{% if prev %} data-pc-prev{% endif %}>{{ p }}</li>{% endfor %}{% if not ns.prev %}<li data-pc-prev hidden></li>{% endif %}</ul>
   </div>
   <div class="btnrow">
-    <button type="button" class="btn btn-primary" data-pc-st="publish"{% if status != "Draft" %} hidden{% endif %}{% if not st.number %} data-pc-new disabled title="A new stage is checked for publishing once saved (AD2)"{% elif problems %} disabled title="Put right what is listed first"{% endif %}>Publish stage</button>
+    <button type="button" class="btn btn-primary" data-pc-st="publish"{% if status != "Draft" %} hidden{% endif %}{% if not st.number %} data-pc-new disabled title="A new stage is checked for publishing once saved"{% elif problems %} disabled title="Put right what is listed first"{% endif %}>Publish stage</button>
     <button type="button" class="btn btn-alert" data-pc-st="revert" aria-expanded="false"{% if status == "Draft" %} hidden{% endif %}>Revert to draft</button>
   </div>
   <div class="pc-revert" data-pc-revert hidden>
