@@ -209,16 +209,24 @@ def pending(session: Session, address: str, actor: Person | None) -> Person:
     not find: an existing *pending* row with that address is reused. A
     bound person's address is only a snapshot, never matched on (Codex on
     #4110), so a bound row with it is left alone and a pending one made.
-    Flushes."""
+    One pending person per address is the database's rule too: if another
+    request made it meanwhile, that one is returned. Flushes."""
     key = email_key(address)
     if key is None:
         raise ValueError("an address is needed")
-    existing = _pending_person(session, key)
-    if existing is not None:
-        return existing
-    person = Person(email=address.strip(), email_key=key)
-    session.add(person)
-    session.flush()
+    for _ in range(_ATTEMPTS):
+        existing = _pending_person(session, key)
+        if existing is not None:
+            return existing
+        person = Person(email=address.strip(), email_key=key)
+        try:
+            with session.begin_nested():
+                session.add(person)
+        except IntegrityError:
+            continue  # another request made it meanwhile: look again
+        break
+    else:
+        raise RuntimeError("could not store the address: another request kept taking it")
     audit.write_event(
         session,
         event_type="person.created",

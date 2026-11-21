@@ -37,7 +37,18 @@ class Person(Base):
     the platform super-admin."""
 
     __tablename__ = "person"
-    __table_args__ = (UniqueConstraint("tenant_id", "object_id", name="uq_person_tenant_object"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "object_id", name="uq_person_tenant_object"),
+        # One pending person per address (Codex on #4110); bound people may
+        # share an address, theirs being a snapshot only.
+        Index(
+            "uq_person_pending_email",
+            "email_key",
+            unique=True,
+            sqlite_where=text("object_id IS NULL"),
+            postgresql_where=text("object_id IS NULL"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     tenant_id: Mapped[str | None] = mapped_column(String(64))

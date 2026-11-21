@@ -591,3 +591,38 @@ def test_an_actor_revoked_meanwhile_reaches_nothing_and_makes_nothing(session: S
     session.rollback()
     assert not operators.can_operate(session, exercise, Actor(owner))
     assert operators.operated_exercises(session, Actor(owner)) == []
+
+
+def test_two_requests_adding_one_address_share_one_pending_person(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex on #4110: two requests adding one address at once. This one
+    looked before the other committed; its insert hits the one-pending-
+    per-address index and it returns the other's person, so an admission
+    and a later sign-in meet on the same row."""
+    other = db.new_session()  # the other request stores the address first
+    first = people.pending(other, "ed@example.edu", actor=None)
+    other.commit()
+    first_id = first.id
+    other.close()
+
+    looks = iter([None])
+    real = people._pending_person  # pyright: ignore[reportPrivateUsage]  -- replay the stale look
+
+    def stale_once(s: Session, *keys: str | None) -> Person | None:
+        if next(looks, "real") is None:
+            return None  # looked before the other request committed
+        return real(s, *keys)
+
+    monkeypatch.setattr(people, "_pending_person", stale_once)
+    second = people.pending(session, "Ed@Example.edu", actor=None)
+    session.commit()
+    assert second.id == first_id
+    assert session.scalar(select(func.count()).select_from(Person)) == 1
+
+
+def test_bound_people_may_still_share_an_address(session: Session) -> None:
+    a = people.resolve(session, _identity("o1", "shared@example.edu"))
+    b = people.resolve(session, _identity("o2", "shared@example.edu"))
+    session.commit()
+    assert a is not None and b is not None and a.id != b.id
