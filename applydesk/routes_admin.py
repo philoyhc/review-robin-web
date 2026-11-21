@@ -1,19 +1,140 @@
 """The platform super-admin's pages, `/admin/…` (segment AD2A, ruling 75):
-the operator list, who may operate an exercise. Scaffold first (rung 5):
-the page's copy and layout, its controls inert; rung 6 wires the search,
-*Admit* and *Revoke*."""
+the operator list, who may operate an exercise. Rung 5 landed the page;
+rung 6 wires its search, *Admit* and *Revoke* (`applydesk/allowlist.py`)."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
-from starlette.responses import Response
+from urllib.parse import parse_qs, urlencode
 
-from applydesk import gate
-from applydesk.web import OPERATOR_LIST, render
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
+from starlette.responses import RedirectResponse, Response
+
+from applydesk import allowlist, db, directory, gate, operators
+from applydesk.web import OPERATOR_LIST, render, url_path
+from cordware.graph import GraphError, directory_for
+from cordware.identity import Identity, current_identity
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(gate.require_super_admin)])
 
+_PAGE = "/admin/operators"
+#: Longest form body a post here takes.
+_MAX_BODY = 4096
+
+#: The page's status line, by the key its redirect carries: the page shows
+#: only these, so a link cannot put words on it (as the Lobby's).
+SAID: dict[str, str] = {
+    "admitted": "Added to the list.",
+    "revoked": "Taken off the list. Their exercises are kept for if they are put back.",
+    "already": "Already on the list.",
+    "not_listed": "Not on the list.",
+    "gone": "That person or account is no longer there; search again.",
+    "directory": "The directory did not answer; try again.",
+    "no_tenant": "Your sign-in names no tenant, so no one can be added from the directory.",
+}
+_REFUSALS: dict[str, str] = {
+    "Already allowed to operate.": "already",
+    "Not on the operator list.": "not_listed",
+    "That person is no longer on record.": "gone",
+    "The directory no longer has that account; search again.": "gone",
+}
+
+
+def _same_site(request: Request) -> None:
+    """Posts come from Apply Desk's own pages (as the Lobby's)."""
+    site = request.headers.get("sec-fetch-site")
+    if site is not None and site not in ("same-origin", "none"):
+        raise HTTPException(status_code=403)
+
+
+async def _form(request: Request) -> dict[str, str]:
+    _same_site(request)
+    body = await request.body()
+    if len(body) > _MAX_BODY:
+        raise HTTPException(status_code=413)
+    return {k: v[0] for k, v in parse_qs(body.decode("utf-8", "replace")).items() if v}
+
+
+def _back(request: Request, said: str) -> RedirectResponse:
+    return RedirectResponse(url_path(request, f"{_PAGE}?{urlencode({'said': said})}"), 303)
+
+
+def _identity(request: Request) -> Identity:
+    identity = current_identity(request)
+    if identity is None:  # the gate let a super-admin through, so never
+        raise HTTPException(status_code=404)
+    return identity
+
 
 @router.get("/operators", name="applydesk_admin_operators")
-def operators_page(request: Request) -> Response:
-    return render(request, "applydesk/admin/operators.html", area=OPERATOR_LIST)
+def operators_page(
+    request: Request, q: str = "", session: Session = Depends(db.get_session)
+) -> Response:
+    found = None
+    if q.strip():
+        try:
+            people_directory = directory_for(request)
+        except GraphError as error:
+            found = directory.search(session, q, None)
+            found = directory.SearchResult(found.on_record, (), directory_failed=error.kind)
+        else:
+            found = directory.search(session, q, people_directory)
+    entries = allowlist.listing(session)
+    return render(
+        request,
+        "applydesk/admin/operators.html",
+        area=OPERATOR_LIST,
+        q=q,
+        found=found,
+        min_query=directory.MIN_QUERY,
+        entries=entries,
+        listed={e.person.id for e in entries},
+        said=SAID.get(request.query_params.get("said", ""), ""),
+    )
+
+
+@router.post("/operators/admit", name="applydesk_admin_admit")
+async def admit(request: Request, session: Session = Depends(db.get_session)) -> Response:
+    form = await _form(request)
+    identity = _identity(request)
+    actor = allowlist.actor_for(session, identity)
+    try:
+        if form.get("person_id", "").isdigit():
+            allowlist.admit_on_record(session, actor, int(form["person_id"]))
+        elif form.get("object_id") and form.get("address"):
+            tenant = (identity.tenant_id or "").strip()
+            if not tenant:
+                return _back(request, "no_tenant")
+            allowlist.admit_from_directory(
+                session,
+                actor,
+                directory_for(request),
+                tenant,
+                form["object_id"],
+                form["address"],
+            )
+        else:
+            raise HTTPException(status_code=400)
+    except operators.Refused as why:
+        session.rollback()
+        return _back(request, _REFUSALS.get(str(why), "gone"))
+    except GraphError:
+        session.rollback()
+        return _back(request, "directory")
+    session.commit()
+    return _back(request, "admitted")
+
+
+@router.post("/operators/{person_id}/revoke", name="applydesk_admin_revoke")
+async def revoke(
+    request: Request, person_id: int, session: Session = Depends(db.get_session)
+) -> Response:
+    await _form(request)
+    actor = allowlist.actor_for(session, _identity(request))
+    try:
+        allowlist.revoke(session, actor, person_id)
+    except operators.Refused as why:
+        session.rollback()
+        return _back(request, _REFUSALS.get(str(why), "gone"))
+    session.commit()
+    return _back(request, "revoked")

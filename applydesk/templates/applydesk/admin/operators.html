@@ -2,20 +2,47 @@
 {% block content %}
 {# The operator list (segment AD2A, ruling 75): the platform super-admin's.
    Who is on it may make an exercise, be added as an operator or take an
-   exercise's ownership. Scaffold (rung 5): copy and layout, controls
-   inert; rung 6 wires the search, Admit and Revoke. #}
+   exercise's ownership. Rung 6 wires the search, Admit and Revoke. #}
 <div class="ptitle"><h1>Operator list</h1></div>
-<p class="placeholder" data-scaffold><strong>Placeholder.</strong> The search, <em>Admit</em> and <em>Revoke</em> do nothing yet: they are wired next.</p>
 <p class="muted pc-intro">Only someone on this list may make an exercise, be added as an exercise's operator or take its ownership. An exercise's Owner adds its operators from this list. Taking someone off ends their access at once but keeps their exercises, so putting them back restores them.</p>
+{% if said %}<p class="nx-said" role="status" data-op-said>{{ said }}</p>{% endif %}
 
 <section class="card" id="op-add" aria-labelledby="op-add-h" data-op-add>
   <div class="cardhead"><h2 id="op-add-h">Add to the list</h2></div>
   <p class="muted">Search by name or email: people already on record first, then the institution's directory.</p>
-  <div class="btnrow">
-    <label class="fc-l">Name or email<input class="fc-in" type="search" name="q" minlength="2" disabled title="Wired next"></label>
-    <button class="btn btn-secondary" type="button" disabled title="Wired next">Search</button>
+  <form class="btnrow" method="get" action="{{ url('/admin/operators') }}" role="search">
+    <label class="fc-l">Name or email<input class="fc-in" type="search" name="q" value="{{ q }}" minlength="{{ min_query }}" required></label>
+    <button class="btn btn-secondary" type="submit">Search</button>
+  </form>
+  {% if found is not none %}
+  <div data-op-results>
+    {% if found.directory_failed %}<p class="muted" role="status" data-op-directory-failed>The directory did not answer ({{ found.directory_failed }}); only people on record are shown.</p>{% endif %}
+    {% if not found.on_record and not found.in_directory %}
+      <p class="muted">No one found{% if q|length < min_query %}: type at least {{ min_query }} characters{% endif %}.</p>
+    {% else %}
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th>Email</th><th>Found</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+      <tbody>
+      {% for p in found.on_record %}
+        <tr data-op-hit="record">
+          <td>{{ p.display_name or "—" }}</td><td>{{ p.email or "—" }}</td><td>On record{% if not p.bound %} · not yet signed in{% endif %}</td>
+          <td>{% if p.id in listed %}<span class="chip chip-ok">On the list</span>{% else %}
+            <form method="post" action="{{ url('/admin/operators/admit') }}"><input type="hidden" name="person_id" value="{{ p.id }}"><button class="btn btn-primary btn-short" type="submit">Admit</button></form>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      {% for u in found.in_directory %}
+        <tr data-op-hit="directory">
+          <td>{{ u.display_name }}</td><td>{{ u.mail or u.user_principal_name }}</td><td>Directory</td>
+          <td><form method="post" action="{{ url('/admin/operators/admit') }}"><input type="hidden" name="object_id" value="{{ u.id }}"><input type="hidden" name="address" value="{{ u.mail or u.user_principal_name }}"><button class="btn btn-primary btn-short" type="submit">Admit</button></form></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% endif %}
   </div>
-  <p class="muted" data-op-results>Matches appear here, each with <em>Admit</em>.</p>
+  {% endif %}
 </section>
 
 <section class="card" id="op-list" aria-labelledby="op-list-h" data-op-list>
@@ -24,9 +51,29 @@
   <table>
     <thead><tr><th>Name</th><th>Email</th><th>Admitted</th><th>By</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
     <tbody>
+    {% for e in entries %}
+      <tr data-op-entry="{{ e.person.id }}">
+        <td>{{ e.person.display_name or "—" }}</td>
+        <td>{{ e.person.email or "—" }}{% if not e.person.bound %} <span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
+        <td>{{ e.admitted_at.strftime("%d %b %Y") if e.admitted_at else "—" }}</td>
+        <td>{{ e.admitted_by.label if e.admitted_by else "Platform super-admin" }}</td>
+        <td><form method="post" action="{{ url('/admin/operators/' ~ e.person.id ~ '/revoke') }}" data-op-revoke data-name="{{ e.person.label }}"><button class="btn btn-destructive btn-short" type="submit">Revoke</button></form></td>
+      </tr>
+    {% else %}
       <tr><td colspan="5" class="muted">Nobody yet. Whoever you admit is listed here, with <em>Revoke</em>.</td></tr>
+    {% endfor %}
     </tbody>
   </table>
   </div>
 </section>
+<script>
+(function () {
+  // Revoke asks first: it ends the person's access at once.
+  document.querySelectorAll("[data-op-revoke]").forEach(function (f) {
+    f.addEventListener("submit", function (e) {
+      if (!window.confirm("Take " + f.dataset.name + " off the list? Their access ends at once; their exercises are kept.")) e.preventDefault();
+    });
+  });
+})();
+</script>
 {% endblock %}

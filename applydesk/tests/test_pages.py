@@ -88,7 +88,8 @@ def client() -> TestClient:
 def test_every_page_of_the_map_answers_locally(client: TestClient, path: str) -> None:
     response = client.get(path)
     assert response.status_code == 200, path
-    assert "Placeholder." in response.text
+    if not path.startswith("/applydesk/admin/"):  # the operator list is real (AD2A)
+        assert "Placeholder." in response.text
 
 
 @pytest.mark.parametrize(
