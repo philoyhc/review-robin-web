@@ -1,6 +1,6 @@
 # Apply Desk — the AD2 series: from sample data to a database
 
-**Opened:** 2026-11-21 · **Rulings:** 72–74 (`applydesk/guide/todo_master.md`) · **Work list:** `applydesk/guide/ad2_deferred_findings.md` · **Model:** `applydesk/docs/data_and_visibility_model.md`
+**Opened:** 2026-11-21 · **Rulings:** 72–75 (`applydesk/guide/todo_master.md`) · **Work list:** `applydesk/guide/ad2_deferred_findings.md` · **Model:** `applydesk/docs/data_and_visibility_model.md`
 
 The roadmap's AD2 row ("Database and identity") is a series of segments, each its own plan in this folder, not one segment (author, 2026-11-21). Each moves one area from sample data and the scratch store to Apply Desk's own database. The pages keep working between segments. This file holds what the series shares; each plan holds its own work.
 
@@ -10,6 +10,7 @@ The roadmap's AD2 row ("Database and identity") is a series of segments, each it
 - **Checkable on localhost** (author, 2026-11-21), as RRW is. The URL defaults to `sqlite:///./applydesk.db`, `alembic -c applydesk/alembic.ini upgrade head` builds it, and `python -m applydesk.seed` loads the sample exercises. A fresh checkout reaches every page under Cordware's fake auth. Tests build the schema from the models on in-memory SQLite.
 - **RRW's layering** (`spec/architecture.md`, "Three-layer split"): thin routes, services holding the rules, models with no logic.
 - **People by tenant and object ID** (ruling 73), never by email after binding.
+- **Every addition of a person searches** by name or email, people on record first, then the institution's directory through Graph (ruling 75, `cordware/graph.py`); a local run searches Cordware's fake directory.
 - **Every change audited**, in RRW's envelope, through Apply Desk's own copy (ruling 74).
 - **A save names the revision it started from** and is refused, *changed since you opened it; reload*, if a newer one exists (ruling 74).
 - **Nothing is hard-deleted**: `retired_at` / `withdrawn_at` (ruling 74).
@@ -19,7 +20,7 @@ The roadmap's AD2 row ("Database and identity") is a series of segments, each it
 
 | Segment | Moves to the database | Findings it takes | Plan |
 |---|---|---|---|
-| AD2A — Foundations | The database and its history; people and their binding; exercise operators (Owner and operators); audit; the seed command | AD-43, AD-53 | `applydesk/guide/segment_AD2A_foundations.md` |
+| AD2A — Foundations | The database and its history; people and their binding; the operator allowlist and its admin page; exercise operators (Owner and operators); audit; the seed command | AD-43, AD-53 | `applydesk/guide/segment_AD2A_foundations.md` |
 | AD2B — Exercises and Details | The exercise and its settings: public ID, code, description, eligibility and invitees, help contact and time zone over the operator settings; NULL for unset; one date helper | AD-52, AD-54, AD-55, AD-60, AD-97, AD-40 | — |
 | AD2C — Process | Stages with date-times, the form's state, gates (stable keys, fields, results), outcomes (keyed values, state, release per audience); rules as validated JSON, evaluated by one server-side service; Process's Save | AD-36, AD-48, AD-51, AD-57, AD-59, AD-61, AD-62, AD-34 | — |
 | AD2D — Form and applications | Versioned forms with stable field keys and per-field visibility grants (rulings 68–71); applications and their states; answers and nominations | AD-45, AD-38, AD-46 | — |
