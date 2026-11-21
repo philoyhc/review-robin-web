@@ -391,6 +391,10 @@ def _owned_with_colleague(
         select(ExerciseOperator).where(ExerciseOperator.person_id == colleague.id)
     )
     assert grant is not None and not grant.is_owner
+    # End this read's transaction, keeping the copy: SQLite (now with real
+    # transactions) would otherwise lock the other session out, where
+    # Postgres's read committed lets it write.
+    session.commit()
     return owner, colleague, exercise.id, grant
 
 
@@ -463,3 +467,22 @@ def test_two_first_sign_ins_of_one_account_both_get_its_person(
     session.commit()
     assert second is not None and second.id == first_id
     assert session.get(Person, earlier.id) is not None  # the savepoint undid only the insert
+
+
+def test_a_rolled_back_resolve_leaves_nothing_behind(session: Session) -> None:
+    """Codex on #4110: on SQLite the person's savepoint once committed on
+    release, keeping the person but not its audit. The engine now begins a
+    real transaction, so a rollback undoes both."""
+    pending = people.pending(session, "ana@example.edu", actor=None)
+    session.commit()
+    assert people.resolve(session, _identity("o1", "new@example.edu")) is not None
+    assert people.resolve(session, _identity("o2", "ana@example.edu")) is not None  # binds
+    session.rollback()
+    fresh = db.new_session()
+    try:
+        assert fresh.scalar(select(func.count()).select_from(Person)) == 1
+        kept = fresh.get(Person, pending.id)
+        assert kept is not None and not kept.bound
+        assert [e.event_type for e in fresh.scalars(select(AuditEvent))] == ["person.created"]
+    finally:
+        fresh.close()
