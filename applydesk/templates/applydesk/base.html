@@ -143,6 +143,15 @@
     .hm-grid > .card + .card { margin-top: 0; }
     .hm-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
     .hm-side > .card { margin-top: 0; }
+    /* The Operators card (segment AD2A). */
+    .ops-act { display: inline; }
+    .ops-add { margin-top: 12px; }
+    .ops-add > summary { list-style: none; display: inline-flex; }
+    .ops-add > summary::-webkit-details-marker { display: none; }
+    .ops-add[open] > summary { margin-bottom: 8px; }
+    .ops-add .btnrow { align-items: flex-end; }
+    .ops-add .btnrow .fc-l { flex: 1; }
+    .ops-hit { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--border-subtle); }
     @media (max-width: 899px) { .hm-grid { grid-template-columns: minmax(0, 1fr); } }
     .cardhead { display: flex; align-items: center; min-height: var(--tog-h); justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
     .cardhead h2 { margin: 0; }

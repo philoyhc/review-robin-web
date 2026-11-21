@@ -6,24 +6,31 @@ from __future__ import annotations
 import functools
 import json
 import re
+from collections.abc import Callable
 from typing import Any, cast
 from urllib.parse import parse_qs, urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from applydesk import (
+    db,
+    directory,
     extract,
     gate,
     handoff,
     home_ops,
     locks,
+    operators,
     paging,
     process_save,
     sample_data,
     scratch,
     scratch_panels,
     stages,
+    team,
     timeline,
     workflow,
 )
@@ -37,6 +44,7 @@ from applydesk.web import (
     root_path,
     url_path,
 )
+from cordware.identity import Identity, current_identity
 
 router = APIRouter(prefix="/operator", dependencies=[Depends(gate.require_exercise_operator)])
 
@@ -440,10 +448,102 @@ async def exercise_details(request: Request, exercise_id: str) -> Response:
     return JSONResponse({"saved": True})
 
 
+#: The Operators card's status line, by the key its redirect carries (as
+#: the Lobby's): a link cannot put words on it.
+OPS_SAID: dict[str, str] = {
+    "added": "Added as an operator.",
+    "removed": "Removed. They can be added again.",
+    "owner": "Ownership handed over; the former Owner stays an operator.",
+    "not_owner": "Only the exercise's Owner changes its operators.",
+    "not_listed": "Only someone on the operator list can be added or made Owner.",
+    "already": "Already an operator.",
+    "is_owner": "The Owner cannot be removed; hand ownership over first.",
+    "not_operator": "Add them as an operator first.",
+    "changed": "Someone else changed the operators just now; look again and retry.",
+}
+_OPS_REFUSALS: dict[str, str] = {
+    "Only the exercise's Owner adds operators.": "not_owner",
+    "Only the exercise's Owner removes operators.": "not_owner",
+    "Only the exercise's Owner hands ownership over.": "not_owner",
+    "Only someone on the operator list can be added.": "not_listed",
+    "Only someone on the operator list can own an exercise.": "not_listed",
+    "Already an operator.": "already",
+    "The Owner cannot be removed; hand ownership over first.": "is_owner",
+    "Add them as an operator first.": "not_operator",
+    "Not an operator of this exercise.": "not_operator",
+}
+
+
+def _ops_back(request: Request, exercise_id: str, said: str) -> RedirectResponse:
+    path = f"/operator/exercises/{exercise_id}?{urlencode({'ops_said': said})}#operators"
+    return RedirectResponse(url_path(request, path), status_code=303)
+
+
+def _ops_change(
+    request: Request,
+    exercise_id: str,
+    change: Callable[[Session, str, Identity, int], None],
+    person_id: int,
+    done: str,
+) -> Response:
+    """One change to the exercise's operators (`team.py`), a refusal
+    turned into a status key."""
+    _same_site(request)
+    identity = current_identity(request)
+    if identity is None:
+        raise HTTPException(status_code=404)
+    session = db.new_session()
+    try:
+        change(session, exercise_id, identity, person_id)
+        session.commit()
+    except operators.Refused as why:
+        session.rollback()
+        return _ops_back(request, exercise_id, _OPS_REFUSALS.get(str(why), "changed"))
+    except IntegrityError:  # a concurrent change won (the one-Owner index)
+        session.rollback()
+        return _ops_back(request, exercise_id, "changed")
+    finally:
+        session.close()
+    return _ops_back(request, exercise_id, done)
+
+
+@router.post("/exercises/{exercise_id}/operators/add", name="applydesk_operators_add")
+async def operators_add(request: Request, exercise_id: str) -> Response:
+    body = await request.body()
+    if len(body) > 1024:
+        raise HTTPException(status_code=413)
+    raw = parse_qs(body.decode("utf-8", "replace")).get("person_id", [""])[0]
+    if not raw.isdigit():
+        raise HTTPException(status_code=400)
+    return _ops_change(request, exercise_id, team.add, int(raw), "added")
+
+
+@router.post(
+    "/exercises/{exercise_id}/operators/{person_id}/remove", name="applydesk_operators_remove"
+)
+def operators_remove(request: Request, exercise_id: str, person_id: int) -> Response:
+    return _ops_change(request, exercise_id, team.remove, person_id, "removed")
+
+
+@router.post(
+    "/exercises/{exercise_id}/operators/{person_id}/owner", name="applydesk_operators_owner"
+)
+def operators_owner(request: Request, exercise_id: str, person_id: int) -> Response:
+    return _ops_change(request, exercise_id, team.make_owner, person_id, "owner")
+
+
 @router.get("/exercises/{exercise_id}", name="applydesk_exercise_home")
 def exercise_home(request: Request, exercise_id: str) -> Response:
     exercise = exercise_or_404(exercise_id)
     tl = timeline.of(exercise)
+    op_q = request.query_params.get("op_q", "").strip()
+    session = db.new_session()
+    try:
+        ops = team.card(session, exercise.public_id, current_identity(request))
+        op_found = team.candidates(session, exercise.public_id, op_q) if op_q and ops.manage else []
+        session.commit()
+    finally:
+        session.close()
     return render(
         request,
         "applydesk/operator/home.html",
@@ -456,6 +556,11 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         next_line=timeline.next_step(exercise, tl),
         ops=home_ops.of(exercise),
         missing=sample_data.setup_missing(exercise),
+        operators_card=ops,
+        op_q=op_q,
+        op_found=op_found,
+        op_min_query=directory.MIN_QUERY,
+        ops_said=OPS_SAID.get(request.query_params.get("ops_said", ""), ""),
         timezones=sample_data.TIMEZONES,
         default_contact=sample_data.DEFAULT_HELP_CONTACT,
         blind_lock=locks.blind_lock(exercise),

@@ -2,23 +2,60 @@
    marked, and the other operators. The Owner (or the platform
    super-admin) adds operators from the operator list, removes them and
    hands ownership over; the rest see it read-only. The Owner is never
-   removed, only replaced by a handover. Scaffold (rung 7): copy and
-   layout, controls inert; rung 8 wires them. #}
-<section class="card" id="operators" aria-labelledby="ops-h" data-operators>
-  <div class="cardhead"><h2 id="ops-h">Operators</h2>
-    <button class="btn btn-secondary btn-short" type="button" disabled title="Wired next" data-ops-add>Add operator</button>
-  </div>
-  <p class="muted">Everyone here runs this exercise. Only the Owner adds and removes operators, from the operator list, and hands ownership to another operator.</p>
+   removed, only replaced by a handover. Rung 8 wires it (`team.py`). #}
+{% set ops = operators_card %}
+{% set base = '/operator/exercises/' ~ exercise.public_id %}
+<section class="card" id="operators" aria-labelledby="ops-h" data-operators{% if ops.manage %} data-ops-manage{% endif %}>
+  <div class="cardhead"><h2 id="ops-h">Operators</h2></div>
+  {% if ops_said %}<p class="nx-said" role="status" data-ops-said>{{ ops_said }}</p>{% endif %}
+  {% if not ops.recorded %}
+    <p class="muted" data-ops-unrecorded>No operators are recorded for this exercise yet: it is sample data not loaded into the database. On localhost, <code>python -m applydesk.seed</code> loads it.</p>
+  {% else %}
+  <p class="muted">{% if ops.manage %}Only the Owner adds and removes operators, from the operator list, and hands ownership to another operator.{% else %}Everyone here runs this exercise. Only the Owner changes who.{% endif %}</p>
   <div class="table-wrap">
   <table>
-    <thead><tr><th>Name</th><th>Role</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+    <thead><tr><th>Name</th><th>Role</th>{% if ops.manage %}<th><span class="visually-hidden">Actions</span></th>{% endif %}</tr></thead>
     <tbody>
-      <tr class="muted" data-ops-sample>
-        <td>The exercise's operators are listed here</td>
-        <td><span class="chip chip-ok">Owner</span></td>
-        <td><button class="btn btn-secondary btn-short" type="button" disabled title="Wired next">Make owner</button> <button class="btn btn-destructive btn-short" type="button" disabled title="Wired next">Remove</button></td>
+    {% for person, owner in ops.rows %}
+      <tr data-ops-row="{{ person.id }}">
+        <td>{{ person.label }}{% if not person.bound %} <span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
+        <td>{% if owner %}<span class="chip chip-ok">Owner</span>{% else %}Operator{% endif %}</td>
+        {% if ops.manage %}<td>{% if not owner %}
+          <form class="ops-act" method="post" action="{{ url(base ~ '/operators/' ~ person.id ~ '/owner') }}" data-ops-confirm="Make {{ person.label }} the Owner? You stay an operator, but only they can then change the operators."><button class="btn btn-secondary btn-short" type="submit">Make owner</button></form>
+          <form class="ops-act" method="post" action="{{ url(base ~ '/operators/' ~ person.id ~ '/remove') }}" data-ops-confirm="Remove {{ person.label }} from this exercise?"><button class="btn btn-destructive btn-short" type="submit">Remove</button></form>
+        {% endif %}</td>{% endif %}
       </tr>
+    {% else %}
+      <tr><td colspan="{{ 3 if ops.manage else 2 }}" class="muted">No operators.</td></tr>
+    {% endfor %}
     </tbody>
   </table>
   </div>
+  {% if ops.manage %}
+  <details class="ops-add" data-ops-add{% if op_q %} open{% endif %}>
+    <summary class="btn btn-secondary btn-short">Add operator</summary>
+    <form class="btnrow" method="get" action="{{ url(base) }}#operators" role="search">
+      <label class="fc-l">Name or email, on the operator list<input class="fc-in" type="search" name="op_q" value="{{ op_q }}" minlength="{{ op_min_query }}" required></label>
+      <button class="btn btn-secondary" type="submit">Search</button>
+    </form>
+    {% if op_q %}
+      {% for p in op_found %}
+        <form class="ops-hit" method="post" action="{{ url(base ~ '/operators/add') }}" data-ops-hit><input type="hidden" name="person_id" value="{{ p.id }}"><span>{{ p.label }}{% if p.email and p.email != p.label %} <span class="muted">· {{ p.email }}</span>{% endif %}</span> <button class="btn btn-primary btn-short" type="submit">Add</button></form>
+      {% else %}
+        <p class="muted">No one on the operator list matches who is not already an operator. The platform super-admin keeps the list.</p>
+      {% endfor %}
+    {% endif %}
+  </details>
+  {% endif %}
+  {% endif %}
 </section>
+<script>
+(function () {
+  // Remove and Make owner ask first.
+  document.querySelectorAll("[data-ops-confirm]").forEach(function (f) {
+    f.addEventListener("submit", function (e) {
+      if (!window.confirm(f.dataset.opsConfirm)) e.preventDefault();
+    });
+  });
+})();
+</script>

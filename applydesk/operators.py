@@ -151,6 +151,12 @@ def operated_exercises(session: Session, actor: Actor) -> list[Exercise]:
     )
 
 
+def is_owner(session: Session, exercise: Exercise, actor: Actor) -> bool:
+    """Whether `actor` may change `exercise`'s operators: its current,
+    allowlisted Owner, or the platform super-admin (read fresh)."""
+    return _is_owner(session, exercise, actor)
+
+
 def _is_owner(session: Session, exercise: Exercise, actor: Actor) -> bool:
     if actor.is_super_admin:
         return True

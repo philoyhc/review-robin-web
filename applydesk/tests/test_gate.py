@@ -192,7 +192,7 @@ def test_the_super_admin_finds_it_in_the_switcher() -> None:
     assert 'href="/applydesk/admin/operators"' in client.get("/applydesk/operator/exercises").text
 
 
-# --- Rung 7: the Operators card on Home, scaffold ---
+# --- Rung 7: the Operators card on Home (wired at rung 8: test_operators_card.py) ---
 
 
 def test_home_shows_the_operators_card_under_details() -> None:
@@ -200,7 +200,3 @@ def test_home_shows_the_operators_card_under_details() -> None:
     page = client.get(f"/applydesk/operator/exercises/{EX}").text
     side = page[page.index('class="hm-side"') :]
     assert side.index("data-details") < side.index("data-operators")
-    card = page[page.index("data-operators") :]
-    card = card[: card.index("</section>")]
-    assert "Add operator" in card and "Make owner" in card and "Remove" in card
-    assert card.count(" disabled") == 3  # inert until rung 8
