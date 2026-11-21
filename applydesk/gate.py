@@ -137,11 +137,20 @@ def landing(request: Request) -> None:
     placeholders_only(request)
 
 
-def placeholders_only(request: Request) -> None:
-    """The participant's pages and the landing, until a later AD2 segment:
-    anyone on a local run, deployed only the platform super-admin."""
+def reaches_placeholders(request: Request) -> bool:
+    """Whether the viewer reaches the participant's pages: anyone on a
+    local run, deployed only the platform super-admin. The pages that link
+    there (the switcher's User Lobby, a dossier's *View as evaluators see
+    it*) offer the link only when it answers (the author's ruling at the
+    AD2A close: hide the links, keep the gate)."""
     if is_local():
-        return
+        return True
     identity = current_identity(request)
-    if identity is None or not identity.is_super_admin:
+    return identity is not None and identity.is_super_admin
+
+
+def placeholders_only(request: Request) -> None:
+    """The participant's pages, until a later AD2 segment:
+    `reaches_placeholders`, else 404."""
+    if not reaches_placeholders(request):
         raise HTTPException(status_code=404)

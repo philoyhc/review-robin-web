@@ -286,3 +286,90 @@ def test_admin_has_review_robin_s_three_tabs() -> None:
         assert f'href="/applydesk{back}" data-admin-back' in page
     rows = admin.get("/applydesk/admin/exercises").text
     assert f'data-ex-row="{EX}"' in rows and "disabled" in rows
+    # Review Robin's actions (the author's ruling): Manage opens Home.
+    assert f'href="/applydesk/operator/exercises/{EX}" aria-label="Manage' in rows
+    assert "Outbox" in rows and "Adopt" not in rows and "is not built yet" in rows
+
+
+# --- The bug sweep at the AD2A close ---
+
+
+def test_a_deployed_operator_is_not_offered_pages_that_would_404(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The author's ruling at the AD2A close: deployed, the participant's
+    pages stay the super-admin's until a later AD2 segment, so an
+    allowlisted operator's switcher offers no User Lobby and a dossier no
+    *View as evaluators see it*; both stay 404 to them. Locally, both are
+    offered and answer."""
+    from applydesk import gate
+
+    session = db.new_session()
+    seed.seed(session)
+    session.close()
+    dossier = f"/applydesk/operator/exercises/{EX}/dossiers/p3bd7kq2wx"
+    local_lobby = client.get("/applydesk/operator/exercises").text
+    assert 'href="/applydesk/me"' in local_lobby
+    assert "data-od-as-evaluators" in client.get(dossier).text
+    monkeypatch.setattr(gate, "is_local", lambda: False)
+    lobby = client.get("/applydesk/operator/exercises").text
+    assert 'href="/applydesk/me"' not in lobby
+    page = client.get(dossier)
+    assert page.status_code == 200 and "data-od-as-evaluators" not in page.text
+    assert client.get("/applydesk/me").status_code == 404
+    assert client.get(f"/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx").status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "body", "status"),
+    [
+        ("POST", "/applydesk/admin/operators/admit", "person_id=%C2%B2", 400),
+        ("POST", "/applydesk/admin/operators/admit", "person_id=" + "9" * 30, 400),
+        ("POST", "/applydesk/admin/operators/" + "1" * 31 + "/revoke", "", 422),
+        ("POST", "/applydesk/admin/operators/0/revoke", "", 422),
+        ("POST", f"/applydesk/operator/exercises/{EX}/operators/add", "person_id=%C2%B2", 400),
+        ("POST", f"/applydesk/operator/exercises/{EX}/operators/add", "person_id=" + "9" * 30, 400),
+        ("POST", f"/applydesk/operator/exercises/{EX}/operators/{'1' * 31}/remove", "", 422),
+        ("POST", f"/applydesk/operator/exercises/{EX}/operators/{'1' * 31}/owner", "", 422),
+    ],
+)
+def test_a_malformed_person_id_is_refused_not_a_500(
+    method: str, path: str, body: str, status: int
+) -> None:
+    """`"²".isdigit()` is true and SQLite overflows past 64 bits: both
+    were 500s."""
+    admin = TestClient(host_with(("applydesk",))[0], raise_server_exceptions=False)
+    answer = admin.request(
+        method,
+        path,
+        content=body,
+        headers={"content-type": "application/x-www-form-urlencoded"},
+        follow_redirects=False,
+    )
+    assert answer.status_code == status, answer.text[:200]
+
+
+@pytest.mark.parametrize(
+    ("return_to", "kept"),
+    [
+        (f"/operator/exercises/{EX}", True),
+        (f"/operator/exercises/{EX}/process", True),
+        ("/me", True),
+        (f"/me/exercises/{EX}", True),
+        ("/me/../../.auth/logout", False),
+        (f"/operator/exercises/{EX}/../../../.auth/logout", False),
+        ("/meX", False),
+        (f"/operator/exercises/{EX}?x=1", False),
+        (f"/operator/exercises/{EX}#top", False),
+        ("/me\\..\\x", False),
+    ],
+)
+def test_back_keeps_only_a_page_path(return_to: str, kept: bool) -> None:
+    """A crafted `return_to` could aim Back at any path on the host, the
+    sign-out among them; now only a page of Apply Desk's is kept."""
+    from urllib.parse import quote
+
+    admin = TestClient(host_with(("applydesk",))[0])
+    page = admin.get(f"/applydesk/admin/operators?return_to={quote(return_to)}").text
+    expected = return_to if kept else "/operator/exercises"
+    assert f'href="/applydesk{expected}" data-admin-back' in page

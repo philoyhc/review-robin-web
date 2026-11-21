@@ -13,6 +13,8 @@ or audited until AD2.
 
 from __future__ import annotations
 
+from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, time
 
@@ -256,3 +258,14 @@ def stage_rows(exercise: Exercise) -> list[StageRow]:
         waiting = outstanding(exercise, st) if status == "Overdue" else ()
         rows.append(StageRow(st, status, blocking, setup, waiting))
     return rows
+
+
+#: Exercise states in their order of life, for a tally's chips.
+STATUS_ORDER = ("Draft", "Published", "Completed", "Closed", "Archived")
+
+
+def status_tally(exercises: Iterable[Exercise], now: datetime = NOW) -> list[tuple[str, int]]:
+    """How many of `exercises` stand in each status, in `STATUS_ORDER`,
+    leaving out the empty ones (Admin's Exercises Overview)."""
+    counts = Counter(exercise_status(e, now) for e in exercises)
+    return [(s, counts[s]) for s in STATUS_ORDER if counts[s]]

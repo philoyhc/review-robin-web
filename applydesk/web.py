@@ -23,7 +23,7 @@ from starlette.requests import HTTPConnection
 from starlette.responses import Response
 
 from applydesk import sample_data, tones, workflow
-from applydesk.gate import is_operator
+from applydesk.gate import is_operator, reaches_placeholders
 from applydesk.gate import viewer as gate_viewer
 from cordware.identity import current_identity, institution_name
 
@@ -96,10 +96,12 @@ ADMIN = "Admin"
 
 #: The switcher's places (`cordware/spec/header_chrome.md` §3), named as Review
 #: Robin's are (author, 2026-11-13): the Operator Lobby for an operator
-#: (`gate.is_operator`), the User Lobby for everyone.
+#: (`gate.is_operator`), the User Lobby for whoever reaches it
+#: (`gate.reaches_placeholders`: deployed, only the super-admin until a
+#: later AD2 segment; the author's ruling at the AD2A close).
 PLACES: tuple[Mapping[str, Any], ...] = (
     {"label": OPERATOR_LOBBY, "path": "/operator/exercises", "operators": True},
-    {"label": USER_LOBBY, "path": "/me", "operators": False},
+    {"label": USER_LOBBY, "path": "/me", "operators": False, "participants": True},
 )
 
 
@@ -171,6 +173,7 @@ def render(
     viewer = current_identity(request)
     operator = is_operator(request)
     super_admin = viewer_is_super_admin(request)
+    participant_pages = reaches_placeholders(request)
     return templates.TemplateResponse(
         request,
         template,
@@ -178,7 +181,14 @@ def render(
             "app_name": APP_NAME,
             "operator_page": app_path(request).startswith("/operator"),
             "area": area,
-            "places": [p for p in PLACES if operator or not p["operators"]],
+            "places": [
+                p
+                for p in PLACES
+                if (operator or not p["operators"])
+                and (participant_pages or not p.get("participants"))
+            ],
+            # Whether a link to the participant's pages answers the viewer.
+            "participant_pages": participant_pages,
             # The account menu's Admin, for the super-admin, carrying the
             # page to come back to; omitted on the Admin pages (§4).
             "admin_entry": super_admin and not app_path(request).startswith("/admin"),

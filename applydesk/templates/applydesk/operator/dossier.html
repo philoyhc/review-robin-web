@@ -9,7 +9,7 @@
 {% block title %}Dossier {{ application.dossier_id }} · {{ exercise.name }}{% endblock %}
 {% block content %}
 <div class="ptitle"><h1>Dossier {{ application.dossier_id }}</h1>
-  <span class="ev-head"><a class="btn btn-secondary" href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ application.dossier_id) }}" target="_blank" rel="noopener" data-od-as-evaluators>View as evaluators see it ↗<span class="visually-hidden"> (opens in a new tab)</span></a></span></div>
+  {% if participant_pages %}<span class="ev-head"><a class="btn btn-secondary" href="{{ url('/me/exercises/' ~ exercise.public_id ~ '/dossiers/' ~ application.dossier_id) }}" target="_blank" rel="noopener" data-od-as-evaluators>View as evaluators see it ↗<span class="visually-hidden"> (opens in a new tab)</span></a></span>{% endif %}</div>
 {% with read_only = true %}{% include "applydesk/_placeholder.html" %}{% endwith %}
 <p class="muted pc-intro">One dossier, as Dossiers holds it: its application, where it stands at each gate and outcome, and what evaluators read. Its cells change on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers') }}">Dossiers</a>.</p>
 <section class="card" data-od-card="application">

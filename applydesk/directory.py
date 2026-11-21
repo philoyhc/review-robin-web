@@ -42,10 +42,12 @@ def search(
     directory: Directory | None,
     *,
     allowlist_only: bool = False,
+    exclude: frozenset[int] = frozenset(),
 ) -> SearchResult:
     """People matching `query` by name or address: those on record (only
-    the allowlist's, with `allowlist_only`), then the directory's not
-    already on record. No directory (None) searches records alone."""
+    the allowlist's, with `allowlist_only`; never the rows in `exclude`,
+    left out before the limit), then the directory's not already on
+    record. No directory (None) searches records alone."""
     text = query.strip()
     if len(text) < MIN_QUERY:
         return SearchResult((), ())
@@ -58,6 +60,8 @@ def search(
     )
     if allowlist_only:
         statement = statement.where(Person.may_operate.is_(True))
+    if exclude:
+        statement = statement.where(Person.id.not_in(exclude))
     on_record = tuple(
         session.scalars(
             statement.order_by(Person.display_name.is_(None), Person.display_name, Person.id).limit(

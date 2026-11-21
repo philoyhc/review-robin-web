@@ -643,3 +643,76 @@ def test_two_pending_people_matching_one_sign_in_bind_neither(session: Session) 
     session.refresh(by_upn)
     session.refresh(by_mail)
     assert not by_upn.bound and not by_mail.bound
+
+
+# --------------------------------------------------------------------------- #
+# The bug sweep at the AD2A close
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("change", ["admit", "revoke"])
+def test_a_second_admit_or_revoke_at_once_is_refused_and_audited_once(
+    session: Session, monkeypatch: pytest.MonkeyPatch, change: str
+) -> None:
+    """Both requests pass the check before either commits (as two tabs on
+    Postgres): the conditional update lets one change the row and be
+    audited; the other is refused."""
+    ana = _operator(session, "o-ana", "ana@example.edu")
+    if change == "admit":
+        ana.may_operate = False
+        session.flush()
+    getattr(operators, change)(session, SUPER, ana)
+    session.commit()
+    event = "person.admitted" if change == "admit" else "person.revoked"
+    before = _events(session, event)
+    # The second request's check ran before the first committed.
+    monkeypatch.setattr(operators, "_allowed", lambda *_a, **_k: change == "revoke")
+    with pytest.raises(Refused) as why:
+        getattr(operators, change)(session, SUPER, ana)
+    assert why.value.key == ("already_listed" if change == "admit" else "not_listed")
+    session.rollback()
+    assert _events(session, event) == before == 1
+
+
+def test_a_change_holds_the_allowlist_rows_it_rests_on(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The Owner's and the target's allowlisting are read under a share
+    lock (`FOR SHARE` on Postgres), so a revoke committing meanwhile waits
+    for the change rather than the change landing for someone revoked."""
+    ana = _operator(session, "o-ana", "ana@example.edu")
+    ben = _operator(session, "o-ben", "ben@example.edu")
+    exercise = operators.create_exercise(session, Actor(ana), "wa9juxbc2t")
+    session.commit()
+    held: list[int] = []
+    real = session.refresh
+
+    def refresh(instance: object, *args: object, **kwargs: object) -> None:
+        if kwargs.get("with_for_update") and isinstance(instance, Person):
+            held.append(instance.id)
+        real(instance, *args, **kwargs)  # pyright: ignore[reportArgumentType]  -- a pass-through
+
+    monkeypatch.setattr(session, "refresh", refresh)
+    operators.add_operator(session, exercise, Actor(ana), ben)
+    assert held.count(ana.id) == 1 and held.count(ben.id) == 1
+    held.clear()
+    operators.hand_over(session, exercise, Actor(ana), ben)
+    assert held.count(ana.id) == 1 and held.count(ben.id) == 1
+
+
+def test_candidates_leave_out_current_operators_before_the_limit(session: Session) -> None:
+    """With more matching operators on the list than the search returns,
+    the ones already on the exercise used to fill it, leaving nobody to
+    add."""
+    ana = _operator(session, "o-ana", "ana@example.edu")
+    exercise = operators.create_exercise(session, Actor(ana), "wa9juxbc2t")
+    for n in range(directory.LIMIT):
+        p = _operator(session, f"o-a{n:02}", f"a{n:02}@example.edu")
+        p.display_name = f"Aaron {n:02}"
+        operators.add_operator(session, exercise, Actor(ana), p)
+    last = _operator(session, "o-zz", "zz@example.edu")
+    last.display_name = "Aaron Zed"
+    session.commit()
+    from applydesk import team
+
+    assert [p.id for p in team.candidates(session, "wa9juxbc2t", "aaron")] == [last.id]

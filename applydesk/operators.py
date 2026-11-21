@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, cast
 
-from sqlalchemy import CursorResult, Update, select, update
+from sqlalchemy import CursorResult, Update, or_, select, update
 from sqlalchemy.orm import Session
 
 from applydesk import audit
@@ -71,14 +71,23 @@ def may_operate(person: Person | None) -> bool:
     return person is not None and person.may_operate and person.revoked_at is None
 
 
-def _allowed(session: Session, person: Person | None) -> bool:
+def _allowed(session: Session, person: Person | None, *, hold: bool = False) -> bool:
     """`may_operate`, read from the database now rather than from the
     session's copy, so a revoke or admit another request committed counts
     (Codex on #4110). Every allowlist check in this module goes through
-    it; `may_operate` alone is for a row just read."""
+    it; `may_operate` alone is for a row just read.
+
+    `hold` reads it under a share lock (`FOR SHARE`) kept to the end of
+    the transaction, for a check a change rests on: a revoke committing
+    meanwhile then waits for the change, rather than the change landing
+    for someone already revoked (bug sweep at the AD2A close)."""
     if person is None:
         return False
-    session.refresh(person, attribute_names=["may_operate", "revoked_at"])
+    session.refresh(
+        person,
+        attribute_names=["may_operate", "revoked_at"],
+        with_for_update={"read": True} if hold else None,
+    )
     return may_operate(person)
 
 
@@ -87,8 +96,9 @@ def _lock(session: Session, exercise: Exercise) -> None:
     change to its operators, so each change's check of who may act and
     what holds, and the change itself, run one at a time per exercise
     (Codex on #4110). The reads after it load fresh rows, not the
-    session's earlier copies. SQLite has no row locks; it serializes
-    writers on its own."""
+    session's earlier copies. SQLite has no row locks: two requests that
+    both read and then write meet as "database is locked", which the
+    routes report as a concurrent change (bug sweep at the AD2A close)."""
     session.execute(select(Exercise.id).where(Exercise.id == exercise.id).with_for_update())
 
 
@@ -171,7 +181,7 @@ def _is_owner(session: Session, exercise: Exercise, actor: Actor) -> bool:
         actor.person is not None
         and owner is not None
         and owner.id == actor.person.id
-        and may_operate(owner)
+        and _allowed(session, owner, hold=True)
     )
 
 
@@ -186,13 +196,28 @@ def admit(session: Session, actor: Actor, person: Person) -> None:
         raise Refused(
             "Only the platform super-admin keeps the operator list.", key="not_super_admin"
         )
+    listed = Refused("Already allowed to operate.", key="already_listed")
     if _allowed(session, person):
-        raise Refused("Already allowed to operate.", key="already_listed")
-    person.may_operate = True
-    person.admitted_by_id = actor.person.id if actor.person is not None else None
-    person.admitted_at = _now()
-    person.revoked_at = None
-    session.flush()
+        raise listed
+    # Conditional, so of two admissions at once one changes the row and
+    # is audited; the other is refused (bug sweep at the AD2A close).
+    if not _changed(
+        session,
+        update(Person)
+        .where(
+            Person.id == person.id,
+            or_(Person.may_operate.is_(False), Person.revoked_at.is_not(None)),
+        )
+        .values(
+            may_operate=True,
+            admitted_by_id=actor.person.id if actor.person is not None else None,
+            admitted_at=_now(),
+            revoked_at=None,
+        )
+        .execution_options(synchronize_session=False),
+    ):
+        raise listed
+    session.refresh(person)
     audit.write_event(
         session, event_type="person.admitted", actor=actor.person, refs={"person_id": person.id}
     )
@@ -205,11 +230,19 @@ def revoke(session: Session, actor: Actor, person: Person, reason: str | None = 
         raise Refused(
             "Only the platform super-admin keeps the operator list.", key="not_super_admin"
         )
+    unlisted = Refused("Not on the operator list.", key="not_listed")
     if not _allowed(session, person):
-        raise Refused("Not on the operator list.", key="not_listed")
-    person.may_operate = False
-    person.revoked_at = _now()
-    session.flush()
+        raise unlisted
+    # Conditional, as `admit`: two revocations at once audit once.
+    if not _changed(
+        session,
+        update(Person)
+        .where(Person.id == person.id, Person.may_operate.is_(True), Person.revoked_at.is_(None))
+        .values(may_operate=False, revoked_at=_now())
+        .execution_options(synchronize_session=False),
+    ):
+        raise unlisted
+    session.refresh(person)
     audit.write_event(
         session,
         event_type="person.revoked",
@@ -228,7 +261,9 @@ def create_exercise(session: Session, actor: Actor, public_id: str) -> Exercise:
     """Make an exercise's row with `actor` its Owner, in one transaction.
     The actor needs a person row and must be allowlisted, or be the
     platform super-admin, who needs no allowlisting (ruling 75)."""
-    if actor.person is None or not (actor.is_super_admin or _allowed(session, actor.person)):
+    if actor.person is None or not (
+        actor.is_super_admin or _allowed(session, actor.person, hold=True)
+    ):
         raise Refused("Only someone on the operator list may make an exercise.", key="not_listed")
     exercise = Exercise(public_id=public_id)
     session.add(exercise)
@@ -250,7 +285,7 @@ def add_operator(session: Session, exercise: Exercise, actor: Actor, person: Per
     _lock(session, exercise)
     if not _is_owner(session, exercise, actor):
         raise Refused("Only the exercise's Owner adds operators.", key="not_owner")
-    if not _allowed(session, person):
+    if not _allowed(session, person, hold=True):
         raise Refused("Only someone on the operator list can be added.", key="not_listed")
     grant = _grant(session, exercise, person)
     if grant is not None and grant.removed_at is None:
@@ -316,7 +351,7 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
     _lock(session, exercise)
     if not _is_owner(session, exercise, actor):
         raise Refused("Only the exercise's Owner hands ownership over.", key="not_owner")
-    if not _allowed(session, person):
+    if not _allowed(session, person, hold=True):
         raise Refused("Only someone on the operator list can own an exercise.", key="not_listed")
     grant = _grant(session, exercise, person)
     if grant is None or grant.removed_at is not None:
