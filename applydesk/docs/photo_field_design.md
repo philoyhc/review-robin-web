@@ -75,10 +75,10 @@ As U4's tool, which is where to read the code:
 
 ## Open questions
 
-- **Blind exercises.** Ruling 6 redacts name and identifiers on the
-  dossier; a face is an identifier. Hide the photo there, or keep
-  the field in a dossier part evaluators do not see (ruling 33) in a
-  blind exercise (author, at AD4/AD5).
+- ~~**Blind exercises.**~~ Settled by ruling 71 (2026-11-21): a photo
+  follows its grants in a blind exercise too, since a photo or screenshot
+  asked for need not identify anyone; to hide a face from evaluators,
+  leave them off its grants.
 - **Required or optional**, per exercise (AD4's form builder).
 - **Retention.** Real applicants' photos need a retention rule under PDPA
   before any is kept (U4's plan, Semantics).

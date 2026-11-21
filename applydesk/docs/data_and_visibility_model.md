@@ -36,7 +36,7 @@ Every value is kept, whatever is shown of it.
 - **Derived values**:
   - **A gate's results:** up to three per gate, each derived from one response field. The derivation sets the result's type (ruling 21).
   - **An outcome's value and combined result:** *Decided* is derived, not stored. Release is recorded per audience, each with its own time (ruling 38).
-- **Operator entries:** values set by hand on Dossiers, the panels and their people (ruling 4), and the setup on Process and Form. An operator entry is either a dossier item, with grants like the rest, or store-only. Both kinds exist (ruling 70), so each field an operator can enter is marked one way or the other at setup.
+- **Operator entries:** values set by hand on Dossiers, the panels and their people (ruling 4), and the setup on Process and Form. An operator entry is either a dossier item, with grants like the rest, or store-only. Both kinds exist (ruling 70).
 
 ## 3. The dossier
 
@@ -44,9 +44,9 @@ The page a candidate's readers open. It is displayable, and every item on it car
 
 - **Whose it is** (ruling 70): a dossier belongs to a **candidate**, the person or people it is about. An **applicant** is a candidate who submitted through a Form. A candidate from *Create dossiers* is not an applicant.
 - **What it holds** (ruling 68): every section of the submitted form (when there is one), every gate's results and every outcome, plus any operator entry marked as a dossier item (ruling 70).
-- **A photo is an item like any other** (ruling 70): subject to its grants.
+- **A photo is an item like any other** (rulings 70, 71): subject to its grants, even in a blind exercise. Blind review's redaction (ruling 6) covers the name and identifiers, not a photo, because a blind exercise may ask for a photo or screenshot that does not identify anyone. An operator who wants a face hidden from evaluators leaves them off its grants.
 - **Who sees an item** (ruling 68): only the grants set on it.
-  - *Applicant*;
+  - *Candidate*, the person the dossier is about (ruling 71; ruling 68 said *Applicant*);
   - *Assigned evaluators*, from named panels or from all panels;
   - *Evaluators*, from named panels or from all panels.
 - **When:** each grant opens from a stage. An item that opens to two audiences at different times carries two grants (rulings 26, 68).
@@ -58,13 +58,14 @@ The page a candidate's readers open. It is displayable, and every item on it car
   - A blind exercise's dossier redacts the applicant's name and identifiers (ruling 6).
   - A confidential gate shows Dossier IDs on its page and in its files (ruling 42).
   - Review Robin always receives the Dossier ID in place of the application ID (ruling 43).
-- **Release is per audience** (ruling 38). An outcome's grant to *Applicant* opening is its release to applicants.
+- **Release is per audience** (ruling 38). An outcome's grant to *Candidate* opening is its release to them.
 - **Not the dossier:** the applicant's timeline shows only the stages ticked *Shown to applicants* (ruling 46). That is the stage's visibility, not an item's.
 
 ## 4. Extraction
 
 Files for offline work, for operators only.
 
+- **In the dossier or not is set on the field** (ruling 71). Every field is set one way or the other where it is defined: a form section, a gate's result, an outcome, an operator entry. A field in the dossier then needs its grants. Dossier-mode extraction follows that setting; process-mode extraction carries what the store holds.
 - **Two primary modes** (ruling 70), and both exist:
   - **Following dossiers:** organized around the data collected, one candidate's items as columns.
   - **Following the process:** organized around the exercise's stages, gates and outcomes.
@@ -102,6 +103,7 @@ Files for offline work, for operators only.
 | 68 | Grants per dossier item (form section, gate result, outcome), each from a stage; operators see all; set on Form and Process |
 | 69 | The three places: the store, the dossier, extraction |
 | 70 | Extraction's two modes; operator entries of both kinds; *candidate* and *applicant*; a photo subject to grants |
+| 71 | The first grant is *Candidate*; a photo follows its grants in a blind exercise too; in-dossier or not is set on each field, and an in-dossier field needs grants |
 
 **Superseded and not to be built:**
 - Ruling 5's "the dossier shows only the *Shown to reviewers* section" became ruling 26's parts, then ruling 68's grants per item.
@@ -110,6 +112,4 @@ Files for offline work, for operators only.
 
 ## 6. Open questions
 
-- **Ruling 68's first grant: *Applicant* or *Candidate*?** By ruling 70's terms, a grant to the person a dossier is about is a grant to the *candidate*. That would let a *Create dossiers* candidate see their dossier, but only if such a candidate can sign in at all.
-- **A photo in a blind exercise.** Ruling 6 has blind review redact name and identifiers automatically. If a photo follows only its grants (ruling 70), a blind exercise shows a face to evaluators whom an operator grants it. Is that intended, or does blind review still hide the photo whatever its grants? Related: the photo field's open question (`applydesk/docs/photo_field_design.md`).
-- **How the operator picks extraction's mode and content**: one card per mode, or a mode chosen per file.
+- **The extraction page's shape:** one card per mode, or a mode chosen per file. This is a layout question for the build that stores dossiers, not a ruling.

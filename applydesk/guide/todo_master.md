@@ -631,7 +631,7 @@ the rulings it relied on but does not move them.
     rulings 26 and 33: a candidate's dossier holds every section of the
     submitted form (when there is one), every gate's results and every
     outcome. Each of those items is shown only to the grants set on it:
-    *Applicant*; *Assigned evaluators*, from named panels or from all;
+    *Applicant* (*Candidate*, ruling 71); *Assigned evaluators*, from named panels or from all;
     *Evaluators*, from named panels or from all. Each grant opens from a
     stage, as ruling 26's parts did; an item opening to two audiences at
     different times carries two grants. Operators see every item, whatever
@@ -657,6 +657,14 @@ the rulings it relied on but does not move them.
     *candidate* is the person or people a dossier is about, an *applicant*
     a candidate who submitted through a Form; a photo is subject to
     visibility grants like any other item.
+71. **The model's second answers** (author, 2026-11-21), amending
+    rulings 6 and 68: ruling 68's first grant is *Candidate*, not
+    *Applicant*, for consistency with ruling 70; a photo follows its
+    grants in a blind exercise too, as blind review's redaction covers
+    name and identifiers and a photo or screenshot asked for need not
+    identify anyone; whether a field goes into the dossier is set on the
+    field itself (a form section, a gate's result, an outcome, an operator
+    entry), and a field in the dossier needs its visibility grants.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 

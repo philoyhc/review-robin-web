@@ -340,7 +340,7 @@ shows the form's own card and one empty String card, open.
   card is *Not shown*, the side that hides.
   *Ruled, not built (ruling 68, `applydesk/guide/todo_master.md`):* each
   dossier item (a form section, a gate's results, an outcome) is to carry
-  grants (*Applicant*; *Assigned evaluators* from named panels or all;
+  grants (*Candidate*, ruling 71; *Assigned evaluators* from named panels or all;
   *Evaluators* from named panels or all), each opening from a stage;
   operators see every item. Form's sections and Process set them; the
   per-card and per-section *Shown* / *Not shown* go.
