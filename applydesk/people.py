@@ -83,6 +83,7 @@ def _bind(
         event_type="person.bound",
         actor=person if how == "sign_in" else actor,
         payload=audit.snapshot(_snapshot(person)),
+        refs={"person_id": person.id},
         context={"how": how},
     )
     return person
@@ -105,6 +106,7 @@ def _new_bound(session: Session, account: Account, how: str, actor: Person | Non
         event_type="person.created",
         actor=person if how == "sign_in" else actor,
         payload=audit.snapshot(_snapshot(person)),
+        refs={"person_id": person.id},
         context={"how": how},
     )
     return person
@@ -169,6 +171,7 @@ def pending(session: Session, address: str, actor: Person | None) -> Person:
         event_type="person.created",
         actor=actor,
         payload=audit.snapshot(_snapshot(person)),
+        refs={"person_id": person.id},
         context={"how": "address"},
     )
     return person

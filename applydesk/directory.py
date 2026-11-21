@@ -66,8 +66,11 @@ def search(
         found = directory.search_users(text)
     except GraphError as error:
         return SearchResult(on_record, (), directory_failed=error.kind)
+    # A bound person is the same account only by object ID; their email is
+    # a snapshot, and a reassigned address is another account (Codex on
+    # #4110). Only a pending person is matched by address.
     known = {p.object_id for p in on_record if p.object_id}
-    known_keys = {p.email_key for p in on_record if p.email_key}
+    known_keys = {p.email_key for p in on_record if p.email_key and not p.object_id}
     fresh = tuple(
         user
         for user in found

@@ -115,8 +115,8 @@ _EXERCISE = frozenset({"exercise_public_id"})
 #: `test_audit.py` pins this to the emitters.
 EVENT_SCHEMAS: dict[str, EventSchema] = {
     # People (applydesk/people.py): made, and bound to an account.
-    "person.created": EventSchema(frozenset({"snapshot", "context"})),
-    "person.bound": EventSchema(frozenset({"snapshot", "context"})),
+    "person.created": EventSchema(frozenset({"snapshot", "refs", "context"})),
+    "person.bound": EventSchema(frozenset({"snapshot", "refs", "context"})),
     # The allowlist (ruling 75), kept by the platform super-admin.
     "person.admitted": EventSchema(frozenset({"refs"})),
     "person.revoked": EventSchema(frozenset({"refs", "reason"})),

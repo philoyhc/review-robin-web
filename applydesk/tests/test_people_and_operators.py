@@ -304,3 +304,42 @@ def test_the_database_holds_one_owner_per_exercise(session: Session) -> None:
     operators.hand_over(session, exercise, Actor(owner), colleague)  # the service's order holds
     session.commit()
     assert operators.owner_of(session, exercise) == colleague
+
+
+def test_a_reassigned_address_s_new_account_still_shows_in_the_search(session: Session) -> None:
+    """Codex on #4110: a bound person matches a directory account by object
+    ID only, so a new account with the old address is not hidden."""
+
+    class Reassigned:
+        def search_users(self, query: str) -> list[DirectoryUser]:
+            return [
+                DirectoryUser(
+                    id="new",
+                    display_name="Ana Lim",
+                    mail="ana@example.edu",
+                    user_principal_name="ana@u.edu",
+                )
+            ]
+
+    old = people.resolve(session, _identity("old", "ana@example.edu"))
+    assert old is not None
+    result = directory.search(session, "ana", Reassigned())  # pyright: ignore[reportArgumentType]  -- a stub directory
+    assert [p.id for p in result.on_record] == [old.id]
+    assert [u.id for u in result.in_directory] == ["new"]
+
+
+def test_creation_and_binding_events_name_the_person(session: Session) -> None:
+    """Codex on #4110: each person.created / person.bound carries refs.person_id."""
+    pending = people.pending(session, "ed@example.edu", actor=None)
+    bound = people.resolve(session, _identity("o9", "ed@example.edu"))
+    fresh = people.resolve(session, _identity("o8", "fi@example.edu"))
+    assert bound is not None and fresh is not None
+    rows = [
+        (e.event_type, e.detail["refs"]["person_id"])
+        for e in session.scalars(select(AuditEvent).order_by(AuditEvent.id))
+    ]
+    assert rows == [
+        ("person.created", pending.id),
+        ("person.bound", pending.id),
+        ("person.created", fresh.id),
+    ]
