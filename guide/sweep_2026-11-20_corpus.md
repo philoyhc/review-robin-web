@@ -26,8 +26,8 @@ prose in full, so three more reads finished the prose a corpus marker needs:
 - S2b: `reviewer-surface.md`, `audience_and_identity_model.md`, `csv_contracts.md`
   §3.3 and the two visual-style specs.
 
-Every divergence is a row of `guide/findings_2026-11-20_corpus.md` (64 rows), or,
-for a package, of that package's own `guide/findings_2026-11-20.md` (Apply
+Every divergence is a row of `guide/archive/findings_2026-11-20_corpus.md` (64 rows, all struck by 2026-11-21), or,
+for a package, of that package's own `guide/archive/findings_2026-11-20.md` (Apply
 Desk 7, Residential 10, Utilities 3). The codebase assessment ran beside it at the
 same commit, `guide/codebase_assessment_20nov.md`; its defect read reproduced B1.
 

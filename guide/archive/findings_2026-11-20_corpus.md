@@ -1,7 +1,7 @@
 # Findings — corpus sweep (2026-11-20)
 
 **Found by:** `guide/sweep_2026-11-20_corpus.md` · **Read at:** `6003c8084`
-(#4063) · **Open:** all rows.
+(#4063) · **Open:** none; archived 2026-11-21, every row struck with the PR that did it.
 
 The register lists every divergence found when each live file in `spec/`,
 `docs/` and the root, the two `cordware/spec/` files, and each application
@@ -16,12 +16,12 @@ package's `spec/` and `docs/` were read against the code they describe.
   marked declined with the reason.
 - **Code defects:** those found by reading the code for bugs, rather than
   the specs for drift, are in the sibling register
-  `guide/findings_2026-11-20_assessment.md`. Two rows here and there
+  `guide/archive/findings_2026-11-20_assessment.md`. Two rows here and there
   are the same defect, seen from each side, and say so.
 - **The packages' findings** are in each package's own guide folder:
-  `applydesk/guide/findings_2026-11-20.md` (7),
-  `residentialapps/guide/findings_2026-11-20.md` (10) and
-  `utilityapps/guide/findings_2026-11-20.md` (3).
+  `applydesk/guide/archive/findings_2026-11-20.md` (7),
+  `residentialapps/guide/archive/findings_2026-11-20.md` (10) and
+  `utilityapps/guide/archive/findings_2026-11-20.md` (3).
 
 **Ids** carry the area of the read, and restart at 1 in this file:
 

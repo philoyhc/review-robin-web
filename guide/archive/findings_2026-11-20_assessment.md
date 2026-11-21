@@ -2,15 +2,15 @@
 
 **Found by:** the defect read and the package read of
 `guide/codebase_assessment_20nov.md` · **Read at:** `6003c8084` (#4063) ·
-**Open:** none.
+**Open:** none; archived 2026-11-21, every row struck with the PR that did it.
 
 RRW's defects and notes from the assessment's reads; the fix checklist, struck
 by the PR that fixes each row, or marked declined with the reason. Spec drift is
-in the sibling register `guide/findings_2026-11-20_corpus.md`, which also holds
+in the sibling register `guide/archive/findings_2026-11-20_corpus.md`, which also holds
 the author decisions the snapshot's §8 names (B4, B6, E1, E2, E3). The packages'
-defects are in each package's own register: `applydesk/guide/findings_2026-11-20.md`,
-`residentialapps/guide/findings_2026-11-20.md` and
-`utilityapps/guide/findings_2026-11-20.md`.
+defects are in each package's own register: `applydesk/guide/archive/findings_2026-11-20.md`,
+`residentialapps/guide/archive/findings_2026-11-20.md` and
+`utilityapps/guide/archive/findings_2026-11-20.md`.
 CONFIRMED means reproduced by a scratch test; *by trace*, read through without
 one. Line numbers are at `6003c8084`.
 
