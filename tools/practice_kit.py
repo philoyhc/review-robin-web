@@ -210,7 +210,7 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
         "deferred",
         "theme",
         (
-            "13 of its 14 pass on the inherited stylesheet; "
+            "14 of its 15 pass on the inherited stylesheet; "
             "test_the_muted_token_absorbed_the_retired_one asserts this project's template counts"
         ),
     ),
