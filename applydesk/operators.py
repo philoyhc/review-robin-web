@@ -210,8 +210,9 @@ def revoke(session: Session, actor: Actor, person: Person, reason: str | None = 
 
 def create_exercise(session: Session, actor: Actor, public_id: str) -> Exercise:
     """Make an exercise's row with `actor` its Owner, in one transaction.
-    The actor must be allowlisted and have a person row."""
-    if actor.person is None or not _allowed(session, actor.person):
+    The actor needs a person row and must be allowlisted, or be the
+    platform super-admin, who needs no allowlisting (ruling 75)."""
+    if actor.person is None or not (actor.is_super_admin or _allowed(session, actor.person)):
         raise Refused("Only someone on the operator list may make an exercise.")
     exercise = Exercise(public_id=public_id)
     session.add(exercise)

@@ -16,12 +16,16 @@ alembic -c applydesk/alembic.ini upgrade head
 python -m applydesk.seed
 ```
 
-The seed is idempotent and refuses to run unless `APP_ENV=local`.
+The seed is idempotent and refuses to run unless `APP_ENV=local`. An
+operator's pages need it: they answer the platform super-admin, or someone
+on the operator allowlist who operates the exercise, and 404 otherwise
+(`gate.py`). With `FAKE_AUTH_SUPER_ADMIN=false` the fake identity is an
+ordinary operator, the Owner the seed made it.
 
 | Path | Holds |
 |---|---|
 | `main.py`, `routes_*.py`, `lookups.py` | The factory, `/health`, the pages, and the path lookups they share |
-| `gate.py`, `ids.py`, `web.py`, `sample_data.py` | Who reaches the pages until AD2, public IDs, templates and chrome, sample data |
+| `gate.py`, `ids.py`, `web.py`, `sample_data.py` | Who reaches the pages (operators by their grants, AD2A), public IDs, templates and chrome, sample data |
 | `stages.py`, `workflow.py`, `locks.py` | Stages, gates, outcomes and rules; each item's state, the status row and emails owed; what a published stage fixes |
 | `timeline.py`, `home_ops.py` | The timeline Home and the applicant's page share; Home's operator part |
 | `extract.py`, `paging.py` | Extract data's files; a long table's pages and sort |

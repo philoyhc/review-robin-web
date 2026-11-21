@@ -254,12 +254,21 @@ def _gated_routes(routes: Any, gates: tuple[object, ...] = ()) -> Iterator[tuple
 
 
 def test_every_route_but_health_carries_the_gate() -> None:
-    """A router that forgot `Depends(placeholders_only)` would pass the
-    path checks above; this walks every route the factory builds."""
+    """A router that forgot its gate would pass the path checks above; this
+    walks every route the factory builds: the operator's carry the
+    operator check (segment AD2A), the rest the placeholders' gate."""
     routes = list(_gated_routes(create_app().routes))
     assert len(routes) > 1
     missing = [
-        r.path for r, calls in routes if r.path != "/health" and gate.placeholders_only not in calls
+        r.path
+        for r, calls in routes
+        if r.path != "/health"
+        and (
+            gate.require_exercise_operator
+            if r.path.startswith("/operator/exercises")
+            else gate.placeholders_only
+        )
+        not in calls
     ]
     assert missing == []
 
@@ -1146,21 +1155,20 @@ def test_an_owed_email_holds_back_only_a_release_to_come() -> None:
     )
 
 
-def test_is_operator_follows_the_gate(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Ruling 18: until AD2, everyone locally; deployed, the super-admin."""
+def test_is_operator_follows_the_allowlist(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Segment AD2A: the super-admin, or someone on the allowlist; a local
+    run no longer makes everyone one (`test_gate.py` has the rest)."""
     from starlette.requests import Request
 
-    request = Request({"type": "http", "headers": []})
-    assert gate.is_operator(request)  # a local run
-    monkeypatch.setattr(gate, "is_local", lambda: False)
+    def request() -> Request:
+        return Request({"type": "http", "headers": [], "state": {}})
+
+    assert gate.is_operator(request())  # the conftest's fake super-admin
     someone = Identity(principal_id="1", email="someone@example.edu", name="Someone")
     monkeypatch.setattr(gate, "current_identity", lambda request: someone)
-    assert not gate.is_operator(request)
+    assert not gate.is_operator(request())  # no tenant: cannot be bound
     monkeypatch.setattr(gate, "current_identity", lambda request: None)
-    assert not gate.is_operator(request)
-    monkeypatch.setattr(type(someone), "is_super_admin", property(lambda self: True))
-    monkeypatch.setattr(gate, "current_identity", lambda request: someone)
-    assert gate.is_operator(request)
+    assert not gate.is_operator(request())
 
 
 # --- Segment AD1F rung 4d: Panels, one table (ruling 20) ---

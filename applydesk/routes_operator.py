@@ -14,6 +14,7 @@ from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from applydesk import (
     extract,
+    gate,
     handoff,
     home_ops,
     locks,
@@ -26,7 +27,6 @@ from applydesk import (
     timeline,
     workflow,
 )
-from applydesk.gate import placeholders_only
 from applydesk.lookups import dossier_or_404, exercise_or_404
 from applydesk.web import (
     OPERATIONS_PAGES,
@@ -38,7 +38,7 @@ from applydesk.web import (
     url_path,
 )
 
-router = APIRouter(prefix="/operator", dependencies=[Depends(placeholders_only)])
+router = APIRouter(prefix="/operator", dependencies=[Depends(gate.require_exercise_operator)])
 
 #: An exercise's operator pages beyond Home, each a partial of
 #: `operator/section.html`, headed by its tab's label (ruling 14).
@@ -51,7 +51,7 @@ def exercises(request: Request) -> Response:
         request,
         "applydesk/operator/exercises.html",
         area=OPERATOR_LOBBY,
-        exercises=sample_data.exercises(),
+        exercises=tuple(e for e in sample_data.exercises() if gate.operates(request, e.public_id)),
         is_scratch=scratch.is_scratch,
         scratch_limit=scratch.LIMIT,
         scratch_said=SAID.get(request.query_params.get("said", ""), ""),
@@ -99,6 +99,9 @@ async def exercise_new(request: Request) -> Response:
         made = scratch.create(browser, name)
     except scratch.Refused as why:
         return _to_lobby(request, why.key if why.key in SAID else "not_made")
+    if not gate.own_new_exercise(request, made.exercise.public_id):
+        scratch.discard(browser, made.exercise.public_id)
+        return _to_lobby(request, "not_made")
     reply = RedirectResponse(
         url_path(request, f"/operator/exercises/{made.exercise.public_id}"), status_code=303
     )

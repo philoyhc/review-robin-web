@@ -49,6 +49,9 @@ Apply Desk has no database. Every page reads `applydesk/sample_data.py` or the p
 - The allowlist is a flag on `person`, as Review Robin's `is_operator` on `users`, not a table of its own: one row per person either way.
 - The audit table copies RRW's envelope rather than inventing a lighter one (ruling 74): the shape is known and its strict check is cheap.
 - The Operators card sits on Home, not on a page of its own: it is one short list per exercise.
+- 2026-11-21 (rung 4): `is_operator` is "the super-admin, or on the allowlist", not "operates any exercise": an allowlisted person with no exercise yet must reach the Lobby to make one.
+- 2026-11-21 (rung 4): the super-admin may make an exercise without being allowlisted, and is its Owner; the person row is made at that point.
+- 2026-11-21 (rung 4): the participant's pages and the landing keep `placeholders_only`; only the operator router takes the check. A discarded scratch exercise keeps its row and grant (soft delete only, ruling 74).
 
 ## Blast radius (measured)
 
@@ -58,6 +61,18 @@ Taken 2026-11-21 at `64f0c5c6e`.
 - `applydesk/tests/`: 30 files; the host fixture `applydesk/tests/_host.py` gains the database.
 - CI: `.github/workflows/ci-postgres.yml` (the round-trip, as Utilities' at l.111–121); `tools/ci_lanes.py` already lists `applydesk/`.
 - The directory: `cordware/graph.py` `search_users` (real, fake and test directories at l.109, 205, 358); Apply Desk calls it nowhere yet (`grep -rn "graph" applydesk/*.py` → none). Its sample picker `operator/_directory_js.html` stands in until AD2E.
+
+## Status
+
+- **Rung 3** ([#4110](https://github.com/philoyhc/review-robin-web/pull/4110)) took ten rounds of Codex review, every finding real; the eleventh was clean. Most were concurrency gaps between two requests. Fixes:
+  - **Audit:** a directory find is audited to the searcher, and person events carry `refs.person_id`.
+  - **Matching:** an address matches only a pending person, and the people search dedupes bound people by object ID.
+  - **Database rules:** one Owner per exercise and one pending person per address, each a partial unique index (migrations `ad2a2oneowner`, `ad2a3onepending`).
+  - **Binding:** a conditional bind and a savepointed insert, each retried.
+  - **SQLite:** engines begin real transactions, so savepoints nest.
+  - **Operator changes:** each takes the exercise's row lock, checks fresh rows, and restates its rule in a conditional update.
+  - **Allowlist:** every check re-reads the row.
+- **Ruling (author, 2026-11-21):** rung 3 merges once CI is green after the tenth fix; any later concurrency finding is recorded here and taken at rungs 6 and 8, where adding people is wired to pages. None was raised.
 
 ## PR ladder
 
