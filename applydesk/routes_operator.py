@@ -13,6 +13,7 @@ from urllib.parse import parse_qs, urlencode
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from applydesk import (
@@ -515,7 +516,8 @@ async def operators_add(request: Request, exercise_id: str) -> Response:
     raw = parse_qs(body.decode("utf-8", "replace")).get("person_id", [""])[0]
     if not raw.isdigit():
         raise HTTPException(status_code=400)
-    return _ops_change(request, exercise_id, team.add, int(raw), "added")
+    # The change itself off the event loop (as the operator list's, Codex on #4113).
+    return await run_in_threadpool(_ops_change, request, exercise_id, team.add, int(raw), "added")
 
 
 @router.post(
