@@ -75,7 +75,7 @@ def test_admit_on_record_then_revoke(client: TestClient) -> None:
     again = client.post(
         "/applydesk/admin/operators/admit", data={"person_id": str(ed_id)}, follow_redirects=False
     )
-    assert again.headers["location"].endswith("said=already")
+    assert again.headers["location"].endswith("said=already_listed")
     gone = client.post(f"/applydesk/admin/operators/{ed_id}/revoke", follow_redirects=False)
     assert gone.headers["location"].endswith("said=revoked")
     session = db.new_session()

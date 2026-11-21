@@ -125,3 +125,30 @@ def test_an_exercise_not_loaded_says_so() -> None:
     """The conftest's super-admin, with an empty database: no rows yet."""
     page = TestClient(host_with(("applydesk",))[0]).get(HOME).text
     assert "data-ops-unrecorded" in page and "python -m applydesk.seed" in page
+
+
+def test_every_refusal_key_has_a_status_line() -> None:
+    """Cold read: refusals are shown by key, never by matching their text,
+    so each key a service can raise has a line on the page that shows it."""
+    import ast
+    from pathlib import Path
+
+    from applydesk import routes_admin, routes_operator
+
+    root = Path(__file__).resolve().parents[1]
+    keys: dict[str, set[str]] = {}
+    for name in ("operators.py", "allowlist.py", "team.py"):
+        tree = ast.parse((root / name).read_text())
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and getattr(node.func, "attr", getattr(node.func, "id", "")) == "Refused"
+            ):
+                for kw in node.keywords:
+                    if kw.arg == "key" and isinstance(kw.value, ast.Constant):
+                        keys.setdefault(name, set()).add(str(kw.value.value))
+    # The admin page shows the allowlist's; the card shows an exercise's.
+    admin = keys["allowlist.py"] | {"already_listed", "not_listed", "not_super_admin"}
+    card = keys["team.py"] | (keys["operators.py"] - {"already_listed", "not_super_admin"})
+    assert admin <= routes_admin.SAID.keys(), admin - routes_admin.SAID.keys()
+    assert card <= routes_operator.OPS_SAID.keys(), card - routes_operator.OPS_SAID.keys()

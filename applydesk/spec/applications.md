@@ -103,12 +103,24 @@ answer only for a Published or Closed exercise.
   between, as in Review Robin.
 - **`/` and `/operator`** have no page of their own: they land an
   operator on the Operator Lobby and anyone else on the User Lobby, as
-  Review Robin's do. Until AD2 knows Apply Desk's operators, an operator
-  is everyone on a local run and, deployed, the super-admin
-  (`gate.is_operator`).
-- **The gate** (`applydesk/gate.py`): every route but `/health` answers
-  anyone on a local run and, deployed, only the platform super-admin,
-  with a 404 for everyone else, until the segments that wire them.
+  Review Robin's do. An operator is the platform super-admin or someone
+  on the operator list (`gate.is_operator`, segment AD2A).
+- **The gate** (`applydesk/gate.py`, segment AD2A): the operator's pages
+  answer the super-admin, or someone on the operator list, and an
+  exercise's pages only its current operators; the Admin pages answer
+  the super-admin alone; everyone else gets a 404, on a local run too.
+  The participant's pages and the landing keep the placeholders' gate
+  (anyone on a local run, deployed only the super-admin) until a later
+  AD2 segment.
+- **Admin → Accounts Management** (`/admin/operators`, segment AD2A,
+  ruling 75): the super-admin's operator list, laid out as Review
+  Robin's Admin → Accounts Management and reached, as it is, from the
+  account menu. Search people on record then the directory, *Admit*,
+  *Revoke*.
+- **An exercise's Operators card**, on Home under Details (segment
+  AD2A, ruling 73): the Owner marked; the Owner adds operators from the
+  operator list, removes them and hands ownership over; read-only for
+  the rest.
 
 ## One look across pages
 

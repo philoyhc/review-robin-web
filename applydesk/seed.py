@@ -17,15 +17,17 @@ from __future__ import annotations
 import argparse
 import sys
 from dataclasses import dataclass
-from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from applydesk import db, sample_data
-from applydesk.models import Exercise, ExerciseOperator, Person
-from cordware.identity import is_local
+from applydesk import db, operators, people, sample_data
+from applydesk.models import Exercise
+from cordware.identity import Identity, is_local
 from cordware.settings import IdentitySettings, identity_settings
+
+#: The seed acts as the platform: the super-admin with no person row.
+_PLATFORM = operators.Actor(None, is_super_admin=True)
 
 
 class SeedRefused(RuntimeError):
@@ -39,34 +41,18 @@ class SeedResult:
     grants_added: int
 
 
-def _fake_owner(session: Session, settings: IdentitySettings) -> Person:
-    tenant = settings.fake_auth_tenant_id.strip() or None
-    object_id = settings.fake_auth_principal_id.strip() or None
-    person = session.scalar(
-        select(Person).where(Person.tenant_id == tenant, Person.object_id == object_id)
+def _fake_identity(settings: IdentitySettings) -> Identity:
+    """Cordware's fake identity, as its host builds it (`cordware/identity.py`)."""
+    return Identity(
+        principal_id=settings.fake_auth_principal_id,
+        email=settings.fake_auth_email,
+        name=settings.fake_auth_name,
+        provider="fake",
+        is_fake=True,
+        tenant_id=settings.fake_auth_tenant_id.strip() or None,
+        upn=settings.fake_auth_upn.strip() or settings.fake_auth_email,
+        mail=settings.fake_auth_mail.strip() or settings.fake_auth_email,
     )
-    if person is None:
-        email = settings.fake_auth_email
-        person = Person(
-            tenant_id=tenant,
-            object_id=object_id,
-            email=email,
-            email_key=email.casefold(),
-            upn=settings.fake_auth_upn.strip() or email,
-            display_name=settings.fake_auth_name,
-            bound_at=datetime.now(UTC),
-        )
-        session.add(person)
-    return person
-
-
-def _pending_owner(session: Session, email: str) -> Person:
-    key = email.strip().casefold()
-    person = session.scalar(select(Person).where(Person.email_key == key))
-    if person is None:
-        person = Person(email=email.strip(), email_key=key)
-        session.add(person)
-    return person
 
 
 def seed(
@@ -75,35 +61,29 @@ def seed(
     settings: IdentitySettings | None = None,
 ) -> SeedResult:
     """Give each sample exercise its row and its Owner; commit. Refused
-    outside `APP_ENV=local`."""
+    outside `APP_ENV=local`. Everything goes through `people` and
+    `operators`, so seeded rows are matched and audited as any others
+    (cold read): the person is bound as a sign-in would bind them, or kept
+    pending by address; admitted by no one (the seed acts as the
+    platform); each exercise made with them its Owner."""
     settings = settings or identity_settings
     if not is_local(settings):
         raise SeedRefused("the seed runs only with APP_ENV=local (ruling 74)")
-    owner = _pending_owner(session, owner_email) if owner_email else _fake_owner(session, settings)
-    if not owner.may_operate:
-        owner.may_operate = True
-        owner.admitted_at = datetime.now(UTC)
-        owner.revoked_at = None
-    session.flush()
+    if owner_email:
+        owner = people.pending(session, owner_email, actor=None)
+    else:
+        found = people.resolve(session, _fake_identity(settings))
+        if found is None:
+            raise SeedRefused("the fake identity has no tenant or principal ID to bind")
+        owner = found
+    if not operators.may_operate(owner):
+        operators.admit(session, _PLATFORM, owner)
     exercises_added = grants_added = 0
     for sample in sample_data.exercises():
         exercise = session.scalar(select(Exercise).where(Exercise.public_id == sample.public_id))
         if exercise is None:
-            exercise = Exercise(public_id=sample.public_id)
-            session.add(exercise)
-            session.flush()
+            operators.create_exercise(session, operators.Actor(owner), sample.public_id)
             exercises_added += 1
-        has_owner = session.scalar(
-            select(ExerciseOperator.id).where(
-                ExerciseOperator.exercise_id == exercise.id,
-                ExerciseOperator.is_owner.is_(True),
-                ExerciseOperator.removed_at.is_(None),
-            )
-        )
-        if has_owner is None:
-            session.add(
-                ExerciseOperator(exercise_id=exercise.id, person_id=owner.id, is_owner=True)
-            )
             grants_added += 1
     session.commit()
     return SeedResult(owner_id=owner.id, exercises_added=exercises_added, grants_added=grants_added)

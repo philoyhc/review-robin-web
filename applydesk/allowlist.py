@@ -113,7 +113,7 @@ def actor_for(session: Session, identity: Identity) -> operators.Actor:
 def admit_on_record(session: Session, actor: operators.Actor, person_id: int) -> Person:
     person = session.get(Person, person_id)
     if person is None:
-        raise operators.Refused("That person is no longer on record.")
+        raise operators.Refused("That person is no longer on record.", key="gone")
     operators.admit(session, actor, person)
     return person
 
@@ -130,7 +130,9 @@ def admit_from_directory(
     and stored bound in the searcher's tenant."""
     found = next((u for u in directory.find_users(address) if u.id == object_id), None)
     if found is None:
-        raise operators.Refused("The directory no longer has that account; search again.")
+        raise operators.Refused(
+            "The directory no longer has that account; search again.", key="gone"
+        )
     person = people.from_directory(session, found, tenant_id, actor.person)
     operators.admit(session, actor, person)
     return person
@@ -139,6 +141,6 @@ def admit_from_directory(
 def revoke(session: Session, actor: operators.Actor, person_id: int) -> Person:
     person = session.get(Person, person_id)
     if person is None:
-        raise operators.Refused("That person is no longer on record.")
+        raise operators.Refused("That person is no longer on record.", key="gone")
     operators.revoke(session, actor, person)
     return person

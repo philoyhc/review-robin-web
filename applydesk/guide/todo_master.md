@@ -193,8 +193,8 @@ the rulings it relied on but does not move them.
 18. **Apply Desk's lobbies are Review Robin's** (author, 2026-11-13): the
     switcher offers the *Operator Lobby* (`/operator/exercises`, operators
     only) and the *User Lobby* (`/me`), each page titled so; `/` and
-    `/operator` land by role. Until AD2 knows Apply Desk's operators, an
-    operator is everyone on a local run and the super-admin deployed.
+    `/operator` land by role. An operator is the super-admin or someone
+    on the operator list (segment AD2A, ruling 75).
 19. **Panels is its own Setup tab, after Gates** (author, 2026-11-13;
     segment AD1F), superseding ruling 14's fold of Panels into Gates:
     - The Setup row is *Process · Form · Gates · Panels · Emails*

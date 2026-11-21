@@ -59,7 +59,11 @@ def search(
     if allowlist_only:
         statement = statement.where(Person.may_operate.is_(True))
     on_record = tuple(
-        session.scalars(statement.order_by(Person.display_name, Person.id).limit(LIMIT))
+        session.scalars(
+            statement.order_by(Person.display_name.is_(None), Person.display_name, Person.id).limit(
+                LIMIT
+            )
+        )
     )
     if allowlist_only or directory is None:
         return SearchResult(on_record, ())

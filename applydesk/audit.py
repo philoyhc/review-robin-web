@@ -112,7 +112,8 @@ class EventSchema:
 _EXERCISE = frozenset({"exercise_public_id"})
 
 #: Every event type Apply Desk emits, with the keys its detail may carry.
-#: `test_audit.py` pins this to the emitters.
+#: `test_every_emitted_event_type_is_registered`
+#: (`applydesk/tests/test_people_and_operators.py`) pins this to the emitters.
 EVENT_SCHEMAS: dict[str, EventSchema] = {
     # People (applydesk/people.py): made, and bound to an account.
     "person.created": EventSchema(frozenset({"snapshot", "refs", "context"})),
@@ -220,7 +221,13 @@ def write_event(
     except AuditDetailValidationError as exc:
         if _strict():
             raise
-        _log.warning("applydesk audit %s; written anyway", exc.loggable)
+        # As Review Robin's (`app/services/audit.py`): the event and the
+        # type as fields the host's JSON log keeps, never a payload value.
+        _log.warning(
+            "applydesk audit %s; written anyway",
+            exc.loggable,
+            extra={"event": "audit.detail_schema_violation", "event_type": event_type},
+        )
     event = AuditEvent(
         event_type=event_type,
         actor_id=actor.id if actor is not None else None,

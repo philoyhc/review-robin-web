@@ -27,17 +27,12 @@ _MAX_BODY = 4096
 SAID: dict[str, str] = {
     "admitted": "Added to the list.",
     "revoked": "Taken off the list. Their exercises are kept for if they are put back.",
-    "already": "Already on the list.",
+    "already_listed": "Already on the list.",
     "not_listed": "Not on the list.",
     "gone": "That person or account is no longer there; search again.",
     "directory": "The directory did not answer; try again.",
     "no_tenant": "Your sign-in names no tenant, so no one can be added from the directory.",
-}
-_REFUSALS: dict[str, str] = {
-    "Already allowed to operate.": "already",
-    "Not on the operator list.": "not_listed",
-    "That person is no longer on record.": "gone",
-    "The directory no longer has that account; search again.": "gone",
+    "not_super_admin": "Only the platform super-admin keeps the operator list.",
 }
 
 
@@ -132,7 +127,7 @@ def _admit(request: Request, form: dict[str, str]) -> Response:
         session.commit()
     except operators.Refused as why:
         session.rollback()
-        return _back(request, _REFUSALS.get(str(why), "gone"))
+        return _back(request, why.key if why.key in SAID else "gone")
     except GraphError:
         session.rollback()
         return _back(request, "directory")
@@ -148,7 +143,7 @@ def _revoke(request: Request, person_id: int) -> Response:
         session.commit()
     except operators.Refused as why:
         session.rollback()
-        return _back(request, _REFUSALS.get(str(why), "gone"))
+        return _back(request, why.key if why.key in SAID else "gone")
     finally:
         session.close()
     return _back(request, "revoked")

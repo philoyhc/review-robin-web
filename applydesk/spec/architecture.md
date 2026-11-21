@@ -12,7 +12,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/main.py` | The factory, `create_app` |
 | `applydesk/routes_health.py` | `/health` |
 | `applydesk/routes_home.py`, `routes_operator.py`, `routes_me.py` | The entry points (landing by role), the operator's pages and the participant's |
-| `applydesk/routes_admin.py`, `allowlist.py` | The platform super-admin's pages, `/admin/…`: the operator list (segment AD2A, ruling 75), behind `gate.require_super_admin`, in the switcher for the super-admin only. The search (people on record, then the directory), *Admit* and *Revoke*; a directory pick is found again at admission, nothing taken from the form |
+| `applydesk/routes_admin.py`, `allowlist.py` | The platform super-admin's pages, `/admin/…`: Admin → Accounts Management, the operator list (segment AD2A, ruling 75), behind `gate.require_super_admin`, reached from the account menu as Review Robin's Admin is. The search (people on record, then the directory), *Admit* and *Revoke*; a directory pick is found again at admission, nothing taken from the form |
 | `applydesk/team.py` | An exercise's Operators card on Home (segment AD2A, ruling 73): its current operators, the Owner first, and whether the viewer may change them; the Owner's (or the super-admin's) add from the operator list, remove and hand over, through `operators.py` |
 | `applydesk/lookups.py` | Path lookups the routes share: an ID's shape checked, then a 404 or the record |
 | `applydesk/gate.py` | Who reaches the pages: `require_exercise_operator` on the operator's (the super-admin, or the allowlisted with a current grant; 404 otherwise), `placeholders_only` on the participant's until a later AD2 segment; `is_operator` for the switcher; a new scratch exercise's row and Owner (segment AD2A) |
@@ -21,7 +21,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/alembic.ini`, `applydesk/alembic/` | Its migration history, version table `applydesk_alembic_version`, comparing only its own tables |
 | `applydesk/people.py` | People bound by tenant and object ID: `resolve` at sign-in (a pending person bound by UPN, then mail), `from_directory`, `pending` (ruling 73) |
 | `applydesk/directory.py` | The people search: on record first, then the directory through `cordware/graph.py`; a failed directory search says so (ruling 75) |
-| `applydesk/operators.py` | The allowlist (`admit`, `revoke`, the super-admin's) and an exercise's Owner and operators (`create_exercise`, `add_operator`, `remove_operator`, `hand_over`, `can_operate`), refusing with `Refused` (rulings 73, 75) |
+| `applydesk/operators.py` | The allowlist (`admit`, `revoke`, the super-admin's) and an exercise's Owner and operators (`create_exercise`, `add_operator`, `remove_operator`, `hand_over`, `can_operate`, `is_owner`), each change under the exercise's row lock and checked on fresh rows, refusing with `Refused` and its key (rulings 73, 75) |
 | `applydesk/audit.py` | `write_event` in Review Robin's envelope, copied, and `EVENT_SCHEMAS`, strict under pytest (ruling 74) |
 | `applydesk/seed.py` | `python -m applydesk.seed`: the sample exercises' rows and their Owner, on localhost only (ruling 74) |
 | `applydesk/ids.py` | Public IDs: generation and the shape check |

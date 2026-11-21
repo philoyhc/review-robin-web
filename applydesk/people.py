@@ -44,7 +44,15 @@ def email_key(address: str | None) -> str | None:
 
 
 def _snapshot(person: Person) -> dict[str, object]:
-    return {"email": person.email, "display_name": person.display_name, "pending": not person.bound}
+    """The person's identity columns as they stand (keys mirror the column
+    names, as Review Robin's snapshots do): what a binding attached."""
+    return {
+        "email": person.email,
+        "upn": person.upn,
+        "display_name": person.display_name,
+        "tenant_id": person.tenant_id,
+        "object_id": person.object_id,
+    }
 
 
 def _bound_person(session: Session, tenant_id: str, object_id: str) -> Person | None:
@@ -67,6 +75,15 @@ def _pending_person(session: Session, *keys: str | None) -> Person | None:
         if person is not None:
             return person
     return None
+
+
+def _ambiguous(session: Session, *keys: str | None) -> bool:
+    """Whether `keys` match two different pending people: one by the UPN,
+    another by the mail. Residential's rule fails closed then
+    (`residentialapps/docs/residentialapps_email_identity_matching.md` §6):
+    neither is bound, for an administrator to settle (cold read)."""
+    found = {p.id for k in keys if k for p in [_pending_person(session, k)] if p is not None}
+    return len(found) > 1
 
 
 def _bind(
@@ -161,12 +178,15 @@ def _attach(
 ) -> Person:
     """The person for `account`: the bound one; else a pending one matching
     `keys`, bound; else a new bound one. A pending row another request
-    bound first is passed over and the look repeated."""
+    bound first is passed over and the look repeated. Two different
+    pending people matching (one by UPN, one by mail) are both left
+    pending: a new bound person is made, without their access, for an
+    administrator to settle (Residential's fail-closed rule)."""
     for _ in range(_ATTEMPTS):
         person = _bound_person(session, account.tenant_id, account.object_id)
         if person is not None:
             return person
-        found = _pending_person(session, *keys)
+        found = None if _ambiguous(session, *keys) else _pending_person(session, *keys)
         if found is None:
             made = _new_bound(session, account, how=how, actor=actor)
         else:

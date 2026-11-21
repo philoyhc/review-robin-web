@@ -212,3 +212,34 @@ def test_home_shows_the_operators_card_under_details() -> None:
     page = client.get(f"/applydesk/operator/exercises/{EX}").text
     side = page[page.index('class="hm-side"') :]
     assert side.index("data-details") < side.index("data-operators")
+
+
+def test_every_exercise_route_names_its_parameter_exercise_id() -> None:
+    """Cold read: the check reads `exercise_id` from the path, so a route
+    under /operator/exercises/{…} naming it otherwise would pass with the
+    allowlist check alone."""
+    from applydesk import routes_operator
+
+    for route in routes_operator.router.routes:
+        assert isinstance(route, APIRoute)
+        if route.path.startswith("/operator/exercises/{"):
+            assert route.path.startswith("/operator/exercises/{exercise_id}"), route.path
+
+
+def test_the_audit_warning_carries_its_event_fields(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Outside strict mode a bad detail writes through and is logged with
+    Review Robin's structured fields (cold read)."""
+    import logging
+
+    from applydesk import audit
+
+    monkeypatch.setattr(audit, "_strict", lambda: False)
+    session = db.new_session()
+    with caplog.at_level(logging.WARNING, logger="applydesk.audit"):
+        audit.write_event(session, event_type="no.such.type", actor=None)
+    session.close()
+    record = next(r for r in caplog.records if r.name == "applydesk.audit")
+    assert getattr(record, "event", None) == "audit.detail_schema_violation"
+    assert getattr(record, "event_type", None) == "no.such.type"

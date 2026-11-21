@@ -457,21 +457,12 @@ OPS_SAID: dict[str, str] = {
     "owner": "Ownership handed over; the former Owner stays an operator.",
     "not_owner": "Only the exercise's Owner changes its operators.",
     "not_listed": "Only someone on the operator list can be added or made Owner.",
-    "already": "Already an operator.",
+    "already_operator": "Already an operator.",
+    "already_owner": "Already the Owner.",
     "is_owner": "The Owner cannot be removed; hand ownership over first.",
     "not_operator": "Add them as an operator first.",
+    "gone": "That person is no longer on record; look again.",
     "changed": "Someone else changed the operators just now; look again and retry.",
-}
-_OPS_REFUSALS: dict[str, str] = {
-    "Only the exercise's Owner adds operators.": "not_owner",
-    "Only the exercise's Owner removes operators.": "not_owner",
-    "Only the exercise's Owner hands ownership over.": "not_owner",
-    "Only someone on the operator list can be added.": "not_listed",
-    "Only someone on the operator list can own an exercise.": "not_listed",
-    "Already an operator.": "already",
-    "The Owner cannot be removed; hand ownership over first.": "is_owner",
-    "Add them as an operator first.": "not_operator",
-    "Not an operator of this exercise.": "not_operator",
 }
 
 
@@ -499,7 +490,7 @@ def _ops_change(
         session.commit()
     except operators.Refused as why:
         session.rollback()
-        return _ops_back(request, exercise_id, _OPS_REFUSALS.get(str(why), "changed"))
+        return _ops_back(request, exercise_id, why.key if why.key in OPS_SAID else "changed")
     except IntegrityError:  # a concurrent change won (the one-Owner index)
         session.rollback()
         return _ops_back(request, exercise_id, "changed")

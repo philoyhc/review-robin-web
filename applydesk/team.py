@@ -67,7 +67,7 @@ def _target(session: Session, public_id: str, person_id: int) -> tuple[Exercise,
     exercise = _exercise(session, public_id)
     person = session.get(Person, person_id)
     if exercise is None or person is None:
-        raise operators.Refused("That exercise or person is no longer on record.")
+        raise operators.Refused("That exercise or person is no longer on record.", key="gone")
     return exercise, person
 
 
