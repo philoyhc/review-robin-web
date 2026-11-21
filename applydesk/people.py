@@ -211,13 +211,20 @@ def resolve(session: Session, identity: Identity) -> Person | None:
     if person.first_signed_in_at is None:
         # Their first sign-in (segment AD2W), once: a directory pick was
         # bound without one. Conditional, so two first requests agree.
-        session.execute(
-            update(Person)
-            .where(Person.id == person.id, Person.first_signed_in_at.is_(None))
-            .values(first_signed_in_at=datetime.now(UTC))
-            .execution_options(synchronize_session=False)
+        stamped = cast(
+            "CursorResult[Any]",
+            session.execute(
+                update(Person)
+                .where(Person.id == person.id, Person.first_signed_in_at.is_(None))
+                .values(first_signed_in_at=datetime.now(UTC))
+                .execution_options(synchronize_session=False)
+            ),
         )
         session.refresh(person, attribute_names=["first_signed_in_at"])
+        if stamped.rowcount == 1:  # audited once, by whoever stamped it (Codex on #4121)
+            audit.write_event(
+                session, event_type="person.signed_in", actor=person, refs={"person_id": person.id}
+            )
     return person
 
 

@@ -337,6 +337,7 @@ def test_creation_and_binding_events_name_the_person(session: Session) -> None:
     rows = [
         (e.event_type, e.detail["refs"]["person_id"])
         for e in session.scalars(select(AuditEvent).order_by(AuditEvent.id))
+        if e.event_type != "person.signed_in"  # AD2W: each sign-in's own event
     ]
     assert rows == [
         ("person.created", pending.id),
@@ -741,3 +742,12 @@ def test_first_sign_in_is_kept_apart_from_binding(session: Session) -> None:
     again = people.resolve(session, _identity("o-dee", "dee@example.edu"))
     session.commit()
     assert again is not None and again.first_signed_in_at == first
+
+
+def test_a_first_sign_in_is_audited_once(session: Session) -> None:
+    """Codex on #4121: the stamp is a change, so it is audited, once."""
+    me = people.resolve(session, _identity("o-eve", "eve@example.edu"))
+    session.commit()
+    people.resolve(session, _identity("o-eve", "eve@example.edu"))
+    session.commit()
+    assert me is not None and _events(session, "person.signed_in") == 1
