@@ -20,7 +20,7 @@ The roadmap's AD2 row ("Database and identity") is a series of segments, each it
 
 | Segment | Moves to the database | Findings it takes | Plan |
 |---|---|---|---|
-| AD2A — Foundations | The database and its history; people and their binding; the operator allowlist and its admin page; exercise operators (Owner and operators); audit; the seed command | AD-43, AD-53 | `applydesk/guide/segment_AD2A_foundations.md` |
+| AD2A — Foundations | The database and its history; people and their binding; the operator allowlist and its admin page; exercise operators (Owner and operators); audit; the seed command | AD-43, AD-53 | `applydesk/guide/archive/segment_AD2A_foundations.md` (closed 2026-11-21) |
 | AD2B — Exercises and Details | The exercise and its settings: public ID, code, description, eligibility and invitees, help contact and time zone over the operator settings; NULL for unset; one date helper | AD-52, AD-54, AD-55, AD-60, AD-97, AD-40 | — |
 | AD2C — Process | Stages with date-times, the form's state, gates (stable keys, fields, results), outcomes (keyed values, state, release per audience); rules as validated JSON, evaluated by one server-side service; Process's Save | AD-36, AD-48, AD-51, AD-57, AD-59, AD-61, AD-62, AD-34 | — |
 | AD2D — Form and applications | Versioned forms with stable field keys and per-field visibility grants (rulings 68–71); applications and their states; answers and nominations | AD-45, AD-38, AD-46 | — |

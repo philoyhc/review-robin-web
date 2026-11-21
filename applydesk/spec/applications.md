@@ -1,7 +1,8 @@
 # Apply Desk as the host sees it
 
-> **Built:** every page below, as a working scaffold on sample data.
-> Every move works on screen; a sample exercise saves nothing until AD2, a
+> **Built:** every page below, as a working scaffold on sample data, behind
+> a real check of who may reach it. Every move works on screen; a sample
+> exercise saves nothing until a later AD2 segment, a
 > scratch exercise is held in the server's memory ("Scratch exercises"),
 > and nothing is sent to Review Robin until AD6.
 
@@ -45,13 +46,14 @@ Paths are under `/applydesk`: operators under `/operator/exercises`,
 participants under `/me`. `<id>` is an exercise's public ID, `<app>` an
 application's, `<dossier>` a dossier's and `<n>` a gate's number. Every
 page is a `GET`; the operator's are `applydesk/routes_operator.py`, the
-participant's `applydesk/routes_me.py`.
+participant's `applydesk/routes_me.py`, the super-admin's
+`applydesk/routes_admin.py`. The few `POST`s are named where they belong.
 
 | Path | Page |
 |---|---|
 | `/health` | Health (above) |
 | `/`, `/operator` | No page: they land by role (below) |
-| `/operator/exercises` | The Operator Lobby: every exercise |
+| `/operator/exercises` | The Operator Lobby: the exercises the viewer operates |
 | `/operator/exercises/<id>` | Exercise Home: the timeline and Details |
 | `…/<id>/process` | Process: stages, gates, outcomes, their rules, and which items email whom |
 | `…/<id>/form` | Form: the application form builder |
@@ -64,6 +66,9 @@ participant's `applydesk/routes_me.py`.
 | `…/<id>/evaluations/gate_<n>` | A gate's pairs, a row each; 404 for a Draft exercise or no such gate |
 | `…/<id>/extract` | Extract data: the download cards |
 | `…/<id>/extract/<file>` | One download (see Extract data, "The route") |
+| `/admin/exercises` | Admin → Exercises Diagnostics: the exercises, a scaffold (the super-admin's alone) |
+| `/admin/operators` | Admin → Accounts Management: the operator list (the super-admin's alone) |
+| `/admin/system` | Admin → System Status: a scaffold (the super-admin's alone) |
 | `/me` | The User Lobby |
 | `/me/exercises/<id>` | An exercise as an applicant sees it: its timeline and *Apply* |
 | `/me/exercises/<id>/applications/<app>` | The applicant's application |
@@ -74,7 +79,10 @@ answer only for a Published or Closed exercise.
 
 - **Public IDs** (`applydesk/ids.py`): 10 symbols from RRW's alphabet,
   `23456789abcdefghjkmnpqrstuvwxyz`, drawn at random. A path whose ID has
-  any other shape, or names nothing, is a 404 before anything is read.
+  any other shape, or names nothing, is a 404 before anything is read. A
+  person's row ID (`ids.row_id`) is a whole number from 1 to 2³¹−1: out of
+  range in a path it is a 422; a form's malformed one is never looked up
+  (the post is refused, 400, unless it names a directory pick instead).
 - **The dossier**, what an evaluator opens, one per application
   (`/me/exercises/<id>/dossiers/<dossier>`), is named by its own ID, never the
   application's, and shows only the *Shown to evaluators* section. In a blind exercise it
@@ -88,7 +96,8 @@ answer only for a Published or Closed exercise.
   Review Robin's bar names Review Robin; author, 2026-11-13), a switcher of the
   *Operator Lobby* (`/operator/exercises`, operators only) and the *User
   Lobby* (`/me`) then *All applications*, the Light/Dark toggle and the
-  account menu. Each lobby's H1 and tab read its name, as Review Robin's
+  account menu, which carries *Admin* for the platform super-admin
+  (`cordware/spec/header_chrome.md` §4). Each lobby's H1 and tab read its name, as Review Robin's
   do (author, 2026-11-13). An exercise's operator pages add Review Robin's chrome
   under a breadcrumb (ruling 14, segment AD1D): *Exercise Home*
   double-height on the left; a Setup row (Process, Form, Panels, Emails)
@@ -104,23 +113,106 @@ answer only for a Published or Closed exercise.
 - **`/` and `/operator`** have no page of their own: they land an
   operator on the Operator Lobby and anyone else on the User Lobby, as
   Review Robin's do. An operator is the platform super-admin or someone
-  on the operator list (`gate.is_operator`, segment AD2A).
-- **The gate** (`applydesk/gate.py`, segment AD2A): the operator's pages
-  answer the super-admin, or someone on the operator list, and an
-  exercise's pages only its current operators; the Admin pages answer
-  the super-admin alone; everyone else gets a 404, on a local run too.
-  The participant's pages and the landing keep the placeholders' gate
-  (anyone on a local run, deployed only the super-admin) until a later
-  AD2 segment.
-- **Admin → Accounts Management** (`/admin/operators`, segment AD2A,
-  ruling 75): the super-admin's operator list, laid out as Review
-  Robin's Admin → Accounts Management and reached, as it is, from the
-  account menu. Search people on record then the directory, *Admit*,
-  *Revoke*.
-- **An exercise's Operators card**, on Home under Details (segment
-  AD2A, ruling 73): the Owner marked; the Owner adds operators from the
-  operator list, removes them and hands ownership over; read-only for
-  the rest.
+  on the operator list (`gate.is_operator`), whether or not they operate an
+  exercise yet, so they can reach the Lobby to make one.
+- **Who reaches what** (`applydesk/gate.py`). Anyone else, signed in or not,
+  gets a 404 on a local run too, so a page does not say it exists.
+
+  | Pages | Reached by |
+  |---|---|
+  | `/operator/…` | The platform super-admin, or someone on the operator list |
+  | An exercise's pages, `/operator/exercises/<id>/…` | The super-admin, or an operator list member with a current grant on that exercise |
+  | `/admin/…` | The super-admin alone; an operator is not enough |
+  | The landing, `/` and `/operator` | Any operator (so a deployed operator lands on the Lobby); anyone else the placeholders' gate |
+  | `/me/…` | The placeholders' gate (`gate.placeholders_only`): anyone on a local run, deployed only the super-admin, until a later AD2 segment |
+
+  A link to `/me/…` (the switcher's *User Lobby*, a dossier's *View as
+  evaluators see it*) is offered only where that gate admits the viewer
+  (`gate.reaches_placeholders`, `participant_pages` in the page context), so
+  none leads to a 404.
+
+  Taking someone off the operator list ends their access at once and keeps
+  their grants. The super-admin acts as Owner of every exercise.
+- **The people** behind the check are bound by tenant and object ID, as
+  Residential's are (`residentialapps/docs/residentialapps_email_identity_matching.md`):
+  - A sign-in finds its person by (tenant, object ID). Failing that, a
+    *pending* person, known only by address, whose address matches the UPN or
+    the mail is bound. Failing that, a new person is made. A bound person's
+    address is a snapshot and never matched again; only a pending person is
+    matched by address.
+  - Two different pending people matching one sign-in fail closed: neither is
+    bound, and the new person has no access until the super-admin settles it.
+  - A pending person has no access until bound. A person found in the
+    directory is stored bound, so pending people are rare: an address the
+    directory did not find.
+  - A sign-in with no tenant or object ID cannot be bound and has no access
+    (the super-admin excepted, who reaches everything but can make an
+    exercise only once bound).
+- **Admin** (`/admin/…`): the super-admin's pages, laid out as Review Robin's
+  Admin and reached, as it is, from the account menu's *Admin* (which opens
+  *Accounts Management*), not the switcher. Every page has *← Back*, the
+  *Admin* heading and one tab strip (`admin/_tabs.html`): *Exercises
+  Diagnostics*, *Accounts Management*, *System Status*. *Back* returns to the
+  page *Admin* was opened from (`return_to`, which every tab and redirect
+  carries): a page path alone, never a query, fragment or dot segment, and an
+  Apply Desk page; else *Back to Operator Lobby*.
+  - **Exercises Diagnostics** and **System Status** are scaffolds: static
+    copy and layout, no data wired. Exercises Diagnostics lists the sample
+    exercises (columns *Exercise*, *Exercise code*, *Owner*, *Opens*,
+    *Applications close*, *Timezone*, *State*), with *Manage*, which opens the
+    exercise's Home, and *Outbox* and *Audit log*, disabled with a title
+    saying each is not built yet.
+- **Admin → Accounts Management** (`/admin/operators`): the list of who may
+  operate. Only someone on the list may make an exercise, be added as an
+  exercise's operator or take its ownership. The page has:
+  - Side by side, an *Add an operator* card and an *Accounts Overview* card
+    (counts: operators, not yet signed in, revoked).
+  - *Add an operator*: *Name or email* search of at least 2 characters
+    (*Search*, Secondary), at most 20 results of each kind, people on record
+    first (*On record*, with *not yet signed in* where pending), then the
+    directory (*Directory*; Graph on the super-admin's delegated token, the
+    fake directory on a local run). A person already on the list shows an
+    *Operator* chip; otherwise *Admit* (Secondary). A directory person already
+    on record by object ID, or by a pending address, is not listed twice. When
+    the directory does not answer, the results say so and show people on
+    record only; nothing is admitted from a failed search.
+  - *Admit* on a directory result looks the account up again by address,
+    matches its object ID and stores it bound in the super-admin's tenant;
+    nothing about the person is taken from the form. A sign-in naming no
+    tenant refuses it.
+  - *Operators*: a table, a *Search:* box over name and address, columns
+    *Email*, *Name*, *Admitted*, *By* and *Revoke* (Secondary, asking first). A
+    pending person carries a *Not yet signed in* chip. Empty, it says nobody
+    is listed.
+  - The signed-in super-admin is listed *(self)*, first when they match the
+    search, with no *Revoke*; the server refuses revoking one's own row
+    (`said=self`).
+  - A change that loses a race with another (a unique clash, or a busy
+    SQLite file on a local run) says the list changed and to check it.
+  - Each outcome is a status line chosen by a key, never by text from the URL.
+- **An exercise's Operators card**, on Home under Details: each current
+  operator, the Owner first and marked *Owner*, the rest *Operator*; a pending
+  person carries *Not yet signed in*.
+  - **Owner rules.** Every exercise has exactly one Owner, who is one of its
+    operators. Whoever makes an exercise is its Owner. Other operators do
+    everything on the exercise; only the Owner (or the super-admin) adds and
+    removes operators and hands ownership over. The Owner cannot be removed,
+    only replaced by a handover to a current operator, who must be on the
+    operator list; the former Owner stays an operator. Adding someone already
+    an operator, or yourself, is refused; re-adding a removed operator
+    restores them.
+  - **For the Owner (or the super-admin)**: *Add operator* opens a
+    *Name or email, on the operator list* search over the operator list only
+    (no directory; current operators left out), each hit with *Add*; every other
+    operator row has *Make owner* and *Remove*, each asking first. All are
+    Secondary.
+  - **For everyone else** the card is read-only and says only the Owner
+    changes who.
+  - An exercise with no row in the database (a sample not yet seeded) shows no
+    operators and says so; a localhost run loads it with
+    `python -m applydesk.seed`.
+  - A change that loses a race with another is refused and says to look
+    again.
 
 ## One look across pages
 
@@ -176,8 +268,9 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
 ## The lobbies and the applicant's application
 
 - **The Operator Lobby** (`applydesk/templates/applydesk/operator/exercises.html`):
-  *New exercise* (Primary), then a row per exercise, this browser's
-  scratch exercises first, newest first:
+  *New exercise* (Primary), then a row per exercise the viewer operates
+  (the super-admin: every one), this browser's scratch exercises first,
+  newest first:
   *Exercise* (its name, linking Home), *Exercise code* (*Not set* when
   none; the public ID shows only in the link), *State* (the exercise's
   status, from its stages: `locks.exercise_status`), *Stage* (the stage
@@ -190,7 +283,12 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
   - **Making and keeping.** *New exercise* opens a form asking for a name
     (1–200 characters); *Create* makes a blank draft, as *Graduate Travel
     Grant 2027* (one stage holding the form, nothing else), and lands on its
-    Home. A refusal (no name, or a sixth) returns to the Lobby saying why.
+    Home. A refusal (no name, or a sixth) returns to the Lobby saying why. Making one
+    also makes its `exercise` row and its Owner, the viewer, in one
+    transaction; if the viewer may not make one (not on the operator list, or
+    not bindable), nothing is made and the Lobby says it could not be. The
+    super-admin needs no list membership and is the Owner. A discarded scratch
+    exercise keeps its row and grant: nothing is hard-deleted.
     Its row carries a *Scratch* chip and *Discard* (Destructive), which asks
     first; a scratch exercise cannot be got back. The Lobby's status line
     shows only its own messages: the redirect carries a key
