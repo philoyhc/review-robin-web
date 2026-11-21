@@ -36,13 +36,15 @@ Every value is kept, whatever is shown of it.
 - **Derived values**:
   - **A gate's results:** up to three per gate, each derived from one response field. The derivation sets the result's type (ruling 21).
   - **An outcome's value and combined result:** *Decided* is derived, not stored. Release is recorded per audience, each with its own time (ruling 38).
-- **Operator entries:** values set by hand on Dossiers, the panels and their people (ruling 4), and the setup on Process and Form.
+- **Operator entries:** values set by hand on Dossiers, the panels and their people (ruling 4), and the setup on Process and Form. An operator entry is either a dossier item, with grants like the rest, or store-only. Both kinds exist (ruling 70), so each field an operator can enter is marked one way or the other at setup.
 
 ## 3. The dossier
 
 The page a candidate's readers open. It is displayable, and every item on it carries its own grants.
 
-- **What it holds** (ruling 68): every section of the submitted form (when there is one), every gate's results and every outcome.
+- **Whose it is** (ruling 70): a dossier belongs to a **candidate**, the person or people it is about. An **applicant** is a candidate who submitted through a Form. A candidate from *Create dossiers* is not an applicant.
+- **What it holds** (ruling 68): every section of the submitted form (when there is one), every gate's results and every outcome, plus any operator entry marked as a dossier item (ruling 70).
+- **A photo is an item like any other** (ruling 70): subject to its grants.
 - **Who sees an item** (ruling 68): only the grants set on it.
   - *Applicant*;
   - *Assigned evaluators*, from named panels or from all panels;
@@ -63,13 +65,20 @@ The page a candidate's readers open. It is displayable, and every item on it car
 
 Files for offline work, for operators only.
 
-- **By default it follows the dossier:** the same items, readable as columns. It may carry more from the store: raw responses, the cells behind a result, notes, setup.
+- **Two primary modes** (ruling 70), and both exist:
+  - **Following dossiers:** organized around the data collected, one candidate's items as columns.
+  - **Following the process:** organized around the exercise's stages, gates and outcomes.
+
+  Either may carry more than any dossier shows, from the store. The exercise's settings are the clearest case: they are no candidate's item.
 - **Identity follows the exercise's confidentiality.**
   - Files can carry Dossier IDs in place of names.
   - The *Alias key* maps Dossier IDs back to applicants. Review Robin never sees it (ruling 43).
 - **File names use the gate's stable key** (ruling 37).
 - **Downloads are to be logged** once the store exists.
-- **Today** Extract data is built on sample data, card by card: *Applications*, *By gate*, *Outcomes*, *Alias key* and *Extract setup* (`applydesk/spec/applications.md`, *Extract data*). How its cards map onto "the dossier's content, plus more" is an open question below.
+- **Today** Extract data is built on sample data, card by card (`applydesk/spec/applications.md`, *Extract data*):
+  - *By gate* and *Extract setup* are already process-shaped.
+  - *Applications* and *Outcomes* sit nearer the dossier mode, but are not yet organized per dossier item.
+  - *Alias key* serves both.
 
 ## 5. The rulings collected
 
@@ -92,6 +101,7 @@ Files for offline work, for operators only.
 | 57 | A gate's results are final when its final results are pulled |
 | 68 | Grants per dossier item (form section, gate result, outcome), each from a stage; operators see all; set on Form and Process |
 | 69 | The three places: the store, the dossier, extraction |
+| 70 | Extraction's two modes; operator entries of both kinds; *candidate* and *applicant*; a photo subject to grants |
 
 **Superseded and not to be built:**
 - Ruling 5's "the dossier shows only the *Shown to reviewers* section" became ruling 26's parts, then ruling 68's grants per item.
@@ -100,7 +110,6 @@ Files for offline work, for operators only.
 
 ## 6. Open questions
 
-- **What extraction carries beyond the dossier**, and how the operator picks it. Today's cards are shaped by kind (applications, gates, outcomes), not by the dossier's items.
-- **Operator entries on the dossier.** Are a value set by hand on Dossiers, or a note, dossier items with grants of their own, or store-only?
-- **One name for the person a dossier is about.** Ruling 26 says *Candidate* and ruling 68 *Applicant*. A dossier made by *Create dossiers* has no applicant.
-- **A face in a blind exercise:** the photo field's open question (`applydesk/docs/photo_field_design.md`).
+- **Ruling 68's first grant: *Applicant* or *Candidate*?** By ruling 70's terms, a grant to the person a dossier is about is a grant to the *candidate*. That would let a *Create dossiers* candidate see their dossier, but only if such a candidate can sign in at all.
+- **A photo in a blind exercise.** Ruling 6 has blind review redact name and identifiers automatically. If a photo follows only its grants (ruling 70), a blind exercise shows a face to evaluators whom an operator grants it. Is that intended, or does blind review still hide the photo whatever its grants? Related: the photo field's open question (`applydesk/docs/photo_field_design.md`).
+- **How the operator picks extraction's mode and content**: one card per mode, or a mode chosen per file.

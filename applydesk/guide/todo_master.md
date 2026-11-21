@@ -648,6 +648,15 @@ the rulings it relied on but does not move them.
     carry more from the store. The rulings are gathered in
     `applydesk/docs/data_and_visibility_model.md`, the draft of an
     eventual spec.
+70. **The model's first answers** (author, 2026-11-21, on ruling 69's
+    open questions): extraction has two primary modes, following dossiers
+    (around the data collected) and following the process (around the
+    exercise's stages, gates and outcomes), and either may carry what no
+    dossier shows, the exercise's settings the clearest case; an operator
+    entry is either a dossier item or store-only, and both kinds exist;
+    *candidate* is the person or people a dossier is about, an *applicant*
+    a candidate who submitted through a Form; a photo is subject to
+    visibility grants like any other item.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
