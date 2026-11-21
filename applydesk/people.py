@@ -151,11 +151,14 @@ def from_directory(
 
 def pending(session: Session, address: str, actor: Person | None) -> Person:
     """A person known only by `address`, for an address the directory did
-    not find: an existing row with that address is reused. Flushes."""
+    not find: an existing *pending* row with that address is reused. A
+    bound person's address is only a snapshot, never matched on (Codex on
+    #4110), so a bound row with it is left alone and a pending one made.
+    Flushes."""
     key = email_key(address)
     if key is None:
         raise ValueError("an address is needed")
-    existing = session.scalar(select(Person).where(Person.email_key == key).order_by(Person.id))
+    existing = _pending_person(session, key)
     if existing is not None:
         return existing
     person = Person(email=address.strip(), email_key=key)

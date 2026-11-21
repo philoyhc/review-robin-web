@@ -13,10 +13,12 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     UniqueConstraint,
     false,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -85,11 +87,21 @@ class Exercise(Base):
 class ExerciseOperator(Base):
     """A person's grant on an exercise (ruling 73): one row per pair, its
     Owner marked. Removal sets `removed_at`; re-adding clears it. The rule
-    of one current Owner is the service's (`applydesk/operators.py`)."""
+    of one current Owner is the service's (`applydesk/operators.py`), and
+    the database's: a partial unique index allows one Owner row per
+    exercise (an Owner is never removed, only replaced), so two handovers
+    at once cannot both win (Codex on #4110)."""
 
     __tablename__ = "exercise_operator"
     __table_args__ = (
         UniqueConstraint("exercise_id", "person_id", name="uq_exercise_operator_pair"),
+        Index(
+            "uq_exercise_one_owner",
+            "exercise_id",
+            unique=True,
+            sqlite_where=text("is_owner"),
+            postgresql_where=text("is_owner"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

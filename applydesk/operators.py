@@ -260,6 +260,7 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
     )
     if former is not None:
         former.is_owner = False
+        session.flush()  # cleared first: the one-Owner index holds at every step
     grant.is_owner = True
     session.flush()
     refs = {"person_id": person.id}

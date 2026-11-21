@@ -272,3 +272,35 @@ def test_a_detail_off_its_schema_fails_in_tests(session: Session) -> None:
         audit.write_event(session, event_type="no.such", actor=None)
     with pytest.raises(audit.AuditDetailValidationError):
         audit.write_event(session, event_type="person.admitted", actor=None, refs={"person": 1})
+
+
+def test_an_address_only_reuses_a_pending_person_never_a_bound_one(session: Session) -> None:
+    """Codex on #4110: a bound person's email is a snapshot, never matched."""
+    bound = people.resolve(session, _identity("o1", "ana@example.edu"))
+    assert bound is not None
+    made = people.pending(session, "ANA@example.edu", actor=None)
+    assert made.id != bound.id and not made.bound
+    assert people.pending(session, "ana@example.edu", actor=None).id == made.id
+
+
+def test_the_database_holds_one_owner_per_exercise(session: Session) -> None:
+    """Codex on #4110: two handovers at once must not leave two Owners; the
+    partial unique index refuses the second Owner row."""
+    from sqlalchemy.exc import IntegrityError
+
+    owner = _operator(session, "o1", "ana@example.edu")
+    colleague = _operator(session, "o2", "ben@example.edu")
+    exercise = operators.create_exercise(session, Actor(owner), "abcdefghjk")
+    operators.add_operator(session, exercise, Actor(owner), colleague)
+    session.commit()
+    grant = session.scalar(
+        select(ExerciseOperator).where(ExerciseOperator.person_id == colleague.id)
+    )
+    assert grant is not None
+    grant.is_owner = True  # as a racing handover would, without clearing the Owner
+    with pytest.raises(IntegrityError):
+        session.flush()
+    session.rollback()
+    operators.hand_over(session, exercise, Actor(owner), colleague)  # the service's order holds
+    session.commit()
+    assert operators.owner_of(session, exercise) == colleague
