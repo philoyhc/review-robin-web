@@ -144,7 +144,7 @@
      steps and the range menu kept on one line. #}
   {% macro pager(foot=false) %}
   <div class="ev-pager" {{ "data-ev-pager-foot" if foot else "data-ev-pager" }}>
-    <span class="muted"{% if not foot %} data-ev-showing{% endif %}>{% if matched %}{{ "{:,}".format(where.offset + 1) }}–{{ "{:,}".format(where.end) }} of {{ "{:,}".format(matched) }}{% else %}None of {{ "{:,}".format(all_pairs | length) }}{% endif %}{% if q %} matching “{{ q }}”{% endif %}</span>
+    <span class="muted"{% if not foot %} data-ev-showing{% endif %}>Showing {% if matched %}{{ "{:,}".format(where.offset + 1) }}–{{ "{:,}".format(where.end) }} of {{ "{:,}".format(matched) }}{% else %}0 of {{ "{:,}".format(all_pairs | length) }}{% endif %} {{ "pair" if (matched or all_pairs | length) == 1 else "pairs" }}{% if q %} matching “{{ q }}”{% endif %}</span>
     {% if where.total > where.size %}
     <span class="ev-steps">{{ step("«", "First page", 0 if where.offset else none) }}{{ step("‹", "Previous page", where.previous) }}
     <details class="ev-ranges"><summary>Rows {{ "{:,}".format(where.offset + 1) }}–{{ "{:,}".format(where.end) }}</summary>

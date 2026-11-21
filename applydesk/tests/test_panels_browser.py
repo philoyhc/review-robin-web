@@ -309,7 +309,7 @@ def test_a_panel_made_in_place_has_no_edit_link_yet(page: Page) -> None:
     gate.locator("[data-pc-panel]").select_option("__new")
     gate.locator('[data-np="name"]').fill("Interview panel")
     gate.locator('[data-np="members"]').fill("daniel.koh@example.edu")
-    gate.get_by_role("button", name="Create panel").click()
+    gate.get_by_role("button", name="+ Panel").click()
     assert not link.is_visible()  # made here: not on Panels until saving
 
 
@@ -360,7 +360,7 @@ def test_a_panel_may_not_take_a_csv_column_s_name(page: Page) -> None:
     box = card.locator("[data-newpanel]")
     box.locator('[data-np="name"]').fill("Note")
     box.locator('[data-np="members"]').fill("daniel.koh@example.edu")
-    box.get_by_role("button", name="Create panel").click()
+    box.get_by_role("button", name="+ Panel").click()
     assert box.locator("[data-np-err]").inner_text() == (
         "Note names a column of the Panels CSV: choose another name."
     )

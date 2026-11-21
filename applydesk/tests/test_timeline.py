@@ -10,7 +10,7 @@ from datetime import date
 import pytest
 from fastapi.testclient import TestClient
 
-from applydesk import sample_data, stages, timeline
+from applydesk import sample_data, stages, timeline, tones
 from applydesk.tests._host import host_with
 
 EX = "wa9juxbc2t"  # the RA recruitment, mid Stage 3
@@ -265,8 +265,9 @@ def test_home_s_operator_part_says_how_each_stage_stands() -> None:
     rows = home_ops.of(e)
     assert [[r.label for r in st] for st in rows] == [
         ["Form"],
-        ["Peer review", "Office checks", "Shortlisting"],
-        ["Staff interview", "Selection"],
+        # A gate as Gate N · label (U4, AD-91); an outcome by its label.
+        ["Gate 1 · Peer review", "Gate 2 · Office checks", "Shortlisting"],
+        ["Gate 3 · Staff interview", "Selection"],
     ]
     form, (g1, _, o1), (g3, o2) = rows[0][0], rows[1], rows[2]
     assert (form.state, form.detail) == ("Closed", "100 submitted · 3 drafts")
@@ -281,6 +282,9 @@ def test_home_s_operator_part_says_how_each_stage_stands() -> None:
         "15 re-appointment · 40 interview · released 6 Nov to applicants",  # Dossiers' tally
     )
     assert (o2.state, o2.detail, o2.target) == ("Pending", "55 pending", "dossiers")
+    # Each tone by the one map, as Dossiers': Pending amber (AD-75).
+    assert (o1.tone, o2.tone) == ("ok", "warn")
+    assert all(r.tone == tones.TONE[r.state] for st in rows for r in st if r.state in tones.TONE)
     draft = sample_data.exercise(DRAFT)
     assert draft is not None
     assert home_ops.of(draft)[1][0].target == ""

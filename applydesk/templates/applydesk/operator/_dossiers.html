@@ -10,6 +10,7 @@
 {% set last = last_submitted(plan.rows) %}
 {% set rank = submitted_rank(plan.rows) %}
 {% set cols = plan.columns %}
+<p class="muted pc-intro">A row per dossier: its application, then each stage's gates and outcomes in timeline order. <em>Unlock</em> to set cells, apply rules, upload a CSV or release an outcome; stages, gates, outcomes, dates and rules come from <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</p>
 <div class="ap" data-applications data-ap-ex="{{ exercise.public_id }}" data-ap-csv-name="{{ dossiers_csv }}">
   <div class="ap-tool">
     {# Filters together, each labelled, as Review Robin's (ruling 64, U17). #}
@@ -145,7 +146,7 @@
   </table>
   </div>
   {% if not cols %}<div class="ap-foot"><span class="muted">No gates or outcomes yet: stages, their gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</span></div>{% endif %}
-  <p class="muted ap-help"><em>Rows</em>: <em>Last applications</em> keeps each applicant's last submitted application. A gate's chip says whether the dossier is sent through it, cycling <em>—</em> (no status yet), <em>Entered</em>, <em>Not entered</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> checkbox does what Process sets. Stages, gates, outcomes, dates and rules come from Process.</p>
+  <p class="muted ap-help"><em>Rows</em>: <em>Last applications</em> keeps each applicant's last submitted application. A gate's chip says whether the dossier is sent through it, cycling <em>—</em> (no status yet), <em>Entered</em>, <em>Not entered</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> checkbox does what Process sets.</p>
 </div>
 <script>
 // Segment AD1C: the Dossiers page's moves, on screen only; a reload
@@ -375,7 +376,9 @@
       r.hidden = !on;
       if (on) n += 1;
     });
-    shown.textContent = "Showing " + n + " of " + rows.length;
+    // One count format with the gate page (AD-80): Review Robin's
+    // "Showing N of M <noun>", thousands grouped.
+    shown.textContent = "Showing " + n.toLocaleString("en-US") + " of " + rows.length.toLocaleString("en-US") + (rows.length === 1 ? " dossier" : " dossiers");
     if (tickAll) drawTickAll();
   }
   [search, status, which].forEach(function (el) { el.addEventListener("input", filter); });

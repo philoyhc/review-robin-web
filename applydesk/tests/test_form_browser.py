@@ -583,7 +583,7 @@ def test_a_card_s_buttons_sit_flush_right_in_order(page: Page) -> None:
     buttons = foot.locator("button")
     assert buttons.all_inner_texts() == [
         "Replicate",
-        "+ New",
+        "+ Question",
         "+ Section",
         "+ Page break",
         "Delete",
@@ -624,13 +624,13 @@ def test_new_panel_opens_its_box_and_keeps_the_choice(page: Page) -> None:
 def test_new_panel_refuses_what_it_cannot_make(page: Page) -> None:
     _, box = _new_panel(page)
     err = box.locator("[data-np-err]")
-    box.get_by_role("button", name="Create panel").click()
+    box.get_by_role("button", name="+ Panel").click()
     assert err.text_content() == "Name the panel. Add at least one member."
     box.locator('[data-np="name"]').fill("panel a")
     # Ruling 22: entries are looked up in the directory; one not found, or
     # a name two people share, stays in the box, said why.
     box.locator('[data-np="members"]').fill("kim@example.edu, DANIEL.KOH@example.edu")
-    box.get_by_role("button", name="Create panel").click()
+    box.get_by_role("button", name="+ Panel").click()
     assert err.text_content() == (
         "A panel is already called panel a. Not found in the directory: kim@example.edu."
     )
@@ -661,7 +661,7 @@ def test_new_panel_is_made_chosen_and_offered_everywhere(page: Page) -> None:
     members.press_sequentially("mei.chen@example.edu,")
     tokens.nth(2).locator(".token-x").click()  # × takes a pill out
     assert tokens.count() == 2
-    box.get_by_role("button", name="Create panel").click()
+    box.get_by_role("button", name="+ Panel").click()
     assert not box.is_visible()
     menu = card.locator('[data-f="pool"]')
     assert menu.evaluate("s => s.options[s.selectedIndex].textContent") == "Panel C"

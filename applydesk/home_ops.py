@@ -48,7 +48,7 @@ def _gate(e: Exercise, g: stages.Gate) -> Row:
     parts.append(f"{pairs:,} {'pair' if pairs == 1 else 'pairs'}")
     parts.append(progress or ("not sent" if state in ("Ready", "Not ready") else ""))
     return Row(
-        g.label or "Untitled gate",
+        f"Gate {g.number} · {g.label or 'untitled'}",  # U4, AD-91
         state,
         tones.tone(state, "warn"),
         " · ".join(p for p in parts if p),
@@ -58,13 +58,16 @@ def _gate(e: Exercise, g: stages.Gate) -> Row:
 
 def _outcome(e: Exercise, o: stages.Outcome, plan: stages.Plan) -> Row:
     """Dossiers' column tally (`stages.counts`) and, as the Workflow card
-    says it, *Released* or *Pending* (cold read: one vocabulary)."""
+    says it, *Released* or *Pending* (cold read: one vocabulary), each
+    toned by the one map (AD-75)."""
     detail = stages.counts(plan, o)
     if o.released:
         when, _, to = o.released.partition(" · ")
         detail += f" · released {when}" + (f" {to}" if to else "")
-        return Row(o.label or "Untitled outcome", "Released", "ok", detail, "dossiers")
-    return Row(o.label or "Untitled outcome", "Pending", "mute", detail, "dossiers")
+        return Row(
+            o.label or "Untitled outcome", "Released", tones.tone("Released"), detail, "dossiers"
+        )
+    return Row(o.label or "Untitled outcome", "Pending", tones.tone("Pending"), detail, "dossiers")
 
 
 def of(e: Exercise) -> tuple[tuple[Row, ...], ...]:

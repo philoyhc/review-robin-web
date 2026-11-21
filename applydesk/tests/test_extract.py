@@ -278,3 +278,36 @@ def test_zip_all_takes_extract_setup_s_pages(client: TestClient) -> None:
         "setup/form.csv",
         "setup/process.csv",
     ]
+
+
+def test_each_download_reads_as_a_download(client: TestClient) -> None:
+    """U13, AD-73: a Download verb on every button, the ZIPs saying so;
+    the files' names unchanged."""
+    text = client.get(f"/applydesk/operator/exercises/{EX}/extract").text
+    labels = re.findall(r'data-xd-dl="([^"]+)"[^>]*>([^<]+)</a>', text)
+    assert dict(labels) == {
+        "all.zip": "Download all (ZIP)",
+        "applications.csv": "Download CSV",
+        "gate_1.csv": "Download CSV",
+        "gate_2.csv": "Download CSV",
+        "gates.zip": "Download gates (ZIP)",
+        "outcomes.csv": "Download CSV",
+        "alias_key.csv": "Download key (CSV)",
+        "setup.zip": "Download setup (ZIP)",
+    }
+    assert 'aria-label="Download Gate 1 CSV"' in text
+    for old in (">Zip all<", ">Zip gates<", ">Zip setup<", ">CSV<", ">Download key<"):
+        assert old not in text, old
+
+
+def test_extract_setup_says_panels_csv_is_long(client: TestClient) -> None:
+    """Ruling 67, AD-84: Panels downloads a column per panel; Extract
+    setup's panels.csv is a row per member, and its card says so."""
+    text = client.get(f"/applydesk/operator/exercises/{EX}/extract").text
+    at = text.index("data-xd-panels-shape")
+    note = text[at : text.index("</p>", at)]
+    assert "one row per member: panel, name, email, note" in note
+    assert "a column per panel" in note
+    e = sample_data.exercise(EX)
+    assert e is not None
+    assert dict(extract.setup(e))["panels.csv"][0] == ("panel", "name", "email", "note")

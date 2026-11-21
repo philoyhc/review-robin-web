@@ -710,7 +710,7 @@ def test_evaluations_shows_each_gate_s_assignments(client: TestClient) -> None:
         'data-ev-act="add"  disabled title="Its session has opened' in page
     )  # no Re-run (ruling 48)
     assert 'data-ev-act="rerun"' not in page
-    assert "1–200 of 2,980" in page
+    assert "Showing 1–200 of 2,980 pairs" in page
     g3 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text
     # Not sent (ruling 29): its pairs suggested, still the operator's.
     assert g3.count("data-ev-row=") == 80 and g3.count(">Suggested<") == 80
@@ -752,9 +752,9 @@ def test_a_gate_s_page_finds_a_candidate_or_an_evaluator(client: TestClient) -> 
     # Hers: 29 reviewing her, and the 99 others she reviews.
     assert aisha.count('data-ev-row="m3qx8vkt2n"') == 29
     assert aisha.count('data-ev-pair="aisha.bello@example.edu"') == 99
-    assert "1–128 of 128 matching" in aisha
+    assert "Showing 1–128 of 128 pairs matching" in aisha
     none = client.get(f"{base}?q=nobody-at-all").text
-    assert "None of 2,980 matching" in none and "data-ev-row=" not in none
+    assert "Showing 0 of 2,980 pairs matching" in none and "data-ev-row=" not in none
 
 
 def test_a_gate_s_page_reads_a_bad_offset_as_the_first_page(client: TestClient) -> None:
@@ -1933,3 +1933,42 @@ def test_a_dossier_has_an_operator_page_under_dossiers(client: TestClient) -> No
     assert client.get(f"/applydesk/operator/exercises/{EX}/dossiers/nope").status_code == 404
     # A draft has no dossier yet (ruling 32), so no page.
     assert client.get(f"/applydesk/operator/exercises/{EX}/dossiers/w5jh8ntq3d").status_code == 404
+
+
+def test_every_operator_section_has_one_intro_under_its_h1(client: TestClient) -> None:
+    """F1, AD-85: a `pc-intro` line under the h1 on every section page,
+    Dossiers', Evaluations' and Extract's included."""
+    for section in ("process", "form", "panels", "emails", "dossiers", "evaluations", "extract"):
+        text = client.get(f"/applydesk/operator/exercises/{EX}/{section}").text
+        assert text.count('class="muted pc-intro"') == 1, section
+        assert text.index("</h1>") < text.index('class="muted pc-intro"'), section
+    # Dossiers' intro says where its columns come from; its key stays below.
+    dossiers = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
+    assert "come from Process" not in dossiers[dossiers.index("ap-help") :]
+
+
+def test_evaluations_says_what_the_link_is_in_words(client: TestClient) -> None:
+    """AD-92: Evaluations' copy describes the dossier's link, not the
+    handoff's field name (that stays in the gate page's file list)."""
+    text = client.get(f"/applydesk/operator/exercises/{EX}/evaluations").text
+    assert "ProfileLink" not in text
+    assert "each dossier with a link to its page here" in text
+
+
+def test_one_label_and_role_creates_a_panel(client: TestClient) -> None:
+    """U8 and U6, AD-72: + Panel, Secondary, on Panels and in the inline
+    box on Form and Process; Form's add is + Question."""
+    panels = client.get(f"/applydesk/operator/exercises/{EX}/panels").text
+    assert (
+        '<button type="button" class="btn btn-secondary" data-pn-act="create">+ Panel</button>'
+        in panels
+    )
+    for section in ("form", "process"):
+        text = client.get(f"/applydesk/operator/exercises/{DRAFT}/{section}").text
+        assert (
+            '<button type="button" class="btn btn-secondary" data-np-act="create">+ Panel</button>'
+            in text
+        ), section
+        assert "Create panel" not in text, section
+    form = client.get(f"/applydesk/operator/exercises/{EX}/form").text
+    assert 'data-fc-act="new">+ Question</button>' in form and ">+ New</button>" not in form
