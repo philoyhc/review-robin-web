@@ -665,6 +665,29 @@ the rulings it relied on but does not move them.
     identify anyone; whether a field goes into the dossier is set on the
     field itself (a form section, a gate's result, an outcome, an operator
     entry), and a field in the dossier needs its visibility grants.
+72. **Scores by hand, and grants live in Apply Desk** (author,
+    2026-11-21): an operator sets only outcomes by hand for now; a
+    *manual gate*, whose result an operator enters, may come later. Review
+    Robin gives no visibility grants at all: who sees what is Apply
+    Desk's, through its dossiers (rulings 68–71).
+73. **An exercise's Owner and its operators** (author, 2026-11-21): the
+    Owner is one of the exercise's operators; there may be others, who do
+    everything else on it. Only the Owner adds and removes operators and
+    hands ownership to another operator. The Owner cannot be removed,
+    only replaced by a handover. Whoever makes an exercise is its Owner;
+    the platform super-admin reaches every exercise. People are bound by
+    tenant and object ID; one known only by email waits as a pending
+    person, bound at first sign-in or straight away from a directory
+    search.
+74. **How AD2 stores** (author, 2026-11-21): AD2 is a series of segments
+    (`applydesk/guide/ad2_series.md`), its database checkable on
+    localhost as Review Robin's is. The sample exercises are seeds for
+    localhost and tests, never production; a scratch exercise becomes a
+    draft exercise in the database. A save names the revision it started
+    from and is refused if a newer one exists. Audit uses Review Robin's
+    envelope, copied. Nothing is hard-deleted; retention of applicants'
+    data comes after AD7. Versions are stored from AD2; what a published
+    exercise fixes is AD3's (G2).
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
@@ -747,8 +770,8 @@ rulings after this list):
 - + Pair on a blind gate cannot leave out the candidate themself without
   saying which dossier is whose: the server checks the pair at AD2
   (AD1G rung 6b's cold read).
-- How Apply Desk's operators line up with Review Robin's.
-- Scores entered by hand (an interview held outside Review Robin): every gate's scores come from Review Robin today and only outcomes are set by hand, on Dossiers; not on Extract data (author, 2026-11-18, AD1J). Where they belong is open.
+- ~~How Apply Desk's operators line up with Review Robin's~~: ruling 73; Review Robin grants no visibility (ruling 72).
+- ~~Scores entered by hand~~: only outcomes, for now; a manual gate may come later (ruling 72).
 - ~~Ruling 9's and AD6's "tags decided at AD6"~~: settled by 23F.
 
 **Order** (UI first): A done in AD1G (closed 2026-11-17),
@@ -761,7 +784,7 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
-| AD2 — Database and identity | The `applydesk` database and Alembic history; people bound by Entra tenant and object ID; operator grants; audit | Cordware: the database and its runtime principal (private) |
+| AD2 — Database (a series) | The `applydesk` database, checkable on localhost, area by area: AD2A foundations (people, operators, audit; `applydesk/guide/segment_AD2A_foundations.md`), then exercises, Process, the form, panels, dossiers and pairs, and retiring the simulation (`applydesk/guide/ad2_series.md`) | Cordware: the database and its runtime principal (private), before AD2's first release |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form, versioned, each section carrying its visibility grants (ruling 68); drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
 | AD5 — Panels and dossiers | The rosters on Panels (rulings 19, 22), each gate's evaluators from its ranked sources (ruling 27); dossiers made from the form or by *Create dossiers* (rulings 25, 26), the dossier with its access check, audit and blind redaction | — |
