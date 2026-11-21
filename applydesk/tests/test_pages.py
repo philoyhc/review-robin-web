@@ -270,6 +270,8 @@ def test_every_route_but_health_carries_the_gate() -> None:
             if r.path.startswith("/operator/exercises")
             else gate.require_super_admin
             if r.path.startswith("/admin/")
+            else gate.landing
+            if r.path in ("/", "/operator", "/operator/")
             else gate.placeholders_only
         )
         not in calls

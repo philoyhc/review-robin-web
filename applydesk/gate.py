@@ -127,6 +127,16 @@ def require_super_admin(request: Request) -> None:
         raise HTTPException(status_code=404)
 
 
+def landing(request: Request) -> None:
+    """`/` and `/operator`: an operator (the super-admin, or someone on the
+    operator list) lands on the Operator Lobby, deployed too; anyone else
+    is held to the placeholders' gate until a later AD2 segment
+    (spec-writer at the AD2A close)."""
+    if is_operator(request):
+        return
+    placeholders_only(request)
+
+
 def placeholders_only(request: Request) -> None:
     """The participant's pages and the landing, until a later AD2 segment:
     anyone on a local run, deployed only the platform super-admin."""

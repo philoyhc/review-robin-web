@@ -243,3 +243,22 @@ def test_the_audit_warning_carries_its_event_fields(
     record = next(r for r in caplog.records if r.name == "applydesk.audit")
     assert getattr(record, "event", None) == "audit.detail_schema_violation"
     assert getattr(record, "event_type", None) == "no.such.type"
+
+
+def test_a_deployed_operator_lands_on_the_lobby(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Spec-writer at the close: deployed, an allowlisted operator who is not
+    the super-admin lands on the Operator Lobby from `/`, not a 404; a
+    stranger still gets 404 there."""
+    from applydesk import gate
+
+    session = db.new_session()
+    seed.seed(session)
+    session.close()
+    monkeypatch.setattr(gate, "is_local", lambda: False)
+    landed = client.get("/applydesk/", follow_redirects=False)
+    assert landed.status_code == 302 and landed.headers["location"].endswith("/operator/exercises")
+    assert client.get("/applydesk/operator", follow_redirects=False).status_code == 302
+    monkeypatch.setattr(identity_settings, "fake_auth_principal_id", "someone-else")
+    assert client.get("/applydesk/", follow_redirects=False).status_code == 404

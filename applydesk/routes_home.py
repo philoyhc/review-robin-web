@@ -6,10 +6,10 @@ Lobby."""
 from fastapi import APIRouter, Depends, Request
 from starlette.responses import RedirectResponse
 
-from applydesk.gate import is_operator, placeholders_only
+from applydesk.gate import is_operator, landing
 from applydesk.web import url_path
 
-router = APIRouter(dependencies=[Depends(placeholders_only)])
+router = APIRouter(dependencies=[Depends(landing)])
 
 
 def _land(request: Request) -> RedirectResponse:
