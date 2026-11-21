@@ -23,6 +23,8 @@ The card becomes **Workspace users**, laid out as Review Robin's (the author's r
   *Operators* and *Admins* are on by default, as Review Robin's are.
 - **Exercise role:** *Any*, *Owner of an exercise*, *Operator of an exercise*, *No exercise*.
 
+- **The *Add an operator* card as Review Robin's *Invite by email*** (the author, 2026-11-21): one *Name or email* box that offers matches as you type, people on record first, then the institution's directory through Graph; *Cancel* and *Add* on the row below it. No *Search* button and no results table.
+
 Rejected: keeping the per-row *Revoke* beside the checkboxes. Two ways to do one thing, and Review Robin retired its single-row toolbar for the bulk bar.
 
 ## Semantics
@@ -58,12 +60,14 @@ Taken 2026-11-21 at `2ae5bd646`.
 1. **PR 1 — this plan.**
 2. **PR 2 — scaffold.** Lands the two-pane toolbar, the new columns over everyone on record, the checkbox column and the bulk bar. Chips, role, search and the bar are inert, with "… is not built yet". Rows are real; the per-row *Revoke* stays until PR 4. Must not touch `operators.py`.
 3. **PR 3 — chips, role and search wired.** Adds `allowlist.accounts(…)` (a category per person, the counts, the role filter) and a view of rows.
-4. **PR 4 — the bulk bar wired.** Bulk *Admit* / *Revoke*, the self refusal, the status line; the per-row *Revoke* removed. Cumulative cold read from PR 2's base.
-5. **PR 5 — close.**
+4. **PR 4 — the Add card as Review Robin's.** A JSON suggestions route under `/admin/` (the super-admin's), the typeahead box, *Cancel* and *Add*; *Add* admits the person picked, as *Admit* does now. Replaces a working card, so it lands wired, not as a scaffold.
+5. **PR 5 — the bulk bar wired.** Bulk *Admit* / *Revoke*, the self refusal, the status line; the per-row *Revoke* removed. Cumulative cold read from PR 2's base.
+6. **PR 6 — close.**
 
 ## Definition of done
 
 - Accounts Management's table shows the seven columns over everyone on record; the chips and *Exercise role* filter it; search matches email or name (`test_operator_list.py`).
+- *Add an operator* suggests on-record and directory matches as one types and admits the pick with *Add*; *Cancel* clears it (`test_operator_list.py`, a browser test).
 - Bulk *Admit* / *Revoke* change each ticked row once, audited, skipping refusals; the super-admin's row cannot be ticked or acted on (`test_operator_list.py`).
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py AD2W` exits 0; any warning adjudicated
@@ -78,7 +82,7 @@ None open. The author settled the columns, the bulk bar, Unit and Admin, and the
 ## Out of scope
 
 - A per-person Unit and an Admin tier: Apply Desk has neither; a later segment may add them.
-- *Invite by email*: *Add an operator* already searches the directory.
+- Review Robin's invite of an address the directory does not hold: *Add* takes a pick, as *Admit* does now.
 - Review Robin's other bulk actions (*Promote*, *Demote*, *Set unit*, *Delete*, *Remove from all sessions*): no counterpart yet.
 
 ## Doc impact
