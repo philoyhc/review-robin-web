@@ -688,6 +688,14 @@ the rulings it relied on but does not move them.
     envelope, copied. Nothing is hard-deleted; retention of applicants'
     data comes after AD7. Versions are stored from AD2; what a published
     exercise fixes is AD3's (G2).
+75. **Adding people, and who may operate** (author, 2026-11-21): every
+    place that adds a person searches by name or email, people already on
+    record first, then the institution's directory through Graph, as
+    Review Robin's pickers do (`cordware/graph.py`, `search_users`).
+    Who may be an operator, and so an Owner, is an allowlist the
+    platform super-admin keeps on Apply Desk's admin page, as Review
+    Robin's *Users* page admits and revokes operators; an Owner adds
+    operators only from it.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
