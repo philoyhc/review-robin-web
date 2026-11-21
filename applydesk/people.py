@@ -67,7 +67,9 @@ def _pending_person(session: Session, *keys: str | None) -> Person | None:
     return None
 
 
-def _bind(session: Session, person: Person, account: Account, how: str) -> Person:
+def _bind(
+    session: Session, person: Person, account: Account, how: str, actor: Person | None
+) -> Person:
     person.tenant_id = account.tenant_id
     person.object_id = account.object_id
     person.email = account.email or person.email
@@ -79,14 +81,14 @@ def _bind(session: Session, person: Person, account: Account, how: str) -> Perso
     audit.write_event(
         session,
         event_type="person.bound",
-        actor=person,
+        actor=person if how == "sign_in" else actor,
         payload=audit.snapshot(_snapshot(person)),
         context={"how": how},
     )
     return person
 
 
-def _new_bound(session: Session, account: Account, how: str) -> Person:
+def _new_bound(session: Session, account: Account, how: str, actor: Person | None) -> Person:
     person = Person(
         tenant_id=account.tenant_id,
         object_id=account.object_id,
@@ -101,7 +103,7 @@ def _new_bound(session: Session, account: Account, how: str) -> Person:
     audit.write_event(
         session,
         event_type="person.created",
-        actor=person,
+        actor=person if how == "sign_in" else actor,
         payload=audit.snapshot(_snapshot(person)),
         context={"how": how},
     )
@@ -124,14 +126,18 @@ def resolve(session: Session, identity: Identity) -> Person | None:
     pending = _pending_person(session, email_key(identity.upn), email_key(mail))
     account = Account(tenant_id, object_id, mail, identity.upn, identity.name)
     if pending is not None:
-        return _bind(session, pending, account, how="sign_in")
-    return _new_bound(session, account, how="sign_in")
+        return _bind(session, pending, account, how="sign_in", actor=None)
+    return _new_bound(session, account, how="sign_in", actor=None)
 
 
-def from_directory(session: Session, user: DirectoryUser, tenant_id: str) -> Person:
+def from_directory(
+    session: Session, user: DirectoryUser, tenant_id: str, actor: Person | None
+) -> Person:
     """The person a directory search found (ruling 75): stored bound, the
     tenant being the searcher's own. An existing bound row is reused; a
-    pending one with the same address is bound. Flushes."""
+    pending one with the same address is bound. `actor` is who searched
+    (None for the super-admin with no row), and the audit names them: the
+    person found did nothing. Flushes."""
     person = _bound_person(session, tenant_id, user.id)
     if person is not None:
         return person
@@ -139,8 +145,8 @@ def from_directory(session: Session, user: DirectoryUser, tenant_id: str) -> Per
     pending = _pending_person(session, email_key(user.user_principal_name), email_key(mail))
     account = Account(tenant_id, user.id, mail, user.user_principal_name, user.display_name)
     if pending is not None:
-        return _bind(session, pending, account, how="directory")
-    return _new_bound(session, account, how="directory")
+        return _bind(session, pending, account, how="directory", actor=actor)
+    return _new_bound(session, account, how="directory", actor=actor)
 
 
 def pending(session: Session, address: str, actor: Person | None) -> Person:

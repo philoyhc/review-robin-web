@@ -93,9 +93,35 @@ def test_a_directory_find_is_stored_bound(session: Session) -> None:
     user = DirectoryUser(
         id="o3", display_name="Cy Ong", mail="cy@example.edu", user_principal_name="cy@u.edu"
     )
-    person = people.from_directory(session, user, TENANT)
+    person = people.from_directory(session, user, TENANT, actor=None)
     assert person.id == pending.id and person.bound and person.display_name == "Cy Ong"
-    assert people.from_directory(session, user, TENANT).id == person.id
+    assert people.from_directory(session, user, TENANT, actor=None).id == person.id
+
+
+def test_a_directory_find_is_audited_to_the_searcher_not_the_found(session: Session) -> None:
+    """Codex on #4110: the person found did nothing; the searcher did, or
+    no one on record (the super-admin with no row)."""
+    searcher = people.resolve(session, _identity("o1", "ann@example.edu"))
+    assert searcher is not None
+    found = DirectoryUser(
+        id="o4", display_name="Di Lim", mail="di@example.edu", user_principal_name="di@u.edu"
+    )
+    pending = people.pending(session, "ed@example.edu", actor=searcher)
+    bound = DirectoryUser(
+        id="o5", display_name="Ed Ho", mail="ed@example.edu", user_principal_name="ed@u.edu"
+    )
+    made = people.from_directory(session, found, TENANT, actor=searcher)
+    people.from_directory(session, bound, TENANT, actor=None)
+    events = {
+        (e.event_type, e.detail["context"]["how"]): e.actor_id
+        for e in session.scalars(select(AuditEvent))
+        if e.detail.get("context", {}).get("how") == "directory"
+    }
+    assert events == {
+        ("person.created", "directory"): searcher.id,
+        ("person.bound", "directory"): None,
+    }
+    assert made.id != searcher.id and pending.bound
 
 
 # --------------------------------------------------------------------------- #
@@ -108,7 +134,7 @@ def test_the_search_shows_people_on_record_first_then_the_directory(session: Ses
     found = directory.search(session, "a", fake)
     assert found == directory.SearchResult((), ())  # too short
     someone = fake.search_users("jane")[0]
-    people.from_directory(session, someone, TENANT)
+    people.from_directory(session, someone, TENANT, actor=None)
     result = directory.search(session, someone.display_name[:4], fake)
     assert [p.object_id for p in result.on_record] == [someone.id]
     assert someone.id not in {u.id for u in result.in_directory}  # not twice
