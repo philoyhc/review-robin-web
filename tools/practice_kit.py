@@ -136,8 +136,8 @@ MANIFEST: tuple[tuple[str, str, str, str], ...] = (
         "",
         (
             "the twins, path-reference, section-reference and node-id gates; read only the tree. "
-            "The node-id floor and archive check skip on a fresh export — both need a corpus a new "
-            "repo has not got"
+            "The node-id floor and archive check **skip** on a fresh export — "
+            "both need a corpus a new repo has not got"
         ),
     ),
     (

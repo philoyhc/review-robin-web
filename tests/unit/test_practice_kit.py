@@ -129,6 +129,37 @@ def test_the_setup_document_table_matches_the_manifest() -> None:
     )
 
 
+def _document_table() -> list[str]:
+    """The setup document's kit table, header to last row, as written."""
+    lines = (REPO_ROOT / "new_project_practices_setup.md").read_text().splitlines()
+    header = pk.render_table().splitlines()[0]
+    assert lines.count(header) == 1, "the setup document has no single kit table"
+    start = lines.index(header)
+    end = start
+    while end < len(lines) and lines[end].startswith("|"):
+        end += 1
+    return lines[start:end]
+
+
+def test_the_setup_document_table_is_the_rendered_manifest() -> None:
+    """Row for row and word for word, notes included: the table is
+    ``render_table()``'s output, so a note edited on one side only fails
+    here. Paths, tiers and needs alone are checked above, with a diagnosis."""
+    expected = pk.render_table().splitlines()
+    actual = _document_table()
+    drifted = [
+        f"line {n}:\n  document: {a}\n  manifest: {e}"
+        for n, (a, e) in enumerate(zip(actual, expected), start=1)
+        if a != e
+    ]
+    assert actual == expected, (
+        "new_project_practices_setup.md's kit table differs from "
+        "tools/practice_kit.py MANIFEST; paste the output of "
+        "`python3 tools/practice_kit.py --list` over it.\n"
+        f"rows: document {len(actual)}, manifest {len(expected)}\n" + "\n".join(drifted)
+    )
+
+
 def test_export_writes_every_entry_and_never_overwrites(tmp_path: pathlib.Path) -> None:
     dest = tmp_path / "fresh"
     (dest / ".gitignore").parent.mkdir(parents=True)
