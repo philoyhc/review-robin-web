@@ -62,6 +62,18 @@ Taken 2026-11-21 at `64f0c5c6e`.
 - CI: `.github/workflows/ci-postgres.yml` (the round-trip, as Utilities' at l.111–121); `tools/ci_lanes.py` already lists `applydesk/`.
 - The directory: `cordware/graph.py` `search_users` (real, fake and test directories at l.109, 205, 358); Apply Desk calls it nowhere yet (`grep -rn "graph" applydesk/*.py` → none). Its sample picker `operator/_directory_js.html` stands in until AD2E.
 
+## Status
+
+- **Rung 3** ([#4110](https://github.com/philoyhc/review-robin-web/pull/4110)) took ten rounds of Codex review, every finding real; the eleventh was clean. Most were concurrency gaps between two requests. Fixes:
+  - **Audit:** a directory find is audited to the searcher, and person events carry `refs.person_id`.
+  - **Matching:** an address matches only a pending person, and the people search dedupes bound people by object ID.
+  - **Database rules:** one Owner per exercise and one pending person per address, each a partial unique index (migrations `ad2a2oneowner`, `ad2a3onepending`).
+  - **Binding:** a conditional bind and a savepointed insert, each retried.
+  - **SQLite:** engines begin real transactions, so savepoints nest.
+  - **Operator changes:** each takes the exercise's row lock, checks fresh rows, and restates its rule in a conditional update.
+  - **Allowlist:** every check re-reads the row.
+- **Ruling (author, 2026-11-21):** rung 3 merges once CI is green after the tenth fix; any later concurrency finding is recorded here and taken at rungs 6 and 8, where adding people is wired to pages. None was raised.
+
 ## PR ladder
 
 1. **The series overview, this plan and rulings 72–74.** Prose only.
