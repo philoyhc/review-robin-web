@@ -94,8 +94,7 @@ def suggest(request: Request, q: str = "", session: Session = Depends(db.get_ses
     """The *Add an operator* box's typeahead (segment AD2W): records, then
     the directory, as JSON; never cached. A sync route, so Graph's blocking
     calls run off the event loop."""
-    found = allowlist.search(session, q, lambda: directory_for(request))
-    answer = allowlist.suggestions(found, {p.id for p in allowlist.listed_ids(session)})
+    answer = allowlist.suggest(session, q, lambda: directory_for(request))
     return JSONResponse(answer, headers={"Cache-Control": "no-store"})
 
 

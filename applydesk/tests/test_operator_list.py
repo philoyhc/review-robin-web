@@ -356,3 +356,22 @@ def test_two_people_with_one_label_stay_two_picks() -> None:
     labels = [o["label"] for o in offers]
     assert labels == ["Sam Lee <sam@example.edu>", "Sam Lee <sam@example.edu> (directory 2)"]
     assert [o["object_id"] for o in offers] == ["o-1", "o-2"]
+
+
+def test_listed_people_never_crowd_the_suggestions_out(client: TestClient) -> None:
+    """Codex on #4122: with a full page of listed matches, the one person
+    who can still be added is offered, not lost to the search's limit."""
+    from applydesk import directory as directory_mod
+    from applydesk.operators import Actor
+
+    session = db.new_session()
+    sup = Actor(None, is_super_admin=True)
+    for n in range(directory_mod.LIMIT):
+        operators.admit(session, sup, people.pending(session, f"lim{n:02}@example.edu", None))
+    last = people.pending(session, "lim.zz@example.edu", None)
+    session.commit()
+    last_id = last.id
+    session.close()
+    offers = _suggest(client, "lim")["people"]
+    assert isinstance(offers, list)
+    assert [o["person_id"] for o in offers if "person_id" in o] == [last_id]

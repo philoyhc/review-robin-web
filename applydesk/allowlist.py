@@ -201,17 +201,34 @@ def listed_ids(session: Session) -> list[Person]:
 
 
 def search(
-    session: Session, query: str, make_directory: Callable[[], Directory]
+    session: Session,
+    query: str,
+    make_directory: Callable[[], Directory],
+    exclude: frozenset[int] = frozenset(),
 ) -> directory.SearchResult:
     """The people search (`directory.search`) for the page: a directory that
     cannot even be reached (no token) is reported as a failure, the people
-    on record still shown."""
+    on record still shown. `exclude` leaves those rows out before the
+    search's limit."""
     try:
         reached = make_directory()
     except GraphError as error:
-        found = directory.search(session, query, None)
+        found = directory.search(session, query, None, exclude=exclude)
         return directory.SearchResult(found.on_record, (), directory_failed=error.kind)
-    return directory.search(session, query, reached)
+    return directory.search(session, query, reached, exclude=exclude)
+
+
+def suggest(
+    session: Session, query: str, make_directory: Callable[[], Directory]
+) -> dict[str, object]:
+    """The *Add an operator* box's offers for `query`: people on the list
+    are left out in the search, before its limit, and so are their entries
+    in the directory (Codex on #4122)."""
+    listed = listed_ids(session)
+    found = search(session, query, make_directory, exclude=frozenset(p.id for p in listed))
+    bound = {p.object_id for p in listed if p.object_id}
+    kept = tuple(u for u in found.in_directory if u.id not in bound)
+    return suggestions(directory.SearchResult(found.on_record, kept, found.directory_failed), set())
 
 
 def suggestions(found: directory.SearchResult, listed: set[int]) -> dict[str, object]:
