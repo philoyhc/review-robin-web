@@ -18,7 +18,7 @@
   <ol class="tl-stages">
     {% for s in tl.stages %}
     <li class="tl-stage tl-{{ s.state | lower }}" data-tl-stage="{{ s.number }}"{% if s.state == "Now" %} data-tl-p="{{ '%.1f' % (s.progress * 100) }}"{% endif %}>
-      <div class="tl-bar" aria-hidden="true">{% if s.state == "Now" %}<span class="tl-today"><span>Today · {{ short(tl.today) }}</span></span>{% endif %}</div>
+      <div class="tl-bar" aria-hidden="true">{% if s.state == "Now" %}<span class="tl-today"><span>{{ "Now · until " ~ short(s.end) if s.end else "Now" }}</span></span>{% endif %}</div>
       <span class="tl-dot" aria-hidden="true">{{ "✓" if s.state in ("Done", "Closed") else s.number }}</span>
       {# Operator pages name a stage by its status (ruling 64, U2); the
          applicant's page, by where it stands (Done, Now, Next, Closed). #}
@@ -28,8 +28,12 @@
       <ul class="tl-items">{% for i in s.items %}<li class="tl-i-{{ i.kind }}"><b>{{ i.kicker }}</b>{{ i.text }}</li>{% endfor %}</ul>
       {# The operator's part (Decision amended again), only where the page
          passes it: Home does, the applicant's page never does. #}
+      {# One *Operator only* across the Horizontal columns (AD1S): every
+         stage keeps its label, read aloud, but only the first is seen;
+         the rows sit in their own shared row, so they still align. #}
       {% if ops %}<div class="tl-op" data-tl-op>
         <span class="tl-op-k">Operator only</span>
+        <div class="tl-op-rows">
         {# Each stage's status (segment AD1K); a draft's blockers, its first
            stage's setup linked to where each is set (author, at the AD1K
            check: in place of a Publish card). #}
@@ -41,11 +45,12 @@
           {% elif sr.waiting %}<span>Waiting on: {{ sr.waiting | join("; ") }}.</span>{% endif %}
           <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Set on Process →</a></div>{% endif %}
         {% for r in ops[loop.index0] %}<div class="tl-op-row"><b>{{ r.label }} <span class="chip chip-{{ r.tone }}">{{ r.state }}</span></b><span>{{ r.detail }}</span>{% if r.target == "dossiers" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers') }}">Open Dossiers →</a>{% elif r.target %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/gate_' ~ r.target) }}">Open Gate {{ r.target }} →</a>{% endif %}</div>{% endfor %}
+        </div>
       </div>{% endif %}
     </li>
     {% endfor %}
   </ol>
-  {% if next_line %}<p class="tl-nextline" data-tl-next>{{ next_line }}{% if next_link %} <a href="{{ next_link }}">{{ next_label }}</a>{% endif %}</p>{% endif %}
+  {% if next_line %}<p class="tl-nextline" data-tl-next>{{ next_line }}</p>{% endif %}
 </section>
 {# Today's place in its stage, and the layout: no inline styles in the
    page (applydesk/tests/test_pages.py), so the script sets them; without

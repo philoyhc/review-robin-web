@@ -395,9 +395,10 @@ Home, `/operator/exercises/<id>`, is two columns: the **Timeline** card
 (two-thirds) and the **Details** card (one-third), one column from 899px down,
 Details below. The status row (`workflow.status_row`) opens with the exercise's status,
 derived from its stages ("Stage status"), and carries *Applications: N
-submitted · M drafts*. Under the timeline a *Next step* line says where
-today falls (`timeline.next_step`), with *Open Gate N →*, its page under Evaluations, while a gate runs
-(`timeline.running_gate`). Home has no Publish card: publishing is per stage,
+submitted · M drafts*. The stage under way carries *Now* on its today
+marker and its outcome due as a *Next:* item; on Home each gate's row in
+its operator part links the gate's page. A line under the timeline
+(`timeline.next_step`) shows only for a draft or when no stage is under way. Home has no Publish card: publishing is per stage,
 on Process, and the timeline's operator part says what blocks each stage.
 Cards side by
 side share a height only when within a fifth of the taller; a short card
@@ -418,7 +419,7 @@ include.
   *Dates not set*. Today is the sample's until AD2, marked on the current
   stage at its share of that stage's days and said in words, between stages
   too.
-- **Items**: the form as *You*, its close as a *Milestone*, each gate as a
+- **Items**: the form as *Applicants*, its close as a *Milestone*, each gate as a
   *Step* by name (*A step.* unnamed), each outcome by name with *released
   <date>* or *expected <the exercise's expected outcome>*. Outcome values
   appear only once released to applicants. Nothing operator-only (panels,

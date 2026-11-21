@@ -451,7 +451,6 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         tl=tl,
         short=timeline.short,
         next_line=timeline.next_step(exercise, tl),
-        running_gate=timeline.running_gate(exercise, tl),
         ops=home_ops.of(exercise),
         missing=sample_data.setup_missing(exercise),
         timezones=sample_data.TIMEZONES,

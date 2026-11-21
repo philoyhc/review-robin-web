@@ -166,7 +166,7 @@
     .tl-items { margin: 0; padding: 0; list-style: none; font-size: 13.5px; }
     .tl-items li { padding: 6px 8px; border-radius: 6px; background: var(--surface-muted); margin-bottom: 6px; overflow-wrap: break-word; }
     .tl-items li b { display: block; font-size: 12px; color: var(--text-subtle); font-weight: 600; }
-    .tl-items li.tl-i-outcome, .tl-items li.tl-i-outcome-due, .tl-items li.tl-i-milestone { background: var(--accent-tint); }
+    .tl-items li.tl-i-outcome, .tl-items li.tl-i-outcome-due, .tl-items li.tl-i-next, .tl-items li.tl-i-milestone { background: var(--accent-tint); }
     .tl-today { position: absolute; background: var(--text-body); z-index: 2; }
     .tl-today span { position: absolute; font-size: 11.5px; font-weight: 700; white-space: nowrap; background: var(--surface-card); padding: 0 4px; }
     .tl:not(.tl-ready) .tl-today { visibility: hidden; }  /* placed by the script */
@@ -208,10 +208,17 @@
     .tl-op-row a { font-size: 12.5px; }
     .tl-op-h { display: block; font-weight: 600; margin-top: 4px; }
     .tl-op-list { margin: 2px 0 4px; padding-left: 16px; color: var(--text-subtle); }
-    .tl.tl-ops[data-layout="h"] .tl-stages { grid-template-rows: auto auto auto 1fr auto; row-gap: 0; }  /* the participants' part spaced as the applicant's */
-    .tl.tl-ops[data-layout="h"] .tl-stage { grid-row: span 5; grid-template-rows: subgrid; grid-template-areas: "bar bar" "dot name" "when when" "items items" "op op"; }
-    .tl[data-layout="h"] .tl-op { grid-area: op; border-top: 1px solid var(--border-default); margin-top: 6px; padding-top: 10px; }
+    /* Horizontal, one *Operator only* (AD1S): the label and the rows are
+       two shared rows (subgrid again), only the first stage's label is
+       seen, and the rule runs unbroken across the columns' gaps. */
+    .tl.tl-ops[data-layout="h"] .tl-stages { grid-template-rows: auto auto auto 1fr auto auto; row-gap: 0; }  /* the participants' part spaced as the applicant's */
+    .tl.tl-ops[data-layout="h"] .tl-stage { grid-row: span 6; grid-template-rows: subgrid; grid-template-areas: "bar bar" "dot name" "when when" "items items" "op op" "op op"; }
+    .tl[data-layout="h"] .tl-op { grid-area: op; display: grid; grid-template-rows: subgrid; position: relative; border-top: 1px solid var(--border-default); margin-top: 6px; padding-top: 10px; }
+    .tl[data-layout="h"] .tl-op-k { grid-row: 1; }
+    .tl[data-layout="h"] .tl-op-rows { grid-row: 2; min-width: 0; }
+    .tl[data-layout="h"] .tl-stage:not(:first-child) .tl-op-k { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }  /* still read aloud */
     .tl[data-layout="h"] .tl-stage > .tl-op { margin-right: 0; padding-right: 8px; }
+    .tl[data-layout="h"] .tl-stage:not(:last-child) > .tl-op { margin-right: -4px; padding-right: 12px; }  /* over the 4px gap */
     .tl.tl-ops[data-layout="v"] .tl-stage { grid-template-columns: 96px 24px minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; grid-template-areas: "when dot name op" "when bar items op"; }
     .tl[data-layout="v"] .tl-op { grid-area: op; border-left: 1px solid var(--border-default); margin-left: 12px; padding: 0 0 18px 14px; }
     .tl[data-layout="v"] .tl-stage:not(:first-child) .tl-op-k { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }  /* still read aloud */
