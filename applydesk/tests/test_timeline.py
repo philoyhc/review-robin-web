@@ -74,8 +74,9 @@ def test_items_say_what_happens_and_nothing_operator_only() -> None:
             "Shortlisting: Re-appointment, Interview or Not shortlisted.",
         ),
     ]
+    # The stage under way's outcome due is its Next item (AD1S).
     assert t.stages[2].items[-1] == timeline.Item(
-        "outcome-due", "Outcome · expected December 2026", "Selection."
+        "next", "Next: Outcome · expected December 2026", "Selection."
     )
     said = " ".join(i.kicker + i.text for s in t.stages for i in s.items)
     for operator_only in (
@@ -100,8 +101,11 @@ def test_home_is_the_timeline_beside_details(client: TestClient) -> None:
     # Three stages start Horizontal; the switch shows once the script runs.
     assert 'data-timeline data-layout="h" data-tl-count="3"' in home
     assert '<div class="tl-switch" role="group" aria-label="Timeline layout" hidden>' in home
-    assert "Today · 17 Nov" in home
-    assert "Now: Interviews, until 4 Dec. Next: Selection, expected December 2026." in home
+    # Now on the timeline itself (AD1S): the marker, and the Next item;
+    # no line under the timeline while a stage is under way.
+    assert "<span>Now · until 4 Dec</span>" in home
+    assert "<b>Next: Outcome · expected December 2026</b>Selection." in home
+    assert "Now: " not in home and "data-tl-next" not in home
     # The old fact cards are gone: their facts are the status row's and
     # the timeline's.
     for gone in ("Where it stands", "<h2>Counts</h2>", "<h2>Next step</h2>", 'class="lede"'):
@@ -111,17 +115,21 @@ def test_home_is_the_timeline_beside_details(client: TestClient) -> None:
     details = home[home.index('id="details"') :]
     assert "<dt>Description</dt>" in details and "Summary" not in details
     assert 'data-dt-lock title="Unlock the details to change them">Unlock' in details
-    # The line under the timeline points to where the stage is worked.
-    # Its gate's own page, where the pairs are (AD-24).
+    # The Now stage's operator part points to where the stage is worked:
+    # its gate's own page, where the pairs are (AD-24, AD1S).
+    now = home[home.index('data-tl-stage="3"') :]
     assert (
-        f'<a href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Open Gate 3 →</a>' in home
-    )
+        '<div class="tl-op-row" data-tl-running><b>Under way</b><span>Gate 3 · Staff interview'
+        f'</span><a href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Open Gate 3 →</a>'
+    ) in now
+    assert home.count("data-tl-running") == 1
 
 
 def test_a_draft_s_home_says_what_publishing_needs(client: TestClient) -> None:
     home = client.get(f"/applydesk/operator/exercises/{DRAFT}").text
-    assert home.count("Dates not set") == 2 and "Today ·" not in home
-    assert "A draft: the timeline is what applicants will see once it is published." in home
+    assert home.count("Dates not set") == 2 and 'class="tl-today"' not in home
+    assert "A draft: the timeline is what participants will see once it is published." in home
+    assert "data-tl-running" not in home
     # What blocks each stage, in the operator part (AD1K, at the author's
     # check: no Publish card); a published exercise has none to show.
     assert home.count("Blocking publication") == 2
@@ -332,3 +340,33 @@ def test_a_stage_not_shown_to_applicants_is_not_on_theirs(
     assert hidden.number not in mine and hidden.number in theirs
     process = client.get(f"/applydesk/operator/exercises/{EX}/process").text
     assert 'data-pc="shown"> Shown to applicants' in process  # its tick unticked
+
+
+def test_the_timeline_names_its_audience_and_carries_now() -> None:
+    """Segment AD1S: participants are applicants and evaluators alike, so
+    no item says *You*; while a stage is under way the timeline carries
+    Now and Next, and the line under it says nothing."""
+    t = _of(EX)
+    assert t.stages[0].items[0] == timeline.Item(
+        "applicants", "Applicants", "Apply online with the application form."
+    )
+    said = [i.kicker for s in t.stages for i in s.items]
+    assert "You" not in said and not any(k.startswith("You ") for k in said)
+    e = sample_data.exercise(EX)
+    assert e is not None
+    assert timeline.next_step(e, t) == ""
+    # Only the stage under way has a Next item, and only for an outcome
+    # still due: mid Stage 2, Shortlisting is released, Selection is later.
+    stage2 = _of(EX, date(2026, 10, 20))
+    assert not [i for s in stage2.stages for i in s.items if i.kind == "next"]
+    assert stage2.stages[2].items[-1].kind == "outcome-due"
+
+
+def test_the_applicant_s_timeline_carries_now_but_no_operator_row(client: TestClient) -> None:
+    page = client.get(f"/applydesk/me/exercises/{EX}").text
+    mine = page[page.index("data-timeline") : page.index("</section>", page.index("data-timeline"))]
+    assert "<span>Now · until 4 Dec</span>" in mine
+    assert "<b>Next: Outcome · expected December 2026</b>Selection." in mine
+    assert "<b>Applicants</b>Apply online" in mine and "<b>You</b>" not in mine
+    for operator in ("data-tl-running", "Operator only", "tl-op", "Open Gate"):
+        assert operator not in mine, operator

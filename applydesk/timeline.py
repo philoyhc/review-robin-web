@@ -1,6 +1,7 @@
 """The exercise's timeline as Home and the applicant's page draw it
 (segment AD1I): each stage with its dates, its state against today, how
-far today is through it, and its items in words an applicant reads.
+far today is through it, and its items in words every participant
+reads (segment AD1S: each item names its audience, never *you*).
 Nothing operator-only goes in (panels, rules, pairs, modes), so one shape
 serves both pages. Today is the sample's until AD2.
 """
@@ -19,8 +20,9 @@ TODAY = date(2026, 11, 17)
 
 @dataclass(frozen=True)
 class Item:
-    """One line of a stage: *you*, *milestone*, *step* or *outcome*, with
-    its kicker (e.g. "Outcome · released 6 Nov") and its text."""
+    """One line of a stage: *applicants*, *milestone*, *step*, *outcome*,
+    *outcome-due* or *next* (the stage under way's first outcome due, AD1S),
+    with its kicker (e.g. "Outcome · released 6 Nov") and its text."""
 
     kind: str
     kicker: str
@@ -78,7 +80,7 @@ def short(d: date) -> str:
 def _items(st: stages.Stage, e: Exercise) -> tuple[Item, ...]:
     out: list[Item] = []
     if st.form:
-        out.append(Item("you", "You", "Apply online with the application form."))
+        out.append(Item("applicants", "Applicants", "Apply online with the application form."))
         if e.application_stage_ends != "Not set":
             close = f"Applications close {e.application_stage_ends}."
             out.append(Item("milestone", "Milestone", close))
@@ -125,36 +127,42 @@ def of(e: Exercise, today: date = TODAY, applicant: bool = False) -> Timeline:
         # Counted in days, a stage's last day in it.
         progress = ((today - s).days + 0.5) / d if state == "Now" and s and d else 0.0
         when = f"{short(s)} – {short(f)}" if s and f else "Dates not set"
-        views.append(StageView(st.number, st.label, s, f, when, state, progress, _items(st, e)))
+        items = _items(st, e)
+        if state == "Now":
+            items = _next_in(items)
+        views.append(StageView(st.number, st.label, s, f, when, state, progress, items))
     return Timeline(tuple(views), start, end, today)
 
 
+def _next_in(items: tuple[Item, ...]) -> tuple[Item, ...]:
+    """The stage under way's first outcome due, as its *Next:* item
+    (segment AD1S): what comes next, and when it is expected."""
+    due = next((i for i in items if i.kind == "outcome-due"), None)
+    if due is None:
+        return items
+    nxt = Item("next", "Next: " + due.kicker, due.text)
+    return tuple(nxt if i is due else i for i in items)
+
+
 def next_step(e: Exercise, t: Timeline) -> str:
-    """The line under the timeline, from where today falls (author,
-    2026-11-17): the stage under way and what comes next."""
+    """The line under the timeline, only where the today marker cannot
+    say it (segment AD1S): a draft, or no stage under way. While a stage
+    is under way the timeline itself carries *Now* and *Next*, so none."""
     if e.state == "Draft":
-        return "A draft: the timeline is what applicants will see once it is published."
-    now = t.now
-    if now is None:
-        ahead = next((s for s in t.stages if s.state == "Next"), None)
-        if ahead is None:
-            return "Every stage is done."
-        return (
-            f"Next: {ahead.name}, from {short(ahead.start)}."
-            if ahead.start
-            else f"Next: {ahead.name}."
-        )
-    due = next((i for i in now.items if i.kind == "outcome-due"), None)
-    line = f"Now: {now.name}, until {short(now.end)}." if now.end else f"Now: {now.name}."
-    if due:
-        expected = due.kicker.partition(" · ")[2]
-        line += f" Next: {due.text.rstrip('.')}" + (f", {expected}." if expected else ".")
-    return line
+        return "A draft: the timeline is what participants will see once it is published."
+    if t.now is not None:
+        return ""
+    ahead = next((s for s in t.stages if s.state == "Next"), None)
+    if ahead is None:
+        return "Every stage is done."
+    return (
+        f"Next: {ahead.name}, from {short(ahead.start)}." if ahead.start else f"Next: {ahead.name}."
+    )
 
 
 def running_gate(e: Exercise, t: Timeline) -> int | None:
-    """The gate being worked in the stage under way, so the Next step line
-    points to its page (AD-24): the stage's first gate whose results are
+    """The gate being worked in the stage under way, so the Now stage's
+    operator part points to its page (AD-24, AD1S): the stage's first gate whose results are
     not in, else its last; none for a draft, or a stage holding no gate."""
     if e.state == "Draft" or t.now is None:
         return None

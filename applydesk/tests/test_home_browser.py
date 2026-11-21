@@ -249,3 +249,24 @@ def test_the_operator_part_lines_up_across_stages(page: Page) -> None:
     dot2 = page.locator(".tl-now .tl-dot").bounding_box()
     assert bar and dot and bar2 and dot2
     assert round(dot["y"] - bar["y"]) == round(dot2["y"] - bar2["y"])
+
+
+# --- Segment AD1S: one Operator only across the Horizontal columns ---
+
+
+def test_horizontal_says_operator_only_once_and_its_rows_align(page: Page) -> None:
+    page.goto(HOME)
+    assert _layout(page) == "h"
+    labels = page.locator(".tl-op-k")
+    assert labels.count() == 3  # each stage keeps one, read aloud
+    widths = labels.evaluate_all("els => els.map(e => e.getBoundingClientRect().width)")
+    assert [w > 1 for w in widths] == [True, False, False], widths
+    # Each column's first operator row starts on one shared line.
+    tops = page.locator(".tl-op-rows").evaluate_all(
+        "els => els.map(e => Math.round(e.firstElementChild.getBoundingClientRect().top))"
+    )
+    assert len(tops) == 3 and len(set(tops)) == 1, tops
+    # The label sits above that line, and the stage under way says Now.
+    label = labels.nth(0).bounding_box()
+    assert label and label["y"] + label["height"] <= tops[0]
+    assert page.locator(".tl-now .tl-today").text_content() == "Now · until 4 Dec"
