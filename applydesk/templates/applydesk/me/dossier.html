@@ -17,5 +17,5 @@
   <h2>Shown to evaluators</h2>
   <dl class="facts">{% for label, value in shown %}<dt>{{ label }}</dt><dd{% if value == "—" %} class="muted"{% endif %}>{{ value }}</dd>{% else %}<dt class="muted">None</dt>{% endfor %}</dl>
 </section>
-<p class="muted">Evaluators open this dossier because they are asked to evaluate it, and score it in Review Robin; the exercise's operators open every dossier (ruling 9).</p>
+<p class="muted">Evaluators open this dossier because they are asked to evaluate it, and score it in Review Robin; the exercise's operators open every dossier.</p>
 {% endblock %}

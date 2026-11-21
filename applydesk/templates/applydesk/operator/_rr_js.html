@@ -210,7 +210,7 @@
     })[0];
     if (clash) return "Not sent (session_code_conflict): " + code + " is " + clash[1] + "'s session code. Choose another.";
     var ev = window.ApplyDeskEv;
-    if (ev && ev.edited()) return "Not sent (invalid_setup): this tab's changes to the pairs are not saved until AD2; discard them to send the pairs as saved.";
+    if (ev && ev.edited()) return "Not sent (invalid_setup): this tab's changes to the pairs are not saved; discard them to send the pairs as saved.";
     if (!first || DATA.state === "Ready") return "";
     if (DATA.approveOnly && ev && ev.allApproved()) return "";
     return "Not sent (invalid_setup): " + (DATA.why || "the gate is not ready") + ".";
@@ -247,7 +247,7 @@
     } else if (b.dataset.rrAct === "pull") {
       if (DATA.state === "Closed") {
         note("final", new Date().toISOString());
-        said.textContent = "Results in (simulated): the gate is done (ruling 57). Its results fill the gate's column on Dossiers with AD6.";
+        said.textContent = "Results in (simulated): the gate is done. Its results do not fill the gate's column on Dossiers yet.";
       } else {
         note("pulled", new Date().toISOString());
         said.textContent = "Pulled (simulated): " + (DATA.line || "no progress yet") + "; its session is still open.";
@@ -261,7 +261,7 @@
     } else if (b.dataset.rrAct === "mail-send") {
       var n = (mailKind === "invite" ? DATA.progress : notDone()).length;
       note(mailKind === "invite" ? "invited" : "reminded", { at: new Date().toISOString(), n: n });
-      said.textContent = (mailKind === "invite" ? "Invited " : "Reminded ") + n + (n === 1 ? " evaluator" : " evaluators") + " (simulated): no email is sent until AD7.";
+      said.textContent = (mailKind === "invite" ? "Invited " : "Reminded ") + n + (n === 1 ? " evaluator" : " evaluators") + " (simulated): no email is sent.";
       closeMail();
       draw();
     } else if (b.dataset.rrAct === "mail-cancel") {

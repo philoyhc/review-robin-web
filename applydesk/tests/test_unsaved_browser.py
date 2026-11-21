@@ -115,7 +115,7 @@ def test_dossiers_marks_what_lock_kept_and_asks_before_leaving(page: Page) -> No
     # The one unsaved marker, as Form's and Process's (AD-70).
     assert marker.get_attribute("class") == "fb-unsaved"
     assert marker.evaluate("e => getComputedStyle(e).fontWeight") == "600"
-    assert marker.inner_text() == "1 change on this page, not saved until AD2"
+    assert marker.inner_text() == "1 change on this page, not saved"
     assert "kept on this page" in page.locator("[data-ap-said]").inner_text()
     assert page.evaluate(LEAVES)
     # The same cell changed again over a second Lock counts once: the count
@@ -123,7 +123,7 @@ def test_dossiers_marks_what_lock_kept_and_asks_before_leaving(page: Page) -> No
     page.locator("[data-ap-lock]").click()
     page.locator("[data-row] [data-ap-adm]:not([disabled])").first.click()
     page.locator("[data-ap-lock]").click()
-    assert marker.inner_text() == "1 change on this page, not saved until AD2"
+    assert marker.inner_text() == "1 change on this page, not saved"
 
 
 def test_panels_marks_what_is_kept_and_asks_before_leaving(page: Page) -> None:

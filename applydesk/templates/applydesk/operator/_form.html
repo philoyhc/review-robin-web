@@ -44,7 +44,7 @@
       <p class="visually-hidden" data-fb-live aria-live="polite"></p>
       <div class="btnrow">
         <button type="button" class="btn btn-secondary" data-fb-preview>Preview</button>
-        {% if scratch_page %}<button class="btn btn-secondary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Save</button>{% else %}<button class="btn btn-secondary" type="button" disabled title="Saving comes with the database (segment AD2)">Save</button>{% endif %}
+        {% if scratch_page %}<button class="btn btn-secondary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Save</button>{% else %}<button class="btn btn-secondary" type="button" disabled title="Saving comes with the database">Save</button>{% endif %}
         <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
       </div>
       {% if scratch_page %}<p class="muted fb-said" data-fb-said role="status"></p>{% endif %}
