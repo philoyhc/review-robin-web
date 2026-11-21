@@ -247,7 +247,12 @@
     .xd-gates th, .xd-gates td { padding: 6px 8px; }
     /* A short button for a compact table row, as RRW's (ruling 64, U25). */
     .btn.btn-short { min-height: 0; padding: 2px 8px; font-size: 13px; line-height: 1.5; vertical-align: middle; }
-    .xd-empty { margin: 0 0 12px; }
+    /* An operator page's empty state (AD-79): a muted card, its title, one
+       line and a link to the page that fixes it (_empty.html). */
+    .ad-empty { border: 1px dashed var(--border-default); border-radius: 8px; background: var(--surface-muted); padding: 14px 16px; margin: 0 0 16px; color: var(--text-subtle); }
+    .ad-empty[hidden] { display: none; }
+    .ad-empty h2 { margin: 0 0 4px; font-size: 16px; font-weight: 600; color: var(--text-body); }
+    .ad-empty p { margin: 0; font-size: 14px; }
     .card .xd-note { font-size: 13px; margin: -4px 0 10px; }
     .card .xd-shape { margin: 0 0 4px; }
     @media (max-width: 899px) { .xd-grid { grid-template-columns: 1fr; } }

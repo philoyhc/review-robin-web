@@ -50,7 +50,6 @@
       <span class="pn-rl" data-pn-inuse>· {{ used | length }} in use</span>
       <button class="btn btn-secondary pn-manage" type="button" data-pn-act="manage" aria-expanded="false" aria-controls="pn-manage">Manage panels</button>
     </div>
-    <p class="muted" data-pn-empty{% if panels %} hidden{% endif %}>No panels yet: make one in <em>Manage panels</em>, or with <em>+ New panel</em> where a question or a gate needs one.</p>
     <ul class="pc-issues" data-pn-issues hidden></ul>
     <p class="pn-said" data-pn-said aria-live="polite"></p>
     {% if scratch_page %}
@@ -140,7 +139,12 @@
       <button class="btn btn-secondary" type="button" data-pn-act="add">Add new</button>
     </div>
     </div>
-    <div class="table-wrap pn-wrap">
+    {# The empty state (AD-79) in the table's place while it has no rows:
+       its title follows whether any panel exists. The table stays in the
+       page, out of view, for the first row Add new makes. #}
+    {% from "applydesk/_empty.html" import empty %}
+    {% call empty("No one on a panel yet" if panels else "No panels yet", url('/operator/exercises/' ~ exercise.public_id ~ '/process'), "Process", "data-pn-empty" ~ (" hidden" if roster else "")) %}Make a panel in <em>Manage panels</em> and add its people with <em>Add new</em>, or make one where a Form question or a gate's evaluators need it.{% endcall %}
+    <div class="table-wrap pn-wrap" data-pn-wrap{% if not roster %} hidden{% endif %}>
       {# Fixed widths (author, 2026-11-14): a row turned to edit boxes
          changes how it looks, never where the columns fall. #}
       <table class="pn-table" aria-label="Panels and their members">
@@ -232,7 +236,10 @@
     var nCols = cols().length, nUsed = cols().filter(function (h) { return h.dataset.used; }).length;
     root.querySelector("[data-pn-people]").textContent = rows().length;
     root.querySelector("[data-pn-inuse]").textContent = "· " + nUsed + " in use";
-    root.querySelector("[data-pn-empty]").hidden = nCols > 0;
+    var none = !rows().length, blank = root.querySelector("[data-pn-empty]");
+    blank.hidden = !none;
+    root.querySelector("[data-pn-wrap]").hidden = none;
+    blank.querySelector("[data-empty-title]").textContent = nCols ? "No one on a panel yet" : "No panels yet";
   }
 
   // Show columns: a hidden panel's header and cells go, and the table
@@ -916,21 +923,51 @@
     }
   });
   search.addEventListener("input", function () { filter(); selected(); });
-  // Sorting by a column, as Review Robin's ↕: ascending, then descending.
+  // Sorting, as the gate page's (AD-83; applydesk/paging.py's
+  // plain_click, shift_click and sort_badge, here on the client): a click
+  // sorts by the column alone, and on the sole sorted column cycles up,
+  // down, unsorted; shift-click adds it to the cascade (three at most),
+  // then turns it down, then drops it. Unsorted, the rows go back to the
+  // order they had before the first sort; nothing is kept on reload.
+  var order = [], SORT_MAX = 3, seqOf = 0;  // order: [field, descending]
+  function plainClick(key) {
+    if (order.length === 1 && order[0][0] === key) return order[0][1] ? [] : [[key, true]];
+    return [[key, false]];
+  }
+  function shiftClick(key) {
+    var i = order.map(function (o) { return o[0]; }).indexOf(key);
+    if (i < 0) return order.length < SORT_MAX ? order.concat([[key, false]]) : order;
+    if (!order[i][1]) return order.slice(0, i).concat([[key, true]], order.slice(i + 1));
+    return order.slice(0, i).concat(order.slice(i + 1));
+  }
+  function badge(key) {
+    for (var n = 0; n < order.length; n++) if (order[n][0] === key) return (n + 1) + (order[n][1] ? "↓" : "↑");
+    return "↕";
+  }
+  function sortRows(next) {
+    // The order to come back to: the rows as they stood before sorting.
+    if (!order.length) rows().forEach(function (r) { r.dataset.pnSeq = seqOf++; });
+    order = next;
+    root.querySelectorAll("[data-pn-sort]").forEach(function (o) {
+      var f = o.dataset.pnSort, th = o.closest("th");
+      o.querySelector("span").textContent = badge(f);
+      if (order.length && order[0][0] === f) th.setAttribute("aria-sort", order[0][1] ? "descending" : "ascending");
+      else th.removeAttribute("aria-sort");
+    });
+    rows().sort(function (x, y) {
+      for (var i = 0; i < order.length; i++) {
+        var c = val(x, order[i][0]).localeCompare(val(y, order[i][0]), undefined, { sensitivity: "base" });
+        if (c) return order[i][1] ? -c : c;
+      }
+      // Unsorted, or tied: the order before sorting; rows made since, last.
+      var a = x.dataset.pnSeq === undefined ? Infinity : +x.dataset.pnSeq;
+      var b = y.dataset.pnSeq === undefined ? Infinity : +y.dataset.pnSeq;
+      return a === b ? 0 : a < b ? -1 : 1;
+    }).forEach(function (r) { body.appendChild(r); });
+  }
   root.querySelectorAll("[data-pn-sort]").forEach(function (b) {
-    b.addEventListener("click", function () {
-      var f = b.dataset.pnSort, down = b.dataset.dir === "asc";
-      root.querySelectorAll("[data-pn-sort]").forEach(function (o) {
-        delete o.dataset.dir; o.closest("th").removeAttribute("aria-sort");
-        o.querySelector("span").textContent = "↕";
-      });
-      b.dataset.dir = down ? "desc" : "asc";
-      b.querySelector("span").textContent = down ? "1↓" : "1↑";  // as Review Robin's badge
-      b.closest("th").setAttribute("aria-sort", down ? "descending" : "ascending");
-      rows().sort(function (x, y) {
-        var c = val(x, f).localeCompare(val(y, f), undefined, { sensitivity: "base" });
-        return down ? -c : c;
-      }).forEach(function (r) { body.appendChild(r); });
+    b.addEventListener("click", function (e) {
+      sortRows(e.shiftKey ? shiftClick(b.dataset.pnSort) : plainClick(b.dataset.pnSort));
     });
   });
   root.addEventListener("keydown", function (e) {

@@ -6,30 +6,37 @@
    chips kept in their browser; without the script, the defaults. The
    files are `applydesk/extract.py`'s; the alias key and the setup files
    since rung 4, the setup's even for a draft. #}
-{% macro seg(key, options, label, on=none) -%}
-<span class="seg" role="group" aria-label="{{ label }}" data-xd-k="{{ key }}">{% for v, o in options %}<button type="button" data-xd-v="{{ v }}" aria-pressed="{{ 'true' if (v == on if on is not none else loop.first) else 'false' }}">{{ o }}</button>{% endfor %}</span>
+{# A card whose download is off has its chips off too, each saying why
+   in its title (AD-79, U16): they would shape nothing. #}
+{% macro seg(key, options, label, on=none, off="") -%}
+<span class="seg" role="group" aria-label="{{ label }}" data-xd-k="{{ key }}">{% for v, o in options %}<button type="button" data-xd-v="{{ v }}" aria-pressed="{{ 'true' if (v == on if on is not none else loop.first) else 'false' }}"{% if off %} disabled title="{{ off }}"{% endif %}>{{ o }}</button>{% endfor %}</span>
 {%- endmacro %}
 {# A multi-select chip is a pill (ruling 47, AD-68), as Panels' Show
    columns: never a Primary-looking button. #}
-{% macro tog(value, name, on=True) -%}
-<button type="button" class="pn-show" data-xd-t="{{ value }}" aria-pressed="{{ 'true' if on else 'false' }}">{{ name }}</button>
+{% macro tog(value, name, on=True, off="") -%}
+<button type="button" class="pn-show" data-xd-t="{{ value }}" aria-pressed="{{ 'true' if on else 'false' }}"{% if off %} disabled title="{{ off }}"{% endif %}>{{ name }}</button>
 {%- endmacro %}
 {% set nothing = extract.submitted == 0 %}
+{% set none_why = "No submitted applications to extract yet" if nothing else "" %}
+{% set no_gate_why = none_why or ("" if extract.gates | selectattr("sent") | list else "No gate has been sent yet") %}
 {% set base = '/operator/exercises/' ~ exercise.public_id ~ '/extract/' %}
 {% macro dl(file, label, cls="btn-secondary", always=False, name="") -%}
-{% if nothing and not always %}<button class="btn {{ cls }}" type="button" disabled>{{ label }}</button>{% else %}<a class="btn {{ cls }}" data-xd-dl="{{ file }}" href="{{ url(base ~ file) }}"{% if name %} aria-label="{{ name }}"{% endif %} download>{{ label }}</a>{% endif %}
+{% if nothing and not always %}<button class="btn {{ cls }}" type="button" disabled title="{{ none_why }}">{{ label }}</button>{% else %}<a class="btn {{ cls }}" data-xd-dl="{{ file }}" href="{{ url(base ~ file) }}"{% if name %} aria-label="{{ name }}"{% endif %} download>{{ label }}</a>{% endif %}
 {%- endmacro %}
 {% macro columns(cols) -%}
 <p class="xd-cols"><span class="visually-hidden">Columns: </span>{{ cols | join(", ") }}</p>
 {%- endmacro %}
 <p class="muted pc-intro">The exercise's data cut into files for offline selection, a card per file; Dossiers and each gate's page show the data itself. Each card's chips shape its download and are kept in this browser.</p>
-{% if nothing %}<p class="muted xd-empty" data-xd-empty>No submitted applications yet.{% if extract.draft %} A draft exercise: only its setup can be extracted.{% endif %}</p>{% endif %}
+{% if nothing %}{% from "applydesk/_empty.html" import empty %}
+{% if extract.draft %}{% call empty("No submitted applications yet", url('/operator/exercises/' ~ exercise.public_id), "Home", "data-xd-empty") %}A draft exercise: only its setup can be extracted until it is published and applications are submitted.{% endcall %}
+{% else %}{% call empty("No submitted applications yet", url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers'), "Dossiers", "data-xd-empty") %}Only the setup can be extracted until an application is submitted; Dossiers lists each one as it comes in.{% endcall %}{% endif %}
+{% endif %}
 <div class="xd-grid" data-xd="{{ exercise.public_id }}">
   <section class="card" data-xd-card="all">
     <h2>Extract all data</h2>
     <p class="xd-help">One ZIP for offline selection: a manifest, then every file the cards below make, as each is set.</p>
-    <div class="xd-chips" role="group" aria-label="The ZIP carries"><span class="xd-k" aria-hidden="true">Carries</span>{{ tog("applications", "Applications") }}{{ tog("gates", "Gates") }}{{ tog("outcomes", "Outcomes") }}{{ tog("setup", "Setup", False) }}</div>
-    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("names", "Names"), ("ids", "Dossier IDs")), "Applicants as", "names" if all_names else "ids") }}</div>
+    <div class="xd-chips" role="group" aria-label="The ZIP carries"><span class="xd-k" aria-hidden="true">Carries</span>{{ tog("applications", "Applications", off=none_why) }}{{ tog("gates", "Gates", off=none_why) }}{{ tog("outcomes", "Outcomes", off=none_why) }}{{ tog("setup", "Setup", False, off=none_why) }}</div>
+    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("names", "Names"), ("ids", "Dossier IDs")), "Applicants as", "names" if all_names else "ids", off=none_why) }}</div>
     {% if not all_names %}<p class="muted xd-note">Dossier IDs to start with: {{ "blind review is on" if exercise.blind else "a gate is confidential" }}.</p>{% endif %}
     {# The files as the Carries chips say; the script hides what is off. #}
     <p class="xd-cols" data-xd-files>{{ extract.zip_name }}: <span>manifest.csv</span> <span data-xd-part="applications">· applications.csv</span>{% for g in extract.gates if g.sent %} <span data-xd-part="gates">· {{ g.name }}</span>{% endfor %} <span data-xd-part="outcomes">· outcomes.csv</span>{% for f in setup_files %} <span data-xd-part="setup" data-xd-page="{{ f[:-4] }}" hidden>· setup/{{ f }}</span>{% endfor %}</p>
@@ -38,16 +45,16 @@
   <section class="card" data-xd-card="applications">
     <h2>Applications</h2>
     <p class="xd-help">One row per application: who and when, then a column per form question, in the form's order.</p>
-    <div class="xd-chips"><span class="xd-k">Rows</span>{{ seg("rows", (("last", "Last applications"), ("all", "All applications")), "Rows") }}</div>
-    <div class="xd-chips"><span class="xd-k">Drafts</span>{{ seg("drafts", (("", "Left out"), ("1", "Included")), "Drafts") }}</div>
+    <div class="xd-chips"><span class="xd-k">Rows</span>{{ seg("rows", (("last", "Last applications"), ("all", "All applications")), "Rows", off=none_why) }}</div>
+    <div class="xd-chips"><span class="xd-k">Drafts</span>{{ seg("drafts", (("", "Left out"), ("1", "Included")), "Drafts", off=none_why) }}</div>
     {{ columns(extract.application_columns) }}
     <div class="btnrow">{{ dl("applications.csv", "Download CSV") }}</div>
   </section>
   <section class="card" data-xd-card="gates">
     <h2>By gate</h2>
     <p class="xd-help">One file per gate, one row per pair: the application, the evaluator, then a column per response field, as Review Robin returned it.</p>
-    <div class="xd-chips"><span class="xd-k">Shape</span>{{ seg("shape", (("pair", "A row per pair"), ("application", "A row per application")), "Shape") }}</div>
-    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("names", "Names"), ("ids", "Dossier IDs")), "Applicants as", "ids") }}</div>
+    <div class="xd-chips"><span class="xd-k">Shape</span>{{ seg("shape", (("pair", "A row per pair"), ("application", "A row per application")), "Shape", off=no_gate_why) }}</div>
+    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("names", "Names"), ("ids", "Dossier IDs")), "Applicants as", "ids", off=no_gate_why) }}</div>
     {% if extract.gates %}
     <table class="xd-gates">
       <thead><tr><th>Gate</th><th>Rows</th><th><span class="visually-hidden">File</span></th></tr></thead>
@@ -63,15 +70,15 @@
     {% else %}
     <p class="muted">No gates yet: Process adds them.</p>
     {% endif %}
-    <div class="btnrow">{% if extract.gates | selectattr("sent") | list %}{{ dl("gates.zip", "Download gates (ZIP)") }}{% else %}<button class="btn btn-secondary" type="button" disabled>Download gates (ZIP)</button>{% endif %}</div>
+    <div class="btnrow">{% if extract.gates | selectattr("sent") | list %}{{ dl("gates.zip", "Download gates (ZIP)") }}{% else %}<button class="btn btn-secondary" type="button" disabled title="{{ no_gate_why }}">Download gates (ZIP)</button>{% endif %}</div>
   </section>
   <section class="card" data-xd-card="outcomes">
     <h2>Outcomes</h2>
     <p class="xd-help">One row per application: each gate's results as Dossiers collates them, then each outcome's value and when it was released.</p>
-    <div class="xd-chips"><span class="xd-k">Rows</span>{{ seg("rows", (("last", "Last applications"), ("all", "All applications")), "Rows") }}</div>
+    <div class="xd-chips"><span class="xd-k">Rows</span>{{ seg("rows", (("last", "Last applications"), ("all", "All applications")), "Rows", off=none_why) }}</div>
     {# Its Applicants as (AD-65): Dossier IDs to start with under blind review. #}
     {% set out_names = "applicant" in extract.outcome_columns %}
-    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("names", "Names"), ("ids", "Dossier IDs")), "Applicants as", "names" if out_names else "ids") }}</div>
+    <div class="xd-chips"><span class="xd-k">Applicants as</span>{{ seg("applicants", (("names", "Names"), ("ids", "Dossier IDs")), "Applicants as", "names" if out_names else "ids", off=none_why) }}</div>
     {% if not out_names %}<p class="muted xd-note">Dossier IDs to start with: blind review is on.</p>{% endif %}
     {{ columns(extract.outcome_columns) }}
     <div class="btnrow">{{ dl("outcomes.csv", "Download CSV") }}</div>

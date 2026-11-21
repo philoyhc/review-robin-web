@@ -8,6 +8,7 @@
    main two columns, and a card on the right that stays in view, with an
    Outline linking every email and the merge tags. Each card's id names
    its email, em-<item>-<audience>, so Process links reach it (ruling 65). #}
+{% from "applydesk/_empty.html" import empty %}
 <div class="fb-split" data-emails data-em-ex="{{ exercise.public_id }}"{% if scratch_page %} data-em-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}" data-em-revision="{{ process_revision }}"{% endif %}>
 <div class="fb-main">
 <p class="muted pc-intro">Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk (AD7); Review Robin sends none.{% if scratch_page %} A template you save is kept in this scratch exercise, and the status row's <em>Emails</em> and Home follow it.{% else %} A template you save is kept in this tab: nothing is saved until AD2, and until then the status row's <em>Emails</em>, Home and Dossiers' <em>Released</em> read the sample's templates.{% endif %}</p>
@@ -28,10 +29,7 @@
   <div class="em-preview" data-em-preview hidden><p class="em-preview-k">Preview, filled from the sample</p><p class="em-preview-s" data-em-preview-subject></p><div class="em-preview-b" data-em-preview-body></div></div>
 </section>
 {% else %}
-<section class="card">
-  <h2>No emails yet</h2>
-  <p class="muted">Each email ticked on Process, the form's or an outcome's, is listed here as a template to write.</p>
-</section>
+{% call empty("No emails yet", url('/operator/exercises/' ~ exercise.public_id ~ '/process'), "Process") %}Each email ticked on Process, the form's or an outcome's, is listed here as a template to write.{% endcall %}
 {% endfor %}
 </div>
 <aside class="fb-side em-side">
