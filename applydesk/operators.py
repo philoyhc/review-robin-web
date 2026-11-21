@@ -222,6 +222,7 @@ def add_operator(session: Session, exercise: Exercise, actor: Actor, person: Per
     _lock(session, exercise)
     if not _is_owner(session, exercise, actor):
         raise Refused("Only the exercise's Owner adds operators.")
+    session.refresh(person)  # their allowlisting as it is now, not as first read
     if not may_operate(person):
         raise Refused("Only someone on the operator list can be added.")
     grant = _grant(session, exercise, person)
@@ -286,6 +287,7 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
     _lock(session, exercise)
     if not _is_owner(session, exercise, actor):
         raise Refused("Only the exercise's Owner hands ownership over.")
+    session.refresh(person)  # their allowlisting as it is now, not as first read
     if not may_operate(person):
         raise Refused("Only someone on the operator list can own an exercise.")
     grant = _grant(session, exercise, person)

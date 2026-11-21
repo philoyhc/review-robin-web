@@ -536,3 +536,33 @@ def test_a_check_passed_just_before_ownership_moved_still_demotes_no_one_else(
         operators.hand_over(session, exercise, Actor(owner), third)
     session.rollback()
     assert operators.owner_of(session, exercise) == colleague
+
+
+@pytest.mark.parametrize("change", ["add", "hand_over"])
+def test_a_target_revoked_meanwhile_is_refused(session: Session, change: str) -> None:
+    """Codex on #4110: the target's allowlisting is read fresh, so one
+    revoked by another request since it was loaded is refused."""
+    from applydesk.models import Exercise
+
+    owner, colleague, exercise_id, _ = _owned_with_colleague(session)
+    newcomer = _operator(session, "o4", "di@example.edu")
+    session.commit()
+    target = colleague if change == "hand_over" else newcomer
+    assert target.may_operate  # this request's copy
+
+    other = db.new_session()  # meanwhile the super-admin revokes them
+    them = other.get(Person, target.id)
+    assert them is not None
+    operators.revoke(other, SUPER, them)
+    other.commit()
+    other.close()
+
+    exercise = session.get(Exercise, exercise_id)
+    assert exercise is not None
+    with pytest.raises(Refused, match="operator list"):
+        if change == "hand_over":
+            operators.hand_over(session, exercise, Actor(owner), target)
+        else:
+            operators.add_operator(session, exercise, Actor(owner), target)
+    session.rollback()
+    assert operators.owner_of(session, exercise) == owner
