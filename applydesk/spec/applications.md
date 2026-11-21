@@ -118,7 +118,8 @@ answer only for a Published or Closed exercise.
   | `/operator/…` | The platform super-admin, or someone on the operator list |
   | An exercise's pages, `/operator/exercises/<id>/…` | The super-admin, or an operator list member with a current grant on that exercise |
   | `/admin/…` | The super-admin alone; an operator is not enough |
-  | `/me/…` and the landing | The placeholders' gate: anyone on a local run, deployed only the super-admin, until a later AD2 segment |
+  | The landing, `/` and `/operator` | Any operator (so a deployed operator lands on the Lobby); anyone else the placeholders' gate |
+  | `/me/…` | The placeholders' gate: anyone on a local run, deployed only the super-admin, until a later AD2 segment |
 
   Taking someone off the operator list ends their access at once and keeps
   their grants. The super-admin acts as Owner of every exercise.
