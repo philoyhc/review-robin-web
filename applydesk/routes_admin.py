@@ -6,15 +6,18 @@ Admin tabs (the author's ask, 2026-11-21)."""
 
 from __future__ import annotations
 
+import re
 from collections import Counter
+from typing import Annotated
 from urllib.parse import parse_qs, urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Request
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 from starlette.responses import RedirectResponse, Response
 
 from applydesk import allowlist, db, directory, gate, locks, operators, sample_data
+from applydesk.ids import ROW_ID_MAX, row_id
 from applydesk.web import ADMIN, render, url_path
 from cordware.graph import GraphError, directory_for
 from cordware.identity import Identity, current_identity
@@ -22,6 +25,8 @@ from cordware.identity import Identity, current_identity
 router = APIRouter(prefix="/admin", dependencies=[Depends(gate.require_super_admin)])
 
 _PAGE = "/admin/operators"
+#: A person's row ID in a path: out of range is a 422, not a 500.
+RowId = Annotated[int, Path(ge=1, le=ROW_ID_MAX)]
 #: Longest form body a post here takes.
 _MAX_BODY = 4096
 
@@ -71,12 +76,17 @@ def _identity(request: Request) -> Identity:
 #: Where the Back link goes, by the page the Admin entry was opened from
 #: (`?return_to=`, as Review Robin's Admin): only an Apply Desk path.
 def _back_link(return_to: str) -> tuple[str, str]:
-    path = return_to if return_to.startswith("/") and not return_to.startswith("//") else ""
-    if path.startswith("/operator/exercises/"):
-        return path, "Back to the exercise"
-    if path.startswith("/me"):
-        return path, "Back to User Lobby"
+    """Only a page path: no dot segment, query or fragment can ride along
+    (bug sweep at the AD2A close: `/me/../../.auth/logout` was kept)."""
+    if _EXERCISE_PAGE.fullmatch(return_to):
+        return return_to, "Back to the exercise"
+    if _ME_PAGE.fullmatch(return_to):
+        return return_to, "Back to User Lobby"
     return "/operator/exercises", "Back to Operator Lobby"
+
+
+_EXERCISE_PAGE = re.compile(r"/operator/exercises/[a-z0-9]+(/[a-z0-9_-]+)*")
+_ME_PAGE = re.compile(r"/me(/[a-z0-9_-]+)*")
 
 
 @router.get("/operators", name="applydesk_admin_operators")
@@ -155,8 +165,9 @@ def _admit(request: Request, form: dict[str, str]) -> Response:
     session = db.new_session()
     try:
         actor = allowlist.actor_for(session, identity)
-        if form.get("person_id", "").isdigit():
-            allowlist.admit_on_record(session, actor, int(form["person_id"]))
+        person_id = row_id(form.get("person_id", ""))
+        if person_id is not None:
+            allowlist.admit_on_record(session, actor, person_id)
         elif form.get("object_id") and form.get("address"):
             tenant = (identity.tenant_id or "").strip()
             if not tenant:
@@ -203,6 +214,6 @@ async def admit(request: Request) -> Response:
 
 
 @router.post("/operators/{person_id}/revoke", name="applydesk_admin_revoke")
-async def revoke(request: Request, person_id: int) -> Response:
+async def revoke(request: Request, person_id: RowId) -> Response:
     form = await _form(request)
     return await run_in_threadpool(_revoke, request, person_id, form.get("return_to", ""))

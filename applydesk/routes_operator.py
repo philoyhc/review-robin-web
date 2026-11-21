@@ -7,10 +7,10 @@ import functools
 import json
 import re
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Annotated, Any, cast
 from urllib.parse import parse_qs, urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
@@ -35,6 +35,7 @@ from applydesk import (
     timeline,
     workflow,
 )
+from applydesk.ids import ROW_ID_MAX, row_id
 from applydesk.lookups import dossier_or_404, exercise_or_404
 from applydesk.web import (
     OPERATIONS_PAGES,
@@ -48,6 +49,8 @@ from applydesk.web import (
 from cordware.identity import Identity, current_identity
 
 router = APIRouter(prefix="/operator", dependencies=[Depends(gate.require_exercise_operator)])
+#: A person's row ID in a path: out of range is a 422, not a 500.
+RowId = Annotated[int, Path(ge=1, le=ROW_ID_MAX)]
 
 #: An exercise's operator pages beyond Home, each a partial of
 #: `operator/section.html`, headed by its tab's label (ruling 14).
@@ -108,7 +111,14 @@ async def exercise_new(request: Request) -> Response:
         made = scratch.create(browser, name)
     except scratch.Refused as why:
         return _to_lobby(request, why.key if why.key in SAID else "not_made")
-    if not gate.own_new_exercise(request, made.exercise.public_id):
+    # Its row and Owner off the event loop (bug sweep at the AD2A close);
+    # the scratch exercise is discarded however that fails.
+    try:
+        owned = await run_in_threadpool(gate.own_new_exercise, request, made.exercise.public_id)
+    except Exception:
+        scratch.discard(browser, made.exercise.public_id)
+        raise
+    if not owned:
         scratch.discard(browser, made.exercise.public_id)
         return _to_lobby(request, "not_made")
     reply = RedirectResponse(
@@ -505,23 +515,24 @@ async def operators_add(request: Request, exercise_id: str) -> Response:
     if len(body) > 1024:
         raise HTTPException(status_code=413)
     raw = parse_qs(body.decode("utf-8", "replace")).get("person_id", [""])[0]
-    if not raw.isdigit():
+    person_id = row_id(raw)
+    if person_id is None:
         raise HTTPException(status_code=400)
     # The change itself off the event loop (as the operator list's, Codex on #4113).
-    return await run_in_threadpool(_ops_change, request, exercise_id, team.add, int(raw), "added")
+    return await run_in_threadpool(_ops_change, request, exercise_id, team.add, person_id, "added")
 
 
 @router.post(
     "/exercises/{exercise_id}/operators/{person_id}/remove", name="applydesk_operators_remove"
 )
-def operators_remove(request: Request, exercise_id: str, person_id: int) -> Response:
+def operators_remove(request: Request, exercise_id: str, person_id: RowId) -> Response:
     return _ops_change(request, exercise_id, team.remove, person_id, "removed")
 
 
 @router.post(
     "/exercises/{exercise_id}/operators/{person_id}/owner", name="applydesk_operators_owner"
 )
-def operators_owner(request: Request, exercise_id: str, person_id: int) -> Response:
+def operators_owner(request: Request, exercise_id: str, person_id: RowId) -> Response:
     return _ops_change(request, exercise_id, team.make_owner, person_id, "owner")
 
 
