@@ -84,7 +84,7 @@ def test_admit_on_record_then_revoke(client: TestClient) -> None:
     session.close()
     assert _events()[-2:] == ["person.admitted", "person.revoked"]
     # Still on record, so still a Workspace user (AD2W), no longer an operator.
-    page = client.get("/applydesk/admin/operators?said=revoked").text
+    page = client.get("/applydesk/admin/operators?said=revoked&show=no_role").text
     assert f'data-op-entry="{kept.id}"' in page and "data-op-revoke data-name" not in page
 
 
@@ -223,13 +223,78 @@ def test_workspace_users_scaffold() -> None:
     pid = pending.id
     session.close()
     admin = TestClient(host_with(("applydesk",))[0])
-    page = admin.get("/applydesk/admin/operators").text
+    page = admin.get("/applydesk/admin/operators?show=unused").text
     table = page[page.index("data-op-list") :]
     for heading in ("Email", "Name", "Unit", "First sign-in", "Operator", "Admin"):
         assert f"<th>{heading}</th>" in table
     assert '<h2 id="op-list-h">Workspace users</h2>' in page
     assert page.count("data-account-chip=") == 4 and "data-account-role" in page
     assert "Acting on ticked rows is not built yet" in page
+    assert "pat@example.edu" not in admin.get("/applydesk/admin/operators").text  # Unused: off
     row = table[table.index(f'data-op-entry="{pid}"') :]
     row = row[: row.index("</tr>")]
     assert "pat@example.edu" in row and "Not yet signed in" in row and "data-op-revoke" not in row
+
+
+def test_chips_and_exercise_role_filter_workspace_users() -> None:
+    """AD2W rung 3, as Review Robin's: each person under one chip (the
+    super-admin's own row Admins, then operators, then anyone with a
+    history No role, else Unused); the counts take the role and search
+    but not the chips; no `show` is the default chips, a blank one none."""
+    from applydesk import seed
+    from applydesk.models import Exercise
+    from applydesk.operators import Actor
+
+    session = db.new_session()
+    seed.seed(session)  # the fake super-admin: listed, Owner of every sample
+    sup = Actor(None, is_super_admin=True)
+
+    def bound(oid: str, mail: str, name: str) -> Person:
+        from cordware.identity import Identity
+
+        p = people.resolve(
+            session, Identity(principal_id=oid, email=mail, name=name, tenant_id="local-tenant")
+        )
+        assert p is not None
+        return p
+
+    ana = bound("o-ana", "ana@example.edu", "Ana Lim")
+    ben = bound("o-ben", "ben@example.edu", "Ben Ong")
+    cat = bound("o-cat", "cat@example.edu", "Cat Tan")
+    for p in (ana, ben, cat):
+        operators.admit(session, sup, p)
+    operators.revoke(session, sup, cat)
+    exercise = session.scalar(select(Exercise).where(Exercise.public_id == "wa9juxbc2t"))
+    assert exercise is not None
+    operators.add_operator(session, exercise, sup, ben)
+    people.pending(session, "pat@example.edu", None)
+    session.commit()
+    ids = {"ana": ana.id, "ben": ben.id, "cat": cat.id}
+    session.close()
+
+    admin = TestClient(host_with(("applydesk",))[0])
+
+    def rows(query: str = "") -> set[str]:
+        page = admin.get("/applydesk/admin/operators" + query).text
+        table = page[page.index("data-op-list") :]
+        return {n for n, i in ids.items() if f'data-op-entry="{i}"' in table} | (
+            {"pat"} if "pat@example.edu" in table else set()
+        )
+
+    page = admin.get("/applydesk/admin/operators").text
+    for chip in ("Operators (2)", "Admins (1)", "No role (1)", "Unused (1)"):
+        assert chip in page, chip
+    assert rows() == {"ana", "ben"}  # the defaults: Operators and Admins
+    assert rows("?show=no_role&show=unused") == {"cat", "pat"}
+    assert rows("?show=") == set()  # every chip off
+    assert "No one matches the chips" in admin.get("/applydesk/admin/operators?show=").text
+    assert rows("?show=bogus&show=operators") == {"ana", "ben"}  # unknown chips ignored
+    assert rows("?role=operator") == {"ben"}  # a current grant on some exercise
+    assert rows("?role=none&show=operators&show=no_role") == {"ana", "cat"}
+    assert rows("?role=owner") == set()  # only the super-admin owns, under Admins
+    assert "data-op-self" in admin.get("/applydesk/admin/operators?role=owner").text
+    owner_page = admin.get("/applydesk/admin/operators?role=owner").text
+    assert "Operators (0)" in owner_page and "Admins (1)" in owner_page
+    assert rows("?list_q=ben") == {"ben"}
+    cleared = admin.get("/applydesk/admin/operators?list_q=ben").text
+    assert "data-account-clear" in cleared and "data-account-clear" not in page

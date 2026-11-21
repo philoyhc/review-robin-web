@@ -66,26 +66,26 @@
   {# Workspace users (segment AD2W, the author's ruling 2026-11-21), as
      Review Robin's Accounts Management: two panes over the table, the
      title and Show chips on the left, the exercise role and search on the
-     right; a checkbox per row for the bulk bar. Scaffold: the chips, the
-     role and the bar are not built yet; the search and the row's Revoke
-     work as before. #}
+     right; a checkbox per row for the bulk bar. The chips join the filter
+     form by `form=` and a change submits it (rung 3); the bar is not built
+     yet. #}
   <div class="adm-panes">
     <div class="adm-pane">
       <h2 id="op-list-h">Workspace users</h2>
       <p class="adm-chips" data-account-chips><span>Show:</span>
-        {% for key, label in (("operators", "Operators"), ("admins", "Admins"), ("no_role", "No role"), ("unused", "Unused")) %}
-        <button type="button" class="pn-show" aria-pressed="{{ 'true' if key in ('operators', 'admins') else 'false' }}" disabled title="Filtering by role is not built yet" data-account-chip="{{ key }}">{{ label }}</button>
+        {% for key, label, _ in categories %}
+        <label class="pn-show adm-chip" data-account-chip="{{ key }}"><input type="checkbox" class="visually-hidden" name="show" value="{{ key }}" form="accounts-filter"{% if key in view.show %} checked{% endif %}>{{ label }} ({{ view.counts[key] }})</label>
         {% endfor %}
       </p>
     </div>
-    <form class="adm-pane adm-filter" method="get" action="{{ url('/admin/operators') }}#op-list" role="search"><input type="hidden" name="return_to" value="{{ back_path }}">
+    <form class="adm-pane adm-filter" id="accounts-filter" method="get" action="{{ url('/admin/operators') }}#op-list" role="search"><input type="hidden" name="return_to" value="{{ back_path }}"><input type="hidden" name="show" value="">
       <div class="adm-filter-row">
-        <label class="fc-l">Exercise role:<select class="fc-in" disabled title="Filtering by exercise role is not built yet" data-account-role>
-          <option>Any</option><option>Owner of an exercise</option><option>Operator of an exercise</option><option>No exercise</option>
+        <label class="fc-l">Exercise role:<select class="fc-in" name="role" data-account-role>
+          {% for value, label in roles %}<option value="{{ value }}"{% if view.role == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
         </select></label>
         <label class="fc-l">Search:<input class="fc-in" type="search" name="list_q" value="{{ list_q }}" placeholder="Email or name"></label>
       </div>
-      <div class="adm-filter-actions"><button class="btn btn-secondary" type="submit">Search</button></div>
+      <div class="adm-filter-actions">{% if view.role != "any" or view.query %}<a class="btn btn-secondary" href="{{ url('/admin/operators') }}?{% for k in view.show %}show={{ k }}&amp;{% endfor %}{% if not view.show %}show=&amp;{% endif %}return_to={{ back_path | urlencode }}#op-list" data-account-clear>Clear</a>{% endif %}<button class="btn btn-secondary" type="submit">Search</button></div>
     </form>
   </div>
   <p class="adm-bulk" data-account-bulk><span class="muted">With ticked rows:</span>
@@ -96,7 +96,7 @@
   <table>
     <thead><tr><th class="adm-check"><span class="visually-hidden">Select</span></th><th>Email</th><th>Name</th><th>Unit</th><th>First sign-in</th><th>Operator</th><th>Admin</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
     <tbody>
-    {% if me_row %}
+    {% if view.me_row %}
       <tr data-op-self>
         <td class="adm-check muted" title="You can't act on your own row">(self)</td>
         <td><code>{{ me.email or "—" }}</code></td>
@@ -108,7 +108,7 @@
         <td></td>
       </tr>
     {% endif %}
-    {% for p in people %}
+    {% for p in view.people %}
       {% set is_me = p.id == me.person_id %}
       {% set is_op = p.id in listed %}
       <tr data-op-entry="{{ p.id }}"{% if is_me %} data-op-self{% endif %}>
@@ -116,13 +116,13 @@
         <td><code>{{ p.email or "—" }}</code></td>
         <td>{{ p.display_name or "—" }}</td>
         <td>{% if (is_op or is_me) and top_line %}<span class="chip chip-mute" title="The workspace default">{{ top_line }}</span>{% elif is_op or is_me %}—{% endif %}</td>
-        <td>{% if p.bound_at %}{{ p.bound_at.strftime("%Y-%m-%d") }}{% else %}<span class="muted">Not yet signed in</span>{% endif %}</td>
+        <td>{% if p.first_signed_in_at %}{{ p.first_signed_in_at.strftime("%Y-%m-%d") }}{% else %}<span class="muted">Not yet signed in</span>{% endif %}</td>
         <td>{% if is_op %}<span class="chip chip-info">yes</span>{% else %}<span class="chip chip-mute">no</span>{% endif %}</td>
         <td>{% if is_me %}<span class="chip chip-info">Super-admin</span>{% else %}<span class="chip chip-mute">no</span>{% endif %}</td>
         <td>{% if is_op and not is_me %}<form method="post" action="{{ url('/admin/operators/' ~ p.id ~ '/revoke') }}" data-op-revoke data-name="{{ p.label }}"><input type="hidden" name="return_to" value="{{ back_path }}"><button class="btn btn-secondary btn-short" type="submit" aria-label="Revoke {{ p.label }}">Revoke</button></form>{% endif %}</td>
       </tr>
-    {% else %}{% if not me_row %}
-      <tr><td colspan="8" class="muted">{% if list_q %}No one matches “{{ list_q }}”.{% else %}No one on record yet.{% endif %}</td></tr>
+    {% else %}{% if not view.me_row %}
+      <tr><td colspan="8" class="muted">No one matches the chips{% if view.role != "any" or view.query %} and the filters{% endif %} above.</td></tr>
     {% endif %}{% endfor %}
     </tbody>
   </table>
@@ -130,6 +130,11 @@
 </section>
 <script>
 (function () {
+  // A chip change submits the filter form at once (as Review Robin's).
+  var filter = document.getElementById("accounts-filter");
+  document.querySelectorAll('input[name="show"][form="accounts-filter"]').forEach(function (box) {
+    box.addEventListener("change", function () { filter.requestSubmit ? filter.requestSubmit() : filter.submit(); });
+  });
   // Revoke asks first: it ends the person's access at once.
   document.querySelectorAll("[data-op-revoke]").forEach(function (f) {
     f.addEventListener("submit", function (e) {

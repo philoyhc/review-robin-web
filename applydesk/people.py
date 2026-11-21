@@ -207,7 +207,18 @@ def resolve(session: Session, identity: Identity) -> Person | None:
         return None
     mail = identity.mail or identity.email
     account = Account(tenant_id, object_id, mail, identity.upn, identity.name)
-    return _attach(session, account, (email_key(identity.upn), email_key(mail)), "sign_in", None)
+    person = _attach(session, account, (email_key(identity.upn), email_key(mail)), "sign_in", None)
+    if person.first_signed_in_at is None:
+        # Their first sign-in (segment AD2W), once: a directory pick was
+        # bound without one. Conditional, so two first requests agree.
+        session.execute(
+            update(Person)
+            .where(Person.id == person.id, Person.first_signed_in_at.is_(None))
+            .values(first_signed_in_at=datetime.now(UTC))
+            .execution_options(synchronize_session=False)
+        )
+        session.refresh(person, attribute_names=["first_signed_in_at"])
+    return person
 
 
 def from_directory(

@@ -58,6 +58,9 @@ class Person(Base):
     upn: Mapped[str | None] = mapped_column(String(320))
     display_name: Mapped[str | None] = mapped_column(String(255))
     bound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # When they first signed in (segment AD2W): a directory pick is bound
+    # without signing in, so `bound_at` is not it.
+    first_signed_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_now
     )

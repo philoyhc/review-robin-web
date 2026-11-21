@@ -716,3 +716,28 @@ def test_candidates_leave_out_current_operators_before_the_limit(session: Sessio
     from applydesk import team
 
     assert [p.id for p in team.candidates(session, "wa9juxbc2t", "aaron")] == [last.id]
+
+
+def test_first_sign_in_is_kept_apart_from_binding(session: Session) -> None:
+    """AD2W: a directory pick is bound without signing in; their first
+    sign-in is recorded once, later ones leave it."""
+    picked = people.from_directory(
+        session,
+        DirectoryUser(
+            id="o-dee",
+            display_name="Dee Ng",
+            mail="dee@example.edu",
+            user_principal_name="dee@example.edu",
+        ),
+        TENANT,
+        None,
+    )
+    session.commit()
+    assert picked.bound and picked.first_signed_in_at is None
+    me = people.resolve(session, _identity("o-dee", "dee@example.edu"))
+    session.commit()
+    assert me is not None and me.id == picked.id and me.first_signed_in_at is not None
+    first = me.first_signed_in_at
+    again = people.resolve(session, _identity("o-dee", "dee@example.edu"))
+    session.commit()
+    assert again is not None and again.first_signed_in_at == first
