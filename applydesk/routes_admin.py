@@ -8,6 +8,7 @@ from urllib.parse import parse_qs, urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 from starlette.responses import RedirectResponse, Response
 
 from applydesk import allowlist, db, directory, gate, operators
@@ -93,12 +94,13 @@ def operators_page(
     )
 
 
-@router.post("/operators/admit", name="applydesk_admin_admit")
-async def admit(request: Request, session: Session = Depends(db.get_session)) -> Response:
-    form = await _form(request)
+def _admit(request: Request, form: dict[str, str]) -> Response:
+    """The admission itself, off the event loop: a directory pick asks
+    Graph again, by blocking calls (Codex on #4113)."""
     identity = _identity(request)
-    actor = allowlist.actor_for(session, identity)
+    session = db.new_session()
     try:
+        actor = allowlist.actor_for(session, identity)
         if form.get("person_id", "").isdigit():
             allowlist.admit_on_record(session, actor, int(form["person_id"]))
         elif form.get("object_id") and form.get("address"):
@@ -115,26 +117,38 @@ async def admit(request: Request, session: Session = Depends(db.get_session)) ->
             )
         else:
             raise HTTPException(status_code=400)
+        session.commit()
     except operators.Refused as why:
         session.rollback()
         return _back(request, _REFUSALS.get(str(why), "gone"))
     except GraphError:
         session.rollback()
         return _back(request, "directory")
-    session.commit()
+    finally:
+        session.close()
     return _back(request, "admitted")
 
 
-@router.post("/operators/{person_id}/revoke", name="applydesk_admin_revoke")
-async def revoke(
-    request: Request, person_id: int, session: Session = Depends(db.get_session)
-) -> Response:
-    await _form(request)
-    actor = allowlist.actor_for(session, _identity(request))
+def _revoke(request: Request, person_id: int) -> Response:
+    session = db.new_session()
     try:
-        allowlist.revoke(session, actor, person_id)
+        allowlist.revoke(session, allowlist.actor_for(session, _identity(request)), person_id)
+        session.commit()
     except operators.Refused as why:
         session.rollback()
         return _back(request, _REFUSALS.get(str(why), "gone"))
-    session.commit()
+    finally:
+        session.close()
     return _back(request, "revoked")
+
+
+@router.post("/operators/admit", name="applydesk_admin_admit")
+async def admit(request: Request) -> Response:
+    form = await _form(request)  # the body is read on the loop, the rest off it
+    return await run_in_threadpool(_admit, request, form)
+
+
+@router.post("/operators/{person_id}/revoke", name="applydesk_admin_revoke")
+async def revoke(request: Request, person_id: int) -> Response:
+    await _form(request)
+    return await run_in_threadpool(_revoke, request, person_id)

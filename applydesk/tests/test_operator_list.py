@@ -129,3 +129,32 @@ def test_a_post_from_another_site_is_refused(client: TestClient) -> None:
         headers={"sec-fetch-site": "cross-site"},
     )
     assert done.status_code == 403
+
+
+def test_the_directory_is_asked_off_the_event_loop(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex on #4113: Graph's calls block, so admission runs in a worker
+    thread, never on the event loop the other requests share."""
+    import asyncio
+
+    from applydesk import routes_admin
+    from cordware.graph import DirectoryUser, FakeDirectory
+
+    seen: list[bool] = []
+
+    class Watched(FakeDirectory):
+        def find_users(self, address: str) -> list[DirectoryUser]:
+            try:
+                asyncio.get_running_loop()
+                seen.append(True)  # on the loop
+            except RuntimeError:
+                seen.append(False)  # in a worker thread
+            return super().find_users(address)
+
+    monkeypatch.setattr(routes_admin, "directory_for", lambda request: Watched())
+    client.post(
+        "/applydesk/admin/operators/admit",
+        data={"object_id": JANE, "address": "jane.tan@example.edu"},
+    )
+    assert seen == [False]
