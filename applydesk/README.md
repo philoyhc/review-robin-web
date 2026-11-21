@@ -6,6 +6,18 @@ AD1K built every page of its URL map as a working scaffold on sample data:
 moves work on screen, nothing is saved until AD2. Rulings and the MVP
 roadmap are in `guide/todo_master.md`.
 
+**On localhost** (segment AD2A, ruling 74), from the repository root with
+the virtualenv active, build Apply Desk's database (a SQLite file,
+`applydesk.db`, unless `APPLYDESK_DATABASE_URL` says otherwise) and load
+the sample exercises, Owned by Cordware's fake identity:
+
+```bash
+alembic -c applydesk/alembic.ini upgrade head
+python -m applydesk.seed
+```
+
+The seed is idempotent and refuses to run unless `APP_ENV=local`.
+
 | Path | Holds |
 |---|---|
 | `main.py`, `routes_*.py`, `lookups.py` | The factory, `/health`, the pages, and the path lookups they share |
@@ -13,6 +25,7 @@ roadmap are in `guide/todo_master.md`.
 | `stages.py`, `workflow.py`, `locks.py` | Stages, gates, outcomes and rules; each item's state, the status row and emails owed; what a published stage fixes |
 | `timeline.py`, `home_ops.py` | The timeline Home and the applicant's page share; Home's operator part |
 | `extract.py`, `paging.py` | Extract data's files; a long table's pages and sort |
+| `db.py`, `models.py`, `alembic.ini`, `alembic/`, `seed.py` | Apply Desk's own database, `applydesk` (segment AD2A): engine and session from `APPLYDESK_DATABASE_URL`, its tables, its migration history and the localhost seed |
 | `templates/applydesk/` | Templates; `base.html` carries the favicon and the bar |
 | `tests/` | Apply Desk's tests, with a host harness (`tests/_host.py`) |
 | `docs/applydesk_functional_spec_v0.6b_agent_handoff.md` | The functional baseline (v0.6b, 2 November 2026); where a ruling in `guide/todo_master.md` differs, the ruling wins |

@@ -1,6 +1,6 @@
 # Apply Desk architecture
 
-> **Built:** everything below, on sample data until AD2's database.
+> **Built:** everything below. The pages read sample data; who operates an exercise moves to the database in segment AD2A, the rest area by area (`applydesk/guide/ad2_series.md`).
 
 How `applydesk/` is laid out, what it may import, and how its tests run.
 Its contract with the host is `applydesk/spec/applications.md`.
@@ -14,6 +14,10 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/routes_home.py`, `routes_operator.py`, `routes_me.py` | The entry points (landing by role), the operator's pages and the participant's |
 | `applydesk/lookups.py` | Path lookups the routes share: an ID's shape checked, then a 404 or the record |
 | `applydesk/gate.py` | Who reaches the pages until AD2 (`placeholders_only`, `is_operator`) |
+| `applydesk/db.py` | Apply Desk's own database, `applydesk`: `APPLYDESK_DATABASE_URL` (locally `sqlite:///./applydesk.db`), the engine made on first use, a request's session |
+| `applydesk/models.py` | Its tables (segment AD2A): `person` (bound by tenant and object ID, or pending by casefolded email; the operator allowlist), `exercise` (its key and public ID), `exercise_operator` (a grant, its Owner marked), `audit_event` |
+| `applydesk/alembic.ini`, `applydesk/alembic/` | Its migration history, version table `applydesk_alembic_version`, comparing only its own tables |
+| `applydesk/seed.py` | `python -m applydesk.seed`: the sample exercises' rows and their Owner, on localhost only (ruling 74) |
 | `applydesk/ids.py` | Public IDs: generation and the shape check |
 | `applydesk/web.py` | Templates, mount-aware URLs (`url()`, `is_here()`, `host_url()`) and the page chrome |
 | `applydesk/sample_data.py` | The sample exercises, applications, form cards and panels (`Panel`: key, name, members; ruling 19) |
@@ -56,7 +60,7 @@ depth and including literal dynamic imports.
   in pytest's `testpaths`, and `applydesk` in pyright's strict include,
   with a relaxed execution environment for `applydesk/tests`, as each
   application's tests have.
-- Both CI workflows' unit shards run `applydesk/tests`.
+- Both CI workflows' unit shards run `applydesk/tests`. `ci-postgres.yml` round-trips Apply Desk's history (`upgrade head`, `downgrade base`, `upgrade head`, `check`) on Postgres, beside RRW's and Utilities', sharing the database through its own version table.
 - `tools/ci_lanes.py` lists `applydesk/` in `APP_DIRS`: its `docs/`,
   `guide/`, `spec/` and `README.md` are prose, and a code change runs the
   full lane. Apply Desk has no lane of its own.
