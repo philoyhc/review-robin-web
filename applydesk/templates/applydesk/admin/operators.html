@@ -18,7 +18,7 @@
   <section class="card" id="op-add" aria-labelledby="op-add-h" data-op-add>
     <h2 id="op-add-h">Add an operator</h2>
     <p class="muted">Only someone on the operator list may make an exercise, be added as an exercise's operator or take its ownership. Search by name or email: people already on record first, then the institution's directory.</p>
-    <form class="adm-search" method="get" action="{{ url('/admin/operators') }}#op-add" role="search">
+    <form class="adm-search" method="get" action="{{ url('/admin/operators') }}#op-add" role="search"><input type="hidden" name="return_to" value="{{ back_path }}">
       <label class="fc-l">Name or email<input class="fc-in" type="search" name="q" value="{{ q }}" minlength="{{ min_query }}" placeholder="A name, or alice@example.edu" required></label>
       <button class="btn btn-secondary" type="submit">Search</button>
     </form>
@@ -36,13 +36,13 @@
           <tr data-op-hit="record">
             <td><code>{{ p.email or "—" }}</code></td><td>{{ p.display_name or "—" }}</td><td>On record{% if not p.bound %} · not yet signed in{% endif %}</td>
             <td>{% if p.id in listed %}<span class="chip chip-ok">Operator</span>{% else %}
-              <form method="post" action="{{ url('/admin/operators/admit') }}"><input type="hidden" name="person_id" value="{{ p.id }}"><button class="btn btn-secondary btn-short" type="submit" aria-label="Admit {{ p.label }}">Admit</button></form>{% endif %}</td>
+              <form method="post" action="{{ url('/admin/operators/admit') }}"><input type="hidden" name="return_to" value="{{ back_path }}"><input type="hidden" name="person_id" value="{{ p.id }}"><button class="btn btn-secondary btn-short" type="submit" aria-label="Admit {{ p.label }}">Admit</button></form>{% endif %}</td>
           </tr>
         {% endfor %}
         {% for u in found.in_directory %}
           <tr data-op-hit="directory">
             <td><code>{{ u.mail or u.user_principal_name }}</code></td><td>{{ u.display_name }}</td><td>Directory</td>
-            <td><form method="post" action="{{ url('/admin/operators/admit') }}"><input type="hidden" name="object_id" value="{{ u.id }}"><input type="hidden" name="address" value="{{ u.mail or u.user_principal_name }}"><button class="btn btn-secondary btn-short" type="submit" aria-label="Admit {{ u.display_name }}">Admit</button></form></td>
+            <td><form method="post" action="{{ url('/admin/operators/admit') }}"><input type="hidden" name="return_to" value="{{ back_path }}"><input type="hidden" name="object_id" value="{{ u.id }}"><input type="hidden" name="address" value="{{ u.mail or u.user_principal_name }}"><button class="btn btn-secondary btn-short" type="submit" aria-label="Admit {{ u.display_name }}">Admit</button></form></td>
           </tr>
         {% endfor %}
         </tbody>
@@ -67,7 +67,7 @@
 <section class="card" id="op-list" aria-labelledby="op-list-h" data-op-list>
   <div class="adm-toolbar">
     <h2 id="op-list-h">Operators</h2>
-    <form class="adm-search" method="get" action="{{ url('/admin/operators') }}#op-list" role="search">
+    <form class="adm-search" method="get" action="{{ url('/admin/operators') }}#op-list" role="search"><input type="hidden" name="return_to" value="{{ back_path }}">
       <label class="fc-l">Search:<input class="fc-in" type="search" name="list_q" value="{{ list_q }}" placeholder="Email or name"></label>
       <button class="btn btn-secondary" type="submit">Search</button>
     </form>
@@ -82,7 +82,7 @@
         <td>{{ e.person.display_name or "—" }}{% if not e.person.bound %} <span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
         <td>{{ e.admitted_at.strftime("%Y-%m-%d") if e.admitted_at else "—" }}</td>
         <td>{{ e.admitted_by.label if e.admitted_by else "—" }}</td>
-        <td><form method="post" action="{{ url('/admin/operators/' ~ e.person.id ~ '/revoke') }}" data-op-revoke data-name="{{ e.person.label }}"><button class="btn btn-secondary btn-short" type="submit" aria-label="Revoke {{ e.person.label }}">Revoke</button></form></td>
+        <td><form method="post" action="{{ url('/admin/operators/' ~ e.person.id ~ '/revoke') }}" data-op-revoke data-name="{{ e.person.label }}"><input type="hidden" name="return_to" value="{{ back_path }}"><button class="btn btn-secondary btn-short" type="submit" aria-label="Revoke {{ e.person.label }}">Revoke</button></form></td>
       </tr>
     {% else %}
       <tr><td colspan="5" class="muted">{% if list_q %}No operator matches “{{ list_q }}”.{% else %}Nobody yet. Whoever you admit is listed here, with <em>Revoke</em>.{% endif %}</td></tr>

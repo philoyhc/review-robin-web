@@ -51,8 +51,11 @@ async def _form(request: Request) -> dict[str, str]:
     return {k: v[0] for k, v in parse_qs(body.decode("utf-8", "replace")).items() if v}
 
 
-def _back(request: Request, said: str) -> RedirectResponse:
-    return RedirectResponse(url_path(request, f"{_PAGE}?{urlencode({'said': said})}"), 303)
+def _back(request: Request, said: str, return_to: str = "") -> RedirectResponse:
+    """The page again with its status line, keeping where Back goes (only
+    an Apply Desk path, checked again; Codex on #4115)."""
+    query = {"return_to": _back_link(return_to)[0], "said": said}
+    return RedirectResponse(url_path(request, f"{_PAGE}?{urlencode(query)}"), 303)
 
 
 def _identity(request: Request) -> Identity:
@@ -105,6 +108,7 @@ def _admit(request: Request, form: dict[str, str]) -> Response:
     """The admission itself, off the event loop: a directory pick asks
     Graph again, by blocking calls (Codex on #4113)."""
     identity = _identity(request)
+    back = form.get("return_to", "")
     session = db.new_session()
     try:
         actor = allowlist.actor_for(session, identity)
@@ -113,7 +117,7 @@ def _admit(request: Request, form: dict[str, str]) -> Response:
         elif form.get("object_id") and form.get("address"):
             tenant = (identity.tenant_id or "").strip()
             if not tenant:
-                return _back(request, "no_tenant")
+                return _back(request, "no_tenant", back)
             allowlist.admit_from_directory(
                 session,
                 actor,
@@ -127,26 +131,26 @@ def _admit(request: Request, form: dict[str, str]) -> Response:
         session.commit()
     except operators.Refused as why:
         session.rollback()
-        return _back(request, why.key if why.key in SAID else "gone")
+        return _back(request, why.key if why.key in SAID else "gone", back)
     except GraphError:
         session.rollback()
-        return _back(request, "directory")
+        return _back(request, "directory", back)
     finally:
         session.close()
-    return _back(request, "admitted")
+    return _back(request, "admitted", back)
 
 
-def _revoke(request: Request, person_id: int) -> Response:
+def _revoke(request: Request, person_id: int, back: str) -> Response:
     session = db.new_session()
     try:
         allowlist.revoke(session, allowlist.actor_for(session, _identity(request)), person_id)
         session.commit()
     except operators.Refused as why:
         session.rollback()
-        return _back(request, why.key if why.key in SAID else "gone")
+        return _back(request, why.key if why.key in SAID else "gone", back)
     finally:
         session.close()
-    return _back(request, "revoked")
+    return _back(request, "revoked", back)
 
 
 @router.post("/operators/admit", name="applydesk_admin_admit")
@@ -157,5 +161,5 @@ async def admit(request: Request) -> Response:
 
 @router.post("/operators/{person_id}/revoke", name="applydesk_admin_revoke")
 async def revoke(request: Request, person_id: int) -> Response:
-    await _form(request)
-    return await run_in_threadpool(_revoke, request, person_id)
+    form = await _form(request)
+    return await run_in_threadpool(_revoke, request, person_id, form.get("return_to", ""))
