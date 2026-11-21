@@ -67,7 +67,9 @@ participant's `applydesk/routes_me.py`, the super-admin's
 | `…/<id>/extract` | Extract data: the download cards |
 | `…/<id>/extract/<file>` | One download (see Extract data, "The route") |
 | `/admin/exercises` | Admin → Exercises Diagnostics: the exercises, a scaffold (the super-admin's alone) |
-| `/admin/operators` | Admin → Accounts Management: the operator list (the super-admin's alone) |
+| `/admin/operators` | Admin → Accounts Management: Workspace users and the Add card (the super-admin's alone) |
+| `/admin/operators/suggest` | The Add card's typeahead: JSON (the super-admin's alone) |
+| `/admin/operators/admit`, `/admin/operators/bulk` | Posts: admit one pick; admit or revoke the ticked rows (the super-admin's alone) |
 | `/admin/system` | Admin → System Status: a scaffold (the super-admin's alone) |
 | `/me` | The User Lobby |
 | `/me/exercises/<id>` | An exercise as an applicant sees it: its timeline and *Apply* |
@@ -162,34 +164,73 @@ answer only for a Published or Closed exercise.
     *Applications close*, *Timezone*, *State*), with *Manage*, which opens the
     exercise's Home, and *Outbox* and *Audit log*, disabled with a title
     saying each is not built yet.
-- **Admin → Accounts Management** (`/admin/operators`): the list of who may
-  operate. Only someone on the list may make an exercise, be added as an
+- **Admin → Accounts Management** (`/admin/operators`): who may operate. Only
+  someone on the operator list may make an exercise, be added as an
   exercise's operator or take its ownership. The page has:
   - Side by side, an *Add an operator* card and an *Accounts Overview* card
-    (counts: operators, not yet signed in, revoked).
-  - *Add an operator*: *Name or email* search of at least 2 characters
-    (*Search*, Secondary), at most 20 results of each kind, people on record
-    first (*On record*, with *not yet signed in* where pending), then the
-    directory (*Directory*; Graph on the super-admin's delegated token, the
-    fake directory on a local run). A person already on the list shows an
-    *Operator* chip; otherwise *Admit* (Secondary). A directory person already
-    on record by object ID, or by a pending address, is not listed twice. When
-    the directory does not answer, the results say so and show people on
-    record only; nothing is admitted from a failed search.
-  - *Admit* on a directory result looks the account up again by address,
+    (counts: operators, *not yet signed in* by `first_signed_in_at`, revoked).
+  - *Add an operator*: one *Name or email* box, as Review Robin's *Invite by
+    email*, with *Cancel* and *Add* on the row below and no *Search* button
+    or results table. From 2 characters it offers matches as one types
+    (`/admin/operators/suggest`, JSON, never cached): at most 20 of each
+    kind, people on record first (*On record*), then the directory
+    (*Directory*; Graph on the super-admin's delegated token, the fake
+    directory on a local run). People already on the list are left out
+    before the limit, and so are their directory entries, so they cannot
+    crowd the offers out; a directory person already on record by object ID,
+    or by a pending address, is not offered twice. Each offer's label,
+    "Name <address>", is unique: repeats are numbered, because the box finds
+    a pick by its label. When the directory does not answer, the box says so
+    and offers people on record only.
+  - *Add* is live only for a pick and posts the pick, never the typed text;
+    *Cancel* clears the box. A post with no pick is refused with a status
+    line saying to pick someone from the suggestions (`said=pick`).
+  - *Admit* on a directory pick looks the account up again by address,
     matches its object ID and stores it bound in the super-admin's tenant;
     nothing about the person is taken from the form. A sign-in naming no
     tenant refuses it.
-  - *Operators*: a table, a *Search:* box over name and address, columns
-    *Email*, *Name*, *Admitted*, *By* and *Revoke* (Secondary, asking first). A
-    pending person carries a *Not yet signed in* chip. Empty, it says nobody
-    is listed.
-  - The signed-in super-admin is listed *(self)*, first when they match the
-    search, with no *Revoke*; the server refuses revoking one's own row
-    (`said=self`).
+  - *Workspace users*: everyone on record, as Review Robin's table. Above it,
+    two panes: the title and *Show:* chips on the left; *Exercise role* and a
+    *Search:* box (email or name), with *Clear* (when a role or search is
+    set) and *Search*, on the right. Seven columns: a checkbox, *Email*,
+    *Name*, *Unit*, *First sign-in*, *Operator*, *Admin*. Empty, the table
+    says nothing matches.
+  - **Chips**, each with its count; every person is under exactly one, the
+    first that applies: *Admins* (the super-admin), *Operators* (on the list
+    and not revoked), *No role* (neither, but ever admitted, ever granted an
+    exercise, or ever the actor of an audit event), *Unused* (none of that).
+    *Operators* and *Admins* are on by default. A chip is a checkbox label
+    that submits the filter form without script. Counts take the role and
+    the search but not the chips.
+  - **`show`** is the chips on: absent altogether means the defaults; present
+    but empty means none; an unknown value is ignored.
+  - **Exercise role**: *Any*, *Owner of an exercise*, *Operator of an
+    exercise* (a current grant, the Owner included), *No exercise* (no
+    current grant).
+  - *First sign-in* is `first_signed_in_at`, the date of the person's first
+    sign-in (a directory pick is bound without one); else *Not yet signed
+    in*. *Unit* shows the workspace's top line as a default pill for an
+    operator, else blank. *Admin* shows *Super-admin* for the super-admin,
+    else *no*.
+  - The signed-in super-admin's row is marked *(self)* in place of its
+    checkbox and is never tickable. With no person row they are a row of
+    their own, first, shown under *Admins* when it matches the role (*Any* or
+    *No exercise*) and the search.
+  - **The bulk bar**: *Admit* and *Revoke* act on every ticked row, live once
+    one is ticked; *Revoke* asks first. The header box ticks every row shown.
+    The post (`/admin/operators/bulk`) runs each person once, in ID order,
+    through `operators.admit` / `revoke`, audited there, in one transaction.
+    A refusal (already so, not listed, gone) or the super-admin's own row
+    skips that person, not the batch. Nothing ticked is refused
+    (`said=none_ticked`); more than 1,000 is refused (`said=too_many`). The
+    redirect keeps the chips, role and search.
   - A change that loses a race with another (a unique clash, or a busy
     SQLite file on a local run) says the list changed and to check it.
-  - Each outcome is a status line chosen by a key, never by text from the URL.
+  - The status line is chosen by a key (`said`), never by text from the URL.
+    The one exception is the bulk line, built from the redirect's `done`
+    (`admit` or `revoke`) and its counts, changed and skipped, which are read
+    as bounded whole numbers: it says what changed and how many were skipped,
+    and no other text from the URL reaches the page.
 - **An exercise's Operators card**, on Home under Details: each current
   operator, the Owner first and marked *Owner*, the rest *Operator*; a pending
   person carries *Not yet signed in*.
