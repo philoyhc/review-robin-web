@@ -118,6 +118,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # People (applydesk/people.py): made, and bound to an account.
     "person.created": EventSchema(frozenset({"snapshot", "refs", "context"})),
     "person.bound": EventSchema(frozenset({"snapshot", "refs", "context"})),
+    "person.signed_in": EventSchema(frozenset({"refs"})),
     # The allowlist (ruling 75), kept by the platform super-admin.
     "person.admitted": EventSchema(frozenset({"refs"})),
     "person.revoked": EventSchema(frozenset({"refs", "reason"})),

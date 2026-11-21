@@ -93,12 +93,17 @@ def operators_page(
     request: Request,
     q: str = "",
     list_q: str = "",
+    role: str = "any",
     return_to: str = "",
     session: Session = Depends(db.get_session),
 ) -> Response:
     found = allowlist.search(session, q, lambda: directory_for(request)) if q.strip() else None
-    people = allowlist.everyone(session, list_q)
     me = allowlist.me(session, _identity(request))
+    # No `show` at all is the default chips; a blank one (the form's hidden
+    # field) with no chip ticked is none, as Review Robin's.
+    shown = request.query_params.getlist("show")
+    show = frozenset(s for s in shown if s) if shown else allowlist.DEFAULT_SHOW
+    view = allowlist.accounts(session, me, show=show, role=role, query=list_q)
     back_path, back_label = _back_link(return_to)
     return render(
         request,
@@ -111,8 +116,9 @@ def operators_page(
         overview=allowlist.overview(session),
         listed={p.id for p in allowlist.listed_ids(session)},
         me=me,
-        me_row=me.leads(people, list_q),
-        people=people,
+        view=view,
+        categories=allowlist.CATEGORIES,
+        roles=allowlist.ROLES,
         said=SAID.get(request.query_params.get("said", ""), ""),
         back_path=back_path,
         back_label=back_label,

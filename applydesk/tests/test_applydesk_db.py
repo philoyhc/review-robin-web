@@ -152,3 +152,28 @@ def test_the_seed_is_audited_and_binds_as_a_sign_in_would() -> None:
     assert kinds[:2] == ["person.created", "person.admitted"]
     assert kinds.count("exercise.created") == len(sample_data.exercises())
     assert "person.bound" in kinds
+
+
+def test_the_first_sign_in_backfill_takes_only_a_person_s_own_binding(tmp_path: Path) -> None:
+    """AD2W's migration (Codex on #4121): an administrator's pick of someone
+    else names the administrator as actor, so it is not their sign-in; a
+    sign-in binding names the person as both actor and subject."""
+    url = f"sqlite:///{tmp_path / 'b.db'}"
+    config = _config(url)
+    command.upgrade(config, "ad2a3onepending")
+    engine = create_engine(url)
+    with engine.begin() as c:
+        c.exec_driver_sql(
+            "INSERT INTO person (id, email, email_key, may_operate, created_at)"
+            " VALUES (1, 'a@x', 'a@x', 0, '2026-11-01'), (2, 'b@x', 'b@x', 0, '2026-11-01')"
+        )
+        c.exec_driver_sql(
+            "INSERT INTO audit_event (at, event_type, actor_id, detail) VALUES"
+            " ('2026-11-02 09:00:00', 'person.created', 1, '{\"refs\": {\"person_id\": 2}}'),"
+            " ('2026-11-03 09:00:00', 'person.bound', 1, '{\"refs\": {\"person_id\": 1}}'),"
+            " ('2026-11-04 09:00:00', 'person.bound', 2, '{\"refs\": {\"person_id\": 2}}')"
+        )
+    command.upgrade(config, "head")
+    with engine.connect() as c:
+        got = dict(c.exec_driver_sql("SELECT id, first_signed_in_at FROM person").all())
+    assert str(got[1]).startswith("2026-11-03") and str(got[2]).startswith("2026-11-04")

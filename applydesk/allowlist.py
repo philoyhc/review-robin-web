@@ -15,38 +15,133 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, case, exists, func, or_, select
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import ColumnElement
 
 from applydesk import directory, operators, people
 from applydesk.directory import escape_like
-from applydesk.models import Person
+from applydesk.models import AuditEvent, ExerciseOperator, Person
 from cordware.graph import Directory, GraphError
 from cordware.identity import Identity
 
+#: Workspace users' chips, `(key, label, on by default)` in toolbar order
+#: (segment AD2W, as Review Robin's `ACCOUNT_CATEGORIES`).
+CATEGORIES: tuple[tuple[str, str, bool], ...] = (
+    ("operators", "Operators", True),
+    ("admins", "Admins", True),
+    ("no_role", "No role", False),
+    ("unused", "Unused", False),
+)
+DEFAULT_SHOW = frozenset(key for key, _, on in CATEGORIES if on)
 
-def everyone(session: Session, query: str = "") -> list[Person]:
-    """Everyone Apply Desk has on record, by name then address (no name
-    last): Accounts Management's *Workspace users* (segment AD2W); with
-    `query`, those whose name or address holds it. The chips and the
-    exercise-role filter come at AD2W's rung 3."""
-    statement = select(Person)
+#: The Exercise role dropdown, `(value, label)`.
+ROLES: tuple[tuple[str, str], ...] = (
+    ("any", "Any"),
+    ("owner", "Owner of an exercise"),
+    ("operator", "Operator of an exercise"),
+    ("none", "No exercise"),
+)
+
+
+def _current_grant(*, owner: bool = False) -> ColumnElement[bool]:
+    held: list[ColumnElement[bool]] = [
+        ExerciseOperator.person_id == Person.id,
+        ExerciseOperator.removed_at.is_(None),
+    ]
+    if owner:
+        held.append(ExerciseOperator.is_owner.is_(True))
+    return exists().where(*held)
+
+
+def _has_history() -> ColumnElement[bool]:
+    """Ever admitted, ever granted an exercise, or ever acted: such a
+    person is *No role* rather than *Unused* when they hold neither."""
+    return or_(
+        Person.admitted_at.is_not(None),
+        exists().where(ExerciseOperator.person_id == Person.id),
+        exists().where(AuditEvent.actor_id == Person.id),
+    )
+
+
+def _category(admin_id: int | None) -> ColumnElement[str]:
+    """Each person under exactly one chip, as Review Robin's: the admin
+    first (the super-admin's own row), then operators, then history."""
+    return case(
+        (Person.id == (admin_id if admin_id is not None else -1), "admins"),
+        (and_(Person.may_operate.is_(True), Person.revoked_at.is_(None)), "operators"),
+        (_has_history(), "no_role"),
+        else_="unused",
+    )
+
+
+def _role_filter(role: str) -> ColumnElement[bool] | None:
+    if role == "owner":
+        return _current_grant(owner=True)
+    if role == "operator":
+        return _current_grant()
+    if role == "none":
+        return ~_current_grant()
+    return None
+
+
+def _matching(query: str) -> ColumnElement[bool] | None:
     text = query.strip().casefold()
-    if text:
-        like = f"%{escape_like(text)}%"
-        statement = statement.where(
-            or_(
-                Person.email_key.like(like, escape="\\"),
-                func.lower(Person.display_name).like(like, escape="\\"),
-            )
-        )
-    return list(
+    if not text:
+        return None
+    like = f"%{escape_like(text)}%"
+    return or_(
+        Person.email_key.like(like, escape="\\"),
+        func.lower(Person.display_name).like(like, escape="\\"),
+    )
+
+
+@dataclass(frozen=True)
+class Accounts:
+    """One view of Workspace users: the rows shown, each chip's count
+    under the role and search, whether the super-admin's own row (with no
+    person row, or none matching) leads, and the filters as read."""
+
+    people: list[Person]
+    counts: dict[str, int]
+    show: frozenset[str]
+    role: str
+    query: str
+    me_row: bool
+
+
+def accounts(
+    session: Session, me: Me, *, show: frozenset[str], role: str = "any", query: str = ""
+) -> Accounts:
+    """Workspace users under the `show` chips, the exercise `role` and the
+    search `query` (segment AD2W). The chips' counts take the role and the
+    search but not the chips, as Review Robin's do. Unknown chips and
+    roles are ignored."""
+    role = role if role in dict(ROLES) else "any"
+    show = show & {key for key, _, _ in CATEGORIES}
+    category = _category(me.person_id)
+    filters = [f for f in (_role_filter(role), _matching(query)) if f is not None]
+    counted = dict(
+        session.execute(
+            select(category, func.count()).select_from(Person).where(*filters).group_by(category)
+        ).all()
+    )
+    counts = {key: int(counted.get(key, 0)) for key, _, _ in CATEGORIES}
+    # The super-admin's own row, when Apply Desk has no person row for
+    # them: an admin with no exercise, matched on the identity's fields.
+    me_row = me.person_id is None and role in ("any", "none") and me.matches(query)
+    if me_row:
+        counts["admins"] += 1
+    people = list(
         session.scalars(
-            statement.order_by(
+            select(Person)
+            .where(category.in_(show), *filters)
+            .order_by(
                 Person.display_name.is_(None), Person.display_name, Person.email_key, Person.id
             )
         )
     )
+    return Accounts(people, counts, show, role, query, me_row and "admins" in show)
 
 
 @dataclass(frozen=True)
@@ -63,11 +158,6 @@ class Me:
     def matches(self, query: str) -> bool:
         text = query.strip().casefold()
         return not text or text in self.email.casefold() or text in self.name.casefold()
-
-    def leads(self, people: list[Person], query: str) -> bool:
-        """Whether their own row leads the list: they match `query` and
-        are not already one of `people` (then that row is marked)."""
-        return self.matches(query) and all(p.id != self.person_id for p in people)
 
 
 def me(session: Session, identity: Identity) -> Me:

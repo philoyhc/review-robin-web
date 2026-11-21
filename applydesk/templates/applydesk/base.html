@@ -169,6 +169,8 @@
     .adm-filter-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
     .adm-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
     .adm-check { width: 1%; white-space: nowrap; }
+    .adm-chip:has(input:checked) { background: var(--accent); color: var(--on-accent); }
+    .adm-chip:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
     .adm-nowrap { white-space: nowrap; }
     .adm-actions .btn + .btn { margin-left: 6px; }
     /* The Operators card (segment AD2A). */

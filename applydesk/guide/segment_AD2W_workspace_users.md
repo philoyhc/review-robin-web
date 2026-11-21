@@ -55,6 +55,10 @@ Taken 2026-11-21 at `2ae5bd646`.
 | Specs | 2 (`applications.md`, `architecture.md`) | `grep -rln "Accounts Management\|admin/operators" applydesk/spec` |
 | Test files | 4; `test_operator_list.py` holds 9 tests | the first command, `--include=test_*.py` |
 
+## Status
+
+- **Rung 3 added a column (2026-11-21).** *First sign-in* needed its own record: `bound_at` is set when a directory pick is bound, before any sign-in, and a later sign-in finds them by object ID and records nothing. `person.first_signed_in_at` (migration `ad2w1firstsignin`) is set once at the first sign-in; existing rows take their own sign-in binding's audit time.
+
 ## PR ladder
 
 1. **PR 1 — this plan.**
