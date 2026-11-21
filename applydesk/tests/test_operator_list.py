@@ -89,8 +89,12 @@ def test_admit_on_record_then_revoke(client: TestClient) -> None:
         "/applydesk/admin/operators/admit", data={"person_id": str(ed_id)}, follow_redirects=False
     )
     assert again.headers["location"].endswith("said=already_listed")
-    gone = client.post(f"/applydesk/admin/operators/{ed_id}/revoke", follow_redirects=False)
-    assert gone.headers["location"].endswith("said=revoked")
+    gone = client.post(
+        "/applydesk/admin/operators/bulk",
+        data={"action": "revoke", "person_ids": str(ed_id)},
+        follow_redirects=False,
+    )
+    assert "done=revoke" in gone.headers["location"] and "n=1" in gone.headers["location"]
     session = db.new_session()
     kept = session.get(Person, ed_id)
     assert kept is not None and not operators.may_operate(kept)
@@ -98,7 +102,7 @@ def test_admit_on_record_then_revoke(client: TestClient) -> None:
     assert _events()[-2:] == ["person.admitted", "person.revoked"]
     # Still on record, so still a Workspace user (AD2W), no longer an operator.
     page = client.get("/applydesk/admin/operators?said=revoked&show=no_role").text
-    assert f'data-op-entry="{kept.id}"' in page and "data-op-revoke data-name" not in page
+    assert f'data-op-entry="{kept.id}"' in page
 
 
 def test_a_forged_directory_pick_is_refused(client: TestClient) -> None:
@@ -133,7 +137,13 @@ def test_nobody_but_the_super_admin_can_post(monkeypatch: pytest.MonkeyPatch) ->
         ).status_code
         == 404
     )
-    assert other.post("/applydesk/admin/operators/1/revoke").status_code == 404
+    assert (
+        other.post(
+            "/applydesk/admin/operators/bulk", data={"action": "revoke", "person_ids": "1"}
+        ).status_code
+        == 404
+    )
+    assert other.get("/applydesk/admin/operators/suggest", params={"q": "jane"}).status_code == 404
     assert _person(JANE) is None
 
 
@@ -190,10 +200,14 @@ def test_back_keeps_where_admin_was_opened_from(client: TestClient) -> None:
     assert back in admitted.text and "Added to the list." in admitted.text
     jane = _person(JANE)
     assert jane is not None
-    revoked = client.post(f"/applydesk/admin/operators/{jane.id}/revoke", data={"return_to": home})
+    revoked = client.post(
+        "/applydesk/admin/operators/bulk",
+        data={"action": "revoke", "person_ids": str(jane.id), "return_to": home},
+    )
     assert back in revoked.text
     away = client.post(
-        f"/applydesk/admin/operators/{jane.id}/revoke", data={"return_to": "//evil.example"}
+        "/applydesk/admin/operators/bulk",
+        data={"action": "admit", "person_ids": str(jane.id), "return_to": "//evil.example"},
     )
     assert 'href="/applydesk/operator/exercises" data-admin-back' in away.text
 
@@ -218,9 +232,13 @@ def test_the_super_admin_is_listed_as_self() -> None:
     assert page.count("data-op-self") == 1 and f'data-op-entry="{me.id}" data-op-self' in page
     row = page[page.index(f'data-op-entry="{me.id}"') :]
     row = row[: row.index("</tr>")]
-    assert "(self)" in row and "Revoke" not in row  # no action on your own row (ruling)
-    refused = admin.post(f"/applydesk/admin/operators/{me.id}/revoke", follow_redirects=False)
-    assert refused.headers["location"].endswith("said=self")
+    assert "(self)" in row and "data-bulk-row" not in row  # no action on your own row (ruling)
+    refused = admin.post(
+        "/applydesk/admin/operators/bulk",
+        data={"action": "revoke", "person_ids": str(me.id)},
+        follow_redirects=False,
+    )
+    assert "n=0" in refused.headers["location"] and "skipped=1" in refused.headers["location"]
     after = _person("local-dev")
     assert after is not None and after.may_operate
 
@@ -241,11 +259,11 @@ def test_workspace_users_scaffold() -> None:
         assert f"<th>{heading}</th>" in table
     assert '<h2 id="op-list-h">Workspace users</h2>' in page
     assert page.count("data-account-chip=") == 4 and "data-account-role" in page
-    assert "Acting on ticked rows is not built yet" in page
+    assert "data-bulk-action" in page  # the bulk bar, wired at rung 5
     assert "pat@example.edu" not in admin.get("/applydesk/admin/operators").text  # Unused: off
     row = table[table.index(f'data-op-entry="{pid}"') :]
     row = row[: row.index("</tr>")]
-    assert "pat@example.edu" in row and "Not yet signed in" in row and "data-op-revoke" not in row
+    assert "pat@example.edu" in row and "Not yet signed in" in row and "data-bulk-row" in row
 
 
 def test_chips_and_exercise_role_filter_workspace_users() -> None:
@@ -375,3 +393,101 @@ def test_listed_people_never_crowd_the_suggestions_out(client: TestClient) -> No
     offers = _suggest(client, "lim")["people"]
     assert isinstance(offers, list)
     assert [o["person_id"] for o in offers if "person_id" in o] == [last_id]
+
+
+def test_the_bulk_bar_admits_and_revokes_every_ticked_row(client: TestClient) -> None:
+    """AD2W rung 5, as Review Robin's: tick rows, then Admit or Revoke them
+    all, each audited once; a refusal (already so, gone, or the
+    super-admin's own row) skips that person, not the batch; the status
+    line counts both."""
+    from applydesk import seed
+
+    session = db.new_session()
+    seed.seed(session)  # the fake super-admin: on the list, their own row
+    a = people.pending(session, "a@example.edu", None)
+    b = people.pending(session, "b@example.edu", None)
+    session.commit()
+    ids = [a.id, b.id]
+    session.close()
+    me = _person("local-dev")
+    assert me is not None
+    page = client.get("/applydesk/admin/operators?show=unused").text
+    for pid in ids:
+        assert f'name="person_ids" value="{pid}" form="users-bulk-form"' in page
+    assert f'name="person_ids" value="{me.id}"' not in page  # (self): no box
+    before = len(_events())
+    done = client.post(
+        "/applydesk/admin/operators/bulk",
+        data={"action": "admit", "person_ids": [*map(str, ids), str(me.id), "999999"]},
+        follow_redirects=False,
+    )
+    location = done.headers["location"]
+    assert "done=admit" in location and "n=2" in location and "skipped=2" in location
+    assert _events()[before:] == ["person.admitted", "person.admitted"]
+    said = client.get(location).text
+    assert "Added to the list: 2. Skipped 2" in said
+    again = client.post(
+        "/applydesk/admin/operators/bulk",
+        data={"action": "revoke", "person_ids": [str(ids[0]), str(ids[0])]},  # twice: once
+        follow_redirects=False,
+    ).headers["location"]
+    assert "n=1" in again and "skipped=0" in again
+    gone = _person_by_id(ids[0])
+    assert gone is not None and not operators.may_operate(gone)
+    still = _person("local-dev")
+    assert still is not None and still.may_operate  # own row never revoked
+    for bad in ({"action": "admit"}, {"action": "drop", "person_ids": str(ids[1])}):
+        refused = client.post("/applydesk/admin/operators/bulk", data=bad, follow_redirects=False)
+        assert refused.headers["location"].endswith("said=none_ticked")
+    forged = client.get("/applydesk/admin/operators?done=admit&n=<b>9</b>&skipped=x").text
+    assert "Added to the list: 0." in forged and "<b>9</b>" not in forged
+
+
+def _person_by_id(person_id: int) -> Person | None:
+    session = db.new_session()
+    try:
+        return session.get(Person, person_id)
+    finally:
+        session.close()
+
+
+def test_cold_read_fixes_for_workspace_users(client: TestClient) -> None:
+    """AD2W's cold read: listed people never crowd the suggestions out; the
+    Overview's not-yet-signed-in counts what the table shows; a bulk change
+    keeps the view; too many ticks say so."""
+    from applydesk import directory as directory_mod
+    from applydesk.operators import Actor
+
+    session = db.new_session()
+    sup = Actor(None, is_super_admin=True)
+    for n in range(directory_mod.LIMIT):  # a full page of listed Lims
+        p = people.pending(session, f"lim{n:02}@example.edu", None)
+        operators.admit(session, sup, p)
+    last = people.pending(session, "lim.zz@example.edu", None)
+    session.commit()
+    last_id = last.id
+    session.close()
+    offers = _suggest(client, "lim")["people"]
+    assert isinstance(offers, list)
+    assert [o["person_id"] for o in offers if "person_id" in o] == [last_id]
+    page = client.get("/applydesk/admin/operators").text
+    assert f"{directory_mod.LIMIT} not yet signed in" in page  # listed, never signed in
+    kept = client.post(
+        "/applydesk/admin/operators/bulk",
+        data={
+            "action": "admit",
+            "person_ids": str(last_id),
+            "show": ["unused", "operators"],
+            "role": "none",
+            "list_q": "lim",
+        },
+        follow_redirects=False,
+    ).headers["location"]
+    for part in ("show=unused", "show=operators", "role=none", "list_q=lim"):
+        assert part in kept, part
+    many = client.post(
+        "/applydesk/admin/operators/bulk",
+        data={"action": "admit", "person_ids": [str(i) for i in range(1, 1003)]},
+        follow_redirects=False,
+    )
+    assert many.headers["location"].endswith("said=too_many")

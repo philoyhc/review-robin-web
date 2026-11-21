@@ -11,7 +11,7 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from playwright.sync_api import Error, Page, Route, expect, sync_playwright
+from playwright.sync_api import Dialog, Error, Page, Route, expect, sync_playwright
 
 from applydesk.tests._host import host_with
 
@@ -89,3 +89,32 @@ def test_cancel_clears_the_box(page: Page) -> None:
     expect(box).to_have_value("")
     expect(page.locator("[data-op-add-options] option")).to_have_count(0)
     expect(page.locator("[data-op-add-cancel]")).to_be_disabled()
+
+
+def test_the_bulk_bar_wakes_on_a_tick_and_revoke_asks_first(page: Page) -> None:
+    from applydesk import db, people
+
+    session = db.new_session()
+    people.pending(session, "kim@example.edu", None)
+    session.commit()
+    session.close()
+    page.goto(f"{ADMIN}?show=unused")
+    admit = page.locator("[data-bulk-action][value='admit']")
+    expect(admit).to_be_disabled()
+    page.locator("[data-bulk-all]").check()
+    expect(page.locator("[data-bulk-count]")).to_have_text("1")
+    expect(admit).to_be_enabled()
+    admit.click()
+    expect(page.locator("[data-op-said]")).to_have_text("Added to the list: 1.")
+    page.goto(f"{ADMIN}?show=operators")
+    page.get_by_role("checkbox", name="Select kim@example.edu").check()
+    asked: list[str] = []
+
+    def answer(dialog: Dialog) -> None:
+        asked.append(dialog.message)
+        dialog.dismiss()  # No: nothing is revoked
+
+    page.once("dialog", answer)
+    page.locator("[data-bulk-revoke]").click()
+    assert asked and "1 ticked person" in asked[0]
+    expect(page.get_by_role("checkbox", name="Select kim@example.edu")).to_be_visible()

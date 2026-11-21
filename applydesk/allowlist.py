@@ -99,8 +99,8 @@ def _matching(query: str) -> ColumnElement[bool] | None:
 @dataclass(frozen=True)
 class Accounts:
     """One view of Workspace users: the rows shown, each chip's count
-    under the role and search, whether the super-admin's own row (with no
-    person row, or none matching) leads, and the filters as read."""
+    under the role and search, whether the super-admin's own row leads
+    (only when they have no person row), and the filters as read."""
 
     people: list[Person]
     counts: dict[str, int]
@@ -186,7 +186,8 @@ def overview(session: Session) -> Overview:
     count = select(func.count()).select_from(Person)
     return Overview(
         listed=session.scalar(count.where(*listed)) or 0,
-        not_signed_in=session.scalar(count.where(*listed, Person.object_id.is_(None))) or 0,
+        not_signed_in=session.scalar(count.where(*listed, Person.first_signed_in_at.is_(None)))
+        or 0,
         revoked=session.scalar(count.where(Person.revoked_at.is_not(None))) or 0,
     )
 
@@ -307,9 +308,35 @@ def admit_from_directory(
     return person
 
 
-def revoke(session: Session, actor: operators.Actor, person_id: int) -> Person:
-    person = session.get(Person, person_id)
-    if person is None:
-        raise operators.Refused("That person is no longer on record.", key="gone")
-    operators.revoke(session, actor, person)
-    return person
+@dataclass(frozen=True)
+class Bulk:
+    """What a bulk *Admit* or *Revoke* did: how many changed, how many
+    were skipped (already so, gone, or the super-admin's own row)."""
+
+    changed: int
+    skipped: int
+
+
+def bulk(
+    session: Session, actor: operators.Actor, action: str, person_ids: list[int], me: Me
+) -> Bulk:
+    """*Admit* or *Revoke* every ticked row (segment AD2W), each through
+    `operators.admit` / `revoke` and audited there, in the caller's one
+    transaction. A refusal skips that person, not the batch: a refusal
+    changes nothing, so the transaction stays good. The super-admin's own
+    row is always skipped (no action on your own row)."""
+    change = operators.admit if action == "admit" else operators.revoke
+    changed = skipped = 0
+    # Each once, in ID order: two overlapping posts lock rows in one order.
+    for person_id in sorted(set(person_ids)):
+        person = session.get(Person, person_id)
+        if person is None or person_id == me.person_id:
+            skipped += 1
+            continue
+        try:
+            change(session, actor, person)
+        except operators.Refused:
+            skipped += 1
+            continue
+        changed += 1
+    return Bulk(changed, skipped)
