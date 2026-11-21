@@ -26,7 +26,7 @@ Whichever plan opens that stage takes its rows: it absorbs, rules or drops each,
 
 | ID | Sev | Finding | Where | Fix | Was |
 |---|---|---|---|---|---|
-| ~~AD-64~~ *Done in #PENDING: ruling 68 names the one vocabulary, grants per item; AD4's roadmap row reads it and the open decision is closed* | M | There are three visibility vocabularies: a per-card `shown` flag (meaningless on text cards), FS §5.1's section Shown/Not shown, and R26's parts with audiences and a visible-from stage. The roadmap's AD4 and the open decision "Card visibility beyond Shown / Not shown" still ignore R26, and the spec gives no notice of the change. | `sample_data.py:577`; `spec/applications.md` l.129-130; `guide/todo_master.md` l.545, 574-576 | Ruling needed (For the author 3), before AD4: model `form_section → dossier_part`; reword AD4 and narrow the open decision. | DM-13, SP-15 |
+| ~~AD-64~~ *Done in #4100: ruling 68 names the one vocabulary, grants per item; AD4's roadmap row reads it and the open decision is closed* | M | There are three visibility vocabularies: a per-card `shown` flag (meaningless on text cards), FS §5.1's section Shown/Not shown, and R26's parts with audiences and a visible-from stage. The roadmap's AD4 and the open decision "Card visibility beyond Shown / Not shown" still ignore R26, and the spec gives no notice of the change. | `sample_data.py:577`; `spec/applications.md` l.129-130; `guide/todo_master.md` l.545, 574-576 | Ruling needed (For the author 3), before AD4: model `form_section → dossier_part`; reword AD4 and narrow the open decision. | DM-13, SP-15 |
 
 ### 10. Component consistency
 
