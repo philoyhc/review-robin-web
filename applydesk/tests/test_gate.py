@@ -323,8 +323,9 @@ def test_a_deployed_operator_is_not_offered_pages_that_would_404(
 @pytest.mark.parametrize(
     ("method", "path", "body", "status"),
     [
-        ("POST", "/applydesk/admin/operators/admit", "person_id=%C2%B2", 400),
-        ("POST", "/applydesk/admin/operators/admit", "person_id=" + "9" * 30, 400),
+        # Not a pick from the suggestions: the page asks for one (AD2W).
+        ("POST", "/applydesk/admin/operators/admit", "person_id=%C2%B2", 303),
+        ("POST", "/applydesk/admin/operators/admit", "person_id=" + "9" * 30, 303),
         ("POST", "/applydesk/admin/operators/" + "1" * 31 + "/revoke", "", 422),
         ("POST", "/applydesk/admin/operators/0/revoke", "", 422),
         ("POST", f"/applydesk/operator/exercises/{EX}/operators/add", "person_id=%C2%B2", 400),

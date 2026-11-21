@@ -38,9 +38,23 @@ def _events() -> list[str]:
         session.close()
 
 
+def _suggest(client: TestClient, q: str) -> dict[str, object]:
+    answer = client.get("/applydesk/admin/operators/suggest", params={"q": q})
+    assert answer.headers["cache-control"] == "no-store"
+    return answer.json()
+
+
 def test_the_search_shows_the_directory_and_admit_stores_them_bound(client: TestClient) -> None:
-    page = client.get("/applydesk/admin/operators", params={"q": "jane"}).text
-    assert 'data-op-hit="directory"' in page and "Jane Tan" in page
+    offers = _suggest(client, "jane")
+    assert offers["available"] is True
+    assert offers["people"] == [
+        {
+            "label": "Jane Tan <jane.tan@example.edu>",
+            "object_id": JANE,
+            "address": "jane.tan@example.edu",
+            "where": "Directory",
+        }
+    ]
     done = client.post(
         "/applydesk/admin/operators/admit",
         data={"object_id": JANE, "address": "jane.tan@example.edu"},
@@ -53,8 +67,7 @@ def test_the_search_shows_the_directory_and_admit_stores_them_bound(client: Test
     listed = client.get("/applydesk/admin/operators").text
     assert f'data-op-entry="{jane.id}"' in listed and "Added to the list." not in listed
     assert "person.admitted" in _events()
-    again = client.get("/applydesk/admin/operators", params={"q": "jane"}).text
-    assert 'data-op-hit="record"' in again and 'chip-ok">Operator<' in again  # now on record
+    assert _suggest(client, "jane")["people"] == []  # on record now, and already listed
 
 
 def test_admit_on_record_then_revoke(client: TestClient) -> None:
@@ -101,8 +114,8 @@ def test_a_forged_directory_pick_is_refused(client: TestClient) -> None:
 
 
 def test_a_failing_directory_still_shows_people_on_record(client: TestClient) -> None:
-    page = client.get("/applydesk/admin/operators", params={"q": "outage@example.edu"}).text
-    assert "data-op-directory-failed" in page and "(server)" in page
+    offers = _suggest(client, "outage@example.edu")
+    assert offers["available"] is False and offers["reason"] == "server"
     done = client.post(
         "/applydesk/admin/operators/admit",
         data={"object_id": JANE, "address": "outage@example.edu"},
@@ -168,9 +181,8 @@ def test_back_keeps_where_admin_was_opened_from(client: TestClient) -> None:
     home = "/operator/exercises/wa9juxbc2t"
     back = f'href="/applydesk{home}" data-admin-back'
     page = client.get("/applydesk/admin/operators", params={"return_to": home}).text
-    assert page.count(f'name="return_to" value="{home}"') >= 2  # both searches
-    found = client.get("/applydesk/admin/operators", params={"q": "jane", "return_to": home})
-    assert back in found.text and f'name="return_to" value="{home}"' in found.text  # Admit too
+    assert page.count(f'name="return_to" value="{home}"') >= 2  # Add and the table's search
+    assert back in page
     admitted = client.post(
         "/applydesk/admin/operators/admit",
         data={"object_id": JANE, "address": "jane.tan@example.edu", "return_to": home},
@@ -298,3 +310,68 @@ def test_chips_and_exercise_role_filter_workspace_users() -> None:
     assert rows("?list_q=ben") == {"ben"}
     cleared = admin.get("/applydesk/admin/operators?list_q=ben").text
     assert "data-account-clear" in cleared and "data-account-clear" not in page
+
+
+def test_add_offers_records_first_and_takes_only_a_pick(client: TestClient) -> None:
+    """AD2W rung 4, as Review Robin's Invite card: one box offering people
+    on record not yet listed, then the directory; Cancel and Add under it,
+    Add posting the pick. Typed text that is no pick is refused politely."""
+    session = db.new_session()
+    pat = people.pending(session, "jane.pat@example.edu", None)
+    session.commit()
+    pid = pat.id
+    session.close()
+    offers = _suggest(client, "jane")["people"]
+    assert isinstance(offers, list) and offers[0] == {
+        "label": "jane.pat@example.edu",
+        "person_id": pid,
+        "where": "On record",
+    }
+    assert offers[1]["where"] == "Directory"
+    page = client.get("/applydesk/admin/operators").text
+    card = page[page.index("data-op-add") : page.index('id="accounts-overview"')]
+    assert "data-op-add-cancel" in card and "data-op-add-submit" in card and ">Search<" not in card
+    typed = client.post(
+        "/applydesk/admin/operators/admit", data={"person_id": ""}, follow_redirects=False
+    )
+    assert typed.headers["location"].endswith("said=pick")
+    assert _suggest(client, "j")["people"] == []  # under the shortest query
+
+
+def test_two_people_with_one_label_stay_two_picks() -> None:
+    """Codex on #4122: the box finds a pick by its label, so two accounts
+    sharing a name and address must not share a label."""
+    from applydesk import allowlist
+    from applydesk.directory import SearchResult
+    from cordware.graph import DirectoryUser
+
+    twins = tuple(
+        DirectoryUser(
+            id=oid, display_name="Sam Lee", mail="sam@example.edu", user_principal_name="sam@x"
+        )
+        for oid in ("o-1", "o-2")
+    )
+    offers = allowlist.suggestions(SearchResult((), twins), set())["people"]
+    assert isinstance(offers, list)
+    labels = [o["label"] for o in offers]
+    assert labels == ["Sam Lee <sam@example.edu>", "Sam Lee <sam@example.edu> (directory 2)"]
+    assert [o["object_id"] for o in offers] == ["o-1", "o-2"]
+
+
+def test_listed_people_never_crowd_the_suggestions_out(client: TestClient) -> None:
+    """Codex on #4122: with a full page of listed matches, the one person
+    who can still be added is offered, not lost to the search's limit."""
+    from applydesk import directory as directory_mod
+    from applydesk.operators import Actor
+
+    session = db.new_session()
+    sup = Actor(None, is_super_admin=True)
+    for n in range(directory_mod.LIMIT):
+        operators.admit(session, sup, people.pending(session, f"lim{n:02}@example.edu", None))
+    last = people.pending(session, "lim.zz@example.edu", None)
+    session.commit()
+    last_id = last.id
+    session.close()
+    offers = _suggest(client, "lim")["people"]
+    assert isinstance(offers, list)
+    assert [o["person_id"] for o in offers if "person_id" in o] == [last_id]

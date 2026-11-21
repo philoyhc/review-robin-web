@@ -14,41 +14,75 @@
 
 <div class="adm-grid">
   <section class="card" id="op-add" aria-labelledby="op-add-h" data-op-add>
+    {# As Review Robin's Invite by email (segment AD2W, the author's ask):
+       one box that offers people on record, then the institution's
+       directory, as it is typed; Cancel and Add below it. Add posts the
+       pick, never the typed text: the directory is asked again on Add. #}
     <h2 id="op-add-h">Add an operator</h2>
-    <p class="muted">Only someone on the operator list may make an exercise, be added as an exercise's operator or take its ownership. Search by name or email: people already on record first, then the institution's directory.</p>
-    <form class="adm-search" method="get" action="{{ url('/admin/operators') }}#op-add" role="search"><input type="hidden" name="return_to" value="{{ back_path }}">
-      <label class="fc-l">Name or email<input class="fc-in" type="search" name="q" value="{{ q }}" minlength="{{ min_query }}" placeholder="A name, or alice@example.edu" required></label>
-      <button class="btn btn-secondary" type="submit">Search</button>
-    </form>
-    {% if found is not none %}
-    <div data-op-results>
-      {% if found.directory_failed %}<p class="muted" role="status" data-op-directory-failed>The directory did not answer ({{ found.directory_failed }}); only people on record are shown.</p>{% endif %}
-      {% if not found.on_record and not found.in_directory %}
-        <p class="muted">No one found{% if q|length < min_query %}: type at least {{ min_query }} characters{% endif %}.</p>
-      {% else %}
-      <div class="table-wrap">
-      <table>
-        <thead><tr><th>Email</th><th>Name</th><th>Found</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
-        <tbody>
-        {% for p in found.on_record %}
-          <tr data-op-hit="record">
-            <td><code>{{ p.email or "—" }}</code></td><td>{{ p.display_name or "—" }}</td><td>On record{% if not p.bound %} · not yet signed in{% endif %}</td>
-            <td>{% if p.id in listed %}<span class="chip chip-ok">Operator</span>{% else %}
-              <form method="post" action="{{ url('/admin/operators/admit') }}"><input type="hidden" name="return_to" value="{{ back_path }}"><input type="hidden" name="person_id" value="{{ p.id }}"><button class="btn btn-secondary btn-short" type="submit" aria-label="Admit {{ p.label }}">Admit</button></form>{% endif %}</td>
-          </tr>
-        {% endfor %}
-        {% for u in found.in_directory %}
-          <tr data-op-hit="directory">
-            <td><code>{{ u.mail or u.user_principal_name }}</code></td><td>{{ u.display_name }}</td><td>Directory</td>
-            <td><form method="post" action="{{ url('/admin/operators/admit') }}"><input type="hidden" name="return_to" value="{{ back_path }}"><input type="hidden" name="object_id" value="{{ u.id }}"><input type="hidden" name="address" value="{{ u.mail or u.user_principal_name }}"><button class="btn btn-secondary btn-short" type="submit" aria-label="Admit {{ u.display_name }}">Admit</button></form></td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
+    <p class="muted">Only someone on the operator list may make an exercise, be added as an exercise's operator or take its ownership. Type a name or an address: people already on record are offered first, then the institution's directory.</p>
+    <form method="post" action="{{ url('/admin/operators/admit') }}" id="op-add-form" data-op-add-form><input type="hidden" name="return_to" value="{{ back_path }}"><input type="hidden" name="person_id" value="" data-op-pick="person_id"><input type="hidden" name="object_id" value="" data-op-pick="object_id"><input type="hidden" name="address" value="" data-op-pick="address">
+      <label class="fc-l">Name or email<input class="fc-in" type="text" id="op-add-box" autocomplete="off" spellcheck="false" list="op-add-options" placeholder="A name, or alice@example.edu" data-op-add-box></label>
+      <datalist id="op-add-options" data-op-add-options></datalist>
+      <p class="muted" role="status" data-op-add-status hidden></p>
+      <div class="adm-filter-actions">
+        <button class="btn btn-secondary" type="reset" data-op-add-cancel disabled>Cancel</button>
+        <button class="btn btn-secondary" type="submit" data-op-add-submit disabled>Add</button>
       </div>
-      {% endif %}
-    </div>
-    {% endif %}
+    </form>
+    <script>
+    (function () {
+      var form = document.querySelector("[data-op-add-form]");
+      var box = form.querySelector("[data-op-add-box]");
+      var options = form.querySelector("[data-op-add-options]");
+      var status = form.querySelector("[data-op-add-status]");
+      var add = form.querySelector("[data-op-add-submit]");
+      var cancel = form.querySelector("[data-op-add-cancel]");
+      var fields = {};
+      form.querySelectorAll("[data-op-pick]").forEach(function (f) { fields[f.dataset.opPick] = f; });
+      var url = {{ url('/admin/operators/suggest') | tojson }};
+      var min = {{ min_query }};
+      var offered = {}, asked = 0, timer = null;
+      function say(text) { status.textContent = text; status.hidden = !text; }
+      // Add is live only for a pick: the hidden fields carry it.
+      function refresh() {
+        var pick = offered[(box.value || "").trim()];
+        Object.keys(fields).forEach(function (k) { fields[k].value = pick && pick[k] != null ? pick[k] : ""; });
+        add.disabled = !pick;
+        cancel.disabled = !(box.value || "").trim();
+      }
+      function fill(people) {
+        options.textContent = ""; offered = {};
+        people.forEach(function (p) {
+          var o = document.createElement("option");
+          o.value = p.label; o.label = p.where;
+          options.appendChild(o); offered[p.label] = p;
+        });
+      }
+      function ask() {
+        var text = (box.value || "").trim();
+        if (offered[text]) return;  // a pick: nothing to ask
+        if (text.length < min) { fill([]); say(""); refresh(); return; }
+        var mine = ++asked;
+        fetch(url + "?q=" + encodeURIComponent(text), { credentials: "same-origin", headers: { "Accept": "application/json" } })
+          .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+          .then(function (answer) {
+            if (mine !== asked) return;
+            fill(answer.people);
+            say(answer.available
+              ? (answer.people.length ? "" : "No one on record or in the directory matches that.")
+              : "The directory did not answer" + (answer.reason ? " (" + answer.reason + ")" : "") + "; only people on record are offered.");
+            refresh();
+          })
+          .catch(function () { if (mine === asked) { fill([]); say("The suggestions could not be fetched just now."); refresh(); } });
+      }
+      box.addEventListener("input", function () {
+        asked++; refresh(); clearTimeout(timer); timer = setTimeout(ask, 300);
+      });
+      form.addEventListener("reset", function () {
+        clearTimeout(timer); asked++; fill([]); say(""); setTimeout(refresh, 0);
+      });
+    })();
+    </script>
   </section>
 
   <section class="card" id="accounts-overview" aria-labelledby="ov-h">

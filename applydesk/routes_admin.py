@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
-from starlette.responses import RedirectResponse, Response
+from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from applydesk import allowlist, db, directory, gate, locks, operators, sample_data
 from applydesk.ids import RowId, row_id
@@ -40,6 +40,7 @@ SAID: dict[str, str] = {
     "not_super_admin": "Only the platform super-admin keeps the operator list.",
     "changed": "Someone else changed the list at the same time; check it and try again.",
     "self": "You can't act on your own row.",
+    "pick": "Pick someone from the suggestions, then Add.",
 }
 
 
@@ -88,16 +89,23 @@ _EXERCISE_PAGE = re.compile(r"/operator/exercises/[a-z0-9]+(/[a-z0-9_-]+)*")
 _ME_PAGE = re.compile(r"/me(/[a-z0-9_-]+)*")
 
 
+@router.get("/operators/suggest", name="applydesk_admin_suggest")
+def suggest(request: Request, q: str = "", session: Session = Depends(db.get_session)) -> Response:
+    """The *Add an operator* box's typeahead (segment AD2W): records, then
+    the directory, as JSON; never cached. A sync route, so Graph's blocking
+    calls run off the event loop."""
+    answer = allowlist.suggest(session, q, lambda: directory_for(request))
+    return JSONResponse(answer, headers={"Cache-Control": "no-store"})
+
+
 @router.get("/operators", name="applydesk_admin_operators")
 def operators_page(
     request: Request,
-    q: str = "",
     list_q: str = "",
     role: str = "any",
     return_to: str = "",
     session: Session = Depends(db.get_session),
 ) -> Response:
-    found = allowlist.search(session, q, lambda: directory_for(request)) if q.strip() else None
     me = allowlist.me(session, _identity(request))
     # No `show` at all is the default chips; a blank one (the form's hidden
     # field) with no chip ticked is none, as Review Robin's.
@@ -109,9 +117,7 @@ def operators_page(
         request,
         "applydesk/admin/operators.html",
         area=ADMIN,
-        q=q,
         list_q=list_q,
-        found=found,
         min_query=directory.MIN_QUERY,
         overview=allowlist.overview(session),
         listed={p.id for p in allowlist.listed_ids(session)},
@@ -180,8 +186,8 @@ def _admit(request: Request, form: dict[str, str]) -> Response:
                 form["object_id"],
                 form["address"],
             )
-        else:
-            raise HTTPException(status_code=400)
+        else:  # typed, not picked from the suggestions
+            return _back(request, "pick", back)
         session.commit()
     except operators.Refused as why:
         session.rollback()
