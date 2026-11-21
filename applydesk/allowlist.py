@@ -77,6 +77,11 @@ class Me:
         text = query.strip().casefold()
         return not text or text in self.email.casefold() or text in self.name.casefold()
 
+    def leads(self, entries: list[Entry], query: str) -> bool:
+        """Whether their own row leads the list: they match `query` and
+        are not already one of `entries` (then that row is marked)."""
+        return self.matches(query) and all(e.person.id != self.person_id for e in entries)
+
 
 def me(session: Session, identity: Identity) -> Me:
     """The super-admin's *(self)* row, read only: nothing is bound here."""

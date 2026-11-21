@@ -7,10 +7,10 @@ import functools
 import json
 import re
 from collections.abc import Callable
-from typing import Annotated, Any, cast
+from typing import Any, cast
 from urllib.parse import parse_qs, urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
@@ -26,6 +26,7 @@ from applydesk import (
     locks,
     operators,
     paging,
+    people,
     process_save,
     sample_data,
     scratch,
@@ -35,7 +36,7 @@ from applydesk import (
     timeline,
     workflow,
 )
-from applydesk.ids import ROW_ID_MAX, row_id
+from applydesk.ids import RowId, row_id
 from applydesk.lookups import dossier_or_404, exercise_or_404
 from applydesk.web import (
     OPERATIONS_PAGES,
@@ -49,8 +50,6 @@ from applydesk.web import (
 from cordware.identity import Identity, current_identity
 
 router = APIRouter(prefix="/operator", dependencies=[Depends(gate.require_exercise_operator)])
-#: A person's row ID in a path: out of range is a 422, not a 500.
-RowId = Annotated[int, Path(ge=1, le=ROW_ID_MAX)]
 
 #: An exercise's operator pages beyond Home, each a partial of
 #: `operator/section.html`, headed by its tab's label (ruling 14).
@@ -115,6 +114,11 @@ async def exercise_new(request: Request) -> Response:
     # the scratch exercise is discarded however that fails.
     try:
         owned = await run_in_threadpool(gate.own_new_exercise, request, made.exercise.public_id)
+    except OperationalError as error:  # SQLite: another change holds the file
+        scratch.discard(browser, made.exercise.public_id)
+        if not db.is_busy(error):
+            raise
+        return _to_lobby(request, "not_made")
     except Exception:
         scratch.discard(browser, made.exercise.public_id)
         raise
@@ -496,17 +500,20 @@ def _ops_change(
         raise HTTPException(status_code=404)
     session = db.new_session()
     try:
+        # Bind the actor and commit first, so no person row is held while
+        # the change waits on the exercise's lock (bug sweep: a deadlock
+        # with an Owner's change on Postgres).
+        people.resolve(session, identity)
+        session.commit()
         change(session, exercise_id, identity, person_id)
         session.commit()
     except operators.Refused as why:
         session.rollback()
         return _ops_back(request, exercise_id, why.key if why.key in OPS_SAID else "changed")
-    except IntegrityError:  # a concurrent change won (the one-Owner index)
+    except (IntegrityError, OperationalError) as error:
+        # A concurrent change won (the one-Owner index; SQLite's busy file).
         session.rollback()
-        return _ops_back(request, exercise_id, "changed")
-    except OperationalError as error:  # SQLite: another change holds the file
-        session.rollback()
-        if not db.is_busy(error):
+        if not db.lost_a_race(error):
             raise
         return _ops_back(request, exercise_id, "changed")
     finally:

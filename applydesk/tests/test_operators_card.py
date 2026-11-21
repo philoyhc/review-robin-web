@@ -180,3 +180,19 @@ def test_sqlite_busy_is_reported_as_a_concurrent_change(
     monkeypatch.setattr(team, "remove", broken)
     with pytest.raises(OperationalError):
         owner.post(f"{HOME}/operators/{ben}/remove", follow_redirects=False)
+
+    from sqlalchemy.exc import IntegrityError
+
+    def clash(*_args: object) -> None:
+        raise IntegrityError("UPDATE", {}, Exception("UNIQUE constraint failed: x"))
+
+    monkeypatch.setattr(team, "remove", clash)
+    answer = owner.post(f"{HOME}/operators/{ben}/remove", follow_redirects=False)
+    assert answer.headers["location"].endswith("ops_said=changed#operators")
+
+    def not_null(*_args: object) -> None:
+        raise IntegrityError("UPDATE", {}, Exception("NOT NULL constraint failed: x"))
+
+    monkeypatch.setattr(team, "remove", not_null)  # a bug, not a race: it stays one
+    with pytest.raises(IntegrityError):
+        owner.post(f"{HOME}/operators/{ben}/remove", follow_redirects=False)

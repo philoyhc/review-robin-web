@@ -8,7 +8,7 @@ rulings 73 and 75).
   (`operators.may_operate`) and, on an exercise's pages, hold a current
   grant on it. Everyone else gets 404, so the pages do not say they exist.
 - **The participant's pages** (`/me/…`) and the landing are still the
-  placeholders': anyone on a local run, deployed only an operator
+  placeholders': anyone on a local run, deployed only the super-admin
   (`placeholders_only`), until a later AD2 segment matches applicants.
 
 The viewer is resolved once per request (`people.resolve`, which binds a
@@ -131,16 +131,26 @@ def landing(request: Request) -> None:
     """`/` and `/operator`: an operator (the super-admin, or someone on the
     operator list) lands on the Operator Lobby, deployed too; anyone else
     is held to the placeholders' gate until a later AD2 segment
-    (spec-writer at the AD2A close). The same gate as `placeholders_only`
-    since the bug sweep, kept apart for the routes that name it."""
+    (spec-writer at the AD2A close)."""
+    if is_operator(request):
+        return
     placeholders_only(request)
 
 
+def reaches_placeholders(request: Request) -> bool:
+    """Whether the viewer reaches the participant's pages: anyone on a
+    local run, deployed only the platform super-admin. The pages that link
+    there (the switcher's User Lobby, a dossier's *View as evaluators see
+    it*) offer the link only when it answers (the author's ruling at the
+    AD2A close: hide the links, keep the gate)."""
+    if is_local():
+        return True
+    identity = current_identity(request)
+    return identity is not None and identity.is_super_admin
+
+
 def placeholders_only(request: Request) -> None:
-    """The participant's pages, until a later AD2 segment: anyone on a
-    local run; deployed, an operator (the super-admin, or someone on the
-    operator list), whom the switcher's User Lobby and a dossier's *View
-    as evaluators see it* send here (bug sweep at the AD2A close)."""
-    if is_local() or is_operator(request):
-        return
-    raise HTTPException(status_code=404)
+    """The participant's pages, until a later AD2 segment:
+    `reaches_placeholders`, else 404."""
+    if not reaches_placeholders(request):
+        raise HTTPException(status_code=404)

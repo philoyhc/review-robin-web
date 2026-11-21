@@ -18,7 +18,7 @@ from typing import Any
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import Connection, Engine, create_engine, event
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 
@@ -72,6 +72,17 @@ def is_busy(error: OperationalError) -> bool:
     concurrent change, as Postgres's row locks would have queued it (bug
     sweep at the AD2A close)."""
     return "database is locked" in str(error.orig)
+
+
+def lost_a_race(error: IntegrityError | OperationalError) -> bool:
+    """Whether `error` is a concurrent change winning: SQLite's busy file,
+    or a unique index another request filled first (the one-pending-per-
+    address one, say). Any other integrity or operational error is a bug
+    and stays one (cold read at the AD2A close)."""
+    if isinstance(error, OperationalError):
+        return is_busy(error)
+    text = str(error.orig).lower()
+    return "unique" in text or "duplicate key" in text
 
 
 @cache

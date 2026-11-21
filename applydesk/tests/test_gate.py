@@ -286,29 +286,38 @@ def test_admin_has_review_robin_s_three_tabs() -> None:
         assert f'href="/applydesk{back}" data-admin-back' in page
     rows = admin.get("/applydesk/admin/exercises").text
     assert f'data-ex-row="{EX}"' in rows and "disabled" in rows
+    # Review Robin's actions (the author's ruling): Manage opens Home.
+    assert f'href="/applydesk/operator/exercises/{EX}" aria-label="Manage' in rows
+    assert "Outbox" in rows and "Adopt" not in rows and "is not built yet" in rows
 
 
 # --- The bug sweep at the AD2A close ---
 
 
-def test_a_deployed_operator_reaches_the_pages_their_links_name(
+def test_a_deployed_operator_is_not_offered_pages_that_would_404(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Deployed, an allowlisted operator's switcher offers the User Lobby
-    and a dossier offers *View as evaluators see it*: both answer them,
-    not 404. A stranger still gets 404 there."""
+    """The author's ruling at the AD2A close: deployed, the participant's
+    pages stay the super-admin's until a later AD2 segment, so an
+    allowlisted operator's switcher offers no User Lobby and a dossier no
+    *View as evaluators see it*; both stay 404 to them. Locally, both are
+    offered and answer."""
     from applydesk import gate
 
     session = db.new_session()
     seed.seed(session)
     session.close()
+    dossier = f"/applydesk/operator/exercises/{EX}/dossiers/p3bd7kq2wx"
+    local_lobby = client.get("/applydesk/operator/exercises").text
+    assert 'href="/applydesk/me"' in local_lobby
+    assert "data-od-as-evaluators" in client.get(dossier).text
     monkeypatch.setattr(gate, "is_local", lambda: False)
     lobby = client.get("/applydesk/operator/exercises").text
-    assert 'href="/applydesk/me"' in lobby
-    assert client.get("/applydesk/me").status_code == 200
-    assert client.get(f"/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx").status_code == 200
-    monkeypatch.setattr(identity_settings, "fake_auth_principal_id", "someone-else")
+    assert 'href="/applydesk/me"' not in lobby
+    page = client.get(dossier)
+    assert page.status_code == 200 and "data-od-as-evaluators" not in page.text
     assert client.get("/applydesk/me").status_code == 404
+    assert client.get(f"/applydesk/me/exercises/{EX}/dossiers/p3bd7kq2wx").status_code == 404
 
 
 @pytest.mark.parametrize(

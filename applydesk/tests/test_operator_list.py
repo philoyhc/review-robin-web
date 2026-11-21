@@ -202,3 +202,10 @@ def test_the_super_admin_is_listed_as_self() -> None:
     assert me is not None
     page = admin.get("/applydesk/admin/operators").text
     assert page.count("data-op-self") == 1 and f'data-op-entry="{me.id}" data-op-self' in page
+    row = page[page.index(f'data-op-entry="{me.id}"') :]
+    row = row[: row.index("</tr>")]
+    assert "(self)" in row and "Revoke" not in row  # no action on your own row (ruling)
+    refused = admin.post(f"/applydesk/admin/operators/{me.id}/revoke", follow_redirects=False)
+    assert refused.headers["location"].endswith("said=self")
+    after = _person("local-dev")
+    assert after is not None and after.may_operate

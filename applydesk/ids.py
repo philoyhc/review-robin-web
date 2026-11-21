@@ -11,6 +11,9 @@ from __future__ import annotations
 
 import re
 import secrets
+from typing import Annotated
+
+from fastapi import Path
 
 PUBLIC_ID_ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz"
 PUBLIC_ID_LENGTH = 10
@@ -42,3 +45,7 @@ def row_id(raw: str) -> int | None:
         return None
     value = int(raw)
     return value if value <= ROW_ID_MAX else None
+
+
+#: A person's row ID in a route's path: out of range is a 422, not a 500.
+RowId = Annotated[int, Path(ge=1, le=ROW_ID_MAX)]

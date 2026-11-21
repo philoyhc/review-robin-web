@@ -79,17 +79,17 @@
         <td><code>{{ me.email or "—" }}</code></td>
         <td>{{ me.name or "—" }} <span class="chip chip-info">Super-admin</span></td>
         <td>—</td><td>—</td>
-        <td class="muted">(self)</td>
+        <td class="muted" title="You can't act on your own row">(self)</td>
       </tr>
     {% endif %}
     {% for e in entries %}
       {% set is_me = e.person.id == me.person_id %}
       <tr data-op-entry="{{ e.person.id }}"{% if is_me %} data-op-self{% endif %}>
         <td><code>{{ e.person.email or "—" }}</code></td>
-        <td>{{ e.person.display_name or "—" }}{% if is_me %} <span class="chip chip-info">Super-admin</span> <span class="muted">(self)</span>{% endif %}{% if not e.person.bound %} <span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
+        <td>{{ e.person.display_name or "—" }}{% if is_me %} <span class="chip chip-info">Super-admin</span>{% endif %}{% if not e.person.bound %} <span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
         <td>{{ e.admitted_at.strftime("%Y-%m-%d") if e.admitted_at else "—" }}</td>
         <td>{{ e.admitted_by.label if e.admitted_by else "—" }}</td>
-        <td><form method="post" action="{{ url('/admin/operators/' ~ e.person.id ~ '/revoke') }}" data-op-revoke data-name="{{ e.person.label }}"><input type="hidden" name="return_to" value="{{ back_path }}"><button class="btn btn-secondary btn-short" type="submit" aria-label="Revoke {{ e.person.label }}">Revoke</button></form></td>
+        <td>{% if is_me %}<span class="muted" title="You can't act on your own row">(self)</span>{% else %}<form method="post" action="{{ url('/admin/operators/' ~ e.person.id ~ '/revoke') }}" data-op-revoke data-name="{{ e.person.label }}"><input type="hidden" name="return_to" value="{{ back_path }}"><button class="btn btn-secondary btn-short" type="submit" aria-label="Revoke {{ e.person.label }}">Revoke</button></form>{% endif %}</td>
       </tr>
     {% else %}{% if not me_row %}
       <tr><td colspan="5" class="muted">{% if list_q %}No operator matches “{{ list_q }}”.{% else %}Nobody yet. Whoever you admit is listed here, with <em>Revoke</em>.{% endif %}</td></tr>
