@@ -433,3 +433,33 @@ def test_handing_over_to_someone_just_removed_is_refused(session: Session) -> No
     assert operators.owner_of(session, exercise) == owner
     session.refresh(read)
     assert read.removed_at is not None and not read.is_owner
+
+
+def test_two_first_sign_ins_of_one_account_both_get_its_person(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex on #4110: two requests resolving the same new account at once.
+    This one looked before the other stored the account; its insert hits
+    the unique (tenant, object ID), and it returns the other's person,
+    keeping its own earlier work in the transaction."""
+    other = db.new_session()  # the other request stores the account first
+    first = people.resolve(other, _identity("o7", "gu@example.edu"))
+    other.commit()
+    assert first is not None
+    first_id = first.id
+    other.close()
+    earlier = people.pending(session, "kept@example.edu", actor=None)  # unrelated, uncommitted
+
+    looks = iter([None])
+    real = people._bound_person  # pyright: ignore[reportPrivateUsage]  -- replay the stale look
+
+    def stale_once(s: Session, tenant_id: str, object_id: str) -> Person | None:
+        if next(looks, "real") is None:
+            return None  # looked before the other request committed
+        return real(s, tenant_id, object_id)
+
+    monkeypatch.setattr(people, "_bound_person", stale_once)
+    second = people.resolve(session, _identity("o7", "gu@example.edu"))
+    session.commit()
+    assert second is not None and second.id == first_id
+    assert session.get(Person, earlier.id) is not None  # the savepoint undid only the insert

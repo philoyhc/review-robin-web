@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from typing import Any, cast
 
 from sqlalchemy import CursorResult, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from applydesk import audit
@@ -76,23 +77,30 @@ def _bind(
     once only the first wins (Codex on #4110). None if another request
     bound it first; the caller looks again."""
     email = account.email or person.email
-    claimed = cast(
-        "CursorResult[Any]",
-        session.execute(
-            update(Person)
-            .where(Person.id == person.id, Person.object_id.is_(None))
-            .values(
-                tenant_id=account.tenant_id,
-                object_id=account.object_id,
-                email=email,
-                email_key=email_key(email),
-                upn=account.upn or person.upn,
-                display_name=account.name or person.display_name,
-                bound_at=datetime.now(UTC),
-            )
-            .execution_options(synchronize_session=False)
-        ),
-    )
+    savepoint = session.begin_nested()
+    try:
+        claimed = cast(
+            "CursorResult[Any]",
+            session.execute(
+                update(Person)
+                .where(Person.id == person.id, Person.object_id.is_(None))
+                .values(
+                    tenant_id=account.tenant_id,
+                    object_id=account.object_id,
+                    email=email,
+                    email_key=email_key(email),
+                    upn=account.upn or person.upn,
+                    display_name=account.name or person.display_name,
+                    bound_at=datetime.now(UTC),
+                )
+                .execution_options(synchronize_session=False)
+            ),
+        )
+        savepoint.commit()
+    except IntegrityError:  # another request stored this account meanwhile
+        savepoint.rollback()
+        session.expire(person)
+        return None
     if claimed.rowcount != 1:
         session.expire(person)
         return None
@@ -108,7 +116,11 @@ def _bind(
     return person
 
 
-def _new_bound(session: Session, account: Account, how: str, actor: Person | None) -> Person:
+def _new_bound(session: Session, account: Account, how: str, actor: Person | None) -> Person | None:
+    """A new person bound to `account`. None if another request stored that
+    account first (the unique (tenant, object ID) refused this insert): the
+    savepoint undoes only the insert, and the caller looks again (Codex on
+    #4110)."""
     person = Person(
         tenant_id=account.tenant_id,
         object_id=account.object_id,
@@ -118,8 +130,11 @@ def _new_bound(session: Session, account: Account, how: str, actor: Person | Non
         display_name=account.name,
         bound_at=datetime.now(UTC),
     )
-    session.add(person)
-    session.flush()
+    try:
+        with session.begin_nested():
+            session.add(person)
+    except IntegrityError:
+        return None
     audit.write_event(
         session,
         event_type="person.created",
@@ -132,8 +147,8 @@ def _new_bound(session: Session, account: Account, how: str, actor: Person | Non
 
 
 #: Looks a binding makes before giving up: each lost race means another
-#: request bound the row, so the next look finds a bound person or another
-#: pending one.
+#: request bound the pending row or stored the account, so the next look
+#: finds the bound person, another pending one, or none.
 _ATTEMPTS = 3
 
 
@@ -153,11 +168,12 @@ def _attach(
             return person
         found = _pending_person(session, *keys)
         if found is None:
-            return _new_bound(session, account, how=how, actor=actor)
-        bound = _bind(session, found, account, how=how, actor=actor)
-        if bound is not None:
-            return bound
-    raise RuntimeError("could not bind the account: its pending person kept being taken")
+            made = _new_bound(session, account, how=how, actor=actor)
+        else:
+            made = _bind(session, found, account, how=how, actor=actor)
+        if made is not None:
+            return made
+    raise RuntimeError("could not bind the account: another request kept taking it")
 
 
 def resolve(session: Session, identity: Identity) -> Person | None:
