@@ -129,6 +129,9 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
   wherever it is made. CSV files are *Upload CSV* and *Download CSV*, both
   Secondary. A cross-page link reads `Verb on Page →` (*Open Gate 2 →*,
   *Review Robin card →*, *Pairs (n) →*); `↓` jumps within a page.
+- **No citations on a page.** A page's copy carries no ruling, segment, AD
+  or gate citation. A control not built yet is disabled and its title says
+  *… is not built yet* (*Applying is not built yet*), never *comes with AD4*.
 - **Buttons** take Review Robin's roles and hovers (`spec/ui_elements.md` §6):
   each of Primary, Secondary, Outline-amber and Destructive has its own hover,
   none while disabled. A page context never reshapes `.btn`. A small button is
@@ -335,9 +338,12 @@ shows the form's own card and one empty String card, open.
   one* and Select people at *Institution-wide*.
 - **Visibility** is per card: *Shown to evaluators* or *Not shown*; a new
   card is *Not shown*, the side that hides.
-  *Ruled, not built (2026-11-18, ruling 33):* what a reader sees is to be
-  set per dossier part, each part with its audiences; the per-card and
-  per-section *Shown* / *Not shown* go.
+  *Ruled, not built (ruling 68, `applydesk/guide/todo_master.md`):* each
+  dossier item (a form section, a gate's results, an outcome) is to carry
+  grants (*Applicant*; *Assigned evaluators* from named panels or all;
+  *Evaluators* from named panels or all), each opening from a stage;
+  operators see every item. Form's sections and Process set them; the
+  per-card and per-section *Shown* / *Not shown* go.
 - **Collapsed**, a card shows its question and help text (a text card's
   title and description), the summary of its settings, and chips: *Required*
   or *Optional* (a text card has none) and its visibility. Expanded, it
@@ -395,10 +401,11 @@ Home, `/operator/exercises/<id>`, is two columns: the **Timeline** card
 (two-thirds) and the **Details** card (one-third), one column from 899px down,
 Details below. The status row (`workflow.status_row`) opens with the exercise's status,
 derived from its stages ("Stage status"), and carries *Applications: N
-submitted · M drafts*. The stage under way carries *Now* on its today
-marker and its outcome due as a *Next:* item; on Home each gate's row in
-its operator part links the gate's page. A line under the timeline
-(`timeline.next_step`) shows only for a draft or when no stage is under way. Home has no Publish card: publishing is per stage,
+submitted · M drafts*. The stage under way's marker reads *Now · until
+<end>* ("The timeline"); on Home each gate's row in its operator part links
+the gate's page. A line under the timeline (`timeline.next_step`) shows only
+for a draft (*A draft: the timeline is what participants will see once it is
+published.*) or when no stage is under way. Home has no Publish card: publishing is per stage,
 on Process, and the timeline's operator part says what blocks each stage.
 Cards side by
 side share a height only when within a fifth of the taller; a short card
@@ -417,11 +424,15 @@ include.
   (*Closed* for the stage holding the form), *Now* when today falls within it,
   *Next* otherwise (the calendar's, apart from the stage's status); a stage with no (or impossible) dates is *Next* and reads
   *Dates not set*. Today is the sample's until AD2, marked on the current
-  stage at its share of that stage's days and said in words, between stages
-  too.
-- **Items**: the form as *Applicants*, its close as a *Milestone*, each gate as a
+  stage at its share of that stage's days. The marker reads *Now · until
+  <the stage's last date>* (*Now* when it has none); between stages the
+  line under the timeline says where today falls.
+- **Items**: the form as *Applicants* (items name their audience, never
+  *you*), its close as a *Milestone*, each gate as a
   *Step* by name (*A step.* unnamed), each outcome by name with *released
-  <date>* or *expected <the exercise's expected outcome>*. Outcome values
+  <date>* or *expected <the exercise's expected outcome>*. In the stage
+  under way, its first outcome due replaces its place in the list as a
+  *Next:* item, in the outcome's tint. Outcome values
   appear only once released to applicants. Nothing operator-only (panels,
   rules, pairs, modes) is in this shape.
 - **Layouts**: *Horizontal*, a bar of equal-width segments each heading its
@@ -433,7 +444,9 @@ include.
   otherwise; storage blocked, that rule applies.
 - **The operator's part** (`applydesk/home_ops.py`), only where the page
   passes `ops`, which is Home alone. Below a rule (Horizontal, aligned across
-  stages), to the right of each stage (Vertical), under the items on a phone,
+  stages, under one visible *Operator only* label: every stage keeps its
+  label for screen readers, only the first is seen, and each stage's rows
+  share one grid row), to the right of each stage (Vertical), under the items on a phone,
   each stage leads with its status chip (`locks.stage_rows`):
   - a Draft lists *Blocking publication*, each one `locks.publish_problems`
     names, or says *Ready to publish.* The first stage's missing setup is
