@@ -19,8 +19,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any, cast
 
-from sqlalchemy import select
+from sqlalchemy import CursorResult, Update, select, update
 from sqlalchemy.orm import Session
 
 from applydesk import audit
@@ -28,7 +29,18 @@ from applydesk.models import Exercise, ExerciseOperator, Person
 
 
 class Refused(Exception):
-    """A change the rules do not allow; the message says which."""
+    """A change the rules do not allow; the message says which. The caller
+    rolls the session back: a refusal raised part-way leaves nothing it
+    should keep."""
+
+
+def _changed(session: Session, statement: Update) -> bool:
+    """Run a conditional update; whether it changed exactly one row. Its
+    WHERE restates the rule, so a concurrent change that broke the rule
+    first (Postgres re-reads the row once that change commits) leaves it
+    changing nothing (Codex on #4110)."""
+    result = cast("CursorResult[Any]", session.execute(statement))
+    return result.rowcount == 1
 
 
 @dataclass(frozen=True)
@@ -228,8 +240,20 @@ def remove_operator(session: Session, exercise: Exercise, actor: Actor, person: 
         raise Refused("Not an operator of this exercise.")
     if grant.is_owner:
         raise Refused("The Owner cannot be removed; hand ownership over first.")
-    grant.removed_at = _now()
-    session.flush()
+    removed = _changed(
+        session,
+        update(ExerciseOperator)
+        .where(
+            ExerciseOperator.id == grant.id,
+            ExerciseOperator.removed_at.is_(None),
+            ExerciseOperator.is_owner.is_(False),
+        )
+        .values(removed_at=_now())
+        .execution_options(synchronize_session=False),
+    )
+    session.expire(grant)
+    if not removed:  # made the Owner, or removed, meanwhile
+        raise Refused("They have just become the Owner or been removed; reload and try again.")
     audit.write_event(
         session,
         event_type="exercise.operator_removed",
@@ -258,14 +282,32 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
             ExerciseOperator.removed_at.is_(None),
         )
     )
-    if former is not None:
-        former.is_owner = False
-        session.flush()  # cleared first: the one-Owner index holds at every step
-    grant.is_owner = True
-    session.flush()
+    # Each step restates its rule in its WHERE: the former Owner is still
+    # the Owner, and the new one is still a current operator. Cleared
+    # first, so the one-Owner index holds at every step.
+    if former is not None and not _changed(
+        session,
+        update(ExerciseOperator)
+        .where(ExerciseOperator.id == former.id, ExerciseOperator.is_owner.is_(True))
+        .values(is_owner=False)
+        .execution_options(synchronize_session=False),
+    ):
+        raise Refused("Ownership has just changed; reload and try again.")
+    if not _changed(
+        session,
+        update(ExerciseOperator)
+        .where(ExerciseOperator.id == grant.id, ExerciseOperator.removed_at.is_(None))
+        .values(is_owner=True)
+        .execution_options(synchronize_session=False),
+    ):
+        raise Refused("They have just been removed; reload and try again.")
+    former_person_id = former.person_id if former is not None else None
+    for row in (grant, former):
+        if row is not None:
+            session.expire(row)
     refs = {"person_id": person.id}
-    if former is not None:
-        refs["former_owner_id"] = former.person_id
+    if former_person_id is not None:
+        refs["former_owner_id"] = former_person_id
     audit.write_event(
         session,
         event_type="exercise.ownership_handed_over",

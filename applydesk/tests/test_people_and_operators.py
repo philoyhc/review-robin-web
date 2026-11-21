@@ -375,3 +375,61 @@ def test_a_pending_person_bound_by_another_request_is_not_taken_over(
     assert second is not None and second.id != pending.id and second.object_id == "o2"
     session.refresh(stale)
     assert stale.object_id == "o1" and stale.may_operate  # the first binding kept
+
+
+def _owned_with_colleague(
+    session: Session,
+) -> tuple[Person, Person, int, ExerciseOperator]:
+    """An exercise, its Owner and a colleague, and the colleague's grant as
+    this request read it (held, so the session keeps that stale copy)."""
+    owner = _operator(session, "o1", "ana@example.edu")
+    colleague = _operator(session, "o2", "ben@example.edu")
+    exercise = operators.create_exercise(session, Actor(owner), "abcdefghjk")
+    operators.add_operator(session, exercise, Actor(owner), colleague)
+    session.commit()
+    grant = session.scalar(
+        select(ExerciseOperator).where(ExerciseOperator.person_id == colleague.id)
+    )
+    assert grant is not None and not grant.is_owner
+    return owner, colleague, exercise.id, grant
+
+
+def test_removing_someone_just_made_owner_is_refused(session: Session) -> None:
+    """Codex on #4110: a removal racing a handover to the same person must
+    not leave the exercise with no current Owner."""
+    from applydesk.models import Exercise
+
+    _, colleague, exercise_id, read = _owned_with_colleague(session)
+    other = db.new_session()  # the super-admin hands over first
+    ex, them = other.get(Exercise, exercise_id), other.get(Person, colleague.id)
+    assert ex is not None and them is not None
+    operators.hand_over(other, ex, SUPER, them)
+    other.commit()
+    other.close()
+    exercise = session.get(Exercise, exercise_id)
+    assert exercise is not None
+    with pytest.raises(Refused, match="reload"):
+        operators.remove_operator(session, exercise, SUPER, colleague)
+    assert read.is_owner  # the refusal reloaded the row
+    session.rollback()
+    assert operators.owner_of(session, exercise) == colleague
+
+
+def test_handing_over_to_someone_just_removed_is_refused(session: Session) -> None:
+    from applydesk.models import Exercise
+
+    owner, colleague, exercise_id, read = _owned_with_colleague(session)
+    other = db.new_session()  # the Owner removes them first
+    ex, them = other.get(Exercise, exercise_id), other.get(Person, colleague.id)
+    assert ex is not None and them is not None
+    operators.remove_operator(other, ex, SUPER, them)
+    other.commit()
+    other.close()
+    exercise = session.get(Exercise, exercise_id)
+    assert exercise is not None
+    with pytest.raises(Refused, match="reload"):
+        operators.hand_over(session, exercise, SUPER, colleague)
+    session.rollback()
+    assert operators.owner_of(session, exercise) == owner
+    session.refresh(read)
+    assert read.removed_at is not None and not read.is_owner
