@@ -120,6 +120,18 @@ jobs:
           alembic -c utilityapps/alembic.ini upgrade head
           alembic -c utilityapps/alembic.ini check
 
+      # Apply Desk's own history (segment AD2A), for its database applydesk.
+      # Its version table is its own, so it shares this database too.
+      - name: Round-trip Apply Desk's migrations
+        if: matrix.shard.name == 'unit'
+        env:
+          APPLYDESK_DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: |
+          alembic -c applydesk/alembic.ini upgrade head
+          alembic -c applydesk/alembic.ini downgrade base
+          alembic -c applydesk/alembic.ini upgrade head
+          alembic -c applydesk/alembic.ini check
+
       - name: Run pytest against Postgres
         # The browser tests serve the app from their own SQLite file, so they
         # add nothing here; they run in ci.yml (guide/archive/browser_test.md).
