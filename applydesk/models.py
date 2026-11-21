@@ -57,6 +57,16 @@ class Person(Base):
     admitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    @property
+    def bound(self) -> bool:
+        """Whether the person is tied to an account (tenant and object ID)."""
+        return self.object_id is not None
+
+    @property
+    def label(self) -> str:
+        """How pages name the person: their name, else their address."""
+        return self.display_name or self.email or "Unknown person"
+
 
 class Exercise(Base):
     """An exercise's key and public ID (AD-53: unique per table). AD2B
