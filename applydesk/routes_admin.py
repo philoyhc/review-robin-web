@@ -16,7 +16,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from applydesk import allowlist, db, directory, gate, locks, operators, sample_data
-from applydesk.ids import RowId, row_id
+from applydesk.ids import row_id
 from applydesk.web import ADMIN, render, url_path
 from cordware.graph import GraphError, directory_for
 from cordware.identity import Identity, current_identity
@@ -26,6 +26,10 @@ router = APIRouter(prefix="/admin", dependencies=[Depends(gate.require_super_adm
 _PAGE = "/admin/operators"
 #: Longest form body a post here takes.
 _MAX_BODY = 4096
+#: The bulk bar's: up to a few thousand ticked rows.
+_MAX_BULK_BODY = 65536
+#: Most rows one bulk post changes.
+_MAX_BULK = 1000
 
 #: The page's status line, by the key its redirect carries: the page shows
 #: only these, so a link cannot put words on it (as the Lobby's).
@@ -39,8 +43,9 @@ SAID: dict[str, str] = {
     "no_tenant": "Your sign-in names no tenant, so no one can be added from the directory.",
     "not_super_admin": "Only the platform super-admin keeps the operator list.",
     "changed": "Someone else changed the list at the same time; check it and try again.",
-    "self": "You can't act on your own row.",
     "pick": "Pick someone from the suggestions, then Add.",
+    "none_ticked": "Tick at least one row, then Admit or Revoke.",
+    "too_many": "Tick at most 1,000 rows at a time; narrow the list with the chips or search.",
 }
 
 
@@ -49,6 +54,15 @@ def _same_site(request: Request) -> None:
     site = request.headers.get("sec-fetch-site")
     if site is not None and site not in ("same-origin", "none"):
         raise HTTPException(status_code=403)
+
+
+async def _form_lists(request: Request) -> dict[str, list[str]]:
+    """The post's fields, each with every value (the bulk bar's ticks)."""
+    _same_site(request)
+    body = await request.body()
+    if len(body) > _MAX_BULK_BODY:
+        raise HTTPException(status_code=413)
+    return parse_qs(body.decode("utf-8", "replace"))
 
 
 async def _form(request: Request) -> dict[str, str]:
@@ -89,6 +103,25 @@ _EXERCISE_PAGE = re.compile(r"/operator/exercises/[a-z0-9]+(/[a-z0-9_-]+)*")
 _ME_PAGE = re.compile(r"/me(/[a-z0-9_-]+)*")
 
 
+def _bulk_said(request: Request) -> str:
+    """The bulk bar's status line, from the redirect's counts: built from
+    numbers, so a link cannot put words on the page."""
+    params = request.query_params
+    done = params.get("done")
+    if done not in ("admit", "revoke"):
+        return ""
+    changed, skipped = (_row_count(params.get(k, "")) for k in ("n", "skipped"))
+    verb = "Added to the list" if done == "admit" else "Taken off the list"
+    line = f"{verb}: {changed}."
+    if skipped:
+        line += f" Skipped {skipped} (already so, no longer there, or your own row)."
+    return line
+
+
+def _row_count(raw: str) -> int:
+    return int(raw) if raw.isascii() and raw.isdigit() and len(raw) <= 6 else 0
+
+
 @router.get("/operators/suggest", name="applydesk_admin_suggest")
 def suggest(request: Request, q: str = "", session: Session = Depends(db.get_session)) -> Response:
     """The *Add an operator* box's typeahead (segment AD2W): records, then
@@ -125,7 +158,7 @@ def operators_page(
         view=view,
         categories=allowlist.CATEGORIES,
         roles=allowlist.ROLES,
-        said=SAID.get(request.query_params.get("said", ""), ""),
+        said=SAID.get(request.query_params.get("said", ""), "") or _bulk_said(request),
         back_path=back_path,
         back_label=back_label,
     )
@@ -205,36 +238,63 @@ def _admit(request: Request, form: dict[str, str]) -> Response:
     return _back(request, "admitted", back)
 
 
-def _revoke(request: Request, person_id: int, back: str) -> Response:
+def _bulk(
+    request: Request,
+    action: str,
+    person_ids: list[int],
+    back: str,
+    view: dict[str, str],
+    shows: list[str],
+) -> Response:
+    """The bulk bar's change (segment AD2W), off the event loop: one
+    transaction, each ticked row through `allowlist.bulk`."""
     session = db.new_session()
     try:
         identity = _identity(request)
-        # As Review Robin: no action on your own row (the author's ruling
-        # at the AD2A close); the page offers none.
-        if allowlist.me(session, identity).person_id == person_id:
-            return _back(request, "self", back)
-        allowlist.revoke(session, allowlist.actor_for(session, identity), person_id)
+        result = allowlist.bulk(
+            session,
+            allowlist.actor_for(session, identity),
+            action,
+            person_ids,
+            allowlist.me(session, identity),
+        )
         session.commit()
-    except operators.Refused as why:
+    except (IntegrityError, OperationalError) as error:
         session.rollback()
-        return _back(request, why.key if why.key in SAID else "gone", back)
-    except OperationalError as error:
-        session.rollback()
-        if not db.is_busy(error):
+        if not db.lost_a_race(error):
             raise
         return _back(request, "changed", back)
     finally:
         session.close()
-    return _back(request, "revoked", back)
+    # The view stays as it was (cold read): chips, role and search.
+    query: list[tuple[str, str | int]] = [("show", s) for s in shows]
+    query += [(k, v) for k, v in view.items()]
+    query += [
+        ("return_to", _back_link(back)[0]),
+        ("done", action),
+        ("n", result.changed),
+        ("skipped", result.skipped),
+    ]
+    return RedirectResponse(url_path(request, f"{_PAGE}?{urlencode(query)}#op-list"), 303)
+
+
+@router.post("/operators/bulk", name="applydesk_admin_bulk")
+async def bulk(request: Request) -> Response:
+    """The bulk bar: *Admit* or *Revoke* every ticked row."""
+    form = await _form_lists(request)
+    action = (form.get("action") or [""])[0]
+    ids = [i for i in (row_id(v) for v in form.get("person_ids", [])) if i is not None]
+    back = (form.get("return_to") or [""])[0]
+    view = {k: v for k in ("show", "role", "list_q") for v in form.get(k, []) if k != "show"}
+    shows = form.get("show", [])
+    if action not in ("admit", "revoke") or not ids:
+        return _back(request, "none_ticked", back)
+    if len(ids) > _MAX_BULK:
+        return _back(request, "too_many", back)
+    return await run_in_threadpool(_bulk, request, action, ids, back, view, shows)
 
 
 @router.post("/operators/admit", name="applydesk_admin_admit")
 async def admit(request: Request) -> Response:
     form = await _form(request)  # the body is read on the loop, the rest off it
     return await run_in_threadpool(_admit, request, form)
-
-
-@router.post("/operators/{person_id}/revoke", name="applydesk_admin_revoke")
-async def revoke(request: Request, person_id: RowId) -> Response:
-    form = await _form(request)
-    return await run_in_threadpool(_revoke, request, person_id, form.get("return_to", ""))

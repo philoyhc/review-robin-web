@@ -58,6 +58,12 @@ Taken 2026-11-21 at `2ae5bd646`.
 ## Status
 
 - **Rung 3 added a column (2026-11-21).** *First sign-in* needed its own record: `bound_at` is set when a directory pick is bound, before any sign-in, and a later sign-in finds them by object ID and records nothing. `person.first_signed_in_at` (migration `ad2w1firstsignin`) is set once at the first sign-in; existing rows take their own sign-in binding's audit time.
+- **Cumulative cold read at rung 5** (from `2ae5bd646`), acted on in rung 5:
+  - listed people no longer crowd the suggestions out (left out before the limit, with their directory entries; landed at rung 4 from Codex on #4122, as did numbering repeated labels);
+  - the Overview's *not yet signed in* counts `first_signed_in_at`, as the table does; the first sign-in is audited (`person.signed_in`), and the backfill takes only a person's own sign-in binding (both fixes landed at rung 3, from Codex on #4121);
+  - the bulk bar keeps the view, says so past 1,000 ticks and changes rows in ID order;
+  - *Unit* shows only for an operator; the per-row Revoke route, with no caller left, is gone.
+- **Decided at build:** *No role* includes anyone who ever acted, as Review Robin's history rule, so only someone who never signed in is *Unused*. The chips are checkbox labels, not `aria-pressed` buttons, so they submit the filter form without script, as Review Robin's.
 
 ## PR ladder
 

@@ -326,8 +326,9 @@ def test_a_deployed_operator_is_not_offered_pages_that_would_404(
         # Not a pick from the suggestions: the page asks for one (AD2W).
         ("POST", "/applydesk/admin/operators/admit", "person_id=%C2%B2", 303),
         ("POST", "/applydesk/admin/operators/admit", "person_id=" + "9" * 30, 303),
-        ("POST", "/applydesk/admin/operators/" + "1" * 31 + "/revoke", "", 422),
-        ("POST", "/applydesk/admin/operators/0/revoke", "", 422),
+        # The bulk bar drops a malformed ID, so nothing is ticked (AD2W).
+        ("POST", "/applydesk/admin/operators/bulk", "action=revoke&person_ids=" + "1" * 31, 303),
+        ("POST", "/applydesk/admin/operators/bulk", "action=revoke&person_ids=%C2%B2", 303),
         ("POST", f"/applydesk/operator/exercises/{EX}/operators/add", "person_id=%C2%B2", 400),
         ("POST", f"/applydesk/operator/exercises/{EX}/operators/add", "person_id=" + "9" * 30, 400),
         ("POST", f"/applydesk/operator/exercises/{EX}/operators/{'1' * 31}/remove", "", 422),
