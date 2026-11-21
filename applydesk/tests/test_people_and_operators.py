@@ -412,7 +412,7 @@ def test_removing_someone_just_made_owner_is_refused(session: Session) -> None:
     other.close()
     exercise = session.get(Exercise, exercise_id)
     assert exercise is not None
-    with pytest.raises(Refused, match="reload"):
+    with pytest.raises(Refused):  # caught on the fresh read, or by the conditional update
         operators.remove_operator(session, exercise, SUPER, colleague)
     assert read.is_owner  # the refusal reloaded the row
     session.rollback()
@@ -431,7 +431,7 @@ def test_handing_over_to_someone_just_removed_is_refused(session: Session) -> No
     other.close()
     exercise = session.get(Exercise, exercise_id)
     assert exercise is not None
-    with pytest.raises(Refused, match="reload"):
+    with pytest.raises(Refused):  # caught on the fresh read, or by the conditional update
         operators.hand_over(session, exercise, SUPER, colleague)
     session.rollback()
     assert operators.owner_of(session, exercise) == owner
@@ -486,3 +486,53 @@ def test_a_rolled_back_resolve_leaves_nothing_behind(session: Session) -> None:
         assert [e.event_type for e in fresh.scalars(select(AuditEvent))] == ["person.created"]
     finally:
         fresh.close()
+
+
+def test_a_former_owner_cannot_hand_over_after_losing_ownership(session: Session) -> None:
+    """Codex on #4110: the Owner's authority is checked on fresh rows under
+    the exercise's lock, and only the checked Owner is demoted, so an Owner
+    whose ownership was just taken cannot appoint another."""
+    from applydesk.models import Exercise
+
+    owner, colleague, exercise_id, _ = _owned_with_colleague(session)
+    third = _operator(session, "o3", "cy@example.edu")
+    exercise = session.get(Exercise, exercise_id)
+    assert exercise is not None
+    operators.add_operator(session, exercise, SUPER, third)
+    session.commit()
+    assert operators.owner_of(session, exercise) == owner  # this request's view
+    session.commit()
+
+    other = db.new_session()  # meanwhile the super-admin hands it to the colleague
+    ex, them = other.get(Exercise, exercise_id), other.get(Person, colleague.id)
+    assert ex is not None and them is not None
+    operators.hand_over(other, ex, SUPER, them)
+    other.commit()
+    other.close()
+
+    with pytest.raises(Refused, match="Only the exercise's Owner"):
+        operators.hand_over(session, exercise, Actor(owner), third)
+    session.rollback()
+    assert operators.owner_of(session, exercise) == colleague
+
+
+def test_a_check_passed_just_before_ownership_moved_still_demotes_no_one_else(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The second guard: had the authority check passed a moment before the
+    handover elsewhere, the demotion names the checked Owner, so it
+    matches no row and the change is refused."""
+    from applydesk.models import Exercise
+
+    owner, colleague, exercise_id, _ = _owned_with_colleague(session)
+    third = _operator(session, "o3", "cy@example.edu")
+    exercise = session.get(Exercise, exercise_id)
+    assert exercise is not None
+    operators.add_operator(session, exercise, SUPER, third)
+    operators.hand_over(session, exercise, SUPER, colleague)  # ownership moves on
+    session.commit()
+    monkeypatch.setattr(operators, "_is_owner", lambda *_: True)  # the stale pass
+    with pytest.raises(Refused, match="Ownership has just changed"):
+        operators.hand_over(session, exercise, Actor(owner), third)
+    session.rollback()
+    assert operators.owner_of(session, exercise) == colleague

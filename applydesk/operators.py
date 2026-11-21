@@ -10,7 +10,11 @@
   another current operator. The Owner is never removed, only replaced by
   a handover. There is always exactly one current Owner.
 
-Each change is audited in the same transaction. A refusal raises
+Each change to an exercise's operators first takes that exercise's row
+lock, then checks who may act on fresh rows, then makes the change by
+conditional updates that restate the rule; so two changes to one exercise
+run one after the other, and the loser is refused. Each change is audited
+in the same transaction. A refusal raises
 `Refused`, its message the rule, fit to show. Functions flush; the caller
 commits.
 """
@@ -61,11 +65,21 @@ def may_operate(person: Person | None) -> bool:
     return person is not None and person.may_operate and person.revoked_at is None
 
 
+def _lock(session: Session, exercise: Exercise) -> None:
+    """Take the exercise's row lock (`SELECT … FOR UPDATE`) before any
+    change to its operators, so each change's check of who may act and
+    what holds, and the change itself, run one at a time per exercise
+    (Codex on #4110). The reads after it load fresh rows, not the
+    session's earlier copies. SQLite has no row locks; it serializes
+    writers on its own."""
+    session.execute(select(Exercise.id).where(Exercise.id == exercise.id).with_for_update())
+
+
 def _grant(session: Session, exercise: Exercise, person: Person) -> ExerciseOperator | None:
     return session.scalar(
-        select(ExerciseOperator).where(
-            ExerciseOperator.exercise_id == exercise.id, ExerciseOperator.person_id == person.id
-        )
+        select(ExerciseOperator)
+        .where(ExerciseOperator.exercise_id == exercise.id, ExerciseOperator.person_id == person.id)
+        .execution_options(populate_existing=True)
     )
 
 
@@ -90,6 +104,7 @@ def owner_of(session: Session, exercise: Exercise) -> Person | None:
             ExerciseOperator.is_owner.is_(True),
             ExerciseOperator.removed_at.is_(None),
         )
+        .execution_options(populate_existing=True)
     )
 
 
@@ -128,12 +143,12 @@ def operated_exercises(session: Session, actor: Actor) -> list[Exercise]:
 def _is_owner(session: Session, exercise: Exercise, actor: Actor) -> bool:
     if actor.is_super_admin:
         return True
-    owner = owner_of(session, exercise)
+    owner = owner_of(session, exercise)  # fresh, as is its allowlisting
     return (
         actor.person is not None
         and owner is not None
         and owner.id == actor.person.id
-        and may_operate(actor.person)
+        and may_operate(owner)
     )
 
 
@@ -204,6 +219,7 @@ def create_exercise(session: Session, actor: Actor, public_id: str) -> Exercise:
 
 def add_operator(session: Session, exercise: Exercise, actor: Actor, person: Person) -> None:
     """Add `person` as an operator; only the Owner (or the super-admin)."""
+    _lock(session, exercise)
     if not _is_owner(session, exercise, actor):
         raise Refused("Only the exercise's Owner adds operators.")
     if not may_operate(person):
@@ -233,6 +249,7 @@ def add_operator(session: Session, exercise: Exercise, actor: Actor, person: Per
 def remove_operator(session: Session, exercise: Exercise, actor: Actor, person: Person) -> None:
     """Remove `person`; only the Owner (or the super-admin), and never the
     Owner themself."""
+    _lock(session, exercise)
     if not _is_owner(session, exercise, actor):
         raise Refused("Only the exercise's Owner removes operators.")
     grant = _grant(session, exercise, person)
@@ -266,6 +283,7 @@ def remove_operator(session: Session, exercise: Exercise, actor: Actor, person: 
 def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person) -> None:
     """Make `person`, a current allowlisted operator, the Owner; the former
     Owner stays an operator. Only the Owner (or the super-admin)."""
+    _lock(session, exercise)
     if not _is_owner(session, exercise, actor):
         raise Refused("Only the exercise's Owner hands ownership over.")
     if not may_operate(person):
@@ -276,11 +294,13 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
     if grant.is_owner:
         raise Refused("Already the Owner.")
     former = session.scalar(
-        select(ExerciseOperator).where(
+        select(ExerciseOperator)
+        .where(
             ExerciseOperator.exercise_id == exercise.id,
             ExerciseOperator.is_owner.is_(True),
             ExerciseOperator.removed_at.is_(None),
         )
+        .execution_options(populate_existing=True)
     )
     # Each step restates its rule in its WHERE: the former Owner is still
     # the Owner, and the new one is still a current operator. Cleared
@@ -288,7 +308,17 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
     if former is not None and not _changed(
         session,
         update(ExerciseOperator)
-        .where(ExerciseOperator.id == former.id, ExerciseOperator.is_owner.is_(True))
+        .where(
+            ExerciseOperator.id == former.id,
+            ExerciseOperator.is_owner.is_(True),
+            # Not the super-admin: the Owner demoted is the one whose
+            # authority was checked (Codex on #4110).
+            *(
+                ()
+                if actor.is_super_admin or actor.person is None
+                else (ExerciseOperator.person_id == actor.person.id,)
+            ),
+        )
         .values(is_owner=False)
         .execution_options(synchronize_session=False),
     ):
