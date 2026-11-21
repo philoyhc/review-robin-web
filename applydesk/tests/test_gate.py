@@ -175,21 +175,33 @@ def test_the_super_admin_s_scratch_exercise_is_owned_by_them(
 
 
 def test_only_the_super_admin_reaches_the_operator_list(client: TestClient) -> None:
-    """Ruling 75: an operator, even an Owner of every sample, gets 404."""
+    """Ruling 75: an operator, even an Owner of every sample, gets 404, and
+    the account menu offers them no Admin."""
     session = db.new_session()
     seed.seed(session)
     session.close()
     assert client.get("/applydesk/admin/operators").status_code == 404
     lobby = client.get("/applydesk/operator/exercises").text
-    assert "/applydesk/admin/operators" not in lobby  # not in the switcher either
+    assert "data-admin-entry" not in lobby
 
 
-def test_the_super_admin_finds_it_in_the_switcher() -> None:
+def test_the_super_admin_reaches_admin_from_the_account_menu() -> None:
+    """As Review Robin's Admin (`cordware/spec/header_chrome.md` §4): an
+    account-menu entry carrying the page to come back to, not in the
+    switcher, and not on the Admin page itself."""
     client = TestClient(host_with(("applydesk",))[0])  # the conftest's super-admin
-    page = client.get("/applydesk/admin/operators")
+    lobby = client.get("/applydesk/operator/exercises").text
+    entry = 'href="/applydesk/admin/operators?return_to=/operator/exercises" data-admin-entry'
+    assert entry in lobby
+    switcher = lobby[lobby.index('class="switch"') :]
+    switcher = switcher[: switcher.index("</details>")]
+    assert "/admin/operators" not in switcher
+    page = client.get(f"/applydesk/admin/operators?return_to=/operator/exercises/{EX}")
     assert page.status_code == 200
-    assert "<h1>Operator list</h1>" in page.text and "data-op-add" in page.text
-    assert 'href="/applydesk/admin/operators"' in client.get("/applydesk/operator/exercises").text
+    assert "<h1>Admin</h1>" in page.text and "data-admin-entry" not in page.text
+    assert f'href="/applydesk/operator/exercises/{EX}" data-admin-back' in page.text
+    away = client.get("/applydesk/admin/operators?return_to=//evil.example").text
+    assert 'href="/applydesk/operator/exercises" data-admin-back' in away  # only Apply Desk paths
 
 
 # --- Rung 7: the Operators card on Home (wired at rung 8: test_operators_card.py) ---

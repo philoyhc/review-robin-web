@@ -12,15 +12,17 @@ a directory that does not answer raises `cordware.graph.GraphError`.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, aliased
 
-from applydesk import operators, people
+from applydesk import directory, operators, people
+from applydesk.directory import escape_like
 from applydesk.models import Person
-from cordware.graph import Directory
+from cordware.graph import Directory, GraphError
 from cordware.identity import Identity
 
 
@@ -33,16 +35,73 @@ class Entry:
     admitted_by: Person | None
 
 
-def listing(session: Session) -> list[Entry]:
-    """Everyone on the list, by name then address."""
+def listing(session: Session, query: str = "") -> list[Entry]:
+    """Everyone on the list, by name then address (no name last, on SQLite
+    and Postgres alike); with `query`, those whose name or address holds
+    it."""
     admitter = aliased(Person)
-    rows = session.execute(
+    statement = (
         select(Person, admitter)
         .outerjoin(admitter, admitter.id == Person.admitted_by_id)
         .where(Person.may_operate.is_(True), Person.revoked_at.is_(None))
-        .order_by(Person.display_name, Person.email_key, Person.id)
+    )
+    text = query.strip().casefold()
+    if text:
+        like = f"%{escape_like(text)}%"
+        statement = statement.where(
+            or_(
+                Person.email_key.like(like, escape="\\"),
+                func.lower(Person.display_name).like(like, escape="\\"),
+            )
+        )
+    rows = session.execute(
+        statement.order_by(
+            Person.display_name.is_(None), Person.display_name, Person.email_key, Person.id
+        )
     ).all()
     return [Entry(person, person.admitted_at, by) for person, by in rows]
+
+
+@dataclass(frozen=True)
+class Overview:
+    """The Accounts Overview card's counts (after Review Robin's)."""
+
+    listed: int
+    not_signed_in: int
+    revoked: int
+
+
+def overview(session: Session) -> Overview:
+    listed = (Person.may_operate.is_(True), Person.revoked_at.is_(None))
+    count = select(func.count()).select_from(Person)
+    return Overview(
+        listed=session.scalar(count.where(*listed)) or 0,
+        not_signed_in=session.scalar(count.where(*listed, Person.object_id.is_(None))) or 0,
+        revoked=session.scalar(count.where(Person.revoked_at.is_not(None))) or 0,
+    )
+
+
+def listed_ids(session: Session) -> list[Person]:
+    """Everyone on the list, unfiltered: which search results are on it."""
+    return list(
+        session.scalars(
+            select(Person).where(Person.may_operate.is_(True), Person.revoked_at.is_(None))
+        )
+    )
+
+
+def search(
+    session: Session, query: str, make_directory: Callable[[], Directory]
+) -> directory.SearchResult:
+    """The people search (`directory.search`) for the page: a directory that
+    cannot even be reached (no token) is reported as a failure, the people
+    on record still shown."""
+    try:
+        reached = make_directory()
+    except GraphError as error:
+        found = directory.search(session, query, None)
+        return directory.SearchResult(found.on_record, (), directory_failed=error.kind)
+    return directory.search(session, query, reached)
 
 
 def actor_for(session: Session, identity: Identity) -> operators.Actor:

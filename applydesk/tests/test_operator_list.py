@@ -54,7 +54,7 @@ def test_the_search_shows_the_directory_and_admit_stores_them_bound(client: Test
     assert f'data-op-entry="{jane.id}"' in listed and "Added to the list." not in listed
     assert "person.admitted" in _events()
     again = client.get("/applydesk/admin/operators", params={"q": "jane"}).text
-    assert 'data-op-hit="record"' in again and "On the list" in again  # now on record
+    assert 'data-op-hit="record"' in again and 'chip-ok">Operator<' in again  # now on record
 
 
 def test_admit_on_record_then_revoke(client: TestClient) -> None:

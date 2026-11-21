@@ -12,7 +12,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.responses import RedirectResponse, Response
 
 from applydesk import allowlist, db, directory, gate, operators
-from applydesk.web import OPERATOR_LIST, render, url_path
+from applydesk.web import ADMIN, render, url_path
 from cordware.graph import GraphError, directory_for
 from cordware.identity import Identity, current_identity
 
@@ -67,30 +67,42 @@ def _identity(request: Request) -> Identity:
     return identity
 
 
+#: Where the Back link goes, by the page the Admin entry was opened from
+#: (`?return_to=`, as Review Robin's Admin): only an Apply Desk path.
+def _back_link(return_to: str) -> tuple[str, str]:
+    path = return_to if return_to.startswith("/") and not return_to.startswith("//") else ""
+    if path.startswith("/operator/exercises/"):
+        return path, "Back to the exercise"
+    if path.startswith("/me"):
+        return path, "Back to User Lobby"
+    return "/operator/exercises", "Back to Operator Lobby"
+
+
 @router.get("/operators", name="applydesk_admin_operators")
 def operators_page(
-    request: Request, q: str = "", session: Session = Depends(db.get_session)
+    request: Request,
+    q: str = "",
+    list_q: str = "",
+    return_to: str = "",
+    session: Session = Depends(db.get_session),
 ) -> Response:
-    found = None
-    if q.strip():
-        try:
-            people_directory = directory_for(request)
-        except GraphError as error:
-            found = directory.search(session, q, None)
-            found = directory.SearchResult(found.on_record, (), directory_failed=error.kind)
-        else:
-            found = directory.search(session, q, people_directory)
-    entries = allowlist.listing(session)
+    found = allowlist.search(session, q, lambda: directory_for(request)) if q.strip() else None
+    entries = allowlist.listing(session, list_q)
+    back_path, back_label = _back_link(return_to)
     return render(
         request,
         "applydesk/admin/operators.html",
-        area=OPERATOR_LIST,
+        area=ADMIN,
         q=q,
+        list_q=list_q,
         found=found,
         min_query=directory.MIN_QUERY,
         entries=entries,
-        listed={e.person.id for e in entries},
+        overview=allowlist.overview(session),
+        listed={p.id for p in allowlist.listed_ids(session)},
         said=SAID.get(request.query_params.get("said", ""), ""),
+        back_path=back_path,
+        back_label=back_label,
     )
 
 

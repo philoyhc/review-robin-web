@@ -31,7 +31,8 @@ class SearchResult:
     directory_failed: str | None = None
 
 
-def _escape(text: str) -> str:
+def escape_like(text: str) -> str:
+    """`text` safe inside a LIKE pattern escaped by a backslash."""
     return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
@@ -48,7 +49,7 @@ def search(
     text = query.strip()
     if len(text) < MIN_QUERY:
         return SearchResult((), ())
-    like = f"%{_escape(text.casefold())}%"
+    like = f"%{escape_like(text.casefold())}%"
     statement = select(Person).where(
         or_(
             Person.email_key.like(like, escape="\\"),

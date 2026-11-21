@@ -143,6 +143,25 @@
     .hm-grid > .card + .card { margin-top: 0; }
     .hm-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
     .hm-side > .card { margin-top: 0; }
+    /* Admin → Accounts Management (segment AD2A), after Review Robin's:
+       Back, the Admin heading, a one-row tab strip, two cards side by
+       side, the list below. */
+    .back-link { display: inline-block; margin: 4px 0 12px; font-size: 14px; color: var(--text-link); text-decoration: none; }
+    .back-link:hover { text-decoration: underline; }
+    main.page > h1 { margin: 0 0 16px; font-size: 22px; }
+    .adm-tabs { display: flex; border: 1px solid var(--border-default); border-radius: 6px; overflow: hidden; background: var(--surface-page); margin-bottom: 16px; }
+    .adm-tab { flex: 1; text-align: center; padding: 10px 16px; font-weight: 600; color: var(--text-subtle); text-decoration: none; }
+    .adm-tab.on { background: var(--surface-card); color: var(--text-body); box-shadow: inset 0 -3px 0 var(--border-default); }
+    .adm-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: stretch; margin-bottom: 20px; }
+    .adm-grid > .card { margin-top: 0; }
+    @media (max-width: 899px) { .adm-grid { grid-template-columns: minmax(0, 1fr); } }
+    .adm-search { display: flex; align-items: flex-end; gap: 12px; margin: 8px 0; }
+    .adm-search .fc-l { flex: 1; }
+    .adm-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+    .adm-toolbar h2 { margin-top: 4px; }
+    .adm-toolbar .adm-search { margin: 0; }
+    .adm-toolbar .adm-search { flex: 0 1 460px; }
+    .adm-pills { line-height: 2; }
     /* The Operators card (segment AD2A). */
     .ops-act { display: inline; }
     .ops-add { margin-top: 12px; }
@@ -967,6 +986,9 @@
                   <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
                 </div>
               </div>
+              {% if admin_entry %}<div class="mg">
+                <a href="{{ url('/admin/operators') }}?return_to={{ here_path | urlencode }}" data-admin-entry>Admin</a>
+              </div>{% endif %}
               <div class="mg">
                 <a href="{{ host_url('/.auth/logout') }}">Sign out</a>
               </div>
