@@ -857,7 +857,9 @@
     } else if (what === "save") {
       save(a.closest("[data-pn-row]"));
     } else if (what === "add") {
-      addRow(null).querySelector('[data-pn="name"]').focus(); check();
+      // check() first: on an empty roster it shows the table, and a box
+      // inside a hidden one cannot take focus.
+      var made = addRow(null); check(); made.querySelector('[data-pn="name"]').focus();
     } else if (what === "create") {
       // A new panel, blank or with an existing one's people.
       var name = newName.value.trim(), from = fromSel.value, bad = badName(name);

@@ -151,7 +151,7 @@
     </tbody>
   </table>
   </div>
-  {% if not cols %}<div class="ap-foot"><span class="muted">No gates or outcomes yet: stages, their gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</span></div>{% endif %}
+  {% if not cols and plan.rows %}<div class="ap-foot"><span class="muted">No gates or outcomes yet: stages, their gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</span></div>{% endif %}
   <p class="muted ap-help"><em>Rows</em>: <em>Last applications</em> keeps each applicant's last submitted application. A gate's chip says whether the dossier is sent through it, cycling <em>—</em> (no status yet), <em>Entered</em>, <em>Not entered</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> checkbox does what Process sets.</p>
 </div>
 <script>

@@ -944,5 +944,7 @@ def test_an_empty_roster_is_one_block_until_a_row_comes(page: Page) -> None:
     assert blank.locator("h2").inner_text() == "No panels yet"
     page.locator('[data-pn-act="add"]').click()
     assert table.is_visible() and not blank.is_visible()
+    # The new row's Name takes focus, once the table is in view (AD1R read).
+    assert page.evaluate("document.activeElement.dataset.pn") == "name"
     page.locator('[data-pn-row] [data-pn-act="remove"]').click()
     assert blank.is_visible() and not table.is_visible()

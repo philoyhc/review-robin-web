@@ -130,7 +130,9 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
   changes*, then *Lock*, with one unsaved note. Where a whole page or card is locked the reason shows as a
   line; one blocked control is disabled with the reason in its title.
 - **Tables** (Dossiers, Evaluations' pairs, the lobby, Panels) sort by a
-  header band with `↕` badges, `1↑` / `1↓` once a column sorts; no sticky header.
+  header band with `↕` badges: a click cycles a column up, down and off, and
+  shift-click adds it to a cascade (`1↑`, `2↓`), as Review Robin's; no sticky
+  header.
 - **Dates**: applicant pages keep friendly dates; operator pages in sample data
   are preformatted strings until AD2.
 
@@ -816,7 +818,8 @@ A panel made on Form or Process appears here only once saved (AD2).
   row is on; a row being edited stays in view) with *Add new* under it,
   which opens a blank row at the top (an imported row joins the end). Columns:
   a select box, *Name*, *Email*, *Note*, one per panel and a ✓ and × column;
-  *Name*, *Email* and *Note* sort with ↕. A panel's heading carries its count
+  *Name*, *Email* and *Note* sort with ↕, three-state with shift-cascade, as the gate page's; an
+  empty roster shows the empty-state card in the table's place. A panel's heading carries its count
   and an *Opened* chip once a gate it feeds has opened (`workflow.panels_sent`),
   the chip's tooltip naming those gates; the heading's tooltip says *Used by*
   or *Not used yet*.
@@ -1216,13 +1219,15 @@ from AD2.
   `setup`), each with `manifest.csv` first: a row per file with its row
   count, then a row per gate left out with the note *Not sent*. *Download all (ZIP)*
   holds `applications.csv`, each sent gate's file, `outcomes.csv`, and with
-  *Setup* the pages Extract setup's chips leave on, under `setup/`. *Zip
-  gates* holds the sent gates' files.
-- **Empty and Draft.** With no submitted applications one line above the
-  cards says so (adding, for a Draft exercise, that only its setup can be
-  extracted), and every download but *Download setup (ZIP)* is off; *Download setup (ZIP)* works
+  *Setup* the pages Extract setup's chips leave on, under `setup/`. *Download
+  gates (ZIP)* holds the sent gates' files.
+- **Empty and Draft.** With no submitted applications the empty-state card
+  above the cards says so, linking to Home for a Draft exercise (only its
+  setup can be extracted) and to Dossiers otherwise, and every download but
+  *Download setup (ZIP)* is off, its chips off with it and each saying why in
+  its title; *Download setup (ZIP)* works
   for a Draft too, as it needs no applications. *Download gates (ZIP)* is off while no
-  gate is sent. An exercise with no gates says so in *By gate*.
+  gate is sent, and *By gate*'s chips with it. An exercise with no gates says so in *By gate*.
 
 ## The Emails page
 

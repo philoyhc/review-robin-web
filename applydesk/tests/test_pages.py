@@ -1231,6 +1231,8 @@ def test_a_blank_draft_s_empty_states_are_one_block(
     dossiers = client.get(f"{base}/dossiers").text
     assert _empties(dossiers) == [("No applications yet", [base])]
     assert '<div class="ap-wrap" hidden>' in dossiers and "<td colspan=" not in dossiers
+    # One empty message: the no-gates foot line waits for rows (AD1R read).
+    assert 'class="ap-foot"' not in dossiers
     monkeypatch.setattr(workflow, "emails", lambda ex: ())
     assert _empties(client.get(f"{base}/emails").text) == [("No emails yet", [f"{base}/process"])]
     # A draft that has gates but no applications links its own pages.
