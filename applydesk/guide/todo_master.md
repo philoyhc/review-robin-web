@@ -619,6 +619,14 @@ the rulings it relied on but does not move them.
     window. What Review Robin receives as Start and End is the gate's
     window, else the stage's (`stages.window`). The spec and the code
     already did this; the ruling records it.
+67. **The 2026-11-18 register's last UI rows** (author, 2026-11-21, opening
+    AD1R): "String" stays the field type's name, as Review Robin's editor
+    has it (AD-92, ruling 64); the switcher's *All applications* stays,
+    the host chrome being one contract across three apps (AD-98); Form's
+    per-card *Shown* control and its chip words wait for ruling 33's parts
+    rather than being reworked first (AD-69, AD-93); Extract's setup card
+    says how its `panels.csv` differs from the Panels export rather than
+    the two being made one shape (AD-84).
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
