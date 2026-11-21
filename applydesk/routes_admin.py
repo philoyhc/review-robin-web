@@ -97,7 +97,7 @@ def operators_page(
     session: Session = Depends(db.get_session),
 ) -> Response:
     found = allowlist.search(session, q, lambda: directory_for(request)) if q.strip() else None
-    entries = allowlist.listing(session, list_q)
+    people = allowlist.everyone(session, list_q)
     me = allowlist.me(session, _identity(request))
     back_path, back_label = _back_link(return_to)
     return render(
@@ -108,11 +108,11 @@ def operators_page(
         list_q=list_q,
         found=found,
         min_query=directory.MIN_QUERY,
-        entries=entries,
         overview=allowlist.overview(session),
         listed={p.id for p in allowlist.listed_ids(session)},
         me=me,
-        me_row=me.leads(entries, list_q),
+        me_row=me.leads(people, list_q),
+        people=people,
         said=SAID.get(request.query_params.get("said", ""), ""),
         back_path=back_path,
         back_label=back_label,

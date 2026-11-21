@@ -14,10 +14,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
 
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session
 
 from applydesk import directory, operators, people
 from applydesk.directory import escape_like
@@ -26,25 +25,12 @@ from cordware.graph import Directory, GraphError
 from cordware.identity import Identity
 
 
-@dataclass(frozen=True)
-class Entry:
-    """One row of the list."""
-
-    person: Person
-    admitted_at: datetime | None
-    admitted_by: Person | None
-
-
-def listing(session: Session, query: str = "") -> list[Entry]:
-    """Everyone on the list, by name then address (no name last, on SQLite
-    and Postgres alike); with `query`, those whose name or address holds
-    it."""
-    admitter = aliased(Person)
-    statement = (
-        select(Person, admitter)
-        .outerjoin(admitter, admitter.id == Person.admitted_by_id)
-        .where(Person.may_operate.is_(True), Person.revoked_at.is_(None))
-    )
+def everyone(session: Session, query: str = "") -> list[Person]:
+    """Everyone Apply Desk has on record, by name then address (no name
+    last): Accounts Management's *Workspace users* (segment AD2W); with
+    `query`, those whose name or address holds it. The chips and the
+    exercise-role filter come at AD2W's rung 3."""
+    statement = select(Person)
     text = query.strip().casefold()
     if text:
         like = f"%{escape_like(text)}%"
@@ -54,12 +40,13 @@ def listing(session: Session, query: str = "") -> list[Entry]:
                 func.lower(Person.display_name).like(like, escape="\\"),
             )
         )
-    rows = session.execute(
-        statement.order_by(
-            Person.display_name.is_(None), Person.display_name, Person.email_key, Person.id
+    return list(
+        session.scalars(
+            statement.order_by(
+                Person.display_name.is_(None), Person.display_name, Person.email_key, Person.id
+            )
         )
-    ).all()
-    return [Entry(person, person.admitted_at, by) for person, by in rows]
+    )
 
 
 @dataclass(frozen=True)
@@ -77,10 +64,10 @@ class Me:
         text = query.strip().casefold()
         return not text or text in self.email.casefold() or text in self.name.casefold()
 
-    def leads(self, entries: list[Entry], query: str) -> bool:
+    def leads(self, people: list[Person], query: str) -> bool:
         """Whether their own row leads the list: they match `query` and
-        are not already one of `entries` (then that row is marked)."""
-        return self.matches(query) and all(e.person.id != self.person_id for e in entries)
+        are not already one of `people` (then that row is marked)."""
+        return self.matches(query) and all(p.id != self.person_id for p in people)
 
 
 def me(session: Session, identity: Identity) -> Me:

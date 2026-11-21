@@ -157,11 +157,18 @@
     @media (max-width: 899px) { .adm-grid { grid-template-columns: minmax(0, 1fr); } }
     .adm-search { display: flex; align-items: flex-end; gap: 12px; margin: 8px 0; }
     .adm-search .fc-l { flex: 1; }
-    .adm-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-    .adm-toolbar h2 { margin-top: 4px; }
-    .adm-toolbar .adm-search { margin: 0; }
-    .adm-toolbar .adm-search { flex: 0 1 460px; }
     .adm-pills { line-height: 2; }
+    /* Workspace users' two panes over the table (segment AD2W), as Review
+       Robin's: title and Show chips left, role and search right. */
+    .adm-panes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; margin-bottom: 8px; }
+    @media (max-width: 899px) { .adm-panes { grid-template-columns: minmax(0, 1fr); } }
+    .adm-pane h2 { margin-top: 4px; }
+    .adm-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 0; }
+    .adm-filter-row { display: flex; gap: 12px; }
+    .adm-filter-row .fc-l { flex: 1; }
+    .adm-filter-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+    .adm-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+    .adm-check { width: 1%; white-space: nowrap; }
     .adm-nowrap { white-space: nowrap; }
     .adm-actions .btn + .btn { margin-left: 6px; }
     /* The Operators card (segment AD2A). */
