@@ -1,0 +1,58 @@
+{% extends "applydesk/base.html" %}
+{% block title %}Exercises Diagnostics — Admin{% endblock %}
+{% block content %}
+{# Admin → Exercises Diagnostics (segment AD2A, scaffold): every exercise
+   on the platform, laid out as Review Robin's Sessions Diagnostics. The
+   rows are the sample exercises; the filter, the owners and the actions
+   are inert until they are wired. #}
+<a class="back-link" href="{{ url(back_path) }}" data-admin-back>&larr; {{ back_label }}</a>
+<h1>Admin</h1>
+{% with admin_tab = "exercises" %}{% include "applydesk/admin/_tabs.html" %}{% endwith %}
+<p class="placeholder"><strong>Placeholder.</strong> The sample exercises, laid out as this page will be: the filter, each exercise's Owner and the actions are not wired yet.</p>
+
+<div class="adm-grid">
+  <section class="card" aria-labelledby="ex-ov-h" data-ex-overview>
+    <h2 id="ex-ov-h">Exercises Overview</h2>
+    <p class="adm-pills">
+      <span class="chip chip-info" data-overview-key="exercises">{{ rows | length }} exercises</span>
+      {% for status, n in by_status %} · <span class="chip chip-{{ tone(status) }}" data-overview-key="{{ status | lower }}">{{ n }} {{ status }}</span>{% endfor %}
+    </p>
+  </section>
+
+  <section class="card" aria-labelledby="ex-filter-h" data-ex-filter>
+    <h2 id="ex-filter-h">Filter</h2>
+    <div class="adm-search" role="search">
+      <label class="fc-l"><span class="visually-hidden">Filter</span><input class="fc-in" type="search" placeholder="Filter by name, code or Owner" disabled></label>
+      <button class="btn btn-secondary" type="button" disabled title="Not wired yet">Clear</button>
+    </div>
+  </section>
+</div>
+
+<section class="card" aria-label="Exercises" data-ex-list>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Exercise</th><th>Code</th><th>Owner</th><th>Opens</th><th>Applications close</th><th>Timezone</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+    <tbody>
+    {% for e in rows %}
+      <tr data-ex-row="{{ e.public_id }}">
+        <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a></td>
+        <td class="adm-nowrap">{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td class="muted">—</td>
+        <td>{{ e.opens or "—" }}</td>
+        <td>{{ e.application_stage_ends or "—" }}</td>
+        <td>{{ e.timezone or default_timezone }}</td>
+        <td>{% with value = exercise_status(e) %}{% include "applydesk/_state_chip.html" %}{% endwith %}</td>
+        <td class="adm-nowrap adm-actions">
+          <button class="btn btn-secondary btn-short" type="button" disabled title="Not wired yet" aria-label="Adopt {{ e.name }}">Adopt</button>
+          <button class="btn btn-secondary btn-short" type="button" disabled title="Not wired yet" aria-label="Emails of {{ e.name }}">Emails</button>
+          <button class="btn btn-secondary btn-short" type="button" disabled title="Not wired yet" aria-label="Audit log of {{ e.name }}">Audit log</button>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="muted">No exercises yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

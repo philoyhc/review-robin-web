@@ -63,6 +63,34 @@ def listing(session: Session, query: str = "") -> list[Entry]:
 
 
 @dataclass(frozen=True)
+class Me:
+    """The signed-in super-admin, shown on the list as *(self)* as Review
+    Robin's Accounts Management shows them (the author's ask, 2026-11-21):
+    they reach every page by their identity, not by being on the list.
+    `person_id` is their row, if they have one."""
+
+    email: str
+    name: str
+    person_id: int | None
+
+    def matches(self, query: str) -> bool:
+        text = query.strip().casefold()
+        return not text or text in self.email.casefold() or text in self.name.casefold()
+
+
+def me(session: Session, identity: Identity) -> Me:
+    """The super-admin's *(self)* row, read only: nothing is bound here."""
+    tenant_id = (identity.tenant_id or "").strip()
+    object_id = (identity.principal_id or "").strip()
+    row = None
+    if tenant_id and object_id:
+        row = session.scalar(
+            select(Person.id).where(Person.tenant_id == tenant_id, Person.object_id == object_id)
+        )
+    return Me(identity.mail or identity.email or "", identity.name or "", row)
+
+
+@dataclass(frozen=True)
 class Overview:
     """The Accounts Overview card's counts (after Review Robin's)."""
 

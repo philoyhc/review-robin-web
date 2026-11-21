@@ -75,6 +75,7 @@ Taken 2026-11-21 at `64f0c5c6e`.
 - **Ruling (author, 2026-11-21):** rung 3 merges once CI is green after the tenth fix; any later concurrency finding is recorded here and taken at rungs 6 and 8, where adding people is wired to pages. None was raised.
 
 - **Ruling (author, 2026-11-21): "harmonize with RRW admin > account management".** The operator list became Admin → Accounts Management, laid out as Review Robin's and reached from the account menu, not the switcher. Admit, Revoke, Add and Remove are Secondary. This supersedes rung 5's switcher entry (`cordware/spec/header_chrome.md` §3, §4).
+- **Scope added (author, 2026-11-21): Admin's other two tabs as scaffolds.** Exercises Diagnostics (the sample exercises, filter and actions inert) and System Status (four cards, every value a dash) beside Accounts Management, as Review Robin's Admin. "Exercises", not "Sessions": Apply Desk's word. Wiring them is later AD2 work.
 - **Cumulative cold read at rung 8**, split at rung 3/4 (3,700 lines): two reads, nothing blocking.
   - Fixed: a sign-in matching two pending people now fails closed (Residential §6); the seed goes through `people` and `operators`, so it is audited; refusals carry a key, not text; row buttons are named; the spec and overview are aligned.
   - Also fixed: Graph is called off the event loop (Codex on #4113).

@@ -262,3 +262,27 @@ def test_a_deployed_operator_lands_on_the_lobby(
     assert client.get("/applydesk/operator", follow_redirects=False).status_code == 302
     monkeypatch.setattr(identity_settings, "fake_auth_principal_id", "someone-else")
     assert client.get("/applydesk/", follow_redirects=False).status_code == 404
+
+
+def test_only_the_super_admin_reaches_the_admin_scaffolds(client: TestClient) -> None:
+    for tab in ("exercises", "system"):
+        assert client.get(f"/applydesk/admin/{tab}").status_code == 404
+
+
+def test_admin_has_review_robin_s_three_tabs() -> None:
+    """The author's ask (2026-11-21): Exercises Diagnostics and System
+    Status beside Accounts Management, scaffolds for now. Each tab keeps
+    where Back goes."""
+    admin = TestClient(host_with(("applydesk",))[0])  # the conftest's super-admin
+    back = f"/operator/exercises/{EX}"
+    for tab in ("exercises", "operators", "system"):
+        page = admin.get(f"/applydesk/admin/{tab}?return_to={back}").text
+        strip = page[page.index('class="adm-tabs"') :]
+        strip = strip[: strip.index("</nav>")]
+        assert strip.count("data-admin-tab=") == 3
+        assert f'data-admin-tab="{tab}"' in strip.split('aria-current="page"')[1][:40]
+        for other in ("exercises", "operators", "system"):
+            assert f'href="/applydesk/admin/{other}?return_to=/operator/exercises/{EX}"' in strip
+        assert f'href="/applydesk{back}" data-admin-back' in page
+    rows = admin.get("/applydesk/admin/exercises").text
+    assert f'data-ex-row="{EX}"' in rows and "disabled" in rows
