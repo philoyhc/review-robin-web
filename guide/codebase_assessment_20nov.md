@@ -49,9 +49,9 @@ commits, PRs #3658 → #4063, 2026-11-06 → 11-20.
   - a read of the four packages, Apply Desk for the first time, with their
     suites and a route fuzz (§6).
 - **Where the findings went:**
-  - RRW's defects are rows of `guide/findings_2026-11-20_assessment.md`;
-  - RRW's spec drift is in `guide/findings_2026-11-20_corpus.md`;
-  - each package's findings, sweep and assessment together, are in its own `guide/findings_2026-11-20.md`.
+  - RRW's defects are rows of `guide/archive/findings_2026-11-20_assessment.md`;
+  - RRW's spec drift is in `guide/archive/findings_2026-11-20_corpus.md`;
+  - each package's findings, sweep and assessment together, are in its own `guide/archive/findings_2026-11-20.md`. All five registers were worked to empty and archived on 2026-11-21.
 
 **Development context:** a single author, with AI agents building. The
 pace is about 29 PRs a day, almost all small. Every code PR has a Codex
@@ -198,8 +198,8 @@ over all 4,050 PRs on `main` (3,823 merge commits, 227 squash-merged).
 
 This section was checked by the sweep's seven reads at the pinned tree,
 spec by spec. The rows that changed this window are in **bold**. Ids:
-- **A–H** are rows of `guide/findings_2026-11-20_corpus.md`;
-- **D** rows marked *assessment* are in `guide/findings_2026-11-20_assessment.md`.
+- **A–H** are rows of `guide/archive/findings_2026-11-20_corpus.md`;
+- **D** rows marked *assessment* are in `guide/archive/findings_2026-11-20_assessment.md`.
 
 Every drift in the 6 November table was closed by 14F's close and the
 register's PRs (#3662 → #3679).
