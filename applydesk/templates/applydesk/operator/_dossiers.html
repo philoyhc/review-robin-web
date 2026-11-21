@@ -30,7 +30,9 @@
     {% endif %}
     <span class="fb-unsaved" data-ap-changes hidden></span>
     <button class="btn btn-secondary" type="button" data-ap-undo hidden>Discard changes</button>
-    <button class="btn btn-secondary" type="button" data-ap-lock title="Unlock the table to change it">Unlock</button>
+    {# Nothing to change with no applications: Unlock is off, saying why,
+       in its place (AD-79, U16). #}
+    <button class="btn btn-secondary" type="button" data-ap-lock{% if plan.rows %} title="Unlock the table to change it"{% else %} disabled title="No applications to change yet"{% endif %}>Unlock</button>
   </div>
   {# The ticked rows' actions and the file, above the table (U17). #}
   <div class="ap-bulk">
@@ -73,7 +75,13 @@
     <div class="btnrow"><button class="btn btn-primary" type="button" data-ap-prop-apply>Apply</button><button class="btn btn-secondary" type="button" data-ap-prop-cancel>Cancel</button></div>
   </section>
   {% endif %}
-  <div class="ap-wrap">
+  {% if not plan.rows %}{% from "applydesk/_empty.html" import empty %}
+  {% if exercise.state == "Draft" %}{% call empty("No applications yet", url('/operator/exercises/' ~ exercise.public_id), "Home") %}A row per dossier comes once the exercise is published and applicants start their applications.{% endcall %}
+  {% else %}{% call empty("No applications yet", url('/operator/exercises/' ~ exercise.public_id ~ '/form'), "Form") %}A row per dossier comes as applicants start their applications on the exercise's form.{% endcall %}{% endif %}
+  {% endif %}
+  {# With no rows the table is kept for the page's script, out of view
+     (AD-79: no header-only table). #}
+  <div class="ap-wrap"{% if not plan.rows %} hidden{% endif %}>
   <table class="ap-table">
     <thead>
       <tr class="ap-groups">
@@ -139,13 +147,11 @@
           {% endif %}<span class="ap-hand">Set by hand</span></td>
         {% endfor %}{% endfor %}
       </tr>
-    {% else %}
-      <tr><td colspan="{{ 3 + plan.columns | length }}" class="muted">No applications yet.</td></tr>
     {% endfor %}
     </tbody>
   </table>
   </div>
-  {% if not cols %}<div class="ap-foot"><span class="muted">No gates or outcomes yet: stages, their gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</span></div>{% endif %}
+  {% if not cols and plan.rows %}<div class="ap-foot"><span class="muted">No gates or outcomes yet: stages, their gates and outcomes are set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</span></div>{% endif %}
   <p class="muted ap-help"><em>Rows</em>: <em>Last applications</em> keeps each applicant's last submitted application. A gate's chip says whether the dossier is sent through it, cycling <em>—</em> (no status yet), <em>Entered</em>, <em>Not entered</em>; under it, its result from Review Robin, or why it was set. An outcome's value carries the date it was decided, or when it is due; its <em>Released</em> checkbox does what Process sets.</p>
 </div>
 <script>

@@ -669,11 +669,12 @@ def test_a_blank_exercise_s_pages_say_what_is_missing(client: TestClient) -> Non
     form = client.get(f"{base}/form").text
     cards = form[form.index('id="fb-cards"') : form.index('<template id="fb-new-field">')]
     assert cards.count('data-kind="field"') == 1 and 'placeholder="Untitled form"' in form
-    assert "No applications yet." in client.get(f"{base}/dossiers").text
+    assert "<h2 data-empty-title>No applications yet</h2>" in client.get(f"{base}/dossiers").text
     # Ruling 16: a form's receipt is owed until Process says otherwise.
     assert 'data-email="Stage 1: Receipt · Applicants"' in client.get(f"{base}/emails").text
     xd = client.get(f"{base}/extract").text
-    assert "No submitted applications yet. A draft exercise: only its setup can be extracted." in xd
+    assert "<h2 data-empty-title>No submitted applications yet</h2>" in xd
+    assert "<p>A draft exercise: only its setup can be extracted" in xd
     assert "No gates yet: Process adds them." in xd
 
 
@@ -932,7 +933,8 @@ def test_a_blank_exercise_s_details_and_evaluations_say_not_yet(client: TestClie
     model = client.get("/applydesk/operator/exercises/wa9juxbc2t").text
     assert '<dd data-dt-show="contact">ra-recruitment@example.edu</dd>' in model
     review = client.get(f"{base}/evaluations").text
-    assert "Nothing to send: the exercise is a draft." in review
+    assert "<h2 data-empty-title>Nothing to send yet</h2>" in review
+    assert "The exercise is a draft: once it is published" in review
     assert "#ev-rr" not in review
 
 
@@ -1196,10 +1198,70 @@ def test_a_panel_nothing_uses_may_be_retired(client: TestClient) -> None:
 
 
 def test_an_exercise_with_no_panels_says_so(client: TestClient) -> None:
-    assert (
-        "data-pn-empty>No panels yet"
-        in client.get(f"/applydesk/operator/exercises/{BLANK}/panels").text
-    )
+    text = client.get(f"/applydesk/operator/exercises/{BLANK}/panels").text
+    assert "data-pn-empty>\n  <h2 data-empty-title>No panels yet</h2>" in text
+    # No header-only table (AD-79): it waits, out of view, for a first row.
+    assert '<div class="table-wrap pn-wrap" data-pn-wrap hidden>' in text
+
+
+_EMPTY = re.compile(
+    r'<section class="ad-empty"[^>]*>\s*<h2 data-empty-title>([^<]+)</h2>'
+    r"\s*<p>(.*?)</p>\s*</section>",
+    re.S,
+)
+
+
+def _empties(text: str) -> list[tuple[str, list[str]]]:
+    """Each empty-state block: its title and the links in its line."""
+    return [(t, re.findall(r'<a href="([^"]+)">', line)) for t, line in _EMPTY.findall(text)]
+
+
+def test_a_blank_draft_s_empty_states_are_one_block(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AD-79 (segment AD1R): Evaluations, Emails, Extract, Dossiers and
+    Panels say they are empty in one block, a muted card with a title, one
+    line and a link to the page that fixes it, where they had five shapes."""
+    base = f"/applydesk/operator/exercises/{BLANK}"
+    assert _empties(client.get(f"{base}/evaluations").text) == [("Nothing to send yet", [base])]
+    assert _empties(client.get(f"{base}/extract").text) == [
+        ("No submitted applications yet", [base])
+    ]
+    assert _empties(client.get(f"{base}/panels").text) == [("No panels yet", [f"{base}/process"])]
+    dossiers = client.get(f"{base}/dossiers").text
+    assert _empties(dossiers) == [("No applications yet", [base])]
+    assert '<div class="ap-wrap" hidden>' in dossiers and "<td colspan=" not in dossiers
+    # One empty message: the no-gates foot line waits for rows (AD1R read).
+    assert 'class="ap-foot"' not in dossiers
+    monkeypatch.setattr(workflow, "emails", lambda ex: ())
+    assert _empties(client.get(f"{base}/emails").text) == [("No emails yet", [f"{base}/process"])]
+    # A draft that has gates but no applications links its own pages.
+    assert _empties(client.get(f"/applydesk/operator/exercises/{DRAFT}/dossiers").text) == [
+        ("No applications yet", [f"/applydesk/operator/exercises/{DRAFT}"])
+    ]
+
+
+def test_controls_over_nothing_are_off_saying_why(client: TestClient) -> None:
+    """AD-79 (U16): Dossiers' Unlock with no applications, and Extract's
+    chips on a card whose download is off, are disabled in place, each
+    with a title saying why; Extract setup's stay live."""
+    base = f"/applydesk/operator/exercises/{BLANK}"
+    dossiers = client.get(f"{base}/dossiers").text
+    assert 'data-ap-lock disabled title="No applications to change yet">Unlock<' in dossiers
+    live = client.get(f"/applydesk/operator/exercises/{EX}/dossiers").text
+    assert 'data-ap-lock title="Unlock the table to change it">Unlock<' in live
+    xd = client.get(f"{base}/extract").text
+    why = 'disabled title="No submitted applications to extract yet"'
+    for card in ("all", "applications", "gates", "outcomes"):
+        body = xd[xd.index(f'data-xd-card="{card}"') :]
+        body = body[: body.index("</section>")]
+        chips = re.findall(r"<button type=\"button\"[^>]*data-xd-[vt]=[^>]*>", body)
+        assert chips and all(why in c for c in chips), card
+        assert all(why in b for b in re.findall(r"<button class=\"btn[^>]*>", body)), card
+    setup = xd[xd.index('data-xd-card="setup"') :]
+    assert "disabled" not in setup[: setup.index("</section>")]
+    full = client.get(f"/applydesk/operator/exercises/{EX}/extract").text
+    assert "No submitted applications to extract yet" not in full
 
 
 # --- Segment AD1F 4d-4e cold read: roster, uses, sent panels ---

@@ -1,0 +1,10 @@
+{# An operator page's empty state (AD-79, segment AD1R): one muted card,
+   its title, one line saying why, and a link to the page that fixes it,
+   as /me's empty lines (AD1P F18). The caller's block is the line; `attrs`
+   marks the block for a page's script ("data-pn-empty hidden"). #}
+{% macro empty(title, href, link, attrs="") -%}
+<section class="ad-empty"{% if attrs %} {{ attrs | safe }}{% endif %}>
+  <h2 data-empty-title>{{ title }}</h2>
+  <p>{{ caller() }} <a href="{{ href }}">{{ link }} →</a></p>
+</section>
+{%- endmacro %}

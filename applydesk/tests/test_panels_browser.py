@@ -339,6 +339,8 @@ def test_focus_stays_on_the_page_after_retire_and_the_last_remove(page: Page) ->
         first.locator("[data-pn-select]").check()
         first.locator('[data-pn-act="remove"]').click()
     assert page.evaluate("document.activeElement.dataset.pnAct") == "add"
+    # The roster emptied, its panels kept: the empty state says so (AD-79).
+    assert page.locator("[data-pn-empty] h2").inner_text() == "No one on a panel yet"
 
 
 def test_a_panel_may_not_take_a_csv_column_s_name(page: Page) -> None:
@@ -892,3 +894,57 @@ def test_panel_chips_are_display_chips_and_their_row_buttons_short(page: Page) -
     row.hover()
     after = td.evaluate("e => getComputedStyle(e.parentElement).backgroundColor")
     assert before != after
+
+
+def test_the_sort_cycles_and_cascades_as_the_gate_page_s(page: Page) -> None:
+    """AD-83 (segment AD1R): a third click clears the sort, putting the rows
+    back; shift-click adds a column to the cascade, then turns it down,
+    then drops it, the badges `1↑` `2↓` as Review Robin's."""
+    page.goto(PANELS)
+    rows = page.locator("[data-pn-row]")
+
+    def emails() -> list[str]:
+        return rows.locator('[data-pn="email"]').evaluate_all("es => es.map(e => e.value)")
+
+    def badges() -> list[str]:
+        return [
+            page.locator(f'[data-pn-sort="{f}"] span').inner_text()
+            for f in ("name", "email", "note")
+        ]
+
+    before = emails()
+    name = page.locator('[data-pn-sort="name"]')
+    name.click()
+    name.click()
+    name.click()  # none → asc → desc → none
+    assert badges() == ["↕", "↕", "↕"] and emails() == before
+    assert page.locator("th", has=name).get_attribute("aria-sort") is None
+    page.locator('[data-pn-sort="note"]').click()
+    name.click(modifiers=["Shift"])
+    assert badges() == ["2↑", "↕", "1↑"]
+    notes = rows.locator('[data-pn="note"]').evaluate_all("es => es.map(e => e.value)")
+    assert notes == sorted(notes, key=str.lower)
+    name.click(modifiers=["Shift"])
+    assert badges() == ["2↓", "↕", "1↑"]
+    name.click(modifiers=["Shift"])
+    assert badges() == ["↕", "↕", "1↑"]
+    # A plain click on the sole sorted column carries on its cycle; on
+    # another, it sorts by that one alone.
+    page.locator('[data-pn-sort="email"]').click()
+    assert badges() == ["↕", "1↑", "↕"]
+    assert emails() == sorted(before, key=str.lower)
+
+
+def test_an_empty_roster_is_one_block_until_a_row_comes(page: Page) -> None:
+    """AD-79: no header-only table; the empty state stands in its place
+    until Add new makes a row, and comes back when the last one goes."""
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/n5wg8tjr3e/panels")
+    blank, table = page.locator("[data-pn-empty]"), page.locator("[data-pn-wrap]")
+    assert blank.is_visible() and not table.is_visible()
+    assert blank.locator("h2").inner_text() == "No panels yet"
+    page.locator('[data-pn-act="add"]').click()
+    assert table.is_visible() and not blank.is_visible()
+    # The new row's Name takes focus, once the table is in view (AD1R read).
+    assert page.evaluate("document.activeElement.dataset.pn") == "name"
+    page.locator('[data-pn-row] [data-pn-act="remove"]').click()
+    assert blank.is_visible() and not table.is_visible()

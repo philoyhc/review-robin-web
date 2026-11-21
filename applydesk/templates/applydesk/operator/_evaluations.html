@@ -3,17 +3,13 @@
    and results are on its page's Review Robin card (segment AD1M),
    simulated in the tab until AD6. #}
 {% set gates = plan.columns | selectattr("via", "defined") | list %}
+{% from "applydesk/_empty.html" import empty %}
+{% set ex_base = '/operator/exercises/' ~ exercise.public_id %}
 <p class="muted pc-intro">Each gate's progress in Review Robin and its pairs, gate by gate. A gate is sent, and its results pulled, on its own page; Process sets its evaluators and rules.</p>
 {% if exercise.state == "Draft" %}
-<section class="card">
-  <h2>Not yet</h2>
-  <p class="muted">Nothing to send: the exercise is a draft. Once it is published, each gate is sent to Review Robin from here once it is Ready, even before its stage's dates.</p>
-</section>
+{% call empty("Nothing to send yet", url(ex_base), "Home") %}The exercise is a draft: once it is published, each gate is sent to Review Robin from here when it is Ready, even before its stage's dates.{% endcall %}
 {% elif not gates %}
-<section class="card">
-  <h2>No gates yet</h2>
-  <p class="muted">Add stages and gates on Process; each one's progress shows here once it is sent.</p>
-</section>
+{% call empty("No gates yet", url(ex_base ~ '/process'), "Process") %}Each gate's progress shows here once it is sent; stages and their gates are added on Process.{% endcall %}
 {% else %}
 {% import "applydesk/operator/_gate_state.html" as gs %}
 <section class="card">
