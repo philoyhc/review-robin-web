@@ -432,6 +432,25 @@ the joke it sounds like.
   unmistakable to a reader, and a Cordware session that renames the file
   meets the reference when it greps.
 
+### 1.14 Help text taken off a page is kept in a running tab
+
+- **Written down at** `applydesk/guide/removed_help_lines.md`, segment
+  AD1S, 2026-11-21.
+- **The rule.** A change that removes or shortens help text on an Apply
+  Desk page adds a row to that file in the same PR: where the text sat,
+  the text verbatim, and what it told the reader. A row goes only when
+  its point is shown again somewhere, saying where.
+- **The instance.** AD1S's copy sweep (#4102) cut every citation and
+  most rationale from the pages; nine of the lines it cut told an
+  operator something shown nowhere else, such as invitation-only also
+  blocking direct links.
+- **Why not.** Nothing can tell help text from any other copy in a
+  template diff, nor whether a cut line carried information or only a
+  citation. A check could confirm only that the file was touched.
+- **What covers it instead.** The file itself, and the author's
+  browser check after a copy change, which is when a missing line is
+  felt.
+
 ## 2. Enforceable but not enforced — the revisit queue
 
 None of these needs an allowlist, and each would pass on the current
