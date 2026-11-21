@@ -65,6 +65,17 @@ def may_operate(person: Person | None) -> bool:
     return person is not None and person.may_operate and person.revoked_at is None
 
 
+def _allowed(session: Session, person: Person | None) -> bool:
+    """`may_operate`, read from the database now rather than from the
+    session's copy, so a revoke or admit another request committed counts
+    (Codex on #4110). Every allowlist check in this module goes through
+    it; `may_operate` alone is for a row just read."""
+    if person is None:
+        return False
+    session.refresh(person, attribute_names=["may_operate", "revoked_at"])
+    return may_operate(person)
+
+
 def _lock(session: Session, exercise: Exercise) -> None:
     """Take the exercise's row lock (`SELECT … FOR UPDATE`) before any
     change to its operators, so each change's check of who may act and
@@ -113,7 +124,7 @@ def can_operate(session: Session, exercise: Exercise, actor: Actor) -> bool:
     else on the allowlist with a current grant."""
     if actor.is_super_admin:
         return True
-    if not may_operate(actor.person):
+    if not _allowed(session, actor.person):
         return False
     assert actor.person is not None
     grant = _grant(session, exercise, actor.person)
@@ -124,7 +135,7 @@ def operated_exercises(session: Session, actor: Actor) -> list[Exercise]:
     """The exercises `actor` reaches: every one for the super-admin."""
     if actor.is_super_admin:
         return list(session.scalars(select(Exercise).order_by(Exercise.id)))
-    if not may_operate(actor.person):
+    if not _allowed(session, actor.person):
         return []
     assert actor.person is not None
     return list(
@@ -161,7 +172,7 @@ def admit(session: Session, actor: Actor, person: Person) -> None:
     """Put `person` on the allowlist (ruling 75)."""
     if not actor.is_super_admin:
         raise Refused("Only the platform super-admin keeps the operator list.")
-    if may_operate(person):
+    if _allowed(session, person):
         raise Refused("Already allowed to operate.")
     person.may_operate = True
     person.admitted_by_id = actor.person.id if actor.person is not None else None
@@ -178,7 +189,7 @@ def revoke(session: Session, actor: Actor, person: Person, reason: str | None = 
     kept (re-admitting restores them)."""
     if not actor.is_super_admin:
         raise Refused("Only the platform super-admin keeps the operator list.")
-    if not may_operate(person):
+    if not _allowed(session, person):
         raise Refused("Not on the operator list.")
     person.may_operate = False
     person.revoked_at = _now()
@@ -200,7 +211,7 @@ def revoke(session: Session, actor: Actor, person: Person, reason: str | None = 
 def create_exercise(session: Session, actor: Actor, public_id: str) -> Exercise:
     """Make an exercise's row with `actor` its Owner, in one transaction.
     The actor must be allowlisted and have a person row."""
-    if actor.person is None or not may_operate(actor.person):
+    if actor.person is None or not _allowed(session, actor.person):
         raise Refused("Only someone on the operator list may make an exercise.")
     exercise = Exercise(public_id=public_id)
     session.add(exercise)
@@ -222,8 +233,7 @@ def add_operator(session: Session, exercise: Exercise, actor: Actor, person: Per
     _lock(session, exercise)
     if not _is_owner(session, exercise, actor):
         raise Refused("Only the exercise's Owner adds operators.")
-    session.refresh(person)  # their allowlisting as it is now, not as first read
-    if not may_operate(person):
+    if not _allowed(session, person):
         raise Refused("Only someone on the operator list can be added.")
     grant = _grant(session, exercise, person)
     if grant is not None and grant.removed_at is None:
@@ -287,8 +297,7 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
     _lock(session, exercise)
     if not _is_owner(session, exercise, actor):
         raise Refused("Only the exercise's Owner hands ownership over.")
-    session.refresh(person)  # their allowlisting as it is now, not as first read
-    if not may_operate(person):
+    if not _allowed(session, person):
         raise Refused("Only someone on the operator list can own an exercise.")
     grant = _grant(session, exercise, person)
     if grant is None or grant.removed_at is not None:

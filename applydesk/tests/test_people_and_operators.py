@@ -566,3 +566,28 @@ def test_a_target_revoked_meanwhile_is_refused(session: Session, change: str) ->
             operators.add_operator(session, exercise, Actor(owner), target)
     session.rollback()
     assert operators.owner_of(session, exercise) == owner
+
+
+def test_an_actor_revoked_meanwhile_reaches_nothing_and_makes_nothing(session: Session) -> None:
+    """Codex on #4110: every allowlist check reads the database, not the
+    session's copy, so an actor revoked by another request is refused at
+    once: no new exercise, no access, nothing listed."""
+    owner, _, exercise_id, _ = _owned_with_colleague(session)
+    from applydesk.models import Exercise
+
+    exercise = session.get(Exercise, exercise_id)
+    assert exercise is not None and owner.may_operate  # this request's copy
+    session.commit()
+
+    other = db.new_session()  # meanwhile the super-admin revokes them
+    them = other.get(Person, owner.id)
+    assert them is not None
+    operators.revoke(other, SUPER, them)
+    other.commit()
+    other.close()
+
+    with pytest.raises(Refused, match="operator list"):
+        operators.create_exercise(session, Actor(owner), "bcdefghjkm")
+    session.rollback()
+    assert not operators.can_operate(session, exercise, Actor(owner))
+    assert operators.operated_exercises(session, Actor(owner)) == []
