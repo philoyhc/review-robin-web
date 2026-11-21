@@ -64,24 +64,46 @@ Taken 2026-11-21 at `64f0c5c6e`.
 
 ## Status
 
-- **Rung 3** ([#4110](https://github.com/philoyhc/review-robin-web/pull/4110)) took ten rounds of Codex review, every finding real; the eleventh was clean. Most were concurrency gaps between two requests. Fixes:
-  - **Audit:** a directory find is audited to the searcher, and person events carry `refs.person_id`.
-  - **Matching:** an address matches only a pending person, and the people search dedupes bound people by object ID.
-  - **Database rules:** one Owner per exercise and one pending person per address, each a partial unique index (migrations `ad2a2oneowner`, `ad2a3onepending`).
-  - **Binding:** a conditional bind and a savepointed insert, each retried.
-  - **SQLite:** engines begin real transactions, so savepoints nest.
-  - **Operator changes:** each takes the exercise's row lock, checks fresh rows, and restates its rule in a conditional update.
-  - **Allowlist:** every check re-reads the row.
-- **Ruling (author, 2026-11-21):** rung 3 merges once CI is green after the tenth fix; any later concurrency finding is recorded here and taken at rungs 6 and 8, where adding people is wired to pages. None was raised.
+Closed 2026-11-21. Intended versus done:
 
-- **Ruling (author, 2026-11-21): "harmonize with RRW admin > account management".** The operator list became Admin → Accounts Management, laid out as Review Robin's and reached from the account menu, not the switcher. Admit, Revoke, Add and Remove are Secondary. This supersedes rung 5's switcher entry (`cordware/spec/header_chrome.md` §3, §4).
-- **Scope added (author, 2026-11-21): Admin's other two tabs as scaffolds.** Exercises Diagnostics (the sample exercises, filter and actions inert) and System Status (four cards, every value a dash) beside Accounts Management, as Review Robin's Admin. "Exercises", not "Sessions": Apply Desk's word. Wiring them is later AD2 work.
-- **Scope added (author, 2026-11-21): the super-admin on the list as *(self)*,** as Review Robin's Accounts Management; no action on their own row (ruling at the bug sweep).
-- **Bug sweep before the close (author's ask, 2026-11-21).** Three reviewers (web layer, data layer, a Postgres 16 run) and a cold read; fixes land as their own PR. Rulings: the participant's pages stay the super-admin's when deployed and the links to them are hidden from other operators (not widened); Exercises Diagnostics offers Review Robin's *Manage* / *Outbox* / *Audit log*. Deferred to `ad2_deferred_findings.md`: the same-site check with no `Sec-Fetch-Site` header, SQLite's ASCII-only `lower()` in name search, Apply Desk's tests not run on Postgres in CI, and `process_save.py`'s `isdigit()` guard.
-- **Cumulative cold read at rung 8**, split at rung 3/4 (3,700 lines): two reads, nothing blocking.
-  - Fixed: a sign-in matching two pending people now fails closed (Residential §6); the seed goes through `people` and `operators`, so it is audited; refusals carry a key, not text; row buttons are named; the spec and overview are aligned.
-  - Also fixed: Graph is called off the event loop (Codex on #4113).
-  - Left as is: the audit detail carries the exercise's public ID only, since its key is a column. Decisions 4 and 7 stand as amended by the rung-4 judgment calls; the close reconciles them.
+- **The ladder held**, rungs 2–8 as #4109–#4115, with three departures:
+  - Rung 9 (Cordware) landed before rung 2, as Cordware #221 and #222. The `applydesk` database, its role, its Key Vault secrets and `APPLYDESK_DATABASE_URL` are provisioned.
+  - Rung 5's switcher entry was superseded at rung 8 (below).
+  - Rung 8 also carried the cold-read fixes and a landing fix the spec-writer raised.
+- **Rung 3 took ten rounds of Codex review**, every finding a real concurrency or binding gap, all fixed.
+  - Two more migrations add partial unique indexes: one Owner per exercise (`ad2a2oneowner`) and one pending person per address (`ad2a3onepending`).
+  - Binding is conditional and savepointed; SQLite engines begin real transactions.
+  - Operator changes take the exercise's row lock and check fresh rows; every allowlist check re-reads the row.
+  - Author ruling: merge after the tenth fix and record any later finding. The eleventh round was clean.
+- **Admin → Accounts Management** (author ruling 2026-11-21: "harmonize with RRW admin > account management"):
+  - It is reached from the account menu, not the switcher, and laid out as Review Robin's.
+  - *Admit*, *Revoke*, *Add* and *Remove* are Secondary.
+- **Decisions amended at build** (judgment calls, rung 4):
+  - `is_operator` reads "the super-admin, or on the allowlist", not "operates any exercise".
+  - The super-admin may make an exercise without being allowlisted, if their sign-in can be bound.
+  - The participant pages keep the placeholders' gate; the landing lets any operator through.
+- **Cold reads: one per closing unit**, at rung 8 from `b6a2229f5`, split at rung 3/4 (3,700 lines). Neither found anything blocking. Fixed:
+  - A sign-in matching two pending people fails closed (Residential §6).
+  - The seed goes through `people` and `operators`, so it is audited.
+  - Refusals carry a key.
+  - Row buttons are named for screen readers.
+  - Snapshots mirror the identity columns.
+- **Codex on rungs 6 and 8**:
+  - Graph is called off the event loop.
+  - Admin keeps where it was opened from.
+- **Scope added (author, 2026-11-21)**, as Review Robin's Admin:
+  - Exercises Diagnostics and System Status as scaffolds beside Accounts Management (#4116). "Exercises", not "Sessions".
+  - The super-admin listed as *(self)*, with no action on their own row.
+- **Bug sweep before the close (author's ask)**: three reviewers (web, data, a Postgres 16 run) and a cold read of #4116 onward; fixed in one PR, each with a test:
+  - a revoked Owner's change could land (allowlisting now read `FOR SHARE`); double admit or revoke audited twice (conditional updates);
+  - SQLite "database is locked" and malformed IDs were 500s; a dot-segment `return_to` steered Back; a new scratch exercise was made on the event loop;
+  - the Operators card's search limited before leaving out current operators; a deadlock the `FOR SHARE` fix opened (the actor is bound and committed before the lock).
+  - Rulings: the participant pages stay the super-admin's when deployed, and the links to them are hidden from other operators; Diagnostics offers *Manage* / *Outbox* / *Audit log*.
+  - Deferred to `ad2_deferred_findings.md` (AD-126 to AD-129).
+- **Known limits, left to later AD2 segments**:
+  - A discarded scratch exercise keeps its row and grant (soft delete only).
+  - An unbindable super-admin cannot make an exercise.
+  - The audit detail names the exercise by public ID only.
 
 ## PR ladder
 
