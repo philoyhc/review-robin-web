@@ -12,8 +12,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any, cast
 
-from sqlalchemy import select
+from sqlalchemy import CursorResult, select, update
 from sqlalchemy.orm import Session
 
 from applydesk import audit
@@ -69,15 +70,33 @@ def _pending_person(session: Session, *keys: str | None) -> Person | None:
 
 def _bind(
     session: Session, person: Person, account: Account, how: str, actor: Person | None
-) -> Person:
-    person.tenant_id = account.tenant_id
-    person.object_id = account.object_id
-    person.email = account.email or person.email
-    person.email_key = email_key(person.email)
-    person.upn = account.upn or person.upn
-    person.display_name = account.name or person.display_name
-    person.bound_at = datetime.now(UTC)
-    session.flush()
+) -> Person | None:
+    """Bind the pending `person` to `account`, only if it is still unbound:
+    a conditional update, so of two requests binding one pending row at
+    once only the first wins (Codex on #4110). None if another request
+    bound it first; the caller looks again."""
+    email = account.email or person.email
+    claimed = cast(
+        "CursorResult[Any]",
+        session.execute(
+            update(Person)
+            .where(Person.id == person.id, Person.object_id.is_(None))
+            .values(
+                tenant_id=account.tenant_id,
+                object_id=account.object_id,
+                email=email,
+                email_key=email_key(email),
+                upn=account.upn or person.upn,
+                display_name=account.name or person.display_name,
+                bound_at=datetime.now(UTC),
+            )
+            .execution_options(synchronize_session=False)
+        ),
+    )
+    if claimed.rowcount != 1:
+        session.expire(person)
+        return None
+    session.refresh(person)
     audit.write_event(
         session,
         event_type="person.bound",
@@ -112,6 +131,35 @@ def _new_bound(session: Session, account: Account, how: str, actor: Person | Non
     return person
 
 
+#: Looks a binding makes before giving up: each lost race means another
+#: request bound the row, so the next look finds a bound person or another
+#: pending one.
+_ATTEMPTS = 3
+
+
+def _attach(
+    session: Session,
+    account: Account,
+    keys: tuple[str | None, ...],
+    how: str,
+    actor: Person | None,
+) -> Person:
+    """The person for `account`: the bound one; else a pending one matching
+    `keys`, bound; else a new bound one. A pending row another request
+    bound first is passed over and the look repeated."""
+    for _ in range(_ATTEMPTS):
+        person = _bound_person(session, account.tenant_id, account.object_id)
+        if person is not None:
+            return person
+        found = _pending_person(session, *keys)
+        if found is None:
+            return _new_bound(session, account, how=how, actor=actor)
+        bound = _bind(session, found, account, how=how, actor=actor)
+        if bound is not None:
+            return bound
+    raise RuntimeError("could not bind the account: its pending person kept being taken")
+
+
 def resolve(session: Session, identity: Identity) -> Person | None:
     """The signed-in person, bound to their account: found by (tenant,
     object ID); else a pending person matching the UPN, then the mail, is
@@ -121,15 +169,9 @@ def resolve(session: Session, identity: Identity) -> Person | None:
     object_id = (identity.principal_id or "").strip()
     if not tenant_id or not object_id:
         return None
-    person = _bound_person(session, tenant_id, object_id)
-    if person is not None:
-        return person
     mail = identity.mail or identity.email
-    pending = _pending_person(session, email_key(identity.upn), email_key(mail))
     account = Account(tenant_id, object_id, mail, identity.upn, identity.name)
-    if pending is not None:
-        return _bind(session, pending, account, how="sign_in", actor=None)
-    return _new_bound(session, account, how="sign_in", actor=None)
+    return _attach(session, account, (email_key(identity.upn), email_key(mail)), "sign_in", None)
 
 
 def from_directory(
@@ -140,15 +182,10 @@ def from_directory(
     pending one with the same address is bound. `actor` is who searched
     (None for the super-admin with no row), and the audit names them: the
     person found did nothing. Flushes."""
-    person = _bound_person(session, tenant_id, user.id)
-    if person is not None:
-        return person
     mail = user.mail or user.user_principal_name
-    pending = _pending_person(session, email_key(user.user_principal_name), email_key(mail))
     account = Account(tenant_id, user.id, mail, user.user_principal_name, user.display_name)
-    if pending is not None:
-        return _bind(session, pending, account, how="directory", actor=actor)
-    return _new_bound(session, account, how="directory", actor=actor)
+    keys = (email_key(user.user_principal_name), email_key(mail))
+    return _attach(session, account, keys, "directory", actor)
 
 
 def pending(session: Session, address: str, actor: Person | None) -> Person:

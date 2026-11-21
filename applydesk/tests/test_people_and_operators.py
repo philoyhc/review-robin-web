@@ -343,3 +343,35 @@ def test_creation_and_binding_events_name_the_person(session: Session) -> None:
         ("person.bound", pending.id),
         ("person.created", fresh.id),
     ]
+
+
+def test_a_pending_person_bound_by_another_request_is_not_taken_over(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex on #4110: two accounts sharing an address resolve at once. This
+    request read the pending row, then another bound it and committed; this
+    request's bind must not overwrite that, and it gets a person of its own."""
+    pending = people.pending(session, "ana@example.edu", actor=None)
+    operators.admit(session, SUPER, pending)
+    session.commit()
+    stale = session.get(Person, pending.id)  # what this request read
+    assert stale is not None and not stale.bound
+
+    other = db.new_session()  # the other request, first to bind it
+    first = people.resolve(other, _identity("o1", "ana@example.edu"))
+    other.commit()
+    other.close()
+    assert first is not None and first.id == pending.id
+
+    looks = iter([stale])
+    real = people._pending_person  # pyright: ignore[reportPrivateUsage]  -- replay the stale read
+
+    def stale_once(s: Session, *keys: str | None) -> Person | None:
+        return next(looks, None) or real(s, *keys)
+
+    monkeypatch.setattr(people, "_pending_person", stale_once)
+    second = people.resolve(session, _identity("o2", "ana@example.edu"))
+    session.commit()
+    assert second is not None and second.id != pending.id and second.object_id == "o2"
+    session.refresh(stale)
+    assert stale.object_id == "o1" and stale.may_operate  # the first binding kept
