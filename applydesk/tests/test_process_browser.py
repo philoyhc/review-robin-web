@@ -801,7 +801,7 @@ def test_a_gate_item_makes_and_picks_its_panel(page: Page) -> None:
     box = gate.locator("[data-newpanel]")
     box.locator('[data-np="name"]').fill("Interview panel")
     box.locator('[data-np="members"]').fill("Daniel Koh, priya.raman@example.edu")
-    box.get_by_role("button", name="Create panel").click()
+    box.get_by_role("button", name="+ Panel").click()
     assert gate.locator("[data-pi-panel]").text_content() == "Interview panel 1 · Total 1"
     # Its members are on Panels, not listed here (author, 2026-11-17).
     assert gate.locator("[data-pc-members]").count() == 0

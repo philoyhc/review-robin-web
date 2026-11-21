@@ -30,6 +30,8 @@ TONE: dict[str, str] = {
     "Not entered": "mute",
     "Pending": "warn",
     "Withdrawn": "warn",
+    # An outcome (Home's operator part, as Process's card).
+    "Released": "ok",
     # A stage on the timeline.
     "Done": "ok",
     "Now": "info",

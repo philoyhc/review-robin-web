@@ -22,6 +22,7 @@
 {% macro columns(cols) -%}
 <p class="xd-cols"><span class="visually-hidden">Columns: </span>{{ cols | join(", ") }}</p>
 {%- endmacro %}
+<p class="muted pc-intro">The exercise's data cut into files for offline selection, a card per file; Dossiers and each gate's page show the data itself. Each card's chips shape its download and are kept in this browser.</p>
 {% if nothing %}<p class="muted xd-empty" data-xd-empty>No submitted applications yet.{% if extract.draft %} A draft exercise: only its setup can be extracted.{% endif %}</p>{% endif %}
 <div class="xd-grid" data-xd="{{ exercise.public_id }}">
   <section class="card" data-xd-card="all">
@@ -32,7 +33,7 @@
     {% if not all_names %}<p class="muted xd-note">Dossier IDs to start with: {{ "blind review is on" if exercise.blind else "a gate is confidential" }}.</p>{% endif %}
     {# The files as the Carries chips say; the script hides what is off. #}
     <p class="xd-cols" data-xd-files>{{ extract.zip_name }}: <span>manifest.csv</span> <span data-xd-part="applications">· applications.csv</span>{% for g in extract.gates if g.sent %} <span data-xd-part="gates">· {{ g.name }}</span>{% endfor %} <span data-xd-part="outcomes">· outcomes.csv</span>{% for f in setup_files %} <span data-xd-part="setup" data-xd-page="{{ f[:-4] }}" hidden>· setup/{{ f }}</span>{% endfor %}</p>
-    <div class="btnrow">{{ dl("all.zip", "Zip all") }}</div>
+    <div class="btnrow">{{ dl("all.zip", "Download all (ZIP)") }}</div>
   </section>
   <section class="card" data-xd-card="applications">
     <h2>Applications</h2>
@@ -54,7 +55,7 @@
       {% for g in extract.gates %}
         <tr data-xd-gate="{{ g.number }}"><td>Gate {{ g.number }} · {{ g.label }}{% if g.confidential %} <span class="chip chip-mute">Confidential</span>{% endif %}</td>
           <td>{% if g.sent %}{{ "{:,}".format(g.pairs) }} {{ "pair" if g.pairs == 1 else "pairs" }}{% else %}<span class="muted">Not sent</span>{% endif %}</td>
-          <td>{% if g.sent %}{{ dl("gate_" ~ g.number ~ ".csv", "CSV", "btn-secondary btn-short", name="Gate " ~ g.number ~ " CSV") }}{% else %}<span class="muted">—</span>{% endif %}</td></tr>
+          <td>{% if g.sent %}{{ dl("gate_" ~ g.number ~ ".csv", "Download CSV", "btn-secondary btn-short", name="Download Gate " ~ g.number ~ " CSV") }}{% else %}<span class="muted">—</span>{% endif %}</td></tr>
       {% endfor %}
       </tbody>
     </table>
@@ -62,7 +63,7 @@
     {% else %}
     <p class="muted">No gates yet: Process adds them.</p>
     {% endif %}
-    <div class="btnrow">{% if extract.gates | selectattr("sent") | list %}{{ dl("gates.zip", "Zip gates") }}{% else %}<button class="btn btn-secondary" type="button" disabled>Zip gates</button>{% endif %}</div>
+    <div class="btnrow">{% if extract.gates | selectattr("sent") | list %}{{ dl("gates.zip", "Download gates (ZIP)") }}{% else %}<button class="btn btn-secondary" type="button" disabled>Download gates (ZIP)</button>{% endif %}</div>
   </section>
   <section class="card" data-xd-card="outcomes">
     <h2>Outcomes</h2>
@@ -79,14 +80,16 @@
     <h2>Alias key</h2>
     <p class="xd-help">Dossier ID to applicant, the key Review Robin never sees. Keep it apart from the files above; downloads will be logged from AD2.</p>
     {{ columns(alias_columns) }}
-    <div class="btnrow">{{ dl("alias_key.csv", "Download key", "btn-secondary") }}</div>
+    <div class="btnrow">{{ dl("alias_key.csv", "Download key (CSV)", "btn-secondary") }}</div>
   </section>
   <section class="card" data-xd-card="setup">
     <h2>Extract setup</h2>
     <p class="xd-help">The exercise's setup as files, for a later import into a new exercise (not built yet): Form, Process (stages, gates, outcomes and rules), Panels and Emails.</p>
     <div class="xd-chips" role="group" aria-label="The setup ZIP carries"><span class="xd-k" aria-hidden="true">Carries</span>{{ tog("form", "Form") }}{{ tog("process", "Process") }}{{ tog("panels", "Panels") }}{{ tog("emails", "Emails") }}</div>
     <p class="xd-cols">{{ setup_files | join(" · ") }}</p>
-    <div class="btnrow">{{ dl("setup.zip", "Zip setup", "btn-secondary", always=True) }}</div>
+    {# Ruling 67, AD-84: the two panel files differ in shape, so say so. #}
+    <p class="muted xd-note" data-xd-panels-shape><code>panels.csv</code> is long, one row per member: panel, name, email, note. The CSV Panels downloads is wide, a column per panel.</p>
+    <div class="btnrow">{{ dl("setup.zip", "Download setup (ZIP)", "btn-secondary", always=True) }}</div>
   </section>
 </div>
 <script>
@@ -110,7 +113,7 @@
     return q;
   }
   function cardOf(name) { return grid.querySelector('[data-xd-card="' + name + '"]'); }
-  // Zip all carries every file as its own card is set (Codex): the
+  // Download all (ZIP) carries every file as its own card is set (Codex): the
   // Applications card's rows and drafts, By gate's shape, Outcomes' rows.
   function borrowed(q) {
     var apps = cardOf("applications"), gates = cardOf("gates"), outs = cardOf("outcomes");  // and Extract setup's pages
@@ -134,7 +137,7 @@
     var p = state(card);
     if (card.dataset.xdCard === "all") p = borrowed(p);
     var q = p.toString();
-    // Zip all is off while its ZIP would hold only the manifest (AD-17):
+    // Download all (ZIP) is off while its ZIP would hold only the manifest (AD-17):
     // no file but the manifest is listed. Off for the keyboard too.
     var empty = card.dataset.xdCard === "all" && !card.querySelector("[data-xd-part]:not([hidden])");
     card.querySelectorAll("a[data-xd-dl]").forEach(function (a) {

@@ -299,7 +299,7 @@ shows the form's own card and one empty String card, open.
   the row: *Panel name* and *Members*, a token box as Residential's people
   boxes are (names or emails, comma-separated, each found in the directory
   a pill with ×; one not found stays in the box with the reason), then
-  *Create panel* and *Cancel*. A panel created joins every *Chosen from*
+  *+ Panel* (Secondary, as on Panels) and *Cancel*. A panel created joins every *Chosen from*
   menu on the page and Preview's lookup, and is selected; it lives on this
   page only. *Edit on Panels →* beside the menu links to the chosen panel
   on Panels, hidden for *Institution-wide* and for a panel made here. A
@@ -322,7 +322,7 @@ shows the form's own card and one empty String card, open.
   No card shows a number. A card with no question reads *Untitled
   question* (*Untitled text*, *Untitled section*).
 - **Buttons** along each card's foot, flush right, in this order:
-  *Replicate* (a field card only), *+ New* (an empty String card),
+  *Replicate* (a field card only), *+ Question* (an empty String card),
   *+ Section*, *+ Page break*, *Delete*. Each insert lands right after the
   card, and a new card opens. *Delete* has no confirmation and is disabled,
   with a reason in its title, on the form's last question or text card.
@@ -890,7 +890,7 @@ CSV* undoes the guard. The page has no *Save*; nothing is kept until AD2.
   statuses*, *Submitted*, *Draft* or *Withdrawn*; *Rows* is *All dossiers*
   or *Last applications*: per applicant, by email, the latest submitted,
   else the latest of any status (`stages.last_submitted`). The three
-  combine, and *Showing N of M* beside them counts the rows in view. The
+  combine, and *Showing N of M dossiers* beside them counts the rows in view. The
   ticked rows' actions (*Set ticked rows*, *Return ticked to draft*) and
   *Download CSV* stand in a row above the table.
 - **The CSV.** *Download CSV* writes `Application ID`, `Applicant`, `Email`,
@@ -1132,21 +1132,21 @@ from AD2.
   setup's pages) is a `.pn-show` pill, a one-of choice a `.seg` (ruling 47),
   both with rounded sides at one height, `--tog-h` (ruling 63).
   Each viewer's are kept in `localStorage` `applydesk-extract-<id>`; with storage blocked, or no script,
-  the defaults apply. *Zip all*'s link also takes the other cards' settings
+  the defaults apply. *Download all (ZIP)*'s link also takes the other cards' settings
   (Applications' rows and drafts, By gate's shape, Outcomes' rows, Extract
   setup's pages) so the ZIP carries each file as its card is set.
   While its files line names only `manifest.csv` (nothing carried, or Setup
-  carried with every setup page off), *Zip all* is off, titled *Tick a file
+  carried with every setup page off), *Download all (ZIP)* is off, titled *Tick a file
   to carry first*.
 
 | Card | Chips (default first) | Download |
 |---|---|---|
-| Extract all data | *Carries*: Applications, Gates, Outcomes on; Setup off. *Applicants as*: Names, Dossier IDs | *Zip all* |
+| Extract all data | *Carries*: Applications, Gates, Outcomes on; Setup off. *Applicants as*: Names, Dossier IDs | *Download all (ZIP)* |
 | Applications | *Rows*: Last applications, All applications. *Drafts*: Left out, Included | *Download CSV* |
-| By gate | *Shape*: A row per pair, A row per application. *Applicants as*: Names, Dossier IDs (Dossier IDs pressed) | a *CSV* per gate; *Zip gates* |
+| By gate | *Shape*: A row per pair, A row per application. *Applicants as*: Names, Dossier IDs (Dossier IDs pressed) | a *Download CSV* per gate; *Download gates (ZIP)* |
 | Outcomes | *Rows*: Last applications, All applications | *Download CSV* |
-| Alias key | none | *Download key* |
-| Extract setup | *Carries*: Form, Process, Panels, Emails, all on | *Zip setup* |
+| Alias key | none | *Download key (CSV)* |
+| Extract setup | *Carries*: Form, Process, Panels, Emails, all on | *Download setup (ZIP)* |
 
 - **The route** `GET /operator/exercises/<id>/extract/<file>`
   (`routes_operator.extract_file`, `applydesk_extract_file`; 404 for an
@@ -1214,14 +1214,14 @@ from AD2.
 - **The ZIPs.** Named `<code>_<kind>_<date>.zip` (the Exercise code, or the
   ID if none, as a file-name slug; today's date; kind `extract`, `gates` or
   `setup`), each with `manifest.csv` first: a row per file with its row
-  count, then a row per gate left out with the note *Not sent*. *Zip all*
+  count, then a row per gate left out with the note *Not sent*. *Download all (ZIP)*
   holds `applications.csv`, each sent gate's file, `outcomes.csv`, and with
   *Setup* the pages Extract setup's chips leave on, under `setup/`. *Zip
   gates* holds the sent gates' files.
 - **Empty and Draft.** With no submitted applications one line above the
   cards says so (adding, for a Draft exercise, that only its setup can be
-  extracted), and every download but *Zip setup* is off; *Zip setup* works
-  for a Draft too, as it needs no applications. *Zip gates* is off while no
+  extracted), and every download but *Download setup (ZIP)* is off; *Download setup (ZIP)* works
+  for a Draft too, as it needs no applications. *Download gates (ZIP)* is off while no
   gate is sent. An exercise with no gates says so in *By gate*.
 
 ## The Emails page

@@ -132,15 +132,15 @@ def test_a_release_asks_first(page: Page) -> None:
 def test_search_status_and_last_applications_filter(page: Page) -> None:
     page.goto(PAGE)
     shown = page.locator("[data-ap-shown]")
-    assert shown.inner_text() == "Showing 104 of 104"
+    assert shown.inner_text() == "Showing 104 of 104 dossiers"
     page.locator("[data-ap-search]").fill("chen.")
-    assert shown.inner_text() == "Showing 4 of 104"
+    assert shown.inner_text() == "Showing 4 of 104 dossiers"
     page.locator("[data-ap-which]").select_option("last")  # one each (ruling 30)
-    assert shown.inner_text() == "Showing 4 of 104"
+    assert shown.inner_text() == "Showing 4 of 104 dossiers"
     page.locator("[data-ap-search]").fill("")
     page.locator("[data-ap-which]").select_option("all")
     page.locator("[data-ap-status]").select_option("Draft")
-    assert shown.inner_text() == "Showing 3 of 104"
+    assert shown.inner_text() == "Showing 3 of 104 dossiers"
 
 
 def test_ticked_rows_are_set_together(page: Page) -> None:
