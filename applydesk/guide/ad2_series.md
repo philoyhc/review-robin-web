@@ -1,0 +1,35 @@
+# Apply Desk — the AD2 series: from sample data to a database
+
+**Opened:** 2026-11-21 · **Rulings:** 72–74 (`applydesk/guide/todo_master.md`) · **Work list:** `applydesk/guide/ad2_deferred_findings.md` · **Model:** `applydesk/docs/data_and_visibility_model.md`
+
+The roadmap's AD2 row ("Database and identity") is a series of segments, each its own plan in this folder, not one segment (author, 2026-11-21). Each moves one area from sample data and the scratch store to Apply Desk's own database. The pages keep working between segments. This file holds what the series shares; each plan holds its own work.
+
+## What every AD2 segment holds to
+
+- **Its own database**, `applydesk`, at `APPLYDESK_DATABASE_URL`, with its own Alembic history (`applydesk/alembic.ini`, version table `applydesk_alembic_version`), as Utilities' (`utilityapps/db.py`). Models use SQLAlchemy 2.x with no Postgres-only types. Migrations survive SQLite and Postgres 16 in both directions; `ci-postgres.yml` round-trips the history.
+- **Checkable on localhost** (author, 2026-11-21), as RRW is. The URL defaults to `sqlite:///./applydesk.db`, `alembic -c applydesk/alembic.ini upgrade head` builds it, and `python -m applydesk.seed` loads the sample exercises. A fresh checkout reaches every page under Cordware's fake auth. Tests build the schema from the models on in-memory SQLite.
+- **RRW's layering** (`spec/architecture.md`, "Three-layer split"): thin routes, services holding the rules, models with no logic.
+- **People by tenant and object ID** (ruling 73), never by email after binding.
+- **Every change audited**, in RRW's envelope, through Apply Desk's own copy (ruling 74).
+- **A save names the revision it started from** and is refused, *changed since you opened it; reload*, if a newer one exists (ruling 74).
+- **Nothing is hard-deleted**: `retired_at` / `withdrawn_at` (ruling 74).
+- **The samples are seeds**: loaded on localhost and in tests, never in production (ruling 74).
+
+## The segments, in order
+
+| Segment | Moves to the database | Findings it takes | Plan |
+|---|---|---|---|
+| AD2A — Foundations | The database and its history; people and their binding; exercise operators (Owner and operators); audit; the seed command | AD-43, AD-53 | `applydesk/guide/segment_AD2A_foundations.md` |
+| AD2B — Exercises and Details | The exercise and its settings: public ID, code, description, eligibility and invitees, help contact and time zone over the operator settings; NULL for unset; one date helper | AD-52, AD-54, AD-55, AD-60, AD-97, AD-40 | — |
+| AD2C — Process | Stages with date-times, the form's state, gates (stable keys, fields, results), outcomes (keyed values, state, release per audience); rules as validated JSON, evaluated by one server-side service; Process's Save | AD-36, AD-48, AD-51, AD-57, AD-59, AD-61, AD-62, AD-34 | — |
+| AD2D — Form and applications | Versioned forms with stable field keys and per-field visibility grants (rulings 68–71); applications and their states; answers and nominations | AD-45, AD-38, AD-46 | — |
+| AD2E — Panels | Panels and members, retiring, size caps; the institution-wide pool as a directory search only | AD-50, AD-42 | — |
+| AD2F — Dossiers, pairs and gates | Dossiers, parts and snapshots; gate entries, results and outcome decisions with who and when; stored pairs; the gate lifecycle and its transfer record; email templates; Lock as one audited transaction. May split in two. | AD-44, AD-58, AD-47, AD-32, AD-39, AD-35 | — |
+| AD2G — Retire the simulation | The scratch store's caps or its end, request-scoped loading with SQL paging, the sample-data path off production | S10 follow-up, AD-125 | — |
+
+Each segment that adds a page's controls lands scaffold-first (`CLAUDE.md`, "Consequential UI lands scaffold-first"). Each closes on its own: Status compacted, `spec-writer` on `applydesk/spec/`, the plan archived, its findings struck in `applydesk/guide/ad2_deferred_findings.md` with the PR that cleared them.
+
+## Outside the series
+
+- **Cordware provisioning:** the `applydesk` database, its runtime role, its Key Vault secret and the App Setting `APPLYDESK_DATABASE_URL`. These follow Utilities' workflows (`postgres-utilityapps-database.yml`, `app-settings-database-urls.yml`) in the private repository. AD2A opens the PR; the author dispatches it. It is needed before AD2's first production release, not before local work.
+- **AD3 onward** add behavior to the stored data: exercise transitions and what a published exercise fixes (AD3, G2), applicants submitting (AD4), dossier access (AD5), sending to Review Robin (AD6), release (AD7).
