@@ -9,9 +9,7 @@
    exercise's ownership. #}
 <a class="back-link" href="{{ url(back_path) }}" data-admin-back>&larr; {{ back_label }}</a>
 <h1>Admin</h1>
-<nav class="adm-tabs" aria-label="Admin">
-  <a class="adm-tab on" href="{{ url('/admin/operators') }}" aria-current="page">Accounts Management</a>
-</nav>
+{% with admin_tab = "operators" %}{% include "applydesk/admin/_tabs.html" %}{% endwith %}
 {% if said %}<p class="nx-said" role="status" data-op-said>{{ said }}</p>{% endif %}
 
 <div class="adm-grid">

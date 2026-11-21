@@ -1,0 +1,52 @@
+{% extends "applydesk/base.html" %}
+{% block title %}System Status — Admin{% endblock %}
+{% block content %}
+{# Admin → System Status (segment AD2A, scaffold): Apply Desk's own
+   working parts, laid out as Review Robin's System Status. Read-only
+   cards; every value is a dash until it is wired. #}
+<a class="back-link" href="{{ url(back_path) }}" data-admin-back>&larr; {{ back_label }}</a>
+<h1>Admin</h1>
+{% with admin_tab = "system" %}{% include "applydesk/admin/_tabs.html" %}{% endwith %}
+<p class="placeholder"><strong>Placeholder.</strong> The cards this page will show; none of their values is read yet.</p>
+
+<div class="adm-grid">
+  <section class="card" aria-labelledby="sys-inst-h" data-system-instance>
+    <h2 id="sys-inst-h">This instance</h2>
+    <dl class="facts">
+      <dt>Version</dt><dd>—</dd>
+      <dt>Started</dt><dd>—</dd>
+      <dt>Uptime</dt><dd>—</dd>
+      <dt>Database</dt><dd>—</dd>
+      <dt>Schema</dt><dd>—</dd>
+    </dl>
+  </section>
+
+  <section class="card" aria-labelledby="sys-dir-h" data-system-directory>
+    <h2 id="sys-dir-h">Directory</h2>
+    <p class="muted">The institution's directory, which <em>Add an operator</em> searches.</p>
+    <dl class="facts">
+      <dt>Tenant</dt><dd>—</dd>
+      <dt>Last search</dt><dd>—</dd>
+      <dt>Last failure</dt><dd>—</dd>
+    </dl>
+  </section>
+</div>
+
+<div class="adm-grid">
+  <section class="card" aria-labelledby="sys-send-h" data-system-sending>
+    <h2 id="sys-send-h">Sending</h2>
+    <dl class="facts">
+      <dt>Email sending</dt><dd>—</dd>
+      <dt>Last sent</dt><dd>—</dd>
+    </dl>
+  </section>
+
+  <section class="card" aria-labelledby="sys-audit-h" data-system-audit>
+    <h2 id="sys-audit-h">Audit trail</h2>
+    <dl class="facts">
+      <dt>Events recorded</dt><dd>—</dd>
+      <dt>Last event</dt><dd>—</dd>
+    </dl>
+  </section>
+</div>
+{% endblock %}

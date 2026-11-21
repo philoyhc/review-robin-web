@@ -1,0 +1,9 @@
+{# Admin's tab strip (segment AD2A), as Review Robin's Admin: Exercises
+   Diagnostics, Accounts Management, System Status. Each tab keeps where
+   Back goes. Needs `admin_tab` (one of "exercises", "operators",
+   "system") and `back_path`. #}
+<nav class="adm-tabs" aria-label="Admin">
+{% for key, label in (("exercises", "Exercises Diagnostics"), ("operators", "Accounts Management"), ("system", "System Status")) %}
+  <a class="adm-tab{% if admin_tab == key %} on{% endif %}" href="{{ url('/admin/' ~ key) }}?return_to={{ back_path | urlencode }}"{% if admin_tab == key %} aria-current="page"{% endif %} data-admin-tab="{{ key }}">{{ label }}</a>
+{% endfor %}
+</nav>

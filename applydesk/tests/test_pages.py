@@ -30,6 +30,8 @@ PAGES = (
     "/applydesk/",
     "/applydesk/operator/exercises",
     "/applydesk/admin/operators",  # the super-admin's (segment AD2A)
+    "/applydesk/admin/exercises",  # scaffolds (AD2A)
+    "/applydesk/admin/system",
     f"/applydesk/operator/exercises/{EX}",
     *(
         f"/applydesk/operator/exercises/{EX}/{section}"
@@ -88,7 +90,7 @@ def client() -> TestClient:
 def test_every_page_of_the_map_answers_locally(client: TestClient, path: str) -> None:
     response = client.get(path)
     assert response.status_code == 200, path
-    if not path.startswith("/applydesk/admin/"):  # the operator list is real (AD2A)
+    if path != "/applydesk/admin/operators":  # the operator list is real (AD2A)
         assert "Placeholder." in response.text
 
 

@@ -1,9 +1,12 @@
 """The platform super-admin's pages, `/admin/…` (segment AD2A, ruling 75):
 the operator list, who may operate an exercise. Rung 5 landed the page;
-rung 6 wires its search, *Admit* and *Revoke* (`applydesk/allowlist.py`)."""
+rung 6 wires its search, *Admit* and *Revoke* (`applydesk/allowlist.py`).
+Exercises Diagnostics and System Status are scaffolds, as Review Robin's
+Admin tabs (the author's ask, 2026-11-21)."""
 
 from __future__ import annotations
 
+from collections import Counter
 from urllib.parse import parse_qs, urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -11,7 +14,7 @@ from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 from starlette.responses import RedirectResponse, Response
 
-from applydesk import allowlist, db, directory, gate, operators
+from applydesk import allowlist, db, directory, gate, locks, operators, sample_data
 from applydesk.web import ADMIN, render, url_path
 from cordware.graph import GraphError, directory_for
 from cordware.identity import Identity, current_identity
@@ -99,6 +102,43 @@ def operators_page(
         overview=allowlist.overview(session),
         listed={p.id for p in allowlist.listed_ids(session)},
         said=SAID.get(request.query_params.get("said", ""), ""),
+        back_path=back_path,
+        back_label=back_label,
+    )
+
+
+#: The Overview's chips in an exercise's order of life.
+_STATUS_ORDER = ("Draft", "Published", "Completed", "Closed", "Archived")
+
+
+@router.get("/exercises", name="applydesk_admin_exercises")
+def exercises_page(request: Request, return_to: str = "") -> Response:
+    """Exercises Diagnostics, a scaffold (the author's 2026-11-21 ask):
+    the sample exercises, as Review Robin's Sessions Diagnostics."""
+    rows = sample_data.EXERCISES
+    tally = Counter(locks.exercise_status(e) for e in rows)
+    back_path, back_label = _back_link(return_to)
+    return render(
+        request,
+        "applydesk/admin/exercises.html",
+        area=ADMIN,
+        rows=rows,
+        by_status=[(s, tally[s]) for s in _STATUS_ORDER if tally[s]],
+        exercise_status=locks.exercise_status,
+        default_timezone=sample_data.DEFAULT_TIMEZONE,
+        back_path=back_path,
+        back_label=back_label,
+    )
+
+
+@router.get("/system", name="applydesk_admin_system")
+def system_page(request: Request, return_to: str = "") -> Response:
+    """System Status, a scaffold: the cards, every value a dash."""
+    back_path, back_label = _back_link(return_to)
+    return render(
+        request,
+        "applydesk/admin/system.html",
+        area=ADMIN,
         back_path=back_path,
         back_label=back_label,
     )
