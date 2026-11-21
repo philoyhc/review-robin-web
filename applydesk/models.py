@@ -13,10 +13,12 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     UniqueConstraint,
     false,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -35,7 +37,18 @@ class Person(Base):
     the platform super-admin."""
 
     __tablename__ = "person"
-    __table_args__ = (UniqueConstraint("tenant_id", "object_id", name="uq_person_tenant_object"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "object_id", name="uq_person_tenant_object"),
+        # One pending person per address (Codex on #4110); bound people may
+        # share an address, theirs being a snapshot only.
+        Index(
+            "uq_person_pending_email",
+            "email_key",
+            unique=True,
+            sqlite_where=text("object_id IS NULL"),
+            postgresql_where=text("object_id IS NULL"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     tenant_id: Mapped[str | None] = mapped_column(String(64))
@@ -57,6 +70,16 @@ class Person(Base):
     admitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    @property
+    def bound(self) -> bool:
+        """Whether the person is tied to an account (tenant and object ID)."""
+        return self.object_id is not None
+
+    @property
+    def label(self) -> str:
+        """How pages name the person: their name, else their address."""
+        return self.display_name or self.email or "Unknown person"
+
 
 class Exercise(Base):
     """An exercise's key and public ID (AD-53: unique per table). AD2B
@@ -75,11 +98,21 @@ class Exercise(Base):
 class ExerciseOperator(Base):
     """A person's grant on an exercise (ruling 73): one row per pair, its
     Owner marked. Removal sets `removed_at`; re-adding clears it. The rule
-    of one current Owner is the service's (`applydesk/operators.py`)."""
+    of one current Owner is the service's (`applydesk/operators.py`), and
+    the database's: a partial unique index allows one Owner row per
+    exercise (an Owner is never removed, only replaced), so two handovers
+    at once cannot both win (Codex on #4110)."""
 
     __tablename__ = "exercise_operator"
     __table_args__ = (
         UniqueConstraint("exercise_id", "person_id", name="uq_exercise_operator_pair"),
+        Index(
+            "uq_exercise_one_owner",
+            "exercise_id",
+            unique=True,
+            sqlite_where=text("is_owner"),
+            postgresql_where=text("is_owner"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

@@ -13,10 +13,11 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from functools import cache
+from typing import Any
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Connection, Engine, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 
@@ -39,7 +40,29 @@ def engine() -> Engine:
     options: dict[str, object] = {"pool_pre_ping": True}
     if url.startswith("sqlite"):
         options = {"connect_args": {"check_same_thread": False}}
-    return create_engine(url, **options)
+    made = create_engine(url, **options)
+    if url.startswith("sqlite"):
+        _real_sqlite_transactions(made)
+    return made
+
+
+def _real_sqlite_transactions(made: Engine) -> None:
+    """SQLAlchemy's recipe for SQLite ("Serializable isolation /
+    Savepoints / Transactional DDL"): Python's driver begins a transaction
+    only before a write, so a savepoint opened after reads had no
+    transaction round it, and releasing it committed (Codex on #4110).
+    The driver's own handling is turned off and the engine says `BEGIN`
+    when its transaction starts, as Postgres does."""
+
+    @event.listens_for(made, "connect")
+    def _no_driver_transactions(  # pyright: ignore[reportUnusedFunction]  -- an event hook
+        dbapi_connection: Any, _record: object
+    ) -> None:
+        dbapi_connection.isolation_level = None
+
+    @event.listens_for(made, "begin")
+    def _begin(conn: Connection) -> None:  # pyright: ignore[reportUnusedFunction]  -- an event hook
+        conn.exec_driver_sql("BEGIN")
 
 
 @cache

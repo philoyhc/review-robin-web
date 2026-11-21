@@ -17,6 +17,10 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/db.py` | Apply Desk's own database, `applydesk`: `APPLYDESK_DATABASE_URL` (locally `sqlite:///./applydesk.db`), the engine made on first use, a request's session |
 | `applydesk/models.py` | Its tables (segment AD2A): `person` (bound by tenant and object ID, or pending by casefolded email; the operator allowlist), `exercise` (its key and public ID), `exercise_operator` (a grant, its Owner marked), `audit_event` |
 | `applydesk/alembic.ini`, `applydesk/alembic/` | Its migration history, version table `applydesk_alembic_version`, comparing only its own tables |
+| `applydesk/people.py` | People bound by tenant and object ID: `resolve` at sign-in (a pending person bound by UPN, then mail), `from_directory`, `pending` (ruling 73) |
+| `applydesk/directory.py` | The people search: on record first, then the directory through `cordware/graph.py`; a failed directory search says so (ruling 75) |
+| `applydesk/operators.py` | The allowlist (`admit`, `revoke`, the super-admin's) and an exercise's Owner and operators (`create_exercise`, `add_operator`, `remove_operator`, `hand_over`, `can_operate`), refusing with `Refused` (rulings 73, 75) |
+| `applydesk/audit.py` | `write_event` in Review Robin's envelope, copied, and `EVENT_SCHEMAS`, strict under pytest (ruling 74) |
 | `applydesk/seed.py` | `python -m applydesk.seed`: the sample exercises' rows and their Owner, on localhost only (ruling 74) |
 | `applydesk/ids.py` | Public IDs: generation and the shape check |
 | `applydesk/web.py` | Templates, mount-aware URLs (`url()`, `is_here()`, `host_url()`) and the page chrome |
