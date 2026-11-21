@@ -24,7 +24,7 @@ ordinary operator, the Owner the seed made it.
 
 | Path | Holds |
 |---|---|
-| `main.py`, `routes_*.py`, `lookups.py` | The factory, `/health`, the pages, and the path lookups they share |
+| `main.py`, `routes_*.py`, `lookups.py` | The factory, `/health`, the pages (the super-admin's operator list among them, AD2A), and the path lookups they share |
 | `gate.py`, `ids.py`, `web.py`, `sample_data.py` | Who reaches the pages (operators by their grants, AD2A), public IDs, templates and chrome, sample data |
 | `stages.py`, `workflow.py`, `locks.py` | Stages, gates, outcomes and rules; each item's state, the status row and emails owed; what a published stage fixes |
 | `timeline.py`, `home_ops.py` | The timeline Home and the applicant's page share; Home's operator part |

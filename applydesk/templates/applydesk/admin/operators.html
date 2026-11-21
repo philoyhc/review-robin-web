@@ -1,0 +1,32 @@
+{% extends "applydesk/base.html" %}
+{% block content %}
+{# The operator list (segment AD2A, ruling 75): the platform super-admin's.
+   Who is on it may make an exercise, be added as an operator or take an
+   exercise's ownership. Scaffold (rung 5): copy and layout, controls
+   inert; rung 6 wires the search, Admit and Revoke. #}
+<div class="ptitle"><h1>Operator list</h1></div>
+<p class="placeholder" data-scaffold><strong>Placeholder.</strong> The search, <em>Admit</em> and <em>Revoke</em> do nothing yet: they are wired next.</p>
+<p class="muted pc-intro">Only someone on this list may make an exercise, be added as an exercise's operator or take its ownership. An exercise's Owner adds its operators from this list. Taking someone off ends their access at once but keeps their exercises, so putting them back restores them.</p>
+
+<section class="card" id="op-add" aria-labelledby="op-add-h" data-op-add>
+  <div class="cardhead"><h2 id="op-add-h">Add to the list</h2></div>
+  <p class="muted">Search by name or email: people already on record first, then the institution's directory.</p>
+  <div class="btnrow">
+    <label class="fc-l">Name or email<input class="fc-in" type="search" name="q" minlength="2" disabled title="Wired next"></label>
+    <button class="btn btn-secondary" type="button" disabled title="Wired next">Search</button>
+  </div>
+  <p class="muted" data-op-results>Matches appear here, each with <em>Admit</em>.</p>
+</section>
+
+<section class="card" id="op-list" aria-labelledby="op-list-h" data-op-list>
+  <div class="cardhead"><h2 id="op-list-h">On the list</h2></div>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Name</th><th>Email</th><th>Admitted</th><th>By</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+    <tbody>
+      <tr><td colspan="5" class="muted">Nobody yet. Whoever you admit is listed here, with <em>Revoke</em>.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

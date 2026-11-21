@@ -169,3 +169,24 @@ def test_the_super_admin_s_scratch_exercise_is_owned_by_them(
     owner = operators.owner_of(session, exercise)
     assert owner is not None and owner.object_id == "local-dev" and not owner.may_operate
     session.close()
+
+
+# --- Rung 5: the operator list, the super-admin's page ---
+
+
+def test_only_the_super_admin_reaches_the_operator_list(client: TestClient) -> None:
+    """Ruling 75: an operator, even an Owner of every sample, gets 404."""
+    session = db.new_session()
+    seed.seed(session)
+    session.close()
+    assert client.get("/applydesk/admin/operators").status_code == 404
+    lobby = client.get("/applydesk/operator/exercises").text
+    assert "/applydesk/admin/operators" not in lobby  # not in the switcher either
+
+
+def test_the_super_admin_finds_it_in_the_switcher() -> None:
+    client = TestClient(host_with(("applydesk",))[0])  # the conftest's super-admin
+    page = client.get("/applydesk/admin/operators")
+    assert page.status_code == 200
+    assert "<h1>Operator list</h1>" in page.text and "data-op-add" in page.text
+    assert 'href="/applydesk/admin/operators"' in client.get("/applydesk/operator/exercises").text

@@ -120,6 +120,13 @@ def own_new_exercise(request: Request, public_id: str) -> bool:
     return True
 
 
+def require_super_admin(request: Request) -> None:
+    """The admin pages' check (ruling 75): the platform super-admin only,
+    404 for everyone else, an operator included."""
+    if not viewer(request).is_super_admin:
+        raise HTTPException(status_code=404)
+
+
 def placeholders_only(request: Request) -> None:
     """The participant's pages and the landing, until a later AD2 segment:
     anyone on a local run, deployed only the platform super-admin."""
