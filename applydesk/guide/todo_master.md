@@ -631,7 +631,7 @@ the rulings it relied on but does not move them.
     rulings 26 and 33: a candidate's dossier holds every section of the
     submitted form (when there is one), every gate's results and every
     outcome. Each of those items is shown only to the grants set on it:
-    *Applicant*; *Assigned evaluators*, from named panels or from all;
+    *Applicant* (*Candidate*, ruling 71); *Assigned evaluators*, from named panels or from all;
     *Evaluators*, from named panels or from all. Each grant opens from a
     stage, as ruling 26's parts did; an item opening to two audiences at
     different times carries two grants. Operators see every item, whatever
@@ -639,6 +639,32 @@ the rulings it relied on but does not move them.
     Form, a gate's results and an outcome's on Process. Recorded now; built
     with the store (AD4 for the form, AD5 for dossiers), and Form's per-card
     *Shown* control (AD-69, AD-93) goes when it is.
+69. **The data lives in three places** (author, 2026-11-21): the store,
+    the database tables, is the one source of truth and holds everything
+    collected (the form, evaluators' responses through Review Robin,
+    operator entries) and derived (results, outcomes); the dossier holds
+    what must be read on screen, each item with its grants (ruling 68);
+    extraction, for operators, follows the dossier by default and may
+    carry more from the store. The rulings are gathered in
+    `applydesk/docs/data_and_visibility_model.md`, the draft of an
+    eventual spec.
+70. **The model's first answers** (author, 2026-11-21, on ruling 69's
+    open questions): extraction has two primary modes, following dossiers
+    (around the data collected) and following the process (around the
+    exercise's stages, gates and outcomes), and either may carry what no
+    dossier shows, the exercise's settings the clearest case; an operator
+    entry is either a dossier item or store-only, and both kinds exist;
+    *candidate* is the person or people a dossier is about, an *applicant*
+    a candidate who submitted through a Form; a photo is subject to
+    visibility grants like any other item.
+71. **The model's second answers** (author, 2026-11-21), amending
+    rulings 6 and 68: ruling 68's first grant is *Candidate*, not
+    *Applicant*, for consistency with ruling 70; a photo follows its
+    grants in a blind exercise too, as blind review's redaction covers
+    name and identifiers and a photo or screenshot asked for need not
+    identify anyone; whether a field goes into the dossier is set on the
+    field itself (a form section, a gate's result, an outcome, an operator
+    entry), and a field in the dossier needs its visibility grants.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
