@@ -746,6 +746,10 @@ Segments in order; each gets a plan in this folder when it starts.
 
 ## Follow-ups from closed plans (AD-124)
 
+- **Help that came off the pages:** decide how to show the lines in
+  `applydesk/guide/removed_help_lines.md` (a help panel, tooltips, an
+  *About this page*, or the Guide). Any PR that removes help text adds its
+  rows there.
 - **AD1S:** the author's browser check of #4101 (Home's timeline, both
   layouts, at 1300px and 390px, and the applicant's `/me` page) and #4102
   (the copy sweep: restore any cut line still needed), deferred on
