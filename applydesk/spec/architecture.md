@@ -12,7 +12,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/main.py` | The factory, `create_app` |
 | `applydesk/routes_health.py` | `/health` |
 | `applydesk/routes_home.py`, `routes_operator.py`, `routes_me.py` | The entry points (landing by role), the operator's pages and the participant's |
-| `applydesk/routes_admin.py`, `allowlist.py` | The platform super-admin's pages, `/admin/…`, behind `gate.require_super_admin`: Admin → Accounts Management, the operator list. `routes_admin.py` is the thin route, also for the Exercises Diagnostics and System Status scaffolds, whose tabs share `admin/_tabs.html`; `allowlist.py` is the page's adapter: the list and its counts, `Me` / `me()` (the signed-in super-admin's read-only *(self)* row), the people search (people on record, then the directory), and *Admit* (a directory pick is found again by address and matched on its object ID, nothing taken from the form) and *Revoke*, through `operators.py` |
+| `applydesk/routes_admin.py`, `allowlist.py` | The platform super-admin's pages, `/admin/…`, behind `gate.require_super_admin`: Admin → Accounts Management, the operator list. `routes_admin.py` is the thin route, also for the Exercises Diagnostics and System Status scaffolds, whose tabs share `admin/_tabs.html`; `allowlist.py` is the page's adapter: `accounts` (Workspace users: a category per person from `CATEGORIES`, the counts, the `ROLES` filter and the search), the Overview's counts, `Me` / `me()` (the signed-in super-admin's read-only *(self)* row), the people search (people on record, then the directory) and `suggest` / `suggestions` (the typeahead's offers, listed people left out before the limit, labels unique), and *Admit* (a directory pick is found again by address and matched on its object ID, nothing taken from the form), `bulk` (*Admit* or *Revoke* every ticked row, a refusal skipping that person) through `operators.py` |
 | `applydesk/team.py` | An exercise's Operators card on Home, the adapter between `routes_operator.py` and `operators.py`: the card (current operators, the Owner first, whether the viewer may change them, whether the exercise has a row), the add search (the operator list only, current operators left out) and add, remove and hand over |
 | `applydesk/lookups.py` | Path lookups the routes share: an ID's shape checked, then a 404 or the record |
 | `applydesk/gate.py` | Who reaches the pages. `require_exercise_operator` on the operator router: 404 unless the viewer is the super-admin or on the allowlist and, on a path with an `exercise_id`, operates that exercise. `require_super_admin` on the admin router. `landing` on `/` and `/operator`: any operator, else the placeholders' gate. `placeholders_only` on the participant's pages until a later AD2 segment, on `reaches_placeholders`: anyone on a local run, deployed only the super-admin; `web.render` offers a link to those pages (`participant_pages`) only where it holds. `viewer` resolves the viewer once per request, binding them (`people.resolve`), and keeps the answer on `request.state`; `is_operator` and `operates` read it. `own_new_exercise` makes a new scratch exercise's row and Owner |
@@ -84,7 +84,7 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
 
 | Table (model) | Holds |
 |---|---|
-| `person` (`Person`) | Tenant ID and object ID, null while pending; email, `email_key` (the casefolded address), UPN and display name as snapshots; `bound_at`, `created_at`. The allowlist is on it: `may_operate`, `admitted_by_id`, `admitted_at`, `revoked_at` |
+| `person` (`Person`) | Tenant ID and object ID, null while pending; email, `email_key` (the casefolded address), UPN and display name as snapshots; `bound_at`; `first_signed_in_at` (the first sign-in, set once; a directory pick is bound without one); `created_at`. The allowlist is on it: `may_operate`, `admitted_by_id`, `admitted_at`, `revoked_at` |
 | `exercise` (`Exercise`) | `public_id`, unique, and `created_at`; the rest of an exercise is sample data |
 | `exercise_operator` (`ExerciseOperator`) | A grant: (exercise, person) unique, `is_owner`, `added_by_id`, `added_at`, `removed_at` |
 | `audit_event` (`AuditEvent`) | `at`, `event_type`, `actor_id`, `exercise_id`, `detail` (JSON) |
@@ -109,6 +109,9 @@ tenant or object ID cannot be bound and has no person.
   matches the UPN, then the mail, who is bound and audited; else a new bound
   person. Once bound, email is a snapshot and nothing matches on it again.
   Only a pending person is ever matched by address.
+  A bound person with no `first_signed_in_at` has it stamped once, by a
+  conditional update so two first requests agree, and audited
+  (`person.signed_in`) by whoever stamped it.
 - Two different pending people matching (one by UPN, one by mail) fail
   closed: neither is bound, and a new bound person is made without their
   access, for the super-admin to settle.
@@ -151,7 +154,7 @@ tenant or object ID cannot be bound and has no person.
 detail that breaks its schema raises; otherwise the row is written and the
 breach logged by name. The detail names an exercise by its public ID.
 
-Events: `person.created`, `person.bound`, `person.admitted`,
+Events: `person.created`, `person.bound`, `person.signed_in`, `person.admitted`,
 `person.revoked`, `exercise.created`, `exercise.operator_added`,
 `exercise.operator_removed`, `exercise.ownership_handed_over`. A directory
 find is audited to the searcher, not the person found.
