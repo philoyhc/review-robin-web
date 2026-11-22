@@ -1,0 +1,57 @@
+{% extends "applydesk/base.html" %}
+{% block content %}
+{# The Archive (segment AD2B rung 5), laid out as Review Robin's archived
+   sessions: an Archived card and a Filter card over one table of the
+   archived exercises the viewer operates. A scaffold: the rows are real;
+   Restore, the tags and the filter wait for rung 6. #}
+<div class="ptitle"><h1>Archived exercises</h1></div>
+<p><a href="{{ url('/operator/exercises') }}">← Back to the Operator Lobby</a></p>
+<div class="lb-row">
+  <section class="card" data-ar-counts>
+    <h2>Archived</h2>
+    <p class="lb-pills"><span class="chip chip-mute">{{ exercises | length }} archived</span></p>
+    <div class="lb-tags"><span class="lbl">Show exercises tagged with:</span>
+      {% for t in lobby_tags %}<button type="button" class="pn-show" disabled title="Filtering by tag is not built yet">{{ t }}</button>
+      {% else %}<span class="muted">No tags yet</span>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="card">
+    <h2>Filter</h2>
+    <input class="fc-in lb-filter" type="search" placeholder="Filter by name, code or tag" aria-label="Filter archived exercises" disabled title="The filter is not built yet">
+    <div class="lb-actions">
+      <button class="btn btn-secondary" type="button" disabled title="The filter is not built yet">Clear</button>
+    </div>
+  </section>
+</div>
+<section class="card">
+  <p class="muted pc-intro">An archived exercise is kept, with its audit trail, but leaves the Lobby and frees its Exercise code. Restoring brings it back, unless another live exercise has taken its code.</p>
+  {% if exercises %}
+  <div class="table-wrap">
+  <table class="lb-table" data-ar-table>
+    <thead><tr>
+      {% for h in ("Exercise", "Exercise code", "Created by", "Created") %}<th class="lb-sort" title="Sorting is not built yet">{{ h }}<span class="arr" aria-hidden="true">↕</span></th>{% endfor %}
+      <th class="lb-sort" title="Sorting is not built yet" aria-sort="descending">Archived<span class="arr" aria-hidden="true">↓</span></th>
+      <th>Tags</th>
+      <th></th>
+    </tr></thead>
+    <tbody>
+    {% for e in exercises %}
+      <tr data-ar-row>
+        <td>{{ e.name }}</td>
+        <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
+        <td>{% if owners[e.public_id] is defined %}<span class="chip chip-mute">{{ owners[e.public_id] }}</span>{% else %}<span class="muted" title="No Owner on record">—</span>{% endif %}</td>
+        <td class="lb-when">{{ created_label(e) or "—" }}</td>
+        <td class="lb-when">{{ archived[e.public_id] }}</td>
+        <td>{% if e.tags %}<div class="lb-tagcell">{% for t in e.tags %}<span class="chip chip-info">{{ t }}</span>{% endfor %}</div>{% else %}<span class="muted">No tags</span>{% endif %}</td>
+        <td><button class="btn btn-secondary btn-short" type="button" disabled title="Restoring is not built yet">Restore</button></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="muted" data-ar-empty>No archived exercises. An Owner archives one from the Lobby's panel.</p>
+  {% endif %}
+</section>
+{% endblock %}

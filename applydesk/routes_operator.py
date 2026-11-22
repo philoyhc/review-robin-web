@@ -86,6 +86,33 @@ def exercises(request: Request, session: Session = Depends(db.get_session)) -> R
     )
 
 
+@router.get("/exercises/archived", name="applydesk_exercises_archived")
+def exercises_archived(request: Request, session: Session = Depends(db.get_session)) -> Response:
+    """The Archive (segment AD2B rung 5, a scaffold): the archived
+    exercises the viewer operates, newest archived first. *Restore*, the
+    tags and the filter wait for rung 6. Registered before
+    ``/exercises/{exercise_id}``, which would otherwise take the path."""
+    when = exercise_store.archived_at()
+    found = [s for s in sample_data.exercises() if s.public_id in when]
+    shown = sorted(
+        (e for e in exercise_store.stored_all(tuple(found)) if gate.operates(request, e.public_id)),
+        key=lambda e: when[e.public_id],
+        reverse=True,
+    )
+    return render(
+        request,
+        "applydesk/operator/exercises_archived.html",
+        area=OPERATOR_LOBBY,
+        exercises=shown,
+        archived={
+            e.public_id: clock.stamp(when[e.public_id], sample_data.timezone(e)) for e in shown
+        },
+        created_label=sample_data.created_label,
+        lobby_tags=sample_data.all_tags(shown),
+        owners=operators.owner_labels(session, [e.public_id for e in shown]),
+    )
+
+
 def _same_site(request: Request) -> None:
     """A scratch exercise's posts come from Apply Desk's own pages: a
     browser naming another site is refused (as Review Robin's handoffs)."""

@@ -2,9 +2,9 @@
 {% block content %}
 {# The Operator Lobby, laid out as Review Robin's (segment AD1T): the
    Exercises and Filter cards over one table whose ticked rows open a
-   panel. A scaffold: the rows, the counts, New exercise and the panel's
-   opening work; sorting, the tags, the filter, Go to Archive and the
-   panel's actions wait for AD2B. #}
+   panel. A scaffold: the rows, the counts, New exercise, Go to Archive
+   and the panel's opening work; sorting, the tags, the filter and the
+   panel's actions wait for AD2B rung 6. #}
 <div class="ptitle"><h1>Operator Lobby</h1></div>
 {% if scratch_said %}<p class="nx-said" role="status" data-nx-said>{{ scratch_said }}</p>{% endif %}
 {% include "applydesk/_placeholder.html" %}
@@ -31,7 +31,7 @@
     <div class="lb-actions">
       <button class="btn btn-secondary" type="button" disabled title="The filter is not built yet">Clear</button>
       <button class="btn btn-primary" type="button" data-nx-open aria-expanded="false" aria-controls="nx-form">New exercise</button>
-      <button class="btn btn-secondary" type="button" disabled title="The Archive is not built yet">Go to Archive</button>
+      <a class="btn btn-secondary" href="{{ url('/operator/exercises/archived') }}">Go to Archive</a>
     </div>
   </section>
 </div>
