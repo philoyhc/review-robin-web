@@ -291,6 +291,32 @@ def test_admin_has_review_robin_s_three_tabs() -> None:
     assert "Outbox" in rows and "Adopt" not in rows and "is not built yet" in rows
 
 
+def test_exercises_diagnostics_names_each_owner_on_record() -> None:
+    """The author, 2026-11-22: the Owner column reads the database: none
+    before the local seed runs, then the seeded Owner on every sample."""
+    from applydesk import db, sample_data, seed
+
+    admin = TestClient(host_with(("applydesk",))[0])
+
+    def owner_cell(page: str, public_id: str) -> str:
+        row = page[page.index(f'data-ex-row="{public_id}"') :]
+        return row[: row.index("</tr>")].split("<td")[3]
+
+    before = admin.get("/applydesk/admin/exercises").text
+    assert all(
+        "No Owner on record" in owner_cell(before, e.public_id) for e in sample_data.EXERCISES
+    )
+    session = db.new_session()
+    seed.seed(session)
+    session.close()
+    after = admin.get("/applydesk/admin/exercises").text
+    assert all(
+        owner_cell(after, e.public_id) == ">Local Operator</td>\n        "
+        for e in sample_data.EXERCISES
+    )
+    assert "each exercise's Owner" not in after  # the placeholder no longer lists it
+
+
 # --- The bug sweep at the AD2A close ---
 
 
