@@ -21,7 +21,7 @@ from cordware.settings import identity_settings
 pytestmark = pytest.mark.usefixtures("unseeded")
 
 ROOT = Path(__file__).resolve().parents[2]
-TABLES = {"person", "exercise", "exercise_operator", "audit_event"}
+TABLES = {"person", "exercise", "exercise_operator", "exercise_tag", "audit_event"}
 
 
 def _config(url: str) -> Config:
