@@ -11,6 +11,10 @@ delete them once no remaining section points to them.
 **Some rows need more than a local run:** an Azure deployment (#2720,
 P5) or the Rehydrate round trip (D28).
 
+**Each package keeps its own register**, in its own `guide/`:
+`applydesk/guide/things_to_check_in_browser.md` (Apply Desk) and
+`residentialapps/guide/things_to_check_in_browser.md` (Residential).
+
 ## Email dates in the session's zone (#2720)
 
 - [ ] **The submitted time does too.** Preview the responses-received

@@ -808,15 +808,9 @@ Segments in order; each gets a plan in this folder when it starts.
   `applydesk/guide/removed_help_lines.md` (a help panel, tooltips, an
   *About this page*, or the Guide). Any PR that removes help text adds its
   rows there.
-- **AD1S:** the author's browser check of #4101 (Home's timeline, both
-  layouts, at 1300px and 390px, and the applicant's `/me` page) and #4102
-  (the copy sweep: restore any cut line still needed), deferred on
-  2026-11-21.
-- **AD1R:** the author's browser check of #4096, #4097 and #4098 (every
-  operator page's hovers and tables; the blank draft's empty states;
-  Extract, Dossiers, Panels, Form, Home and the gate page at 1300px and
-  390px, light and dark), deferred by the author on 2026-11-21. Tweaks it
-  finds land as their own PRs.
+- **Browser checks owed** (AD1R, AD1S, AD2M and later): one register,
+  `applydesk/guide/things_to_check_in_browser.md` (2026-11-22). A PR that
+  owes one adds its section there.
 - **AD5:** a list headline (Result 1) has no value on Dossiers (AD1F).
 - **AD5:** a panel used twice in one gate, or a max above its panel's
   size, is not flagged (AD1G).
