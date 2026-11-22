@@ -244,7 +244,10 @@ def _manage(request: Request, public_id: str) -> Response:
         return RedirectResponse(home, status_code=303)
     session = db.new_session()
     try:
-        exercise = session.scalar(select(Exercise).where(Exercise.public_id == public_id))
+        # A deleted exercise is gone: nothing to adopt (cold read, AD2B).
+        exercise = session.scalar(
+            select(Exercise).where(Exercise.public_id == public_id, Exercise.deleted_at.is_(None))
+        )
         if exercise is None:
             return RedirectResponse(
                 url_path(request, "/admin/exercises?said=not_loaded"), status_code=303

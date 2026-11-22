@@ -63,12 +63,13 @@ SECTIONS: dict[str, str] = dict(SETUP_PAGES + OPERATIONS_PAGES)
 def exercises(request: Request, session: Session = Depends(db.get_session)) -> Response:
     """The Operator Lobby (segment AD2B rung 6): the live exercises the
     viewer operates, sorted, tagged and filtered by the query string."""
-    live = exercise_store.live_ids()
-    mine = [
-        e
-        for e in exercise_store.stored_all(sample_data.exercises())
-        if e.public_id in live and gate.operates(request, e.public_id)
+    # Each row's values and the revision its Save names, from one read.
+    found = [
+        s
+        for s in exercise_store.stored_all_at(sample_data.exercises())
+        if s.live and gate.operates(request, s.exercise.public_id)
     ]
+    mine = [s.exercise for s in found]
     owners = operators.owner_labels(session, [e.public_id for e in mine])
     query = lobby.Query.parse(request.query_params, request.query_params.getlist("tag"))
     shown = lobby.apply(mine, query, owners)
@@ -81,7 +82,7 @@ def exercises(request: Request, session: Session = Depends(db.get_session)) -> R
         query=query,
         base=url_path(request, "/operator/exercises"),
         back=query.href(""),
-        revisions=exercise_store.revisions([e.public_id for e in shown]),
+        revisions={s.exercise.public_id: s.revision for s in found},
         is_scratch=scratch.is_scratch,
         scratch_limit=scratch.LIMIT,
         scratch_said=SAID.get(request.query_params.get("said", ""), ""),
@@ -215,9 +216,12 @@ def _panel_change(request: Request, action: str, ids: list[str], form: dict[str,
         session.rollback()
         if not db.lost_a_race(error):
             raise
-        return "stale"
+        return "code_taken" if "uq_exercise_live_code" in str(error.orig) else "stale"
     finally:
         session.close()
+    if action == "delete":  # a deleted scratch exercise frees its place (cold read)
+        for i in ids:
+            scratch.discard(scratch.token(), i)
     gate.forget_viewer(request)
     return {"save": "saved", "add_tags": "tagged", "remove_tags": "untagged"}.get(
         action, action + "d"
@@ -427,7 +431,7 @@ def _details(v: dict[str, Any]) -> dict[str, Any]:
     name, code = str(text["name"]).strip(), str(text["code"]).strip()
     if not name or len(name) > 200:
         raise _Refusal("name", "A name of 1 to 200 characters is needed.")
-    if len(code) > 40:
+    if max(len(code), len(code.casefold())) > 40:  # its key is casefolded ("ß" is "ss")
         raise _Refusal("code", "An exercise code is at most 40 characters.")
     contact = str(text["contact"]).strip()
     if len(str(text["description"]).strip()) > 2000:
@@ -460,7 +464,8 @@ async def _scratch_json(request: Request, exercise_id: str) -> tuple[sample_data
     Apply Desk's own page, JSON, at most ``scratch.MAX_BODY``; 404 for an
     exercise that is not this browser's scratch one."""
     _same_site(request)
-    exercise = exercise_or_404(exercise_id)
+    # The lookup reads the database: off the event loop (cold read, AD2B).
+    exercise = await run_in_threadpool(exercise_or_404, exercise_id)
     if not scratch.is_scratch(exercise.public_id):
         raise HTTPException(status_code=404)
     if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
@@ -705,6 +710,19 @@ async def exercise_details(request: Request, exercise_id: str) -> Response:
     return await run_in_threadpool(_save_details, request, exercise_id, sent)
 
 
+def _locks_hold(exercise: sample_data.Exercise, values: dict[str, Any]) -> None:
+    """What the page locks, the server refuses too (cold read): a published
+    exercise's code and who may apply (G2), and blind review once a stage
+    holding a gate is published (`locks.blind_lock`)."""
+    if values["blind"] != exercise.blind and locks.blind_lock(exercise).fixed:
+        raise _Refusal("blind", locks.blind_lock(exercise).reason)
+    if exercise.state != "Draft":
+        if values["code"] != (exercise.code or None):
+            raise _Refusal("code", "Fixed once published: a change waits for re-publishing.")
+        if values["eligibility"] != exercise_store.eligibility_of(exercise.eligibility):
+            raise _Refusal("eligibility", "Fixed once published: a change waits for re-publishing.")
+
+
 def _save_details(request: Request, exercise_id: str, sent: object) -> Response:
     """Details' *Lock*, past the request's own checks: the transaction."""
     exercise = exercise_or_404(exercise_id)
@@ -719,6 +737,7 @@ def _save_details(request: Request, exercise_id: str, sent: object) -> Response:
         if not isinstance(opened, int) or isinstance(opened, bool):
             raise scratch.Refused("The details are malformed.")
         values = exercise_store.details_from_page(_details(got))
+        _locks_hold(exercise, values)
     except scratch.Refused as why:
         field = why.field if isinstance(why, _Refusal) else "name"
         return JSONResponse({"error": str(why), "field": field}, status_code=400)
@@ -738,6 +757,14 @@ def _save_details(request: Request, exercise_id: str, sent: object) -> Response:
         session.rollback()
         if not db.lost_a_race(error):
             raise
+        if "uq_exercise_live_code" in str(error.orig):
+            return JSONResponse(
+                {
+                    "error": "Not saved: another live exercise took that code just now.",
+                    "field": "code",
+                },
+                status_code=409,
+            )
         return JSONResponse(
             {"error": "Not saved: someone else saved just now; reload and retry.", "field": "name"},
             status_code=409,
@@ -876,7 +903,11 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         # clashing code on the page (segment AD1I Semantics).
         other_codes=[
             [e.code, e.name]
-            for e in exercise_store.stored_all(sample_data.exercises())
+            for e in (
+                s.exercise
+                for s in exercise_store.stored_all_at(sample_data.exercises())
+                if s.live  # an archived or deleted exercise frees its code
+            )
             if e.code and e.public_id != exercise.public_id
         ],
     )

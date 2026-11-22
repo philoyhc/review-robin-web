@@ -132,27 +132,56 @@ def stored_at(sample: sample_data.Exercise) -> tuple[sample_data.Exercise, int]:
         session.close()
 
 
-def stored_all(samples: tuple[sample_data.Exercise, ...]) -> tuple[sample_data.Exercise, ...]:
+@dataclass(frozen=True)
+class Stored:
+    """A sample as the database has it, with its row's state, from one
+    read: the revision a page names must describe the values it shows
+    (Codex on #4137; cold read at AD2B rung 6)."""
+
+    exercise: sample_data.Exercise
+    revision: int
+    archived: bool
+    deleted: bool
+
+    @property
+    def live(self) -> bool:
+        return not (self.archived or self.deleted)
+
+
+def stored_all_at(samples: tuple[sample_data.Exercise, ...]) -> tuple[Stored, ...]:
     """Each of `samples` as the database has it, in one session."""
     if not samples:
-        return samples
+        return ()
     session = db.new_session()
     try:
         rows = {
             e.public_id: e
             for e in session.scalars(
-                select(Exercise).where(
-                    Exercise.public_id.in_([s.public_id for s in samples]),
-                    Exercise.deleted_at.is_(None),
-                )
+                select(Exercise).where(Exercise.public_id.in_([s.public_id for s in samples]))
             )
         }
-        return tuple(
-            overlay(s, settings_of(session, rows[s.public_id]) if s.public_id in rows else None)
-            for s in samples
-        )
+        out: list[Stored] = []
+        for s in samples:
+            found = rows.get(s.public_id)
+            deleted = found is not None and found.deleted_at is not None
+            settings = settings_of(session, found) if found is not None and not deleted else None
+            out.append(
+                Stored(
+                    overlay(s, settings),
+                    settings.revision if settings else 0,
+                    found is not None and found.archived_at is not None,
+                    deleted,
+                )
+            )
+        return tuple(out)
     finally:
         session.close()
+
+
+def stored_all(samples: tuple[sample_data.Exercise, ...]) -> tuple[sample_data.Exercise, ...]:
+    """Each of `samples` as the database has it, deleted ones left out:
+    a deleted exercise leaves every page (segment AD2B rung 6)."""
+    return tuple(s.exercise for s in stored_all_at(samples) if not s.deleted)
 
 
 def _from_sample(sample: sample_data.Exercise) -> dict[str, object]:
@@ -183,7 +212,8 @@ def record_sample(
         setattr(exercise, name, value)
     if sample.created:
         exercise.created_at = datetime.fromisoformat(sample.created).astimezone(UTC)
-    exercise.created_by_id = actor.id if actor is not None else None
+    if exercise.created_by_id is None:  # set when it was made; kept (cold read)
+        exercise.created_by_id = actor.id if actor is not None else None
     exercise.revision = 1
     seen: set[str] = set()
     for tag in sample.tags:
@@ -194,7 +224,7 @@ def record_sample(
     audit.write_event(
         session,
         event_type="exercise.settings_recorded",
-        actor=None,
+        actor=actor,
         exercise=exercise,
         payload=audit.snapshot({**values, "tags": list(sample.tags)}),
     )
@@ -219,7 +249,7 @@ def details_from_page(fields: dict[str, Any]) -> dict[str, Any]:
     """Details as the card sends them (the sample's words) as stored
     values: "Not set" and "" to NULL (AD-60), the default timezone to NULL
     (AD-54)."""
-    eligibility = next((k for k, v in ELIGIBILITY.items() if v == fields["eligibility"]), None)
+    eligibility = eligibility_of(fields["eligibility"])
     zone = fields["timezone"] or None
     return {
         "name": fields["name"],
@@ -230,6 +260,12 @@ def details_from_page(fields: dict[str, Any]) -> dict[str, Any]:
         "help_contact": fields["help_contact"] or None,
         "timezone": None if zone == sample_data.DEFAULT_TIMEZONE else zone,
     }
+
+
+def eligibility_of(words: str) -> str | None:
+    """Who may apply, from the pages' words to the stored enum ("Not set"
+    to None, AD-60)."""
+    return next((k for k, v in ELIGIBILITY.items() if v == words), None)
 
 
 def _clash(session: Session, exercise: Exercise, code: str | None) -> Exercise | None:
@@ -331,7 +367,7 @@ def parse_tags(text: str) -> list[str]:
         tag = " ".join(part.split())
         if not tag:
             continue
-        if len(tag) > MAX_TAG:
+        if max(len(tag), len(tag.casefold())) > MAX_TAG:  # the key is casefolded
             raise Refused(f"A tag is at most {MAX_TAG} characters.", key="tag_long", field="tags")
         seen.setdefault(tag.casefold(), tag)
     if len(seen) > MAX_TAGS:
@@ -407,7 +443,7 @@ def save_panel(
     code = code.strip()
     if not name or len(name) > 200:
         raise Refused("A name of 1 to 200 characters is needed.", key="name", field="name")
-    if len(code) > 40:
+    if max(len(code), len(code.casefold())) > 40:  # its key is casefolded
         raise Refused("An exercise code is at most 40 characters.", key="code_long", field="code")
     _ready(session, exercise, actor)
     if (clash := _clash(session, exercise, code or None)) is not None:
@@ -535,33 +571,6 @@ def copy_settings(session: Session, source_id: str, target: Exercise, actor: Per
         exercise=target,
         refs={"source_exercise_id": source.id},
     )
-
-
-def live_ids() -> set[str]:
-    """Every exercise neither archived nor deleted: the Lobby's rows."""
-    session = db.new_session()
-    try:
-        return set(
-            session.scalars(
-                select(Exercise.public_id).where(
-                    Exercise.archived_at.is_(None), Exercise.deleted_at.is_(None)
-                )
-            )
-        )
-    finally:
-        session.close()
-
-
-def revisions(public_ids: list[str]) -> dict[str, int]:
-    """Each exercise's revision, for the panel's *Save* to name."""
-    session = db.new_session()
-    try:
-        found = session.execute(
-            select(Exercise.public_id, Exercise.revision).where(Exercise.public_id.in_(public_ids))
-        )
-        return {public_id: revision for public_id, revision in found}
-    finally:
-        session.close()
 
 
 def is_deleted(public_id: str) -> bool:

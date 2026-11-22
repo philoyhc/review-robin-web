@@ -38,7 +38,10 @@ def actor_for(session: Session, identity: Identity) -> operators.Actor:
 
 
 def _exercise(session: Session, public_id: str) -> Exercise | None:
-    return session.scalar(select(Exercise).where(Exercise.public_id == public_id))
+    # A deleted exercise's operators are not changed (cold read, AD2B).
+    return session.scalar(
+        select(Exercise).where(Exercise.public_id == public_id, Exercise.deleted_at.is_(None))
+    )
 
 
 def card(session: Session, public_id: str, identity: Identity | None) -> Card:

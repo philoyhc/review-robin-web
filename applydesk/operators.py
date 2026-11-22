@@ -233,9 +233,14 @@ def can_operate(session: Session, exercise: Exercise, actor: Actor) -> bool:
 
 
 def operated_exercises(session: Session, actor: Actor) -> list[Exercise]:
-    """The exercises `actor` holds a current grant on."""
+    """The exercises `actor` holds a current grant on; a deleted one is
+    gone from every page, so from this too (cold read, AD2B)."""
     if _the_platform(actor):
-        return list(session.scalars(select(Exercise).order_by(Exercise.id)))
+        return list(
+            session.scalars(
+                select(Exercise).where(Exercise.deleted_at.is_(None)).order_by(Exercise.id)
+            )
+        )
     if not _may_act(session, actor):
         return []
     assert actor.person is not None
@@ -246,6 +251,7 @@ def operated_exercises(session: Session, actor: Actor) -> list[Exercise]:
             .where(
                 ExerciseOperator.person_id == actor.person.id,
                 ExerciseOperator.removed_at.is_(None),
+                Exercise.deleted_at.is_(None),
             )
             .order_by(Exercise.id)
         )
@@ -444,7 +450,8 @@ def create_exercise(session: Session, actor: Actor, public_id: str) -> Exercise:
         actor.is_super_admin or _allowed(session, actor.person, hold=True)
     ):
         raise Refused("Only someone on the operator list may make an exercise.", key="not_listed")
-    exercise = Exercise(public_id=public_id)
+    # Who made it, recorded as it is made (cold read, AD2B).
+    exercise = Exercise(public_id=public_id, created_by_id=actor.person.id)
     session.add(exercise)
     session.flush()
     session.add(ExerciseOperator(exercise_id=exercise.id, person_id=actor.person.id, is_owner=True))

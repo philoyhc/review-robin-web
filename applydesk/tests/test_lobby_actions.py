@@ -74,17 +74,15 @@ def test_an_unknown_sort_is_ignored_not_echoed() -> None:
 
 
 def test_tag_chips_narrow_with_and_and_widen_with_or() -> None:
-    ra = sample_data.exercise(RA)
-    assert ra is not None and len(ra.tags) >= 2
-    first, second = ra.tags[0], ra.tags[1]
+    """No sample carries both Residential and Grants: none under AND; RA-2027
+    (Residential) and the two Grants exercises under OR."""
     client = _client()
-    both = _rows_in(client.get(LOBBY, params=[("tag", first), ("tag", second)]).text)
-    either = _rows_in(
-        client.get(LOBBY, params=[("tag", first), ("tag", second), ("any", "1")]).text
-    )
-    assert RA in both and set(both) <= set(either)
-    page = client.get(LOBBY, params=[("tag", first)]).text
-    assert f'aria-current="true" data-lb-chip>{first}<' in page
+    pair = [("tag", "Residential"), ("tag", "Grants")]
+    assert _rows_in(client.get(LOBBY, params=pair).text) == []
+    either = _rows_in(client.get(LOBBY, params=[*pair, ("any", "1")]).text)
+    assert sorted(either) == sorted([RA, "r6tm4kq9wz", BLANK])
+    page = client.get(LOBBY, params=[("tag", "Residential")]).text
+    assert 'aria-current="true" data-lb-chip>Residential<' in page
 
 
 def test_the_filter_matches_name_code_or_tag_ignoring_case() -> None:
@@ -188,6 +186,12 @@ def test_delete_asks_first_and_then_the_exercise_leaves_every_page() -> None:
     assert _post(client, action="delete", id=BLANK, confirm="yes") == "Deleted."
     assert BLANK not in _rows_in(client.get(LOBBY).text)
     assert client.get(f"{LOBBY}/{BLANK}").status_code == 404
+    # Every page: the Admin's Diagnostics and the applicant's /me too, and
+    # Manage cannot adopt it.
+    assert "Graduate Travel Grant" not in client.get("/applydesk/admin/exercises").text
+    assert "Graduate Travel Grant" not in client.get("/applydesk/me").text
+    manage = client.post(f"/applydesk/admin/exercises/{BLANK}/manage")
+    assert "not_loaded" in manage.headers["location"]
     session = db.new_session()
     kinds = list(session.scalars(select(AuditEvent.event_type)))
     session.close()
@@ -208,6 +212,14 @@ def test_archive_and_delete_are_owner_only() -> None:
     assert _post(client, action="archive", id=RA) == message
     assert _post(client, action="delete", id=RA, confirm="yes") == message
     assert _row(RA).archived_at is None and _row(RA).deleted_at is None
+    # Restore too: archived by hand, a non-Owner cannot bring it back.
+    session = db.new_session()
+    row = session.scalars(select(Exercise).where(Exercise.public_id == RA)).one()
+    row.archived_at = row.created_at
+    session.commit()
+    session.close()
+    reply = client.post(f"{LOBBY}/archived/restore", data={"id": RA})
+    assert "not_owner" in reply.headers["location"] and _row(RA).archived_at is not None
 
 
 def test_duplicate_settings_only_makes_a_copy_named_and_owned_by_the_viewer() -> None:
@@ -226,6 +238,12 @@ def test_duplicate_settings_only_makes_a_copy_named_and_owned_by_the_viewer() ->
     session.close()
     home = client.get(reply.headers["location"], cookies=reply.cookies)
     assert home.status_code == 200 and "Copy of Recruitment" in home.text
+    session = db.new_session()
+    grant = session.scalars(
+        select(ExerciseOperator).where(ExerciseOperator.exercise_id == copy.id)
+    ).one()
+    session.close()
+    assert grant.is_owner and copy.created_by_id == grant.person_id  # the duplicator's
 
 
 @pytest.mark.parametrize("action", ["", "explode"])

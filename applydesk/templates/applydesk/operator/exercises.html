@@ -94,13 +94,13 @@
       </div>
       <div class="lb-exp-foot">
         <div class="lb-purge"><label><input type="checkbox" name="confirm" value="yes" data-lb-confirm> <strong>Yes, delete</strong></label><span class="sep" aria-hidden="true">|</span><span class="muted">Archive after purging</span>
-          {% for p in ("Applications", "Dossiers", "Audit log") %}<label><input type="checkbox" disabled title="Purging waits for stored applications (AD2D): Purge and archive archives only"> {{ p }}</label>{% endfor %}</div>
+          {% for p in ("Applications", "Dossiers", "Audit log") %}<label><input type="checkbox" disabled title="Purging waits for stored applications: Purge and archive archives only"> {{ p }}</label>{% endfor %}</div>
         <div class="lb-btns" data-lb-one>
           <button class="btn btn-secondary" type="submit" name="action" value="save">Save</button>
           <button class="btn btn-secondary" type="button" data-lb-cancel>Cancel</button>
-          <button class="btn btn-secondary" type="button" disabled title="Duplicating the whole setup waits for stages, forms and applications to be stored (AD2C–AD2F); Duplicate settings only copies the settings and tags">Duplicate</button>
+          <button class="btn btn-secondary" type="button" disabled title="Duplicating the whole setup waits for its stages, forms and applications to be stored; Duplicate settings only copies the settings and tags">Duplicate</button>
           <button class="btn btn-secondary" type="submit" name="action" value="duplicate" formnovalidate>Duplicate settings only</button>
-          <button class="btn btn-alert" type="submit" name="action" value="archive" title="Archives only: purging waits for stored applications (AD2D)" data-lb-archive>Purge and archive</button>
+          <button class="btn btn-alert" type="submit" name="action" value="archive" title="Archives only: purging waits for stored applications" data-lb-archive>Purge and archive</button>
           <button class="btn btn-destructive" type="submit" name="action" value="delete" data-lb-delete>Delete</button>
         </div>
         <div class="lb-btns" data-lb-many hidden>
@@ -109,7 +109,7 @@
           <button class="btn btn-secondary" type="button" data-lb-none>Unselect all</button>
           <button class="btn btn-secondary" type="submit" name="action" value="add_tags">All tags to all</button>
           <button class="btn btn-secondary" type="submit" name="action" value="remove_tags">Remove from all</button>
-          <button class="btn btn-alert" type="submit" name="action" value="archive" title="Archives only: purging waits for stored applications (AD2D)" data-lb-archive>Purge and archive all</button>
+          <button class="btn btn-alert" type="submit" name="action" value="archive" title="Archives only: purging waits for stored applications" data-lb-archive>Purge and archive all</button>
           <button class="btn btn-destructive" type="submit" name="action" value="delete" data-lb-delete>Delete all</button>
         </div>
       </div>
@@ -172,6 +172,10 @@
     panel.querySelectorAll("[data-lb-many]").forEach(function (el) { el.hidden = one; });
     // Only the shown fields post: one exercise's, or the bulk tags.
     panel.querySelectorAll("[data-lb-f]").forEach(function (i) { i.disabled = !one; });
+    // And only the shown buttons: Enter in the bulk Tags box must not post
+    // the hidden one-exercise Save (cold read).
+    panel.querySelectorAll('[data-lb-one] button[type="submit"]').forEach(function (b) { b.disabled = !one; });
+    panel.querySelectorAll('[data-lb-many] button[type="submit"]').forEach(function (b) { b.disabled = one; });
     panel.querySelector("[data-lb-many-tags]").disabled = one;
     if (one) {
       var r = row(at);
@@ -197,22 +201,22 @@
   panel.querySelector("[data-lb-none]").addEventListener("click", function () { untick(ticks); all.focus(); });
   // A panel action posts the ticked exercises (segment AD2B rung 6); Save
   // names the revision the row was drawn at, and Delete asks first.
-  var form = panel.querySelector("[data-lb-form]");
-  form.addEventListener("submit", function (e) {
+  var lbForm = panel.querySelector("[data-lb-form]");
+  lbForm.addEventListener("submit", function (e) {
     var on = ticks.filter(function (b) { return b.checked; });
     var by = e.submitter;
-    if (by && by.value === "delete" && form.querySelector("[data-lb-confirm]").checked) {
+    if (by && by.value === "delete" && lbForm.querySelector("[data-lb-confirm]").checked) {
       var what = on.length === 1 ? row(on[0]).dataset.name : on.length + " exercises";
       if (!window.confirm("Delete " + what + "? It leaves every page; its audit trail stays.")) { e.preventDefault(); return; }
     }
-    form.querySelectorAll("[data-lb-id]").forEach(function (x) { x.remove(); });
+    lbForm.querySelectorAll("[data-lb-id]").forEach(function (x) { x.remove(); });
     on.forEach(function (b) {
       var i = document.createElement("input");
       i.type = "hidden"; i.name = "id"; i.value = row(b).dataset.id; i.setAttribute("data-lb-id", "");
-      form.appendChild(i);
+      lbForm.appendChild(i);
     });
     var at = anchor();
-    form.querySelector("[data-lb-revision]").value = at ? row(at).dataset.revision : "";
+    lbForm.querySelector("[data-lb-revision]").value = at ? row(at).dataset.revision : "";
   });
   panel.querySelector("[data-lb-others]").addEventListener("click", function () {
     var at = anchor();

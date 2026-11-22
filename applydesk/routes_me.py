@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
 from applydesk import clock, extract, sample_data, stages, timeline, workflow
+from applydesk.exercises import stored_all
 from applydesk.gate import placeholders_only
 from applydesk.lookups import application_or_404, dossier_or_404, exercise_or_404
 from applydesk.web import USER_LOBBY, render
@@ -21,7 +22,9 @@ ON_ME = ("Published", "Closed")
 
 @router.get("", name="applydesk_me")
 def me(request: Request) -> Response:
-    exercises = [e for e in sample_data.EXERCISES if e.state in ON_ME]
+    # As the database has them; a deleted one is gone (segment AD2B).
+    exercises = [e for e in stored_all(sample_data.EXERCISES) if e.state in ON_ME]
+    shown = {e.public_id: e for e in stored_all(sample_data.EXERCISES)}
     return render(
         request,
         "applydesk/me/home.html",
@@ -29,7 +32,9 @@ def me(request: Request) -> Response:
         exercises=exercises,
         mine=sample_data.my_applications(),
         dossiers=[
-            (sample_data.exercise(a.exercise_id), a) for a in sample_data.APPLICATIONS[1:5:2]
+            (shown[a.exercise_id], a)
+            for a in sample_data.APPLICATIONS[1:5:2]
+            if a.exercise_id in shown
         ],
     )
 
