@@ -371,7 +371,8 @@ def test_the_owner_columns_name_the_owner_not_the_viewer(unseeded: None) -> None
     lobby = admin.get("/applydesk/operator/exercises").text
     row = lobby[lobby.index("Recruitment and Selection") :]
     row = row[: row.index("</tr>")]
-    assert 'recorded">pat@example.edu</span>' in row and "Local Operator" not in row
+    # Your role (segment AD2O): the viewer operates RA, Pat owns it.
+    assert '<td data-lb-role><span class="chip chip-mute">Operator</span>' in row
 
 
 # --- The bug sweep at the AD2A close ---

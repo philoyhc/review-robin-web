@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from applydesk import db, operators, people, seed
-from applydesk.models import AuditEvent, Exercise
+from applydesk.models import AuditEvent, Exercise, Person
 from applydesk.operators import Actor
 from applydesk.tests._host import host_with
 from cordware.identity import Identity
@@ -88,7 +88,10 @@ def test_the_owner_removes_but_not_themself(owner: TestClient) -> None:
     me = next(pid for pid, is_owner in _roles().items() if is_owner)
     refused = owner.post(f"{HOME}/operators/{me}/remove", follow_redirects=False)
     assert refused.headers["location"].endswith("ops_said=is_owner#operators")
-    assert "The Owner cannot be removed" in owner.get(refused.headers["location"]).text
+    assert (
+        "An Owner is made an operator before being removed"
+        in owner.get(refused.headers["location"]).text
+    )
 
 
 def test_someone_off_the_list_cannot_be_added(owner: TestClient) -> None:
@@ -203,3 +206,32 @@ def test_sqlite_busy_is_reported_as_a_concurrent_change(
     monkeypatch.setattr(team, "remove", not_null)  # a bug, not a race: it stays one
     with pytest.raises(IntegrityError):
         owner.post(f"{HOME}/operators/{ben}/remove", follow_redirects=False)
+
+
+# --- AD2O's scaffold: Owners and operators -------------------------------------
+
+
+def test_the_card_offers_each_viewer_only_their_moves(owner: TestClient) -> None:
+    """`applydesk/spec/permissions.md` §7: an Owner sees Make Owner, Transfer
+    and Remove on an operator, and, as the only Owner, no Step down on their
+    own row; the new moves are inert until AD2O's wiring."""
+    ben = _colleague()
+    session = db.new_session()
+    ra = session.scalars(select(Exercise).where(Exercise.public_id == EX)).one()
+    person = session.get(Person, ben)
+    assert person is not None
+    operators.add_operator(session, ra, SUPER, person)
+    session.commit()
+    session.close()
+    page = owner.get(HOME).text
+    card = page[
+        page.index("data-operators") : page.index("</section>", page.index("data-operators"))
+    ]
+    assert '<h2 id="ops-h">Owners and operators</h2>' in card
+    row = card[card.index(f'data-ops-row="{ben}"') :]
+    row = row[: row.index("</tr>")]
+    assert 'data-ops-move="make-owner"' in row and "disabled" in row
+    assert 'data-ops-move="transfer"' in row and 'data-ops-move="remove"' in row
+    me = card[card.index("data-ops-self") :]
+    me = me[: me.index("</tr>")]
+    assert "data-ops-last" in me and 'data-ops-move="step-down"' not in me

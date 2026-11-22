@@ -60,7 +60,7 @@ SECTIONS: dict[str, str] = dict(SETUP_PAGES + OPERATIONS_PAGES)
 
 
 @router.get("/exercises", name="applydesk_exercises")
-def exercises(request: Request, session: Session = Depends(db.get_session)) -> Response:
+def exercises(request: Request) -> Response:
     """The Operator Lobby (segment AD2B rung 6): the live exercises the
     viewer operates, sorted, tagged and filtered by the query string."""
     # Each row's values and the revision its Save names, from one read.
@@ -70,9 +70,10 @@ def exercises(request: Request, session: Session = Depends(db.get_session)) -> R
         if s.live and gate.operates(request, s.exercise.public_id)
     ]
     mine = [s.exercise for s in found]
-    owners = operators.owner_labels(session, [e.public_id for e in mine])
+    # Your role on each (segment AD2O), from the viewer's own grants.
+    roles = {e.public_id: "Owner" if gate.owns(request, e.public_id) else "Operator" for e in mine}
     query = lobby.Query.parse(request.query_params, request.query_params.getlist("tag"))
-    shown = lobby.apply(mine, query, owners)
+    shown = lobby.apply(mine, query, roles)
     return render(
         request,
         "applydesk/operator/exercises.html",
@@ -93,13 +94,12 @@ def exercises(request: Request, session: Session = Depends(db.get_session)) -> R
         utc_offset=sample_data.utc_offset,
         created_label=sample_data.created_label,
         lobby_tags=sample_data.all_tags(mine),
-        # Created by is the Owner on record (the author, 2026-11-22).
-        owners=owners,
+        roles=roles,
     )
 
 
 @router.get("/exercises/archived", name="applydesk_exercises_archived")
-def exercises_archived(request: Request, session: Session = Depends(db.get_session)) -> Response:
+def exercises_archived(request: Request) -> Response:
     """The Archive (segment AD2B): the archived exercises the viewer
     operates, tagged and filtered as the Lobby, newest archived first,
     each with *Restore*. Registered before ``/exercises/{exercise_id}``,
@@ -128,7 +128,9 @@ def exercises_archived(request: Request, session: Session = Depends(db.get_sessi
         },
         created_label=sample_data.created_label,
         lobby_tags=sample_data.all_tags(mine),
-        owners=operators.owner_labels(session, [e.public_id for e in shown]),
+        roles={
+            e.public_id: "Owner" if gate.owns(request, e.public_id) else "Operator" for e in shown
+        },
         said=SAID.get(request.query_params.get("said", ""), ""),
     )
 
@@ -781,12 +783,12 @@ def _save_details(request: Request, exercise_id: str, sent: object) -> Response:
 OPS_SAID: dict[str, str] = {
     "added": "Added as an operator.",
     "removed": "Removed. They can be added again.",
-    "owner": "Ownership handed over; the former Owner stays an operator.",
-    "not_owner": "Only the exercise's Owner changes its operators.",
+    "owner": "Ownership transferred: they are an Owner, and you an operator.",
+    "not_owner": "Only an Owner of this exercise changes its Owners and operators.",
     "not_listed": "Only someone on the operator list can be added or made Owner.",
     "already_operator": "Already an operator.",
-    "already_owner": "Already the Owner.",
-    "is_owner": "The Owner cannot be removed; hand ownership over first.",
+    "already_owner": "Already an Owner.",
+    "is_owner": "An Owner is made an operator before being removed.",
     "not_operator": "Add them as an operator first.",
     "gone": "That person is no longer on record; look again.",
     "changed": "Someone else changed the operators just now; look again and retry.",

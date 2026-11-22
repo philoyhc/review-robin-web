@@ -42,6 +42,7 @@ class Viewer:
     may_operate: bool
     operates: frozenset[str]
     is_admin: bool = False  # an Admin (segment AD2M): reaches the Admin pages
+    owns: frozenset[str] = frozenset()  # of `operates`, those they own (AD2O)
 
 
 _NOBODY = Viewer(is_super_admin=False, may_operate=False, operates=frozenset())
@@ -83,6 +84,7 @@ def _look_up(request: Request) -> Viewer:
                 is_super_admin=True,
                 may_operate=True,
                 operates=frozenset(e.public_id for e in mine),
+                owns=operators.owned_ids(session, person),
             )
         actor = operators.Actor(person)
         if not operators.may_operate(person):
@@ -93,6 +95,7 @@ def _look_up(request: Request) -> Viewer:
             may_operate=True,
             operates=operates,
             is_admin=operators.is_admin(person),
+            owns=operators.owned_ids(session, person),
         )
     finally:
         session.close()
@@ -108,6 +111,11 @@ def is_operator(request: Request) -> bool:
 def operates(request: Request, public_id: str) -> bool:
     found = viewer(request)
     return found.may_operate and public_id in found.operates
+
+
+def owns(request: Request, public_id: str) -> bool:
+    """Whether the viewer owns the exercise (segment AD2O)."""
+    return public_id in viewer(request).owns
 
 
 def require_exercise_operator(request: Request) -> None:
