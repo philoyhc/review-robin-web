@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from applydesk import audit, db, sample_data
+from applydesk import audit, db, operators, sample_data
 from applydesk.models import Exercise, ExerciseTag, Person
 
 #: The stored eligibility and the words the pages show (AD-60: NULL is
@@ -311,5 +311,270 @@ def archived_at() -> dict[str, datetime]:
             )
             if at is not None
         }
+    finally:
+        session.close()
+
+
+# --------------------------------------------------------------------------- #
+# The Operator Lobby's panel and the Archive (segment AD2B rung 6).
+
+#: Tags an exercise carries at most, and a tag's longest (Semantics).
+MAX_TAGS = 20
+MAX_TAG = 40
+
+
+def parse_tags(text: str) -> list[str]:
+    """Comma-separated tags as typed: trimmed, blanks dropped, each once
+    ignoring case, in the case first typed. Refused past the limits."""
+    seen: dict[str, str] = {}
+    for part in text.split(","):
+        tag = " ".join(part.split())
+        if not tag:
+            continue
+        if len(tag) > MAX_TAG:
+            raise Refused(f"A tag is at most {MAX_TAG} characters.", key="tag_long", field="tags")
+        seen.setdefault(tag.casefold(), tag)
+    if len(seen) > MAX_TAGS:
+        raise Refused(
+            f"An exercise carries at most {MAX_TAGS} tags.", key="tags_many", field="tags"
+        )
+    return list(seen.values())
+
+
+def _locked(session: Session, public_id: str) -> Exercise:
+    found = session.scalar(
+        select(Exercise)
+        .where(Exercise.public_id == public_id, Exercise.deleted_at.is_(None))
+        .with_for_update()
+    )
+    if found is None:
+        raise Refused("That exercise is no longer on record.", key="gone")
+    return found
+
+
+def _ready(session: Session, exercise: Exercise, actor: Person | None) -> None:
+    """Record a sample's settings before a first change (revision 0)."""
+    if exercise.revision < 1:
+        sample = sample_data.exercise(exercise.public_id)
+        if sample is not None:
+            record_sample(session, exercise, sample, actor)
+
+
+def _put_tags(session: Session, exercise: Exercise, tags: list[str]) -> None:
+    for old in session.scalars(select(ExerciseTag).where(ExerciseTag.exercise_id == exercise.id)):
+        session.delete(old)
+    session.flush()
+    for tag in tags:
+        session.add(ExerciseTag(exercise_id=exercise.id, label=tag, label_key=tag.casefold()))
+
+
+def _changed(
+    session: Session,
+    exercise: Exercise,
+    actor: Person | None,
+    changes: dict[str, list[Any]],
+) -> None:
+    exercise.revision += 1
+    session.flush()
+    audit.write_event(
+        session,
+        event_type="exercise.details_changed",
+        actor=actor,
+        exercise=exercise,
+        payload=audit.changes(changes),
+        context={"revision": exercise.revision},
+    )
+
+
+def save_panel(
+    session: Session,
+    public_id: str,
+    name: str,
+    code: str,
+    tags: list[str],
+    opened: int,
+    actor: Person | None,
+) -> int:
+    """The panel's *Save* for one exercise: its name, code and tags, if
+    no one saved since the Lobby opened at revision `opened`."""
+    exercise = _locked(session, public_id)
+    if exercise.revision != opened:
+        raise Refused(
+            "Not saved: someone else changed this exercise since the Lobby opened. Reload.",
+            key="stale",
+        )
+    name = " ".join(name.split())
+    code = code.strip()
+    if not name or len(name) > 200:
+        raise Refused("A name of 1 to 200 characters is needed.", key="name", field="name")
+    if len(code) > 40:
+        raise Refused("An exercise code is at most 40 characters.", key="code_long", field="code")
+    _ready(session, exercise, actor)
+    if (clash := _clash(session, exercise, code or None)) is not None:
+        raise Refused(f"{code} is already {clash.name}'s code.", key="code_taken", field="code")
+    before_tags = list(tags_of(session, exercise))
+    changes: dict[str, list[Any]] = {}
+    if exercise.name != name:
+        changes["name"] = [exercise.name, name]
+    if exercise.code != (code or None):
+        changes["code"] = [exercise.code, code or None]
+    if before_tags != tags:
+        changes["tags"] = [before_tags, tags]
+    if not changes:
+        return exercise.revision
+    exercise.name, exercise.code, exercise.code_key = name, code or None, _key(code)
+    if "tags" in changes:
+        _put_tags(session, exercise, tags)
+    _changed(session, exercise, actor, changes)
+    return exercise.revision
+
+
+def retag(
+    session: Session, public_ids: list[str], tags: list[str], actor: Person | None, *, add: bool
+) -> None:
+    """*All tags to all* (`add`) or *Remove from all*: `tags` added to, or
+    taken from, each exercise; one past the limit refuses the lot."""
+    wanted = {t.casefold() for t in tags}
+    for public_id in sorted(set(public_ids)):
+        exercise = _locked(session, public_id)
+        _ready(session, exercise, actor)
+        before = list(tags_of(session, exercise))
+        held = {t.casefold() for t in before}
+        if add:
+            after = before + [t for t in tags if t.casefold() not in held]
+        else:
+            after = [t for t in before if t.casefold() not in wanted]
+        if len(after) > MAX_TAGS:
+            raise Refused(
+                f"{exercise.name} would carry more than {MAX_TAGS} tags.", key="tags_many"
+            )
+        if after != before:
+            _put_tags(session, exercise, after)
+            _changed(session, exercise, actor, {"tags": [before, after]})
+
+
+def _owned(session: Session, exercise: Exercise, actor: operators.Actor) -> None:
+    if not operators.is_owner(session, exercise, actor):
+        raise Refused(
+            f"Only an Owner of {exercise.name or 'an exercise'} may do that.", key="not_owner"
+        )
+
+
+def archive(session: Session, public_ids: list[str], actor: operators.Actor) -> None:
+    """Archive each exercise (Owner-only, every one or none): it leaves
+    the Lobby for the Archive and frees its code."""
+    for public_id in sorted(set(public_ids)):
+        exercise = _locked(session, public_id)
+        _owned(session, exercise, actor)
+        _ready(session, exercise, actor.person)
+        if exercise.archived_at is None:
+            exercise.archived_at = datetime.now(UTC)
+            exercise.revision += 1
+            session.flush()
+            audit.write_event(
+                session, event_type="exercise.archived", actor=actor.person, exercise=exercise
+            )
+
+
+def restore(session: Session, public_id: str, actor: operators.Actor) -> None:
+    """Bring an archived exercise back (Owner-only), unless another live
+    exercise has taken its code since."""
+    exercise = _locked(session, public_id)
+    _owned(session, exercise, actor)
+    if exercise.archived_at is None:
+        return
+    if (clash := _clash(session, exercise, exercise.code)) is not None:
+        raise Refused(
+            f"Not restored: {exercise.code} is now {clash.name}'s code. Change one first.",
+            key="restore_taken",
+        )
+    exercise.archived_at = None
+    exercise.revision += 1
+    session.flush()
+    audit.write_event(
+        session, event_type="exercise.restored", actor=actor.person, exercise=exercise
+    )
+
+
+def delete(session: Session, public_ids: list[str], actor: operators.Actor) -> None:
+    """Delete each exercise (Owner-only, every one or none): it leaves
+    every page; its row and audit trail stay (ruling 74)."""
+    for public_id in sorted(set(public_ids)):
+        exercise = _locked(session, public_id)
+        _owned(session, exercise, actor)
+        exercise.deleted_at = datetime.now(UTC)
+        exercise.revision += 1
+        session.flush()
+        audit.write_event(
+            session, event_type="exercise.deleted", actor=actor.person, exercise=exercise
+        )
+
+
+def copy_settings(session: Session, source_id: str, target: Exercise, actor: Person | None) -> None:
+    """*Duplicate settings only*: `target` (a new exercise's row) takes
+    the source's settings and tags, named "Copy of …", with no code."""
+    source = _locked(session, source_id)
+    _ready(session, source, actor)
+    target.name = f"Copy of {source.name}"[:200]
+    target.code = target.code_key = None
+    target.description, target.eligibility, target.blind = (
+        source.description,
+        source.eligibility,
+        source.blind,
+    )
+    target.help_contact, target.timezone = source.help_contact, source.timezone
+    target.created_by_id = actor.id if actor is not None else None
+    target.revision = 1
+    session.flush()
+    _put_tags(session, target, list(tags_of(session, source)))
+    session.flush()
+    audit.write_event(
+        session,
+        event_type="exercise.duplicated",
+        actor=actor,
+        exercise=target,
+        refs={"source_exercise_id": source.id},
+    )
+
+
+def live_ids() -> set[str]:
+    """Every exercise neither archived nor deleted: the Lobby's rows."""
+    session = db.new_session()
+    try:
+        return set(
+            session.scalars(
+                select(Exercise.public_id).where(
+                    Exercise.archived_at.is_(None), Exercise.deleted_at.is_(None)
+                )
+            )
+        )
+    finally:
+        session.close()
+
+
+def revisions(public_ids: list[str]) -> dict[str, int]:
+    """Each exercise's revision, for the panel's *Save* to name."""
+    session = db.new_session()
+    try:
+        found = session.execute(
+            select(Exercise.public_id, Exercise.revision).where(Exercise.public_id.in_(public_ids))
+        )
+        return {public_id: revision for public_id, revision in found}
+    finally:
+        session.close()
+
+
+def is_deleted(public_id: str) -> bool:
+    """Whether the exercise is deleted: it leaves every page (rung 6)."""
+    session = db.new_session()
+    try:
+        return (
+            session.scalar(
+                select(Exercise.id).where(
+                    Exercise.public_id == public_id, Exercise.deleted_at.is_not(None)
+                )
+            )
+            is not None
+        )
     finally:
         session.close()

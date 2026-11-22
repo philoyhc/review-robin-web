@@ -739,6 +739,9 @@
     .pn-top .pn-toolbar { margin-left: auto; flex-direction: column; align-items: flex-end; }
     .pn-show { display: inline-flex; align-items: center; box-sizing: border-box; min-height: var(--tog-h); font: inherit; font-size: 12px; font-weight: 600; line-height: 1; padding: 0 12px; border-radius: 9999px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
     .pn-show[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+    a.pn-show { text-decoration: none; }
+    a.pn-show[aria-current="true"] { background: var(--accent); color: var(--on-accent); }
+    th.lb-sort a { color: inherit; text-decoration: none; }
     .pn-table .pn-off { display: none; }
     .pn-table th.pn-retiring .pn-h, .pn-show.pn-retiring { text-decoration: line-through; }
     .pn-table th.pn-retiring { opacity: 0.6; }

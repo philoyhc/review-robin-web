@@ -1,5 +1,5 @@
-"""The Archive (segment AD2B rung 5, a scaffold): the archived exercises
-the viewer operates, newest archived first; Restore inert until rung 6."""
+"""The Archive (segment AD2B rungs 5 and 6): the archived exercises the
+viewer operates, newest archived first, each with Restore."""
 
 from __future__ import annotations
 
@@ -40,11 +40,11 @@ def test_an_empty_archive_says_so() -> None:
     assert "0 archived" in reply.text and "data-ar-empty" in reply.text
 
 
-def test_archived_exercises_are_listed_newest_first_restore_inert() -> None:
+def test_archived_exercises_are_listed_newest_first() -> None:
     _archive("wa9juxbc2t", datetime(2026, 11, 20, 1, 0, tzinfo=UTC))  # RA-2027
     _archive("n5wg8tjr3e", datetime(2026, 11, 21, 1, 0, tzinfo=UTC))  # Graduate Travel Grant
     page = _client().get(ARCHIVE).text
     assert "2 archived" in page
     assert page.index("Graduate Travel Grant") < page.index("Recruitment and Selection")
     assert "2026-11-20 09:00" in page  # RA-2027's, in Singapore time
-    assert 'disabled title="Restoring is not built yet">Restore' in page
+    assert page.count("data-ar-restore>Restore") == 2

@@ -24,6 +24,7 @@ from applydesk import (
     gate,
     handoff,
     home_ops,
+    lobby,
     locks,
     operators,
     paging,
@@ -38,7 +39,7 @@ from applydesk import (
     workflow,
 )
 from applydesk import exercises as exercise_store
-from applydesk.ids import RowId, row_id
+from applydesk.ids import RowId, is_public_id, row_id
 from applydesk.lookups import dossier_or_404, exercise_or_404
 from applydesk.web import (
     OPERATIONS_PAGES,
@@ -60,42 +61,56 @@ SECTIONS: dict[str, str] = dict(SETUP_PAGES + OPERATIONS_PAGES)
 
 @router.get("/exercises", name="applydesk_exercises")
 def exercises(request: Request, session: Session = Depends(db.get_session)) -> Response:
-    shown = sample_data.newest_first(
+    """The Operator Lobby (segment AD2B rung 6): the live exercises the
+    viewer operates, sorted, tagged and filtered by the query string."""
+    live = exercise_store.live_ids()
+    mine = [
         e
         for e in exercise_store.stored_all(sample_data.exercises())
-        if gate.operates(request, e.public_id)
-    )
+        if e.public_id in live and gate.operates(request, e.public_id)
+    ]
+    owners = operators.owner_labels(session, [e.public_id for e in mine])
+    query = lobby.Query.parse(request.query_params, request.query_params.getlist("tag"))
+    shown = lobby.apply(mine, query, owners)
     return render(
         request,
         "applydesk/operator/exercises.html",
         area=OPERATOR_LOBBY,
         exercises=shown,
+        total=len(mine),
+        query=query,
+        base=url_path(request, "/operator/exercises"),
+        back=query.href(""),
+        revisions=exercise_store.revisions([e.public_id for e in shown]),
         is_scratch=scratch.is_scratch,
         scratch_limit=scratch.LIMIT,
         scratch_said=SAID.get(request.query_params.get("said", ""), ""),
         exercise_status=locks.exercise_status,
-        status_counts=locks.status_counts(shown),
+        status_counts=locks.status_counts(mine),
         stage_position=workflow.stage_position,
         timezone=sample_data.timezone,
         utc_offset=sample_data.utc_offset,
         created_label=sample_data.created_label,
-        lobby_tags=sample_data.all_tags(shown),
-        # Created by is the Owner on record until AD2B records who
-        # created each exercise (the author, 2026-11-22).
-        owners=operators.owner_labels(session, [e.public_id for e in shown]),
+        lobby_tags=sample_data.all_tags(mine),
+        # Created by is the Owner on record (the author, 2026-11-22).
+        owners=owners,
     )
 
 
 @router.get("/exercises/archived", name="applydesk_exercises_archived")
 def exercises_archived(request: Request, session: Session = Depends(db.get_session)) -> Response:
-    """The Archive (segment AD2B rung 5, a scaffold): the archived
-    exercises the viewer operates, newest archived first. *Restore*, the
-    tags and the filter wait for rung 6. Registered before
-    ``/exercises/{exercise_id}``, which would otherwise take the path."""
+    """The Archive (segment AD2B): the archived exercises the viewer
+    operates, tagged and filtered as the Lobby, newest archived first,
+    each with *Restore*. Registered before ``/exercises/{exercise_id}``,
+    which would otherwise take the path."""
     when = exercise_store.archived_at()
     found = [s for s in sample_data.exercises() if s.public_id in when]
+    mine = [
+        e for e in exercise_store.stored_all(tuple(found)) if gate.operates(request, e.public_id)
+    ]
+    query = lobby.Query.parse(request.query_params, request.query_params.getlist("tag"))
     shown = sorted(
-        (e for e in exercise_store.stored_all(tuple(found)) if gate.operates(request, e.public_id)),
+        (e for e in mine if lobby.matches(e, query)),
         key=lambda e: when[e.public_id],
         reverse=True,
     )
@@ -104,13 +119,196 @@ def exercises_archived(request: Request, session: Session = Depends(db.get_sessi
         "applydesk/operator/exercises_archived.html",
         area=OPERATOR_LOBBY,
         exercises=shown,
+        total=len(mine),
+        query=query,
+        base=url_path(request, "/operator/exercises/archived"),
         archived={
             e.public_id: clock.stamp(when[e.public_id], sample_data.timezone(e)) for e in shown
         },
         created_label=sample_data.created_label,
-        lobby_tags=sample_data.all_tags(shown),
+        lobby_tags=sample_data.all_tags(mine),
         owners=operators.owner_labels(session, [e.public_id for e in shown]),
+        said=SAID.get(request.query_params.get("said", ""), ""),
     )
+
+
+#: The panel's actions, as its buttons post them.
+PANEL_ACTIONS = ("save", "add_tags", "remove_tags", "duplicate", "archive", "delete")
+
+
+@router.post("/exercises/panel", name="applydesk_exercises_panel")
+async def exercises_panel(request: Request) -> Response:
+    """The Lobby panel's actions (segment AD2B rung 6) on the ticked
+    exercises; the Lobby again, its query kept, saying how it went."""
+    _same_site(request)
+    body = await request.body()
+    if len(body) > scratch.MAX_BODY:
+        raise HTTPException(status_code=413)
+    form = parse_qs(body.decode("utf-8", "replace"), keep_blank_values=True)
+    action = form.get("action", [""])[0]
+    ids = [i for i in form.get("id", []) if is_public_id(i)][: len(sample_data.EXERCISES) + 50]
+    if action not in PANEL_ACTIONS or not ids:
+        raise HTTPException(status_code=400)
+    back = _lobby_query(form.get("back", [""])[0])
+    if action == "duplicate":
+        return await _duplicate(request, ids[0], back)
+    said = await run_in_threadpool(_panel_change, request, action, ids, form)
+    return _back_to_lobby(request, back, said)
+
+
+def _lobby_query(raw: str) -> str:
+    """The Lobby's query a panel post came from, rebuilt from its parts
+    so nothing else rides back (Semantics: never echoed)."""
+    pairs = parse_qs(raw.lstrip("?"))
+    flat = {k: v[0] for k, v in pairs.items() if v}
+    return lobby.Query.parse(flat, pairs.get("tag", [])).href("")
+
+
+def _back_to_lobby(request: Request, back: str, said: str) -> RedirectResponse:
+    joiner = "&" if back else "?"
+    path = "/operator/exercises" + back + (f"{joiner}{urlencode({'said': said})}" if said else "")
+    return RedirectResponse(url_path(request, path), status_code=303)
+
+
+def _panel_change(request: Request, action: str, ids: list[str], form: dict[str, list[str]]) -> str:
+    """One panel action's transaction; the status key it ends with."""
+    if not all(gate.operates(request, i) for i in ids):
+        return "gone"
+    identity = current_identity(request)
+    if identity is None:
+        return "gone"
+    session = db.new_session()
+    try:
+        actor = team.actor_for(session, identity)
+        session.commit()  # bind the actor first, as `_ops_change` does
+
+        def first(key: str) -> str:
+            return form.get(key, [""])[0]
+
+        if action == "save":
+            opened = int(first("revision")) if first("revision").isdigit() else -1
+            exercise_store.save_panel(
+                session,
+                ids[0],
+                first("name"),
+                first("code"),
+                exercise_store.parse_tags(first("tags")),
+                opened,
+                actor.person,
+            )
+        elif action in ("add_tags", "remove_tags"):
+            tags = exercise_store.parse_tags(first("tags"))
+            if not tags:
+                return "no_tags"
+            exercise_store.retag(session, ids, tags, actor.person, add=action == "add_tags")
+        elif action == "archive":
+            exercise_store.archive(session, ids, actor)
+        else:
+            if first("confirm") != "yes":
+                return "delete_unconfirmed"
+            exercise_store.delete(session, ids, actor)
+        session.commit()
+    except exercise_store.Refused as why:
+        session.rollback()
+        return why.key if why.key in SAID else "refused"
+    except (IntegrityError, OperationalError) as error:
+        session.rollback()
+        if not db.lost_a_race(error):
+            raise
+        return "stale"
+    finally:
+        session.close()
+    gate.forget_viewer(request)
+    return {"save": "saved", "add_tags": "tagged", "remove_tags": "untagged"}.get(
+        action, action + "d"
+    )
+
+
+async def _duplicate(request: Request, source_id: str, back: str) -> Response:
+    """*Duplicate settings only*: a new scratch exercise, its row taking
+    the source's settings and tags; its Home next (as *New exercise*)."""
+    if not gate.operates(request, source_id):
+        return _back_to_lobby(request, back, "gone")
+    source = sample_data.exercise(source_id)
+    if source is None:
+        return _back_to_lobby(request, back, "gone")
+    browser = scratch.token() or scratch.new_token()
+    try:
+        made = scratch.create(browser, f"Copy of {source.name}"[:200])
+    except scratch.Refused as why:
+        return _back_to_lobby(request, back, why.key if why.key in SAID else "not_made")
+    made_id = made.exercise.public_id
+    try:
+        ok = await run_in_threadpool(_copy_into, request, source_id, made_id)
+    except Exception:
+        scratch.discard(browser, made_id)
+        raise
+    if not ok:
+        scratch.discard(browser, made_id)
+        return _back_to_lobby(request, back, "not_made")
+    reply = RedirectResponse(url_path(request, f"/operator/exercises/{made_id}"), status_code=303)
+    reply.raw_headers.append(
+        scratch.cookie_header(browser, root_path(request), request.url.scheme == "https")
+    )
+    return reply
+
+
+def _copy_into(request: Request, source_id: str, made_id: str) -> bool:
+    if not gate.own_new_exercise(request, made_id):
+        return False
+    identity = current_identity(request)
+    session = db.new_session()
+    try:
+        actor = people.resolve(session, identity) if identity is not None else None
+        target = exercise_store.row(session, made_id)
+        if target is None:
+            return False
+        exercise_store.copy_settings(session, source_id, target, actor)
+        session.commit()
+    except (exercise_store.Refused, OperationalError):
+        session.rollback()
+        return False
+    finally:
+        session.close()
+    return True
+
+
+@router.post("/exercises/archived/restore", name="applydesk_exercises_restore")
+async def exercises_restore(request: Request) -> Response:
+    """*Restore* on the Archive (segment AD2B rung 6), Owner-only."""
+    _same_site(request)
+    body = await request.body()
+    if len(body) > scratch.MAX_BODY:
+        raise HTTPException(status_code=413)
+    public_id = parse_qs(body.decode("utf-8", "replace")).get("id", [""])[0]
+    if not is_public_id(public_id):
+        raise HTTPException(status_code=400)
+    said = await run_in_threadpool(_restore, request, public_id)
+    path = "/operator/exercises/archived?" + urlencode({"said": said})
+    return RedirectResponse(url_path(request, path), status_code=303)
+
+
+def _restore(request: Request, public_id: str) -> str:
+    identity = current_identity(request)
+    if identity is None or not gate.operates(request, public_id):
+        return "gone"
+    session = db.new_session()
+    try:
+        actor = team.actor_for(session, identity)
+        session.commit()
+        exercise_store.restore(session, public_id, actor)
+        session.commit()
+    except exercise_store.Refused as why:
+        session.rollback()
+        return why.key if why.key in SAID else "refused"
+    except (IntegrityError, OperationalError) as error:
+        session.rollback()
+        if not db.lost_a_race(error):
+            raise
+        return "stale"
+    finally:
+        session.close()
+    return "restored"
 
 
 def _same_site(request: Request) -> None:
@@ -128,6 +326,25 @@ SAID: dict[str, str] = {
     **scratch.CREATE_REFUSALS,
     "not_made": "The scratch exercise could not be made.",
     "discarded": "The scratch exercise was discarded.",
+    # The panel and the Archive (segment AD2B rung 6).
+    "saved": "Saved.",
+    "tagged": "Tags added.",
+    "untagged": "Tags removed.",
+    "archived": "Archived: see Go to Archive.",
+    "deleted": "Deleted.",
+    "restored": "Restored to the Lobby.",
+    "no_tags": "Type the tags first.",
+    "delete_unconfirmed": "Not deleted: tick Yes, delete first.",
+    "not_owner": "Only an exercise's Owner may archive, restore or delete it.",
+    "code_taken": "Not saved: another live exercise has that code.",
+    "code_long": "Not saved: an exercise code is at most 40 characters.",
+    "name": "Not saved: a name of 1 to 200 characters is needed.",
+    "tag_long": "Not saved: a tag is at most 40 characters.",
+    "tags_many": "Not saved: an exercise carries at most 20 tags.",
+    "restore_taken": "Not restored: another live exercise now has its code. Change one first.",
+    "stale": "Not saved: someone else changed it just now. Look again and retry.",
+    "gone": "That exercise is no longer on record, or not yours to change.",
+    "refused": "Not done.",
 }
 
 

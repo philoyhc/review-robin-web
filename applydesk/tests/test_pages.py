@@ -316,7 +316,7 @@ def test_the_lobby_names_exercises_by_code_not_id(client: TestClient) -> None:
     """Iteration rung 4 (author, 2026-11-12): an Exercise code column, as
     RRW's Session Code; the public ID is only in each row's link."""
     page = client.get("/applydesk/operator/exercises").text
-    assert '<th class="lb-sort" title="Sorting is not built yet">Exercise code<' in page
+    assert 'data-lb-sort="code">Exercise code<' in page
     assert ">ID<" not in page
     for e in sample_data.EXERCISES:
         if e.code:  # a just-created exercise has none yet
@@ -395,9 +395,9 @@ def test_the_lobby_names_each_exercise_s_current_stage(
 
 def test_the_lobby_is_laid_out_as_review_robin_s(client: TestClient) -> None:
     """Segment AD1T: the Exercises and Filter cards over eight columns,
-    newest first; sorting, the tags and the filter inert until AD2B."""
+    newest first; sorting, the tags and the filter links (AD2B rung 6)."""
     lobby = client.get("/applydesk/operator/exercises").text
-    heads = re.findall(r"<th[^>]*>([^<]+)<", lobby)
+    heads = re.findall(r"<th[^>]*>(?:<a [^>]*>)?([^<]+)<", lobby)
     assert heads == [
         "Exercise",
         "Exercise code",
@@ -412,9 +412,12 @@ def test_the_lobby_is_laid_out_as_review_robin_s(client: TestClient) -> None:
     assert '<span class="chip chip-info">5 exercises</span>' in lobby
     assert ">2 Draft</span>" in lobby and ">3 Published</span>" in lobby
     assert ">0 Closed</span>" in lobby and ">0 Archived</span>" in lobby
-    assert lobby.count('title="Filtering by tag is not built yet"') == 4 + 2  # 4 tags, OR, Clear
+    assert lobby.count("data-lb-chip>") == 4 and "data-lb-any>OR</a>" in lobby
     assert 'href="/applydesk/operator/exercises/archived">Go to Archive</a>' in lobby  # AD2B
-    assert 'aria-sort="descending">Created<' in lobby
+    assert (
+        'aria-sort="descending"><a href="/applydesk/operator/exercises?sort=created&amp;dir=asc"'
+        ' data-lb-sort="created">Created<' in lobby
+    )
     # Newest first: the Graduate Travel Grant, made last, heads the rows.
     order = [lobby.index(e.name) for e in sample_data.newest_first(sample_data.EXERCISES)]
     assert order == sorted(order)
