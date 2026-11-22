@@ -67,6 +67,25 @@ Taken 2026-11-22 at `0de2e6a0a`.
 | Test files opening an exercise's pages | 56, of which 5 seed | `grep -rln "operator/exercises/" applydesk/tests \| wc -l` |
 | Migrations | 4; this adds one | `ls applydesk/alembic/versions` |
 
+## Status
+
+Closed 2026-11-22. Intended versus done:
+- **Ladder:** the plan and the spec's rulings (#4130), the scaffold (#4131), then rungs 3 and 4 as one PR (#4132), and this close. The two build rungs went together because the cold read's fixes spanned both.
+- **Done as decided,** plus these decisions confirmed at build (Judgment calls):
+  - the last Admin is never demoted, whoever acts;
+  - a super-admin's row is protected;
+  - the seed is `Actor(platform=True)`, the only actor that holds every exercise;
+  - *Manage* keeps Review Robin's name and adopts after a confirm.
+- **Found in the build:** a handover whose actor's Owner row had just moved still promoted its target. It is now refused (rung 4).
+- **Reads:**
+  - One cumulative `diff-reviewer` read of rungs 2–4 found 1 high, 4 medium and 7 low findings, all acted on in #4132. The high one: *Manage*'s confirm sat in the title block.
+  - Codex found one deadlock: two Admins demoting each other. Fixed by locking every Admin row first, and `db.lost_a_race` now reads a Postgres deadlock.
+  - `spec-writer` at the close rewrote `permissions.md` §2–§10, `applications.md` and `architecture.md`.
+- **Left for AD2O:**
+  - Module docstrings and copy that still say "the Owner": `operators.py`, `routes_admin.py`, `team.py`, `_operators.html`, the Lobby's *Created by* title.
+  - The Owner-only refusals' wording.
+- **Owed:** the author's browser check of Promote, Demote and *Manage*.
+
 ## PR ladder
 
 1. **PR 1 — this plan**, with the spec's rulings (`applydesk/spec/permissions.md`).
