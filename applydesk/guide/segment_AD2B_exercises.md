@@ -12,7 +12,7 @@ The database's `exercise` row holds only a public ID and a creation time (AD2A).
 
 The Operator Lobby is AD1T's scaffold. Sorting, tags, the filter, *Go to Archive* and the tick panel's actions are inert, and *Created* and *Tags* are sample values.
 
-The AD2 series gives AD2B six findings: AD-52, AD-54, AD-55, AD-60, AD-97 and AD-40 (`applydesk/guide/ad2_deferred_findings.md`).
+The AD2 series gave AD2B six findings. Five stay here: AD-54, AD-55, AD-60, AD-97 and AD-40 (`applydesk/guide/ad2_deferred_findings.md`). AD-52's invitee list moves to AD2C, as a stage item (author, 2026-11-22).
 
 ## Decision
 
@@ -26,7 +26,6 @@ The AD2 series gives AD2B six findings: AD-52, AD-54, AD-55, AD-60, AD-97 and AD
   - `created_by_id` and `created_at`;
   - `archived_at` and `deleted_at` (ruling 74: nothing hard-deleted);
   - a `revision`.
-- **Invitees:** an `exercise_invitee` table (AD-52), bound or pending people as on the operator list.
 - **NULL for unset:** "Not set" is never stored (AD-60). Pages print it.
 - **One service, `applydesk/exercises.py`, reads and writes them:**
   - The pages keep their sample-shaped `Exercise`. `lookups.exercise_or_404` overlays the row's settings on the sample's stages and applications, which stay sample data until AD2C–AD2F.
@@ -56,9 +55,7 @@ Rejected: moving the whole `Exercise` dataclass to the database at once. Stages,
   - blank is allowed, so a new exercise has none;
   - two live exercises may not share one, ignoring case;
   - an archived or deleted exercise frees its code.
-- **Eligibility:**
-  - *Invitation only* with no invitees is allowed while Draft;
-  - Validate's warning about it is AD3's.
+- **Eligibility:** stored as the enum only. Who is invited is a stage item, AD2C's (AD-52).
 - **Timezone:**
   - NULL means the operator settings' default;
   - choosing the default stores NULL, so Details can say "the default" truthfully (AD-54).
@@ -82,7 +79,7 @@ Rejected: moving the whole `Exercise` dataclass to the database at once. Stages,
 ## Judgment calls — decided
 
 - Overlay, not replace: `sample_data.Exercise` stays the pages' shape until AD2G retires the simulation.
-- Invitees take the operator list's bound-or-pending person, so a later sign-in binds them the same way.
+- Invitees are a stage item, not the exercise's: AD-52 moves to AD2C (author, 2026-11-22).
 - Server-side sorting rather than client-side: the Lobby lists only what the viewer operates, a short list, and a query string survives a reload.
 
 ## Blast radius (measured)
@@ -101,14 +98,13 @@ Taken 2026-11-22 at `579a52717`.
 
 1. **PR 1 — this plan.**
 2. **PR 2 — the stored exercise.**
-   - The columns and `exercise_invitee`, with a migration round-tripped on Postgres.
+   - The columns, with a migration round-tripped on Postgres.
    - `exercises.py` with get, list, save, revision and audit.
    - The seed writing settings.
    - `exercise_or_404` overlaying the stored settings.
    - Must not change any page's look.
 3. **PR 3 — Details saves to the database.**
    - Any operated exercise saves, with the revision guard; "Not set" becomes NULL (AD-55, AD-60, AD-54).
-   - Invitees on Details: the operator list's typeahead over records and the directory.
 4. **PR 4 — one clock and the date helper** (AD-40, AD-97).
 5. **PR 5 — Lobby scaffold for Archive.** The Archive page, with the list, *Restore* and the copy, as a scaffold.
 6. **PR 6 — the Lobby wired.**
@@ -123,7 +119,7 @@ Taken 2026-11-22 at `579a52717`.
 - **Details on a sample exercise saves and survives a restart.** A stale Lock is refused (a new `test_exercises.py`).
 - **The Lobby sorts and filters through its query string.** Its tag chips filter with *OR*. Archive and Restore round-trip, and Delete removes the exercise from every page, by its Owner only (`test_pages.py`, `test_lobby_browser.py`).
 - **No "Not set" is stored** (`grep -rn '"Not set"' applydesk/exercises.py applydesk/seed.py` finds none).
-- **AD-40, AD-52, AD-54, AD-55, AD-60 and AD-97 are struck** in `applydesk/guide/ad2_deferred_findings.md`, each with its PR.
+- **AD-40, AD-54, AD-55, AD-60 and AD-97 are struck** in `applydesk/guide/ad2_deferred_findings.md`, each with its PR.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py AD2B` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -132,22 +128,24 @@ Taken 2026-11-22 at `579a52717`.
 
 ## Open questions
 
-1. **Duplicate (with setup):** inert until AD2C–AD2F store the setup, as proposed, or left off the panel until then? (author)
-2. **Purge and archive:** archive now and say the purge is not built, as proposed, or keep the whole button inert until AD2D? (author)
-3. **Invitees:** on Details, as proposed, or on a page of their own when the list may run to hundreds? (author)
+None open. Answered 2026-11-22 (author):
+- *Duplicate* stays on the panel, inert, saying why.
+- *Purge and archive* archives now.
+- Invitees are a stage item, deferred to AD2C.
 
 ## Out of scope
 
 - **AD2O:** Make Owner, step down, leave, *Your role* (`applydesk/spec/permissions.md` §3, §7).
+- **AD2C:** invitees, a stage item (AD-52).
 - **AD2C onward:** stage dates (*Opens*, *Applications close*, *Expected outcome* stay sample values), forms, applications, panels and dossiers.
 - **AD3:** what a published exercise fixes, and Validate's warnings.
 
 ## Doc impact
 
-- `applydesk/spec/applications.md` — Details saving to the database with the revision guard and invitees; the Operator Lobby wired (sorting, tags, the filter, Archive and Restore, the panel's actions, what stays inert); dates on operator pages.
-- `applydesk/spec/architecture.md` — the module map (`exercises.py`, `clock.py`), the `exercise` columns and `exercise_invitee`, the migrations.
+- `applydesk/spec/applications.md` — Details saving to the database with the revision guard; the Operator Lobby wired (sorting, tags, the filter, Archive and Restore, the panel's actions, what stays inert); dates on operator pages.
+- `applydesk/spec/architecture.md` — the module map (`exercises.py`, `clock.py`), the `exercise` columns, the migrations.
 - `applydesk/spec/permissions.md` — §3 and §6: archive and delete built, Owner-only.
-- `applydesk/guide/ad2_deferred_findings.md` — AD-40, AD-52, AD-54, AD-55, AD-60, AD-97 struck with their PRs.
-- `applydesk/guide/ad2_series.md` — AD2B's row points at this plan, then its archived copy.
+- `applydesk/guide/ad2_deferred_findings.md` — AD-40, AD-54, AD-55, AD-60, AD-97 struck with their PRs.
+- `applydesk/guide/ad2_series.md` — AD2B's row points at this plan, then its archived copy; AD-52 moved to AD2C's row.
 - `applydesk/guide/todo_master.md` — the queue entry deleted at close.
 - `applydesk/README.md` — the plan's index row, moved at close.
