@@ -128,6 +128,10 @@
     <span class="muted">With ticked rows (<span data-bulk-count>0</span>):</span>
     <button class="btn btn-secondary btn-short" type="submit" name="action" value="admit" disabled data-bulk-action>Admit</button>
     <button class="btn btn-secondary btn-short" type="submit" name="action" value="revoke" disabled data-bulk-action data-bulk-revoke>Revoke</button>
+    {# Promote and Demote (segment AD2M, scaffold): the super-admin makes
+       and unmakes Admins, who share these pages and manage operators. #}
+    <button class="btn btn-secondary btn-short" type="button" disabled title="Promoting to Admin is not built yet" data-bulk-promote>Promote to Admin</button>
+    <button class="btn btn-secondary btn-short" type="button" disabled title="Demoting an Admin is not built yet" data-bulk-demote>Demote from Admin</button>
   </form>
   <div class="table-wrap">
   <table>
