@@ -9,7 +9,7 @@ bringing Review Robin to this file's per-exercise model.
 This is the **target contract**. Each section marks what is built; the rest
 is to build, and its plan will name this file in its `Doc impact`.
 `spec/applications.md` describes the pages as they stand ("Who reaches
-what", Accounts Management, the Operators card, the Operator Lobby).
+what", Accounts Management, the Owners and operators card, the Operator Lobby).
 
 ## 1. Principles
 
@@ -60,11 +60,13 @@ it: **Owner ⊇ Operator**.
 | **Operator** | an `exercise_operator` row | an Owner adding them | an Owner removing them, or leaving |
 | **Owner** | the same row, `is_owner` true | making the exercise; an Owner making an operator an Owner; an Owner transferring ownership to them | an Owner demoting them to operator; transferring their own ownership away; stepping down |
 
-*Built:* the rows, adding and removing operators, a handover, and several
-Owners in the data (adopting adds one beside the others; the one-Owner index
-is gone and the exercise's row lock serializes changes to its Owners). *To
-build:* Make Owner, demote, step down and leave, and the Owners and operators
-card.
+*Built:* the rows, adding and removing operators, Make Owner, transfer,
+demote, step down and leave, and the *Owners and operators* card. The
+exercise's row lock serializes changes to its Owners.
+
+An **acting Owner** is one who is signed in (bound) and either on the operator
+list or the super-admin. An exercise always keeps at least one. Revoked and
+pending Owners keep their rows but do not count.
 
 ### What each may do on an exercise
 
@@ -86,8 +88,8 @@ card.
 | Purge it (with *Purge and archive*) | — | ✓ |
 | Delete | — | ✓ |
 
-*Built:* rename and tag in the Lobby, *Duplicate settings only*, and Archive,
-Restore and Delete, each an Owner's alone: the server refuses an operator,
+*Built:* rename and tag in the Lobby, *Duplicate settings only*, the
+ownership moves above, and Archive, Restore and Delete, each an Owner's alone: the server refuses an operator,
 whatever the page offers (`applydesk/exercises.py`, checking
 `operators.is_owner`). A ticked set is archived or deleted
 whole or not at all. *To build:* the purge (AD2D, with stored applications:
@@ -95,17 +97,21 @@ whole or not at all. *To build:* the purge (AD2D, with stored applications:
 
 ### The ownership moves
 
-- **Make Owner**: an operator becomes an Owner; every Owner stays one.
+- **Make Owner**: an operator becomes an Owner; every Owner stays one. An
+  Owner's alone.
 - **Transfer**: an operator becomes an Owner and the Owner doing it becomes
   an operator, in one audited step. Transfer never leaves the exercise
   without an Owner, so the last Owner may transfer.
-- **Demote**: an Owner turns an Owner (themself included: *Step down*) into
-  an operator.
+- **Demote**: an Owner turns an Owner (themself included: *Step down*, only
+  on their own row) into an operator. Refused for the last acting Owner;
+  demoting an Owner who does not act is not held.
 - **Remove**: an Owner takes an **operator** off the exercise. An Owner is
   never removed directly: they are demoted first, then removed (the author's
   ruling, 2026-11-22). Their row is kept, ended, so re-adding them restores
   it, as today.
-- **Leave**: an operator takes themself off. An Owner steps down first.
+- **Leave**: an operator takes themself off, and lands on the Lobby. An Owner
+  steps down first.
+- **Archived exercises** refuse every move, read under the row lock.
 
 ## 4. Participants
 
@@ -159,7 +165,7 @@ role, so every change has an Owner on record.
   (an unbound super-admin cannot adopt).
 - Once adopted, they are an Owner as any other. A later Demote keeps the Owner
   rows they adopted, as Revoke keeps an operator's grants.
-- Stepping down and leaving are AD2O's (§3).
+- Stepping down and leaving are §3's.
 
 ## 6. Who reaches which pages
 
@@ -180,13 +186,14 @@ role, so every change has an Owner on record.
   the seeded person, Local Operator, owns the sample exercises in the
   ordinary way: the seed grants them (`applydesk/seed.py`), not their being
   super-admin.
-- **Your role** replaces *Created by*: an *Owner* or *Operator* chip for the
-  viewer on that exercise; it sorts as the other columns do.
+- **Your role** replaces *Created by*, on the Lobby and the Archive: an
+  *Owner* or *Operator* chip for the viewer on that exercise; the Lobby sorts
+  by it as by the other columns, Owner first.
 - **The tick panel follows the role.** *Purge and archive* and *Delete* are
-  live only when the viewer owns every ticked exercise; otherwise they say
-  which ticked exercises the viewer only operates. *Duplicate*, rename and
+  disabled when a ticked exercise is one the viewer only operates, and a note
+  lists those exercises; the server refuses regardless. *Duplicate*, rename and
   tags are open to operators.
-- **Exercise Home's Operators card becomes *Owners and operators*.** Owners
+- **Exercise Home's card is *Owners and operators*.** Owners
   first, each marked *Owner*, then operators; a pending person says *Not yet
   signed in*. Each row offers only the moves the viewer may make:
 
@@ -194,7 +201,7 @@ role, so every change has an Owner on record.
   |---|---|---|
   | Another operator | *Make Owner*, *Transfer ownership*, *Remove* | nothing |
   | Another Owner | *Make operator* | nothing |
-  | Their own row | *Step down to operator* (not the last Owner) | *Leave* |
+  | Their own row | *Step down to operator* (not the last acting Owner) | *Leave* |
 
   An Owner also has *Add operator*, the operator-list search the card has now.
   *Transfer ownership*, *Remove* and *Leave* ask first and take the
@@ -206,19 +213,24 @@ role, so every change has an Owner on record.
 
 ## 8. Guards
 
-- **At least one Owner, always.** To build with demote, step down and leave:
-  one that would leave no Owner is refused; transfer always leaves one. The
-  check runs
-  under the same row lock the handover takes now, so two Owners demoting each
-  other at once cannot both succeed.
+- **At least one acting Owner, always.** Demote and step down are refused
+  (`last_owner`) for the last acting Owner; *Leave* is refused an Owner
+  (`owner_leaving`); transfer always leaves one. The check runs under the
+  exercise's row lock, so two Owners demoting each other at once cannot both
+  succeed.
 - **Owners and operators come from the operator list.** Adding an operator,
   making an Owner and transferring all require the person to be on it.
-- **An Owner is demoted before removal** (§3).
+- **An Owner is demoted before removal** (§3): *Remove* refuses an Owner
+  (`is_owner`).
 - **Revoking from the operator list** ends the person's access at once and
-  keeps their grants, so re-admitting restores them (built). Built: it
-  refuses an Admin, who is demoted first. To build: it is refused while they
-  are the **only** Owner of an exercise not archived; ownership is handed over
-  first, as Review Robin's `sole_owner` refuses.
+  keeps their grants, so re-admitting restores them. It refuses an Admin, who
+  is demoted first, and is refused (`sole_owner`) while they are the **only**
+  acting Owner of a live exercise; ownership is handed over first, as Review
+  Robin's `sole_owner` refuses.
+  - It applies only when the person revoked counts as an acting Owner.
+  - It locks each owned exercise before counting; after its update it
+    re-checks under those locks and undoes the update if it would refuse.
+  - Archived exercises do not hold it.
 - **A super-admin's row is protected** (built): no Revoke, Promote or Demote
   acts on it, whoever acts, and nobody acts on their own row in Accounts
   Management. No in-app action deletes it either.
@@ -247,9 +259,9 @@ Every change writes an `audit_event` with the actor.
 | `exercise.created` | an exercise is made, its maker its Owner | Yes |
 | `exercise.operator_added`, `exercise.operator_removed` | an operator added or removed | Yes |
 | `exercise.ownership_handed_over` | a transfer | Yes |
-| `exercise.owner_added` | Make Owner | No |
-| `exercise.owner_demoted` | an Owner made an operator, or stepping down | No |
-| `exercise.operator_left` | an operator leaves | No |
+| `exercise.owner_added` | Make Owner | Yes |
+| `exercise.owner_demoted` | an Owner made an operator, or stepping down (`context.stepped_down`) | Yes |
+| `exercise.operator_left` | an operator leaves | Yes |
 | `exercise.adopted` | an Admin or the super-admin adopts an exercise as Owner (not when already an Owner) | Yes |
 | `exercise.archived`, `exercise.restored`, `exercise.deleted` | an Owner archives (*Purge and archive* too, which only archives), restores, or deletes | Yes |
 | `exercise.settings_recorded`, `exercise.details_changed`, `exercise.duplicated` | an exercise's settings recorded from the sample (the seed), changed (Details' *Lock*, the Lobby's *Save* and tag actions), or copied | Yes |

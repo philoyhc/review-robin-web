@@ -62,6 +62,42 @@ Taken 2026-11-22 at `3a965352b`.
 | Tests on the Operators card | 3 | `grep -rln "operators/.*owner\|_operators.html\|data-ops" applydesk/tests` |
 | Tests naming *Created by* | 2 | `grep -rln "Created by" applydesk/tests` |
 
+## Status — closed 2026-11-22
+
+**The ladder held as planned:** plan #4143, scaffold #4144, moves #4145, wired #4146, then this close.
+
+**Decisions confirmed at build:**
+- **The last-Owner guard counts Owners who can act**, not every Owner grant. An Owner who can act is bound and either on the operator list or the super-admin, whose grants count unlisted (`counts_as_owner`).
+  - A revoked or pending Owner doesn't keep an exercise running.
+  - Demoting a non-acting Owner isn't held.
+  - This narrows Semantics' "Pending people … reach nothing until bound": they may be Owners, but they don't count.
+- **Revoke takes the exercise locks.** It locks each live exercise the person owns before counting. After its update it re-reads and re-locks what they now own. If it refuses, it puts the person's row back, so a bulk batch keeps nothing.
+  - The guard holds only when the person being revoked counts as an Owner who can act.
+- **Moves read `archived_at` under the row lock**, which archiving also takes.
+- ***Step down* and *Leave* are refused on another person's row** (`not_self`).
+
+**Where the Definition of done's tests landed:**
+- Revoke: `applydesk/tests/test_owners.py`.
+- The card's per-viewer moves and the Lobby's `data-owner`: `test_operators_card.py`.
+- *Your role* rendering: `test_pages.py` and `test_gate.py`.
+
+**Reads:**
+- One cumulative `diff-reviewer` read of rungs 2–4, from base `3a965352b`, at rung 4. It found:
+  - revoked and pending Owners counted toward the guard;
+  - a non-acting Owner's demote was refused;
+  - Revoke raced a Transfer;
+  - *Step down* on another person's row gave the wrong message;
+  - gaps in the card tests.
+  Its bulk-Revoke deadlock finding was already handled by `db.is_busy`.
+- Codex added four rounds on rung 3:
+  - an unlisted super-admin Owner wasn't counted;
+  - the archive check read a stale copy;
+  - a pending co-Owner's revoke was held;
+  - Revoke's re-check didn't lock the exercises it found.
+  All were fixed in #4145.
+
+**Left as found:** `routes_operator._ops_change` still comments on "the one-Owner index", which AD2M dropped. It's a stale code comment, for the next slice that edits that function.
+
 ## PR ladder
 
 1. **PR 1 — this plan.**

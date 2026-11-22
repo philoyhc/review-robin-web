@@ -12,6 +12,27 @@ auth). Most need the samples loaded first:
 `alembic -c applydesk/alembic.ini upgrade head`, then
 `python -m applydesk.seed`.
 
+## Owners and operators, and *Your role* (AD2O: #4144, #4145, #4146)
+
+- [ ] **The card.** On an exercise's Home, the card reads *Owners and
+  operators*, Owners first. As its only Owner, your row offers no *Step
+  down* and says why; another operator's row offers *Make Owner*,
+  *Transfer ownership* and *Remove*, the last two asking first.
+- [ ] **Make Owner, then Step down.** Make a colleague an Owner: both rows
+  say Owner. *Step down* on your row: you are an operator, they the Owner,
+  and your row now offers only *Leave*.
+- [ ] **Leave.** As an operator, *Leave* asks, then lands on the Lobby
+  without that exercise.
+- [ ] **Transfer.** *Transfer ownership* asks, then you are an operator and
+  they the only Owner.
+- [ ] **Your role.** The Lobby and the Archive show *Your role* (Owner or
+  Operator) where *Created by* was; the Lobby sorts by it.
+- [ ] **The panel.** Tick an exercise you only operate: *Purge and archive*
+  and *Delete* are disabled and the note names it; untick it and they
+  return.
+- [ ] **Archived is read-only.** On an archived exercise's Home, the card's
+  moves are refused with *Archived: restore it to change who runs it.*
+
 ## The Lobby wired, and the Archive (AD2B: #4139, #4140)
 
 - [ ] **Sorting.** Click a header: the rows sort by it, its arrow shows the
