@@ -5,7 +5,7 @@ Revises: ad2m2manyowners
 Create Date: 2026-11-22
 
 The `exercise` row takes its settings (segment AD2B,
-`applydesk/guide/segment_AD2B_exercises.md`): name, code (one live
+`applydesk/guide/archive/segment_AD2B_exercises.md`): name, code (one live
 exercise per code, ignoring case), description, eligibility, blind, help
 contact and timezone (NULL takes the operator settings' default), who
 created it, archived and deleted, and a revision; `exercise_tag` its tags.

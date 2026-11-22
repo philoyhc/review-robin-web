@@ -1,6 +1,6 @@
 # Apply Desk architecture
 
-> **Built:** everything below. The pages read sample data; who may reach them, who operates an exercise, the people and the audit trail are in the database, the rest moving there area by area (`applydesk/guide/ad2_series.md`).
+> **Built:** everything below. The pages read sample data; who may reach them, who operates an exercise, an exercise's own settings, the people and the audit trail are in the database, the rest moving there area by area (`applydesk/guide/ad2_series.md`).
 
 How `applydesk/` is laid out, what it may import, and how its tests run.
 Its contract with the host is `applydesk/spec/applications.md`.
@@ -17,13 +17,16 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/lookups.py` | Path lookups the routes share: an ID's shape checked, then a 404 or the record |
 | `applydesk/gate.py` | Who reaches the pages. `require_exercise_operator` on the operator router: 404 unless the viewer is the super-admin or on the allowlist and, on a path with an `exercise_id`, holds a current grant on that exercise (the super-admin's reach is their grants too). `require_admin` on the admin router: the super-admin or an Admin. `landing` on `/` and `/operator`: any operator, else the placeholders' gate. `placeholders_only` on the participant's pages until a later AD2 segment, on `reaches_placeholders`: anyone on a local run, deployed only the super-admin; `web.render` offers a link to those pages (`participant_pages`) only where it holds. `viewer` resolves the viewer once per request, binding them (`people.resolve`), and keeps the answer on `request.state`; `is_operator` and `operates` read it; `forget_viewer` drops it after the viewer's grants change. `own_new_exercise` makes a new scratch exercise's row and Owner |
 | `applydesk/db.py` | Apply Desk's own database, `applydesk` ("The database"); `is_busy` and `lost_a_race` tell a concurrent change (SQLite busy, or a unique clash) from a bug |
-| `applydesk/models.py` | Its tables, on Apply Desk's own `Base`: `person`, `exercise`, `exercise_operator`, `audit_event` ("The database") |
+| `applydesk/models.py` | Its tables, on Apply Desk's own `Base`: `person`, `exercise`, `exercise_tag`, `exercise_operator`, `audit_event` ("The database") |
+| `applydesk/exercises.py` | An exercise's stored settings and the rules over them ("Exercises"): `overlay` and `stored` read them over the sample, `save_details` is Details' *Lock*, `save_panel`, `retag`, `archive`, `restore`, `delete` and `copy_settings` are the Lobby's, `record_sample` is the seed's. Flushes, never commits; refuses with `Refused` and its `key` |
+| `applydesk/clock.py` | The one clock (`today`, `midday`) and the date wording (`short`, `span`, `stamp`): no page reads the wall clock or words a date itself |
+| `applydesk/lobby.py` | The Operator Lobby's and the Archive's query string: `Query` (`sort`, `dir`, `tag`, `any`, `q`) and `apply` / `matches`, which sort and filter the rows |
 | `applydesk/alembic.ini`, `applydesk/alembic/` | Its migration history ("The database") |
 | `applydesk/people.py` | People and their binding: `resolve` at sign-in, `from_directory` for a directory find, `pending` for an address the directory did not find ("Binding") |
 | `applydesk/directory.py` | The people search every place that adds people uses: people on record first, then the directory through `cordware/graph.py`; a failed directory search is reported, never read as nobody there |
 | `applydesk/operators.py` | The rules of who may operate and who operates each exercise: the allowlist (`admit`, `revoke`), the Admin tier (`promote`, `demote`; `is_admin`; `is_protected` marks a super-admin's row, which no Revoke, Promote or Demote acts on; `keeps_the_list` says who admits and revokes, `makes_admins` who promotes and demotes) and an exercise's Owners and operators (`create_exercise`, `add_operator`, `remove_operator`, `hand_over`, `adopt`, `can_operate`, `is_owner`, `owners_of`; `owner_labels` names each exercise's Owners, comma-separated, for the Owners columns). `Actor` is the person, whether they are the super-admin, and `platform`, the seed acting as no one with every exercise, never built from a sign-in. Refusing with `Refused` and its `key` ("Operators"); `_allowed` re-reads the allowlist row, under `FOR SHARE` where a change rests on it |
 | `applydesk/audit.py` | `write_event` in Review Robin's envelope, copied, and `EVENT_SCHEMAS` ("Audit") |
-| `applydesk/seed.py` | `python -m applydesk.seed`: the sample exercises' rows and their Owner; refused unless `APP_ENV=local` |
+| `applydesk/seed.py` | `python -m applydesk.seed`: the sample exercises' rows, their settings and their Owner; refused unless `APP_ENV=local` |
 | `applydesk/ids.py` | Public IDs: generation and the shape check; `row_id` and `RowId` for a database row ID in a form or path |
 | `applydesk/web.py` | Templates, mount-aware URLs (`url()`, `is_here()`, `host_url()`) and the page chrome |
 | `applydesk/sample_data.py` | The sample exercises, applications, form cards and panels (`Panel`: key, name, members; ruling 19) |
@@ -80,13 +83,15 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
   `applydesk_alembic_version`. `include_name` limits comparison to Apply
   Desk's own tables, since another application's tables share CI's Postgres.
   The history is `ad2a1foundations` (the four tables), `ad2a2oneowner`,
-  `ad2a3onepending`, `ad2w1firstsignin`, `ad2m1admins` (`person.is_admin`) and
-  `ad2m2manyowners` (drops `uq_exercise_one_owner`).
+  `ad2a3onepending`, `ad2w1firstsignin`, `ad2m1admins` (`person.is_admin`),
+  `ad2m2manyowners` (drops `uq_exercise_one_owner`) and `ad2b1exercisesettings`
+  (the `exercise` columns below, `uq_exercise_live_code` and `exercise_tag`).
 
 | Table (model) | Holds |
 |---|---|
 | `person` (`Person`) | Tenant ID and object ID, null while pending; email, `email_key` (the casefolded address), UPN and display name as snapshots; `bound_at`; `first_signed_in_at` (the first sign-in, set once; a directory pick is bound without one); `created_at`. The allowlist is on it: `may_operate`, `admitted_by_id`, `admitted_at`, `revoked_at`, `is_admin` (an Admin, always also listed) |
-| `exercise` (`Exercise`) | `public_id`, unique, and `created_at`; the rest of an exercise is sample data |
+| `exercise` (`Exercise`) | `public_id`, unique, and `created_at`; `name`, `code` and `code_key` (the code casefolded), `description`, `eligibility` (`open`, `invitation` or NULL), `blind`, `help_contact` and `timezone` (NULL takes the operator settings' default), `created_by_id` (the person who made it), `archived_at`, `deleted_at` and `revision` ("Exercises"). Its stages, form and applications are sample data |
+| `exercise_tag` (`ExerciseTag`) | One tag on an exercise: `exercise_id`, `label` (the case first typed) and `label_key` (casefolded); (exercise, `label_key`) unique |
 | `exercise_operator` (`ExerciseOperator`) | A grant: (exercise, person) unique, `is_owner`, `added_by_id`, `added_at`, `removed_at` |
 | `audit_event` (`AuditEvent`) | `at`, `event_type`, `actor_id`, `exercise_id`, `detail` (JSON) |
 
@@ -97,10 +102,41 @@ unique index defined identically for SQLite and Postgres:
 - `uq_person_pending_email` (`email_key` where `object_id` is null): one
   pending person per address. Bound people may share an address, theirs being
   a snapshot.
+- `uq_exercise_live_code` (`code_key` where it is set and the exercise is
+  neither archived nor deleted): one live exercise per code, ignoring case.
 
 An exercise may have several Owners, so there is no one-Owner index: changes
 to its Owners and operators take its row lock (`operators._lock`) instead,
 and an Owner is never removed directly.
+
+### Exercises
+
+`applydesk/exercises.py` reads and writes an exercise's settings. The pages
+keep `sample_data.Exercise`'s shape: `overlay` lays the stored settings over
+the sample's, whose stages, form and applications stay sample data, and
+`lookups.exercise_or_404` is the one reader, a 404 for a deleted exercise.
+`revision` 0 means no settings are recorded and the sample's stand; the seed,
+or the first change, records them (`exercise.settings_recorded`).
+
+- **NULL is unset.** "Not set" is a page word, never stored. Choosing the
+  default timezone or help contact stores NULL.
+- **Revision.** It rises on every saved change; a save names the revision its
+  page opened at and is refused, saving nothing, if a newer one exists.
+- **Code.** Unique among live exercises, ignoring case, by
+  `uq_exercise_live_code`; a clash is refused naming the holder. Archiving or
+  deleting frees it; restoring is refused if it is taken.
+- **Tags.** Trimmed, unique per exercise ignoring case, at most 20 an exercise
+  and 40 characters each.
+- **Nothing is hard-deleted.** Delete sets `deleted_at`: the row, its grants
+  and its audit trail stay, and the exercise leaves every page.
+- **Owner-only.** Archive, restore and delete require an Owner
+  (`operators.is_owner`); a ticked set is done whole or not at all.
+- **Locks.** Each change takes the exercise's row lock. The route, not the
+  service, refuses what the page locks: a published exercise's code and
+  eligibility, and blind review once a gate's stage is published.
+- **Dates.** `applydesk/clock.py`: today is the sample's fixed day while the
+  sample's stages stand (`clock.FROZEN`), else the wall clock's in the
+  exercise's timezone.
 
 ### Binding
 
@@ -159,7 +195,11 @@ breach logged by name. The detail names an exercise by its public ID.
 Events: `person.created`, `person.bound`, `person.signed_in`, `person.admitted`,
 `person.revoked`, `exercise.created`, `exercise.operator_added`,
 `exercise.operator_removed`, `exercise.ownership_handed_over`,
-`exercise.adopted`, `person.promoted`, `person.demoted`. A directory
+`exercise.adopted`, `person.promoted`, `person.demoted`,
+`exercise.settings_recorded` (a snapshot), `exercise.details_changed` (a
+changes envelope and the new `revision`, from Details' *Lock* and the Lobby's
+*Save* and tag actions), `exercise.archived`, `exercise.restored`,
+`exercise.deleted` and `exercise.duplicated` (`refs.source_exercise_id`). A directory
 find is audited to the searcher, not the person found.
 
 ### The seed

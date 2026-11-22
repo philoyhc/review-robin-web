@@ -12,7 +12,25 @@ auth). Most need the samples loaded first:
 `alembic -c applydesk/alembic.ini upgrade head`, then
 `python -m applydesk.seed`.
 
-## Details saved, and one way of writing dates (AD2B: #4137, rung 4)
+## The Lobby wired, and the Archive (AD2B: #4139, #4140)
+
+- [ ] **Sorting.** Click a header: the rows sort by it, its arrow shows the
+  way; click again to flip it. Reload: the order stays.
+- [ ] **Tags and the filter.** Click two tag chips: only exercises carrying
+  both show; click *OR*: either. Type in the filter and press Enter: name,
+  code or tag matches. *Clear* empties each.
+- [ ] **The panel, one exercise.** Tick a row, change its name, code and
+  tags, *Save*: it says *Saved.* A code another live exercise holds is
+  refused. *Duplicate settings only* opens "Copy of …"'s Home.
+- [ ] **The panel, several.** Tick two, type tags, *All tags to all*, then
+  *Remove from all*. Press Enter in that Tags box: it does not post Save.
+- [ ] **Archive and Restore.** *Purge and archive* moves an exercise to
+  *Go to Archive*; *Restore* brings it back, unless another exercise has
+  taken its code meanwhile.
+- [ ] **Delete.** Without *Yes, delete* ticked it says so; ticked, it asks,
+  then the exercise is gone from the Lobby, Admin's Diagnostics and `/me`.
+
+## Details saved, and one way of writing dates (AD2B: #4137, #4138)
 
 Re-seed first: AD2B adds a migration, and the seed now records each
 sample's settings.
