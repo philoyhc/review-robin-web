@@ -18,7 +18,7 @@ from cordware.settings import identity_settings
 
 EX = "wa9juxbc2t"
 HOME = f"/applydesk/operator/exercises/{EX}"
-SUPER = Actor(None, is_super_admin=True)
+SUPER = Actor(None, is_super_admin=True, platform=True)
 
 
 @pytest.fixture
@@ -121,10 +121,15 @@ def test_an_operator_who_is_not_the_owner_sees_it_read_only_and_is_refused(
     assert me in _roles()
 
 
-def test_an_exercise_not_loaded_says_so() -> None:
-    """The conftest's super-admin, with an empty database: no rows yet."""
-    page = TestClient(host_with(("applydesk",))[0]).get(HOME).text
-    assert "data-ops-unrecorded" in page and "python -m applydesk.seed" in page
+def test_an_exercise_not_loaded_is_reached_by_no_one(unseeded: None) -> None:
+    """Segment AD2M: with an empty database even the super-admin holds no
+    role on a sample, so its pages are a 404; Exercises Diagnostics' Manage
+    says it is not loaded and how to load it."""
+    client = TestClient(host_with(("applydesk",))[0])
+    assert client.get(HOME).status_code == 404
+    manage = client.post(f"/applydesk/admin/exercises/{EX}/manage", follow_redirects=False)
+    assert manage.headers["location"].endswith("said=not_loaded")
+    assert "python -m applydesk.seed" in client.get(manage.headers["location"]).text
 
 
 def test_every_refusal_key_has_a_status_line() -> None:
@@ -148,8 +153,10 @@ def test_every_refusal_key_has_a_status_line() -> None:
                     if kw.arg == "key" and isinstance(kw.value, ast.Constant):
                         keys.setdefault(name, set()).add(str(kw.value.value))
     # The admin page shows the allowlist's; the card shows an exercise's.
-    admin = keys["allowlist.py"] | {"already_listed", "not_listed", "not_super_admin"}
-    card = keys["team.py"] | (keys["operators.py"] - {"already_listed", "not_super_admin"})
+    # Admins' keys (segment AD2M) are the admin page's alone.
+    admins = {"already_admin", "not_admin", "last_admin", "pending", "is_admin", "protected"}
+    admin = keys["allowlist.py"] | {"already_listed", "not_listed", "not_super_admin"} | admins
+    card = keys["team.py"] | (keys["operators.py"] - {"already_listed", "not_super_admin"} - admins)
     assert admin <= routes_admin.SAID.keys(), admin - routes_admin.SAID.keys()
     assert card <= routes_operator.OPS_SAID.keys(), card - routes_operator.OPS_SAID.keys()
 

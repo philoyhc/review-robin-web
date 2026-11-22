@@ -122,11 +122,16 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # The allowlist (ruling 75), kept by the platform super-admin.
     "person.admitted": EventSchema(frozenset({"refs"})),
     "person.revoked": EventSchema(frozenset({"refs", "reason"})),
+    # Admins (segment AD2M), made and unmade by the super-admin.
+    "person.promoted": EventSchema(frozenset({"refs"})),
+    "person.demoted": EventSchema(frozenset({"refs"})),
     # An exercise's operators (ruling 73).
     "exercise.created": EventSchema(_EXERCISE | {"refs"}),
     "exercise.operator_added": EventSchema(_EXERCISE | {"refs", "context"}),
     "exercise.operator_removed": EventSchema(_EXERCISE | {"refs"}),
     "exercise.ownership_handed_over": EventSchema(_EXERCISE | {"refs"}),
+    # An Admin or the super-admin taking up an exercise as an Owner (AD2M).
+    "exercise.adopted": EventSchema(_EXERCISE | {"refs", "context"}),
 }
 
 

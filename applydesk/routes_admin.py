@@ -6,10 +6,12 @@ Admin tabs (the author's ask, 2026-11-21)."""
 
 from __future__ import annotations
 
+import functools
 import re
 from urllib.parse import parse_qs, urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
@@ -17,11 +19,12 @@ from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from applydesk import allowlist, db, directory, gate, locks, operators, sample_data
 from applydesk.ids import row_id
+from applydesk.models import Exercise
 from applydesk.web import ADMIN, render, url_path
 from cordware.graph import GraphError, directory_for
-from cordware.identity import Identity, current_identity
+from cordware.identity import Identity, current_identity, super_admin_configured
 
-router = APIRouter(prefix="/admin", dependencies=[Depends(gate.require_super_admin)])
+router = APIRouter(prefix="/admin", dependencies=[Depends(gate.require_admin)])
 
 _PAGE = "/admin/operators"
 #: Longest form body a post here takes.
@@ -41,11 +44,32 @@ SAID: dict[str, str] = {
     "gone": "That person or account is no longer there; search again.",
     "directory": "The directory did not answer; try again.",
     "no_tenant": "Your sign-in names no tenant, so no one can be added from the directory.",
-    "not_super_admin": "Only the platform super-admin keeps the operator list.",
+    "not_super_admin": "Only an Admin or the platform super-admin keeps the operator list.",
     "changed": "Someone else changed the list at the same time; check it and try again.",
     "pick": "Pick someone from the suggestions, then Add.",
-    "none_ticked": "Tick at least one row, then Admit or Revoke.",
+    "none_ticked": "Tick at least one row, then choose what to do with them.",
     "too_many": "Tick at most 1,000 rows at a time; narrow the list with the chips or search.",
+    # Admins (segment AD2M).
+    "already_admin": "Already an Admin.",
+    "not_admin": "Not an Admin.",
+    "last_admin": "The last Admin stays an Admin.",
+    "pending": "Only someone who has signed in can be an Admin.",
+    "is_admin": "An Admin is demoted before being taken off the list.",
+    "protected": "A super-admin's row is not changed here.",
+}
+
+#: Exercises Diagnostics' status line, by the key Manage's redirect carries
+#: (segment AD2M): adopt's refusals, worded for the page.
+ADOPT_SAID: dict[str, str] = {
+    "not_loaded": (
+        "That exercise is not in the database yet; on a local run, load the samples"
+        " with python -m applydesk.seed."
+    ),
+    "not_admin": (
+        "Only an Admin or the platform super-admin adopts an exercise, signed in with"
+        " an account Apply Desk can record."
+    ),
+    "changed": "Someone else changed this exercise's operators at the same time; try again.",
 }
 
 
@@ -108,13 +132,23 @@ def _bulk_said(request: Request) -> str:
     numbers, so a link cannot put words on the page."""
     params = request.query_params
     done = params.get("done")
-    if done not in ("admit", "revoke"):
+    verbs = {
+        "admit": "Added to the list",
+        "revoke": "Taken off the list",
+        "promote": "Made Admins",
+        "demote": "No longer Admins",
+    }
+    if done not in verbs:
         return ""
     changed, skipped = (_row_count(params.get(k, "")) for k in ("n", "skipped"))
-    verb = "Added to the list" if done == "admit" else "Taken off the list"
-    line = f"{verb}: {changed}."
+    line = f"{verbs[done]}: {changed}."
     if skipped:
-        line += f" Skipped {skipped} (already so, no longer there, or your own row)."
+        why = {
+            "revoke": "already so, an Admin (demote first), no longer there, or your own row",
+            "promote": "already so, not yet signed in, no longer there, or your own row",
+            "demote": "not an Admin, the last Admin, no longer there, or your own row",
+        }.get(done, "already so, no longer there, or your own row")
+        line += f" Skipped {skipped} ({why})."
     return line
 
 
@@ -156,6 +190,10 @@ def operators_page(
         listed={p.id for p in allowlist.listed_ids(session)},
         me=me,
         view=view,
+        # Promote and Demote: the super-admin's; with none configured, any
+        # Admin's (segment AD2M, Review Robin's fallback).
+        makes_admins=gate.viewer(request).is_super_admin
+        or (not super_admin_configured() and gate.viewer(request).is_admin),
         categories=allowlist.CATEGORIES,
         roles=allowlist.ROLES,
         said=SAID.get(request.query_params.get("said", ""), "") or _bulk_said(request),
@@ -179,12 +217,54 @@ def exercises_page(
         area=ADMIN,
         rows=rows,
         owners=operators.owner_labels(session, [e.public_id for e in rows]),
+        # Manage opens an exercise the viewer owns or operates, and adopts
+        # the rest, asking first (segment AD2M).
+        operates=functools.partial(gate.operates, request),
+        said=ADOPT_SAID.get(request.query_params.get("said", ""), ""),
         by_status=locks.status_tally(rows),
         exercise_status=locks.exercise_status,
         default_timezone=sample_data.DEFAULT_TIMEZONE,
         back_path=back_path,
         back_label=back_label,
     )
+
+
+@router.post("/exercises/{public_id}/manage", name="applydesk_admin_manage")
+async def manage(request: Request, public_id: str) -> Response:
+    """*Manage* on Exercises Diagnostics (segment AD2M): adopt the exercise
+    as an Owner unless the viewer already owns or operates it, then open its
+    Home. A sample not yet in the database cannot be adopted, and says so."""
+    _same_site(request)
+    return await run_in_threadpool(_manage, request, public_id)
+
+
+def _manage(request: Request, public_id: str) -> Response:
+    home = url_path(request, f"/operator/exercises/{public_id}")
+    if gate.operates(request, public_id):
+        return RedirectResponse(home, status_code=303)
+    session = db.new_session()
+    try:
+        exercise = session.scalar(select(Exercise).where(Exercise.public_id == public_id))
+        if exercise is None:
+            return RedirectResponse(
+                url_path(request, "/admin/exercises?said=not_loaded"), status_code=303
+            )
+        operators.adopt(session, exercise, allowlist.actor_for(session, _identity(request)))
+        session.commit()
+    except operators.Refused as refused:
+        session.rollback()
+        return RedirectResponse(
+            url_path(request, f"/admin/exercises?said={refused.key}"), status_code=303
+        )
+    except (IntegrityError, OperationalError) as error:
+        session.rollback()
+        if not db.lost_a_race(error):
+            raise
+        return RedirectResponse(url_path(request, "/admin/exercises?said=changed"), status_code=303)
+    finally:
+        session.close()
+    gate.forget_viewer(request)  # their grants changed
+    return RedirectResponse(home, status_code=303)
 
 
 @router.get("/system", name="applydesk_admin_system")
@@ -291,7 +371,7 @@ async def bulk(request: Request) -> Response:
     back = (form.get("return_to") or [""])[0]
     view = {k: v for k in ("show", "role", "list_q") for v in form.get(k, []) if k != "show"}
     shows = form.get("show", [])
-    if action not in ("admit", "revoke") or not ids:
+    if action not in allowlist.BULK_ACTIONS or not ids:
         return _back(request, "none_ticked", back)
     if len(ids) > _MAX_BULK:
         return _back(request, "too_many", back)

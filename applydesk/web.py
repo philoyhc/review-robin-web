@@ -173,6 +173,7 @@ def render(
     viewer = current_identity(request)
     operator = is_operator(request)
     super_admin = viewer_is_super_admin(request)
+    admin = super_admin or gate_viewer(request).is_admin
     participant_pages = reaches_placeholders(request)
     return templates.TemplateResponse(
         request,
@@ -191,7 +192,8 @@ def render(
             "participant_pages": participant_pages,
             # The account menu's Admin, for the super-admin, carrying the
             # page to come back to; omitted on the Admin pages (§4).
-            "admin_entry": super_admin and not app_path(request).startswith("/admin"),
+            "admin_entry": admin and not app_path(request).startswith("/admin"),
+            "viewer_is_admin": admin and not super_admin,
             "here_path": app_path(request),
             "nav": nav,
             "top_line": institution_name(),

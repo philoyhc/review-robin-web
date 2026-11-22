@@ -128,10 +128,10 @@
     <span class="muted">With ticked rows (<span data-bulk-count>0</span>):</span>
     <button class="btn btn-secondary btn-short" type="submit" name="action" value="admit" disabled data-bulk-action>Admit</button>
     <button class="btn btn-secondary btn-short" type="submit" name="action" value="revoke" disabled data-bulk-action data-bulk-revoke>Revoke</button>
-    {# Promote and Demote (segment AD2M, scaffold): the super-admin makes
-       and unmakes Admins, who share these pages and manage operators. #}
-    <button class="btn btn-secondary btn-short" type="button" disabled title="Promoting to Admin is not built yet" data-bulk-promote>Promote to Admin</button>
-    <button class="btn btn-secondary btn-short" type="button" disabled title="Demoting an Admin is not built yet" data-bulk-demote>Demote from Admin</button>
+    {# Promote and Demote (segment AD2M): the super-admin makes and
+       unmakes Admins, who share these pages and keep the operator list. #}
+    {% if makes_admins %}<button class="btn btn-secondary btn-short" type="submit" name="action" value="promote" disabled data-bulk-action data-bulk-promote>Promote to Admin</button>
+    <button class="btn btn-secondary btn-short" type="submit" name="action" value="demote" disabled data-bulk-action data-bulk-demote>Demote from Admin</button>{% endif %}
   </form>
   <div class="table-wrap">
   <table>
@@ -144,23 +144,24 @@
         <td>{{ me.name or "—" }}</td>
         <td>{% if top_line %}<span class="chip chip-mute" title="The workspace default">{{ top_line }}</span>{% else %}—{% endif %}</td>
         <td>—</td>
-        <td><span class="chip chip-info" title="The super-admin operates every exercise">yes</span></td>
+        <td><span class="chip chip-info" title="The super-admin may operate, as every Admin may">yes</span></td>
         <td><span class="chip chip-info">Super-admin</span></td>
       </tr>
     {% endif %}
     {% for p in view.people %}
       {% set is_me = p.id == me.person_id %}
-      {# The super-admin operates every exercise by their identity, listed
-         or not (`gate.viewer`), so their own row says yes. #}
-      {% set is_op = p.id in listed or is_me %}
+      {# The super-admin may operate by their identity, listed or not
+         (`gate.viewer`), so their own row says yes; they work on an
+         exercise once they own or operate it (segment AD2M). #}
+      {% set is_op = p.id in listed or (is_me and me.is_super_admin) %}
       <tr data-op-entry="{{ p.id }}"{% if is_me %} data-op-self{% endif %}>
         <td class="adm-check">{% if is_me %}<span class="muted" title="You can't act on your own row">(self)</span>{% else %}<input type="checkbox" name="person_ids" value="{{ p.id }}" form="users-bulk-form" aria-label="Select {{ p.label }}" data-bulk-row>{% endif %}</td>
         <td><code>{{ p.email or "—" }}</code></td>
         <td>{{ p.display_name or "—" }}</td>
         <td>{% if is_op and top_line %}<span class="chip chip-mute" title="The workspace default">{{ top_line }}</span>{% elif is_op %}—{% endif %}</td>
         <td>{% if p.first_signed_in_at %}{{ p.first_signed_in_at.strftime("%Y-%m-%d") }}{% else %}<span class="muted">Not yet signed in</span>{% endif %}</td>
-        <td>{% if is_op %}<span class="chip chip-info"{% if is_me %} title="The super-admin operates every exercise"{% endif %}>yes</span>{% else %}<span class="chip chip-mute">no</span>{% endif %}</td>
-        <td>{% if is_me %}<span class="chip chip-info">Super-admin</span>{% else %}<span class="chip chip-mute">no</span>{% endif %}</td>
+        <td>{% if is_op %}<span class="chip chip-info"{% if is_me and me.is_super_admin %} title="The super-admin may operate, as every Admin may"{% endif %}>yes</span>{% else %}<span class="chip chip-mute">no</span>{% endif %}</td>
+        <td>{% if is_me and me.is_super_admin %}<span class="chip chip-info">Super-admin</span>{% elif p.is_admin and is_op %}<span class="chip chip-info">Admin</span>{% else %}<span class="chip chip-mute">no</span>{% endif %}</td>
       </tr>
     {% else %}{% if not view.me_row %}
       <tr><td colspan="7" class="muted">No one matches the chips{% if view.role != "any" or view.query %} and the filters{% endif %} above.</td></tr>
@@ -193,6 +194,8 @@
   bulk.addEventListener("submit", function (e) {
     if (e.submitter && e.submitter.hasAttribute("data-bulk-revoke") &&
         !window.confirm("Take the " + ticked() + " ticked " + (ticked() === 1 ? "person" : "people") + " off the list? Their access ends at once; their exercises are kept.")) e.preventDefault();
+    if (e.submitter && e.submitter.hasAttribute("data-bulk-demote") &&
+        !window.confirm("Demote the " + ticked() + " ticked " + (ticked() === 1 ? "person" : "people") + " from Admin? They stay on the operator list.")) e.preventDefault();
   });
   refresh();
 })();

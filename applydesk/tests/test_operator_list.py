@@ -212,7 +212,7 @@ def test_back_keeps_where_admin_was_opened_from(client: TestClient) -> None:
     assert 'href="/applydesk/operator/exercises" data-admin-back' in away.text
 
 
-def test_the_super_admin_is_listed_as_self() -> None:
+def test_the_super_admin_is_listed_as_self(unseeded: None) -> None:
     """The author's ask (2026-11-21), as Review Robin's Accounts
     Management: the signed-in super-admin is on the list as (self), though
     they reach every page by their identity; once on the list themselves,
@@ -223,11 +223,11 @@ def test_the_super_admin_is_listed_as_self() -> None:
     page = admin.get("/applydesk/admin/operators").text
     assert page.count("data-op-self") == 1 and "Super-admin" in page and "Nobody yet" not in page
     assert "data-op-self" not in admin.get("/applydesk/admin/operators?list_q=zzz").text
-    # The super-admin operates every exercise, so their row says so (the
+    # The super-admin may operate, so their row says so (the
     # author, 2026-11-22: Local Operator showed as no operator).
-    own = page[page.index("<tr data-op-self>") :]
+    own = page[page.index("data-op-self>") :]
     own = own[: own.index("</tr>")]
-    assert 'title="The super-admin operates every exercise">yes</span>' in own
+    assert 'title="The super-admin may operate, as every Admin may">yes</span>' in own
     session = db.new_session()
     seed.seed(session)  # puts the fake identity on the list
     me = _person("local-dev")
@@ -238,7 +238,7 @@ def test_the_super_admin_is_listed_as_self() -> None:
     row = page[page.index(f'data-op-entry="{me.id}"') :]
     row = row[: row.index("</tr>")]
     assert "(self)" in row and "data-bulk-row" not in row  # no action on your own row (ruling)
-    assert 'title="The super-admin operates every exercise">yes</span>' in row
+    assert 'title="The super-admin may operate, as every Admin may">yes</span>' in row
     refused = admin.post(
         "/applydesk/admin/operators/bulk",
         data={"action": "revoke", "person_ids": str(me.id)},
@@ -250,10 +250,10 @@ def test_the_super_admin_is_listed_as_self() -> None:
 
 
 def test_the_super_admin_reads_operator_yes_though_not_listed(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, unseeded: None
 ) -> None:
     """The author, 2026-11-22: Local Operator showed as no operator. The
-    super-admin operates every exercise by their identity (`gate.viewer`),
+    super-admin may operate by their identity (`gate.viewer`),
     so their own row reads yes and shows the workspace Unit, listed or not."""
     from datetime import UTC, datetime
 
@@ -262,7 +262,7 @@ def test_the_super_admin_reads_operator_yes_though_not_listed(
     monkeypatch.setattr(identity_settings, "institution_name", "Example University")
     admin = TestClient(host_with(("applydesk",))[0])
     alone = admin.get("/applydesk/admin/operators").text
-    own = alone[alone.index("<tr data-op-self>") :]
+    own = alone[alone.index("data-op-self>") :]
     own = own[: own.index("</tr>")]
     assert 'title="The workspace default">Example University</span>' in own
     session = db.new_session()
@@ -278,7 +278,7 @@ def test_the_super_admin_reads_operator_yes_though_not_listed(
     ).text
     row = page[page.index(f'data-op-entry="{pid}"') :]
     row = row[: row.index("</tr>")]
-    assert 'title="The super-admin operates every exercise">yes</span>' in row
+    assert 'title="The super-admin may operate, as every Admin may">yes</span>' in row
     assert 'title="The workspace default">Example University</span>' in row
 
 
@@ -316,7 +316,7 @@ def test_chips_and_exercise_role_filter_workspace_users() -> None:
 
     session = db.new_session()
     seed.seed(session)  # the fake super-admin: listed, Owner of every sample
-    sup = Actor(None, is_super_admin=True)
+    sup = Actor(None, is_super_admin=True, platform=True)
 
     def bound(oid: str, mail: str, name: str) -> Person:
         from cordware.identity import Identity
@@ -422,7 +422,7 @@ def test_listed_people_never_crowd_the_suggestions_out(client: TestClient) -> No
     from applydesk.operators import Actor
 
     session = db.new_session()
-    sup = Actor(None, is_super_admin=True)
+    sup = Actor(None, is_super_admin=True, platform=True)
     for n in range(directory_mod.LIMIT):
         operators.admit(session, sup, people.pending(session, f"lim{n:02}@example.edu", None))
     last = people.pending(session, "lim.zz@example.edu", None)
@@ -498,7 +498,7 @@ def test_cold_read_fixes_for_workspace_users(client: TestClient) -> None:
     from applydesk.operators import Actor
 
     session = db.new_session()
-    sup = Actor(None, is_super_admin=True)
+    sup = Actor(None, is_super_admin=True, platform=True)
     for n in range(directory_mod.LIMIT):  # a full page of listed Lims
         p = people.pending(session, f"lim{n:02}@example.edu", None)
         operators.admit(session, sup, p)
@@ -530,17 +530,3 @@ def test_cold_read_fixes_for_workspace_users(client: TestClient) -> None:
         follow_redirects=False,
     )
     assert many.headers["location"].endswith("said=too_many")
-
-
-def test_promote_and_demote_are_scaffolded(client: TestClient) -> None:
-    """Segment AD2M rung 2: the bulk bar shows Promote and Demote, inert and
-    saying so, beside Admit and Revoke; nothing posts them yet."""
-    page = client.get("/applydesk/admin/operators").text
-    bar = page[page.index("data-account-bulk") :]
-    bar = bar[: bar.index("</form>")]
-    assert (
-        bar.index(">Revoke<") < bar.index(">Promote to Admin<") < bar.index(">Demote from Admin<")
-    )
-    assert 'disabled title="Promoting to Admin is not built yet" data-bulk-promote' in bar
-    assert 'disabled title="Demoting an Admin is not built yet" data-bulk-demote' in bar
-    assert 'value="promote"' not in bar and 'value="demote"' not in bar

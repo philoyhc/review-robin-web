@@ -4,9 +4,12 @@ rulings 73 and 75).
 - **Operator pages** (`/operator/…`) answer only an operator:
   `require_exercise_operator`, a FastAPI dependency on that router, as
   Review Robin's per-session check (`app/web/deps.py`). The platform
-  super-admin reaches everything. Anyone else must be on the allowlist
-  (`operators.may_operate`) and, on an exercise's pages, hold a current
-  grant on it. Everyone else gets 404, so the pages do not say they exist.
+  super-admin or someone on the allowlist (`operators.may_operate`) reaches
+  the Lobby; on an exercise's pages each must hold a current grant on it,
+  the super-admin included: they adopt the rest from Admin (segment AD2M).
+  Everyone else gets 404, so the pages do not say they exist.
+- **The Admin pages** (`/admin/…`) answer the super-admin and Admins
+  (`require_admin`).
 - **The participant's pages** (`/me/…`) and the landing are still the
   placeholders': anyone on a local run, deployed only the super-admin
   (`placeholders_only`), until a later AD2 segment matches applicants.
@@ -32,11 +35,13 @@ from cordware.identity import current_identity, is_local
 class Viewer:
     """What the gate knows of the signed-in viewer: whether they are the
     platform super-admin, whether they may operate, and the public IDs of
-    the exercises they operate (None for the super-admin: every one)."""
+    the exercises they own or operate (the super-admin's too: they adopt
+    the rest, segment AD2M)."""
 
     is_super_admin: bool
     may_operate: bool
-    operates: frozenset[str] | None
+    operates: frozenset[str]
+    is_admin: bool = False  # an Admin (segment AD2M): reaches the Admin pages
 
 
 _NOBODY = Viewer(is_super_admin=False, may_operate=False, operates=frozenset())
@@ -57,19 +62,38 @@ def _look_up(request: Request) -> Viewer:
     identity = current_identity(request)
     if identity is None:
         return _NOBODY
-    if identity.is_super_admin:
-        return Viewer(is_super_admin=True, may_operate=True, operates=None)
-    if not (identity.tenant_id or "").strip() or not (identity.principal_id or "").strip():
+    bindable = (identity.tenant_id or "").strip() and (identity.principal_id or "").strip()
+    if identity.is_super_admin and not bindable:
+        # The super-admin, unbound: the Admin pages and the Lobby, but no
+        # exercise, since adopting one needs a person (segment AD2M).
+        return Viewer(is_super_admin=True, may_operate=True, operates=frozenset())
+    if not bindable:
         return _NOBODY  # cannot be bound, so cannot be on the allowlist
     session = db.new_session()
     try:
         person = people.resolve(session, identity)
         session.commit()
+        if identity.is_super_admin:
+            # Every exercise they reach, they own or operate: they adopt
+            # the rest from Admin (segment AD2M).
+            mine = operators.operated_exercises(
+                session, operators.Actor(person, is_super_admin=True)
+            )
+            return Viewer(
+                is_super_admin=True,
+                may_operate=True,
+                operates=frozenset(e.public_id for e in mine),
+            )
         actor = operators.Actor(person)
         if not operators.may_operate(person):
             return _NOBODY
         operates = frozenset(e.public_id for e in operators.operated_exercises(session, actor))
-        return Viewer(is_super_admin=False, may_operate=True, operates=operates)
+        return Viewer(
+            is_super_admin=False,
+            may_operate=True,
+            operates=operates,
+            is_admin=operators.is_admin(person),
+        )
     finally:
         session.close()
 
@@ -83,7 +107,7 @@ def is_operator(request: Request) -> bool:
 
 def operates(request: Request, public_id: str) -> bool:
     found = viewer(request)
-    return found.may_operate and (found.operates is None or public_id in found.operates)
+    return found.may_operate and public_id in found.operates
 
 
 def require_exercise_operator(request: Request) -> None:
@@ -120,10 +144,22 @@ def own_new_exercise(request: Request, public_id: str) -> bool:
     return True
 
 
-def require_super_admin(request: Request) -> None:
-    """The admin pages' check (ruling 75): the platform super-admin only,
-    404 for everyone else, an operator included."""
-    if not viewer(request).is_super_admin:
+def forget_viewer(request: Request) -> None:
+    """Drop the viewer looked up for this request: their grants changed."""
+    setattr(request.state, _STATE, None)
+
+
+def is_admin(request: Request) -> bool:
+    """Whether the viewer reaches the Admin pages: the super-admin or an
+    Admin (segment AD2M)."""
+    found = viewer(request)
+    return found.is_super_admin or found.is_admin
+
+
+def require_admin(request: Request) -> None:
+    """The Admin pages' check (ruling 75, segment AD2M): the super-admin or
+    an Admin; 404 for everyone else, an operator included."""
+    if not is_admin(request):
         raise HTTPException(status_code=404)
 
 

@@ -20,7 +20,7 @@ from cordware.settings import identity_settings
 
 EX = "wa9juxbc2t"  # a sample exercise the seed grants
 OTHER = "r6tm4kq9wz"
-SUPER = Actor(None, is_super_admin=True)
+SUPER = Actor(None, is_super_admin=True, platform=True)
 
 
 @pytest.fixture
@@ -65,7 +65,7 @@ def test_the_walk_covers_the_router() -> None:
     assert len(WALK) >= 15 and ("GET", f"/operator/exercises/{EX}") in WALK
 
 
-def test_a_stranger_gets_404_everywhere(client: TestClient) -> None:
+def test_a_stranger_gets_404_everywhere(client: TestClient, unseeded: None) -> None:
     _all_404(client)
     me = _me()
     assert me is not None and not me.may_operate  # bound at sign-in, not allowlisted
@@ -113,7 +113,9 @@ def test_a_revoked_operator_gets_404_everywhere_and_back_when_readmitted(
     assert client.get(f"/applydesk/operator/exercises/{EX}").status_code == 200  # grants kept
 
 
-def test_the_allowlisted_with_no_exercise_reach_only_the_lobby(client: TestClient) -> None:
+def test_the_allowlisted_with_no_exercise_reach_only_the_lobby(
+    client: TestClient, unseeded: None
+) -> None:
     client.get("/applydesk/")  # binds the fake identity
     session = db.new_session()
     me = session.scalar(select(Person).where(Person.object_id == "local-dev"))
@@ -126,7 +128,9 @@ def test_the_allowlisted_with_no_exercise_reach_only_the_lobby(client: TestClien
     assert lobby.status_code == 200 and f"/exercises/{EX}" not in lobby.text
 
 
-def test_a_new_scratch_exercise_gets_its_row_and_its_owner(client: TestClient) -> None:
+def test_a_new_scratch_exercise_gets_its_row_and_its_owner(
+    client: TestClient, unseeded: None
+) -> None:
     client.get("/applydesk/")
     session = db.new_session()
     me = session.scalar(select(Person).where(Person.object_id == "local-dev"))
@@ -140,12 +144,12 @@ def test_a_new_scratch_exercise_gets_its_row_and_its_owner(client: TestClient) -
     public_id = made.headers["location"].rsplit("/", 1)[1]
     exercise = session.scalar(select(Exercise).where(Exercise.public_id == public_id))
     assert exercise is not None
-    assert operators.owner_of(session, exercise) == me
+    assert operators.owners_of(session, exercise) == [me]
     session.close()
     assert client.get(made.headers["location"]).status_code == 200
 
 
-def test_a_stranger_cannot_make_a_scratch_exercise(client: TestClient) -> None:
+def test_a_stranger_cannot_make_a_scratch_exercise(client: TestClient, unseeded: None) -> None:
     made = client.post(
         "/applydesk/operator/exercises/new", data={"name": "Trial"}, follow_redirects=False
     )
@@ -156,7 +160,7 @@ def test_a_stranger_cannot_make_a_scratch_exercise(client: TestClient) -> None:
 
 
 def test_the_super_admin_s_scratch_exercise_is_owned_by_them(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, unseeded: None
 ) -> None:
     client = TestClient(host_with(("applydesk",))[0])  # the conftest's super-admin
     made = client.post(
@@ -166,8 +170,8 @@ def test_the_super_admin_s_scratch_exercise_is_owned_by_them(
     session = db.new_session()
     exercise = session.scalar(select(Exercise).where(Exercise.public_id == public_id))
     assert exercise is not None
-    owner = operators.owner_of(session, exercise)
-    assert owner is not None and owner.object_id == "local-dev" and not owner.may_operate
+    (owner,) = operators.owners_of(session, exercise)
+    assert owner.object_id == "local-dev" and not owner.may_operate
     session.close()
 
 
@@ -291,7 +295,7 @@ def test_admin_has_review_robin_s_three_tabs() -> None:
     assert "Outbox" in rows and "Adopt" not in rows and "is not built yet" in rows
 
 
-def test_exercises_diagnostics_names_each_owner_on_record() -> None:
+def test_exercises_diagnostics_names_each_owner_on_record(unseeded: None) -> None:
     """The author, 2026-11-22: the Owner column reads the database: none
     before the local seed runs, then the seeded Owner on every sample."""
     from applydesk import db, sample_data, seed
@@ -317,7 +321,7 @@ def test_exercises_diagnostics_names_each_owner_on_record() -> None:
     assert "each exercise's Owner" not in after  # the placeholder no longer lists it
 
 
-def test_the_owner_columns_name_the_owner_not_the_viewer() -> None:
+def test_the_owner_columns_name_the_owner_not_the_viewer(unseeded: None) -> None:
     """Cold read, 2026-11-22: an Owner who is not the signed-in viewer
     shows on both pages, a pending one by address; a plain operator, an
     unknown exercise and a removed grant name no one."""
@@ -326,7 +330,7 @@ def test_the_owner_columns_name_the_owner_not_the_viewer() -> None:
 
     session = db.new_session()
     seed.seed(session, owner_email="pat@example.edu")
-    platform = operators.Actor(None, is_super_admin=True)
+    platform = operators.Actor(None, is_super_admin=True, platform=True)
     jane = people.pending(session, "jane.tan@example.edu", None)
     operators.admit(session, platform, jane)
     ra = session.scalar(select(Exercise).where(Exercise.public_id == EX))
@@ -345,6 +349,17 @@ def test_the_owner_columns_name_the_owner_not_the_viewer() -> None:
     diag = admin.get("/applydesk/admin/exercises").text
     row = diag[diag.index(f'data-ex-row="{EX}"') :]
     assert "<td>pat@example.edu</td>" in row[: row.index("</tr>")]
+    # The viewer sees RA in the Lobby once they operate it (segment AD2M:
+    # the super-admin reaches only what they own or operate).
+    assert "Recruitment and Selection" not in admin.get("/applydesk/operator/exercises").text
+    session = db.new_session()
+    me = session.scalar(select(Person).where(Person.object_id == "local-dev"))  # bound above
+    ra = session.scalar(select(Exercise).where(Exercise.public_id == EX))
+    assert me is not None and ra is not None
+    operators.admit(session, platform, me)
+    operators.add_operator(session, ra, platform, me)
+    session.commit()
+    session.close()
     lobby = admin.get("/applydesk/operator/exercises").text
     row = lobby[lobby.index("Recruitment and Selection") :]
     row = row[: row.index("</tr>")]

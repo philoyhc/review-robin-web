@@ -30,6 +30,7 @@ from sqlalchemy.orm import Session
 
 from applydesk import audit
 from applydesk.models import Exercise, ExerciseOperator, Person
+from cordware.identity import is_super_admin_email, super_admin_configured
 
 
 class Refused(Exception):
@@ -56,10 +57,14 @@ def _changed(session: Session, statement: Update) -> bool:
 @dataclass(frozen=True)
 class Actor:
     """Who is acting: their person (None for a super-admin with no row
-    yet) and whether they are the platform super-admin."""
+    yet) and whether they are the platform super-admin. An Admin is read
+    from their row, fresh, where it matters (`_admin_now`)."""
 
     person: Person | None
     is_super_admin: bool = False
+    # The platform itself acting as no one (the seed): it reaches every
+    # exercise. Never built from a sign-in (cold read, segment AD2M).
+    platform: bool = False
 
 
 def _now() -> datetime:
@@ -89,6 +94,44 @@ def _allowed(session: Session, person: Person | None, *, hold: bool = False) -> 
         with_for_update={"read": True} if hold else None,
     )
     return may_operate(person)
+
+
+def is_admin(person: Person | None) -> bool:
+    """An Admin, on the operator list (segment AD2M)."""
+    return person is not None and person.is_admin and may_operate(person)
+
+
+def _admin_now(session: Session, person: Person | None) -> bool:
+    """`is_admin`, read from the database now and held to the end of the
+    transaction, as `_allowed` is: a demotion committing meanwhile waits."""
+    if person is None:
+        return False
+    session.refresh(
+        person,
+        attribute_names=["is_admin", "may_operate", "revoked_at"],
+        with_for_update={"read": True},
+    )
+    return is_admin(person)
+
+
+def is_protected(person: Person) -> bool:
+    """A super-admin's row: no Revoke, Promote or Demote acts on it (spec
+    §8), as Review Robin's `protected_super_admin` refuses."""
+    return is_super_admin_email(person.email) or is_super_admin_email(person.upn)
+
+
+def keeps_the_list(session: Session, actor: Actor) -> bool:
+    """Whether `actor` admits and revokes operators: the super-admin or an
+    Admin (`applydesk/spec/permissions.md` §2)."""
+    return actor.is_super_admin or _admin_now(session, actor.person)
+
+
+def makes_admins(session: Session, actor: Actor) -> bool:
+    """Whether `actor` promotes and demotes Admins: the super-admin; with
+    no super-admin configured, any Admin (Review Robin's fallback)."""
+    if actor.is_super_admin:
+        return True
+    return not super_admin_configured() and _admin_now(session, actor.person)
 
 
 def _lock(session: Session, exercise: Exercise) -> None:
@@ -122,16 +165,20 @@ def current_operators(session: Session, exercise: Exercise) -> list[tuple[Person
     return [(person, is_owner) for person, is_owner in rows]
 
 
-def owner_of(session: Session, exercise: Exercise) -> Person | None:
-    return session.scalar(
-        select(Person)
-        .join(ExerciseOperator, ExerciseOperator.person_id == Person.id)
-        .where(
-            ExerciseOperator.exercise_id == exercise.id,
-            ExerciseOperator.is_owner.is_(True),
-            ExerciseOperator.removed_at.is_(None),
+def owners_of(session: Session, exercise: Exercise) -> list[Person]:
+    """The exercise's current Owners, read fresh, by name."""
+    return list(
+        session.scalars(
+            select(Person)
+            .join(ExerciseOperator, ExerciseOperator.person_id == Person.id)
+            .where(
+                ExerciseOperator.exercise_id == exercise.id,
+                ExerciseOperator.is_owner.is_(True),
+                ExerciseOperator.removed_at.is_(None),
+            )
+            .order_by(Person.display_name, Person.id)
+            .execution_options(populate_existing=True)
         )
-        .execution_options(populate_existing=True)
     )
 
 
@@ -150,16 +197,35 @@ def owner_labels(session: Session, public_ids: list[str]) -> dict[str, str]:
             ExerciseOperator.is_owner.is_(True),
             ExerciseOperator.removed_at.is_(None),
         )
+        .order_by(Person.display_name, Person.id)
     ).all()
-    return {public_id: person.label for public_id, person in rows}
+    # Several Owners read comma-separated (segment AD2M).
+    named: dict[str, list[str]] = {}
+    for public_id, person in rows:
+        named.setdefault(public_id, []).append(person.label)
+    return {public_id: ", ".join(labels) for public_id, labels in named.items()}
+
+
+def _the_platform(actor: Actor) -> bool:
+    """The platform acting as no one (the seed): it reaches every exercise.
+    A signed-in super-admin does not, bound or not: they adopt (AD2M)."""
+    return actor.platform
+
+
+def _may_act(session: Session, actor: Actor, *, hold: bool = False) -> bool:
+    """Whether `actor`'s grants count: anyone on the operator list, and the
+    super-admin, who needs no listing (ruling 75)."""
+    return actor.person is not None and (
+        actor.is_super_admin or _allowed(session, actor.person, hold=hold)
+    )
 
 
 def can_operate(session: Session, exercise: Exercise, actor: Actor) -> bool:
-    """Whether `actor` reaches `exercise`: the super-admin always; anyone
-    else on the allowlist with a current grant."""
-    if actor.is_super_admin:
+    """Whether `actor` reaches `exercise`: a current grant on it, as an
+    operator or an Owner (the super-admin included, segment AD2M)."""
+    if _the_platform(actor):
         return True
-    if not _allowed(session, actor.person):
+    if not _may_act(session, actor):
         return False
     assert actor.person is not None
     grant = _grant(session, exercise, actor.person)
@@ -167,10 +233,10 @@ def can_operate(session: Session, exercise: Exercise, actor: Actor) -> bool:
 
 
 def operated_exercises(session: Session, actor: Actor) -> list[Exercise]:
-    """The exercises `actor` reaches: every one for the super-admin."""
-    if actor.is_super_admin:
+    """The exercises `actor` holds a current grant on."""
+    if _the_platform(actor):
         return list(session.scalars(select(Exercise).order_by(Exercise.id)))
-    if not _allowed(session, actor.person):
+    if not _may_act(session, actor):
         return []
     assert actor.person is not None
     return list(
@@ -187,20 +253,22 @@ def operated_exercises(session: Session, actor: Actor) -> list[Exercise]:
 
 
 def is_owner(session: Session, exercise: Exercise, actor: Actor) -> bool:
-    """Whether `actor` may change `exercise`'s operators: its current,
-    allowlisted Owner, or the platform super-admin (read fresh)."""
+    """Whether `actor` may change `exercise`'s operators: one of its
+    current Owners, allowlisted or the super-admin (read fresh)."""
     return _is_owner(session, exercise, actor)
 
 
 def _is_owner(session: Session, exercise: Exercise, actor: Actor) -> bool:
-    if actor.is_super_admin:
+    if _the_platform(actor):
         return True
-    owner = owner_of(session, exercise)  # fresh, as is its allowlisting
+    if actor.person is None:
+        return False
+    grant = _grant(session, exercise, actor.person)  # fresh
     return (
-        actor.person is not None
-        and owner is not None
-        and owner.id == actor.person.id
-        and _allowed(session, owner, hold=True)
+        grant is not None
+        and grant.removed_at is None
+        and grant.is_owner
+        and _may_act(session, actor, hold=True)
     )
 
 
@@ -211,9 +279,10 @@ def _is_owner(session: Session, exercise: Exercise, actor: Actor) -> bool:
 
 def admit(session: Session, actor: Actor, person: Person) -> None:
     """Put `person` on the allowlist (ruling 75)."""
-    if not actor.is_super_admin:
+    if not keeps_the_list(session, actor):
         raise Refused(
-            "Only the platform super-admin keeps the operator list.", key="not_super_admin"
+            "Only an Admin or the platform super-admin keeps the operator list.",
+            key="not_super_admin",
         )
     listed = Refused("Already allowed to operate.", key="already_listed")
     if _allowed(session, person):
@@ -244,19 +313,29 @@ def admit(session: Session, actor: Actor, person: Person) -> None:
 
 def revoke(session: Session, actor: Actor, person: Person, reason: str | None = None) -> None:
     """Take `person` off the allowlist: their access ends, their grants are
-    kept (re-admitting restores them)."""
-    if not actor.is_super_admin:
+    kept (re-admitting restores them). An Admin is demoted first."""
+    if not keeps_the_list(session, actor):
         raise Refused(
-            "Only the platform super-admin keeps the operator list.", key="not_super_admin"
+            "Only an Admin or the platform super-admin keeps the operator list.",
+            key="not_super_admin",
         )
     unlisted = Refused("Not on the operator list.", key="not_listed")
     if not _allowed(session, person):
         raise unlisted
+    if is_protected(person):
+        raise Refused("A super-admin's row is not changed here.", key="protected")
+    if person.is_admin:
+        raise Refused("An Admin is demoted before being taken off the list.", key="is_admin")
     # Conditional, as `admit`: two revocations at once audit once.
     if not _changed(
         session,
         update(Person)
-        .where(Person.id == person.id, Person.may_operate.is_(True), Person.revoked_at.is_(None))
+        .where(
+            Person.id == person.id,
+            Person.may_operate.is_(True),
+            Person.revoked_at.is_(None),
+            Person.is_admin.is_(False),
+        )
         .values(may_operate=False, revoked_at=_now())
         .execution_options(synchronize_session=False),
     ):
@@ -268,6 +347,87 @@ def revoke(session: Session, actor: Actor, person: Person, reason: str | None = 
         actor=actor.person,
         refs={"person_id": person.id},
         reason=reason,
+    )
+
+
+def promote(session: Session, actor: Actor, person: Person) -> None:
+    """Make `person` an Admin (segment AD2M), putting them on the operator
+    list if they are not on it. Only someone bound to an account."""
+    if not makes_admins(session, actor):
+        raise Refused("Only the platform super-admin makes Admins.", key="not_super_admin")
+    if is_protected(person):
+        raise Refused("A super-admin's row is not changed here.", key="protected")
+    if not person.bound:
+        raise Refused("Only someone who has signed in can be an Admin.", key="pending")
+    already = Refused("Already an Admin.", key="already_admin")
+    # Locked to the end of the transaction, so a revoke racing this waits
+    # and the listing read here is the one written (cold read, AD2M).
+    session.refresh(
+        person,
+        attribute_names=["is_admin", "may_operate", "revoked_at"],
+        with_for_update=True,
+    )
+    if person.is_admin:
+        raise already
+    listed = may_operate(person)
+    values: dict[str, Any] = {"is_admin": True}
+    if not listed:
+        values |= {
+            "may_operate": True,
+            "admitted_by_id": actor.person.id if actor.person is not None else None,
+            "admitted_at": _now(),
+            "revoked_at": None,
+        }
+    # Conditional, as `admit`: of two promotions at once one is audited.
+    if not _changed(
+        session,
+        update(Person)
+        .where(Person.id == person.id, Person.is_admin.is_(False))
+        .values(**values)
+        .execution_options(synchronize_session=False),
+    ):
+        raise already
+    session.refresh(person)
+    if not listed:
+        audit.write_event(
+            session, event_type="person.admitted", actor=actor.person, refs={"person_id": person.id}
+        )
+    audit.write_event(
+        session, event_type="person.promoted", actor=actor.person, refs={"person_id": person.id}
+    )
+
+
+def demote(session: Session, actor: Actor, person: Person) -> None:
+    """Take `person`'s Admin away (segment AD2M); they stay on the operator
+    list. The last Admin is kept."""
+    # Every Admin row locked first, in one order, then the actor checked:
+    # two Admins demoting each other at once queue rather than each
+    # holding a share lock the other's update needs (Codex on #4132).
+    admins = session.scalars(
+        select(Person.id).where(Person.is_admin.is_(True)).order_by(Person.id).with_for_update()
+    ).all()
+    if not makes_admins(session, actor):
+        raise Refused("Only the platform super-admin makes Admins.", key="not_super_admin")
+    if is_protected(person):
+        raise Refused("A super-admin's row is not changed here.", key="protected")
+    not_admin = Refused("Not an Admin.", key="not_admin")
+    session.refresh(person, attribute_names=["is_admin"])
+    if not person.is_admin:
+        raise not_admin
+    # The last Admin is never demoted (spec §8, Review Robin's last_admin).
+    if len(admins) <= 1:
+        raise Refused("The last Admin stays an Admin.", key="last_admin")
+    if not _changed(
+        session,
+        update(Person)
+        .where(Person.id == person.id, Person.is_admin.is_(True))
+        .values(is_admin=False)
+        .execution_options(synchronize_session=False),
+    ):
+        raise not_admin
+    session.refresh(person)
+    audit.write_event(
+        session, event_type="person.demoted", actor=actor.person, refs={"person_id": person.id}
     )
 
 
@@ -365,8 +525,8 @@ def remove_operator(session: Session, exercise: Exercise, actor: Actor, person: 
 
 
 def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person) -> None:
-    """Make `person`, a current allowlisted operator, the Owner; the former
-    Owner stays an operator. Only the Owner (or the super-admin)."""
+    """Make `person`, a current allowlisted operator, an Owner in the
+    actor's place; the actor stays an operator. Only an Owner."""
     _lock(session, exercise)
     if not _is_owner(session, exercise, actor):
         raise Refused("Only the exercise's Owner hands ownership over.", key="not_owner")
@@ -377,31 +537,35 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
         raise Refused("Add them as an operator first.", key="not_operator")
     if grant.is_owner:
         raise Refused("Already the Owner.", key="already_owner")
+    # The Owner handing over steps down: the actor's own grant (the
+    # platform, acting as no one, hands over the first Owner's).
     former = session.scalar(
         select(ExerciseOperator)
         .where(
             ExerciseOperator.exercise_id == exercise.id,
             ExerciseOperator.is_owner.is_(True),
             ExerciseOperator.removed_at.is_(None),
+            *(() if actor.person is None else (ExerciseOperator.person_id == actor.person.id,)),
         )
+        .order_by(ExerciseOperator.id)
+        .limit(1)
         .execution_options(populate_existing=True)
     )
+    if former is None and actor.person is not None:
+        # The actor's own Owner row is gone: their check passed just before
+        # ownership moved elsewhere, so nothing is changed (Codex on #4110).
+        raise Refused("Ownership has just changed; reload and try again.", key="changed")
     # Each step restates its rule in its WHERE: the former Owner is still
-    # the Owner, and the new one is still a current operator. Cleared
-    # first, so the one-Owner index holds at every step.
+    # an Owner, and the new one is still a current operator.
     if former is not None and not _changed(
         session,
         update(ExerciseOperator)
         .where(
             ExerciseOperator.id == former.id,
             ExerciseOperator.is_owner.is_(True),
-            # Not the super-admin: the Owner demoted is the one whose
-            # authority was checked (Codex on #4110).
-            *(
-                ()
-                if actor.is_super_admin or actor.person is None
-                else (ExerciseOperator.person_id == actor.person.id,)
-            ),
+            # The Owner demoted is the one whose authority was checked
+            # (Codex on #4110).
+            *(() if actor.person is None else (ExerciseOperator.person_id == actor.person.id,)),
         )
         .values(is_owner=False)
         .execution_options(synchronize_session=False),
@@ -429,3 +593,35 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
         exercise=exercise,
         refs=refs,
     )
+
+
+def adopt(session: Session, exercise: Exercise, actor: Actor) -> bool:
+    """Make `actor`, an Admin or the super-admin, an Owner of `exercise`
+    (segment AD2M, `applydesk/spec/permissions.md` §5): the one way either
+    takes up an exercise, so every change has an Owner on record. True if
+    it changed anything; adopting one already owned changes nothing."""
+    _lock(session, exercise)
+    if actor.person is None or not (actor.is_super_admin or _admin_now(session, actor.person)):
+        raise Refused("Only an Admin or the platform super-admin adopts.", key="not_admin")
+    grant = _grant(session, exercise, actor.person)
+    if grant is not None and grant.removed_at is None and grant.is_owner:
+        return False
+    was = "none" if grant is None else ("removed" if grant.removed_at else "operator")
+    if grant is None:
+        grant = ExerciseOperator(exercise_id=exercise.id, person_id=actor.person.id)
+        session.add(grant)
+    if was != "operator":  # a current operator keeps who added them, and when
+        grant.added_by_id = actor.person.id
+        grant.added_at = _now()
+    grant.is_owner = True
+    grant.removed_at = None
+    session.flush()
+    audit.write_event(
+        session,
+        event_type="exercise.adopted",
+        actor=actor.person,
+        exercise=exercise,
+        refs={"person_id": actor.person.id},
+        context={"was": was},
+    )
+    return True

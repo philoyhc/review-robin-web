@@ -4,12 +4,14 @@
 {# Admin → Exercises Diagnostics (segment AD2A, scaffold): every exercise
    on the platform, laid out as Review Robin's Sessions Diagnostics. The
    rows are the sample exercises, each with its Owner from the database
-   (2026-11-22). Manage opens the exercise's Home; the filter, Outbox and
+   (2026-11-22). Manage opens the exercise's Home, adopting it as an
+   Owner first, asking, where the viewer holds no role (segment AD2M); the filter, Outbox and
    Audit log are inert until built (the author's ruling at the AD2A close:
    Review Robin's actions). #}
 <a class="back-link" href="{{ url(back_path) }}" data-admin-back>&larr; {{ back_label }}</a>
 <h1>Admin</h1>
 {% with admin_tab = "exercises" %}{% include "applydesk/admin/_tabs.html" %}{% endwith %}
+{% if said %}<p class="nx-said" role="status" data-adopt-said>{{ said }}</p>{% endif %}
 <p class="placeholder"><strong>Placeholder.</strong> The sample exercises, laid out as this page will be: the filter, the Outbox and the audit log are not built yet.</p>
 
 <div class="adm-grid">
@@ -33,7 +35,7 @@
 <section class="card" aria-label="Exercises" data-ex-list>
   <div class="table-wrap">
   <table>
-    <thead><tr><th>Exercise</th><th>Exercise code</th><th>Owner</th><th>Opens</th><th>Applications close</th><th>Timezone</th><th>State</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+    <thead><tr><th>Exercise</th><th>Exercise code</th><th>Owners</th><th>Opens</th><th>Applications close</th><th>Timezone</th><th>State</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
     <tbody>
     {% for e in rows %}
       <tr data-ex-row="{{ e.public_id }}">
@@ -45,7 +47,7 @@
         <td>{{ e.timezone or default_timezone }}</td>
         <td>{% with value = exercise_status(e) %}{% include "applydesk/_state_chip.html" %}{% endwith %}</td>
         <td class="adm-nowrap adm-actions">
-          <a class="btn btn-secondary btn-short" href="{{ url('/operator/exercises/' ~ e.public_id) }}" aria-label="Manage {{ e.name }}">Manage</a>
+          {% if operates(e.public_id) %}<a class="btn btn-secondary btn-short" href="{{ url('/operator/exercises/' ~ e.public_id) }}" aria-label="Manage {{ e.name }}">Manage</a>{% else %}<form class="adm-inline" method="post" action="{{ url('/admin/exercises/' ~ e.public_id ~ '/manage') }}" data-adopt data-name="{{ e.name }}"><button class="btn btn-secondary btn-short" type="submit" aria-label="Manage {{ e.name }}" title="You hold no role here: Manage makes you an Owner">Manage</button></form>{% endif %}
           <button class="btn btn-secondary btn-short" type="button" disabled title="The Outbox is not built yet" aria-label="Outbox of {{ e.name }}">Outbox</button>
           <button class="btn btn-secondary btn-short" type="button" disabled title="The audit log is not built yet" aria-label="Audit log of {{ e.name }}">Audit log</button>
         </td>
@@ -57,4 +59,14 @@
   </table>
   </div>
 </section>
+<script>
+(function () {
+  // Manage on an exercise the viewer holds no role on adopts it: ask first.
+  document.querySelectorAll("[data-adopt]").forEach(function (f) {
+    f.addEventListener("submit", function (e) {
+      if (!window.confirm("Become an Owner of " + f.dataset.name + "? It is recorded, and the exercise's other Owners see you on its Operators card.")) e.preventDefault();
+    });
+  });
+})();
+</script>
 {% endblock %}
