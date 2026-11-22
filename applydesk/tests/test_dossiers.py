@@ -26,7 +26,7 @@ def test_the_columns_follow_the_setup(client: TestClient) -> None:
     text = client.get(PAGE).text
     groups = re.findall(r"<th class=\"ap-(?:first|r)\"[^>]*><b>([^<]+)</b>", text)
     assert groups == ["Applications", "Review", "Interviews"]  # ruling 15
-    for dates in ("1 Sep – 30 Sep", "1 Oct – 6 Nov", "9 Nov – 4 Dec"):
+    for dates in ("1–30 Sep 2026", "1 Oct – 6 Nov 2026", "9 Nov – 4 Dec 2026"):
         assert dates in text
     heads = re.findall(r'data-col="(\w+)" data-kind="(\w+)"', text)
     assert heads == [

@@ -16,14 +16,10 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import datetime, time
+from datetime import datetime
 
-from applydesk import sample_data, stages, timeline, tones, workflow
+from applydesk import clock, sample_data, stages, tones, workflow
 from applydesk.sample_data import Exercise
-
-#: The sample's now: midday of its today (the model exercise is mid
-#: Stage 3, ruling 30).
-NOW = datetime.combine(timeline.TODAY, time(12))
 
 
 @dataclass(frozen=True)
@@ -63,8 +59,10 @@ def outstanding(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
     return tuple(why for why in (_item_open(e, st, i) for i in items) if why)
 
 
-def stage_status(e: Exercise, st: stages.Stage, now: datetime = NOW) -> str:
-    """Draft, Published, Overdue or Completed (ruling 35; Semantics)."""
+def stage_status(e: Exercise, st: stages.Stage, now: datetime | None = None) -> str:
+    """Draft, Published, Overdue or Completed (ruling 35; Semantics), at
+    `now`, else midday of the exercise's today (`clock`, AD-40)."""
+    now = now or clock.midday(sample_data.timezone(e))
     if st.status != "Published":
         return "Draft"
     if st.when is None or not st.when.valid or now <= st.when.end:
@@ -72,7 +70,7 @@ def stage_status(e: Exercise, st: stages.Stage, now: datetime = NOW) -> str:
     return "Overdue" if outstanding(e, st) else "Completed"
 
 
-def exercise_status(e: Exercise, now: datetime = NOW) -> str:
+def exercise_status(e: Exercise, now: datetime | None = None) -> str:
     """The exercise's status from its stages: Draft until one is
     published, Completed when every one is, else Published. Closed and
     Archived stay ``Exercise.state``'s until AD3."""
@@ -264,14 +262,18 @@ def stage_rows(exercise: Exercise) -> list[StageRow]:
 STATUS_ORDER = ("Draft", "Published", "Completed", "Closed", "Archived")
 
 
-def status_counts(exercises: Iterable[Exercise], now: datetime = NOW) -> list[tuple[str, int]]:
+def status_counts(
+    exercises: Iterable[Exercise], now: datetime | None = None
+) -> list[tuple[str, int]]:
     """How many of `exercises` stand in each status, in `STATUS_ORDER`,
     keeping the empty ones (the Operator Lobby's Exercises card, AD1T)."""
     counts = Counter(exercise_status(e, now) for e in exercises)
     return [(s, counts[s]) for s in STATUS_ORDER]
 
 
-def status_tally(exercises: Iterable[Exercise], now: datetime = NOW) -> list[tuple[str, int]]:
+def status_tally(
+    exercises: Iterable[Exercise], now: datetime | None = None
+) -> list[tuple[str, int]]:
     """How many of `exercises` stand in each status, in `STATUS_ORDER`,
     leaving out the empty ones (Admin's Exercises Overview)."""
     counts = Counter(exercise_status(e, now) for e in exercises)

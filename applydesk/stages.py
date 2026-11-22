@@ -16,7 +16,7 @@ from dataclasses import dataclass, replace
 from datetime import date, datetime
 from typing import cast
 
-from applydesk import sample_data
+from applydesk import clock, sample_data
 from applydesk.sample_data import Application
 
 #: Gate admittance, in the order a chip cycles (author, 2026-11-13): no
@@ -227,12 +227,7 @@ class Outcome:
     @property
     def due(self) -> str:
         """Its due day as the pages print it, e.g. "4 Dec"; "" unset."""
-        return short_day(self.due_at) if self.due_at else ""
-
-
-def short_day(d: datetime | date) -> str:
-    """A day as the pages print it, e.g. "1 Sep"."""
-    return f"{d.day} {d.strftime('%b')}"
+        return clock.short(self.due_at) if self.due_at else ""
 
 
 @dataclass(frozen=True)
@@ -290,10 +285,10 @@ class Stage:
 
     @property
     def dates(self) -> str:
-        """The dates as the pages print them, e.g. "1 Sep – 30 Sep"."""
+        """The dates as the pages print them, e.g. "1–30 Sep 2026"."""
         if self.when is None:
             return "Dates not set"
-        return f"{short_day(self.when.start)} – {short_day(self.when.end)}"
+        return clock.span(self.when.start, self.when.end)
 
     @property
     def label(self) -> str:
@@ -771,8 +766,8 @@ def local_value(d: datetime | None) -> str:
 
 
 def window_text(w: StageDates | None) -> str:
-    """A window as a gate's send line says it, e.g. "1 Oct to 31 Oct"."""
-    return f"{short_day(w.start)} to {short_day(w.end)}" if w and w.valid else ""
+    """A window as a gate's send line says it, e.g. "1–31 Oct 2026"."""
+    return clock.span(w.start, w.end) if w and w.valid else ""
 
 
 def window(st: Stage, item: Gate | Outcome | None) -> StageDates | None:

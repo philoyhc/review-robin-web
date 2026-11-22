@@ -12,6 +12,24 @@ auth). Most need the samples loaded first:
 `alembic -c applydesk/alembic.ini upgrade head`, then
 `python -m applydesk.seed`.
 
+## Details saved, and one way of writing dates (AD2B: #4137, rung 4)
+
+Re-seed first: AD2B adds a migration, and the seed now records each
+sample's settings.
+
+- [ ] **Details saves.** On RA-2027's Home, *Unlock* Details, change the
+  description and the timezone, *Lock*: it says *Saved.* Reload: the
+  change is still there.
+- [ ] **A stale Lock is refused.** Open the same Home in two tabs. Save a
+  change in one, then *Lock* a change in the other: it is refused, says
+  to reload, and saves nothing.
+- [ ] **A taken code is refused.** On the Graduate Travel Grant's Home,
+  set the code to `ra-2027`: Lock is refused on the code field.
+- [ ] **Dates read one way.** Home's timeline, Process's stage cards and
+  a gate's *send* line write a range with its year once
+  ("1–30 Sep 2026", "9 Nov – 4 Dec 2026"). On Process, change a stage's
+  dates: its card's summary follows in the same words.
+
 ## Admins and adopting an exercise (AD2M: #4131, #4132)
 
 - [ ] **Promote and Demote.** On Admin → Accounts Management, tick

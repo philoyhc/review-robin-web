@@ -14,6 +14,8 @@ from datetime import UTC, datetime
 from typing import Any, TypedDict, cast
 from zoneinfo import ZoneInfo
 
+from applydesk import clock
+
 
 @dataclass(frozen=True)
 class Exercise:
@@ -88,7 +90,7 @@ def created_label(e: Exercise) -> str:
     """When the exercise was created, in its own timezone, as the Lobby
     prints it ("2026-08-04 09:12"), or "" when not recorded."""
     at = created_at(e)
-    return at.astimezone(ZoneInfo(timezone(e))).strftime("%Y-%m-%d %H:%M") if at else ""
+    return clock.stamp(at, timezone(e)) if at else ""
 
 
 def newest_first(exercises: Iterable[Exercise]) -> tuple[Exercise, ...]:

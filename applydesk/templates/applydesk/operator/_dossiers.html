@@ -166,7 +166,7 @@
   var CYCLE = ["—", "Entered", "Not entered"];
   // Not yet decided: a gate's —, an outcome's Pending or its "—" ("").
   function undecided(v) { return v === "—" || v === "Pending" || v === ""; }
-  var TODAY = {{ today | tojson }};  // the one clock, timeline.TODAY (AD-40)
+  var TODAY = {{ today | tojson }};  // the one clock, the clock's today (AD-40)
   var rows = Array.prototype.slice.call(root.querySelectorAll("[data-row]"));
   var heads = Array.prototype.slice.call(root.querySelectorAll("th[data-col]"));
 

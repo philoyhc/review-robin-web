@@ -14,7 +14,7 @@
       <button type="button" data-tl-layout="v" aria-pressed="false">Vertical</button>
     </div>
   </div>
-  <p class="tl-sub">{{ tl.stages | length }} {{ "stage" if tl.stages | length == 1 else "stages" }}{% if tl.start %}, {{ short(tl.start) }} to {{ short(tl.end) }} {{ tl.end.year }}{% endif %}, in {{ timezone(exercise) }} time.{% if tl.today_text %} {{ tl.today_text }}{% endif %}</p>
+  <p class="tl-sub">{{ tl.stages | length }} {{ "stage" if tl.stages | length == 1 else "stages" }}{% if tl.dates %}, {{ tl.dates }}{% endif %}, in {{ timezone(exercise) }} time.{% if tl.today_text %} {{ tl.today_text }}{% endif %}</p>
   <ol class="tl-stages">
     {% for s in tl.stages %}
     <li class="tl-stage tl-{{ s.state | lower }}" data-tl-stage="{{ s.number }}"{% if s.state == "Now" %} data-tl-p="{{ '%.1f' % (s.progress * 100) }}"{% endif %}>
