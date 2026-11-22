@@ -261,27 +261,37 @@ answer only for a Published or Closed exercise.
     (`admit`, `revoke`, `promote` or `demote`) and its counts, changed and skipped, which are read
     as bounded whole numbers: it says what changed and how many were skipped,
     and no other text from the URL reaches the page.
-- **An exercise's Operators card**, on Home under Details: each current
-  operator, the Owner first and marked *Owner*, the rest *Operator*; a pending
-  person carries *Not yet signed in*.
+- **An exercise's *Owners and operators* card**, on Home under Details: each
+  current operator, Owners first and marked *Owner*, the rest *Operator*; a
+  pending person carries *Not yet signed in*, and the viewer's own row *(you)*.
   - **Owner rules.** Every exercise has one or more Owners, each one of its
     operators. Whoever makes an exercise is its Owner; an Admin or the
     super-admin who adopts it becomes another. Other operators do
-    everything on the exercise; only an Owner adds and removes operators and
-    hands ownership over. An Owner cannot be removed, only replaced by a
-    handover to a current operator, who must be on the operator list; the
-    Owner handing over stays an operator and any other Owners stay Owners.
-    Adding someone already an operator, or yourself, is refused; re-adding a
-    removed operator restores them. Make Owner beside the existing Owners,
-    demote, step down, leave and the *Owners and operators* card are
-    `applydesk/spec/permissions.md` §3 and §7, to build.
+    everything on the exercise; only an Owner adds and removes operators,
+    makes Owners and transfers ownership. The moves, and the rule that an
+    exercise keeps an Owner who can act, are
+    `applydesk/spec/permissions.md` §3 and §8. A person made an Owner or
+    transferred to must be on the operator list. Adding someone already an
+    operator, or yourself, is refused; re-adding a removed operator restores
+    them.
   - **For an Owner**: *Add operator* opens a
     *Name or email, on the operator list* search over the operator list only
-    (no directory; current operators left out), each hit with *Add*; every other
-    operator row has *Make owner* and *Remove*, each asking first. All are
-    Secondary.
-  - **For everyone else** the card is read-only and says only the Owner
-    changes who.
+    (no directory; current operators left out), each hit with *Add*. On
+    another operator's row: *Make Owner* (Secondary), *Transfer ownership*
+    (Outline-amber) and *Remove* (Destructive); on another Owner's: *Make
+    operator* (Secondary); on their own: *Step down to operator*
+    (Secondary), or, while they are the only Owner who can act, a note saying
+    to make another Owner or transfer first. *Transfer ownership*, *Remove*
+    and *Leave* ask first.
+  - **For an operator** the card is read-only except *Leave* (Destructive),
+    on their own row, which returns them to the Lobby; it says only Owners
+    change who.
+  - Each move posts to its own route under
+    `/operator/exercises/{id}/operators/{person_id}/` (`owner`, `make-owner`,
+    `demote`, `step-down`, `leave`, `remove`;
+    `routes_operator.operators_*`), `owner` being *Transfer ownership*. The
+    result is a status line chosen by key (`routes_operator.OPS_SAID`), never
+    text from the URL. An archived exercise refuses every move.
   - An exercise with no row in the database (a sample not yet seeded) shows no
     operators and says so; a localhost run loads it with
     `python -m applydesk.seed`.
@@ -361,8 +371,8 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     or tag), *Clear*, *New exercise* (Primary; opens the scratch form below)
     and *Go to Archive* (the Archive, below).
   - **Columns**, in order: *Exercise* (its name, linking Home), *Exercise
-    code* (*Not set* when none; the public ID shows only in the link), *Created
-    by*, *Created*, *Timezone*, *Status*, *Tags*, and a tick box. Every
+    code* (*Not set* when none; the public ID shows only in the link), *Your
+    role*, *Created*, *Timezone*, *Status*, *Tags*, and a tick box. Every
     column but *Tags* and the tick sorts; *Created* carries the descending
     arrow by default.
     - *Created* is `YYYY-MM-DD HH:MM` in the exercise's own timezone
@@ -375,12 +385,10 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
       (`workflow.stage_position`); omitted when the exercise has no stages. N
       is the number of the stage holding the next step, or the last once
       every step is done; M counts the exercise's stages.
-    - *Created by* is the exercise's current Owners on record, comma-separated
-      (`operators.owner_labels`; the exercise's `created_by_id` is stored but
-      the column does not read it); *—* where there is none, as before the
-      local seed has run. A scratch
-      exercise's Owner is whoever made it, until ownership is handed over;
-      then it reads the new Owner.
+    - *Your role* is an *Owner* or *Operator* chip for the viewer on that
+      exercise (`gate.owns`); it sorts Owner first, then Operator (`role`,
+      `applydesk/lobby.py`). The exercise's Owners are named on Home's
+      *Owners and operators* card.
     - *Tags* are the exercise's stored tags (*No tags* when none).
   - **The tick panel**, Review Robin's. Ticked rows are highlighted and one
     panel sits under the most recently ticked row still ticked; unticking
@@ -438,11 +446,14 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     - *Archive*, *Restore* and *Delete* are Owner-only
       (`applydesk/spec/permissions.md` §3): the server refuses an operator,
       saying so, and does nothing for any of a ticked set when one is refused.
-      The panel does not disable them for an operator.
+      The panel disables *Purge and archive* and *Delete* (and their *all*
+      forms) while a ticked row is one the viewer only operates, and a note
+      names those exercises; the server's refusal stands whatever the page
+      shows.
     - Each change is audited (`applydesk/spec/architecture.md` "Audit").
   - **The Archive** (`/operator/exercises/archived`,
     `routes_operator.exercises_archived`): the archived exercises the viewer
-    operates, newest archived first, as the Lobby's table with an *Archived* column (the
+    operates, newest archived first, as the Lobby's table, with *Your role* and an *Archived* column (the
     moment, `clock.stamp`, the fixed sort) and a *Restore* button on each row, filtered by
     tag and text as the Lobby. *Restore* posts to
     `/operator/exercises/archived/restore`, an Owner's: it returns the
