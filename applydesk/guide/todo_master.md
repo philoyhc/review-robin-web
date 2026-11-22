@@ -696,6 +696,20 @@ the rulings it relied on but does not move them.
     platform super-admin keeps on Apply Desk's admin page, as Review
     Robin's *Users* page admits and revokes operators; an Owner adds
     operators only from it.
+76. ***Open form* and *Close form* are Home's next step** (author,
+    2026-11-22; AD2C): the action `workflow.steps` already words
+    (*Open form…*, *Close form…*) becomes live there, not a button on
+    Process.
+77. **Candidates is a stage item** (author, 2026-11-22; AD2C, replacing
+    an invitee list for AD-52): a list of people the operator keeps by
+    hand, added through the people search (ruling 75) or a CSV upload.
+    It can be a form's roster (who may apply to an *Invitation only*
+    exercise) or feed gates directly (ruling 24's exercise with no form,
+    its candidates loaded as dossiers).
+78. **The rule engine runs on the server only** (author, 2026-11-22;
+    AD2C, answering ruling 31): rules are evaluated by one server-side
+    service, the pages ask it for proposals and checks, and the pages'
+    JS evaluator retires.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
