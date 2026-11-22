@@ -33,5 +33,5 @@ Each segment that adds a page's controls lands scaffold-first (`CLAUDE.md`, "Con
 
 ## Outside the series
 
-- **Cordware provisioning:** the `applydesk` database, its runtime role, its Key Vault secret and the App Setting `APPLYDESK_DATABASE_URL`. These follow Utilities' workflows (`postgres-utilityapps-database.yml`, `app-settings-database-urls.yml`) in the private repository. AD2A opens the PR; the author dispatches it. It is needed before AD2's first production release, not before local work.
+- **Cordware provisioning:** done 2026-11-21. The `applydesk` database, its runtime role `applydesk_app`, its Key Vault secret and the App Setting `APPLYDESK_DATABASE_URL` were made by the private repository's `postgres-applydesk-database.yml` and `app-settings-database-urls.yml`. AD2 reaches Cordware with the import of RRW `48b225a` (rules v16, 2026-11-22), and each release migrates `applydesk` before the upload, from its own row in `release.yml`.
 - **AD3 onward** add behavior to the stored data: exercise transitions and what a published exercise fixes (AD3, G2), applicants submitting (AD4), dossier access (AD5), sending to Review Robin (AD6), release (AD7).
