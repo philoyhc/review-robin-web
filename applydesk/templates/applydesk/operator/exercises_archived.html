@@ -38,7 +38,7 @@
   <div class="table-wrap">
   <table class="lb-table" data-ar-table>
     <thead><tr>
-      {% for h in ("Exercise", "Exercise code", "Created by", "Created") %}<th>{{ h }}</th>{% endfor %}
+      {% for h in ("Exercise", "Exercise code", "Your role", "Created") %}<th>{{ h }}</th>{% endfor %}
       <th aria-sort="descending">Archived<span class="arr" aria-hidden="true">↓</span></th>
       <th>Tags</th>
       <th></th>
@@ -48,7 +48,7 @@
       <tr data-ar-row>
         <td>{{ e.name }}</td>
         <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
-        <td>{% if owners[e.public_id] is defined %}<span class="chip chip-mute">{{ owners[e.public_id] }}</span>{% else %}<span class="muted" title="No Owner on record">—</span>{% endif %}</td>
+        <td>{% if roles[e.public_id] == "Owner" %}<span class="chip chip-ok">Owner</span>{% else %}<span class="chip chip-mute">Operator</span>{% endif %}</td>
         <td class="lb-when">{{ created_label(e) or "—" }}</td>
         <td class="lb-when">{{ archived[e.public_id] }}</td>
         <td>{% if e.tags %}<div class="lb-tagcell">{% for t in e.tags %}<span class="chip chip-info">{{ t }}</span>{% endfor %}</div>{% else %}<span class="muted">No tags</span>{% endif %}</td>

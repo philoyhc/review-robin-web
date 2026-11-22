@@ -1,32 +1,44 @@
-{# The exercise's operators, on Home (segment AD2A, ruling 73): the Owner,
-   marked, and the other operators. The Owner (or the platform
-   super-admin) adds operators from the operator list, removes them and
-   hands ownership over; the rest see it read-only. The Owner is never
-   removed, only replaced by a handover. Rung 8 wires it (`team.py`). #}
+{# The exercise's Owners and operators, on Home (segment AD2O, after AD2A's
+   Operators card; `applydesk/spec/permissions.md` §7). Owners first, each
+   marked Owner, then operators. Each row offers only the viewer's moves:
+   an Owner may make another operator an Owner, transfer ownership to them
+   or remove them, make another Owner an operator, and step down while not
+   the last Owner; an operator may leave. AD2O's scaffold: Transfer and
+   Remove work as before; Make Owner, Make operator, Step down and Leave
+   wait for the next rungs. #}
 {% set ops = operators_card %}
 {% set base = '/operator/exercises/' ~ exercise.public_id %}
+{% set inert = "Built in the next rung of AD2O" %}
 <section class="card" id="operators" aria-labelledby="ops-h" data-operators{% if ops.manage %} data-ops-manage{% endif %}>
-  <div class="cardhead"><h2 id="ops-h">Operators</h2></div>
+  <div class="cardhead"><h2 id="ops-h">Owners and operators</h2></div>
   {% if ops_said %}<p class="nx-said" role="status" data-ops-said>{{ ops_said }}</p>{% endif %}
   {% if not ops.recorded %}
     <p class="muted" data-ops-unrecorded>No operators are recorded for this exercise yet: it is sample data not loaded into the database. On localhost, <code>python -m applydesk.seed</code> loads it.</p>
   {% else %}
-  <p class="muted">{% if ops.manage %}Only the Owner adds and removes operators, from the operator list, and hands ownership to another operator.{% else %}Everyone here runs this exercise. Only the Owner changes who.{% endif %}</p>
+  <p class="muted">{% if ops.manage %}An exercise has one or more Owners, each also an operator. Owners add and remove operators, make Owners, and transfer ownership; it always keeps at least one Owner.{% else %}Everyone here runs this exercise. Only its Owners change who.{% endif %}</p>
   <div class="table-wrap">
   <table>
-    <thead><tr><th>Name</th><th>Role</th>{% if ops.manage %}<th><span class="visually-hidden">Actions</span></th>{% endif %}</tr></thead>
+    <thead><tr><th>Name</th><th>Role</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
     <tbody>
     {% for person, owner in ops.rows %}
-      <tr data-ops-row="{{ person.id }}">
-        <td>{{ person.label }}{% if not person.bound %} <span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
+      {% set mine = person.id == ops.viewer_id %}
+      <tr data-ops-row="{{ person.id }}"{% if mine %} data-ops-self{% endif %}>
+        <td>{{ person.label }}{% if mine %} <span class="muted">(you)</span>{% endif %}{% if not person.bound %} <span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
         <td>{% if owner %}<span class="chip chip-ok">Owner</span>{% else %}Operator{% endif %}</td>
-        {% if ops.manage %}<td>{% if not owner %}
-          <form class="ops-act" method="post" action="{{ url(base ~ '/operators/' ~ person.id ~ '/owner') }}" data-ops-confirm="Make {{ person.label }} the Owner? You stay an operator, but only they can then change the operators."><button class="btn btn-secondary btn-short" type="submit" aria-label="Make {{ person.label }} the Owner">Make owner</button></form>
-          <form class="ops-act" method="post" action="{{ url(base ~ '/operators/' ~ person.id ~ '/remove') }}" data-ops-confirm="Remove {{ person.label }} from this exercise?"><button class="btn btn-secondary btn-short" type="submit" aria-label="Remove {{ person.label }}">Remove</button></form>
-        {% endif %}</td>{% endif %}
+        <td class="ops-acts">
+        {% if mine %}
+          {% if owner %}{% if ops.owners > 1 %}<button class="btn btn-secondary btn-short" type="button" disabled title="{{ inert }}" data-ops-move="step-down">Step down to operator</button>{% else %}<span class="muted" data-ops-last>The only Owner: make another Owner or transfer first</span>{% endif %}
+          {% else %}<button class="btn btn-destructive btn-short" type="button" disabled title="{{ inert }}" data-ops-move="leave">Leave</button>{% endif %}
+        {% elif ops.manage %}
+          {% if owner %}<button class="btn btn-secondary btn-short" type="button" disabled title="{{ inert }}" data-ops-move="make-operator" aria-label="Make {{ person.label }} an operator">Make operator</button>
+          {% else %}<button class="btn btn-secondary btn-short" type="button" disabled title="{{ inert }}" data-ops-move="make-owner" aria-label="Make {{ person.label }} an Owner">Make Owner</button>
+          <form class="ops-act" method="post" action="{{ url(base ~ '/operators/' ~ person.id ~ '/owner') }}" data-ops-confirm="Transfer ownership to {{ person.label }}? They become an Owner and you an operator."><button class="btn btn-alert btn-short" type="submit" aria-label="Transfer ownership to {{ person.label }}" data-ops-move="transfer">Transfer ownership</button></form>
+          <form class="ops-act" method="post" action="{{ url(base ~ '/operators/' ~ person.id ~ '/remove') }}" data-ops-confirm="Remove {{ person.label }} from this exercise?"><button class="btn btn-destructive btn-short" type="submit" aria-label="Remove {{ person.label }}" data-ops-move="remove">Remove</button></form>{% endif %}
+        {% endif %}
+        </td>
       </tr>
     {% else %}
-      <tr><td colspan="{{ 3 if ops.manage else 2 }}" class="muted">No operators.</td></tr>
+      <tr><td colspan="3" class="muted">No operators.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -51,7 +63,7 @@
 </section>
 <script>
 (function () {
-  // Remove and Make owner ask first.
+  // Transfer, Remove and Leave ask first.
   document.querySelectorAll("[data-ops-confirm]").forEach(function (f) {
     f.addEventListener("submit", function (e) {
       if (!window.confirm(f.dataset.opsConfirm)) e.preventDefault();

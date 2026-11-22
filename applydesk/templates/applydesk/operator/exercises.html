@@ -54,7 +54,7 @@
   <table class="lb-table" data-lb-table>
     <thead><tr>
       {# Each header sorts by its column; again, the other way (query string). #}
-      {% for key, h in (("name", "Exercise"), ("code", "Exercise code"), ("created_by", "Created by"), ("created", "Created"), ("timezone", "Timezone"), ("status", "Status")) %}<th class="lb-sort"{% if query.aria_sort(key) %} aria-sort="{{ query.aria_sort(key) }}"{% endif %}><a href="{{ query.sort_href(base, key) }}" data-lb-sort="{{ key }}">{{ h }}<span class="arr" aria-hidden="true">{{ query.arrow(key) }}</span></a></th>{% endfor %}
+      {% for key, h in (("name", "Exercise"), ("code", "Exercise code"), ("role", "Your role"), ("created", "Created"), ("timezone", "Timezone"), ("status", "Status")) %}<th class="lb-sort"{% if query.aria_sort(key) %} aria-sort="{{ query.aria_sort(key) }}"{% endif %}><a href="{{ query.sort_href(base, key) }}" data-lb-sort="{{ key }}">{{ h }}<span class="arr" aria-hidden="true">{{ query.arrow(key) }}</span></a></th>{% endfor %}
       <th>Tags</th>
       <th class="lb-check"><input type="checkbox" aria-label="Select every exercise shown" data-lb-all></th>
     </tr></thead>
@@ -67,7 +67,7 @@
         <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a>{% if scratch_row %} <span class="chip chip-mute" data-scratch-chip>Scratch</span>
           <form class="nx-discard" method="post" action="{{ url('/operator/exercises/' ~ e.public_id ~ '/discard') }}" data-nx-discard data-name="{{ e.name }}"><button class="btn btn-destructive btn-short" type="submit">Discard</button></form>{% endif %}</td>
         <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
-        <td>{% if owners[e.public_id] is defined %}<span class="chip chip-mute" title="The Owner, until who created it is recorded">{{ owners[e.public_id] }}</span>{% else %}<span class="muted" title="No Owner on record">—</span>{% endif %}</td>
+        <td data-lb-role>{% if roles[e.public_id] == "Owner" %}<span class="chip chip-ok">Owner</span>{% else %}<span class="chip chip-mute">Operator</span>{% endif %}</td>
         <td class="lb-when">{{ created_label(e) or "—" }}</td>
         <td><span class="chip chip-mute" title="{{ zone }}">{{ utc_offset(zone) }}</span></td>
         <td class="lb-stage">{% with value = exercise_status(e) %}{% include "applydesk/_state_chip.html" %}{% endwith %}{% if m %}<span class="of" data-lb-stage>Stage {{ n }} of {{ m }}{% if stage_name %} · {{ stage_name }}{% endif %}</span>{% endif %}</td>
@@ -94,6 +94,7 @@
       </div>
       <div class="lb-exp-foot">
         <div class="lb-purge"><label><input type="checkbox" name="confirm" value="yes" data-lb-confirm> <strong>Yes, delete</strong></label><span class="sep" aria-hidden="true">|</span><span class="muted">Archive after purging</span>
+          <span class="muted" data-lb-owner-note>Purge and archive and Delete are an Owner's.</span>
           {% for p in ("Applications", "Dossiers", "Audit log") %}<label><input type="checkbox" disabled title="Purging waits for stored applications: Purge and archive archives only"> {{ p }}</label>{% endfor %}</div>
         <div class="lb-btns" data-lb-one>
           <button class="btn btn-secondary" type="submit" name="action" value="save">Save</button>

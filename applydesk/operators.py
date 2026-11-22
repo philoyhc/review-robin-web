@@ -258,6 +258,25 @@ def operated_exercises(session: Session, actor: Actor) -> list[Exercise]:
     )
 
 
+def owned_ids(session: Session, person: Person | None) -> frozenset[str]:
+    """The public IDs of the live exercises `person` currently owns: the
+    viewer's *Your role* (segment AD2O)."""
+    if person is None:
+        return frozenset()
+    return frozenset(
+        session.scalars(
+            select(Exercise.public_id)
+            .join(ExerciseOperator, ExerciseOperator.exercise_id == Exercise.id)
+            .where(
+                ExerciseOperator.person_id == person.id,
+                ExerciseOperator.removed_at.is_(None),
+                ExerciseOperator.is_owner.is_(True),
+                Exercise.deleted_at.is_(None),
+            )
+        )
+    )
+
+
 def is_owner(session: Session, exercise: Exercise, actor: Actor) -> bool:
     """Whether `actor` may change `exercise`'s operators: one of its
     current Owners, allowlisted or the super-admin (read fresh)."""

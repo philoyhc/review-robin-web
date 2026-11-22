@@ -21,7 +21,7 @@ from applydesk import locks, sample_data
 from applydesk.sample_data import Exercise
 
 #: The columns a table sorts by, as the query string names them.
-SORTS = ("name", "code", "created_by", "created", "timezone", "status")
+SORTS = ("name", "code", "role", "created", "timezone", "status")
 _OLDEST = datetime.min.replace(tzinfo=UTC)
 _MAX_TAGS = 20  # chips a query may name; more are ignored
 
@@ -139,14 +139,14 @@ def matches(e: Exercise, query: Query) -> bool:
 
 
 def apply(
-    exercises: Iterable[Exercise], query: Query, owners: Mapping[str, str]
+    exercises: Iterable[Exercise], query: Query, roles: Mapping[str, str]
 ) -> tuple[Exercise, ...]:
     """`exercises` the query keeps, in its order. Ties keep Created,
     newest first; an empty value sorts last whichever way."""
     kept = [e for e in sample_data.newest_first(exercises) if matches(e, query)]
     key = _KEYS[query.sort]
-    filled = [(k, e) for e in kept if (k := key(e, owners)) is not None]
-    empty = [e for e in kept if key(e, owners) is None]
+    filled = [(k, e) for e in kept if (k := key(e, roles)) is not None]
+    empty = [e for e in kept if key(e, roles) is None]
     filled.sort(key=lambda pair: pair[0], reverse=query.descending)
     return tuple([e for _, e in filled] + empty)
 
@@ -169,7 +169,8 @@ def _words(value: str) -> tuple[float, str] | None:
 _KEYS: dict[str, Callable[[Exercise, Mapping[str, str]], tuple[float, str] | None]] = {
     "name": lambda e, _o: _words(e.name),
     "code": lambda e, _o: _words(e.code),
-    "created_by": lambda e, o: _words(o.get(e.public_id, "")),
+    # Your role (segment AD2O): Owner before Operator, ascending.
+    "role": lambda e, r: (0.0 if r.get(e.public_id) == "Owner" else 1.0, ""),
     "created": lambda e, _o: _created(e),
     "timezone": lambda e, _o: _offset(sample_data.timezone(e)),
     "status": lambda e, _o: (float(locks.STATUS_ORDER.index(locks.exercise_status(e))), ""),

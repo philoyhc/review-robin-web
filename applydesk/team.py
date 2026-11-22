@@ -31,6 +31,12 @@ class Card:
     rows: list[tuple[Person, bool]]
     manage: bool
     recorded: bool
+    viewer_id: int | None = None  # the viewer's own row, for Step down and Leave (AD2O)
+
+    @property
+    def owners(self) -> int:
+        """How many Owners: the last one cannot step down (AD2O)."""
+        return sum(1 for _, owner in self.rows if owner)
 
 
 def actor_for(session: Session, identity: Identity) -> operators.Actor:
@@ -49,10 +55,10 @@ def card(session: Session, public_id: str, identity: Identity | None) -> Card:
     if exercise is None:
         return Card([], False, False)
     rows = operators.current_operators(session, exercise)
-    manage = identity is not None and operators.is_owner(
-        session, exercise, actor_for(session, identity)
-    )
-    return Card(rows, manage, True)
+    actor = actor_for(session, identity) if identity is not None else None
+    manage = actor is not None and operators.is_owner(session, exercise, actor)
+    viewer_id = actor.person.id if actor is not None and actor.person is not None else None
+    return Card(rows, manage, True, viewer_id)
 
 
 def candidates(session: Session, public_id: str, query: str) -> list[Person]:
