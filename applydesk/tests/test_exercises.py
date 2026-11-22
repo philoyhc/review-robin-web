@@ -213,3 +213,16 @@ def test_an_archived_exercise_frees_its_code() -> None:
     blank = f"/applydesk/operator/exercises/{BLANK}/details"
     reply = _client().post(blank, json=_good(code="RA-2027", name="Graduate Travel Grant 2027"))
     assert reply.status_code == 200
+
+
+def test_home_names_the_revision_of_the_settings_it_shows() -> None:
+    """Codex on #4137: the settings and the revision Lock names come
+    from one read, so a save between two reads cannot pair old values
+    with a newer revision."""
+    sample = sample_data.exercise(EX)
+    assert sample is not None
+    assert _client().post(DETAILS, json=_good(name="Renamed")).status_code == 200
+    shown, revision = exercises.stored_at(sample)
+    assert (shown.name, revision) == ("Renamed", 2)
+    page = _client().get(DETAILS[: -len("/details")]).text
+    assert 'data-dt-revision="2"' in page and "Renamed" in page

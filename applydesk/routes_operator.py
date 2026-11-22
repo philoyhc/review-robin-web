@@ -581,7 +581,12 @@ def operators_owner(request: Request, exercise_id: str, person_id: RowId) -> Res
 
 @router.get("/exercises/{exercise_id}", name="applydesk_exercise_home")
 def exercise_home(request: Request, exercise_id: str) -> Response:
-    exercise = exercise_or_404(exercise_id)
+    exercise_or_404(exercise_id)
+    found = sample_data.exercise(exercise_id)
+    if found is None:
+        raise HTTPException(status_code=404)
+    # The settings and the revision Details' Lock names, from one read.
+    exercise, revision = exercise_store.stored_at(found)
     tl = timeline.of(exercise)
     op_q = request.query_params.get("op_q", "").strip()
     session = db.new_session()
@@ -611,8 +616,7 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         timezones=sample_data.TIMEZONES,
         default_contact=sample_data.DEFAULT_HELP_CONTACT,
         blind_lock=locks.blind_lock(exercise),
-        # The revision Details' Lock names (segment AD2B rung 3).
-        revision=exercise_store.revision_of(exercise.public_id),
+        revision=revision,
         stage_rows=locks.stage_rows(exercise),
         STATUS_CHIP=locks.STATUS_CHIP,
         # Every other exercise's code and name, so Details refuses a

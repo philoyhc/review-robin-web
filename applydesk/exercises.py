@@ -115,10 +115,19 @@ def overlay(sample: sample_data.Exercise, settings: Settings | None) -> sample_d
 def stored(sample: sample_data.Exercise) -> sample_data.Exercise:
     """`sample` as the database has it: the pages' one reader (through
     `lookups.exercise_or_404` and the Lobby)."""
+    return stored_at(sample)[0]
+
+
+def stored_at(sample: sample_data.Exercise) -> tuple[sample_data.Exercise, int]:
+    """`sample` as the database has it, with the revision those settings
+    are at, from one read: Details' Lock names that revision, so it must
+    describe the values the page shows (Codex on #4137). 0 while none
+    are recorded."""
     session = db.new_session()
     try:
         found = row(session, sample.public_id)
-        return overlay(sample, settings_of(session, found) if found is not None else None)
+        settings = settings_of(session, found) if found is not None else None
+        return overlay(sample, settings), settings.revision if settings else 0
     finally:
         session.close()
 
@@ -286,14 +295,3 @@ def save_details(
         context={"revision": exercise.revision},
     )
     return exercise.revision
-
-
-def revision_of(public_id: str) -> int:
-    """The exercise's stored revision, 0 while none is recorded: the
-    revision Details opens at."""
-    session = db.new_session()
-    try:
-        found = row(session, public_id)
-        return found.revision if found is not None else 0
-    finally:
-        session.close()
