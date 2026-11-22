@@ -75,15 +75,23 @@ card.
 | Run it: open the form, send gates, decide outcomes, release, extract | ✓ | ✓ |
 | See every dossier item, whatever its grants | ✓ | ✓ |
 | In the Lobby: rename, tag | ✓ | ✓ |
-| Duplicate it (the copy's Owner is whoever duplicates it) | ✓ | ✓ |
+| Duplicate its settings (the copy's Owner is whoever duplicates it) | ✓ | ✓ |
 | Leave it (take themself off) | ✓ | ✓, not the last Owner |
 | Add an operator | — | ✓ |
 | Remove an operator | — | ✓ |
 | Make an operator an Owner | — | ✓ |
 | Demote an Owner to operator (another, or themself) | — | ✓, not the last Owner |
 | Transfer ownership to an operator | — | ✓ |
-| Purge and archive | — | ✓ |
+| Archive it, and Restore an archived one | — | ✓ |
+| Purge it (with *Purge and archive*) | — | ✓ |
 | Delete | — | ✓ |
+
+*Built:* rename and tag in the Lobby, *Duplicate settings only*, and Archive,
+Restore and Delete, each an Owner's alone: the server refuses an operator,
+whatever the page offers (`applydesk/exercises.py`, checking
+`operators.is_owner`). A ticked set is archived or deleted
+whole or not at all. *To build:* the purge (AD2D, with stored applications:
+*Purge and archive* archives only) and duplicating the whole setup (AD2C–AD2F).
 
 ### The ownership moves
 
@@ -104,7 +112,7 @@ card.
 | Kind | Recognized by | Reaches | Built |
 |---|---|---|---|
 | **Applicant** (*Candidate*, ruling 71) | their application | `/me`: the exercises open to them, their applications, and what is released to applicants | Placeholder pages; per-person gating in AD2D |
-| **Invitee** | an *Invitation only* exercise's invitee list | as an Applicant, for that exercise | AD2B |
+| **Invitee** | an *Invitation only* exercise's invitee list | as an Applicant, for that exercise | AD2C |
 | **Evaluator** | membership of a panel a gate draws on | the dossiers they evaluate, `/me/…/dossiers/<id>`, showing only items granted to *Assigned evaluators* or *Evaluators* (ruling 68); they respond in Review Robin, never in Apply Desk | AD2E, AD4, AD5 |
 
 | **Observer** | named on an exercise as observing it (pre-positioned: the model has a place for them; nothing is built until a later segment) | `/me`: what the exercise grants observers, read-only, as Review Robin's observers read `/me/sessions/<id>/collation` | Later |
@@ -131,7 +139,7 @@ super-admin).
 | Make an exercise, becoming its Owner | — | ✓ | ✓ | ✓ | ✓ | ✓, once bound |
 | Set up and run an exercise; read every dossier item | — | — | ○ | ○ | via adopt | via adopt |
 | Add or remove operators; Make Owner; demote; transfer | — | — | — | ○ | via adopt | via adopt |
-| Purge and archive; delete an exercise | — | — | — | ○ | via adopt | via adopt |
+| Archive, restore, purge or delete an exercise | — | — | — | ○ | via adopt | via adopt |
 | Admin → Exercises Diagnostics: every exercise, its Owners, Outbox, Audit log | — | — | — | — | ✓ | ✓ |
 | Admin → Accounts Management: Admit and Revoke Operators | — | — | — | — | ✓ | ✓ |
 | Promote and demote Admins | — | — | — | — | only when no super-admin is configured | ✓ |
@@ -159,7 +167,7 @@ role, so every change has an Owner on record.
 |---|---|---|
 | `/operator/…` (the Lobby, making an exercise) | an Operator, Admin or the super-admin | Yes |
 | An exercise's pages, `/operator/exercises/<id>/…` | its operators and Owners, an Admin or the super-admin among them once adopted | Yes |
-| Owner-only posts (operators, ownership, purge, delete) | its Owners | Operators and ownership: yes. Purge and delete: to build |
+| Owner-only posts (operators, ownership, archive, restore, purge, delete) | its Owners | Operators and ownership, archive, restore and delete: yes. Purge: to build (AD2D) |
 | `/admin/…` | Admins and the super-admin | Yes |
 | `/me/…` | participants, by their records (§4) | Behind the placeholders' gate |
 | `/` and `/operator` | an operator lands on the Lobby; anyone else on the User Lobby | Yes |
@@ -243,7 +251,8 @@ Every change writes an `audit_event` with the actor.
 | `exercise.owner_demoted` | an Owner made an operator, or stepping down | No |
 | `exercise.operator_left` | an operator leaves | No |
 | `exercise.adopted` | an Admin or the super-admin adopts an exercise as Owner (not when already an Owner) | Yes |
-| `exercise.deleted`, `exercise.archived` | an Owner deletes, or purges and archives | No |
+| `exercise.archived`, `exercise.restored`, `exercise.deleted` | an Owner archives (*Purge and archive* too, which only archives), restores, or deletes | Yes |
+| `exercise.settings_recorded`, `exercise.details_changed`, `exercise.duplicated` | an exercise's settings recorded from the sample (the seed), changed (Details' *Lock*, the Lobby's *Save* and tag actions), or copied | Yes |
 | `person.promoted`, `person.demoted` | Admin granted, taken away; a Promote that lists someone also writes `person.admitted` | Yes |
 
 ## 10. Open

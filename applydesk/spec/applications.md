@@ -1,10 +1,12 @@
 # Apply Desk as the host sees it
 
 > **Built:** every page below, as a working scaffold on sample data, behind
-> a real check of who may reach it. Every move works on screen; a sample
-> exercise saves nothing until a later AD2 segment, a
-> scratch exercise is held in the server's memory ("Scratch exercises"),
-> and nothing is sent to Review Robin until AD6.
+> a real check of who may reach it. Every move works on screen. An
+> exercise's own settings (Details, the Lobby's name, code and tags, its
+> archive) are stored in the database; the rest of a sample exercise saves
+> nothing until a later AD2 segment, a scratch exercise's other pages are
+> held in the server's memory ("Scratch exercises"), and nothing is sent to
+> Review Robin until AD6.
 
 Apply Desk's contract with the Cordware host. The host's side is
 `cordware/spec/host.md`; this file states only what Apply Desk adds. The
@@ -54,6 +56,7 @@ participant's `applydesk/routes_me.py`, the Admins' (and the super-admin's)
 | `/health` | Health (above) |
 | `/`, `/operator` | No page: they land by role (below) |
 | `/operator/exercises` | The Operator Lobby: the exercises the viewer owns or operates, in two cards over one table |
+| `/operator/exercises/archived` | The Archive: the archived exercises, each with *Restore* |
 | `/operator/exercises/<id>` | Exercise Home: the timeline and Details |
 | `…/<id>/process` | Process: stages, gates, outcomes, their rules, and which items email whom |
 | `…/<id>/form` | Form: the application form builder |
@@ -333,8 +336,13 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
   Dossiers', hovers its cells); no sticky header. A click on a header cycles
   its column up, down and off, and shift-click adds it to a cascade (`1↑`,
   `2↓`), as Review Robin's.
-- **Dates**: applicant pages keep friendly dates; operator pages in sample data
-  are preformatted strings until AD2.
+- **Dates** are worded by `applydesk/clock.py`, and no page words one itself.
+  Applicant pages and a dated context keep friendly dates: `short` (*4 Dec*)
+  and `span`, a range with its year said once (*1–30 Sep 2026*, *1 Sep – 4 Dec
+  2026*). Operator pages print a stored moment as `YYYY-MM-DD HH:MM` in the
+  exercise's own timezone (`stamp`). Today is `clock.today`'s: the sample's
+  fixed day while the sample's stages stand, since they are dated around it,
+  and the wall clock's in the exercise's timezone once stages are stored.
 
 ## The lobbies and the applicant's application
 
@@ -342,23 +350,24 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
   `routes_operator.exercises`), laid out as Review Robin's Sessions lobby: two
   cards over one table of the exercises the viewer owns or operates (the
   super-admin and Admins included; the others are on Exercises Diagnostics),
-  newest *Created* first (`sample_data.newest_first`), this
+  newest *Created* first by default (`sample_data.newest_first`), this
   browser's scratch exercises among them, not ahead of them. One not recorded
-  goes last.
+  goes last. The rows come from the database: an archived or deleted
+  exercise is not in the Lobby.
   - **Cards.** *Exercises*: a chip for the total, then one per status in
     `locks.STATUS_ORDER` (`locks.status_counts`, empty ones kept, so the chips
     add up to the total), then *Show exercises tagged with:* the tags shown
     (`sample_data.all_tags`), *OR* and *Clear*. *Filter*: a box (name, code
     or tag), *Clear*, *New exercise* (Primary; opens the scratch form below)
-    and *Go to Archive*.
+    and *Go to Archive* (the Archive, below).
   - **Columns**, in order: *Exercise* (its name, linking Home), *Exercise
     code* (*Not set* when none; the public ID shows only in the link), *Created
     by*, *Created*, *Timezone*, *Status*, *Tags*, and a tick box. Every
     column but *Tags* and the tick sorts; *Created* carries the descending
-    arrow.
+    arrow by default.
     - *Created* is `YYYY-MM-DD HH:MM` in the exercise's own timezone
-      (`sample_data.created_label`); the stamp holds its UTC offset, so it
-      follows a timezone Details sets later.
+      (`sample_data.created_label`, `clock.stamp`); the stamp holds its UTC
+      offset, so it follows a timezone Details sets.
     - *Timezone* is a chip of the offset now (`GMT+8`, `GMT+5:30`, `GMT`),
       the zone's name as its title (`sample_data.utc_offset`).
     - *Status* is the state chip (`locks.exercise_status`) over *Stage N of
@@ -367,20 +376,21 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
       is the number of the stage holding the next step, or the last once
       every step is done; M counts the exercise's stages.
     - *Created by* is the exercise's current Owners on record, comma-separated
-      (`operators.owner_labels`), until AD2B records who made each; *—*
-      where there is none, as before the local seed has run. A scratch
+      (`operators.owner_labels`; the exercise's `created_by_id` is stored but
+      the column does not read it); *—* where there is none, as before the
+      local seed has run. A scratch
       exercise's Owner is whoever made it, until ownership is handed over;
       then it reads the new Owner.
-    - *Tags* are `Exercise.tags` (sample values; *No tags* when none).
+    - *Tags* are the exercise's stored tags (*No tags* when none).
   - **The tick panel**, Review Robin's. Ticked rows are highlighted and one
     panel sits under the most recently ticked row still ticked; unticking
     every row closes it. The header box ticks every row shown and shows a dash
     when only some are ticked.
     - **One row ticked**: *Name*, *Exercise code* and *Tags* (filled from the
       row), *Yes, delete*, *Archive after purging* with Applications,
-      Dossiers and Audit log; buttons *Save*, *Cancel*, *Duplicate*,
-      *Duplicate settings only*, *Purge and archive* (Outline-amber),
-      *Delete* (Destructive). There is no deadline field: an exercise's dates
+      Dossiers and Audit log (disabled: purging waits for AD2D); buttons
+      *Save*, *Cancel*, *Duplicate*, *Duplicate settings only*, *Purge and
+      archive* (Outline-amber), *Delete* (Destructive). There is no deadline field: an exercise's dates
       are its stages', set on Process.
     - **Several**: *Tags*, the same delete and purge controls; buttons
       *Cancel*, *Unselect others*, *Unselect all*, *All tags to all*, *Remove
@@ -388,14 +398,66 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     - ***Cancel*** unticks the row the panel sits under, so the panel moves
       back to the row ticked before it (the tick order is kept). *Unselect
       others* keeps only that row ticked; *Unselect all* unticks every row.
-  - **Inert until AD2B**, each disabled with a "… is not built yet" title:
-    sorting, the tag chips, *OR*, *Clear* (both), the filter box, *Go to
-    Archive*, and every panel field and action except *Cancel*, *Unselect
-    others* and *Unselect all*, which only untick rows in the browser.
-    *New exercise*, the tick boxes and the panel's opening work.
-- **Scratch exercises** (`applydesk/scratch.py`). Until AD2 stores
-  anything, an operator sets an exercise up end to end in one that is held
-  in the server's memory and never written anywhere.
+  - **Sorting, tags and the filter** ride the query string (`sort`, `dir`,
+    `tag`, `any`, `q`; `applydesk/lobby.py`), so a reload or a shared link
+    keeps them. A header sorts by its column, ascending (*Created*: newest
+    first), and again the other way; a row with no value in the sorted column goes last either way, ties keeping
+    *Created*, newest first. Each `tag` chip narrows to exercises carrying
+    every chosen tag; *OR* (`any=1`) shows those carrying any. The filter
+    keeps exercises whose name, code or a tag contains the text, ignoring
+    case. The filter's *Clear* drops the text, the chips' *Clear* every
+    chosen tag, and a chip pressed again drops its tag.
+    An unknown value is ignored, never echoed. A panel post returns to the
+    Lobby with the query kept.
+  - **The panel posts** to `/operator/exercises/panel` (`routes_operator.exercises_panel`):
+    a same-site form post of at most `scratch.MAX_BODY`; it ends on the
+    Lobby with a status line chosen by key (`routes_operator.SAID`). Every
+    ticked exercise must be one the viewer operates.
+    - *Save* (one row): name, code and tags, revision-guarded: the Lobby
+      names the revision each row was drawn at, and a save over a newer one
+      is refused and saves nothing. The name is 1–200 characters and the code
+      at most 40, held by no other live exercise, ignoring case; a blank
+      code stores none. A published exercise's code is fixed here as on
+      Details (G2): the panel shows it read-only and the server refuses a
+      change, while its name and tags still save.
+    - *All tags to all* and *Remove from all* (several rows): the typed tags
+      added to, or taken from, each ticked exercise; an exercise that would
+      pass 20 tags refuses the lot.
+    - *Duplicate settings only*: a new Draft exercise with the source's
+      settings and tags, named *Copy of <name>* with no code, its Owner the
+      viewer. It is made as *New exercise* makes one, counts toward the five a
+      browser may hold, and lands on its Home. *Duplicate*, which would copy
+      the whole setup, stays disabled: it waits for stages, forms and
+      applications to be stored (AD2C–AD2F).
+    - *Purge and archive* **archives only**: purging waits for AD2D's stored
+      applications, so the Archive after purging boxes stay disabled and the
+      button's title says so.
+    - *Delete* asks first (*Yes, delete* must be ticked, else *Not
+      deleted*). The exercise leaves every page, and its row, grants and
+      audit trail stay (nothing is hard-deleted).
+    - *Archive*, *Restore* and *Delete* are Owner-only
+      (`applydesk/spec/permissions.md` §3): the server refuses an operator,
+      saying so, and does nothing for any of a ticked set when one is refused.
+      The panel does not disable them for an operator.
+    - Each change is audited (`applydesk/spec/architecture.md` "Audit").
+  - **The Archive** (`/operator/exercises/archived`,
+    `routes_operator.exercises_archived`): the archived exercises the viewer
+    operates, newest archived first, as the Lobby's table with an *Archived* column (the
+    moment, `clock.stamp`, the fixed sort) and a *Restore* button on each row, filtered by
+    tag and text as the Lobby. *Restore* posts to
+    `/operator/exercises/archived/restore`, an Owner's: it returns the
+    exercise to the Lobby, unless another live exercise has taken its code
+    since, when it is refused saying so and the exercise stays archived. An
+    archived exercise frees its code. With none archived the page says an
+    Owner archives one from the Lobby's panel.
+  - **Still inert**, each disabled with a "… is not built yet" title or one
+    saying what it waits for: *Duplicate* and the purge boxes (above).
+    *Cancel*, *Unselect others* and *Unselect all* only untick rows in the
+    browser. *New exercise*, the tick boxes and the panel's opening work.
+- **Scratch exercises** (`applydesk/scratch.py`). Until AD2 stores the
+  rest, an operator sets an exercise up end to end in one whose stages,
+  form, panels and emails are held in the server's memory and never written
+  anywhere. Its settings are the database's, as any exercise's (Details).
   - **Making and keeping.** *New exercise* opens a form asking for a name
     (1–200 characters); *Create* makes a blank draft, as *Graduate Travel
     Grant 2027* (one stage holding the form, nothing else), and lands on its
@@ -427,18 +489,15 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     Evaluations show their empty states.
   - **A save** is a same-site JSON post (403 for another site, 415 for
     non-JSON, 400 for malformed JSON) of at most `scratch.MAX_BODY`
-    (256 KiB; 413 past it). The page says *Saved to this scratch
-    exercise.* or the reason it was refused, and a saved page's *Unsaved
-    changes* marker clears. A page edited while its save was on the way
+    (256 KiB; 413 past it). The page (Details apart, which saves to the
+    database) says *Saved to this scratch exercise.* or the reason it was
+    refused, and a saved page's *Unsaved changes* marker clears. A page edited while its save was on the way
     stays unsaved. Shapes are checked, not the plan: what a page flags
     itself (dates out of order, weights not adding up, a rule pointing at a
     removed gate) is kept as left and flagged again; only what has no shape
     to be kept in is refused.
-  - **Details** (*Lock*, to `…/details`): a name of 1–200 characters, a code
-    of at most 40 that no other exercise holds (case-insensitively), a
-    description of at most 2,000, a help contact that is an address (or
-    none), a timezone offered, who may apply one of the choices, *Blind* a
-    flag. A refusal points at the field it names.
+  - **Details** (*Lock*, to `…/details`) is not kept here: it saves to the
+    database for every exercise ("Details").
   - **Form** (to `…/form`, `applydeskFormSnapshot`): at most 200 cards, a
     title of at most 200 characters, a description of at most 4,000; each
     card of a known kind, a field of a type offered, its text within its
@@ -651,7 +710,7 @@ include.
   says where it stands: *Done* when its last date has passed
   (*Closed* for the stage holding the form), *Now* when today falls within it,
   *Next* otherwise (the calendar's, apart from the stage's status); a stage with no (or impossible) dates is *Next* and reads
-  *Dates not set*. Today is the sample's until AD2, marked on the current
+  *Dates not set*. Today is `clock.today`'s (the sample's fixed day until stages are stored), marked on the current
   stage at its share of that stage's days. The marker reads *Now · until
   <the stage's last date>* (*Now* when it has none); between stages the
   line under the timeline says where today falls.
@@ -721,16 +780,34 @@ Unlocked, each is a field with a line saying where it is used.
   the last kept values, saying *Changes discarded.* only when something
   changed. *Unsaved changes* shows, and the browser warns on leaving, from
   any change since load.
-- *Lock* refuses an empty Name, an Exercise code another exercise holds (any
-  case, saying whose) and a Help contact that is not an email address. The
-  Timezone is chosen from `sample_data.TIMEZONES`, the default first.
+- *Lock* refuses an empty Name (at most 200 characters), an Exercise code of
+  more than 40 characters or one a live exercise holds (any case, saying
+  whose), a Description of more than 2,000 characters, and a Help contact that
+  is not an email address. The Timezone is chosen from `sample_data.TIMEZONES`,
+  the default first. A refusal points at the field it names.
 - A published exercise's Exercise code and Who may apply are fixed, saying
   so; changing them waits for re-publishing (G2).
 - **Blind review** is fixed, with its reason, once the first stage holding a
   gate is published (`locks.blind_lock`).
-- On a sample exercise nothing is saved until AD2: a reload restores the
-  sample. A scratch exercise's *Lock* saves. Process shows
-  Help contact and Timezone read-only.
+- **The server refuses what the page locks**: a changed Exercise code or Who
+  may apply on a published exercise, and a changed Blind review once it is
+  fixed, are refused whatever the post says.
+- **Saved to the database**, for any exercise the viewer operates, sample or
+  scratch: *Lock* posts JSON to `…/details` (`routes_operator.exercise_details`;
+  415 for non-JSON, 413 past `scratch.MAX_BODY`), and a reload or a restart
+  shows the saved values. The post names the revision the page opened at;
+  one older than the stored revision is refused with a 409 saying someone else
+  changed the details, saves nothing, and the page keeps the unsaved values.
+  An accepted save returns the new revision, which the page then names; a save
+  that changes nothing leaves the revision alone. A change is audited
+  `exercise.details_changed`.
+- **Unset is NULL**, never the text *Not set*, which the page prints: Who may
+  apply unset reads *Not set*; a Help contact or Timezone left unset, or
+  chosen as the default, is stored unset and reads the operator settings'
+  default followed by *· the default*. Who may apply is stored as `open`
+  (*Open to all signed in*) or `invitation` (*Invitation only*); who is
+  invited is a stage item (AD2C).
+- Process shows Help contact and Timezone read-only.
 
 ## The Process page
 
@@ -970,7 +1047,7 @@ but the lobby's *Stage* column reads:
 - **Stage status** (ruling 35; author, 2026-11-18). Each stage is *Draft*,
   *Published*, *Overdue* or *Completed* (`locks.stage_status`); the operator
   declares only Draft and Published (`Stage.status`), the rest follow from its
-  end and its items, against the sample's now (`locks.NOW`; the page's script
+  end and its items, against now (midday of `clock.today`, as `clock.midday` gives it, the sample's fixed day until stages are stored; the page's script
   derives them again as an end moves). The status box, in the card's body, and
   its chip carry it.
   - **Publish stage** takes a Draft to Published, and is disabled, saying why,

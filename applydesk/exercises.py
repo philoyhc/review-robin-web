@@ -1,5 +1,5 @@
 """An exercise's own settings, stored (segment AD2B,
-`applydesk/guide/segment_AD2B_exercises.md`): name, code, description,
+`applydesk/guide/archive/segment_AD2B_exercises.md`): name, code, description,
 eligibility, blind, help contact, timezone and tags on the `exercise` row.
 
 The pages keep `sample_data.Exercise`'s shape until AD2G retires the

@@ -94,6 +94,30 @@ Taken 2026-11-22 at `579a52717`.
 | Test files on the Lobby | 11 | `grep -rln "operator/exercises\"" applydesk/tests` |
 | Migrations | 6; this adds two or three | `ls applydesk/alembic/versions` |
 
+## Status
+
+Closed 2026-11-22. Intended versus done:
+
+- **The ladder held:** plan #4135, the stored exercise #4136, Details #4137, the clock #4138, the Archive scaffold #4139, the Lobby wired #4140, and this close.
+- **Diverged at build:**
+  - The test seed records settings as the localhost seed does (rung 3), so Details' code check runs against the database.
+  - Tests that varied a sample's settings now set the stored row.
+  - Codex on #4137:
+    - Home reads an exercise's values and the revision Lock names in one read (`exercises.stored_at`).
+    - The save runs off the event loop.
+  - *Duplicate settings only* makes a scratch exercise whose row takes the settings. A stored exercise with no sample waits for AD2G.
+- **Scope added from the cumulative read** (in two parts at the rung 4 boundary, past 1,500 lines; one read each, both acted on in #4140):
+  - A deleted exercise leaves every page, Admin and `/me` included.
+  - The server holds the locks the page shows: a published exercise's code and who may apply, and blind review.
+  - A deleted scratch exercise frees its place.
+  - The Lobby's Save names the revision of the values it shows.
+  - An exercise's creator is recorded when it is made.
+- **Decisions confirmed at build:**
+  - Archive and Restore are Owner-only, as Delete is.
+  - A code or tag is measured as its casefolded key.
+  - *Purge and archive* archives only.
+- **Open for the author:** whether an archived exercise is read-only. The panel's Save and tag actions accept one by a hand-made post; the pages offer none.
+
 ## PR ladder
 
 1. **PR 1 — this plan.**
@@ -118,7 +142,7 @@ Taken 2026-11-22 at `579a52717`.
 
 - **Details on a sample exercise saves and survives a restart.** A stale Lock is refused (a new `test_exercises.py`).
 - **The Lobby sorts and filters through its query string.** Its tag chips filter with *OR*. Archive and Restore round-trip, and Delete removes the exercise from every page, by its Owner only (`test_pages.py`, `test_lobby_browser.py`).
-- **No "Not set" is stored** (`grep -rn '"Not set"' applydesk/exercises.py applydesk/seed.py` finds none).
+- **No "Not set" is stored:** `exercises._from_sample` and `details_from_page` map it to NULL (`test_not_set_is_stored_as_null`). The words stay in `exercises.py` as what pages print (`NOT_SET`). <!-- the grep as first written also matched the display constant -->
 - **AD-40, AD-54, AD-55, AD-60 and AD-97 are struck** in `applydesk/guide/ad2_deferred_findings.md`, each with its PR.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py AD2B` exits 0; any warning adjudicated
