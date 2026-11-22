@@ -371,7 +371,9 @@ def revoke(session: Session, actor: Actor, person: Person, reason: str | None = 
     )
     for exercise in owned:
         _lock(session, exercise)
-    if any(_owner_count(session, e) == 1 for e in owned):
+    # Only an Owner who can act holds the count up: revoking a pending or
+    # unlisted co-Owner leaves it as it was (Codex on #4145).
+    if counts_as_owner(person) and any(_owner_count(session, e) == 1 for e in owned):
         raise Refused(
             "The only Owner of a live exercise: hand its ownership over first.",
             key="sole_owner",

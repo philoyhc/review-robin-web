@@ -282,3 +282,18 @@ def test_a_move_reads_the_archive_under_the_lock(session: Session) -> None:
     with pytest.raises(Refused) as no:
         operators.make_owner(session, exercise, Actor(ann), ben)
     assert no.value.key == "archived"
+
+
+def test_revoking_a_pending_co_owner_is_not_held(session: Session) -> None:
+    """Codex on #4145: Ann, signed in, stays the Owner who can act, so a
+    pending co-Owner's access may be withdrawn."""
+    exercise, ann, _, _ = _exercise(session)
+    pat = people.pending(session, "pat@x.edu", actor=None)
+    operators.admit(session, SUPER, pat)
+    operators.add_operator(session, exercise, Actor(ann), pat)
+    operators.make_owner(session, exercise, Actor(ann), pat)
+    session.commit()
+    operators.revoke(session, SUPER, pat)
+    session.commit()
+    session.refresh(pat)
+    assert not pat.may_operate
