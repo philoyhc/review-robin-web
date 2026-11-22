@@ -8,8 +8,11 @@ from __future__ import annotations
 import math
 import random
 import re
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, replace
+from datetime import UTC, datetime
 from typing import Any, TypedDict, cast
+from zoneinfo import ZoneInfo
 
 
 @dataclass(frozen=True)
@@ -30,6 +33,11 @@ class Exercise:
     # defaults below, as Review Robin's sessions take its own.
     help_contact: str = ""
     timezone: str = ""
+    # The Operator Lobby's Created and Tags (segment AD1T): sample values
+    # until AD2B records them; ``created`` is ISO local time in the
+    # exercise's timezone, "" for none.
+    created: str = ""
+    tags: tuple[str, ...] = ()
 
 
 #: Apply Desk's operator settings' defaults for a new exercise (a sample
@@ -57,6 +65,29 @@ def help_contact(e: Exercise) -> str:
 def timezone(e: Exercise) -> str:
     """The exercise's timezone, or the operator settings' default."""
     return e.timezone or DEFAULT_TIMEZONE
+
+
+def utc_offset(zone: str, at: datetime | None = None) -> str:
+    """``zone``'s offset from UTC at ``at`` (now by default), as the
+    Operator Lobby prints it: "GMT+8", "GMT+5:30", "GMT-4", "GMT"."""
+    off = (at or datetime.now(UTC)).astimezone(ZoneInfo(zone)).utcoffset()
+    minutes = int(off.total_seconds() // 60) if off else 0
+    if not minutes:
+        return "GMT"
+    sign = "+" if minutes > 0 else "-"
+    hours, rest = divmod(abs(minutes), 60)
+    return f"GMT{sign}{hours}" + (f":{rest:02d}" if rest else "")
+
+
+def created_label(e: Exercise) -> str:
+    """When the exercise was created, as the Lobby prints it
+    ("2026-08-04 09:12"), or "" when not recorded."""
+    return e.created.replace("T", " ")[:16]
+
+
+def all_tags(exercises: Iterable[Exercise]) -> list[str]:
+    """Every tag on ``exercises``, once each, sorted ignoring case."""
+    return sorted({t for e in exercises for t in e.tags}, key=str.casefold)
 
 
 @dataclass(frozen=True)
@@ -140,6 +171,8 @@ EXERCISES: tuple[Exercise, ...] = (
             " the 2027/28 academic year; current RAs may apply to return."
         ),
         help_contact="ra-recruitment@example.edu",
+        created="2026-08-04T09:12",
+        tags=("Residential", "2027"),
     ),
     Exercise(
         public_id="k7mfr3pq8z",
@@ -153,6 +186,8 @@ EXERCISES: tuple[Exercise, ...] = (
         application_stage_ends="31 Oct 2026, 23:59",
         expected_outcome="December 2026",
         summary="Nominated teachers submit a teaching portfolio; a panel reads it blind.",
+        created="2026-07-21T14:30",
+        tags=("Awards",),
     ),
     Exercise(
         public_id="c4xh2ndv6s",
@@ -166,6 +201,8 @@ EXERCISES: tuple[Exercise, ...] = (
         application_stage_ends="Not set",
         expected_outcome="Not set",
         summary="Placements with partner organizations over the summer vacation.",
+        created="2026-10-30T16:45",
+        tags=(),
     ),
     # Open for applications, now that the model exercise is past its
     # Call for applications (segment AD1C).
@@ -181,6 +218,8 @@ EXERCISES: tuple[Exercise, ...] = (
         application_stage_ends="31 Jan 2027, 23:59",
         expected_outcome="Early March 2027",
         summary="Travel and registration for presenting at an international conference.",
+        created="2026-10-06T10:02",
+        tags=("Grants", "2027"),
     ),
     # Just created: a name and nothing else, awaiting setup (author,
     # 2026-11-12).
@@ -196,6 +235,8 @@ EXERCISES: tuple[Exercise, ...] = (
         application_stage_ends="Not set",
         expected_outcome="Not set",
         summary="",
+        created="2026-11-12T15:40",
+        tags=("Grants",),
     ),
 )
 

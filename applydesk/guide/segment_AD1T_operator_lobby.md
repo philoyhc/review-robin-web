@@ -50,6 +50,9 @@ Rejected: a separate *With ticked exercises* bar above the table, as first mocke
 
 - The purge options are Applications, Dossiers and Audit log, in place of Review Robin's Responses, Rosters and Audit log.
 - The panel takes Apply Desk's accent tint, not Review Robin's blue.
+- Created by reads the signed-in operator's name on every row, sample and scratch, until AD2B records who made each (2026-11-22): the sample exercises are the viewer's own in AD1's sample, as the author read them.
+- The rows stand newest first, as Created's arrow says; clicking a header stays inert (2026-11-22).
+- The panel's *Cancel*, *Unselect others* and *Unselect all* work, since they only untick rows in the browser; every other action is inert (2026-11-22).
 
 ## Blast radius (measured)
 

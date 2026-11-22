@@ -726,6 +726,18 @@ def current_stage(exercise: Exercise) -> str:
     return plan.stages[-1].label if plan.stages else ""
 
 
+def stage_position(exercise: Exercise) -> tuple[int, int, str]:
+    """Where the exercise stands on Process, as the Operator Lobby's Status
+    prints it (segment AD1T): the current stage's number, how many stages,
+    and the stage's name ("" when unnamed), e.g. (3, 3, "Interviews")."""
+    plan = stages.plan_of(exercise.public_id)
+    if not plan.stages:
+        return (0, 0, "")
+    label = current_stage(exercise)
+    at = next((i for i, st in enumerate(plan.stages) if st.label == label), len(plan.stages) - 1)
+    return (at + 1, len(plan.stages), plan.stages[at].name)
+
+
 def panels_sent(exercise_id: str) -> dict[str, tuple[str, ...]]:
     """The opened gates each panel evaluates, by panel key (AD1F
     Semantics, ruling 29): a gate whose Review Robin session has opened

@@ -58,18 +58,34 @@ SECTIONS: dict[str, str] = dict(SETUP_PAGES + OPERATIONS_PAGES)
 
 @router.get("/exercises", name="applydesk_exercises")
 def exercises(request: Request) -> Response:
+    # Newest first, as the Created column's arrow says (segment AD1T): a
+    # scratch exercise, made now, before the sample's.
+    shown = sorted(
+        (e for e in sample_data.exercises() if gate.operates(request, e.public_id)),
+        key=lambda e: e.created,
+        reverse=True,
+    )
+    by_status = dict(locks.status_tally(shown))
     return render(
         request,
         "applydesk/operator/exercises.html",
         area=OPERATOR_LOBBY,
-        exercises=tuple(e for e in sample_data.exercises() if gate.operates(request, e.public_id)),
+        exercises=tuple(shown),
         is_scratch=scratch.is_scratch,
         scratch_limit=scratch.LIMIT,
         scratch_said=SAID.get(request.query_params.get("said", ""), ""),
         exercise_status=locks.exercise_status,
-        counts=workflow.counts_of,
-        current_stage=workflow.current_stage,
+        status_counts=[(s, by_status.get(s, 0)) for s in LOBBY_STATUSES],
+        stage_position=workflow.stage_position,
+        timezone=sample_data.timezone,
+        utc_offset=sample_data.utc_offset,
+        created_label=sample_data.created_label,
+        lobby_tags=sample_data.all_tags(shown),
     )
+
+
+#: The Lobby's Exercises card counts these, after the total (segment AD1T).
+LOBBY_STATUSES = ("Draft", "Published", "Completed", "Archived")
 
 
 def _same_site(request: Request) -> None:
