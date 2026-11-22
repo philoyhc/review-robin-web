@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from applydesk import db, operators, people, sample_data
+from applydesk import db, exercises, operators, people, sample_data
 from applydesk.models import Exercise
 from cordware.identity import Identity, is_local
 from cordware.settings import IdentitySettings, identity_settings
@@ -59,6 +59,8 @@ def seed(
     session: Session,
     owner_email: str | None = None,
     settings: IdentitySettings | None = None,
+    *,
+    record_settings: bool = True,
 ) -> SeedResult:
     """Give each sample exercise its row and its Owner; commit. Refused
     outside `APP_ENV=local`. Everything goes through `people` and
@@ -82,9 +84,12 @@ def seed(
     for sample in sample_data.exercises():
         exercise = session.scalar(select(Exercise).where(Exercise.public_id == sample.public_id))
         if exercise is None:
-            operators.create_exercise(session, operators.Actor(owner), sample.public_id)
+            exercise = operators.create_exercise(session, operators.Actor(owner), sample.public_id)
             exercises_added += 1
             grants_added += 1
+        # Its settings too (segment AD2B), once: a later save is kept.
+        if record_settings:
+            exercises.record_sample(session, exercise, sample, owner)
     session.commit()
     return SeedResult(owner_id=owner.id, exercises_added=exercises_added, grants_added=grants_added)
 

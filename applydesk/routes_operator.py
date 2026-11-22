@@ -36,6 +36,7 @@ from applydesk import (
     timeline,
     workflow,
 )
+from applydesk import exercises as exercise_store
 from applydesk.ids import RowId, row_id
 from applydesk.lookups import dossier_or_404, exercise_or_404
 from applydesk.web import (
@@ -59,7 +60,9 @@ SECTIONS: dict[str, str] = dict(SETUP_PAGES + OPERATIONS_PAGES)
 @router.get("/exercises", name="applydesk_exercises")
 def exercises(request: Request, session: Session = Depends(db.get_session)) -> Response:
     shown = sample_data.newest_first(
-        e for e in sample_data.exercises() if gate.operates(request, e.public_id)
+        e
+        for e in exercise_store.stored_all(sample_data.exercises())
+        if gate.operates(request, e.public_id)
     )
     return render(
         request,
@@ -596,7 +599,7 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         # clashing code on the page (segment AD1I Semantics).
         other_codes=[
             [e.code, e.name]
-            for e in sample_data.exercises()
+            for e in exercise_store.stored_all(sample_data.exercises())
             if e.code and e.public_id != exercise.public_id
         ],
     )

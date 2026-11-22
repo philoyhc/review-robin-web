@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from fastapi import HTTPException
 
-from applydesk import sample_data
+from applydesk import exercises, sample_data
 from applydesk.ids import is_public_id
 
 
@@ -16,7 +16,8 @@ def exercise_or_404(exercise_id: str) -> sample_data.Exercise:
     found = sample_data.exercise(exercise_id)
     if found is None:
         raise HTTPException(status_code=404)
-    return found
+    # Its stored settings over the sample's (segment AD2B).
+    return exercises.stored(found)
 
 
 def application_or_404(

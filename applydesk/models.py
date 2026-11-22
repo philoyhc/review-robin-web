@@ -16,6 +16,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    Text,
     UniqueConstraint,
     false,
     text,
@@ -91,17 +92,67 @@ class Person(Base):
 
 
 class Exercise(Base):
-    """An exercise's key and public ID (AD-53: unique per table). AD2B
-    adds its settings; until then they are the sample's."""
+    """An exercise: its public ID (AD-53: unique per table) and its own
+    settings (segment AD2B). `revision` 0 means no settings are recorded
+    yet (a row AD2A made); the pages then keep the sample's. NULL is unset,
+    never the text "Not set" (AD-60); a NULL help contact or timezone takes
+    the operator settings' default (AD-54). Nothing is hard-deleted
+    (ruling 74): `archived_at` and `deleted_at`."""
 
     __tablename__ = "exercise"
-    __table_args__ = (UniqueConstraint("public_id", name="uq_exercise_public_id"),)
+    __table_args__ = (
+        UniqueConstraint("public_id", name="uq_exercise_public_id"),
+        # One live exercise per code, ignoring case; archiving or deleting
+        # frees it (segment AD2B).
+        Index(
+            "uq_exercise_live_code",
+            "code_key",
+            unique=True,
+            sqlite_where=text(
+                "code_key IS NOT NULL AND archived_at IS NULL AND deleted_at IS NULL"
+            ),
+            postgresql_where=text(
+                "code_key IS NOT NULL AND archived_at IS NULL AND deleted_at IS NULL"
+            ),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     public_id: Mapped[str] = mapped_column(String(16), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_now
     )
+    name: Mapped[str | None] = mapped_column(String(200))
+    code: Mapped[str | None] = mapped_column(String(40))
+    code_key: Mapped[str | None] = mapped_column(String(40))  # the code, casefolded
+    description: Mapped[str | None] = mapped_column(Text)
+    eligibility: Mapped[str | None] = mapped_column(String(16))  # "open", "invitation"
+    blind: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
+    help_contact: Mapped[str | None] = mapped_column(String(320))
+    timezone: Mapped[str | None] = mapped_column(String(64))
+    created_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("person.id", name="fk_exercise_created_by")
+    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+
+class ExerciseTag(Base):
+    """One tag on an exercise (segment AD2B): kept in the case first typed,
+    unique per exercise ignoring case."""
+
+    __tablename__ = "exercise_tag"
+    __table_args__ = (UniqueConstraint("exercise_id", "label_key", name="uq_exercise_tag_label"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    exercise_id: Mapped[int] = mapped_column(
+        ForeignKey("exercise.id", name="fk_exercise_tag_exercise"), nullable=False, index=True
+    )
+    label: Mapped[str] = mapped_column(String(40), nullable=False)
+    label_key: Mapped[str] = mapped_column(String(40), nullable=False)
 
 
 class ExerciseOperator(Base):

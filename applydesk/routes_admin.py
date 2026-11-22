@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 from starlette.responses import JSONResponse, RedirectResponse, Response
 
-from applydesk import allowlist, db, directory, gate, locks, operators, sample_data
+from applydesk import allowlist, db, directory, exercises, gate, locks, operators, sample_data
 from applydesk.ids import row_id
 from applydesk.models import Exercise
 from applydesk.web import ADMIN, render, url_path
@@ -209,7 +209,7 @@ def exercises_page(
     """Exercises Diagnostics, a scaffold (the author's 2026-11-21 ask):
     the sample exercises, as Review Robin's Sessions Diagnostics, each
     with its Owner on record (2026-11-22)."""
-    rows = sample_data.EXERCISES
+    rows = exercises.stored_all(sample_data.EXERCISES)
     back_path, back_label = _back_link(return_to)
     return render(
         request,
