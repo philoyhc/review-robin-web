@@ -249,6 +249,39 @@ def test_the_super_admin_is_listed_as_self() -> None:
     assert after is not None and after.may_operate
 
 
+def test_the_super_admin_reads_operator_yes_though_not_listed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The author, 2026-11-22: Local Operator showed as no operator. The
+    super-admin operates every exercise by their identity (`gate.viewer`),
+    so their own row reads yes and shows the workspace Unit, listed or not."""
+    from datetime import UTC, datetime
+
+    from applydesk import seed
+
+    monkeypatch.setattr(identity_settings, "institution_name", "Example University")
+    admin = TestClient(host_with(("applydesk",))[0])
+    alone = admin.get("/applydesk/admin/operators").text
+    own = alone[alone.index("<tr data-op-self>") :]
+    own = own[: own.index("</tr>")]
+    assert 'title="The workspace default">Example University</span>' in own
+    session = db.new_session()
+    seed.seed(session)
+    me = session.scalar(select(Person).where(Person.object_id == "local-dev"))
+    assert me is not None
+    me.may_operate, me.revoked_at = False, datetime.now(UTC)  # off the list
+    session.commit()
+    pid = me.id
+    session.close()
+    page = admin.get(
+        "/applydesk/admin/operators?show=admins&show=operators&show=no_role&show=unused"
+    ).text
+    row = page[page.index(f'data-op-entry="{pid}"') :]
+    row = row[: row.index("</tr>")]
+    assert 'title="The super-admin operates every exercise">yes</span>' in row
+    assert 'title="The workspace default">Example University</span>' in row
+
+
 def test_workspace_users_scaffold() -> None:
     """AD2W rung 2: everyone on record in Review Robin's columns, the two
     panes over the table, the chips, the exercise role and the bulk bar
