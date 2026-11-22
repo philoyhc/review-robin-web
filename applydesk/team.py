@@ -92,6 +92,28 @@ def remove(session: Session, public_id: str, identity: Identity, person_id: int)
     operators.remove_operator(session, exercise, actor_for(session, identity), person)
 
 
-def make_owner(session: Session, public_id: str, identity: Identity, person_id: int) -> None:
+def transfer(session: Session, public_id: str, identity: Identity, person_id: int) -> None:
     exercise, person = _target(session, public_id, person_id)
-    operators.hand_over(session, exercise, actor_for(session, identity), person)
+    operators.transfer(session, exercise, actor_for(session, identity), person)
+
+
+def make_owner(session: Session, public_id: str, identity: Identity, person_id: int) -> None:
+    """*Make Owner* beside the others (segment AD2O)."""
+    exercise, person = _target(session, public_id, person_id)
+    operators.make_owner(session, exercise, actor_for(session, identity), person)
+
+
+def demote(session: Session, public_id: str, identity: Identity, person_id: int) -> None:
+    """*Make operator*, or *Step down* on the viewer's own row (AD2O)."""
+    exercise, person = _target(session, public_id, person_id)
+    operators.demote_owner(session, exercise, actor_for(session, identity), person)
+
+
+def leave(session: Session, public_id: str, identity: Identity, person_id: int) -> None:
+    """*Leave*: the viewer takes themself off (AD2O); `person_id` must be
+    their own, or nothing changes."""
+    exercise, person = _target(session, public_id, person_id)
+    actor = actor_for(session, identity)
+    if actor.person is None or actor.person.id != person.id:
+        raise operators.Refused("Only you can take yourself off.", key="not_self")
+    operators.leave(session, exercise, actor)

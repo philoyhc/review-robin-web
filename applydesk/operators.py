@@ -351,6 +351,33 @@ def revoke(session: Session, actor: Actor, person: Person, reason: str | None = 
         raise Refused("A super-admin's row is not changed here.", key="protected")
     if person.is_admin:
         raise Refused("An Admin is demoted before being taken off the list.", key="is_admin")
+    # Not while they are the only Owner of a live exercise: ownership is
+    # handed over first (`applydesk/spec/permissions.md` §8, as Review
+    # Robin's sole_owner). Each exercise they own is locked, in order,
+    # before its Owners are counted, so a demote cannot slip between.
+    owned = sorted(
+        session.scalars(
+            select(Exercise)
+            .join(ExerciseOperator, ExerciseOperator.exercise_id == Exercise.id)
+            .where(
+                ExerciseOperator.person_id == person.id,
+                ExerciseOperator.is_owner.is_(True),
+                ExerciseOperator.removed_at.is_(None),
+                Exercise.archived_at.is_(None),
+                Exercise.deleted_at.is_(None),
+            )
+        ),
+        key=lambda e: e.id,
+    )
+    for exercise in owned:
+        _lock(session, exercise)
+    # Only an Owner who can act holds the count up: revoking a pending or
+    # unlisted co-Owner leaves it as it was (Codex on #4145).
+    if counts_as_owner(person) and any(_owner_count(session, e) == 1 for e in owned):
+        raise Refused(
+            "The only Owner of a live exercise: hand its ownership over first.",
+            key="sole_owner",
+        )
     # Conditional, as `admit`: two revocations at once audit once.
     if not _changed(
         session,
@@ -365,6 +392,46 @@ def revoke(session: Session, actor: Actor, person: Person, reason: str | None = 
         .execution_options(synchronize_session=False),
     ):
         raise unlisted
+    # Again, now their row is held: a Transfer to them that committed while
+    # this waited on their row made them an Owner after the check above, so
+    # an exercise they own may now have no other Owner who can act. Refused,
+    # the change rolls back (cold read, AD2O).
+    now_owned = sorted(
+        session.scalars(
+            select(Exercise)
+            .join(ExerciseOperator, ExerciseOperator.exercise_id == Exercise.id)
+            .where(
+                ExerciseOperator.person_id == person.id,
+                ExerciseOperator.is_owner.is_(True),
+                ExerciseOperator.removed_at.is_(None),
+                Exercise.archived_at.is_(None),
+                Exercise.deleted_at.is_(None),
+            )
+        ),
+        key=lambda e: e.id,
+    )
+    # Each is locked, in order, before its Owners are counted again, as
+    # above: an exercise they came to own since the first check may have an
+    # Owner stepping down at this moment, whose count read this person's
+    # row before the update. Whichever of the two takes the lock second
+    # reads the other's change (Codex on #4145). A lock taken in the other
+    # order meets a deadlock, which `db.is_busy` reports as a lost race.
+    for exercise in now_owned:
+        _lock(session, exercise)
+    if any(_owner_count(session, e) == 0 for e in now_owned):
+        # A refusal changes nothing (`allowlist.bulk` keeps the batch's
+        # transaction): put back the row this call changed.
+        session.execute(
+            update(Person)
+            .where(Person.id == person.id)
+            .values(may_operate=True, revoked_at=None)
+            .execution_options(synchronize_session=False)
+        )
+        session.expire(person)
+        raise Refused(
+            "The only Owner of a live exercise: hand its ownership over first.",
+            key="sole_owner",
+        )
     session.refresh(person)
     audit.write_event(
         session,
@@ -515,16 +582,17 @@ def add_operator(session: Session, exercise: Exercise, actor: Actor, person: Per
 
 
 def remove_operator(session: Session, exercise: Exercise, actor: Actor, person: Person) -> None:
-    """Remove `person`; only the Owner (or the super-admin), and never the
-    Owner themself."""
+    """Remove `person`, an operator; only an Owner. An Owner is made an
+    operator first (`applydesk/spec/permissions.md` §3)."""
     _lock(session, exercise)
+    _not_archived(session, exercise)
     if not _is_owner(session, exercise, actor):
         raise Refused("Only the exercise's Owner removes operators.", key="not_owner")
     grant = _grant(session, exercise, person)
     if grant is None or grant.removed_at is not None:
         raise Refused("Not an operator of this exercise.", key="not_operator")
     if grant.is_owner:
-        raise Refused("The Owner cannot be removed; hand ownership over first.", key="is_owner")
+        raise Refused("An Owner is made an operator before being removed.", key="is_owner")
     removed = _changed(
         session,
         update(ExerciseOperator)
@@ -550,10 +618,13 @@ def remove_operator(session: Session, exercise: Exercise, actor: Actor, person: 
     )
 
 
-def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person) -> None:
-    """Make `person`, a current allowlisted operator, an Owner in the
-    actor's place; the actor stays an operator. Only an Owner."""
+def transfer(session: Session, exercise: Exercise, actor: Actor, person: Person) -> None:
+    """*Transfer ownership*: make `person`, a current allowlisted operator,
+    an Owner in the actor's place; the actor stays an operator. Only an
+    Owner. It never leaves the exercise without an Owner, so the last
+    Owner may transfer (`applydesk/spec/permissions.md` §3)."""
     _lock(session, exercise)
+    _not_archived(session, exercise)
     if not _is_owner(session, exercise, actor):
         raise Refused("Only the exercise's Owner hands ownership over.", key="not_owner")
     if not _allowed(session, person, hold=True):
@@ -562,7 +633,7 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
     if grant is None or grant.removed_at is not None:
         raise Refused("Add them as an operator first.", key="not_operator")
     if grant.is_owner:
-        raise Refused("Already the Owner.", key="already_owner")
+        raise Refused("Already an Owner.", key="already_owner")
     # The Owner handing over steps down: the actor's own grant (the
     # platform, acting as no one, hands over the first Owner's).
     former = session.scalar(
@@ -618,6 +689,159 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
         actor=actor.person,
         exercise=exercise,
         refs=refs,
+    )
+
+
+def counts_as_owner(person: Person) -> bool:
+    """Whether an Owner keeps the exercise run: signed in, and on the
+    operator list or the super-admin, whose grants count unlisted
+    (`_may_act`, ruling 75; Codex on #4145). The predicate `_owner_count`
+    counts by."""
+    if person.object_id is None:
+        return False
+    return bool(person.may_operate) or is_protected(person)
+
+
+def _owner_count(session: Session, exercise: Exercise) -> int:
+    """The exercise's current Owners who can act (`counts_as_owner`), read
+    under its row lock (`_lock`): one revoked from the operator list keeps
+    their grant but reaches nothing, and one never signed in reaches
+    nothing until bound, so neither counts (else the last Owner who can
+    act could step down beside them)."""
+    return sum(
+        1
+        for person in session.scalars(
+            select(Person)
+            .join(ExerciseOperator, ExerciseOperator.person_id == Person.id)
+            .where(
+                ExerciseOperator.exercise_id == exercise.id,
+                ExerciseOperator.is_owner.is_(True),
+                ExerciseOperator.removed_at.is_(None),
+            )
+            .execution_options(populate_existing=True)
+        )
+        if counts_as_owner(person)
+    )
+
+
+def _not_archived(session: Session, exercise: Exercise) -> None:
+    """An archived exercise is read-only until restored (#4142). Read
+    fresh under the row lock `_lock` took, which `exercises.archive` takes
+    too: the copy loaded before it may predate an archive (Codex on
+    #4145)."""
+    session.refresh(exercise, attribute_names=["archived_at"])
+    if exercise.archived_at is not None:
+        raise Refused("Archived: restore it to change who runs it.", key="archived")
+
+
+def make_owner(session: Session, exercise: Exercise, actor: Actor, person: Person) -> None:
+    """*Make Owner* (segment AD2O): `person`, a current operator on the
+    operator list, becomes an Owner beside the others. Only an Owner."""
+    _lock(session, exercise)
+    _not_archived(session, exercise)
+    if not _is_owner(session, exercise, actor):
+        raise Refused("Only an Owner makes Owners.", key="not_owner")
+    if not _allowed(session, person, hold=True):
+        raise Refused("Only someone on the operator list can own an exercise.", key="not_listed")
+    grant = _grant(session, exercise, person)
+    if grant is None or grant.removed_at is not None:
+        raise Refused("Add them as an operator first.", key="not_operator")
+    if grant.is_owner:
+        raise Refused("Already an Owner.", key="already_owner")
+    if not _changed(
+        session,
+        update(ExerciseOperator)
+        .where(
+            ExerciseOperator.id == grant.id,
+            ExerciseOperator.removed_at.is_(None),
+            ExerciseOperator.is_owner.is_(False),
+        )
+        .values(is_owner=True)
+        .execution_options(synchronize_session=False),
+    ):
+        raise Refused("They have just changed; reload and try again.", key="changed")
+    session.expire(grant)
+    audit.write_event(
+        session,
+        event_type="exercise.owner_added",
+        actor=actor.person,
+        exercise=exercise,
+        refs={"person_id": person.id},
+    )
+
+
+def demote_owner(session: Session, exercise: Exercise, actor: Actor, person: Person) -> None:
+    """*Make operator*, or *Step down* when `person` is the actor (segment
+    AD2O): an Owner becomes an operator. Only an Owner, and never the last
+    one (`applydesk/spec/permissions.md` §8): the count is read under the
+    row lock, so two Owners demoting each other cannot both succeed."""
+    _lock(session, exercise)
+    _not_archived(session, exercise)
+    if not _is_owner(session, exercise, actor):
+        raise Refused("Only an Owner changes who owns the exercise.", key="not_owner")
+    grant = _grant(session, exercise, person)
+    if grant is None or grant.removed_at is not None or not grant.is_owner:
+        raise Refused("Not an Owner of this exercise.", key="not_an_owner")
+    # Only an Owner who can act is guarded: demoting a revoked or pending
+    # co-Owner takes no acting Owner away (cold read, AD2O).
+    if counts_as_owner(person) and _owner_count(session, exercise) <= 1:
+        raise Refused(
+            "The only Owner stays one: make another Owner or transfer first.", key="last_owner"
+        )
+    if not _changed(
+        session,
+        update(ExerciseOperator)
+        .where(
+            ExerciseOperator.id == grant.id,
+            ExerciseOperator.removed_at.is_(None),
+            ExerciseOperator.is_owner.is_(True),
+        )
+        .values(is_owner=False)
+        .execution_options(synchronize_session=False),
+    ):
+        raise Refused("They have just changed; reload and try again.", key="changed")
+    session.expire(grant)
+    audit.write_event(
+        session,
+        event_type="exercise.owner_demoted",
+        actor=actor.person,
+        exercise=exercise,
+        refs={"person_id": person.id},
+        context={"stepped_down": actor.person is not None and actor.person.id == person.id},
+    )
+
+
+def leave(session: Session, exercise: Exercise, actor: Actor) -> None:
+    """*Leave* (segment AD2O): an operator takes themself off. An Owner
+    steps down first (`applydesk/spec/permissions.md` §3)."""
+    _lock(session, exercise)
+    _not_archived(session, exercise)
+    if actor.person is None:
+        raise Refused("Not an operator of this exercise.", key="not_operator")
+    grant = _grant(session, exercise, actor.person)
+    if grant is None or grant.removed_at is not None:
+        raise Refused("Not an operator of this exercise.", key="not_operator")
+    if grant.is_owner:
+        raise Refused("An Owner steps down to operator before leaving.", key="owner_leaving")
+    if not _changed(
+        session,
+        update(ExerciseOperator)
+        .where(
+            ExerciseOperator.id == grant.id,
+            ExerciseOperator.removed_at.is_(None),
+            ExerciseOperator.is_owner.is_(False),
+        )
+        .values(removed_at=_now())
+        .execution_options(synchronize_session=False),
+    ):
+        raise Refused("You have just been made an Owner or removed; reload.", key="changed")
+    session.expire(grant)
+    audit.write_event(
+        session,
+        event_type="exercise.operator_left",
+        actor=actor.person,
+        exercise=exercise,
+        refs={"person_id": actor.person.id},
     )
 
 

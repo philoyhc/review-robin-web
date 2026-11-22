@@ -6,6 +6,7 @@ operator included, gets 404 on every operator route."""
 from __future__ import annotations
 
 import re
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.routing import APIRoute
@@ -111,7 +112,9 @@ def test_a_revoked_operator_gets_404_everywhere_and_back_when_readmitted(
     seed.seed(session)
     me = session.scalar(select(Person).where(Person.object_id == "local-dev"))
     assert me is not None
-    operators.revoke(session, SUPER, me)
+    # Revoked as the list records it. The service refuses a sole Owner
+    # (segment AD2O, `test_owners.py`); this tests what the gate does.
+    me.may_operate, me.revoked_at = False, datetime.now(UTC)
     session.commit()
     _all_404(client)
     assert client.get("/applydesk/", follow_redirects=False).headers["location"].endswith("/me")

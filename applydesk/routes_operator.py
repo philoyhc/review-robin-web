@@ -792,6 +792,17 @@ OPS_SAID: dict[str, str] = {
     "not_operator": "Add them as an operator first.",
     "gone": "That person is no longer on record; look again.",
     "changed": "Someone else changed the operators just now; look again and retry.",
+    # The ownership moves (segment AD2O).
+    "made_owner": "Made an Owner.",
+    "demoted": "Made an operator.",
+    "stepped_down": "You stepped down to operator.",
+    "left": "You left the exercise.",
+    "last_owner": "The only Owner stays one: make another Owner or transfer first.",
+    "not_an_owner": "They are not an Owner of this exercise.",
+    "owner_leaving": "An Owner steps down to operator before leaving.",
+    "not_self": "Only you can take yourself off.",
+    "archived": "Archived: restore it to change who runs it.",
+    "sole_owner": "The only Owner of a live exercise: hand its ownership over first.",
 }
 
 
@@ -860,7 +871,7 @@ def operators_remove(request: Request, exercise_id: str, person_id: RowId) -> Re
     "/exercises/{exercise_id}/operators/{person_id}/owner", name="applydesk_operators_owner"
 )
 def operators_owner(request: Request, exercise_id: str, person_id: RowId) -> Response:
-    return _ops_change(request, exercise_id, team.make_owner, person_id, "owner")
+    return _ops_change(request, exercise_id, team.transfer, person_id, "owner")
 
 
 @router.get("/exercises/{exercise_id}", name="applydesk_exercise_home")

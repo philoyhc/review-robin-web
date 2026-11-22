@@ -210,9 +210,9 @@ def test_the_owner_adds_removes_and_hands_over(session: Session) -> None:
         operators.add_operator(session, exercise, Actor(owner), colleague)
     with pytest.raises(Refused, match="Owner adds"):
         operators.add_operator(session, exercise, Actor(colleague), outsider)
-    with pytest.raises(Refused, match="cannot be removed"):
+    with pytest.raises(Refused, match="made an operator before being removed"):
         operators.remove_operator(session, exercise, Actor(owner), owner)
-    operators.hand_over(session, exercise, Actor(owner), colleague)
+    operators.transfer(session, exercise, Actor(owner), colleague)
     assert operators.owners_of(session, exercise) == [colleague]
     assert [(p.id, o) for p, o in operators.current_operators(session, exercise)] == [
         (colleague.id, True),
@@ -242,12 +242,13 @@ def test_revoking_ends_access_but_keeps_the_grant(session: Session) -> None:
     assert operators.operated_exercises(session, Actor(colleague)) == []
     operators.admit(session, SUPER, colleague)
     assert operators.operated_exercises(session, Actor(colleague)) == [exercise]
-    # A revoked Owner keeps the row; the super-admin hands it over.
+    # A revoked Owner keeps the row but acts no more. A sole Owner is not
+    # revoked (segment AD2O), so another Owner is made first.
+    operators.make_owner(session, exercise, Actor(owner), colleague)
     operators.revoke(session, SUPER, owner)
     with pytest.raises(Refused):
         operators.add_operator(session, exercise, Actor(owner), colleague)
-    operators.hand_over(session, exercise, SUPER, colleague)
-    assert operators.owners_of(session, exercise) == [colleague]
+    assert set(operators.owners_of(session, exercise)) == {owner, colleague}
 
 
 # --------------------------------------------------------------------------- #
@@ -303,7 +304,7 @@ def test_an_exercise_may_have_several_owners(session: Session) -> None:
     assert {p.id for p in operators.owners_of(session, exercise)} == {owner.id, colleague.id}
     grant.is_owner = False
     session.commit()
-    operators.hand_over(session, exercise, Actor(owner), colleague)
+    operators.transfer(session, exercise, Actor(owner), colleague)
     session.commit()
     assert operators.owners_of(session, exercise) == [colleague]
 
@@ -410,7 +411,7 @@ def test_removing_someone_just_made_owner_is_refused(session: Session) -> None:
     other = db.new_session()  # the super-admin hands over first
     ex, them = other.get(Exercise, exercise_id), other.get(Person, colleague.id)
     assert ex is not None and them is not None
-    operators.hand_over(other, ex, SUPER, them)
+    operators.transfer(other, ex, SUPER, them)
     other.commit()
     other.close()
     exercise = session.get(Exercise, exercise_id)
@@ -435,7 +436,7 @@ def test_handing_over_to_someone_just_removed_is_refused(session: Session) -> No
     exercise = session.get(Exercise, exercise_id)
     assert exercise is not None
     with pytest.raises(Refused):  # caught on the fresh read, or by the conditional update
-        operators.hand_over(session, exercise, SUPER, colleague)
+        operators.transfer(session, exercise, SUPER, colleague)
     session.rollback()
     assert operators.owners_of(session, exercise) == [owner]
     session.refresh(read)
@@ -509,12 +510,12 @@ def test_a_former_owner_cannot_hand_over_after_losing_ownership(session: Session
     other = db.new_session()  # meanwhile the super-admin hands it to the colleague
     ex, them = other.get(Exercise, exercise_id), other.get(Person, colleague.id)
     assert ex is not None and them is not None
-    operators.hand_over(other, ex, SUPER, them)
+    operators.transfer(other, ex, SUPER, them)
     other.commit()
     other.close()
 
     with pytest.raises(Refused, match="Only the exercise's Owner"):
-        operators.hand_over(session, exercise, Actor(owner), third)
+        operators.transfer(session, exercise, Actor(owner), third)
     session.rollback()
     assert operators.owners_of(session, exercise) == [colleague]
 
@@ -532,11 +533,11 @@ def test_a_check_passed_just_before_ownership_moved_still_demotes_no_one_else(
     exercise = session.get(Exercise, exercise_id)
     assert exercise is not None
     operators.add_operator(session, exercise, SUPER, third)
-    operators.hand_over(session, exercise, SUPER, colleague)  # ownership moves on
+    operators.transfer(session, exercise, SUPER, colleague)  # ownership moves on
     session.commit()
     monkeypatch.setattr(operators, "_is_owner", lambda *_: True)  # the stale pass
     with pytest.raises(Refused, match="Ownership has just changed"):
-        operators.hand_over(session, exercise, Actor(owner), third)
+        operators.transfer(session, exercise, Actor(owner), third)
     session.rollback()
     assert operators.owners_of(session, exercise) == [colleague]
 
@@ -564,7 +565,7 @@ def test_a_target_revoked_meanwhile_is_refused(session: Session, change: str) ->
     assert exercise is not None
     with pytest.raises(Refused, match="operator list"):
         if change == "hand_over":
-            operators.hand_over(session, exercise, Actor(owner), target)
+            operators.transfer(session, exercise, Actor(owner), target)
         else:
             operators.add_operator(session, exercise, Actor(owner), target)
     session.rollback()
@@ -575,11 +576,13 @@ def test_an_actor_revoked_meanwhile_reaches_nothing_and_makes_nothing(session: S
     """Codex on #4110: every allowlist check reads the database, not the
     session's copy, so an actor revoked by another request is refused at
     once: no new exercise, no access, nothing listed."""
-    owner, _, exercise_id, _ = _owned_with_colleague(session)
+    owner, colleague, exercise_id, _ = _owned_with_colleague(session)
     from applydesk.models import Exercise
 
     exercise = session.get(Exercise, exercise_id)
     assert exercise is not None and owner.may_operate  # this request's copy
+    # Not the sole Owner, so Revoke may take them off (segment AD2O).
+    operators.make_owner(session, exercise, Actor(owner), colleague)
     session.commit()
 
     other = db.new_session()  # meanwhile the super-admin revokes them
@@ -699,7 +702,7 @@ def test_a_change_holds_the_allowlist_rows_it_rests_on(
     operators.add_operator(session, exercise, Actor(ana), ben)
     assert held.count(ana.id) == 1 and held.count(ben.id) == 1
     held.clear()
-    operators.hand_over(session, exercise, Actor(ana), ben)
+    operators.transfer(session, exercise, Actor(ana), ben)
     assert held.count(ana.id) == 1 and held.count(ben.id) == 1
 
 

@@ -245,7 +245,7 @@ def test_adopting_beside_an_owner_leaves_two_owners(monkeypatch: pytest.MonkeyPa
     ann_row = session.get(Person, ann)
     assert ra is not None and ann_row is not None
     operators.add_operator(session, ra, SUPER, ann_row)
-    operators.hand_over(session, ra, SUPER, ann_row)  # Ann owns RA
+    operators.transfer(session, ra, SUPER, ann_row)  # Ann owns RA
     session.commit()
     session.close()
     _as(me_id, "promote")
