@@ -530,17 +530,3 @@ def test_cold_read_fixes_for_workspace_users(client: TestClient) -> None:
         follow_redirects=False,
     )
     assert many.headers["location"].endswith("said=too_many")
-
-
-def test_promote_and_demote_are_scaffolded(client: TestClient) -> None:
-    """Segment AD2M rung 2: the bulk bar shows Promote and Demote, inert and
-    saying so, beside Admit and Revoke; nothing posts them yet."""
-    page = client.get("/applydesk/admin/operators").text
-    bar = page[page.index("data-account-bulk") :]
-    bar = bar[: bar.index("</form>")]
-    assert (
-        bar.index(">Revoke<") < bar.index(">Promote to Admin<") < bar.index(">Demote from Admin<")
-    )
-    assert 'disabled title="Promoting to Admin is not built yet" data-bulk-promote' in bar
-    assert 'disabled title="Demoting an Admin is not built yet" data-bulk-demote' in bar
-    assert 'value="promote"' not in bar and 'value="demote"' not in bar

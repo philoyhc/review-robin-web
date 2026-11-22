@@ -1017,7 +1017,7 @@
               <div class="mg who">
                 <strong>{{ _who }}</strong>
                 {% if viewer.email %}<span>{{ viewer.email }}</span>{% endif %}
-                {% if viewer.is_super_admin %}<span>super admin</span>{% endif %}
+                {% if viewer.is_super_admin %}<span>super admin</span>{% elif viewer_is_admin %}<span>admin</span>{% endif %}
               </div>
               <div class="mg narrow-only">
                 <div class="theme-toggle" role="group" aria-label="Display mode">

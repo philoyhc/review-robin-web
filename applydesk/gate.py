@@ -37,6 +37,7 @@ class Viewer:
     is_super_admin: bool
     may_operate: bool
     operates: frozenset[str] | None
+    is_admin: bool = False  # an Admin (segment AD2M): reaches the Admin pages
 
 
 _NOBODY = Viewer(is_super_admin=False, may_operate=False, operates=frozenset())
@@ -69,7 +70,12 @@ def _look_up(request: Request) -> Viewer:
         if not operators.may_operate(person):
             return _NOBODY
         operates = frozenset(e.public_id for e in operators.operated_exercises(session, actor))
-        return Viewer(is_super_admin=False, may_operate=True, operates=operates)
+        return Viewer(
+            is_super_admin=False,
+            may_operate=True,
+            operates=operates,
+            is_admin=operators.is_admin(person),
+        )
     finally:
         session.close()
 
@@ -121,9 +127,22 @@ def own_new_exercise(request: Request, public_id: str) -> bool:
 
 
 def require_super_admin(request: Request) -> None:
-    """The admin pages' check (ruling 75): the platform super-admin only,
-    404 for everyone else, an operator included."""
+    """The platform super-admin only, 404 for everyone else."""
     if not viewer(request).is_super_admin:
+        raise HTTPException(status_code=404)
+
+
+def is_admin(request: Request) -> bool:
+    """Whether the viewer reaches the Admin pages: the super-admin or an
+    Admin (segment AD2M)."""
+    found = viewer(request)
+    return found.is_super_admin or found.is_admin
+
+
+def require_admin(request: Request) -> None:
+    """The Admin pages' check (ruling 75, segment AD2M): the super-admin or
+    an Admin; 404 for everyone else, an operator included."""
+    if not is_admin(request):
         raise HTTPException(status_code=404)
 
 

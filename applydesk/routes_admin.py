@@ -19,9 +19,9 @@ from applydesk import allowlist, db, directory, gate, locks, operators, sample_d
 from applydesk.ids import row_id
 from applydesk.web import ADMIN, render, url_path
 from cordware.graph import GraphError, directory_for
-from cordware.identity import Identity, current_identity
+from cordware.identity import Identity, current_identity, super_admin_configured
 
-router = APIRouter(prefix="/admin", dependencies=[Depends(gate.require_super_admin)])
+router = APIRouter(prefix="/admin", dependencies=[Depends(gate.require_admin)])
 
 _PAGE = "/admin/operators"
 #: Longest form body a post here takes.
@@ -41,11 +41,17 @@ SAID: dict[str, str] = {
     "gone": "That person or account is no longer there; search again.",
     "directory": "The directory did not answer; try again.",
     "no_tenant": "Your sign-in names no tenant, so no one can be added from the directory.",
-    "not_super_admin": "Only the platform super-admin keeps the operator list.",
+    "not_super_admin": "Only an Admin or the platform super-admin keeps the operator list.",
     "changed": "Someone else changed the list at the same time; check it and try again.",
     "pick": "Pick someone from the suggestions, then Add.",
-    "none_ticked": "Tick at least one row, then Admit or Revoke.",
+    "none_ticked": "Tick at least one row, then choose what to do with them.",
     "too_many": "Tick at most 1,000 rows at a time; narrow the list with the chips or search.",
+    # Admins (segment AD2M).
+    "already_admin": "Already an Admin.",
+    "not_admin": "Not an Admin.",
+    "last_admin": "The last Admin stays an Admin.",
+    "pending": "Only someone who has signed in can be an Admin.",
+    "is_admin": "An Admin is demoted before being taken off the list.",
 }
 
 
@@ -108,13 +114,23 @@ def _bulk_said(request: Request) -> str:
     numbers, so a link cannot put words on the page."""
     params = request.query_params
     done = params.get("done")
-    if done not in ("admit", "revoke"):
+    verbs = {
+        "admit": "Added to the list",
+        "revoke": "Taken off the list",
+        "promote": "Made Admins",
+        "demote": "No longer Admins",
+    }
+    if done not in verbs:
         return ""
     changed, skipped = (_row_count(params.get(k, "")) for k in ("n", "skipped"))
-    verb = "Added to the list" if done == "admit" else "Taken off the list"
-    line = f"{verb}: {changed}."
+    line = f"{verbs[done]}: {changed}."
     if skipped:
-        line += f" Skipped {skipped} (already so, no longer there, or your own row)."
+        why = {
+            "revoke": "already so, an Admin (demote first), no longer there, or your own row",
+            "promote": "already so, not yet signed in, no longer there, or your own row",
+            "demote": "not an Admin, the last Admin, no longer there, or your own row",
+        }.get(done, "already so, no longer there, or your own row")
+        line += f" Skipped {skipped} ({why})."
     return line
 
 
@@ -156,6 +172,10 @@ def operators_page(
         listed={p.id for p in allowlist.listed_ids(session)},
         me=me,
         view=view,
+        # Promote and Demote: the super-admin's; with none configured, any
+        # Admin's (segment AD2M, Review Robin's fallback).
+        makes_admins=gate.viewer(request).is_super_admin
+        or (not super_admin_configured() and gate.viewer(request).is_admin),
         categories=allowlist.CATEGORIES,
         roles=allowlist.ROLES,
         said=SAID.get(request.query_params.get("said", ""), "") or _bulk_said(request),
@@ -291,7 +311,7 @@ async def bulk(request: Request) -> Response:
     back = (form.get("return_to") or [""])[0]
     view = {k: v for k in ("show", "role", "list_q") for v in form.get(k, []) if k != "show"}
     shows = form.get("show", [])
-    if action not in ("admit", "revoke") or not ids:
+    if action not in allowlist.BULK_ACTIONS or not ids:
         return _back(request, "none_ticked", back)
     if len(ids) > _MAX_BULK:
         return _back(request, "too_many", back)

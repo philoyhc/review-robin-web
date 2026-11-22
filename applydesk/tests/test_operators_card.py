@@ -148,8 +148,10 @@ def test_every_refusal_key_has_a_status_line() -> None:
                     if kw.arg == "key" and isinstance(kw.value, ast.Constant):
                         keys.setdefault(name, set()).add(str(kw.value.value))
     # The admin page shows the allowlist's; the card shows an exercise's.
-    admin = keys["allowlist.py"] | {"already_listed", "not_listed", "not_super_admin"}
-    card = keys["team.py"] | (keys["operators.py"] - {"already_listed", "not_super_admin"})
+    # Admins' keys (segment AD2M) are the admin page's alone.
+    admins = {"already_admin", "not_admin", "last_admin", "pending", "is_admin"}
+    admin = keys["allowlist.py"] | {"already_listed", "not_listed", "not_super_admin"} | admins
+    card = keys["team.py"] | (keys["operators.py"] - {"already_listed", "not_super_admin"} - admins)
     assert admin <= routes_admin.SAID.keys(), admin - routes_admin.SAID.keys()
     assert card <= routes_operator.OPS_SAID.keys(), card - routes_operator.OPS_SAID.keys()
 

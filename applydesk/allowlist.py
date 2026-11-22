@@ -68,7 +68,17 @@ def _category(admin_id: int | None) -> ColumnElement[str]:
     """Each person under exactly one chip, as Review Robin's: the admin
     first (the super-admin's own row), then operators, then history."""
     return case(
-        (Person.id == (admin_id if admin_id is not None else -1), "admins"),
+        (
+            or_(
+                Person.id == (admin_id if admin_id is not None else -1),
+                and_(
+                    Person.is_admin.is_(True),
+                    Person.may_operate.is_(True),
+                    Person.revoked_at.is_(None),
+                ),
+            ),
+            "admins",
+        ),
         (and_(Person.may_operate.is_(True), Person.revoked_at.is_(None)), "operators"),
         (_has_history(), "no_role"),
         else_="unused",
@@ -129,7 +139,9 @@ def accounts(
     counts = {key: int(counted.get(key, 0)) for key, _, _ in CATEGORIES}
     # The super-admin's own row, when Apply Desk has no person row for
     # them: an admin with no exercise, matched on the identity's fields.
-    me_row = me.person_id is None and role in ("any", "none") and me.matches(query)
+    me_row = (
+        me.is_super_admin and me.person_id is None and role in ("any", "none") and me.matches(query)
+    )
     if me_row:
         counts["admins"] += 1
     people = list(
@@ -154,6 +166,7 @@ class Me:
     email: str
     name: str
     person_id: int | None
+    is_super_admin: bool = True  # an Admin's own row is theirs, not the super-admin's
 
     def matches(self, query: str) -> bool:
         text = query.strip().casefold()
@@ -169,7 +182,9 @@ def me(session: Session, identity: Identity) -> Me:
         row = session.scalar(
             select(Person.id).where(Person.tenant_id == tenant_id, Person.object_id == object_id)
         )
-    return Me(identity.mail or identity.email or "", identity.name or "", row)
+    return Me(
+        identity.mail or identity.email or "", identity.name or "", row, identity.is_super_admin
+    )
 
 
 @dataclass(frozen=True)
@@ -275,9 +290,12 @@ def suggestions(found: directory.SearchResult, listed: set[int]) -> dict[str, ob
 
 
 def actor_for(session: Session, identity: Identity) -> operators.Actor:
-    """The super-admin acting, with their person row where they can be
-    bound (their admissions then name them)."""
-    return operators.Actor(people.resolve(session, identity), is_super_admin=True)
+    """The super-admin or an Admin acting, with their person row where they
+    can be bound (their changes then name them). Each change checks again
+    what the actor may do (`operators.keeps_the_list`, `makes_admins`)."""
+    return operators.Actor(
+        people.resolve(session, identity), is_super_admin=identity.is_super_admin
+    )
 
 
 def admit_on_record(session: Session, actor: operators.Actor, person_id: int) -> Person:
@@ -317,6 +335,15 @@ class Bulk:
     skipped: int
 
 
+#: The bulk bar's actions (segments AD2W, AD2M), each through `operators`.
+BULK_ACTIONS: dict[str, Callable[[Session, operators.Actor, Person], None]] = {
+    "admit": operators.admit,
+    "revoke": operators.revoke,
+    "promote": operators.promote,
+    "demote": operators.demote,
+}
+
+
 def bulk(
     session: Session, actor: operators.Actor, action: str, person_ids: list[int], me: Me
 ) -> Bulk:
@@ -325,7 +352,7 @@ def bulk(
     transaction. A refusal skips that person, not the batch: a refusal
     changes nothing, so the transaction stays good. The super-admin's own
     row is always skipped (no action on your own row)."""
-    change = operators.admit if action == "admit" else operators.revoke
+    change = BULK_ACTIONS[action]
     changed = skipped = 0
     # Each once, in ID order: two overlapping posts lock rows in one order.
     for person_id in sorted(set(person_ids)):

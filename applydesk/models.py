@@ -72,6 +72,12 @@ class Person(Base):
     )
     admitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # An Admin (segment AD2M): reaches the Admin pages and keeps the
+    # operator list; made and unmade by the super-admin. An Admin is always
+    # on the operator list too (Promote puts them there; Revoke refuses one).
+    is_admin: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
 
     @property
     def bound(self) -> bool:

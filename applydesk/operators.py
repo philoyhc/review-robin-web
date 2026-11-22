@@ -30,6 +30,7 @@ from sqlalchemy.orm import Session
 
 from applydesk import audit
 from applydesk.models import Exercise, ExerciseOperator, Person
+from cordware.identity import super_admin_configured
 
 
 class Refused(Exception):
@@ -56,7 +57,8 @@ def _changed(session: Session, statement: Update) -> bool:
 @dataclass(frozen=True)
 class Actor:
     """Who is acting: their person (None for a super-admin with no row
-    yet) and whether they are the platform super-admin."""
+    yet) and whether they are the platform super-admin. An Admin is read
+    from their row, fresh, where it matters (`_admin_now`)."""
 
     person: Person | None
     is_super_admin: bool = False
@@ -89,6 +91,38 @@ def _allowed(session: Session, person: Person | None, *, hold: bool = False) -> 
         with_for_update={"read": True} if hold else None,
     )
     return may_operate(person)
+
+
+def is_admin(person: Person | None) -> bool:
+    """An Admin, on the operator list (segment AD2M)."""
+    return person is not None and person.is_admin and may_operate(person)
+
+
+def _admin_now(session: Session, person: Person | None) -> bool:
+    """`is_admin`, read from the database now and held to the end of the
+    transaction, as `_allowed` is: a demotion committing meanwhile waits."""
+    if person is None:
+        return False
+    session.refresh(
+        person,
+        attribute_names=["is_admin", "may_operate", "revoked_at"],
+        with_for_update={"read": True},
+    )
+    return is_admin(person)
+
+
+def keeps_the_list(session: Session, actor: Actor) -> bool:
+    """Whether `actor` admits and revokes operators: the super-admin or an
+    Admin (`applydesk/spec/permissions.md` §2)."""
+    return actor.is_super_admin or _admin_now(session, actor.person)
+
+
+def makes_admins(session: Session, actor: Actor) -> bool:
+    """Whether `actor` promotes and demotes Admins: the super-admin; with
+    no super-admin configured, any Admin (Review Robin's fallback)."""
+    if actor.is_super_admin:
+        return True
+    return not super_admin_configured() and _admin_now(session, actor.person)
 
 
 def _lock(session: Session, exercise: Exercise) -> None:
@@ -211,9 +245,10 @@ def _is_owner(session: Session, exercise: Exercise, actor: Actor) -> bool:
 
 def admit(session: Session, actor: Actor, person: Person) -> None:
     """Put `person` on the allowlist (ruling 75)."""
-    if not actor.is_super_admin:
+    if not keeps_the_list(session, actor):
         raise Refused(
-            "Only the platform super-admin keeps the operator list.", key="not_super_admin"
+            "Only an Admin or the platform super-admin keeps the operator list.",
+            key="not_super_admin",
         )
     listed = Refused("Already allowed to operate.", key="already_listed")
     if _allowed(session, person):
@@ -244,19 +279,27 @@ def admit(session: Session, actor: Actor, person: Person) -> None:
 
 def revoke(session: Session, actor: Actor, person: Person, reason: str | None = None) -> None:
     """Take `person` off the allowlist: their access ends, their grants are
-    kept (re-admitting restores them)."""
-    if not actor.is_super_admin:
+    kept (re-admitting restores them). An Admin is demoted first."""
+    if not keeps_the_list(session, actor):
         raise Refused(
-            "Only the platform super-admin keeps the operator list.", key="not_super_admin"
+            "Only an Admin or the platform super-admin keeps the operator list.",
+            key="not_super_admin",
         )
     unlisted = Refused("Not on the operator list.", key="not_listed")
     if not _allowed(session, person):
         raise unlisted
+    if person.is_admin:
+        raise Refused("An Admin is demoted before being taken off the list.", key="is_admin")
     # Conditional, as `admit`: two revocations at once audit once.
     if not _changed(
         session,
         update(Person)
-        .where(Person.id == person.id, Person.may_operate.is_(True), Person.revoked_at.is_(None))
+        .where(
+            Person.id == person.id,
+            Person.may_operate.is_(True),
+            Person.revoked_at.is_(None),
+            Person.is_admin.is_(False),
+        )
         .values(may_operate=False, revoked_at=_now())
         .execution_options(synchronize_session=False),
     ):
@@ -268,6 +311,76 @@ def revoke(session: Session, actor: Actor, person: Person, reason: str | None = 
         actor=actor.person,
         refs={"person_id": person.id},
         reason=reason,
+    )
+
+
+def promote(session: Session, actor: Actor, person: Person) -> None:
+    """Make `person` an Admin (segment AD2M), putting them on the operator
+    list if they are not on it. Only someone bound to an account."""
+    if not makes_admins(session, actor):
+        raise Refused("Only the platform super-admin makes Admins.", key="not_super_admin")
+    if not person.bound:
+        raise Refused("Only someone who has signed in can be an Admin.", key="pending")
+    already = Refused("Already an Admin.", key="already_admin")
+    session.refresh(person, attribute_names=["is_admin", "may_operate", "revoked_at"])
+    if person.is_admin:
+        raise already
+    listed = may_operate(person)
+    values: dict[str, Any] = {"is_admin": True}
+    if not listed:
+        values |= {
+            "may_operate": True,
+            "admitted_by_id": actor.person.id if actor.person is not None else None,
+            "admitted_at": _now(),
+            "revoked_at": None,
+        }
+    # Conditional, as `admit`: of two promotions at once one is audited.
+    if not _changed(
+        session,
+        update(Person)
+        .where(Person.id == person.id, Person.is_admin.is_(False))
+        .values(**values)
+        .execution_options(synchronize_session=False),
+    ):
+        raise already
+    session.refresh(person)
+    if not listed:
+        audit.write_event(
+            session, event_type="person.admitted", actor=actor.person, refs={"person_id": person.id}
+        )
+    audit.write_event(
+        session, event_type="person.promoted", actor=actor.person, refs={"person_id": person.id}
+    )
+
+
+def demote(session: Session, actor: Actor, person: Person) -> None:
+    """Take `person`'s Admin away (segment AD2M); they stay on the operator
+    list. With no super-admin configured, the last Admin is kept."""
+    if not makes_admins(session, actor):
+        raise Refused("Only the platform super-admin makes Admins.", key="not_super_admin")
+    not_admin = Refused("Not an Admin.", key="not_admin")
+    session.refresh(person, attribute_names=["is_admin"])
+    if not person.is_admin:
+        raise not_admin
+    if not super_admin_configured():
+        # Every Admin row locked before counting, so two demotions at once
+        # cannot both see another Admin left (Review Robin's last_admin).
+        admins = session.scalars(
+            select(Person.id).where(Person.is_admin.is_(True)).with_for_update()
+        ).all()
+        if len(admins) <= 1:
+            raise Refused("The last Admin stays an Admin.", key="last_admin")
+    if not _changed(
+        session,
+        update(Person)
+        .where(Person.id == person.id, Person.is_admin.is_(True))
+        .values(is_admin=False)
+        .execution_options(synchronize_session=False),
+    ):
+        raise not_admin
+    session.refresh(person)
+    audit.write_event(
+        session, event_type="person.demoted", actor=actor.person, refs={"person_id": person.id}
     )
 
 
