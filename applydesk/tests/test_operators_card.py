@@ -214,7 +214,7 @@ def test_sqlite_busy_is_reported_as_a_concurrent_change(
 def test_the_card_offers_each_viewer_only_their_moves(owner: TestClient) -> None:
     """`applydesk/spec/permissions.md` §7: an Owner sees Make Owner, Transfer
     and Remove on an operator, and, as the only Owner, no Step down on their
-    own row; the new moves are inert until AD2O's wiring."""
+    own row."""
     ben = _colleague()
     session = db.new_session()
     ra = session.scalars(select(Exercise).where(Exercise.public_id == EX)).one()
@@ -230,8 +230,103 @@ def test_the_card_offers_each_viewer_only_their_moves(owner: TestClient) -> None
     assert '<h2 id="ops-h">Owners and operators</h2>' in card
     row = card[card.index(f'data-ops-row="{ben}"') :]
     row = row[: row.index("</tr>")]
-    assert 'data-ops-move="make-owner"' in row and "disabled" in row
+    assert 'data-ops-move="make-owner"' in row and "disabled" not in row  # wired (rung 4)
     assert 'data-ops-move="transfer"' in row and 'data-ops-move="remove"' in row
     me = card[card.index("data-ops-self") :]
     me = me[: me.index("</tr>")]
     assert "data-ops-last" in me and 'data-ops-move="step-down"' not in me
+
+
+# --- AD2O wired: each move posts and says how it went ---------------------------
+
+
+def _add(ben: int) -> None:
+    session = db.new_session()
+    ra = session.scalars(select(Exercise).where(Exercise.public_id == EX)).one()
+    person = session.get(Person, ben)
+    assert person is not None
+    operators.add_operator(session, ra, SUPER, person)
+    session.commit()
+    session.close()
+
+
+def test_make_owner_then_make_operator_from_the_card(owner: TestClient) -> None:
+    ben = _colleague()
+    _add(ben)
+    made = owner.post(f"{HOME}/operators/{ben}/make-owner", follow_redirects=False)
+    assert made.headers["location"].endswith("ops_said=made_owner#operators")
+    assert _roles()[ben] is True
+    page = owner.get(made.headers["location"]).text
+    assert "Made an Owner." in page and 'data-ops-move="step-down"' in page
+    back = owner.post(f"{HOME}/operators/{ben}/demote", follow_redirects=False)
+    assert back.headers["location"].endswith("ops_said=demoted#operators")
+    assert _roles()[ben] is False
+
+
+def test_the_only_owner_cannot_step_down_but_can_once_another_owns(owner: TestClient) -> None:
+    me = next(pid for pid, is_owner in _roles().items() if is_owner)
+    refused = owner.post(f"{HOME}/operators/{me}/step-down", follow_redirects=False)
+    assert refused.headers["location"].endswith("ops_said=last_owner#operators")
+    ben = _colleague()
+    _add(ben)
+    owner.post(f"{HOME}/operators/{ben}/make-owner")
+    done = owner.post(f"{HOME}/operators/{me}/step-down", follow_redirects=False)
+    assert done.headers["location"].endswith("ops_said=stepped_down#operators")
+    assert _roles()[me] is False
+
+
+def test_leaving_lands_on_the_lobby(owner: TestClient) -> None:
+    me = next(pid for pid, is_owner in _roles().items() if is_owner)
+    ben = _colleague()
+    _add(ben)
+    owner.post(f"{HOME}/operators/{ben}/make-owner")
+    owner.post(f"{HOME}/operators/{me}/step-down")
+    left = owner.post(f"{HOME}/operators/{me}/leave", follow_redirects=False)
+    assert left.headers["location"].endswith("/operator/exercises?said=left")
+    assert me not in _roles()
+    assert "You left the exercise." in owner.get(left.headers["location"]).text
+
+
+def test_nobody_leaves_for_someone_else(owner: TestClient) -> None:
+    ben = _colleague()
+    _add(ben)
+    refused = owner.post(f"{HOME}/operators/{ben}/leave", follow_redirects=False)
+    assert refused.headers["location"].endswith("ops_said=not_self#operators")
+    assert ben in _roles()
+
+
+def test_the_lobby_rows_carry_the_viewer_s_role(owner: TestClient) -> None:
+    lobby = owner.get("/applydesk/operator/exercises").text
+    assert f'data-id="{EX}"' in lobby and 'data-owner="true"' in lobby
+    assert "data-lb-owner-note" in lobby
+
+
+def test_an_operator_sees_only_leave_on_their_own_row(owner: TestClient) -> None:
+    """Cold read: §7's operator column. Ownership passes to Ben, so the
+    viewer operates: Leave on their row, nothing on Ben's; and in the Lobby
+    their row for RA says they do not own it."""
+    ben = _colleague()
+    _add(ben)
+    owner.post(f"{HOME}/operators/{ben}/owner")  # transfer: the viewer operates now
+    page = owner.get(HOME).text
+    card = page[
+        page.index("data-operators") : page.index("</section>", page.index("data-operators"))
+    ]
+    me = card[card.index("data-ops-self") :]
+    me = me[: me.index("</tr>")]
+    assert 'data-ops-move="leave"' in me
+    them = card[card.index(f'data-ops-row="{ben}"') :]
+    them = them[: them.index("</tr>")]
+    assert "data-ops-move" not in them
+    lobby = owner.get("/applydesk/operator/exercises").text
+    row = lobby[lobby.index(f'data-id="{EX}"') :]
+    assert 'data-owner="false"' in row[: row.index(">")]
+
+
+def test_step_down_is_for_your_own_row_only(owner: TestClient) -> None:
+    ben = _colleague()
+    _add(ben)
+    owner.post(f"{HOME}/operators/{ben}/make-owner")
+    refused = owner.post(f"{HOME}/operators/{ben}/step-down", follow_redirects=False)
+    assert refused.headers["location"].endswith("ops_said=not_self#operators")
+    assert _roles()[ben] is True
