@@ -39,9 +39,11 @@ ordinary operator, the Owner the seed made it.
 | `docs/home/` | Mock-ups of Exercise Home (2026-11-17), for segment AD1I: the timeline horizontal (v1, Details locked and unlocked), vertical (v2, desktop and phone) and equal-width (v3, three and five stages and a phone, the one built), and the operator's part below or beside it (v4) |
 | `docs/extract/` | Mock-ups of Extract data (2026-11-18), for segment AD1J: download cards after Review Robin's, desktop and phone (v1) |
 | `spec/applications.md` | Apply Desk as the host sees it: registry entry, health, running alone, the URL map, and each page's contract |
+| `spec/permissions.md` | Accounts and permissions, the target contract (2026-11-22): workspace roles (Operator, Admin, super-admin), an exercise's Owners and operators, participants, what each may do, guards and audit; each part marked built or to build |
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and CI |
 | `guide/todo_master.md` | Rulings, the MVP roadmap and open decisions |
 | `guide/ad2_series.md` | The AD2 series: what every AD2 segment holds to (its own database, checkable on localhost) and the segments AD2A–AD2G in order, each with the findings it takes |
+| `guide/segment_AD2M_admins.md` | AD2M: the Admin tier between Operator and super-admin, and *adopt* as the one way an Admin or the super-admin takes up an exercise, as its Owner |
 | `guide/ad2_deferred_findings.md` | The 2026-11-18 assessment's rows that wait on AD2's persistence and identity (28 rows, moved 2026-11-21); AD2's plan absorbs, rules or drops each |
 | `guide/ad3_plus_deferred_findings.md` | The 2026-11-18 assessment's rows that wait on a stage after AD2: Layer B, AD3's lifecycle, AD4's dossier parts and AD7 (6 rows, moved 2026-11-21) |
 | `guide/removed_help_lines.md` | A running tab of help lines taken off the pages: what each told the reader, kept until the author decides how such help is shown |

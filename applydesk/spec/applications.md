@@ -117,7 +117,7 @@ answer only for a Published or Closed exercise.
   Review Robin's do. An operator is the platform super-admin or someone
   on the operator list (`gate.is_operator`), whether or not they operate an
   exercise yet, so they can reach the Lobby to make one.
-- **Who reaches what** (`applydesk/gate.py`). Anyone else, signed in or not,
+- **Who reaches what** (`applydesk/gate.py`; the target model, Owners and operators, is `applydesk/spec/permissions.md`). Anyone else, signed in or not,
   gets a 404 on a local run too, so a page does not say it exists.
 
   | Pages | Reached by |
