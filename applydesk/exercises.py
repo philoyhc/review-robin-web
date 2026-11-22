@@ -446,6 +446,10 @@ def save_panel(
     if max(len(code), len(code.casefold())) > 40:  # its key is casefolded
         raise Refused("An exercise code is at most 40 characters.", key="code_long", field="code")
     _ready(session, exercise, actor)
+    # A published exercise's code is fixed (G2), here as on Details (Codex on #4140).
+    sample = sample_data.exercise(public_id)
+    if sample is not None and sample.state != "Draft" and (code or None) != exercise.code:
+        raise Refused("A published exercise's code is fixed.", key="code_fixed", field="code")
     if (clash := _clash(session, exercise, code or None)) is not None:
         raise Refused(f"{code} is already {clash.name}'s code.", key="code_taken", field="code")
     before_tags = list(tags_of(session, exercise))

@@ -341,6 +341,7 @@ SAID: dict[str, str] = {
     "delete_unconfirmed": "Not deleted: tick Yes, delete first.",
     "not_owner": "Only an exercise's Owner may archive, restore or delete it.",
     "code_taken": "Not saved: another live exercise has that code.",
+    "code_fixed": "Not saved: a published exercise's code is fixed until it is re-published.",
     "code_long": "Not saved: an exercise code is at most 40 characters.",
     "name": "Not saved: a name of 1 to 200 characters is needed.",
     "tag_long": "Not saved: a tag is at most 40 characters.",

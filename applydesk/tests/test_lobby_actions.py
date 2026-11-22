@@ -16,7 +16,7 @@ from applydesk.tests._host import host_with
 
 LOBBY = "/applydesk/operator/exercises"
 PANEL = f"{LOBBY}/panel"
-RA, BLANK = "wa9juxbc2t", "n5wg8tjr3e"
+RA, BLANK, SIS = "wa9juxbc2t", "n5wg8tjr3e", "c4xh2ndv6s"
 
 
 def _client() -> TestClient:
@@ -102,20 +102,21 @@ def test_the_query_rebuilds_itself_and_drops_what_it_does_not_know() -> None:
 
 
 def test_save_renames_recodes_and_retags_one_exercise() -> None:
+    """SIS-2027 is a draft, so its code may change."""
     said = _post(
         _client(),
         action="save",
-        id=RA,
-        revision=str(_row(RA).revision),
-        name="RA 2027",
-        code="RA-27",
-        tags="Residential, halls , residential",
+        id=SIS,
+        revision=str(_row(SIS).revision),
+        name="SIS 2027",
+        code="SIS-27",
+        tags="Interns, summer , INTERNS",
     )
     assert said == "Saved."
-    row = _row(RA)
-    assert (row.name, row.code, row.code_key) == ("RA 2027", "RA-27", "ra-27")
+    row = _row(SIS)
+    assert (row.name, row.code, row.code_key) == ("SIS 2027", "SIS-27", "sis-27")
     session = db.new_session()
-    assert exercises.tags_of(session, row) == ("Residential", "halls")
+    assert exercises.tags_of(session, row) == ("Interns", "summer")
     session.close()
 
 
@@ -249,3 +250,30 @@ def test_duplicate_settings_only_makes_a_copy_named_and_owned_by_the_viewer() ->
 @pytest.mark.parametrize("action", ["", "explode"])
 def test_an_unknown_action_is_refused(action: str) -> None:
     assert _client().post(PANEL, data={"action": action, "id": RA}).status_code == 400
+
+
+def test_a_published_exercise_s_code_is_fixed_in_the_lobby_too() -> None:
+    """Codex on #4140: RA-2027 is published; its name and tags save, its
+    code does not."""
+    client = _client()
+    revision = str(_row(RA).revision)
+    said = _post(client, action="save", id=RA, revision=revision, name="RA", code="RA-28", tags="")
+    assert said.startswith("Not saved: a published exercise") and _row(RA).code == "RA-2027"
+    said = _post(
+        client, action="save", id=RA, revision=revision, name="RA", code="RA-2027", tags=""
+    )
+    assert said == "Saved." and _row(RA).name == "RA"
+
+
+def test_my_applications_leave_with_a_deleted_exercise() -> None:
+    """Codex on #4140: an application in a deleted exercise leaves /me."""
+    mine = sample_data.my_applications()
+    assert mine
+    gone = mine[0].exercise_id
+    session = db.new_session()
+    row = session.scalars(select(Exercise).where(Exercise.public_id == gone)).one()
+    row.deleted_at = row.created_at
+    session.commit()
+    session.close()
+    page = _client().get("/applydesk/me").text
+    assert all(a.public_id not in page for a in mine if a.exercise_id == gone)

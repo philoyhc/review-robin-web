@@ -30,7 +30,8 @@ def me(request: Request) -> Response:
         "applydesk/me/home.html",
         area=USER_LOBBY,
         exercises=exercises,
-        mine=sample_data.my_applications(),
+        # Not an application in a deleted exercise (Codex on #4140).
+        mine=[a for a in sample_data.my_applications() if a.exercise_id in shown],
         dossiers=[
             (shown[a.exercise_id], a)
             for a in sample_data.APPLICATIONS[1:5:2]

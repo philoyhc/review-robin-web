@@ -63,7 +63,7 @@
       {% set scratch_row = is_scratch(e.public_id) %}
       {% set n, m, stage_name = stage_position(e) %}
       {% set zone = timezone(e) %}
-      <tr data-lb-row data-id="{{ e.public_id }}" data-revision="{{ revisions.get(e.public_id, 0) }}" data-name="{{ e.name }}" data-code="{{ e.code }}" data-tags="{{ e.tags | join(', ') }}">
+      <tr data-lb-row data-id="{{ e.public_id }}" data-revision="{{ revisions.get(e.public_id, 0) }}" data-name="{{ e.name }}" data-code="{{ e.code }}" data-published="{{ 'false' if e.state == 'Draft' else 'true' }}" data-tags="{{ e.tags | join(', ') }}">
         <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a>{% if scratch_row %} <span class="chip chip-mute" data-scratch-chip>Scratch</span>
           <form class="nx-discard" method="post" action="{{ url('/operator/exercises/' ~ e.public_id ~ '/discard') }}" data-nx-discard data-name="{{ e.name }}"><button class="btn btn-destructive btn-short" type="submit">Discard</button></form>{% endif %}</td>
         <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
@@ -180,6 +180,10 @@
     if (one) {
       var r = row(at);
       ["name", "code", "tags"].forEach(function (k) { panel.querySelector('[data-lb-f="' + k + '"]').value = r.dataset[k] || ""; });
+      // A published exercise's code is fixed, as on Details (G2).
+      var code = panel.querySelector('[data-lb-f="code"]');
+      code.readOnly = r.dataset.published === "true";
+      code.title = code.readOnly ? "Fixed once published: a change waits for re-publishing" : "";
     }
     panel.hidden = false;
   }
