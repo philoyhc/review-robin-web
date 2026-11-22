@@ -1,11 +1,15 @@
-"""An exercise's own settings, stored (segment AD2B rung 2): the seed
-records each sample's settings once, NULL for unset, and the pages read
-them laid over the sample's, unchanged in what they show."""
+"""An exercise's own settings, stored (segment AD2B): the seed records
+each sample's settings once, NULL for unset, and the pages read them laid
+over the sample's (rung 2); Details' *Lock* saves them, refused if stale
+(rung 3)."""
 
 from __future__ import annotations
 
 import dataclasses
+from datetime import UTC, datetime
+from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -19,7 +23,7 @@ BLANK = "n5wg8tjr3e"  # Graduate Travel Grant: "Not set" everywhere
 
 def _seed_settings() -> None:
     session = db.new_session()
-    seed.seed(session)  # the conftest's seed recorded grants only
+    seed.seed(session)  # the conftest's seed already did: changes nothing
     session.close()
 
 
@@ -95,6 +99,117 @@ def test_a_stored_change_shows_on_the_pages() -> None:
 
 
 def test_a_row_without_settings_keeps_the_sample_s() -> None:
-    """The conftest's seed made rows with revision 0: nothing recorded."""
+    """A row at revision 0 has nothing recorded: the sample's stand."""
+    session = db.new_session()
+    ra = session.scalar(select(Exercise).where(Exercise.public_id == EX))
+    assert ra is not None
+    ra.revision, ra.name = 0, "Ignored"
+    session.commit()
+    session.close()
     sample = sample_data.exercise(EX)
     assert sample is not None and exercises.stored(sample) == sample
+
+
+# --- Rung 3: Details saves to the database ---
+DETAILS = f"/applydesk/operator/exercises/{EX}/details"
+
+
+def _client() -> TestClient:
+    return TestClient(host_with(("applydesk",))[0])
+
+
+def _good(**changes: Any) -> dict[str, Any]:
+    """Details as the card sends RA-2027's, at the seed's revision."""
+    return {
+        "revision": 1,
+        "name": "Recruitment and Selection of Residential Assistants",
+        "code": "RA-2027",
+        "description": "Look after a house of residents.",
+        "contact": "",
+        "timezone": sample_data.DEFAULT_TIMEZONE,
+        "eligibility": "Open to all signed in",
+        "blind": True,
+        **changes,
+    }
+
+
+def _row() -> Exercise:
+    session = db.new_session()
+    found = session.scalar(select(Exercise).where(Exercise.public_id == EX))
+    session.close()
+    assert found is not None
+    return found
+
+
+def test_lock_on_a_sample_saves_and_survives() -> None:
+    client = _client()
+    reply = client.post(DETAILS, json=_good())
+    assert reply.status_code == 200 and reply.json() == {"saved": True, "revision": 2}
+    row = _row()
+    # The default timezone and an empty contact are NULL (AD-54).
+    assert (row.description, row.blind, row.help_contact, row.timezone) == (
+        "Look after a house of residents.",
+        True,
+        None,
+        None,
+    )
+    assert "Look after a house of residents." in client.get(DETAILS[: -len("/details")]).text
+    session = db.new_session()
+    event = session.scalars(
+        select(AuditEvent).where(AuditEvent.event_type == "exercise.details_changed")
+    ).one()
+    session.close()
+    # Only what changed is audited.
+    assert set(event.detail["changes"]) == {"description", "blind", "help_contact"}
+
+
+def test_a_stale_lock_is_refused_and_saves_nothing() -> None:
+    client = _client()
+    assert client.post(DETAILS, json=_good(name="First")).status_code == 200
+    stale = client.post(DETAILS, json=_good(name="Second"))  # opened at 1, now 2
+    assert stale.status_code == 409 and "someone else changed" in stale.json()["error"]
+    assert (_row().name, _row().revision) == ("First", 2)
+
+
+def test_an_unchanged_lock_keeps_the_revision() -> None:
+    sample = sample_data.exercise(EX)
+    assert sample is not None
+    same = _good(
+        description=sample.summary,
+        contact=sample.help_contact,
+        blind=sample.blind,
+        timezone=sample.timezone or sample_data.DEFAULT_TIMEZONE,
+    )
+    assert _client().post(DETAILS, json=same).json() == {"saved": True, "revision": 1}
+
+
+def test_not_set_is_stored_as_null() -> None:
+    """AD-60: "Not set" eligibility is NULL, never the words."""
+    client = _client()
+    blank = f"/applydesk/operator/exercises/{BLANK}/details"
+    sent = _good(code="", eligibility="Not set", name="Graduate Travel Grant 2027")
+    assert client.post(blank, json=sent).status_code == 200
+    session = db.new_session()
+    row = session.scalar(select(Exercise).where(Exercise.public_id == BLANK))
+    session.close()
+    assert row is not None and (row.eligibility, row.code, row.code_key) == (None, None, None)
+
+
+@pytest.mark.parametrize("code", ["ra-2027", "RA-2027"])
+def test_another_live_exercise_s_code_is_refused(code: str) -> None:
+    blank = f"/applydesk/operator/exercises/{BLANK}/details"
+    reply = _client().post(blank, json=_good(code=code, name="Graduate Travel Grant 2027"))
+    assert reply.status_code == 400 and reply.json()["field"] == "code"
+    assert "already Recruitment and Selection" in reply.json()["error"]
+
+
+def test_an_archived_exercise_frees_its_code() -> None:
+    session = db.new_session()
+    ra = session.scalar(select(Exercise).where(Exercise.public_id == EX))
+    assert ra is not None
+    ra.archived_at = datetime.now(UTC)
+    session.commit()
+    session.close()
+    blank = f"/applydesk/operator/exercises/{BLANK}/details"
+    reply = _client().post(blank, json=_good(code="RA-2027", name="Graduate Travel Grant 2027"))
+    assert reply.status_code == 200

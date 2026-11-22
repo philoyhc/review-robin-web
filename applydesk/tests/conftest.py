@@ -43,10 +43,10 @@ def applydesk_db(
         from applydesk import seed
 
         session = db.new_session()
-        # Grants only: the sample's settings stay the pages' until a test
-        # asks for stored ones (`test_exercises.py`), so the tests that
-        # vary a sample's settings keep doing so (segment AD2B rung 2).
-        seed.seed(session, record_settings=False)
+        # Settings recorded, as the localhost seed records them (segment
+        # AD2B rung 3): Details saves against them and refuses a code
+        # another exercise holds.
+        seed.seed(session)
         session.close()
     yield
     db.engine().dispose()

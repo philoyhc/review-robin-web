@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -189,3 +190,110 @@ def record_sample(
         payload=audit.snapshot({**values, "tags": list(sample.tags)}),
     )
     return True
+
+
+class Refused(Exception):
+    """A Details save the rules refuse: `field` names the field it is
+    about, as the card points there; `key` names the rule."""
+
+    def __init__(self, message: str, *, key: str, field: str = "name") -> None:
+        super().__init__(message)
+        self.key = key
+        self.field = field
+
+
+#: The fields Details' *Lock* saves, in the order the audit lists them.
+DETAILS = ("name", "code", "description", "eligibility", "blind", "help_contact", "timezone")
+
+
+def details_from_page(fields: dict[str, Any]) -> dict[str, Any]:
+    """Details as the card sends them (the sample's words) as stored
+    values: "Not set" and "" to NULL (AD-60), the default timezone to NULL
+    (AD-54)."""
+    eligibility = next((k for k, v in ELIGIBILITY.items() if v == fields["eligibility"]), None)
+    zone = fields["timezone"] or None
+    return {
+        "name": fields["name"],
+        "code": fields["code"] or None,
+        "description": fields["summary"] or None,
+        "eligibility": eligibility,
+        "blind": bool(fields["blind"]),
+        "help_contact": fields["help_contact"] or None,
+        "timezone": None if zone == sample_data.DEFAULT_TIMEZONE else zone,
+    }
+
+
+def _clash(session: Session, exercise: Exercise, code: str | None) -> Exercise | None:
+    if not code:
+        return None
+    return session.scalar(
+        select(Exercise).where(
+            Exercise.code_key == _key(code),
+            Exercise.id != exercise.id,
+            Exercise.archived_at.is_(None),
+            Exercise.deleted_at.is_(None),
+        )
+    )
+
+
+def save_details(
+    session: Session,
+    sample: sample_data.Exercise,
+    values: dict[str, Any],
+    opened: int,
+    actor: Person | None,
+) -> int:
+    """Details' *Lock* (segment AD2B rung 3): `values` (stored form) saved
+    on the exercise's row, if no one saved since the page opened at
+    revision `opened` (ruling 74). Audited with the fields that changed.
+    The new revision; refused if stale, gone, or the code is taken. The
+    caller commits (and rolls back on a refusal)."""
+    exercise = session.scalar(
+        select(Exercise)
+        .where(Exercise.public_id == sample.public_id, Exercise.deleted_at.is_(None))
+        .with_for_update()
+    )
+    if exercise is None:
+        raise Refused("This exercise is no longer on record.", key="gone")
+    if exercise.revision != opened:
+        raise Refused(
+            "Not saved: someone else changed the details since this page opened."
+            " Reload to see them.",
+            key="stale",
+        )
+    if exercise.revision < 1:  # nothing recorded yet: the page's values first
+        record_sample(session, exercise, sample, actor)
+    clash = _clash(session, exercise, values["code"])
+    if clash is not None:
+        raise Refused(
+            f"{values['code']} is already {clash.name}'s code.", key="code_taken", field="code"
+        )
+    before = {k: getattr(exercise, k) for k in DETAILS}
+    changed = {k: [before[k], values[k]] for k in DETAILS if before[k] != values[k]}
+    if not changed:
+        return exercise.revision
+    for name, value in values.items():
+        setattr(exercise, name, value)
+    exercise.code_key = _key(values["code"])
+    exercise.revision += 1
+    session.flush()
+    audit.write_event(
+        session,
+        event_type="exercise.details_changed",
+        actor=actor,
+        exercise=exercise,
+        payload=audit.changes(changed),
+        context={"revision": exercise.revision},
+    )
+    return exercise.revision
+
+
+def revision_of(public_id: str) -> int:
+    """The exercise's stored revision, 0 while none is recorded: the
+    revision Details opens at."""
+    session = db.new_session()
+    try:
+        found = row(session, public_id)
+        return found.revision if found is not None else 0
+    finally:
+        session.close()

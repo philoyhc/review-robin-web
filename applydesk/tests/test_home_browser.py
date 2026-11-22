@@ -96,6 +96,8 @@ def test_details_unlock_edit_and_lock(page: Page) -> None:
     card.get_by_role("checkbox", name="Blind review").check()
     assert card.locator("[data-unsaved]").is_visible()
     card.get_by_role("button", name="Lock", exact=True).click()
+    # Saved to the database (segment AD2B rung 3).
+    expect(card.locator("[data-dt-said]")).to_have_text("Saved.")
     assert card.get_attribute("data-unlocked") is None
     view = card.locator("[data-dt-view]")
     assert view.locator('[data-dt-show="description"]').inner_text() == (
@@ -107,14 +109,18 @@ def test_details_unlock_edit_and_lock(page: Page) -> None:
     )
     assert view.locator('[data-dt-show="timezone"]').inner_text() == "Europe/London"
     assert view.locator('[data-dt-show="blind"]').inner_text() == "On"
-    assert card.locator("[data-dt-said]").inner_text().startswith("Locked: changed on this page")
-    assert card.locator("[data-unsaved]").is_visible()  # kept, but not saved
+    assert not card.locator("[data-unsaved]").is_visible()  # saved
     assert card.get_by_role("button", name="Unlock").evaluate("e => e === document.activeElement")
-    # Discard puts back what was last kept, not what was loaded.
+    # Discard puts back what was last saved, not what was loaded.
     card.get_by_role("button", name="Unlock").click()
     card.get_by_label("Description").fill("Something else.")
     card.get_by_role("button", name="Discard changes").click()
     assert view.locator('[data-dt-show="description"]').inner_text() == (
+        "Look after a house of residents."
+    )
+    # A reload shows what was saved.
+    page.reload()
+    assert page.locator('[data-dt-show="description"]').inner_text() == (
         "Look after a house of residents."
     )
 
@@ -186,6 +192,7 @@ def test_details_refuse_what_cannot_hold(page: Page) -> None:
     expect(why).to_have_text("A help contact is an email address.")
     card.get_by_label("Help contact").fill("interns@example.edu")
     card.get_by_role("button", name="Lock", exact=True).click()
+    expect(card.locator("[data-dt-said]")).to_have_text("Saved.")
     assert card.locator('[data-dt-show="code"]').inner_text() == "SIS-2028"
     assert card.locator('[data-dt-show="contact"]').inner_text() == "interns@example.edu"
     assert card.locator("[aria-invalid]").count() == 0

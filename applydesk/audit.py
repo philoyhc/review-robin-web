@@ -132,6 +132,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "exercise.ownership_handed_over": EventSchema(_EXERCISE | {"refs"}),
     # An exercise's settings recorded from the sample (the seed, AD2B).
     "exercise.settings_recorded": EventSchema(_EXERCISE | {"snapshot"}),
+    "exercise.details_changed": EventSchema(_EXERCISE | {"changes", "context"}),
     # An Admin or the super-admin taking up an exercise as an Owner (AD2M).
     "exercise.adopted": EventSchema(_EXERCISE | {"refs", "context"}),
 }

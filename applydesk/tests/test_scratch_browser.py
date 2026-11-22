@@ -87,7 +87,7 @@ def test_new_exercise_to_its_home_then_details_saved_and_discarded(page: Page) -
     card.locator('[data-dt="description"]').fill("A bursary set up in the browser.")
     card.locator('[data-dt-act="lock"]').click()
     said = card.locator("[data-dt-said]")
-    said.filter(has_text="Saved to this scratch exercise.").wait_for()
+    said.filter(has_text="Saved.").wait_for()
     page.reload()
     card = page.locator("[data-details]")
     assert card.locator('[data-dt-show="code"]').inner_text() == "BB-27"

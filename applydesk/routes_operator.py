@@ -170,9 +170,10 @@ class _Refusal(scratch.Refused):
         self.field = field
 
 
-def _details(exercise: sample_data.Exercise, v: dict[str, Any]) -> dict[str, Any]:
+def _details(v: dict[str, Any]) -> dict[str, Any]:
     """Details as Lock sends them, checked as the card checks them; the
-    reason for the first fault, else the fields for ``scratch.update``."""
+    reason for the first fault, else the fields in the sample's words (a
+    clashing code is the database's to refuse, `exercises.save_details`)."""
     text = {
         k: v.get(k) for k in ("name", "code", "description", "contact", "timezone", "eligibility")
     }
@@ -183,16 +184,6 @@ def _details(exercise: sample_data.Exercise, v: dict[str, Any]) -> dict[str, Any
         raise _Refusal("name", "A name of 1 to 200 characters is needed.")
     if len(code) > 40:
         raise _Refusal("code", "An exercise code is at most 40 characters.")
-    clash = next(
-        (
-            e
-            for e in sample_data.exercises()
-            if code and e.public_id != exercise.public_id and e.code.lower() == code.lower()
-        ),
-        None,
-    )
-    if clash:
-        raise _Refusal("code", f"{code} is already {clash.name}'s code.")
     contact = str(text["contact"]).strip()
     if len(str(text["description"]).strip()) > 2000:
         raise _Refusal("description", "A description is at most 2,000 characters.")
@@ -452,11 +443,13 @@ async def exercise_email_save(request: Request, exercise_id: str) -> Response:
 
 @router.post("/exercises/{exercise_id}/details", name="applydesk_exercise_details")
 async def exercise_details(request: Request, exercise_id: str) -> Response:
-    """Details' *Lock* on a scratch exercise (segment AD1N): the fields
-    kept in memory for this browser; a sample exercise has no such post."""
+    """Details' *Lock* (segment AD2B rung 3): saved on the exercise's row,
+    any exercise the viewer operates, refused if someone saved since the
+    page opened (the revision it sends)."""
     _same_site(request)
     exercise = exercise_or_404(exercise_id)
-    if not scratch.is_scratch(exercise.public_id):
+    identity = current_identity(request)
+    if identity is None:
         raise HTTPException(status_code=404)
     if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
         raise HTTPException(status_code=415, detail="Not saved: the page sent no JSON.")
@@ -467,13 +460,38 @@ async def exercise_details(request: Request, exercise_id: str) -> Response:
         sent = json.loads(body)
         if not isinstance(sent, dict):
             raise scratch.Refused("The details are malformed.")
-        changes = _details(exercise, cast(dict[str, Any], sent))
-        scratch.update(exercise.public_id, **changes)
+        got = cast(dict[str, Any], sent)
+        opened = got.get("revision")
+        if not isinstance(opened, int) or isinstance(opened, bool):
+            raise scratch.Refused("The details are malformed.")
+        values = exercise_store.details_from_page(_details(got))
     except (ValueError, scratch.Refused) as why:
         reason = str(why) if isinstance(why, scratch.Refused) else "The details are malformed."
         field = why.field if isinstance(why, _Refusal) else "name"
         return JSONResponse({"error": reason, "field": field}, status_code=400)
-    return JSONResponse({"saved": True})
+    session = db.new_session()
+    try:
+        # Bind the actor and commit first, as `_ops_change` does.
+        actor = people.resolve(session, identity)
+        session.commit()
+        revision = exercise_store.save_details(session, exercise, values, opened, actor)
+        session.commit()
+    except exercise_store.Refused as why:
+        session.rollback()
+        status = 409 if why.key == "stale" else 400
+        return JSONResponse({"error": str(why), "field": why.field}, status_code=status)
+    except (IntegrityError, OperationalError) as error:
+        # Another live exercise took the code, or a concurrent save won.
+        session.rollback()
+        if not db.lost_a_race(error):
+            raise
+        return JSONResponse(
+            {"error": "Not saved: someone else saved just now; reload and retry.", "field": "name"},
+            status_code=409,
+        )
+    finally:
+        session.close()
+    return JSONResponse({"saved": True, "revision": revision})
 
 
 #: The Operators card's status line, by the key its redirect carries (as
@@ -593,6 +611,8 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         timezones=sample_data.TIMEZONES,
         default_contact=sample_data.DEFAULT_HELP_CONTACT,
         blind_lock=locks.blind_lock(exercise),
+        # The revision Details' Lock names (segment AD2B rung 3).
+        revision=exercise_store.revision_of(exercise.public_id),
         stage_rows=locks.stage_rows(exercise),
         STATUS_CHIP=locks.STATUS_CHIP,
         # Every other exercise's code and name, so Details refuses a
