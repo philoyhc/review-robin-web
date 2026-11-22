@@ -34,8 +34,8 @@ class Exercise:
     help_contact: str = ""
     timezone: str = ""
     # The Operator Lobby's Created and Tags (segment AD1T): sample values
-    # until AD2B records them; ``created`` is ISO local time in the
-    # exercise's timezone, "" for none.
+    # until AD2B records them; ``created`` is an ISO time with its UTC
+    # offset, shown in the exercise's timezone; "" for none.
     created: str = ""
     tags: tuple[str, ...] = ()
 
@@ -79,10 +79,23 @@ def utc_offset(zone: str, at: datetime | None = None) -> str:
     return f"GMT{sign}{hours}" + (f":{rest:02d}" if rest else "")
 
 
+def created_at(e: Exercise) -> datetime | None:
+    """When the exercise was created, or None when not recorded."""
+    return datetime.fromisoformat(e.created) if e.created else None
+
+
 def created_label(e: Exercise) -> str:
-    """When the exercise was created, as the Lobby prints it
-    ("2026-08-04 09:12"), or "" when not recorded."""
-    return e.created.replace("T", " ")[:16]
+    """When the exercise was created, in its own timezone, as the Lobby
+    prints it ("2026-08-04 09:12"), or "" when not recorded."""
+    at = created_at(e)
+    return at.astimezone(ZoneInfo(timezone(e))).strftime("%Y-%m-%d %H:%M") if at else ""
+
+
+def newest_first(exercises: Iterable[Exercise]) -> tuple[Exercise, ...]:
+    """``exercises`` newest first, as the Lobby's Created arrow says
+    (segment AD1T); one not recorded goes last, ties keep their order."""
+    oldest = datetime.min.replace(tzinfo=UTC)
+    return tuple(sorted(exercises, key=lambda e: created_at(e) or oldest, reverse=True))
 
 
 def all_tags(exercises: Iterable[Exercise]) -> list[str]:
@@ -171,7 +184,7 @@ EXERCISES: tuple[Exercise, ...] = (
             " the 2027/28 academic year; current RAs may apply to return."
         ),
         help_contact="ra-recruitment@example.edu",
-        created="2026-08-04T09:12",
+        created="2026-08-04T09:12+08:00",
         tags=("Residential", "2027"),
     ),
     Exercise(
@@ -186,7 +199,7 @@ EXERCISES: tuple[Exercise, ...] = (
         application_stage_ends="31 Oct 2026, 23:59",
         expected_outcome="December 2026",
         summary="Nominated teachers submit a teaching portfolio; a panel reads it blind.",
-        created="2026-07-21T14:30",
+        created="2026-07-21T14:30+08:00",
         tags=("Awards",),
     ),
     Exercise(
@@ -201,7 +214,7 @@ EXERCISES: tuple[Exercise, ...] = (
         application_stage_ends="Not set",
         expected_outcome="Not set",
         summary="Placements with partner organizations over the summer vacation.",
-        created="2026-10-30T16:45",
+        created="2026-10-30T16:45+08:00",
         tags=(),
     ),
     # Open for applications, now that the model exercise is past its
@@ -218,7 +231,7 @@ EXERCISES: tuple[Exercise, ...] = (
         application_stage_ends="31 Jan 2027, 23:59",
         expected_outcome="Early March 2027",
         summary="Travel and registration for presenting at an international conference.",
-        created="2026-10-06T10:02",
+        created="2026-10-06T10:02+08:00",
         tags=("Grants", "2027"),
     ),
     # Just created: a name and nothing else, awaiting setup (author,
@@ -235,7 +248,7 @@ EXERCISES: tuple[Exercise, ...] = (
         application_stage_ends="Not set",
         expected_outcome="Not set",
         summary="",
-        created="2026-11-12T15:40",
+        created="2026-11-12T15:40+08:00",
         tags=("Grants",),
     ),
 )

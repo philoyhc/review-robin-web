@@ -18,9 +18,8 @@ import time
 from collections.abc import Awaitable, Callable, MutableMapping
 from contextvars import ContextVar
 from dataclasses import dataclass, field, replace
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from starlette.requests import cookie_parser
 from starlette.responses import Response
@@ -153,12 +152,10 @@ def create(browser_token: str, name: str) -> Scratch:
         public_id = generate_public_id()
         while public_id in taken:
             public_id = generate_public_id()
-        # Created is when it was made, in the operator settings' default
-        # timezone, a scratch exercise's own (segment AD1T).
-        made_at = datetime.now(ZoneInfo(sample_data.DEFAULT_TIMEZONE))
-        made = Scratch(
-            replace(blank(name, public_id), created=made_at.isoformat(timespec="minutes")[:16])
-        )
+        # Created is when it was made (segment AD1T), kept with its offset
+        # so the Lobby shows it in whatever timezone Details later sets.
+        made_at = datetime.now(UTC).isoformat(timespec="minutes")
+        made = Scratch(replace(blank(name, public_id), created=made_at))
         found.exercises[public_id] = made
         return made
 

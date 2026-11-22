@@ -61,6 +61,21 @@ def test_more_ticks_move_the_panel_under_the_last_and_offer_bulk_actions(page: P
     expect(panel.locator(".lb-exp-h")).to_have_text("2 exercises selected")
     expect(panel.get_by_role("button", name="Delete all")).to_be_visible()
     expect(panel.get_by_role("button", name="Duplicate")).to_be_hidden()
+    # Cancel unticks the row the panel sits under; the panel goes back
+    # to the row ticked before it, as Review Robin's.
+    _tick(page, "PCG-2027")
+    panel.get_by_role("button", name="Cancel").click()
+    assert not page.get_by_role("checkbox", name="Select PCG-2027").is_checked()
+    assert _row(page, "TEA-2026").evaluate(
+        "r => r.nextElementSibling.hasAttribute('data-lb-panel')"
+    )
+    # Unticking the last ticked row moves the panel back too, not to the
+    # lowest ticked row.
+    _tick(page, "PCG-2027")
+    page.get_by_role("checkbox", name="Select PCG-2027").uncheck()
+    assert _row(page, "TEA-2026").evaluate(
+        "r => r.nextElementSibling.hasAttribute('data-lb-panel')"
+    )
     # Unselect others keeps the last ticked, and the panel turns to one.
     panel.get_by_role("button", name="Unselect others").click()
     expect(panel.locator(".lb-exp-h")).to_have_text("1 exercise selected")
@@ -73,6 +88,11 @@ def test_more_ticks_move_the_panel_under_the_last_and_offer_bulk_actions(page: P
     page.locator("[data-lb-all]").uncheck()
     expect(panel).to_be_hidden()
     expect(page.locator("tr.lb-on")).to_have_count(0)
+    # Unselect all clears every row at once.
+    _tick(page, "RA-2027")
+    _tick(page, "TEA-2026")
+    panel.get_by_role("button", name="Unselect all").click()
+    expect(panel).to_be_hidden()
 
 
 def test_the_cards_stand_side_by_side_over_the_table(page: Page) -> None:

@@ -52,7 +52,9 @@ Rejected: a separate *With ticked exercises* bar above the table, as first mocke
 - The panel takes Apply Desk's accent tint, not Review Robin's blue.
 - Created by reads the signed-in operator's name on every row, sample and scratch, until AD2B records who made each (2026-11-22): the sample exercises are the viewer's own in AD1's sample, as the author read them.
 - The rows stand newest first, as Created's arrow says; clicking a header stays inert (2026-11-22).
-- The panel's *Cancel*, *Unselect others* and *Unselect all* work, since they only untick rows in the browser; every other action is inert (2026-11-22).
+- The panel's *Cancel*, *Unselect others* and *Unselect all* work, since they only untick rows in the browser; every other action is inert. *Cancel* unticks the row the panel sits under, which moves it back to the row ticked before, as Review Robin's (2026-11-22, cold read).
+- *New exercise* now stamps the scratch exercise's Created, in UTC with its offset, so Created follows a timezone Details sets later; the ladder's "must not touch scratch creation" yields to Semantics here, and nothing else in creation changed (2026-11-22, cold read).
+- The Exercises card counts Closed too, every status in `locks.STATUS_ORDER`, so the chips add up to the total (2026-11-22, cold read).
 
 ## Blast radius (measured)
 

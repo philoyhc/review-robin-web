@@ -96,7 +96,7 @@
         <div class="lb-btns" data-lb-many hidden>
           <button class="btn btn-secondary" type="button" data-lb-cancel>Cancel</button>
           <button class="btn btn-secondary" type="button" data-lb-others>Unselect others</button>
-          <button class="btn btn-secondary" type="button" data-lb-cancel>Unselect all</button>
+          <button class="btn btn-secondary" type="button" data-lb-none>Unselect all</button>
           <button class="btn btn-secondary" type="button" disabled title="Tags are not built yet">All tags to all</button>
           <button class="btn btn-secondary" type="button" disabled title="Tags are not built yet">Remove from all</button>
           <button class="btn btn-alert" type="button" disabled title="Purging is not built yet">Purge and archive all</button>
@@ -127,48 +127,63 @@
       if (!window.confirm("Discard " + f.dataset.name + "? Everything set up in it goes.")) e.preventDefault();
     });
   });
-  // The tick panel (segment AD1T): it follows the last ticked row, shows
-  // one exercise's fields or the bulk actions, and closes when no row is
-  // ticked. The header box ticks every row and shows a dash for some.
+  // The tick panel (segment AD1T), as Review Robin's: it sits under the
+  // most recently ticked row still ticked, shows one exercise's fields or
+  // the bulk actions, and closes when no row is ticked. Cancel unticks
+  // that row, so the panel goes back to the one ticked before it. The
+  // header box ticks every row and shows a dash for some.
   var table = document.querySelector("[data-lb-table]");
   if (!table) return;
   var panel = table.querySelector("[data-lb-panel]"), all = table.querySelector("[data-lb-all]");
   var ticks = Array.prototype.slice.call(table.querySelectorAll("[data-lb-tick]"));
-  var last = null;
+  var order = [];  // the boxes in the order they were ticked
   function row(box) { return box.closest("tr"); }
+  function anchor() {
+    for (var i = order.length - 1; i >= 0; i--) if (order[i].checked) return order[i];
+    return null;
+  }
+  function ticked(box) {
+    order = order.filter(function (b) { return b !== box; });
+    if (box.checked) order.push(box);
+  }
   function sync() {
     var on = ticks.filter(function (b) { return b.checked; });
     ticks.forEach(function (b) { row(b).classList.toggle("lb-on", b.checked); });
     all.checked = on.length > 0 && on.length === ticks.length;
     all.indeterminate = on.length > 0 && on.length < ticks.length;
-    if (!on.length) { panel.hidden = true; last = null; return; }
-    if (!last || !last.checked) last = on[on.length - 1];
-    row(last).after(panel);
+    var at = anchor();
+    if (!at) { panel.hidden = true; return; }
+    row(at).after(panel);
     var one = on.length === 1;
     panel.querySelector("[data-lb-count]").textContent = on.length;
     panel.querySelector("[data-lb-noun]").textContent = one ? "exercise" : "exercises";
     panel.querySelectorAll("[data-lb-one]").forEach(function (el) { el.hidden = !one; });
     panel.querySelectorAll("[data-lb-many]").forEach(function (el) { el.hidden = one; });
     if (one) {
-      var r = row(on[0]);
+      var r = row(at);
       ["name", "code", "tags"].forEach(function (k) { panel.querySelector('[data-lb-f="' + k + '"]').value = r.dataset[k] || ""; });
     }
     panel.hidden = false;
   }
+  function untick(boxes) { boxes.forEach(function (b) { b.checked = false; ticked(b); }); sync(); }
   ticks.forEach(function (b) {
-    b.addEventListener("change", function () { if (b.checked) last = b; sync(); });
+    b.addEventListener("change", function () { ticked(b); sync(); });
   });
   all.addEventListener("change", function () {
-    ticks.forEach(function (b) { b.checked = all.checked; });
-    last = all.checked ? ticks[ticks.length - 1] : null;
+    ticks.forEach(function (b) { if (b.checked !== all.checked) { b.checked = all.checked; ticked(b); } });
     sync();
   });
   panel.querySelectorAll("[data-lb-cancel]").forEach(function (b) {
-    b.addEventListener("click", function () { ticks.forEach(function (t) { t.checked = false; }); sync(); all.focus(); });
+    b.addEventListener("click", function () {
+      var at = anchor();
+      if (at) untick([at]);
+      (anchor() || all).focus();
+    });
   });
+  panel.querySelector("[data-lb-none]").addEventListener("click", function () { untick(ticks); all.focus(); });
   panel.querySelector("[data-lb-others]").addEventListener("click", function () {
-    ticks.forEach(function (t) { t.checked = t === last; });
-    sync();
+    var at = anchor();
+    untick(ticks.filter(function (t) { return t !== at; }));
   });
 })();
 </script>

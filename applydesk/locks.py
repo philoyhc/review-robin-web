@@ -264,6 +264,13 @@ def stage_rows(exercise: Exercise) -> list[StageRow]:
 STATUS_ORDER = ("Draft", "Published", "Completed", "Closed", "Archived")
 
 
+def status_counts(exercises: Iterable[Exercise], now: datetime = NOW) -> list[tuple[str, int]]:
+    """How many of `exercises` stand in each status, in `STATUS_ORDER`,
+    keeping the empty ones (the Operator Lobby's Exercises card, AD1T)."""
+    counts = Counter(exercise_status(e, now) for e in exercises)
+    return [(s, counts[s]) for s in STATUS_ORDER]
+
+
 def status_tally(exercises: Iterable[Exercise], now: datetime = NOW) -> list[tuple[str, int]]:
     """How many of `exercises` stand in each status, in `STATUS_ORDER`,
     leaving out the empty ones (Admin's Exercises Overview)."""

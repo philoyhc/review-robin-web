@@ -411,15 +411,12 @@ def test_the_lobby_is_laid_out_as_review_robin_s(client: TestClient) -> None:
     assert "<h2>Exercises</h2>" in lobby and "<h2>Filter</h2>" in lobby
     assert '<span class="chip chip-info">5 exercises</span>' in lobby
     assert ">2 Draft</span>" in lobby and ">3 Published</span>" in lobby
-    assert ">0 Archived</span>" in lobby
+    assert ">0 Closed</span>" in lobby and ">0 Archived</span>" in lobby
     assert lobby.count('title="Filtering by tag is not built yet"') == 4 + 2  # 4 tags, OR, Clear
     assert 'disabled title="The Archive is not built yet">Go to Archive' in lobby
     assert 'aria-sort="descending">Created<' in lobby
     # Newest first: the Graduate Travel Grant, made last, heads the rows.
-    order = [
-        lobby.index(e.name)
-        for e in sorted(sample_data.EXERCISES, key=lambda e: e.created, reverse=True)
-    ]
+    order = [lobby.index(e.name) for e in sample_data.newest_first(sample_data.EXERCISES)]
     assert order == sorted(order)
     row = lobby[lobby.index("Recruitment and Selection") :]
     row = row[: row.index("</tr>")]
@@ -434,20 +431,46 @@ def test_the_lobby_is_laid_out_as_review_robin_s(client: TestClient) -> None:
     assert '<span class="chip chip-mute">Local Operator</span>' in row
 
 
-def test_a_scratch_exercise_is_created_now_by_the_viewer_with_no_tags(client: TestClient) -> None:
-    """Segment AD1T: a scratch exercise's Created is when it was made, and
-    it has no tags; it heads the lobby, newest first."""
+def test_a_scratch_exercise_heads_the_lobby_made_now_by_the_viewer_untagged(
+    client: TestClient,
+) -> None:
+    """Segment AD1T: a scratch exercise's Created is when it was made, its
+    Created by the viewer, and it has no tags; newest, it heads the rows."""
     from applydesk import scratch
 
-    made = scratch.create("lobby-test", "Lobby Bursary")
+    before = datetime.now(UTC).replace(second=0, microsecond=0)
     try:
-        assert made.exercise.tags == ()
-        assert (
-            made.exercise.created[:10]
-            == datetime.now(ZoneInfo("Asia/Singapore")).date().isoformat()
-        )
+        made = scratch.create("lobby-test", "Lobby Bursary").exercise
+        at = sample_data.created_at(made)
+        assert made.tags == () and at is not None and before <= at <= datetime.now(UTC)
+        assert client.post(
+            "/applydesk/operator/exercises/new", data={"name": "Lobby Bursary"}
+        ).is_success  # the client follows the redirect, keeping the cookie
+        lobby = client.get("/applydesk/operator/exercises").text
     finally:
         scratch.clear()
+    rows = lobby.split("<tr data-lb-row")[1:]
+    first = rows[0][: rows[0].index("</tr>")]
+    assert "Lobby Bursary" in first and "data-scratch-chip" in first
+    assert '<span class="chip chip-mute">Local Operator</span>' in first
+    assert '<span class="muted">No tags</span>' in first
+    shown = re.search(r'<td class="lb-when">([^<]+)</td>', first)
+    assert shown is not None
+    local = datetime.strptime(shown.group(1), "%Y-%m-%d %H:%M").replace(
+        tzinfo=ZoneInfo("Asia/Singapore")
+    )
+    assert before <= local <= datetime.now(UTC)
+
+
+def test_created_shows_in_the_exercise_s_own_timezone() -> None:
+    """A scratch exercise keeps its creation time with its offset, so Created
+    follows a timezone Details sets later (cold read, AD1T)."""
+    import dataclasses
+
+    e = dataclasses.replace(sample_data.EXERCISES[0], created="2026-08-04T01:12+00:00")
+    assert sample_data.created_label(e) == "2026-08-04 09:12"
+    london = dataclasses.replace(e, timezone="Europe/London")
+    assert sample_data.created_label(london) == "2026-08-04 02:12"
 
 
 @pytest.mark.parametrize(
