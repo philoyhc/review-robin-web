@@ -137,7 +137,8 @@ super-admin).
 **Adopt** (to build, with Admins): from Exercises Diagnostics an Admin or the
 super-admin who holds no role on an exercise may read its diagnostics, but
 must *adopt* it to open its pages or change anything: an audited step that
-makes them an Owner of it, as Review Robin's *Manage* self-adds a sys-admin.
+makes them an Owner of it. The row's *Manage* adopts, asking first, as Review
+Robin's *Manage* self-adds a sys-admin.
 The super-admin adopts too (the author's ruling, 2026-11-22): nobody edits an
 exercise without a recorded role, so every change has an Owner on record.
 Adopting one they already operate makes them an Owner. Once adopted, they are

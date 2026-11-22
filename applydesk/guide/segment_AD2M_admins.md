@@ -18,8 +18,8 @@ The author ruled on 2026-11-22 (`applydesk/spec/permissions.md` §10):
   - **Granted and taken away:** only the super-admin Promotes and Demotes, on Accounts Management.
   - **Nesting:** an Admin is an Operator (Super-admin ⊇ Admin ⊇ Operator). Every gate reads `may_operate or is_admin`.
   - **Reach:** `/admin/…` is for Admins and the super-admin. Admins admit and revoke operators. Promote and Demote stay the super-admin's.
-- **Adopt** makes an Admin or the super-admin an **Owner** of an exercise. It is one audited step (`exercise.adopted`), taken from Exercises Diagnostics.
-  - *Manage* on a row adopts when the viewer holds no role there, then opens Home.
+- **Adopt** makes an Admin or the super-admin an **Owner** of an exercise. It is one audited step (`exercise.adopted`), taken from Exercises Diagnostics' *Manage*, Review Robin's name for the same step.
+  - *Manage* on a row adopts when the viewer holds no role there, then opens Home. It asks first, saying they will become an Owner.
   - Where the viewer already operates or owns the exercise, *Manage* just opens Home.
   - Adopting an exercise they only operate makes them an Owner.
 - **The super-admin loses implicit reach.** Their `operates` becomes their grants, as anyone's. The Lobby then lists only what they own or operate (§7), and an exercise they hold no role on is a 404 until they adopt it.
@@ -44,7 +44,7 @@ Rejected: adopting as an operator first and as an Owner once AD2O lands. The spe
   - is idempotent: adopting an exercise you already own changes nothing and audits nothing;
   - requires a row in the database (a sample exercise not yet seeded cannot be adopted, and says so);
   - an Admin who is later demoted keeps the Owner rows they adopted. Their grants stand, as an operator's do when revoked.
-- **The Lobby, Exercises Diagnostics' *Owners* column and `owner_labels`** name every Owner, comma-separated.
+- **Exercises Diagnostics' *Owners* column and `owner_labels`** name every Owner, comma-separated.
 - **Tests and local runs:** `conftest.py` seeds the sample exercises, so the fake super-admin owns them in the ordinary way, as Local Operator does after `python -m applydesk.seed`.
 
 ## Judgment calls — decided
@@ -66,7 +66,7 @@ Taken 2026-11-22 at `0de2e6a0a`.
 ## PR ladder
 
 1. **PR 1 — this plan**, with the spec's rulings (`applydesk/spec/permissions.md`).
-2. **PR 2 — scaffold.** Accounts Management gains *Promote* and *Demote* in the bulk bar, and Exercises Diagnostics gains *Adopt* in place of *Manage*. Both are inert and say they are not built yet; the copy is final. Must not touch: gates and data.
+2. **PR 2 — scaffold.** Accounts Management gains *Promote* and *Demote* in the bulk bar, inert and saying they are not built yet, and the page's copy names Admins. Exercises Diagnostics' *Manage* keeps opening Home. Must not touch: gates and data.
 3. **PR 3 — Admins.**
    - The `is_admin` column and its migration (round-tripped on Postgres).
    - Promote and Demote in `operators.py`, with their guards and audit.
@@ -102,7 +102,7 @@ None open. The author ruled on Admins, adopt and observers on 2026-11-22.
 ## Doc impact
 
 - `applydesk/spec/permissions.md` — §2's Admin built; §5 adopt built; §6 the reach columns; §9 the new events built.
-- `applydesk/spec/applications.md` — "Who reaches what", Admin → Accounts Management (Admin column, chips, Promote and Demote), Exercises Diagnostics (*Adopt*, *Owners*), the Operator Lobby (only what the viewer owns or operates).
+- `applydesk/spec/applications.md` — "Who reaches what", Admin → Accounts Management (Admin column, chips, Promote and Demote), Exercises Diagnostics (*Manage* adopting, *Owners*), the Operator Lobby (only what the viewer owns or operates).
 - `applydesk/spec/architecture.md` — the module map: `operators.py`'s promote, demote and adopt; `gate.py`'s Admin.
 - `applydesk/guide/todo_master.md` — the queue entry deleted at close.
 - `applydesk/README.md` — the plan's index row, moved at close.
