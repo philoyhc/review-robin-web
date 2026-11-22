@@ -428,16 +428,8 @@ def test_the_lobby_is_laid_out_as_review_robin_s(client: TestClient) -> None:
     )
     assert 'data-tags="Residential, 2027"' in row
     # Created by is the Owner on record until AD2B records the creator
-    # (the author, 2026-11-22): none before the seed, the seeded one after.
-    assert 'title="No Owner on record">—' in row
-    from applydesk import db, seed
-
-    session = db.new_session()
-    seed.seed(session)
-    session.close()
-    seeded = client.get("/applydesk/operator/exercises").text
-    row = seeded[seeded.index("Recruitment and Selection") :]
-    row = row[: row.index("</tr>")]
+    # (the author, 2026-11-22): the seeded one. Before the seed no one owns
+    # or operates a sample, so the Lobby lists none (segment AD2M).
     assert 'title="The Owner, until who created it is recorded">Local Operator</span>' in row
 
 

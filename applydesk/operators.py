@@ -156,16 +156,20 @@ def current_operators(session: Session, exercise: Exercise) -> list[tuple[Person
     return [(person, is_owner) for person, is_owner in rows]
 
 
-def owner_of(session: Session, exercise: Exercise) -> Person | None:
-    return session.scalar(
-        select(Person)
-        .join(ExerciseOperator, ExerciseOperator.person_id == Person.id)
-        .where(
-            ExerciseOperator.exercise_id == exercise.id,
-            ExerciseOperator.is_owner.is_(True),
-            ExerciseOperator.removed_at.is_(None),
+def owners_of(session: Session, exercise: Exercise) -> list[Person]:
+    """The exercise's current Owners, read fresh, by name."""
+    return list(
+        session.scalars(
+            select(Person)
+            .join(ExerciseOperator, ExerciseOperator.person_id == Person.id)
+            .where(
+                ExerciseOperator.exercise_id == exercise.id,
+                ExerciseOperator.is_owner.is_(True),
+                ExerciseOperator.removed_at.is_(None),
+            )
+            .order_by(Person.display_name, Person.id)
+            .execution_options(populate_existing=True)
         )
-        .execution_options(populate_existing=True)
     )
 
 
@@ -184,16 +188,35 @@ def owner_labels(session: Session, public_ids: list[str]) -> dict[str, str]:
             ExerciseOperator.is_owner.is_(True),
             ExerciseOperator.removed_at.is_(None),
         )
+        .order_by(Person.display_name, Person.id)
     ).all()
-    return {public_id: person.label for public_id, person in rows}
+    # Several Owners read comma-separated (segment AD2M).
+    named: dict[str, list[str]] = {}
+    for public_id, person in rows:
+        named.setdefault(public_id, []).append(person.label)
+    return {public_id: ", ".join(labels) for public_id, labels in named.items()}
+
+
+def _the_platform(actor: Actor) -> bool:
+    """The platform acting with no person (the seed): it reaches every
+    exercise. A signed-in super-admin does not: they adopt (segment AD2M)."""
+    return actor.is_super_admin and actor.person is None
+
+
+def _may_act(session: Session, actor: Actor, *, hold: bool = False) -> bool:
+    """Whether `actor`'s grants count: anyone on the operator list, and the
+    super-admin, who needs no listing (ruling 75)."""
+    return actor.person is not None and (
+        actor.is_super_admin or _allowed(session, actor.person, hold=hold)
+    )
 
 
 def can_operate(session: Session, exercise: Exercise, actor: Actor) -> bool:
-    """Whether `actor` reaches `exercise`: the super-admin always; anyone
-    else on the allowlist with a current grant."""
-    if actor.is_super_admin:
+    """Whether `actor` reaches `exercise`: a current grant on it, as an
+    operator or an Owner (the super-admin included, segment AD2M)."""
+    if _the_platform(actor):
         return True
-    if not _allowed(session, actor.person):
+    if not _may_act(session, actor):
         return False
     assert actor.person is not None
     grant = _grant(session, exercise, actor.person)
@@ -201,10 +224,10 @@ def can_operate(session: Session, exercise: Exercise, actor: Actor) -> bool:
 
 
 def operated_exercises(session: Session, actor: Actor) -> list[Exercise]:
-    """The exercises `actor` reaches: every one for the super-admin."""
-    if actor.is_super_admin:
+    """The exercises `actor` holds a current grant on."""
+    if _the_platform(actor):
         return list(session.scalars(select(Exercise).order_by(Exercise.id)))
-    if not _allowed(session, actor.person):
+    if not _may_act(session, actor):
         return []
     assert actor.person is not None
     return list(
@@ -221,20 +244,22 @@ def operated_exercises(session: Session, actor: Actor) -> list[Exercise]:
 
 
 def is_owner(session: Session, exercise: Exercise, actor: Actor) -> bool:
-    """Whether `actor` may change `exercise`'s operators: its current,
-    allowlisted Owner, or the platform super-admin (read fresh)."""
+    """Whether `actor` may change `exercise`'s operators: one of its
+    current Owners, allowlisted or the super-admin (read fresh)."""
     return _is_owner(session, exercise, actor)
 
 
 def _is_owner(session: Session, exercise: Exercise, actor: Actor) -> bool:
-    if actor.is_super_admin:
+    if _the_platform(actor):
         return True
-    owner = owner_of(session, exercise)  # fresh, as is its allowlisting
+    if actor.person is None:
+        return False
+    grant = _grant(session, exercise, actor.person)  # fresh
     return (
-        actor.person is not None
-        and owner is not None
-        and owner.id == actor.person.id
-        and _allowed(session, owner, hold=True)
+        grant is not None
+        and grant.removed_at is None
+        and grant.is_owner
+        and _may_act(session, actor, hold=True)
     )
 
 
@@ -478,8 +503,8 @@ def remove_operator(session: Session, exercise: Exercise, actor: Actor, person: 
 
 
 def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person) -> None:
-    """Make `person`, a current allowlisted operator, the Owner; the former
-    Owner stays an operator. Only the Owner (or the super-admin)."""
+    """Make `person`, a current allowlisted operator, an Owner in the
+    actor's place; the actor stays an operator. Only an Owner."""
     _lock(session, exercise)
     if not _is_owner(session, exercise, actor):
         raise Refused("Only the exercise's Owner hands ownership over.", key="not_owner")
@@ -490,31 +515,35 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
         raise Refused("Add them as an operator first.", key="not_operator")
     if grant.is_owner:
         raise Refused("Already the Owner.", key="already_owner")
+    # The Owner handing over steps down: the actor's own grant (the
+    # platform, acting as no one, hands over the first Owner's).
     former = session.scalar(
         select(ExerciseOperator)
         .where(
             ExerciseOperator.exercise_id == exercise.id,
             ExerciseOperator.is_owner.is_(True),
             ExerciseOperator.removed_at.is_(None),
+            *(() if actor.person is None else (ExerciseOperator.person_id == actor.person.id,)),
         )
+        .order_by(ExerciseOperator.id)
+        .limit(1)
         .execution_options(populate_existing=True)
     )
+    if former is None and actor.person is not None:
+        # The actor's own Owner row is gone: their check passed just before
+        # ownership moved elsewhere, so nothing is changed (Codex on #4110).
+        raise Refused("Ownership has just changed; reload and try again.", key="changed")
     # Each step restates its rule in its WHERE: the former Owner is still
-    # the Owner, and the new one is still a current operator. Cleared
-    # first, so the one-Owner index holds at every step.
+    # an Owner, and the new one is still a current operator.
     if former is not None and not _changed(
         session,
         update(ExerciseOperator)
         .where(
             ExerciseOperator.id == former.id,
             ExerciseOperator.is_owner.is_(True),
-            # Not the super-admin: the Owner demoted is the one whose
-            # authority was checked (Codex on #4110).
-            *(
-                ()
-                if actor.is_super_admin or actor.person is None
-                else (ExerciseOperator.person_id == actor.person.id,)
-            ),
+            # The Owner demoted is the one whose authority was checked
+            # (Codex on #4110).
+            *(() if actor.person is None else (ExerciseOperator.person_id == actor.person.id,)),
         )
         .values(is_owner=False)
         .execution_options(synchronize_session=False),
@@ -542,3 +571,34 @@ def hand_over(session: Session, exercise: Exercise, actor: Actor, person: Person
         exercise=exercise,
         refs=refs,
     )
+
+
+def adopt(session: Session, exercise: Exercise, actor: Actor) -> bool:
+    """Make `actor`, an Admin or the super-admin, an Owner of `exercise`
+    (segment AD2M, `applydesk/spec/permissions.md` §5): the one way either
+    takes up an exercise, so every change has an Owner on record. True if
+    it changed anything; adopting one already owned changes nothing."""
+    _lock(session, exercise)
+    if actor.person is None or not (actor.is_super_admin or _admin_now(session, actor.person)):
+        raise Refused("Only an Admin or the platform super-admin adopts.", key="not_admin")
+    grant = _grant(session, exercise, actor.person)
+    if grant is not None and grant.removed_at is None and grant.is_owner:
+        return False
+    was = "none" if grant is None else ("removed" if grant.removed_at else "operator")
+    if grant is None:
+        grant = ExerciseOperator(exercise_id=exercise.id, person_id=actor.person.id)
+        session.add(grant)
+    grant.is_owner = True
+    grant.removed_at = None
+    grant.added_by_id = actor.person.id
+    grant.added_at = _now()
+    session.flush()
+    audit.write_event(
+        session,
+        event_type="exercise.adopted",
+        actor=actor.person,
+        exercise=exercise,
+        refs={"person_id": actor.person.id},
+        context={"was": was},
+    )
+    return True

@@ -176,3 +176,101 @@ def test_an_operator_cannot_reach_the_admin_pages(monkeypatch: pytest.MonkeyPatc
         ).status_code
         == 404
     )
+
+
+# --- Rung 4: adopting an exercise ---
+
+EX = "wa9juxbc2t"
+
+
+def _drop_my_grant(public_id: str) -> None:
+    """Take the fake identity (seeded Owner of every sample) off one."""
+    from applydesk.models import Exercise, ExerciseOperator
+
+    session = db.new_session()
+    exercise = session.scalar(select(Exercise).where(Exercise.public_id == public_id))
+    assert exercise is not None
+    for grant in session.scalars(
+        select(ExerciseOperator).where(ExerciseOperator.exercise_id == exercise.id)
+    ):
+        session.delete(grant)
+    session.commit()
+    session.close()
+
+
+def test_the_super_admin_adopts_before_working_on_an_exercise() -> None:
+    """The author's ruling (2026-11-22): the super-admin reaches only what
+    they own or operate; Manage adopts the rest as an Owner, audited."""
+    client = TestClient(host_with(("applydesk",))[0])
+    _drop_my_grant(EX)
+    home = f"/applydesk/operator/exercises/{EX}"
+    assert client.get(home).status_code == 404
+    assert "Recruitment and Selection" not in client.get("/applydesk/operator/exercises").text
+    diag = client.get("/applydesk/admin/exercises").text
+    row = diag[diag.index(f'data-ex-row="{EX}"') :]
+    row = row[: row.index("</tr>")]
+    assert "data-adopt" in row and f"/admin/exercises/{EX}/manage" in row
+    adopted = client.post(f"/applydesk/admin/exercises/{EX}/manage", follow_redirects=False)
+    assert adopted.headers["location"].endswith(f"/operator/exercises/{EX}")
+    assert client.get(home).status_code == 200
+    assert "Recruitment and Selection" in client.get("/applydesk/operator/exercises").text
+    assert _events()[-1] == "exercise.adopted"
+    # Owned now: Manage is a plain link, and posting again adopts nothing.
+    again = client.post(f"/applydesk/admin/exercises/{EX}/manage", follow_redirects=False)
+    assert again.status_code == 303 and _events()[-1] == "exercise.adopted"
+    assert _events().count("exercise.adopted") == 1
+    diag = client.get("/applydesk/admin/exercises").text
+    row = diag[diag.index(f'data-ex-row="{EX}"') :]
+    assert "data-adopt" not in row[: row.index("</tr>")]
+
+
+def test_adopting_beside_an_owner_leaves_two_owners(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An Admin adopting an exercise someone else owns becomes a second
+    Owner; Diagnostics names both."""
+    from applydesk.models import Exercise
+
+    monkeypatch.setattr(identity_settings, "fake_auth_super_admin", False)
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["root@example.edu"])
+    session = db.new_session()
+    me = session.scalar(select(Person).where(Person.object_id == "local-dev"))
+    assert me is not None
+    me_id = me.id
+    session.close()
+    _drop_my_grant(EX)
+    ann = _signed_in("ann@example.edu", "o-ann", "Ann Koh")
+    _as(ann, "admit")
+    session = db.new_session()
+    ra = session.scalar(select(Exercise).where(Exercise.public_id == EX))
+    ann_row = session.get(Person, ann)
+    assert ra is not None and ann_row is not None
+    operators.add_operator(session, ra, SUPER, ann_row)
+    operators.hand_over(session, ra, SUPER, ann_row)  # Ann owns RA
+    session.commit()
+    session.close()
+    _as(me_id, "promote")
+    client = TestClient(host_with(("applydesk",))[0])
+    client.post(f"/applydesk/admin/exercises/{EX}/manage")
+    session = db.new_session()
+    ra = session.scalar(select(Exercise).where(Exercise.public_id == EX))
+    assert ra is not None
+    assert {p.id for p in operators.owners_of(session, ra)} == {ann, me_id}
+    session.close()
+    diag = client.get("/applydesk/admin/exercises").text
+    row = diag[diag.index(f'data-ex-row="{EX}"') :]
+    assert "Ann Koh, Local Operator" in row[: row.index("</tr>")]
+
+
+def test_an_operator_cannot_adopt(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(identity_settings, "fake_auth_super_admin", False)
+    _drop_my_grant(EX)
+    client = TestClient(host_with(("applydesk",))[0])
+    assert client.post(f"/applydesk/admin/exercises/{EX}/manage").status_code == 404
+    session = db.new_session()
+    with pytest.raises(Refused):
+        me = session.scalar(select(Person).where(Person.object_id == "local-dev"))
+        from applydesk.models import Exercise
+
+        ra = session.scalar(select(Exercise).where(Exercise.public_id == EX))
+        assert ra is not None
+        operators.adopt(session, ra, Actor(me))
+    session.close()

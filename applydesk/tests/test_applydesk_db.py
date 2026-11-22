@@ -17,6 +17,9 @@ from applydesk.models import Exercise, ExerciseOperator, Person
 from applydesk.seed import SeedRefused, main, seed
 from cordware.settings import identity_settings
 
+# These test an empty database, before the seed (segment AD2M).
+pytestmark = pytest.mark.usefixtures("unseeded")
+
 ROOT = Path(__file__).resolve().parents[2]
 TABLES = {"person", "exercise", "exercise_operator", "audit_event"}
 

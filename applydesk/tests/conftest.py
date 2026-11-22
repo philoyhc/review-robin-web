@@ -22,7 +22,9 @@ def _fake_super_admin(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
-def applydesk_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+def applydesk_db(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest
+) -> Iterator[None]:
     """Apply Desk's database as a fresh SQLite file for every test, its
     tables made from the models (the migration is round-tripped in
     `test_applydesk_db.py`): the gate reads it (segment AD2A), so no test
@@ -33,7 +35,23 @@ def applydesk_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[No
     db.engine.cache_clear()
     db._sessions.cache_clear()  # pyright: ignore[reportPrivateUsage]  -- reset between tests
     models.Base.metadata.create_all(db.engine())
+    # The fake identity owns the sample exercises in the ordinary way, as
+    # Local Operator does after `python -m applydesk.seed`: the super-admin
+    # reaches no exercise it holds no role on (segment AD2M). A test of an
+    # unloaded database asks for `unseeded`.
+    if "unseeded" not in request.fixturenames:
+        from applydesk import seed
+
+        session = db.new_session()
+        seed.seed(session)
+        session.close()
     yield
     db.engine().dispose()
     db.engine.cache_clear()
     db._sessions.cache_clear()  # pyright: ignore[reportPrivateUsage]  -- reset between tests
+
+
+@pytest.fixture
+def unseeded() -> None:
+    """Asked for by a test of a database the seed has not loaded: the
+    `applydesk_db` fixture then leaves it empty."""

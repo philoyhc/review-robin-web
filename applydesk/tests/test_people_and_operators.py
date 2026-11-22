@@ -16,6 +16,9 @@ from applydesk.operators import Actor, Refused
 from cordware.graph import DirectoryUser, FakeDirectory, GraphError
 from cordware.identity import Identity
 
+# These test an empty database, before the seed (segment AD2M).
+pytestmark = pytest.mark.usefixtures("unseeded")
+
 TENANT = "tenant-1"
 
 
@@ -188,7 +191,7 @@ def test_making_an_exercise_makes_its_owner(session: Session) -> None:
     with pytest.raises(Refused):
         operators.create_exercise(session, Actor(stranger), "abcdefghjk")
     exercise = operators.create_exercise(session, Actor(owner), "abcdefghjk")
-    assert operators.owner_of(session, exercise) is owner
+    assert operators.owners_of(session, exercise) == [owner]
     assert operators.can_operate(session, exercise, Actor(owner))
     assert not operators.can_operate(session, exercise, Actor(stranger))
     assert operators.can_operate(session, exercise, SUPER)
@@ -210,7 +213,7 @@ def test_the_owner_adds_removes_and_hands_over(session: Session) -> None:
     with pytest.raises(Refused, match="cannot be removed"):
         operators.remove_operator(session, exercise, Actor(owner), owner)
     operators.hand_over(session, exercise, Actor(owner), colleague)
-    assert operators.owner_of(session, exercise) is colleague
+    assert operators.owners_of(session, exercise) == [colleague]
     assert [(p.id, o) for p, o in operators.current_operators(session, exercise)] == [
         (colleague.id, True),
         (owner.id, False),
@@ -244,7 +247,7 @@ def test_revoking_ends_access_but_keeps_the_grant(session: Session) -> None:
     with pytest.raises(Refused):
         operators.add_operator(session, exercise, Actor(owner), colleague)
     operators.hand_over(session, exercise, SUPER, colleague)
-    assert operators.owner_of(session, exercise) is colleague
+    assert operators.owners_of(session, exercise) == [colleague]
 
 
 # --------------------------------------------------------------------------- #
@@ -283,11 +286,9 @@ def test_an_address_only_reuses_a_pending_person_never_a_bound_one(session: Sess
     assert people.pending(session, "ana@example.edu", actor=None).id == made.id
 
 
-def test_the_database_holds_one_owner_per_exercise(session: Session) -> None:
-    """Codex on #4110: two handovers at once must not leave two Owners; the
-    partial unique index refuses the second Owner row."""
-    from sqlalchemy.exc import IntegrityError
-
+def test_an_exercise_may_have_several_owners(session: Session) -> None:
+    """Segment AD2M: the one-Owner index went, so a second Owner row is
+    allowed (adopting adds one); a handover still moves the actor's own."""
     owner = _operator(session, "o1", "ana@example.edu")
     colleague = _operator(session, "o2", "ben@example.edu")
     exercise = operators.create_exercise(session, Actor(owner), "abcdefghjk")
@@ -297,13 +298,14 @@ def test_the_database_holds_one_owner_per_exercise(session: Session) -> None:
         select(ExerciseOperator).where(ExerciseOperator.person_id == colleague.id)
     )
     assert grant is not None
-    grant.is_owner = True  # as a racing handover would, without clearing the Owner
-    with pytest.raises(IntegrityError):
-        session.flush()
-    session.rollback()
-    operators.hand_over(session, exercise, Actor(owner), colleague)  # the service's order holds
+    grant.is_owner = True
+    session.flush()
+    assert {p.id for p in operators.owners_of(session, exercise)} == {owner.id, colleague.id}
+    grant.is_owner = False
     session.commit()
-    assert operators.owner_of(session, exercise) == colleague
+    operators.hand_over(session, exercise, Actor(owner), colleague)
+    session.commit()
+    assert operators.owners_of(session, exercise) == [colleague]
 
 
 def test_a_reassigned_address_s_new_account_still_shows_in_the_search(session: Session) -> None:
@@ -417,7 +419,7 @@ def test_removing_someone_just_made_owner_is_refused(session: Session) -> None:
         operators.remove_operator(session, exercise, SUPER, colleague)
     assert read.is_owner  # the refusal reloaded the row
     session.rollback()
-    assert operators.owner_of(session, exercise) == colleague
+    assert operators.owners_of(session, exercise) == [colleague]
 
 
 def test_handing_over_to_someone_just_removed_is_refused(session: Session) -> None:
@@ -435,7 +437,7 @@ def test_handing_over_to_someone_just_removed_is_refused(session: Session) -> No
     with pytest.raises(Refused):  # caught on the fresh read, or by the conditional update
         operators.hand_over(session, exercise, SUPER, colleague)
     session.rollback()
-    assert operators.owner_of(session, exercise) == owner
+    assert operators.owners_of(session, exercise) == [owner]
     session.refresh(read)
     assert read.removed_at is not None and not read.is_owner
 
@@ -501,7 +503,7 @@ def test_a_former_owner_cannot_hand_over_after_losing_ownership(session: Session
     assert exercise is not None
     operators.add_operator(session, exercise, SUPER, third)
     session.commit()
-    assert operators.owner_of(session, exercise) == owner  # this request's view
+    assert operators.owners_of(session, exercise) == [owner]  # this request's view
     session.commit()
 
     other = db.new_session()  # meanwhile the super-admin hands it to the colleague
@@ -514,7 +516,7 @@ def test_a_former_owner_cannot_hand_over_after_losing_ownership(session: Session
     with pytest.raises(Refused, match="Only the exercise's Owner"):
         operators.hand_over(session, exercise, Actor(owner), third)
     session.rollback()
-    assert operators.owner_of(session, exercise) == colleague
+    assert operators.owners_of(session, exercise) == [colleague]
 
 
 def test_a_check_passed_just_before_ownership_moved_still_demotes_no_one_else(
@@ -536,7 +538,7 @@ def test_a_check_passed_just_before_ownership_moved_still_demotes_no_one_else(
     with pytest.raises(Refused, match="Ownership has just changed"):
         operators.hand_over(session, exercise, Actor(owner), third)
     session.rollback()
-    assert operators.owner_of(session, exercise) == colleague
+    assert operators.owners_of(session, exercise) == [colleague]
 
 
 @pytest.mark.parametrize("change", ["add", "hand_over"])
@@ -566,7 +568,7 @@ def test_a_target_revoked_meanwhile_is_refused(session: Session, change: str) ->
         else:
             operators.add_operator(session, exercise, Actor(owner), target)
     session.rollback()
-    assert operators.owner_of(session, exercise) == owner
+    assert operators.owners_of(session, exercise) == [owner]
 
 
 def test_an_actor_revoked_meanwhile_reaches_nothing_and_makes_nothing(session: Session) -> None:

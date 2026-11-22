@@ -121,10 +121,15 @@ def test_an_operator_who_is_not_the_owner_sees_it_read_only_and_is_refused(
     assert me in _roles()
 
 
-def test_an_exercise_not_loaded_says_so() -> None:
-    """The conftest's super-admin, with an empty database: no rows yet."""
-    page = TestClient(host_with(("applydesk",))[0]).get(HOME).text
-    assert "data-ops-unrecorded" in page and "python -m applydesk.seed" in page
+def test_an_exercise_not_loaded_is_reached_by_no_one(unseeded: None) -> None:
+    """Segment AD2M: with an empty database even the super-admin holds no
+    role on a sample, so its pages are a 404; Exercises Diagnostics' Manage
+    says it is not loaded and how to load it."""
+    client = TestClient(host_with(("applydesk",))[0])
+    assert client.get(HOME).status_code == 404
+    manage = client.post(f"/applydesk/admin/exercises/{EX}/manage", follow_redirects=False)
+    assert manage.headers["location"].endswith("said=not_loaded")
+    assert "python -m applydesk.seed" in client.get(manage.headers["location"]).text
 
 
 def test_every_refusal_key_has_a_status_line() -> None:

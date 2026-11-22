@@ -212,7 +212,7 @@ def test_back_keeps_where_admin_was_opened_from(client: TestClient) -> None:
     assert 'href="/applydesk/operator/exercises" data-admin-back' in away.text
 
 
-def test_the_super_admin_is_listed_as_self() -> None:
+def test_the_super_admin_is_listed_as_self(unseeded: None) -> None:
     """The author's ask (2026-11-21), as Review Robin's Accounts
     Management: the signed-in super-admin is on the list as (self), though
     they reach every page by their identity; once on the list themselves,
@@ -223,11 +223,11 @@ def test_the_super_admin_is_listed_as_self() -> None:
     page = admin.get("/applydesk/admin/operators").text
     assert page.count("data-op-self") == 1 and "Super-admin" in page and "Nobody yet" not in page
     assert "data-op-self" not in admin.get("/applydesk/admin/operators?list_q=zzz").text
-    # The super-admin operates every exercise, so their row says so (the
+    # The super-admin may operate, so their row says so (the
     # author, 2026-11-22: Local Operator showed as no operator).
-    own = page[page.index("<tr data-op-self>") :]
+    own = page[page.index("data-op-self>") :]
     own = own[: own.index("</tr>")]
-    assert 'title="The super-admin operates every exercise">yes</span>' in own
+    assert 'title="The super-admin may operate, as every Admin may">yes</span>' in own
     session = db.new_session()
     seed.seed(session)  # puts the fake identity on the list
     me = _person("local-dev")
@@ -238,7 +238,7 @@ def test_the_super_admin_is_listed_as_self() -> None:
     row = page[page.index(f'data-op-entry="{me.id}"') :]
     row = row[: row.index("</tr>")]
     assert "(self)" in row and "data-bulk-row" not in row  # no action on your own row (ruling)
-    assert 'title="The super-admin operates every exercise">yes</span>' in row
+    assert 'title="The super-admin may operate, as every Admin may">yes</span>' in row
     refused = admin.post(
         "/applydesk/admin/operators/bulk",
         data={"action": "revoke", "person_ids": str(me.id)},
@@ -250,10 +250,10 @@ def test_the_super_admin_is_listed_as_self() -> None:
 
 
 def test_the_super_admin_reads_operator_yes_though_not_listed(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, unseeded: None
 ) -> None:
     """The author, 2026-11-22: Local Operator showed as no operator. The
-    super-admin operates every exercise by their identity (`gate.viewer`),
+    super-admin may operate by their identity (`gate.viewer`),
     so their own row reads yes and shows the workspace Unit, listed or not."""
     from datetime import UTC, datetime
 
@@ -262,7 +262,7 @@ def test_the_super_admin_reads_operator_yes_though_not_listed(
     monkeypatch.setattr(identity_settings, "institution_name", "Example University")
     admin = TestClient(host_with(("applydesk",))[0])
     alone = admin.get("/applydesk/admin/operators").text
-    own = alone[alone.index("<tr data-op-self>") :]
+    own = alone[alone.index("data-op-self>") :]
     own = own[: own.index("</tr>")]
     assert 'title="The workspace default">Example University</span>' in own
     session = db.new_session()
@@ -278,7 +278,7 @@ def test_the_super_admin_reads_operator_yes_though_not_listed(
     ).text
     row = page[page.index(f'data-op-entry="{pid}"') :]
     row = row[: row.index("</tr>")]
-    assert 'title="The super-admin operates every exercise">yes</span>' in row
+    assert 'title="The super-admin may operate, as every Admin may">yes</span>' in row
     assert 'title="The workspace default">Example University</span>' in row
 
 

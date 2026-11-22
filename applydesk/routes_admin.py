@@ -6,10 +6,12 @@ Admin tabs (the author's ask, 2026-11-21)."""
 
 from __future__ import annotations
 
+import functools
 import re
 from urllib.parse import parse_qs, urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
@@ -17,6 +19,7 @@ from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from applydesk import allowlist, db, directory, gate, locks, operators, sample_data
 from applydesk.ids import row_id
+from applydesk.models import Exercise
 from applydesk.web import ADMIN, render, url_path
 from cordware.graph import GraphError, directory_for
 from cordware.identity import Identity, current_identity, super_admin_configured
@@ -52,6 +55,10 @@ SAID: dict[str, str] = {
     "last_admin": "The last Admin stays an Admin.",
     "pending": "Only someone who has signed in can be an Admin.",
     "is_admin": "An Admin is demoted before being taken off the list.",
+    "not_loaded": (
+        "That exercise is not in the database yet; on a local run, load the samples"
+        " with python -m applydesk.seed."
+    ),
 }
 
 
@@ -199,12 +206,54 @@ def exercises_page(
         area=ADMIN,
         rows=rows,
         owners=operators.owner_labels(session, [e.public_id for e in rows]),
+        # Manage opens an exercise the viewer owns or operates, and adopts
+        # the rest, asking first (segment AD2M).
+        operates=functools.partial(gate.operates, request),
+        said=SAID.get(request.query_params.get("said", ""), ""),
         by_status=locks.status_tally(rows),
         exercise_status=locks.exercise_status,
         default_timezone=sample_data.DEFAULT_TIMEZONE,
         back_path=back_path,
         back_label=back_label,
     )
+
+
+@router.post("/exercises/{public_id}/manage", name="applydesk_admin_manage")
+async def manage(request: Request, public_id: str) -> Response:
+    """*Manage* on Exercises Diagnostics (segment AD2M): adopt the exercise
+    as an Owner unless the viewer already owns or operates it, then open its
+    Home. A sample not yet in the database cannot be adopted, and says so."""
+    _same_site(request)
+    return await run_in_threadpool(_manage, request, public_id)
+
+
+def _manage(request: Request, public_id: str) -> Response:
+    home = url_path(request, f"/operator/exercises/{public_id}")
+    if gate.operates(request, public_id):
+        return RedirectResponse(home, status_code=303)
+    session = db.new_session()
+    try:
+        exercise = session.scalar(select(Exercise).where(Exercise.public_id == public_id))
+        if exercise is None:
+            return RedirectResponse(
+                url_path(request, "/admin/exercises?said=not_loaded"), status_code=303
+            )
+        operators.adopt(session, exercise, allowlist.actor_for(session, _identity(request)))
+        session.commit()
+    except operators.Refused as refused:
+        session.rollback()
+        return RedirectResponse(
+            url_path(request, f"/admin/exercises?said={refused.key}"), status_code=303
+        )
+    except (IntegrityError, OperationalError) as error:
+        session.rollback()
+        if not db.lost_a_race(error):
+            raise
+        return RedirectResponse(url_path(request, "/admin/exercises?said=changed"), status_code=303)
+    finally:
+        session.close()
+    gate.forget_viewer(request)  # their grants changed
+    return RedirectResponse(home, status_code=303)
 
 
 @router.get("/system", name="applydesk_admin_system")

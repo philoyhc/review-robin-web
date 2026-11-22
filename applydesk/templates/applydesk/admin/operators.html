@@ -144,14 +144,15 @@
         <td>{{ me.name or "—" }}</td>
         <td>{% if top_line %}<span class="chip chip-mute" title="The workspace default">{{ top_line }}</span>{% else %}—{% endif %}</td>
         <td>—</td>
-        <td><span class="chip chip-info" title="The super-admin operates every exercise">yes</span></td>
+        <td><span class="chip chip-info" title="The super-admin may operate, as every Admin may">yes</span></td>
         <td><span class="chip chip-info">Super-admin</span></td>
       </tr>
     {% endif %}
     {% for p in view.people %}
       {% set is_me = p.id == me.person_id %}
-      {# The super-admin operates every exercise by their identity, listed
-         or not (`gate.viewer`), so their own row says yes. #}
+      {# The super-admin may operate by their identity, listed or not
+         (`gate.viewer`), so their own row says yes; they work on an
+         exercise once they own or operate it (segment AD2M). #}
       {% set is_op = p.id in listed or (is_me and me.is_super_admin) %}
       <tr data-op-entry="{{ p.id }}"{% if is_me %} data-op-self{% endif %}>
         <td class="adm-check">{% if is_me %}<span class="muted" title="You can't act on your own row">(self)</span>{% else %}<input type="checkbox" name="person_ids" value="{{ p.id }}" form="users-bulk-form" aria-label="Select {{ p.label }}" data-bulk-row>{% endif %}</td>
@@ -159,7 +160,7 @@
         <td>{{ p.display_name or "—" }}</td>
         <td>{% if is_op and top_line %}<span class="chip chip-mute" title="The workspace default">{{ top_line }}</span>{% elif is_op %}—{% endif %}</td>
         <td>{% if p.first_signed_in_at %}{{ p.first_signed_in_at.strftime("%Y-%m-%d") }}{% else %}<span class="muted">Not yet signed in</span>{% endif %}</td>
-        <td>{% if is_op %}<span class="chip chip-info"{% if is_me and me.is_super_admin %} title="The super-admin operates every exercise"{% endif %}>yes</span>{% else %}<span class="chip chip-mute">no</span>{% endif %}</td>
+        <td>{% if is_op %}<span class="chip chip-info"{% if is_me and me.is_super_admin %} title="The super-admin may operate, as every Admin may"{% endif %}>yes</span>{% else %}<span class="chip chip-mute">no</span>{% endif %}</td>
         <td>{% if is_me and me.is_super_admin %}<span class="chip chip-info">Super-admin</span>{% elif p.is_admin and is_op %}<span class="chip chip-info">Admin</span>{% else %}<span class="chip chip-mute">no</span>{% endif %}</td>
       </tr>
     {% else %}{% if not view.me_row %}
