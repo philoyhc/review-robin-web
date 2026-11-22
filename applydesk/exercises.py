@@ -562,6 +562,20 @@ def delete(session: Session, public_ids: list[str], actor: operators.Actor) -> N
         )
 
 
+def discard(session: Session, public_id: str, actor: operators.Actor) -> None:
+    """*Discard* on a scratch exercise: its row deleted as `delete` deletes
+    one (the row and audit trail kept, ruling 74), so its code is free
+    again. Not Owner-only: a scratch exercise is reached from one browser
+    only, so whoever holds it there discards it, even after handing its
+    ownership on (cold read; Codex on cordware#223)."""
+    exercise = _locked(session, public_id)
+    _live(exercise)
+    exercise.deleted_at = datetime.now(UTC)
+    exercise.revision += 1
+    session.flush()
+    audit.write_event(session, event_type="exercise.deleted", actor=actor.person, exercise=exercise)
+
+
 def copy_settings(session: Session, source_id: str, target: Exercise, actor: Person | None) -> None:
     """*Duplicate settings only*: `target` (a new exercise's row) takes
     the source's settings and tags, named "Copy of …", with no code."""

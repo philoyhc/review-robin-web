@@ -263,7 +263,7 @@ Every change writes an `audit_event` with the actor.
 | `exercise.owner_demoted` | an Owner made an operator, or stepping down (`context.stepped_down`) | Yes |
 | `exercise.operator_left` | an operator leaves | Yes |
 | `exercise.adopted` | an Admin or the super-admin adopts an exercise as Owner (not when already an Owner) | Yes |
-| `exercise.archived`, `exercise.restored`, `exercise.deleted` | an Owner archives (*Purge and archive* too, which only archives), restores, or deletes | Yes |
+| `exercise.archived`, `exercise.restored`, `exercise.deleted` | an Owner archives (*Purge and archive* too, which only archives), restores, or deletes; the holder of a scratch exercise discards it (`exercise.deleted`) | Yes |
 | `exercise.settings_recorded`, `exercise.details_changed`, `exercise.duplicated` | an exercise's settings recorded from the sample (the seed), changed (Details' *Lock*, the Lobby's *Save* and tag actions), or copied | Yes |
 | `person.promoted`, `person.demoted` | Admin granted, taken away; a Promote that lists someone also writes `person.admitted` | Yes |
 

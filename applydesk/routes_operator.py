@@ -206,6 +206,8 @@ def _panel_change(request: Request, action: str, ids: list[str], form: dict[str,
             exercise_store.retag(session, ids, tags, actor.person, add=action == "add_tags")
         elif action == "archive":
             exercise_store.archive(session, ids, actor)
+        elif action == "discard":
+            exercise_store.discard(session, ids[0], actor)
         else:
             if first("confirm") != "yes":
                 return "delete_unconfirmed"
@@ -221,13 +223,16 @@ def _panel_change(request: Request, action: str, ids: list[str], form: dict[str,
         return "code_taken" if "uq_exercise_live_code" in str(error.orig) else "stale"
     finally:
         session.close()
-    if action == "delete":  # a deleted scratch exercise frees its place (cold read)
+    if action in ("delete", "discard"):  # a deleted scratch exercise frees its place
         for i in ids:
             scratch.discard(scratch.token(), i)
     gate.forget_viewer(request)
-    return {"save": "saved", "add_tags": "tagged", "remove_tags": "untagged"}.get(
-        action, action + "d"
-    )
+    return {
+        "save": "saved",
+        "add_tags": "tagged",
+        "remove_tags": "untagged",
+        "discard": "discarded",
+    }.get(action, action + "d")
 
 
 async def _duplicate(request: Request, source_id: str, back: str) -> Response:
@@ -403,12 +408,14 @@ async def exercise_new(request: Request) -> Response:
 
 @router.post("/exercises/{exercise_id}/discard", name="applydesk_exercise_discard")
 def exercise_discard(request: Request, exercise_id: str) -> Response:
-    """*Discard* on the Lobby: a scratch exercise forgotten."""
+    """*Discard* on the Lobby: a scratch exercise forgotten, and its row
+    deleted (`exercises.discard`), so its code is free again (Codex on
+    cordware#223)."""
     _same_site(request)
     exercise = exercise_or_404(exercise_id)
-    if not scratch.discard(scratch.token(), exercise.public_id):
+    if not scratch.is_scratch(exercise.public_id):
         raise HTTPException(status_code=404)
-    return _to_lobby(request, "discarded")
+    return _to_lobby(request, _panel_change(request, "discard", [exercise.public_id], {}))
 
 
 _ELIGIBILITY = ("Open to all signed in", "Invitation only", "Not set")
