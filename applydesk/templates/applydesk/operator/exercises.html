@@ -62,7 +62,7 @@
         <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a>{% if scratch_row %} <span class="chip chip-mute" data-scratch-chip>Scratch</span>
           <form class="nx-discard" method="post" action="{{ url('/operator/exercises/' ~ e.public_id ~ '/discard') }}" data-nx-discard data-name="{{ e.name }}"><button class="btn btn-destructive btn-short" type="submit">Discard</button></form>{% endif %}</td>
         <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
-        <td>{% if owners[e.public_id] is defined %}<span class="chip chip-mute" title="The Owner, until who created it is recorded">{{ owners[e.public_id] }}</span>{% else %}<span class="muted" title="No Owner on record: run the seed locally (python -m applydesk.seed)">—</span>{% endif %}</td>
+        <td>{% if owners[e.public_id] is defined %}<span class="chip chip-mute" title="The Owner, until who created it is recorded">{{ owners[e.public_id] }}</span>{% else %}<span class="muted" title="No Owner on record">—</span>{% endif %}</td>
         <td class="lb-when">{{ created_label(e) or "—" }}</td>
         <td><span class="chip chip-mute" title="{{ zone }}">{{ utc_offset(zone) }}</span></td>
         <td class="lb-stage">{% with value = exercise_status(e) %}{% include "applydesk/_state_chip.html" %}{% endwith %}{% if m %}<span class="of" data-lb-stage>Stage {{ n }} of {{ m }}{% if stage_name %} · {{ stage_name }}{% endif %}</span>{% endif %}</td>

@@ -317,6 +317,40 @@ def test_exercises_diagnostics_names_each_owner_on_record() -> None:
     assert "each exercise's Owner" not in after  # the placeholder no longer lists it
 
 
+def test_the_owner_columns_name_the_owner_not_the_viewer() -> None:
+    """Cold read, 2026-11-22: an Owner who is not the signed-in viewer
+    shows on both pages, a pending one by address; a plain operator, an
+    unknown exercise and a removed grant name no one."""
+    from applydesk import db, operators, people, sample_data, seed
+    from applydesk.models import Exercise
+
+    session = db.new_session()
+    seed.seed(session, owner_email="pat@example.edu")
+    platform = operators.Actor(None, is_super_admin=True)
+    jane = people.pending(session, "jane.tan@example.edu", None)
+    operators.admit(session, platform, jane)
+    ra = session.scalar(select(Exercise).where(Exercise.public_id == EX))
+    assert ra is not None
+    operators.add_operator(session, ra, platform, jane)
+    session.commit()
+    ids = [e.public_id for e in sample_data.EXERCISES]
+    labels = operators.owner_labels(session, [*ids, "nosuchid00"])
+    assert labels == dict.fromkeys(ids, "pat@example.edu")  # Jane operates, Pat owns
+    assert operators.owner_labels(session, []) == {}
+    operators.remove_operator(session, ra, platform, jane)
+    session.commit()
+    assert operators.owner_labels(session, [EX]) == {EX: "pat@example.edu"}
+    session.close()
+    admin = TestClient(host_with(("applydesk",))[0])
+    diag = admin.get("/applydesk/admin/exercises").text
+    row = diag[diag.index(f'data-ex-row="{EX}"') :]
+    assert "<td>pat@example.edu</td>" in row[: row.index("</tr>")]
+    lobby = admin.get("/applydesk/operator/exercises").text
+    row = lobby[lobby.index("Recruitment and Selection") :]
+    row = row[: row.index("</tr>")]
+    assert 'recorded">pat@example.edu</span>' in row and "Local Operator" not in row
+
+
 # --- The bug sweep at the AD2A close ---
 
 

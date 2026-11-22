@@ -39,7 +39,7 @@
       <tr data-ex-row="{{ e.public_id }}">
         <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a></td>
         <td class="adm-nowrap">{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
-        <td>{% if owners[e.public_id] is defined %}{{ owners[e.public_id] }}{% else %}<span class="muted" title="No Owner on record: run the seed locally (python -m applydesk.seed)">—</span>{% endif %}</td>
+        <td>{% if owners[e.public_id] is defined %}{{ owners[e.public_id] }}{% else %}<span class="muted" title="No Owner on record">—</span>{% endif %}</td>
         <td>{{ e.opens or "—" }}</td>
         <td>{{ e.application_stage_ends or "—" }}</td>
         <td>{{ e.timezone or default_timezone }}</td>

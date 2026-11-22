@@ -342,7 +342,8 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     - *Created by* is the exercise's current Owner on record
       (`operators.owner_labels`), until AD2B records who made each; *—*
       where there is none, as before the local seed has run. A scratch
-      exercise's Owner is whoever made it.
+      exercise's Owner is whoever made it, until ownership is handed over;
+      then it reads the new Owner.
     - *Tags* are `Exercise.tags` (sample values; *No tags* when none).
   - **The tick panel**, Review Robin's. Ticked rows are highlighted and one
     panel sits under the most recently ticked row still ticked; unticking

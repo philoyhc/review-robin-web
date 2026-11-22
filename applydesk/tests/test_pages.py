@@ -429,7 +429,7 @@ def test_the_lobby_is_laid_out_as_review_robin_s(client: TestClient) -> None:
     assert 'data-tags="Residential, 2027"' in row
     # Created by is the Owner on record until AD2B records the creator
     # (the author, 2026-11-22): none before the seed, the seeded one after.
-    assert 'title="No Owner on record: run the seed locally (python -m applydesk.seed)">—' in row
+    assert 'title="No Owner on record">—' in row
     from applydesk import db, seed
 
     session = db.new_session()
