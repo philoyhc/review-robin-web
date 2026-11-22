@@ -4,9 +4,12 @@ rulings 73 and 75).
 - **Operator pages** (`/operator/…`) answer only an operator:
   `require_exercise_operator`, a FastAPI dependency on that router, as
   Review Robin's per-session check (`app/web/deps.py`). The platform
-  super-admin reaches everything. Anyone else must be on the allowlist
-  (`operators.may_operate`) and, on an exercise's pages, hold a current
-  grant on it. Everyone else gets 404, so the pages do not say they exist.
+  super-admin or someone on the allowlist (`operators.may_operate`) reaches
+  the Lobby; on an exercise's pages each must hold a current grant on it,
+  the super-admin included: they adopt the rest from Admin (segment AD2M).
+  Everyone else gets 404, so the pages do not say they exist.
+- **The Admin pages** (`/admin/…`) answer the super-admin and Admins
+  (`require_admin`).
 - **The participant's pages** (`/me/…`) and the landing are still the
   placeholders': anyone on a local run, deployed only the super-admin
   (`placeholders_only`), until a later AD2 segment matches applicants.
@@ -144,12 +147,6 @@ def own_new_exercise(request: Request, public_id: str) -> bool:
 def forget_viewer(request: Request) -> None:
     """Drop the viewer looked up for this request: their grants changed."""
     setattr(request.state, _STATE, None)
-
-
-def require_super_admin(request: Request) -> None:
-    """The platform super-admin only, 404 for everyone else."""
-    if not viewer(request).is_super_admin:
-        raise HTTPException(status_code=404)
 
 
 def is_admin(request: Request) -> bool:

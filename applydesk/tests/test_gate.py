@@ -20,7 +20,7 @@ from cordware.settings import identity_settings
 
 EX = "wa9juxbc2t"  # a sample exercise the seed grants
 OTHER = "r6tm4kq9wz"
-SUPER = Actor(None, is_super_admin=True)
+SUPER = Actor(None, is_super_admin=True, platform=True)
 
 
 @pytest.fixture
@@ -330,7 +330,7 @@ def test_the_owner_columns_name_the_owner_not_the_viewer(unseeded: None) -> None
 
     session = db.new_session()
     seed.seed(session, owner_email="pat@example.edu")
-    platform = operators.Actor(None, is_super_admin=True)
+    platform = operators.Actor(None, is_super_admin=True, platform=True)
     jane = people.pending(session, "jane.tan@example.edu", None)
     operators.admit(session, platform, jane)
     ra = session.scalar(select(Exercise).where(Exercise.public_id == EX))

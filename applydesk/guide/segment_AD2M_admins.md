@@ -51,6 +51,10 @@ Rejected: adopting as an operator first and as an Owner once AD2O lands. The spe
 
 - Admin is a column on `person`, not a role table. It nests as Review Robin's does and needs no join.
 - Accounts Management's *Admin* column reads *Super-admin*, *Admin* or *no*. The *Admins* chip counts Admins with the super-admin.
+- The last Admin is never demoted, a super-admin configured or not, as spec §8 and Review Robin's `last_admin` say; the plan's "only with none configured" yielded to the spec (2026-11-22, cold read).
+- A super-admin's row is protected from Revoke, Promote and Demote, whoever acts, as Review Robin's `protected_super_admin` (2026-11-22, cold read).
+- The seed acts as `Actor(platform=True)`, the one actor with every exercise; a signed-in super-admin, bound or not, reaches only their grants (2026-11-22, cold read).
+- Rungs 3 and 4 land as one PR: the cold read's fixes span both (2026-11-22).
 
 ## Blast radius (measured)
 

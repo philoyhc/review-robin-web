@@ -18,7 +18,7 @@ from cordware.settings import identity_settings
 
 EX = "wa9juxbc2t"
 HOME = f"/applydesk/operator/exercises/{EX}"
-SUPER = Actor(None, is_super_admin=True)
+SUPER = Actor(None, is_super_admin=True, platform=True)
 
 
 @pytest.fixture
@@ -154,7 +154,7 @@ def test_every_refusal_key_has_a_status_line() -> None:
                         keys.setdefault(name, set()).add(str(kw.value.value))
     # The admin page shows the allowlist's; the card shows an exercise's.
     # Admins' keys (segment AD2M) are the admin page's alone.
-    admins = {"already_admin", "not_admin", "last_admin", "pending", "is_admin"}
+    admins = {"already_admin", "not_admin", "last_admin", "pending", "is_admin", "protected"}
     admin = keys["allowlist.py"] | {"already_listed", "not_listed", "not_super_admin"} | admins
     card = keys["team.py"] | (keys["operators.py"] - {"already_listed", "not_super_admin"} - admins)
     assert admin <= routes_admin.SAID.keys(), admin - routes_admin.SAID.keys()

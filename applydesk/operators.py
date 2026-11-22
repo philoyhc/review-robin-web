@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 
 from applydesk import audit
 from applydesk.models import Exercise, ExerciseOperator, Person
-from cordware.identity import super_admin_configured
+from cordware.identity import is_super_admin_email, super_admin_configured
 
 
 class Refused(Exception):
@@ -62,6 +62,9 @@ class Actor:
 
     person: Person | None
     is_super_admin: bool = False
+    # The platform itself acting as no one (the seed): it reaches every
+    # exercise. Never built from a sign-in (cold read, segment AD2M).
+    platform: bool = False
 
 
 def _now() -> datetime:
@@ -109,6 +112,12 @@ def _admin_now(session: Session, person: Person | None) -> bool:
         with_for_update={"read": True},
     )
     return is_admin(person)
+
+
+def is_protected(person: Person) -> bool:
+    """A super-admin's row: no Revoke, Promote or Demote acts on it (spec
+    §8), as Review Robin's `protected_super_admin` refuses."""
+    return is_super_admin_email(person.email) or is_super_admin_email(person.upn)
 
 
 def keeps_the_list(session: Session, actor: Actor) -> bool:
@@ -198,9 +207,9 @@ def owner_labels(session: Session, public_ids: list[str]) -> dict[str, str]:
 
 
 def _the_platform(actor: Actor) -> bool:
-    """The platform acting with no person (the seed): it reaches every
-    exercise. A signed-in super-admin does not: they adopt (segment AD2M)."""
-    return actor.is_super_admin and actor.person is None
+    """The platform acting as no one (the seed): it reaches every exercise.
+    A signed-in super-admin does not, bound or not: they adopt (AD2M)."""
+    return actor.platform
 
 
 def _may_act(session: Session, actor: Actor, *, hold: bool = False) -> bool:
@@ -313,6 +322,8 @@ def revoke(session: Session, actor: Actor, person: Person, reason: str | None = 
     unlisted = Refused("Not on the operator list.", key="not_listed")
     if not _allowed(session, person):
         raise unlisted
+    if is_protected(person):
+        raise Refused("A super-admin's row is not changed here.", key="protected")
     if person.is_admin:
         raise Refused("An Admin is demoted before being taken off the list.", key="is_admin")
     # Conditional, as `admit`: two revocations at once audit once.
@@ -344,10 +355,18 @@ def promote(session: Session, actor: Actor, person: Person) -> None:
     list if they are not on it. Only someone bound to an account."""
     if not makes_admins(session, actor):
         raise Refused("Only the platform super-admin makes Admins.", key="not_super_admin")
+    if is_protected(person):
+        raise Refused("A super-admin's row is not changed here.", key="protected")
     if not person.bound:
         raise Refused("Only someone who has signed in can be an Admin.", key="pending")
     already = Refused("Already an Admin.", key="already_admin")
-    session.refresh(person, attribute_names=["is_admin", "may_operate", "revoked_at"])
+    # Locked to the end of the transaction, so a revoke racing this waits
+    # and the listing read here is the one written (cold read, AD2M).
+    session.refresh(
+        person,
+        attribute_names=["is_admin", "may_operate", "revoked_at"],
+        with_for_update=True,
+    )
     if person.is_admin:
         raise already
     listed = may_operate(person)
@@ -383,18 +402,20 @@ def demote(session: Session, actor: Actor, person: Person) -> None:
     list. With no super-admin configured, the last Admin is kept."""
     if not makes_admins(session, actor):
         raise Refused("Only the platform super-admin makes Admins.", key="not_super_admin")
+    if is_protected(person):
+        raise Refused("A super-admin's row is not changed here.", key="protected")
     not_admin = Refused("Not an Admin.", key="not_admin")
     session.refresh(person, attribute_names=["is_admin"])
     if not person.is_admin:
         raise not_admin
-    if not super_admin_configured():
-        # Every Admin row locked before counting, so two demotions at once
-        # cannot both see another Admin left (Review Robin's last_admin).
-        admins = session.scalars(
-            select(Person.id).where(Person.is_admin.is_(True)).with_for_update()
-        ).all()
-        if len(admins) <= 1:
-            raise Refused("The last Admin stays an Admin.", key="last_admin")
+    # The last Admin is never demoted (spec §8, Review Robin's last_admin).
+    # Every Admin row locked before counting, so two demotions at once
+    # cannot both see another Admin left.
+    admins = session.scalars(
+        select(Person.id).where(Person.is_admin.is_(True)).with_for_update()
+    ).all()
+    if len(admins) <= 1:
+        raise Refused("The last Admin stays an Admin.", key="last_admin")
     if not _changed(
         session,
         update(Person)
@@ -588,10 +609,11 @@ def adopt(session: Session, exercise: Exercise, actor: Actor) -> bool:
     if grant is None:
         grant = ExerciseOperator(exercise_id=exercise.id, person_id=actor.person.id)
         session.add(grant)
+    if was != "operator":  # a current operator keeps who added them, and when
+        grant.added_by_id = actor.person.id
+        grant.added_at = _now()
     grant.is_owner = True
     grant.removed_at = None
-    grant.added_by_id = actor.person.id
-    grant.added_at = _now()
     session.flush()
     audit.write_event(
         session,

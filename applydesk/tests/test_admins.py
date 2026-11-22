@@ -17,7 +17,7 @@ from applydesk.tests._host import host_with
 from cordware.identity import Identity
 from cordware.settings import identity_settings
 
-SUPER = Actor(None, is_super_admin=True)
+SUPER = Actor(None, is_super_admin=True, platform=True)
 
 
 def _signed_in(email: str, oid: str, name: str = "Ben Ong") -> int:
@@ -62,6 +62,7 @@ def _as(pid: int, change: str) -> None:
 def test_the_super_admin_promotes_and_demotes_from_the_bulk_bar() -> None:
     admin = TestClient(host_with(("applydesk",))[0])
     ben = _signed_in("ben@example.edu", "o-ben")
+    _as(_signed_in("ann@example.edu", "o-ann", "Ann Koh"), "promote")  # Ben is not the last
     page = admin.get("/applydesk/admin/operators").text
     assert 'value="promote" disabled data-bulk-action data-bulk-promote>Promote to Admin' in page
     made = admin.post(
@@ -265,12 +266,59 @@ def test_an_operator_cannot_adopt(monkeypatch: pytest.MonkeyPatch) -> None:
     _drop_my_grant(EX)
     client = TestClient(host_with(("applydesk",))[0])
     assert client.post(f"/applydesk/admin/exercises/{EX}/manage").status_code == 404
-    session = db.new_session()
-    with pytest.raises(Refused):
-        me = session.scalar(select(Person).where(Person.object_id == "local-dev"))
-        from applydesk.models import Exercise
+    from applydesk.models import Exercise
 
-        ra = session.scalar(select(Exercise).where(Exercise.public_id == EX))
-        assert ra is not None
+    session = db.new_session()
+    me = session.scalar(select(Person).where(Person.object_id == "local-dev"))
+    ra = session.scalar(select(Exercise).where(Exercise.public_id == EX))
+    assert me is not None and ra is not None
+    with pytest.raises(Refused) as refused:
         operators.adopt(session, ra, Actor(me))
+    assert refused.value.key == "not_admin"
+    session.close()
+
+
+def test_the_last_admin_stays_one_with_a_super_admin_too() -> None:
+    """Spec §8, as Review Robin's last_admin: never the last, whoever asks."""
+    ben = _signed_in("ben@example.edu", "o-ben")
+    _as(ben, "promote")
+    session = db.new_session()
+    row = session.get(Person, ben)
+    assert row is not None
+    with pytest.raises(Refused) as refused:
+        operators.demote(session, SUPER, row)
+    assert refused.value.key == "last_admin"
+    session.close()
+
+
+def test_a_super_admin_s_row_is_protected(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cold read: an Admin keeps the list, but no Revoke, Promote or
+    Demote acts on a super-admin's row (spec §8)."""
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["root@example.edu"])
+    root = _signed_in("root@example.edu", "o-root", "Root")
+    _as(root, "admit")
+    session = db.new_session()
+    row = session.get(Person, root)
+    assert row is not None
+    for change in (operators.revoke, operators.promote, operators.demote):
+        with pytest.raises(Refused) as refused:
+            change(session, SUPER, row)
+        assert refused.value.key == "protected"
+    session.close()
+
+
+def test_a_bound_super_admin_holds_no_exercise_without_a_grant() -> None:
+    """Cold read: the services, not only the gate, give a signed-in
+    super-admin no implicit reach; only the seed's platform actor has it."""
+    from applydesk.models import Exercise
+
+    _drop_my_grant(EX)
+    session = db.new_session()
+    me = session.scalar(select(Person).where(Person.object_id == "local-dev"))
+    ra = session.scalar(select(Exercise).where(Exercise.public_id == EX))
+    assert me is not None and ra is not None
+    for actor in (Actor(me, is_super_admin=True), Actor(None, is_super_admin=True)):
+        assert not operators.can_operate(session, ra, actor)
+        assert not operators.is_owner(session, ra, actor)
+    assert operators.can_operate(session, ra, SUPER)  # the platform
     session.close()

@@ -27,7 +27,7 @@ from cordware.identity import Identity, is_local
 from cordware.settings import IdentitySettings, identity_settings
 
 #: The seed acts as the platform: the super-admin with no person row.
-_PLATFORM = operators.Actor(None, is_super_admin=True)
+_PLATFORM = operators.Actor(None, is_super_admin=True, platform=True)
 
 
 class SeedRefused(RuntimeError):

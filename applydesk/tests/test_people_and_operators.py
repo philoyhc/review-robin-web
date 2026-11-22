@@ -52,7 +52,7 @@ def _operator(session: Session, oid: str, mail: str) -> Person:
     return person
 
 
-SUPER = Actor(person=None, is_super_admin=True)
+SUPER = Actor(person=None, is_super_admin=True, platform=True)
 
 
 # --------------------------------------------------------------------------- #

@@ -316,7 +316,7 @@ def test_chips_and_exercise_role_filter_workspace_users() -> None:
 
     session = db.new_session()
     seed.seed(session)  # the fake super-admin: listed, Owner of every sample
-    sup = Actor(None, is_super_admin=True)
+    sup = Actor(None, is_super_admin=True, platform=True)
 
     def bound(oid: str, mail: str, name: str) -> Person:
         from cordware.identity import Identity
@@ -422,7 +422,7 @@ def test_listed_people_never_crowd_the_suggestions_out(client: TestClient) -> No
     from applydesk.operators import Actor
 
     session = db.new_session()
-    sup = Actor(None, is_super_admin=True)
+    sup = Actor(None, is_super_admin=True, platform=True)
     for n in range(directory_mod.LIMIT):
         operators.admit(session, sup, people.pending(session, f"lim{n:02}@example.edu", None))
     last = people.pending(session, "lim.zz@example.edu", None)
@@ -498,7 +498,7 @@ def test_cold_read_fixes_for_workspace_users(client: TestClient) -> None:
     from applydesk.operators import Actor
 
     session = db.new_session()
-    sup = Actor(None, is_super_admin=True)
+    sup = Actor(None, is_super_admin=True, platform=True)
     for n in range(directory_mod.LIMIT):  # a full page of listed Lims
         p = people.pending(session, f"lim{n:02}@example.edu", None)
         operators.admit(session, sup, p)

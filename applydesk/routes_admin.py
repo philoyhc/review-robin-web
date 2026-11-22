@@ -55,10 +55,21 @@ SAID: dict[str, str] = {
     "last_admin": "The last Admin stays an Admin.",
     "pending": "Only someone who has signed in can be an Admin.",
     "is_admin": "An Admin is demoted before being taken off the list.",
+    "protected": "A super-admin's row is not changed here.",
+}
+
+#: Exercises Diagnostics' status line, by the key Manage's redirect carries
+#: (segment AD2M): adopt's refusals, worded for the page.
+ADOPT_SAID: dict[str, str] = {
     "not_loaded": (
         "That exercise is not in the database yet; on a local run, load the samples"
         " with python -m applydesk.seed."
     ),
+    "not_admin": (
+        "Only an Admin or the platform super-admin adopts an exercise, signed in with"
+        " an account Apply Desk can record."
+    ),
+    "changed": "Someone else changed this exercise's operators at the same time; try again.",
 }
 
 
@@ -209,7 +220,7 @@ def exercises_page(
         # Manage opens an exercise the viewer owns or operates, and adopts
         # the rest, asking first (segment AD2M).
         operates=functools.partial(gate.operates, request),
-        said=SAID.get(request.query_params.get("said", ""), ""),
+        said=ADOPT_SAID.get(request.query_params.get("said", ""), ""),
         by_status=locks.status_tally(rows),
         exercise_status=locks.exercise_status,
         default_timezone=sample_data.DEFAULT_TIMEZONE,

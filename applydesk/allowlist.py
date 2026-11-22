@@ -166,7 +166,7 @@ class Me:
     email: str
     name: str
     person_id: int | None
-    is_super_admin: bool = True  # an Admin's own row is theirs, not the super-admin's
+    is_super_admin: bool = False  # an Admin's own row is theirs, not the super-admin's
 
     def matches(self, query: str) -> bool:
         text = query.strip().casefold()
@@ -347,8 +347,8 @@ BULK_ACTIONS: dict[str, Callable[[Session, operators.Actor, Person], None]] = {
 def bulk(
     session: Session, actor: operators.Actor, action: str, person_ids: list[int], me: Me
 ) -> Bulk:
-    """*Admit* or *Revoke* every ticked row (segment AD2W), each through
-    `operators.admit` / `revoke` and audited there, in the caller's one
+    """*Admit*, *Revoke*, *Promote* or *Demote* every ticked row (segments
+    AD2W, AD2M), each through `operators` and audited there, in the caller's one
     transaction. A refusal skips that person, not the batch: a refusal
     changes nothing, so the transaction stays good. The super-admin's own
     row is always skipped (no action on your own row)."""

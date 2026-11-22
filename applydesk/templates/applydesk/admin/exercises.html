@@ -1,15 +1,5 @@
 {% extends "applydesk/base.html" %}
-{% block title %}Exercises Diagnostics — Admin<script>
-(function () {
-  // Manage on an exercise the viewer holds no role on adopts it: ask first.
-  document.querySelectorAll("[data-adopt]").forEach(function (f) {
-    f.addEventListener("submit", function (e) {
-      if (!window.confirm("Become an Owner of " + f.dataset.name + "? It is recorded, and the exercise's other Owners see you on its Operators card.")) e.preventDefault();
-    });
-  });
-})();
-</script>
-{% endblock %}
+{% block title %}Exercises Diagnostics — Admin{% endblock %}
 {% block content %}
 {# Admin → Exercises Diagnostics (segment AD2A, scaffold): every exercise
    on the platform, laid out as Review Robin's Sessions Diagnostics. The
@@ -69,4 +59,14 @@
   </table>
   </div>
 </section>
+<script>
+(function () {
+  // Manage on an exercise the viewer holds no role on adopts it: ask first.
+  document.querySelectorAll("[data-adopt]").forEach(function (f) {
+    f.addEventListener("submit", function (e) {
+      if (!window.confirm("Become an Owner of " + f.dataset.name + "? It is recorded, and the exercise's other Owners see you on its Operators card.")) e.preventDefault();
+    });
+  });
+})();
+</script>
 {% endblock %}
