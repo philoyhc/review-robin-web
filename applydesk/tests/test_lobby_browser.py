@@ -38,11 +38,9 @@ def test_one_tick_opens_the_panel_with_that_exercise_s_fields(page: Page) -> Non
     expect(panel.locator('[data-lb-f="tags"]')).to_have_value("Residential, 2027")
     expect(panel.get_by_role("button", name="Duplicate settings only")).to_be_visible()
     expect(panel.get_by_role("button", name="Delete all")).to_be_hidden()
-    # Every action but Cancel waits for AD2B, saying so.
-    expect(panel.get_by_role("button", name="Save")).to_be_disabled()
-    expect(panel.get_by_role("button", name="Save")).to_have_attribute(
-        "title", "Saving here is not built yet"
-    )
+    # Wired (AD2B rung 6): Save posts; Duplicate (the whole setup) says why not.
+    expect(panel.get_by_role("button", name="Save")).to_be_enabled()
+    expect(panel.get_by_role("button", name="Duplicate", exact=True)).to_be_disabled()
     # The header box shows a dash while only some rows are ticked.
     assert page.locator("[data-lb-all]").evaluate("b => b.indeterminate")
     panel.get_by_role("button", name="Cancel").click()

@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from applydesk import audit, db, sample_data
+from applydesk import audit, db, operators, sample_data
 from applydesk.models import Exercise, ExerciseTag, Person
 
 #: The stored eligibility and the words the pages show (AD-60: NULL is
@@ -132,27 +132,56 @@ def stored_at(sample: sample_data.Exercise) -> tuple[sample_data.Exercise, int]:
         session.close()
 
 
-def stored_all(samples: tuple[sample_data.Exercise, ...]) -> tuple[sample_data.Exercise, ...]:
+@dataclass(frozen=True)
+class Stored:
+    """A sample as the database has it, with its row's state, from one
+    read: the revision a page names must describe the values it shows
+    (Codex on #4137; cold read at AD2B rung 6)."""
+
+    exercise: sample_data.Exercise
+    revision: int
+    archived: bool
+    deleted: bool
+
+    @property
+    def live(self) -> bool:
+        return not (self.archived or self.deleted)
+
+
+def stored_all_at(samples: tuple[sample_data.Exercise, ...]) -> tuple[Stored, ...]:
     """Each of `samples` as the database has it, in one session."""
     if not samples:
-        return samples
+        return ()
     session = db.new_session()
     try:
         rows = {
             e.public_id: e
             for e in session.scalars(
-                select(Exercise).where(
-                    Exercise.public_id.in_([s.public_id for s in samples]),
-                    Exercise.deleted_at.is_(None),
-                )
+                select(Exercise).where(Exercise.public_id.in_([s.public_id for s in samples]))
             )
         }
-        return tuple(
-            overlay(s, settings_of(session, rows[s.public_id]) if s.public_id in rows else None)
-            for s in samples
-        )
+        out: list[Stored] = []
+        for s in samples:
+            found = rows.get(s.public_id)
+            deleted = found is not None and found.deleted_at is not None
+            settings = settings_of(session, found) if found is not None and not deleted else None
+            out.append(
+                Stored(
+                    overlay(s, settings),
+                    settings.revision if settings else 0,
+                    found is not None and found.archived_at is not None,
+                    deleted,
+                )
+            )
+        return tuple(out)
     finally:
         session.close()
+
+
+def stored_all(samples: tuple[sample_data.Exercise, ...]) -> tuple[sample_data.Exercise, ...]:
+    """Each of `samples` as the database has it, deleted ones left out:
+    a deleted exercise leaves every page (segment AD2B rung 6)."""
+    return tuple(s.exercise for s in stored_all_at(samples) if not s.deleted)
 
 
 def _from_sample(sample: sample_data.Exercise) -> dict[str, object]:
@@ -183,7 +212,8 @@ def record_sample(
         setattr(exercise, name, value)
     if sample.created:
         exercise.created_at = datetime.fromisoformat(sample.created).astimezone(UTC)
-    exercise.created_by_id = actor.id if actor is not None else None
+    if exercise.created_by_id is None:  # set when it was made; kept (cold read)
+        exercise.created_by_id = actor.id if actor is not None else None
     exercise.revision = 1
     seen: set[str] = set()
     for tag in sample.tags:
@@ -194,7 +224,7 @@ def record_sample(
     audit.write_event(
         session,
         event_type="exercise.settings_recorded",
-        actor=None,
+        actor=actor,
         exercise=exercise,
         payload=audit.snapshot({**values, "tags": list(sample.tags)}),
     )
@@ -219,7 +249,7 @@ def details_from_page(fields: dict[str, Any]) -> dict[str, Any]:
     """Details as the card sends them (the sample's words) as stored
     values: "Not set" and "" to NULL (AD-60), the default timezone to NULL
     (AD-54)."""
-    eligibility = next((k for k, v in ELIGIBILITY.items() if v == fields["eligibility"]), None)
+    eligibility = eligibility_of(fields["eligibility"])
     zone = fields["timezone"] or None
     return {
         "name": fields["name"],
@@ -230,6 +260,12 @@ def details_from_page(fields: dict[str, Any]) -> dict[str, Any]:
         "help_contact": fields["help_contact"] or None,
         "timezone": None if zone == sample_data.DEFAULT_TIMEZONE else zone,
     }
+
+
+def eligibility_of(words: str) -> str | None:
+    """Who may apply, from the pages' words to the stored enum ("Not set"
+    to None, AD-60)."""
+    return next((k for k, v in ELIGIBILITY.items() if v == words), None)
 
 
 def _clash(session: Session, exercise: Exercise, code: str | None) -> Exercise | None:
@@ -311,5 +347,247 @@ def archived_at() -> dict[str, datetime]:
             )
             if at is not None
         }
+    finally:
+        session.close()
+
+
+# --------------------------------------------------------------------------- #
+# The Operator Lobby's panel and the Archive (segment AD2B rung 6).
+
+#: Tags an exercise carries at most, and a tag's longest (Semantics).
+MAX_TAGS = 20
+MAX_TAG = 40
+
+
+def parse_tags(text: str) -> list[str]:
+    """Comma-separated tags as typed: trimmed, blanks dropped, each once
+    ignoring case, in the case first typed. Refused past the limits."""
+    seen: dict[str, str] = {}
+    for part in text.split(","):
+        tag = " ".join(part.split())
+        if not tag:
+            continue
+        if max(len(tag), len(tag.casefold())) > MAX_TAG:  # the key is casefolded
+            raise Refused(f"A tag is at most {MAX_TAG} characters.", key="tag_long", field="tags")
+        seen.setdefault(tag.casefold(), tag)
+    if len(seen) > MAX_TAGS:
+        raise Refused(
+            f"An exercise carries at most {MAX_TAGS} tags.", key="tags_many", field="tags"
+        )
+    return list(seen.values())
+
+
+def _locked(session: Session, public_id: str) -> Exercise:
+    found = session.scalar(
+        select(Exercise)
+        .where(Exercise.public_id == public_id, Exercise.deleted_at.is_(None))
+        .with_for_update()
+    )
+    if found is None:
+        raise Refused("That exercise is no longer on record.", key="gone")
+    return found
+
+
+def _ready(session: Session, exercise: Exercise, actor: Person | None) -> None:
+    """Record a sample's settings before a first change (revision 0)."""
+    if exercise.revision < 1:
+        sample = sample_data.exercise(exercise.public_id)
+        if sample is not None:
+            record_sample(session, exercise, sample, actor)
+
+
+def _put_tags(session: Session, exercise: Exercise, tags: list[str]) -> None:
+    for old in session.scalars(select(ExerciseTag).where(ExerciseTag.exercise_id == exercise.id)):
+        session.delete(old)
+    session.flush()
+    for tag in tags:
+        session.add(ExerciseTag(exercise_id=exercise.id, label=tag, label_key=tag.casefold()))
+
+
+def _changed(
+    session: Session,
+    exercise: Exercise,
+    actor: Person | None,
+    changes: dict[str, list[Any]],
+) -> None:
+    exercise.revision += 1
+    session.flush()
+    audit.write_event(
+        session,
+        event_type="exercise.details_changed",
+        actor=actor,
+        exercise=exercise,
+        payload=audit.changes(changes),
+        context={"revision": exercise.revision},
+    )
+
+
+def save_panel(
+    session: Session,
+    public_id: str,
+    name: str,
+    code: str,
+    tags: list[str],
+    opened: int,
+    actor: Person | None,
+) -> int:
+    """The panel's *Save* for one exercise: its name, code and tags, if
+    no one saved since the Lobby opened at revision `opened`."""
+    exercise = _locked(session, public_id)
+    if exercise.revision != opened:
+        raise Refused(
+            "Not saved: someone else changed this exercise since the Lobby opened. Reload.",
+            key="stale",
+        )
+    name = " ".join(name.split())
+    code = code.strip()
+    if not name or len(name) > 200:
+        raise Refused("A name of 1 to 200 characters is needed.", key="name", field="name")
+    if max(len(code), len(code.casefold())) > 40:  # its key is casefolded
+        raise Refused("An exercise code is at most 40 characters.", key="code_long", field="code")
+    _ready(session, exercise, actor)
+    # A published exercise's code is fixed (G2), here as on Details (Codex on #4140).
+    sample = sample_data.exercise(public_id)
+    if sample is not None and sample.state != "Draft" and (code or None) != exercise.code:
+        raise Refused("A published exercise's code is fixed.", key="code_fixed", field="code")
+    if (clash := _clash(session, exercise, code or None)) is not None:
+        raise Refused(f"{code} is already {clash.name}'s code.", key="code_taken", field="code")
+    before_tags = list(tags_of(session, exercise))
+    changes: dict[str, list[Any]] = {}
+    if exercise.name != name:
+        changes["name"] = [exercise.name, name]
+    if exercise.code != (code or None):
+        changes["code"] = [exercise.code, code or None]
+    if before_tags != tags:
+        changes["tags"] = [before_tags, tags]
+    if not changes:
+        return exercise.revision
+    exercise.name, exercise.code, exercise.code_key = name, code or None, _key(code)
+    if "tags" in changes:
+        _put_tags(session, exercise, tags)
+    _changed(session, exercise, actor, changes)
+    return exercise.revision
+
+
+def retag(
+    session: Session, public_ids: list[str], tags: list[str], actor: Person | None, *, add: bool
+) -> None:
+    """*All tags to all* (`add`) or *Remove from all*: `tags` added to, or
+    taken from, each exercise; one past the limit refuses the lot."""
+    wanted = {t.casefold() for t in tags}
+    for public_id in sorted(set(public_ids)):
+        exercise = _locked(session, public_id)
+        _ready(session, exercise, actor)
+        before = list(tags_of(session, exercise))
+        held = {t.casefold() for t in before}
+        if add:
+            after = before + [t for t in tags if t.casefold() not in held]
+        else:
+            after = [t for t in before if t.casefold() not in wanted]
+        if len(after) > MAX_TAGS:
+            raise Refused(
+                f"{exercise.name} would carry more than {MAX_TAGS} tags.", key="tags_many"
+            )
+        if after != before:
+            _put_tags(session, exercise, after)
+            _changed(session, exercise, actor, {"tags": [before, after]})
+
+
+def _owned(session: Session, exercise: Exercise, actor: operators.Actor) -> None:
+    if not operators.is_owner(session, exercise, actor):
+        raise Refused(
+            f"Only an Owner of {exercise.name or 'an exercise'} may do that.", key="not_owner"
+        )
+
+
+def archive(session: Session, public_ids: list[str], actor: operators.Actor) -> None:
+    """Archive each exercise (Owner-only, every one or none): it leaves
+    the Lobby for the Archive and frees its code."""
+    for public_id in sorted(set(public_ids)):
+        exercise = _locked(session, public_id)
+        _owned(session, exercise, actor)
+        _ready(session, exercise, actor.person)
+        if exercise.archived_at is None:
+            exercise.archived_at = datetime.now(UTC)
+            exercise.revision += 1
+            session.flush()
+            audit.write_event(
+                session, event_type="exercise.archived", actor=actor.person, exercise=exercise
+            )
+
+
+def restore(session: Session, public_id: str, actor: operators.Actor) -> None:
+    """Bring an archived exercise back (Owner-only), unless another live
+    exercise has taken its code since."""
+    exercise = _locked(session, public_id)
+    _owned(session, exercise, actor)
+    if exercise.archived_at is None:
+        return
+    if (clash := _clash(session, exercise, exercise.code)) is not None:
+        raise Refused(
+            f"Not restored: {exercise.code} is now {clash.name}'s code. Change one first.",
+            key="restore_taken",
+        )
+    exercise.archived_at = None
+    exercise.revision += 1
+    session.flush()
+    audit.write_event(
+        session, event_type="exercise.restored", actor=actor.person, exercise=exercise
+    )
+
+
+def delete(session: Session, public_ids: list[str], actor: operators.Actor) -> None:
+    """Delete each exercise (Owner-only, every one or none): it leaves
+    every page; its row and audit trail stay (ruling 74)."""
+    for public_id in sorted(set(public_ids)):
+        exercise = _locked(session, public_id)
+        _owned(session, exercise, actor)
+        exercise.deleted_at = datetime.now(UTC)
+        exercise.revision += 1
+        session.flush()
+        audit.write_event(
+            session, event_type="exercise.deleted", actor=actor.person, exercise=exercise
+        )
+
+
+def copy_settings(session: Session, source_id: str, target: Exercise, actor: Person | None) -> None:
+    """*Duplicate settings only*: `target` (a new exercise's row) takes
+    the source's settings and tags, named "Copy of …", with no code."""
+    source = _locked(session, source_id)
+    _ready(session, source, actor)
+    target.name = f"Copy of {source.name}"[:200]
+    target.code = target.code_key = None
+    target.description, target.eligibility, target.blind = (
+        source.description,
+        source.eligibility,
+        source.blind,
+    )
+    target.help_contact, target.timezone = source.help_contact, source.timezone
+    target.created_by_id = actor.id if actor is not None else None
+    target.revision = 1
+    session.flush()
+    _put_tags(session, target, list(tags_of(session, source)))
+    session.flush()
+    audit.write_event(
+        session,
+        event_type="exercise.duplicated",
+        actor=actor,
+        exercise=target,
+        refs={"source_exercise_id": source.id},
+    )
+
+
+def is_deleted(public_id: str) -> bool:
+    """Whether the exercise is deleted: it leaves every page (rung 6)."""
+    session = db.new_session()
+    try:
+        return (
+            session.scalar(
+                select(Exercise.id).where(
+                    Exercise.public_id == public_id, Exercise.deleted_at.is_not(None)
+                )
+            )
+            is not None
+        )
     finally:
         session.close()

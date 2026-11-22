@@ -128,7 +128,7 @@ def _good(**changes: Any) -> dict[str, Any]:
         "contact": "",
         "timezone": sample_data.DEFAULT_TIMEZONE,
         "eligibility": "Open to all signed in",
-        "blind": True,
+        "blind": False,  # RA-2027's, fixed now a gate's stage is published
         **changes,
     }
 
@@ -149,7 +149,7 @@ def test_lock_on_a_sample_saves_and_survives() -> None:
     # The default timezone and an empty contact are NULL (AD-54).
     assert (row.description, row.blind, row.help_contact, row.timezone) == (
         "Look after a house of residents.",
-        True,
+        False,
         None,
         None,
     )
@@ -160,7 +160,7 @@ def test_lock_on_a_sample_saves_and_survives() -> None:
     ).one()
     session.close()
     # Only what changed is audited.
-    assert set(event.detail["changes"]) == {"description", "blind", "help_contact"}
+    assert set(event.detail["changes"]) == {"description", "help_contact"}
 
 
 def test_a_stale_lock_is_refused_and_saves_nothing() -> None:
@@ -216,9 +216,8 @@ def test_an_archived_exercise_frees_its_code() -> None:
 
 
 def test_home_names_the_revision_of_the_settings_it_shows() -> None:
-    """Codex on #4137: the settings and the revision Lock names come
-    from one read, so a save between two reads cannot pair old values
-    with a newer revision."""
+    """Codex on #4137: Home's values and the revision Lock names come
+    from one read (`stored_at`); this checks they agree after a save."""
     sample = sample_data.exercise(EX)
     assert sample is not None
     assert _client().post(DETAILS, json=_good(name="Renamed")).status_code == 200
@@ -226,3 +225,27 @@ def test_home_names_the_revision_of_the_settings_it_shows() -> None:
     assert (shown.name, revision) == ("Renamed", 2)
     page = _client().get(DETAILS[: -len("/details")]).text
     assert 'data-dt-revision="2"' in page and "Renamed" in page
+
+
+@pytest.mark.parametrize(
+    ("change", "field"),
+    [
+        ({"blind": True}, "blind"),
+        ({"code": "RA-28"}, "code"),
+        ({"eligibility": "Invitation only"}, "eligibility"),
+    ],
+)
+def test_what_the_page_locks_the_server_refuses(change: dict[str, Any], field: str) -> None:
+    """Cold read: RA-2027 is published with a gate's stage published, so
+    its code, who may apply and blind review are fixed on the server too,
+    not only by the page's disabled inputs."""
+    reply = _client().post(DETAILS, json=_good(**change))
+    assert reply.status_code == 400 and reply.json()["field"] == field
+    assert _row().revision == 1
+
+
+def test_a_code_is_measured_as_its_key_is() -> None:
+    """Cold read: "ß" casefolds to "ss", so 40 of them would not fit the key."""
+    blank = f"/applydesk/operator/exercises/{BLANK}/details"
+    reply = _client().post(blank, json=_good(code="ß" * 21, name="G"))
+    assert reply.status_code == 400 and reply.json()["field"] == "code"

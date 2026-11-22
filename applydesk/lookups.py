@@ -14,7 +14,7 @@ def exercise_or_404(exercise_id: str) -> sample_data.Exercise:
     if not is_public_id(exercise_id):
         raise HTTPException(status_code=404)
     found = sample_data.exercise(exercise_id)
-    if found is None:
+    if found is None or exercises.is_deleted(exercise_id):  # deleted: gone (AD2B)
         raise HTTPException(status_code=404)
     # Its stored settings over the sample's (segment AD2B).
     return exercises.stored(found)

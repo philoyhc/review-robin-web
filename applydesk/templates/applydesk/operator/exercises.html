@@ -2,9 +2,10 @@
 {% block content %}
 {# The Operator Lobby, laid out as Review Robin's (segment AD1T): the
    Exercises and Filter cards over one table whose ticked rows open a
-   panel. A scaffold: the rows, the counts, New exercise, Go to Archive
-   and the panel's opening work; sorting, the tags, the filter and the
-   panel's actions wait for AD2B rung 6. #}
+   panel. Wired in AD2B rung 6: the rows are the live exercises the
+   viewer operates; sorting, the tag chips and the filter ride the query
+   string (`lobby.py`), so a reload keeps them; the panel's actions post
+   to `/operator/exercises/panel` and come back here. #}
 <div class="ptitle"><h1>Operator Lobby</h1></div>
 {% if scratch_said %}<p class="nx-said" role="status" data-nx-said>{{ scratch_said }}</p>{% endif %}
 {% include "applydesk/_placeholder.html" %}
@@ -13,23 +14,28 @@
   <section class="card" data-lb-counts>
     <h2>Exercises</h2>
     <p class="lb-pills">
-      <span class="chip chip-info">{{ exercises | length }} exercise{{ "" if exercises | length == 1 else "s" }}</span>
+      <span class="chip chip-info">{{ total }} exercise{{ "" if total == 1 else "s" }}</span>
       {% for s, n in status_counts %}<span class="chip chip-{{ tone(s) if n else 'mute' }}">{{ n }} {{ s }}</span>
       {% endfor %}
     </p>
     <div class="lb-tags"><span class="lbl">Show exercises tagged with:</span>
-      {% for t in tags %}<button type="button" class="pn-show" disabled title="Filtering by tag is not built yet">{{ t }}</button>
+      {% for t in tags %}<a class="pn-show" href="{{ query.tag_href(base, t) }}" aria-current="{{ 'true' if query.has_tag(t) else 'false' }}" data-lb-chip>{{ t }}</a>
       {% else %}<span class="muted">No tags yet</span>
       {% endfor %}
-      {% if tags %}<button type="button" class="pn-show" disabled title="Filtering by tag is not built yet">OR</button>
-      <button type="button" class="pn-show" disabled title="Filtering by tag is not built yet">Clear</button>{% endif %}
+      {% if tags %}<a class="pn-show" href="{{ query.any_href(base) }}" aria-current="{{ 'true' if query.any_tag else 'false' }}" title="{{ 'Showing exercises with any chosen tag' if query.any_tag else 'Showing exercises with every chosen tag; OR shows any' }}" data-lb-any>OR</a>
+      {% if query.tags %}<a class="pn-show" href="{{ query.href(base, tags=()) }}" data-lb-clear-tags>Clear</a>{% endif %}{% endif %}
     </div>
   </section>
   <section class="card">
     <h2>Filter</h2>
-    <input class="fc-in lb-filter" type="search" placeholder="Filter by name, code or tag" aria-label="Filter exercises" disabled title="The filter is not built yet">
+    <form method="get" action="{{ base }}" data-lb-filter>
+      {% if query.sort != "created" or not query.descending %}<input type="hidden" name="sort" value="{{ query.sort }}"><input type="hidden" name="dir" value="{{ 'desc' if query.descending else 'asc' }}">{% endif %}
+      {% for t in query.tags %}<input type="hidden" name="tag" value="{{ t }}">{% endfor %}
+      {% if query.any_tag and query.tags %}<input type="hidden" name="any" value="1">{% endif %}
+      <input class="fc-in lb-filter" type="search" name="q" value="{{ query.text }}" placeholder="Filter by name, code or tag" aria-label="Filter exercises">
+    </form>
     <div class="lb-actions">
-      <button class="btn btn-secondary" type="button" disabled title="The filter is not built yet">Clear</button>
+      {% if query.text %}<a class="btn btn-secondary" href="{{ query.href(base, text='') }}" data-lb-clear>Clear</a>{% else %}<button class="btn btn-secondary" type="button" disabled title="Nothing to clear">Clear</button>{% endif %}
       <button class="btn btn-primary" type="button" data-nx-open aria-expanded="false" aria-controls="nx-form">New exercise</button>
       <a class="btn btn-secondary" href="{{ url('/operator/exercises/archived') }}">Go to Archive</a>
     </div>
@@ -47,9 +53,8 @@
   <div class="table-wrap">
   <table class="lb-table" data-lb-table>
     <thead><tr>
-      {% for h in ("Exercise", "Exercise code", "Created by") %}<th class="lb-sort" title="Sorting is not built yet">{{ h }}<span class="arr" aria-hidden="true">↕</span></th>{% endfor %}
-      <th class="lb-sort" title="Sorting is not built yet" aria-sort="descending">Created<span class="arr" aria-hidden="true">↓</span></th>
-      {% for h in ("Timezone", "Status") %}<th class="lb-sort" title="Sorting is not built yet">{{ h }}<span class="arr" aria-hidden="true">↕</span></th>{% endfor %}
+      {# Each header sorts by its column; again, the other way (query string). #}
+      {% for key, h in (("name", "Exercise"), ("code", "Exercise code"), ("created_by", "Created by"), ("created", "Created"), ("timezone", "Timezone"), ("status", "Status")) %}<th class="lb-sort"{% if query.aria_sort(key) %} aria-sort="{{ query.aria_sort(key) }}"{% endif %}><a href="{{ query.sort_href(base, key) }}" data-lb-sort="{{ key }}">{{ h }}<span class="arr" aria-hidden="true">{{ query.arrow(key) }}</span></a></th>{% endfor %}
       <th>Tags</th>
       <th class="lb-check"><input type="checkbox" aria-label="Select every exercise shown" data-lb-all></th>
     </tr></thead>
@@ -58,7 +63,7 @@
       {% set scratch_row = is_scratch(e.public_id) %}
       {% set n, m, stage_name = stage_position(e) %}
       {% set zone = timezone(e) %}
-      <tr data-lb-row data-name="{{ e.name }}" data-code="{{ e.code }}" data-tags="{{ e.tags | join(', ') }}">
+      <tr data-lb-row data-id="{{ e.public_id }}" data-revision="{{ revisions.get(e.public_id, 0) }}" data-name="{{ e.name }}" data-code="{{ e.code }}" data-published="{{ 'false' if e.state == 'Draft' else 'true' }}" data-tags="{{ e.tags | join(', ') }}">
         <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a>{% if scratch_row %} <span class="chip chip-mute" data-scratch-chip>Scratch</span>
           <form class="nx-discard" method="post" action="{{ url('/operator/exercises/' ~ e.public_id ~ '/discard') }}" data-nx-discard data-name="{{ e.name }}"><button class="btn btn-destructive btn-short" type="submit">Discard</button></form>{% endif %}</td>
         <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
@@ -69,40 +74,46 @@
         <td>{% if e.tags %}<div class="lb-tagcell">{% for t in e.tags %}<span class="chip chip-info">{{ t }}</span>{% endfor %}</div>{% else %}<span class="muted">No tags</span>{% endif %}</td>
         <td class="lb-check"><input type="checkbox" aria-label="Select {{ e.code or e.name }}" data-lb-tick></td>
       </tr>
+    {% else %}
+      <tr><td colspan="8" class="muted" data-lb-none-shown>{% if total %}No exercise matches. <a href="{{ query.href(base, tags=(), text='') }}">Show them all</a>.{% else %}No exercises yet: start one with New exercise.{% endif %}</td></tr>
     {% endfor %}
     {# The tick panel (Review Robin's): moved under the last ticked row;
        one exercise is edited in place, two or more get the bulk actions. #}
     <tr class="lb-exp" data-lb-panel hidden><td colspan="8">
+      <form method="post" action="{{ url('/operator/exercises/panel') }}" data-lb-form>
+      <input type="hidden" name="back" value="{{ back }}">
+      <input type="hidden" name="revision" value="" data-lb-revision>
       <p class="lb-exp-h" aria-live="polite"><strong data-lb-count>0</strong> <span data-lb-noun>exercises</span> selected</p>
       <div class="lb-fields" data-lb-one>
-        <label class="fc-l">Name<input class="fc-in" data-lb-f="name" disabled title="Editing here is not built yet"></label>
-        <label class="fc-l">Exercise code<input class="fc-in" data-lb-f="code" disabled title="Editing here is not built yet"></label>
-        <label class="fc-l">Tags<input class="fc-in" data-lb-f="tags" disabled title="Tags are not built yet"></label>
+        <label class="fc-l">Name<input class="fc-in" name="name" maxlength="200" data-lb-f="name"></label>
+        <label class="fc-l">Exercise code<input class="fc-in" name="code" maxlength="40" data-lb-f="code"></label>
+        <label class="fc-l">Tags <span class="dt-why">· separated by commas</span><input class="fc-in" name="tags" data-lb-f="tags"></label>
       </div>
       <div class="lb-fields lb-fields-many" data-lb-many hidden>
-        <label class="fc-l">Tags<input class="fc-in" disabled title="Tags are not built yet"></label>
+        <label class="fc-l">Tags <span class="dt-why">· separated by commas, added to or removed from each</span><input class="fc-in" name="tags" data-lb-many-tags disabled></label>
       </div>
       <div class="lb-exp-foot">
-        <div class="lb-purge"><label><input type="checkbox" disabled title="Deleting is not built yet"> <strong>Yes, delete</strong></label><span class="sep" aria-hidden="true">|</span><span class="muted">Archive after purging</span>
-          {% for p in ("Applications", "Dossiers", "Audit log") %}<label><input type="checkbox" disabled title="Purging is not built yet"> {{ p }}</label>{% endfor %}</div>
+        <div class="lb-purge"><label><input type="checkbox" name="confirm" value="yes" data-lb-confirm> <strong>Yes, delete</strong></label><span class="sep" aria-hidden="true">|</span><span class="muted">Archive after purging</span>
+          {% for p in ("Applications", "Dossiers", "Audit log") %}<label><input type="checkbox" disabled title="Purging waits for stored applications: Purge and archive archives only"> {{ p }}</label>{% endfor %}</div>
         <div class="lb-btns" data-lb-one>
-          <button class="btn btn-secondary" type="button" disabled title="Saving here is not built yet">Save</button>
+          <button class="btn btn-secondary" type="submit" name="action" value="save">Save</button>
           <button class="btn btn-secondary" type="button" data-lb-cancel>Cancel</button>
-          <button class="btn btn-secondary" type="button" disabled title="Duplicating is not built yet">Duplicate</button>
-          <button class="btn btn-secondary" type="button" disabled title="Duplicating is not built yet">Duplicate settings only</button>
-          <button class="btn btn-alert" type="button" disabled title="Purging is not built yet">Purge and archive</button>
-          <button class="btn btn-destructive" type="button" disabled title="Deleting is not built yet">Delete</button>
+          <button class="btn btn-secondary" type="button" disabled title="Duplicating the whole setup waits for its stages, forms and applications to be stored; Duplicate settings only copies the settings and tags">Duplicate</button>
+          <button class="btn btn-secondary" type="submit" name="action" value="duplicate" formnovalidate>Duplicate settings only</button>
+          <button class="btn btn-alert" type="submit" name="action" value="archive" title="Archives only: purging waits for stored applications" data-lb-archive>Purge and archive</button>
+          <button class="btn btn-destructive" type="submit" name="action" value="delete" data-lb-delete>Delete</button>
         </div>
         <div class="lb-btns" data-lb-many hidden>
           <button class="btn btn-secondary" type="button" data-lb-cancel>Cancel</button>
           <button class="btn btn-secondary" type="button" data-lb-others>Unselect others</button>
           <button class="btn btn-secondary" type="button" data-lb-none>Unselect all</button>
-          <button class="btn btn-secondary" type="button" disabled title="Tags are not built yet">All tags to all</button>
-          <button class="btn btn-secondary" type="button" disabled title="Tags are not built yet">Remove from all</button>
-          <button class="btn btn-alert" type="button" disabled title="Purging is not built yet">Purge and archive all</button>
-          <button class="btn btn-destructive" type="button" disabled title="Deleting is not built yet">Delete all</button>
+          <button class="btn btn-secondary" type="submit" name="action" value="add_tags">All tags to all</button>
+          <button class="btn btn-secondary" type="submit" name="action" value="remove_tags">Remove from all</button>
+          <button class="btn btn-alert" type="submit" name="action" value="archive" title="Archives only: purging waits for stored applications" data-lb-archive>Purge and archive all</button>
+          <button class="btn btn-destructive" type="submit" name="action" value="delete" data-lb-delete>Delete all</button>
         </div>
       </div>
+      </form>
     </td></tr>
     </tbody>
   </table>
@@ -159,9 +170,20 @@
     panel.querySelector("[data-lb-noun]").textContent = one ? "exercise" : "exercises";
     panel.querySelectorAll("[data-lb-one]").forEach(function (el) { el.hidden = !one; });
     panel.querySelectorAll("[data-lb-many]").forEach(function (el) { el.hidden = one; });
+    // Only the shown fields post: one exercise's, or the bulk tags.
+    panel.querySelectorAll("[data-lb-f]").forEach(function (i) { i.disabled = !one; });
+    // And only the shown buttons: Enter in the bulk Tags box must not post
+    // the hidden one-exercise Save (cold read).
+    panel.querySelectorAll('[data-lb-one] button[type="submit"]').forEach(function (b) { b.disabled = !one; });
+    panel.querySelectorAll('[data-lb-many] button[type="submit"]').forEach(function (b) { b.disabled = one; });
+    panel.querySelector("[data-lb-many-tags]").disabled = one;
     if (one) {
       var r = row(at);
       ["name", "code", "tags"].forEach(function (k) { panel.querySelector('[data-lb-f="' + k + '"]').value = r.dataset[k] || ""; });
+      // A published exercise's code is fixed, as on Details (G2).
+      var code = panel.querySelector('[data-lb-f="code"]');
+      code.readOnly = r.dataset.published === "true";
+      code.title = code.readOnly ? "Fixed once published: a change waits for re-publishing" : "";
     }
     panel.hidden = false;
   }
@@ -181,6 +203,25 @@
     });
   });
   panel.querySelector("[data-lb-none]").addEventListener("click", function () { untick(ticks); all.focus(); });
+  // A panel action posts the ticked exercises (segment AD2B rung 6); Save
+  // names the revision the row was drawn at, and Delete asks first.
+  var lbForm = panel.querySelector("[data-lb-form]");
+  lbForm.addEventListener("submit", function (e) {
+    var on = ticks.filter(function (b) { return b.checked; });
+    var by = e.submitter;
+    if (by && by.value === "delete" && lbForm.querySelector("[data-lb-confirm]").checked) {
+      var what = on.length === 1 ? row(on[0]).dataset.name : on.length + " exercises";
+      if (!window.confirm("Delete " + what + "? It leaves every page; its audit trail stays.")) { e.preventDefault(); return; }
+    }
+    lbForm.querySelectorAll("[data-lb-id]").forEach(function (x) { x.remove(); });
+    on.forEach(function (b) {
+      var i = document.createElement("input");
+      i.type = "hidden"; i.name = "id"; i.value = row(b).dataset.id; i.setAttribute("data-lb-id", "");
+      lbForm.appendChild(i);
+    });
+    var at = anchor();
+    lbForm.querySelector("[data-lb-revision]").value = at ? row(at).dataset.revision : "";
+  });
   panel.querySelector("[data-lb-others]").addEventListener("click", function () {
     var at = anchor();
     untick(ticks.filter(function (t) { return t !== at; }));

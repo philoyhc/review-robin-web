@@ -56,7 +56,13 @@ WALK = _operator_paths()
 def _all_404(client: TestClient, *, but_lobby: bool = False) -> None:
     for method, path in WALK:
         # The Lobby, New exercise and the Archive (AD2B) are lobby-level.
-        lobby = ("/operator/exercises", "/operator/exercises/new", "/operator/exercises/archived")
+        lobby = (
+            "/operator/exercises",
+            "/operator/exercises/new",
+            "/operator/exercises/archived",
+            "/operator/exercises/panel",  # checks each ticked exercise itself (AD2B)
+            "/operator/exercises/archived/restore",
+        )
         if but_lobby and path in lobby:
             continue
         answer = client.request(method, "/applydesk" + path, follow_redirects=False)
