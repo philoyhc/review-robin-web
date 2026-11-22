@@ -38,7 +38,7 @@
   </form>
   <p class="dt-said" data-dt-said role="status"></p>
   {# Unlock and Lock at the card's foot, on the right (author, 2026-11-18). #}
-  <div class="btnrow dt-foot"><button class="btn btn-secondary" type="button" data-dt-lock title="Unlock the details to change them">Unlock</button></div>
+  <div class="btnrow dt-foot"><button class="btn btn-secondary" type="button" data-dt-lock{% if archived %} disabled title="Archived: restore it to change it"{% else %} title="Unlock the details to change them"{% endif %}>Unlock</button></div>
 </section>
 <script>
 (function () {

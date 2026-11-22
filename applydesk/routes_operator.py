@@ -346,6 +346,7 @@ SAID: dict[str, str] = {
     "name": "Not saved: a name of 1 to 200 characters is needed.",
     "tag_long": "Not saved: a tag is at most 40 characters.",
     "tags_many": "Not saved: an exercise carries at most 20 tags.",
+    "archived_readonly": "Not saved: an archived exercise is read-only. Restore it first.",
     "restore_taken": "Not restored: another live exercise now has its code. Change one first.",
     "stale": "Not saved: someone else changed it just now. Look again and retry.",
     "gone": "That exercise is no longer on record, or not yours to change.",
@@ -898,6 +899,8 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         default_contact=sample_data.DEFAULT_HELP_CONTACT,
         blind_lock=locks.blind_lock(exercise),
         revision=revision,
+        # Read-only until restored (the author, 2026-11-22).
+        archived=exercise_store.is_archived(exercise.public_id),
         stage_rows=locks.stage_rows(exercise),
         STATUS_CHIP=locks.STATUS_CHIP,
         # Every other exercise's code and name, so Details refuses a

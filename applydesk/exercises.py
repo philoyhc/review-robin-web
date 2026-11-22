@@ -388,6 +388,15 @@ def _locked(session: Session, public_id: str) -> Exercise:
     return found
 
 
+def _live(exercise: Exercise) -> None:
+    """An archived exercise is read-only until restored (the author,
+    2026-11-22)."""
+    if exercise.archived_at is not None:
+        raise Refused(
+            "Archived: restore it from the Archive to change it.", key="archived_readonly"
+        )
+
+
 def _ready(session: Session, exercise: Exercise, actor: Person | None) -> None:
     """Record a sample's settings before a first change (revision 0)."""
     if exercise.revision < 1:
@@ -434,6 +443,7 @@ def save_panel(
     """The panel's *Save* for one exercise: its name, code and tags, if
     no one saved since the Lobby opened at revision `opened`."""
     exercise = _locked(session, public_id)
+    _live(exercise)
     if exercise.revision != opened:
         raise Refused(
             "Not saved: someone else changed this exercise since the Lobby opened. Reload.",
@@ -477,6 +487,7 @@ def retag(
     wanted = {t.casefold() for t in tags}
     for public_id in sorted(set(public_ids)):
         exercise = _locked(session, public_id)
+        _live(exercise)
         _ready(session, exercise, actor)
         before = list(tags_of(session, exercise))
         held = {t.casefold() for t in before}
@@ -542,6 +553,7 @@ def delete(session: Session, public_ids: list[str], actor: operators.Actor) -> N
     for public_id in sorted(set(public_ids)):
         exercise = _locked(session, public_id)
         _owned(session, exercise, actor)
+        _live(exercise)  # restored first, as the spec says (cold read)
         exercise.deleted_at = datetime.now(UTC)
         exercise.revision += 1
         session.flush()
@@ -585,6 +597,25 @@ def is_deleted(public_id: str) -> bool:
             session.scalar(
                 select(Exercise.id).where(
                     Exercise.public_id == public_id, Exercise.deleted_at.is_not(None)
+                )
+            )
+            is not None
+        )
+    finally:
+        session.close()
+
+
+def is_archived(public_id: str) -> bool:
+    """Whether the exercise is archived: read-only until restored
+    (the author, 2026-11-22; as Review Robin's archived sessions)."""
+    session = db.new_session()
+    try:
+        return (
+            session.scalar(
+                select(Exercise.id).where(
+                    Exercise.public_id == public_id,
+                    Exercise.archived_at.is_not(None),
+                    Exercise.deleted_at.is_(None),
                 )
             )
             is not None

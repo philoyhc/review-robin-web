@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from fastapi import HTTPException, Request
 from sqlalchemy import select
 
-from applydesk import db, operators, people
+from applydesk import db, exercises, operators, people
 from applydesk.models import Exercise
 from cordware.identity import current_identity, is_local
 
@@ -118,6 +118,17 @@ def require_exercise_operator(request: Request) -> None:
     exercise_id = request.path_params.get("exercise_id")
     if isinstance(exercise_id, str) and not operates(request, exercise_id):
         raise HTTPException(status_code=404)
+    # An archived exercise is read-only until restored (the author,
+    # 2026-11-22; as Review Robin's archived sessions): its pages open,
+    # but nothing posted to them changes it.
+    if (
+        isinstance(exercise_id, str)
+        and request.method not in ("GET", "HEAD")
+        and exercises.is_archived(exercise_id)
+    ):
+        raise HTTPException(
+            status_code=409, detail="Archived: restore it from the Archive to change it."
+        )
 
 
 def own_new_exercise(request: Request, public_id: str) -> bool:
