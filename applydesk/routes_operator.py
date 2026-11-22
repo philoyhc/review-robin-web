@@ -445,12 +445,9 @@ async def exercise_email_save(request: Request, exercise_id: str) -> Response:
 async def exercise_details(request: Request, exercise_id: str) -> Response:
     """Details' *Lock* (segment AD2B rung 3): saved on the exercise's row,
     any exercise the viewer operates, refused if someone saved since the
-    page opened (the revision it sends)."""
+    page opened (the revision it sends). The body is read here; the
+    database is reached off the event loop (Codex on #4137)."""
     _same_site(request)
-    exercise = exercise_or_404(exercise_id)
-    identity = current_identity(request)
-    if identity is None:
-        raise HTTPException(status_code=404)
     if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
         raise HTTPException(status_code=415, detail="Not saved: the page sent no JSON.")
     body = await request.body()
@@ -458,6 +455,18 @@ async def exercise_details(request: Request, exercise_id: str) -> Response:
         raise HTTPException(status_code=413, detail=_TOO_LARGE)
     try:
         sent = json.loads(body)
+    except ValueError:
+        sent = None
+    return await run_in_threadpool(_save_details, request, exercise_id, sent)
+
+
+def _save_details(request: Request, exercise_id: str, sent: object) -> Response:
+    """Details' *Lock*, past the request's own checks: the transaction."""
+    exercise = exercise_or_404(exercise_id)
+    identity = current_identity(request)
+    if identity is None:
+        raise HTTPException(status_code=404)
+    try:
         if not isinstance(sent, dict):
             raise scratch.Refused("The details are malformed.")
         got = cast(dict[str, Any], sent)
@@ -465,10 +474,9 @@ async def exercise_details(request: Request, exercise_id: str) -> Response:
         if not isinstance(opened, int) or isinstance(opened, bool):
             raise scratch.Refused("The details are malformed.")
         values = exercise_store.details_from_page(_details(got))
-    except (ValueError, scratch.Refused) as why:
-        reason = str(why) if isinstance(why, scratch.Refused) else "The details are malformed."
+    except scratch.Refused as why:
         field = why.field if isinstance(why, _Refusal) else "name"
-        return JSONResponse({"error": reason, "field": field}, status_code=400)
+        return JSONResponse({"error": str(why), "field": field}, status_code=400)
     session = db.new_session()
     try:
         # Bind the actor and commit first, as `_ops_change` does.
