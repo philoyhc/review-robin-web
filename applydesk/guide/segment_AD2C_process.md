@@ -172,10 +172,7 @@ Taken 2026-11-22 at `1ceb1d592`.
 1. ~~Where *Open form* and *Close form* sit~~: Home's next step (ruling 76).
 2. ~~How invitees are kept~~: the Candidates stage item, by search and CSV (ruling 77).
 3. ~~Where the rule engine runs~~: on the server alone, with the JS retired (ruling 78).
-4. **Where Candidates sits under ruling 15.** *The author.* Proposed:
-   - At most one Candidates item per exercise.
-   - It may share a stage with the form (as its roster) or with gates (feeding them), or stand alone.
-   - *+ Candidates* is disabled with its reason when the exercise already has one.
+4. ~~Where Candidates sits under ruling 15~~: at most one per exercise, with the form, with gates or alone; *+ Candidates* disabled with its reason once there is one (author, 2026-11-22; ruling 77).
 
 ## Out of scope
 

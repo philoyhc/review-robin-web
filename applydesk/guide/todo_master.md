@@ -706,6 +706,8 @@ the rulings it relied on but does not move them.
     It can be a form's roster (who may apply to an *Invitation only*
     exercise) or feed gates directly (ruling 24's exercise with no form,
     its candidates loaded as dossiers).
+    At most one per exercise; it may share a stage with the form or with
+    gates, or stand alone (ruling 15 otherwise unchanged).
 78. **The rule engine runs on the server only** (author, 2026-11-22;
     AD2C, answering ruling 31): rules are evaluated by one server-side
     service, the pages ask it for proposals and checks, and the pages'
