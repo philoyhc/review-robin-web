@@ -696,6 +696,22 @@ the rulings it relied on but does not move them.
     platform super-admin keeps on Apply Desk's admin page, as Review
     Robin's *Users* page admits and revokes operators; an Owner adds
     operators only from it.
+76. ***Open form* and *Close form* are Home's next step** (author,
+    2026-11-22; AD2C): the action `workflow.steps` already words
+    (*Open form…*, *Close form…*) becomes live there, not a button on
+    Process.
+77. **Candidates is a stage item** (author, 2026-11-22; AD2C, replacing
+    an invitee list for AD-52): a list of people the operator keeps by
+    hand, added through the people search (ruling 75) or a CSV upload.
+    It can be a form's roster (who may apply to an *Invitation only*
+    exercise) or feed gates directly (ruling 24's exercise with no form,
+    its candidates loaded as dossiers).
+    At most one per exercise; it may share a stage with the form or with
+    gates, or stand alone (ruling 15 otherwise unchanged).
+78. **The rule engine runs on the server only** (author, 2026-11-22;
+    AD2C, answering ruling 31): rules are evaluated by one server-side
+    service, the pages ask it for proposals and checks, and the pages'
+    JS evaluator retires.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
@@ -792,7 +808,7 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
-| AD2 — Database (a series) | The `applydesk` database, checkable on localhost, area by area: AD2A foundations (people, operators, audit; closed 2026-11-21, `applydesk/guide/archive/segment_AD2A_foundations.md`); AD2W, Accounts Management's table as Review Robin's Workspace users (closed 2026-11-21, `applydesk/guide/archive/segment_AD2W_workspace_users.md`); then exercises, Process, the form, panels, dossiers and pairs, and retiring the simulation (`applydesk/guide/ad2_series.md`) | Cordware: the database and its runtime principal (private), before AD2's first release |
+| AD2 — Database (a series) | The `applydesk` database, checkable on localhost, area by area: AD2A foundations (people, operators, audit; closed 2026-11-21, `applydesk/guide/archive/segment_AD2A_foundations.md`); AD2W, Accounts Management's table as Review Robin's Workspace users (closed 2026-11-21, `applydesk/guide/archive/segment_AD2W_workspace_users.md`); then exercises, Process (AD2C open, `applydesk/guide/segment_AD2C_process.md`), the form, panels, dossiers and pairs, and retiring the simulation (`applydesk/guide/ad2_series.md`) | Cordware: the database and its runtime principal (private), before AD2's first release |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form, versioned, each section carrying its visibility grants (ruling 68); drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
 | AD5 — Panels and dossiers | The rosters on Panels (rulings 19, 22), each gate's evaluators from its ranked sources (ruling 27); dossiers made from the form or by *Create dossiers* (rulings 25, 26), the dossier with its access check, audit and blind redaction | — |

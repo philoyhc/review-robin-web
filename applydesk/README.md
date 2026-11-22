@@ -44,6 +44,7 @@ ordinary operator, the Owner the seed made it.
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and CI |
 | `guide/todo_master.md` | Rulings, the MVP roadmap and open decisions |
 | `guide/ad2_series.md` | The AD2 series: what every AD2 segment holds to (its own database, checkable on localhost) and the segments AD2A–AD2G in order, each with the findings it takes |
+| `guide/segment_AD2C_process.md` | AD2C: an exercise's timeline in the database (stages, the form's window and state, gates with stable keys, fields and results, outcomes with keyed values, rules as validated JSON, release audiences) and the Candidates item (ruling 77); Process saves for every exercise, and the rule engine runs on the server alone (ruling 78) |
 | `guide/things_to_check_in_browser.md` | **Browser checks owed** on merged changes, one section per change, each row ticked and the section deleted once checked (2026-11-22, AD1R and AD1S's moved in from `guide/todo_master.md`) |
 | `guide/ad2_deferred_findings.md` | The 2026-11-18 assessment's rows that wait on AD2's persistence and identity (28 rows, moved 2026-11-21); AD2's plan absorbs, rules or drops each |
 | `guide/ad3_plus_deferred_findings.md` | The 2026-11-18 assessment's rows that wait on a stage after AD2: Layer B, AD3's lifecycle, AD4's dossier parts and AD7 (6 rows, moved 2026-11-21) |
