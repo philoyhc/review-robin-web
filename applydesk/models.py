@@ -1,7 +1,8 @@
 """Apply Desk's tables (segment AD2A): people, exercises, who operates
-them, and the audit trail. The rest of an exercise still comes from
-`applydesk/sample_data.py` until AD2B onward (`applydesk/guide/
-ad2_series.md`)."""
+them, and the audit trail; an exercise's settings and tags (AD2B); its
+timeline, gates, outcomes and Candidates (AD2C). The rest of an exercise
+still comes from `applydesk/sample_data.py` until AD2D onward
+(`applydesk/guide/ad2_series.md`)."""
 
 from __future__ import annotations
 
@@ -12,6 +13,7 @@ from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -138,6 +140,11 @@ class Exercise(Base):
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # Process's own revision (segment AD2C): 0 until its timeline is first
+    # saved, the pages keeping the sample's; a Details save leaves it be.
+    process_revision: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
 
 
 class ExerciseTag(Base):
@@ -180,6 +187,240 @@ class ExerciseOperator(Base):
     )
     added_by_id: Mapped[int | None] = mapped_column(
         ForeignKey("person.id", name="fk_exercise_operator_added_by")
+    )
+    added_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_now
+    )
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+def _exercise_fk(table: str) -> Mapped[int]:
+    return mapped_column(
+        ForeignKey("exercise.id", name=f"fk_{table}_exercise"), nullable=False, index=True
+    )
+
+
+class Stage(Base):
+    """A stage of an exercise's timeline (segment AD2C, rulings 15 and
+    35): its place, name and dates (NULL unset), its status, whether
+    applicants see it, and, on the stage holding the form, the form's own
+    window and state, the one source of either (AD-36, AD-59). ``key`` is
+    stable across saves (``s<n>``). Retired, never deleted (ruling 74)."""
+
+    __tablename__ = "stage"
+    __table_args__ = (UniqueConstraint("exercise_id", "key", name="uq_stage_key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    exercise_id: Mapped[int] = _exercise_fk("stage")
+    key: Mapped[str] = mapped_column(String(16), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str | None] = mapped_column(String(200))
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    shown: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    holds_form: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Ruling 77: the exercise's one Candidates item sits on a stage.
+    holds_candidates: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    form_opens_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    form_closes_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # "draft", "open" or "closed" on the stage holding the form (ruling 24).
+    form_state: Mapped[str | None] = mapped_column(String(8))
+    form_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    form_closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Gate(Base):
+    """A gate (rulings 21, 27, 28): its ``key`` unique per exercise and never
+    reused, its handle in URLs and file names (ruling 37, AD-48); its
+    number is computed for display. ``rule`` is validated JSON whose
+    references are keys (AD-62)."""
+
+    __tablename__ = "gate"
+    __table_args__ = (UniqueConstraint("exercise_id", "key", name="uq_gate_key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    exercise_id: Mapped[int] = _exercise_fk("gate")
+    stage_id: Mapped[int] = mapped_column(
+        ForeignKey("stage.id", name="fk_gate_stage"), nullable=False, index=True
+    )
+    key: Mapped[str] = mapped_column(String(16), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    label: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    via: Mapped[str] = mapped_column(String(16), nullable=False, default="RRW")
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    confidential: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    mode: Mapped[str] = mapped_column(String(16), nullable=False, default="automatic")
+    total_min: Mapped[int | None] = mapped_column(Integer)
+    total_max: Mapped[int | None] = mapped_column(Integer)
+    review_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rule: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class GateField(Base):
+    """A response field evaluators answer (ruling 28), by a stable key
+    Review Robin reports under (AD-51)."""
+
+    __tablename__ = "gate_field"
+    __table_args__ = (UniqueConstraint("gate_id", "key", name="uq_gate_field_key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    gate_id: Mapped[int] = mapped_column(
+        ForeignKey("gate.id", name="fk_gate_field_gate"), nullable=False, index=True
+    )
+    key: Mapped[str] = mapped_column(String(16), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    label: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    type: Mapped[str] = mapped_column(String(16), nullable=False, default="integer")
+    min: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    max: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    step: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    options: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    help: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class GateResult(Base):
+    """One of a gate's results (ruling 21): position 1 is the headline; the
+    field it collates by FK, never a copy of it (AD-51)."""
+
+    __tablename__ = "gate_result"
+    __table_args__ = (UniqueConstraint("gate_id", "key", name="uq_gate_result_key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    gate_id: Mapped[int] = mapped_column(
+        ForeignKey("gate.id", name="fk_gate_result_gate"), nullable=False, index=True
+    )
+    key: Mapped[str] = mapped_column(String(16), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    field_id: Mapped[int | None] = mapped_column(
+        ForeignKey("gate_field.id", name="fk_gate_result_field")
+    )
+    derive: Mapped[str] = mapped_column(String(16), nullable=False, default="mean")
+    value: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    at_least: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    ignore_zero: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class GateSource(Base):
+    """One of a gate's ranked evaluator sources (ruling 27): ``ref`` a panel
+    key or a Form question until AD2E and AD2D store those. Rewritten
+    with its gate on each save."""
+
+    __tablename__ = "gate_source"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    gate_id: Mapped[int] = mapped_column(
+        ForeignKey("gate.id", name="fk_gate_source_gate"), nullable=False, index=True
+    )
+    rank: Mapped[int] = mapped_column(Integer, nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    ref: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    min: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    all_members: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class Outcome(Base):
+    """An outcome (rulings 13, 14, 38): its key unique per exercise and never
+    reused, its due time, its rule; *Decided* is derived, never stored."""
+
+    __tablename__ = "outcome"
+    __table_args__ = (UniqueConstraint("exercise_id", "key", name="uq_outcome_key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    exercise_id: Mapped[int] = _exercise_fk("outcome")
+    stage_id: Mapped[int] = mapped_column(
+        ForeignKey("stage.id", name="fk_outcome_stage"), nullable=False, index=True
+    )
+    key: Mapped[str] = mapped_column(String(16), nullable=False)
+    label: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rule: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class OutcomeValue(Base):
+    """A value an outcome decides (AD-57): rules and cells name it by key,
+    so renaming its label orphans nothing; ``advances`` says whether it
+    takes the application on."""
+
+    __tablename__ = "outcome_value"
+    __table_args__ = (UniqueConstraint("outcome_id", "key", name="uq_outcome_value_key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    outcome_id: Mapped[int] = mapped_column(
+        ForeignKey("outcome.id", name="fk_outcome_value_outcome"), nullable=False, index=True
+    )
+    key: Mapped[str] = mapped_column(String(16), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    advances: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class OutcomeWeight(Base):
+    """A gate result's weight in an outcome's combined result: the gate by
+    FK, the result by its key on it ("" reads its first, ruling 21).
+    Rewritten with its outcome on each save."""
+
+    __tablename__ = "outcome_weight"
+    __table_args__ = (
+        UniqueConstraint("outcome_id", "gate_id", "result_key", name="uq_outcome_weight_pair"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    outcome_id: Mapped[int] = mapped_column(
+        ForeignKey("outcome.id", name="fk_outcome_weight_outcome"), nullable=False, index=True
+    )
+    gate_id: Mapped[int] = mapped_column(
+        ForeignKey("gate.id", name="fk_outcome_weight_gate"), nullable=False
+    )
+    result_key: Mapped[str] = mapped_column(String(16), nullable=False, default="")
+    weight: Mapped[float] = mapped_column(Float, nullable=False)
+
+
+class OutcomeRelease(Base):
+    """An outcome released to one audience (``applicants`` or ``reviewers``),
+    by whom and when (ruling 38): written only by a release (AD2F's
+    *Release*). Whom it opens to, and what, is ruling 79's views (AD2V)."""
+
+    __tablename__ = "outcome_release"
+    __table_args__ = (UniqueConstraint("outcome_id", "audience", name="uq_outcome_release_pair"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    outcome_id: Mapped[int] = mapped_column(
+        ForeignKey("outcome.id", name="fk_outcome_release_outcome"), nullable=False, index=True
+    )
+    audience: Mapped[str] = mapped_column(String(16), nullable=False)
+    released_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    released_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("person.id", name="fk_outcome_release_by")
+    )
+
+
+class Candidate(Base):
+    """Someone on an exercise's Candidates list (ruling 77): added by hand,
+    through the people search or a CSV, once per exercise; removing them
+    sets ``removed_at``, adding them again clears it."""
+
+    __tablename__ = "candidate"
+    __table_args__ = (UniqueConstraint("exercise_id", "person_id", name="uq_candidate_pair"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    exercise_id: Mapped[int] = _exercise_fk("candidate")
+    person_id: Mapped[int] = mapped_column(
+        ForeignKey("person.id", name="fk_candidate_person"), nullable=False
+    )
+    via: Mapped[str] = mapped_column(String(8), nullable=False)  # "search" or "csv"
+    added_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("person.id", name="fk_candidate_added_by")
     )
     added_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_now
