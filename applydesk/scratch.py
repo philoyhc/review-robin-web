@@ -167,17 +167,6 @@ def discard(browser_token: str | None, public_id: str) -> bool:
         return bool(found and found.exercises.pop(public_id, None))
 
 
-def update(public_id: str, **changes: Any) -> sample_data.Exercise:
-    """Change a scratch exercise's details (Details' *Lock*)."""
-    with _LOCK:
-        found = _browser(_token.get(), time.monotonic())
-        held = found.exercises.get(public_id) if found else None
-        if held is None:
-            raise Refused("No such scratch exercise.")
-        held.exercise = replace(held.exercise, **changes)
-        return held.exercise
-
-
 def alive(browser_token: str) -> bool:
     """Whether this browser still holds a store (its idle clock running)."""
     with _LOCK:

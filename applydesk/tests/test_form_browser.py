@@ -35,7 +35,19 @@ def page() -> Iterator[Page]:
     client = TestClient(host_with(("applydesk",))[0])
 
     def serve(route: Route) -> None:
-        response = client.get(route.request.url.removeprefix(ORIGIN))
+        # Any method, as the page sends it: Details' Lock posts (AD2B).
+        request = route.request
+        headers = {
+            k: v
+            for k, v in request.headers.items()
+            if k.lower() in ("content-type", "sec-fetch-site")
+        }
+        response = client.request(
+            request.method,
+            request.url.removeprefix(ORIGIN),
+            content=request.post_data_buffer,
+            headers=headers,
+        )
         route.fulfill(
             status=response.status_code,
             body=response.content,

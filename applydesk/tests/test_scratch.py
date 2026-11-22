@@ -137,6 +137,7 @@ def test_details_save_into_the_scratch() -> None:
     client = _client()
     made = _create(client)
     good = {
+        "revision": 0,  # a new scratch exercise has no settings recorded
         "name": "Summer Bursary 2027",
         "code": "SB-27",
         "description": "Bursaries for summer study.",
@@ -146,7 +147,9 @@ def test_details_save_into_the_scratch() -> None:
         "blind": True,
     }
     reply = client.post(f"{LOBBY}/{made}/details", json=good)
-    assert reply.status_code == 200 and reply.json() == {"saved": True}
+    # Recorded (revision 1), then changed (2): segment AD2B rung 3.
+    assert reply.status_code == 200 and reply.json() == {"saved": True, "revision": 2}
+    good["revision"] = 2
     home = client.get(f"{LOBBY}/{made}").text
     assert "<code>SB-27</code>" in home and "Bursaries for summer study." in home
     assert "Europe/London" in home and "Invitation only" in home
@@ -158,11 +161,10 @@ def test_details_save_into_the_scratch() -> None:
         ({**good, "timezone": "Mars/Base"}, "That timezone is not offered."),
         ({**good, "blind": "yes"}, "The details are malformed."),
         ({**good, "description": "x" * 2001}, "at most 2,000 characters"),
+        ({**good, "revision": "2"}, "The details are malformed."),
     ):
         refused = client.post(f"{LOBBY}/{made}/details", json=bad)
         assert refused.status_code == 400 and reason in refused.json()["error"], bad
-    # A sample exercise has no such post.
-    assert client.post(f"{LOBBY}/wa9juxbc2t/details", json=good).status_code == 404
 
 
 def test_a_post_from_another_site_is_refused() -> None:
@@ -847,6 +849,7 @@ def test_a_details_refusal_names_its_field() -> None:
     client = _client()
     made = _create(client)
     good = {
+        "revision": 0,
         "name": "N",
         "code": "",
         "description": "",

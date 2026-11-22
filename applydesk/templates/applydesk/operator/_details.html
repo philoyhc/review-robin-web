@@ -3,9 +3,10 @@
    it is used; Lock keeps the changes on this page, refusing an empty
    name, a clashing code or a help contact that is not an address;
    Discard changes puts the last kept values back. A published exercise's
-   code and who may apply are fixed (G2). Nothing is saved until AD2. #}
+   code and who may apply are fixed (G2). Lock saves to the database,
+   naming the revision the page opened at (segment AD2B rung 3). #}
 {% set live = exercise.state != "Draft" %}
-<section class="card dt" id="details" data-details{% if scratch_page %} data-dt-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/details') }}"{% endif %} data-dt-codes="{{ other_codes | tojson | forceescape }}" data-dt-default-contact="{{ default_contact }}">
+<section class="card dt" id="details" data-details data-dt-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/details') }}" data-dt-revision="{{ revision }}" data-dt-codes="{{ other_codes | tojson | forceescape }}" data-dt-default-contact="{{ default_contact }}">
   <div class="cardhead"><h2>Details</h2>
     <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
   </div>
@@ -122,22 +123,19 @@
     var v = read(), no = refusal(v);
     if (no) { refuse(field(no[0]), no[1]); return; }
     form.querySelectorAll("[aria-invalid]").forEach(function (x) { x.removeAttribute("aria-invalid"); x.removeAttribute("aria-describedby"); });
-    // A scratch exercise's Lock keeps the details in the server's memory
-    // for this browser (segment AD1N); a sample's stays on the page.
-    if (card.dataset.dtSave) {
-      fetch(card.dataset.dtSave, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(v), credentials: "same-origin" })
-        .then(function (r) { return r.json().then(function (body) { return [r.ok, body]; }, function () { return [false, null]; }); })
-        .then(function (got) {
-          // The field a refusal names, else Name (cold read).
-          if (!got[0]) { refuse(field((got[1] && got[1].field) || "name"), (got[1] && (got[1].error || got[1].detail)) || "Not saved."); return; }
-          kept = v; loaded = v; show(v); open(false); draw();
-          said.textContent = "Saved to this scratch exercise.";
-        })
-        .catch(function () { refuse(field("name"), "Not saved: the server could not be reached."); });
-      return;
-    }
-    kept = v; show(v); open(false); draw();
-    said.textContent = same(v, loaded) ? "Locked." : "Locked: changed on this page only; nothing is saved.";
+    // Lock saves to the database, refused if someone saved since this
+    // page opened (segment AD2B rung 3, ruling 74).
+    var sent = Object.assign({ revision: Number(card.dataset.dtRevision) }, v);
+    fetch(card.dataset.dtSave, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sent), credentials: "same-origin" })
+      .then(function (r) { return r.json().then(function (body) { return [r.ok, body]; }, function () { return [false, null]; }); })
+      .then(function (got) {
+        // The field a refusal names, else Name (cold read).
+        if (!got[0]) { refuse(field((got[1] && got[1].field) || "name"), (got[1] && (got[1].error || got[1].detail)) || "Not saved."); return; }
+        card.dataset.dtRevision = String(got[1].revision);
+        kept = v; loaded = v; show(v); open(false); draw();
+        said.textContent = "Saved.";
+      })
+      .catch(function () { refuse(field("name"), "Not saved: the server could not be reached."); });
   });
   form.addEventListener("keydown", function (e) {
     // Esc discards, as Panels' and + Pair's close (AD-104).

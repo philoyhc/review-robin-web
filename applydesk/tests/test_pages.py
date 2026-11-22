@@ -1976,12 +1976,17 @@ def test_the_outcomes_card_follows_its_file_under_blind_review(
 ) -> None:
     """Cold read: blind, the Outcomes card starts on Dossier IDs, says
     why, lists no applicant columns, and lets the operator choose Names."""
-    import dataclasses
+    from sqlalchemy import select
 
-    ex = sample_data.exercise(EX)
-    assert ex is not None
-    blind = dataclasses.replace(ex, blind=True)
-    monkeypatch.setattr(sample_data, "exercise", lambda i: blind)
+    from applydesk import db
+    from applydesk.models import Exercise
+
+    # Blind as stored: the pages read the row's settings (segment AD2B).
+    session = db.new_session()
+    row = session.scalars(select(Exercise).where(Exercise.public_id == EX)).one()
+    row.blind = True
+    session.commit()
+    session.close()
     page = client.get(f"/applydesk/operator/exercises/{EX}/extract").text
     card = page[page.index('data-xd-card="outcomes"') : page.index('data-xd-card="alias"')]
     assert "Dossier IDs to start with: blind review is on." in card
