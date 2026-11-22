@@ -37,17 +37,18 @@ what", Accounts Management, the Operators card, the Operator Lobby).
 | Role | Stored as | Granted by | Revoked by | Built |
 |---|---|---|---|---|
 | **Operator** | `person.may_operate` (the operator list) | *Admit*, by an Admin or the super-admin | *Revoke*, by an Admin or the super-admin | Yes (AD2A, AD2W) |
-| **Admin** | `person.is_admin` (to add) | the super-admin | the super-admin | No: being built (the author's ruling, 2026-11-22), after Review Robin's sys-admin |
+| **Admin** | `person.is_admin`, always with `may_operate` | *Promote*, by the super-admin (any Admin when none is configured) | *Demote*, likewise | Yes, after Review Robin's sys-admin |
 | **Super-admin** | derived from Cordware's `SUPER_ADMIN_EMAILS`, never stored | deployer config | deployer config | Yes |
 
 - An Operator may make exercises, and becomes the Owner of each they make.
   Being on the operator list opens no exercise by itself.
 - An Admin reaches the Admin pages and manages Operators; an Admin is an
-  Operator, so may make exercises.
-- The super-admin reaches every Admin page and manages Admins. Like an Admin,
-  they work on an exercise only once they own or operate it: an exercise they
-  hold no role on, they adopt (§5). They see the Operator Lobby as any operator
-  does: only the exercises they own or operate (§7).
+  Operator, so may make exercises. Every gate reads `may_operate or is_admin`.
+- The super-admin reaches every Admin page and manages Admins. Their reach to
+  exercises is their grants only, as an Admin's: an exercise they hold no role
+  on, they adopt (§5). The Operator Lobby lists only what they own or operate
+  (§7). Only the seed, acting as the platform (`Actor.platform`), holds every
+  exercise.
 
 ## 3. Exercise roles
 
@@ -59,9 +60,11 @@ it: **Owner ⊇ Operator**.
 | **Operator** | an `exercise_operator` row | an Owner adding them | an Owner removing them, or leaving |
 | **Owner** | the same row, `is_owner` true | making the exercise; an Owner making an operator an Owner; an Owner transferring ownership to them | an Owner demoting them to operator; transferring their own ownership away; stepping down |
 
-*Built:* the rows, adding and removing operators, and a handover. *To
-build:* more than one Owner (today `uq_exercise_one_owner` allows one), Make
-Owner, demote, step down and leave.
+*Built:* the rows, adding and removing operators, a handover, and several
+Owners in the data (adopting adds one beside the others; the one-Owner index
+is gone and the exercise's row lock serializes changes to its Owners). *To
+build:* Make Owner, demote, step down and leave, and the Owners and operators
+card.
 
 ### What each may do on an exercise
 
@@ -131,28 +134,33 @@ super-admin).
 | Purge and archive; delete an exercise | — | — | — | ○ | via adopt | via adopt |
 | Admin → Exercises Diagnostics: every exercise, its Owners, Outbox, Audit log | — | — | — | — | ✓ | ✓ |
 | Admin → Accounts Management: Admit and Revoke Operators | — | — | — | — | ✓ | ✓ |
-| Promote and demote Admins | — | — | — | — | — | ✓ |
+| Promote and demote Admins | — | — | — | — | only when no super-admin is configured | ✓ |
 | Admin → System Status | — | — | — | — | ✓ | ✓ |
 
-**Adopt** (to build, with Admins): from Exercises Diagnostics an Admin or the
-super-admin who holds no role on an exercise may read its diagnostics, but
-must *adopt* it to open its pages or change anything: an audited step that
+**Adopt** (built): from Exercises Diagnostics an Admin or the super-admin who
+holds no role on an exercise may read its diagnostics, but must *adopt* it to
+open its pages or change anything: an audited step (`exercise.adopted`) that
 makes them an Owner of it. The row's *Manage* adopts, asking first, as Review
-Robin's *Manage* self-adds a sys-admin.
-The super-admin adopts too (the author's ruling, 2026-11-22): nobody edits an
-exercise without a recorded role, so every change has an Owner on record.
-Adopting one they already operate makes them an Owner. Once adopted, they are
-an Owner as any other, and step down or leave the same way. Today the
-super-admin reaches every exercise without a grant; adopting replaces that.
+Robin's *Manage* self-adds a sys-admin; where the viewer already owns or
+operates the exercise it only opens Home. The super-admin adopts too (the
+author's ruling, 2026-11-22): nobody edits an exercise without a recorded
+role, so every change has an Owner on record.
+- Adopting one they already operate makes them an Owner; adopting one they
+  already own changes nothing and audits nothing.
+- It needs the exercise's row in the database and a person row for the actor
+  (an unbound super-admin cannot adopt).
+- Once adopted, they are an Owner as any other. A later Demote keeps the Owner
+  rows they adopted, as Revoke keeps an operator's grants.
+- Stepping down and leaving are AD2O's (§3).
 
 ## 6. Who reaches which pages
 
 | Pages | Reached by | Built |
 |---|---|---|
 | `/operator/…` (the Lobby, making an exercise) | an Operator, Admin or the super-admin | Yes |
-| An exercise's pages, `/operator/exercises/<id>/…` | its operators and Owners, an Admin or the super-admin among them once adopted | Operators and the one Owner, yes; today the super-admin reaches all without adopting |
-| Owner-only posts (operators, ownership, purge, delete) | its Owners | Partly: today the one Owner and the super-admin |
-| `/admin/…` | Admins and the super-admin | Super-admin only today |
+| An exercise's pages, `/operator/exercises/<id>/…` | its operators and Owners, an Admin or the super-admin among them once adopted | Yes |
+| Owner-only posts (operators, ownership, purge, delete) | its Owners | Operators and ownership: yes. Purge and delete: to build |
+| `/admin/…` | Admins and the super-admin | Yes |
 | `/me/…` | participants, by their records (§4) | Behind the placeholders' gate |
 | `/` and `/operator` | an operator lands on the Lobby; anyone else on the User Lobby | Yes |
 
@@ -190,22 +198,29 @@ super-admin reaches every exercise without a grant; adopting replaces that.
 
 ## 8. Guards
 
-- **At least one Owner, always.** Demoting, stepping down or leaving that
-  would leave no Owner is refused; transfer always leaves one. The check runs
+- **At least one Owner, always.** To build with demote, step down and leave:
+  one that would leave no Owner is refused; transfer always leaves one. The
+  check runs
   under the same row lock the handover takes now, so two Owners demoting each
   other at once cannot both succeed.
 - **Owners and operators come from the operator list.** Adding an operator,
   making an Owner and transferring all require the person to be on it.
 - **An Owner is demoted before removal** (§3).
 - **Revoking from the operator list** ends the person's access at once and
-  keeps their grants, so re-admitting restores them (built). To build: it is
-  refused while they are the **only** Owner of an exercise not archived;
-  ownership is handed over first, as Review Robin's `sole_owner` refuses.
-- **The super-admin is protected**: no Revoke, demote or delete against them,
-  and nobody acts on their own row in Accounts Management (built).
-- **With Admins**: Admins are promoted and demoted by the super-admin only;
-  the last Admin is never demoted; with no super-admin configured, an Admin
-  may promote Admins (Review Robin's fallback).
+  keeps their grants, so re-admitting restores them (built). Built: it
+  refuses an Admin, who is demoted first. To build: it is refused while they
+  are the **only** Owner of an exercise not archived; ownership is handed over
+  first, as Review Robin's `sole_owner` refuses.
+- **A super-admin's row is protected** (built): no Revoke, Promote or Demote
+  acts on it, whoever acts, and nobody acts on their own row in Accounts
+  Management. No in-app action deletes it either.
+- **Admins** (built):
+  - Promote and Demote are the super-admin's; with no super-admin configured,
+    any Admin may (Review Robin's fallback).
+  - Promote needs a bound person (a pending one is refused) and puts them on
+    the operator list if they are not on it.
+  - The last Admin is never demoted, a super-admin configured or not.
+  - Demote keeps them on the operator list.
 - **Deleting a person** is allowed only for one with no history: never signed
   in, no grants, never an audit actor (Review Robin's `has_history`).
 - **A pending person** may be admitted and granted, and reaches nothing until
@@ -227,9 +242,9 @@ Every change writes an `audit_event` with the actor.
 | `exercise.owner_added` | Make Owner | No |
 | `exercise.owner_demoted` | an Owner made an operator, or stepping down | No |
 | `exercise.operator_left` | an operator leaves | No |
-| `exercise.adopted` | an Admin or the super-admin adopts an exercise as Owner | No |
+| `exercise.adopted` | an Admin or the super-admin adopts an exercise as Owner (not when already an Owner) | Yes |
 | `exercise.deleted`, `exercise.archived` | an Owner deletes, or purges and archives | No |
-| `person.promoted`, `person.demoted` | Admin granted, taken away | No |
+| `person.promoted`, `person.demoted` | Admin granted, taken away; a Promote that lists someone also writes `person.admitted` | Yes |
 
 ## 10. Open
 
@@ -237,6 +252,6 @@ Every change writes an `audit_event` with the actor.
   outcomes), and who names them (its Owners, on Home, as Review Robin's
   operators name observers). Decided when they are built.
 
-Decided 2026-11-22 (the author): build the Admin tier now; the super-admin
+Decided 2026-11-22 (the author): the Admin tier is built; the super-admin
 adopts as an Admin does; observers are participants on `/me`, pre-positioned
 here and built later.
