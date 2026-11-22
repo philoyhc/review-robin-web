@@ -413,7 +413,7 @@ def test_the_lobby_is_laid_out_as_review_robin_s(client: TestClient) -> None:
     assert ">2 Draft</span>" in lobby and ">3 Published</span>" in lobby
     assert ">0 Closed</span>" in lobby and ">0 Archived</span>" in lobby
     assert lobby.count('title="Filtering by tag is not built yet"') == 4 + 2  # 4 tags, OR, Clear
-    assert 'disabled title="The Archive is not built yet">Go to Archive' in lobby
+    assert 'href="/applydesk/operator/exercises/archived">Go to Archive</a>' in lobby  # AD2B
     assert 'aria-sort="descending">Created<' in lobby
     # Newest first: the Graduate Travel Grant, made last, heads the rows.
     order = [lobby.index(e.name) for e in sample_data.newest_first(sample_data.EXERCISES)]

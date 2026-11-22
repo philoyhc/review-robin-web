@@ -295,3 +295,21 @@ def save_details(
         context={"revision": exercise.revision},
     )
     return exercise.revision
+
+
+def archived_at() -> dict[str, datetime]:
+    """When each archived (not deleted) exercise was archived, by its
+    public ID: the Archive page's rows (segment AD2B rung 5)."""
+    session = db.new_session()
+    try:
+        return {
+            public_id: at
+            for public_id, at in session.execute(
+                select(Exercise.public_id, Exercise.archived_at).where(
+                    Exercise.archived_at.is_not(None), Exercise.deleted_at.is_(None)
+                )
+            )
+            if at is not None
+        }
+    finally:
+        session.close()
