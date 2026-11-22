@@ -43,6 +43,7 @@ ordinary operator, the Owner the seed made it.
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and CI |
 | `guide/todo_master.md` | Rulings, the MVP roadmap and open decisions |
 | `guide/ad2_series.md` | The AD2 series: what every AD2 segment holds to (its own database, checkable on localhost) and the segments AD2A–AD2G in order, each with the findings it takes |
+| `guide/segment_AD2B_exercises.md` | AD2B: an exercise's own settings in the database (Details saving for every exercise, NULL for unset, one clock and date helper), and the Operator Lobby's scaffold wired (sorting, tags, the filter, Archive, the tick panel's actions) |
 | `guide/things_to_check_in_browser.md` | **Browser checks owed** on merged changes, one section per change, each row ticked and the section deleted once checked (2026-11-22, AD1R and AD1S's moved in from `guide/todo_master.md`) |
 | `guide/ad2_deferred_findings.md` | The 2026-11-18 assessment's rows that wait on AD2's persistence and identity (28 rows, moved 2026-11-21); AD2's plan absorbs, rules or drops each |
 | `guide/ad3_plus_deferred_findings.md` | The 2026-11-18 assessment's rows that wait on a stage after AD2: Layer B, AD3's lifecycle, AD4's dossier parts and AD7 (6 rows, moved 2026-11-21) |
