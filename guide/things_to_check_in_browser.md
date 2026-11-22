@@ -11,18 +11,9 @@ delete them once no remaining section points to them.
 **Some rows need more than a local run:** an Azure deployment (#2720,
 P5) or the Rehydrate round trip (D28).
 
-**Apply Desk's checks are here too**, under "Apply Desk" at the end, at
-`http://127.0.0.1:8000/applydesk/` on the same local run; its plans and
-`applydesk/guide/todo_master.md` point here rather than keeping their own
-(consolidated 2026-11-22). Most need the samples loaded first:
-`alembic -c applydesk/alembic.ini upgrade head`, then
-`python -m applydesk.seed`.
-
-**Residential's walkthroughs stay in their own files**, since they are also
-scripts for feedback sessions, each deleted when its item closes:
-`residentialapps/guide/1B_browser_checks.md`,
-`residentialapps/guide/1C_browser_checks.md` and
-`residentialapps/guide/1D_browser_checks.md`.
+**Each package keeps its own register**, in its own `guide/`:
+`applydesk/guide/things_to_check_in_browser.md` (Apply Desk) and
+`residentialapps/guide/things_to_check_in_browser.md` (Residential).
 
 ## Email dates in the session's zone (#2720)
 
@@ -70,56 +61,3 @@ deployment, not a local run.
 - [ ] **An invited user's first sign-in binds them.** Invite a new
   address, then sign in as it: the log shows
   `workspace.user_principal_recorded`.
-
----
-
-# Apply Desk
-
-## Admins and adopting an exercise (AD2M: #4131, #4132)
-
-- [ ] **Promote and Demote.** On Admin → Accounts Management, tick
-  someone who has signed in and click *Promote to Admin*: the row's
-  *Admin* reads *Admin* and they move under the *Admins* chip. Tick them
-  again and click *Demote from Admin*: it asks first, then they read *no*
-  and stay an operator.
-- [ ] **Revoke skips an Admin.** Tick an Admin and click *Revoke*: the
-  status line counts them as skipped.
-- [ ] **An Admin's view.** With `FAKE_AUTH_SUPER_ADMIN=false` and Local
-  Operator promoted: the account menu reads *admin*, the Admin pages
-  open, and the bulk bar has no *Promote* or *Demote*.
-- [ ] **Manage adopts, asking first.** On a fresh database seeded with
-  `python -m applydesk.seed --owner pat@example.edu`, the Lobby lists no
-  sample. On Admin → Exercises Diagnostics, *Manage* on one asks first;
-  after it the exercise's Home opens, the Lobby lists it, and *Owners*
-  reads `pat@example.edu, Local Operator`.
-- [ ] **Unseeded.** With no seed run, *Manage* says the exercise is not in
-  the database yet and names the command.
-
-## Owners on record, and the super-admin's own row (#4128, #4129)
-
-- [ ] **Owners column and Created by.** After the seed, Exercises
-  Diagnostics' *Owners* and the Lobby's *Created by* read Local Operator
-  for every sample, the Lobby's with its tooltip.
-- [ ] **Your own row.** On Accounts Management, Local Operator's *(self)*
-  row reads Operator *yes*, with its tooltip, and the workspace Unit when
-  `CORDWARE_INSTITUTION_NAME` is set.
-
-## Home's timeline and the copy sweep (AD1S: #4101, #4102)
-
-Moved from `applydesk/guide/todo_master.md` (deferred 2026-11-21).
-
-- [ ] **The timeline.** Exercise Home's timeline in both layouts, at
-  1300px and 390px, and the applicant's `/me` exercise page.
-- [ ] **The copy sweep.** Read the pages #4102 touched; restore any cut
-  line still needed (`applydesk/guide/removed_help_lines.md`).
-
-## Hovers, tables and empty states (AD1R: #4096, #4097, #4098)
-
-Moved from `applydesk/guide/todo_master.md` (deferred 2026-11-21).
-Tweaks it finds land as their own PRs.
-
-- [ ] **Hovers and tables** on every operator page.
-- [ ] **The blank draft's empty states** (*Graduate Travel Grant 2027*).
-- [ ] **Widths and themes.** Extract, Dossiers, Panels, Form, Home and the
-  gate page at 1300px and 390px, light and dark.
-

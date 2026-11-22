@@ -25,13 +25,13 @@ Residential Apps: one package, mounted under Cordware as two applications, **Res
 | `guide/segment_1B_rosters_and_organization.md` | Segment 1B plan: the shared core's admin screens scaffolded, then databases, identity, organization and rosters wired to them (paused after item 1 for RA Leave's screens, ruling 13) |
 | `guide/segment_1C_ra_leave.md` | Segment 1C plan: RA Leave's screens, phone first, settling Residential's UX conventions (item 1, next); then wired on 1B's core (items 2–5) |
 | `guide/1B_browser_checks.md` | Segment 1B item 1's browser walkthrough: the landing, Rosters and setup, a person's page and Sys admin, step by step; deleted when the screens are approved |
-| `guide/1C_browser_checks.md` | Segment 1C item 1's browser walkthrough: RA Leave's RA, staff and admin screens and the appeal-mode previews, step by step; deleted when item 1 closes |
 | `guide/segment_1D_support_logs.md` | Segment 1D plan: Support Logs' screens on placeholders, phone first for the frontline, as RA Leave's were; then wired on the shared core |
 | `guide/1D_unit_scoping.md` | Segment 1D: the plan for scoping Support Logs by Residential Unit (opened and closed 2026-11-08, #3731→#3735) |
 | `guide/1D_browser_checks.md` | Segment 1D item 1's browser walkthrough: every Support Logs screen, step by step, with the PowerShell fake-auth commands; deleted when item 1 closes |
 | `guide/1D_sharing_screens.md` | Segment 1D: the plan to bring Support Logs' screens in line with the sharing model, rung by rung (opened 2026-11-07) |
 | `guide/1D_sharing_model.md` | Segment 1D: who sees whose records, decided 2026-11-07: shared past records and shares at logging, agreed to by the receiver; teams for a student, with Students' Teams filter; handovers |
 | `guide/1D_refinements.md` | Segment 1D item 1's rungs 11–12, from the author's browser check of 2026-11-06: the sample viewers cut to the roles in practice, Home's Log encounter button gone, Log's favorites, durations and types |
+| `guide/things_to_check_in_browser.md` | **Browser checks owed**: the walkthroughs still owed (1B, 1D) and any smaller check, as Review Robin's and Apply Desk's registers (2026-11-22) |
 | `guide/fake_ids.md` | Every command the browser walkthroughs need: copy-and-paste PowerShell blocks that run Residential Apps locally as each sample viewer, the sample-viewer tables, and the browser settings |
 | `guide/todo_master.md` | Rulings, dependencies, open decisions and pending revisions |
 | `guide/archive/findings_2026-11-20.md` | **Archived 2026-11-21, every row struck (#4079, #4084, #4090).** Residential's findings from RRW's corpus sweep and codebase assessment of 2026-11-20 (the first to read the packages' prose): 11 rows, the page map, frozen drafts still leaned on, and docs that predate the units ruling |

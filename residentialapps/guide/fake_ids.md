@@ -7,7 +7,6 @@ and point here:
 | Walkthrough | Its blocks |
 |---|---|
 | `residentialapps/guide/1B_browser_checks.md` | Rosters and setup, Sys admin (1B) |
-| `residentialapps/guide/1C_browser_checks.md` | RA Leave (1C) |
 | `residentialapps/guide/1D_browser_checks.md` | Support Logs (1D) |
 
 Each block stands alone. It:

@@ -809,8 +809,8 @@ Segments in order; each gets a plan in this folder when it starts.
   *About this page*, or the Guide). Any PR that removes help text adds its
   rows there.
 - **Browser checks owed** (AD1R, AD1S, AD2M and later): one register,
-  `guide/things_to_check_in_browser.md`, "Apply Desk" (consolidated
-  2026-11-22). A PR that owes one adds its section there.
+  `applydesk/guide/things_to_check_in_browser.md` (2026-11-22). A PR that
+  owes one adds its section there.
 - **AD5:** a list headline (Result 1) has no value on Dossiers (AD1F).
 - **AD5:** a panel used twice in one gate, or a max above its panel's
   size, is not flagged (AD1G).
