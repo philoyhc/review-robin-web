@@ -13,7 +13,7 @@ import re
 from dataclasses import dataclass
 from typing import cast
 
-from applydesk import sample_data, stages, tones
+from applydesk import clock, sample_data, stages, tones
 from applydesk.sample_data import Exercise
 
 #: Each sample gate sent to Review Robin, its state and its line (ruling
@@ -698,7 +698,7 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
     # holding only the application gives no date for it.
     decided = [st for st in plan.stages if st.columns]
     last_when = decided[-1].when if decided else None
-    last = stages.short_day(last_when.end) if last_when else ""
+    last = clock.short(last_when.end) if last_when else ""
     out.append(
         Step(
             "Close",

@@ -3,7 +3,7 @@
 far today is through it, and its items in words every participant
 reads (segment AD1S: each item names its audience, never *you*).
 Nothing operator-only goes in (panels, rules, pairs, modes), so one shape
-serves both pages. Today is the sample's until AD2.
+serves both pages. Today is `clock.today`, in the exercise's timezone.
 """
 
 from __future__ import annotations
@@ -11,11 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
-from applydesk import stages
+from applydesk import clock, sample_data, stages
 from applydesk.sample_data import Exercise
-
-#: The sample's today (the model exercise is mid Stage 3, ruling 30).
-TODAY = date(2026, 11, 17)
 
 
 @dataclass(frozen=True)
@@ -35,7 +32,7 @@ class StageView:
     name: str
     start: date | None
     end: date | None
-    when: str  # "1 Sep – 30 Sep", or "Dates not set"
+    when: str  # "1–30 Sep 2026", or "Dates not set"
     state: str  # Closed, Done, Now, Next
     progress: float  # how far today is through it, 0 to 1
     items: tuple[Item, ...]
@@ -53,10 +50,15 @@ class Timeline:
         return next((s for s in self.stages if s.state == "Now"), None)
 
     @property
+    def dates(self) -> str:
+        """The whole timeline's days, e.g. "1 Sep – 4 Dec 2026"; "" undated."""
+        return clock.span(self.start, self.end) if self.start and self.end else ""
+
+    @property
     def today_text(self) -> str:
         """Where today falls, in words: the track's marker for a reader
         who cannot see it."""
-        when = short(self.today)
+        when = clock.short(self.today)
         if self.now:
             return f"Today, {when}, is in {self.now.name}."
         dated = [s for s in self.stages if s.start and s.end]
@@ -71,10 +73,6 @@ class Timeline:
             if after
             else f"Today, {when}, is after {before[-1].name}."
         )
-
-
-def short(d: date) -> str:
-    return f"{d.day} {d.strftime('%b')}"
 
 
 def _items(st: stages.Stage, e: Exercise) -> tuple[Item, ...]:
@@ -103,9 +101,11 @@ def _items(st: stages.Stage, e: Exercise) -> tuple[Item, ...]:
     return tuple(out)
 
 
-def of(e: Exercise, today: date = TODAY, applicant: bool = False) -> Timeline:
-    """The exercise's timeline from Process's stages (Semantics, AD1I);
+def of(e: Exercise, today: date | None = None, applicant: bool = False) -> Timeline:
+    """The exercise's timeline from Process's stages (Semantics, AD1I),
+    against `today`, else the clock's in the exercise's timezone (AD-40);
     for an ``applicant``, only the stages *Shown to applicants* (ruling 46)."""
+    today = today or clock.today(sample_data.timezone(e))
     plan = stages.plan_of(e.public_id)
     kept = [st for st in plan.stages if st.shown or not applicant]
     # A stage's declared start and end (segment AD1K): typed, no parsing.
@@ -126,7 +126,7 @@ def of(e: Exercise, today: date = TODAY, applicant: bool = False) -> Timeline:
             state = "Next"
         # Counted in days, a stage's last day in it.
         progress = ((today - s).days + 0.5) / d if state == "Now" and s and d else 0.0
-        when = f"{short(s)} – {short(f)}" if s and f else "Dates not set"
+        when = clock.span(s, f) if s and f else "Dates not set"
         items = _items(st, e)
         if state == "Now":
             items = _next_in(items)
@@ -156,5 +156,7 @@ def next_step(e: Exercise, t: Timeline) -> str:
     if ahead is None:
         return "Every stage is done."
     return (
-        f"Next: {ahead.name}, from {short(ahead.start)}." if ahead.start else f"Next: {ahead.name}."
+        f"Next: {ahead.name}, from {clock.short(ahead.start)}."
+        if ahead.start
+        else f"Next: {ahead.name}."
     )

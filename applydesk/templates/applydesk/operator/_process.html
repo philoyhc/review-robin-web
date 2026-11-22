@@ -229,16 +229,25 @@
     var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v || "");
     return m ? Number(m[3]) + " " + MONTHS[Number(m[2]) - 1] : "";
   }
+  // A range, its year said once, as clock.span (AD-97): "1–30 Sep 2026",
+  // "1 Sep – 4 Dec 2026", "30 Dec 2026 – 4 Jan 2027".
+  function daySpan(v, w) {
+    var a = /^(\d{4})-(\d{2})-(\d{2})/.exec(v), b = /^(\d{4})-(\d{2})-(\d{2})/.exec(w);
+    if (a[1] !== b[1]) return shortDay(v) + " " + a[1] + " – " + shortDay(w) + " " + b[1];
+    if (a[2] !== b[2]) return shortDay(v) + " – " + shortDay(w) + " " + b[1];
+    if (a[3] !== b[3]) return Number(a[3]) + "–" + shortDay(w) + " " + b[1];
+    return shortDay(w) + " " + b[1];
+  }
   function datesOf(card) {
-    var a = shortDay(field(card, "from")), b = shortDay(field(card, "to"));
-    return a && b ? a + " – " + b : (a || b || "Dates not set");
+    var v = field(card, "from"), w = field(card, "to");
+    return shortDay(v) && shortDay(w) ? daySpan(v, w) : (shortDay(v) || shortDay(w) || "Dates not set");
   }
   // An item's window: its own dates, else its stage's (author, 2026-11-18).
   function windowOf(item, card) {
     // As stages.window: its own window whole, else its stage's (cold read).
     var own = field(item, "item-from") && field(item, "item-to");
     var a = own ? field(item, "item-from") : field(card, "from"), b = own ? field(item, "item-to") : field(card, "to");
-    return a && b && a < b ? shortDay(a) + " to " + shortDay(b) : "";
+    return a && b && a < b && shortDay(a) && shortDay(b) ? daySpan(a, b) : "";
   }
   function itemName(item, fallback) {
     var i = item.querySelector('[data-pc="item-name"]');
@@ -353,7 +362,7 @@
       if (r) f.title = r; else f.removeAttribute("title");
     });
   }
-  // The sample's now (locks.NOW), against which a published stage's end
+  // The clock's now (clock.midday), against which a published stage's end
   // decides Published, Overdue or Completed.
   var NOW = root.dataset.now;
   var STATUS_CHIP = {{ STATUS_CHIP | tojson }};

@@ -17,6 +17,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from applydesk import (
+    clock,
     db,
     directory,
     extract,
@@ -612,7 +613,7 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         status=workflow.status_row(exercise),
         exercise=exercise,
         tl=tl,
-        short=timeline.short,
+        short=clock.short,
         next_line=timeline.next_step(exercise, tl),
         ops=home_ops.of(exercise),
         missing=sample_data.setup_missing(exercise),
@@ -981,7 +982,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         extract=extract.of(exercise) if section == "extract" else None,
         dossiers_csv=extract.zip_name(exercise, "dossiers", ext="csv"),
         redraft_closed=workflow.closed_by(exercise.public_id) if section == "dossiers" else {},
-        today=timeline.short(timeline.TODAY),
+        today=clock.short(clock.today(sample_data.timezone(exercise))),
         all_names=extract.names_by_default(exercise, "all.zip"),
         alias_columns=extract.ALIAS_KEYS,
         setup_files=extract.SETUP_FILES,
@@ -1022,7 +1023,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         revert_warnings=functools.partial(locks.revert_warnings, exercise),
         outstanding=functools.partial(locks.outstanding, exercise),
         STATUS_CHIP=locks.STATUS_CHIP,
-        now_value=stages.local_value(locks.NOW),
+        now_value=stages.local_value(clock.midday(sample_data.timezone(exercise))),
         cells_lock=functools.partial(locks.cells_lock, exercise),
         release_lock=functools.partial(locks.release_lock, exercise),
         blind_lock=locks.blind_lock(exercise),

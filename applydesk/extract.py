@@ -23,7 +23,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import date
 
-from applydesk import sample_data, stages, timeline, workflow
+from applydesk import clock, sample_data, stages, workflow
 from applydesk.sample_data import Exercise
 
 #: Every application file's first columns: who and when.
@@ -141,8 +141,9 @@ def names_by_default(e: Exercise, file: str) -> bool:
 def zip_name(e: Exercise, kind: str, on: date | None = None, ext: str = "zip") -> str:
     """``<code>_<kind>_<date>.zip`` (Semantics), e.g. ra_2027_extract_2026-11-18.zip;
     ``ext`` names another file the same way (Dossiers' CSV, AD-66). Dated
-    by the one clock, ``timeline.TODAY`` (AD-40)."""
-    return f"{slug(e.code or e.public_id)}_{kind}_{(on or timeline.TODAY).isoformat()}.{ext}"
+    by the one clock, in the exercise's timezone (AD-40)."""
+    day = on or clock.today(sample_data.timezone(e))
+    return f"{slug(e.code or e.public_id)}_{kind}_{day.isoformat()}.{ext}"
 
 
 def of(e: Exercise) -> Extract:

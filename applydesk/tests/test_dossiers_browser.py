@@ -98,7 +98,7 @@ def test_an_outcome_is_picked_and_dated(page: Page) -> None:
     pick.select_option("Selected")
     assert (
         row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "17 Nov"
-    )  # timeline.TODAY (AD-40)
+    )  # the clock's today (AD-40)
     assert _count(page, "o2").startswith("1 selected")
     pick.select_option("Pending")
     assert row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "Due 4 Dec"
@@ -195,7 +195,7 @@ def test_an_application_advanced_by_hand_can_be_given_later_outcomes(page: Page)
     selection.select_option("Selected")
     assert (
         row.locator('[data-cell="o2"] [data-ap-date]').inner_text() == "17 Nov"
-    )  # timeline.TODAY (AD-40)
+    )  # the clock's today (AD-40)
     # A draft stays inert.
     assert _row(page, "wen.novak").locator('[data-cell="o2"] select').count() == 0
 

@@ -85,9 +85,9 @@ def test_a_card_opens_and_its_name_and_dates_follow(page: Page) -> None:
     review.locator('[data-pc="name"]').fill("Peer and panel review")
     review.locator('[data-pc="to"]').fill("2026-11-12T23:59")
     assert review.locator('[data-sum="name"]').inner_text() == "Peer and panel review"
-    assert review.locator('[data-sum="dates"]').inner_text() == "16 Oct – 12 Nov"
+    assert review.locator('[data-sum="dates"]').inner_text() == "16 Oct – 12 Nov 2026"
     outline = page.locator("[data-pc-outline]").inner_text()
-    assert "Peer and panel review 16 Oct – 12 Nov" in outline
+    assert "Peer and panel review 16 Oct – 12 Nov 2026" in outline
     review.locator('[data-pc="name"]').fill("")
     assert review.locator('[data-sum="name"]').inner_text() == "Stage 2"
 
@@ -1493,8 +1493,8 @@ def test_what_will_be_sent_follows_the_gate_and_its_stage(page: Page) -> None:
     stage.locator('[data-pc="from"]').fill("2027-03-01T00:00")
     stage.locator('[data-pc="to"]').fill("2027-03-15T23:59")
     assert send.text_content() == (
-        "Review Robin receives Placement chat: Talk about the placement, open 1 Mar to"
-        " 15 Mar (Asia/Singapore); help contact applydesk-help@example.edu; tagged applydesk."
+        "Review Robin receives Placement chat: Talk about the placement, open 1–15 Mar 2027"
+        " (Asia/Singapore); help contact applydesk-help@example.edu; tagged applydesk."
     )
 
 
@@ -1508,7 +1508,7 @@ def test_what_was_sent_stays_once_the_session_opens(page: Page) -> None:
     stage = gate.locator("xpath=ancestor::article[@data-kind='stage']")
     _open(stage)
     stage.locator('[data-pc="to"]').fill("2026-11-07T23:59")  # an extension
-    assert send.text_content() == before and "open 1 Oct to 31 Oct" in (before or "")
+    assert send.text_content() == before and "open 1–31 Oct 2026" in (before or "")
 
 
 def test_a_replica_of_an_opened_gate_follows_its_own_settings(page: Page) -> None:
@@ -1527,7 +1527,7 @@ def test_a_replica_of_an_opened_gate_follows_its_own_settings(page: Page) -> Non
     _open(copy)
     _open_item(gate)
     gate.locator('[data-pc="item-from"]').fill("2026-10-02T00:00")
-    assert "open 2 Oct to 31 Oct" in (send.text_content() or "")
+    assert "open 2–31 Oct 2026" in (send.text_content() or "")
 
 
 def test_dates_are_date_times_and_an_item_s_window_follows(page: Page) -> None:
@@ -1544,13 +1544,13 @@ def test_dates_are_date_times_and_an_item_s_window_follows(page: Page) -> None:
     due = stage.locator('.pc-item[data-key="o2"] [data-pc="due"]')
     assert due.input_value() == "2026-12-04T17:00"
     send = gate.locator("[data-pr-send]")
-    assert "open 9 Nov to 2 Dec" in (send.text_content() or "")
+    assert "open 9 Nov – 2 Dec 2026" in (send.text_content() or "")
     _revert(stage)  # its start, and its gate's, are fixed while published
     gate.locator('[data-pc="item-from"]').fill("")
     gate.locator('[data-pc="item-to"]').fill("")
     stage.locator('[data-pc="to"]').fill("2026-12-11T23:59")
-    assert "open 9 Nov to 11 Dec" in (send.text_content() or "")
-    assert stage.locator('[data-sum="dates"]').inner_text() == "9 Nov – 11 Dec"
+    assert "open 9 Nov – 11 Dec 2026" in (send.text_content() or "")
+    assert stage.locator('[data-sum="dates"]').inner_text() == "9 Nov – 11 Dec 2026"
 
 
 # --- Segment AD1K rung 3b: a stage's status, publish, revert and locks ---

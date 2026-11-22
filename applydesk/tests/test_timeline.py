@@ -10,7 +10,7 @@ from datetime import date
 import pytest
 from fastapi.testclient import TestClient
 
-from applydesk import sample_data, stages, timeline, tones
+from applydesk import clock, sample_data, stages, timeline, tones
 from applydesk.tests._host import host_with
 
 EX = "wa9juxbc2t"  # the RA recruitment, mid Stage 3
@@ -23,7 +23,7 @@ def client() -> TestClient:
     return TestClient(host_with(("applydesk",))[0])
 
 
-def _of(exercise_id: str, today: date = timeline.TODAY) -> timeline.Timeline:
+def _of(exercise_id: str, today: date = clock.SAMPLE_TODAY) -> timeline.Timeline:
     e = sample_data.exercise(exercise_id)
     assert e is not None
     return timeline.of(e, today)
@@ -32,9 +32,9 @@ def _of(exercise_id: str, today: date = timeline.TODAY) -> timeline.Timeline:
 def test_each_stage_has_its_dates_state_and_progress() -> None:
     t = _of(EX)
     assert [(s.name, s.when, s.state) for s in t.stages] == [
-        ("Applications", "1 Sep – 30 Sep", "Closed"),
-        ("Review", "1 Oct – 6 Nov", "Done"),
-        ("Interviews", "9 Nov – 4 Dec", "Now"),
+        ("Applications", "1–30 Sep 2026", "Closed"),
+        ("Review", "1 Oct – 6 Nov 2026", "Done"),
+        ("Interviews", "9 Nov – 4 Dec 2026", "Now"),
     ]
     assert (t.start, t.end) == (date(2026, 9, 1), date(2026, 12, 4))
     assert t.now is t.stages[2] and t.stages[2].progress == pytest.approx(8.5 / 26)
@@ -143,7 +143,7 @@ def test_a_stage_s_dates_are_typed_and_printed_as_before() -> None:
     when = stages.span(stages.day(2026, 9, 1), stages.day(2026, 9, 30))
     assert when.end == stages.day(2026, 9, 30, 23, 59)
     st = stages.Stage(1, "Applications", when, form=True)
-    assert st.dates == "1 Sep – 30 Sep"
+    assert st.dates == "1–30 Sep 2026"
     assert stages.Stage(2, "", None).dates == "Dates not set"
     # A year's turn needs no inference: the dates say it.
     pcg = _of(PCG)

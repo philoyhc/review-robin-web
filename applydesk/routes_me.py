@@ -7,7 +7,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.responses import Response
 
-from applydesk import extract, sample_data, stages, timeline, workflow
+from applydesk import clock, extract, sample_data, stages, timeline, workflow
 from applydesk.gate import placeholders_only
 from applydesk.lookups import application_or_404, dossier_or_404, exercise_or_404
 from applydesk.web import USER_LOBBY, render
@@ -47,7 +47,7 @@ def exercise(request: Request, exercise_id: str) -> Response:
         area=USER_LOBBY,
         exercise=found,
         tl=timeline.of(found, applicant=True),
-        short=timeline.short,
+        short=clock.short,
         mine=sample_data.my_applications(found.public_id),
         results=stages.released_results,
     )
