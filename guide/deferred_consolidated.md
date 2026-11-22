@@ -1382,6 +1382,15 @@ reachability, data counts, and audit-schema drift (`EVENT_SCHEMAS`
 mismatches logged in production mode). **Lift trigger:** a deployed
 problem that one of these would have shown without the logs.
 
+### Owners and operators on a session
+
+*Filed 2026-11-22, at the author's ask.* Review Robin's sessions have
+owners only; the author wants Apply Desk's nested Owner ⊇ Operator model
+(`applydesk/spec/permissions.md`) here too, with Owners alone managing
+people, ownership and deletion. What changes and what is open:
+`guide/rrw_permissions_update.md`. **Lift trigger:** Apply Desk has built
+its model, so the cards and their copy are shared.
+
 ## Part C — Future possibilities (off-roadmap)
 
 Aspirational directions deliberately *not* on the roadmap. Each entry states the idea, why it is off the roadmap, what is being done instead, and what evidence would move it back on.
