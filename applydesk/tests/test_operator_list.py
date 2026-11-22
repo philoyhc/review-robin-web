@@ -223,6 +223,11 @@ def test_the_super_admin_is_listed_as_self() -> None:
     page = admin.get("/applydesk/admin/operators").text
     assert page.count("data-op-self") == 1 and "Super-admin" in page and "Nobody yet" not in page
     assert "data-op-self" not in admin.get("/applydesk/admin/operators?list_q=zzz").text
+    # The super-admin operates every exercise, so their row says so (the
+    # author, 2026-11-22: Local Operator showed as no operator).
+    own = page[page.index("<tr data-op-self>") :]
+    own = own[: own.index("</tr>")]
+    assert 'title="The super-admin operates every exercise">yes</span>' in own
     session = db.new_session()
     seed.seed(session)  # puts the fake identity on the list
     me = _person("local-dev")
@@ -233,6 +238,7 @@ def test_the_super_admin_is_listed_as_self() -> None:
     row = page[page.index(f'data-op-entry="{me.id}"') :]
     row = row[: row.index("</tr>")]
     assert "(self)" in row and "data-bulk-row" not in row  # no action on your own row (ruling)
+    assert 'title="The super-admin operates every exercise">yes</span>' in row
     refused = admin.post(
         "/applydesk/admin/operators/bulk",
         data={"action": "revoke", "person_ids": str(me.id)},

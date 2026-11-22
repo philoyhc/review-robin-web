@@ -215,7 +215,9 @@ answer only for a Published or Closed exercise.
   - The signed-in super-admin's row is marked *(self)* in place of its
     checkbox and is never tickable. With no person row they are a row of
     their own, first, shown under *Admins* when it matches the role (*Any* or
-    *No exercise*) and the search.
+    *No exercise*) and the search. Their *Operator* reads *yes*, listed or
+    not, since the super-admin operates every exercise (`gate.viewer`), and
+    their *Unit* the workspace default.
   - **The bulk bar**: *Admit* and *Revoke* act on every ticked row, live once
     one is ticked; *Revoke* asks first. The header box ticks every row shown.
     The post (`/admin/operators/bulk`) runs each person once, in ID order,
