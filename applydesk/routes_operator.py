@@ -57,7 +57,7 @@ SECTIONS: dict[str, str] = dict(SETUP_PAGES + OPERATIONS_PAGES)
 
 
 @router.get("/exercises", name="applydesk_exercises")
-def exercises(request: Request) -> Response:
+def exercises(request: Request, session: Session = Depends(db.get_session)) -> Response:
     shown = sample_data.newest_first(
         e for e in sample_data.exercises() if gate.operates(request, e.public_id)
     )
@@ -76,6 +76,9 @@ def exercises(request: Request) -> Response:
         utc_offset=sample_data.utc_offset,
         created_label=sample_data.created_label,
         lobby_tags=sample_data.all_tags(shown),
+        # Created by is the Owner on record until AD2B records who
+        # created each exercise (the author, 2026-11-22).
+        owners=operators.owner_labels(session, [e.public_id for e in shown]),
     )
 
 

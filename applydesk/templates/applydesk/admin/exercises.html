@@ -3,13 +3,14 @@
 {% block content %}
 {# Admin → Exercises Diagnostics (segment AD2A, scaffold): every exercise
    on the platform, laid out as Review Robin's Sessions Diagnostics. The
-   rows are the sample exercises. Manage opens the exercise's Home; the
-   filter, the owners, Outbox and Audit log are inert until built (the
-   author's ruling at the AD2A close: Review Robin's actions). #}
+   rows are the sample exercises, each with its Owner from the database
+   (2026-11-22). Manage opens the exercise's Home; the filter, Outbox and
+   Audit log are inert until built (the author's ruling at the AD2A close:
+   Review Robin's actions). #}
 <a class="back-link" href="{{ url(back_path) }}" data-admin-back>&larr; {{ back_label }}</a>
 <h1>Admin</h1>
 {% with admin_tab = "exercises" %}{% include "applydesk/admin/_tabs.html" %}{% endwith %}
-<p class="placeholder"><strong>Placeholder.</strong> The sample exercises, laid out as this page will be: the filter, each exercise's Owner, the Outbox and the audit log are not built yet.</p>
+<p class="placeholder"><strong>Placeholder.</strong> The sample exercises, laid out as this page will be: the filter, the Outbox and the audit log are not built yet.</p>
 
 <div class="adm-grid">
   <section class="card" aria-labelledby="ex-ov-h" data-ex-overview>
@@ -38,7 +39,7 @@
       <tr data-ex-row="{{ e.public_id }}">
         <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a></td>
         <td class="adm-nowrap">{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
-        <td class="muted">—</td>
+        <td>{% if owners[e.public_id] is defined %}{{ owners[e.public_id] }}{% else %}<span class="muted" title="No Owner on record">—</span>{% endif %}</td>
         <td>{{ e.opens or "—" }}</td>
         <td>{{ e.application_stage_ends or "—" }}</td>
         <td>{{ e.timezone or default_timezone }}</td>

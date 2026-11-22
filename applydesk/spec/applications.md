@@ -159,11 +159,13 @@ answer only for a Published or Closed exercise.
   carries): a page path alone, never a query, fragment or dot segment, and an
   Apply Desk page; else *Back to Operator Lobby*.
   - **Exercises Diagnostics** and **System Status** are scaffolds: static
-    copy and layout, no data wired. Exercises Diagnostics lists the sample
-    exercises (columns *Exercise*, *Exercise code*, *Owner*, *Opens*,
-    *Applications close*, *Timezone*, *State*), with *Manage*, which opens the
-    exercise's Home, and *Outbox* and *Audit log*, disabled with a title
-    saying each is not built yet.
+    copy and layout, no data wired but the Owner. Exercises Diagnostics lists
+    the sample exercises (columns *Exercise*, *Exercise code*, *Owner*,
+    *Opens*, *Applications close*, *Timezone*, *State*), with *Manage*, which
+    opens the exercise's Home, and *Outbox* and *Audit log*, disabled with a
+    title saying each is not built yet. *Owner* is the exercise's current
+    Owner on record (`operators.owner_labels`), named as pages name a person;
+    *—* where there is none, as before the local seed has run.
 - **Admin → Accounts Management** (`/admin/operators`): who may operate. Only
   someone on the operator list may make an exercise, be added as an
   exercise's operator or take its ownership. The page has:
@@ -337,8 +339,11 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
       (`workflow.stage_position`); omitted when the exercise has no stages. N
       is the number of the stage holding the next step, or the last once
       every step is done; M counts the exercise's stages.
-    - *Created by* is the signed-in operator's name on every row, sample
-      and scratch, until AD2B records who made each.
+    - *Created by* is the exercise's current Owner on record
+      (`operators.owner_labels`), until AD2B records who made each; *—*
+      where there is none, as before the local seed has run. A scratch
+      exercise's Owner is whoever made it, until ownership is handed over;
+      then it reads the new Owner.
     - *Tags* are `Exercise.tags` (sample values; *No tags* when none).
   - **The tick panel**, Review Robin's. Ticked rows are highlighted and one
     panel sits under the most recently ticked row still ticked; unticking

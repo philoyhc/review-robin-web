@@ -165,9 +165,12 @@ def operators_page(
 
 
 @router.get("/exercises", name="applydesk_admin_exercises")
-def exercises_page(request: Request, return_to: str = "") -> Response:
+def exercises_page(
+    request: Request, return_to: str = "", session: Session = Depends(db.get_session)
+) -> Response:
     """Exercises Diagnostics, a scaffold (the author's 2026-11-21 ask):
-    the sample exercises, as Review Robin's Sessions Diagnostics."""
+    the sample exercises, as Review Robin's Sessions Diagnostics, each
+    with its Owner on record (2026-11-22)."""
     rows = sample_data.EXERCISES
     back_path, back_label = _back_link(return_to)
     return render(
@@ -175,6 +178,7 @@ def exercises_page(request: Request, return_to: str = "") -> Response:
         "applydesk/admin/exercises.html",
         area=ADMIN,
         rows=rows,
+        owners=operators.owner_labels(session, [e.public_id for e in rows]),
         by_status=locks.status_tally(rows),
         exercise_status=locks.exercise_status,
         default_timezone=sample_data.DEFAULT_TIMEZONE,

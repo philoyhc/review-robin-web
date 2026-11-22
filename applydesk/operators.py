@@ -135,6 +135,25 @@ def owner_of(session: Session, exercise: Exercise) -> Person | None:
     )
 
 
+def owner_labels(session: Session, public_ids: list[str]) -> dict[str, str]:
+    """Each exercise's current Owner, as pages name them, by public ID; an
+    exercise with no row or no Owner is left out (the Owner columns on
+    Admin's Exercises Diagnostics and the Operator Lobby, 2026-11-22)."""
+    if not public_ids:
+        return {}
+    rows = session.execute(
+        select(Exercise.public_id, Person)
+        .join(ExerciseOperator, ExerciseOperator.exercise_id == Exercise.id)
+        .join(Person, Person.id == ExerciseOperator.person_id)
+        .where(
+            Exercise.public_id.in_(public_ids),
+            ExerciseOperator.is_owner.is_(True),
+            ExerciseOperator.removed_at.is_(None),
+        )
+    ).all()
+    return {public_id: person.label for public_id, person in rows}
+
+
 def can_operate(session: Session, exercise: Exercise, actor: Actor) -> bool:
     """Whether `actor` reaches `exercise`: the super-admin always; anyone
     else on the allowlist with a current grant."""
