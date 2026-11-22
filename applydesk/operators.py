@@ -396,17 +396,28 @@ def revoke(session: Session, actor: Actor, person: Person, reason: str | None = 
     # this waited on their row made them an Owner after the check above, so
     # an exercise they own may now have no other Owner who can act. Refused,
     # the change rolls back (cold read, AD2O).
-    now_owned = session.scalars(
-        select(Exercise)
-        .join(ExerciseOperator, ExerciseOperator.exercise_id == Exercise.id)
-        .where(
-            ExerciseOperator.person_id == person.id,
-            ExerciseOperator.is_owner.is_(True),
-            ExerciseOperator.removed_at.is_(None),
-            Exercise.archived_at.is_(None),
-            Exercise.deleted_at.is_(None),
-        )
+    now_owned = sorted(
+        session.scalars(
+            select(Exercise)
+            .join(ExerciseOperator, ExerciseOperator.exercise_id == Exercise.id)
+            .where(
+                ExerciseOperator.person_id == person.id,
+                ExerciseOperator.is_owner.is_(True),
+                ExerciseOperator.removed_at.is_(None),
+                Exercise.archived_at.is_(None),
+                Exercise.deleted_at.is_(None),
+            )
+        ),
+        key=lambda e: e.id,
     )
+    # Each is locked, in order, before its Owners are counted again, as
+    # above: an exercise they came to own since the first check may have an
+    # Owner stepping down at this moment, whose count read this person's
+    # row before the update. Whichever of the two takes the lock second
+    # reads the other's change (Codex on #4145). A lock taken in the other
+    # order meets a deadlock, which `db.is_busy` reports as a lost race.
+    for exercise in now_owned:
+        _lock(session, exercise)
     if any(_owner_count(session, e) == 0 for e in now_owned):
         # A refusal changes nothing (`allowlist.bulk` keeps the batch's
         # transaction): put back the row this call changed.
