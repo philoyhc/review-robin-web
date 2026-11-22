@@ -130,6 +130,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "exercise.operator_added": EventSchema(_EXERCISE | {"refs", "context"}),
     "exercise.operator_removed": EventSchema(_EXERCISE | {"refs"}),
     "exercise.ownership_handed_over": EventSchema(_EXERCISE | {"refs"}),
+    "exercise.owner_added": EventSchema(_EXERCISE | {"refs"}),
+    "exercise.owner_demoted": EventSchema(_EXERCISE | {"refs", "context"}),
+    "exercise.operator_left": EventSchema(_EXERCISE | {"refs"}),
     # An exercise's settings recorded from the sample (the seed, AD2B).
     "exercise.settings_recorded": EventSchema(_EXERCISE | {"snapshot"}),
     "exercise.details_changed": EventSchema(_EXERCISE | {"changes", "context"}),

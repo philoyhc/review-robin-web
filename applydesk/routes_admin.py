@@ -144,7 +144,10 @@ def _bulk_said(request: Request) -> str:
     line = f"{verbs[done]}: {changed}."
     if skipped:
         why = {
-            "revoke": "already so, an Admin (demote first), no longer there, or your own row",
+            "revoke": (
+                "already so, an Admin (demote first), the only Owner of a live exercise"
+                " (hand it over first), no longer there, or your own row"
+            ),
             "promote": "already so, not yet signed in, no longer there, or your own row",
             "demote": "not an Admin, the last Admin, no longer there, or your own row",
         }.get(done, "already so, no longer there, or your own row")
