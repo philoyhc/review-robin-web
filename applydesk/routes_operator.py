@@ -58,17 +58,24 @@ SECTIONS: dict[str, str] = dict(SETUP_PAGES + OPERATIONS_PAGES)
 
 @router.get("/exercises", name="applydesk_exercises")
 def exercises(request: Request) -> Response:
+    shown = sample_data.newest_first(
+        e for e in sample_data.exercises() if gate.operates(request, e.public_id)
+    )
     return render(
         request,
         "applydesk/operator/exercises.html",
         area=OPERATOR_LOBBY,
-        exercises=tuple(e for e in sample_data.exercises() if gate.operates(request, e.public_id)),
+        exercises=shown,
         is_scratch=scratch.is_scratch,
         scratch_limit=scratch.LIMIT,
         scratch_said=SAID.get(request.query_params.get("said", ""), ""),
         exercise_status=locks.exercise_status,
-        counts=workflow.counts_of,
-        current_stage=workflow.current_stage,
+        status_counts=locks.status_counts(shown),
+        stage_position=workflow.stage_position,
+        timezone=sample_data.timezone,
+        utc_offset=sample_data.utc_offset,
+        created_label=sample_data.created_label,
+        lobby_tags=sample_data.all_tags(shown),
     )
 
 

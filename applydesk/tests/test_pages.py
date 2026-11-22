@@ -7,9 +7,11 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from html.parser import HTMLParser
 from types import SimpleNamespace
 from typing import Any, cast
+from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
@@ -314,7 +316,8 @@ def test_the_lobby_names_exercises_by_code_not_id(client: TestClient) -> None:
     """Iteration rung 4 (author, 2026-11-12): an Exercise code column, as
     RRW's Session Code; the public ID is only in each row's link."""
     page = client.get("/applydesk/operator/exercises").text
-    assert "<th>Exercise code</th>" in page and ">ID<" not in page
+    assert '<th class="lb-sort" title="Sorting is not built yet">Exercise code<' in page
+    assert ">ID<" not in page
     for e in sample_data.EXERCISES:
         if e.code:  # a just-created exercise has none yet
             assert f"<code>{e.code}</code>" in page
@@ -370,18 +373,123 @@ def test_the_retired_sections_are_gone(client: TestClient, old: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("exercise_id", "now"),
-    [(DRAFT, "Stage 1"), (OPEN, "Stage 1"), (EX, "Interviews"), (BLIND, "Stage 2")],
+    ("exercise_id", "now", "shown"),
+    [
+        (DRAFT, "Stage 1", "Stage 1 of 2"),
+        (OPEN, "Stage 1", "Stage 1 of 1"),
+        (EX, "Interviews", "Stage 3 of 3 · Interviews"),
+        (BLIND, "Stage 2", "Stage 2 of 2"),
+    ],
 )
 def test_the_lobby_names_each_exercise_s_current_stage(
-    client: TestClient, exercise_id: str, now: str
+    client: TestClient, exercise_id: str, now: str, shown: str
 ) -> None:
-    """Ruling 15: the stage holding the exercise's next step."""
+    """Ruling 15: the stage holding the exercise's next step, which the
+    lobby's Status reads as Stage N of M, named when named (AD1T)."""
     e = sample_data.exercise(exercise_id)
     assert e is not None and workflow.current_stage(e) == now
     lobby = client.get("/applydesk/operator/exercises").text
     row = lobby[lobby.index(e.name) :]
-    assert f"<td>{now}</td>" in row[: row.index("</tr>")]
+    assert f'<span class="of" data-lb-stage>{shown}</span>' in row[: row.index("</tr>")]
+
+
+def test_the_lobby_is_laid_out_as_review_robin_s(client: TestClient) -> None:
+    """Segment AD1T: the Exercises and Filter cards over eight columns,
+    newest first; sorting, the tags and the filter inert until AD2B."""
+    lobby = client.get("/applydesk/operator/exercises").text
+    heads = re.findall(r"<th[^>]*>([^<]+)<", lobby)
+    assert heads == [
+        "Exercise",
+        "Exercise code",
+        "Created by",
+        "Created",
+        "Timezone",
+        "Status",
+        "Tags",
+    ]
+    assert "Submitted</th>" not in lobby and "Applications close" not in lobby
+    assert "<h2>Exercises</h2>" in lobby and "<h2>Filter</h2>" in lobby
+    assert '<span class="chip chip-info">5 exercises</span>' in lobby
+    assert ">2 Draft</span>" in lobby and ">3 Published</span>" in lobby
+    assert ">0 Closed</span>" in lobby and ">0 Archived</span>" in lobby
+    assert lobby.count('title="Filtering by tag is not built yet"') == 4 + 2  # 4 tags, OR, Clear
+    assert 'disabled title="The Archive is not built yet">Go to Archive' in lobby
+    assert 'aria-sort="descending">Created<' in lobby
+    # Newest first: the Graduate Travel Grant, made last, heads the rows.
+    order = [lobby.index(e.name) for e in sample_data.newest_first(sample_data.EXERCISES)]
+    assert order == sorted(order)
+    row = lobby[lobby.index("Recruitment and Selection") :]
+    row = row[: row.index("</tr>")]
+    assert '<td class="lb-when">2026-08-04 09:12</td>' in row
+    assert '<span class="chip chip-mute" title="Asia/Singapore">GMT+8</span>' in row
+    assert (
+        '<span class="chip chip-info">Residential</span><span class="chip chip-info">2027</span>'
+        in row
+    )
+    assert 'data-tags="Residential, 2027"' in row
+    # Created by is the signed-in operator's name until AD2B records it.
+    assert '<span class="chip chip-mute">Local Operator</span>' in row
+
+
+def test_a_scratch_exercise_heads_the_lobby_made_now_by_the_viewer_untagged(
+    client: TestClient,
+) -> None:
+    """Segment AD1T: a scratch exercise's Created is when it was made, its
+    Created by the viewer, and it has no tags; newest, it heads the rows."""
+    from applydesk import scratch
+
+    before = datetime.now(UTC).replace(second=0, microsecond=0)
+    try:
+        made = scratch.create("lobby-test", "Lobby Bursary").exercise
+        at = sample_data.created_at(made)
+        assert made.tags == () and at is not None and before <= at <= datetime.now(UTC)
+        assert client.post(
+            "/applydesk/operator/exercises/new", data={"name": "Lobby Bursary"}
+        ).is_success  # the client follows the redirect, keeping the cookie
+        lobby = client.get("/applydesk/operator/exercises").text
+    finally:
+        scratch.clear()
+    rows = lobby.split("<tr data-lb-row")[1:]
+    first = rows[0][: rows[0].index("</tr>")]
+    assert "Lobby Bursary" in first and "data-scratch-chip" in first
+    assert '<span class="chip chip-mute">Local Operator</span>' in first
+    assert '<span class="muted">No tags</span>' in first
+    shown = re.search(r'<td class="lb-when">([^<]+)</td>', first)
+    assert shown is not None
+    local = datetime.strptime(shown.group(1), "%Y-%m-%d %H:%M").replace(
+        tzinfo=ZoneInfo("Asia/Singapore")
+    )
+    assert before <= local <= datetime.now(UTC)
+
+
+def test_created_shows_in_the_exercise_s_own_timezone() -> None:
+    """A scratch exercise keeps its creation time with its offset, so Created
+    follows a timezone Details sets later (cold read, AD1T)."""
+    import dataclasses
+
+    e = dataclasses.replace(sample_data.EXERCISES[0], created="2026-08-04T01:12+00:00")
+    assert sample_data.created_label(e) == "2026-08-04 09:12"
+    london = dataclasses.replace(e, timezone="Europe/London")
+    assert sample_data.created_label(london) == "2026-08-04 02:12"
+
+
+@pytest.mark.parametrize(
+    ("zone", "at", "shown"),
+    [
+        ("Asia/Singapore", datetime(2026, 1, 1, tzinfo=UTC), "GMT+8"),
+        ("Asia/Kolkata", datetime(2026, 1, 1, tzinfo=UTC), "GMT+5:30"),
+        ("UTC", datetime(2026, 1, 1, tzinfo=UTC), "GMT"),
+        ("America/New_York", datetime(2026, 1, 1, tzinfo=UTC), "GMT-5"),
+        ("America/New_York", datetime(2026, 7, 1, tzinfo=UTC), "GMT-4"),
+    ],
+)
+def test_a_timezone_shows_as_its_offset(zone: str, at: datetime, shown: str) -> None:
+    assert sample_data.utc_offset(zone, at) == shown
+
+
+def test_stage_position_counts_the_exercise_s_stages() -> None:
+    ra = sample_data.exercise(EX)
+    assert ra is not None and workflow.stage_position(ra) == (3, 3, "Interviews")
 
 
 def _page(text: str) -> str:
@@ -1748,13 +1856,12 @@ def test_the_applicant_reaches_each_of_their_applications(client: TestClient) ->
 
 
 def test_one_count_of_applications_everywhere(client: TestClient) -> None:
-    """AD-41: the lobby, Home and the status row count the same submitted
-    applications, drafts and the withdrawn one apart; "draft" pluralized."""
+    """AD-41: Home and the status row count the same submitted
+    applications, drafts and the withdrawn one apart; "draft" pluralized.
+    The lobby's Submitted column went in AD1T."""
     c = workflow.counts_of(EX)
     assert (c.submitted, c.drafts) == (100, 3)
     assert workflow.plural(1, "draft") == "1 draft" and workflow.plural(3, "draft") == "3 drafts"
-    lobby = client.get("/applydesk/operator").text
-    assert "<th>Submitted</th>" in lobby and "<td>100</td>" in lobby
     home = client.get(f"/applydesk/operator/exercises/{EX}").text
     assert "100 submitted · 3 drafts" in home
 

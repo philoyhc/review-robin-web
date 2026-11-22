@@ -1,6 +1,40 @@
 {% extends "applydesk/base.html" %}
 {% block content %}
-<div class="ptitle"><h1>Operator Lobby</h1><button class="btn btn-primary" type="button" data-nx-open aria-expanded="false" aria-controls="nx-form">New exercise</button></div>
+{# The Operator Lobby, laid out as Review Robin's (segment AD1T): the
+   Exercises and Filter cards over one table whose ticked rows open a
+   panel. A scaffold: the rows, the counts, New exercise and the panel's
+   opening work; sorting, the tags, the filter, Go to Archive and the
+   panel's actions wait for AD2B. #}
+<div class="ptitle"><h1>Operator Lobby</h1></div>
+{% if scratch_said %}<p class="nx-said" role="status" data-nx-said>{{ scratch_said }}</p>{% endif %}
+{% include "applydesk/_placeholder.html" %}
+{% set tags = lobby_tags %}
+<div class="lb-row">
+  <section class="card" data-lb-counts>
+    <h2>Exercises</h2>
+    <p class="lb-pills">
+      <span class="chip chip-info">{{ exercises | length }} exercise{{ "" if exercises | length == 1 else "s" }}</span>
+      {% for s, n in status_counts %}<span class="chip chip-{{ tone(s) if n else 'mute' }}">{{ n }} {{ s }}</span>
+      {% endfor %}
+    </p>
+    <div class="lb-tags"><span class="lbl">Show exercises tagged with:</span>
+      {% for t in tags %}<button type="button" class="pn-show" disabled title="Filtering by tag is not built yet">{{ t }}</button>
+      {% else %}<span class="muted">No tags yet</span>
+      {% endfor %}
+      {% if tags %}<button type="button" class="pn-show" disabled title="Filtering by tag is not built yet">OR</button>
+      <button type="button" class="pn-show" disabled title="Filtering by tag is not built yet">Clear</button>{% endif %}
+    </div>
+  </section>
+  <section class="card">
+    <h2>Filter</h2>
+    <input class="fc-in lb-filter" type="search" placeholder="Filter by name, code or tag" aria-label="Filter exercises" disabled title="The filter is not built yet">
+    <div class="lb-actions">
+      <button class="btn btn-secondary" type="button" disabled title="The filter is not built yet">Clear</button>
+      <button class="btn btn-primary" type="button" data-nx-open aria-expanded="false" aria-controls="nx-form">New exercise</button>
+      <button class="btn btn-secondary" type="button" disabled title="The Archive is not built yet">Go to Archive</button>
+    </div>
+  </section>
+</div>
 {# New exercise (segment AD1N, ruling 59): a name, then a blank draft held
    in memory for this browser until AD2, at most {{ scratch_limit }}. #}
 <form class="card nx-form" id="nx-form" method="post" action="{{ url('/operator/exercises/new') }}" data-nx-form hidden>
@@ -8,44 +42,148 @@
   <p class="muted">A scratch exercise: kept in this server's memory for this browser only, never saved, gone after a restart, a deploy or eight idle hours; at most {{ scratch_limit }} at once.</p>
   <div class="btnrow"><button class="btn btn-primary" type="submit">Create</button><button class="btn btn-secondary" type="button" data-nx-cancel>Cancel</button></div>
 </form>
-{% if scratch_said %}<p class="nx-said" role="status" data-nx-said>{{ scratch_said }}</p>{% endif %}
-{% include "applydesk/_placeholder.html" %}
-<p class="muted pc-intro">Each call for applications is an exercise, named by its Exercise code.</p>
-<div class="table-wrap">
-<table>
-  <thead><tr><th>Exercise</th><th>Exercise code</th><th>State</th><th>Stage</th><th>Submitted</th><th>Applications close</th></tr></thead>
-  <tbody>
-  {% for e in exercises %}
-    <tr>
-      <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a>{% if is_scratch(e.public_id) %} <span class="chip chip-mute" data-scratch-chip>Scratch</span>
-        <form class="nx-discard" method="post" action="{{ url('/operator/exercises/' ~ e.public_id ~ '/discard') }}" data-nx-discard data-name="{{ e.name }}"><button class="btn btn-destructive btn-short" type="submit">Discard</button></form>{% endif %}</td>
-      <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
-      <td>{% with value = exercise_status(e) %}{% include "applydesk/_state_chip.html" %}{% endwith %}</td>
-      <td>{{ current_stage(e) }}</td>
-      <td>{{ "{:,}".format(counts(e.public_id).submitted) }}</td>
-      <td>{{ e.application_stage_ends }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-</div>
+<section class="card">
+  <p class="muted pc-intro">Each call for applications is an exercise, named by its Exercise code.</p>
+  <div class="table-wrap">
+  <table class="lb-table" data-lb-table>
+    <thead><tr>
+      {% for h in ("Exercise", "Exercise code", "Created by") %}<th class="lb-sort" title="Sorting is not built yet">{{ h }}<span class="arr" aria-hidden="true">↕</span></th>{% endfor %}
+      <th class="lb-sort" title="Sorting is not built yet" aria-sort="descending">Created<span class="arr" aria-hidden="true">↓</span></th>
+      {% for h in ("Timezone", "Status") %}<th class="lb-sort" title="Sorting is not built yet">{{ h }}<span class="arr" aria-hidden="true">↕</span></th>{% endfor %}
+      <th>Tags</th>
+      <th class="lb-check"><input type="checkbox" aria-label="Select every exercise shown" data-lb-all></th>
+    </tr></thead>
+    <tbody>
+    {% for e in exercises %}
+      {% set scratch_row = is_scratch(e.public_id) %}
+      {% set n, m, stage_name = stage_position(e) %}
+      {% set zone = timezone(e) %}
+      <tr data-lb-row data-name="{{ e.name }}" data-code="{{ e.code }}" data-tags="{{ e.tags | join(', ') }}">
+        <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a>{% if scratch_row %} <span class="chip chip-mute" data-scratch-chip>Scratch</span>
+          <form class="nx-discard" method="post" action="{{ url('/operator/exercises/' ~ e.public_id ~ '/discard') }}" data-nx-discard data-name="{{ e.name }}"><button class="btn btn-destructive btn-short" type="submit">Discard</button></form>{% endif %}</td>
+        <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
+        <td>{% if viewer and viewer.display_label %}<span class="chip chip-mute">{{ viewer.display_label }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td class="lb-when">{{ created_label(e) or "—" }}</td>
+        <td><span class="chip chip-mute" title="{{ zone }}">{{ utc_offset(zone) }}</span></td>
+        <td class="lb-stage">{% with value = exercise_status(e) %}{% include "applydesk/_state_chip.html" %}{% endwith %}{% if m %}<span class="of" data-lb-stage>Stage {{ n }} of {{ m }}{% if stage_name %} · {{ stage_name }}{% endif %}</span>{% endif %}</td>
+        <td>{% if e.tags %}<div class="lb-tagcell">{% for t in e.tags %}<span class="chip chip-info">{{ t }}</span>{% endfor %}</div>{% else %}<span class="muted">No tags</span>{% endif %}</td>
+        <td class="lb-check"><input type="checkbox" aria-label="Select {{ e.code or e.name }}" data-lb-tick></td>
+      </tr>
+    {% endfor %}
+    {# The tick panel (Review Robin's): moved under the last ticked row;
+       one exercise is edited in place, two or more get the bulk actions. #}
+    <tr class="lb-exp" data-lb-panel hidden><td colspan="8">
+      <p class="lb-exp-h" aria-live="polite"><strong data-lb-count>0</strong> <span data-lb-noun>exercises</span> selected</p>
+      <div class="lb-fields" data-lb-one>
+        <label class="fc-l">Name<input class="fc-in" data-lb-f="name" disabled title="Editing here is not built yet"></label>
+        <label class="fc-l">Exercise code<input class="fc-in" data-lb-f="code" disabled title="Editing here is not built yet"></label>
+        <label class="fc-l">Tags<input class="fc-in" data-lb-f="tags" disabled title="Tags are not built yet"></label>
+      </div>
+      <div class="lb-fields lb-fields-many" data-lb-many hidden>
+        <label class="fc-l">Tags<input class="fc-in" disabled title="Tags are not built yet"></label>
+      </div>
+      <div class="lb-exp-foot">
+        <div class="lb-purge"><label><input type="checkbox" disabled title="Deleting is not built yet"> <strong>Yes, delete</strong></label><span class="sep" aria-hidden="true">|</span><span class="muted">Archive after purging</span>
+          {% for p in ("Applications", "Dossiers", "Audit log") %}<label><input type="checkbox" disabled title="Purging is not built yet"> {{ p }}</label>{% endfor %}</div>
+        <div class="lb-btns" data-lb-one>
+          <button class="btn btn-secondary" type="button" disabled title="Saving here is not built yet">Save</button>
+          <button class="btn btn-secondary" type="button" data-lb-cancel>Cancel</button>
+          <button class="btn btn-secondary" type="button" disabled title="Duplicating is not built yet">Duplicate</button>
+          <button class="btn btn-secondary" type="button" disabled title="Duplicating is not built yet">Duplicate settings only</button>
+          <button class="btn btn-alert" type="button" disabled title="Purging is not built yet">Purge and archive</button>
+          <button class="btn btn-destructive" type="button" disabled title="Deleting is not built yet">Delete</button>
+        </div>
+        <div class="lb-btns" data-lb-many hidden>
+          <button class="btn btn-secondary" type="button" data-lb-cancel>Cancel</button>
+          <button class="btn btn-secondary" type="button" data-lb-others>Unselect others</button>
+          <button class="btn btn-secondary" type="button" data-lb-none>Unselect all</button>
+          <button class="btn btn-secondary" type="button" disabled title="Tags are not built yet">All tags to all</button>
+          <button class="btn btn-secondary" type="button" disabled title="Tags are not built yet">Remove from all</button>
+          <button class="btn btn-alert" type="button" disabled title="Purging is not built yet">Purge and archive all</button>
+          <button class="btn btn-destructive" type="button" disabled title="Deleting is not built yet">Delete all</button>
+        </div>
+      </div>
+    </td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
 <script>
 (function () {
   var open = document.querySelector("[data-nx-open]"), form = document.querySelector("[data-nx-form]");
-  if (!open || !form) return;
-  function show(on) {
-    form.hidden = !on;
-    open.setAttribute("aria-expanded", on ? "true" : "false");
-    if (on) form.querySelector("[data-nx-name]").focus(); else open.focus();
+  if (open && form) {
+    var show = function (on) {
+      form.hidden = !on;
+      open.setAttribute("aria-expanded", on ? "true" : "false");
+      if (on) form.querySelector("[data-nx-name]").focus(); else open.focus();
+    };
+    open.addEventListener("click", function () { show(form.hidden); });
+    form.querySelector("[data-nx-cancel]").addEventListener("click", function () { show(false); });
+    form.addEventListener("keydown", function (e) { if (e.key === "Escape") show(false); });
   }
-  open.addEventListener("click", function () { show(form.hidden); });
-  form.querySelector("[data-nx-cancel]").addEventListener("click", function () { show(false); });
-  form.addEventListener("keydown", function (e) { if (e.key === "Escape") show(false); });
   // Discard asks first: a scratch exercise cannot be got back.
   document.querySelectorAll("[data-nx-discard]").forEach(function (f) {
     f.addEventListener("submit", function (e) {
       if (!window.confirm("Discard " + f.dataset.name + "? Everything set up in it goes.")) e.preventDefault();
     });
+  });
+  // The tick panel (segment AD1T), as Review Robin's: it sits under the
+  // most recently ticked row still ticked, shows one exercise's fields or
+  // the bulk actions, and closes when no row is ticked. Cancel unticks
+  // that row, so the panel goes back to the one ticked before it. The
+  // header box ticks every row and shows a dash for some.
+  var table = document.querySelector("[data-lb-table]");
+  if (!table) return;
+  var panel = table.querySelector("[data-lb-panel]"), all = table.querySelector("[data-lb-all]");
+  var ticks = Array.prototype.slice.call(table.querySelectorAll("[data-lb-tick]"));
+  var order = [];  // the boxes in the order they were ticked
+  function row(box) { return box.closest("tr"); }
+  function anchor() {
+    for (var i = order.length - 1; i >= 0; i--) if (order[i].checked) return order[i];
+    return null;
+  }
+  function ticked(box) {
+    order = order.filter(function (b) { return b !== box; });
+    if (box.checked) order.push(box);
+  }
+  function sync() {
+    var on = ticks.filter(function (b) { return b.checked; });
+    ticks.forEach(function (b) { row(b).classList.toggle("lb-on", b.checked); });
+    all.checked = on.length > 0 && on.length === ticks.length;
+    all.indeterminate = on.length > 0 && on.length < ticks.length;
+    var at = anchor();
+    if (!at) { panel.hidden = true; return; }
+    row(at).after(panel);
+    var one = on.length === 1;
+    panel.querySelector("[data-lb-count]").textContent = on.length;
+    panel.querySelector("[data-lb-noun]").textContent = one ? "exercise" : "exercises";
+    panel.querySelectorAll("[data-lb-one]").forEach(function (el) { el.hidden = !one; });
+    panel.querySelectorAll("[data-lb-many]").forEach(function (el) { el.hidden = one; });
+    if (one) {
+      var r = row(at);
+      ["name", "code", "tags"].forEach(function (k) { panel.querySelector('[data-lb-f="' + k + '"]').value = r.dataset[k] || ""; });
+    }
+    panel.hidden = false;
+  }
+  function untick(boxes) { boxes.forEach(function (b) { b.checked = false; ticked(b); }); sync(); }
+  ticks.forEach(function (b) {
+    b.addEventListener("change", function () { ticked(b); sync(); });
+  });
+  all.addEventListener("change", function () {
+    ticks.forEach(function (b) { if (b.checked !== all.checked) { b.checked = all.checked; ticked(b); } });
+    sync();
+  });
+  panel.querySelectorAll("[data-lb-cancel]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var at = anchor();
+      if (at) untick([at]);
+      (anchor() || all).focus();
+    });
+  });
+  panel.querySelector("[data-lb-none]").addEventListener("click", function () { untick(ticks); all.focus(); });
+  panel.querySelector("[data-lb-others]").addEventListener("click", function () {
+    var at = anchor();
+    untick(ticks.filter(function (t) { return t !== at; }));
   });
 })();
 </script>

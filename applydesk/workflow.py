@@ -621,6 +621,7 @@ class Step:
     done: bool
     blocked: str = ""  # why it is not ready, when it is not
     link: str = ""  # a page to open instead of an action, e.g. "evaluations"
+    stage: int = 0  # the stage's number; 0 for the close (segment AD1T)
 
 
 def steps(exercise: Exercise) -> tuple[Step, ...]:
@@ -645,6 +646,7 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
                     else "Not open yet",
                     {"Draft": "Open form…", "Open": "Close form…"}.get(form, ""),
                     form == "Closed",
+                    stage=r.number,
                 )
             )
         for c in r.columns:
@@ -661,6 +663,7 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
                         "" if state in SENT_STATES else "Send…",
                         state == "Results in",
                         link="evaluations" if state in ("Sent", "Closed", "Detached") else "",
+                        stage=r.number,
                     )
                 )
             else:
@@ -688,6 +691,7 @@ def steps(exercise: Exercise) -> tuple[Step, ...]:
                         "" if released else "Release…",
                         released,
                         blocked,
+                        stage=r.number,
                     )
                 )
     # The close follows the last stage with something to decide: one
@@ -724,6 +728,20 @@ def current_stage(exercise: Exercise) -> str:
         return now.group
     plan = stages.plan_of(exercise.public_id)
     return plan.stages[-1].label if plan.stages else ""
+
+
+def stage_position(exercise: Exercise) -> tuple[int, int, str]:
+    """Where the exercise stands on Process, as the Operator Lobby's Status
+    prints it (segment AD1T): the number of the stage holding its next
+    step, or the last once every step is done (as `current_stage`); how
+    many stages; and that stage's name ("" when unnamed), e.g.
+    (3, 3, "Interviews"). Found by number, as two stages may share a name."""
+    plan = stages.plan_of(exercise.public_id)
+    if not plan.stages:
+        return (0, 0, "")
+    now = next_step(steps(exercise))
+    at = next((st for st in plan.stages if now and st.number == now.stage), plan.stages[-1])
+    return (plan.stages.index(at) + 1, len(plan.stages), at.name)
 
 
 def panels_sent(exercise_id: str) -> dict[str, tuple[str, ...]]:

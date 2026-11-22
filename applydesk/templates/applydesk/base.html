@@ -900,6 +900,34 @@
     .nx-form { margin-bottom: 16px; max-width: 560px; }
     .nx-said { margin: 0 0 12px; }
     .nx-discard { display: inline; margin-left: 8px; }
+    /* The exercises' lobby, as Review Robin's (segment AD1T). */
+    .lb-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; margin: 0 0 20px; align-items: stretch; }
+    .lb-row > .card { margin: 0; }
+    @media (max-width: 899px) { .lb-row { grid-template-columns: minmax(0, 1fr); } }
+    .lb-pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 14px; }
+    .lb-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 14px; }
+    .lb-tags .lbl { color: var(--text-subtle); margin-right: 2px; }
+    .lb-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+    .lb-filter { width: 100%; box-sizing: border-box; }
+    th.lb-sort { white-space: nowrap; }
+    th.lb-sort .arr { color: var(--accent); margin-left: 4px; font-size: 12px; }
+    .lb-when, .lb-stage { white-space: nowrap; }
+    .lb-stage .of { color: var(--text-subtle); font-size: 13px; display: block; }
+    .lb-tagcell { display: flex; flex-wrap: wrap; gap: 4px; }
+    .lb-check { width: 1%; text-align: center; }
+    tr.lb-on > td { background: var(--accent-tint); }
+    tr.lb-on > td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
+    tr.lb-exp > td { background: var(--accent-tint); box-shadow: inset 4px 0 0 var(--accent); padding: 14px 16px 16px; }
+    .lb-exp-h { font-size: 15px; margin: 0 0 10px; }
+    .lb-fields { display: grid; grid-template-columns: 1.6fr 1fr 1.6fr; gap: 12px; margin-bottom: 12px; }
+    .lb-fields-many { grid-template-columns: 1fr; max-width: 50%; margin-left: auto; }
+    @media (max-width: 899px) { .lb-fields, .lb-fields-many { grid-template-columns: minmax(0, 1fr); max-width: none; } }
+    .lb-fields .fc-in { width: 100%; box-sizing: border-box; background: var(--surface-card); }
+    .lb-exp-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+    .lb-purge { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 14px; }
+    .lb-purge .sep { color: var(--text-subtle); }
+    .lb-btns { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-left: auto; }
+    .lb-btns[hidden], .lb-fields[hidden] { display: none; }
     .rr-mail { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
     .rr-mail .facts { margin-bottom: 8px; }
     .ev-pager { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
