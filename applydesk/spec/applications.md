@@ -484,8 +484,13 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     also makes its `exercise` row and its Owner, the viewer, in one
     transaction; if the viewer may not make one (not on the operator list, or
     not bindable), nothing is made and the Lobby says it could not be. The
-    super-admin needs no list membership, only a person row, and is the Owner. A discarded scratch
-    exercise keeps its row and grant: nothing is hard-deleted.
+    super-admin needs no list membership, only a person row, and is the Owner. *Discard*
+    deletes its row as the panel's *Delete* does (`deleted_at`,
+    `exercise.deleted` audited), so its code is free again. It is not
+    Owner-only: only the browser holding it reaches a scratch exercise, so
+    its holder discards it even after handing ownership on; the row and grant
+    stay, as nothing is hard-deleted. One gone by expiry or a restart keeps
+    its row live, code included, until AD2G retires the scratch store.
     Its *Created* is stamped at *Create* (`scratch.py`), in UTC with its
     offset; it has no tags. Its row carries a *Scratch* chip and *Discard*
     (Destructive), which asks

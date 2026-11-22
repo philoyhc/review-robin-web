@@ -12,7 +12,7 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from applydesk import db, operators, people
+from applydesk import db, exercises, operators, people
 from applydesk.models import AuditEvent, Exercise, Person
 from applydesk.operators import Actor, Refused
 from cordware.identity import Identity
@@ -297,3 +297,17 @@ def test_revoking_a_pending_co_owner_is_not_held(session: Session) -> None:
     session.commit()
     session.refresh(pat)
     assert not pat.may_operate
+
+
+def test_a_holder_who_handed_ownership_on_may_still_discard(session: Session) -> None:
+    """Cold read on the Discard fix: Ann made it, then transferred it to Ben;
+    a scratch exercise is reached only from Ann's browser, so her Discard
+    deletes the row (audited) rather than leaving it stuck."""
+    exercise, ann, ben, _ = _exercise(session)
+    operators.transfer(session, exercise, Actor(ann), ben)
+    session.commit()
+    exercises.discard(session, exercise.public_id, Actor(ann))
+    session.commit()
+    session.refresh(exercise)
+    assert exercise.deleted_at is not None
+    assert _events(session, "exercise.deleted") == 1

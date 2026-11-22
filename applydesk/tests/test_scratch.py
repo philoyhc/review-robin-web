@@ -10,8 +10,10 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
-from applydesk import sample_data, scratch
+from applydesk import db, sample_data, scratch
+from applydesk.models import AuditEvent, Exercise
 from applydesk.tests._host import host_with
 
 LOBBY = "/applydesk/operator/exercises"
@@ -109,6 +111,41 @@ def test_discard_forgets_it() -> None:
     reply = client.post(f"{LOBBY}/{made}/discard")
     assert reply.status_code == 303 and "discarded" in reply.headers["location"]
     assert client.get(f"{LOBBY}/{made}").status_code == 404
+
+
+def test_discard_retires_the_row_and_frees_its_code() -> None:
+    """Codex on cordware#223: Discard retired only the scratch copy, so its
+    row kept the code reserved; now the row is deleted, audited, and the
+    code is free for the next exercise."""
+    client = _client()
+    made = _create(client)
+    details = {
+        "revision": 0,
+        "name": "Summer Bursary 2027",
+        "code": "SB-27",
+        "description": "",
+        "contact": "",
+        "timezone": "Europe/London",
+        "eligibility": "Not set",
+        "blind": False,
+    }
+    assert client.post(f"{LOBBY}/{made}/details", json=details).status_code == 200
+    reply = client.post(f"{LOBBY}/{made}/discard")
+    assert reply.status_code == 303 and "discarded" in reply.headers["location"]
+    session = db.new_session()
+    try:
+        row = session.scalar(select(Exercise).where(Exercise.public_id == made))
+        assert row is not None and row.deleted_at is not None
+        assert session.scalar(
+            select(AuditEvent).where(
+                AuditEvent.event_type == "exercise.deleted", AuditEvent.exercise_id == row.id
+            )
+        )
+    finally:
+        session.close()
+    again = _create(client, "Summer Bursary 2028")
+    details["name"], details["code"] = "Summer Bursary 2028", "SB-27"
+    assert client.post(f"{LOBBY}/{again}/details", json=details).status_code == 200
 
 
 def test_an_idle_browser_s_scratch_expires(monkeypatch: pytest.MonkeyPatch) -> None:
