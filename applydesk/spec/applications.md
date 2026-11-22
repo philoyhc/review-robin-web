@@ -53,7 +53,7 @@ participant's `applydesk/routes_me.py`, the super-admin's
 |---|---|
 | `/health` | Health (above) |
 | `/`, `/operator` | No page: they land by role (below) |
-| `/operator/exercises` | The Operator Lobby: the exercises the viewer operates |
+| `/operator/exercises` | The Operator Lobby: the exercises the viewer operates, in two cards over one table |
 | `/operator/exercises/<id>` | Exercise Home: the timeline and Details |
 | `…/<id>/process` | Process: stages, gates, outcomes, their rules, and which items email whom |
 | `…/<id>/form` | Form: the application form builder |
@@ -308,16 +308,57 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
 
 ## The lobbies and the applicant's application
 
-- **The Operator Lobby** (`applydesk/templates/applydesk/operator/exercises.html`):
-  *New exercise* (Primary), then a row per exercise the viewer operates
-  (the super-admin: every one), this browser's scratch exercises first,
-  newest first:
-  *Exercise* (its name, linking Home), *Exercise code* (*Not set* when
-  none; the public ID shows only in the link), *State* (the exercise's
-  status, from its stages: `locks.exercise_status`), *Stage* (the stage
-  holding its next step, `workflow.current_stage`), *Submitted*
-  (`workflow.counts_of`, the count every page uses) and *Applications
-  close*.
+- **The Operator Lobby** (`applydesk/templates/applydesk/operator/exercises.html`,
+  `routes_operator.exercises`), laid out as Review Robin's Sessions lobby: two
+  cards over one table of the exercises the viewer operates (the super-admin:
+  every one), newest *Created* first (`sample_data.newest_first`), this
+  browser's scratch exercises among them, not ahead of them. One not recorded
+  goes last.
+  - **Cards.** *Exercises*: a chip for the total, then one per status in
+    `locks.STATUS_ORDER` (`locks.status_counts`, empty ones kept, so the chips
+    add up to the total), then *Show exercises tagged with:* the tags shown
+    (`sample_data.all_tags`), *OR* and *Clear*. *Filter*: a box (name, code
+    or tag), *Clear*, *New exercise* (Primary; opens the scratch form below)
+    and *Go to Archive*.
+  - **Columns**, in order: *Exercise* (its name, linking Home), *Exercise
+    code* (*Not set* when none; the public ID shows only in the link), *Created
+    by*, *Created*, *Timezone*, *Status*, *Tags*, and a tick box. Every
+    column but *Tags* and the tick sorts; *Created* carries the descending
+    arrow.
+    - *Created* is `YYYY-MM-DD HH:MM` in the exercise's own timezone
+      (`sample_data.created_label`); the stamp holds its UTC offset, so it
+      follows a timezone Details sets later.
+    - *Timezone* is a chip of the offset now (`GMT+8`, `GMT+5:30`, `GMT`),
+      the zone's name as its title (`sample_data.utc_offset`).
+    - *Status* is the state chip (`locks.exercise_status`) over *Stage N of
+      M*, then ` · <stage name>` when the stage has one
+      (`workflow.stage_position`); omitted when the exercise has no stages. N
+      is the number of the stage holding the next step, or the last once
+      every step is done; M counts the exercise's stages.
+    - *Created by* is the signed-in operator's name on every row, sample
+      and scratch, until AD2B records who made each.
+    - *Tags* are `Exercise.tags` (sample values; *No tags* when none).
+  - **The tick panel**, Review Robin's. Ticked rows are highlighted and one
+    panel sits under the most recently ticked row still ticked; unticking
+    every row closes it. The header box ticks every row shown and shows a dash
+    when only some are ticked.
+    - **One row ticked**: *Name*, *Exercise code* and *Tags* (filled from the
+      row), *Yes, delete*, *Archive after purging* with Applications,
+      Dossiers and Audit log; buttons *Save*, *Cancel*, *Duplicate*,
+      *Duplicate settings only*, *Purge and archive* (Outline-amber),
+      *Delete* (Destructive). There is no deadline field: an exercise's dates
+      are its stages', set on Process.
+    - **Several**: *Tags*, the same delete and purge controls; buttons
+      *Cancel*, *Unselect others*, *Unselect all*, *All tags to all*, *Remove
+      from all*, *Purge and archive all*, *Delete all*.
+    - ***Cancel*** unticks the row the panel sits under, so the panel moves
+      back to the row ticked before it (the tick order is kept). *Unselect
+      others* keeps only that row ticked; *Unselect all* unticks every row.
+  - **Inert until AD2B**, each disabled with a "… is not built yet" title:
+    sorting, the tag chips, *OR*, *Clear* (both), the filter box, *Go to
+    Archive*, and every panel field and action except *Cancel*, *Unselect
+    others* and *Unselect all*, which only untick rows in the browser.
+    *New exercise*, the tick boxes and the panel's opening work.
 - **Scratch exercises** (`applydesk/scratch.py`). Until AD2 stores
   anything, an operator sets an exercise up end to end in one that is held
   in the server's memory and never written anywhere.
@@ -330,7 +371,9 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     not bindable), nothing is made and the Lobby says it could not be. The
     super-admin needs no list membership and is the Owner. A discarded scratch
     exercise keeps its row and grant: nothing is hard-deleted.
-    Its row carries a *Scratch* chip and *Discard* (Destructive), which asks
+    Its *Created* is stamped at *Create* (`scratch.py`), in UTC with its
+    offset; it has no tags. Its row carries a *Scratch* chip and *Discard*
+    (Destructive), which asks
     first; a scratch exercise cannot be got back. The Lobby's status line
     shows only its own messages: the redirect carries a key
     (`routes_operator.SAID`), never the text, so a link cannot put words

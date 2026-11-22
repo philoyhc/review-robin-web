@@ -67,6 +67,20 @@ Taken 2026-11-21 at `f4978a9a5`.
 | Tests naming the lobby's markup | 3 (`test_pages.py`, `test_scratch.py`, `test_scratch_browser.py`) | `grep -rln "data-nx-open\|Submitted</th>\|data-scratch-chip" applydesk/tests` |
 | Specs | 1 (`applications.md`, "The Operator Lobby") | `grep -n "Operator Lobby" applydesk/spec/applications.md` |
 
+## Status
+
+Closed 2026-11-22. Intended versus done:
+- **Ladder as planned:** the plan (#4125), the scaffold (#4126), and this close.
+- **Done as decided,** with these build decisions (Judgment calls, 2026-11-22):
+  - Created by is the viewer's name;
+  - rows are newest first;
+  - the panel's *Cancel* and the two *Unselect* buttons work in the browser;
+  - Closed is counted;
+  - the scratch Created is stamped at creation, which the ladder's "must not touch" yields to.
+- **Beyond the plan:** Status finds its stage by number (`workflow.stage_position`, a `stage` on each `Step`), since two stages may share a name.
+- **Reads:** one `diff-reviewer` read of the unit (from `f4978a9a5`) found 8 findings, no blocker; all were acted on in #4126. `spec-writer` at the close rewrote "The Operator Lobby" in `applydesk/spec/applications.md` and flagged only the Closed and stage-number points above.
+- **Owed:** the author's browser check of the lobby and its panel.
+
 ## PR ladder
 
 1. **PR 1 — this plan.**

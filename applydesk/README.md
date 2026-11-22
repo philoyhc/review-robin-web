@@ -42,7 +42,6 @@ ordinary operator, the Owner the seed made it.
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and CI |
 | `guide/todo_master.md` | Rulings, the MVP roadmap and open decisions |
 | `guide/ad2_series.md` | The AD2 series: what every AD2 segment holds to (its own database, checkable on localhost) and the segments AD2A–AD2G in order, each with the findings it takes |
-| `guide/segment_AD1T_operator_lobby.md` | AD1T: the Operator Lobby laid out as Review Robin's (cards, columns, the tick panel), a scaffold on sample data |
 | `guide/ad2_deferred_findings.md` | The 2026-11-18 assessment's rows that wait on AD2's persistence and identity (28 rows, moved 2026-11-21); AD2's plan absorbs, rules or drops each |
 | `guide/ad3_plus_deferred_findings.md` | The 2026-11-18 assessment's rows that wait on a stage after AD2: Layer B, AD3's lifecycle, AD4's dossier parts and AD7 (6 rows, moved 2026-11-21) |
 | `guide/removed_help_lines.md` | A running tab of help lines taken off the pages: what each told the reader, kept until the author decides how such help is shown |

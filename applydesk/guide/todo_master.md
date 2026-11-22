@@ -792,7 +792,6 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
-| AD1T — The Operator Lobby as Review Robin's | Cards, columns and the tick panel as a scaffold on sample data (`applydesk/guide/segment_AD1T_operator_lobby.md`); its wiring goes to AD2B | — |
 | AD2 — Database (a series) | The `applydesk` database, checkable on localhost, area by area: AD2A foundations (people, operators, audit; closed 2026-11-21, `applydesk/guide/archive/segment_AD2A_foundations.md`); AD2W, Accounts Management's table as Review Robin's Workspace users (closed 2026-11-21, `applydesk/guide/archive/segment_AD2W_workspace_users.md`); then exercises, Process, the form, panels, dossiers and pairs, and retiring the simulation (`applydesk/guide/ad2_series.md`) | Cordware: the database and its runtime principal (private), before AD2's first release |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form, versioned, each section carrying its visibility grants (ruling 68); drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
