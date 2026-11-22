@@ -71,7 +71,10 @@ def is_busy(error: OperationalError) -> bool:
     both read, then write, on a local run. The routes report it as a
     concurrent change, as Postgres's row locks would have queued it (bug
     sweep at the AD2A close)."""
-    return "database is locked" in str(error.orig)
+    text = str(error.orig)
+    # Postgres aborting one of two transactions that each waited on the
+    # other is the same race lost (Codex on #4132).
+    return "database is locked" in text or "deadlock detected" in text
 
 
 def lost_a_race(error: IntegrityError | OperationalError) -> bool:

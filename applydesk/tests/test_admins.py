@@ -322,3 +322,16 @@ def test_a_bound_super_admin_holds_no_exercise_without_a_grant() -> None:
         assert not operators.is_owner(session, ra, actor)
     assert operators.can_operate(session, ra, SUPER)  # the platform
     session.close()
+
+
+def test_a_postgres_deadlock_is_a_lost_race() -> None:
+    """Codex on #4132: Postgres aborting one of two transactions that each
+    waited on the other is reported as a concurrent change, not a 500."""
+    from sqlalchemy.exc import OperationalError
+
+    def error(text: str) -> OperationalError:
+        return OperationalError("UPDATE person", {}, Exception(text))
+
+    assert db.lost_a_race(error("deadlock detected\nDETAIL: Process 1 waits for ShareLock"))
+    assert db.lost_a_race(error("database is locked"))
+    assert not db.lost_a_race(error("no such table: person"))

@@ -399,7 +399,13 @@ def promote(session: Session, actor: Actor, person: Person) -> None:
 
 def demote(session: Session, actor: Actor, person: Person) -> None:
     """Take `person`'s Admin away (segment AD2M); they stay on the operator
-    list. With no super-admin configured, the last Admin is kept."""
+    list. The last Admin is kept."""
+    # Every Admin row locked first, in one order, then the actor checked:
+    # two Admins demoting each other at once queue rather than each
+    # holding a share lock the other's update needs (Codex on #4132).
+    admins = session.scalars(
+        select(Person.id).where(Person.is_admin.is_(True)).order_by(Person.id).with_for_update()
+    ).all()
     if not makes_admins(session, actor):
         raise Refused("Only the platform super-admin makes Admins.", key="not_super_admin")
     if is_protected(person):
@@ -409,11 +415,6 @@ def demote(session: Session, actor: Actor, person: Person) -> None:
     if not person.is_admin:
         raise not_admin
     # The last Admin is never demoted (spec §8, Review Robin's last_admin).
-    # Every Admin row locked before counting, so two demotions at once
-    # cannot both see another Admin left.
-    admins = session.scalars(
-        select(Person.id).where(Person.is_admin.is_(True)).with_for_update()
-    ).all()
     if len(admins) <= 1:
         raise Refused("The last Admin stays an Admin.", key="last_admin")
     if not _changed(
