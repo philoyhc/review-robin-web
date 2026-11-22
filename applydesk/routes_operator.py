@@ -349,6 +349,7 @@ SAID: dict[str, str] = {
     "tag_long": "Not saved: a tag is at most 40 characters.",
     "tags_many": "Not saved: an exercise carries at most 20 tags.",
     "archived_readonly": "Not saved: an archived exercise is read-only. Restore it first.",
+    "left": "You left the exercise.",
     "restore_taken": "Not restored: another live exercise now has its code. Change one first.",
     "stale": "Not saved: someone else changed it just now. Look again and retry.",
     "gone": "That exercise is no longer on record, or not yours to change.",
@@ -817,9 +818,12 @@ def _ops_change(
     change: Callable[[Session, str, Identity, int], None],
     person_id: int,
     done: str,
+    *,
+    to_lobby: bool = False,
 ) -> Response:
     """One change to the exercise's operators (`team.py`), a refusal
-    turned into a status key."""
+    turned into a status key. `to_lobby`: done, the viewer no longer runs
+    the exercise (Leave), so the Lobby says so."""
     _same_site(request)
     identity = current_identity(request)
     if identity is None:
@@ -844,6 +848,9 @@ def _ops_change(
         return _ops_back(request, exercise_id, "changed")
     finally:
         session.close()
+    gate.forget_viewer(request)  # their grants changed (plan's Semantics)
+    if to_lobby:
+        return _to_lobby(request, done)
     return _ops_back(request, exercise_id, done)
 
 
@@ -871,7 +878,42 @@ def operators_remove(request: Request, exercise_id: str, person_id: RowId) -> Re
     "/exercises/{exercise_id}/operators/{person_id}/owner", name="applydesk_operators_owner"
 )
 def operators_owner(request: Request, exercise_id: str, person_id: RowId) -> Response:
+    """*Transfer ownership* (the old *Make owner*; its path is kept)."""
     return _ops_change(request, exercise_id, team.transfer, person_id, "owner")
+
+
+@router.post(
+    "/exercises/{exercise_id}/operators/{person_id}/make-owner",
+    name="applydesk_operators_make_owner",
+)
+def operators_make_owner(request: Request, exercise_id: str, person_id: RowId) -> Response:
+    """*Make Owner*: an Owner beside the others (segment AD2O)."""
+    return _ops_change(request, exercise_id, team.make_owner, person_id, "made_owner")
+
+
+@router.post(
+    "/exercises/{exercise_id}/operators/{person_id}/demote", name="applydesk_operators_demote"
+)
+def operators_demote(request: Request, exercise_id: str, person_id: RowId) -> Response:
+    """*Make operator* on another Owner's row (segment AD2O)."""
+    return _ops_change(request, exercise_id, team.demote, person_id, "demoted")
+
+
+@router.post(
+    "/exercises/{exercise_id}/operators/{person_id}/step-down",
+    name="applydesk_operators_step_down",
+)
+def operators_step_down(request: Request, exercise_id: str, person_id: RowId) -> Response:
+    """*Step down to operator* on the viewer's own row (segment AD2O)."""
+    return _ops_change(request, exercise_id, team.step_down, person_id, "stepped_down")
+
+
+@router.post(
+    "/exercises/{exercise_id}/operators/{person_id}/leave", name="applydesk_operators_leave"
+)
+def operators_leave(request: Request, exercise_id: str, person_id: RowId) -> Response:
+    """*Leave*: the viewer takes themself off; the Lobby next (AD2O)."""
+    return _ops_change(request, exercise_id, team.leave, person_id, "left", to_lobby=True)
 
 
 @router.get("/exercises/{exercise_id}", name="applydesk_exercise_home")

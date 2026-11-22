@@ -36,7 +36,7 @@ class Card:
     @property
     def owners(self) -> int:
         """How many Owners: the last one cannot step down (AD2O)."""
-        return sum(1 for _, owner in self.rows if owner)
+        return sum(1 for p, owner in self.rows if owner and operators.counts_as_owner(p))
 
 
 def actor_for(session: Session, identity: Identity) -> operators.Actor:
@@ -107,6 +107,16 @@ def demote(session: Session, public_id: str, identity: Identity, person_id: int)
     """*Make operator*, or *Step down* on the viewer's own row (AD2O)."""
     exercise, person = _target(session, public_id, person_id)
     operators.demote_owner(session, exercise, actor_for(session, identity), person)
+
+
+def step_down(session: Session, public_id: str, identity: Identity, person_id: int) -> None:
+    """*Step down to operator* on the viewer's own row (AD2O); any other
+    row is *Make operator*'s, so refused here (cold read)."""
+    exercise, person = _target(session, public_id, person_id)
+    actor = actor_for(session, identity)
+    if actor.person is None or actor.person.id != person.id:
+        raise operators.Refused("Only you can step yourself down.", key="not_self")
+    operators.demote_owner(session, exercise, actor, person)
 
 
 def leave(session: Session, public_id: str, identity: Identity, person_id: int) -> None:

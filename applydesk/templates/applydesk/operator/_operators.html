@@ -3,12 +3,11 @@
    marked Owner, then operators. Each row offers only the viewer's moves:
    an Owner may make another operator an Owner, transfer ownership to them
    or remove them, make another Owner an operator, and step down while not
-   the last Owner; an operator may leave. AD2O's scaffold: Transfer and
-   Remove work as before; Make Owner, Make operator, Step down and Leave
-   wait for the next rungs. #}
+   the last Owner; an operator may leave. Each posts to its own route
+   (`routes_operator.operators_*`) and comes back saying how it went;
+   Transfer, Remove and Leave ask first. #}
 {% set ops = operators_card %}
 {% set base = '/operator/exercises/' ~ exercise.public_id %}
-{% set inert = "Built in the next rung of AD2O" %}
 <section class="card" id="operators" aria-labelledby="ops-h" data-operators{% if ops.manage %} data-ops-manage{% endif %}>
   <div class="cardhead"><h2 id="ops-h">Owners and operators</h2></div>
   {% if ops_said %}<p class="nx-said" role="status" data-ops-said>{{ ops_said }}</p>{% endif %}
@@ -27,11 +26,11 @@
         <td>{% if owner %}<span class="chip chip-ok">Owner</span>{% else %}Operator{% endif %}</td>
         <td class="ops-acts">
         {% if mine %}
-          {% if owner %}{% if ops.owners > 1 %}<button class="btn btn-secondary btn-short" type="button" disabled title="{{ inert }}" data-ops-move="step-down">Step down to operator</button>{% else %}<span class="muted" data-ops-last>The only Owner: make another Owner or transfer first</span>{% endif %}
-          {% else %}<button class="btn btn-destructive btn-short" type="button" disabled title="{{ inert }}" data-ops-move="leave">Leave</button>{% endif %}
+          {% if owner %}{% if ops.owners > 1 %}<form class="ops-act" method="post" action="{{ url(base ~ '/operators/' ~ person.id ~ '/step-down') }}"><button class="btn btn-secondary btn-short" type="submit" data-ops-move="step-down">Step down to operator</button></form>{% else %}<span class="muted" data-ops-last>The only Owner: make another Owner or transfer first</span>{% endif %}
+          {% else %}<form class="ops-act" method="post" action="{{ url(base ~ '/operators/' ~ person.id ~ '/leave') }}" data-ops-confirm="Leave this exercise? An Owner can add you back."><button class="btn btn-destructive btn-short" type="submit" data-ops-move="leave">Leave</button></form>{% endif %}
         {% elif ops.manage %}
-          {% if owner %}<button class="btn btn-secondary btn-short" type="button" disabled title="{{ inert }}" data-ops-move="make-operator" aria-label="Make {{ person.label }} an operator">Make operator</button>
-          {% else %}<button class="btn btn-secondary btn-short" type="button" disabled title="{{ inert }}" data-ops-move="make-owner" aria-label="Make {{ person.label }} an Owner">Make Owner</button>
+          {% if owner %}<form class="ops-act" method="post" action="{{ url(base ~ '/operators/' ~ person.id ~ '/demote') }}"><button class="btn btn-secondary btn-short" type="submit" data-ops-move="make-operator" aria-label="Make {{ person.label }} an operator">Make operator</button></form>
+          {% else %}<form class="ops-act" method="post" action="{{ url(base ~ '/operators/' ~ person.id ~ '/make-owner') }}"><button class="btn btn-secondary btn-short" type="submit" data-ops-move="make-owner" aria-label="Make {{ person.label }} an Owner">Make Owner</button></form>
           <form class="ops-act" method="post" action="{{ url(base ~ '/operators/' ~ person.id ~ '/owner') }}" data-ops-confirm="Transfer ownership to {{ person.label }}? They become an Owner and you an operator."><button class="btn btn-alert btn-short" type="submit" aria-label="Transfer ownership to {{ person.label }}" data-ops-move="transfer">Transfer ownership</button></form>
           <form class="ops-act" method="post" action="{{ url(base ~ '/operators/' ~ person.id ~ '/remove') }}" data-ops-confirm="Remove {{ person.label }} from this exercise?"><button class="btn btn-destructive btn-short" type="submit" aria-label="Remove {{ person.label }}" data-ops-move="remove">Remove</button></form>{% endif %}
         {% endif %}

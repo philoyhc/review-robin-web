@@ -63,7 +63,7 @@
       {% set scratch_row = is_scratch(e.public_id) %}
       {% set n, m, stage_name = stage_position(e) %}
       {% set zone = timezone(e) %}
-      <tr data-lb-row data-id="{{ e.public_id }}" data-revision="{{ revisions.get(e.public_id, 0) }}" data-name="{{ e.name }}" data-code="{{ e.code }}" data-published="{{ 'false' if e.state == 'Draft' else 'true' }}" data-tags="{{ e.tags | join(', ') }}">
+      <tr data-lb-row data-id="{{ e.public_id }}" data-revision="{{ revisions.get(e.public_id, 0) }}" data-name="{{ e.name }}" data-code="{{ e.code }}" data-published="{{ 'false' if e.state == 'Draft' else 'true' }}" data-owner="{{ 'true' if roles[e.public_id] == 'Owner' else 'false' }}" data-tags="{{ e.tags | join(', ') }}">
         <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a>{% if scratch_row %} <span class="chip chip-mute" data-scratch-chip>Scratch</span>
           <form class="nx-discard" method="post" action="{{ url('/operator/exercises/' ~ e.public_id ~ '/discard') }}" data-nx-discard data-name="{{ e.name }}"><button class="btn btn-destructive btn-short" type="submit">Discard</button></form>{% endif %}</td>
         <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
@@ -94,7 +94,7 @@
       </div>
       <div class="lb-exp-foot">
         <div class="lb-purge"><label><input type="checkbox" name="confirm" value="yes" data-lb-confirm> <strong>Yes, delete</strong></label><span class="sep" aria-hidden="true">|</span><span class="muted">Archive after purging</span>
-          <span class="muted" data-lb-owner-note>Purge and archive and Delete are an Owner's.</span>
+          <span class="muted" data-lb-owner-note role="status">Purge and archive and Delete are an Owner's.</span>
           {% for p in ("Applications", "Dossiers", "Audit log") %}<label><input type="checkbox" disabled title="Purging waits for stored applications: Purge and archive archives only"> {{ p }}</label>{% endfor %}</div>
         <div class="lb-btns" data-lb-one>
           <button class="btn btn-secondary" type="submit" name="action" value="save">Save</button>
@@ -173,10 +173,21 @@
     panel.querySelectorAll("[data-lb-many]").forEach(function (el) { el.hidden = one; });
     // Only the shown fields post: one exercise's, or the bulk tags.
     panel.querySelectorAll("[data-lb-f]").forEach(function (i) { i.disabled = !one; });
+    // Purge and archive and Delete are an Owner's (segment AD2O): live only
+    // when the viewer owns every ticked exercise; else say which they only
+    // operate. The server refuses the rest whatever the page shows.
+    var operated = on.filter(function (b) { return row(b).dataset.owner !== "true"; });
+    var ownerOnly = operated.length > 0;
+    panel.querySelectorAll("[data-lb-archive], [data-lb-delete]").forEach(function (b) { b.dataset.ownerOnly = ownerOnly ? "1" : ""; });
+    var note = panel.querySelector("[data-lb-owner-note]");
+    note.textContent = ownerOnly
+      ? "Purge and archive and Delete are an Owner's. You only operate: " + operated.map(function (b) { return row(b).dataset.name; }).join(", ") + "."
+      : "Purge and archive and Delete are an Owner's.";
     // And only the shown buttons: Enter in the bulk Tags box must not post
     // the hidden one-exercise Save (cold read).
     panel.querySelectorAll('[data-lb-one] button[type="submit"]').forEach(function (b) { b.disabled = !one; });
     panel.querySelectorAll('[data-lb-many] button[type="submit"]').forEach(function (b) { b.disabled = one; });
+    panel.querySelectorAll("[data-lb-archive], [data-lb-delete]").forEach(function (b) { if (b.dataset.ownerOnly) b.disabled = true; });
     panel.querySelector("[data-lb-many-tags]").disabled = one;
     if (one) {
       var r = row(at);
