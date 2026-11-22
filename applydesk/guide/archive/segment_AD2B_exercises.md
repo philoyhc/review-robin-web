@@ -116,7 +116,7 @@ Closed 2026-11-22. Intended versus done:
   - Archive and Restore are Owner-only, as Delete is.
   - A code or tag is measured as its casefolded key.
   - *Purge and archive* archives only.
-- **Open for the author:** whether an archived exercise is read-only. The panel's Save and tag actions accept one by a hand-made post; the pages offer none.
+- **Ruled after the close** (author, 2026-11-22): an archived exercise is read-only until restored, as Review Robin's archived sessions are; built in a follow-up PR.
 
 ## PR ladder
 

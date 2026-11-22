@@ -3,6 +3,7 @@
 {% block content %}
 <div class="ptitle"><h1>{{ exercise.name }}</h1></div>
 {% include "applydesk/_placeholder.html" %}
+{% if archived %}<p class="nx-said" role="status" data-archived>Archived: read-only. <a href="{{ url('/operator/exercises/archived') }}">Restore it from the Archive</a> to change it.</p>{% endif %}
 {# Segment AD1I: the timeline two-thirds wide, Details one-third; the old
    fact cards fold into the status row and the line under the timeline. #}
 <div class="hm-grid">

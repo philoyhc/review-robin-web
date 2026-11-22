@@ -450,6 +450,14 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     since, when it is refused saying so and the exercise stays archived. An
     archived exercise frees its code. With none archived the page says an
     Owner archives one from the Lobby's panel.
+  - **An archived exercise is read-only** until restored (the author,
+    2026-11-22), as Review Robin's archived sessions are. Its pages open, and
+    Home says it is archived, linking to the Archive, with Details' *Unlock*
+    disabled. Every post to its pages is refused with a 409 by the operator
+    router's gate (`gate.require_exercise_operator`). The Lobby panel's
+    *Save* and tag actions refuse it too. Review Robin also offers *Delete*
+    on its archived page; Apply Desk deletes only from the Lobby, so an
+    archived exercise is restored before it is deleted.
   - **Still inert**, each disabled with a "… is not built yet" title or one
     saying what it waits for: *Duplicate* and the purge boxes (above).
     *Cancel*, *Unselect others* and *Unselect all* only untick rows in the

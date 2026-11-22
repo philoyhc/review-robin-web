@@ -48,3 +48,72 @@ def test_archived_exercises_are_listed_newest_first() -> None:
     assert page.index("Graduate Travel Grant") < page.index("Recruitment and Selection")
     assert "2026-11-20 09:00" in page  # RA-2027's, in Singapore time
     assert page.count("data-ar-restore>Restore") == 2
+
+
+# --- Read-only while archived (the author, 2026-11-22) ------------------------
+
+
+def test_an_archived_exercise_opens_but_cannot_be_changed() -> None:
+    """As Review Robin's archived sessions: its pages open, read-only;
+    every post to them is refused until it is restored."""
+    _archive("wa9juxbc2t", datetime(2026, 11, 20, 1, 0, tzinfo=UTC))
+    client = _client()
+    home = client.get(f"{LOBBY}/wa9juxbc2t")
+    assert home.status_code == 200 and "data-archived" in home.text
+    assert 'data-dt-lock disabled title="Archived: restore it to change it"' in home.text
+    details = client.post(f"{LOBBY}/wa9juxbc2t/details", json={"revision": 1, "name": "X"})
+    assert details.status_code == 409 and "restore it" in details.json()["detail"]
+    operators = client.post(f"{LOBBY}/wa9juxbc2t/operators/add", data={"person_id": "1"})
+    assert operators.status_code == 409
+
+
+def test_the_panel_refuses_an_archived_exercise_too() -> None:
+    _archive("n5wg8tjr3e", datetime(2026, 11, 20, 1, 0, tzinfo=UTC))
+    client = TestClient(host_with(("applydesk",))[0], follow_redirects=False)
+    session = db.new_session()
+    row = session.scalars(select(Exercise).where(Exercise.public_id == "n5wg8tjr3e")).one()
+    revision = row.revision
+    session.close()
+    for fields in (
+        {
+            "action": "save",
+            "id": "n5wg8tjr3e",
+            "revision": str(revision),
+            "name": "G",
+            "code": "",
+            "tags": "",
+        },
+        {"action": "add_tags", "id": "n5wg8tjr3e", "tags": "x"},
+    ):
+        reply = client.post(f"{LOBBY}/panel", data=fields)
+        assert "archived_readonly" in reply.headers["location"], fields
+
+
+def test_a_restored_exercise_can_be_changed_again() -> None:
+    _archive("wa9juxbc2t", datetime(2026, 11, 20, 1, 0, tzinfo=UTC))
+    client = TestClient(host_with(("applydesk",))[0], follow_redirects=False)
+    assert (
+        "restored"
+        in client.post(f"{LOBBY}/archived/restore", data={"id": "wa9juxbc2t"}).headers["location"]
+    )
+    home = client.get(f"{LOBBY}/wa9juxbc2t")
+    assert "data-archived" not in home.text
+    # And a change goes through again (cold read: not only the banner).
+    reply = client.post(
+        f"{LOBBY}/panel", data={"action": "add_tags", "id": "wa9juxbc2t", "tags": "Back"}
+    )
+    assert "tagged" in reply.headers["location"]
+
+
+def test_an_archived_exercise_is_restored_before_it_is_deleted() -> None:
+    """Cold read: read-only means Delete too; the spec says restore first."""
+    _archive("n5wg8tjr3e", datetime(2026, 11, 20, 1, 0, tzinfo=UTC))
+    client = TestClient(host_with(("applydesk",))[0], follow_redirects=False)
+    reply = client.post(
+        f"{LOBBY}/panel", data={"action": "delete", "id": "n5wg8tjr3e", "confirm": "yes"}
+    )
+    assert "archived_readonly" in reply.headers["location"]
+    session = db.new_session()
+    row = session.scalars(select(Exercise).where(Exercise.public_id == "n5wg8tjr3e")).one()
+    session.close()
+    assert row.deleted_at is None
