@@ -37,15 +37,17 @@ what", Accounts Management, the Operators card, the Operator Lobby).
 | Role | Stored as | Granted by | Revoked by | Built |
 |---|---|---|---|---|
 | **Operator** | `person.may_operate` (the operator list) | *Admit*, by an Admin or the super-admin | *Revoke*, by an Admin or the super-admin | Yes (AD2A, AD2W) |
-| **Admin** | `person.is_admin` (to add) | the super-admin | the super-admin | No: proposed, after Review Robin's sys-admin |
+| **Admin** | `person.is_admin` (to add) | the super-admin | the super-admin | No: being built (the author's ruling, 2026-11-22), after Review Robin's sys-admin |
 | **Super-admin** | derived from Cordware's `SUPER_ADMIN_EMAILS`, never stored | deployer config | deployer config | Yes |
 
 - An Operator may make exercises, and becomes the Owner of each they make.
   Being on the operator list opens no exercise by itself.
-- An Admin, when built, reaches the Admin pages and manages Operators; an
-  Admin is an Operator, so may make exercises.
-- The super-admin reaches everything (§6). They see the Operator Lobby as any
-  operator does: only the exercises they own or operate (§7).
+- An Admin reaches the Admin pages and manages Operators; an Admin is an
+  Operator, so may make exercises.
+- The super-admin reaches every Admin page and manages Admins. Like an Admin,
+  they work on an exercise only once they own or operate it: an exercise they
+  hold no role on, they adopt (§5). They see the Operator Lobby as any operator
+  does: only the exercises they own or operate (§7).
 
 ## 3. Exercise roles
 
@@ -102,6 +104,14 @@ Owner, demote, step down and leave.
 | **Invitee** | an *Invitation only* exercise's invitee list | as an Applicant, for that exercise | AD2B |
 | **Evaluator** | membership of a panel a gate draws on | the dossiers they evaluate, `/me/…/dossiers/<id>`, showing only items granted to *Assigned evaluators* or *Evaluators* (ruling 68); they respond in Review Robin, never in Apply Desk | AD2E, AD4, AD5 |
 
+| **Observer** | named on an exercise as observing it (pre-positioned: the model has a place for them; nothing is built until a later segment) | `/me`: what the exercise grants observers, read-only, as Review Robin's observers read `/me/sessions/<id>/collation` | Later |
+
+An observer, as in Review Robin (`spec/participant_model.md`), is a
+participant on `/me`, not an operator: they read, never change, and hold no
+role on the exercise's operator pages. Their grants join ruling 68's
+audiences (*Applicant*, *Assigned evaluators*, *Evaluators*) as *Observers*
+when they are built.
+
 A participant may also be an operator; the two are independent. Until AD2D,
 the participant's pages stay behind the placeholders' gate
 (`gate.placeholders_only`: anyone on a local run, deployed only the
@@ -116,31 +126,31 @@ super-admin).
 | Their own `/me` pages | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | The Operator Lobby, listing what they own or operate | — | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Make an exercise, becoming its Owner | — | ✓ | ✓ | ✓ | ✓ | ✓, once bound |
-| Set up and run an exercise; read every dossier item | — | — | ○ | ○ | via adopt | ✓ |
-| Add or remove operators; Make Owner; demote; transfer | — | — | — | ○ | via adopt | ✓ |
-| Purge and archive; delete an exercise | — | — | — | ○ | via adopt | ✓ |
+| Set up and run an exercise; read every dossier item | — | — | ○ | ○ | via adopt | via adopt |
+| Add or remove operators; Make Owner; demote; transfer | — | — | — | ○ | via adopt | via adopt |
+| Purge and archive; delete an exercise | — | — | — | ○ | via adopt | via adopt |
 | Admin → Exercises Diagnostics: every exercise, its Owners, Outbox, Audit log | — | — | — | — | ✓ | ✓ |
 | Admin → Accounts Management: Admit and Revoke Operators | — | — | — | — | ✓ | ✓ |
 | Promote and demote Admins | — | — | — | — | — | ✓ |
 | Admin → System Status | — | — | — | — | ✓ | ✓ |
 
-**Adopt** (to build, with Admins): from Exercises Diagnostics an Admin who is
-not an Owner may read an exercise's diagnostics, but must *adopt* it to change
-anything: an audited step that makes them an Owner of it, as Review Robin's
-*Manage* self-adds a sys-admin. No editing without a recorded role.
-
-**The super-admin** reaches every exercise's pages from Admin → Exercises
-Diagnostics (*Manage*), as Owner, without a grant: the break-glass role. Their
-changes are audited under their own identity as any Owner's are. Whether they
-too must adopt is open (§10).
+**Adopt** (to build, with Admins): from Exercises Diagnostics an Admin or the
+super-admin who holds no role on an exercise may read its diagnostics, but
+must *adopt* it to open its pages or change anything: an audited step that
+makes them an Owner of it, as Review Robin's *Manage* self-adds a sys-admin.
+The super-admin adopts too (the author's ruling, 2026-11-22): nobody edits an
+exercise without a recorded role, so every change has an Owner on record.
+Adopting one they already operate makes them an Owner. Once adopted, they are
+an Owner as any other, and step down or leave the same way. Today the
+super-admin reaches every exercise without a grant; adopting replaces that.
 
 ## 6. Who reaches which pages
 
 | Pages | Reached by | Built |
 |---|---|---|
 | `/operator/…` (the Lobby, making an exercise) | an Operator, Admin or the super-admin | Yes |
-| An exercise's pages, `/operator/exercises/<id>/…` | its operators and Owners; the super-admin; an Admin once adopted | Yes, but for Admins |
-| Owner-only posts (operators, ownership, purge, delete) | its Owners; the super-admin | Partly: today the one Owner |
+| An exercise's pages, `/operator/exercises/<id>/…` | its operators and Owners, an Admin or the super-admin among them once adopted | Operators and the one Owner, yes; today the super-admin reaches all without adopting |
+| Owner-only posts (operators, ownership, purge, delete) | its Owners | Partly: today the one Owner and the super-admin |
 | `/admin/…` | Admins and the super-admin | Super-admin only today |
 | `/me/…` | participants, by their records (§4) | Behind the placeholders' gate |
 | `/` and `/operator` | an operator lands on the Lobby; anyone else on the User Lobby | Yes |
@@ -216,15 +226,16 @@ Every change writes an `audit_event` with the actor.
 | `exercise.owner_added` | Make Owner | No |
 | `exercise.owner_demoted` | an Owner made an operator, or stepping down | No |
 | `exercise.operator_left` | an operator leaves | No |
-| `exercise.adopted` | an Admin adopts an exercise as Owner | No |
+| `exercise.adopted` | an Admin or the super-admin adopts an exercise as Owner | No |
 | `exercise.deleted`, `exercise.archived` | an Owner deletes, or purges and archives | No |
 | `person.promoted`, `person.demoted` | Admin granted, taken away | No |
 
 ## 10. Open
 
-- **The Admin tier**: build it now, or keep the Admin pages the
-  super-admin's until a second person needs them.
-- **The super-admin's reach**: keep reaching every exercise as Owner without a
-  grant (§5), or adopt as an Admin would, for the record.
-- **Observers**, Review Robin's read-only audience: whether Apply Desk has
-  one (a committee chair reading outcomes, say) or not.
+- **Observers**: what an exercise grants them (which dossier items, which
+  outcomes), and who names them (its Owners, on Home, as Review Robin's
+  operators name observers). Decided when they are built.
+
+Decided 2026-11-22 (the author): build the Admin tier now; the super-admin
+adopts as an Admin does; observers are participants on `/me`, pre-positioned
+here and built later.
