@@ -442,6 +442,7 @@ def _build(
                 _flag(st.get("shown"), f"Stage {n}"),
                 _span(form.get("from"), form.get("to"), "The form") if form else None,
                 key=stage_key,
+                candidates=_flag(st.get("candidates", False), f"Stage {n}"),
             )
         )
     shape = stages.problems(tuple(built))

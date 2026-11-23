@@ -138,6 +138,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "exercise.details_changed": EventSchema(_EXERCISE | {"changes", "context"}),
     # Segment AD2C: Process saved whole, replacing the draft.
     "exercise.process_saved": EventSchema(_EXERCISE | {"counts", "context"}),
+    # Candidates (ruling 77): added by search or CSV, removed in the list.
+    "candidate.added": EventSchema(_EXERCISE | {"refs", "context"}),
+    "candidate.removed": EventSchema(_EXERCISE | {"refs"}),
     "exercise.archived": EventSchema(_EXERCISE),
     "exercise.restored": EventSchema(_EXERCISE),
     "exercise.deleted": EventSchema(_EXERCISE),

@@ -284,6 +284,8 @@ class Stage:
     # Its key, stable across saves once stored (segment AD2C); "" for a
     # sample's or a new stage's, a save minting one (``process_store``).
     key: str = ""
+    # Holds the Candidates item (ruling 77): at most one stage does.
+    candidates: bool = False
 
     @property
     def dates(self) -> str:
@@ -694,12 +696,15 @@ def problems(stages: tuple[Stage, ...]) -> tuple[str, ...]:
     """What breaks ruling 15's shape: at most one stage holds the
     form, anywhere in the timeline (a gate may come first, its
     outcome deciding who may apply: author, 2026-11-13); no stage holds
-    the form and a gate, or more than one outcome. (A stage left
+    the form and a gate, or more than one outcome; at most one holds
+    Candidates (ruling 77). (A stage left
     empty while it is set up is allowed.)"""
     out: list[str] = []
     holding = [st for st in stages if st.form]
     if len(holding) > 1:
         out.append("More than one stage holds the form.")
+    if sum(st.candidates for st in stages) > 1:
+        out.append("More than one stage holds Candidates.")
     for st in stages:
         if st.form and any(isinstance(c, Gate) for c in st.columns):
             out.append(f"{st.label} holds both the form and a gate.")

@@ -367,6 +367,7 @@ def load(session: Session, public_id: str) -> Stored | None:
                 st.shown,
                 _dates(st.form_opens_at, st.form_closes_at) if st.holds_form else None,
                 key=st.key,
+                candidates=st.holds_candidates,
             )
         )
     return Stored(tuple(built), exercise.process_revision)
@@ -665,6 +666,7 @@ def save(
             status="published" if st.status == "Published" else "draft",
             shown=st.shown,
             holds_form=st.form,
+            holds_candidates=st.candidates,
             form_opens_at=_stored(st.form_when.start) if st.form and st.form_when else None,
             form_closes_at=_stored(st.form_when.end) if st.form and st.form_when else None,
         )
