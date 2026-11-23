@@ -125,13 +125,13 @@ SUMMARY_CASES: list[tuple[FormCard, str]] = [
 ]
 
 
-#: The model exercise's pools, which name the panels in SUMMARY_CASES.
-POOLS = sample_data.people_pools(EX)
 
 
 @pytest.mark.parametrize(("card", "summary"), SUMMARY_CASES)
 def test_a_card_s_summary(card: FormCard, summary: str) -> None:
-    assert card_summary(card, POOLS) == summary
+    # The model exercise's pools, which name the panels in SUMMARY_CASES:
+    # read in the test, since the store is the database's (AD2E).
+    assert card_summary(card, sample_data.people_pools(EX)) == summary
 
 
 def test_a_pool_the_summary_is_not_given_reads_as_institution_wide() -> None:

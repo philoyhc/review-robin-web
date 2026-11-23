@@ -180,7 +180,7 @@ def test_process_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> 
         page.locator("[data-fb-save]").click()
     said = page.locator("[data-fb-said]")
     said.filter(has_text="Saved").wait_for()
-    assert said.inner_text() == "Saved to this scratch exercise.", said.inner_text()
+    assert said.inner_text() == "Saved.", said.inner_text()
     assert page.locator("[data-unsaved]").is_hidden()
     names = page.locator('#pc-cards > .fc [data-pc="name"]')
     assert [names.nth(i).input_value() for i in range(names.count())] == [
@@ -224,13 +224,13 @@ def test_panels_saved_into_a_scratch_exercise_survive_a_reload(page: Page) -> No
     # and says it saved once back (cold read).
     with page.expect_navigation():
         page.locator("[data-fb-save]").click()
-    page.locator("[data-fb-said]").filter(has_text="Saved to this scratch exercise.").wait_for()
+    page.locator("[data-fb-said]").filter(has_text="Saved.").wait_for()
     assert page.locator("[data-pn-kept]").is_hidden()
     assert page.locator('th[data-panel="panel-1"]').inner_text().startswith("Readers")
     # Saved again, it keeps its key.
     with page.expect_navigation():
         page.locator("[data-fb-save]").click()
-    page.locator("[data-fb-said]").filter(has_text="Saved to this scratch exercise.").wait_for()
+    page.locator("[data-fb-said]").filter(has_text="Saved.").wait_for()
     assert page.locator('th[data-panel="panel-1"]').inner_text().startswith("Readers")
     assert page.locator("[data-pn-row]").count() == 1
     assert who[1] in page.locator("[data-pn-row]").first.inner_text()
