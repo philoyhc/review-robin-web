@@ -347,8 +347,9 @@ class Outcome(Base):
 
 
 class OutcomeValue(Base):
-    """A value an outcome decides (AD-57): rules and cells name it by key,
-    so renaming its label orphans nothing; ``advances`` says whether it
+    """A value an outcome decides (AD-57): rules name it by key, kept
+    while its label stands (a label changed on Process is a new value until
+    the page carries keys, `process_store`); ``advances`` says whether it
     takes the application on."""
 
     __tablename__ = "outcome_value"
