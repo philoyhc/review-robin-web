@@ -21,7 +21,24 @@ from cordware.settings import identity_settings
 pytestmark = pytest.mark.usefixtures("unseeded")
 
 ROOT = Path(__file__).resolve().parents[2]
-TABLES = {"person", "exercise", "exercise_operator", "exercise_tag", "audit_event"}
+TABLES = {
+    "person",
+    "exercise",
+    "exercise_operator",
+    "exercise_tag",
+    "audit_event",
+    # AD2C: the timeline, its gates and outcomes, and Candidates.
+    "stage",
+    "gate",
+    "gate_field",
+    "gate_result",
+    "gate_source",
+    "outcome",
+    "outcome_value",
+    "outcome_weight",
+    "outcome_release",
+    "candidate",
+}
 
 
 def _config(url: str) -> Config:
