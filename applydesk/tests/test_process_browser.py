@@ -1896,3 +1896,20 @@ def test_swapping_two_values_swaps_their_rules(page: Page) -> None:
     rows.nth(1).fill(first)  # distinct again: both renames apply together
     got = cast(dict[str, Any], _rule(o1))
     assert got["then"] == second and got["otherwise"] == first
+
+
+def test_swapping_two_values_through_a_blank_row_swaps_their_rules(page: Page) -> None:
+    """Codex on #4161: a swap made by clearing one row first waits for the
+    blank row too, so the two renames apply together."""
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    first, second = _values(o1)[:2]
+    rule = {"when": [["status", "", "is", "Submitted"]], "then": first, "otherwise": second}
+    o1.evaluate("(e, r) => { e.dataset.rule = JSON.stringify(r); }", rule)
+    rows = o1.locator('[data-pc="value"]')
+    rows.nth(0).fill("")
+    rows.nth(1).fill(first)  # the first row blank: nothing moves yet
+    assert cast(dict[str, Any], _rule(o1)) == rule
+    rows.nth(0).fill(second)
+    got = cast(dict[str, Any], _rule(o1))
+    assert got["then"] == second and got["otherwise"] == first

@@ -611,7 +611,7 @@
   }
   // Each row's data-was is the label the rules name it by. While two rows
   // read alike (typed through a sibling's label, or a swap half-done) or a
-  // row is blank, nothing moves; once every label is distinct again, each
+  // row that had a value is blank, nothing moves; once every label is distinct again, each
   // row's rename applies together, by row, so no value's rules go to
   // another (cold read; Codex on #4161).
   function reconcileValues(outcome) {
@@ -622,6 +622,9 @@
     var seen = {};
     for (var i = 0; i < rows.length; i++) {
       var n = rows[i].now;
+      // A row with a value, cleared for now (a swap through a blank row),
+      // waits too: its rename and the others' apply together (Codex on #4161).
+      if (!n && rows[i].was) return;
       if (!n) continue;
       if (seen[n]) return;
       seen[n] = true;
