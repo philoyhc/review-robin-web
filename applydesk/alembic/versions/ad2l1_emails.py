@@ -5,7 +5,7 @@ Revises: ad2d1form
 Create Date: 2026-11-23
 
 An exercise's emails in the database (segment AD2L,
-`applydesk/guide/segment_AD2L_emails.md`): `email_send`, a row per
+`applydesk/guide/archive/segment_AD2L_emails.md`): `email_send`, a row per
 (item, audience) Process ticks, retired when unticked; `email_template`,
 a row per (item, audience) with its subject, body and the version its
 saves count; and `exercise.sends_saved`, false until Process records its

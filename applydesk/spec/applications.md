@@ -4,10 +4,10 @@
 > a real check of who may reach it. Every move works on screen. An
 > exercise's own settings (Details, the Lobby's name, code and tags, its
 > archive), its Process (stages, gates, outcomes, rules, the form's state),
-> its Form and its Candidates are stored in the database; the rest of a sample
-> exercise saves nothing until a later AD2 segment, a scratch exercise's
-> other pages are held in the server's memory ("Scratch exercises"), and
-> nothing is sent to Review Robin until AD6.
+> its Form, its Panels, its Emails and its Candidates are stored in the
+> database; the rest of a sample exercise saves nothing until a later AD2
+> segment, a scratch exercise itself is held in the server's memory
+> ("Scratch exercises"), and nothing is sent to Review Robin until AD6.
 
 Apply Desk's contract with the Cordware host. The host's side is
 `cordware/spec/host.md`; this file states only what Apply Desk adds. The
@@ -475,11 +475,11 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     *Cancel*, *Unselect others* and *Unselect all* only untick rows in the
     browser. *New exercise*, the tick boxes and the panel's opening work.
 - **Scratch exercises** (`applydesk/scratch.py`). Until AD2 stores the
-  rest, an operator sets an exercise up end to end in one whose emails
-  are held in the server's memory and never written anywhere. Its
-  settings, its Process, its Panels, its Form and its Candidates are the
-  database's, as any exercise's (Details; "The Process page"; "The Panels
-  page"; "The Form page").
+  rest, an operator sets an exercise up end to end in one that is itself
+  held in the server's memory (until AD2G). Every page of it saves to the
+  database, as any exercise's: its settings, Process, Panels, Form, Emails
+  and Candidates (Details; "The Process page"; "The Panels page"; "The Form
+  page"; "The Emails page").
   - **Making and keeping.** *New exercise* opens a form asking for a name
     (1–200 characters); *Create* makes a blank draft, as *Graduate Travel
     Grant 2027* (one stage holding the form, nothing else), and lands on its
@@ -516,8 +516,7 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     Evaluations show their empty states.
   - **A save** is a same-site JSON post (403 for another site, 415 for
     non-JSON, 400 for malformed JSON) of at most `scratch.MAX_BODY`
-    (256 KiB; 413 past it). The page (Details, Process, Panels and Form apart,
-    which save to the database and say *Saved.*) says *Saved to this scratch exercise.* or the reason it was
+    (256 KiB; 413 past it). The page says *Saved.* or the reason it was
     refused, and a saved page's *Unsaved changes* marker clears. A page edited while its save was on the way
     stays unsaved. Shapes are checked, not the plan: what a page flags
     itself (dates out of order, weights not adding up) is kept as left and
@@ -532,28 +531,15 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     card's number. A new form is empty (one blank question), not the
     sample's. `sample_data.form_cards` and `form_heading` read it back.
   - **Process** is not kept here: it saves to the database for every
-    exercise ("The Process page"). Only the emails it ticks stay in this
-    store, as `workflow.sends` reads them, until Emails is stored; on a
-    sample exercise they stay the sample's.
+    exercise ("The Process page"), the emails it ticks included ("The
+    Emails page").
   - **Panels** is not kept here: it saves to the database for every
     exercise, as does a panel made with *+ New panel…* on Form or Process,
     with the save that names it; its checks are "The Panels page".
-  - **Revision.** Emails sends the Process revision its page opened at
-    (`workflow.process_revision`), and a save from a page older than the
-    last Process save is refused (*reload Emails*), so no stale key lands on
-    another outcome.
+  - **Emails** is not kept here: a card's *Save* keeps its template in the
+    database for every exercise ("The Emails page").
   - **Reload.** A save that keys something anew (a panel) reloads the page
     so it holds the keys kept, and says it saved once back.
-  - **Emails** (a card's *Save*, to `…/emails`): by the item, audience and
-    name Process owes it for, not the tab. Refused for an email Process does
-    not owe, including a card on a page opened before Process last saved
-    (its revision; *reload Emails*), a subject over 300 characters or a body over 20,000, or
-    another kind's merge tag (`workflow.foreign_tags`). `workflow.emails`
-    counts it written once it has a subject and a body, else the card says
-    it is still owed; the chip, the status row and Home follow.
-    `workflow.template_text` opens a card as saved, empty if never.
-    Process's save carries each outcome's templates to its new key and
-    drops a removed outcome's (`workflow.rekey_templates`).
 - **The User Lobby** (`applydesk/templates/applydesk/me/home.html`), three
   cards: *My applications*, each of the applicant's own with its state,
   linking its page, a draft included; *Open to me*, each Published or
@@ -1211,8 +1197,9 @@ but the lobby's *Stage* column reads:
     a published one's `open` or `closed`).
   - **Audited** as `exercise.process_saved` with the counts of stages,
     gates and outcomes saved and retired, and the new revision.
-  - **A scratch exercise** saves the same way; the emails it ticks stay in
-    its store ("Scratch exercises"). A panel made with *+ New panel…* is
+  - **The emails it ticks** are recorded with the save, in its transaction,
+    for every exercise (`email_store.save_sends`; "The Emails page"). A
+    scratch exercise saves the same way. A panel made with *+ New panel…* is
     stored with the save, on a sample too ("The Panels page").
 - **The outcome values editor.** An outcome's values are rows, each carrying
   its key; a renamed value keeps its key and the page rewrites the rules
@@ -1254,8 +1241,8 @@ but the lobby's *Stage* column reads:
   outcome with an owed email is not ready to release. `workflow.steps`
   records which audiences' emails are not written, but no page shows it
   until a Workflow card returns; meanwhile the *Owed* chips and the status
-  row's Emails pill do. Template text is written on Emails (saved in the tab
-  until AD2); sending comes later (AD6, AD7).
+  row's Emails pill do. Template text is written on Emails; sending comes
+  later (AD6, AD7).
 - **Preview** of the timeline the cards describe is not built.
 
 ## The Panels page
@@ -1357,8 +1344,8 @@ A panel made on Form or Process appears here once that page is saved.
     which records them with the page's changes and keeps their keys.
   - **After a save** the page reloads to hold the keys kept.
 - **A panel made on Form or Process** (*+ New panel…*) is stored with that
-  page's own save, for every exercise (a sample's Process included; Form
-  saves only on a scratch exercise), in the same transaction and under the
+  page's own save, for every exercise (a sample's included), in the same
+  transaction and under the
   exercise's lock, so a refusal of either keeps neither. It is minted a key,
   named and capped as above, its members join the roster, and a panel the
   exercise already holds by that name is that panel, not a second one. A
@@ -1777,8 +1764,7 @@ from AD2.
 Every template the exercise owes (see Process, "Emails"), a card each in
 timeline order (`workflow.emails`). A line above them says Process ticks
 which items email whom, that evaluators' invitations and reminders for a
-linked gate come from Apply Desk (AD7; Review Robin sends none), and that a
-saved template is kept in the tab only.
+linked gate come from Apply Desk (AD7; Review Robin sends none).
 
 - **Each card** is named for its email, `em-<item>-<audience>`
   (`workflow.email_anchor`), so a link reaches it wherever it falls; its
@@ -1806,14 +1792,35 @@ saved template is kept in the tab only.
   default (`workflow.DEFAULT_TEMPLATES`).
 - **Save**, each card's own (ruling 23; the page has none): on while the
   card differs from what it last saved, an *Unsaved changes* marker beside
-  it. It keeps the template in the tab (`sessionStorage`, by exercise); a
-  template is *Written* once saved with a subject and a body, else
-  *Owed*. A kept template shows only while Process still makes it owed.
-  On a sample exercise nothing is saved until AD2; until then the status
-  row's *Emails*, Home and Dossiers' *Released* read the sample's
-  templates. A scratch exercise's *Save* keeps the template in the
-  exercise, not the tab, and the status row and Home follow it. Leaving with a
-  card unsaved asks first.
+  it. It posts to `…/emails` for every exercise and keeps the template in the
+  database (`email_store.save_template`), by the item, audience and name
+  Process owes it for; the status row's *Emails*, Home and Dossiers'
+  *Released* follow it. A template is *Written* once it has a subject and a
+  body, else *Owed* (*Saved, still owed*). A kept template shows only while
+  Process still makes it owed. A sample's card never saved keeps its default
+  (*Written*) or empty (*Owed*) state, and a scratch exercise's is empty
+  and *Owed*. Leaving with a card unsaved asks first. A save says *Saved.*
+  (or *Saved, still owed: it needs a subject and a body.*), or is refused,
+  saying why, when:
+  - the post is malformed (400);
+  - the email is not one Process owes, or the page opened before Process last
+    saved (`workflow.process_revision`, sent as the page's revision), checked
+    under the exercise's lock so no stale key lands on another outcome (400,
+    *reload Emails*);
+  - the template was saved since the page opened (409, *saved since the page
+    opened; reload*): each card carries its own `version`, how many times it
+    was saved, sent back with the save, taken from the same read as its text
+    and updated after each save, so a card's save does not stale the others;
+  - a subject is over 300 characters or a body over 20,000 (400);
+  - the text names another kind's merge tag (`workflow.foreign_tags`; 400);
+  - the exercise is archived, or deleted meanwhile (400);
+  - another save of a new template lost the race (409, *reload and retry*).
+
+  Saved audited as `exercise.email_saved` (`context`: `item`, `audience`,
+  `version`, `written`). Process's *Save* records the emails it ticks for
+  every exercise, with its timeline; until a sample's is first saved the
+  sample keeps its own ticks (`workflow.sends`). A template whose email
+  Process retires is kept, not shown.
 - **Reset to default** puts the kind's default in the card, asking first
   over other text; on the default already it says so. The button reads
   *Start from the default* while the subject or the body is empty, but asks
@@ -1850,8 +1857,7 @@ saved template is kept in the tab only.
   gates; `$exercise_url` the participant page, under the mount (the route
   adds it, `_email_sample`). As Review Robin's, a default body drops each
   line whose tag comes out empty; here a body is a default when it equals
-  its kind's default, saved in the tab or not, since nothing is saved
-  until AD2. Elsewhere, in a subject or a body of one's own, a tag with no
+  its kind's default, saved or not. Elsewhere, in a subject or a body of one's own, a tag with no
   value in the sample (a draft has no application) shows dimmed. Another
   kind's tag shows marked.
   It follows the card as it is typed.

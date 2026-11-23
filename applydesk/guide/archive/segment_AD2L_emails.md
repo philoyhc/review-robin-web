@@ -51,6 +51,24 @@ Taken 2026-11-23 at `5fd6aec29`.
 | Calls of the Emails readers | 7 | `grep -rn 'workflow.emails(\|workflow.sends\|template_text(\|scratch_templates(' applydesk/*.py \| grep -v "def "` |
 | Test files on Emails or the ticks | 7 | `grep -rln '/emails"\|data-em-save\|em-said\|template_text\|workflow.sends' applydesk/tests --include=*.py` |
 
+## Status
+
+**Closed 2026-11-23.** Intended versus done:
+
+- **The ladder held:**
+  - #4179 plan;
+  - #4180 tables;
+  - #4181 `email_store`;
+  - #4182 Emails and the ticks stored for every exercise, which also carried the cumulative read.
+- **Decisions confirmed at build:**
+  - The owed check is a callable the store reads under the exercise's lock. A Process save that lands first is therefore seen.
+  - A card's text and version come from one read. Read separately, a save landing between them could pair old text with a newer version (cold read).
+  - Recording no ticks at all is a valid save: the exercise sends no email.
+  - With every Setup page in the database, the scratch page store (`scratch.page`, `save_page`, `Scratch.pages`) is deleted here rather than in AD2G. The browser-held exercise itself stays until AD2G.
+  - A refusal that already says "Not saved" is shown once.
+- **Left:** `workflow.sends` still opens a session per call, and Process's cards call it per outcome. This is a cost, not a defect, and goes with AD2G's request-scoped loading.
+- **Reads:** one cumulative `diff-reviewer` read of rungs 2–4 (base `26fbd7687`) found 3 defects and several leftovers, all fixed except the per-call reads above.
+
 ## PR ladder
 
 1. **PR 1 — this plan.**
