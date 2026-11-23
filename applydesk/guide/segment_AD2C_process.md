@@ -127,7 +127,7 @@ Taken 2026-11-22 at `1ceb1d592`.
   - Published stages: the save refuses only their removal. Refusing other edits to them, and an audited revert to draft, move to rung 9 with the form's state.
   - `plan_of` reads the store on every call, without a per-request cache: about 200 queries on a saved sample's Process, 0.17 s locally. AD2G's request-scoped loading.
   - Sources and weights are replaced on each save, not retired: they are parts of a gate or an outcome, never named on their own.
-  - An outcome value renamed on the page takes a new key (Codex on #4154): its values are one list of labels. Keeping the key waits on a values editor that carries keys.
+  - An outcome value renamed on the page takes a new key (Codex on #4154): its values are one list of labels. **Ruled 2026-11-23 (author):** a values editor that carries each value's key through a rename is built within AD2C, as its own rung after rung 9 and before the close.
   - `applydesk/spec/applications.md` still describes renumbering and `removed`: the close's spec pass.
   - Rung 9: re-adding a removed candidate revives its row (`uq_candidate_pair`); the Decision's `candidate_list` became `stage.holds_candidates`.
 

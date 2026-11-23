@@ -22,6 +22,7 @@ pending person at their first sign-in) and the answer kept on
 from __future__ import annotations
 
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request
 from sqlalchemy import select
@@ -209,3 +210,25 @@ def placeholders_only(request: Request) -> None:
     `reaches_placeholders`, else 404."""
     if not reaches_placeholders(request):
         raise HTTPException(status_code=404)
+
+
+def same_site(request: Request) -> None:
+    """Every post comes from Apply Desk's own pages (AD-126): a browser
+    naming another site in ``Sec-Fetch-Site`` is refused; one that sends
+    no such header (Safari before 16.4) must name this origin in
+    ``Origin``, else in ``Referer``, or the post is refused too. The host
+    sets the request's scheme and host to the public origin (segment 21E),
+    so the request's own URL is the origin to match."""
+    site = request.headers.get("sec-fetch-site")
+    if site is not None:
+        if site not in ("same-origin", "none"):
+            raise HTTPException(status_code=403)
+        return
+    here = f"{request.url.scheme}://{request.url.netloc}"
+    origin = request.headers.get("origin")
+    if not origin or origin == "null":
+        referer = request.headers.get("referer", "")
+        parts = urlsplit(referer)
+        origin = f"{parts.scheme}://{parts.netloc}" if parts.scheme and parts.netloc else ""
+    if origin != here:
+        raise HTTPException(status_code=403)
