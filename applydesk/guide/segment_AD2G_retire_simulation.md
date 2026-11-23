@@ -86,6 +86,7 @@ Taken 2026-11-23 at `31fecbe33`.
   - Duplicate made a blocking lookup on the event loop.
   - The cap's lock was `FOR UPDATE`; it is now `FOR NO KEY UPDATE`, taken after the allowlist check.
   - `--reset` trusted `APP_ENV` alone; it now needs a SQLite or localhost URL.
+  - Codex on #4188: `--reset` by downgrade failed on data the old constraints forbid (two Owners stop `ad2m2`); it now drops Apply Desk's own tables and upgrades to head.
   - Weak cap and co-operator tests were strengthened.
 - **Found while building:**
   - The seed walked `sample_data.exercises()`, which now lists ordinary rows too; it walks the samples only.
