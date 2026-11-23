@@ -139,6 +139,8 @@ jobs:
         # it drops the schema it is pointed at. Under -n each xdist worker
         # runs on its own database derived from it, rrw_gw0 and on
         # (tests/conftest.py, guide/archive/segment_22B_postgres_parallel.md).
+        # Apply Desk's tests derive their own database from it the same way,
+        # rrw_ad and rrw_ad_gw0 on (applydesk/tests/conftest.py, AD-128).
         env:
           TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
           PYTEST_ARGS: ${{ matrix.shard.pytest_args }}
