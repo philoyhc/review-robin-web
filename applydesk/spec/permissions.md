@@ -112,6 +112,14 @@ whole or not at all. *To build:* the purge (AD2D, with stored applications:
 - **Leave**: an operator takes themself off, and lands on the Lobby. An Owner
   steps down first.
 - **Archived exercises** refuse every move, read under the row lock.
+- **Who sees an exercise.** A made exercise (not a sample) is seen as any
+  exercise is: by those holding a current grant on it, so every operator an
+  Owner adds sees it, and nobody else does. Nothing is held by a browser.
+- **Making one** is the Operator's, an Admin's or the super-admin's (§2),
+  refused otherwise before the cap. A person may hold at most 50 live
+  exercises of their making (archived and deleted ones, and the samples,
+  do not count); the count is taken under a lock on their person row, so two
+  makes at once cannot both pass.
 
 ## 4. Participants
 
@@ -263,8 +271,8 @@ Every change writes an `audit_event` with the actor.
 | `exercise.owner_demoted` | an Owner made an operator, or stepping down (`context.stepped_down`) | Yes |
 | `exercise.operator_left` | an operator leaves | Yes |
 | `exercise.adopted` | an Admin or the super-admin adopts an exercise as Owner (not when already an Owner) | Yes |
-| `exercise.archived`, `exercise.restored`, `exercise.deleted` | an Owner archives (*Purge and archive* too, which only archives), restores, or deletes; the holder of a scratch exercise discards it (`exercise.deleted`) | Yes |
-| `exercise.settings_recorded`, `exercise.details_changed`, `exercise.duplicated` | an exercise's settings recorded from the sample (the seed), changed (Details' *Lock*, the Lobby's *Save* and tag actions), or copied | Yes |
+| `exercise.archived`, `exercise.restored`, `exercise.deleted` | an Owner archives (*Purge and archive* too, which only archives), restores, or deletes (*Delete* on the Lobby's panel); deleting is Owner-only, with no exception | Yes |
+| `exercise.settings_recorded`, `exercise.details_changed`, `exercise.duplicated` | a sample's settings recorded (the seed), changed (Details' *Lock*, the Lobby's *Save* and tag actions), or copied | Yes |
 | `exercise.process_saved`, `exercise.stage_reverted` | Process saved; a published stage reverted to draft by a save, with its reason | Yes |
 | `exercise.form_opened`, `exercise.form_closed` | Home's *Open form*, *Close form* | Yes |
 | `candidate.added`, `candidate.removed` | someone listed in an exercise's Candidates (`context.via`: `search` or `csv`) or taken off | Yes |

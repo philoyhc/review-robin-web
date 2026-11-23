@@ -6,8 +6,8 @@
 > archive), its Process (stages, gates, outcomes, rules, the form's state),
 > its Form, its Panels, its Emails and its Candidates are stored in the
 > database; the rest of a sample exercise saves nothing until a later AD2
-> segment, a scratch exercise itself is held in the server's memory
-> ("Scratch exercises"), and nothing is sent to Review Robin until AD6.
+> segment, and nothing is sent to Review Robin until AD6. A made exercise
+> ("Ordinary exercises") is a row in the database like any other.
 
 Apply Desk's contract with the Cordware host. The host's side is
 `cordware/spec/host.md`; this file states only what Apply Desk adds. The
@@ -169,7 +169,7 @@ answer only for a Published or Closed exercise.
   Apply Desk page; else *Back to Operator Lobby*.
   - **Exercises Diagnostics** and **System Status** are scaffolds: static
     copy and layout, no data wired but the Owners. Exercises Diagnostics lists
-    the sample exercises (columns *Exercise*, *Exercise code*, *Owners*,
+    the ordinary exercises and the samples (columns *Exercise*, *Exercise code*, *Owners*,
     *Opens*, *Applications close*, *Timezone*, *State*), with *Manage*, and
     *Outbox* and *Audit log*, disabled with a title saying each is not built
     yet. *Owners* is every current Owner on record, comma-separated
@@ -361,15 +361,14 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
   `routes_operator.exercises`), laid out as Review Robin's Sessions lobby: two
   cards over one table of the exercises the viewer owns or operates (the
   super-admin and Admins included; the others are on Exercises Diagnostics),
-  newest *Created* first by default (`sample_data.newest_first`), this
-  browser's scratch exercises among them, not ahead of them. One not recorded
-  goes last. The rows come from the database: an archived or deleted
+  newest *Created* first by default (`sample_data.newest_first`). One not
+  recorded goes last. The rows come from the database: an archived or deleted
   exercise is not in the Lobby.
   - **Cards.** *Exercises*: a chip for the total, then one per status in
     `locks.STATUS_ORDER` (`locks.status_counts`, empty ones kept, so the chips
     add up to the total), then *Show exercises tagged with:* the tags shown
     (`sample_data.all_tags`), *OR* and *Clear*. *Filter*: a box (name, code
-    or tag), *Clear*, *New exercise* (Primary; opens the scratch form below)
+    or tag), *Clear*, *New exercise* (Primary; opens the name form, "Ordinary exercises")
     and *Go to Archive* (the Archive, below).
   - **Columns**, in order: *Exercise* (its name, linking Home), *Exercise
     code* (*Not set* when none; the public ID shows only in the link), *Your
@@ -419,9 +418,10 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     An unknown value is ignored, never echoed. A panel post returns to the
     Lobby with the query kept.
   - **The panel posts** to `/operator/exercises/panel` (`routes_operator.exercises_panel`):
-    a same-site form post of at most `scratch.MAX_BODY`; it ends on the
+    a same-site form post of at most `web.MAX_BODY`; it ends on the
     Lobby with a status line chosen by key (`routes_operator.SAID`). Every
-    ticked exercise must be one the viewer operates.
+    ticked exercise must be one the viewer operates, and at most 500
+    (`routes_operator.MOST_TICKED`) are taken.
     - *Save* (one row): name, code and tags, revision-guarded: the Lobby
       names the revision each row was drawn at, and a save over a newer one
       is refused and saves nothing. The name is 1–200 characters and the code
@@ -434,8 +434,9 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
       pass 20 tags refuses the lot.
     - *Duplicate settings only*: a new Draft exercise with the source's
       settings and tags, named *Copy of <name>* with no code, its Owner the
-      viewer. It is made as *New exercise* makes one, counts toward the five a
-      browser may hold, and lands on its Home. *Duplicate*, which would copy
+      viewer. It is made as *New exercise* makes one (`exercises.make`: the
+      same refusals and the same cap, "Ordinary exercises"), and lands on its
+      Home. *Duplicate*, which would copy
       the whole setup, stays disabled: it waits for stages, forms and
       applications to be stored (AD2C–AD2F).
     - *Purge and archive* **archives only**: purging waits for AD2D's stored
@@ -474,55 +475,51 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     saying what it waits for: *Duplicate* and the purge boxes (above).
     *Cancel*, *Unselect others* and *Unselect all* only untick rows in the
     browser. *New exercise*, the tick boxes and the panel's opening work.
-- **Scratch exercises** (`applydesk/scratch.py`). Until AD2 stores the
-  rest, an operator sets an exercise up end to end in one that is itself
-  held in the server's memory (until AD2G). Every page of it saves to the
-  database, as any exercise's: its settings, Process, Panels, Form, Emails
-  and Candidates (Details; "The Process page"; "The Panels page"; "The Form
-  page"; "The Emails page").
-  - **Making and keeping.** *New exercise* opens a form asking for a name
-    (1–200 characters); *Create* makes a blank draft, as *Graduate Travel
-    Grant 2027* (one stage holding the form, nothing else), and lands on its
-    Home. A refusal (no name, or a sixth) returns to the Lobby saying why. Making one
-    also makes its `exercise` row and its Owner, the viewer, in one
-    transaction; if the viewer may not make one (not on the operator list, or
-    not bindable), nothing is made and the Lobby says it could not be. The
-    super-admin needs no list membership, only a person row, and is the Owner. *Discard*
-    deletes its row as the panel's *Delete* does (`deleted_at`,
-    `exercise.deleted` audited), so its code is free again. It is not
-    Owner-only: only the browser holding it reaches a scratch exercise, so
-    its holder discards it even after handing ownership on; the row and grant
-    stay, as nothing is hard-deleted. One gone by expiry or a restart keeps
-    its row live, code included, until AD2G retires the scratch store.
-    Its *Created* is stamped at *Create* (`scratch.py`), in UTC with its
-    offset; it has no tags. Its row carries a *Scratch* chip and *Discard*
-    (Destructive), which asks
-    first; a scratch exercise cannot be got back. The Lobby's status line
-    shows only its own messages: the redirect carries a key
-    (`routes_operator.SAID`), never the text, so a link cannot put words
-    on the page. Every page of one says
-    what it is in place of the placeholder line.
-  - **Whose and for how long.** One browser's, keyed by an opaque HttpOnly
-    `applydesk-scratch` cookie on the mount's path (SameSite Lax, Secure
-    over https), renewed on each request while the store lives. At most five
-    per browser; gone after a restart, a deploy or eight idle hours. Another
-    browser's request naming its ID gets a 404, as does *Discard* or a save
-    on a sample exercise. Its ID is drawn as any exercise's and never
-    equals a sample's or another live scratch exercise's.
-  - **What every page reads.** `sample_data` and `stages` consult the store
-    before the fixed sample, so Home, Process, Dossiers, Evaluations,
-    Emails, Preview and the applicant pages see what the Setup pages saved,
-    with no route of their own. It holds no applications, so Dossiers and
-    Evaluations show their empty states.
+- **Ordinary exercises.** Every live `exercise` row that is not a sample
+  (`sample_data.is_sample`, `SAMPLE_IDS`) is an ordinary exercise, however it
+  was made. An operator sets one up end to end: every page of it saves to
+  the database, as any exercise's (Details; "The Process page"; "The Panels
+  page"; "The Form page"; "The Emails page"). A sample stays a fixed fixture, and `sample_data.sample` reads one with no
+  database read.
+  - **Making.** *New exercise* opens a form asking for a name (1–200
+    characters); *Create* makes a blank Draft and lands on its Home.
+    *Duplicate settings only* makes one too. Both go through
+    `exercises.make`, which makes the row and its Owner, the viewer, in one
+    transaction. A refusal returns to the Lobby saying why, by key
+    (`exercises.MAKE_REFUSALS`): `name_needed`, `name_long`, `not_listed` (the
+    viewer is not on the operator list, or not bindable: nothing is made) and
+    `full`. The super-admin needs no list membership, only a person row, and
+    is the Owner. The Lobby's status line shows only its own messages: the
+    redirect carries a key (`routes_operator.SAID`), never the text, so a link
+    cannot put words on the page.
+  - **The cap.** A person may hold at most 50 live exercises of their making
+    (`exercises.MOST_MADE`): archived and deleted ones, and the samples, do
+    not count. The allowlist is checked before the cap. The count is taken
+    under `FOR NO KEY UPDATE` on the person's row, so two makes at once cannot
+    both pass.
+  - **What one reads.** `exercises.from_row` builds it: a blank Draft named
+    by its row (*Untitled exercise* when the name is NULL), its *Created* the
+    row's `created_at`, no code, no tags, one stage holding the form, a blank
+    form and blank emails (every template *Owed*), no applications, so
+    Dossiers and Evaluations show their empty states. `sample_data.exercise`
+    and `exercises()` return a sample, else an ordinary exercise's row;
+    `exercises()` lists the ordinary ones newest first, then the samples.
+    Stored settings overlay it as they do a sample's. Its first change marks
+    its revision recorded; it is not recorded as a sample.
+  - **Who sees one.** The grant gate decides ("The Lobbies" above;
+    `applydesk/spec/permissions.md` §3), so a co-operator sees it.   - **Deleting.** *Delete* on the Lobby's panel (above) is the only way, and
+    an Owner's alone: the row and its grants stay, its code is free again.
+    There is no second route and no exception for the person who made it.
   - **A save** is a same-site JSON post (403 for another site, 415 for
-    non-JSON, 400 for malformed JSON) of at most `scratch.MAX_BODY`
-    (256 KiB; 413 past it). The page says *Saved.* or the reason it was
-    refused, and a saved page's *Unsaved changes* marker clears. A page edited while its save was on the way
-    stays unsaved. Shapes are checked, not the plan: what a page flags
-    itself (dates out of order, weights not adding up) is kept as left and
-    flagged again; only what has no shape to be kept in is refused.
-  - **Details** (*Lock*, to `…/details`) is not kept here: it saves to the
-    database for every exercise ("Details").
+    non-JSON, 400 for malformed JSON) of at most `web.MAX_BODY` (256 KiB; 413
+    past it). The page says *Saved.* or the reason it was refused, and a
+    saved page's *Unsaved changes* marker clears. A page edited while its
+    save was on the way stays unsaved. Shapes are checked, not the plan: what
+    a page flags itself (dates out of order, weights not adding up) is kept as
+    left and flagged again; only what has no shape to be kept in is refused.
+    The Setup pages' save script is `_page_save_js.html`.
+  - **Details** (*Lock*, to `…/details`) saves to the database for every
+    exercise ("Details").
   - **Form** (to `…/form`, `applydeskFormSnapshot`): at most 200 cards, a
     title of at most 200 characters, a description of at most 4,000; each
     card of a known kind, a field of a type offered, its text within its
@@ -530,14 +527,10 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     the exercise has (blank reads *Institution-wide*); a refusal names the
     card's number. A new form is empty (one blank question), not the
     sample's. `sample_data.form_cards` and `form_heading` read it back.
-  - **Process** is not kept here: it saves to the database for every
-    exercise ("The Process page"), the emails it ticks included ("The
-    Emails page").
-  - **Panels** is not kept here: it saves to the database for every
-    exercise, as does a panel made with *+ New panel…* on Form or Process,
-    with the save that names it; its checks are "The Panels page".
-  - **Emails** is not kept here: a card's *Save* keeps its template in the
-    database for every exercise ("The Emails page").
+  - **Process**, **Panels** and **Emails** save to the database for every
+    exercise, a panel made with *+ New panel…* on Form or Process with the
+    save that names it; their checks are in "The Process page", "The Panels
+    page" and "The Emails page".
   - **Reload.** A save that keys something anew (a panel) reloads the page
     so it holds the keys kept, and says it saved once back.
 - **The User Lobby** (`applydesk/templates/applydesk/me/home.html`), three
@@ -567,7 +560,7 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
 
 The application form builder on the Form tab,
 `/operator/exercises/<id>/form`. Every move works in the browser, and *Save*
-keeps the form in the database for every exercise, sample or scratch ("Saving
+keeps the form in the database for every exercise ("Saving
 Form"). Until it is first saved, a sample exercise shows its sample form. A
 blank exercise shows the form's own card and one empty String card, open.
 
@@ -674,7 +667,7 @@ blank exercise shows the form's own card and one empty String card, open.
   `applydesk/guide/todo_master.md`.
 - **Saving Form** (`applydesk/form_store.py`; the post is
   `routes_operator.exercise_form_save`, a same-site JSON post of at most
-  `scratch.MAX_BODY`). *Save* replaces the form, its title, description and
+  `web.MAX_BODY`). *Save* replaces the form, its title, description and
   cards, in one transaction under the exercise's lock, guarded by
   `exercise.form_revision` (0 until Form is first saved). The post names the
   revision the page opened at, and a save returns the new one. A sample's
@@ -825,10 +818,13 @@ Unlocked, each is a field with a line saying where it is used.
   changed. *Unsaved changes* shows, and the browser warns on leaving, from
   any change since load.
 - *Lock* refuses an empty Name (at most 200 characters), an Exercise code of
-  more than 40 characters or one a live exercise holds (any case, saying
-  whose), a Description of more than 2,000 characters, and a Help contact that
+  more than 40 characters or one a live exercise holds (any case), a Description of more than 2,000 characters, and a Help contact that
   is not an email address. The Timezone is chosen from `sample_data.TIMEZONES`,
-  the default first. A refusal points at the field it names.
+  the default first. A refusal points at the field it names. The page's own code check lists
+  only exercises the viewer operates; a clash with any other is the
+  server's to refuse, saying *<code> is already another live exercise's
+  code* and naming no exercise, and *Restore* on the Archive likewise says
+  the code *is now another live exercise's code*.
 - A published exercise's Exercise code and Who may apply are fixed, saying
   so; changing them waits for re-publishing (G2).
 - **Blind review** is fixed, with its reason, once the first stage holding a
@@ -837,8 +833,8 @@ Unlocked, each is a field with a line saying where it is used.
   may apply on a published exercise, and a changed Blind review once it is
   fixed, are refused whatever the post says.
 - **Saved to the database**, for any exercise the viewer operates, sample or
-  scratch: *Lock* posts JSON to `…/details` (`routes_operator.exercise_details`;
-  415 for non-JSON, 413 past `scratch.MAX_BODY`), and a reload or a restart
+  ordinary: *Lock* posts JSON to `…/details` (`routes_operator.exercise_details`;
+  415 for non-JSON, 413 past `web.MAX_BODY`), and a reload or a restart
   shows the saved values. The post names the revision the page opened at;
   one older than the stored revision is refused with a 409 saying someone else
   changed the details, saves nothing, and the page keeps the unsaved values.
@@ -1155,9 +1151,9 @@ but the lobby's *Stage* column reads:
   it. *Save* and the *Unsaved changes* marker sit at its foot, kept as Form's
   are (ruling 23): a warning on leaving with changes pending.
 - **Saving Process** (`applydesk/process_store.py`; the post is
-  `routes_operator.exercise_process_save`, a same-site JSON post as a
-  scratch save's, at most `scratch.MAX_BODY`). *Save* is live on every
-  exercise, sample and scratch, and keeps the page's whole snapshot in the
+  `routes_operator.exercise_process_save`, a same-site JSON post of at
+  most `web.MAX_BODY`). *Save* is live on every
+  exercise and keeps the page's whole snapshot in the
   database, replacing the draft (ruling 23); a reload or a restart shows it.
   - **One transaction**, under the exercise's row lock, guarded by
     `exercise.process_revision` (0 until the first save). The post names the
@@ -1199,7 +1195,7 @@ but the lobby's *Stage* column reads:
     gates and outcomes saved and retired, and the new revision.
   - **The emails it ticks** are recorded with the save, in its transaction,
     for every exercise (`email_store.save_sends`; "The Emails page"). A
-    scratch exercise saves the same way. A panel made with *+ New panel…* is
+    panel made with *+ New panel…* is
     stored with the save, on a sample too ("The Panels page").
 - **The outcome values editor.** An outcome's values are rows, each carrying
   its key; a renamed value keeps its key and the page rewrites the rules
@@ -1311,7 +1307,7 @@ A panel made on Form or Process appears here once that page is saved.
   when the directory has no such person.
 - **Checks.** An email is required, found in the directory and listed once.
 - **Save** (`routes_operator._save_panels`; `applydesk/panels_store.py`),
-  for every exercise, sample or scratch: the page's panels and roster are
+  for every exercise: the page's panels and roster are
   kept in the database, and a page saved says *Saved.*.
   - **Revision.** The page carries the `exercise.panels_revision` it opened
     at (read before its panels). A save from an older one is refused whole
@@ -1798,7 +1794,7 @@ linked gate come from Apply Desk (AD7; Review Robin sends none).
   *Released* follow it. A template is *Written* once it has a subject and a
   body, else *Owed* (*Saved, still owed*). A kept template shows only while
   Process still makes it owed. A sample's card never saved keeps its default
-  (*Written*) or empty (*Owed*) state, and a scratch exercise's is empty
+  (*Written*) or empty (*Owed*) state, and an ordinary exercise's is empty
   and *Owed*. Leaving with a card unsaved asks first. A save says *Saved.*
   (or *Saved, still owed: it needs a subject and a body.*), or is refused,
   saying why, when:

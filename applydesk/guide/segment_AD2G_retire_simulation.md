@@ -74,6 +74,32 @@ Taken 2026-11-23 at `31fecbe33`.
 | Spec lines mentioning scratch | 26, in 3 specs | `grep -rn "scratch" applydesk/spec/*.md \| wc -l` |
 | Readers of the sample list | 9 | `grep -rn "sample_data\.exercises()\|sample_data\.EXERCISES" applydesk/*.py \| wc -l` |
 
+### Status
+
+**Closed 2026-11-23.** Intended versus done:
+
+- **The ladder held.** #4185 was the plan. #4186 was rung 2 (rows are exercises), #4187 rung 3 (the store removed), #4188 rung 4 (the seed's flags), then the close. Rungs 5–6 were struck: no samples on Azure, so ruling 74 stands.
+- **One cold read, at rung 4 rather than rung 3**, because rung 4 also changed code. It covered rungs 2–4 from `09c3e18d0`, and its findings were fixed on the rung each belonged to:
+  - Home's Details code list carried every operator's draft names. It now carries only the viewer's own, and a code clash names no other exercise.
+  - Lookups inside a transaction opened a second connection; `sample_data.sample` reads a sample with no query.
+  - A fresh ordinary row was recorded as a sample on its first change: it was renamed and audited.
+  - Duplicate made a blocking lookup on the event loop.
+  - The cap's lock was `FOR UPDATE`; it is now `FOR NO KEY UPDATE`, taken after the allowlist check.
+  - `--reset` trusted `APP_ENV` alone; it now needs a SQLite or localhost URL.
+  - Codex on #4188: `--reset` by downgrade failed on data the old constraints forbid (two Owners stop `ad2m2`); it now drops Apply Desk's own tables and upgrades to head.
+  - Weak cap and co-operator tests were strengthened.
+- **Found while building:**
+  - The seed walked `sample_data.exercises()`, which now lists ordinary rows too; it walks the samples only.
+  - Semantics said seeded samples have no `created_by_id`. They have one (the seed's person), so the cap excludes the samples by ID.
+- **Decisions confirmed at build:**
+  - *New exercise* records the name on the row.
+  - The Lobby panel takes 500 ticked rows (`MOST_TICKED`).
+  - The Archive's refusal is shown by its key's text.
+- **Left for later:**
+  - The Lobby, Archive and Home still read every ordinary row before filtering by grant: Item 2's paging.
+  - `--reset` is tested on SQLite only.
+- **Owed:** the author's browser check of *New exercise*, the Lobby, Home's Details, and Form, Process and Panels saves.
+
 ### PR ladder
 
 1. **Plan** (this file), with the todo_master pointer. Prose only.
@@ -120,4 +146,4 @@ Taken 2026-11-23 at `31fecbe33`.
 - `applydesk/spec/architecture.md` — the module map without `scratch.py`; `exercises.from_row`; `sample_data.is_sample`; the seed's flags (Item 1).
 - `applydesk/spec/permissions.md` — a co-operator sees a new exercise; *Discard*'s Owner-less exception removed (Item 1).
 - `applydesk/README.md` — the seed's `--reset` and `--blank` (Item 1).
-- `applydesk/guide/todo_master.md` — the S10 follow-up deleted (Item 1).
+- `applydesk/guide/todo_master.md` — the S10 follow-up deleted, and the roadmap row marks Item 1 closed (Item 1).
