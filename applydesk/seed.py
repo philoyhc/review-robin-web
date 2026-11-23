@@ -81,7 +81,7 @@ def seed(
     if not operators.may_operate(owner):
         operators.admit(session, _PLATFORM, owner)
     exercises_added = grants_added = 0
-    for sample in sample_data.exercises():
+    for sample in sample_data.EXERCISES:  # the samples only, never an ordinary row (AD2G)
         exercise = session.scalar(select(Exercise).where(Exercise.public_id == sample.public_id))
         if exercise is None:
             exercise = operators.create_exercise(session, operators.Actor(owner), sample.public_id)
