@@ -200,7 +200,9 @@ def test_another_live_exercise_s_code_is_refused(code: str) -> None:
     blank = f"/applydesk/operator/exercises/{BLANK}/details"
     reply = _client().post(blank, json=_good(code=code, name="Graduate Travel Grant 2027"))
     assert reply.status_code == 400 and reply.json()["field"] == "code"
-    assert "already Recruitment and Selection" in reply.json()["error"]
+    # The other exercise unnamed: the viewer may not operate it (AD2G cold read).
+    assert "already another live exercise's code" in reply.json()["error"]
+    assert "Recruitment" not in reply.json()["error"]
 
 
 def test_an_archived_exercise_frees_its_code() -> None:
