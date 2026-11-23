@@ -2,25 +2,25 @@
    owes, kept in one place. Process says which items email whom; each one
    ticked there is a template here, named for its stage, item and
    audience. Each template stands alone, so each card has its own Save
-   (ruling 23); the page has none. A Save keeps the template in this tab
-   (sessionStorage) until AD2; nothing is sent until AD7. #}
+   (ruling 23); the page has none. A Save keeps the template in the
+   database for every exercise (segment AD2L); nothing is sent until AD7. #}
 {# Laid out as Form and Process (author, 2026-11-19): the templates in the
    main two columns, and a card on the right that stays in view, with an
    Outline linking every email and the merge tags. Each card's id names
    its email, em-<item>-<audience>, so Process links reach it (ruling 65). #}
 {% from "applydesk/_empty.html" import empty %}
-<div class="fb-split" data-emails data-em-ex="{{ exercise.public_id }}"{% if scratch_page %} data-em-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}" data-em-revision="{{ process_revision }}"{% endif %}>
+<div class="fb-split" data-emails data-em-ex="{{ exercise.public_id }}" data-em-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/emails') }}" data-em-revision="{{ process_revision }}">
 <div class="fb-main">
-<p class="muted pc-intro">Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk; Review Robin sends none.{% if scratch_page %} A template you save is kept in this scratch exercise, and the status row's <em>Emails</em> and Home follow it.{% else %} A template you save is kept in this tab only: the status row's <em>Emails</em>, Home and Dossiers' <em>Released</em> still read the sample's templates.{% endif %}</p>
+<p class="muted pc-intro">Every email this exercise sends, one template each. <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a> says which items email whom; each one it ticks is listed here, to be written. Evaluators' invitations and reminders for a linked gate come from Apply Desk; Review Robin sends none. A template you save is kept for this exercise, and the status row's <em>Emails</em> and Home follow it.</p>
 {% for e in emails %}
 {% set sample = email_sample(e) %}
 {% set t = email_text(e) %}
-<section class="card em-card" id="{{ e.anchor }}" data-email="{{ e.name }}" data-em-item="{{ e.item }}" data-em-audience="{{ e.audience }}" data-em-kind="{{ e.kind }}" data-em-sample="{{ sample | tojson | forceescape }}">
+<section class="card em-card" id="{{ e.anchor }}" data-email="{{ e.name }}" data-em-item="{{ e.item }}" data-em-audience="{{ e.audience }}" data-em-kind="{{ e.kind }}" data-em-version="{{ email_version(e) }}" data-em-sample="{{ sample | tojson | forceescape }}">
   <h2>{{ e.name }} <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}" data-em-chip>{{ "Written" if e.ok else "Owed" }}</span></h2>
   {# Back to what ticks it on Process (ruling 65): the form's card or the outcome's. #}
   <p class="muted em-help">{{ e.when }} · <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}#{{ e.process_anchor }}" data-em-process>Set on Process →</a></p>
-  {# A written sample template shows its kind's default; an owed one,
-     empty; a scratch exercise's, as its card last saved it. #}
+  {# As its card last saved it; else a written sample template shows its
+     kind's default, an owed one empty. #}
   <div class="field"><label>Subject <input type="text" class="fc-in" data-em-subject value="{{ t[0] }}" maxlength="300"></label></div>
   <div class="field"><label>Body <textarea class="fc-in" rows="3" data-fit-box data-em-body maxlength="20000">{{ t[1] }}</textarea></label></div>
   {# Its kind's fields, put at the cursor in whichever box last had it. #}
@@ -82,23 +82,11 @@
     }
     return bad;
   }
-  var STORE = "applydesk-emails:" + root.dataset.emEx;
-  // A scratch exercise's Save posts to the server (segment AD1N rung 6),
-  // which the page then opens with: the tab keeps nothing of its own.
-  var SAVE = root.dataset.emSave || "";
-  var kept = {};
-  if (!SAVE) { try { kept = JSON.parse(sessionStorage.getItem(STORE) || "{}") || {}; } catch (e) { kept = {}; } }
+  // A card's Save posts to the server (segment AD2L), which the page then
+  // opens with: the tab keeps nothing of its own.
+  var SAVE = root.dataset.emSave;
   var cards = Array.prototype.slice.call(root.querySelectorAll("[data-email]"));
   var lastCard = null;
-  // Only what Process still makes owed: a stale entry is dropped.
-  var names = cards.map(function (c) { return c.dataset.email; });
-  function store() {
-    if (SAVE) return;
-    try { sessionStorage.setItem(STORE, JSON.stringify(kept)); } catch (e) { /* kept on the page only */ }
-  }
-  var stale = Object.keys(kept).filter(function (n) { return names.indexOf(n) < 0; });
-  stale.forEach(function (n) { delete kept[n]; });
-  if (stale.length) store();
   function subj(c) { return c.querySelector("[data-em-subject]"); }
   function body(c) { return c.querySelector("[data-em-body]"); }
   function written(s, b) { return s.trim() !== "" && b.trim() !== ""; }
@@ -106,10 +94,7 @@
   // fit-box script fits it on input.
   function fit(t) { t.dispatchEvent(new Event("input", { bubbles: true })); }
   cards.forEach(function (c) {
-    var k = kept[c.dataset.email];
-    if (k) { subj(c).value = k.s; body(c).value = k.b; }
     c.savedS = subj(c).value; c.savedB = body(c).value;
-    if (k) fit(body(c));
     draw(c);
   });
   function dirty(c) { return subj(c).value !== c.savedS || body(c).value !== c.savedB; }
@@ -253,27 +238,21 @@
         (badS.length ? subj(c) : body(c)).focus();
         return;
       }
-      if (SAVE) {
-        // What is sent is what is kept: an edit made meanwhile stays unsaved.
-        var sentS = subj(c).value, sentB = body(c).value;
-        b.disabled = true;
-        fetch(SAVE, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
-          body: JSON.stringify({ item: c.dataset.emItem, audience: c.dataset.emAudience, name: c.dataset.email, revision: Number(root.dataset.emRevision), subject: sentS, body: sentB }) })
-          .then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }, function () { return [false, null]; }); })
-          .then(function (got) {
-            if (!got[0]) { draw(c); said.textContent = (got[1] && got[1].detail) || ("Not saved: " + ((got[1] && got[1].error) || "the server refused it.")); return; }
-            c.savedS = sentS; c.savedB = sentB;
-            draw(c);
-            said.textContent = written(sentS, sentB) ? "Saved to this scratch exercise." : "Saved, still owed: it needs a subject and a body.";
-          })
-          .catch(function () { draw(c); said.textContent = "Not saved: the server could not be reached."; });
-        return;
-      }
-      c.savedS = subj(c).value; c.savedB = body(c).value;
-      kept[c.dataset.email] = { s: c.savedS, b: c.savedB };
-      store();
-      draw(c);
-      said.textContent = written(c.savedS, c.savedB) ? "Saved in this tab only." : "Saved in this tab, still owed: it needs a subject and a body.";
+      // What is sent is what is kept: an edit made meanwhile stays unsaved.
+      var sentS = subj(c).value, sentB = body(c).value;
+      b.disabled = true;
+      fetch(SAVE, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
+        body: JSON.stringify({ item: c.dataset.emItem, audience: c.dataset.emAudience, name: c.dataset.email, revision: Number(root.dataset.emRevision), version: Number(c.dataset.emVersion || 0), subject: sentS, body: sentB }) })
+        .then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }, function () { return [false, null]; }); })
+        .then(function (got) {
+          if (!got[0]) { draw(c); said.textContent = (got[1] && got[1].detail) || ("Not saved: " + ((got[1] && got[1].error) || "the server refused it.")); return; }
+          // The version the save made: this card's next Save carries it.
+          if (got[1] && typeof got[1].version === "number") c.dataset.emVersion = String(got[1].version);
+          c.savedS = sentS; c.savedB = sentB;
+          draw(c);
+          said.textContent = written(sentS, sentB) ? "Saved." : "Saved, still owed: it needs a subject and a body.";
+        })
+        .catch(function () { draw(c); said.textContent = "Not saved: the server could not be reached."; });
     } else if (b.dataset.emAct === "reset") {
       var d = DEFAULTS[c.dataset.emKind];
       if (subj(c).value === d[0] && body(c).value === d[1]) { said.textContent = "This is the default already."; return; }

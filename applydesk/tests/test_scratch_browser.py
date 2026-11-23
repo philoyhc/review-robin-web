@@ -259,7 +259,7 @@ def test_an_email_saved_into_a_scratch_exercise_survives_a_reload(page: Page) ->
     assert card.locator("[data-em-chip]").text_content() == "Owed"
     card.locator('[data-em-act="reset"]').click()
     card.locator('[data-em-act="save"]').click()
-    card.locator("[data-em-said]").filter(has_text="Saved to this scratch exercise.").wait_for()
+    card.locator("[data-em-said]").filter(has_text="Saved.").wait_for()
     assert card.locator("[data-em-chip]").text_content() == "Written"
     page.reload()
     card = page.locator('[data-em-item="receipt"]')

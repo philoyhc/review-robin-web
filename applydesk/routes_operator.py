@@ -22,6 +22,7 @@ from applydesk import (
     clock,
     db,
     directory,
+    email_store,
     extract,
     form_store,
     gate,
@@ -486,26 +487,6 @@ async def _page_json(request: Request) -> Any:
         raise HTTPException(status_code=400) from None
 
 
-async def _scratch_json(request: Request, exercise_id: str) -> tuple[sample_data.Exercise, Any]:
-    """A Setup page's post into a scratch exercise (segment AD1N): from
-    Apply Desk's own page, JSON, at most ``scratch.MAX_BODY``; 404 for an
-    exercise that is not this browser's scratch one."""
-    gate.same_site(request)
-    # The lookup reads the database: off the event loop (cold read, AD2B).
-    exercise = await run_in_threadpool(exercise_or_404, exercise_id)
-    if not scratch.is_scratch(exercise.public_id):
-        raise HTTPException(status_code=404)
-    if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
-        raise HTTPException(status_code=415, detail="Not saved: the page sent no JSON.")
-    body = await request.body()
-    if len(body) > scratch.MAX_BODY:
-        raise HTTPException(status_code=413, detail=_TOO_LARGE)
-    try:
-        return exercise, json.loads(body)
-    except (ValueError, RecursionError):  # too deep a body reads as malformed
-        raise HTTPException(status_code=400) from None
-
-
 def _made_pools(cards: Any, known: dict[str, Any]) -> set[str]:
     """The panels a Form snapshot's questions name that the page made
     with *+ New panel…* (``new-1``), not yet the exercise's."""
@@ -633,6 +614,8 @@ def _save_process(request: Request, exercise_id: str, sent: object) -> Response:
         taken = process_store.taken_keys(session, exercise.public_id)
         built, ticks = process_save.build(sent, exercise.public_id, renamed, taken)
         process_store.save(session, exercise.public_id, built, opened, actor)
+        # The emails each item ticks, kept with the timeline (segment AD2L).
+        email_store.save_sends(session, exercise.public_id, ticks)
         session.commit()
     except (process_save.Refused, panels_store.Refused) as why:
         session.rollback()
@@ -652,8 +635,6 @@ def _save_process(request: Request, exercise_id: str, sent: object) -> Response:
         )
     finally:
         session.close()
-    if scratch.is_scratch(exercise.public_id):
-        scratch.save_page(exercise.public_id, workflow.SENDS_PAGE, ticks)
     # A column the page added took the server's key, and a panel it
     # adopted keyed anew: the page reloads to hold the keys kept.
     return JSONResponse({"saved": True, "reload": True, "strict": True})
@@ -944,45 +925,88 @@ def _save_panels(request: Request, exercise_id: str, sent: object) -> Response:
 
 @router.post("/exercises/{exercise_id}/emails", name="applydesk_exercise_email_save")
 async def exercise_email_save(request: Request, exercise_id: str) -> Response:
-    """An Emails card's *Save* on a scratch exercise (segment AD1N rung 6):
-    one template, by the item and audience Process owes it for, kept for
-    this browser, so the card, the status row and Home read it."""
-    exercise, sent = await _scratch_json(request, exercise_id)
+    """An Emails card's *Save* (segment AD1N rung 6; every exercise since
+    AD2L): one template, by the item and audience Process owes it for,
+    kept in the database (`email_store.save_template`)."""
+    sent = await _page_json(request)
+    return await run_in_threadpool(_save_email, request, exercise_id, sent)
+
+
+def _save_email(request: Request, exercise_id: str, sent: Any) -> Response:
+    """An Emails card's *Save*, past the request's own checks."""
+    exercise = exercise_or_404(exercise_id)
+    identity = current_identity(request)
+    if identity is None:
+        raise HTTPException(status_code=404)
     got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
-    item, audience = got.get("item"), got.get("audience")
+    item, audience, name = got.get("item"), got.get("audience"), got.get("name")
     subject, body = got.get("subject"), got.get("body")
-    owed = next(
-        (
-            e
-            for e in workflow.emails(exercise.public_id)
-            if (e.item, e.audience, e.name) == (item, audience, got.get("name"))
-        ),
-        None,
-    )
-    # A page opened before Process last saved names outcomes by keys that
-    # may now be another's, even under the same name (two stages can share
-    # one): refused by the revision it was opened at (Codex on #4028).
-    stale = got.get("revision") != workflow.process_revision(exercise.public_id)
-    if stale or owed is None or not isinstance(subject, str) or not isinstance(body, str):
+    opened, version = got.get("revision"), got.get("version")
+    if (
+        not isinstance(subject, str)
+        or not isinstance(body, str)
+        or not isinstance(version, int)
+        or isinstance(version, bool)
+    ):
+        return JSONResponse({"error": "The email is malformed."}, status_code=400)
+
+    def owed_now() -> workflow.Email | None:
+        return next(
+            (
+                e
+                for e in workflow.emails(exercise.public_id)
+                if (e.item, e.audience, e.name) == (item, audience, name)
+            ),
+            None,
+        )
+
+    owed = owed_now()
+    if owed is None:
         return JSONResponse(
             {"error": "That email is not one Process owes now: reload Emails."},
             status_code=400,
-        )
-    if len(subject) > 300 or len(body) > 20000:
-        return JSONResponse(
-            {"error": "A subject is at most 300 characters, a body 20,000."}, status_code=400
         )
     bad = workflow.foreign_tags(owed.kind, subject + "\n" + body)
     if bad:
         tags = ", ".join(f"${t}" for t in bad)
         return JSONResponse({"error": f"{tags} is not a tag of this email."}, status_code=400)
+    session = db.new_session()
     try:
-        kept = dict(workflow.scratch_templates(exercise.public_id) or {})
-        kept[(owed.item, owed.audience)] = (subject, body)
-        scratch.save_page(exercise.public_id, workflow.SCRATCH_PAGE, kept)
-    except scratch.Refused as why:
-        return JSONResponse({"error": str(why)}, status_code=400)
-    return JSONResponse({"saved": True, "written": bool(subject.strip() and body.strip())})
+        actor = people.resolve(session, identity)
+        session.commit()
+        # Under the exercise's lock: a page opened before Process last saved
+        # names outcomes by keys that may now be another's, even under the
+        # same name (Codex on #4028); and the email must still be owed.
+        kept = email_store.save_template(
+            session,
+            exercise.public_id,
+            (owed.item, owed.audience),
+            subject,
+            body,
+            version,
+            actor,
+            owed=lambda: (
+                opened == workflow.process_revision(exercise.public_id) and owed_now() is not None
+            ),
+        )
+        session.commit()
+    except email_store.Refused as why:
+        session.rollback()
+        return JSONResponse({"error": str(why)}, status_code=409 if why.key == "stale" else 400)
+    except (IntegrityError, OperationalError) as error:
+        # Two first saves of one template can meet on its unique index.
+        session.rollback()
+        if not db.lost_a_race(error):
+            raise
+        return JSONResponse(
+            {"error": "Not saved: someone else saved just now; reload and retry."},
+            status_code=409,
+        )
+    finally:
+        session.close()
+    return JSONResponse(
+        {"saved": True, "written": bool(subject.strip() and body.strip()), "version": kept}
+    )
 
 
 @router.post("/exercises/{exercise_id}/details", name="applydesk_exercise_details")
@@ -1786,6 +1810,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         tag_rows=workflow.tag_rows(owed),
         email_defaults=workflow.DEFAULT_TEMPLATES,
         email_text=functools.partial(workflow.template_text, exercise.public_id),
+        email_version=functools.partial(workflow.template_version, exercise.public_id),
         process_revision=workflow.process_revision(exercise.public_id),
         email_fields=workflow.EMAIL_FIELDS,
         tag_help=workflow.TAG_HELP,

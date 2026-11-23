@@ -115,3 +115,47 @@ def test_too_long_a_template_is_refused(session: Session) -> None:
         email_store.save_template(
             session, MODEL, RECEIPT, "", "x" * 20001, 0, None, owed=lambda: True
         )
+
+
+def test_a_sample_s_card_saves_and_the_page_and_status_follow() -> None:
+    """Rung 4: Emails saves for every exercise, a sample's included; its
+    other cards keep the sample's, and its ticks Process's once recorded."""
+    from fastapi.testclient import TestClient
+
+    from applydesk import workflow
+    from applydesk.tests._host import host_with
+
+    client = TestClient(host_with(("applydesk",))[0])
+    page = f"/applydesk/operator/exercises/{MODEL}/emails"
+    text = client.get(page).text
+    assert "data-em-save=" in text and "Placeholder." not in text
+    owed = next(e for e in workflow.emails(MODEL) if not e.ok)
+    card = {
+        "item": owed.item,
+        "audience": owed.audience,
+        "name": owed.name,
+        "revision": workflow.process_revision(MODEL),
+        "version": 0,
+        "subject": "$exercise_name: news",
+        "body": "Dear $applicant_name,",
+    }
+    reply = client.post(page, json=card)
+    assert reply.status_code == 200 and reply.json()["version"] == 1, reply.text
+    assert next(e for e in workflow.emails(MODEL) if e.name == owed.name).ok
+    assert 'value="$exercise_name: news"' in client.get(page).text
+    # A second tab still at version 0 is refused, not overwriting it.
+    stale = client.post(page, json={**card, "subject": "Other"})
+    assert stale.status_code == 409
+    # The sample's other written cards keep their default.
+    written = next(e for e in workflow.emails(MODEL) if e.ok and e.name != owed.name)
+    assert workflow.template_text(MODEL, written) == workflow.DEFAULT_TEMPLATES[written.kind]
+
+
+def test_recorded_ticks_replace_the_sample_s(session: Session) -> None:
+    from applydesk import workflow
+
+    assert workflow.sends(MODEL, "o2", "Evaluators")  # the sample's
+    email_store.save_sends(session, MODEL, {RECEIPT})
+    session.commit()
+    assert not workflow.sends(MODEL, "o2", "Evaluators")
+    assert [e.item for e in workflow.emails(MODEL)] == ["receipt"]

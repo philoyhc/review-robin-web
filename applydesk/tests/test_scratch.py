@@ -249,6 +249,17 @@ def _post_form(client: TestClient, public_id: str, form: dict[str, Any]) -> Any:
     return client.post(f"{LOBBY}/{public_id}/form", json=sent)
 
 
+def _post_email(client: TestClient, public_id: str, card: dict[str, Any]) -> Any:
+    """An Emails card's Save as the page sends it, with the version of the
+    template it opened at (segment AD2L) unless the test names one."""
+    from applydesk import email_store
+
+    pair = (card.get("item"), card.get("audience"))
+    held = email_store.stored_templates(public_id).get(pair)  # pyright: ignore[reportArgumentType]  -- a test's malformed pair finds none
+    sent = {"version": held.version if held else 0, **card}
+    return client.post(f"{LOBBY}/{public_id}/emails", json=sent)
+
+
 def _field(label: str, **over: object) -> dict[str, object]:
     card: dict[str, object] = {
         "kind": "field",
@@ -917,9 +928,10 @@ def test_an_email_saves_into_the_scratch() -> None:
     page = client.get(f"{LOBBY}/{made}/emails").text
     assert 'data-em-item="receipt"' in page and "data-em-save=" in page
     assert ">Owed<" in page
-    reply = client.post(
-        f"{LOBBY}/{made}/emails",
-        json={
+    reply = _post_email(
+        client,
+        made,
+        {
             "item": "receipt",
             "audience": "Applicants",
             "name": "Stage 1: Receipt · Applicants",
@@ -928,14 +940,16 @@ def test_an_email_saves_into_the_scratch() -> None:
             "body": "Dear $applicant_name, thank you.",
         },
     )
-    assert reply.status_code == 200 and reply.json() == {"saved": True, "written": True}, reply.text
+    assert reply.status_code == 200, reply.text
+    assert reply.json() == {"saved": True, "written": True, "version": 1}
     page = client.get(f"{LOBBY}/{made}/emails").text
     assert 'value="Received: $exercise_name"' in page and "Dear $applicant_name, thank you." in page
     assert ">Written<" in page and ">Owed<" not in page
     # A subject alone keeps it owed.
-    reply = client.post(
-        f"{LOBBY}/{made}/emails",
-        json={
+    reply = _post_email(
+        client,
+        made,
+        {
             "item": "receipt",
             "audience": "Applicants",
             "name": "Stage 1: Receipt · Applicants",
@@ -944,7 +958,7 @@ def test_an_email_saves_into_the_scratch() -> None:
             "body": " ",
         },
     )
-    assert reply.json() == {"saved": True, "written": False}
+    assert reply.json() == {"saved": True, "written": False, "version": 2}
     assert ">Owed<" in client.get(f"{LOBBY}/{made}/emails").text
 
 
@@ -964,17 +978,18 @@ def test_email_save_is_checked() -> None:
         ({**good, "name": "Stage 2: Receipt · Applicants"}, "not one Process owes"),
         ({**good, "revision": 1}, "not one Process owes"),
         ({**good, "audience": "Evaluators"}, "not one Process owes"),
-        ({**good, "subject": 3}, "not one Process owes"),
+        ({**good, "subject": 3}, "malformed"),
         ({**good, "body": "x" * 20001}, "at most"),
         ({**good, "body": "Your outcome: $outcome"}, "$outcome is not a tag"),
     ):
-        refused = client.post(f"{LOBBY}/{made}/emails", json=bad)
+        refused = _post_email(client, made, bad)
         assert refused.status_code == 400 and reason in refused.json()["error"], (bad, refused.text)
     # An unknown tag stays as typed.
-    assert (
-        client.post(f"{LOBBY}/{made}/emails", json={**good, "body": "$nonsense"}).status_code == 200
-    )
-    assert client.post(f"{LOBBY}/wa9juxbc2t/emails", json=good).status_code == 404
+    assert _post_email(client, made, {**good, "body": "$nonsense"}).status_code == 200
+    # A card opened before another save of the same template is refused
+    # (segment AD2L), 409.
+    stale = _post_email(client, made, {**good, "version": 0})
+    assert stale.status_code == 409 and "Reload" in stale.json()["error"]
 
 
 def test_templates_keep_their_outcome_and_a_removed_ones_key_is_not_reused() -> None:
@@ -1004,9 +1019,10 @@ def test_templates_keep_their_outcome_and_a_removed_ones_key_is_not_reused() -> 
     }
     assert _post_process(client, made, both).status_code == 200
     for key, stage, text in (("o1", "Shortlist", "First"), ("o2", "Award", "Second")):
-        reply = client.post(
-            f"{LOBBY}/{made}/emails",
-            json={
+        reply = _post_email(
+            client,
+            made,
+            {
                 "item": key,
                 "audience": "Applicants",
                 "name": f"{stage}: Outcome · Applicants",
@@ -1110,11 +1126,11 @@ def test_an_emails_page_older_than_process_s_last_save_is_refused() -> None:
         "subject": "x",
         "body": "x",
     }
-    refused = client.post(f"{LOBBY}/{made}/emails", json=stale)
+    refused = _post_email(client, made, stale)
     assert refused.status_code == 400 and "reload Emails" in refused.json()["error"]
     # The survivor keeps its key, o2 (AD2C): saved at the new revision.
     fresh = {**stale, "item": "o2", "revision": 2}
-    assert client.post(f"{LOBBY}/{made}/emails", json=fresh).status_code == 200
+    assert _post_email(client, made, fresh).status_code == 200
 
 
 def test_a_process_page_older_than_the_last_save_is_refused() -> None:
