@@ -23,6 +23,7 @@ from applydesk import (
     db,
     directory,
     extract,
+    form_store,
     gate,
     handoff,
     home_ops,
@@ -505,20 +506,6 @@ async def _scratch_json(request: Request, exercise_id: str) -> tuple[sample_data
         raise HTTPException(status_code=400) from None
 
 
-_CARD_KINDS = ("field", "section", "pagebreak")
-_CARD_TEXT = {
-    "label": 500,
-    "help": 2000,
-    "min": 40,
-    "max": 40,
-    "step": 40,
-    "options": 2000,
-    "ratio_w": 6,
-    "ratio_h": 6,
-    "pool": 80,
-}
-
-
 def _made_pools(cards: Any, known: dict[str, Any]) -> set[str]:
     """The panels a Form snapshot's questions name that the page made
     with *+ New panel…* (``new-1``), not yet the exercise's."""
@@ -535,66 +522,9 @@ def _made_pools(cards: Any, known: dict[str, Any]) -> set[str]:
 
 
 def _form(sent: Any, exercise_id: str, renamed: dict[str, str]) -> dict[str, Any]:
-    """The form as Form's *Save* sends it (``applydeskFormSnapshot``),
-    checked card by card and kept in ``FormCard``'s shape; a panel the
-    page made is named by the key ``renamed`` gives it."""
-    if not isinstance(sent, dict):
-        raise scratch.Refused("The form is malformed.")
-    got = cast(dict[str, Any], sent)
-    title, description, cards = got.get("title", ""), got.get("description", ""), got.get("cards")
-    if (
-        not isinstance(title, str)
-        or not isinstance(description, str)
-        or not isinstance(cards, list)
-    ):
-        raise scratch.Refused("The form is malformed.")
-    if len(title.strip()) > 200:
-        raise scratch.Refused("The form's title is at most 200 characters.")
-    if len(description.strip()) > 4000:
-        raise scratch.Refused("The form's description is at most 4,000 characters.")
-    if len(cast(list[Any], cards)) > 200:
-        raise scratch.Refused("A form holds at most 200 cards.")
-    types = {k for k, _ in sample_data.CARD_TYPES}
-    kept: list[dict[str, Any]] = []
-    for n, raw in enumerate(cast(list[Any], cards), start=1):
-        if not isinstance(raw, dict):
-            raise scratch.Refused(f"Card {n} is malformed.")
-        card = cast(dict[str, Any], raw)
-        kind = card.get("kind")
-        # A string first: a list or object would fail ``in`` on a set
-        # unhashable, a 500 (findings 2026-11-20 S9).
-        if not isinstance(kind, str) or kind not in _CARD_KINDS:
-            raise scratch.Refused(f"Card {n} is of no known kind.")
-        if kind != "field":
-            label = card.get("label", "")
-            if not isinstance(label, str):
-                raise scratch.Refused(f"Card {n} is malformed.")
-            if len(label) > _CARD_TEXT["label"]:
-                raise scratch.Refused(f"Card {n}'s label is too long.")
-            kept.append({"kind": kind, "label": label})
-            continue
-        if not isinstance(card.get("type"), str) or card.get("type") not in types:
-            raise scratch.Refused(f"Card {n}'s type is not one of the choices.")
-        out: dict[str, Any] = {"kind": "field", "type": card["type"]}
-        for key, cap in _CARD_TEXT.items():
-            value = card.get(key, "")
-            if not isinstance(value, str) or len(value) > cap:
-                raise scratch.Refused(f"Card {n}'s {key} is malformed or too long.")
-            out[key] = value
-        for key in ("exclusive", "required", "shown"):
-            if not isinstance(card.get(key), bool):
-                raise scratch.Refused(f"Card {n} is malformed.")
-            out[key] = card[key]
-        out["pool"] = out["pool"] or "institution"
-        out["pool"] = renamed.get(out["pool"], out["pool"])
-        if out["pool"] not in sample_data.people_pools(exercise_id) and out["pool"] not in set(
-            renamed.values()
-        ):
-            raise scratch.Refused(f"Card {n} chooses from no panel this exercise has.")
-        out["ratio_w"] = out["ratio_w"] or "4"
-        out["ratio_h"] = out["ratio_h"] or "5"
-        kept.append(out)
-    return {"title": title.strip(), "description": description.strip(), "cards": kept}
+    """The form as Form's *Save* sends it, checked (`form_store.parse`);
+    a panel the page made is named by the key ``renamed`` gives it."""
+    return form_store.parse(sent, sample_data.people_pools(exercise_id), renamed)
 
 
 @router.post("/exercises/{exercise_id}/form", name="applydesk_exercise_form_save")
@@ -633,7 +563,7 @@ def _save_form(request: Request, exercise: sample_data.Exercise, sent: Any) -> R
             # read): the form as it was.
             scratch.save_page(exercise.public_id, "form", before)
             raise
-    except (scratch.Refused, panels_store.Refused) as why:
+    except (scratch.Refused, panels_store.Refused, form_store.Refused) as why:
         session.rollback()
         return JSONResponse({"error": str(why)}, status_code=400)
     except (IntegrityError, OperationalError) as error:
