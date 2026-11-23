@@ -74,8 +74,11 @@ def exercises(request: Request) -> Response:
     # Each row's values and the revision its Save names, from one read.
     found = [
         s
-        for s in exercise_store.stored_all_at(sample_data.exercises())
-        if s.live and gate.operates(request, s.exercise.public_id)
+        # Only the viewer's are read further (cold read, AD2G).
+        for s in exercise_store.stored_all_at(
+            tuple(e for e in sample_data.exercises() if gate.operates(request, e.public_id))
+        )
+        if s.live
     ]
     mine = [s.exercise for s in found]
     # Your role on each (segment AD2O), from the viewer's own grants.
@@ -246,7 +249,8 @@ async def _duplicate(request: Request, source_id: str, back: str) -> Response:
     source's settings and tags; its Home next (as *New exercise*)."""
     if not gate.operates(request, source_id):
         return _back_to_lobby(request, back, "gone")
-    source = sample_data.exercise(source_id)
+    # Off the event loop: an ordinary exercise is a database read (cold read).
+    source = await run_in_threadpool(sample_data.exercise, source_id)
     if source is None:
         return _back_to_lobby(request, back, "gone")
     made, said = await run_in_threadpool(_make, request, f"Copy of {source.name}"[:200], source_id)
@@ -1286,16 +1290,24 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         archived=exercise_store.is_archived(exercise.public_id),
         stage_rows=locks.stage_rows(exercise),
         STATUS_CHIP=locks.STATUS_CHIP,
-        # Every other exercise's code and name, so Details refuses a
-        # clashing code on the page (segment AD1I Semantics).
+        # The viewer's other exercises' codes and names, so Details refuses
+        # a clashing code on the page (segment AD1I Semantics); a clash with
+        # one they do not operate is the server's to refuse, unnamed (cold
+        # read, AD2G: never another operator's names).
         other_codes=[
             [e.code, e.name]
             for e in (
                 s.exercise
-                for s in exercise_store.stored_all_at(sample_data.exercises())
+                for s in exercise_store.stored_all_at(
+                    tuple(
+                        e
+                        for e in sample_data.exercises()
+                        if e.public_id != exercise.public_id and gate.operates(request, e.public_id)
+                    )
+                )
                 if s.live  # an archived or deleted exercise frees its code
             )
-            if e.code and e.public_id != exercise.public_id
+            if e.code
         ],
     )
 
