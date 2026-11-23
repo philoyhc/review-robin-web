@@ -449,7 +449,7 @@
     if (all.length === 1 && was && was !== "1") all[0].setAttribute("data-open", "");
     all.forEach(function (item) {
       var kind = item.dataset.item;
-      if (kind !== "form") item.querySelector("[data-pi-name]").textContent = itemName(item, kind === "gate" ? "Untitled gate" : "Untitled outcome");
+      if (kind !== "form" && kind !== "candidates") item.querySelector("[data-pi-name]").textContent = itemName(item, kind === "gate" ? "Untitled gate" : "Untitled outcome");
       if (kind === "gate") {
         var pc = item.querySelector("[data-pi-panel]");
         pc.textContent = summary(item);
@@ -503,8 +503,8 @@
       li.appendChild(document.createTextNode(" "));
       li.appendChild(el("span", "muted", datesOf(card)));
       card.querySelectorAll(".pc-item").forEach(function (item) {
-        var kind = item.dataset.item, text = "Form";
-        if (kind !== "form") {
+        var kind = item.dataset.item, text = kind === "candidates" ? "Candidates" : "Form";
+        if (kind === "gate" || kind === "outcome") {
           var label = kind === "gate" ? "Gate " + (++g) : "Outcome " + (++o);
           item.querySelector("[data-pc-kicker]").textContent = label;
           text = label + " · " + itemName(item, kind === "gate" ? "Untitled gate" : "Untitled outcome");
