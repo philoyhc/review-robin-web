@@ -38,7 +38,11 @@ def test_applications_csv_a_row_per_application(client: TestClient) -> None:
     assert e is not None
     assert tuple(rows[0]) == extract.of(e).application_columns
     first = dict(zip(rows[0], rows[1], strict=True))
-    assert first["applicant"] == "Aisha Bello" and first["Year of study"] == "Year 4"
+    # A seeded answer, read by its question's key (segment AD2D).
+    year = next(k for k, q in sample_data.list_questions(EX).items() if q.label == "Year of study")
+    app = next(a for a in sample_data.applications_of(EX) if a.public_id == first["application_id"])
+    assert first["applicant"] == "Aisha Bello"
+    assert first["Year of study"] == sample_data.answers(EX, app)[year]
     assert len(rows) - 1 == 100  # last applications: each applicant's latest submitted
     drafts = _rows(client.get(f"{BASE}/applications.csv?rows=all&drafts=1").content)
     # Drafts, never a withdrawn application (cold read).

@@ -211,7 +211,7 @@
     {{ pick.edit(url('/operator/exercises/' ~ exercise.public_id ~ '/panels'), s.ref if s.kind == "panel" else "") }}
   </div>
   <div class="ps-ref" data-ps-for="nominated"{% if s.kind != "nominated" %} hidden{% endif %}>
-    <select class="fc-in" data-ps="question" aria-label="Source {{ n }}: question"{{ sent_attr(sent) }}>{% for q in nominee_questions %}<option{% if s.kind == "nominated" and q == s.ref %} selected{% endif %}>{{ q }}</option>{% endfor %}</select>
+    <select class="fc-in" data-ps="question" aria-label="Source {{ n }}: question"{{ sent_attr(sent) }}>{% for key, label in nominee_questions %}<option value="{{ key }}"{% if s.kind == "nominated" and key == s.ref %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
   </div>
   <label class="ps-n ps-min"><span class="ps-cap">Min</span><input class="fc-in" data-ps="min" value="{{ s.min }}" inputmode="numeric" aria-label="Source {{ n }}: min"{{ sent_attr(sent) }}></label>
   <label class="ps-n"><span class="ps-cap">Max</span><input class="fc-in" data-ps="max" value="{{ s.max }}" inputmode="numeric" aria-label="Source {{ n }}: max"{{ sent_attr(sent) }}></label>

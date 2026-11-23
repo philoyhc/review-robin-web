@@ -20,7 +20,7 @@ import pytest
 from fastapi.testclient import TestClient
 from playwright.sync_api import Error, Locator, Page, Route, sync_playwright
 
-from applydesk import stages
+from applydesk import sample_data, stages
 from applydesk.tests import _fellowship
 from applydesk.tests._host import host_with
 
@@ -393,10 +393,16 @@ def test_a_rule_branches_reads_a_form_answer_and_takes_the_best_n(page: Page) ->
     )
     _checked(page)
     assert not o1.locator("[data-rule-warn]").is_visible()
+    # The question is named by its key (segment AD2D), shown by its label.
+    field = next(
+        k
+        for k, q in sample_data.list_questions(_fellowship.EX).items()
+        if q.label == "Field of study"
+    )
     assert json.loads(o1.get_attribute("data-rule") or "null")["more"] == [
         {
             "when": [
-                ["form", "Field of study", "is", "Engineering"],
+                ["form", field, "is", "Engineering"],
                 ["top", "g1.r1", "le", "5"],
             ],
             "then": "Not shortlisted",

@@ -138,16 +138,17 @@ def revision(public_id: str) -> int:
     return found or 0
 
 
-def _live_keys(session: Session, exercise: Exercise) -> set[str]:
-    """The keys of the form a page opened: the stored form's, else the
-    sample's."""
+def _before_cards(session: Session, exercise: Exercise) -> tuple[FormCard, ...]:
+    """The form a page opened: the stored form's cards, else the sample's."""
     stored_form = load(session, exercise.public_id)
-    cards = (
-        stored_form.cards
-        if stored_form is not None
-        else sample_data.sample_form(exercise.public_id)
-    )
-    return {c.key for c in cards if c.key}
+    if stored_form is not None:
+        return stored_form.cards
+    return sample_data.sample_form(exercise.public_id)
+
+
+def _live_keys(session: Session, exercise: Exercise) -> set[str]:
+    """The keys of the form a page opened."""
+    return {c.key for c in _before_cards(session, exercise) if c.key}
 
 
 def taken_keys(session: Session, exercise: Exercise) -> set[str]:
@@ -284,6 +285,29 @@ def _write(session: Session, exercise: Exercise, cards: list[dict[str, Any]]) ->
     return {"cards": len(cards), "fields": fields, "retired": retired}
 
 
+def _none() -> tuple[frozenset[str], frozenset[str]]:
+    return frozenset(), frozenset()
+
+
+def _held(cards: Collection[Any], lists: bool) -> set[str]:
+    """The keys of the choose-one *List* questions (``lists``), else of the
+    *Select people* questions, among ``cards`` (dicts or ``FormCard``)."""
+
+    def get(c: Any, name: str) -> Any:
+        return cast(dict[str, Any], c).get(name) if isinstance(c, dict) else getattr(c, name)
+
+    return {
+        get(c, "key")
+        for c in cards
+        if get(c, "kind") == "field"
+        and (
+            (get(c, "type") == "list" and get(c, "exclusive"))
+            if lists
+            else get(c, "type") == "people"
+        )
+    }
+
+
 def save(
     session: Session,
     public_id: str,
@@ -292,18 +316,22 @@ def save(
     actor: Person | None,
     *,
     published: Callable[[], bool],
+    in_use: Callable[[], tuple[frozenset[str], frozenset[str]]] = _none,
 ) -> int:
     """Keep ``form`` (``parse``'s) as the exercise's form, if no save came
     between (``opened``, the revision the page loaded) and the stage holding
-    it is not ``published``; the new revision. Flushed, not committed: the
-    caller's transaction holds the change and its audit. The exercise's
-    lock is ``panels_store``'s, so a Panels save cannot retire a panel a
-    question names in between; a caller that read the panels first took it
-    already."""
+    it is not ``published``; the new revision. A question the process reads
+    (``in_use``: the List questions its rules read, the Select people
+    questions its nominated sources read) may not be dropped or made
+    another type. Both are read under the lock, so a Process save landing
+    first is seen. Flushed, not committed: the caller's transaction holds
+    the change and its audit. The exercise's lock is ``panels_store``'s, so
+    a Panels save cannot retire a panel a question names in between; a
+    caller that read the panels first took it already."""
     exercise = panels_store.lock(session, public_id)
     if exercise.archived_at is not None:
         raise Refused("Archived: restore it to change it.", key="archived")
-    if published():  # read under the lock: a Process save before it is seen
+    if published():
         raise Refused(
             "Not saved: the form is published. Revert its stage on Process to change it.",
             key="published",
@@ -313,6 +341,15 @@ def save(
             "Not saved: Form was saved since this page opened. Reload to see it.", key="stale"
         )
     cards = _keyed(form["cards"], _live_keys(session, exercise), taken_keys(session, exercise))
+    before = _before_cards(session, exercise)
+    lists, people = in_use()
+    for read, as_lists, kind in ((lists, True, "rule"), (people, False, "nominated source")):
+        if (read & _held(before, as_lists)) - _held(cards, as_lists):
+            raise Refused(
+                f"Not saved: a {kind} on Process reads a question this save drops or changes."
+                " Change it on Process first.",
+                key="in_use",
+            )
     counts = _write(session, exercise, cards)
     exercise.form_title = form["title"] or None
     exercise.form_description = form["description"] or None

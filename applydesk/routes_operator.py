@@ -559,15 +559,16 @@ def _save_form(request: Request, exercise_id: str, sent: Any) -> Response:
         wanted = _made_pools(got.get("cards"), sample_data.people_pools(exercise.public_id))
         renamed = panels_store.adopt(session, exercise.public_id, got.get("pools"), wanted, actor)
         form = _form(sent, exercise.public_id, renamed)
+        # Both read under the lock, as they stand once any Process save
+        # before this one has landed (cold read).
         revision = form_store.save(
             session,
             exercise.public_id,
             form,
             opened,
             actor,
-            # Read under the lock, once any Process save before this one has
-            # landed (Codex on #4176).
             published=lambda: locks.form_lock(exercise).fixed,
+            in_use=lambda: stages.form_reads(stages.plan_of(exercise.public_id)),
         )
         kept = form_store.load(session, exercise.public_id)
         keyed = kept is None or [c.key for c in kept.cards] != [c["key"] for c in form["cards"]]
@@ -674,7 +675,7 @@ def _check_process(exercise_id: str, sent: Any) -> Response:
         built, _ = process_save.build(sent, exercise.public_id, {k: k for k in made}, checking=True)
     except process_save.Refused as why:
         return JSONResponse({"error": str(why)}, status_code=400)
-    plan = stages.Plan(built, ())
+    plan = stages.Plan(stages.form_keyed(built, exercise.public_id), (), exercise.public_id)
     forms = sample_data.list_questions(exercise.public_id)
     return JSONResponse(
         {"problems": {c.key: list(stages.rule_problems(plan, c, forms)) for c in plan.columns}}
@@ -1716,7 +1717,12 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         scope=stages.scope,
         submitted_rank=stages.submitted_rank,
         answers=functools.partial(sample_data.answers, exercise.public_id),
-        form_lists=sample_data.list_questions(exercise.public_id),
+        # The form's List questions by key, each its label and options
+        # (segment AD2D), for Process's rule editor.
+        form_lists={
+            key: {"label": q.label, "options": list(q.options)}
+            for key, q in sample_data.list_questions(exercise.public_id).items()
+        },
         # Ruling 77: the Candidates list, read only where Process draws it.
         cand_list=_candidates_of(exercise.public_id) if section == "process" else (),
         short=clock.short,

@@ -296,7 +296,8 @@ def test_a_blank_scratch_form_starts_empty_and_form_saves_into_it() -> None:
     assert "Your faculty" in form and "Why you" in form and "Bursary application" in form
     process = client.get(f"{LOBBY}/{made}/process").text
     lists = process.split('id="pc-form-lists">')[1].split("</script>")[0]
-    assert '"Your faculty": ["Arts", "Science", "Engineering"]' in lists
+    # By the question's key, with its label (segment AD2D).
+    assert '{"label": "Your faculty", "options": ["Arts", "Science", "Engineering"]}' in lists
     assert "Application form" not in client.get(f"{LOBBY}/{made}").text  # no longer missing
     preview = client.get(f"{LOBBY}/{made}/form/preview").text
     assert "Your faculty" in preview

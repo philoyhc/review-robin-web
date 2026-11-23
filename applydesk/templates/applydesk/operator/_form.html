@@ -1,6 +1,6 @@
 {# The Form page (segment AD1B): the form's own title and description,
-   then its cards; the Outline beside them. Every move works in the
-   browser and nothing is saved until AD2. #}
+   then its cards; the Outline beside them. Save keeps it in the database
+   for every exercise (segment AD2D). #}
 {% import "applydesk/operator/_form_cards.html" as fc %}
 {% set single = (cards | selectattr("kind", "equalto", "field") | list | length) == 1 %}
 <div class="fb-split" data-form-builder data-unsaved-root data-exercise="{{ exercise.public_id }}"{% if form_lock.fixed %} data-fb-fixed="{{ form_lock.reason }}"{% endif %}>
@@ -59,8 +59,8 @@
 {% include "applydesk/operator/_unsaved_js.html" %}
 {% include "applydesk/operator/_scratch_save_js.html" %}
 <script>
-// Segment AD1B: the Form page's moves, in the browser only; a reload
-// restores the sample form. Collapse and expand, the type menu, the
+// Segment AD1B: the Form page's moves, in the browser until Save keeps
+// them (segment AD2D); a reload shows the form as last saved. Collapse and expand, the type menu, the
 // toggles and the summaries (rung 2); adding, replicating, deleting,
 // dragging and the keyboard, the Outline following (rung 3); the form's
 // own card collapsing, and the snapshot the Preview tab draws (rung 4).

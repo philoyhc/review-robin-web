@@ -229,7 +229,12 @@ def test_the_application_reads_its_form_and_answers(client: TestClient) -> None:
     """AD-26: the Form's questions in order with the seeded answers, "—"
     where none; no hand-kept list, no title against the first field."""
     page = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/m3qx8vkt2n").text
-    assert "<dt>Year of study</dt><dd>Year 4</dd>" in page
+    # Seeded by the question's key (segment AD2D).
+    year = next(
+        k for k, q in sample_data.list_questions("wa9juxbc2t").items() if q.label == "Year of study"
+    )
+    app = next(a for a in sample_data.applications_of("wa9juxbc2t") if a.public_id == "m3qx8vkt2n")
+    assert f"<dt>Year of study</dt><dd>{sample_data.answers('wa9juxbc2t', app)[year]}</dd>" in page
     assert "<dt>Residence</dt><dd>Tembusu House</dd>" in page
     # The same answers Extract writes, so the two never disagree.
     app = next(a for a in sample_data.APPLICATIONS if a.public_id == "m3qx8vkt2n")

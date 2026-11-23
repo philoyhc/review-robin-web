@@ -33,7 +33,7 @@ from typing import Any, cast
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from applydesk import audit, db, stages
+from applydesk import audit, db, sample_data, stages
 from applydesk.models import (
     Exercise,
     GateField,
@@ -146,9 +146,13 @@ def rule_of(
     )
 
 
-def check_references(built: tuple[stages.Stage, ...]) -> None:
-    """Refuse a rule naming what the snapshot does not hold (AD-62), or a
-    gate's rule reading a gate; other problems are the Outline's."""
+def check_references(
+    built: tuple[stages.Stage, ...], questions: dict[str, sample_data.ListQuestion]
+) -> None:
+    """Refuse a rule naming what the snapshot does not hold (AD-62), a
+    question the form no longer asks as a List question (``questions``,
+    by key: segment AD2D), or a gate's rule reading a gate; other
+    problems are the Outline's."""
     plan = stages.Plan(built, ())
     cols = {c.key: c for c in plan.columns}
     for column in plan.columns:
@@ -161,6 +165,12 @@ def check_references(built: tuple[stages.Stage, ...]) -> None:
                 if kind in GATE_READS and isinstance(column, stages.Gate):
                     raise Refused(
                         f"{name}'s rule reads a gate: a gate's rule may not.", key="rule_scope"
+                    )
+                if kind == "form" and key not in questions:
+                    raise Refused(
+                        f"{name}'s rule reads a question the form no longer asks as a"
+                        " choose-one List question.",
+                        key="rule_target",
                     )
                 if kind == "out" and not isinstance(cols.get(key), stages.Outcome):
                     raise Refused(
@@ -481,7 +491,7 @@ def _normalized(public_id: str, gate: stages.Gate) -> stages.Gate:
     )
 
 
-def _check(built: tuple[stages.Stage, ...]) -> None:
+def _check(built: tuple[stages.Stage, ...], questions: dict[str, sample_data.ListQuestion]) -> None:
     if not built:
         raise Refused("A process has at least one stage.", key="no_stage")
     shape = stages.problems(built)
@@ -504,7 +514,7 @@ def _check(built: tuple[stages.Stage, ...]) -> None:
         if twice is not None:
             name = c.label or "An outcome"
             raise Refused(f"{name} has two values called \u201c{twice}\u201d.", key="values")
-    check_references(built)
+    check_references(built, questions)
 
 
 def _changed_locked(row: StageRow, st: stages.Stage) -> bool:
@@ -598,7 +608,11 @@ def save(
             "Not saved: Process was saved since this page opened. Reload to see it.",
             key="stale",
         )
-    _check(built)
+    # A form condition is stored by its question's key (segment AD2D): a
+    # page opened before keys names a label, kept as the key it maps to.
+    questions = sample_data.list_questions(public_id)
+    built = stages.form_keyed(built, public_id)
+    _check(built, questions)
     at = _now()
     stage_rows = {
         r.key: r

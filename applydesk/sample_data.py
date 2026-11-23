@@ -922,55 +922,83 @@ def people_pools(exercise_id: str) -> dict[str, Pool]:
     return pools
 
 
+def field_key(exercise_id: str, ref: str, of_type: str) -> str | None:
+    """The key of the field of type ``of_type`` that ``ref`` names (segment
+    AD2D): its key; else, for a reference stored before keys, the key the
+    sample's form gave that label while the form still holds it; else the
+    first field carrying that label; None if none does."""
+    cards = [
+        c for c in form_cards(exercise_id) if c.kind == "field" and c.type == of_type and c.key
+    ]
+    keys = {c.key for c in cards}
+    if ref in keys:
+        return ref
+    sample = {c.label: c.key for c in sample_form(exercise_id) if c.kind == "field"}
+    if sample.get(ref) in keys:
+        return sample[ref]
+    return next((c.key for c in cards if (c.label or "Untitled question") == ref), None)
+
+
 def nominees(exercise_id: str, application: Application, question: str) -> tuple[str, ...]:
-    """Whom an applicant named in a *Select people* question, by email
-    (segment AD1G's sample): drawn from the question's pool, up to its
-    max, one applicant in five naming no one. Nothing is stored until AD2."""
-    card = next(
-        (
-            c
-            for c in form_cards(exercise_id)
-            if c.kind == "field"
-            and c.type == "people"
-            and (c.label or "Untitled question") == question
-        ),
-        None,
-    )
+    """Whom an applicant named in a *Select people* question, named by key
+    (a label stored before keys is read through it), by email (segment
+    AD1G's sample): drawn from the question's pool, up to its max, one
+    applicant in five naming no one, seeded by the question's key so a
+    rename keeps them. Nothing is stored until AD4."""
+    key = field_key(exercise_id, question, "people")
+    card = next((c for c in form_cards(exercise_id) if key and c.key == key), None)
     if card is None:
         return ()
     pools = people_pools(exercise_id)
     members = pools.get(card.pool, pools["institution"])["members"]
-    rng = random.Random(f"nominee {application.public_id} {question}")
+    rng = random.Random(f"nominee {application.public_id} {card.key}")
     if not members or rng.random() < 0.2:
         return ()
     most = int(card.max) if _DIGITS.fullmatch(card.max) else 1
     return tuple(email for _, email in rng.sample(members, min(max(most, 1), len(members))))
 
 
-def list_questions(exercise_id: str) -> dict[str, list[str]]:
-    """The form's choose-one *List* questions and their options, by label:
+@dataclass(frozen=True)
+class ListQuestion:
+    """A choose-one *List* question a rule's form condition may read
+    (ruling 30): its key (segment AD2D), its label and its options."""
+
+    key: str
+    label: str
+    options: tuple[str, ...]
+
+
+def list_questions(exercise_id: str) -> dict[str, ListQuestion]:
+    """The form's choose-one *List* questions, by key (segment AD2D, AD-45):
     what a rule's form-answer condition may read (ruling 30)."""
-    out: dict[str, list[str]] = {}
+    out: dict[str, ListQuestion] = {}
     for c in form_cards(exercise_id):
-        if c.kind == "field" and c.type == "list" and c.exclusive:
-            out[c.label or "Untitled question"] = [
-                o.strip() for o in c.options.split(",") if o.strip()
-            ]
+        if c.kind == "field" and c.type == "list" and c.exclusive and c.key:
+            options = tuple(o.strip() for o in c.options.split(",") if o.strip())
+            out[c.key] = ListQuestion(c.key, c.label or "Untitled question", options)
     return out
 
 
 def answers(exercise_id: str, application: Application) -> dict[str, str]:
-    """The application's answers to the form's *List* questions, by label
+    """The application's answers to the form's *List* questions, by key
     (ruling 30's form-answer condition reads them): a choose-one list's
-    option, seeded per application. Nothing is stored until AD4."""
+    option, seeded per application and question key. Nothing is stored
+    until AD4."""
     out: dict[str, str] = {}
-    for label, options in list_questions(exercise_id).items():
-        if options:
-            out[label] = random.Random(f"answer {application.public_id} {label}").choice(options)
+    questions = list_questions(exercise_id)
+    for key, q in questions.items():
+        if q.options:
+            seed = f"answer {application.public_id} {key}"  # a rename keeps it
+            out[key] = random.Random(seed).choice(list(q.options))
     if exercise_id == "wa9juxbc2t":  # what the sample knows, not chance
+        # By the key the sample's form gave each, so a rename keeps it.
+        keys = {c.label: c.key for c in sample_form(exercise_id)}
         ras = {m.email.casefold() for m in CURRENT_RAS}
-        out["Currently an RA?"] = "Yes" if application.email.casefold() in ras else "No"
-        out["Residence"] = application.title.split(" · ")[-1]
+        if keys.get("Currently an RA?") in questions:
+            current = application.email.casefold() in ras
+            out[keys["Currently an RA?"]] = "Yes" if current else "No"
+        if keys.get("Residence") in questions:
+            out[keys["Residence"]] = application.title.split(" · ")[-1]
     return out
 
 

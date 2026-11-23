@@ -69,7 +69,9 @@ def _server_plan(monkeypatch: pytest.MonkeyPatch) -> None:
             )
             for r in plan.rows
         )
-        return stages.Plan(staged, rows)
+        # Rules set here name a question by label, as one stored before
+        # keys does: keyed as plan_of keys them (segment AD2D).
+        return stages.Plan(stages.form_keyed(staged, exercise_id), rows, exercise_id)
 
     monkeypatch.setattr(stages, "plan_of", plan_of)
 
@@ -500,7 +502,13 @@ def _by_answer(question: str) -> dict[str, list[stages.Row]]:
     groups: dict[str, list[stages.Row]] = {}
     for r in stages.plan_of("wa9juxbc2t").rows:
         if r.application.state == "Submitted":
-            answer = sample_data.answers("wa9juxbc2t", r.application)[question]
+            # Answers are keyed by question (segment AD2D): found by label.
+            key = next(
+                k
+                for k, q in sample_data.list_questions("wa9juxbc2t").items()
+                if q.label == question
+            )
+            answer = sample_data.answers("wa9juxbc2t", r.application)[key]
             groups.setdefault(answer, []).append(r)
     return groups
 
@@ -659,7 +667,14 @@ def test_a_dossier_waiting_elsewhere_holds_back_only_a_ranking_it_could_join(
     """Codex on #3955: one an earlier branch left waiting held back every
     later best N, even one whose other conditions rule it out."""
     groups = _by_answer("Faculty")
-    eng_app = groups["Engineering"][0].application
+    # One entered at the checks, so its result can be coming, and not yet
+    # at Interview, so the rule would change it (answers are seeded by
+    # question key since segment AD2D).
+    eng_app = next(
+        r.application
+        for r in groups["Engineering"]
+        if r.cells["g2"].value == "Entered" and r.cells["o1"].value == "Not shortlisted"
+    )
     eng, eng_dossier = eng_app.public_id, eng_app.dossier_id
     page.goto(PAGE)
     _unlock(page)
