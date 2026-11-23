@@ -90,6 +90,13 @@ Taken 2026-11-23 at `4f911c6cd`.
   - Names park on placeholders before they are written, so two panels may swap names in one save.
   - Two addresses that turn out to be one person are refused.
   - Each save or adoption is audited as `exercise.panels_saved`.
+- **2026-11-23, rung 4:**
+  - `sample_data`'s panel readers read `panels_store.stored`, as `plan_of` reads Process, a session per call (AD2G batches them).
+  - Panels' *Save* shows for every exercise, with the revision it opened at, and its Placeholder line goes.
+  - Form's and Process's *+ New panel…* adopt into the database within their own save's transaction; Process's refusal on a sample goes.
+  - `scratch_panels.py` is deleted, its spec lines repointed.
+  - A page saved to the database says *Saved.*, not *Saved to this scratch exercise.*: Process on a sample said the latter since AD2C.
+  - Found at build: `test_form.py` read the pools at import, before the tests make their tables.
 
 ## PR ladder
 
