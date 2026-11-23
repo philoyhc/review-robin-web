@@ -81,33 +81,24 @@ Taken 2026-11-23 at `4f911c6cd`.
 
 ## Status
 
-- **2026-11-23, rung 2:**
-  - The tables, `exercise.panels_revision` and `person.display_name_key` (`ad2e1panels`, backfilled with Python's casefold).
-  - The model keeps the key in step with the name (`Person._name_key`); the one bulk update that writes a name, binding a pending person, sets it too.
-  - `directory.search` and the allowlist's filter match the key. `test_a_name_search_reads_past_ascii` fails on the old `lower()`.
-- **2026-11-23, rung 3:** `panels_store` loads, saves and adopts, nothing calling it yet (`applydesk/tests/test_panels_store.py`).
-  - A save starts from the stored roster, else the sample's, so a sample's keys are kept.
+**Closed 2026-11-23.** Intended versus done:
+
+- **The ladder held:**
+  - #4168 plan, with the AD2 order;
+  - #4169 tables and the name key;
+  - #4170 `panels_store`;
+  - #4171 the pages wired and `scratch_panels.py` deleted.
+- **Decisions confirmed at build:**
+  - A save starts from the stored roster, else the sample's, so a sample's keys are kept; its panels are recorded at the first save.
   - Names park on placeholders before they are written, so two panels may swap names in one save.
-  - Two addresses that turn out to be one person are refused.
-  - Each save or adoption is audited as `exercise.panels_saved`.
-- **2026-11-23, rung 4:**
-  - `sample_data`'s panel readers read `panels_store.stored`, as `plan_of` reads Process, a session per call (AD2G batches them).
-  - Panels' *Save* shows for every exercise, with the revision it opened at, and its Placeholder line goes.
-  - Form's and Process's *+ New panel…* adopt into the database within their own save's transaction; Process's refusal on a sample goes.
-  - `scratch_panels.py` is deleted, its spec lines repointed.
-  - A page saved to the database says *Saved.*, not *Saved to this scratch exercise.*: Process on a sample said the latter since AD2C.
-  - Found at build: `test_form.py` read the pools at import, before the tests make their tables.
-- **2026-11-23, the cumulative read** (`diff-reviewer`, base `69c06018c`, rungs 2-4): 7 findings, all fixed in rung 4 but one Codex had already caught on #4170.
-  - The fixes:
-    - A save made during edits now returns its new revision, which the page carries, so "save again" no longer meets a stale refusal.
-    - Panels reads what uses a panel under the row lock, and Process takes the lock before it reads the panels.
-    - The page reads its revision before its panels.
-    - Form commits before it keeps the form.
-    - An adoption with nothing new writes no save.
-    - A test that a refused Process save keeps no panel.
-  - Copy and spec: the scratch note now says Details, Process and Panels save to the database, and the Panels checks are restored to the spec's scratch section.
-  - Rung 3's "two addresses that are one person" refusal cannot happen: addresses are deduplicated by the same key first. It stays as a guard.
-  - Codex on #4170: a blank name is stored blank and read as the address, since an address can outrun the name column.
+  - A blank roster name is stored blank and read as the address (Codex on #4170).
+  - The name keys are three times their name's width, since casefolding lengthens some letters (Codex on #4169).
+  - A save returns its new revision, which the page carries, so edits made during a save can be saved next.
+  - What uses a panel is read under the exercise's lock. The lock also writes, so SQLite serializes Panels, Process and Form saves too (Codex on #4171). Form holds it while it checks and keeps its questions.
+  - An adoption with nothing new writes no save.
+  - A page saved to the database says *Saved.*.
+- **Left:** the panel readers open a session per call, AD2G's request-scoped loading. The "two addresses that are one person" refusal is a guard that cannot fire.
+- **Reads:** one cumulative `diff-reviewer` read of rungs 2-4 (base `69c06018c`) found 7 defects, all fixed. One of the 7 Codex also caught. Codex found 3 more across #4169-#4171, each fixed with a test.
 
 ## PR ladder
 

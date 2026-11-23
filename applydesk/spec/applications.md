@@ -475,10 +475,10 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     *Cancel*, *Unselect others* and *Unselect all* only untick rows in the
     browser. *New exercise*, the tick boxes and the panel's opening work.
 - **Scratch exercises** (`applydesk/scratch.py`). Until AD2 stores the
-  rest, an operator sets an exercise up end to end in one whose form,
-  panels and emails are held in the server's memory and never written
-  anywhere. Its settings, its Process and its Candidates are the database's,
-  as any exercise's (Details; "The Process page").
+  rest, an operator sets an exercise up end to end in one whose form and
+  emails are held in the server's memory and never written anywhere. Its
+  settings, its Process, its Panels and its Candidates are the database's, as
+  any exercise's (Details; "The Process page"; "The Panels page").
   - **Making and keeping.** *New exercise* opens a form asking for a name
     (1–200 characters); *Create* makes a blank draft, as *Graduate Travel
     Grant 2027* (one stage holding the form, nothing else), and lands on its
@@ -515,8 +515,8 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     Evaluations show their empty states.
   - **A save** is a same-site JSON post (403 for another site, 415 for
     non-JSON, 400 for malformed JSON) of at most `scratch.MAX_BODY`
-    (256 KiB; 413 past it). The page (Details and Process apart, which
-    save to the database) says *Saved to this scratch exercise.* or the reason it was
+    (256 KiB; 413 past it). The page (Details, Process and Panels apart,
+    which save to the database and say *Saved.*) says *Saved to this scratch exercise.* or the reason it was
     refused, and a saved page's *Unsaved changes* marker clears. A page edited while its save was on the way
     stays unsaved. Shapes are checked, not the plan: what a page flags
     itself (dates out of order, weights not adding up) is kept as left and
@@ -535,14 +535,8 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     store, as `workflow.sends` reads them, until Emails is stored; on a
     sample exercise they stay the sample's.
   - **Panels** is not kept here: it saves to the database for every
-    exercise (`applydesk/panels_store.py`, segment AD2E), as does a panel
-    made with *+ New panel…* on Form or Process, with the save that names
-    it. Its *Save* is refused while a row or a *Manage panels* change is
-    still open, and refuses a page opened before the last save. At most 50
-    panels (distinct names of at most 80 characters, none a CSV column's)
-    and 2,000 people (an address each, distinct; ticks naming the page's
-    panels); someone on no panel stays on the roster. Retiring a panel a
-    question or a gate uses is refused.
+    exercise, as does a panel made with *+ New panel…* on Form or Process,
+    with the save that names it; its checks are "The Panels page".
   - **Revision.** Emails sends the Process revision its page opened at
     (`workflow.process_revision`), and a save from a page older than the
     last Process save is refused (*reload Emails*), so no stale key lands on
@@ -621,9 +615,11 @@ shows the form's own card and one empty String card, open.
   boxes are (names or emails, comma-separated, each found in the directory
   a pill with ×; one not found stays in the box with the reason), then
   *+ Panel* (Secondary, as on Panels) and *Cancel*. A panel created joins every *Chosen from*
-  menu on the page and Preview's lookup, and is selected; it lives on this
-  page only. *Edit on Panels →* beside the menu links to the chosen panel
-  on Panels, hidden for *Institution-wide* and for a panel made here. A
+  menu on the page and Preview's lookup, and is selected; it is stored, as a
+  panel of the exercise, with the page's *Save* ("The Panels page"), under
+  the exercise's lock, or not at all. *Edit on Panels →* beside the menu links to the chosen panel
+  on Panels, hidden for *Institution-wide* and for a panel made here and not
+  yet saved. A
   panel the exercise lacks reads as *Institution-wide* on the card, in its
   summary and in Preview. Help text and descriptions grow to fit what is typed, with no
   resize handle, as does a long answer's box in Preview. Changing the type
@@ -1175,8 +1171,8 @@ but the lobby's *Stage* column reads:
   - **Audited** as `exercise.process_saved` with the counts of stages,
     gates and outcomes saved and retired, and the new revision.
   - **A scratch exercise** saves the same way; the emails it ticks stay in
-    its store ("Scratch exercises"). A panel made with *+ New panel…* on a
-    sample exercise is refused until Panels is stored.
+    its store ("Scratch exercises"). A panel made with *+ New panel…* is
+    stored with the save, on a sample too ("The Panels page").
 - **The outcome values editor.** An outcome's values are rows, each carrying
   its key; a renamed value keeps its key and the page rewrites the rules
   naming it, so a rename changes no stored rule. A value whose label no row
@@ -1231,10 +1227,8 @@ it does comes from where it is used (a Select people question, a gate's
 evaluator source), never from its key. Form and Process hold a panel's
 *key*, not its name, so a rename follows everywhere. Panels laid out as Review Robin's
 roster pages: a roster card, then one full-width table. Every move works in
-the browser. On a sample exercise nothing is saved until AD2, and a reload
-restores the sample; a scratch exercise has a page *Save* ("Scratch
-exercises").
-A panel made on Form or Process appears here only once saved (AD2).
+the browser; nothing is kept until the page's *Save* (below).
+A panel made on Form or Process appears here once that page is saved.
 
 - **The roster card.** *People* (the count of rows), a pill per panel with its
   count, how many panels are in use, and *Manage panels*. Problems list under
@@ -1261,11 +1255,11 @@ A panel made on Form or Process appears here only once saved (AD2).
     the rows an added panel brought (a row kept with its own ✓ stays); neither
     closes the card. Enter in a name box is *Save*, Esc puts that name back.
     *Close* asks first while any waits. *Copy emails* and the CSV act at once.
-  - Whatever ✓, ×, *Save* or an import changes is on the page only: ✓ says
-    *kept on this page* (*nothing changed* on an untouched row), the page
-    shows *Changes on this page, not saved* (on a scratch
-    exercise, *Unsaved changes* beside *Save*), and leaving asks
-    first, as it does while a ticked row holds changes ✓ has not kept. ×
+  - Whatever ✓, ×, *Save* or an import changes is on the page only until the
+    page's *Save*: ✓ says *kept on this page* (*nothing changed* on an
+    untouched row), *Unsaved changes* shows beside the page's *Save*, and
+    leaving asks first, as it does while a ticked row holds changes ✓ has not
+    kept. ×
     on a member of a panel an opened gate keeps (as kept, not as ticked
     while editing) asks before removing them.
 - **The table.** Above it, in two columns (ruling 65): on the left, *Show
@@ -1286,9 +1280,48 @@ A panel made on Form or Process appears here only once saved (AD2).
   (Enter too) keeps its changes on the page; unticking without ✓ puts the row
   back, and a new row never kept goes. A verified email, found in the
   directory, is a pill, clicked to change it; unticked it reads as text, red
-  when the directory has no such person. A sample exercise has no page
-  *Save*.
+  when the directory has no such person.
 - **Checks.** An email is required, found in the directory and listed once.
+- **Save** (`routes_operator._save_panels`; `applydesk/panels_store.py`),
+  for every exercise, sample or scratch: the page's panels and roster are
+  kept in the database, and a page saved says *Saved.*.
+  - **Revision.** The page carries the `exercise.panels_revision` it opened
+    at (read before its panels). A save from an older one is refused whole
+    (409; *Panels was saved since this page opened*): nothing merges. A save
+    returns its new revision, which the page keeps, so edits made while it
+    was on the way can be saved next.
+  - **One transaction** under the exercise's lock, audited as
+    `exercise.panels_saved` (`spec/architecture.md`, "Panels"). Refused on an
+    archived exercise.
+  - **Refused** by the page when a row or a *Manage panels* change is still
+    open (✓ or *Save* or *Cancel* it first). Refused by the server (400):
+    - a panel with no name, a name over 80 characters, a name a CSV column's
+      (`Name`, `Email`, `Note`; any case) or two panels with one name (case
+      ignored);
+    - a row with no email address, or an address on two rows;
+    - a tick naming a panel not on the page;
+    - retiring a panel a Form question or a gate uses;
+    - more than 50 panels or 2,000 people (the author's ruling).
+  - **Keys** are `panel-<n>`, minted by the server for a panel the page made
+    and never reused: a retired panel keeps its key, so a question or gate
+    naming it reads as missing, never as another panel. A page's own
+    placeholder key (`made-1`, `new-1`) never reaches a row.
+  - **People.** Each address is matched to a person on record, else made
+    pending (`people.pending`), as Candidates' CSV is; the directory is not
+    searched per row. The note belongs to the person's row, not to each panel.
+    A name left blank is stored blank and shown as the address. A row ticked
+    on no panel stays on the roster; a row removed retires its entry and
+    memberships, and adding the person again revives them.
+  - **Sample exercises.** The sample's panels stand until the first save,
+    which records them with the page's changes and keeps their keys.
+  - **After a save** the page reloads to hold the keys kept.
+- **A panel made on Form or Process** (*+ New panel…*) is stored with that
+  page's own save, for every exercise (a sample's Process included; Form
+  saves only on a scratch exercise), in the same transaction and under the
+  exercise's lock, so a refusal of either keeps neither. It is minted a key,
+  named and capped as above, its members join the roster, and a panel the
+  exercise already holds by that name is that panel, not a second one. A
+  save naming no new panel writes no panels save.
 - **An opened gate** (`workflow.gate_opened`: its Review Robin session has
   opened, ruling 29) keeps the roster it opened with: its panel says so here,
   with an *Opened* chip, and on Process. Every panel source of a gate counts

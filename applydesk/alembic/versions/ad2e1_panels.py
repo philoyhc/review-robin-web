@@ -5,7 +5,7 @@ Revises: ad2c1process
 Create Date: 2026-11-23
 
 An exercise's panels in the database (segment AD2E,
-`applydesk/guide/segment_AD2E_panels.md`): `panel`, keyed per exercise and
+`applydesk/guide/archive/segment_AD2E_panels.md`): `panel`, keyed per exercise and
 named uniquely among its live panels; `roster_entry`, a row per person on
 the Panels table with their name and note; `panel_member`, an entry on a
 panel; and `exercise.panels_revision`, 0 until Panels is first saved.
