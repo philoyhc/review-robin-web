@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import os
 from collections.abc import Iterator
+from dataclasses import replace
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -26,6 +28,78 @@ def _table_open(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(locks, "release_lock", lambda e, o: locks.OPEN)
 
 
+#: What a test sets on the server's own plan, which *Apply rules* reads
+#: (ruling 78): a column's rule, a gate cell's result, every result in.
+_SERVER: dict[str, Any] = {}
+
+
+@pytest.fixture(autouse=True)
+def _server_plan(monkeypatch: pytest.MonkeyPatch) -> None:
+    rules: dict[str, stages.Rule | None] = {}
+    results: dict[tuple[str, str], str | None] = {}
+    _SERVER.clear()
+    _SERVER.update(rules=rules, results=results, fill=False)
+    real = stages.plan_of
+
+    def cell(app: str, key: str, c: stages.Cell) -> stages.Cell:
+        if _SERVER["fill"] and key in ("g1", "g2") and c.value == "Entered" and c.result is None:
+            c = replace(c, result=1.0)
+        if (app, key) in results:
+            x = results[(app, key)]
+            c = replace(c, result=None if x is None else float(x))
+        return c
+
+    def plan_of(exercise_id: str) -> stages.Plan:
+        plan = real(exercise_id)
+        if exercise_id != "wa9juxbc2t":
+            return plan
+        staged = tuple(
+            replace(
+                st,
+                columns=tuple(
+                    replace(c, rule=rules[c.key]) if c.key in rules else c for c in st.columns
+                ),
+            )
+            for st in plan.stages
+        )
+        rows = tuple(
+            stages.Row(
+                r.application,
+                {k: cell(r.application.public_id, k, c) for k, c in r.cells.items()},
+            )
+            for r in plan.rows
+        )
+        return stages.Plan(staged, rows)
+
+    monkeypatch.setattr(stages, "plan_of", plan_of)
+
+
+def _set_result(app: str, key: str, value: str | None) -> None:
+    """A gate cell's first result as the server holds it (None: not in)."""
+    _SERVER["results"][(app, key)] = value
+
+
+def _fill_results() -> None:
+    """Every gate result in, so no ranking waits on one (the sample keeps
+    two dossiers' peer reviews coming)."""
+    _SERVER["fill"] = True
+
+
+def _rule_of(rule: dict[str, Any] | None) -> stages.Rule | None:
+    if rule is None:
+        return None
+
+    def conds(when: list[list[str]]) -> tuple[tuple[str, str, str, str], ...]:
+        return tuple((c[0], c[1], c[2], c[3]) for c in when)
+
+    return stages.Rule(
+        conds(rule["when"]),
+        rule["then"],
+        rule["otherwise"],
+        tuple((conds(m["when"]), m["then"]) for m in rule.get("more", [])),
+    )
+
+
 ORIGIN = "http://applydesk.test"
 PAGE = f"{ORIGIN}/applydesk/operator/exercises/wa9juxbc2t/dossiers"
 
@@ -35,7 +109,13 @@ def page() -> Iterator[Page]:
     client = TestClient(host_with(("applydesk",))[0])
 
     def serve(route: Route) -> None:
-        response = client.get(route.request.url.removeprefix(ORIGIN))
+        # A post too: *Apply rules* asks the server (ruling 78).
+        response = client.request(
+            route.request.method,
+            route.request.url.removeprefix(ORIGIN),
+            content=route.request.post_data_buffer,
+            headers={**route.request.headers, "origin": ORIGIN},
+        )
         route.fulfill(
             status=response.status_code,
             body=response.content,
@@ -366,7 +446,9 @@ def _apply_rules(page: Page, *, only_undecided: bool = True, replace_hand: bool 
     rule.locator("[data-ap-rule-pending]").set_checked(only_undecided)
     rule.locator("[data-ap-rule-hand]").set_checked(replace_hand)
     rule.locator("[data-ap-rule-go]").click()
-    return page.locator("[data-ap-proposal]")
+    proposal = page.locator("[data-ap-proposal]")
+    proposal.wait_for(state="visible")  # the server answers (ruling 78)
+    return proposal
 
 
 def test_each_column_shows_its_rule_from_setup(page: Page) -> None:
@@ -400,9 +482,11 @@ def test_apply_rules_proposes_in_column_order_and_waits_on_the_undecided(page: P
     assert _count(page, "o2").startswith("15 selected · 40 pending")
 
 
-def _set_rule(page: Page, key: str, rule: dict[str, object]) -> None:
-    """A rule set on a column's header, as Process will: the sample has no
-    branched rule until AD1H rung 6."""
+def _set_rule(page: Page, key: str, rule: dict[str, Any] | None) -> None:
+    """A rule set on a column, as Process saves it: on the server, whose
+    engine *Apply rules* asks (ruling 78), and on the header, which shows
+    it. None is decided by hand."""
+    _SERVER["rules"][key] = _rule_of(rule)
     page.evaluate(
         '([k, r]) => { document.querySelector(`th[data-col="${k}"]`).dataset.rule ='
         " JSON.stringify(r); }",
@@ -473,12 +557,7 @@ def test_the_best_n_waits_while_one_it_could_rank_is_not_in(page: Page) -> None:
     page.goto(PAGE)
     _unlock(page)
     # One of them still waiting on its peer reviews: no result yet.
-    page.evaluate(
-        "i => { delete [...document.querySelectorAll('[data-row]')].find("
-        "r => r.dataset.apApp === i)"
-        ".querySelector('[data-cell=\"g1\"] [data-v]').dataset.result; }",
-        rows[0].application.public_id,
-    )
+    _set_result(rows[0].application.public_id, "g1", None)
     _set_rule(
         page,
         "o1",
@@ -502,16 +581,6 @@ def test_the_best_n_waits_while_one_it_could_rank_is_not_in(page: Page) -> None:
     assert proposed and all(p.endswith("Not shortlisted") for p in proposed)
 
 
-_FILL_RESULTS = """() => {
-  // Every gate result in, so no ranking waits on one (the sample keeps
-  // two dossiers' peer reviews coming).
-  const cells = '[data-cell="g1"] [data-v], [data-cell="g2"] [data-v]';
-  for (const el of document.querySelectorAll(cells)) {
-    if (el.dataset.v === "Entered" && el.dataset.result === undefined) el.dataset.result = "1";
-  }
-}"""
-
-
 def _cell(page: Page, row_id: str, key: str) -> Locator:
     return _row(page, row_id).locator(f'[data-cell="{key}"] [data-v]')
 
@@ -524,15 +593,13 @@ def test_one_not_entered_at_a_ranking_goes_on_once(page: Page) -> None:
     a, b = rows[0].application.public_id, rows[1].application.public_id
     page.goto(PAGE)
     _unlock(page)
-    page.evaluate(_FILL_RESULTS)
+    _fill_results()
     for i, top in ((a, "9.9"), (b, "9.8")):
         _cell(page, i, "g2").evaluate("e => { e.dataset.v = 'Not entered'; }")
-        _cell(page, i, "g1").evaluate("(e, x) => { e.dataset.result = x; }", top)
+        _set_result(i, "g1", top)
     # The gates' own rules would enter them again: decided by hand here.
-    page.evaluate(
-        "() => { for (const k of ['g1', 'g2']) "
-        "document.querySelector(`th[data-col=\"${k}\"]`).dataset.rule = 'null'; }"
-    )
+    for k in ("g1", "g2"):
+        _set_rule(page, k, None)
     _set_rule(
         page,
         "o1",
@@ -565,11 +632,9 @@ def test_one_a_ranking_cannot_take_falls_through_though_another_condition_waits(
     page.goto(PAGE)
     _unlock(page)
     _cell(page, x, "g1").evaluate("e => { e.dataset.v = 'Not entered'; }")
-    _cell(page, x, "g2").evaluate("e => { delete e.dataset.result; }")
-    page.evaluate(
-        "() => { for (const k of ['g1', 'g2']) "
-        "document.querySelector(`th[data-col=\"${k}\"]`).dataset.rule = 'null'; }"
-    )
+    _set_result(x, "g2", None)
+    for k in ("g1", "g2"):
+        _set_rule(page, k, None)
     _set_rule(
         page,
         "o1",
@@ -598,7 +663,7 @@ def test_a_dossier_waiting_elsewhere_holds_back_only_a_ranking_it_could_join(
     eng, eng_dossier = eng_app.public_id, eng_app.dossier_id
     page.goto(PAGE)
     _unlock(page)
-    _cell(page, eng, "g2").evaluate("e => { delete e.dataset.result; }")  # its checks coming
+    _set_result(eng, "g2", None)  # its checks coming
     _set_rule(
         page,
         "o1",
@@ -630,7 +695,7 @@ def test_the_best_n_waits_on_another_condition_not_yet_judged(page: Page) -> Non
     field, rows = sorted(_by_answer("Faculty").items())[0]
     page.goto(PAGE)
     _unlock(page)
-    _cell(page, rows[0].application.public_id, "g2").evaluate("e => { delete e.dataset.result; }")
+    _set_result(rows[0].application.public_id, "g2", None)
     _set_rule(
         page,
         "o1",
@@ -659,7 +724,7 @@ def test_a_later_column_reads_what_an_earlier_one_proposes(page: Page) -> None:
     # coming: the Shortlisting cannot decide it, so its entry waits.
     kenji = _row(page, "kenji.russo")
     kenji.locator('[data-cell="o1"] select').select_option("Pending")
-    _cell(page, "h6zr2tdw9p", "g1").evaluate("e => { delete e.dataset.result; }")
+    _set_result("h6zr2tdw9p", "g1", None)
     prop = _apply_rules(page, only_undecided=False, replace_hand=True)
     rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
     # The one set by hand goes back to the rule's Not shortlisted, and so
@@ -697,7 +762,7 @@ def test_selection_reaches_one_sent_on_by_shortlisting_alone(page: Page) -> None
     _row(page, low.application.public_id).locator('[data-cell="o1"] select').select_option(
         "Re-appointment"
     )
-    _cell(page, major.application.public_id, "g2").evaluate("e => { e.dataset.result = '0'; }")
+    _set_result(major.application.public_id, "g2", "0")
     prop = _apply_rules(page, only_undecided=False)  # its decided Shortlisting too
     rows = prop.locator("[data-ap-prop-rows] tr").all_inner_texts()
     for r in (low, major):
@@ -889,7 +954,7 @@ def test_the_lock_guards_rules_csv_and_open_proposals(page: Page) -> None:
     page.locator("[data-ap-rule-open]").click()
     assert page.locator("[data-ap-rule-go]").is_enabled()
     page.locator("[data-ap-rule-go]").click()
-    assert page.locator("[data-ap-proposal]").is_visible()
+    page.locator("[data-ap-proposal]").wait_for(state="visible")
     page.locator("[data-ap-lock]").click()
     assert not page.locator("[data-ap-proposal]").is_visible()
     assert not page.locator("[data-ap-rule]").is_visible()

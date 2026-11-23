@@ -35,7 +35,20 @@ def page(monkeypatch: pytest.MonkeyPatch) -> Iterator[Page]:
     client = TestClient(host_with(("applydesk",))[0])
 
     def serve(route: Route) -> None:
-        response = client.get(route.request.url.removeprefix(ORIGIN))
+        # Any method: the page asks the server for its rules' problems
+        # (ruling 78).
+        request = route.request
+        headers = {
+            k: v
+            for k, v in request.headers.items()
+            if k.lower() in ("content-type", "sec-fetch-site")
+        }
+        response = client.request(
+            request.method,
+            request.url.removeprefix(ORIGIN),
+            content=request.post_data_buffer,
+            headers=headers,
+        )
         route.fulfill(
             status=response.status_code,
             body=response.content,
@@ -74,6 +87,12 @@ def _counts(page: Page) -> str:
 def _open(card: Locator) -> None:
     if card.get_attribute("data-open") is None:
         card.locator("[data-fc-toggle]").click()
+
+
+def _checked(page: Page) -> None:
+    """The rules' problems are the server's to say (ruling 78): wait for
+    the page's last check to come back before reading them."""
+    page.wait_for_function("!('pcAsking' in document.querySelector('[data-process]').dataset)")
 
 
 def test_a_card_opens_and_its_name_and_dates_follow(page: Page) -> None:
@@ -344,6 +363,7 @@ def test_a_rule_branches_reads_a_form_answer_and_takes_the_best_n(page: Page) ->
     second.locator(".pc-cond").nth(1).locator("select").first.select_option("top")
     count = second.locator('.pc-cond input[aria-label="How many, branch 2"]')
     count.fill("x")
+    _checked(page)
     assert "takes the best “x”, not a whole number" in o1.locator("[data-rule-warn]").inner_text()
     count.fill("5")
     second.locator('[data-rule-part="then"]').select_option("Not shortlisted")
@@ -351,6 +371,7 @@ def test_a_rule_branches_reads_a_form_answer_and_takes_the_best_n(page: Page) ->
         "Combined ≥ 4.2 → Shortlisted; else if Field of study is Engineering and the best 5"
         " by Rating at Peer Review → Not shortlisted, else Not shortlisted"
     )
+    _checked(page)
     assert not o1.locator("[data-rule-warn]").is_visible()
     assert json.loads(o1.get_attribute("data-rule") or "null")["more"] == [
         {
@@ -391,6 +412,7 @@ def test_a_form_answer_the_form_no_longer_asks_is_named(page: Page) -> None:
     }
     o1.evaluate("(e, r) => { e.dataset.rule = JSON.stringify(r); }", rule)
     o1.locator('[data-pc="values"]').fill("Shortlisted, Not shortlisted")  # redraws
+    _checked(page)
     assert "reads “Year of study”, not a List question on the form" in (
         o1.locator("[data-rule-warn]").inner_text()
     )
@@ -402,13 +424,16 @@ def test_a_rule_left_reading_a_later_outcome_is_named(page: Page) -> None:
     interview.locator("[data-fc-grip]").focus()
     page.keyboard.press("ArrowUp")
     g3 = _item(page, "g3")
+    _checked(page)
     warn = g3.locator("[data-rule-warn]")
     assert warn.is_visible()
     assert warn.inner_text() == "This rule reads Shortlist for interview, which comes later."
+    _checked(page)
     issues = page.locator("[data-pc-issues]").inner_text()
     assert "· Interview reads Shortlist for interview, which comes later." in issues
     _cards(page).nth(1).locator("[data-fc-grip]").focus()
     page.keyboard.press("ArrowDown")
+    _checked(page)
     assert not warn.is_visible() and not page.locator("[data-pc-issues]").is_visible()
 
 
@@ -463,6 +488,7 @@ def test_a_flagged_rule_keeps_its_column_while_edited(page: Page) -> None:
     interview.locator('[data-pc-act="remove-gate"]').click()  # g3 goes
     interview.locator('[data-pc-act="gate"]').click()
     o2 = _item(page, "o2")
+    _checked(page)
     warn = o2.locator("[data-rule-warn]")
     assert "no longer in the process" in (warn.text_content() or "")
     o2.locator('[data-pc-act="rule"]').click()
@@ -509,6 +535,7 @@ def test_a_replica_s_rules_and_weights_read_its_own_gates(page: Page) -> None:
         f"{g[1]}.r1",
         f"{g[1]}.r2",
     ]
+    _checked(page)
     assert not out.locator("[data-rule-warn]").is_visible()
 
 
@@ -564,9 +591,11 @@ def test_weights_say_when_their_gates_change_and_check_the_total(page: Page) -> 
     )
     weights.locator("[data-w-key]").first.fill("20")
     assert weights.locator("[data-w-note]").inner_text() == ""
+    _checked(page)
     assert o1.locator("[data-rule-warn]").inner_text() == (
         "This outcome has weights adding up to 90, not 100."
     )
+    _checked(page)
     assert "· Shortlist for interview has weights adding up to 90, not 100." in (
         page.locator("[data-pc-issues]").inner_text()
     )
@@ -578,6 +607,7 @@ def test_a_decision_outside_the_values_is_named(page: Page) -> None:
     o1.locator('[data-pc-act="rule"]').click()
     o1.locator('[data-pc="values"]').fill("Yes, No")
     assert o1.locator('[data-rule-part="then"]').input_value() == "Shortlisted"
+    _checked(page)
     assert "decides “Shortlisted”, not among its values" in (
         o1.locator("[data-rule-warn]").inner_text()
     )
@@ -623,11 +653,13 @@ def test_a_later_rule_s_editor_follows_an_outcome_s_values(page: Page) -> None:
         "Yes",
         "No",
     ]
+    _checked(page)
     assert "reads “Shortlisted”, not among the values of Shortlist for interview" in (
         g3.locator("[data-rule-warn]").inner_text()
     )
     value.select_option("Yes")
     assert _line(g3) == "Shortlist for interview is Yes → Entered, else Not entered"
+    _checked(page)
     assert not g3.locator("[data-rule-warn]").is_visible()
 
 
@@ -787,6 +819,7 @@ def test_a_gate_item_makes_and_picks_its_panel(page: Page) -> None:
     gate = selection.locator('.pc-item[data-item="gate"]')
     assert gate.get_attribute("data-open") == ""  # alone in its stage
     _open_cards(gate)
+    _checked(page)
     issues = page.locator("[data-pc-issues]")
     assert "Gate 1 · Placement interview has no evaluators." in issues.inner_text()
     assert page.locator("[data-o-panel]").text_content() == "No evaluators"
@@ -901,6 +934,7 @@ def test_sources_are_ranked_and_removed(page: Page) -> None:
     # Focus goes to the row that took its place.
     assert gate.locator('[data-ps-act="remove"]').evaluate("e => e === document.activeElement")
     assert gate.locator("[data-ps-bounds]").text_content() == "within 0–1"
+    _checked(page)
     issues = page.locator("[data-pc-issues]")
     assert "has its Total's max above the sources' maxes together (1)." in issues.inner_text()
     assert "chip-warn" in (gate.locator("[data-pi-panel]").get_attribute("class") or "")
@@ -929,10 +963,12 @@ def test_a_source_takes_its_kind_and_its_bounds(page: Page) -> None:
     assert not added.locator('[data-ps="panel"]').is_visible()
     assert gate.locator("[data-ps-bounds]").text_content() == "within 2–4"
     added.locator('[data-ps="min"]').fill("3")
+    _checked(page)
     issues = page.locator("[data-pc-issues]").inner_text()
     assert "has source 3's min above its max." in issues
     assert "has its Total's min below the sources' mins together (4)." in issues
     added.locator('[data-ps="max"]').fill("x")
+    _checked(page)
     assert (
         "needs a whole-number min and max for source 3."
         in page.locator("[data-pc-issues]").inner_text()
@@ -1266,6 +1302,7 @@ def test_a_rule_matches_a_list_result_and_names_one_it_cannot_read(page: Page) -
     assert _line(o1).startswith("Verdict at Vote is No")
     # Turned into a string, it can no longer be read: the rule says so.
     fld.locator('[data-q="type"]').select_option("string")
+    _checked(page)
     assert "reads Verdict at Vote, which a rule cannot compare" in (
         o1.locator("[data-rule-warn]").inner_text()
     )
@@ -1354,6 +1391,7 @@ def test_response_fields_are_added_edited_and_removed(page: Page) -> None:
     # With no field, nothing to derive and no type a rule could read.
     assert row.locator('[data-r="derive"] option').count() == 0
     assert row.locator("[data-pr-type]").text_content() == "None until a field is chosen"
+    _checked(page)
     assert "Gate 1 · Placement interview has result 1 with no field chosen." in (
         page.locator("[data-pc-issues]").inner_text()
     )
@@ -1443,14 +1481,17 @@ def test_the_model_exercise_s_branched_rules_draw_as_the_server_does(page: Page)
     assert any("Currently an RA? is Yes" in line for line in shown)
     assert any("the best 20 by Interview score at Staff interview" in line for line in shown)
     # Weights all 0 are no combined result, which its rule does not read.
+    _checked(page)
     assert not page.locator("[data-pc-issues]").is_visible()
     o1 = _item(page, "o1")
     _revert(o1.locator("xpath=ancestor::article[@data-kind='stage']"))
+    _checked(page)
     assert not o1.locator("[data-rule-warn]").is_visible()
     o1.locator('[data-pc-act="rule"]').click()
     assert o1.locator(".pc-branch").count() == 2
     # A rule reading the combined result, with no weights, is named.
     o1.locator(".pc-cond select").first.select_option("comb")
+    _checked(page)
     assert "This outcome has weights adding up to 0, not 100." in (
         o1.locator("[data-rule-warn]").inner_text()
     )
@@ -1751,3 +1792,19 @@ def test_an_open_revert_shuts_when_a_later_stage_is_published(page: Page) -> Non
     assert not review.locator("[data-pc-revert]").is_visible()
     assert review.locator('[data-pc-st="revert"]').is_disabled()
     assert review.locator("[data-pc-status]").text_content() == "Completed"
+
+
+def test_an_edit_undone_before_its_check_leaves_no_stale_warning(page: Page) -> None:
+    """Codex on #4156: an edit undone within the check's 250 ms is not
+    checked, so its warning is never drawn on the page as restored."""
+    page.goto(PAGE)
+    _checked(page)
+    o1 = _item(page, "o1")
+    o1.locator('[data-pc-act="rule"]').click()
+    values = o1.locator('[data-pc="values"]')
+    was = values.input_value()
+    values.fill("Yes, No")  # its rule now decides a value it no longer has
+    values.fill(was)  # undone at once
+    page.wait_for_timeout(600)
+    _checked(page)
+    assert o1.locator("[data-rule-warn]").is_hidden()

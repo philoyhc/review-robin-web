@@ -11,7 +11,7 @@
 {% set issues = stage_problems(plan.stages) %}
 <script type="application/json" id="pc-pools">{{ people | tojson }}</script>
 <script type="application/json" id="pc-form-lists">{{ form_lists | tojson }}</script>
-<div class="fb-split" data-process data-unsaved-root data-now="{{ now_value }}">
+<div class="fb-split" data-process data-unsaved-root data-now="{{ now_value }}" data-pc-problems="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process/problems') }}">
   <div class="fb-main">
     <p class="muted pc-intro">The exercise's timeline, stage by stage. A stage holds the application form, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Dossiers applies them.</p>
     <div class="fb-cards" id="pc-cards">
@@ -642,53 +642,6 @@
       return b.when.map(condText).join(" and ") + " → " + (b.then || "—");
     }).join("; else if ") + ", else " + (rule.otherwise || "—");
   }
-  function problemsOf(item, rule) {
-    var found = [];
-    if (!rule) return found;
-    var gate = item.dataset.item === "gate";
-    var conds = [], decides = [];
-    branchesOf(rule).forEach(function (b) { conds = conds.concat(b.when); decides.push(b.then); });
-    conds.forEach(function (c) {
-      var kind = c[0], key = c[1], res = kind === "res" || kind === "top";
-      var col = key && kind !== "form" ? byKey(res ? gateKey(key) : key) : null;
-      if (kind === "out") {
-        if (!col) found.push("reads an outcome no longer in the process");
-        else if (earlierOutcomes(item).indexOf(col) < 0) found.push("reads " + nameOf(col) + ", which comes later");
-        else if (c[3] && valuesOf(col).indexOf(c[3]) < 0) found.push("reads “" + c[3] + "”, not among the values of " + nameOf(col));
-      } else if ((res || kind === "ent") && !gate) {
-        if (!col) found.push("reads a gate no longer in the process");
-        else if (scopeOf(item).indexOf(col) < 0) found.push("reads " + nameOf(col) + ", outside the gates before it");
-      }
-      if (kind === "last" && !/^[1-9][0-9]*$/.test(c[3])) found.push("counts the applicant's last “" + c[3] + "” submitted, not a whole number");
-      if (kind === "res" && col && !gate) {
-        var row = resultRow(key), rk = row ? kindOfResult(row) : "";
-        if (!row) found.push("reads a result no longer on " + nameOf(col));
-        else if (!rk) found.push("reads " + resultLabel(key) + ", which a rule cannot compare");
-        else if (rk === "list" && c[2] !== "is") found.push("compares " + resultLabel(key) + ", a list, as a number");
-        else if (rk === "number" && c[2] === "is") found.push("matches " + resultLabel(key) + ", a number, as a list");
-        else if (rk === "list" && optionsOf(row).indexOf(c[3]) < 0) found.push("reads “" + c[3] + "”, not among the options of " + resultLabel(key));
-        else if (rk === "number" && (c[3].trim() === "" || isNaN(Number(c[3])))) found.push("compares with “" + c[3] + "”, not a number");
-      }
-      if (kind === "comb" && (c[3].trim() === "" || isNaN(Number(c[3])))) found.push("compares with “" + c[3] + "”, not a number");
-      if (kind === "top" && col && !gate) {
-        var trow = resultRow(key);
-        if (!trow) found.push("reads a result no longer on " + nameOf(col));
-        else if (kindOfResult(trow) !== "number") found.push("ranks by " + resultLabel(key) + ", which is not a number");
-      }
-      if (kind === "top" && !/^[1-9][0-9]*$/.test(c[3])) found.push("takes the best “" + c[3] + "”, not a whole number");
-      if (kind === "form") {
-        if (!(key in FORM_LISTS)) found.push("reads “" + key + "”, not a List question on the form");
-        else if (FORM_LISTS[key].indexOf(c[3]) < 0) found.push("reads “" + c[3] + "”, not among the options of " + key);
-      }
-    });
-    if (!gate) {
-      var vals = valuesOf(item);
-      decides.concat([rule.otherwise]).forEach(function (v) {
-        if (v && vals.indexOf(v) < 0) found.push("decides “" + v + "”, not among its values");
-      });
-    }
-    return found;
-  }
   function weights(outcome) {
     var box = outcome.querySelector("[data-pc-weights]");
     // Its gates' numeric results (ruling 21), each weighed by its key.
@@ -750,10 +703,55 @@
       .concat(conf && conf.checked ? ["Confidential"] : [])
       .concat([line && line !== "Decided by hand" ? "Enters: " + line : "Entry decided by hand"]).join(" · ");
   }
+  // What each rule reads amiss, by its column's key: the server's to say
+  // (ruling 78, applydesk/rules.py's checks), asked after each edit and
+  // drawn when it answers; until then the last answer stands.
+  var problems = {}, asking = null, askedFor = "", checkError = "", inflight = 0;
+  function askProblems() {
+    var snap = window.applydeskProcessSnapshot ? window.applydeskProcessSnapshot() : null;
+    if (!snap) return;
+    var body = JSON.stringify(snap);
+    // A check waiting for an edit since undone goes too (Codex on #4156).
+    window.clearTimeout(asking);
+    asking = null;
+    if (body === askedFor) {
+      if (!inflight) delete root.dataset.pcAsking;
+      return;
+    }
+    root.dataset.pcAsking = "";  // a check outstanding (the tests wait on it)
+    asking = window.setTimeout(function () {
+      asking = null;
+      askedFor = body;
+      inflight += 1;
+      fetch(root.dataset.pcProblems, { method: "POST", headers: { "Content-Type": "application/json" }, body: body, credentials: "same-origin" })
+        .then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }); })
+        .then(function (got) {
+          inflight -= 1;
+          // Drawn only for the page as it now stands: a later edit asked
+          // again, or the page went back to what was answered before.
+          var now = window.applydeskProcessSnapshot ? JSON.stringify(window.applydeskProcessSnapshot()) : body;
+          if (askedFor !== body || now !== body) {
+            if (asking === null && !inflight && now === askedFor) delete root.dataset.pcAsking;
+            return;
+          }
+          // A snapshot the server cannot read yet says why, in place of the
+          // rules' problems, rather than leaving the last ones (Codex on #4156).
+          problems = got[0] && got[1].problems ? got[1].problems : {};
+          checkError = got[0] ? "" : (got[1] && got[1].error) || "The rules could not be checked.";
+          if (asking === null && !inflight) delete root.dataset.pcAsking;  // none newer waiting
+          drawRules();
+        }, function () { inflight -= 1; askedFor = ""; if (asking === null && !inflight) delete root.dataset.pcAsking; });
+    }, 250);
+  }
   function rules() {
+    drawRules();
+    askProblems();
+  }
+  function drawRules() {
     var all = stageProblems();
+    if (checkError) all.push("Rules not checked: " + checkError);
     columns().forEach(function (item) {
-      var rule = ruleOf(item), found = problemsOf(item, rule);
+      var rule = ruleOf(item), found = rule ? (problems[item.dataset.key] || []) : [];
       var weighed = item.dataset.item === "outcome" ? weights(item) : "";
       item.querySelector("[data-rule-line]").textContent = ruleText(rule);
       if (item.dataset.item === "gate") gateLine(item);

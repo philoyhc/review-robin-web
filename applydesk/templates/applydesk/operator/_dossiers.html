@@ -56,7 +56,7 @@
      nothing changes until Apply. #}
   {# Rules are set with each gate and outcome on Process (author,
      2026-11-13); this page only applies them, and a hand overrides. #}
-  <section class="card ap-panel" id="ap-rule" data-ap-rule hidden aria-labelledby="ap-rule-h">
+  <section class="card ap-panel" id="ap-rule" data-ap-rule data-ap-rule-url="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers/proposal') }}" hidden aria-labelledby="ap-rule-h">
     <h2 id="ap-rule-h">Apply rules</h2>
     <p class="muted">Each column's rule, set on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>, works out its cells in column order, so a rule that reads an earlier outcome sees it decided first. Nothing changes until you apply the proposal.</p>
     <div class="ap-rule-row">
@@ -594,10 +594,10 @@
     });
   }
 
-  // Apply rules: each column's rule, set on Process, in column order, so a
-  // rule reading an earlier outcome sees the value this run gives it. By
-  // default only cells not yet decided, never a cell set by hand unless
-  // asked; a condition that cannot be judged yet leaves the cell, named.
+  // Apply rules (ruling 78): the server's rule engine (applydesk/rules.py)
+  // says what each column's rule would change in the table as it stands,
+  // hand changes included, and the page shows it as a proposal. Nothing
+  // changes until Apply; past about 2 s the page says it is working.
   var rule = root.querySelector("[data-ap-rule]");
   if (rule) {
     var ruleOpen = root.querySelector("[data-ap-rule-open]"), go = rule.querySelector("[data-ap-rule-go]");
@@ -606,159 +606,52 @@
       ruleOpen.setAttribute("aria-expanded", rule.hidden ? "false" : "true");
       if (!rule.hidden) go.focus();
     });
-    // An outcome none of whose gates this application entered.
-    function notReached(r, okey, val) {
-      var scoped = head[okey].dataset.scope ? head[okey].dataset.scope.split("|") : [];
-      return scoped.length > 0 && scoped.every(function (g) { var v = val(r, g); return v === null || v === "Not entered"; });
-    }
-    // A branch reading earlier outcomes and nothing of its own gates, all
-    // of whose conditions hold: it decides without the gates.
-    function sentOn(r, okey, spec, val) {
-      if (!spec) return false;
-      return [{ when: spec.when }].concat(spec.more || []).some(function (b) {
-        var outs = b.when.filter(function (c) { return c[0] === "out"; });
-        return outs.length > 0 && outs.length === b.when.filter(function (c) { return c[0] !== "form"; }).length &&
-          b.when.every(function (c) { return holds(r, c, okey, val) === true; });
+    // Each row's cells that can be set: value and hand mark.
+    function tableCells() {
+      var out = {};
+      rows.forEach(function (r) {
+        var cells = {};
+        Array.prototype.forEach.call(r.querySelectorAll("[data-cell]"), function (cell) {
+          var el = cell.querySelector("[data-v]");
+          if (el) cells[cell.dataset.cell] = [el.dataset.v, cell.hasAttribute("data-hand")];
+        });
+        out[r.dataset.apApp] = cells;
       });
+      return out;
     }
-    function holds(r, cond, okey, val) {
-      var kind = cond[0], key = cond[1], op = cond[2], want = cond[3];
-      function cmp(x) { var t = parseFloat(want); return op === "ge" ? x >= t : x < t; }
-      if (kind === "status") return r.dataset.status === want;
-      if (kind === "form") {  // ruling 30: the answer to a List question
-        var ans = {};
-        try { ans = JSON.parse(r.dataset.answers || "{}"); } catch (e) { ans = {}; }
-        return ans[key] === want;
-      }
-      // Ranked across the branch, below; one not entered at the gate has
-      // no place in it, so the branch fails it now (Codex on #3955).
-      if (kind === "top") { var tg = val(r, gateKey(key)); return tg !== null && tg !== "Not entered"; }
-      if (kind === "last") return r.dataset.rank !== undefined && parseInt(r.dataset.rank, 10) <= parseInt(want, 10);
-      if (kind === "ent" || kind === "out") {
-        var v = val(r, key);
-        if (v === null) return false;  // a cell this application has not
-        if (kind === "out" && v === "" && notReached(r, key, val)) return false;
-        if (v !== want && undecided(v)) return null;  // not decided yet: wait
-        return v === want;
-      }
-      if (kind === "res") {
-        var g = val(r, gateKey(key)), el = cellOf(r, gateKey(key)), x = resultAt(el, key);
-        if (g === null || g === "Not entered") return false;
-        if (g === "—" || x === undefined) return null;
-        return op === "is" ? x === want : cmp(parseFloat(x));  // a list is matched (ruling 21)
-      }
-      var c = combinedOf(r, okey, val);  // comb
-      return c.known ? cmp(c.value) : null;  // as stages.combined: unknown
-    }
+    var byApp = {};
+    rows.forEach(function (r) { byApp[r.dataset.apApp] = r; });
     go.addEventListener("click", function () {
       if (!unlocked) return;
-      var onlyPending = rule.querySelector("[data-ap-rule-pending]").checked;
-      var replaceHand = rule.querySelector("[data-ap-rule-hand]").checked;
-      var shadow = new Map(), changes = [], skipped = [];
-      function val(r, key) {
-        var k = r.dataset.apApp + "|" + key;  /* the row's own, kept through a sort */
-        if (shadow.has(k)) return shadow.get(k);
-        var el = cellOf(r, key);
-        return el ? el.dataset.v : null;
-      }
-      heads.forEach(function (h) {
-        var spec = JSON.parse(h.dataset.rule || "null");
-        if (!spec) return;
-        var key = h.dataset.col, unjudged = [], reach = [];
-        if (h.dataset.apFixed) { skipped.push(h.dataset.label + ": fixed, its Review Robin session has opened."); return; }
-        rows.forEach(function (r) {
-          var el = cellOf(r, key);
-          if (!el) return;  // a draft, or a cell that cannot be set
-          // A withdrawn application keeps what it had; a draft has nothing.
-          if (r.dataset.status !== "Submitted") return;
-          // An outcome none of whose gates this application entered is
-          // not reached: it stays as it is, unless its cell is already open
-          // (Pending or decided), or a branch of its rule takes it on an
-          // earlier outcome's value alone (ruling 30: re-appointment skips
-          // the interview), that value set by hand or by this very run.
-          if (h.dataset.kind === "outcome" && val(r, key) === "" && notReached(r, key, val) && !sentOn(r, key, spec, val)) return;
-          reach.push(r);
+      var asked = tableCells(), state = tableState();
+      var slow = window.setTimeout(function () { said.textContent = "Working out what the rules would change…"; }, 2000);
+      go.disabled = true;
+      fetch(rule.dataset.apRuleUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          only_pending: rule.querySelector("[data-ap-rule-pending]").checked,
+          replace_hand: rule.querySelector("[data-ap-rule-hand]").checked,
+          cells: asked
+        })
+      }).then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }); })
+        .then(function (got) {
+          window.clearTimeout(slow);
+          go.disabled = !unlocked;
+          if (said.textContent.indexOf("Working out") === 0) said.textContent = "";
+          if (!got[0]) { said.textContent = (got[1] && got[1].error) || "The rules could not be applied: try again."; return; }
+          // The table moved while the server worked: ask again.
+          if (!unlocked || tableState() !== state) { said.textContent = "The table changed while the rules were worked out: propose again."; return; }
+          var changes = got[1].changes.map(function (c) {
+            return { row: byApp[c.app], key: c.key, from: c.from, to: c.to, byRule: true };
+          }).filter(function (c) { return c.row; });
+          propose("Apply rules", changes, got[1].skipped, go, true);
+        }, function () {
+          window.clearTimeout(slow);
+          go.disabled = !unlocked;
+          said.textContent = "The rules could not be applied: try again.";
         });
-        // Ruling 30: branches in order, the first whose conditions all hold
-        // giving its value, none holding the else. A branch taking the best
-        // N ranks the dossiers it reaches whose other conditions hold, ties
-        // at the cut all taken. Every reached dossier is ranked, a hand-set
-        // or decided one too; only the cells the options allow are
-        // proposed. A ranking waits (cold read on rungs 2-3) while any
-        // dossier could still join it: one with no result, one whose other
-        // condition here cannot be judged yet, or one an earlier branch
-        // left waiting that this branch's other conditions do not rule out
-        // (Codex on #3955), which may yet fall through to it.
-        var branches = [{ when: spec.when, then: spec.then }].concat(spec.more || []);
-        var verdicts = new Map(), left = reach.slice(), held = [];
-        branches.forEach(function (b) {
-          var tops = b.when.filter(function (c) { return c[0] === "top"; });
-          var others = b.when;
-          var passing = [], rest = [], unsure = [];
-          function couldJoin(r) {
-            return others.every(function (c) { return holds(r, c, key, val) !== false; });
-          }
-          left.forEach(function (r) {
-            var verdict = true;
-            b.when.forEach(function (cond) {
-              if (verdict === false) return;
-              var x = holds(r, cond, key, val);
-              if (x === false) verdict = false; else if (x === null) verdict = null;
-            });
-            if (verdict === null) { verdicts.set(r, null); unsure.push(r); }
-            else if (verdict) passing.push(r);
-            else rest.push(r);
-          });
-          tops.forEach(function (t) {
-            if (!passing.length) return;
-            var scored = passing.map(function (r) {
-              var g = val(r, gateKey(t[1])), x = resultAt(cellOf(r, gateKey(t[1])), t[1]);
-              return { r: r, x: (g === "Not entered" || g === null) ? -Infinity : (g === "—" || x === undefined ? NaN : parseFloat(x)) };
-            });
-            // One not entered at the gate has no place in its ranking: it
-            // goes on to the next branch, once (Codex on #3955).
-            scored = scored.filter(function (s) {
-              if (s.x === -Infinity) { rest.push(s.r); return false; }
-              return true;
-            });
-            passing = scored.map(function (s) { return s.r; });
-            var waiting = unsure.length > 0 || held.some(couldJoin);
-            if (waiting || scored.some(function (s) { return isNaN(s.x); })) {
-              passing.forEach(function (r) { verdicts.set(r, null); unsure.push(r); });
-              passing = [];
-              return;
-            }
-            scored.sort(function (a, b) { return b.x - a.x; });
-            var n = parseInt(t[3], 10) || 0;
-            var cut = n > 0 && scored.length > n ? scored[n - 1].x : -Infinity;
-            var kept = scored.filter(function (s, i) { return i < n || s.x === cut; });
-            if (kept.length > n && n > 0) {
-              skipped.push(h.dataset.label + ": " + kept.length + " at the cut of " + n + ": tied.");
-            }
-            var keep = new Set(kept.map(function (s) { return s.r; }));
-            passing.forEach(function (r) { if (!keep.has(r)) rest.push(r); });
-            passing = passing.filter(function (r) { return keep.has(r); });
-          });
-          passing.forEach(function (r) { verdicts.set(r, b.then); });
-          held = held.concat(unsure);
-          left = rest;
-        });
-        left.forEach(function (r) { verdicts.set(r, spec.otherwise); });
-        reach.forEach(function (r) {
-          var el = cellOf(r, key);
-          if (!replaceHand && el.closest("td").hasAttribute("data-hand")) return;
-          if (onlyPending && !undecided(el.dataset.v)) return;
-          var to = verdicts.get(r);
-          if (to === null) { unjudged.push(nameOf(r)); return; }
-          if (to === el.dataset.v) return;
-          shadow.set(r.dataset.apApp + "|" + key, to);
-          changes.push({ row: r, key: key, from: el.dataset.v, to: to, byRule: true });
-        });
-        if (unjudged.length) {
-          skipped.push(h.dataset.label + ": " + unjudged.length + (unjudged.length === 1 ? " dossier cannot" : " dossiers cannot") + " be judged yet (a result not in), left as is: " + unjudged.join(", ") + ".");
-        }
-      });
-      propose("Apply rules", changes, skipped, go, true);
     });
   }
 

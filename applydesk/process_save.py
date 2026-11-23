@@ -20,6 +20,7 @@ row. A rule naming a column the snapshot drops is left as written:
 from __future__ import annotations
 
 import re
+from contextvars import ContextVar
 from dataclasses import replace
 from datetime import datetime
 from typing import Any, cast
@@ -51,6 +52,13 @@ _COND_KINDS = ("status", "last", "out", "res", "ent", "comb", "form", "top")
 _TEXT = 2000
 #: A key the page made for a column it added, replaced on save.
 _PAGE_KEY = re.compile(r"([go])new[0-9]+")
+
+
+#: Building only to check the rules (``build(..., checking=True)``): a
+#: field the rules do not read that is still being typed (a date with one
+#: end, a weight not yet a whole percent, a count left blank) is read as
+#: unset rather than refusing the whole snapshot (Codex on #4156).
+_checking: ContextVar[bool] = ContextVar("process_save_checking", default=False)
 
 
 def _dict(v: Any, what: str) -> dict[str, Any]:
@@ -86,6 +94,8 @@ def _whole(v: Any, what: str) -> int:
     """A count the page read as a whole number. Blank or not whole, the
     page sends null: refused, never kept as 0 (Codex on #4026)."""
     if v is None:
+        if _checking.get():
+            return 0
         raise Refused(f"{what} needs whole numbers for its evaluator counts.")
     if not isinstance(v, int) or isinstance(v, bool) or not 0 <= v <= 10_000:
         raise Refused(f"{what} is malformed.")
@@ -107,6 +117,12 @@ def _span(a: Any, b: Any, what: str) -> StageDates | None:
     """Both ends, or none. One end alone has nowhere to be kept (a range
     is both or no dates, as ``stages.window``), so it is refused rather
     than dropped (Codex on #4026)."""
+    if _checking.get():
+        try:
+            start, end = _when(a, f"{what}'s start"), _when(b, f"{what}'s end")
+        except Refused:
+            return None
+        return StageDates(start, end) if start and end else None
     start, end = _when(a, f"{what}'s start"), _when(b, f"{what}'s end")
     if (start is None) != (end is None):
         raise Refused(f"{what} needs both a start and an end, or neither.")
@@ -262,6 +278,8 @@ def _outcome(v: Any, number: int) -> Outcome:
         # on purpose (Codex on #4026).
         # ASCII digits only: "²".isdigit() holds and int() refuses it (AD-129).
         if not re.fullmatch(r"[0-9]+", text):
+            if _checking.get():
+                continue  # the page says so itself; the rules are still checked
             raise Refused(f"{what}'s weights are not all whole percents.")
         share = int(text) / 100
         weights.append((k, share))
@@ -352,12 +370,31 @@ def build(
     exercise_id: str,
     renamed: dict[str, str] | None = None,
     taken: frozenset[str] = frozenset(),
+    *,
+    checking: bool = False,
 ) -> tuple[tuple[Stage, ...], frozenset[tuple[str, str]]]:
     """The stages the snapshot describes, and its (item, audience) emails;
     a gate's panel is one the exercise has, or one the page made, by the
     key ``renamed`` gives it (``scratch_panels.adopt``). A column the page
-    added takes a key past ``taken`` (``process_store.taken_keys``)."""
-    renamed = renamed or {}
+    added takes a key past ``taken`` (``process_store.taken_keys``).
+
+    ``checking``: built only to say what its rules read amiss (ruling 78),
+    so the page's own keys are kept and ruling 15's shape, which the page
+    says itself, is not refused."""
+    token = _checking.set(checking)
+    try:
+        return _build(sent, exercise_id, renamed or {}, taken, checking)
+    finally:
+        _checking.reset(token)
+
+
+def _build(
+    sent: Any,
+    exercise_id: str,
+    renamed: dict[str, str],
+    taken: frozenset[str],
+    checking: bool,
+) -> tuple[tuple[Stage, ...], frozenset[tuple[str, str]]]:
     panels = frozenset(sample_data.panel_pools(exercise_id))
     got = _dict(sent, "The process")
     raw = _list(got.get("stages"), "The process's stages", MAX_STAGES)
@@ -408,8 +445,10 @@ def build(
             )
         )
     shape = stages.problems(tuple(built))
-    if shape:
+    if shape and not checking:
         raise Refused(shape[0])
+    if checking:
+        return tuple(built), frozenset(sends)
     keys = _minted([c.key for st in built for c in st.columns], taken)
     final = tuple(_rekeyed(st, keys) for st in built)
     return final, frozenset((keys.get(item, item), aud) for item, aud in sends)
