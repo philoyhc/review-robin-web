@@ -204,6 +204,9 @@ Review Robin).
 ### Status
 
 - **2026-11-23:** planned with Items 2 and 3.
+- **2026-11-23, the change:** `exercises_archived.html` links the name;
+  `test_archive.py::test_an_archived_row_names_the_exercise_and_links_to_its_home`
+  fails without it.
 
 ### PR ladder
 

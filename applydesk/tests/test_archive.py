@@ -50,6 +50,17 @@ def test_archived_exercises_are_listed_newest_first() -> None:
     assert page.count("data-ar-restore>Restore") == 2
 
 
+def test_an_archived_row_names_the_exercise_and_links_to_its_home() -> None:
+    """AD1U Item 4, as Review Robin's archived sessions: the name opens
+    the exercise's Home, read-only while it is archived."""
+    _archive("wa9juxbc2t", datetime(2026, 11, 20, 1, 0, tzinfo=UTC))
+    client = _client()
+    page = client.get(ARCHIVE).text
+    assert f'<a href="{LOBBY}/wa9juxbc2t">Recruitment and Selection' in page
+    home = client.get(f"{LOBBY}/wa9juxbc2t")
+    assert home.status_code == 200 and "data-archived" in home.text
+
+
 # --- Read-only while archived (the author, 2026-11-22) ------------------------
 
 
