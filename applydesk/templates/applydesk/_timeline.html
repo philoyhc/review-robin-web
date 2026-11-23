@@ -44,7 +44,7 @@
             {% else %}<span>Ready to publish.</span>{% endif %}
           {% elif sr.waiting %}<span>Waiting on: {{ sr.waiting | join("; ") }}.</span>{% endif %}
           <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Set on Process →</a></div>{% endif %}
-        {% for r in ops[loop.index0] %}<div class="tl-op-row"><b>{{ r.label }} <span class="chip chip-{{ r.tone }}">{{ r.state }}</span></b><span>{{ r.detail }}</span>{% if r.target == "dossiers" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers') }}">Open Dossiers →</a>{% elif r.target %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/' ~ r.target) }}">Open Gate {{ r.gate }} →</a>{% endif %}</div>{% endfor %}
+        {% for r in ops[loop.index0] %}<div class="tl-op-row"><b>{{ r.label }} <span class="chip chip-{{ r.tone }}">{{ r.state }}</span></b><span>{{ r.detail }}</span>{% if r.gate %}{% if r.target %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/' ~ r.target) }}">Open Gate {{ r.gate }} →</a>{% endif %}{% elif r.target == "dossiers" %}<a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/dossiers') }}">Open Dossiers →</a>{% endif %}</div>{% endfor %}
         </div>
       </div>{% endif %}
     </li>

@@ -1335,7 +1335,8 @@ def _old_gate_link(
     request: Request, exercise: sample_data.Exercise, gate: str, tail: str = ""
 ) -> RedirectResponse | None:
     """An old ``gate_<n>`` link (sent emails and bookmarks hold them)
-    redirected once to the gate's keyed page, its query kept; None for a
+    redirected to the gate numbered so now, its query kept: a 302, since
+    a number names another gate once gates move; None for a
     path that is not one. 404 as ``_gate_or_404`` for a number naming no
     gate. The digits are bounded, so a number past Python's
     integer-string limit is a 404, not a 500 (findings 2026-11-20 S8)."""
@@ -1349,7 +1350,7 @@ def _old_gate_link(
         request, f"/operator/exercises/{exercise.public_id}/evaluations/{found.key}{tail}"
     )
     query = request.url.query
-    return RedirectResponse(path + (f"?{query}" if query else ""), status_code=301)
+    return RedirectResponse(path + (f"?{query}" if query else ""), status_code=302)
 
 
 def _bundle(request: Request, exercise: sample_data.Exercise, gate: stages.Gate) -> handoff.Bundle:

@@ -18,8 +18,9 @@ from applydesk.sample_data import Exercise
 class Row:
     """One operator row: what it is, its state chip and tone, a line of
     figures, and where it is worked (``target``: "dossiers" or a gate's
-    key, ``gate`` its number for the link's words; "" for no link, a
-    draft's gates having no page yet)."""
+    key, ``gate`` its number, set only on a gate's row, so a gate keyed
+    "dossiers" still links to its page; "" for no link, a draft's gates
+    having no page yet)."""
 
     label: str
     state: str

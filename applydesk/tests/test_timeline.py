@@ -304,6 +304,20 @@ def test_home_draws_the_operator_part_and_links_where_it_is_worked(client: TestC
     assert f'href="/applydesk/operator/exercises/{EX}/dossiers">Open Dossiers →</a>' in home
 
 
+def test_a_gate_row_links_to_its_gate_whatever_its_key(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AD2C rung 5b, cold read: a row's target is a gate's key, so a gate
+    keyed "dossiers" still opens its own page, not Dossiers."""
+    from applydesk import home_ops
+
+    gate = home_ops.Row("Gate 1 · Odd", "Ready", "warn", "", "dossiers", 1)
+    monkeypatch.setattr(home_ops, "of", lambda e: ((gate,),))
+    home = client.get(f"/applydesk/operator/exercises/{EX}").text
+    assert f'href="/applydesk/operator/exercises/{EX}/evaluations/dossiers">Open Gate 1 →' in home
+    assert "Open Dossiers →" not in home
+
+
 def test_a_stage_not_shown_to_applicants_is_not_on_theirs(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:

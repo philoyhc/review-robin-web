@@ -138,7 +138,7 @@ Taken 2026-11-22 at `1ceb1d592`.
   - Left: a CSV row not on record is made pending without a directory lookup, deliberately (the directory is searched one person at a time, from the search). A published stage's rule and value edits are not refused by the save; the page leaves them editable too.
 - **2026-11-23, rung 5b (gate handles, AD-48):**
   - A gate's page and its bundle files are at `/evaluations/<key>`.
-  - An old `gate_<n>` page or bundle link redirects (301) to the gate numbered so now, keeping its query.
+  - An old `gate_<n>` page or bundle link redirects (302, not cached: a number names another gate once gates move) to the gate numbered so now, keeping its query.
   - A removed gate's key 404s.
   - Extract's gate file is `gate_<key>.csv`, saved as `<key>_<slug>.csv`. An old `gate_<n>.csv` download 404s: only Extract's own page links to it.
   - Home's *Open Gate N* rows carry the key.

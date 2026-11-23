@@ -486,7 +486,7 @@ def test_a_sample_exercise_s_process_saves_into_the_database() -> None:
     # gate's, and an old numbered link reaches the gate numbered so now.
     assert client.get(f"{LOBBY}/{model}/evaluations/{gate_keys[0]}").status_code == 404
     old = client.get(f"{LOBBY}/{model}/evaluations/gate_1", follow_redirects=False)
-    assert old.status_code == 301
+    assert old.status_code == 302
     assert old.headers["location"] == f"{LOBBY}/{model}/evaluations/{new_key}"
     extract = client.get(f"{LOBBY}/{model}/extract")
     assert extract.status_code == 200

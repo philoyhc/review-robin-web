@@ -949,10 +949,10 @@ def test_an_old_numbered_gate_link_redirects_once_to_its_key(client: TestClient)
     with its query, and a bundle file's with its file."""
     base = f"/applydesk/operator/exercises/{EX}/evaluations"
     page = client.get(f"{base}/gate_2?q=lim&offset=200", follow_redirects=False)
-    assert page.status_code == 301
+    assert page.status_code == 302  # not cached: a number names another gate once gates move
     assert page.headers["location"] == f"{base}/g2?q=lim&offset=200"
     file = client.get(f"{base}/gate_3/reviewers.csv", follow_redirects=False)
-    assert file.status_code == 301 and file.headers["location"] == f"{base}/g3/reviewers.csv"
+    assert file.status_code == 302 and file.headers["location"] == f"{base}/g3/reviewers.csv"
     assert client.get(f"{base}/gate_3/nosuch.csv", follow_redirects=False).status_code == 404
     draft = f"/applydesk/operator/exercises/{DRAFT}/evaluations/gate_1"
     assert client.get(draft, follow_redirects=False).status_code == 404
