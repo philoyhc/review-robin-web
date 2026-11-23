@@ -14,7 +14,6 @@ import random
 import re
 from dataclasses import dataclass, replace
 from datetime import date, datetime
-from typing import cast
 
 from applydesk import clock, sample_data
 from applydesk.sample_data import Application
@@ -645,22 +644,41 @@ def _exercise_span(e: sample_data.Exercise) -> StageDates | None:
     return StageDates(start, end)
 
 
-def _scratch_stages(exercise_id: str) -> tuple[Stage, ...] | None:
-    """A scratch exercise's stages as Process last saved them (segment
-    AD1N), else None."""
-    from applydesk import scratch  # scratch builds on sample_data, as this does
+def _stored_stages(exercise_id: str) -> tuple[Stage, ...] | None:
+    """The stages Process last saved for the exercise (segment AD2C), else
+    None: never saved, it reads the sample's."""
+    from applydesk import process_store  # it builds on these dataclasses
 
-    saved = scratch.page(exercise_id, "process")
-    return cast(tuple[Stage, ...], saved[0]) if isinstance(saved, tuple) else None
+    return process_store.stored_stages(exercise_id)
+
+
+def _blank_cells(rows: tuple[Row, ...], saved: tuple[Stage, ...]) -> tuple[Row, ...]:
+    """A sample's rows under its saved timeline: a column the sample never
+    had (added on Process) is blank for each, until AD2F stores cells."""
+    keys = [c.key for st in saved for c in st.columns]
+    return tuple(
+        Row(r.application, {**{k: Cell("") for k in keys if k not in r.cells}, **r.cells})
+        for r in rows
+    )
+
+
+def sample_keys(exercise_id: str) -> frozenset[str]:
+    """The gate and outcome keys of a sample exercise's own timeline (none
+    for another): its cells are keyed by them."""
+    return frozenset(c.key for st in _STAGES.get(exercise_id, ()) for c in st.columns)
 
 
 def plan_of(exercise_id: str) -> Plan:
     """The stages and every application's cells for one exercise. An
     exercise not yet set up has one stage, holding the form, as a
-    new exercise starts (ruling 15)."""
+    new exercise starts (ruling 15). Once Process has saved it, its stored
+    stages; a sample's cells stay the sample's until AD2F stores them."""
     apps = sample_data.applications_of(exercise_id)
-    saved = _scratch_stages(exercise_id)
+    saved = _stored_stages(exercise_id)
     if saved is not None:
+        if exercise_id in _STAGES:
+            rows = _model_rows(apps) if exercise_id == "wa9juxbc2t" else _small_rows(apps)
+            return Plan(saved, _blank_cells(rows, saved))
         return Plan(saved, tuple(Row(a, {}) for a in apps))
     if exercise_id not in _STAGES:
         e = sample_data.exercise(exercise_id)

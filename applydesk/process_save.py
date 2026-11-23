@@ -1,6 +1,7 @@
-"""Process's *Save* on a scratch exercise (segment AD1N rung 4): the page's
-snapshot (``applydeskProcessSnapshot``) checked and built back into the
-stages the sample's lookups return, and the emails its items tick.
+"""Process's *Save* (segment AD1N rung 4; every exercise since AD2C): the
+page's snapshot (``applydeskProcessSnapshot``) checked and built back into
+the stages the pages read, and the emails its items tick, for
+``process_store.save`` to keep.
 
 Shapes are checked, never the plan: what the page itself flags (dates out
 of order, a rule left pointing at a removed gate, weights not adding up)
@@ -8,9 +9,12 @@ is saved as the operator left it and flagged again on reload. Ruling 15's
 shape is the exception (``stages.problems``): nothing else the pages draw
 expects a stage holding the form and a gate.
 
-Gates and outcomes are renumbered in timeline order, ``g1``... and
-``o1``..., the keys the page minted for new ones (``gnew1``) rewritten in
-every rule and weight that names them, so a key never outlives a reload.
+Gates, outcomes and stages keep the keys they were saved under (ruling
+37). One the page made (``gnew1``, ``onew1``) is given the server's own,
+past every key the exercise has held (``g6``, ``o4``), and every rule,
+weight and email tick naming it follows, so a page key never reaches a
+row. A rule naming a column the snapshot drops is left as written:
+``process_store`` refuses it, naming both (AD-62).
 """
 
 from __future__ import annotations
@@ -45,8 +49,8 @@ MAX_ITEMS = 50  # fields, sources, conditions, values: per list
 _KEY = re.compile(r"[a-z][a-z0-9]{0,15}")
 _COND_KINDS = ("status", "last", "out", "res", "ent", "comb", "form", "top")
 _TEXT = 2000
-#: What a rule or a weight naming a removed column reads after a save.
-REMOVED = "removed"
+#: A key the page made for a column it added, replaced on save.
+_PAGE_KEY = re.compile(r"([go])new[0-9]+")
 
 
 def _dict(v: Any, what: str) -> dict[str, Any]:
@@ -276,25 +280,34 @@ def _outcome(v: Any, number: int) -> Outcome:
     )
 
 
-Results = dict[str, frozenset[str]]
+def _minted(page_keys: list[str], taken: frozenset[str]) -> dict[str, str]:
+    """Each page-made key (``gnew1``) to the server's next of its kind,
+    past every key held now or ever (``taken``) and every one the page
+    keeps; the rest map to themselves."""
+    held = set(taken) | {k for k in page_keys if not _PAGE_KEY.fullmatch(k)}
+    top = {"g": 0, "o": 0}
+    for k in held:
+        if k[:1] in top and k[1:].isascii() and k[1:].isdigit():
+            top[k[0]] = max(top[k[0]], int(k[1:]))
+    keys: dict[str, str] = {}
+    for k in page_keys:
+        made = _PAGE_KEY.fullmatch(k)
+        if made:
+            top[made.group(1)] += 1
+            keys[k] = f"{made.group(1)}{top[made.group(1)]}"
+        else:
+            keys[k] = k
+    return keys
 
 
-def _rekey(text: str, keys: dict[str, str], results: Results) -> str:
+def _rekey(text: str, keys: dict[str, str]) -> str:
     """A rule's or a weight's key, "gnew1.r2" or "o1", with its column's
-    new key. One naming no column on the page (a gate removed since), or a
-    result its gate no longer has, reads ``removed``, which no column is
-    ever keyed: kept as left, never read as the column renumbered into its
-    old key, nor as a result added later under the removed one's key
-    (Codex on #4026)."""
+    key as saved; one naming no column on the page is left as written."""
     head, dot, tail = text.partition(".")
-    if not head:
-        return text
-    if head not in keys or (tail and head in results and tail not in results[head]):
-        return REMOVED + dot + tail
-    return keys[head] + dot + tail
+    return keys.get(head, head) + dot + tail
 
 
-def _rekey_rule(rule: Rule | None, keys: dict[str, str], results: Results) -> Rule | None:
+def _rekey_rule(rule: Rule | None, keys: dict[str, str]) -> Rule | None:
     if rule is None:
         return None
 
@@ -302,7 +315,7 @@ def _rekey_rule(rule: Rule | None, keys: dict[str, str], results: Results) -> Ru
         when: tuple[tuple[str, str, str, str], ...],
     ) -> tuple[tuple[str, str, str, str], ...]:
         return tuple(
-            (k, _rekey(key, keys, results) if k in ("out", "res", "ent", "top") else key, op, v)
+            (k, _rekey(key, keys) if k in ("out", "res", "ent", "top") else key, op, v)
             for k, key, op, v in when
         )
 
@@ -335,11 +348,15 @@ def made_panels(sent: Any, exercise_id: str) -> set[str]:
 
 
 def build(
-    sent: Any, exercise_id: str, renamed: dict[str, str] | None = None
+    sent: Any,
+    exercise_id: str,
+    renamed: dict[str, str] | None = None,
+    taken: frozenset[str] = frozenset(),
 ) -> tuple[tuple[Stage, ...], frozenset[tuple[str, str]]]:
     """The stages the snapshot describes, and its (item, audience) emails;
     a gate's panel is one the exercise has, or one the page made, by the
-    key ``renamed`` gives it (``scratch_panels.adopt``)."""
+    key ``renamed`` gives it (``scratch_panels.adopt``). A column the page
+    added takes a key past ``taken`` (``process_store.taken_keys``)."""
     renamed = renamed or {}
     panels = frozenset(sample_data.panel_pools(exercise_id))
     got = _dict(sent, "The process")
@@ -348,18 +365,17 @@ def build(
         raise Refused("A process has at least one stage.")
     built: list[Stage] = []
     sends: set[tuple[str, str]] = set()
-    keys: dict[str, str] = {}
+    seen: set[str] = set()
     gates_n = outcomes_n = 0
     for n, x in enumerate(raw, 1):
         st = _dict(x, f"Stage {n}")
+        stage_key = _text(st.get("key", ""), f"Stage {n}'s key", 16)
+        if stage_key and not _KEY.fullmatch(stage_key):
+            raise Refused(f"Stage {n}'s key is malformed.")
         columns: list[Gate | Outcome] = []
         for g in _list(st.get("gates"), f"Stage {n}'s gates", MAX_GATES):
             gates_n += 1
-            gate = _gate(g, gates_n, panels, renamed)
-            if gate.key in keys:
-                raise Refused("Two gates or outcomes share a key.")
-            keys[gate.key] = f"g{gates_n}"
-            columns.append(gate)
+            columns.append(_gate(g, gates_n, panels, renamed))
         form = None if st.get("form") is None else _dict(st.get("form"), f"Stage {n}'s form")
         if form is not None:
             for item in ("receipt", "reminder"):
@@ -368,16 +384,16 @@ def build(
         if st.get("outcome") is not None:
             outcomes_n += 1
             outcome = _outcome(st.get("outcome"), outcomes_n)
-            if outcome.key in keys:
-                raise Refused("Two gates or outcomes share a key.")
-            new = f"o{outcomes_n}"
-            keys[outcome.key] = new
             o = _dict(st.get("outcome"), f"Stage {n}'s outcome")
             if _flag(o.get("applicants_email"), f"Outcome {outcomes_n}"):
-                sends.add((new, workflow.APPLICANTS))
+                sends.add((outcome.key, workflow.APPLICANTS))
             if _flag(o.get("evaluators_email"), f"Outcome {outcomes_n}"):
-                sends.add((new, workflow.EVALUATORS))
+                sends.add((outcome.key, workflow.EVALUATORS))
             columns.append(outcome)
+        for c in columns:
+            if c.key in seen:
+                raise Refused("Two gates or outcomes share a key.")
+            seen.add(c.key)
         built.append(
             Stage(
                 n,
@@ -388,51 +404,26 @@ def build(
                 "Published" if _flag(st.get("published"), f"Stage {n}") else "Draft",
                 _flag(st.get("shown"), f"Stage {n}"),
                 _span(form.get("from"), form.get("to"), "The form") if form else None,
+                key=stage_key,
             )
         )
     shape = stages.problems(tuple(built))
     if shape:
         raise Refused(shape[0])
-    results = {
-        c.key: frozenset(r.key for r in c.results)
-        for st in built
-        for c in st.columns
-        if isinstance(c, Gate)
-    }
-    final = tuple(_rekeyed(st, keys, results) for st in built)
-    return final, frozenset(sends)
+    keys = _minted([c.key for st in built for c in st.columns], taken)
+    final = tuple(_rekeyed(st, keys) for st in built)
+    return final, frozenset((keys.get(item, item), aud) for item, aud in sends)
 
 
-def keys_of(sent: Any) -> dict[str, str]:
-    """Each gate's and outcome's key as the page sent it, to the key
-    ``build`` gives it (timeline order: ``g1``…, ``o1``…), for what else
-    names a column by key: the templates Emails keeps by outcome."""
-    keys: dict[str, str] = {}
-    gates = outcomes = 0
-    for st in _items(sent, "stages"):
-        for g in _items(st, "gates"):
-            gates += 1
-            key = cast(dict[str, Any], g).get("key") if isinstance(g, dict) else None
-            if isinstance(key, str):
-                keys[key] = f"g{gates}"
-        o = cast(dict[str, Any], st).get("outcome") if isinstance(st, dict) else None
-        if isinstance(o, dict):
-            outcomes += 1
-            key = cast(dict[str, Any], o).get("key")
-            if isinstance(key, str):
-                keys[key] = f"o{outcomes}"
-    return keys
-
-
-def _rekeyed(st: Stage, keys: dict[str, str], results: Results) -> Stage:
+def _rekeyed(st: Stage, keys: dict[str, str]) -> Stage:
     columns = tuple(
-        replace(c, key=keys[c.key], rule=_rekey_rule(c.rule, keys, results))
+        replace(c, key=keys[c.key], rule=_rekey_rule(c.rule, keys))
         if isinstance(c, Gate)
         else replace(
             c,
             key=keys[c.key],
-            rule=_rekey_rule(c.rule, keys, results),
-            weights=tuple((_rekey(k, keys, results), w) for k, w in c.weights),
+            rule=_rekey_rule(c.rule, keys),
+            weights=tuple((_rekey(k, keys), w) for k, w in c.weights),
         )
         for c in st.columns
     )

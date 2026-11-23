@@ -335,15 +335,21 @@ def awaits_approval(exercise_id: str, gate: stages.Gate) -> bool:
     return gate.mode == "suggested" and gate_readiness(exercise_id, gate).endswith(" to approve")
 
 
+#: A scratch exercise's email ticks, as its Process last saved them: the
+#: (item, audience) pairs it sends. Kept for the browser until Emails is
+#: stored; a sample's stay the sample's.
+SENDS_PAGE = "sends"
+
+
 def sends(exercise_id: str, item: str, audience: str) -> bool:
     """Whether Process has the item ("receipt", "reminder" or an outcome's
     key) email the audience; a scratch exercise's as its Process last saved
     them (segment AD1N)."""
     from applydesk import scratch
 
-    saved = scratch.page(exercise_id, "process")
-    if isinstance(saved, tuple):
-        return (item, audience) in cast(tuple[object, frozenset[tuple[str, str]]], saved)[1]
+    saved = scratch.page(exercise_id, SENDS_PAGE)
+    if isinstance(saved, frozenset):
+        return (item, audience) in cast(frozenset[tuple[str, str]], saved)
     return (item, audience) in _SENDS.get(exercise_id, _DEFAULT_SENDS)
 
 
@@ -363,37 +369,13 @@ def scratch_templates(exercise_id: str) -> dict[tuple[str, str], tuple[str, str]
     return cast(dict[tuple[str, str], tuple[str, str]], held) if isinstance(held, dict) else {}
 
 
-#: Each Process save's number on a scratch exercise: an Emails page
-#: opened before the latest one names its outcomes by keys that may now be
-#: another outcome's, so its saves are refused (Codex on #4028).
-REVISION_PAGE = "process_revision"
-
-
 def process_revision(exercise_id: str) -> int:
-    """How many times Process has saved into a scratch exercise."""
-    from applydesk import scratch
+    """How many times Process has saved the exercise (segment AD2C): an
+    Emails page opened before the latest names outcomes the save may have
+    retired, so its saves are refused (Codex on #4028)."""
+    from applydesk import process_store
 
-    held = scratch.page(exercise_id, REVISION_PAGE)
-    return held if isinstance(held, int) else 0
-
-
-def rekey_templates(exercise_id: str, keys: dict[str, str]) -> None:
-    """A scratch exercise's templates after Process renumbers its outcomes
-    (``process_save.keys_of``): each outcome's follows it to its new key,
-    a removed outcome's is dropped, the form's stay (cold read: a
-    template must never land on another outcome)."""
-    from applydesk import scratch
-
-    own = scratch_templates(exercise_id)
-    if not own:
-        return
-    kept: dict[tuple[str, str], tuple[str, str]] = {}
-    for (item, audience), text in own.items():
-        if item in _FORM_MAIL:
-            kept[(item, audience)] = text
-        elif item in keys:
-            kept[(keys[item], audience)] = text
-    scratch.save_page(exercise_id, SCRATCH_PAGE, kept)
+    return process_store.revision(exercise_id)
 
 
 def foreign_tags(kind: str, text: str) -> tuple[str, ...]:

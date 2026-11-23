@@ -389,7 +389,7 @@
 {% set outs = st.columns | rejectattr("via", "defined") | list %}
 {% set status = stage_status(st) %}
 {% set lk = stage_lock(st) %}
-<article class="fc pc" data-kind="stage" data-stage="{{ st.number }}" data-status="{{ status }}"{% if lk.fixed %} data-locked="{{ lk.reason }}"{% endif %}{% if open %} data-open{% endif %}>
+<article class="fc pc" data-kind="stage" data-stage="{{ st.number }}" data-stage-key="{{ st.key }}" data-status="{{ status }}"{% if lk.fixed %} data-locked="{{ lk.reason }}"{% endif %}{% if open %} data-open{% endif %}>
   <div class="fc-head">
     {{ grip() }}
     <button type="button" class="fc-toggle" data-fc-toggle aria-expanded="{{ 'true' if open else 'false' }}" aria-label="{{ 'Collapse' if open else 'Expand' }} {{ st.label }}"></button>

@@ -225,13 +225,29 @@ def test_the_utilities_mock_bundle_arrives_set_up(client: TestClient, db: Sessio
     assert status["schedule"]["responses_release_at"] is None  # releases nothing
 
 
+@pytest.fixture
+def applydesk_db(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Apply Desk's database, empty, as a fresh SQLite file: `stages.plan_of`
+    reads a saved timeline from it (segment AD2C), and finds none."""
+    from applydesk import db, models
+
+    monkeypatch.setenv("APPLYDESK_DATABASE_URL", f"sqlite:///{tmp_path / 'applydesk.db'}")
+    db.engine.cache_clear()
+    db._sessions.cache_clear()  # pyright: ignore[reportPrivateUsage]  -- reset for this test
+    models.Base.metadata.create_all(db.engine())
+    yield
+    db.engine().dispose()
+    db.engine.cache_clear()
+    db._sessions.cache_clear()  # pyright: ignore[reportPrivateUsage]  -- as above
+
+
 @pytest.mark.parametrize(
     ("exercise_id", "number"),
     [("wa9juxbc2t", 3), ("wa9juxbc2t", 2), ("k7mfr3pq8z", 1)],
     ids=["interview", "confidential-gate", "blind-exercise"],
 )
 def test_an_apply_desk_gate_s_bundle_arrives_set_up(
-    client: TestClient, db: Session, exercise_id: str, number: int
+    client: TestClient, db: Session, exercise_id: str, number: int, applydesk_db: None
 ) -> None:
     """Apply Desk's own builders (segment AD1M, `applydesk/handoff.py`):
     a gate's four files, as its card offers them, create a draft whose
