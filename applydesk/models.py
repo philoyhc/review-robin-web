@@ -1,9 +1,9 @@
 """Apply Desk's tables (segment AD2A): people, exercises, who operates
 them, and the audit trail; an exercise's settings and tags (AD2B); its
 timeline, gates, outcomes and Candidates (AD2C); its panels and roster
-(AD2E); its form's cards (AD2D). The rest of an exercise still comes
-from `applydesk/sample_data.py` until the series' later segments
-(`applydesk/guide/ad2_series.md`)."""
+(AD2E); its form's cards (AD2D); its email ticks and templates (AD2L).
+The rest of an exercise still comes from `applydesk/sample_data.py` until
+the series' later segments (`applydesk/guide/ad2_series.md`)."""
 
 from __future__ import annotations
 
@@ -168,6 +168,11 @@ class Exercise(Base):
     form_description: Mapped[str | None] = mapped_column(Text)
     form_revision: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
+    )
+    # Whether Process has recorded its email ticks (segment AD2L): until
+    # then a sample keeps its own.
+    sends_saved: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
     )
 
 
@@ -547,6 +552,45 @@ class FormCard(Base):
     required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     shown: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class EmailSend(Base):
+    """One email Process ticks (segment AD2L; rulings 16, 65): ``item`` is
+    ``receipt``, ``reminder`` or an outcome's key, ``audience``
+    ``Applicants`` or ``Evaluators``. Recorded with Process's save; an
+    unticked one is retired (ruling 74)."""
+
+    __tablename__ = "email_send"
+    __table_args__ = (
+        UniqueConstraint("exercise_id", "item", "audience", name="uq_email_send_pair"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    exercise_id: Mapped[int] = _exercise_fk("email_send")
+    item: Mapped[str] = mapped_column(String(40), nullable=False)
+    audience: Mapped[str] = mapped_column(String(16), nullable=False)
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class EmailTemplate(Base):
+    """An email's template (segment AD2L; ruling 54), by the item and
+    audience it is owed for: its subject and body as its Emails card last
+    saved them, and ``version``, how many times it was saved, which a card
+    sends back so a save from an older page is refused."""
+
+    __tablename__ = "email_template"
+    __table_args__ = (
+        UniqueConstraint("exercise_id", "item", "audience", name="uq_email_template_pair"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    exercise_id: Mapped[int] = _exercise_fk("email_template")
+    item: Mapped[str] = mapped_column(String(40), nullable=False)
+    audience: Mapped[str] = mapped_column(String(16), nullable=False)
+    subject: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    body: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    saved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AuditEvent(Base):
