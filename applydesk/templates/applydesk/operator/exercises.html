@@ -8,7 +8,7 @@
    to `/operator/exercises/panel` and come back here. #}
 <div class="ptitle"><h1>Operator Lobby</h1></div>
 {% if scratch_said %}<p class="nx-said" role="status" data-nx-said>{{ scratch_said }}</p>{% endif %}
-{% include "applydesk/_placeholder.html" %}
+{% with saves = true %}{% include "applydesk/_placeholder.html" %}{% endwith %}
 {% set tags = lobby_tags %}
 <div class="lb-row">
   <section class="card" data-lb-counts>
