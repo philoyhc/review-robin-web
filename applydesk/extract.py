@@ -45,9 +45,10 @@ SETUP_PARTS = frozenset(f.removesuffix(".csv") for f in SETUP_FILES)
 class GateFile:
     """One gate's file: its name, columns and rows (pairs), or not sent."""
 
-    number: int
+    number: int  # for display only
+    key: str  # its handle (ruling 37, AD-48): the download is gate_<key>.csv
     label: str
-    name: str  # gate_<n>_<slug>.csv
+    name: str  # <key>_<slug>.csv
     columns: tuple[str, ...]
     pairs: int
     sent: bool  # its Review Robin session has opened, so it has answers
@@ -99,8 +100,9 @@ def _gate(e: Exercise, g: stages.Gate) -> GateFile:
     columns = PAIR_KEYS + tuple(f.label for f in stages.fields_of(g))
     return GateFile(
         g.number,
+        g.key,
         g.label or "Untitled gate",
-        f"gate_{g.number}_{slug(g.label or 'untitled')}.csv",
+        f"{g.key}_{slug(g.label or 'untitled')}.csv",
         columns,
         pairs,
         e.state != "Draft" and workflow.gate_opened(state, line),
@@ -317,19 +319,19 @@ def _answer(f: stages.ResponseField, *key: str) -> str:
 
 
 def gate_file(
-    e: Exercise, number: int, shape: str = "pair", names: bool = False
+    e: Exercise, key: str, shape: str = "pair", names: bool = False
 ) -> tuple[str, Table] | None:
     """A gate's file and its name, or None for a gate not sent or none."""
-    g = next((x for x in of(e).gates if x.number == number), None)
-    table = gate(e, number, shape, names) if g else None
+    g = next((x for x in of(e).gates if x.key == key), None)
+    table = gate(e, key, shape, names) if g else None
     return (g.name, table) if g and table else None
 
 
-def gate(e: Exercise, number: int, shape: str = "pair", names: bool = False) -> Table | None:
+def gate(e: Exercise, key: str, shape: str = "pair", names: bool = False) -> Table | None:
     """A gate's file: a row per pair with each response field's answer, or
     a row per application with its results. None for a gate not sent."""
     plan = stages.plan_of(e.public_id)
-    g = next((c for c in plan.columns if isinstance(c, stages.Gate) and c.number == number), None)
+    g = stages.gate_keyed(plan, key)
     if g is None or not _gate(e, g).sent:
         return None
     rows, _ = stages.assignments(e.public_id, g)
@@ -401,7 +403,7 @@ def gates_zip(e: Exercise, shape: str = "pair", names: bool = False) -> bytes:
     files: list[tuple[str, Table]] = []
     notes: list[tuple[str, str]] = []
     for g in x.gates:
-        table = gate(e, g.number, shape, names)
+        table = gate(e, g.key, shape, names)
         if table is None:
             notes.append((g.name, "Not sent"))
         else:
@@ -431,7 +433,7 @@ def all_zip(
         files.append(("applications.csv", applications(e, rows, drafts)))
     if "gates" in carries:
         for g in x.gates:
-            table = gate(e, g.number, shape, names)
+            table = gate(e, g.key, shape, names)
             if table is None:
                 notes.append((g.name, "Not sent"))
             else:

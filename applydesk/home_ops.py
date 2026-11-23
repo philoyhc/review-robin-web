@@ -18,13 +18,15 @@ from applydesk.sample_data import Exercise
 class Row:
     """One operator row: what it is, its state chip and tone, a line of
     figures, and where it is worked (``target``: "dossiers" or a gate's
-    number; "" for no link, a draft's gates having no page yet)."""
+    key, ``gate`` its number for the link's words; "" for no link, a
+    draft's gates having no page yet)."""
 
     label: str
     state: str
     tone: str  # the chip's, from tones.tone
     detail: str
     target: str
+    gate: int = 0
 
 
 def _form(e: Exercise) -> Row:
@@ -52,7 +54,8 @@ def _gate(e: Exercise, g: stages.Gate) -> Row:
         state,
         tones.tone(state, "warn"),
         " · ".join(p for p in parts if p),
-        "" if e.state == "Draft" else str(g.number),
+        "" if e.state == "Draft" else g.key,
+        g.number,
     )
 
 

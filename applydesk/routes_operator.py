@@ -1323,16 +1323,33 @@ def form_preview(request: Request, exercise_id: str) -> Response:
 
 
 def _gate_or_404(exercise: sample_data.Exercise, gate: str) -> stages.Gate:
-    """The gate a ``gate_<n>`` path names, 404 for one the exercise lacks
-    or a draft exercise. The digits are bounded, so a number past
-    Python's integer-string limit is a 404, not a 500 (findings
-    2026-11-20 S8)."""
-    number = re.fullmatch(r"gate_([1-9][0-9]{0,8})", gate)
-    plan = stages.plan_of(exercise.public_id)
-    found = stages.gate_numbered(plan, int(number.group(1))) if number else None
+    """The gate a path names by its key (ruling 37, AD-48), 404 for one
+    the exercise lacks or a draft exercise."""
+    found = stages.gate_keyed(stages.plan_of(exercise.public_id), gate)
     if found is None or exercise.state == "Draft":
         raise HTTPException(status_code=404)
     return found
+
+
+def _old_gate_link(
+    request: Request, exercise: sample_data.Exercise, gate: str, tail: str = ""
+) -> RedirectResponse | None:
+    """An old ``gate_<n>`` link (sent emails and bookmarks hold them)
+    redirected once to the gate's keyed page, its query kept; None for a
+    path that is not one. 404 as ``_gate_or_404`` for a number naming no
+    gate. The digits are bounded, so a number past Python's
+    integer-string limit is a 404, not a 500 (findings 2026-11-20 S8)."""
+    number = re.fullmatch(r"gate_([1-9][0-9]{0,8})", gate)
+    if number is None:
+        return None
+    found = stages.gate_numbered(stages.plan_of(exercise.public_id), int(number.group(1)))
+    if found is None or exercise.state == "Draft":
+        raise HTTPException(status_code=404)
+    path = url_path(
+        request, f"/operator/exercises/{exercise.public_id}/evaluations/{found.key}{tail}"
+    )
+    query = request.url.query
+    return RedirectResponse(path + (f"?{query}" if query else ""), status_code=301)
 
 
 def _bundle(request: Request, exercise: sample_data.Exercise, gate: stages.Gate) -> handoff.Bundle:
@@ -1422,9 +1439,12 @@ def gate_bundle_file(request: Request, exercise_id: str, gate: str, kind: str) -
     against formulas here, for the person who opens it; the handoff sends
     the bytes unguarded (findings 2026-11-20 S12)."""
     exercise = exercise_or_404(exercise_id)
-    found = _gate_or_404(exercise, gate)
     if kind not in handoff.KINDS:
         raise HTTPException(status_code=404)
+    old = _old_gate_link(request, exercise, gate, f"/{kind}.csv")
+    if old is not None:
+        return old
+    found = _gate_or_404(exercise, gate)
     sent = _bundle(request, exercise, found)
     return _download(
         f"{sent.code}_{kind}.csv",
@@ -1447,6 +1467,9 @@ def gate_evaluations(
     row each (author, 2026-11-17), 200 at a time, filtered by candidate
     or evaluator."""
     exercise = exercise_or_404(exercise_id)
+    old = _old_gate_link(request, exercise, gate)
+    if old is not None:
+        return old
     found = _gate_or_404(exercise, gate)
     sent_with = _bundle(request, exercise, found)
     rows, spread = stages.assignments(exercise.public_id, found)
@@ -1589,9 +1612,9 @@ def extract_file(
         return _csv(file, extract.outcomes(exercise, rows, names))
     if file == "alias_key.csv":
         return _csv(file, extract.alias_key(exercise))
-    gate = re.fullmatch(r"gate_([1-9][0-9]{0,8})\.csv", file)
+    gate = re.fullmatch(r"gate_([a-z][a-z0-9]{0,15})\.csv", file)  # its key (AD-48)
     if gate:
-        found = extract.gate_file(exercise, int(gate.group(1)), shape, names)
+        found = extract.gate_file(exercise, gate.group(1), shape, names)
         if found is None:
             raise HTTPException(status_code=404)  # no such gate, or not sent
         return _csv(*found)

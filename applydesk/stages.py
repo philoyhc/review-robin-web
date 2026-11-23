@@ -1467,9 +1467,16 @@ def released_results(exercise_id: str, public_id: str) -> tuple[tuple[str, str, 
 
 
 def gate_numbered(plan: Plan, number: int) -> Gate | None:
-    """The plan's gate numbered ``number`` (its page under Evaluations,
-    ``…/evaluations/gate_<n>``, segment AD1H), None if none is."""
+    """The plan's gate numbered ``number``, None if none is: an old
+    ``…/evaluations/gate_<n>`` link, redirected to the keyed one."""
     return next((c for c in plan.columns if isinstance(c, Gate) and c.number == number), None)
+
+
+def gate_keyed(plan: Plan, key: str) -> Gate | None:
+    """The plan's live gate keyed ``key`` (its page under Evaluations,
+    ``…/evaluations/<key>``; ruling 37, AD-48), None if none is: a
+    removed gate's key stays on its retired row, so it 404s."""
+    return next((c for c in plan.columns if isinstance(c, Gate) and c.key == key), None)
 
 
 @dataclass(frozen=True)

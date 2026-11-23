@@ -21,7 +21,7 @@ def _box(loc: Locator) -> FloatRect:
 
 def test_the_review_robin_card_is_two_columns_tiles_and_a_progress_panel(page: Page) -> None:
     page.set_viewport_size({"width": 1300, "height": 900})
-    page.goto(f"{EX}/evaluations/gate_1")
+    page.goto(f"{EX}/evaluations/g1")
     card = page.locator("#ev-rr")
     # The whole card folds, shut on load (author, 2026-11-20); shut, its
     # line keeps the counts; the head's Review Robin ↓ opens it.

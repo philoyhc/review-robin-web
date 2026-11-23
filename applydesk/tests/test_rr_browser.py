@@ -11,7 +11,7 @@ from applydesk.tests.test_form_browser import page as page  # the fixture, re-ex
 
 EX = "wa9juxbc2t"
 EVALUATIONS = f"{ORIGIN}/applydesk/operator/exercises/{EX}/evaluations"
-INTERVIEW = f"{EVALUATIONS}/gate_3"  # Suggested, its pairs awaiting approval
+INTERVIEW = f"{EVALUATIONS}/g3"  # Suggested, its pairs awaiting approval
 
 
 def _card(page: Page) -> Locator:
@@ -109,7 +109,7 @@ def test_an_opened_closed_or_detached_gate_sends_nothing(page: Page) -> None:
         (2, "Opened in Review Robin"),
         (3, "Detached: unlinked in Review Robin"),
     ):
-        page.goto(f"{base}/gate_{n}")
+        page.goto(f"{base}/g{n}")
         card = _card(page)
         for sel in ('[data-rr-act="send"]', '[data-rr-act="resend"]', "[data-rr-code]"):
             el = card.locator(sel)
@@ -123,7 +123,7 @@ K7 = f"{ORIGIN}/applydesk/operator/exercises/k7mfr3pq8z/evaluations"
 def test_pull_reads_progress_and_a_closed_session_s_final_pull_concludes(page: Page) -> None:
     """Ruling 57: a pull while the session is open reads progress only;
     once it has closed, *Pull final results* marks the gate *Results in*."""
-    page.goto(f"{K7}/gate_1")  # open, 3 of 5 reviewed
+    page.goto(f"{K7}/g1")  # open, 3 of 5 reviewed
     card = _card(page)
     pull = card.locator('[data-rr-act="pull"]')
     assert pull.inner_text() == "Pull results" and pull.is_enabled()
@@ -136,7 +136,7 @@ def test_pull_reads_progress_and_a_closed_session_s_final_pull_concludes(page: P
     assert _said(page) == "Pulled (simulated): 3 of 5 reviewed; its session is still open."
     assert " of " in card.locator("[data-rr-done]").first.inner_text()
     assert page.locator(".ev-head [data-gate-state]").text_content() == "Sent"
-    page.goto(f"{K7}/gate_2")  # closed, not pulled
+    page.goto(f"{K7}/g2")  # closed, not pulled
     card = _card(page)
     pull = card.locator('[data-rr-act="pull"]')
     assert pull.inner_text() == "Pull final results"
@@ -153,7 +153,7 @@ def test_pull_reads_progress_and_a_closed_session_s_final_pull_concludes(page: P
     )
     page.goto(K7)
     assert page.locator('tr[data-gate="g2"] [data-gate-state]').text_content() == "Results in"
-    page.goto(f"{K7}/gate_3")  # detached
+    page.goto(f"{K7}/g3")  # detached
     card = _card(page)
     for act in ("pull", "invite", "remind"):
         btn = card.locator(f'[data-rr-act="{act}"]')
@@ -163,7 +163,7 @@ def test_pull_reads_progress_and_a_closed_session_s_final_pull_concludes(page: P
 
 
 def test_invite_and_remind_show_the_email_first(page: Page) -> None:
-    page.goto(f"{K7}/gate_1")
+    page.goto(f"{K7}/g1")
     card = _card(page)
     invite = card.locator('[data-rr-act="invite"]')
     invite.click()
@@ -215,6 +215,6 @@ def test_re_send_is_refused_too_after_the_pairs_change_in_the_tab(page: Page) ->
 
 
 def test_a_detached_gate_keeps_what_was_last_reported(page: Page) -> None:
-    page.goto(f"{K7}/gate_3")
+    page.goto(f"{K7}/g3")
     done = _card(page).locator("[data-rr-done]")
     assert done.count() and all(" of " in t for t in done.all_text_contents())

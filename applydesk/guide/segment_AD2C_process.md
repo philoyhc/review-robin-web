@@ -136,6 +136,13 @@ Taken 2026-11-22 at `1ceb1d592`.
   - Rung 6: `_is_number` accepted `1_000`, `nan` and `inf`; a failed older check dropped a newer answer; a too-deep body was a 500.
   - Rungs 7-9: a published stage's end could not be extended; adds and a changed start or `shown` were not refused; a revert's reason was not audited; moving the form reseeded its state; a rename typed through a sibling's label merged their rules; three minor messages.
   - Left: a CSV row not on record is made pending without a directory lookup, deliberately (the directory is searched one person at a time, from the search). A published stage's rule and value edits are not refused by the save; the page leaves them editable too.
+- **2026-11-23, rung 5b (gate handles, AD-48):**
+  - A gate's page and its bundle files are at `/evaluations/<key>`.
+  - An old `gate_<n>` page or bundle link redirects (301) to the gate numbered so now, keeping its query.
+  - A removed gate's key 404s.
+  - Extract's gate file is `gate_<key>.csv`, saved as `<key>_<slug>.csv`. An old `gate_<n>.csv` download 404s: only Extract's own page links to it.
+  - Home's *Open Gate N* rows carry the key.
+  - `applydesk/spec/applications.md`'s `gate_<n>` lines are left for the close's spec pass.
 
 ## PR ladder
 

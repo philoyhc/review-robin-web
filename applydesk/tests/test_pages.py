@@ -48,16 +48,16 @@ PAGES = (
         )
     ),
     f"/applydesk/operator/exercises/{EX}/form/preview",
-    f"/applydesk/operator/exercises/{EX}/evaluations/gate_1",  # a gate's own page (AD1H)
+    f"/applydesk/operator/exercises/{EX}/evaluations/g1",  # a gate's own page (AD1H)
     f"/applydesk/operator/exercises/{EX}/dossiers/p3bd7kq2wx",  # a dossier, the operator's (AD1P)
-    f"/applydesk/operator/exercises/{EX}/evaluations/gate_2?q=lim&offset=200",
+    f"/applydesk/operator/exercises/{EX}/evaluations/g2?q=lim&offset=200",
     f"/applydesk/operator/exercises/{OPEN}",  # open for applications
     f"/applydesk/operator/exercises/{OPEN}/dossiers",  # only its first stage
     f"/applydesk/operator/exercises/{BLANK}/form/preview",
     f"/applydesk/operator/exercises/{BLIND}",  # in Stage 2; blind review on
     f"/applydesk/operator/exercises/{BLIND}/process",  # a panel no gate uses
     f"/applydesk/operator/exercises/{BLIND}/evaluations",  # blind: the alias key
-    f"/applydesk/operator/exercises/{BLIND}/evaluations/gate_1",
+    f"/applydesk/operator/exercises/{BLIND}/evaluations/g1",
     f"/applydesk/operator/exercises/{DRAFT}/process",  # the Setup stage is now
     f"/applydesk/operator/exercises/{DRAFT}",  # the Publish step
     f"/applydesk/operator/exercises/{DRAFT}/dossiers",  # none yet
@@ -675,7 +675,7 @@ def test_evaluations_lists_each_gate_s_progress(client: TestClient) -> None:
     # Each row links to its gate's Review Robin card (segment AD1M); the
     # link reads the same whatever the gate's state (ruling 64, U10).
     assert re.findall(r'href="([^"]+)#ev-rr">([^<]+)</a>', text) == [
-        (f"/applydesk/operator/exercises/{EX}/evaluations/gate_{n}", "Review Robin card →")
+        (f"/applydesk/operator/exercises/{EX}/evaluations/g{n}", "Review Robin card →")
         for n in (1, 2, 3)
     ]
 
@@ -685,7 +685,7 @@ def test_a_gate_page_s_review_robin_card_is_a_scaffold(client: TestClient) -> No
     name and code derived (ruling 56), every control off until its
     script has run."""
     base = f"/applydesk/operator/exercises/{EX}/evaluations"
-    ready = client.get(f"{base}/gate_3").text
+    ready = client.get(f"{base}/g3").text
     card = ready.split('id="ev-rr"')[1].split("</section>")[0]
     assert f'value="{EX}-g3" data-rr-code disabled' in card
     assert "data-rr-name disabled" in card
@@ -697,7 +697,7 @@ def test_a_gate_page_s_review_robin_card_is_a_scaffold(client: TestClient) -> No
         assert f'<div class="rr-file"><h4>{kind}</h4>' in card  # a tile each (ruling 65)
     assert "<th>Evaluator</th><th>Pairs</th><th>Done</th>" in card
     assert 'href="#ev-rr">Review Robin ↓</a>' in ready
-    done = client.get(f"{base}/gate_1").text.split('id="ev-rr"')[1].split("</section>")[0]
+    done = client.get(f"{base}/g1").text.split('id="ev-rr"')[1].split("</section>")[0]
     assert "Linked; its results are in" in done and "Sent (sample)" in done
 
 
@@ -727,7 +727,7 @@ def test_extract_data_is_download_cards_and_shows_no_data(client: TestClient) ->
     assert re.search(
         r"ra_2027_extract_\d{4}-\d\d-\d\d\.zip: <span>manifest\.csv</span> "
         r'<span data-xd-part="applications">· applications\.csv</span> '
-        r'<span data-xd-part="gates">· gate_1_peer_review\.csv</span>',
+        r'<span data-xd-part="gates">· g1_peer_review\.csv</span>',
         text,
     )
     # A confidential gate: Extract all data starts on Dossier IDs, saying why.
@@ -753,9 +753,9 @@ def test_extract_s_files_follow_the_exercise(client: TestClient) -> None:
     assert x.application_columns[6:9] == ("Preferred name", "Matriculation number", "Year of study")
     assert "About you" not in x.application_columns
     assert [(g.name, g.pairs, g.sent) for g in x.gates] == [
-        ("gate_1_peer_review.csv", 2980, True),
-        ("gate_2_office_checks.csv", 500, True),
-        ("gate_3_staff_interview.csv", 80, False),
+        ("g1_peer_review.csv", 2980, True),
+        ("g2_office_checks.csv", 500, True),
+        ("g3_staff_interview.csv", 80, False),
     ]
     assert x.outcome_columns[:5] == (
         "dossier_id",
@@ -845,10 +845,10 @@ def test_evaluations_shows_each_gate_s_assignments(client: TestClient) -> None:
     g1 = text[text.index('data-ev-gate="g1"') : text.index('data-ev-gate="g2"')]
     assert "100 dossiers · 100 filled" in g1
     assert re.search(r"Current RAs: Aisha Bello \d+ · ", g1)
-    link = f'href="/applydesk/operator/exercises/{EX}/evaluations/gate_1">Pairs (2,980)'
+    link = f'href="/applydesk/operator/exercises/{EX}/evaluations/g1">Pairs (2,980)'
     assert link in g1
     assert "data-ev-row" not in text  # the rows are the gate's page's
-    page = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_1").text
+    page = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/g1").text
     assert "<title>Gate 1 · Peer review · Recruitment and Selection of Residential" in page
     # A row per pair (author, 2026-11-17), 200 to a page.
     assert page.count("data-ev-row=") == 200 == page.count('data-ev-source="Current RAs"')
@@ -857,7 +857,7 @@ def test_evaluations_shows_each_gate_s_assignments(client: TestClient) -> None:
     )  # no Re-run (ruling 48)
     assert 'data-ev-act="rerun"' not in page
     assert "Showing 1–200 of 2,980 pairs" in page
-    g3 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text
+    g3 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/g3").text
     # Not sent (ruling 29): its pairs suggested, still the operator's.
     assert g3.count("data-ev-row=") == 80 and g3.count(">Suggested<") == 80
     assert (
@@ -871,7 +871,7 @@ def test_a_gate_s_page_shows_200_rows_at_a_time(client: TestClient) -> None:
     """Segment AD1H: Gate 1's 2,980 pairs, 200 at a time, as Review
     Robin's rosters; the offset snapped to a page and clamped to the last;
     the steps and the range menu keep the filter."""
-    base = f"/applydesk/operator/exercises/{EX}/evaluations/gate_1"
+    base = f"/applydesk/operator/exercises/{EX}/evaluations/g1"
     first = client.get(base).text
     assert f'href="{base}?offset=200#ev-table-card" aria-label="Next page"' in first
     assert 'is-inactive" aria-disabled="true" aria-label="Previous page"' in first
@@ -888,7 +888,7 @@ def test_a_gate_s_page_shows_200_rows_at_a_time(client: TestClient) -> None:
 
 
 def test_a_gate_s_page_finds_a_candidate_or_an_evaluator(client: TestClient) -> None:
-    base = f"/applydesk/operator/exercises/{EX}/evaluations/gate_1"
+    base = f"/applydesk/operator/exercises/{EX}/evaluations/g1"
     one = client.get(f"{base}?q=KENJI").text
     # Kenji's 30 reviewers; Kenji reviews no one, not being an RA.
     assert one.count('data-ev-row="h6zr2tdw9p"') == 30 == one.count("data-ev-row=")
@@ -904,7 +904,7 @@ def test_a_gate_s_page_finds_a_candidate_or_an_evaluator(client: TestClient) -> 
 
 
 def test_a_gate_s_page_reads_a_bad_offset_as_the_first_page(client: TestClient) -> None:
-    base = f"/applydesk/operator/exercises/{EX}/evaluations/gate_1"
+    base = f"/applydesk/operator/exercises/{EX}/evaluations/g1"
     for offset in ("abc", "1.5", ""):
         page = client.get(f"{base}?offset={offset}")
         assert page.status_code == 200 and "1–200 of 2,980" in page.text, offset
@@ -913,7 +913,7 @@ def test_a_gate_s_page_reads_a_bad_offset_as_the_first_page(client: TestClient) 
 def test_a_blind_gate_s_page_finds_a_candidate_only_by_the_dossier(client: TestClient) -> None:
     """Codex on #3958: a blind page shows the dossier ID, so a search by
     the applicant's name, email or application ID must not find them."""
-    base = f"/applydesk/operator/exercises/{BLIND}/evaluations/gate_1"
+    base = f"/applydesk/operator/exercises/{BLIND}/evaluations/g1"
     app = sample_data.applications_of(BLIND)[0]
     for q in (app.applicant.split()[0], app.email, app.public_id):
         assert "data-ev-row=" not in client.get(f"{base}?q={q}").text, q
@@ -926,7 +926,7 @@ def test_a_sent_suggested_gate_s_pairs_are_approved_and_fixed(
     """Once its session opens (ruling 29), a Suggested gate's pairs read
     Approved and its operations are Review Robin's."""
     monkeypatch.setitem(workflow._GATES[EX], "g3", ("Sent", "12 of 80 reviewed"))  # pyright: ignore[reportPrivateUsage]  -- a sample's state
-    page = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text
+    page = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/g3").text
     assert page.count(">Approved<") == 80 and ">Suggested<" not in page
     assert 'data-ev-act="approve-all" disabled title="Its session has opened' in page
     assert "Its session has opened: its pairs are Review Robin's to change." in page
@@ -934,13 +934,28 @@ def test_a_sent_suggested_gate_s_pairs_are_approved_and_fixed(
 
 def test_a_gate_s_page_is_only_a_gate_s(client: TestClient) -> None:
     base = f"/applydesk/operator/exercises/{EX}/evaluations"
-    for tail in ("gate_9", "gate_0", "gate_x", "g1", "gate_01"):
+    for tail in ("g9", "g01", "G1", "gate_x", "gate_9", "gate_0", "gate_01"):
         assert client.get(f"{base}/{tail}").status_code == 404, tail
     # A draft sends nothing, so it has no assignments to show.
-    draft = client.get(f"/applydesk/operator/exercises/{DRAFT}/evaluations/gate_1")
+    draft = client.get(f"/applydesk/operator/exercises/{DRAFT}/evaluations/g1")
     assert draft.status_code == 404
-    blind = client.get(f"/applydesk/operator/exercises/{BLIND}/evaluations/gate_1").text
+    blind = client.get(f"/applydesk/operator/exercises/{BLIND}/evaluations/g1").text
     assert '>Dossier<a class="ev-sort-btn"' in blind and ">Applicant<a" not in blind
+
+
+def test_an_old_numbered_gate_link_redirects_once_to_its_key(client: TestClient) -> None:
+    """AD2C rung 5b (ruling 37, AD-48): a gate's page is keyed; an old
+    ``gate_<n>`` link, held by sent emails and bookmarks, redirects to it
+    with its query, and a bundle file's with its file."""
+    base = f"/applydesk/operator/exercises/{EX}/evaluations"
+    page = client.get(f"{base}/gate_2?q=lim&offset=200", follow_redirects=False)
+    assert page.status_code == 301
+    assert page.headers["location"] == f"{base}/g2?q=lim&offset=200"
+    file = client.get(f"{base}/gate_3/reviewers.csv", follow_redirects=False)
+    assert file.status_code == 301 and file.headers["location"] == f"{base}/g3/reviewers.csv"
+    assert client.get(f"{base}/gate_3/nosuch.csv", follow_redirects=False).status_code == 404
+    draft = f"/applydesk/operator/exercises/{DRAFT}/evaluations/gate_1"
+    assert client.get(draft, follow_redirects=False).status_code == 404
 
 
 def test_a_dossier_with_no_evaluator_is_one_row() -> None:
@@ -984,7 +999,7 @@ def test_a_gate_s_table_sorts_as_review_robin_s_tables() -> None:
 
 
 def test_a_gate_s_page_sorts_every_page_on_the_server(client: TestClient) -> None:
-    base = f"/applydesk/operator/exercises/{EX}/evaluations/gate_1"
+    base = f"/applydesk/operator/exercises/{EX}/evaluations/g1"
     first = client.get(f"{base}?sort=evaluator").text
     evaluators = re.findall(r'data-ev-pair="([^"]+)"', first)
     names = [n for n in re.findall(r'<td><span title="[^"]+">([^<]+)</span></td>', first)]
@@ -1005,7 +1020,7 @@ def test_a_gate_s_page_sorts_every_page_on_the_server(client: TestClient) -> Non
 
 
 def test_a_blind_gate_sorts_by_the_dossier(client: TestClient) -> None:
-    base = f"/applydesk/operator/exercises/{BLIND}/evaluations/gate_1"
+    base = f"/applydesk/operator/exercises/{BLIND}/evaluations/g1"
     text = client.get(f"{base}?sort=candidate").text
     shown = re.findall(
         r"<tr data-ev-row=\"\w+\"[^>]*>\s*<td>(?:<input [^>]*>)?<code>(\w+)</code></td>", text
@@ -1845,7 +1860,7 @@ def test_crumbs_and_headings_after_the_register(client: TestClient) -> None:
         assert f'aria-current="page">{current}' in page
     app = client.get(f"{me}/applications/f2ps7nyh4k").text
     assert "<h3" not in app.split('class="page"', 1)[-1].split("<footer", 1)[0]
-    gate = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_1").text
+    gate = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/g1").text
     crumb = gate[gate.index('class="crumbs"') : gate.index("</nav>", gate.index('class="crumbs"'))]
     assert "/evaluations" in crumb and 'aria-current="page">Gate 1 · ' in crumb
     assert crumb.count('<span class="crumb">') == 3  # root, exercise, Evaluations (AD-102)
@@ -1858,7 +1873,7 @@ def test_crumbs_and_headings_after_the_register(client: TestClient) -> None:
     # The gate's state and its Review Robin action in its head (AD-23).
     head = gate[gate.index('class="ev-head"') : gate.index("</div>", gate.index('class="ev-head"'))]
     assert "data-gate-state>Results in<" in head  # done: no action left
-    g2 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/gate_3").text  # not sent
+    g2 = client.get(f"/applydesk/operator/exercises/{EX}/evaluations/g3").text  # not sent
     head = g2[g2.index('class="ev-head"') : g2.index("</div>", g2.index('class="ev-head"'))]
     assert "data-gate-state" in head and 'href="#ev-rr">Review Robin ↓</a>' in head
     # AD-33: why it is not ready, as saved, beside the chip.
@@ -1928,11 +1943,11 @@ def test_a_confidential_gate_s_page_shows_dossier_ids(client: TestClient) -> Non
     """Ruling 42, AD-65: a confidential gate's page shows Dossier IDs, not
     names, as its files do; a gate that is not confidential names them."""
     base = f"/applydesk/operator/exercises/{EX}/evaluations"
-    conf = client.get(f"{base}/gate_2").text
+    conf = client.get(f"{base}/g2").text
     assert '>Dossier<a class="ev-sort-btn"' in conf
     assert "Aisha Bello" not in conf
     assert re.search(r"<td>(?:<input [^>]*>)?<code>\w{10}</code></td>", conf)
-    named = client.get(f"{base}/gate_1").text
+    named = client.get(f"{base}/g1").text
     assert '>Applicant<a class="ev-sort-btn"' in named
 
 
@@ -2060,11 +2075,11 @@ def test_a_gate_page_s_pairs_take_ticks_off_until_the_script_runs(client: TestCl
     the page's script runs; on a gate whose session has opened, off and
     saying why."""
     base = f"/applydesk/operator/exercises/{EX}/evaluations"
-    g3 = client.get(f"{base}/gate_3").text
+    g3 = client.get(f"{base}/g3").text
     rows = g3.count("data-ev-pair=")
     assert rows and g3.count("data-ev-tick ") == rows
     assert 'data-ev-tick-all aria-label="Tick every pair on this page" disabled data-ev-wait' in g3
-    g1 = client.get(f"{base}/gate_1").text
+    g1 = client.get(f"{base}/g1").text
     assert (
         'data-ev-tick-all aria-label="Tick every pair on this page" disabled '
         'title="Its session has opened: its pairs are Review Robin\'s to change"' in g1

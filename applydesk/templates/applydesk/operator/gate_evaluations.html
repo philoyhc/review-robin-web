@@ -7,7 +7,7 @@
    browser (AD1G rung 6b), kept in this tab across its pages and sorts
    until discarded; nothing is saved until AD2. #}
 {% set base = '/operator/exercises/' ~ exercise.public_id ~ '/evaluations' %}
-{% set here = base ~ '/gate_' ~ gate.number %}
+{% set here = base ~ '/' ~ gate.key %}
 {# Off once its session has opened; off until the operations' script
    has run otherwise, so a page without it offers nothing inert. #}
 {% set off %}{% if sent %} disabled title="Its session has opened: its pairs are Review Robin's to change"{% else %} disabled data-ev-wait{% endif %}{% endset %}
