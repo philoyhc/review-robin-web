@@ -62,6 +62,11 @@ when they are all ticked.
    asking first**. Afterwards, restore the moved `applydesk.db` (or
    re-seed) for everyday use.
 
+## Wide tables on a phone (AD1U Item 2)
+
+- [ ] **Panels and Exercises Diagnostics at 390px.** The page does not
+  scroll sideways; the table scrolls inside its card.
+
 ## Process: Candidates, the form's moves, published stages and outcome values (AD2C: #4158, #4161)
 
 - [x] **The form's move on Home.** A draft exercise's *Open form* is

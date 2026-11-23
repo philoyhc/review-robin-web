@@ -398,7 +398,10 @@
     .chip-ok { background: var(--chip-ok-bg); color: var(--chip-ok-fg); }
     .chip-bad { background: var(--chip-bad-bg); color: var(--chip-bad-fg); }
     .chip-mute { background: var(--chip-mute-bg); color: var(--chip-mute-fg); }
-    .table-wrap { overflow-x: auto; }
+    /* Relative, so a visually hidden header label (absolute) is placed
+       inside the wrap and clipped with the table, rather than widening
+       the page on a phone (AD1U Item 2). */
+    .table-wrap { overflow-x: auto; position: relative; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     /* Tables as Review Robin's (spec/ui_elements.md §7; ruling 64, U12;
        AD-77): row-only borders in --border-default, a muted header band at

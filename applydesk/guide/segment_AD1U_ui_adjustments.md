@@ -113,6 +113,10 @@ narrow widths, which loses data the operator needs.
 ### Status
 
 - **2026-11-23:** planned with Items 3 and 4.
+- **2026-11-23, build:** both tables were already in a scrolling
+  `.table-wrap`; the page widened through each table's visually hidden
+  header label (absolute), placed outside the wrap. `.table-wrap` is now
+  `position: relative`, so the label is clipped with its table. Rejected as in Decision, and no markup changed.
 
 ### PR ladder
 
