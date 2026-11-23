@@ -534,6 +534,34 @@ def test_a_sample_exercise_adopts_a_panel_made_on_process() -> None:
     assert "Current RAs" in panels  # the sample's own, recorded with it
 
 
+def test_a_refused_process_save_keeps_no_panel_it_made() -> None:
+    """A panel made on Process is stored with the save or not at all: a
+    stale save refused after adopting it leaves nothing (AD2E cold read)."""
+    from applydesk import panels_store
+
+    client = _client()
+    made_panel = {"new-1": {"name": "Readers", "members": [["Ada", "ada@example.edu"]]}}
+    gate = _gate("gnew1", "Read", sources=[{"kind": "panel", "ref": "new-1", "min": 1, "max": 1}])
+    sent = {"stages": [_stage("Review", gates=[gate])], "pools": made_panel, "revision": 99}
+    refused = client.post(f"{LOBBY}/wa9juxbc2t/process", json=sent)
+    assert refused.status_code == 409, refused.text
+    assert panels_store.revision("wa9juxbc2t") == 0
+    assert "Readers" not in client.get(f"{LOBBY}/wa9juxbc2t/panels").text
+
+
+def test_a_panels_save_says_its_new_revision() -> None:
+    """The page's next Save carries it, so edits kept while a save was on
+    its way can be saved next (AD2E cold read)."""
+    client = _client()
+    made = _create(client)
+    first = _post_panels(client, made, _panels())
+    assert first.status_code == 200 and first.json()["revision"] == 1
+    again = _panels(panels=[{"key": "panel-1", "name": "Readers"}])
+    again["people"] = [{**p, "panels": ["panel-1"] if p["panels"] else []} for p in again["people"]]  # pyright: ignore[reportGeneralTypeIssues, reportUnknownVariableType]  -- a test's dict
+    second = client.post(f"{LOBBY}/{made}/panels", json={**again, "revision": 1})
+    assert second.status_code == 200 and second.json()["revision"] == 2
+
+
 def test_process_save_is_checked() -> None:
     client = _client()
     made = _create(client)

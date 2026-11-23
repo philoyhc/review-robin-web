@@ -19,6 +19,7 @@ a pending person, as Candidates' CSV is. Rows are retired, never deleted
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, cast
@@ -124,6 +125,12 @@ def load(session: Session, public_id: str) -> State | None:
         for e, p in rows
     ]
     return _assemble(public_id, [(p.key, p.name) for p in panels], people_rows)
+
+
+def lock(session: Session, public_id: str) -> None:
+    """Take the exercise's row lock in ``session``: a save that reads the
+    panels before it writes holds it first."""
+    _exercise(session, public_id, lock=True)
 
 
 def stored(public_id: str) -> State | None:
@@ -389,7 +396,7 @@ def save(
     sent: Any,
     opened: int,
     actor: Person | None,
-    in_use: frozenset[str],
+    in_use: Callable[[], frozenset[str]],
 ) -> int:
     """Keep the Panels page's snapshot ``sent`` as the exercise's panels and
     roster, if no save came between (``opened``, the revision the page
@@ -403,7 +410,9 @@ def save(
             "Not saved: Panels was saved since this page opened. Reload to see it.", key="stale"
         )
     before = _before(session, exercise)
-    state = _parse(public_id, sent, before, taken_keys(session, exercise), in_use)
+    # What uses a panel is read under the lock, so a Process save that adds
+    # a gate on it cannot land between the check and this save (cold read).
+    state = _parse(public_id, sent, before, taken_keys(session, exercise), in_use())
     counts = _write(session, exercise, state, actor)
     exercise.panels_revision += 1
     audit.write_event(
@@ -441,6 +450,8 @@ def adopt(
     taken = taken_keys(session, exercise)
     panels = [(p.key, p.name) for p in before.panels]
     roster = [(m, set(keys)) for m, keys in before.roster]
+    before_panels = list(panels)
+    before_roster = [(m, set(keys)) for m, keys in roster]
     names = {n.casefold() for _, n in panels}
     by_name = {n.casefold(): k for k, n in panels}
     by_email = {m.email.casefold(): i for i, (m, _) in enumerate(roster)}
@@ -478,6 +489,10 @@ def adopt(
         raise Refused(f"An exercise holds at most {MAX_PANELS} panels.", key="cap")
     if len(roster) > MAX_PEOPLE:
         raise Refused(f"The roster holds at most {MAX_PEOPLE} people.", key="cap")
+    # Offered again by a page that missed its reload, with nothing new: the
+    # panels as they stand, no save written (cold read).
+    if (panels, roster) == (before_panels, before_roster):
+        return keys
     counts = _write(session, exercise, _assemble(public_id, panels, roster), actor)
     exercise.panels_revision += 1
     audit.write_event(

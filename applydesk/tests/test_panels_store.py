@@ -41,7 +41,7 @@ def _revision(session: Session) -> int:
 
 
 def _save(session: Session, sent: dict[str, Any], in_use: frozenset[str] = frozenset()) -> int:
-    got = panels_store.save(session, MODEL, sent, _revision(session), None, in_use)
+    got = panels_store.save(session, MODEL, sent, _revision(session), None, lambda: in_use)
     session.commit()
     return got
 
@@ -163,7 +163,7 @@ def test_a_bad_snapshot_is_refused_and_nothing_is_kept(
     session: Session, sent: dict[str, Any], said: str
 ) -> None:
     with pytest.raises(Refused, match=said):
-        panels_store.save(session, MODEL, sent, 0, None, frozenset())
+        panels_store.save(session, MODEL, sent, 0, None, frozenset)
     session.rollback()
     assert panels_store.load(session, MODEL) is None
 
@@ -171,7 +171,7 @@ def test_a_bad_snapshot_is_refused_and_nothing_is_kept(
 def test_a_stale_save_is_refused(session: Session) -> None:
     _save(session, _sent([("made-1", "P")], []))
     with pytest.raises(Refused) as why:
-        panels_store.save(session, MODEL, _sent([], []), 0, None, frozenset())
+        panels_store.save(session, MODEL, _sent([], []), 0, None, frozenset)
     assert why.value.key == "stale"
 
 
@@ -181,7 +181,7 @@ def test_a_panel_in_use_may_not_be_retired(session: Session) -> None:
     assert stored is not None
     key = stored.panels[0].key
     with pytest.raises(Refused) as why:
-        panels_store.save(session, MODEL, _sent([], []), 1, None, frozenset({key}))
+        panels_store.save(session, MODEL, _sent([], []), 1, None, lambda: frozenset({key}))
     assert why.value.key == "in_use"
 
 
@@ -197,8 +197,13 @@ def test_a_page_s_new_panels_are_adopted_once(session: Session) -> None:
     # The sample's panels were recorded with it, keys kept.
     sample = [p.key for p in sample_data.PANELS if p.exercise_id == MODEL]
     assert [p.key for p in stored.panels][: len(sample)] == sample
-    # A page that has not reloaded offers it again: the same panel.
+    # A page that has not reloaded offers it again: the same panel, and no
+    # save written, so an open Panels page is not made stale (cold read).
+    revision = _revision(session)
     again = panels_store.adopt(session, MODEL, made, {"new-1"}, None)
     session.commit()
     assert again == keys
+    assert _revision(session) == revision
+    events = select(func.count()).where(AuditEvent.event_type == "exercise.panels_saved")
+    assert session.scalar(events) == 1
     assert len(panels_store.load(session, MODEL).panels) == len(stored.panels)  # pyright: ignore[reportOptionalMemberAccess]

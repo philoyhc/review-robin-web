@@ -537,7 +537,12 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
   - **Panels** is not kept here: it saves to the database for every
     exercise (`applydesk/panels_store.py`, segment AD2E), as does a panel
     made with *+ New panel…* on Form or Process, with the save that names
-    it. "The Panels page" says what its *Save* refuses.
+    it. Its *Save* is refused while a row or a *Manage panels* change is
+    still open, and refuses a page opened before the last save. At most 50
+    panels (distinct names of at most 80 characters, none a CSV column's)
+    and 2,000 people (an address each, distinct; ticks naming the page's
+    panels); someone on no panel stays on the roster. Retiring a panel a
+    question or a gate uses is refused.
   - **Revision.** Emails sends the Process revision its page opened at
     (`workflow.process_revision`), and a save from a page older than the
     last Process save is refused (*reload Emails*), so no stale key lands on

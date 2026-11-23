@@ -620,8 +620,10 @@ def _save_form(request: Request, exercise: sample_data.Exercise, sent: Any) -> R
         wanted = _made_pools(got.get("cards"), sample_data.people_pools(exercise.public_id))
         renamed = panels_store.adopt(session, exercise.public_id, got.get("pools"), wanted, actor)
         form = _form(sent, exercise.public_id, renamed)
-        scratch.save_page(exercise.public_id, "form", form)
+        # The panels first: a form naming one that failed to store is never
+        # kept (AD2E cold read).
         session.commit()
+        scratch.save_page(exercise.public_id, "form", form)
     except (scratch.Refused, panels_store.Refused) as why:
         session.rollback()
         return JSONResponse({"error": str(why)}, status_code=400)
@@ -665,6 +667,9 @@ def _save_process(request: Request, exercise_id: str, sent: object) -> Response:
         # Bind the actor and commit first, as Details does.
         actor = people.resolve(session, identity)
         session.commit()
+        # The exercise's row lock before its panels are read, so a Panels
+        # save cannot retire one between the check and this save (AD2E).
+        panels_store.lock(session, exercise.public_id)
         # A panel made with *+ New panel…* joins the exercise's panels,
         # stored with the process or not at all (segment AD2E).
         wanted = process_save.made_panels(sent, exercise.public_id)
@@ -952,8 +957,14 @@ def _save_panels(request: Request, exercise_id: str, sent: object) -> Response:
     try:
         actor = people.resolve(session, identity)
         session.commit()
-        in_use = frozenset(stages.panel_uses(exercise.public_id))
-        panels_store.save(session, exercise.public_id, sent, opened, actor, in_use)
+        revision = panels_store.save(
+            session,
+            exercise.public_id,
+            sent,
+            opened,
+            actor,
+            lambda: frozenset(stages.panel_uses(exercise.public_id)),
+        )
         session.commit()
     except panels_store.Refused as why:
         session.rollback()
@@ -969,8 +980,10 @@ def _save_panels(request: Request, exercise_id: str, sent: object) -> Response:
     finally:
         session.close()
     # A panel made on the page has its own key now: the page reloads to
-    # hold it, or its next Save would key it anew (cold read).
-    return JSONResponse({"saved": True, "reload": True})
+    # hold it, or its next Save would key it anew (cold read). The new
+    # revision rides along, so a page that kept edits made during the save
+    # can save them next (AD2E cold read).
+    return JSONResponse({"saved": True, "reload": True, "revision": revision})
 
 
 @router.post("/exercises/{exercise_id}/emails", name="applydesk_exercise_email_save")
@@ -1700,6 +1713,9 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
     exercise = exercise_or_404(exercise_id)
     if section not in SECTIONS:
         raise HTTPException(status_code=404)
+    # The revision before the panels it guards: a save landing between the
+    # two reads makes the page stale, never newer than what it shows.
+    panels_revision = panels_store.revision(exercise.public_id) if section == "panels" else 0
     return render(
         request,
         "applydesk/operator/section.html",
@@ -1730,7 +1746,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         people=sample_data.people_pools(exercise.public_id),
         panel_pools=sample_data.panel_pools(exercise.public_id),
         panels=sample_data.panels_of(exercise.public_id),
-        panels_revision=panels_store.revision(exercise.public_id) if section == "panels" else 0,
+        panels_revision=panels_revision,
         roster=sample_data.roster(exercise.public_id),
         uses=stages.panel_uses(exercise.public_id),
         panels_sent=workflow.panels_sent(exercise.public_id),

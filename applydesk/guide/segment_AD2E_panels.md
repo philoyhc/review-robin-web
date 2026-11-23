@@ -97,6 +97,17 @@ Taken 2026-11-23 at `4f911c6cd`.
   - `scratch_panels.py` is deleted, its spec lines repointed.
   - A page saved to the database says *Saved.*, not *Saved to this scratch exercise.*: Process on a sample said the latter since AD2C.
   - Found at build: `test_form.py` read the pools at import, before the tests make their tables.
+- **2026-11-23, the cumulative read** (`diff-reviewer`, base `69c06018c`, rungs 2-4): 7 findings, all fixed in rung 4 but one Codex had already caught on #4170.
+  - The fixes:
+    - A save made during edits now returns its new revision, which the page carries, so "save again" no longer meets a stale refusal.
+    - Panels reads what uses a panel under the row lock, and Process takes the lock before it reads the panels.
+    - The page reads its revision before its panels.
+    - Form commits before it keeps the form.
+    - An adoption with nothing new writes no save.
+    - A test that a refused Process save keeps no panel.
+  - Copy and spec: the scratch note now says Details, Process and Panels save to the database, and the Panels checks are restored to the spec's scratch section.
+  - Rung 3's "two addresses that are one person" refusal cannot happen: addresses are deduplicated by the same key first. It stays as a guard.
+  - Codex on #4170: a blank name is stored blank and read as the address, since an address can outrun the name column.
 
 ## PR ladder
 

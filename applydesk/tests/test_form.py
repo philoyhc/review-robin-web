@@ -125,8 +125,6 @@ SUMMARY_CASES: list[tuple[FormCard, str]] = [
 ]
 
 
-
-
 @pytest.mark.parametrize(("card", "summary"), SUMMARY_CASES)
 def test_a_card_s_summary(card: FormCard, summary: str) -> None:
     # The model exercise's pools, which name the panels in SUMMARY_CASES:
