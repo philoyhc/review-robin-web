@@ -30,13 +30,13 @@ from applydesk import (
     locks,
     operators,
     paging,
+    panels_store,
     people,
     process_save,
     process_store,
     rules,
     sample_data,
     scratch,
-    scratch_panels,
     stages,
     team,
     timeline,
@@ -603,17 +603,49 @@ async def exercise_form_save(request: Request, exercise_id: str) -> Response:
     kept in memory for this browser, so Process, Preview and the applicant
     pages read them."""
     exercise, sent = await _scratch_json(request, exercise_id)
+    return await run_in_threadpool(_save_form, request, exercise, sent)
+
+
+def _save_form(request: Request, exercise: sample_data.Exercise, sent: Any) -> Response:
+    """Form's *Save*, past the request's own checks. A panel made with
+    *+ New panel…* is stored with it (segment AD2E), or not at all."""
+    identity = current_identity(request)
+    if identity is None:
+        raise HTTPException(status_code=404)
+    session = db.new_session()
     try:
+        actor = people.resolve(session, identity)
+        session.commit()
         got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
+        # The exercise's lock before the panels are read, held until the
+        # form is kept, so a Panels save cannot retire a panel a question
+        # names in between (Codex on #4171).
+        panels_store.lock(session, exercise.public_id)
         wanted = _made_pools(got.get("cards"), sample_data.people_pools(exercise.public_id))
-        # A panel made with *+ New panel…* joins the exercise's panels
-        # (rung 5), kept with the form or not at all.
-        renamed, panels = scratch_panels.adopt(exercise.public_id, got.get("pools"), wanted)
+        renamed = panels_store.adopt(session, exercise.public_id, got.get("pools"), wanted, actor)
         form = _form(sent, exercise.public_id, renamed)
-        scratch_panels.keep(exercise.public_id, panels)
+        before = scratch.page(exercise.public_id, "form")
         scratch.save_page(exercise.public_id, "form", form)
-    except (scratch.Refused, scratch_panels.Refused) as why:
+        try:
+            session.commit()
+        except Exception:
+            # A form naming a panel that failed to store is never kept (cold
+            # read): the form as it was.
+            scratch.save_page(exercise.public_id, "form", before)
+            raise
+    except (scratch.Refused, panels_store.Refused) as why:
+        session.rollback()
         return JSONResponse({"error": str(why)}, status_code=400)
+    except (IntegrityError, OperationalError) as error:
+        session.rollback()
+        if not db.lost_a_race(error):
+            raise
+        return JSONResponse(
+            {"error": "Not saved: someone else saved just now; reload and retry."},
+            status_code=409,
+        )
+    finally:
+        session.close()
     # A panel it adopted has a key of its own now: the page reloads to
     # name it so, or its next Save would offer it again (cold read).
     return JSONResponse({"saved": True, "reload": bool(renamed)})
@@ -644,20 +676,18 @@ def _save_process(request: Request, exercise_id: str, sent: object) -> Response:
         # Bind the actor and commit first, as Details does.
         actor = people.resolve(session, identity)
         session.commit()
-        # A panel made with *+ New panel…* joins the exercise's panels
-        # (AD1N rung 5), kept with the process or not at all.
+        # The exercise's row lock before its panels are read, so a Panels
+        # save cannot retire one between the check and this save (AD2E).
+        panels_store.lock(session, exercise.public_id)
+        # A panel made with *+ New panel…* joins the exercise's panels,
+        # stored with the process or not at all (segment AD2E).
         wanted = process_save.made_panels(sent, exercise.public_id)
-        if wanted and not scratch.is_scratch(exercise.public_id):
-            # A sample's panels are the sample's until Panels is stored (AD2E).
-            raise process_save.Refused(
-                "A new panel is kept on a new exercise only, until panels are stored."
-            )
-        renamed, panels = scratch_panels.adopt(exercise.public_id, got.get("pools"), wanted)
+        renamed = panels_store.adopt(session, exercise.public_id, got.get("pools"), wanted, actor)
         taken = process_store.taken_keys(session, exercise.public_id)
         built, ticks = process_save.build(sent, exercise.public_id, renamed, taken)
         process_store.save(session, exercise.public_id, built, opened, actor)
         session.commit()
-    except (process_save.Refused, scratch_panels.Refused) as why:
+    except (process_save.Refused, panels_store.Refused) as why:
         session.rollback()
         return JSONResponse({"error": str(why)}, status_code=400)
     except process_store.Refused as why:
@@ -675,7 +705,6 @@ def _save_process(request: Request, exercise_id: str, sent: object) -> Response:
         )
     finally:
         session.close()
-    scratch_panels.keep(exercise.public_id, panels)
     if scratch.is_scratch(exercise.public_id):
         scratch.save_page(exercise.public_id, workflow.SENDS_PAGE, ticks)
     # A column the page added took the server's key, and a panel it
@@ -916,19 +945,54 @@ def _propose(exercise_id: str, sent: Any) -> Response:
 
 @router.post("/exercises/{exercise_id}/panels", name="applydesk_exercise_panels_save")
 async def exercise_panels_save(request: Request, exercise_id: str) -> Response:
-    """Panels' *Save* on a scratch exercise (segment AD1N rung 5): its
-    panels and roster, kept for this browser, so Form's questions and
-    Process's gates pick from them."""
-    exercise, sent = await _scratch_json(request, exercise_id)
+    """Panels' *Save* (segment AD1N rung 5; every exercise since AD2E): its
+    panels and roster, kept in the database (`panels_store.save`), so
+    Form's questions and Process's gates pick from them."""
+    sent = await _page_json(request)
+    return await run_in_threadpool(_save_panels, request, exercise_id, sent)
+
+
+def _save_panels(request: Request, exercise_id: str, sent: object) -> Response:
+    """Panels' *Save*, past the request's own checks: the transaction."""
+    exercise = exercise_or_404(exercise_id)
+    identity = current_identity(request)
+    if identity is None:
+        raise HTTPException(status_code=404)
+    got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
+    opened = got.get("revision")
+    if not isinstance(opened, int) or isinstance(opened, bool):
+        return JSONResponse({"error": "The panels are malformed."}, status_code=400)
+    session = db.new_session()
     try:
-        in_use = frozenset(stages.panel_uses(exercise.public_id))
-        kept = scratch_panels.build(sent, exercise.public_id, in_use)
-        scratch.save_page(exercise.public_id, scratch_panels.PAGE, kept)
-    except (scratch_panels.Refused, scratch.Refused) as why:
-        return JSONResponse({"error": str(why)}, status_code=400)
+        actor = people.resolve(session, identity)
+        session.commit()
+        revision = panels_store.save(
+            session,
+            exercise.public_id,
+            sent,
+            opened,
+            actor,
+            lambda: frozenset(stages.panel_uses(exercise.public_id)),
+        )
+        session.commit()
+    except panels_store.Refused as why:
+        session.rollback()
+        return JSONResponse({"error": str(why)}, status_code=409 if why.key == "stale" else 400)
+    except (IntegrityError, OperationalError) as error:
+        session.rollback()
+        if not db.lost_a_race(error):
+            raise
+        return JSONResponse(
+            {"error": "Not saved: someone else saved just now; reload and retry."},
+            status_code=409,
+        )
+    finally:
+        session.close()
     # A panel made on the page has its own key now: the page reloads to
-    # hold it, or its next Save would key it anew (cold read).
-    return JSONResponse({"saved": True, "reload": True})
+    # hold it, or its next Save would key it anew (cold read). The new
+    # revision rides along, so a page that kept edits made during the save
+    # can save them next (AD2E cold read).
+    return JSONResponse({"saved": True, "reload": True, "revision": revision})
 
 
 @router.post("/exercises/{exercise_id}/emails", name="applydesk_exercise_email_save")
@@ -1658,6 +1722,9 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
     exercise = exercise_or_404(exercise_id)
     if section not in SECTIONS:
         raise HTTPException(status_code=404)
+    # The revision before the panels it guards: a save landing between the
+    # two reads makes the page stale, never newer than what it shows.
+    panels_revision = panels_store.revision(exercise.public_id) if section == "panels" else 0
     return render(
         request,
         "applydesk/operator/section.html",
@@ -1688,6 +1755,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         people=sample_data.people_pools(exercise.public_id),
         panel_pools=sample_data.panel_pools(exercise.public_id),
         panels=sample_data.panels_of(exercise.public_id),
+        panels_revision=panels_revision,
         roster=sample_data.roster(exercise.public_id),
         uses=stages.panel_uses(exercise.public_id),
         panels_sent=workflow.panels_sent(exercise.public_id),

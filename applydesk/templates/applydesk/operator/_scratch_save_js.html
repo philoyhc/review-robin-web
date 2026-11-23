@@ -18,6 +18,8 @@
     }
     var root = btn.closest("[data-unsaved-root]") || document;
     var said = root.querySelector("[data-fb-said]");
+    // A page saved to the database names its own words (Process, Panels).
+    var done = btn.dataset.fbSaved || "Saved to this scratch exercise.";
     btn.addEventListener("click", function () {
       if (btn.dataset.fbStale) {
         if (said) said.textContent = "Reload the page before saving again: it was saved with new keys while you were editing.";
@@ -37,14 +39,19 @@
             // Edits made while the save was on its way are not in it (Codex):
             // the page stays unsaved until a later Save carries them.
             var now = snap();
-            if ((typeof now === "string" ? now : JSON.stringify(now)) === sent) {
-              if (said) said.textContent = "Saved to this scratch exercise.";
+            var same = (typeof now === "string" ? now : JSON.stringify(now)) === sent;
+            // A save that says its new revision (Panels): the next Save
+            // carries it, so edits kept since can be saved (AD2E). Set after
+            // the comparison, as the snapshot carries the revision.
+            if (got[1] && typeof got[1].revision === "number") btn.dataset.revision = String(got[1].revision);
+            if (same) {
+              if (said) said.textContent = done;
               root.dispatchEvent(new Event("applydesk:saved"));
               // A save that keyed something anew (a panel, a renumbered
               // gate) reloads, so the page holds the keys kept; it says so
               // once it is back.
               if (got[1] && got[1].reload) {
-                try { sessionStorage.setItem(NOTE, "Saved to this scratch exercise."); } catch (e) { /* said above */ }
+                try { sessionStorage.setItem(NOTE, done); } catch (e) { /* said above */ }
                 location.reload();
               }
             } else if (got[1] && got[1].strict) {

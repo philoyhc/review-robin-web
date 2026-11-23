@@ -6,7 +6,7 @@
 
 - **Panels keeps nothing an exercise can rely on.**
   - On a sample exercise, the page has no *Save*.
-  - On a scratch exercise, *Save* writes into the browser's in-memory store (`applydesk/scratch_panels.py`). A deploy, a restart or eight idle hours drops it.
+  - On a scratch exercise, *Save* writes into the browser's in-memory store (`scratch_panels.py`, deleted in rung 4). A deploy, a restart or eight idle hours drops it.
   - Process refuses a panel made on a sample's Process "until panels are stored" (AD2C).
 - **The model has four shapes for one concept** (AD-50): `Panel`, `Member`, `Evaluator` and `Assessor`. A per-membership note is merged per person. Retiring is page-only. No cap is held by the server.
 - **People search is ASCII-only on SQLite** (AD-127). The members box and the directory search compare `lower(display_name)`, so "émile" misses "Émile" locally.
@@ -90,6 +90,24 @@ Taken 2026-11-23 at `4f911c6cd`.
   - Names park on placeholders before they are written, so two panels may swap names in one save.
   - Two addresses that turn out to be one person are refused.
   - Each save or adoption is audited as `exercise.panels_saved`.
+- **2026-11-23, rung 4:**
+  - `sample_data`'s panel readers read `panels_store.stored`, as `plan_of` reads Process, a session per call (AD2G batches them).
+  - Panels' *Save* shows for every exercise, with the revision it opened at, and its Placeholder line goes.
+  - Form's and Process's *+ New panel…* adopt into the database within their own save's transaction; Process's refusal on a sample goes.
+  - `scratch_panels.py` is deleted, its spec lines repointed.
+  - A page saved to the database says *Saved.*, not *Saved to this scratch exercise.*: Process on a sample said the latter since AD2C.
+  - Found at build: `test_form.py` read the pools at import, before the tests make their tables.
+- **2026-11-23, the cumulative read** (`diff-reviewer`, base `69c06018c`, rungs 2-4): 7 findings, all fixed in rung 4 but one Codex had already caught on #4170.
+  - The fixes:
+    - A save made during edits now returns its new revision, which the page carries, so "save again" no longer meets a stale refusal.
+    - Panels reads what uses a panel under the row lock, and Process takes the lock before it reads the panels.
+    - The page reads its revision before its panels.
+    - Form commits before it keeps the form.
+    - An adoption with nothing new writes no save.
+    - A test that a refused Process save keeps no panel.
+  - Copy and spec: the scratch note now says Details, Process and Panels save to the database, and the Panels checks are restored to the spec's scratch section.
+  - Rung 3's "two addresses that are one person" refusal cannot happen: addresses are deduplicated by the same key first. It stays as a guard.
+  - Codex on #4170: a blank name is stored blank and read as the address, since an address can outrun the name column.
 
 ## PR ladder
 
@@ -104,7 +122,7 @@ Taken 2026-11-23 at `4f911c6cd`.
 4. **PR 4 — Panels saves for every exercise.**
    - The readers read the store; Panels' *Save* is shown for every exercise.
    - Form's and Process's *+ New panel…* adopt into the database, and Process's refusal on a sample goes.
-   - A scratch exercise's panels move to the database, and `applydesk/scratch_panels.py` is deleted, with its spec lines.
+   - A scratch exercise's panels move to the database, and `scratch_panels.py` is deleted, with its spec lines.
    - Last build rung: the cumulative `diff-reviewer` read.
 5. **PR 5 — close.**
 
@@ -117,7 +135,7 @@ Taken 2026-11-23 at `4f911c6cd`.
   - keeps its keys (`applydesk/tests/test_panels_store.py`).
 - **A panel made** on Form or Process is stored with that page's save, on a sample too.
 - **Search:** "émile" finds "Émile" on SQLite (a test).
-- `applydesk/scratch_panels.py` is gone; `grep -rn scratch_panels applydesk` finds nothing.
+- `scratch_panels.py` is gone; `grep -rn scratch_panels applydesk --include=*.py` finds nothing.
 - **The register:** AD-127 struck; AD-50 marked *Partly* (the shapes and the caps here; `Assessor` and `Evaluator` with AD2F), each with its PR.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py AD2E` exits 0; any warning adjudicated

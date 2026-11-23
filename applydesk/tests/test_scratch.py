@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from sqlalchemy.exc import OperationalError
 
 from applydesk import db, sample_data, scratch
 from applydesk.models import AuditEvent, Exercise
@@ -227,6 +228,16 @@ def _post_process(client: TestClient, made: str, body: object) -> Any:
         found = re.search(r'data-revision="(\d+)"', page)
         body = {**body, "revision": int(found.group(1)) if found else 0}  # pyright: ignore[reportUnknownVariableType]  -- a test's dict
     return client.post(f"{LOBBY}/{made}/process", json=body)
+
+
+def _post_panels(client: TestClient, made: str, body: object) -> Any:
+    """Panels' Save as the page sends it: with the revision the page
+    opened at, read off the page, unless the test gives one (AD2E)."""
+    if isinstance(body, dict) and "revision" not in body:
+        page = client.get(f"{LOBBY}/{made}/panels").text
+        found = re.search(r'data-revision="(\d+)"', page)
+        body = {**body, "revision": int(found.group(1)) if found else 0}  # pyright: ignore[reportUnknownVariableType]  -- a test's dict
+    return client.post(f"{LOBBY}/{made}/panels", json=body)
 
 
 def _field(label: str, **over: object) -> dict[str, object]:
@@ -502,9 +513,9 @@ def test_a_sample_exercise_s_process_saves_into_the_database() -> None:
     assert saves == 2
 
 
-def test_a_sample_exercise_cannot_adopt_a_panel_made_on_process() -> None:
-    """A sample's panels are the sample's until panels are stored (AD2E):
-    a gate naming one made on the page is refused, not half kept."""
+def test_a_sample_exercise_adopts_a_panel_made_on_process() -> None:
+    """Since AD2E a sample's panels are stored too: a gate naming one made
+    on the page keeps it, beside the sample's own panels."""
     client = _client()
     made_panel = {"new-1": {"name": "Readers", "members": [["Ada", "ada@example.edu"]]}}
     gate = _gate("gnew1", "Read", sources=[{"kind": "panel", "ref": "new-1", "min": 1, "max": 1}])
@@ -517,8 +528,85 @@ def test_a_sample_exercise_cannot_adopt_a_panel_made_on_process() -> None:
         ],
         "pools": made_panel,
     }
-    refused = _post_process(client, "wa9juxbc2t", sent)
-    assert refused.status_code == 400 and "new exercise only" in refused.json()["error"]
+    kept = _post_process(client, "wa9juxbc2t", sent)
+    assert kept.status_code == 200, kept.text
+    panels = client.get(f"{LOBBY}/wa9juxbc2t/panels").text
+    assert "Readers" in panels and "ada@example.edu" in panels
+    assert "Current RAs" in panels  # the sample's own, recorded with it
+
+
+def test_a_refused_process_save_keeps_no_panel_it_made() -> None:
+    """A panel made on Process is stored with the save or not at all: a
+    stale save refused after adopting it leaves nothing (AD2E cold read)."""
+    from applydesk import panels_store
+
+    client = _client()
+    made_panel = {"new-1": {"name": "Readers", "members": [["Ada", "ada@example.edu"]]}}
+    gate = _gate("gnew1", "Read", sources=[{"kind": "panel", "ref": "new-1", "min": 1, "max": 1}])
+    sent = {"stages": [_stage("Review", gates=[gate])], "pools": made_panel, "revision": 99}
+    refused = client.post(f"{LOBBY}/wa9juxbc2t/process", json=sent)
+    assert refused.status_code == 409, refused.text
+    assert panels_store.revision("wa9juxbc2t") == 0
+    assert "Readers" not in client.get(f"{LOBBY}/wa9juxbc2t/panels").text
+
+
+def test_form_holds_the_exercise_lock_while_it_checks_and_keeps_the_form(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A Panels save cannot retire a panel between Form's check of its
+    questions and the form kept: the lock comes first (Codex on #4171); a
+    commit that fails puts the form back as it was."""
+    from applydesk import panels_store, routes_operator
+
+    client = _client()
+    made = _create(client)
+    seen: list[str] = []
+    real_lock, real_form = panels_store.lock, routes_operator._form  # pyright: ignore[reportPrivateUsage]  -- watched, not replaced
+    monkeypatch.setattr(
+        panels_store, "lock", lambda s, p: (seen.append("lock"), real_lock(s, p))[1]
+    )
+    monkeypatch.setattr(
+        routes_operator, "_form", lambda *a: (seen.append("form"), real_form(*a))[1]
+    )
+    form = {"title": "", "description": "", "cards": [_field("Why?")]}
+    assert client.post(f"{LOBBY}/{made}/form", json=form).status_code == 200
+    assert seen[:2] == ["lock", "form"], seen
+    kept = client.get(f"{LOBBY}/{made}/form").text
+    assert "Why?" in kept
+
+    def fail(self: object) -> None:
+        raise OperationalError("COMMIT", {}, Exception("database is locked"))
+
+    from sqlalchemy.orm import Session as OrmSession
+
+    calls = {"n": 0}
+    real_commit = OrmSession.commit
+
+    def second_fails(self: OrmSession) -> None:
+        calls["n"] += 1
+        if calls["n"] == 2:  # the form's commit, after binding the actor
+            fail(self)
+        real_commit(self)
+
+    monkeypatch.setattr(OrmSession, "commit", second_fails)
+    other = {"title": "", "description": "", "cards": [_field("Something else")]}
+    assert client.post(f"{LOBBY}/{made}/form", json=other).status_code == 409
+    monkeypatch.setattr(OrmSession, "commit", real_commit)
+    page = client.get(f"{LOBBY}/{made}/form").text
+    assert "Why?" in page and "Something else" not in page
+
+
+def test_a_panels_save_says_its_new_revision() -> None:
+    """The page's next Save carries it, so edits kept while a save was on
+    its way can be saved next (AD2E cold read)."""
+    client = _client()
+    made = _create(client)
+    first = _post_panels(client, made, _panels())
+    assert first.status_code == 200 and first.json()["revision"] == 1
+    again = _panels(panels=[{"key": "panel-1", "name": "Readers"}])
+    again["people"] = [{**p, "panels": ["panel-1"] if p["panels"] else []} for p in again["people"]]  # pyright: ignore[reportGeneralTypeIssues, reportUnknownVariableType]  -- a test's dict
+    second = client.post(f"{LOBBY}/{made}/panels", json={**again, "revision": 1})
+    assert second.status_code == 200 and second.json()["revision"] == 2
 
 
 def test_process_save_is_checked() -> None:
@@ -692,7 +780,7 @@ def test_panels_save_into_the_scratch() -> None:
     made = _create(client)
     page = client.get(f"{LOBBY}/{made}/panels").text
     assert 'data-fb-snapshot="applydeskPanelsSnapshot"' in page
-    reply = client.post(f"{LOBBY}/{made}/panels", json=_panels())
+    reply = _post_panels(client, made, _panels())
     assert reply.status_code == 200, reply.text
     page = client.get(f"{LOBBY}/{made}/panels").text
     assert 'data-panel="panel-1"' in page and "Readers" in page
@@ -702,7 +790,7 @@ def test_panels_save_into_the_scratch() -> None:
     # Saved again, the panel keeps its key; renamed, it keeps it too.
     again = _panels(panels=[{"key": "panel-1", "name": "Peer readers"}])
     again["people"] = [{**p, "panels": ["panel-1"] if p["panels"] else []} for p in again["people"]]  # pyright: ignore[reportGeneralTypeIssues, reportUnknownVariableType]  -- a test's dict
-    assert client.post(f"{LOBBY}/{made}/panels", json=again).status_code == 200
+    assert _post_panels(client, made, again).status_code == 200
     page = client.get(f"{LOBBY}/{made}/panels").text
     assert 'data-panel="panel-1"' in page and "Peer readers" in page
     # A page that missed its reload sends made-1 again: it is panel-1, not a
@@ -714,7 +802,7 @@ def test_panels_save_into_the_scratch() -> None:
     }
     assert client.post(f"{LOBBY}/{made}/form", json=form).status_code == 200
     stale = _panels(panels=[{"key": "made-1", "name": "Peer readers"}])
-    reply = client.post(f"{LOBBY}/{made}/panels", json=stale)
+    reply = _post_panels(client, made, stale)
     assert reply.status_code == 200, reply.text
     page = client.get(f"{LOBBY}/{made}/panels").text
     assert 'data-panel="panel-1"' in page and 'data-panel="panel-2"' not in page
@@ -751,19 +839,27 @@ def test_panels_save_is_checked() -> None:
             "not on the page",
         ),
     ):
-        refused = client.post(f"{LOBBY}/{made}/panels", json=bad)
+        refused = _post_panels(client, made, bad)
         assert refused.status_code == 400 and reason in refused.json()["error"], (bad, refused.text)
     # A panel a question uses cannot be retired.
-    assert client.post(f"{LOBBY}/{made}/panels", json=_panels()).status_code == 200
+    assert _post_panels(client, made, _panels()).status_code == 200
     form = {
         "title": "",
         "description": "",
         "cards": [_field("Who?", type="people", pool="panel-1")],
     }
     assert client.post(f"{LOBBY}/{made}/form", json=form).status_code == 200
-    retired = client.post(f"{LOBBY}/{made}/panels", json=_panels(panels=[], people=[]))
+    retired = _post_panels(client, made, _panels(panels=[], people=[]))
     assert retired.status_code == 400 and "in use" in retired.json()["error"]
-    assert client.post(f"{LOBBY}/wa9juxbc2t/panels", json=_panels()).status_code == 404
+    # A sample exercise's Panels saves too (AD2E); a page opened before the
+    # last save is refused.
+    from applydesk import sample_data
+
+    kept = [{"key": p.key, "name": p.name} for p in sample_data.panels_of("wa9juxbc2t")]
+    sample = _panels(panels=[*kept, {"key": "made-1", "name": "Readers"}])
+    assert _post_panels(client, "wa9juxbc2t", sample).status_code == 200
+    stale = client.post(f"{LOBBY}/wa9juxbc2t/panels", json={**sample, "revision": 0})
+    assert stale.status_code == 409 and "Reload" in stale.json()["error"]
 
 
 def test_a_panel_made_on_form_or_process_joins_the_panels() -> None:

@@ -19,14 +19,15 @@ a pending person, as Candidates' CSV is. Rows are retired, never deleted
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, cast
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-from applydesk import audit, people, sample_data
+from applydesk import audit, db, people, sample_data
 from applydesk.models import Exercise, PanelMember, Person, RosterEntry
 from applydesk.models import Panel as PanelRow
 from applydesk.sample_data import Member, Panel
@@ -126,6 +127,45 @@ def load(session: Session, public_id: str) -> State | None:
     return _assemble(public_id, [(p.key, p.name) for p in panels], people_rows)
 
 
+def lock(session: Session, public_id: str) -> Exercise:
+    """Take the exercise's lock in ``session``: a save that reads the
+    panels before it writes holds it first. A no-op write as well as the
+    row lock, since SQLite has no row locks but serializes writers: any
+    two saves that read and change the panels take turns (Codex on #4171)."""
+    exercise = _exercise(session, public_id, lock=True)
+    session.execute(
+        update(Exercise)
+        .where(Exercise.id == exercise.id)
+        .values(panels_revision=Exercise.panels_revision)
+        .execution_options(synchronize_session=False)
+    )
+    return exercise
+
+
+def stored(public_id: str) -> State | None:
+    """The panels Panels last saved, read in a session of its own (the
+    readers in ``sample_data``, which no route hands a session); None if
+    never saved."""
+    session = db.new_session()
+    try:
+        return load(session, public_id)
+    finally:
+        session.close()
+
+
+def revision(public_id: str) -> int:
+    """How many times the exercise's panels were saved: the Panels page
+    sends the one it opened at, and a save from an older one is refused."""
+    session = db.new_session()
+    try:
+        found = session.scalar(
+            select(Exercise.panels_revision).where(Exercise.public_id == public_id)
+        )
+    finally:
+        session.close()
+    return found or 0
+
+
 def _before(session: Session, exercise: Exercise) -> State:
     """What the page started from: the stored roster, else the sample's."""
     stored = load(session, exercise.public_id)
@@ -211,6 +251,15 @@ def _parse(
     if len(cast(list[Any], raw_people)) > MAX_PEOPLE:
         raise Refused(f"The roster holds at most {MAX_PEOPLE} people.", key="cap")
     known = {p.key for p in before.panels}
+    # A page that missed its reload after a save keyed its panels still
+    # names them ``made-1``…: by name, the saved panel it became, unless
+    # the post carries that panel under its own key too (Codex on #4027).
+    sent_keys = {
+        key
+        for p in cast(list[Any], raw_panels)
+        if isinstance(p, dict) and isinstance(key := cast(dict[str, Any], p).get("key"), str)
+    }
+    by_name = {p.name.casefold(): p.key for p in before.panels if p.key not in sent_keys}
     keys: dict[str, str] = {}
     panels: list[tuple[str, str]] = []
     names: set[str] = set()
@@ -222,7 +271,7 @@ def _parse(
         if not _KEY.fullmatch(key) or key in keys:
             raise Refused("A panel's key is malformed.")
         name = _name(panel.get("name"), names)
-        keys[key] = key if key in known else _fresh(taken)
+        keys[key] = key if key in known else by_name.pop(name.casefold(), None) or _fresh(taken)
         panels.append((keys[key], name))
     if in_use - set(keys.values()):
         raise Refused(
@@ -356,13 +405,13 @@ def save(
     sent: Any,
     opened: int,
     actor: Person | None,
-    in_use: frozenset[str],
+    in_use: Callable[[], frozenset[str]],
 ) -> int:
     """Keep the Panels page's snapshot ``sent`` as the exercise's panels and
     roster, if no save came between (``opened``, the revision the page
     loaded); the new revision. Flushed, not committed: the caller's
     transaction holds the change and its audit."""
-    exercise = _exercise(session, public_id, lock=True)
+    exercise = lock(session, public_id)
     if exercise.archived_at is not None:
         raise Refused("Archived: restore it to change it.", key="archived")
     if opened != exercise.panels_revision:
@@ -370,7 +419,9 @@ def save(
             "Not saved: Panels was saved since this page opened. Reload to see it.", key="stale"
         )
     before = _before(session, exercise)
-    state = _parse(public_id, sent, before, taken_keys(session, exercise), in_use)
+    # What uses a panel is read under the lock, so a Process save that adds
+    # a gate on it cannot land between the check and this save (cold read).
+    state = _parse(public_id, sent, before, taken_keys(session, exercise), in_use())
     counts = _write(session, exercise, state, actor)
     exercise.panels_revision += 1
     audit.write_event(
@@ -401,13 +452,15 @@ def adopt(
     if not isinstance(made, dict):
         raise Refused("A panel made on this page is malformed.")
     pools = cast(dict[str, Any], made)
-    exercise = _exercise(session, public_id, lock=True)
+    exercise = lock(session, public_id)
     if exercise.archived_at is not None:
         raise Refused("Archived: restore it to change it.", key="archived")
     before = _before(session, exercise)
     taken = taken_keys(session, exercise)
     panels = [(p.key, p.name) for p in before.panels]
     roster = [(m, set(keys)) for m, keys in before.roster]
+    before_panels = list(panels)
+    before_roster = [(m, set(keys)) for m, keys in roster]
     names = {n.casefold() for _, n in panels}
     by_name = {n.casefold(): k for k, n in panels}
     by_email = {m.email.casefold(): i for i, (m, _) in enumerate(roster)}
@@ -445,6 +498,10 @@ def adopt(
         raise Refused(f"An exercise holds at most {MAX_PANELS} panels.", key="cap")
     if len(roster) > MAX_PEOPLE:
         raise Refused(f"The roster holds at most {MAX_PEOPLE} people.", key="cap")
+    # Offered again by a page that missed its reload, with nothing new: the
+    # panels as they stand, no save written (cold read).
+    if (panels, roster) == (before_panels, before_roster):
+        return keys
     counts = _write(session, exercise, _assemble(public_id, panels, roster), actor)
     exercise.panels_revision += 1
     audit.write_event(

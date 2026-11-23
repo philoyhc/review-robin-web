@@ -42,7 +42,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/handoff.py` | The bundle a gate is sent to Review Robin with: the reviewers, reviewees, relationships and settings CSVs |
 | `applydesk/scratch.py` | Scratch exercises: the per-browser in-memory store, its cookie and limits, and each page's saved state |
 | `applydesk/process_save.py` | Process's *Save*, before the store: the page's snapshot shape-checked and built back into stages (`build`), minting the keys of what the page added; `build(checking=True)` serves the rules check |
-| `applydesk/scratch_panels.py` | Panels' *Save* on a scratch exercise, and the panels Form and Process make |
+| `applydesk/panels_store.py` | An exercise's panels and the Panels roster in the database (segment AD2E): `load`, `save` under the exercise's row lock guarded by `exercise.panels_revision`, and `adopt` for the panels Form and Process make |
 | `applydesk/tones.py` | Each state's chip tone, one map for every page |
 | `applydesk/paging.py` | A long table's pages, 200 rows each, and its sort read from the query |
 | `applydesk/templates/applydesk/` | Its templates; `base.html` carries the favicon and the bar |

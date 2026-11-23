@@ -860,18 +860,19 @@ _ELSEWHERE: tuple[tuple[str, str], ...] = (
 INSTITUTION = "Institution-wide"
 
 
-def _scratch_panels(
+def _stored_panels(
     exercise_id: str,
 ) -> tuple[tuple[Panel, ...], tuple[tuple[Member, frozenset[str]], ...]] | None:
-    """A scratch exercise's panels and roster as Panels last saved them
-    (segment AD1N rung 5), else None."""
-    from applydesk import scratch_panels  # it builds on this module
+    """The exercise's panels and roster as Panels last saved them (segment
+    AD2E), else None: never saved, it reads the sample's."""
+    from applydesk import panels_store  # it builds on this module
 
-    return scratch_panels.saved(exercise_id)
+    found = panels_store.stored(exercise_id)
+    return (found.panels, found.roster) if found is not None else None
 
 
 def panels_of(exercise_id: str) -> tuple[Panel, ...]:
-    own = _scratch_panels(exercise_id)
+    own = _stored_panels(exercise_id)
     if own is not None:
         return own[0]
     return tuple(p for p in PANELS if p.exercise_id == exercise_id)
@@ -884,7 +885,7 @@ def people_pools(exercise_id: str) -> dict[str, Pool]:
         email: (name, email)
         for name, email in [
             *((m.name, m.email) for p in PANELS for m in p.members),
-            *((m.name, m.email) for m, _ in (_scratch_panels(exercise_id) or ((), ()))[1]),
+            *((m.name, m.email) for m, _ in (_stored_panels(exercise_id) or ((), ()))[1]),
             *((a.name, a.email) for a in ASSESSORS),
             *_ELSEWHERE,
         ]
@@ -954,9 +955,9 @@ def roster(exercise_id: str) -> tuple[tuple[Member, frozenset[str]], ...]:
     in the order first met, with the keys of the panels they sit on: the
     Panels table's rows (ruling 20). A name or a note left blank where
     first met is taken from a later panel that gives one; a name that is
-    only the email counts as blank. A scratch exercise's is its roster as
-    Panels last saved it, someone on no panel included."""
-    own = _scratch_panels(exercise_id)
+    only the email counts as blank. Once Panels is saved, its roster as
+    saved (segment AD2E), someone on no panel included."""
+    own = _stored_panels(exercise_id)
     if own is not None:
         return own[1]
     rows: dict[str, tuple[Member, set[str]]] = {}
