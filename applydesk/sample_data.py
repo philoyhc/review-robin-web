@@ -1098,10 +1098,16 @@ def is_sample(public_id: str) -> bool:
     return public_id in SAMPLE_IDS
 
 
+def sample(public_id: str) -> Exercise | None:
+    """The fixed sample with this ID, else None: no database read, so a
+    caller inside a transaction may ask (cold read, AD2G)."""
+    return next((e for e in EXERCISES if e.public_id == public_id), None)
+
+
 def exercise(public_id: str) -> Exercise | None:
     """An exercise by ID: a sample, else an ordinary exercise's row
     (segment AD2G), else None."""
-    found = next((e for e in EXERCISES if e.public_id == public_id), None)
+    found = sample(public_id)
     if found is not None:
         return found
     from applydesk import exercises as store  # it builds on this module

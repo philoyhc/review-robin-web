@@ -695,7 +695,7 @@ def plan_of(exercise_id: str) -> Plan:
             return Plan(saved, _blank_cells(rows, saved), exercise_id)
         return Plan(saved, tuple(Row(a, {}) for a in apps), exercise_id)
     if exercise_id not in _STAGES:
-        e = sample_data.exercise(exercise_id)
+        e = sample_data.sample(exercise_id)  # an ordinary one: Draft, no dates
         when = _exercise_span(e) if e else None
         status = "Draft" if e is None or e.state == "Draft" else "Published"
         only = Stage(1, "", when, form=True, status=status)
