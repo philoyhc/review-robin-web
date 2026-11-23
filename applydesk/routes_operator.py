@@ -31,6 +31,7 @@ from applydesk import (
     people,
     process_save,
     process_store,
+    rules,
     sample_data,
     scratch,
     scratch_panels,
@@ -684,6 +685,72 @@ def _save_process(request: Request, exercise_id: str, sent: object) -> Response:
     # A column the page added took the server's key, and a panel it
     # adopted keyed anew: the page reloads to hold the keys kept.
     return JSONResponse({"saved": True, "reload": True, "strict": True})
+
+
+#: The largest table *Apply rules* sends, in bytes: every row's settable
+#: cells, a few dozen bytes each.
+_PROPOSAL_BODY = 4 * 1024 * 1024
+
+
+@router.post("/exercises/{exercise_id}/dossiers/proposal", name="applydesk_dossiers_proposal")
+async def dossiers_proposal(request: Request, exercise_id: str) -> Response:
+    """Dossiers' *Apply rules* (ruling 78): what the server's rule engine
+    would change in the table the page sends (each row's settable cells,
+    value and hand mark), as a proposal. Changes nothing."""
+    _same_site(request)
+    if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
+        raise HTTPException(status_code=415)
+    body = await request.body()
+    if len(body) > _PROPOSAL_BODY:
+        raise HTTPException(status_code=413)
+    try:
+        sent = json.loads(body)
+    except ValueError:
+        raise HTTPException(status_code=400) from None
+    return await run_in_threadpool(_propose, exercise_id, sent)
+
+
+def _table_sent(v: Any) -> dict[str, dict[str, tuple[str, bool]]] | None:
+    """The page's cells, ``{app: {key: [value, hand]}}``, else None."""
+    if not isinstance(v, dict):
+        return None
+    out: dict[str, dict[str, tuple[str, bool]]] = {}
+    for app, cells in cast(dict[Any, Any], v).items():
+        if not isinstance(app, str) or not isinstance(cells, dict):
+            return None
+        own: dict[str, tuple[str, bool]] = {}
+        for key, cell in cast(dict[Any, Any], cells).items():
+            if not (
+                isinstance(key, str) and isinstance(cell, list) and len(cast(list[Any], cell)) == 2
+            ):
+                return None
+            value, hand = cast(list[Any], cell)
+            if not isinstance(value, str) or not isinstance(hand, bool) or len(value) > 200:
+                return None
+            own[key] = (value, hand)
+        out[app] = own
+    return out
+
+
+def _propose(exercise_id: str, sent: Any) -> Response:
+    exercise = exercise_or_404(exercise_id)
+    got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
+    table = _table_sent(got.get("cells"))
+    only, hand = got.get("only_pending"), got.get("replace_hand")
+    if table is None or not isinstance(only, bool) or not isinstance(hand, bool):
+        return JSONResponse({"error": "The table sent is malformed."}, status_code=400)
+    plan = stages.plan_of(exercise.public_id)
+    columns = rules.columns_of(plan, lambda gate: locks.cells_lock(exercise, gate).fixed)
+    rows = rules.rows_of(plan, functools.partial(sample_data.answers, exercise.public_id), table)
+    proposal = rules.propose(columns, rows, only_pending=only, replace_hand=hand)
+    return JSONResponse(
+        {
+            "changes": [
+                {"app": c.app, "key": c.key, "from": c.old, "to": c.new} for c in proposal.changes
+            ],
+            "skipped": list(proposal.skipped),
+        }
+    )
 
 
 @router.post("/exercises/{exercise_id}/panels", name="applydesk_exercise_panels_save")

@@ -6,9 +6,13 @@ script is `test_rules_parity_browser.py`'s."""
 
 from __future__ import annotations
 
-from applydesk import rules
+import pytest
+from fastapi.testclient import TestClient
+
+from applydesk import locks, rules, stages
 from applydesk.rules import Cell, Column, Dossier
 from applydesk.stages import Rule
+from applydesk.tests._host import host_with
 
 
 def _row(app: str, gate: str, result: str | None, out: str = "", **more: Cell) -> Dossier:
@@ -90,3 +94,47 @@ def test_a_later_column_reads_what_this_run_gave_an_earlier_one() -> None:
     row = Dossier("a", "A", "Submitted", 1, {}, {"o1": Cell(""), "o2": Cell("")})
     got = rules.propose([first, second], [row], only_pending=True, replace_hand=False)
     assert [(c.key, c.new) for c in got.changes] == [("o1", "Yes"), ("o2", "Given")]
+
+
+URL = "/applydesk/operator/exercises/wa9juxbc2t/dossiers/proposal"
+
+
+def _client() -> TestClient:
+    return TestClient(host_with(("applydesk",))[0], follow_redirects=False)
+
+
+def test_the_proposal_route_answers_for_the_table_sent(monkeypatch: pytest.MonkeyPatch) -> None:
+    """*Apply rules* (ruling 78): the page's table in, the engine's
+    proposal out; a gate whose session has opened is left, said; a hand
+    change the server has not seen is read."""
+    client = _client()
+    plan = stages.plan_of("wa9juxbc2t")
+    row = next(r for r in plan.rows if r.application.state == "Submitted")
+    app = row.application.public_id
+    body = {"only_pending": False, "replace_hand": True, "cells": {}}
+    reply = client.post(URL, json=body)
+    assert reply.status_code == 200, reply.text
+    got = reply.json()
+    assert set(got) == {"changes", "skipped"}
+    assert "Peer review: fixed, its Review Robin session has opened." in got["skipped"]
+    monkeypatch.setattr(locks, "cells_lock", lambda e, g: locks.OPEN)
+    # Its gate set to Not entered by hand on the page: the server reads
+    # it, and the gate's rule (a submitted one is entered) moves it back.
+    sent = {**body, "cells": {app: {"g1": ["Not entered", True]}}}
+    after = client.post(URL, json=sent).json()
+    assert {"app": app, "key": "g1", "from": "Not entered", "to": "Entered"} in after["changes"]
+    kept = client.post(URL, json={**sent, "replace_hand": False}).json()
+    assert not any(c["app"] == app and c["key"] == "g1" for c in kept["changes"])
+
+
+def test_the_proposal_route_refuses_a_malformed_table() -> None:
+    client = _client()
+    for bad in (
+        {"only_pending": True, "replace_hand": False, "cells": []},
+        {"only_pending": "yes", "replace_hand": False, "cells": {}},
+        {"only_pending": True, "replace_hand": False, "cells": {"a": {"g1": ["x"]}}},
+        {"only_pending": True, "replace_hand": False, "cells": {"a": {"g1": ["x", "no"]}}},
+    ):
+        reply = client.post(URL, json=bad)
+        assert reply.status_code == 400 and "malformed" in reply.json()["error"], bad
+    assert client.post(URL, content=b"x", headers={"content-type": "text/plain"}).status_code == 415

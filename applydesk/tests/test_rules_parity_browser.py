@@ -1,10 +1,11 @@
-"""The parity run before the page's evaluator goes (segment AD2C rung 6,
-ruling 78): Dossiers' *Apply rules*, worked by its own script in a real
-Chromium, proposes what `applydesk/rules.py` proposes over the same table,
-cell for cell and reason for reason. The table is read off the page as it
-stands, hand changes included, and sent to the server engine as the page
-will send it. Without a Chromium build the test skips, saying why;
-``RRW_REQUIRE_BROWSER=1`` (set by CI) turns that skip into a failure."""
+"""Dossiers' *Apply rules* against the server's engine (segment AD2C rung
+6, ruling 78). Rung 6a ran this file against the page's own script, the
+one parity run before it went: the two agreed cell for cell and reason for
+reason. Since rung 6b the page asks the engine, so this now checks that
+the page shows the engine's answer over the table as it stands, hand
+changes included, under each option. Without a Chromium build the test
+skips, saying why; ``RRW_REQUIRE_BROWSER=1`` (set by CI) turns that skip
+into a failure."""
 
 from __future__ import annotations
 
@@ -36,7 +37,13 @@ def page() -> Iterator[Page]:
     client = TestClient(host_with(("applydesk",))[0])
 
     def serve(route: Route) -> None:
-        response = client.get(route.request.url.removeprefix(ORIGIN))
+        # A post too: *Apply rules* asks the server (ruling 78).
+        response = client.request(
+            route.request.method,
+            route.request.url.removeprefix(ORIGIN),
+            content=route.request.post_data_buffer,
+            headers={**route.request.headers, "origin": ORIGIN},
+        )
         route.fulfill(
             status=response.status_code,
             body=response.content,
@@ -88,6 +95,7 @@ def _page_answer(page: Page, *, only_pending: bool, replace_hand: bool) -> dict[
     rule.locator("[data-ap-rule-pending]").set_checked(only_pending)
     rule.locator("[data-ap-rule-hand]").set_checked(replace_hand)
     rule.locator("[data-ap-rule-go]").click()
+    page.locator("[data-ap-proposal]").wait_for(state="visible")
     got = page.evaluate(_PROPOSAL)
     page.locator("[data-ap-prop-cancel]").click()
     return got
@@ -156,6 +164,7 @@ def test_parity_holds_after_hand_changes_and_an_applied_run(page: Page) -> None:
         _same(page, MODEL, only_pending=only_pending, replace_hand=replace_hand)
     # Apply one run, then ask again over the changed table.
     page.locator("[data-ap-rule-go]").click()
+    page.locator("[data-ap-proposal]").wait_for(state="visible")
     page.locator("[data-ap-prop-apply]").click()
     _same(page, MODEL, only_pending=False, replace_hand=True)
 
