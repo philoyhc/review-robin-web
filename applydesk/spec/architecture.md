@@ -17,7 +17,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/lookups.py` | Path lookups the routes share: an ID's shape checked, then a 404 or the record |
 | `applydesk/gate.py` | Who reaches the pages. `require_exercise_operator` on the operator router: 404 unless the viewer is the super-admin or on the allowlist and, on a path with an `exercise_id`, holds a current grant on that exercise (the super-admin's reach is their grants too). `require_admin` on the admin router: the super-admin or an Admin. `landing` on `/` and `/operator`: any operator, else the placeholders' gate. `placeholders_only` on the participant's pages until a later AD2 segment, on `reaches_placeholders`: anyone on a local run, deployed only the super-admin; `web.render` offers a link to those pages (`participant_pages`) only where it holds. `viewer` resolves the viewer once per request, binding them (`people.resolve`), and keeps the answer on `request.state`; `is_operator` and `operates` read it; `forget_viewer` drops it after the viewer's grants change. `own_new_exercise` makes a new scratch exercise's row and Owner |
 | `applydesk/db.py` | Apply Desk's own database, `applydesk` ("The database"); `is_busy` and `lost_a_race` tell a concurrent change (SQLite busy, or a unique clash) from a bug |
-| `applydesk/models.py` | Its tables, on Apply Desk's own `Base`: `person`, `exercise`, `exercise_tag`, `exercise_operator`, `audit_event`, and the Process and Candidates tables ("The database") |
+| `applydesk/models.py` | Its tables, on Apply Desk's own `Base`: `person`, `exercise`, `exercise_tag`, `exercise_operator`, `audit_event`, and the Process, Candidates and Panels tables ("The database") |
 | `applydesk/exercises.py` | An exercise's stored settings and the rules over them ("Exercises"): `overlay` and `stored` read them over the sample, `save_details` is Details' *Lock*, `save_panel`, `retag`, `archive`, `restore`, `delete` and `copy_settings` are the Lobby's, `record_sample` is the seed's. Flushes, never commits; refuses with `Refused` and its `key` |
 | `applydesk/clock.py` | The one clock (`today`, `midday`) and the date wording (`short`, `span`, `stamp`): no page reads the wall clock or words a date itself |
 | `applydesk/lobby.py` | The Operator Lobby's and the Archive's query string: `Query` (`sort`, `dir`, `tag`, `any`, `q`) and `apply` / `matches`, which sort and filter the rows |
@@ -42,7 +42,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/handoff.py` | The bundle a gate is sent to Review Robin with: the reviewers, reviewees, relationships and settings CSVs |
 | `applydesk/scratch.py` | Scratch exercises: the per-browser in-memory store, its cookie and limits, and each page's saved state |
 | `applydesk/process_save.py` | Process's *Save*, before the store: the page's snapshot shape-checked and built back into stages (`build`), minting the keys of what the page added; `build(checking=True)` serves the rules check |
-| `applydesk/panels_store.py` | An exercise's panels and the Panels roster in the database (segment AD2E): `load`, `save` under the exercise's row lock guarded by `exercise.panels_revision`, and `adopt` for the panels Form and Process make |
+| `applydesk/panels_store.py` | An exercise's panels and the Panels roster in the database (segment AD2E): `load`, `stored`, `revision`, `lock`, `save` (guarded by `exercise.panels_revision`) and `adopt` for the panels Form and Process make ("Panels") |
 | `applydesk/tones.py` | Each state's chip tone, one map for every page |
 | `applydesk/paging.py` | A long table's pages, 200 rows each, and its sort read from the query |
 | `applydesk/templates/applydesk/` | Its templates; `base.html` carries the favicon and the bar |
@@ -89,13 +89,16 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
   `ad2a3onepending`, `ad2w1firstsignin`, `ad2m1admins` (`person.is_admin`),
   `ad2m2manyowners` (drops `uq_exercise_one_owner`), `ad2b1exercisesettings`
   (the `exercise` columns below, `uq_exercise_live_code` and `exercise_tag`)
-  and `ad2c1process` (the Process and Candidates tables and
-  `exercise.process_revision`; new tables only).
+  `ad2c1process` (the Process and Candidates tables and
+  `exercise.process_revision`; new tables only) and `ad2e1_panels.py`
+  (revision `ad2e1panels`: `panel`, `roster_entry` and `panel_member`,
+  `exercise.panels_revision`, and `person.display_name_key`, backfilled with
+  Python's casefold).
 
 | Table (model) | Holds |
 |---|---|
-| `person` (`Person`) | Tenant ID and object ID, null while pending; email, `email_key` (the casefolded address), UPN and display name as snapshots; `bound_at`; `first_signed_in_at` (the first sign-in, set once; a directory pick is bound without one); `created_at`. The allowlist is on it: `may_operate`, `admitted_by_id`, `admitted_at`, `revoked_at`, `is_admin` (an Admin, always also listed) |
-| `exercise` (`Exercise`) | `public_id`, unique, and `created_at`; `name`, `code` and `code_key` (the code casefolded), `description`, `eligibility` (`open`, `invitation` or NULL), `blind`, `help_contact` and `timezone` (NULL takes the operator settings' default), `created_by_id` (the person who made it), `archived_at`, `deleted_at`, `revision` ("Exercises") and `process_revision` ("Process"). Its form and applications are sample data |
+| `person` (`Person`) | Tenant ID and object ID, null while pending; email, `email_key` (the casefolded address), UPN and display name as snapshots, `display_name_key` (the name casefolded, kept in step by the model; three times the name's width, as casefolding can lengthen a name, and searched by the directory and the allowlist in place of `lower(display_name)`, which folds ASCII only on SQLite); `bound_at`; `first_signed_in_at` (the first sign-in, set once; a directory pick is bound without one); `created_at`. The allowlist is on it: `may_operate`, `admitted_by_id`, `admitted_at`, `revoked_at`, `is_admin` (an Admin, always also listed) |
+| `exercise` (`Exercise`) | `public_id`, unique, and `created_at`; `name`, `code` and `code_key` (the code casefolded), `description`, `eligibility` (`open`, `invitation` or NULL), `blind`, `help_contact` and `timezone` (NULL takes the operator settings' default), `created_by_id` (the person who made it), `archived_at`, `deleted_at`, `revision` ("Exercises") and `process_revision` ("Process") and `panels_revision` ("Panels"; 0 until Panels is first saved). Its form and applications are sample data |
 | `exercise_tag` (`ExerciseTag`) | One tag on an exercise: `exercise_id`, `label` (the case first typed) and `label_key` (casefolded); (exercise, `label_key`) unique |
 | `exercise_operator` (`ExerciseOperator`) | A grant: (exercise, person) unique, `is_owner`, `added_by_id`, `added_at`, `removed_at` |
 | `audit_event` (`AuditEvent`) | `at`, `event_type`, `actor_id`, `exercise_id`, `detail` (JSON) |
@@ -104,6 +107,9 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
 | `gate_field` (`GateField`) | A response field: `gate_id`, `key` (`f<n>`), `position`, `label`, `type`, `min`, `max`, `step`, `options`, `required`, `help`, `retired_at`. (gate, `key`) unique |
 | `gate_result` (`GateResult`) | A result: `gate_id`, `key` (`r<n>`), `position` (1 is the headline), `name`, `field_id` (the `gate_field` it collates, nullable), `derive`, `value`, `at_least`, `ignore_zero`, `retired_at`. (gate, `key`) unique |
 | `gate_source` (`GateSource`) | An evaluator source: `gate_id`, `rank`, `kind`, `ref` (a panel key or a Form question key, strings until panels and questions are stored), `min`, `max`, `all_members` |
+| `panel` (`Panel`) | A panel: `exercise_id`, `key` (`panel-<n>`, server-minted, never reused), `name` and `name_key` (casefolded), `position`, `retired_at`. (exercise, `key`) unique; (exercise, `name_key`) unique among live panels (`uq_panel_live_name`) |
+| `roster_entry` (`RosterEntry`) | One person on an exercise's Panels table, on a panel or none: `exercise_id`, `person_id`, `name` (as typed; blank when it equals the address), `note` (one per person), `position`, `retired_at`. (exercise, person) unique, so removing and re-adding revives the row |
+| `panel_member` (`PanelMember`) | A roster entry on a panel: `panel_id`, `roster_entry_id`, `retired_at`; (panel, entry) unique, so unticking and ticking again revives the row |
 | `outcome` (`Outcome`) | `stage_id`, `key` (`o<n>`), `label`, `due_at`, `rule` (JSON), `retired_at`. (exercise, `key`) unique |
 | `outcome_value` (`OutcomeValue`) | A value of an outcome: `outcome_id`, `key` (`v<n>`), `position`, `label`, `advances`, `retired_at`. (outcome, `key`) unique |
 | `outcome_weight` (`OutcomeWeight`) | A weight in an outcome's combined result: `outcome_id`, `gate_id`, `result_key`, `weight`. (outcome, gate, result) unique |
@@ -190,6 +196,43 @@ one's). Dossiers' cells stay the sample's.
   `stages.rule_problems` for the page's flags, and a Dossiers table posted to
   `…/dossiers/proposal` by `rules.propose`; neither writes.
 
+### Panels
+
+`applydesk/panels_store.py` keeps an exercise's panels and Panels roster. The
+pages keep `sample_data.Panel` and `Member`, which `load` builds; the
+readers in `sample_data` (`panels_of`, `roster`, `people_pools`,
+`panel_pools`) read `stored`, the panels as last saved, else the sample's
+(`panels_revision` 0). Nothing is deleted: a panel, entry or membership the
+save drops is retired.
+
+- **`load`, `stored`, `revision`.** `load` reads in the caller's session;
+  `stored` and `revision` open one of their own, for readers no route hands
+  a session. `revision` is how many times the panels were saved.
+- **`save`** takes the lock, refuses an archived exercise and a snapshot
+  built on an older `panels_revision` (`Refused`, key `stale`), checks it
+  whole (names, addresses, ticks, the caps, `in_use`), writes it and raises
+  the revision, in the caller's transaction with the audit event. It returns
+  the new revision. `in_use` is read under the lock, so a Process save adding
+  a gate on a panel cannot land between the check and the save.
+- **`adopt`** stores the panels Form and Process make with *+ New panel…*,
+  with that page's own save, under the same lock; a panel held by that name
+  is that panel, and an adoption that adds nothing writes no save.
+- **`lock`** takes the exercise's row lock (`SELECT … FOR UPDATE`) and a
+  no-op `UPDATE` of `panels_revision` beside it: SQLite has no row locks but
+  serializes writers, so two saves that read the panels and change them take
+  turns there too. A route whose save reads panels (Form's, Process's) takes
+  it before it reads them and holds it until it commits.
+- **Keys** are minted past every key the exercise has held, retired ones and
+  the sample's included. A sample's panels are recorded at the first save,
+  keeping their keys; the seed writes none. Names park on placeholders
+  before they are written, so two panels may swap names in one save.
+- **Caps:** at most 50 panels and 2,000 people (`MAX_PANELS`, `MAX_PEOPLE`).
+- **People.** An address is matched to a person on record (a bound one first,
+  by its address snapshot, else a pending one), else made pending
+  (`people.pending`).
+- **Audit.** `exercise.panels_saved`: a counts envelope (`panels`, `people`,
+  `retired`) and `context.revision`; an adoption audits the same.
+
 ### Candidates
 
 `applydesk/candidates.py` lists an exercise's people (the form's roster on an
@@ -266,7 +309,8 @@ changes envelope and the new `revision`, from Details' *Lock* and the Lobby's
 `exercise.process_saved` (a counts envelope: stages, gates and outcomes kept
 and `retired`; `context.revision`), `exercise.stage_reverted` (`reason`,
 `refs.stage_id`), `exercise.form_opened`, `exercise.form_closed`,
-`candidate.added` (`refs.person_id`, `context.via`) and `candidate.removed`
+`exercise.panels_saved` (a counts envelope: panels and people kept and
+`retired`; `context.revision`), `candidate.added` (`refs.person_id`, `context.via`) and `candidate.removed`
 (`refs.person_id`). A directory find is audited to the searcher, not the
 person found.
 
