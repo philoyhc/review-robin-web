@@ -43,14 +43,18 @@ when they are all ticked.
    - *Owners and operators*: **The card**, **Make Owner, then Step down**,
      **Leave**, **Transfer**. Do Transfer on a scratch exercise, since it
      makes Jane the only Owner.
-   - *Admins and adopting*: **Promote and Demote**, **Revoke skips an
-     Admin** (on Jane).
-3. **Not the super-admin.** With Local Operator promoted to Admin in
-   sitting 2, restart with `FAKE_AUTH_SUPER_ADMIN=false`: **An Admin's
-   view**.
-4. **A fresh database, unseeded.** Stop the server, set
-   `FAKE_AUTH_SUPER_ADMIN` back to `true` (a fresh database keeps no Admin
-   role, and Exercises Diagnostics needs one), move `applydesk.db` aside,
+   - *Admins and adopting*: *Promote to Admin* on Jane (the first half of
+     **Promote and Demote**), then **Revoke skips an Admin**. Leave her an
+     Admin for sitting 3.
+3. **An Admin, not the super-admin.** Local Operator cannot promote its own
+   row, so the Admin is Jane: restart as Jane (her three values from
+   sitting 2) with `FAKE_AUTH_SUPER_ADMIN=false`: **An Admin's view**, read
+   as Jane rather than Local Operator. Then restart as Local Operator
+   (`local-dev`, `FAKE_AUTH_SUPER_ADMIN=true`) and *Demote from Admin* on
+   Jane, the second half of **Promote and Demote**.
+4. **A fresh database, unseeded.** Stop the server (super-admin still on:
+   a fresh database keeps no Admin role, and Exercises Diagnostics needs
+   one), move `applydesk.db` aside,
    run `alembic -c applydesk/alembic.ini upgrade head` only, and start the
    server: **Unseeded**.
 5. **Seeded for someone else.** On that database, run
