@@ -143,6 +143,26 @@ def test_the_search_shows_people_on_record_first_then_the_directory(session: Ses
     assert someone.id not in {u.id for u in result.in_directory}  # not twice
 
 
+def test_a_name_search_reads_past_ascii(session: Session) -> None:
+    """AD2E, AD-127: the searches match a casefolded name key, so "émile"
+    finds "Émile" on SQLite too, whose lower() is ASCII-only; the key
+    follows a rename."""
+    from applydesk import allowlist
+
+    person = Person(display_name="Émile Zola", email="ez@example.edu", may_operate=True)
+    session.add(person)
+    session.flush()
+    assert person.display_name_key == "émile zola"
+    assert [p.id for p in directory.search(session, "émile", None).on_record] == [person.id]
+    me = allowlist.Me("admin@example.edu", "Admin", None)
+    every = frozenset(key for key, _, _ in allowlist.CATEGORIES)
+    listed = allowlist.accounts(session, me, show=every, query="ÉMILE")
+    assert [p.id for p in listed.people] == [person.id]
+    person.display_name = "Straße"
+    session.flush()
+    assert [p.id for p in directory.search(session, "strasse", None).on_record] == [person.id]
+
+
 def test_a_failed_directory_search_says_so_and_adds_no_one(session: Session) -> None:
     class Down:
         def find_users(self, address: str) -> list[DirectoryUser]:
