@@ -7,9 +7,9 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, Route
 
-from applydesk import db, people, process_store, stages
+from applydesk import candidates, db, people, process_store, stages
 from applydesk.tests.test_process_browser import ORIGIN
 from applydesk.tests.test_process_browser import page as page  # the fixture, re-exported
 
@@ -92,3 +92,46 @@ def test_candidates_moved_to_another_stage_shows_the_list_as_it_stands(page: Pag
     moved = other.locator('.pc-item[data-item="candidates"]')
     assert "zoe.candidate@example.edu" in (moved.locator("[data-cand-list]").text_content() or "")
     assert moved.locator("[data-cand-count]").text_content() == "1 person"
+
+
+def test_changes_are_sent_one_at_a_time(page: Page) -> None:
+    """Codex on #4161: two removals in quick succession are sent in turn, so
+    an older answer cannot redraw over a newer list."""
+    built = stages.plan_of(MODEL).stages
+    session = db.new_session()
+    try:
+        process_store.save(
+            session, MODEL, (replace(built[0], candidates=True), *built[1:]), 0, None
+        )
+        for address in ("one@example.edu", "two@example.edu"):
+            candidates.add(session, MODEL, people.pending(session, address, None), "csv", None)
+        session.commit()
+    finally:
+        session.close()
+    seen: list[str] = []
+    held: list[Route] = []
+
+    def hold(route: Route) -> None:
+        if route.request.method != "POST":
+            route.fallback()  # to the fixture's server
+            return
+        seen.append(route.request.post_data or "")
+        held.append(route)
+
+    page.route("**/candidates", hold)
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
+    stage = page.locator("#pc-cards .pc").nth(0)
+    if not stage.locator(".fc-body").first.is_visible():
+        stage.locator("[data-fc-toggle]").first.click()
+    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
+    if not item.locator("[data-cand-search]").is_visible():
+        item.locator("[data-pi-toggle]").click()
+    item.locator("[data-cand-remove]").first.click()
+    item.locator("[data-cand-remove]").last.click()
+    page.wait_for_timeout(300)
+    assert len(seen) == 1  # the second waits for the first's answer
+    held.pop().fallback()
+    page.wait_for_timeout(300)
+    assert len(seen) == 2
+    held.pop().fallback()
+    item.locator("[data-cand-none]").wait_for()

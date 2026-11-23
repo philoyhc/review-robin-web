@@ -1673,15 +1673,20 @@
       if (kept) draw(kept, { candidates: got.candidates });
     }
   }
+  // One change at a time, each sent once the one before has answered, so
+  // an older answer never redraws over a newer list (Codex on #4161).
+  var queue = Promise.resolve();
   function change(item, body) {
     var said = item.querySelector("[data-cand-said]");
     said.textContent = "Saving…";
-    fetch(base, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(body) })
-      .then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }); })
-      .then(function (got) {
-        if (!got[0]) { said.textContent = (got[1] && (got[1].error || got[1].detail)) || "Not saved: try again."; return; }
-        draw(item, got[1]);
-      }, function () { said.textContent = "Not saved: try again."; });
+    queue = queue.then(function () {
+      return fetch(base, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(body) })
+        .then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }); })
+        .then(function (got) {
+          if (!got[0]) { said.textContent = (got[1] && (got[1].error || got[1].detail)) || "Not saved: try again."; return; }
+          draw(item, got[1]);
+        }, function () { said.textContent = "Not saved: try again."; });
+    });
   }
   function found(item, got) {
     var ul = item.querySelector("[data-cand-found]");
