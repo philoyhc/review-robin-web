@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Iterator
+from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
@@ -1879,3 +1880,19 @@ def test_a_value_typed_through_another_s_label_keeps_both_rules(page: Page) -> N
     after = json.dumps(_rule(o1))
     assert first in after  # the first value's rules stay its own
     assert second not in after and "Held" in after
+
+
+def test_swapping_two_values_swaps_their_rules(page: Page) -> None:
+    """Codex on #4161: two labels swapped (each typed into the other's row)
+    carry each value's rules with it, once the labels are distinct again."""
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    first, second = _values(o1)[:2]
+    rule = {"when": [["status", "", "is", "Submitted"]], "then": first, "otherwise": second}
+    o1.evaluate("(e, r) => { e.dataset.rule = JSON.stringify(r); }", rule)
+    rows = o1.locator('[data-pc="value"]')
+    rows.nth(0).fill(second)  # alike for now: nothing moves
+    assert cast(dict[str, Any], _rule(o1))["then"] == first
+    rows.nth(1).fill(first)  # distinct again: both renames apply together
+    got = cast(dict[str, Any], _rule(o1))
+    assert got["then"] == second and got["otherwise"] == first

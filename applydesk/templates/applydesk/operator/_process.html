@@ -588,23 +588,50 @@
   // A value renamed: every rule naming it follows (its own outcome's
   // decisions, and later rules reading that outcome), so the renamed value
   // keeps its key and its rules (AD-57).
-  function renameValue(outcome, was, now) {
-    if (!was || !now || was === now) return;
+  // Values renamed: every rule naming one follows (its own outcome's
+  // decisions, and later rules reading that outcome), all at once, so a
+  // swap of two labels carries each one's rules (AD-57; Codex on #4161).
+  function renameValues(outcome, map) {
     var key = outcome.dataset.key;
+    function to(label) { return Object.prototype.hasOwnProperty.call(map, label) ? map[label] : null; }
     columns().forEach(function (item) {
       var rule = ruleOf(item);
       if (!rule) return;
       var moved = false;
-      function cond(c) { if (c[0] === "out" && c[1] === key && c[3] === was) { c[3] = now; moved = true; } }
+      function cond(c) { if (c[0] === "out" && c[1] === key && to(c[3]) !== null) { c[3] = to(c[3]); moved = true; } }
       (rule.when || []).forEach(cond);
       (rule.more || []).forEach(function (b) { (b.when || []).forEach(cond); });
       if (item === outcome) {
-        if (rule.then === was) { rule.then = now; moved = true; }
-        if (rule.otherwise === was) { rule.otherwise = now; moved = true; }
-        (rule.more || []).forEach(function (b) { if (b.then === was) { b.then = now; moved = true; } });
+        if (to(rule.then) !== null) { rule.then = to(rule.then); moved = true; }
+        if (to(rule.otherwise) !== null) { rule.otherwise = to(rule.otherwise); moved = true; }
+        (rule.more || []).forEach(function (b) { if (to(b.then) !== null) { b.then = to(b.then); moved = true; } });
       }
       if (moved) setRule(item, rule);
     });
+  }
+  // Each row's data-was is the label the rules name it by. While two rows
+  // read alike (typed through a sibling's label, or a swap half-done) or a
+  // row is blank, nothing moves; once every label is distinct again, each
+  // row's rename applies together, by row, so no value's rules go to
+  // another (cold read; Codex on #4161).
+  function reconcileValues(outcome) {
+    var rows = valueRows(outcome).map(function (li) {
+      var input = li.querySelector('[data-pc="value"]');
+      return { input: input, was: input.dataset.was || "", now: input.value.trim() };
+    });
+    var seen = {};
+    for (var i = 0; i < rows.length; i++) {
+      var n = rows[i].now;
+      if (!n) continue;
+      if (seen[n]) return;
+      seen[n] = true;
+    }
+    var map = {}, any = false;
+    rows.forEach(function (r) {
+      if (r.now && r.was && r.was !== r.now) { map[r.was] = r.now; any = true; }
+    });
+    if (any) renameValues(outcome, map);
+    rows.forEach(function (r) { if (r.now) r.input.dataset.was = r.now; });
   }
   // A rule's or a weight's key names a gate's result, "g1.r2" (ruling 21);
   // a bare gate key reads its first. What a rule may do with a result:
@@ -1213,6 +1240,7 @@
       } else if (p.dataset.pcAct === "remove-value") {
         var gone = p.closest("li"), outc = p.closest(".pc-item");
         gone.remove();
+        reconcileValues(outc);
         changed();
         outc.querySelector('[data-pc-act="add-value"]').focus();
       } else if (p.dataset.pcAct === "candidates") {
@@ -1263,16 +1291,7 @@
     if (e.target.closest("[data-rule-ed]")) { var item = e.target.closest(".pc-item"); setRule(item, readEditor(item)); rules(); return; }
     if (e.target.matches("[data-w-key]")) { var note = e.target.closest("[data-pc-weights]").querySelector("[data-w-note]"); if (note) note.textContent = ""; rules(); return; }
     if (e.target.matches('[data-pc="value"]')) {
-      var holder = e.target.closest(".pc-item"), was = e.target.dataset.was || "", now = e.target.value.trim();
-      // A label another row has (typed through, or a swap half-done) is
-      // ambiguous: rules stay with the row's last distinct label until it
-      // is one again, so two values' rules never merge (cold read).
-      var others = valueRows(holder).filter(function (li) { return li !== e.target.closest("li"); })
-        .map(function (li) { return li.querySelector('[data-pc="value"]').value.trim(); });
-      if (now && others.indexOf(now) < 0 && others.indexOf(was) < 0) {
-        renameValue(holder, was, now);
-        e.target.dataset.was = now;
-      }
+      reconcileValues(e.target.closest(".pc-item"));
       // Its own Then and Otherwise, and any later rule reading it, offer
       // the values as they now stand (changed() redraws open editors); a
       // chosen one gone stays, flagged.

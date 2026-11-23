@@ -695,14 +695,14 @@ def save(
     reverted: list[tuple[StageRow, str]] = []
     # The form's state, and when it opened and closed, go with it to
     # another stage (the cold read; Codex on #4161): a move is not a
-    # reopening.
-    form_was = next(
-        (
-            (r.form_state, r.form_opened_at, r.form_closed_at)
-            for r in stage_rows.values()
-            if r.holds_form and r.retired_at is None and r.form_state
-        ),
-        None,
+    # reopening. A form removed in one save and added back in a later one
+    # takes the state its last holder recorded, retired or not, the
+    # furthest along if more than one did.
+    recorded = [r for r in stage_rows.values() if r.form_state]
+    holder = [r for r in recorded if r.holds_form and r.retired_at is None]
+    last = holder or sorted(recorded, key=lambda r: _FORM_ORDER.get(r.form_state or "", 0))[-1:]
+    form_was = (
+        (last[0].form_state, last[0].form_opened_at, last[0].form_closed_at) if last else None
     )
     for position, st in enumerate(built, 1):
         key = stage_key(st)
@@ -980,6 +980,8 @@ def _form_seed(public_id: str) -> str:
 #: only forward, draft to open to closed (ruling 24; reopening is not in
 #: the MVP).
 FORM_MOVES = {"open": "draft", "closed": "open"}
+#: How far along each state is: a form only moves forward.
+_FORM_ORDER = {"draft": 0, "open": 1, "closed": 2}
 
 
 def form_state(session: Session, public_id: str) -> str | None:

@@ -217,3 +217,26 @@ def test_a_draft_made_published_by_its_stages_opens_its_form() -> None:
     moved = _client().post(f"{LOBBY}/{DRAFT}/form/move", data={"to": "open"})
     assert "form_said=open" in moved.headers["location"]
     assert workflow.form_state(exercise_or_404(DRAFT)) == "Open"
+
+
+def test_the_form_keeps_its_state_when_removed_and_added_back_later() -> None:
+    """Codex on #4161: a closed form removed in one save and added to
+    another stage in the next stays closed, rather than reseeded open."""
+    _client().post(f"{LOBBY}/{OPEN}/form/move", data={"to": "closed"})
+    session = db.new_session()
+    try:
+        stored = process_store.load(session, OPEN)
+        assert stored is not None
+        (first,) = stored.stages
+        without = (replace(first, form=False, form_when=None),)
+        process_store.save(session, OPEN, without, stored.revision, None)
+        session.commit()
+        again = process_store.load(session, OPEN)
+        assert again is not None
+        later = replace(first, key="", name="Next", status="Draft", columns=())
+        back = (again.stages[0], later)
+        process_store.save(session, OPEN, back, again.revision, None)
+        session.commit()
+        assert process_store.form_state(session, OPEN) == "closed"
+    finally:
+        session.close()
