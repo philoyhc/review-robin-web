@@ -121,3 +121,18 @@ def test_new_exercise_records_its_name_on_the_row() -> None:
     finally:
         session.close()
         scratch.clear()  # the store it still fills until rung 3
+
+
+def test_the_seed_leaves_ordinary_exercises_alone() -> None:
+    """Cold read: the seed walks the samples, not every exercise, so a
+    second run neither records sample settings on an ordinary row nor
+    counts it."""
+    _row("k7m2p9q4rg", "Mine")
+    session = db.new_session()
+    try:
+        result = seed.seed(session)
+        assert result.exercises_added == 0
+        found = exercises.row(session, "k7m2p9q4rg")
+        assert found is not None and (found.name, found.revision) == ("Mine", 0)
+    finally:
+        session.close()
