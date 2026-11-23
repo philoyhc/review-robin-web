@@ -92,8 +92,22 @@ def client() -> TestClient:
 def test_every_page_of_the_map_answers_locally(client: TestClient, path: str) -> None:
     response = client.get(path)
     assert response.status_code == 200, path
-    if path != "/applydesk/admin/operators":  # the operator list is real (AD2A)
-        assert "Placeholder." in response.text
+    if path in _SAVES:
+        assert "Placeholder." not in response.text, path
+    elif path != "/applydesk/admin/operators":  # the operator list is real (AD2A)
+        assert "Placeholder." in response.text, path
+
+
+def _saves(path: str) -> bool:
+    """The pages that save (AD2B, AD2C) carry no placeholder line (AD1U
+    Item 3): the Lobby, an exercise's Home and its Process."""
+    if path in ("/applydesk/", "/applydesk/operator"):
+        return True  # both land on the Lobby
+    tail = path.removeprefix("/applydesk/operator/exercises")
+    return tail == "" or re.fullmatch(r"/[a-z0-9]{10}(/process)?", tail) is not None
+
+
+_SAVES = frozenset(p for p in PAGES if _saves(p))
 
 
 @pytest.mark.parametrize(
@@ -1795,7 +1809,9 @@ def test_pages_say_what_works_and_what_is_not_built(client: TestClient) -> None:
     """The register's copy rows (AD-06, 10-13, 19, 29): one banner, honest
     copy, and a reason on every inert control."""
     home = client.get("/applydesk/operator/exercises/wa9juxbc2t").text
-    assert "what you do here works on screen, but nothing is saved, and a reload" in home
+    assert "Placeholder." not in home  # Home saves (AD1U Item 3)
+    panels = client.get("/applydesk/operator/exercises/wa9juxbc2t/panels").text
+    assert "what you do here works on screen, but nothing is saved, and a reload" in panels
     extract = client.get("/applydesk/operator/exercises/wa9juxbc2t/extract").text
     assert "the files are built from the sample, not from edits made on other pages" in extract
     assert "Keep it apart from the files above." in extract and "logged" not in extract

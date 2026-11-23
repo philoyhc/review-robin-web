@@ -159,6 +159,10 @@ since nothing on those pages is still sample-only enough to need a line.
 ### Status
 
 - **2026-11-23:** planned with Items 2 and 4.
+- **2026-11-23, the change:** `_placeholder.html` takes a `saves` flag, set
+  by `exercises.html`, `home.html` and `section.html` (Process only);
+  `test_pages.py` (`_SAVES`) fails if the line shows on those pages or goes
+  from the rest.
 
 ### PR ladder
 
