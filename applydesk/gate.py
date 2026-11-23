@@ -140,9 +140,9 @@ def require_exercise_operator(request: Request) -> None:
         )
 
 
-def own_new_exercise(request: Request, public_id: str) -> bool:
-    """Make the `exercise` row for a new scratch exercise with the viewer
-    its Owner (ruling 73), in one transaction. False, and nothing made, if
+def own_new_exercise(request: Request, public_id: str, name: str | None = None) -> bool:
+    """Make the `exercise` row for a new exercise, named `name`, with the
+    viewer its Owner (ruling 73), in one transaction. False, and nothing made, if
     the viewer cannot be bound or may not make one, or the ID is taken."""
     identity = current_identity(request)
     if identity is None:
@@ -153,7 +153,7 @@ def own_new_exercise(request: Request, public_id: str) -> bool:
         actor = operators.Actor(person, is_super_admin=identity.is_super_admin)
         if session.scalar(select(Exercise.id).where(Exercise.public_id == public_id)):
             return False
-        operators.create_exercise(session, actor, public_id)
+        operators.create_exercise(session, actor, public_id, name)
         session.commit()
     except operators.Refused:
         session.rollback()

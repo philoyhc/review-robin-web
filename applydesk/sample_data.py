@@ -258,6 +258,9 @@ EXERCISES: tuple[Exercise, ...] = (
     ),
 )
 
+#: The samples' IDs: every other exercise is an ordinary one (segment AD2G).
+SAMPLE_IDS: frozenset[str] = frozenset(e.public_id for e in EXERCISES)
+
 _WRITTEN: tuple[Application, ...] = (
     # The model exercise's (ruling 30): Aisha a current RA applying to
     # return, Kenji a new applicant, Wen's still a draft.
@@ -770,10 +773,8 @@ def _stored_form(exercise_id: str) -> Form | None:
 
 def _blank_form(exercise_id: str) -> bool:
     """An exercise whose form starts with no questions: the sample's empty
-    draft, or a scratch exercise (segment AD1N)."""
-    from applydesk import scratch
-
-    return exercise_id in EMPTY_FORMS or scratch.is_scratch(exercise_id)
+    draft, or an ordinary exercise (segment AD2G)."""
+    return exercise_id in EMPTY_FORMS or not is_sample(exercise_id)
 
 
 def form_is_empty(exercise_id: str) -> bool:
@@ -1090,23 +1091,31 @@ def setup_missing(e: Exercise) -> tuple[tuple[str, str], ...]:
     return tuple(missing)
 
 
-def exercise(public_id: str) -> Exercise | None:
-    """An exercise by ID: the browser's scratch exercise first (segment
-    AD1N, ruling 59), else the fixed sample's."""
-    from applydesk import scratch  # scratch builds on this module
+def is_sample(public_id: str) -> bool:
+    """Whether the exercise is one of the fixed samples (segment AD2G):
+    every other exercise is an ordinary one, made by *New exercise* or
+    *Duplicate*, with no sample stages, form, emails or applications."""
+    return public_id in SAMPLE_IDS
 
-    held = scratch.get(public_id)
-    if held is not None:
-        return held.exercise
-    return next((e for e in EXERCISES if e.public_id == public_id), None)
+
+def exercise(public_id: str) -> Exercise | None:
+    """An exercise by ID: a sample, else an ordinary exercise's row
+    (segment AD2G), else None."""
+    found = next((e for e in EXERCISES if e.public_id == public_id), None)
+    if found is not None:
+        return found
+    from applydesk import exercises as store  # it builds on this module
+
+    return store.ordinary(public_id)
 
 
 def exercises() -> tuple[Exercise, ...]:
-    """Every exercise the operator sees: this browser's scratch exercises,
-    newest first, then the fixed sample's."""
-    from applydesk import scratch
+    """Every exercise on record: the ordinary ones, newest first, then the
+    fixed samples (segment AD2G). Deleted ones are left out; archived ones
+    are not, for the Archive."""
+    from applydesk import exercises as store
 
-    return tuple(s.exercise for s in scratch.mine()) + EXERCISES
+    return store.ordinaries() + EXERCISES
 
 
 #: The signed-in applicant's applications on the /me pages, a submitted one

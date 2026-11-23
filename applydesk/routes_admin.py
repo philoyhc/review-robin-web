@@ -205,7 +205,7 @@ def exercises_page(
     """Exercises Diagnostics, a scaffold (the author's 2026-11-21 ask):
     the sample exercises, as Review Robin's Sessions Diagnostics, each
     with its Owner on record (2026-11-22)."""
-    rows = exercises.stored_all(sample_data.EXERCISES)
+    rows = exercises.stored_all(sample_data.exercises())
     back_path, back_label = _back_link(return_to)
     return render(
         request,

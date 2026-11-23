@@ -28,6 +28,8 @@ ELIGIBILITY: dict[str, str] = {
     "invitation": "Invitation only",
 }
 NOT_SET = "Not set"
+#: An ordinary exercise's name while its row has none.
+UNTITLED = "Untitled exercise"
 
 
 @dataclass(frozen=True)
@@ -56,6 +58,58 @@ def row(session: Session, public_id: str) -> Exercise | None:
     return session.scalar(
         select(Exercise).where(Exercise.public_id == public_id, Exercise.deleted_at.is_(None))
     )
+
+
+def from_row(found: Exercise) -> sample_data.Exercise:
+    """An ordinary exercise in the pages' shape (segment AD2G): a blank
+    Draft, its *Created* the row's. `overlay` lays its stored settings
+    over it, as over a sample's."""
+    made = found.created_at if found.created_at.tzinfo else found.created_at.replace(tzinfo=UTC)
+    return sample_data.Exercise(
+        public_id=found.public_id,
+        code="",
+        name=found.name or UNTITLED,
+        state="Draft",
+        form_open=True,
+        eligibility=NOT_SET,
+        blind=False,
+        opens=NOT_SET,
+        application_stage_ends=NOT_SET,
+        expected_outcome=NOT_SET,
+        summary="",
+        created=made.isoformat(timespec="minutes"),
+    )
+
+
+def ordinary(public_id: str) -> sample_data.Exercise | None:
+    """The ordinary exercise with this ID, archived or not, unless deleted
+    or a sample: `sample_data.exercise`'s reader for every exercise but a
+    sample."""
+    if sample_data.is_sample(public_id):
+        return None
+    session = db.new_session()
+    try:
+        found = row(session, public_id)
+        return from_row(found) if found is not None else None
+    finally:
+        session.close()
+
+
+def ordinaries() -> tuple[sample_data.Exercise, ...]:
+    """Every ordinary exercise not deleted, newest first."""
+    session = db.new_session()
+    try:
+        rows = session.scalars(
+            select(Exercise)
+            .where(
+                Exercise.deleted_at.is_(None),
+                Exercise.public_id.not_in(sorted(sample_data.SAMPLE_IDS)),
+            )
+            .order_by(Exercise.created_at.desc(), Exercise.id.desc())
+        )
+        return tuple(from_row(r) for r in rows)
+    finally:
+        session.close()
 
 
 def tags_of(session: Session, exercise: Exercise) -> tuple[str, ...]:

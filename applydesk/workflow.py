@@ -402,11 +402,9 @@ def _stored_templates(exercise_id: str) -> dict[tuple[str, str], Template]:
 
 
 def _blank_emails(exercise_id: str) -> bool:
-    """An exercise none of whose templates is written until saved: a
-    scratch one (segment AD1N), not a sample."""
-    from applydesk import scratch
-
-    return scratch.is_scratch(exercise_id)
+    """An exercise none of whose templates is written until saved: an
+    ordinary one (segment AD2G), not a sample."""
+    return not sample_data.is_sample(exercise_id)
 
 
 def process_revision(exercise_id: str) -> int:

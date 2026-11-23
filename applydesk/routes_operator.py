@@ -147,6 +147,11 @@ def exercises_archived(request: Request) -> Response:
 PANEL_ACTIONS = ("save", "add_tags", "remove_tags", "duplicate", "archive", "delete")
 
 
+#: The most exercises one panel action takes: every ordinary exercise is
+#: listed now (segment AD2G), not only the samples and a browser's five.
+MOST_TICKED = 500
+
+
 @router.post("/exercises/panel", name="applydesk_exercises_panel")
 async def exercises_panel(request: Request) -> Response:
     """The Lobby panel's actions (segment AD2B rung 6) on the ticked
@@ -157,7 +162,7 @@ async def exercises_panel(request: Request) -> Response:
         raise HTTPException(status_code=413)
     form = parse_qs(body.decode("utf-8", "replace"), keep_blank_values=True)
     action = form.get("action", [""])[0]
-    ids = [i for i in form.get("id", []) if is_public_id(i)][: len(sample_data.EXERCISES) + 50]
+    ids = [i for i in form.get("id", []) if is_public_id(i)][:MOST_TICKED]
     if action not in PANEL_ACTIONS or not ids:
         raise HTTPException(status_code=400)
     back = _lobby_query(form.get("back", [""])[0])
@@ -385,7 +390,9 @@ async def exercise_new(request: Request) -> Response:
     # Its row and Owner off the event loop (bug sweep at the AD2A close);
     # the scratch exercise is discarded however that fails.
     try:
-        owned = await run_in_threadpool(gate.own_new_exercise, request, made.exercise.public_id)
+        owned = await run_in_threadpool(
+            gate.own_new_exercise, request, made.exercise.public_id, made.exercise.name
+        )
     except OperationalError as error:  # SQLite: another change holds the file
         scratch.discard(browser, made.exercise.public_id)
         if not db.is_busy(error):
