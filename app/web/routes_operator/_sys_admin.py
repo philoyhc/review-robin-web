@@ -166,6 +166,18 @@ def sys_admin_sessions(
     return response
 
 
+@router.get("/sys-admin/scale-preview", response_class=HTMLResponse)
+def sys_admin_scale_preview(request: Request, user: User = Depends(require_sys_admin)) -> Response:
+    """The scale answer's scaffold (segment 20P Item 1 rung 2): the control
+    on hard-wired fields, for the author's browser check on a local run.
+    A 404 anywhere else; removed when rung 3 wires the setting."""
+    if not is_local():
+        raise HTTPException(status_code=404)
+    return _templates.TemplateResponse(
+        request, "operator/sys_admin_scale_preview.html", {"user": user}
+    )
+
+
 @router.get("/sys-admin/system", response_class=HTMLResponse)
 def sys_admin_system(
     request: Request,

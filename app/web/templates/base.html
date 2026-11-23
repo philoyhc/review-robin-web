@@ -668,6 +668,32 @@
          grows it with its text. The app-wide 80px textarea floor would
          override that, so the box drops it. */
       textarea.rs-answer { min-height: 0; }
+      /* A scale answer (segment 20P Item 1, ``reviewer/_scale_js.html``):
+         a line, a circle, numbered stops up to 11 points; past that a
+         slide with the number box beside it. */
+      .sc { min-width: 220px; padding: 10px 12px 2px; }
+      .sc-line { position: relative; height: 28px; cursor: pointer; touch-action: none; }
+      .sc-track { position: absolute; left: 0; right: 0; top: 13px; height: 2px; background: var(--gray-soft); }
+      .sc-stop { position: absolute; top: 9px; width: 10px; height: 10px; margin-left: -5px; border-radius: var(--radius-pill); background: var(--white); border: 2px solid var(--gray); box-sizing: border-box; }
+      .sc-thumb { position: absolute; top: 4px; width: 20px; height: 20px; margin-left: -10px; border-radius: var(--radius-pill); background: var(--blue-strong); border: 2px solid var(--white); box-shadow: 0 0 0 1px var(--blue-deep); }
+      .sc-thumb:focus-visible { outline: 3px solid var(--blue-soft); outline-offset: 2px; }
+      .sc-readout { display: none; position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); padding: 1px 6px; border-radius: var(--radius-button); background: var(--ink); color: var(--white); font-size: var(--fs-small); white-space: nowrap; }
+      .sc-slide .sc-thumb:focus .sc-readout, .sc-dragging .sc-readout { display: block; }
+      /* Unanswered: the circle stays reachable by Tab and screen readers, unseen until focused. */
+      .sc-empty .sc-thumb { left: 0; opacity: 0; }
+      .sc-empty .sc-thumb:focus-visible { opacity: 0.45; }
+      .sc-numbers, .sc-labels { position: relative; height: 1.3em; font-size: var(--fs-small); color: var(--slate); }
+      .sc-num { position: absolute; transform: translateX(-50%); }
+      .sc-labels { display: flex; justify-content: space-between; height: auto; color: var(--ink); }
+      .sc-label-middle { text-align: center; }
+      .sc-label-end { text-align: right; }
+      .sc-foot { display: flex; gap: 10px; align-items: baseline; font-size: var(--fs-small); color: var(--slate); }
+      .sc-clear { background: none; border: none; padding: 0; color: var(--blue-deep); text-decoration: underline; cursor: pointer; font-size: var(--fs-small); }
+      .sc { margin-bottom: 8px; }
+      .sc.sc-slide > input[type="number"] { width: 8em; max-width: 8em; margin-top: 4px; }
+      .sc-off { opacity: 0.55; }
+      .sc-off .sc-line { cursor: default; }
+      .sc-box-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
       /* A box the fit script has taken on (``data-fit-on``) loses its
          handle and its scrollbar: its height is its text's, and a drag
          would be undone by the next keystroke. Without script the
