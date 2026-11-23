@@ -23,7 +23,7 @@ from sqlalchemy import (
     false,
     text,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, validates
 
 from applydesk.db import Base
 
@@ -60,6 +60,12 @@ class Person(Base):
     email_key: Mapped[str | None] = mapped_column(String(320), index=True)
     upn: Mapped[str | None] = mapped_column(String(320))
     display_name: Mapped[str | None] = mapped_column(String(255))
+    # The casefolded name the people searches match (segment AD2E, AD-127):
+    # SQLite's `lower()` is ASCII-only, so "émile" missed "Émile" there.
+    # Kept in step with `display_name` by `_name_key` below. Three times the
+    # name's width: casefolding lengthens some letters ("ß" is "ss"), at
+    # most to three (Codex on #4169).
+    display_name_key: Mapped[str | None] = mapped_column(String(765), index=True)
     bound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # When they first signed in (segment AD2W): a directory pick is bound
     # without signing in, so `bound_at` is not it.
@@ -81,6 +87,11 @@ class Person(Base):
     is_admin: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=false()
     )
+
+    @validates("display_name")
+    def _name_key(self, _key: str, value: str | None) -> str | None:
+        self.display_name_key = value.casefold() if value else None
+        return value
 
     @property
     def bound(self) -> bool:
@@ -143,6 +154,11 @@ class Exercise(Base):
     # Process's own revision (segment AD2C): 0 until its timeline is first
     # saved, the pages keeping the sample's; a Details save leaves it be.
     process_revision: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    # Panels' own revision (segment AD2E): 0 until its panels are first
+    # saved, the pages keeping the sample's.
+    panels_revision: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
 
@@ -427,6 +443,70 @@ class Candidate(Base):
         DateTime(timezone=True), nullable=False, default=_now
     )
     removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Panel(Base):
+    """A named roster an exercise keeps (segment AD2E; rulings 4, 19, 39):
+    keyed per exercise (``panel-<n>``, minted by the server, never reused),
+    named uniquely among its live panels; retiring sets ``retired_at``
+    (ruling 74)."""
+
+    __tablename__ = "panel"
+    __table_args__ = (
+        UniqueConstraint("exercise_id", "key", name="uq_panel_key"),
+        Index(
+            "uq_panel_live_name",
+            "exercise_id",
+            "name_key",
+            unique=True,
+            sqlite_where=text("retired_at IS NULL"),
+            postgresql_where=text("retired_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    exercise_id: Mapped[int] = _exercise_fk("panel")
+    key: Mapped[str] = mapped_column(String(40), nullable=False)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    name_key: Mapped[str] = mapped_column(String(240), nullable=False)  # casefolded: 3 x 80
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class RosterEntry(Base):
+    """Someone on an exercise's Panels table (ruling 20), on a panel or on
+    none: the name as typed and the note, one per person (AD-50). Removing
+    them sets ``retired_at``; adding them again clears it."""
+
+    __tablename__ = "roster_entry"
+    __table_args__ = (UniqueConstraint("exercise_id", "person_id", name="uq_roster_entry_pair"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    exercise_id: Mapped[int] = _exercise_fk("roster_entry")
+    person_id: Mapped[int] = mapped_column(
+        ForeignKey("person.id", name="fk_roster_entry_person"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    note: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PanelMember(Base):
+    """A roster entry on a panel; unticking sets ``retired_at``, ticking
+    again clears it."""
+
+    __tablename__ = "panel_member"
+    __table_args__ = (UniqueConstraint("panel_id", "roster_entry_id", name="uq_panel_member_pair"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    panel_id: Mapped[int] = mapped_column(
+        ForeignKey("panel.id", name="fk_panel_member_panel"), nullable=False, index=True
+    )
+    roster_entry_id: Mapped[int] = mapped_column(
+        ForeignKey("roster_entry.id", name="fk_panel_member_entry"), nullable=False, index=True
+    )
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AuditEvent(Base):

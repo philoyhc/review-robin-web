@@ -38,6 +38,10 @@ TABLES = {
     "outcome_weight",
     "outcome_release",
     "candidate",
+    # AD2E: panels, the Panels roster and memberships.
+    "panel",
+    "roster_entry",
+    "panel_member",
 }
 
 

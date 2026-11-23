@@ -94,6 +94,7 @@ def _bind(
     once only the first wins (Codex on #4110). None if another request
     bound it first; the caller looks again."""
     email = account.email or person.email
+    name = account.name or person.display_name
     savepoint = session.begin_nested()
     try:
         claimed = cast(
@@ -107,7 +108,9 @@ def _bind(
                     email=email,
                     email_key=email_key(email),
                     upn=account.upn or person.upn,
-                    display_name=account.name or person.display_name,
+                    display_name=name,
+                    # An UPDATE skips the model's hook, so the key is set here.
+                    display_name_key=name.casefold() if name else None,
                     bound_at=datetime.now(UTC),
                 )
                 .execution_options(synchronize_session=False)

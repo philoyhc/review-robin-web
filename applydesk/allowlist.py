@@ -102,7 +102,7 @@ def _matching(query: str) -> ColumnElement[bool] | None:
     like = f"%{escape_like(text)}%"
     return or_(
         Person.email_key.like(like, escape="\\"),
-        func.lower(Person.display_name).like(like, escape="\\"),
+        Person.display_name_key.like(like, escape="\\"),
     )
 
 

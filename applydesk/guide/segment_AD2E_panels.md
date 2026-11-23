@@ -79,6 +79,13 @@ Taken 2026-11-23 at `4f911c6cd`.
 | Templates naming a panel | 20 | `grep -rln -i panel applydesk/templates` |
 | Name searches on `lower(display_name)` | 2 | `grep -rn 'lower(Person.display_name)' applydesk/*.py` |
 
+## Status
+
+- **2026-11-23, rung 2:**
+  - The tables, `exercise.panels_revision` and `person.display_name_key` (`ad2e1panels`, backfilled with Python's casefold).
+  - The model keeps the key in step with the name (`Person._name_key`); the one bulk update that writes a name, binding a pending person, sets it too.
+  - `directory.search` and the allowlist's filter match the key. `test_a_name_search_reads_past_ascii` fails on the old `lower()`.
+
 ## PR ladder
 
 1. **PR 1 — this plan,** with the AD2 order in `applydesk/guide/todo_master.md` and the series file.
@@ -115,7 +122,7 @@ Taken 2026-11-23 at `4f911c6cd`.
 
 ## Open questions
 
-1. **The caps:** keep 50 panels and 2,000 people, or the functional spec's 5 × 200? Recommended: keep the page's. The author decides before PR 3.
+1. ~~The caps~~: 50 panels and 2,000 people, the page's own (author, 2026-11-23).
 
 ## Out of scope
 

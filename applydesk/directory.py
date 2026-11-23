@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from applydesk.models import Person
@@ -55,7 +55,7 @@ def search(
     statement = select(Person).where(
         or_(
             Person.email_key.like(like, escape="\\"),
-            func.lower(Person.display_name).like(like, escape="\\"),
+            Person.display_name_key.like(like, escape="\\"),
         )
     )
     if allowlist_only:
