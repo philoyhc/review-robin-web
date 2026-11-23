@@ -7,7 +7,6 @@ import re
 
 from fastapi.testclient import TestClient
 
-from applydesk import scratch
 from applydesk.tests._host import host_with
 
 LOBBY = "/applydesk/operator/exercises"
@@ -34,7 +33,6 @@ def test_a_saved_gate_links_to_its_review_robin_card() -> None:
 
 
 def test_a_draft_s_gate_says_why_it_has_no_link() -> None:
-    scratch.clear()
     client = _client()
     made = client.post(f"{LOBBY}/new", data={"name": "Linkless"}).headers["location"]
     made = made.rsplit("/", 1)[-1]
@@ -71,7 +69,6 @@ def test_a_draft_s_gate_says_why_it_has_no_link() -> None:
     # A new gate in a draft is held back by the draft, not by saving.
     template = page[page.index('id="pc-new-gate"') :]
     assert "once the exercise is published" in template[: template.index("</template>")]
-    scratch.clear()
 
 
 def test_all_takes_the_panel_s_size_as_it_stands() -> None:
@@ -141,7 +138,6 @@ def test_a_sample_gate_naming_a_panel_reads_as_all() -> None:
 def test_process_save_keeps_all() -> None:
     from applydesk import stages
 
-    scratch.clear()
     client = _client()
     made = (
         client.post(f"{LOBBY}/new", data={"name": "Wholes"}).headers["location"].rsplit("/", 1)[-1]
@@ -180,14 +176,10 @@ def test_process_save_keeps_all() -> None:
     }
     reply = client.post(f"{LOBBY}/{made}/process", json={"stages": [stage], "revision": 0})
     assert reply.status_code == 200, reply.text
-    reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- the request's context, outside one
-    try:
-        saved = stages.plan_of(made).columns[0]
-        assert isinstance(saved, stages.Gate)
-        sources, _ = stages.sources_of(made, saved)
-        assert sources[0].all_members and (sources[0].min, sources[0].max) == (2, 2)
-    finally:
-        scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
+    saved = stages.plan_of(made).columns[0]
+    assert isinstance(saved, stages.Gate)
+    sources, _ = stages.sources_of(made, saved)
+    assert sources[0].all_members and (sources[0].min, sources[0].max) == (2, 2)
     # A member joins the panel: the gate takes them too, nothing to retype.
     grown = {
         "panels": [{"key": "panel-1", "name": "Readers"}],
@@ -198,32 +190,23 @@ def test_process_save_keeps_all() -> None:
         ],
     }
     assert client.post(f"{LOBBY}/{made}/panels", json={**grown, "revision": 1}).status_code == 200
-    reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- as above
-    try:
-        saved = stages.plan_of(made).columns[0]
-        assert isinstance(saved, stages.Gate)
-        sources, total = stages.sources_of(made, saved)
-        assert (sources[0].max, total.min, total.max) == (3, 3, 3)
-        assert not stages.total_problem(sources, total)
-    finally:
-        scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
+    saved = stages.plan_of(made).columns[0]
+    assert isinstance(saved, stages.Gate)
+    sources, total = stages.sources_of(made, saved)
+    assert (sources[0].max, total.min, total.max) == (3, 3, 3)
+    assert not stages.total_problem(sources, total)
     # And one leaves: the gate takes the rest, still nothing to retype.
     shrunk = {**grown, "people": grown["people"][:1]}
     assert client.post(f"{LOBBY}/{made}/panels", json={**shrunk, "revision": 2}).status_code == 200
-    reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- as above
-    try:
-        saved = stages.plan_of(made).columns[0]
-        assert isinstance(saved, stages.Gate)
-        sources, total = stages.sources_of(made, saved)
-        assert (sources[0].max, total.min, total.max) == (1, 1, 1)
-        assert not stages.total_problem(sources, total)
-    finally:
-        scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
+    saved = stages.plan_of(made).columns[0]
+    assert isinstance(saved, stages.Gate)
+    sources, total = stages.sources_of(made, saved)
+    assert (sources[0].max, total.min, total.max) == (1, 1, 1)
+    assert not stages.total_problem(sources, total)
     bad = {**gate, "sources": [{**gate["sources"][0], "all_members": "yes"}]}  # pyright: ignore[reportIndexIssue]  -- a test's dict
     stage_bad = {**stage, "gates": [bad]}
     refused = client.post(f"{LOBBY}/{made}/process", json={"stages": [stage_bad], "revision": 1})
     assert refused.status_code == 400 and "malformed" in refused.json()["error"]
-    scratch.clear()
 
 
 def test_each_link_between_process_a_gate_and_its_emails_lands() -> None:

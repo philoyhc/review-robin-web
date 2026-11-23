@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
-from applydesk import db, exercises, operators, people, sample_data, scratch, seed
+from applydesk import db, exercises, operators, people, sample_data, seed
 from applydesk.models import Exercise
 from applydesk.tests._host import host_with
 from cordware.settings import identity_settings
@@ -120,4 +120,3 @@ def test_new_exercise_records_its_name_on_the_row() -> None:
         assert found.name == "Named at birth"
     finally:
         session.close()
-        scratch.clear()  # the store it still fills until rung 3

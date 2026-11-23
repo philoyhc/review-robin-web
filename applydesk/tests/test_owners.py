@@ -299,14 +299,16 @@ def test_revoking_a_pending_co_owner_is_not_held(session: Session) -> None:
     assert not pat.may_operate
 
 
-def test_a_holder_who_handed_ownership_on_may_still_discard(session: Session) -> None:
-    """Cold read on the Discard fix: Ann made it, then transferred it to Ben;
-    a scratch exercise is reached only from Ann's browser, so her Discard
-    deletes the row (audited) rather than leaving it stuck."""
+def test_a_holder_who_handed_ownership_on_cannot_delete(session: Session) -> None:
+    """Segment AD2G: *Discard*'s Owner-less delete is retired with the
+    scratch store; once Ann transfers to Ben, deleting is Ben's alone."""
     exercise, ann, ben, _ = _exercise(session)
     operators.transfer(session, exercise, Actor(ann), ben)
     session.commit()
-    exercises.discard(session, exercise.public_id, Actor(ann))
+    with pytest.raises(exercises.Refused):
+        exercises.delete(session, [exercise.public_id], Actor(ann))
+    session.rollback()
+    exercises.delete(session, [exercise.public_id], Actor(ben))
     session.commit()
     session.refresh(exercise)
     assert exercise.deleted_at is not None

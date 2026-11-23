@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from applydesk import scratch
 from applydesk.routes_admin import router as admin_router
 from applydesk.routes_health import router as health_router
 from applydesk.routes_home import router as home_router
@@ -22,6 +21,4 @@ def create_app() -> FastAPI:
     app.include_router(operator_router)
     app.include_router(me_router)
     app.include_router(admin_router)
-    # Each request sees its browser's scratch exercises (segment AD1N).
-    app.add_middleware(scratch.Middleware)
     return app

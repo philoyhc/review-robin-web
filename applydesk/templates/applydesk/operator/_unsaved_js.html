@@ -45,7 +45,7 @@
     window.addEventListener("beforeunload", function (e) {
       if (dirty) { e.preventDefault(); e.returnValue = ""; }
     });
-    // A scratch exercise's Save (segment AD1N) clears the marker.
+    // A Setup page's Save clears the marker.
     root.addEventListener("applydesk:saved", function () { dirty = false; mark.hidden = true; });
   });
 })();

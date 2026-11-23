@@ -88,6 +88,10 @@ _add_globals(templates.env, email_anchor=workflow.email_anchor)
 
 APP_NAME = "Apply Desk"
 
+#: The largest post an operator page takes, in bytes (segment AD1N; kept
+#: by AD2G when the scratch store it came with went).
+MAX_BODY = 256 * 1024
+
 OPERATOR_LOBBY, USER_LOBBY = "Operator Lobby", "User Lobby"
 #: The platform super-admin's pages (ruling 75), after Review Robin's
 #: Admin: reached from the account menu, not the switcher
@@ -147,13 +151,6 @@ def initials(label: str) -> str:
     return "".join(p[0] for p in parts[:2]).upper() or "?"
 
 
-def _scratch_page(exercise: object) -> bool:
-    from applydesk import scratch  # scratch reads sample_data, as this does
-
-    public_id = getattr(exercise, "public_id", None)
-    return isinstance(public_id, str) and scratch.is_scratch(public_id)
-
-
 def viewer_is_super_admin(request: Request) -> bool:
     return gate_viewer(request).is_super_admin
 
@@ -201,8 +198,6 @@ def render(
             "top_line": institution_name(),
             "viewer": viewer,
             "initials": initials(viewer.display_label) if viewer else "?",
-            # A scratch exercise's pages say so (segment AD1N, ruling 59).
-            "scratch_page": _scratch_page(context.get("exercise")),
             **context,
         },
         status_code=status_code,

@@ -139,9 +139,7 @@ def test_the_allowlisted_with_no_exercise_reach_only_the_lobby(
     assert lobby.status_code == 200 and f"/exercises/{EX}" not in lobby.text
 
 
-def test_a_new_scratch_exercise_gets_its_row_and_its_owner(
-    client: TestClient, unseeded: None
-) -> None:
+def test_a_new_exercise_gets_its_row_and_its_owner(client: TestClient, unseeded: None) -> None:
     client.get("/applydesk/")
     session = db.new_session()
     me = session.scalar(select(Person).where(Person.object_id == "local-dev"))
@@ -160,7 +158,7 @@ def test_a_new_scratch_exercise_gets_its_row_and_its_owner(
     assert client.get(made.headers["location"]).status_code == 200
 
 
-def test_a_stranger_cannot_make_a_scratch_exercise(client: TestClient, unseeded: None) -> None:
+def test_a_stranger_cannot_make_an_exercise(client: TestClient, unseeded: None) -> None:
     made = client.post(
         "/applydesk/operator/exercises/new", data={"name": "Trial"}, follow_redirects=False
     )
@@ -170,7 +168,7 @@ def test_a_stranger_cannot_make_a_scratch_exercise(client: TestClient, unseeded:
     session.close()
 
 
-def test_the_super_admin_s_scratch_exercise_is_owned_by_them(
+def test_the_super_admin_s_new_exercise_is_owned_by_them(
     monkeypatch: pytest.MonkeyPatch, unseeded: None
 ) -> None:
     client = TestClient(host_with(("applydesk",))[0])  # the conftest's super-admin

@@ -4,5 +4,5 @@
    pages and a dossier's operator page, whose controls are all off, say
    so (cold read). #}
 {# `saves` (AD1U Item 3): a page that saves (the Lobby, Home, Form, Process, Panels, Emails)
-   shows no placeholder line; a scratch exercise still shows its own. #}
-{% if scratch_page %}<p class="placeholder scratch-note" data-scratch-note><strong>Scratch exercise.</strong> Details, Form, Process, Panels and Emails save to the database; the exercise itself is listed for this browser only, and gone from it after a restart, a deploy or eight idle hours, until test exercises are seeded (AD2G).</p>{% elif not saves %}<p class="placeholder"><strong>Placeholder.</strong> {% if section == "extract" %}Sample data: the files are built from the sample, not from edits made on other pages.{% elif read_only %}Sample data, shown as it will look: nothing here can be changed yet.{% else %}Sample data: what you do here works on screen, but nothing is saved, and a reload restores the sample.{% endif %}</p>{% endif %}
+   shows no placeholder line. #}
+{% if not saves %}<p class="placeholder"><strong>Placeholder.</strong> {% if section == "extract" %}Sample data: the files are built from the sample, not from edits made on other pages.{% elif read_only %}Sample data, shown as it will look: nothing here can be changed yet.{% else %}Sample data: what you do here works on screen, but nothing is saved, and a reload restores the sample.{% endif %}</p>{% endif %}

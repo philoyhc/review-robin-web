@@ -35,7 +35,7 @@ from cordware.identity import is_super_admin_email, super_admin_configured
 
 class Refused(Exception):
     """A change the rules do not allow; the message says which, and `key`
-    names the rule for a page's status line (as `scratch.Refused`'s), so
+    names the rule for a page's status line (as `exercises.Refused`'s), so
     rewording a message cannot change what a page shows. The caller rolls
     the session back: a refusal raised part-way leaves nothing it should
     keep."""

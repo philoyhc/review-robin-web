@@ -38,7 +38,6 @@ from applydesk import (
     process_store,
     rules,
     sample_data,
-    scratch,
     stages,
     team,
     timeline,
@@ -49,6 +48,7 @@ from applydesk.ids import RowId, is_public_id, row_id
 from applydesk.lookups import dossier_or_404, exercise_or_404
 from applydesk.models import Person
 from applydesk.web import (
+    MAX_BODY,
     OPERATIONS_PAGES,
     OPERATOR_LOBBY,
     SETUP_PAGES,
@@ -92,9 +92,8 @@ def exercises(request: Request) -> Response:
         base=url_path(request, "/operator/exercises"),
         back=query.href(""),
         revisions={s.exercise.public_id: s.revision for s in found},
-        is_scratch=scratch.is_scratch,
-        scratch_limit=scratch.LIMIT,
-        scratch_said=SAID.get(request.query_params.get("said", ""), ""),
+        most_made=exercise_store.MOST_MADE,
+        lobby_said=SAID.get(request.query_params.get("said", ""), ""),
         exercise_status=locks.exercise_status,
         status_counts=locks.status_counts(mine),
         stage_position=workflow.stage_position,
@@ -158,7 +157,7 @@ async def exercises_panel(request: Request) -> Response:
     exercises; the Lobby again, its query kept, saying how it went."""
     gate.same_site(request)
     body = await request.body()
-    if len(body) > scratch.MAX_BODY:
+    if len(body) > MAX_BODY:
         raise HTTPException(status_code=413)
     form = parse_qs(body.decode("utf-8", "replace"), keep_blank_values=True)
     action = form.get("action", [""])[0]
@@ -219,8 +218,6 @@ def _panel_change(request: Request, action: str, ids: list[str], form: dict[str,
             exercise_store.retag(session, ids, tags, actor.person, add=action == "add_tags")
         elif action == "archive":
             exercise_store.archive(session, ids, actor)
-        elif action == "discard":
-            exercise_store.discard(session, ids[0], actor)
         else:
             if first("confirm") != "yes":
                 return "delete_unconfirmed"
@@ -236,65 +233,53 @@ def _panel_change(request: Request, action: str, ids: list[str], form: dict[str,
         return "code_taken" if "uq_exercise_live_code" in str(error.orig) else "stale"
     finally:
         session.close()
-    if action in ("delete", "discard"):  # a deleted scratch exercise frees its place
-        for i in ids:
-            scratch.discard(scratch.token(), i)
     gate.forget_viewer(request)
     return {
         "save": "saved",
         "add_tags": "tagged",
         "remove_tags": "untagged",
-        "discard": "discarded",
     }.get(action, action + "d")
 
 
 async def _duplicate(request: Request, source_id: str, back: str) -> Response:
-    """*Duplicate settings only*: a new scratch exercise, its row taking
-    the source's settings and tags; its Home next (as *New exercise*)."""
+    """*Duplicate settings only*: a new exercise, its row taking the
+    source's settings and tags; its Home next (as *New exercise*)."""
     if not gate.operates(request, source_id):
         return _back_to_lobby(request, back, "gone")
     source = sample_data.exercise(source_id)
     if source is None:
         return _back_to_lobby(request, back, "gone")
-    browser = scratch.token() or scratch.new_token()
-    try:
-        made = scratch.create(browser, f"Copy of {source.name}"[:200])
-    except scratch.Refused as why:
-        return _back_to_lobby(request, back, why.key if why.key in SAID else "not_made")
-    made_id = made.exercise.public_id
-    try:
-        ok = await run_in_threadpool(_copy_into, request, source_id, made_id)
-    except Exception:
-        scratch.discard(browser, made_id)
-        raise
-    if not ok:
-        scratch.discard(browser, made_id)
-        return _back_to_lobby(request, back, "not_made")
-    reply = RedirectResponse(url_path(request, f"/operator/exercises/{made_id}"), status_code=303)
-    reply.raw_headers.append(
-        scratch.cookie_header(browser, root_path(request), request.url.scheme == "https")
-    )
-    return reply
+    made, said = await run_in_threadpool(_make, request, f"Copy of {source.name}"[:200], source_id)
+    if made is None:
+        return _back_to_lobby(request, back, said)
+    return RedirectResponse(url_path(request, f"/operator/exercises/{made}"), status_code=303)
 
 
-def _copy_into(request: Request, source_id: str, made_id: str) -> bool:
-    if not gate.own_new_exercise(request, made_id):
-        return False
+def _make(request: Request, name: str, source_id: str | None = None) -> tuple[str | None, str]:
+    """*New exercise* or *Duplicate*'s transaction (segment AD2G): the new
+    exercise's public ID, else None and the Lobby's status key."""
     identity = current_identity(request)
+    if identity is None:
+        return None, "not_made"
     session = db.new_session()
     try:
-        actor = people.resolve(session, identity) if identity is not None else None
-        target = exercise_store.row(session, made_id)
-        if target is None:
-            return False
-        exercise_store.copy_settings(session, source_id, target, actor)
+        actor = team.actor_for(session, identity)
+        session.commit()  # bind the actor first, as `_ops_change` does
+        made = exercise_store.make(session, actor, name, source_id=source_id)
         session.commit()
-    except (exercise_store.Refused, OperationalError):
+        public_id = made.public_id
+    except exercise_store.Refused as why:
         session.rollback()
-        return False
+        return None, why.key if why.key in SAID else "not_made"
+    except OperationalError as error:  # SQLite: another change holds the file
+        session.rollback()
+        if not db.is_busy(error):
+            raise
+        return None, "not_made"
     finally:
         session.close()
-    return True
+    gate.forget_viewer(request)  # their grants changed
+    return public_id, ""
 
 
 @router.post("/exercises/archived/restore", name="applydesk_exercises_restore")
@@ -302,7 +287,7 @@ async def exercises_restore(request: Request) -> Response:
     """*Restore* on the Archive (segment AD2B rung 6), Owner-only."""
     gate.same_site(request)
     body = await request.body()
-    if len(body) > scratch.MAX_BODY:
+    if len(body) > MAX_BODY:
         raise HTTPException(status_code=413)
     public_id = parse_qs(body.decode("utf-8", "replace")).get("id", [""])[0]
     if not is_public_id(public_id):
@@ -339,9 +324,8 @@ def _restore(request: Request, public_id: str) -> str:
 #: shows only these, so a link cannot put words on it (findings
 #: 2026-11-20 S11, ruled: a message key, not the text).
 SAID: dict[str, str] = {
-    **scratch.CREATE_REFUSALS,
-    "not_made": "The scratch exercise could not be made.",
-    "discarded": "The scratch exercise was discarded.",
+    **exercise_store.MAKE_REFUSALS,
+    "not_made": "The exercise could not be made.",
     # The panel and the Archive (segment AD2B rung 6).
     "saved": "Saved.",
     "tagged": "Tags added.",
@@ -375,61 +359,24 @@ def _to_lobby(request: Request, said: str = "") -> RedirectResponse:
 
 @router.post("/exercises/new", name="applydesk_exercise_new")
 async def exercise_new(request: Request) -> Response:
-    """*New exercise* (segment AD1N, ruling 59): a blank draft named by the
-    operator, held in memory for this browser, its Home next."""
+    """*New exercise* (segment AD2G): a blank draft named by the operator,
+    its row and Owner made in one transaction, its Home next."""
     gate.same_site(request)
     body = await request.body()
-    if len(body) > scratch.MAX_BODY:
+    if len(body) > MAX_BODY:
         raise HTTPException(status_code=413)
     name = parse_qs(body.decode("utf-8", "replace")).get("name", [""])[0]
-    browser = scratch.token() or scratch.new_token()
-    try:
-        made = scratch.create(browser, name)
-    except scratch.Refused as why:
-        return _to_lobby(request, why.key if why.key in SAID else "not_made")
-    # Its row and Owner off the event loop (bug sweep at the AD2A close);
-    # the scratch exercise is discarded however that fails.
-    try:
-        owned = await run_in_threadpool(
-            gate.own_new_exercise, request, made.exercise.public_id, made.exercise.name
-        )
-    except OperationalError as error:  # SQLite: another change holds the file
-        scratch.discard(browser, made.exercise.public_id)
-        if not db.is_busy(error):
-            raise
-        return _to_lobby(request, "not_made")
-    except Exception:
-        scratch.discard(browser, made.exercise.public_id)
-        raise
-    if not owned:
-        scratch.discard(browser, made.exercise.public_id)
-        return _to_lobby(request, "not_made")
-    reply = RedirectResponse(
-        url_path(request, f"/operator/exercises/{made.exercise.public_id}"), status_code=303
-    )
-    reply.raw_headers.append(
-        scratch.cookie_header(browser, root_path(request), request.url.scheme == "https")
-    )
-    return reply
-
-
-@router.post("/exercises/{exercise_id}/discard", name="applydesk_exercise_discard")
-def exercise_discard(request: Request, exercise_id: str) -> Response:
-    """*Discard* on the Lobby: a scratch exercise forgotten, and its row
-    deleted (`exercises.discard`), so its code is free again (Codex on
-    cordware#223)."""
-    gate.same_site(request)
-    exercise = exercise_or_404(exercise_id)
-    if not scratch.is_scratch(exercise.public_id):
-        raise HTTPException(status_code=404)
-    return _to_lobby(request, _panel_change(request, "discard", [exercise.public_id], {}))
+    made, said = await run_in_threadpool(_make, request, name)
+    if made is None:
+        return _to_lobby(request, said)
+    return RedirectResponse(url_path(request, f"/operator/exercises/{made}"), status_code=303)
 
 
 _ELIGIBILITY = ("Open to all signed in", "Invitation only", "Not set")
 _EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 
 
-class _Refusal(scratch.Refused):
+class _Refusal(Exception):
     """A Details refusal naming the field it is about, so the card points
     there rather than at Name (cold read)."""
 
@@ -446,7 +393,7 @@ def _details(v: dict[str, Any]) -> dict[str, Any]:
         k: v.get(k) for k in ("name", "code", "description", "contact", "timezone", "eligibility")
     }
     if not all(isinstance(x, str) for x in text.values()) or not isinstance(v.get("blind"), bool):
-        raise scratch.Refused("The details are malformed.")
+        raise _Refusal("name", "The details are malformed.")
     name, code = str(text["name"]).strip(), str(text["code"]).strip()
     if not name or len(name) > 200:
         raise _Refusal("name", "A name of 1 to 200 characters is needed.")
@@ -473,20 +420,20 @@ def _details(v: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-#: What a scratch post past ``scratch.MAX_BODY`` is told (cold read: the
+#: What a page post past ``MAX_BODY`` is told (cold read: the
 #: plan's "past a limit the page says so").
 _TOO_LARGE = "Not saved: a page posts at most 256 KiB."
 
 
 async def _page_json(request: Request) -> Any:
     """A Setup page's post (segment AD2C): from Apply Desk's own page,
-    JSON, at most ``scratch.MAX_BODY``; the exercise is the caller's to
+    JSON, at most ``MAX_BODY``; the exercise is the caller's to
     look up, off the event loop."""
     gate.same_site(request)
     if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
         raise HTTPException(status_code=415, detail="Not saved: the page sent no JSON.")
     body = await request.body()
-    if len(body) > scratch.MAX_BODY:
+    if len(body) > MAX_BODY:
         raise HTTPException(status_code=413, detail=_TOO_LARGE)
     try:
         return json.loads(body)
@@ -1032,7 +979,7 @@ async def exercise_details(request: Request, exercise_id: str) -> Response:
     if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
         raise HTTPException(status_code=415, detail="Not saved: the page sent no JSON.")
     body = await request.body()
-    if len(body) > scratch.MAX_BODY:
+    if len(body) > MAX_BODY:
         raise HTTPException(status_code=413, detail=_TOO_LARGE)
     try:
         sent = json.loads(body)
@@ -1062,16 +1009,15 @@ def _save_details(request: Request, exercise_id: str, sent: object) -> Response:
         raise HTTPException(status_code=404)
     try:
         if not isinstance(sent, dict):
-            raise scratch.Refused("The details are malformed.")
+            raise _Refusal("name", "The details are malformed.")
         got = cast(dict[str, Any], sent)
         opened = got.get("revision")
         if not isinstance(opened, int) or isinstance(opened, bool):
-            raise scratch.Refused("The details are malformed.")
+            raise _Refusal("name", "The details are malformed.")
         values = exercise_store.details_from_page(_details(got))
         _locks_hold(exercise, values)
-    except scratch.Refused as why:
-        field = why.field if isinstance(why, _Refusal) else "name"
-        return JSONResponse({"error": str(why), "field": field}, status_code=400)
+    except _Refusal as why:
+        return JSONResponse({"error": str(why), "field": why.field}, status_code=400)
     session = db.new_session()
     try:
         # Bind the actor and commit first, as `_ops_change` does.
