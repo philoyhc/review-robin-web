@@ -617,13 +617,22 @@ def _save_form(request: Request, exercise: sample_data.Exercise, sent: Any) -> R
         actor = people.resolve(session, identity)
         session.commit()
         got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
+        # The exercise's lock before the panels are read, held until the
+        # form is kept, so a Panels save cannot retire a panel a question
+        # names in between (Codex on #4171).
+        panels_store.lock(session, exercise.public_id)
         wanted = _made_pools(got.get("cards"), sample_data.people_pools(exercise.public_id))
         renamed = panels_store.adopt(session, exercise.public_id, got.get("pools"), wanted, actor)
         form = _form(sent, exercise.public_id, renamed)
-        # The panels first: a form naming one that failed to store is never
-        # kept (AD2E cold read).
-        session.commit()
+        before = scratch.page(exercise.public_id, "form")
         scratch.save_page(exercise.public_id, "form", form)
+        try:
+            session.commit()
+        except Exception:
+            # A form naming a panel that failed to store is never kept (cold
+            # read): the form as it was.
+            scratch.save_page(exercise.public_id, "form", before)
+            raise
     except (scratch.Refused, panels_store.Refused) as why:
         session.rollback()
         return JSONResponse({"error": str(why)}, status_code=400)

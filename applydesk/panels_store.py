@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, cast
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from applydesk import audit, db, people, sample_data
@@ -127,10 +127,19 @@ def load(session: Session, public_id: str) -> State | None:
     return _assemble(public_id, [(p.key, p.name) for p in panels], people_rows)
 
 
-def lock(session: Session, public_id: str) -> None:
-    """Take the exercise's row lock in ``session``: a save that reads the
-    panels before it writes holds it first."""
-    _exercise(session, public_id, lock=True)
+def lock(session: Session, public_id: str) -> Exercise:
+    """Take the exercise's lock in ``session``: a save that reads the
+    panels before it writes holds it first. A no-op write as well as the
+    row lock, since SQLite has no row locks but serializes writers: any
+    two saves that read and change the panels take turns (Codex on #4171)."""
+    exercise = _exercise(session, public_id, lock=True)
+    session.execute(
+        update(Exercise)
+        .where(Exercise.id == exercise.id)
+        .values(panels_revision=Exercise.panels_revision)
+        .execution_options(synchronize_session=False)
+    )
+    return exercise
 
 
 def stored(public_id: str) -> State | None:
@@ -402,7 +411,7 @@ def save(
     roster, if no save came between (``opened``, the revision the page
     loaded); the new revision. Flushed, not committed: the caller's
     transaction holds the change and its audit."""
-    exercise = _exercise(session, public_id, lock=True)
+    exercise = lock(session, public_id)
     if exercise.archived_at is not None:
         raise Refused("Archived: restore it to change it.", key="archived")
     if opened != exercise.panels_revision:
@@ -443,7 +452,7 @@ def adopt(
     if not isinstance(made, dict):
         raise Refused("A panel made on this page is malformed.")
     pools = cast(dict[str, Any], made)
-    exercise = _exercise(session, public_id, lock=True)
+    exercise = lock(session, public_id)
     if exercise.archived_at is not None:
         raise Refused("Archived: restore it to change it.", key="archived")
     before = _before(session, exercise)

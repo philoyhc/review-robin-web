@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from sqlalchemy.exc import OperationalError
 
 from applydesk import db, sample_data, scratch
 from applydesk.models import AuditEvent, Exercise
@@ -547,6 +548,52 @@ def test_a_refused_process_save_keeps_no_panel_it_made() -> None:
     assert refused.status_code == 409, refused.text
     assert panels_store.revision("wa9juxbc2t") == 0
     assert "Readers" not in client.get(f"{LOBBY}/wa9juxbc2t/panels").text
+
+
+def test_form_holds_the_exercise_lock_while_it_checks_and_keeps_the_form(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A Panels save cannot retire a panel between Form's check of its
+    questions and the form kept: the lock comes first (Codex on #4171); a
+    commit that fails puts the form back as it was."""
+    from applydesk import panels_store, routes_operator
+
+    client = _client()
+    made = _create(client)
+    seen: list[str] = []
+    real_lock, real_form = panels_store.lock, routes_operator._form  # pyright: ignore[reportPrivateUsage]  -- watched, not replaced
+    monkeypatch.setattr(
+        panels_store, "lock", lambda s, p: (seen.append("lock"), real_lock(s, p))[1]
+    )
+    monkeypatch.setattr(
+        routes_operator, "_form", lambda *a: (seen.append("form"), real_form(*a))[1]
+    )
+    form = {"title": "", "description": "", "cards": [_field("Why?")]}
+    assert client.post(f"{LOBBY}/{made}/form", json=form).status_code == 200
+    assert seen[:2] == ["lock", "form"], seen
+    kept = client.get(f"{LOBBY}/{made}/form").text
+    assert "Why?" in kept
+
+    def fail(self: object) -> None:
+        raise OperationalError("COMMIT", {}, Exception("database is locked"))
+
+    from sqlalchemy.orm import Session as OrmSession
+
+    calls = {"n": 0}
+    real_commit = OrmSession.commit
+
+    def second_fails(self: OrmSession) -> None:
+        calls["n"] += 1
+        if calls["n"] == 2:  # the form's commit, after binding the actor
+            fail(self)
+        real_commit(self)
+
+    monkeypatch.setattr(OrmSession, "commit", second_fails)
+    other = {"title": "", "description": "", "cards": [_field("Something else")]}
+    assert client.post(f"{LOBBY}/{made}/form", json=other).status_code == 409
+    monkeypatch.setattr(OrmSession, "commit", real_commit)
+    page = client.get(f"{LOBBY}/{made}/form").text
+    assert "Why?" in page and "Something else" not in page
 
 
 def test_a_panels_save_says_its_new_revision() -> None:
