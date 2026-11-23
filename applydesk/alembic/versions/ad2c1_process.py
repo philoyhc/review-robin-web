@@ -5,7 +5,7 @@ Revises: ad2b1exercisesettings
 Create Date: 2026-11-22
 
 An exercise's timeline in the database (segment AD2C,
-`applydesk/guide/segment_AD2C_process.md`): `stage` (with the form's
+`applydesk/guide/archive/segment_AD2C_process.md`): `stage` (with the form's
 window and state on the stage holding it), `gate` and its `gate_field`,
 `gate_result` and `gate_source` rows, `outcome` and its `outcome_value`,
 `outcome_weight` and `outcome_release` rows, each gate

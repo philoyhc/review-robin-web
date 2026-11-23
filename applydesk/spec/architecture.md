@@ -1,6 +1,6 @@
 # Apply Desk architecture
 
-> **Built:** everything below. The pages read sample data; who may reach them, who operates an exercise, an exercise's own settings, the people and the audit trail are in the database, the rest moving there area by area (`applydesk/guide/ad2_series.md`).
+> **Built:** everything below. The pages read sample data; who may reach them, who operates an exercise, an exercise's own settings, its Process (the timeline, gates, outcomes and rules), its Candidates, the people and the audit trail are in the database, the rest moving there area by area (`applydesk/guide/ad2_series.md`).
 
 How `applydesk/` is laid out, what it may import, and how its tests run.
 Its contract with the host is `applydesk/spec/applications.md`.
@@ -17,7 +17,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/lookups.py` | Path lookups the routes share: an ID's shape checked, then a 404 or the record |
 | `applydesk/gate.py` | Who reaches the pages. `require_exercise_operator` on the operator router: 404 unless the viewer is the super-admin or on the allowlist and, on a path with an `exercise_id`, holds a current grant on that exercise (the super-admin's reach is their grants too). `require_admin` on the admin router: the super-admin or an Admin. `landing` on `/` and `/operator`: any operator, else the placeholders' gate. `placeholders_only` on the participant's pages until a later AD2 segment, on `reaches_placeholders`: anyone on a local run, deployed only the super-admin; `web.render` offers a link to those pages (`participant_pages`) only where it holds. `viewer` resolves the viewer once per request, binding them (`people.resolve`), and keeps the answer on `request.state`; `is_operator` and `operates` read it; `forget_viewer` drops it after the viewer's grants change. `own_new_exercise` makes a new scratch exercise's row and Owner |
 | `applydesk/db.py` | Apply Desk's own database, `applydesk` ("The database"); `is_busy` and `lost_a_race` tell a concurrent change (SQLite busy, or a unique clash) from a bug |
-| `applydesk/models.py` | Its tables, on Apply Desk's own `Base`: `person`, `exercise`, `exercise_tag`, `exercise_operator`, `audit_event` ("The database") |
+| `applydesk/models.py` | Its tables, on Apply Desk's own `Base`: `person`, `exercise`, `exercise_tag`, `exercise_operator`, `audit_event`, and the Process and Candidates tables ("The database") |
 | `applydesk/exercises.py` | An exercise's stored settings and the rules over them ("Exercises"): `overlay` and `stored` read them over the sample, `save_details` is Details' *Lock*, `save_panel`, `retag`, `archive`, `restore`, `delete` and `copy_settings` are the Lobby's, `record_sample` is the seed's. Flushes, never commits; refuses with `Refused` and its `key` |
 | `applydesk/clock.py` | The one clock (`today`, `midday`) and the date wording (`short`, `span`, `stamp`): no page reads the wall clock or words a date itself |
 | `applydesk/lobby.py` | The Operator Lobby's and the Archive's query string: `Query` (`sort`, `dir`, `tag`, `any`, `q`) and `apply` / `matches`, which sort and filter the rows |
@@ -30,7 +30,10 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/ids.py` | Public IDs: generation and the shape check; `row_id` and `RowId` for a database row ID in a form or path |
 | `applydesk/web.py` | Templates, mount-aware URLs (`url()`, `is_here()`, `host_url()`) and the page chrome |
 | `applydesk/sample_data.py` | The sample exercises, applications, form cards and panels (`Panel`: key, name, members; ruling 19) |
-| `applydesk/stages.py` | Stages, gates, outcomes and their rules; each row's cells; evaluators, assignments and pairs |
+| `applydesk/stages.py` | Stages, gates, outcomes and their rules; each row's cells; evaluators, assignments and pairs. `plan_of` reads the stored timeline (`process_store.stored_stages`) once Process has saved the exercise, else the sample (a new exercise's one stage); `gate_keyed` and `gate_numbered` find a gate by its key or its old number; `rule_problems` is what a rule reads amiss |
+| `applydesk/process_store.py` | An exercise's timeline in the database ("Process"): `load` and `stored_stages` build the dataclasses the pages read, `save` keeps a page's snapshot whole (the revision guard, keys, the references check, the audit), `move_form` is Home's *Open form* and *Close form*. Flushes, never commits; refuses with `Refused` and its `key` |
+| `applydesk/rules.py` | The rule engine, the only rule evaluator: `propose` answers what each rule would change in a table of dossiers (Dossiers' *Apply rules…*), over `Dossier`, `Column` and `Cell` rows built by `columns_of` and `rows_of`. Pure: reads no database |
+| `applydesk/candidates.py` | An exercise's Candidates ("Candidates"): `listing`, `add`, `remove` and `import_csv`. Flushes, never commits |
 | `applydesk/workflow.py` | Each item's state, the status row, the emails owed, the counts and the steps |
 | `applydesk/locks.py` | A stage's status and what a published stage fixes (ruling 35); `status_tally`, the exercises counted by status |
 | `applydesk/timeline.py` | The timeline Home and the applicant's page share: nothing operator-only |
@@ -38,7 +41,7 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/extract.py` | Extract data's files: names, columns and rows |
 | `applydesk/handoff.py` | The bundle a gate is sent to Review Robin with: the reviewers, reviewees, relationships and settings CSVs |
 | `applydesk/scratch.py` | Scratch exercises: the per-browser in-memory store, its cookie and limits, and each page's saved state |
-| `applydesk/process_save.py` | Process's *Save* on a scratch exercise: the snapshot checked and built back into stages |
+| `applydesk/process_save.py` | Process's *Save*, before the store: the page's snapshot shape-checked and built back into stages (`build`), minting the keys of what the page added; `build(checking=True)` serves the rules check |
 | `applydesk/scratch_panels.py` | Panels' *Save* on a scratch exercise, and the panels Form and Process make |
 | `applydesk/tones.py` | Each state's chip tone, one map for every page |
 | `applydesk/paging.py` | A long table's pages, 200 rows each, and its sort read from the query |
@@ -84,16 +87,28 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
   Desk's own tables, since another application's tables share CI's Postgres.
   The history is `ad2a1foundations` (the four tables), `ad2a2oneowner`,
   `ad2a3onepending`, `ad2w1firstsignin`, `ad2m1admins` (`person.is_admin`),
-  `ad2m2manyowners` (drops `uq_exercise_one_owner`) and `ad2b1exercisesettings`
-  (the `exercise` columns below, `uq_exercise_live_code` and `exercise_tag`).
+  `ad2m2manyowners` (drops `uq_exercise_one_owner`), `ad2b1exercisesettings`
+  (the `exercise` columns below, `uq_exercise_live_code` and `exercise_tag`)
+  and `ad2c1process` (the Process and Candidates tables and
+  `exercise.process_revision`; new tables only).
 
 | Table (model) | Holds |
 |---|---|
 | `person` (`Person`) | Tenant ID and object ID, null while pending; email, `email_key` (the casefolded address), UPN and display name as snapshots; `bound_at`; `first_signed_in_at` (the first sign-in, set once; a directory pick is bound without one); `created_at`. The allowlist is on it: `may_operate`, `admitted_by_id`, `admitted_at`, `revoked_at`, `is_admin` (an Admin, always also listed) |
-| `exercise` (`Exercise`) | `public_id`, unique, and `created_at`; `name`, `code` and `code_key` (the code casefolded), `description`, `eligibility` (`open`, `invitation` or NULL), `blind`, `help_contact` and `timezone` (NULL takes the operator settings' default), `created_by_id` (the person who made it), `archived_at`, `deleted_at` and `revision` ("Exercises"). Its stages, form and applications are sample data |
+| `exercise` (`Exercise`) | `public_id`, unique, and `created_at`; `name`, `code` and `code_key` (the code casefolded), `description`, `eligibility` (`open`, `invitation` or NULL), `blind`, `help_contact` and `timezone` (NULL takes the operator settings' default), `created_by_id` (the person who made it), `archived_at`, `deleted_at`, `revision` ("Exercises") and `process_revision` ("Process"). Its form and applications are sample data |
 | `exercise_tag` (`ExerciseTag`) | One tag on an exercise: `exercise_id`, `label` (the case first typed) and `label_key` (casefolded); (exercise, `label_key`) unique |
 | `exercise_operator` (`ExerciseOperator`) | A grant: (exercise, person) unique, `is_owner`, `added_by_id`, `added_at`, `removed_at` |
 | `audit_event` (`AuditEvent`) | `at`, `event_type`, `actor_id`, `exercise_id`, `detail` (JSON) |
+| `stage` (`Stage`) | One stage: `key` (`s<n>`), `position`, `name`, `starts_at` and `ends_at` (NULL when unset), `status` (`draft` or `published`), `shown`; `holds_form` and `holds_candidates`; on the stage holding the form, its window (`form_opens_at`, `form_closes_at`) and state (`form_state`: `draft`, `open`, `closed`; NULL elsewhere) with `form_opened_at` and `form_closed_at`; `retired_at`. (exercise, `key`) unique |
+| `gate` (`Gate`) | One gate: its `stage_id`, `key` (`g<n>`), `position` in its stage, `label`, `via`, `description`, `confidential`, `mode`, `total_min` and `total_max`, `review_from` and `review_to`, `rule` (JSON), `retired_at`. (exercise, `key`) unique. Its number is computed, for display only |
+| `gate_field` (`GateField`) | A response field: `gate_id`, `key` (`f<n>`), `position`, `label`, `type`, `min`, `max`, `step`, `options`, `required`, `help`, `retired_at`. (gate, `key`) unique |
+| `gate_result` (`GateResult`) | A result: `gate_id`, `key` (`r<n>`), `position` (1 is the headline), `name`, `field_id` (the `gate_field` it collates, nullable), `derive`, `value`, `at_least`, `ignore_zero`, `retired_at`. (gate, `key`) unique |
+| `gate_source` (`GateSource`) | An evaluator source: `gate_id`, `rank`, `kind`, `ref` (a panel key or a Form question key, strings until panels and questions are stored), `min`, `max`, `all_members` |
+| `outcome` (`Outcome`) | `stage_id`, `key` (`o<n>`), `label`, `due_at`, `rule` (JSON), `retired_at`. (exercise, `key`) unique |
+| `outcome_value` (`OutcomeValue`) | A value of an outcome: `outcome_id`, `key` (`v<n>`), `position`, `label`, `advances`, `retired_at`. (outcome, `key`) unique |
+| `outcome_weight` (`OutcomeWeight`) | A weight in an outcome's combined result: `outcome_id`, `gate_id`, `result_key`, `weight`. (outcome, gate, result) unique |
+| `outcome_release` (`OutcomeRelease`) | Who released an outcome to which audience, when: `outcome_id`, `audience`, `released_at`, `released_by_id`; (outcome, `audience`) unique. Written only by a release, which is not built; the table is empty |
+| `candidate` (`Candidate`) | One person on an exercise's Candidates: `exercise_id`, `person_id`, `via` (`search` or `csv`), `added_by_id`, `added_at`, `removed_at`. (exercise, `person_id`) unique, so removing sets `removed_at` and adding again clears it |
 
 The database enforces what a race could otherwise break, each as a partial
 unique index defined identically for SQLite and Postgres:
@@ -137,6 +152,53 @@ or the first change, records them (`exercise.settings_recorded`).
 - **Dates.** `applydesk/clock.py`: today is the sample's fixed day while the
   sample's stages stand (`clock.FROZEN`), else the wall clock's in the
   exercise's timezone.
+
+### Process
+
+`applydesk/process_store.py` keeps an exercise's timeline. The pages keep
+`stages`' dataclasses, which `load` builds; `stages.plan_of` reads the stored
+timeline once the exercise has one (`process_revision` of 1 or more) and
+otherwise the sample's (or, for a scratch exercise not yet saved, a new
+one's). Dossiers' cells stay the sample's.
+
+- **One save replaces the draft.** `save` takes the exercise's row lock,
+  refuses an archived exercise, refuses a snapshot built on an older
+  `process_revision` (`Refused`, key `stale`), checks it whole, writes it and
+  raises the revision, in the caller's transaction with the audit event. The
+  route reports a lost race (`db.lost_a_race`) as a concurrent change.
+- **Keys** are per exercise and never reused: a stage, gate or outcome the
+  snapshot drops is retired (`retired_at`), never deleted, and a retired key
+  is refused if sent again. A gate's field, result and value are parts of
+  their gate or outcome and revive on return. Sources and weights are
+  replaced on each save. `taken_keys` includes a sample's own keys, which its
+  cells are keyed by.
+- **References.** A rule stores every target by key; an outcome value is its
+  key, read back as its label by the pages. `check_references` refuses a
+  rule naming a gate, result or outcome the snapshot lacks, an outcome
+  weighing one, and a gate's rule reading a gate. Other problems are
+  `stages.rule_problems`', flagged and saved as left.
+- **Published stages** (`status` `published`): the save refuses removing one,
+  changing its name, start or `shown`, and adding to it; a revert to draft
+  is audited with its reason.
+- **Dates.** Unset is NULL, never text; a reversed pair is refused.
+- **The form's state** is `stage.form_state`. `move_form` takes the lock,
+  records an unsaved timeline first, and moves `draft` to `open` (the
+  exercise published) or `open` to `closed`, never otherwise, stamping
+  `form_opened_at` or `form_closed_at`.
+- **The rule engine** is `rules.py` and nothing else: no template evaluates
+  a rule. A Process snapshot posted to `…/process/problems` is answered by
+  `stages.rule_problems` for the page's flags, and a Dossiers table posted to
+  `…/dossiers/proposal` by `rules.propose`; neither writes.
+
+### Candidates
+
+`applydesk/candidates.py` lists an exercise's people (the form's roster on an
+*Invitation only* exercise). `add` and `remove` flush and audit; a person is
+listed once (`uq_candidate_pair`), and removing then adding revives the same
+row. `import_csv` adds each good row, matching an address to a person on
+record or making a pending one (`people.pending`), and returns the rows it
+could not read, not saved. An archived or deleted exercise refuses every
+change.
 
 ### Binding
 
@@ -200,8 +262,13 @@ Events: `person.created`, `person.bound`, `person.signed_in`, `person.admitted`,
 `exercise.settings_recorded` (a snapshot), `exercise.details_changed` (a
 changes envelope and the new `revision`, from Details' *Lock* and the Lobby's
 *Save* and tag actions), `exercise.archived`, `exercise.restored`,
-`exercise.deleted` and `exercise.duplicated` (`refs.source_exercise_id`). A directory
-find is audited to the searcher, not the person found.
+`exercise.deleted` and `exercise.duplicated` (`refs.source_exercise_id`),
+`exercise.process_saved` (a counts envelope: stages, gates and outcomes kept
+and `retired`; `context.revision`), `exercise.stage_reverted` (`reason`,
+`refs.stage_id`), `exercise.form_opened`, `exercise.form_closed`,
+`candidate.added` (`refs.person_id`, `context.via`) and `candidate.removed`
+(`refs.person_id`). A directory find is audited to the searcher, not the
+person found.
 
 ### The seed
 
@@ -232,7 +299,7 @@ depth and including literal dynamic imports.
   in pytest's `testpaths`, and `applydesk` in pyright's strict include,
   with a relaxed execution environment for `applydesk/tests`, as each
   application's tests have.
-- Both CI workflows' unit shards run `applydesk/tests`. `ci-postgres.yml` round-trips Apply Desk's history (`upgrade head`, `downgrade base`, `upgrade head`, `check`) on Postgres, beside RRW's and Utilities', sharing the database through its own version table.
+- Both CI workflows' unit shards run `applydesk/tests`. In `ci-postgres.yml` they run against Postgres: each worker's database is derived from `TEST_DATABASE_URL` as `rrw_ad` and `rrw_ad_gw0` on (`applydesk/tests/conftest.py`), and `applydesk/tests/test_postgres_locks.py` exercises the row locks, which SQLite cannot show. `ci-postgres.yml` also round-trips Apply Desk's history (`upgrade head`, `downgrade base`, `upgrade head`, `check`) on Postgres, beside RRW's and Utilities', sharing the database through its own version table.
 - `tools/ci_lanes.py` lists `applydesk/` in `APP_DIRS`: its `docs/`,
   `guide/`, `spec/` and `README.md` are prose, and a code change runs the
   full lane. Apply Desk has no lane of its own.

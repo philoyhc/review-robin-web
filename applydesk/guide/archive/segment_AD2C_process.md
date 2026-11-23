@@ -117,33 +117,41 @@ Taken 2026-11-22 at `1ceb1d592`.
 
 ## Status
 
-- **2026-11-23, ruling 79:** visibility moves to its own segment (AD2V). `outcome_audience` leaves rung 3's tables; `outcome_release` stays (ruling 38).
-- **2026-11-23, rung 5 split:** 5a lands the store's wiring (`plan_of` reads it, *Save* on every exercise, keys kept and minted past every key held, a sample's included). 5b lands `/evaluations/<key>` and Extract's names. The form's window and state (AD-36, AD-59, AD-60) move with rung 9's *Open form*.
-- **Decisions confirmed at build (rung 5a):**
+**Closed 2026-11-23.** Intended versus done:
+
+- **The ladder became:**
+  - #4150 plan;
+  - #4152 tests on Postgres;
+  - #4153 tables;
+  - #4154 `process_store`;
+  - #4155 rung 5a, the store wired;
+  - #4156 the rule engine;
+  - #4157 one same-site helper;
+  - #4158 scaffold;
+  - #4161 rungs 9 and 10 (Candidates, the form's moves, published stages, the values editor);
+  - #4167 rung 5b, gate handles and the register.
+  - Rung 5 split in two: 5a wired the store; 5b, `/evaluations/<key>` and Extract's names, landed last. The form's window and state (AD-36, AD-59, AD-60) moved to rung 9 with *Open form*. Rung 10, the values editor, was added by the author's ruling (2026-11-23), after Codex on #4154 found a renamed value took a new key; it shipped with rung 9 because it already fixed two of rung 9's Codex findings.
+- **Scope that moved:**
+  - Ruling 79 sent `outcome_audience` to AD2V; `outcome_release` is stored, empty until AD2F's *Release*. AD-34 is therefore *Partly*, not struck.
+  - The Decision's `candidate_list` became `stage.holds_candidates`.
+- **Decisions confirmed at build:**
   - A sample's saved timeline keeps the sample's cells; a column it never had is blank until AD2F.
-  - Email ticks stay in the scratch store until Emails is stored; on a sample they stay the sample's.
-  - A panel made on a sample's Process is refused until AD2E stores panels.
-- **2026-11-23, cumulative read on rungs 2-5** (`diff-reviewer`, base `1d09637c2`): a removed field or result could not be added back (fixed in rung 4: revived); times read back in the database's zone (fixed: UTC); a concurrent first save reached the operator as a 500 (fixed in rung 5). Left for later:
-  - Published stages: the save refuses only their removal. Refusing other edits to them, and an audited revert to draft, move to rung 9 with the form's state.
-  - `plan_of` reads the store on every call, without a per-request cache: about 200 queries on a saved sample's Process, 0.17 s locally. AD2G's request-scoped loading.
-  - Sources and weights are replaced on each save, not retired: they are parts of a gate or an outcome, never named on their own.
-  - An outcome value renamed on the page takes a new key (Codex on #4154): its values are one list of labels. **Ruled 2026-11-23 (author):** a values editor that carries each value's key through a rename is built within AD2C, as its own rung after rung 9 and before the close.
-  - `applydesk/spec/applications.md` still describes renumbering and `removed`: the close's spec pass.
-  - Rung 9: re-adding a removed candidate revives its row (`uq_candidate_pair`); the Decision's `candidate_list` became `stage.holds_candidates`.
-- **2026-11-23, rungs 9 and 10 ship as one PR (#4161):** Codex on rung 9 found two defects rung 10 had already fixed (a published stage's end, the form's state on a move), so rung 10 joined rung 9's PR rather than following it. A third finding: Home and the form's move now read publication from the stages (`locks.exercise_status`), not the sample's stored state.
-- **2026-11-23, rung 10 (values editor):** values are rows on Process, each carrying its key; a rename keeps it and the page rewrites the rules naming it. Carried keys are assigned before label matches.
-- **2026-11-23, cumulative reads at rung 10**, split at rung 6 (over ~1,500 lines; bases `cae6108d6` and `875d1535a`). Fixed in rung 10:
-  - Rung 6: `_is_number` accepted `1_000`, `nan` and `inf`; a failed older check dropped a newer answer; a too-deep body was a 500.
-  - Rungs 7-9: a published stage's end could not be extended; adds and a changed start or `shown` were not refused; a revert's reason was not audited; moving the form reseeded its state; a rename typed through a sibling's label merged their rules; three minor messages.
-  - Left: a CSV row not on record is made pending without a directory lookup, deliberately (the directory is searched one person at a time, from the search). A published stage's rule and value edits are not refused by the save; the page leaves them editable too.
-- **2026-11-23, rung 5b (gate handles, AD-48):**
-  - A gate's page and its bundle files are at `/evaluations/<key>`.
-  - An old `gate_<n>` page or bundle link redirects (302, not cached: a number names another gate once gates move) to the gate numbered so now, keeping its query.
-  - A removed gate's key 404s.
-  - Extract's gate file is `gate_<key>.csv`, saved as `<key>_<slug>.csv`. An old `gate_<n>.csv` download 404s: only Extract's own page links to it.
-  - Home's *Open Gate N* rows carry the key.
-  - `applydesk/spec/applications.md`'s `gate_<n>` lines are left for the close's spec pass.
-- **2026-11-23, the register** (`applydesk/guide/ad2_deferred_findings.md`): the Definition of done's findings struck with their PRs, but AD-34, which is marked *Partly* (its audiences went to AD2V with ruling 79, the release is AD2F's). AD-60's note gains its stage half. AD-35 stays open: its Process half is done, the rest is other segments'.
+  - Email ticks stay in the scratch store until Emails is stored. A panel made on a sample's Process is refused until AD2E.
+  - A removed field, result or candidate is revived when added back.
+  - Times are read back as UTC.
+  - Sources and weights are replaced on each save, not retired: they are never named on their own.
+  - Home and the form's moves read publication from the stages (`locks.exercise_status`).
+  - A value's key is carried through a rename, and carried keys are assigned before label matches.
+  - An old `gate_<n>` link redirects with a 302, since a number names another gate once gates move; an old `gate_<n>.csv` download 404s.
+- **Left, deliberately:**
+  - `plan_of` reads the store on every call (about 200 queries on a saved sample's Process, 0.17 s locally): AD2G's request-scoped loading.
+  - A Candidates CSV row not on record is made pending without a directory lookup.
+  - A published stage's rule and value edits are disabled on the page (`locks.item_lock`) but not refused by the save; the spec says which edits the save refuses.
+- **Reads:** four `diff-reviewer` reads.
+  - Rungs 2-5 found 3 defects, all fixed.
+  - Rungs 6 and 7-9 (split past ~1,500 lines) found 10, fixed in rung 10.
+  - Rung 5b, which reopened code after them, found 2, both fixed.
+  - Codex found further defects on #4154, #4156, #4158 and #4161, each fixed in its PR with a test.
 
 ## PR ladder
 
