@@ -44,6 +44,7 @@ ordinary operator, the Owner the seed made it.
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and CI |
 | `guide/todo_master.md` | Rulings, the MVP roadmap and open decisions |
 | `guide/ad2_series.md` | The AD2 series: what every AD2 segment holds to (its own database, checkable on localhost) and the segments AD2A–AD2G in order, each with the findings it takes |
+| `guide/segment_AD2E_panels.md` | AD2E, version 1: an exercise's panels, the Panels roster and memberships in the database; Panels' *Save* for every exercise, the panels Form and Process make stored with their save, the caps held by the server, and Unicode-aware people search (AD-127) |
 | `guide/segment_AD1U_ui_adjustments.md` | AD1U: a standing segment for small UI adjustments the author asks for, each an item closing on its own; Item 1, Admin's pages take the operator pages' layout |
 | `guide/things_to_check_in_browser.md` | **Browser checks owed** on merged changes, one section per change, each row ticked and the section deleted once checked (2026-11-22, AD1R and AD1S's moved in from `guide/todo_master.md`) |
 | `guide/ad2_deferred_findings.md` | The 2026-11-18 assessment's rows that wait on AD2's persistence and identity (28 rows, moved 2026-11-21); AD2's plan absorbs, rules or drops each |
