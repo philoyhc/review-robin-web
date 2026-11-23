@@ -1121,7 +1121,8 @@ def _move_form(request: Request, exercise_id: str, to: str) -> Response:
     try:
         actor = people.resolve(session, identity)
         session.commit()
-        process_store.move_form(session, exercise.public_id, to, exercise.state != "Draft", actor)
+        published = locks.exercise_status(exercise) != "Draft"  # by its stages
+        process_store.move_form(session, exercise.public_id, to, published, actor)
         session.commit()
     except process_store.Refused as why:
         session.rollback()

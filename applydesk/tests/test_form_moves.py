@@ -191,3 +191,24 @@ def test_a_first_save_refused_says_so_on_home(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(process_store, "save", refuse)
     moved = _client().post(f"{LOBBY}/{OPEN}/form/move", data={"to": "closed"})
     assert "form_said=unsaved" in moved.headers["location"]
+
+
+def test_a_draft_made_published_by_its_stages_opens_its_form() -> None:
+    """Codex on #4161: an exercise made as a draft is published by
+    publishing a stage; its form then opens, though the sample's stored
+    state still says Draft."""
+    built = stages.plan_of(DRAFT).stages
+    session = db.new_session()
+    try:
+        published = (replace(built[0], status="Published"), *built[1:])
+        process_store.save(session, DRAFT, published, 0, None)
+        session.commit()
+    finally:
+        session.close()
+    exercise = exercise_or_404(DRAFT)
+    assert exercise.state == "Draft"  # the sample's own, unchanged
+    action = workflow.form_action(exercise)
+    assert action is not None and action[1:] == ("open", "")
+    moved = _client().post(f"{LOBBY}/{DRAFT}/form/move", data={"to": "open"})
+    assert "form_said=open" in moved.headers["location"]
+    assert workflow.form_state(exercise_or_404(DRAFT)) == "Open"

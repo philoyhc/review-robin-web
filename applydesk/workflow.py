@@ -250,7 +250,12 @@ def form_action(exercise: Exercise) -> tuple[str, str, str] | None:
         return ("Close form", "closed", "")
     if state == "Closed":
         return None
-    if exercise.state == "Draft":
+    from applydesk import locks  # locks reads this module's steps
+
+    # Published as its stages are, not the sample's stored state: an
+    # exercise made as a draft is published by publishing a stage (Codex
+    # on #4161).
+    if locks.exercise_status(exercise) == "Draft":
         return ("Open form", "open", "A draft's form opens once the exercise is published.")
     return ("Open form", "open", "")
 
