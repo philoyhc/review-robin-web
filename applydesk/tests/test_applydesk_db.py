@@ -42,6 +42,8 @@ TABLES = {
     "panel",
     "roster_entry",
     "panel_member",
+    # AD2D: the form's cards.
+    "form_card",
 }
 
 
