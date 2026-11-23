@@ -263,3 +263,15 @@ def test_reset_is_refused_outside_local(
 def test_blank_takes_at_most_the_cap() -> None:
     with pytest.raises(SystemExit):
         main(["--blank", "51"])
+
+
+@pytest.mark.usefixtures("applydesk_db")
+def test_reset_refuses_a_database_off_this_machine(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Cold read: APP_ENV=local with a remote URL in `.env` must not wipe it."""
+    monkeypatch.setenv(
+        "APPLYDESK_DATABASE_URL", "postgresql+psycopg://u:p@db.example.org:5432/applydesk"
+    )
+    assert main(["--reset"]) == 2
+    assert "localhost" in capsys.readouterr().err

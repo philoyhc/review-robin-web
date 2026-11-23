@@ -24,7 +24,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import make_url, select
 from sqlalchemy.orm import Session
 
 from applydesk import db, exercises, operators, people, sample_data
@@ -109,6 +109,11 @@ def reset(settings: IdentitySettings | None = None) -> None:
 
     if not is_local(settings or identity_settings):
         raise SeedRefused("--reset runs only with APP_ENV=local (ruling 74)")
+    # It destroys data, so the database must be local too, not only the
+    # environment: SQLite, or a server on this machine (cold read).
+    url = make_url(db.ApplyDeskSettings().database_url)
+    if not (url.get_backend_name() == "sqlite" or url.host in ("localhost", "127.0.0.1", "::1")):
+        raise SeedRefused("--reset empties only a SQLite file or a database on localhost")
     db.engine().dispose()  # no pooled connection holds a table it drops
     config = Config(str(Path(__file__).resolve().parent / "alembic.ini"))
     command.downgrade(config, "base")
