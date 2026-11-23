@@ -206,3 +206,105 @@ def test_the_first_sign_in_backfill_takes_only_a_person_s_own_binding(tmp_path: 
     with engine.connect() as c:
         got = dict(c.exec_driver_sql("SELECT id, first_signed_in_at FROM person").all())
     assert str(got[1]).startswith("2026-11-03") and str(got[2]).startswith("2026-11-04")
+
+
+def _fresh(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
+    """A database built by its migration history, as a localhost one is,
+    in place of the fixture's (made from the models, with no history)."""
+    url = f"sqlite:///{tmp_path / 'local.db'}"
+    monkeypatch.setenv("APPLYDESK_DATABASE_URL", url)
+    db.engine.cache_clear()
+    db._sessions.cache_clear()  # pyright: ignore[reportPrivateUsage]  -- a new database
+    command.upgrade(_config(url), "head")
+    return url
+
+
+@pytest.mark.usefixtures("applydesk_db")
+def test_reset_and_blank_drafts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Segment AD2G: `--reset --blank 3` leaves the samples and three
+    blank drafts, whatever was there before; a second `--blank` numbers
+    on from the drafts already there."""
+    _fresh(tmp_path, monkeypatch)
+    assert main(["--blank", "2"]) == 0
+    assert main(["--reset", "--blank", "3"]) == 0
+    assert "reset, then seeded" in capsys.readouterr().out
+    session = db.new_session()
+    names = sorted(
+        n for n in session.scalars(select(Exercise.name)) if n and n.startswith("Blank exercise")
+    )
+    assert names == ["Blank exercise 1", "Blank exercise 2", "Blank exercise 3"]
+    total = session.scalar(select(func.count()).select_from(Exercise))
+    assert total == len(sample_data.EXERCISES) + 3
+    session.close()
+    assert main(["--blank", "1"]) == 0
+    session = db.new_session()
+    assert session.scalar(select(Exercise.id).where(Exercise.name == "Blank exercise 4"))
+    session.close()
+
+
+@pytest.mark.usefixtures("applydesk_db")
+def test_reset_is_refused_outside_local(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _fresh(tmp_path, monkeypatch)
+    assert main(["--blank", "1"]) == 0
+    monkeypatch.setattr(identity_settings, "app_env", "production")
+    assert main(["--reset"]) == 2
+    assert "refused" in capsys.readouterr().err
+    monkeypatch.setattr(identity_settings, "app_env", "local")
+    session = db.new_session()
+    assert session.scalar(select(Exercise.id).where(Exercise.name == "Blank exercise 1"))
+    session.close()
+
+
+@pytest.mark.usefixtures("applydesk_db")
+def test_blank_takes_at_most_the_cap() -> None:
+    with pytest.raises(SystemExit):
+        main(["--blank", "51"])
+
+
+@pytest.mark.usefixtures("applydesk_db")
+def test_reset_refuses_a_database_off_this_machine(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Cold read: APP_ENV=local with a remote URL in `.env` must not wipe it."""
+    monkeypatch.setenv(
+        "APPLYDESK_DATABASE_URL", "postgresql+psycopg://u:p@db.example.org:5432/applydesk"
+    )
+    assert main(["--reset"]) == 2
+    assert "localhost" in capsys.readouterr().err
+
+
+@pytest.mark.usefixtures("applydesk_db")
+def test_reset_survives_data_old_constraints_forbid(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex on #4188: an exercise with two Owners (`operators.adopt` allows
+    it) would stop a downgrade at `ad2m2`'s one-Owner index; the reset drops
+    the tables instead, so it still empties and reseeds."""
+    from applydesk.models import ExerciseOperator
+
+    _fresh(tmp_path, monkeypatch)
+    assert main(["--blank", "1"]) == 0
+    session = db.new_session()
+    try:
+        exercise = session.scalars(select(Exercise)).first()
+        assert exercise is not None
+        from applydesk import people
+
+        other = people.pending(session, "two@x.edu", actor=None)
+        session.flush()
+        session.add(ExerciseOperator(exercise_id=exercise.id, person_id=other.id, is_owner=True))
+        session.commit()
+    finally:
+        session.close()
+    assert main(["--reset"]) == 0
+    session = db.new_session()
+    try:
+        assert session.scalar(select(func.count()).select_from(Exercise)) == len(
+            sample_data.EXERCISES
+        )
+    finally:
+        session.close()

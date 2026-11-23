@@ -21,6 +21,9 @@ from sqlalchemy import Connection, Engine, create_engine, event
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
+#: Apply Desk's Alembic version table, apart from RRW's (`alembic/env.py`).
+VERSION_TABLE = "applydesk_alembic_version"
+
 
 class ApplyDeskSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

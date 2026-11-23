@@ -10,6 +10,11 @@ names, kept pending until it signs in.
 It is idempotent: a second run changes nothing. It refuses to run unless
 `APP_ENV=local`, since the samples are seeds for localhost and tests,
 never production (ruling 74). Tests seed through `seed()`.
+
+Two flags (segment AD2G): `--reset` empties Apply Desk's local database
+first (its Alembic history down to base and up to head, Apply Desk's own
+tables only), and `--blank N` adds N blank drafts, ordinary exercises
+Owned by the same person, as *New exercise* makes them.
 """
 
 from __future__ import annotations
@@ -17,12 +22,13 @@ from __future__ import annotations
 import argparse
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import make_url, select, text
 from sqlalchemy.orm import Session
 
 from applydesk import db, exercises, operators, people, sample_data
-from applydesk.models import Exercise
+from applydesk.models import Exercise, Person
 from cordware.identity import Identity, is_local
 from cordware.settings import IdentitySettings, identity_settings
 
@@ -94,6 +100,64 @@ def seed(
     return SeedResult(owner_id=owner.id, exercises_added=exercises_added, grants_added=grants_added)
 
 
+def reset(settings: IdentitySettings | None = None) -> None:
+    """Empty Apply Desk's database: its own tables (its models' and its
+    Alembic version table) dropped, then its history run up to head, so
+    no other application's tables are touched. Not a downgrade, which
+    would have to satisfy each old constraint against live data (Codex on
+    #4188: two Owners of one exercise stop `ad2m2`'s downgrade). Refused
+    outside `APP_ENV=local`, as the seed is."""
+    from alembic import command
+    from alembic.config import Config
+
+    if not is_local(settings or identity_settings):
+        raise SeedRefused("--reset runs only with APP_ENV=local (ruling 74)")
+    # It destroys data, so the database must be local too, not only the
+    # environment: SQLite, or a server on this machine (cold read).
+    url = make_url(db.ApplyDeskSettings().database_url)
+    if not (url.get_backend_name() == "sqlite" or url.host in ("localhost", "127.0.0.1", "::1")):
+        raise SeedRefused("--reset empties only a SQLite file or a database on localhost")
+    from applydesk import models
+
+    engine = db.engine()
+    engine.dispose()  # no pooled connection holds a table it drops
+    models.Base.metadata.drop_all(engine)
+    with engine.begin() as connection:
+        connection.execute(text(f'DROP TABLE IF EXISTS "{db.VERSION_TABLE}"'))
+    engine.dispose()
+    config = Config(str(Path(__file__).resolve().parent / "alembic.ini"))
+    command.upgrade(config, "head")
+
+
+def blank(session: Session, owner_id: int, count: int) -> list[str]:
+    """Add `count` blank drafts Owned by the person `owner_id`, named
+    *Blank exercise 1*… after the ones already there; commit. Their
+    public IDs, newest last. *New exercise*'s cap holds."""
+    owner = session.get(Person, owner_id)
+    if owner is None:
+        raise SeedRefused("the seed's Owner is not on record")
+    actor = operators.Actor(owner)
+    taken = {
+        name
+        for name in session.scalars(select(Exercise.name).where(Exercise.created_by_id == owner_id))
+        if name
+    }
+    made: list[str] = []
+    n = 0
+    while len(made) < count:
+        n += 1
+        name = f"Blank exercise {n}"
+        if name in taken:
+            continue
+        try:
+            made.append(exercises.make(session, actor, name).public_id)
+        except exercises.Refused as why:
+            session.rollback()
+            raise SeedRefused(str(why)) from None
+    session.commit()
+    return made
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python -m applydesk.seed",
@@ -104,18 +168,38 @@ def main(argv: list[str] | None = None) -> int:
         metavar="EMAIL",
         help="make this address the Owner (pending until it signs in) instead of the fake identity",
     )
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="empty Apply Desk's local database first (down to base, up to head)",
+    )
+    parser.add_argument(
+        "--blank",
+        metavar="N",
+        type=int,
+        default=0,
+        help=f"add N blank drafts Owned by the same person (at most {exercises.MOST_MADE})",
+    )
     args = parser.parse_args(argv)
-    session = db.new_session()
+    if not 0 <= args.blank <= exercises.MOST_MADE:
+        parser.error(f"--blank takes 0 to {exercises.MOST_MADE}")
     try:
-        result = seed(session, owner_email=args.owner)
+        if args.reset:
+            reset()
+        session = db.new_session()
+        try:
+            result = seed(session, owner_email=args.owner)
+            made = blank(session, result.owner_id, args.blank) if args.blank else []
+        finally:
+            session.close()
     except SeedRefused as refused:
         print(f"refused: {refused}", file=sys.stderr)
         return 2
-    finally:
-        session.close()
     print(
-        f"seeded: {result.exercises_added} exercises and {result.grants_added} "
+        ("reset, then " if args.reset else "")
+        + f"seeded: {result.exercises_added} exercises and {result.grants_added} "
         f"Owner grants added (owner person {result.owner_id})"
+        + (f"; {len(made)} blank drafts added" if made else "")
     )
     return 0
 

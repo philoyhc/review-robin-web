@@ -17,6 +17,15 @@ alembic -c applydesk/alembic.ini upgrade head
 python -m applydesk.seed
 ```
 
+Two flags (segment AD2G): `--reset` empties Apply Desk's local database
+first (its own tables only, down to base and up to head), and `--blank N`
+adds N blank drafts Owned by the same person, as *New exercise* makes
+them. For a clean slate with three drafts to set up:
+
+```bash
+python -m applydesk.seed --reset --blank 3
+```
+
 The seed is idempotent and refuses to run unless `APP_ENV=local`. An
 operator's pages need it: they answer the platform super-admin, or someone
 on the operator allowlist who operates the exercise, and 404 otherwise
