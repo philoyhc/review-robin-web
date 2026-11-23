@@ -85,6 +85,11 @@ Taken 2026-11-23 at `4f911c6cd`.
   - The tables, `exercise.panels_revision` and `person.display_name_key` (`ad2e1panels`, backfilled with Python's casefold).
   - The model keeps the key in step with the name (`Person._name_key`); the one bulk update that writes a name, binding a pending person, sets it too.
   - `directory.search` and the allowlist's filter match the key. `test_a_name_search_reads_past_ascii` fails on the old `lower()`.
+- **2026-11-23, rung 3:** `panels_store` loads, saves and adopts, nothing calling it yet (`applydesk/tests/test_panels_store.py`).
+  - A save starts from the stored roster, else the sample's, so a sample's keys are kept.
+  - Names park on placeholders before they are written, so two panels may swap names in one save.
+  - Two addresses that turn out to be one person are refused.
+  - Each save or adoption is audited as `exercise.panels_saved`.
 
 ## PR ladder
 
