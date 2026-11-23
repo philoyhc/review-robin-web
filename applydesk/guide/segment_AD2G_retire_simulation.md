@@ -42,7 +42,7 @@ Two items, each closing on its own, in the order the series file gives. **Item 1
 - **The seed** (`python -m applydesk.seed`, local only, ruling 74) gains:
   - `--reset`, which empties Apply Desk's local database (Alembic `downgrade base`, then `upgrade head`) before seeding;
   - `--blank N`, which adds N blank drafts owned by the seed's Owner.
-- **Admin's *Load sample exercises*** (rungs 5–6) gives Azure the samples for testing, with the Admin who loads them as their Owner. **This amends ruling 74** ("never production"). It is built only if the author rules that amendment (Open questions). Otherwise the rungs are struck.
+- **No samples on Azure** (author, 2026-11-23): ruling 74 stands. Azure testers make blank exercises with *New exercise*; the samples stay seeds for localhost and tests.
 
 **Rejected:**
 - **A `scratch` flag on the row**, keeping the shell's meaning. Nothing differs once the pages persist, and a flag would need its own lifecycle (expiry, promotion).
@@ -86,8 +86,8 @@ Taken 2026-11-23 at `31fecbe33`.
    - Tests: `test_scratch.py` and `test_scratch_browser.py` become `test_new_exercise.py` and `test_new_exercise_browser.py`.
    - **Last build rung:** `diff-reviewer` on the cumulative diff from rung 2's base.
 4. **The seed:** `--reset` and `--blank N`, `applydesk/README.md`'s local steps.
-5. ~~If ruled~~ **Admin scaffold:** *Load sample exercises* on Admin's Exercises Diagnostics, inert.
-6. ~~If ruled~~ **Load wired:** Admin-only, idempotent, audited (`exercise.samples_loaded`), the loader as Owner. Takes its own read.
+5. ~~Admin scaffold: *Load sample exercises*~~ — struck: no samples on Azure (author, 2026-11-23).
+6. ~~Load wired~~ — struck, as rung 5.
 7. **Close:** `spec-writer` on `applydesk/spec/`, S10's follow-up deleted, Item 1's status compacted.
 
 ### Definition of done
@@ -105,8 +105,8 @@ Taken 2026-11-23 at `31fecbe33`.
 
 ### Open questions
 
-- **Admin's *Load sample exercises* on Azure** (amends ruling 74's "never production"). Decides whether rungs 5–6 are built. The author.
-- **The cap of 50 live exercises per creator.** The default holds unless the author sets another number.
+- ~~Samples on Azure~~ — no; ruling 74 stands (author, 2026-11-23).
+- ~~The cap~~ — 50 live exercises per creator (author, 2026-11-23).
 
 ### Out of scope
 
@@ -120,4 +120,4 @@ Taken 2026-11-23 at `31fecbe33`.
 - `applydesk/spec/architecture.md` — the module map without `scratch.py`; `exercises.from_row`; `sample_data.is_sample`; the seed's flags (Item 1).
 - `applydesk/spec/permissions.md` — a co-operator sees a new exercise; *Discard*'s Owner-less exception removed (Item 1).
 - `applydesk/README.md` — the seed's `--reset` and `--blank` (Item 1).
-- `applydesk/guide/todo_master.md` — the S10 follow-up deleted; ruling 74 amended if rungs 5–6 are ruled (Item 1).
+- `applydesk/guide/todo_master.md` — the S10 follow-up deleted (Item 1).
