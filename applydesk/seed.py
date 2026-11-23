@@ -24,7 +24,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from sqlalchemy import make_url, select
+from sqlalchemy import make_url, select, text
 from sqlalchemy.orm import Session
 
 from applydesk import db, exercises, operators, people, sample_data
@@ -101,8 +101,11 @@ def seed(
 
 
 def reset(settings: IdentitySettings | None = None) -> None:
-    """Empty Apply Desk's database: its Alembic history down to base and
-    up to head, so only Apply Desk's own tables are touched. Refused
+    """Empty Apply Desk's database: its own tables (its models' and its
+    Alembic version table) dropped, then its history run up to head, so
+    no other application's tables are touched. Not a downgrade, which
+    would have to satisfy each old constraint against live data (Codex on
+    #4188: two Owners of one exercise stop `ad2m2`'s downgrade). Refused
     outside `APP_ENV=local`, as the seed is."""
     from alembic import command
     from alembic.config import Config
@@ -114,9 +117,15 @@ def reset(settings: IdentitySettings | None = None) -> None:
     url = make_url(db.ApplyDeskSettings().database_url)
     if not (url.get_backend_name() == "sqlite" or url.host in ("localhost", "127.0.0.1", "::1")):
         raise SeedRefused("--reset empties only a SQLite file or a database on localhost")
-    db.engine().dispose()  # no pooled connection holds a table it drops
+    from applydesk import models
+
+    engine = db.engine()
+    engine.dispose()  # no pooled connection holds a table it drops
+    models.Base.metadata.drop_all(engine)
+    with engine.begin() as connection:
+        connection.execute(text(f'DROP TABLE IF EXISTS "{db.VERSION_TABLE}"'))
+    engine.dispose()
     config = Config(str(Path(__file__).resolve().parent / "alembic.ini"))
-    command.downgrade(config, "base")
     command.upgrade(config, "head")
 
 

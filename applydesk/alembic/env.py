@@ -12,9 +12,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from applydesk import models
-from applydesk.db import ApplyDeskSettings
-
-VERSION_TABLE = "applydesk_alembic_version"
+from applydesk.db import VERSION_TABLE, ApplyDeskSettings
 
 config = context.config
 
