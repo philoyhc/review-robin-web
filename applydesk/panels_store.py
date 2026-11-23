@@ -116,7 +116,13 @@ def load(session: Session, public_id: str) -> State | None:
         ):
             if member.panel_id in by_id:
                 ticks.setdefault(member.roster_entry_id, set()).add(by_id[member.panel_id])
-    people_rows = [(Member(e.name, p.email or "", e.note), ticks.get(e.id, set())) for e, p in rows]
+    # A blank name reads as the address, as the page shows it; it is stored
+    # blank, since an address may be longer than a name's column (Codex on
+    # #4170).
+    people_rows = [
+        (Member(e.name or p.email or "", p.email or "", e.note), ticks.get(e.id, set()))
+        for e, p in rows
+    ]
     return _assemble(public_id, [(p.key, p.name) for p in panels], people_rows)
 
 
@@ -306,7 +312,7 @@ def _write(
             session.add(entry)
             entries[person.id] = entry
         entry.name, entry.note, entry.position, entry.retired_at = (
-            member.name,
+            "" if member.name == member.email else member.name,
             member.note,
             position,
             None,

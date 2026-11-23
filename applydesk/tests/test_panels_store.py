@@ -121,6 +121,18 @@ def test_a_person_removed_and_added_again_revives_their_rows(session: Session) -
     assert again is not None and [m.email for m in again.panels[0].members] == ["ana@example.edu"]
 
 
+def test_a_blank_name_is_stored_blank_and_read_as_the_address(session: Session) -> None:
+    """An address may be longer than a name's column: a blank name is kept
+    blank, read back as the address (Codex on #4170; ci-postgres holds the
+    column to its width)."""
+    long = "a" * 240 + "@example.edu"  # 252 characters, within the page's 254
+    _save(session, _sent([], [_row("", long, [])]))
+    entry = session.scalars(select(RosterEntry)).one()
+    assert entry.name == ""
+    stored = panels_store.load(session, MODEL)
+    assert stored is not None and stored.roster[0][0].name == long
+
+
 def test_an_address_is_matched_to_a_person_else_made_pending(session: Session) -> None:
     known = Person(email="known@example.edu", email_key="known@example.edu", display_name="K")
     session.add(known)
