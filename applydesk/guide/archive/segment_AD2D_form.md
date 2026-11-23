@@ -67,6 +67,28 @@ Taken 2026-11-23 at `edf86c06c`.
 | Test files on Form or its save | 7 | `grep -rln '/form"\|/form'"'"'\|form_save\|applydeskFormSnapshot' applydesk/tests --include=*.py` |
 | Rule code naming the form condition | 4 | `grep -rn '"form"' applydesk/rules.py applydesk/process_save.py` |
 
+## Status
+
+**Closed 2026-11-23.** Intended versus done:
+
+- **The ladder held:**
+  - #4173 plan;
+  - #4174 tables;
+  - #4175 `form_store`;
+  - #4176 Form saving for every exercise, with the scratch form path deleted;
+  - #4177 questions by key, which carried the cumulative read.
+- **Decisions confirmed at build:**
+  - A sample's cards are keyed `q1`… in order (`sample_data.sample_form`), and its first save keeps those keys.
+  - A save that keys a new card or panel reloads the page. Edits made while that save was on its way wait for the reload ("strict"), so a card is never keyed twice.
+  - A replicated card is sent with no key, so the original keeps its own (Codex on #4176).
+  - Publication, and the questions the process reads, are both read under the exercise's lock (Codex on #4176; cold read).
+  - Form refuses a save that drops or retypes a question a rule or a nominated source reads, as Panels refuses retiring a panel in use (cold read).
+  - Nominated sources name their question by key too. The register lists them under AD-45, and a rename now that Form saves would otherwise empty their nominees (cold read).
+  - A label stored before keys maps first to the key the sample's form gave it, then to the current label. Seeded answers and nominees follow the key, so a rename changes none.
+  - `stages.scope` matches an outcome by key, since a keyed plan is rebuilt on each read.
+- **Left:** `answers` and `plan_of` read the form once per row through sessions of their own. This is a cost, not a defect, and belongs to AD2G's request-scoped loading.
+- **Reads:** one cumulative `diff-reviewer` read of rungs 2–5 (base `2cde4af39`) found 9 issues. Eight were fixed; the per-row reads are left, above. Codex found 2 on #4176, which the read had also caught, and both were fixed with tests.
+
 ## PR ladder
 
 1. **PR 1 — this plan.**

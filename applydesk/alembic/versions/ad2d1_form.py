@@ -5,7 +5,7 @@ Revises: ad2e1panels
 Create Date: 2026-11-23
 
 An exercise's form in the database (segment AD2D,
-`applydesk/guide/segment_AD2D_form.md`): `form_card`, one row per field,
+`applydesk/guide/archive/segment_AD2D_form.md`): `form_card`, one row per field,
 section or page break, keyed per exercise (`q<n>`, never reused) so a rule
 names a question by its key (AD-45); and the exercise's `form_title`,
 `form_description` and `form_revision`, 0 until Form is first saved. New
