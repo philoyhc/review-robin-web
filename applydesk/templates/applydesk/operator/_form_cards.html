@@ -1,7 +1,8 @@
 {# The Form page's cards (segment AD1B): one macro per kind, so a card
    the server renders and a card the page's script adds share their
    markup. A field card carries every type's fields; its data-type says
-   which show. Nothing here is saved. #}
+   which show. Each carries its key (segment AD2D), blank on a new one;
+   Form's Save sends it, and the server keys a new card. #}
 
 {% macro grip() %}<button type="button" class="fc-grip" data-fc-grip aria-label="Move: drag, or press the up and down arrow keys" title="Drag to reorder">⋮⋮</button>{% endmacro %}
 
@@ -19,7 +20,7 @@
 
 {% macro field(c, summary, kept_size, card_types, pools, panels_url, open=False) %}
 {% set size = kept_size(c.ratio_w, c.ratio_h) %}
-<article class="fc" data-kind="field" data-type="{{ c.type }}"{% if open %} data-open{% endif %}>
+<article class="fc" data-kind="field" data-type="{{ c.type }}"{% if open %} data-open{% endif %} data-key="{{ c.key }}">
   <div class="fc-head">
     {{ grip() }}
     <button type="button" class="fc-toggle" data-fc-toggle aria-expanded="{{ 'true' if open else 'false' }}" aria-label="{{ 'Collapse' if open else 'Expand' }}"></button>
@@ -88,7 +89,7 @@
 {% endmacro %}
 
 {% macro section(c, open=False) %}
-<article class="fc fc-section" data-kind="section"{% if open %} data-open{% endif %}>
+<article class="fc fc-section" data-kind="section"{% if open %} data-open{% endif %} data-key="{{ c.key }}">
   <div class="fc-head">
     {{ grip() }}
     <button type="button" class="fc-toggle" data-fc-toggle aria-expanded="{{ 'true' if open else 'false' }}" aria-label="{{ 'Collapse' if open else 'Expand' }}"></button>
@@ -101,8 +102,8 @@
 </article>
 {% endmacro %}
 
-{% macro pagebreak() %}
-<div class="fc-break" data-kind="pagebreak">
+{% macro pagebreak(key="") %}
+<div class="fc-break" data-kind="pagebreak" data-key="{{ key }}">
   {{ grip() }}<span class="fc-break-l">Page break</span>
   <button type="button" class="btn btn-destructive btn-short" data-fc-act="delete">Remove</button>
 </div>

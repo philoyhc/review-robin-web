@@ -529,24 +529,30 @@ def _form(sent: Any, exercise_id: str, renamed: dict[str, str]) -> dict[str, Any
 
 @router.post("/exercises/{exercise_id}/form", name="applydesk_exercise_form_save")
 async def exercise_form_save(request: Request, exercise_id: str) -> Response:
-    """Form's *Save* on a scratch exercise (segment AD1N rung 3): the cards
-    kept in memory for this browser, so Process, Preview and the applicant
-    pages read them."""
-    exercise, sent = await _scratch_json(request, exercise_id)
-    return await run_in_threadpool(_save_form, request, exercise, sent)
+    """Form's *Save* (segment AD1N rung 3; every exercise since AD2D): the
+    form kept in the database (`form_store.save`), guarded by the revision
+    the page opened at."""
+    sent = await _page_json(request)
+    return await run_in_threadpool(_save_form, request, exercise_id, sent)
 
 
-def _save_form(request: Request, exercise: sample_data.Exercise, sent: Any) -> Response:
-    """Form's *Save*, past the request's own checks. A panel made with
-    *+ New panel…* is stored with it (segment AD2E), or not at all."""
+def _save_form(request: Request, exercise_id: str, sent: Any) -> Response:
+    """Form's *Save*, past the request's own checks: the transaction. A
+    panel made with *+ New panel…* is stored with it (segment AD2E), or
+    not at all."""
+    exercise = exercise_or_404(exercise_id)
     identity = current_identity(request)
     if identity is None:
         raise HTTPException(status_code=404)
+    got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
+    opened = got.get("revision")
+    if not isinstance(opened, int) or isinstance(opened, bool):
+        return JSONResponse({"error": "The form is malformed."}, status_code=400)
+    published = locks.form_lock(exercise).fixed
     session = db.new_session()
     try:
         actor = people.resolve(session, identity)
         session.commit()
-        got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
         # The exercise's lock before the panels are read, held until the
         # form is kept, so a Panels save cannot retire a panel a question
         # names in between (Codex on #4171).
@@ -554,19 +560,21 @@ def _save_form(request: Request, exercise: sample_data.Exercise, sent: Any) -> R
         wanted = _made_pools(got.get("cards"), sample_data.people_pools(exercise.public_id))
         renamed = panels_store.adopt(session, exercise.public_id, got.get("pools"), wanted, actor)
         form = _form(sent, exercise.public_id, renamed)
-        before = scratch.page(exercise.public_id, "form")
-        scratch.save_page(exercise.public_id, "form", form)
-        try:
-            session.commit()
-        except Exception:
-            # A form naming a panel that failed to store is never kept (cold
-            # read): the form as it was.
-            scratch.save_page(exercise.public_id, "form", before)
-            raise
-    except (scratch.Refused, panels_store.Refused, form_store.Refused) as why:
+        revision = form_store.save(
+            session, exercise.public_id, form, opened, actor, published=published
+        )
+        kept = form_store.load(session, exercise.public_id)
+        keyed = kept is None or [c.key for c in kept.cards] != [c["key"] for c in form["cards"]]
+        session.commit()
+    except panels_store.Refused as why:
         session.rollback()
         return JSONResponse({"error": str(why)}, status_code=400)
+    except form_store.Refused as why:
+        session.rollback()
+        return JSONResponse({"error": str(why)}, status_code=409 if why.key == "stale" else 400)
     except (IntegrityError, OperationalError) as error:
+        # A concurrent save won: on SQLite the row lock is the file's, so
+        # two first saves can meet on a key's unique index.
         session.rollback()
         if not db.lost_a_race(error):
             raise
@@ -576,9 +584,11 @@ def _save_form(request: Request, exercise: sample_data.Exercise, sent: Any) -> R
         )
     finally:
         session.close()
-    # A panel it adopted has a key of its own now: the page reloads to
-    # name it so, or its next Save would offer it again (cold read).
-    return JSONResponse({"saved": True, "reload": bool(renamed)})
+    # A card or a panel keyed anew on saving: the page reloads to hold its
+    # keys, or its next Save would key it again. Edits made while the save
+    # was on its way cannot be saved before that reload ("strict").
+    reload = keyed or bool(renamed)
+    return JSONResponse({"saved": True, "reload": reload, "strict": reload, "revision": revision})
 
 
 @router.post("/exercises/{exercise_id}/process", name="applydesk_exercise_process_save")
@@ -1655,6 +1665,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
     # The revision before the panels it guards: a save landing between the
     # two reads makes the page stale, never newer than what it shows.
     panels_revision = panels_store.revision(exercise.public_id) if section == "panels" else 0
+    form_revision = form_store.revision(exercise.public_id) if section == "form" else 0
     return render(
         request,
         "applydesk/operator/section.html",
@@ -1686,6 +1697,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         panel_pools=sample_data.panel_pools(exercise.public_id),
         panels=sample_data.panels_of(exercise.public_id),
         panels_revision=panels_revision,
+        form_revision=form_revision,
         roster=sample_data.roster(exercise.public_id),
         uses=stages.panel_uses(exercise.public_id),
         panels_sent=workflow.panels_sent(exercise.public_id),

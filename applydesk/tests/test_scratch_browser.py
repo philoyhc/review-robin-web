@@ -122,9 +122,15 @@ def test_form_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> Non
     card = page.locator('#fb-cards > .fc[data-kind="field"]')
     card.locator('[data-f="label"]').fill("What do you study?")
     assert page.locator("[data-unsaved]").is_visible()
-    page.locator("[data-fb-save]").click()
-    page.locator("[data-fb-said]").filter(has_text="Saved to this scratch exercise.").wait_for()
+    # The new question is keyed on saving (segment AD2D), so the page
+    # reloads to hold its key, and says it saved once back.
+    with page.expect_navigation():
+        page.locator("[data-fb-save]").click()
+    said = page.locator("[data-fb-said]")
+    said.filter(has_text="Saved").wait_for()
+    assert said.inner_text() == "Saved.", said.inner_text()
     assert page.locator("[data-unsaved]").is_hidden()
+    assert page.locator('#fb-cards > .fc[data-kind="field"]').get_attribute("data-key") == "q1"
     # An edit made while a save is on its way keeps the page unsaved (Codex).
     page.route(
         "**/form",

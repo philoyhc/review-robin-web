@@ -11,10 +11,13 @@ import re
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
-from typing import Any, TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict
 from zoneinfo import ZoneInfo
 
 from applydesk import clock
+
+if TYPE_CHECKING:
+    from applydesk.form_store import Form
 
 
 @dataclass(frozen=True)
@@ -757,60 +760,69 @@ _RA_FORM: tuple[FormCard, ...] = (
 _RA_DESCRIPTION = "Apply to be a Residential Assistant for 2027/28, or to return as one."
 
 
-def _scratch_form(exercise_id: str) -> dict[str, Any] | None:
-    """A scratch exercise's form (segment AD1N): as Form last saved it,
-    else empty; None for an exercise that is not a scratch one."""
+def _stored_form(exercise_id: str) -> Form | None:
+    """The exercise's form as Form last saved it (segment AD2D), else None:
+    never saved, it reads the sample's."""
+    from applydesk import form_store  # it builds on this module
+
+    return form_store.stored(exercise_id)
+
+
+def _blank_form(exercise_id: str) -> bool:
+    """An exercise whose form starts with no questions: the sample's empty
+    draft, or a scratch exercise (segment AD1N)."""
     from applydesk import scratch
 
-    if not scratch.is_scratch(exercise_id):
-        return None
-    saved = scratch.page(exercise_id, "form")
-    if isinstance(saved, dict):
-        return cast(dict[str, Any], saved)
-    return {"title": "", "description": "", "cards": []}
+    return exercise_id in EMPTY_FORMS or scratch.is_scratch(exercise_id)
 
 
 def form_is_empty(exercise_id: str) -> bool:
-    """A form with no questions: the sample's empty draft, or a scratch
-    exercise's until Form saves a question into it (segment AD1N)."""
-    own = _scratch_form(exercise_id)
+    """A form with no questions: as Form last saved it, else the sample's
+    empty draft or a scratch exercise's."""
+    own = _stored_form(exercise_id)
     if own is not None:
-        return not any(c.get("kind") == "field" for c in own["cards"])
-    return exercise_id in EMPTY_FORMS
+        return not any(c.kind == "field" for c in own.cards)
+    return _blank_form(exercise_id)
 
 
 def form_cards(exercise_id: str) -> tuple[FormCard, ...]:
-    """The Form page's cards: one empty question for a form with none."""
-    own = _scratch_form(exercise_id)
+    """The Form page's cards, as Form last saved them, else the sample's:
+    one empty question for a form with none."""
+    own = _stored_form(exercise_id)
     if own is not None:
-        cards = tuple(FormCard(**c) for c in own["cards"])
-        return cards or (FormCard("field"),)
-    if exercise_id in EMPTY_FORMS:
+        cards: tuple[FormCard, ...] = own.cards
+    elif _blank_form(exercise_id):
+        cards = ()
+    else:
+        cards = sample_form(exercise_id)
+    if not cards:
         return (FormCard("field"),)
     # A pool this exercise has no roster for reads as Institution-wide,
     # so the summary, the card's menu and Preview agree.
     pools = people_pools(exercise_id)
     return tuple(
         replace(c, pool="institution") if c.type == "people" and c.pool not in pools else c
-        for c in sample_form(exercise_id)
+        for c in cards
     )
 
 
 def sample_form(exercise_id: str) -> tuple[FormCard, ...]:
     """The sample's own cards, keyed ``q1``… in order, the keys its first
-    save keeps (segment AD2D); none for an empty draft."""
-    if exercise_id in EMPTY_FORMS:
+    save keeps (segment AD2D); none for an empty draft or a scratch
+    exercise."""
+    if _blank_form(exercise_id):
         return ()
     cards = _RA_FORM if exercise_id == "wa9juxbc2t" else SAMPLE_FORM
     return tuple(replace(c, key=f"q{n}") for n, c in enumerate(cards, 1))
 
 
 def form_heading(exercise_id: str) -> tuple[str, str]:
-    """The form's own title and description."""
-    own = _scratch_form(exercise_id)
+    """The form's own title and description, as Form last saved them,
+    else the sample's."""
+    own = _stored_form(exercise_id)
     if own is not None:
-        return str(own["title"]), str(own["description"])
-    if exercise_id in EMPTY_FORMS:
+        return own.title, own.description
+    if _blank_form(exercise_id):
         return "", ""
     return "Application form", (
         _RA_DESCRIPTION if exercise_id == "wa9juxbc2t" else FORM_DESCRIPTION

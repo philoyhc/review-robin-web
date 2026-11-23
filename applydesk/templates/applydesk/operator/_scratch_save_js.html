@@ -4,7 +4,9 @@
    its snapshot in `data-fb-snapshot` (a global function's name), else
    Form's `applydeskFormSnapshot`; a snapshot of null is a page saying
    itself why it cannot be saved yet. A reply asking to reload (new keys
-   kept) reloads the page, which says it saved once back. The page counts as saved only if
+   kept) reloads the page, which says it saved once back; a page naming
+   `data-fb-strict` says that instead when edits made meanwhile cannot be
+   saved before the reload. The page counts as saved only if
    nothing changed while the save was on its way. #}
 <script>
 (function () {
@@ -59,7 +61,7 @@
               // renumbering): it cannot save again until reloaded, and says
               // so rather than refusing later (Codex on #4028).
               btn.dataset.fbStale = "1";
-              if (said) said.textContent = "Saved, but not the changes made since. Process renumbered on saving: copy what you changed since, reload, then save again.";
+              if (said) said.textContent = btn.dataset.fbStrict || "Saved, but not the changes made since. Process renumbered on saving: copy what you changed since, reload, then save again.";
             } else if (said) {
               said.textContent = "Saved, but not the changes made since: save again.";
             }
