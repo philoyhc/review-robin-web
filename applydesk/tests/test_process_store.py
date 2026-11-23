@@ -354,6 +354,78 @@ def test_an_outcome_with_a_value_twice_is_refused(session: Session) -> None:
     assert refused.value.key == "values" and "Yes" in str(refused.value)
 
 
+def test_a_field_or_result_removed_then_added_again_saves(session: Session) -> None:
+    """The cold read on rungs 2-5: the page mints a gate's lowest free field
+    key and the next result key, so a removed one comes back; its row is
+    revived, not refused (which left Process unsaveable)."""
+    built = _built(MODEL)
+    _save(session, MODEL, built)
+    stored = process_store.load(session, MODEL)
+    assert stored is not None
+    gate = next(
+        c
+        for st in stored.stages
+        for c in st.columns
+        if isinstance(c, stages.Gate) and len(c.fields) > 1 and len(c.results) > 1
+    )
+    last_field, last_result = gate.fields[-1], gate.results[-1]
+    fewer = replace(
+        gate,
+        fields=gate.fields[:-1],
+        results=tuple(
+            replace(r, source="", derive="") if r.source == last_field.key else r
+            for r in gate.results[:-1]
+        ),
+    )
+
+    def with_gate(g: stages.Gate) -> tuple[stages.Stage, ...]:
+        return tuple(
+            replace(st, columns=tuple(g if c.key == g.key else c for c in st.columns))
+            for st in stored.stages
+        )
+
+    trimmed = _without_reads(with_gate(fewer), f"{gate.key}.{last_result.key}")
+    _save(session, MODEL, trimmed)
+    # Added again under the same keys, as the page mints them.
+    again = process_store.load(session, MODEL)
+    assert again is not None
+    back = tuple(
+        replace(st, columns=tuple(gate if c.key == gate.key else c for c in st.columns))
+        for st in again.stages
+    )
+    _save(session, MODEL, back)
+    reloaded = process_store.load(session, MODEL)
+    assert reloaded is not None
+    got = next(c for st in reloaded.stages for c in st.columns if c.key == gate.key)
+    assert isinstance(got, stages.Gate)
+    assert [f.key for f in got.fields] == [f.key for f in gate.fields]
+    assert [r.key for r in got.results] == [r.key for r in gate.results]
+
+
+def _without_reads(built: tuple[stages.Stage, ...], result: str) -> tuple[stages.Stage, ...]:
+    """Every rule and weight reading ``result`` ("g1.r2") dropped."""
+
+    def clean(c: stages.Gate | stages.Outcome) -> stages.Gate | stages.Outcome:
+        if not isinstance(c, stages.Outcome):
+            return c
+        rule = c.rule
+        if rule and any(key == result for when, _ in rule.branches for _k, key, _o, _v in when):
+            rule = None
+        return replace(c, rule=rule, weights=tuple(w for w in c.weights if w[0] != result))
+
+    return tuple(replace(st, columns=tuple(clean(c) for c in st.columns)) for st in built)
+
+
+def test_a_stored_time_reads_back_as_utc_wall_clock() -> None:
+    """The cold read on rungs 2-5: a timestamptz comes back in the database
+    session's zone; the pages' wall clock is the UTC one stored."""
+    from datetime import timedelta, timezone
+
+    stored = datetime(2027, 1, 4, 9, 0)
+    elsewhere = process_store._stored(stored).astimezone(timezone(timedelta(hours=8)))  # pyright: ignore[reportOptionalMemberAccess, reportPrivateUsage]
+    assert process_store._naive(elsewhere) == stored  # pyright: ignore[reportPrivateUsage]
+
+
 def test_a_weight_in_a_superscript_digit_is_refused() -> None:
     """AD-129: ``"²".isdigit()`` holds and ``int`` refuses it."""
     with pytest.raises(process_save.Refused):

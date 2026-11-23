@@ -375,7 +375,11 @@ def load(session: Session, public_id: str) -> Stored | None:
 def _naive(at: datetime | None) -> datetime | None:
     """A stored time as the pages hold it: the exercise's wall clock,
     without a zone (``stages.StageDates``, segment AD1K)."""
-    return at.replace(tzinfo=None) if at is not None else None
+    # Read back in UTC first: a timestamptz comes back in the database
+    # session's zone (the cold read on rungs 2-5).
+    if at is None:
+        return None
+    return at.astimezone(UTC).replace(tzinfo=None) if at.tzinfo else at
 
 
 def _stored(at: datetime | None) -> datetime | None:
@@ -475,15 +479,30 @@ def _check(built: tuple[stages.Stage, ...]) -> None:
 
 
 def _upsert[R: (StageRow, GateRow, Outcome, GateField, GateResult, OutcomeValue)](
-    session: Session, existing: dict[str, R], key: str, make: type[R], **values: Any
+    session: Session,
+    existing: dict[str, R],
+    key: str,
+    make: type[R],
+    *,
+    revive: bool = False,
+    **values: Any,
 ) -> R:
+    """The row under ``key``, made or updated. A stage's, gate's or
+    outcome's key is never given again (ruling 37: a link to it must not
+    reach something new), so a retired one is refused. A gate's field or
+    result is part of its gate: nothing outside the snapshot names it, the
+    rules and weights that do are checked at save, and the page mints the
+    lowest free key, so a retired one is revived (the cold read on rungs
+    2-5: refusing it left Process unsaveable)."""
     row = existing.get(key)
     if row is None:
         row = make(key=key, **values)
         session.add(row)
     else:
         if row.retired_at is not None:
-            raise Refused(f"The key {key} belonged to something removed.", key="keys")
+            if not revive:
+                raise Refused(f"The key {key} belonged to something removed.", key="keys")
+            row.retired_at = None
         for name, value in values.items():
             setattr(row, name, value)
     return row
@@ -736,6 +755,7 @@ def _save_gate(
             fields,
             f.key,
             GateField,
+            revive=True,
             gate_id=grow.id,
             position=n,
             label=f.label,
@@ -764,6 +784,7 @@ def _save_gate(
             results,
             r.key,
             GateResult,
+            revive=True,
             gate_id=grow.id,
             position=n,
             name=r.name,
