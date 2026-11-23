@@ -115,3 +115,18 @@ def test_process_opens_the_card_a_link_names(page: Page) -> None:
     page.goto(f"{EX}/panels")
     page.goto(f"{EX}/process#gate-nosuch")
     expect(page.locator(".pc-item[data-open]")).to_have_count(plain)
+
+
+def test_no_page_scrolls_sideways_on_a_phone(page: Page) -> None:
+    """AD1U Item 2: at 390px a wide table scrolls inside its card; a visually
+    hidden header label must not widen the page past it."""
+    page.set_viewport_size({"width": 390, "height": 900})
+    for path in (
+        f"{EX}/panels",
+        f"{ORIGIN}/applydesk/admin/exercises",
+        f"{EX}/dossiers",
+        f"{ORIGIN}/applydesk/operator/exercises",
+    ):
+        page.goto(path)
+        wide = page.evaluate("document.documentElement.scrollWidth")
+        assert wide <= 390, (path, wide)
