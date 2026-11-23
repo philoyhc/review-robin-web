@@ -145,7 +145,7 @@ PANEL_ACTIONS = ("save", "add_tags", "remove_tags", "duplicate", "archive", "del
 async def exercises_panel(request: Request) -> Response:
     """The Lobby panel's actions (segment AD2B rung 6) on the ticked
     exercises; the Lobby again, its query kept, saying how it went."""
-    _same_site(request)
+    gate.same_site(request)
     body = await request.body()
     if len(body) > scratch.MAX_BODY:
         raise HTTPException(status_code=413)
@@ -289,7 +289,7 @@ def _copy_into(request: Request, source_id: str, made_id: str) -> bool:
 @router.post("/exercises/archived/restore", name="applydesk_exercises_restore")
 async def exercises_restore(request: Request) -> Response:
     """*Restore* on the Archive (segment AD2B rung 6), Owner-only."""
-    _same_site(request)
+    gate.same_site(request)
     body = await request.body()
     if len(body) > scratch.MAX_BODY:
         raise HTTPException(status_code=413)
@@ -322,14 +322,6 @@ def _restore(request: Request, public_id: str) -> str:
     finally:
         session.close()
     return "restored"
-
-
-def _same_site(request: Request) -> None:
-    """A scratch exercise's posts come from Apply Desk's own pages: a
-    browser naming another site is refused (as Review Robin's handoffs)."""
-    site = request.headers.get("sec-fetch-site")
-    if site is not None and site not in ("same-origin", "none"):
-        raise HTTPException(status_code=403)
 
 
 #: The Lobby's status line, by the key its redirect carries: the page
@@ -374,7 +366,7 @@ def _to_lobby(request: Request, said: str = "") -> RedirectResponse:
 async def exercise_new(request: Request) -> Response:
     """*New exercise* (segment AD1N, ruling 59): a blank draft named by the
     operator, held in memory for this browser, its Home next."""
-    _same_site(request)
+    gate.same_site(request)
     body = await request.body()
     if len(body) > scratch.MAX_BODY:
         raise HTTPException(status_code=413)
@@ -413,7 +405,7 @@ def exercise_discard(request: Request, exercise_id: str) -> Response:
     """*Discard* on the Lobby: a scratch exercise forgotten, and its row
     deleted (`exercises.discard`), so its code is free again (Codex on
     cordware#223)."""
-    _same_site(request)
+    gate.same_site(request)
     exercise = exercise_or_404(exercise_id)
     if not scratch.is_scratch(exercise.public_id):
         raise HTTPException(status_code=404)
@@ -477,7 +469,7 @@ async def _page_json(request: Request) -> Any:
     """A Setup page's post (segment AD2C): from Apply Desk's own page,
     JSON, at most ``scratch.MAX_BODY``; the exercise is the caller's to
     look up, off the event loop."""
-    _same_site(request)
+    gate.same_site(request)
     if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
         raise HTTPException(status_code=415, detail="Not saved: the page sent no JSON.")
     body = await request.body()
@@ -493,7 +485,7 @@ async def _scratch_json(request: Request, exercise_id: str) -> tuple[sample_data
     """A Setup page's post into a scratch exercise (segment AD1N): from
     Apply Desk's own page, JSON, at most ``scratch.MAX_BODY``; 404 for an
     exercise that is not this browser's scratch one."""
-    _same_site(request)
+    gate.same_site(request)
     # The lookup reads the database: off the event loop (cold read, AD2B).
     exercise = await run_in_threadpool(exercise_or_404, exercise_id)
     if not scratch.is_scratch(exercise.public_id):
@@ -720,7 +712,7 @@ async def dossiers_proposal(request: Request, exercise_id: str) -> Response:
     """Dossiers' *Apply rules* (ruling 78): what the server's rule engine
     would change in the table the page sends (each row's settable cells,
     value and hand mark), as a proposal. Changes nothing."""
-    _same_site(request)
+    gate.same_site(request)
     if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
         raise HTTPException(status_code=415)
     body = await request.body()
@@ -844,7 +836,7 @@ async def exercise_details(request: Request, exercise_id: str) -> Response:
     any exercise the viewer operates, refused if someone saved since the
     page opened (the revision it sends). The body is read here; the
     database is reached off the event loop (Codex on #4137)."""
-    _same_site(request)
+    gate.same_site(request)
     if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
         raise HTTPException(status_code=415, detail="Not saved: the page sent no JSON.")
     body = await request.body()
@@ -966,7 +958,7 @@ def _ops_change(
     """One change to the exercise's operators (`team.py`), a refusal
     turned into a status key. `to_lobby`: done, the viewer no longer runs
     the exercise (Leave), so the Lobby says so."""
-    _same_site(request)
+    gate.same_site(request)
     identity = current_identity(request)
     if identity is None:
         raise HTTPException(status_code=404)

@@ -8,9 +8,11 @@ import os
 import re
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy import create_engine, make_url, text
+from starlette.testclient import TestClient
 
 from cordware.settings import identity_settings
 
@@ -66,6 +68,21 @@ def _applydesk_postgres() -> Iterator[str | None]:
     models.Base.metadata.create_all(made)
     made.dispose()
     yield url
+
+
+@pytest.fixture(autouse=True)
+def _browser_like_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test client posts as a current browser does, naming its own
+    site in ``Sec-Fetch-Site`` (AD-126 refuses a post with neither that nor
+    a same-origin ``Origin`` or ``Referer``). A test of an older browser
+    takes the header out: ``client.headers.pop("sec-fetch-site")``."""
+    real = TestClient.__init__
+
+    def init(self: TestClient, *args: Any, **kwargs: Any) -> None:
+        real(self, *args, **kwargs)
+        self.headers.setdefault("sec-fetch-site", "same-origin")
+
+    monkeypatch.setattr(TestClient, "__init__", init)
 
 
 @pytest.fixture(autouse=True)

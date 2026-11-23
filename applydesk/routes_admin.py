@@ -73,16 +73,9 @@ ADOPT_SAID: dict[str, str] = {
 }
 
 
-def _same_site(request: Request) -> None:
-    """Posts come from Apply Desk's own pages (as the Lobby's)."""
-    site = request.headers.get("sec-fetch-site")
-    if site is not None and site not in ("same-origin", "none"):
-        raise HTTPException(status_code=403)
-
-
 async def _form_lists(request: Request) -> dict[str, list[str]]:
     """The post's fields, each with every value (the bulk bar's ticks)."""
-    _same_site(request)
+    gate.same_site(request)
     body = await request.body()
     if len(body) > _MAX_BULK_BODY:
         raise HTTPException(status_code=413)
@@ -90,7 +83,7 @@ async def _form_lists(request: Request) -> dict[str, list[str]]:
 
 
 async def _form(request: Request) -> dict[str, str]:
-    _same_site(request)
+    gate.same_site(request)
     body = await request.body()
     if len(body) > _MAX_BODY:
         raise HTTPException(status_code=413)
@@ -237,7 +230,7 @@ async def manage(request: Request, public_id: str) -> Response:
     """*Manage* on Exercises Diagnostics (segment AD2M): adopt the exercise
     as an Owner unless the viewer already owns or operates it, then open its
     Home. A sample not yet in the database cannot be adopted, and says so."""
-    _same_site(request)
+    gate.same_site(request)
     return await run_in_threadpool(_manage, request, public_id)
 
 
