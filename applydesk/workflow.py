@@ -11,10 +11,13 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import cast
+from typing import TYPE_CHECKING
 
 from applydesk import clock, sample_data, stages, tones
 from applydesk.sample_data import Exercise
+
+if TYPE_CHECKING:
+    from applydesk.email_store import Template
 
 #: Each sample gate sent to Review Robin, its state and its line (ruling
 #: 14: Not ready → Ready → Sent → Results in). A gate missing here is not
@@ -370,38 +373,40 @@ def awaits_approval(exercise_id: str, gate: stages.Gate) -> bool:
     return gate.mode == "suggested" and gate_readiness(exercise_id, gate).endswith(" to approve")
 
 
-#: A scratch exercise's email ticks, as its Process last saved them: the
-#: (item, audience) pairs it sends. Kept for the browser until Emails is
-#: stored; a sample's stay the sample's.
-SENDS_PAGE = "sends"
-
-
 def sends(exercise_id: str, item: str, audience: str) -> bool:
     """Whether Process has the item ("receipt", "reminder" or an outcome's
-    key) email the audience; a scratch exercise's as its Process last saved
-    them (segment AD1N)."""
-    from applydesk import scratch
-
-    saved = scratch.page(exercise_id, SENDS_PAGE)
-    if isinstance(saved, frozenset):
-        return (item, audience) in cast(frozenset[tuple[str, str]], saved)
+    key) email the audience: as Process last recorded its ticks (segment
+    AD2L), else the sample's."""
+    saved = _stored_sends(exercise_id)
+    if saved is not None:
+        return (item, audience) in saved
     return (item, audience) in _SENDS.get(exercise_id, _DEFAULT_SENDS)
 
 
-#: A scratch exercise's templates, by (item, audience): (subject, body),
-#: as each Emails card last saved it (segment AD1N rung 6).
-SCRATCH_PAGE = "emails"
 _TAG = re.compile(r"\$\$|\$(?:([A-Za-z_][A-Za-z0-9_]*)|\{([A-Za-z_][A-Za-z0-9_]*)\})")
 
 
-def scratch_templates(exercise_id: str) -> dict[tuple[str, str], tuple[str, str]] | None:
-    """A scratch exercise's saved templates, else None (not a scratch one)."""
+def _stored_sends(exercise_id: str) -> frozenset[tuple[str, str]] | None:
+    """The ticks Process last recorded (segment AD2L), else None."""
+    from applydesk import email_store
+
+    return email_store.stored_sends(exercise_id)
+
+
+def _stored_templates(exercise_id: str) -> dict[tuple[str, str], Template]:
+    """Each template an Emails card saved (segment AD2L), by (item,
+    audience)."""
+    from applydesk import email_store
+
+    return dict(email_store.stored_templates(exercise_id))
+
+
+def _blank_emails(exercise_id: str) -> bool:
+    """An exercise none of whose templates is written until saved: a
+    scratch one (segment AD1N), not a sample."""
     from applydesk import scratch
 
-    if not scratch.is_scratch(exercise_id):
-        return None
-    held = scratch.page(exercise_id, SCRATCH_PAGE)
-    return cast(dict[tuple[str, str], tuple[str, str]], held) if isinstance(held, dict) else {}
+    return scratch.is_scratch(exercise_id)
 
 
 def process_revision(exercise_id: str) -> int:
@@ -427,43 +432,56 @@ def foreign_tags(kind: str, text: str) -> tuple[str, ...]:
     return tuple(out)
 
 
-def template_text(exercise_id: str, email: Email) -> tuple[str, str]:
-    """A card's subject and body as the page opens it: a scratch
-    exercise's as saved (empty if never); a sample's written one its
-    kind's default, an owed one empty."""
-    own = scratch_templates(exercise_id)
+def template_text(exercise_id: str, email: Email) -> tuple[str, str, int]:
+    """A card's subject, body and version as the page opens it, from one
+    read, so the text and the version a card carries always agree (cold
+    read): as its card last saved them (segment AD2L); else a sample's
+    written one its kind's default, an owed one (or a scratch exercise's)
+    empty, at version 0."""
+    own = _stored_templates(exercise_id).get((email.item, email.audience))
     if own is not None:
-        return own.get((email.item, email.audience), ("", ""))
-    return DEFAULT_TEMPLATES[email.kind] if email.ok else ("", "")
+        return own.subject, own.body, own.version
+    subject, body = DEFAULT_TEMPLATES[email.kind] if email.ok else ("", "")
+    return subject, body, 0
 
 
 def emails(exercise_id: str) -> tuple[Email, ...]:
     """Every template the exercise's Process makes owed, in timeline
-    order: the form's, then each outcome's per audience (ruling 16). A
-    scratch exercise's is written once its card saved a subject and a
-    body."""
+    order: the form's, then each outcome's per audience (ruling 16). One
+    is written once its card saved a subject and a body (segment AD2L);
+    one never saved, as the sample has it (a scratch exercise's, owed)."""
     plan = stages.plan_of(exercise_id)
-    own = scratch_templates(exercise_id)
-    written = (
-        frozenset(k for k, (subject, body) in own.items() if subject.strip() and body.strip())
-        if own is not None
-        else _WRITTEN.get(exercise_id, frozenset())
+    stored = _stored_templates(exercise_id)
+    ticked = _stored_sends(exercise_id)  # one read for every item (cold read)
+
+    def ticks(item: str, audience: str) -> bool:
+        if ticked is not None:
+            return (item, audience) in ticked
+        return (item, audience) in _SENDS.get(exercise_id, _DEFAULT_SENDS)
+
+    sample: frozenset[tuple[str, str]] = (
+        frozenset() if _blank_emails(exercise_id) else _WRITTEN.get(exercise_id, frozenset())
     )
+
+    def is_written(pair: tuple[str, str]) -> bool:
+        own = stored.get(pair)
+        return own.written if own is not None else pair in sample
+
     out: list[Email] = []
     for st in plan.stages:
         if st.form:
             for item, (what, when) in _FORM_MAIL.items():
-                if sends(exercise_id, item, APPLICANTS):
+                if ticks(item, APPLICANTS):
                     name = f"{st.label}: {what} · {APPLICANTS}"
-                    ok = (item, APPLICANTS) in written
+                    ok = is_written((item, APPLICANTS))
                     out.append(Email(name, when, ok, item, APPLICANTS))
         for c in st.columns:
             if isinstance(c, stages.Outcome):
                 for who in (APPLICANTS, EVALUATORS):
-                    if sends(exercise_id, c.key, who):
+                    if ticks(c.key, who):
                         name = f"{st.label}: Outcome · {who}"
                         when = f"When {c.label} is released"
-                        out.append(Email(name, when, (c.key, who) in written, c.key, who))
+                        out.append(Email(name, when, is_written((c.key, who)), c.key, who))
     return tuple(out)
 
 

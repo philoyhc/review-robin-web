@@ -57,11 +57,10 @@ CREATE_REFUSALS: dict[str, str] = {
 
 @dataclass
 class Scratch:
-    """One scratch exercise: its details, and each Setup page's state as
-    that page last saved it (later rungs), by page."""
+    """One scratch exercise: its details. Its Setup pages save to the
+    database, as every exercise's do (segments AD2B to AD2L)."""
 
     exercise: sample_data.Exercise
-    pages: dict[str, Any] = field(default_factory=lambda: dict[str, Any]())
 
 
 @dataclass
@@ -188,23 +187,6 @@ def cookie_header(browser_token: str, root: str, secure: bool) -> tuple[bytes, b
         samesite="lax",
     )
     return made.raw_headers[-1]
-
-
-def page(public_id: str, name: str) -> Any:
-    """What a Setup page last saved into the current browser's scratch
-    exercise, else None (never saved, or not a scratch exercise)."""
-    held = get(public_id)
-    return held.pages.get(name) if held else None
-
-
-def save_page(public_id: str, name: str, value: Any) -> None:
-    """Keep a Setup page's state in its scratch exercise (later rungs)."""
-    with _LOCK:
-        found = _browser(_token.get(), time.monotonic())
-        held = found.exercises.get(public_id) if found else None
-        if held is None:
-            raise Refused("No such scratch exercise.")
-        held.pages[name] = value
 
 
 def clear() -> None:

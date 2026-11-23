@@ -100,12 +100,15 @@ def test_every_page_of_the_map_answers_locally(client: TestClient, path: str) ->
 
 def _saves(path: str) -> bool:
     """The pages that save (AD2B, AD2C, AD2E, AD2D) carry no placeholder
-    line (AD1U Item 3): the Lobby, an exercise's Home, Form, Process and
-    Panels."""
+    line (AD1U Item 3): the Lobby, an exercise's Home, Form, Process,
+    Panels and Emails."""
     if path in ("/applydesk/", "/applydesk/operator"):
         return True  # both land on the Lobby
     tail = path.removeprefix("/applydesk/operator/exercises")
-    return tail == "" or re.fullmatch(r"/[a-z0-9]{10}(/form|/process|/panels)?", tail) is not None
+    return (
+        tail == ""
+        or re.fullmatch(r"/[a-z0-9]{10}(/form|/process|/panels|/emails)?", tail) is not None
+    )
 
 
 _SAVES = frozenset(p for p in PAGES if _saves(p))
@@ -1832,13 +1835,13 @@ def test_pages_say_what_works_and_what_is_not_built(client: TestClient) -> None:
     home = client.get("/applydesk/operator/exercises/wa9juxbc2t").text
     assert "Placeholder." not in home  # Home saves (AD1U Item 3)
     emails = client.get("/applydesk/operator/exercises/wa9juxbc2t/emails").text
-    assert "what you do here works on screen, but nothing is saved, and a reload" in emails
+    assert "Placeholder." not in emails  # Emails saves (segment AD2L)
     extract = client.get("/applydesk/operator/exercises/wa9juxbc2t/extract").text
     assert "the files are built from the sample, not from edits made on other pages" in extract
     assert "Keep it apart from the files above." in extract and "logged" not in extract
     emails = client.get("/applydesk/operator/exercises/wa9juxbc2t/emails").text
     assert "come from Apply Desk; Review Robin sends none" in emails
-    assert "and Dossiers' <em>Released</em> still read the sample's templates" in emails
+    assert "A template you save is kept for this exercise" in emails
     evaluations = client.get("/applydesk/operator/exercises/wa9juxbc2t/evaluations").text
     assert "Results come back by dossier" in evaluations
     lobby = client.get("/applydesk/operator/exercises").text

@@ -1,6 +1,6 @@
 """The Emails page in a real Chromium (segment AD1L): each card a
-template that stands alone, written, saved in the tab and reset to its
-kind's default. Skips without a Chromium build, as
+template that stands alone, written, saved (to the database since AD2L)
+and reset to its kind's default. Skips without a Chromium build, as
 `test_form_browser.py`'s."""
 
 from __future__ import annotations
@@ -20,22 +20,25 @@ def _card(page: Page, name: str) -> Locator:
     return page.locator(f'[data-email="{name}"]')
 
 
-def test_an_owed_template_is_written_saved_and_kept_in_the_tab(page: Page) -> None:
+def test_an_owed_template_is_written_saved_and_kept(page: Page) -> None:
     page.goto(EMAILS)
     card = _card(page, OWED)
     save = card.locator('[data-em-act="save"]')
+    said = card.locator("[data-em-said]")
     assert card.locator("[data-em-chip]").text_content() == "Owed" and save.is_disabled()
     card.locator("[data-em-subject]").fill("$exercise_name: your interview outcome")
     assert card.locator("[data-em-unsaved]").is_visible() and save.is_enabled()
     save.click()
     # A subject alone is not written.
+    said.filter(has_text="still owed").wait_for()
     assert card.locator("[data-em-chip]").text_content() == "Owed"
-    assert "still owed" in card.locator("[data-em-said]").inner_text()
     card.locator("[data-em-body]").fill("Dear $applicant_name, …")
     save.click()
+    said.filter(has_text="Saved.").wait_for()
     assert card.locator("[data-em-chip]").text_content() == "Written"
     assert card.locator("[data-em-unsaved]").is_hidden()
-    page.reload()  # kept in the tab
+    assert card.get_attribute("data-em-version") == "2"  # each save counted
+    page.reload()  # kept in the database (segment AD2L)
     card = _card(page, OWED)
     assert card.locator("[data-em-chip]").text_content() == "Written"
     assert card.locator("[data-em-body]").input_value() == "Dear $applicant_name, …"
@@ -69,22 +72,15 @@ def test_leaving_with_a_card_unsaved_asks_first(page: Page) -> None:
     assert asked == ["beforeunload"]
 
 
-def test_an_emptied_template_is_owed_again_and_a_stale_one_leaves_storage(page: Page) -> None:
+def test_an_emptied_template_is_owed_again(page: Page) -> None:
     page.goto(EMAILS)
     card = _card(page, WRITTEN)
     card.locator("[data-em-subject]").fill("")
     card.locator('[data-em-act="save"]').click()
+    card.locator("[data-em-said]").filter(has_text="still owed").wait_for()
     assert card.locator("[data-em-chip]").text_content() == "Owed"
-    # A template Process no longer makes owed is dropped from storage.
-    page.evaluate(
-        "() => { const k = 'applydesk-emails:wa9juxbc2t';"
-        " const v = JSON.parse(sessionStorage.getItem(k));"
-        " v['Gone: Outcome · Applicants'] = {s: 'x', b: 'y'};"
-        " sessionStorage.setItem(k, JSON.stringify(v)); }"
-    )
     page.reload()
-    kept = page.evaluate("() => JSON.parse(sessionStorage.getItem('applydesk-emails:wa9juxbc2t'))")
-    assert list(kept) == [WRITTEN]
+    assert _card(page, WRITTEN).locator("[data-em-chip]").text_content() == "Owed"
 
 
 def test_reset_on_the_default_says_so_and_asks_nothing(page: Page) -> None:

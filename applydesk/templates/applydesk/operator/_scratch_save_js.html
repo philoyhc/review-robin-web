@@ -21,7 +21,7 @@
     var root = btn.closest("[data-unsaved-root]") || document;
     var said = root.querySelector("[data-fb-said]");
     // A page saved to the database names its own words (Process, Panels).
-    var done = btn.dataset.fbSaved || "Saved to this scratch exercise.";
+    var done = btn.dataset.fbSaved || "Saved.";
     btn.addEventListener("click", function () {
       if (btn.dataset.fbStale) {
         if (said) said.textContent = "Reload the page before saving again: it was saved with new keys while you were editing.";
