@@ -459,6 +459,13 @@ def _check(built: tuple[stages.Stage, ...]) -> None:
     stage_keys = [st.key for st in built if st.key]
     if len(set(stage_keys)) < len(stage_keys):
         raise Refused("Two stages share a key.", key="keys")
+    # A value is keyed by its label (AD-57): two alike would be one row
+    # (Codex on #4154).
+    for c in (c for st in built for c in st.columns if isinstance(c, stages.Outcome)):
+        twice = next((v for i, v in enumerate(c.values) if v in c.values[:i]), None)
+        if twice is not None:
+            name = c.label or "An outcome"
+            raise Refused(f"{name} has two values called \u201c{twice}\u201d.", key="values")
     check_references(built)
 
 

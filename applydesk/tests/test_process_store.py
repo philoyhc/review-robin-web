@@ -334,6 +334,26 @@ def test_a_single_outcome_value_advances(session: Session) -> None:
         assert [rows[v] for v in o.values] == [True] * (len(o.values) - 1) + [False]
 
 
+def test_an_outcome_with_a_value_twice_is_refused(session: Session) -> None:
+    """Codex on #4154: values are keyed by label, so a repeated one is
+    refused, not left to fail the transaction on a duplicate key."""
+    built = _built(MODEL)
+    first = next(c for st in built for c in st.columns if isinstance(c, stages.Outcome))
+    twice = tuple(
+        replace(
+            st,
+            columns=tuple(
+                replace(c, values=("Yes", "Yes"), rule=None) if c.key == first.key else c
+                for c in st.columns
+            ),
+        )
+        for st in built
+    )
+    with pytest.raises(Refused) as refused:
+        process_store.save(session, MODEL, twice, 0, None)
+    assert refused.value.key == "values" and "Yes" in str(refused.value)
+
+
 def test_a_weight_in_a_superscript_digit_is_refused() -> None:
     """AD-129: ``"²".isdigit()`` holds and ``int`` refuses it."""
     with pytest.raises(process_save.Refused):
