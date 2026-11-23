@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scale answer mockup</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1f2933; --muted: #6b7280;
+    --border-default: #d4d8de; --border-subtle: #e6e8eb;
+    --accent: #be123c; --accent-soft: #fde7ec; --focus: #2563eb;
+    --track: #c9ced6; --stop: #9aa3ae;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111418; --card: #1a1e24; --ink: #e6e8eb; --muted: #9aa3ae;
+      --border-default: #39404a; --border-subtle: #2a3038;
+      --accent: #fb7185; --accent-soft: #3a1d25; --focus: #60a5fa;
+      --track: #4a525d; --stop: #6b7480;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--ink);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1000px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+  p.lede { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--card); border: 2px solid var(--border-default); border-radius: 10px;
+          padding: 16px 18px; margin-bottom: 20px; }
+  .note { color: var(--muted); font-size: 13px; margin: 2px 0 12px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 10px 10px; border-bottom: 1px solid var(--border-default); vertical-align: middle; }
+  th { font-weight: 500; font-size: 13px; color: var(--muted); background: color-mix(in srgb, var(--border-subtle) 50%, transparent); }
+  .who b { display: block; } .who span { color: var(--muted); font-size: 13px; }
+  .table-scroll { overflow-x: auto; }
+
+  /* ---- the scale ---- */
+  .scale { position: relative; width: 100%; max-width: 420px;
+           padding: 6px 12px 0; user-select: none; touch-action: none; outline: none; }
+  .scale-rail { position: relative; height: 28px; cursor: pointer; }
+  .scale-line { position: absolute; left: 0; right: 0; top: 13px; height: 2px; background: var(--track); border-radius: 1px; }
+  .scale-fill { position: absolute; left: 0; top: 13px; height: 2px; background: var(--accent); width: 0; }
+  .scale-stop { position: absolute; top: 9px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%;
+                background: var(--card); border: 2px solid var(--stop); }
+  .scale-knob { position: absolute; top: 2px; width: 24px; height: 24px; margin-left: -12px; border-radius: 50%;
+                background: var(--accent); border: 3px solid var(--card); box-shadow: 0 0 0 1px var(--accent), 0 1px 3px rgba(0,0,0,.3);
+                transition: left .08s ease-out; cursor: grab; }
+  .scale.dragging .scale-knob { cursor: grabbing; transition: none; }
+  .scale[data-empty] .scale-knob { display: none; }
+  .scale:focus-visible .scale-knob, .scale[data-empty]:focus-visible .scale-line { box-shadow: 0 0 0 3px var(--focus); }
+  .scale-ticks { position: relative; height: 18px; font-size: 12px; color: var(--muted); }
+  .scale-ticks span { position: absolute; transform: translateX(-50%); }
+  .scale-ticks span.on { color: var(--ink); font-weight: 600; }
+  .scale-labels { position: relative; height: 18px; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .scale-labels span { position: absolute; white-space: nowrap; }
+  .scale-labels span:nth-child(1) { left: 0; transform: translateX(-4px); }
+  .scale-labels span:nth-child(2) { left: 50%; transform: translateX(-50%); }
+  .scale-labels span:nth-child(3) { right: 0; transform: translateX(4px); }
+  .scale-bubble { position: absolute; bottom: 30px; transform: translateX(-50%); background: var(--ink); color: var(--card);
+                  font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 6px; white-space: nowrap; display: none; }
+  .scale.dragging .scale-bubble, .scale:focus-visible .scale-bubble { display: block; }
+  .scale[data-empty] .scale-bubble { display: none !important; }
+  .scale[data-mode="slide"] .scale-rail { margin-top: 22px; }
+  .scale-box { width: 84px; font-size: 15px; padding: 4px 6px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--card); color: var(--ink); }
+  .scale-row { display: flex; align-items: center; gap: 10px; }
+  .scale-val { min-width: 88px; padding-left: 6px; font-size: 13px; color: var(--muted); }
+  .scale-val b { color: var(--ink); font-size: 15px; }
+  .scale-clear { font-size: 12px; color: var(--muted); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; }
+  .scale[aria-disabled="true"] { opacity: .55; pointer-events: none; }
+  .numbox { width: 90px; font-size: 16px; padding: 6px 8px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--card); color: var(--ink); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  .phone { width: 390px; max-width: 100%; border: 10px solid #20242a; border-radius: 28px; padding: 14px 12px; background: var(--bg); margin: 0 auto; }
+  .phone .rcard { background: var(--card); border: 1px solid var(--border-default); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+  .phone .lbl { font-size: 13px; color: var(--muted); margin: 10px 0 2px; }
+  .phone .scale { max-width: none; min-width: 0 !important; padding-left: 8px; padding-right: 8px; }
+  .phone .scale-row { flex-wrap: wrap; row-gap: 2px; }
+  .phone .scale-row > div:first-child { flex-basis: 100% !important; }
+  .phone .scale-val { min-width: 0; padding-left: 0; }
+  dl.spec { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: 14px; }
+  dl.spec dt { color: var(--muted); }
+  code { font-size: 13px; }
+  .out { font: 13px ui-monospace, monospace; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>A scale answer for numeric fields — mockup</h1>
+  <p class="lede">An Integer or Decimal response field with both a Min and a Max, set by the operator to answer as a scale, shows as a line with a circle: up to 11 points it snaps to each one; past 11 it slides. Click a point, drag the circle, or use the arrow keys. Nothing is answered until the reviewer chooses.</p>
+
+  <section class="card">
+    <h2>On the reviewer surface (desktop, Responses across)</h2>
+    <p class="note">Two scale fields beside a text answer. Row 1 is unanswered; row 2 is answered. The value the form submits is shown under the table.</p>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th>Reviewee</th><th>Overall score <span class="note">(1–5)</span></th><th>Fit for role <span class="note">(0–10)</span></th><th>Comments</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="who"><b>Rae Tan</b><span>rae@example.edu</span></td>
+          <td><div class="scale" data-min="1" data-max="5" data-step="1" data-name="r1.overall" data-labels="Poor|Fair|Excellent"></div></td>
+          <td><div class="scale" data-min="0" data-max="10" data-step="1" data-name="r1.fit"></div></td>
+          <td><textarea class="numbox" style="width:150px" rows="1" placeholder="Optional"></textarea></td>
+        </tr>
+        <tr>
+          <td class="who"><b>Sam Lee</b><span>sam@example.edu</span></td>
+          <td><div class="scale" data-min="1" data-max="5" data-step="1" data-value="4" data-name="r2.overall" data-labels="Poor|Fair|Excellent"></div></td>
+          <td><div class="scale" data-min="0" data-max="10" data-step="1" data-value="7" data-name="r2.fit"></div></td>
+          <td><textarea class="numbox" style="width:150px" rows="2">Strong interview.</textarea></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="out" id="out"></p>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Variants</h2>
+      <p class="note">Integer 1–5, step 1: five stops.</p>
+      <div class="scale" data-min="1" data-max="5" data-step="1" data-name="v.a"></div>
+      <p class="note" style="margin-top:16px">Decimal 1–5, step 0.5: nine stops.</p>
+      <div class="scale" data-min="1" data-max="5" data-step="0.5" data-value="3.5" data-name="v.b"></div>
+      <p class="note" style="margin-top:16px">With the three labels the operator may type: start, middle, end (optional).</p>
+      <div class="scale" data-min="1" data-max="7" data-step="1" data-labels="Strongly disagree|Neutral|Strongly agree" data-name="v.c"></div>
+      <p class="note" style="margin-top:16px">Session closed: shown, not changeable.</p>
+      <div class="scale" data-min="1" data-max="5" data-step="1" data-value="2" data-disabled data-name="v.d"></div>
+    </section>
+
+    <section class="card">
+      <h2>When it stays a number box</h2>
+      <p class="note">No Min or no Max, or the field not set to answer as a scale (opt-in): today's box.</p>
+      <input class="numbox" type="number" inputmode="numeric" placeholder="Any value">
+      <h2 style="margin-top:18px">Keyboard and screen readers</h2>
+      <dl class="spec">
+        <dt>← → ↑ ↓</dt><dd>one step; the first press on an empty scale picks Min</dd>
+        <dt>Page Up / Down</dt><dd>ten steps on a slide</dd>
+        <dt>Home / End</dt><dd>Min / Max</dd>
+        <dt>Delete</dt><dd>clears the answer</dd>
+        <dt>Announced as</dt><dd><code>role="slider"</code>, e.g. “Overall score for Rae Tan, 4 of 1 to 5”, or “not answered”</dd>
+      </dl>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>More than 11 points: a slide, no snaps shown</h2>
+    <p class="note">Past 11 points the stops would sit too close to tap, so the line shows none. The circle follows the finger smoothly; the value still lands on the field's Step, and a readout above the circle says what it is while dragging (and while focused). Only Min, the midpoint and Max are numbered. Arrow keys move one step; Page Up / Page Down ten.</p>
+    <div class="grid2">
+      <div>
+        <p class="note">A. Slide with its readout. Integer 0–100, Step 1 (101 points).</p>
+        <div class="scale" data-mode="slide" data-min="0" data-max="100" data-step="1" data-labels="None|Some|Complete" data-name="s.a"></div>
+        <p class="note" style="margin-top:22px">Decimal 0–10, Step 0.1 (101 points), answered.</p>
+        <div class="scale" data-mode="slide" data-min="0" data-max="10" data-step="0.1" data-value="6.4" data-name="s.b"></div>
+      </div>
+      <div>
+        <p class="note">B. Slide with a box beside it, for an exact value: typing moves the circle, sliding fills the box.</p>
+        <div class="scale" data-mode="slide" data-box data-min="0" data-max="100" data-step="1" data-name="s.c"></div>
+        <p class="note" style="margin-top:22px">Integer 1,000–2,000, Step 5 (201 points), with a box.</p>
+        <div class="scale" data-mode="slide" data-box data-min="1000" data-max="2000" data-step="5" data-value="1450" data-name="s.d"></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:14px">On a phone a 300 px line holding 101 points gives each point about 3 px, so a finger lands near a value, not on it: the readout shows where it landed, and the arrow keys or the box (B) make it exact.</p>
+  </section>
+
+  <section class="card">
+    <h2>On a phone (Responses stacked, under 640 px)</h2>
+    <p class="note">Each reviewee a card, each field a label over its answer; the scale takes the card's full width, so its stops are about 70 px apart at 390 px.</p>
+    <div class="phone">
+      <div class="rcard">
+        <b>Rae Tan</b>
+        <div class="lbl">Overall score (1–5)</div>
+        <div class="scale" data-min="1" data-max="5" data-step="1" data-labels="Poor|Fair|Excellent" data-name="p.overall"></div>
+        <div class="lbl">Fit for role (0–10)</div>
+        <div class="scale" data-min="0" data-max="10" data-step="1" data-value="6" data-name="p.fit"></div>
+        <div class="lbl">Share of time on the role (0–100%)</div>
+        <div class="scale" data-mode="slide" data-min="0" data-max="100" data-step="1" data-value="35" data-name="p.share"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  function decimals(step) { return (String(step).split(".")[1] || "").length; }
+  function fmt(v, d) { return d ? v.toFixed(d) : String(Math.round(v)); }   // d: decimals of Min, Max and Step together
+  document.querySelectorAll(".scale").forEach(function (el) {
+    var min = +el.dataset.min, max = +el.dataset.max, step = +el.dataset.step;
+    var n = Math.round((max - min) / step) + 1;                 // points on the line
+    var dp = Math.max(decimals(min), decimals(max), decimals(step));
+    var slide = el.dataset.mode === "slide";
+    var value = el.dataset.value === undefined ? null : +el.dataset.value;
+    var name = el.dataset.name, labels = (el.dataset.labels || "").split("|");
+    var disabled = el.hasAttribute("data-disabled");
+    var labelled = !!(labels[0] || labels[1] || labels[2]);
+    var w = slide ? 240 : Math.max(5, n) * 26;              // about 26 px a stop
+    if (labelled) w = Math.max(w, 260);                       // room for three labels
+    el.style.minWidth = (w + 100) + "px";
+    el.setAttribute("role", "slider");
+    // Its accessible name: the field and, in a table or a card, whose answer it is.
+    var field = "", who = "";
+    var td = el.closest("td");
+    if (td) {
+      var th = td.closest("table").querySelectorAll("thead th")[td.cellIndex];
+      field = th ? th.childNodes[0].textContent.trim() : "";
+      var w = td.parentElement.querySelector(".who b"); who = w ? w.textContent : "";
+    } else {
+      var prev = el.previousElementSibling;
+      field = prev ? prev.textContent.replace(/\s*\(.*$/, "").replace(/[.:].*$/, "").trim() : "";
+      var card = el.closest(".rcard"); var cb = card && card.querySelector("b"); who = cb ? cb.textContent : "";
+    }
+    el.setAttribute("aria-label", field + (who ? " for " + who : ""));
+    el.setAttribute("tabindex", disabled ? "-1" : "0");
+    el.setAttribute("aria-valuemin", min); el.setAttribute("aria-valuemax", max);
+    if (disabled) el.setAttribute("aria-disabled", "true");
+
+    var row = document.createElement("div"); row.className = "scale-row";
+    var box = document.createElement("div"); box.style.flex = "1";
+    var rail = document.createElement("div"); rail.className = "scale-rail";
+    rail.innerHTML = '<div class="scale-line"></div><div class="scale-fill"></div>';
+    var ticks = document.createElement("div"); ticks.className = "scale-ticks";
+    function tick(i, frac) {
+      var t = document.createElement("span"); t.style.left = (frac * 100) + "%";
+      t.textContent = fmt(min + i * step, dp); t.dataset.i = i; ticks.appendChild(t);
+    }
+    if (slide) {
+      var mid = Math.round((n - 1) / 2);
+      [0, mid, n - 1].forEach(function (i) { tick(i, i / (n - 1)); });
+    } else {
+      for (var i = 0; i < n; i++) {
+        var s = document.createElement("div"); s.className = "scale-stop"; s.style.left = (i / (n - 1)) * 100 + "%"; rail.appendChild(s);
+        tick(i, i / (n - 1));
+      }
+    }
+    var knob = document.createElement("div"); knob.className = "scale-knob"; rail.appendChild(knob);
+    var bubble = document.createElement("div"); bubble.className = "scale-bubble"; rail.appendChild(bubble);
+    box.appendChild(rail); box.appendChild(ticks);
+    if (labels[0] || labels[1] || labels[2]) {
+      var lab = document.createElement("div"); lab.className = "scale-labels";
+      lab.innerHTML = "<span></span><span></span><span></span>";
+      for (var k = 0; k < 3; k++) lab.children[k].textContent = labels[k] || "";
+      box.appendChild(lab);
+    }
+    var side = document.createElement("div"); side.className = "scale-val";
+    row.appendChild(box); row.appendChild(side); el.appendChild(row);
+    var numbox = null;
+    if (el.hasAttribute("data-box")) {
+      numbox = document.createElement("input"); numbox.type = "number"; numbox.className = "scale-box";
+      numbox.min = min; numbox.max = max; numbox.step = step; numbox.placeholder = fmt(min, dp) + "–" + fmt(max, dp);
+      numbox.setAttribute("aria-label", "Exact value");
+      numbox.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+      numbox.addEventListener("keydown", function (e) { e.stopPropagation(); });
+      numbox.addEventListener("input", function () {
+        if (numbox.value === "") { value = null; render(); return; }
+        var v = +numbox.value; if (isNaN(v)) return;
+        v = Math.min(max, Math.max(min, min + Math.round((v - min) / step) * step));
+        value = +fmt(v, dp); render(null, true);
+      });
+      numbox.addEventListener("change", function () { render(); });   // on commit, the box shows the answer it rounded to
+      row.insertBefore(numbox, side);
+    }
+    var hidden = document.createElement("input"); hidden.type = "hidden"; hidden.name = name; el.appendChild(hidden);
+
+    function fracOf(v) { return (v - min) / (max - min); }
+    // render: dragFrac, when dragging a slide, places the circle under the finger, not on the value
+    function render(dragFrac, fromBox) {
+      var fill = rail.querySelector(".scale-fill");
+      if (value === null) {
+        el.setAttribute("data-empty", ""); el.removeAttribute("aria-valuenow");
+        el.setAttribute("aria-valuetext", "not answered");
+        side.textContent = numbox ? "" : "Not answered"; fill.style.width = "0"; hidden.value = "";
+        if (numbox && !fromBox) numbox.value = "";
+      } else {
+        var p = (dragFrac === undefined || dragFrac === null ? fracOf(value) : dragFrac) * 100;
+        el.removeAttribute("data-empty"); knob.style.left = p + "%"; bubble.style.left = p + "%"; fill.style.width = p + "%";
+        bubble.textContent = fmt(value, dp);
+        el.setAttribute("aria-valuenow", value);
+        el.setAttribute("aria-valuetext", fmt(value, dp) + " of " + fmt(min, dp) + " to " + fmt(max, dp));
+        side.innerHTML = numbox ? "" : "<b>" + fmt(value, dp) + "</b> ";
+        if (!disabled) {
+          var c = document.createElement("button"); c.type = "button"; c.className = "scale-clear"; c.textContent = "clear";
+          c.addEventListener("click", function () { value = null; render(); update(); });
+          side.appendChild(c);
+        }
+        hidden.value = fmt(value, dp);
+        if (numbox && !fromBox) numbox.value = fmt(value, dp);
+      }
+      ticks.querySelectorAll("span").forEach(function (t) {
+        t.classList.toggle("on", value !== null && +t.dataset.i === Math.round((value - min) / step));
+      });
+      update();
+    }
+    function fracAt(clientX) {
+      var r = rail.getBoundingClientRect();
+      return Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+    }
+    function valueAt(f) { return +fmt(min + Math.round(f * (n - 1)) * step, dp); }
+    rail.addEventListener("pointerdown", function (ev) {
+      if (disabled) return;
+      el.focus(); el.classList.add("dragging"); rail.setPointerCapture(ev.pointerId);
+      var f = fracAt(ev.clientX); value = valueAt(f); render(slide ? f : null);
+    });
+    rail.addEventListener("pointermove", function (ev) {
+      if (!el.classList.contains("dragging")) return;
+      var f = fracAt(ev.clientX), v = valueAt(f);
+      if (slide) { value = v; render(f); }
+      else if (v !== value) { value = v; render(); }
+    });
+    ["pointerup", "pointercancel"].forEach(function (k) {
+      rail.addEventListener(k, function () {
+        if (!el.classList.contains("dragging")) return;
+        el.classList.remove("dragging"); render();   // a slide settles on its value's spot
+      });
+    });
+    el.addEventListener("keydown", function (ev) {
+      var k = ev.key, v = value, big = slide ? 10 : 1;
+      if (k === "ArrowRight" || k === "ArrowUp") v = v === null ? min : Math.min(max, v + step);
+      else if (k === "ArrowLeft" || k === "ArrowDown") v = v === null ? min : Math.max(min, v - step);
+      else if (k === "PageUp") v = v === null ? min : Math.min(max, v + big * step);
+      else if (k === "PageDown") v = v === null ? min : Math.max(min, v - big * step);
+      else if (k === "Home") v = min; else if (k === "End") v = max;
+      else if (k === "Delete" || k === "Backspace") v = null;
+      else return;
+      ev.preventDefault(); value = v === null ? null : +fmt(v, dp); render();
+    });
+    render();
+  });
+  function update() {
+    var out = document.getElementById("out"); if (!out) return;
+    var vals = Array.from(document.querySelectorAll("table input[type=hidden]"))
+      .map(function (i) { return i.name + "=" + (i.value || "(blank)"); });
+    out.textContent = "Submits: " + vals.join("  ·  ");
+  }
+})();
+</script>
+</body>
+</html>

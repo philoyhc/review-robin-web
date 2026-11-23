@@ -864,6 +864,12 @@ Segments in order; each gets a plan in this folder when it starts.
 - **AD6:** a gate's progress line, and each evaluator's share of it on
   the Review Robin card, is canned beside counted pairs until Review
   Robin's status read replaces it (AD1I; AD-32; AD1M).
+- **AD6 (or its own item): a scale on a gate** (author, 2026-11-23;
+  RRW `guide/rrw_reviewer_phone_and_scale.md` §3). The gate's *Response
+  fields* offer *Integer (scale)* and *Decimal (scale)*, stored as the
+  number type plus a `gate_field` flag and three labels, handed off as
+  Review Robin's scale attributes. After Review Robin's scale item
+  lands; until then Apply Desk does not offer the two types.
 - **AD2:** operator pages' dates as Review Robin's `YYYY-MM-DD HH:MM`
   through one helper, once dates are stored (U18; AD1P).
 - **AD2:** the store that replaces the scratch store caps what one
