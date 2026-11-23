@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Scale preview — Admin{% endblock %}
+{% block body_class %}ui-v2{% endblock %}
+
+{% block content %}
+  {# Segment 20P Item 1 rung 2: the scale answer on hard-wired fields, for
+     the author's browser check on a local run (`guide/segment_20P_scale_answer.md`).
+     Each box is the reviewer surface's number box, as
+     `reviewer/_response_control.html` renders it, with the attributes the
+     setting will add at rung 3. Nothing here saves. Removed at rung 3. #}
+  <h1>Scale preview</h1>
+  <p class="muted">A scaffold for checking the scale answer in a browser: click, drag, the arrow keys, Page Up and Page Down, Home, End, Delete and <em>clear</em>. Nothing here is saved.</p>
+
+  <div class="page-grid">
+    <div class="card" data-scale-preview>
+      <h2>Snaps (up to 11 points)</h2>
+      <p class="muted">Integer 1 to 5, Step 1, with three labels; unanswered.</p>
+      <input type="number" inputmode="numeric" name="p1" aria-label="Overall merit for Ana Lee" value=""
+             min="1" max="5" step="any" data-rs-step="1" data-rs-step-anchor="1"
+             data-rs-scale="snap" data-rs-scale-start="Poor" data-rs-scale-middle="Fair" data-rs-scale-end="Excellent">
+      <p class="muted">Decimal 0 to 1, Step 0.1 (11 points, snaps); answered 0.7.</p>
+      <input type="number" inputmode="decimal" name="p2" aria-label="Fit for Ana Lee" value="0.7"
+             min="0" max="1" step="any" data-rs-step="0.1" data-rs-step-anchor="0" data-rs-scale="snap">
+      <p class="muted">Integer 1 to 7, no labels; a closed session (read-only), answered 5.</p>
+      <input type="number" inputmode="numeric" name="p3" aria-label="Clarity for Ana Lee" value="5"
+             min="1" max="7" step="any" data-rs-step="1" data-rs-step-anchor="1" data-rs-scale="snap" disabled>
+    </div>
+    <div class="card" data-scale-preview>
+      <h2>Slides (more than 11 points)</h2>
+      <p class="muted">Integer 0 to 100, Step 1, with start and end labels; unanswered.</p>
+      <input type="number" inputmode="numeric" name="p4" aria-label="Confidence for Ana Lee" value=""
+             min="0" max="100" step="any" data-rs-step="1" data-rs-step-anchor="0"
+             data-rs-scale="slide" data-rs-scale-start="Not at all" data-rs-scale-end="Fully">
+      <p class="muted">Integer 1,000 to 2,000, Step 1; answered 1450. Type in the box to move the circle.</p>
+      <input type="number" inputmode="numeric" name="p5" aria-label="Budget for Ana Lee" value="1450"
+             min="1000" max="2000" step="any" data-rs-step="1" data-rs-step-anchor="1000" data-rs-scale="slide">
+      <p class="muted">Decimal 0 to 10, Step 0.5 (21 points, slides).</p>
+      <input type="number" inputmode="decimal" name="p6" aria-label="Score for Ana Lee" value=""
+             min="0" max="10" step="any" data-rs-step="0.5" data-rs-step-anchor="0" data-rs-scale="slide">
+    </div>
+  </div>
+  {% include "reviewer/_scale_js.html" %}
+{% endblock %}
