@@ -6,10 +6,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 
 from applydesk import db, exercises, operators, people, sample_data, seed
-from applydesk.models import Exercise
+from applydesk.models import Exercise, Person
 from applydesk.tests._host import host_with
 from cordware.settings import identity_settings
 
@@ -133,5 +134,89 @@ def test_the_seed_leaves_ordinary_exercises_alone() -> None:
         assert result.exercises_added == 0
         found = exercises.row(session, "k7m2p9q4rg")
         assert found is not None and (found.name, found.revision) == ("Mine", 0)
+    finally:
+        session.close()
+
+
+def test_another_operator_s_drafts_stay_theirs_until_they_add_you() -> None:
+    """Cold read: the Lobby and Home show an ordinary exercise only to
+    those who operate it; its name never reaches another operator's page,
+    not even in Details' code list; a co-operator added on it sees it."""
+    from cordware.identity import Identity
+
+    _row("k7m2p9q4rh", "Mine")
+    session = db.new_session()
+    try:
+        platform = operators.Actor(None, is_super_admin=True, platform=True)
+        ben = people.resolve(
+            session, Identity(principal_id="o-ben", email="ben@x.edu", name="Ben", tenant_id="t")
+        )
+        assert ben is not None
+        operators.admit(session, platform, ben)
+        theirs = operators.create_exercise(
+            session, operators.Actor(ben), "k7m2p9q4rj", "Bens Draft"
+        )
+        theirs.code, theirs.code_key, theirs.revision = "BEN-1", "ben-1", 1
+        session.commit()
+        ben_id = ben.id
+    finally:
+        session.close()
+    client = _client()
+    assert "Bens Draft" not in client.get(LOBBY).text
+    assert client.get(f"{LOBBY}/k7m2p9q4rj").status_code == 404
+    home = client.get(f"{LOBBY}/k7m2p9q4rh").text
+    assert "Bens Draft" not in home and "BEN-1" not in home
+    # Ben adds the viewer as an operator: now it is theirs to see too.
+    session = db.new_session()
+    try:
+        me = people.resolve(session, seed._fake_identity(identity_settings))  # pyright: ignore[reportPrivateUsage]  -- the signed-in fake
+        found = exercises.row(session, "k7m2p9q4rj")
+        ben = session.get(Person, ben_id)
+        assert me is not None and found is not None and ben is not None
+        operators.add_operator(session, found, operators.Actor(ben), me)
+        session.commit()
+    finally:
+        session.close()
+    assert "Bens Draft" in _client().get(LOBBY).text
+    assert _client().get(f"{LOBBY}/k7m2p9q4rj").status_code == 200
+
+
+def test_a_code_clash_with_an_exercise_you_do_not_operate_names_neither() -> None:
+    _row("k7m2p9q4rk", "Mine")
+    session = db.new_session()
+    try:
+        other = exercises.row(session, "k7m2p9q4rk")
+        assert other is not None
+        sample = exercises.row(session, sample_data.EXERCISES[0].public_id)
+        assert sample is not None and sample.code and sample.name
+        code, name = sample.code, sample.name
+        with pytest.raises(exercises.Refused) as refused:
+            exercises.save_panel(session, "k7m2p9q4rk", "Mine", code, [], 0, None)
+        assert "another live exercise" in str(refused.value)
+        assert name not in str(refused.value)
+    finally:
+        session.close()
+
+
+def test_a_fresh_ordinary_exercise_is_not_recorded_as_a_sample() -> None:
+    """Cold read: its first panel save neither renames it nor audits a
+    sample's settings; the row's own values stand."""
+    from sqlalchemy import select
+
+    from applydesk.models import AuditEvent
+
+    _row("k7m2p9q4rm", "Fresh")
+    session = db.new_session()
+    try:
+        exercises.retag(session, ["k7m2p9q4rm"], ["x"], add=True, actor=None)
+        session.commit()
+        found = exercises.row(session, "k7m2p9q4rm")
+        assert found is not None and (found.name, found.revision) == ("Fresh", 2)
+        assert not session.scalar(
+            select(AuditEvent).where(
+                AuditEvent.exercise_id == found.id,
+                AuditEvent.event_type == "exercise.settings_recorded",
+            )
+        )
     finally:
         session.close()

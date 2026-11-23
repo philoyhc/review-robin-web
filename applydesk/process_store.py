@@ -984,7 +984,7 @@ def _form_seed(public_id: str) -> str:
     nothing the pages showed."""
     from applydesk import sample_data
 
-    e = sample_data.exercise(public_id)
+    e = sample_data.sample(public_id)  # an ordinary exercise is a Draft; no read
     if e is None or e.state == "Draft":
         return "draft"
     return "open" if e.form_open else "closed"

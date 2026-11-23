@@ -10,12 +10,14 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import func, select
 from sqlalchemy.exc import OperationalError
 
-from applydesk import db, exercises, sample_data
-from applydesk.models import AuditEvent
+from applydesk import db, exercises, operators, people, sample_data
+from applydesk.models import AuditEvent, Exercise
 from applydesk.tests._host import host_with
 from applydesk.web import MAX_BODY
+from cordware.settings import identity_settings
 
 LOBBY = "/applydesk/operator/exercises"
 
@@ -97,8 +99,59 @@ def test_at_most_fifty_live_of_one_s_making(monkeypatch: pytest.MonkeyPatch) -> 
     assert (
         client.post(f"{LOBBY}/panel", data={"action": "archive", "id": made[0]}).status_code == 303
     )
-    _create(client, "Room again")
-    # The seeded samples, recorded as made by this same person, never count.
+    again = _create(client, "Room again")
+    assert (
+        client.post(f"{LOBBY}/new", data={"name": "Full again"})
+        .headers["location"]
+        .endswith("?said=full")
+    )
+    deleted = client.post(
+        f"{LOBBY}/panel", data={"action": "delete", "id": again, "confirm": "yes"}
+    )
+    assert deleted.status_code == 303 and "said=deleted" in deleted.headers["location"]
+    _create(client, "Room after a delete")
+    # The seeded samples, recorded as made by this same person, never count:
+    # they are live and theirs, yet three were made under a cap of 3.
+    session = db.new_session()
+    try:
+        samples = session.scalar(
+            select(func.count(Exercise.id)).where(
+                Exercise.public_id.in_(sorted(sample_data.SAMPLE_IDS)),
+                Exercise.created_by_id.is_not(None),
+            )
+        )
+        assert samples
+    finally:
+        session.close()
+
+
+def test_an_allowlisted_operator_is_capped_too(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Not only the super-admin: an ordinary operator on the allowlist."""
+    monkeypatch.setattr(exercises, "MOST_MADE", 1)
+    monkeypatch.setattr(identity_settings, "fake_auth_super_admin", False)
+    client = _client()
+    _create(client, "Only one")
+    assert (
+        client.post(f"{LOBBY}/new", data={"name": "Two"}).headers["location"].endswith("?said=full")
+    )
+
+
+def test_someone_off_the_list_is_told_so_not_full(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cold read: the allowlist is checked before the cap."""
+    from cordware.identity import Identity
+
+    monkeypatch.setattr(exercises, "MOST_MADE", 0)
+    session = db.new_session()
+    try:
+        stranger = people.resolve(
+            session, Identity(principal_id="o-x", email="x@x.edu", name="X", tenant_id="t")
+        )
+        assert stranger is not None and not operators.may_operate(stranger)
+        with pytest.raises(exercises.Refused) as refused:
+            exercises.make(session, operators.Actor(stranger), "Not mine to make")
+        assert refused.value.key == "not_listed"
+    finally:
+        session.close()
 
 
 def test_the_cap_is_fifty() -> None:
