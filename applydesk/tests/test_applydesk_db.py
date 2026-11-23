@@ -206,3 +206,60 @@ def test_the_first_sign_in_backfill_takes_only_a_person_s_own_binding(tmp_path: 
     with engine.connect() as c:
         got = dict(c.exec_driver_sql("SELECT id, first_signed_in_at FROM person").all())
     assert str(got[1]).startswith("2026-11-03") and str(got[2]).startswith("2026-11-04")
+
+
+def _fresh(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
+    """A database built by its migration history, as a localhost one is,
+    in place of the fixture's (made from the models, with no history)."""
+    url = f"sqlite:///{tmp_path / 'local.db'}"
+    monkeypatch.setenv("APPLYDESK_DATABASE_URL", url)
+    db.engine.cache_clear()
+    db._sessions.cache_clear()  # pyright: ignore[reportPrivateUsage]  -- a new database
+    command.upgrade(_config(url), "head")
+    return url
+
+
+@pytest.mark.usefixtures("applydesk_db")
+def test_reset_and_blank_drafts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Segment AD2G: `--reset --blank 3` leaves the samples and three
+    blank drafts, whatever was there before; a second `--blank` numbers
+    on from the drafts already there."""
+    _fresh(tmp_path, monkeypatch)
+    assert main(["--blank", "2"]) == 0
+    assert main(["--reset", "--blank", "3"]) == 0
+    assert "reset, then seeded" in capsys.readouterr().out
+    session = db.new_session()
+    names = sorted(
+        n for n in session.scalars(select(Exercise.name)) if n and n.startswith("Blank exercise")
+    )
+    assert names == ["Blank exercise 1", "Blank exercise 2", "Blank exercise 3"]
+    total = session.scalar(select(func.count()).select_from(Exercise))
+    assert total == len(sample_data.EXERCISES) + 3
+    session.close()
+    assert main(["--blank", "1"]) == 0
+    session = db.new_session()
+    assert session.scalar(select(Exercise.id).where(Exercise.name == "Blank exercise 4"))
+    session.close()
+
+
+@pytest.mark.usefixtures("applydesk_db")
+def test_reset_is_refused_outside_local(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _fresh(tmp_path, monkeypatch)
+    assert main(["--blank", "1"]) == 0
+    monkeypatch.setattr(identity_settings, "app_env", "production")
+    assert main(["--reset"]) == 2
+    assert "refused" in capsys.readouterr().err
+    monkeypatch.setattr(identity_settings, "app_env", "local")
+    session = db.new_session()
+    assert session.scalar(select(Exercise.id).where(Exercise.name == "Blank exercise 1"))
+    session.close()
+
+
+@pytest.mark.usefixtures("applydesk_db")
+def test_blank_takes_at_most_the_cap() -> None:
+    with pytest.raises(SystemExit):
+        main(["--blank", "51"])
