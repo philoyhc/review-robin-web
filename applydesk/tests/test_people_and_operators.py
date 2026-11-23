@@ -161,6 +161,11 @@ def test_a_name_search_reads_past_ascii(session: Session) -> None:
     person.display_name = "Straße"
     session.flush()
     assert [p.id for p in directory.search(session, "strasse", None).on_record] == [person.id]
+    # A full-width name that casefolds longer still fits its key: Postgres
+    # (ci-postgres) holds the column to its width (Codex on #4169).
+    person.display_name = "ß" * 255
+    session.flush()
+    assert person.display_name_key == "ss" * 255
 
 
 def test_a_failed_directory_search_says_so_and_adds_no_one(session: Session) -> None:

@@ -33,7 +33,7 @@ def upgrade() -> None:
         sa.Column("exercise_id", sa.Integer(), nullable=False),
         sa.Column("key", sa.String(length=40), nullable=False),
         sa.Column("name", sa.String(length=80), nullable=False),
-        sa.Column("name_key", sa.String(length=80), nullable=False),
+        sa.Column("name_key", sa.String(length=240), nullable=False),
         sa.Column("position", sa.Integer(), nullable=False),
         sa.Column("retired_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["exercise_id"], ["exercise.id"], name="fk_panel_exercise"),
@@ -94,7 +94,9 @@ def upgrade() -> None:
         )
 
     with op.batch_alter_table("person", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("display_name_key", sa.String(length=255), nullable=True))
+        # Three times the name's width: casefolding lengthens some letters
+        # ("ß" is "ss"), at most to three (Codex on #4169).
+        batch_op.add_column(sa.Column("display_name_key", sa.String(length=765), nullable=True))
         batch_op.create_index(
             batch_op.f("ix_person_display_name_key"), ["display_name_key"], unique=False
         )

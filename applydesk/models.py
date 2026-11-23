@@ -62,8 +62,10 @@ class Person(Base):
     display_name: Mapped[str | None] = mapped_column(String(255))
     # The casefolded name the people searches match (segment AD2E, AD-127):
     # SQLite's `lower()` is ASCII-only, so "émile" missed "Émile" there.
-    # Kept in step with `display_name` by `_name_key` below.
-    display_name_key: Mapped[str | None] = mapped_column(String(255), index=True)
+    # Kept in step with `display_name` by `_name_key` below. Three times the
+    # name's width: casefolding lengthens some letters ("ß" is "ss"), at
+    # most to three (Codex on #4169).
+    display_name_key: Mapped[str | None] = mapped_column(String(765), index=True)
     bound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # When they first signed in (segment AD2W): a directory pick is bound
     # without signing in, so `bound_at` is not it.
@@ -466,7 +468,7 @@ class Panel(Base):
     exercise_id: Mapped[int] = _exercise_fk("panel")
     key: Mapped[str] = mapped_column(String(40), nullable=False)
     name: Mapped[str] = mapped_column(String(80), nullable=False)
-    name_key: Mapped[str] = mapped_column(String(80), nullable=False)
+    name_key: Mapped[str] = mapped_column(String(240), nullable=False)  # casefolded: 3 x 80
     position: Mapped[int] = mapped_column(Integer, nullable=False)
     retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
