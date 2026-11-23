@@ -36,13 +36,15 @@
         .then(function (got) {
           btn.disabled = false;
           if (got[0]) {
-            // A save that says its new revision (Panels): the next Save
-            // carries it, so edits kept since can be saved (AD2E).
-            if (got[1] && typeof got[1].revision === "number") btn.dataset.revision = String(got[1].revision);
             // Edits made while the save was on its way are not in it (Codex):
             // the page stays unsaved until a later Save carries them.
             var now = snap();
-            if ((typeof now === "string" ? now : JSON.stringify(now)) === sent) {
+            var same = (typeof now === "string" ? now : JSON.stringify(now)) === sent;
+            // A save that says its new revision (Panels): the next Save
+            // carries it, so edits kept since can be saved (AD2E). Set after
+            // the comparison, as the snapshot carries the revision.
+            if (got[1] && typeof got[1].revision === "number") btn.dataset.revision = String(got[1].revision);
+            if (same) {
               if (said) said.textContent = done;
               root.dispatchEvent(new Event("applydesk:saved"));
               // A save that keyed something anew (a panel, a renumbered
