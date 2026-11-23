@@ -31,6 +31,9 @@ from applydesk.models import Candidate, Exercise, Person
 VIA = ("search", "csv")
 #: The most rows one CSV adds.
 MAX_ROWS = 2000
+#: The longest address a person row holds (``Person.email``, ``String(320)``):
+#: a longer one is a bad row, not a failed insert (Codex on #4161).
+MAX_EMAIL = 320
 _EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 
 
@@ -193,8 +196,9 @@ def import_csv(session: Session, public_id: str, text: str, actor: Person | None
             break
         address = row[at_email].strip() if at_email < len(row) else ""
         name = row[at_name].strip() if at_name is not None and at_name < len(row) else ""
-        if not _EMAIL.fullmatch(address):
-            bad.append(f"Row {n}: “{address}” is not an email address.")
+        if len(address) > MAX_EMAIL or not _EMAIL.fullmatch(address):
+            shown = address if len(address) <= 60 else address[:57] + "…"
+            bad.append(f"Row {n}: “{shown}” is not an email address.")
             continue
         key = people.email_key(address) or ""
         if key in seen:

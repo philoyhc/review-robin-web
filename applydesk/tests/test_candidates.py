@@ -70,6 +70,20 @@ def test_a_csv_saves_its_good_rows_and_lists_the_rest_back() -> None:
         session.close()
 
 
+def test_a_csv_address_too_long_to_store_is_a_bad_row() -> None:
+    """Codex on #4161: an address longer than a person row holds is listed
+    back with the bad rows, and the good rows still save."""
+    long = "a" * 315 + "@x.edu"  # 321 characters: matches the pattern, too long
+    session = db.new_session()
+    try:
+        done = candidates.import_csv(session, MODEL, f"Email\n{long}\nok@example.edu\n", None)
+        assert done.added == 1 and len(done.bad) == 1
+        assert done.bad[0].startswith("Row 2: “aaa") and "is not an email address" in done.bad[0]
+        assert [c.email for c in candidates.listing(session, MODEL)] == ["ok@example.edu"]
+    finally:
+        session.close()
+
+
 def test_a_csv_without_an_email_column_is_refused() -> None:
     session = db.new_session()
     try:
