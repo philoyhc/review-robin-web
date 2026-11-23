@@ -87,7 +87,7 @@ the PR body unless it says otherwise.
   field's `validation`, not a type; up to 11 points it snaps, past that
   it slides with a number box; three optional labels (start, middle,
   end); a Step required. Apply Desk's gates follow it
-  (`applydesk/guide/todo_master.md`).
+  (`applydesk/guide/todo_master.md`). **Plan:** `guide/segment_20P_scale_answer.md` (Item 1; Item 2 is Apply Desk's).
 
 ### Sequencing notes
 
