@@ -3,8 +3,8 @@
 > **Built:** every page below, as a working scaffold on sample data, behind
 > a real check of who may reach it. Every move works on screen. An
 > exercise's own settings (Details, the Lobby's name, code and tags, its
-> archive), its Process (stages, gates, outcomes, rules, the form's state)
-> and its Candidates are stored in the database; the rest of a sample
+> archive), its Process (stages, gates, outcomes, rules, the form's state),
+> its Form and its Candidates are stored in the database; the rest of a sample
 > exercise saves nothing until a later AD2 segment, a scratch exercise's
 > other pages are held in the server's memory ("Scratch exercises"), and
 > nothing is sent to Review Robin until AD6.
@@ -475,10 +475,11 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     *Cancel*, *Unselect others* and *Unselect all* only untick rows in the
     browser. *New exercise*, the tick boxes and the panel's opening work.
 - **Scratch exercises** (`applydesk/scratch.py`). Until AD2 stores the
-  rest, an operator sets an exercise up end to end in one whose form and
-  emails are held in the server's memory and never written anywhere. Its
-  settings, its Process, its Panels and its Candidates are the database's, as
-  any exercise's (Details; "The Process page"; "The Panels page").
+  rest, an operator sets an exercise up end to end in one whose emails
+  are held in the server's memory and never written anywhere. Its
+  settings, its Process, its Panels, its Form and its Candidates are the
+  database's, as any exercise's (Details; "The Process page"; "The Panels
+  page"; "The Form page").
   - **Making and keeping.** *New exercise* opens a form asking for a name
     (1–200 characters); *Create* makes a blank draft, as *Graduate Travel
     Grant 2027* (one stage holding the form, nothing else), and lands on its
@@ -515,7 +516,7 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     Evaluations show their empty states.
   - **A save** is a same-site JSON post (403 for another site, 415 for
     non-JSON, 400 for malformed JSON) of at most `scratch.MAX_BODY`
-    (256 KiB; 413 past it). The page (Details, Process and Panels apart,
+    (256 KiB; 413 past it). The page (Details, Process, Panels and Form apart,
     which save to the database and say *Saved.*) says *Saved to this scratch exercise.* or the reason it was
     refused, and a saved page's *Unsaved changes* marker clears. A page edited while its save was on the way
     stays unsaved. Shapes are checked, not the plan: what a page flags
@@ -579,10 +580,10 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
 ## The Form page
 
 The application form builder on the Form tab,
-`/operator/exercises/<id>/form`. Every move works in the browser. On a
-sample exercise nothing is saved until AD2, and a reload restores the
-sample form; a scratch exercise saves ("Scratch exercises"). A blank exercise
-shows the form's own card and one empty String card, open.
+`/operator/exercises/<id>/form`. Every move works in the browser, and *Save*
+keeps the form in the database for every exercise, sample or scratch ("Saving
+Form"). Until it is first saved, a sample exercise shows its sample form. A
+blank exercise shows the form's own card and one empty String card, open.
 
 - **Layout.** The form's own *Form title* and *Description* at the top: it
   cannot be deleted or moved, collapses like a card, and its title is
@@ -657,8 +658,8 @@ shows the form's own card and one empty String card, open.
   (a text card is no question) and required ones; a click goes to the card
   (leaving Preview if it is showing). Nothing in it is numbered. It follows
   every change.
-- **Keeping an edit** (ruling 23). One *Save*, in the Outline, disabled
-  on a sample exercise until AD2; an *Unsaved changes* marker beside it once anything is edited
+- **Keeping an edit** (ruling 23). One *Save*, in the Outline, live on every
+  exercise ("Saving Form"); an *Unsaved changes* marker beside it once anything is edited
   (a move, a toggle, an added, replicated or removed card; opening a card or
   the preview is no edit), and a warning on leaving the page with it showing.
 - **Preview**, at the foot of the Outline with *Save* beside it, shows the form in place of the cards, as an applicant sees it,
@@ -685,6 +686,40 @@ shows the form's own card and one empty String card, open.
   still work.
 - **Conditional questions** (branching) are not built: deferred, see
   `applydesk/guide/todo_master.md`.
+- **Saving Form** (`applydesk/form_store.py`; the post is
+  `routes_operator.exercise_form_save`, a same-site JSON post of at most
+  `scratch.MAX_BODY`). *Save* replaces the form, its title, description and
+  cards, in one transaction under the exercise's lock, guarded by
+  `exercise.form_revision` (0 until Form is first saved). The post names the
+  revision the page opened at, and a save returns the new one. A sample's
+  form is recorded at its first save. Nothing is deleted: a card a save
+  drops is retired.
+  - **Refused**, each a 400 naming why, bar the stale one:
+    - a post with no revision (malformed);
+    - an archived exercise;
+    - a published form (`locks.form_lock`);
+    - a revision older than the stored one, a 409 (*Form was saved since this
+      page opened. Reload to see it.*); a concurrent first save losing the race
+      is a 409 likewise;
+    - a card or field malformed, of an unknown kind or type, or past its
+      length caps, more than 200 cards, or a *Chosen from* naming a panel the
+      exercise lacks;
+    - a save that drops, or makes another type, a question a rule on Process
+      reads (a choose-one *List*) or a nominated source reads (*Select
+      people*). Both are read under the lock, so a Process save landing first
+      is seen.
+  - **Keys.** Each card (a section and a page break too, so the order is one
+    list) has a `key`, `q<n>`, minted by the server past every key the
+    exercise has held, retired ones and the sample's included, and never
+    reused. A card keeps its key through a rename and a move; a new card, a
+    replicated card and a page's placeholder are given a fresh one. A removed
+    question keeps its key, so a rule naming it is refused, not re-pointed. A
+    sample's cards take `q1`… in order at the first save.
+  - **Reload.** A save that keys a new card, or a panel made with *+ New
+    panel…* ("The Panels page"), answers that the page must reload to hold its
+    keys, and edits made while it was on its way cannot be saved before then
+    ("strict").
+  - **Audit.** `exercise.form_saved` (`applydesk/spec/architecture.md`).
 
 ## Exercise Home
 
@@ -948,8 +983,8 @@ but the lobby's *Stage* column reads:
     (▲ ▼; a row's **+** adds the next, × removes; *+ Source* shows only
     when there is none), each a *Kind*, its *Min* and *Max* per dossier:
     - *Nominated*, the people a applicant named in a *Select people*
-      question of Form, picked by its label, offered only when the form has
-      one; or
+      question of Form, picked by its label and kept by its key, offered only
+      when the form has one; or
     - *Panel*, by the shared menu and *+ New panel…* box Form uses (above)
       with *Edit on Panels →*; a panel's members are on Panels, not listed.
       After its *Min* and *Max*, **All** (a Toggle, ruling 62) gives each
@@ -1058,21 +1093,27 @@ but the lobby's *Stage* column reads:
   A gate's *Then*s and *Otherwise* are *Entered* / *Not entered*; an
   outcome's are its values. The item's line reads as Dossiers' header does
   (`stages.rule_text`), *Decided by hand* for none. A rule names every target
-  by key (gate, result, outcome, value; a form question by a string until
-  Form keys them), so moving a stage keeps its meaning.
+  by key (gate, result, outcome, value, form question), so moving a stage or
+  renaming a question keeps its meaning. A form condition and a nominated
+  source name a question by its `q<n>` key ("Saving Form"); the editor offers
+  the questions by label. One stored before keys may name a label, read
+  through to the key of the question that carries it and written back by key at
+  the next Process save.
   - **Checked on the server** (ruling 78; `rules.py` and `stages.rule_problems`
     are the only rule code; no page evaluates a rule). The page posts its
     snapshot to `…/process/problems` and shows what comes back; nothing is
     kept.
   - **Flagged**, on its item and in the Outline: a rule that reads a later
     outcome or a gate outside its outcome's scope; a form question gone from
-    Form, or an answer not among its options; a best N that is not a whole
+    Form, or no longer asked as a choose-one *List* (shown "(removed)" in
+    place of its label), or an answer not among its options; a best N that is not a whole
     number or ranks by a result that is not a number; deciding or comparing
     with a value its target lacks; a count or threshold that is not a number.
     It is saved as left and flagged again. Weights that are not numbers or do
     not total 100 are flagged likewise.
   - **Refused at save**, not flagged: a rule naming a gate, result or outcome
-    the snapshot drops, and a gate's rule reading a gate (a gate never reads
+    the snapshot drops, a form condition naming a question the form no longer
+    asks as a choose-one *List* ("Saving Form"), and a gate's rule reading a gate (a gate never reads
     a gate). The refusal names the rule and the target. A rule is never
     rewritten to match a removal: it means what it says.
   A rule or weight names a gate's *result* (`stages.result_label`, *Rating at
@@ -1680,14 +1721,14 @@ from AD2.
   tab or a return gets a leading apostrophe, a plain number aside.
   - **`applications.csv`**: a row per application, `application_id`,
     `dossier_id`, `applicant`, `email`, `state`, `submitted`, then a column
-    per form question by its label, in the form's order (a section, page
-    break or text block no column). *Last applications* is each applicant's
+    per form question, headed by its label and read by its key, in the form's
+    order (a section, page break or text block no column). *Last applications* is each applicant's
     last submitted one (Dossiers', ruling 13); *All applications* every
     submitted one; *Drafts* adds drafts, never a withdrawn application. It
     always names its applicants. A list answer is one cell, items joined by
     `; ` (Select people: the nominees); a photo its file name. Where the
-    sample holds no answer, one is seeded per application and question, the
-    same every time.
+    sample holds no answer, one is seeded per application and question key (a
+    rename keeps it), the same every time.
   - **`gate_<key>.csv`**, by the gate's key and downloaded as
     `<key>_<slug>.csv` (the gate's name in lower case, other runs as `_`). An
     old `gate_<n>.csv` is a 404: only this page links to it.
