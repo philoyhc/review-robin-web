@@ -1,7 +1,7 @@
 """The Form page (segment AD1B, rung 2): the form's own title and
 description, then a card per question, text block, section and page
 break, each type with its own fields and a summary that reads as the
-page's script computes it. Nothing is saved."""
+page's script computes it. Saved since AD2D (`test_form_store.py`)."""
 
 from __future__ import annotations
 
@@ -74,10 +74,15 @@ def test_every_card_has_its_own_visibility(client: TestClient) -> None:
     )
 
 
-def test_nothing_is_saved(client: TestClient) -> None:
+def test_save_posts_to_the_database_with_the_revision(client: TestClient) -> None:
+    """Form saves for every exercise (segment AD2D): its Save names the
+    revision the page opened at, and each card its key."""
     text = client.get(FORM).text
-    assert 'disabled title="Saving comes with the database">Save</button>' in text
+    assert "Saving comes with the database" not in text
+    assert 'data-fb-save="' in text and 'data-revision="0"' in text
     assert "<form" not in text.split("<main", 1)[1]
+    cards = _form(client)
+    assert re.findall(r'data-key="(q\d+)"', cards) == [c.key for c in sample_data.sample_form(EX)]
 
 
 def test_a_blank_form_opens_its_one_card(client: TestClient) -> None:

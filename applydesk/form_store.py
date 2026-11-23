@@ -18,7 +18,7 @@ naming it is refused, not re-pointed.
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, cast
@@ -291,7 +291,7 @@ def save(
     opened: int,
     actor: Person | None,
     *,
-    published: bool,
+    published: Callable[[], bool],
 ) -> int:
     """Keep ``form`` (``parse``'s) as the exercise's form, if no save came
     between (``opened``, the revision the page loaded) and the stage holding
@@ -303,7 +303,7 @@ def save(
     exercise = panels_store.lock(session, public_id)
     if exercise.archived_at is not None:
         raise Refused("Archived: restore it to change it.", key="archived")
-    if published:
+    if published():  # read under the lock: a Process save before it is seen
         raise Refused(
             "Not saved: the form is published. Revert its stage on Process to change it.",
             key="published",

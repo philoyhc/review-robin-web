@@ -240,6 +240,15 @@ def _post_panels(client: TestClient, made: str, body: object) -> Any:
     return client.post(f"{LOBBY}/{made}/panels", json=body)
 
 
+def _post_form(client: TestClient, public_id: str, form: dict[str, Any]) -> Any:
+    """Form's Save as the page sends it, with the revision it opened at
+    (segment AD2D) unless the test names one."""
+    from applydesk import form_store
+
+    sent = {"revision": form_store.revision(public_id), **form}
+    return client.post(f"{LOBBY}/{public_id}/form", json=sent)
+
+
 def _field(label: str, **over: object) -> dict[str, object]:
     card: dict[str, object] = {
         "kind": "field",
@@ -281,7 +290,7 @@ def test_a_blank_scratch_form_starts_empty_and_form_saves_into_it() -> None:
             {"kind": "pagebreak", "label": ""},
         ],
     }
-    reply = client.post(f"{LOBBY}/{made}/form", json=sent)
+    reply = _post_form(client, made, sent)
     assert reply.status_code == 200, reply.text
     form = client.get(f"{LOBBY}/{made}/form").text
     assert "Your faculty" in form and "Why you" in form and "Bursary application" in form
@@ -326,9 +335,10 @@ def test_form_save_is_checked() -> None:
         ),
         ({"title": "", "description": "x" * 4001, "cards": []}, "at most 4,000 characters"),
     ):
-        refused = client.post(f"{LOBBY}/{made}/form", json=bad)
+        refused = _post_form(client, made, bad)
         assert refused.status_code == 400 and reason in refused.json()["error"], bad
-    assert client.post(f"{LOBBY}/wa9juxbc2t/form", json={"cards": []}).status_code == 404
+    # A page that sends no revision is refused, not saved over another's.
+    assert client.post(f"{LOBBY}/{made}/form", json={"cards": []}).status_code == 400
 
 
 def _stage(name: str = "", **over: object) -> dict[str, object]:
@@ -569,7 +579,7 @@ def test_form_holds_the_exercise_lock_while_it_checks_and_keeps_the_form(
         routes_operator, "_form", lambda *a: (seen.append("form"), real_form(*a))[1]
     )
     form = {"title": "", "description": "", "cards": [_field("Why?")]}
-    assert client.post(f"{LOBBY}/{made}/form", json=form).status_code == 200
+    assert _post_form(client, made, form).status_code == 200
     assert seen[:2] == ["lock", "form"], seen
     kept = client.get(f"{LOBBY}/{made}/form").text
     assert "Why?" in kept
@@ -590,7 +600,7 @@ def test_form_holds_the_exercise_lock_while_it_checks_and_keeps_the_form(
 
     monkeypatch.setattr(OrmSession, "commit", second_fails)
     other = {"title": "", "description": "", "cards": [_field("Something else")]}
-    assert client.post(f"{LOBBY}/{made}/form", json=other).status_code == 409
+    assert _post_form(client, made, other).status_code == 409
     monkeypatch.setattr(OrmSession, "commit", real_commit)
     page = client.get(f"{LOBBY}/{made}/form").text
     assert "Why?" in page and "Something else" not in page
@@ -800,7 +810,7 @@ def test_panels_save_into_the_scratch() -> None:
         "description": "",
         "cards": [_field("Who?", type="people", pool="panel-1")],
     }
-    assert client.post(f"{LOBBY}/{made}/form", json=form).status_code == 200
+    assert _post_form(client, made, form).status_code == 200
     stale = _panels(panels=[{"key": "made-1", "name": "Peer readers"}])
     reply = _post_panels(client, made, stale)
     assert reply.status_code == 200, reply.text
@@ -848,7 +858,7 @@ def test_panels_save_is_checked() -> None:
         "description": "",
         "cards": [_field("Who?", type="people", pool="panel-1")],
     }
-    assert client.post(f"{LOBBY}/{made}/form", json=form).status_code == 200
+    assert _post_form(client, made, form).status_code == 200
     retired = _post_panels(client, made, _panels(panels=[], people=[]))
     assert retired.status_code == 400 and "in use" in retired.json()["error"]
     # A sample exercise's Panels saves too (AD2E); a page opened before the
@@ -873,11 +883,11 @@ def test_a_panel_made_on_form_or_process_joins_the_panels() -> None:
         "cards": [_field("Your referee", type="people", pool="new-1")],
         "pools": {"new-1": {"name": "Referees", "members": [["Cy Ref", "cy@example.edu"]]}},
     }
-    reply = client.post(f"{LOBBY}/{made}/form", json=form)
+    reply = _post_form(client, made, form)
     assert reply.status_code == 200 and reply.json()["reload"] is True, reply.text
     # Offered again by a page that missed its reload (Codex on #4027): the
     # panel kept the first time, not a refusal or a second panel.
-    again = client.post(f"{LOBBY}/{made}/form", json=form)
+    again = _post_form(client, made, form)
     assert again.status_code == 200, again.text
     assert 'data-panel="panel-2"' not in client.get(f"{LOBBY}/{made}/panels").text
     panels = client.get(f"{LOBBY}/{made}/panels").text
@@ -894,7 +904,7 @@ def test_a_panel_made_on_form_or_process_joins_the_panels() -> None:
     assert 'data-panel="panel-2"' in panels and "Markers" in panels and "Referees" in panels
     # A made panel the post does not carry is refused, not dropped.
     lost = {**form, "pools": {}}
-    refused = client.post(f"{LOBBY}/{made}/form", json=lost)
+    refused = _post_form(client, made, lost)
     assert refused.status_code == 400 and "panel made on this page" in refused.json()["error"]
 
 
@@ -1041,7 +1051,7 @@ def test_too_large_a_post_says_so() -> None:
     client = _client()
     made = _create(client)
     huge = {"title": "", "description": "", "cards": [], "pad": "x" * (scratch.MAX_BODY + 1)}
-    reply = client.post(f"{LOBBY}/{made}/form", json=huge)
+    reply = _post_form(client, made, huge)
     assert reply.status_code == 413 and "256 KiB" in reply.json()["detail"]
 
 

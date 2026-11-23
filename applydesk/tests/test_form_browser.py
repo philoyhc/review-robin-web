@@ -213,6 +213,10 @@ def test_replicate_copies_the_card(page: Page) -> None:
     assert copy.get_attribute("data-type") == "integer"
     assert copy.locator('[data-f="max"][data-g="number"]').input_value() == "6"
     assert copy.locator('[data-sum="type"]').text_content() == "Integer · 1 to 6, step 1"
+    # The copy is a new question: only the original keeps its key, wherever
+    # the copy is dragged (Codex on #4176).
+    assert copies.nth(0).get_attribute("data-key", timeout=1000)
+    assert copy.get_attribute("data-key") == ""
 
 
 def test_section_and_page_break_are_added_after_the_card(page: Page) -> None:

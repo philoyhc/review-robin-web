@@ -99,12 +99,13 @@ def test_every_page_of_the_map_answers_locally(client: TestClient, path: str) ->
 
 
 def _saves(path: str) -> bool:
-    """The pages that save (AD2B, AD2C) carry no placeholder line (AD1U
-    Item 3): the Lobby, an exercise's Home and its Process."""
+    """The pages that save (AD2B, AD2C, AD2E, AD2D) carry no placeholder
+    line (AD1U Item 3): the Lobby, an exercise's Home, Form, Process and
+    Panels."""
     if path in ("/applydesk/", "/applydesk/operator"):
         return True  # both land on the Lobby
     tail = path.removeprefix("/applydesk/operator/exercises")
-    return tail == "" or re.fullmatch(r"/[a-z0-9]{10}(/process|/panels)?", tail) is not None
+    return tail == "" or re.fullmatch(r"/[a-z0-9]{10}(/form|/process|/panels)?", tail) is not None
 
 
 _SAVES = frozenset(p for p in PAGES if _saves(p))
