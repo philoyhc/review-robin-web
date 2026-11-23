@@ -534,19 +534,10 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     exercise ("The Process page"). Only the emails it ticks stay in this
     store, as `workflow.sends` reads them, until Emails is stored; on a
     sample exercise they stay the sample's.
-  - **Panels** (to `…/panels`, `applydeskPanelsSnapshot`,
-    `applydesk/scratch_panels.py`): refused on the page while a row or a
-    *Manage panels* change is still open. At most 50 panels (distinct names
-    of at most 80 characters, none a CSV column's) and 2,000 people (an
-    address each, distinct; ticks naming the page's panels); someone on no
-    panel stays on the roster. Retiring a panel a question or a gate uses is
-    refused. A panel the page made is keyed `panel-1`… on its first save, a
-    saved one keeping its key; one named as a saved panel the post does not
-    otherwise carry (a page that missed its reload) is that panel. `sample_data.panels_of` and `roster` read it
-    back. A panel made with *+ New panel…* on Form or Process joins the
-    exercise's panels, members and all, with the save that names it; one
-    offered again under a saved panel's name (a page that missed its
-    reload) is that panel, not a second.
+  - **Panels** is not kept here: it saves to the database for every
+    exercise (`applydesk/panels_store.py`, segment AD2E), as does a panel
+    made with *+ New panel…* on Form or Process, with the save that names
+    it. "The Panels page" says what its *Save* refuses.
   - **Revision.** Emails sends the Process revision its page opened at
     (`workflow.process_revision`), and a save from a page older than the
     last Process save is refused (*reload Emails*), so no stale key lands on

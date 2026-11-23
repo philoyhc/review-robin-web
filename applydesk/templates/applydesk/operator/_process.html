@@ -45,7 +45,7 @@
       {% if issues %}<ul class="pc-issues" data-pc-issues>{% for i in issues %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
       <p class="visually-hidden" data-pc-live aria-live="polite"></p>
       <div class="btnrow">
-        <button class="btn btn-secondary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}" data-fb-snapshot="applydeskProcessSnapshot" data-revision="{{ process_revision }}">Save</button>
+        <button class="btn btn-secondary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}" data-fb-snapshot="applydeskProcessSnapshot" data-revision="{{ process_revision }}" data-fb-saved="Saved.">Save</button>
         <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
       </div>
       <p class="muted fb-said" data-fb-said role="status"></p>

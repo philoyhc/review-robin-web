@@ -36,7 +36,7 @@
 {% endmacro %}
 {% set directory = people.institution.members | map(attribute=1) | map("lower") | list %}
 {% macro sort(field, label) %}<button type="button" class="pn-sort" data-pn-sort="{{ field }}" aria-label="Sort by {{ label }}">{{ label }}<span aria-hidden="true">↕</span></button>{% endmacro %}
-<div class="pn" data-panels{% if scratch_page %} data-unsaved-root{% endif %} data-exercise="{{ exercise.public_id }}" data-pn-opened="{{ panels_sent | list | tojson | forceescape }}">
+<div class="pn" data-panels data-unsaved-root data-exercise="{{ exercise.public_id }}" data-pn-opened="{{ panels_sent | list | tojson | forceescape }}">
   <p class="muted pc-intro">Everyone on this exercise's panels, a column for each panel. Tick a row, or several, to edit them; ✓ keeps a row's changes, and unticking it without ✓ puts the row back as it was. A panel is picked where it is needed: a <em>Select people</em> question on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form') }}">Form</a>, a gate's evaluators on <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}">Process</a>.</p>
 
   {# The roster card, as Review Robin's: the roster's size and a pill per
@@ -52,18 +52,14 @@
     </div>
     <ul class="pc-issues" data-pn-issues hidden></ul>
     <p class="pn-said" data-pn-said aria-live="polite"></p>
-    {% if scratch_page %}
-    {# A scratch exercise's Save (segment AD1N rung 5): what ✓, ×, an
-       import and Manage panels' Save kept on the page, kept for this
-       browser. #}
+    {# Panels' Save (segment AD1N rung 5; every exercise since AD2E): what
+       ✓, ×, an import and Manage panels' Save kept on the page, kept in the
+       database, guarded by the revision the page opened at. #}
     <div class="btnrow pn-save-row">
-      <button class="btn btn-secondary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/panels') }}" data-fb-snapshot="applydeskPanelsSnapshot">Save</button>
+      <button class="btn btn-secondary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/panels') }}" data-fb-snapshot="applydeskPanelsSnapshot" data-revision="{{ panels_revision }}" data-fb-saved="Saved.">Save</button>
       <span class="fb-unsaved" data-pn-kept hidden>Unsaved changes</span>
     </div>
     <p class="muted fb-said" data-fb-said role="status"></p>
-    {% else %}
-    <p class="fb-unsaved" data-pn-kept hidden>Changes on this page, not saved</p>
-    {% endif %}
     <div class="pn-manage-panel" id="pn-manage" data-pn-manage hidden>
       <section class="card">
         <h2>Panels</h2>
@@ -132,7 +128,7 @@
     <div class="pn-top">
     {# A chip per panel, after Review Robin's rosters' Show columns: pressed,
        its column shows (author, 2026-11-14). Not remembered across a
-       reload, as nothing on this page is until AD2. #}
+       reload: a view, not a setting. #}
     <p class="pn-showcols" data-pn-showcols{% if not panels %} hidden{% endif %}><span>Show columns:</span>{% for p in panels %}<button type="button" class="pn-show" data-panel="{{ p.key }}" data-pn-show aria-pressed="true"><span data-pn-name>{{ p.name }}</span></button>{% endfor %}</p>
     <div class="pn-toolbar">
       <label class="pn-search">Filter<input class="fc-in" type="search" data-pn-search placeholder="Name, email, note or panel"></label>
@@ -182,8 +178,8 @@
 <script type="application/json" id="pn-people">{{ people.institution.members | tojson }}</script>
 {% include "applydesk/operator/_directory_js.html" %}
 <script>
-// Segment AD1F rung 4e: the Panels page's moves, in the browser only; a
-// reload restores the sample. Text goes in by textContent only.
+// Segment AD1F rung 4e: the Panels page's moves, in the browser until
+// Save keeps them (AD2E). Text goes in by textContent only.
 (function () {
   var root = document.querySelector("[data-panels]");
   if (!root) return;
@@ -983,15 +979,16 @@
     if (e.target.matches("[data-pn-rename]")) { e.preventDefault(); keepAll(); return; }
     if (e.target === newName) { e.preventDefault(); root.querySelector('[data-pn-act="create"]').click(); }
   });
-  // A scratch exercise's Save (segment AD1N rung 5): the page as kept,
-  // refused while a row or a panel change is still open, since neither
-  // ✓ nor Manage panels' Save has kept it yet.
+  // Panels' Save: the page as kept, refused while a row or a panel change
+  // is still open, since neither ✓ nor Manage panels' Save has kept it
+  // yet; with the revision the page opened at (AD2E).
   window.applydeskPanelsSnapshot = function () {
     if (anyPending() || rowsPending()) {
       said.textContent = "Keep or undo the open rows and panel changes first: ✓ a row, Save or Cancel in Manage panels.";
       return null;
     }
     return {
+      revision: Number((root.querySelector("[data-fb-save]") || { dataset: {} }).dataset.revision || 0),
       panels: cols().map(function (h) { return { key: h.dataset.panel, name: nameOf(h.dataset.panel) }; }),
       people: rows().map(function (r) {
         var t = ticks(r);
@@ -1004,4 +1001,4 @@
   check();
 })();
 </script>
-{% if scratch_page %}{% include "applydesk/operator/_scratch_save_js.html" %}{% endif %}
+{% include "applydesk/operator/_scratch_save_js.html" %}

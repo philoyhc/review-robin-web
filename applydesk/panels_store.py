@@ -26,7 +26,7 @@ from typing import Any, cast
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from applydesk import audit, people, sample_data
+from applydesk import audit, db, people, sample_data
 from applydesk.models import Exercise, PanelMember, Person, RosterEntry
 from applydesk.models import Panel as PanelRow
 from applydesk.sample_data import Member, Panel
@@ -126,6 +126,30 @@ def load(session: Session, public_id: str) -> State | None:
     return _assemble(public_id, [(p.key, p.name) for p in panels], people_rows)
 
 
+def stored(public_id: str) -> State | None:
+    """The panels Panels last saved, read in a session of its own (the
+    readers in ``sample_data``, which no route hands a session); None if
+    never saved."""
+    session = db.new_session()
+    try:
+        return load(session, public_id)
+    finally:
+        session.close()
+
+
+def revision(public_id: str) -> int:
+    """How many times the exercise's panels were saved: the Panels page
+    sends the one it opened at, and a save from an older one is refused."""
+    session = db.new_session()
+    try:
+        found = session.scalar(
+            select(Exercise.panels_revision).where(Exercise.public_id == public_id)
+        )
+    finally:
+        session.close()
+    return found or 0
+
+
 def _before(session: Session, exercise: Exercise) -> State:
     """What the page started from: the stored roster, else the sample's."""
     stored = load(session, exercise.public_id)
@@ -211,6 +235,15 @@ def _parse(
     if len(cast(list[Any], raw_people)) > MAX_PEOPLE:
         raise Refused(f"The roster holds at most {MAX_PEOPLE} people.", key="cap")
     known = {p.key for p in before.panels}
+    # A page that missed its reload after a save keyed its panels still
+    # names them ``made-1``…: by name, the saved panel it became, unless
+    # the post carries that panel under its own key too (Codex on #4027).
+    sent_keys = {
+        key
+        for p in cast(list[Any], raw_panels)
+        if isinstance(p, dict) and isinstance(key := cast(dict[str, Any], p).get("key"), str)
+    }
+    by_name = {p.name.casefold(): p.key for p in before.panels if p.key not in sent_keys}
     keys: dict[str, str] = {}
     panels: list[tuple[str, str]] = []
     names: set[str] = set()
@@ -222,7 +255,7 @@ def _parse(
         if not _KEY.fullmatch(key) or key in keys:
             raise Refused("A panel's key is malformed.")
         name = _name(panel.get("name"), names)
-        keys[key] = key if key in known else _fresh(taken)
+        keys[key] = key if key in known else by_name.pop(name.casefold(), None) or _fresh(taken)
         panels.append((keys[key], name))
     if in_use - set(keys.values()):
         raise Refused(

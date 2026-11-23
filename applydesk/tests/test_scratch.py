@@ -229,6 +229,16 @@ def _post_process(client: TestClient, made: str, body: object) -> Any:
     return client.post(f"{LOBBY}/{made}/process", json=body)
 
 
+def _post_panels(client: TestClient, made: str, body: object) -> Any:
+    """Panels' Save as the page sends it: with the revision the page
+    opened at, read off the page, unless the test gives one (AD2E)."""
+    if isinstance(body, dict) and "revision" not in body:
+        page = client.get(f"{LOBBY}/{made}/panels").text
+        found = re.search(r'data-revision="(\d+)"', page)
+        body = {**body, "revision": int(found.group(1)) if found else 0}  # pyright: ignore[reportUnknownVariableType]  -- a test's dict
+    return client.post(f"{LOBBY}/{made}/panels", json=body)
+
+
 def _field(label: str, **over: object) -> dict[str, object]:
     card: dict[str, object] = {
         "kind": "field",
@@ -502,9 +512,9 @@ def test_a_sample_exercise_s_process_saves_into_the_database() -> None:
     assert saves == 2
 
 
-def test_a_sample_exercise_cannot_adopt_a_panel_made_on_process() -> None:
-    """A sample's panels are the sample's until panels are stored (AD2E):
-    a gate naming one made on the page is refused, not half kept."""
+def test_a_sample_exercise_adopts_a_panel_made_on_process() -> None:
+    """Since AD2E a sample's panels are stored too: a gate naming one made
+    on the page keeps it, beside the sample's own panels."""
     client = _client()
     made_panel = {"new-1": {"name": "Readers", "members": [["Ada", "ada@example.edu"]]}}
     gate = _gate("gnew1", "Read", sources=[{"kind": "panel", "ref": "new-1", "min": 1, "max": 1}])
@@ -517,8 +527,11 @@ def test_a_sample_exercise_cannot_adopt_a_panel_made_on_process() -> None:
         ],
         "pools": made_panel,
     }
-    refused = _post_process(client, "wa9juxbc2t", sent)
-    assert refused.status_code == 400 and "new exercise only" in refused.json()["error"]
+    kept = _post_process(client, "wa9juxbc2t", sent)
+    assert kept.status_code == 200, kept.text
+    panels = client.get(f"{LOBBY}/wa9juxbc2t/panels").text
+    assert "Readers" in panels and "ada@example.edu" in panels
+    assert "Current RAs" in panels  # the sample's own, recorded with it
 
 
 def test_process_save_is_checked() -> None:
@@ -692,7 +705,7 @@ def test_panels_save_into_the_scratch() -> None:
     made = _create(client)
     page = client.get(f"{LOBBY}/{made}/panels").text
     assert 'data-fb-snapshot="applydeskPanelsSnapshot"' in page
-    reply = client.post(f"{LOBBY}/{made}/panels", json=_panels())
+    reply = _post_panels(client, made, _panels())
     assert reply.status_code == 200, reply.text
     page = client.get(f"{LOBBY}/{made}/panels").text
     assert 'data-panel="panel-1"' in page and "Readers" in page
@@ -702,7 +715,7 @@ def test_panels_save_into_the_scratch() -> None:
     # Saved again, the panel keeps its key; renamed, it keeps it too.
     again = _panels(panels=[{"key": "panel-1", "name": "Peer readers"}])
     again["people"] = [{**p, "panels": ["panel-1"] if p["panels"] else []} for p in again["people"]]  # pyright: ignore[reportGeneralTypeIssues, reportUnknownVariableType]  -- a test's dict
-    assert client.post(f"{LOBBY}/{made}/panels", json=again).status_code == 200
+    assert _post_panels(client, made, again).status_code == 200
     page = client.get(f"{LOBBY}/{made}/panels").text
     assert 'data-panel="panel-1"' in page and "Peer readers" in page
     # A page that missed its reload sends made-1 again: it is panel-1, not a
@@ -714,7 +727,7 @@ def test_panels_save_into_the_scratch() -> None:
     }
     assert client.post(f"{LOBBY}/{made}/form", json=form).status_code == 200
     stale = _panels(panels=[{"key": "made-1", "name": "Peer readers"}])
-    reply = client.post(f"{LOBBY}/{made}/panels", json=stale)
+    reply = _post_panels(client, made, stale)
     assert reply.status_code == 200, reply.text
     page = client.get(f"{LOBBY}/{made}/panels").text
     assert 'data-panel="panel-1"' in page and 'data-panel="panel-2"' not in page
@@ -751,19 +764,27 @@ def test_panels_save_is_checked() -> None:
             "not on the page",
         ),
     ):
-        refused = client.post(f"{LOBBY}/{made}/panels", json=bad)
+        refused = _post_panels(client, made, bad)
         assert refused.status_code == 400 and reason in refused.json()["error"], (bad, refused.text)
     # A panel a question uses cannot be retired.
-    assert client.post(f"{LOBBY}/{made}/panels", json=_panels()).status_code == 200
+    assert _post_panels(client, made, _panels()).status_code == 200
     form = {
         "title": "",
         "description": "",
         "cards": [_field("Who?", type="people", pool="panel-1")],
     }
     assert client.post(f"{LOBBY}/{made}/form", json=form).status_code == 200
-    retired = client.post(f"{LOBBY}/{made}/panels", json=_panels(panels=[], people=[]))
+    retired = _post_panels(client, made, _panels(panels=[], people=[]))
     assert retired.status_code == 400 and "in use" in retired.json()["error"]
-    assert client.post(f"{LOBBY}/wa9juxbc2t/panels", json=_panels()).status_code == 404
+    # A sample exercise's Panels saves too (AD2E); a page opened before the
+    # last save is refused.
+    from applydesk import sample_data
+
+    kept = [{"key": p.key, "name": p.name} for p in sample_data.panels_of("wa9juxbc2t")]
+    sample = _panels(panels=[*kept, {"key": "made-1", "name": "Readers"}])
+    assert _post_panels(client, "wa9juxbc2t", sample).status_code == 200
+    stale = client.post(f"{LOBBY}/wa9juxbc2t/panels", json={**sample, "revision": 0})
+    assert stale.status_code == 409 and "Reload" in stale.json()["error"]
 
 
 def test_a_panel_made_on_form_or_process_joins_the_panels() -> None:

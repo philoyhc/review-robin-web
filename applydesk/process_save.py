@@ -384,7 +384,7 @@ def build(
 ) -> tuple[tuple[Stage, ...], frozenset[tuple[str, str]]]:
     """The stages the snapshot describes, and its (item, audience) emails;
     a gate's panel is one the exercise has, or one the page made, by the
-    key ``renamed`` gives it (``scratch_panels.adopt``). A column the page
+    key ``renamed`` gives it (``panels_store.adopt``). A column the page
     added takes a key past ``taken`` (``process_store.taken_keys``).
 
     ``checking``: built only to say what its rules read amiss (ruling 78),

@@ -18,6 +18,8 @@
     }
     var root = btn.closest("[data-unsaved-root]") || document;
     var said = root.querySelector("[data-fb-said]");
+    // A page saved to the database names its own words (Process, Panels).
+    var done = btn.dataset.fbSaved || "Saved to this scratch exercise.";
     btn.addEventListener("click", function () {
       if (btn.dataset.fbStale) {
         if (said) said.textContent = "Reload the page before saving again: it was saved with new keys while you were editing.";
@@ -38,13 +40,13 @@
             // the page stays unsaved until a later Save carries them.
             var now = snap();
             if ((typeof now === "string" ? now : JSON.stringify(now)) === sent) {
-              if (said) said.textContent = "Saved to this scratch exercise.";
+              if (said) said.textContent = done;
               root.dispatchEvent(new Event("applydesk:saved"));
               // A save that keyed something anew (a panel, a renumbered
               // gate) reloads, so the page holds the keys kept; it says so
               // once it is back.
               if (got[1] && got[1].reload) {
-                try { sessionStorage.setItem(NOTE, "Saved to this scratch exercise."); } catch (e) { /* said above */ }
+                try { sessionStorage.setItem(NOTE, done); } catch (e) { /* said above */ }
                 location.reload();
               }
             } else if (got[1] && got[1].strict) {

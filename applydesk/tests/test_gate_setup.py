@@ -153,7 +153,7 @@ def test_process_save_keeps_all() -> None:
             {"name": "B", "email": "b@example.edu", "note": "", "panels": ["made-1"]},
         ],
     }
-    assert client.post(f"{LOBBY}/{made}/panels", json=panels).status_code == 200
+    assert client.post(f"{LOBBY}/{made}/panels", json={**panels, "revision": 0}).status_code == 200
     gate = {
         "key": "gnew1",
         "label": "Read",
@@ -197,7 +197,7 @@ def test_process_save_keeps_all() -> None:
             {"name": "C", "email": "c@example.edu", "note": "", "panels": ["panel-1"]},
         ],
     }
-    assert client.post(f"{LOBBY}/{made}/panels", json=grown).status_code == 200
+    assert client.post(f"{LOBBY}/{made}/panels", json={**grown, "revision": 1}).status_code == 200
     reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- as above
     try:
         saved = stages.plan_of(made).columns[0]
@@ -209,7 +209,7 @@ def test_process_save_keeps_all() -> None:
         scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
     # And one leaves: the gate takes the rest, still nothing to retype.
     shrunk = {**grown, "people": grown["people"][:1]}
-    assert client.post(f"{LOBBY}/{made}/panels", json=shrunk).status_code == 200
+    assert client.post(f"{LOBBY}/{made}/panels", json={**shrunk, "revision": 2}).status_code == 200
     reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- as above
     try:
         saved = stages.plan_of(made).columns[0]
