@@ -1792,3 +1792,19 @@ def test_an_open_revert_shuts_when_a_later_stage_is_published(page: Page) -> Non
     assert not review.locator("[data-pc-revert]").is_visible()
     assert review.locator('[data-pc-st="revert"]').is_disabled()
     assert review.locator("[data-pc-status]").text_content() == "Completed"
+
+
+def test_an_edit_undone_before_its_check_leaves_no_stale_warning(page: Page) -> None:
+    """Codex on #4156: an edit undone within the check's 250 ms is not
+    checked, so its warning is never drawn on the page as restored."""
+    page.goto(PAGE)
+    _checked(page)
+    o1 = _item(page, "o1")
+    o1.locator('[data-pc-act="rule"]').click()
+    values = o1.locator('[data-pc="values"]')
+    was = values.input_value()
+    values.fill("Yes, No")  # its rule now decides a value it no longer has
+    values.fill(was)  # undone at once
+    page.wait_for_timeout(600)
+    _checked(page)
+    assert o1.locator("[data-rule-warn]").is_hidden()
