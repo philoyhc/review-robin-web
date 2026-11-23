@@ -135,3 +135,65 @@ def test_changes_are_sent_one_at_a_time(page: Page) -> None:
     assert len(seen) == 2
     held.pop().fallback()
     item.locator("[data-cand-none]").wait_for()
+
+
+def _drafts_holding_candidates() -> None:
+    built = stages.plan_of(MODEL).stages
+    drafts = tuple(replace(st, status="Draft", candidates=(i == 0)) for i, st in enumerate(built))
+    session = db.new_session()
+    try:
+        process_store.save(session, MODEL, drafts, 0, None)
+        people.pending(session, "zoe.candidate@example.edu", None)
+        session.commit()
+    finally:
+        session.close()
+
+
+def test_a_replicated_stage_leaves_candidates_behind(page: Page) -> None:
+    """Codex on #4161: a stage's copy holds no Candidates, as it holds no
+    form, so Replicate does not leave Process unsaveable."""
+    _drafts_holding_candidates()
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
+    first = page.locator("#pc-cards .pc").nth(0)
+    if not first.locator(".fc-body").first.is_visible():
+        first.locator("[data-fc-toggle]").first.click()
+    first.locator('[data-fc-act="replicate"]').click()
+    assert page.locator('#pc-cards .pc-item[data-item="candidates"]').count() == 1
+    assert (
+        page.locator("#pc-cards .pc").nth(1).locator('.pc-item[data-item="candidates"]').count()
+        == 0
+    )
+
+
+def test_an_answer_after_a_move_redraws_the_item_on_the_page(page: Page) -> None:
+    """Codex on #4161: a change answered after Candidates moved stage is
+    drawn on the item now on the page, not the one taken off."""
+    _drafts_holding_candidates()
+    held: list[Route] = []
+
+    def hold(route: Route) -> None:
+        if route.request.method == "POST":
+            held.append(route)
+        else:
+            route.fallback()
+
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
+    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
+    first, other = page.locator("#pc-cards .pc").nth(0), page.locator("#pc-cards .pc").nth(1)
+    for card in (first, other):
+        if not card.locator(".fc-body").first.is_visible():
+            card.locator("[data-fc-toggle]").first.click()
+    if not item.locator("[data-cand-search]").is_visible():
+        item.locator("[data-pi-toggle]").click()
+    item.locator("[data-cand-search]").fill("zoe.cand")
+    found = item.locator("[data-cand-found] li", has_text="zoe.candidate@example.edu")
+    found.wait_for()
+    page.route("**/candidates", hold)
+    found.locator("button").click()
+    page.wait_for_timeout(200)
+    first.locator('[data-pc-act="remove-candidates"]').click()
+    other.locator('[data-pc-act="candidates"]').click()
+    held.pop().fallback()
+    moved = other.locator('.pc-item[data-item="candidates"]')
+    moved.locator("[data-cand-list] tr", has_text="zoe.candidate@example.edu").wait_for()
+    assert moved.locator("[data-cand-count]").text_content() == "1 person"

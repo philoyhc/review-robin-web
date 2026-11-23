@@ -1063,7 +1063,8 @@
       added.dataset.stageKey = "";
       // One stage holds the form: a copy leaves it behind. Its gates and
       // outcome are new columns, with keys of their own.
-      added.querySelectorAll('.pc-item[data-item="form"]').forEach(function (f) { f.remove(); });
+      // One stage holds Candidates too (ruling 77; Codex on #4161).
+      added.querySelectorAll('.pc-item[data-item="form"], .pc-item[data-item="candidates"]').forEach(function (f) { f.remove(); });
       // A copy is a new stage: a draft, nothing in it opened (AD1K).
       added.querySelectorAll("[data-pc-lock]").forEach(function (f) { delete f.dataset.opened; });
       var copyBox = added.querySelector("[data-pc-status-box]");
@@ -1683,9 +1684,16 @@
       return fetch(base, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(body) })
         .then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }); })
         .then(function (got) {
-          if (!got[0]) { said.textContent = (got[1] && (got[1].error || got[1].detail)) || "Not saved: try again."; return; }
-          draw(item, got[1]);
-        }, function () { said.textContent = "Not saved: try again."; });
+          // The item on the page now: Candidates may have moved stage while
+          // this change was waiting (Codex on #4161).
+          var now = root.querySelector('#pc-cards .pc-item[data-item="candidates"]') || item;
+          var nowSaid = now.querySelector("[data-cand-said]");
+          if (!got[0]) { nowSaid.textContent = (got[1] && (got[1].error || got[1].detail)) || "Not saved: try again."; return; }
+          draw(now, got[1]);
+        }, function () {
+          var now = root.querySelector('#pc-cards .pc-item[data-item="candidates"]') || item;
+          now.querySelector("[data-cand-said]").textContent = "Not saved: try again.";
+        });
     });
   }
   function found(item, got) {
