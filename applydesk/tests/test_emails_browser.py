@@ -130,6 +130,8 @@ def test_save_refuses_another_kind_s_field_and_says_which(page: Page) -> None:
     assert card.locator("[data-em-chip]").text_content() == "Owed"
     card.locator("[data-em-body]").fill("Dear ${applicant_name}, $not_a_tag and $$5 stay text.")
     card.locator('[data-em-act="save"]').click()  # ${tag} as $tag
+    # The save goes to the server (segment AD2L): wait for its word.
+    card.locator("[data-em-said]").filter(has_text="Saved.").wait_for()
     assert card.locator("[data-em-chip]").text_content() == "Written"
 
 
@@ -255,6 +257,7 @@ def test_the_side_card_s_outline_and_tags(page: Page) -> None:
     assert tag_said.inner_text() == f"$evaluator_name is not a tag of {OWED}."
     card.locator("[data-em-subject]").fill("Your outcome")
     card.locator('[data-em-act="save"]').click()
+    card.locator("[data-em-said]").filter(has_text="Saved.").wait_for()  # the server's (AD2L)
     chip = side.locator(f'[data-em-o-chip="{OWED}"]')
     assert chip.text_content() == "Written"  # CSS uppercases the chip
     assert side.locator("[data-em-counts]").inner_text() == "5 emails · 4 written · 1 owed"

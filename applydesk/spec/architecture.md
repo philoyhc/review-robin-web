@@ -34,15 +34,16 @@ Its contract with the host is `applydesk/spec/applications.md`.
 | `applydesk/process_store.py` | An exercise's timeline in the database ("Process"): `load` and `stored_stages` build the dataclasses the pages read, `save` keeps a page's snapshot whole (the revision guard, keys, the references check, the audit), `move_form` is Home's *Open form* and *Close form*. Flushes, never commits; refuses with `Refused` and its `key` |
 | `applydesk/rules.py` | The rule engine, the only rule evaluator: `propose` answers what each rule would change in a table of dossiers (Dossiers' *Apply rules…*), over `Dossier`, `Column` and `Cell` rows built by `columns_of` and `rows_of`. Pure: reads no database |
 | `applydesk/candidates.py` | An exercise's Candidates ("Candidates"): `listing`, `add`, `remove` and `import_csv`. Flushes, never commits |
-| `applydesk/workflow.py` | Each item's state, the status row, the emails owed, the counts and the steps |
+| `applydesk/workflow.py` | Each item's state, the status row, the emails owed, the counts and the steps. Its email readers read `email_store`, else the sample's: `sends` (the stored ticks), `template_text` (subject, body and version from one read) and `emails` |
 | `applydesk/locks.py` | A stage's status and what a published stage fixes (ruling 35); `status_tally`, the exercises counted by status |
 | `applydesk/timeline.py` | The timeline Home and the applicant's page share: nothing operator-only |
 | `applydesk/home_ops.py` | The operator's part of Home's timeline |
 | `applydesk/extract.py` | Extract data's files: names, columns and rows |
 | `applydesk/handoff.py` | The bundle a gate is sent to Review Robin with: the reviewers, reviewees, relationships and settings CSVs |
-| `applydesk/scratch.py` | Scratch exercises: the per-browser in-memory store, its cookie and limits, and each page's saved state |
+| `applydesk/scratch.py` | Scratch exercises: the per-browser in-memory store, its cookie and limits. It holds no page state: every page saves to the database |
 | `applydesk/process_save.py` | Process's *Save*, before the store: the page's snapshot shape-checked and built back into stages (`build`), minting the keys of what the page added; `build(checking=True)` serves the rules check |
 | `applydesk/form_store.py` | An exercise's form in the database (segment AD2D): `parse`, `load`, `stored`, `revision`, `save` (under `panels_store.lock`, guarded by `exercise.form_revision`; "Form") |
+| `applydesk/email_store.py` | An exercise's emails in the database (segment AD2L): `sends`, `stored_sends` and `save_sends` (Process's ticks, in its transaction); `templates`, `stored_templates` and `save_template` (one card, under `panels_store.lock`, the owed check made under the lock, guarded by the template's `version`; "Emails") |
 | `applydesk/panels_store.py` | An exercise's panels and the Panels roster in the database (segment AD2E): `load`, `stored`, `revision`, `lock`, `save` (guarded by `exercise.panels_revision`) and `adopt` for the panels Form and Process make ("Panels") |
 | `applydesk/tones.py` | Each state's chip tone, one map for every page |
 | `applydesk/paging.py` | A long table's pages, 200 rows each, and its sort read from the query |
@@ -94,12 +95,14 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
   `exercise.process_revision`; new tables only) and `ad2e1_panels.py`
   (revision `ad2e1panels`: `panel`, `roster_entry` and `panel_member`,
   `exercise.panels_revision`, and `person.display_name_key`, backfilled with
-  Python's casefold).
+  Python's casefold), `ad2d1_form.py` (`ad2d1form`) and `ad2l1_emails.py`
+  (revision `ad2l1emails` after `ad2d1form`: `email_send`, `email_template`
+  and `exercise.sends_saved`).
 
 | Table (model) | Holds |
 |---|---|
 | `person` (`Person`) | Tenant ID and object ID, null while pending; email, `email_key` (the casefolded address), UPN and display name as snapshots, `display_name_key` (the name casefolded, kept in step by the model; three times the name's width, as casefolding can lengthen a name, and searched by the directory and the allowlist in place of `lower(display_name)`, which folds ASCII only on SQLite); `bound_at`; `first_signed_in_at` (the first sign-in, set once; a directory pick is bound without one); `created_at`. The allowlist is on it: `may_operate`, `admitted_by_id`, `admitted_at`, `revoked_at`, `is_admin` (an Admin, always also listed) |
-| `exercise` (`Exercise`) | `public_id`, unique, and `created_at`; `name`, `code` and `code_key` (the code casefolded), `description`, `eligibility` (`open`, `invitation` or NULL), `blind`, `help_contact` and `timezone` (NULL takes the operator settings' default), `created_by_id` (the person who made it), `archived_at`, `deleted_at`, `revision` ("Exercises") and `process_revision` ("Process") and `panels_revision` ("Panels"; 0 until Panels is first saved). Its form and applications are sample data |
+| `exercise` (`Exercise`) | `public_id`, unique, and `created_at`; `name`, `code` and `code_key` (the code casefolded), `description`, `eligibility` (`open`, `invitation` or NULL), `blind`, `help_contact` and `timezone` (NULL takes the operator settings' default), `created_by_id` (the person who made it), `archived_at`, `deleted_at`, `revision` ("Exercises") and `process_revision` ("Process") and `panels_revision` ("Panels"; 0 until Panels is first saved) and `sends_saved` ("Emails"; false until Process first records its ticks), and the form's `form_title`, `form_description` and `form_revision` ("Form"). Its applications are sample data |
 | `exercise_tag` (`ExerciseTag`) | One tag on an exercise: `exercise_id`, `label` (the case first typed) and `label_key` (casefolded); (exercise, `label_key`) unique |
 | `exercise_operator` (`ExerciseOperator`) | A grant: (exercise, person) unique, `is_owner`, `added_by_id`, `added_at`, `removed_at` |
 | `audit_event` (`AuditEvent`) | `at`, `event_type`, `actor_id`, `exercise_id`, `detail` (JSON) |
@@ -116,6 +119,8 @@ Apply Desk has its own database, `applydesk`, laid out as Utilities'.
 | `outcome_value` (`OutcomeValue`) | A value of an outcome: `outcome_id`, `key` (`v<n>`), `position`, `label`, `advances`, `retired_at`. (outcome, `key`) unique |
 | `outcome_weight` (`OutcomeWeight`) | A weight in an outcome's combined result: `outcome_id`, `gate_id`, `result_key`, `weight`. (outcome, gate, result) unique |
 | `outcome_release` (`OutcomeRelease`) | Who released an outcome to which audience, when: `outcome_id`, `audience`, `released_at`, `released_by_id`; (outcome, `audience`) unique. Written only by a release, which is not built; the table is empty |
+| `email_send` (`EmailSend`) | An email Process ticks: `exercise_id`, `item` (`receipt`, `reminder` or an outcome's key), `audience` (`Applicants` or `Evaluators`), `retired_at` (an unticked pair is retired, never deleted, and revived if ticked again). (exercise, `item`, `audience`) unique (`uq_email_send_pair`). Recorded whole with each Process save; `exercise.sends_saved` is false until the first, and a sample keeps its own ticks until then |
+| `email_template` (`EmailTemplate`) | An email's template: `exercise_id`, `item`, `audience`, `subject` (at most 300 characters), `body`, `version` (how many times it was saved) and `saved_at`. (exercise, `item`, `audience`) unique (`uq_email_template_pair`). A card never saved has no row. The row of an email Process retires stays |
 | `candidate` (`Candidate`) | One person on an exercise's Candidates: `exercise_id`, `person_id`, `via` (`search` or `csv`), `added_by_id`, `added_at`, `removed_at`. (exercise, `person_id`) unique, so removing sets `removed_at` and adding again clears it |
 
 The database enforces what a race could otherwise break, each as a partial
@@ -267,6 +272,34 @@ drops is retired.
   keys a plan reads. Extract reads answers by key under the label's header.
 - **Audit.** `exercise.form_saved`: a counts envelope and `context.revision`.
 
+### Emails
+
+`applydesk/email_store.py` keeps an exercise's emails: the ticks Process
+records and each card's template. Nothing is deleted.
+
+- **The ticks.** `sends` reads the live (item, audience) pairs, None until
+  Process first records them (`exercise.sends_saved`), so a sample keeps its
+  own; `stored_sends` opens a session of its own, for readers no route hands
+  one. `save_sends` replaces them with a Process save's (`process_save.build`'s
+  second value), in that save's transaction under its lock: a pair no longer
+  ticked is retired, one ticked again revived.
+- **A template.** `templates` and `stored_templates` read each saved template
+  by (item, audience); one never saved is absent. `save_template` takes
+  `panels_store.lock`, refuses an archived exercise (`Refused`, key
+  `archived`), an email the caller's `owed` check, read under the lock, says
+  Process no longer owes, with the Process revision the page opened at
+  (`not_owed`), and a template whose `version` is not the one the card opened
+  at (`stale`; the route answers 409). A subject over 300 characters or a body
+  over 20,000 is `long`. It writes the text, raises `version` and audits
+  `exercise.email_saved`, in the caller's transaction. It returns the new
+  version. A first save of one template racing another meets
+  `uq_email_template_pair`, which the route reports as a lost race.
+- **The readers** in `workflow` read these, else the sample's: `sends`,
+  `template_text` (subject, body and version from one read, so a card's text
+  and version agree) and `emails` (a template is written once it has a
+  subject and a body; one never saved is the sample's default, or owed for a
+  scratch exercise).
+
 ### Candidates
 
 `applydesk/candidates.py` lists an exercise's people (the form's roster on an
@@ -345,7 +378,8 @@ and `retired`; `context.revision`), `exercise.stage_reverted` (`reason`,
 `refs.stage_id`), `exercise.form_opened`, `exercise.form_closed`,
 `exercise.panels_saved` (a counts envelope: panels and people kept and
 `retired`; `context.revision`), `exercise.form_saved` (a counts envelope:
-`cards`, `fields`, `retired`; `context.revision`), `candidate.added` (`refs.person_id`, `context.via`) and `candidate.removed`
+`cards`, `fields`, `retired`; `context.revision`), `exercise.email_saved`
+(`context`: `item`, `audience`, `version`, `written`), `candidate.added` (`refs.person_id`, `context.via`) and `candidate.removed`
 (`refs.person_id`). A directory find is audited to the searcher, not the
 person found.
 
