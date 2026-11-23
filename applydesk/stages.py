@@ -10,6 +10,7 @@ Nothing is saved."""
 
 from __future__ import annotations
 
+import math
 import random
 import re
 from dataclasses import dataclass, replace
@@ -846,12 +847,16 @@ def date_problems(plan: Plan, st: Stage) -> tuple[str, ...]:
 
 
 def _is_number(value: str) -> bool:
-    """As the page's ``!isNaN(Number(v))`` on a non-blank value."""
+    """As the page's ``!isNaN(Number(v))`` on a non-blank value: a finite
+    number, with no ``_`` (Python's ``float`` reads ``1_000``, ``nan`` and
+    ``inf``, which the rules would then read as ``1`` or never hold)."""
+    text = value.strip()
+    if not text or "_" in text:
+        return False
     try:
-        float(value.strip())
+        return math.isfinite(float(text))
     except ValueError:
         return False
-    return bool(value.strip())
 
 
 def _compare_problems(

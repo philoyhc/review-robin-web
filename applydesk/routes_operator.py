@@ -481,7 +481,7 @@ async def _page_json(request: Request) -> Any:
         raise HTTPException(status_code=413, detail=_TOO_LARGE)
     try:
         return json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):  # too deep a body reads as malformed
         raise HTTPException(status_code=400) from None
 
 
@@ -501,7 +501,7 @@ async def _scratch_json(request: Request, exercise_id: str) -> tuple[sample_data
         raise HTTPException(status_code=413, detail=_TOO_LARGE)
     try:
         return exercise, json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):  # too deep a body reads as malformed
         raise HTTPException(status_code=400) from None
 
 
@@ -861,7 +861,7 @@ async def dossiers_proposal(request: Request, exercise_id: str) -> Response:
         raise HTTPException(status_code=413)
     try:
         sent = json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):  # too deep a body reads as malformed
         raise HTTPException(status_code=400) from None
     return await run_in_threadpool(_propose, exercise_id, sent)
 
@@ -985,7 +985,7 @@ async def exercise_details(request: Request, exercise_id: str) -> Response:
         raise HTTPException(status_code=413, detail=_TOO_LARGE)
     try:
         sent = json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):  # too deep a body reads as malformed
         sent = None
     return await run_in_threadpool(_save_details, request, exercise_id, sent)
 

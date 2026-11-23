@@ -770,7 +770,7 @@
           checkError = got[0] ? "" : (got[1] && got[1].error) || "The rules could not be checked.";
           if (asking === null && !inflight) delete root.dataset.pcAsking;  // none newer waiting
           drawRules();
-        }, function () { inflight -= 1; askedFor = ""; if (asking === null && !inflight) delete root.dataset.pcAsking; });
+        }, function () { inflight -= 1; if (askedFor === body) askedFor = ""; if (asking === null && !inflight) delete root.dataset.pcAsking; });
     }, 250);
   }
   function rules() {
