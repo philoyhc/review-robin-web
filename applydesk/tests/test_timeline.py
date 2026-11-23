@@ -120,7 +120,7 @@ def test_home_is_the_timeline_beside_details(client: TestClient) -> None:
     # the link once the line under the timeline is gone (AD1S).
     now = home[home.index('data-tl-stage="3"') :]
     now = now[: now.index("</ol>")]  # the last stage: up to the list's end
-    link = f'<a href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Open Gate 3 →</a>'
+    link = f'<a href="/applydesk/operator/exercises/{EX}/evaluations/g3">Open Gate 3 →</a>'
     assert now.count(link) == 1
     assert "data-tl-next" not in home
 
@@ -278,7 +278,7 @@ def test_home_s_operator_part_says_how_each_stage_stands() -> None:
     ]
     form, (g1, _, o1), (g3, o2) = rows[0][0], rows[1], rows[2]
     assert (form.state, form.detail) == ("Closed", "100 submitted · 3 drafts")
-    assert (g1.state, g1.target) == ("Results in", "1")
+    assert (g1.state, g1.target) == ("Results in", "g1")
     assert "2,980 pairs · 100 of 100 reviewed" in g1.detail
     assert g3.detail == (
         "Suggested, then approved · Residential staff 2 · Total 2 · 80 pairs"
@@ -300,8 +300,22 @@ def test_home_s_operator_part_says_how_each_stage_stands() -> None:
 def test_home_draws_the_operator_part_and_links_where_it_is_worked(client: TestClient) -> None:
     home = client.get(f"/applydesk/operator/exercises/{EX}").text
     assert home.count("data-tl-op") == 3 and 'class="card tl tl-ops"' in home
-    assert f'href="/applydesk/operator/exercises/{EX}/evaluations/gate_3">Open Gate 3 →</a>' in home
+    assert f'href="/applydesk/operator/exercises/{EX}/evaluations/g3">Open Gate 3 →</a>' in home
     assert f'href="/applydesk/operator/exercises/{EX}/dossiers">Open Dossiers →</a>' in home
+
+
+def test_a_gate_row_links_to_its_gate_whatever_its_key(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AD2C rung 5b, cold read: a row's target is a gate's key, so a gate
+    keyed "dossiers" still opens its own page, not Dossiers."""
+    from applydesk import home_ops
+
+    gate = home_ops.Row("Gate 1 · Odd", "Ready", "warn", "", "dossiers", 1)
+    monkeypatch.setattr(home_ops, "of", lambda e: ((gate,),))
+    home = client.get(f"/applydesk/operator/exercises/{EX}").text
+    assert f'href="/applydesk/operator/exercises/{EX}/evaluations/dossiers">Open Gate 1 →' in home
+    assert "Open Dossiers →" not in home
 
 
 def test_a_stage_not_shown_to_applicants_is_not_on_theirs(

@@ -168,7 +168,7 @@ def test_panels_marks_what_is_kept_and_asks_before_leaving(page: Page) -> None:
 def test_the_gate_page_asks_before_leaving_its_pages_with_changes(page: Page) -> None:
     """AD-07: changes kept in the tab ask before leaving the gate's
     pages; its own pager and sort do not."""
-    page.goto(f"{MODEL}/evaluations/gate_3")
+    page.goto(f"{MODEL}/evaluations/g3")
     assert not page.evaluate(LEAVES)
     page.locator("#ev-table-card tbody tr").first.get_by_role("button", name="Remove").click()
     assert page.evaluate(LEAVES)

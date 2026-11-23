@@ -27,7 +27,7 @@ def test_chips_shape_the_links_and_are_kept(page: Page) -> None:
     assert _href(page, "applications", "applications.csv").endswith("?rows=all&drafts=1")
     gates = page.locator('[data-xd-card="gates"]')
     gates.get_by_role("button", name="A row per application").click()
-    assert "shape=application" in _href(page, "gates", "gate_1.csv")
+    assert "shape=application" in _href(page, "gates", "gate_g1.csv")
     assert "shape=application" in _href(page, "gates", "gates.zip")
     every = page.locator('[data-xd-card="all"]')
     every.get_by_role("button", name="Applications").click()

@@ -21,7 +21,7 @@ def test_a_saved_gate_links_to_its_review_robin_card() -> None:
     page = _client().get(f"{LOBBY}/wa9juxbc2t/process").text
     # Ruling 65: first in the gate's body, Open Gate N →, to its page.
     links = re.findall(r'data-pc-rr="[^"]*">[^<]*<a href="([^"]+)">Open Gate (\d+) →</a>', page)
-    assert links and links[0] == (f"{LOBBY}/wa9juxbc2t/evaluations/gate_1", "1"), links
+    assert links and links[0] == (f"{LOBBY}/wa9juxbc2t/evaluations/g1", "1"), links
     links = [href for href, _ in links]
     # Each one opens: the card is there.
     client = _client()
@@ -67,7 +67,7 @@ def test_a_draft_s_gate_says_why_it_has_no_link() -> None:
     page = client.get(f"{LOBBY}/{made}/process").text
     saved = page[page.index('data-key="g1"') :]
     saved = saved[: saved.index("data-pr-list")]
-    assert "once the exercise is published" in saved and "/evaluations/gate_" not in saved
+    assert "once the exercise is published" in saved and "/evaluations/g1" not in saved
     # A new gate in a draft is held back by the draft, not by saving.
     template = page[page.index('id="pc-new-gate"') :]
     assert "once the exercise is published" in template[: template.index("</template>")]
@@ -235,7 +235,7 @@ def test_each_link_between_process_a_gate_and_its_emails_lands() -> None:
     process = client.get(f"{base}/process").text
     emails = client.get(f"{base}/emails").text
     # A gate page: Set on Process → its card.
-    gate = client.get(f"{base}/evaluations/gate_1").text
+    gate = client.get(f"{base}/evaluations/g1").text
     back = re.findall(r'<a href="([^"]+)">Set on Process →</a>', gate)
     assert back and back[0].startswith(f"{base}/process#gate-"), back
     assert f'data-item="gate" data-key="{back[0].split("#gate-")[1]}"' in process

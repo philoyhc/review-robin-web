@@ -12,7 +12,7 @@ from playwright.sync_api import Locator, Page
 from applydesk.tests.test_form_browser import page as page
 
 ORIGIN = "http://applydesk.test"
-GATE3 = f"{ORIGIN}/applydesk/operator/exercises/wa9juxbc2t/evaluations/gate_3"
+GATE3 = f"{ORIGIN}/applydesk/operator/exercises/wa9juxbc2t/evaluations/g3"
 
 
 def _badges(page: Page) -> list[str]:
@@ -347,7 +347,7 @@ def test_no_one_is_offered_to_review_themself(page: Page, monkeypatch: pytest.Mo
     """Gate 1's current RAs review every applicant but themselves: Aisha,
     an RA applying to return, is not offered for her own dossier."""
     _as(monkeypatch, "g1", mode="suggested")
-    page.goto(GATE3.replace("gate_3", "gate_1"))
+    page.goto(GATE3.replace("g3", "g1"))
     page.get_by_role("button", name="+ Pair").click()
     page.locator("[data-ev-add-who]").select_option(label="Aisha Bello")
     # Her 29 reviewers are on it already: no one is left but herself, and

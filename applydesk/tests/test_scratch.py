@@ -481,7 +481,13 @@ def test_a_sample_exercise_s_process_saves_into_the_database() -> None:
     # Every page draws the new gate, which no sample cell names: blank.
     for path in ("", "/process", "/form", "/panels", "/emails", "/dossiers", "/evaluations"):
         assert client.get(f"{LOBBY}/{model}{path}").status_code == 200, path
-    assert client.get(f"{LOBBY}/{model}/evaluations/gate_1").status_code == 200
+    assert client.get(f"{LOBBY}/{model}/evaluations/{new_key}").status_code == 200
+    # Its page is keyed (AD-48): the removed gate's key is not the new
+    # gate's, and an old numbered link reaches the gate numbered so now.
+    assert client.get(f"{LOBBY}/{model}/evaluations/{gate_keys[0]}").status_code == 404
+    old = client.get(f"{LOBBY}/{model}/evaluations/gate_1", follow_redirects=False)
+    assert old.status_code == 302
+    assert old.headers["location"] == f"{LOBBY}/{model}/evaluations/{new_key}"
     extract = client.get(f"{LOBBY}/{model}/extract")
     assert extract.status_code == 200
     files = set(re.findall(r"/extract/([\w.-]+\.(?:csv|zip))", extract.text))

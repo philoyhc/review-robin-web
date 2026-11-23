@@ -46,25 +46,25 @@ def test_applications_csv_a_row_per_application(client: TestClient) -> None:
 
 
 def test_a_gate_csv_by_pair_or_by_application(client: TestClient) -> None:
-    pairs = _rows(client.get(f"{BASE}/gate_1.csv").content)
+    pairs = _rows(client.get(f"{BASE}/gate_g1.csv").content)
     assert pairs[0] == ["dossier_id", "evaluator", "evaluator_email", "Score", "Comment"]
     assert len(pairs) - 1 == 2980
     assert all(0 <= int(r[3]) <= 5 for r in pairs[1:])  # within the field's bounds
     # The same pair answers the same every time (seeded sample answers).
-    assert pairs == _rows(client.get(f"{BASE}/gate_1.csv").content)
-    named = _rows(client.get(f"{BASE}/gate_2.csv?applicants=names").content)
+    assert pairs == _rows(client.get(f"{BASE}/gate_g1.csv").content)
+    named = _rows(client.get(f"{BASE}/gate_g2.csv?applicants=names").content)
     assert named[0][:3] == ["dossier_id", "applicant", "email"]
     assert {r[5] for r in named[1:]} <= {"No concerns", "Minor concerns", "Major concerns"}
-    by_app = _rows(client.get(f"{BASE}/gate_1.csv?shape=application").content)
+    by_app = _rows(client.get(f"{BASE}/gate_g1.csv?shape=application").content)
     assert by_app[0] == ["dossier_id", "Mean score", "Comments"]
     assert by_app[1][:2] == ["p3bd7kq2wx", "3.81"]  # Dossiers' collated result
-    r = client.get(f"{BASE}/gate_1.csv")
-    assert 'filename="gate_1_peer_review.csv"' in r.headers["content-disposition"]
+    r = client.get(f"{BASE}/gate_g1.csv")
+    assert 'filename="g1_peer_review.csv"' in r.headers["content-disposition"]
 
 
 def test_a_gate_not_sent_or_missing_has_no_file(client: TestClient) -> None:
-    assert client.get(f"{BASE}/gate_3.csv").status_code == 404
-    assert client.get(f"{BASE}/gate_9.csv").status_code == 404
+    assert client.get(f"{BASE}/gate_g3.csv").status_code == 404
+    assert client.get(f"{BASE}/gate_g9.csv").status_code == 404
     assert client.get(f"{BASE}/nothing.csv").status_code == 404
 
 
@@ -79,9 +79,9 @@ def test_a_number_past_any_gate_or_page_is_not_a_500(client: TestClient) -> None
     assert client.get(f"{evaluations}/gate_{huge}/reviewers.csv").status_code == 404
     # Past the last, an offset clamps to the last page, however long;
     # a negative one is the first (spec/applications.md, the pager).
-    last = client.get(f"{evaluations}/gate_1?offset={huge}")
+    last = client.get(f"{evaluations}/g1?offset={huge}")
     assert last.status_code == 200 and "2,801–2,980 of 2,980" in last.text
-    first = client.get(f"{evaluations}/gate_1?offset=-{huge}")
+    first = client.get(f"{evaluations}/g1?offset=-{huge}")
     assert first.status_code == 200 and "1–200 of 2,980" in first.text
 
 
@@ -104,21 +104,21 @@ def test_the_zips_carry_a_manifest_and_what_the_chips_say(client: TestClient) ->
     assert z.namelist() == [
         "manifest.csv",
         "applications.csv",
-        "gate_1_peer_review.csv",
-        "gate_2_office_checks.csv",
+        "g1_peer_review.csv",
+        "g2_office_checks.csv",
         "outcomes.csv",
     ]
     manifest = _rows(z.read("manifest.csv"))
-    assert ["gate_3_staff_interview.csv", "", "Not sent"] in manifest
-    assert ["gate_1_peer_review.csv", "2980", ""] in manifest
+    assert ["g3_staff_interview.csv", "", "Not sent"] in manifest
+    assert ["g1_peer_review.csv", "2980", ""] in manifest
     # Applicants as Dossier IDs: no file names them but the applications'.
     z = zipfile.ZipFile(
         io.BytesIO(client.get(f"{BASE}/all.zip?applicants=ids&carries=gates,outcomes").content)
     )
     assert z.namelist() == [
         "manifest.csv",
-        "gate_1_peer_review.csv",
-        "gate_2_office_checks.csv",
+        "g1_peer_review.csv",
+        "g2_office_checks.csv",
         "outcomes.csv",
     ]
     assert "applicant" not in _rows(z.read("outcomes.csv"))[0]
@@ -129,7 +129,7 @@ def test_the_zips_carry_a_manifest_and_what_the_chips_say(client: TestClient) ->
         )
     )
     assert len(_rows(z.read("applications.csv"))) - 1 == 103
-    assert _rows(z.read("gate_1_peer_review.csv"))[0][-2:] == ["Mean score", "Comments"]
+    assert _rows(z.read("g1_peer_review.csv"))[0][-2:] == ["Mean score", "Comments"]
     assert len(_rows(z.read("outcomes.csv"))) - 1 == 100
     gates = zipfile.ZipFile(io.BytesIO(client.get(f"{BASE}/gates.zip").content))
     assert gates.namelist()[0] == "manifest.csv" and len(gates.namelist()) == 3
@@ -137,9 +137,9 @@ def test_the_zips_carry_a_manifest_and_what_the_chips_say(client: TestClient) ->
 
 def test_the_page_links_each_download(client: TestClient) -> None:
     text = client.get(f"/applydesk/operator/exercises/{EX}/extract").text
-    for f in ("all.zip", "applications.csv", "gate_1.csv", "gate_2.csv", "gates.zip"):
+    for f in ("all.zip", "applications.csv", "gate_g1.csv", "gate_g2.csv", "gates.zip"):
         assert f'data-xd-dl="{f}" href="{BASE}/{f}"' in text
-    assert 'data-xd-dl="gate_3.csv"' not in text  # not sent
+    assert 'data-xd-dl="gate_g3.csv"' not in text  # not sent
     blank = client.get("/applydesk/operator/exercises/n5wg8tjr3e/extract").text
     # Nothing submitted: only the setup can be extracted (Semantics).
     assert re.findall(r'data-xd-dl="([^"]+)"', blank) == ["setup.zip"]
@@ -230,10 +230,10 @@ def test_zip_all_names_no_one_by_default_on_a_sensitive_exercise(client: TestCli
     """Semantics: a confidential gate's file defaults to Dossier IDs; the RA
     exercise's Office checks is confidential, so Zip all starts on IDs."""
     z = zipfile.ZipFile(io.BytesIO(client.get(f"{BASE}/all.zip").content))
-    assert "applicant" not in _rows(z.read("gate_2_office_checks.csv"))[0]
+    assert "applicant" not in _rows(z.read("g2_office_checks.csv"))[0]
     assert "applicant" not in _rows(z.read("outcomes.csv"))[0]
     named = zipfile.ZipFile(io.BytesIO(client.get(f"{BASE}/all.zip?applicants=names").content))
-    assert "applicant" in _rows(named.read("gate_2_office_checks.csv"))[0]
+    assert "applicant" in _rows(named.read("g2_office_checks.csv"))[0]
 
 
 def test_a_cell_never_runs_as_a_formula() -> None:
@@ -288,8 +288,8 @@ def test_each_download_reads_as_a_download(client: TestClient) -> None:
     assert dict(labels) == {
         "all.zip": "Download all (ZIP)",
         "applications.csv": "Download CSV",
-        "gate_1.csv": "Download CSV",
-        "gate_2.csv": "Download CSV",
+        "gate_g1.csv": "Download CSV",
+        "gate_g2.csv": "Download CSV",
         "gates.zip": "Download gates (ZIP)",
         "outcomes.csv": "Download CSV",
         "alias_key.csv": "Download key (CSV)",

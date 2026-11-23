@@ -149,14 +149,14 @@ def test_the_digest_follows_the_files() -> None:
 
 
 def test_each_file_downloads_under_its_code(client: TestClient) -> None:
-    reply = client.get(f"{BASE}/gate_3/relationships.csv")
+    reply = client.get(f"{BASE}/g3/relationships.csv")
     assert reply.status_code == 200
     assert reply.headers["content-type"].startswith("text/csv")
     assert f'filename="{EX}-g3_relationships.csv"' in reply.headers["content-disposition"]
-    reviewees = _rows(client.get(f"{BASE}/gate_3/reviewees.csv").text)
+    reviewees = _rows(client.get(f"{BASE}/g3/reviewees.csv").text)
     assert reviewees[0]["ProfileLink"].startswith("http://testserver/applydesk/me/exercises/")
-    assert client.get(f"{BASE}/gate_3/observers.csv").status_code == 404
-    assert client.get(f"{BASE}/gate_9/reviewers.csv").status_code == 404
+    assert client.get(f"{BASE}/g3/observers.csv").status_code == 404
+    assert client.get(f"{BASE}/g9/reviewers.csv").status_code == 404
 
 
 def test_a_download_is_guarded_and_the_handoff_is_not(
@@ -180,7 +180,7 @@ def test_a_download_is_guarded_and_the_handoff_is_not(
         return dataclasses.replace(sent, files=files)
 
     monkeypatch.setattr(routes_operator, "_bundle", tainted)
-    down = client.get(f"{BASE}/gate_3/reviewers.csv").text
+    down = client.get(f"{BASE}/g3/reviewers.csv").text
     assert "'=HYPERLINK" in down and "\n=HYPERLINK" not in down
     # What Review Robin is sent stays unguarded: the page's digest, which
     # *Changed since sent* compares, is the raw files'.
@@ -191,7 +191,7 @@ def test_a_download_is_guarded_and_the_handoff_is_not(
         return raw[-1]
 
     monkeypatch.setattr(routes_operator, "_bundle", keep)
-    page = client.get(f"{BASE}/gate_3").text
+    page = client.get(f"{BASE}/g3").text
     assert "=HYPERLINK" in raw[-1].files["reviewers"]
     assert raw[-1].digest() in page
 
@@ -205,14 +205,14 @@ def test_guarded_marks_a_formula_and_leaves_a_number() -> None:
 
 
 def test_the_card_counts_and_offers_each_file(client: TestClient) -> None:
-    page = client.get(f"{BASE}/gate_3").text
+    page = client.get(f"{BASE}/g3").text
     card = page.split('id="ev-rr"')[1].split("</section>")[0]
     sent = _bundle(EX, 3)
     assert f"{sent.rows('reviewers')} evaluators, by name and email" in card
     assert f"{sent.rows('reviewees')} dossiers, each with its" in card
     assert f"{sent.rows('relationships')} pairs, each tagged" in card
     for kind in handoff.KINDS:
-        assert f'href="{BASE}/gate_3/{kind}.csv" download data-rr-file="{kind}"' in card
+        assert f'href="{BASE}/g3/{kind}.csv" download data-rr-file="{kind}"' in card
 
 
 def test_the_sample_shows_each_later_link_state(client: TestClient) -> None:
@@ -227,7 +227,7 @@ def test_the_sample_shows_each_later_link_state(client: TestClient) -> None:
         3: "Detached: unlinked in Review Robin, so neither re-sent nor pulled",
     }
     for n, line in lines.items():
-        card = client.get(f"{base}/gate_{n}").text.split('id="ev-rr"')[1]
+        card = client.get(f"{base}/g{n}").text.split('id="ev-rr"')[1]
         assert f"<dd data-rr-link>{line}</dd>" in card
     # Both opened: their pairs are Review Robin's, as an open session's.
     assert workflow.gate_opened("Closed", "") and workflow.gate_opened("Detached", "")
@@ -247,7 +247,7 @@ def test_progress_follows_the_gate_s_line() -> None:
 
 
 def test_the_card_s_data_links_review_robin_s_me(client: TestClient) -> None:
-    page = client.get("/applydesk/operator/exercises/k7mfr3pq8z/evaluations/gate_1").text
+    page = client.get("/applydesk/operator/exercises/k7mfr3pq8z/evaluations/g1").text
     data = page.split('<script type="application/json" id="rr-data">')[1].split("</script>")[0]
     assert '"rrMe": "http://testserver/reviewrobin/me"' in data
     assert '"opened": true' in data and '"state": "Sent"' in data
@@ -261,9 +261,7 @@ def test_every_gate_page_has_its_card(client: TestClient) -> None:
         for gate in stages.plan_of(exercise.public_id).columns:
             if not isinstance(gate, stages.Gate):
                 continue
-            path = (
-                f"/applydesk/operator/exercises/{exercise.public_id}/evaluations/gate_{gate.number}"
-            )
+            path = f"/applydesk/operator/exercises/{exercise.public_id}/evaluations/{gate.key}"
             page = client.get(path).text
             card = page.split('id="ev-rr"')[1].split("</section>")[0]
             for part in (
