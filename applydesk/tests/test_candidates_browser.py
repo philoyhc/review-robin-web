@@ -61,3 +61,34 @@ def test_the_list_is_kept_as_it_is_changed(page: Page) -> None:
     assert item.locator("[data-cand-said]").inner_text() == "1 added."
     # Kept as made: Process's own Save has nothing unsaved.
     assert page.locator("[data-unsaved]").is_hidden()
+
+
+def test_candidates_moved_to_another_stage_shows_the_list_as_it_stands(page: Page) -> None:
+    """Codex on #4161: + Candidates on another stage draws the list as it
+    now is, not as the page first loaded it."""
+    built = stages.plan_of(MODEL).stages
+    drafts = tuple(replace(st, status="Draft", candidates=(i == 0)) for i, st in enumerate(built))
+    session = db.new_session()
+    try:
+        process_store.save(session, MODEL, drafts, 0, None)
+        people.pending(session, "zoe.candidate@example.edu", None)
+        session.commit()
+    finally:
+        session.close()
+    page.goto(f"{ORIGIN}/applydesk/operator/exercises/{MODEL}/process")
+    item = page.locator('#pc-cards .pc-item[data-item="candidates"]')
+    first, other = page.locator("#pc-cards .pc").nth(0), page.locator("#pc-cards .pc").nth(1)
+    for card in (first, other):
+        if not card.locator(".fc-body").first.is_visible():
+            card.locator("[data-fc-toggle]").first.click()
+    if not item.locator("[data-cand-search]").is_visible():
+        item.locator("[data-pi-toggle]").click()
+    item.locator("[data-cand-search]").fill("zoe.cand")
+    found = item.locator("[data-cand-found] li", has_text="zoe.candidate@example.edu")
+    found.locator("button").click()
+    item.locator("[data-cand-list] tr", has_text="zoe.candidate@example.edu").wait_for()
+    first.locator('[data-pc-act="remove-candidates"]').click()
+    other.locator('[data-pc-act="candidates"]').click()
+    moved = other.locator('.pc-item[data-item="candidates"]')
+    assert "zoe.candidate@example.edu" in (moved.locator("[data-cand-list]").text_content() or "")
+    assert moved.locator("[data-cand-count]").text_content() == "1 person"

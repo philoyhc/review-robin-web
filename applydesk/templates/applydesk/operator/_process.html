@@ -1664,6 +1664,14 @@
     (got.bad || []).forEach(function (t) { bad.appendChild(el("li", "", t)); });
     bad.hidden = !(got.bad || []).length;
     item.querySelector("[data-cand-said]").textContent = got.said || "";
+    // The item + Candidates adds is drawn from a template: it keeps the list
+    // as it now stands, so moving Candidates to another stage shows it
+    // (Codex on #4161).
+    var tpl = document.getElementById("pc-new-candidates");
+    if (tpl && !tpl.content.contains(item)) {
+      var kept = tpl.content.querySelector(".pc-item");
+      if (kept) draw(kept, { candidates: got.candidates });
+    }
   }
   function change(item, body) {
     var said = item.querySelector("[data-cand-said]");

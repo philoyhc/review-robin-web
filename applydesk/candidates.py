@@ -177,7 +177,10 @@ def import_csv(session: Session, public_id: str, text: str, actor: Person | None
     number. Flushes; the caller commits."""
     _exercise(session, public_id)
     reader = csv.reader(io.StringIO(text.lstrip("﻿")))
-    header = next(reader, None)
+    try:
+        header = next(reader, None)
+    except csv.Error as error:  # a field past the parser's limit (Codex on #4161)
+        raise Refused("The file could not be read as a CSV.") from error
     if header is None:
         raise Refused("The file is empty.")
     names = [h.strip().casefold() for h in header]
@@ -188,7 +191,16 @@ def import_csv(session: Session, public_id: str, text: str, actor: Person | None
     bad: list[str] = []
     seen: set[str] = set()
     added = already = 0
-    for n, row in enumerate(reader, start=2):
+    n = 1
+    while True:
+        n += 1
+        try:
+            row = next(reader)
+        except StopIteration:
+            break
+        except csv.Error:  # a field past the parser's limit: the rest is not read
+            bad.append(f"Row {n} could not be read; the rows after it were not read.")
+            break
         if not any(cell.strip() for cell in row):
             continue
         if n - 1 > MAX_ROWS:

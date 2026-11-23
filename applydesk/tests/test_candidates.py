@@ -84,6 +84,20 @@ def test_a_csv_address_too_long_to_store_is_a_bad_row() -> None:
         session.close()
 
 
+def test_a_csv_field_past_the_parser_s_limit_stops_the_read_not_the_upload() -> None:
+    """Codex on #4161: a field longer than ``csv``'s limit raises
+    ``csv.Error``; the rows before it save and the rest are listed back."""
+    huge = "x" * 140_000
+    session = db.new_session()
+    try:
+        text = f"Email,Name\nok@example.edu,Ok\nlate@example.edu,{huge}\nafter@example.edu,\n"
+        done = candidates.import_csv(session, MODEL, text, None)
+        assert done.added == 1
+        assert done.bad == ("Row 3 could not be read; the rows after it were not read.",)
+    finally:
+        session.close()
+
+
 def test_a_csv_without_an_email_column_is_refused() -> None:
     session = db.new_session()
     try:
