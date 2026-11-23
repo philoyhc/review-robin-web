@@ -72,6 +72,21 @@ the PR body unless it says otherwise.
   update-aware (a missing name read from the stored instrument) when
   AD6 builds the real re-send, or close this if AD6 always sends it.
 
+- **Review Robin on a phone** (author, 2026-11-23). Open
+  `guide/rrw_mobile_responsive.md` as a segment, its six rungs the
+  ladder; rung 1 (the viewport tag on participant pages, about 10 lines)
+  can land first. Re-checked unbuilt at `eb275acf9`
+  (`guide/rrw_reviewer_phone_and_scale.md` §1).
+- **A scale answer for a numeric response field** (author, 2026-11-23;
+  `guide/rrw_reviewer_phone_and_scale.md` §2, mockups
+  `guide/rrw_scale_mockup.html` and `guide/rrw_scale_builder_mockup.html`).
+  An item of a segment, scaffold first. Settled: opt-in per field, as
+  Band 3's *Integer (scale)* and *Decimal (scale)*, a mode stored in the
+  field's `validation`, not a type; up to 11 points it snaps, past that
+  it slides with a number box; three optional labels (start, middle,
+  end); a Step required. Apply Desk's gates follow it
+  (`applydesk/guide/todo_master.md`).
+
 ### Sequencing notes
 
 - **The email pipeline:** 14F (closed) sends by hand; 14G adds mail on

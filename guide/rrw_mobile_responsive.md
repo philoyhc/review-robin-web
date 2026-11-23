@@ -10,6 +10,12 @@ desktop-sized on a phone, and the rest is a CSS layer over tables that
 already scroll safely. The operator pages are a different order of work
 and are best left desktop-first.
 
+**Re-checked 2026-11-23 at `eb275acf9`:** nothing here is built and the
+plan holds; `base.html` still lacks the tag, and 20K's *Responses
+stacked* is still what rung 2 turns into cards
+(`guide/rrw_reviewer_phone_and_scale.md` §1). Queued as a stub in
+`guide/todo_master.md`.
+
 ## 1. The finding that matters
 
 **RRW's `app/web/templates/base.html` has no viewport meta tag.**
