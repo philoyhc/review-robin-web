@@ -1,7 +1,8 @@
 """Apply Desk's tables (segment AD2A): people, exercises, who operates
 them, and the audit trail; an exercise's settings and tags (AD2B); its
-timeline, gates, outcomes and Candidates (AD2C). The rest of an exercise
-still comes from `applydesk/sample_data.py` until AD2D onward
+timeline, gates, outcomes and Candidates (AD2C); its panels and roster
+(AD2E); its form's cards (AD2D). The rest of an exercise still comes
+from `applydesk/sample_data.py` until the series' later segments
 (`applydesk/guide/ad2_series.md`)."""
 
 from __future__ import annotations
@@ -159,6 +160,13 @@ class Exercise(Base):
     # Panels' own revision (segment AD2E): 0 until its panels are first
     # saved, the pages keeping the sample's.
     panels_revision: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    # The form's heading and its own revision (segment AD2D): 0 until Form
+    # is first saved, the pages keeping the sample's form.
+    form_title: Mapped[str | None] = mapped_column(String(200))
+    form_description: Mapped[str | None] = mapped_column(Text)
+    form_revision: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
 
@@ -506,6 +514,38 @@ class PanelMember(Base):
     roster_entry_id: Mapped[int] = mapped_column(
         ForeignKey("roster_entry.id", name="fk_panel_member_entry"), nullable=False, index=True
     )
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class FormCard(Base):
+    """One card of an exercise's form (segment AD2D; AD-45): a field, a
+    section or a page break, in the form's order. ``key`` is stable across
+    saves and renames (``q<n>``, minted by the server, never reused), so a
+    rule names a question by it. The text widths are Form's own checks;
+    ``pool`` is ``institution`` or a panel's key. Removing a card sets
+    ``retired_at`` (ruling 74)."""
+
+    __tablename__ = "form_card"
+    __table_args__ = (UniqueConstraint("exercise_id", "key", name="uq_form_card_key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    exercise_id: Mapped[int] = _exercise_fk("form_card")
+    key: Mapped[str] = mapped_column(String(40), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)  # field, section, pagebreak
+    type: Mapped[str] = mapped_column(String(16), nullable=False, default="string")
+    label: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    help: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    min: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    max: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    step: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    options: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    exclusive: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    ratio_w: Mapped[str] = mapped_column(String(6), nullable=False, default="4")
+    ratio_h: Mapped[str] = mapped_column(String(6), nullable=False, default="5")
+    pool: Mapped[str] = mapped_column(String(80), nullable=False, default="institution")
+    required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    shown: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
