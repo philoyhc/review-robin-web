@@ -64,6 +64,29 @@
 </div>
 {% endmacro %}
 
+{# Ruling 77: Candidates, a list of people kept by hand, through the
+   people search or a CSV; the form's roster on an Invitation only
+   exercise, or fed to gates as dossiers. At most one per exercise.
+   A scaffold: its controls are inert until the next rung. #}
+{% macro candidates_item(open=False) %}
+<div class="pc-item" data-item="candidates"{% if open %} data-open{% endif %}>
+  {% set chips %}<span class="chip chip-mute" data-cand-count>No one yet</span>{% endset %}
+  {{ head("Candidates", "Candidates", chips, open) }}
+  <div class="pi-body">
+  <p class="pc-line">People added by hand. On an <em>Invitation only</em> exercise they are who may apply; with no form, each becomes a dossier for the gates that follow.</p>
+  <div class="pc-row pi-sec">
+    <label class="fc-l pc-wide">Add someone<input class="fc-in" type="search" data-cand-search placeholder="Search by name or email" disabled title="Adding candidates is not built yet"></label>
+    <label class="fc-l">Or a file<button type="button" class="btn btn-secondary" data-cand-csv disabled title="Uploading candidates is not built yet">Upload CSV…</button></label>
+  </div>
+  <p class="pc-line muted pc-hint">A CSV has an <em>Email</em> column and, if you like, a <em>Name</em>. Rows that do not read are listed back, not saved.</p>
+  <table class="pc-cands" data-cand-list>
+    <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Added</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
+    <tbody><tr><td colspan="4" class="muted">No candidates yet.</td></tr></tbody>
+  </table>
+  </div>
+</div>
+{% endmacro %}
+
 {% macro rule_box(plan, c, rule_text, sec=True) %}
 {% set rt = rule_text(plan, c) %}
 <div class="pc-rule{% if sec %} pi-sec{% endif %}">
@@ -414,10 +437,12 @@
     {% if st.form %}{{ form_item(open=lone, w=st.form_when) }}{% endif %}
     {% for g in gates %}{{ gate_item(plan, g, rule_text, open=lone, window=window_text(window(st, g))) }}{% endfor %}
     {% for o in outs %}{{ outcome_item(plan, o, rule_text, open=lone) }}{% endfor %}
+    {% if exercise.eligibility == "Invitation only" and (st.form or (not plan.form_stage and st.number == 1)) %}{{ candidates_item() }}{% endif %}
     <p class="pc-line muted pc-empty">Nothing in this stage yet: add the form, a gate or an outcome.</p>
     <div class="pc-adds">
       <button type="button" class="btn btn-secondary" data-pc-act="gate"{% if st.form %} disabled title="A stage holding the form holds no gate"{% endif %}>+ Gate</button>
       <button type="button" class="btn btn-secondary" data-pc-act="outcome"{% if outs %} disabled title="A stage holds one outcome at most"{% endif %}>+ Outcome</button>
+      <button type="button" class="btn btn-secondary" data-pc-act="candidates" disabled title="Candidates, a list of people you add by hand, are not built yet">+ Candidates</button>
       <button type="button" class="btn btn-secondary" data-pc-act="form"{% if st.form %} disabled title="This stage holds the form"{% elif gates %} disabled title="A stage holding gates holds no form"{% elif plan.form_stage %} disabled title="Another stage holds the form"{% endif %}>+ Form</button>
     </div>
     <div class="fc-foot">

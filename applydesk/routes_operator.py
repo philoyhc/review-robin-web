@@ -1077,6 +1077,8 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         tl=tl,
         short=clock.short,
         next_line=timeline.next_step(exercise, tl),
+        # Ruling 76: Home's next step carries the form's own move.
+        form_action=workflow.form_action(exercise),
         ops=home_ops.of(exercise),
         missing=sample_data.setup_missing(exercise),
         operators_card=ops,

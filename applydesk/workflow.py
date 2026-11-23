@@ -225,6 +225,19 @@ def form_state(exercise: Exercise) -> str:
     return "Open" if exercise.form_open else "Closed"
 
 
+def form_action(exercise: Exercise) -> tuple[str, str] | None:
+    """The action Home's next step offers on the application form (ruling
+    76), and why it is not live: *Open form* until it opens, *Close form*
+    while open; None with no form. Inert until AD2C rung 9 wires it."""
+    if stages.plan_of(exercise.public_id).form_stage is None:
+        return None
+    if exercise.state == "Draft":
+        return ("Open form", "A draft's form opens once the exercise is published.")
+    if exercise.form_open:
+        return ("Close form", "Closing the form from here is not built yet.")
+    return ("Open form", "Opening the form from here is not built yet.")
+
+
 #: A gate's states once sent (segment AD1M): *Closed* is a session
 #: Review Robin has closed whose results are not yet pulled (ruling 57);
 #: *Detached* one unlinked there, re-sent and pulled no more.
