@@ -61,7 +61,11 @@ def _now() -> datetime:
 
 def _exercise(session: Session, public_id: str, *, lock: bool = False) -> Exercise:
     query = select(Exercise).where(Exercise.public_id == public_id, Exercise.deleted_at.is_(None))
-    found = session.scalar(query.with_for_update() if lock else query)
+    # Under the lock, the row as committed now: a copy the session already
+    # holds may carry an older revision (Codex on #4154).
+    found = session.scalar(
+        query.with_for_update().execution_options(populate_existing=True) if lock else query
+    )
     if found is None:
         raise Refused("That exercise is no longer on record.", key="gone")
     return found
@@ -144,10 +148,10 @@ def check_references(built: tuple[stages.Stage, ...]) -> None:
     cols = {c.key: c for c in plan.columns}
     for column in plan.columns:
         rule = column.rule
-        if rule is None:
-            continue
         name = column.label or ("Gate" if isinstance(column, stages.Gate) else "Outcome")
-        for when, _ in rule.branches:
+        # An outcome's weights are checked whether or not it has a rule
+        # (Codex on #4154).
+        for when, _ in rule.branches if rule else ():
             for kind, key, _op, _value in when:
                 if kind in GATE_READS and isinstance(column, stages.Gate):
                     raise Refused(
@@ -780,18 +784,29 @@ def _save_values(
         v.key: v
         for v in session.scalars(select(OutcomeValue).where(OutcomeValue.outcome_id == orow.id))
     }
-    last = len(outcome.values)
+    # Every value but the last takes an application on; a single value is
+    # itself (``stages.going_on``; Codex on #4154).
+    advancing = set(stages.going_on(outcome))
     for n, label in enumerate(outcome.values, 1):
         key = keys[label]
         row = rows.get(key)
         if row is None:
             session.add(
                 OutcomeValue(
-                    outcome_id=orow.id, key=key, position=n, label=label, advances=n < last
+                    outcome_id=orow.id,
+                    key=key,
+                    position=n,
+                    label=label,
+                    advances=label in advancing,
                 )
             )
         else:
-            row.position, row.label, row.advances, row.retired_at = n, label, n < last, None
+            row.position, row.label, row.advances, row.retired_at = (
+                n,
+                label,
+                label in advancing,
+                None,
+            )
     for key, row in rows.items():
         if key not in set(keys.values()) and row.retired_at is None:
             row.retired_at = at

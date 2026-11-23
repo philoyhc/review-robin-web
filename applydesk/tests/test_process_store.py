@@ -245,6 +245,95 @@ def test_outcome_values_keep_their_keys_by_label(session: Session) -> None:
     )
 
 
+def test_a_stale_save_is_refused_though_the_session_holds_the_exercise(
+    session: Session,
+) -> None:
+    """Codex on #4154: a session that loaded the exercise before another
+    saved reads the committed revision under the lock, not its own copy."""
+    built = _built(MODEL)
+    _save(session, MODEL, built)  # revision 1, the exercise now in this session
+    held = session.scalar(select(Exercise).where(Exercise.public_id == MODEL))
+    assert held is not None and held.process_revision == 1  # kept, as a caller would
+    stored = process_store.load(session, MODEL)
+    assert stored is not None
+    # Its copy of the exercise kept past the commit (SQLite allows one
+    # writer, so this session's read ends first): still at revision 1.
+    session.expire_on_commit = False
+    session.commit()
+    other = db.new_session()
+    try:
+        process_store.save(other, MODEL, stored.stages, 1, None)
+        other.commit()  # revision 2
+    finally:
+        other.close()
+    with pytest.raises(Refused) as stale:
+        process_store.save(session, MODEL, stored.stages, 1, None)
+    assert stale.value.key == "stale" and held.process_revision == 2
+
+
+def test_a_weight_on_a_gate_dropped_is_refused_without_a_rule(session: Session) -> None:
+    """Codex on #4154: an outcome decided by hand still has its weights
+    checked; one naming a dropped gate is refused, not saved dangling."""
+    built = _built(MODEL)
+    weighed = next(
+        c for st in built for c in st.columns if isinstance(c, stages.Outcome) and c.weights
+    )
+    gone = stages.split_key(weighed.weights[0][0])[0]
+    changed = tuple(
+        replace(
+            st,
+            columns=tuple(
+                replace(c, rule=None) if c.key == weighed.key else c
+                for c in st.columns
+                if c.key != gone
+            ),
+        )
+        for st in built
+    )
+    changed = tuple(
+        replace(
+            st,
+            columns=tuple(
+                replace(c, rule=None)
+                if isinstance(c, stages.Outcome) and c.key != weighed.key and c.rule
+                else c
+                for c in st.columns
+            ),
+        )
+        for st in changed
+    )
+    with pytest.raises(Refused) as dangling:
+        process_store.save(session, MODEL, changed, 0, None)
+    assert dangling.value.key == "rule_target" and "weighs" in str(dangling.value)
+
+
+def test_a_single_outcome_value_advances(session: Session) -> None:
+    """Codex on #4154: as ``stages.going_on`` reads it, a lone value takes
+    an application on; with several, every one but the last does."""
+    from applydesk.models import OutcomeValue
+
+    built = _built(MODEL)
+    first = next(c for st in built for c in st.columns if isinstance(c, stages.Outcome))
+    lone = tuple(
+        replace(
+            st,
+            columns=tuple(
+                replace(c, values=("Go",), rule=None) if c.key == first.key else c
+                for c in st.columns
+            ),
+        )
+        for st in built
+    )
+    _save(session, MODEL, lone)
+    rows = {v.label: v.advances for v in session.scalars(select(OutcomeValue))}
+    assert rows["Go"] is True
+    others = [
+        c for st in built for c in st.columns if isinstance(c, stages.Outcome) and c is not first
+    ]
+    for o in others:
+        assert [rows[v] for v in o.values] == [True] * (len(o.values) - 1) + [False]
+
+
 def test_a_weight_in_a_superscript_digit_is_refused() -> None:
     """AD-129: ``"²".isdigit()`` holds and ``int`` refuses it."""
     with pytest.raises(process_save.Refused):
