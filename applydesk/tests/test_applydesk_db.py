@@ -44,6 +44,9 @@ TABLES = {
     "panel_member",
     # AD2D: the form's cards.
     "form_card",
+    # AD2L: email ticks and templates.
+    "email_send",
+    "email_template",
 }
 
 
