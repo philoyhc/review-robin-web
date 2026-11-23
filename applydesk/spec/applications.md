@@ -3,10 +3,11 @@
 > **Built:** every page below, as a working scaffold on sample data, behind
 > a real check of who may reach it. Every move works on screen. An
 > exercise's own settings (Details, the Lobby's name, code and tags, its
-> archive) are stored in the database; the rest of a sample exercise saves
-> nothing until a later AD2 segment, a scratch exercise's other pages are
-> held in the server's memory ("Scratch exercises"), and nothing is sent to
-> Review Robin until AD6.
+> archive), its Process (stages, gates, outcomes, rules, the form's state)
+> and its Candidates are stored in the database; the rest of a sample
+> exercise saves nothing until a later AD2 segment, a scratch exercise's
+> other pages are held in the server's memory ("Scratch exercises"), and
+> nothing is sent to Review Robin until AD6.
 
 Apply Desk's contract with the Cordware host. The host's side is
 `cordware/spec/host.md`; this file states only what Apply Desk adds. The
@@ -46,8 +47,8 @@ mounts it beside every other application. Its records are stamped
 
 Paths are under `/applydesk`: operators under `/operator/exercises`,
 participants under `/me`. `<id>` is an exercise's public ID, `<app>` an
-application's, `<dossier>` a dossier's and `<n>` a gate's number. Every
-page is a `GET`; the operator's are `applydesk/routes_operator.py`, the
+application's, `<dossier>` a dossier's and `<gate>` a gate's key (`g1`…).
+Every page is a `GET`; the operator's are `applydesk/routes_operator.py`, the
 participant's `applydesk/routes_me.py`, the Admins' (and the super-admin's)
 `applydesk/routes_admin.py`. The few `POST`s are named where they belong.
 
@@ -66,7 +67,7 @@ participant's `applydesk/routes_me.py`, the Admins' (and the super-admin's)
 | `…/<id>/dossiers` | Dossiers: a row per dossier, the exercise's control surface |
 | `…/<id>/dossiers/<dossier>` | A dossier as the operator sees it; 404 for no such dossier |
 | `…/<id>/evaluations` | Evaluations: each gate's state, progress and assignments |
-| `…/<id>/evaluations/gate_<n>` | A gate's pairs, a row each; 404 for a Draft exercise or no such gate |
+| `…/<id>/evaluations/<gate>` | A gate's pairs, a row each; 404 for a Draft exercise, no such gate or a removed gate's key. An old `gate_<n>` path redirects (302) to the gate it numbers now |
 | `…/<id>/extract` | Extract data: the download cards |
 | `…/<id>/extract/<file>` | One download (see Extract data, "The route") |
 | `/admin/exercises` | Admin → Exercises Diagnostics: the exercises, a scaffold (Admins and the super-admin) |
@@ -474,9 +475,10 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     *Cancel*, *Unselect others* and *Unselect all* only untick rows in the
     browser. *New exercise*, the tick boxes and the panel's opening work.
 - **Scratch exercises** (`applydesk/scratch.py`). Until AD2 stores the
-  rest, an operator sets an exercise up end to end in one whose stages,
-  form, panels and emails are held in the server's memory and never written
-  anywhere. Its settings are the database's, as any exercise's (Details).
+  rest, an operator sets an exercise up end to end in one whose form,
+  panels and emails are held in the server's memory and never written
+  anywhere. Its settings, its Process and its Candidates are the database's,
+  as any exercise's (Details; "The Process page").
   - **Making and keeping.** *New exercise* opens a form asking for a name
     (1–200 characters); *Create* makes a blank draft, as *Graduate Travel
     Grant 2027* (one stage holding the form, nothing else), and lands on its
@@ -513,13 +515,12 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     Evaluations show their empty states.
   - **A save** is a same-site JSON post (403 for another site, 415 for
     non-JSON, 400 for malformed JSON) of at most `scratch.MAX_BODY`
-    (256 KiB; 413 past it). The page (Details apart, which saves to the
-    database) says *Saved to this scratch exercise.* or the reason it was
+    (256 KiB; 413 past it). The page (Details and Process apart, which
+    save to the database) says *Saved to this scratch exercise.* or the reason it was
     refused, and a saved page's *Unsaved changes* marker clears. A page edited while its save was on the way
     stays unsaved. Shapes are checked, not the plan: what a page flags
-    itself (dates out of order, weights not adding up, a rule pointing at a
-    removed gate) is kept as left and flagged again; only what has no shape
-    to be kept in is refused.
+    itself (dates out of order, weights not adding up) is kept as left and
+    flagged again; only what has no shape to be kept in is refused.
   - **Details** (*Lock*, to `…/details`) is not kept here: it saves to the
     database for every exercise ("Details").
   - **Form** (to `…/form`, `applydeskFormSnapshot`): at most 200 cards, a
@@ -529,22 +530,10 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     the exercise has (blank reads *Institution-wide*); a refusal names the
     card's number. A new form is empty (one blank question), not the
     sample's. `sample_data.form_cards` and `form_heading` read it back.
-  - **Process** (to `…/process`, `applydeskProcessSnapshot`,
-    `applydesk/process_save.py`): every stage (name, dates, shown, Draft or
-    Published, so *Publish* and the reverts work), the form's dates and the
-    receipt and reminder it ticks, each gate (name, dates, description,
-    confidential, rule, sources, Total, assignment, response fields, up to
-    three results) and each outcome (name, due, values, weights, rule, the
-    emails it ticks). Limits: 20 stages, 10 gates a stage, 50 in any list,
-    at least one stage, ruling 15's shape (`stages.problems`). Refused as
-    having no shape to be kept in: a date range with one end alone, a
-    weight that is blank or not a whole percent, an evaluator count that is
-    not a whole number, a result reading a field its gate lacks, a panel
-    source the exercise lacks. A result whose field was removed is kept with
-    none. Gates are keyed `g1`… and outcomes `o1`… in timeline order, in the
-    rules and weights that name them too; one naming a gate or result no
-    longer there reads `removed`, never another column's. `stages.plan_of`
-    and `workflow.sends` read it back.
+  - **Process** is not kept here: it saves to the database for every
+    exercise ("The Process page"). Only the emails it ticks stay in this
+    store, as `workflow.sends` reads them, until Emails is stored; on a
+    sample exercise they stay the sample's.
   - **Panels** (to `…/panels`, `applydeskPanelsSnapshot`,
     `applydesk/scratch_panels.py`): refused on the page while a row or a
     *Manage panels* change is still open. At most 50 panels (distinct names
@@ -558,14 +547,12 @@ Apply Desk's pages share Review Robin's look and vocabulary (`spec/ui_elements.m
     exercise's panels, members and all, with the save that names it; one
     offered again under a saved panel's name (a page that missed its
     reload) is that panel, not a second.
-  - **Revision.** Each Process save bumps the exercise's revision; Process
-    and Emails send the revision their page opened at, and a save from a
-    page older than the last Process save is refused (*reload*), so no stale
-    key lands on another column or outcome. A Process save that succeeded
-    while the page was edited leaves *Save* saying to reload first.
-  - **Reload.** A save that keys something anew (a panel; every Process
-    save, which renumbers) reloads the page so it holds the keys kept, and
-    says it saved once back.
+  - **Revision.** Emails sends the Process revision its page opened at
+    (`workflow.process_revision`), and a save from a page older than the
+    last Process save is refused (*reload Emails*), so no stale key lands on
+    another outcome.
+  - **Reload.** A save that keys something anew (a panel) reloads the page
+    so it holds the keys kept, and says it saved once back.
   - **Emails** (a card's *Save*, to `…/emails`): by the item, audience and
     name Process owes it for, not the tab. Refused for an email Process does
     not owe, including a card on a page opened before Process last saved
@@ -791,6 +778,25 @@ include.
   A stage left unticked in Process's *Shown to applicants* is not on it
   (`Stage.shown`, ruling 46); the operator's Home shows every stage.
 
+### The form's state
+
+The application form is `draft`, `open` or `closed`, kept on the stage that
+holds it ("Saving Process"), and moves only forward. Home's next step carries
+the move as a Primary button, *Open form* then *Close form*
+(`workflow.form_action`, posting to `…/form/move`,
+`routes_operator.form_move`): *Open form* is disabled, with its reason, while
+the exercise is a draft (published as its stages are, `locks.exercise_status`),
+and nothing is offered once the form is closed or when no stage holds one.
+Reopening a closed form is not built.
+- A move is a same-site form post, from the state before it only, and is
+  refused, with the reason in a line on Home, for a form that has moved
+  meanwhile, an exercise with no form or an archived one. A timeline Process
+  never saved is recorded first, as its save would. Each move stamps when it
+  happened and is audited (`exercise.form_opened`, `exercise.form_closed`).
+- `workflow.form_state` reads the stored state once Process has saved the
+  exercise, else the exercise's: Home's operator part, the applicant's exercise
+  page, a stage's completion (`locks`) and `workflow.steps` follow it.
+
 ### Details
 
 Name, Exercise code, Description (`Exercise.summary`), Help contact,
@@ -831,7 +837,7 @@ Unlocked, each is a field with a line saying where it is used.
   chosen as the default, is stored unset and reads the operator settings'
   default followed by *· the default*. Who may apply is stored as `open`
   (*Open to all signed in*) or `invitation` (*Invitation only*); who is
-  invited is a stage item (AD2C).
+  invited is the Candidates stage item ("The Process page").
 - Process shows Help contact and Timezone read-only.
 
 ## The Process page
@@ -839,11 +845,12 @@ Unlocked, each is a field with a line saying where it is used.
 The exercise's timeline as a stack of stage cards, on the Process tab,
 `/operator/exercises/<id>/process` (rulings 13–16). Process sets up the whole
 flow and every rule Dossiers applies; Form, Panels and Emails flesh out its
-nodes. Every move works in the browser. On a sample exercise nothing is
-saved until AD2, and a reload restores the sample; a scratch exercise
-saves. A blank exercise shows one open card, *Stage 1*,
-holding the form. The cards are drawn from `stages.plan_of`, so Process,
-Dossiers and the status row agree on load. There is no Workflow card:
+nodes. Every move works in the browser, and *Save* keeps the timeline in the
+database for every exercise ("Saving Process"). A blank exercise shows one
+open card, *Stage 1*, holding the form. The cards are drawn from
+`stages.plan_of`, which reads the stored timeline once Process has saved the
+exercise and the sample before then, so Process, Dossiers and the status row
+agree on load. There is no Workflow card:
 ruling 14's was removed (author, 2026-11-15: derivative of the other
 pages, it can wait). Its steps stay as a contract, which no page draws
 but the lobby's *Stage* column reads:
@@ -862,7 +869,7 @@ but the lobby's *Stage* column reads:
   `workflow.current_stage` is the stage holding it, else the last stage.
 
 - **Layout.** The cards in timeline order, the Outline beside them (as
-  Form's), *Save* at its foot, disabled on a sample exercise until AD2.
+  Form's), *Save* at its foot.
 - **A stage card.** *Stage name* (an empty name reads *Stage N*, by position),
   *Starts* and *Ends*, and *Shown to applicants*. Collapsed, it shows its
   name, dates, status chip and a summary (`Form · Outcome: Shortlist`,
@@ -871,7 +878,9 @@ but the lobby's *Stage* column reads:
   gates, the outcome.
 - **Dates are typed** (author, 2026-11-18). A stage's *Starts* and *Ends* are
   date-time inputs (`stages.StageDates`, in the exercise's time zone; a bare
-  day's end is its last minute, 23:59); an empty or reversed pair is no dates.
+  day's end is its last minute, 23:59). An empty pair is unset: stored NULL,
+  printed *Dates not set*. A pair with one end alone, or ending before it
+  starts, is refused at save.
   Each item carries its own, inside its stage's: the form's *Opens* and
   *Closes*, a gate's *From* and *To* (its review window), an outcome's *Due*.
   Left blank, an item runs on its stage's dates and an outcome is due at its
@@ -898,8 +907,9 @@ but the lobby's *Stage* column reads:
   `#outcome-<key>`. Process opens and scrolls to it, on load and on a hash
   change; a name it does not know opens the page as usual.
 - **Reordering** by the card's handle, dragged or with ↑ ↓ (announcing the new
-  position). Gates and outcomes are numbered by the timeline and renumber as
-  cards move; the Outline and Dossiers' headers follow.
+  position). A gate's or outcome's number is its place in the timeline, for display
+  only, and follows as cards move; its key never changes, and the Outline and
+  Dossiers' headers follow.
 - **Items collapse.** A stage's items each have a head, always shown, with
   its kicker, name and chips, and a toggle for the body: a gate's state,
   results count and evaluators (*Nominated 0–2 · Panel A 1–3 · Total 3*, or
@@ -931,7 +941,7 @@ but the lobby's *Stage* column reads:
   - **Its page** (rulings 61, 65): the gate's body opens, shut card or
     open, with a line saying its pairs, Review Robin session and progress
     are on its page under Evaluations, and *Open Gate n →*
-    (`…/evaluations/gate_<n>`). In a draft exercise the line says instead
+    (`…/evaluations/<key>`). In a draft exercise the line says instead
     that the page is there once the exercise is published, and a new gate
     otherwise that it is there once the gate is saved.
   - **Gate**: *Name*; *Type* (a disabled menu, *Review Robin session*, kept
@@ -1021,7 +1031,7 @@ but the lobby's *Stage* column reads:
     page's script redraws it on every edit of the gate's name, description or
     dates, or the stage's. Once the gate's session has opened it is frozen as
     sent (`data-fixed`), though the dates may still change.
-- **The outcome.** *Name*, *Due* (a date-time, blank for the stage's end), *Values* (comma-separated), *Rule*, and, when
+- **The outcome.** *Name*, *Due* (a date-time, blank for the stage's end), *Values* (a row each, *+ Value*, *Remove*; the list's order is the order of its values), *Rule*, and, when
   more than one gate is in scope, the *Combined result*: a weight per gate's numeric result, as
   percentages; weights that all sit at 0 are no combined result, flagged only when a rule reads one. Scope is the gates since the previous outcome (ruling 13); the
   weights follow as gates are added, removed or moved, a new gate takes what is
@@ -1055,15 +1065,24 @@ but the lobby's *Stage* column reads:
 
   A gate's *Then*s and *Otherwise* are *Entered* / *Not entered*; an
   outcome's are its values. The item's line reads as Dossiers' header does
-  (`stages.rule_text`), *Decided by hand* for none. A rule names columns by key,
-  so moving a stage keeps its meaning. One that reads a later outcome, a gate
-  outside its outcome's scope, or a column since removed; a form question gone from Form, or an answer
-  not among its options; a best N that is not a whole number or ranks by a
-  result that is not a number; decides or compares
-  with a value its target lacks; or has a count or threshold that is not a
-  number, is **flagged** on its item and in the Outline, and keeps reading what
-  it read (a removed column as *(removed)*) until the operator picks another.
-  Weights that are not numbers or do not total 100 are flagged likewise.
+  (`stages.rule_text`), *Decided by hand* for none. A rule names every target
+  by key (gate, result, outcome, value; a form question by a string until
+  Form keys them), so moving a stage keeps its meaning.
+  - **Checked on the server** (ruling 78; `rules.py` and `stages.rule_problems`
+    are the only rule code; no page evaluates a rule). The page posts its
+    snapshot to `…/process/problems` and shows what comes back; nothing is
+    kept.
+  - **Flagged**, on its item and in the Outline: a rule that reads a later
+    outcome or a gate outside its outcome's scope; a form question gone from
+    Form, or an answer not among its options; a best N that is not a whole
+    number or ranks by a result that is not a number; deciding or comparing
+    with a value its target lacks; a count or threshold that is not a number.
+    It is saved as left and flagged again. Weights that are not numbers or do
+    not total 100 are flagged likewise.
+  - **Refused at save**, not flagged: a rule naming a gate, result or outcome
+    the snapshot drops, and a gate's rule reading a gate (a gate never reads
+    a gate). The refusal names the rule and the target. A rule is never
+    rewritten to match a removal: it means what it says.
   A rule or weight names a gate's *result* (`stages.result_label`, *Rating at
   Peer Review*), and Dossiers' headers say the same: a number (a mean,
   median, sum, count, share, or a numeric field's lowest, highest or entered
@@ -1092,7 +1111,7 @@ but the lobby's *Stage* column reads:
     past now makes it Published again: an **extension** is how a stage is kept
     open or reopened.
   - **Revert to draft** takes a Published stage back, with a reason (required;
-    audited at AD2), from the last published stage back, so no Draft precedes a
+    audited as `exercise.stage_reverted` with it), from the last published stage back, so no Draft precedes a
     Published one. Its confirm says an opened gate stays fixed and how many
     submitted applications stay submitted (`locks.revert_warnings`).
   - **The exercise's status** is derived (`locks.exercise_status`): Draft while
@@ -1115,8 +1134,83 @@ but the lobby's *Stage* column reads:
   the counts (stages, gates, outcomes) and every problem, among them a gate
   with no evaluators. A stage or item is a button: it opens its card and goes to
   it. *Save* and the *Unsaved changes* marker sit at its foot, kept as Form's
-  are (ruling 23): *Save* disabled on a sample exercise until AD2, a
-  warning on leaving with changes pending.
+  are (ruling 23): a warning on leaving with changes pending.
+- **Saving Process** (`applydesk/process_store.py`; the post is
+  `routes_operator.exercise_process_save`, a same-site JSON post as a
+  scratch save's, at most `scratch.MAX_BODY`). *Save* is live on every
+  exercise, sample and scratch, and keeps the page's whole snapshot in the
+  database, replacing the draft (ruling 23); a reload or a restart shows it.
+  - **One transaction**, under the exercise's row lock, guarded by
+    `exercise.process_revision` (0 until the first save). The post names the
+    revision the page opened at; an older one is refused with a 409
+    (*Process was saved since this page opened; reload*), nothing merged.
+    Two first saves meeting are refused likewise. An archived exercise is
+    refused. Every refusal is a 400 naming why, bar the stale one.
+  - **Checked** as before the store (the limits and shapes of the post:
+    20 stages, 10 gates a stage, 50 in any list, at least one stage;
+    refused as having no shape to be kept in: a date range with one end alone,
+    a weight that is blank or not a whole percent, an evaluator count that is
+    not a whole number, a result reading a field its gate lacks, a panel
+    source the exercise lacks), then ruling 15's shape (`stages.problems`),
+    dates that run backwards, two items sharing a key or an outcome two
+    values of one label, and rules naming a removed target (above).
+  - **Keys** (ruling 37). A stage, gate, outcome, gate field, result and
+    outcome value keeps its key across saves, whatever its position; the
+    server mints the key of a new one (`s<n>`, `g<n>`, `o<n>`, `f<n>`,
+    `r<n>`, `v<n>`), and a key a page minted for it (`gnew1`) never reaches a
+    row. A stage's, gate's or outcome's key is never reused within its
+    exercise: what a save drops is retired, not deleted, so an old link
+    404s rather than reaching a new gate. A field, result or value a save
+    drops may be added back and takes its row again. A sample exercise's
+    own keys count as held, and its timeline is recorded at its first
+    save, its cells staying the sample's until Dossiers stores them.
+    Evaluator sources and outcome weights are replaced by each save.
+  - **Published stages** (ruling 35). The server refuses what the page
+    disables on a published stage: removing it, changing its name, start or
+    *Shown to applicants*, and adding a gate, outcome or form to it. Its end
+    stays editable. Reverting a stage to draft goes with the save that
+    records it, audited with its reason (`exercise.stage_reverted`). A
+    rule or value edit on a published stage is not refused by the save.
+  - **The form's window and state** are on the stage holding the form
+    (`form_opens_at`, `form_closes_at`, `form_state`); that stage is their one
+    source. A form moved to another stage takes its state with it, and the
+    state it is first stored with is the exercise's (a draft's `draft`,
+    a published one's `open` or `closed`).
+  - **Audited** as `exercise.process_saved` with the counts of stages,
+    gates and outcomes saved and retired, and the new revision.
+  - **A scratch exercise** saves the same way; the emails it ticks stay in
+    its store ("Scratch exercises"). A panel made with *+ New panel…* on a
+    sample exercise is refused until Panels is stored.
+- **The outcome values editor.** An outcome's values are rows, each carrying
+  its key; a renamed value keeps its key and the page rewrites the rules
+  naming it, so a rename changes no stored rule. A value whose label no row
+  carries a key for takes its old label's key if unclaimed, else a new key;
+  carried keys are assigned first, so reordering rows hands no key to
+  another value. A removed value's key stays on its retired row.
+- **The Candidates item** (ruling 77, `applydesk/candidates.py`): people
+  kept by hand, shown as a stage item with a count, a search, *Upload CSV…*
+  and a list (name, email, when added, *Remove*). It is the form's roster
+  when Who may apply is *Invitation only*; feeding gates as dossiers is not
+  built. At most one stage holds it, with the form, with gates or alone
+  (`stages.problems`): *+ Candidates* is disabled with its reason once an
+  exercise has one, and *Take Candidates off this stage* removes the item,
+  not the list. A person is listed once, and each add and removal is made at
+  once, audited, not waiting for *Save*.
+  - **Search** is the people search of ruling 75 (`applydesk/directory.py`:
+    people on record, then the directory; those listed left out; a failed
+    directory search says so). A pick is added as `search`.
+  - **CSV** has an *Email* column and, if given, a *Name* (any case, any
+    order), one address a row, at most 2,000 rows. Each row's address is
+    matched to a person on record, else made a pending person
+    (`people.pending`; the directory is not searched per row); a name fills a
+    pending person's blank name. The good rows are saved in one transaction
+    and the rest reported back by row number, not saved: an address that is
+    not one, or in the file twice. A person listed already is counted, not
+    reported. A file with no *Email* column, an empty file or one that
+    cannot be read is refused whole. Added as `csv`.
+  - **Remove** retires the row; adding the person again revives it.
+  - The list stays if Who may apply returns to *Open to all signed in*; it
+    is then unused. Checking it when someone applies is not built.
 - **Emails** (ruling 16). Process picks no template. Each email ticked, the
   form's receipt and reminder or an outcome's *Send email* per audience, is a
   template owed on the Emails page, named for its stage (*Review: Outcome ·
@@ -1288,7 +1382,14 @@ CSV* undoes the guard. The page has no *Save*; nothing is kept until AD2.
 
 *Apply rules…* proposes each outcome and gate cell from the rule Process
 holds (branches in order, a form answer from the application's answers, the
-best N), as a proposal the operator approves (Esc is its *Cancel*); a hand-set cell is kept unless
+best N), as a proposal the operator approves (Esc is its *Cancel*). The
+proposal is the server's (`applydesk/rules.py`, ruling 78, posted to
+`…/dossiers/proposal`: a same-site JSON post, 415 for non-JSON, 413 past
+4 MiB): the page sends the cells as it holds them, hand changes included, and
+the engine answers for them under the timeline as saved, so an unsaved Process
+edit is not seen until saved. The page waits on the answer and, past about
+two seconds, says it is working. Nothing changes until the operator approves.
+A hand-set cell is kept unless
 *Also replace cells set by hand* is ticked. An outcome whose gates a dossier entered none of is not reached
 and stays as it is, unless its cell is already open (*Pending* or decided) or
 a branch of its rule reads earlier outcomes' values alone and they hold, set
@@ -1322,8 +1423,12 @@ its load line per panel source (*Ana 6 · Ben 5 …*) and a link, *Pairs (n)
 →*, to the gate's own page. A draft exercise shows neither. Nothing is
 saved until AD2; a reload restores the sample.
 
-**The gate page**, `…/evaluations/gate_<n>` (`routes_operator.gate_evaluations`),
-404 for a gate the exercise lacks or a draft exercise. Its breadcrumb runs
+**The gate page**, `…/evaluations/<key>` (`routes_operator.gate_evaluations`),
+the gate's own key, 404 for a gate the exercise lacks (a removed gate's key
+included: it is never given to another gate) or a draft exercise. An old
+`gate_<n>` link, which sent emails and bookmarks hold, redirects once (302,
+not cached, its query kept) to the gate numbered so now; the same holds for
+its `<kind>.csv` files. A number naming no gate is a 404. Its breadcrumb runs
 Exercise / Evaluations / *Gate n · label*. Under its banner, a line says its name,
 dates, evaluators and rules are set on Process, and *Set on Process →* opens
 its card there (`…/process#gate-<key>`, ruling 65). The gate's head (its
@@ -1404,7 +1509,7 @@ keeps all of them.
   window with its offset, the tag `applydesk`, and one instrument named
   for the gate holding its response fields. Never observers, release,
   rules or layouts. Each file downloads from
-  `…/evaluations/gate_<n>/<kind>.csv` as `<code>_<kind>.csv`, each cell a
+  `…/evaluations/<key>/<kind>.csv` as `<code>_<kind>.csv`, each cell a
   spreadsheet would run as a formula guarded with `'` (`extract.guarded`);
   the handoff sends Review Robin the files unguarded, as its handoff route
   takes them (`tests/integration/test_handoffs.py`).
@@ -1520,7 +1625,7 @@ from AD2.
 - **The route** `GET /operator/exercises/<id>/extract/<file>`
   (`routes_operator.extract_file`, `applydesk_extract_file`; 404 for an
   unknown exercise or file). Files: `applications.csv`, `outcomes.csv`,
-  `alias_key.csv`, `gate_<n>.csv`, `gates.zip`, `all.zip`, `setup.zip`.
+  `alias_key.csv`, `gate_<key>.csv`, `gates.zip`, `all.zip`, `setup.zip`.
   Query parameters, an unrecognized value reading as its default:
 
   | Parameter | Values | Read by |
@@ -1554,8 +1659,10 @@ from AD2.
     `; ` (Select people: the nominees); a photo its file name. Where the
     sample holds no answer, one is seeded per application and question, the
     same every time.
-  - **`gate_<n>.csv`**, downloaded as `gate_<n>_<slug>.csv` (the gate's name
-    in lower case, other runs as `_`): *A row per pair* is `dossier_id`
+  - **`gate_<key>.csv`**, by the gate's key and downloaded as
+    `<key>_<slug>.csv` (the gate's name in lower case, other runs as `_`). An
+    old `gate_<n>.csv` is a 404: only this page links to it.
+    The file: *A row per pair* is `dossier_id`
     (then `applicant`, `email` for *Names*), `evaluator`, `evaluator_email`,
     then a column per response field by label; a dossier with no evaluator
     yet has no row. Answers are seeded per pair until AD5. *A row per
