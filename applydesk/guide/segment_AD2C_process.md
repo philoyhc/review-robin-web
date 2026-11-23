@@ -37,7 +37,7 @@
   - `outcome`: key, stage, label, `due_at`, `rule`.
   - `outcome_value`: key, label, position, `advances` (AD-57).
   - `outcome_weight`: the outcome, a gate FK and the weight.
-  - `outcome_audience` and `outcome_release`: whom the outcome is released to, and who released it to which audience when (ruling 38, AD-34). *Decided* stays derived.
+  - ~~`outcome_audience` and~~ `outcome_release`: ~~whom the outcome is released to, and~~ who released it to which audience when (ruling 38, AD-34). *Decided* stays derived. *Whom an outcome opens to is ruling 79's views, in AD2V (2026-11-23).*
   - `candidate_list` and `candidate`: the Candidates item (ruling 77). The list sits on a stage; each candidate is a person FK, added by whom and when, and how (search or CSV).
 - **Rules are validated JSON with typed references.**
   - The `Rule` shape stays, with every target named by key: gate, result, outcome, value, form question.
@@ -115,6 +115,10 @@ Taken 2026-11-22 at `1ceb1d592`.
 | Test files reading `stages.` | 25 | `grep -rln 'stages\.' applydesk/tests` |
 | `_same_site` definitions | 2 | `grep -n 'def _same_site' applydesk/*.py` |
 
+## Status
+
+- **2026-11-23, ruling 79:** visibility moves to its own segment (AD2V). `outcome_audience` leaves rung 3's tables; `outcome_release` stays (ruling 38).
+
 ## PR ladder
 
 1. **PR 1 — this plan.**
@@ -144,13 +148,13 @@ Taken 2026-11-22 at `1ceb1d592`.
 9. **PR 9 — wired.**
    - Candidates saved, imported and removed (ruling 77, AD-52).
    - The form's state moves (ruling 76, AD-36).
-   - Release audiences (AD-34).
+   - ~~Release audiences (AD-34).~~ *To AD2V, ruling 79.*
    - Last build rung: the cumulative `diff-reviewer` read, split at a rung boundary past about 1,500 lines.
 10. **PR 10 — close.**
 
 ## Definition of done
 
-- **The tables** exist for stages, gates (with fields, results and sources), outcomes (with values, weights and audiences) and Candidates. The migration round-trips in `ci-postgres`.
+- **The tables** exist for stages, gates (with fields, results and sources), outcomes (with values, weights and releases) and Candidates. The migration round-trips in `ci-postgres`.
 - **A saved Process:**
   - survives a restart;
   - is refused on a stale revision, or when a rule names a removed target;
@@ -176,7 +180,8 @@ Taken 2026-11-22 at `1ceb1d592`.
 
 ## Out of scope
 
-- **Dossiers' cells, decisions and pairs, the *Release* action, and Candidates loaded as dossiers:** AD2F. AD2C stores the list and the audiences.
+- **Dossiers' cells, decisions and pairs, the *Release* action, and Candidates loaded as dossiers:** AD2F. AD2C stores the list.
+- **Who sees what in a dossier** (ruling 79): AD2V.
 - **Form questions and their keys:** AD2D. Rules naming a question keep a string until then.
 - **Panels:** AD2E. Sources keep panel keys until then.
 - **The applicant's check against Candidates:** AD4.

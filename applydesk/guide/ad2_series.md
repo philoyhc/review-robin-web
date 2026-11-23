@@ -27,6 +27,7 @@ The roadmap's AD2 row ("Database and identity") is a series of segments, each it
 | AD2D — Form and applications | Versioned forms with stable field keys and per-field visibility grants (rulings 68–71); applications and their states; answers and nominations | AD-45, AD-38, AD-46 | — |
 | AD2E — Panels | Panels and members, retiring, size caps; the institution-wide pool as a directory search only | AD-50, AD-42, AD-127 (Unicode-aware people search, placed 2026-11-22) | — |
 | AD2F — Dossiers, pairs and gates | Dossiers, parts and snapshots; gate entries, results and outcome decisions with who and when; stored pairs; the gate lifecycle and its transfer record; email templates; Lock as one audited transaction. May split in two. | AD-44, AD-58, AD-47, AD-32, AD-39, AD-35 | — |
+| AD2V — Dossier visibility | Ruling 79's views: what each gate × panel's evaluators see during its window, what each outcome opens to candidates and past evaluators (continue, add or reset), each field's ceiling, and the flag for an item no view shows; after AD2F stores dossiers | — | — |
 | AD2G — Retire the simulation | The scratch store's caps or its end, request-scoped loading with SQL paging, the sample-data path off production | S10 follow-up, AD-125 | — |
 
 Each segment that adds a page's controls lands scaffold-first (`CLAUDE.md`, "Consequential UI lands scaffold-first"). Each closes on its own: Status compacted, `spec-writer` on `applydesk/spec/`, the plan archived, its findings struck in `applydesk/guide/ad2_deferred_findings.md` with the PR that cleared them.

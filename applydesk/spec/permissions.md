@@ -75,7 +75,7 @@ pending Owners keep their rows but do not count.
 | Open every page of the exercise | ✓ | ✓ |
 | Set it up: Details, Form, Process, Panels, Emails | ✓ | ✓ |
 | Run it: open the form, send gates, decide outcomes, release, extract | ✓ | ✓ |
-| See every dossier item, whatever its grants | ✓ | ✓ |
+| See every dossier item, whatever the views show (ruling 79) | ✓ | ✓ |
 | In the Lobby: rename, tag | ✓ | ✓ |
 | Duplicate its settings (the copy's Owner is whoever duplicates it) | ✓ | ✓ |
 | Leave it (take themself off) | ✓ | ✓, not the last Owner |
@@ -119,7 +119,7 @@ whole or not at all. *To build:* the purge (AD2D, with stored applications:
 |---|---|---|---|
 | **Applicant** (*Candidate*, ruling 71) | their application | `/me`: the exercises open to them, their applications, and what is released to applicants | Placeholder pages; per-person gating in AD2D |
 | **Invitee** | an *Invitation only* exercise's invitee list | as an Applicant, for that exercise | AD2C |
-| **Evaluator** | membership of a panel a gate draws on | the dossiers they evaluate, `/me/…/dossiers/<id>`, showing only items granted to *Assigned evaluators* or *Evaluators* (ruling 68); they respond in Review Robin, never in Apply Desk | AD2E, AD4, AD5 |
+| **Evaluator** | membership of a panel a gate draws on | the dossiers they evaluate, `/me/…/dossiers/<id>`, showing only what their gate × panel's view shows, during the gate's window (ruling 79); they respond in Review Robin, never in Apply Desk | AD2E, AD4, AD5 |
 
 | **Observer** | named on an exercise as observing it (pre-positioned: the model has a place for them; nothing is built until a later segment) | `/me`: what the exercise grants observers, read-only, as Review Robin's observers read `/me/sessions/<id>/collation` | Later |
 
