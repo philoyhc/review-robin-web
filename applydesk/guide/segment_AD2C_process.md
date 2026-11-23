@@ -143,6 +143,7 @@ Taken 2026-11-22 at `1ceb1d592`.
   - Extract's gate file is `gate_<key>.csv`, saved as `<key>_<slug>.csv`. An old `gate_<n>.csv` download 404s: only Extract's own page links to it.
   - Home's *Open Gate N* rows carry the key.
   - `applydesk/spec/applications.md`'s `gate_<n>` lines are left for the close's spec pass.
+- **2026-11-23, the register** (`applydesk/guide/ad2_deferred_findings.md`): the Definition of done's findings struck with their PRs, but AD-34, which is marked *Partly* (its audiences went to AD2V with ruling 79, the release is AD2F's). AD-60's note gains its stage half. AD-35 stays open: its Process half is done, the rest is other segments'.
 
 ## PR ladder
 
