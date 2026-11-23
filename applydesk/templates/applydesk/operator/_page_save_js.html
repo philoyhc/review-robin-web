@@ -1,4 +1,4 @@
-{# A scratch exercise's Save on a Setup page (segment AD1N, ruling 59):
+{# A Setup page's Save (segment AD1N; every exercise's since AD2B–AD2L):
    the button carrying `data-fb-save` posts what its page's snapshot
    function gives, as JSON, and says whether it was kept. The page names
    its snapshot in `data-fb-snapshot` (a global function's name), else
@@ -10,7 +10,7 @@
    nothing changed while the save was on its way. #}
 <script>
 (function () {
-  var NOTE = "applydesk-scratch-saved";
+  var NOTE = "applydesk-page-saved";
   var note = null;
   try { note = sessionStorage.getItem(NOTE); sessionStorage.removeItem(NOTE); } catch (e) { note = null; }
   document.querySelectorAll("[data-fb-save]").forEach(function (btn) {

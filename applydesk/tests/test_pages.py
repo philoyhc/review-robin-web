@@ -459,27 +459,23 @@ def test_the_lobby_is_laid_out_as_review_robin_s(client: TestClient) -> None:
     assert '<td data-lb-role><span class="chip chip-ok">Owner</span>' in row  # Your role (AD2O)
 
 
-def test_a_scratch_exercise_heads_the_lobby_made_now_by_the_viewer_untagged(
+def test_a_new_exercise_heads_the_lobby_made_now_by_the_viewer_untagged(
     client: TestClient,
 ) -> None:
-    """Segment AD1T: a scratch exercise's Created is when it was made, its
-    Created by the viewer, and it has no tags; newest, it heads the rows."""
-    from applydesk import scratch
-
+    """Segment AD1T, on a row since AD2G: a new exercise's Created is when
+    it was made, its Owner the viewer, and it has no tags; newest, it heads
+    the rows."""
     before = datetime.now(UTC).replace(second=0, microsecond=0)
-    try:
-        made = scratch.create("lobby-test", "Lobby Bursary").exercise
-        at = sample_data.created_at(made)
-        assert made.tags == () and at is not None and before <= at <= datetime.now(UTC)
-        assert client.post(
-            "/applydesk/operator/exercises/new", data={"name": "Lobby Bursary"}
-        ).is_success  # the client follows the redirect, keeping the cookie
-        lobby = client.get("/applydesk/operator/exercises").text
-    finally:
-        scratch.clear()
+    assert client.post(
+        "/applydesk/operator/exercises/new", data={"name": "Lobby Bursary"}
+    ).is_success
+    made = next(e for e in sample_data.exercises() if e.name == "Lobby Bursary")
+    at = sample_data.created_at(made)
+    assert made.tags == () and at is not None and before <= at <= datetime.now(UTC)
+    lobby = client.get("/applydesk/operator/exercises").text
     rows = lobby.split("<tr data-lb-row")[1:]
     first = rows[0][: rows[0].index("</tr>")]
-    assert "Lobby Bursary" in first and "data-scratch-chip" in first
+    assert "Lobby Bursary" in first and "Scratch" not in first
     assert '<td data-lb-role><span class="chip chip-ok">Owner</span>' in first  # AD2O
     assert '<span class="muted">No tags</span>' in first
     shown = re.search(r'<td class="lb-when">([^<]+)</td>', first)
@@ -491,7 +487,7 @@ def test_a_scratch_exercise_heads_the_lobby_made_now_by_the_viewer_untagged(
 
 
 def test_created_shows_in_the_exercise_s_own_timezone() -> None:
-    """A scratch exercise keeps its creation time with its offset, so Created
+    """An exercise keeps its creation time with its offset, so Created
     follows a timezone Details sets later (cold read, AD1T)."""
     import dataclasses
 
@@ -1845,10 +1841,10 @@ def test_pages_say_what_works_and_what_is_not_built(client: TestClient) -> None:
     evaluations = client.get("/applydesk/operator/exercises/wa9juxbc2t/evaluations").text
     assert "Results come back by dossier" in evaluations
     lobby = client.get("/applydesk/operator/exercises").text
-    # New exercise works (segment AD1N): a scratch exercise, its form hidden
-    # until asked for, saying what a scratch exercise is.
+    # New exercise works (segment AD2G): a blank draft, its form hidden
+    # until asked for, saying what it makes.
     assert 'data-nx-open aria-expanded="false" aria-controls="nx-form">New exercise<' in lobby
-    assert "never saved, gone after a restart" in lobby
+    assert "A blank draft, with you its Owner; at most 50" in lobby
     # A draft on an exercise whose form has closed says so (AD-29).
     draft = client.get("/applydesk/me/exercises/wa9juxbc2t/applications/f2ps7nyh4k").text
     assert "Applications closed on 30 Sep 2026, 23:59." in draft and ">Submit<" not in draft

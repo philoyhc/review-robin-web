@@ -779,7 +779,7 @@ def _blank_form(exercise_id: str) -> bool:
 
 def form_is_empty(exercise_id: str) -> bool:
     """A form with no questions: as Form last saved it, else the sample's
-    empty draft or a scratch exercise's."""
+    empty draft or an ordinary exercise's."""
     own = _stored_form(exercise_id)
     if own is not None:
         return not any(c.kind == "field" for c in own.cards)
@@ -809,7 +809,7 @@ def form_cards(exercise_id: str) -> tuple[FormCard, ...]:
 
 def sample_form(exercise_id: str) -> tuple[FormCard, ...]:
     """The sample's own cards, keyed ``q1``… in order, the keys its first
-    save keeps (segment AD2D); none for an empty draft or a scratch
+    save keeps (segment AD2D); none for an empty draft or an ordinary
     exercise."""
     if _blank_form(exercise_id):
         return ()

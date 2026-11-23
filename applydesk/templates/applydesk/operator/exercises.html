@@ -7,7 +7,7 @@
    string (`lobby.py`), so a reload keeps them; the panel's actions post
    to `/operator/exercises/panel` and come back here. #}
 <div class="ptitle"><h1>Operator Lobby</h1></div>
-{% if scratch_said %}<p class="nx-said" role="status" data-nx-said>{{ scratch_said }}</p>{% endif %}
+{% if lobby_said %}<p class="nx-said" role="status" data-nx-said>{{ lobby_said }}</p>{% endif %}
 {% with saves = true %}{% include "applydesk/_placeholder.html" %}{% endwith %}
 {% set tags = lobby_tags %}
 <div class="lb-row">
@@ -41,11 +41,12 @@
     </div>
   </section>
 </div>
-{# New exercise (segment AD1N, ruling 59): a name, then a blank draft held
-   in memory for this browser until AD2, at most {{ scratch_limit }}. #}
+{# New exercise (segment AD2G): a name, then a blank draft in the
+   database with the viewer its Owner, at most `exercises.MOST_MADE` live
+   of their making. #}
 <form class="card nx-form" id="nx-form" method="post" action="{{ url('/operator/exercises/new') }}" data-nx-form hidden>
   <label class="fc-l">Name of the new exercise<input class="fc-in" name="name" maxlength="200" required data-nx-name></label>
-  <p class="muted">A scratch exercise: kept in this server's memory for this browser only, never saved, gone after a restart, a deploy or eight idle hours; at most {{ scratch_limit }} at once.</p>
+  <p class="muted">A blank draft, with you its Owner; at most {{ most_made }} live exercises of your making.</p>
   <div class="btnrow"><button class="btn btn-primary" type="submit">Create</button><button class="btn btn-secondary" type="button" data-nx-cancel>Cancel</button></div>
 </form>
 <section class="card">
@@ -60,12 +61,10 @@
     </tr></thead>
     <tbody>
     {% for e in exercises %}
-      {% set scratch_row = is_scratch(e.public_id) %}
       {% set n, m, stage_name = stage_position(e) %}
       {% set zone = timezone(e) %}
       <tr data-lb-row data-id="{{ e.public_id }}" data-revision="{{ revisions.get(e.public_id, 0) }}" data-name="{{ e.name }}" data-code="{{ e.code }}" data-published="{{ 'false' if e.state == 'Draft' else 'true' }}" data-owner="{{ 'true' if roles[e.public_id] == 'Owner' else 'false' }}" data-tags="{{ e.tags | join(', ') }}">
-        <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a>{% if scratch_row %} <span class="chip chip-mute" data-scratch-chip>Scratch</span>
-          <form class="nx-discard" method="post" action="{{ url('/operator/exercises/' ~ e.public_id ~ '/discard') }}" data-nx-discard data-name="{{ e.name }}"><button class="btn btn-destructive btn-short" type="submit">Discard</button></form>{% endif %}</td>
+        <td><a href="{{ url('/operator/exercises/' ~ e.public_id) }}">{{ e.name }}</a></td>
         <td>{% if e.code %}<code>{{ e.code }}</code>{% else %}<span class="muted">Not set</span>{% endif %}</td>
         <td data-lb-role>{% if roles[e.public_id] == "Owner" %}<span class="chip chip-ok">Owner</span>{% else %}<span class="chip chip-mute">Operator</span>{% endif %}</td>
         <td class="lb-when">{{ created_label(e) or "—" }}</td>
@@ -133,12 +132,6 @@
     form.querySelector("[data-nx-cancel]").addEventListener("click", function () { show(false); });
     form.addEventListener("keydown", function (e) { if (e.key === "Escape") show(false); });
   }
-  // Discard asks first: a scratch exercise cannot be got back.
-  document.querySelectorAll("[data-nx-discard]").forEach(function (f) {
-    f.addEventListener("submit", function (e) {
-      if (!window.confirm("Discard " + f.dataset.name + "? Everything set up in it goes.")) e.preventDefault();
-    });
-  });
   // The tick panel (segment AD1T), as Review Robin's: it sits under the
   // most recently ticked row still ticked, shows one exercise's fields or
   // the bulk actions, and closes when no row is ticked. Cancel unticks

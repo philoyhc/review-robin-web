@@ -54,7 +54,7 @@
 </div>
 {% include "applydesk/operator/_panel_pick_js.html" %}
 {% include "applydesk/operator/_unsaved_js.html" %}
-{% include "applydesk/operator/_scratch_save_js.html" %}
+{% include "applydesk/operator/_page_save_js.html" %}
 <script>
 // Segment AD1E rung 3: the stage card moves, in the browser only; a reload
 // restores the sample. Collapse and expand; the name and dates feeding the
@@ -1564,7 +1564,7 @@
   list.addEventListener("change", resultEvent, true);
   Array.prototype.forEach.call(list.querySelectorAll('.pc-item[data-item="gate"]'), drawFields);
 
-  // --- A scratch exercise's Save (segment AD1N): the page's whole state,
+  // --- Process's Save: the page's whole state,
   // as routes_operator._process reads it and stages builds it back.
   function checked(item, rel) { var i = item.querySelector('[data-rel="' + rel + '"]'); return !!(i && i.checked); }
   function gateOf(item) {

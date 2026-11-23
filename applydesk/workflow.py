@@ -434,7 +434,7 @@ def template_text(exercise_id: str, email: Email) -> tuple[str, str, int]:
     """A card's subject, body and version as the page opens it, from one
     read, so the text and the version a card carries always agree (cold
     read): as its card last saved them (segment AD2L); else a sample's
-    written one its kind's default, an owed one (or a scratch exercise's)
+    written one its kind's default, an owed one (or an ordinary exercise's)
     empty, at version 0."""
     own = _stored_templates(exercise_id).get((email.item, email.audience))
     if own is not None:
@@ -447,7 +447,7 @@ def emails(exercise_id: str) -> tuple[Email, ...]:
     """Every template the exercise's Process makes owed, in timeline
     order: the form's, then each outcome's per audience (ruling 16). One
     is written once its card saved a subject and a body (segment AD2L);
-    one never saved, as the sample has it (a scratch exercise's, owed)."""
+    one never saved, as the sample has it (an ordinary exercise's, owed)."""
     plan = stages.plan_of(exercise_id)
     stored = _stored_templates(exercise_id)
     ticked = _stored_sends(exercise_id)  # one read for every item (cold read)

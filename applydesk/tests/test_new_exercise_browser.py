@@ -1,6 +1,6 @@
-"""A scratch exercise in a real Chromium (segment AD1N rung 2): *New
-exercise*, a name, the blank draft's Home; Details saved into it, kept
-across a reload; Discard. Skips without a Chromium build, as
+"""A new exercise in a real Chromium (segment AD1N rung 2; a row since
+AD2G): *New exercise*, a name, the blank draft's Home; Details saved into
+it, kept across a reload. Skips without a Chromium build, as
 `test_form_browser.py`'s."""
 
 from __future__ import annotations
@@ -12,7 +12,6 @@ import pytest
 from fastapi.testclient import TestClient
 from playwright.sync_api import Error, Page, Route, sync_playwright
 
-from applydesk import scratch
 from applydesk.tests._host import host_with
 from applydesk.tests.test_form_browser import ORIGIN
 
@@ -22,8 +21,7 @@ LOBBY = f"{ORIGIN}/applydesk/operator/exercises"
 @pytest.fixture
 def page() -> Iterator[Page]:
     """As `test_form_browser.py`'s, but every method served, with its body
-    and redirects, and the test client keeping the scratch cookie."""
-    scratch.clear()
+    and redirects."""
     client = TestClient(host_with(("applydesk",))[0], follow_redirects=False)
 
     def serve(route: Route) -> None:
@@ -69,18 +67,17 @@ def page() -> Iterator[Page]:
         tab.context.route(f"{ORIGIN}/**", serve)
         yield tab
         browser.close()
-        scratch.clear()
         assert errors == [], f"page errors: {errors}"
 
 
-def test_new_exercise_to_its_home_then_details_saved_and_discarded(page: Page) -> None:
+def test_new_exercise_to_its_home_then_details_saved(page: Page) -> None:
     page.goto(LOBBY)
     page.get_by_role("button", name="New exercise").click()
     page.locator("[data-nx-name]").fill("Browser Bursary 2027")
     page.get_by_role("button", name="Create").click()
     page.wait_for_url(f"{LOBBY}/*")
     assert page.locator("h1").inner_text().startswith("Browser Bursary 2027")
-    assert page.locator("[data-scratch-note]").is_visible()
+    assert page.locator("[data-scratch-note]").count() == 0
     card = page.locator("[data-details]")
     card.locator("[data-dt-lock]").click()
     card.locator('[data-dt="code"]').fill("BB-27")
@@ -103,15 +100,10 @@ def test_new_exercise_to_its_home_then_details_saved_and_discarded(page: Page) -
     card.locator('[data-dt-act="discard"]').click()
     page.goto(LOBBY)
     row = page.locator("tr", has_text="Browser Bursary 2027")
-    assert row.locator("[data-scratch-chip]").inner_text().lower() == "scratch"
-    page.once("dialog", lambda d: d.accept())
-    row.get_by_role("button", name="Discard").click()
-    page.wait_for_url(f"{LOBBY}?said=*")
-    assert "was discarded." in page.locator("[data-nx-said]").inner_text()
-    assert page.locator("tr", has_text="Browser Bursary 2027").count() == 0
+    assert row.count() == 1 and row.get_by_role("button", name="Discard").count() == 0
 
 
-def test_form_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> None:
+def test_form_saved_into_a_new_exercise_survives_a_reload(page: Page) -> None:
     page.goto(LOBBY)
     page.get_by_role("button", name="New exercise").click()
     page.locator("[data-nx-name]").fill("Form Walkthrough")
@@ -153,7 +145,7 @@ def test_form_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> Non
     )
 
 
-def test_process_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> None:
+def test_process_saved_into_a_new_exercise_survives_a_reload(page: Page) -> None:
     """Rung 4: a stage, a gate and an outcome added on Process, saved,
     and read back; the outcome's ticked email is owed on Emails."""
     page.goto(LOBBY)
@@ -206,7 +198,7 @@ def test_process_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> 
     assert "Award" in page.locator("main").inner_text()
 
 
-def test_panels_saved_into_a_scratch_exercise_survive_a_reload(page: Page) -> None:
+def test_panels_saved_into_a_new_exercise_survive_a_reload(page: Page) -> None:
     """Rung 5: a panel made in Manage panels, with a member from the
     directory, saved, read back, and offered to a gate on Process."""
     page.goto(LOBBY)
@@ -245,7 +237,7 @@ def test_panels_saved_into_a_scratch_exercise_survive_a_reload(page: Page) -> No
     assert pools["panel-1"]["name"] == "Readers", pools
 
 
-def test_an_email_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> None:
+def test_an_email_saved_into_a_new_exercise_survives_a_reload(page: Page) -> None:
     """Rung 6: the receipt a new exercise owes, started from the default,
     saved, written after a reload; a tag of another kind refused."""
     page.goto(LOBBY)

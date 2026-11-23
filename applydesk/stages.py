@@ -197,7 +197,7 @@ class Gate:
     # Its review window, inside its stage's dates (author, 2026-11-18);
     # None runs it on the stage's (``window``).
     when: StageDates | None = None
-    # Its ``fields`` are its own, even none (a scratch exercise's, as
+    # Its ``fields`` are its own, even none (an ordinary exercise's, as
     # Process saved them): no field is made up per result in their place,
     # as for a sample gate listing none (``fields_of``; Codex on #4026).
     own_fields: bool = False

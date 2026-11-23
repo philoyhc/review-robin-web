@@ -25,10 +25,8 @@ from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request
-from sqlalchemy import select
 
 from applydesk import db, exercises, operators, people
-from applydesk.models import Exercise
 from cordware.identity import current_identity, is_local
 
 
@@ -138,30 +136,6 @@ def require_exercise_operator(request: Request) -> None:
         raise HTTPException(
             status_code=409, detail="Archived: restore it from the Archive to change it."
         )
-
-
-def own_new_exercise(request: Request, public_id: str, name: str | None = None) -> bool:
-    """Make the `exercise` row for a new exercise, named `name`, with the
-    viewer its Owner (ruling 73), in one transaction. False, and nothing made, if
-    the viewer cannot be bound or may not make one, or the ID is taken."""
-    identity = current_identity(request)
-    if identity is None:
-        return False
-    session = db.new_session()
-    try:
-        person = people.resolve(session, identity)
-        actor = operators.Actor(person, is_super_admin=identity.is_super_admin)
-        if session.scalar(select(Exercise.id).where(Exercise.public_id == public_id)):
-            return False
-        operators.create_exercise(session, actor, public_id, name)
-        session.commit()
-    except operators.Refused:
-        session.rollback()
-        return False
-    finally:
-        session.close()
-    setattr(request.state, _STATE, None)  # its grants changed
-    return True
 
 
 def forget_viewer(request: Request) -> None:

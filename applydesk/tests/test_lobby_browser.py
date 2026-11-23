@@ -100,6 +100,6 @@ def test_the_cards_stand_side_by_side_over_the_table(page: Page) -> None:
     a, b = counts.bounding_box(), filt.bounding_box()
     assert a is not None and b is not None
     assert abs(a["y"] - b["y"]) < 1 and b["x"] > a["x"] + a["width"]
-    # New exercise opens the scratch form from the Filter card.
+    # New exercise opens its form from the Filter card.
     filt.get_by_role("button", name="New exercise").click()
     expect(page.locator("[data-nx-form]")).to_be_visible()

@@ -15,10 +15,11 @@ from datetime import UTC, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from applydesk import audit, db, operators, sample_data
+from applydesk.ids import generate_public_id
 from applydesk.models import Exercise, ExerciseTag, Person
 
 #: The stored eligibility and the words the pages show (AD-60: NULL is
@@ -626,18 +627,69 @@ def delete(session: Session, public_ids: list[str], actor: operators.Actor) -> N
         )
 
 
-def discard(session: Session, public_id: str, actor: operators.Actor) -> None:
-    """*Discard* on a scratch exercise: its row deleted as `delete` deletes
-    one (the row and audit trail kept, ruling 74), so its code is free
-    again. Not Owner-only: a scratch exercise is reached from one browser
-    only, so whoever holds it there discards it, even after handing its
-    ownership on (cold read; Codex on cordware#223)."""
-    exercise = _locked(session, public_id)
-    _live(exercise)
-    exercise.deleted_at = datetime.now(UTC)
-    exercise.revision += 1
-    session.flush()
-    audit.write_event(session, event_type="exercise.deleted", actor=actor.person, exercise=exercise)
+#: The most live exercises one person may have made (segment AD2G; the
+#: author, 2026-11-23): archive or delete one to make another.
+MOST_MADE = 50
+
+#: Why *New exercise* or *Duplicate* was refused, by the key the Lobby's
+#: redirect carries (findings 2026-11-20 S11: a key, never the text).
+MAKE_REFUSALS: dict[str, str] = {
+    "name_needed": "A name is needed.",
+    "name_long": "A name is at most 200 characters.",
+    "full": f"At most {MOST_MADE} live exercises of your making: archive or delete one first.",
+    "not_listed": "Only someone on the operator list may make an exercise.",
+}
+
+
+def _fresh_id(session: Session) -> str:
+    """A public ID no sample and no row has."""
+    while True:
+        public_id = generate_public_id()
+        taken = sample_data.is_sample(public_id) or session.scalar(
+            select(Exercise.id).where(Exercise.public_id == public_id)
+        )
+        if not taken:
+            return public_id
+
+
+def make(
+    session: Session, actor: operators.Actor, name: str, *, source_id: str | None = None
+) -> Exercise:
+    """*New exercise* (`source_id` None) or *Duplicate settings only*
+    (segment AD2G): an ordinary exercise's row, the actor its Owner, in
+    the caller's transaction. Refused past :data:`MOST_MADE` live
+    exercises the actor made, counted under a lock on their person row so
+    two at once cannot both pass. Flushed, not committed."""
+    name = name.strip()
+    if not name:
+        raise Refused(MAKE_REFUSALS["name_needed"], key="name_needed")
+    if len(name) > 200:
+        raise Refused(MAKE_REFUSALS["name_long"], key="name_long")
+    if actor.person is None or not (actor.is_super_admin or operators.may_operate(actor.person)):
+        raise Refused(MAKE_REFUSALS["not_listed"], key="not_listed")  # before the cap (cold read)
+    # FOR NO KEY UPDATE: serialises one person's makes without blocking the
+    # key-share locks that rows referring to them take (cold read).
+    session.scalar(
+        select(Person.id).where(Person.id == actor.person.id).with_for_update(key_share=True)
+    )
+    made_count = session.scalar(
+        select(func.count(Exercise.id)).where(
+            Exercise.created_by_id == actor.person.id,
+            Exercise.deleted_at.is_(None),
+            Exercise.archived_at.is_(None),
+            # The seed records the samples' creator too; they never count.
+            Exercise.public_id.not_in(sorted(sample_data.SAMPLE_IDS)),
+        )
+    )
+    if (made_count or 0) >= MOST_MADE:
+        raise Refused(MAKE_REFUSALS["full"], key="full")
+    try:
+        made = operators.create_exercise(session, actor, _fresh_id(session), name)
+    except operators.Refused as why:
+        raise Refused(str(why), key=why.key) from None
+    if source_id is not None:
+        copy_settings(session, source_id, made, actor.person)
+    return made
 
 
 def copy_settings(session: Session, source_id: str, target: Exercise, actor: Person | None) -> None:

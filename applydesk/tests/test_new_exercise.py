@@ -1,30 +1,25 @@
-"""Scratch exercises (segment AD1N rung 2, ruling 59): *New exercise*
-makes a blank draft held in memory for one browser; Details saves into
-it; another browser never sees it."""
+"""*New exercise* (segment AD1N, made ordinary by AD2G Item 1): a blank
+draft in the database with the viewer its Owner, at most
+`exercises.MOST_MADE` live of their making; its Setup pages save into it
+as every exercise's do."""
 
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import OperationalError
 
-from applydesk import db, sample_data, scratch
+from applydesk import db, exercises, operators, people, sample_data
 from applydesk.models import AuditEvent, Exercise
 from applydesk.tests._host import host_with
+from applydesk.web import MAX_BODY
+from cordware.settings import identity_settings
 
 LOBBY = "/applydesk/operator/exercises"
-
-
-@pytest.fixture(autouse=True)
-def _empty_store() -> Iterator[None]:
-    scratch.clear()
-    yield
-    scratch.clear()
 
 
 def _client() -> TestClient:
@@ -47,43 +42,36 @@ def test_new_exercise_makes_a_blank_draft_and_lands_on_its_home() -> None:
         and "disabled" not in lobby.split("data-nx-open")[0][-80:]
     )
     made = _create(client)
-    assert scratch.COOKIE in client.cookies
+    assert not client.cookies  # no browser store (segment AD2G)
     home = client.get(f"{LOBBY}/{made}").text
-    assert "Summer Bursary 2027" in home and "data-scratch-note" in home
+    assert "Summer Bursary 2027" in home and "data-scratch-note" not in home
     # On record outside the request: a row, not a browser's (segment AD2G).
     found = sample_data.exercise(made)
     assert found is not None and found.name == "Summer Bursary 2027"
     lobby = client.get(LOBBY).text
     row = lobby[lobby.index(f"/operator/exercises/{made}") :][:800]
-    assert "data-scratch-chip>Scratch<" in row and "/discard" in row
+    assert "Scratch" not in row and "/discard" not in row
     # Newest first, before the sample.
     assert lobby.index(made) < lobby.index("wa9juxbc2t")
     # Its form is blank (Codex on #4024), and Home says so.
     form = client.get(f"{LOBBY}/{made}/form").text
     assert "Project title" not in form
     assert "Application form" in home
-    # Each Setup page renders it (the lookups read the scratch first).
+    # Each Setup page renders it (the lookups read its row).
     for section in ("process", "form", "panels", "emails", "dossiers", "evaluations"):
         assert client.get(f"{LOBBY}/{made}/{section}").status_code == 200, section
 
 
 def test_the_same_operator_in_another_browser_sees_it() -> None:
     """Segment AD2G: an exercise is its row, reached through its grants,
-    not one browser's store; only *Discard* still needs that browser
-    until rung 3 retires it."""
+    not one browser's store."""
     mine, theirs = _client(), _client()
     made = _create(mine)
     assert theirs.get(f"{LOBBY}/{made}").status_code == 200
     assert made in theirs.get(LOBBY).text
-    assert theirs.post(f"{LOBBY}/{made}/discard").status_code == 404
-    assert mine.get(f"{LOBBY}/{made}").status_code == 200
 
 
-def client_404(client: TestClient, path: str) -> bool:
-    return client.get(path).status_code == 404
-
-
-def test_a_name_is_needed_and_five_at_most() -> None:
+def test_a_name_is_needed() -> None:
     client = _client()
     refused = client.post(f"{LOBBY}/new", data={"name": "  "})
     assert refused.status_code == 303 and refused.headers["location"].endswith("?said=name_needed")
@@ -94,12 +82,80 @@ def test_a_name_is_needed_and_five_at_most() -> None:
         "A name is needed."
         in client.get(refused.headers["location"].removeprefix("http://testserver")).text
     )
-    for n in range(scratch.LIMIT):
-        _create(client, f"Exercise {n}")
-    sixth = client.post(f"{LOBBY}/new", data={"name": "One too many"})
-    assert sixth.headers["location"].endswith("?said=full")
-    full = client.get(sixth.headers["location"].removeprefix("http://testserver")).text
-    assert "discard one first" in full
+
+
+def test_at_most_fifty_live_of_one_s_making(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The cap (author, 2026-11-23), here at 3: archived or deleted ones
+    free a place; Duplicate counts as New exercise does."""
+    monkeypatch.setattr(exercises, "MOST_MADE", 3)
+    client = _client()
+    made = [_create(client, f"Exercise {n}") for n in range(3)]
+    fourth = client.post(f"{LOBBY}/new", data={"name": "One too many"})
+    assert fourth.headers["location"].endswith("?said=full")
+    full = client.get(fourth.headers["location"].removeprefix("http://testserver")).text
+    assert "archive or delete one first" in full
+    copy = client.post(f"{LOBBY}/panel", data={"action": "duplicate", "id": made[0]})
+    assert copy.headers["location"].endswith("said=full")
+    assert (
+        client.post(f"{LOBBY}/panel", data={"action": "archive", "id": made[0]}).status_code == 303
+    )
+    again = _create(client, "Room again")
+    assert (
+        client.post(f"{LOBBY}/new", data={"name": "Full again"})
+        .headers["location"]
+        .endswith("?said=full")
+    )
+    deleted = client.post(
+        f"{LOBBY}/panel", data={"action": "delete", "id": again, "confirm": "yes"}
+    )
+    assert deleted.status_code == 303 and "said=deleted" in deleted.headers["location"]
+    _create(client, "Room after a delete")
+    # The seeded samples, recorded as made by this same person, never count:
+    # they are live and theirs, yet three were made under a cap of 3.
+    session = db.new_session()
+    try:
+        samples = session.scalar(
+            select(func.count(Exercise.id)).where(
+                Exercise.public_id.in_(sorted(sample_data.SAMPLE_IDS)),
+                Exercise.created_by_id.is_not(None),
+            )
+        )
+        assert samples
+    finally:
+        session.close()
+
+
+def test_an_allowlisted_operator_is_capped_too(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Not only the super-admin: an ordinary operator on the allowlist."""
+    monkeypatch.setattr(exercises, "MOST_MADE", 1)
+    monkeypatch.setattr(identity_settings, "fake_auth_super_admin", False)
+    client = _client()
+    _create(client, "Only one")
+    assert (
+        client.post(f"{LOBBY}/new", data={"name": "Two"}).headers["location"].endswith("?said=full")
+    )
+
+
+def test_someone_off_the_list_is_told_so_not_full(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cold read: the allowlist is checked before the cap."""
+    from cordware.identity import Identity
+
+    monkeypatch.setattr(exercises, "MOST_MADE", 0)
+    session = db.new_session()
+    try:
+        stranger = people.resolve(
+            session, Identity(principal_id="o-x", email="x@x.edu", name="X", tenant_id="t")
+        )
+        assert stranger is not None and not operators.may_operate(stranger)
+        with pytest.raises(exercises.Refused) as refused:
+            exercises.make(session, operators.Actor(stranger), "Not mine to make")
+        assert refused.value.key == "not_listed"
+    finally:
+        session.close()
+
+
+def test_the_cap_is_fifty() -> None:
+    assert exercises.MOST_MADE == 50
 
 
 def test_the_lobby_status_line_shows_only_its_own_messages() -> None:
@@ -111,78 +167,26 @@ def test_the_lobby_status_line_shows_only_its_own_messages() -> None:
     assert "A name is needed." in client.get(f"{LOBBY}?said=name_needed").text
 
 
-def test_discard_forgets_it() -> None:
+def test_discard_is_retired() -> None:
+    """Segment AD2G: *Delete* on the Lobby panel does what *Discard* did."""
     client = _client()
     made = _create(client)
-    reply = client.post(f"{LOBBY}/{made}/discard")
-    assert reply.status_code == 303 and "discarded" in reply.headers["location"]
-    assert client.get(f"{LOBBY}/{made}").status_code == 404
+    assert client.post(f"{LOBBY}/{made}/discard").status_code in (404, 405)
+    assert client.post(f"{LOBBY}/panel", data={"action": "discard", "id": made}).status_code == 400
 
 
-def test_discard_retires_the_row_and_frees_its_code() -> None:
-    """Codex on cordware#223: Discard retired only the scratch copy, so its
-    row kept the code reserved; now the row is deleted, audited, and the
-    code is free for the next exercise."""
-    client = _client()
-    made = _create(client)
-    details = {
-        "revision": 0,
-        "name": "Summer Bursary 2027",
-        "code": "SB-27",
-        "description": "",
-        "contact": "",
-        "timezone": "Europe/London",
-        "eligibility": "Not set",
-        "blind": False,
-    }
-    assert client.post(f"{LOBBY}/{made}/details", json=details).status_code == 200
-    reply = client.post(f"{LOBBY}/{made}/discard")
-    assert reply.status_code == 303 and "discarded" in reply.headers["location"]
-    session = db.new_session()
-    try:
-        row = session.scalar(select(Exercise).where(Exercise.public_id == made))
-        assert row is not None and row.deleted_at is not None
-        assert session.scalar(
-            select(AuditEvent).where(
-                AuditEvent.event_type == "exercise.deleted", AuditEvent.exercise_id == row.id
-            )
-        )
-    finally:
-        session.close()
-    again = _create(client, "Summer Bursary 2028")
-    details["name"], details["code"] = "Summer Bursary 2028", "SB-27"
-    assert client.post(f"{LOBBY}/{again}/details", json=details).status_code == 200
+def test_an_exercise_survives_a_new_app() -> None:
+    """Nothing lives in the process: a restart (a new app on the same
+    database) still finds it."""
+    made = _create(_client())
+    assert _client().get(f"{LOBBY}/{made}").status_code == 200
 
 
-def test_an_exercise_outlives_its_browser_s_store(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Segment AD2G: eight idle hours drop the browser's store, not the
-    exercise, which its row keeps."""
-    client = _client()
-    made = _create(client)
-    later = scratch.time.monotonic() + scratch.IDLE_SECONDS + 1
-    monkeypatch.setattr(scratch.time, "monotonic", lambda: later)
-    assert client.get(f"{LOBBY}/{made}").status_code == 200
-
-
-def test_the_cookie_is_renewed_while_the_store_lives() -> None:
-    """Codex on #4024: the cookie lasts one idle window from the last
-    request, as the store does, not from the exercise's creation."""
-    client = _client()
-    made = _create(client)
-    renewed = client.get(f"{LOBBY}/{made}").headers.get_list("set-cookie")
-    assert any(
-        c.startswith(f"{scratch.COOKIE}=") and f"Max-Age={scratch.IDLE_SECONDS}" in c
-        for c in renewed
-    ), renewed
-    # A browser with no store is not handed one.
-    assert not _client().get(LOBBY).headers.get_list("set-cookie")
-
-
-def test_details_save_into_the_scratch() -> None:
+def test_details_save_into_a_new_exercise() -> None:
     client = _client()
     made = _create(client)
     good = {
-        "revision": 0,  # a new scratch exercise has no settings recorded
+        "revision": 0,  # a new exercise has no settings recorded
         "name": "Summer Bursary 2027",
         "code": "SB-27",
         "description": "Bursaries for summer study.",
@@ -288,7 +292,7 @@ def _field(label: str, **over: object) -> dict[str, object]:
     return card
 
 
-def test_a_blank_scratch_form_starts_empty_and_form_saves_into_it() -> None:
+def test_a_new_exercise_s_form_starts_empty_and_form_saves_into_it() -> None:
     """Rung 3: Form's Save keeps the cards; the page, Preview and Process's
     form-answer rules read them back."""
     client = _client()
@@ -319,7 +323,7 @@ def test_a_blank_scratch_form_starts_empty_and_form_saves_into_it() -> None:
     assert "Application form" not in client.get(f"{LOBBY}/{made}").text  # no longer missing
     preview = client.get(f"{LOBBY}/{made}/form/preview").text
     assert "Your faculty" in preview
-    # Another scratch exercise's form is its own.
+    # Another new exercise's form is its own.
     other = _create(client, "Second")
     assert "Your faculty" not in client.get(f"{LOBBY}/{other}/form").text
 
@@ -445,7 +449,7 @@ def _process() -> dict[str, object]:
     }
 
 
-def test_process_saves_into_the_scratch() -> None:
+def test_process_saves_into_a_new_exercise() -> None:
     """Rung 4: Process's stages, gates, outcomes and ticks kept and read
     back; new keys renumbered, in the rules that name them too."""
     from applydesk import stages, workflow
@@ -462,19 +466,14 @@ def test_process_saves_into_the_scratch() -> None:
     assert 'data-key="o1"' in process and "gnew1" not in process and "onew2" not in process
     # The rule follows the gate's new key.
     assert "&#34;g1.r1&#34;" in process or '"g1.r1"' in process
-    # Read back in a request of this browser: the saved plan and its ticks.
-    scratch_token = client.cookies[scratch.COOKIE]
-    reset = scratch._token.set(scratch_token)  # pyright: ignore[reportPrivateUsage]  -- the request's context, outside one
-    try:
-        plan = stages.plan_of(made)
-        assert [st.label for st in plan.stages] == ["Applications", "Review"]
-        assert plan.stages[0].status == "Published" and plan.stages[0].form
-        assert workflow.sends(made, "receipt", workflow.APPLICANTS)
-        assert not workflow.sends(made, "reminder", workflow.APPLICANTS)
-        assert workflow.sends(made, "o1", workflow.APPLICANTS)
-        assert not workflow.sends(made, "o1", workflow.EVALUATORS)
-    finally:
-        scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
+    # Read back outside any request: the saved plan and its ticks.
+    plan = stages.plan_of(made)
+    assert [st.label for st in plan.stages] == ["Applications", "Review"]
+    assert plan.stages[0].status == "Published" and plan.stages[0].form
+    assert workflow.sends(made, "receipt", workflow.APPLICANTS)
+    assert not workflow.sends(made, "reminder", workflow.APPLICANTS)
+    assert workflow.sends(made, "o1", workflow.APPLICANTS)
+    assert not workflow.sends(made, "o1", workflow.EVALUATORS)
     # The outcome's email is owed on Emails.
     assert "Award" in client.get(f"{LOBBY}/{made}/emails").text
 
@@ -484,8 +483,7 @@ def test_a_sample_exercise_s_process_saves_into_the_database() -> None:
     records its timeline, which its pages read from then on; a stage keeps
     its key; a gate the page adds takes a key past every one the exercise
     has held, and a removed gate's key is never given again."""
-    from applydesk import db, stages
-    from applydesk.models import AuditEvent
+    from applydesk import stages
 
     client = _client()
     model = "wa9juxbc2t"
@@ -802,7 +800,7 @@ def _panels(**over: object) -> dict[str, object]:
     return sent
 
 
-def test_panels_save_into_the_scratch() -> None:
+def test_panels_save_into_a_new_exercise() -> None:
     """Rung 5: Panels' panels and roster kept; Form and Process pick from
     them; a saved panel keeps its key."""
     client = _client()
@@ -927,7 +925,7 @@ def test_a_panel_made_on_form_or_process_joins_the_panels() -> None:
     assert refused.status_code == 400 and "panel made on this page" in refused.json()["error"]
 
 
-def test_an_email_saves_into_the_scratch() -> None:
+def test_an_email_saves_into_a_new_exercise() -> None:
     """Rung 6: an Emails card's template kept by its item and audience;
     written once it has a subject and a body, which the status row follows."""
     client = _client()
@@ -1058,23 +1056,10 @@ def test_templates_keep_their_outcome_and_a_removed_ones_key_is_not_reused() -> 
     assert "First" not in page
 
 
-def test_an_odd_cookie_beside_the_token_does_not_lose_it() -> None:
-    """Cold read: a co-hosted cookie with a space in it keeps the scratch
-    token readable (Starlette's parser, not SimpleCookie)."""
-    client = _client()
-    made = _create(client)
-    token = client.cookies[scratch.COOKIE]
-    odd = TestClient(host_with(("applydesk",))[0], follow_redirects=False)
-    reply = odd.get(
-        f"{LOBBY}/{made}", headers={"cookie": f'other=a b c; quoted="x; {scratch.COOKIE}={token}'}
-    )
-    assert reply.status_code == 200
-
-
 def test_too_large_a_post_says_so() -> None:
     client = _client()
     made = _create(client)
-    huge = {"title": "", "description": "", "cards": [], "pad": "x" * (scratch.MAX_BODY + 1)}
+    huge = {"title": "", "description": "", "cards": [], "pad": "x" * (MAX_BODY + 1)}
     reply = _post_form(client, made, huge)
     assert reply.status_code == 413 and "256 KiB" in reply.json()["detail"]
 

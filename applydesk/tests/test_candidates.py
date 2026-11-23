@@ -141,7 +141,7 @@ def test_the_routes_add_remove_and_upload() -> None:
 def test_process_places_candidates_on_one_stage() -> None:
     """The item's place is saved with Process; two stages holding it is
     ruling 77 broken, refused."""
-    from applydesk.tests.test_scratch import _post_process, _stage
+    from applydesk.tests.test_new_exercise import _post_process, _stage
 
     client = _client()
     form = {"from": "", "to": "", "receipt": False, "reminder": False}
