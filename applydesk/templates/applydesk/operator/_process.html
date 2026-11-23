@@ -706,7 +706,7 @@
   // What each rule reads amiss, by its column's key: the server's to say
   // (ruling 78, applydesk/rules.py's checks), asked after each edit and
   // drawn when it answers; until then the last answer stands.
-  var problems = {}, asking = null, askedFor = "";
+  var problems = {}, asking = null, askedFor = "", checkError = "";
   function askProblems() {
     var snap = window.applydeskProcessSnapshot ? window.applydeskProcessSnapshot() : null;
     if (!snap) return;
@@ -721,7 +721,10 @@
         .then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }); })
         .then(function (got) {
           if (askedFor !== body) return;  // a later edit asked again
-          problems = got[0] && got[1].problems ? got[1].problems : problems;
+          // A snapshot the server cannot read yet says why, in place of the
+          // rules' problems, rather than leaving the last ones (Codex on #4156).
+          problems = got[0] && got[1].problems ? got[1].problems : {};
+          checkError = got[0] ? "" : (got[1] && got[1].error) || "The rules could not be checked.";
           if (asking === null) delete root.dataset.pcAsking;  // none newer waiting
           drawRules();
         }, function () { askedFor = ""; if (asking === null) delete root.dataset.pcAsking; });
@@ -733,6 +736,7 @@
   }
   function drawRules() {
     var all = stageProblems();
+    if (checkError) all.push("Rules not checked: " + checkError);
     columns().forEach(function (item) {
       var rule = ruleOf(item), found = rule ? (problems[item.dataset.key] || []) : [];
       var weighed = item.dataset.item === "outcome" ? weights(item) : "";

@@ -172,3 +172,54 @@ def test_the_problems_route_says_what_a_rule_reads_amiss() -> None:
     assert stages.plan_of("wa9juxbc2t").columns[0].key == "g1"  # nothing kept
     bad = client.post(url, json={"stages": "x"})
     assert bad.status_code == 400 and "malformed" in bad.json()["error"]
+
+
+def test_rules_are_checked_while_another_field_is_half_typed() -> None:
+    """Codex on #4156: a stage with one date, or a weight not yet a whole
+    percent, no longer stops the rules being checked; Save still refuses
+    them."""
+    from applydesk import process_save
+
+    client = _client()
+    outcome = {
+        "key": "onew1",
+        "label": "Award",
+        "due": "",
+        "values": ["Yes", "No"],
+        "weights": {"g1.r1": "ab"},
+        "rule": {"when": [["status", "", "is", "Submitted"]], "then": "Maybe", "otherwise": "No"},
+        "applicants_email": False,
+        "evaluators_email": False,
+    }
+    stage = {
+        "key": "",
+        "name": "Review",
+        "from": "2027-02-01T09:00",
+        "to": "",
+        "shown": True,
+        "published": False,
+        "form": None,
+        "gates": [],
+        "outcome": outcome,
+    }
+    sent = {"revision": 0, "stages": [stage]}
+    url = "/applydesk/operator/exercises/wa9juxbc2t/process/problems"
+    reply = client.post(url, json=sent)
+    assert reply.status_code == 200, reply.text
+    assert reply.json()["problems"]["onew1"] == ["decides “Maybe”, not among its values"]
+    # Saving the same snapshot is still refused, the half-typed field named.
+    with pytest.raises(process_save.Refused):
+        process_save.build(sent, "wa9juxbc2t")
+
+
+def test_a_long_outcome_value_does_not_spoil_the_proposal() -> None:
+    """Codex on #4156: an outcome value may run to 500 characters."""
+    plan = stages.plan_of("wa9juxbc2t")
+    row = next(r for r in plan.rows if r.application.state == "Submitted")
+    long = "x" * 400
+    body = {
+        "only_pending": True,
+        "replace_hand": False,
+        "cells": {row.application.public_id: {"o1": [long, True]}},
+    }
+    assert _client().post(URL, json=body).status_code == 200

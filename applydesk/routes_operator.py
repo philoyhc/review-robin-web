@@ -748,7 +748,9 @@ def _table_sent(v: Any) -> dict[str, dict[str, tuple[str, bool]]] | None:
             ):
                 return None
             value, hand = cast(list[Any], cell)
-            if not isinstance(value, str) or not isinstance(hand, bool) or len(value) > 200:
+            if (
+                not isinstance(value, str) or not isinstance(hand, bool) or len(value) > 500
+            ):  # an outcome value's limit
                 return None
             own[key] = (value, hand)
         out[app] = own
