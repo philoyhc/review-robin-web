@@ -548,7 +548,6 @@ def _save_form(request: Request, exercise_id: str, sent: Any) -> Response:
     opened = got.get("revision")
     if not isinstance(opened, int) or isinstance(opened, bool):
         return JSONResponse({"error": "The form is malformed."}, status_code=400)
-    published = locks.form_lock(exercise).fixed
     session = db.new_session()
     try:
         actor = people.resolve(session, identity)
@@ -561,7 +560,14 @@ def _save_form(request: Request, exercise_id: str, sent: Any) -> Response:
         renamed = panels_store.adopt(session, exercise.public_id, got.get("pools"), wanted, actor)
         form = _form(sent, exercise.public_id, renamed)
         revision = form_store.save(
-            session, exercise.public_id, form, opened, actor, published=published
+            session,
+            exercise.public_id,
+            form,
+            opened,
+            actor,
+            # Read under the lock, once any Process save before this one has
+            # landed (Codex on #4176).
+            published=lambda: locks.form_lock(exercise).fixed,
         )
         kept = form_store.load(session, exercise.public_id)
         keyed = kept is None or [c.key for c in kept.cards] != [c["key"] for c in form["cards"]]

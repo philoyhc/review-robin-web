@@ -234,6 +234,9 @@
     else if (what === "pagebreak") added = fresh("fb-new-pagebreak");
     else if (what === "replicate") {
       added = item.cloneNode(true);
+      // A copy is a new question: the server keys it (segment AD2D), so
+      // the original keeps its key wherever the copy is dragged.
+      added.dataset.key = "";
       // A clone keeps typed values, but not a select's current choice.
       added.querySelector('[data-f="type"]').value = item.querySelector('[data-f="type"]').value;
       added.querySelector('[data-f="pool"]').value = item.querySelector('[data-f="pool"]').value;
