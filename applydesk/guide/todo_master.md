@@ -838,7 +838,7 @@ Segments in order; each gets a plan in this folder when it starts.
 
 | Segment | Lands | Gates and dependencies |
 |---|---|---|
-| AD2 — Database (a series) | The `applydesk` database, checkable on localhost, area by area: AD2A foundations (people, operators, audit; closed 2026-11-21, `applydesk/guide/archive/segment_AD2A_foundations.md`); AD2W, Accounts Management's table as Review Robin's Workspace users (closed 2026-11-21, `applydesk/guide/archive/segment_AD2W_workspace_users.md`); then exercises, Process (AD2C closed 2026-11-23, `applydesk/guide/archive/segment_AD2C_process.md`); next, in order (author, 2026-11-23): AD2E panels (closed 2026-11-23, `applydesk/guide/archive/segment_AD2E_panels.md`), AD2D version 1, the form's questions (closed 2026-11-23, `applydesk/guide/archive/segment_AD2D_form.md`), AD2L email templates (closed 2026-11-23, `applydesk/guide/archive/segment_AD2L_emails.md`), then AD2G's first part (the browser store removed, test exercises seeded); then dossiers and pairs (AD2F), visibility (AD2V) and the rest of the simulation's retirement (`applydesk/guide/ad2_series.md`) | Cordware: the database and its runtime principal (private), before AD2's first release |
+| AD2 — Database (a series) | The `applydesk` database, checkable on localhost, area by area: AD2A foundations (people, operators, audit; closed 2026-11-21, `applydesk/guide/archive/segment_AD2A_foundations.md`); AD2W, Accounts Management's table as Review Robin's Workspace users (closed 2026-11-21, `applydesk/guide/archive/segment_AD2W_workspace_users.md`); then exercises, Process (AD2C closed 2026-11-23, `applydesk/guide/archive/segment_AD2C_process.md`); next, in order (author, 2026-11-23): AD2E panels (closed 2026-11-23, `applydesk/guide/archive/segment_AD2E_panels.md`), AD2D version 1, the form's questions (closed 2026-11-23, `applydesk/guide/archive/segment_AD2D_form.md`), AD2L email templates (closed 2026-11-23, `applydesk/guide/archive/segment_AD2L_emails.md`), then AD2G's first part (the browser store removed, test exercises seeded; plan `applydesk/guide/segment_AD2G_retire_simulation.md`, Item 1); then dossiers and pairs (AD2F), visibility (AD2V) and the rest of the simulation's retirement (`applydesk/guide/ad2_series.md`) | Cordware: the database and its runtime principal (private), before AD2's first release |
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form, versioned, each section carrying its visibility grants (ruling 68); drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
 | AD5 — Panels and dossiers | The rosters on Panels (rulings 19, 22), each gate's evaluators from its ranked sources (ruling 27); dossiers made from the form or by *Create dossiers* (rulings 25, 26), the dossier with its access check, audit and blind redaction | — |
@@ -864,12 +864,13 @@ Segments in order; each gets a plan in this folder when it starts.
 - **AD6:** a gate's progress line, and each evaluator's share of it on
   the Review Robin card, is canned beside counted pairs until Review
   Robin's status read replaces it (AD1I; AD-32; AD1M).
-- **AD6 (or its own item): a scale on a gate** (author, 2026-11-23;
+- **A scale on a gate, built with Review Robin's scale field right after
+  AD2G Item 1** (author, 2026-11-23;
   RRW `guide/rrw_reviewer_phone_and_scale.md` §3). The gate's *Response
   fields* offer *Integer (scale)* and *Decimal (scale)*, stored as the
   number type plus a `gate_field` flag and three labels, handed off as
-  Review Robin's scale attributes. After Review Robin's scale item
-  lands; until then Apply Desk does not offer the two types.
+  Review Robin's scale attributes. Lands with or after Review Robin's
+  scale item; until then Apply Desk does not offer the two types.
 - **AD2:** operator pages' dates as Review Robin's `YYYY-MM-DD HH:MM`
   through one helper, once dates are stored (U18; AD1P).
 - **AD2:** the store that replaces the scratch store caps what one
