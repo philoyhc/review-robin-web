@@ -60,6 +60,13 @@ Taken 2026-11-23 at `da8cf86d7`.
 | Layout test | 1 (`test_mounts.py`) | `grep -rn '<body class=' applydesk/tests` |
 | Spec lines | 1 (`applications.md`, "Layout") | `grep -n "1400 px" applydesk/spec/applications.md` |
 
+### Status
+
+- **2026-11-23, rung 2:** `operator_page` covers `/admin`
+  (`applydesk/web.py`); `test_admin_takes_the_operator_pages_layout` fails
+  without it. The browser check is owed
+  (`applydesk/guide/things_to_check_in_browser.md`).
+
 ### PR ladder
 
 1. **This plan.**

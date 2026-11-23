@@ -147,3 +147,13 @@ def test_operator_pages_take_review_robin_s_layout() -> None:
     assert '<body class="op">' in lobby
     assert '<body class="op crumbed">' in process
     assert '<body class="">' in client.get("/applydesk/me").text
+
+
+def test_admin_takes_the_operator_pages_layout() -> None:
+    """AD1U Item 1: Admin's tabs are operator work surfaces too, laid out as
+    the operator pages are, not in the participant's centred column."""
+    client = TestClient(host_with(("applydesk",))[0])
+    for tab in ("exercises", "operators", "system"):
+        page = client.get(f"/applydesk/admin/{tab}")
+        assert page.status_code == 200, tab
+        assert '<body class="op">' in page.text, tab

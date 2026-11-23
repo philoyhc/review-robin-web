@@ -12,6 +12,14 @@ auth). Most need the samples loaded first:
 `alembic -c applydesk/alembic.ini upgrade head`, then
 `python -m applydesk.seed`.
 
+
+## Admin's layout (AD1U Item 1)
+
+- [ ] **Admin lines up with the operator pages.** Go from an exercise's
+  Home to Admin (*Accounts Management*): the bar, the title and the cards
+  keep the 40 px left margin and run as wide as Home's, not a centred
+  column. The same on *Exercises Diagnostics* and *System Status*.
+
 ## Owners and operators, and *Your role* (AD2O: #4144, #4145, #4146)
 
 - [ ] **The card.** On an exercise's Home, the card reads *Owners and
