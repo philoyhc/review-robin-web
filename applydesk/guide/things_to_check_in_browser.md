@@ -31,11 +31,15 @@ when they are all ticked.
      every operator page at 1300px and 390px, light and dark, in one go.
    - *Owners and operators*, **Your role**, **The panel** and **Archived is
      read-only**: these need no second person.
-2. **A second person.** Restart with `FAKE_AUTH_EMAIL=jane.tan@example.edu`
-   and `FAKE_AUTH_NAME=Jane Tan` and load the Lobby once (Jane has now
-   signed in); restart as Local Operator. On Accounts Management, add
-   `jane.tan@example.edu` as an operator, then on RA-2027's Home, *Add
-   operator* Jane. Then:
+2. **A second person.** As Local Operator, on Accounts Management, add
+   `jane.tan@example.edu` (Jane Tan, from the fake directory) as an
+   operator. Then sign in as her once: restart with
+   `FAKE_AUTH_EMAIL=jane.tan@example.edu`, `FAKE_AUTH_NAME=Jane Tan` and
+   `FAKE_AUTH_PRINCIPAL_ID=11111111-1111-4111-8111-111111111111` (her
+   fake-directory ID; people are matched by tenant and that ID, not by
+   address), and load the Lobby. Restart as Local Operator, with
+   `FAKE_AUTH_PRINCIPAL_ID` back to `local-dev`, and on RA-2027's Home
+   *Add operator* Jane. Then:
    - *Owners and operators*: **The card**, **Make Owner, then Step down**,
      **Leave**, **Transfer**. Do Transfer on a scratch exercise, since it
      makes Jane the only Owner.
