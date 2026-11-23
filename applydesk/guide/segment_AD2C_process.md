@@ -118,6 +118,18 @@ Taken 2026-11-22 at `1ceb1d592`.
 ## Status
 
 - **2026-11-23, ruling 79:** visibility moves to its own segment (AD2V). `outcome_audience` leaves rung 3's tables; `outcome_release` stays (ruling 38).
+- **2026-11-23, rung 5 split:** 5a lands the store's wiring (`plan_of` reads it, *Save* on every exercise, keys kept and minted past every key held, a sample's included). 5b lands `/evaluations/<key>` and Extract's names. The form's window and state (AD-36, AD-59, AD-60) move with rung 9's *Open form*.
+- **Decisions confirmed at build (rung 5a):**
+  - A sample's saved timeline keeps the sample's cells; a column it never had is blank until AD2F.
+  - Email ticks stay in the scratch store until Emails is stored; on a sample they stay the sample's.
+  - A panel made on a sample's Process is refused until AD2E stores panels.
+- **2026-11-23, cumulative read on rungs 2-5** (`diff-reviewer`, base `1d09637c2`): a removed field or result could not be added back (fixed in rung 4: revived); times read back in the database's zone (fixed: UTC); a concurrent first save reached the operator as a 500 (fixed in rung 5). Left for later:
+  - Published stages: the save refuses only their removal. Refusing other edits to them, and an audited revert to draft, move to rung 9 with the form's state.
+  - `plan_of` reads the store on every call, without a per-request cache: about 200 queries on a saved sample's Process, 0.17 s locally. AD2G's request-scoped loading.
+  - Sources and weights are replaced on each save, not retired: they are parts of a gate or an outcome, never named on their own.
+  - An outcome value renamed on the page takes a new key (Codex on #4154): its values are one list of labels. Keeping the key waits on a values editor that carries keys.
+  - `applydesk/spec/applications.md` still describes renumbering and `removed`: the close's spec pass.
+  - Rung 9: re-adding a removed candidate revives its row (`uq_candidate_pair`); the Decision's `candidate_list` became `stage.holds_candidates`.
 
 ## PR ladder
 

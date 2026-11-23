@@ -33,7 +33,7 @@ from typing import Any, cast
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from applydesk import audit, stages
+from applydesk import audit, db, stages
 from applydesk.models import (
     Exercise,
     GateField,
@@ -392,16 +392,43 @@ def _dates(start: datetime | None, end: datetime | None) -> stages.StageDates | 
     return stages.StageDates(_naive(start) or start, _naive(end) or end)
 
 
+def stored_stages(public_id: str) -> tuple[stages.Stage, ...] | None:
+    """The stages Process last saved for the exercise, read in a session of
+    its own (``stages.plan_of``, which no route hands a session); None if
+    never saved."""
+    session = db.new_session()
+    try:
+        found = load(session, public_id)
+    finally:
+        session.close()
+    return found.stages if found is not None else None
+
+
+def revision(public_id: str) -> int:
+    """How many times Process has saved the exercise: a page sends the one
+    it opened at, and a save from an older one is refused (``save``)."""
+    session = db.new_session()
+    try:
+        held = session.scalar(
+            select(Exercise.process_revision).where(Exercise.public_id == public_id)
+        )
+    finally:
+        session.close()
+    return held or 0
+
+
 # --- Save ------------------------------------------------------------------
 
 
 def taken_keys(session: Session, public_id: str) -> frozenset[str]:
     """Every gate, outcome and stage key the exercise has ever held, retired
-    ones too: a new one is minted past them (ruling 37)."""
+    ones too, and a sample's own (its cells are keyed by them until AD2F
+    stores cells, so a new gate must not take one): a new key is minted
+    past them (ruling 37)."""
+    keys: set[str] = set(stages.sample_keys(public_id))
     exercise = session.scalar(select(Exercise).where(Exercise.public_id == public_id))
     if exercise is None:
-        return frozenset()
-    keys: set[str] = set()
+        return frozenset(keys)
     for model in (StageRow, GateRow, Outcome):
         keys |= set(session.scalars(select(model.key).where(model.exercise_id == exercise.id)))
     return frozenset(keys)
@@ -534,7 +561,10 @@ def save(
     if exercise.archived_at is not None:
         raise Refused("Archived: restore it to change it.", key="archived")
     if opened != exercise.process_revision:
-        raise Refused("Changed since you opened it; reload.", key="stale")
+        raise Refused(
+            "Not saved: Process was saved since this page opened. Reload to see it.",
+            key="stale",
+        )
     _check(built)
     at = _now()
     stage_rows = {

@@ -439,6 +439,82 @@ def test_process_saves_into_the_scratch() -> None:
     assert "Award" in client.get(f"{LOBBY}/{made}/emails").text
 
 
+def test_a_sample_exercise_s_process_saves_into_the_database() -> None:
+    """AD2C rung 5: Save is offered on every exercise. A sample's first save
+    records its timeline, which its pages read from then on; a stage keeps
+    its key; a gate the page adds takes a key past every one the exercise
+    has held, and a removed gate's key is never given again."""
+    from applydesk import db, stages
+    from applydesk.models import AuditEvent
+
+    client = _client()
+    model = "wa9juxbc2t"
+    page = client.get(f"{LOBBY}/{model}/process").text
+    assert "Saving comes with the database" not in page
+    assert 'data-fb-save="' in page and 'data-revision="0"' in page
+    before = stages.plan_of(model)
+    gate_keys = [c.key for c in before.columns if isinstance(c, stages.Gate)]
+    two = {
+        "stages": [
+            _stage("Applications", form={"from": "", "to": "", "receipt": True, "reminder": False}),
+            _stage("Review", gates=[_gate(gate_keys[0], "Kept read")]),
+        ]
+    }
+    reply = _post_process(client, model, two)
+    assert reply.status_code == 200, reply.text
+    stored = stages.plan_of(model)
+    assert [st.label for st in stored.stages] == ["Applications", "Review"]
+    assert [c.key for c in stored.columns] == [gate_keys[0]]
+    assert all(st.key for st in stored.stages)
+    page = client.get(f"{LOBBY}/{model}/process").text
+    assert 'value="Kept read"' in page and 'data-revision="1"' in page
+    assert f'data-stage-key="{stored.stages[0].key}"' in page
+    # A gate added on the page: a key past all the sample's, never gnew1.
+    top = max(int(k[1:]) for k in gate_keys)
+    keyed = [{**st, "key": s.key} for st, s in zip(two["stages"], stored.stages, strict=True)]  # pyright: ignore[reportGeneralTypeIssues, reportUnknownVariableType]  -- a test's dict
+    keyed[1]["gates"] = [_gate("gnew1", "Second read")]  # the first gate removed
+    assert _post_process(client, model, {"stages": keyed}).status_code == 200
+    again = stages.plan_of(model)
+    new_key = f"g{top + 1}"
+    assert [c.key for c in again.columns] == [new_key]
+    assert [st.key for st in again.stages] == [st.key for st in stored.stages]
+    # Every page draws the new gate, which no sample cell names: blank.
+    for path in ("", "/process", "/form", "/panels", "/emails", "/dossiers", "/evaluations"):
+        assert client.get(f"{LOBBY}/{model}{path}").status_code == 200, path
+    assert client.get(f"{LOBBY}/{model}/evaluations/gate_1").status_code == 200
+    extract = client.get(f"{LOBBY}/{model}/extract")
+    assert extract.status_code == 200
+    files = set(re.findall(r"/extract/([\w.-]+\.(?:csv|zip))", extract.text))
+    assert "all.zip" in files, files  # every gate's file is in it
+    for name in sorted(files):
+        assert client.get(f"{LOBBY}/{model}/extract/{name}").status_code == 200, name
+    session = db.new_session()
+    try:
+        saves = session.query(AuditEvent).filter_by(event_type="exercise.process_saved").count()
+    finally:
+        session.close()
+    assert saves == 2
+
+
+def test_a_sample_exercise_cannot_adopt_a_panel_made_on_process() -> None:
+    """A sample's panels are the sample's until panels are stored (AD2E):
+    a gate naming one made on the page is refused, not half kept."""
+    client = _client()
+    made_panel = {"new-1": {"name": "Readers", "members": [["Ada", "ada@example.edu"]]}}
+    gate = _gate("gnew1", "Read", sources=[{"kind": "panel", "ref": "new-1", "min": 1, "max": 1}])
+    sent = {
+        "stages": [
+            _stage(
+                "Applications", form={"from": "", "to": "", "receipt": False, "reminder": False}
+            ),
+            _stage("Review", gates=[gate]),
+        ],
+        "pools": made_panel,
+    }
+    refused = _post_process(client, "wa9juxbc2t", sent)
+    assert refused.status_code == 400 and "new exercise only" in refused.json()["error"]
+
+
 def test_process_save_is_checked() -> None:
     client = _client()
     made = _create(client)
@@ -505,14 +581,15 @@ def test_process_save_is_checked() -> None:
             bad,
             refused.text,
         )
-    assert client.post(f"{LOBBY}/wa9juxbc2t/process", json=_process()).status_code == 404
+    # A sample exercise saves too since AD2C, at the revision its page opened.
+    saved = _post_process(client, "wa9juxbc2t", _process())
+    assert saved.status_code == 200, saved.text
 
 
-def test_a_rule_naming_a_removed_gate_never_reads_another() -> None:
-    """Codex on #4026: renumbering never lands a dangling rule on the gate
-    renumbered into the removed one's key; NaN and Infinity are refused."""
-    from applydesk import stages
-
+def test_a_rule_naming_a_removed_gate_is_refused() -> None:
+    """AD2C (AD-62): a rule naming a gate or a result the snapshot drops is
+    refused, both named, never kept pointing at nothing; NaN and Infinity
+    are refused as weights (Codex on #4026)."""
     client = _client()
     made = _create(client)
     outcome = {
@@ -528,30 +605,16 @@ def test_a_rule_naming_a_removed_gate_never_reads_another() -> None:
     # Gate g1 removed on the page; g2 is all that is left, and the rule
     # still names g1.
     sent = {"stages": [_stage("Review", gates=[_gate("g2", "Second")], outcome=outcome)]}
-    assert _post_process(client, made, sent).status_code == 200
-    reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- the request's context, outside one
-    try:
-        plan = stages.plan_of(made)
-        gate, kept = plan.columns[0], plan.columns[1]
-        assert gate.key == "g1" and isinstance(kept, stages.Outcome) and kept.rule
-        assert kept.rule.when[0][1] == "removed.r1"
-    finally:
-        scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
-    # A result removed from a gate still there: its rule reads removed too,
-    # so a result added later as r2 is not read in its place.
+    refused = _post_process(client, made, sent)
+    assert refused.status_code == 400 and "no longer" in refused.json()["error"], refused.text
+    # A result removed from a gate still there is refused the same way.
     two = {
         **outcome,
         "rule": {"when": [["res", "g2.r2", "ge", "3"]], "then": "Yes", "otherwise": "No"},
     }
     sent = {"stages": [_stage("Review", gates=[_gate("g2", "Second")], outcome=two)]}
-    assert _post_process(client, made, sent).status_code == 200
-    reset = scratch._token.set(client.cookies[scratch.COOKIE])  # pyright: ignore[reportPrivateUsage]  -- as above
-    try:
-        kept = stages.plan_of(made).columns[1]
-        assert isinstance(kept, stages.Outcome) and kept.rule
-        assert kept.rule.when[0][1] == "removed.r2"
-    finally:
-        scratch._token.reset(reset)  # pyright: ignore[reportPrivateUsage]  -- as above
+    refused = _post_process(client, made, sent)
+    assert refused.status_code == 400 and "no longer" in refused.json()["error"], refused.text
     for bad in ("NaN", "Infinity", "-inf", "33.3", "-5", ""):
         weighed = {**outcome, "weights": {"g2.r1": bad, "g2.r2": "50"}}
         sent = {"stages": [_stage("Review", gates=[_gate("g2", "Second")], outcome=weighed)]}
@@ -801,10 +864,10 @@ def test_email_save_is_checked() -> None:
     assert client.post(f"{LOBBY}/wa9juxbc2t/emails", json=good).status_code == 404
 
 
-def test_templates_follow_their_outcome_when_process_renumbers() -> None:
-    """Cold read: removing an earlier outcome renumbers the later one; its
-    template goes with it, and the removed one's is dropped, never landing
-    on another outcome."""
+def test_templates_keep_their_outcome_and_a_removed_ones_key_is_not_reused() -> None:
+    """Cold read, kept since AD2C: removing an earlier outcome leaves the
+    later one its key and its template; an outcome added after takes a new
+    key, so the removed one's template never lands on it."""
     client = _client()
     made = _create(client)
 
@@ -840,25 +903,23 @@ def test_templates_follow_their_outcome_when_process_renumbers() -> None:
             },
         )
         assert reply.status_code == 200, reply.text
-    # Shortlist's stage removed: Award's outcome is o1 now.
+    # Shortlist's stage removed: Award's outcome keeps o2 and its template.
     only = {"stages": [_stage("Award", outcome=outcome("o2", "Award"))]}
     assert _post_process(client, made, only).status_code == 200
     page = client.get(f"{LOBBY}/{made}/emails").text
-    card = page[page.index('data-em-item="o1"') :][:3000]
+    card = page[page.index('data-em-item="o2"') :][:3000]
     assert 'value="Second"' in card and "First" not in page
-    # A tab still naming the old o2 card is refused, not saved onto o1.
-    stale = client.post(
-        f"{LOBBY}/{made}/emails",
-        json={
-            "item": "o1",
-            "audience": "Applicants",
-            "name": "Shortlist: Outcome · Applicants",
-            "revision": 2,
-            "subject": "x",
-            "body": "x",
-        },
-    )
-    assert stale.status_code == 400 and "reload Emails" in stale.json()["error"]
+    # An outcome added now is o3, never the removed o1.
+    again = {
+        "stages": [
+            _stage("Award", outcome=outcome("o2", "Award")),
+            _stage("Appeal", outcome=outcome("onew1", "Appeal")),
+        ]
+    }
+    assert _post_process(client, made, again).status_code == 200
+    page = client.get(f"{LOBBY}/{made}/emails").text
+    assert 'data-em-item="o3"' in page and 'data-em-item="o1"' not in page
+    assert "First" not in page
 
 
 def test_an_odd_cookie_beside_the_token_does_not_lose_it() -> None:
@@ -927,8 +988,7 @@ def test_an_emails_page_older_than_process_s_last_save_is_refused() -> None:
     assert 'data-em-revision="1"' in client.get(f"{LOBBY}/{made}/emails").text
     only = {"stages": [_stage("Review", outcome=outcome("o2"))]}
     assert _post_process(client, made, only).status_code == 200
-    # The first stage's card, opened at revision 1: same item and name as the
-    # survivor now has, refused all the same.
+    # The first stage's card, opened at revision 1: refused by revision.
     stale = {
         "item": "o1",
         "audience": "Applicants",
@@ -939,17 +999,18 @@ def test_an_emails_page_older_than_process_s_last_save_is_refused() -> None:
     }
     refused = client.post(f"{LOBBY}/{made}/emails", json=stale)
     assert refused.status_code == 400 and "reload Emails" in refused.json()["error"]
-    fresh = {**stale, "revision": 2}
+    # The survivor keeps its key, o2 (AD2C): saved at the new revision.
+    fresh = {**stale, "item": "o2", "revision": 2}
     assert client.post(f"{LOBBY}/{made}/emails", json=fresh).status_code == 200
 
 
 def test_a_process_page_older_than_the_last_save_is_refused() -> None:
-    """Codex on #4028: a second tab's older snapshot is refused before it
-    renumbers anything, so no template moves onto another outcome."""
+    """Codex on #4028: a second tab's older snapshot is refused, never
+    merged (ruling 74, as Details is)."""
     client = _client()
     made = _create(client)
     first = {"stages": [_stage("One")], "revision": 0}
     assert client.post(f"{LOBBY}/{made}/process", json=first).status_code == 200
     stale = client.post(f"{LOBBY}/{made}/process", json={**first, "revision": 0})
-    assert stale.status_code == 400 and "reload" in stale.json()["error"]
+    assert stale.status_code == 409 and "Reload" in stale.json()["error"], stale.text
     assert client.post(f"{LOBBY}/{made}/process", json={**first, "revision": 1}).status_code == 200

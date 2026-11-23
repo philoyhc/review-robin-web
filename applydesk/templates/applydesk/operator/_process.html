@@ -44,16 +44,16 @@
       {% if issues %}<ul class="pc-issues" data-pc-issues>{% for i in issues %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
       <p class="visually-hidden" data-pc-live aria-live="polite"></p>
       <div class="btnrow">
-        {% if scratch_page %}<button class="btn btn-secondary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}" data-fb-snapshot="applydeskProcessSnapshot" data-revision="{{ process_revision }}">Save</button>{% else %}<button class="btn btn-secondary" type="button" disabled title="Saving comes with the database">Save</button>{% endif %}
+        <button class="btn btn-secondary" type="button" data-fb-save="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}" data-fb-snapshot="applydeskProcessSnapshot" data-revision="{{ process_revision }}">Save</button>
         <span class="fb-unsaved" data-unsaved hidden>Unsaved changes</span>
       </div>
-      {% if scratch_page %}<p class="muted fb-said" data-fb-said role="status"></p>{% endif %}
+      <p class="muted fb-said" data-fb-said role="status"></p>
     </section>
   </aside>
 </div>
 {% include "applydesk/operator/_panel_pick_js.html" %}
 {% include "applydesk/operator/_unsaved_js.html" %}
-{% if scratch_page %}{% include "applydesk/operator/_scratch_save_js.html" %}{% endif %}
+{% include "applydesk/operator/_scratch_save_js.html" %}
 <script>
 // Segment AD1E rung 3: the stage card moves, in the browser only; a reload
 // restores the sample. Collapse and expand; the name and dates feeding the
@@ -998,6 +998,8 @@
     if (what === "new") added = fresh("pc-new-stage");
     else if (what === "replicate") {
       added = card.cloneNode(true);
+      // A copy is a new stage: the server gives it a key of its own.
+      added.dataset.stageKey = "";
       // One stage holds the form: a copy leaves it behind. Its gates and
       // outcome are new columns, with keys of their own.
       added.querySelectorAll('.pc-item[data-item="form"]').forEach(function (f) { f.remove(); });
@@ -1512,6 +1514,7 @@
         var form = items(card, "form")[0];
         var outcome = items(card, "outcome")[0];
         return {
+          key: card.dataset.stageKey || "",
           name: field(card, "name"), from: field(card, "from"), to: field(card, "to"),
           shown: !!(card.querySelector('[data-pc="shown"]') || {}).checked,
           published: card.dataset.status !== "Draft",

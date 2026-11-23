@@ -30,6 +30,7 @@ from applydesk import (
     paging,
     people,
     process_save,
+    process_store,
     sample_data,
     scratch,
     scratch_panels,
@@ -471,6 +472,22 @@ def _details(v: dict[str, Any]) -> dict[str, Any]:
 _TOO_LARGE = "Not saved: a page posts at most 256 KiB to a scratch exercise."
 
 
+async def _page_json(request: Request) -> Any:
+    """A Setup page's post (segment AD2C): from Apply Desk's own page,
+    JSON, at most ``scratch.MAX_BODY``; the exercise is the caller's to
+    look up, off the event loop."""
+    _same_site(request)
+    if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
+        raise HTTPException(status_code=415, detail="Not saved: the page sent no JSON.")
+    body = await request.body()
+    if len(body) > scratch.MAX_BODY:
+        raise HTTPException(status_code=413, detail=_TOO_LARGE)
+    try:
+        return json.loads(body)
+    except ValueError:
+        raise HTTPException(status_code=400) from None
+
+
 async def _scratch_json(request: Request, exercise_id: str) -> tuple[sample_data.Exercise, Any]:
     """A Setup page's post into a scratch exercise (segment AD1N): from
     Apply Desk's own page, JSON, at most ``scratch.MAX_BODY``; 404 for an
@@ -607,38 +624,64 @@ async def exercise_form_save(request: Request, exercise_id: str) -> Response:
 
 @router.post("/exercises/{exercise_id}/process", name="applydesk_exercise_process_save")
 async def exercise_process_save(request: Request, exercise_id: str) -> Response:
-    """Process's *Save* on a scratch exercise (segment AD1N rung 4): its
-    stages, gates and outcomes, their rules, the emails each item ticks,
-    and each stage's Draft or Published, kept for this browser."""
-    exercise, sent = await _scratch_json(request, exercise_id)
-    # A page opened before Process last saved holds keys that may now name
-    # other columns, and the templates follow keys: refused before anything
-    # changes (Codex on #4028).
-    opened = cast(dict[str, Any], sent).get("revision") if isinstance(sent, dict) else None
-    if opened != workflow.process_revision(exercise.public_id):
-        return JSONResponse(
-            {"error": "Process was saved since this page opened: reload it to save."},
-            status_code=400,
-        )
+    """Process's *Save* (segment AD1N rung 4; every exercise since AD2C):
+    its stages, gates and outcomes and their rules, kept in the database
+    (`process_store.save`); the emails each item ticks, kept for this
+    browser on a scratch exercise until Emails is stored."""
+    sent = await _page_json(request)
+    return await run_in_threadpool(_save_process, request, exercise_id, sent)
+
+
+def _save_process(request: Request, exercise_id: str, sent: object) -> Response:
+    """Process's *Save*, past the request's own checks: the transaction."""
+    exercise = exercise_or_404(exercise_id)
+    identity = current_identity(request)
+    if identity is None:
+        raise HTTPException(status_code=404)
+    got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
+    opened = got.get("revision")
+    if not isinstance(opened, int) or isinstance(opened, bool):
+        return JSONResponse({"error": "The process is malformed."}, status_code=400)
+    session = db.new_session()
     try:
+        # Bind the actor and commit first, as Details does.
+        actor = people.resolve(session, identity)
+        session.commit()
         # A panel made with *+ New panel…* joins the exercise's panels
-        # (rung 5), kept with the process or not at all.
+        # (AD1N rung 5), kept with the process or not at all.
         wanted = process_save.made_panels(sent, exercise.public_id)
-        made = cast(dict[str, Any], sent).get("pools") if isinstance(sent, dict) else None
-        renamed, panels = scratch_panels.adopt(exercise.public_id, made, wanted)
-        kept = process_save.build(sent, exercise.public_id, renamed)
-        scratch_panels.keep(exercise.public_id, panels)
-        scratch.save_page(exercise.public_id, "process", kept)
-        # Emails keeps templates by outcome key: they follow the renumbering.
-        workflow.rekey_templates(exercise.public_id, process_save.keys_of(sent))
-        scratch.save_page(
-            exercise.public_id,
-            workflow.REVISION_PAGE,
-            workflow.process_revision(exercise.public_id) + 1,
-        )
-    except (process_save.Refused, scratch.Refused, scratch_panels.Refused) as why:
+        if wanted and not scratch.is_scratch(exercise.public_id):
+            # A sample's panels are the sample's until Panels is stored (AD2E).
+            raise process_save.Refused(
+                "A new panel is kept on a new exercise only, until panels are stored."
+            )
+        renamed, panels = scratch_panels.adopt(exercise.public_id, got.get("pools"), wanted)
+        taken = process_store.taken_keys(session, exercise.public_id)
+        built, ticks = process_save.build(sent, exercise.public_id, renamed, taken)
+        process_store.save(session, exercise.public_id, built, opened, actor)
+        session.commit()
+    except (process_save.Refused, scratch_panels.Refused) as why:
+        session.rollback()
         return JSONResponse({"error": str(why)}, status_code=400)
-    # Gates and outcomes are renumbered on every save, and a panel it
+    except process_store.Refused as why:
+        session.rollback()
+        return JSONResponse({"error": str(why)}, status_code=409 if why.key == "stale" else 400)
+    except (IntegrityError, OperationalError) as error:
+        # A concurrent save won: on SQLite the row lock is the file's, so
+        # two first saves can meet on a key's unique index (cold read).
+        session.rollback()
+        if not db.lost_a_race(error):
+            raise
+        return JSONResponse(
+            {"error": "Not saved: someone else saved just now; reload and retry."},
+            status_code=409,
+        )
+    finally:
+        session.close()
+    scratch_panels.keep(exercise.public_id, panels)
+    if scratch.is_scratch(exercise.public_id):
+        scratch.save_page(exercise.public_id, workflow.SENDS_PAGE, ticks)
+    # A column the page added took the server's key, and a panel it
     # adopted keyed anew: the page reloads to hold the keys kept.
     return JSONResponse({"saved": True, "reload": True, "strict": True})
 
