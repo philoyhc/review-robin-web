@@ -222,6 +222,9 @@ class Outcome:
     # (author, 2026-11-13), set with the outcome on Process; the sample's.
     weights: tuple[tuple[str, float], ...] = ()
     rule: Rule | None = None
+    # Each value's key, beside ``values`` (AD-57): stored values carry
+    # theirs, so a label renamed keeps its key; "" for one not yet saved.
+    value_keys: tuple[str, ...] = ()
 
     @property
     def due(self) -> str:

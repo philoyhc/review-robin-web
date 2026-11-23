@@ -347,7 +347,15 @@
   <div class="pc-row">
     <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ o.label }}" placeholder="Untitled outcome"></label>
   </div>
-  <label class="fc-l">Values<input class="fc-in" data-pc="values" value="{{ o.values | join(', ') }}" placeholder="Comma-separated, e.g. Shortlisted, Not shortlisted"></label>
+  {# Its values, one row each (AD-57): a row keeps its key when renamed,
+     and the rules naming it follow on the page. #}
+  <div class="fc-l pc-values" data-pc-values role="group" aria-label="Values">
+    <span>Values</span>
+    <ol class="pc-value-list" data-pc-value-list>
+      {% for v in o.values %}<li data-value-key="{{ o.value_keys[loop.index0] if o.value_keys | length > loop.index0 else '' }}"><input class="fc-in" data-pc="value" value="{{ v }}" data-was="{{ v }}" aria-label="Value {{ loop.index }}"><button type="button" class="btn btn-secondary btn-short" data-pc-act="remove-value" aria-label="Remove {{ v }}">Remove</button></li>{% endfor %}
+    </ol>
+    <button type="button" class="btn btn-secondary btn-short" data-pc-act="add-value">+ Value</button>
+  </div>
   {# Its combined result: weights over the gates in its scope, those since
      the previous outcome (ruling 13); redrawn by the script as gates move. #}
   {% set wrows = weight_rows(plan, o) if o.key else () %}

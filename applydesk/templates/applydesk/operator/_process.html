@@ -573,9 +573,35 @@
   function byKey(key) { return columns().filter(function (c) { return c.dataset.key === key; })[0] || null; }
   function ruleOf(item) { try { return JSON.parse(item.dataset.rule || "null"); } catch (e) { return null; } }
   function setRule(item, rule) { item.dataset.rule = JSON.stringify(rule); }
+  function valueRows(outcome) { return Array.prototype.slice.call(outcome.querySelectorAll("[data-pc-value-list] > li")); }
   function valuesOf(outcome) {
-    var v = outcome.querySelector('[data-pc="values"]');
-    return (v ? v.value : "").split(",").map(function (x) { return x.trim(); }).filter(Boolean);
+    return valueRows(outcome).map(function (li) { return li.querySelector('[data-pc="value"]').value.trim(); }).filter(Boolean);
+  }
+  // Each value's key beside it, "" for one added here (AD-57).
+  function valueKeysOf(outcome) {
+    return valueRows(outcome).filter(function (li) { return li.querySelector('[data-pc="value"]').value.trim(); })
+      .map(function (li) { return li.dataset.valueKey || ""; });
+  }
+  // A value renamed: every rule naming it follows (its own outcome's
+  // decisions, and later rules reading that outcome), so the renamed value
+  // keeps its key and its rules (AD-57).
+  function renameValue(outcome, was, now) {
+    if (!was || !now || was === now) return;
+    var key = outcome.dataset.key;
+    columns().forEach(function (item) {
+      var rule = ruleOf(item);
+      if (!rule) return;
+      var moved = false;
+      function cond(c) { if (c[0] === "out" && c[1] === key && c[3] === was) { c[3] = now; moved = true; } }
+      (rule.when || []).forEach(cond);
+      (rule.more || []).forEach(function (b) { (b.when || []).forEach(cond); });
+      if (item === outcome) {
+        if (rule.then === was) { rule.then = now; moved = true; }
+        if (rule.otherwise === was) { rule.otherwise = now; moved = true; }
+        (rule.more || []).forEach(function (b) { if (b.then === was) { b.then = now; moved = true; } });
+      }
+      if (moved) setRule(item, rule);
+    });
   }
   // A rule's or a weight's key names a gate's result, "g1.r2" (ruling 21);
   // a bare gate key reads its first. What a rule may do with a result:
@@ -1172,6 +1198,20 @@
         card.querySelector(".fc-body > .pc-row").after(fresh("pc-new-form"));
         changed();
         card.querySelector('[data-pc-act="remove-form"]').focus();
+      } else if (p.dataset.pcAct === "add-value") {
+        var vlist = p.closest("[data-pc-values]").querySelector("[data-pc-value-list]");
+        var li = document.createElement("li"), inp = document.createElement("input"), rm = document.createElement("button");
+        li.dataset.valueKey = "";
+        inp.className = "fc-in"; inp.setAttribute("data-pc", "value"); inp.setAttribute("aria-label", "Value " + (vlist.children.length + 1));
+        rm.type = "button"; rm.className = "btn btn-secondary btn-short"; rm.setAttribute("data-pc-act", "remove-value"); rm.textContent = "Remove";
+        li.appendChild(inp); li.appendChild(rm); vlist.appendChild(li);
+        inp.focus();
+        changed();
+      } else if (p.dataset.pcAct === "remove-value") {
+        var gone = p.closest("li"), outc = p.closest(".pc-item");
+        gone.remove();
+        changed();
+        outc.querySelector('[data-pc-act="add-value"]').focus();
       } else if (p.dataset.pcAct === "candidates") {
         card.querySelector(".pc-empty").before(fresh("pc-new-candidates"));
         changed();
@@ -1219,14 +1259,17 @@
     if (e.target.matches('[data-ps="mode"]')) { changed(); return; }  // the shut Evaluators card names the mode
     if (e.target.closest("[data-rule-ed]")) { var item = e.target.closest(".pc-item"); setRule(item, readEditor(item)); rules(); return; }
     if (e.target.matches("[data-w-key]")) { var note = e.target.closest("[data-pc-weights]").querySelector("[data-w-note]"); if (note) note.textContent = ""; rules(); return; }
-    if (e.target.matches('[data-pc="values"]')) {
+    if (e.target.matches('[data-pc="value"]')) {
+      var holder = e.target.closest(".pc-item"), was = e.target.dataset.was || "", now = e.target.value.trim();
+      renameValue(holder, was, now);
+      if (now) e.target.dataset.was = now;
       // Its own Then and Otherwise, and any later rule reading it, offer
       // the values as they now stand (changed() redraws open editors); a
       // chosen one gone stays, flagged.
       changed();
       return;
     }
-    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-from"], [data-pc="item-to"], [data-pc="item-name"], [data-pc="values"], [data-pc="confidential"], [data-pc="description"]')) changed();
+    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-from"], [data-pc="item-to"], [data-pc="item-name"], [data-pc="value"], [data-pc="confidential"], [data-pc="description"]')) changed();
   });
   // --- A gate's results (rulings 21, 28): up to three, each the response
   // field it collates and a derivation, which sets the result's type. As stages.field_text,
@@ -1510,7 +1553,7 @@
     if (box && !box.hidden) box.querySelectorAll("[data-w-key]").forEach(function (i) { w[i.dataset.wKey] = i.value.trim(); });
     return {
       key: item.dataset.key, label: field(item, "item-name"), due: field(item, "due"),
-      values: valuesOf(item), weights: w, rule: ruleOf(item),
+      values: valuesOf(item), value_keys: valueKeysOf(item), weights: w, rule: ruleOf(item),
       applicants_email: checked(item, "applicants-email"), evaluators_email: checked(item, "evaluators-email")
     };
   }

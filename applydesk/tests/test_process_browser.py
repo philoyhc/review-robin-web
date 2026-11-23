@@ -266,6 +266,25 @@ def _item(page: Page, key: str) -> Locator:
     return item
 
 
+def _set_values(item: Locator, values: list[str]) -> None:
+    """Replace an outcome's values: each row removed, then each value
+    added as a new row (a rename would carry its rules along, AD-57)."""
+    while item.locator('[data-pc-act="remove-value"]').count():
+        item.locator('[data-pc-act="remove-value"]').first.click()
+    for v in values:
+        item.locator('[data-pc-act="add-value"]').click()
+        item.locator('[data-pc="value"]').last.fill(v)
+
+
+def _rule(item: Locator) -> object:
+    return json.loads(item.get_attribute("data-rule") or "null")
+
+
+def _values(item: Locator) -> list[str]:
+    rows = item.locator('[data-pc="value"]')
+    return [rows.nth(i).input_value() for i in range(rows.count())]
+
+
 def _open_item(item: Locator) -> None:
     if item.get_attribute("data-open") is None:
         item.locator("[data-pi-toggle]").click()
@@ -411,7 +430,7 @@ def test_a_form_answer_the_form_no_longer_asks_is_named(page: Page) -> None:
         "otherwise": "Not shortlisted",
     }
     o1.evaluate("(e, r) => { e.dataset.rule = JSON.stringify(r); }", rule)
-    o1.locator('[data-pc="values"]').fill("Shortlisted, Not shortlisted")  # redraws
+    _set_values(o1, ["Shortlisted", "Not shortlisted"])  # redraws
     _checked(page)
     assert "reads “Year of study”, not a List question on the form" in (
         o1.locator("[data-rule-warn]").inner_text()
@@ -605,7 +624,7 @@ def test_a_decision_outside_the_values_is_named(page: Page) -> None:
     page.goto(PAGE)
     o1 = _item(page, "o1")
     o1.locator('[data-pc-act="rule"]').click()
-    o1.locator('[data-pc="values"]').fill("Yes, No")
+    _set_values(o1, ["Yes", "No"])
     assert o1.locator('[data-rule-part="then"]').input_value() == "Shortlisted"
     _checked(page)
     assert "decides “Shortlisted”, not among its values" in (
@@ -646,7 +665,7 @@ def test_a_later_rule_s_editor_follows_an_outcome_s_values(page: Page) -> None:
     g3 = _item(page, "g3")
     g3.locator('[data-pc-act="rule"]').click()
     o1 = _item(page, "o1")
-    o1.locator('[data-pc="values"]').fill("Yes, No")
+    _set_values(o1, ["Yes", "No"])
     value = g3.locator('.pc-cond select[aria-label="Value"]')
     assert value.evaluate_all("els => [...els[0].options].map(o => o.value)") == [
         "Shortlisted",
@@ -1801,10 +1820,46 @@ def test_an_edit_undone_before_its_check_leaves_no_stale_warning(page: Page) -> 
     _checked(page)
     o1 = _item(page, "o1")
     o1.locator('[data-pc-act="rule"]').click()
-    values = o1.locator('[data-pc="values"]')
-    was = values.input_value()
-    values.fill("Yes, No")  # its rule now decides a value it no longer has
-    values.fill(was)  # undone at once
+    first = o1.locator('[data-pc="value"]').first
+    was = first.input_value()
+    first.fill("")  # its rule now decides a value it no longer has
+    first.fill(was)  # undone at once
     page.wait_for_timeout(600)
     _checked(page)
     assert o1.locator("[data-rule-warn]").is_hidden()
+
+
+def test_a_renamed_value_carries_its_rules(page: Page) -> None:
+    """AD-57: renaming a value rewrites the rules naming it, its own
+    decisions and later rules reading the outcome, so nothing is flagged."""
+    page.goto(PAGE)
+    _checked(page)
+    o1 = _item(page, "o1")
+    first = o1.locator('[data-pc="value"]').first
+    assert first.input_value() == "Shortlisted"
+    first.fill("Invited")
+    assert "Shortlisted" not in json.dumps(_rule(o1))
+    assert "Invited" in json.dumps(_rule(o1))
+    g3 = _item(page, "g3")
+    assert "Invited" in json.dumps(_rule(g3)) and "Shortlisted" not in json.dumps(_rule(g3))
+    page.wait_for_timeout(400)
+    _checked(page)
+    assert o1.locator("[data-rule-warn]").is_hidden()
+    assert g3.locator("[data-rule-warn]").is_hidden()
+
+
+def test_values_are_added_and_removed_as_rows(page: Page) -> None:
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    was = _values(o1)
+    o1.locator('[data-pc-act="add-value"]').click()
+    o1.locator('[data-pc="value"]').last.fill("Waitlisted")
+    assert _values(o1) == [*was, "Waitlisted"]
+    assert page.locator("[data-unsaved]").is_visible()
+    snap = page.evaluate("() => window.applydeskProcessSnapshot()")
+    outcome = next(s["outcome"] for s in snap["stages"] if (s["outcome"] or {}).get("key") == "o1")
+    assert outcome["values"] == [*was, "Waitlisted"]
+    # A sample's values carry no keys until saved; one added here has none.
+    assert len(outcome["value_keys"]) == len(was) + 1 and outcome["value_keys"][-1] == ""
+    o1.locator('[data-pc-act="remove-value"]').last.click()
+    assert _values(o1) == was

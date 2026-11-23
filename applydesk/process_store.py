@@ -344,6 +344,7 @@ def load(session: Session, public_id: str) -> Stored | None:
                 if w.outcome_id == o.id
             ),
             rule_of(o.rule, own, by_outcome_key),
+            value_keys=tuple(own.keys()),
         )
 
     built: list[stages.Stage] = []
@@ -644,8 +645,19 @@ def save(
                 )
                 keys: dict[str, str] = {}
                 n = 0
+                # Each label takes, in turn: the live key the page carried
+                # beside it (a value renamed keeps its key), else its own
+                # label's key if no other label carried it, else a new one.
+                # Carried keys go first, so a row's order cannot hand its
+                # key to another (AD-57).
+                live = set(had.values())
+                for label, carried in zip(c.values, c.value_keys, strict=False):
+                    if carried in live and carried not in keys.values():
+                        keys[label] = carried
                 for label in c.values:
-                    if label in had:
+                    if label in keys:
+                        continue
+                    if label in had and had[label] not in keys.values():
                         keys[label] = had[label]
                         continue
                     while True:
