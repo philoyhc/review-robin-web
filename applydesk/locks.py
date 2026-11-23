@@ -105,6 +105,7 @@ def publish_problems(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
         out.append("The application form has no questions.")
     forms = sample_data.list_questions(e.public_id)
     pools = sample_data.panel_pools(e.public_id)
+    people_keys = frozenset(k for k, _ in stages.nominee_questions(e.public_id))
     for c in st.columns:
         if isinstance(c, stages.Gate):
             name = f"Gate {c.number} · {c.label or 'untitled'}"
@@ -115,7 +116,7 @@ def publish_problems(e: Exercise, st: stages.Stage) -> tuple[str, ...]:
             elif why:
                 out.append(f"{name}: {why}.")
             # Each source must give evaluators too (Codex).
-            out += [f"{name}: {p}." for p in stages.source_problems(sources, pools)]
+            out += [f"{name}: {p}." for p in stages.source_problems(sources, pools, people_keys)]
         else:
             name = c.label or "The outcome"
             if not c.values:

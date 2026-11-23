@@ -49,7 +49,7 @@ def _save_form(session: Session, cards: list[sample_data.FormCard]) -> None:
         sample_data.people_pools(MODEL),
         {},
     )
-    form_store.save(session, MODEL, form, opened or 0, None, published=False)
+    form_store.save(session, MODEL, form, opened or 0, None, published=lambda: False)
     session.commit()
 
 
@@ -125,8 +125,84 @@ def test_a_rule_naming_a_dropped_question_is_refused(session: Session) -> None:
     plan = stages.plan_of(MODEL)
     o1 = next(c for c in plan.columns if c.key == "o1")
     problems = stages.rule_problems(plan, o1, sample_data.list_questions(MODEL))
-    assert "reads a question no longer on the form" in problems
+    assert "reads a question the form no longer asks as a choose-one List question" in problems
     assert "(removed) is Yes" in stages.rule_text(plan, o1)
-    with pytest.raises(process_store.Refused, match="no longer on the form") as why:
+    with pytest.raises(process_store.Refused, match="no longer asks") as why:
         process_store.save(session, MODEL, plan.stages, 0, None)
     assert why.value.key == "rule_target"
+
+
+GRANT = "r6tm4kq9wz"  # its form asks for a preferred evaluator, a nominated source
+
+
+def _save_grant(session: Session, cards: list[sample_data.FormCard], **kw: object) -> None:
+    opened = session.scalar(select(Exercise.form_revision).where(Exercise.public_id == GRANT))
+    form = form_store.parse(
+        {"title": "", "description": "", "cards": [asdict(c) for c in cards]},
+        sample_data.people_pools(GRANT),
+        {},
+    )
+    form_store.save(session, GRANT, form, opened or 0, None, published=lambda: False, **kw)  # pyright: ignore[reportArgumentType]  -- in_use, when given
+    session.commit()
+
+
+def _people_key() -> str:
+    return next(c.key for c in sample_data.sample_form(GRANT) if c.type == "people")
+
+
+def test_a_rename_keeps_nominees_and_seeded_answers(session: Session) -> None:
+    key = _people_key()
+    apps = sample_data.applications_of(GRANT)
+    before = [sample_data.nominees(GRANT, a, key) for a in apps]
+    answers = [sample_data.answers(GRANT, a) for a in apps]
+    assert any(before)
+    # A label stored before keys reads as the same question.
+    assert [sample_data.nominees(GRANT, a, "Preferred evaluator") for a in apps] == before
+    cards = [replace(c, label=f"{c.label} (renamed)") for c in sample_data.sample_form(GRANT)]
+    _save_grant(session, cards)
+    assert [sample_data.nominees(GRANT, a, key) for a in apps] == before
+    assert [sample_data.nominees(GRANT, a, "Preferred evaluator") for a in apps] == before
+    assert [sample_data.answers(GRANT, a) for a in apps] == answers
+    # A nominated source stored by label reads as the question's key.
+    gate = stages.Gate(
+        "g9", 9, "Read", "RRW", sources=(stages.Source("nominated", "Preferred evaluator", 1, 1),)
+    )
+    keyed = stages.form_keyed((stages.Stage(1, "", None, columns=(gate,)),), GRANT)
+    assert [s.ref for s in keyed[0].columns[0].sources] == [key]  # pyright: ignore[reportAttributeAccessIssue]  -- a Gate
+    assert stages.form_reads(stages.Plan(keyed, ())) == (frozenset(), frozenset({key}))
+
+
+def test_form_refuses_to_drop_a_question_the_process_reads(session: Session) -> None:
+    people = _people_key()
+    reads = lambda: (frozenset[str](), frozenset({people}))  # noqa: E731
+    cards = [c for c in sample_data.sample_form(GRANT) if c.key != people]
+    with pytest.raises(form_store.Refused, match="nominated source") as why:
+        _save_grant(session, cards, in_use=reads)
+    assert why.value.key == "in_use"
+    session.rollback()
+    # Made another type, it is refused too; a rename is not.
+    retyped = [
+        replace(c, type="string") if c.key == people else c for c in sample_data.sample_form(GRANT)
+    ]
+    with pytest.raises(form_store.Refused, match="nominated source"):
+        _save_grant(session, retyped, in_use=reads)
+    session.rollback()
+    renamed = [
+        replace(c, label="Who?") if c.key == people else c for c in sample_data.sample_form(GRANT)
+    ]
+    _save_grant(session, renamed, in_use=reads)
+
+
+def test_a_rule_s_question_may_not_be_dropped_on_form(session: Session) -> None:
+    reads = lambda: stages.form_reads(stages.plan_of(MODEL))  # noqa: E731
+    cards = [c for c in sample_data.sample_form(MODEL) if c.key != _key()]
+    opened = session.scalar(select(Exercise.form_revision).where(Exercise.public_id == MODEL))
+    form = form_store.parse(
+        {"title": "", "description": "", "cards": [asdict(c) for c in cards]},
+        sample_data.people_pools(MODEL),
+        {},
+    )
+    with pytest.raises(form_store.Refused, match="a rule on Process"):
+        form_store.save(
+            session, MODEL, form, opened or 0, None, published=lambda: False, in_use=reads
+        )

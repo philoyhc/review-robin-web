@@ -43,7 +43,7 @@ def _save(session: Session, cards: list[dict[str, Any]], title: str = "Apply") -
         sample_data.people_pools(MODEL),
         {},
     )
-    got = form_store.save(session, MODEL, form, _revision(session), None, published=False)
+    got = form_store.save(session, MODEL, form, _revision(session), None, published=lambda: False)
     session.commit()
     return got
 
@@ -109,14 +109,14 @@ def test_a_stale_save_is_refused(session: Session) -> None:
     _save(session, _sample())
     form = form_store.parse({"title": "", "description": "", "cards": []}, POOLS, {})
     with pytest.raises(Refused) as why:
-        form_store.save(session, MODEL, form, 0, None, published=False)
+        form_store.save(session, MODEL, form, 0, None, published=lambda: False)
     assert why.value.key == "stale"
 
 
 def test_a_published_form_is_refused(session: Session) -> None:
     form = form_store.parse({"title": "", "description": "", "cards": []}, POOLS, {})
     with pytest.raises(Refused) as why:
-        form_store.save(session, MODEL, form, 0, None, published=True)
+        form_store.save(session, MODEL, form, 0, None, published=lambda: True)
     assert why.value.key == "published"
     session.rollback()
     assert form_store.load(session, MODEL) is None

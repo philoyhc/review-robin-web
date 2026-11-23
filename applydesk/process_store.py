@@ -168,7 +168,8 @@ def check_references(
                     )
                 if kind == "form" and key not in questions:
                     raise Refused(
-                        f"{name}'s rule reads a question no longer on the form.",
+                        f"{name}'s rule reads a question the form no longer asks as a"
+                        " choose-one List question.",
                         key="rule_target",
                     )
                 if kind == "out" and not isinstance(cols.get(key), stages.Outcome):

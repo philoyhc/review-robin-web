@@ -705,25 +705,35 @@ def plan_of(exercise_id: str) -> Plan:
 
 
 def form_keyed(built: tuple[Stage, ...], exercise_id: str) -> tuple[Stage, ...]:
-    """``built`` with each rule's form condition naming its question by key
-    (segment AD2D, AD-45): a rule stored before keys (AD2C) or the
-    sample's names a label, mapped to the key of the List question that
+    """``built`` with each rule's form condition, and each nominated
+    source, naming its question by key (segment AD2D, AD-45): one stored
+    before keys (AD2C) or the sample's names a label, mapped to the key of the List question that
     carries it, else to the key the sample's form gave that label; a name
     neither knows is left as it is, for the Outline to flag and a save to
     refuse."""
     rules = [c.rule for st in built for c in st.columns if c.rule is not None]
-    if not any(k == "form" for r in rules for when, _ in r.branches for k, *_ in when):
+    named = any(
+        s.kind == "nominated"
+        for st in built
+        for c in st.columns
+        if isinstance(c, Gate)
+        for s in c.sources
+    )
+    if not named and not any(
+        k == "form" for r in rules for when, _ in r.branches for k, *_ in when
+    ):
         return built
-    questions = sample_data.list_questions(exercise_id)
-    # A label the sample's rules name: the key the sample's form gave it,
-    # so a question renamed before Process saves again keeps its rule.
+    # A label the sample names: the key the sample's form gave it, so a
+    # question renamed before Process saves again keeps its reader.
     sample = {c.label: c.key for c in sample_data.sample_form(exercise_id) if c.kind == "field"}
 
+    def ref(name: str, of_type: str) -> str:
+        if re.fullmatch(r"q[0-9]+", name):
+            return name
+        return sample_data.field_key(exercise_id, name, of_type) or sample.get(name) or name
+
     def cond(c: tuple[str, str, str, str]) -> tuple[str, str, str, str]:
-        if c[0] != "form":
-            return c
-        key = sample_data.question_key(questions, c[1]) or sample.get(c[1])
-        return (c[0], key, c[2], c[3]) if key else c
+        return (c[0], ref(c[1], "list"), c[2], c[3]) if c[0] == "form" else c
 
     def keyed(rule: Rule | None) -> Rule | None:
         if rule is None:
@@ -731,10 +741,17 @@ def form_keyed(built: tuple[Stage, ...], exercise_id: str) -> tuple[Stage, ...]:
         branches = [(tuple(cond(c) for c in when), then) for when, then in rule.branches]
         return Rule(branches[0][0], branches[0][1], rule.otherwise, tuple(branches[1:]))
 
-    return tuple(
-        replace(st, columns=tuple(replace(c, rule=keyed(c.rule)) for c in st.columns))
-        for st in built
-    )
+    def column(c: Gate | Outcome) -> Gate | Outcome:
+        c = replace(c, rule=keyed(c.rule))
+        if isinstance(c, Gate) and any(s.kind == "nominated" and s.ref for s in c.sources):
+            sources = tuple(
+                replace(s, ref=ref(s.ref, "people")) if s.kind == "nominated" and s.ref else s
+                for s in c.sources
+            )
+            c = replace(c, sources=sources)
+        return c
+
+    return tuple(replace(st, columns=tuple(column(c) for c in st.columns)) for st in built)
 
 
 def problems(stages: tuple[Stage, ...]) -> tuple[str, ...]:
@@ -974,7 +991,9 @@ def rule_problems(
             if kind == "form":
                 question = forms.get(key)
                 if question is None and re.fullmatch(r"q[0-9]+", key):
-                    found.append("reads a question no longer on the form")
+                    found.append(
+                        "reads a question the form no longer asks as a choose-one List question"
+                    )
                 elif question is None:
                     found.append(f"reads \u201c{key}\u201d, not a List question on the form")
                 elif value not in question.options:
@@ -1076,7 +1095,10 @@ def rule_text(plan: Plan, column: Gate | Outcome) -> str:
     def labels() -> dict[str, str]:
         nonlocal found
         if found is None:
-            found = sample_data.question_labels(plan.exercise_id) if plan.exercise_id else {}
+            # The List questions' labels, as Process's editor names them:
+            # a question gone or made another type reads "(removed)".
+            questions = sample_data.list_questions(plan.exercise_id) if plan.exercise_id else {}
+            found = {k: q.label for k, q in questions.items()}
         return found
 
     def said(kind: str, key: str, op: str, value: str) -> str:
@@ -1305,13 +1327,36 @@ def total_problem(sources: tuple[Source, ...], total: Total) -> str:
     return ""
 
 
-def nominee_questions(exercise_id: str) -> tuple[str, ...]:
-    """The form's *Select people* questions by label, as a nominated
-    source picks one (ruling 27): offered only when the form has one."""
+def form_reads(plan: Plan) -> tuple[frozenset[str], frozenset[str]]:
+    """The question keys the process reads (segment AD2D): those its rules'
+    form conditions name, which must stay choose-one *List* questions, and
+    those its nominated sources name, which must stay *Select people*."""
+    lists = {
+        key
+        for c in plan.columns
+        if c.rule is not None
+        for when, _ in c.rule.branches
+        for kind, key, _op, _value in when
+        if kind == "form"
+    }
+    people = {
+        s.ref
+        for c in plan.columns
+        if isinstance(c, Gate)
+        for s in c.sources
+        if s.kind == "nominated" and s.ref
+    }
+    return frozenset(lists), frozenset(people)
+
+
+def nominee_questions(exercise_id: str) -> tuple[tuple[str, str], ...]:
+    """The form's *Select people* questions, (key, label), as a nominated
+    source picks one by key (ruling 27, segment AD2D): offered only when
+    the form has one."""
     return tuple(
-        c.label or "Untitled question"
+        (c.key, c.label or "Untitled question")
         for c in sample_data.form_cards(exercise_id)
-        if c.kind == "field" and c.type == "people"
+        if c.kind == "field" and c.type == "people" and c.key
     )
 
 
@@ -1352,17 +1397,23 @@ def sources_warn(
 
 
 def source_problems(
-    sources: tuple[Source, ...], pools: dict[str, sample_data.Pool]
+    sources: tuple[Source, ...],
+    pools: dict[str, sample_data.Pool],
+    questions: frozenset[str] | None = None,
 ) -> tuple[str, ...]:
     """Each source that cannot give evaluators, in words, as the page
     script's ``sourceProblems``: a panel not chosen or gone, a question
-    not chosen, a min above its max. Publishing reads it too (Codex)."""
+    not chosen, or (given the form's *Select people* keys, ``questions``)
+    no longer on the form, a min above its max. Publishing reads it too
+    (Codex)."""
     out: list[str] = []
     for n, s in enumerate(sources, 1):
         if s.kind == "panel" and s.ref not in pools:
             out.append(f"source {n} has no panel" if not s.ref else f"source {n}'s panel is gone")
         elif s.kind == "nominated" and not s.ref:
             out.append(f"source {n} has no question chosen")
+        elif s.kind == "nominated" and questions is not None and s.ref not in questions:
+            out.append(f"source {n}'s question is no longer on the form")
         if s.min > s.max:
             out.append(f"source {n}'s min is above its max")
     return tuple(out)

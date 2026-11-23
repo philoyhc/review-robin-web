@@ -247,7 +247,7 @@ def _form_answer(e: Exercise, a: sample_data.Application, c: sample_data.FormCar
     number within its bounds; a photo its file name; text a canned line."""
     n = _seed(a.public_id, c.label)
     if c.type == "people":
-        return "; ".join(sample_data.nominees(e.public_id, a, c.label))
+        return "; ".join(sample_data.nominees(e.public_id, a, c.key))
     if c.type == "list":
         options = [o.strip() for o in c.options.split(",") if o.strip()]
         if not options:
