@@ -947,30 +947,65 @@ def nominees(exercise_id: str, application: Application, question: str) -> tuple
     return tuple(email for _, email in rng.sample(members, min(max(most, 1), len(members))))
 
 
-def list_questions(exercise_id: str) -> dict[str, list[str]]:
-    """The form's choose-one *List* questions and their options, by label:
+@dataclass(frozen=True)
+class ListQuestion:
+    """A choose-one *List* question a rule's form condition may read
+    (ruling 30): its key (segment AD2D), its label and its options."""
+
+    key: str
+    label: str
+    options: tuple[str, ...]
+
+
+def list_questions(exercise_id: str) -> dict[str, ListQuestion]:
+    """The form's choose-one *List* questions, by key (segment AD2D, AD-45):
     what a rule's form-answer condition may read (ruling 30)."""
-    out: dict[str, list[str]] = {}
+    out: dict[str, ListQuestion] = {}
     for c in form_cards(exercise_id):
-        if c.kind == "field" and c.type == "list" and c.exclusive:
-            out[c.label or "Untitled question"] = [
-                o.strip() for o in c.options.split(",") if o.strip()
-            ]
+        if c.kind == "field" and c.type == "list" and c.exclusive and c.key:
+            options = tuple(o.strip() for o in c.options.split(",") if o.strip())
+            out[c.key] = ListQuestion(c.key, c.label or "Untitled question", options)
     return out
 
 
+def question_key(questions: dict[str, ListQuestion], ref: str) -> str | None:
+    """The key of the question a form condition names: by its key, else,
+    for a rule stored before keys (AD2C), by its label; None if the form
+    holds neither."""
+    if ref in questions:
+        return ref
+    return next((q.key for q in questions.values() if q.label == ref), None)
+
+
+def question_labels(exercise_id: str) -> dict[str, str]:
+    """Each keyed question's label, by key: how a page names the question
+    a rule reads."""
+    return {
+        c.key: c.label or "Untitled question"
+        for c in form_cards(exercise_id)
+        if c.kind == "field" and c.key
+    }
+
+
 def answers(exercise_id: str, application: Application) -> dict[str, str]:
-    """The application's answers to the form's *List* questions, by label
+    """The application's answers to the form's *List* questions, by key
     (ruling 30's form-answer condition reads them): a choose-one list's
-    option, seeded per application. Nothing is stored until AD4."""
+    option, seeded per application and label. Nothing is stored until AD4."""
     out: dict[str, str] = {}
-    for label, options in list_questions(exercise_id).items():
-        if options:
-            out[label] = random.Random(f"answer {application.public_id} {label}").choice(options)
+    questions = list_questions(exercise_id)
+    for key, q in questions.items():
+        if q.options:
+            seed = f"answer {application.public_id} {q.label}"
+            out[key] = random.Random(seed).choice(list(q.options))
     if exercise_id == "wa9juxbc2t":  # what the sample knows, not chance
+        # By the key the sample's form gave each, so a rename keeps it.
+        keys = {c.label: c.key for c in sample_form(exercise_id)}
         ras = {m.email.casefold() for m in CURRENT_RAS}
-        out["Currently an RA?"] = "Yes" if application.email.casefold() in ras else "No"
-        out["Residence"] = application.title.split(" · ")[-1]
+        if keys.get("Currently an RA?") in questions:
+            current = application.email.casefold() in ras
+            out[keys["Currently an RA?"]] = "Yes" if current else "No"
+        if keys.get("Residence") in questions:
+            out[keys["Residence"]] = application.title.split(" · ")[-1]
     return out
 
 

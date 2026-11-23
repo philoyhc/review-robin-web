@@ -668,7 +668,7 @@ def _check_process(exercise_id: str, sent: Any) -> Response:
         built, _ = process_save.build(sent, exercise.public_id, {k: k for k in made}, checking=True)
     except process_save.Refused as why:
         return JSONResponse({"error": str(why)}, status_code=400)
-    plan = stages.Plan(built, ())
+    plan = stages.Plan(stages.form_keyed(built, exercise.public_id), (), exercise.public_id)
     forms = sample_data.list_questions(exercise.public_id)
     return JSONResponse(
         {"problems": {c.key: list(stages.rule_problems(plan, c, forms)) for c in plan.columns}}
@@ -1710,7 +1710,12 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         scope=stages.scope,
         submitted_rank=stages.submitted_rank,
         answers=functools.partial(sample_data.answers, exercise.public_id),
-        form_lists=sample_data.list_questions(exercise.public_id),
+        # The form's List questions by key, each its label and options
+        # (segment AD2D), for Process's rule editor.
+        form_lists={
+            key: {"label": q.label, "options": list(q.options)}
+            for key, q in sample_data.list_questions(exercise.public_id).items()
+        },
         # Ruling 77: the Candidates list, read only where Process draws it.
         cand_list=_candidates_of(exercise.public_id) if section == "process" else (),
         short=clock.short,

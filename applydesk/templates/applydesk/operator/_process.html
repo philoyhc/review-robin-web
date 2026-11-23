@@ -557,8 +557,11 @@
     gate: [["status", "Status"], ["last", "Applicant's last submitted"], ["out", "An earlier outcome"], ["form", "A form answer"]],
     outcome: [["res", "A gate's result"], ["ent", "Entry at a gate"], ["comb", "Combined result"], ["out", "An earlier outcome"], ["form", "A form answer"], ["top", "The best N"]]
   };
-  // The form's choose-one List questions and their options, by label.
+  // The form's choose-one List questions by key (segment AD2D): each its
+  // label and options.
   var FORM_LISTS = JSON.parse(document.getElementById("pc-form-lists").textContent);
+  function formOptions(key) { return (FORM_LISTS[key] || { options: [] }).options; }
+  function formLabel(key) { return FORM_LISTS[key] ? FORM_LISTS[key].label : "(removed)"; }
   function branchesOf(rule) {
     return rule ? [{ when: rule.when || [], then: rule.then }].concat(rule.more || []) : [];
   }
@@ -694,7 +697,7 @@
     if (kind === "res") return resultLabel(key) + " " + (op === "is" ? "is" : SIGN[op]) + " " + value;
     if (kind === "ent") return "Entry at " + label + " is " + value;
     if (kind === "out") return label + " is " + (value || "—");
-    if (kind === "form") return (key || "Untitled question") + " is " + (value || "—");
+    if (kind === "form") return (key ? formLabel(key) : "Untitled question") + " is " + (value || "—");
     if (kind === "top") return "the best " + value + " by " + resultLabel(key);
     return "Combined " + SIGN[op] + " " + value;
   }
@@ -880,7 +883,7 @@
     } else if (k === "out") {
       row.appendChild(select(earlierOutcomes(item).map(function (o) { return [o.dataset.key, nameOf(o)]; }), cond[1], lab("Outcome"), keyName(cond[1])));
     } else if (k === "form") {
-      row.appendChild(select(pairs(Object.keys(FORM_LISTS)), cond[1], lab("Question")));
+      row.appendChild(select(Object.keys(FORM_LISTS).map(function (q) { return [q, FORM_LISTS[q].label]; }), cond[1], lab("Question"), formLabel(cond[1])));
     }
     if (k === "res" || k === "comb") {
       var op = select(k === "res" && rkind === "list" ? [["is", "is"]] : [["ge", "≥"], ["lt", "<"]], cond[2], lab("Comparison"), cond[2] === "is" ? "is" : SIGN[cond[2]] || cond[2]);
@@ -891,7 +894,7 @@
     else if (k === "ent") value = select(pairs(["Entered", "Not entered"]), cond[3], lab("Entry"));
     else if (k === "out") { var o = byKey(cond[1]); value = select(pairs(o ? valuesOf(o) : []), cond[3], lab("Value")); }
     else if (k === "res" && rkind === "list") value = select(pairs(optionsOf(rrow)), cond[3], lab("Value"));
-    else if (k === "form") value = select(pairs(FORM_LISTS[cond[1]] || []), cond[3], lab("Answer"));
+    else if (k === "form") value = select(pairs(formOptions(cond[1])), cond[3], lab("Answer"));
     else { value = el("input", "fc-in pc-num"); value.value = cond[3]; value.inputMode = "decimal"; value.setAttribute("aria-label", lab(k === "last" || k === "top" ? "How many" : "Threshold")); }
     value.dataset.cond = "value";
     row.appendChild(value);
@@ -987,7 +990,7 @@
     if (k === "status") return [k, "", "is", "Submitted"];
     if (k === "last") return [k, "", "le", "1"];
     if (k === "comb") return [k, "", "ge", "4.0"];
-    if (k === "form") { var q = Object.keys(FORM_LISTS)[0] || ""; return [k, q, "is", q ? (FORM_LISTS[q][0] || "") : ""]; }
+    if (k === "form") { var q = Object.keys(FORM_LISTS)[0] || ""; return [k, q, "is", formOptions(q)[0] || ""]; }
     if (k === "top") { var t = resOptions(item, "number")[0]; return [k, t ? t[0] : "", "le", "10"]; }
     if (k === "out") { var o = earlierOutcomes(item).slice(-1)[0]; return [k, o ? o.dataset.key : "", "is", o ? (valuesOf(o)[0] || "") : ""]; }
     var g = scopeOf(item)[0], r = resOptions(item)[0];
@@ -1040,7 +1043,7 @@
         if (e.target === sels[0]) { bs[b].when[j] = fixCond(item, [e.target.value]); redraw = true; }
         else if (c[0] === "out" && e.target === sels[1]) { var o = byKey(e.target.value); c[3] = o ? (valuesOf(o)[0] || "") : ""; redraw = true; }
         else if (c[0] === "res" && e.target === sels[1]) { bs[b].when[j] = resCond(e.target.value, c[3]); redraw = true; }
-        else if (c[0] === "form" && e.target === sels[1]) { c[3] = (FORM_LISTS[e.target.value] || [])[0] || ""; redraw = true; }
+        else if (c[0] === "form" && e.target === sels[1]) { c[3] = formOptions(e.target.value)[0] || ""; redraw = true; }
         at = { b: b, i: j }; n = cs.indexOf(e.target);
       }
     }

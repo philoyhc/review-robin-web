@@ -83,11 +83,12 @@ def slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_") or "untitled"
 
 
-def _questions(exercise_id: str) -> tuple[str, ...]:
-    """A column per form question, in the form's order; a section's title,
-    a page break and a text block's title are no column."""
+def _questions(exercise_id: str) -> tuple[sample_data.FormCard, ...]:
+    """A column per form question, in the form's order, its header the
+    question's label and its answers read by key (segment AD2D); a
+    section's title, a page break and a text block's title are no column."""
     return tuple(
-        c.label
+        c
         for c in sample_data.form_cards(exercise_id)
         if c.kind == "field" and c.type != "text" and c.label
     )
@@ -156,7 +157,7 @@ def of(e: Exercise) -> Extract:
         zip_name(e, "extract"),
         sum(a.state == "Submitted" for a in apps),
         e.state == "Draft",
-        APPLICATION_KEYS + _questions(e.public_id),
+        APPLICATION_KEYS + tuple(c.label for c in _questions(e.public_id)),
         gates,
         _outcome_columns(plan, names_by_default(e, "outcomes.csv")),
     )
@@ -220,18 +221,15 @@ def applications(e: Exercise, rows: str = "last", drafts: bool = False) -> Table
     answer, in the form's order."""
     plan = stages.plan_of(e.public_id)
     questions = _questions(e.public_id)
-    cards = {
-        c.label: c for c in sample_data.form_cards(e.public_id) if c.kind == "field" and c.label
-    }
     out: list[list[str]] = []
     for r in _shown(plan, rows, drafts):
         a = r.application
         known = sample_data.answers(e.public_id, a)
         out.append(
             [a.public_id, a.dossier_id, a.applicant, a.email, a.state, a.submitted]
-            + [known.get(q) or _form_answer(e, a, cards[q]) for q in questions]
+            + [known.get(c.key) or _form_answer(e, a, c) for c in questions]
         )
-    return APPLICATION_KEYS + questions, out
+    return APPLICATION_KEYS + tuple(c.label for c in questions), out
 
 
 _TEXT = (
@@ -284,7 +282,7 @@ def form_answers(
     for c in sample_data.form_cards(e.public_id):
         if c.kind != "field" or c.type == "text" or not c.label:
             continue
-        value = known.get(c.label) or _form_answer(e, a, c)
+        value = known.get(c.key) or _form_answer(e, a, c)
         (shown if c.shown else hidden).append((c.label, value or "—"))
     return tuple(shown), tuple(hidden)
 
