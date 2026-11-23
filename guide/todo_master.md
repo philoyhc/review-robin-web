@@ -77,7 +77,9 @@ the PR body unless it says otherwise.
   ladder; rung 1 (the viewport tag on participant pages, about 10 lines)
   can land first. Re-checked unbuilt at `eb275acf9`
   (`guide/rrw_reviewer_phone_and_scale.md` §1).
-- **A scale answer for a numeric response field** (author, 2026-11-23;
+- **A scale answer for a numeric response field** — **next after Apply
+  Desk's AD2G Item 1** (author, 2026-11-23), with its hooks on Apply
+  Desk's Process > Gate response fields built alongside (
   `guide/rrw_reviewer_phone_and_scale.md` §2, mockups
   `guide/rrw_scale_mockup.html` and `guide/rrw_scale_builder_mockup.html`).
   An item of a segment, scaffold first. Settled: opt-in per field, as
