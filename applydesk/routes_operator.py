@@ -687,6 +687,29 @@ def _save_process(request: Request, exercise_id: str, sent: object) -> Response:
     return JSONResponse({"saved": True, "reload": True, "strict": True})
 
 
+@router.post("/exercises/{exercise_id}/process/problems", name="applydesk_process_problems")
+async def process_problems(request: Request, exercise_id: str) -> Response:
+    """What each rule on the Process page reads amiss, by its column's key
+    (ruling 78: the server checks rules, the page shows it). The page's
+    snapshot, as *Save* sends it; nothing is kept."""
+    sent = await _page_json(request)
+    return await run_in_threadpool(_check_process, exercise_id, sent)
+
+
+def _check_process(exercise_id: str, sent: Any) -> Response:
+    exercise = exercise_or_404(exercise_id)
+    made = process_save.made_panels(sent, exercise.public_id)
+    try:
+        built, _ = process_save.build(sent, exercise.public_id, {k: k for k in made}, checking=True)
+    except process_save.Refused as why:
+        return JSONResponse({"error": str(why)}, status_code=400)
+    plan = stages.Plan(built, ())
+    forms = sample_data.list_questions(exercise.public_id)
+    return JSONResponse(
+        {"problems": {c.key: list(stages.rule_problems(plan, c, forms)) for c in plan.columns}}
+    )
+
+
 #: The largest table *Apply rules* sends, in bytes: every row's settable
 #: cells, a few dozen bytes each.
 _PROPOSAL_BODY = 4 * 1024 * 1024

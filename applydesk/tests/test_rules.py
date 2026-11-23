@@ -138,3 +138,37 @@ def test_the_proposal_route_refuses_a_malformed_table() -> None:
         reply = client.post(URL, json=bad)
         assert reply.status_code == 400 and "malformed" in reply.json()["error"], bad
     assert client.post(URL, content=b"x", headers={"content-type": "text/plain"}).status_code == 415
+
+
+def test_the_problems_route_says_what_a_rule_reads_amiss() -> None:
+    """Process asks the server what each rule reads amiss (ruling 78), by
+    the page's own keys, a new column's too; nothing is kept."""
+    client = _client()
+    outcome = {
+        "key": "onew1",
+        "label": "Award",
+        "due": "",
+        "values": ["Yes", "No"],
+        "weights": {},
+        "rule": {"when": [["status", "", "is", "Submitted"]], "then": "Maybe", "otherwise": "No"},
+        "applicants_email": False,
+        "evaluators_email": False,
+    }
+    stage = {
+        "key": "",
+        "name": "Review",
+        "from": "",
+        "to": "",
+        "shown": True,
+        "published": False,
+        "form": None,
+        "gates": [],
+        "outcome": outcome,
+    }
+    url = "/applydesk/operator/exercises/wa9juxbc2t/process/problems"
+    reply = client.post(url, json={"revision": 0, "stages": [stage]})
+    assert reply.status_code == 200, reply.text
+    assert reply.json()["problems"] == {"onew1": ["decides “Maybe”, not among its values"]}
+    assert stages.plan_of("wa9juxbc2t").columns[0].key == "g1"  # nothing kept
+    bad = client.post(url, json={"stages": "x"})
+    assert bad.status_code == 400 and "malformed" in bad.json()["error"]

@@ -878,8 +878,8 @@ def rule_problems(
     it; a gate or result gone, or outside an outcome's scope; a value not
     among an outcome's values or a list result's options; a form answer
     not a List question's option (``forms``, the form's List questions);
-    a count not a whole number. The page's script says the same in place;
-    publishing reads this."""
+    a count not a whole number. The Process page shows it, asking the
+    server (ruling 78); publishing reads it too."""
     rule = column.rule
     if rule is None:
         return ()
@@ -910,8 +910,12 @@ def rule_problems(
                     found += _compare_problems(plan, kind, key, _op, value, gate, result)
             if kind == "comb" and not _is_number(value):
                 found.append(f"compares with \u201c{value}\u201d, not a number")
-            if kind in ("last", "top") and not re.fullmatch(r"[1-9][0-9]*", value):
-                found.append(f"takes \u201c{value}\u201d, not a whole number")
+            if kind == "last" and not re.fullmatch(r"[1-9][0-9]*", value):
+                found.append(
+                    f"counts the applicant's last \u201c{value}\u201d submitted, not a whole number"
+                )
+            if kind == "top" and not re.fullmatch(r"[1-9][0-9]*", value):
+                found.append(f"takes the best \u201c{value}\u201d, not a whole number")
             if kind == "form":
                 if key not in forms:
                     found.append(f"reads \u201c{key}\u201d, not a List question on the form")

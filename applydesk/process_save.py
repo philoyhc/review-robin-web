@@ -352,11 +352,17 @@ def build(
     exercise_id: str,
     renamed: dict[str, str] | None = None,
     taken: frozenset[str] = frozenset(),
+    *,
+    checking: bool = False,
 ) -> tuple[tuple[Stage, ...], frozenset[tuple[str, str]]]:
     """The stages the snapshot describes, and its (item, audience) emails;
     a gate's panel is one the exercise has, or one the page made, by the
     key ``renamed`` gives it (``scratch_panels.adopt``). A column the page
-    added takes a key past ``taken`` (``process_store.taken_keys``)."""
+    added takes a key past ``taken`` (``process_store.taken_keys``).
+
+    ``checking``: built only to say what its rules read amiss (ruling 78),
+    so the page's own keys are kept and ruling 15's shape, which the page
+    says itself, is not refused."""
     renamed = renamed or {}
     panels = frozenset(sample_data.panel_pools(exercise_id))
     got = _dict(sent, "The process")
@@ -408,8 +414,10 @@ def build(
             )
         )
     shape = stages.problems(tuple(built))
-    if shape:
+    if shape and not checking:
         raise Refused(shape[0])
+    if checking:
+        return tuple(built), frozenset(sends)
     keys = _minted([c.key for st in built for c in st.columns], taken)
     final = tuple(_rekeyed(st, keys) for st in built)
     return final, frozenset((keys.get(item, item), aud) for item, aud in sends)
