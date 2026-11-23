@@ -66,23 +66,33 @@
 
 {# Ruling 77: Candidates, a list of people kept by hand, through the
    people search or a CSV; the form's roster on an Invitation only
-   exercise, or fed to gates as dossiers. At most one per exercise.
-   A scaffold: its controls are inert until the next rung. #}
-{% macro candidates_item(open=False) %}
+   exercise, or fed to gates as dossiers. At most one stage holds it,
+   placed by Process's Save; the list itself is kept as each change is
+   made (`applydesk/candidates.py`). #}
+{% macro candidates_item(open=False, listed=()) %}
 <div class="pc-item" data-item="candidates"{% if open %} data-open{% endif %}>
-  {% set chips %}<span class="chip chip-mute" data-cand-count>No one yet</span>{% endset %}
+  {% set chips %}<span class="chip chip-mute" data-cand-count>{{ listed | length if listed else "No one yet" }}{% if listed %} {{ "person" if listed | length == 1 else "people" }}{% endif %}</span>{% endset %}
   {{ head("Candidates", "Candidates", chips, open) }}
   <div class="pi-body">
   <p class="pc-line">People added by hand. On an <em>Invitation only</em> exercise they are who may apply; with no form, each becomes a dossier for the gates that follow.</p>
+  <div data-cand-live>
   <div class="pc-row pi-sec">
-    <label class="fc-l pc-wide">Add someone<input class="fc-in" type="search" data-cand-search placeholder="Search by name or email" disabled title="Adding candidates is not built yet"></label>
-    <label class="fc-l">Or a file<button type="button" class="btn btn-secondary" data-cand-csv disabled title="Uploading candidates is not built yet">Upload CSV…</button></label>
+    <label class="fc-l pc-wide">Add someone<input class="fc-in" type="search" data-cand-search placeholder="Search by name or email" autocomplete="off"></label>
+    <label class="fc-l">Or a file<button type="button" class="btn btn-secondary" data-cand-csv>Upload CSV…</button><input type="file" accept=".csv,text/csv" data-cand-file hidden></label>
   </div>
+  <ul class="pc-cand-found" data-cand-found hidden></ul>
   <p class="pc-line muted pc-hint">A CSV has an <em>Email</em> column and, if you like, a <em>Name</em>. Rows that do not read are listed back, not saved.</p>
+  <p class="muted fb-said" data-cand-said role="status"></p>
+  <ul class="pc-issues" data-cand-bad hidden></ul>
   <table class="pc-cands" data-cand-list>
     <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Added</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
-    <tbody><tr><td colspan="4" class="muted">No candidates yet.</td></tr></tbody>
+    <tbody>
+    {% for c in listed %}<tr data-cand-id="{{ c.person_id }}"><td>{{ c.name or "—" }}</td><td>{{ c.email }}</td><td>{{ short(c.added_at) }}</td><td><button type="button" class="btn btn-destructive btn-short" data-cand-remove="{{ c.person_id }}" aria-label="Remove {{ c.name or c.email }}">Remove</button></td></tr>
+    {% else %}<tr data-cand-none><td colspan="4" class="muted">No candidates yet.</td></tr>{% endfor %}
+    </tbody>
   </table>
+  </div>
+  <div class="pc-item-foot"><button type="button" class="btn btn-destructive" data-pc-act="remove-candidates">Take Candidates off this stage</button></div>
   </div>
 </div>
 {% endmacro %}
@@ -337,7 +347,15 @@
   <div class="pc-row">
     <label class="fc-l pc-wide">Name<input class="fc-in" data-pc="item-name" value="{{ o.label }}" placeholder="Untitled outcome"></label>
   </div>
-  <label class="fc-l">Values<input class="fc-in" data-pc="values" value="{{ o.values | join(', ') }}" placeholder="Comma-separated, e.g. Shortlisted, Not shortlisted"></label>
+  {# Its values, one row each (AD-57): a row keeps its key when renamed,
+     and the rules naming it follow on the page. #}
+  <div class="fc-l pc-values" data-pc-values role="group" aria-label="Values">
+    <span>Values</span>
+    <ol class="pc-value-list" data-pc-value-list>
+      {% for v in o.values %}<li data-value-key="{{ o.value_keys[loop.index0] if o.value_keys | length > loop.index0 else '' }}"><input class="fc-in" data-pc="value" value="{{ v }}" data-was="{{ v }}" aria-label="Value {{ loop.index }}"><button type="button" class="btn btn-secondary btn-short" data-pc-act="remove-value" aria-label="Remove {{ v }}">Remove</button></li>{% endfor %}
+    </ol>
+    <button type="button" class="btn btn-secondary btn-short" data-pc-act="add-value">+ Value</button>
+  </div>
   {# Its combined result: weights over the gates in its scope, those since
      the previous outcome (ruling 13); redrawn by the script as gates move. #}
   {% set wrows = weight_rows(plan, o) if o.key else () %}
@@ -374,8 +392,8 @@
 {% endmacro %}
 
 {# A stage's status (ruling 35, segment AD1K): Publish while Draft, its
-   problems listed; Revert to draft, with a reason, once published. The
-   page changes only: nothing is saved or audited until AD2. #}
+   problems listed; Revert to draft, with a reason, once published. Saving
+   Process records either; a revert is audited with its reason. #}
 {% macro status_box(st, status) %}
 {% set problems = publish_problems(st) if st.number else () %}
 <div class="pc-status" data-pc-status-box>
@@ -437,12 +455,12 @@
     {% if st.form %}{{ form_item(open=lone, w=st.form_when) }}{% endif %}
     {% for g in gates %}{{ gate_item(plan, g, rule_text, open=lone, window=window_text(window(st, g))) }}{% endfor %}
     {% for o in outs %}{{ outcome_item(plan, o, rule_text, open=lone) }}{% endfor %}
-    {% if exercise.eligibility == "Invitation only" and (st.form or (not plan.form_stage and st.number == 1)) %}{{ candidates_item() }}{% endif %}
+    {% if st.candidates %}{{ candidates_item(listed=cand_list) }}{% endif %}
     <p class="pc-line muted pc-empty">Nothing in this stage yet: add the form, a gate or an outcome.</p>
     <div class="pc-adds">
       <button type="button" class="btn btn-secondary" data-pc-act="gate"{% if st.form %} disabled title="A stage holding the form holds no gate"{% endif %}>+ Gate</button>
       <button type="button" class="btn btn-secondary" data-pc-act="outcome"{% if outs %} disabled title="A stage holds one outcome at most"{% endif %}>+ Outcome</button>
-      <button type="button" class="btn btn-secondary" data-pc-act="candidates" disabled title="Candidates, a list of people you add by hand, are not built yet">+ Candidates</button>
+      <button type="button" class="btn btn-secondary" data-pc-act="candidates"{% if st.candidates %} disabled title="This stage holds Candidates"{% elif plan.stages | selectattr("candidates") | list %} disabled title="Another stage holds Candidates"{% endif %}>+ Candidates</button>
       <button type="button" class="btn btn-secondary" data-pc-act="form"{% if st.form %} disabled title="This stage holds the form"{% elif gates %} disabled title="A stage holding gates holds no form"{% elif plan.form_stage %} disabled title="Another stage holds the form"{% endif %}>+ Form</button>
     </div>
     <div class="fc-foot">

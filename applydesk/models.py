@@ -348,9 +348,9 @@ class Outcome(Base):
 
 class OutcomeValue(Base):
     """A value an outcome decides (AD-57): rules name it by key, kept
-    while its label stands (a label changed on Process is a new value until
-    the page carries keys, `process_store`); ``advances`` says whether it
-    takes the application on."""
+    while its label stands or is renamed on Process (the page carries each
+    value's key, `process_store`); ``advances`` says whether it takes the
+    application on."""
 
     __tablename__ = "outcome_value"
     __table_args__ = (UniqueConstraint("outcome_id", "key", name="uq_outcome_value_key"),)

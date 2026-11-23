@@ -130,6 +130,12 @@ Taken 2026-11-22 at `1ceb1d592`.
   - An outcome value renamed on the page takes a new key (Codex on #4154): its values are one list of labels. **Ruled 2026-11-23 (author):** a values editor that carries each value's key through a rename is built within AD2C, as its own rung after rung 9 and before the close.
   - `applydesk/spec/applications.md` still describes renumbering and `removed`: the close's spec pass.
   - Rung 9: re-adding a removed candidate revives its row (`uq_candidate_pair`); the Decision's `candidate_list` became `stage.holds_candidates`.
+- **2026-11-23, rungs 9 and 10 ship as one PR (#4161):** Codex on rung 9 found two defects rung 10 had already fixed (a published stage's end, the form's state on a move), so rung 10 joined rung 9's PR rather than following it. A third finding: Home and the form's move now read publication from the stages (`locks.exercise_status`), not the sample's stored state.
+- **2026-11-23, rung 10 (values editor):** values are rows on Process, each carrying its key; a rename keeps it and the page rewrites the rules naming it. Carried keys are assigned before label matches.
+- **2026-11-23, cumulative reads at rung 10**, split at rung 6 (over ~1,500 lines; bases `cae6108d6` and `875d1535a`). Fixed in rung 10:
+  - Rung 6: `_is_number` accepted `1_000`, `nan` and `inf`; a failed older check dropped a newer answer; a too-deep body was a 500.
+  - Rungs 7-9: a published stage's end could not be extended; adds and a changed start or `shown` were not refused; a revert's reason was not audited; moving the form reseeded its state; a rename typed through a sibling's label merged their rules; three minor messages.
+  - Left: a CSV row not on record is made pending without a directory lookup, deliberately (the directory is searched one person at a time, from the search). A published stage's rule and value edits are not refused by the save; the page leaves them editable too.
 
 ## PR ladder
 

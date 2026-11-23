@@ -11,7 +11,7 @@
 {% set issues = stage_problems(plan.stages) %}
 <script type="application/json" id="pc-pools">{{ people | tojson }}</script>
 <script type="application/json" id="pc-form-lists">{{ form_lists | tojson }}</script>
-<div class="fb-split" data-process data-unsaved-root data-now="{{ now_value }}" data-pc-problems="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process/problems') }}">
+<div class="fb-split" data-process data-cand-url="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/candidates') }}" data-unsaved-root data-now="{{ now_value }}" data-pc-problems="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process/problems') }}">
   <div class="fb-main">
     <p class="muted pc-intro">The exercise's timeline, stage by stage. A stage holds the application form, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Dossiers applies them.</p>
     <div class="fb-cards" id="pc-cards">
@@ -20,6 +20,7 @@
     {# What + Stage and + Form add: the same macros as the server's own. #}
     <template id="pc-new-stage">{{ pc.stage(plan, blank_stage, rule_text, last=False, open=True) }}</template>
     <template id="pc-new-form">{{ pc.form_item(new=True, open=True) }}</template>
+    <template id="pc-new-candidates">{{ pc.candidates_item(open=True, listed=cand_list) }}</template>
     <template id="pc-new-gate">{{ pc.gate_item(plan, blank_gate, rule_text, open=True) }}</template>
     <template id="pc-new-outcome">{{ pc.outcome_item(plan, blank_outcome, rule_text, open=True) }}</template>
     <template id="pc-new-source">{{ pc.source_row(blank_source, 0, False) }}</template>
@@ -276,8 +277,11 @@
   // Ruling 15, as the buttons say it: the form, a gate, an outcome.
   function guards() {
     var all = cards(), holder = all.filter(function (c) { return items(c, "form").length; })[0];
+    var candHolder = all.filter(function (c) { return items(c, "candidates").length; })[0];
     all.forEach(function (card) {
       var hasForm = items(card, "form").length > 0, hasGates = items(card, "gate").length > 0;
+      // Ruling 77: at most one stage holds Candidates.
+      guard(card, "candidates", card === candHolder ? "This stage holds Candidates" : candHolder ? "Another stage holds Candidates" : "");
       guard(card, "form", hasForm ? "This stage holds the form" : hasGates ? "A stage holding gates holds no form" : holder ? "Another stage holds the form" : "");
       var gate = card.querySelector('[data-pc-act="gate"]'), out = card.querySelector('[data-pc-act="outcome"]');
       gate.disabled = hasForm;
@@ -383,7 +387,7 @@
     all.forEach(function (c, i) { if (c.dataset.status !== "Draft") at = i; });
     return at;
   }
-  // Publish and revert, on this page only: nothing is saved until AD2.
+  // Publish and revert on the page; the save records them (ruling 35).
   function setStatus(card, status) {
     card.dataset.status = status;
     var chip = card.querySelector("[data-pc-status]");
@@ -408,7 +412,8 @@
     var panel = box.querySelector("[data-pc-revert]"), reason = box.querySelector("[data-pc-reason]");
     if (what === "publish") {
       setStatus(card, "Published");
-      live.textContent = labelOf(card) + " published on this page only: nothing is saved.";
+      delete card.dataset.revertReason;
+      live.textContent = labelOf(card) + " published: saved when Process is saved.";
       box.querySelector('[data-pc-st="revert"]').focus();
     } else if (what === "revert") {
       panel.hidden = !panel.hidden;
@@ -424,10 +429,12 @@
     } else if (what === "confirm") {
       var all = cards();
       if (all.slice(all.indexOf(card) + 1).some(function (c) { return c.dataset.status !== "Draft"; })) return true;
+      card.dataset.revertReason = reason.value.trim();  // audited with the save
       reason.value = "";
       b.disabled = true;
       setStatus(card, "Draft");
-      live.textContent = labelOf(card) + " reverted to draft on this page only: nothing is saved or audited.";
+      changed();
+      live.textContent = labelOf(card) + " reverted to draft: saved, with its reason, when Process is saved.";
       box.querySelector('[data-pc-st="publish"]').focus();
     }
     return true;
@@ -569,9 +576,65 @@
   function byKey(key) { return columns().filter(function (c) { return c.dataset.key === key; })[0] || null; }
   function ruleOf(item) { try { return JSON.parse(item.dataset.rule || "null"); } catch (e) { return null; } }
   function setRule(item, rule) { item.dataset.rule = JSON.stringify(rule); }
+  function valueRows(outcome) { return Array.prototype.slice.call(outcome.querySelectorAll("[data-pc-value-list] > li")); }
   function valuesOf(outcome) {
-    var v = outcome.querySelector('[data-pc="values"]');
-    return (v ? v.value : "").split(",").map(function (x) { return x.trim(); }).filter(Boolean);
+    return valueRows(outcome).map(function (li) { return li.querySelector('[data-pc="value"]').value.trim(); }).filter(Boolean);
+  }
+  // Each value's key beside it, "" for one added here (AD-57).
+  function valueKeysOf(outcome) {
+    return valueRows(outcome).filter(function (li) { return li.querySelector('[data-pc="value"]').value.trim(); })
+      .map(function (li) { return li.dataset.valueKey || ""; });
+  }
+  // A value renamed: every rule naming it follows (its own outcome's
+  // decisions, and later rules reading that outcome), so the renamed value
+  // keeps its key and its rules (AD-57).
+  // Values renamed: every rule naming one follows (its own outcome's
+  // decisions, and later rules reading that outcome), all at once, so a
+  // swap of two labels carries each one's rules (AD-57; Codex on #4161).
+  function renameValues(outcome, map) {
+    var key = outcome.dataset.key;
+    function to(label) { return Object.prototype.hasOwnProperty.call(map, label) ? map[label] : null; }
+    columns().forEach(function (item) {
+      var rule = ruleOf(item);
+      if (!rule) return;
+      var moved = false;
+      function cond(c) { if (c[0] === "out" && c[1] === key && to(c[3]) !== null) { c[3] = to(c[3]); moved = true; } }
+      (rule.when || []).forEach(cond);
+      (rule.more || []).forEach(function (b) { (b.when || []).forEach(cond); });
+      if (item === outcome) {
+        if (to(rule.then) !== null) { rule.then = to(rule.then); moved = true; }
+        if (to(rule.otherwise) !== null) { rule.otherwise = to(rule.otherwise); moved = true; }
+        (rule.more || []).forEach(function (b) { if (to(b.then) !== null) { b.then = to(b.then); moved = true; } });
+      }
+      if (moved) setRule(item, rule);
+    });
+  }
+  // Each row's data-was is the label the rules name it by. While two rows
+  // read alike (typed through a sibling's label, or a swap half-done) or a
+  // row that had a value is blank, nothing moves; once every label is distinct again, each
+  // row's rename applies together, by row, so no value's rules go to
+  // another (cold read; Codex on #4161).
+  function reconcileValues(outcome) {
+    var rows = valueRows(outcome).map(function (li) {
+      var input = li.querySelector('[data-pc="value"]');
+      return { input: input, was: input.dataset.was || "", now: input.value.trim() };
+    });
+    var seen = {};
+    for (var i = 0; i < rows.length; i++) {
+      var n = rows[i].now;
+      // A row with a value, cleared for now (a swap through a blank row),
+      // waits too: its rename and the others' apply together (Codex on #4161).
+      if (!n && rows[i].was) return;
+      if (!n) continue;
+      if (seen[n]) return;
+      seen[n] = true;
+    }
+    var map = {}, any = false;
+    rows.forEach(function (r) {
+      if (r.now && r.was && r.was !== r.now) { map[r.was] = r.now; any = true; }
+    });
+    if (any) renameValues(outcome, map);
+    rows.forEach(function (r) { if (r.now) r.input.dataset.was = r.now; });
   }
   // A rule's or a weight's key names a gate's result, "g1.r2" (ruling 21);
   // a bare gate key reads its first. What a rule may do with a result:
@@ -740,7 +803,7 @@
           checkError = got[0] ? "" : (got[1] && got[1].error) || "The rules could not be checked.";
           if (asking === null && !inflight) delete root.dataset.pcAsking;  // none newer waiting
           drawRules();
-        }, function () { inflight -= 1; askedFor = ""; if (asking === null && !inflight) delete root.dataset.pcAsking; });
+        }, function () { inflight -= 1; if (askedFor === body) askedFor = ""; if (asking === null && !inflight) delete root.dataset.pcAsking; });
     }, 250);
   }
   function rules() {
@@ -1000,7 +1063,8 @@
       added.dataset.stageKey = "";
       // One stage holds the form: a copy leaves it behind. Its gates and
       // outcome are new columns, with keys of their own.
-      added.querySelectorAll('.pc-item[data-item="form"]').forEach(function (f) { f.remove(); });
+      // One stage holds Candidates too (ruling 77; Codex on #4161).
+      added.querySelectorAll('.pc-item[data-item="form"], .pc-item[data-item="candidates"]').forEach(function (f) { f.remove(); });
       // A copy is a new stage: a draft, nothing in it opened (AD1K).
       added.querySelectorAll("[data-pc-lock]").forEach(function (f) { delete f.dataset.opened; });
       var copyBox = added.querySelector("[data-pc-status-box]");
@@ -1168,6 +1232,30 @@
         card.querySelector(".fc-body > .pc-row").after(fresh("pc-new-form"));
         changed();
         card.querySelector('[data-pc-act="remove-form"]').focus();
+      } else if (p.dataset.pcAct === "add-value") {
+        var vlist = p.closest("[data-pc-values]").querySelector("[data-pc-value-list]");
+        var li = document.createElement("li"), inp = document.createElement("input"), rm = document.createElement("button");
+        li.dataset.valueKey = "";
+        inp.className = "fc-in"; inp.setAttribute("data-pc", "value"); inp.setAttribute("aria-label", "Value " + (vlist.children.length + 1));
+        rm.type = "button"; rm.className = "btn btn-secondary btn-short"; rm.setAttribute("data-pc-act", "remove-value"); rm.textContent = "Remove";
+        li.appendChild(inp); li.appendChild(rm); vlist.appendChild(li);
+        inp.focus();
+        changed();
+      } else if (p.dataset.pcAct === "remove-value") {
+        var gone = p.closest("li"), outc = p.closest(".pc-item");
+        gone.remove();
+        reconcileValues(outc);
+        changed();
+        outc.querySelector('[data-pc-act="add-value"]').focus();
+      } else if (p.dataset.pcAct === "candidates") {
+        card.querySelector(".pc-empty").before(fresh("pc-new-candidates"));
+        changed();
+        card.querySelector('[data-pc-act="remove-candidates"]').focus();
+      } else if (p.dataset.pcAct === "remove-candidates") {
+        // The list stays kept on the exercise; only its place goes.
+        p.closest(".pc-item").remove();
+        changed();
+        card.querySelector('[data-pc-act="candidates"]').focus();
       } else if (p.dataset.pcAct === "remove-form") {
         p.closest(".pc-item").remove();
         changed();
@@ -1206,14 +1294,15 @@
     if (e.target.matches('[data-ps="mode"]')) { changed(); return; }  // the shut Evaluators card names the mode
     if (e.target.closest("[data-rule-ed]")) { var item = e.target.closest(".pc-item"); setRule(item, readEditor(item)); rules(); return; }
     if (e.target.matches("[data-w-key]")) { var note = e.target.closest("[data-pc-weights]").querySelector("[data-w-note]"); if (note) note.textContent = ""; rules(); return; }
-    if (e.target.matches('[data-pc="values"]')) {
+    if (e.target.matches('[data-pc="value"]')) {
+      reconcileValues(e.target.closest(".pc-item"));
       // Its own Then and Otherwise, and any later rule reading it, offer
       // the values as they now stand (changed() redraws open editors); a
       // chosen one gone stays, flagged.
       changed();
       return;
     }
-    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-from"], [data-pc="item-to"], [data-pc="item-name"], [data-pc="values"], [data-pc="confidential"], [data-pc="description"]')) changed();
+    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-from"], [data-pc="item-to"], [data-pc="item-name"], [data-pc="value"], [data-pc="confidential"], [data-pc="description"]')) changed();
   });
   // --- A gate's results (rulings 21, 28): up to three, each the response
   // field it collates and a derivation, which sets the result's type. As stages.field_text,
@@ -1497,7 +1586,7 @@
     if (box && !box.hidden) box.querySelectorAll("[data-w-key]").forEach(function (i) { w[i.dataset.wKey] = i.value.trim(); });
     return {
       key: item.dataset.key, label: field(item, "item-name"), due: field(item, "due"),
-      values: valuesOf(item), weights: w, rule: ruleOf(item),
+      values: valuesOf(item), value_keys: valueKeysOf(item), weights: w, rule: ruleOf(item),
       applicants_email: checked(item, "applicants-email"), evaluators_email: checked(item, "evaluators-email")
     };
   }
@@ -1516,9 +1605,11 @@
           name: field(card, "name"), from: field(card, "from"), to: field(card, "to"),
           shown: !!(card.querySelector('[data-pc="shown"]') || {}).checked,
           published: card.dataset.status !== "Draft",
+          revert_reason: card.dataset.revertReason || "",
           form: form ? { from: field(form, "item-from"), to: field(form, "item-to"),
                          receipt: checked(form, "receipt"), reminder: checked(form, "reminder") } : null,
           gates: items(card, "gate").map(gateOf),
+          candidates: items(card, "candidates").length > 0,
           outcome: outcome ? outcomeOf(outcome) : null
         };
       })
@@ -1542,5 +1633,116 @@
   window.addEventListener("load", fromHash);
   window.addEventListener("hashchange", fromHash);
   changed();
+})();
+</script>
+<script>
+// Ruling 77: the Candidates list, kept as each change is made (not by
+// Process's Save, which places the item): the people search, Add, Remove
+// and a CSV upload, each answered with the list as it now stands.
+(function () {
+  var root = document.querySelector("[data-process]");
+  if (!root) return;
+  var base = root.dataset.candUrl, timer = null;
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+  function draw(item, got) {
+    var body = item.querySelector("[data-cand-list] tbody");
+    body.textContent = "";
+    if (!got.candidates.length) {
+      var none = el("tr"), td = el("td", "muted", "No candidates yet.");
+      none.setAttribute("data-cand-none", ""); td.colSpan = 4; none.appendChild(td); body.appendChild(none);
+    }
+    got.candidates.forEach(function (c) {
+      var tr = el("tr"), b = el("button", "btn btn-destructive btn-short", "Remove");
+      tr.dataset.candId = c.id;
+      tr.appendChild(el("td", "", c.name || "—")); tr.appendChild(el("td", "", c.email)); tr.appendChild(el("td", "", c.added));
+      b.type = "button"; b.dataset.candRemove = c.id; b.setAttribute("aria-label", "Remove " + (c.name || c.email));
+      var cell = el("td"); cell.appendChild(b); tr.appendChild(cell); body.appendChild(tr);
+    });
+    var n = got.candidates.length;
+    item.querySelector("[data-cand-count]").textContent = n ? n + (n === 1 ? " person" : " people") : "No one yet";
+    var bad = item.querySelector("[data-cand-bad]");
+    bad.textContent = "";
+    (got.bad || []).forEach(function (t) { bad.appendChild(el("li", "", t)); });
+    bad.hidden = !(got.bad || []).length;
+    item.querySelector("[data-cand-said]").textContent = got.said || "";
+    // The item + Candidates adds is drawn from a template: it keeps the list
+    // as it now stands, so moving Candidates to another stage shows it
+    // (Codex on #4161).
+    var tpl = document.getElementById("pc-new-candidates");
+    if (tpl && !tpl.content.contains(item)) {
+      var kept = tpl.content.querySelector(".pc-item");
+      if (kept) draw(kept, { candidates: got.candidates });
+    }
+  }
+  // One change at a time, each sent once the one before has answered, so
+  // an older answer never redraws over a newer list (Codex on #4161).
+  var queue = Promise.resolve();
+  function change(item, body) {
+    var said = item.querySelector("[data-cand-said]");
+    said.textContent = "Saving…";
+    queue = queue.then(function () {
+      return fetch(base, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(body) })
+        .then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }); })
+        .then(function (got) {
+          // The item on the page now: Candidates may have moved stage while
+          // this change was waiting (Codex on #4161).
+          var now = root.querySelector('#pc-cards .pc-item[data-item="candidates"]') || item;
+          var nowSaid = now.querySelector("[data-cand-said]");
+          if (!got[0]) { nowSaid.textContent = (got[1] && (got[1].error || got[1].detail)) || "Not saved: try again."; return; }
+          draw(now, got[1]);
+        }, function () {
+          var now = root.querySelector('#pc-cards .pc-item[data-item="candidates"]') || item;
+          now.querySelector("[data-cand-said]").textContent = "Not saved: try again.";
+        });
+    });
+  }
+  function found(item, got) {
+    var ul = item.querySelector("[data-cand-found]");
+    ul.textContent = "";
+    got.on_record.forEach(function (p) {
+      var li = el("li"), b = el("button", "btn btn-secondary btn-short", "Add");
+      b.type = "button"; b.dataset.candAdd = JSON.stringify({ action: "add", person_id: p.id });
+      li.appendChild(el("span", "", (p.name || p.email) + (p.name ? " · " + p.email : ""))); li.appendChild(b); ul.appendChild(li);
+    });
+    got.directory.forEach(function (u) {
+      var li = el("li"), b = el("button", "btn btn-secondary btn-short", "Add");
+      b.type = "button"; b.dataset.candAdd = JSON.stringify({ action: "add", object_id: u.object_id, address: u.address });
+      li.appendChild(el("span", "", u.name + " · " + u.address + " (directory)")); li.appendChild(b); ul.appendChild(li);
+    });
+    if (!got.on_record.length && !got.directory.length) ul.appendChild(el("li", "muted", got.directory_failed ? "No one on record; the directory could not be searched." : "No one found."));
+    ul.hidden = false;
+  }
+  root.addEventListener("input", function (e) {
+    if (!e.target.matches("[data-cand-search]")) return;
+    var item = e.target.closest('.pc-item[data-item="candidates"]'), q = e.target.value.trim();
+    window.clearTimeout(timer);
+    if (q.length < 2) { item.querySelector("[data-cand-found]").hidden = true; return; }
+    timer = window.setTimeout(function () {
+      fetch(base + "/search?q=" + encodeURIComponent(q), { credentials: "same-origin" })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (got) { if (e.target.value.trim() === q) found(item, got); },
+              function () { if (e.target.value.trim() === q) item.querySelector("[data-cand-said]").textContent = "The search failed: try again."; });
+    }, 250);
+  });
+  root.addEventListener("click", function (e) {
+    var item = e.target.closest('.pc-item[data-item="candidates"]');
+    if (!item) return;
+    var add = e.target.closest("[data-cand-add]");
+    if (add) {
+      change(item, JSON.parse(add.dataset.candAdd));
+      item.querySelector("[data-cand-found]").hidden = true;
+      item.querySelector("[data-cand-search]").value = "";
+      return;
+    }
+    var rm = e.target.closest("[data-cand-remove]");
+    if (rm) { change(item, { action: "remove", person_id: Number(rm.dataset.candRemove) }); return; }
+    if (e.target.closest("[data-cand-csv]")) item.querySelector("[data-cand-file]").click();
+  });
+  root.addEventListener("change", function (e) {
+    if (!e.target.matches("[data-cand-file]")) return;
+    var item = e.target.closest('.pc-item[data-item="candidates"]'), file = e.target.files[0];
+    if (!file) return;
+    file.text().then(function (text) { change(item, { action: "csv", text: text }); e.target.value = ""; });
+  });
 })();
 </script>

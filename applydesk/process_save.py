@@ -286,15 +286,24 @@ def _outcome(v: Any, number: int) -> Outcome:
     if len(weights) > MAX_ITEMS:
         raise Refused(f"{what} has too many weights.")
     values = tuple(_text(x, f"{what}'s values") for x in _list(got.get("values"), what))
+    # Each value's key, beside it (AD-57): "" for one the page added.
+    raw_keys = _list(got.get("value_keys", [""] * len(values)), f"{what}'s values")
+    if len(raw_keys) != len(values):
+        raise Refused(f"{what}'s values are malformed.")
+    value_keys = tuple(_text(k, f"{what}'s values", 16) for k in raw_keys)
+    if any(k and not _KEY.fullmatch(k) for k in value_keys):
+        raise Refused(f"{what}'s values are malformed.")
+    kept = [(v, k) for v, k in zip(values, value_keys, strict=True) if v]
     return Outcome(
         _key(got.get("key"), f"{what}'s key"),
         number,
         _text(got.get("label"), what),
-        tuple(x for x in values if x),
+        tuple(v for v, _ in kept),
         _when(got.get("due", ""), f"{what}'s due"),
         "",
         tuple(weights),
         _rule(got.get("rule"), f"{what}'s rule"),
+        value_keys=tuple(k for _, k in kept),
     )
 
 
@@ -442,6 +451,8 @@ def _build(
                 _flag(st.get("shown"), f"Stage {n}"),
                 _span(form.get("from"), form.get("to"), "The form") if form else None,
                 key=stage_key,
+                candidates=_flag(st.get("candidates", False), f"Stage {n}"),
+                revert_reason=_text(st.get("revert_reason", ""), f"Stage {n}'s reason", 500),
             )
         )
     shape = stages.problems(tuple(built))

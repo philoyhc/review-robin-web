@@ -432,3 +432,83 @@ def test_a_weight_in_a_superscript_digit_is_refused() -> None:
         process_save._outcome(  # pyright: ignore[reportPrivateUsage]
             {"key": "o1", "label": "Shortlist", "values": ["Yes"], "weights": {"g1": "²"}}, 1
         )
+
+
+def _with_values(
+    built: tuple[stages.Stage, ...], key: str, values: tuple[str, ...], value_keys: tuple[str, ...]
+) -> tuple[stages.Stage, ...]:
+    return tuple(
+        replace(
+            st,
+            columns=tuple(
+                replace(c, values=values, value_keys=value_keys, rule=None) if c.key == key else c
+                for c in st.columns
+            ),
+        )
+        for st in built
+    )
+
+
+def test_a_renamed_value_keeps_its_key(session: Session) -> None:
+    """The values editor (AD-57): a value renamed on Process carries its key,
+    so the stored row is relabelled rather than retired and minted anew."""
+    from applydesk.models import OutcomeValue
+
+    _save(session, MODEL, _built(MODEL))
+    stored = process_store.load(session, MODEL)
+    assert stored is not None
+    first = next(c for st in stored.stages for c in st.columns if isinstance(c, stages.Outcome))
+    assert len(first.value_keys) == len(first.values) and all(first.value_keys)
+    renamed = ("Renamed", *first.values[1:])
+    _save(session, MODEL, _with_values(stored.stages, first.key, renamed, first.value_keys))
+    again = process_store.load(session, MODEL)
+    assert again is not None
+    now = next(c for st in again.stages for c in st.columns if c.key == first.key)
+    assert isinstance(now, stages.Outcome)
+    assert now.values == renamed and now.value_keys == first.value_keys
+    assert (
+        session.scalar(
+            select(func.count())
+            .select_from(OutcomeValue)
+            .where(OutcomeValue.label == first.values[0])
+        )
+        == 0
+    )
+
+
+def test_a_new_value_named_as_a_renamed_one_takes_a_new_key(session: Session) -> None:
+    """A value renamed away and a new value under its old label, the new one
+    listed first: the carried key stays with the renamed value."""
+    _save(session, MODEL, _built(MODEL))
+    stored = process_store.load(session, MODEL)
+    assert stored is not None
+    first = next(c for st in stored.stages for c in st.columns if isinstance(c, stages.Outcome))
+    old, k = first.values[0], first.value_keys[0]
+    values = (old, "Renamed", *first.values[1:])
+    value_keys = ("", k, *first.value_keys[1:])
+    _save(session, MODEL, _with_values(stored.stages, first.key, values, value_keys))
+    again = process_store.load(session, MODEL)
+    assert again is not None
+    now = next(c for st in again.stages for c in st.columns if c.key == first.key)
+    assert isinstance(now, stages.Outcome)
+    got = dict(zip(now.values, now.value_keys, strict=True))
+    assert got["Renamed"] == k and got[old] not in first.value_keys
+
+
+def test_value_keys_are_read_from_the_snapshot() -> None:
+    """`process_save` reads each value's key beside it; a blank value drops
+    with its key, and a malformed key is refused."""
+    from applydesk.process_save import Refused as SaveRefused
+
+    raw = {
+        "key": "o1",
+        "label": "Decide",
+        "values": ["Yes", "", "No"],
+        "value_keys": ["v1", "v9", ""],
+    }
+    got = process_save._outcome(raw, 1)  # pyright: ignore[reportPrivateUsage]
+    assert got.values == ("Yes", "No") and got.value_keys == ("v1", "")
+    with pytest.raises(SaveRefused):
+        process_save._outcome({**raw, "value_keys": ["v1"]}, 1)  # pyright: ignore[reportPrivateUsage]
+    with pytest.raises(SaveRefused):
+        process_save._outcome({**raw, "value_keys": ["bad key", "", ""]}, 1)  # pyright: ignore[reportPrivateUsage]

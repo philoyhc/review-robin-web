@@ -17,6 +17,8 @@ from starlette.concurrency import run_in_threadpool
 from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from applydesk import (
+    allowlist,
+    candidates,
     clock,
     db,
     directory,
@@ -43,6 +45,7 @@ from applydesk import (
 from applydesk import exercises as exercise_store
 from applydesk.ids import RowId, is_public_id, row_id
 from applydesk.lookups import dossier_or_404, exercise_or_404
+from applydesk.models import Person
 from applydesk.web import (
     OPERATIONS_PAGES,
     OPERATOR_LOBBY,
@@ -52,6 +55,7 @@ from applydesk.web import (
     root_path,
     url_path,
 )
+from cordware.graph import GraphError, directory_for
 from cordware.identity import Identity, current_identity
 
 router = APIRouter(prefix="/operator", dependencies=[Depends(gate.require_exercise_operator)])
@@ -477,7 +481,7 @@ async def _page_json(request: Request) -> Any:
         raise HTTPException(status_code=413, detail=_TOO_LARGE)
     try:
         return json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):  # too deep a body reads as malformed
         raise HTTPException(status_code=400) from None
 
 
@@ -497,7 +501,7 @@ async def _scratch_json(request: Request, exercise_id: str) -> tuple[sample_data
         raise HTTPException(status_code=413, detail=_TOO_LARGE)
     try:
         return exercise, json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):  # too deep a body reads as malformed
         raise HTTPException(status_code=400) from None
 
 
@@ -702,6 +706,146 @@ def _check_process(exercise_id: str, sent: Any) -> Response:
     )
 
 
+@router.get("/exercises/{exercise_id}/candidates/search", name="applydesk_candidates_search")
+def candidates_search(request: Request, exercise_id: str, q: str = "") -> Response:
+    """The Candidates item's people search (ruling 75): people on record,
+    then the directory's not on record; those listed already left out."""
+    exercise = exercise_or_404(exercise_id)
+    session = db.new_session()
+    try:
+        listed = frozenset(c.person_id for c in candidates.listing(session, exercise.public_id))
+        found = allowlist.search(session, q, lambda: directory_for(request), exclude=listed)
+    finally:
+        session.close()
+    return JSONResponse(
+        {
+            "on_record": [
+                {"id": p.id, "name": p.display_name or "", "email": p.email or ""}
+                for p in found.on_record
+            ],
+            "directory": [
+                {
+                    "object_id": u.id,
+                    "name": u.display_name,
+                    "address": u.mail or u.user_principal_name,
+                }
+                for u in found.in_directory
+            ],
+            "directory_failed": bool(found.directory_failed),
+        }
+    )
+
+
+@router.post("/exercises/{exercise_id}/candidates", name="applydesk_candidates_change")
+async def candidates_change(request: Request, exercise_id: str) -> Response:
+    """The Candidates item's changes (ruling 77): add someone picked in the
+    search, remove someone, or upload a CSV; the list as it now stands."""
+    sent = await _page_json(request)
+    return await run_in_threadpool(_change_candidates, request, exercise_id, sent)
+
+
+def _listed_json(rows: tuple[candidates.Listed, ...]) -> list[dict[str, object]]:
+    return [
+        {
+            "id": c.person_id,
+            "name": c.name,
+            "email": c.email,
+            "via": c.via,
+            "added": clock.short(c.added_at),
+        }
+        for c in rows
+    ]
+
+
+def _change_candidates(request: Request, exercise_id: str, sent: Any) -> Response:
+    exercise = exercise_or_404(exercise_id)
+    identity = current_identity(request)
+    if identity is None:
+        raise HTTPException(status_code=404)
+    got = cast(dict[str, Any], sent) if isinstance(sent, dict) else {}
+    action = got.get("action")
+    session = db.new_session()
+    said = ""
+    bad: tuple[str, ...] = ()
+    try:
+        actor = people.resolve(session, identity)
+        session.commit()
+        if action == "add" and isinstance(got.get("person_id"), int):
+            person = session.get(Person, got["person_id"])
+            if person is None:
+                raise candidates.Refused("That person is no longer on record; search again.")
+            said = (
+                "Added."
+                if candidates.add(session, exercise.public_id, person, "search", actor)
+                else "Already listed."
+            )
+        elif (
+            action == "add"
+            and isinstance(got.get("object_id"), str)
+            and isinstance(got.get("address"), str)
+        ):
+            tenant = (identity.tenant_id or "").strip()
+            if not tenant:
+                raise candidates.Refused("The directory cannot be searched from this sign-in.")
+            address, object_id = got["address"], got["object_id"]
+            found = next(
+                (u for u in directory_for(request).find_users(address) if u.id == object_id),
+                None,
+            )
+            if found is None:
+                raise candidates.Refused("The directory no longer has that account; search again.")
+            person = people.from_directory(session, found, tenant, actor)
+            said = (
+                "Added."
+                if candidates.add(session, exercise.public_id, person, "search", actor)
+                else "Already listed."
+            )
+        elif action == "remove" and isinstance(got.get("person_id"), int):
+            said = (
+                "Removed."
+                if candidates.remove(session, exercise.public_id, got["person_id"], actor)
+                else "Not on the list: removed already."
+            )
+        elif action == "csv" and isinstance(got.get("text"), str):
+            done = candidates.import_csv(session, exercise.public_id, got["text"], actor)
+            said = (
+                f"{done.added} added"
+                + (f", {done.already} listed already" if done.already else "")
+                + "."
+            )
+            bad = done.bad
+        else:
+            raise candidates.Refused("That change is malformed.")
+        session.commit()
+        listed = candidates.listing(session, exercise.public_id)
+    except candidates.Refused as why:
+        session.rollback()
+        return JSONResponse({"error": str(why)}, status_code=400)
+    except GraphError:
+        session.rollback()
+        return JSONResponse(
+            {"error": "The directory could not be reached; try again."}, status_code=400
+        )
+    except (IntegrityError, OperationalError) as error:
+        session.rollback()
+        if not db.lost_a_race(error):
+            raise
+        return JSONResponse(
+            {"error": "Someone else changed the list just now; try again."}, status_code=409
+        )
+    finally:
+        session.close()
+    return JSONResponse({"said": said, "bad": list(bad), "candidates": _listed_json(listed)})
+
+
+def _candidates_of(public_id: str) -> tuple[candidates.Listed, ...]:
+    session = db.new_session()
+    try:
+        return candidates.listing(session, public_id)
+    finally:
+        session.close()
+
+
 #: The largest table *Apply rules* sends, in bytes: every row's settable
 #: cells, a few dozen bytes each.
 _PROPOSAL_BODY = 4 * 1024 * 1024
@@ -720,7 +864,7 @@ async def dossiers_proposal(request: Request, exercise_id: str) -> Response:
         raise HTTPException(status_code=413)
     try:
         sent = json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):  # too deep a body reads as malformed
         raise HTTPException(status_code=400) from None
     return await run_in_threadpool(_propose, exercise_id, sent)
 
@@ -844,7 +988,7 @@ async def exercise_details(request: Request, exercise_id: str) -> Response:
         raise HTTPException(status_code=413, detail=_TOO_LARGE)
     try:
         sent = json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):  # too deep a body reads as malformed
         sent = None
     return await run_in_threadpool(_save_details, request, exercise_id, sent)
 
@@ -939,6 +1083,59 @@ OPS_SAID: dict[str, str] = {
     "archived": "Archived: restore it to change who runs it.",
     "sole_owner": "The only Owner of a live exercise: hand its ownership over first.",
 }
+
+
+#: Home's line after the form's move (ruling 76), by the key its redirect
+#: carries.
+FORM_SAID: dict[str, str] = {
+    "open": "The form is open.",
+    "closed": "The form is closed.",
+    "draft": "A draft's form opens once the exercise is published.",
+    "form_state": "The form has moved since this page opened: see where it stands now.",
+    "no_form": "This exercise has no application form.",
+    "archived": "Archived: restore it to change it.",
+    "changed": "Someone else changed it just now; try again.",
+    "unsaved": "Process cannot be saved as it stands: save it there first.",
+}
+
+
+@router.post("/exercises/{exercise_id}/form/move", name="applydesk_form_move")
+async def form_move(request: Request, exercise_id: str) -> Response:
+    """*Open form* or *Close form*, Home's next step (ruling 76): the
+    form's state moves forward, audited."""
+    gate.same_site(request)
+    body = await request.body()
+    if len(body) > 1024:
+        raise HTTPException(status_code=413)
+    to = parse_qs(body.decode("utf-8", "replace")).get("to", [""])[0]
+    return await run_in_threadpool(_move_form, request, exercise_id, to)
+
+
+def _move_form(request: Request, exercise_id: str, to: str) -> Response:
+    exercise = exercise_or_404(exercise_id)
+    identity = current_identity(request)
+    if identity is None or to not in process_store.FORM_MOVES:
+        raise HTTPException(status_code=404 if identity is None else 400)
+    said = to
+    session = db.new_session()
+    try:
+        actor = people.resolve(session, identity)
+        session.commit()
+        published = locks.exercise_status(exercise) != "Draft"  # by its stages
+        process_store.move_form(session, exercise.public_id, to, published, actor)
+        session.commit()
+    except process_store.Refused as why:
+        session.rollback()
+        said = why.key if why.key in FORM_SAID else "changed"
+    except (IntegrityError, OperationalError) as error:
+        session.rollback()
+        if not db.lost_a_race(error):
+            raise
+        said = "changed"
+    finally:
+        session.close()
+    path = f"/operator/exercises/{exercise_id}?{urlencode({'form_said': said})}"
+    return RedirectResponse(url_path(request, path), status_code=303)
 
 
 def _ops_back(request: Request, exercise_id: str, said: str) -> RedirectResponse:
@@ -1079,6 +1276,7 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         next_line=timeline.next_step(exercise, tl),
         # Ruling 76: Home's next step carries the form's own move.
         form_action=workflow.form_action(exercise),
+        form_said=FORM_SAID.get(request.query_params.get("form_said", ""), ""),
         ops=home_ops.of(exercise),
         missing=sample_data.setup_missing(exercise),
         operators_card=ops,
@@ -1479,6 +1677,9 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         submitted_rank=stages.submitted_rank,
         answers=functools.partial(sample_data.answers, exercise.public_id),
         form_lists=sample_data.list_questions(exercise.public_id),
+        # Ruling 77: the Candidates list, read only where Process draws it.
+        cand_list=_candidates_of(exercise.public_id) if section == "process" else (),
+        short=clock.short,
         rule_text=stages.rule_text,
         rule_json=stages.rule_json,
         weight_rows=stages.weight_rows,

@@ -138,6 +138,14 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "exercise.details_changed": EventSchema(_EXERCISE | {"changes", "context"}),
     # Segment AD2C: Process saved whole, replacing the draft.
     "exercise.process_saved": EventSchema(_EXERCISE | {"counts", "context"}),
+    # Candidates (ruling 77): added by search or CSV, removed in the list.
+    # The form's moves, Home's next step (ruling 76).
+    "exercise.form_opened": EventSchema(_EXERCISE),
+    # A published stage reverted to draft by a Process save (ruling 35).
+    "exercise.stage_reverted": EventSchema(_EXERCISE | {"refs", "reason"}),
+    "exercise.form_closed": EventSchema(_EXERCISE),
+    "candidate.added": EventSchema(_EXERCISE | {"refs", "context"}),
+    "candidate.removed": EventSchema(_EXERCISE | {"refs"}),
     "exercise.archived": EventSchema(_EXERCISE),
     "exercise.restored": EventSchema(_EXERCISE),
     "exercise.deleted": EventSchema(_EXERCISE),

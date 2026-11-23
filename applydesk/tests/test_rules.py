@@ -223,3 +223,24 @@ def test_a_long_outcome_value_does_not_spoil_the_proposal() -> None:
         "cells": {row.application.public_id: {"o1": [long, True]}},
     }
     assert _client().post(URL, json=body).status_code == 200
+
+
+@pytest.mark.parametrize("text", ["1_000", "nan", "inf", "-Infinity", "", "  ", "12x"])
+def test_a_threshold_python_reads_but_a_rule_cannot_is_not_a_number(text: str) -> None:
+    """The cold read on rung 6: ``float`` reads ``1_000``, ``nan`` and
+    ``inf``, which the engine would read as ``1`` or never hold; the
+    check must flag each, as the deleted page check did."""
+    assert not stages._is_number(text)  # pyright: ignore[reportPrivateUsage]
+
+
+@pytest.mark.parametrize("text", ["1000", " 2.5 ", "-3", "1e3"])
+def test_a_threshold_that_is_a_number_reads_as_one(text: str) -> None:
+    assert stages._is_number(text)  # pyright: ignore[reportPrivateUsage]
+
+
+def test_a_body_nested_too_deep_is_refused_not_a_500() -> None:
+    """The cold read on rung 6: ``json.loads`` raises ``RecursionError`` on
+    a deep body; it reads as malformed rather than failing the request."""
+    deep = b"[" * 100_000 + b"]" * 100_000
+    reply = _client().post(URL, content=deep, headers={"content-type": "application/json"})
+    assert reply.status_code == 400, reply.status_code

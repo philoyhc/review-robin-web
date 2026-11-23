@@ -171,7 +171,9 @@ def test_process_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> 
     second.locator('[data-pc-act="outcome"]').click()
     outcome = second.locator('.pc-item[data-item="outcome"]')
     outcome.locator('[data-pc="item-name"]').fill("Award")
-    outcome.locator('[data-pc="values"]').fill("Awarded, Not awarded")
+    for v in ("Awarded", "Not awarded"):
+        outcome.locator('[data-pc-act="add-value"]').click()
+        outcome.locator('[data-pc="value"]').last.fill(v)
     outcome.locator('[data-rel="applicants-email"]').check()
     # Gates are renumbered on saving, so the page reloads to hold the keys.
     with page.expect_navigation():
@@ -190,7 +192,9 @@ def test_process_saved_into_a_scratch_exercise_survives_a_reload(page: Page) -> 
     assert gate.locator('[data-pc="item-name"]').input_value() == "Panel read"
     outcome = page.locator('.pc-item[data-item="outcome"]')
     assert outcome.get_attribute("data-key") == "o1"
-    assert outcome.locator('[data-pc="values"]').input_value() == "Awarded, Not awarded"
+    rows = outcome.locator('[data-pc="value"]')
+    assert [rows.nth(i).input_value() for i in range(rows.count())] == ["Awarded", "Not awarded"]
+    assert outcome.locator("li").first.get_attribute("data-value-key")
     assert outcome.locator('[data-rel="applicants-email"]').is_checked()
     page.goto(home + "/emails")
     assert "Award" in page.locator("main").inner_text()
