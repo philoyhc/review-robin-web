@@ -290,6 +290,9 @@ class Stage:
     key: str = ""
     # Holds the Candidates item (ruling 77): at most one stage does.
     candidates: bool = False
+    # Why a published stage was reverted to draft on the page (ruling 35):
+    # sent with the save that records the revert, and audited with it.
+    revert_reason: str = ""
 
     @property
     def dates(self) -> str:

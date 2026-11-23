@@ -508,14 +508,34 @@ def _check(built: tuple[stages.Stage, ...]) -> None:
 
 
 def _changed_locked(row: StageRow, st: stages.Stage) -> bool:
-    """Whether a published stage's name or dates differ in the snapshot."""
+    """Whether what the page locks on a published stage differs in the
+    snapshot: its name, its start and whether applicants see it. Its end
+    stays editable, an extension keeping it open (ruling 35)."""
     starts = _stored(st.when.start) if st.when else None
-    ends = _stored(st.when.end) if st.when else None
     return (
         (row.name or "") != (st.name or "")
         or _naive(row.starts_at) != _naive(starts)
-        or _naive(row.ends_at) != _naive(ends)
+        or row.shown != st.shown
     )
+
+
+def _adds_to(
+    row: StageRow,
+    st: stages.Stage,
+    gate_rows: dict[str, GateRow],
+    outcome_rows: dict[str, Outcome],
+) -> bool:
+    """Whether the snapshot puts on a published stage a gate, an outcome or
+    the form it did not hold: the page disables its adds (ruling 35)."""
+    if st.form and not row.holds_form:
+        return True
+    for c in st.columns:
+        held = gate_rows.get(c.key) if isinstance(c, stages.Gate) else outcome_rows.get(c.key)
+        if held is not None and held.retired_at is not None:
+            continue  # a retired key brought back: refused as such below
+        if held is None or held.stage_id != row.id:
+            return True
+    return False
 
 
 def _upsert[R: (StageRow, GateRow, Outcome, GateField, GateResult, OutcomeValue)](
@@ -672,7 +692,17 @@ def save(
     kept_gates: set[str] = set()
     kept_outcomes: set[str] = set()
     counts = {"stages": 0, "gates": 0, "outcomes": 0}
-    reverted: list[StageRow] = []
+    reverted: list[tuple[StageRow, str]] = []
+    # The form's state goes with it to another stage (the cold read): a
+    # move is not a reopening.
+    form_was = next(
+        (
+            r.form_state
+            for r in stage_rows.values()
+            if r.holds_form and r.retired_at is None and r.form_state
+        ),
+        None,
+    )
     for position, st in enumerate(built, 1):
         key = stage_key(st)
         kept_stages.add(key)
@@ -683,11 +713,17 @@ def save(
             # refuses too; reverting it to draft is its own audited move.
             if st.status == "Published" and _changed_locked(before, st):
                 raise Refused(
-                    f"{st.label} is published: revert it to draft to change its name or dates.",
+                    f"{st.label} is published: revert it to draft to change its name, "
+                    "start or who sees it.",
+                    key="published",
+                )
+            if st.status == "Published" and _adds_to(before, st, gate_rows, outcome_rows):
+                raise Refused(
+                    f"{st.label} is published: revert it to draft to add to it.",
                     key="published",
                 )
             if st.status != "Published":
-                reverted.append(before)
+                reverted.append((before, st.revert_reason))
         srow = _upsert(
             session,
             stage_rows,
@@ -705,8 +741,8 @@ def save(
             form_opens_at=_stored(st.form_when.start) if st.form and st.form_when else None,
             form_closes_at=_stored(st.form_when.end) if st.form and st.form_when else None,
         )
-        if st.form and srow.form_state is None:
-            srow.form_state = _form_seed(public_id)
+        if st.form:
+            srow.form_state = form_was or srow.form_state or _form_seed(public_id)
         session.flush()
         gate_position = 0
         for c in st.columns:
@@ -779,12 +815,13 @@ def save(
         payload=audit.counts(**counts, retired=retired),
         context={"revision": exercise.process_revision},
     )
-    for row in reverted:
+    for row, why in reverted:
         audit.write_event(
             session,
             event_type="exercise.stage_reverted",
             actor=actor,
             exercise=exercise,
+            reason=why or None,
             refs={"stage_id": row.id},
         )
     return exercise.process_revision
@@ -973,7 +1010,10 @@ def move_form(
     if to == "open" and not published:
         raise Refused("A draft's form opens once the exercise is published.", key="draft")
     if exercise.process_revision < 1:
-        save(session, public_id, stages.plan_of(public_id).stages, 0, actor)
+        try:
+            save(session, public_id, stages.plan_of(public_id).stages, 0, actor)
+        except Refused as why:
+            raise Refused(str(why), key="unsaved") from why
     row = session.scalar(
         select(StageRow).where(
             StageRow.exercise_id == exercise.id,

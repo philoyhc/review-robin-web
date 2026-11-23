@@ -387,7 +387,7 @@
     all.forEach(function (c, i) { if (c.dataset.status !== "Draft") at = i; });
     return at;
   }
-  // Publish and revert, on this page only: nothing is saved until AD2.
+  // Publish and revert on the page; the save records them (ruling 35).
   function setStatus(card, status) {
     card.dataset.status = status;
     var chip = card.querySelector("[data-pc-status]");
@@ -412,7 +412,8 @@
     var panel = box.querySelector("[data-pc-revert]"), reason = box.querySelector("[data-pc-reason]");
     if (what === "publish") {
       setStatus(card, "Published");
-      live.textContent = labelOf(card) + " published on this page only: nothing is saved.";
+      delete card.dataset.revertReason;
+      live.textContent = labelOf(card) + " published: saved when Process is saved.";
       box.querySelector('[data-pc-st="revert"]').focus();
     } else if (what === "revert") {
       panel.hidden = !panel.hidden;
@@ -428,10 +429,12 @@
     } else if (what === "confirm") {
       var all = cards();
       if (all.slice(all.indexOf(card) + 1).some(function (c) { return c.dataset.status !== "Draft"; })) return true;
+      card.dataset.revertReason = reason.value.trim();  // audited with the save
       reason.value = "";
       b.disabled = true;
       setStatus(card, "Draft");
-      live.textContent = labelOf(card) + " reverted to draft on this page only: nothing is saved or audited.";
+      changed();
+      live.textContent = labelOf(card) + " reverted to draft: saved, with its reason, when Process is saved.";
       box.querySelector('[data-pc-st="publish"]').focus();
     }
     return true;
@@ -1261,8 +1264,15 @@
     if (e.target.matches("[data-w-key]")) { var note = e.target.closest("[data-pc-weights]").querySelector("[data-w-note]"); if (note) note.textContent = ""; rules(); return; }
     if (e.target.matches('[data-pc="value"]')) {
       var holder = e.target.closest(".pc-item"), was = e.target.dataset.was || "", now = e.target.value.trim();
-      renameValue(holder, was, now);
-      if (now) e.target.dataset.was = now;
+      // A label another row has (typed through, or a swap half-done) is
+      // ambiguous: rules stay with the row's last distinct label until it
+      // is one again, so two values' rules never merge (cold read).
+      var others = valueRows(holder).filter(function (li) { return li !== e.target.closest("li"); })
+        .map(function (li) { return li.querySelector('[data-pc="value"]').value.trim(); });
+      if (now && others.indexOf(now) < 0 && others.indexOf(was) < 0) {
+        renameValue(holder, was, now);
+        e.target.dataset.was = now;
+      }
       // Its own Then and Otherwise, and any later rule reading it, offer
       // the values as they now stand (changed() redraws open editors); a
       // chosen one gone stays, flagged.
@@ -1572,6 +1582,7 @@
           name: field(card, "name"), from: field(card, "from"), to: field(card, "to"),
           shown: !!(card.querySelector('[data-pc="shown"]') || {}).checked,
           published: card.dataset.status !== "Draft",
+          revert_reason: card.dataset.revertReason || "",
           form: form ? { from: field(form, "item-from"), to: field(form, "item-to"),
                          receipt: checked(form, "receipt"), reminder: checked(form, "reminder") } : null,
           gates: items(card, "gate").map(gateOf),
@@ -1665,8 +1676,9 @@
     if (q.length < 2) { item.querySelector("[data-cand-found]").hidden = true; return; }
     timer = window.setTimeout(function () {
       fetch(base + "/search?q=" + encodeURIComponent(q), { credentials: "same-origin" })
-        .then(function (r) { return r.json(); })
-        .then(function (got) { if (e.target.value.trim() === q) found(item, got); });
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (got) { if (e.target.value.trim() === q) found(item, got); },
+              function () { if (e.target.value.trim() === q) item.querySelector("[data-cand-said]").textContent = "The search failed: try again."; });
     }, 250);
   });
   root.addEventListener("click", function (e) {

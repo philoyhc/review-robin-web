@@ -801,8 +801,11 @@ def _change_candidates(request: Request, exercise_id: str, sent: Any) -> Respons
                 else "Already listed."
             )
         elif action == "remove" and isinstance(got.get("person_id"), int):
-            candidates.remove(session, exercise.public_id, got["person_id"], actor)
-            said = "Removed."
+            said = (
+                "Removed."
+                if candidates.remove(session, exercise.public_id, got["person_id"], actor)
+                else "Not on the list: removed already."
+            )
         elif action == "csv" and isinstance(got.get("text"), str):
             done = candidates.import_csv(session, exercise.public_id, got["text"], actor)
             said = (
@@ -1092,6 +1095,7 @@ FORM_SAID: dict[str, str] = {
     "no_form": "This exercise has no application form.",
     "archived": "Archived: restore it to change it.",
     "changed": "Someone else changed it just now; try again.",
+    "unsaved": "Process cannot be saved as it stands: save it there first.",
 }
 
 

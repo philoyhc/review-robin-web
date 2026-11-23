@@ -392,8 +392,8 @@
 {% endmacro %}
 
 {# A stage's status (ruling 35, segment AD1K): Publish while Draft, its
-   problems listed; Revert to draft, with a reason, once published. The
-   page changes only: nothing is saved or audited until AD2. #}
+   problems listed; Revert to draft, with a reason, once published. Saving
+   Process records either; a revert is audited with its reason. #}
 {% macro status_box(st, status) %}
 {% set problems = publish_problems(st) if st.number else () %}
 <div class="pc-status" data-pc-status-box>

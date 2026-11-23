@@ -452,6 +452,7 @@ def _build(
                 _span(form.get("from"), form.get("to"), "The form") if form else None,
                 key=stage_key,
                 candidates=_flag(st.get("candidates", False), f"Stage {n}"),
+                revert_reason=_text(st.get("revert_reason", ""), f"Stage {n}'s reason", 500),
             )
         )
     shape = stages.problems(tuple(built))

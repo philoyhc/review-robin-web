@@ -142,7 +142,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # The form's moves, Home's next step (ruling 76).
     "exercise.form_opened": EventSchema(_EXERCISE),
     # A published stage reverted to draft by a Process save (ruling 35).
-    "exercise.stage_reverted": EventSchema(_EXERCISE | {"refs"}),
+    "exercise.stage_reverted": EventSchema(_EXERCISE | {"refs", "reason"}),
     "exercise.form_closed": EventSchema(_EXERCISE),
     "candidate.added": EventSchema(_EXERCISE | {"refs", "context"}),
     "candidate.removed": EventSchema(_EXERCISE | {"refs"}),

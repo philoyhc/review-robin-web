@@ -7,6 +7,7 @@ the revert is audited."""
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -89,9 +90,104 @@ def test_a_published_stage_keeps_its_name_and_dates_until_reverted() -> None:
         assert locked.value.key == "published" and "revert it to draft" in str(locked.value)
         session.rollback()
         # Reverted to draft, the same change saves, and the revert is audited.
-        reverted = (replace(stored.stages[0], name="Renamed", status="Draft"), *stored.stages[1:])
+        reverted = (
+            replace(stored.stages[0], name="Renamed", status="Draft", revert_reason="Wrong name"),
+            *stored.stages[1:],
+        )
         process_store.save(session, DONE, reverted, 1, None)
         session.commit()
     finally:
         session.close()
     assert _events("exercise.stage_reverted") == 1
+    session = db.new_session()
+    try:
+        event = session.scalar(
+            select(AuditEvent).where(AuditEvent.event_type == "exercise.stage_reverted")
+        )
+        assert event is not None and event.detail["reason"] == "Wrong name"
+    finally:
+        session.close()
+
+
+def _published() -> tuple[stages.Stage, ...]:
+    built = tuple(replace(st, status="Published") for st in stages.plan_of(DONE).stages)
+    session = db.new_session()
+    try:
+        process_store.save(session, DONE, built, 0, None)
+        session.commit()
+        stored = process_store.load(session, DONE)
+        assert stored is not None
+        return stored.stages
+    finally:
+        session.close()
+
+
+def test_a_published_stage_s_end_is_extended() -> None:
+    """The cold read on rungs 7-10: its end stays editable (ruling 35), an
+    extension keeping it open; its start, and who sees it, do not."""
+    stored = _published()
+    first = stored[0]
+    assert first.when is not None
+    later = replace(first.when, end=first.when.end + timedelta(days=7))
+    session = db.new_session()
+    try:
+        process_store.save(session, DONE, (replace(first, when=later), *stored[1:]), 1, None)
+        session.commit()
+        for change in (
+            replace(first, when=replace(later, start=later.start - timedelta(days=1))),
+            replace(first, when=later, shown=not first.shown),
+        ):
+            with pytest.raises(Refused) as locked:
+                process_store.save(session, DONE, (change, *stored[1:]), 2, None)
+            assert locked.value.key == "published"
+            session.rollback()
+    finally:
+        session.close()
+
+
+def test_nothing_is_added_to_a_published_stage() -> None:
+    """The page disables a published stage's adds; a save refuses them too."""
+    stored = _published()
+    # Interviews' gate moved into Review, both published.
+    review, interviews = stored[1], stored[2]
+    moved = interviews.columns[0]
+    assert isinstance(moved, stages.Gate)
+    changed = list(stored)
+    changed[1] = replace(review, columns=(*review.columns[:-1], moved, review.columns[-1]))
+    changed[2] = replace(interviews, columns=interviews.columns[1:])
+    session = db.new_session()
+    try:
+        with pytest.raises(Refused) as locked:
+            process_store.save(session, DONE, tuple(changed), 1, None)
+        assert locked.value.key == "published" and "add to it" in str(locked.value)
+    finally:
+        session.close()
+
+
+def test_the_form_keeps_its_state_when_it_moves_stage() -> None:
+    """The cold read on rungs 7-10: a closed form moved to another stage
+    stays closed, rather than reseeded open from the sample."""
+    client = _client()
+    client.post(f"{LOBBY}/{OPEN}/form/move", data={"to": "closed"})
+    session = db.new_session()
+    try:
+        stored = process_store.load(session, OPEN)
+        assert stored is not None
+        (first,) = stored.stages
+        # The form moved on to a new draft stage after the published one.
+        later = replace(first, key="", name="Next", status="Draft", columns=())
+        moved = (replace(first, form=False, form_when=None), later)
+        process_store.save(session, OPEN, moved, stored.revision, None)
+        session.commit()
+        assert process_store.form_state(session, OPEN) == "closed"
+    finally:
+        session.close()
+
+
+def test_a_first_save_refused_says_so_on_home(monkeypatch: pytest.MonkeyPatch) -> None:
+    def refuse(*_: object, **__: object) -> int:
+        raise Refused("A rule reads amiss.")
+
+    monkeypatch.setattr(process_store, "save", refuse)
+    moved = _client().post(f"{LOBBY}/{OPEN}/form/move", data={"to": "closed"})
+    assert "form_said=unsaved" in moved.headers["location"]

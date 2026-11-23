@@ -1669,7 +1669,7 @@ def test_a_revert_needs_a_reason_and_leaves_an_opened_gate_fixed(page: Page) -> 
     assert g1.locator('[data-pc="item-name"]').is_disabled()  # opened: stays fixed
     o1 = review.locator('.pc-item[data-key="o1"]')
     assert o1.locator('[data-pc="item-name"]').is_enabled()
-    assert "reverted to draft on this page only" in (
+    assert "reverted to draft: saved, with its reason, when Process is saved" in (
         page.locator("[data-pc-live]").text_content() or ""
     )
 
@@ -1863,3 +1863,19 @@ def test_values_are_added_and_removed_as_rows(page: Page) -> None:
     assert len(outcome["value_keys"]) == len(was) + 1 and outcome["value_keys"][-1] == ""
     o1.locator('[data-pc-act="remove-value"]').last.click()
     assert _values(o1) == was
+
+
+def test_a_value_typed_through_another_s_label_keeps_both_rules(page: Page) -> None:
+    """The cold read on rungs 7-10: a value renamed through a sibling's label
+    (or a swap half-done) does not take the sibling's rules with it."""
+    page.goto(PAGE)
+    o1 = _item(page, "o1")
+    first, second = _values(o1)[:2]
+    before = json.dumps(_rule(o1))
+    assert first in before
+    row = o1.locator('[data-pc="value"]').nth(1)
+    row.fill(first)  # now the same as the first value: ambiguous, not applied
+    row.fill("Held")
+    after = json.dumps(_rule(o1))
+    assert first in after  # the first value's rules stay its own
+    assert second not in after and "Held" in after
