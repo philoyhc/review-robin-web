@@ -51,6 +51,9 @@
     {% endfor %}
   </ol>
   {% if next_line %}<p class="tl-nextline" data-tl-next>{{ next_line }}</p>{% endif %}
+  {# Ruling 76: the form's own move, as Home's next step (inert until it
+     is wired; its title says why). #}
+  {% if form_action is defined and form_action %}<div class="btnrow tl-act"><button type="button" class="btn btn-primary" data-tl-form disabled title="{{ form_action[1] }}">{{ form_action[0] }}</button><span class="muted tl-act-why">{{ form_action[1] }}</span></div>{% endif %}
 </section>
 {# Today's place in its stage, and the layout: no inline styles in the
    page (applydesk/tests/test_pages.py), so the script sets them; without
