@@ -180,7 +180,9 @@ def render(
         template,
         {
             "app_name": APP_NAME,
-            "operator_page": app_path(request).startswith("/operator"),
+            # Operator work surfaces, Admin's included (AD1U Item 1): Review
+            # Robin's left-aligned wide layout, not the participant's column.
+            "operator_page": app_path(request).startswith(("/operator", "/admin")),
             "area": area,
             "places": [
                 p
