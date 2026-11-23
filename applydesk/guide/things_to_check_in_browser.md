@@ -21,10 +21,10 @@ when they are all ticked.
 1. **Seeded, as the super-admin** (`.env` as `docs/local_setup.md`; then
    `alembic -c applydesk/alembic.ini upgrade head` and
    `python -m applydesk.seed`). Most rows:
-   - *Admin's layout*; *Owners on record*; *Details saved, and one way of
-     writing dates* (RA-2027, the Graduate Travel Grant).
-   - *The Lobby wired, and the Archive*: Delete last, on a scratch
-     exercise made with *New exercise*.
+   - Run headless on 2026-11-23 (`041d436d6`): Admin's layout, Owners on
+     record and Details saved passed whole and are gone; the rows ticked
+     below passed too. Left for a person: *The panel, several* (Enter in
+     its Tags box, then *All tags to all* and *Remove from all*).
    - *Process: Candidates, the form's moves, published stages and outcome
      values*, on RA-2027 and the samples it names.
    - *Home's timeline*, *Hovers, tables and empty states*: a pass of
@@ -64,7 +64,7 @@ when they are all ticked.
 
 ## Process: Candidates, the form's moves, published stages and outcome values (AD2C: #4158, #4161)
 
-- [ ] **The form's move on Home.** A draft exercise's *Open form* is
+- [x] **The form's move on Home.** A draft exercise's *Open form* is
   disabled and says why. On `r6tm4kq9wz` (form open), *Close form* closes
   it and Home says so. Publish a draft exercise's first stage on Process,
   save, and its Home's *Open form* is enabled.
@@ -85,13 +85,6 @@ when they are all ticked.
   rules are as left.
 
 
-## Admin's layout (AD1U Item 1)
-
-- [ ] **Admin lines up with the operator pages.** Go from an exercise's
-  Home to Admin (*Accounts Management*): the bar, the title and the cards
-  keep the 40 px left margin and run as wide as Home's, not a centred
-  column. The same on *Exercises Diagnostics* and *System Status*.
-
 ## Owners and operators, and *Your role* (AD2O: #4144, #4145, #4146)
 
 - [ ] **The card.** On an exercise's Home, the card reads *Owners and
@@ -105,7 +98,7 @@ when they are all ticked.
   without that exercise.
 - [ ] **Transfer.** *Transfer ownership* asks, then you are an operator and
   they the only Owner.
-- [ ] **Your role.** The Lobby and the Archive show *Your role* (Owner or
+- [x] **Your role.** The Lobby and the Archive show *Your role* (Owner or
   Operator) where *Created by* was; the Lobby sorts by it.
 - [ ] **The panel.** Tick an exercise you only operate: *Purge and archive*
   and *Delete* are disabled and the note names it; untick it and they
@@ -115,39 +108,21 @@ when they are all ticked.
 
 ## The Lobby wired, and the Archive (AD2B: #4139, #4140)
 
-- [ ] **Sorting.** Click a header: the rows sort by it, its arrow shows the
+- [x] **Sorting.** Click a header: the rows sort by it, its arrow shows the
   way; click again to flip it. Reload: the order stays.
-- [ ] **Tags and the filter.** Click two tag chips: only exercises carrying
+- [x] **Tags and the filter.** Click two tag chips: only exercises carrying
   both show; click *OR*: either. Type in the filter and press Enter: name,
   code or tag matches. *Clear* empties each.
-- [ ] **The panel, one exercise.** Tick a row, change its name, code and
+- [x] **The panel, one exercise.** Tick a row, change its name, code and
   tags, *Save*: it says *Saved.* A code another live exercise holds is
   refused. *Duplicate settings only* opens "Copy of …"'s Home.
 - [ ] **The panel, several.** Tick two, type tags, *All tags to all*, then
   *Remove from all*. Press Enter in that Tags box: it does not post Save.
-- [ ] **Archive and Restore.** *Purge and archive* moves an exercise to
+- [x] **Archive and Restore.** *Purge and archive* moves an exercise to
   *Go to Archive*; *Restore* brings it back, unless another exercise has
   taken its code meanwhile.
-- [ ] **Delete.** Without *Yes, delete* ticked it says so; ticked, it asks,
+- [x] **Delete.** Without *Yes, delete* ticked it says so; ticked, it asks,
   then the exercise is gone from the Lobby, Admin's Diagnostics and `/me`.
-
-## Details saved, and one way of writing dates (AD2B: #4137, #4138)
-
-Re-seed first: AD2B adds a migration, and the seed now records each
-sample's settings.
-
-- [ ] **Details saves.** On RA-2027's Home, *Unlock* Details, change the
-  description and the timezone, *Lock*: it says *Saved.* Reload: the
-  change is still there.
-- [ ] **A stale Lock is refused.** Open the same Home in two tabs. Save a
-  change in one, then *Lock* a change in the other: it is refused, says
-  to reload, and saves nothing.
-- [ ] **A taken code is refused.** On the Graduate Travel Grant's Home,
-  set the code to `ra-2027`: Lock is refused on the code field.
-- [ ] **Dates read one way.** Home's timeline, Process's stage cards and
-  a gate's *send* line write a range with its year once
-  ("1–30 Sep 2026", "9 Nov – 4 Dec 2026"). On Process, change a stage's
-  dates: its card's summary follows in the same words.
 
 ## Admins and adopting an exercise (AD2M: #4131, #4132)
 
@@ -168,15 +143,6 @@ sample's settings.
   reads `pat@example.edu, Local Operator`.
 - [ ] **Unseeded.** With no seed run, *Manage* says the exercise is not in
   the database yet and names the command.
-
-## Owners on record, and the super-admin's own row (#4128, #4129)
-
-- [ ] **Owners column and Created by.** After the seed, Exercises
-  Diagnostics' *Owners* and the Lobby's *Created by* read Local Operator
-  for every sample, the Lobby's with its tooltip.
-- [ ] **Your own row.** On Accounts Management, Local Operator's *(self)*
-  row reads Operator *yes*, with its tooltip, and the workspace Unit when
-  `CORDWARE_INSTITUTION_NAME` is set.
 
 ## Home's timeline and the copy sweep (AD1S: #4101, #4102)
 

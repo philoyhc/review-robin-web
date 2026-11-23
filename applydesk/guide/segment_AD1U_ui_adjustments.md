@@ -95,3 +95,125 @@ None.
 
 - `applydesk/spec/applications.md` — "Layout": the operator's layout covers `/admin/…` too.
 - `applydesk/guide/things_to_check_in_browser.md` — a section for Admin's layout, until the author checks it.
+
+## Item 2 — Wide tables scroll inside their card on a phone
+
+### Opportunity
+
+At 390px, Panels' table and Admin → Exercises Diagnostics' table run past
+their card and the page scrolls sideways (859px and 712px wide; the headless
+sitting 1, 2026-11-23).
+
+### Decision
+
+Each sits in a horizontally scrolling wrapper, as Review Robin's wide tables
+do, so the table scrolls and the page does not. Rejected: hiding columns at
+narrow widths, which loses data the operator needs.
+
+### Status
+
+- **2026-11-23:** planned with Items 3 and 4.
+
+### PR ladder
+
+1. **The change:** the two tables wrapped; a browser test that neither page
+   scrolls sideways at 390px.
+
+### Definition of done
+
+- Panels and Exercises Diagnostics do not scroll sideways at 390px (a
+  browser test).
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py AD1U.2` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+None.
+
+### Doc impact
+
+- `applydesk/guide/things_to_check_in_browser.md` — a row for the two tables at 390px.
+
+## Item 3 — No "nothing is saved" banner where things are saved
+
+### Opportunity
+
+The Lobby, Home and Process still carry *Placeholder. Sample data: what you
+do here works on screen, but nothing is saved, and a reload restores the
+sample.* Since AD2B and AD2C they save: the Lobby's panel, Home's Details and
+Owners card, and Process. The banner now says the opposite of what happens.
+
+### Decision
+
+The banner goes from those three pages; the pages still on sample data keep
+it, and a scratch exercise keeps its own note. Rejected: rewording it there,
+since nothing on those pages is still sample-only enough to need a line.
+
+### Status
+
+- **2026-11-23:** planned with Items 2 and 4.
+
+### PR ladder
+
+1. **The change:** `_placeholder.html` says nothing on the Lobby, Home and
+   Process; `test_pages.py` holds which pages carry it.
+
+### Definition of done
+
+- The Lobby, Home and Process carry no *Placeholder* line; Form, Panels,
+  Emails, Dossiers, Evaluations and Extract still do (`test_pages.py`).
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py AD1U.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+None.
+
+### Doc impact
+
+- `applydesk/spec/applications.md` — the placeholder line (AD-06) is not shown on the Lobby, Home or Process.
+
+## Item 4 — The Archive's rows link to the exercise, as Review Robin's
+
+### Opportunity
+
+Review Robin's Archive links each session's name to its Home
+(`app/web/templates/operator/sessions_archived.html`); Apply Desk's lists the
+name as plain text, so an archived exercise's Home is reachable only by URL.
+
+### Decision
+
+The name links to the exercise's Home, which already reads *Archived:
+read-only* with a link back to restore it (the author, 2026-11-23: follow
+Review Robin).
+
+### Status
+
+- **2026-11-23:** planned with Items 2 and 3.
+
+### PR ladder
+
+1. **The change:** the link; a test that an archived row links to its Home.
+
+### Definition of done
+
+- An archived row's name links to the exercise's Home (a test).
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py AD1U.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+
+### Open questions
+
+None.
+
+### Doc impact
+
+- `applydesk/spec/applications.md` — "The Archive": a row's name opens the exercise's Home.
