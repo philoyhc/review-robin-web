@@ -348,12 +348,13 @@ the rulings it relied on but does not move them.
     (author, 2026-11-15), amending ruling 25:
     - **A dossier** is the complete, readable file on one candidate's
       one entry: a candidate with two applications has two dossiers.
-    - **It is made of parts**, each with an **audience**, any of:
+    - ~~**It is made of parts**, each with an **audience**, any of:
       *Operators*; *Candidate*; a panel's *all members*; a panel's
       *assigned evaluators only*. And each with **when it becomes
       visible**: the stage from which its audience sees it. A part
       that opens to different audiences at different times is two
-      parts.
+      parts.~~ *Who sees what, and when, is set where people read:
+      ruling 79.*
     - **The form writes parts**: each section names its part (replacing
       *Shown to reviewers* / *Not shown*), written at submit or at the
       form's close (ruling 24's choice).
@@ -459,9 +460,10 @@ the rulings it relied on but does not move them.
     pairs, cells, results, parts and the alias key hang off it, not the
     application. Proposed: minted at submit, so a draft has none.
 33. **What a reader sees is set per dossier part** (author, 2026-11-18;
-    AD-64): the parts of ruling 26, each with its audiences, are the one
-    vocabulary; per-card *shown* and section *Shown / Not shown* go, and
-    the terms are standardized to *part*.
+    AD-64): ~~the parts of ruling 26, each with its audiences, are the one
+    vocabulary;~~ per-card *shown* and section *Shown / Not shown* go, and
+    the terms are standardized to *part*. *Who sees a part is set by
+    ruling 79's views, not on the part.*
 34. **Approval is per dossier** (author, 2026-11-18; AD-47): under
     *Suggested, then approved*, the operator approves a dossier's
     evaluators together, not pair by pair.
@@ -630,20 +632,21 @@ the rulings it relied on but does not move them.
 68. **Who sees each dossier item** (author, 2026-11-21), refining
     rulings 26 and 33: a candidate's dossier holds every section of the
     submitted form (when there is one), every gate's results and every
-    outcome. Each of those items is shown only to the grants set on it:
+    outcome. ~~Each of those items is shown only to the grants set on it:
     *Applicant* (*Candidate*, ruling 71); *Assigned evaluators*, from named panels or from all;
     *Evaluators*, from named panels or from all. Each grant opens from a
     stage, as ruling 26's parts did; an item opening to two audiences at
-    different times carries two grants. Operators see every item, whatever
-    its grants. Grants are set on the item itself: a form section's on
-    Form, a gate's results and an outcome's on Process. Recorded now; built
+    different times carries two grants.~~ Operators see every item, whatever
+    its grants. ~~Grants are set on the item itself: a form section's on
+    Form, a gate's results and an outcome's on Process.~~ *Who sees an
+    item, and when, is set by ruling 79's views.* Recorded now; built
     with the store (AD4 for the form, AD5 for dossiers), and Form's per-card
     *Shown* control (AD-69, AD-93) goes when it is.
 69. **The data lives in three places** (author, 2026-11-21): the store,
     the database tables, is the one source of truth and holds everything
     collected (the form, evaluators' responses through Review Robin,
     operator entries) and derived (results, outcomes); the dossier holds
-    what must be read on screen, each item with its grants (ruling 68);
+    what must be read on screen, each item shown as ruling 79's views say;
     extraction, for operators, follows the dossier by default and may
     carry more from the store. The rulings are gathered in
     `applydesk/docs/data_and_visibility_model.md`, the draft of an
@@ -664,12 +667,14 @@ the rulings it relied on but does not move them.
     name and identifiers and a photo or screenshot asked for need not
     identify anyone; whether a field goes into the dossier is set on the
     field itself (a form section, a gate's result, an outcome, an operator
-    entry), and a field in the dossier needs its visibility grants.
+    entry), and a field in the dossier ~~needs its visibility grants~~
+    is meant to be seen by someone: at least one of ruling 79's views
+    shows it.
 72. **Scores by hand, and grants live in Apply Desk** (author,
     2026-11-21): an operator sets only outcomes by hand for now; a
     *manual gate*, whose result an operator enters, may come later. Review
     Robin gives no visibility grants at all: who sees what is Apply
-    Desk's, through its dossiers (rulings 68–71).
+    Desk's, through its dossiers (rulings 68–71, 79).
 73. **An exercise's Owner and its operators** (author, 2026-11-21): the
     Owner is one of the exercise's operators; there may be others, who do
     everything else on it. Only the Owner adds and removes operators and
@@ -712,6 +717,31 @@ the rulings it relied on but does not move them.
     AD2C, answering ruling 31): rules are evaluated by one server-side
     service, the pages ask it for proposals and checks, and the pages'
     JS evaluator retires.
+79. **Visibility is set where people read, not where data is written**
+    (author, 2026-11-23), superseding the per-item grants of rulings 26,
+    33, 68 and 71:
+    - **Each gate × panel** sets what that panel's evaluators see of the
+      dossier during the gate, its assigned evaluators and the whole
+      panel apart (ruling 68's distinction). Its window is the gate's
+      review window, nothing before or after: once its gate closes, an
+      evaluator sees nothing of it unless an outcome opens it to them.
+    - **Each outcome** sets what becomes visible to candidates and to
+      evaluators of past gates, from its release to that audience
+      (ruling 38) until the next outcome updates it, or the end of the
+      exercise. The next outcome either **continues** what was shown,
+      **adds** to it, or **resets** it to what it names alone.
+    - **A candidate always sees their own submitted form**, before any
+      outcome.
+    - **A new item starts hidden from every view**, and the page flags
+      an item in the dossier that no view shows: an item in the dossier
+      is meant to be seen by someone (ruling 71).
+    - **Each field keeps its own switch** (ruling 71): whether it goes
+      into the dossier, and a ceiling the views cannot pass (*never to
+      candidates*, *never to evaluators*).
+    - **Operators see every item**, as before (ruling 68).
+    - Built in its own segment (AD2V, `applydesk/guide/ad2_series.md`),
+      once dossiers are stored; AD2C stores the gates, panels' sources
+      and outcomes its views name, by key.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 

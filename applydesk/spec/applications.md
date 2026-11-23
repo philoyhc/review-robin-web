@@ -649,11 +649,12 @@ shows the form's own card and one empty String card, open.
   one* and Select people at *Institution-wide*.
 - **Visibility** is per card: *Shown to evaluators* or *Not shown*; a new
   card is *Not shown*, the side that hides.
-  *Ruled, not built (ruling 68, `applydesk/guide/todo_master.md`):* each
-  dossier item (a form section, a gate's results, an outcome) is to carry
-  grants (*Candidate*, ruling 71; *Assigned evaluators* from named panels or all;
-  *Evaluators* from named panels or all), each opening from a stage;
-  operators see every item. Form's sections and Process set them; the
+  *Ruled, not built (ruling 79, `applydesk/guide/todo_master.md`; segment
+  AD2V):* who sees a dossier item is set where people read: each gate ×
+  panel for its evaluators during the gate's window, each outcome for
+  candidates and past evaluators from its release (continuing, adding to or
+  resetting the last). A candidate always sees their own form; a new item
+  starts hidden; each field keeps a ceiling; operators see every item. The
   per-card and per-section *Shown* / *Not shown* go.
 - **Collapsed**, a card shows its question and help text (a text card's
   title and description), the summary of its settings, and chips: *Required*
