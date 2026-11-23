@@ -282,6 +282,9 @@ class Stage:
     # The form's open and close, inside the stage's dates (author,
     # 2026-11-18); None is the stage's (``window``).
     form_when: StageDates | None = None
+    # Its key, stable across saves once stored (segment AD2C); "" for a
+    # sample's or a new stage's, a save minting one (``process_store``).
+    key: str = ""
 
     @property
     def dates(self) -> str:

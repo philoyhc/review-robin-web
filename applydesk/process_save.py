@@ -256,7 +256,8 @@ def _outcome(v: Any, number: int) -> Outcome:
         # is refused, never read as 0 or rounded (Codex on #4026; cold read).
         # Blank too: the page flags it, and 0 would read as weighed out
         # on purpose (Codex on #4026).
-        if not text.isdigit():
+        # ASCII digits only: "²".isdigit() holds and int() refuses it (AD-129).
+        if not re.fullmatch(r"[0-9]+", text):
             raise Refused(f"{what}'s weights are not all whole percents.")
         share = int(text) / 100
         weights.append((k, share))
