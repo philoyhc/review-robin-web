@@ -28,6 +28,8 @@ ELIGIBILITY: dict[str, str] = {
     "invitation": "Invitation only",
 }
 NOT_SET = "Not set"
+#: An ordinary exercise's name while its row has none.
+UNTITLED = "Untitled exercise"
 
 
 @dataclass(frozen=True)
@@ -56,6 +58,58 @@ def row(session: Session, public_id: str) -> Exercise | None:
     return session.scalar(
         select(Exercise).where(Exercise.public_id == public_id, Exercise.deleted_at.is_(None))
     )
+
+
+def from_row(found: Exercise) -> sample_data.Exercise:
+    """An ordinary exercise in the pages' shape (segment AD2G): a blank
+    Draft, its *Created* the row's. `overlay` lays its stored settings
+    over it, as over a sample's."""
+    made = found.created_at if found.created_at.tzinfo else found.created_at.replace(tzinfo=UTC)
+    return sample_data.Exercise(
+        public_id=found.public_id,
+        code="",
+        name=found.name or UNTITLED,
+        state="Draft",
+        form_open=True,
+        eligibility=NOT_SET,
+        blind=False,
+        opens=NOT_SET,
+        application_stage_ends=NOT_SET,
+        expected_outcome=NOT_SET,
+        summary="",
+        created=made.isoformat(timespec="minutes"),
+    )
+
+
+def ordinary(public_id: str) -> sample_data.Exercise | None:
+    """The ordinary exercise with this ID, archived or not, unless deleted
+    or a sample: `sample_data.exercise`'s reader for every exercise but a
+    sample."""
+    if sample_data.is_sample(public_id):
+        return None
+    session = db.new_session()
+    try:
+        found = row(session, public_id)
+        return from_row(found) if found is not None else None
+    finally:
+        session.close()
+
+
+def ordinaries() -> tuple[sample_data.Exercise, ...]:
+    """Every ordinary exercise not deleted, newest first."""
+    session = db.new_session()
+    try:
+        rows = session.scalars(
+            select(Exercise)
+            .where(
+                Exercise.deleted_at.is_(None),
+                Exercise.public_id.not_in(sorted(sample_data.SAMPLE_IDS)),
+            )
+            .order_by(Exercise.created_at.desc(), Exercise.id.desc())
+        )
+        return tuple(from_row(r) for r in rows)
+    finally:
+        session.close()
 
 
 def tags_of(session: Session, exercise: Exercise) -> tuple[str, ...]:
@@ -311,7 +365,9 @@ def save_details(
     clash = _clash(session, exercise, values["code"])
     if clash is not None:
         raise Refused(
-            f"{values['code']} is already {clash.name}'s code.", key="code_taken", field="code"
+            f"{values['code']} is already another live exercise's code.",
+            key="code_taken",
+            field="code",
         )
     before = {k: getattr(exercise, k) for k in DETAILS}
     changed = {k: [before[k], values[k]] for k in DETAILS if before[k] != values[k]}
@@ -398,11 +454,16 @@ def _live(exercise: Exercise) -> None:
 
 
 def _ready(session: Session, exercise: Exercise, actor: Person | None) -> None:
-    """Record a sample's settings before a first change (revision 0)."""
+    """Before a first change (revision 0): a sample's settings recorded;
+    an ordinary exercise's row already holds its own, so it is only
+    marked recorded, neither renamed nor audited as a sample (cold read,
+    AD2G). Reads no other session: the caller holds a transaction."""
     if exercise.revision < 1:
-        sample = sample_data.exercise(exercise.public_id)
+        sample = sample_data.sample(exercise.public_id)
         if sample is not None:
             record_sample(session, exercise, sample, actor)
+        else:
+            exercise.revision = 1
 
 
 def _put_tags(session: Session, exercise: Exercise, tags: list[str]) -> None:
@@ -457,11 +518,14 @@ def save_panel(
         raise Refused("An exercise code is at most 40 characters.", key="code_long", field="code")
     _ready(session, exercise, actor)
     # A published exercise's code is fixed (G2), here as on Details (Codex on #4140).
-    sample = sample_data.exercise(public_id)
+    sample = sample_data.sample(public_id)  # an ordinary exercise is a Draft
     if sample is not None and sample.state != "Draft" and (code or None) != exercise.code:
         raise Refused("A published exercise's code is fixed.", key="code_fixed", field="code")
-    if (clash := _clash(session, exercise, code or None)) is not None:
-        raise Refused(f"{code} is already {clash.name}'s code.", key="code_taken", field="code")
+    if _clash(session, exercise, code or None) is not None:
+        # Never the other exercise's name: the viewer may not operate it.
+        raise Refused(
+            f"{code} is already another live exercise's code.", key="code_taken", field="code"
+        )
     before_tags = list(tags_of(session, exercise))
     changes: dict[str, list[Any]] = {}
     if exercise.name != name:
@@ -534,9 +598,9 @@ def restore(session: Session, public_id: str, actor: operators.Actor) -> None:
     _owned(session, exercise, actor)
     if exercise.archived_at is None:
         return
-    if (clash := _clash(session, exercise, exercise.code)) is not None:
+    if _clash(session, exercise, exercise.code) is not None:
         raise Refused(
-            f"Not restored: {exercise.code} is now {clash.name}'s code. Change one first.",
+            f"Not restored: {exercise.code} is now another live exercise's code. Change one first.",
             key="restore_taken",
         )
     exercise.archived_at = None

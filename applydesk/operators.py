@@ -528,16 +528,20 @@ def demote(session: Session, actor: Actor, person: Person) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def create_exercise(session: Session, actor: Actor, public_id: str) -> Exercise:
-    """Make an exercise's row with `actor` its Owner, in one transaction.
-    The actor needs a person row and must be allowlisted, or be the
-    platform super-admin, who needs no allowlisting (ruling 75)."""
+def create_exercise(
+    session: Session, actor: Actor, public_id: str, name: str | None = None
+) -> Exercise:
+    """Make an exercise's row with `actor` its Owner, in one transaction,
+    named `name` (*New exercise*'s, segment AD2G; the seed's samples take
+    theirs from `record_sample`). The actor needs a person row and must be
+    allowlisted, or be the platform super-admin, who needs no allowlisting
+    (ruling 75)."""
     if actor.person is None or not (
         actor.is_super_admin or _allowed(session, actor.person, hold=True)
     ):
         raise Refused("Only someone on the operator list may make an exercise.", key="not_listed")
     # Who made it, recorded as it is made (cold read, AD2B).
-    exercise = Exercise(public_id=public_id, created_by_id=actor.person.id)
+    exercise = Exercise(public_id=public_id, name=name, created_by_id=actor.person.id)
     session.add(exercise)
     session.flush()
     session.add(ExerciseOperator(exercise_id=exercise.id, person_id=actor.person.id, is_owner=True))

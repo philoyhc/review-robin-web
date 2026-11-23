@@ -50,7 +50,9 @@ def test_new_exercise_makes_a_blank_draft_and_lands_on_its_home() -> None:
     assert scratch.COOKIE in client.cookies
     home = client.get(f"{LOBBY}/{made}").text
     assert "Summer Bursary 2027" in home and "data-scratch-note" in home
-    assert sample_data.exercise(made) is None  # outside a request: no browser
+    # On record outside the request: a row, not a browser's (segment AD2G).
+    found = sample_data.exercise(made)
+    assert found is not None and found.name == "Summer Bursary 2027"
     lobby = client.get(LOBBY).text
     row = lobby[lobby.index(f"/operator/exercises/{made}") :][:800]
     assert "data-scratch-chip>Scratch<" in row and "/discard" in row
@@ -65,11 +67,14 @@ def test_new_exercise_makes_a_blank_draft_and_lands_on_its_home() -> None:
         assert client.get(f"{LOBBY}/{made}/{section}").status_code == 200, section
 
 
-def test_another_browser_cannot_see_or_open_it() -> None:
+def test_the_same_operator_in_another_browser_sees_it() -> None:
+    """Segment AD2G: an exercise is its row, reached through its grants,
+    not one browser's store; only *Discard* still needs that browser
+    until rung 3 retires it."""
     mine, theirs = _client(), _client()
     made = _create(mine)
-    assert client_404(theirs, f"{LOBBY}/{made}")
-    assert made not in theirs.get(LOBBY).text
+    assert theirs.get(f"{LOBBY}/{made}").status_code == 200
+    assert made in theirs.get(LOBBY).text
     assert theirs.post(f"{LOBBY}/{made}/discard").status_code == 404
     assert mine.get(f"{LOBBY}/{made}").status_code == 200
 
@@ -149,12 +154,14 @@ def test_discard_retires_the_row_and_frees_its_code() -> None:
     assert client.post(f"{LOBBY}/{again}/details", json=details).status_code == 200
 
 
-def test_an_idle_browser_s_scratch_expires(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_an_exercise_outlives_its_browser_s_store(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Segment AD2G: eight idle hours drop the browser's store, not the
+    exercise, which its row keeps."""
     client = _client()
     made = _create(client)
     later = scratch.time.monotonic() + scratch.IDLE_SECONDS + 1
     monkeypatch.setattr(scratch.time, "monotonic", lambda: later)
-    assert client.get(f"{LOBBY}/{made}").status_code == 404
+    assert client.get(f"{LOBBY}/{made}").status_code == 200
 
 
 def test_the_cookie_is_renewed_while_the_store_lives() -> None:

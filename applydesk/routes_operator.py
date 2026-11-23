@@ -74,8 +74,11 @@ def exercises(request: Request) -> Response:
     # Each row's values and the revision its Save names, from one read.
     found = [
         s
-        for s in exercise_store.stored_all_at(sample_data.exercises())
-        if s.live and gate.operates(request, s.exercise.public_id)
+        # Only the viewer's are read further (cold read, AD2G).
+        for s in exercise_store.stored_all_at(
+            tuple(e for e in sample_data.exercises() if gate.operates(request, e.public_id))
+        )
+        if s.live
     ]
     mine = [s.exercise for s in found]
     # Your role on each (segment AD2O), from the viewer's own grants.
@@ -147,6 +150,11 @@ def exercises_archived(request: Request) -> Response:
 PANEL_ACTIONS = ("save", "add_tags", "remove_tags", "duplicate", "archive", "delete")
 
 
+#: The most exercises one panel action takes: every ordinary exercise is
+#: listed now (segment AD2G), not only the samples and a browser's five.
+MOST_TICKED = 500
+
+
 @router.post("/exercises/panel", name="applydesk_exercises_panel")
 async def exercises_panel(request: Request) -> Response:
     """The Lobby panel's actions (segment AD2B rung 6) on the ticked
@@ -157,7 +165,7 @@ async def exercises_panel(request: Request) -> Response:
         raise HTTPException(status_code=413)
     form = parse_qs(body.decode("utf-8", "replace"), keep_blank_values=True)
     action = form.get("action", [""])[0]
-    ids = [i for i in form.get("id", []) if is_public_id(i)][: len(sample_data.EXERCISES) + 50]
+    ids = [i for i in form.get("id", []) if is_public_id(i)][:MOST_TICKED]
     if action not in PANEL_ACTIONS or not ids:
         raise HTTPException(status_code=400)
     back = _lobby_query(form.get("back", [""])[0])
@@ -248,7 +256,8 @@ async def _duplicate(request: Request, source_id: str, back: str) -> Response:
     the source's settings and tags; its Home next (as *New exercise*)."""
     if not gate.operates(request, source_id):
         return _back_to_lobby(request, back, "gone")
-    source = sample_data.exercise(source_id)
+    # Off the event loop: an ordinary exercise is a database read (cold read).
+    source = await run_in_threadpool(sample_data.exercise, source_id)
     if source is None:
         return _back_to_lobby(request, back, "gone")
     browser = scratch.token() or scratch.new_token()
@@ -385,7 +394,9 @@ async def exercise_new(request: Request) -> Response:
     # Its row and Owner off the event loop (bug sweep at the AD2A close);
     # the scratch exercise is discarded however that fails.
     try:
-        owned = await run_in_threadpool(gate.own_new_exercise, request, made.exercise.public_id)
+        owned = await run_in_threadpool(
+            gate.own_new_exercise, request, made.exercise.public_id, made.exercise.name
+        )
     except OperationalError as error:  # SQLite: another change holds the file
         scratch.discard(browser, made.exercise.public_id)
         if not db.is_busy(error):
@@ -1333,16 +1344,24 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         archived=exercise_store.is_archived(exercise.public_id),
         stage_rows=locks.stage_rows(exercise),
         STATUS_CHIP=locks.STATUS_CHIP,
-        # Every other exercise's code and name, so Details refuses a
-        # clashing code on the page (segment AD1I Semantics).
+        # The viewer's other exercises' codes and names, so Details refuses
+        # a clashing code on the page (segment AD1I Semantics); a clash with
+        # one they do not operate is the server's to refuse, unnamed (cold
+        # read, AD2G: never another operator's names).
         other_codes=[
             [e.code, e.name]
             for e in (
                 s.exercise
-                for s in exercise_store.stored_all_at(sample_data.exercises())
+                for s in exercise_store.stored_all_at(
+                    tuple(
+                        e
+                        for e in sample_data.exercises()
+                        if e.public_id != exercise.public_id and gate.operates(request, e.public_id)
+                    )
+                )
                 if s.live  # an archived or deleted exercise frees its code
             )
-            if e.code and e.public_id != exercise.public_id
+            if e.code
         ],
     )
 
