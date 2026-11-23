@@ -602,6 +602,9 @@ class FormCard:
     pool: str = "institution"  # Select people: "institution" or a Panel key
     required: bool = False
     shown: bool = False  # shown to evaluators; a new card is not
+    # Its handle (segment AD2D; AD-45): ``q<n>``, kept through a rename, so
+    # a rule names the question by it. Blank on a card no save has keyed.
+    key: str = ""
 
 
 SAMPLE_FORM: tuple[FormCard, ...] = (
@@ -789,8 +792,17 @@ def form_cards(exercise_id: str) -> tuple[FormCard, ...]:
     pools = people_pools(exercise_id)
     return tuple(
         replace(c, pool="institution") if c.type == "people" and c.pool not in pools else c
-        for c in (_RA_FORM if exercise_id == "wa9juxbc2t" else SAMPLE_FORM)
+        for c in sample_form(exercise_id)
     )
+
+
+def sample_form(exercise_id: str) -> tuple[FormCard, ...]:
+    """The sample's own cards, keyed ``q1``… in order, the keys its first
+    save keeps (segment AD2D); none for an empty draft."""
+    if exercise_id in EMPTY_FORMS:
+        return ()
+    cards = _RA_FORM if exercise_id == "wa9juxbc2t" else SAMPLE_FORM
+    return tuple(replace(c, key=f"q{n}") for n, c in enumerate(cards, 1))
 
 
 def form_heading(exercise_id: str) -> tuple[str, str]:

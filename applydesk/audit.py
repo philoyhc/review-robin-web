@@ -140,6 +140,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "exercise.process_saved": EventSchema(_EXERCISE | {"counts", "context"}),
     # Segment AD2E: Panels saved whole, or a page's new panels adopted.
     "exercise.panels_saved": EventSchema(_EXERCISE | {"counts", "context"}),
+    # Segment AD2D: Form saved whole.
+    "exercise.form_saved": EventSchema(_EXERCISE | {"counts", "context"}),
     # Candidates (ruling 77): added by search or CSV, removed in the list.
     # The form's moves, Home's next step (ruling 76).
     "exercise.form_opened": EventSchema(_EXERCISE),
