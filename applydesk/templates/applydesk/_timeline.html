@@ -51,9 +51,10 @@
     {% endfor %}
   </ol>
   {% if next_line %}<p class="tl-nextline" data-tl-next>{{ next_line }}</p>{% endif %}
-  {# Ruling 76: the form's own move, as Home's next step (inert until it
-     is wired; its title says why). #}
-  {% if form_action is defined and form_action %}<div class="btnrow tl-act"><button type="button" class="btn btn-primary" data-tl-form disabled title="{{ form_action[1] }}">{{ form_action[0] }}</button><span class="muted tl-act-why">{{ form_action[1] }}</span></div>{% endif %}
+  {# Ruling 76: the form's own move, as Home's next step: live once the
+     exercise is published, its title saying why while it is not. #}
+  {% if form_action is defined and form_action %}<form class="btnrow tl-act" method="post" action="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/form/move') }}"><input type="hidden" name="to" value="{{ form_action[1] }}"><button type="submit" class="btn btn-primary" data-tl-form{% if form_action[2] %} disabled title="{{ form_action[2] }}"{% endif %}>{{ form_action[0] }}</button>{% if form_action[2] %}<span class="muted tl-act-why">{{ form_action[2] }}</span>{% endif %}</form>{% endif %}
+  {% if form_said is defined and form_said %}<p class="nx-said" role="status" data-tl-form-said>{{ form_said }}</p>{% endif %}
 </section>
 {# Today's place in its stage, and the layout: no inline styles in the
    page (applydesk/tests/test_pages.py), so the script sets them; without

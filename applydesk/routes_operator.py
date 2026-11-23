@@ -1082,6 +1082,57 @@ OPS_SAID: dict[str, str] = {
 }
 
 
+#: Home's line after the form's move (ruling 76), by the key its redirect
+#: carries.
+FORM_SAID: dict[str, str] = {
+    "open": "The form is open.",
+    "closed": "The form is closed.",
+    "draft": "A draft's form opens once the exercise is published.",
+    "form_state": "The form has moved since this page opened: see where it stands now.",
+    "no_form": "This exercise has no application form.",
+    "archived": "Archived: restore it to change it.",
+    "changed": "Someone else changed it just now; try again.",
+}
+
+
+@router.post("/exercises/{exercise_id}/form/move", name="applydesk_form_move")
+async def form_move(request: Request, exercise_id: str) -> Response:
+    """*Open form* or *Close form*, Home's next step (ruling 76): the
+    form's state moves forward, audited."""
+    gate.same_site(request)
+    body = await request.body()
+    if len(body) > 1024:
+        raise HTTPException(status_code=413)
+    to = parse_qs(body.decode("utf-8", "replace")).get("to", [""])[0]
+    return await run_in_threadpool(_move_form, request, exercise_id, to)
+
+
+def _move_form(request: Request, exercise_id: str, to: str) -> Response:
+    exercise = exercise_or_404(exercise_id)
+    identity = current_identity(request)
+    if identity is None or to not in process_store.FORM_MOVES:
+        raise HTTPException(status_code=404 if identity is None else 400)
+    said = to
+    session = db.new_session()
+    try:
+        actor = people.resolve(session, identity)
+        session.commit()
+        process_store.move_form(session, exercise.public_id, to, exercise.state != "Draft", actor)
+        session.commit()
+    except process_store.Refused as why:
+        session.rollback()
+        said = why.key if why.key in FORM_SAID else "changed"
+    except (IntegrityError, OperationalError) as error:
+        session.rollback()
+        if not db.lost_a_race(error):
+            raise
+        said = "changed"
+    finally:
+        session.close()
+    path = f"/operator/exercises/{exercise_id}?{urlencode({'form_said': said})}"
+    return RedirectResponse(url_path(request, path), status_code=303)
+
+
 def _ops_back(request: Request, exercise_id: str, said: str) -> RedirectResponse:
     path = f"/operator/exercises/{exercise_id}?{urlencode({'ops_said': said})}#operators"
     return RedirectResponse(url_path(request, path), status_code=303)
@@ -1220,6 +1271,7 @@ def exercise_home(request: Request, exercise_id: str) -> Response:
         next_line=timeline.next_step(exercise, tl),
         # Ruling 76: Home's next step carries the form's own move.
         form_action=workflow.form_action(exercise),
+        form_said=FORM_SAID.get(request.query_params.get("form_said", ""), ""),
         ops=home_ops.of(exercise),
         missing=sample_data.setup_missing(exercise),
         operators_card=ops,

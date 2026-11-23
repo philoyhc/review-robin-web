@@ -218,24 +218,41 @@ class Pill:
     tone: str
 
 
+def _stored_form(exercise_id: str) -> str | None:
+    from applydesk import db, process_store
+
+    session = db.new_session()
+    try:
+        return process_store.form_state(session, exercise_id)
+    finally:
+        session.close()
+
+
 def form_state(exercise: Exercise) -> str:
-    """The application form's state: Draft, Open or Closed."""
+    """The application form's state: Draft, Open or Closed; as stored on
+    its stage once the timeline is (ruling 76), else the exercise's."""
+    stored = _stored_form(exercise.public_id)
+    if stored is not None:
+        return {"draft": "Draft", "open": "Open", "closed": "Closed"}.get(stored, "Draft")
     if exercise.state == "Draft":
         return "Draft"
     return "Open" if exercise.form_open else "Closed"
 
 
-def form_action(exercise: Exercise) -> tuple[str, str] | None:
-    """The action Home's next step offers on the application form (ruling
-    76), and why it is not live: *Open form* until it opens, *Close form*
-    while open; None with no form. Inert until AD2C rung 9 wires it."""
+def form_action(exercise: Exercise) -> tuple[str, str, str] | None:
+    """The move Home's next step offers on the application form (ruling
+    76): its label, the move it posts ("open" or "closed"), and why it is
+    not offered yet ("" when it is). None with no form, or one closed."""
     if stages.plan_of(exercise.public_id).form_stage is None:
         return None
+    state = form_state(exercise)
+    if state == "Open":
+        return ("Close form", "closed", "")
+    if state == "Closed":
+        return None
     if exercise.state == "Draft":
-        return ("Open form", "A draft's form opens once the exercise is published.")
-    if exercise.form_open:
-        return ("Close form", "Closing the form from here is not built yet.")
-    return ("Open form", "Opening the form from here is not built yet.")
+        return ("Open form", "open", "A draft's form opens once the exercise is published.")
+    return ("Open form", "open", "")
 
 
 #: A gate's states once sent (segment AD1M): *Closed* is a session

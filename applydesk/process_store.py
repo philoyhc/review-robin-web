@@ -506,6 +506,17 @@ def _check(built: tuple[stages.Stage, ...]) -> None:
     check_references(built)
 
 
+def _changed_locked(row: StageRow, st: stages.Stage) -> bool:
+    """Whether a published stage's name or dates differ in the snapshot."""
+    starts = _stored(st.when.start) if st.when else None
+    ends = _stored(st.when.end) if st.when else None
+    return (
+        (row.name or "") != (st.name or "")
+        or _naive(row.starts_at) != _naive(starts)
+        or _naive(row.ends_at) != _naive(ends)
+    )
+
+
 def _upsert[R: (StageRow, GateRow, Outcome, GateField, GateResult, OutcomeValue)](
     session: Session,
     existing: dict[str, R],
@@ -649,10 +660,22 @@ def save(
     kept_gates: set[str] = set()
     kept_outcomes: set[str] = set()
     counts = {"stages": 0, "gates": 0, "outcomes": 0}
+    reverted: list[StageRow] = []
     for position, st in enumerate(built, 1):
         key = stage_key(st)
         kept_stages.add(key)
         counts["stages"] += 1
+        before = stage_rows.get(key)
+        if before is not None and before.status == "published":
+            # Ruling 35: what the page locks on a published stage, the save
+            # refuses too; reverting it to draft is its own audited move.
+            if st.status == "Published" and _changed_locked(before, st):
+                raise Refused(
+                    f"{st.label} is published: revert it to draft to change its name or dates.",
+                    key="published",
+                )
+            if st.status != "Published":
+                reverted.append(before)
         srow = _upsert(
             session,
             stage_rows,
@@ -671,7 +694,7 @@ def save(
             form_closes_at=_stored(st.form_when.end) if st.form and st.form_when else None,
         )
         if st.form and srow.form_state is None:
-            srow.form_state = "draft"
+            srow.form_state = _form_seed(public_id)
         session.flush()
         gate_position = 0
         for c in st.columns:
@@ -744,6 +767,14 @@ def save(
         payload=audit.counts(**counts, retired=retired),
         context={"revision": exercise.process_revision},
     )
+    for row in reverted:
+        audit.write_event(
+            session,
+            event_type="exercise.stage_reverted",
+            actor=actor,
+            exercise=exercise,
+            refs={"stage_id": row.id},
+        )
     return exercise.process_revision
 
 
@@ -875,3 +906,86 @@ def _save_values(
     for key, row in rows.items():
         if key not in set(keys.values()) and row.retired_at is None:
             row.retired_at = at
+
+
+# --- The form's moves (ruling 76) ---------------------------------------------
+
+
+def _form_seed(public_id: str) -> str:
+    """The state a form takes when its stage is first stored: a draft
+    exercise's is a draft; a published one's is open or closed as the
+    exercise had it (the sample's ``form_open``), so a save changes
+    nothing the pages showed."""
+    from applydesk import sample_data
+
+    e = sample_data.exercise(public_id)
+    if e is None or e.state == "Draft":
+        return "draft"
+    return "open" if e.form_open else "closed"
+
+
+#: The form's state on its stage, and the moves Home's next step makes:
+#: only forward, draft to open to closed (ruling 24; reopening is not in
+#: the MVP).
+FORM_MOVES = {"open": "draft", "closed": "open"}
+
+
+def form_state(session: Session, public_id: str) -> str | None:
+    """The stored form's state ("draft", "open" or "closed"), None while
+    the timeline is not stored or holds no form."""
+    exercise = session.scalar(select(Exercise).where(Exercise.public_id == public_id))
+    if exercise is None or exercise.process_revision < 1:
+        return None
+    row = session.scalar(
+        select(StageRow).where(
+            StageRow.exercise_id == exercise.id,
+            StageRow.holds_form.is_(True),
+            StageRow.retired_at.is_(None),
+        )
+    )
+    return row.form_state if row is not None else None
+
+
+def move_form(
+    session: Session, public_id: str, to: str, published: bool, actor: Person | None
+) -> None:
+    """Open or close the application form (ruling 76): ``to`` is "open"
+    or "closed", from the state before it only; opening needs the
+    exercise published (ruling 24). A timeline never saved is recorded
+    first, as Process would save it. Audited; flushed, not committed."""
+    if to not in FORM_MOVES:
+        raise ValueError(to)
+    exercise = _exercise(session, public_id, lock=True)
+    if exercise.archived_at is not None:
+        raise Refused("Archived: restore it to change it.", key="archived")
+    if to == "open" and not published:
+        raise Refused("A draft's form opens once the exercise is published.", key="draft")
+    if exercise.process_revision < 1:
+        save(session, public_id, stages.plan_of(public_id).stages, 0, actor)
+    row = session.scalar(
+        select(StageRow).where(
+            StageRow.exercise_id == exercise.id,
+            StageRow.holds_form.is_(True),
+            StageRow.retired_at.is_(None),
+        )
+    )
+    if row is None:
+        raise Refused("This exercise has no application form.", key="no_form")
+    if (row.form_state or "draft") != FORM_MOVES[to]:
+        said = {"open": "The form is open already.", "closed": "The form is not open."}[to]
+        raise Refused(said, key="form_state")
+    now = _now()
+    row.form_state = to
+    if to == "open":
+        row.form_opened_at = now
+    else:
+        row.form_closed_at = now
+    session.flush()
+    if to == "open":
+        audit.write_event(
+            session, event_type="exercise.form_opened", actor=actor, exercise=exercise
+        )
+    else:
+        audit.write_event(
+            session, event_type="exercise.form_closed", actor=actor, exercise=exercise
+        )
