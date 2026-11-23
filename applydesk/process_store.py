@@ -13,10 +13,15 @@ instead (a value not among a list's options, an outcome read before it
 is decided) is saved as left, and flagged again (``stages.rule_problems``).
 
 Outcome values are rows keyed per outcome (AD-57): rules store their
-keys, so a label renamed is one row changed; the pages keep reading
-labels, which load and save translate. A sample gate's fields and
-sources, read by ``stages.fields_of`` and ``stages.sources_of`` until
-edited, are saved as rows of their own.
+keys, and a value keeps its key while its label stands. The Process page
+edits an outcome's values as one list of labels, so a renamed label is a
+new value (a new key) and the old one is retired; a rule still naming the
+old label is flagged until edited (``stages.rule_problems``). Carrying a
+value's key through a rename waits on a values editor that holds keys
+(Codex on #4154). The pages keep reading labels, which load and save
+translate. A sample gate's fields and sources, read by
+``stages.fields_of`` and ``stages.sources_of`` until edited, are saved as
+rows of their own.
 """
 
 from __future__ import annotations
