@@ -296,14 +296,18 @@ def test_an_application_answers_the_form_s_list_questions() -> None:
     """Ruling 30's form answers: whether one is a current RA, and their
     house, are what the sample knows; the rest seeded."""
     apps = [a for a in sample_data.applications_of(EX) if a.state == "Submitted"]
-    got = [sample_data.answers(EX, a) for a in apps]
+    # Answers are keyed by question (segment AD2D): read them here by label.
+    key = {q.label: k for k, q in sample_data.list_questions(EX).items()}
+    got = [{label: sample_data.answers(EX, a)[k] for label, k in key.items()} for a in apps]
     assert set(got[0]) == {"Year of study", "Faculty", "Currently an RA?", "Residence"}
     ras = {m.email for m in sample_data.CURRENT_RAS}
     assert [g["Currently an RA?"] == "Yes" for g in got] == [a.email in ras for a in apps]
     assert sum(g["Currently an RA?"] == "Yes" for g in got) == 20
     assert all(a.title.endswith(g["Residence"]) for a, g in zip(apps, got, strict=True))
     assert len({g["Faculty"] for g in got}) > 3  # spread, not one
-    assert got == [sample_data.answers(EX, a) for a in apps]  # seeded
+    assert [sample_data.answers(EX, a) for a in apps] == [  # seeded
+        sample_data.answers(EX, a) for a in apps
+    ]
     assert sample_data.answers("n5wg8tjr3e", apps[0]) == {}  # no questions
 
 

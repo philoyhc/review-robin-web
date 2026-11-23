@@ -799,7 +799,7 @@ def scope(plan: Plan, outcome: Outcome) -> tuple[Gate, ...]:
     before it, in column order (author, 2026-11-13)."""
     gates: list[Gate] = []
     for c in plan.columns:
-        if c is outcome:
+        if c.key == outcome.key:  # by key: a keyed plan is built anew (AD2D)
             return tuple(gates)
         gates = [] if isinstance(c, Outcome) else [*gates, c]
     return ()
@@ -973,8 +973,10 @@ def rule_problems(
                 found.append(f"takes the best \u201c{value}\u201d, not a whole number")
             if kind == "form":
                 question = forms.get(key)
-                if question is None:
-                    found.append("reads a question that is not a List question on the form")
+                if question is None and re.fullmatch(r"q[0-9]+", key):
+                    found.append("reads a question no longer on the form")
+                elif question is None:
+                    found.append(f"reads \u201c{key}\u201d, not a List question on the form")
                 elif value not in question.options:
                     found.append(
                         f"reads \u201c{value}\u201d, not among the options of {question.label}"

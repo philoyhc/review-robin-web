@@ -125,7 +125,7 @@ def test_a_rule_naming_a_dropped_question_is_refused(session: Session) -> None:
     plan = stages.plan_of(MODEL)
     o1 = next(c for c in plan.columns if c.key == "o1")
     problems = stages.rule_problems(plan, o1, sample_data.list_questions(MODEL))
-    assert "reads a question that is not a List question on the form" in problems
+    assert "reads a question no longer on the form" in problems
     assert "(removed) is Yes" in stages.rule_text(plan, o1)
     with pytest.raises(process_store.Refused, match="no longer on the form") as why:
         process_store.save(session, MODEL, plan.stages, 0, None)

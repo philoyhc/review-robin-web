@@ -69,7 +69,9 @@ def _server_plan(monkeypatch: pytest.MonkeyPatch) -> None:
             )
             for r in plan.rows
         )
-        return stages.Plan(staged, rows)
+        # Rules set here name a question by label, as one stored before
+        # keys does: keyed as plan_of keys them (segment AD2D).
+        return stages.Plan(stages.form_keyed(staged, exercise_id), rows, exercise_id)
 
     monkeypatch.setattr(stages, "plan_of", plan_of)
 
@@ -500,7 +502,13 @@ def _by_answer(question: str) -> dict[str, list[stages.Row]]:
     groups: dict[str, list[stages.Row]] = {}
     for r in stages.plan_of("wa9juxbc2t").rows:
         if r.application.state == "Submitted":
-            answer = sample_data.answers("wa9juxbc2t", r.application)[question]
+            # Answers are keyed by question (segment AD2D): found by label.
+            key = next(
+                k
+                for k, q in sample_data.list_questions("wa9juxbc2t").items()
+                if q.label == question
+            )
+            answer = sample_data.answers("wa9juxbc2t", r.application)[key]
             groups.setdefault(answer, []).append(r)
     return groups
 
