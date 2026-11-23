@@ -48,9 +48,11 @@ when they are all ticked.
 3. **Not the super-admin.** With Local Operator promoted to Admin in
    sitting 2, restart with `FAKE_AUTH_SUPER_ADMIN=false`: **An Admin's
    view**.
-4. **A fresh database, unseeded.** Stop the server, move `applydesk.db`
-   aside, run `alembic -c applydesk/alembic.ini upgrade head` only:
-   **Unseeded**.
+4. **A fresh database, unseeded.** Stop the server, set
+   `FAKE_AUTH_SUPER_ADMIN` back to `true` (a fresh database keeps no Admin
+   role, and Exercises Diagnostics needs one), move `applydesk.db` aside,
+   run `alembic -c applydesk/alembic.ini upgrade head` only, and start the
+   server: **Unseeded**.
 5. **Seeded for someone else.** On that database, run
    `python -m applydesk.seed --owner pat@example.edu`: **Manage adopts,
    asking first**. Afterwards, restore the moved `applydesk.db` (or
