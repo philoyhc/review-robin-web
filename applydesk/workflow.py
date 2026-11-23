@@ -377,15 +377,20 @@ def sends(exercise_id: str, item: str, audience: str) -> bool:
     """Whether Process has the item ("receipt", "reminder" or an outcome's
     key) email the audience: as Process last recorded its ticks (segment
     AD2L), else the sample's."""
-    from applydesk import email_store
-
-    saved = email_store.stored_sends(exercise_id)
+    saved = _stored_sends(exercise_id)
     if saved is not None:
         return (item, audience) in saved
     return (item, audience) in _SENDS.get(exercise_id, _DEFAULT_SENDS)
 
 
 _TAG = re.compile(r"\$\$|\$(?:([A-Za-z_][A-Za-z0-9_]*)|\{([A-Za-z_][A-Za-z0-9_]*)\})")
+
+
+def _stored_sends(exercise_id: str) -> frozenset[tuple[str, str]] | None:
+    """The ticks Process last recorded (segment AD2L), else None."""
+    from applydesk import email_store
+
+    return email_store.stored_sends(exercise_id)
 
 
 def _stored_templates(exercise_id: str) -> dict[tuple[str, str], Template]:
@@ -427,21 +432,17 @@ def foreign_tags(kind: str, text: str) -> tuple[str, ...]:
     return tuple(out)
 
 
-def template_text(exercise_id: str, email: Email) -> tuple[str, str]:
-    """A card's subject and body as the page opens it: as its card last
-    saved them (segment AD2L); else a sample's written one its kind's
-    default, an owed one (or a scratch exercise's) empty."""
+def template_text(exercise_id: str, email: Email) -> tuple[str, str, int]:
+    """A card's subject, body and version as the page opens it, from one
+    read, so the text and the version a card carries always agree (cold
+    read): as its card last saved them (segment AD2L); else a sample's
+    written one its kind's default, an owed one (or a scratch exercise's)
+    empty, at version 0."""
     own = _stored_templates(exercise_id).get((email.item, email.audience))
     if own is not None:
-        return own.subject, own.body
-    return DEFAULT_TEMPLATES[email.kind] if email.ok else ("", "")
-
-
-def template_version(exercise_id: str, email: Email) -> int:
-    """How many times the card's template was saved: the card sends it
-    back, and a save from a page opened before another is refused."""
-    own = _stored_templates(exercise_id).get((email.item, email.audience))
-    return own.version if own is not None else 0
+        return own.subject, own.body, own.version
+    subject, body = DEFAULT_TEMPLATES[email.kind] if email.ok else ("", "")
+    return subject, body, 0
 
 
 def emails(exercise_id: str) -> tuple[Email, ...]:
@@ -451,6 +452,13 @@ def emails(exercise_id: str) -> tuple[Email, ...]:
     one never saved, as the sample has it (a scratch exercise's, owed)."""
     plan = stages.plan_of(exercise_id)
     stored = _stored_templates(exercise_id)
+    ticked = _stored_sends(exercise_id)  # one read for every item (cold read)
+
+    def ticks(item: str, audience: str) -> bool:
+        if ticked is not None:
+            return (item, audience) in ticked
+        return (item, audience) in _SENDS.get(exercise_id, _DEFAULT_SENDS)
+
     sample: frozenset[tuple[str, str]] = (
         frozenset() if _blank_emails(exercise_id) else _WRITTEN.get(exercise_id, frozenset())
     )
@@ -463,14 +471,14 @@ def emails(exercise_id: str) -> tuple[Email, ...]:
     for st in plan.stages:
         if st.form:
             for item, (what, when) in _FORM_MAIL.items():
-                if sends(exercise_id, item, APPLICANTS):
+                if ticks(item, APPLICANTS):
                     name = f"{st.label}: {what} · {APPLICANTS}"
                     ok = is_written((item, APPLICANTS))
                     out.append(Email(name, when, ok, item, APPLICANTS))
         for c in st.columns:
             if isinstance(c, stages.Outcome):
                 for who in (APPLICANTS, EVALUATORS):
-                    if sends(exercise_id, c.key, who):
+                    if ticks(c.key, who):
                         name = f"{st.label}: Outcome · {who}"
                         when = f"When {c.label} is released"
                         out.append(Email(name, when, is_written((c.key, who)), c.key, who))

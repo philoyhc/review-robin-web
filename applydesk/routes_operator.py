@@ -468,7 +468,7 @@ def _details(v: dict[str, Any]) -> dict[str, Any]:
 
 #: What a scratch post past ``scratch.MAX_BODY`` is told (cold read: the
 #: plan's "past a limit the page says so").
-_TOO_LARGE = "Not saved: a page posts at most 256 KiB to a scratch exercise."
+_TOO_LARGE = "Not saved: a page posts at most 256 KiB."
 
 
 async def _page_json(request: Request) -> Any:
@@ -583,8 +583,8 @@ def _save_form(request: Request, exercise_id: str, sent: Any) -> Response:
 async def exercise_process_save(request: Request, exercise_id: str) -> Response:
     """Process's *Save* (segment AD1N rung 4; every exercise since AD2C):
     its stages, gates and outcomes and their rules, kept in the database
-    (`process_store.save`); the emails each item ticks, kept for this
-    browser on a scratch exercise until Emails is stored."""
+    (`process_store.save`), and the emails each item ticks
+    (`email_store.save_sends`, segment AD2L)."""
     sent = await _page_json(request)
     return await run_in_threadpool(_save_process, request, exercise_id, sent)
 
@@ -947,6 +947,8 @@ def _save_email(request: Request, exercise_id: str, sent: Any) -> Response:
         or not isinstance(body, str)
         or not isinstance(version, int)
         or isinstance(version, bool)
+        or not isinstance(opened, int)
+        or isinstance(opened, bool)
     ):
         return JSONResponse({"error": "The email is malformed."}, status_code=400)
 
@@ -993,6 +995,10 @@ def _save_email(request: Request, exercise_id: str, sent: Any) -> Response:
     except email_store.Refused as why:
         session.rollback()
         return JSONResponse({"error": str(why)}, status_code=409 if why.key == "stale" else 400)
+    except panels_store.Refused as why:
+        # The exercise deleted after the page's lookup (cold read).
+        session.rollback()
+        return JSONResponse({"error": str(why)}, status_code=400)
     except (IntegrityError, OperationalError) as error:
         # Two first saves of one template can meet on its unique index.
         session.rollback()
@@ -1810,7 +1816,6 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         tag_rows=workflow.tag_rows(owed),
         email_defaults=workflow.DEFAULT_TEMPLATES,
         email_text=functools.partial(workflow.template_text, exercise.public_id),
-        email_version=functools.partial(workflow.template_version, exercise.public_id),
         process_revision=workflow.process_revision(exercise.public_id),
         email_fields=workflow.EMAIL_FIELDS,
         tag_help=workflow.TAG_HELP,

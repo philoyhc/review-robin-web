@@ -148,7 +148,15 @@ def test_a_sample_s_card_saves_and_the_page_and_status_follow() -> None:
     assert stale.status_code == 409
     # The sample's other written cards keep their default.
     written = next(e for e in workflow.emails(MODEL) if e.ok and e.name != owed.name)
-    assert workflow.template_text(MODEL, written) == workflow.DEFAULT_TEMPLATES[written.kind]
+    assert workflow.template_text(MODEL, written) == (*workflow.DEFAULT_TEMPLATES[written.kind], 0)
+    # The card's text and version come from one read: saved, then version 1.
+    assert workflow.template_text(MODEL, owed) == (
+        "$exercise_name: news",
+        "Dear $applicant_name,",
+        1,
+    )
+    # A boolean revision is refused, not read as 1 (cold read).
+    assert client.post(page, json={**card, "revision": True}).status_code == 400
 
 
 def test_recorded_ticks_replace_the_sample_s(session: Session) -> None:

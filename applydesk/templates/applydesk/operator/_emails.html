@@ -15,7 +15,7 @@
 {% for e in emails %}
 {% set sample = email_sample(e) %}
 {% set t = email_text(e) %}
-<section class="card em-card" id="{{ e.anchor }}" data-email="{{ e.name }}" data-em-item="{{ e.item }}" data-em-audience="{{ e.audience }}" data-em-kind="{{ e.kind }}" data-em-version="{{ email_version(e) }}" data-em-sample="{{ sample | tojson | forceescape }}">
+<section class="card em-card" id="{{ e.anchor }}" data-email="{{ e.name }}" data-em-item="{{ e.item }}" data-em-audience="{{ e.audience }}" data-em-kind="{{ e.kind }}" data-em-version="{{ t[2] }}" data-em-sample="{{ sample | tojson | forceescape }}">
   <h2>{{ e.name }} <span class="chip chip-{{ 'ok' if e.ok else 'warn' }}" data-em-chip>{{ "Written" if e.ok else "Owed" }}</span></h2>
   {# Back to what ticks it on Process (ruling 65): the form's card or the outcome's. #}
   <p class="muted em-help">{{ e.when }} · <a href="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process') }}#{{ e.process_anchor }}" data-em-process>Set on Process →</a></p>
@@ -56,9 +56,9 @@
 <script type="application/json" id="em-fields">{{ email_fields | tojson }}</script>
 <script>
 (function () {
-  // Segment AD1L: each card a template that stands alone. Save keeps it in
-  // this tab; Written once it has a subject and a body. Leaving with a
-  // card unsaved asks first.
+  // Segment AD1L: each card a template that stands alone. Save keeps it for
+  // the exercise (segment AD2L); Written once it has a subject and a body.
+  // Leaving with a card unsaved asks first.
   var root = document.querySelector("[data-emails]");
   var DEFAULTS = JSON.parse(document.getElementById("em-defaults").textContent);
   var FIELDS = JSON.parse(document.getElementById("em-fields").textContent);
@@ -245,7 +245,13 @@
         body: JSON.stringify({ item: c.dataset.emItem, audience: c.dataset.emAudience, name: c.dataset.email, revision: Number(root.dataset.emRevision), version: Number(c.dataset.emVersion || 0), subject: sentS, body: sentB }) })
         .then(function (r) { return r.json().then(function (got) { return [r.ok, got]; }, function () { return [false, null]; }); })
         .then(function (got) {
-          if (!got[0]) { draw(c); said.textContent = (got[1] && got[1].detail) || ("Not saved: " + ((got[1] && got[1].error) || "the server refused it.")); return; }
+          if (!got[0]) {
+            draw(c);
+            // A refusal that says "Not saved" itself is shown as it is (cold read).
+            var err = (got[1] && got[1].error) || "the server refused it.";
+            said.textContent = (got[1] && got[1].detail) || (/^Not saved/.test(err) ? err : "Not saved: " + err);
+            return;
+          }
           // The version the save made: this card's next Save carries it.
           if (got[1] && typeof got[1].version === "number") c.dataset.emVersion = String(got[1].version);
           c.savedS = sentS; c.savedB = sentB;
