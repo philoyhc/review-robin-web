@@ -13,7 +13,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from applydesk import db, form_store, sample_data
+from applydesk import db, form_store, panels_store, sample_data
 from applydesk.form_store import Refused
 from applydesk.models import AuditEvent, Exercise
 from applydesk.models import FormCard as CardRow
@@ -153,3 +153,22 @@ def test_a_page_s_new_panel_is_named_by_its_stored_key() -> None:
         {"new-1": "panel-7"},
     )
     assert form["cards"][0]["pool"] == "panel-7"
+
+
+def test_publication_is_read_under_the_lock(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex on #4176: a stage published by a Process save landing before
+    the lock is seen, so the save is refused."""
+    seen: list[str] = []
+    real = panels_store.lock
+    monkeypatch.setattr(panels_store, "lock", lambda s, p: (seen.append("lock"), real(s, p))[1])
+
+    def published() -> bool:
+        seen.append("published")
+        return True
+
+    form = form_store.parse({"title": "", "description": "", "cards": []}, POOLS, {})
+    with pytest.raises(Refused):
+        form_store.save(session, MODEL, form, 0, None, published=published)
+    assert seen == ["lock", "published"]
