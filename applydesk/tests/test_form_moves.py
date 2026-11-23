@@ -16,6 +16,7 @@ from sqlalchemy import select
 from applydesk import db, process_store, stages, workflow
 from applydesk.lookups import exercise_or_404
 from applydesk.models import AuditEvent
+from applydesk.models import Stage as StageRow
 from applydesk.process_store import Refused
 from applydesk.tests._host import host_with
 
@@ -180,6 +181,10 @@ def test_the_form_keeps_its_state_when_it_moves_stage() -> None:
         process_store.save(session, OPEN, moved, stored.revision, None)
         session.commit()
         assert process_store.form_state(session, OPEN) == "closed"
+        holder = session.scalar(
+            select(StageRow).where(StageRow.holds_form.is_(True), StageRow.retired_at.is_(None))
+        )
+        assert holder is not None and holder.form_closed_at is not None  # moved with it
     finally:
         session.close()
 

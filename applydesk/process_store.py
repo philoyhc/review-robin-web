@@ -693,11 +693,12 @@ def save(
     kept_outcomes: set[str] = set()
     counts = {"stages": 0, "gates": 0, "outcomes": 0}
     reverted: list[tuple[StageRow, str]] = []
-    # The form's state goes with it to another stage (the cold read): a
-    # move is not a reopening.
+    # The form's state, and when it opened and closed, go with it to
+    # another stage (the cold read; Codex on #4161): a move is not a
+    # reopening.
     form_was = next(
         (
-            r.form_state
+            (r.form_state, r.form_opened_at, r.form_closed_at)
             for r in stage_rows.values()
             if r.holds_form and r.retired_at is None and r.form_state
         ),
@@ -741,8 +742,10 @@ def save(
             form_opens_at=_stored(st.form_when.start) if st.form and st.form_when else None,
             form_closes_at=_stored(st.form_when.end) if st.form and st.form_when else None,
         )
-        if st.form:
-            srow.form_state = form_was or srow.form_state or _form_seed(public_id)
+        if st.form and form_was is not None:
+            srow.form_state, srow.form_opened_at, srow.form_closed_at = form_was
+        elif st.form:
+            srow.form_state = srow.form_state or _form_seed(public_id)
         session.flush()
         gate_position = 0
         for c in st.columns:
