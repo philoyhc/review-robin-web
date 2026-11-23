@@ -275,3 +275,36 @@ def test_reset_refuses_a_database_off_this_machine(
     )
     assert main(["--reset"]) == 2
     assert "localhost" in capsys.readouterr().err
+
+
+@pytest.mark.usefixtures("applydesk_db")
+def test_reset_survives_data_old_constraints_forbid(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex on #4188: an exercise with two Owners (`operators.adopt` allows
+    it) would stop a downgrade at `ad2m2`'s one-Owner index; the reset drops
+    the tables instead, so it still empties and reseeds."""
+    from applydesk.models import ExerciseOperator
+
+    _fresh(tmp_path, monkeypatch)
+    assert main(["--blank", "1"]) == 0
+    session = db.new_session()
+    try:
+        exercise = session.scalars(select(Exercise)).first()
+        assert exercise is not None
+        from applydesk import people
+
+        other = people.pending(session, "two@x.edu", actor=None)
+        session.flush()
+        session.add(ExerciseOperator(exercise_id=exercise.id, person_id=other.id, is_owner=True))
+        session.commit()
+    finally:
+        session.close()
+    assert main(["--reset"]) == 0
+    session = db.new_session()
+    try:
+        assert session.scalar(select(func.count()).select_from(Exercise)) == len(
+            sample_data.EXERCISES
+        )
+    finally:
+        session.close()
