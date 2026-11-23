@@ -12,6 +12,68 @@ auth). Most need the samples loaded first:
 `alembic -c applydesk/alembic.ini upgrade head`, then
 `python -m applydesk.seed`.
 
+## Run order (2026-11-23)
+
+The sections below, grouped by the setup each needs, so each setup is
+made once. Tick rows in their own sections as they pass; this section goes
+when they are all ticked.
+
+1. **Seeded, as the super-admin** (`.env` as `docs/local_setup.md`; then
+   `alembic -c applydesk/alembic.ini upgrade head` and
+   `python -m applydesk.seed`). Most rows:
+   - *Admin's layout*; *Owners on record*; *Details saved, and one way of
+     writing dates* (RA-2027, the Graduate Travel Grant).
+   - *The Lobby wired, and the Archive*: Delete last, on a scratch
+     exercise made with *New exercise*.
+   - *Process: Candidates, the form's moves, published stages and outcome
+     values*, on RA-2027 and the samples it names.
+   - *Home's timeline*, *Hovers, tables and empty states*: a pass of
+     every operator page at 1300px and 390px, light and dark, in one go.
+   - *Owners and operators*, **Your role**, **The panel** and **Archived is
+     read-only**: these need no second person.
+2. **A second person.** Restart with `FAKE_AUTH_EMAIL=jane.tan@example.edu`
+   and `FAKE_AUTH_NAME=Jane Tan` and load the Lobby once (Jane has now
+   signed in); restart as Local Operator. On Accounts Management, add
+   `jane.tan@example.edu` as an operator, then on RA-2027's Home, *Add
+   operator* Jane. Then:
+   - *Owners and operators*: **The card**, **Make Owner, then Step down**,
+     **Leave**, **Transfer**. Do Transfer on a scratch exercise, since it
+     makes Jane the only Owner.
+   - *Admins and adopting*: **Promote and Demote**, **Revoke skips an
+     Admin** (on Jane).
+3. **Not the super-admin.** With Local Operator promoted to Admin in
+   sitting 2, restart with `FAKE_AUTH_SUPER_ADMIN=false`: **An Admin's
+   view**.
+4. **A fresh database, unseeded.** Stop the server, move `applydesk.db`
+   aside, run `alembic -c applydesk/alembic.ini upgrade head` only:
+   **Unseeded**.
+5. **Seeded for someone else.** On that database, run
+   `python -m applydesk.seed --owner pat@example.edu`: **Manage adopts,
+   asking first**. Afterwards, restore the moved `applydesk.db` (or
+   re-seed) for everyday use.
+
+## Process: Candidates, the form's moves, published stages and outcome values (AD2C: #4158, #4161)
+
+- [ ] **The form's move on Home.** A draft exercise's *Open form* is
+  disabled and says why. On `r6tm4kq9wz` (form open), *Close form* closes
+  it and Home says so. Publish a draft exercise's first stage on Process,
+  save, and its Home's *Open form* is enabled.
+- [ ] **Candidates.** On a stage holding Candidates, the search finds
+  someone and *Add* lists them; *Remove* takes them off (two in a row
+  both go); a CSV adds its good rows and lists the rest. None of it marks
+  Process unsaved. The Outline names the item *Candidates*.
+- [ ] **Candidates moved and replicated.** *Take Candidates off this
+  stage*, then *+ Candidates* on another draft stage: the list is as it
+  stands. *Replicate* a stage holding Candidates: the copy has none.
+- [ ] **Published stages.** Extend a published stage's *Ends* and save: it
+  saves. *Revert to draft* asks for a reason; after saving, its name and
+  start are editable.
+- [ ] **Outcome values.** Values show one row each with *Remove* and
+  *+ Value*. Rename one a rule names: the rule line and any later rule
+  reading it follow, with no warning. Swap two labels (each typed into the
+  other's row): the decisions swap with them. Save and reload: values and
+  rules are as left.
+
 
 ## Admin's layout (AD1U Item 1)
 
