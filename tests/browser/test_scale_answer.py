@@ -608,6 +608,9 @@ def test_band_3_scale_row_keeps_its_controls_on_one_line(
     page.set_viewport_size({"width": 1500, "height": 1100})
     card = open_unlocked(page, session_id)
     rating = rows(card).first
+    type_box = rating.locator("[data-new-model-rf-data-type]").bounding_box()
+    assert type_box
+    type_width = type_box["width"]
     rating.locator("[data-new-model-rf-data-type]").select_option(label="Integer (scale)")
 
     def box(sel: str) -> FloatRect:
@@ -615,6 +618,17 @@ def test_band_3_scale_row_keeps_its_controls_on_one_line(
         assert b is not None
         return b
 
+    # The scale line never squeezes the Type menu (author, 2026-11-24):
+    # it keeps the width it had before the switch, with long labels and
+    # at narrower windows too.
+    rating.locator('[data-new-model-rf-scale-label="start"]').fill("Not familiar")
+    rating.locator('[data-new-model-rf-scale-label="middle"]').fill("Some observations")
+    rating.locator('[data-new-model-rf-scale-label="end"]').fill("Worked together")
+    for width in (1500, 1100, 900):
+        page.set_viewport_size({"width": width, "height": 1100})
+        menu = rating.locator("[data-new-model-rf-data-type]").bounding_box()
+        assert menu and abs(menu["width"] - type_width) <= 1, width
+    page.set_viewport_size({"width": 1500, "height": 1100})
     top = box('[data-new-model-rf-bound="min"]')["y"]
     for sel in (
         "[data-new-model-rf-name]",
