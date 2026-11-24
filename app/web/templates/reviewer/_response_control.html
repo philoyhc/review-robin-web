@@ -70,6 +70,8 @@
          step="any"
          {% if validation.step is defined %}data-rs-step="{{ validation.step }}"{% elif data_type == "Integer" and (validation.min is not defined or validation.min == validation.min|int) %}data-rs-step="1"{% endif %}
          {% if validation.min is defined %}data-rs-step-anchor="{{ validation.min }}"{% endif %}
+         {# Segment 20P — a scale: ``reviewer/_scale_js.html`` draws it over this box. #}
+         {% if validation.scale %}data-rs-scale{% set scale_labels = validation.scale_labels or [] %}{% for part in ("start", "middle", "end") %}{% if scale_labels[loop.index0] %} data-rs-scale-{{ part }}="{{ scale_labels[loop.index0] }}"{% endif %}{% endfor %}{% endif %}
          {% if cell.placeholder %}title="{{ cell.placeholder }}"{% endif %}
          {{ disabled_attr }}>
 {% elif data_type == "List" %}

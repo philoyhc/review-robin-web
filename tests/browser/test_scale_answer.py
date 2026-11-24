@@ -9,9 +9,17 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 
+import httpx
 from playwright.sync_api import Page, expect
 
-from .conftest import app_url
+from ._builder import (
+    REVIEWER_EMAIL,
+    activate,
+    branch_rating,
+    make_rating_a_scale,
+    seed_rosters,
+)
+from .conftest import LiveServer, app_url
 
 _PREVIEW = "/operator/sys-admin/scale-preview"
 
@@ -133,3 +141,190 @@ def test_each_scale_sits_in_a_column_that_resizes_down_to_its_minimum(page: Page
     # And it still answers.
     widget.locator(".sc-stop").nth(2).click(force=True)
     expect(page.locator('input[name="p1"]')).to_have_value("3")
+
+
+def test_a_scale_field_on_the_reviewer_surface_saves_what_it_shows(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Rung 3a: a field set to a scale draws one on the reviewer surface;
+    a click there marks the page unsaved, Save keeps the value, and the
+    reload draws the circle where it was left."""
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    make_rating_a_scale(live_server.database_url, session_id)
+    activate(api, live_server.database_url, session_id)
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 1400, "height": 1000})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    widget = reviewer.locator('[data-rs-scale-widget="snap"]').first
+    expect(widget.locator(".sc-stop")).to_have_count(5)
+    expect(widget.locator(".sc-label")).to_have_text(["Poor", "", "Excellent"])
+    widget.locator(".sc-stop").nth(3).click(force=True)
+    box = reviewer.locator("[name^='response['][name$='][rating]']")
+    expect(box).to_have_value("4")
+    with reviewer.expect_response(lambda r: r.request.method == "POST"):
+        reviewer.locator("[data-rs-save]:visible").first.click()
+    reviewer.wait_for_load_state()
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    widget = reviewer.locator('[data-rs-scale-widget="snap"]').first
+    expect(widget.get_by_role("slider")).to_have_attribute("aria-valuenow", "4")
+
+
+def test_a_governed_scale_follows_its_branch(
+    page: Page,
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """A scale whose box a branch disables and enables after load (Codex
+    on #4193): closed it takes no input, open it answers, and closed
+    again it stops."""
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    branch_rating(page, session_id)  # "Why" opens at Rating >= 4
+    make_rating_a_scale(live_server.database_url, session_id, "", label="Why")
+    activate(api, live_server.database_url, session_id)
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 1400, "height": 1000})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    rating = reviewer.locator("[name^='response['][name$='][rating]']")
+    why = reviewer.locator("[name^='response['][name$='][why]']")
+    widget = reviewer.locator('[data-rs-scale-widget="snap"]').first
+    thumb = widget.get_by_role("slider")
+    expect(widget).to_have_class(re.compile(r"\bsc-off\b"))
+    expect(thumb).to_have_attribute("aria-disabled", "true")
+    widget.locator(".sc-stop").nth(1).click(force=True)
+    expect(why).to_have_value("")
+
+    rating.fill("5")
+    expect(why).to_be_enabled()
+    expect(widget).not_to_have_class(re.compile(r"\bsc-off\b"))
+    expect(widget.locator(".sc-clear")).to_be_enabled()
+    widget.locator(".sc-stop").nth(1).click(force=True)
+    expect(why).to_have_value("2")
+
+    rating.fill("2")
+    expect(why).to_be_disabled()
+    expect(thumb).to_have_attribute("aria-disabled", "true")
+    thumb.press("ArrowRight", timeout=2000)
+    expect(why).to_have_value("2")
+
+
+def test_a_tiny_decimal_step_keeps_its_places(page: Page) -> None:
+    """A step JavaScript writes in scientific notation (``1e-7``) still
+    numbers its stops and answers to seven places (Codex on #4193)."""
+    _open(page)
+    page.evaluate(
+        """() => {
+          const box = document.createElement("input");
+          box.type = "number"; box.name = "tiny"; box.min = "0"; box.max = "0.000001";
+          box.dataset.rsStep = "1e-7"; box.setAttribute("data-rs-scale", "");
+          const cell = document.createElement("div"); cell.id = "tiny-cell";
+          cell.appendChild(box); document.body.appendChild(cell);
+          window.rrwScaleEnhance(cell);
+        }"""
+    )
+    widget = page.locator("#tiny-cell [data-rs-scale-widget='snap']")
+    expect(widget.locator(".sc-num").nth(3)).to_have_text("0.0000003")
+    widget.get_by_role("slider").press("End")
+    expect(page.locator('input[name="tiny"]')).to_have_value("0.0000010")
+
+
+def test_a_narrow_saved_column_widens_to_hold_its_scale(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Codex on #4193: a column sized for a number box (here a saved
+    60px width, which makes the table fixed-layout) widens to the
+    scale's minimum rather than letting it paint over the next cell."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument, InstrumentResponseField
+
+    from ._builder import session_pk
+
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    make_rating_a_scale(live_server.database_url, session_id)
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(
+                    Instrument.session_id == session_pk(live_server.database_url, session_id)
+                )
+            ).scalar_one()
+            rating = db.execute(
+                select(InstrumentResponseField).where(
+                    InstrumentResponseField.instrument_id == instrument.id,
+                    InstrumentResponseField.label == "Rating",
+                )
+            ).scalar_one()
+            instrument.column_widths = {f"rf_{rating.id}": 60}
+            db.commit()
+    finally:
+        engine.dispose()
+    activate(api, live_server.database_url, session_id)
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 1400, "height": 1000})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    widget = reviewer.locator('[data-rs-scale-widget="snap"]').first
+    expect(widget).to_be_visible()
+    cell = widget.locator("xpath=ancestor::td[1]")
+    next_cell = cell.locator("xpath=following-sibling::td[1]")
+    w, c, n = widget.bounding_box(), cell.bounding_box(), next_cell.bounding_box()
+    assert w is not None and c is not None and n is not None
+    assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
+    assert w["x"] + w["width"] <= n["x"] + 1
+
+
+def test_a_stacked_scale_stays_inside_its_cell_with_saved_widths(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Codex on #4193: a stacked cell with a saved 150px label track and
+    a 60px input track grows the input track and the cell to hold the
+    scale, rather than letting it run into the next column."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument
+
+    from ._builder import session_pk
+
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    make_rating_a_scale(live_server.database_url, session_id)
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(
+                    Instrument.session_id == session_pk(live_server.database_url, session_id)
+                )
+            ).scalar_one()
+            instrument.response_layout = "stacked"
+            instrument.column_widths = {"stack_label": 150, "stack_input": 60}
+            db.commit()
+    finally:
+        engine.dispose()
+    activate(api, live_server.database_url, session_id)
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 1400, "height": 1000})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    widget = reviewer.locator(".rs-stack-fields [data-rs-scale-widget]").first
+    expect(widget).to_be_visible()
+    cell = widget.locator("xpath=ancestor::td[1]")
+    w, c = widget.bounding_box(), cell.bounding_box()
+    assert w is not None and c is not None
+    assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
+    assert w["width"] >= int(widget.get_attribute("data-rs-scale-min") or "0") - 1

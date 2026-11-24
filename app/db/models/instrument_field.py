@@ -13,6 +13,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql.expression import false as sa_false
 
 from app.db.base import Base
 
@@ -102,6 +103,13 @@ class InstrumentResponseField(Base):
     _inline_max: Mapped[float | None] = mapped_column("max", Float, nullable=True)
     _inline_step: Mapped[float | None] = mapped_column("step", Float, nullable=True)
     _inline_list_csv: Mapped[str | None] = mapped_column("list_csv", Text, nullable=True)
+    # Segment 20P Item 1 — an Integer or Decimal field answered as a scale
+    # (a mode, not a type: ``data_type`` is unchanged). ``scale_labels`` is
+    # ``start|middle|end``, any part blank. Both feed ``validation``.
+    scale: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=sa_false(), nullable=False
+    )
+    scale_labels: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     instrument: Mapped[Instrument] = relationship(back_populates="response_fields")
     responses: Mapped[list[Response]] = relationship(
