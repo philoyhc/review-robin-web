@@ -323,3 +323,76 @@ def test_a_tiny_decimal_step_keeps_its_places(page: Page) -> None:
     expect(widget.locator(".sc-num").nth(3)).to_have_text("0.0000003")
     widget.get_by_role("slider").press("End")
     expect(page.locator('input[name="tiny"]')).to_have_value("0.0000010")
+
+
+def test_a_scale_governs_a_branch(
+    page: Page,
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """A scale is its number box's mode, so as a parent it opens and
+    closes its branch as the box does."""
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    branch_rating(page, session_id)  # "Why" opens at Rating >= 4
+    make_rating_a_scale(live_server.database_url, session_id)
+    activate(api, live_server.database_url, session_id)
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 1400, "height": 1000})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    why = reviewer.locator("[name^='response['][name$='][why]']")
+    widget = reviewer.locator('[data-rs-scale-widget="snap"]').first
+    expect(why).to_be_disabled()
+    widget.locator(".sc-stop").nth(4).click(force=True)
+    expect(why).to_be_enabled()
+    widget.get_by_role("slider").press("Home")
+    expect(why).to_be_disabled()
+
+
+def test_stacked_scales_take_the_widest_ones_width(
+    page: Page,
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """The author's ask (2026-11-24): in the stacked layout every scale
+    takes the widest scale's width, so their lines line up."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument
+
+    from ._builder import session_pk
+
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    branch_rating(page, session_id, op="ge", value="1")  # "Why", open from 1
+    make_rating_a_scale(live_server.database_url, session_id)
+    long_words = "Not convincing in the least||Convincing beyond any doubt"
+    make_rating_a_scale(live_server.database_url, session_id, long_words, label="Why")
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(
+                    Instrument.session_id == session_pk(live_server.database_url, session_id)
+                )
+            ).scalar_one()
+            instrument.response_layout = "stacked"
+            db.commit()
+    finally:
+        engine.dispose()
+    activate(api, live_server.database_url, session_id)
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 1600, "height": 1000})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    scales = reviewer.locator(".rs-stack-fields [data-rs-scale-widget]")
+    expect(scales).to_have_count(2)
+    mins = [int(scales.nth(i).get_attribute("data-rs-scale-min") or "0") for i in range(2)]
+    assert mins[0] != mins[1]  # the labels make one wider than the other
+    widths = [scales.nth(i).evaluate("w => w.getBoundingClientRect().width") for i in range(2)]
+    assert abs(widths[0] - widths[1]) < 1
+    assert abs(widths[0] - max(mins)) < 1
