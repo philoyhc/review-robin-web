@@ -226,6 +226,9 @@ def set_band2_state(
                 rf["selected"] = bool(raw.get("selected"))
                 rf["required"] = bool(raw.get("required"))
                 rf["help_text_visible"] = bool(raw.get("help_text_visible"))
+                # Segment 20P — the scale mode and its three labels.
+                rf["scale"] = bool(raw.get("scale")) and data_type in ("integer", "decimal")
+                rf["scale_labels"] = str(raw.get("scale_labels") or "")[:255]
                 help_text_raw = raw.get("help_text")
                 rf["help_text"] = str(help_text_raw)[:1000] if help_text_raw is not None else ""
                 rf.update(_band2_branch_entry(raw))
@@ -387,6 +390,8 @@ _RESPONSE_FIELD_ATTRS: tuple[str, ...] = (
     "_inline_max",
     "_inline_step",
     "_inline_list_csv",
+    "scale",
+    "scale_labels",
     "validation",
 )
 
@@ -603,6 +608,14 @@ def _validate_response_field_shape(rf: dict[str, Any]) -> str | None:
             and step > (max_ - min_) + 1e-9
         ):
             return "Step must be at most (Max − Min) so the field has at least two valid values."
+        if rf.get("scale"):
+            # Segment 20P — a scale needs its whole shape (Band 3 shows
+            # the same reasons on the row).
+            from app.services.instruments._response_fields import scale_shape_error
+
+            if step is None and data_type == "integer" and _is_whole_or_blank(min_):
+                step = INTEGER_DEFAULT_STEP  # a blank Integer Step saves as 1
+            return scale_shape_error(data_type.capitalize(), min_, max_, step)
         return None
     if data_type == "string":
         max_ = _band2_parse_float(rf.get("max"))
@@ -704,6 +717,8 @@ def _sync_response_fields_to_db(
         ResponseFieldDropAcknowledgementRequired,
         ResponseFieldShapeChangeError,
         ResponsesPresentError,
+        join_scale_labels,
+        parse_scale_labels,
         validation_block_from_inline,
     )
 
@@ -906,6 +921,10 @@ def _sync_response_fields_to_db(
         field._inline_max = new_max
         field._inline_step = new_step
         field._inline_list_csv = new_list_csv
+        # Segment 20P — a mode, not a shape: switching it changes no
+        # answer's validity, so it skips the responses guard above.
+        field.scale = bool(rf.get("scale"))
+        field.scale_labels = join_scale_labels(parse_scale_labels(rf.get("scale_labels")))
         # The reviewer surface reads ``cell.field.validation`` (JSON
         # column) for ``max_length`` / numeric ``min`` / ``max`` /
         # ``step`` / List ``choices`` — separate from the inline
@@ -918,6 +937,8 @@ def _sync_response_fields_to_db(
             new_max,
             new_step,
             new_list_csv,
+            field.scale,
+            field.scale_labels,
         )
 
     # Delete rows whose ids were in the *previous* JSON state but
@@ -1235,8 +1256,19 @@ def replace_response_fields(
         field._inline_max = entry["max"]
         field._inline_step = entry["step"]
         field._inline_list_csv = entry["list_csv"]
+        # Segment 20P — an entry that says nothing of the scale (the
+        # Settings import before rung 4) keeps the stored one.
+        if "scale" in entry:
+            field.scale = bool(entry["scale"])
+            field.scale_labels = entry.get("scale_labels")
         field.validation = validation_block_from_inline(
-            entry["data_type"], entry["min"], entry["max"], entry["step"], entry["list_csv"]
+            entry["data_type"],
+            entry["min"],
+            entry["max"],
+            entry["step"],
+            entry["list_csv"],
+            bool(field.scale),  # None on a field not yet flushed
+            field.scale_labels,
         )
     if widths != (instrument.column_widths or {}):
         instrument.column_widths = widths or None

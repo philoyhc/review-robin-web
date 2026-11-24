@@ -554,6 +554,8 @@ def replicate_instrument(
             _inline_max=field._inline_max,
             _inline_step=field._inline_step,
             _inline_list_csv=field._inline_list_csv,
+            scale=field.scale,
+            scale_labels=field.scale_labels,
             branch_op=field.branch_op,
             branch_value=field.branch_value,
             branch_mode=field.branch_mode,

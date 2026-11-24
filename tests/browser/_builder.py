@@ -248,3 +248,33 @@ def set_comments_max(database_url: str, session_id: str, max_length: int) -> Non
             db.commit()
     finally:
         engine.dispose()
+
+
+def make_rating_a_scale(
+    database_url: str, session_id: str, labels: str = "Poor||Excellent"
+) -> None:
+    """The seeded Rating field (Integer 1–5) answered as a scale (segment
+    20P), written directly, both stores as the card's Save writes them."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument, InstrumentResponseField
+    from app.services.instruments._response_fields import validation_block_from_inline
+
+    engine = create_engine(database_url)
+    try:
+        with Session(engine) as db:
+            field = db.execute(
+                select(InstrumentResponseField)
+                .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
+                .where(
+                    Instrument.session_id == session_pk(database_url, session_id),
+                    InstrumentResponseField.label == "Rating",
+                )
+            ).scalar_one()
+            field._inline_min, field._inline_max, field._inline_step = 1.0, 5.0, 1.0
+            field.scale, field.scale_labels = True, labels
+            field.validation = validation_block_from_inline("Integer", 1, 5, 1, None, True, labels)
+            db.commit()
+    finally:
+        engine.dispose()

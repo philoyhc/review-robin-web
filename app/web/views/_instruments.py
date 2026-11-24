@@ -816,6 +816,9 @@ def _new_model_band2_state(
             "max": "" if rf._inline_max is None else _format_band2_bound(rf._inline_max),
             "step": "" if rf._inline_step is None else _format_band2_bound(rf._inline_step),
             "list_options": rf._inline_list_csv or "",
+            # Segment 20P — the scale mode and its ``start|middle|end`` labels.
+            "scale": rf.scale,
+            "scale_labels": rf.scale_labels or "",
             "selected": rf.visible,
             "required": rf.required,
             "help_text": rf.help_text or "",

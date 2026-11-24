@@ -9,9 +9,11 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 
+import httpx
 from playwright.sync_api import Page, expect
 
-from .conftest import app_url
+from ._builder import REVIEWER_EMAIL, activate, make_rating_a_scale, seed_rosters
+from .conftest import LiveServer, app_url
 
 _PREVIEW = "/operator/sys-admin/scale-preview"
 
@@ -133,3 +135,33 @@ def test_each_scale_sits_in_a_column_that_resizes_down_to_its_minimum(page: Page
     # And it still answers.
     widget.locator(".sc-stop").nth(2).click(force=True)
     expect(page.locator('input[name="p1"]')).to_have_value("3")
+
+
+def test_a_scale_field_on_the_reviewer_surface_saves_what_it_shows(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Rung 3a: a field set to a scale draws one on the reviewer surface;
+    a click there marks the page unsaved, Save keeps the value, and the
+    reload draws the circle where it was left."""
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    make_rating_a_scale(live_server.database_url, session_id)
+    activate(api, live_server.database_url, session_id)
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 1400, "height": 1000})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    widget = reviewer.locator('[data-rs-scale-widget="snap"]').first
+    expect(widget.locator(".sc-stop")).to_have_count(5)
+    expect(widget.locator(".sc-label")).to_have_text(["Poor", "", "Excellent"])
+    widget.locator(".sc-stop").nth(3).click(force=True)
+    box = reviewer.locator("[name^='response['][name$='][rating]']")
+    expect(box).to_have_value("4")
+    with reviewer.expect_response(lambda r: r.request.method == "POST"):
+        reviewer.locator("[data-rs-save]:visible").first.click()
+    reviewer.wait_for_load_state()
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    widget = reviewer.locator('[data-rs-scale-widget="snap"]').first
+    expect(widget.get_by_role("slider")).to_have_attribute("aria-valuenow", "4")

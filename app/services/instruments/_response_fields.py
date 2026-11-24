@@ -141,12 +141,61 @@ def _validation_block_from_default_spec(
     return None
 
 
+#: The most points a scale snaps at; past this it slides (segment 20P).
+SCALE_SNAP_MAX = 11
+#: A scale label's longest text, each of the three.
+SCALE_LABEL_MAX = 60
+
+
+def scale_shape_error(
+    data_type: str | None, min_: float | None, max_: float | None, step: float | None
+) -> str | None:
+    """Why a field cannot answer as a scale (segment 20P Item 1), else
+    None: an Integer or Decimal with a Min, a Max above it, a Step, and
+    the bounds a whole number of Steps apart (whole on an Integer).
+    ``data_type`` is the inline label (``Integer``, ``Decimal``)."""
+    if data_type not in ("Integer", "Decimal"):
+        return "Only an Integer or a Decimal field can be a scale."
+    if min_ is None or max_ is None:
+        return "A scale needs a Min and a Max."
+    if step is None or step <= 0:
+        return "A scale needs a Step."
+    if max_ <= min_:
+        return "Max must be above Min."
+    if data_type == "Integer" and not all(float(v).is_integer() for v in (min_, max_, step)):
+        return "Whole numbers only."
+    points = (max_ - min_) / step
+    if abs(points - round(points)) > 1e-9 * max(1.0, abs(points)):
+        return "Max must be Min plus a whole number of Steps."
+    return None
+
+
+def scale_points(min_: float, max_: float, step: float) -> int:
+    """How many values a scale offers: ``(Max - Min) / Step + 1``."""
+    return round((max_ - min_) / step) + 1
+
+
+def parse_scale_labels(raw: str | None) -> list[str]:
+    """``start|middle|end`` as three strings (blank where absent), each
+    trimmed to :data:`SCALE_LABEL_MAX`."""
+    parts = [p.strip()[:SCALE_LABEL_MAX] for p in (raw or "").split("|")][:3]
+    return parts + [""] * (3 - len(parts))
+
+
+def join_scale_labels(labels: list[str]) -> str | None:
+    """The stored form of three labels, or None when all are blank."""
+    parts = (labels + ["", "", ""])[:3]
+    return "|".join(parts) if any(parts) else None
+
+
 def validation_block_from_inline(
     data_type: str | None,
     min_: float | None,
     max_: float | None,
     step: float | None,
     list_csv: str | None,
+    scale: bool = False,
+    scale_labels: str | None = None,
 ) -> dict[str, Any] | None:
     """Build the ``instrument_response_fields.validation`` JSON
     from the inline-column state an operator-authored Band 3 row
@@ -185,6 +234,13 @@ def validation_block_from_inline(
             block["max"] = cast(max_)
         if step is not None:
             block["step"] = cast(step)
+        # Segment 20P — the reviewer surface draws a scale only for a field
+        # whose shape is one; any other stays the number box.
+        if scale and scale_shape_error(data_type, min_, max_, step) is None:
+            block["scale"] = True
+            labels = parse_scale_labels(scale_labels)
+            if any(labels):
+                block["scale_labels"] = labels
         return block or None
     if data_type == "List":
         if not list_csv:
