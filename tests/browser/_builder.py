@@ -251,10 +251,11 @@ def set_comments_max(database_url: str, session_id: str, max_length: int) -> Non
 
 
 def make_rating_a_scale(
-    database_url: str, session_id: str, labels: str = "Poor||Excellent"
+    database_url: str, session_id: str, labels: str = "Poor||Excellent", *, label: str = "Rating"
 ) -> None:
-    """The seeded Rating field (Integer 1–5) answered as a scale (segment
-    20P), written directly, both stores as the card's Save writes them."""
+    """A field (the seeded Rating, by default) as an Integer 1–5 answered
+    as a scale (segment 20P), written directly, both stores as the card's
+    Save writes them."""
     from sqlalchemy import create_engine, select
     from sqlalchemy.orm import Session
 
@@ -269,9 +270,10 @@ def make_rating_a_scale(
                 .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
                 .where(
                     Instrument.session_id == session_pk(database_url, session_id),
-                    InstrumentResponseField.label == "Rating",
+                    InstrumentResponseField.label == label,
                 )
             ).scalar_one()
+            field._inline_data_type = "Integer"
             field._inline_min, field._inline_max, field._inline_step = 1.0, 5.0, 1.0
             field.scale, field.scale_labels = True, labels
             field.validation = validation_block_from_inline("Integer", 1, 5, 1, None, True, labels)

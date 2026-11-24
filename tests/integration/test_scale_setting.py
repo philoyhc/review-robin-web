@@ -102,7 +102,10 @@ def test_the_card_saves_a_scale_and_audits_it(client: TestClient, db: Session) -
     events = db.scalars(
         select(AuditEvent).where(AuditEvent.event_type == "instrument.response_fields_saved")
     ).all()
-    assert any("scale" in str(e.detail) for e in events)
+    (updated,) = [u for e in events for u in (e.detail or {})["set_changes"]["updated"]]
+    assert updated["field_key"] == "rating"
+    assert updated["changes"]["scale"] == [False, True]
+    assert updated["changes"]["scale_labels"] == [None, "Low||High"]
 
 
 def test_an_integer_scale_with_no_step_takes_one(client: TestClient, db: Session) -> None:

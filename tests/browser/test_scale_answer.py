@@ -15,6 +15,7 @@ from playwright.sync_api import Page, expect
 from ._builder import (
     REVIEWER_EMAIL,
     activate,
+    branch_rating,
     make_rating_a_scale,
     open_unlocked,
     rows,
@@ -172,7 +173,91 @@ def test_a_scale_field_on_the_reviewer_surface_saves_what_it_shows(
     reviewer.wait_for_load_state()
     reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
     widget = reviewer.locator('[data-rs-scale-widget="snap"]').first
-    expect(widget.get_by_role("slider")).to_have_attribute("aria-valuenow", "4")
+    thumb = widget.get_by_role("slider")
+    expect(thumb).to_have_attribute("aria-valuenow", "4")
+    # An arrow key saves as the box would.
+    thumb.press("ArrowLeft")
+    expect(box).to_have_value("3")
+    with reviewer.expect_response(lambda r: r.request.method == "POST"):
+        reviewer.locator("[data-rs-save]:visible").first.click()
+    reviewer.wait_for_load_state()
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    widget = reviewer.locator('[data-rs-scale-widget="snap"]').first
+    expect(widget.get_by_role("slider")).to_have_attribute("aria-valuenow", "3")
+    # And *clear*, named for its field, saves the field unanswered.
+    clear = widget.get_by_role("button", name=re.compile(r"^Clear Rating"))
+    clear.click()
+    expect(box).to_have_value("")
+    with reviewer.expect_response(lambda r: r.request.method == "POST"):
+        reviewer.locator("[data-rs-save]:visible").first.click()
+    reviewer.wait_for_load_state()
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    expect(reviewer.locator("[name^='response['][name$='][rating]']")).to_have_value("")
+    expect(
+        reviewer.locator('[data-rs-scale-widget="snap"]').first.get_by_role("slider")
+    ).to_have_attribute("aria-valuetext", "not answered")
+
+
+def test_a_governed_scale_follows_its_branch(
+    page: Page,
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """A scale whose box a branch disables and enables after load (the
+    cold read of Item 1): closed it takes no input, open it answers, and
+    closed again it stops."""
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    branch_rating(page, session_id)  # "Why" opens at Rating >= 4
+    make_rating_a_scale(live_server.database_url, session_id, "", label="Why")
+    activate(api, live_server.database_url, session_id)
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 1400, "height": 1000})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    rating = reviewer.locator("[name^='response['][name$='][rating]']")
+    why = reviewer.locator("[name^='response['][name$='][why]']")
+    widget = reviewer.locator('[data-rs-scale-widget="snap"]').first
+    thumb = widget.get_by_role("slider")
+    expect(widget).to_have_class(re.compile(r"\bsc-off\b"))
+    expect(thumb).to_have_attribute("aria-disabled", "true")
+    widget.locator(".sc-stop").nth(1).click(force=True)
+    expect(why).to_have_value("")
+
+    rating.fill("5")
+    expect(why).to_be_enabled()
+    expect(widget).not_to_have_class(re.compile(r"\bsc-off\b"))
+    expect(widget.locator(".sc-clear")).to_be_enabled()
+    widget.locator(".sc-stop").nth(1).click(force=True)
+    expect(why).to_have_value("2")
+
+    rating.fill("2")
+    expect(why).to_be_disabled()
+    expect(thumb).to_have_attribute("aria-disabled", "true")
+    thumb.press("ArrowRight", timeout=2000)
+    expect(why).to_have_value("2")
+
+
+def test_a_slide_answers_a_drag_a_click_and_clear(page: Page) -> None:
+    """The plan's rung 4: drag the circle along a slide, click its line,
+    and clear it (on the scaffold, retargeted at the close)."""
+    _open(page)
+    slide = page.locator('[data-rs-scale-widget="slide"]').first
+    box = slide.locator('input[name="p4"]')
+    line = slide.locator(".sc-line")
+    bounds = line.bounding_box()
+    assert bounds is not None
+    y = bounds["y"] + bounds["height"] / 2
+    page.mouse.move(bounds["x"] + 2, y)
+    page.mouse.down()
+    page.mouse.move(bounds["x"] + bounds["width"] * 0.5, y, steps=8)
+    page.mouse.up()
+    assert abs(int(box.input_value()) - 50) <= 2
+    line.click(position={"x": 0, "y": bounds["height"] / 2})
+    expect(box).to_have_value("0")
+    slide.locator(".sc-clear").click()
+    expect(box).to_have_value("")
 
 
 def test_band_3_chooses_a_scale_and_band_2_previews_it(

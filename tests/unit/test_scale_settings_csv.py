@@ -103,3 +103,14 @@ def test_over_long_labels_are_cut_and_extra_parts_dropped(db: Session) -> None:
     result = apply_session_config(db, review_session, _scale_rows(labels="x" * 99 + "|b|c|d"))
     assert result.ok, result.errors
     assert _field(db, review_session.id).scale_labels == "x" * 60 + "|b|c"
+
+
+def test_a_bundle_without_the_attributes_imports_no_scale(db: Session) -> None:
+    """A bundle exported before rung 4 says nothing of the scale; the
+    field it creates is not one, whatever its bounds."""
+    review_session = _bare_session(db, code="csv-scale-old")
+    rows = [r for r in _scale_rows() if ".scale" not in r.field]
+    assert apply_session_config(db, review_session, rows).ok
+    field = _field(db, review_session.id)
+    assert not field.scale and field.scale_labels is None
+    assert field.validation and "scale" not in field.validation

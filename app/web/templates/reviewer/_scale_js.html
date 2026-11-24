@@ -60,13 +60,11 @@
     // A Band 2 preview's scale (``data-rs-scale-preview``) shows as the
     // reviewer will see it, full color, but takes no input.
     var preview = box.hasAttribute("data-rs-scale-preview");
-    var off = box.disabled;
-    var label = box.getAttribute("aria-label") || "";
 
     var side = g.side, minWidth = g.minWidth;
     var wrap = document.createElement("div");
     wrap.className = "sc" + (snap ? " sc-snap" : " sc-slide")
-      + (preview ? " sc-preview" : off ? " sc-off" : "");
+      + (preview ? " sc-preview" : "");
     wrap.setAttribute("data-rs-scale-widget", snap ? "snap" : "slide");
     wrap.setAttribute("data-rs-scale-min", String(minWidth));
     wrap.style.minWidth = minWidth + "px";
@@ -79,10 +77,8 @@
     var thumb = document.createElement("div");
     thumb.className = "sc-thumb";
     thumb.setAttribute("role", "slider");
-    thumb.setAttribute("aria-label", label);
     thumb.setAttribute("aria-valuemin", String(min));
     thumb.setAttribute("aria-valuemax", String(max));
-    if (off) thumb.setAttribute("aria-disabled", "true"); else thumb.tabIndex = 0;
     var readout = document.createElement("span");
     readout.className = "sc-readout";
     thumb.appendChild(readout);
@@ -129,9 +125,8 @@
     foot.appendChild(said);
     var clear = document.createElement("button");
     clear.type = "button";
-    clear.className = "sc-clear";
+    clear.className = "btn-reset sc-clear";
     clear.textContent = "clear";
-    if (off) clear.disabled = true;
     foot.appendChild(clear);
 
     wrap.appendChild(line);
@@ -139,6 +134,9 @@
     if (labels) wrap.appendChild(labels);
     wrap.appendChild(foot);
     box.parentNode.insertBefore(wrap, box);
+    // A Band 2 preview is a picture of the scale: the operator's own
+    // controls are Band 3's, so assistive tech skips it.
+    if (preview) wrap.setAttribute("aria-hidden", "true");
     if (snap) {
       box.classList.add("sc-box-hidden");  // still submitted, out of the tab order
       box.tabIndex = -1;
@@ -157,7 +155,7 @@
       if (v === null || v < min || v > max) {
         wrap.classList.add("sc-empty");
         thumb.removeAttribute("aria-valuenow");
-        thumb.setAttribute("aria-valuetext", "not answered");
+        thumb.setAttribute("aria-valuetext", v === null ? "not answered" : box.value + ", out of range");
         said.textContent = v === null ? "Not answered" : "Out of range";
         return;
       }
@@ -186,9 +184,36 @@
       return min + Math.min(1, Math.max(0, (x - r.left) / r.width)) * (max - min);
     }
 
-    if (!off) {
+    // Whether the scale takes input now. The box can be switched on and
+    // off after the page loads (a branch opening or closing disables a
+    // governed field's box), so this is read live, never kept.
+    function off() { return preview || box.disabled; }
+    // The thumb, *clear* and the look follow the box's state and name;
+    // the branching script also adds and removes " (required)".
+    function sync() {
+      var label = box.getAttribute("aria-label") || "";
+      var isOff = off();
+      wrap.classList.toggle("sc-off", box.disabled && !preview);
+      thumb.setAttribute("aria-label", label);
+      if (isOff) {
+        thumb.setAttribute("aria-disabled", "true");
+        thumb.removeAttribute("tabindex");
+      } else {
+        thumb.removeAttribute("aria-disabled");
+        thumb.tabIndex = 0;
+      }
+      clear.disabled = isOff;
+      clear.setAttribute("aria-label", "Clear " + (label.replace(/ \(required\)$/, "") || "answer"));
+    }
+    sync();
+    if (window.MutationObserver) {
+      new MutationObserver(sync).observe(box, { attributes: true, attributeFilter: ["disabled", "aria-label"] });
+    }
+
+    if (!preview) {
       var dragging = false;
       line.addEventListener("pointerdown", function (e) {
+        if (off()) return;
         dragging = true;
         line.setPointerCapture(e.pointerId);
         wrap.classList.add("sc-dragging");
@@ -206,6 +231,7 @@
         });
       });
       thumb.addEventListener("keydown", function (e) {
+        if (off()) return;
         var v = value(), big = snap ? 1 : 10, to;
         if (e.key === "Delete" || e.key === "Backspace") { set(null); e.preventDefault(); return; }
         if (e.key === "Home") to = min;
@@ -219,7 +245,7 @@
         set(to);
         e.preventDefault();
       });
-      clear.addEventListener("click", function () { set(null); thumb.focus(); });
+      clear.addEventListener("click", function () { if (!off()) { set(null); thumb.focus(); } });
       box.addEventListener("input", show);  // typing in a slide's box moves the circle
     }
     show();

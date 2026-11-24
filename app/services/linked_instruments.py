@@ -182,6 +182,9 @@ def _field_entry(field: ResponseFieldSpec) -> dict[str, Any]:
         "max": field.max,
         "step": field.step,
         "list_csv": field.list_csv,
+        # Segment 20P: a re-send sets the scale as the file states it.
+        "scale": field.scale,
+        "scale_labels": field.scale_labels,
         "required": field.required,
         "help_text": field.help_text,
         "help_text_visible": field.help_text_visible,
