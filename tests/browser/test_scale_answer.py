@@ -626,6 +626,8 @@ def test_band_3_scale_row_keeps_its_controls_on_one_line(
     )
     assert start["y"] > top + 10  # the next line
     assert abs(start["x"] - box('[data-new-model-rf-bound="min"]')["x"]) <= 1
+    # The label boxes are as tall as the bounds above them.
+    assert abs(start["height"] - box('[data-new-model-rf-bound="min"]')["height"]) <= 1
     caption, summary = box(".rf-scale-caption"), box("[data-new-model-rf-scale-summary]")
     assert caption["x"] + caption["width"] <= start["x"]
     assert summary["x"] >= end["x"] + end["width"]

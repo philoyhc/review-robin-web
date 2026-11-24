@@ -682,7 +682,9 @@
          so the row's own controls keep one line (author, 2026-11-24). */
       .rf-scale-line { grid-column: 1 / -1; position: relative; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: center; }
       .rf-scale-line[hidden] { display: none; }
-      .rf-scale-line input { padding: 4px 8px; box-sizing: border-box; min-width: 0; }
+      /* As tall as Min, Max and Step above (their padding is inline):
+         ``body.ui-v2`` outranks the app-wide input padding. */
+      body.ui-v2 .rf-scale-line input[type="text"] { padding: 4px 8px; box-sizing: border-box; min-width: 0; }
       .rf-scale-caption { position: absolute; right: calc(100% + var(--space-3)); top: 50%; transform: translateY(-50%); white-space: nowrap; }
       .rf-scale-summary { position: absolute; left: calc(100% + var(--space-3)); top: 50%; transform: translateY(-50%); white-space: nowrap; font-size: var(--fs-small); }
       /* A row with a scale line is two lines tall: its controls hold
