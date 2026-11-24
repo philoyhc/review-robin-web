@@ -773,3 +773,49 @@ def test_band_2_scale_column_resizes_down_to_its_scale(
     w = widget.bounding_box()
     assert cell is not None and w is not None
     assert w["x"] + w["width"] <= cell["x"] + cell["width"] + 1
+
+
+def test_stacked_scales_share_their_ends(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Author, 2026-11-24: in a stacked cell a 1-5 snap and a 1-100 slide
+    take one side, so the slide's line starts where the snap's does and
+    its box ends where the snap's line ends."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument
+
+    from ._builder import session_pk
+
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    make_rating_a_scale(live_server.database_url, session_id, "Unlikely||Certainly")
+    make_rating_a_scale(
+        live_server.database_url, session_id, "Poor||Exceptional", label="Comments", hi=100
+    )
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(
+                    Instrument.session_id == session_pk(live_server.database_url, session_id)
+                )
+            ).scalar_one()
+            instrument.response_layout = "stacked"
+            db.commit()
+    finally:
+        engine.dispose()
+    activate(api, live_server.database_url, session_id)
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 1400, "height": 1000})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    snap = reviewer.locator(".sc-snap .sc-line").first.bounding_box()
+    slide = reviewer.locator(".sc-slide .sc-line").first.bounding_box()
+    box = reviewer.locator(".sc-slide > input").first.bounding_box()
+    assert snap and slide and box
+    assert abs(slide["x"] - snap["x"]) < 0.5
+    assert abs(box["x"] + box["width"] - (snap["x"] + snap["width"])) < 0.5
