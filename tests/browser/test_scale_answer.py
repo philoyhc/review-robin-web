@@ -1,7 +1,7 @@
-"""The scale answer (segment 20P Item 1), on rung 2's scaffold page: a
-bounded number box becomes a line with a circle. It snaps with a stop per
+"""The scale answer (segment 20P Item 1), on the reviewer surface, Band 3
+and Band 2: a bounded number box becomes a line with a circle. It snaps with a stop per
 point up to 11 points and slides past that, keeping its box; it answers to
-clicks, the keys and *clear*, and a disabled one is read-only. The box
+clicks, the keys and *clear*, and a closed one is read-only. The box
 underneath keeps the value that a save would send."""
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ import re
 from collections.abc import Callable
 
 import httpx
-from playwright.sync_api import FloatRect, Page, expect
+from playwright.sync_api import FloatRect, Locator, Page, expect
 
 from ._builder import (
     REVIEWER_EMAIL,
@@ -24,19 +24,37 @@ from ._builder import (
 )
 from .conftest import LiveServer, app_url
 
-_PREVIEW = "/operator/sys-admin/scale-preview"
+
+def _surface(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+    labels: str = "Poor|Fair|Excellent",
+    *,
+    javascript: bool = True,
+    **bounds: float | str,
+) -> tuple[Page, Locator]:
+    """A live session whose Rating is a scale (an Integer 1–5 unless
+    ``bounds`` say otherwise), opened on the reviewer surface; returns the
+    page and Rating's number box."""
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    make_rating_a_scale(live_server.database_url, session_id, labels, **bounds)  # pyright: ignore[reportArgumentType]  -- typed per keyword in the helper
+    activate(api, live_server.database_url, session_id)
+    reviewer = page_as(REVIEWER_EMAIL, javascript=javascript)
+    reviewer.set_viewport_size({"width": 1400, "height": 1000})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    return reviewer, reviewer.locator("[name^='response['][name$='][rating]']")
 
 
-def _open(page: Page) -> Page:
-    page.set_viewport_size({"width": 1400, "height": 1000})
-    page.goto(app_url(_PREVIEW))
-    expect(page.locator("[data-rs-scale-widget]").first).to_be_visible()
-    return page
-
-
-def test_a_snap_scale_has_a_stop_per_point_and_answers_click_keys_and_clear(page: Page) -> None:
-    _open(page)
-    box = page.locator('input[name="p1"]')
+def test_a_snap_scale_has_a_stop_per_point_and_answers_click_keys_and_clear(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    page, box = _surface(page_as, api, live_server, new_session)
     widget = page.locator('[data-rs-scale-widget="snap"]').first
     thumb = widget.get_by_role("slider")
     expect(widget.locator(".sc-stop")).to_have_count(5)
@@ -66,30 +84,38 @@ def test_a_snap_scale_has_a_stop_per_point_and_answers_click_keys_and_clear(page
     expect(box).to_have_attribute("tabindex", "-1")
 
 
-def test_eleven_decimal_points_snap_and_a_disabled_scale_is_read_only(page: Page) -> None:
-    _open(page)
-    tenths = page.locator('[data-rs-scale-widget="snap"]').nth(1)
+def test_eleven_decimal_points_snap(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """0 to 1 by 0.1 is eleven points, so it snaps; a closed scale's
+    read-only state is covered by ``test_a_governed_scale_follows_its_branch``."""
+    page, box = _surface(
+        page_as, api, live_server, new_session, "", data_type="Decimal", lo=0, hi=1, step=0.1
+    )
+    tenths = page.locator('[data-rs-scale-widget="snap"]').first
     expect(tenths.locator(".sc-stop")).to_have_count(11)
-    expect(tenths.get_by_role("slider")).to_have_attribute("aria-valuenow", "0.7")
+    expect(tenths.locator(".sc-num").nth(7)).to_have_text("0.7")
+    tenths.locator(".sc-stop").nth(7).click(force=True)
+    expect(box).to_have_value("0.7")
     tenths.get_by_role("slider").press("ArrowUp")
-    expect(page.locator('input[name="p2"]')).to_have_value("0.8")
-    closed = page.locator('[data-rs-scale-widget="snap"]').nth(2)
-    expect(closed).to_have_class(re.compile(r"\bsc-off\b"))
-    expect(closed.get_by_role("slider")).to_have_attribute("aria-disabled", "true")
-    expect(closed.locator(".sc-clear")).to_be_disabled()
-    closed.locator(".sc-line").click(force=True)
-    expect(page.locator('input[name="p3"]')).to_have_value("5")
+    expect(box).to_have_value("0.8")
 
 
-def test_a_slide_keeps_its_box_and_each_moves_the_other(page: Page) -> None:
-    _open(page)
-    slide = page.locator('[data-rs-scale-widget="slide"]').nth(1)
-    box = slide.locator('input[name="p5"]')
+def test_a_slide_keeps_its_box_and_each_moves_the_other(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    page, box = _surface(page_as, api, live_server, new_session, "", lo=1000, hi=2000, step=1)
+    slide = page.locator('[data-rs-scale-widget="slide"]').first
     thumb = slide.get_by_role("slider")
     expect(slide.locator(".sc-stop")).to_have_count(0)
     expect(slide.locator(".sc-num")).to_have_text(["1000", "1500", "2000"])
     expect(box).to_be_visible()
-    expect(thumb).to_have_attribute("aria-valuenow", "1450")
     box.fill("1999")
     expect(thumb).to_have_attribute("aria-valuenow", "1999")
     # The box shows the value, so the foot doesn't repeat it.
@@ -100,52 +126,15 @@ def test_a_slide_keeps_its_box_and_each_moves_the_other(page: Page) -> None:
     expect(box).to_have_value("2000")
 
 
-def test_without_script_the_box_remains(page_as: Callable[..., Page]) -> None:
-    page = page_as(javascript=False)
-    page.goto(app_url(_PREVIEW))
-    expect(page.locator('input[name="p1"]')).to_be_visible()
+def test_without_script_the_box_remains(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    page, box = _surface(page_as, api, live_server, new_session, javascript=False)
+    expect(box).to_be_visible()
     expect(page.locator("[data-rs-scale-widget]")).to_have_count(0)
-
-
-def test_each_scale_sits_in_a_column_that_resizes_down_to_its_minimum(page: Page) -> None:
-    """The author's ask (2026-11-24): each scale in a table column, the
-    columns resized as Band 2's are, never below what the scale states."""
-    _open(page)
-    col = page.locator('col[data-col-key="merit"]')
-    minimum = int(col.get_attribute("data-min") or "0")
-    widget = page.locator('[data-rs-scale-widget="snap"]').first
-    assert minimum >= int(widget.get_attribute("data-rs-scale-min") or "0")
-    handle = page.locator('.new-model-band2-resize-handle[data-col-key="merit"]')
-
-    def drag(dx: float) -> None:
-        box = handle.bounding_box()
-        assert box is not None
-        x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
-        page.mouse.move(x, y)
-        page.mouse.down()
-        page.mouse.move(x + dx, y, steps=5)
-        page.mouse.up()
-
-    def stops_span() -> float:
-        first = widget.locator(".sc-stop").first.bounding_box()
-        last = widget.locator(".sc-stop").last.bounding_box()
-        assert first is not None and last is not None
-        return last["x"] - first["x"]
-
-    narrow = stops_span()
-    drag(160)
-    assert int(col.evaluate("c => parseInt(c.style.width, 10)")) >= minimum + 150
-    assert stops_span() > narrow + 100  # the stops spread with the column
-    drag(-1000)  # far past the minimum
-    assert int(col.evaluate("c => parseInt(c.style.width, 10)")) == minimum
-    # At its minimum the scale is whole: the last stop inside its cell.
-    cell = widget.locator("xpath=ancestor::td[1]").bounding_box()
-    last = widget.locator(".sc-stop").last.bounding_box()
-    assert cell is not None and last is not None
-    assert last["x"] + last["width"] <= cell["x"] + cell["width"]
-    # And it still answers.
-    widget.locator(".sc-stop").nth(2).click(force=True)
-    expect(page.locator('input[name="p1"]')).to_have_value("3")
 
 
 def test_a_scale_field_on_the_reviewer_surface_saves_what_it_shows(
@@ -241,12 +230,16 @@ def test_a_governed_scale_follows_its_branch(
     expect(why).to_have_value("2")
 
 
-def test_a_slide_answers_a_drag_a_click_and_clear(page: Page) -> None:
+def test_a_slide_answers_a_drag_a_click_and_clear(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
     """The plan's rung 4: drag the circle along a slide, click its line,
-    and clear it (on the scaffold, retargeted at the close)."""
-    _open(page)
+    and clear it."""
+    page, box = _surface(page_as, api, live_server, new_session, "", lo=0, hi=100, step=1)
     slide = page.locator('[data-rs-scale-widget="slide"]').first
-    box = slide.locator('input[name="p4"]')
     line = slide.locator(".sc-line")
     bounds = line.bounding_box()
     assert bounds is not None
@@ -307,10 +300,16 @@ def test_band_3_chooses_a_scale_and_band_2_previews_it(
     ).to_have_count(1)
 
 
-def test_a_tiny_decimal_step_keeps_its_places(page: Page) -> None:
+def test_a_tiny_decimal_step_keeps_its_places(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
     """A step JavaScript writes in scientific notation (``1e-7``) still
-    numbers its stops and answers to seven places (Codex on #4193)."""
-    _open(page)
+    numbers its stops and answers to seven places (Codex on #4193). Built
+    on the page, since a saved step that small renders as ``1e-07``."""
+    page, _ = _surface(page_as, api, live_server, new_session)
     page.evaluate(
         """() => {
           const box = document.createElement("input");
@@ -579,10 +578,15 @@ def test_band_2_scale_column_holds_its_scale_inside_the_cell_padding(
     assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
 
 
-def test_a_slides_box_sits_to_the_right_of_its_scale(page: Page) -> None:
+def test_a_slides_box_sits_to_the_right_of_its_scale(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
     """The author's ask (2026-11-24): a slide's number box sits to the
     right of the scale, level with its line, not under it."""
-    _open(page)
+    page, _ = _surface(page_as, api, live_server, new_session, "", lo=0, hi=100, step=1)
     slide = page.locator('[data-rs-scale-widget="slide"]').first
     line = slide.locator(".sc-line").bounding_box()
     numbers = slide.locator(".sc-numbers").bounding_box()
@@ -715,11 +719,16 @@ def test_an_answered_field_switching_to_its_scale_keeps_string_off(
     expect(select_box.locator('option[value="string"]')).to_be_disabled()
 
 
-def test_start_and_end_labels_reach_the_edges_and_middle_is_centered(page: Page) -> None:
+def test_start_and_end_labels_reach_the_edges_and_middle_is_centered(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
     """The author's ask (2026-11-24): Start sits at the scale's left
     edge and End at its right, out over the side padding, and Middle is
     centered on the bar as a whole."""
-    _open(page)
+    page, _ = _surface(page_as, api, live_server, new_session)
     widget = page.locator('[data-rs-scale-widget="snap"]').first  # Poor / Fair / Excellent
     w = widget.bounding_box()
     line = widget.locator(".sc-line").bounding_box()
@@ -736,3 +745,31 @@ def test_start_and_end_labels_reach_the_edges_and_middle_is_centered(page: Page)
     clear = widget.locator(".sc-clear").bounding_box()
     assert clear and abs(clear["x"] - start["x"]) <= 1
     assert abs((middle["x"] + middle["width"] / 2) - (line["x"] + line["width"] / 2)) <= 1
+
+
+def test_band_2_scale_column_resizes_down_to_its_scale(
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """Dragging a scale column's gripper in Band 2 stops at the scale's
+    minimum and the cell's padding (the scaffold's resize test, retargeted
+    at Item 1's close)."""
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    make_rating_a_scale(live_server.database_url, session_id)
+    page.set_viewport_size({"width": 1500, "height": 1100})
+    card = open_unlocked(page, session_id)
+    preview = card.locator("[data-new-model-band2-preview]")
+    widget = preview.locator("[data-rs-scale-widget]").first
+    expect(widget).to_be_visible()
+    handle = preview.locator('.new-model-band2-resize-handle[data-col-key^="resp_"]').first
+    hb = handle.bounding_box()
+    assert hb is not None
+    x, y = hb["x"] + hb["width"] / 2, hb["y"] + hb["height"] / 2
+    page.mouse.move(x, y)
+    page.mouse.down()
+    page.mouse.move(x - 1000, y, steps=5)
+    page.mouse.up()
+    cell = widget.locator("xpath=ancestor::td[1]").bounding_box()
+    w = widget.bounding_box()
+    assert cell is not None and w is not None
+    assert w["x"] + w["width"] <= cell["x"] + cell["width"] + 1

@@ -251,11 +251,19 @@ def set_comments_max(database_url: str, session_id: str, max_length: int) -> Non
 
 
 def make_rating_a_scale(
-    database_url: str, session_id: str, labels: str = "Poor||Excellent", *, label: str = "Rating"
+    database_url: str,
+    session_id: str,
+    labels: str = "Poor||Excellent",
+    *,
+    label: str = "Rating",
+    data_type: str = "Integer",
+    lo: float = 1,
+    hi: float = 5,
+    step: float = 1,
 ) -> None:
-    """A field (the seeded Rating, by default) as an Integer 1–5 answered
-    as a scale (segment 20P), written directly, both stores as the card's
-    Save writes them."""
+    """A field (the seeded Rating, by default) answered as a scale
+    (segment 20P), an Integer 1–5 unless told otherwise, written directly,
+    both stores as the card's Save writes them."""
     from sqlalchemy import create_engine, select
     from sqlalchemy.orm import Session
 
@@ -273,10 +281,16 @@ def make_rating_a_scale(
                     InstrumentResponseField.label == label,
                 )
             ).scalar_one()
-            field._inline_data_type = "Integer"
-            field._inline_min, field._inline_max, field._inline_step = 1.0, 5.0, 1.0
+            field._inline_data_type = data_type
+            field._inline_min, field._inline_max, field._inline_step = (
+                float(lo),
+                float(hi),
+                float(step),
+            )
             field.scale, field.scale_labels = True, labels
-            field.validation = validation_block_from_inline("Integer", 1, 5, 1, None, True, labels)
+            field.validation = validation_block_from_inline(
+                data_type, lo, hi, step, None, True, labels
+            )
             db.commit()
     finally:
         engine.dispose()

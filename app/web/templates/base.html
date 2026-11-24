@@ -723,13 +723,7 @@
       /* A row with a scale line is two lines tall: its controls hold
          the first, level with Min, Max and Step. */
       [data-new-model-rf-row]:has(.rf-scale-line:not([hidden])) > td { vertical-align: top; }
-      /* The scale preview's table (segment 20P rung 2): fixed columns,
-         each resized from a gripper on its header as Band 2's are. */
-      .sc-preview-table { table-layout: fixed; border-collapse: collapse; }
-      body.ui-v2 .sc-preview-table th { position: relative; text-align: left; font-size: var(--fs-small); padding: 6px 8px; border-bottom: 1px solid var(--gray-soft); }
-      body.ui-v2 .sc-preview-table td { vertical-align: top; padding: 4px 8px; border-bottom: 1px solid var(--gray-mist); }
-      body.ui-v2 .sc-preview-table td:first-child { padding: 12px 8px; }
-      .sc-preview-table .new-model-band2-resize-handle { position: absolute; right: -3px; top: 0; bottom: 0; width: 6px; cursor: col-resize; user-select: none; touch-action: none; z-index: 1; }
+      /* A snap scale's own box: off screen, still submitted. */
       .sc-box-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
       /* A box the fit script has taken on (``data-fit-on``) loses its
          handle and its scrollbar: its height is its text's, and a drag
