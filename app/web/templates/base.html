@@ -669,6 +669,64 @@
         box-sizing: border-box;
       }
       th.rs-textlong, td.rs-textlong { min-width: 14em; }
+      /* Segment 20Q rung 3 — on a phone the response table is a list of
+         cards: a reviewee (or group) row is a card, its identity at the
+         top, each answer a label over its box. The label is the cell's
+         `data-label`, so a screen reader still reads the header once.
+         The header row, and with it the sort buttons, is hidden; the
+         cards keep the table's current order. The operator's column
+         widths have no columns to act on. */
+      @media (max-width: 639px) {
+        .table-scroll:has(> table.rs-table) { overflow-x: visible; }
+        table.rs-table,
+        table.rs-table > tbody,
+        table.rs-table > tbody > tr,
+        table.rs-table > tbody > tr > td { display: block; width: auto !important; }
+        table.rs-table { table-layout: auto; border: 0; }
+        table.rs-table > colgroup,
+        table.rs-table > thead { display: none; }
+        table.rs-table > tbody > tr {
+          position: relative;
+          border: 1px solid var(--border-default);
+          border-radius: var(--radius-card);
+          padding: var(--space-3);
+          margin-bottom: var(--space-3);
+        }
+        table.rs-table > tbody > tr > td {
+          border: 0;
+          padding: var(--space-1) 0;
+          max-width: none;
+          min-width: 0;
+          white-space: normal;
+          text-align: left !important;
+        }
+        table.rs-table > tbody > tr > td.rs-reviewee,
+        table.rs-table > tbody > tr > td.rs-group { padding-right: 4ch; }
+        table.rs-table > tbody > tr > td[data-label]::before {
+          content: attr(data-label);
+          display: block;
+          font-weight: 600;
+          margin-bottom: 2px;
+        }
+        table.rs-table > tbody > tr > td input:not([type="checkbox"]):not([type="radio"]),
+        table.rs-table > tbody > tr > td select,
+        table.rs-table > tbody > tr > td textarea {
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+        /* The ✓ / ⚠ sits in the card's top-right corner. */
+        table.rs-table > tbody > tr > td.rs-status {
+          position: absolute;
+          top: var(--space-3);
+          right: var(--space-3);
+          padding: 0;
+        }
+        /* A stacked cell's lines put the label over the box too. */
+        table.rs-table .rs-stack-fields { grid-template-columns: minmax(0, 1fr); }
+        table.rs-table .rs-stack-field { display: block; }
+        table.rs-table .rs-stack-label { padding-top: 0; margin-bottom: 2px; }
+      }
       /* A String answer box (segment 19X Item 10) is a textarea whose
          ``rows`` is its floor, one line or two; the fit script below
          grows it with its text. The app-wide 80px textarea floor would
