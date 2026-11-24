@@ -658,9 +658,16 @@
       .sc-empty .sc-thumb:focus-visible { opacity: 0.45; }
       .sc-numbers, .sc-labels { position: relative; height: 1.3em; font-size: var(--fs-small); color: var(--slate); }
       .sc-num { position: absolute; transform: translateX(-50%); }
-      .sc-labels { display: flex; justify-content: space-between; height: auto; color: var(--ink); }
-      .sc-label-middle { text-align: center; }
-      .sc-label-end { text-align: right; }
+      /* Start and End reach out over the side padding to the scale's
+         edges; Middle sits at the bar's center, the two outer columns
+         being equal (author, 2026-11-24). */
+      .sc-labels { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); column-gap: 8px; height: auto; color: var(--ink); margin: 0 calc(-1 * var(--sc-side, 0px)); }
+      .sc-label-start { justify-self: start; text-align: left; }
+      /* "Not answered" and *clear* start where Start does. */
+      .sc .sc-foot { margin-left: calc(-1 * var(--sc-side, 0px)); }
+      .sc-said:empty { display: none; }  /* answered: *clear* takes its place */
+      .sc-label-middle { justify-self: center; text-align: center; }
+      .sc-label-end { justify-self: end; text-align: right; }
       .sc-foot { display: flex; gap: 10px; align-items: baseline; font-size: var(--fs-small); color: var(--slate); }
       /* *clear* is a `.btn-reset` (spec/ui_elements.md), at the foot's size. */
       .sc-clear { font-size: var(--fs-small); }
@@ -694,7 +701,7 @@
          each resized from a gripper on its header as Band 2's are. */
       .sc-preview-table { table-layout: fixed; border-collapse: collapse; }
       body.ui-v2 .sc-preview-table th { position: relative; text-align: left; font-size: var(--fs-small); padding: 6px 8px; border-bottom: 1px solid var(--gray-soft); }
-      body.ui-v2 .sc-preview-table td { vertical-align: top; padding: 4px 0; border-bottom: 1px solid var(--gray-mist); }
+      body.ui-v2 .sc-preview-table td { vertical-align: top; padding: 4px 8px; border-bottom: 1px solid var(--gray-mist); }
       body.ui-v2 .sc-preview-table td:first-child { padding: 12px 8px; }
       .sc-preview-table .new-model-band2-resize-handle { position: absolute; right: -3px; top: 0; bottom: 0; width: 6px; cursor: col-resize; user-select: none; touch-action: none; z-index: 1; }
       .sc-box-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

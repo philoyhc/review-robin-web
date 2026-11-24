@@ -75,7 +75,7 @@
       table.querySelectorAll("tbody tr").forEach(function (tr) {
         var cell = tr.children[i];
         var w = cell && cell.querySelector("[data-rs-scale-min]");
-        if (w) most = Math.max(most, parseInt(w.getAttribute("data-rs-scale-min"), 10) + 2);
+        if (w) most = Math.max(most, parseInt(w.getAttribute("data-rs-scale-min"), 10) + 18);  // + the cell's 8px sides
       });
       return most;
     }

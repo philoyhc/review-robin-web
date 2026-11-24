@@ -704,3 +704,26 @@ def test_an_answered_field_switching_to_its_scale_keeps_string_off(
     expect(select_box.locator('option[value="decimal"]').first).to_be_disabled()
     select_box.select_option(label="Integer")
     expect(select_box.locator('option[value="string"]')).to_be_disabled()
+
+
+def test_start_and_end_labels_reach_the_edges_and_middle_is_centered(page: Page) -> None:
+    """The author's ask (2026-11-24): Start sits at the scale's left
+    edge and End at its right, out over the side padding, and Middle is
+    centered on the bar as a whole."""
+    _open(page)
+    widget = page.locator('[data-rs-scale-widget="snap"]').first  # Poor / Fair / Excellent
+    w = widget.bounding_box()
+    line = widget.locator(".sc-line").bounding_box()
+    start = widget.locator(".sc-label-start").bounding_box()
+    middle = widget.locator(".sc-label-middle").bounding_box()
+    end = widget.locator(".sc-label-end").bounding_box()
+    assert w and line and start and middle and end
+    assert abs(start["x"] - w["x"]) <= 1
+    assert abs((end["x"] + end["width"]) - (w["x"] + w["width"])) <= 1
+    said = widget.locator(".sc-said").bounding_box()  # "Not answered" lines up with Start
+    assert said and abs(said["x"] - start["x"]) <= 1
+    # Answered, *clear* takes that place.
+    widget.locator(".sc-stop").nth(2).click(force=True)
+    clear = widget.locator(".sc-clear").bounding_box()
+    assert clear and abs(clear["x"] - start["x"]) <= 1
+    assert abs((middle["x"] + middle["width"] / 2) - (line["x"] + line["width"] / 2)) <= 1

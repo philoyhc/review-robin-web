@@ -76,6 +76,7 @@
     wrap.setAttribute("data-rs-scale-min", String(minWidth));
     wrap.style.minWidth = minWidth + "px";
     wrap.style.paddingLeft = wrap.style.paddingRight = side + "px";
+    wrap.style.setProperty("--sc-side", side + "px");  // the labels reach out over it
     if (!snap) wrap.style.columnGap = side + "px";
     var line = document.createElement("div");
     line.className = "sc-line";
