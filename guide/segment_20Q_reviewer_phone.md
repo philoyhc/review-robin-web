@@ -59,6 +59,17 @@ Taken 2026-11-24 at `bc229fdba`.
 | `.table-scroll` wrappers on the review surface | 3 | `grep -c "table-scroll" app/web/templates/reviewer/review_surface.html` |
 | Browser test files reaching `/me/sessions` | 23 | `grep -rln "/me/sessions" tests/browser` |
 
+## Status
+
+Open. Rung 2 (2026-11-24) diverged in two places:
+- **The tag follows the participant chrome, not a per-template block.**
+  `base.html` emits it when the body class includes `reviewer`, which the seven
+  `reviewer/` templates set always and About, Guide and `me_debug.html` set for a
+  non-operator. One condition, and a new participant page inherits it.
+- **The check rides the URL crawl, not a browser test.** A tag in the HTML needs
+  no browser: `tests/integration/test_url_crawl.py` asserts it on every `/me`
+  page, About and Guide for rae, and its absence from every operator page.
+
 ## PR ladder
 
 1. **Plan** (this file), with the todo pointers. Prose only.

@@ -264,10 +264,10 @@ ROUTES: dict[str, tuple[Visit, ...]] = {
     "/": (Visit("alice", 302),),
     "/operator": (Visit("alice", 302),),
     "/operator/": (Visit("alice", 302),),
-    "/about": _PAGE,
+    "/about": (Visit("alice", 200), Visit("rae", 200)),
     "/auth/me": _PAGE,
     "/auth/me/debug": _PAGE,
-    "/guide": _PAGE,
+    "/guide": (Visit("alice", 200), Visit("rae", 200)),
     "/health": _PAGE,
     "/templates/demo.zip": _PAGE,
     "/templates/full.zip": _PAGE,
@@ -536,4 +536,27 @@ def test_every_get_route_under_the_mount_emits_only_prefixed_urls(
                 found = leaks(response)
                 if response.status_code != visit.status or found:
                     failures.append(f"{phase} {visit.who} {route}: {response.status_code} {found}")
+                if _viewport_wrong(route, visit, response.status_code, response.text):
+                    failures.append(f"{phase} {visit.who} {route}: viewport tag wrong")
     assert not failures, "\n".join(failures)
+
+
+_VIEWPORT = '<meta name="viewport"'
+
+
+def _viewport_wrong(route: str, visit: Visit, status: int, body: str) -> bool:
+    """Segment 20Q: a participant page carries the viewport tag, so a
+    phone lays it out at its own width; an operator page does not, and
+    a phone keeps rendering it zoomed out. About and Guide follow the
+    chrome they wear: rae's is the participant's, alice's the operator's."""
+    if status != 200 or "<html" not in body:
+        return False
+    participant = route.startswith("/me") or (
+        route in {"/about", "/guide"} and visit.who != "alice"
+    )
+    operator = route.startswith("/operator") or route in {"/about", "/guide"}
+    if participant:
+        return _VIEWPORT not in body
+    if operator:
+        return _VIEWPORT in body
+    return False
