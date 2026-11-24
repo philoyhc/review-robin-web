@@ -723,7 +723,7 @@
       /* A row with a scale line is two lines tall: its controls hold
          the first, level with Min, Max and Step. */
       [data-new-model-rf-row]:has(.rf-scale-line:not([hidden])) > td { vertical-align: top; }
-      /* A snap scale's own box: off screen, still submitted. */
+      /* A snap scale's own box: off screen, its value still sent. */
       .sc-box-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
       /* A box the fit script has taken on (``data-fit-on``) loses its
          handle and its scrollbar: its height is its text's, and a drag
