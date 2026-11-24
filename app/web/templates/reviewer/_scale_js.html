@@ -233,8 +233,33 @@
     show();
   }
 
+  // The reviewer surface's tables size a number column for its box (a
+  // fixed width on a group table, or a saved one), which a scale would
+  // overflow. Widen any such column to the scale's minimum, its header
+  // and its ``<col>`` both (Codex on #4193). The Band 2 preview sizes
+  // its own columns, so only the surface's tables are touched.
+  function fitColumns(root) {
+    Array.prototype.forEach.call((root || document).querySelectorAll("table[data-rrw-sortable] [data-rs-scale-widget]"), function (w) {
+      var td = w.closest("td"), table = td && td.closest("table");
+      if (!td || !table || !table.tHead || !table.tHead.rows.length) return;
+      var style = getComputedStyle(td);
+      var need = (parseInt(w.getAttribute("data-rs-scale-min"), 10) || 0)
+        + (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+      var th = table.tHead.rows[0].cells[td.cellIndex];
+      var cols = table.querySelectorAll("colgroup > col");
+      var col = cols.length ? cols[td.cellIndex] : null;
+      td.style.minWidth = need + "px";
+      if (th && th.getBoundingClientRect().width < need) {
+        th.classList.remove("rs-narrow");
+        th.style.width = need + "px";
+        if (col) col.style.width = need + "px";
+      }
+    });
+  }
+
   function all(root) {
     Array.prototype.forEach.call((root || document).querySelectorAll("input[data-rs-scale]"), enhance);
+    fitColumns(root);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { all(); });
   else all();
