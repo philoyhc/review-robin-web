@@ -69,6 +69,10 @@ Open. Rung 2 (2026-11-24) diverged in two places:
 - **The check rides the URL crawl, not a browser test.** A tag in the HTML needs
   no browser: `tests/integration/test_url_crawl.py` asserts it on every `/me`
   page, About and Guide for rae, and its absence from every operator page.
+- **Rung 3: cards by width alone.** The rule keys on the viewport, not the
+  chrome, so an operator's preview of the surface in a narrow window shows the
+  same cards. The check of no sideways scroll covers the response table only;
+  the visibility grid's is rung 4's.
 
 ## PR ladder
 
