@@ -52,7 +52,7 @@ _INSTRUMENT_ROW = re.compile(r"^instruments\[1\]\.(name|description)$")
 _FIELD_ROW = re.compile(
     r"^instruments\[1\]\.response_fields\[\d+\]\."
     r"(field_key|label|response_type|data_type|min|max|step|list_csv"
-    r"|required|help_text|help_text_visible|visible)$"
+    r"|scale|scale_labels|required|help_text|help_text_visible|visible)$"
 )
 #: The short label's cap (``Instrument.short_label``).
 SHORT_LABEL_MAX = 32
@@ -182,6 +182,9 @@ def _field_entry(field: ResponseFieldSpec) -> dict[str, Any]:
         "max": field.max,
         "step": field.step,
         "list_csv": field.list_csv,
+        # Segment 20P: a re-send sets the scale as the file states it.
+        "scale": field.scale,
+        "scale_labels": field.scale_labels,
         "required": field.required,
         "help_text": field.help_text,
         "help_text_visible": field.help_text_visible,

@@ -255,6 +255,27 @@
     show();
   }
 
+  // In the stacked layout (one line per field) every scale in a table
+  // takes the widest one's width, so their lines start and end together
+  // (author, 2026-11-24). Across rows too: the scope is the table.
+  function evenStacks(root) {
+    var scopes = [];
+    Array.prototype.forEach.call((root || document).querySelectorAll(".rs-stack-fields"), function (cell) {
+      var scope = cell.closest("table") || cell;
+      if (scopes.indexOf(scope) < 0) scopes.push(scope);
+    });
+    scopes.forEach(function (scope) {
+      var scales = scope.querySelectorAll(".rs-stack-fields [data-rs-scale-widget]");
+      var widest = 0;
+      Array.prototype.forEach.call(scales, function (w) {
+        widest = Math.max(widest, parseInt(w.getAttribute("data-rs-scale-min"), 10) || 0);
+      });
+      Array.prototype.forEach.call(scales, function (w) {
+        w.style.minWidth = w.style.width = widest + "px";
+      });
+    });
+  }
+
   // The reviewer surface's tables size a number column for its box (a
   // fixed width on a group table, or a saved one), which a scale would
   // overflow. Widen any such column to the scale's minimum, its header
@@ -303,6 +324,7 @@
 
   function all(root) {
     Array.prototype.forEach.call((root || document).querySelectorAll("input[data-rs-scale]"), enhance);
+    evenStacks(root);
     fitColumns(root);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { all(); });

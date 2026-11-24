@@ -5402,7 +5402,10 @@
         window.newModelRfScaleLabels = window.newModelRfScaleLabels || function (row) {
           var parts = ['start', 'middle', 'end'].map(function (k) {
             var input = row.querySelector('[data-new-model-rf-scale-label="' + k + '"]');
-            return (input && input.value || '').trim();
+            // ``|`` separates the three when stored, so a typed one
+            // becomes the look-alike ``¦`` rather than shifting the
+            // labels along.
+            return (input && input.value || '').trim().replace(/\|/g, '\u00a6');
           });
           return parts.some(Boolean) ? parts.join('|') : '';
         };

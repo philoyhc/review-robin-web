@@ -170,7 +170,7 @@ def sys_admin_sessions(
 def sys_admin_scale_preview(request: Request, user: User = Depends(require_sys_admin)) -> Response:
     """The scale answer's scaffold (segment 20P Item 1 rung 2): the control
     on hard-wired fields, for the author's browser check on a local run.
-    A 404 anywhere else; removed when rung 3 wires the setting."""
+    A 404 anywhere else; kept for the author's checks until Item 1 closes."""
     if not is_local():
         raise HTTPException(status_code=404)
     return _templates.TemplateResponse(

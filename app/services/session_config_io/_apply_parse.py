@@ -20,6 +20,7 @@ from app.services.instruments._band2 import INTEGER_WHOLE_BOUNDS_MESSAGE
 from app.services.instruments._response_fields import (
     DEFAULT_RESPONSE_FIELDS,
     _inline_kwargs_from_default_spec,
+    scale_shape_error,
 )
 
 # The Band 3 per-cell rules live with the editor's validator; the import
@@ -913,6 +914,17 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                                 message=INTEGER_WHOLE_BOUNDS_MESSAGE,
                             )
                         )
+            # Segment 20P — a scale needs its whole shape, as on the card.
+            if rf.scale:
+                why = scale_shape_error(rf.data_type, rf.min, rf.max, rf.step)
+                if why is not None:
+                    errors.append(
+                        ApplyError(
+                            row_number=0,
+                            field=(f"instruments[{n}].response_fields[{m}].scale"),
+                            message=why,
+                        )
+                    )
             if not rf.label:
                 errors.append(
                     ApplyError(
