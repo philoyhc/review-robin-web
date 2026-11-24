@@ -3,42 +3,115 @@
 {% block title %}Scale preview — Admin{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
 
+{% macro scale(name, label, value, min, max, step, start="", middle="", end="", disabled=false) -%}
+  <input type="number" inputmode="{{ 'decimal' if '.' in step else 'numeric' }}" name="{{ name }}"
+         aria-label="{{ label }}" value="{{ value }}" min="{{ min }}" max="{{ max }}" step="any"
+         data-rs-step="{{ step }}" data-rs-step-anchor="{{ min }}" data-rs-scale
+         {% if start %}data-rs-scale-start="{{ start }}"{% endif %}
+         {% if middle %}data-rs-scale-middle="{{ middle }}"{% endif %}
+         {% if end %}data-rs-scale-end="{{ end }}"{% endif %}
+         {% if disabled %}disabled{% endif %}>
+{%- endmacro %}
+
 {% block content %}
   {# Segment 20P Item 1 rung 2: the scale answer on hard-wired fields, for
      the author's browser check on a local run (`guide/segment_20P_scale_answer.md`).
-     Each box is the reviewer surface's number box, as
-     `reviewer/_response_control.html` renders it, with the attributes the
-     setting will add at rung 3. Nothing here saves. Removed at rung 3. #}
+     Each scale sits in a column of a fixed table, as the reviewer surface's
+     *Responses across* lays them out. A gripper on each header resizes its
+     column as Band 2's do, never narrower than the widest scale in it
+     states (``data-rs-scale-min``). Nothing here saves; removed at rung 3. #}
   <h1>Scale preview</h1>
-  <p class="muted">A scaffold for checking the scale answer in a browser: click, drag, the arrow keys, Page Up and Page Down, Home, End, Delete and <em>clear</em>. Nothing here is saved.</p>
+  <p class="muted">A scaffold for checking the scale answer in a browser: click, drag, the arrow keys, Page Up and Page Down, Home, End, Delete and <em>clear</em>. Drag a header's right edge to resize its column; it stops at the narrowest its scales read at. Nothing here is saved.</p>
 
-  <div class="page-grid">
-    <div class="card" data-scale-preview>
-      <h2>Snaps (up to 11 points)</h2>
-      <p class="muted">Integer 1 to 5, Step 1, with three labels; unanswered.</p>
-      <input type="number" inputmode="numeric" name="p1" aria-label="Overall merit for Ana Lee" value=""
-             min="1" max="5" step="any" data-rs-step="1" data-rs-step-anchor="1"
-             data-rs-scale="snap" data-rs-scale-start="Poor" data-rs-scale-middle="Fair" data-rs-scale-end="Excellent">
-      <p class="muted">Decimal 0 to 1, Step 0.1 (11 points, snaps); answered 0.7.</p>
-      <input type="number" inputmode="decimal" name="p2" aria-label="Fit for Ana Lee" value="0.7"
-             min="0" max="1" step="any" data-rs-step="0.1" data-rs-step-anchor="0" data-rs-scale="snap">
-      <p class="muted">Integer 1 to 7, no labels; a closed session (read-only), answered 5.</p>
-      <input type="number" inputmode="numeric" name="p3" aria-label="Clarity for Ana Lee" value="5"
-             min="1" max="7" step="any" data-rs-step="1" data-rs-step-anchor="1" data-rs-scale="snap" disabled>
-    </div>
-    <div class="card" data-scale-preview>
-      <h2>Slides (more than 11 points)</h2>
-      <p class="muted">Integer 0 to 100, Step 1, with start and end labels; unanswered.</p>
-      <input type="number" inputmode="numeric" name="p4" aria-label="Confidence for Ana Lee" value=""
-             min="0" max="100" step="any" data-rs-step="1" data-rs-step-anchor="0"
-             data-rs-scale="slide" data-rs-scale-start="Not at all" data-rs-scale-end="Fully">
-      <p class="muted">Integer 1,000 to 2,000, Step 1; answered 1450. Type in the box to move the circle.</p>
-      <input type="number" inputmode="numeric" name="p5" aria-label="Budget for Ana Lee" value="1450"
-             min="1000" max="2000" step="any" data-rs-step="1" data-rs-step-anchor="1000" data-rs-scale="slide">
-      <p class="muted">Decimal 0 to 10, Step 0.5 (21 points, slides).</p>
-      <input type="number" inputmode="decimal" name="p6" aria-label="Score for Ana Lee" value=""
-             min="0" max="10" step="any" data-rs-step="0.5" data-rs-step-anchor="0" data-rs-scale="slide">
+  {% set columns = [
+    ("merit", "Overall merit (1–5, labels)"),
+    ("fit", "Fit (0–1 by 0.1)"),
+    ("clarity", "Clarity (1–7, closed)"),
+    ("confidence", "Confidence (0–100)"),
+    ("budget", "Budget (1,000–2,000)"),
+    ("score", "Score (0–10 by 0.5)"),
+  ] %}
+  <div class="card" data-scale-preview>
+    <div class="table-scroll">
+      <table class="sc-preview-table" data-scale-preview-table>
+        <colgroup>
+          <col data-col-key="reviewee" style="width: 140px;">
+          {% for key, _ in columns %}<col data-col-key="{{ key }}">{% endfor %}
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Reviewee<span class="new-model-band2-resize-handle" data-col-key="reviewee" title="Drag to resize column"></span></th>
+            {% for key, title in columns %}
+              <th>{{ title }}{% if not loop.last %}<span class="new-model-band2-resize-handle" data-col-key="{{ key }}" title="Drag to resize column"></span>{% endif %}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row, who, merit, fit, conf, budget in [("p", "Ana Lee", "", "0.7", "", "1450"), ("q", "Ben Tan", "3", "", "62", "")] %}
+            <tr>
+              <td>{{ who }}</td>
+              <td>{{ scale(row ~ "1", "Overall merit for " ~ who, merit, "1", "5", "1", "Poor", "Fair", "Excellent") }}</td>
+              <td>{{ scale(row ~ "2", "Fit for " ~ who, fit, "0", "1", "0.1") }}</td>
+              <td>{{ scale(row ~ "3", "Clarity for " ~ who, "5", "1", "7", "1", disabled=true) }}</td>
+              <td>{{ scale(row ~ "4", "Confidence for " ~ who, conf, "0", "100", "1", "Not at all", "", "Fully") }}</td>
+              <td>{{ scale(row ~ "5", "Budget for " ~ who, budget, "1000", "2000", "1") }}</td>
+              <td>{{ scale(row ~ "6", "Score for " ~ who, "", "0", "10", "0.5") }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
   {% include "reviewer/_scale_js.html" %}
+  <script>
+  // Each column starts at the widest minimum among its scales, and a
+  // gripper drag resizes it as Band 2's does, clamped at that minimum.
+  function sizeColumns() {
+    var table = document.querySelector("[data-scale-preview-table]");
+    if (!table) return;
+    var cols = Array.prototype.slice.call(table.querySelectorAll("col"));
+    function floor(i) {
+      var most = 60;
+      table.querySelectorAll("tbody tr").forEach(function (tr) {
+        var cell = tr.children[i];
+        var w = cell && cell.querySelector("[data-rs-scale-min]");
+        if (w) most = Math.max(most, parseInt(w.getAttribute("data-rs-scale-min"), 10) + 2);
+      });
+      return most;
+    }
+    cols.forEach(function (col, i) {
+      var min = floor(i);
+      col.setAttribute("data-min", String(min));
+      if (!col.style.width) col.style.width = min + "px";
+    });
+    function width() {
+      table.style.width = cols.reduce(function (n, c) { return n + parseInt(c.style.width, 10); }, 0) + "px";
+    }
+    width();
+    table.querySelectorAll(".new-model-band2-resize-handle").forEach(function (handle) {
+      handle.addEventListener("pointerdown", function (e) {
+        var col = table.querySelector('col[data-col-key="' + handle.getAttribute("data-col-key") + '"]');
+        var min = parseInt(col.getAttribute("data-min"), 10);
+        var startX = e.clientX, start = parseInt(col.style.width, 10);
+        handle.setPointerCapture(e.pointerId);
+        document.body.style.cursor = "col-resize";
+        function move(ev) {
+          col.style.width = Math.max(min, Math.min(1200, start + ev.clientX - startX)) + "px";
+          width();
+        }
+        function up() {
+          handle.removeEventListener("pointermove", move);
+          handle.removeEventListener("pointerup", up);
+          document.body.style.cursor = "";
+        }
+        handle.addEventListener("pointermove", move);
+        handle.addEventListener("pointerup", up);
+        e.preventDefault();
+      });
+    });
+  }
+  // After the scales are built (they state their minimums as they are).
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", sizeColumns);
+  else sizeColumns();
+  </script>
 {% endblock %}
