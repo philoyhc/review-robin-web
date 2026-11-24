@@ -283,8 +283,6 @@
   // its own columns, so only the surface's tables are touched.
   function fitColumns(root) {
     Array.prototype.forEach.call((root || document).querySelectorAll("table[data-rrw-sortable] [data-rs-scale-widget]"), function (w) {
-      // A stacked cell holds its scales its own way (``evenStacks``).
-      if (w.closest(".rs-stack-fields")) return;
       var td = w.closest("td"), table = td && td.closest("table");
       if (!td || !table || !table.tHead || !table.tHead.rows.length) return;
       var style = getComputedStyle(td);
