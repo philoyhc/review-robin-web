@@ -728,6 +728,12 @@
       .sc { padding: 10px 12px 2px; box-sizing: border-box; }
       .sc-line { position: relative; height: 28px; cursor: pointer; touch-action: none; }
       .sc-track { position: absolute; left: 0; right: 0; top: 13px; height: 2px; background: var(--gray-soft); }
+      /* A slide's line ends in a short bar at each end, so its reach
+         reads at a glance (author, 2026-11-24: mockup B). */
+      .sc-slide .sc-track::before,
+      .sc-slide .sc-track::after { content: ""; position: absolute; top: -6px; width: 2px; height: 14px; background: var(--gray); border-radius: 1px; }
+      .sc-slide .sc-track::before { left: -1px; }
+      .sc-slide .sc-track::after { right: -1px; }
       .sc-stop { position: absolute; top: 9px; width: 10px; height: 10px; margin-left: -5px; border-radius: var(--radius-pill); background: var(--white); border: 2px solid var(--gray); box-sizing: border-box; }
       .sc-thumb { position: absolute; top: 4px; width: 20px; height: 20px; margin-left: -10px; border-radius: var(--radius-pill); background: var(--blue-strong); border: 2px solid var(--white); box-shadow: 0 0 0 1px var(--blue-deep); }
       .sc-thumb:focus-visible { outline: 3px solid var(--blue-soft); outline-offset: 2px; }

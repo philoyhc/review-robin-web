@@ -819,3 +819,12 @@ def test_stacked_scales_share_their_ends(
     assert snap and slide and box
     assert abs(slide["x"] - snap["x"]) < 0.5
     assert abs(box["x"] + box["width"] - (snap["x"] + snap["width"])) < 0.5
+    # A slide's line ends in a short bar at each end (mockup B); a snap's,
+    # which has its stops, does not.
+    caps = reviewer.locator(".sc-slide .sc-track").first.evaluate(
+        "t => ['::before', '::after'].map(p => getComputedStyle(t, p).height)"
+    )
+    assert caps == ["14px", "14px"]
+    assert reviewer.locator(".sc-snap .sc-track").first.evaluate(
+        "t => getComputedStyle(t, '::before').content"
+    ) in ("none", "normal")
