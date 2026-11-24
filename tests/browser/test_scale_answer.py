@@ -303,3 +303,23 @@ def test_band_3_chooses_a_scale_and_band_2_previews_it(
     expect(
         card.locator('[data-new-model-band2-preview] [data-rs-scale-widget="snap"]')
     ).to_have_count(1)
+
+
+def test_a_tiny_decimal_step_keeps_its_places(page: Page) -> None:
+    """A step JavaScript writes in scientific notation (``1e-7``) still
+    numbers its stops and answers to seven places (Codex on #4193)."""
+    _open(page)
+    page.evaluate(
+        """() => {
+          const box = document.createElement("input");
+          box.type = "number"; box.name = "tiny"; box.min = "0"; box.max = "0.000001";
+          box.dataset.rsStep = "1e-7"; box.setAttribute("data-rs-scale", "");
+          const cell = document.createElement("div"); cell.id = "tiny-cell";
+          cell.appendChild(box); document.body.appendChild(cell);
+          window.rrwScaleEnhance(cell);
+        }"""
+    )
+    widget = page.locator("#tiny-cell [data-rs-scale-widget='snap']")
+    expect(widget.locator(".sc-num").nth(3)).to_have_text("0.0000003")
+    widget.get_by_role("slider").press("End")
+    expect(page.locator('input[name="tiny"]')).to_have_value("0.0000010")
