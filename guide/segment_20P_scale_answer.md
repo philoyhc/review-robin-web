@@ -63,6 +63,27 @@ Taken 2026-11-23 at `de266a3bf`.
 | Band 3 `data_type` mentions | 15 in a 7,637-line template | `grep -n data_type app/web/templates/operator/instruments_index.html \| wc -l` |
 | Tests touching step or field attributes | 17 and 41 | `grep -rln 'data-rs-step\|"step"' tests/`; `grep -rln 'response_fields\[' tests/` |
 
+### Status
+
+Closed 2026-11-24. **Built:** #4190 plan, #4191 scaffold, #4192 the scaffold as a resizable table, #4193 3a storage and the reviewer surface, #4194 3b Band 3 and Band 2, #4195 4 the Settings CSV and the cold read, #4196–#4198 the author's browser checks (5, 6, 7 the rollback of 6's label span), and the close (scaffold removed, its tests moved to the reviewer surface).
+
+**Diverged from the plan:**
+- Storage is two columns, `scale` and `scale_labels` (migration `e5f9b3a7c2d4`), mirrored into `validation` while the shape holds. Band 3's Save rebuilds `validation` from the columns, so keys kept only there would have been lost.
+- The CSV `scale` is a boolean; snap or slide follows from the point count (11 or fewer snap). Nothing stores `snap`/`slide`, so the first judgment call fell away. Item 2's handoff therefore sends `scale=true`, not `snap`.
+- A scale whose bounds can't be one refuses the card's Save with its reason (422), rather than saving as a plain number (author's ruling, 2026-11-24).
+- Rung 3 split into 3a and 3b, and the scaffold stayed until the close for the author's checks.
+
+**Added at build (author, 2026-11-24):**
+- A field with saved responses may switch to or from its scale; every other type stays locked.
+- In the stacked layout every scale in a table takes the widest one's width.
+- A slide's number box sits to its right, and an answered slide's foot is empty.
+- Band 3's label line sits under Min, Max and Step. A span from the Type menu to Step was built (#4197) and rolled back (#4198) because it squeezed the Type menu; a browser guard now holds its width.
+- Start and End labels reach the scale's edges, Middle is centered on the bar, and "Not answered" lines up with Start.
+
+**Found and fixed in review:**
+- Codex, 12 findings over #4193–#4197: a governed scale's live state, scientific-notation steps, a Save without `scale` kept the stored one, reviewer and stacked columns widen to the scale, Band 2's stacked and padded floors, the linked re-send's row allowlist, and String staying off on an answered field.
+- One cumulative `diff-reviewer` read (base `8b33d9ede`, at rung 4) found 10. It led to the live branch state, the re-send carrying the scale, the `|` in labels, `.btn-reset`, accessible names and stronger tests. One fix pushed with a failing test (rung 5's pinned row-script rule); the next push corrected it.
+
 ### PR ladder
 
 1. **Plan** (this file), with the todo pointers. Prose only.
@@ -93,7 +114,7 @@ Taken 2026-11-23 at `de266a3bf`.
 
 ### Open questions
 
-- The builder mockup's layout (the second line) is the author's to confirm at rung 3's browser check.
+- ~~The builder mockup's layout~~: confirmed at the browser checks: labels under Min, Max and Step (Status).
 
 ### Out of scope
 
