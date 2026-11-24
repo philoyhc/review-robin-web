@@ -92,3 +92,44 @@ def test_without_script_the_box_remains(page_as: Callable[..., Page]) -> None:
     page.goto(app_url(_PREVIEW))
     expect(page.locator('input[name="p1"]')).to_be_visible()
     expect(page.locator("[data-rs-scale-widget]")).to_have_count(0)
+
+
+def test_each_scale_sits_in_a_column_that_resizes_down_to_its_minimum(page: Page) -> None:
+    """The author's ask (2026-11-24): each scale in a table column, the
+    columns resized as Band 2's are, never below what the scale states."""
+    _open(page)
+    col = page.locator('col[data-col-key="merit"]')
+    minimum = int(col.get_attribute("data-min") or "0")
+    widget = page.locator('[data-rs-scale-widget="snap"]').first
+    assert minimum >= int(widget.get_attribute("data-rs-scale-min") or "0")
+    handle = page.locator('.new-model-band2-resize-handle[data-col-key="merit"]')
+
+    def drag(dx: float) -> None:
+        box = handle.bounding_box()
+        assert box is not None
+        x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+        page.mouse.move(x, y)
+        page.mouse.down()
+        page.mouse.move(x + dx, y, steps=5)
+        page.mouse.up()
+
+    def stops_span() -> float:
+        first = widget.locator(".sc-stop").first.bounding_box()
+        last = widget.locator(".sc-stop").last.bounding_box()
+        assert first is not None and last is not None
+        return last["x"] - first["x"]
+
+    narrow = stops_span()
+    drag(160)
+    assert int(col.evaluate("c => parseInt(c.style.width, 10)")) >= minimum + 150
+    assert stops_span() > narrow + 100  # the stops spread with the column
+    drag(-1000)  # far past the minimum
+    assert int(col.evaluate("c => parseInt(c.style.width, 10)")) == minimum
+    # At its minimum the scale is whole: the last stop inside its cell.
+    cell = widget.locator("xpath=ancestor::td[1]").bounding_box()
+    last = widget.locator(".sc-stop").last.bounding_box()
+    assert cell is not None and last is not None
+    assert last["x"] + last["width"] <= cell["x"] + cell["width"]
+    # And it still answers.
+    widget.locator(".sc-stop").nth(2).click(force=True)
+    expect(page.locator('input[name="p1"]')).to_have_value("3")

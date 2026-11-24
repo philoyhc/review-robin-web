@@ -645,7 +645,7 @@
       /* A scale answer (segment 20P Item 1, ``reviewer/_scale_js.html``):
          a line, a circle, numbered stops up to 11 points; past that a
          slide with the number box beside it. */
-      .sc { min-width: 220px; padding: 10px 12px 2px; }
+      .sc { padding: 10px 12px 2px; box-sizing: border-box; }
       .sc-line { position: relative; height: 28px; cursor: pointer; touch-action: none; }
       .sc-track { position: absolute; left: 0; right: 0; top: 13px; height: 2px; background: var(--gray-soft); }
       .sc-stop { position: absolute; top: 9px; width: 10px; height: 10px; margin-left: -5px; border-radius: var(--radius-pill); background: var(--white); border: 2px solid var(--gray); box-sizing: border-box; }
@@ -667,6 +667,14 @@
       .sc.sc-slide > input[type="number"] { width: 8em; max-width: 8em; margin-top: 4px; }
       .sc-off { opacity: 0.55; }
       .sc-off .sc-line { cursor: default; }
+      /* The scale preview's table (segment 20P rung 2): fixed columns,
+         each resized from a gripper on its header as Band 2's are. */
+      .sc-preview-wrap { overflow-x: auto; }
+      .sc-preview-table { table-layout: fixed; border-collapse: collapse; }
+      body.ui-v2 .sc-preview-table th { position: relative; text-align: left; font-size: var(--fs-small); padding: 6px 8px; border-bottom: 1px solid var(--gray-soft); }
+      body.ui-v2 .sc-preview-table td { vertical-align: top; padding: 4px 0; border-bottom: 1px solid var(--gray-mist); }
+      body.ui-v2 .sc-preview-table td:first-child { padding: 12px 8px; }
+      .sc-preview-table .new-model-band2-resize-handle { position: absolute; right: -3px; top: 0; bottom: 0; width: 6px; cursor: col-resize; user-select: none; touch-action: none; z-index: 1; }
       .sc-box-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
       /* A box the fit script has taken on (``data-fit-on``) loses its
          handle and its scrollbar: its height is its text's, and a drag

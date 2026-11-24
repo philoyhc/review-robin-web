@@ -6,7 +6,12 @@
    Min, the midpoint and Max, and the box stays beside it for an exact
    value. The box keeps its name and value, so what is submitted, saved
    and checked does not change. Without script the box is all there is.
-   Optional labels: ``data-rs-scale-start``, ``-middle``, ``-end``. #}
+   Optional labels: ``data-rs-scale-start``, ``-middle``, ``-end``.
+
+   Each scale states the narrowest it reads at (``minWidth``), set on
+   the widget as a style and as ``data-rs-scale-min`` (px) for a column
+   resizer to respect: a snap needs room for every numbered stop, a
+   label row needs room for its words, a slide needs its three numbers. #}
 <script>
 (function () {
   var SNAP_MAX = 11;
@@ -29,9 +34,23 @@
     var off = box.disabled;
     var label = box.getAttribute("aria-label") || "";
 
+    // The narrowest the scale reads at: every stop's number (or the three
+    // a slide shows) apart, and the labels' words side by side.
+    var numberCh = Math.max(String(max).length, String(min).length) + places + 1;
+    var stopsPx = snap ? points * Math.max(26, numberCh * 8 + 6) : 3 * (numberCh * 8 + 24);
+    var labelsPx = ["start", "middle", "end"].reduce(function (n, k) {
+      return n + (box.getAttribute("data-rs-scale-" + k) || "").length * 7 + 12;
+    }, 0);
+    // The end numbers sit centered on the line's ends, so each side keeps
+    // half the widest number clear of the cell's edge.
+    var side = Math.max(12, Math.ceil(numberCh * 4) + 4);
+    var minWidth = Math.max(160, stopsPx, labelsPx) + 2 * side;
     var wrap = document.createElement("div");
     wrap.className = "sc" + (snap ? " sc-snap" : " sc-slide") + (off ? " sc-off" : "");
     wrap.setAttribute("data-rs-scale-widget", snap ? "snap" : "slide");
+    wrap.setAttribute("data-rs-scale-min", String(minWidth));
+    wrap.style.minWidth = minWidth + "px";
+    wrap.style.paddingLeft = wrap.style.paddingRight = side + "px";
     var line = document.createElement("div");
     line.className = "sc-line";
     var track = document.createElement("div");
