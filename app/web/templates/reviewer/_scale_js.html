@@ -25,30 +25,50 @@
     return Math.min(20, Math.max(0, (dot < 0 ? 0 : digits.length - dot - 1) - exp));
   }
 
+  // A scale's geometry from its bounds and labels, or null when the
+  // bounds are not a scale's: how many points, whether it snaps, the
+  // decimals it shows, the padding each side keeps, and the narrowest
+  // it reads at. Band 2 sizes a preview column from it before drawing.
+  function geometry(min, max, step, words) {
+    if (!isFinite(min) || !isFinite(max) || !isFinite(step) || step <= 0 || max <= min) return null;
+    var points = Math.round((max - min) / step) + 1;
+    if (Math.abs((points - 1) * step - (max - min)) > step / 1000) return null;  // off the grid
+    var snap = points <= SNAP_MAX;
+    var places = Math.max(decimals(step), decimals(min));
+    // Every stop's number (or the three a slide shows) apart, and the
+    // labels' words side by side.
+    var numberCh = Math.max(String(max).length, String(min).length) + places + 1;
+    var stopsPx = snap ? points * Math.max(26, numberCh * 8 + 6) : 3 * (numberCh * 8 + 24);
+    var labelsPx = (words || []).reduce(function (n, w) { return n + (w || "").length * 7 + 12; }, 0);
+    // The end numbers sit centered on the line's ends, so each side keeps
+    // half the widest number clear of the cell's edge.
+    var side = Math.max(12, Math.ceil(numberCh * 4) + 4);
+    return {
+      points: points, snap: snap, places: places, side: side,
+      minWidth: Math.max(160, stopsPx, labelsPx) + 2 * side,
+    };
+  }
+  window.rrwScaleGeometry = geometry;
+
   function enhance(box) {
     if (box.dataset.rsScaleDone) return;
     var min = parseFloat(box.min), max = parseFloat(box.max);
     var step = parseFloat(box.dataset.rsStep);
-    if (!isFinite(min) || !isFinite(max) || !isFinite(step) || step <= 0 || max <= min) return;
-    var points = Math.round((max - min) / step) + 1;
-    if (Math.abs((points - 1) * step - (max - min)) > step / 1000) return;  // bounds off the grid
+    var words = ["start", "middle", "end"].map(function (k) {
+      return box.getAttribute("data-rs-scale-" + k) || "";
+    });
+    var g = geometry(min, max, step, words);
+    if (!g) return;
     box.dataset.rsScaleDone = "1";
-    var snap = points <= SNAP_MAX;
-    var places = Math.max(decimals(step), decimals(min));
+    var points = g.points, snap = g.snap, places = g.places;
+    // A Band 2 preview's scale (``data-rs-scale-preview``) shows as the
+    // reviewer will see it, full color, but takes no input.
+    var preview = box.hasAttribute("data-rs-scale-preview");
 
-    // The narrowest the scale reads at: every stop's number (or the three
-    // a slide shows) apart, and the labels' words side by side.
-    var numberCh = Math.max(String(max).length, String(min).length) + places + 1;
-    var stopsPx = snap ? points * Math.max(26, numberCh * 8 + 6) : 3 * (numberCh * 8 + 24);
-    var labelsPx = ["start", "middle", "end"].reduce(function (n, k) {
-      return n + (box.getAttribute("data-rs-scale-" + k) || "").length * 7 + 12;
-    }, 0);
-    // The end numbers sit centered on the line's ends, so each side keeps
-    // half the widest number clear of the cell's edge.
-    var side = Math.max(12, Math.ceil(numberCh * 4) + 4);
-    var minWidth = Math.max(160, stopsPx, labelsPx) + 2 * side;
+    var side = g.side, minWidth = g.minWidth;
     var wrap = document.createElement("div");
-    wrap.className = "sc" + (snap ? " sc-snap" : " sc-slide");
+    wrap.className = "sc" + (snap ? " sc-snap" : " sc-slide")
+      + (preview ? " sc-preview" : "");
     wrap.setAttribute("data-rs-scale-widget", snap ? "snap" : "slide");
     wrap.setAttribute("data-rs-scale-min", String(minWidth));
     wrap.style.minWidth = minWidth + "px";
@@ -90,9 +110,6 @@
       numbers.appendChild(n);
     });
 
-    var words = ["start", "middle", "end"].map(function (k) {
-      return box.getAttribute("data-rs-scale-" + k) || "";
-    });
     var labels = null;
     if (words.some(Boolean)) {
       labels = document.createElement("div");
@@ -112,7 +129,7 @@
     foot.appendChild(said);
     var clear = document.createElement("button");
     clear.type = "button";
-    clear.className = "sc-clear";
+    clear.className = "btn-reset sc-clear";
     clear.textContent = "clear";
     foot.appendChild(clear);
 
@@ -121,6 +138,9 @@
     if (labels) wrap.appendChild(labels);
     wrap.appendChild(foot);
     box.parentNode.insertBefore(wrap, box);
+    // A Band 2 preview is a picture of the scale: the operator's own
+    // controls are Band 3's, so assistive tech skips it.
+    if (preview) wrap.setAttribute("aria-hidden", "true");
     if (snap) {
       box.classList.add("sc-box-hidden");  // still submitted, out of the tab order
       box.tabIndex = -1;
@@ -139,7 +159,7 @@
       if (v === null || v < min || v > max) {
         wrap.classList.add("sc-empty");
         thumb.removeAttribute("aria-valuenow");
-        thumb.setAttribute("aria-valuetext", "not answered");
+        thumb.setAttribute("aria-valuetext", v === null ? "not answered" : box.value + ", out of range");
         said.textContent = v === null ? "Not answered" : "Out of range";
         return;
       }
@@ -168,31 +188,33 @@
       return min + Math.min(1, Math.max(0, (x - r.left) / r.width)) * (max - min);
     }
 
-    // Whether the scale takes input now. A branch opening or closing
-    // enables or disables a governed field's box after the page loads,
-    // so this is read live, never kept.
-    function off() { return box.disabled; }
+    // Whether the scale takes input now. The box can be switched on and
+    // off after the page loads (a branch opening or closing disables a
+    // governed field's box), so this is read live, never kept.
+    function off() { return preview || box.disabled; }
     // The thumb, *clear* and the look follow the box's state and name;
     // the branching script also adds and removes " (required)".
     function sync() {
       var label = box.getAttribute("aria-label") || "";
-      wrap.classList.toggle("sc-off", off());
+      var isOff = off();
+      wrap.classList.toggle("sc-off", box.disabled && !preview);
       thumb.setAttribute("aria-label", label);
-      if (off()) {
+      if (isOff) {
         thumb.setAttribute("aria-disabled", "true");
         thumb.removeAttribute("tabindex");
       } else {
         thumb.removeAttribute("aria-disabled");
         thumb.tabIndex = 0;
       }
-      clear.disabled = off();
+      clear.disabled = isOff;
+      clear.setAttribute("aria-label", "Clear " + (label.replace(/ \(required\)$/, "") || "answer"));
     }
     sync();
     if (window.MutationObserver) {
       new MutationObserver(sync).observe(box, { attributes: true, attributeFilter: ["disabled", "aria-label"] });
     }
 
-    {
+    if (!preview) {
       var dragging = false;
       line.addEventListener("pointerdown", function (e) {
         if (off()) return;

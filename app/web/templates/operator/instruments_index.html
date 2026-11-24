@@ -2592,7 +2592,34 @@
           // A response column's <col> style: its dragged width, or, for an
           // unsized number column, its header / digit span, as the
           // surface's is (19T Item 16).
+          // Segment 20P — the narrowest a scale column reads at, in px,
+          // from the scale's own geometry; 0 for any other column.
+          function scaleMinWidth(card, key) {
+            var row = rfRowByKey(card, key);
+            if (!row || !rfRowCommitted(row) || !window.rrwScaleGeometry) { return 0; }
+            var shape = window.newModelRfCommittedShape(row);
+            if (!shape.scale) { return 0; }
+            var g = window.rrwScaleGeometry(
+              parseFloat(shape.min), parseFloat(shape.max), parseFloat(shape.step),
+              (shape.scaleLabels || '').split('|')
+            );
+            return g ? g.minWidth + 2 : 0;
+          }
+          // A scale column's floor: the scale and the preview cell's side
+          // padding (``var(--space-4)`` each side in ``base.html``), so
+          // the scale fits inside the cell (Codex on #4194).
+          function scaleColumnMin(card, key) {
+            var scale = scaleMinWidth(card, key);
+            if (!scale) { return 0; }
+            var pad = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--space-4')) || 16;
+            return scale + 2 * pad;
+          }
           function responseColStyle(card, r) {
+            var scaleMin = scaleColumnMin(card, r.key);
+            if (scaleMin) {
+              // A scale column: its dragged width, never under its minimum.
+              return 'width: ' + Math.max(scaleMin, r.width > 0 ? r.width : 0) + 'px;';
+            }
             var row = r.width > 0 ? null : rfRowByKey(card, r.key);
             var ch = row && rfRowCommitted(row)
               ? numericColumnCh(r.label, r.required, window.newModelRfCommittedShape(row))
@@ -2786,17 +2813,28 @@
           function stackWidth(card, which) {
             return parseInt(card.getAttribute('data-new-model-band2-stack-' + which + '-width') || '', 10) || 0;
           }
+          // Segment 20P — the widest scale among the fields, which a saved
+          // response track narrower than it grows to hold (Codex on #4194).
+          function stackScaleMin(card) {
+            return rfRows(card).reduce(function (most, row) {
+              return Math.max(most, scaleMinWidth(card, row.getAttribute('data-row-key')));
+            }, 0);
+          }
+          function stackInputWidth(card) {
+            var input = stackWidth(card, 'input');
+            return input ? Math.max(input, stackScaleMin(card)) : 0;
+          }
           function stackVars(card) {
             var vars = [];
             if (stackWidth(card, 'label')) { vars.push('--rs-stack-label: ' + stackWidth(card, 'label') + 'px'); }
-            if (stackWidth(card, 'input')) { vars.push('--rs-stack-input: ' + stackWidth(card, 'input') + 'px'); }
+            if (stackInputWidth(card)) { vars.push('--rs-stack-input: ' + stackInputWidth(card) + 'px'); }
             return vars.join('; ');
           }
           // Both widths set, the Responses column holds them: the two
           // widths, the grid's gap and the cell's padding (the surface's
           // ``stack_col_px``).
           function stackColStyle(card) {
-            var label = stackWidth(card, 'label'), input = stackWidth(card, 'input');
+            var label = stackWidth(card, 'label'), input = stackInputWidth(card);
             return (label && input) ? 'width: ' + (label + input + 12 + 32) + 'px;' : '';
           }
           function stackResizeHandle(which) {
@@ -3203,9 +3241,12 @@
               || parseInt(col.style.width, 10) || 100;
             var lastWidth = startWidth;
             document.body.style.cursor = 'col-resize';
+            // Segment 20P — a scale column stops at the scale's minimum.
+            var floorPx = Math.max(40, key.indexOf('resp_') === 0 && card
+              ? scaleColumnMin(card, key.slice(5)) : 0);
             function onMove(ev) {
               var delta = ev.clientX - startX;
-              var w = Math.max(40, Math.min(1200, startWidth + delta));
+              var w = Math.max(floorPx, Math.min(1200, startWidth + delta));
               col.style.width = w + 'px';
               lastWidth = w;
             }
@@ -3329,6 +3370,9 @@
                 required: !!(requiredBtn && requiredBtn.getAttribute('data-required') === 'true'),
                 help_text_visible: !!(helpBtn && helpBtn.getAttribute('data-help-visible') === 'true'),
                 help_text: committed ? (row.getAttribute('data-help-text') || '') : '',
+                // Segment 20P — the scale mode and its labels.
+                scale: window.newModelRfIsScale(row),
+                scale_labels: window.newModelRfScaleLabels(row),
               };
               if (rfIdAttr && /^\d+$/.test(rfIdAttr)) {
                 rf.id = parseInt(rfIdAttr, 10);
@@ -3564,6 +3608,7 @@
               dataType: a('data-rf-data-type') || 'string',
               min: a('data-rf-min'), max: a('data-rf-max'),
               step: a('data-rf-step'), list: a('data-rf-list'),
+              scale: a('data-rf-scale'), scaleLabels: a('data-rf-scale-labels'),
             };
           };
           function buildResponseFieldPreviewCell(card, r) {
@@ -3601,10 +3646,21 @@
               // Matches reviewer surface which puts the validation
               // info on ``title`` (tooltip), not as a visible
               // placeholder, on ``<input type="number">``.
+              // Segment 20P — a scale previews as the reviewer will see
+              // it (``reviewer/_scale_js.html``, drawn after the rebuild).
+              var scaleAttrs = '';
+              if (bounds.scale) {
+                var words = (bounds.scaleLabels || '').split('|');
+                scaleAttrs = ' data-rs-scale data-rs-scale-preview data-rs-step="' + esc(bounds.step) + '"'
+                  + ['start', 'middle', 'end'].map(function (k, i) {
+                    return words[i] ? ' data-rs-scale-' + k + '="' + esc(words[i]) + '"' : '';
+                  }).join('');
+              }
               return '<input type="number" ' + commonAttrs
                 + (bounds.min ? ' min="' + esc(bounds.min) + '"' : '')
                 + (bounds.max ? ' max="' + esc(bounds.max) + '"' : '')
                 + (bounds.step ? ' step="' + esc(bounds.step) + '"' : '')
+                + scaleAttrs
                 + '>';
             }
             if (dataType === 'list') {
@@ -3634,7 +3690,8 @@
               var summary = '';
               if (dataType === 'integer' || dataType === 'decimal') {
                 if (bounds.min && bounds.max && bounds.step) {
-                  summary = bounds.min + '-' + bounds.max + ', steps of ' + bounds.step;
+                  summary = bounds.min + '-' + bounds.max + ', steps of ' + bounds.step
+                    + (bounds.scale ? ', as a scale' : '');
                 }
               } else if (dataType === 'string') {
                 if (bounds.max) {
@@ -3712,6 +3769,8 @@
             syncStackHead(card);
             // 19T Item 8 — refresh the display-field table's arrows.
             syncDfTable(card);
+            // Segment 20P — draw each scale the preview now holds.
+            if (window.rrwScaleEnhance) { window.rrwScaleEnhance(container); }
           }
           // 19T Item 9 — set a response field's selection on its row,
           // from its Active checkbox. Hiding a field with
@@ -4965,6 +5024,8 @@
                    data-rf-max="{{ rf.max }}"
                    data-rf-step="{{ rf.step }}"
                    data-rf-list="{{ rf.list_options }}"
+                   data-rf-scale="{{ 'true' if rf.scale else '' }}"
+                   data-rf-scale-labels="{{ rf.scale_labels }}"
                    data-width="{{ rf.width_px or '' }}"
                    data-help-text="{{ rf.help_text or '' }}"
                    data-response-count="{{ rf.response_count or 0 }}"
@@ -5035,8 +5096,13 @@
                         {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                         style="width: 100%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                   <option value="string" {% if rf.data_type == 'string' %}selected{% endif %}>String</option>
-                  <option value="integer" {% if rf.data_type == 'integer' %}selected{% endif %}>Integer</option>
-                  <option value="decimal" {% if rf.data_type == 'decimal' %}selected{% endif %}>Decimal</option>
+                  {# Segment 20P — each scale type keeps its number type's
+                     value, so every reader of the menu's value is
+                     unchanged; ``data-scale`` marks the choice. #}
+                  <option value="integer" {% if rf.data_type == 'integer' and not rf.scale %}selected{% endif %}>Integer</option>
+                  <option value="integer" data-scale {% if rf.data_type == 'integer' and rf.scale %}selected{% endif %}>Integer (scale)</option>
+                  <option value="decimal" {% if rf.data_type == 'decimal' and not rf.scale %}selected{% endif %}>Decimal</option>
+                  <option value="decimal" data-scale {% if rf.data_type == 'decimal' and rf.scale %}selected{% endif %}>Decimal (scale)</option>
                   <option value="list" {% if rf.data_type == 'list' %}selected{% endif %}>List</option>
                   <optgroup label="Quick fill (List)">
                     {% for key, label, _options in band3_list_presets %}
@@ -5078,6 +5144,20 @@
                          oninput="newModelRfFieldChanged(this)"
                          {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                          style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type != 'list' %} display: none;{% endif %}">
+                  {# Segment 20P — a scale's second line: its three labels
+                     under Min, Max and Step, then what the reviewer gets. #}
+                  {% set _labels = (rf.scale_labels or '').split('|') + ['', '', ''] %}
+                  {# Only on a scale row; the script clones the template's
+                     for a row switched to a scale type. #}
+                  {% if rf.scale %}
+                  <div data-new-model-rf-scale-line class="rf-scale-line">
+                    {% for part, ph in (('start', 'Start label'), ('middle', 'Middle label'), ('end', 'End label')) %}
+                    <input type="text" data-new-model-rf-scale-label="{{ part }}" placeholder="{{ ph }}" maxlength="60" aria-label="{{ ph }}"
+                           value="{{ _labels[loop.index0] }}" oninput="newModelRfFieldChanged(this)">
+                    {% endfor %}
+                    <span class="rf-scale-summary muted" data-new-model-rf-scale-summary></span>
+                  </div>
+                  {% endif %}
                 </div></td>
                 {# 19T Item 13 — under a Require branch the condition
                    decides, so R grays out; its own value is kept for a
@@ -5171,7 +5251,9 @@
                       style="width: 100%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                 <option value="string">String</option>
                 <option value="integer">Integer</option>
+                <option value="integer" data-scale>Integer (scale)</option>
                 <option value="decimal">Decimal</option>
+                <option value="decimal" data-scale>Decimal (scale)</option>
                 <option value="list">List</option>
                 <optgroup label="Quick fill (List)">
                   {% for key, label, _options in band3_list_presets %}
@@ -5205,6 +5287,12 @@
                        placeholder="List (comma-separated)"
                        oninput="newModelRfFieldChanged(this)"
                        style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
+                <div data-new-model-rf-scale-line class="rf-scale-line" hidden>
+                  <input type="text" data-new-model-rf-scale-label="start" placeholder="Start label" maxlength="60" aria-label="Start label" oninput="newModelRfFieldChanged(this)">
+                  <input type="text" data-new-model-rf-scale-label="middle" placeholder="Middle label" maxlength="60" aria-label="Middle label" oninput="newModelRfFieldChanged(this)">
+                  <input type="text" data-new-model-rf-scale-label="end" placeholder="End label" maxlength="60" aria-label="End label" oninput="newModelRfFieldChanged(this)">
+                  <span class="rf-scale-summary muted" data-new-model-rf-scale-summary></span>
+                </div>
               </div></td>
                 <td class="col-shrink"><button type="button"
                       class="btn secondary"
@@ -5302,6 +5390,69 @@
           }
           window.newModelStageBand2State(band2);
         };
+        // Segment 20P — whether a row's Type is a scale choice (its
+        // option carries ``data-scale``; the value stays the number type).
+        window.newModelRfIsScale = window.newModelRfIsScale || function (row) {
+          var sel = row && row.querySelector('[data-new-model-rf-data-type]');
+          var opt = sel && sel.options[sel.selectedIndex];
+          return !!(opt && opt.hasAttribute('data-scale'));
+        };
+        // The row's three scale labels as ``start|middle|end``, blank
+        // when it has none.
+        window.newModelRfScaleLabels = window.newModelRfScaleLabels || function (row) {
+          var parts = ['start', 'middle', 'end'].map(function (k) {
+            var input = row.querySelector('[data-new-model-rf-scale-label="' + k + '"]');
+            return (input && input.value || '').trim();
+          });
+          return parts.some(Boolean) ? parts.join('|') : '';
+        };
+        // Why the row's live bounds can't be a scale, else null: the
+        // server's ``scale_shape_error``, word for word.
+        window.newModelRfScaleReason = window.newModelRfScaleReason || function (dataType, mn, mx, st) {
+          if (mn === null || mx === null) { return 'A scale needs a Min and a Max.'; }
+          if (st === null || st <= 0) { return 'A scale needs a Step.'; }
+          if (mx <= mn) { return 'Max must be above Min.'; }
+          if (dataType === 'integer' && [mn, mx, st].some(function (v) { return v !== Math.floor(v); })) {
+            return 'Whole numbers only.';
+          }
+          var points = (mx - mn) / st;
+          if (Math.abs(points - Math.round(points)) > 1e-9 * Math.max(1, Math.abs(points))) {
+            return 'Max must be Min plus a whole number of Steps.';
+          }
+          return null;
+        };
+        // The scale line's summary: what the reviewer will get.
+        window.newModelRfSyncScaleLine = window.newModelRfSyncScaleLine || function (row) {
+          var on = window.newModelRfIsScale(row);
+          var line = row.querySelector('[data-new-model-rf-scale-line]');
+          if (!line && on) {
+            // A saved row renders the line only when it is a scale.
+            var band3 = row.closest('[data-new-model-band3]');
+            var tpl = band3 && band3.querySelector('[data-new-model-rf-row-template]');
+            var source = tpl && tpl.content.querySelector('[data-new-model-rf-scale-line]');
+            var wrap = row.querySelector('[data-new-model-rf-bounds-wrap]');
+            if (source && wrap) { line = wrap.appendChild(source.cloneNode(true)); }
+          }
+          if (!line) { return; }
+          line.hidden = !on;
+          if (!on) { return; }
+          function num(key) {
+            var input = row.querySelector('[data-new-model-rf-bound="' + key + '"]');
+            var t = (input && input.value || '').trim();
+            return t === '' ? null : parseFloat(t);
+          }
+          var sel = row.querySelector('[data-new-model-rf-data-type]');
+          var mn = num('min'), mx = num('max'), st = num('step');
+          var summary = line.querySelector('[data-new-model-rf-scale-summary]');
+          var why = window.newModelRfScaleReason(sel.value, mn, mx, st);
+          if (summary) {
+            if (why) { summary.textContent = why; }
+            else {
+              var points = Math.round((mx - mn) / st) + 1;
+              summary.textContent = points + ' points · ' + (points <= 11 ? 'snaps' : 'slides, with a box');
+            }
+          }
+        };
         window.newModelRfSyncBounds = window.newModelRfSyncBounds || function (select) {
           // Show only the bound inputs that apply to the picked
           // data type. Bound visibility map mirrors the spec:
@@ -5346,6 +5497,12 @@
             var key = input.getAttribute('data-new-model-rf-bound');
             input.style.display = show.indexOf(key) >= 0 ? '' : 'none';
           });
+          // Segment 20P — Integer (scale) with no Step fills a Step of 1.
+          if (window.newModelRfIsScale(row) && dataType === 'integer') {
+            var stepBox = row.querySelector('[data-new-model-rf-bound="step"]');
+            if (stepBox && !stepBox.value.trim() && !stepBox.disabled) { stepBox.value = '1'; }
+          }
+          window.newModelRfSyncScaleLine(row);
           // Re-check the row's marker and X — a
           // data-type swap may render previously-valid bounds
           // (e.g. min=10, max=5 for String, where only max is
@@ -5415,6 +5572,10 @@
               return v !== null && v !== Math.floor(v);
             })) {
               return 'Integer fields take whole-number Min, Max and Step. Choose Decimal for steps like 0.5.';
+            }
+            // Segment 20P — a scale needs its whole shape.
+            if (window.newModelRfIsScale(row)) {
+              return window.newModelRfScaleReason(dataType, mn, mx, st);
             }
             return null;
           }
@@ -5547,6 +5708,9 @@
             name: window.newModelRfSaveName(row),
             dataType: typeSel ? typeSel.value : 'string',
             min: '', max: '', step: '', list: '',
+            // Segment 20P — the scale mode and its labels.
+            scale: window.newModelRfIsScale(row) ? 'true' : '',
+            scaleLabels: window.newModelRfScaleLabels(row),
           };
           row.querySelectorAll('[data-new-model-rf-bound]').forEach(function (input) {
             shape[input.getAttribute('data-new-model-rf-bound')] = (input.value || '').trim();
@@ -5560,6 +5724,7 @@
           var a = window.newModelRfRowShape(row);
           var b = window.newModelRfCommittedShape(row);
           if (a.name !== b.name || a.dataType !== b.dataType) { return true; }
+          if (a.scale !== b.scale || (a.scale && a.scaleLabels !== b.scaleLabels)) { return true; }
           var shown = {
             string: ['min', 'max'],
             integer: ['min', 'max', 'step'],
@@ -6574,6 +6739,7 @@
           var changed = window.newModelRfSyncDefaults(
             row.closest('[data-new-model-rf-rows]')
           );
+          window.newModelRfSyncScaleLine(row);  // segment 20P: its summary follows the bounds
           window.newModelRfRecomputeActionStates(row);
           window.newModelRfMaybeCommit(row);
           changed.forEach(function (other) {
@@ -6657,6 +6823,8 @@
           row.setAttribute('data-rf-max', shape.max);
           row.setAttribute('data-rf-step', shape.step);
           row.setAttribute('data-rf-list', shape.list);
+          row.setAttribute('data-rf-scale', shape.scale);
+          row.setAttribute('data-rf-scale-labels', shape.scaleLabels);
         };
         // 19T Item 9 — ✓ retired: a row commits by itself whenever its
         // live name and shape are valid and differ from what the preview
@@ -7635,4 +7803,6 @@
       if (pill) pill.textContent = _VP_IDENTITY_LABELS[next] || next;
     };
   </script>
+{# Segment 20P — Band 2 previews a scale field as the reviewer sees it. #}
+{% include "reviewer/_scale_js.html" %}
 {% endblock %}

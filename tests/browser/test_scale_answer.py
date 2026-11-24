@@ -17,6 +17,9 @@ from ._builder import (
     activate,
     branch_rating,
     make_rating_a_scale,
+    open_unlocked,
+    rows,
+    save,
     seed_rosters,
 )
 from .conftest import LiveServer, app_url
@@ -171,6 +174,51 @@ def test_a_scale_field_on_the_reviewer_surface_saves_what_it_shows(
     reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
     widget = reviewer.locator('[data-rs-scale-widget="snap"]').first
     expect(widget.get_by_role("slider")).to_have_attribute("aria-valuenow", "4")
+
+
+def test_band_3_chooses_a_scale_and_band_2_previews_it(
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
+) -> None:
+    """Rung 3b: Integer (scale) on Rating (1–5) shows its label line and
+    "5 points · snaps", Band 2's preview draws the scale in a column no
+    narrower than the scale's minimum, and Save keeps it across a reload."""
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    page.set_viewport_size({"width": 1500, "height": 1100})
+    card = open_unlocked(page, session_id)
+    rating = rows(card).first
+    rating.locator("[data-new-model-rf-data-type]").select_option(label="Integer (scale)")
+    line = rating.locator("[data-new-model-rf-scale-line]")
+    expect(line).to_be_visible()
+    expect(line.locator("[data-new-model-rf-scale-summary]")).to_have_text("5 points · snaps")
+    rating.locator('[data-new-model-rf-scale-label="start"]').fill("Poor")
+    rating.locator('[data-new-model-rf-scale-label="end"]').fill("Excellent")
+    preview = card.locator("[data-new-model-band2-preview]")
+    widget = preview.locator('[data-rs-scale-widget="snap"]').first
+    expect(widget).to_be_visible()
+    expect(widget.locator(".sc-stop")).to_have_count(5)
+    expect(widget.locator(".sc-label")).to_have_text(["Poor", "", "Excellent"])
+    expect(preview.locator(".rs-constraints")).to_contain_text("as a scale")
+    cell = widget.locator("xpath=ancestor::td[1]").bounding_box()
+    assert cell is not None
+    assert cell["width"] >= int(widget.get_attribute("data-rs-scale-min") or "0")
+    # A bound that breaks the scale says why, and the preview keeps the last good one.
+    rating.locator('[data-new-model-rf-bound="step"]').fill("3")
+    expect(line.locator("[data-new-model-rf-scale-summary]")).to_have_text(
+        "Max must be Min plus a whole number of Steps."
+    )
+    expect(rating).to_have_attribute("data-row-pending", "true")
+    rating.locator('[data-new-model-rf-bound="step"]').fill("1")
+    save(page, card)
+    card = open_unlocked(page, session_id)
+    rating = rows(card).first
+    expect(rating.locator("[data-new-model-rf-data-type] option:checked")).to_have_text(
+        "Integer (scale)"
+    )
+    expect(rating.locator('[data-new-model-rf-scale-label="end"]')).to_have_value("Excellent")
+    expect(
+        card.locator('[data-new-model-band2-preview] [data-rs-scale-widget="snap"]')
+    ).to_have_count(1)
 
 
 def test_a_governed_scale_follows_its_branch(
@@ -328,3 +376,86 @@ def test_a_stacked_scale_stays_inside_its_cell_with_saved_widths(
     assert w is not None and c is not None
     assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
     assert w["width"] >= int(widget.get_attribute("data-rs-scale-min") or "0") - 1
+
+
+def test_band_2_stacked_preview_holds_its_scale_with_saved_widths(
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """Codex on #4194: a stacked preview whose saved response track
+    (60px) is narrower than the scale grows the track and the column to
+    hold it, rather than painting the scale outside its cell."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument
+
+    from ._builder import session_pk
+
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    make_rating_a_scale(live_server.database_url, session_id)
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(
+                    Instrument.session_id == session_pk(live_server.database_url, session_id)
+                )
+            ).scalar_one()
+            instrument.response_layout = "stacked"
+            instrument.column_widths = {"stack_label": 150, "stack_input": 60}
+            db.commit()
+    finally:
+        engine.dispose()
+    page.set_viewport_size({"width": 1500, "height": 1100})
+    card = open_unlocked(page, session_id)
+    widget = card.locator("[data-new-model-band2-preview] .rs-stack-fields [data-rs-scale-widget]")
+    expect(widget).to_have_count(1)
+    cell = widget.locator("xpath=ancestor::td[1]")
+    w, c = widget.bounding_box(), cell.bounding_box()
+    assert w is not None and c is not None
+    assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
+
+
+def test_band_2_scale_column_holds_its_scale_inside_the_cell_padding(
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """Codex on #4194: with a saved narrow width (a fixed-layout preview)
+    a scale column's floor counts the cell's side padding, so the scale
+    ends inside its cell rather than ~30px into the next."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument, InstrumentResponseField
+
+    from ._builder import session_pk
+
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    make_rating_a_scale(live_server.database_url, session_id)
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(
+                    Instrument.session_id == session_pk(live_server.database_url, session_id)
+                )
+            ).scalar_one()
+            rating = db.execute(
+                select(InstrumentResponseField).where(
+                    InstrumentResponseField.instrument_id == instrument.id,
+                    InstrumentResponseField.label == "Rating",
+                )
+            ).scalar_one()
+            instrument.column_widths = {f"rf_{rating.id}": 60}
+            db.commit()
+    finally:
+        engine.dispose()
+    page.set_viewport_size({"width": 1500, "height": 1100})
+    card = open_unlocked(page, session_id)
+    widget = card.locator("[data-new-model-band2-preview] [data-rs-scale-widget]").first
+    expect(widget).to_be_visible()
+    cell = widget.locator("xpath=ancestor::td[1]")
+    w, c = widget.bounding_box(), cell.bounding_box()
+    assert w is not None and c is not None
+    assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
