@@ -179,3 +179,28 @@ def test_a_scale_fits_its_card(
     assert card and box
     assert box["x"] >= card["x"] and box["x"] + box["width"] <= card["x"] + card["width"] + 0.5
     _no_sideways_scroll(reviewer)
+
+
+def test_a_slide_box_sits_under_its_full_width_scale(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Author, 2026-11-24: in a card a slide's line takes the card's
+    width, and its box drops to a row of its own under the scale and its
+    labels, above *Not answered*, at its desktop width."""
+    reviewer = _surface(
+        page_as, api, live_server, new_session, scale={"lo": 1, "hi": 100, "step": 1}
+    )
+    widget = reviewer.locator("table.rs-table .sc.sc-slide").first
+    line = widget.locator(".sc-line").bounding_box()
+    labels = widget.locator(".sc-labels").bounding_box()
+    box = widget.locator("input[type='number']").bounding_box()
+    foot = widget.locator(".sc-foot").bounding_box()
+    whole = widget.bounding_box()
+    assert line and labels and box and foot and whole
+    assert line["width"] > whole["width"] * 0.8  # the line spans the card
+    assert box["y"] >= labels["y"] + labels["height"] - 1  # under the labels
+    assert foot["y"] >= box["y"] + box["height"] - 1  # above Not answered
+    assert abs(box["width"] - 88) < 1
