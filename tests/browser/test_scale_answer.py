@@ -396,3 +396,54 @@ def test_stacked_scales_take_the_widest_ones_width(
     widths = [scales.nth(i).evaluate("w => w.getBoundingClientRect().width") for i in range(2)]
     assert abs(widths[0] - widths[1]) < 1
     assert abs(widths[0] - max(mins)) < 1
+
+
+def test_a_narrow_saved_column_widens_to_hold_its_scale(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Codex on #4193: a column sized for a number box (here a saved
+    60px width, which makes the table fixed-layout) widens to the
+    scale's minimum rather than letting it paint over the next cell."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument, InstrumentResponseField
+
+    from ._builder import session_pk
+
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    make_rating_a_scale(live_server.database_url, session_id)
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(
+                    Instrument.session_id == session_pk(live_server.database_url, session_id)
+                )
+            ).scalar_one()
+            rating = db.execute(
+                select(InstrumentResponseField).where(
+                    InstrumentResponseField.instrument_id == instrument.id,
+                    InstrumentResponseField.label == "Rating",
+                )
+            ).scalar_one()
+            instrument.column_widths = {f"rf_{rating.id}": 60}
+            db.commit()
+    finally:
+        engine.dispose()
+    activate(api, live_server.database_url, session_id)
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 1400, "height": 1000})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    widget = reviewer.locator('[data-rs-scale-widget="snap"]').first
+    expect(widget).to_be_visible()
+    cell = widget.locator("xpath=ancestor::td[1]")
+    next_cell = cell.locator("xpath=following-sibling::td[1]")
+    w, c, n = widget.bounding_box(), cell.bounding_box(), next_cell.bounding_box()
+    assert w is not None and c is not None and n is not None
+    assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
+    assert w["x"] + w["width"] <= n["x"] + 1
