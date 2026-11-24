@@ -5434,41 +5434,6 @@
           return null;
         };
         // The scale line's summary: what the reviewer will get.
-        // The label line spans from the Type menu's left edge to Step's
-        // right edge, so the three boxes take that width between them
-        // (author, 2026-11-24). Measured, since the columns are the
-        // table's: a hidden card measures nothing and is fitted when its
-        // table next resizes.
-        window.newModelRfFitScaleLine = window.newModelRfFitScaleLine || function (row) {
-          var line = row.querySelector('[data-new-model-rf-scale-line]');
-          var sel = row.querySelector('[data-new-model-rf-data-type]');
-          var step = row.querySelector('[data-new-model-rf-bound="step"]');
-          if (!line || line.hidden || !sel || !step) { return; }
-          var from = sel.getBoundingClientRect(), to = step.getBoundingClientRect();
-          var at = line.parentNode.getBoundingClientRect();
-          if (!from.width || !to.width) { return; }
-          line.style.marginLeft = Math.round(from.left - at.left) + 'px';
-          line.style.width = Math.round(to.right - from.left) + 'px';
-        };
-        (function () {
-          function fitAll(table) {
-            table.querySelectorAll('[data-new-model-rf-row]').forEach(window.newModelRfFitScaleLine);
-          }
-          function watch() {
-            var tables = document.querySelectorAll('table.rf-table');
-            if (window.ResizeObserver) {
-              var ro = new ResizeObserver(function (entries) {
-                entries.forEach(function (e) { fitAll(e.target); });
-              });
-              tables.forEach(function (t) { ro.observe(t); });
-            } else {
-              window.addEventListener('resize', function () { tables.forEach(fitAll); });
-            }
-            tables.forEach(fitAll);
-          }
-          if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', watch); }
-          else { watch(); }
-        })();
         window.newModelRfSyncScaleLine = window.newModelRfSyncScaleLine || function (row) {
           var on = window.newModelRfIsScale(row);
           var line = row.querySelector('[data-new-model-rf-scale-line]');
@@ -5490,7 +5455,6 @@
           }
           var sel = row.querySelector('[data-new-model-rf-data-type]');
           var mn = num('min'), mx = num('max'), st = num('step');
-          window.newModelRfFitScaleLine(row);
           var summary = line.querySelector('[data-new-model-rf-scale-summary]');
           var why = window.newModelRfScaleReason(sel.value, mn, mx, st);
           if (summary) {
