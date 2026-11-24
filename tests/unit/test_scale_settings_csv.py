@@ -114,3 +114,14 @@ def test_a_bundle_without_the_attributes_imports_no_scale(db: Session) -> None:
     field = _field(db, review_session.id)
     assert not field.scale and field.scale_labels is None
     assert field.validation and "scale" not in field.validation
+
+
+def test_a_linked_resend_owns_the_scale_rows() -> None:
+    """Codex on #4195: a linked application's re-send carries the scale,
+    so its two rows are among the instrument rows it owns; without them
+    the bundle would be refused as not owned."""
+    from app.services.linked_instruments import owns_row
+
+    assert owns_row(f"{_PREFIX}.scale")
+    assert owns_row(f"{_PREFIX}.scale_labels")
+    assert not owns_row(f"{_PREFIX}.branch_op")  # branching stays the operator's

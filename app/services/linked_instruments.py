@@ -52,7 +52,7 @@ _INSTRUMENT_ROW = re.compile(r"^instruments\[1\]\.(name|description)$")
 _FIELD_ROW = re.compile(
     r"^instruments\[1\]\.response_fields\[\d+\]\."
     r"(field_key|label|response_type|data_type|min|max|step|list_csv"
-    r"|required|help_text|help_text_visible|visible)$"
+    r"|scale|scale_labels|required|help_text|help_text_visible|visible)$"
 )
 #: The short label's cap (``Instrument.short_label``).
 SHORT_LABEL_MAX = 32
