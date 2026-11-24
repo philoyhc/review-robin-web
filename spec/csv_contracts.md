@@ -1060,6 +1060,23 @@ imported visible under a hidden parent
 could never be answered, so import applies the same Active cascade the
 builder's Save does.
 
+**A scale** adds two `instruments[n].response_fields[m]` attributes
+(`spec/instruments.md` § "Scale"):
+
+| Attribute | Carries | On |
+|---|---|---|
+| `scale` | boolean: the field answers as a scale. Snap or slide is not stored; the point count decides (`spec/reviewer-surface.md` "Scale") | an Integer or Decimal field |
+| `scale_labels` | `start\|middle\|end` as one string; each part is cut to 60 characters and parts past the third are dropped; an empty part is no label | a scale |
+
+The import refuses a `scale` the field's bounds cannot make one, at the
+`scale` cell and with the card's wording (the reason Band 3 shows on the
+row): not an Integer or Decimal, no Min or Max, Max not above Min, no Step
+(a blank Step stays blank on import, so an Integer scale needs its Step
+written), a fractional bound on an Integer, or a Max that is not Min plus a
+whole number of Steps. A bundle without the two attributes imports no
+scale, and `scale_labels` without `scale` is stored and draws nothing. They are in the byte-stable
+round trip (§4).
+
 ### 3.4 What's not an importer
 
 - **Assignments.** A materialized derivative of the rule engine,
