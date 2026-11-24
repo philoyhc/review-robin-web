@@ -77,17 +77,10 @@ the PR body unless it says otherwise.
   ladder; rung 1 (the viewport tag on participant pages, about 10 lines)
   can land first. Re-checked unbuilt at `eb275acf9`
   (`guide/rrw_reviewer_phone_and_scale.md` §1).
-- **A scale answer for a numeric response field** — **next after Apply
-  Desk's AD2G Item 1** (author, 2026-11-23), with its hooks on Apply
-  Desk's Process > Gate response fields built alongside (
-  `guide/rrw_reviewer_phone_and_scale.md` §2, mockups
-  `guide/rrw_scale_mockup.html` and `guide/rrw_scale_builder_mockup.html`).
-  An item of a segment, scaffold first. Settled: opt-in per field, as
-  Band 3's *Integer (scale)* and *Decimal (scale)*, a mode stored in the
-  field's `validation`, not a type; up to 11 points it snaps, past that
-  it slides with a number box; three optional labels (start, middle,
-  end); a Step required. Apply Desk's gates follow it
-  (`applydesk/guide/todo_master.md`). **Plan:** `guide/segment_20P_scale_answer.md` (Item 1; Item 2 is Apply Desk's).
+- **A scale on an Apply Desk gate** — 20P Item 2: Process > Gate's
+  response fields offer *Integer (scale)* and *Decimal (scale)*, and the
+  handoff writes `scale` and `scale_labels` (Review Robin's side closed
+  with Item 1, 2026-11-24). **Plan:** `guide/segment_20P_scale_answer.md` (Item 2).
 
 ### Sequencing notes
 

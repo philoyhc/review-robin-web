@@ -1294,7 +1294,7 @@ leading columns on every row — see
 | **+** button | — | Inserts a new row (its own `<tbody>` group) directly after this one's, seeded with the next default label (see "A field's default label" below). On a governed row it adds a field to the same branch instead, directly after the row's unit — the row, its condition row and every deeper row (see ["Branching between response fields"](#branching-between-response-fields)). |
 | **⑂** / **↰** / **↳** | `branch_parent_id` / `branch_op` / `branch_value` / `branch_mode` | Fork, join and detach — see ["Branching between response fields"](#branching-between-response-fields) below. |
 | Name (text input) | `InstrumentResponseField.label` | The string the reviewer sees as the field's prompt. Empty until typed — see "A field's default label" below. |
-| Type (`<select>`) | `_inline_data_type` | `String / Integer / Decimal / List`, plus a `Quick fill (List)` `<optgroup>` of pre-filled presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. Disabled when the row has saved responses; the inline title pins the reason ("Cannot change — this field has saved responses. Clear them first."). |
+| Type (`<select>`) | `_inline_data_type`, `scale` | `String / Integer / Integer (scale) / Decimal / Decimal (scale) / List`, plus a `Quick fill (List)` `<optgroup>` of pre-filled presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) and [Scale](#scale) below. Disabled when the row has saved responses, except that a numeric field's menu stays enabled and offers only its own two choices (see Scale); the inline title pins the reason ("Cannot change — this field has saved responses. Clear them first."). |
 | Bounds (inline inputs) | `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_csv` | For `Integer` / `Decimal`: a 3-cell grid of `min` / `max` / `step`. For `List`: a single comma-separated `list_options` input spanning the grid. For `String`: bounds default to length min / max (same `min` / `max` fields). Disabled when the row has saved responses (same reason / title as Type). |
 | **R** button | `required` | Toggle. Active = required for reviewers to submit; the reviewer surface blocks submission and names the missing fields. Stages Band 2 state directly, so Save alone persists a toggle. Grayed out on a row a Require branch governs, where the condition decides (see ["Branching between response fields"](#branching-between-response-fields)). |
 | **≡** button | `help_text_visible` | Toggle. Active = render a help row for this field in Band 2's intro, above the reviewer-surface preview table (**Help rows** under "Visibility card"). The help-text *text* is a plain `help_text` textarea in that row (shown when the instrument card is unlocked, read view when locked), bound to the `dfsave-{id}` form, so it commits with the bulk Save. Stages Band 2 state directly, like R. |
@@ -1466,6 +1466,55 @@ identity is not stored — only the resulting `data_type` +
 Adding a preset: append a `(key, label, list_options)` tuple to
 `LIST_PRESETS` in `app/services/instruments/_field_presets.py`.
 No DB migration, no template macro changes.
+
+#### Scale
+
+A numeric field can answer as a **scale** on the reviewer surface
+(`spec/reviewer-surface.md` "Scale"). It is a mode, not a type: the field
+stays `Integer` or `Decimal`, so validation, branching, the CSVs and every
+result page read it as the number it is.
+
+- **Storage:** `InstrumentResponseField.scale` (Boolean NOT NULL, default
+  false) and `scale_labels` (Text, nullable, `start|middle|end`, each part
+  at most 60 characters, NULL when all are blank), Alembic revision
+  `e5f9b3a7c2d4`. The `validation` JSON carries `scale` and `scale_labels`
+  too, **only while the field's shape is a scale's**, so a field that
+  cannot be one renders as the plain box. Written by
+  `validation_block_from_inline` (`app/services/instruments/_response_fields.py`).
+- **The shape** (`scale_shape_error`, the single check the card's Save,
+  Band 3's row and the Settings CSV import all use): an Integer or Decimal
+  with a Min, a Max above it, a Step above zero, whole-number bounds and
+  Step on an Integer, and a Max that is Min plus a whole number of Steps.
+  Its reasons are the row's tooltip and summary: "A scale needs a Min and a
+  Max.", "A scale needs a Step.", "Max must be above Min.", "Whole numbers
+  only.", "Max must be Min plus a whole number of Steps."
+- **Snap or slide** is derived from the point count, `(Max − Min) / Step +
+  1`: up to `SCALE_SNAP_MAX` (11) points snaps, more slides. It is never
+  stored, so a changed Step moves a field between them.
+- **Band 3's Type menu** lists *Integer (scale)* after *Integer* and
+  *Decimal (scale)* after *Decimal*. Each posts its number type's value
+  and marks the choice `data-scale`. Choosing *Integer (scale)* with a
+  blank Step fills a Step of 1.
+- **A scale row has a second line:** "Labels", three boxes (placeholders
+  Start / Middle / End, 60 characters each; a typed `|` becomes `¦`, since
+  `|` separates the stored parts) under Min / Max / Step, then a summary of
+  what the reviewer will get: "N points · snaps" or "slides, with a box".
+  When the shape is not a scale's the summary is the reason above, and the
+  row stays pending (`data-row-pending`), so the preview keeps its last
+  committed shape.
+- **Save:** the card's Save refuses a scale whose shape is not one with a
+  422 naming the reason, as it does any bad bound. It does not fall back to
+  a plain number. The sanitizer carries `scale` only when the entry states
+  it; a Save that omits it keeps the stored scale, and a non-numeric type
+  clears it. Switching a field to or from a scale changes no answer's
+  validity, so it **skips the saved-responses guard**: an answered field's
+  Type menu stays enabled but offers only Integer ↔ Integer (scale) or
+  Decimal ↔ Decimal (scale), its bounds and other types locked as before.
+- **Band 2's preview** draws the scale as the reviewer sees it, full color
+  and taking no input. Its column, and the drag floor of its resize handle,
+  is the scale's minimum width plus the cell padding. In the stacked
+  layout a saved narrow input track grows to the widest scale among the
+  fields.
 
 #### Branching between response fields
 

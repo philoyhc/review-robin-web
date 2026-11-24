@@ -807,7 +807,7 @@ Response field input markup is driven by the field's `data_type`:
 | `data_type` | Render |
 |---|---|
 | `String` | `<textarea class="rs-answer" data-fit-box>` that fits its text (below); `maxlength` reflects `validation.max_length`; preserves stored value. `rows` is `1` when `max_length` is 50 or fewer, else `2` (a field with no `max_length` included), and a one-line box carries `data-fit-box="one-line"`. |
-| `Integer`, `Decimal` | `<input type="number">`; `min` / `max` reflect `validation`. `step="any"` turns off the browser's own step grid; the step lives in `data-rs-step` (anchored at `min` by `data-rs-step-anchor`) and the page's inline script checks it. An `Integer` with no `validation.step` and a whole (or no) `min` still carries `data-rs-step="1"`, so a decimal meets that check. |
+| `Integer`, `Decimal` | `<input type="number">`; `min` / `max` reflect `validation`. `step="any"` turns off the browser's own step grid; the step lives in `data-rs-step` (anchored at `min` by `data-rs-step-anchor`) and the page's inline script checks it. An `Integer` with no `validation.step` and a whole (or no) `min` still carries `data-rs-step="1"`, so a decimal meets that check. A field with `validation.scale` also carries `data-rs-scale` and, per label set, `data-rs-scale-start` / `-middle` / `-end`; [Scale](#scale) below draws over the box. |
 | `List` | `<select>` over `validation.choices`, with an empty leading option (`value=""`) representing "no answer". |
 | anything else | `<input type="text">` (defensive fallback). |
 
@@ -840,6 +840,39 @@ Stored values are read from `Response` rows keyed by
 `(assignment_id, response_field_id)` and rendered as the input's
 `value` (or selected `<option>` for `List`, or textarea body for a
 `String`).
+
+### Scale
+
+A numeric field the operator set to *Integer (scale)* or *Decimal (scale)*
+(`spec/instruments.md` § "Scale") renders its number box as before, with
+`data-rs-scale`, and `reviewer/_scale_js.html` draws a scale over it. The
+box keeps its name and value, so what is submitted, saved and validated is
+what the box alone would give; the scale only sets the box. **Without
+script the number box is the control.** A summary, results or collation page
+shows the number, never the scale.
+
+- **Snap or slide, by point count** (`(Max − Min) / Step + 1`): up to 11
+  points the scale **snaps**, with a stop and a number at every allowed
+  value and the box hidden (still submitted); past 11 it **slides**, with
+  Min, the midpoint and Max numbered and the number box to the right for an
+  exact value.
+- **Labels:** up to three, from the operator. Start and End sit at the
+  scale's edges, Middle centered on the bar. Numbers always show.
+- **Unanswered:** no circle; the foot reads "Not answered". A value out of
+  range reads "Out of range". An answered scale shows nothing there, and
+  *clear* takes its place; *clear* empties the answer.
+- **Keys** on the circle: arrows move one Step; PageUp / PageDown ten
+  Steps on a slide, one on a snap; Home / End go to Min / Max; Delete / Backspace clear.
+  The first arrow on an empty scale picks Min.
+- **Disabled state:** the scale follows its box's `disabled` live, so a
+  closed assignment, an operator pause or a branch closing dims it
+  read-only and a branch opening restores it. A scale can govern a branch
+  and be governed by one: setting it fires the box's `input` / `change`, so
+  "Branching between response fields" below applies unchanged.
+- **Width:** a scale states the narrowest it reads at (every snap stop
+  numbered, the labels' words, a slide's three numbers and its box). A
+  reviewer table's column widens to it. In the **stacked** layout every scale in a table takes the
+  widest one's width.
 
 ### Branching between response fields
 
