@@ -2,6 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    {# Segment 20Q: a participant page (the `reviewer` body class) lays
+       out at the phone's own width. An operator page has no tag, so a
+       phone keeps rendering it as a desktop page zoomed out. #}
+    {% if "reviewer" in self.body_class().split() %}
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% endif %}
     {# Segment 20O: the tab reads "Page · Review Robin", as every Cordware
        application's does. A page's title block names only the page;
        the base adds the app, and a page with none reads "Review Robin". #}
