@@ -47,8 +47,9 @@
     var side = Math.max(12, Math.ceil(numberCh * 4) + 4);
     return {
       points: points, snap: snap, places: places, side: side,
-      // A slide also holds its box, a side's gap away.
-      minWidth: Math.max(160, stopsPx, labelsPx) + 2 * side + (snap ? 0 : side + SLIDE_BOX),
+      // A snap keeps a side each end; a slide keeps one at its start and
+      // one as the gap before its box, which ends at the widget's edge.
+      minWidth: Math.max(160, stopsPx, labelsPx) + 2 * side + (snap ? 0 : SLIDE_BOX),
     };
   }
   window.rrwScaleGeometry = geometry;
@@ -76,7 +77,10 @@
     wrap.setAttribute("data-rs-scale-min", String(minWidth));
     wrap.setAttribute("data-rs-scale-side", String(side));
     wrap.style.minWidth = minWidth + "px";
-    wrap.style.paddingLeft = wrap.style.paddingRight = side + "px";
+    // A slide's box reaches the widget's right edge, where a snap's End
+    // label ends (author, 2026-11-24): it keeps no right padding.
+    wrap.style.paddingLeft = side + "px";
+    wrap.style.paddingRight = (snap ? side : 0) + "px";
     wrap.style.setProperty("--sc-side", side + "px");  // the labels reach out over it
     if (!snap) wrap.style.columnGap = side + "px";
     var line = document.createElement("div");
@@ -153,6 +157,9 @@
       box.setAttribute("aria-hidden", "true");
     } else {
       wrap.appendChild(box);
+      // One width wherever it shows: the Band 2 preview writes its own
+      // inline width on every preview box, which a stylesheet would lose to.
+      box.style.width = box.style.maxWidth = SLIDE_BOX + "px";
     }
 
     function value() {
@@ -266,9 +273,8 @@
   // In the stacked layout (one line per field) every scale in a table
   // takes the widest one's width, so their lines start and end together
   // (author, 2026-11-24). Across rows too: the scope is the table. They
-  // share the widest side too, so every line starts at one edge and a
-  // slide's box ends where a snap's line does (author, 2026-11-24): a
-  // scale whose side grows widens by twice the growth.
+  // share the widest side too, so every line starts at one edge (author,
+  // 2026-11-24): a scale whose side grows widens by twice the growth.
   function evenStacks(root) {
     var scopes = [];
     Array.prototype.forEach.call((root || document).querySelectorAll(".rs-stack-fields"), function (cell) {
@@ -285,7 +291,8 @@
         widest = Math.max(widest, min + 2 * (side - own(w)));
       });
       Array.prototype.forEach.call(scales, function (w) {
-        w.style.paddingLeft = w.style.paddingRight = side + "px";
+        w.style.paddingLeft = side + "px";
+        w.style.paddingRight = (w.classList.contains("sc-slide") ? 0 : side) + "px";
         w.style.setProperty("--sc-side", side + "px");
         if (w.classList.contains("sc-slide")) w.style.columnGap = side + "px";
         w.style.minWidth = w.style.width = widest + "px";

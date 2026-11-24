@@ -704,7 +704,11 @@
         /* A slide's box drops to its own row under the scale and its
            labels, above *Not answered* / *clear*, at its desktop width:
            the line takes the card's full width (author, 2026-11-24). */
-        table.rs-table .sc.sc-slide { grid-template-columns: minmax(0, 1fr); }
+        table.rs-table .sc.sc-slide {
+          grid-template-columns: minmax(0, 1fr);
+          /* One column: the end number needs its side again. */
+          padding-right: var(--sc-side, 0px) !important;
+        }
         table.rs-table .sc.sc-slide > .sc-foot { order: 1; }
         body.ui-v2 table.rs-table > tbody > tr > td .sc.sc-slide > input[type="number"] {
           grid-column: 1;
