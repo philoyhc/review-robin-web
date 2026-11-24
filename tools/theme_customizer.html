@@ -638,7 +638,8 @@
       }
       th.rs-textlong, td.rs-textlong { min-width: 14em; }
       /* Segment 20Q rung 3 — on a phone the response table is a list of
-         cards: a reviewee (or group) row is a card, its identity at the
+         cards (rung 5: the lobby, summary, results and collation tables
+         too, each an `rs-table`): a reviewee (or group) row is a card, its identity at the
          top, each answer a label over its box. The label is the cell's
          `data-label`, so a screen reader still reads the header once.
          The header row, and with it the sort buttons, is hidden; the
@@ -715,6 +716,20 @@
           grid-row: auto;
           width: 88px;
           margin: 4px 0 6px calc(-1 * var(--sc-side, 0px));
+        }
+        /* Segment 20Q rung 5 — the lobby's cells are short pills: each
+           label sits beside its value rather than over it. */
+        table.rs-table.rs-table-inline > tbody > tr > td[data-label] {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: var(--space-1) var(--space-2);
+        }
+        table.rs-table.rs-table-inline > tbody > tr > td[data-label]::before {
+          flex: 1 1 auto;
+          margin: 0;
+          font-weight: normal;
+          color: var(--text-subtle);
         }
         /* A stacked cell's lines put the label over the box too. */
         table.rs-table .rs-stack-fields { grid-template-columns: minmax(0, 1fr); }

@@ -20,15 +20,16 @@
       {# `.table-scroll` (base.html): a table wider than its card
          scrolls inside the card rather than pushing the page sideways. #}
       <div class="table-scroll">
-      <table>
-        <tr>
+      <table class="rs-table rs-table-inline">
+        <thead><tr>
           <th>Session</th>
           <th>Start</th>
           <th>End</th>
           <th>Timezone</th>
           <th>Session status</th>
           <th>Reviewer status</th>
-        </tr>
+        </tr></thead>
+        <tbody>
         {% for item in items %}
           <tr>
             <td>
@@ -76,7 +77,7 @@
                 </div>
               {% endif %}
             </td>
-            <td>
+            <td data-label="Start">
               {% if item.start_text %}
                 {# Start: neutral data — when the session opened, or
                    its scheduled opening while prepared. #}
@@ -85,7 +86,7 @@
                 <span class="muted">—</span>
               {% endif %}
             </td>
-            <td>
+            <td data-label="End">
               {% if item.deadline_text %}
                 {# End: red once the deadline has passed (the
                    session won't accept further responses),
@@ -99,12 +100,12 @@
                 <span class="muted">—</span>
               {% endif %}
             </td>
-            <td>
+            <td data-label="Timezone">
               <span class="pill pill-count">
                 <abbr class="tz-gmt" title="{{ item.timezone_label }}">{{ item.timezone_gmt_offset }}</abbr>
               </span>
             </td>
-            <td>
+            <td data-label="Session status">
               {# One rule for every role (participant audit M6):
                  Not open yet / Open / Available / Closed.
                  Open and Closed say whether the review accepts
@@ -113,7 +114,7 @@
                  follow ``role_links``, not this label. #}
               <span class="pill {{ item.status.css }}">{{ item.status.label }}</span>
             </td>
-            <td>
+            <td data-label="Reviewer status">
               {# Pair the (N/M) counter's colour with the reviewer
                  status pill so the row's progress reads at a
                  glance: blue = nothing yet, amber = mid-flight,
@@ -132,6 +133,7 @@
             </td>
           </tr>
         {% endfor %}
+        </tbody>
       </table>
       </div>
     </div>
