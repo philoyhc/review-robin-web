@@ -343,7 +343,6 @@ ROUTES: dict[str, tuple[Visit, ...]] = {
     "/operator/sys-admin/sessions/{session_id}/audit-log": _PAGE,
     "/operator/sys-admin/sessions/{session_id}/outbox": _PAGE,
     "/operator/sys-admin/system": _PAGE,
-    "/operator/sys-admin/scale-preview": _PAGE,  # segment 20P rung 2; local only
     "/operator/sys-admin/users": _PAGE,
     "/operator/sys-admin/users/search-options": _PAGE,
     "/operator/sys-admin/users/directory-search": _PAGE,
