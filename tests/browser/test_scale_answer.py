@@ -631,3 +631,67 @@ def test_band_3_scale_row_keeps_its_controls_on_one_line(
     assert summary["x"] >= end["x"] + end["width"]
     assert abs(caption["y"] + caption["height"] / 2 - (start["y"] + start["height"] / 2)) <= 4
     assert abs(summary["y"] + summary["height"] / 2 - (start["y"] + start["height"] / 2)) <= 4
+
+
+def test_an_answered_field_switching_to_its_scale_keeps_string_off(
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """Codex on #4196: switching an answered Integer to Integer (scale)
+    recomputes the row's actions, which must not re-enable String."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import (
+        Assignment,
+        Instrument,
+        InstrumentResponseField,
+        Response,
+        Reviewee,
+        Reviewer,
+    )
+
+    from ._builder import session_pk
+
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            pk = session_pk(live_server.database_url, session_id)
+            instrument = db.execute(
+                select(Instrument).where(Instrument.session_id == pk)
+            ).scalar_one()
+            rating = db.execute(
+                select(InstrumentResponseField).where(
+                    InstrumentResponseField.instrument_id == instrument.id,
+                    InstrumentResponseField.label == "Rating",
+                )
+            ).scalar_one()
+            reviewer = (
+                db.execute(select(Reviewer).where(Reviewer.session_id == pk)).scalars().first()
+            )
+            reviewee = (
+                db.execute(select(Reviewee).where(Reviewee.session_id == pk)).scalars().first()
+            )
+            assert reviewer is not None and reviewee is not None
+            assignment = Assignment(
+                session_id=pk,
+                reviewer_id=reviewer.id,
+                reviewee_id=reviewee.id,
+                instrument_id=instrument.id,
+            )
+            db.add(assignment)
+            db.flush()
+            db.add(Response(assignment_id=assignment.id, response_field_id=rating.id, value="4"))
+            db.commit()
+    finally:
+        engine.dispose()
+    page.set_viewport_size({"width": 1500, "height": 1100})
+    card = open_unlocked(page, session_id)
+    select_box = rows(card).first.locator("[data-new-model-rf-data-type]")
+    expect(select_box).to_be_enabled()
+    select_box.select_option(label="Integer (scale)")
+    expect(select_box.locator('option[value="string"]')).to_be_disabled()
+    expect(select_box.locator('option[value="decimal"]').first).to_be_disabled()
+    select_box.select_option(label="Integer")
+    expect(select_box.locator('option[value="string"]')).to_be_disabled()

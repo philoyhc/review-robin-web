@@ -6686,7 +6686,9 @@
           }
           var typeSel = row.querySelector('[data-new-model-rf-data-type]');
           var stringOpt = typeSel && typeSel.querySelector('option[value="string"]');
-          if (stringOpt) { stringOpt.disabled = isParent; }
+          // Saved responses keep String off too (segment 20P: an answered
+          // number field may only switch to or from its scale; Codex on #4196).
+          if (stringOpt) { stringOpt.disabled = isParent || hasResponses; }
           var forkBtn = row.querySelector('[data-new-model-rf-fork]');
           if (forkBtn) {
             var liveType = typeSel ? typeSel.value : 'string';
