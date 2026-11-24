@@ -782,8 +782,8 @@ def test_stacked_scales_share_their_ends(
     new_session: Callable[[], str],
 ) -> None:
     """Author, 2026-11-24: in a stacked cell a 1-5 snap and a 1-100 slide
-    take one side, so the slide's line starts where the snap's does and
-    its box ends where the snap's line ends."""
+    take one side, so the slide's line starts where the snap's does, and
+    its box ends at the widget's edge, where the snap's End label ends."""
     from sqlalchemy import create_engine, select
     from sqlalchemy.orm import Session
 
@@ -814,11 +814,13 @@ def test_stacked_scales_share_their_ends(
     reviewer.set_viewport_size({"width": 1400, "height": 1000})
     reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
     snap = reviewer.locator(".sc-snap .sc-line").first.bounding_box()
+    end = reviewer.locator(".sc-snap .sc-label-end").first.bounding_box()
     slide = reviewer.locator(".sc-slide .sc-line").first.bounding_box()
     box = reviewer.locator(".sc-slide > input").first.bounding_box()
-    assert snap and slide and box
+    assert snap and end and slide and box
     assert abs(slide["x"] - snap["x"]) < 0.5
-    assert abs(box["x"] + box["width"] - (snap["x"] + snap["width"])) < 0.5
+    assert abs(box["x"] + box["width"] - (end["x"] + end["width"])) < 0.5
+    assert abs(box["width"] - 88) < 0.5
     # A slide's line ends in a short bar at each end (mockup B); a snap's,
     # which has its stops, does not.
     caps = reviewer.locator(".sc-slide .sc-track").first.evaluate(
