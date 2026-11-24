@@ -12,7 +12,15 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Page, expect
 
-from ._builder import REVIEWER_EMAIL, activate, make_rating_a_scale, seed_rosters
+from ._builder import (
+    REVIEWER_EMAIL,
+    activate,
+    make_rating_a_scale,
+    open_unlocked,
+    rows,
+    save,
+    seed_rosters,
+)
 from .conftest import LiveServer, app_url
 
 _PREVIEW = "/operator/sys-admin/scale-preview"
@@ -165,3 +173,48 @@ def test_a_scale_field_on_the_reviewer_surface_saves_what_it_shows(
     reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
     widget = reviewer.locator('[data-rs-scale-widget="snap"]').first
     expect(widget.get_by_role("slider")).to_have_attribute("aria-valuenow", "4")
+
+
+def test_band_3_chooses_a_scale_and_band_2_previews_it(
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
+) -> None:
+    """Rung 3b: Integer (scale) on Rating (1–5) shows its label line and
+    "5 points · snaps", Band 2's preview draws the scale in a column no
+    narrower than the scale's minimum, and Save keeps it across a reload."""
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    page.set_viewport_size({"width": 1500, "height": 1100})
+    card = open_unlocked(page, session_id)
+    rating = rows(card).first
+    rating.locator("[data-new-model-rf-data-type]").select_option(label="Integer (scale)")
+    line = rating.locator("[data-new-model-rf-scale-line]")
+    expect(line).to_be_visible()
+    expect(line.locator("[data-new-model-rf-scale-summary]")).to_have_text("5 points · snaps")
+    rating.locator('[data-new-model-rf-scale-label="start"]').fill("Poor")
+    rating.locator('[data-new-model-rf-scale-label="end"]').fill("Excellent")
+    preview = card.locator("[data-new-model-band2-preview]")
+    widget = preview.locator('[data-rs-scale-widget="snap"]').first
+    expect(widget).to_be_visible()
+    expect(widget.locator(".sc-stop")).to_have_count(5)
+    expect(widget.locator(".sc-label")).to_have_text(["Poor", "", "Excellent"])
+    expect(preview.locator(".rs-constraints")).to_contain_text("as a scale")
+    cell = widget.locator("xpath=ancestor::td[1]").bounding_box()
+    assert cell is not None
+    assert cell["width"] >= int(widget.get_attribute("data-rs-scale-min") or "0")
+    # A bound that breaks the scale says why, and the preview keeps the last good one.
+    rating.locator('[data-new-model-rf-bound="step"]').fill("3")
+    expect(line.locator("[data-new-model-rf-scale-summary]")).to_have_text(
+        "Max must be Min plus a whole number of Steps."
+    )
+    expect(rating).to_have_attribute("data-row-pending", "true")
+    rating.locator('[data-new-model-rf-bound="step"]').fill("1")
+    save(page, card)
+    card = open_unlocked(page, session_id)
+    rating = rows(card).first
+    expect(rating.locator("[data-new-model-rf-data-type] option:checked")).to_have_text(
+        "Integer (scale)"
+    )
+    expect(rating.locator('[data-new-model-rf-scale-label="end"]')).to_have_value("Excellent")
+    expect(
+        card.locator('[data-new-model-band2-preview] [data-rs-scale-widget="snap"]')
+    ).to_have_count(1)

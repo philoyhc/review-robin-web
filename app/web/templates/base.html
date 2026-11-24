@@ -693,6 +693,14 @@
       .sc.sc-slide > input[type="number"] { width: 8em; max-width: 8em; margin-top: 4px; }
       .sc-off { opacity: 0.55; }
       .sc-off .sc-line { cursor: default; }
+      /* A Band 2 preview's scale: full color, no input. */
+      .sc-preview .sc-line, .sc-preview .sc-clear { pointer-events: none; cursor: default; }
+      /* Band 3's scale line (segment 20P): the three labels under Min,
+         Max and Step, then what the reviewer gets. */
+      .rf-scale-line { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: center; }
+      .rf-scale-line[hidden] { display: none; }
+      .rf-scale-line input { padding: 4px 8px; box-sizing: border-box; min-width: 0; }
+      .rf-scale-summary { grid-column: 1 / -1; font-size: var(--fs-small); }
       /* The scale preview's table (segment 20P rung 2): fixed columns,
          each resized from a gripper on its header as Band 2's are. */
       .sc-preview-table { table-layout: fixed; border-collapse: collapse; }

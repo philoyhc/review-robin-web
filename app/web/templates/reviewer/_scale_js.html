@@ -21,32 +21,52 @@
     return s.indexOf(".") < 0 ? 0 : s.length - s.indexOf(".") - 1;
   }
 
+  // A scale's geometry from its bounds and labels, or null when the
+  // bounds are not a scale's: how many points, whether it snaps, the
+  // decimals it shows, the padding each side keeps, and the narrowest
+  // it reads at. Band 2 sizes a preview column from it before drawing.
+  function geometry(min, max, step, words) {
+    if (!isFinite(min) || !isFinite(max) || !isFinite(step) || step <= 0 || max <= min) return null;
+    var points = Math.round((max - min) / step) + 1;
+    if (Math.abs((points - 1) * step - (max - min)) > step / 1000) return null;  // off the grid
+    var snap = points <= SNAP_MAX;
+    var places = Math.max(decimals(step), decimals(min));
+    // Every stop's number (or the three a slide shows) apart, and the
+    // labels' words side by side.
+    var numberCh = Math.max(String(max).length, String(min).length) + places + 1;
+    var stopsPx = snap ? points * Math.max(26, numberCh * 8 + 6) : 3 * (numberCh * 8 + 24);
+    var labelsPx = (words || []).reduce(function (n, w) { return n + (w || "").length * 7 + 12; }, 0);
+    // The end numbers sit centered on the line's ends, so each side keeps
+    // half the widest number clear of the cell's edge.
+    var side = Math.max(12, Math.ceil(numberCh * 4) + 4);
+    return {
+      points: points, snap: snap, places: places, side: side,
+      minWidth: Math.max(160, stopsPx, labelsPx) + 2 * side,
+    };
+  }
+  window.rrwScaleGeometry = geometry;
+
   function enhance(box) {
     if (box.dataset.rsScaleDone) return;
     var min = parseFloat(box.min), max = parseFloat(box.max);
     var step = parseFloat(box.dataset.rsStep);
-    if (!isFinite(min) || !isFinite(max) || !isFinite(step) || step <= 0 || max <= min) return;
-    var points = Math.round((max - min) / step) + 1;
-    if (Math.abs((points - 1) * step - (max - min)) > step / 1000) return;  // bounds off the grid
+    var words = ["start", "middle", "end"].map(function (k) {
+      return box.getAttribute("data-rs-scale-" + k) || "";
+    });
+    var g = geometry(min, max, step, words);
+    if (!g) return;
     box.dataset.rsScaleDone = "1";
-    var snap = points <= SNAP_MAX;
-    var places = Math.max(decimals(step), decimals(min));
+    var points = g.points, snap = g.snap, places = g.places;
+    // A Band 2 preview's scale (``data-rs-scale-preview``) shows as the
+    // reviewer will see it, full color, but takes no input.
+    var preview = box.hasAttribute("data-rs-scale-preview");
     var off = box.disabled;
     var label = box.getAttribute("aria-label") || "";
 
-    // The narrowest the scale reads at: every stop's number (or the three
-    // a slide shows) apart, and the labels' words side by side.
-    var numberCh = Math.max(String(max).length, String(min).length) + places + 1;
-    var stopsPx = snap ? points * Math.max(26, numberCh * 8 + 6) : 3 * (numberCh * 8 + 24);
-    var labelsPx = ["start", "middle", "end"].reduce(function (n, k) {
-      return n + (box.getAttribute("data-rs-scale-" + k) || "").length * 7 + 12;
-    }, 0);
-    // The end numbers sit centered on the line's ends, so each side keeps
-    // half the widest number clear of the cell's edge.
-    var side = Math.max(12, Math.ceil(numberCh * 4) + 4);
-    var minWidth = Math.max(160, stopsPx, labelsPx) + 2 * side;
+    var side = g.side, minWidth = g.minWidth;
     var wrap = document.createElement("div");
-    wrap.className = "sc" + (snap ? " sc-snap" : " sc-slide") + (off ? " sc-off" : "");
+    wrap.className = "sc" + (snap ? " sc-snap" : " sc-slide")
+      + (preview ? " sc-preview" : off ? " sc-off" : "");
     wrap.setAttribute("data-rs-scale-widget", snap ? "snap" : "slide");
     wrap.setAttribute("data-rs-scale-min", String(minWidth));
     wrap.style.minWidth = minWidth + "px";
@@ -90,9 +110,6 @@
       numbers.appendChild(n);
     });
 
-    var words = ["start", "middle", "end"].map(function (k) {
-      return box.getAttribute("data-rs-scale-" + k) || "";
-    });
     var labels = null;
     if (words.some(Boolean)) {
       labels = document.createElement("div");
