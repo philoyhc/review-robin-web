@@ -172,7 +172,9 @@
       thumb.setAttribute("aria-valuenow", String(v));
       thumb.setAttribute("aria-valuetext", box.value + " of " + at(0) + " to " + at(points - 1));
       readout.textContent = box.value;
-      said.textContent = snap ? "" : box.value;
+      // Answered, the foot says nothing: a snap shows its value on the
+      // line, a slide in its box (author, 2026-11-24).
+      said.textContent = "";
     }
 
     function set(v) {

@@ -92,6 +92,8 @@ def test_a_slide_keeps_its_box_and_each_moves_the_other(page: Page) -> None:
     expect(thumb).to_have_attribute("aria-valuenow", "1450")
     box.fill("1999")
     expect(thumb).to_have_attribute("aria-valuenow", "1999")
+    # The box shows the value, so the foot doesn't repeat it.
+    expect(slide.locator(".sc-said")).to_have_text("")
     thumb.press("PageDown")  # ten steps
     expect(box).to_have_value("1989")
     thumb.press("End")
