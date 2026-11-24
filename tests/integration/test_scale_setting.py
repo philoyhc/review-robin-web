@@ -176,3 +176,38 @@ def test_the_reviewer_surface_marks_a_scale_for_the_script(
     assert "rrwScaleEnhance" in body  # the script is on the page
     # A field that is not a scale stays the plain box.
     assert all("data-rs-scale" not in c for c in _controls(body, "comments"))
+
+
+def test_a_save_that_says_nothing_of_the_scale_keeps_it(client: TestClient, db: Session) -> None:
+    """Codex on #4193: a payload without ``scale`` (the card before rung
+    3b serialized it) keeps the stored scale rather than clearing it; a
+    change to a type that cannot be one still clears it."""
+    review_session, instrument = _new_model_with_tags(client, db, code="scale-keep")
+    scale = {"min": "1", "max": "5", "step": "1", "scale": True, "scale_labels": "Low||High"}
+    assert _save(
+        client, review_session, instrument, _rfs(instrument, Rating=scale)
+    ).status_code in (
+        200,
+        303,
+    )
+    db.expire_all()
+
+    def without_scale(rfs: list[dict]) -> list[dict]:
+        return [{k: v for k, v in rf.items() if k not in ("scale", "scale_labels")} for rf in rfs]
+
+    reply = _save(client, review_session, instrument, without_scale(_rfs(instrument)))
+    assert reply.status_code in (200, 303), reply.text
+    db.expire_all()
+    rating = _rating(db, instrument)
+    assert rating.scale and rating.scale_labels == "Low||High"
+    assert rating.validation and rating.validation["scale"] is True
+
+    reply = _save(
+        client,
+        review_session,
+        instrument,
+        without_scale(_rfs(instrument, Rating={"data_type": "string", "min": "", "max": ""})),
+    )
+    assert reply.status_code in (200, 303), reply.text
+    db.expire_all()
+    assert not _rating(db, instrument).scale

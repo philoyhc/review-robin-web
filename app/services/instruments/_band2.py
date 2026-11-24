@@ -226,9 +226,12 @@ def set_band2_state(
                 rf["selected"] = bool(raw.get("selected"))
                 rf["required"] = bool(raw.get("required"))
                 rf["help_text_visible"] = bool(raw.get("help_text_visible"))
-                # Segment 20P — the scale mode and its three labels.
-                rf["scale"] = bool(raw.get("scale")) and data_type in ("integer", "decimal")
-                rf["scale_labels"] = str(raw.get("scale_labels") or "")[:255]
+                # Segment 20P — the scale mode and its three labels, only
+                # when the entry states them: a Save that says nothing of
+                # the scale keeps the stored one (Codex on #4193).
+                if "scale" in raw:
+                    rf["scale"] = bool(raw.get("scale")) and data_type in ("integer", "decimal")
+                    rf["scale_labels"] = str(raw.get("scale_labels") or "")[:255]
                 help_text_raw = raw.get("help_text")
                 rf["help_text"] = str(help_text_raw)[:1000] if help_text_raw is not None else ""
                 rf.update(_band2_branch_entry(raw))
@@ -922,9 +925,14 @@ def _sync_response_fields_to_db(
         field._inline_step = new_step
         field._inline_list_csv = new_list_csv
         # Segment 20P — a mode, not a shape: switching it changes no
-        # answer's validity, so it skips the responses guard above.
-        field.scale = bool(rf.get("scale"))
-        field.scale_labels = join_scale_labels(parse_scale_labels(rf.get("scale_labels")))
+        # answer's validity, so it skips the responses guard above. An
+        # entry that says nothing of the scale keeps the stored one,
+        # unless the field is no longer a number.
+        if "scale" in rf:
+            field.scale = bool(rf.get("scale"))
+            field.scale_labels = join_scale_labels(parse_scale_labels(rf.get("scale_labels")))
+        elif new_data_type not in ("Integer", "Decimal"):
+            field.scale = False
         # The reviewer surface reads ``cell.field.validation`` (JSON
         # column) for ``max_length`` / numeric ``min`` / ``max`` /
         # ``step`` / List ``choices`` — separate from the inline
