@@ -575,3 +575,59 @@ def test_band_2_scale_column_holds_its_scale_inside_the_cell_padding(
     w, c = widget.bounding_box(), cell.bounding_box()
     assert w is not None and c is not None
     assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
+
+
+def test_a_slides_box_sits_to_the_right_of_its_scale(page: Page) -> None:
+    """The author's ask (2026-11-24): a slide's number box sits to the
+    right of the scale, level with its line, not under it."""
+    _open(page)
+    slide = page.locator('[data-rs-scale-widget="slide"]').first
+    line = slide.locator(".sc-line").bounding_box()
+    numbers = slide.locator(".sc-numbers").bounding_box()
+    box = slide.locator('input[type="number"]').bounding_box()
+    assert line is not None and numbers is not None and box is not None
+    assert box["x"] >= line["x"] + line["width"]
+    assert box["y"] < numbers["y"] + numbers["height"]  # level, not below
+    assert box["y"] + box["height"] > line["y"]
+    # The scale's stated minimum holds the box: inside its cell.
+    cell = slide.locator("xpath=ancestor::td[1]").bounding_box()
+    assert cell is not None
+    assert box["x"] + box["width"] <= cell["x"] + cell["width"] + 1
+
+
+def test_band_3_scale_row_keeps_its_controls_on_one_line(
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
+) -> None:
+    """The author's ask (2026-11-24): a scale row's own controls stay
+    level with Min, Max and Step, and the label boxes take the next
+    line under them, "Labels" in front and the summary after."""
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    page.set_viewport_size({"width": 1500, "height": 1100})
+    card = open_unlocked(page, session_id)
+    rating = rows(card).first
+    rating.locator("[data-new-model-rf-data-type]").select_option(label="Integer (scale)")
+
+    def box(sel: str) -> dict[str, float]:
+        b = rating.locator(sel).first.bounding_box()
+        assert b is not None
+        return b
+
+    top = box('[data-new-model-rf-bound="min"]')["y"]
+    for sel in (
+        "[data-new-model-rf-name]",
+        "[data-new-model-rf-data-type]",
+        "[data-new-model-rf-delete]",
+    ):
+        assert abs(box(sel)["y"] - top) <= 4, sel
+    start, end = (
+        box('[data-new-model-rf-scale-label="start"]'),
+        box('[data-new-model-rf-scale-label="end"]'),
+    )
+    assert start["y"] > top + 10  # the next line
+    assert abs(start["x"] - box('[data-new-model-rf-bound="min"]')["x"]) <= 1
+    caption, summary = box(".rf-scale-caption"), box("[data-new-model-rf-scale-summary]")
+    assert caption["x"] + caption["width"] <= start["x"]
+    assert summary["x"] >= end["x"] + end["width"]
+    assert abs(caption["y"] + caption["height"] / 2 - (start["y"] + start["height"] / 2)) <= 4
+    assert abs(summary["y"] + summary["height"] / 2 - (start["y"] + start["height"] / 2)) <= 4

@@ -15,6 +15,8 @@
 <script>
 (function () {
   var SNAP_MAX = 11;
+  // A slide's box, to the right of its scale (``base.html``'s 88px).
+  var SLIDE_BOX = 88;
 
   // The decimals a number is written with, scientific notation too
   // (``String(1e-7)`` is ``"1e-7"``: seven places, not none).
@@ -45,7 +47,8 @@
     var side = Math.max(12, Math.ceil(numberCh * 4) + 4);
     return {
       points: points, snap: snap, places: places, side: side,
-      minWidth: Math.max(160, stopsPx, labelsPx) + 2 * side,
+      // A slide also holds its box, a side's gap away.
+      minWidth: Math.max(160, stopsPx, labelsPx) + 2 * side + (snap ? 0 : side + SLIDE_BOX),
     };
   }
   window.rrwScaleGeometry = geometry;
@@ -73,6 +76,7 @@
     wrap.setAttribute("data-rs-scale-min", String(minWidth));
     wrap.style.minWidth = minWidth + "px";
     wrap.style.paddingLeft = wrap.style.paddingRight = side + "px";
+    if (!snap) wrap.style.columnGap = side + "px";
     var line = document.createElement("div");
     line.className = "sc-line";
     var track = document.createElement("div");

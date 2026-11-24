@@ -5091,22 +5091,29 @@
                        oninput="newModelRfFieldChanged(this)"
                        style="width: 100%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                 </td>
+                {# Saved responses fix the type, except that a number field
+                   may still switch to or from its scale (segment 20P: a
+                   mode, not a shape; author, 2026-11-24). The menu then
+                   offers only the field's own two choices. #}
+                {% set _numeric = rf.data_type in ('integer', 'decimal') %}
+                {% set _only_scale = rf.has_responses and _numeric %}
+                {% set _off = 'disabled' if rf.has_responses else '' %}
                 <td class="rf-type"><select data-new-model-rf-data-type
                         onchange="newModelRfTypeChanged(this)"
-                        {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
+                        {% if rf.has_responses and not _numeric %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% elif _only_scale %}title="This field has saved responses: it can switch to or from a scale, but not to another type."{% endif %}
                         style="width: 100%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
-                  <option value="string" {% if rf.data_type == 'string' %}selected{% endif %}>String</option>
+                  <option value="string" {% if rf.data_type == 'string' %}selected{% endif %} {{ _off }}>String</option>
                   {# Segment 20P — each scale type keeps its number type's
                      value, so every reader of the menu's value is
                      unchanged; ``data-scale`` marks the choice. #}
-                  <option value="integer" {% if rf.data_type == 'integer' and not rf.scale %}selected{% endif %}>Integer</option>
-                  <option value="integer" data-scale {% if rf.data_type == 'integer' and rf.scale %}selected{% endif %}>Integer (scale)</option>
-                  <option value="decimal" {% if rf.data_type == 'decimal' and not rf.scale %}selected{% endif %}>Decimal</option>
-                  <option value="decimal" data-scale {% if rf.data_type == 'decimal' and rf.scale %}selected{% endif %}>Decimal (scale)</option>
-                  <option value="list" {% if rf.data_type == 'list' %}selected{% endif %}>List</option>
-                  <optgroup label="Quick fill (List)">
+                  <option value="integer" {% if rf.data_type == 'integer' and not rf.scale %}selected{% endif %} {{ 'disabled' if _only_scale and rf.data_type != 'integer' }}>Integer</option>
+                  <option value="integer" data-scale {% if rf.data_type == 'integer' and rf.scale %}selected{% endif %} {{ 'disabled' if _only_scale and rf.data_type != 'integer' }}>Integer (scale)</option>
+                  <option value="decimal" {% if rf.data_type == 'decimal' and not rf.scale %}selected{% endif %} {{ 'disabled' if _only_scale and rf.data_type != 'decimal' }}>Decimal</option>
+                  <option value="decimal" data-scale {% if rf.data_type == 'decimal' and rf.scale %}selected{% endif %} {{ 'disabled' if _only_scale and rf.data_type != 'decimal' }}>Decimal (scale)</option>
+                  <option value="list" {% if rf.data_type == 'list' %}selected{% endif %} {{ _off }}>List</option>
+                  <optgroup label="Quick fill (List)" {{ _off }}>
                     {% for key, label, _options in band3_list_presets %}
-                      <option value="{{ key }}" data-preset-options="{{ _options }}">{{ label }}</option>
+                      <option value="{{ key }}" data-preset-options="{{ _options }}" {{ _off }}>{{ label }}</option>
                     {% endfor %}
                   </optgroup>
                 </select>
@@ -5151,8 +5158,9 @@
                      for a row switched to a scale type. #}
                   {% if rf.scale %}
                   <div data-new-model-rf-scale-line class="rf-scale-line">
-                    {% for part, ph in (('start', 'Start label'), ('middle', 'Middle label'), ('end', 'End label')) %}
-                    <input type="text" data-new-model-rf-scale-label="{{ part }}" placeholder="{{ ph }}" maxlength="60" aria-label="{{ ph }}"
+                    <span class="rf-scale-caption" aria-hidden="true">Labels</span>
+                    {% for part, ph, name in (('start', 'Start', 'Start label'), ('middle', 'Middle', 'Middle label'), ('end', 'End', 'End label')) %}
+                    <input type="text" data-new-model-rf-scale-label="{{ part }}" placeholder="{{ ph }}" maxlength="60" aria-label="{{ name }}"
                            value="{{ _labels[loop.index0] }}" oninput="newModelRfFieldChanged(this)">
                     {% endfor %}
                     <span class="rf-scale-summary muted" data-new-model-rf-scale-summary></span>
@@ -5288,9 +5296,10 @@
                        oninput="newModelRfFieldChanged(this)"
                        style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box; display: none;">
                 <div data-new-model-rf-scale-line class="rf-scale-line" hidden>
-                  <input type="text" data-new-model-rf-scale-label="start" placeholder="Start label" maxlength="60" aria-label="Start label" oninput="newModelRfFieldChanged(this)">
-                  <input type="text" data-new-model-rf-scale-label="middle" placeholder="Middle label" maxlength="60" aria-label="Middle label" oninput="newModelRfFieldChanged(this)">
-                  <input type="text" data-new-model-rf-scale-label="end" placeholder="End label" maxlength="60" aria-label="End label" oninput="newModelRfFieldChanged(this)">
+                  <span class="rf-scale-caption" aria-hidden="true">Labels</span>
+                  <input type="text" data-new-model-rf-scale-label="start" placeholder="Start" maxlength="60" aria-label="Start label" oninput="newModelRfFieldChanged(this)">
+                  <input type="text" data-new-model-rf-scale-label="middle" placeholder="Middle" maxlength="60" aria-label="Middle label" oninput="newModelRfFieldChanged(this)">
+                  <input type="text" data-new-model-rf-scale-label="end" placeholder="End" maxlength="60" aria-label="End label" oninput="newModelRfFieldChanged(this)">
                   <span class="rf-scale-summary muted" data-new-model-rf-scale-summary></span>
                 </div>
               </div></td>

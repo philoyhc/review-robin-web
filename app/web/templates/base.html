@@ -691,17 +691,29 @@
       /* *clear* is a `.btn-reset` (spec/ui_elements.md), at the foot's size. */
       .sc-clear { font-size: var(--fs-small); }
       .sc { margin-bottom: 8px; }
-      .sc.sc-slide > input[type="number"] { width: 8em; max-width: 8em; margin-top: 4px; }
+      /* A slide's box sits to the right of its scale, level with the
+         line and its numbers (author, 2026-11-24); the gap is the side
+         the end number needs, set by the script. */
+      .sc.sc-slide { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+      .sc.sc-slide > :not(input) { grid-column: 1; }
+      body.ui-v2 .sc.sc-slide > input[type="number"] { grid-column: 2; grid-row: 1 / span 2; width: 88px; max-width: 88px; margin: 0; }
       .sc-off { opacity: 0.55; }
       .sc-off .sc-line { cursor: default; }
       /* A Band 2 preview's scale: full color, no input. */
       .sc-preview .sc-line, .sc-preview .sc-clear { pointer-events: none; cursor: default; }
       /* Band 3's scale line (segment 20P): the three labels under Min,
          Max and Step, then what the reviewer gets. */
-      .rf-scale-line { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: center; }
+      /* The line sits under Min, Max and Step, a box under each; "Labels"
+         reaches back under the Type menu and the summary on past Step,
+         so the row's own controls keep one line (author, 2026-11-24). */
+      .rf-scale-line { grid-column: 1 / -1; position: relative; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: center; }
       .rf-scale-line[hidden] { display: none; }
       .rf-scale-line input { padding: 4px 8px; box-sizing: border-box; min-width: 0; }
-      .rf-scale-summary { grid-column: 1 / -1; font-size: var(--fs-small); }
+      .rf-scale-caption { position: absolute; right: calc(100% + var(--space-3)); top: 50%; transform: translateY(-50%); white-space: nowrap; }
+      .rf-scale-summary { position: absolute; left: calc(100% + var(--space-3)); top: 50%; transform: translateY(-50%); white-space: nowrap; font-size: var(--fs-small); }
+      /* A row with a scale line is two lines tall: its controls hold
+         the first, level with Min, Max and Step. */
+      [data-new-model-rf-row]:has(.rf-scale-line:not([hidden])) > td { vertical-align: top; }
       /* The scale preview's table (segment 20P rung 2): fixed columns,
          each resized from a gripper on its header as Band 2's are. */
       .sc-preview-table { table-layout: fixed; border-collapse: collapse; }

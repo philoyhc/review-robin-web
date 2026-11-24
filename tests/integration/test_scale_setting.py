@@ -29,7 +29,7 @@ from .test_instrument_builder_routes import (
     _new_model_with_tags,
     _populate_rosters,
 )
-from .test_response_field_branching_save import _rfs, _save
+from .test_response_field_branching_save import _add_response, _rfs, _save
 from .test_response_field_branching_surface import _controls
 
 
@@ -214,3 +214,36 @@ def test_a_save_that_says_nothing_of_the_scale_keeps_it(client: TestClient, db: 
     assert reply.status_code in (200, 303), reply.text
     db.expire_all()
     assert not _rating(db, instrument).scale
+
+
+def test_a_field_with_responses_may_switch_to_and_from_its_scale(
+    client: TestClient, db: Session
+) -> None:
+    """The author's ruling (2026-11-24): saved responses fix a field's
+    type, but Integer may still become Integer (scale) and back; the
+    card's menu offers only those two."""
+    review_session, instrument = _new_model_with_tags(client, db, code="scale-answered")
+    rating = _rating(db, instrument)
+    _add_response(db, review_session, instrument, rating)
+
+    reply = _save(client, review_session, instrument, _rfs(instrument, Rating={"scale": True}))
+    assert reply.status_code in (200, 303), reply.text
+    db.expire_all()
+    assert _rating(db, instrument).scale
+
+    reply = _save(client, review_session, instrument, _rfs(instrument, Rating={"scale": False}))
+    assert reply.status_code in (200, 303), reply.text
+    db.expire_all()
+    assert not _rating(db, instrument).scale
+
+    body = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
+    start = body.index('data-has-responses="true"')
+    select_html = body[body.index("<select data-new-model-rf-data-type", start) :]
+    select_html = select_html[: select_html.index("</select>")]
+    assert "disabled aria-disabled" not in select_html.split(">", 1)[0]
+    enabled = [
+        opt.split(">", 1)[1].split("<", 1)[0]
+        for opt in select_html.split("<option")[1:]
+        if "disabled" not in opt.split(">", 1)[0]
+    ]
+    assert enabled == ["Integer", "Integer (scale)"]
