@@ -79,7 +79,7 @@
         {# `.table-scroll` (base.html): a table wider than its card
            scrolls inside the card rather than pushing the page sideways. #}
         <div class="table-scroll">
-        <table class="{% if section.is_group %}rs-group-table{% endif %}"{% if section.has_custom_widths and not section.is_group %} style="table-layout: fixed;"{% endif %}>
+        <table class="rs-table{% if section.is_group %} rs-group-table{% endif %}"{% if section.has_custom_widths and not section.is_group %} style="table-layout: fixed;"{% endif %}>
           {% if section.has_custom_widths %}
             <colgroup>
               <col{% if section.identity_width_px %} style="width: {{ section.identity_width_px }}px"{% endif %}>
@@ -132,7 +132,7 @@
                 </td>
               {% endif %}
               {% for cell in row.display_cells %}
-                <td{% if cell.is_profile_link %} class="rs-narrow"{% endif %}>
+                <td{% if cell.is_profile_link %} class="rs-narrow"{% endif %} data-label="{{ section.display_field_cols[loop.index0].label }}">
                   {% if cell.is_profile_link %}
                     {{ profile_value(cell.value, "View") }}
                   {% else %}
@@ -142,7 +142,7 @@
               {% endfor %}
               {% for value in row.values %}
                 {% set col = section.field_cols[loop.index0] %}
-                <td{% if col.is_narrow %} class="rs-narrow"{% elif col.is_textlong %} class="rs-textlong"{% endif %}>
+                <td{% if col.is_narrow %} class="rs-narrow"{% elif col.is_textlong %} class="rs-textlong"{% endif %} data-label="{{ col.label }}{% if col.required %} *{% endif %}">
                   {% if value %}
                     {{ value }}
                   {% else %}

@@ -3,8 +3,10 @@
    /results "summarized" mode so the per-data-type shape stays
    consistent across the two surfaces.
 
-   Expects ``cell`` (``SummarizedFieldCell``) in scope. #}
-<td>
+   Expects ``cell`` (``SummarizedFieldCell``) in scope, and
+   ``cell_label`` (the field's label) for the cell's ``data-label``,
+   the label a phone's card shows over it (segment 20Q rung 5). #}
+<td{% if cell_label %} data-label="{{ cell_label }}"{% endif %}>
   {% if cell.data_type in ("Integer", "Decimal") %}
     Average: {% if cell.response_count > 0 %}{{ cell.average }}{% else %}<span class="muted">—</span>{% endif %}<br>
     Median: {% if cell.response_count > 0 %}{{ cell.median }}{% else %}<span class="muted">—</span>{% endif %}<br>

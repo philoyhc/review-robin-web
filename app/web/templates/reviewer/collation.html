@@ -69,7 +69,7 @@
         {# `.table-scroll` (base.html): a table wider than its card
            scrolls inside the card rather than pushing the page sideways. #}
         <div class="table-scroll">
-        <table>
+        <table class="rs-table">
           <thead>
             <tr>
               <th scope="col" class="rs-reviewee">Cohort</th>
@@ -83,16 +83,18 @@
             {# Row 1 — Reviewer side (distinct headcount + shared aggregate) #}
             <tr>
               <td class="rs-reviewee">{{ section.reviewer_stats.distinct_count }} Reviewers in cohort</td>
-              <td>{{ section.reviewer_stats.response_count }}</td>
+              <td data-label="Responses">{{ section.reviewer_stats.response_count }}</td>
               {% for cell in section.reviewer_stats.field_cells %}
+                {% set cell_label = section.fields[loop.index0].label or section.fields[loop.index0].field_key %}
                 {% include "reviewer/_collation_field_cell.html" %}
               {% endfor %}
             </tr>
             {# Row 2 — Reviewee side (same aggregate, different headcount) #}
             <tr>
               <td class="rs-reviewee">{{ section.reviewee_stats.distinct_count }} Reviewees in cohort</td>
-              <td>{{ section.reviewee_stats.response_count }}</td>
+              <td data-label="Responses">{{ section.reviewee_stats.response_count }}</td>
               {% for cell in section.reviewee_stats.field_cells %}
+                {% set cell_label = section.fields[loop.index0].label or section.fields[loop.index0].field_key %}
                 {% include "reviewer/_collation_field_cell.html" %}
               {% endfor %}
             </tr>
