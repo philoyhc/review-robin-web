@@ -263,3 +263,23 @@ def test_the_rest_of_the_surface_fits_a_phone(
 
     expect(reviewer.locator("table.rs-table code").first).to_contain_text("montgomery")
     _no_sideways_scroll(reviewer)
+
+
+def test_the_instruments_page_grid_keeps_its_columns_in_a_narrow_window(
+    page: Page, new_session: Callable[[], str]
+) -> None:
+    """Codex on #4206: the stacked visibility grid is the reviewer
+    surface's; the Instruments page's own grids, with no labels on their
+    cells, keep their header row in a window under 640 px."""
+    from ._builder import open_unlocked
+
+    session_id = new_session()
+    page.set_viewport_size({"width": 600, "height": 900})
+    card = open_unlocked(page, session_id)
+    grids = card.locator("table.vp-grid")
+    assert grids.count() > 0
+    for i in range(grids.count()):
+        grid = grids.nth(i)
+        if grid.is_visible():
+            expect(grid.locator("thead")).to_be_visible()
+            assert grid.evaluate("t => getComputedStyle(t).display") == "table"
