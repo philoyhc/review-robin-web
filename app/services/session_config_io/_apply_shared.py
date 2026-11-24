@@ -89,6 +89,9 @@ class _ResponseFieldSpec:
     max: float | None = None
     step: float | None = None
     list_csv: str | None = None
+    # Segment 20P — answered as a scale, and its ``start|middle|end`` labels.
+    scale: bool = False
+    scale_labels: str | None = None
     visible: bool = True
     # 19T Item 10 — branching. A governed field names its parent by
     # ``field_key`` (ids don't survive an export); the parent carries the

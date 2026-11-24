@@ -538,6 +538,9 @@ def _response_field_rows(instrument: Instrument, n: int) -> list[Row]:
                 "string",
             )
         )
+        # Segment 20P — the scale mode and its labels.
+        rows.append(Row(f"{prefix}.scale", _bool(field.scale), "boolean"))
+        rows.append(Row(f"{prefix}.scale_labels", _str(field.scale_labels), "string"))
         rows.append(Row(f"{prefix}.visible", _bool(field.visible), "boolean"))
         # 19T Item 10 — branching. The parent goes by ``field_key``,
         # since ids don't survive an export; the condition rides on the

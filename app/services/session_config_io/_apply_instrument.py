@@ -41,6 +41,8 @@ from app.services.instruments._response_fields import (
     _inline_kwargs_from_default_spec,
     _validate_field_key,
     _validation_block_from_default_spec,
+    join_scale_labels,
+    parse_scale_labels,
     validation_block_from_inline,
 )
 from app.services.responses import (
@@ -182,6 +184,12 @@ def _apply_instrument_kv(plan: _ParsedConfig, field_path: str, value: str, data_
             rf.step = _parse_decimal(value)
         elif attr == "list_csv":
             rf.list_csv = value or None
+        # Segment 20P — the scale; its shape is checked with the row
+        # (``_apply_parse``), its labels trimmed as the card trims them.
+        elif attr == "scale":
+            rf.scale = _parse_bool(value, default=False)
+        elif attr == "scale_labels":
+            rf.scale_labels = join_scale_labels(parse_scale_labels(value))
         elif attr == "visible":
             rf.visible = _parse_bool(value, default=True)
         # 19T Item 10 — branching; resolved and checked once the
@@ -557,6 +565,8 @@ def _apply_instruments(
                 inline_kwargs["_inline_max"] = rf_spec.max
                 inline_kwargs["_inline_step"] = rf_spec.step
                 inline_kwargs["_inline_list_csv"] = rf_spec.list_csv
+                inline_kwargs["scale"] = rf_spec.scale
+                inline_kwargs["scale_labels"] = rf_spec.scale_labels
                 # Recompute the ``validation`` JSON to match the
                 # imported inline state — mirrors the dual-write
                 # the operator's Band 3 save path lands (Segment
@@ -567,6 +577,8 @@ def _apply_instruments(
                     rf_spec.max,
                     rf_spec.step,
                     rf_spec.list_csv,
+                    rf_spec.scale,
+                    rf_spec.scale_labels,
                 )
             else:
                 validation_block = default_validation
