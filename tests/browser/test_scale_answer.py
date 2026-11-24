@@ -602,7 +602,8 @@ def test_band_3_scale_row_keeps_its_controls_on_one_line(
 ) -> None:
     """The author's ask (2026-11-24): a scale row's own controls stay
     level with Min, Max and Step, and the label boxes take the next
-    line under them, "Labels" in front and the summary after."""
+    line, spread from the Type menu to Step, "Labels" in front and the
+    summary after."""
     session_id = new_session()
     seed_rosters(api, session_id)
     page.set_viewport_size({"width": 1500, "height": 1100})
@@ -627,7 +628,11 @@ def test_band_3_scale_row_keeps_its_controls_on_one_line(
         box('[data-new-model-rf-scale-label="end"]'),
     )
     assert start["y"] > top + 10  # the next line
-    assert abs(start["x"] - box('[data-new-model-rf-bound="min"]')["x"]) <= 1
+    # The three boxes span from the Type menu's left edge to Step's right
+    # edge (author, 2026-11-24).
+    assert abs(start["x"] - box("[data-new-model-rf-data-type]")["x"]) <= 1
+    step = box('[data-new-model-rf-bound="step"]')
+    assert abs((end["x"] + end["width"]) - (step["x"] + step["width"])) <= 1
     # The label boxes are as tall as the bounds above them.
     assert abs(start["height"] - box('[data-new-model-rf-bound="min"]')["height"]) <= 1
     caption, summary = box(".rf-scale-caption"), box("[data-new-model-rf-scale-summary]")
