@@ -15,6 +15,7 @@ from playwright.sync_api import Page, expect
 from ._builder import (
     REVIEWER_EMAIL,
     activate,
+    branch_rating,
     make_rating_a_scale,
     open_unlocked,
     rows,
@@ -218,3 +219,64 @@ def test_band_3_chooses_a_scale_and_band_2_previews_it(
     expect(
         card.locator('[data-new-model-band2-preview] [data-rs-scale-widget="snap"]')
     ).to_have_count(1)
+
+
+def test_a_governed_scale_follows_its_branch(
+    page: Page,
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """A scale whose box a branch disables and enables after load (Codex
+    on #4193): closed it takes no input, open it answers, and closed
+    again it stops."""
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    branch_rating(page, session_id)  # "Why" opens at Rating >= 4
+    make_rating_a_scale(live_server.database_url, session_id, "", label="Why")
+    activate(api, live_server.database_url, session_id)
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 1400, "height": 1000})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    rating = reviewer.locator("[name^='response['][name$='][rating]']")
+    why = reviewer.locator("[name^='response['][name$='][why]']")
+    widget = reviewer.locator('[data-rs-scale-widget="snap"]').first
+    thumb = widget.get_by_role("slider")
+    expect(widget).to_have_class(re.compile(r"\bsc-off\b"))
+    expect(thumb).to_have_attribute("aria-disabled", "true")
+    widget.locator(".sc-stop").nth(1).click(force=True)
+    expect(why).to_have_value("")
+
+    rating.fill("5")
+    expect(why).to_be_enabled()
+    expect(widget).not_to_have_class(re.compile(r"\bsc-off\b"))
+    expect(widget.locator(".sc-clear")).to_be_enabled()
+    widget.locator(".sc-stop").nth(1).click(force=True)
+    expect(why).to_have_value("2")
+
+    rating.fill("2")
+    expect(why).to_be_disabled()
+    expect(thumb).to_have_attribute("aria-disabled", "true")
+    thumb.press("ArrowRight", timeout=2000)
+    expect(why).to_have_value("2")
+
+
+def test_a_tiny_decimal_step_keeps_its_places(page: Page) -> None:
+    """A step JavaScript writes in scientific notation (``1e-7``) still
+    numbers its stops and answers to seven places (Codex on #4193)."""
+    _open(page)
+    page.evaluate(
+        """() => {
+          const box = document.createElement("input");
+          box.type = "number"; box.name = "tiny"; box.min = "0"; box.max = "0.000001";
+          box.dataset.rsStep = "1e-7"; box.setAttribute("data-rs-scale", "");
+          const cell = document.createElement("div"); cell.id = "tiny-cell";
+          cell.appendChild(box); document.body.appendChild(cell);
+          window.rrwScaleEnhance(cell);
+        }"""
+    )
+    widget = page.locator("#tiny-cell [data-rs-scale-widget='snap']")
+    expect(widget.locator(".sc-num").nth(3)).to_have_text("0.0000003")
+    widget.get_by_role("slider").press("End")
+    expect(page.locator('input[name="tiny"]')).to_have_value("0.0000010")
