@@ -4381,14 +4381,20 @@ def test_wave3_prii_disabled_type_and_bounds_when_responses_present(
     rating_block = flat[rating_row_idx : rating_row_idx + 6000]
     assert 'data-new-model-rf-shape-locked="true"' in rating_block
 
-    # data_type select disabled.
+    # data_type select: Rating is a number, so (segment 20P, the
+    # author's ruling 2026-11-24) it stays open to switch to or from
+    # its scale, and every other type is disabled.
     sel_idx = rating_block.find("data-new-model-rf-data-type")
     assert sel_idx != -1
     # Slice from the <select that opens this attribute to its closing >.
     sel_open = rating_block.rfind("<select", 0, sel_idx)
     sel_close = rating_block.find(">", sel_idx)
     sel_tag = rating_block[sel_open:sel_close]
-    assert "disabled" in sel_tag
+    assert "disabled" not in sel_tag
+    sel_body = rating_block[sel_close : rating_block.find("</select>", sel_close)]
+    for other in ("String", "Decimal", "List"):
+        opt = sel_body[sel_body.find("<option", 0, sel_body.find(f">{other}<")) :]
+        assert "disabled" in opt.split(">", 1)[0], other
 
     # Each of min / max / step / list bound inputs disabled.
     for bound in ("min", "max", "step", "list"):

@@ -10,7 +10,7 @@ import re
 from collections.abc import Callable
 
 import httpx
-from playwright.sync_api import Page, expect
+from playwright.sync_api import FloatRect, Page, expect
 
 from ._builder import (
     REVIEWER_EMAIL,
@@ -575,3 +575,125 @@ def test_band_2_scale_column_holds_its_scale_inside_the_cell_padding(
     w, c = widget.bounding_box(), cell.bounding_box()
     assert w is not None and c is not None
     assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
+
+
+def test_a_slides_box_sits_to_the_right_of_its_scale(page: Page) -> None:
+    """The author's ask (2026-11-24): a slide's number box sits to the
+    right of the scale, level with its line, not under it."""
+    _open(page)
+    slide = page.locator('[data-rs-scale-widget="slide"]').first
+    line = slide.locator(".sc-line").bounding_box()
+    numbers = slide.locator(".sc-numbers").bounding_box()
+    box = slide.locator('input[type="number"]').bounding_box()
+    assert line is not None and numbers is not None and box is not None
+    assert box["x"] >= line["x"] + line["width"]
+    assert box["y"] < numbers["y"] + numbers["height"]  # level, not below
+    assert box["y"] + box["height"] > line["y"]
+    # The scale's stated minimum holds the box: inside its cell.
+    cell = slide.locator("xpath=ancestor::td[1]").bounding_box()
+    assert cell is not None
+    assert box["x"] + box["width"] <= cell["x"] + cell["width"] + 1
+
+
+def test_band_3_scale_row_keeps_its_controls_on_one_line(
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
+) -> None:
+    """The author's ask (2026-11-24): a scale row's own controls stay
+    level with Min, Max and Step, and the label boxes take the next
+    line under them, "Labels" in front and the summary after."""
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    page.set_viewport_size({"width": 1500, "height": 1100})
+    card = open_unlocked(page, session_id)
+    rating = rows(card).first
+    rating.locator("[data-new-model-rf-data-type]").select_option(label="Integer (scale)")
+
+    def box(sel: str) -> FloatRect:
+        b = rating.locator(sel).first.bounding_box()
+        assert b is not None
+        return b
+
+    top = box('[data-new-model-rf-bound="min"]')["y"]
+    for sel in (
+        "[data-new-model-rf-name]",
+        "[data-new-model-rf-data-type]",
+        "[data-new-model-rf-delete]",
+    ):
+        assert abs(box(sel)["y"] - top) <= 4, sel
+    start, end = (
+        box('[data-new-model-rf-scale-label="start"]'),
+        box('[data-new-model-rf-scale-label="end"]'),
+    )
+    assert start["y"] > top + 10  # the next line
+    assert abs(start["x"] - box('[data-new-model-rf-bound="min"]')["x"]) <= 1
+    # The label boxes are as tall as the bounds above them.
+    assert abs(start["height"] - box('[data-new-model-rf-bound="min"]')["height"]) <= 1
+    caption, summary = box(".rf-scale-caption"), box("[data-new-model-rf-scale-summary]")
+    assert caption["x"] + caption["width"] <= start["x"]
+    assert summary["x"] >= end["x"] + end["width"]
+    assert abs(caption["y"] + caption["height"] / 2 - (start["y"] + start["height"] / 2)) <= 4
+    assert abs(summary["y"] + summary["height"] / 2 - (start["y"] + start["height"] / 2)) <= 4
+
+
+def test_an_answered_field_switching_to_its_scale_keeps_string_off(
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """Codex on #4196: switching an answered Integer to Integer (scale)
+    recomputes the row's actions, which must not re-enable String."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import (
+        Assignment,
+        Instrument,
+        InstrumentResponseField,
+        Response,
+        Reviewee,
+        Reviewer,
+    )
+
+    from ._builder import session_pk
+
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            pk = session_pk(live_server.database_url, session_id)
+            instrument = db.execute(
+                select(Instrument).where(Instrument.session_id == pk)
+            ).scalar_one()
+            rating = db.execute(
+                select(InstrumentResponseField).where(
+                    InstrumentResponseField.instrument_id == instrument.id,
+                    InstrumentResponseField.label == "Rating",
+                )
+            ).scalar_one()
+            reviewer = (
+                db.execute(select(Reviewer).where(Reviewer.session_id == pk)).scalars().first()
+            )
+            reviewee = (
+                db.execute(select(Reviewee).where(Reviewee.session_id == pk)).scalars().first()
+            )
+            assert reviewer is not None and reviewee is not None
+            assignment = Assignment(
+                session_id=pk,
+                reviewer_id=reviewer.id,
+                reviewee_id=reviewee.id,
+                instrument_id=instrument.id,
+            )
+            db.add(assignment)
+            db.flush()
+            db.add(Response(assignment_id=assignment.id, response_field_id=rating.id, value="4"))
+            db.commit()
+    finally:
+        engine.dispose()
+    page.set_viewport_size({"width": 1500, "height": 1100})
+    card = open_unlocked(page, session_id)
+    select_box = rows(card).first.locator("[data-new-model-rf-data-type]")
+    expect(select_box).to_be_enabled()
+    select_box.select_option(label="Integer (scale)")
+    expect(select_box.locator('option[value="string"]')).to_be_disabled()
+    expect(select_box.locator('option[value="decimal"]').first).to_be_disabled()
+    select_box.select_option(label="Integer")
+    expect(select_box.locator('option[value="string"]')).to_be_disabled()

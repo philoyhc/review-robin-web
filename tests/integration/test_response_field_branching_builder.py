@@ -235,7 +235,7 @@ def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) 
         "? !window.newModelRfBranchSibling(row, up)",
         "? 'Delete its branch first'",
         "'Delete this field and its branch'",
-        "if (stringOpt) { stringOpt.disabled = isParent; }",
+        "if (stringOpt) { stringOpt.disabled = isParent || hasResponses; }",
         "activeBox.disabled = parentHidden;",
         "window.newModelRfRecomputeCondition(group, row);",
     ):
