@@ -5041,6 +5041,57 @@
         font-size: var(--fs-small);
         margin: 0 0 var(--space-2) 0;
       }
+      /* Segment 20Q rung 4 — the rest of the reviewer surface on a
+         phone, scoped to the surface (its operator preview too): the
+         Instruments page's own `vp-grid`s and Band 2's progress row keep
+         their desktop shape in a narrow window (Codex on #4206). The
+         visibility grid stacks: an audience a block, each
+         window a line, its label (the cell's `data-label`) left of its
+         pill. The progress pills and the constraint line read from the
+         left, as the cards under them do. The action row's buttons share
+         the width, and Prev / Next take a line of their own. An address
+         breaks inside itself rather than push the page wider. */
+      @media (max-width: 639px) {
+        body.ui-v2 [data-rs-visibility-policy-card] .table-scroll:has(> table.vp-grid) { overflow-x: visible; }
+        body.ui-v2 [data-rs-visibility-policy-card] table.vp-grid > thead { display: none; }
+        body.ui-v2 [data-rs-visibility-policy-card] table.vp-grid,
+        body.ui-v2 [data-rs-visibility-policy-card] table.vp-grid > tbody,
+        body.ui-v2 [data-rs-visibility-policy-card] table.vp-grid > tbody > tr,
+        body.ui-v2 [data-rs-visibility-policy-card] table.vp-grid > tbody > tr > td { display: block; width: auto; }
+        body.ui-v2 [data-rs-visibility-policy-card] table.vp-grid > tbody > tr {
+          padding: var(--space-2) 0;
+          border-bottom: 1px solid var(--border-subtle);
+        }
+        body.ui-v2 [data-rs-visibility-policy-card] table.vp-grid > tbody > tr:last-child { border-bottom: 0; }
+        body.ui-v2 [data-rs-visibility-policy-card] table.vp-grid > tbody > tr > td {
+          border: 0;
+          padding: 2px 0 !important;
+        }
+        body.ui-v2 [data-rs-visibility-policy-card] table.vp-grid td.vp-audience { font-weight: 600; }
+        body.ui-v2 [data-rs-visibility-policy-card] table.vp-grid td[data-label] {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: var(--space-1) var(--space-2);
+        }
+        body.ui-v2 [data-rs-visibility-policy-card] table.vp-grid td[data-label]::before {
+          content: attr(data-label);
+          flex: 1 1 auto;
+          color: var(--text-subtle);
+        }
+        body.ui-v2 [data-rs-visibility-policy-card] table.vp-grid td[data-label] > .pill { white-space: nowrap; }
+        body.ui-v2 .rs-instrument-group .rs-progress-row { justify-content: flex-start; }
+        body.ui-v2 .rs-instrument-group .rs-constraints { text-align: left; }
+        body.ui-v2 .rs-action-row,
+        body.ui-v2 .rs-action-row.rs-action-row-top { justify-content: stretch; }
+        body.ui-v2 .rs-action-row-controls,
+        body.ui-v2 .rs-page-nav-cluster { flex: 1 1 100%; flex-wrap: nowrap; }
+        body.ui-v2 .rs-action-row-controls > .btn { flex: 1 1 0; justify-content: center; text-align: center; }
+        body.ui-v2 .rs-page-nav-cluster { justify-content: space-between; }
+        body.ui-v2 .rs-action-divider { display: none; }
+        body.ui-v2 .rs-role-nav,
+        body.ui-v2 table.rs-table code { overflow-wrap: anywhere; }
+      }
       /* Segment 20K — a stacked instrument's Responses cell: one line
          per response field, its label (the constraint under it) left of
          its box. The lines share one label column (a subgrid) so every

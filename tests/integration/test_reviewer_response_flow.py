@@ -2591,9 +2591,9 @@ def test_surface_visibility_policy_card_reflects_persisted_policy(
     assert "Responses released" in body
     # Two audience labels in the table — Observers omitted.
     flat = " ".join(body.split())
-    assert '<td style="padding: 4px 8px;">You</td>' in flat
-    assert '<td style="padding: 4px 8px;">Reviewees</td>' in flat
-    assert '<td style="padding: 4px 8px;">Observers</td>' not in flat
+    assert '<td style="padding: 4px 8px;" class="vp-audience">You</td>' in flat
+    assert '<td style="padding: 4px 8px;" class="vp-audience">Reviewees</td>' in flat
+    assert '<td style="padding: 4px 8px;" class="vp-audience">Observers</td>' not in flat
     # The reviewee after-release cell shows the Summarized mode,
     # which the reviewer-facing vocabulary names "Anonymized
     # summaries" (operators see "summarized" as the encoded mode;
