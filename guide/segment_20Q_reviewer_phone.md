@@ -73,6 +73,13 @@ Open. Rung 2 (2026-11-24) diverged in two places:
   chrome, so an operator's preview of the surface in a narrow window shows the
   same cards. The check of no sideways scroll covers the response table only;
   the visibility grid's is rung 4's.
+- **Rung 3a/3b (author's checks):** a slide on a phone puts its box under the
+  line; stacked scales share one side, a slide's box 88 px everywhere and
+  ending where a snap's End label ends; a slide's line ends in a bar each side.
+- **Rung 4: an address breaks anywhere it must** (`overflow-wrap: anywhere`),
+  not only at `@` and `.`: the surface renders through two template
+  environments, and a `<wbr>` filter would be registered in both for a
+  rarely-seen case. The action row stays where it is (open question).
 
 ## PR ladder
 

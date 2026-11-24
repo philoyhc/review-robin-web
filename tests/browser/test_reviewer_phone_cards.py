@@ -45,6 +45,7 @@ def _surface(
     new_session: Callable[[], str],
     size: ViewportSize = _PHONE,
     scale: dict[str, float] | None = None,
+    before_activate: Callable[[str, str], None] | None = None,
     **instrument: object,
 ) -> Page:
     session_id = new_session()
@@ -60,6 +61,8 @@ def _surface(
         )
     if instrument:
         _set_instrument(live_server.database_url, session_id, **instrument)
+    if before_activate is not None:
+        before_activate(live_server.database_url, session_id)
     activate(api, live_server.database_url, session_id)
     reviewer = page_as(REVIEWER_EMAIL)
     reviewer.set_viewport_size(size)
@@ -147,6 +150,7 @@ def test_the_desktop_table_is_untouched(
         page_as, api, live_server, new_session, size={"width": 1400, "height": 1000}
     )
     expect(reviewer.locator("table.rs-table > thead")).to_be_visible()
+    expect(reviewer.locator("table.vp-grid > thead").first).to_be_visible()
     row = reviewer.locator("table.rs-table > tbody > tr").first
     assert row.evaluate("tr => getComputedStyle(tr).display") == "table-row"
     assert _label(reviewer, "table.rs-table td[data-label]") == "none"
@@ -204,3 +208,58 @@ def test_a_slide_box_sits_under_its_full_width_scale(
     assert box["y"] >= labels["y"] + labels["height"] - 1  # under the labels
     assert foot["y"] >= box["y"] + box["height"] - 1  # above Not answered
     assert abs(box["width"] - 88) < 1
+
+
+def _long_address(database_url: str, session_id: str) -> None:
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Reviewee
+
+    engine = create_engine(database_url)
+    try:
+        with Session(engine) as db:
+            for reviewee in db.execute(
+                select(Reviewee).where(Reviewee.session_id == session_pk(database_url, session_id))
+            ).scalars():
+                reviewee.email_or_identifier = (
+                    "christopher.alexander.montgomery-whitfield@departmentofexamples.example.edu"
+                )
+            db.commit()
+    finally:
+        engine.dispose()
+
+
+def test_the_rest_of_the_surface_fits_a_phone(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Rung 4: the visibility grid stacks, a window's label beside its
+    pill; the action row's buttons share the width; a long address
+    breaks inside its card. Nothing scrolls sideways, the grid included."""
+    reviewer = _surface(page_as, api, live_server, new_session, before_activate=_long_address)
+    grid = reviewer.locator("table.vp-grid").first
+    expect(grid.locator("thead")).to_be_hidden()
+    window = grid.locator("td[data-label='Session ongoing']").first
+    label = window.evaluate(
+        "td => getComputedStyle(td, '::before').content.replace(/^\"|\"$/g, '')"
+    )
+    assert label == "Session ongoing"
+    pill = window.locator(".pill").bounding_box()
+    cell = window.bounding_box()
+    assert pill and cell and pill["height"] < cell["height"] + 1  # one line, beside its label
+    spill = reviewer.locator(".table-scroll:has(> table.vp-grid)").first.evaluate(
+        "el => el.scrollWidth - el.clientWidth"
+    )
+    assert spill <= 0, f"the visibility grid scrolls {spill}px sideways"
+
+    buttons = reviewer.locator(".rs-action-row-controls").first.locator(".btn")
+    widths = [buttons.nth(i).bounding_box() for i in range(buttons.count())]
+    assert all(widths) and len(widths) == 3
+    sizes = [w["width"] for w in widths if w]
+    assert max(sizes) - min(sizes) < 1  # the three share the row
+
+    expect(reviewer.locator("table.rs-table code").first).to_contain_text("montgomery")
+    _no_sideways_scroll(reviewer)
