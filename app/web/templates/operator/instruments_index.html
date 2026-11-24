@@ -2605,8 +2605,17 @@
             );
             return g ? g.minWidth + 2 : 0;
           }
+          // A scale column's floor: the scale and the preview cell's side
+          // padding (``var(--space-4)`` each side in ``base.html``), so
+          // the scale fits inside the cell (Codex on #4194).
+          function scaleColumnMin(card, key) {
+            var scale = scaleMinWidth(card, key);
+            if (!scale) { return 0; }
+            var pad = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--space-4')) || 16;
+            return scale + 2 * pad;
+          }
           function responseColStyle(card, r) {
-            var scaleMin = scaleMinWidth(card, r.key);
+            var scaleMin = scaleColumnMin(card, r.key);
             if (scaleMin) {
               // A scale column: its dragged width, never under its minimum.
               return 'width: ' + Math.max(scaleMin, r.width > 0 ? r.width : 0) + 'px;';
@@ -3234,7 +3243,7 @@
             document.body.style.cursor = 'col-resize';
             // Segment 20P — a scale column stops at the scale's minimum.
             var floorPx = Math.max(40, key.indexOf('resp_') === 0 && card
-              ? scaleMinWidth(card, key.slice(5)) : 0);
+              ? scaleColumnMin(card, key.slice(5)) : 0);
             function onMove(ev) {
               var delta = ev.clientX - startX;
               var w = Math.max(floorPx, Math.min(1200, startWidth + delta));
