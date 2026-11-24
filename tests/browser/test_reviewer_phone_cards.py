@@ -8,9 +8,10 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import httpx
+import pytest
 from playwright.sync_api import Page, ViewportSize, expect
 
-from ._builder import REVIEWER_EMAIL, activate, seed_rosters, session_pk
+from ._builder import REVIEWER_EMAIL, activate, make_rating_a_scale, seed_rosters, session_pk
 from .conftest import LiveServer, app_url
 
 _PHONE: ViewportSize = {"width": 390, "height": 844}
@@ -43,10 +44,20 @@ def _surface(
     live_server: LiveServer,
     new_session: Callable[[], str],
     size: ViewportSize = _PHONE,
+    scale: dict[str, float] | None = None,
     **instrument: object,
 ) -> Page:
     session_id = new_session()
     seed_rosters(api, session_id)
+    if scale is not None:
+        make_rating_a_scale(
+            live_server.database_url,
+            session_id,
+            "Poor||Excellent",
+            lo=scale["lo"],
+            hi=scale["hi"],
+            step=scale["step"],
+        )
     if instrument:
         _set_instrument(live_server.database_url, session_id, **instrument)
     activate(api, live_server.database_url, session_id)
@@ -139,3 +150,32 @@ def test_the_desktop_table_is_untouched(
     row = reviewer.locator("table.rs-table > tbody > tr").first
     assert row.evaluate("tr => getComputedStyle(tr).display") == "table-row"
     assert _label(reviewer, "table.rs-table td[data-label]") == "none"
+
+
+@pytest.mark.parametrize("layout", ["across", "stacked"])
+@pytest.mark.parametrize(
+    "bounds",
+    [{"lo": 0, "hi": 10, "step": 1}, {"lo": 1, "hi": 100, "step": 1}],
+    ids=["snap-11-points", "slide"],
+)
+def test_a_scale_fits_its_card(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+    layout: str,
+    bounds: dict[str, float],
+) -> None:
+    """Codex on #4203: a scale states a desktop minimum width (362 px
+    for 11 points) that a phone's card has not got; in a card it takes
+    the card's width instead, and nothing scrolls sideways."""
+    reviewer = _surface(
+        page_as, api, live_server, new_session, scale=bounds, response_layout=layout
+    )
+    widget = reviewer.locator("table.rs-table [data-rs-scale-widget]").first
+    expect(widget).to_be_visible()
+    card = reviewer.locator("table.rs-table > tbody > tr").first.bounding_box()
+    box = widget.bounding_box()
+    assert card and box
+    assert box["x"] >= card["x"] and box["x"] + box["width"] <= card["x"] + card["width"] + 0.5
+    _no_sideways_scroll(reviewer)

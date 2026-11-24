@@ -676,7 +676,7 @@
           font-weight: 600;
           margin-bottom: 2px;
         }
-        table.rs-table > tbody > tr > td input:not([type="checkbox"]):not([type="radio"]),
+        table.rs-table > tbody > tr > td input:not([type="checkbox"]):not([type="radio"]):not(.sc-box-hidden),
         table.rs-table > tbody > tr > td select,
         table.rs-table > tbody > tr > td textarea {
           width: 100%;
@@ -690,6 +690,17 @@
           right: var(--space-3);
           padding: 0;
         }
+        /* A scale (20P) states the narrowest it reads at on a desktop
+           (`_scale_js.html` sets it inline on the widget, a stacked one's
+           width, and its cell). A card is narrower: the scale takes the
+           card's width, its stops placed by percentage (Codex on #4203). */
+        table.rs-table > tbody > tr > td { min-width: 0 !important; }
+        table.rs-table [data-rs-scale-widget] {
+          min-width: 0 !important;
+          width: 100% !important;
+        }
+        /* Its number box, hidden while the scale snaps, stays 1px. */
+        table.rs-table .sc-box-hidden { width: 1px !important; }
         /* A stacked cell's lines put the label over the box too. */
         table.rs-table .rs-stack-fields { grid-template-columns: minmax(0, 1fr); }
         table.rs-table .rs-stack-field { display: block; }
