@@ -74,6 +74,7 @@
       + (preview ? " sc-preview" : "");
     wrap.setAttribute("data-rs-scale-widget", snap ? "snap" : "slide");
     wrap.setAttribute("data-rs-scale-min", String(minWidth));
+    wrap.setAttribute("data-rs-scale-side", String(side));
     wrap.style.minWidth = minWidth + "px";
     wrap.style.paddingLeft = wrap.style.paddingRight = side + "px";
     wrap.style.setProperty("--sc-side", side + "px");  // the labels reach out over it
@@ -264,7 +265,10 @@
 
   // In the stacked layout (one line per field) every scale in a table
   // takes the widest one's width, so their lines start and end together
-  // (author, 2026-11-24). Across rows too: the scope is the table.
+  // (author, 2026-11-24). Across rows too: the scope is the table. They
+  // share the widest side too, so every line starts at one edge and a
+  // slide's box ends where a snap's line does (author, 2026-11-24): a
+  // scale whose side grows widens by twice the growth.
   function evenStacks(root) {
     var scopes = [];
     Array.prototype.forEach.call((root || document).querySelectorAll(".rs-stack-fields"), function (cell) {
@@ -273,11 +277,17 @@
     });
     scopes.forEach(function (scope) {
       var scales = scope.querySelectorAll(".rs-stack-fields [data-rs-scale-widget]");
-      var widest = 0;
+      var side = 0, widest = 0;
+      function own(w) { return parseInt(w.getAttribute("data-rs-scale-side"), 10) || 0; }
+      Array.prototype.forEach.call(scales, function (w) { side = Math.max(side, own(w)); });
       Array.prototype.forEach.call(scales, function (w) {
-        widest = Math.max(widest, parseInt(w.getAttribute("data-rs-scale-min"), 10) || 0);
+        var min = parseInt(w.getAttribute("data-rs-scale-min"), 10) || 0;
+        widest = Math.max(widest, min + 2 * (side - own(w)));
       });
       Array.prototype.forEach.call(scales, function (w) {
+        w.style.paddingLeft = w.style.paddingRight = side + "px";
+        w.style.setProperty("--sc-side", side + "px");
+        if (w.classList.contains("sc-slide")) w.style.columnGap = side + "px";
         w.style.minWidth = w.style.width = widest + "px";
       });
     });

@@ -733,6 +733,17 @@
         }
         /* Its number box, hidden while the scale snaps, stays 1px. */
         table.rs-table .sc-box-hidden { width: 1px !important; }
+        /* A slide's box drops to its own row under the scale and its
+           labels, above *Not answered* / *clear*, at its desktop width:
+           the line takes the card's full width (author, 2026-11-24). */
+        table.rs-table .sc.sc-slide { grid-template-columns: minmax(0, 1fr); }
+        table.rs-table .sc.sc-slide > .sc-foot { order: 1; }
+        body.ui-v2 table.rs-table > tbody > tr > td .sc.sc-slide > input[type="number"] {
+          grid-column: 1;
+          grid-row: auto;
+          width: 88px;
+          margin: 4px 0 6px calc(-1 * var(--sc-side, 0px));
+        }
         /* A stacked cell's lines put the label over the box too. */
         table.rs-table .rs-stack-fields { grid-template-columns: minmax(0, 1fr); }
         table.rs-table .rs-stack-field { display: block; }
@@ -749,6 +760,12 @@
       .sc { padding: 10px 12px 2px; box-sizing: border-box; }
       .sc-line { position: relative; height: 28px; cursor: pointer; touch-action: none; }
       .sc-track { position: absolute; left: 0; right: 0; top: 13px; height: 2px; background: var(--gray-soft); }
+      /* A slide's line ends in a short bar at each end, so its reach
+         reads at a glance (author, 2026-11-24: mockup B). */
+      .sc-slide .sc-track::before,
+      .sc-slide .sc-track::after { content: ""; position: absolute; top: -6px; width: 2px; height: 14px; background: var(--gray); border-radius: 1px; }
+      .sc-slide .sc-track::before { left: -1px; }
+      .sc-slide .sc-track::after { right: -1px; }
       .sc-stop { position: absolute; top: 9px; width: 10px; height: 10px; margin-left: -5px; border-radius: var(--radius-pill); background: var(--white); border: 2px solid var(--gray); box-sizing: border-box; }
       .sc-thumb { position: absolute; top: 4px; width: 20px; height: 20px; margin-left: -10px; border-radius: var(--radius-pill); background: var(--blue-strong); border: 2px solid var(--white); box-shadow: 0 0 0 1px var(--blue-deep); }
       .sc-thumb:focus-visible { outline: 3px solid var(--blue-soft); outline-offset: 2px; }
