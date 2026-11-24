@@ -16,9 +16,13 @@
 (function () {
   var SNAP_MAX = 11;
 
+  // The decimals a number is written with, scientific notation too
+  // (``String(1e-7)`` is ``"1e-7"``: seven places, not none).
   function decimals(n) {
-    var s = String(n);
-    return s.indexOf(".") < 0 ? 0 : s.length - s.indexOf(".") - 1;
+    var parts = String(n).split("e");
+    var digits = parts[0], exp = parts.length > 1 ? parseInt(parts[1], 10) : 0;
+    var dot = digits.indexOf(".");
+    return Math.min(20, Math.max(0, (dot < 0 ? 0 : digits.length - dot - 1) - exp));
   }
 
   function enhance(box) {
@@ -31,8 +35,6 @@
     box.dataset.rsScaleDone = "1";
     var snap = points <= SNAP_MAX;
     var places = Math.max(decimals(step), decimals(min));
-    var off = box.disabled;
-    var label = box.getAttribute("aria-label") || "";
 
     // The narrowest the scale reads at: every stop's number (or the three
     // a slide shows) apart, and the labels' words side by side.
@@ -46,7 +48,7 @@
     var side = Math.max(12, Math.ceil(numberCh * 4) + 4);
     var minWidth = Math.max(160, stopsPx, labelsPx) + 2 * side;
     var wrap = document.createElement("div");
-    wrap.className = "sc" + (snap ? " sc-snap" : " sc-slide") + (off ? " sc-off" : "");
+    wrap.className = "sc" + (snap ? " sc-snap" : " sc-slide");
     wrap.setAttribute("data-rs-scale-widget", snap ? "snap" : "slide");
     wrap.setAttribute("data-rs-scale-min", String(minWidth));
     wrap.style.minWidth = minWidth + "px";
@@ -59,10 +61,8 @@
     var thumb = document.createElement("div");
     thumb.className = "sc-thumb";
     thumb.setAttribute("role", "slider");
-    thumb.setAttribute("aria-label", label);
     thumb.setAttribute("aria-valuemin", String(min));
     thumb.setAttribute("aria-valuemax", String(max));
-    if (off) thumb.setAttribute("aria-disabled", "true"); else thumb.tabIndex = 0;
     var readout = document.createElement("span");
     readout.className = "sc-readout";
     thumb.appendChild(readout);
@@ -114,7 +114,6 @@
     clear.type = "button";
     clear.className = "sc-clear";
     clear.textContent = "clear";
-    if (off) clear.disabled = true;
     foot.appendChild(clear);
 
     wrap.appendChild(line);
@@ -169,9 +168,34 @@
       return min + Math.min(1, Math.max(0, (x - r.left) / r.width)) * (max - min);
     }
 
-    if (!off) {
+    // Whether the scale takes input now. A branch opening or closing
+    // enables or disables a governed field's box after the page loads,
+    // so this is read live, never kept.
+    function off() { return box.disabled; }
+    // The thumb, *clear* and the look follow the box's state and name;
+    // the branching script also adds and removes " (required)".
+    function sync() {
+      var label = box.getAttribute("aria-label") || "";
+      wrap.classList.toggle("sc-off", off());
+      thumb.setAttribute("aria-label", label);
+      if (off()) {
+        thumb.setAttribute("aria-disabled", "true");
+        thumb.removeAttribute("tabindex");
+      } else {
+        thumb.removeAttribute("aria-disabled");
+        thumb.tabIndex = 0;
+      }
+      clear.disabled = off();
+    }
+    sync();
+    if (window.MutationObserver) {
+      new MutationObserver(sync).observe(box, { attributes: true, attributeFilter: ["disabled", "aria-label"] });
+    }
+
+    {
       var dragging = false;
       line.addEventListener("pointerdown", function (e) {
+        if (off()) return;
         dragging = true;
         line.setPointerCapture(e.pointerId);
         wrap.classList.add("sc-dragging");
@@ -189,6 +213,7 @@
         });
       });
       thumb.addEventListener("keydown", function (e) {
+        if (off()) return;
         var v = value(), big = snap ? 1 : 10, to;
         if (e.key === "Delete" || e.key === "Backspace") { set(null); e.preventDefault(); return; }
         if (e.key === "Home") to = min;
@@ -202,7 +227,7 @@
         set(to);
         e.preventDefault();
       });
-      clear.addEventListener("click", function () { set(null); thumb.focus(); });
+      clear.addEventListener("click", function () { if (!off()) { set(null); thumb.focus(); } });
       box.addEventListener("input", show);  // typing in a slide's box moves the circle
     }
     show();
