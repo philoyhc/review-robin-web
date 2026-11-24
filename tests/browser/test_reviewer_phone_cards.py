@@ -283,3 +283,20 @@ def test_the_instruments_page_grid_keeps_its_columns_in_a_narrow_window(
         if grid.is_visible():
             expect(grid.locator("thead")).to_be_visible()
             assert grid.evaluate("t => getComputedStyle(t).display") == "table"
+
+
+def test_a_long_unbroken_value_wraps_inside_its_card(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Codex on #4207: a card lets its table show outside the scroll box,
+    so a read-only value with no break in it (a pasted URL on the summary
+    or results page) must wrap inside its cell rather than widen the
+    page. Put one in a card's cell, as those pages render it."""
+    reviewer = _surface(page_as, api, live_server, new_session)
+    reviewer.locator("table.rs-table td[data-label]").first.evaluate(
+        "td => { td.textContent = 'https://example.edu/' + 'x'.repeat(240); }"
+    )
+    _no_sideways_scroll(reviewer)

@@ -700,6 +700,10 @@
           min-width: 0;
           white-space: normal;
           text-align: left !important;
+          /* A value with no break in it (a pasted URL on the summary or
+             results page) wraps in its card rather than widen the page
+             (Codex on #4207). */
+          overflow-wrap: anywhere;
         }
         table.rs-table > tbody > tr > td.rs-reviewee,
         table.rs-table > tbody > tr > td.rs-group { padding-right: 4ch; }
