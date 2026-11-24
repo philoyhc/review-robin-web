@@ -92,6 +92,8 @@ def test_a_slide_keeps_its_box_and_each_moves_the_other(page: Page) -> None:
     expect(thumb).to_have_attribute("aria-valuenow", "1450")
     box.fill("1999")
     expect(thumb).to_have_attribute("aria-valuenow", "1999")
+    # The box shows the value, so the foot doesn't repeat it.
+    expect(slide.locator(".sc-said")).to_have_text("")
     thumb.press("PageDown")  # ten steps
     expect(box).to_have_value("1989")
     thumb.press("End")
@@ -600,7 +602,8 @@ def test_band_3_scale_row_keeps_its_controls_on_one_line(
 ) -> None:
     """The author's ask (2026-11-24): a scale row's own controls stay
     level with Min, Max and Step, and the label boxes take the next
-    line under them, "Labels" in front and the summary after."""
+    line, spread from the Type menu to Step, "Labels" in front and the
+    summary after."""
     session_id = new_session()
     seed_rosters(api, session_id)
     page.set_viewport_size({"width": 1500, "height": 1100})
@@ -625,7 +628,11 @@ def test_band_3_scale_row_keeps_its_controls_on_one_line(
         box('[data-new-model-rf-scale-label="end"]'),
     )
     assert start["y"] > top + 10  # the next line
-    assert abs(start["x"] - box('[data-new-model-rf-bound="min"]')["x"]) <= 1
+    # The three boxes span from the Type menu's left edge to Step's right
+    # edge (author, 2026-11-24).
+    assert abs(start["x"] - box("[data-new-model-rf-data-type]")["x"]) <= 1
+    step = box('[data-new-model-rf-bound="step"]')
+    assert abs((end["x"] + end["width"]) - (step["x"] + step["width"])) <= 1
     # The label boxes are as tall as the bounds above them.
     assert abs(start["height"] - box('[data-new-model-rf-bound="min"]')["height"]) <= 1
     caption, summary = box(".rf-scale-caption"), box("[data-new-model-rf-scale-summary]")
@@ -697,3 +704,26 @@ def test_an_answered_field_switching_to_its_scale_keeps_string_off(
     expect(select_box.locator('option[value="decimal"]').first).to_be_disabled()
     select_box.select_option(label="Integer")
     expect(select_box.locator('option[value="string"]')).to_be_disabled()
+
+
+def test_start_and_end_labels_reach_the_edges_and_middle_is_centered(page: Page) -> None:
+    """The author's ask (2026-11-24): Start sits at the scale's left
+    edge and End at its right, out over the side padding, and Middle is
+    centered on the bar as a whole."""
+    _open(page)
+    widget = page.locator('[data-rs-scale-widget="snap"]').first  # Poor / Fair / Excellent
+    w = widget.bounding_box()
+    line = widget.locator(".sc-line").bounding_box()
+    start = widget.locator(".sc-label-start").bounding_box()
+    middle = widget.locator(".sc-label-middle").bounding_box()
+    end = widget.locator(".sc-label-end").bounding_box()
+    assert w and line and start and middle and end
+    assert abs(start["x"] - w["x"]) <= 1
+    assert abs((end["x"] + end["width"]) - (w["x"] + w["width"])) <= 1
+    said = widget.locator(".sc-said").bounding_box()  # "Not answered" lines up with Start
+    assert said and abs(said["x"] - start["x"]) <= 1
+    # Answered, *clear* takes that place.
+    widget.locator(".sc-stop").nth(2).click(force=True)
+    clear = widget.locator(".sc-clear").bounding_box()
+    assert clear and abs(clear["x"] - start["x"]) <= 1
+    assert abs((middle["x"] + middle["width"] / 2) - (line["x"] + line["width"] / 2)) <= 1
