@@ -10,7 +10,7 @@ import re
 from collections.abc import Callable
 
 import httpx
-from playwright.sync_api import Page, expect
+from playwright.sync_api import FloatRect, Page, expect
 
 from ._builder import (
     REVIEWER_EMAIL,
@@ -608,7 +608,7 @@ def test_band_3_scale_row_keeps_its_controls_on_one_line(
     rating = rows(card).first
     rating.locator("[data-new-model-rf-data-type]").select_option(label="Integer (scale)")
 
-    def box(sel: str) -> dict[str, float]:
+    def box(sel: str) -> FloatRect:
         b = rating.locator(sel).first.bounding_box()
         assert b is not None
         return b
