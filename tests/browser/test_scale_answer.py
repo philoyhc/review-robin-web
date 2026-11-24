@@ -415,3 +415,47 @@ def test_band_2_stacked_preview_holds_its_scale_with_saved_widths(
     w, c = widget.bounding_box(), cell.bounding_box()
     assert w is not None and c is not None
     assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
+
+
+def test_band_2_scale_column_holds_its_scale_inside_the_cell_padding(
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """Codex on #4194: with a saved narrow width (a fixed-layout preview)
+    a scale column's floor counts the cell's side padding, so the scale
+    ends inside its cell rather than ~30px into the next."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument, InstrumentResponseField
+
+    from ._builder import session_pk
+
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    make_rating_a_scale(live_server.database_url, session_id)
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(
+                    Instrument.session_id == session_pk(live_server.database_url, session_id)
+                )
+            ).scalar_one()
+            rating = db.execute(
+                select(InstrumentResponseField).where(
+                    InstrumentResponseField.instrument_id == instrument.id,
+                    InstrumentResponseField.label == "Rating",
+                )
+            ).scalar_one()
+            instrument.column_widths = {f"rf_{rating.id}": 60}
+            db.commit()
+    finally:
+        engine.dispose()
+    page.set_viewport_size({"width": 1500, "height": 1100})
+    card = open_unlocked(page, session_id)
+    widget = card.locator("[data-new-model-band2-preview] [data-rs-scale-widget]").first
+    expect(widget).to_be_visible()
+    cell = widget.locator("xpath=ancestor::td[1]")
+    w, c = widget.bounding_box(), cell.bounding_box()
+    assert w is not None and c is not None
+    assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
