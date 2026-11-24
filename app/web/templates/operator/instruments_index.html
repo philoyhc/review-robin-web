@@ -2804,17 +2804,28 @@
           function stackWidth(card, which) {
             return parseInt(card.getAttribute('data-new-model-band2-stack-' + which + '-width') || '', 10) || 0;
           }
+          // Segment 20P — the widest scale among the fields, which a saved
+          // response track narrower than it grows to hold (Codex on #4194).
+          function stackScaleMin(card) {
+            return rfRows(card).reduce(function (most, row) {
+              return Math.max(most, scaleMinWidth(card, row.getAttribute('data-row-key')));
+            }, 0);
+          }
+          function stackInputWidth(card) {
+            var input = stackWidth(card, 'input');
+            return input ? Math.max(input, stackScaleMin(card)) : 0;
+          }
           function stackVars(card) {
             var vars = [];
             if (stackWidth(card, 'label')) { vars.push('--rs-stack-label: ' + stackWidth(card, 'label') + 'px'); }
-            if (stackWidth(card, 'input')) { vars.push('--rs-stack-input: ' + stackWidth(card, 'input') + 'px'); }
+            if (stackInputWidth(card)) { vars.push('--rs-stack-input: ' + stackInputWidth(card) + 'px'); }
             return vars.join('; ');
           }
           // Both widths set, the Responses column holds them: the two
           // widths, the grid's gap and the cell's padding (the surface's
           // ``stack_col_px``).
           function stackColStyle(card) {
-            var label = stackWidth(card, 'label'), input = stackWidth(card, 'input');
+            var label = stackWidth(card, 'label'), input = stackInputWidth(card);
             return (label && input) ? 'width: ' + (label + input + 12 + 32) + 'px;' : '';
           }
           function stackResizeHandle(which) {

@@ -492,3 +492,42 @@ def test_a_stacked_scale_stays_inside_its_cell_with_saved_widths(
     assert w is not None and c is not None
     assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
     assert w["width"] >= int(widget.get_attribute("data-rs-scale-min") or "0") - 1
+
+
+def test_band_2_stacked_preview_holds_its_scale_with_saved_widths(
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """Codex on #4194: a stacked preview whose saved response track
+    (60px) is narrower than the scale grows the track and the column to
+    hold it, rather than painting the scale outside its cell."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument
+
+    from ._builder import session_pk
+
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    make_rating_a_scale(live_server.database_url, session_id)
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(
+                    Instrument.session_id == session_pk(live_server.database_url, session_id)
+                )
+            ).scalar_one()
+            instrument.response_layout = "stacked"
+            instrument.column_widths = {"stack_label": 150, "stack_input": 60}
+            db.commit()
+    finally:
+        engine.dispose()
+    page.set_viewport_size({"width": 1500, "height": 1100})
+    card = open_unlocked(page, session_id)
+    widget = card.locator("[data-new-model-band2-preview] .rs-stack-fields [data-rs-scale-widget]")
+    expect(widget).to_have_count(1)
+    cell = widget.locator("xpath=ancestor::td[1]")
+    w, c = widget.bounding_box(), cell.bounding_box()
+    assert w is not None and c is not None
+    assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
