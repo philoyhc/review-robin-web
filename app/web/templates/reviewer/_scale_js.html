@@ -243,8 +243,30 @@
       var td = w.closest("td"), table = td && td.closest("table");
       if (!td || !table || !table.tHead || !table.tHead.rows.length) return;
       var style = getComputedStyle(td);
-      var need = (parseInt(w.getAttribute("data-rs-scale-min"), 10) || 0)
-        + (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+      var min = Math.max(parseInt(w.getAttribute("data-rs-scale-min"), 10) || 0, parseFloat(w.style.minWidth) || 0);
+      var need = min + (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+      // A stacked cell (20K) is two tracks, the labels' and the boxes':
+      // the input track grows to the scale, and the cell holds both
+      // tracks and the gap between them (Codex on #4193).
+      var stack = w.closest(".rs-stack-fields");
+      if (stack) {
+        var grid = getComputedStyle(stack);
+        var inputTrack = parseFloat(grid.getPropertyValue("--rs-stack-input"));
+        if (inputTrack && inputTrack < min) stack.style.setProperty("--rs-stack-input", min + "px");
+        // The label track as it will be once the cell is wide enough: a
+        // saved width, else the labels' own width. Measured with the grid
+        // at max-content, since a narrow cell shrinks the track (minmax 0).
+        var labelTrack = parseFloat(grid.getPropertyValue("--rs-stack-label"));
+        if (!labelTrack) {
+          var was = stack.style.width;
+          stack.style.width = "max-content";
+          var field = w.closest(".rs-stack-field");
+          var label = field && field.querySelector(".rs-stack-label");
+          labelTrack = label ? label.getBoundingClientRect().width : 0;
+          stack.style.width = was;
+        }
+        need += labelTrack + (parseFloat(grid.columnGap) || 0);
+      }
       var th = table.tHead.rows[0].cells[td.cellIndex];
       var cols = table.querySelectorAll("colgroup > col");
       var col = cols.length ? cols[td.cellIndex] : null;

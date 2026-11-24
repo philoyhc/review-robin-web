@@ -283,3 +283,48 @@ def test_a_narrow_saved_column_widens_to_hold_its_scale(
     assert w is not None and c is not None and n is not None
     assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
     assert w["x"] + w["width"] <= n["x"] + 1
+
+
+def test_a_stacked_scale_stays_inside_its_cell_with_saved_widths(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Codex on #4193: a stacked cell with a saved 150px label track and
+    a 60px input track grows the input track and the cell to hold the
+    scale, rather than letting it run into the next column."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument
+
+    from ._builder import session_pk
+
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    make_rating_a_scale(live_server.database_url, session_id)
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(
+                    Instrument.session_id == session_pk(live_server.database_url, session_id)
+                )
+            ).scalar_one()
+            instrument.response_layout = "stacked"
+            instrument.column_widths = {"stack_label": 150, "stack_input": 60}
+            db.commit()
+    finally:
+        engine.dispose()
+    activate(api, live_server.database_url, session_id)
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 1400, "height": 1000})
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    widget = reviewer.locator(".rs-stack-fields [data-rs-scale-widget]").first
+    expect(widget).to_be_visible()
+    cell = widget.locator("xpath=ancestor::td[1]")
+    w, c = widget.bounding_box(), cell.bounding_box()
+    assert w is not None and c is not None
+    assert w["x"] + w["width"] <= c["x"] + c["width"] + 1
+    assert w["width"] >= int(widget.get_attribute("data-rs-scale-min") or "0") - 1
