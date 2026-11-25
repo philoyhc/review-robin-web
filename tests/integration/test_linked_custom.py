@@ -226,3 +226,24 @@ def test_a_blank_type_cell_leaves_the_type(client: TestClient, db: Session) -> N
     reply = _resend(client, transfer, _update_bundle(files=_with(blank)))
     assert reply.status_code == 200, reply.text
     assert _instrument(db).linked_mode == "custom"
+
+
+def test_a_long_held_list_keeps_every_choice_after_a_save(client: TestClient, db: Session) -> None:
+    """Codex on #4220: the sync cuts a List's options at 255 characters
+    and builds the reviewer's choices from the cut; the whole list put
+    back, the choices are built again from it."""
+    review_session = _custom(client, db)
+    comment = next(f for f in _instrument(db).response_fields if f.field_key == "comment")
+    options = ",".join(f"Option {n:03}" for n in range(40))
+    assert len(options) > 255
+    comment._inline_data_type = "List"
+    comment._inline_response_type = "list"
+    comment._inline_list_csv = options
+    comment.validation = {"choices": options.split(",")}
+    db.commit()
+    score, comment_rf = _band2_rfs(_instrument(db))
+    reply = _save(client, review_session, [comment_rf, score])
+    assert reply.status_code == 200, reply.text
+    stored = next(f for f in _instrument(db).response_fields if f.field_key == "comment")
+    assert stored._inline_list_csv == options
+    assert stored.validation == {"choices": options.split(",")}

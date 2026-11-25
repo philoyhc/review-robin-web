@@ -323,9 +323,28 @@ def held_problems(
             )
             continue
         field = by_key[key]
+        restored = False
         for attr in _CUTS:
             if getattr(field, attr) != was[attr]:
                 setattr(field, attr, was[attr])
+                restored = True
+        if restored:
+            # The sync built the validation the reviewer surface reads
+            # (a List's choices) from the cut text: build it again from
+            # the whole (Codex on #4220).
+            from app.services.instruments._response_fields import (
+                validation_block_from_inline,
+            )
+
+            field.validation = validation_block_from_inline(
+                field._inline_data_type,
+                field._inline_min,
+                field._inline_max,
+                field._inline_step,
+                field._inline_list_csv,
+                bool(field.scale),
+                field.scale_labels,
+            )
     return problems
 
 
