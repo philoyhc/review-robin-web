@@ -544,8 +544,8 @@ RESULTS_HEADER = (
     "ResponseType",
     "Value",
     "SubmittedAt",
-    # Segment 23G rung 5: ``answered``, or ``not_asked`` for a custom
-    # gate's held field a branch closed on a submitted assignment.
+    # Segment 23G rung 5: ``answered``, or ``not_asked`` for a field a
+    # branch closed on a submitted assignment, on any branched instrument.
     "Answer",
 )
 #: ``RESULTS_HEADER``'s ``Answer`` values.
@@ -670,10 +670,7 @@ def _held_by_instrument(db: Session, review_session: ReviewSession) -> dict[int,
             Instrument.session_id == review_session.id, Instrument.linked_mode == "custom"
         )
     )
-    return {
-        i.id: set(i.held_field_keys or (f.field_key for f in i.response_fields))
-        for i in instruments
-    }
+    return {i.id: linked_instruments.held_keys(i) for i in instruments}
 
 
 def _not_asked_rows(
@@ -697,6 +694,7 @@ def _not_asked_rows(
             .join(Instrument, InstrumentResponseField.instrument_id == Instrument.id)
             .where(
                 Instrument.session_id == review_session.id,
+                Instrument.group_kind.is_(None),
                 InstrumentResponseField.branch_parent_id.is_not(None),
             )
         )

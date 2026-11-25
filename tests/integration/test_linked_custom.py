@@ -147,3 +147,82 @@ def test_a_locked_page_stays_fixed(client: TestClient, db: Session) -> None:
     page = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert 'data-new-model-rf-held="true"' not in page
     assert "data-linked-structure\n" in page
+
+
+# --- The cumulative read of rungs 2-5 ---
+
+
+def _branched(db: Session) -> None:
+    """Familiarity (own) governs the held Score; the held Comments, now
+    required, anchors the branch (19T Item 11)."""
+    from .test_results_not_asked import _familiarity_governs_score
+
+    fields = _familiarity_governs_score(db)
+    fields["comment"].required = True
+    db.commit()
+
+
+def test_hiding_an_own_parent_hides_a_held_field_without_a_refusal(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _custom(client, db)
+    _branched(db)
+    rfs = _band2_rfs(_instrument(db))
+    hidden = [{**rf, "selected": False} if rf["name"] == "Familiarity" else rf for rf in rfs]
+    reply = _save(client, review_session, hidden)
+    assert reply.status_code == 200, reply.text
+    fields = {f.field_key: f for f in _instrument(db).response_fields}
+    assert not fields["familiarity"].visible and not fields["score"].visible
+    # Shown again, the cascade shows the held field again too.
+    reply = _save(client, review_session, [{**rf, "selected": True} for rf in rfs])
+    assert reply.status_code == 200, reply.text
+    assert {f.field_key: f.visible for f in _instrument(db).response_fields}["score"]
+
+
+def test_a_long_held_text_survives_a_save(client: TestClient, db: Session) -> None:
+    review_session = _custom(client, db)
+    comment = next(f for f in _instrument(db).response_fields if f.field_key == "comment")
+    long_help = "Say why. " * 150  # past the card's 1000 characters
+    comment.help_text = long_help
+    db.commit()
+    score, comment_rf = _band2_rfs(_instrument(db))
+    reply = _save(client, review_session, [comment_rf, score])  # a reorder only
+    assert reply.status_code == 200, reply.text
+    stored = next(f for f in _instrument(db).response_fields if f.field_key == "comment")
+    assert stored.help_text == long_help
+
+
+def test_a_switch_into_custom_holds_what_an_old_instrument_has(
+    client: TestClient, db: Session
+) -> None:
+    from .test_handoff_update import _created as created_with
+
+    files = {"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": mock.settings_csv()}
+    _, transfer = created_with(client, db, files=files)
+    instrument = _instrument(db)
+    instrument.held_field_keys = None  # from before the list
+    db.commit()
+    typed = (
+        "field,value,data_type\r\n"
+        "instruments[1].name,Gate 1,string\r\n"
+        "instruments[1].linked_mode,custom,enum\r\n"
+    )
+    reply = _resend(client, transfer, _update_bundle(files=_with(typed)))
+    assert reply.status_code == 200, reply.text
+    assert _instrument(db).held_field_keys == ["score", "comment"]
+
+
+def test_a_blank_type_cell_leaves_the_type(client: TestClient, db: Session) -> None:
+    from .test_handoff_update import _created as created_with
+
+    settings = mock.settings_csv() + "instruments[1].linked_mode,custom,enum\r\n"
+    files = {"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": settings}
+    _, transfer = created_with(client, db, files=files)
+    blank = (
+        "field,value,data_type\r\n"
+        "instruments[1].name,Gate 1,string\r\n"
+        "instruments[1].linked_mode,,enum\r\n"
+    )
+    reply = _resend(client, transfer, _update_bundle(files=_with(blank)))
+    assert reply.status_code == 200, reply.text
+    assert _instrument(db).linked_mode == "custom"

@@ -255,3 +255,20 @@ def test_a_resend_that_would_leave_the_instrument_invalid_is_refused(
     assert reply.status_code == 422 and reply.json()["slot"] == "settings"
     assert _order(db) == ["familiarity", "score", "comment"]
     assert _instrument(db).held_field_keys == ["score", "comment"]
+
+
+def test_a_resend_keeps_a_held_field_hidden_under_a_hidden_parent(
+    client: TestClient, db: Session
+) -> None:
+    """The cumulative read: the re-send writes Score visible as sent, but
+    Familiarity above it is hidden, so Score stays hidden, as the card's
+    Save keeps it."""
+    created = _set_up(client, db)
+    fields = _fields(db)
+    fields["familiarity"].visible = False
+    fields["score"].visible = False
+    fields["comment"].required = True
+    db.commit()
+    reply = _resend(client, created, _update_bundle(files=_with(_settings(SCORE, COMMENT))))
+    assert reply.status_code == 200, reply.text
+    assert not _fields(db)["score"].visible

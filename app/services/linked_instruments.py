@@ -35,7 +35,6 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.db.models.instrument import LINKED_MODE_DEFAULT
 from app.json_shapes import json_list
 from app.services import audit, linked_apps
 from app.services import instruments as instruments_service
@@ -109,13 +108,13 @@ def held_key_errors(
     instrument, whose re-send replaces every field."""
     if not any(".response_fields[" in row for row in rows):
         return []
-    mode = spec.linked_mode if "instruments[1].linked_mode" in rows else instrument.linked_mode
+    mode = spec.linked_mode or instrument.linked_mode
     if mode != "custom" or not linked_apps.locks(
         review_session, linked_apps.Lock.INSTRUMENT_STRUCTURE
     ):
         return []
     stored = {f.field_key for f in instrument.response_fields}
-    held = set(stored if instrument.held_field_keys is None else instrument.held_field_keys)
+    held = held_keys(instrument)
     return [
         f"instruments[1].response_fields[{m}].field_key: {field.field_key!r} is a field "
         "Review Robin added; send another key"
@@ -225,19 +224,64 @@ def hold_keys(instrument: Instrument, keys: list[str]) -> None:
     instrument.held_field_keys = [k for k in dict.fromkeys(keys) if k]
 
 
-def held_definitions(instrument: Instrument) -> dict[str, tuple[Any, ...]]:
+def held_keys(instrument: Instrument) -> set[str]:
+    """The keys of the fields a custom instrument holds (segment 23G): the
+    list the application last sent, or, on an instrument from before the
+    list (``None``), every stored field. Every reader goes through here,
+    so the card, its Save, a re-send and the results agree (the cumulative
+    read of 23G rungs 2-5)."""
+    if instrument.held_field_keys is None:
+        return {f.field_key for f in instrument.response_fields}
+    return set(instrument.held_field_keys)
+
+
+#: The card's sync cuts these on every Save (``set_band2_state``): a held
+#: field's value is compared cut, then put back whole.
+_CUTS = {"label": 255, "_inline_list_csv": 255, "scale_labels": 255, "help_text": 1000}
+
+
+def _cut(attr: str, value: Any) -> Any:
+    if attr not in _CUTS:
+        return value
+    text = "" if value is None else str(value)
+    if attr in ("label", "_inline_list_csv"):
+        text = text.strip()
+    return text[: _CUTS[attr]]
+
+
+def _hidden_above(field: InstrumentResponseField, by_id: dict[int, Any]) -> bool:
+    """Whether a field above it in its branches is hidden: its own
+    ``visible`` then follows the branch (the card's cascade), not the
+    application."""
+    seen = {field.id}
+    parent = by_id.get(field.branch_parent_id) if field.branch_parent_id else None
+    while parent is not None and parent.id not in seen:
+        if not parent.visible:
+            return True
+        seen.add(parent.id)
+        parent = by_id.get(parent.branch_parent_id) if parent.branch_parent_id else None
+    return False
+
+
+#: A held field as :func:`held_definitions` reads it: its attributes, and
+#: whether a hidden field above it sets its visibility.
+type HeldDefinition = tuple[dict[str, Any], bool]
+
+
+def held_definitions(instrument: Instrument) -> dict[str, HeldDefinition]:
     """Each held field's definition by key, as stored. A blank Integer
     Step reads 1, which the Band 3 sync fills in for it, so a Save that
     changes nothing compares equal."""
-    keys = set(instrument.held_field_keys or ())
-    out: dict[str, tuple[Any, ...]] = {}
+    keys = held_keys(instrument)
+    by_id: dict[int, Any] = {f.id: f for f in instrument.response_fields}
+    out: dict[str, HeldDefinition] = {}
     for field in instrument.response_fields:
         if field.field_key not in keys:
             continue
         values = {attr: getattr(field, attr) for attr in _HELD_ATTRS}
         if values["_inline_step"] is None and values["_inline_data_type"] == "Integer":
             values["_inline_step"] = 1.0
-        out[field.field_key] = tuple(values[attr] for attr in _HELD_ATTRS)
+        out[field.field_key] = (values, _hidden_above(field, by_id))
     return out
 
 
@@ -245,27 +289,43 @@ def held_problems(
     db: Session,
     review_session: ReviewSession,
     instrument: Instrument,
-    before: dict[str, tuple[Any, ...]],
+    before: dict[str, HeldDefinition],
 ) -> list[str]:
     """What a Band 3 save did to a held field that a custom instrument
     refuses (segment 23G rung 3), read against ``before``
     (:func:`held_definitions` taken ahead of the save): a held field
     removed, or its definition changed. Its required flag, place and
-    branch are Review Robin's and never a problem."""
+    branch are Review Robin's and never a problem; nor is its visibility
+    while a hidden field above it sets it, before or after (the card's
+    cascade), nor the sync cutting a long text, which is put back whole
+    here (the cumulative read of 23G rungs 2-5)."""
     db.flush()
     db.refresh(instrument, ["response_fields"])
     after = held_definitions(instrument)
+    by_key = {f.field_key: f for f in instrument.response_fields}
     source = linked_apps.linked_name(review_session)
     problems: list[str] = []
-    for key, definition in before.items():
-        label = definition[0] or key
+    for key, (was, was_cascaded) in before.items():
+        label = was["label"] or key
         if key not in after:
             problems.append(f"'{label}' comes from {source}, so it can't be removed.")
-        elif after[key] != definition:
+            continue
+        now, now_cascaded = after[key]
+        skip: set[str] = {"visible"} if was_cascaded or now_cascaded else set()
+        if any(
+            _cut(attr, now[attr]) != _cut(attr, was[attr])
+            for attr in _HELD_ATTRS
+            if attr not in skip
+        ):
             problems.append(
                 f"'{label}' comes from {source}: only whether it is required, "
                 "its place and its branch can change."
             )
+            continue
+        field = by_key[key]
+        for attr in _CUTS:
+            if getattr(field, attr) != was[attr]:
+                setattr(field, attr, was[attr])
     return problems
 
 
@@ -349,10 +409,9 @@ def apply_owned(
             db, instrument=instrument, description=spec.description, actor=actor
         )
     was_custom = is_custom(review_session, instrument)
-    if "instruments[1].linked_mode" in rows:
-        set_mode(
-            db, review_session, instrument, spec.linked_mode or LINKED_MODE_DEFAULT, actor=actor
-        )
+    if "instruments[1].linked_mode" in rows and spec.linked_mode:
+        # A blank cell leaves the type, as the Settings import does.
+        set_mode(db, review_session, instrument, spec.linked_mode, actor=actor)
     custom = is_custom(review_session, instrument)
     if any(".response_fields[" in row for row in rows):
         sent = [f for _, f in sorted(spec.response_fields.items())]
@@ -363,7 +422,7 @@ def apply_owned(
                 db,
                 instrument=instrument,
                 fields=[_field_entry(f) for f in sent],
-                held=instrument.held_field_keys,
+                held=sorted(held_keys(instrument)),
                 actor=actor,
             )
         else:
@@ -407,7 +466,8 @@ def restore_held(db: Session, instrument: Instrument, *, actor: User) -> None:
     segment 23G rung 4). ``replace_response_fields`` deletes Review
     Robin's own fields, refusing one holding responses, and audits."""
     by_key = {f.field_key: f for f in instrument.response_fields}
-    held = [by_key[k] for k in (instrument.held_field_keys or by_key) if k in by_key]
+    order = instrument.held_field_keys if instrument.held_field_keys is not None else by_key
+    held = [by_key[k] for k in order if k in by_key]
     instruments_service.replace_response_fields(
         db, instrument=instrument, fields=[_stored_entry(f) for f in held], actor=actor
     )
@@ -426,6 +486,13 @@ def set_mode(
     nothing. What a switch keeps or drops is rung 4's."""
     if mode == instrument.linked_mode:
         return
+    if mode == "custom" and instrument.held_field_keys is None:
+        # An instrument from before the list: what it holds now is what
+        # the application sent, so a custom gate starts from it.
+        hold_keys(
+            instrument,
+            [f.field_key for f in sorted(instrument.response_fields, key=lambda f: f.order)],
+        )
     audit.write_event(
         db,
         event_type="instrument.linked_mode_set",

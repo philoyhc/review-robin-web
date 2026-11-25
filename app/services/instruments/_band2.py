@@ -1434,6 +1434,12 @@ def replace_held_fields(
             unbranch(parent, "no_longer_fits")
     if widths != (instrument.column_widths or {}):
         instrument.column_widths = widths or None
+    # A hidden parent hides its branch, as the card's Save keeps it (the
+    # cumulative read of 23G rungs 2-5): a sent field stays shown only
+    # while nothing above it is hidden.
+    from app.services.responses import hide_below_hidden_parents
+
+    hide_below_hidden_parents(instrument.response_fields)
     db.flush()
     db.refresh(instrument, ["response_fields"])
     # What stays must still be a valid instrument, as the card's Save
