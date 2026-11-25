@@ -1972,3 +1972,34 @@ def test_swapping_two_values_through_a_blank_row_swaps_their_rules(page: Page) -
     rows.nth(0).fill(second)
     got = cast(dict[str, Any], _rule(o1))
     assert got["then"] == second and got["otherwise"] == first
+
+
+def test_the_type_menu_shows_its_whole_choice(page: Page) -> None:
+    """Segment 23G (author, 2026-11-25): the Type menu is as wide as
+    *Review Robin Session (custom)*, the Name beside it taking the rest."""
+    page.goto(MODEL)
+    review = _cards(page).nth(1)
+    _open(review)
+    gate = review.locator('.pc-item[data-item="gate"]').first
+    _open_item(gate)
+    menu = gate.locator('[data-pc="type"]')
+    assert menu.evaluate("s => s.options[s.selectedIndex].text") == "Review Robin Session (custom)"
+    # The text's own width, in the menu's font, fits inside the menu with
+    # its padding and arrow.
+    room, text = menu.evaluate(
+        """s => {
+          const probe = document.createElement("span");
+          probe.style.font = getComputedStyle(s).font;
+          probe.style.whiteSpace = "pre";
+          probe.textContent = s.options[s.selectedIndex].text;
+          document.body.append(probe);
+          const w = probe.getBoundingClientRect().width;
+          probe.remove();
+          const cs = getComputedStyle(s);
+          return [s.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), w];
+        }"""
+    )
+    assert room >= text, (room, text)
+    name = gate.locator('[data-pc="item-name"]').bounding_box()
+    box = menu.bounding_box()
+    assert name and box and name["width"] > box["width"]
