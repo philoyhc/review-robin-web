@@ -21,6 +21,7 @@ from datetime import UTC, datetime, timedelta
 from typing import cast
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -338,6 +339,14 @@ def replayed(db: Session, user: User, bundle: Bundle) -> ReviewSession | None:
     is incomplete."""
     prior = prior_transfer(db, bundle.transfer_id)
     if prior is None:
+        # Its draft was discarded (segment 23J; the cumulative read): a
+        # retried create makes no fresh draft for a gate already dropped.
+        if _discarded(db, bundle.transfer_id) is not None:
+            raise HandoffError(
+                "session_discarded",
+                409,
+                ["This transfer's session was discarded in Review Robin."],
+            )
         return None
     if prior.actor_user_id != user.id:
         raise HandoffError("duplicate_conflict", 409)
@@ -585,6 +594,23 @@ def _discarded(db: Session, created_transfer: str) -> AuditEvent | None:
     return next((e for e in events if _transfer_of(e) == created_transfer), None)
 
 
+def _already_discarded(done: AuditEvent, user: User, bundle: Bundle) -> tuple[str, str]:
+    """A retried discard's answer, for the operator and the application
+    that discarded it; anyone else's is refused, as a fresh one would be."""
+    detail: dict[str, object] = done.detail or {}
+    context = detail.get("context")
+    sender = (
+        cast(dict[str, object], context).get("source_app") if isinstance(context, dict) else None
+    )
+    if sender != bundle.source_app:
+        raise HandoffError("not_linked", 404)
+    if done.actor_user_id != user.id:
+        raise HandoffError("not_authorized", 403)
+    snapshot = detail.get("snapshot")
+    code = cast(dict[str, object], snapshot).get("code", "") if isinstance(snapshot, dict) else ""
+    return "already_discarded", str(code)
+
+
 def discard(
     db: Session,
     user: User,
@@ -605,14 +631,7 @@ def discard(
         raise HandoffError("not_linked", 404) from None
     done = _discarded(db, created_transfer)
     if done is not None:
-        if done.actor_user_id != user.id:
-            raise HandoffError("not_authorized", 403)
-        detail: dict[str, object] = done.detail or {}
-        snapshot = detail.get("snapshot")
-        code = (
-            cast(dict[str, object], snapshot).get("code", "") if isinstance(snapshot, dict) else ""
-        )
-        return "already_discarded", str(code)
+        return _already_discarded(done, user, bundle)
     prior = prior_transfer(db, created_transfer)
     if prior is None:
         raise HandoffError("not_linked", 404)
@@ -621,7 +640,24 @@ def discard(
         db, user, review_session.id
     ):
         raise HandoffError("not_authorized", 403)
-    session_guard.lock_session(db, review_session)
+    # A create still running is not discarded under it (the cumulative
+    # read): it would finish on a deleted session.
+    if not prior.completed and datetime.now(UTC) - prior.started_at < IN_PROGRESS:
+        raise HandoffError(
+            "transfer_in_progress",
+            409,
+            ["The set-up of this transfer is still running. Try again in a moment."],
+        )
+    try:
+        session_guard.lock_session(db, review_session)
+    except NoResultFound:
+        # Deleted while this one waited for the lock: a discard that got
+        # there first answers as a retry would; anything else, not linked.
+        db.rollback()
+        done = _discarded(db, created_transfer)
+        if done is not None:
+            return _already_discarded(done, user, bundle)
+        raise HandoffError("not_linked", 404) from None
     profile = linked_apps.profile_for(bundle.source_app)
     if profile is None or review_session.linked_app != profile.key:
         raise HandoffError("not_linked", 404)
