@@ -1327,6 +1327,11 @@ def replace_held_fields(
     stored = {f.field_key: f for f in instrument.response_fields}
     was_held = set(stored) if held is None else set(held)
     wanted = [str(entry["field_key"]) for entry in fields]
+    # A sent key naming a field Review Robin added would overwrite it; the
+    # caller refuses it first (``linked_instruments.held_key_errors``).
+    taken = sorted(set(wanted) & (set(stored) - was_held))
+    if taken:
+        raise ValueError(f"Keys of Review Robin's own fields: {', '.join(taken)}")
     widths = dict(instrument.column_widths or {})
     gone = [stored[key] for key in was_held - set(wanted) if key in stored]
     for field in gone:

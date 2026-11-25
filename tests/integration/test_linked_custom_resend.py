@@ -200,3 +200,17 @@ def test_a_switch_to_custom_keeps_everything(client: TestClient, db: Session) ->
     reply = _resend(client, created, _update_bundle(files=_with(_settings(mode="custom"))))
     assert reply.status_code == 200, reply.text
     assert _instrument(db).linked_mode == "custom" and _order(db) == before
+
+
+def test_a_sent_key_naming_an_own_field_is_refused(client: TestClient, db: Session) -> None:
+    """Codex on #4219: a new field keyed as one Review Robin added would
+    overwrite it and hold it; the re-send is refused, nothing written."""
+    created = _set_up(client, db)
+    clash = ("familiarity", "Familiarity", "text", "String", "", "", "")
+    reply = _resend(client, created, _update_bundle(files=_with(_settings(SCORE, COMMENT, clash))))
+    assert reply.status_code == 422 and reply.json()["slot"] == "settings"
+    assert "Review Robin added" in reply.json()["details"][0]
+    fields = _fields(db)
+    assert fields["familiarity"]._inline_data_type == "Integer"
+    assert fields["score"].branch_parent_id == fields["familiarity"].id
+    assert _instrument(db).held_field_keys == ["score", "comment"]

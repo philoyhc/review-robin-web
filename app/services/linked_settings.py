@@ -126,10 +126,13 @@ def prepare(
         raise SettingsRefused([f"{error.field}: {error.message}" for error in errors])
     if settings.instrument is not None:
         try:
-            linked_instruments.the_instrument(db, review_session)
+            instrument = linked_instruments.the_instrument(db, review_session)
         except linked_instruments.NotOneInstrument as exc:
             raise SettingsRefused([str(exc)]) from exc
         problems = linked_instruments.row_errors(settings.instrument, settings.instrument_rows)
+        problems += linked_instruments.held_key_errors(
+            review_session, instrument, settings.instrument, settings.instrument_rows
+        )
         if problems:
             raise SettingsRefused(problems)
     overrides = _normalized(settings.overrides)

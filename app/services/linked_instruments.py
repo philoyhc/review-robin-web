@@ -96,6 +96,34 @@ def row_errors(spec: InstrumentSpec, rows: frozenset[str]) -> list[str]:
     return errors
 
 
+def held_key_errors(
+    review_session: ReviewSession,
+    instrument: Instrument,
+    spec: InstrumentSpec,
+    rows: frozenset[str],
+) -> list[str]:
+    """A custom re-send's field key that names a field Review Robin added
+    (segment 23G rung 4, Codex on #4219): taken as the application's, it
+    would overwrite that field and hold it. Refused before anything is
+    written; the application must send another key. Empty for a locked
+    instrument, whose re-send replaces every field."""
+    if not any(".response_fields[" in row for row in rows):
+        return []
+    mode = spec.linked_mode if "instruments[1].linked_mode" in rows else instrument.linked_mode
+    if mode != "custom" or not linked_apps.locks(
+        review_session, linked_apps.Lock.INSTRUMENT_STRUCTURE
+    ):
+        return []
+    stored = {f.field_key for f in instrument.response_fields}
+    held = set(stored if instrument.held_field_keys is None else instrument.held_field_keys)
+    return [
+        f"instruments[1].response_fields[{m}].field_key: {field.field_key!r} is a field "
+        "Review Robin added; send another key"
+        for m, field in sorted(spec.response_fields.items())
+        if field.field_key in stored - held
+    ]
+
+
 def the_instrument(db: Session, review_session: ReviewSession) -> Instrument:
     """The draft's one instrument, or :class:`NotOneInstrument`."""
     instruments = list(
