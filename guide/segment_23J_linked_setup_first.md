@@ -88,6 +88,11 @@ Taken 2026-11-25 at `d23dffcd2`.
 - A retry answers `already_discarded` with the session code, read from that delete.
 - A transfer cut off before completion may also be discarded: its draft is just as empty.
 
+**Rung 4 (2026-11-25, scaffold):** on the gate page's Review Robin card:
+- *Set up in Review Robin* comes before *Send rosters* (renamed from *Send to Review Robin*). It is disabled, with its reason in its title; the card's script leaves it so.
+- The facts gain *In Review Robin*, an inert *Open in Review Robin ↗*.
+- The Progress line says what each step does.
+
 ## PR ladder
 
 1. **Plan**: this file, its queue entry and README row; Apply Desk's ruling 80 in `applydesk/guide/todo_master.md`, with AD6's row naming the stored `session_home_url`. Prose only.
