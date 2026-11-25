@@ -832,6 +832,12 @@
       found.forEach(function (f) { all.push(who + f + "."); });
       if (item.dataset.item === "gate") {
         sourceProblems(item).forEach(function (f) { all.push(who + f + "."); });
+        // A field Review Robin could not ask as set (segment AD2S), as
+        // stages.field_problems: publishing its stage waits on it.
+        fieldRows(item).forEach(function (row, i) {
+          var f = readField(row), why = scaleProblem(f);
+          if (why) all.push(who + "field " + (i + 1) + " (" + (f.label || f.key) + ") " + why + ".");
+        });
         item.querySelectorAll("[data-result]").forEach(function (r, i) {
           if (!r.querySelector('[data-r="source"]').value) all.push(who + "has result " + (i + 1) + " with no field chosen.");
         });
@@ -1333,7 +1339,25 @@
     if (r.type === "list") { var o = opts(r.options); return o.length ? "List: " + o.join(", ") : "List, no options yet"; }
     if (r.type === "string") return r.max ? "String, up to " + r.max + " characters" : "String";
     var parts = [span(r.min, r.max), r.step ? "step " + r.step : ""].filter(Boolean);
-    return (r.type === "integer" ? "Integer" : "Decimal") + (parts.length ? " " + parts.join(", ") : "");
+    var text = (r.type === "integer" ? "Integer" : "Decimal") + (r.scale ? " scale" : "") + (parts.length ? " " + parts.join(", ") : "");
+    var labels = r.scale ? (r.scaleLabels || "").split("|").filter(Boolean).join(" / ") : "";
+    return labels ? text + ", labelled " + labels : text;
+  }
+  // Why a field set as a scale cannot be one, as stages.scale_problem
+  // (Review Robin's scale_shape_error, segment AD2S); "" when it can.
+  // A plain decimal only, as stages._number reads one.
+  function num(v) { return /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(v) ? Number(v) : null; }
+  function scaleProblem(f) {
+    if (!f.scale) return "";
+    if (f.type !== "integer" && f.type !== "decimal") return "is a scale but not an Integer or a Decimal";
+    var lo = num(f.min), hi = num(f.max), st = num(f.step);
+    if (lo === null || hi === null) return "is a scale with no Min or Max";
+    if (st === null || st <= 0) return "is a scale with no Step";
+    if (hi <= lo) return "is a scale whose Max is not above its Min";
+    if (f.type === "integer" && ![lo, hi, st].every(Number.isInteger)) return "is an Integer scale with a bound or Step not whole";
+    var pts = (hi - lo) / st;
+    if (Math.abs(pts - Math.round(pts)) > 1e-9 * Math.max(1, Math.abs(pts))) return "is a scale whose Max is not Min plus a whole number of Steps";
+    return "";
   }
   function resultType(r) {
     if (r.derive === "min" || r.derive === "max" || r.derive === "mode") return fieldText(r);
@@ -1430,9 +1454,14 @@
   function fv(row, q) { var i = row.querySelector('[data-q="' + q + '"]'); return i ? (i.type === "checkbox" ? i.checked : i.value.trim()) : ""; }
   function fieldRows(item) { return Array.prototype.slice.call(item.querySelectorAll("[data-rf]")); }
   function readField(row) {
-    var type = fv(row, "type");
+    // The menu's value is the type, or "<type>:scale" (segment AD2S).
+    var choice = fv(row, "type").split(":"), type = choice[0], scale = choice[1] === "scale";
+    // A "|" typed in a label would move the others along: Band 3 stores
+    // it as "¦" (newModelRfScaleLabels), and so does this.
+    var labels = scale ? ["scale_start", "scale_middle", "scale_end"].map(function (q) { return fv(row, q).replace(/\|/g, "\u00a6"); }) : [];
     return {
       key: row.dataset.rf, label: fv(row, "label"), type: type,
+      scale: scale, scaleLabels: labels.some(Boolean) ? labels.join("|") : "",
       min: type === "integer" || type === "decimal" ? fv(row, "min") : "",
       max: type === "integer" || type === "decimal" ? fv(row, "max") : type === "string" ? fv(row, "maxlen") : "",
       step: type === "integer" || type === "decimal" ? fv(row, "step") : "",
@@ -1479,6 +1508,7 @@
       row.querySelector('[data-q-g="number"]').hidden = !(f.type === "integer" || f.type === "decimal");
       row.querySelector('[data-q-g="string"]').hidden = f.type !== "string";
       row.querySelector('[data-q-g="list"]').hidden = f.type !== "list";
+      row.querySelector('[data-q-g="scale"]').hidden = !f.scale;
       row.querySelector("[data-rf-name]").textContent = f.label || "Untitled field";
       row.querySelector("[data-rf-sum]").textContent = fieldSummary(f);
     });
@@ -1575,7 +1605,12 @@
       confidential: !!(item.querySelector('[data-pc="confidential"]') || {}).checked,
       rule: ruleOf(item), mode: item.querySelector('[data-ps="mode"]').value,
       sources: sourcesOf(item), total: totalOf(item),
-      fields: fieldRows(item).map(readField),
+      fields: fieldRows(item).map(function (row) {
+        var f = readField(row);
+        return { key: f.key, label: f.label, type: f.type, min: f.min, max: f.max, step: f.step,
+                 options: f.options, required: f.required, help: f.help,
+                 scale: f.scale, scale_labels: f.scaleLabels };
+      }),
       results: Array.prototype.slice.call(item.querySelectorAll("[data-result]")).map(function (row) {
         var r = readResult(row);
         return { key: row.dataset.result, name: r.name, source: rv(row, "source"), derive: r.derive,

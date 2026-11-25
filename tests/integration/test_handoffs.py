@@ -283,6 +283,39 @@ def test_an_apply_desk_gate_s_bundle_arrives_set_up(
         assert keys == {a.application.public_id for a in rows}
 
 
+def test_an_apply_desk_scale_field_arrives_as_a_scale(
+    client: TestClient, db: Session, applydesk_db: None
+) -> None:
+    """Segment AD2S: a gate field set to *Integer (scale)* from 1 to 5
+    hands off `scale` = true with its bounds and labels, and its draft's
+    field is a 5-point scale the reviewer surface draws (snapping, at 11
+    points or fewer: segment 20P)."""
+    from dataclasses import replace
+
+    from applydesk import handoff, sample_data, stages
+
+    exercise = next(e for e in sample_data.EXERCISES if e.public_id == "wa9juxbc2t")
+    gate = stages.gate_numbered(stages.plan_of("wa9juxbc2t"), 3)
+    assert gate is not None and gate.fields
+    first = gate.fields[0]
+    scale = stages.Field("integer", "1", "5", "1", scale=True, scale_labels="Weak||Strong")
+    gate = replace(gate, fields=(replace(first, field=scale), *gate.fields[1:]))
+    sent = handoff.bundle(exercise, gate, lambda app: f"https://applydesk.invalid/{app.dossier_id}")
+    reply = _post(client, {**sent.envelope(), "transfer_id": str(uuid.uuid4())})
+    assert reply.status_code == 201, reply.text
+    instrument = db.scalars(select(Instrument)).one()
+    got = next(f for f in instrument.response_fields if f.field_key == first.key)
+    assert (got.scale, got.scale_labels) == (True, "Weak||Strong")
+    assert got.validation == {
+        "min": 1,
+        "max": 5,
+        "step": 1,
+        "scale": True,
+        "scale_labels": ["Weak", "", "Strong"],
+    }
+    assert not any(f.scale for f in instrument.response_fields if f.field_key != first.key)
+
+
 def test_a_refused_settings_file_leaves_no_session_and_says_why(
     client: TestClient, db: Session
 ) -> None:
