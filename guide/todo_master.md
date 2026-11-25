@@ -72,10 +72,6 @@ the PR body unless it says otherwise.
   update-aware (a missing name read from the stored instrument) when
   AD6 builds the real re-send, or close this if AD6 always sends it.
 
-- **Review Robin on a phone** — 20Q: the participant pages usable at
-  390 px, the reviewer surface first (the viewport tag opted in per
-  participant template, reviewee cards under 640 px, a 390 px guard).
-  **Plan:** `guide/segment_20Q_reviewer_phone.md`.
 - **A scale on an Apply Desk gate** — 20P Item 2: Process > Gate's
   response fields offer *Integer (scale)* and *Decimal (scale)*, and the
   handoff writes `scale` and `scale_labels` (Review Robin's side closed

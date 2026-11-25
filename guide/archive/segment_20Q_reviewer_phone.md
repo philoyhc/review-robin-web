@@ -61,44 +61,35 @@ Taken 2026-11-24 at `bc229fdba`.
 
 ## Status
 
-Open. Rung 2 (2026-11-24) diverged in two places:
-- **The tag follows the participant chrome, not a per-template block.**
-  `base.html` emits it when the body class includes `reviewer`, which the
-  `reviewer/` templates set (the surface only outside the operator's preview) and
-  About, Guide and `me_debug.html` set for a non-operator. One condition, and a
-  new participant page inherits it.
-- **The check rides the URL crawl, not a browser test.** A tag in the HTML needs
-  no browser: `tests/integration/test_url_crawl.py` asserts it on every `/me`
-  page, About and Guide for rae, and its absence from every operator page.
-- **Rung 3: cards by width alone.** The rule keys on the viewport, not the
-  chrome, so an operator's preview of the surface in a narrow window shows the
-  same cards. The check of no sideways scroll covers the response table only;
-  the visibility grid's is rung 4's.
-- **Rung 3a/3b (author's checks):** a slide on a phone puts its box under the
-  line; stacked scales share one side, a slide's box 88 px everywhere and
-  ending where a snap's End label ends; a slide's line ends in a bar each side.
-- **Rung 4: an address breaks anywhere it must** (`overflow-wrap: anywhere`),
-  not only at `@` and `.`: the surface renders through two template
-  environments, and a `<wbr>` filter would be registered in both for a
-  rarely-seen case.
-- **Rung 6:**
-  - **The bottom action row floats** (author, 2026-11-25): sticky, so it
-    pins to the screen's foot until the list ends.
-  - **Touch targets are two tiers**: a button, box or list at least 44 px; a
-    checkbox, a text link or text button inside a line, or a role pill at
-    least 24 px (WCAG 2.2's minimum, with its inline exception). 44 px links
-    would break the lines they sit in.
-  - **The floating row waits for the top row to scroll away** (author,
-    2026-11-25): a short script marks it `rs-action-row-float` only then.
-  - **The cumulative read** (`3ff8b6b71..b82cd6675`) found no leak onto
-    operator pages and every `data-label` on its header's index; it turned up
-    eight points, all taken: the guard checks cards and visits the sign-in
-    details and a stacked surface; Band 2's stacked track holds scales widened
-    to a shared side; the integration test matches labels to headers;
-    collation's download cell keeps its alignment; and three plan lines above.
-  - **The breakpoints are not consolidated.** The participant rules this
-    segment adds use only 640 px; the rest are operator layouts, and moving
-    them would change those pages for no participant gain.
+**Closed 2026-11-25.** Built as laddered: plan #4201, then rungs 2–6 (#4202–#4208), with two
+author-iteration rungs on the scale (#4204, #4205) after rung 3's phone check.
+
+Intended versus done:
+- **The viewport tag follows the participant chrome**, not a per-template block: `base.html`
+  emits it when the body class includes `reviewer` (the `reviewer/` templates, the surface only
+  outside the operator preview, and About, Guide and sign-in details for a non-operator). Its
+  check rides the URL crawl, not a browser test.
+- **Cards key on width alone**, so the operator's preview shows them in a narrow window too.
+- **Scales (author's rulings, every width):** a slide's box is 88 px, ends at the widget's edge
+  and drops under the line on a phone; a slide's line ends in a bar each side; stacked scales
+  share one side, Band 2's track sized to match.
+- **Addresses break anywhere** (`overflow-wrap: anywhere`), not only at `@` and `.`: a `<wbr>`
+  filter would need registering in both template environments.
+- **The bottom action row floats** (author, 2026-11-25), only once the top row has scrolled out
+  of view; without script it stays in place.
+- **Touch targets are two tiers**: controls 44 px; checkboxes, inline links, text buttons and
+  role pills a 24 px target (WCAG 2.2), since 44 px links would break their lines.
+- **The breakpoints were not consolidated**: the participant rules use only 640 px, and the rest
+  are operator layouts.
+- **The guard** visits every participant page with a table; the pre-open and
+  invitation-mismatch notices are left to the URL crawl.
+
+Reads: one cumulative `diff-reviewer` read at rung 6 (`3ff8b6b71..b82cd6675`) found no leak onto
+operator pages and raised eight points, all taken, one a real defect (Band 2's stacked track
+under-sized for scales widened to a shared side). Codex caught three more on the way, all fixed:
+a scale's desktop minimum overflowing its card (#4203), the stacked visibility grid reaching the
+Instruments page's grids (#4206), and an unbroken value widening a card (#4207). CI caught the
+24 px inline targets a pixel short on its fonts (#4208).
 
 ## PR ladder
 

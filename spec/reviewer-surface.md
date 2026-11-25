@@ -872,7 +872,55 @@ shows the number, never the scale.
 - **Width:** a scale states the narrowest it reads at (every snap stop
   numbered, the labels' words, a slide's three numbers and its box). A
   reviewer table's column widens to it. In the **stacked** layout every scale in a table takes the
-  widest one's width.
+  widest one's width, and the widest *side* (the padding that holds the
+  end numbers and labels), so every line starts at one edge; a scale with
+  a narrower side widens by twice the difference. Band 2's stacked preview
+  does the same, and its track holds the widest scale as widened.
+- **A slide's box and line, at every width.** The box is 88 px, set by the
+  script on the box itself (so Band 2's preview, which writes its own
+  inline widths, agrees), and ends at the widget's right edge, where a
+  snap's End label ends; a slide keeps no right padding. A slide's line
+  ends in a short bar at each end.
+- **On a phone** (under 640 px) a scale takes the card's width, its stops
+  placed by percentage rather than at the stated narrowest width, and a
+  slide's box drops under the line, 88 px wide, above *Not answered* /
+  *clear*.
+
+### On a phone
+
+Under 640 px (the CSS is keyed to width, not chrome, so an operator's
+preview of the surface in a narrow window shows the same) the surface
+reflows. Every rule here is CSS under that width except the floating
+action row; desktop is untouched, bar the scale rules in [Scale](#scale)
+that apply at every width. Without script it all still works.
+
+- **The response table is a list of cards** (`table.rs-table`). A row is a
+  card: identity (and display fields) at the top, then each answer as its
+  label over its box. The label is the cell's `data-label` (the field's
+  label, with its ` *` marker when required), so a screen reader reads the
+  header once. The header row, and with it the sort buttons, is hidden;
+  the cards keep the table's current order. Saved column widths and
+  `<col>` widths are inert. The status icon sits in the card's top-right
+  corner. A **stacked** instrument's lines put each label over its box,
+  and **group mode** is the same card. A long value wraps in its card
+  rather than widen the page. A closed branch stays dimmed, a Require
+  branch's marker stays on the label, and a locked, submitted or closed
+  assignment's card is read-only as its row is.
+- **The visibility grid stacks.** An audience is a block, each window
+  (*Session ongoing*, *Responses released*; the cell's `data-label`) a line
+  with its label beside its pill.
+- **Progress pills and the constraint line** read from the left.
+- **The action row's buttons share its width**, with Prev / Next on a line
+  of their own.
+- **The bottom action row floats**: sticky at the screen's foot, with
+  clearance for a home indicator, so Save / Cancel / Submit stay in reach
+  down a long list. Only once the top row has scrolled out of view: a
+  script on the surface marks the bottom row `rs-action-row-float` then,
+  so the two sets never show together. With no script (or no
+  `IntersectionObserver`) it stays in place. It remains the form's own
+  row, so it posts as ever.
+- **Addresses and codes break anywhere** (`overflow-wrap: anywhere`)
+  rather than push the page wider.
 
 ### Branching between response fields
 
@@ -1484,6 +1532,12 @@ reviewee-/observer-only rows show `—` in those cells.
   implies something is waiting. Active
   reviewers and observers always have a row, so they never see it.
 
+**On a phone** (under 640 px) the table is cards (`rs-table`,
+`rs-table-inline`), as in *On a phone* under the per-instrument table: the
+Session cell heads the card, and Start, End, Timezone, Session status and
+Reviewer status each sit as a `data-label` beside its pill rather than over
+it.
+
 ### Cross-role union and reachability
 
 The route (`app/web/routes_reviewer/_dashboard.py`
@@ -1573,6 +1627,9 @@ dashboard's Session column once Reviewer Status is
   redirect to `/me?notice=summary`, where one line says the summary is
   available once every review is submitted.
 - **H1** — "Your responses — {session.name}".
+- **On a phone** its per-instrument tables are cards, as the surface's are
+  (*On a phone* under the per-instrument table), each value under its
+  field's label.
 - **Role row** — under the H1: the reviewer's own line, then the
   role-navigator chips, as on the surface (§
   *Role-navigator chip strip*).

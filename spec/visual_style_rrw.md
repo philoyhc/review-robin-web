@@ -121,19 +121,34 @@ The implication: when designing a page, **think about mobile order first**, then
 
 Cordware's mobile-to-desktop guidance (`cordware/docs/cordware_mobile_to_desktop.md`)
 gives each surface one of three classes. Review Robin uses two (author,
-2026-11-04); no surface of it is mobile-critical. Either way, cards stack
+2026-11-04). Either way, cards stack
 in DOM order (above): that rule is about order, not about which device a
 page is built for.
 
 - **Operator pages are desktop-oriented.** They are built for a notebook
   or desktop, and must still render safely on a phone: nothing clipped,
   every action reachable, wide tables scrolling rather than breaking.
-- **Participant pages (`/me/…`) are responsive general-use where
-  feasible**, usable on a phone as on a desktop; a page that cannot be
-  is desktop-oriented. The expected case is the response form's tabular
-  instrument (§ *Response form layout and instrument pacing*), whose wide
-  grid is the canonical layout; a new page that cannot be responsive says
-  so in its plan.
+- **Participant pages (`/me/…`) are responsive general-use**, usable on a
+  phone as on a desktop; a new page that cannot be responsive says so in
+  its plan. A participant page is one whose body class includes
+  `reviewer`: the `reviewer/` templates (the response surface only outside
+  the operator's preview), and About, Guide and the sign-in details for a
+  non-operator. `base.html` emits the viewport tag
+  (`width=device-width, initial-scale=1`) for exactly those pages, so a
+  new participant page inherits it. An operator page carries no tag: a
+  phone renders it as a desktop page zoomed out, and it stays
+  desktop-first.
+  - **Under 640 px** a participant table is a list of cards
+    (`spec/reviewer-surface.md` § *On a phone*; `spec/participant_model.md`
+    for results and collation). 640 px is the one phone breakpoint; the
+    wider breakpoints belong to operator layouts and tablets, and are
+    deliberately not consolidated with it.
+  - **Under `pointer: coarse`** (a touch screen), on participant pages
+    only: a button, box (input, select, textarea) or list is at least
+    44 px tall; a checkbox or radio is 24 px; an inline text link, a text
+    button (`.btn-reset`) and a role pill are a 24 px target, got from
+    padding so the line they sit in does not grow. 44 px links would
+    break the lines they sit in.
 
 A plan states a page's class only when it departs from these.
 
