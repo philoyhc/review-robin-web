@@ -51,6 +51,13 @@ RESPONSE_LAYOUT_DEFAULT = "columns"
 DISPLAY_LAYOUTS: tuple[str, ...] = ("across", "stacked", "joined")
 DISPLAY_LAYOUT_DEFAULT = "across"
 
+# Segment 23G — a linked instrument's gate type (ruling 36): ``locked``,
+# fixed whole as 23F made it (*Review Robin Session*), or ``custom``, its
+# fields held but Review Robin may reorder, require, add and branch
+# (*Review Robin Session (custom)*). Read only under the instrument lock.
+LINKED_MODES: tuple[str, ...] = ("locked", "custom")
+LINKED_MODE_DEFAULT = "locked"
+
 
 def _next_session_seq(context: Any) -> int:
     """``max(session_seq) + 1`` within the row's session, 19Q Item 6.
@@ -229,6 +236,18 @@ class Instrument(Base, TimestampMixin):
     :data:`DISPLAY_LAYOUTS`; a group-scoped instrument reads ``across`` as
     ``joined``. Set by ``instruments.set_display_layout``. Revision
     ``c3f8a1d6e2b7`` gave every existing row the default."""
+    linked_mode: Mapped[str] = mapped_column(
+        String(8),
+        default=LINKED_MODE_DEFAULT,
+        server_default=LINKED_MODE_DEFAULT,
+        nullable=False,
+    )
+    """A linked instrument's gate type (segment 23G): ``locked`` or
+    ``custom``, one of :data:`LINKED_MODES`, as the linked application's
+    Settings row ``instruments[1].linked_mode`` sends it. Read only while
+    the session's profile holds the instrument lock; on any other
+    instrument it is inert. Revision ``a7d3e9f2b4c8`` gave every existing
+    row the default."""
     deadline_closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     sort_display_fields: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     """Operator-defined default sort spec for this instrument's

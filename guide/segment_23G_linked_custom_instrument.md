@@ -52,6 +52,10 @@ Taken 2026-11-18 at `295cdf575`.
 - Tests: `tests/integration/test_linked_sessions.py`, `tests/integration/test_chip_edge.py`, `tests/unit/test_linked_sessions_spec.py`.
 - Apply Desk: `applydesk/stages.py` (`Gate.via`), `applydesk/templates/applydesk/operator/_process_cards.html` (the gate card), `applydesk/extract.py` (`process.csv` detail).
 
+## Status
+
+**Rung 2 (2026-11-25):** `Instrument.linked_mode` (`locked` / `custom`, `LINKED_MODES`; migration `a7d3e9f2b4c8`, every row `locked`); the Settings row `instruments[N].linked_mode`, parsed and refused when unknown, written to the CSV only when `custom` so every other file is unchanged; a linked application owns `instruments[1].linked_mode` on a re-send, a change audited as `instrument.linked_mode_set` (the same type writes nothing). The cumulative read for rungs 2–5 runs from `dde4e36cf`. As any instrument row, the row needs the gate's name beside it (the parse's rule).
+
 ## PR ladder
 
 1. **Plan** (this file), its queue entry and README row; ruling 36 in `applydesk/guide/todo_master.md`.
