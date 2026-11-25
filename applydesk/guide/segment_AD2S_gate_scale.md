@@ -64,7 +64,7 @@ None.
 ## Out of scope
 
 - The applicant Form's questions: they are answered in Apply Desk and have their own types.
-- **A gate whose instrument Review Robin may extend** (reorder, add fields, branch): segment 23G, *Review Robin (advanced)*, ruling 36 (`guide/segment_23G_linked_advanced_instrument.md`).
+- **A gate whose instrument Review Robin may extend** (reorder, add fields, branch): segment 23G, *Review Robin Session (custom)*, ruling 36 (`guide/segment_23G_linked_custom_instrument.md`).
 
 ## Doc impact
 

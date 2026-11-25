@@ -1,4 +1,4 @@
-# Segment 23G — A linked instrument Review Robin may extend: *Review Robin (advanced)*
+# Segment 23G — A linked instrument Review Robin may extend: *Review Robin Session (custom)*
 
 **Opened:** 2026-11-18 · **Theme:** a second linked-gate type whose instrument starts with the gate's fields, held, and lets Review Robin reorder them, set required, add fields and branch between them · **Related:** `spec/linked_sessions.md` (`instrument_structure`), `spec/instruments.md` ("A linked instrument", "Branching between response fields"), `spec/handoffs.md` (§6a re-send, §10 results), `applydesk/guide/todo_master.md` (ruling 36), `guide/archive/` (23F)
 
@@ -10,8 +10,8 @@ A gate Apply Desk sends to Review Robin today makes a **linked instrument** that
 
 The author's, 2026-11-18 (ruling 36): **two types of Review Robin gate**.
 
-1. **Review Robin** (the default): the instrument locked as 23F made it. Nothing changes.
-2. **Review Robin (advanced)**: the instrument **starts with the gate's response fields**, each **held** (Review Robin may not delete it, nor change its key, label, type, bounds, options or help text, which stay the application's), but Review Robin **may**:
+1. **Review Robin Session** (the default): the instrument locked as 23F made it. Nothing changes.
+2. **Review Robin Session (custom)**: the instrument **starts with the gate's response fields**, each **held** (Review Robin may not delete it, nor change its key, label, type, bounds, options or help text, which stay the application's), but Review Robin **may**:
    - **reorder** fields, held and its own alike;
    - **set required or not** on every field (Review Robin's say, not the gate's);
    - **add fields** of its own;
@@ -24,18 +24,19 @@ Rejected: **unlocking the linked instrument outright**, since Apply Desk reads i
 ## Semantics
 
 - **Held vs own.** A held field is one the application sent, known by `field_key`; an own field is one Review Robin added. A held field's row shows the lock glyph on its fixed chips (`spec/ui_elements.md` §9) and has no delete; an own field's row is as any instrument's.
-- **Required.** Review Robin's for every field in advanced mode; the gate's `required` sets the starting value at the create only, and a re-send never overwrites it.
+- **Required.** Review Robin's for every field in custom mode; the gate's `required` sets the starting value at the create only, and a re-send never overwrites it.
 - **Branching.** As `spec/instruments.md` "Branching between response fields" (two levels, one branch per parent, no cycle); held and own fields may be parents or governed alike.
-- **A re-send** (§6a) into an advanced instrument updates held fields in place by key, **keeps** own fields, the order and the branches; a newly sent field joins at the end; a held field the re-send drops is deleted, and a branch that loses its parent or a governed field is dropped, **audited** (`instrument.branch_dropped`, reason `field_removed`). A held field whose type changes so its branch no longer fits (a String parent; a value outside new bounds) loses that branch the same way. A field holding responses refuses as today (`ResponsesPresentError`).
+- **A re-send** (§6a) into a custom instrument updates held fields in place by key, **keeps** own fields, the order and the branches; a newly sent field joins at the end; a held field the re-send drops is deleted, and a branch that loses its parent or a governed field is dropped, **audited** (`instrument.branch_dropped`, reason `field_removed`). A held field whose type changes so its branch no longer fits (a String parent; a value outside new bounds) loses that branch the same way. A field holding responses refuses as today (`ResponsesPresentError`).
 - **Results** (§10) carry the **held** fields' answers only, as today. A held field closed by a branch is **not answered** for that pair, said so (`closed_by_branch`), so Apply Desk's derivations count it as no response (a mean's `at_least` reads it). Own fields' answers stay in Review Robin (its own extracts); returning them is out of scope.
-- **Switching type** on a linked draft not yet opened: *advanced → default* drops own fields and branches and restores the gate's order and required, audited; *default → advanced* keeps everything. Once the session opens, the type is fixed (ruling 29's re-send window).
+- **Switching type** on a linked draft not yet opened: *custom → default* drops own fields and branches and restores the gate's order and required, audited; *default → custom* keeps everything. Once the session opens, the type is fixed (ruling 29's re-send window).
 - **Not linked, or another profile**: nothing changes; the mode exists only under `instrument_structure`.
 
 ## Judgment calls — decided
 
-- The mode is a column on the instrument (`linked_mode`: `locked` / `advanced`), not a new `Lock` member: the lock is per profile, the type per gate.
+- The mode is a column on the instrument (`linked_mode`: `locked` / `custom`), not a new `Lock` member: the lock is per profile, the type per gate.
 - The handoff carries it as one Settings row, `instruments[1].linked_mode`, owned by the application like the instrument's name.
 - Held fields are known by key, not by a flag copied onto the field, so a re-send that renames nothing needs no migration of field rows.
+- **Renamed** *Review Robin (advanced)* → *Review Robin Session (custom)*, mode `advanced` → `custom` (author, 2026-11-25); the default reads *Review Robin Session*, as Apply Desk's gate type does. Nothing was built under the old name.
 
 ## Blast radius (measured)
 
@@ -50,15 +51,15 @@ Taken 2026-11-18 at `295cdf575`.
 
 1. **Plan** (this file), its queue entry and README row; ruling 36 in `applydesk/guide/todo_master.md`.
 2. **The mode, stored and sent**: `Instrument.linked_mode` (migration, default `locked`), the handoff's `instruments[1].linked_mode` row (owned, validated, audited), `set_up` taking it. No page change. Must not touch the editor.
-3. **What advanced allows**: the refusals and the fixed rendering by mode: held rows fixed and undeletable, own rows and +, ⑂, reorder and required live; the card's Save and the response-field routes accept them. Integration and Chromium tests on a linked advanced instrument.
-4. **The re-send into advanced**: `replace_response_fields` keeping own fields, order, branches and required; broken branches dropped and audited; switching type on an unopened draft.
+3. **What custom allows**: the refusals and the fixed rendering by mode: held rows fixed and undeletable, own rows and +, ⑂, reorder and required live; the card's Save and the response-field routes accept them. Integration and Chromium tests on a linked custom instrument.
+4. **The re-send into custom**: `replace_response_fields` keeping own fields, order, branches and required; broken branches dropped and audited; switching type on an unopened draft.
 5. **Results**: held answers only, `closed_by_branch` for a field a branch closed (`spec/handoffs.md` §10). `diff-reviewer` reads 2–5.
-6. **Apply Desk**: the gate's *Type* on Process (*Review Robin* / *Review Robin (advanced)*), shown on the gate card and Evaluations, in `process.csv`; sample only, as Apply Desk sends nothing until AD5.
+6. **Apply Desk**: the gate's *Type* on Process (*Review Robin Session* / *Review Robin Session (custom)*), shown on the gate card and Evaluations, in `process.csv`; sample only, as Apply Desk sends nothing until AD5.
 7. **Close**, after the author's check.
 
 ## Definition of done
 
-- A linked instrument sent as advanced lets Review Robin reorder, require, add and branch, and refuses deleting or redefining a held field (tests, Chromium tests).
+- A linked instrument sent as custom lets Review Robin reorder, require, add and branch, and refuses deleting or redefining a held field (tests, Chromium tests).
 - A re-send keeps own fields, order, branches and required, dropping only what it must, audited (tests).
 - Results carry held answers and say when a branch closed one (tests).
 - Apply Desk's Process offers the two types (tests).
@@ -71,8 +72,9 @@ Taken 2026-11-18 at `295cdf575`.
 
 ## Open questions
 
+- **Who sets *Required* on a held field?** Ruling 36 gives it to Review Robin (the gate's value only the start), so a branch can make a held field optional; the author's restatement (2026-11-25) has the gate's fields fixed in Review Robin, which keeps *Required* the gate's, and a held field then branches only as *Require*. The author's, before rung 3.
 - **Own fields' answers back to Apply Desk** (a *Familiarity* worth showing on the dossier?): proposed later, Review Robin's extracts only; the author's.
-- **May a held field be hidden** (`visible`) in advanced mode, or only branched? Proposed: its visibility stays the application's.
+- **May a held field be hidden** (`visible`) in custom mode, or only branched? Proposed: its visibility stays the application's.
 - **Apply Desk's derivations over a branched field** (e.g. a mean of Score where Familiarity closed it for some evaluators): counted as no response (proposed); the author's, with ruling 31's evaluation design.
 
 ## Out of scope
@@ -83,9 +85,9 @@ Taken 2026-11-18 at `295cdf575`.
 
 ## Doc impact
 
-- `spec/linked_sessions.md` — `instrument_structure`: the two modes and what advanced allows, refuses and holds; the coupled-locks note.
-- `spec/instruments.md` — "A linked instrument": held vs own fields in advanced mode, their rendering and routes.
-- `spec/handoffs.md` — §6a re-send into an advanced instrument; §10 results' `closed_by_branch`; the `linked_mode` row.
+- `spec/linked_sessions.md` — `instrument_structure`: the two modes and what custom allows, refuses and holds; the coupled-locks note.
+- `spec/instruments.md` — "A linked instrument": held vs own fields in custom mode, their rendering and routes.
+- `spec/handoffs.md` — §6a re-send into a custom instrument; §10 results' `closed_by_branch`; the `linked_mode` row.
 - `spec/csv_contracts.md` — the Settings CSV's `instruments[1].linked_mode` row.
 - `applydesk/spec/applications.md` — the gate's *Type* on Process.
 - `guide/todo_master.md` — the queue entry (rung 1); deleted at close.
