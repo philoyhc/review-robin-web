@@ -285,6 +285,43 @@ def held_definitions(instrument: Instrument) -> dict[str, HeldDefinition]:
     return out
 
 
+def restore_cut_texts(instrument: Instrument, before: dict[str, HeldDefinition]) -> None:
+    """Put back whole each held text the card's sync cut (label, list,
+    scale labels, help), with the validation built from it: ``before`` is
+    :func:`held_definitions` taken ahead of the save. Run between the sync
+    and the record of what changed (``set_band2_state``'s ``after_sync``),
+    so a save that changed nothing records nothing (Codex on #4220). A
+    text the save changed beyond the cut is left for :func:`held_problems`."""
+    from app.services.instruments._response_fields import validation_block_from_inline
+
+    for field in instrument.response_fields:
+        was = before.get(field.field_key)
+        if was is None:
+            continue
+        values = was[0]
+        cut = [
+            attr
+            for attr in _CUTS
+            if getattr(field, attr) != values[attr]
+            and _cut(attr, getattr(field, attr)) == _cut(attr, values[attr])
+        ]
+        if not cut:
+            continue
+        for attr in cut:
+            setattr(field, attr, values[attr])
+        # The sync built the validation the reviewer surface reads (a
+        # List's choices) from the cut text: build it again from the whole.
+        field.validation = validation_block_from_inline(
+            field._inline_data_type,
+            field._inline_min,
+            field._inline_max,
+            field._inline_step,
+            field._inline_list_csv,
+            bool(field.scale),
+            field.scale_labels,
+        )
+
+
 def held_problems(
     db: Session,
     review_session: ReviewSession,
@@ -297,12 +334,12 @@ def held_problems(
     removed, or its definition changed. Its required flag, place and
     branch are Review Robin's and never a problem; nor is its visibility
     while a hidden field above it sets it, before or after (the card's
-    cascade), nor the sync cutting a long text, which is put back whole
-    here (the cumulative read of 23G rungs 2-5)."""
+    cascade), nor the sync cutting a long text, which
+    :func:`restore_cut_texts` has put back whole (the cumulative read of
+    23G rungs 2-5)."""
     db.flush()
     db.refresh(instrument, ["response_fields"])
     after = held_definitions(instrument)
-    by_key = {f.field_key: f for f in instrument.response_fields}
     source = linked_apps.linked_name(review_session)
     problems: list[str] = []
     for key, (was, was_cascaded) in before.items():
@@ -312,38 +349,10 @@ def held_problems(
             continue
         now, now_cascaded = after[key]
         skip: set[str] = {"visible"} if was_cascaded or now_cascaded else set()
-        if any(
-            _cut(attr, now[attr]) != _cut(attr, was[attr])
-            for attr in _HELD_ATTRS
-            if attr not in skip
-        ):
+        if any(now[attr] != was[attr] for attr in _HELD_ATTRS if attr not in skip):
             problems.append(
                 f"'{label}' comes from {source}: only whether it is required, "
                 "its place and its branch can change."
-            )
-            continue
-        field = by_key[key]
-        restored = False
-        for attr in _CUTS:
-            if getattr(field, attr) != was[attr]:
-                setattr(field, attr, was[attr])
-                restored = True
-        if restored:
-            # The sync built the validation the reviewer surface reads
-            # (a List's choices) from the cut text: build it again from
-            # the whole (Codex on #4220).
-            from app.services.instruments._response_fields import (
-                validation_block_from_inline,
-            )
-
-            field.validation = validation_block_from_inline(
-                field._inline_data_type,
-                field._inline_min,
-                field._inline_max,
-                field._inline_step,
-                field._inline_list_csv,
-                bool(field.scale),
-                field.scale_labels,
             )
     return problems
 

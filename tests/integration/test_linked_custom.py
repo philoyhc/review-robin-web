@@ -192,6 +192,29 @@ def test_a_long_held_text_survives_a_save(client: TestClient, db: Session) -> No
     assert stored.help_text == long_help
 
 
+def test_a_no_op_save_with_a_long_held_text_changes_nothing(
+    client: TestClient, db: Session
+) -> None:
+    """Codex on #4220: the sync cuts long help to 1000 characters, which
+    read as an edit, un-validating the session and auditing a change no
+    one made. The whole text is back before the change is recorded."""
+    from app.db.models import AuditEvent
+
+    review_session = _custom(client, db)
+    comment = next(f for f in _instrument(db).response_fields if f.field_key == "comment")
+    comment.help_text = "Say why. " * 150
+    stored = db.get(ReviewSession, review_session.id)
+    assert stored is not None
+    stored.status = "validated"
+    db.commit()
+    reply = _save(client, review_session, list(_band2_rfs(_instrument(db))))
+    assert reply.status_code == 200, reply.text
+    db.expire_all()
+    assert stored.status == "validated"
+    saved = select(AuditEvent).where(AuditEvent.event_type == "instrument.response_fields_saved")
+    assert db.scalars(saved).first() is None
+
+
 def test_a_switch_into_custom_holds_what_an_old_instrument_has(
     client: TestClient, db: Session
 ) -> None:

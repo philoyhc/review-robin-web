@@ -30,6 +30,7 @@ dependency is one-way.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -124,9 +125,15 @@ def set_band2_state(
     state: dict[str, Any] | None,
     actor: User,
     acknowledged_drop: bool = False,
+    after_sync: Callable[[Instrument], None] | None = None,
 ) -> Instrument:
     """Persist the operator's Band 2 selections + response-field
     definitions on a new-model instrument card.
+
+    ``after_sync`` runs once the response fields are written and before
+    what changed is recorded: a custom linked instrument puts its held
+    texts back whole there (segment 23G), so a save that changed nothing
+    records nothing.
 
     ``state`` is the JSON blob described in the
     ``e7c2b4d9a3f1_add_instruments_band2_state`` migration docstring:
@@ -346,6 +353,9 @@ def set_band2_state(
                 actor=actor,
             )
         db.refresh(instrument, attribute_names=["response_fields"])
+        if after_sync is not None:
+            after_sync(instrument)
+            db.flush()
         _record_response_field_changes(
             db,
             instrument=instrument,
