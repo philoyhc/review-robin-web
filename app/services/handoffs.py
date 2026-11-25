@@ -188,8 +188,17 @@ def parse_bundle(body: bytes, *, operation: str = OPERATION) -> Bundle:
             ],
         )
     missing = [kind for kind in REQUIRED_FILES if kind not in files]
-    if missing:
+    # A linked application may set its session up before its rosters
+    # (segment 23J): both rosters or neither, and no pairs without them.
+    set_up_only = linked_apps.profile_for(source_app) is not None and len(missing) == len(
+        REQUIRED_FILES
+    )
+    if missing and not set_up_only:
         raise HandoffError("invalid_package", 422, [f"Missing: {', '.join(missing)}."])
+    if set_up_only and "relationships" in files:
+        raise HandoffError(
+            "invalid_package", 422, ["Relationships need the reviewers and reviewees they pair."]
+        )
     contents: dict[str, bytes] = {}
     for kind in (*REQUIRED_FILES, *OPTIONAL_FILES):
         if kind not in files:
@@ -199,8 +208,9 @@ def parse_bundle(body: bytes, *, operation: str = OPERATION) -> Bundle:
             raise HandoffError("invalid_package", 422, [f"`files.{kind}` must be CSV text."])
         contents[kind] = _encoded(value, f"files.{kind}")
     # Symmetric review turns on only while both rosters are empty, and a
-    # handoff always carries them: refused here, naming the file that asks
-    # for it, rather than as a Reviewees refusal (segment 23D, cold read).
+    # handoff carries them, or sends them later (23J): refused here, naming
+    # the file that asks for it, rather than as a Reviewees refusal
+    # (segment 23D, cold read).
     if "settings" in contents and session_config_io.settings_symmetric_review(contents["settings"]):
         raise HandoffError(
             "invalid_setup",
@@ -210,6 +220,12 @@ def parse_bundle(body: bytes, *, operation: str = OPERATION) -> Bundle:
             slot="settings",
         )
     return Bundle(transfer_id, source_app, name, code, contents)
+
+
+def carries_rosters(bundle: Bundle) -> bool:
+    """Whether the bundle sends its rosters: a linked application's may
+    leave both out, setting its session up first (segment 23J)."""
+    return all(kind in bundle.files for kind in REQUIRED_FILES)
 
 
 def check_linked(bundle: Bundle) -> None:
@@ -292,9 +308,12 @@ def replayed(db: Session, user: User, bundle: Bundle) -> ReviewSession | None:
     sender once is not the operator now), a transfer whose first try may
     still be running (no rosters yet, started within :data:`IN_PROGRESS`:
     the sender keeps its transfer and tries again), or a transfer cut off
-    before its rosters saved, whose draft is left for its operator rather
-    than deleted. A transfer cut off between the roster save and its
-    completion record gets the instrument set-up and the record here."""
+    before it completed, whose draft is left for its operator rather than
+    deleted. A transfer cut off between the roster save and its completion
+    record gets the instrument set-up and the record here. A create sent
+    without rosters (segment 23J) answers by its completion record alone:
+    with no rosters to tell a finished save, one cut off before the record
+    is incomplete."""
     prior = prior_transfer(db, bundle.transfer_id)
     if prior is None:
         return None
@@ -313,7 +332,7 @@ def replayed(db: Session, user: User, bundle: Bundle) -> ReviewSession | None:
             raise HandoffError(
                 "transfer_incomplete",
                 409,
-                ["An earlier try of this transfer stopped before its rosters were saved."],
+                ["An earlier try of this transfer stopped before it completed."],
                 review_session=prior.review_session,
             )
         # The create's own last steps, which the cut-off try never reached
@@ -349,7 +368,8 @@ def record_created(
         actor_user_id=user.id,
         session=review_session,
         payload=audit.counts(files=len(bundle.files)),
-        context=_transfer_context(bundle),
+        # Whether it came with its rosters or set up first (segment 23J).
+        context={**_transfer_context(bundle), "rosters": carries_rosters(bundle)},
         correlation_id=correlation_id,
     )
     unit_of_work.commit(db)
