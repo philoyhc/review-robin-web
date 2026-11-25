@@ -544,7 +544,13 @@ RESULTS_HEADER = (
     "ResponseType",
     "Value",
     "SubmittedAt",
+    # Segment 23G rung 5: ``answered``, or ``not_asked`` for a field a
+    # branch closed on a submitted assignment, on any branched instrument.
+    "Answer",
 )
+#: ``RESULTS_HEADER``'s ``Answer`` values.
+ANSWERED = "answered"
+NOT_ASKED = "not_asked"
 COMPLETION_HEADER = ("ReviewerEmail", "RevieweeEmail", "InstrumentSeq", "State")
 EXPORTED = "session.handoff_results_exported"
 
@@ -588,8 +594,16 @@ def _counted_assignments(review_session: ReviewSession):
 def results_csv(db: Session, review_session: ReviewSession) -> CsvSnapshot:
     """Submitted answers, one row per answer, values as stored (author,
     2026-11-11). Saved drafts are left out (§6.5). A complete snapshot:
-    a receiver reconciles on reviewer, reviewee, instrument and field."""
+    a receiver reconciles on reviewer, reviewee, instrument and field.
+
+    A ``not_asked`` row, with no value, stands for each field a branch
+    closed on a submitted assignment (segment 23G rung 5, author
+    2026-11-25): not a response, and never owed, where a field asked and
+    left blank has no row. Any branched instrument gives them. A custom
+    linked instrument reports its held fields only, Review Robin's own
+    staying in its extracts."""
     zone = resolve_session_timezone(review_session)
+    held = _held_by_instrument(db, review_session)
     stmt = (
         select(Response, Reviewer, Reviewee, Instrument, InstrumentResponseField)
         .join(Assignment, Response.assignment_id == Assignment.id)
@@ -612,21 +626,136 @@ def results_csv(db: Session, review_session: ReviewSession) -> CsvSnapshot:
             InstrumentResponseField.id,
         )
     )
-    rows = [
+    keyed: list[tuple[tuple[object, ...], tuple[str, ...]]] = [
         (
-            reviewer.email,
-            reviewee.email_or_identifier,
-            str(instrument.session_seq),
-            instrument.short_label or "",
-            field.field_key,
-            field.label,
-            field.response_type,
-            response.value if response.value is not None else "",
-            iso_in_zone(response.submitted_at, zone),
+            (
+                reviewer.email,
+                reviewee.email_or_identifier,
+                instrument.session_seq,
+                field.order,
+                field.id,
+            ),
+            (
+                reviewer.email,
+                reviewee.email_or_identifier,
+                str(instrument.session_seq),
+                instrument.short_label or "",
+                field.field_key,
+                field.label,
+                field.response_type,
+                response.value if response.value is not None else "",
+                iso_in_zone(response.submitted_at, zone),
+                ANSWERED,
+            ),
         )
         for response, reviewer, reviewee, instrument, field in db.execute(stmt)
+        if instrument.id not in held or field.field_key in held[instrument.id]
     ]
-    return _snapshot("results.csv", RESULTS_HEADER, rows)
+    not_asked = _not_asked_rows(db, review_session, held, zone)
+    if not_asked:
+        # The added rows take their place by reviewer, application,
+        # instrument and field; any other file keeps the query's order.
+        keyed += not_asked
+        keyed.sort(key=lambda pair: pair[0])
+    return _snapshot("results.csv", RESULTS_HEADER, [row for _, row in keyed])
+
+
+def _held_by_instrument(db: Session, review_session: ReviewSession) -> dict[int, set[str]]:
+    """Each custom linked instrument's held keys, by instrument id; empty
+    for any other session (segment 23G rung 5)."""
+    if not linked_apps.locks(review_session, linked_apps.Lock.INSTRUMENT_STRUCTURE):
+        return {}
+    instruments = db.scalars(
+        select(Instrument).where(
+            Instrument.session_id == review_session.id, Instrument.linked_mode == "custom"
+        )
+    )
+    return {i.id: linked_instruments.held_keys(i) for i in instruments}
+
+
+def _not_asked_rows(
+    db: Session,
+    review_session: ReviewSession,
+    held: dict[int, set[str]],
+    zone: str,
+) -> list[tuple[tuple[object, ...], tuple[str, ...]]]:
+    """A ``not_asked`` row for each visible field a branch closed on a
+    submitted assignment of a branched instrument (on a custom linked one,
+    its held fields only), read from its submitted answers as the reviewer
+    surface reads them (``applicable_field_ids``). An assignment is
+    submitted as ``completion.csv`` says it is: its answers all
+    submitted, or none and its reviewer submitted. Empty, and nothing
+    read, when no instrument branches."""
+    from app.services.responses import applicable_field_ids
+
+    branched = set(
+        db.scalars(
+            select(InstrumentResponseField.instrument_id)
+            .join(Instrument, InstrumentResponseField.instrument_id == Instrument.id)
+            .where(
+                Instrument.session_id == review_session.id,
+                Instrument.group_kind.is_(None),
+                InstrumentResponseField.branch_parent_id.is_not(None),
+            )
+        )
+    )
+    if not branched:
+        return []
+    reviewer_submitted = {
+        progress.reviewer.id
+        for progress in monitoring.per_reviewer_progress(db, review_session)
+        if progress.pill_state == "submitted"
+    }
+    answers: dict[int, list[Response]] = {}
+    for response in db.scalars(
+        select(Response)
+        .join(Assignment, Response.assignment_id == Assignment.id)
+        .where(Assignment.session_id == review_session.id, Assignment.instrument_id.in_(branched))
+    ):
+        answers.setdefault(response.assignment_id, []).append(response)
+    stmt = _counted_assignments(review_session).where(Instrument.id.in_(branched))
+    out: list[tuple[tuple[object, ...], tuple[str, ...]]] = []
+    for assignment, reviewer, reviewee, instrument in db.execute(stmt):
+        given = answers.get(assignment.id, [])
+        if given and any(r.submitted_at is None for r in given):
+            continue  # in progress
+        if not given and reviewer.id not in reviewer_submitted:
+            continue  # not started
+        stamps = [r.submitted_at for r in given if r.submitted_at is not None]
+        submitted_at = iso_in_zone(max(stamps), zone) if stamps else ""
+        fields = list(instrument.response_fields)
+        open_ids = applicable_field_ids(fields, {r.response_field_id: r.value for r in given})
+        for field in fields:
+            if not field.visible:
+                continue
+            if instrument.id in held and field.field_key not in held[instrument.id]:
+                continue
+            if field.id in open_ids:
+                continue
+            out.append(
+                (
+                    (
+                        reviewer.email,
+                        reviewee.email_or_identifier,
+                        instrument.session_seq,
+                        field.order,
+                        field.id,
+                    ),
+                    (
+                        reviewer.email,
+                        reviewee.email_or_identifier,
+                        str(instrument.session_seq),
+                        instrument.short_label or "",
+                        field.field_key,
+                        field.label,
+                        field.response_type,
+                        "",
+                        submitted_at,
+                        NOT_ASKED,
+                    ),
+                )
+            )
+    return out
 
 
 def completion_csv(db: Session, review_session: ReviewSession) -> CsvSnapshot:

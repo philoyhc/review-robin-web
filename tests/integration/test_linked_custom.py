@@ -147,3 +147,126 @@ def test_a_locked_page_stays_fixed(client: TestClient, db: Session) -> None:
     page = client.get(f"/operator/sessions/{review_session.public_id}/instruments").text
     assert 'data-new-model-rf-held="true"' not in page
     assert "data-linked-structure\n" in page
+
+
+# --- The cumulative read of rungs 2-5 ---
+
+
+def _branched(db: Session) -> None:
+    """Familiarity (own) governs the held Score; the held Comments, now
+    required, anchors the branch (19T Item 11)."""
+    from .test_results_not_asked import _familiarity_governs_score
+
+    fields = _familiarity_governs_score(db)
+    fields["comment"].required = True
+    db.commit()
+
+
+def test_hiding_an_own_parent_hides_a_held_field_without_a_refusal(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _custom(client, db)
+    _branched(db)
+    rfs = _band2_rfs(_instrument(db))
+    hidden = [{**rf, "selected": False} if rf["name"] == "Familiarity" else rf for rf in rfs]
+    reply = _save(client, review_session, hidden)
+    assert reply.status_code == 200, reply.text
+    fields = {f.field_key: f for f in _instrument(db).response_fields}
+    assert not fields["familiarity"].visible and not fields["score"].visible
+    # Shown again, the cascade shows the held field again too.
+    reply = _save(client, review_session, [{**rf, "selected": True} for rf in rfs])
+    assert reply.status_code == 200, reply.text
+    assert {f.field_key: f.visible for f in _instrument(db).response_fields}["score"]
+
+
+def test_a_long_held_text_survives_a_save(client: TestClient, db: Session) -> None:
+    review_session = _custom(client, db)
+    comment = next(f for f in _instrument(db).response_fields if f.field_key == "comment")
+    long_help = "Say why. " * 150  # past the card's 1000 characters
+    comment.help_text = long_help
+    db.commit()
+    score, comment_rf = _band2_rfs(_instrument(db))
+    reply = _save(client, review_session, [comment_rf, score])  # a reorder only
+    assert reply.status_code == 200, reply.text
+    stored = next(f for f in _instrument(db).response_fields if f.field_key == "comment")
+    assert stored.help_text == long_help
+
+
+def test_a_no_op_save_with_a_long_held_text_changes_nothing(
+    client: TestClient, db: Session
+) -> None:
+    """Codex on #4220: the sync cuts long help to 1000 characters, which
+    read as an edit, un-validating the session and auditing a change no
+    one made. The whole text is back before the change is recorded."""
+    from app.db.models import AuditEvent
+
+    review_session = _custom(client, db)
+    comment = next(f for f in _instrument(db).response_fields if f.field_key == "comment")
+    comment.help_text = "Say why. " * 150
+    stored = db.get(ReviewSession, review_session.id)
+    assert stored is not None
+    stored.status = "validated"
+    db.commit()
+    reply = _save(client, review_session, list(_band2_rfs(_instrument(db))))
+    assert reply.status_code == 200, reply.text
+    db.expire_all()
+    assert stored.status == "validated"
+    saved = select(AuditEvent).where(AuditEvent.event_type == "instrument.response_fields_saved")
+    assert db.scalars(saved).first() is None
+
+
+def test_a_switch_into_custom_holds_what_an_old_instrument_has(
+    client: TestClient, db: Session
+) -> None:
+    from .test_handoff_update import _created as created_with
+
+    files = {"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": mock.settings_csv()}
+    _, transfer = created_with(client, db, files=files)
+    instrument = _instrument(db)
+    instrument.held_field_keys = None  # from before the list
+    db.commit()
+    typed = (
+        "field,value,data_type\r\n"
+        "instruments[1].name,Gate 1,string\r\n"
+        "instruments[1].linked_mode,custom,enum\r\n"
+    )
+    reply = _resend(client, transfer, _update_bundle(files=_with(typed)))
+    assert reply.status_code == 200, reply.text
+    assert _instrument(db).held_field_keys == ["score", "comment"]
+
+
+def test_a_blank_type_cell_leaves_the_type(client: TestClient, db: Session) -> None:
+    from .test_handoff_update import _created as created_with
+
+    settings = mock.settings_csv() + "instruments[1].linked_mode,custom,enum\r\n"
+    files = {"reviewers": REVIEWERS, "reviewees": REVIEWEES, "settings": settings}
+    _, transfer = created_with(client, db, files=files)
+    blank = (
+        "field,value,data_type\r\n"
+        "instruments[1].name,Gate 1,string\r\n"
+        "instruments[1].linked_mode,,enum\r\n"
+    )
+    reply = _resend(client, transfer, _update_bundle(files=_with(blank)))
+    assert reply.status_code == 200, reply.text
+    assert _instrument(db).linked_mode == "custom"
+
+
+def test_a_long_held_list_keeps_every_choice_after_a_save(client: TestClient, db: Session) -> None:
+    """Codex on #4220: the sync cuts a List's options at 255 characters
+    and builds the reviewer's choices from the cut; the whole list put
+    back, the choices are built again from it."""
+    review_session = _custom(client, db)
+    comment = next(f for f in _instrument(db).response_fields if f.field_key == "comment")
+    options = ",".join(f"Option {n:03}" for n in range(40))
+    assert len(options) > 255
+    comment._inline_data_type = "List"
+    comment._inline_response_type = "list"
+    comment._inline_list_csv = options
+    comment.validation = {"choices": options.split(",")}
+    db.commit()
+    score, comment_rf = _band2_rfs(_instrument(db))
+    reply = _save(client, review_session, [comment_rf, score])
+    assert reply.status_code == 200, reply.text
+    stored = next(f for f in _instrument(db).response_fields if f.field_key == "comment")
+    assert stored._inline_list_csv == options
+    assert stored.validation == {"choices": options.split(",")}

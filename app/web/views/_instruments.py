@@ -808,7 +808,7 @@ def _new_model_band2_state(
     # Segment 23G rung 3 — a custom linked instrument's held fields: the
     # application's definition, fixed on the row; none on any other.
     held: set[str] = (
-        set(instrument.held_field_keys or ())
+        linked_instruments.held_keys(instrument)
         if linked_instruments.is_custom(instrument.session, instrument)
         else set()
     )

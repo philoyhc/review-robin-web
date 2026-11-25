@@ -13,6 +13,8 @@ Source ranges in pre-refactor ``routes_operator.py``: 2512-2575,
 
 from __future__ import annotations
 
+import functools
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -1074,6 +1076,13 @@ async def instrument_consolidated_save(
                             state=band2_state,
                             actor=user,
                             acknowledged_drop=acknowledged_drop,
+                            after_sync=(
+                                functools.partial(
+                                    linked_instruments.restore_cut_texts, before=held_before
+                                )
+                                if held_before
+                                else None
+                            ),
                         )
                     except instruments_service.ResponsesPresentError as exc:
                         return _fail(
