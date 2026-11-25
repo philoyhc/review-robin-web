@@ -245,3 +245,20 @@ def test_a_scale_review_robin_would_refuse_is_never_sent(
     assert _said(page) == (
         f"Not sent (invalid_setup): field 1 ({field.label}) is a scale with no Step."
     )
+
+
+def test_set_up_and_its_link_are_in_place_and_inert(page: Page) -> None:
+    """Segment 23J rung 4 (scaffold): *Set up in Review Robin* before
+    *Send rosters*, and *Open in Review Robin ↗* on the facts, both inert
+    with their reason, the card's script leaving them so."""
+    page.goto(INTERVIEW)
+    card = _card(page)
+    acts = card.locator(".rr-progress .rr-acts").first.locator("[data-rr-act]")
+    assert acts.nth(0).inner_text() == "Set up in Review Robin"
+    assert acts.nth(1).inner_text() == "Send rosters"
+    set_up = card.locator('[data-rr-act="setup"]')
+    assert set_up.is_disabled() and "Not built yet" in (set_up.get_attribute("title") or "")
+    assert card.locator('[data-rr-act="send"]').is_enabled()  # the script still wires Send
+    link = card.locator("[data-rr-open]")
+    assert link.inner_text() == "Open in Review Robin ↗"
+    assert link.locator("a").count() == 0  # nothing to open yet

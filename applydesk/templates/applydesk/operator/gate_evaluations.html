@@ -43,6 +43,9 @@
     <dt>Last send</dt><dd data-rr-last>{% if state[0] not in ("Not ready", "Ready") %}Sent (sample){% else %}<span class="muted">—</span>{% endif %}</dd>
     <dt>Invited</dt><dd data-rr-invited><span class="muted">—</span></dd>
     <dt>Reminded</dt><dd data-rr-reminded><span class="muted">—</span></dd>
+    {# Segment 23J (ruling 80, scaffold): the session's Session Home in a
+       new tab, once the gate is set up in Review Robin. Inert until then. #}
+    <dt>In Review Robin</dt><dd data-rr-open><span class="muted rr-open-off" title="Once the gate is set up in Review Robin, this opens its session there, in a new tab">Open in Review Robin ↗</span></dd>
   </dl>
   </div>
   <h3>What is sent</h3>
@@ -61,9 +64,11 @@
      so they are not under 30 rows. Inside the card, which _rr_js.html reads. #}
   <div class="rr-progress">
   <h3>Progress</h3>
-  <p class="muted">Progress is read from Review Robin by <em>Pull results</em> once the session opens; once it closes, <em>Pull final results</em> brings the results back and the gate is done.</p>
+  <p class="muted"><em>Set up in Review Robin</em> makes the gate's session from its settings and response fields, so a custom gate's instrument can be built there early; <em>Send rosters</em> sends its evaluators, dossiers and pairs once the gate is ready. Progress is read from Review Robin by <em>Pull results</em> once the session opens; once it closes, <em>Pull final results</em> brings the results back and the gate is done.</p>
   <div class="btnrow rr-acts">
-    <button class="btn btn-primary" type="button" data-rr-act="send"{{ rr_wait }}>Send to Review Robin</button>
+    {# Segment 23J (scaffold): inert, its reason in its title; wired next. #}
+    <button class="btn btn-primary" type="button" data-rr-act="setup" disabled title="Not built yet: sets the gate's session up in Review Robin before its rosters">Set up in Review Robin</button>
+    <button class="btn btn-primary" type="button" data-rr-act="send"{{ rr_wait }}>Send rosters</button>
     <button class="btn btn-secondary" type="button" data-rr-act="resend"{{ rr_wait }}>Re-send</button>
     <button class="btn btn-secondary" type="button" data-rr-act="pull"{{ rr_wait }}>Pull results</button>
     <button class="btn btn-secondary" type="button" data-rr-act="invite" aria-expanded="false" aria-controls="rr-mail"{{ rr_wait }}>Invite evaluators</button>
