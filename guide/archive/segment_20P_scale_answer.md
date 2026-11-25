@@ -4,7 +4,7 @@
 
 Two items, each closing on its own:
 - **Item 1** builds the scale in Review Robin.
-- **Item 2** offers it on Apply Desk's gates, which hand their response fields to Review Robin.
+- **Item 2** offers it on Apply Desk's gates, which hand their response fields to Review Robin. *(Moved to Apply Desk's AD2S, 2026-11-25; see Item 2.)*
 
 The order is the author's (2026-11-23): next after AD2G Item 1, with the gate hooks built alongside. Item 2's handoff needs Item 1's Settings CSV attributes, so Item 1 lands first.
 
@@ -129,58 +129,8 @@ Closed 2026-11-24. **Built:** #4190 plan, #4191 scaffold, #4192 the scaffold as 
 - `spec/settings_inventory.md` — the two new per-field settings (Item 1).
 - `guide/todo_master.md` — the scale stub deleted (Item 1).
 
-## Item 2 — A scale on an Apply Desk gate
+## ~~Item 2 — A scale on an Apply Desk gate~~
 
-### Opportunity
-
-An Apply Desk gate runs in Review Robin, and its *Response fields* card offers only Integer, Decimal, List and String (`FIELD_TYPES`, `applydesk/stages.py`). Once Review Robin has the scale, a gate should be able to ask for one (`guide/rrw_reviewer_phone_and_scale.md` §3).
-
-### Decision
-
-- **The menu is Band 3's:** Integer, Integer (scale), Decimal, Decimal (scale), List, String.
-- **Storage:**
-  - `gate_field` keeps `type` as the number type and gains `scale` and `scale_labels`. That is a migration on Apply Desk's chain.
-  - Results derive, extract and hand off as now.
-- **The row:**
-  - A scale row takes Band 3's second line.
-  - A field that cannot be a scale yet is a problem on the Outline, and the gate cannot be sent with it.
-- **The handoff** writes Item 1's two attributes beside the field's other rows. `data_type` is unchanged.
-
-### Blast radius (measured)
-
-Taken 2026-11-23 at `de266a3bf`.
-
-| What | Count | Command |
-|---|---|---|
-| Modules using `gate_field` | 2 | `grep -rln "gate_field\|GateField" applydesk/*.py` |
-| Templates with the Response fields card | 1 | `grep -rln "FIELD_TYPES\|Response fields" applydesk/templates` |
-| Checks on a field's type | 27 | `grep -rn "type ==\|type in (\|ALLOWED\[" applydesk/*.py \| wc -l` |
-
-### PR ladder
-
-1. **Model and save:** the migration, `process_save`'s checks, and the Outline problem.
-2. **The card and the handoff:** the two Type entries and the second line; `handoff.py`'s attributes. This is the last build rung, so it carries the cumulative read.
-3. **Close:** `spec-writer` on `applydesk/spec/`, and the item deleted from `applydesk/guide/todo_master.md`.
-
-### Definition of done
-
-- A gate field set to *Integer (scale)* from 1 to 5 hands off `scale=snap`, and its Review Robin session renders the scale.
-- `### Doc impact` section present and current
-- `python3 tools/close_check.py 20P.2` exits 0; any warning adjudicated
-- `spec-writer` run against the doc-impact specs; flags adjudicated
-- `### Status` compacted to intended vs done; answered open questions collapsed
-- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
-
-### Open questions
-
-None.
-
-### Out of scope
-
-- The applicant Form's questions: they are answered in Apply Desk and have their own types.
-
-### Doc impact
-
-- `applydesk/spec/applications.md` — *Response fields* lists the two scale types and the second line (Item 2).
-- `applydesk/spec/architecture.md` — `gate_field`'s two columns (Item 2).
-- `applydesk/guide/todo_master.md` — the gate-scale item deleted (Item 2).
+Moved to Apply Desk as its own segment, **AD2S** (author, 2026-11-25): all of its code is
+`applydesk/`'s, and Review Robin's side closed with Item 1. The plan, with its Definition of done
+corrected to hand off `scale` = `true` with the bounds, is `applydesk/guide/segment_AD2S_gate_scale.md`.
