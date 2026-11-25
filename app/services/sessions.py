@@ -511,12 +511,15 @@ def delete_session(
     review_session: ReviewSession,
     user: User,
     correlation_id: str | None = None,
+    context: Mapping[str, str | int | bool] | None = None,
 ) -> None:
     """Delete a session and all its dependent rows.
 
     Audit events tied to this session are removed too. A new
     ``session.deleted`` event is then written with ``session_id=None``
-    so the deletion itself stays in the global audit log.
+    so the deletion itself stays in the global audit log, with
+    ``context`` when the caller names why (a linked application's
+    discard, segment 23J).
     """
     lifecycle.require_not_ready(db, review_session)
     owner_reports.before_delete(db, review_session)
@@ -536,6 +539,7 @@ def delete_session(
         actor_user_id=user.id,
         session=None,
         payload=audit.snapshot(captured),
+        context=context,
         correlation_id=correlation_id,
     )
     db.commit()
