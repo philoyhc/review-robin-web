@@ -1056,10 +1056,14 @@ async def instrument_consolidated_save(
                     band2_state = json_object(_json.loads(band2_snapshot))
                 except (TypeError, ValueError):
                     band2_state = None
+                custom = linked_instruments.is_custom(review_session, instrument)
+                held_before = linked_instruments.held_definitions(instrument) if custom else {}
                 if band2_state is not None and structure_fixed:
-                    # The response fields and the dossier link's display
-                    # are the linked application's.
-                    band2_state.pop("response_fields", None)
+                    # The dossier link's display is the linked application's;
+                    # so are the response fields, but for a custom gate's
+                    # (segment 23G), whose held fields are checked below.
+                    if not custom:
+                        band2_state.pop("response_fields", None)
                     linked_instruments.hold_profile(instrument, band2_state)
                 if band2_state is not None:
                     acknowledged_drop = bool(band2_state.get("acknowledged_drop", False))
@@ -1100,6 +1104,16 @@ async def instrument_consolidated_save(
                             },
                             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                         )
+                    if held_before:
+                        problems = linked_instruments.held_problems(
+                            db, review_session, instrument, held_before
+                        )
+                        if problems:
+                            db.rollback()
+                            return JSONResponse(
+                                {"ok": False, "errors": problems},
+                                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            )
 
             # Display-field reorder — staged into the hidden
             # ``display_field_order_snapshot`` form field by the client (drag

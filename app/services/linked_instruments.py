@@ -31,7 +31,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Instrument, InstrumentDisplayField, ReviewSession, User
 from app.db.models.instrument import LINKED_MODE_DEFAULT
 from app.json_shapes import json_list
-from app.services import audit
+from app.services import audit, linked_apps
 from app.services import instruments as instruments_service
 from app.services.instruments import record_band1_links_set
 from app.services.session_config_io import InstrumentSpec, ResponseFieldSpec
@@ -155,6 +155,86 @@ def default_display_fields(db: Session, instrument: Instrument, *, actor: User) 
         )
 
 
+#: A held field's definition, the linked application's (segment 23G): all
+#: but whether it is required, its place and its branch, which a custom
+#: instrument leaves to Review Robin.
+_HELD_ATTRS = (
+    "label",
+    "help_text",
+    "help_text_visible",
+    "visible",
+    "_inline_data_type",
+    "_inline_response_type",
+    "_inline_min",
+    "_inline_max",
+    "_inline_step",
+    "_inline_list_csv",
+    "scale",
+    "scale_labels",
+)
+
+
+def is_custom(review_session: ReviewSession, instrument: Instrument) -> bool:
+    """Whether a linked instrument is *Review Robin Session (custom)*
+    (segment 23G): the session holds the instrument lock and its gate sent
+    ``custom``. Its held fields stay the application's; the rest of Band 3
+    is Review Robin's."""
+    return (
+        linked_apps.locks(review_session, linked_apps.Lock.INSTRUMENT_STRUCTURE)
+        and instrument.linked_mode == "custom"
+    )
+
+
+def hold_keys(instrument: Instrument, keys: list[str]) -> None:
+    """Record the response-field keys the application sent, in its order:
+    the fields a custom instrument holds (segment 23G rung 3)."""
+    instrument.held_field_keys = [k for k in dict.fromkeys(keys) if k]
+
+
+def held_definitions(instrument: Instrument) -> dict[str, tuple[Any, ...]]:
+    """Each held field's definition by key, as stored. A blank Integer
+    Step reads 1, which the Band 3 sync fills in for it, so a Save that
+    changes nothing compares equal."""
+    keys = set(instrument.held_field_keys or ())
+    out: dict[str, tuple[Any, ...]] = {}
+    for field in instrument.response_fields:
+        if field.field_key not in keys:
+            continue
+        values = {attr: getattr(field, attr) for attr in _HELD_ATTRS}
+        if values["_inline_step"] is None and values["_inline_data_type"] == "Integer":
+            values["_inline_step"] = 1.0
+        out[field.field_key] = tuple(values[attr] for attr in _HELD_ATTRS)
+    return out
+
+
+def held_problems(
+    db: Session,
+    review_session: ReviewSession,
+    instrument: Instrument,
+    before: dict[str, tuple[Any, ...]],
+) -> list[str]:
+    """What a Band 3 save did to a held field that a custom instrument
+    refuses (segment 23G rung 3), read against ``before``
+    (:func:`held_definitions` taken ahead of the save): a held field
+    removed, or its definition changed. Its required flag, place and
+    branch are Review Robin's and never a problem."""
+    db.flush()
+    db.refresh(instrument, ["response_fields"])
+    after = held_definitions(instrument)
+    source = linked_apps.linked_name(review_session)
+    problems: list[str] = []
+    for key, definition in before.items():
+        label = definition[0] or key
+        if key not in after:
+            problems.append(f"'{label}' comes from {source}, so it can't be removed.")
+        elif after[key] != definition:
+            problems.append(
+                f"'{label}' comes from {source}: only whether it is required, "
+                "its place and its branch can change."
+            )
+    return problems
+
+
 def set_up(db: Session, review_session: ReviewSession, *, actor: User) -> Instrument:
     """The create's instrument set-up for a linked application that takes
     the instrument lock: its one instrument, the fixed rule, the display
@@ -162,6 +242,11 @@ def set_up(db: Session, review_session: ReviewSession, *, actor: User) -> Instru
     instrument = the_instrument(db, review_session)
     fix_rule(db, instrument, actor=actor)
     default_display_fields(db, instrument, actor=actor)
+    # The fields the application sent are the ones a custom gate holds.
+    hold_keys(
+        instrument,
+        [f.field_key for f in sorted(instrument.response_fields, key=lambda f: f.order)],
+    )
     # The short label follows the gate's name, as a re-send's does.
     if instrument.name:
         instruments_service.update_short_label(
@@ -234,12 +319,14 @@ def apply_owned(
             db, review_session, instrument, spec.linked_mode or LINKED_MODE_DEFAULT, actor=actor
         )
     if any(".response_fields[" in row for row in rows):
+        sent = [f for _, f in sorted(spec.response_fields.items())]
         instruments_service.replace_response_fields(
             db,
             instrument=instrument,
-            fields=[_field_entry(f) for _, f in sorted(spec.response_fields.items())],
+            fields=[_field_entry(f) for f in sent],
             actor=actor,
         )
+        hold_keys(instrument, [f.field_key or "" for f in sent])
 
 
 def set_mode(

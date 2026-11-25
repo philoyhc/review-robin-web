@@ -1680,6 +1680,11 @@
          with bold comma-joined tag values on top and up to
          GROUP_MEMBER_NAME_LIMIT (=10) member names below. #}
       {% set _band2 = new_model_band2_state.get(instrument.id, {"fields": [], "sample_names": [], "sample_extra_count": 0, "identity_width_px": none}) %}
+      {# Segment 23G rung 3 — a linked instrument's response fields are
+         fixed whole, but for a custom gate's: then Band 3 is Review
+         Robin's, each held row's definition the application's. #}
+      {% set _rf_fixed = linked and linked.has("instrument_structure") and instrument.linked_mode != 'custom' %}
+      {% set _rf_custom = linked and linked.has("instrument_structure") and instrument.linked_mode == 'custom' %}
       {# Mirror the saved unit-of-review onto Band 2's wrapper so
          the preview-builder JS can read it in both edit and view
          modes. The Link 3 hidden ``link3_mode`` input only renders
@@ -1703,7 +1708,7 @@
            data-new-model-band2-saved-boundary-fields="{{ _band2.saved_reviewee_boundary_fields }}"
            data-new-model-band2-sample-member-ids="{{ _band2.sample_group_member_ids | join(',') }}"
            data-new-model-band2-edit-mode="{{ 1 if is_editing else 0 }}"
-           {% if linked and linked.has("instrument_structure") %}data-linked-structure{% endif %}
+           {% if _rf_fixed %}data-linked-structure{% endif %}
            data-new-model-band2-sort-spec='{{ _band2.sort_spec | tojson }}'>
         <div style="display: flex; align-items: center; gap: 12px;
                     margin: 0 0 12px 0;">
@@ -2540,6 +2545,7 @@
                 key: row.getAttribute('data-row-key'),
                 label: row.getAttribute('data-label'),
                 helpText: row.getAttribute('data-help-text') || '',
+                held: row.getAttribute('data-new-model-rf-held') === 'true',
               });
             });
             return out;
@@ -3485,10 +3491,12 @@
               // Locked, a row with no text is skipped, as the reviewer
               // surface skips it; unlocked it stays, to be typed into.
               if (!unlocked && !helpText) { return; }
+              // A held field's help is its application's (23G rung 3).
+              if (p.held && !helpText) { return; }
               html += '<div class="rs-help-row" '
                 + 'data-help-card-key="' + keyAttr + '">';
               html += '<strong>' + esc(p.label || '') + '</strong>';
-              if (unlocked) {
+              if (unlocked && !p.held) {
                 html += '<textarea data-help-card-textarea data-fit-box '
                   + 'data-help-card-key="' + keyAttr + '" '
                   + 'aria-label="Help text for ' + esc(p.label || '') + '" '
@@ -4901,11 +4909,12 @@
              script relabels it as the name box changes
              (``newModelRfRecomputeActionStates``); a disabled box makes
              it a fixed switch held off (base.html). #}
-          {% macro rf_chip(name, selected) %}<label class="pill pill-count tag-chip rf-name-chip"
+          {% macro rf_chip(name, selected, held=false, source='') %}<label class="pill pill-count tag-chip rf-name-chip"
                  title="{{ name }}"><input type="checkbox" class="visually-hidden" data-new-model-rf-active
                  {% if selected %}checked{% endif %}
+                 {% if held %}disabled{% endif %}
                  aria-label="Show {{ name }}"
-                 title="Show this field in the preview and to reviewers"
+                 title="{% if held %}From {{ source }}: it shows as sent{% else %}Show this field in the preview and to reviewers{% endif %}"
                  onchange="newModelRfToggleActive(this)"><span data-new-model-rf-chip-label>{{ name }}</span></label>{% endmacro %}
           {% macro rf_condition_row(condition) %}
                 {% set _value_input %}
@@ -4980,13 +4989,15 @@
           {% set _rfs = _band2.response_fields %}
           {% set _next_idx = (_rfs | length) %}
           <div class="table-scroll">
-          {% if linked and linked.has("instrument_structure") %}
+          {% if _rf_fixed %}
           <p class="muted linked-note" data-linked-fields>The response fields come from {{ linked.name }}.</p>
+          {% elif _rf_custom %}
+          <p class="muted linked-note" data-linked-fields>The fields marked with a lock come from {{ linked.name }}: whether each is required, its place and its branch are yours; add your own fields beside them.</p>
           {% endif %}
           <table class="rf-table" data-new-model-rf-rows
                data-new-model-rf-row-counter="{{ _next_idx + 1 }}"
                data-new-model-rf-branch-ops='{{ _band2.branch_ops | tojson }}'
-               {% if linked and linked.has("instrument_structure") %}data-linked-fixed inert{% else %}data-lock-region{% if not is_editing %} inert aria-hidden="true"{% endif %}{% endif %}>
+               {% if _rf_fixed %}data-linked-fixed inert{% else %}data-lock-region{% if not is_editing %} inert aria-hidden="true"{% endif %}{% endif %}>
             {# 19T Item 10 — one <tbody> per group: a field on its own, or
                a parent with its condition row and the fields it governs
                (``views._response_field_groups``), a field inside it
@@ -5040,7 +5051,8 @@
                    data-width="{{ rf.width_px or '' }}"
                    data-help-text="{{ rf.help_text or '' }}"
                    data-response-count="{{ rf.response_count or 0 }}"
-                   {% if rf.has_responses %}data-has-responses="true" data-new-model-rf-shape-locked="true"{% endif %}>
+                   {% if rf.has_responses %}data-has-responses="true" data-new-model-rf-shape-locked="true"{% endif %}
+                   {% if rf.held %}data-new-model-rf-held="true" data-rf-held-source="{{ linked.name }}"{% endif %}>
                 {# 19T Item 14 — six leading columns at every level. The
                    field's name chip comes first and never moves
                    (ux_refinements Item 1: an on/off chip around the Active
@@ -5050,7 +5062,7 @@
                    limit: its slot stays empty), a level-1 row's ↰ (rung
                    5), join / detach, and empty slots to fill the six. A
                    parent's bar runs down from its + column. #}
-                <td class="col-shrink rf-active-cell">{{ rf_chip(rf.name, rf.selected) }}</td>
+                <td class="col-shrink rf-active-cell">{{ rf_chip(rf.name, rf.selected, rf.held, linked.name if rf.held else '') }}</td>
                 {% for _ in range(_level) %}<td class="col-shrink rf-branch-bar"></td>{% endfor %}
                 <td class="col-shrink{% if rf.is_parent %} rf-branch-bar-start{% endif %}">
                 <button type="button" class="btn secondary rf-glyph"
@@ -5099,6 +5111,7 @@
                        placeholder="Response field"
                        onkeydown="newModelRfNameKey(this, event)"
                        value="{{ rf.name }}"
+                       {% if rf.held %}readonly aria-readonly="true" title="From {{ linked.name }}: its name is the application's"{% endif %}
                        oninput="newModelRfFieldChanged(this)"
                        style="width: 100%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                 </td>
@@ -5109,9 +5122,11 @@
                 {% set _numeric = rf.data_type in ('integer', 'decimal') %}
                 {% set _only_scale = rf.has_responses and _numeric %}
                 {% set _off = 'disabled' if rf.has_responses else '' %}
+                {# 23G rung 3 — a held field's type and bounds are the
+                   application's, as a field with responses keeps its own. #}
                 <td class="rf-type"><select data-new-model-rf-data-type
                         onchange="newModelRfTypeChanged(this)"
-                        {% if rf.has_responses and not _numeric %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% elif _only_scale %}title="This field has saved responses: it can switch to or from a scale, but not to another type."{% endif %}
+                        {% if rf.held %}disabled aria-disabled="true" title="From {{ linked.name }}: its type is the application's"{% elif rf.has_responses and not _numeric %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% elif _only_scale %}title="This field has saved responses: it can switch to or from a scale, but not to another type."{% endif %}
                         style="width: 100%; min-width: 0; padding: 4px 8px; box-sizing: border-box;">
                   <option value="string" {% if rf.data_type == 'string' %}selected{% endif %} {{ _off }}>String</option>
                   {# Segment 20P — each scale type keeps its number type's
@@ -5139,28 +5154,28 @@
                          placeholder="Min"
                          value="{{ rf.min }}"
                          oninput="newModelRfFieldChanged(this)"
-                         {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
+                         {% if rf.held %}disabled aria-disabled="true" title="From {{ linked.name }}: its bounds are the application's"{% elif rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                          style="padding: 4px 8px; box-sizing: border-box;{% if rf.data_type == 'list' %} display: none;{% endif %}">
                   <input type="text"
                          data-new-model-rf-bound="max"
                          placeholder="Max"
                          value="{{ rf.max }}"
                          oninput="newModelRfFieldChanged(this)"
-                         {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
+                         {% if rf.held %}disabled aria-disabled="true" title="From {{ linked.name }}: its bounds are the application's"{% elif rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                          style="padding: 4px 8px; box-sizing: border-box;{% if rf.data_type == 'list' %} display: none;{% endif %}">
                   <input type="text"
                          data-new-model-rf-bound="step"
                          placeholder="Step"
                          value="{{ rf.step }}"
                          oninput="newModelRfFieldChanged(this)"
-                         {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
+                         {% if rf.held %}disabled aria-disabled="true" title="From {{ linked.name }}: its bounds are the application's"{% elif rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                          style="padding: 4px 8px; box-sizing: border-box;{% if rf.data_type not in ('integer', 'decimal') %} display: none;{% endif %}">
                   <input type="text"
                          data-new-model-rf-bound="list"
                          placeholder="List (comma-separated)"
                          value="{{ rf.list_options }}"
                          oninput="newModelRfFieldChanged(this)"
-                         {% if rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
+                         {% if rf.held %}disabled aria-disabled="true" title="From {{ linked.name }}: its bounds are the application's"{% elif rf.has_responses %}disabled aria-disabled="true" title="Cannot change — this field has saved responses. Clear them first."{% endif %}
                          style="grid-column: 1 / -1; min-width: 0; padding: 4px 8px; box-sizing: border-box;{% if rf.data_type != 'list' %} display: none;{% endif %}">
                   {# Segment 20P — a scale's second line: its three labels
                      under Min, Max and Step, then what the reviewer gets. #}
@@ -5172,6 +5187,7 @@
                     <span class="rf-scale-caption" aria-hidden="true">Labels</span>
                     {% for part, ph, name in (('start', 'Start', 'Start label'), ('middle', 'Middle', 'Middle label'), ('end', 'End', 'End label')) %}
                     <input type="text" data-new-model-rf-scale-label="{{ part }}" placeholder="{{ ph }}" maxlength="60" aria-label="{{ name }}"
+                           {% if rf.held %}disabled aria-disabled="true"{% endif %}
                            value="{{ _labels[loop.index0] }}" oninput="newModelRfFieldChanged(this)">
                     {% endfor %}
                     <span class="rf-scale-summary muted" data-new-model-rf-scale-summary></span>
@@ -5194,6 +5210,7 @@
                         class="btn{% if not rf.help_text_visible %} secondary{% endif %}"
                         data-new-model-rf-help-visible
                         data-help-visible="{{ 'true' if rf.help_text_visible else 'false' }}"
+                        {% if rf.held %}disabled aria-disabled="true"{% endif %}
                         onclick="newModelRfHelpVisibleChanged(this)"
                         aria-pressed="{{ 'true' if rf.help_text_visible else 'false' }}"
                         title="Show a help-text card for this field above the preview table"
@@ -5210,9 +5227,9 @@
                         onclick="newModelRfMove(this)">▼</button></td>
                 <td class="col-shrink">                <button type="button" class="btn destructive"
                         data-new-model-rf-delete
-                        {% if rf.has_responses or rf.is_parent or rf.branch_locked %}disabled aria-disabled="true"{% endif %}
+                        {% if rf.held or rf.has_responses or rf.is_parent or rf.branch_locked %}disabled aria-disabled="true"{% endif %}
                         {% if not rf.has_responses %}onclick="newModelRfDeleteRow(this)"{% endif %}
-                        title="{% if rf.has_responses %}Cannot delete — this field has saved responses{% elif rf.is_parent %}Delete its branch first{% elif rf.branch_locked %}Its branch has saved responses, so its fields can't change{% else %}Delete this row{% endif %}">X</button></td>
+                        title="{% if rf.held %}From {{ linked.name }}: it stays{% elif rf.has_responses %}Cannot delete — this field has saved responses{% elif rf.is_parent %}Delete its branch first{% elif rf.branch_locked %}Its branch has saved responses, so its fields can't change{% else %}Delete this row{% endif %}">X</button></td>
                 </tr>
                 {% if rf.condition %}
                 {# A parent's condition row, right after it at the next
@@ -6388,7 +6405,8 @@
           // Its Active box was off while its parent was hidden; as a field
           // of its own it can be shown again (Codex on #2646).
           var active = row.querySelector('[data-new-model-rf-active]');
-          if (active) {
+          // A held field's box stays fixed (23G rung 3).
+          if (active && row.getAttribute('data-new-model-rf-held') !== 'true') {
             active.disabled = false;
             active.setAttribute('title', 'Show this field in the preview and to reviewers');
           }
@@ -6680,6 +6698,21 @@
             activeBox.setAttribute('title', parentHidden
               ? 'Its parent field is hidden, so this field is too'
               : 'Show this field in the preview and to reviewers');
+          }
+          // Segment 23G rung 3 — a held field (a custom gate's, from its
+          // application) keeps its definition: it shows as sent, its help
+          // stays as sent, and it can't be deleted. Its R, place and branch
+          // are Review Robin's, so nothing else here changes.
+          if (row.getAttribute('data-new-model-rf-held') === 'true') {
+            var heldFrom = 'From ' + (row.getAttribute('data-rf-held-source') || 'its application');
+            [activeBox, helpBtn, deleteBtn].forEach(function (btn) {
+              if (!btn) { return; }
+              btn.disabled = true;
+              btn.setAttribute('aria-disabled', 'true');
+            });
+            if (activeBox) { activeBox.setAttribute('title', heldFrom + ': it shows as sent'); }
+            if (helpBtn) { helpBtn.setAttribute('title', heldFrom + ': its help shows as sent'); }
+            if (deleteBtn) { deleteBtn.setAttribute('title', heldFrom + ': it stays'); }
           }
           // ux_refinements Item 1 — the name chip goes by the row's name:
           // the typed name, else the default the name box shows muted.
