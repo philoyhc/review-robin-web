@@ -262,3 +262,13 @@ def test_set_up_and_its_link_are_in_place_and_inert(page: Page) -> None:
     link = card.locator("[data-rr-open]")
     assert link.inner_text() == "Open in Review Robin ↗"
     assert link.locator("a").count() == 0  # nothing to open yet
+
+
+def test_set_up_is_secondary_beside_send_rosters(page: Page) -> None:
+    """Codex on #4227: one Primary per region (`spec/ui_elements.md` §6),
+    *Send rosters*; *Set up in Review Robin* is Secondary."""
+    page.goto(INTERVIEW)
+    card = _card(page)
+    assert "btn-secondary" in (card.locator('[data-rr-act="setup"]').get_attribute("class") or "")
+    primaries = card.locator(".rr-progress .rr-acts").first.locator(".btn-primary")
+    assert primaries.count() == 1 and primaries.first.get_attribute("data-rr-act") == "send"
