@@ -743,6 +743,22 @@ the rulings it relied on but does not move them.
     - Built in its own segment (AD2V, `applydesk/guide/ad2_series.md`),
       once dossiers are stored; AD2C stores the gates, panels' sources
       and outcomes its views name, by key.
+80. **A gate's Review Robin session is set up before its rosters**
+    (author, 2026-11-25): the gate's page has two steps.
+    - *Set up in Review Robin* creates the linked draft from the gate's
+      settings and instrument, with no rosters. From then on the Review
+      Robin card shows *Open in Review Robin ↗*, a new tab at Review
+      Robin's `session_home_url`. A custom gate's instrument is built
+      there, at design time.
+    - *Send rosters* sends the reviewers, reviewees and pairs once the
+      gate is *Ready*.
+
+    The step is manual, offered once the exercise is published, and both
+    gate types take it. A gate removed after set-up has its empty draft
+    discarded in Review Robin. Its own segment:
+    `guide/segment_23J_linked_setup_first.md`. Apply Desk stores
+    `session_home_url` with the gate's transfer record (AD2F) and makes
+    the real calls with AD6.
 
 ## What a linked Review Robin gate needs (2026-11-16)
 
@@ -843,7 +859,7 @@ Segments in order; each gets a plan in this folder when it starts.
 | AD3 — Exercises | The exercise and its public ID, configuration, draft → published → closed → archived, Validate, the form closing and the next stage opening (ruling 15) | G2 (published changes), G3 (stages) |
 | AD4 — Applicant forms and portal | The applicant form, versioned, each section carrying its visibility grants (ruling 68); drafts, submit, withdraw; open or invitation-only exercises | G1 narrowed to applicant forms (shared package or fork); G4 (allowance) |
 | AD5 — Panels and dossiers | The rosters on Panels (rulings 19, 22), each gate's evaluators from its ranked sources (ruling 27); dossiers made from the form or by *Create dossiers* (rulings 25, 26), the dossier with its access check, audit and blind redaction | — |
-| AD6 — Assessment in Review Robin | Rosters from dossiers (rulings 25, 26), the pairs as `relationships.csv` (ruling 27, 23F), `ProfileLink` to the dossier, the blind alias key (ruling 10), results back into ApplyDesk | The open items below |
+| AD6 — Assessment in Review Robin | The session set up first, its `session_home_url` kept for *Open in Review Robin ↗* (ruling 80); rosters from dossiers (rulings 25, 26), the pairs as `relationships.csv` (ruling 27, 23F), `ProfileLink` to the dossier, the blind alias key (ruling 10), results back into ApplyDesk | The open items below |
 | AD7 — Timeline and outcomes | Milestones, announcements, outcome import, embargo on read, release, correction | G5 (sender), G7 (publication) |
 | AD8 — Dashboard | Counts by state; the export bundle is Extract data, built in AD1J (ruling 14) | — |
 | Later | Blob storage, then uploads and referees | G8, with IT |
