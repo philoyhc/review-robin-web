@@ -296,3 +296,13 @@ def test_an_opened_gate_links_to_its_session_and_sets_nothing_up(page: Page) -> 
     card = _card(page)
     assert card.locator('[data-rr-act="setup"]').is_disabled()
     assert card.locator("[data-rr-open] a").count() == 1
+
+
+def test_set_up_is_secondary_beside_send_rosters(page: Page) -> None:
+    """Codex on #4227: one Primary per region (`spec/ui_elements.md` §6),
+    *Send rosters*; *Set up in Review Robin* is Secondary."""
+    page.goto(INTERVIEW)
+    card = _card(page)
+    assert "btn-secondary" in (card.locator('[data-rr-act="setup"]').get_attribute("class") or "")
+    primaries = card.locator(".rr-progress .rr-acts").first.locator(".btn-primary")
+    assert primaries.count() == 1 and primaries.first.get_attribute("data-rr-act") == "send"
