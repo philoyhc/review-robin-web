@@ -18,7 +18,7 @@ from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
-from playwright.sync_api import Error, Locator, Page, Route, sync_playwright
+from playwright.sync_api import Dialog, Error, Locator, Page, Route, sync_playwright
 
 from applydesk import sample_data, stages
 from applydesk.tests import _fellowship
@@ -2003,3 +2003,30 @@ def test_the_type_menu_shows_its_whole_choice(page: Page) -> None:
     name = gate.locator('[data-pc="item-name"]').bounding_box()
     box = menu.bounding_box()
     assert name and box and name["width"] > box["width"]
+
+
+def test_removing_a_set_up_gate_asks_first(page: Page) -> None:
+    """Segment 23J (ruling 80): a gate set up in Review Robin, its rosters
+    not sent, has an empty draft there, which removing it discards: the
+    page asks first, and a No keeps the gate."""
+    gate = _draft_gate(page)
+    key = gate.get_attribute("data-key")
+    assert key
+    page.evaluate(
+        """key => {
+          const ex = document.querySelector('[data-process]').dataset.ex;
+          sessionStorage.setItem('applydesk-rr-setup:' + ex,
+            JSON.stringify({[key]: {at: 'x', transfer: 't', url: 'u'}}));
+        }""",
+        key,
+    )
+    asked: list[str] = []
+
+    def answer(dialog: Dialog) -> None:
+        asked.append(dialog.message)
+        dialog.dismiss()
+
+    page.on("dialog", answer)
+    gate.locator('[data-pc-act="remove-gate"]').click()
+    assert asked and "set up in Review Robin" in asked[0]
+    assert page.locator(f'.pc-item[data-item="gate"][data-key="{key}"]').count() == 1

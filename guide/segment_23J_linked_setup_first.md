@@ -93,6 +93,13 @@ Taken 2026-11-25 at `d23dffcd2`.
 - The facts gain *In Review Robin*, an inert *Open in Review Robin ↗*.
 - The Progress line says what each step does.
 
+**Rung 5 (2026-11-25):** the steps are simulated in the tab, as sends are (`_rr_js.html`).
+- **Set up** checks the session's name and code (and the other gates' codes, set-up ones included) and any field Review Robin would refuse; its pairs and readiness wait for the rosters. It is kept under `applydesk-rr-setup:<exercise>` with its transfer and link.
+- **The link line** reads *Linked; set up, its rosters not yet sent*.
+- **Open in Review Robin ↗** is live, in a new tab, once a gate is set up, sent or opened. The sample's stand-in for `session_home_url` is Review Robin's session list (`_rr_home`).
+- **Send rosters** after a set-up sends to the set-up's transfer.
+- **Process** asks before removing a gate set up but not sent.
+
 ## PR ladder
 
 1. **Plan**: this file, its queue entry and README row; Apply Desk's ruling 80 in `applydesk/guide/todo_master.md`, with AD6's row naming the stored `session_home_url`. Prose only.

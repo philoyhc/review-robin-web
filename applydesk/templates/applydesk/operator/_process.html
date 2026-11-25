@@ -11,7 +11,7 @@
 {% set issues = stage_problems(plan.stages) %}
 <script type="application/json" id="pc-pools">{{ people | tojson }}</script>
 <script type="application/json" id="pc-form-lists">{{ form_lists | tojson }}</script>
-<div class="fb-split" data-process data-cand-url="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/candidates') }}" data-unsaved-root data-now="{{ now_value }}" data-pc-problems="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process/problems') }}">
+<div class="fb-split" data-process data-ex="{{ exercise.public_id }}" data-cand-url="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/candidates') }}" data-unsaved-root data-now="{{ now_value }}" data-pc-problems="{{ url('/operator/exercises/' ~ exercise.public_id ~ '/process/problems') }}">
   <div class="fb-main">
     <p class="muted pc-intro">The exercise's timeline, stage by stage. A stage holds the application form, or gates (which may run together), and may hold an outcome: a result that updates the timeline. Every rule is set here; Dossiers applies them.</p>
     <div class="fb-cards" id="pc-cards">
@@ -66,6 +66,14 @@
 // names what breaks ruling 15 and any rule or weights gone astray.
 (function () {
   var root = document.querySelector("[data-process]");
+  // The gate page's set-ups and sends in this tab (_rr_js.html): one set up
+  // and not yet sent has an empty draft in Review Robin (segment 23J).
+  function setUpOnly(key) {
+    function kept(name) {
+      try { var all = JSON.parse(sessionStorage.getItem(name + root.dataset.ex) || "null"); return all && typeof all === "object" ? all : {}; } catch (e) { return {}; }
+    }
+    return !!key && !!kept("applydesk-rr-setup:")[key] && !kept("applydesk-rr:")[key];
+  }
   if (!root) return;
   var list = root.querySelector("#pc-cards");
   var outline = root.querySelector("[data-pc-outline]");
@@ -1290,6 +1298,10 @@
         p.textContent = open ? "Done" : (ruleOf(item) ? "Edit the rule" : "Add a rule");
         if (open) drawEditor(item);
       } else if (p.dataset.pcAct === "remove-gate" || p.dataset.pcAct === "remove-outcome") {
+        // A gate set up in Review Robin, its rosters not sent (segment 23J,
+        // ruling 80), has an empty draft there: removing it discards that.
+        if (p.dataset.pcAct === "remove-gate" && setUpOnly(p.closest(".pc-item").dataset.key)
+            && !window.confirm("This gate is set up in Review Robin. Removing it discards its empty draft there once Process is saved.")) return;
         p.closest(".pc-item").remove();
         changed();
         card.querySelector('[data-pc-act="' + p.dataset.pcAct.slice(7) + '"]').focus();

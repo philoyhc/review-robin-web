@@ -2,7 +2,9 @@
    tab (ruling 55). A send is kept in sessionStorage under
    ``applydesk-rr:<exercise>``, by gate, with the session's name and code
    (ruling 56), when it was sent, its transfer ID and the bundle's digest;
-   a pull, an invitation and a reminder under ``applydesk-rr-log:<exercise>``.
+   a pull, an invitation and a reminder under ``applydesk-rr-log:<exercise>``;
+   a set-up (segment 23J, ruling 80) under ``applydesk-rr-setup:<exercise>``,
+   with its transfer ID and the session's Session Home.
    Nothing reaches Review Robin until AD2 and AD6, and no email is sent
    until AD7. Refusals carry the codes Review Robin answers with
    (`spec/handoffs.md`). #}
@@ -27,6 +29,9 @@
   var LOG = "applydesk-rr-log:" + DATA.ex;
   var pullBtn = card.querySelector('[data-rr-act="pull"]'), inviteBtn = card.querySelector('[data-rr-act="invite"]'), remindBtn = card.querySelector('[data-rr-act="remind"]');
   var mail = card.querySelector("[data-rr-mail]"), mailKind = "";
+  var SETUP = "applydesk-rr-setup:" + DATA.ex;
+  var setupBtn = card.querySelector('[data-rr-act="setup"]'), openAt = card.querySelector("[data-rr-open]");
+  var openOff = openAt.innerHTML;
 
   function load() {
     var all;
@@ -43,6 +48,17 @@
   function record() {
     var r = load()[DATA.key];
     return r && typeof r.name === "string" && typeof r.code === "string" && typeof r.digest === "string" ? r : null;
+  }
+  // A set-up (segment 23J): the session made before its rosters, kept by
+  // gate with its transfer, which the roster send then re-sends to.
+  function setups() {
+    var all;
+    try { all = JSON.parse(sessionStorage.getItem(SETUP) || "null"); } catch (e) { all = null; }
+    return all && typeof all === "object" && !Array.isArray(all) ? all : {};
+  }
+  function setUp() {
+    var s = setups()[DATA.key];
+    return s && typeof s.at === "string" && typeof s.transfer === "string" && typeof s.url === "string" ? s : null;
   }
   var rec = record();
   if (load()[DATA.key] && !rec) { var all0 = load(); delete all0[DATA.key]; save(all0); }
@@ -113,6 +129,25 @@
       sendBtn.removeAttribute("title");
       resendBtn.disabled = true;
       resendBtn.title = "Not sent yet";
+      if (setUp()) {
+        card.querySelector("[data-rr-link]").textContent = "Linked; set up, its rosters not yet sent";
+        card.querySelector("[data-rr-last]").textContent = "Set up " + at(setUp().at) + " in this tab";
+      }
+    }
+    // Set up once, before anything is sent (segment 23J); a sent gate's
+    // session is already there.
+    var made = setUp() || rec || DATA.opened || DATA.state === "Sent";
+    off(setupBtn, fixed || (made ? "Its session is in Review Robin" : ""));
+    if (made) {
+      var a = document.createElement("a");
+      a.href = (setUp() && setUp().url) || DATA.rrHome;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = "Open in Review Robin ↗";
+      openAt.textContent = "";
+      openAt.appendChild(a);
+    } else {
+      openAt.innerHTML = openOff;
     }
     card.querySelector("[data-rr-changed]").hidden = !changed();
     drawLater();
@@ -198,17 +233,26 @@
     if (was && !was.disabled) was.focus();
   }
 
-  // Why this send would be refused, or "" (`spec/handoffs.md` §5).
-  function refusal(first) {
+  // The session's name and code as Review Robin would refuse them, or ""
+  // (`spec/handoffs.md` §5): a send's and a set-up's alike.
+  function named() {
     var name = nameIn.value.trim(), code = codeIn.value.trim();
     if (!name || name.length > 255) return "Not sent (invalid_package): the session name must be 1 to 255 characters.";
     if (!code || code.length > 64) return "Not sent (invalid_package): the session code must be 1 to 64 characters.";
-    var kept = load();
+    var kept = load(), made = setups();
     var clash = DATA.others.filter(function (o) {
-      var theirs = kept[o[0]] && typeof kept[o[0]].code === "string" ? kept[o[0]].code : o[2];
+      // A gate sent, or set up (segment 23J), in this tab holds its code.
+      var theirs = kept[o[0]] && typeof kept[o[0]].code === "string" ? kept[o[0]].code
+        : made[o[0]] && typeof made[o[0]].code === "string" ? made[o[0]].code : o[2];
       return theirs.toLowerCase() === code.toLowerCase();
     })[0];
     if (clash) return "Not sent (session_code_conflict): " + code + " is " + clash[1] + "'s session code. Choose another.";
+    return "";
+  }
+  // Why this send would be refused, or "".
+  function refusal(first) {
+    var no = named();
+    if (no) return no;
     var ev = window.ApplyDeskEv;
     if (ev && ev.edited()) return "Not sent (invalid_setup): this tab's changes to the pairs are not saved; discard them to send the pairs as saved.";
     if (DATA.fieldProblems.length) return "Not sent (invalid_setup): " + DATA.fieldProblems[0] + ".";
@@ -223,6 +267,12 @@
       return (c === "x" ? r : (r & 3 | 8)).toString(16);
     });
   }
+  // Why a set-up would be refused, or "": the name and code, and a field
+  // Review Robin would refuse; its pairs and readiness wait for the rosters.
+  function setUpRefusal() {
+    var no = named() || (DATA.fieldProblems.length ? "Not sent (invalid_setup): " + DATA.fieldProblems[0] + "." : "");
+    return no.replace("Not sent", "Not set up");
+  }
   function keep(transfer) {
     var all = load();
     rec = { name: nameIn.value.trim(), code: codeIn.value.trim(), digest: DATA.digest, at: new Date().toISOString(), transfer: transfer };
@@ -233,12 +283,23 @@
   card.addEventListener("click", function (e) {
     var b = e.target.closest("[data-rr-act]");
     if (!b || b.disabled) return;
-    if (b.dataset.rrAct === "send") {
+    if (b.dataset.rrAct === "setup") {
+      var nope = setUpRefusal();
+      if (nope) { said.textContent = nope; return; }
+      var all = setups();
+      all[DATA.key] = { at: new Date().toISOString(), transfer: uuid(), url: DATA.rrHome, name: nameIn.value.trim(), code: codeIn.value.trim() };
+      try { sessionStorage.setItem(SETUP, JSON.stringify(all)); } catch (e2) { /* kept for the page only */ }
+      draw();
+      said.textContent = "Set up (simulated): Review Robin would now hold an empty draft, " + codeIn.value.trim() + ", with the gate's settings and response fields; Open in Review Robin ↗ opens it. Its rosters follow once the gate is ready.";
+    } else if (b.dataset.rrAct === "send") {
       var no = refusal(true);
       if (no) { said.textContent = no; return; }
-      keep(uuid());
+      var first = setUp();
+      keep(first ? first.transfer : uuid());
       draw();
-      said.textContent = "Sent (simulated): Review Robin would now hold a draft session, " + rec.code + ", its Session Home opening in a new tab.";
+      said.textContent = first
+        ? "Rosters sent (simulated): the draft " + rec.code + " now holds its evaluators, dossiers and pairs."
+        : "Sent (simulated): Review Robin would now hold a draft session, " + rec.code + ", its Session Home opening in a new tab.";
     } else if (b.dataset.rrAct === "resend") {
       var why = refusal(false);
       if (why) { said.textContent = why.replace("Not sent", "Not re-sent"); return; }

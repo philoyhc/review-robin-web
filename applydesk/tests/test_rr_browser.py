@@ -247,18 +247,52 @@ def test_a_scale_review_robin_would_refuse_is_never_sent(
     )
 
 
-def test_set_up_and_its_link_are_in_place_and_inert(page: Page) -> None:
-    """Segment 23J rung 4 (scaffold): *Set up in Review Robin* before
-    *Send rosters*, and *Open in Review Robin ↗* on the facts, both inert
-    with their reason, the card's script leaving them so."""
+def test_set_up_then_send_rosters_and_the_link_opens(page: Page) -> None:
+    """Segment 23J (ruling 80): *Set up in Review Robin* before the gate is
+    ready makes its session, *Open in Review Robin ↗* then opens it in a
+    new tab, and *Send rosters* sends to the same transfer."""
+    page.on("dialog", lambda d: d.accept())
     page.goto(INTERVIEW)
     card = _card(page)
     acts = card.locator(".rr-progress .rr-acts").first.locator("[data-rr-act]")
     assert acts.nth(0).inner_text() == "Set up in Review Robin"
     assert acts.nth(1).inner_text() == "Send rosters"
     set_up = card.locator('[data-rr-act="setup"]')
-    assert set_up.is_disabled() and "Not built yet" in (set_up.get_attribute("title") or "")
-    assert card.locator('[data-rr-act="send"]').is_enabled()  # the script still wires Send
-    link = card.locator("[data-rr-open]")
-    assert link.inner_text() == "Open in Review Robin ↗"
-    assert link.locator("a").count() == 0  # nothing to open yet
+    assert set_up.is_enabled()
+    assert card.locator("[data-rr-open] a").count() == 0  # nothing to open yet
+    set_up.click()
+    assert _said(page).startswith("Set up (simulated): Review Robin would now hold an empty draft")
+    assert card.locator("[data-rr-link]").inner_text() == "Linked; set up, its rosters not yet sent"
+    assert card.locator("[data-rr-last]").inner_text().startswith("Set up ")
+    link = card.locator("[data-rr-open] a")
+    assert link.get_attribute("target") == "_blank" and link.get_attribute("rel") == "noopener"
+    assert (link.get_attribute("href") or "").endswith("/reviewrobin/operator/sessions")
+    assert set_up.is_disabled()
+    page.reload()  # kept in the tab
+    card = _card(page)
+    assert card.locator('[data-rr-act="setup"]').is_disabled()
+    assert card.locator("[data-rr-open] a").count() == 1
+    _approve_all(page)
+    card.locator('[data-rr-act="send"]').click()
+    assert _said(page).startswith("Rosters sent (simulated): the draft")
+    kept = page.evaluate(
+        "() => [JSON.parse(sessionStorage.getItem('applydesk-rr-setup:" + EX + "')).g3.transfer,"
+        " JSON.parse(sessionStorage.getItem('applydesk-rr:" + EX + "')).g3.transfer]"
+    )
+    assert kept[0] == kept[1]  # the rosters go to the set-up's transfer
+
+
+def test_a_set_up_with_no_code_is_refused(page: Page) -> None:
+    page.goto(INTERVIEW)
+    card = _card(page)
+    card.locator("[data-rr-code]").fill("")
+    card.locator('[data-rr-act="setup"]').click()
+    assert _said(page).startswith("Not set up (invalid_package)")
+    assert card.locator("[data-rr-open] a").count() == 0
+
+
+def test_an_opened_gate_links_to_its_session_and_sets_nothing_up(page: Page) -> None:
+    page.goto(f"{EVALUATIONS}/g1")
+    card = _card(page)
+    assert card.locator('[data-rr-act="setup"]').is_disabled()
+    assert card.locator("[data-rr-open] a").count() == 1

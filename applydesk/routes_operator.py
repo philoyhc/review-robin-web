@@ -1394,6 +1394,14 @@ def _rr_me(request: Request) -> str:
     return f"{request.url.scheme}://{request.url.netloc}{host}/reviewrobin/me"
 
 
+def _rr_home(request: Request) -> str:
+    """Where *Open in Review Robin* goes in the sample (segment 23J): a set
+    up gate's session is Review Robin's ``session_home_url``, which the
+    sample has none of, so its stand-in is Review Robin's session list,
+    beside Apply Desk under the host's mounts."""
+    return _rr_me(request).removesuffix("/me") + "/operator/sessions"
+
+
 def _rr_data(
     exercise: sample_data.Exercise,
     gate: stages.Gate,
@@ -1402,6 +1410,7 @@ def _rr_data(
     sent_with: handoff.Bundle,
     people: tuple[tuple[str, str, int], ...],
     rr_me: str,
+    rr_home: str = "",
 ) -> dict[str, object]:
     """What the Review Robin card's script needs to send and re-send in
     the tab (segment AD1M rung 4, ruling 55): the gate's state as the
@@ -1414,6 +1423,8 @@ def _rr_data(
     return {
         "ex": exercise.public_id,
         "key": gate.key,
+        # Open in Review Robin's stand-in for a set-up gate (segment 23J).
+        "rrHome": rr_home,
         "state": state[0],
         "why": state[1] if state[0] == "Not ready" else "",
         "opened": opened,
@@ -1536,7 +1547,9 @@ def gate_evaluations(
         assignment_counts=stages.assignment_counts,
         bundle=sent_with,
         people=people,
-        rr_data=_rr_data(exercise, found, state, sent, sent_with, people, _rr_me(request)),
+        rr_data=_rr_data(
+            exercise, found, state, sent, sent_with, people, _rr_me(request), _rr_home(request)
+        ),
     )
 
 
