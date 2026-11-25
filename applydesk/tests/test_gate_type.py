@@ -118,7 +118,7 @@ def test_a_custom_gate_sends_its_mode() -> None:
         return {r["field"]: r["value"] for r in csv.DictReader(io.StringIO(text))}
 
     assert settings(by_number[1])["instruments[1].linked_mode"] == "custom"
-    assert "instruments[1].linked_mode" not in settings(by_number[2])
+    assert settings(by_number[2])["instruments[1].linked_mode"] == "locked"
 
 
 def test_the_custom_sample_says_who_was_not_asked() -> None:

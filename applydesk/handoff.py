@@ -179,10 +179,11 @@ def settings_csv(exercise: sample_data.Exercise, gate: stages.Gate) -> str:
         ["instruments[1].name", gate.label or f"Gate {gate.number}", "string"],
         ["instruments[1].description", gate.description, "string"],
     ]
-    if gate.via == stages.CUSTOM:
-        # Review Robin may extend it (segment 23G); locked is the default,
-        # so a default gate's file is as before.
-        rows.append(["instruments[1].linked_mode", "custom", "enum"])
+    # Its type, both ways (segment 23G): a gate switched back to the
+    # default sends ``locked``, since a re-send leaves the mode as it is
+    # when the row is absent (Codex on #4221).
+    mode = "custom" if gate.via == stages.CUSTOM else "locked"
+    rows.append(["instruments[1].linked_mode", mode, "enum"])
     for m, f in enumerate(stages.fields_of(gate), start=1):
         at = f"instruments[1].response_fields[{m}]"
         rows += [
