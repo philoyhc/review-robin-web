@@ -133,4 +133,4 @@ Closed 2026-11-24. **Built:** #4190 plan, #4191 scaffold, #4192 the scaffold as 
 
 Moved to Apply Desk as its own segment, **AD2S** (author, 2026-11-25): all of its code is
 `applydesk/`'s, and Review Robin's side closed with Item 1. The plan, with its Definition of done
-corrected to hand off `scale` = `true` with the bounds, is `applydesk/guide/segment_AD2S_gate_scale.md`.
+corrected to hand off `scale` = `true` with the bounds, is `applydesk/guide/archive/segment_AD2S_gate_scale.md`.
