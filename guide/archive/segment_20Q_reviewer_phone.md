@@ -89,7 +89,8 @@ operator pages and raised eight points, all taken, one a real defect (Band 2's s
 under-sized for scales widened to a shared side). Codex caught three more on the way, all fixed:
 a scale's desktop minimum overflowing its card (#4203), the stacked visibility grid reaching the
 Instruments page's grids (#4206), and an unbroken value widening a card (#4207). CI caught the
-24 px inline targets a pixel short on its fonts (#4208).
+24 px inline targets a pixel short on its fonts (#4208). `spec-writer` at the close wrote the
+three specs; the divergences it flagged are the ones recorded above, so none changed a decision.
 
 ## PR ladder
 
