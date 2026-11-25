@@ -487,7 +487,10 @@ def _form(e: Exercise) -> Table:
 
 
 def _field(f: stages.Field) -> dict[str, str]:
-    return {"type": f.type, "min": f.min, "max": f.max, "step": f.step, "options": f.options}
+    out = {"type": f.type, "min": f.min, "max": f.max, "step": f.step, "options": f.options}
+    if f.scale:  # segment AD2S: shown only where set, as the other blanks
+        out |= {"scale": "yes", "scale_labels": f.scale_labels}
+    return out
 
 
 def _detail(**settings: str) -> str:

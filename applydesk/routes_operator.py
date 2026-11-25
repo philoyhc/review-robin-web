@@ -1749,6 +1749,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         result_summary=stages.result_summary,
         result_type=stages.result_type,
         field_types=stages.FIELD_TYPES,
+        field_choices=stages.FIELD_CHOICES,
         derivations=stages.DERIVATIONS,
         allowed=stages.ALLOWED,
         blank_result=stages.GateResult("", "", stages.Field(), "mean"),

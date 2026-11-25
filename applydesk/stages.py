@@ -65,6 +65,18 @@ FIELD_TYPES: tuple[tuple[str, str], ...] = (
     ("list", "List"),
     ("string", "String"),
 )
+#: The *Type* menu on a gate's response field (segment AD2S), as Review
+#: Robin's Band 3 offers it: a number type, or one answered as a scale
+#: (``type`` plus ``Field.scale``), then List and String. (value, label),
+#: the value ``<type>`` or ``<type>:scale``.
+FIELD_CHOICES: tuple[tuple[str, str], ...] = (
+    ("integer", "Integer"),
+    ("integer:scale", "Integer (scale)"),
+    ("decimal", "Decimal"),
+    ("decimal:scale", "Decimal (scale)"),
+    ("list", "List"),
+    ("string", "String"),
+)
 
 #: How a result is derived from its field's responses (ruling 21): (key,
 #: label), and the ones each field type allows. Every gate runs in Review
@@ -1232,14 +1244,18 @@ def field_text(f: Field) -> str:
         return f"List: {options}" if options else "List, no options yet"
     if f.type == "string":
         return f"String, up to {f.max} characters" if f.max else "String"
-    name = "Integer" if f.type == "integer" else "Decimal"
+    name = ("Integer" if f.type == "integer" else "Decimal") + (" scale" if f.scale else "")
     parts = [p for p in (_bounds(f.min, f.max), f"step {f.step}" if f.step else "") if p]
-    return f"{name} {', '.join(parts)}" if parts else name
+    text = f"{name} {', '.join(parts)}" if parts else name
+    labels = " / ".join(p for p in f.scale_labels.split("|") if p) if f.scale else ""
+    return f"{text}, labelled {labels}" if labels else text
 
 
 def result_type(r: GateResult) -> str:
-    """The result's type, which its derivation sets (ruling 21)."""
-    f = r.field
+    """The result's type, which its derivation sets (ruling 21). A
+    result is a number, never a scale (segment AD2S): the page's script
+    reads a result's field without it."""
+    f = replace(r.field, scale=False)
     if r.derive in ("mean", "median"):
         span = _bounds(f.min, f.max)
         return f"Decimal {span}" if span else "Decimal"
@@ -1300,7 +1316,7 @@ def derivation_text(r: GateResult) -> str:
 def result_summary(r: GateResult) -> str:
     """A result's row, collapsed: what is asked, how it is derived, and
     what it gives; the page's script writes the same."""
-    return f"{field_text(r.field)} · {derivation_text(r)} → {result_type(r)}"
+    return f"{field_text(replace(r.field, scale=False))} · {derivation_text(r)} → {result_type(r)}"
 
 
 def weight_rows(plan: Plan, outcome: Outcome) -> tuple[tuple[str, int], ...]:

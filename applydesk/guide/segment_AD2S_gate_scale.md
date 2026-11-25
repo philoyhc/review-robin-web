@@ -38,6 +38,8 @@ Taken 2026-11-25 at `3092a29ea`.
 
 **Rung 2 (2026-11-25):** `ad2s1_gate_scale.py` adds `gate_field.scale` and `scale_labels`; `stages.Field` carries both, `process_save` reads them (a List or String keeps neither, labels cut to 60), and `stages.field_problems` names a scale Review Robin's `scale_shape_error` would refuse, which `locks.publish_problems` blocks on. Divergences: `scale_labels` is `String(200)` not null, `""` for none, as the table's other text columns, not nullable; the Outline's line is the page script's and lands with the card in rung 3, since nothing sets a scale before it.
 
+**Rung 3 (2026-11-25):** the *Type* menu is `stages.FIELD_CHOICES` (a scale's value `<type>:scale`), the labels take a second line, and the page script's `scaleProblem` names on the Outline what `stages.field_problems` names at publishing. The handoff writes `scale` and, when set, `scale_labels`; the extract's field detail carries them. A result collating a scale field reads it as a number (`result_type`, `result_summary`), as the page script always has. `tests/integration/test_handoffs.py` posts the bundle to Review Robin and finds a 5-point scale.
+
 ## PR ladder
 
 1. **Plan** (this file, moved from 20P Item 2). Prose only.
