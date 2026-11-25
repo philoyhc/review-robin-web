@@ -73,6 +73,15 @@ Taken 2026-11-25 at `d23dffcd2`.
 | Apply Desk: gate state and the Review Robin card | 9 files; `_rr_js.html` 276 lines; gate states *Not ready*, *Ready*, *Sent*, *Not sent* | `grep -rln "gate_state\|data-rr-" applydesk/templates applydesk/*.py` |
 | Apply Desk tests on the card | 4 files (`test_rr_browser.py`, `test_handoff.py`, `test_pages.py`, `test_layout_browser.py`) | `grep -rln "_rr_js\|data-rr-" applydesk/tests --include=*.py` |
 
+## Status
+
+**Rung 2 (2026-11-25):**
+- A linked sender may omit both roster files (`handoffs.carries_rosters`). One roster without the other is `invalid_package`, as is a `relationships` file without rosters. A header with no rows is still `empty_roster`.
+- The create's audit `context` gains `rosters`.
+- Replay needed no change. A completed set-up answers `already_created`; one cut off before its record is `transfer_in_progress`, then `transfer_incomplete`. Only the incomplete message no longer names rosters.
+- **Taken beyond the ladder:** a re-send may also carry the settings alone, before the rosters, so Process edits after set-up reach the draft. The pipeline had no file to save and returned before the re-send's guard and record. Now, with no files, it runs them under the session lock (`quick_setup_pipeline.run_contents`).
+- The cumulative read for rungs 2–5 runs from `8e2eb04ec`.
+
 ## PR ladder
 
 1. **Plan**: this file, its queue entry and README row; Apply Desk's ruling 80 in `applydesk/guide/todo_master.md`, with AD6's row naming the stored `session_home_url`. Prose only.

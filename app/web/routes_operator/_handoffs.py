@@ -227,7 +227,9 @@ async def create_handoff_session(
     db: Session = Depends(get_db),
 ) -> JSONResponse:
     """Create a draft session from another application's rosters, and its
-    settings when it sends them, all or nothing (`spec/handoffs.md`). The
+    settings when it sends them, all or nothing (`spec/handoffs.md`). A
+    linked application may send no rosters, setting its session up first
+    (segment 23J): the draft then waits for a re-send to bring them. The
     package gate has already checked that the signer-in is an RRW
     operator. Nothing is prepared, activated, invited or sent here."""
     body = await _handoff_body(request)
@@ -314,7 +316,8 @@ async def create_handoff_session(
             reason=refusal.failure.reason,
         )
     try:
-        handoffs.check_rosters(db, review_session)
+        if handoffs.carries_rosters(bundle):
+            handoffs.check_rosters(db, review_session)
         handoffs.set_up_instrument(db, review_session, user)
     except handoffs.HandoffError as exc:
         discard()

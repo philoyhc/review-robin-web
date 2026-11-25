@@ -310,6 +310,16 @@ async def run_contents(
     from app.web.routes_operator._shared import acknowledged_loss, roster_address
 
     if not contents:
+        # Nothing to save, but a caller's checks and record still run under
+        # the session lock: a linked re-send carrying only its settings,
+        # before its rosters (segment 23J), applies them in ``unit_record``.
+        if unit_guard is not None or unit_record is not None:
+            with unit_of_work.atomic(db):
+                session_guard.lock_session(db, review_session)
+                if unit_guard is not None:
+                    unit_guard()
+                if unit_record is not None:
+                    unit_record()
         return None
     first = next(iter(contents))
     if not lifecycle.is_editable(review_session):
