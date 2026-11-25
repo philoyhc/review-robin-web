@@ -1,5 +1,9 @@
-"""Segment 20Q rung 6 — the guard: every participant page at 390 × 844
-on a touch phone. No page scrolls sideways, and nothing tappable is too
+"""Segment 20Q rung 6 — the guard: the participant pages at 390 × 844 on
+a touch phone (the lobby, the surface open and closed, Across and
+Stacked, the summary, About, Guide, the sign-in details, results and
+collation; the pre-open and invitation-mismatch notices carry no table
+and are left to the URL crawl). Every response table is laid out as
+cards, no page scrolls sideways, and nothing tappable is too
 small to tap: a control (a button, a box, a list, a button-styled link)
 is at least 44 px tall, and a text link or text button inside a line
 (an address, *clear*, a role pill) at least 24 px, WCAG 2.2's minimum
@@ -59,6 +63,12 @@ def _check(page: Page, name: str) -> list[str]:
         spill = scroller.evaluate("el => el.scrollWidth - el.clientWidth")
         if spill > 0:
             problems.append(f"{name}: a table scrolls {spill}px sideways")
+    flat = page.evaluate(
+        """() => [...document.querySelectorAll('table.rs-table > tbody > tr')]
+            .filter(tr => getComputedStyle(tr).display !== 'block').length"""
+    )
+    if flat:
+        problems.append(f"{name}: {flat} table row(s) not laid out as cards")
     problems += [f"{name}: {p}" for p in page.evaluate(_TOO_SMALL)]
     return problems
 
@@ -100,6 +110,27 @@ def _release(database_url: str, session_id: str) -> None:
         engine.dispose()
 
 
+def _stack(database_url: str, session_id: str) -> None:
+    """The session's instrument in the stacked layout (20K)."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument
+
+    engine = create_engine(database_url)
+    try:
+        with Session(engine) as db:
+            for instrument in db.execute(
+                select(Instrument).where(
+                    Instrument.session_id == session_pk(database_url, session_id)
+                )
+            ).scalars():
+                instrument.response_layout = "stacked"
+            db.commit()
+    finally:
+        engine.dispose()
+
+
 def test_every_participant_page_fits_a_phone(
     page_as: Callable[..., Page],
     api: httpx.Client,
@@ -130,6 +161,7 @@ def test_every_participant_page_fits_a_phone(
         (reviewer, f"/me/sessions/{session_id}/summary", "summary (released)"),
         (reviewer, f"/me/sessions/{session_id}/1", "review surface (closed)"),
         (reviewer, "/about", "about"),
+        (reviewer, "/auth/me/debug", "sign-in details"),
         (reviewer, "/guide", "guide"),
         (page_as(REVIEWEE_EMAIL, **PHONE), f"/me/sessions/{session_id}/results", "results"),
         (page_as(OBSERVER_EMAIL, **PHONE), f"/me/sessions/{session_id}/collation", "collation"),
@@ -138,4 +170,8 @@ def test_every_participant_page_fits_a_phone(
         response = page.goto(app_url(path))
         assert response is not None and response.ok, (name, response and response.status)
         problems += _check(page, name)
+
+    _stack(live_server.database_url, session_id)
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
+    problems += _check(reviewer, "review surface (closed, stacked)")
     assert not problems, "\n".join(problems)

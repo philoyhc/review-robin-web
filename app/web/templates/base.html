@@ -699,12 +699,14 @@
           max-width: none;
           min-width: 0;
           white-space: normal;
-          text-align: left !important;
           /* A value with no break in it (a pasted URL on the summary or
              results page) wraps in its card rather than widen the page
              (Codex on #4207). */
           overflow-wrap: anywhere;
         }
+        /* A value reads from the left; a cell spanning the row
+           (collation's download) keeps its own alignment. */
+        table.rs-table > tbody > tr > td:not([colspan]) { text-align: left !important; }
         table.rs-table > tbody > tr > td.rs-reviewee,
         table.rs-table > tbody > tr > td.rs-group { padding-right: 4ch; }
         table.rs-table > tbody > tr > td[data-label]::before {
@@ -5145,10 +5147,12 @@
         /* Rung 6 — the bottom action row floats: it pins to the foot of
            the screen while the reviewer works down a long list, and
            settles in its place at the list's end (author, 2026-11-25).
-           Sticky, not fixed: it stays the form's own row, so Save /
-           Cancel / Submit post as they always do. It keeps clear of an
-           iPhone's home indicator. */
-        body.ui-v2 .rs-action-row:not(.rs-action-row-top) {
+           Only once the top row has scrolled away: the surface's script
+           marks it `rs-action-row-float` then, so the two sets never show
+           together. Sticky, not fixed: it stays the form's own row, so
+           Save / Cancel / Submit post as they always do. It keeps clear
+           of an iPhone's home indicator. */
+        body.ui-v2 .rs-action-row.rs-action-row-float {
           position: sticky;
           bottom: 0;
           z-index: 5;

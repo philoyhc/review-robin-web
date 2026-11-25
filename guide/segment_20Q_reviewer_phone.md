@@ -34,7 +34,7 @@ Build the assessment's six rungs, participants only.
 
 ## Semantics
 
-- **Desktop is untouched.** Every new rule sits under `max-width: 639px` or `pointer: coarse`. The existing browser tests at 1,400 px stay the desktop net.
+- **Desktop is untouched.** Every new rule sits under `max-width: 639px` or `pointer: coarse`. The existing browser tests at 1,400 px stay the desktop net. *(Amended at rung 3a/3b by the author's rulings: a slide scale's end bars, its box at the widget's edge, and stacked scales sharing one side apply at every width, the Band 2 preview included.)*
 - **Saved column widths** still apply at 640 px and wider. Under 640 px a card has no columns, so they have nothing to act on.
 - **Branching:** a closed governed field stays dimmed in its card line, and a Require branch's required marker stays on the label.
 - **Locked, submitted or closed assignments** render their cards read-only, as their rows do now.
@@ -63,9 +63,10 @@ Taken 2026-11-24 at `bc229fdba`.
 
 Open. Rung 2 (2026-11-24) diverged in two places:
 - **The tag follows the participant chrome, not a per-template block.**
-  `base.html` emits it when the body class includes `reviewer`, which the seven
-  `reviewer/` templates set always and About, Guide and `me_debug.html` set for a
-  non-operator. One condition, and a new participant page inherits it.
+  `base.html` emits it when the body class includes `reviewer`, which the
+  `reviewer/` templates set (the surface only outside the operator's preview) and
+  About, Guide and `me_debug.html` set for a non-operator. One condition, and a
+  new participant page inherits it.
 - **The check rides the URL crawl, not a browser test.** A tag in the HTML needs
   no browser: `tests/integration/test_url_crawl.py` asserts it on every `/me`
   page, About and Guide for rae, and its absence from every operator page.
@@ -87,6 +88,14 @@ Open. Rung 2 (2026-11-24) diverged in two places:
     checkbox, a text link or text button inside a line, or a role pill at
     least 24 px (WCAG 2.2's minimum, with its inline exception). 44 px links
     would break the lines they sit in.
+  - **The floating row waits for the top row to scroll away** (author,
+    2026-11-25): a short script marks it `rs-action-row-float` only then.
+  - **The cumulative read** (`3ff8b6b71..b82cd6675`) found no leak onto
+    operator pages and every `data-label` on its header's index; it turned up
+    eight points, all taken: the guard checks cards and visits the sign-in
+    details and a stacked surface; Band 2's stacked track holds scales widened
+    to a shared side; the integration test matches labels to headers;
+    collation's download cell keeps its alignment; and three plan lines above.
   - **The breakpoints are not consolidated.** The participant rules this
     segment adds use only 640 px; the rest are operator layouts, and moving
     them would change those pages for no participant gain.
@@ -111,7 +120,7 @@ Each rung lands as a scaffold the author checks on a phone before the next.
 ## Definition of done
 
 - At 390 × 844, no participant page scrolls sideways, and no reviewer-surface response table needs a sideways scroll, in either layout or in group mode.
-- Every tappable element on a participant page is at least 44 px tall under `pointer: coarse`.
+- Under `pointer: coarse`, a participant page's button, box or list is at least 44 px tall, and a checkbox, text link, text button or role pill a 24 px target (`tests/browser/test_participant_pages_phone.py`).
 - An operator page renders as before: no viewport tag.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 20Q` exits 0; any warning adjudicated
@@ -132,7 +141,7 @@ Each rung lands as a scaffold the author checks on a phone before the next.
 ## Doc impact
 
 - `spec/reviewer-surface.md` — the card layout under 640 px, `data-label`, the stacked visibility grid and action row (rungs 3–4).
-- `spec/visual_style_rrw.md` — "Device classes": participant pages responsive with the viewport tag opt-in, the 640 / 900 breakpoints, 44 px touch targets (rungs 2, 6).
+- `spec/visual_style_rrw.md` — "Device classes": participant pages responsive with the viewport tag opt-in, the 640 px card breakpoint, touch targets of 44 px for controls and 24 px for inline targets, the floating action row (rungs 2, 6).
 - `spec/participant_model.md` — results and collation as cards on a phone (rung 5).
 - `guide/rrw_mobile_responsive.md` — marked as built by 20Q (at close).
 - `guide/todo_master.md` — the phone stub deleted (at close).
