@@ -997,9 +997,23 @@ but the lobby's *Stage* column reads:
     dossier it cannot fill is *Short*. A panel gives its least-loaded
     members first. Referees are not a source.
   - **Response fields**: what each evaluator answers in Review Robin, a row
-    each, edited in place: *Label*, *Type* (Integer, Decimal, List or
-    String, with Min/Max/Step, Max length or Options), *Required*, and *Help*
-    (shown under the field in Review Robin); *+ Field*, *Remove the field*.
+    each, edited in place: *Label*, *Type* (Integer, Integer (scale), Decimal,
+    Decimal (scale), List or String, with Min/Max/Step, Max length or
+    Options; `stages.FIELD_CHOICES`), *Required*, and *Help* (shown under the
+    field in Review Robin); *+ Field*, *Remove the field*.
+    A **scale** is stored as its number type plus a flag, as Review Robin
+    keeps it; its Min/Max/Step line stays and a second line takes the
+    optional *Start*, *Middle* and *End* labels (60 characters each; a typed
+    `|` is kept as `¦`). Switching to or from a scale keeps the bounds;
+    switching to List or String keeps no scale and no labels. The row reads
+    *Integer scale 1 to 5, step 1, labelled Weak / Strong*, and a result
+    collating a scale reads it as a number. A scale Review Robin would
+    refuse (`stages.field_problems`, mirroring Review Robin's
+    `scale_shape_error`: bounds or Step missing, Max not above Min, an
+    Integer scale not whole, Max not Min plus a whole number of Steps; a
+    bound is a plain decimal) is a problem on the Outline, blocks publishing
+    (`locks.publish_problems`) and is refused by the Review Robin card's
+    send and re-send.
     Each shows its **Key**, read-only: what Review Robin reports the field's
     answers under. A new field takes `f<n>`, the first not in use on the gate.
     A gate with none lists one per result.
@@ -1560,7 +1574,9 @@ keeps all of them.
   with its evaluator's source, commas dropped; **settings**, the gate's
   description, the exercise's help contact and timezone, the gate's
   window with its offset, the tag `applydesk`, and one instrument named
-  for the gate holding its response fields. Never observers, release,
+  for the gate holding its response fields (a scale's `scale` = `true` and, when
+  set, `scale_labels`, beside its `data_type`, which stays Integer or
+  Decimal; the extract's field detail shows both, a result's never). Never observers, release,
   rules or layouts. Each file downloads from
   `…/evaluations/<key>/<kind>.csv` as `<code>_<kind>.csv`, each cell a
   spreadsheet would run as a formula guarded with `'` (`extract.guarded`);
