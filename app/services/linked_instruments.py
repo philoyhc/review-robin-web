@@ -29,6 +29,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, InstrumentDisplayField, ReviewSession, User
+from app.db.models.instrument import LINKED_MODE_DEFAULT
 from app.json_shapes import json_list
 from app.services import audit
 from app.services import instruments as instruments_service
@@ -46,9 +47,10 @@ PAIR_RULE = {
 PROFILE_LINK = ("reviewee", "profile_link")
 
 
-#: The instrument rows a re-send may carry: the gate's name and
-#: description, and each response field's definition (no branching).
-_INSTRUMENT_ROW = re.compile(r"^instruments\[1\]\.(name|description)$")
+#: The instrument rows a re-send may carry: the gate's name, description
+#: and type (segment 23G), and each response field's definition (no
+#: branching).
+_INSTRUMENT_ROW = re.compile(r"^instruments\[1\]\.(name|description|linked_mode)$")
 _FIELD_ROW = re.compile(
     r"^instruments\[1\]\.response_fields\[\d+\]\."
     r"(field_key|label|response_type|data_type|min|max|step|list_csv"
@@ -227,6 +229,10 @@ def apply_owned(
         instruments_service.update_instrument_description(
             db, instrument=instrument, description=spec.description, actor=actor
         )
+    if "instruments[1].linked_mode" in rows:
+        set_mode(
+            db, review_session, instrument, spec.linked_mode or LINKED_MODE_DEFAULT, actor=actor
+        )
     if any(".response_fields[" in row for row in rows):
         instruments_service.replace_response_fields(
             db,
@@ -234,6 +240,31 @@ def apply_owned(
             fields=[_field_entry(f) for _, f in sorted(spec.response_fields.items())],
             actor=actor,
         )
+
+
+def set_mode(
+    db: Session,
+    review_session: ReviewSession,
+    instrument: Instrument,
+    mode: str,
+    *,
+    actor: User,
+) -> None:
+    """Write the gate's type a re-send carries (segment 23G rung 2),
+    audited as ``instrument.linked_mode_set``; the same type writes
+    nothing. What a switch keeps or drops is rung 4's."""
+    if mode == instrument.linked_mode:
+        return
+    audit.write_event(
+        db,
+        event_type="instrument.linked_mode_set",
+        summary=(f"Set instrument {instrument.name!r}'s gate type to {mode} (linked re-send)"),
+        actor_user_id=actor.id,
+        session=review_session,
+        payload=audit.changes({"linked_mode": [instrument.linked_mode, mode]}),
+        refs={"instrument_id": instrument.id},
+    )
+    instrument.linked_mode = mode
 
 
 def display_sources(db: Session, review_session: ReviewSession) -> set[tuple[str, str]]:

@@ -22,6 +22,7 @@ from app.db.models import (
     SessionRuleSet,
     SessionTag,
 )
+from app.db.models.instrument import LINKED_MODE_DEFAULT
 from app.services.date_formatting import iso_in_zone
 from app.services.email_templates import (
     OVERRIDE_KEYS,
@@ -464,6 +465,10 @@ def _instrument_rows(
             "json",
         ),
     ]
+    # Segment 23G — a linked instrument's gate type, written only when it
+    # is not the default, so every other instrument's file is unchanged.
+    if instrument.linked_mode != LINKED_MODE_DEFAULT:
+        rows.append(Row(f"{prefix}.linked_mode", _str(instrument.linked_mode), "enum"))
     return rows
 
 

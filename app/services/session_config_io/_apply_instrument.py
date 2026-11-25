@@ -76,6 +76,7 @@ from ._apply_shared import (
     _parse_int,
     _parse_intro_layout,
     _parse_json,
+    _parse_linked_mode,
     _parse_response_layout,
     _ParsedConfig,
     _ParseError,
@@ -306,6 +307,8 @@ def _apply_instrument_kv(plan: _ParsedConfig, field_path: str, value: str, data_
         instrument.response_layout = _parse_response_layout(value)
     elif attr == "display_layout":
         instrument.display_layout = _parse_display_layout(value)
+    elif attr == "linked_mode":
+        instrument.linked_mode = _parse_linked_mode(value)
     elif attr == "band2_state":
         state = json_object(_parse_json(value, default={}))
         # The Instruments page reads this as an object; anything else
@@ -503,6 +506,8 @@ def _apply_instruments(
             instrument.response_layout = spec.response_layout
         if spec.display_layout is not None:
             instrument.display_layout = spec.display_layout
+        if spec.linked_mode is not None:
+            instrument.linked_mode = spec.linked_mode
         db.add(instrument)
         db.flush()  # populate ``instrument.id``
         counts["instruments"] += 1
