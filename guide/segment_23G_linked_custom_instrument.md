@@ -72,7 +72,7 @@ Taken 2026-11-18 at `295cdf575`.
 
 ## Open questions
 
-- **Who sets *Required* on a held field?** Ruling 36 gives it to Review Robin (the gate's value only the start), so a branch can make a held field optional; the author's restatement (2026-11-25) has the gate's fields fixed in Review Robin, which keeps *Required* the gate's, and a held field then branches only as *Require*. The author's, before rung 3.
+- **Who sets *Required* on a held field?** Review Robin, as ruling 36 says: the gate's value is the start only (author, 2026-11-25, given what a fixed *Required* costs a branched instrument).
 - **Own fields' answers back to Apply Desk** (a *Familiarity* worth showing on the dossier?): proposed later, Review Robin's extracts only; the author's.
 - **May a held field be hidden** (`visible`) in custom mode, or only branched? Proposed: its visibility stays the application's.
 - **Apply Desk's derivations over a branched field** (e.g. a mean of Score where Familiarity closed it for some evaluators): counted as no response (proposed); the author's, with ruling 31's evaluation design.
