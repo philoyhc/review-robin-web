@@ -1,5 +1,9 @@
 # Review Robin on a phone: what it would take
 
+> **Built for participant pages by segment 20Q** (closed 2026-11-25;
+> `guide/archive/segment_20Q_reviewer_phone.md`). Operator pages stay
+> desktop-first, as below.
+
 **Assessment, 2026-11-12, against RRW `main` at `3e47ce9d`.** Written in
 Cordware's `guide/` (Cordware #208) and moved here the same day (author),
 since all of it is RRW work. No RRW
