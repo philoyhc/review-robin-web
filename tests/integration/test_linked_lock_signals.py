@@ -270,6 +270,10 @@ READERS: dict[Lock, dict[str, str]] = {
         "app/services/instruments/_instrument_crud.py": (
             _LINKED + "test_the_page_seeds_no_display_field_back"
         ),
+        "app/services/linked_instruments.py": (
+            "tests/integration/test_linked_custom.py::"
+            "test_custom_saves_order_required_and_an_own_field"
+        ),
         "app/services/linked_settings.py": (
             "tests/integration/test_handoff_update.py::"
             "test_a_resend_writes_the_instruments_owned_rows"
