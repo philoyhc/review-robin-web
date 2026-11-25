@@ -572,6 +572,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "instrument.response_layout_set": EventSchema(_IDENTITY | {"changes", "refs"}),
     "instrument.display_layout_set": EventSchema(_IDENTITY | {"changes", "refs"}),
     "instrument.linked_mode_set": EventSchema(_IDENTITY | {"changes", "refs"}),
+    "instrument.branch_dropped": EventSchema(_IDENTITY | {"snapshot", "reason", "refs"}),
     "instrument.band2_state_updated": EventSchema(_IDENTITY | {"changes", "refs"}),
     "instrument.field_added": EventSchema(_IDENTITY | {"snapshot", "refs", "context"}),
     "instrument.field_updated": EventSchema(_IDENTITY | {"changes", "refs", "context"}),
