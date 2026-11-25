@@ -20,7 +20,7 @@ import io
 import re
 import zipfile
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 
 from applydesk import clock, sample_data, stages, workflow
@@ -487,7 +487,10 @@ def _form(e: Exercise) -> Table:
 
 
 def _field(f: stages.Field) -> dict[str, str]:
-    return {"type": f.type, "min": f.min, "max": f.max, "step": f.step, "options": f.options}
+    out = {"type": f.type, "min": f.min, "max": f.max, "step": f.step, "options": f.options}
+    if f.scale:  # segment AD2S: shown only where set, as the other blanks
+        out |= {"scale": "yes", "scale_labels": f.scale_labels}
+    return out
 
 
 def _detail(**settings: str) -> str:
@@ -554,7 +557,8 @@ def _process(e: Exercise) -> Table:
                                 value=r.value,
                                 at_least=str(r.at_least),
                                 ignore_zero=_yes(r.ignore_zero),
-                                **_field(r.field),
+                                # A result is a number, never a scale (AD2S).
+                                **_field(replace(r.field, scale=False)),
                             )
                         ]
                     )

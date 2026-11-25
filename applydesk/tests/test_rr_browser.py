@@ -4,8 +4,12 @@ build, as `test_form_browser.py`'s."""
 
 from __future__ import annotations
 
+from dataclasses import replace
+
+import pytest
 from playwright.sync_api import Locator, Page
 
+from applydesk import stages
 from applydesk.tests.test_form_browser import ORIGIN
 from applydesk.tests.test_form_browser import page as page  # the fixture, re-exported
 
@@ -218,3 +222,26 @@ def test_a_detached_gate_keeps_what_was_last_reported(page: Page) -> None:
     page.goto(f"{K7}/g3")
     done = _card(page).locator("[data-rr-done]")
     assert done.count() and all(" of " in t for t in done.all_text_contents())
+
+
+def test_a_scale_review_robin_would_refuse_is_never_sent(
+    page: Page, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Segment AD2S, the cumulative read: publishing is not the only way
+    out; a send or a re-send of a field Review Robin's import would
+    refuse is refused here, by name."""
+    model = stages._STAGES[EX]  # pyright: ignore[reportPrivateUsage]  -- a sample's shape
+    interviews = model[2]
+    g3, o2 = interviews.columns
+    assert isinstance(g3, stages.Gate) and g3.fields
+    bad = stages.Field("integer", "1", "5", "", scale=True)
+    field = replace(g3.fields[0], field=bad)
+    broken = replace(interviews, columns=(replace(g3, fields=(field, *g3.fields[1:])), o2))
+    monkeypatch.setitem(stages._STAGES, EX, (*model[:2], broken))  # pyright: ignore[reportPrivateUsage]  -- as above
+    page.on("dialog", lambda d: d.accept())
+    page.goto(INTERVIEW)
+    _approve_all(page)
+    _card(page).locator('[data-rr-act="send"]').click()
+    assert _said(page) == (
+        f"Not sent (invalid_setup): field 1 ({field.label}) is a scale with no Step."
+    )

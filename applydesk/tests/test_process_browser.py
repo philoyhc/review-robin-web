@@ -1175,6 +1175,53 @@ def test_a_result_s_derivations_follow_its_field(page: Page) -> None:
     )
 
 
+def test_a_field_is_set_as_a_scale_its_labels_and_problems_follow(page: Page) -> None:
+    """Segment AD2S: Band 3's menu sets a scale, its labels show on a
+    second line, a scale Review Robin would refuse is named on the
+    Outline, and a List keeps neither the flag nor its labels."""
+    gate = _draft_gate(page)
+    fld = _field(gate, 0)
+    scale_row = fld.locator('[data-q-g="scale"]')
+    assert scale_row.is_hidden()
+    fld.locator('[data-q="type"]').select_option("integer:scale")
+    assert scale_row.is_visible() and fld.locator('[data-q-g="number"]').is_visible()
+    fld.locator('[data-q="min"]').fill("1")
+    fld.locator('[data-q="max"]').fill("5")
+    fld.locator('[data-q="step"]').fill("1")
+    fld.locator('[data-q="scale_start"]').fill("Weak")
+    fld.locator('[data-q="scale_end"]').fill("Strong")
+    # A "|" typed in a label is kept as "¦", as Band 3 keeps it, so the
+    # labels never move along (the cumulative read).
+    fld.locator('[data-q="scale_middle"]').fill("so|so")
+    snap = page.evaluate("() => window.applydeskProcessSnapshot()")
+    sent = next(g for s in snap["stages"] for g in s["gates"] if g["fields"])["fields"][0]
+    assert sent["scale_labels"] == "Weak|so\u00a6so|Strong"
+    fld.locator('[data-q="scale_middle"]').fill("")
+    label = fld.locator('[data-q="label"]').input_value() or "f1"
+    assert (fld.locator("[data-rf-sum]").text_content() or "").startswith(
+        "Integer scale 1 to 5, step 1, labelled Weak / Strong · "
+    )
+    # A result reads the field as a number: its derivations are a number's.
+    assert "Mean" in _result(gate, 0).locator('[data-r="derive"] option').all_text_contents()
+    snap = page.evaluate("() => window.applydeskProcessSnapshot()")
+    sent = next(g for s in snap["stages"] for g in s["gates"] if g["fields"])["fields"][0]
+    assert (sent["type"], sent["scale"], sent["scale_labels"]) == ("integer", True, "Weak||Strong")
+    fld.locator('[data-q="max"]').fill("6")
+    fld.locator('[data-q="step"]').fill("2")
+    _checked(page)
+    issues = page.locator("[data-pc-issues]").inner_text()
+    assert (
+        f"field 1 ({label}) is a scale whose Max is not Min plus a whole number of Steps." in issues
+    )
+    fld.locator('[data-q="type"]').select_option("list")
+    assert scale_row.is_hidden()
+    snap = page.evaluate("() => window.applydeskProcessSnapshot()")
+    sent = next(g for s in snap["stages"] for g in s["gates"] if g["fields"])["fields"][0]
+    assert (sent["scale"], sent["scale_labels"]) == (False, "")
+    _checked(page)
+    assert "is a scale" not in page.locator("[data-pc-issues]").inner_text()
+
+
 def test_results_are_added_to_three_and_removed(page: Page) -> None:
     gate = _draft_gate(page)
     add = gate.locator('[data-pr-act="add"]')

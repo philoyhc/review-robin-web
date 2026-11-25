@@ -174,13 +174,24 @@
       {# Prescribed, never edited: what Review Robin reports the answers
          under (AD1G amendment). #}
       <label class="fc-l pc-narrow">Key<input class="fc-in" data-rf-key value="{{ f.key }}" readonly title="What Review Robin reports this field's answers under"></label>
-      <label class="fc-l">Type<select class="fc-in" data-q="type">{% for k, l in field_types %}<option value="{{ k }}"{% if k == t.type %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+      {# Band 3's menu (segment AD2S): a scale is its number type plus the
+         flag, the value ``<type>:scale``. #}
+      {% set chosen = t.type ~ (":scale" if t.scale else "") %}
+      <label class="fc-l">Type<select class="fc-in" data-q="type">{% for k, l in field_choices %}<option value="{{ k }}"{% if k == chosen %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
     </div>
     {# Only the type's own settings show, from the first draw (Codex). #}
     <div class="pc-row" data-q-g="number"{% if t.type not in ("integer", "decimal") %} hidden{% endif %}>
       <label class="fc-l pc-narrow">Min<input class="fc-in" data-q="min" inputmode="decimal" value="{{ t.min if t.type in ('integer', 'decimal') }}"></label>
       <label class="fc-l pc-narrow">Max<input class="fc-in" data-q="max" inputmode="decimal" value="{{ t.max if t.type in ('integer', 'decimal') }}"></label>
       <label class="fc-l pc-narrow">Step<input class="fc-in" data-q="step" inputmode="decimal" value="{{ t.step if t.type in ('integer', 'decimal') }}"></label>
+    </div>
+    {# A scale's Start / Middle / End labels, each optional, on a second
+       line as Band 3's (segment AD2S). #}
+    {% set sl = (t.scale_labels.split("|") + ["", "", ""])[:3] %}
+    <div class="pc-row" data-q-g="scale"{% if not t.scale %} hidden{% endif %}>
+      <label class="fc-l">Start label<input class="fc-in" data-q="scale_start" maxlength="60" value="{{ sl[0] }}" placeholder="e.g. Weak"></label>
+      <label class="fc-l">Middle label<input class="fc-in" data-q="scale_middle" maxlength="60" value="{{ sl[1] }}"></label>
+      <label class="fc-l">End label<input class="fc-in" data-q="scale_end" maxlength="60" value="{{ sl[2] }}" placeholder="e.g. Strong"></label>
     </div>
     <div class="pc-row" data-q-g="string"{% if t.type != "string" %} hidden{% endif %}>
       <label class="fc-l pc-narrow">Max length<input class="fc-in" data-q="maxlen" inputmode="numeric" value="{{ t.max if t.type == 'string' }}"></label>

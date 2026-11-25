@@ -40,6 +40,11 @@ def _scale(**kw: Any) -> stages.Field:
         (_scale(step="0.5"), "is an Integer scale with a bound or Step not whole"),
         (_scale(max="6", step="2"), "is a scale whose Max is not Min plus a whole number of Steps"),
         (_scale(max="nan"), "is a scale with no Min or Max"),
+        # A plain decimal only, as the page script reads one (the read).
+        (_scale(max="1_0"), "is a scale with no Min or Max"),
+        (_scale(max="0x10"), "is a scale with no Min or Max"),
+        (_scale(max="inf"), "is a scale with no Min or Max"),
+        (_scale(min="-1", max="1e1", step=".5", type="decimal"), ""),
     ],
 )
 def test_a_scale_s_bounds_are_checked_as_review_robin_does(field: stages.Field, why: str) -> None:
@@ -139,3 +144,74 @@ def test_a_scale_review_robin_would_refuse_blocks_publishing(
         " Min plus a whole number of Steps.",
     )
     assert stages.field_problems(replace(g3, fields=(replace(bad, field=_scale()),))) == ()
+
+
+# --- Rung 3: the card's texts, the handoff and the extract ---
+
+
+def test_a_scale_reads_as_one_and_its_results_as_numbers() -> None:
+    f = _scale(scale_labels="Weak||Strong")
+    assert stages.field_text(f) == "Integer scale 1 to 5, step 1, labelled Weak / Strong"
+    assert stages.field_text(replace(f, scale=False)) == "Integer 1 to 5, step 1"
+    r = stages.GateResult("r1", "Score", f, "max")
+    assert stages.result_type(r) == "Integer 1 to 5, step 1"
+    assert stages.result_summary(r).startswith("Integer 1 to 5, step 1 · ")
+
+
+def test_the_handoff_carries_the_flag_and_labels() -> None:
+    from applydesk import handoff
+
+    e = sample_data.exercise(RA)
+    assert e is not None
+    gate = stages.gate_numbered(stages.plan_of(RA), 3)
+    assert gate is not None and len(gate.fields) > 1
+    fields = (
+        replace(gate.fields[0], field=_scale(scale_labels="Weak||Strong")),
+        replace(gate.fields[1], field=_scale(type="decimal", min="0", max="1", step="0.1")),
+        *gate.fields[2:],
+    )
+    rows = handoff.settings_csv(e, replace(gate, fields=fields)).splitlines()
+    at = "instruments[1].response_fields"
+    assert f"{at}[1].scale,true,boolean" in rows
+    assert f"{at}[1].scale_labels,Weak||Strong,string" in rows
+    assert f"{at}[1].data_type,Integer,string" in rows
+    assert f"{at}[2].scale,true,boolean" in rows
+    assert not any(r.startswith(f"{at}[2].scale_labels") for r in rows)  # none set
+    assert not any(r.startswith(f"{at}[3].scale") for r in rows)
+
+
+def test_the_page_offers_band_3_s_menu_and_marks_a_saved_scale(session: Session) -> None:
+    from fastapi.testclient import TestClient
+
+    from applydesk.tests._host import host_with
+
+    built = stages.plan_of(RA).stages
+    gate = next(c for st in built for c in st.columns if isinstance(c, stages.Gate) and c.fields)
+    scaled = replace(gate.fields[0], field=_scale(scale_labels="Weak|Fair|"))
+    changed = replace(gate, fields=(scaled, *gate.fields[1:]))
+    revision = session.scalar(select(Exercise.process_revision).where(Exercise.public_id == RA))
+    process_store.save(
+        session,
+        RA,
+        tuple(
+            replace(st, columns=tuple(changed if c.key == gate.key else c for c in st.columns))
+            for st in built
+        ),
+        revision or 0,
+        None,
+    )
+    session.commit()
+    client = TestClient(host_with(("applydesk",))[0])
+    page = client.get(f"/applydesk/operator/exercises/{RA}/process").text
+    assert [label for _, label in stages.FIELD_CHOICES] == [
+        "Integer",
+        "Integer (scale)",
+        "Decimal",
+        "Decimal (scale)",
+        "List",
+        "String",
+    ]
+    assert '<option value="integer:scale" selected>Integer (scale)</option>' in page
+    assert 'data-q="scale_start" maxlength="60" value="Weak"' in page
+    assert 'data-q="scale_middle" maxlength="60" value="Fair"' in page
+    assert "Integer scale 1 to 5, step 1, labelled Weak / Fair" in page

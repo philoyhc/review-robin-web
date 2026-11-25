@@ -199,6 +199,12 @@ def settings_csv(exercise: sample_data.Exercise, gate: stages.Gate) -> str:
                 for k, v in (("min", f.field.min), ("max", f.field.max), ("step", f.field.step))
                 if v
             ]
+        if f.field.scale:
+            # Review Robin's scale (segment 20P Item 1): the flag and its
+            # labels; it decides snap or slide from the bounds (AD2S).
+            rows.append([f"{at}.scale", "true", "boolean"])
+            if f.field.scale_labels:
+                rows.append([f"{at}.scale_labels", f.field.scale_labels, "string"])
     return _csv(["field", "value", "data_type"], rows)
 
 

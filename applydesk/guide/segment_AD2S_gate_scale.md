@@ -38,6 +38,10 @@ Taken 2026-11-25 at `3092a29ea`.
 
 **Rung 2 (2026-11-25):** `ad2s1_gate_scale.py` adds `gate_field.scale` and `scale_labels`; `stages.Field` carries both, `process_save` reads them (a List or String keeps neither, labels cut to 60), and `stages.field_problems` names a scale Review Robin's `scale_shape_error` would refuse, which `locks.publish_problems` blocks on. Divergences: `scale_labels` is `String(200)` not null, `""` for none, as the table's other text columns, not nullable; the Outline's line is the page script's and lands with the card in rung 3, since nothing sets a scale before it.
 
+**Rung 3 (2026-11-25):** the *Type* menu is `stages.FIELD_CHOICES` (a scale's value `<type>:scale`), the labels take a second line, and the page script's `scaleProblem` names on the Outline what `stages.field_problems` names at publishing. The handoff writes `scale` and, when set, `scale_labels`; the extract's field detail carries them. A result collating a scale field reads it as a number (`result_type`, `result_summary`), as the page script always has. `tests/integration/test_handoffs.py` posts the bundle to Review Robin and finds a 5-point scale.
+
+**Cumulative read (1, at rung 3, on `e6d63de1a..`):** two defects, two lesser findings, all taken. A `|` typed in a label moved the others along: the script stores it as `¦`, as Band 3 does. A sent gate could be re-sent with a scale Review Robin refuses, since only publishing checked: the card's send and re-send now refuse on `stages.field_problems`. An extract's result rows carried the scale: a result reads as a number there too. The script and the server read a bound differently (`0x10`, `1_0`): both take a plain decimal only.
+
 ## PR ladder
 
 1. **Plan** (this file, moved from 20P Item 2). Prose only.
