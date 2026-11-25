@@ -56,6 +56,7 @@ from ._band1 import (
 # Band 2 state + the Band 3 dual-write — carved into
 # ``_band2.py`` in Segment 18N PR 2.
 from ._band2 import (
+    HeldFieldsRefused,
     replace_held_fields,
     replace_response_fields,
     response_field_shape_error,
@@ -239,6 +240,7 @@ __all__ = [
     "prune_unpopulated_display_fields",
     "seed_display_fields_from_assignments",
     "seed_display_fields_from_reviewees",
+    "HeldFieldsRefused",
     "replace_held_fields",
     "replace_response_fields",
     "response_field_shape_error",

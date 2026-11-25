@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.json_shapes import json_list
+from app.services import instruments as instruments_service
 from app.services import (
     linked_instruments,
     operator_settings,
@@ -255,9 +256,14 @@ def apply(
             correlation_id=correlation_id,
         )
     if settings.instrument is not None:
-        linked_instruments.apply_owned(
-            db, review_session, settings.instrument, settings.instrument_rows, actor=user
-        )
+        try:
+            linked_instruments.apply_owned(
+                db, review_session, settings.instrument, settings.instrument_rows, actor=user
+            )
+        except instruments_service.HeldFieldsRefused as exc:
+            # A custom re-send that would leave the instrument invalid
+            # (segment 23G rung 4): refused whole, as a bad row is.
+            raise SettingsRefused(exc.details) from exc
     if settings.tags is not None:
         session_tags.set_tags(
             db,

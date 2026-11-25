@@ -1294,6 +1294,16 @@ def replace_response_fields(
     )
 
 
+class HeldFieldsRefused(ValueError):
+    """A custom re-send that ``replace_held_fields`` refuses (segment 23G
+    rung 4): ``details`` say why, one line each. Nothing is kept: the
+    caller's unit rolls back."""
+
+    def __init__(self, details: list[str]) -> None:
+        super().__init__("; ".join(details))
+        self.details = details
+
+
 def replace_held_fields(
     db: Session,
     *,
@@ -1331,7 +1341,7 @@ def replace_held_fields(
     # caller refuses it first (``linked_instruments.held_key_errors``).
     taken = sorted(set(wanted) & (set(stored) - was_held))
     if taken:
-        raise ValueError(f"Keys of Review Robin's own fields: {', '.join(taken)}")
+        raise HeldFieldsRefused([f"{key!r} is a field Review Robin added" for key in taken])
     widths = dict(instrument.column_widths or {})
     gone = [stored[key] for key in was_held - set(wanted) if key in stored]
     for field in gone:
@@ -1343,12 +1353,22 @@ def replace_held_fields(
     # is deleted before the events are written.
     dropped: list[tuple[str, str, str]] = []
 
+    def outer(parent_id: int | None) -> int | None:
+        """The nearest enclosing parent that stays, past removed ones."""
+        by_id = {f.id: f for f in instrument.response_fields}
+        while parent_id in gone_ids:
+            parent_id = by_id[parent_id].branch_parent_id
+        return parent_id
+
     def unbranch(parent: InstrumentResponseField, reason: str) -> None:
         """Drop ``parent``'s branch: its condition, and its governed
-        fields' link to it, once."""
+        fields' link to it, once. A branch inside another's keeps its
+        fields in the outer one (Codex on #4219): they move up a level,
+        never out of every branch."""
+        lifted = outer(parent.branch_parent_id)
         for child in instrument.response_fields:
             if child.branch_parent_id == parent.id:
-                child.branch_parent_id = None
+                child.branch_parent_id = lifted
         parent.branch_op = None
         parent.branch_value = None
         parent.branch_mode = None
@@ -1416,6 +1436,13 @@ def replace_held_fields(
         instrument.column_widths = widths or None
     db.flush()
     db.refresh(instrument, ["response_fields"])
+    # What stays must still be a valid instrument, as the card's Save
+    # requires (Codex on #4219): else the re-send is refused whole.
+    from app.services.responses import branch_structure_errors
+
+    broken = branch_structure_errors(instrument.response_fields)
+    if broken:
+        raise HeldFieldsRefused([f"{label}: {reason}" for label, reason in broken])
     for key, label, reason in dropped:
         audit.write_event(
             db,

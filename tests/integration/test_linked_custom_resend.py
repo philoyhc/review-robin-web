@@ -214,3 +214,44 @@ def test_a_sent_key_naming_an_own_field_is_refused(client: TestClient, db: Sessi
     assert fields["familiarity"]._inline_data_type == "Integer"
     assert fields["score"].branch_parent_id == fields["familiarity"].id
     assert _instrument(db).held_field_keys == ["score", "comment"]
+
+
+def test_a_dropped_inner_branch_keeps_its_fields_in_the_outer_one(
+    client: TestClient, db: Session
+) -> None:
+    """Codex on #4219: Familiarity governs Score and Comments, Score
+    governs Why. Score sent as String drops its branch; Why moves up into
+    Familiarity's, so the order still reads as one branch."""
+    created = _set_up(client, db)
+    fields = _fields(db)
+    why = _own(db, "why", "Why", 2)
+    fields["comment"].order = 3
+    fields["score"].branch_op, fields["score"].branch_value = "ge", "3"
+    why.branch_parent_id = fields["score"].id
+    fields["comment"].branch_parent_id = fields["familiarity"].id
+    db.commit()
+    as_text = ("score", "Score", "text", "String", "", "", "")
+    reply = _resend(client, created, _update_bundle(files=_with(_settings(as_text, COMMENT))))
+    assert reply.status_code == 200, reply.text
+    fields = _fields(db)
+    familiarity = fields["familiarity"].id
+    assert [fields[k].branch_parent_id for k in ("score", "why", "comment")] == [familiarity] * 3
+    (dropped,) = _dropped(db)
+    assert dropped["reason"] == "no_longer_fits"
+
+
+def test_a_resend_that_would_leave_the_instrument_invalid_is_refused(
+    client: TestClient, db: Session
+) -> None:
+    """Comments is the one required field outside any branch, and Score,
+    inside Familiarity's, is required: a re-send dropping Comments would
+    leave no anchor (19T Item 11), so it is refused, nothing written."""
+    created = _set_up(client, db)
+    fields = _fields(db)
+    fields["familiarity"].required = False
+    fields["comment"].required = True
+    db.commit()
+    reply = _resend(client, created, _update_bundle(files=_with(_settings(SCORE))))
+    assert reply.status_code == 422 and reply.json()["slot"] == "settings"
+    assert _order(db) == ["familiarity", "score", "comment"]
+    assert _instrument(db).held_field_keys == ["score", "comment"]
