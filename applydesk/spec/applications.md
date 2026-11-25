@@ -955,7 +955,7 @@ but the lobby's *Stage* column reads:
     otherwise that it is there once the gate is saved.
   - **Gate**: *Name*; *Type* (a disabled menu, *Review Robin session*, kept
     for other kinds; *Ruled, not built (2026-11-18, ruling 36):* a second
-    type, *Review Robin (advanced)*, whose instrument Review Robin may
+    type, *Review Robin Session (custom)*, whose instrument Review Robin may
     extend around the gate's response fields); *Description* (Review Robin's instrument description);
     *Confidential* (per gate: Review Robin shows each applicant as *Name
     redacted* with their Dossier ID); the *Entry rule*. The exercise's *Help
