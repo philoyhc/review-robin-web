@@ -300,3 +300,29 @@ def test_a_long_unbroken_value_wraps_inside_its_card(
         "td => { td.textContent = 'https://example.edu/' + 'x'.repeat(240); }"
     )
     _no_sideways_scroll(reviewer)
+
+
+def test_the_bottom_action_row_floats_on_a_phone(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Rung 6 (author, 2026-11-25): on a phone the bottom Save / Cancel /
+    Submit row pins to the foot of the screen while its own place is
+    still below; on a desktop it stays in its place."""
+    reviewer = _surface(page_as, api, live_server, new_session, size={"width": 390, "height": 420})
+    row = reviewer.locator(".rs-action-row:not(.rs-action-row-top)")
+    assert row.evaluate("r => getComputedStyle(r).position") == "sticky"
+    reviewer.evaluate("() => window.scrollTo(0, 0)")
+    box = row.bounding_box()
+    assert box and abs(box["y"] + box["height"] - 420) < 1  # at the foot of the screen
+    expect(row.get_by_role("button", name="Save")).to_be_visible()
+
+    desktop = _surface(page_as, api, live_server, new_session, size={"width": 1400, "height": 1000})
+    assert (
+        desktop.locator(".rs-action-row:not(.rs-action-row-top)").evaluate(
+            "r => getComputedStyle(r).position"
+        )
+        == "static"
+    )

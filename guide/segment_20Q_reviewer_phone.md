@@ -79,7 +79,17 @@ Open. Rung 2 (2026-11-24) diverged in two places:
 - **Rung 4: an address breaks anywhere it must** (`overflow-wrap: anywhere`),
   not only at `@` and `.`: the surface renders through two template
   environments, and a `<wbr>` filter would be registered in both for a
-  rarely-seen case. The action row stays where it is (open question).
+  rarely-seen case.
+- **Rung 6:**
+  - **The bottom action row floats** (author, 2026-11-25): sticky, so it
+    pins to the screen's foot until the list ends.
+  - **Touch targets are two tiers**: a button, box or list at least 44 px; a
+    checkbox, a text link or text button inside a line, or a role pill at
+    least 24 px (WCAG 2.2's minimum, with its inline exception). 44 px links
+    would break the lines they sit in.
+  - **The breakpoints are not consolidated.** The participant rules this
+    segment adds use only 640 px; the rest are operator layouts, and moving
+    them would change those pages for no participant gain.
 
 ## PR ladder
 
@@ -111,7 +121,7 @@ Each rung lands as a scaffold the author checks on a phone before the next.
 
 ## Open questions
 
-- Should the action row (Save / Submit) be fixed to the bottom of the screen on a phone? The author decides at rung 4's browser check on a real phone; iOS Safari's bottom bar is the risk.
+- ~~Should the action row be fixed to the bottom on a phone?~~ Yes, the bottom row floats (author, 2026-11-25; rung 6).
 
 ## Out of scope
 
