@@ -1766,6 +1766,7 @@ def exercise_section(request: Request, exercise_id: str, section: str) -> Respon
         total_bounds=stages.total_bounds,
         sources_warn=stages.sources_warn,
         gate_summary=stages.gate_summary,
+        gate_type=stages.gate_type,
         evaluators_summary=stages.evaluators_summary,
         gate_types=stages.GATE_TYPES,
         fields_of=stages.fields_of,

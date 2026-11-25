@@ -22,7 +22,7 @@
     {% for g in gates %}
       {% set st = gate_state(exercise.public_id, g.key) %}
       <tr data-gate="{{ g.key }}"><td>Gate {{ g.number }} · <strong>{{ g.label }}</strong></td>
-        <td>Review Robin</td>
+        <td>{{ gate_type(g) }}</td>
         <td>{{ gs.chip(st) }}</td>
         <td>{{ st[1] or "—" }}</td>
         <td class="ev-go">{{ gs.action(st, url('/operator/exercises/' ~ exercise.public_id ~ '/evaluations/' ~ g.key)) }}</td></tr>

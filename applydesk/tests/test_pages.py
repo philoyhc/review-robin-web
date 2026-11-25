@@ -1695,16 +1695,19 @@ def test_count_is_any_field_s() -> None:
 def test_a_gate_card_follows_ruling_28(client: TestClient) -> None:
     """Ruling 28 (AD1G rung 4c, scaffold): a gate's own fields and its
     evaluators sit in two cards, shut, each saying what it holds; Type is
-    fixed at Review Robin; then Response fields, then Results; no Runs as."""
+    a Review Robin session, Gate 1 the custom one (segment 23G); then
+    Response fields, then Results; no Runs as."""
     text = client.get(f"/applydesk/operator/exercises/{EX}/process").text
     gate = text[text.index('data-item="gate"') : text.index('data-pc-act="remove-gate"')]
     assert re.findall(r'<details class="gsec" data-gsec="(\w+)"', gate) == ["gate", "evaluators"]
     assert '<details class="gsec" data-gsec="gate" open' not in gate  # shut on load
     sums = re.findall(r"data-gsec-sum>([^<]*)<", gate)
-    assert sums[0].startswith("Review Robin session · Enters: Status is Submitted")
+    assert sums[0].startswith("Review Robin Session (custom) · Enters: Status is Submitted")
     assert sums[1] == "Current RAs 29–30 · Total 29–30 · Automatic"
-    assert '<select class="fc-in" data-pc="type" disabled' in gate
-    assert ">Review Robin session</option>" in gate
+    assert re.findall(
+        r'<option value="([\w-]+)"( selected)?>', gate[gate.index('data-pc="type"') :]
+    )[:2] == [("RRW", ""), ("RRW-custom", " selected")]
+    assert ">Review Robin Session (custom)</option>" in gate
     assert "Every current RA scores every applicant" in gate  # its description
     assert 'data-pc="confidential"' in gate and ">Confidential<" in gate
     order = [
@@ -1735,7 +1738,7 @@ def test_a_confidential_gate_says_so_when_shut(client: TestClient) -> None:
     plan = stages.plan_of(EX)
     assert (
         stages.gate_summary(plan, gate)
-        == "Review Robin session · Confidential · Entry decided by hand"
+        == "Review Robin Session · Confidential · Entry decided by hand"
     )
     fields = stages.fields_of(
         stages.Gate(
