@@ -30,7 +30,7 @@ import uuid
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypedDict
+from typing import Any, TypedDict
 
 import httpx
 import pytest
@@ -250,7 +250,9 @@ def page_as(browser: Browser, live_server: LiveServer) -> Iterator[Callable[...,
     contexts = []
     errors: list[str] = []
 
-    def open_page(email: str | None = None, *, javascript: bool = True) -> Page:
+    def open_page(email: str | None = None, *, javascript: bool = True, **context: Any) -> Page:
+        """``context`` adds to the browser context's options: a phone's
+        ``viewport``, ``is_mobile`` and ``has_touch`` (segment 20Q)."""
         headers = {}
         if email is not None:
             headers = {
@@ -258,14 +260,15 @@ def page_as(browser: Browser, live_server: LiveServer) -> Iterator[Callable[...,
                 "X-MS-CLIENT-PRINCIPAL-ID": f"browser-{email}",
                 "X-MS-CLIENT-PRINCIPAL-IDP": "aad",
             }
-        context = browser.new_context(
+        options: dict[str, Any] = {"viewport": {"width": 1500, "height": 1000}, **context}
+        browser_context = browser.new_context(
             base_url=live_server.base_url,
-            viewport={"width": 1500, "height": 1000},
             extra_http_headers=headers,
             java_script_enabled=javascript,
+            **options,
         )
-        contexts.append(context)
-        opened = context.new_page()
+        contexts.append(browser_context)
+        opened = browser_context.new_page()
         opened.on("pageerror", lambda exc: errors.append(str(exc)))
         return opened
 

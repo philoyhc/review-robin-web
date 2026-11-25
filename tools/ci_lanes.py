@@ -93,6 +93,7 @@ NOT_PROSE_READERS = {
     "tests/browser/test_builder_branching.py": "a docstring cites a guide plan",
     "tests/integration/test_guide_screencaps.py": "reads app/web/static/guide, not guide/",
     "tests/integration/test_url_crawl.py": '"guide" is the in-app /guide URL',
+    "tests/browser/test_participant_pages_phone.py": '"/guide" is the in-app Guide page',
     "residentialapps/tests/test_sample_data.py": (
         "reads the mock CSVs, not prose; the residential lane runs it"
     ),

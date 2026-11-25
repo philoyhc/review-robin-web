@@ -830,3 +830,54 @@ def test_stacked_scales_share_their_ends(
     assert reviewer.locator(".sc-snap .sc-track").first.evaluate(
         "t => getComputedStyle(t, '::before').content"
     ) in ("none", "normal")
+
+
+def test_band_2_stacked_preview_holds_scales_with_different_sides(
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """20Q cumulative read: stacked scales share the widest side, so an
+    11-point 1-11 snap (a 16px side) beside a 0-0.04 by 0.01 snap (20px)
+    widens 8px past its own minimum, the widest of the two; Band 2's
+    track, sized to a saved 60px, grows to hold it as widened."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument
+
+    from ._builder import session_pk
+
+    session_id = new_session()
+    seed_rosters(api, session_id)
+    make_rating_a_scale(live_server.database_url, session_id, "", hi=11)
+    make_rating_a_scale(
+        live_server.database_url,
+        session_id,
+        "",
+        label="Comments",
+        data_type="Decimal",
+        lo=0,
+        hi=0.04,
+        step=0.01,
+    )
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(
+                    Instrument.session_id == session_pk(live_server.database_url, session_id)
+                )
+            ).scalar_one()
+            instrument.response_layout = "stacked"
+            instrument.column_widths = {"stack_label": 150, "stack_input": 60}
+            db.commit()
+    finally:
+        engine.dispose()
+    page.set_viewport_size({"width": 1500, "height": 1100})
+    card = open_unlocked(page, session_id)
+    widgets = card.locator("[data-new-model-band2-preview] .rs-stack-fields [data-rs-scale-widget]")
+    expect(widgets).to_have_count(2)
+    cell = widgets.first.locator("xpath=ancestor::td[1]").bounding_box()
+    assert cell is not None
+    for i in range(2):
+        w = widgets.nth(i).bounding_box()
+        assert w is not None and w["x"] + w["width"] <= cell["x"] + cell["width"] + 1, (i, w, cell)

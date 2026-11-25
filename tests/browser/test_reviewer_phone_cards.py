@@ -5,6 +5,7 @@ the table is untouched."""
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 import httpx
@@ -300,3 +301,34 @@ def test_a_long_unbroken_value_wraps_inside_its_card(
         "td => { td.textContent = 'https://example.edu/' + 'x'.repeat(240); }"
     )
     _no_sideways_scroll(reviewer)
+
+
+def test_the_bottom_action_row_floats_on_a_phone(
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Rung 6 (author, 2026-11-25): on a phone the bottom Save / Cancel /
+    Submit row pins to the foot of the screen, but only once the top row
+    has scrolled out of view, so the two sets never show together; on a
+    desktop it stays in its place."""
+    reviewer = _surface(page_as, api, live_server, new_session, size={"width": 390, "height": 420})
+    row = reviewer.locator(".rs-action-row:not(.rs-action-row-top)")
+    reviewer.evaluate("() => window.scrollTo(0, 0)")
+    expect(reviewer.locator(".rs-action-row-top")).to_be_in_viewport()
+    expect(row).not_to_have_class(re.compile(r"rs-action-row-float"))
+    expect(row).not_to_be_in_viewport()  # in its place, below the fold
+
+    top = reviewer.locator(".rs-action-row-top").bounding_box()
+    assert top
+    reviewer.evaluate(f"() => window.scrollTo(0, {top['y'] + top['height'] + 20})")
+    expect(row).to_have_class(re.compile(r"rs-action-row-float"))
+    assert row.evaluate("r => getComputedStyle(r).position") == "sticky"
+    box = row.bounding_box()
+    assert box and abs(box["y"] + box["height"] - 420) < 1  # at the foot of the screen
+    expect(row.get_by_role("button", name="Save")).to_be_visible()
+
+    desktop = _surface(page_as, api, live_server, new_session, size={"width": 1400, "height": 1000})
+    desktop_row = desktop.locator(".rs-action-row:not(.rs-action-row-top)")
+    assert desktop_row.evaluate("r => getComputedStyle(r).position") == "static"

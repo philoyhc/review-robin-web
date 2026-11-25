@@ -699,12 +699,14 @@
           max-width: none;
           min-width: 0;
           white-space: normal;
-          text-align: left !important;
           /* A value with no break in it (a pasted URL on the summary or
              results page) wraps in its card rather than widen the page
              (Codex on #4207). */
           overflow-wrap: anywhere;
         }
+        /* A value reads from the left; a cell spanning the row
+           (collation's download) keeps its own alignment. */
+        table.rs-table > tbody > tr > td:not([colspan]) { text-align: left !important; }
         table.rs-table > tbody > tr > td.rs-reviewee,
         table.rs-table > tbody > tr > td.rs-group { padding-right: 4ch; }
         table.rs-table > tbody > tr > td[data-label]::before {
@@ -5142,6 +5144,41 @@
         body.ui-v2 .rs-action-divider { display: none; }
         body.ui-v2 .rs-role-nav,
         body.ui-v2 table.rs-table code { overflow-wrap: anywhere; }
+        /* Rung 6 — the bottom action row floats: it pins to the foot of
+           the screen while the reviewer works down a long list, and
+           settles in its place at the list's end (author, 2026-11-25).
+           Only once the top row has scrolled away: the surface's script
+           marks it `rs-action-row-float` then, so the two sets never show
+           together. Sticky, not fixed: it stays the form's own row, so
+           Save / Cancel / Submit post as they always do. It keeps clear
+           of an iPhone's home indicator. */
+        body.ui-v2 .rs-action-row.rs-action-row-float {
+          position: sticky;
+          bottom: 0;
+          z-index: 5;
+          margin: var(--space-4) calc(-1 * var(--space-2)) 0;
+          padding: var(--space-2) var(--space-2)
+            calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+          background: var(--surface-page);
+          border-top: 1px solid var(--border-default);
+          box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+        }
+      }
+      /* Rung 6 — on a touch screen a participant page's controls are
+         big enough to tap: a button, a box or a list at least 44 px
+         tall; a checkbox 24 px; a text link or text button inside a line
+         (an address, *clear*, a role pill) a 24 px target, WCAG 2.2's
+         minimum, its padding taking no room from the line. Operator
+         pages, desktop-first, are left alone. */
+      @media (pointer: coarse) {
+        body.ui-v2.reviewer .btn { min-height: 44px; }
+        body.ui-v2.reviewer input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not(.sc-box-hidden),
+        body.ui-v2.reviewer select,
+        body.ui-v2.reviewer textarea { min-height: 44px; }
+        body.ui-v2.reviewer input[type="checkbox"],
+        body.ui-v2.reviewer input[type="radio"] { width: 24px; height: 24px; }
+        body.ui-v2.reviewer a:not(.btn),
+        body.ui-v2.reviewer .btn-reset { padding-block: 4px; }
       }
       /* Segment 20K — a stacked instrument's Responses cell: one line
          per response field, its label (the constraint under it) left of

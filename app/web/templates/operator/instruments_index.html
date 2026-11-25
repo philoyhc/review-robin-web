@@ -2594,15 +2594,18 @@
           // surface's is (19T Item 16).
           // Segment 20P — the narrowest a scale column reads at, in px,
           // from the scale's own geometry; 0 for any other column.
-          function scaleMinWidth(card, key) {
+          function scaleGeometry(card, key) {
             var row = rfRowByKey(card, key);
-            if (!row || !rfRowCommitted(row) || !window.rrwScaleGeometry) { return 0; }
+            if (!row || !rfRowCommitted(row) || !window.rrwScaleGeometry) { return null; }
             var shape = window.newModelRfCommittedShape(row);
-            if (!shape.scale) { return 0; }
-            var g = window.rrwScaleGeometry(
+            if (!shape.scale) { return null; }
+            return window.rrwScaleGeometry(
               parseFloat(shape.min), parseFloat(shape.max), parseFloat(shape.step),
               (shape.scaleLabels || '').split('|')
             );
+          }
+          function scaleMinWidth(card, key) {
+            var g = scaleGeometry(card, key);
             return g ? g.minWidth + 2 : 0;
           }
           // A scale column's floor: the scale and the preview cell's side
@@ -2815,9 +2818,17 @@
           }
           // Segment 20P — the widest scale among the fields, which a saved
           // response track narrower than it grows to hold (Codex on #4194).
+          // The stacked scales share the widest one's side
+          // (``_scale_js.html``'s ``evenStacks``), so a scale with a
+          // narrower side widens by twice the difference: the track holds
+          // the widest of them as widened (20Q cumulative read).
           function stackScaleMin(card) {
-            return rfRows(card).reduce(function (most, row) {
-              return Math.max(most, scaleMinWidth(card, row.getAttribute('data-row-key')));
+            var gs = rfRows(card).map(function (row) {
+              return scaleGeometry(card, row.getAttribute('data-row-key'));
+            }).filter(Boolean);
+            var side = gs.reduce(function (most, g) { return Math.max(most, g.side); }, 0);
+            return gs.reduce(function (most, g) {
+              return Math.max(most, g.minWidth + 2 * (side - g.side) + 2);
             }, 0);
           }
           function stackInputWidth(card) {

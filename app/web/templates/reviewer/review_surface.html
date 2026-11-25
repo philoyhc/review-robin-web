@@ -571,6 +571,21 @@
 
       {% if any_accepting or preview_mode or page_count > 1 %}
         {% include "reviewer/_action_row.html" %}
+        {# 20Q rung 6 — on a phone the bottom row floats at the screen's
+           foot (base.html), but only once the top row has scrolled out of
+           view: while the top buttons show, one set is enough (author,
+           2026-11-25). Without script the bottom row stays in its place. #}
+        <script>
+          (function () {
+            var rows = document.querySelectorAll(".rs-action-row");
+            var top = document.querySelector(".rs-action-row-top");
+            var bottom = rows[rows.length - 1];
+            if (!top || !bottom || bottom === top || !("IntersectionObserver" in window)) return;
+            new IntersectionObserver(function (entries) {
+              bottom.classList.toggle("rs-action-row-float", !entries[0].isIntersecting);
+            }).observe(top);
+          })();
+        </script>
       {% endif %}
     {% if preview_mode %}</div>{% else %}</form>{% endif %}
 

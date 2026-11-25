@@ -24,13 +24,16 @@ from .test_url_crawl import _go_live, _release, _seed_draft, _submit, _user
 
 
 class _Tables(HTMLParser):
-    """Each ``rs-table``'s body value cells' ``data-label``s: every
-    ``<td>`` but a row's first (the identity: reviewee, group, reviewer,
-    cohort or session) and a cell spanning columns (collation's download)."""
+    """Each ``rs-table``'s header texts, and its body value cells'
+    ``data-label``s: every ``<td>`` but a row's first (the identity:
+    reviewee, group, reviewer, cohort or session) and a cell spanning
+    columns (collation's download)."""
 
     def __init__(self) -> None:
         super().__init__()
         self.tables: list[list[str | None]] = []
+        self.headers: list[list[str]] = []
+        self._th: list[str] | None = None
         self._first = False
         self._depth = 0
         self._in_body = False
@@ -42,6 +45,9 @@ class _Tables(HTMLParser):
                 self._depth += 1
                 if self._depth == 1:
                     self.tables.append([])
+                    self.headers.append([])
+        elif self._depth == 1 and not self._in_body and tag == "th":
+            self._th = []
         elif self._depth == 1 and tag == "tbody":
             self._in_body = True
         elif self._depth == 1 and self._in_body and tag == "tr":
@@ -52,8 +58,15 @@ class _Tables(HTMLParser):
                 return
             self.tables[-1].append(a.get("data-label"))
 
+    def handle_data(self, data: str) -> None:
+        if self._th is not None:
+            self._th.append(data)
+
     def handle_endtag(self, tag: str) -> None:
-        if tag == "table" and self._depth:
+        if tag == "th" and self._th is not None:
+            self.headers[-1].append(" ".join("".join(self._th).split()))
+            self._th = None
+        elif tag == "table" and self._depth:
             self._depth -= 1
             self._in_body = False
 
@@ -62,6 +75,12 @@ def _cells(body: str) -> list[list[str | None]]:
     parser = _Tables()
     parser.feed(body)
     return parser.tables
+
+
+def _headers(body: str) -> list[list[str]]:
+    parser = _Tables()
+    parser.feed(body)
+    return parser.headers
 
 
 @pytest.fixture
@@ -129,9 +148,13 @@ def test_each_page_table_is_a_card_table_with_labelled_values(
 ) -> None:
     tables = _cells(pages[page])
     assert tables, f"{page}: no rs-table"
-    for labels in tables:
+    for labels, headers in zip(tables, _headers(pages[page]), strict=True):
         assert labels, f"{page}: an rs-table with no value cells"
         assert all(labels), (page, labels)
+        # The first row's labels are the columns' headers, in order, past
+        # the identity column: a label read from the wrong index shows.
+        columns = headers[1:]
+        assert labels[: len(columns)] == columns, (page, labels, headers)
 
 
 def test_the_lobby_reads_its_labels_beside_their_values(pages: dict[str, str]) -> None:
