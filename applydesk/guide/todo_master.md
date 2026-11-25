@@ -871,7 +871,8 @@ Segments in order; each gets a plan in this folder when it starts.
   number type plus a `gate_field` flag and three labels, handed off as
   Review Robin's scale attributes. Lands with or after Review Robin's
   scale item; until then Apply Desk does not offer the two types.
-  **Plan:** `guide/segment_20P_scale_answer.md`, Item 2.
+  Review Robin's scale closed 2026-11-24 (20P Item 1).
+  **Plan:** `applydesk/guide/segment_AD2S_gate_scale.md`.
 - **AD2:** operator pages' dates as Review Robin's `YYYY-MM-DD HH:MM`
   through one helper, once dates are stored (U18; AD1P).
 - **Form:** card drag has no Escape and no auto-scroll (AD1B).
