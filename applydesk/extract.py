@@ -20,7 +20,7 @@ import io
 import re
 import zipfile
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 
 from applydesk import clock, sample_data, stages, workflow
@@ -557,7 +557,8 @@ def _process(e: Exercise) -> Table:
                                 value=r.value,
                                 at_least=str(r.at_least),
                                 ignore_zero=_yes(r.ignore_zero),
-                                **_field(r.field),
+                                # A result is a number, never a scale (AD2S).
+                                **_field(replace(r.field, scale=False)),
                             )
                         ]
                     )

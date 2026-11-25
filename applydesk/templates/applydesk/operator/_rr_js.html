@@ -211,6 +211,7 @@
     if (clash) return "Not sent (session_code_conflict): " + code + " is " + clash[1] + "'s session code. Choose another.";
     var ev = window.ApplyDeskEv;
     if (ev && ev.edited()) return "Not sent (invalid_setup): this tab's changes to the pairs are not saved; discard them to send the pairs as saved.";
+    if (DATA.fieldProblems.length) return "Not sent (invalid_setup): " + DATA.fieldProblems[0] + ".";
     if (!first || DATA.state === "Ready") return "";
     if (DATA.approveOnly && ev && ev.allApproved()) return "";
     return "Not sent (invalid_setup): " + (DATA.why || "the gate is not ready") + ".";

@@ -1190,6 +1190,13 @@ def test_a_field_is_set_as_a_scale_its_labels_and_problems_follow(page: Page) ->
     fld.locator('[data-q="step"]').fill("1")
     fld.locator('[data-q="scale_start"]').fill("Weak")
     fld.locator('[data-q="scale_end"]').fill("Strong")
+    # A "|" typed in a label is kept as "¦", as Band 3 keeps it, so the
+    # labels never move along (the cumulative read).
+    fld.locator('[data-q="scale_middle"]').fill("so|so")
+    snap = page.evaluate("() => window.applydeskProcessSnapshot()")
+    sent = next(g for s in snap["stages"] for g in s["gates"] if g["fields"])["fields"][0]
+    assert sent["scale_labels"] == "Weak|so\u00a6so|Strong"
+    fld.locator('[data-q="scale_middle"]').fill("")
     label = fld.locator('[data-q="label"]').input_value() or "f1"
     assert (fld.locator("[data-rf-sum]").text_content() or "").startswith(
         "Integer scale 1 to 5, step 1, labelled Weak / Strong · "

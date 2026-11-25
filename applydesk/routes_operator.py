@@ -1417,6 +1417,11 @@ def _rr_data(
         "state": state[0],
         "why": state[1] if state[0] == "Not ready" else "",
         "opened": opened,
+        # A field Review Robin would refuse (segment AD2S): a send or a
+        # re-send is refused as Review Robin's import would refuse it, the
+        # re-send included, which publishing does not guard (the
+        # cumulative read).
+        "fieldProblems": list(stages.field_problems(gate)),
         "approveOnly": workflow.awaits_approval(exercise.public_id, gate),
         "name": sent_with.name,
         "code": sent_with.code,

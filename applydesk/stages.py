@@ -132,11 +132,17 @@ def scale_labels(raw: str) -> str:
     return "|".join(parts) if any(parts) else ""
 
 
+_DECIMAL = re.compile(r"[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?")
+
+
 def _number(v: str) -> float | None:
-    try:
-        n = float(v)
-    except ValueError:
+    """A plain decimal, as the page script's ``num`` reads one: never
+    ``1_0``, ``inf`` or another digit set, which ``float`` would take and
+    the script would not (the cumulative read). Stricter than Review
+    Robin's ``float``, never looser."""
+    if not _DECIMAL.fullmatch(v.strip()):
         return None
+    n = float(v)
     return n if math.isfinite(n) else None
 
 

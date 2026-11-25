@@ -40,6 +40,11 @@ def _scale(**kw: Any) -> stages.Field:
         (_scale(step="0.5"), "is an Integer scale with a bound or Step not whole"),
         (_scale(max="6", step="2"), "is a scale whose Max is not Min plus a whole number of Steps"),
         (_scale(max="nan"), "is a scale with no Min or Max"),
+        # A plain decimal only, as the page script reads one (the read).
+        (_scale(max="1_0"), "is a scale with no Min or Max"),
+        (_scale(max="0x10"), "is a scale with no Min or Max"),
+        (_scale(max="inf"), "is a scale with no Min or Max"),
+        (_scale(min="-1", max="1e1", step=".5", type="decimal"), ""),
     ],
 )
 def test_a_scale_s_bounds_are_checked_as_review_robin_does(field: stages.Field, why: str) -> None:

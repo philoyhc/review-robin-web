@@ -1345,7 +1345,8 @@
   }
   // Why a field set as a scale cannot be one, as stages.scale_problem
   // (Review Robin's scale_shape_error, segment AD2S); "" when it can.
-  function num(v) { return v !== "" && isFinite(Number(v)) ? Number(v) : null; }
+  // A plain decimal only, as stages._number reads one.
+  function num(v) { return /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(v) ? Number(v) : null; }
   function scaleProblem(f) {
     if (!f.scale) return "";
     if (f.type !== "integer" && f.type !== "decimal") return "is a scale but not an Integer or a Decimal";
@@ -1455,7 +1456,9 @@
   function readField(row) {
     // The menu's value is the type, or "<type>:scale" (segment AD2S).
     var choice = fv(row, "type").split(":"), type = choice[0], scale = choice[1] === "scale";
-    var labels = scale ? [fv(row, "scale_start"), fv(row, "scale_middle"), fv(row, "scale_end")] : [];
+    // A "|" typed in a label would move the others along: Band 3 stores
+    // it as "¦" (newModelRfScaleLabels), and so does this.
+    var labels = scale ? ["scale_start", "scale_middle", "scale_end"].map(function (q) { return fv(row, q).replace(/\|/g, "\u00a6"); }) : [];
     return {
       key: row.dataset.rf, label: fv(row, "label"), type: type,
       scale: scale, scaleLabels: labels.some(Boolean) ? labels.join("|") : "",
