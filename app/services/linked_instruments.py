@@ -28,7 +28,13 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Instrument, InstrumentDisplayField, ReviewSession, User
+from app.db.models import (
+    Instrument,
+    InstrumentDisplayField,
+    InstrumentResponseField,
+    ReviewSession,
+    User,
+)
 from app.db.models.instrument import LINKED_MODE_DEFAULT
 from app.json_shapes import json_list
 from app.services import audit, linked_apps
@@ -88,6 +94,34 @@ def row_errors(spec: InstrumentSpec, rows: frozenset[str]) -> list[str]:
         if shape:
             errors.append(f"{at}: {shape}")
     return errors
+
+
+def held_key_errors(
+    review_session: ReviewSession,
+    instrument: Instrument,
+    spec: InstrumentSpec,
+    rows: frozenset[str],
+) -> list[str]:
+    """A custom re-send's field key that names a field Review Robin added
+    (segment 23G rung 4, Codex on #4219): taken as the application's, it
+    would overwrite that field and hold it. Refused before anything is
+    written; the application must send another key. Empty for a locked
+    instrument, whose re-send replaces every field."""
+    if not any(".response_fields[" in row for row in rows):
+        return []
+    mode = spec.linked_mode if "instruments[1].linked_mode" in rows else instrument.linked_mode
+    if mode != "custom" or not linked_apps.locks(
+        review_session, linked_apps.Lock.INSTRUMENT_STRUCTURE
+    ):
+        return []
+    stored = {f.field_key for f in instrument.response_fields}
+    held = set(stored if instrument.held_field_keys is None else instrument.held_field_keys)
+    return [
+        f"instruments[1].response_fields[{m}].field_key: {field.field_key!r} is a field "
+        "Review Robin added; send another key"
+        for m, field in sorted(spec.response_fields.items())
+        if field.field_key in stored - held
+    ]
 
 
 def the_instrument(db: Session, review_session: ReviewSession) -> Instrument:
@@ -314,19 +348,69 @@ def apply_owned(
         instruments_service.update_instrument_description(
             db, instrument=instrument, description=spec.description, actor=actor
         )
+    was_custom = is_custom(review_session, instrument)
     if "instruments[1].linked_mode" in rows:
         set_mode(
             db, review_session, instrument, spec.linked_mode or LINKED_MODE_DEFAULT, actor=actor
         )
+    custom = is_custom(review_session, instrument)
     if any(".response_fields[" in row for row in rows):
         sent = [f for _, f in sorted(spec.response_fields.items())]
-        instruments_service.replace_response_fields(
-            db,
-            instrument=instrument,
-            fields=[_field_entry(f) for f in sent],
-            actor=actor,
-        )
+        if custom:
+            # Segment 23G rung 4 — the held fields only: Review Robin's own,
+            # the order, the branches and required stay.
+            instruments_service.replace_held_fields(
+                db,
+                instrument=instrument,
+                fields=[_field_entry(f) for f in sent],
+                held=instrument.held_field_keys,
+                actor=actor,
+            )
+        else:
+            instruments_service.replace_response_fields(
+                db,
+                instrument=instrument,
+                fields=[_field_entry(f) for f in sent],
+                actor=actor,
+            )
         hold_keys(instrument, [f.field_key or "" for f in sent])
+    elif was_custom and not custom:
+        # Custom to locked with no fields sent: the instrument becomes the
+        # application's held fields again, in its order, unbranched; its
+        # own fields go (segment 23G rung 4).
+        restore_held(db, instrument, actor=actor)
+
+
+def _stored_entry(field: InstrumentResponseField) -> dict[str, Any]:
+    """A stored field as ``replace_response_fields`` takes an entry."""
+    return {
+        "field_key": field.field_key,
+        "label": field.label,
+        "response_type": field._inline_response_type,
+        "data_type": field._inline_data_type,
+        "min": field._inline_min,
+        "max": field._inline_max,
+        "step": field._inline_step,
+        "list_csv": field._inline_list_csv,
+        "scale": field.scale,
+        "scale_labels": field.scale_labels,
+        "required": field.required,
+        "help_text": field.help_text,
+        "help_text_visible": field.help_text_visible,
+        "visible": field.visible,
+    }
+
+
+def restore_held(db: Session, instrument: Instrument, *, actor: User) -> None:
+    """Make a custom instrument the application's held fields alone, in
+    the order it sent them, every branch cleared (a switch to locked;
+    segment 23G rung 4). ``replace_response_fields`` deletes Review
+    Robin's own fields, refusing one holding responses, and audits."""
+    by_key = {f.field_key: f for f in instrument.response_fields}
+    held = [by_key[k] for k in (instrument.held_field_keys or by_key) if k in by_key]
+    instruments_service.replace_response_fields(
+        db, instrument=instrument, fields=[_stored_entry(f) for f in held], actor=actor
+    )
 
 
 def set_mode(

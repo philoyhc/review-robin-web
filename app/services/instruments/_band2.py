@@ -1292,3 +1292,177 @@ def replace_response_fields(
         actor=actor,
         include_branches=True,
     )
+
+
+class HeldFieldsRefused(ValueError):
+    """A custom re-send that ``replace_held_fields`` refuses (segment 23G
+    rung 4): ``details`` say why, one line each. Nothing is kept: the
+    caller's unit rolls back."""
+
+    def __init__(self, details: list[str]) -> None:
+        super().__init__("; ".join(details))
+        self.details = details
+
+
+def replace_held_fields(
+    db: Session,
+    *,
+    instrument: Instrument,
+    fields: list[dict[str, Any]],
+    held: list[str] | None,
+    actor: User,
+) -> list[str]:
+    """A linked application's re-send into a custom instrument (segment
+    23G rung 4): the held fields it sends are updated in place by key, a
+    newly sent one joins at the end, and a held field it no longer sends
+    is deleted; Review Robin's own fields, the order, the branches and
+    every field's ``required`` stay as they are (a new field takes the
+    sent ``required`` as its start). ``held`` is the keys the application
+    sent last (``None`` reads every stored field as held, an instrument
+    from before the list). A branch that loses its parent or its last
+    governed field, or whose parent no longer takes its condition (a type
+    or options change), is dropped and audited as
+    ``instrument.branch_dropped``. Entries are ``replace_response_fields``'s.
+    Audited as the card's Save is, and only flushes. Refuses a deleted
+    field holding responses (:class:`ResponsesPresentError`). Returns the
+    labels of the fields whose branch was dropped."""
+    from app.services.instruments._response_fields import (
+        ResponsesPresentError,
+        validation_block_from_inline,
+    )
+    from app.services.responses._branching import condition_error
+
+    lifecycle.require_editable(db, instrument.session)
+    before = _response_field_snapshot(instrument)
+    stored = {f.field_key: f for f in instrument.response_fields}
+    was_held = set(stored) if held is None else set(held)
+    wanted = [str(entry["field_key"]) for entry in fields]
+    # A sent key naming a field Review Robin added would overwrite it; the
+    # caller refuses it first (``linked_instruments.held_key_errors``).
+    taken = sorted(set(wanted) & (set(stored) - was_held))
+    if taken:
+        raise HeldFieldsRefused([f"{key!r} is a field Review Robin added" for key in taken])
+    widths = dict(instrument.column_widths or {})
+    gone = [stored[key] for key in was_held - set(wanted) if key in stored]
+    for field in gone:
+        count = _response_count_for_field(db, field.id)
+        if count > 0:
+            raise ResponsesPresentError(count)
+    gone_ids = {field.id for field in gone}
+    # (field key, label, reason): read when dropped, as a removed parent
+    # is deleted before the events are written.
+    dropped: list[tuple[str, str, str]] = []
+
+    def outer(parent_id: int | None) -> int | None:
+        """The nearest enclosing parent that stays, past removed ones."""
+        by_id = {f.id: f for f in instrument.response_fields}
+        while parent_id in gone_ids:
+            parent_id = by_id[parent_id].branch_parent_id
+        return parent_id
+
+    def unbranch(parent: InstrumentResponseField, reason: str) -> None:
+        """Drop ``parent``'s branch: its condition, and its governed
+        fields' link to it, once. A branch inside another's keeps its
+        fields in the outer one (Codex on #4219): they move up a level,
+        never out of every branch."""
+        lifted = outer(parent.branch_parent_id)
+        for child in instrument.response_fields:
+            if child.branch_parent_id == parent.id:
+                child.branch_parent_id = lifted
+        parent.branch_op = None
+        parent.branch_value = None
+        parent.branch_mode = None
+        dropped.append((parent.field_key, parent.label, reason))
+
+    for field in gone:
+        if any(child.branch_parent_id == field.id for child in instrument.response_fields):
+            unbranch(field, "field_removed")
+        widths.pop(f"rf_{field.id}", None)
+    for field in gone:
+        db.delete(field)
+    db.flush()
+    db.refresh(instrument, ["response_fields"])
+    kept = sorted(
+        (f for f in instrument.response_fields if f.id not in gone_ids), key=lambda f: f.order
+    )
+    by_key = {f.field_key: f for f in kept}
+    for entry in fields:
+        key = str(entry["field_key"])
+        field = by_key.get(key)
+        if field is None:
+            field = InstrumentResponseField(instrument_id=instrument.id, field_key=key)
+            field.required = bool(entry["required"])
+            db.add(field)
+            kept.append(field)
+            by_key[key] = field
+        field.label = str(entry["label"])
+        field.visible = bool(entry["visible"])
+        field.help_text = entry["help_text"]
+        field.help_text_visible = bool(entry["help_text_visible"])
+        field._inline_response_type = entry["response_type"]
+        field._inline_data_type = entry["data_type"]
+        field._inline_min = entry["min"]
+        field._inline_max = entry["max"]
+        field._inline_step = entry["step"]
+        field._inline_list_csv = entry["list_csv"]
+        if "scale" in entry:
+            field.scale = bool(entry["scale"])
+            field.scale_labels = entry.get("scale_labels")
+        field.validation = validation_block_from_inline(
+            entry["data_type"],
+            entry["min"],
+            entry["max"],
+            entry["step"],
+            entry["list_csv"],
+            bool(field.scale),
+            field.scale_labels,
+        )
+    for order, field in enumerate(kept):
+        field.order = order
+    db.flush()
+    db.refresh(instrument, ["response_fields"])
+    # A branch whose last governed field went, or whose parent no longer
+    # takes its condition (a String now, or an option gone), is dropped.
+    for parent in list(instrument.response_fields):
+        governs = any(f.branch_parent_id == parent.id for f in instrument.response_fields)
+        has_condition = bool(parent.branch_op or parent.branch_value or parent.branch_mode)
+        if has_condition and not governs:
+            unbranch(parent, "field_removed")
+        elif governs and condition_error(
+            parent._inline_data_type, parent._inline_list_csv, parent.branch_op, parent.branch_value
+        ):
+            unbranch(parent, "no_longer_fits")
+    if widths != (instrument.column_widths or {}):
+        instrument.column_widths = widths or None
+    db.flush()
+    db.refresh(instrument, ["response_fields"])
+    # What stays must still be a valid instrument, as the card's Save
+    # requires (Codex on #4219): else the re-send is refused whole.
+    from app.services.responses import branch_structure_errors
+
+    broken = branch_structure_errors(instrument.response_fields)
+    if broken:
+        raise HeldFieldsRefused([f"{label}: {reason}" for label, reason in broken])
+    for key, label, reason in dropped:
+        audit.write_event(
+            db,
+            event_type="instrument.branch_dropped",
+            summary=(
+                f"Dropped the branch on {label!r} in instrument "
+                f"{_instrument_label(instrument)} (linked re-send)"
+            ),
+            actor_user_id=actor.id,
+            session=instrument.session,
+            payload=audit.snapshot({"field_key": key, "label": label}),
+            reason=reason,
+            refs={"instrument_id": instrument.id},
+        )
+    _record_response_field_changes(
+        db,
+        instrument=instrument,
+        before=before,
+        after=_response_field_snapshot(instrument),
+        actor=actor,
+        include_branches=True,
+    )
+    return [label for _, label, _ in dropped]
