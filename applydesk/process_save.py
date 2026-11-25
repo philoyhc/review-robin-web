@@ -253,6 +253,9 @@ def _gate(v: Any, number: int, panels: frozenset[str], renamed: dict[str, str]) 
             )
         )
     total = _dict(got.get("total"), f"{what}'s Total")
+    via = _text(got.get("type", "RRW"), what, 20) or "RRW"
+    if via not in dict(stages.GATE_TYPES):
+        raise Refused(f"{what}'s type is not one of the choices.")
     mode = _text(got.get("mode"), what, 20)
     if mode not in dict(stages.MODES):
         raise Refused(f"{what}'s assignment is not one of the choices.")
@@ -260,7 +263,7 @@ def _gate(v: Any, number: int, panels: frozenset[str], renamed: dict[str, str]) 
         _key(got.get("key"), f"{what}'s key"),
         number,
         _text(got.get("label"), what),
-        "RRW",
+        via,
         tuple(results),
         _rule(got.get("rule"), f"{what}'s rule"),
         sources=tuple(sources),

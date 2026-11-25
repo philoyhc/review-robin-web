@@ -764,8 +764,8 @@
   // with the rule line it reads, so a rule edited or cleared shows at once.
   function gateLine(item) {
     var line = item.querySelector("[data-rule-line]").textContent;
-    var conf = item.querySelector('[data-pc="confidential"]');
-    item.querySelector('[data-gsec="gate"] [data-gsec-sum]').textContent = ["Review Robin session"]
+    var conf = item.querySelector('[data-pc="confidential"]'), type = item.querySelector('[data-pc="type"]');
+    item.querySelector('[data-gsec="gate"] [data-gsec-sum]').textContent = [type.options[type.selectedIndex].text]
       .concat(conf && conf.checked ? ["Confidential"] : [])
       .concat([line && line !== "Decided by hand" ? "Enters: " + line : "Entry decided by hand"]).join(" · ");
   }
@@ -1121,7 +1121,7 @@
         var srcBox = item.querySelector("[data-pc-sources]");
         if (srcBox) {
           srcBox.removeAttribute("data-sent");
-          item.querySelectorAll("[data-pc-sources] [data-ps], [data-pc-sources] [data-ps-act], [data-ps=\"mode\"], [data-pc=\"description\"], [data-pc=\"confidential\"]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
+          item.querySelectorAll("[data-pc-sources] [data-ps], [data-pc-sources] [data-ps-act], [data-ps=\"mode\"], [data-pc=\"description\"], [data-pc=\"confidential\"], [data-pc=\"type\"]").forEach(function (f) { f.disabled = false; f.removeAttribute("title"); });
           drawSources(item);
         }
         // Its fields, results, + Field and + Result are its own to set too.
@@ -1311,7 +1311,7 @@
       changed();
       return;
     }
-    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-from"], [data-pc="item-to"], [data-pc="item-name"], [data-pc="value"], [data-pc="confidential"], [data-pc="description"]')) changed();
+    if (e.target.closest('[data-pc="name"], [data-pc="from"], [data-pc="to"], [data-pc="item-from"], [data-pc="item-to"], [data-pc="item-name"], [data-pc="value"], [data-pc="confidential"], [data-pc="type"], [data-pc="description"]')) changed();
   });
   // --- A gate's results (rulings 21, 28): up to three, each the response
   // field it collates and a derivation, which sets the result's type. As stages.field_text,
@@ -1603,6 +1603,7 @@
       from: field(item, "item-from"), to: field(item, "item-to"),
       description: field(item, "description"),
       confidential: !!(item.querySelector('[data-pc="confidential"]') || {}).checked,
+      type: item.querySelector('[data-pc="type"]').value,
       rule: ruleOf(item), mode: item.querySelector('[data-ps="mode"]').value,
       sources: sourcesOf(item), total: totalOf(item),
       fields: fieldRows(item).map(function (row) {

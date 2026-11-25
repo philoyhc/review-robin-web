@@ -532,7 +532,11 @@ def _process(e: Exercise) -> Table:
                         "",
                         "",
                         rule,
-                        _detail(confidential=_yes(c.confidential), about=c.description),
+                        _detail(
+                            type=stages.gate_type(c),
+                            confidential=_yes(c.confidential),
+                            about=c.description,
+                        ),
                     ]
                 )
                 for f in stages.fields_of(c):

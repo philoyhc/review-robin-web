@@ -1475,9 +1475,14 @@ def test_the_shut_cards_lines_follow_edits(page: Page) -> None:
     gate = _draft_gate(page)
     line = gate.locator('[data-gsec="gate"] [data-gsec-sum]')
     # As the server's stages.gate_summary: the draft's gate has no rule yet.
-    assert line.text_content() == "Review Robin session · Entry decided by hand"
+    assert line.text_content() == "Review Robin Session · Entry decided by hand"
     gate.locator('[data-pc="confidential"]').check()
-    assert line.text_content() == "Review Robin session · Confidential · Entry decided by hand"
+    assert line.text_content() == "Review Robin Session · Confidential · Entry decided by hand"
+    # Segment 23G: the type is the gate's to choose, and the line follows.
+    gate.locator('[data-pc="type"]').select_option("RRW-custom")
+    assert line.text_content() == (
+        "Review Robin Session (custom) · Confidential · Entry decided by hand"
+    )
     who = gate.locator('[data-gsec="evaluators"] [data-gsec-sum]')
     assert who.text_content() == "No evaluators · Automatic"
     gate.locator('[data-ps="mode"]').select_option("assigned")
@@ -1489,11 +1494,12 @@ def test_the_shut_gate_line_follows_its_rule(page: Page) -> None:
     once, not at the next unrelated edit."""
     gate = _peer_copy(page)
     line = gate.locator('[data-gsec="gate"] [data-gsec-sum]')
-    assert line.text_content() == "Review Robin session · Enters: " + _line(gate)
+    kind = "Review Robin Session"  # the peer review, as copied
+    assert line.text_content() == kind + " · Enters: " + _line(gate)
     gate.locator('[data-pc-act="rule"]').click()
     gate.locator('[data-rule-part="clear"]').click()
     assert _line(gate) == "Decided by hand"
-    assert line.text_content() == "Review Robin session · Entry decided by hand"
+    assert line.text_content() == kind + " · Entry decided by hand"
 
 
 def test_a_sent_gate_keeps_its_fields(page: Page) -> None:

@@ -246,7 +246,7 @@ class Gate:
     key: str
     number: int
     label: str
-    via: str  # "RRW": a Review Robin session
+    via: str  # its type, a GATE_TYPES key: "RRW" or "RRW-custom" (segment 23G)
     results: tuple[GateResult, ...] = ()  # up to three (ruling 21); the first is the headline
     rule: Rule | None = None
     panel: str = ""  # who evaluates: a sample_data.Panel key, "" for none yet (ruling 19)
@@ -428,7 +428,7 @@ _G1 = Gate(
     "g1",
     1,
     "Peer review",
-    "RRW",
+    "RRW-custom",
     (
         GateResult("r1", "Mean score", _SCORE, "mean", source="score", ignore_zero=True),
         GateResult("r2", "Comments", _COMMENT, "join", source="comment"),
@@ -439,6 +439,8 @@ _G1 = Gate(
     # new applicant, 29 for a returning one.
     (Source("panel", "current-ras", 29, 30),),
     Total(29, 30),
+    # Custom (segment 23G): Review Robin asks how well each RA knows the
+    # applicant first, and asks for a score only from those who do.
     description="Every current RA scores every applicant, never themselves.",
     fields=(
         ResponseField("score", "Score", _SCORE, True, "0 = Don't know enough about this applicant"),
@@ -659,8 +661,9 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
         r = random.Random(f"ra {i}")
         reviewers = 29 if a.email.casefold() in ras else 30
         passed = i in back or (i in ahead and i != by_hand)
-        # Gate 1: each reviewer's score, 0 from those who do not know the
-        # applicant, and their mean with the 0s left out (`averaged`).
+        # Gate 1: each reviewer's score and their mean (`averaged`). It is
+        # custom (segment 23G): a reviewer who does not know the applicant
+        # is never asked, told apart from one who left it blank.
         knew = reviewers - r.randint(0, 9)
         if passed:
             aim = round(r.uniform(3.6, 4.9), 1)
@@ -670,11 +673,11 @@ def _model_rows(apps: tuple[Application, ...]) -> tuple[Row, ...]:
             aim = round(r.uniform(2.2, 4.6), 1)
         total = round(aim * knew)
         scores = (total // knew + 1,) * (total % knew) + (total // knew,) * (knew - total % knew)
-        got, taken = averaged((*scores, *(0,) * (reviewers - knew)), "mean", True)
+        got, taken = averaged(scores, "mean", True)
         mean = got if got is not None else 0.0
         # Gate 2: a major concern from any office keeps one off the list.
         major = 0 if passed or i == by_hand or mean < 3.5 else r.randint(1, 2)
-        cells["g1"] = Cell("Entered", mean_note(got, taken, reviewers), got)
+        cells["g1"] = Cell("Entered", mean_note(got, taken, reviewers, reviewers - knew), got)
         minor = r.randint(0, 5 - major) if r.random() < 0.4 else 0
         concern = f"Major concerns from {major} of 5" if major else "No major concerns"
         cells["g2"] = Cell("Entered", concern, major * 20.0, extra=(("r2", str(minor * 20)),))
@@ -1299,12 +1302,13 @@ def averaged(values: tuple[float, ...], derive: str, ignore_zero: bool) -> tuple
     return round(value, 2), len(taken)
 
 
-def mean_note(value: float | None, taken: int, of: int) -> str:
+def mean_note(value: float | None, taken: int, of: int, not_asked: int = 0) -> str:
     """A mean's note under its chip: "3.7 from 27 of 29", the scores it
-    took of those asked; "No view from 30" when none scored (ruling 30)."""
-    if value is None:
-        return f"No view from {of}"
-    return f"{value:.1f} from {taken} of {of}"
+    took of its evaluators; "No view from 30" when none scored (ruling
+    30). Those a branch never asked are told from those who left it
+    blank (segment 23G): "4.2 from 3 of 5 · 2 not asked"."""
+    note = f"No view from {of}" if value is None else f"{value:.1f} from {taken} of {of}"
+    return f"{note} · {not_asked} not asked" if not_asked else note
 
 
 def derivation_text(r: GateResult) -> str:
@@ -1825,9 +1829,20 @@ def assignment_counts(rows: tuple[Assignment, ...]) -> str:
     return " · ".join(parts)
 
 
-#: A gate's kinds (ruling 28): only a Review Robin run for now, the menu
-#: kept for other kinds later.
-GATE_TYPES: tuple[tuple[str, str], ...] = (("RRW", "Review Robin session"),)
+#: A gate's types (ruling 28): a Review Robin session, its instrument
+#: fixed whole, or one Review Robin may extend (ruling 36, segment 23G):
+#: reorder, set required, add fields and branch, the gate's fields held.
+#: The menu stays open to other kinds later.
+GATE_TYPES: tuple[tuple[str, str], ...] = (
+    ("RRW", "Review Robin Session"),
+    ("RRW-custom", "Review Robin Session (custom)"),
+)
+CUSTOM = "RRW-custom"
+
+
+def gate_type(gate: Gate) -> str:
+    """A gate's type as the page reads it, e.g. "Review Robin Session"."""
+    return dict(GATE_TYPES).get(gate.via or "RRW", GATE_TYPES[0][1])
 
 
 def fields_of(gate: Gate) -> tuple[ResponseField, ...]:
@@ -1870,7 +1885,7 @@ def gate_summary(plan: Plan, gate: Gate) -> str:
     """The shut Gate card's line (ruling 28): its type, whether it is
     confidential, and who it enters."""
     rule = rule_text(plan, gate)
-    parts = [dict(GATE_TYPES).get(gate.via or "RRW", "Review Robin session")]
+    parts = [gate_type(gate)]
     if gate.confidential:
         parts.append("Confidential")
     parts.append(f"Enters: {rule}" if rule else "Entry decided by hand")

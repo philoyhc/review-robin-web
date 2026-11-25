@@ -97,12 +97,12 @@ def test_the_model_exercise_reads_as_partway_through() -> None:
     assert decided["Not shortlisted"].count(True) == 5
     hand = [r for r in plan.rows if r.cells["o1"].by_hand]
     assert len(hand) == 1 and hand[0].cells["o1"].note == "Set by hand: panel request"
-    # Gate 1's note says how many scored: those who did not know them left out.
+    # Gate 1's note says how many scored, and how many were not asked.
     aisha = next(r for r in plan.rows if r.application.public_id == "m3qx8vkt2n")
-    assert re.fullmatch(r"\d\.\d from \d+ of 29", aisha.cells["g1"].note)
+    assert re.fullmatch(r"\d\.\d from \d+ of 29( · \d not asked)?", aisha.cells["g1"].note)
     assert aisha.cells["o1"].value == "Re-appointment"
     kenji = next(r for r in plan.rows if r.application.public_id == "h6zr2tdw9p")
-    assert kenji.cells["o1"].value == "Interview" and kenji.cells["g1"].note.endswith("of 30")
+    assert kenji.cells["o1"].value == "Interview" and " of 30" in kenji.cells["g1"].note
 
 
 def test_a_mean_s_note_says_how_many_scored() -> None:
@@ -110,12 +110,15 @@ def test_a_mean_s_note_says_how_many_scored() -> None:
     scored of those asked, or that none had a view."""
     assert stages.mean_note(3.59, 27, 29) == "3.6 from 27 of 29"
     assert stages.mean_note(None, 0, 30) == "No view from 30"
+    # Segment 23G: those a branch never asked are not those who left it blank.
+    assert stages.mean_note(4.2, 3, 5, 2) == "4.2 from 3 of 5 · 2 not asked"
     plan = stages.plan_of(EX)
     for row in plan.rows:
         g1 = row.cells["g1"]
         if g1.value == "Entered":
-            m = re.fullmatch(r"(\d\.\d) from (\d+) of (29|30)", g1.note)
-            assert m and g1.result is not None and f"{g1.result:.1f}" == m.group(1), g1.note
+            m = re.fullmatch(r"(\d\.\d) from (\d+) of (29|30)(?: · (\d) not asked)?", g1.note)
+            assert m and int(m.group(2)) + int(m.group(4) or 0) == int(m.group(3)), g1.note
+            assert g1.result is not None and f"{g1.result:.1f}" == m.group(1), g1.note
 
 
 def _app(i: str, email: str, state: str, day: int) -> sample_data.Application:
