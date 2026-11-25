@@ -69,6 +69,12 @@
   // is sent as it stands: re-sent, never sent again.
   else if (!rec && DATA.state === "Sent") rec = { name: DATA.name, code: DATA.code, digest: DATA.digest, at: "", transfer: "" };
   if (rec) { nameIn.value = rec.name; codeIn.value = rec.code; }
+  // A set-up keeps the name and code it was made with (Codex on #4228):
+  // its rosters go to that session, so a reload must not revert them.
+  else if (setUp() && typeof setUp().name === "string" && typeof setUp().code === "string") {
+    nameIn.value = setUp().name;
+    codeIn.value = setUp().code;
+  }
 
   // The gate's pulls, invitations and reminders in this tab.
   function logs() {

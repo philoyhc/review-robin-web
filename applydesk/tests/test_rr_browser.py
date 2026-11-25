@@ -306,3 +306,23 @@ def test_set_up_is_secondary_beside_send_rosters(page: Page) -> None:
     assert "btn-secondary" in (card.locator('[data-rr-act="setup"]').get_attribute("class") or "")
     primaries = card.locator(".rr-progress .rr-acts").first.locator(".btn-primary")
     assert primaries.count() == 1 and primaries.first.get_attribute("data-rr-act") == "send"
+
+
+def test_a_set_up_keeps_its_name_and_code_across_a_reload(page: Page) -> None:
+    """Codex on #4228: the session's name and code chosen before *Set up*
+    come back after a reload, so *Send rosters* sends them, not the
+    defaults."""
+    page.on("dialog", lambda d: d.accept())
+    page.goto(INTERVIEW)
+    card = _card(page)
+    card.locator("[data-rr-name]").fill("Interviews, round 2")
+    card.locator("[data-rr-code]").fill("RA-INT-2")
+    card.locator('[data-rr-act="setup"]').click()
+    page.reload()
+    card = _card(page)
+    assert card.locator("[data-rr-name]").input_value() == "Interviews, round 2"
+    assert card.locator("[data-rr-code]").input_value() == "RA-INT-2"
+    _approve_all(page)
+    card.locator('[data-rr-act="send"]').click()
+    sent = page.evaluate("() => JSON.parse(sessionStorage.getItem('applydesk-rr:" + EX + "')).g3")
+    assert sent["name"] == "Interviews, round 2" and sent["code"] == "RA-INT-2"
