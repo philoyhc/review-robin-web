@@ -56,6 +56,8 @@ Taken 2026-11-18 at `295cdf575`.
 
 **Rung 2 (2026-11-25):** `Instrument.linked_mode` (`locked` / `custom`, `LINKED_MODES`; migration `a7d3e9f2b4c8`, every row `locked`); the Settings row `instruments[N].linked_mode`, parsed and refused when unknown, written to the CSV only when `custom` so every other file is unchanged; a linked application owns `instruments[1].linked_mode` on a re-send, a change audited as `instrument.linked_mode_set` (the same type writes nothing). The cumulative read for rungs 2–5 runs from `dde4e36cf`. As any instrument row, the row needs the gate's name beside it (the parse's rule).
 
+**Rung 3 (2026-11-25):** held fields are a list, `Instrument.held_field_keys` (migration `b8e4f0a3c5d9`; author, 2026-11-25, not a flag on the field), written at the create and by each re-send carrying field rows. On a custom instrument the card's Save keeps the response fields and checks the held ones after (`linked_instruments.held_problems`): a held field removed, or its name, type, bounds, options, scale, help or visibility changed, is a 422; its R, place and branch are Review Robin's. Band 3 is the operator's lock region; each held row's name, type, bounds, visibility chip, ≡, help box and delete are fixed. Narrowed: the per-field routes and the legacy `/band2-state` POST, which no page calls, still refuse on every linked instrument.
+
 ## PR ladder
 
 1. **Plan** (this file), its queue entry and README row; ruling 36 in `applydesk/guide/todo_master.md`.

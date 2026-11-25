@@ -248,6 +248,12 @@ class Instrument(Base, TimestampMixin):
     the session's profile holds the instrument lock; on any other
     instrument it is inert. Revision ``a7d3e9f2b4c8`` gave every existing
     row the default."""
+    held_field_keys: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    """The response-field keys a linked application sent (segment 23G
+    rung 3): in ``custom`` mode these fields are held, their definition
+    the application's, while Review Robin's own fields are free. Written
+    at the create and by each re-send that carries field rows; null on
+    any other instrument. Revision ``b8e4f0a3c5d9`` added it."""
     deadline_closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     sort_display_fields: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     """Operator-defined default sort spec for this instrument's

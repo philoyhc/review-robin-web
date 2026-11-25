@@ -39,7 +39,7 @@ from app.db.models import (
     User,
 )
 from app.json_shapes import json_list
-from app.services import field_labels, linked_apps, visibility_policies
+from app.services import field_labels, linked_apps, linked_instruments, visibility_policies
 from app.services import instruments as instruments_service
 from app.services import session_lifecycle as lifecycle
 from app.services._queries import slot_has_data
@@ -805,6 +805,13 @@ def _new_model_band2_state(
     # read path. width_px reads from ``column_widths["rf_<id>"]``
     # (migrated out of the JSON entry into the canonical widths dict).
     column_widths_map = instrument.column_widths or {}
+    # Segment 23G rung 3 — a custom linked instrument's held fields: the
+    # application's definition, fixed on the row; none on any other.
+    held: set[str] = (
+        set(instrument.held_field_keys or ())
+        if linked_instruments.is_custom(instrument.session, instrument)
+        else set()
+    )
     response_fields: list[dict[str, Any]] = []
     for rf in sorted(instrument.response_fields, key=lambda f: f.order):
         data_type_lower = (rf._inline_data_type or "String").lower()
@@ -829,6 +836,7 @@ def _new_model_band2_state(
             "branch_value": rf.branch_value or "",
             # 19T Item 13 — what the condition does; blank reads Show.
             "branch_mode": rf.branch_mode or "",
+            "held": rf.field_key in held,
         }
         width = column_widths_map.get(f"rf_{rf.id}")
         if width is not None:

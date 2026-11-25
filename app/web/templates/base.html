@@ -3352,6 +3352,13 @@
         cursor: not-allowed;
         opacity: 0.7;
       }
+      /* Segment 23G rung 3: a custom gate's held field keeps the name its
+         application sent; the box reads as fixed, beside live R and ▲ ▼. */
+      body.ui-v2 [data-new-model-rf-held] [data-new-model-rf-name][readonly] {
+        background: var(--surface-muted);
+        color: var(--text-subtle);
+        cursor: not-allowed;
+      }
       /* A chip that is a ``<label>`` keeps the pill's box, not the
          form label's block and margins, and shows its hidden box's
          keyboard focus as a ring. */
